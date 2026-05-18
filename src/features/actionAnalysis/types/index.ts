@@ -246,13 +246,17 @@ export type PaymentMonitoringSort =
   | 'payment_date_desc'
   | 'payment_date_asc'
 
-export type PaymentMonitoringDateField = 'recorded_at' | 'verified_at' | 'payment_date'
-
 export interface PaymentMonitoringFilters {
   period?: CallMonitoringPeriod
+  /** Top date range — always filters Payment.recorded_at (Created at). */
   from_datetime?: string
   to_datetime?: string
-  date_field?: PaymentMonitoringDateField
+  /** Independent Confirmed-at range (Payment.verified_at). ISO datetime. */
+  verified_at_from?: string
+  verified_at_to?: string
+  /** Independent Payment-date range (Payment.payment_date). YYYY-MM-DD. */
+  payment_date_from?: string
+  payment_date_to?: string
   user_ids?: number[]
   payment_method_in?: PaymentMethod[]
   status_in?: PaymentStatus[]

@@ -378,12 +378,13 @@
           "rejected": "Отклонено",
           "incoming_line_result": "Итог входящей линии"
         },
-        "paymentDateField": "Тип даты",
-        "paymentDateFields": {
-          "recorded_at": "Создан",
-          "verified_at": "Подтверждён",
-          "payment_date": "Дата платежа"
-        },
+        "confirmedAtRangeHeading": "Подтверждён",
+        "confirmedAtFrom": "С",
+        "confirmedAtTo": "По",
+        "paymentDateRangeHeading": "Дата платежа",
+        "paymentDateFrom": "С",
+        "paymentDateTo": "По",
+        "selectedCount": "Выбрано: {{count}}",
         "paymentMethod": "Способ оплаты",
         "paymentMethods": {
           "all": "Все способы",

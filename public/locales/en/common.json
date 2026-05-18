@@ -375,12 +375,13 @@
           "rejected": "Rejected",
           "incoming_line_result": "Incoming line result"
         },
-        "paymentDateField": "Date type",
-        "paymentDateFields": {
-          "recorded_at": "Created at",
-          "verified_at": "Confirmed at",
-          "payment_date": "Payment date"
-        },
+        "confirmedAtRangeHeading": "Confirmed at",
+        "confirmedAtFrom": "From",
+        "confirmedAtTo": "To",
+        "paymentDateRangeHeading": "Payment date",
+        "paymentDateFrom": "From",
+        "paymentDateTo": "To",
+        "selectedCount": "{{count}} selected",
         "paymentMethod": "Payment method",
         "paymentMethods": {
           "all": "All methods",

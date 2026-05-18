@@ -378,12 +378,13 @@
           "rejected": "Відхилено",
           "incoming_line_result": "Результат вхідної лінії"
         },
-        "paymentDateField": "Тип дати",
-        "paymentDateFields": {
-          "recorded_at": "Створено",
-          "verified_at": "Підтверджено",
-          "payment_date": "Дата платежу"
-        },
+        "confirmedAtRangeHeading": "Підтверджено",
+        "confirmedAtFrom": "Від",
+        "confirmedAtTo": "До",
+        "paymentDateRangeHeading": "Дата платежу",
+        "paymentDateFrom": "Від",
+        "paymentDateTo": "До",
+        "selectedCount": "Вибрано: {{count}}",
         "paymentMethod": "Спосіб оплати",
         "paymentMethods": {
           "all": "Усі способи",

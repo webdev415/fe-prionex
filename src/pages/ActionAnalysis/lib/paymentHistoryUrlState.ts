@@ -1,7 +1,6 @@
 import type {
   CallMonitoringPeriod,
   PaymentMethod,
-  PaymentMonitoringDateField,
   PaymentMonitoringFilters,
   PaymentMonitoringSort,
   PaymentStatus,
@@ -15,7 +14,6 @@ import { localDateStringsToIsoRange } from './dateRange'
 
 const DEFAULT_PERIOD: CallMonitoringPeriod = 'last_7d'
 const DEFAULT_SORT: PaymentMonitoringSort = 'recorded_at_desc'
-const DEFAULT_DATE_FIELD: PaymentMonitoringDateField = 'recorded_at'
 
 const PAYMENT_MONITORING_SORTS: readonly PaymentMonitoringSort[] = [
   'recorded_at_desc',
@@ -28,16 +26,17 @@ const PAYMENT_MONITORING_SORTS: readonly PaymentMonitoringSort[] = [
   'payment_date_asc',
 ]
 
-const PAYMENT_DATE_FIELDS: readonly PaymentMonitoringDateField[] = [
-  'recorded_at',
-  'verified_at',
-  'payment_date',
-]
-
 /** Bar state for the Payment History sub-tab.
  *
- * `period` + `customFromDate`/`customToDate` drive the date-range picker; the
- * resolved range applies to whichever column is named by `dateField`.
+ * `period` + `customFromDate`/`customToDate` drive the top date-range picker
+ * and always filter `recorded_at` (the "Created at" column).
+ *
+ * `verifiedFromDate`/`verifiedToDate` are the optional separate Confirmed-at
+ * range (filters `verified_at`). YYYY-MM-DD strings; converted to ISO at
+ * query time (start-of-day → end-of-day).
+ *
+ * `paymentFromDate`/`paymentToDate` are the optional separate Payment-date
+ * range (filters `payment_date`, which is a DATE column — sent verbatim).
  *
  * `employeeIds` is the tab-level Operator refinement. When the page-level
  * scope selector locks the picker (scope=my/group), this is ignored at query
@@ -50,7 +49,10 @@ export interface PaymentHistoryBarState {
   period?: CallMonitoringPeriod
   customFromDate?: string
   customToDate?: string
-  dateField: PaymentMonitoringDateField
+  verifiedFromDate?: string
+  verifiedToDate?: string
+  paymentFromDate?: string
+  paymentToDate?: string
   employeeIds: number[]
   paymentMethods: PaymentMethod[]
   statuses: PaymentStatus[]
@@ -64,7 +66,10 @@ export const PAYMENT_HISTORY_FILTERS_DEFAULT: PaymentHistoryBarState = {
   period: DEFAULT_PERIOD,
   customFromDate: undefined,
   customToDate: undefined,
-  dateField: DEFAULT_DATE_FIELD,
+  verifiedFromDate: undefined,
+  verifiedToDate: undefined,
+  paymentFromDate: undefined,
+  paymentToDate: undefined,
   employeeIds: [],
   paymentMethods: [],
   statuses: [],
@@ -90,6 +95,11 @@ function parseEnumList<T extends string>(values: readonly string[], allowed: rea
   return values.filter((v): v is T => allowedSet.has(v))
 }
 
+function parseYmd(value: string | null): string | undefined {
+  if (value == null) return undefined
+  return /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : undefined
+}
+
 export function readPaymentHistoryUrlState(params: URLSearchParams): PaymentHistoryBarState {
   const period =
     parseEnum<CallMonitoringPeriod>(params.get('period'), [
@@ -99,10 +109,6 @@ export function readPaymentHistoryUrlState(params: URLSearchParams): PaymentHist
       'last_30d',
       'custom',
     ]) ?? DEFAULT_PERIOD
-
-  const dateField =
-    parseEnum<PaymentMonitoringDateField>(params.get('date_field'), PAYMENT_DATE_FIELDS) ??
-    DEFAULT_DATE_FIELD
 
   const employeeIds = params
     .getAll('employee_id')
@@ -122,7 +128,10 @@ export function readPaymentHistoryUrlState(params: URLSearchParams): PaymentHist
     period,
     customFromDate: params.get('from_date') ?? undefined,
     customToDate: params.get('to_date') ?? undefined,
-    dateField,
+    verifiedFromDate: parseYmd(params.get('verified_from')),
+    verifiedToDate: parseYmd(params.get('verified_to')),
+    paymentFromDate: parseYmd(params.get('payment_from')),
+    paymentToDate: parseYmd(params.get('payment_to')),
     employeeIds,
     paymentMethods,
     statuses,
@@ -144,7 +153,10 @@ export function writePaymentHistoryUrlState(
     'period',
     'from_date',
     'to_date',
-    'date_field',
+    'verified_from',
+    'verified_to',
+    'payment_from',
+    'payment_to',
     'employee_id',
     'payment_method',
     'status',
@@ -159,9 +171,10 @@ export function writePaymentHistoryUrlState(
     next.set('from_date', state.customFromDate)
     next.set('to_date', state.customToDate)
   }
-  if (state.dateField && state.dateField !== DEFAULT_DATE_FIELD) {
-    next.set('date_field', state.dateField)
-  }
+  if (state.verifiedFromDate) next.set('verified_from', state.verifiedFromDate)
+  if (state.verifiedToDate) next.set('verified_to', state.verifiedToDate)
+  if (state.paymentFromDate) next.set('payment_from', state.paymentFromDate)
+  if (state.paymentToDate) next.set('payment_to', state.paymentToDate)
   for (const id of state.employeeIds) next.append('employee_id', String(id))
   for (const m of state.paymentMethods) next.append('payment_method', m)
   for (const s of state.statuses) next.append('status', s)
@@ -172,7 +185,7 @@ export function writePaymentHistoryUrlState(
   return next
 }
 
-function resolveDateRange(state: PaymentHistoryBarState): {
+function resolveRecordedAtRange(state: PaymentHistoryBarState): {
   from_datetime?: string
   to_datetime?: string
 } {
@@ -200,6 +213,27 @@ function resolveDateRange(state: PaymentHistoryBarState): {
     return { from_datetime: start.toISOString(), to_datetime: now.toISOString() }
   }
   return {}
+}
+
+/** Compose YYYY-MM-DD bounds into an ISO datetime window (start-of-day → end-of-day local). */
+function resolveYmdWindow(
+  from: string | undefined,
+  to: string | undefined
+): { fromIso?: string; toIso?: string } {
+  const compose = (ymd: string | undefined, side: 'from' | 'to'): string | undefined => {
+    if (!ymd) return undefined
+    const [y, m, d] = ymd.split('-').map(Number)
+    const hh = side === 'to' ? 23 : 0
+    const mm = side === 'to' ? 59 : 0
+    const ss = side === 'to' ? 59 : 0
+    const ms = side === 'to' ? 999 : 0
+    const dt = new Date(y, m - 1, d, hh, mm, ss, ms)
+    return Number.isNaN(dt.getTime()) ? undefined : dt.toISOString()
+  }
+  return {
+    fromIso: compose(from, 'from'),
+    toIso: compose(to, 'to'),
+  }
 }
 
 /**
@@ -231,10 +265,16 @@ export function toPaymentMonitoringQuery(
   options: { page?: number; limit?: number } = {}
 ): PaymentMonitoringFilters {
   const effectiveUserIds = resolveEffectiveUserIds(scopedUserIds, state.employeeIds)
+  const verified = resolveYmdWindow(state.verifiedFromDate, state.verifiedToDate)
   return {
     period: state.period,
-    ...resolveDateRange(state),
-    date_field: state.dateField,
+    ...resolveRecordedAtRange(state),
+    verified_at_from: verified.fromIso,
+    verified_at_to: verified.toIso,
+    // payment_date is a DATE column — send the YYYY-MM-DD strings verbatim;
+    // FastAPI parses them as `date` and Postgres compares without timezone.
+    payment_date_from: state.paymentFromDate,
+    payment_date_to: state.paymentToDate,
     user_ids: effectiveUserIds,
     payment_method_in: state.paymentMethods.length > 0 ? state.paymentMethods : undefined,
     status_in: state.statuses.length > 0 ? state.statuses : undefined,

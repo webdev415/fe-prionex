@@ -18,14 +18,19 @@ describe('paymentHistoryUrlState', () => {
     expect(out).toEqual(PAYMENT_HISTORY_FILTERS_DEFAULT)
   })
 
-  it('omits default period / sort / date_field from the URL', () => {
+  it('omits default period / sort from the URL', () => {
     const params = writePaymentHistoryUrlState(
       new URLSearchParams(),
       PAYMENT_HISTORY_FILTERS_DEFAULT
     )
     expect(params.get('period')).toBeNull()
     expect(params.get('sort')).toBeNull()
+    // date_field was removed in favour of independent verified_at / payment_date ranges
     expect(params.get('date_field')).toBeNull()
+    expect(params.get('verified_from')).toBeNull()
+    expect(params.get('verified_to')).toBeNull()
+    expect(params.get('payment_from')).toBeNull()
+    expect(params.get('payment_to')).toBeNull()
   })
 
   it('round-trips a fully populated state', () => {
@@ -33,7 +38,10 @@ describe('paymentHistoryUrlState', () => {
       period: 'custom',
       customFromDate: '2026-05-01',
       customToDate: '2026-05-15',
-      dateField: 'verified_at',
+      verifiedFromDate: '2026-05-02',
+      verifiedToDate: '2026-05-10',
+      paymentFromDate: '2026-05-03',
+      paymentToDate: '2026-05-12',
       employeeIds: [12, 34],
       paymentMethods: ['card', 'cash'],
       statuses: ['verified', 'pending'],
@@ -43,6 +51,30 @@ describe('paymentHistoryUrlState', () => {
       sort: 'amount_desc',
     }
     expect(roundtrip(state)).toEqual(state)
+  })
+
+  it('round-trips the four independent date keys under their own URL names', () => {
+    const state: PaymentHistoryBarState = {
+      ...PAYMENT_HISTORY_FILTERS_DEFAULT,
+      verifiedFromDate: '2026-05-02',
+      verifiedToDate: '2026-05-10',
+      paymentFromDate: '2026-05-03',
+      paymentToDate: '2026-05-12',
+    }
+    const params = writePaymentHistoryUrlState(new URLSearchParams(), state)
+    expect(params.get('verified_from')).toBe('2026-05-02')
+    expect(params.get('verified_to')).toBe('2026-05-10')
+    expect(params.get('payment_from')).toBe('2026-05-03')
+    expect(params.get('payment_to')).toBe('2026-05-12')
+  })
+
+  it('drops malformed YMD dates silently when reading', () => {
+    const params = new URLSearchParams()
+    params.set('verified_from', '2026/05/02') // wrong format
+    params.set('payment_to', '12-05-2026') // wrong format
+    const out = readPaymentHistoryUrlState(params)
+    expect(out.verifiedFromDate).toBeUndefined()
+    expect(out.paymentToDate).toBeUndefined()
   })
 
   it('serialises multi-select filters as repeated query keys', () => {
@@ -120,5 +152,40 @@ describe('toPaymentMonitoringQuery — scope composition', () => {
     }
     const q = toPaymentMonitoringQuery(state, [99])
     expect(q.user_ids).toEqual([])
+  })
+
+  it('emits verified_at_from/to as ISO datetimes (start-of-day → end-of-day local)', () => {
+    const state: PaymentHistoryBarState = {
+      ...PAYMENT_HISTORY_FILTERS_DEFAULT,
+      verifiedFromDate: '2026-05-02',
+      verifiedToDate: '2026-05-10',
+    }
+    const q = toPaymentMonitoringQuery(state, undefined)
+    // Range bounds are timezone-dependent ISO strings (built from local-time
+    // start/end-of-day), so we only assert the relationship and the implied
+    // window length (>= ~7 days × 24h, with some tz slop tolerated).
+    expect(q.verified_at_from).toBeDefined()
+    expect(q.verified_at_to).toBeDefined()
+    const span = new Date(q.verified_at_to!).getTime() - new Date(q.verified_at_from!).getTime()
+    expect(span).toBeGreaterThan(7 * 24 * 60 * 60 * 1000)
+  })
+
+  it('emits payment_date_from/to as YYYY-MM-DD strings (DATE column)', () => {
+    const state: PaymentHistoryBarState = {
+      ...PAYMENT_HISTORY_FILTERS_DEFAULT,
+      paymentFromDate: '2026-05-03',
+      paymentToDate: '2026-05-12',
+    }
+    const q = toPaymentMonitoringQuery(state, undefined)
+    expect(q.payment_date_from).toBe('2026-05-03')
+    expect(q.payment_date_to).toBe('2026-05-12')
+  })
+
+  it('omits the new date params when not set', () => {
+    const q = toPaymentMonitoringQuery(PAYMENT_HISTORY_FILTERS_DEFAULT, undefined)
+    expect(q.verified_at_from).toBeUndefined()
+    expect(q.verified_at_to).toBeUndefined()
+    expect(q.payment_date_from).toBeUndefined()
+    expect(q.payment_date_to).toBeUndefined()
   })
 })

@@ -1,10 +1,6 @@
+import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import type {
-  CallMonitoringPeriod,
-  PaymentMethod,
-  PaymentMonitoringDateField,
-  PaymentStatus,
-} from '@/features/actionAnalysis'
+import type { CallMonitoringPeriod, PaymentMethod, PaymentStatus } from '@/features/actionAnalysis'
 import {
   PAYMENT_METHOD_VALUES,
   PAYMENT_STATUS_VALUES,
@@ -12,15 +8,8 @@ import {
 } from '@/features/actionAnalysis'
 import type { OperatorUser } from '@/features/users/api/usersApi'
 import { Button } from '@/components/ui/Button'
-import { Checkbox } from '@/components/ui/Checkbox'
+import { DateSelect } from '@/components/ui/DateSelect'
 import { Input } from '@/components/ui/Input'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/Select'
 import { useSyncedState } from '@/hooks'
 import { Icons } from '@/lib/icons'
 import {
@@ -30,14 +19,9 @@ import {
 import type { ScopedUserIds } from '../lib/scope'
 import { DateRangeQuickFilter } from './DateRangeQuickFilter'
 import { EmployeeFilterDropdown } from './EmployeeFilterDropdown'
+import { MultiCheckboxDropdown } from './MultiCheckboxDropdown'
 
 const FILTER_SURFACE = 'rounded-xl bg-white/50 p-4 shadow-sm sm:p-6'
-
-const DATE_FIELDS: readonly PaymentMonitoringDateField[] = [
-  'recorded_at',
-  'verified_at',
-  'payment_date',
-]
 
 interface Props {
   value: PaymentHistoryBarState
@@ -48,8 +32,16 @@ interface Props {
   scope?: ScopedUserIds
 }
 
-function toggleListValue<T extends string>(list: T[], value: T): T[] {
-  return list.includes(value) ? list.filter((v) => v !== value) : [...list, value]
+function ymdToDate(ymd: string | undefined): Date | null {
+  if (!ymd || !/^\d{4}-\d{2}-\d{2}$/.test(ymd)) return null
+  const [y, m, d] = ymd.split('-').map(Number)
+  return new Date(y, m - 1, d, 12, 0, 0, 0)
+}
+
+function dateToYmd(d: Date | null): string | undefined {
+  if (!d) return undefined
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 }
 
 export function PaymentHistoryFiltersBar({
@@ -87,6 +79,37 @@ export function PaymentHistoryFiltersBar({
     onClear()
   }
 
+  // Translated option lists for the three multi-select dropdowns.
+  const methodOptions = useMemo(
+    () =>
+      PAYMENT_METHOD_VALUES.map((m) => ({
+        value: m,
+        label: t(`pages.actionAnalysis.filters.paymentMethods.${m}`, m),
+      })),
+    [t]
+  )
+  const statusOptions = useMemo(
+    () =>
+      PAYMENT_STATUS_VALUES.map((s) => ({
+        value: s,
+        label: t(`pages.actionAnalysis.filters.paymentStatuses.${s}`, s),
+      })),
+    [t]
+  )
+  const typeOptions = useMemo(
+    () =>
+      PAYMENT_TYPE_VALUES.map((tt) => ({
+        value: tt,
+        label: t(`pages.actionAnalysis.filters.paymentTypes.${tt}`, tt),
+      })),
+    [t]
+  )
+
+  const verifiedFrom = ymdToDate(draft.verifiedFromDate)
+  const verifiedTo = ymdToDate(draft.verifiedToDate)
+  const paymentFrom = ymdToDate(draft.paymentFromDate)
+  const paymentTo = ymdToDate(draft.paymentToDate)
+
   return (
     <div className={FILTER_SURFACE}>
       <div className="flex w-full flex-col gap-4 sm:gap-6">
@@ -101,27 +124,6 @@ export function PaymentHistoryFiltersBar({
         <div className="h-px w-full bg-gray-200" />
 
         <div className="grid w-full gap-3 sm:grid-cols-2 lg:grid-cols-3 lg:gap-4 xl:grid-cols-4">
-          <div className="flex flex-col gap-1.5">
-            <span className="text-dark-500 text-xs font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
-              {t('pages.actionAnalysis.filters.paymentDateField', 'Date type')}
-            </span>
-            <Select
-              value={draft.dateField}
-              onValueChange={(v) => update({ dateField: v as PaymentMonitoringDateField })}
-            >
-              <SelectTrigger className="h-[45px] w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {DATE_FIELDS.map((f) => (
-                  <SelectItem key={f} value={f}>
-                    {t(`pages.actionAnalysis.filters.paymentDateFields.${f}`, f)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
           <EmployeeFilterDropdown
             operators={operators}
             selectedIds={draft.employeeIds}
@@ -129,6 +131,30 @@ export function PaymentHistoryFiltersBar({
             disabled={scope?.employeePickerDisabled}
             disabledLabel={scopeLockedEmpLabel}
             label={t('pages.actionAnalysis.filters.operator', 'Operator')}
+          />
+
+          <MultiCheckboxDropdown<PaymentMethod>
+            label={t('pages.actionAnalysis.filters.paymentMethod', 'Payment method')}
+            options={methodOptions}
+            selected={draft.paymentMethods}
+            onChange={(next) => update({ paymentMethods: next })}
+            allLabel={t('pages.actionAnalysis.filters.paymentMethods.all', 'All methods')}
+          />
+
+          <MultiCheckboxDropdown<PaymentStatus>
+            label={t('pages.actionAnalysis.filters.status', 'Status')}
+            options={statusOptions}
+            selected={draft.statuses}
+            onChange={(next) => update({ statuses: next })}
+            allLabel={t('pages.actionAnalysis.filters.paymentStatuses.all', 'All')}
+          />
+
+          <MultiCheckboxDropdown<string>
+            label={t('pages.actionAnalysis.filters.paymentType', 'Payment type')}
+            options={typeOptions}
+            selected={draft.paymentTypes}
+            onChange={(next) => update({ paymentTypes: next })}
+            allLabel={t('pages.actionAnalysis.filters.paymentTypes.all', 'All types')}
           />
 
           <div className="flex flex-col gap-1.5">
@@ -166,59 +192,72 @@ export function PaymentHistoryFiltersBar({
           </div>
         </div>
 
-        <div className="grid w-full gap-3 sm:grid-cols-3 lg:gap-4">
-          <div className="flex flex-col gap-2 rounded-lg border border-gray-200 bg-white/60 p-3">
-            <span className="text-dark-500 text-xs font-semibold">
-              {t('pages.actionAnalysis.filters.paymentMethod', 'Payment method')}
-            </span>
+        {/* Independent secondary date range — Confirmed at (Payment.verified_at). */}
+        <div className="flex flex-col gap-3 rounded-lg border border-gray-200 bg-white/60 p-4">
+          <span className="text-dark-500 text-xs font-semibold tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
+            {t('pages.actionAnalysis.filters.confirmedAtRangeHeading', 'Confirmed at')}
+          </span>
+          <div className="grid w-full gap-3 sm:grid-cols-2 lg:gap-4">
             <div className="flex flex-col gap-1.5">
-              {PAYMENT_METHOD_VALUES.map((m: PaymentMethod) => (
-                <label key={m} className="flex items-center gap-2 text-sm text-gray-700">
-                  <Checkbox
-                    checked={draft.paymentMethods.includes(m)}
-                    onCheckedChange={() =>
-                      update({ paymentMethods: toggleListValue(draft.paymentMethods, m) })
-                    }
-                  />
-                  <span>{t(`pages.actionAnalysis.filters.paymentMethods.${m}`, m)}</span>
-                </label>
-              ))}
+              <span className="text-xs font-medium text-gray-600">
+                {t('pages.actionAnalysis.filters.confirmedAtFrom', 'From')}
+              </span>
+              <DateSelect
+                value={verifiedFrom}
+                onChange={({ value: v }) => update({ verifiedFromDate: dateToYmd(v) ?? undefined })}
+                placeholder={t('pages.actionAnalysis.filters.selectStartDate', 'Select start date')}
+                max={verifiedTo ?? undefined}
+                format="yyyy-MM-dd"
+                className="min-w-0 flex-1 [&_input]:h-[45px]"
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <span className="text-xs font-medium text-gray-600">
+                {t('pages.actionAnalysis.filters.confirmedAtTo', 'To')}
+              </span>
+              <DateSelect
+                value={verifiedTo}
+                onChange={({ value: v }) => update({ verifiedToDate: dateToYmd(v) ?? undefined })}
+                placeholder={t('pages.actionAnalysis.filters.selectEndDate', 'Select end date')}
+                min={verifiedFrom ?? undefined}
+                format="yyyy-MM-dd"
+                className="min-w-0 flex-1 [&_input]:h-[45px]"
+              />
             </div>
           </div>
+        </div>
 
-          <div className="flex flex-col gap-2 rounded-lg border border-gray-200 bg-white/60 p-3">
-            <span className="text-dark-500 text-xs font-semibold">
-              {t('pages.actionAnalysis.filters.status', 'Status')}
-            </span>
+        {/* Independent tertiary date range — Payment date (Payment.payment_date, DATE). */}
+        <div className="flex flex-col gap-3 rounded-lg border border-gray-200 bg-white/60 p-4">
+          <span className="text-dark-500 text-xs font-semibold tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
+            {t('pages.actionAnalysis.filters.paymentDateRangeHeading', 'Payment date')}
+          </span>
+          <div className="grid w-full gap-3 sm:grid-cols-2 lg:gap-4">
             <div className="flex flex-col gap-1.5">
-              {PAYMENT_STATUS_VALUES.map((s: PaymentStatus) => (
-                <label key={s} className="flex items-center gap-2 text-sm text-gray-700">
-                  <Checkbox
-                    checked={draft.statuses.includes(s)}
-                    onCheckedChange={() => update({ statuses: toggleListValue(draft.statuses, s) })}
-                  />
-                  <span>{t(`pages.actionAnalysis.filters.paymentStatuses.${s}`, s)}</span>
-                </label>
-              ))}
+              <span className="text-xs font-medium text-gray-600">
+                {t('pages.actionAnalysis.filters.paymentDateFrom', 'From')}
+              </span>
+              <DateSelect
+                value={paymentFrom}
+                onChange={({ value: v }) => update({ paymentFromDate: dateToYmd(v) ?? undefined })}
+                placeholder={t('pages.actionAnalysis.filters.selectStartDate', 'Select start date')}
+                max={paymentTo ?? undefined}
+                format="yyyy-MM-dd"
+                className="min-w-0 flex-1 [&_input]:h-[45px]"
+              />
             </div>
-          </div>
-
-          <div className="flex flex-col gap-2 rounded-lg border border-gray-200 bg-white/60 p-3">
-            <span className="text-dark-500 text-xs font-semibold">
-              {t('pages.actionAnalysis.filters.paymentType', 'Payment type')}
-            </span>
             <div className="flex flex-col gap-1.5">
-              {PAYMENT_TYPE_VALUES.map((tt) => (
-                <label key={tt} className="flex items-center gap-2 text-sm text-gray-700">
-                  <Checkbox
-                    checked={draft.paymentTypes.includes(tt)}
-                    onCheckedChange={() =>
-                      update({ paymentTypes: toggleListValue(draft.paymentTypes, tt) })
-                    }
-                  />
-                  <span>{t(`pages.actionAnalysis.filters.paymentTypes.${tt}`, tt)}</span>
-                </label>
-              ))}
+              <span className="text-xs font-medium text-gray-600">
+                {t('pages.actionAnalysis.filters.paymentDateTo', 'To')}
+              </span>
+              <DateSelect
+                value={paymentTo}
+                onChange={({ value: v }) => update({ paymentToDate: dateToYmd(v) ?? undefined })}
+                placeholder={t('pages.actionAnalysis.filters.selectEndDate', 'Select end date')}
+                min={paymentFrom ?? undefined}
+                format="yyyy-MM-dd"
+                className="min-w-0 flex-1 [&_input]:h-[45px]"
+              />
             </div>
           </div>
         </div>

@@ -58,7 +58,6 @@ export type {
   PaymentStatus,
   PaymentType,
   PaymentMonitoringSort,
-  PaymentMonitoringDateField,
   PaymentMonitoringFilters,
   PaymentMonitoringItem,
   PaymentMonitoringSummary,
