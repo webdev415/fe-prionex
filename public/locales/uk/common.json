@@ -2721,7 +2721,9 @@
         "clearFilters": "Очистити",
         "deleteTitle": "Видалити взаємодію",
         "deleteConfirm": "Видалити цю взаємодію? Цю дію не можна скасувати.",
-        "deleteSuccess": "Взаємодію видалено"
+        "deleteSuccess": "Взаємодію видалено",
+        "showFullNote": "Показати",
+        "hideFullNote": "Сховати"
       },
       "editInteraction": {
         "title": "Редагувати взаємодію",

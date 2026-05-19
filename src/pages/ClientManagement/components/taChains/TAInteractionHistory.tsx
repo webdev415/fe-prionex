@@ -53,6 +53,49 @@ function toIsoOrUndefined(v?: string, endOfDay = false): string | undefined {
   return `${v}T${endOfDay ? '23:59:59.999' : '00:00:00'}`
 }
 
+const NOTE_PREVIEW_LENGTH = 50
+
+/**
+ * Notes cell with per-row expand/collapse toggle. Short notes render
+ * inline with no toggle. Long notes show a truncated preview by default
+ * and a button to reveal the full text. State is local to the row so
+ * expanding one note does not affect any other row.
+ */
+function NotesCell({ note }: { note: string | null | undefined }) {
+  const { t } = useTranslation('common')
+  const [expanded, setExpanded] = useState(false)
+  if (!note) {
+    return <span className="text-xs text-gray-600">-</span>
+  }
+  const isLong = note.length > NOTE_PREVIEW_LENGTH
+  if (!isLong) {
+    return <span className="text-xs text-gray-600">{note}</span>
+  }
+  const preview = note.slice(0, NOTE_PREVIEW_LENGTH) + '...'
+  const label = expanded
+    ? t('pages.clientChains.history.hideFullNote')
+    : t('pages.clientChains.history.showFullNote')
+  return (
+    <span className="inline-flex items-start gap-1 text-xs text-gray-600">
+      <span className="whitespace-pre-wrap">{expanded ? note : preview}</span>
+      <button
+        type="button"
+        onClick={() => setExpanded((v) => !v)}
+        aria-expanded={expanded}
+        aria-label={label}
+        title={label}
+        className="mt-[1px] shrink-0 cursor-pointer rounded p-0.5 text-gray-500 hover:bg-gray-100 hover:text-gray-800"
+      >
+        {expanded ? (
+          <Icons.ArrowUp size={14} strokeWidth={1.5} />
+        ) : (
+          <Icons.ArrowDown size={14} strokeWidth={1.5} />
+        )}
+      </button>
+    </span>
+  )
+}
+
 export function TAInteractionHistory({ clientId, debts = [] }: Props) {
   const [editingId, setEditingId] = useState<number | null>(null)
   const [deletingId, setDeletingId] = useState<number | null>(null)
@@ -424,11 +467,7 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
       key: 'notes',
       header: t('pages.clientChains.history.notes'),
       align: 'left',
-      render: (row) => (
-        <span className="text-xs text-gray-600">
-          {row.notes ? (row.notes.length > 50 ? row.notes.slice(0, 50) + '...' : row.notes) : '-'}
-        </span>
-      ),
+      render: (row) => <NotesCell note={row.notes} />,
     },
     {
       key: 'recorded_by_name',
