@@ -270,6 +270,8 @@
         "allMarkerTypes": "All types",
         "feedbackType": "Feedback type",
         "allFeedbackTypes": "All types",
+        "granularity": "Granularity",
+        "selectOperator": "Select an operator…",
         "minDuration": "Min duration (s)",
         "maxDuration": "Max duration (s)",
         "contactType": "Contact type",
@@ -553,6 +555,8 @@
         "loadScorecardFailed": "Failed to load scorecard",
         "loadMarkersFailed": "Failed to load markers",
         "loadFeedbackFailed": "Failed to load feedback",
+        "loadDynamicsFailed": "Failed to load score dynamics",
+        "noOperators": "No operators in scope.",
         "noScoresPermission": "You do not have permission to view any quality scoring data.",
         "emptyScopeResolution": "The selected scope returned no operators.",
         "departmentNoOperators": "No operators in this department for the current project.",
@@ -657,7 +661,21 @@
       },
       "feedbackEmpty": "No feedback in scope.",
       "feedbackTotalSuffix": "items",
-      "dynamicsComingSoon": "The operator score-dynamics chart ships in the next KAN-410 step.",
+      "dynamics": {
+        "empty": "No completed scorecards in this range.",
+        "selectOperatorHint": "Pick an operator to view their score dynamics.",
+        "operator": "Operator",
+        "teamAvg": "Team average",
+        "periodAvg": "Period avg",
+        "periodMin": "Min",
+        "periodMax": "Max",
+        "scorecardCount": "Scorecards",
+        "granularity": {
+          "day": "Daily",
+          "week": "Weekly",
+          "month": "Monthly"
+        }
+      },
       "scope": {
         "label": "View scope",
         "my": "My actions",

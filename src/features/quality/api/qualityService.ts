@@ -238,6 +238,49 @@ export async function exportFeedback(filters: FeedbackListFilters): Promise<Blob
   return response.data
 }
 
+// ----- Score Dynamics -----
+
+function buildDynamicsParams(filters: DynamicsFilters): URLSearchParams {
+  const params = new URLSearchParams()
+  if (filters.granularity) params.set('granularity', filters.granularity)
+  if (filters.period) params.set('period', filters.period)
+  if (filters.from_date) params.set('from_date', filters.from_date)
+  if (filters.to_date) params.set('to_date', filters.to_date)
+  return params
+}
+
+export async function getOperatorDynamics(filters: DynamicsFilters): Promise<DynamicsResponse> {
+  const response = await api.get<DynamicsResponse>(
+    `/api/v1/quality/dynamics/${filters.operator_id}`,
+    { params: buildDynamicsParams(filters) }
+  )
+  return response.data
+}
+
+export async function exportOperatorDynamics(filters: DynamicsFilters): Promise<Blob> {
+  const response = await api.get<Blob>(`/api/v1/quality/dynamics/${filters.operator_id}/export`, {
+    params: buildDynamicsParams(filters),
+    responseType: 'blob',
+    timeout: 120_000,
+  })
+  return response.data
+}
+
+export async function listDynamicsAlerts(opts: {
+  operator_id?: number
+  alert_type?: 'score_drop' | 'consistent_growth'
+  limit?: number
+}): Promise<AlertsResponse> {
+  const params = new URLSearchParams()
+  if (opts.operator_id != null) params.set('operator_id', String(opts.operator_id))
+  if (opts.alert_type) params.set('alert_type', opts.alert_type)
+  if (opts.limit != null) params.set('limit', String(opts.limit))
+  const response = await api.get<AlertsResponse>('/api/v1/quality/dynamics/alerts', {
+    params,
+  })
+  return response.data
+}
+
 export const qualityService = {
   listTemplates,
   getTemplate,
@@ -264,4 +307,7 @@ export const qualityService = {
   markFeedbackRead,
   markFeedbackCompleted,
   exportFeedback,
+  getOperatorDynamics,
+  exportOperatorDynamics,
+  listDynamicsAlerts,
 }

@@ -273,6 +273,8 @@
         "allMarkerTypes": "Усі типи",
         "feedbackType": "Тип відгуку",
         "allFeedbackTypes": "Усі типи",
+        "granularity": "Гранулярність",
+        "selectOperator": "Оберіть оператора…",
         "minDuration": "Мін. тривалість (с)",
         "maxDuration": "Макс. тривалість (с)",
         "contactType": "Тип контакту",
@@ -556,6 +558,8 @@
         "loadScorecardFailed": "Не вдалося завантажити скоркарту",
         "loadMarkersFailed": "Не вдалося завантажити маркери",
         "loadFeedbackFailed": "Не вдалося завантажити відгуки",
+        "loadDynamicsFailed": "Не вдалося завантажити динаміку оцінок",
+        "noOperators": "Немає операторів у поточній області.",
         "noScoresPermission": "У вас немає прав на перегляд даних з оцінки якості.",
         "emptyScopeResolution": "Обрана область не містить операторів.",
         "departmentNoOperators": "У цьому відділі немає операторів у поточному проєкті.",
@@ -660,7 +664,21 @@
       },
       "feedbackEmpty": "Немає відгуків у поточній області.",
       "feedbackTotalSuffix": "записів",
-      "dynamicsComingSoon": "Графік динаміки оцінок з'явиться у наступному кроці KAN-410.",
+      "dynamics": {
+        "empty": "Немає завершених скоркарт у цьому діапазоні.",
+        "selectOperatorHint": "Оберіть оператора, щоб побачити динаміку оцінок.",
+        "operator": "Оператор",
+        "teamAvg": "Середнє по команді",
+        "periodAvg": "Середнє за період",
+        "periodMin": "Мін.",
+        "periodMax": "Макс.",
+        "scorecardCount": "Скоркарти",
+        "granularity": {
+          "day": "По днях",
+          "week": "По тижнях",
+          "month": "По місяцях"
+        }
+      },
       "scope": {
         "label": "Область перегляду",
         "my": "Мої дії",

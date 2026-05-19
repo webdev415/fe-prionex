@@ -273,6 +273,8 @@
         "allMarkerTypes": "Все типы",
         "feedbackType": "Тип отзыва",
         "allFeedbackTypes": "Все типы",
+        "granularity": "Гранулярность",
+        "selectOperator": "Выберите оператора…",
         "minDuration": "Мин. длительность (с)",
         "maxDuration": "Макс. длительность (с)",
         "contactType": "Тип контакта",
@@ -556,6 +558,8 @@
         "loadScorecardFailed": "Не удалось загрузить скоркарту",
         "loadMarkersFailed": "Не удалось загрузить маркеры",
         "loadFeedbackFailed": "Не удалось загрузить отзывы",
+        "loadDynamicsFailed": "Не удалось загрузить динамику оценок",
+        "noOperators": "Нет операторов в текущей области.",
         "noScoresPermission": "У вас нет прав на просмотр данных по оценке качества.",
         "emptyScopeResolution": "Выбранная область не содержит операторов.",
         "departmentNoOperators": "В этом отделе нет операторов в текущем проекте.",
@@ -660,7 +664,21 @@
       },
       "feedbackEmpty": "Нет отзывов в текущей области.",
       "feedbackTotalSuffix": "записей",
-      "dynamicsComingSoon": "График динамики оценок появится в следующем шаге KAN-410.",
+      "dynamics": {
+        "empty": "Нет завершённых скоркарт в этом диапазоне.",
+        "selectOperatorHint": "Выберите оператора, чтобы увидеть динамику оценок.",
+        "operator": "Оператор",
+        "teamAvg": "Среднее по команде",
+        "periodAvg": "Среднее за период",
+        "periodMin": "Мин.",
+        "periodMax": "Макс.",
+        "scorecardCount": "Скоркарты",
+        "granularity": {
+          "day": "По дням",
+          "week": "По неделям",
+          "month": "По месяцам"
+        }
+      },
       "scope": {
         "label": "Область просмотра",
         "my": "Мои действия",
