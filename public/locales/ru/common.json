@@ -249,6 +249,11 @@
       "mockTableRowDebt": "Долг в зоне риска",
       "mockTableRowOverdue": "Доля просрочки"
     },
+    "myFeedback": {
+      "title": "Мои отзывы",
+      "subtitle": "Все отзывы, которые ваши тренеры отправили вам.",
+      "empty": "Отзывов пока нет — ваши тренеры ничего не присылали."
+    },
     "actionAnalysis": {
       "title": "Анализ действий",
       "subtitle": "Мониторинг звонков и история взаимодействий для команды тренеров.",
@@ -266,6 +271,8 @@
         "allStatuses": "Все статусы",
         "markerType": "Тип маркера",
         "allMarkerTypes": "Все типы",
+        "feedbackType": "Тип отзыва",
+        "allFeedbackTypes": "Все типы",
         "minDuration": "Мин. длительность (с)",
         "maxDuration": "Макс. длительность (с)",
         "contactType": "Тип контакта",
@@ -470,7 +477,9 @@
         "weightedScore": "Балл",
         "markerType": "Тип",
         "timestamp": "Время",
-        "comment": "Комментарий"
+        "comment": "Комментарий",
+        "feedbackType": "Тип",
+        "preview": "Текст"
       },
       "callType": {
         "incoming": "Входящий",
@@ -546,6 +555,7 @@
         "loadScorecardsFailed": "Не удалось загрузить скоркарты",
         "loadScorecardFailed": "Не удалось загрузить скоркарту",
         "loadMarkersFailed": "Не удалось загрузить маркеры",
+        "loadFeedbackFailed": "Не удалось загрузить отзывы",
         "noScoresPermission": "У вас нет прав на просмотр данных по оценке качества.",
         "emptyScopeResolution": "Выбранная область не содержит операторов.",
         "departmentNoOperators": "В этом отделе нет операторов в текущем проекте.",
@@ -622,7 +632,34 @@
       },
       "markersEmpty": "Нет маркеров в текущей области.",
       "markersTotalSuffix": "маркеров",
-      "feedbackComingSoon": "Вкладка обратной связи появится в следующем шаге KAN-410.",
+      "feedback": {
+        "leave": "Оставить отзыв",
+        "typeLabel": "Тип",
+        "text": "Текст отзыва",
+        "send": "Отправить",
+        "includeTimestamp": "Включить текущую позицию воспроизведения",
+        "reply": "Ответить",
+        "replyPlaceholder": "Напишите ответ…",
+        "markRead": "Отметить прочитанным",
+        "markComplete": "Отметить выполненным",
+        "threadEmpty": "Ответов пока нет.",
+        "types": {
+          "praise": "Похвала",
+          "note": "Заметка",
+          "correction_task": "Задание на исправление"
+        },
+        "status": {
+          "unread": "Не прочитано",
+          "read": "Прочитано",
+          "completed": "Выполнено"
+        },
+        "role": {
+          "trainer": "Тренер",
+          "operator": "Оператор"
+        }
+      },
+      "feedbackEmpty": "Нет отзывов в текущей области.",
+      "feedbackTotalSuffix": "записей",
       "dynamicsComingSoon": "График динамики оценок появится в следующем шаге KAN-410.",
       "scope": {
         "label": "Область просмотра",

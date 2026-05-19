@@ -17,6 +17,14 @@ export {
   addMarkerToLibrary,
   listMarkers,
   exportMarkers,
+  listFeedback,
+  listMyFeedback,
+  getFeedback,
+  createFeedback,
+  replyToFeedback,
+  markFeedbackRead,
+  markFeedbackCompleted,
+  exportFeedback,
 } from './api/qualityService'
 
 export { useTemplates, templateKeys } from './hooks/useTemplates'
@@ -42,10 +50,23 @@ export {
   useExportMarkers,
   markerKeys,
 } from './hooks/useMarkers'
+export {
+  useFeedback,
+  useMyFeedback,
+  useFeedbackDetail,
+  useCreateFeedback,
+  useReplyToFeedback,
+  useMarkFeedbackRead,
+  useMarkFeedbackCompleted,
+  useExportFeedback,
+  feedbackKeys,
+} from './hooks/useFeedback'
 
 export { ScorecardPanel } from './components/ScorecardPanel'
 export { MarkerOverlay } from './components/MarkerOverlay'
 export { AddMarkerButton } from './components/AddMarkerButton'
+export { LeaveFeedbackButton } from './components/LeaveFeedbackButton'
+export { FeedbackThreadView } from './components/FeedbackThreadView'
 
 export type {
   Criterion,
@@ -68,8 +89,14 @@ export type {
   MarkerStatus,
   MarkerType,
   MarkerUpdatePayload,
+  Feedback,
+  FeedbackCreatePayload,
+  FeedbackListFilters,
+  FeedbackReply,
+  FeedbackStatus,
+  FeedbackType,
 } from './types'
 
-export { MARKER_TYPES, MARKER_COLORS } from './types'
+export { MARKER_TYPES, MARKER_COLORS, FEEDBACK_TYPES } from './types'
 
 export { computeWeightedScorePreview } from './lib/scoringPreview'

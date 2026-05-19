@@ -239,3 +239,68 @@ export interface FeedbackListFilters {
   page?: number
   page_size?: number
 }
+
+// ---- Score Dynamics (KAN-410, Feature 2.4) ----
+
+export type DynamicsGranularity = 'day' | 'week' | 'month'
+
+export interface DynamicsPoint {
+  bucket_start: string
+  avg_score: number | null
+  scorecard_count: number
+  scorecard_ids: number[]
+}
+
+export interface SectionBreakdownPoint {
+  bucket_start: string
+  section_key: string
+  avg_score: number | null
+  scorecard_count: number
+}
+
+export interface TeamBenchmarkPoint {
+  bucket_start: string
+  team_avg_score: number | null
+  operator_count: number
+}
+
+export interface DynamicsResponse {
+  operator_id: number
+  period_from: string
+  period_to: string
+  granularity: DynamicsGranularity
+  points: DynamicsPoint[]
+  by_section: SectionBreakdownPoint[]
+  team_benchmark: TeamBenchmarkPoint[]
+  period_avg: number | null
+  period_min: number | null
+  period_max: number | null
+  scorecard_count: number
+}
+
+export interface DynamicsFilters {
+  operator_id: number
+  granularity?: DynamicsGranularity
+  period?: string
+  from_date?: string
+  to_date?: string
+}
+
+export type DynamicsAlertType = 'score_drop' | 'consistent_growth'
+
+export interface ScoreDynamicsAlert {
+  id: number
+  operator_id: number
+  project_id: number
+  alert_type: DynamicsAlertType
+  prior_period_avg: number
+  current_period_avg: number
+  delta_pct: number
+  triggered_at: string
+  notified_trainer_ids: number[]
+}
+
+export interface AlertsResponse {
+  alerts: ScoreDynamicsAlert[]
+  total: number
+}

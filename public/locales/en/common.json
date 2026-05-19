@@ -246,6 +246,11 @@
       "mockTableRowDebt": "Debt at risk",
       "mockTableRowOverdue": "Overdue ratio"
     },
+    "myFeedback": {
+      "title": "My Feedback",
+      "subtitle": "All feedback your trainers have sent you.",
+      "empty": "No feedback yet — your trainers haven’t sent any."
+    },
     "actionAnalysis": {
       "title": "Action Analysis",
       "subtitle": "Call monitoring and interaction history for the trainer team.",
@@ -263,6 +268,8 @@
         "allStatuses": "All statuses",
         "markerType": "Marker type",
         "allMarkerTypes": "All types",
+        "feedbackType": "Feedback type",
+        "allFeedbackTypes": "All types",
         "minDuration": "Min duration (s)",
         "maxDuration": "Max duration (s)",
         "contactType": "Contact type",
@@ -467,7 +474,9 @@
         "weightedScore": "Score",
         "markerType": "Type",
         "timestamp": "Timestamp",
-        "comment": "Comment"
+        "comment": "Comment",
+        "feedbackType": "Type",
+        "preview": "Text"
       },
       "callType": {
         "incoming": "Incoming",
@@ -543,6 +552,7 @@
         "loadScorecardsFailed": "Failed to load scorecards",
         "loadScorecardFailed": "Failed to load scorecard",
         "loadMarkersFailed": "Failed to load markers",
+        "loadFeedbackFailed": "Failed to load feedback",
         "noScoresPermission": "You do not have permission to view any quality scoring data.",
         "emptyScopeResolution": "The selected scope returned no operators.",
         "departmentNoOperators": "No operators in this department for the current project.",
@@ -619,7 +629,34 @@
       },
       "markersEmpty": "No markers in scope.",
       "markersTotalSuffix": "markers",
-      "feedbackComingSoon": "The feedback inbox ships in the next KAN-410 step.",
+      "feedback": {
+        "leave": "Leave feedback",
+        "typeLabel": "Type",
+        "text": "Feedback text",
+        "send": "Send",
+        "includeTimestamp": "Include current playback position",
+        "reply": "Reply",
+        "replyPlaceholder": "Write a reply…",
+        "markRead": "Mark read",
+        "markComplete": "Mark completed",
+        "threadEmpty": "No replies yet.",
+        "types": {
+          "praise": "Praise",
+          "note": "Note",
+          "correction_task": "Correction task"
+        },
+        "status": {
+          "unread": "Unread",
+          "read": "Read",
+          "completed": "Completed"
+        },
+        "role": {
+          "trainer": "Trainer",
+          "operator": "Operator"
+        }
+      },
+      "feedbackEmpty": "No feedback in scope.",
+      "feedbackTotalSuffix": "items",
       "dynamicsComingSoon": "The operator score-dynamics chart ships in the next KAN-410 step.",
       "scope": {
         "label": "View scope",

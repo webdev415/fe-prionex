@@ -86,6 +86,11 @@ const ActionAnalysisPage = lazy(() =>
     default: m.ActionAnalysisPage,
   }))
 )
+const MyFeedbackPage = lazy(() =>
+  import('@/pages/MyFeedback').then((m) => ({
+    default: m.MyFeedbackPage,
+  }))
+)
 const SellerManagementPage = lazy(() =>
   import('@/pages/SellerManagement').then((m) => ({
     default: m.SellerManagementPage,
@@ -250,6 +255,14 @@ export const router = createBrowserRouter([
             {withSuspense(<ActionAnalysisPage />)}
           </PermissionRoute>
         ),
+      },
+      {
+        // KAN-410 — operator-self feedback inbox. Auth-only (no permission
+        // gate): every operator sees their own feedback. When a real
+        // operator profile page lands later, this content can be re-mounted
+        // as a tab there.
+        path: 'my-feedback',
+        element: withSuspense(<MyFeedbackPage />),
       },
       {
         path: 'sellers',

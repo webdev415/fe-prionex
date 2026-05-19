@@ -1,6 +1,9 @@
 import { api } from '@/lib/api'
 import type {
+  AlertsResponse,
   CallMarker,
+  DynamicsFilters,
+  DynamicsResponse,
   Feedback,
   FeedbackCreatePayload,
   FeedbackListFilters,
