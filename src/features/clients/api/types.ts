@@ -134,6 +134,10 @@ export interface Client {
   // logged yet. The table renders "—" in that case.
   last_interaction_result_id?: number | null
   last_interaction_result_name?: string | null
+  // ISO timestamp of the most recent non-archived TA interaction.
+  // Powers the dashboard's "Last outgoing TA date" column. ``null``
+  // means no TA interaction has ever been logged.
+  last_interaction_date?: string | null
 
   // Assignment (Sprint 2 - Phase A)
   responsible_employee_id?: number | null
