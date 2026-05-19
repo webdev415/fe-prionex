@@ -35,6 +35,7 @@
     "scoringConfiguration": "Конфігурація оцінки",
     "systemSettings": "Системні налаштування",
     "tags": "Теги",
+    "contactTypes": "Типи контактів",
     "actionAnalysis": "Аналіз дій"
   },
   "search": {
@@ -3661,6 +3662,38 @@
           "ipAddress": "IP адреса",
           "successStatus": "Статус успіху"
         }
+      }
+    },
+    "contactTypes": {
+      "title": "Типи контактів",
+      "add": "+ Додати тип контакту",
+      "createTitle": "Новий тип контакту",
+      "editTitle": "Редагувати тип контакту",
+      "fieldName": "Назва",
+      "fieldDefaultLine": "Лінія дзвінка за замовчуванням",
+      "fieldSpam": "Дозволити спам",
+      "fieldPrimary": "Показувати як основний телефон",
+      "fieldSort": "Порядок сортування",
+      "white": "Біла",
+      "gray": "Сіра",
+      "hidden": "Приховано",
+      "active": "Активно",
+      "hide": "Приховати",
+      "restore": "Відновити",
+      "filterStatus": "Статус",
+      "filterAll": "Усі",
+      "filterActive": "Активні",
+      "filterHidden": "Приховані",
+      "errorLoading": "Не вдалося завантажити типи контактів",
+      "retry": "Повторити",
+      "columns": {
+        "sortOrder": "Порядок",
+        "name": "Назва",
+        "defaultLine": "Лінія дзвінка",
+        "spamAllowed": "Спам",
+        "primary": "Основний телефон",
+        "status": "Статус",
+        "actions": "Дії"
       }
     },
     "tags": {

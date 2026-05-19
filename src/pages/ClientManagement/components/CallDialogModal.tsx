@@ -51,6 +51,8 @@ export interface CallDialogModalProps {
   onMinimize?: () => void
   onRetry?: () => void // Callback to retry failed call
   onSpamCall?: (phone: string) => void // Callback to add phone to spam call history
+  /** When false, spam-calls option is hidden. Default true. */
+  spamOptionEnabled?: boolean
   // For incoming call
   loans?: Array<{
     id: string
@@ -102,6 +104,7 @@ export function CallDialogModal({
   onMinimize,
   onRetry,
   onSpamCall,
+  spamOptionEnabled = true,
   loans = [],
 }: CallDialogModalProps) {
   const { t } = useTranslation('common')
@@ -167,7 +170,9 @@ export function CallDialogModal({
         ? (initialElapsedTime ?? 0) + Math.floor((Date.now() - minimizedAt) / 1000)
         : (initialElapsedTime ?? 0)
       setElapsedTime(correctedTime)
-      setCallType(initialCallType)
+      setCallType(
+        !spamOptionEnabled && initialCallType === 'spam-calls' ? 'white-line' : initialCallType
+      )
       setIsMuted(false)
       setIsOnHold(false)
       setAutoCloseCountdown(3)
@@ -197,6 +202,7 @@ export function CallDialogModal({
     minimizedAt,
     initialManualPhoneEnabled,
     initialManualPhoneDigits,
+    spamOptionEnabled,
   ])
 
   const callLineLabel = useMemo(() => {
@@ -733,19 +739,21 @@ export function CallDialogModal({
                         {t('pages.clients.modals.callDialog.grayLine')}
                       </span>
                     </label>
-                    <label
-                      className={cn(
-                        'flex cursor-pointer items-center gap-2 rounded-lg border-2 px-3 py-2 transition-colors sm:px-4',
-                        callType === 'spam-calls'
-                          ? 'border-primary-300 bg-primary-100'
-                          : 'border-gray-300 bg-white hover:border-gray-400'
-                      )}
-                    >
-                      <RadioItem value="spam-calls" id="spam-calls" />
-                      <span className="text-dark-500 text-xs font-light sm:text-sm">
-                        {t('pages.clients.modals.callDialog.spamCalls')}
-                      </span>
-                    </label>
+                    {spamOptionEnabled && (
+                      <label
+                        className={cn(
+                          'flex cursor-pointer items-center gap-2 rounded-lg border-2 px-3 py-2 transition-colors sm:px-4',
+                          callType === 'spam-calls'
+                            ? 'border-primary-300 bg-primary-100'
+                            : 'border-gray-300 bg-white hover:border-gray-400'
+                        )}
+                      >
+                        <RadioItem value="spam-calls" id="spam-calls" />
+                        <span className="text-dark-500 text-xs font-light sm:text-sm">
+                          {t('pages.clients.modals.callDialog.spamCalls')}
+                        </span>
+                      </label>
+                    )}
                   </RadioGroup>
                 </div>
               </div>
