@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useOriginateCall } from './useCall'
 import { useCallWebSocket } from './useCallWebSocket'
 import { useAuth } from '@/features/auth/hooks/useAuth'
@@ -32,6 +32,14 @@ export function useCallOrigination() {
         clearTimeout(cooldownTimeoutRef.current)
       }
     }
+  }, [])
+
+  const openCallModal = useCallback((open: boolean) => {
+    if (open) {
+      setCallError(null)
+      setCurrentCallId(null)
+    }
+    setIsCallModalOpen(open)
   }, [])
 
   const handleClearCallError = () => setCallError(null)
@@ -171,7 +179,10 @@ export function useCallOrigination() {
   return {
     user,
     isCallModalOpen,
-    setIsCallModalOpen,
+    // Expose the wrapped setter under the existing name so all
+    // callsites that do `setIsCallModalOpen(true)` automatically pick
+    // up the fresh-session reset without needing to be updated.
+    setIsCallModalOpen: openCallModal,
     currentCallId,
     activeCallType,
     callError,
