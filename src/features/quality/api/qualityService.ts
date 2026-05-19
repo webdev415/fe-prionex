@@ -1,6 +1,10 @@
 import { api } from '@/lib/api'
 import type {
   CallMarker,
+  Feedback,
+  FeedbackCreatePayload,
+  FeedbackListFilters,
+  FeedbackReply,
   MarkerCreatePayload,
   MarkerListFilters,
   MarkerUpdatePayload,
@@ -162,6 +166,75 @@ export async function exportMarkers(filters: MarkerListFilters): Promise<Blob> {
   return response.data
 }
 
+// ----- Feedback -----
+
+function buildFeedbackListParams(filters: FeedbackListFilters): URLSearchParams {
+  const params = new URLSearchParams()
+  filters.operator_id?.forEach((id) => params.append('operator_id', String(id)))
+  filters.trainer_id?.forEach((id) => params.append('trainer_id', String(id)))
+  filters.feedback_type?.forEach((t) => params.append('feedback_type', t))
+  filters.status?.forEach((s) => params.append('status', s))
+  if (filters.call_id) params.set('call_id', filters.call_id)
+  if (filters.period) params.set('period', filters.period)
+  if (filters.from_date) params.set('from_date', filters.from_date)
+  if (filters.to_date) params.set('to_date', filters.to_date)
+  if (filters.page != null) params.set('page', String(filters.page))
+  if (filters.page_size != null) params.set('page_size', String(filters.page_size))
+  return params
+}
+
+export async function listFeedback(filters: FeedbackListFilters): Promise<PageResponse<Feedback>> {
+  const response = await api.get<PageResponse<Feedback>>('/api/v1/quality/feedback', {
+    params: buildFeedbackListParams(filters),
+  })
+  return response.data
+}
+
+export async function listMyFeedback(
+  filters: Omit<FeedbackListFilters, 'operator_id' | 'trainer_id'>
+): Promise<PageResponse<Feedback>> {
+  const response = await api.get<PageResponse<Feedback>>('/api/v1/quality/feedback/me', {
+    params: buildFeedbackListParams(filters as FeedbackListFilters),
+  })
+  return response.data
+}
+
+export async function getFeedback(feedbackId: number): Promise<Feedback> {
+  const response = await api.get<Feedback>(`/api/v1/quality/feedback/${feedbackId}`)
+  return response.data
+}
+
+export async function createFeedback(payload: FeedbackCreatePayload): Promise<Feedback> {
+  const response = await api.post<Feedback>('/api/v1/quality/feedback', payload)
+  return response.data
+}
+
+export async function replyToFeedback(feedbackId: number, text: string): Promise<FeedbackReply> {
+  const response = await api.post<FeedbackReply>(`/api/v1/quality/feedback/${feedbackId}/replies`, {
+    text,
+  })
+  return response.data
+}
+
+export async function markFeedbackRead(feedbackId: number): Promise<Feedback> {
+  const response = await api.post<Feedback>(`/api/v1/quality/feedback/${feedbackId}/mark-read`)
+  return response.data
+}
+
+export async function markFeedbackCompleted(feedbackId: number): Promise<Feedback> {
+  const response = await api.post<Feedback>(`/api/v1/quality/feedback/${feedbackId}/complete`)
+  return response.data
+}
+
+export async function exportFeedback(filters: FeedbackListFilters): Promise<Blob> {
+  const response = await api.get<Blob>('/api/v1/quality/feedback/export', {
+    params: buildFeedbackListParams(filters),
+    responseType: 'blob',
+    timeout: 120_000,
+  })
+  return response.data
+}
+
 export const qualityService = {
   listTemplates,
   getTemplate,
@@ -180,4 +253,12 @@ export const qualityService = {
   addMarkerToLibrary,
   listMarkers,
   exportMarkers,
+  listFeedback,
+  listMyFeedback,
+  getFeedback,
+  createFeedback,
+  replyToFeedback,
+  markFeedbackRead,
+  markFeedbackCompleted,
+  exportFeedback,
 }

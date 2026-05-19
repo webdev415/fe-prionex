@@ -186,3 +186,56 @@ export interface MarkerListFilters {
   page?: number
   page_size?: number
 }
+
+// ---- Feedback (KAN-410, Feature 2.3) ----
+
+export type FeedbackType = 'praise' | 'note' | 'correction_task'
+export type FeedbackStatus = 'unread' | 'read' | 'completed'
+
+export const FEEDBACK_TYPES: FeedbackType[] = ['praise', 'note', 'correction_task']
+
+export interface FeedbackReply {
+  id: number
+  feedback_id: number
+  author_id: number
+  author_role: 'trainer' | 'operator'
+  text: string
+  created_at: string
+}
+
+export interface Feedback {
+  id: number
+  call_id: string
+  operator_id: number
+  trainer_id: number
+  project_id: number
+  feedback_type: FeedbackType
+  text: string
+  timestamp_ms: number | null
+  status: FeedbackStatus
+  created_at: string
+  read_at: string | null
+  completed_at: string | null
+  replies: FeedbackReply[]
+}
+
+export interface FeedbackCreatePayload {
+  call_id: string
+  operator_id: number
+  feedback_type: FeedbackType
+  text: string
+  timestamp_ms?: number | null
+}
+
+export interface FeedbackListFilters {
+  operator_id?: number[]
+  trainer_id?: number[]
+  feedback_type?: FeedbackType[]
+  status?: FeedbackStatus[]
+  call_id?: string
+  period?: string
+  from_date?: string
+  to_date?: string
+  page?: number
+  page_size?: number
+}
