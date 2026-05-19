@@ -53,12 +53,68 @@ function toIsoOrUndefined(v?: string, endOfDay = false): string | undefined {
   return `${v}T${endOfDay ? '23:59:59.999' : '00:00:00'}`
 }
 
+const NOTE_PREVIEW_LENGTH = 50
+
+/**
+ * Notes cell with per-row expand/collapse toggle. Short notes render
+ * inline with no toggle. Long notes show a truncated preview by default
+ * and a button to reveal the full text. State is local to the row so
+ * expanding one note does not affect any other row.
+ */
+function NotesCell({ note }: { note: string | null | undefined }) {
+  const { t } = useTranslation('common')
+  const [expanded, setExpanded] = useState(false)
+  if (!note) {
+    return <span className="text-xs text-gray-600">-</span>
+  }
+  const isLong = note.length > NOTE_PREVIEW_LENGTH
+  if (!isLong) {
+    return <span className="text-xs text-gray-600">{note}</span>
+  }
+  const preview = note.slice(0, NOTE_PREVIEW_LENGTH) + '...'
+  const label = expanded
+    ? t('pages.clientChains.history.hideFullNote')
+    : t('pages.clientChains.history.showFullNote')
+  return (
+    <span className="inline-flex items-start gap-1 text-xs text-gray-600">
+      <span className="whitespace-pre-wrap">{expanded ? note : preview}</span>
+      <button
+        type="button"
+        onClick={() => setExpanded((v) => !v)}
+        aria-expanded={expanded}
+        aria-label={label}
+        title={label}
+        className="mt-[1px] shrink-0 cursor-pointer rounded p-0.5 text-gray-500 hover:bg-gray-100 hover:text-gray-800"
+      >
+        {expanded ? (
+          <Icons.ArrowUp size={14} strokeWidth={1.5} />
+        ) : (
+          <Icons.ArrowDown size={14} strokeWidth={1.5} />
+        )}
+      </button>
+    </span>
+  )
+}
+
 export function TAInteractionHistory({ clientId, debts = [] }: Props) {
   const [editingId, setEditingId] = useState<number | null>(null)
   const [deletingId, setDeletingId] = useState<number | null>(null)
   const deleteMut = useDeleteTAInteraction()
-  // Map debt ID → contract number for display
+  // Map debt ID → contract number for display. We deliberately only render
+  // debts that are present here; values not in the map are treated as
+  // not-a-credit (chain layout drift can shove phone numbers / unrelated
+  // values into a step that the *current* chain marks as field_type=credit).
   const debtContractMap = new Map(debts.map((d) => [d.id, `#${d.contract_number ?? d.id}`]))
+  // Returns the contract-number display for a credit id, or null if the id
+  // does not belong to this client's debts (or looks like a phone — debt
+  // ids are <=7 digits in this project, phones are 10+).
+  const safeCreditDisplay = (raw: number | string | null | undefined): string | null => {
+    if (raw === null || raw === undefined) return null
+    const numId = typeof raw === 'number' ? raw : parseInt(String(raw).trim(), 10)
+    if (Number.isNaN(numId)) return null
+    if (String(numId).length >= 9) return null // looks like a phone, not a debt id
+    return debtContractMap.get(numId) ?? null
+  }
   const { t, i18n } = useTranslation('common')
   const togglePinMut = useTogglePinTAInteraction()
   const handleTogglePin = async (id: number) => {
@@ -183,18 +239,32 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
         const stepsOrdered = chain?.steps
           ? [...chain.steps].sort((a, b) => a.step_order - b.step_order)
           : []
-        const phones: string[] = []
+        const sd = row.step_data as Record<string, string>
+        const phones = new Set<string>()
+        const isPhoneShaped = (val: string): boolean => {
+          // 10–15 digits after stripping non-digit chars. Debt ids are
+          // <=7 digits in this project, so this range cannot collide
+          // with a credit value.
+          const digits = val.replace(/\D/g, '')
+          return digits.length >= 10 && digits.length <= 15
+        }
+        // 1. Happy path: render whatever the current chain marks as
+        //    contact-typed. Validate shape so a retyped step (e.g.
+        //    contact → credit) doesn't pump a debt id into this cell.
         for (const step of stepsOrdered) {
           if (step.target_action_field_type !== 'contact') continue
-          const sd = row.step_data as Record<string, string>
           const val = sd[String(step.step_order)] ?? sd[String(step.target_action_id)]
-          if (val) phones.push(val)
+          if (val && isPhoneShaped(val)) phones.add(val)
         }
-        // Dedupe: chains with multiple contact steps that share a
-        // target_action_id (or the user entering the same phone in
-        // multiple contact steps) would otherwise render the same
-        // number twice.
-        const uniquePhones = Array.from(new Set(phones))
+        // 2. Drift recovery: if the chain was retyped so the original
+        //    contact step is no longer contact (was the user-reported
+        //    case), the phone still lives in step_data — pull it back
+        //    by scanning all values. We add only phone-shaped strings,
+        //    so dropdown labels and small numeric ids never appear.
+        for (const val of Object.values(sd)) {
+          if (typeof val === 'string' && isPhoneShaped(val)) phones.add(val)
+        }
+        const uniquePhones = Array.from(phones)
         return (
           <span className="text-xs text-gray-700">
             {uniquePhones.length > 0 ? uniquePhones.join(', ') : '-'}
@@ -208,17 +278,27 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
       align: 'left',
       render: (row) => {
         const formatStepValue = (fieldType: string | undefined, val: string): string => {
-          if (fieldType === 'credit') {
-            return val
+          // Drift-tolerant credit format: even when the step's current
+          // type isn't 'credit', if the value happens to match a real
+          // debt for this client we render the contract number so the
+          // Result column stays consistent with the Credit column.
+          if (fieldType === 'credit' || debtContractMap.has(parseInt(val, 10))) {
+            const seen = new Set<number>()
+            const out: string[] = []
+            for (const id of val
               .split(',')
               .map((s) => s.trim())
-              .filter(Boolean)
-              .map((id) => {
-                const numId = parseInt(id, 10)
-                if (Number.isNaN(numId)) return id
-                return debtContractMap.get(numId) ?? `#${numId}`
-              })
-              .join(', ')
+              .filter(Boolean)) {
+              const display = safeCreditDisplay(id)
+              if (!display) continue
+              const numId = parseInt(id, 10)
+              if (seen.has(numId)) continue
+              seen.add(numId)
+              out.push(display)
+            }
+            if (out.length > 0) return out.join(', ')
+            // Fell through (e.g. credit-typed step holding a phone after
+            // drift) — show raw so the step isn't silently dropped.
           }
           if (fieldType === 'amount') return formatMoneyKopeckTight(val)
           if (fieldType === 'date') return formatDateTime(val, user?.timezone)
@@ -244,8 +324,10 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
               const val = sd[String(step.step_order)] ?? sd[String(step.target_action_id)]
               if (!val) continue
               const ta = taById.get(step.target_action_id)
-              // Phone numbers (contact-type steps) live in their own column.
-              if (step.target_action_field_type === 'contact') continue
+              // Show every saved step in the Result column (workflow
+              // trail). The Phone and Credit columns are convenience
+              // summary views; we don't suppress values here just
+              // because they're also surfaced there.
               const followUps: string[] = []
 
               // Attach top-level promise/credit fields to the dropdown step
@@ -266,13 +348,25 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
                     consumedPromiseAmount = true
                   }
                   if (picked.require_credit && row.credit_id && !consumedCredit) {
-                    followUps.push(debtContractMap.get(row.credit_id) ?? `#${row.credit_id}`)
+                    const followCredit = safeCreditDisplay(row.credit_id)
+                    if (followCredit) followUps.push(followCredit)
                     consumedCredit = true
                   }
                 }
               }
 
-              entries.push({ value: formatStepValue(ta?.field_type, val), followUps })
+              let formattedValue = formatStepValue(ta?.field_type, val)
+              // Chain-layout drift: a credit-typed step whose saved value
+              // isn't a real debt for this client (e.g. step was contact
+              // when the phone was captured, then retyped to credit).
+              // Don't pretend it's a debt id (#raw) and don't silently
+              // drop the step — show the raw value so operators see the
+              // step ran, while keeping the dedicated Credit column
+              // clean of phones.
+              if (ta?.field_type === 'credit' && !formattedValue) {
+                formattedValue = val
+              }
+              entries.push({ value: formattedValue, followUps })
             }
           } else {
             for (const [, val] of Object.entries(row.step_data as Record<string, string>)) {
@@ -290,7 +384,8 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
           orphan.push(formatMoneyKopeckTight(row.promise_amount))
         }
         if (row.credit_id && !consumedCredit) {
-          orphan.push(debtContractMap.get(row.credit_id) ?? `#${row.credit_id}`)
+          const orphanCredit = safeCreditDisplay(row.credit_id)
+          if (orphanCredit) orphan.push(orphanCredit)
         }
         if (orphan.length > 0) {
           if (entries.length > 0) {
@@ -327,29 +422,38 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
       header: t('pages.clientChains.history.credit'),
       align: 'left',
       render: (row) => {
-        // Collect credit IDs from: credit_id field + credit-type steps in step_data
+        // Collect credit IDs from both sources (legacy top-level field
+        // and credit-type chain steps), dedupe by numeric id, and drop
+        // values that aren't real debts. Filtering through
+        // safeCreditDisplay is what prevents three failure modes:
+        //   - phones showing up here when an old contact step is now
+        //     marked field_type='credit' (chain edited after save),
+        //   - the same loan appearing twice when row.credit_id and a
+        //     credit-step value both reference the same debt,
+        //   - raw "#<numeric id>" leaking when the debt isn't in this
+        //     client's debtContractMap (cross-project / soft-deleted).
+        const seen = new Set<number>()
         const creditIds: string[] = []
-        if (row.credit_id) {
-          creditIds.push(debtContractMap.get(row.credit_id) ?? `#${row.credit_id}`)
+        const addCredit = (raw: number | string | null | undefined) => {
+          const display = safeCreditDisplay(raw)
+          if (!display) return
+          const numId = typeof raw === 'number' ? raw : parseInt(String(raw).trim(), 10)
+          if (seen.has(numId)) return
+          seen.add(numId)
+          creditIds.push(display)
         }
-        // Check step_data for credit-type step values
+        if (row.credit_id) addCredit(row.credit_id)
         if (row.step_data) {
-          const chain = chains.find((c) => c.id === row.chain_id)
-          const stepsOrdered = chain?.steps ?? []
-          for (const step of stepsOrdered) {
-            if (step.target_action_field_type === 'credit') {
-              const sd = row.step_data as Record<string, string>
-              const val = sd[String(step.step_order)] ?? sd[String(step.target_action_id)]
-              if (val) {
-                // val is comma-separated credit IDs like "125844,55138"
-                for (const id of val.split(',')) {
-                  const numId = parseInt(id.trim(), 10)
-                  if (!Number.isNaN(numId)) {
-                    creditIds.push(debtContractMap.get(numId) ?? `#${numId}`)
-                  }
-                }
-              }
-            }
+          // Scan every step_data value — not just credit-typed steps —
+          // so a debt id saved when the step was credit but later
+          // retyped (chain drift) still shows up here. addCredit /
+          // safeCreditDisplay only accept real debts of this client,
+          // so non-credit values (phones, dropdown labels, dates)
+          // never leak in.
+          const sd = row.step_data as Record<string, string>
+          for (const v of Object.values(sd)) {
+            if (typeof v !== 'string') continue
+            for (const id of v.split(',')) addCredit(id.trim())
           }
         }
         return (
@@ -363,11 +467,7 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
       key: 'notes',
       header: t('pages.clientChains.history.notes'),
       align: 'left',
-      render: (row) => (
-        <span className="text-xs text-gray-600">
-          {row.notes ? (row.notes.length > 50 ? row.notes.slice(0, 50) + '...' : row.notes) : '-'}
-        </span>
-      ),
+      render: (row) => <NotesCell note={row.notes} />,
     },
     {
       key: 'recorded_by_name',

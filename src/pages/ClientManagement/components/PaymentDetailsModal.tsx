@@ -47,6 +47,11 @@ export interface PaymentDetailsModalProps {
   onViewClientProfile?: () => void
   onPrintReceipt?: () => void
   onDownloadReceipt?: () => void
+  /**
+   * When set, an edit icon appears next to "Created by" and invokes this
+   * callback. The parent is responsible for permission-gating the affordance.
+   */
+  onReassignEmployee?: () => void
 }
 
 export function PaymentDetailsModal({
@@ -58,6 +63,7 @@ export function PaymentDetailsModal({
   onViewClientProfile,
   onPrintReceipt,
   onDownloadReceipt,
+  onReassignEmployee,
 }: PaymentDetailsModalProps) {
   const { t } = useTranslation('common')
   const userTimezone = useAuthStore((state) => state.user?.timezone)
@@ -416,9 +422,20 @@ export function PaymentDetailsModal({
               <div className="flex flex-col items-start gap-4 self-stretch sm:flex-row sm:items-center sm:gap-3">
                 <div className="flex flex-1 flex-col items-start gap-2 p-0">
                   <div className="flex items-start gap-6 self-stretch">
-                    <span className="text-dark-500 text-xs leading-[150%] font-light tracking-[-0.28px] sm:text-sm">
+                    <span className="text-dark-500 inline-flex items-center gap-1.5 text-xs leading-[150%] font-light tracking-[-0.28px] sm:text-sm">
                       {t('pages.clients.modals.paymentDetails.createdBy')}{' '}
                       <span className="font-medium">{payment.createdBy}</span>
+                      {onReassignEmployee && payment.status === 'Verified' && (
+                        <button
+                          type="button"
+                          onClick={onReassignEmployee}
+                          className="bg-primary-50 text-primary-700 hover:bg-primary-100 hover:text-primary-800 focus:ring-primary-500 inline-flex h-6 w-6 items-center justify-center rounded-md transition-colors focus:ring-2 focus:outline-none"
+                          aria-label={t('pages.clients.modals.paymentDetails.reassignEmployee')}
+                          title={t('pages.clients.modals.paymentDetails.reassignEmployee')}
+                        >
+                          <Icons.PencilEdit02 size={14} strokeWidth={1.5} />
+                        </button>
+                      )}
                     </span>
                   </div>
                   <div className="flex items-start gap-6 self-stretch">

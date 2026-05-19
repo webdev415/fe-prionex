@@ -9,6 +9,7 @@ import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
 import { useAuth } from '@/features/auth'
+import { getUserDisplayName } from '@/lib/mapBackendUser'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -26,11 +27,7 @@ export function UserProfile({ onLogoutClick }: UserProfileProps) {
   const [isOpen, setIsOpen] = useState(false)
   const navigate = useNavigate()
 
-  // Get display name: prefer firstName + lastName, fallback to username
-  const displayName =
-    user?.firstName && user?.lastName
-      ? `${user.firstName} ${user.lastName}`
-      : user?.username || 'User'
+  const displayName = getUserDisplayName(user)
 
   // Close dropdown on window resize to prevent positioning issues
   useEffect(() => {

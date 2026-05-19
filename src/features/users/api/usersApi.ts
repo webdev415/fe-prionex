@@ -182,11 +182,18 @@ export async function getOperators(
 export async function getUserDepartment(
   userId: number,
   projectId?: number
-): Promise<{ department_name: string | null }> {
-  const response = await api.get<{ department_name: string | null }>(
-    `/api/v1/users/${userId}/department`,
-    { params: projectId ? { project_id: projectId } : {} }
-  )
+): Promise<{
+  department_name: string | null
+  department_id?: number | null
+  group_name: string | null
+  group_id?: number | null
+}> {
+  const response = await api.get<{
+    department_name: string | null
+    department_id?: number | null
+    group_name: string | null
+    group_id?: number | null
+  }>(`/api/v1/users/${userId}/department`, { params: projectId ? { project_id: projectId } : {} })
   return response.data
 }
 

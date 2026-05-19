@@ -11,6 +11,7 @@ import {
   verifyPayment,
   cancelPayment,
   editPayment,
+  reassignPaymentEmployee,
   getPayment,
   exportPaymentsCSV,
 } from '../api/paymentApi'
@@ -19,6 +20,7 @@ import type {
   VerifyPaymentRequest,
   CancelPaymentRequest,
   EditPaymentRequest,
+  ReassignPaymentEmployeeRequest,
   Payment,
   PaymentListParams,
 } from '../api/types'
@@ -162,6 +164,34 @@ export function useEditPayment() {
     },
     onError: (error: unknown) => {
       toast.error(extractErrorMessage(error, 'Failed to update payment'))
+    },
+  })
+}
+
+/**
+ * Reassign the recorded-by employee on a verified payment.
+ */
+export function useReassignPaymentEmployee() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({
+      paymentId,
+      request,
+    }: {
+      paymentId: number
+      request: ReassignPaymentEmployeeRequest
+    }) => reassignPaymentEmployee(paymentId, request),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['payment', data.payment_number] })
+      queryClient.invalidateQueries({ queryKey: ['payments'] })
+      queryClient.invalidateQueries({ queryKey: ['client-payment-history'] })
+      queryClient.invalidateQueries({ queryKey: ['payment-stats'] })
+
+      toast.success('Employee reassigned successfully')
+    },
+    onError: (error: unknown) => {
+      toast.error(extractErrorMessage(error, 'Failed to reassign employee'))
     },
   })
 }

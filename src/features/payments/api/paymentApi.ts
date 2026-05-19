@@ -10,6 +10,7 @@ import type {
   VerifyPaymentRequest,
   CancelPaymentRequest,
   EditPaymentRequest,
+  ReassignPaymentEmployeeRequest,
   PaymentListParams,
   PaymentListResponse,
   ClientPaymentHistoryParams,
@@ -71,6 +72,18 @@ export async function editPayment(
   request: EditPaymentRequest
 ): Promise<Payment> {
   const response = await api.put<Payment>(`${BASE_URL}/${paymentId}`, request)
+  return response.data
+}
+
+/**
+ * Reassign the recorded-by employee on a verified payment.
+ * Requires verify_payment permission server-side.
+ */
+export async function reassignPaymentEmployee(
+  paymentId: number,
+  request: ReassignPaymentEmployeeRequest
+): Promise<Payment> {
+  const response = await api.patch<Payment>(`${BASE_URL}/${paymentId}/recorded-by`, request)
   return response.data
 }
 
