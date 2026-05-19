@@ -260,6 +260,9 @@
         "allEmployees": "All employees",
         "period": "Period",
         "status": "Status",
+        "allStatuses": "All statuses",
+        "markerType": "Marker type",
+        "allMarkerTypes": "All types",
         "minDuration": "Min duration (s)",
         "maxDuration": "Max duration (s)",
         "contactType": "Contact type",
@@ -458,7 +461,13 @@
         "createdAt": "Created at",
         "confirmedAt": "Confirmed at",
         "amount": "Amount",
-        "paymentMethod": "Payment method"
+        "paymentMethod": "Payment method",
+        "date": "Date",
+        "template": "Template",
+        "weightedScore": "Score",
+        "markerType": "Type",
+        "timestamp": "Timestamp",
+        "comment": "Comment"
       },
       "callType": {
         "incoming": "Incoming",
@@ -531,6 +540,11 @@
         "loadTaHistoryFailed": "Failed to load TA history",
         "loadTaskHistoryFailed": "Failed to load task history",
         "loadPaymentHistoryFailed": "Failed to load payment history",
+        "loadScorecardsFailed": "Failed to load scorecards",
+        "loadScorecardFailed": "Failed to load scorecard",
+        "loadMarkersFailed": "Failed to load markers",
+        "noScoresPermission": "You do not have permission to view any quality scoring data.",
+        "emptyScopeResolution": "The selected scope returned no operators.",
         "departmentNoOperators": "No operators in this department for the current project.",
         "exportFailed": "Export failed",
         "callNotFound": "Call not found"
@@ -559,6 +573,54 @@
         "heatmap": "Heatmap",
         "scriptAnalytics": "Script Analytics"
       },
+      "scoresSubTabs": {
+        "scorecards": "Scorecards",
+        "markers": "Markers",
+        "feedback": "Feedback",
+        "dynamics": "Score Dynamics"
+      },
+      "scorecard": {
+        "title": "Quality evaluation",
+        "template": "Template",
+        "selectTemplate": "Select a template…",
+        "startEvaluation": "Start evaluation",
+        "history": "Previous scorecards on this call",
+        "computedScore": "Score",
+        "perCallComment": "Overall comment",
+        "saveDraft": "Save draft",
+        "markCompleted": "Mark completed",
+        "sendToOperator": "Send to operator",
+        "status": {
+          "draft": "Draft",
+          "completed": "Completed",
+          "sent": "Sent"
+        }
+      },
+      "scorecardsEmpty": "No scorecards in scope.",
+      "scorecardsTotalSuffix": "scorecards",
+      "markers": {
+        "addMarker": "Add marker",
+        "type": "Type",
+        "comment": "Comment",
+        "commentPlaceholder": "Optional comment",
+        "save": "Save",
+        "types": {
+          "error": "Error",
+          "good_moment": "Good moment",
+          "script_violation": "Script violation",
+          "stop_word": "Stop word",
+          "unmotivated_pause": "Unmotivated pause",
+          "note": "Note"
+        },
+        "status": {
+          "draft": "Draft",
+          "sent": "Sent"
+        }
+      },
+      "markersEmpty": "No markers in scope.",
+      "markersTotalSuffix": "markers",
+      "feedbackComingSoon": "The feedback inbox ships in the next KAN-410 step.",
+      "dynamicsComingSoon": "The operator score-dynamics chart ships in the next KAN-410 step.",
       "scope": {
         "label": "View scope",
         "my": "My actions",

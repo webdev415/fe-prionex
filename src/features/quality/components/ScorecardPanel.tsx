@@ -10,7 +10,7 @@
  * flow only); operator-side call sites that open the modal don't pass a
  * `scorecardPanel` prop and get the legacy single-panel layout unchanged.
  */
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/Button'
 import { Icons } from '@/lib/icons'
@@ -45,22 +45,15 @@ export function ScorecardPanel({
   const templatesQuery = useTemplates(false)
   const historyQuery = useScorecardHistoryForCall(callId)
 
-  const [activeScorecardId, setActiveScorecardId] = useState<number | null>(
-    pinnedScorecardId ?? null
-  )
+  // `manuallySelectedId` is what the user clicks (template start, history row).
+  // The effective active id is derived during render from three sources in
+  // priority order: the pinned prop, an explicit user click, then the first
+  // outstanding draft on this call. No effects, no cascading renders.
+  const [manuallySelectedId, setManuallySelectedId] = useState<number | null>(null)
   const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(null)
 
-  useEffect(() => {
-    if (pinnedScorecardId != null) setActiveScorecardId(pinnedScorecardId)
-  }, [pinnedScorecardId])
-
-  // Auto-pick the most recent in-progress draft for this call on first load
-  // so re-opening the panel resumes where the trainer left off.
-  useEffect(() => {
-    if (activeScorecardId != null) return
-    const draftRow = historyQuery.data?.find((h) => h.status === 'draft')
-    if (draftRow) setActiveScorecardId(draftRow.id)
-  }, [historyQuery.data, activeScorecardId])
+  const autoDraftId = historyQuery.data?.find((h) => h.status === 'draft')?.id ?? null
+  const activeScorecardId = pinnedScorecardId ?? manuallySelectedId ?? autoDraftId ?? null
 
   const activeQuery = useScorecard(activeScorecardId, activeScorecardId != null)
   const createMutation = useCreateScorecard()
@@ -68,10 +61,13 @@ export function ScorecardPanel({
   const sendMutation = useSendScorecard()
 
   const activeScorecard = activeQuery.data
-  const sections: Section[] =
-    activeScorecard?.template_snapshot.sections ??
-    templatesQuery.data?.find((tpl) => tpl.id === selectedTemplateId)?.sections ??
-    []
+  const sections: Section[] = useMemo(() => {
+    if (activeScorecard?.template_snapshot.sections) {
+      return activeScorecard.template_snapshot.sections
+    }
+    const picked = templatesQuery.data?.find((tpl) => tpl.id === selectedTemplateId)
+    return picked?.sections ?? []
+  }, [activeScorecard, templatesQuery.data, selectedTemplateId])
 
   const draftState = useMemo(() => {
     if (!activeScorecard) return null
@@ -103,7 +99,7 @@ export function ScorecardPanel({
       template_id: selectedTemplateId,
       status: 'draft',
     })
-    setActiveScorecardId(created.id)
+    setManuallySelectedId(created.id)
   }
 
   const handleMarkCompleted = async () => {
@@ -141,7 +137,7 @@ export function ScorecardPanel({
                 <li key={row.id}>
                   <button
                     type="button"
-                    onClick={() => setActiveScorecardId(row.id)}
+                    onClick={() => setManuallySelectedId(row.id)}
                     className="text-primary-600 hover:underline"
                   >
                     {new Date(row.created_at).toLocaleString()} —{' '}
@@ -189,7 +185,7 @@ export function ScorecardPanel({
   if (activeQuery.isLoading) {
     return (
       <aside className="flex h-full items-center justify-center rounded-xl bg-white p-4 shadow-sm">
-        <Icons.Spinner size={20} className="animate-spin text-gray-400" />
+        <Icons.Spinner className="h-5 w-5" />
       </aside>
     )
   }
@@ -300,7 +296,7 @@ function SectionEditor({ section, scores, disabled, onChange }: SectionEditorPro
         className="flex w-full items-center justify-between px-3 py-2 text-left text-sm font-medium text-gray-700"
       >
         <span>{section.name}</span>
-        <Icons.ChevronDown
+        <Icons.ArrowDown
           size={16}
           className={`transition-transform ${collapsed ? '-rotate-90' : ''}`}
         />

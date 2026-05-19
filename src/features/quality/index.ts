@@ -10,6 +10,13 @@ export {
   updateScorecard,
   sendScorecard,
   exportScorecards,
+  listMarkersForCall,
+  createMarker,
+  updateMarker,
+  deleteMarker,
+  addMarkerToLibrary,
+  listMarkers,
+  exportMarkers,
 } from './api/qualityService'
 
 export { useTemplates, templateKeys } from './hooks/useTemplates'
@@ -25,8 +32,20 @@ export {
   scorecardKeys,
 } from './hooks/useScorecards'
 export { useScorecardDraft } from './hooks/useScorecardDraft'
+export {
+  useMarkers,
+  useMarkersForCall,
+  useCreateMarker,
+  useUpdateMarker,
+  useDeleteMarker,
+  useAddMarkerToLibrary,
+  useExportMarkers,
+  markerKeys,
+} from './hooks/useMarkers'
 
 export { ScorecardPanel } from './components/ScorecardPanel'
+export { MarkerOverlay } from './components/MarkerOverlay'
+export { AddMarkerButton } from './components/AddMarkerButton'
 
 export type {
   Criterion,
@@ -43,6 +62,14 @@ export type {
   ScoreEntry,
   ScoresPayload,
   Section,
+  CallMarker,
+  MarkerCreatePayload,
+  MarkerListFilters,
+  MarkerStatus,
+  MarkerType,
+  MarkerUpdatePayload,
 } from './types'
+
+export { MARKER_TYPES, MARKER_COLORS } from './types'
 
 export { computeWeightedScorePreview } from './lib/scoringPreview'

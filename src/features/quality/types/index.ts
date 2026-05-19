@@ -113,3 +113,76 @@ export interface PageResponse<T> {
   data: T[]
   pagination: Pagination
 }
+
+// ---- Markers (KAN-410, Feature 2.2) ----
+
+export type MarkerType =
+  | 'error'
+  | 'good_moment'
+  | 'script_violation'
+  | 'stop_word'
+  | 'unmotivated_pause'
+  | 'note'
+
+export type MarkerStatus = 'draft' | 'sent'
+
+export const MARKER_TYPES: MarkerType[] = [
+  'error',
+  'good_moment',
+  'script_violation',
+  'stop_word',
+  'unmotivated_pause',
+  'note',
+]
+
+// Default color palette for marker dots. KAN-412 will let admins reshape
+// this; v1 ships a fixed scheme so the timeline is readable from day one.
+export const MARKER_COLORS: Record<MarkerType, string> = {
+  error: '#ef4444',
+  good_moment: '#22c55e',
+  script_violation: '#f97316',
+  stop_word: '#a855f7',
+  unmotivated_pause: '#eab308',
+  note: '#0ea5e9',
+}
+
+export interface CallMarker {
+  id: number
+  call_id: string
+  operator_id: number
+  trainer_id: number
+  project_id: number
+  timestamp_ms: number
+  marker_type: MarkerType
+  comment: string | null
+  status: MarkerStatus
+  added_to_library: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface MarkerCreatePayload {
+  timestamp_ms: number
+  marker_type: MarkerType
+  comment?: string | null
+  operator_id: number
+}
+
+export interface MarkerUpdatePayload {
+  timestamp_ms?: number
+  marker_type?: MarkerType
+  comment?: string | null
+  status?: MarkerStatus
+}
+
+export interface MarkerListFilters {
+  operator_id?: number[]
+  trainer_id?: number[]
+  marker_type?: MarkerType[]
+  status?: MarkerStatus[]
+  period?: string
+  from_date?: string
+  to_date?: string
+  page?: number
+  page_size?: number
+}

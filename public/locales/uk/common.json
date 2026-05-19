@@ -263,6 +263,9 @@
         "allEmployees": "Усі співробітники",
         "period": "Період",
         "status": "Статус",
+        "allStatuses": "Усі статуси",
+        "markerType": "Тип маркера",
+        "allMarkerTypes": "Усі типи",
         "minDuration": "Мін. тривалість (с)",
         "maxDuration": "Макс. тривалість (с)",
         "contactType": "Тип контакту",
@@ -461,7 +464,13 @@
         "createdAt": "Створено",
         "confirmedAt": "Підтверджено",
         "amount": "Сума",
-        "paymentMethod": "Спосіб оплати"
+        "paymentMethod": "Спосіб оплати",
+        "date": "Дата",
+        "template": "Шаблон",
+        "weightedScore": "Бал",
+        "markerType": "Тип",
+        "timestamp": "Час",
+        "comment": "Коментар"
       },
       "callType": {
         "incoming": "Вхідний",
@@ -534,6 +543,11 @@
         "loadTaHistoryFailed": "Не вдалося завантажити історію ЦД",
         "loadTaskHistoryFailed": "Не вдалося завантажити історію завдань",
         "loadPaymentHistoryFailed": "Не вдалося завантажити історію платежів",
+        "loadScorecardsFailed": "Не вдалося завантажити скоркарти",
+        "loadScorecardFailed": "Не вдалося завантажити скоркарту",
+        "loadMarkersFailed": "Не вдалося завантажити маркери",
+        "noScoresPermission": "У вас немає прав на перегляд даних з оцінки якості.",
+        "emptyScopeResolution": "Обрана область не містить операторів.",
         "departmentNoOperators": "У цьому відділі немає операторів у поточному проєкті.",
         "exportFailed": "Не вдалося експортувати",
         "callNotFound": "Дзвінок не знайдено"
@@ -562,6 +576,54 @@
         "heatmap": "Теплова карта",
         "scriptAnalytics": "Аналітика скриптів"
       },
+      "scoresSubTabs": {
+        "scorecards": "Скоркарти",
+        "markers": "Маркери",
+        "feedback": "Зворотний зв'язок",
+        "dynamics": "Динаміка оцінок"
+      },
+      "scorecard": {
+        "title": "Оцінка якості",
+        "template": "Шаблон",
+        "selectTemplate": "Оберіть шаблон…",
+        "startEvaluation": "Розпочати оцінку",
+        "history": "Попередні скоркарти за цим дзвінком",
+        "computedScore": "Бал",
+        "perCallComment": "Загальний коментар",
+        "saveDraft": "Зберегти чернетку",
+        "markCompleted": "Позначити завершеною",
+        "sendToOperator": "Надіслати оператору",
+        "status": {
+          "draft": "Чернетка",
+          "completed": "Завершена",
+          "sent": "Надіслана"
+        }
+      },
+      "scorecardsEmpty": "Немає скоркарт у поточній області.",
+      "scorecardsTotalSuffix": "скоркарт",
+      "markers": {
+        "addMarker": "Додати маркер",
+        "type": "Тип",
+        "comment": "Коментар",
+        "commentPlaceholder": "Коментар (необов'язково)",
+        "save": "Зберегти",
+        "types": {
+          "error": "Помилка",
+          "good_moment": "Гарний момент",
+          "script_violation": "Порушення скрипту",
+          "stop_word": "Стоп-слово",
+          "unmotivated_pause": "Невмотивована пауза",
+          "note": "Нотатка"
+        },
+        "status": {
+          "draft": "Чернетка",
+          "sent": "Надіслано"
+        }
+      },
+      "markersEmpty": "Немає маркерів у поточній області.",
+      "markersTotalSuffix": "маркерів",
+      "feedbackComingSoon": "Вкладка зворотного зв'язку з'явиться у наступному кроці KAN-410.",
+      "dynamicsComingSoon": "Графік динаміки оцінок з'явиться у наступному кроці KAN-410.",
       "scope": {
         "label": "Область перегляду",
         "my": "Мої дії",

@@ -1,5 +1,9 @@
 import { api } from '@/lib/api'
 import type {
+  CallMarker,
+  MarkerCreatePayload,
+  MarkerListFilters,
+  MarkerUpdatePayload,
   PageResponse,
   Scorecard,
   ScorecardCreatePayload,
@@ -96,6 +100,68 @@ export async function exportScorecards(filters: ScorecardListFilters): Promise<B
   return response.data
 }
 
+// ----- Markers -----
+
+function buildMarkerListParams(filters: MarkerListFilters): URLSearchParams {
+  const params = new URLSearchParams()
+  filters.operator_id?.forEach((id) => params.append('operator_id', String(id)))
+  filters.trainer_id?.forEach((id) => params.append('trainer_id', String(id)))
+  filters.marker_type?.forEach((t) => params.append('marker_type', t))
+  filters.status?.forEach((s) => params.append('status', s))
+  if (filters.period) params.set('period', filters.period)
+  if (filters.from_date) params.set('from_date', filters.from_date)
+  if (filters.to_date) params.set('to_date', filters.to_date)
+  if (filters.page != null) params.set('page', String(filters.page))
+  if (filters.page_size != null) params.set('page_size', String(filters.page_size))
+  return params
+}
+
+export async function listMarkersForCall(callId: string): Promise<CallMarker[]> {
+  const response = await api.get<CallMarker[]>(`/api/v1/quality/calls/${callId}/markers`)
+  return response.data
+}
+
+export async function createMarker(
+  callId: string,
+  payload: MarkerCreatePayload
+): Promise<CallMarker> {
+  const response = await api.post<CallMarker>(`/api/v1/quality/calls/${callId}/markers`, payload)
+  return response.data
+}
+
+export async function updateMarker(
+  markerId: number,
+  payload: MarkerUpdatePayload
+): Promise<CallMarker> {
+  const response = await api.put<CallMarker>(`/api/v1/quality/markers/${markerId}`, payload)
+  return response.data
+}
+
+export async function deleteMarker(markerId: number): Promise<void> {
+  await api.delete(`/api/v1/quality/markers/${markerId}`)
+}
+
+export async function addMarkerToLibrary(markerId: number): Promise<CallMarker> {
+  const response = await api.post<CallMarker>(`/api/v1/quality/markers/${markerId}/add-to-library`)
+  return response.data
+}
+
+export async function listMarkers(filters: MarkerListFilters): Promise<PageResponse<CallMarker>> {
+  const response = await api.get<PageResponse<CallMarker>>('/api/v1/quality/markers', {
+    params: buildMarkerListParams(filters),
+  })
+  return response.data
+}
+
+export async function exportMarkers(filters: MarkerListFilters): Promise<Blob> {
+  const response = await api.get<Blob>('/api/v1/quality/markers/export', {
+    params: buildMarkerListParams(filters),
+    responseType: 'blob',
+    timeout: 120_000,
+  })
+  return response.data
+}
+
 export const qualityService = {
   listTemplates,
   getTemplate,
@@ -107,4 +173,11 @@ export const qualityService = {
   updateScorecard,
   sendScorecard,
   exportScorecards,
+  listMarkersForCall,
+  createMarker,
+  updateMarker,
+  deleteMarker,
+  addMarkerToLibrary,
+  listMarkers,
+  exportMarkers,
 }
