@@ -545,9 +545,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         let backendSearchType: SearchType = 'all'
         if (type === 'phone') {
           backendSearchType = 'phone'
-        } else if (type === 'name' || type === 'tin') {
-          // Map name/tin to name search (backend name search includes TIN)
+        } else if (type === 'name') {
           backendSearchType = 'name'
+        } else if (type === 'tin') {
+          backendSearchType = 'tin'
         } else if (type === 'email') {
           backendSearchType = 'email'
         } else if (type === 'contract_number') {
