@@ -57,7 +57,7 @@ export const OPTIONAL_CREDENTIAL_KEYS: Record<MessagingService, string[]> = {
   intel_tele: ['from_name', 'reply_to_email', 'reply_to_name'],
   turbosms: [],
   omnicell: [],
-  vodafone_obm: [],
+  vodafone_obm: ['sender_id'],
   my2_viber: [],
 }
 
@@ -155,7 +155,7 @@ export interface MessagingDraft {
   body: string
   subject: string | null
   sender_name: string | null
-  available_variables: Array<Record<string, unknown>> | null
+  available_variables: string[] | null
   created_by: number | null
   created_at: string
   updated_at: string | null
@@ -167,7 +167,7 @@ export interface MessagingDraftCreate {
   body: string
   subject?: string | null
   sender_name?: string | null
-  available_variables?: Array<Record<string, unknown>> | null
+  available_variables?: string[] | null
 }
 
 export interface MessagingDraftUpdate {
@@ -175,7 +175,7 @@ export interface MessagingDraftUpdate {
   body?: string
   subject?: string | null
   sender_name?: string | null
-  available_variables?: Array<Record<string, unknown>> | null
+  available_variables?: string[] | null
 }
 
 export interface MessagingDraftPreviewResponse {
@@ -297,6 +297,13 @@ export interface MessagingCampaignCreate {
   source?: MessagingSource
 }
 
+export interface MessagingDestinationQuota {
+  destination: string
+  sent_today: number
+  daily_limit: number
+  allowed: boolean
+}
+
 export interface MessagingSingleSendRequest {
   client_id: number
   channel: MessagingChannel
@@ -306,6 +313,7 @@ export interface MessagingSingleSendRequest {
   subject?: string | null
   sender_name?: string | null
   variables?: Record<string, unknown>
+  destination_override?: string | null
   name?: string | null
 }
 

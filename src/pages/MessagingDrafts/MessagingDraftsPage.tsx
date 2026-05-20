@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { Button } from '@/components/ui/Button'
@@ -15,15 +15,123 @@ import { Modal, ModalContent, ModalFooter, ModalHeader } from '@/components/ui/M
 import { PermissionGuard } from '@/components/auth'
 import { PERMISSIONS } from '@/constants/permissions'
 import { Icons } from '@/lib/icons'
+import { cn } from '@/lib/utils'
 import {
   MESSAGING_CHANNELS,
   useCreateMessagingDraft,
-  useDeleteMessagingDraft,
   useMessagingDrafts,
-  usePreviewMessagingDraft,
   useUpdateMessagingDraft,
 } from '@/features/messaging'
 import type { MessagingChannel, MessagingDraft } from '@/features/messaging'
+import { DeleteDraftModal } from './DeleteDraftModal'
+import { DraftViewModal } from './DraftViewModal'
+
+// Available variables shared with the SMS templates editor — same name set so
+// operators have one consistent palette across SMS-templates and messaging
+// drafts. Messaging service's template renderer uses `{{var}}` (double brace)
+// syntax, so we insert variables in that form here.
+const MESSAGING_AVAILABLE_VARIABLES = [
+  { name: 'client_name', key: 'clientFirstName' },
+  { name: 'debt_amount', key: 'currentDebtAmount' },
+  { name: 'operator_name', key: 'operatorName' },
+  { name: 'operator_phone', key: 'operatorPhone' },
+  { name: 'due_date', key: 'paymentDueDate' },
+  { name: 'contract_number', key: 'contractLoanNumber' },
+] as const
+
+interface TableIconButtonProps {
+  label: string
+  onClick: () => void
+  disabled?: boolean
+  variant?: 'default' | 'danger'
+  children: React.ReactNode
+}
+
+function TableIconButton({
+  label,
+  onClick,
+  disabled,
+  variant = 'default',
+  children,
+}: TableIconButtonProps) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      aria-label={label}
+      title={label}
+      className={cn(
+        'focus-visible:ring-primary-500 inline-flex h-8 w-8 items-center justify-center rounded-md border bg-white transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
+        variant === 'danger'
+          ? 'border-red-200 text-red-600 hover:bg-red-50'
+          : 'hover:border-primary-500 hover:text-primary-600 border-gray-300 text-gray-500'
+      )}
+    >
+      {children}
+    </button>
+  )
+}
+
+// Per-channel form rules. Drives subject visibility, body limits / char
+// counter, sender-name constraints, placeholders, and helper text.
+interface ChannelSpec {
+  showSubject: boolean
+  subjectRequired: boolean
+  bodyMaxLength: number
+  // SMS-only segmentation thresholds; ignored for other channels.
+  gsmSingleLimit?: number
+  cyrillicSingleLimit?: number
+  gsmConcatLimit?: number
+  cyrillicConcatLimit?: number
+  senderMaxLength: number
+}
+
+const CHANNEL_SPECS: Record<MessagingChannel, ChannelSpec> = {
+  sms: {
+    showSubject: false,
+    subjectRequired: false,
+    bodyMaxLength: 1071, // 7 SMS segments (153 chars each, GSM-7)
+    gsmSingleLimit: 160,
+    cyrillicSingleLimit: 70,
+    gsmConcatLimit: 153,
+    cyrillicConcatLimit: 67,
+    senderMaxLength: 11,
+  },
+  viber: {
+    showSubject: false,
+    subjectRequired: false,
+    bodyMaxLength: 1000,
+    senderMaxLength: 20,
+  },
+  email: {
+    showSubject: true,
+    subjectRequired: true,
+    bodyMaxLength: 50000,
+    senderMaxLength: 100,
+  },
+}
+
+// Crude but reliable Cyrillic / non-GSM detector: any code point above U+007F
+// forces UCS-2 encoding on SMS, which slashes single-segment capacity 160 → 70.
+const hasNonGsmChar = (text: string) => {
+  for (let i = 0; i < text.length; i += 1) {
+    if (text.charCodeAt(i) > 0x7f) return true
+  }
+  return false
+}
+
+const getSmsSegmentInfo = (body: string, spec: ChannelSpec) => {
+  if (!spec.gsmSingleLimit || !spec.cyrillicSingleLimit) return null
+  const cyrillic = hasNonGsmChar(body)
+  const single = cyrillic ? spec.cyrillicSingleLimit : spec.gsmSingleLimit
+  const concat = cyrillic
+    ? (spec.cyrillicConcatLimit ?? spec.cyrillicSingleLimit)
+    : (spec.gsmConcatLimit ?? spec.gsmSingleLimit)
+  const length = body.length
+  const segments = length === 0 ? 0 : length <= single ? 1 : Math.ceil(length / concat)
+  return { cyrillic, single, concat, segments }
+}
 
 const formatDateTime = (value?: string | null) => {
   if (!value) return '-'
@@ -55,6 +163,12 @@ function DraftFormModal({ draft, open, onClose }: DraftFormModalProps) {
   const [subject, setSubject] = useState('')
   const [body, setBody] = useState('')
 
+  // Track which text field was focused last so the variable palette knows
+  // where to insert the chosen variable.
+  const subjectRef = useRef<HTMLInputElement | null>(null)
+  const bodyRef = useRef<HTMLTextAreaElement | null>(null)
+  const lastFocusedRef = useRef<'subject' | 'body'>('body')
+
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (!open) return
@@ -64,22 +178,51 @@ function DraftFormModal({ draft, open, onClose }: DraftFormModalProps) {
     setSenderName(draft?.sender_name ?? '')
     setSubject(draft?.subject ?? '')
     setBody(draft?.body ?? '')
+    lastFocusedRef.current = 'body'
   }, [draft, open])
   /* eslint-enable react-hooks/set-state-in-effect */
 
+  const spec = CHANNEL_SPECS[channel]
+
+  // When the user switches a draft from email → SMS/Viber, the previously
+  // entered subject becomes meaningless. Clearing it here keeps the saved
+  // payload aligned with what the user sees and avoids surfacing stale data
+  // if they later flip back to email.
+  const handleChannelChange = (next: MessagingChannel) => {
+    if (next === channel) return
+    setChannel(next)
+    if (!CHANNEL_SPECS[next].showSubject) {
+      setSubject('')
+    }
+    if (CHANNEL_SPECS[next].senderMaxLength < senderName.length) {
+      setSenderName(senderName.slice(0, CHANNEL_SPECS[next].senderMaxLength))
+    }
+  }
+
   const isPending = createDraftMutation.isPending || updateDraftMutation.isPending
-  const requiresSubject = channel === 'email'
-  const canSubmit = name.trim() && body.trim() && (!requiresSubject || subject.trim())
+  const trimmedName = name.trim()
+  const trimmedBody = body.trim()
+  const trimmedSubject = subject.trim()
+
+  const smsSegments = channel === 'sms' ? getSmsSegmentInfo(body, spec) : null
+  // SMS counter uses one-part limits (160 GSM-7 / 70 UCS-2), not multi-part totals.
+  const bodyCharLimit = channel === 'sms' && smsSegments ? smsSegments.single : spec.bodyMaxLength
+  const bodyTooShort = trimmedBody.length === 0
+  const bodyTooLong = body.length > bodyCharLimit
+
+  const subjectInvalid = spec.subjectRequired && !trimmedSubject
+
+  const canSubmit = !!trimmedName && !!trimmedBody && !subjectInvalid && !bodyTooLong && !isPending
 
   const handleSubmit = async () => {
     if (!canSubmit) return
 
     const payload = {
-      name: name.trim(),
+      name: trimmedName,
       channel,
       sender_name: senderName.trim() || null,
-      subject: subject.trim() || null,
-      body: body.trim(),
+      subject: spec.showSubject ? trimmedSubject || null : null,
+      body: trimmedBody,
       available_variables: null,
     }
 
@@ -91,6 +234,50 @@ function DraftFormModal({ draft, open, onClose }: DraftFormModalProps) {
 
     onClose()
   }
+
+  const insertVariableAtCursor = (variableName: string) => {
+    const token = `{{${variableName}}}`
+
+    if (lastFocusedRef.current === 'subject' && spec.showSubject && subjectRef.current) {
+      const input = subjectRef.current
+      const start = input.selectionStart ?? subject.length
+      const end = input.selectionEnd ?? subject.length
+      const next = subject.slice(0, start) + token + subject.slice(end)
+      setSubject(next)
+      setTimeout(() => {
+        input.focus()
+        const pos = start + token.length
+        input.setSelectionRange(pos, pos)
+      }, 0)
+      return
+    }
+
+    const textarea = bodyRef.current
+    if (!textarea) {
+      setBody((current) => current + token)
+      return
+    }
+    const start = textarea.selectionStart ?? body.length
+    const end = textarea.selectionEnd ?? body.length
+    const next = body.slice(0, start) + token + body.slice(end)
+    setBody(next)
+    setTimeout(() => {
+      textarea.focus()
+      const pos = start + token.length
+      textarea.setSelectionRange(pos, pos)
+    }, 0)
+  }
+
+  const bodyError = bodyTooShort
+    ? t('pages.messagingDrafts.form.bodyRequired', {
+        defaultValue: 'Message body is required.',
+      })
+    : bodyTooLong
+      ? t('pages.messagingDrafts.form.bodyTooLong', {
+          max: bodyCharLimit,
+          defaultValue: `Body exceeds the ${bodyCharLimit}-character limit for ${channel.toUpperCase()}.`,
+        })
+      : undefined
 
   return (
     <Modal open={open} onClose={onClose} maxWidth="xl">
@@ -109,18 +296,19 @@ function DraftFormModal({ draft, open, onClose }: DraftFormModalProps) {
       <ModalContent>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <Input
-            label={t('pages.messagingDrafts.form.name', 'Draft name')}
+            label={`${t('pages.messagingDrafts.form.name', 'Draft name')} *`}
             value={name}
             onChange={(event) => setName(event.target.value)}
             placeholder={t('pages.messagingDrafts.form.namePlaceholder', 'Payment reminder')}
           />
           <div>
             <label className="text-dark-500 mb-1.5 block text-sm font-light">
-              {t('pages.messagingDrafts.form.channel', 'Channel')}
+              {t('pages.messagingDrafts.form.channel', 'Channel')}{' '}
+              <span className="text-error-500">*</span>
             </label>
             <Select
               value={channel}
-              onValueChange={(value) => setChannel(value as MessagingChannel)}
+              onValueChange={(value) => handleChannelChange(value as MessagingChannel)}
             >
               <SelectTrigger>
                 <SelectValue />
@@ -134,62 +322,132 @@ function DraftFormModal({ draft, open, onClose }: DraftFormModalProps) {
               </SelectContent>
             </Select>
           </div>
-          <Input
-            label={t('pages.messagingDrafts.form.senderName', 'Sender name')}
-            value={senderName}
-            onChange={(event) => setSenderName(event.target.value)}
-            placeholder={t('pages.messagingDrafts.form.senderNamePlaceholder', 'CRM Prionex')}
-          />
-          <Input
-            label={t('pages.messagingDrafts.form.subject', 'Subject')}
-            value={subject}
-            onChange={(event) => setSubject(event.target.value)}
-            placeholder={t(
-              'pages.messagingDrafts.form.subjectPlaceholder',
-              'Reminder about your account'
-            )}
-            helperText={
-              requiresSubject
-                ? t(
-                    'pages.messagingDrafts.form.subjectRequired',
-                    'Subject is required for email drafts'
-                  )
-                : t(
-                    'pages.messagingDrafts.form.subjectOptional',
-                    'Optional for SMS and Viber drafts'
-                  )
-            }
-          />
+
+          <div>
+            <div className="mb-1.5 flex items-baseline justify-between gap-3">
+              <label htmlFor="draft-sender-name" className="text-dark-500 text-sm font-light">
+                {t('pages.messagingDrafts.form.senderName', 'Sender name')}
+              </label>
+              <span className="shrink-0 text-xs text-gray-500 tabular-nums">
+                {t('pages.messagingDrafts.form.charCount', {
+                  count: senderName.length,
+                  max: spec.senderMaxLength,
+                  defaultValue: `${senderName.length} / ${spec.senderMaxLength}`,
+                })}
+              </span>
+            </div>
+            <Input
+              id="draft-sender-name"
+              value={senderName}
+              onChange={(event) => setSenderName(event.target.value.slice(0, spec.senderMaxLength))}
+              placeholder={
+                channel === 'email'
+                  ? t(
+                      'pages.messagingDrafts.form.senderNameEmailPlaceholder',
+                      'CRM Prionex Support'
+                    )
+                  : t('pages.messagingDrafts.form.senderNamePlaceholder', 'CRM Prionex')
+              }
+              maxLength={spec.senderMaxLength}
+            />
+          </div>
+
+          {spec.showSubject && (
+            <Input
+              ref={subjectRef}
+              label={`${t('pages.messagingDrafts.form.subject', 'Subject')} *`}
+              value={subject}
+              onChange={(event) => setSubject(event.target.value)}
+              onFocus={() => {
+                lastFocusedRef.current = 'subject'
+              }}
+              placeholder={t(
+                'pages.messagingDrafts.form.subjectPlaceholder',
+                'Reminder about your account'
+              )}
+              maxLength={500}
+              error={
+                subjectInvalid
+                  ? t('pages.messagingDrafts.form.subjectRequiredError', {
+                      defaultValue: 'Subject is required for email drafts.',
+                    })
+                  : undefined
+              }
+            />
+          )}
         </div>
 
         <div className="mt-4">
+          <div className="mb-1.5 flex items-baseline justify-between gap-3">
+            <label htmlFor="draft-body" className="text-dark-500 text-sm font-light">
+              {t('pages.messagingDrafts.form.body', 'Message body')}{' '}
+              <span className="text-error-500">*</span>
+            </label>
+            <span className="shrink-0 text-xs text-gray-500 tabular-nums">
+              {t('pages.messagingDrafts.form.charCount', {
+                count: body.length,
+                max: bodyCharLimit,
+                defaultValue: `${body.length} / ${bodyCharLimit}`,
+              })}
+            </span>
+          </div>
           <Textarea
-            label={t('pages.messagingDrafts.form.body', 'Message body')}
+            id="draft-body"
+            ref={bodyRef}
             value={body}
             onChange={(event) => setBody(event.target.value)}
-            placeholder={t(
-              'pages.messagingDrafts.form.bodyPlaceholder',
-              'Hello {{first_name}}, this is a reminder about your account.'
-            )}
+            onFocus={() => {
+              lastFocusedRef.current = 'body'
+            }}
+            placeholder={
+              channel === 'sms'
+                ? t(
+                    'pages.messagingDrafts.form.bodyPlaceholderSms',
+                    'Hi {{client_name}}, your payment of {{debt_amount}} UAH is due on {{due_date}}. — CRM Prionex'
+                  )
+                : channel === 'viber'
+                  ? t(
+                      'pages.messagingDrafts.form.bodyPlaceholderViber',
+                      'Hi {{client_name}}, your payment of {{debt_amount}} UAH is due on {{due_date}}. Tap reply to confirm.'
+                    )
+                  : t(
+                      'pages.messagingDrafts.form.bodyPlaceholderEmail',
+                      'Dear {{client_name}},\n\nThis is a reminder that your payment of {{debt_amount}} UAH for contract {{contract_number}} is due on {{due_date}}.\n\nBest regards,\n{{operator_name}}'
+                    )
+            }
             textareaSize="lg"
+            error={bodyError}
           />
         </div>
 
         <div className="mt-4 rounded-xl border border-gray-200 bg-white p-4 text-sm text-gray-600">
-          <div className="text-dark-500 font-medium">
-            {t('pages.messagingDrafts.availableVariables', 'Common variables')}
+          <div className="flex items-center justify-between">
+            <div className="text-dark-500 font-medium">
+              {t('pages.smsTemplates.forms.availableVariables', 'Available variables')}
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="bg-success-500 h-2 w-2 rounded-full" />
+              <span className="text-success-500 text-xs font-medium">
+                {t('pages.smsTemplates.forms.active', 'Active')}
+              </span>
+            </div>
           </div>
-          <div className="mt-2 flex flex-wrap gap-2">
-            {['{{first_name}}', '{{last_name}}', '{{full_name}}', '{{phone}}', '{{email}}'].map(
-              (variable) => (
-                <code
-                  key={variable}
-                  className="text-dark-500 rounded bg-gray-100 px-2 py-1 text-xs"
-                >
-                  {variable}
+          <div className="mt-3 flex flex-col gap-2">
+            {MESSAGING_AVAILABLE_VARIABLES.map((variable) => (
+              <button
+                key={variable.name}
+                type="button"
+                onClick={() => insertVariableAtCursor(variable.name)}
+                className="text-dark-500 hover:bg-primary-50 flex items-start gap-4 rounded-lg px-2 py-1.5 text-left text-xs transition-colors"
+              >
+                <code className="w-44 shrink-0 rounded bg-gray-100 px-2 py-1 font-mono">
+                  {`{{${variable.name}}}`}
                 </code>
-              )
-            )}
+                <span className="flex-1 self-center font-medium">
+                  {t(`pages.smsTemplates.variables.${variable.key}`)}
+                </span>
+              </button>
+            ))}
           </div>
         </div>
       </ModalContent>
@@ -202,137 +460,10 @@ function DraftFormModal({ draft, open, onClose }: DraftFormModalProps) {
           variant="primary"
           onClick={handleSubmit}
           size="sm"
-          disabled={!canSubmit || isPending}
+          disabled={!canSubmit}
           isLoading={isPending}
         >
           {isEditing ? t('actions.save', 'Save') : t('actions.create', 'Create')}
-        </Button>
-      </ModalFooter>
-    </Modal>
-  )
-}
-
-interface DraftPreviewModalProps {
-  draft: MessagingDraft | null
-  open: boolean
-  onClose: () => void
-}
-
-function DraftPreviewModal({ draft, open, onClose }: DraftPreviewModalProps) {
-  const { t } = useTranslation('common')
-  const previewDraftMutation = usePreviewMessagingDraft()
-  const [variablesJson, setVariablesJson] = useState('{\n  "first_name": "Alice"\n}')
-
-  /* eslint-disable react-hooks/set-state-in-effect */
-  useEffect(() => {
-    if (!open) return
-    setVariablesJson('{\n  "first_name": "Alice"\n}')
-  }, [open])
-  /* eslint-enable react-hooks/set-state-in-effect */
-
-  const previewResult = previewDraftMutation.data
-
-  const handlePreview = async () => {
-    if (!draft) return
-
-    let parsed: Record<string, unknown> = {}
-    try {
-      parsed = variablesJson.trim() ? (JSON.parse(variablesJson) as Record<string, unknown>) : {}
-    } catch {
-      previewDraftMutation.reset()
-      throw new Error('Invalid JSON')
-    }
-
-    await previewDraftMutation.mutateAsync({
-      draftId: draft.id,
-      variables: parsed,
-    })
-  }
-
-  const handleRunPreview = async () => {
-    try {
-      await handlePreview()
-    } catch {
-      // Keep the UX simple for now: invalid JSON is shown inline.
-    }
-  }
-
-  let variablesError = ''
-  try {
-    if (variablesJson.trim()) {
-      JSON.parse(variablesJson)
-    }
-  } catch {
-    variablesError = t('pages.messagingDrafts.preview.invalidJson', 'Variables must be valid JSON')
-  }
-
-  return (
-    <Modal open={open} onClose={onClose} maxWidth="xl">
-      <ModalHeader
-        title={
-          draft
-            ? t('pages.messagingDrafts.preview.titleWithName', {
-                name: draft.name,
-                defaultValue: draft.name,
-              })
-            : t('pages.messagingDrafts.preview.title', 'Preview draft')
-        }
-      />
-      <ModalContent>
-        <div className="space-y-4">
-          <Textarea
-            label={t('pages.messagingDrafts.preview.variables', 'Preview variables (JSON)')}
-            value={variablesJson}
-            onChange={(event) => setVariablesJson(event.target.value)}
-            textareaSize="md"
-            error={variablesError}
-          />
-
-          {previewResult && (
-            <div className="space-y-4 rounded-xl border border-gray-200 bg-white p-4">
-              <div>
-                <div className="text-dark-500 text-sm font-medium">
-                  {t('pages.messagingDrafts.preview.renderedSubject', 'Rendered subject')}
-                </div>
-                <div className="mt-1 text-sm text-gray-600">{previewResult.subject || '-'}</div>
-              </div>
-
-              <div>
-                <div className="text-dark-500 text-sm font-medium">
-                  {t('pages.messagingDrafts.preview.renderedBody', 'Rendered body')}
-                </div>
-                <pre className="text-dark-500 mt-1 overflow-auto rounded-lg bg-gray-50 p-3 text-xs">
-                  {previewResult.body}
-                </pre>
-              </div>
-
-              <div>
-                <div className="text-dark-500 text-sm font-medium">
-                  {t('pages.messagingDrafts.preview.missingVariables', 'Missing variables')}
-                </div>
-                <div className="mt-1 text-sm text-gray-600">
-                  {previewResult.missing_variables.length > 0
-                    ? previewResult.missing_variables.join(', ')
-                    : t('pages.messagingDrafts.preview.noneMissing', 'None')}
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      </ModalContent>
-      <ModalFooter>
-        <Button type="button" variant="cancel" onClick={onClose} size="sm">
-          {t('actions.close', 'Close')}
-        </Button>
-        <Button
-          type="button"
-          variant="primary"
-          onClick={handleRunPreview}
-          size="sm"
-          disabled={!draft || !!variablesError || previewDraftMutation.isPending}
-          isLoading={previewDraftMutation.isPending}
-        >
-          {t('pages.messagingDrafts.preview.action', 'Render preview')}
         </Button>
       </ModalFooter>
     </Modal>
@@ -344,13 +475,13 @@ export function MessagingDraftsPage() {
   const [channelFilter, setChannelFilter] = useState<string>('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [editingDraft, setEditingDraft] = useState<MessagingDraft | null>(null)
-  const [previewDraft, setPreviewDraft] = useState<MessagingDraft | null>(null)
+  const [viewDraft, setViewDraft] = useState<MessagingDraft | null>(null)
+  const [deleteDraft, setDeleteDraft] = useState<MessagingDraft | null>(null)
   const [showCreateModal, setShowCreateModal] = useState(false)
 
   const { data: drafts = [], isLoading } = useMessagingDrafts(
     channelFilter === 'all' ? undefined : (channelFilter as MessagingChannel)
   )
-  const deleteDraftMutation = useDeleteMessagingDraft()
 
   const filteredDrafts = useMemo(() => {
     const query = searchQuery.trim().toLowerCase()
@@ -396,38 +527,32 @@ export function MessagingDraftsPage() {
         align: 'center',
         render: (draft) => (
           <div className="flex items-center justify-center gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="xs"
-              onClick={() => setPreviewDraft(draft)}
+            <TableIconButton
+              label={t('pages.messagingDrafts.actions.view', 'View draft')}
+              onClick={() => setViewDraft(draft)}
             >
-              {t('pages.messagingDrafts.actions.preview', 'Preview')}
-            </Button>
+              <Icons.View size={16} strokeWidth={1.5} />
+            </TableIconButton>
             <PermissionGuard permission={PERMISSIONS.MESSAGING.MANAGE_DRAFTS}>
-              <Button
-                type="button"
-                variant="outline"
-                size="xs"
+              <TableIconButton
+                label={t('actions.edit', 'Edit')}
                 onClick={() => setEditingDraft(draft)}
               >
-                {t('actions.edit', 'Edit')}
-              </Button>
-              <Button
-                type="button"
+                <Icons.PencilEdit size={16} strokeWidth={1.5} />
+              </TableIconButton>
+              <TableIconButton
+                label={t('actions.delete', 'Delete')}
                 variant="danger"
-                size="xs"
-                onClick={() => deleteDraftMutation.mutate(draft.id)}
-                disabled={deleteDraftMutation.isPending}
+                onClick={() => setDeleteDraft(draft)}
               >
-                {t('actions.delete', 'Delete')}
-              </Button>
+                <Icons.Delete size={16} strokeWidth={1.5} />
+              </TableIconButton>
             </PermissionGuard>
           </div>
         ),
       },
     ],
-    [deleteDraftMutation, t]
+    [t]
   )
 
   return (
@@ -496,10 +621,15 @@ export function MessagingDraftsPage() {
         open={editingDraft !== null}
         onClose={() => setEditingDraft(null)}
       />
-      <DraftPreviewModal
-        draft={previewDraft}
-        open={previewDraft !== null}
-        onClose={() => setPreviewDraft(null)}
+      <DraftViewModal
+        draft={viewDraft}
+        open={viewDraft !== null}
+        onClose={() => setViewDraft(null)}
+      />
+      <DeleteDraftModal
+        draft={deleteDraft}
+        open={deleteDraft !== null}
+        onClose={() => setDeleteDraft(null)}
       />
     </div>
   )

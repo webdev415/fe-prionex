@@ -6,6 +6,7 @@ import type {
   MessagingCampaignSummary,
   MessagingChannel,
   MessagingClientHistoryItem,
+  MessagingDestinationQuota,
   MessagingDraft,
   MessagingDraftCreate,
   MessagingDraftPreviewResponse,
@@ -160,6 +161,14 @@ export const messagingApi = {
 
   getCampaignExportUrl(campaignId: number) {
     return `${api.defaults.baseURL}${BASE_URL}/campaigns/${campaignId}/export`
+  },
+
+  getDestinationQuota(destination: string) {
+    return api
+      .get<MessagingDestinationQuota>(`${BASE_URL}/rate/destination`, {
+        params: { destination },
+      })
+      .then((response) => response.data)
   },
 
   sendSingle(payload: MessagingSingleSendRequest) {

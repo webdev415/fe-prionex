@@ -25,6 +25,8 @@ export const messagingKeys = {
     clientId: number,
     params?: { channel?: MessagingChannel; limit?: number; offset?: number }
   ) => [...messagingKeys.all, 'clients', clientId, 'history', params ?? {}] as const,
+  destinationQuota: (destination: string) =>
+    [...messagingKeys.all, 'rate', 'destination', destination] as const,
 } as const
 
 export function useMessagingDrafts(channel?: MessagingChannel) {
@@ -90,6 +92,16 @@ export function useMessagingCampaignRecipients(
     placeholderData: (previousData) => previousData,
     staleTime: 10000,
     refetchInterval: 15000,
+  })
+}
+
+export function useDestinationQuota(destination: string, enabled = true) {
+  return useQuery({
+    queryKey: messagingKeys.destinationQuota(destination),
+    queryFn: () => messagingApi.getDestinationQuota(destination),
+    enabled: enabled && destination.trim().length > 0,
+    staleTime: 15000,
+    refetchInterval: 30000,
   })
 }
 

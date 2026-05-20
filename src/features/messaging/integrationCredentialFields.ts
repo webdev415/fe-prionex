@@ -26,10 +26,10 @@ export const INTEGRATION_CREDENTIAL_FIELDS: Record<
   vodafone_obm: [
     {
       key: 'username',
-      label: 'Cabinet phone or email',
+      label: 'OBM login (Settings → Logins)',
       type: 'text',
       required: true,
-      placeholder: 'e.g. 380669172453 or fc.technofinance@gmail.com',
+      placeholder: 'Legal-entity login string, or phone/email if cabinet allows',
     },
     { key: 'password', label: 'Cabinet password', type: 'password', required: true },
     {
@@ -38,6 +38,13 @@ export const INTEGRATION_CREDENTIAL_FIELDS: Record<
       type: 'text',
       required: true,
       placeholder: 'Approved sender, e.g. TechnoFin',
+    },
+    {
+      key: 'sender_id',
+      label: 'Sender ID (optional)',
+      type: 'text',
+      required: false,
+      placeholder: 'Numeric id from OBM Sender name, e.g. 5581072',
     },
   ],
   my2_viber: [

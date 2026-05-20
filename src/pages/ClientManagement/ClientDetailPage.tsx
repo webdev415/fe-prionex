@@ -827,6 +827,7 @@ export function ClientDetailPage() {
   } | null>(null)
   const [isSendSMSModalOpen, setIsSendSMSModalOpen] = useState(false)
   const [isSendMessageModalOpen, setIsSendMessageModalOpen] = useState(false)
+  const [selectedPhoneForMessage, setSelectedPhoneForMessage] = useState<string>('')
   const [selectedPhoneForSMS, setSelectedPhoneForSMS] = useState<string>('')
   const [selectedPhoneForCall, setSelectedPhoneForCall] = useState<string>('')
   const [selectedPhoneForNote, setSelectedPhoneForNote] = useState<string>('')
@@ -2303,6 +2304,18 @@ export function ClientDetailPage() {
                             <Icons.ChatFeedback01 size={16} className="flex-shrink-0" />
                           </button>
                         </PermissionGuard>
+                        <PermissionGuard permission={PERMISSIONS.MESSAGING.SEND_MESSAGES}>
+                          <button
+                            onClick={() => {
+                              setSelectedPhoneForMessage(phone.number)
+                              setIsSendMessageModalOpen(true)
+                            }}
+                            className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 md:h-[20px] md:w-[20px]"
+                            title={t('pages.clients.detail.sendMessage', 'Send message')}
+                          >
+                            <Icons.MailSend01 size={16} className="flex-shrink-0" />
+                          </button>
+                        </PermissionGuard>
                         <PermissionGuard permission={PERMISSIONS.CLIENTS.CREATE_INTERACTIONS}>
                           <button
                             onClick={() => {
@@ -2683,6 +2696,18 @@ export function ClientDetailPage() {
                                 className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 md:h-[20px] md:w-[20px]"
                               >
                                 <Icons.ChatFeedback01 size={16} className="flex-shrink-0" />
+                              </button>
+                            </PermissionGuard>
+                            <PermissionGuard permission={PERMISSIONS.MESSAGING.SEND_MESSAGES}>
+                              <button
+                                onClick={() => {
+                                  setSelectedPhoneForMessage(client.work?.workPhone || '')
+                                  setIsSendMessageModalOpen(true)
+                                }}
+                                className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 md:h-[20px] md:w-[20px]"
+                                title={t('pages.clients.detail.sendMessage', 'Send message')}
+                              >
+                                <Icons.MailSend01 size={16} className="flex-shrink-0" />
                               </button>
                             </PermissionGuard>
                             <PermissionGuard permission={PERMISSIONS.CLIENTS.CREATE_INTERACTIONS}>
@@ -3193,6 +3218,23 @@ export function ClientDetailPage() {
                                       </button>
                                     </PermissionGuard>
                                     <PermissionGuard
+                                      permission={PERMISSIONS.MESSAGING.SEND_MESSAGES}
+                                    >
+                                      <button
+                                        onClick={() => {
+                                          setSelectedPhoneForMessage(contact.contactValue)
+                                          setIsSendMessageModalOpen(true)
+                                        }}
+                                        className="text-primary-500 flex h-[20px] w-[20px] cursor-pointer items-center justify-center hover:opacity-80"
+                                        title={t(
+                                          'pages.clients.detail.sendMessage',
+                                          'Send message'
+                                        )}
+                                      >
+                                        <Icons.MailSend01 size={16} className="flex-shrink-0" />
+                                      </button>
+                                    </PermissionGuard>
+                                    <PermissionGuard
                                       permission={PERMISSIONS.CLIENTS.CREATE_INTERACTIONS}
                                     >
                                       <button
@@ -3474,18 +3516,6 @@ export function ClientDetailPage() {
                           >
                             {t('pages.clients.detail.exportCSV')}
                           </Button>
-                          {activeCallSmsTab === 'messaging' && (
-                            <PermissionGuard permission={PERMISSIONS.MESSAGING.SEND_MESSAGES}>
-                              <Button
-                                leftIcon={<Icons.MailSend01 size={18} />}
-                                className="bg-primary-300 text-dark-500 flex w-full flex-row items-center gap-1 rounded px-3 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px] md:w-auto md:px-4 md:py-2.5"
-                                size="sm"
-                                onClick={() => setIsSendMessageModalOpen(true)}
-                              >
-                                {t('pages.clients.detail.sendMessage', 'Send message')}
-                              </Button>
-                            </PermissionGuard>
-                          )}
                         </div>
                       </div>
                     </div>
@@ -4375,9 +4405,25 @@ export function ClientDetailPage() {
 
         <SendMessageModal
           open={isSendMessageModalOpen}
-          onClose={() => setIsSendMessageModalOpen(false)}
+          onClose={() => {
+            setIsSendMessageModalOpen(false)
+            setSelectedPhoneForMessage('')
+          }}
           clientId={clientId}
           clientName={client.fullName}
+          phones={client.phones?.map((p) => p.number)}
+          workPhone={
+            client.work?.workPhone && client.work.workPhone !== '-'
+              ? client.work.workPhone
+              : undefined
+          }
+          email={profile?.email ?? null}
+          initialPhone={selectedPhoneForMessage || undefined}
+          loans={client.loans?.map((l) => ({
+            id: l.id,
+            loanNumber: l.loanNumber,
+            totalToRepay: l.remainingDebtAmount,
+          }))}
           onSent={() => {
             // Messaging history refreshes via react-query invalidation in the mutation hook.
           }}
