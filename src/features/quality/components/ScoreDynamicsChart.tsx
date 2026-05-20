@@ -86,12 +86,13 @@ export function ScoreDynamicsChart({ data, onPointClick }: ScoreDynamicsChartPro
         <LineChart
           data={rows}
           margin={{ top: 8, right: 16, left: -8, bottom: 0 }}
-          onClick={(state) => {
+          onClick={(state: unknown) => {
             if (!onPointClick) return
-            // Recharts surfaces `activePayload` on click. Cast loosely since
-            // the typed surface for chart-level click is partial.
+            // Recharts surfaces `activePayload` on click. The chart-level
+            // onClick handler is loosely typed across recharts versions, so
+            // we accept `unknown` and narrow ourselves.
             const payload = (state as { activePayload?: Array<{ payload: ChartRow }> })
-              .activePayload?.[0]?.payload
+              ?.activePayload?.[0]?.payload
             if (payload && payload.scorecard_ids.length > 0) {
               onPointClick(payload.scorecard_ids)
             }
@@ -100,7 +101,17 @@ export function ScoreDynamicsChart({ data, onPointClick }: ScoreDynamicsChartPro
           <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
           <XAxis dataKey="bucket_label" stroke="#6b7280" fontSize={12} />
           <YAxis domain={[0, 5]} stroke="#6b7280" fontSize={12} />
-          <Tooltip formatter={(v: number | null) => (v == null ? '—' : v.toFixed(2))} />
+          <Tooltip
+            formatter={(v) => {
+              // Recharts types the formatter param as `ValueType`
+              // (number | string | (number|string)[]). Normalise to a single
+              // number for the score axis; fall back to the raw value if it
+              // isn't numeric for some reason.
+              if (v == null) return '—'
+              const n = typeof v === 'number' ? v : Number(v)
+              return Number.isFinite(n) ? n.toFixed(2) : String(v)
+            }}
+          />
           <Legend />
           {data.period_avg != null ? (
             <ReferenceLine
