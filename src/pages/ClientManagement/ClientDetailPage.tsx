@@ -4072,7 +4072,11 @@ export function ClientDetailPage() {
           }}
           interaction={editingInteraction}
           loanOptions={loans
-            .filter((loan) => loan.status.toLowerCase() !== 'closed')
+            // Edit modal always lists every loan, including closed ones,
+            // so a historical interaction's saved credit value is never
+            // orphaned when its debt has since been closed. The new
+            // chain-step "Show closed credits" admin flag only affects
+            // the *create* flow in ChainExecutor — see ChainStepsEditor.
             .map((loan) => ({
               id: loan.id,
               contractNumber: loan.contract_number ?? String(loan.id),

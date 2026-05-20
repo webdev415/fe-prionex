@@ -2699,7 +2699,8 @@
         "selectTA": "Выберите ЦД",
         "delayMinutes": "Задержка (мин)",
         "required": "Обязательно",
-        "notInPast": "Дата не может быть в прошлом"
+        "notInPast": "Дата не может быть в прошлом",
+        "showClosedCredits": "Показывать закрытые кредиты"
       },
       "modals": {
         "create": {
