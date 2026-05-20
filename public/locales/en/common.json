@@ -2699,7 +2699,10 @@
       "addButton": "Add template",
       "chainFallback": "Chain #{{id}}",
       "taFallback": "TA #{{id}}",
+      "departmentFallback": "Dept #{{id}}",
       "presetChip": "{{label}}: {{value}}",
+      "departments": "Departments",
+      "departmentsRequired": "Select at least one department.",
       "toasts": {
         "added": "Template added",
         "removed": "Template removed"

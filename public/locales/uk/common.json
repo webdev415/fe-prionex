@@ -2952,7 +2952,10 @@
       "addButton": "Додати шаблон",
       "chainFallback": "Ланцюжок #{{id}}",
       "taFallback": "ЦД #{{id}}",
+      "departmentFallback": "Відділ #{{id}}",
       "presetChip": "{{label}}: {{value}}",
+      "departments": "Відділи",
+      "departmentsRequired": "Оберіть щонайменше один відділ.",
       "toasts": {
         "added": "Шаблон додано",
         "removed": "Шаблон вилучено"
