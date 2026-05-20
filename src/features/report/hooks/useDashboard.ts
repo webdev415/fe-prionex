@@ -67,10 +67,10 @@ export function useDashboard({
     },
     placeholderData: keepPreviousData,
     enabled: enabled && !!projectId,
-    staleTime: 0, // Always fetch fresh data
-    refetchOnMount: 'always', // Always refetch when component mounts
+    staleTime: 4 * 60_000,
+    refetchOnMount: true,
     refetchOnWindowFocus: true,
-    refetchInterval: 3000, // Refetch every 3 seconds for real-time updates
+    refetchInterval: 5 * 60_000,
     retry: 2,
   })
 }
