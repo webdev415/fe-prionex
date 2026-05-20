@@ -1567,7 +1567,8 @@
         "employee": "Співробітник",
         "searcher": "Пошуковець",
         "assignmentDate": "Дата призначення",
-        "actions": "Дії"
+        "actions": "Дії",
+        "lastOutgoingTaDate": "Дата останньої ЦД"
       },
       "priorities": {
         "critical": "Критичний",
@@ -3105,7 +3106,10 @@
       "addButton": "Додати шаблон",
       "chainFallback": "Ланцюжок #{{id}}",
       "taFallback": "ЦД #{{id}}",
+      "departmentFallback": "Відділ #{{id}}",
       "presetChip": "{{label}}: {{value}}",
+      "departments": "Відділи",
+      "departmentsRequired": "Оберіть щонайменше один відділ.",
       "toasts": {
         "added": "Шаблон додано",
         "removed": "Шаблон вилучено"

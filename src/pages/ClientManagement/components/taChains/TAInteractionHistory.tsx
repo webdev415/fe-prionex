@@ -84,12 +84,12 @@ function NotesCell({ note }: { note: string | null | undefined }) {
         aria-expanded={expanded}
         aria-label={label}
         title={label}
-        className="mt-[1px] shrink-0 cursor-pointer rounded p-0.5 text-gray-500 hover:bg-gray-100 hover:text-gray-800"
+        className="shrink-0 cursor-pointer rounded p-0.5 text-black hover:bg-gray-100"
       >
         {expanded ? (
-          <Icons.ArrowUp size={14} strokeWidth={1.5} />
+          <Icons.ArrowUp size={16} strokeWidth={2} />
         ) : (
-          <Icons.ArrowDown size={14} strokeWidth={1.5} />
+          <Icons.ArrowDown size={16} strokeWidth={2} />
         )}
       </button>
     </span>
