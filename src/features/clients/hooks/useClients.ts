@@ -290,6 +290,7 @@ export function useClientProfile(clientId: number, enabled = true) {
     queryFn: () => clientApi.getClientProfile(clientId),
     enabled: enabled && clientId > 0,
     staleTime: 5 * 60_000,
+    refetchOnMount: false,
   })
 }
 
@@ -302,6 +303,7 @@ export function useClientLoans(clientId: number, enabled = true) {
     queryFn: () => clientApi.getClientById(clientId),
     enabled: enabled && clientId > 0,
     staleTime: 2 * 60_000,
+    refetchOnMount: false,
     select: (data) => data.debts ?? [],
   })
 }
@@ -327,6 +329,7 @@ export function useClientPaymentsSection(clientId: number, enabled = true) {
     },
     enabled: enabled && clientId > 0,
     staleTime: 2 * 60_000,
+    refetchOnMount: false,
   })
 }
 
@@ -418,6 +421,7 @@ export function useClientCallSmsHistory(clientId: number, enabled = true) {
     },
     enabled: enabled && clientId > 0,
     staleTime: 30000,
+    refetchOnMount: false,
   })
 }
 
@@ -431,6 +435,7 @@ export function useClientTasks(clientId: number, enabled = true) {
     enabled: enabled && clientId > 0,
     staleTime: 30000,
     refetchInterval: 30_000,
+    refetchOnMount: false,
     select: (data) => data.tasks ?? [],
   })
 }
@@ -496,6 +501,7 @@ export function useClientOperatorsSection(clientId: number, enabled = true) {
     },
     enabled: enabled && clientId > 0,
     staleTime: 5 * 60_000,
+    refetchOnMount: false,
   })
 }
 
@@ -508,6 +514,7 @@ export function useClientDocuments(clientId: number, enabled = true) {
     queryFn: () => documentApi.list(clientId),
     enabled: enabled && clientId > 0,
     staleTime: 5 * 60_000,
+    refetchOnMount: false,
   })
 }
 
@@ -521,6 +528,7 @@ export function useClientActivities(clientId: number, enabled = true) {
     queryFn: () => interactionApi.getClientInteractions(clientId),
     enabled: enabled && clientId > 0,
     staleTime: 2 * 60_000,
+    refetchOnMount: false,
     select: (data) => data.items ?? [],
   })
 }
@@ -583,6 +591,7 @@ export function useClientDialHistory(clientId: number, enabled = true) {
     queryFn: () => interactionApi.getClientDialHistory(clientId, { limit: 10 }),
     enabled: enabled && clientId > 0,
     staleTime: 2 * 60_000,
+    refetchOnMount: false,
     select: (data) => data.records ?? [],
   })
 }
@@ -606,6 +615,7 @@ export function useClientRestructuringAgreements(clientId: number, enabled = tru
     queryFn: () => clientApi.getClientRestructuringAgreements(clientId),
     enabled: enabled && clientId > 0,
     staleTime: 2 * 60_000,
+    refetchOnMount: false,
   })
 
   const hasTerminalRR = Array.isArray(query.data)
@@ -636,6 +646,7 @@ export function useRestructuringAgreementDetail(clientId: number, raId: number, 
     queryFn: () => clientApi.getRestructuringAgreementDetail(clientId, raId),
     enabled: enabled && clientId > 0 && raId > 0,
     staleTime: 2 * 60_000,
+    refetchOnMount: false,
   })
 }
 
@@ -820,6 +831,7 @@ export function useRRStatusHistory(clientId: number, raId: number, enabled = tru
     queryFn: () => clientApi.getRestructuringAgreementStatusHistory(clientId, raId),
     enabled: enabled && clientId > 0 && raId > 0,
     staleTime: 30000,
+    refetchOnMount: false,
   })
 }
 
@@ -832,6 +844,7 @@ export function useRROverpayments(clientId: number, raId: number, enabled = true
     queryFn: () => clientApi.getRROverpayments(clientId, raId),
     enabled: enabled && clientId > 0 && raId > 0,
     staleTime: 30000,
+    refetchOnMount: false,
   })
 }
 
