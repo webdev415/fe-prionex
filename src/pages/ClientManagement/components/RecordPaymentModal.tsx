@@ -28,12 +28,9 @@ import type { DebtDetail, RestructuringAgreementSummary } from '@/features/clien
 import { useClientRestructuringAgreements } from '@/features/clients/hooks/useClients'
 import { PAYMENT_TYPE_VALUES, type PaymentType } from '@/features/payments/api/types'
 
-// KAN-507: an RR is "open" for auto-prefill purposes when its status is not
-// terminal. Terminal status_ids (Completed=4, Cancelled=5) match the
-// convention pinned in useClientRestructuringAgreements.
-const TERMINAL_RR_STATUS_IDS = new Set<number>([4, 5])
-function isRrOpen(ra: RestructuringAgreementSummary): boolean {
-  return ra.status_id != null && !TERMINAL_RR_STATUS_IDS.has(ra.status_id)
+const RR_STATUS_CONNECTED = 1
+function isRrConnected(ra: RestructuringAgreementSummary): boolean {
+  return ra.status_id === RR_STATUS_CONNECTED
 }
 
 /**
@@ -147,26 +144,39 @@ export function RecordPaymentModal({
   // by definition report zero remaining balance, otherwise the feature
   // is useless.
   const isClosedDebtCorrection = selectedDebt?.status === 'closed'
+  const hasConnectedRrForDebt = useMemo(() => {
+    if (selectedDebtId == null) return false
+    return (restructuringAgreements ?? []).some(
+      (ra) => ra.debt_id === selectedDebtId && isRrConnected(ra)
+    )
+  }, [restructuringAgreements, selectedDebtId])
 
-  // KAN-507: auto-prefill Payment Type when the picked debt has an open RR.
-  // Only writes when the field is still untouched (paymentType === '' AND
-  // paymentTypeDirty === false) so an explicit operator choice is never
-  // silently overwritten — switching debts after picking a value stays.
-  // The setState-in-effect rule fires here, but the guards make the write
-  // idempotent (won't re-fire once paymentType is set), so a one-line
-  // disable is the cleanest expression of the intent.
+  // Dirty guard prevents this auto-prefill from clobbering an explicit
+  // operator pick when the picked debt changes.
   useEffect(() => {
-    if (selectedDebtId == null) return
     if (paymentTypeDirty) return
     if (paymentType !== '') return
-    const openRrForDebt = (restructuringAgreements ?? []).find(
-      (ra) => ra.debt_id === selectedDebtId && isRrOpen(ra)
-    )
-    if (openRrForDebt) {
+    if (!hasConnectedRrForDebt) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setPaymentType('payment_by_rr')
+  }, [hasConnectedRrForDebt, paymentTypeDirty, paymentType])
+
+  useEffect(() => {
+    if (paymentType === 'payment_by_rr' && !hasConnectedRrForDebt) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
-      setPaymentType('payment_by_rr')
+      setPaymentType('')
+      setPaymentTypeDirty(false)
+      setPaymentTypeError(null)
     }
-  }, [selectedDebtId, restructuringAgreements, paymentTypeDirty, paymentType])
+  }, [paymentType, hasConnectedRrForDebt])
+
+  const availablePaymentTypes = useMemo<readonly PaymentType[]>(
+    () =>
+      hasConnectedRrForDebt
+        ? PAYMENT_TYPE_VALUES
+        : PAYMENT_TYPE_VALUES.filter((v) => v !== 'payment_by_rr'),
+    [hasConnectedRrForDebt]
+  )
 
   const amountValue = parseFloat(paymentAmount) || 0
   const minAmount = 100
@@ -516,7 +526,7 @@ export function RecordPaymentModal({
                     />
                   </SelectTrigger>
                   <SelectContent>
-                    {PAYMENT_TYPE_VALUES.map((v) => (
+                    {availablePaymentTypes.map((v) => (
                       <SelectItem key={v} value={v}>
                         {t(`pages.actionAnalysis.filters.paymentTypes.${v}`, v)}
                       </SelectItem>
