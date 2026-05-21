@@ -79,6 +79,10 @@ import {
   useDeleteContact,
   useContactTypes,
 } from '@/features/clients/hooks/useClients'
+import {
+  contactTypeLabel,
+  pickDefaultActiveContactTypeId,
+} from '@/features/clients/utils/contactTypeLabel'
 import type { RestructuringPaymentEntry } from '@/features/clients/api/types'
 import type { OverpaymentResponse, RRStatusHistoryEntry } from '@/features/clients/api/clientApi'
 import { useUpdateInteraction } from '@/features/clients/hooks/useNoteInteraction'
@@ -266,7 +270,6 @@ export function ClientDetailPage() {
     isCallModalOpen,
     setIsCallModalOpen,
     currentCallId,
-    activeCallType,
     callError,
     isOriginatingCall,
     isCallCooldown,
@@ -353,7 +356,37 @@ export function ClientDetailPage() {
   const { mutate: createContact, isPending: isCreatingContact } = useCreateContact()
   const { mutate: updateContact, isPending: isUpdatingContact } = useUpdateContact()
   const { mutate: deleteContact, isPending: isDeletingContact } = useDeleteContact()
-  const { data: contactTypes = [] } = useContactTypes()
+  const { data: contactTypes = [], refetch: refetchContactTypes } = useContactTypes('all')
+  const contactTypesById = useMemo(() => {
+    const m = new Map<number, (typeof contactTypes)[number]>()
+    contactTypes.forEach((ct) => m.set(ct.id, ct))
+    return m
+  }, [contactTypes])
+
+  const defaultNewContactTypeId = useMemo(
+    () => pickDefaultActiveContactTypeId(contactTypes),
+    [contactTypes]
+  )
+
+  const openOutboundCall = (rawPhone: string | null | undefined, contactTypeId?: number | null) => {
+    const phone = (rawPhone ?? '').trim()
+    if (!phone) return
+    if (isCallActive()) {
+      toast.warning(
+        t('pages.clients.modals.callDialog.callInProgress') ||
+          'Another call or recording is already in progress. Please finish or close it first.'
+      )
+      return
+    }
+    const meta = contactTypeId != null ? contactTypesById.get(contactTypeId) : undefined
+    const initialCallType: CallType =
+      meta?.default_call_line === 'gray' ? 'gray-line' : 'white-line'
+    const spamOptionEnabled = meta?.spam_allowed !== false
+    setCallModalPreferences({ phone, initialCallType, spamOptionEnabled })
+    setOpenCallModal('call-dialog')
+    setIsCallModalOpen(true)
+  }
+
   const canCreateTasks = useHasPermission(PERMISSIONS.CLIENTS.CREATE_TASKS)
   const canEditClient = useHasPermission(PERMISSIONS.CLIENTS.EDIT)
   // Per-transition RR permissions. Buttons in the RR actions column
@@ -394,11 +427,15 @@ export function ClientDetailPage() {
   const client = useMemo(() => {
     if (!profile) return null
 
-    // Build phones array from additional_phones (sourced from client_contacts types 1, 2, 29)
+    // Build phones array from additional_phones (ordered by directory sort_order on backend)
     const isValidPhone = (p: string | null | undefined): p is string => !!p && !/^0+$/.test(p)
     const phones: Array<{
       number: string
       type: string
+      contactTypeId: number
+      contactTypeCode?: string | null
+      defaultCallLine: string
+      spamAllowed: boolean
       created_at?: string | null
       added_by_user_name?: string | null
     }> = []
@@ -409,13 +446,25 @@ export function ClientDetailPage() {
           phones.push({
             number: p.number,
             type: p.type,
+            contactTypeId: p.contact_type_id,
+            contactTypeCode: p.contact_type_code ?? null,
+            defaultCallLine: p.default_call_line ?? 'white',
+            spamAllowed: p.spam_allowed !== false,
             created_at: p.created_at,
             added_by_user_name: p.added_by_user_name,
           })
         )
     } else if (isValidPhone(profile.phone_primary)) {
-      // Fallback for backward compat
-      phones.push({ number: profile.phone_primary, type: 'mobile' })
+      // Legacy profile: primary phone string only (no contact rows in strip yet).
+      // Treat as client mobile (type id 1) so call/spam UI has consistent defaults.
+      phones.push({
+        number: profile.phone_primary,
+        type: 'mobile',
+        contactTypeId: 1,
+        contactTypeCode: null,
+        defaultCallLine: 'white',
+        spamAllowed: true,
+      })
     }
 
     return {
@@ -485,6 +534,8 @@ export function ClientDetailPage() {
         comment: r.comment ?? '',
         created_at: r.created_at,
         added_by_user_name: r.added_by_user_name,
+        defaultCallLine: r.default_call_line ?? 'white',
+        spamAllowed: r.spam_allowed !== false,
       })),
       addresses: (profile.addresses ?? []).map((a) => ({
         id: a.id,
@@ -839,7 +890,11 @@ export function ClientDetailPage() {
   } | null>(null)
   const [isSendSMSModalOpen, setIsSendSMSModalOpen] = useState(false)
   const [selectedPhoneForSMS, setSelectedPhoneForSMS] = useState<string>('')
-  const [selectedPhoneForCall, setSelectedPhoneForCall] = useState<string>('')
+  const [callModalPreferences, setCallModalPreferences] = useState<{
+    phone: string
+    initialCallType: CallType
+    spamOptionEnabled: boolean
+  } | null>(null)
   const [contactEditorMode, setContactEditorMode] = useState<'add' | 'edit' | null>(null)
   const [editingContactId, setEditingContactId] = useState<number | null>(null)
   const [contactDeleteConfirmId, setContactDeleteConfirmId] = useState<number | null>(null)
@@ -869,24 +924,36 @@ export function ClientDetailPage() {
   const [activeOperatorTab, setActiveOperatorTab] = useState<'operators' | 'searchers'>('operators')
   const [activeCallSmsTab, setActiveCallSmsTab] = useState<'all' | 'calls' | 'sms'>('all')
 
+  const contactTypesForRecommenderSelect = useMemo(() => {
+    return [...contactTypes]
+      .filter((ct) => !ct.is_hidden || ct.id === contactFormData.contact_type_id)
+      .sort((a, b) =>
+        a.sort_order !== b.sort_order
+          ? a.sort_order - b.sort_order
+          : a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })
+      )
+  }, [contactTypes, contactFormData.contact_type_id])
+
   const resetContactEditor = () => {
     setContactEditorMode(null)
     setEditingContactId(null)
     setContactError(null)
     setContactFormData({
       contact_value: '',
-      contact_type_id: 7,
+      contact_type_id: defaultNewContactTypeId,
       comment: '',
     })
   }
 
-  const handleStartAddContact = () => {
+  const handleStartAddContact = async () => {
     setContactError(null)
     setEditingContactId(null)
     setContactEditorMode('add')
+    const { data: freshTypes } = await refetchContactTypes()
+    const types = freshTypes ?? contactTypes
     setContactFormData({
       contact_value: '',
-      contact_type_id: contactTypes[0]?.id ?? 7,
+      contact_type_id: pickDefaultActiveContactTypeId(types),
       comment: '',
     })
   }
@@ -902,7 +969,7 @@ export function ClientDetailPage() {
     setContactEditorMode('edit')
     setContactFormData({
       contact_value: contact.contactValue ?? '',
-      contact_type_id: contact.contactTypeId ?? contactTypes[0]?.id ?? 7,
+      contact_type_id: contact.contactTypeId ?? defaultNewContactTypeId,
       comment: contact.comment ?? '',
     })
   }
@@ -1945,18 +2012,7 @@ export function ClientDetailPage() {
                     return
                   }
 
-                  if (isCallActive()) {
-                    toast.warning(
-                      t('pages.clients.modals.callDialog.callInProgress') ||
-                        'Another call or recording is already in progress. Please finish or close it first.'
-                    )
-                    return
-                  }
-
-                  // Open modal in 'initial' state to let user select call type
-                  setSelectedPhoneForCall(phoneNumber)
-                  setOpenCallModal('call-dialog')
-                  setIsCallModalOpen(true)
+                  openOutboundCall(phoneNumber, client.phones?.[0]?.contactTypeId ?? null)
                 }}
               >
                 {t('pages.clients.activity.call')}
@@ -2152,13 +2208,17 @@ export function ClientDetailPage() {
                             {phone.type && (
                               <div>
                                 {t('pages.clients.detail.phoneType')}:{' '}
-                                {phone.type === 'mobile'
-                                  ? t('pages.clients.editModal.phoneMobile')
-                                  : phone.type === 'home'
-                                    ? t('pages.clients.editModal.phoneHome')
-                                    : phone.type === 'register'
-                                      ? t('pages.clients.editModal.phoneRegister')
-                                      : phone.type}
+                                {phone.contactTypeCode
+                                  ? t(`contactTypes.${phone.contactTypeCode}`, {
+                                      defaultValue: phone.type,
+                                    })
+                                  : phone.type === 'mobile'
+                                    ? t('pages.clients.editModal.phoneMobile')
+                                    : phone.type === 'home'
+                                      ? t('pages.clients.editModal.phoneHome')
+                                      : phone.type === 'register'
+                                        ? t('pages.clients.editModal.phoneRegister')
+                                        : phone.type}
                               </div>
                             )}
                             {phone.added_by_user_name && (
@@ -2181,16 +2241,7 @@ export function ClientDetailPage() {
                           <button
                             disabled={!user?.is_agent || !user?.asterisk_extension}
                             onClick={() => {
-                              if (isCallActive()) {
-                                toast.warning(
-                                  t('pages.clients.modals.callDialog.callInProgress') ||
-                                    'Another call or recording is already in progress. Please finish or close it first.'
-                                )
-                                return
-                              }
-                              setSelectedPhoneForCall(phone.number)
-                              setOpenCallModal('call-dialog')
-                              setIsCallModalOpen(true)
+                              openOutboundCall(phone.number, phone.contactTypeId)
                             }}
                             className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-40 md:h-[20px] md:w-[20px]"
                           >
@@ -2564,16 +2615,7 @@ export function ClientDetailPage() {
                               <button
                                 disabled={!user?.is_agent || !user?.asterisk_extension}
                                 onClick={() => {
-                                  if (isCallActive()) {
-                                    toast.warning(
-                                      t('pages.clients.modals.callDialog.callInProgress') ||
-                                        'Another call or recording is already in progress. Please finish or close it first.'
-                                    )
-                                    return
-                                  }
-                                  setSelectedPhoneForCall(client.work?.workPhone || '')
-                                  setOpenCallModal('call-dialog')
-                                  setIsCallModalOpen(true)
+                                  openOutboundCall(client.work?.workPhone || '', null)
                                 }}
                                 className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-40 md:h-[20px] md:w-[20px]"
                               >
@@ -3070,16 +3112,10 @@ export function ClientDetailPage() {
                                       <button
                                         disabled={!user?.is_agent || !user?.asterisk_extension}
                                         onClick={() => {
-                                          if (isCallActive()) {
-                                            toast.warning(
-                                              t('pages.clients.modals.callDialog.callInProgress') ||
-                                                'Another call or recording is already in progress. Please finish or close it first.'
-                                            )
-                                            return
-                                          }
-                                          setSelectedPhoneForCall(contact.contactValue)
-                                          setOpenCallModal('call-dialog')
-                                          setIsCallModalOpen(true)
+                                          openOutboundCall(
+                                            contact.contactValue,
+                                            contact.contactTypeId
+                                          )
                                         }}
                                         className="text-primary-500 flex h-[20px] w-[20px] cursor-pointer items-center justify-center hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-40"
                                       >
@@ -3205,11 +3241,9 @@ export function ClientDetailPage() {
                                       <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
-                                      {contactTypes.map((ct) => (
+                                      {contactTypesForRecommenderSelect.map((ct) => (
                                         <SelectItem key={ct.id} value={String(ct.id)}>
-                                          {i18n.language === 'uk'
-                                            ? ct.name
-                                            : t(`contactTypes.${ct.code}`)}
+                                          {contactTypeLabel(ct, t, i18n.language)}
                                         </SelectItem>
                                       ))}
                                     </SelectContent>
@@ -4120,12 +4154,13 @@ export function ClientDetailPage() {
           open={isCallModalOpen}
           onClose={() => {
             handleCloseCallModal()
-            setSelectedPhoneForCall('')
+            setCallModalPreferences(null)
           }}
           clientName={client.fullName}
-          phoneNumber={selectedPhoneForCall || client.phones?.[0]?.number || ''}
+          phoneNumber={callModalPreferences?.phone || client.phones?.[0]?.number || ''}
           callId={currentCallId}
-          initialCallType={activeCallType}
+          initialCallType={callModalPreferences?.initialCallType ?? 'white-line'}
+          spamOptionEnabled={callModalPreferences?.spamOptionEnabled ?? true}
           initialState="initial"
           error={callError}
           isLoading={isOriginatingCall}

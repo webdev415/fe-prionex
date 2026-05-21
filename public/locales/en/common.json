@@ -35,6 +35,7 @@
     "scoringConfiguration": "Scoring Configuration",
     "systemSettings": "System Settings",
     "tags": "Tags",
+    "contactTypes": "Contact Types",
     "actionAnalysis": "Action Analysis"
   },
   "search": {
@@ -3300,6 +3301,38 @@
           "templateWillBePermanentlyRemoved": "The template will be permanently removed from the system.",
           "deleting": "Deleting..."
         }
+      }
+    },
+    "contactTypes": {
+      "title": "Contact Types",
+      "add": "+ Add contact type",
+      "createTitle": "New contact type",
+      "editTitle": "Edit contact type",
+      "fieldName": "Name",
+      "fieldDefaultLine": "Default Call Line",
+      "fieldSpam": "Spam Allowed",
+      "fieldPrimary": "Show as Primary Phone",
+      "fieldSort": "Sort Order",
+      "white": "White",
+      "gray": "Gray",
+      "hidden": "Hidden",
+      "active": "Active",
+      "hide": "Hide",
+      "restore": "Restore",
+      "filterStatus": "Status",
+      "filterAll": "All",
+      "filterActive": "Active",
+      "filterHidden": "Hidden",
+      "errorLoading": "Failed to load contact types",
+      "retry": "Retry",
+      "columns": {
+        "sortOrder": "Sort Order",
+        "name": "Name",
+        "defaultLine": "Default Call Line",
+        "spamAllowed": "Spam Allowed",
+        "primary": "Show as Primary Phone",
+        "status": "Status",
+        "actions": "Actions"
       }
     },
     "tags": {

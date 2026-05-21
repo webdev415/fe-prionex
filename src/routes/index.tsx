@@ -105,6 +105,9 @@ const AuditLogsPage = lazy(() =>
   import('@/pages/AuditLogs').then((m) => ({ default: m.AuditLogsPage }))
 )
 const TagsPage = lazy(() => import('@/pages/Tags/TagsPage').then((m) => ({ default: m.TagsPage })))
+const ContactTypesPage = lazy(() =>
+  import('@/pages/ContactTypes/ContactTypesPage').then((m) => ({ default: m.ContactTypesPage }))
+)
 const ProfileSettingsPage = lazy(() =>
   import('@/pages/ProfileSettings/ProfileSettingsPage').then((m) => ({
     default: m.ProfileSettingsPage,
@@ -264,6 +267,14 @@ export const router = createBrowserRouter([
         element: (
           <PermissionRoute requiredPermission={PERMISSIONS.TAGS.VIEW}>
             {withSuspense(<TagsPage />)}
+          </PermissionRoute>
+        ),
+      },
+      {
+        path: 'system-settings/contact-types',
+        element: (
+          <PermissionRoute requiredPermission={PERMISSIONS.CONTACT_TYPES.VIEW}>
+            {withSuspense(<ContactTypesPage />)}
           </PermissionRoute>
         ),
       },

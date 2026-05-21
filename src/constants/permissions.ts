@@ -4,8 +4,7 @@
  * Centralized permission definitions that match the backend RBAC system.
  * These permissions control access to features, routes, and UI elements.
  *
- * Backend Source: /home/pst/dev/prionex/api-prionex/services/auth/alembic/versions/20251122_0002_002_seed_initial_data.py
- * Total Permissions: 43
+ * Backend Source: api-prionex/services/auth/alembic (seed + incremental migrations)
  */
 
 export const PERMISSIONS = {
@@ -190,6 +189,15 @@ export const PERMISSIONS = {
   },
 
   /**
+   * Contact Types (CRM Settings directory for phone contact labels)
+   */
+  CONTACT_TYPES: {
+    VIEW: 'view_contact_types',
+    CREATE: 'create_contact_types',
+    EDIT: 'edit_contact_types',
+  },
+
+  /**
    * Restructuring Category (5 permissions)
    * Per-transition gates for manual RR status changes. Each button in
    * the RR actions column checks its specific permission. Automated
@@ -254,6 +262,7 @@ export const PERMISSION_CATEGORIES = {
   TA_CHAINS: 'TA Chains',
   ACTION_ANALYSIS: 'Action Analysis',
   DOCUMENT_GENERATION: 'Document Generation',
+  CONTACT_TYPES: 'Contact Types',
   RESTRUCTURING: 'Restructuring',
 } as const
 
@@ -346,6 +355,11 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   create_edit_document_templates: 'Create and edit document templates',
   delete_document_templates: 'Delete document templates',
   generate_document: 'Generate a document on the client card',
+
+  // Contact Types (CRM Settings)
+  view_contact_types: 'View Contact Types directory in Settings',
+  create_contact_types: 'Create new contact types (requires view permission)',
+  edit_contact_types: 'Edit contact types and hide or restore them (requires view permission)',
 
   // Restructuring — per-transition gates on the RR action buttons
   rr_transition_connected_to_violated:

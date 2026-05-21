@@ -69,6 +69,8 @@ export interface DataTableProps<T> {
   tableHeaderActions?: ReactNode // Buttons/actions to display in a header row above the table
   tableHeaderTitle?: string | ReactNode // Optional title/text to display on the left side of the table header
   tableClassName?: string // Additional classes for the <table> element (e.g., 'table-fixed')
+  /** Extra row classes (e.g. dim hidden rows). Applied after selection / zebra background. */
+  rowClassName?: (item: T) => string | undefined
 }
 
 export function DataTable<T extends { id: number | string }>({
@@ -93,6 +95,7 @@ export function DataTable<T extends { id: number | string }>({
   tableHeaderActions,
   tableHeaderTitle,
   tableClassName,
+  rowClassName,
 }: DataTableProps<T>) {
   const { t } = useTranslation('common')
   const handleSort = (column: Column<T>) => {
@@ -352,7 +355,7 @@ export function DataTable<T extends { id: number | string }>({
                 return (
                   <tr
                     key={item.id}
-                    className={`transition-colors ${getRowBackground()} ${onRowClick ? 'cursor-pointer' : ''}`}
+                    className={`transition-colors ${getRowBackground()} ${onRowClick ? 'cursor-pointer' : ''} ${rowClassName?.(item) ?? ''}`}
                     onClick={() => onRowClick?.(item)}
                   >
                     {/* Checkbox column for bulk selection */}

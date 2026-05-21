@@ -35,6 +35,7 @@
     "scoringConfiguration": "Конфигурация оценки",
     "systemSettings": "Системные настройки",
     "tags": "Теги",
+    "contactTypes": "Типы контактов",
     "actionAnalysis": "Анализ действий"
   },
   "search": {
@@ -3583,6 +3584,38 @@
           "ipAddress": "IP адрес",
           "successStatus": "Статус успеха"
         }
+      }
+    },
+    "contactTypes": {
+      "title": "Типы контактов",
+      "add": "+ Добавить тип контакта",
+      "createTitle": "Новый тип контакта",
+      "editTitle": "Редактировать тип контакта",
+      "fieldName": "Название",
+      "fieldDefaultLine": "Линия звонка по умолчанию",
+      "fieldSpam": "Разрешить спам",
+      "fieldPrimary": "Показывать как основной телефон",
+      "fieldSort": "Порядок сортировки",
+      "white": "Белая",
+      "gray": "Серая",
+      "hidden": "Скрыт",
+      "active": "Активен",
+      "hide": "Скрыть",
+      "restore": "Восстановить",
+      "filterStatus": "Статус",
+      "filterAll": "Все",
+      "filterActive": "Активные",
+      "filterHidden": "Скрытые",
+      "errorLoading": "Не удалось загрузить типы контактов",
+      "retry": "Повторить",
+      "columns": {
+        "sortOrder": "Порядок",
+        "name": "Название",
+        "defaultLine": "Линия звонка",
+        "spamAllowed": "Спам",
+        "primary": "Основной телефон",
+        "status": "Статус",
+        "actions": "Действия"
       }
     },
     "tags": {

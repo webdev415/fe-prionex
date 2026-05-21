@@ -733,13 +733,20 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         path: '/dashboard/system-settings',
         icon: 'setting-07',
         label: t('navigation.systemSettings', 'System Settings'),
-        requiredPermission: PERMISSIONS.SYSTEM.MANAGE_SETTINGS,
+        requiredPermissions: [PERMISSIONS.SYSTEM.MANAGE_SETTINGS, PERMISSIONS.CONTACT_TYPES.VIEW],
+        mode: 'any' as const,
         subItems: [
           {
             path: '/dashboard/system-settings/tags',
             label: t('navigation.tags', 'Tags'),
             icon: 'file-01',
             requiredPermission: PERMISSIONS.TAGS.VIEW,
+          },
+          {
+            path: '/dashboard/system-settings/contact-types',
+            label: t('navigation.contactTypes', 'Contact Types'),
+            icon: 'user-multiple-02',
+            requiredPermission: PERMISSIONS.CONTACT_TYPES.VIEW,
           },
           {
             path: '/dashboard/system-settings/scoring-configuration',
