@@ -81,6 +81,22 @@ export interface Payment {
   is_deleted: boolean
   deleted_at?: string
   deleted_by?: number
+  // H-5: verify-time allocation snapshot. Populated by the BE on the
+  // ``POST /payments/{id}/verify`` response when the payment has been
+  // snapshotted. ``null``/missing for legacy rows and for responses
+  // from non-verify endpoints (those callers should read
+  // ``/debt-breakdown`` instead). Type extension only — no consumer
+  // change required in this iteration.
+  allocation_at?: string | null
+  allocation?: {
+    principal: number
+    interest: number
+    fees: number
+    penalties: number
+    fines: number
+    allocated_total: number
+    unmatched: number
+  } | null
 }
 
 export interface RecordPaymentRequest {
@@ -237,11 +253,32 @@ export interface PaymentDebtBreakdownResponse {
   payment_number: string
   payment_amount: number
   payment_status: string
-  debt_id: number
+  /** Optional — null/missing when the payment has no associated debt (AC-1b). */
+  debt_id: number | null
   contract_number: string
   allocation: PaymentAllocationItem[]
   total_allocated: number
+  /**
+   * Per the payment-allocation-snapshot requirement (Phase 4): residue from
+   * ``payment_amount - Σ(allocated_*)``. Frontend renders a defensive
+   * "Unmatched / Overpayment" pseudo-row when this is > 0.01. Old backends
+   * omit the field — treat as 0 (`unmatched ?? 0`).
+   */
+  unmatched?: number
   total_remaining_debt: number
-  allocation_method: 'computed' | 'stored'
+  /**
+   * - ``"stored"``: read from payment.allocated_* (Phase 3+).
+   * - ``"computed"``: chronological replay (legacy rows; identical to today).
+   * - ``"none"``: payment has no debt (debt_id_missing).
+   */
+  allocation_method: 'computed' | 'stored' | 'none'
+  /**
+   * Verify-time snapshot timestamp. Present for ``allocation_method === "stored"``;
+   * ``null`` for legacy rows. The frontend treats either this or ``computed_at``
+   * as the "last computed at" indicator.
+   */
+  allocation_at?: string | null
   computed_at: string
+  /** AC-1b — when true, allocation is empty and the modal renders a placeholder. */
+  debt_id_missing?: boolean
 }
