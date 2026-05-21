@@ -79,6 +79,10 @@ import {
   useDeleteContact,
   useContactTypes,
 } from '@/features/clients/hooks/useClients'
+import {
+  contactTypeLabel,
+  pickDefaultActiveContactTypeId,
+} from '@/features/clients/utils/contactTypeLabel'
 import type { RestructuringPaymentEntry } from '@/features/clients/api/types'
 import type { OverpaymentResponse, RRStatusHistoryEntry } from '@/features/clients/api/clientApi'
 import { useUpdateInteraction } from '@/features/clients/hooks/useNoteInteraction'
@@ -352,24 +356,17 @@ export function ClientDetailPage() {
   const { mutate: createContact, isPending: isCreatingContact } = useCreateContact()
   const { mutate: updateContact, isPending: isUpdatingContact } = useUpdateContact()
   const { mutate: deleteContact, isPending: isDeletingContact } = useDeleteContact()
-  const { data: contactTypes = [] } = useContactTypes('all')
+  const { data: contactTypes = [], refetch: refetchContactTypes } = useContactTypes('all')
   const contactTypesById = useMemo(() => {
     const m = new Map<number, (typeof contactTypes)[number]>()
     contactTypes.forEach((ct) => m.set(ct.id, ct))
     return m
   }, [contactTypes])
 
-  /** First active type by directory sort (ticket: add-contact list order). */
-  const defaultNewContactTypeId = useMemo(() => {
-    const active = contactTypes
-      .filter((ct) => !ct.is_hidden)
-      .sort((a, b) =>
-        a.sort_order !== b.sort_order
-          ? a.sort_order - b.sort_order
-          : a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })
-      )
-    return active[0]?.id ?? contactTypes[0]?.id ?? 7
-  }, [contactTypes])
+  const defaultNewContactTypeId = useMemo(
+    () => pickDefaultActiveContactTypeId(contactTypes),
+    [contactTypes]
+  )
 
   const openOutboundCall = (rawPhone: string | null | undefined, contactTypeId?: number | null) => {
     const phone = (rawPhone ?? '').trim()
@@ -948,13 +945,15 @@ export function ClientDetailPage() {
     })
   }
 
-  const handleStartAddContact = () => {
+  const handleStartAddContact = async () => {
     setContactError(null)
     setEditingContactId(null)
     setContactEditorMode('add')
+    const { data: freshTypes } = await refetchContactTypes()
+    const types = freshTypes ?? contactTypes
     setContactFormData({
       contact_value: '',
-      contact_type_id: defaultNewContactTypeId,
+      contact_type_id: pickDefaultActiveContactTypeId(types),
       comment: '',
     })
   }
@@ -3244,9 +3243,7 @@ export function ClientDetailPage() {
                                     <SelectContent>
                                       {contactTypesForRecommenderSelect.map((ct) => (
                                         <SelectItem key={ct.id} value={String(ct.id)}>
-                                          {i18n.language === 'uk'
-                                            ? ct.name
-                                            : t(`contactTypes.${ct.code}`)}
+                                          {contactTypeLabel(ct, t, i18n.language)}
                                         </SelectItem>
                                       ))}
                                     </SelectContent>

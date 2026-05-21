@@ -4,6 +4,8 @@
 
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { toast } from 'sonner'
+import { getErrorMessage } from '@/lib/errors'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -35,8 +37,10 @@ export function ContactTypesPage() {
   const [defaultLine, setDefaultLine] = useState<'white' | 'gray'>('white')
   const [spamAllowed, setSpamAllowed] = useState(false)
   const [primaryPhone, setPrimaryPhone] = useState(false)
+  const [formError, setFormError] = useState<string | null>(null)
 
   const openCreate = () => {
+    setFormError(null)
     setEditing(null)
     setName('')
     setSortOrder('100')
@@ -59,6 +63,12 @@ export function ContactTypesPage() {
   const handleSave = () => {
     const so = Number(sortOrder)
     if (!name.trim() || Number.isNaN(so)) return
+    setFormError(null)
+    const onError = (error: unknown) => {
+      const message = getErrorMessage(error)
+      setFormError(message)
+      toast.error(message)
+    }
     if (editing) {
       patchMutation.mutate(
         {
@@ -76,6 +86,7 @@ export function ContactTypesPage() {
             setFormOpen(false)
             refetch()
           },
+          onError,
         }
       )
     } else {
@@ -92,6 +103,7 @@ export function ContactTypesPage() {
             setFormOpen(false)
             refetch()
           },
+          onError,
         }
       )
     }
@@ -235,6 +247,7 @@ export function ContactTypesPage() {
           }
         />
         <ModalContent className="flex flex-col gap-4">
+          {formError && <p className="text-error-500 text-sm">{formError}</p>}
           <Input
             label={t('pages.contactTypes.fieldName', 'Name')}
             value={name}
