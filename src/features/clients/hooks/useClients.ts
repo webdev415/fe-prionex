@@ -478,21 +478,20 @@ export function useDeleteTask(clientId: number) {
 }
 
 /**
- * Get client assignment history (operators + searchers). Calls GET /clients/{id}/assignment-history
+ * Get client assignment history (operators + searchers) in a single request.
+ * Calls GET /clients/{id}/assignment-history/combined — one DB round trip,
+ * one auth-service name lookup, both employee and searcher current users.
  */
 export function useClientOperatorsSection(clientId: number, enabled = true) {
   return useQuery({
     queryKey: clientKeys.operatorsSection(clientId),
     queryFn: async () => {
-      const [employeeHistory, searcherHistory] = await Promise.all([
-        clientApi.getClientAssignmentHistory(clientId, { assignment_type: 'employee' }),
-        clientApi.getClientAssignmentHistory(clientId, { assignment_type: 'searcher' }),
-      ])
+      const data = await clientApi.getClientAssignmentHistoryCombined(clientId)
       return {
-        operators: employeeHistory.history,
-        searchers: searcherHistory.history,
-        current_employee: employeeHistory.current_employee,
-        current_searcher: searcherHistory.current_searcher,
+        operators: data.employee_history,
+        searchers: data.searcher_history,
+        current_employee: data.current_employee,
+        current_searcher: data.current_searcher,
       }
     },
     enabled: enabled && clientId > 0,

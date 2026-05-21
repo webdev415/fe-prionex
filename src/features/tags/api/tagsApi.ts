@@ -15,7 +15,7 @@ import type { Tag, TagDefinition, TagCreate, TagDefinitionUpdate } from '../type
  * @returns List of tags
  */
 export async function getTags(projectId?: number): Promise<TagDefinition[]> {
-  const params: Record<string, number | string> = { limit: 1000 }
+  const params: Record<string, number | string> = { limit: 200 }
   if (projectId) params.project_id = projectId
   const response = await api.get<TagDefinition[]>('/api/v1/tags', { params })
   return response.data
