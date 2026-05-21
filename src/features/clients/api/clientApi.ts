@@ -9,6 +9,7 @@ import api from '@/lib/api'
 import type {
   AddressResponse,
   AssignClientRequest,
+  AssignmentHistoryCombinedResponse,
   AssignmentHistoryResponse,
   BulkAssignClientRequest,
   BulkAssignmentResponse,
@@ -177,7 +178,11 @@ export async function getClientWriteoffs(
 }
 
 /**
- * Get client assignment history
+ * Get client assignment history (legacy, single-type).
+ *
+ * @deprecated Use getClientAssignmentHistoryCombined for new UI surfaces —
+ * it returns both employee and searcher history in one request, halving
+ * the auth-service load and DB round-trips per ClientDetailPage mount.
  */
 export async function getClientAssignmentHistory(
   clientId: number,
@@ -185,6 +190,20 @@ export async function getClientAssignmentHistory(
 ): Promise<AssignmentHistoryResponse> {
   const response = await api.get<AssignmentHistoryResponse>(
     `${BASE_URL}/${clientId}/assignment-history`,
+    { params }
+  )
+  return response.data
+}
+
+/**
+ * Get combined client assignment history (employee + searcher) in one call.
+ */
+export async function getClientAssignmentHistoryCombined(
+  clientId: number,
+  params: { skip?: number; limit?: number } = {}
+): Promise<AssignmentHistoryCombinedResponse> {
+  const response = await api.get<AssignmentHistoryCombinedResponse>(
+    `${BASE_URL}/${clientId}/assignment-history/combined`,
     { params }
   )
   return response.data
@@ -495,6 +514,7 @@ export const clientApi = {
   getClientProfile,
   getClientWriteoffs,
   getClientAssignmentHistory,
+  getClientAssignmentHistoryCombined,
   createAddress,
   updateAddress,
   deleteAddress,
