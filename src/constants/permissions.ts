@@ -295,7 +295,7 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   // Messaging
   view_bulk_messaging: 'View the bulk messaging workflow and message drafts',
   manage_drafts: 'Create, edit, and delete messaging drafts',
-  launch_campaigns: 'Preview recipients, launch campaigns, and cancel in-flight campaigns',
+  launch_campaigns: 'Preview recipients and launch campaigns',
   view_campaign_analytics:
     'View campaign analytics, campaign recipients, CSV exports, and unified client message history',
   manage_messaging_integrations:

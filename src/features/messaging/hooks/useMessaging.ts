@@ -13,6 +13,10 @@ export const messagingKeys = {
   campaignList: (params?: {
     status?: string
     channel?: MessagingChannel
+    launched_from?: string
+    launched_to?: string
+    initiated_by?: number
+    search?: string
     limit?: number
     offset?: number
   }) => [...messagingKeys.campaigns(), 'list', params ?? {}] as const,
@@ -58,6 +62,10 @@ export function useMessagingIntegrations(enabled = true) {
 export function useMessagingCampaigns(params?: {
   status?: string
   channel?: MessagingChannel
+  launched_from?: string
+  launched_to?: string
+  initiated_by?: number
+  search?: string
   limit?: number
   offset?: number
 }) {

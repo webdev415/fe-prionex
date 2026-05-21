@@ -35,7 +35,10 @@
     "scoringConfiguration": "Scoring Configuration",
     "systemSettings": "System Settings",
     "tags": "Tags",
-    "actionAnalysis": "Action Analysis"
+    "actionAnalysis": "Action Analysis",
+    "messagingIntegrations": "Messaging Integrations",
+    "messagingDrafts": "Message Drafts",
+    "campaignAnalytics": "Campaign Analytics"
   },
   "search": {
     "placeholder": "Search",
@@ -1412,7 +1415,8 @@
       "bulkActions": {
         "assignEmployee": "Assign Employee",
         "addTags": "Add Tags",
-        "removeTags": "Remove Tags"
+        "removeTags": "Remove Tags",
+        "sendMessage": "Send message"
       },
       "manageTags": "Manage Tags",
       "errorLoading": "Failed to load clients",
@@ -1721,6 +1725,92 @@
           "smsFailedToSend": "Failed to send SMS. Please check SMS provider configuration or try again later.",
           "smsFailedDuplicate": "Duplicate message rejected by provider. Please change the message text and try again.",
           "sendSMS": "Send SMS"
+        },
+        "sendMessage": {
+          "title": "Send message to {{clientName}}",
+          "channel": "Channel",
+          "service": "Service",
+          "servicePlaceholder": "Select a service",
+          "loadingIntegrations": "Loading integrations...",
+          "noChannels": "No enabled channels are available",
+          "noIntegrations": "No enabled integrations for this channel",
+          "recipient": "Recipient",
+          "clientEmail": "Client email",
+          "clientPhoneSms": "Client phone (SMS)",
+          "clientPhoneViber": "Client phone (Viber)",
+          "noEmail": "This client has no email address on file.",
+          "noPhone": "This client has no phone number on file.",
+          "selectPhone": "Select phone number",
+          "workPhone": "work",
+          "quotaStatus": "{{sent}} / {{limit}} messages sent today",
+          "quotaExceeded": "Daily limit reached ({{limit}} / {{limit}}). Cannot send.",
+          "quotaExceededHint": "Daily message limit reached for this recipient",
+          "draft": "Draft",
+          "draftPlaceholder": "Select a draft",
+          "loadingDrafts": "Loading drafts...",
+          "noDraft": "No draft (custom message)",
+          "senderName": "Sender name",
+          "senderNamePlaceholder": "CRM Prionex",
+          "subject": "Subject",
+          "subjectPlaceholder": "Reminder about your account",
+          "body": "Message body",
+          "bodyHint": "Edit the message before sending. Variables like {{client_name}} are filled from client data.",
+          "preview": "Message preview",
+          "previewTo": "To",
+          "previewSender": "Sender",
+          "previewSubject": "Subject",
+          "previewBody": "Message",
+          "send": "Send message",
+          "toastQueued": "Message queued successfully"
+        },
+        "viewMessage": {
+          "title": "Message details",
+          "source": "Source",
+          "launchedBy": "Launched by",
+          "destination": "Destination",
+          "status": "Status",
+          "subject": "Subject",
+          "timeline": "Delivery timeline",
+          "sentAt": "Sent",
+          "deliveredAt": "Delivered",
+          "body": "Message",
+          "failure": "Failure details",
+          "failedAt": "Failed at",
+          "sourceSingle": "Single",
+          "sourceBulk": "Bulk"
+        },
+        "bulkSendMessage": {
+          "title": "Send message to {{count}} clients",
+          "selectedClients": "Selected clients preview",
+          "recipientCount": "{{count}} recipients will receive this message",
+          "filteredSelectAllHint": "All clients matching your current search and filters are included (across all pages).",
+          "andMore": "and {{count}} more clients",
+          "campaignName": "Campaign name",
+          "campaignNamePlaceholder": "May payment reminder",
+          "defaultCampaignName": "Bulk {{channel}} campaign — {{date}}",
+          "channel": "Channel",
+          "service": "Service",
+          "servicePlaceholder": "Select a service",
+          "loadingIntegrations": "Loading integrations...",
+          "noChannels": "No enabled channels are available",
+          "noServices": "No enabled integrations for this channel",
+          "draft": "Draft",
+          "draftPlaceholder": "Select a draft",
+          "loadingDrafts": "Loading drafts...",
+          "noDraft": "No draft (custom message)",
+          "noDrafts": "No drafts available for this channel",
+          "customMessage": "Custom message",
+          "bodyHint": "Variables like {{client_name}} are filled per recipient at send time.",
+          "draftPreview": "Message preview",
+          "draftPreviewHint": "Variables such as {{client_name}} and {{debt_amount}} are shown as written. Each recipient receives a message with values filled from their own client data at send time.",
+          "previewSubject": "Subject",
+          "previewSender": "Sender",
+          "previewBody": "Message",
+          "launch": "Launch campaign",
+          "resolveFailed": "Could not load the full client list for this campaign.",
+          "noRecipients": "No recipients match the current selection.",
+          "recipientCap": "Only the first {{cap}} recipients will be included.",
+          "campaignLaunched": "Campaign {{code}} launched"
         },
         "viewSMS": {
           "title": "View SMS",
@@ -2064,6 +2154,7 @@
         "typeOfCommunication": "Type of communication",
         "calls": "Calls",
         "sms": "SMS",
+        "messaging": "Messaging",
         "notes": "Notes",
         "all": "All",
         "dateRange": "Date range",
@@ -2313,6 +2404,12 @@
         "latestCalls": "Latest Calls",
         "latestSms": "Latest SMS",
         "latestCallsAndSms": "Latest Calls and SMS",
+        "latestMessages": "Latest messages",
+        "sendMessage": "Send message",
+        "totalMessages": "Total messages",
+        "noMessagingHistory": "No messaging history is available for this client yet",
+        "noCallSmsHistory": "No calls, SMS, or messaging history for this client yet",
+        "exportMessagingCsvFailed": "Failed to export messaging history",
         "tabs": {
           "personal": "Personal",
           "work": "Work",
@@ -4104,7 +4201,7 @@
         "quickRanges": "Quick ranges",
         "today": "Today",
         "yesterday": "Yesterday",
-        "last7": "Last 7",
+        "last7": "Last 7 days",
         "last30": "Last 30 days",
         "selectEmployee": "Select employee",
         "allTypes": "All Types",
@@ -4181,6 +4278,230 @@
           "ipAddress": "IP Address",
           "successStatus": "Success Status"
         }
+      }
+    },
+    "messagingCampaigns": {
+      "description": "Review bulk and single-send campaigns, inspect recipient outcomes, and export delivery results.",
+      "empty": "No campaigns matched the current filters",
+      "exportFailed": "Failed to export campaign recipients",
+      "filters": {
+        "searchLabel": "Search",
+        "searchPlaceholder": "Search campaign, code, or service",
+        "status": "Status",
+        "channel": "Channel",
+        "launcher": "Launched by",
+        "allStatuses": "All statuses",
+        "allChannels": "All channels",
+        "allLaunchers": "All launchers",
+        "searchLauncher": "Search launcher..."
+      },
+      "status": {
+        "queued": "Queued",
+        "sending": "Sending",
+        "completed": "Completed",
+        "partially_failed": "Partially failed",
+        "failed": "Failed"
+      },
+      "summary": {
+        "delivered": "delivered",
+        "resultsLine": "{{delivered}}/{{total}} delivered"
+      },
+      "table": {
+        "code": "Code",
+        "name": "Campaign",
+        "source": "Source",
+        "channel": "Channel",
+        "service": "Service",
+        "status": "Status",
+        "summary": "Results",
+        "launchedBy": "Launched by",
+        "launchedAt": "Launched",
+        "actions": "Actions",
+        "client": "Client",
+        "destination": "Destination",
+        "sentAt": "Sent",
+        "deliveredAt": "Delivered",
+        "error": "Error"
+      },
+      "actions": {
+        "viewDetails": "View details",
+        "export": "Export CSV"
+      },
+      "detail": {
+        "title": "Campaign details",
+        "source": "Source",
+        "launchedBy": "Launched by",
+        "launchedAt": "Launched at",
+        "completedAt": "Completed at",
+        "selectionPayload": "Audience",
+        "selectionIds": "{{count}} clients selected by ID",
+        "selectionFilter": "Clients matching saved list filters",
+        "selectionUnknown": "Custom selection",
+        "campaignMessage": "Campaign message",
+        "draftUsed": "Draft",
+        "senderName": "Sender",
+        "subject": "Subject",
+        "body": "Body",
+        "recipientResults": "Recipient results",
+        "recipientResultsHint": "Showing the latest 100 recipient rows for this campaign.",
+        "noRecipients": "No recipient results available yet",
+        "stats": {
+          "total": "Total",
+          "sent": "Sent",
+          "delivered": "Delivered",
+          "failed": "Failed",
+          "skipped": "Skipped"
+        }
+      }
+    },
+    "messagingDrafts": {
+      "description": "Manage reusable message bodies for SMS, Viber, and email campaigns.",
+      "createTitle": "Create draft",
+      "editTitle": "Edit draft",
+      "empty": "No drafts matched the current filters",
+      "filters": {
+        "search": "Search draft name or content",
+        "channel": "Channel",
+        "allChannels": "All channels"
+      },
+      "table": {
+        "name": "Draft",
+        "channel": "Channel",
+        "senderName": "Sender",
+        "updatedAt": "Updated",
+        "actions": "Actions"
+      },
+      "actions": {
+        "newDraft": "New draft",
+        "view": "View draft"
+      },
+      "form": {
+        "name": "Draft name",
+        "namePlaceholder": "Payment reminder",
+        "channel": "Channel",
+        "senderName": "Sender name",
+        "senderNamePlaceholder": "CRM Prionex",
+        "senderNameEmailPlaceholder": "CRM Prionex Support",
+        "subject": "Subject",
+        "subjectPlaceholder": "Reminder about your account",
+        "subjectRequiredError": "Subject is required for email drafts.",
+        "body": "Message body",
+        "bodyRequired": "Message body is required.",
+        "bodyTooLong": "Body exceeds the {{max}}-character limit for {{channel}}.",
+        "charCount": "{{count}} / {{max}}",
+        "bodyPlaceholderSms": "Hi {{client_name}}, your payment of {{debt_amount}} UAH is due on {{due_date}}. — CRM Prionex",
+        "bodyPlaceholderViber": "Hi {{client_name}}, your payment of {{debt_amount}} UAH is due on {{due_date}}. Tap reply to confirm.",
+        "bodyPlaceholderEmail": "Dear {{client_name}},\n\nThis is a reminder that your payment of {{debt_amount}} UAH for contract {{contract_number}} is due on {{due_date}}.\n\nBest regards,\n{{operator_name}}"
+      },
+      "view": {
+        "title": "View draft",
+        "titleWithName": "View draft: {{name}}",
+        "templateBody": "Message template",
+        "variables": "Variables in this draft"
+      },
+      "delete": {
+        "title": "Delete draft",
+        "confirmMessage": "Are you sure you want to delete the draft \"{{name}}\"?",
+        "cannotUndo": "This action cannot be undone",
+        "permanentRemoval": "The draft will be permanently removed."
+      },
+      "toasts": {
+        "created": "Draft created successfully",
+        "updated": "Draft updated successfully",
+        "deleted": "Draft deleted successfully"
+      }
+    },
+    "messagingIntegrations": {
+      "description": "Configure provider credentials, enable channels per service, and verify connection health.",
+      "channelToggleAria": "Enable {{channel}} channel",
+      "channelToggleHint": "Use these toggles to enable or disable the service channels supported by this provider.",
+      "providerNotImplemented": "Live API connection is not available for this provider yet. Save credentials for later; Test and messaging are disabled.",
+      "testDisabledHint": "Enter and save complete credentials for a supported provider before testing.",
+      "table": {
+        "channels": "Channels",
+        "lastTested": "Last tested"
+      },
+      "actions": {
+        "test": "Test",
+        "configure": "Configure"
+      },
+      "form": {
+        "credentials": "Credentials",
+        "editCredentials": "Edit credentials",
+        "storedValuePlaceholder": "Saved ({{hint}}) — leave blank to keep",
+        "staticConfigHint": "API URL and callback URL are configured by your administrator in the server environment, not here."
+      },
+      "status": {
+        "configured": "Configured",
+        "error": "Error",
+        "unconfigured": "Unconfigured",
+        "not_configured": "Not configured"
+      },
+      "services": {
+        "turbosms": "TurboSMS",
+        "omnicell": "OmniCell",
+        "vodafone_obm": "Vodafone OBM",
+        "my2_viber": "My2 Viber",
+        "intel_tele": "Intel-Tele.com"
+      },
+      "credentials": {
+        "turbosms": {
+          "api_key": { "label": "API key" },
+          "sender": { "label": "Sender" }
+        },
+        "omnicell": {
+          "username": { "label": "Username" },
+          "password": { "label": "Password" },
+          "sender": { "label": "SMS sender (Alpha name)" }
+        },
+        "vodafone_obm": {
+          "username": {
+            "label": "OBM login (Settings → Logins)",
+            "placeholder": "Legal-entity login string, or phone/email if cabinet allows"
+          },
+          "password": { "label": "Cabinet password" },
+          "sender": {
+            "label": "Sender (Alpha name)",
+            "placeholder": "Approved sender, e.g. TechnoFin"
+          },
+          "sender_id": {
+            "label": "Sender ID (optional)",
+            "placeholder": "Numeric id from OBM Sender name, e.g. 5581072"
+          }
+        },
+        "my2_viber": {
+          "api_key": {
+            "label": "API token",
+            "placeholder": "From my2.viber.net.ua → Profile → API"
+          },
+          "sender": {
+            "label": "Sender (Alpha name)",
+            "placeholder": "Approved Viber sender from cabinet, e.g. default"
+          }
+        },
+        "intel_tele": {
+          "username": {
+            "label": "Cabinet login",
+            "placeholder": "e.g. fc.technofinance@gmail.com"
+          },
+          "api_key": {
+            "label": "API key / SMTP password",
+            "placeholder": "e.intel-tele.com → Automation → API and SMTP (same value for both)"
+          },
+          "from_email": {
+            "label": "From email",
+            "placeholder": "Verified sender, e.g. info@techno-finance.com"
+          },
+          "from_name": { "label": "From name" },
+          "reply_to_email": { "label": "Reply-to email" },
+          "reply_to_name": { "label": "Reply-to name" }
+        }
+      },
+      "toasts": {
+        "saved": "Integration saved successfully",
+        "updated": "Integration updated successfully",
+        "deleted": "Integration deleted successfully",
+        "testCompleted": "Integration test completed"
       }
     },
     "forbidden": {

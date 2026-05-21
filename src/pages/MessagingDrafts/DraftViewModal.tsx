@@ -44,7 +44,7 @@ export function DraftViewModal({ draft, open, onClose }: DraftViewModalProps) {
           draft
             ? t('pages.messagingDrafts.view.titleWithName', {
                 name: draft.name,
-                defaultValue: draft.name,
+                defaultValue: `View draft: ${draft.name}`,
               })
             : t('pages.messagingDrafts.view.title', 'View draft')
         }
@@ -99,7 +99,7 @@ export function DraftViewModal({ draft, open, onClose }: DraftViewModalProps) {
         ) : null}
       </ModalContent>
       <ModalFooter>
-        <Button type="button" variant="cancel" onClick={onClose} size="sm">
+        <Button type="button" variant="cancel" onClick={onClose} className="w-full rounded-md">
           {t('actions.close', 'Close')}
         </Button>
       </ModalFooter>

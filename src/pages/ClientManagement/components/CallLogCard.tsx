@@ -54,6 +54,8 @@ type CallLogCardProps = {
   setIsCallRecordingModalOpen?: (open: boolean) => void
   setSelectedSMSData?: React.Dispatch<React.SetStateAction<SMSData | null>>
   setIsViewSMSModalOpen?: (open: boolean) => void
+  /** When set (and not a call card), click invokes this instead of the legacy SMS modal. */
+  onSelect?: () => void
 }
 
 /**
@@ -91,6 +93,7 @@ export function CallLogCard({
   setIsCallRecordingModalOpen,
   setSelectedSMSData,
   setIsViewSMSModalOpen,
+  onSelect,
 }: CallLogCardProps) {
   const { t } = useTranslation('common')
   const { isCallActive, setOpenCallModal } = useCallStore()
@@ -112,6 +115,10 @@ export function CallLogCard({
       case 'INITIATED':
       case 'RINGING':
         return t('pages.clients.statuses.pending')
+      case 'SENT':
+        return t('pages.clients.statuses.sent', 'Sent')
+      case 'SKIPPED':
+        return t('pages.clients.statuses.skipped', 'Skipped')
       default:
         return status
     }
@@ -137,8 +144,11 @@ export function CallLogCard({
     if (s === 'FAILED' || s === 'NO_ANSWER' || s === 'NO ANSWER') {
       return 'bg-error-500'
     }
-    if (s === 'INITIATED' || s === 'RINGING' || s === 'PENDING') {
+    if (s === 'INITIATED' || s === 'RINGING' || s === 'PENDING' || s === 'SENT') {
       return 'bg-warning-500'
+    }
+    if (s === 'SKIPPED') {
+      return 'bg-gray-400'
     }
     return 'bg-gray-500'
   }
@@ -150,8 +160,11 @@ export function CallLogCard({
     if (s === 'FAILED' || s === 'NO_ANSWER' || s === 'NO ANSWER') {
       return 'bg-error-200'
     }
-    if (s === 'INITIATED' || s === 'RINGING' || s === 'PENDING') {
+    if (s === 'INITIATED' || s === 'RINGING' || s === 'PENDING' || s === 'SENT') {
       return 'bg-warning-200'
+    }
+    if (s === 'SKIPPED') {
+      return 'bg-gray-200'
     }
     return 'bg-gray-200'
   }
@@ -165,8 +178,11 @@ export function CallLogCard({
     if (s === 'FAILED' || s === 'NO_ANSWER' || s === 'NO ANSWER') {
       return 'text-error-500'
     }
-    if (s === 'INITIATED' || s === 'RINGING' || s === 'PENDING') {
+    if (s === 'INITIATED' || s === 'RINGING' || s === 'PENDING' || s === 'SENT') {
       return 'text-warning-500'
+    }
+    if (s === 'SKIPPED') {
+      return 'text-gray-500'
     }
     return 'text-gray-500'
   }
@@ -207,6 +223,8 @@ export function CallLogCard({
       })
       setOpenCallModal('call-recording')
       setIsCallRecordingModalOpen?.(true)
+    } else if (onSelect) {
+      onSelect()
     } else {
       // SMS card clicked
       setSelectedSMSData?.({

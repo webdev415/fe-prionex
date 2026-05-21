@@ -51,11 +51,10 @@ export function DeleteDraftModal({ draft, open, onClose }: DeleteDraftModalProps
       <ModalContent>
         <div className="space-y-4">
           <p className="text-dark-500 text-xs sm:text-sm">
-            {t(
-              'pages.messagingDrafts.delete.confirmMessage',
-              'Are you sure you want to delete the draft'
-            )}{' '}
-            <strong>&quot;{draft.name}&quot;</strong>?
+            {t('pages.messagingDrafts.delete.confirmMessage', {
+              name: draft.name,
+              defaultValue: `Are you sure you want to delete the draft "${draft.name}"?`,
+            })}
           </p>
           <Alert variant="warning">
             <AlertTitle>

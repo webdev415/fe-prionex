@@ -20,21 +20,15 @@ import {
   useTestMessagingIntegration,
   useUpdateMessagingIntegration,
 } from '@/features/messaging'
-import type { MessagingChannel, MessagingIntegration } from '@/features/messaging'
+import type {
+  IntegrationCredentialFieldDef,
+  MessagingChannel,
+  MessagingIntegration,
+} from '@/features/messaging'
+import { formatDateTime } from '@/lib/formatters'
+import { MessagingIntegrationsPageSkeleton } from './components/MessagingIntegrationsPageSkeleton'
 
-const formatDateTime = (value?: string | null) => {
-  if (!value) return '-'
-
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return value
-
-  return new Intl.DateTimeFormat('en-GB', {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  }).format(date)
-}
-
-const formatStatusLabel = (status: string) =>
+const formatStatusFallback = (status: string) =>
   status.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase())
 
 const getStatusBadgeClass = (status: string) => {
@@ -85,6 +79,7 @@ function IntegrationCard({ row, animationIndex = 0 }: IntegrationCardProps) {
   const [credentialBaseline, setCredentialBaseline] = useState<Record<string, string>>(() =>
     emptyCredentialForm(row.service)
   )
+  const [isTesting, setIsTesting] = useState(false)
 
   const preview = row.credentials_preview ?? {}
   const credentialFields = getIntegrationCredentialFields(row.service)
@@ -93,7 +88,7 @@ function IntegrationCard({ row, animationIndex = 0 }: IntegrationCardProps) {
   // draft state so background refetches do not reset an in-progress change.
   const activeEnabledChannels = channelsTouched ? enabledChannels : row.enabled_channels
 
-  const isPending = updateIntegrationMutation.isPending || testIntegrationMutation.isPending
+  const isSaving = updateIntegrationMutation.isPending
   const isRevealing = revealCredentialsMutation.isPending
 
   const channelsChanged =
@@ -108,7 +103,13 @@ function IntegrationCard({ row, animationIndex = 0 }: IntegrationCardProps) {
   )
   const credentialsComplete = formCredentialsComplete(row.service, credentialForm, preview)
 
-  const canSave = !isPending && (!row.integration || channelsChanged || credentialsChanged)
+  const hasUnsavedChanges =
+    channelsChanged ||
+    credentialsChanged ||
+    (!row.integration && (channelsTouched || credentialsChanged || credentialsComplete))
+
+  const canSave = !isSaving && hasUnsavedChanges
+  const showSaveButton = hasUnsavedChanges
 
   const canTest =
     row.integration &&
@@ -174,27 +175,58 @@ function IntegrationCard({ row, animationIndex = 0 }: IntegrationCardProps) {
   }
 
   const handleTest = async () => {
-    if (!canTest || !row.integration) return
+    if (!canTest || !row.integration || isTesting) return
 
-    const wasCredentialsChanged = credentialsChanged && credentialsComplete
-    if (wasCredentialsChanged) {
-      await updateIntegrationMutation.mutateAsync({
-        service: row.service,
-        payload: {
-          enabled_channels: activeEnabledChannels,
-          credentials: buildPayload(),
-        },
-      })
-      setChannelsTouched(false)
-      // Saving inside Test counts as a Save click → close the editor.
-      closeCredentialEditor()
+    setIsTesting(true)
+    try {
+      const wasCredentialsChanged = credentialsChanged && credentialsComplete
+      if (wasCredentialsChanged) {
+        await updateIntegrationMutation.mutateAsync({
+          service: row.service,
+          payload: {
+            enabled_channels: activeEnabledChannels,
+            credentials: buildPayload(),
+          },
+        })
+        setChannelsTouched(false)
+        // Saving inside Test counts as a Save click → close the editor.
+        closeCredentialEditor()
+      }
+
+      await testIntegrationMutation.mutateAsync(row.service)
+    } finally {
+      setIsTesting(false)
     }
-
-    await testIntegrationMutation.mutateAsync(row.service)
   }
 
   const updateCredentialField = (key: string, value: string) => {
     setCredentialForm((current) => ({ ...current, [key]: value }))
+  }
+
+  const credentialFieldLabel = (field: IntegrationCredentialFieldDef) => {
+    const base = t(
+      `pages.messagingIntegrations.credentials.${row.service}.${field.key}.label`,
+      field.label
+    )
+    return field.required ? `${base} *` : base
+  }
+
+  const credentialFieldPlaceholder = (
+    field: IntegrationCredentialFieldDef,
+    hasStored: boolean,
+    storedHint: string
+  ) => {
+    if (hasStored) {
+      return t('pages.messagingIntegrations.form.storedValuePlaceholder', {
+        hint: storedHint,
+        defaultValue: `Saved (${storedHint}) — leave blank to keep`,
+      })
+    }
+    if (!field.placeholder) return undefined
+    return t(
+      `pages.messagingIntegrations.credentials.${row.service}.${field.key}.placeholder`,
+      field.placeholder
+    )
   }
 
   return (
@@ -211,7 +243,7 @@ function IntegrationCard({ row, animationIndex = 0 }: IntegrationCardProps) {
             row.status
           )}`}
         >
-          {formatStatusLabel(row.status)}
+          {t(`pages.messagingIntegrations.status.${row.status}`, formatStatusFallback(row.status))}
         </span>
       </div>
 
@@ -241,7 +273,7 @@ function IntegrationCard({ row, animationIndex = 0 }: IntegrationCardProps) {
                         : base.filter((item) => item !== channel)
                     })
                   }}
-                  disabled={isPending}
+                  disabled={isSaving || isTesting}
                   ariaLabel={t('pages.messagingIntegrations.channelToggleAria', {
                     channel: channel.toUpperCase(),
                     defaultValue: `Enable ${channel.toUpperCase()} channel`,
@@ -276,7 +308,7 @@ function IntegrationCard({ row, animationIndex = 0 }: IntegrationCardProps) {
           <button
             type="button"
             onClick={openCredentialEditor}
-            disabled={isEditingCredentials || isPending || isRevealing}
+            disabled={isEditingCredentials || isSaving || isTesting || isRevealing}
             aria-expanded={isEditingCredentials}
             aria-controls={`credentials-${row.service}`}
             aria-busy={isRevealing}
@@ -327,22 +359,15 @@ function IntegrationCard({ row, animationIndex = 0 }: IntegrationCardProps) {
                   typeof storedHint === 'string' &&
                   storedHint.length > 0 &&
                   storedHint.startsWith('***')
-                const label = field.required ? `${field.label} *` : field.label
                 return (
                   <Input
                     key={field.key}
-                    label={label}
+                    label={credentialFieldLabel(field)}
                     type={field.type ?? 'text'}
                     value={credentialForm[field.key] ?? ''}
                     onChange={(event) => updateCredentialField(field.key, event.target.value)}
-                    placeholder={
-                      hasStored
-                        ? t('pages.messagingIntegrations.form.storedValuePlaceholder', {
-                            defaultValue: `Saved (${String(storedHint)}) — leave blank to keep`,
-                          })
-                        : field.placeholder
-                    }
-                    disabled={isPending}
+                    placeholder={credentialFieldPlaceholder(field, hasStored, String(storedHint))}
+                    disabled={isSaving || isTesting}
                     autoComplete="off"
                     required={field.required}
                     aria-required={field.required}
@@ -365,17 +390,21 @@ function IntegrationCard({ row, animationIndex = 0 }: IntegrationCardProps) {
           <div className="text-xs font-medium tracking-wide text-gray-500 uppercase">
             {t('pages.messagingIntegrations.table.lastTested', 'Last tested')}
           </div>
-          <div className="text-dark-500 mt-1 text-sm">{formatDateTime(row.last_tested_at)}</div>
+          <div className="text-dark-500 mt-1 text-sm">
+            {formatDateTime(row.last_tested_at ?? undefined)}
+          </div>
         </div>
 
         <div className="flex flex-wrap gap-2">
           {row.integration && (
             <Button
               type="button"
-              variant="outline"
+              variant="secondary"
               size="xs"
               onClick={handleTest}
-              disabled={!canTest || isPending}
+              disabled={!canTest || isTesting || isSaving}
+              isLoading={isTesting}
+              className="rounded-md"
               title={
                 !canTest
                   ? t(
@@ -391,26 +420,30 @@ function IntegrationCard({ row, animationIndex = 0 }: IntegrationCardProps) {
           {isEditingCredentials && (
             <Button
               type="button"
-              variant="outline"
+              variant="cancel"
+              className="rounded-md"
               size="xs"
               onClick={closeCredentialEditor}
-              disabled={isPending}
+              disabled={isSaving || isTesting}
             >
               {t('actions.cancel', 'Cancel')}
             </Button>
           )}
-          <Button
-            type="button"
-            variant="primary"
-            size="xs"
-            onClick={handleSave}
-            disabled={!canSave}
-            isLoading={updateIntegrationMutation.isPending}
-          >
-            {row.integration
-              ? t('actions.save', 'Save')
-              : t('pages.messagingIntegrations.actions.configure', 'Configure')}
-          </Button>
+          {showSaveButton && (
+            <Button
+              type="button"
+              variant="primary"
+              size="xs"
+              className="rounded-md"
+              onClick={handleSave}
+              disabled={!canSave}
+              isLoading={isSaving}
+            >
+              {row.integration
+                ? t('actions.save', 'Save')
+                : t('pages.messagingIntegrations.actions.configure', 'Configure')}
+            </Button>
+          )}
         </div>
       </div>
     </div>
@@ -428,7 +461,10 @@ export function MessagingIntegrationsPage() {
         return {
           id: service,
           service,
-          label: getMessagingServiceLabel(service),
+          label: t(
+            `pages.messagingIntegrations.services.${service}`,
+            getMessagingServiceLabel(service)
+          ),
           integration,
           supported_channels: getSupportedChannelsForService(service),
           enabled_channels: integration?.enabled_channels ?? [],
@@ -437,7 +473,7 @@ export function MessagingIntegrationsPage() {
           credentials_preview: integration?.credentials_preview ?? {},
         }
       }),
-    [integrations]
+    [integrations, t]
   )
 
   return (
@@ -457,9 +493,7 @@ export function MessagingIntegrationsPage() {
       </div>
 
       {isLoading ? (
-        <div className="rounded-xl border border-white/70 bg-white/60 p-4">
-          <div className="py-8 text-sm text-gray-500">{t('status.loading', 'Loading...')}</div>
-        </div>
+        <MessagingIntegrationsPageSkeleton />
       ) : (
         <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
           {integrationRows.map((row, index) => (

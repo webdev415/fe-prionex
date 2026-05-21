@@ -73,10 +73,10 @@ export const INTEGRATION_CREDENTIAL_FIELDS: Record<
     },
     {
       key: 'api_key',
-      label: 'API key (SMTP password)',
+      label: 'API key / SMTP password',
       type: 'password',
       required: true,
-      placeholder: 'From e.intel-tele.com → Automation → API and SMTP',
+      placeholder: 'e.intel-tele.com → Automation → API and SMTP (same value for both)',
     },
     {
       key: 'from_email',

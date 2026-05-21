@@ -2,6 +2,16 @@ export type MessagingChannel = 'sms' | 'viber' | 'email'
 export type MessagingSource = 'single' | 'bulk'
 
 export const MESSAGING_CHANNELS: MessagingChannel[] = ['sms', 'viber', 'email']
+
+/** Campaign lifecycle values from messaging-service dispatch (``dispatch.py``). */
+export const MESSAGING_CAMPAIGN_STATUSES = [
+  'queued',
+  'sending',
+  'completed',
+  'partially_failed',
+  'failed',
+] as const
+export type MessagingCampaignStatus = (typeof MESSAGING_CAMPAIGN_STATUSES)[number]
 export const KNOWN_MESSAGING_SERVICES = [
   'turbosms',
   'omnicell',
@@ -54,7 +64,7 @@ export const REQUIRED_CREDENTIAL_KEYS: Record<MessagingService, string[]> = {
 }
 
 export const OPTIONAL_CREDENTIAL_KEYS: Record<MessagingService, string[]> = {
-  intel_tele: ['from_name', 'reply_to_email', 'reply_to_name'],
+  intel_tele: ['from_name', 'reply_to_email', 'reply_to_name', 'domain_id'],
   turbosms: [],
   omnicell: [],
   vodafone_obm: ['sender_id'],
@@ -63,6 +73,7 @@ export const OPTIONAL_CREDENTIAL_KEYS: Record<MessagingService, string[]> = {
 
 const CREDENTIAL_ALIASES: Record<string, string[]> = {
   api_key: ['api_key', 'token'],
+  domain_id: ['domain_id', 'mailersend_domain_id'],
   sender: ['sender', 'sender_name'],
   from_email: ['from_email', 'sender_email'],
   reply_to_email: ['reply_to_email', 'reply_to'],
@@ -241,6 +252,11 @@ export interface MessagingCampaignSummary {
   completed_at: string | null
 }
 
+export interface MessagingCampaignListResponse {
+  items: MessagingCampaignSummary[]
+  total: number
+}
+
 export interface MessagingCampaignDetail extends MessagingCampaignSummary {
   draft_id: number | null
   message_snapshot: Record<string, unknown>
@@ -251,6 +267,7 @@ export interface MessagingCampaignRecipient {
   id: number
   campaign_id: number
   client_id: number
+  client_name?: string | null
   destination: string | null
   rendered_body: string | null
   rendered_subject: string | null
@@ -291,9 +308,11 @@ export interface MessagingCampaignCreate {
   name: string
   channel: MessagingChannel
   service: string
-  draft_id: number
+  draft_id?: number | null
+  body?: string | null
+  subject?: string | null
+  sender_name?: string | null
   selection_payload: MessagingSelectionPayload
-  override_variables?: Record<string, unknown>
   source?: MessagingSource
 }
 
@@ -332,6 +351,8 @@ export interface MessagingClientHistoryItem {
   channel: MessagingChannel
   service: string
   source: MessagingSource
+  initiated_by?: number
+  initiatedBy?: number
   destination: string | null
   body: string | null
   subject: string | null

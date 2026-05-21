@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useQuery } from '@tanstack/react-query'
 import { Modal, ModalContent, ModalFooter, ModalHeader } from '@/components/ui/Modal'
@@ -31,9 +31,13 @@ import {
   useMessagingDrafts,
   useMessagingIntegrations,
   useSendMessage,
+  MessagingVariablesPalette,
+  insertMessagingVariableAtCursor,
+  type MessagingTemplateFocusField,
 } from '@/features/messaging'
 import type { MessagingChannel, MessagingDraft } from '@/features/messaging'
 import { CHANNEL_SPECS } from '@/pages/MessagingDrafts/draftModalShared'
+import { SendMessageModalSkeleton } from './SendMessageModalSkeleton'
 
 const formatClientNameInitials = (fullName: string): string => {
   const parts = fullName.trim().split(/\s+/)
@@ -121,6 +125,10 @@ export function SendMessageModal({
   const [senderName, setSenderName] = useState('')
   const [contentTouched, setContentTouched] = useState(false)
   const [selectedPhone, setSelectedPhone] = useState('')
+
+  const subjectRef = useRef<HTMLInputElement | null>(null)
+  const bodyRef = useRef<HTMLTextAreaElement | null>(null)
+  const lastFocusedRef = useRef<MessagingTemplateFocusField>('body')
 
   const { data: integrations = [], isLoading: integrationsLoading } = useMessagingIntegrations(open)
   const { data: channelDrafts = [], isLoading: draftsLoading } = useMessagingDrafts(
@@ -224,7 +232,23 @@ export function SendMessageModal({
     setContentTouched(false)
     setSelectedLoanId(loans.length > 0 ? loans[0].id : null)
     setSelectedPhone(resolveDestinationPhone(clientPhones, initialPhone))
+    lastFocusedRef.current = 'body'
   }, [clientPhones, initialPhone, loans, open])
+
+  const handleInsertVariable = (variableName: string) => {
+    insertMessagingVariableAtCursor({
+      variableName,
+      subject,
+      body,
+      setSubject,
+      setBody,
+      showSubject,
+      subjectRef,
+      bodyRef,
+      lastFocusedRef,
+      onInserted: () => setContentTouched(true),
+    })
+  }
 
   useEffect(() => {
     if (!open) return
@@ -308,6 +332,11 @@ export function SendMessageModal({
     !quotaExceeded &&
     !sendMessageMutation.isPending
 
+  const isFormLoading = integrationsLoading || draftsLoading
+
+  const serviceLabel = (serviceKey: string) =>
+    t(`pages.messagingIntegrations.services.${serviceKey}`, getMessagingServiceLabel(serviceKey))
+
   const handleSend = async () => {
     if (!canSend) return
 
@@ -348,331 +377,363 @@ export function SendMessageModal({
         })}
       />
       <ModalContent>
-        <div className="space-y-4">
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <div>
-              <label className="text-dark-500 mb-1.5 block text-sm font-light">
-                {t('pages.clients.modals.sendMessage.channel', 'Channel')}
-              </label>
-              <Select
-                value={channel}
-                onValueChange={(value) => handleChannelChange(value as MessagingChannel)}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableChannels.map((item) => (
-                    <SelectItem key={item} value={item}>
-                      {item.toUpperCase()}
-                    </SelectItem>
-                  ))}
-                  {availableChannels.length === 0 && (
-                    <SelectItem value="__none" disabled>
-                      {t(
-                        'pages.clients.modals.sendMessage.noChannels',
-                        'No enabled channels are available'
-                      )}
-                    </SelectItem>
-                  )}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <label className="text-dark-500 mb-1.5 block text-sm font-light">
-                {t('pages.clients.modals.sendMessage.service', 'Service')}
-              </label>
-              <Select
-                value={service || undefined}
-                onValueChange={setService}
-                disabled={!hasDestination || availableIntegrations.length === 0}
-              >
-                <SelectTrigger>
-                  <SelectValue
-                    placeholder={t(
-                      'pages.clients.modals.sendMessage.servicePlaceholder',
-                      integrationsLoading ? 'Loading integrations...' : 'Select a service'
-                    )}
-                  />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableIntegrations.length > 0 ? (
-                    availableIntegrations.map((integration) => (
-                      <SelectItem key={integration.service} value={integration.service}>
-                        {getMessagingServiceLabel(integration.service)}
+        {isFormLoading ? (
+          <SendMessageModalSkeleton />
+        ) : (
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div>
+                <label className="text-dark-500 mb-1.5 block text-sm font-light">
+                  {t('pages.clients.modals.sendMessage.channel', 'Channel')}
+                </label>
+                <Select
+                  value={channel}
+                  onValueChange={(value) => handleChannelChange(value as MessagingChannel)}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableChannels.map((item) => (
+                      <SelectItem key={item} value={item}>
+                        {item.toUpperCase()}
                       </SelectItem>
-                    ))
-                  ) : (
-                    <SelectItem value="__none" disabled>
-                      {t(
-                        'pages.clients.modals.sendMessage.noIntegrations',
-                        'No enabled integrations for this channel'
-                      )}
-                    </SelectItem>
-                  )}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <div className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
-            <div className="text-dark-500 mb-2 text-sm font-medium">
-              {t('pages.clients.modals.sendMessage.recipient', 'Recipient')}
-            </div>
-            {destinationKind === 'email' ? (
-              <div className="space-y-2">
-                <div className="text-dark-500 text-xs font-light">{destinationLabel}</div>
-                <div className="text-dark-500 text-sm font-medium">{clientEmail || '—'}</div>
-                {!clientEmail && (
-                  <p className="text-error-600 text-xs">
-                    {t(
-                      'pages.clients.modals.sendMessage.noEmail',
-                      'This client has no email address on file.'
-                    )}
-                  </p>
-                )}
-                {clientEmail && quotaData && (
-                  <div
-                    className={`flex items-center gap-1.5 text-xs ${
-                      quotaData.allowed ? 'text-gray-500' : 'text-error-600 font-medium'
-                    }`}
-                  >
-                    {quotaData.allowed ? (
-                      <Icons.Info size={12} strokeWidth={1.5} />
-                    ) : (
-                      <Icons.Warning size={12} strokeWidth={1.5} />
-                    )}
-                    {quotaData.allowed
-                      ? t(
-                          'pages.clients.modals.sendMessage.quotaStatus',
-                          '{{sent}} / {{limit}} messages sent today',
-                          { sent: quotaData.sent_today, limit: quotaData.daily_limit }
-                        )
-                      : t(
-                          'pages.clients.modals.sendMessage.quotaExceeded',
-                          'Daily limit reached ({{limit}} / {{limit}}). Cannot send.',
-                          { limit: quotaData.daily_limit }
+                    ))}
+                    {availableChannels.length === 0 && (
+                      <SelectItem value="__none" disabled>
+                        {t(
+                          'pages.clients.modals.sendMessage.noChannels',
+                          'No enabled channels are available'
                         )}
-                  </div>
-                )}
+                      </SelectItem>
+                    )}
+                  </SelectContent>
+                </Select>
               </div>
-            ) : (
-              <div className="space-y-2">
-                <div className="text-dark-500 text-xs font-light">{destinationLabel}</div>
-                {clientPhones.length > 1 ? (
-                  <Select value={selectedPhone} onValueChange={setSelectedPhone}>
-                    <SelectTrigger className="bg-white">
-                      <SelectValue
-                        placeholder={t(
-                          'pages.clients.modals.sendMessage.selectPhone',
-                          'Select phone number'
-                        )}
-                      />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {clientPhones.map((phone) => (
-                        <SelectItem key={phone} value={phone}>
-                          {phone}
-                          {phone === workPhone
-                            ? ` (${t('pages.clients.modals.sendMessage.workPhone', 'work')})`
-                            : ''}
+
+              <div>
+                <label className="text-dark-500 mb-1.5 block text-sm font-light">
+                  {t('pages.clients.modals.sendMessage.service', 'Service')}
+                </label>
+                <Select
+                  value={service || undefined}
+                  onValueChange={setService}
+                  disabled={!hasDestination || availableIntegrations.length === 0}
+                >
+                  <SelectTrigger>
+                    <SelectValue
+                      placeholder={
+                        integrationsLoading
+                          ? t(
+                              'pages.clients.modals.sendMessage.loadingIntegrations',
+                              'Loading integrations...'
+                            )
+                          : t(
+                              'pages.clients.modals.sendMessage.servicePlaceholder',
+                              'Select a service'
+                            )
+                      }
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableIntegrations.length > 0 ? (
+                      availableIntegrations.map((integration) => (
+                        <SelectItem key={integration.service} value={integration.service}>
+                          {serviceLabel(integration.service)}
                         </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                ) : (
-                  <div className="text-dark-500 text-sm font-medium">{selectedPhone || '—'}</div>
-                )}
-                {!hasPhoneDestination && (
-                  <p className="text-error-600 text-xs">
-                    {t(
-                      'pages.clients.modals.sendMessage.noPhone',
-                      'This client has no phone number on file.'
-                    )}
-                  </p>
-                )}
-                {hasPhoneDestination && quotaData && (
-                  <div
-                    className={`flex items-center gap-1.5 text-xs ${
-                      quotaData.allowed ? 'text-gray-500' : 'text-error-600 font-medium'
-                    }`}
-                  >
-                    {quotaData.allowed ? (
-                      <Icons.Info size={12} strokeWidth={1.5} />
+                      ))
                     ) : (
-                      <Icons.Warning size={12} strokeWidth={1.5} />
-                    )}
-                    {quotaData.allowed
-                      ? t(
-                          'pages.clients.modals.sendMessage.quotaStatus',
-                          '{{sent}} / {{limit}} messages sent today',
-                          { sent: quotaData.sent_today, limit: quotaData.daily_limit }
-                        )
-                      : t(
-                          'pages.clients.modals.sendMessage.quotaExceeded',
-                          'Daily limit reached ({{limit}} / {{limit}}). Cannot send.',
-                          { limit: quotaData.daily_limit }
+                      <SelectItem value="__none" disabled>
+                        {t(
+                          'pages.clients.modals.sendMessage.noIntegrations',
+                          'No enabled integrations for this channel'
                         )}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <div>
-              <label className="text-dark-500 mb-1.5 block text-sm font-light">
-                {t('pages.clients.modals.sendMessage.draft', 'Draft')}
-              </label>
-              <Select value={draftId} onValueChange={handleDraftChange} disabled={!hasDestination}>
-                <SelectTrigger>
-                  <SelectValue
-                    placeholder={t(
-                      'pages.clients.modals.sendMessage.draftPlaceholder',
-                      draftsLoading ? 'Loading drafts...' : 'Select a draft'
+                      </SelectItem>
                     )}
-                  />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">
-                    {t('pages.clients.modals.sendMessage.noDraft', 'No draft (custom message)')}
-                  </SelectItem>
-                  {channelDrafts.map((draft) => (
-                    <SelectItem key={draft.id} value={String(draft.id)}>
-                      {draft.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <Input
-              label={t('pages.clients.modals.sendMessage.senderName', 'Sender name')}
-              value={senderName}
-              onChange={(event) => {
-                setSenderName(event.target.value)
-                setContentTouched(true)
-              }}
-              maxLength={channelSpec.senderMaxLength}
-              disabled={!hasDestination}
-              placeholder={t(
-                'pages.clients.modals.sendMessage.senderNamePlaceholder',
-                'CRM Prionex'
-              )}
-            />
-          </div>
-
-          {loans.length > 0 && (
-            <div>
-              <label className="text-dark-500 mb-1.5 block text-sm font-light">
-                {t('pages.clients.modals.sendSMS.loanNumber', 'Loan number')}
-              </label>
-              <Select
-                value={selectedLoanId?.toString() ?? ''}
-                onValueChange={(value) => setSelectedLoanId(Number(value))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="—" />
-                </SelectTrigger>
-                <SelectContent>
-                  {loans.map((loan) => (
-                    <SelectItem key={loan.id} value={loan.id.toString()}>
-                      {loan.loanNumber} — {formatMoneyUAHTwoDecimals(loan.totalToRepay)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-
-          {showSubject && (
-            <Input
-              label={t('pages.clients.modals.sendMessage.subject', 'Subject')}
-              value={subject}
-              onChange={(event) => {
-                setSubject(event.target.value)
-                setContentTouched(true)
-              }}
-              disabled={!hasDestination}
-              placeholder={t(
-                'pages.clients.modals.sendMessage.subjectPlaceholder',
-                'Reminder about your account'
-              )}
-              required={channelSpec.subjectRequired}
-            />
-          )}
-
-          <Textarea
-            label={t('pages.clients.modals.sendMessage.body', 'Message body')}
-            value={body}
-            onChange={(event) => {
-              setBody(event.target.value)
-              setContentTouched(true)
-            }}
-            textareaSize="lg"
-            maxLength={channelSpec.bodyMaxLength}
-            disabled={!hasDestination}
-            helperText={t(
-              'pages.clients.modals.sendMessage.bodyHint',
-              'Edit the message before sending. Variables like {{client_name}} are filled from client data.'
-            )}
-          />
-
-          <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
-            <div className="mb-3 flex flex-wrap items-center gap-2">
-              <span className="text-dark-500 text-sm font-medium">
-                {t('pages.clients.modals.sendMessage.preview', 'Message preview')}
-              </span>
-              <span className="rounded-full bg-white px-2.5 py-0.5 text-xs font-medium text-gray-600 ring-1 ring-gray-200 ring-inset">
-                {channel.toUpperCase()}
-              </span>
-            </div>
-            <div className="space-y-2 text-sm">
-              <div>
-                <span className="text-dark-500 font-medium">
-                  {t('pages.clients.modals.sendMessage.previewTo', 'To')}:
-                </span>{' '}
-                <span className="text-gray-600">
-                  {destinationKind === 'email' ? clientEmail || '—' : selectedPhone || '—'}
-                </span>
+                  </SelectContent>
+                </Select>
               </div>
-              <div>
-                <span className="text-dark-500 font-medium">
-                  {t('pages.clients.modals.sendMessage.previewSender', 'Sender')}:
-                </span>{' '}
-                <span className="text-gray-600">{senderName.trim() || '—'}</span>
+            </div>
+
+            <div className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
+              <div className="text-dark-500 mb-2 text-sm font-medium">
+                {t('pages.clients.modals.sendMessage.recipient', 'Recipient')}
               </div>
-              {showSubject && (
-                <div>
-                  <span className="text-dark-500 font-medium">
-                    {t('pages.clients.modals.sendMessage.previewSubject', 'Subject')}:
-                  </span>{' '}
-                  <span className="text-gray-600">{previewSubject || '—'}</span>
+              {destinationKind === 'email' ? (
+                <div className="space-y-2">
+                  <div className="text-dark-500 text-xs font-light">{destinationLabel}</div>
+                  <div className="text-dark-500 text-sm font-medium">{clientEmail || '—'}</div>
+                  {!clientEmail && (
+                    <p className="text-error-600 text-xs">
+                      {t(
+                        'pages.clients.modals.sendMessage.noEmail',
+                        'This client has no email address on file.'
+                      )}
+                    </p>
+                  )}
+                  {clientEmail && quotaData && (
+                    <div
+                      className={`flex items-center gap-1.5 text-xs ${
+                        quotaData.allowed ? 'text-gray-500' : 'text-error-600 font-medium'
+                      }`}
+                    >
+                      {quotaData.allowed ? (
+                        <Icons.Info size={12} strokeWidth={1.5} />
+                      ) : (
+                        <Icons.Warning size={12} strokeWidth={1.5} />
+                      )}
+                      {quotaData.allowed
+                        ? t(
+                            'pages.clients.modals.sendMessage.quotaStatus',
+                            '{{sent}} / {{limit}} messages sent today',
+                            { sent: quotaData.sent_today, limit: quotaData.daily_limit }
+                          )
+                        : t(
+                            'pages.clients.modals.sendMessage.quotaExceeded',
+                            'Daily limit reached ({{limit}} / {{limit}}). Cannot send.',
+                            { limit: quotaData.daily_limit }
+                          )}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <div className="text-dark-500 text-xs font-light">{destinationLabel}</div>
+                  {clientPhones.length > 1 ? (
+                    <Select value={selectedPhone} onValueChange={setSelectedPhone}>
+                      <SelectTrigger className="bg-white">
+                        <SelectValue
+                          placeholder={t(
+                            'pages.clients.modals.sendMessage.selectPhone',
+                            'Select phone number'
+                          )}
+                        />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {clientPhones.map((phone) => (
+                          <SelectItem key={phone} value={phone}>
+                            {phone}
+                            {phone === workPhone
+                              ? ` (${t('pages.clients.modals.sendMessage.workPhone', 'work')})`
+                              : ''}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <div className="text-dark-500 text-sm font-medium">{selectedPhone || '—'}</div>
+                  )}
+                  {!hasPhoneDestination && (
+                    <p className="text-error-600 text-xs">
+                      {t(
+                        'pages.clients.modals.sendMessage.noPhone',
+                        'This client has no phone number on file.'
+                      )}
+                    </p>
+                  )}
+                  {hasPhoneDestination && quotaData && (
+                    <div
+                      className={`flex items-center gap-1.5 text-xs ${
+                        quotaData.allowed ? 'text-gray-500' : 'text-error-600 font-medium'
+                      }`}
+                    >
+                      {quotaData.allowed ? (
+                        <Icons.Info size={12} strokeWidth={1.5} />
+                      ) : (
+                        <Icons.Warning size={12} strokeWidth={1.5} />
+                      )}
+                      {quotaData.allowed
+                        ? t(
+                            'pages.clients.modals.sendMessage.quotaStatus',
+                            '{{sent}} / {{limit}} messages sent today',
+                            { sent: quotaData.sent_today, limit: quotaData.daily_limit }
+                          )
+                        : t(
+                            'pages.clients.modals.sendMessage.quotaExceeded',
+                            'Daily limit reached ({{limit}} / {{limit}}). Cannot send.',
+                            { limit: quotaData.daily_limit }
+                          )}
+                    </div>
+                  )}
                 </div>
               )}
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div>
-                <span className="text-dark-500 font-medium">
-                  {t('pages.clients.modals.sendMessage.previewBody', 'Message')}:
+                <label className="text-dark-500 mb-1.5 block text-sm font-light">
+                  {t('pages.clients.modals.sendMessage.draft', 'Draft')}
+                </label>
+                <Select
+                  value={draftId}
+                  onValueChange={handleDraftChange}
+                  disabled={!hasDestination}
+                >
+                  <SelectTrigger>
+                    <SelectValue
+                      placeholder={
+                        draftsLoading
+                          ? t('pages.clients.modals.sendMessage.loadingDrafts', 'Loading drafts...')
+                          : t('pages.clients.modals.sendMessage.draftPlaceholder', 'Select a draft')
+                      }
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">
+                      {t('pages.clients.modals.sendMessage.noDraft', 'No draft (custom message)')}
+                    </SelectItem>
+                    {channelDrafts.map((draft) => (
+                      <SelectItem key={draft.id} value={String(draft.id)}>
+                        {draft.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <Input
+                label={t('pages.clients.modals.sendMessage.senderName', 'Sender name')}
+                value={senderName}
+                onChange={(event) => {
+                  setSenderName(event.target.value)
+                  setContentTouched(true)
+                }}
+                maxLength={channelSpec.senderMaxLength}
+                disabled={!hasDestination}
+                placeholder={t(
+                  'pages.clients.modals.sendMessage.senderNamePlaceholder',
+                  'CRM Prionex'
+                )}
+              />
+            </div>
+
+            {loans.length > 0 && (
+              <div>
+                <label className="text-dark-500 mb-1.5 block text-sm font-light">
+                  {t('pages.clients.modals.sendSMS.loanNumber', 'Loan number')}
+                </label>
+                <Select
+                  value={selectedLoanId?.toString() ?? ''}
+                  onValueChange={(value) => setSelectedLoanId(Number(value))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="—" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {loans.map((loan) => (
+                      <SelectItem key={loan.id} value={loan.id.toString()}>
+                        {loan.loanNumber} — {formatMoneyUAHTwoDecimals(loan.totalToRepay)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {showSubject && (
+              <Input
+                ref={subjectRef}
+                label={t('pages.clients.modals.sendMessage.subject', 'Subject')}
+                value={subject}
+                onChange={(event) => {
+                  setSubject(event.target.value)
+                  setContentTouched(true)
+                }}
+                onFocus={() => {
+                  lastFocusedRef.current = 'subject'
+                }}
+                disabled={!hasDestination}
+                placeholder={t(
+                  'pages.clients.modals.sendMessage.subjectPlaceholder',
+                  'Reminder about your account'
+                )}
+                required={channelSpec.subjectRequired}
+              />
+            )}
+
+            <Textarea
+              ref={bodyRef}
+              label={t('pages.clients.modals.sendMessage.body', 'Message body')}
+              value={body}
+              onChange={(event) => {
+                setBody(event.target.value)
+                setContentTouched(true)
+              }}
+              onFocus={() => {
+                lastFocusedRef.current = 'body'
+              }}
+              textareaSize="lg"
+              maxLength={channelSpec.bodyMaxLength}
+              disabled={!hasDestination}
+              helperText={t(
+                'pages.clients.modals.sendMessage.bodyHint',
+                'Edit the message before sending. Variables like {{client_name}} are filled from client data.'
+              )}
+            />
+
+            <MessagingVariablesPalette onInsert={handleInsertVariable} disabled={!hasDestination} />
+
+            <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+              <div className="mb-3 flex flex-wrap items-center gap-2">
+                <span className="text-dark-500 text-sm font-medium">
+                  {t('pages.clients.modals.sendMessage.preview', 'Message preview')}
                 </span>
-                <pre className="text-dark-500 mt-1 overflow-auto rounded-lg bg-white p-3 text-xs whitespace-pre-wrap">
-                  {previewBody.trim() || '—'}
-                </pre>
+                <span className="rounded-full bg-white px-2.5 py-0.5 text-xs font-medium text-gray-600 ring-1 ring-gray-200 ring-inset">
+                  {channel.toUpperCase()}
+                </span>
+              </div>
+              <div className="space-y-2 text-sm">
+                <div>
+                  <span className="text-dark-500 font-medium">
+                    {t('pages.clients.modals.sendMessage.previewTo', 'To')}:
+                  </span>{' '}
+                  <span className="text-gray-600">
+                    {destinationKind === 'email' ? clientEmail || '—' : selectedPhone || '—'}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-dark-500 font-medium">
+                    {t('pages.clients.modals.sendMessage.previewSender', 'Sender')}:
+                  </span>{' '}
+                  <span className="text-gray-600">{senderName.trim() || '—'}</span>
+                </div>
+                {showSubject && (
+                  <div>
+                    <span className="text-dark-500 font-medium">
+                      {t('pages.clients.modals.sendMessage.previewSubject', 'Subject')}:
+                    </span>{' '}
+                    <span className="text-gray-600">{previewSubject || '—'}</span>
+                  </div>
+                )}
+                <div>
+                  <span className="text-dark-500 font-medium">
+                    {t('pages.clients.modals.sendMessage.previewBody', 'Message')}:
+                  </span>
+                  <pre className="text-dark-500 mt-1 overflow-auto rounded-lg bg-white p-3 text-xs whitespace-pre-wrap">
+                    {previewBody.trim() || '—'}
+                  </pre>
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        )}
       </ModalContent>
       <ModalFooter>
-        <Button type="button" variant="cancel" onClick={onClose} size="sm">
+        <Button
+          type="button"
+          variant="cancel"
+          onClick={onClose}
+          className="w-full rounded-md"
+          disabled={isFormLoading}
+        >
           {t('actions.cancel', 'Cancel')}
         </Button>
         <Button
           type="button"
           variant="primary"
           onClick={handleSend}
-          size="sm"
-          disabled={!canSend}
+          className="w-full rounded-md"
+          disabled={!canSend || isFormLoading}
           isLoading={sendMessageMutation.isPending}
           title={
             quotaExceeded

@@ -42,6 +42,10 @@ import { ViewSMSModal } from './components/ViewSMSModal'
 import { SendSMSModal } from './components/SendSMSModal'
 import { ViewMessageModal } from './components/ViewMessageModal'
 import { SendMessageModal } from './components/SendMessageModal'
+import {
+  MessagingHistorySkeleton,
+  MessagingTabSkeleton,
+} from './components/MessagingHistorySkeleton'
 import { CallLogCard } from './components/CallLogCard'
 import { cn } from '@/lib/utils'
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/Tooltip'
@@ -106,7 +110,16 @@ import { searchClientsByPhoneExact } from '@/api/clientSearchApi'
 import { ChainExecutor, TAInteractionHistory } from './components/taChains'
 import { formatUkrainePhoneForDisplay, normalizeUkrainePhoneToDb } from '@/lib/phone'
 import { isAdminRole, isHiddenVisibility } from '@/features/tags/utils/visibility'
-import { useMessagingClientHistory } from '@/features/messaging'
+import {
+  buildOperatorNamesMap,
+  countMessagingHistoryByOutcome,
+  downloadBlob,
+  formatLauncherName,
+  messagingApi,
+  messagingStatusForCallLogCard,
+  useMessagingClientHistory,
+} from '@/features/messaging'
+import { useOperators } from '@/features/users/hooks/useUsers'
 
 // Extended types for SMS and Call items with API-specific properties
 type ExtendedSMSItem = {
@@ -314,6 +327,14 @@ export function ClientDetailPage() {
       { limit: 100, offset: 0 },
       isValidClientId && canAccessMessagingHistory
     )
+  const activeProjectId = useAuthStore((s) => s.user?.active_project_id)
+  const { data: messagingOperators = [] } = useOperators(
+    activeProjectId ? Number(activeProjectId) : null
+  )
+  const messagingLauncherNames = useMemo(
+    () => buildOperatorNamesMap(messagingOperators),
+    [messagingOperators]
+  )
   const canViewTasks = useHasPermission(PERMISSIONS.CLIENTS.VIEW_TASKS)
   const { data: tasks = [], isLoading: isTasksLoading } = useClientTasks(
     clientId,
@@ -867,6 +888,7 @@ export function ClientDetailPage() {
     source: string
     channel: string
     service: string
+    launchedBy?: string
     destination: string
     status: string
     body: string
@@ -877,97 +899,22 @@ export function ClientDetailPage() {
     errorMessage?: string | null
   } | null>(null)
   const [isViewMessageModalOpen, setIsViewMessageModalOpen] = useState(false)
+  const [isExportingMessagingCsv, setIsExportingMessagingCsv] = useState(false)
 
-  const messageHistoryColumns = useMemo<
-    Column<{
-      id: number
-      sentAt: string | null
-      channel: string
-      source: string
-      campaignName: string
-      campaignCode: string
-      service: string
-      destination: string | null
-      status: string
-      body: string | null
-      subject: string | null
-      deliveredAt: string | null
-      failedAt: string | null
-      errorMessage: string | null
-    }>[]
-  >(
-    () => [
-      {
-        key: 'sentAt',
-        header: t('pages.clients.detail.sentAt', 'Sent'),
-        align: 'left',
-        render: (item) =>
-          formatDateTime(item.sentAt ?? item.deliveredAt ?? item.failedAt ?? undefined),
-      },
-      {
-        key: 'channel',
-        header: t('pages.clients.detail.channel', 'Channel'),
-        align: 'left',
-        render: (item) => item.channel.toUpperCase(),
-      },
-      {
-        key: 'source',
-        header: t('pages.clients.detail.source', 'Source'),
-        align: 'left',
-        render: (item) =>
-          item.source.charAt(0).toUpperCase() + item.source.slice(1).replace('_', ' '),
-      },
-      {
-        key: 'campaignName',
-        header: t('pages.clients.detail.campaign', 'Campaign'),
-        align: 'left',
-        render: (item) => (
-          <div className="flex flex-col gap-1">
-            <span className="text-dark-500 font-medium">{item.campaignName}</span>
-            <span className="text-xs text-gray-500">{item.campaignCode}</span>
-          </div>
-        ),
-      },
-      {
-        key: 'status',
-        header: t('pages.clients.detail.status', 'Status'),
-        align: 'left',
-      },
-      {
-        key: 'actions',
-        header: t('pages.clients.detail.actions', 'Actions'),
-        align: 'center',
-        render: (item) => (
-          <Button
-            type="button"
-            variant="outline"
-            size="xs"
-            onClick={() => {
-              setSelectedMessageData({
-                campaignName: item.campaignName,
-                campaignCode: item.campaignCode,
-                source: item.source,
-                channel: item.channel,
-                service: item.service,
-                destination: item.destination || '-',
-                status: item.status,
-                body: item.body || '-',
-                subject: item.subject || undefined,
-                sentAt: item.sentAt,
-                deliveredAt: item.deliveredAt,
-                failedAt: item.failedAt,
-                errorMessage: item.errorMessage,
-              })
-              setIsViewMessageModalOpen(true)
-            }}
-          >
-            {t('pages.clients.detail.viewMessage', 'View message')}
-          </Button>
-        ),
-      },
-    ],
-    [t]
-  )
+  const handleExportMessagingCsv = async () => {
+    if (!isValidClientId) return
+    setIsExportingMessagingCsv(true)
+    try {
+      const blob = await messagingApi.exportClientHistory(clientId)
+      downloadBlob(blob, `client-${clientId}-messaging-history.csv`)
+    } catch {
+      toast.error(
+        t('pages.clients.detail.exportMessagingCsvFailed', 'Failed to export messaging history')
+      )
+    } finally {
+      setIsExportingMessagingCsv(false)
+    }
+  }
 
   const resetContactEditor = () => {
     setContactEditorMode(null)
@@ -3513,6 +3460,22 @@ export function ClientDetailPage() {
                             leftIcon={<Icons.Download size={20} />}
                             className="bg-secondary-800 flex w-full flex-row items-center gap-1 rounded px-3 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px] text-white md:w-auto md:px-4 md:py-2.5"
                             size="sm"
+                            disabled={
+                              (activeCallSmsTab !== 'messaging' && activeCallSmsTab !== 'all') ||
+                              !canAccessMessagingHistory ||
+                              isMessagingHistoryLoading ||
+                              messagingHistory.length === 0 ||
+                              isExportingMessagingCsv
+                            }
+                            isLoading={
+                              (activeCallSmsTab === 'messaging' || activeCallSmsTab === 'all') &&
+                              isExportingMessagingCsv
+                            }
+                            onClick={() => {
+                              if (activeCallSmsTab === 'messaging' || activeCallSmsTab === 'all') {
+                                void handleExportMessagingCsv()
+                              }
+                            }}
                           >
                             {t('pages.clients.detail.exportCSV')}
                           </Button>
@@ -3520,21 +3483,21 @@ export function ClientDetailPage() {
                       </div>
                     </div>
                     {isCallSmsLoading ||
-                    (activeCallSmsTab === 'messaging' && isMessagingHistoryLoading) ? (
-                      <div className="flex w-full flex-col gap-4">
-                        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-4">
-                          {Array.from({ length: 6 }).map((_, i) => (
-                            <div key={i} className="h-24 animate-pulse rounded-lg bg-gray-200" />
-                          ))}
-                        </div>
-                      </div>
+                    (canAccessMessagingHistory &&
+                      isMessagingHistoryLoading &&
+                      (activeCallSmsTab === 'messaging' || activeCallSmsTab === 'all')) ? (
+                      activeCallSmsTab === 'messaging' ? (
+                        <MessagingTabSkeleton />
+                      ) : (
+                        <MessagingHistorySkeleton />
+                      )
                     ) : (
                       <>
                         {activeCallSmsTab === 'all' && (
                           <div className="flex flex-col items-start gap-6 self-stretch">
                             {/* Date-grouped Calls and SMS */}
                             {(() => {
-                              // Combine calls and SMS, group by date
+                              // Combine calls, legacy SMS, and messaging-service history (Viber, bulk, email).
                               const allItems = [
                                 ...client.callSmsHistory.calls.map((item) => ({
                                   ...item,
@@ -3544,17 +3507,42 @@ export function ClientDetailPage() {
                                   ...item,
                                   itemType: 'sms' as const,
                                 })),
+                                ...(canAccessMessagingHistory
+                                  ? messagingHistory.map((item) => ({
+                                      ...item,
+                                      itemType: 'messaging' as const,
+                                    }))
+                                  : []),
                               ]
 
                               const grouped = allItems.reduce(
                                 (acc, item) => {
-                                  // Use original UTC timestamp (sent_at for SMS, initiated_at for calls) instead of date string
                                   const timestamp =
                                     item.itemType === 'sms'
                                       ? (item as unknown as ExtendedSMSItem & { itemType: 'sms' })
                                           .sent_at || item.date
-                                      : (item as unknown as ExtendedCallItem & { itemType: 'call' })
-                                          .initiated_at || item.date
+                                      : item.itemType === 'messaging'
+                                        ? (
+                                            item as (typeof messagingHistory)[number] & {
+                                              itemType: 'messaging'
+                                            }
+                                          ).sent_at ||
+                                          (
+                                            item as (typeof messagingHistory)[number] & {
+                                              itemType: 'messaging'
+                                            }
+                                          ).delivered_at ||
+                                          (
+                                            item as (typeof messagingHistory)[number] & {
+                                              itemType: 'messaging'
+                                            }
+                                          ).failed_at ||
+                                          new Date().toISOString()
+                                        : (
+                                            item as unknown as ExtendedCallItem & {
+                                              itemType: 'call'
+                                            }
+                                          ).initiated_at || item.date
                                   const locale =
                                     i18n.language?.split('-')[0] === 'uk' ? 'uk-UA' : 'en-GB'
                                   const date = new Date(String(timestamp)).toLocaleDateString(
@@ -3566,14 +3554,22 @@ export function ClientDetailPage() {
                                       timeZone: userTimezone || undefined,
                                     }
                                   )
-                                  if (!acc[date]) acc[date] = { calls: [], sms: [] }
+                                  if (!acc[date]) {
+                                    acc[date] = { calls: [], sms: [], messaging: [] }
+                                  }
                                   if (item.itemType === 'call') {
                                     acc[date].calls.push(
                                       item as unknown as ExtendedCallItem & { itemType: 'call' }
                                     )
-                                  } else {
+                                  } else if (item.itemType === 'sms') {
                                     acc[date].sms.push(
                                       item as unknown as ExtendedSMSItem & { itemType: 'sms' }
+                                    )
+                                  } else {
+                                    acc[date].messaging.push(
+                                      item as (typeof messagingHistory)[number] & {
+                                        itemType: 'messaging'
+                                      }
                                     )
                                   }
                                   return acc
@@ -3583,9 +3579,23 @@ export function ClientDetailPage() {
                                   {
                                     calls: (ExtendedCallItem & { itemType: 'call' })[]
                                     sms: (ExtendedSMSItem & { itemType: 'sms' })[]
+                                    messaging: ((typeof messagingHistory)[number] & {
+                                      itemType: 'messaging'
+                                    })[]
                                   }
                                 >
                               )
+
+                              if (Object.keys(grouped).length === 0) {
+                                return (
+                                  <p className="text-dark-500 text-sm">
+                                    {t(
+                                      'pages.clients.detail.noCallSmsHistory',
+                                      'No calls, SMS, or messaging history for this client yet'
+                                    )}
+                                  </p>
+                                )
+                              }
 
                               return Object.entries(grouped)
                                 .sort(
@@ -3650,6 +3660,73 @@ export function ClientDetailPage() {
                                           setIsViewSMSModalOpen={setIsViewSMSModalOpen}
                                         />
                                       ))}
+                                      {items.messaging.map((msg) => {
+                                        const timestamp =
+                                          msg.sent_at ||
+                                          msg.delivered_at ||
+                                          msg.failed_at ||
+                                          new Date().toISOString()
+                                        const dt = new Date(String(timestamp))
+                                        const time = dt.toLocaleTimeString(
+                                          i18n.language?.split('-')[0] === 'uk' ? 'uk-UA' : 'en-GB',
+                                          {
+                                            hour: '2-digit',
+                                            minute: '2-digit',
+                                            timeZone: userTimezone || undefined,
+                                          }
+                                        )
+                                        return (
+                                          <CallLogCard
+                                            key={`messaging-${msg.recipient_id}`}
+                                            clientName={client.fullName}
+                                            time={time}
+                                            date={date}
+                                            status={messagingStatusForCallLogCard(
+                                              msg.status,
+                                              msg.service
+                                            )}
+                                            template={`${msg.channel.toUpperCase()} · ${msg.campaign_name}`}
+                                            message={msg.body || ''}
+                                            operator={
+                                              formatLauncherName(
+                                                msg.initiated_by,
+                                                messagingLauncherNames
+                                              ) || undefined
+                                            }
+                                            phone={msg.destination || '-'}
+                                            sent_at={msg.sent_at ?? undefined}
+                                            delivered_at={msg.delivered_at ?? undefined}
+                                            icon={
+                                              <Icons.ChatFeedback01
+                                                size={20}
+                                                className="text-secondary-800"
+                                              />
+                                            }
+                                            onSelect={() => {
+                                              setSelectedMessageData({
+                                                campaignName: msg.campaign_name,
+                                                campaignCode: msg.campaign_code,
+                                                source: msg.source,
+                                                channel: msg.channel,
+                                                service: msg.service,
+                                                launchedBy: formatLauncherName(
+                                                  msg.initiated_by,
+                                                  messagingLauncherNames
+                                                ),
+                                                destination: msg.destination || '-',
+                                                status: msg.status,
+                                                body: msg.body || '',
+                                                subject: msg.subject ?? undefined,
+                                                sentAt: msg.sent_at,
+                                                deliveredAt: msg.delivered_at,
+                                                failedAt: msg.failed_at,
+                                                errorMessage: msg.error_message,
+                                              })
+                                              setIsViewMessageModalOpen(true)
+                                            }}
+                                          />
+                                        )
+                                      })}
                                     </div>
                                   </div>
                                 ))
@@ -3923,8 +4000,8 @@ export function ClientDetailPage() {
                         )}
                         {activeCallSmsTab === 'messaging' && (
                           <div className="flex flex-col items-start gap-4 self-stretch">
-                            <div className="grid w-full grid-cols-1 gap-3 md:grid-cols-3">
-                              <div className="flex w-full items-center justify-between rounded-xl border border-white bg-white/50 px-4 py-4">
+                            <div className="flex h-auto w-full flex-col items-start gap-3 p-0 md:h-14 md:flex-row md:gap-5">
+                              <div className="flex w-full flex-1 items-center justify-between rounded-xl border border-white bg-white/50 px-4 py-4 pl-3 md:w-auto md:px-5">
                                 <div className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
                                   {t('pages.clients.detail.totalMessages', 'Total messages')}
                                 </div>
@@ -3932,56 +4009,147 @@ export function ClientDetailPage() {
                                   {messagingHistory.length}
                                 </div>
                               </div>
-                              <div className="flex w-full items-center justify-between rounded-xl border border-white bg-white/50 px-4 py-4">
+                              <div className="flex w-full flex-1 items-center justify-between rounded-xl border border-white bg-white/50 px-4 py-4 pl-3 md:w-auto md:px-5">
                                 <div className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
-                                  {t('pages.clients.detail.delivered', 'Delivered')}
+                                  {t('pages.clients.detail.deliveryRate')}
                                 </div>
                                 <div className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
-                                  {
-                                    messagingHistory.filter(
-                                      (item) => item.status.toLowerCase() === 'delivered'
+                                  {(() => {
+                                    const { delivered, failed, pending, total } =
+                                      countMessagingHistoryByOutcome(messagingHistory)
+                                    const sent = messagingHistory.filter(
+                                      (item) => item.status.toLowerCase() === 'sent'
                                     ).length
-                                  }
-                                </div>
-                              </div>
-                              <div className="flex w-full items-center justify-between rounded-xl border border-white bg-white/50 px-4 py-4">
-                                <div className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
-                                  {t('pages.clients.detail.failed', 'Failed')}
-                                </div>
-                                <div className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
-                                  {
-                                    messagingHistory.filter(
-                                      (item) => item.status.toLowerCase() === 'failed'
-                                    ).length
-                                  }
+                                    const rate =
+                                      total > 0 ? Math.round((delivered / total) * 100) : 0
+                                    return `${rate}% (${delivered} ${t('pages.clients.detail.delivered')}, ${failed} ${t('pages.clients.detail.failed')}, ${sent} ${t('pages.clients.statuses.sent', 'sent')}, ${pending} ${t('pages.clients.detail.pending')})`
+                                  })()}
                                 </div>
                               </div>
                             </div>
 
-                            <DataTable
-                              columns={messageHistoryColumns}
-                              data={messagingHistory.map((item) => ({
-                                id: item.recipient_id,
-                                sentAt: item.sent_at,
-                                channel: item.channel,
-                                source: item.source,
-                                campaignName: item.campaign_name,
-                                campaignCode: item.campaign_code,
-                                service: item.service,
-                                destination: item.destination,
-                                status: item.status,
-                                body: item.body,
-                                subject: item.subject,
-                                deliveredAt: item.delivered_at,
-                                failedAt: item.failed_at,
-                                errorMessage: item.error_message,
-                              }))}
-                              emptyMessage={t(
-                                'pages.clients.detail.noMessagingHistory',
-                                'No messaging history is available for this client yet'
-                              )}
-                              className="w-full"
-                            />
+                            {messagingHistory.length === 0 ? (
+                              <p className="text-dark-500 text-sm">
+                                {t(
+                                  'pages.clients.detail.noMessagingHistory',
+                                  'No messaging history is available for this client yet'
+                                )}
+                              </p>
+                            ) : (
+                              <div className="w-full space-y-6">
+                                {(() => {
+                                  const grouped = messagingHistory.reduce(
+                                    (acc, item) => {
+                                      const timestamp =
+                                        item.sent_at ||
+                                        item.delivered_at ||
+                                        item.failed_at ||
+                                        new Date().toISOString()
+                                      const locale =
+                                        i18n.language?.split('-')[0] === 'uk' ? 'uk-UA' : 'en-GB'
+                                      const date = new Date(String(timestamp)).toLocaleDateString(
+                                        locale,
+                                        {
+                                          year: 'numeric',
+                                          month: '2-digit',
+                                          day: '2-digit',
+                                          timeZone: userTimezone || undefined,
+                                        }
+                                      )
+                                      if (!acc[date]) acc[date] = []
+                                      acc[date].push(item)
+                                      return acc
+                                    },
+                                    {} as Record<string, typeof messagingHistory>
+                                  )
+
+                                  return Object.entries(grouped)
+                                    .sort(
+                                      ([a], [b]) =>
+                                        new Date(b as string).getTime() -
+                                        new Date(a as string).getTime()
+                                    )
+                                    .map(([date, items]) => (
+                                      <div key={date} className="space-y-4">
+                                        <h3 className="text-dark-500 text-sm font-semibold md:text-base">
+                                          {date}
+                                        </h3>
+                                        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-4">
+                                          {items.map((item) => {
+                                            const timestamp =
+                                              item.sent_at ||
+                                              item.delivered_at ||
+                                              item.failed_at ||
+                                              new Date().toISOString()
+                                            const dt = new Date(String(timestamp))
+                                            const time = dt.toLocaleTimeString(
+                                              i18n.language?.split('-')[0] === 'uk'
+                                                ? 'uk-UA'
+                                                : 'en-GB',
+                                              {
+                                                hour: '2-digit',
+                                                minute: '2-digit',
+                                                timeZone: userTimezone || undefined,
+                                              }
+                                            )
+                                            return (
+                                              <CallLogCard
+                                                key={item.recipient_id}
+                                                clientName={client.fullName}
+                                                time={time}
+                                                date={date}
+                                                status={messagingStatusForCallLogCard(
+                                                  item.status,
+                                                  item.service
+                                                )}
+                                                template={`${item.channel.toUpperCase()} · ${item.campaign_name}`}
+                                                message={item.body || ''}
+                                                operator={
+                                                  formatLauncherName(
+                                                    item.initiated_by,
+                                                    messagingLauncherNames
+                                                  ) || undefined
+                                                }
+                                                phone={item.destination || '-'}
+                                                sent_at={item.sent_at ?? undefined}
+                                                delivered_at={item.delivered_at ?? undefined}
+                                                icon={
+                                                  <Icons.ChatFeedback01
+                                                    size={20}
+                                                    className="text-secondary-800"
+                                                  />
+                                                }
+                                                onSelect={() => {
+                                                  setSelectedMessageData({
+                                                    campaignName: item.campaign_name,
+                                                    campaignCode: item.campaign_code,
+                                                    source: item.source,
+                                                    channel: item.channel,
+                                                    service: item.service,
+                                                    launchedBy: formatLauncherName(
+                                                      item.initiated_by,
+                                                      messagingLauncherNames
+                                                    ),
+                                                    destination: item.destination || '-',
+                                                    status: item.status,
+                                                    body: item.body || '-',
+                                                    subject: item.subject || undefined,
+                                                    sentAt: item.sent_at,
+                                                    deliveredAt: item.delivered_at,
+                                                    failedAt: item.failed_at,
+                                                    errorMessage: item.error_message,
+                                                  })
+                                                  setIsViewMessageModalOpen(true)
+                                                }}
+                                              />
+                                            )
+                                          })}
+                                        </div>
+                                      </div>
+                                    ))
+                                })()}
+                              </div>
+                            )}
                           </div>
                         )}
                       </>

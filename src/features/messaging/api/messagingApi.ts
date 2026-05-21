@@ -3,7 +3,7 @@ import type {
   MessagingCampaignCreate,
   MessagingCampaignDetail,
   MessagingCampaignRecipient,
-  MessagingCampaignSummary,
+  MessagingCampaignListResponse,
   MessagingChannel,
   MessagingClientHistoryItem,
   MessagingDestinationQuota,
@@ -22,7 +22,48 @@ import type {
   MessagingSingleSendResponse,
 } from './types'
 
+import { readInitiatedByUserId } from '../utils/launcherNames'
+
 const BASE_URL = '/api/v1/messaging'
+
+function normalizeClientHistoryItem(raw: MessagingClientHistoryItem): MessagingClientHistoryItem {
+  const initiated_by = readInitiatedByUserId(raw)
+  return initiated_by != null ? { ...raw, initiated_by } : raw
+}
+
+async function enrichClientHistoryLaunchers(
+  history: MessagingClientHistoryItem[]
+): Promise<MessagingClientHistoryItem[]> {
+  const normalized = history.map(normalizeClientHistoryItem)
+  const campaignIdsNeedingLauncher = [
+    ...new Set(
+      normalized
+        .filter((item) => readInitiatedByUserId(item) == null)
+        .map((item) => item.campaign_id)
+    ),
+  ]
+  if (campaignIdsNeedingLauncher.length === 0) return normalized
+
+  const launcherByCampaignId = new Map<number, number>()
+  await Promise.all(
+    campaignIdsNeedingLauncher.map(async (campaignId) => {
+      try {
+        const campaign = await api
+          .get<MessagingCampaignDetail>(`${BASE_URL}/campaigns/${campaignId}`)
+          .then((response) => response.data)
+        const initiatedBy = readInitiatedByUserId(campaign)
+        if (initiatedBy != null) launcherByCampaignId.set(campaignId, initiatedBy)
+      } catch {
+        // Keep history usable when a campaign was removed or the caller lacks access.
+      }
+    })
+  )
+
+  return normalized.map((item) => {
+    const initiated_by = readInitiatedByUserId(item) ?? launcherByCampaignId.get(item.campaign_id)
+    return initiated_by != null ? { ...item, initiated_by } : item
+  })
+}
 
 export const messagingApi = {
   listDrafts(params?: { channel?: MessagingChannel }) {
@@ -122,11 +163,15 @@ export const messagingApi = {
   listCampaigns(params?: {
     status?: string
     channel?: MessagingChannel
+    launched_from?: string
+    launched_to?: string
+    initiated_by?: number
+    search?: string
     limit?: number
     offset?: number
   }) {
     return api
-      .get<MessagingCampaignSummary[]>(`${BASE_URL}/campaigns`, { params })
+      .get<MessagingCampaignListResponse>(`${BASE_URL}/campaigns`, { params })
       .then((response) => response.data)
   },
 
@@ -153,14 +198,11 @@ export const messagingApi = {
       .then((response) => response.data)
   },
 
-  cancelCampaign(campaignId: number) {
-    return api
-      .post<MessagingCampaignSummary>(`${BASE_URL}/campaigns/${campaignId}/cancel`)
-      .then((response) => response.data)
-  },
-
-  getCampaignExportUrl(campaignId: number) {
-    return `${api.defaults.baseURL}${BASE_URL}/campaigns/${campaignId}/export`
+  async exportCampaign(campaignId: number): Promise<Blob> {
+    const response = await api.get(`${BASE_URL}/campaigns/${campaignId}/export`, {
+      responseType: 'blob',
+    })
+    return response.data as Blob
   },
 
   getDestinationQuota(destination: string) {
@@ -177,12 +219,24 @@ export const messagingApi = {
       .then((response) => response.data)
   },
 
-  getClientHistory(
+  async getClientHistory(
     clientId: number,
     params?: { channel?: MessagingChannel; limit?: number; offset?: number }
   ) {
-    return api
+    const history = await api
       .get<MessagingClientHistoryItem[]>(`${BASE_URL}/clients/${clientId}/history`, { params })
       .then((response) => response.data)
+    return enrichClientHistoryLaunchers(history)
+  },
+
+  async exportClientHistory(
+    clientId: number,
+    params?: { channel?: MessagingChannel }
+  ): Promise<Blob> {
+    const response = await api.get(`${BASE_URL}/clients/${clientId}/history/export`, {
+      params,
+      responseType: 'blob',
+    })
+    return response.data as Blob
   },
 }

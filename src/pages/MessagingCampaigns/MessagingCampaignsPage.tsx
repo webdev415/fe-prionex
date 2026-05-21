@@ -1,299 +1,120 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { DataTable, type Column } from '@/components/ui/DataTable'
-import { Button } from '@/components/ui/Button'
-import { Input } from '@/components/ui/Input'
+import { Pagination } from '@/components/ui/Pagination'
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/Select'
-import { Modal, ModalContent, ModalFooter, ModalHeader } from '@/components/ui/Modal'
-import { PermissionGuard } from '@/components/auth'
-import { PERMISSIONS } from '@/constants/permissions'
+  CampaignAnalyticsFiltersBar,
+  type CampaignAnalyticsFilters,
+} from './components/CampaignAnalyticsFiltersBar'
+import { CampaignDetailModal } from './components/CampaignDetailModal'
 import { Icons } from '@/lib/icons'
-import { messagingApi, MESSAGING_CHANNELS } from '@/features/messaging'
-import type { MessagingCampaignRecipient, MessagingCampaignSummary } from '@/features/messaging'
+import { cn } from '@/lib/utils'
+import { formatDateTime } from '@/lib/formatters'
 import {
-  useCancelMessagingCampaign,
-  useMessagingCampaign,
-  useMessagingCampaignRecipients,
-  useMessagingCampaigns,
+  buildOperatorNamesMap,
+  formatLauncherName,
+  getMessagingServiceLabel,
+  MESSAGING_CHANNELS,
 } from '@/features/messaging'
+import { MessagingCampaignsTableSkeleton } from './components/MessagingCampaignsPageSkeleton'
+import type { MessagingCampaignSummary } from '@/features/messaging'
+import { useMessagingCampaigns } from '@/features/messaging'
+import { useOperators } from '@/features/users/hooks/useUsers'
+import { useAuthStore } from '@/stores/authStore'
 
-const formatDateTime = (value?: string | null) => {
-  if (!value) return '-'
-
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return value
-
-  return new Intl.DateTimeFormat('en-GB', {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  }).format(date)
-}
-
-const formatStatus = (value: string) =>
+const formatStatusFallback = (value: string) =>
   value
     .split('_')
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .map((part) => (part ? part.charAt(0).toUpperCase() + part.slice(1) : ''))
     .join(' ')
 
-interface CampaignDetailModalProps {
-  campaignId: number | null
-  onClose: () => void
-}
-
-function CampaignDetailModal({ campaignId, onClose }: CampaignDetailModalProps) {
-  const { t } = useTranslation('common')
-  const { data: campaign, isLoading } = useMessagingCampaign(campaignId ?? 0, campaignId !== null)
-  const { data: recipients, isLoading: recipientsLoading } = useMessagingCampaignRecipients(
-    campaignId ?? 0,
-    { limit: 100, offset: 0 },
-    campaignId !== null
-  )
-  const cancelCampaignMutation = useCancelMessagingCampaign()
-
-  const recipientColumns = useMemo<Column<MessagingCampaignRecipient>[]>(
-    () => [
-      {
-        key: 'client_id',
-        header: t('pages.messagingCampaigns.table.client', 'Client'),
-        align: 'left',
-      },
-      {
-        key: 'destination',
-        header: t('pages.messagingCampaigns.table.destination', 'Destination'),
-        align: 'left',
-      },
-      {
-        key: 'status',
-        header: t('pages.messagingCampaigns.table.status', 'Status'),
-        align: 'left',
-        render: (recipient) => formatStatus(recipient.status),
-      },
-      {
-        key: 'sent_at',
-        header: t('pages.messagingCampaigns.table.sentAt', 'Sent'),
-        align: 'left',
-        render: (recipient) => formatDateTime(recipient.sent_at),
-      },
-      {
-        key: 'delivered_at',
-        header: t('pages.messagingCampaigns.table.deliveredAt', 'Delivered'),
-        align: 'left',
-        render: (recipient) => formatDateTime(recipient.delivered_at),
-      },
-      {
-        key: 'error_message',
-        header: t('pages.messagingCampaigns.table.error', 'Error'),
-        align: 'left',
-        render: (recipient) => recipient.error_message || '-',
-      },
-    ],
-    [t]
-  )
-
-  const handleExport = () => {
-    if (!campaign) return
-
-    window.open(messagingApi.getCampaignExportUrl(campaign.id), '_blank', 'noopener,noreferrer')
-  }
-
-  const handleCancel = async () => {
-    if (!campaign) return
-    await cancelCampaignMutation.mutateAsync(campaign.id)
-  }
-
-  return (
-    <Modal open={campaignId !== null} onClose={onClose} maxWidth="2xl">
-      <ModalHeader
-        icon={
-          <div className="bg-primary-300 flex h-8 w-8 items-center justify-center rounded-full">
-            <Icons.MailSend01 size={18} className="text-dark-500" strokeWidth={1.5} />
-          </div>
-        }
-        title={
-          campaign
-            ? `${campaign.code} - ${campaign.name}`
-            : t('pages.messagingCampaigns.detail.title', 'Campaign detail')
-        }
-      />
-      <ModalContent>
-        {isLoading || !campaign ? (
-          <div className="py-8 text-sm text-gray-500">{t('status.loading', 'Loading...')}</div>
-        ) : (
-          <div className="space-y-6">
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-              <div className="rounded-xl border border-gray-200 bg-white p-4">
-                <div className="text-xs tracking-wide text-gray-500 uppercase">
-                  {t('pages.messagingCampaigns.detail.status', 'Status')}
-                </div>
-                <div className="text-dark-500 mt-2 text-lg font-semibold">
-                  {formatStatus(campaign.status)}
-                </div>
-              </div>
-              <div className="rounded-xl border border-gray-200 bg-white p-4">
-                <div className="text-xs tracking-wide text-gray-500 uppercase">
-                  {t('pages.messagingCampaigns.detail.channelService', 'Channel / service')}
-                </div>
-                <div className="text-dark-500 mt-2 text-lg font-semibold">
-                  {campaign.channel.toUpperCase()} / {campaign.service}
-                </div>
-              </div>
-              <div className="rounded-xl border border-gray-200 bg-white p-4">
-                <div className="text-xs tracking-wide text-gray-500 uppercase">
-                  {t('pages.messagingCampaigns.detail.source', 'Source')}
-                </div>
-                <div className="text-dark-500 mt-2 text-lg font-semibold">
-                  {formatStatus(campaign.source)}
-                </div>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
-              {[
-                ['Total', campaign.total_recipients],
-                ['Sent', campaign.sent_count],
-                ['Delivered', campaign.delivered_count],
-                ['Failed', campaign.failed_count],
-                ['Skipped', campaign.skipped_count],
-              ].map(([label, value]) => (
-                <div key={label} className="rounded-xl border border-gray-200 bg-white p-4">
-                  <div className="text-xs tracking-wide text-gray-500 uppercase">{label}</div>
-                  <div className="text-dark-500 mt-2 text-2xl font-semibold">{value}</div>
-                </div>
-              ))}
-            </div>
-
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-              <div className="rounded-xl border border-gray-200 bg-white p-4">
-                <div className="text-dark-500 mb-2 text-sm font-medium">
-                  {t('pages.messagingCampaigns.detail.messageSnapshot', 'Message snapshot')}
-                </div>
-                <pre className="text-dark-500 overflow-auto rounded-lg bg-gray-50 p-3 text-xs">
-                  {JSON.stringify(campaign.message_snapshot, null, 2)}
-                </pre>
-              </div>
-              <div className="rounded-xl border border-gray-200 bg-white p-4">
-                <div className="text-dark-500 mb-2 text-sm font-medium">
-                  {t('pages.messagingCampaigns.detail.selectionPayload', 'Selection payload')}
-                </div>
-                <pre className="text-dark-500 overflow-auto rounded-lg bg-gray-50 p-3 text-xs">
-                  {JSON.stringify(campaign.selection_payload, null, 2)}
-                </pre>
-              </div>
-            </div>
-
-            <div className="rounded-xl border border-gray-200 bg-white p-4">
-              <div className="mb-4 flex flex-col gap-1">
-                <div className="text-dark-500 text-sm font-medium">
-                  {t('pages.messagingCampaigns.detail.recipientResults', 'Recipient results')}
-                </div>
-                <div className="text-xs text-gray-500">
-                  {t(
-                    'pages.messagingCampaigns.detail.recipientResultsHint',
-                    'Showing the latest 100 recipient rows for this campaign.'
-                  )}
-                </div>
-              </div>
-
-              {recipientsLoading ? (
-                <div className="py-6 text-sm text-gray-500">
-                  {t('status.loading', 'Loading...')}
-                </div>
-              ) : (
-                <DataTable
-                  columns={recipientColumns}
-                  data={recipients ?? []}
-                  emptyMessage={t(
-                    'pages.messagingCampaigns.detail.noRecipients',
-                    'No recipient results available yet'
-                  )}
-                />
-              )}
-            </div>
-
-            <div className="grid grid-cols-1 gap-2 text-sm text-gray-600 md:grid-cols-2">
-              <div>
-                {t('pages.messagingCampaigns.detail.launchedAt', 'Launched at')}:&nbsp;
-                <span className="text-dark-500 font-medium">
-                  {formatDateTime(campaign.launched_at)}
-                </span>
-              </div>
-              <div>
-                {t('pages.messagingCampaigns.detail.completedAt', 'Completed at')}:&nbsp;
-                <span className="text-dark-500 font-medium">
-                  {formatDateTime(campaign.completed_at)}
-                </span>
-              </div>
-            </div>
-          </div>
-        )}
-      </ModalContent>
-      <ModalFooter>
-        <Button type="button" variant="cancel" onClick={onClose} size="sm">
-          {t('actions.close', 'Close')}
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          onClick={handleExport}
-          size="sm"
-          disabled={!campaign}
-        >
-          {t('pages.messagingCampaigns.actions.export', 'Export CSV')}
-        </Button>
-        <PermissionGuard permission={PERMISSIONS.MESSAGING.LAUNCH_CAMPAIGNS}>
-          <Button
-            type="button"
-            variant="danger"
-            onClick={handleCancel}
-            size="sm"
-            disabled={!campaign || cancelCampaignMutation.isPending}
-            isLoading={cancelCampaignMutation.isPending}
-          >
-            {t('pages.messagingCampaigns.actions.cancelCampaign', 'Cancel campaign')}
-          </Button>
-        </PermissionGuard>
-      </ModalFooter>
-    </Modal>
-  )
-}
+const DEFAULT_PAGE_SIZE = 10
 
 export function MessagingCampaignsPage() {
   const { t } = useTranslation('common')
-  const [statusFilter, setStatusFilter] = useState<string>('all')
-  const [channelFilter, setChannelFilter] = useState<string>('all')
-  const [searchQuery, setSearchQuery] = useState('')
+  const activeProjectId = useAuthStore((s) => s.user?.active_project_id)
+  const { data: operators = [] } = useOperators(activeProjectId ? Number(activeProjectId) : null)
+  const operatorNames = useMemo(() => buildOperatorNamesMap(operators), [operators])
+
+  const [appliedFilters, setAppliedFilters] = useState<CampaignAnalyticsFilters>({
+    status: 'all',
+    channel: 'all',
+    launcher: 'all',
+  })
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE)
   const [selectedCampaignId, setSelectedCampaignId] = useState<number | null>(null)
 
+  const handleFilterChange = useCallback((filters: CampaignAnalyticsFilters) => {
+    setAppliedFilters(filters)
+    setCurrentPage(1)
+  }, [])
+
+  const launcherOptions = useMemo(
+    () =>
+      [...operators]
+        .sort((a, b) =>
+          (operatorNames.get(a.id) ?? '').localeCompare(operatorNames.get(b.id) ?? '')
+        )
+        .map((operator) => ({
+          id: operator.id,
+          label: operatorNames.get(operator.id) || `#${operator.id}`,
+        })),
+    [operatorNames, operators]
+  )
+
   const {
-    data: campaigns = [],
-    isLoading,
+    data: campaignList,
+    isPending,
     isFetching,
+    isPlaceholderData,
   } = useMessagingCampaigns({
-    status: statusFilter === 'all' ? undefined : statusFilter,
+    status: appliedFilters.status === 'all' ? undefined : appliedFilters.status,
     channel:
-      channelFilter === 'all' ? undefined : (channelFilter as (typeof MESSAGING_CHANNELS)[number]),
-    limit: 100,
-    offset: 0,
+      appliedFilters.channel === 'all'
+        ? undefined
+        : (appliedFilters.channel as (typeof MESSAGING_CHANNELS)[number]),
+    launched_from: appliedFilters.launched_from,
+    launched_to: appliedFilters.launched_to,
+    initiated_by: appliedFilters.launcher === 'all' ? undefined : Number(appliedFilters.launcher),
+    search: appliedFilters.search?.trim() || undefined,
+    limit: pageSize,
+    offset: (currentPage - 1) * pageSize,
   })
 
-  const filteredCampaigns = useMemo(() => {
-    const query = searchQuery.trim().toLowerCase()
-    if (!query) return campaigns
+  const campaigns = campaignList?.items ?? []
+  const totalItems = campaignList?.total ?? 0
+  const totalPages = totalItems > 0 ? Math.ceil(totalItems / pageSize) : 0
 
-    return campaigns.filter((campaign) => {
-      return (
-        campaign.name.toLowerCase().includes(query) ||
-        campaign.code.toLowerCase().includes(query) ||
-        campaign.service.toLowerCase().includes(query)
-      )
-    })
-  }, [campaigns, searchQuery])
+  const campaignStatusLabel = useCallback(
+    (status: string) =>
+      t(`pages.messagingCampaigns.status.${status}`, formatStatusFallback(status)),
+    [t]
+  )
+
+  const campaignSourceLabel = useCallback(
+    (source: string) => {
+      const normalized = source.trim().toLowerCase()
+      if (normalized === 'single') {
+        return t('pages.clients.modals.viewMessage.sourceSingle', { defaultValue: 'Single' })
+      }
+      if (normalized === 'bulk') {
+        return t('pages.clients.modals.viewMessage.sourceBulk', { defaultValue: 'Bulk' })
+      }
+      return formatStatusFallback(source)
+    },
+    [t]
+  )
+
+  const showTableSkeleton = isPending || (isFetching && isPlaceholderData)
+
+  /* eslint-disable react-hooks/set-state-in-effect */
+  useEffect(() => {
+    if (totalPages > 0 && currentPage > totalPages) {
+      setCurrentPage(totalPages)
+    }
+  }, [currentPage, totalPages])
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const columns = useMemo<Column<MessagingCampaignSummary>[]>(
     () => [
@@ -303,7 +124,7 @@ export function MessagingCampaignsPage() {
         key: 'source',
         header: t('pages.messagingCampaigns.table.source', 'Source'),
         align: 'left',
-        render: (campaign) => formatStatus(campaign.source),
+        render: (campaign) => campaignSourceLabel(campaign.source),
       },
       {
         key: 'channel',
@@ -315,22 +136,34 @@ export function MessagingCampaignsPage() {
         key: 'service',
         header: t('pages.messagingCampaigns.table.service', 'Service'),
         align: 'left',
+        render: (campaign) =>
+          t(
+            `pages.messagingIntegrations.services.${campaign.service}`,
+            getMessagingServiceLabel(campaign.service)
+          ),
       },
       {
         key: 'status',
         header: t('pages.messagingCampaigns.table.status', 'Status'),
         align: 'left',
-        render: (campaign) => formatStatus(campaign.status),
+        render: (campaign) => campaignStatusLabel(campaign.status),
       },
       {
         key: 'summary',
         header: t('pages.messagingCampaigns.table.summary', 'Results'),
         align: 'left',
         render: (campaign) =>
-          `${campaign.delivered_count}/${campaign.total_recipients} ${t(
-            'pages.messagingCampaigns.summary.delivered',
-            'delivered'
-          )}`,
+          t('pages.messagingCampaigns.summary.resultsLine', {
+            delivered: campaign.delivered_count,
+            total: campaign.total_recipients,
+            defaultValue: `${campaign.delivered_count}/${campaign.total_recipients} delivered`,
+          }),
+      },
+      {
+        key: 'initiated_by',
+        header: t('pages.messagingCampaigns.table.launchedBy', 'Launched by'),
+        align: 'left',
+        render: (campaign) => formatLauncherName(campaign.initiated_by, operatorNames),
       },
       {
         key: 'launched_at',
@@ -343,27 +176,32 @@ export function MessagingCampaignsPage() {
         header: t('pages.messagingCampaigns.table.actions', 'Actions'),
         align: 'center',
         render: (campaign) => (
-          <Button
-            type="button"
-            variant="outline"
-            size="xs"
-            onClick={() => setSelectedCampaignId(campaign.id)}
-          >
-            {t('pages.messagingCampaigns.actions.viewDetails', 'View details')}
-          </Button>
+          <div className="flex items-center justify-center">
+            <button
+              type="button"
+              onClick={() => setSelectedCampaignId(campaign.id)}
+              aria-label={t('pages.messagingCampaigns.actions.viewDetails', 'View details')}
+              title={t('pages.messagingCampaigns.actions.viewDetails', 'View details')}
+              className={cn(
+                'focus-visible:ring-primary-500 hover:border-primary-500 hover:text-primary-600 inline-flex h-8 w-8 items-center justify-center rounded-md border border-gray-300 bg-white text-gray-500 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2'
+              )}
+            >
+              <Icons.View size={16} strokeWidth={1.5} />
+            </button>
+          </div>
         ),
       },
     ],
-    [t]
+    [campaignSourceLabel, campaignStatusLabel, operatorNames, t]
   )
 
   return (
-    <div className="flex flex-col gap-6 p-3 md:p-6">
+    <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-2">
-        <h1 className="text-dark-500 text-2xl font-semibold">
+        <h1 className="text-dark-500 text-xl font-light sm:text-2xl">
           {t('navigation.campaignAnalytics', 'Campaign Analytics')}
         </h1>
-        <p className="text-sm text-gray-600">
+        <p className="mt-1 text-sm font-light text-gray-600">
           {t(
             'pages.messagingCampaigns.description',
             'Review bulk and single-send campaigns, inspect recipient outcomes, and export delivery results.'
@@ -371,64 +209,45 @@ export function MessagingCampaignsPage() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 gap-3 rounded-xl border border-white/70 bg-white/60 p-4 md:grid-cols-3">
-        <Input
-          value={searchQuery}
-          onChange={(event) => setSearchQuery(event.target.value)}
-          placeholder={t(
-            'pages.messagingCampaigns.filters.search',
-            'Search campaign, code, or service'
-          )}
-        />
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger>
-            <SelectValue placeholder={t('pages.messagingCampaigns.filters.status', 'Status')} />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">
-              {t('pages.messagingCampaigns.filters.allStatuses', 'All statuses')}
-            </SelectItem>
-            {['queued', 'running', 'completed', 'cancelled', 'failed'].map((status) => (
-              <SelectItem key={status} value={status}>
-                {formatStatus(status)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={channelFilter} onValueChange={setChannelFilter}>
-          <SelectTrigger>
-            <SelectValue placeholder={t('pages.messagingCampaigns.filters.channel', 'Channel')} />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">
-              {t('pages.messagingCampaigns.filters.allChannels', 'All channels')}
-            </SelectItem>
-            {MESSAGING_CHANNELS.map((channel) => (
-              <SelectItem key={channel} value={channel}>
-                {channel.toUpperCase()}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      <CampaignAnalyticsFiltersBar
+        filters={appliedFilters}
+        onFilterChange={handleFilterChange}
+        launcherOptions={launcherOptions}
+        isLoading={isPending || isFetching}
+      />
 
-      <div className="rounded-xl border border-white/70 bg-white/60 p-4">
-        {isLoading || isFetching ? (
-          <div className="py-8 text-sm text-gray-500">{t('status.loading', 'Loading...')}</div>
-        ) : (
+      {showTableSkeleton ? (
+        <MessagingCampaignsTableSkeleton rows={pageSize} />
+      ) : (
+        <>
           <DataTable
             columns={columns}
-            data={filteredCampaigns}
+            data={campaigns}
             emptyMessage={t(
               'pages.messagingCampaigns.empty',
               'No campaigns matched the current filters'
             )}
           />
-        )}
-      </div>
+          {totalPages > 0 && (
+            <div className="flex items-center justify-center">
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                pageSize={pageSize}
+                onPageChange={setCurrentPage}
+                onPageSizeChange={(newSize) => {
+                  setPageSize(newSize)
+                  setCurrentPage(1)
+                }}
+              />
+            </div>
+          )}
+        </>
+      )}
 
       <CampaignDetailModal
         campaignId={selectedCampaignId}
+        operatorNames={operatorNames}
         onClose={() => setSelectedCampaignId(null)}
       />
     </div>

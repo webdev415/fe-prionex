@@ -1,8 +1,10 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { getErrorMessage } from '@/lib/errors'
+import i18n from '@/lib/i18n'
 import { clientKeys } from '@/features/clients/hooks/useClients'
 import { messagingApi } from '../api/messagingApi'
+
 import type {
   MessagingCampaignCreate,
   MessagingChannel,
@@ -15,6 +17,12 @@ import type {
 } from '../api/types'
 import { messagingKeys } from './useMessaging'
 
+const messagingToast = (
+  key: string,
+  defaultValue: string,
+  interpolation?: Record<string, string | number>
+) => i18n.t(key, { ns: 'common', defaultValue, ...interpolation })
+
 export function useCreateMessagingDraft() {
   const queryClient = useQueryClient()
 
@@ -22,7 +30,9 @@ export function useCreateMessagingDraft() {
     mutationFn: (payload: MessagingDraftCreate) => messagingApi.createDraft(payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: messagingKeys.drafts() })
-      toast.success('Draft created successfully')
+      toast.success(
+        messagingToast('pages.messagingDrafts.toasts.created', 'Draft created successfully')
+      )
     },
     onError: (error) => toast.error(getErrorMessage(error)),
   })
@@ -37,7 +47,9 @@ export function useUpdateMessagingDraft() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: messagingKeys.drafts() })
       queryClient.invalidateQueries({ queryKey: messagingKeys.draft(variables.draftId) })
-      toast.success('Draft updated successfully')
+      toast.success(
+        messagingToast('pages.messagingDrafts.toasts.updated', 'Draft updated successfully')
+      )
     },
     onError: (error) => toast.error(getErrorMessage(error)),
   })
@@ -50,7 +62,9 @@ export function useDeleteMessagingDraft() {
     mutationFn: (draftId: number) => messagingApi.deleteDraft(draftId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: messagingKeys.drafts() })
-      toast.success('Draft deleted successfully')
+      toast.success(
+        messagingToast('pages.messagingDrafts.toasts.deleted', 'Draft deleted successfully')
+      )
     },
     onError: (error) => toast.error(getErrorMessage(error)),
   })
@@ -78,7 +92,9 @@ export function useCreateMessagingIntegration() {
     mutationFn: (payload: MessagingIntegrationCreate) => messagingApi.createIntegration(payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: messagingKeys.integrations() })
-      toast.success('Integration saved successfully')
+      toast.success(
+        messagingToast('pages.messagingIntegrations.toasts.saved', 'Integration saved successfully')
+      )
     },
     onError: (error) => toast.error(getErrorMessage(error)),
   })
@@ -93,7 +109,12 @@ export function useUpdateMessagingIntegration() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: messagingKeys.integrations() })
       queryClient.invalidateQueries({ queryKey: messagingKeys.integration(variables.service) })
-      toast.success('Integration updated successfully')
+      toast.success(
+        messagingToast(
+          'pages.messagingIntegrations.toasts.updated',
+          'Integration updated successfully'
+        )
+      )
     },
     onError: (error) => toast.error(getErrorMessage(error)),
   })
@@ -106,7 +127,12 @@ export function useDeleteMessagingIntegration() {
     mutationFn: (service: string) => messagingApi.deleteIntegration(service),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: messagingKeys.integrations() })
-      toast.success('Integration deleted successfully')
+      toast.success(
+        messagingToast(
+          'pages.messagingIntegrations.toasts.deleted',
+          'Integration deleted successfully'
+        )
+      )
     },
     onError: (error) => toast.error(getErrorMessage(error)),
   })
@@ -120,7 +146,12 @@ export function useTestMessagingIntegration() {
     onSuccess: (_, service) => {
       queryClient.invalidateQueries({ queryKey: messagingKeys.integrations() })
       queryClient.invalidateQueries({ queryKey: messagingKeys.integration(service) })
-      toast.success('Integration test completed')
+      toast.success(
+        messagingToast(
+          'pages.messagingIntegrations.toasts.testCompleted',
+          'Integration test completed'
+        )
+      )
     },
     onError: (error) => toast.error(getErrorMessage(error)),
   })
@@ -174,22 +205,15 @@ export function useCreateMessagingCampaign() {
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: messagingKeys.campaigns() })
       queryClient.invalidateQueries({ queryKey: messagingKeys.campaign(result.id) })
-      toast.success(`Campaign ${result.code} launched`)
-    },
-    onError: (error) => toast.error(getErrorMessage(error)),
-  })
-}
-
-export function useCancelMessagingCampaign() {
-  const queryClient = useQueryClient()
-
-  return useMutation({
-    mutationFn: (campaignId: number) => messagingApi.cancelCampaign(campaignId),
-    onSuccess: (result) => {
-      queryClient.invalidateQueries({ queryKey: messagingKeys.campaigns() })
-      queryClient.invalidateQueries({ queryKey: messagingKeys.campaign(result.id) })
-      queryClient.invalidateQueries({ queryKey: messagingKeys.campaignRecipients(result.id) })
-      toast.success(`Campaign ${result.code} cancelled`)
+      toast.success(
+        messagingToast(
+          'pages.clients.modals.bulkSendMessage.campaignLaunched',
+          'Campaign {{code}} launched',
+          {
+            code: result.code,
+          }
+        )
+      )
     },
     onError: (error) => toast.error(getErrorMessage(error)),
   })
@@ -204,7 +228,12 @@ export function useSendMessage() {
       queryClient.invalidateQueries({ queryKey: messagingKeys.campaigns() })
       queryClient.invalidateQueries({ queryKey: messagingKeys.clientHistory(variables.client_id) })
       queryClient.invalidateQueries({ queryKey: clientKeys.callSmsHistory(variables.client_id) })
-      toast.success('Message queued successfully')
+      toast.success(
+        messagingToast(
+          'pages.clients.modals.sendMessage.toastQueued',
+          'Message queued successfully'
+        )
+      )
     },
     onError: (error) => toast.error(getErrorMessage(error)),
   })

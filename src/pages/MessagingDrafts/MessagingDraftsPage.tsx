@@ -18,26 +18,18 @@ import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 import {
   MESSAGING_CHANNELS,
+  MessagingVariablesPalette,
+  insertMessagingVariableAtCursor,
+  type MessagingTemplateFocusField,
   useCreateMessagingDraft,
   useMessagingDrafts,
   useUpdateMessagingDraft,
 } from '@/features/messaging'
 import type { MessagingChannel, MessagingDraft } from '@/features/messaging'
+import { formatDateTime } from '@/lib/formatters'
 import { DeleteDraftModal } from './DeleteDraftModal'
 import { DraftViewModal } from './DraftViewModal'
-
-// Available variables shared with the SMS templates editor — same name set so
-// operators have one consistent palette across SMS-templates and messaging
-// drafts. Messaging service's template renderer uses `{{var}}` (double brace)
-// syntax, so we insert variables in that form here.
-const MESSAGING_AVAILABLE_VARIABLES = [
-  { name: 'client_name', key: 'clientFirstName' },
-  { name: 'debt_amount', key: 'currentDebtAmount' },
-  { name: 'operator_name', key: 'operatorName' },
-  { name: 'operator_phone', key: 'operatorPhone' },
-  { name: 'due_date', key: 'paymentDueDate' },
-  { name: 'contract_number', key: 'contractLoanNumber' },
-] as const
+import { MessagingDraftsTableSkeleton } from './components/MessagingDraftsPageSkeleton'
 
 interface TableIconButtonProps {
   label: string
@@ -133,18 +125,6 @@ const getSmsSegmentInfo = (body: string, spec: ChannelSpec) => {
   return { cyrillic, single, concat, segments }
 }
 
-const formatDateTime = (value?: string | null) => {
-  if (!value) return '-'
-
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return value
-
-  return new Intl.DateTimeFormat('en-GB', {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  }).format(date)
-}
-
 interface DraftFormModalProps {
   draft: MessagingDraft | null
   open: boolean
@@ -167,7 +147,7 @@ function DraftFormModal({ draft, open, onClose }: DraftFormModalProps) {
   // where to insert the chosen variable.
   const subjectRef = useRef<HTMLInputElement | null>(null)
   const bodyRef = useRef<HTMLTextAreaElement | null>(null)
-  const lastFocusedRef = useRef<'subject' | 'body'>('body')
+  const lastFocusedRef = useRef<MessagingTemplateFocusField>('body')
 
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
@@ -236,36 +216,17 @@ function DraftFormModal({ draft, open, onClose }: DraftFormModalProps) {
   }
 
   const insertVariableAtCursor = (variableName: string) => {
-    const token = `{{${variableName}}}`
-
-    if (lastFocusedRef.current === 'subject' && spec.showSubject && subjectRef.current) {
-      const input = subjectRef.current
-      const start = input.selectionStart ?? subject.length
-      const end = input.selectionEnd ?? subject.length
-      const next = subject.slice(0, start) + token + subject.slice(end)
-      setSubject(next)
-      setTimeout(() => {
-        input.focus()
-        const pos = start + token.length
-        input.setSelectionRange(pos, pos)
-      }, 0)
-      return
-    }
-
-    const textarea = bodyRef.current
-    if (!textarea) {
-      setBody((current) => current + token)
-      return
-    }
-    const start = textarea.selectionStart ?? body.length
-    const end = textarea.selectionEnd ?? body.length
-    const next = body.slice(0, start) + token + body.slice(end)
-    setBody(next)
-    setTimeout(() => {
-      textarea.focus()
-      const pos = start + token.length
-      textarea.setSelectionRange(pos, pos)
-    }, 0)
+    insertMessagingVariableAtCursor({
+      variableName,
+      subject,
+      body,
+      setSubject,
+      setBody,
+      showSubject: spec.showSubject,
+      subjectRef,
+      bodyRef,
+      lastFocusedRef,
+    })
   }
 
   const bodyError = bodyTooShort
@@ -275,6 +236,7 @@ function DraftFormModal({ draft, open, onClose }: DraftFormModalProps) {
     : bodyTooLong
       ? t('pages.messagingDrafts.form.bodyTooLong', {
           max: bodyCharLimit,
+          channel: channel.toUpperCase(),
           defaultValue: `Body exceeds the ${bodyCharLimit}-character limit for ${channel.toUpperCase()}.`,
         })
       : undefined
@@ -420,46 +382,17 @@ function DraftFormModal({ draft, open, onClose }: DraftFormModalProps) {
           />
         </div>
 
-        <div className="mt-4 rounded-xl border border-gray-200 bg-white p-4 text-sm text-gray-600">
-          <div className="flex items-center justify-between">
-            <div className="text-dark-500 font-medium">
-              {t('pages.smsTemplates.forms.availableVariables', 'Available variables')}
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="bg-success-500 h-2 w-2 rounded-full" />
-              <span className="text-success-500 text-xs font-medium">
-                {t('pages.smsTemplates.forms.active', 'Active')}
-              </span>
-            </div>
-          </div>
-          <div className="mt-3 flex flex-col gap-2">
-            {MESSAGING_AVAILABLE_VARIABLES.map((variable) => (
-              <button
-                key={variable.name}
-                type="button"
-                onClick={() => insertVariableAtCursor(variable.name)}
-                className="text-dark-500 hover:bg-primary-50 flex items-start gap-4 rounded-lg px-2 py-1.5 text-left text-xs transition-colors"
-              >
-                <code className="w-44 shrink-0 rounded bg-gray-100 px-2 py-1 font-mono">
-                  {`{{${variable.name}}}`}
-                </code>
-                <span className="flex-1 self-center font-medium">
-                  {t(`pages.smsTemplates.variables.${variable.key}`)}
-                </span>
-              </button>
-            ))}
-          </div>
-        </div>
+        <MessagingVariablesPalette className="mt-4" onInsert={insertVariableAtCursor} />
       </ModalContent>
       <ModalFooter>
-        <Button type="button" variant="cancel" onClick={onClose} size="sm">
+        <Button type="button" variant="cancel" onClick={onClose} className="w-full rounded-md">
           {t('actions.cancel', 'Cancel')}
         </Button>
         <Button
           type="button"
           variant="primary"
           onClick={handleSubmit}
-          size="sm"
+          className="w-full rounded-md"
           disabled={!canSubmit}
           isLoading={isPending}
         >
@@ -519,7 +452,7 @@ export function MessagingDraftsPage() {
         key: 'updated_at',
         header: t('pages.messagingDrafts.table.updatedAt', 'Updated'),
         align: 'left',
-        render: (draft) => formatDateTime(draft.updated_at ?? draft.created_at),
+        render: (draft) => formatDateTime(draft.updated_at ?? draft.created_at ?? undefined),
       },
       {
         key: 'actions',
@@ -601,7 +534,7 @@ export function MessagingDraftsPage() {
 
       <div className="rounded-xl border border-white/70 bg-white/60 p-4">
         {isLoading ? (
-          <div className="py-8 text-sm text-gray-500">{t('status.loading', 'Loading...')}</div>
+          <MessagingDraftsTableSkeleton />
         ) : (
           <DataTable
             columns={columns}

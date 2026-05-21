@@ -746,6 +746,14 @@ export function ClientManagementPage() {
     searchType,
   ])
 
+  /** Filters + sort for bulk messaging when "select all" is used (no pagination). */
+  const clientListFilterParams = useMemo(() => {
+    const { skip, limit, ...rest } = apiParams
+    void skip
+    void limit
+    return rest
+  }, [apiParams])
+
   // Fetch clients from API
   const { data: clientsResponse, isLoading, isFetching, isError, error } = useClients(apiParams)
 
@@ -1723,6 +1731,8 @@ export function ClientManagementPage() {
           selectedClients={selectedClientsData}
           totalSelectedCount={totalSelectedCount}
           allClientsSelectedAcrossPages={allClientsSelected}
+          excludedClientIds={Array.from(excludedClients)}
+          clientListFilterParams={clientListFilterParams}
           onClose={() => setShowBulkSendMessageModal(false)}
           onLaunched={() => {
             setShowBulkSendMessageModal(false)
