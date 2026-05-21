@@ -3102,7 +3102,8 @@
         "selectTA": "Select a TA",
         "delayMinutes": "Delay (minutes)",
         "required": "Required",
-        "notInPast": "Date cannot be in the past"
+        "notInPast": "Date cannot be in the past",
+        "showClosedCredits": "Show closed credits"
       },
       "modals": {
         "create": {

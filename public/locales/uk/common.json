@@ -2862,7 +2862,8 @@
         "selectTA": "Оберіть ЦД",
         "delayMinutes": "Затримка (хв)",
         "required": "Обов'язково",
-        "notInPast": "Дата не може бути в минулому"
+        "notInPast": "Дата не може бути в минулому",
+        "showClosedCredits": "Показувати закриті кредити"
       },
       "modals": {
         "create": {
