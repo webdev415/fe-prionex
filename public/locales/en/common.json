@@ -36,6 +36,7 @@
     "scoringConfiguration": "Scoring Configuration",
     "systemSettings": "System Settings",
     "tags": "Tags",
+    "contactTypes": "Contact Types",
     "actionAnalysis": "Action Analysis"
   },
   "search": {
@@ -376,6 +377,49 @@
           "extended": "Extended",
           "rejected": "Rejected",
           "incoming_line_result": "Incoming line result"
+        },
+        "confirmedAtRangeHeading": "Confirmed at",
+        "confirmedAtFrom": "From",
+        "confirmedAtTo": "To",
+        "paymentDateRangeHeading": "Payment date",
+        "paymentDateFrom": "From",
+        "paymentDateTo": "To",
+        "selectedCount": "{{count}} selected",
+        "paymentMethod": "Payment method",
+        "paymentMethods": {
+          "all": "All methods",
+          "bank_transfer": "Bank transfer",
+          "online_gateway": "Online (link)",
+          "cash": "Cash",
+          "card": "Card",
+          "other": "Other"
+        },
+        "paymentStatuses": {
+          "all": "All",
+          "pending": "Pending",
+          "verified": "Confirmed",
+          "cancelled": "Rejected"
+        },
+        "paymentType": "Payment type",
+        "paymentTypes": {
+          "all": "All types",
+          "payment_by_rr": "Payment by RR",
+          "partial_payment": "Partial payment",
+          "full_payment": "Full payment"
+        },
+        "amountMin": "Min amount",
+        "amountMax": "Max amount",
+        "amountMinPlaceholder": "0.00",
+        "amountMaxPlaceholder": "e.g. 1000.00",
+        "paymentSortOptions": {
+          "recorded_at_desc": "Created (newest)",
+          "recorded_at_asc": "Created (oldest)",
+          "verified_at_desc": "Confirmed (newest)",
+          "verified_at_asc": "Confirmed (oldest)",
+          "amount_desc": "Amount (high → low)",
+          "amount_asc": "Amount (low → high)",
+          "payment_date_desc": "Payment date (newest)",
+          "payment_date_asc": "Payment date (oldest)"
         }
       },
       "columns": {
@@ -408,7 +452,15 @@
         "priority": "Priority",
         "topic": "Topic",
         "dueDate": "Due date",
-        "dueTime": "Due time"
+        "dueTime": "Due time",
+        "loanNumber": "Loan number",
+        "loanSaleDate": "Date of loan sale",
+        "paymentType": "Payment type",
+        "operator": "Operator",
+        "createdAt": "Created at",
+        "confirmedAt": "Confirmed at",
+        "amount": "Amount",
+        "paymentMethod": "Payment method"
       },
       "callType": {
         "incoming": "Incoming",
@@ -455,7 +507,20 @@
         "title": "Tasks due by date",
         "subtitle": "Total tasks due within the current filter range.",
         "totalLabel": "tasks due",
-        "empty": "No tasks due in the selected range."
+        "empty": "No tasks due in the selected range.",
+        "emptyMonth": "No tasks due this month.",
+        "today": "Today",
+        "prevMonth": "Previous month",
+        "nextMonth": "Next month",
+        "weekdayShort": {
+          "mon": "Mon",
+          "tue": "Tue",
+          "wed": "Wed",
+          "thu": "Thu",
+          "fri": "Fri",
+          "sat": "Sat",
+          "sun": "Sun"
+        }
       },
       "errors": {
         "loadFailed": "Failed to load calls",
@@ -467,6 +532,7 @@
         "loadScriptAnalyticsFailed": "Failed to load script analytics.",
         "loadTaHistoryFailed": "Failed to load TA history",
         "loadTaskHistoryFailed": "Failed to load task history",
+        "loadPaymentHistoryFailed": "Failed to load payment history",
         "departmentNoOperators": "No operators in this department for the current project.",
         "exportFailed": "Export failed",
         "callNotFound": "Call not found"
@@ -489,10 +555,26 @@
         "interactions": "Interaction History",
         "taHistory": "TA History",
         "taskHistory": "Task History",
+        "paymentHistory": "Payment History",
         "timeline": "Timeline",
         "screenTime": "Screen Time",
         "heatmap": "Heatmap",
         "scriptAnalytics": "Script Analytics"
+      },
+      "scope": {
+        "label": "View scope",
+        "my": "My actions",
+        "group": "Group actions",
+        "department": "Department actions",
+        "all": "All actions",
+        "groupComingSoon": "Coming soon"
+      },
+      "paymentHistoryEmpty": "No payments match the current filters",
+      "paymentHistorySummary": {
+        "totalPayments": "payments",
+        "totalAmount": "total",
+        "verified": "confirmed",
+        "pending": "pending"
       },
       "timeline": {
         "callId": "Call ID",
@@ -681,6 +763,9 @@
         "isAgent": "Is Agent",
         "assignProjects": "Assign Projects",
         "rolePerProject": "Role per Project",
+        "department": "Department",
+        "group": "Group",
+        "noGroup": "No group",
         "notAssigned": "Not assigned",
         "noRolesAvailable": "No roles available",
         "errorCreating": "Error creating user",
@@ -939,7 +1024,8 @@
       "actions": {
         "view": "View",
         "edit": "Edit",
-        "delete": "Delete"
+        "delete": "Delete",
+        "groups": "Groups"
       },
       "modals": {
         "create": {
@@ -983,6 +1069,56 @@
       "status": {
         "active": "Active",
         "inactive": "Inactive"
+      }
+    },
+    "groups": {
+      "title": "Groups",
+      "newGroup": "New Group",
+      "noGroups": "No groups found",
+      "tableHeaders": {
+        "name": "Name",
+        "description": "Description",
+        "assignedOperators": "Assigned Operators",
+        "actions": "Actions"
+      },
+      "actions": {
+        "edit": "Edit",
+        "delete": "Delete"
+      },
+      "modals": {
+        "create": { "title": "Create Group" },
+        "edit": {
+          "title": "Edit Group",
+          "failedToLoad": "Failed to load group data. Please try again."
+        },
+        "manage": {
+          "title": "Groups in {{departmentName}}",
+          "defaultTitle": "Department Groups"
+        },
+        "archive": {
+          "title": "Archive Group: {{groupName}}",
+          "defaultTitle": "Archive Group",
+          "confirmMessage": "Are you sure you want to archive the group \"{{groupName}}\"?",
+          "hasAssignedOperators": "This group has {{count}} assigned operator(s). They will be unassigned from the group.",
+          "archiving": "Archiving...",
+          "archiveGroup": "Archive Group",
+          "failedToArchive": "Failed to archive group. Please try again.",
+          "failedToLoad": "Failed to load group data. Please try again.",
+          "groupNotFound": "Group not found"
+        }
+      },
+      "forms": {
+        "name": "Name",
+        "description": "Description",
+        "department": "Department",
+        "placeholders": {
+          "name": "Enter group name",
+          "description": "Describe this group"
+        },
+        "errors": {
+          "failedToCreate": "Failed to create group. Please try again.",
+          "failedToUpdate": "Failed to update group. Please try again."
+        }
       }
     },
     "imports": {
@@ -1484,6 +1620,10 @@
         "defaulted": "Defaulted",
         "answered": "Answered",
         "noAnswer": "No Answer",
+        "busy": "Busy",
+        "cancel": "Cancelled",
+        "unavailable": "Unavailable",
+        "congestion": "Congestion",
         "sent": "Sent",
         "delivered": "Delivered",
         "failed": "Failed",
@@ -1628,6 +1768,8 @@
           "callType": "Call Type",
           "whiteLine": "White Line",
           "grayLine": "Gray Line",
+          "lineWhite": "White",
+          "lineGray": "Gray",
           "spamCalls": "Spam calls",
           "markAsSpam": "Mark as Spam",
           "callNow": "Call Now",
@@ -1835,6 +1977,9 @@
           "last4DigitsMustBe4": "Last 4 digits must be exactly 4 numbers",
           "paymentMethodDetails": "Payment Method Details",
           "paymentMethodDetailsPlaceholder": "Enter additional payment details (optional)",
+          "paymentTypeLabel": "Payment type",
+          "paymentTypePlaceholder": "Select payment type",
+          "paymentTypeRequired": "Payment type is required",
           "impactPreview": "Impact Preview",
           "currentTotalDebt": "Current Total Debt:",
           "paymentAmountLabel": "Payment Amount:",
@@ -1925,7 +2070,20 @@
           "cancellationReason": "Cancellation Reason:",
           "printReceipt": "Print Receipt",
           "downloadReceiptPDF": "Download Receipt PDF",
-          "close": "Close"
+          "close": "Close",
+          "reassignEmployee": "Reassign employee"
+        },
+        "reassignEmployee": {
+          "title": "Reassign Employee",
+          "description": "Change the employee recorded against this payment.",
+          "currentLabel": "Currently assigned",
+          "newLabel": "New employee",
+          "selectPlaceholder": "Select an employee...",
+          "searchPlaceholder": "Search employees...",
+          "loadingOperators": "Loading employees...",
+          "cancel": "Cancel",
+          "confirm": "Save",
+          "saving": "Saving..."
         },
         "cancelPayment": {
           "title": "Cancel Payment: Confirmation Required",
@@ -3171,6 +3329,38 @@
         }
       }
     },
+    "contactTypes": {
+      "title": "Contact Types",
+      "add": "+ Add contact type",
+      "createTitle": "New contact type",
+      "editTitle": "Edit contact type",
+      "fieldName": "Name",
+      "fieldDefaultLine": "Default Call Line",
+      "fieldSpam": "Spam Allowed",
+      "fieldPrimary": "Show as Primary Phone",
+      "fieldSort": "Sort Order",
+      "white": "White",
+      "gray": "Gray",
+      "hidden": "Hidden",
+      "active": "Active",
+      "hide": "Hide",
+      "restore": "Restore",
+      "filterStatus": "Status",
+      "filterAll": "All",
+      "filterActive": "Active",
+      "filterHidden": "Hidden",
+      "errorLoading": "Failed to load contact types",
+      "retry": "Retry",
+      "columns": {
+        "sortOrder": "Sort Order",
+        "name": "Name",
+        "defaultLine": "Default Call Line",
+        "spamAllowed": "Spam Allowed",
+        "primary": "Show as Primary Phone",
+        "status": "Status",
+        "actions": "Actions"
+      }
+    },
     "tags": {
       "title": "Tags",
       "createTag": "Create Tag",
@@ -3891,6 +4081,8 @@
       "title": "Profile Settings",
       "accountSecurity": "Account Security",
       "roleLabel": "Role:",
+      "departmentLabel": "Department:",
+      "groupLabel": "Group:",
       "resetPassword": "Reset Password",
       "passwordChanged": "Password changed",
       "passwordChangeFailed": "Failed to change password",

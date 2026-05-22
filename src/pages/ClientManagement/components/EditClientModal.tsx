@@ -23,9 +23,6 @@ import {
   useCreateAddress,
   useUpdateAddress,
   useDeleteAddress,
-  useCreateContact,
-  useUpdateContact,
-  useDeleteContact,
   useUpdateEmployment,
   useUpdatePassport,
   clientKeys,
@@ -114,9 +111,6 @@ function EditForm({ profile, clientId }: EditFormProps) {
   const { mutate: createAddress, isPending: isCreatingAddress } = useCreateAddress()
   const { mutate: updateAddress, isPending: isUpdatingAddress } = useUpdateAddress()
   const { mutate: deleteAddress } = useDeleteAddress()
-  const { mutateAsync: createContactAsync } = useCreateContact()
-  const { mutateAsync: updateContactAsync } = useUpdateContact()
-  const { mutateAsync: deleteContactAsync } = useDeleteContact()
   const { mutate: updateEmployment, isPending: isSavingWork } = useUpdateEmployment()
   const { mutate: updatePassport, isPending: isSavingPassport } = useUpdatePassport()
   const canEditAll = useHasPermission(PERMISSIONS.CLIENTS.EDIT)
@@ -132,13 +126,6 @@ function EditForm({ profile, clientId }: EditFormProps) {
     profile.middle_name?.trim() || legacyNames?.middle || ''
   )
   const [email, setEmail] = useState(profile.email || '')
-  // Phone fields from contacts (type 1 = mobile, type 2 = home, type 29 = register)
-  const existingMobileContact = profile.recommenders?.find((c) => c.contact_type_id === 1)
-  const existingHomeContact = profile.recommenders?.find((c) => c.contact_type_id === 2)
-  const existingRegisterContact = profile.recommenders?.find((c) => c.contact_type_id === 29)
-  const [phoneMobile, setPhoneMobile] = useState(existingMobileContact?.contact_value || '')
-  const [phoneHome, setPhoneHome] = useState(existingHomeContact?.contact_value || '')
-  const [phoneRegister, setPhoneRegister] = useState(existingRegisterContact?.contact_value || '')
   const [dateOfBirth, setDateOfBirth] = useState(profile.date_of_birth || '')
   const [maritalStatus, setMaritalStatus] = useState(profile.marital_status || '')
   const [familyMembers, setFamilyMembers] = useState(profile.family_members_count?.toString() || '')
@@ -189,9 +176,7 @@ function EditForm({ profile, clientId }: EditFormProps) {
 
   // Inline error state per section
   const [personalError, setPersonalError] = useState<string | null>(null)
-  const [phoneError, setPhoneError] = useState<string | null>(null)
   const [passportError, setPassportError] = useState<string | null>(null)
-  const [isSavingPhones, setIsSavingPhones] = useState(false)
   const [workError, setWorkError] = useState<string | null>(null)
   const [addressError, setAddressError] = useState<string | null>(null)
 
@@ -200,77 +185,6 @@ function EditForm({ profile, clientId }: EditFormProps) {
     queryClient.invalidateQueries({ queryKey: clientKeys.detail(clientId) })
     queryClient.invalidateQueries({ queryKey: clientKeys.lists() })
     queryClient.invalidateQueries({ queryKey: clientKeys.prioritySummary() })
-  }
-
-  const buildPhoneSaveTasks = (): Promise<unknown>[] => {
-    const tasks: Promise<unknown>[] = []
-
-    if (existingMobileContact) {
-      if (phoneMobile.trim() !== existingMobileContact.contact_value) {
-        tasks.push(
-          updateContactAsync({
-            clientId,
-            contactId: existingMobileContact.id,
-            data: { contact_value: phoneMobile.trim() },
-          })
-        )
-      }
-    } else if (phoneMobile.trim()) {
-      tasks.push(
-        createContactAsync({
-          clientId,
-          data: { contact_value: phoneMobile.trim(), contact_type_id: 1 },
-        })
-      )
-    }
-
-    if (existingHomeContact) {
-      if (phoneHome.trim()) {
-        if (phoneHome.trim() !== existingHomeContact.contact_value) {
-          tasks.push(
-            updateContactAsync({
-              clientId,
-              contactId: existingHomeContact.id,
-              data: { contact_value: phoneHome.trim() },
-            })
-          )
-        }
-      } else {
-        tasks.push(deleteContactAsync({ clientId, contactId: existingHomeContact.id }))
-      }
-    } else if (phoneHome.trim()) {
-      tasks.push(
-        createContactAsync({
-          clientId,
-          data: { contact_value: phoneHome.trim(), contact_type_id: 2 },
-        })
-      )
-    }
-
-    if (existingRegisterContact) {
-      if (phoneRegister.trim()) {
-        if (phoneRegister.trim() !== existingRegisterContact.contact_value) {
-          tasks.push(
-            updateContactAsync({
-              clientId,
-              contactId: existingRegisterContact.id,
-              data: { contact_value: phoneRegister.trim() },
-            })
-          )
-        }
-      } else {
-        tasks.push(deleteContactAsync({ clientId, contactId: existingRegisterContact.id }))
-      }
-    } else if (phoneRegister.trim()) {
-      tasks.push(
-        createContactAsync({
-          clientId,
-          data: { contact_value: phoneRegister.trim(), contact_type_id: 29 },
-        })
-      )
-    }
-
-    return tasks
   }
 
   const handleSavePersonalOnly = async () => {
@@ -307,27 +221,6 @@ function EditForm({ profile, clientId }: EditFormProps) {
       invalidateClientCaches()
     } catch (error) {
       setPersonalError(extractErrorMessage(error, t('pages.clients.editModal.saveError')))
-    }
-  }
-
-  const handleSavePhonesOnly = async () => {
-    setPhoneError(null)
-    if (!phoneMobile.trim()) return
-
-    const tasks = buildPhoneSaveTasks()
-    if (tasks.length === 0) {
-      return
-    }
-
-    setIsSavingPhones(true)
-    try {
-      await Promise.all(tasks)
-      toast.success(t('pages.clients.editModal.saveSuccess'))
-      invalidateClientCaches()
-    } catch (error) {
-      setPhoneError(extractErrorMessage(error, t('pages.clients.editModal.saveError')))
-    } finally {
-      setIsSavingPhones(false)
     }
   }
 
@@ -741,66 +634,6 @@ function EditForm({ profile, clientId }: EditFormProps) {
           </Button>
         </div>
       )}
-
-      {/* Section 2: Phone Numbers */}
-      <div className="flex flex-col items-start gap-2 self-stretch">
-        <span className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
-          {t('pages.clients.editModal.phoneNumbers')}
-        </span>
-        <div className="flex flex-col items-start justify-center gap-4 self-stretch rounded-xl border border-white bg-white/50 p-4 sm:p-5 sm:px-6">
-          <div className="flex w-full flex-col gap-4 sm:flex-row sm:gap-5">
-            <div className="flex flex-1 flex-col gap-1">
-              <label className="text-dark-500 text-xs font-medium sm:text-sm">
-                {t('pages.clients.editModal.phoneMobile')} <span className="text-error-500">*</span>
-              </label>
-              <Input
-                value={phoneMobile}
-                onChange={(e) => setPhoneMobile(e.target.value)}
-                inputSize="md"
-                className="rounded-md"
-              />
-            </div>
-            <div className="flex flex-1 flex-col gap-1">
-              <label className="text-dark-500 text-xs font-medium sm:text-sm">
-                {t('pages.clients.editModal.phoneHome')}
-              </label>
-              <Input
-                value={phoneHome}
-                onChange={(e) => setPhoneHome(e.target.value)}
-                inputSize="md"
-                className="rounded-md"
-              />
-            </div>
-          </div>
-          <div className="flex w-full flex-col gap-4 sm:flex-row sm:gap-5">
-            <div className="flex flex-1 flex-col gap-1">
-              <label className="text-dark-500 text-xs font-medium sm:text-sm">
-                {t('pages.clients.editModal.phoneRegister')}
-              </label>
-              <Input
-                value={phoneRegister}
-                onChange={(e) => setPhoneRegister(e.target.value)}
-                inputSize="md"
-                className="rounded-md"
-              />
-            </div>
-            <div className="flex-1" />
-          </div>
-        </div>
-      </div>
-
-      {phoneError && <p className="text-error-500 text-sm">{phoneError}</p>}
-      <div className="flex justify-end">
-        <Button
-          data-testid="edit-client-save-phones"
-          variant="primary"
-          onClick={handleSavePhonesOnly}
-          disabled={isSavingPhones || !phoneMobile.trim()}
-          className="rounded-md"
-        >
-          {isSavingPhones ? 'Saving...' : t('pages.clients.editModal.save')}
-        </Button>
-      </div>
 
       {/* Section 3: Work Information */}
       <div className="flex flex-col items-start gap-2 self-stretch">

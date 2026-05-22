@@ -9,6 +9,7 @@ import api from '@/lib/api'
 import type {
   AddressResponse,
   AssignClientRequest,
+  AssignmentHistoryCombinedResponse,
   AssignmentHistoryResponse,
   BulkAssignClientRequest,
   BulkAssignmentResponse,
@@ -16,7 +17,9 @@ import type {
   ClientDetail,
   ClientProfileResponse,
   ContactResponse,
+  ContactTypeCreatePayload,
   ContactTypeOption,
+  ContactTypePatchPayload,
   CreateAddressRequest,
   CreateClientRequest,
   CreateContactRequest,
@@ -177,7 +180,11 @@ export async function getClientWriteoffs(
 }
 
 /**
- * Get client assignment history
+ * Get client assignment history (legacy, single-type).
+ *
+ * @deprecated Use getClientAssignmentHistoryCombined for new UI surfaces —
+ * it returns both employee and searcher history in one request, halving
+ * the auth-service load and DB round-trips per ClientDetailPage mount.
  */
 export async function getClientAssignmentHistory(
   clientId: number,
@@ -185,6 +192,20 @@ export async function getClientAssignmentHistory(
 ): Promise<AssignmentHistoryResponse> {
   const response = await api.get<AssignmentHistoryResponse>(
     `${BASE_URL}/${clientId}/assignment-history`,
+    { params }
+  )
+  return response.data
+}
+
+/**
+ * Get combined client assignment history (employee + searcher) in one call.
+ */
+export async function getClientAssignmentHistoryCombined(
+  clientId: number,
+  params: { skip?: number; limit?: number } = {}
+): Promise<AssignmentHistoryCombinedResponse> {
+  const response = await api.get<AssignmentHistoryCombinedResponse>(
+    `${BASE_URL}/${clientId}/assignment-history/combined`,
     { params }
   )
   return response.data
@@ -469,10 +490,33 @@ export async function getRROverpayments(
 }
 
 /**
- * Get all contact types from the lookup table
+ * Get contact types from the lookup table (optionally filtered by status).
  */
-export async function getContactTypes(): Promise<ContactTypeOption[]> {
-  const response = await api.get<ContactTypeOption[]>(`${BASE_URL}/contact-types`)
+export async function getContactTypes(params?: {
+  status?: 'all' | 'active' | 'hidden'
+}): Promise<ContactTypeOption[]> {
+  const status = params?.status ?? 'all'
+  const response = await api.get<ContactTypeOption[]>(`${BASE_URL}/contact-types`, {
+    params: { status },
+  })
+  return response.data
+}
+
+export async function createContactType(
+  payload: ContactTypeCreatePayload
+): Promise<ContactTypeOption> {
+  const response = await api.post<ContactTypeOption>(`${BASE_URL}/contact-types`, payload)
+  return response.data
+}
+
+export async function patchContactType(
+  typeId: number,
+  payload: ContactTypePatchPayload
+): Promise<ContactTypeOption> {
+  const response = await api.patch<ContactTypeOption>(
+    `${BASE_URL}/contact-types/${typeId}`,
+    payload
+  )
   return response.data
 }
 
@@ -495,6 +539,7 @@ export const clientApi = {
   getClientProfile,
   getClientWriteoffs,
   getClientAssignmentHistory,
+  getClientAssignmentHistoryCombined,
   createAddress,
   updateAddress,
   deleteAddress,
@@ -502,6 +547,8 @@ export const clientApi = {
   updateContact,
   deleteContact,
   getContactTypes,
+  createContactType,
+  patchContactType,
   updateEmployment,
   updatePassport,
   getClientRestructuringAgreements,

@@ -4,7 +4,7 @@
  * Modal for recording a new payment for a client.
  */
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Modal, ModalHeader, ModalContent, ModalFooter } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
@@ -24,7 +24,17 @@ import {
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 import { formatMoneyUAHTwoDecimals } from '@/lib/formatters'
-import type { DebtDetail } from '@/features/clients/api/types'
+import type { DebtDetail, RestructuringAgreementSummary } from '@/features/clients/api/types'
+import { useClientRestructuringAgreements } from '@/features/clients/hooks/useClients'
+import { PAYMENT_TYPE_VALUES, type PaymentType } from '@/features/payments/api/types'
+
+// KAN-507: an RR is "open" for auto-prefill purposes when its status is not
+// terminal. Terminal status_ids (Completed=4, Cancelled=5) match the
+// convention pinned in useClientRestructuringAgreements.
+const TERMINAL_RR_STATUS_IDS = new Set<number>([4, 5])
+function isRrOpen(ra: RestructuringAgreementSummary): boolean {
+  return ra.status_id != null && !TERMINAL_RR_STATUS_IDS.has(ra.status_id)
+}
 
 /**
  * Get today's date at midnight local time.
@@ -43,6 +53,14 @@ export interface RecordPaymentModalProps {
   debts?: DebtDetail[]
   /** Whether user has verify_payment permission. When false, hides Verified radio and Save & Verify button. */
   canVerify?: boolean
+  /**
+   * Client id — needed to fetch the client's Restructuring Agreement list so
+   * the new Payment Type field can auto-pre-fill `payment_by_rr` when the
+   * picked debt has an open RR (KAN-507). Optional for back-compat with any
+   * existing call sites that don't have a clientId on hand; when omitted,
+   * the auto-prefill simply doesn't fire and the operator picks manually.
+   */
+  clientId?: number
   onSave: (data: {
     amount: number
     date: Date
@@ -54,6 +72,8 @@ export interface RecordPaymentModalProps {
     last4Digits?: string
     paymentMethodDetails?: string
     debtId?: number
+    /** KAN-507: required at the form layer; always set when onSave fires. */
+    paymentType: PaymentType
   }) => void
 }
 
@@ -64,6 +84,7 @@ export function RecordPaymentModal({
   currentDebt,
   debts,
   canVerify = true,
+  clientId,
   onSave,
 }: RecordPaymentModalProps) {
   const { t } = useTranslation('common')
@@ -81,6 +102,22 @@ export function RecordPaymentModal({
   const [last4Digits, setLast4Digits] = useState<string>('')
   const [paymentMethodDetails, setPaymentMethodDetails] = useState<string>('')
   const [last4DigitsError, setLast4DigitsError] = useState<string | null>(null)
+
+  // KAN-507: Payment Type controlled-vocabulary dropdown. Required at the
+  // form layer; backend keeps it Optional on the wire for back-compat.
+  const [paymentType, setPaymentType] = useState<PaymentType | ''>('')
+  // Tracks whether the operator has touched the dropdown for this modal
+  // session. Auto-prefill only writes when the field is still untouched —
+  // switching debts must never silently overwrite an explicit choice.
+  const [paymentTypeDirty, setPaymentTypeDirty] = useState(false)
+  const [paymentTypeError, setPaymentTypeError] = useState<string | null>(null)
+
+  // Pull the client's RR list to power the auto-prefill effect below. The
+  // hook is a no-op when clientId is missing.
+  const { data: restructuringAgreements } = useClientRestructuringAgreements(
+    clientId ?? 0,
+    Boolean(clientId)
+  )
 
   // Debts a user can pick in this modal. Closed debts are normally hidden,
   // but users with verify_payment permission (canVerify) may select them
@@ -111,8 +148,28 @@ export function RecordPaymentModal({
   // is useless.
   const isClosedDebtCorrection = selectedDebt?.status === 'closed'
 
+  // KAN-507: auto-prefill Payment Type when the picked debt has an open RR.
+  // Only writes when the field is still untouched (paymentType === '' AND
+  // paymentTypeDirty === false) so an explicit operator choice is never
+  // silently overwritten — switching debts after picking a value stays.
+  // The setState-in-effect rule fires here, but the guards make the write
+  // idempotent (won't re-fire once paymentType is set), so a one-line
+  // disable is the cleanest expression of the intent.
+  useEffect(() => {
+    if (selectedDebtId == null) return
+    if (paymentTypeDirty) return
+    if (paymentType !== '') return
+    const openRrForDebt = (restructuringAgreements ?? []).find(
+      (ra) => ra.debt_id === selectedDebtId && isRrOpen(ra)
+    )
+    if (openRrForDebt) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setPaymentType('payment_by_rr')
+    }
+  }, [selectedDebtId, restructuringAgreements, paymentTypeDirty, paymentType])
+
   const amountValue = parseFloat(paymentAmount) || 0
-  const minAmount = 100
+  const minAmount = 0.01
   const maxAmount = isClosedDebtCorrection ? Number.POSITIVE_INFINITY : currentDebt
   const newDebt = currentDebt - amountValue
   const hasDebt = newDebt > 0
@@ -147,12 +204,14 @@ export function RecordPaymentModal({
   const hasValidationErrors =
     !!amountError ||
     !!last4DigitsError ||
+    !!paymentTypeError ||
     !paymentDate ||
     amountValue < 0 ||
     amountValue < minAmount ||
     amountValue > maxAmount ||
     (paymentMethod === 'Card' && last4Digits.length !== 4) ||
-    (selectableDebts.length > 1 && !selectedDebtId)
+    (selectableDebts.length > 1 && !selectedDebtId) ||
+    paymentType === ''
 
   // Validate payment amount on change
   const handleAmountChange = (value: string) => {
@@ -203,6 +262,14 @@ export function RecordPaymentModal({
       return
     }
 
+    // KAN-507: Payment Type is required at the form layer.
+    if (paymentType === '') {
+      setPaymentTypeError(
+        t('pages.clients.modals.recordPayment.paymentTypeRequired', 'Payment type is required')
+      )
+      return
+    }
+
     onSave({
       amount: amountValue,
       date: paymentDate,
@@ -213,6 +280,7 @@ export function RecordPaymentModal({
       last4Digits: paymentMethod === 'Card' ? last4Digits : undefined,
       paymentMethodDetails: paymentMethodDetails.trim() || undefined,
       debtId: selectedDebtId ?? undefined,
+      paymentType,
     })
 
     // Reset form
@@ -227,6 +295,9 @@ export function RecordPaymentModal({
     setPaymentMethodDetails('')
     setLast4DigitsError(null)
     setSelectedDebtId(selectableDebts[0]?.id ?? null)
+    setPaymentType('')
+    setPaymentTypeDirty(false)
+    setPaymentTypeError(null)
     onClose()
   }
 
@@ -243,6 +314,9 @@ export function RecordPaymentModal({
     setPaymentMethodDetails('')
     setLast4DigitsError(null)
     setSelectedDebtId(selectableDebts[0]?.id ?? null)
+    setPaymentType('')
+    setPaymentTypeDirty(false)
+    setPaymentTypeError(null)
     onClose()
   }
 
@@ -409,6 +483,49 @@ export function RecordPaymentModal({
                     </Label>
                   </div>
                 </RadioGroup>
+              </div>
+
+              {/* Payment Type (KAN-507) — required dropdown with auto-prefill */}
+              <div className="flex flex-col items-start gap-2 self-stretch">
+                <Label required className="text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                  {t('pages.clients.modals.recordPayment.paymentTypeLabel', 'Payment type')}
+                </Label>
+                <Select
+                  value={paymentType === '' ? undefined : paymentType}
+                  onValueChange={(v) => {
+                    setPaymentType(v as PaymentType)
+                    setPaymentTypeDirty(true)
+                    setPaymentTypeError(null)
+                  }}
+                >
+                  <SelectTrigger
+                    className={cn(
+                      'h-[45px] w-full rounded-md',
+                      paymentTypeError && 'border-error-500'
+                    )}
+                    aria-label={t(
+                      'pages.clients.modals.recordPayment.paymentTypeLabel',
+                      'Payment type'
+                    )}
+                  >
+                    <SelectValue
+                      placeholder={t(
+                        'pages.clients.modals.recordPayment.paymentTypePlaceholder',
+                        'Select payment type'
+                      )}
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PAYMENT_TYPE_VALUES.map((v) => (
+                      <SelectItem key={v} value={v}>
+                        {t(`pages.actionAnalysis.filters.paymentTypes.${v}`, v)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {paymentTypeError && (
+                  <span className="text-error-600 text-xs">{paymentTypeError}</span>
+                )}
               </div>
 
               {/* Payment Method Details - Shown for all payment methods */}

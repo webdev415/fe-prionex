@@ -46,7 +46,11 @@ function PaymentDebtBreakdownInner({ paymentId }: PaymentDebtBreakdownProps) {
     isError,
     refetch,
   } = usePaymentDebtBreakdown(paymentId, {
-    enabled: hasDebtId && !isCancelled,
+    // H-3: cancelled snapshotted payments must still render the
+    // historical allocation. The BE preserves ``allocated_*`` across
+    // cancel; the modal surfaces the cancelled state via an inline
+    // badge instead of hiding the table.
+    enabled: hasDebtId,
   })
 
   const componentLabels: Record<string, string> = {
@@ -58,7 +62,7 @@ function PaymentDebtBreakdownInner({ paymentId }: PaymentDebtBreakdownProps) {
   }
 
   // Loading state
-  if (isLoadingPayment || (hasDebtId && !isCancelled && isLoadingBreakdown)) {
+  if (isLoadingPayment || (hasDebtId && isLoadingBreakdown)) {
     return (
       <div className="mt-4 border-t border-gray-200 pt-4 dark:border-gray-700">
         <h4 className="mb-3 text-sm font-medium text-gray-500 dark:text-gray-400">
@@ -81,20 +85,6 @@ function PaymentDebtBreakdownInner({ paymentId }: PaymentDebtBreakdownProps) {
           {t('breakdown.title')}
         </h4>
         <p className="text-sm text-gray-400 italic dark:text-gray-500">{t('breakdown.no_debt')}</p>
-      </div>
-    )
-  }
-
-  // Cancelled payment
-  if (isCancelled) {
-    return (
-      <div className="mt-4 border-t border-gray-200 pt-4 dark:border-gray-700">
-        <h4 className="mb-2 text-sm font-medium text-gray-500 dark:text-gray-400">
-          {t('breakdown.title')}
-        </h4>
-        <p className="text-sm text-gray-400 italic dark:text-gray-500">
-          {t('breakdown.cancelled_note')}
-        </p>
       </div>
     )
   }
@@ -122,6 +112,10 @@ function PaymentDebtBreakdownInner({ paymentId }: PaymentDebtBreakdownProps) {
   }
 
   const isPending = breakdown.payment_status === 'pending'
+  // H-3: render cancelled rows with the same muted styling as pending
+  // so the historical allocation reads as "not contributing to the
+  // current balance" rather than as a fresh successful allocation.
+  const isMuted = isPending || isCancelled
 
   return (
     <div className="mt-4 border-t border-gray-200 pt-4 dark:border-gray-700">
@@ -129,7 +123,15 @@ function PaymentDebtBreakdownInner({ paymentId }: PaymentDebtBreakdownProps) {
         <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">
           {t('breakdown.title')}
         </h4>
-        {isPending ? (
+        {isCancelled ? (
+          // H-3: cancelled snapshotted payments render the historical
+          // allocation with an inline cancelled badge instead of a
+          // placeholder. The BE preserves ``allocated_*`` across cancel.
+          <span className="inline-flex items-center gap-1 text-xs text-gray-500 italic dark:text-gray-400">
+            <Icons.Close className="h-3 w-3" />
+            {t('breakdown.cancelled_note')}
+          </span>
+        ) : isPending ? (
           <span className="text-xs text-amber-600 italic dark:text-amber-400">
             {t('breakdown.pending_note')}
           </span>
@@ -162,7 +164,7 @@ function PaymentDebtBreakdownInner({ paymentId }: PaymentDebtBreakdownProps) {
                 </td>
                 <td
                   className={`py-2 text-right font-medium ${
-                    isPending
+                    isMuted
                       ? 'text-gray-500 dark:text-gray-400'
                       : 'text-green-600 dark:text-green-400'
                   }`}
@@ -183,6 +185,28 @@ function PaymentDebtBreakdownInner({ paymentId }: PaymentDebtBreakdownProps) {
                 </td>
               </tr>
             ))}
+            {/* Defensive Unmatched / Overpayment row (Phase 5 of
+                payment-allocation-snapshot). Rendered only when the
+                backend reports a non-zero residue (Σ allocated_* < amount).
+                Old backends omit ``unmatched`` — treat as 0 and skip. */}
+            {Number(breakdown.unmatched ?? 0) > 0.01 && (
+              <tr
+                className="border-b border-amber-200 bg-amber-50 dark:border-amber-700/40 dark:bg-amber-900/20"
+                title={t('breakdown.unmatched_tooltip')}
+              >
+                <td className="py-2 font-medium text-amber-700 dark:text-amber-300">
+                  <span className="inline-flex items-center gap-1">
+                    <Icons.Warning className="h-3.5 w-3.5" />
+                    {t('breakdown.unmatched')}
+                  </span>
+                </td>
+                <td className="py-2 text-right text-amber-700 dark:text-amber-300">—</td>
+                <td className="py-2 text-right font-medium text-amber-700 dark:text-amber-300">
+                  {formatMoneyUAHTwoDecimals(Number(breakdown.unmatched ?? 0))}
+                </td>
+                <td className="py-2 text-right text-amber-700 dark:text-amber-300">—</td>
+              </tr>
+            )}
             {/* Total row */}
             <tr className="border-t-2 border-gray-300 font-bold dark:border-gray-600">
               <td className="pt-2 text-gray-900 dark:text-gray-100">{t('breakdown.total')}</td>
@@ -193,7 +217,7 @@ function PaymentDebtBreakdownInner({ paymentId }: PaymentDebtBreakdownProps) {
               </td>
               <td
                 className={`pt-2 text-right ${
-                  isPending
+                  isMuted
                     ? 'text-gray-600 dark:text-gray-300'
                     : 'text-green-700 dark:text-green-300'
                 }`}

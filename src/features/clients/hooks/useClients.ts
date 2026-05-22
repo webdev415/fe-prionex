@@ -13,6 +13,7 @@ import { taskApi } from '../api/taskApi'
 import { interactionApi } from '../api/interactionApi'
 import { callSmsApi } from '../api/callSmsApi'
 import { documentApi } from '../api/documentApi'
+import { isNonAnsweredOutcome } from '@/lib/callOutcome'
 import type {
   AssignClientRequest,
   BulkAssignClientRequest,
@@ -26,6 +27,8 @@ import type {
   UpdateAddressRequest,
   UpdateClientRequest,
   UpdateContactRequest,
+  ContactTypeCreatePayload,
+  ContactTypePatchPayload,
 } from '../api/types'
 
 // Query keys
@@ -51,7 +54,8 @@ export const clientKeys = {
   search: (params: SearchByTinParams) => [...clientKeys.all, 'search', params] as const,
   count: () => [...clientKeys.all, 'count'] as const,
   prioritySummary: () => [...clientKeys.all, 'priority-summary'] as const,
-  contactTypes: () => [...clientKeys.all, 'contact-types'] as const,
+  contactTypes: (status: 'all' | 'active' | 'hidden' = 'all') =>
+    [...clientKeys.all, 'contact-types', status] as const,
 }
 
 /**
@@ -353,7 +357,7 @@ export function useClientCallSmsHistory(clientId: number, enabled = true) {
       // Map calls to UI shape
       const mappedCalls = (callsData.calls ?? []).map((c) => {
         const dt = c.initiated_at ? new Date(c.initiated_at) : new Date()
-        const durationSecs = c.talk_duration ?? 0
+        const durationSecs = isNonAnsweredOutcome(c.outcome) ? 0 : (c.talk_duration ?? 0)
         const durationMin = Math.floor(durationSecs / 60)
         const durationSec = durationSecs % 60
         return {
@@ -482,21 +486,20 @@ export function useDeleteTask(clientId: number) {
 }
 
 /**
- * Get client assignment history (operators + searchers). Calls GET /clients/{id}/assignment-history
+ * Get client assignment history (operators + searchers) in a single request.
+ * Calls GET /clients/{id}/assignment-history/combined — one DB round trip,
+ * one auth-service name lookup, both employee and searcher current users.
  */
 export function useClientOperatorsSection(clientId: number, enabled = true) {
   return useQuery({
     queryKey: clientKeys.operatorsSection(clientId),
     queryFn: async () => {
-      const [employeeHistory, searcherHistory] = await Promise.all([
-        clientApi.getClientAssignmentHistory(clientId, { assignment_type: 'employee' }),
-        clientApi.getClientAssignmentHistory(clientId, { assignment_type: 'searcher' }),
-      ])
+      const data = await clientApi.getClientAssignmentHistoryCombined(clientId)
       return {
-        operators: employeeHistory.history,
-        searchers: searcherHistory.history,
-        current_employee: employeeHistory.current_employee,
-        current_searcher: searcherHistory.current_searcher,
+        operators: data.employee_history,
+        searchers: data.searcher_history,
+        current_employee: data.current_employee,
+        current_searcher: data.current_searcher,
       }
     },
     enabled: enabled && clientId > 0,
@@ -1073,11 +1076,32 @@ export function useDeleteContact() {
 /**
  * Fetch contact type options from the lookup table
  */
-export function useContactTypes() {
+export function useContactTypes(status: 'all' | 'active' | 'hidden' = 'all') {
   return useQuery({
-    queryKey: clientKeys.contactTypes(),
-    queryFn: () => clientApi.getContactTypes(),
-    staleTime: Infinity, // Lookup data rarely changes
+    queryKey: clientKeys.contactTypes(status),
+    queryFn: () => clientApi.getContactTypes({ status }),
+    staleTime: 60_000,
+  })
+}
+
+export function useCreateContactType() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (payload: ContactTypeCreatePayload) => clientApi.createContactType(payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [...clientKeys.all, 'contact-types'] })
+    },
+  })
+}
+
+export function usePatchContactType() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ typeId, payload }: { typeId: number; payload: ContactTypePatchPayload }) =>
+      clientApi.patchContactType(typeId, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [...clientKeys.all, 'contact-types'] })
+    },
   })
 }
 

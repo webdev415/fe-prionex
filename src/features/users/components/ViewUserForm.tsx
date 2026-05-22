@@ -184,9 +184,24 @@ export function ViewUserForm({ user }: ViewUserFormProps) {
                 className="grid w-full grid-cols-1 items-center gap-2 sm:grid-cols-2 sm:gap-4"
               >
                 <span className="text-sm font-light text-gray-500">{project.project_name}:</span>
-                <span className="text-sm font-semibold break-words text-gray-950">
-                  {project.role_name}
-                </span>
+                <div className="text-sm font-semibold break-words text-gray-950">
+                  <div>{project.role_name}</div>
+                  {(project.department_name || project.group_name) && (
+                    <div className="text-xs font-normal text-gray-600">
+                      {project.department_name && (
+                        <span>
+                          {t('pages.users.forms.department')}: {project.department_name}
+                        </span>
+                      )}
+                      {project.department_name && project.group_name && ' · '}
+                      {project.group_name && (
+                        <span>
+                          {t('pages.users.forms.group')}: {project.group_name}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
             ))}
           </div>

@@ -402,6 +402,8 @@ export interface ClientProfileResponse {
     comment?: string | null
     created_at?: string | null
     added_by_user_name?: string | null
+    default_call_line?: string | null
+    spam_allowed?: boolean | null
   }>
   addresses: Array<{
     id: number
@@ -420,11 +422,16 @@ export interface ClientProfileResponse {
     is_primary?: boolean
   }>
   additional_phones: Array<{
+    contact_id: number
+    contact_type_id: number
+    contact_type_code?: string | null
     number: string
     type: string
     label?: string | null
     created_at?: string | null
     added_by_user_name?: string | null
+    default_call_line: string
+    spam_allowed: boolean
   }>
   comments: Array<{
     id: number
@@ -529,6 +536,28 @@ export interface ContactTypeOption {
   code: string
   name: string
   is_phone: boolean
+  sort_order: number
+  default_call_line: string
+  spam_allowed: boolean
+  show_as_primary_phone: boolean
+  is_hidden: boolean
+}
+
+export interface ContactTypeCreatePayload {
+  name: string
+  default_call_line: 'white' | 'gray'
+  spam_allowed: boolean
+  show_as_primary_phone: boolean
+  sort_order: number
+}
+
+export interface ContactTypePatchPayload {
+  name?: string
+  default_call_line?: 'white' | 'gray'
+  spam_allowed?: boolean
+  show_as_primary_phone?: boolean
+  sort_order?: number
+  is_hidden?: boolean
 }
 
 export interface WriteoffsResponse {
@@ -555,6 +584,15 @@ export interface AssignmentHistoryEntry {
 export interface AssignmentHistoryResponse {
   history: AssignmentHistoryEntry[]
   total: number
+  current_employee?: { id: number; name: string } | null
+  current_searcher?: { id: number; name: string } | null
+}
+
+export interface AssignmentHistoryCombinedResponse {
+  employee_history: AssignmentHistoryEntry[]
+  searcher_history: AssignmentHistoryEntry[]
+  total_employee: number
+  total_searcher: number
   current_employee?: { id: number; name: string } | null
   current_searcher?: { id: number; name: string } | null
 }

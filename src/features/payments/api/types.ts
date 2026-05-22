@@ -7,6 +7,19 @@ export type PaymentMethod = 'bank_transfer' | 'online_gateway' | 'cash' | 'card'
 
 export type PaymentStatus = 'pending' | 'verified' | 'cancelled'
 
+/**
+ * KAN-507 controlled-vocabulary values written through the operator-facing
+ * record / edit endpoints. The backend keeps `payment_type` Optional on the
+ * wire for back-compat; the FE form makes it required.
+ */
+export type PaymentType = 'payment_by_rr' | 'partial_payment' | 'full_payment'
+
+export const PAYMENT_TYPE_VALUES: readonly PaymentType[] = [
+  'payment_by_rr',
+  'partial_payment',
+  'full_payment',
+]
+
 export interface Payment {
   id: number
   payment_number: string
@@ -68,6 +81,22 @@ export interface Payment {
   is_deleted: boolean
   deleted_at?: string
   deleted_by?: number
+  // H-5: verify-time allocation snapshot. Populated by the BE on the
+  // ``POST /payments/{id}/verify`` response when the payment has been
+  // snapshotted. ``null``/missing for legacy rows and for responses
+  // from non-verify endpoints (those callers should read
+  // ``/debt-breakdown`` instead). Type extension only — no consumer
+  // change required in this iteration.
+  allocation_at?: string | null
+  allocation?: {
+    principal: number
+    interest: number
+    fees: number
+    penalties: number
+    fines: number
+    allocated_total: number
+    unmatched: number
+  } | null
 }
 
 export interface RecordPaymentRequest {
@@ -91,6 +120,12 @@ export interface RecordPaymentRequest {
   related_call_id?: number
   payment_plan_id?: number
   installment_id?: number
+  /**
+   * KAN-507 controlled value. Required at the FE form layer; backend keeps it
+   * Optional on the wire for back-compat. When the picked debt has an open RR,
+   * the form auto-pre-fills `payment_by_rr` (operator can override).
+   */
+  payment_type?: PaymentType
 }
 
 export interface VerifyPaymentRequest {
@@ -104,6 +139,8 @@ export interface CancelPaymentRequest {
 export interface EditPaymentRequest {
   amount?: number
   payment_method?: PaymentMethod
+  /** KAN-507 controlled value; backend rejects anything outside the enum. */
+  payment_type?: PaymentType
   payment_method_details?: string
   bank_reference?: string
   notes?: string
@@ -111,6 +148,10 @@ export interface EditPaymentRequest {
   bank_name?: string
   bank_account?: string
   bank_transaction_id?: string
+}
+
+export interface ReassignPaymentEmployeeRequest {
+  recorded_by_user_id: number
 }
 
 export interface PaymentListParams {
@@ -212,11 +253,32 @@ export interface PaymentDebtBreakdownResponse {
   payment_number: string
   payment_amount: number
   payment_status: string
-  debt_id: number
+  /** Optional — null/missing when the payment has no associated debt (AC-1b). */
+  debt_id: number | null
   contract_number: string
   allocation: PaymentAllocationItem[]
   total_allocated: number
+  /**
+   * Per the payment-allocation-snapshot requirement (Phase 4): residue from
+   * ``payment_amount - Σ(allocated_*)``. Frontend renders a defensive
+   * "Unmatched / Overpayment" pseudo-row when this is > 0.01. Old backends
+   * omit the field — treat as 0 (`unmatched ?? 0`).
+   */
+  unmatched?: number
   total_remaining_debt: number
-  allocation_method: 'computed' | 'stored'
+  /**
+   * - ``"stored"``: read from payment.allocated_* (Phase 3+).
+   * - ``"computed"``: chronological replay (legacy rows; identical to today).
+   * - ``"none"``: payment has no debt (debt_id_missing).
+   */
+  allocation_method: 'computed' | 'stored' | 'none'
+  /**
+   * Verify-time snapshot timestamp. Present for ``allocation_method === "stored"``;
+   * ``null`` for legacy rows. The frontend treats either this or ``computed_at``
+   * as the "last computed at" indicator.
+   */
+  allocation_at?: string | null
   computed_at: string
+  /** AC-1b — when true, allocation is empty and the modal renders a placeholder. */
+  debt_id_missing?: boolean
 }

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useOriginateCall } from './useCall'
 import { useCallWebSocket } from './useCallWebSocket'
 import { useAuth } from '@/features/auth/hooks/useAuth'
@@ -32,6 +32,14 @@ export function useCallOrigination() {
         clearTimeout(cooldownTimeoutRef.current)
       }
     }
+  }, [])
+
+  const openCallModal = useCallback((open: boolean) => {
+    if (open) {
+      setCallError(null)
+      setCurrentCallId(null)
+    }
+    setIsCallModalOpen(open)
   }, [])
 
   const handleClearCallError = () => setCallError(null)
@@ -113,39 +121,45 @@ export function useCallOrigination() {
     clientName: string,
     clientId: string,
     callType: CallType
-  ) => {
+  ): Promise<string | null> => {
     if (isCallCooldown) {
-      return
+      return Promise.resolve(null)
     }
 
     if (!user?.asterisk_extension) {
       setCallError('Your account is not configured for calling. Please contact administrator.')
       startCallErrorCooldown()
-      return
+      return Promise.resolve(null)
     }
     setCallError(null)
     setActiveCallType(callType)
 
     const context = callType === 'gray-line' ? 'outbound-gray' : 'outbound-white'
 
-    originateCall(
-      {
-        agent_extension: user.asterisk_extension,
-        customer_number: phoneNumber,
-        caller_id_name: 'CRM Call',
-        client_id: Number(clientId) || undefined,
-        campaign_id: user.active_project_id ?? undefined,
-        metadata: { client_name: clientName },
-        context,
-      },
-      {
-        onSuccess: (data) => setCurrentCallId(data.call_id),
-        onError: (err: unknown) => {
-          setCallError(getOriginateErrorMessage(err))
-          startCallErrorCooldown()
+    return new Promise<string | null>((resolve) => {
+      originateCall(
+        {
+          agent_extension: user.asterisk_extension!,
+          customer_number: phoneNumber,
+          caller_id_name: 'CRM Call',
+          client_id: Number(clientId) || undefined,
+          campaign_id: user.active_project_id ?? undefined,
+          metadata: { client_name: clientName },
+          context,
         },
-      }
-    )
+        {
+          onSuccess: (data) => {
+            setCurrentCallId(data.call_id)
+            resolve(data.call_id)
+          },
+          onError: (err: unknown) => {
+            setCallError(getOriginateErrorMessage(err))
+            startCallErrorCooldown()
+            resolve(null)
+          },
+        }
+      )
+    })
   }
 
   const handleCloseCallModal = () => {
@@ -157,15 +171,20 @@ export function useCallOrigination() {
   }
 
   const handleCallEnd = () => {
+    // Allow starting another call while the ended summary is still visible.
+    // Keep currentCallId until handleCloseCallModal so call details keep polling
+    // until the backend records COMPLETED/FAILED (avoids call_db race on auto-close).
     setOpenCallModal(null)
-    setCurrentCallId(null)
     setActiveCallType('white-line')
   }
 
   return {
     user,
     isCallModalOpen,
-    setIsCallModalOpen,
+    // Expose the wrapped setter under the existing name so all
+    // callsites that do `setIsCallModalOpen(true)` automatically pick
+    // up the fresh-session reset without needing to be updated.
+    setIsCallModalOpen: openCallModal,
     currentCallId,
     activeCallType,
     callError,
