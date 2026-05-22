@@ -24,6 +24,7 @@ import type {
 } from '../api/types'
 import { generateReceiptPDF } from '../utils/receiptGenerator'
 import { getClientById } from '@/features/clients/api/clientApi'
+import { clientKeys } from '@/features/clients/hooks/useClients'
 import { getSeller } from '@/features/sellers/api/sellersApi'
 
 /**
@@ -65,7 +66,13 @@ export function useRecordPayment() {
       queryClient.invalidateQueries({ queryKey: ['payment-stats'] })
       // Invalidate client queries to update debt
       queryClient.invalidateQueries({ queryKey: ['client', data.client_id] })
-      queryClient.invalidateQueries({ queryKey: ['clients'] })
+      queryClient.invalidateQueries({ queryKey: clientKeys.detail(data.client_id), exact: true })
+      queryClient.invalidateQueries({ queryKey: clientKeys.loans(data.client_id), exact: true })
+      queryClient.invalidateQueries({
+        queryKey: clientKeys.paymentsSection(data.client_id),
+        exact: true,
+      })
+      queryClient.invalidateQueries({ queryKey: clientKeys.lists() })
 
       toast.success('Payment recorded successfully')
     },
@@ -97,7 +104,13 @@ export function useVerifyPayment() {
       queryClient.invalidateQueries({ queryKey: ['payment-stats'] })
       // Invalidate client queries to update debt
       queryClient.invalidateQueries({ queryKey: ['client', data.client_id] })
-      queryClient.invalidateQueries({ queryKey: ['clients'] })
+      queryClient.invalidateQueries({ queryKey: clientKeys.detail(data.client_id), exact: true })
+      queryClient.invalidateQueries({ queryKey: clientKeys.loans(data.client_id), exact: true })
+      queryClient.invalidateQueries({
+        queryKey: clientKeys.paymentsSection(data.client_id),
+        exact: true,
+      })
+      queryClient.invalidateQueries({ queryKey: clientKeys.lists() })
 
       toast.success('Payment verified successfully')
     },
@@ -129,7 +142,13 @@ export function useCancelPayment() {
       queryClient.invalidateQueries({ queryKey: ['payment-stats'] })
       // Invalidate client queries to update debt
       queryClient.invalidateQueries({ queryKey: ['client', data.client_id] })
-      queryClient.invalidateQueries({ queryKey: ['clients'] })
+      queryClient.invalidateQueries({ queryKey: clientKeys.detail(data.client_id), exact: true })
+      queryClient.invalidateQueries({ queryKey: clientKeys.loans(data.client_id), exact: true })
+      queryClient.invalidateQueries({
+        queryKey: clientKeys.paymentsSection(data.client_id),
+        exact: true,
+      })
+      queryClient.invalidateQueries({ queryKey: clientKeys.lists() })
 
       toast.success('Payment cancelled successfully')
     },
@@ -156,7 +175,13 @@ export function useEditPayment() {
       queryClient.invalidateQueries({ queryKey: ['payment-stats'] })
       // Invalidate client queries to update debt
       queryClient.invalidateQueries({ queryKey: ['client', data.client_id] })
-      queryClient.invalidateQueries({ queryKey: ['clients'] })
+      queryClient.invalidateQueries({ queryKey: clientKeys.detail(data.client_id), exact: true })
+      queryClient.invalidateQueries({ queryKey: clientKeys.loans(data.client_id), exact: true })
+      queryClient.invalidateQueries({
+        queryKey: clientKeys.paymentsSection(data.client_id),
+        exact: true,
+      })
+      queryClient.invalidateQueries({ queryKey: clientKeys.lists() })
 
       toast.success('Payment updated successfully')
     },
