@@ -536,19 +536,41 @@ export function ClientDetailPage() {
             workPhone: profile.employment.work_phone ?? '-',
           }
         : null,
-      recommenders: (profile.recommenders ?? []).map((r) => ({
-        id: r.id,
-        contactValue: r.contact_value ?? '',
-        contactTypeId: r.contact_type_id ?? null,
-        contactType: r.contact_type_name ?? '',
-        contactTypeCode: r.contact_type_code ?? null,
-        isPhone: r.is_phone ?? false,
-        comment: r.comment ?? '',
-        created_at: r.created_at,
-        added_by_user_name: r.added_by_user_name,
-        defaultCallLine: r.default_call_line ?? 'white',
-        spamAllowed: r.spam_allowed !== false,
-      })),
+      recommenders: (() => {
+        const mapRow = (r: (typeof profile.recommenders)[number]) => ({
+          id: r.id,
+          contactValue: r.contact_value ?? '',
+          contactTypeId: r.contact_type_id ?? null,
+          contactType: r.contact_type_name ?? '',
+          contactTypeCode: r.contact_type_code ?? null,
+          isPhone: r.is_phone ?? false,
+          comment: r.comment ?? '',
+          created_at: r.created_at,
+          added_by_user_name: r.added_by_user_name,
+          defaultCallLine: r.default_call_line ?? 'white',
+          spamAllowed: r.spam_allowed !== false,
+        })
+        const fromApi = (profile.recommenders ?? []).map(mapRow)
+        const includedIds = new Set(fromApi.map((r) => r.id))
+        // Phone-strip rows may be omitted from recommenders on older API builds;
+        // merge from additional_phones so the tab matches the left panel.
+        const stripOnly = (profile.additional_phones ?? [])
+          .filter((p) => isValidPhone(p.number) && !includedIds.has(p.contact_id))
+          .map((p) => ({
+            id: p.contact_id,
+            contactValue: p.number,
+            contactTypeId: p.contact_type_id,
+            contactType: p.label ?? p.type,
+            contactTypeCode: p.contact_type_code ?? null,
+            isPhone: true,
+            comment: '',
+            created_at: p.created_at,
+            added_by_user_name: p.added_by_user_name,
+            defaultCallLine: p.default_call_line ?? 'white',
+            spamAllowed: p.spam_allowed !== false,
+          }))
+        return [...stripOnly, ...fromApi]
+      })(),
       addresses: (profile.addresses ?? []).map((a) => ({
         id: a.id,
         addressType: a.address_type,
