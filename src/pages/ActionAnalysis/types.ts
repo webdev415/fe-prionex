@@ -5,6 +5,7 @@ export type ActionAnalysisCallsSubTabId =
   | 'interactions'
   | 'ta-history'
   | 'task-history'
+  | 'payment-history'
   | 'timeline'
   | 'screen-time'
   | 'heatmap'
@@ -22,6 +23,7 @@ export const ACTION_ANALYSIS_CALLS_SUB_TABS: ActionAnalysisCallsSubTabId[] = [
   'interactions',
   'ta-history',
   'task-history',
+  'payment-history',
   'timeline',
   'screen-time',
   'heatmap',

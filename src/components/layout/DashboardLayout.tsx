@@ -566,7 +566,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           id: item.id,
           name: item.full_name,
           debt: item.total_debt,
-          phone: item.phone_primary ?? '',
+          phone: (item.phones ?? []).join(', '),
           email: item.email_primary ?? '',
           priority: mapPriorityLevel(item.priority_level),
           score: item.priority_score,
@@ -739,7 +739,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         path: '/dashboard/system-settings',
         icon: 'setting-07',
         label: t('navigation.systemSettings', 'System Settings'),
-        requiredPermission: PERMISSIONS.SYSTEM.MANAGE_SETTINGS,
+        requiredPermissions: [PERMISSIONS.SYSTEM.MANAGE_SETTINGS, PERMISSIONS.CONTACT_TYPES.VIEW],
+        mode: 'any' as const,
         subItems: [
           {
             path: '/dashboard/system-settings/messaging-integrations',
@@ -758,6 +759,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             label: t('navigation.tags', 'Tags'),
             icon: 'file-01',
             requiredPermission: PERMISSIONS.TAGS.VIEW,
+          },
+          {
+            path: '/dashboard/system-settings/contact-types',
+            label: t('navigation.contactTypes', 'Contact Types'),
+            icon: 'user-multiple-02',
+            requiredPermission: PERMISSIONS.CONTACT_TYPES.VIEW,
           },
           {
             path: '/dashboard/system-settings/scoring-configuration',
@@ -794,6 +801,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               PERMISSIONS.DOCUMENT_GENERATION.DELETE_TEMPLATES,
             ],
             mode: 'any' as const,
+          },
+          {
+            path: '/dashboard/system-settings/rr-notifications',
+            label: t('navigation.rrNotifications', 'RR Notifications'),
+            icon: 'mail',
+            requiredPermission: PERMISSIONS.SYSTEM.MANAGE_SETTINGS,
           },
         ],
       },

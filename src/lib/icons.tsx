@@ -13,6 +13,7 @@ import type { ComponentProps } from 'react'
 import {
   Notification03Icon,
   AiPhone01Icon,
+  CallEnd02Icon,
   Calendar01Icon,
   UserGroupIcon,
   Folder01Icon,
@@ -170,6 +171,7 @@ export const Icons = {
   // Navigation
   Bell: (props: Omit<IconProps, 'icon'>) => <Icon icon={Notification03Icon} {...props} />,
   Phone: (props: Omit<IconProps, 'icon'>) => <Icon icon={AiPhone01Icon} {...props} />,
+  CallEnd: (props: Omit<IconProps, 'icon'>) => <Icon icon={CallEnd02Icon} {...props} />,
   Calendar: (props: Omit<IconProps, 'icon'>) => <Icon icon={Calendar01Icon} {...props} />,
   Users: (props: Omit<IconProps, 'icon'>) => <Icon icon={UserGroupIcon} {...props} />,
   Folder: (props: Omit<IconProps, 'icon'>) => <Icon icon={Folder01Icon} {...props} />,
@@ -340,6 +342,7 @@ export const Icons = {
 export {
   Notification03Icon,
   AiPhone01Icon,
+  CallEnd02Icon,
   Calendar01Icon,
   UserGroupIcon,
   Folder01Icon,
