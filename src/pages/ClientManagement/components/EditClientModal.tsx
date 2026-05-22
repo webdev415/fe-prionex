@@ -196,8 +196,8 @@ function EditForm({ profile, clientId }: EditFormProps) {
   const [addressError, setAddressError] = useState<string | null>(null)
 
   const invalidateClientCaches = () => {
-    queryClient.invalidateQueries({ queryKey: clientKeys.profile(clientId) })
-    queryClient.invalidateQueries({ queryKey: clientKeys.detail(clientId) })
+    queryClient.invalidateQueries({ queryKey: clientKeys.profile(clientId), exact: true })
+    queryClient.invalidateQueries({ queryKey: clientKeys.detail(clientId), exact: true })
     queryClient.invalidateQueries({ queryKey: clientKeys.lists() })
     queryClient.invalidateQueries({ queryKey: clientKeys.prioritySummary() })
   }
@@ -348,8 +348,11 @@ function EditForm({ profile, clientId }: EditFormProps) {
       {
         onSuccess: async () => {
           toast.success(t('pages.clients.editModal.saveSuccess'))
-          await queryClient.invalidateQueries({ queryKey: clientKeys.profile(clientId) })
-          queryClient.invalidateQueries({ queryKey: clientKeys.detail(clientId) })
+          await queryClient.invalidateQueries({
+            queryKey: clientKeys.profile(clientId),
+            exact: true,
+          })
+          queryClient.invalidateQueries({ queryKey: clientKeys.detail(clientId), exact: true })
         },
         onError: (error) => {
           setWorkError(extractErrorMessage(error, t('pages.clients.editModal.saveError')))
@@ -376,8 +379,11 @@ function EditForm({ profile, clientId }: EditFormProps) {
       {
         onSuccess: async () => {
           toast.success(t('pages.clients.editModal.saveSuccess'))
-          await queryClient.invalidateQueries({ queryKey: clientKeys.profile(clientId) })
-          queryClient.invalidateQueries({ queryKey: clientKeys.detail(clientId) })
+          await queryClient.invalidateQueries({
+            queryKey: clientKeys.profile(clientId),
+            exact: true,
+          })
+          queryClient.invalidateQueries({ queryKey: clientKeys.detail(clientId), exact: true })
         },
         onError: (error) => {
           setPassportError(extractErrorMessage(error, t('pages.clients.editModal.saveError')))

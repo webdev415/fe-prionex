@@ -62,6 +62,19 @@ const formatCampaignDateStamp = (language: string) =>
     day: '2-digit',
   }).format(new Date())
 
+function draftSnapshotMatches(
+  draft: MessagingDraft,
+  body: string,
+  subject: string,
+  senderName: string
+): boolean {
+  return (
+    body.trim() === draft.body.trim() &&
+    (subject.trim() || '') === (draft.subject || '').trim() &&
+    (senderName.trim() || '') === (draft.sender_name || '').trim()
+  )
+}
+
 function applyDraftToForm(
   draft: MessagingDraft,
   channel: MessagingChannel,
@@ -106,6 +119,7 @@ export function BulkSendMessageModal({
   const [body, setBody] = useState('')
   const [subject, setSubject] = useState('')
   const [senderName, setSenderName] = useState('')
+  const [contentTouched, setContentTouched] = useState(false)
   const [isResolvingRecipients, setIsResolvingRecipients] = useState(false)
 
   const subjectRef = useRef<HTMLInputElement | null>(null)
@@ -140,23 +154,14 @@ export function BulkSendMessageModal({
     [drafts, draftId]
   )
 
-  const previewSource = useMemo(() => {
-    if (isCustomMessage) {
-      return {
-        body,
-        subject,
-        sender_name: senderName,
-        label: t('pages.clients.modals.bulkSendMessage.customMessage', 'Custom message'),
-      }
-    }
-    if (!selectedDraft) return null
-    return {
-      body: selectedDraft.body,
-      subject: selectedDraft.subject || '',
-      sender_name: selectedDraft.sender_name || '',
-      label: selectedDraft.name,
-    }
-  }, [body, isCustomMessage, selectedDraft, senderName, subject, t])
+  const useDraftIdOnLaunch =
+    selectedDraft !== null &&
+    !contentTouched &&
+    draftSnapshotMatches(selectedDraft, body, subject, senderName)
+
+  const previewLabel = isCustomMessage
+    ? t('pages.clients.modals.bulkSendMessage.customMessage', 'Custom message')
+    : (selectedDraft?.name ?? '')
 
   useEffect(() => {
     if (!open) return
@@ -197,6 +202,7 @@ export function BulkSendMessageModal({
 
     setDraftId(NO_DRAFT_VALUE)
     resetCustomMessageFields({ setBody, setSubject, setSenderName })
+    setContentTouched(false)
     lastFocusedRef.current = 'body'
   }, [open])
 
@@ -219,9 +225,8 @@ export function BulkSendMessageModal({
   const hasSelection =
     totalSelectedCount > 0 && (allClientsSelectedAcrossPages || clientIds.length > 0)
 
-  const hasMessageContent = isCustomMessage
-    ? body.trim().length > 0 && (!channelSpec.subjectRequired || subject.trim().length > 0)
-    : selectedDraft != null
+  const hasMessageContent =
+    body.trim().length > 0 && (!channelSpec.subjectRequired || subject.trim().length > 0)
 
   const canLaunch =
     hasSelection &&
@@ -240,6 +245,7 @@ export function BulkSendMessageModal({
     const spec = CHANNEL_SPECS[nextChannel]
     setChannel(nextChannel)
     setDraftId(NO_DRAFT_VALUE)
+    setContentTouched(false)
     resetCustomMessageFields({ setBody, setSubject, setSenderName })
     if (senderName.length > spec.senderMaxLength) {
       setSenderName(senderName.slice(0, spec.senderMaxLength))
@@ -251,6 +257,7 @@ export function BulkSendMessageModal({
 
   const handleDraftChange = (value: string) => {
     setDraftId(value)
+    setContentTouched(false)
     if (value === NO_DRAFT_VALUE) {
       resetCustomMessageFields({ setBody, setSubject, setSenderName })
       return
@@ -272,6 +279,7 @@ export function BulkSendMessageModal({
       subjectRef,
       bodyRef,
       lastFocusedRef,
+      onInserted: () => setContentTouched(true),
     })
   }
 
@@ -326,13 +334,13 @@ export function BulkSendMessageModal({
         name: campaignName.trim(),
         channel,
         service,
-        ...(isCustomMessage
-          ? {
+        ...(useDraftIdOnLaunch
+          ? { draft_id: selectedDraft!.id }
+          : {
               body: body.trim(),
               subject: channelSpec.showSubject ? subject.trim() || null : null,
               sender_name: senderName.trim() || null,
-            }
-          : { draft_id: selectedDraft!.id }),
+            }),
         selection_payload: {
           mode: 'ids',
           ids,
@@ -541,105 +549,112 @@ export function BulkSendMessageModal({
                 </div>
               </div>
 
-              {isCustomMessage && (
-                <div className="space-y-4">
-                  <Input
-                    label={t('pages.clients.modals.sendMessage.senderName', 'Sender name')}
-                    value={senderName}
-                    onChange={(event) => setSenderName(event.target.value)}
-                    maxLength={channelSpec.senderMaxLength}
-                    placeholder={t(
-                      'pages.clients.modals.sendMessage.senderNamePlaceholder',
-                      'CRM Prionex'
-                    )}
-                  />
-
-                  {channelSpec.showSubject && (
-                    <Input
-                      ref={subjectRef}
-                      label={t('pages.clients.modals.sendMessage.subject', 'Subject')}
-                      value={subject}
-                      onChange={(event) => setSubject(event.target.value)}
-                      onFocus={() => {
-                        lastFocusedRef.current = 'subject'
-                      }}
-                      placeholder={t(
-                        'pages.clients.modals.sendMessage.subjectPlaceholder',
-                        'Reminder about your account'
-                      )}
-                      required={channelSpec.subjectRequired}
-                    />
+              <div className="space-y-4">
+                <Input
+                  label={t('pages.clients.modals.sendMessage.senderName', 'Sender name')}
+                  value={senderName}
+                  onChange={(event) => {
+                    setSenderName(event.target.value)
+                    setContentTouched(true)
+                  }}
+                  maxLength={channelSpec.senderMaxLength}
+                  placeholder={t(
+                    'pages.clients.modals.sendMessage.senderNamePlaceholder',
+                    'CRM Prionex'
                   )}
+                />
 
-                  <Textarea
-                    ref={bodyRef}
-                    label={t('pages.clients.modals.sendMessage.body', 'Message body')}
-                    value={body}
-                    onChange={(event) => setBody(event.target.value)}
-                    onFocus={() => {
-                      lastFocusedRef.current = 'body'
+                {channelSpec.showSubject && (
+                  <Input
+                    ref={subjectRef}
+                    label={t('pages.clients.modals.sendMessage.subject', 'Subject')}
+                    value={subject}
+                    onChange={(event) => {
+                      setSubject(event.target.value)
+                      setContentTouched(true)
                     }}
-                    textareaSize="lg"
-                    maxLength={channelSpec.bodyMaxLength}
-                    helperText={t(
-                      'pages.clients.modals.bulkSendMessage.bodyHint',
-                      'Variables like {{client_name}} are filled per recipient at send time.'
+                    onFocus={() => {
+                      lastFocusedRef.current = 'subject'
+                    }}
+                    placeholder={t(
+                      'pages.clients.modals.sendMessage.subjectPlaceholder',
+                      'Reminder about your account'
                     )}
+                    required={channelSpec.subjectRequired}
                   />
+                )}
 
-                  <MessagingVariablesPalette onInsert={handleInsertVariable} />
-                </div>
-              )}
+                <Textarea
+                  ref={bodyRef}
+                  label={t('pages.clients.modals.sendMessage.body', 'Message body')}
+                  value={body}
+                  onChange={(event) => {
+                    setBody(event.target.value)
+                    setContentTouched(true)
+                  }}
+                  onFocus={() => {
+                    lastFocusedRef.current = 'body'
+                  }}
+                  textareaSize="lg"
+                  maxLength={channelSpec.bodyMaxLength}
+                  helperText={t(
+                    'pages.clients.modals.bulkSendMessage.bodyHint',
+                    'Edit the message before sending. Variables like {{client_name}} are filled per recipient at send time.'
+                  )}
+                />
 
-              {previewSource && (isCustomMessage ? body.trim().length > 0 : true) && (
-                <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
-                  <div className="mb-3 flex flex-wrap items-center gap-2">
-                    <span className="text-dark-500 text-sm font-medium">
-                      {t('pages.clients.modals.bulkSendMessage.draftPreview', 'Message preview')}
-                    </span>
-                    <span className="rounded-full bg-white px-2.5 py-0.5 text-xs font-medium text-gray-600 ring-1 ring-gray-200 ring-inset">
-                      {previewSource.label}
-                    </span>
-                    <span className="rounded-full bg-white px-2.5 py-0.5 text-xs font-medium text-gray-600 ring-1 ring-gray-200 ring-inset">
-                      {channel.toUpperCase()}
-                    </span>
-                  </div>
-                  <p className="mb-3 text-xs text-gray-500">
-                    {t(
-                      'pages.clients.modals.bulkSendMessage.draftPreviewHint',
-                      'Variables such as {{client_name}} and {{debt_amount}} are shown as written. Each recipient receives a message with values filled from their own client data at send time.'
-                    )}
-                  </p>
-                  <div className="space-y-2 text-sm">
-                    {channelSpec.showSubject && (
-                      <div>
-                        <span className="text-dark-500 font-medium">
-                          {t('pages.clients.modals.bulkSendMessage.previewSubject', 'Subject')}:
-                        </span>{' '}
-                        <span className="font-mono text-gray-600">
-                          {previewSource.subject.trim() || '—'}
-                        </span>
-                      </div>
-                    )}
-                    {(previewSource.sender_name || '').trim() && (
-                      <div>
-                        <span className="text-dark-500 font-medium">
-                          {t('pages.clients.modals.bulkSendMessage.previewSender', 'Sender')}:
-                        </span>{' '}
-                        <span className="text-gray-600">{previewSource.sender_name}</span>
-                      </div>
-                    )}
-                    <div>
-                      <span className="text-dark-500 font-medium">
-                        {t('pages.clients.modals.bulkSendMessage.previewBody', 'Message')}:
+                <MessagingVariablesPalette onInsert={handleInsertVariable} />
+
+                {body.trim().length > 0 && (
+                  <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+                    <div className="mb-3 flex flex-wrap items-center gap-2">
+                      <span className="text-dark-500 text-sm font-medium">
+                        {t('pages.clients.modals.bulkSendMessage.draftPreview', 'Message preview')}
                       </span>
-                      <pre className="text-dark-500 mt-1 max-h-48 overflow-auto rounded-lg bg-white p-3 font-mono text-xs whitespace-pre-wrap">
-                        {previewSource.body.trim() || '—'}
-                      </pre>
+                      {previewLabel && (
+                        <span className="rounded-full bg-white px-2.5 py-0.5 text-xs font-medium text-gray-600 ring-1 ring-gray-200 ring-inset">
+                          {previewLabel}
+                        </span>
+                      )}
+                      <span className="rounded-full bg-white px-2.5 py-0.5 text-xs font-medium text-gray-600 ring-1 ring-gray-200 ring-inset">
+                        {channel.toUpperCase()}
+                      </span>
+                    </div>
+                    <p className="mb-3 text-xs text-gray-500">
+                      {t(
+                        'pages.clients.modals.bulkSendMessage.draftPreviewHint',
+                        'Variables such as {{client_name}} and {{debt_amount}} are shown as written. Each recipient receives a message with values filled from their own client data at send time.'
+                      )}
+                    </p>
+                    <div className="space-y-2 text-sm">
+                      {channelSpec.showSubject && (
+                        <div>
+                          <span className="text-dark-500 font-medium">
+                            {t('pages.clients.modals.bulkSendMessage.previewSubject', 'Subject')}:
+                          </span>{' '}
+                          <span className="font-mono text-gray-600">{subject.trim() || '—'}</span>
+                        </div>
+                      )}
+                      {(senderName || '').trim() && (
+                        <div>
+                          <span className="text-dark-500 font-medium">
+                            {t('pages.clients.modals.bulkSendMessage.previewSender', 'Sender')}:
+                          </span>{' '}
+                          <span className="text-gray-600">{senderName}</span>
+                        </div>
+                      )}
+                      <div>
+                        <span className="text-dark-500 font-medium">
+                          {t('pages.clients.modals.bulkSendMessage.previewBody', 'Message')}:
+                        </span>
+                        <pre className="text-dark-500 mt-1 max-h-48 overflow-auto rounded-lg bg-white p-3 font-mono text-xs whitespace-pre-wrap">
+                          {body.trim() || '—'}
+                        </pre>
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
             </>
           )}
         </div>

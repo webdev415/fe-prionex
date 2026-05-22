@@ -11,6 +11,7 @@ export type CallModalType = 'call-dialog' | 'call-recording'
 export interface MinimizedCallInfo {
   id: string
   type: CallModalType
+  clientId?: number | null
   clientName: string
   phoneNumber: string // ORIGINAL client phone — used as the restored modal's phoneNumber prop
   displayPhone?: string // What the bubble tooltip should show (manual/dialed number if any)

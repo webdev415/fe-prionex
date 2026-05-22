@@ -10,6 +10,7 @@ import { useTranslation } from 'react-i18next'
 import { useQueryClient } from '@tanstack/react-query'
 import { useCallStore } from '@/stores/callStore'
 import { useCallDetails } from '@/features/calls/hooks/useCall'
+import { invalidateCallRelatedQueries } from '@/features/calls/utils/queryInvalidation'
 import { Icons } from '@/lib/icons'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/Tooltip'
 import { CallDialogModal } from '@/pages/ClientManagement/components/CallDialogModal'
@@ -56,9 +57,7 @@ export function MinimizedCallBubble() {
           callState: newState,
           elapsedTime: callDetails.total_duration ?? liveElapsedTime,
         })
-        // Invalidate call history so it shows the updated record
-        queryClient.invalidateQueries({ queryKey: ['callHistory'] })
-        queryClient.invalidateQueries({ queryKey: ['clients', 'detail'] })
+        invalidateCallRelatedQueries(queryClient, minimizedCall.clientId)
       }
     }
   }, [callDetails]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -288,6 +287,7 @@ export function MinimizedCallBubble() {
           open={isRestored}
           onClose={handleClose}
           onMinimize={handleMinimize}
+          clientId={minimizedCall.clientId}
           clientName={minimizedCall.clientName}
           phoneNumber={minimizedCall.phoneNumber}
           callId={minimizedCall.callId}

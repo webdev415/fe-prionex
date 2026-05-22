@@ -22,6 +22,7 @@ import {
   type ScoringConfigResponse,
   type PreviewResponse,
 } from '@/features/clients/api/configApi'
+import { clientKeys } from '@/features/clients/hooks/useClients'
 import { PermissionGuard } from '@/components/auth'
 import { PERMISSIONS } from '@/constants/permissions'
 import { useHasPermission } from '@/hooks'
@@ -260,8 +261,9 @@ export function ScoringConfigurationPage() {
       // Invalidate history query so it refreshes when navigating to history page
       queryClient.invalidateQueries({ queryKey: ['configHistory'] })
 
-      // Invalidate client queries to refresh priorities and priority summary
-      queryClient.invalidateQueries({ queryKey: ['clients'] })
+      // Invalidate client list queries to refresh priorities and priority summary.
+      queryClient.invalidateQueries({ queryKey: clientKeys.lists() })
+      queryClient.invalidateQueries({ queryKey: clientKeys.prioritySummary() })
 
       // Invalidate config queries to refresh thresholds used in priority mapping
       queryClient.invalidateQueries({ queryKey: ['config'] })
@@ -306,8 +308,9 @@ export function ScoringConfigurationPage() {
       // Invalidate history query so it refreshes when navigating to history page
       queryClient.invalidateQueries({ queryKey: ['configHistory'] })
 
-      // Invalidate client queries to refresh priorities and priority summary
-      queryClient.invalidateQueries({ queryKey: ['clients'] })
+      // Invalidate client list queries to refresh priorities and priority summary.
+      queryClient.invalidateQueries({ queryKey: clientKeys.lists() })
+      queryClient.invalidateQueries({ queryKey: clientKeys.prioritySummary() })
 
       // Invalidate config queries to refresh thresholds used in priority mapping
       queryClient.invalidateQueries({ queryKey: ['config'] })

@@ -174,6 +174,7 @@ export function useSetManualPriority() {
       // Invalidate specific client and lists
       queryClient.invalidateQueries({
         queryKey: clientKeys.detail(variables.clientId),
+        exact: true,
       })
       queryClient.invalidateQueries({ queryKey: clientKeys.lists() })
       queryClient.invalidateQueries({ queryKey: clientKeys.prioritySummary() })
@@ -211,7 +212,10 @@ export function useAssignClient() {
       clientApi.assignClient(clientId, data),
     onSuccess: (_, variables) => {
       // Invalidate specific client and lists to show updated assignments
-      queryClient.invalidateQueries({ queryKey: clientKeys.detail(variables.clientId) })
+      queryClient.invalidateQueries({
+        queryKey: clientKeys.detail(variables.clientId),
+        exact: true,
+      })
       queryClient.invalidateQueries({ queryKey: clientKeys.lists() })
       // The `contact.responsible_changed` event is published after this
       // request returns and the tag-service applies any matching auto-tag
@@ -622,14 +626,14 @@ export function useClientRestructuringAgreements(clientId: number, enabled = tru
     : false
   const dataUpdatedAt = query.dataUpdatedAt
 
-  // Refetch loans + detail exactly when the RR list resolves with at
-  // least one terminal RR. The dependency on dataUpdatedAt makes this
-  // re-run on every successful fetch (not just the first), so a fresh
-  // cascade close becomes visible after a poll/refresh.
+  // Refetch only the base loans + detail queries when the RR list
+  // resolves with at least one terminal RR. These keys are shared
+  // prefixes for the detail page, so exact matching avoids invalidating
+  // this RR query again and creating a refetch loop.
   useEffect(() => {
     if (clientId > 0 && hasTerminalRR) {
-      queryClient.invalidateQueries({ queryKey: clientKeys.loans(clientId) })
-      queryClient.invalidateQueries({ queryKey: clientKeys.detail(clientId) })
+      queryClient.invalidateQueries({ queryKey: clientKeys.loans(clientId), exact: true })
+      queryClient.invalidateQueries({ queryKey: clientKeys.detail(clientId), exact: true })
     }
   }, [clientId, hasTerminalRR, dataUpdatedAt, queryClient])
 
@@ -688,8 +692,11 @@ export function useCloseDebt() {
       closureDate?: string
     }) => clientApi.closeDebt(clientId, debtId, closureDate),
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: clientKeys.loans(variables.clientId) })
-      queryClient.invalidateQueries({ queryKey: clientKeys.detail(variables.clientId) })
+      queryClient.invalidateQueries({ queryKey: clientKeys.loans(variables.clientId), exact: true })
+      queryClient.invalidateQueries({
+        queryKey: clientKeys.detail(variables.clientId),
+        exact: true,
+      })
       queryClient.invalidateQueries({ queryKey: clientKeys.lists() })
       toast.success('Loan closed successfully')
     },
@@ -717,8 +724,11 @@ export function useUpdateDebtClosureDate() {
       closureDate: string
     }) => clientApi.updateDebtClosureDate(clientId, debtId, closureDate),
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: clientKeys.loans(variables.clientId) })
-      queryClient.invalidateQueries({ queryKey: clientKeys.detail(variables.clientId) })
+      queryClient.invalidateQueries({ queryKey: clientKeys.loans(variables.clientId), exact: true })
+      queryClient.invalidateQueries({
+        queryKey: clientKeys.detail(variables.clientId),
+        exact: true,
+      })
       toast.success('Closure date updated')
     },
     onError: (error: AxiosError<{ detail?: string }>) => {
@@ -745,8 +755,11 @@ export function useCompleteRestructuringAgreement() {
       // (see rr_status_service.cascade_close_debt_for_terminal_rr),
       // so the loans list and client detail need to refetch or the
       // closed loan will keep appearing in "Loans in Process".
-      queryClient.invalidateQueries({ queryKey: clientKeys.loans(variables.clientId) })
-      queryClient.invalidateQueries({ queryKey: clientKeys.detail(variables.clientId) })
+      queryClient.invalidateQueries({ queryKey: clientKeys.loans(variables.clientId), exact: true })
+      queryClient.invalidateQueries({
+        queryKey: clientKeys.detail(variables.clientId),
+        exact: true,
+      })
       toast.success('Restructuring agreement completed')
     },
     onError: (error: AxiosError<{ detail?: string }>) => {
@@ -969,8 +982,14 @@ export function useCreateAddress() {
     mutationFn: ({ clientId, data }: { clientId: number; data: CreateAddressRequest }) =>
       clientApi.createAddress(clientId, data),
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: clientKeys.profile(variables.clientId) })
-      queryClient.invalidateQueries({ queryKey: clientKeys.detail(variables.clientId) })
+      queryClient.invalidateQueries({
+        queryKey: clientKeys.profile(variables.clientId),
+        exact: true,
+      })
+      queryClient.invalidateQueries({
+        queryKey: clientKeys.detail(variables.clientId),
+        exact: true,
+      })
     },
   })
 }
@@ -992,8 +1011,14 @@ export function useUpdateAddress() {
       data: UpdateAddressRequest
     }) => clientApi.updateAddress(clientId, addressId, data),
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: clientKeys.profile(variables.clientId) })
-      queryClient.invalidateQueries({ queryKey: clientKeys.detail(variables.clientId) })
+      queryClient.invalidateQueries({
+        queryKey: clientKeys.profile(variables.clientId),
+        exact: true,
+      })
+      queryClient.invalidateQueries({
+        queryKey: clientKeys.detail(variables.clientId),
+        exact: true,
+      })
     },
   })
 }
@@ -1008,8 +1033,14 @@ export function useDeleteAddress() {
     mutationFn: ({ clientId, addressId }: { clientId: number; addressId: number }) =>
       clientApi.deleteAddress(clientId, addressId),
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: clientKeys.profile(variables.clientId) })
-      queryClient.invalidateQueries({ queryKey: clientKeys.detail(variables.clientId) })
+      queryClient.invalidateQueries({
+        queryKey: clientKeys.profile(variables.clientId),
+        exact: true,
+      })
+      queryClient.invalidateQueries({
+        queryKey: clientKeys.detail(variables.clientId),
+        exact: true,
+      })
     },
   })
 }
@@ -1024,8 +1055,14 @@ export function useCreateContact() {
     mutationFn: ({ clientId, data }: { clientId: number; data: CreateContactRequest }) =>
       clientApi.createContact(clientId, data),
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: clientKeys.profile(variables.clientId) })
-      queryClient.invalidateQueries({ queryKey: clientKeys.detail(variables.clientId) })
+      queryClient.invalidateQueries({
+        queryKey: clientKeys.profile(variables.clientId),
+        exact: true,
+      })
+      queryClient.invalidateQueries({
+        queryKey: clientKeys.detail(variables.clientId),
+        exact: true,
+      })
     },
   })
 }
@@ -1047,8 +1084,14 @@ export function useUpdateContact() {
       data: UpdateContactRequest
     }) => clientApi.updateContact(clientId, contactId, data),
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: clientKeys.profile(variables.clientId) })
-      queryClient.invalidateQueries({ queryKey: clientKeys.detail(variables.clientId) })
+      queryClient.invalidateQueries({
+        queryKey: clientKeys.profile(variables.clientId),
+        exact: true,
+      })
+      queryClient.invalidateQueries({
+        queryKey: clientKeys.detail(variables.clientId),
+        exact: true,
+      })
     },
   })
 }
@@ -1063,8 +1106,14 @@ export function useDeleteContact() {
     mutationFn: ({ clientId, contactId }: { clientId: number; contactId: number }) =>
       clientApi.deleteContact(clientId, contactId),
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: clientKeys.profile(variables.clientId) })
-      queryClient.invalidateQueries({ queryKey: clientKeys.detail(variables.clientId) })
+      queryClient.invalidateQueries({
+        queryKey: clientKeys.profile(variables.clientId),
+        exact: true,
+      })
+      queryClient.invalidateQueries({
+        queryKey: clientKeys.detail(variables.clientId),
+        exact: true,
+      })
     },
   })
 }
