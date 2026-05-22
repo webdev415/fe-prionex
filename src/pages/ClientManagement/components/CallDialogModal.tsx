@@ -507,6 +507,7 @@ export function CallDialogModal({
       phoneNumber,
       // Separate field for what the minimized-bubble tooltip should show.
       displayPhone,
+      clientId,
       callId: overrides?.callId ?? callId ?? null,
       callState: overrides?.callState ?? callState,
       callType,

@@ -1,13 +1,5 @@
-/**
- * RecordPaymentModal — Payment Type field tests (KAN-507).
- *
- * Covers:
- *  - Submit blocked when Payment Type is empty (FE-level required).
- *  - Auto-prefill to `payment_by_rr` when the picked debt has an open RR.
- *  - No auto-prefill when the debt has no open RR.
- *  - No auto-prefill when only terminal-status RRs exist (status_id ∈ {4, 5}).
- *  - Auto-prefill does not overwrite an explicit operator choice.
- *  - onSave payload carries the chosen paymentType.
+/** RR status_id taxonomy mirrored from rr_status_service.py:
+ *   1 = CONNECTED, 2 = VIOLATED, 3 = CANCELLED, 4 = COMPLETED, 5 = COMPLETED_EARLY.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
@@ -71,7 +63,7 @@ beforeEach(() => {
 })
 
 describe('RecordPaymentModal — Payment Type (KAN-507)', () => {
-  it('auto-prefills payment_by_rr when the picked debt has an open RR', () => {
+  it('auto-prefills payment_by_rr when the picked debt has a Connected RR', () => {
     mockRrList.mockReturnValue([
       { id: 1, debt_id: 901, status_id: 1, status_name: 'Connected' },
     ] as RestructuringAgreementSummary[])
@@ -97,15 +89,114 @@ describe('RecordPaymentModal — Payment Type (KAN-507)', () => {
     ).toBeInTheDocument()
   })
 
-  it('does NOT auto-prefill when only terminal-status RRs exist (4=Completed / 5=Cancelled)', () => {
-    mockRrList.mockReturnValue([
-      { id: 1, debt_id: 901, status_id: 4, status_name: 'Completed' },
-      { id: 2, debt_id: 901, status_id: 5, status_name: 'Cancelled' },
-    ] as RestructuringAgreementSummary[])
+  it.each([
+    [2, 'Violated'],
+    [3, 'Cancelled'],
+    [4, 'Completed'],
+    [5, 'CompletedEarly'],
+  ])(
+    'does NOT auto-prefill when the only RR has non-Connected status_id=%s (%s)',
+    (statusId, statusName) => {
+      mockRrList.mockReturnValue([
+        { id: 1, debt_id: 901, status_id: statusId, status_name: statusName },
+      ] as RestructuringAgreementSummary[])
+      renderModal()
+      expect(
+        screen.queryByText('pages.actionAnalysis.filters.paymentTypes.payment_by_rr')
+      ).not.toBeInTheDocument()
+      expect(
+        screen.getByText('pages.clients.modals.recordPayment.paymentTypePlaceholder')
+      ).toBeInTheDocument()
+    }
+  )
+
+  it('omits "Payment by RR" from the dropdown when no Connected RR exists', () => {
+    mockRrList.mockReturnValue([])
     renderModal()
+
+    const trigger = screen.getByLabelText(
+      'pages.clients.modals.recordPayment.paymentTypeLabel'
+    ) as HTMLElement
+    fireEvent.click(trigger)
+
+    // Partial + Full are available; Payment by RR is not.
+    expect(
+      screen.getByText('pages.actionAnalysis.filters.paymentTypes.partial_payment')
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText('pages.actionAnalysis.filters.paymentTypes.full_payment')
+    ).toBeInTheDocument()
     expect(
       screen.queryByText('pages.actionAnalysis.filters.paymentTypes.payment_by_rr')
     ).not.toBeInTheDocument()
+  })
+
+  it('shows "Payment by RR" in the dropdown when a Connected RR exists', () => {
+    mockRrList.mockReturnValue([
+      { id: 1, debt_id: 901, status_id: 1, status_name: 'Connected' },
+    ] as RestructuringAgreementSummary[])
+    renderModal()
+
+    const trigger = screen.getByLabelText(
+      'pages.clients.modals.recordPayment.paymentTypeLabel'
+    ) as HTMLElement
+    fireEvent.click(trigger)
+
+    // payment_by_rr appears both on the trigger (active value) and in the
+    // listbox, so assert > 0 occurrences rather than an exact instance.
+    expect(
+      screen.getAllByText('pages.actionAnalysis.filters.paymentTypes.payment_by_rr').length
+    ).toBeGreaterThan(0)
+    expect(
+      screen.getByText('pages.actionAnalysis.filters.paymentTypes.partial_payment')
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText('pages.actionAnalysis.filters.paymentTypes.full_payment')
+    ).toBeInTheDocument()
+  })
+
+  it('clears a stale payment_by_rr when the picked debt loses its Connected RR', () => {
+    mockRrList.mockReturnValue([
+      { id: 1, debt_id: 901, status_id: 1, status_name: 'Connected' },
+    ] as RestructuringAgreementSummary[])
+    const { rerender } = render(
+      <RecordPaymentModal
+        open={true}
+        onClose={vi.fn()}
+        customerName="Test Client"
+        currentDebt={5000}
+        debts={[makeDebt()]}
+        clientId={42}
+        onSave={vi.fn()}
+      />
+    )
+    expect(
+      screen.getByText('pages.actionAnalysis.filters.paymentTypes.payment_by_rr')
+    ).toBeInTheDocument()
+
+    // RR list now reports the same debt with status_id=2 (Violated).
+    mockRrList.mockReturnValue([
+      { id: 1, debt_id: 901, status_id: 2, status_name: 'Violated' },
+    ] as RestructuringAgreementSummary[])
+    rerender(
+      <RecordPaymentModal
+        open={true}
+        onClose={vi.fn()}
+        customerName="Test Client"
+        currentDebt={5000}
+        debts={[makeDebt()]}
+        clientId={42}
+        onSave={vi.fn()}
+      />
+    )
+
+    expect(
+      screen.queryByText('pages.actionAnalysis.filters.paymentTypes.payment_by_rr')
+    ).not.toBeInTheDocument()
+    // Placeholder is back — the operator must re-pick a valid option.
+    expect(
+      screen.getByText('pages.clients.modals.recordPayment.paymentTypePlaceholder')
+    ).toBeInTheDocument()
   })
 
   it('blocks submit when Payment Type is empty', () => {

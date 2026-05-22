@@ -18,6 +18,7 @@ import { useTranslation } from 'react-i18next'
 import { useQueryClient } from '@tanstack/react-query'
 import { useCallStore } from '@/stores/callStore'
 import { useCallDetails, useHangupCall } from '@/features/calls/hooks/useCall'
+import { invalidateCallRelatedQueries } from '@/features/calls/utils/queryInvalidation'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/Tooltip'
@@ -87,8 +88,7 @@ export function MinimizedCallBubble() {
         : minimizedCall.elapsedTime,
     })
     if (isTerminal) {
-      queryClient.invalidateQueries({ queryKey: ['callHistory'] })
-      queryClient.invalidateQueries({ queryKey: ['clients', 'detail'] })
+      invalidateCallRelatedQueries(queryClient, minimizedCall.clientId)
     }
   }, [callDetails]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -156,8 +156,7 @@ export function MinimizedCallBubble() {
       onSuccess: () => {
         const total = callDetails?.total_duration ?? minimizedCall.elapsedTime ?? liveElapsedTime
         setMinimizedCall({ ...minimizedCall, callState: 'ended', elapsedTime: total })
-        queryClient.invalidateQueries({ queryKey: ['callHistory'] })
-        queryClient.invalidateQueries({ queryKey: ['clients', 'detail'] })
+        invalidateCallRelatedQueries(queryClient, minimizedCall.clientId)
       },
       onError: () => {
         // Match the modal: force-end on the FE regardless of AMI errors.
