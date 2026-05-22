@@ -1517,8 +1517,7 @@
         "employee": "Сотрудник",
         "searcher": "Розыскник",
         "assignmentDate": "Дата назначения",
-        "actions": "Действия",
-        "lastOutgoingTaDate": "Дата последнего ЦД"
+        "actions": "Действия"
       },
       "priorities": {
         "critical": "Критический",

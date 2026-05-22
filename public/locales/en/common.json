@@ -1569,8 +1569,7 @@
         "employee": "Employee",
         "searcher": "Searcher",
         "assignmentDate": "Assignment Date",
-        "actions": "Actions",
-        "lastOutgoingTaDate": "Last outgoing TA date"
+        "actions": "Actions"
       },
       "priorities": {
         "critical": "Critical",
