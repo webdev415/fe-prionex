@@ -4089,12 +4089,7 @@ export function ClientDetailPage() {
                             </div>
 
                             {messagingHistory.length === 0 ? (
-                              <p className="text-dark-500 text-sm">
-                                {t(
-                                  'pages.clients.detail.noMessagingHistory',
-                                  'No messaging history is available for this client yet'
-                                )}
-                              </p>
+                              ''
                             ) : (
                               <div className="w-full space-y-6">
                                 {(() => {
