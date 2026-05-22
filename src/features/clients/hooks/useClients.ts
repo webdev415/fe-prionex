@@ -3,6 +3,7 @@
  * TIN-based brand isolation architecture
  */
 
+import { useEffect } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import type { AxiosError } from 'axios'
@@ -63,8 +64,8 @@ export function useClients(params: GetClientsParams = {}) {
     queryFn: () => clientApi.getClients(params),
     // Keep previous page/filter/sort results while refetching to avoid full-page loader flicker.
     placeholderData: (previousData) => previousData,
-    staleTime: 30000, // 30 seconds
-    refetchInterval: 60000, // Refetch every 60 seconds
+    staleTime: 2 * 60_000,
+    refetchInterval: 5 * 60_000,
     enabled: true,
   })
 }
@@ -192,8 +193,8 @@ export function usePrioritySummary() {
   return useQuery({
     queryKey: clientKeys.prioritySummary(),
     queryFn: () => clientApi.getPrioritySummary(),
-    staleTime: 30000, // 30 seconds
-    refetchInterval: 60000, // Refetch every 60 seconds
+    staleTime: 2 * 60_000,
+    refetchInterval: 5 * 60_000,
     enabled: true,
   })
 }
@@ -288,7 +289,8 @@ export function useClientProfile(clientId: number, enabled = true) {
     queryKey: clientKeys.profile(clientId),
     queryFn: () => clientApi.getClientProfile(clientId),
     enabled: enabled && clientId > 0,
-    staleTime: 30000,
+    staleTime: 5 * 60_000,
+    refetchOnMount: false,
   })
 }
 
@@ -300,7 +302,8 @@ export function useClientLoans(clientId: number, enabled = true) {
     queryKey: clientKeys.loans(clientId),
     queryFn: () => clientApi.getClientById(clientId),
     enabled: enabled && clientId > 0,
-    staleTime: 30000,
+    staleTime: 2 * 60_000,
+    refetchOnMount: false,
     select: (data) => data.debts ?? [],
   })
 }
@@ -325,7 +328,8 @@ export function useClientPaymentsSection(clientId: number, enabled = true) {
       }
     },
     enabled: enabled && clientId > 0,
-    staleTime: 30000,
+    staleTime: 2 * 60_000,
+    refetchOnMount: false,
   })
 }
 
@@ -363,7 +367,9 @@ export function useClientCallSmsHistory(clientId: number, enabled = true) {
           duration: durationSecs > 0 ? `${durationMin}m ${durationSec}s` : '-',
           operator: c.agent_extension && c.agent_extension !== '000' ? c.agent_extension : '-',
           cost: 0,
-          type: 'Outgoing' as 'Outgoing' | 'Incoming',
+          type: c.direction === 'inbound' ? ('Incoming' as const) : ('Outgoing' as const),
+          direction: c.direction ?? null,
+          telephony_type: c.telephony_type ?? null,
           line: '',
           initiated_at: c.initiated_at ?? new Date().toISOString(),
           recording_path: c.recording_path ?? null,
@@ -415,6 +421,7 @@ export function useClientCallSmsHistory(clientId: number, enabled = true) {
     },
     enabled: enabled && clientId > 0,
     staleTime: 30000,
+    refetchOnMount: false,
   })
 }
 
@@ -428,6 +435,7 @@ export function useClientTasks(clientId: number, enabled = true) {
     enabled: enabled && clientId > 0,
     staleTime: 30000,
     refetchInterval: 30_000,
+    refetchOnMount: false,
     select: (data) => data.tasks ?? [],
   })
 }
@@ -474,25 +482,25 @@ export function useDeleteTask(clientId: number) {
 }
 
 /**
- * Get client assignment history (operators + searchers). Calls GET /clients/{id}/assignment-history
+ * Get client assignment history (operators + searchers) in a single request.
+ * Calls GET /clients/{id}/assignment-history/combined — one DB round trip,
+ * one auth-service name lookup, both employee and searcher current users.
  */
 export function useClientOperatorsSection(clientId: number, enabled = true) {
   return useQuery({
     queryKey: clientKeys.operatorsSection(clientId),
     queryFn: async () => {
-      const [employeeHistory, searcherHistory] = await Promise.all([
-        clientApi.getClientAssignmentHistory(clientId, { assignment_type: 'employee' }),
-        clientApi.getClientAssignmentHistory(clientId, { assignment_type: 'searcher' }),
-      ])
+      const data = await clientApi.getClientAssignmentHistoryCombined(clientId)
       return {
-        operators: employeeHistory.history,
-        searchers: searcherHistory.history,
-        current_employee: employeeHistory.current_employee,
-        current_searcher: searcherHistory.current_searcher,
+        operators: data.employee_history,
+        searchers: data.searcher_history,
+        current_employee: data.current_employee,
+        current_searcher: data.current_searcher,
       }
     },
     enabled: enabled && clientId > 0,
-    staleTime: 30000,
+    staleTime: 5 * 60_000,
+    refetchOnMount: false,
   })
 }
 
@@ -504,7 +512,8 @@ export function useClientDocuments(clientId: number, enabled = true) {
     queryKey: clientKeys.documents(clientId),
     queryFn: () => documentApi.list(clientId),
     enabled: enabled && clientId > 0,
-    staleTime: 60000,
+    staleTime: 5 * 60_000,
+    refetchOnMount: false,
   })
 }
 
@@ -517,7 +526,8 @@ export function useClientActivities(clientId: number, enabled = true) {
     queryKey: clientKeys.activities(clientId),
     queryFn: () => interactionApi.getClientInteractions(clientId),
     enabled: enabled && clientId > 0,
-    staleTime: 30000,
+    staleTime: 2 * 60_000,
+    refetchOnMount: false,
     select: (data) => data.items ?? [],
   })
 }
@@ -579,21 +589,51 @@ export function useClientDialHistory(clientId: number, enabled = true) {
     queryKey: clientKeys.dialHistory(clientId),
     queryFn: () => interactionApi.getClientDialHistory(clientId, { limit: 10 }),
     enabled: enabled && clientId > 0,
-    staleTime: 30000,
+    staleTime: 2 * 60_000,
+    refetchOnMount: false,
     select: (data) => data.records ?? [],
   })
 }
 
 /**
  * Get restructuring agreements for a client (RR tab).
+ *
+ * Side effect: the BE list endpoint runs a lazy RR → Debt close
+ * cascade so already-terminal RRs (Completed / Completed Early)
+ * trigger their linked debt to close. When this query observes a
+ * terminal RR (status_id 4 or 5), we invalidate the loans query so
+ * the closed debt disappears from "Loans in Process" without a
+ * manual page refresh. Detail is invalidated too because
+ * remaining_debt_amount and status are surfaced in the client detail
+ * card.
  */
 export function useClientRestructuringAgreements(clientId: number, enabled = true) {
-  return useQuery({
+  const queryClient = useQueryClient()
+  const query = useQuery({
     queryKey: clientKeys.restructuringAgreements(clientId),
     queryFn: () => clientApi.getClientRestructuringAgreements(clientId),
     enabled: enabled && clientId > 0,
-    staleTime: 30000,
+    staleTime: 2 * 60_000,
+    refetchOnMount: false,
   })
+
+  const hasTerminalRR = Array.isArray(query.data)
+    ? query.data.some((ra) => ra.status_id === 4 || ra.status_id === 5)
+    : false
+  const dataUpdatedAt = query.dataUpdatedAt
+
+  // Refetch loans + detail exactly when the RR list resolves with at
+  // least one terminal RR. The dependency on dataUpdatedAt makes this
+  // re-run on every successful fetch (not just the first), so a fresh
+  // cascade close becomes visible after a poll/refresh.
+  useEffect(() => {
+    if (clientId > 0 && hasTerminalRR) {
+      queryClient.invalidateQueries({ queryKey: clientKeys.loans(clientId) })
+      queryClient.invalidateQueries({ queryKey: clientKeys.detail(clientId) })
+    }
+  }, [clientId, hasTerminalRR, dataUpdatedAt, queryClient])
+
+  return query
 }
 
 /**
@@ -604,7 +644,8 @@ export function useRestructuringAgreementDetail(clientId: number, raId: number, 
     queryKey: clientKeys.restructuringDetail(clientId, raId),
     queryFn: () => clientApi.getRestructuringAgreementDetail(clientId, raId),
     enabled: enabled && clientId > 0 && raId > 0,
-    staleTime: 30000,
+    staleTime: 2 * 60_000,
+    refetchOnMount: false,
   })
 }
 
@@ -700,6 +741,12 @@ export function useCompleteRestructuringAgreement() {
       queryClient.invalidateQueries({
         queryKey: clientKeys.restructuringAgreements(variables.clientId),
       })
+      // Completing an RR cascade-closes the linked debt on the BE
+      // (see rr_status_service.cascade_close_debt_for_terminal_rr),
+      // so the loans list and client detail need to refetch or the
+      // closed loan will keep appearing in "Loans in Process".
+      queryClient.invalidateQueries({ queryKey: clientKeys.loans(variables.clientId) })
+      queryClient.invalidateQueries({ queryKey: clientKeys.detail(variables.clientId) })
       toast.success('Restructuring agreement completed')
     },
     onError: (error: AxiosError<{ detail?: string }>) => {
@@ -783,6 +830,7 @@ export function useRRStatusHistory(clientId: number, raId: number, enabled = tru
     queryFn: () => clientApi.getRestructuringAgreementStatusHistory(clientId, raId),
     enabled: enabled && clientId > 0 && raId > 0,
     staleTime: 30000,
+    refetchOnMount: false,
   })
 }
 
@@ -795,6 +843,7 @@ export function useRROverpayments(clientId: number, raId: number, enabled = true
     queryFn: () => clientApi.getRROverpayments(clientId, raId),
     enabled: enabled && clientId > 0 && raId > 0,
     staleTime: 30000,
+    refetchOnMount: false,
   })
 }
 

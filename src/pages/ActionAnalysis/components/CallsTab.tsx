@@ -37,6 +37,7 @@ interface CallSeed {
   initiated_at: string
   talk_duration?: number | null
   client_id?: number | null
+  telephony_type?: string | null
 }
 
 const CALL_ID_PARAM = 'call_id'
@@ -119,10 +120,11 @@ export function CallsTab() {
         call_id: fetchedDetail.call_id,
         agent_extension: fetchedDetail.agent_extension,
         customer_number: fetchedDetail.customer_number,
-        direction: null,
+        direction: fetchedDetail.direction ?? null,
         initiated_at: fetchedDetail.initiated_at,
         talk_duration: fetchedDetail.talk_duration ?? null,
         client_id: null,
+        telephony_type: fetchedDetail.telephony_type ?? null,
       }
     }
     return null
@@ -225,6 +227,8 @@ export function CallsTab() {
       phone: detailForModal.customer_number,
       call_id: detailForModal.call_id,
       clientId: detailForModal.client_id ?? null,
+      direction: detailForModal.direction ?? null,
+      telephony_type: detailForModal.telephony_type ?? null,
     }
   }, [detailForModal, operatorLookup, t])
 

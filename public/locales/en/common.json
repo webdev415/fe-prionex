@@ -50,6 +50,7 @@
     "error": "Could not search clients. Please try again.",
     "searching": "Searching...",
     "noResults": "No clients found for '{{query}}'.",
+    "phoneMinDigits": "Type at least {{count}} digits to search by phone.",
     "debt": "Debt",
     "phone": "Phone",
     "viewAllResults": "View all results"

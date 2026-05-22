@@ -2,6 +2,7 @@ import React from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { useCallStore } from '@/stores/callStore'
+import { TelephonyTypeBadge } from '@/components/ui/TelephonyTypeBadge'
 import { Icons } from '@/lib/icons'
 
 function cn(...parts: Array<string | undefined | false>) {
@@ -17,6 +18,8 @@ type CallData = {
   duration: string
   phone: string
   call_id?: string
+  direction?: string | null
+  telephony_type?: string | null
 }
 
 type SMSData = {
@@ -50,6 +53,8 @@ type CallLogCardProps = {
   recording_path?: string | null
   sent_at?: string
   delivered_at?: string
+  direction?: string | null
+  telephony_type?: string | null
   setSelectedCallData?: React.Dispatch<React.SetStateAction<CallData | null>>
   setIsCallRecordingModalOpen?: (open: boolean) => void
   setSelectedSMSData?: React.Dispatch<React.SetStateAction<SMSData | null>>
@@ -89,6 +94,8 @@ export function CallLogCard({
   recording_path,
   sent_at,
   delivered_at,
+  direction,
+  telephony_type,
   setSelectedCallData,
   setIsCallRecordingModalOpen,
   setSelectedSMSData,
@@ -220,6 +227,8 @@ export function CallLogCard({
         duration: duration || '',
         phone: phone || '',
         call_id: call_id,
+        direction: direction ?? (type === 'Incoming' ? 'inbound' : 'outbound'),
+        telephony_type: telephony_type ?? null,
       })
       setOpenCallModal('call-recording')
       setIsCallRecordingModalOpen?.(true)
@@ -296,6 +305,10 @@ export function CallLogCard({
                 <span className={cn('shrink-0 text-sm', getStatusTextColor())}>
                   {status ? getTranslatedStatus(status) : ''}
                 </span>
+                <TelephonyTypeBadge
+                  type={telephony_type}
+                  direction={direction ?? (type === 'Incoming' ? 'inbound' : 'outbound')}
+                />
               </div>
 
               {/* Line 2: Time + Duration */}
