@@ -777,6 +777,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             ],
             mode: 'any' as const,
           },
+          {
+            path: '/dashboard/system-settings/rr-notifications',
+            label: t('navigation.rrNotifications', 'RR Notifications'),
+            icon: 'mail',
+            requiredPermission: PERMISSIONS.SYSTEM.MANAGE_SETTINGS,
+          },
         ],
       },
     ]

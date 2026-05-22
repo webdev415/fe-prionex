@@ -61,6 +61,11 @@ const SmsTemplatesPage = lazy(() =>
     default: m.SmsTemplatesPage,
   }))
 )
+const RRNotificationsPage = lazy(() =>
+  import('@/pages/RRNotifications').then((m) => ({
+    default: m.RRNotificationsPage,
+  }))
+)
 const TAManagementPage = lazy(() =>
   import('@/pages/TAManagement').then((m) => ({
     default: m.TAManagementPage,
@@ -288,6 +293,14 @@ export const router = createBrowserRouter([
         element: (
           <PermissionRoute requiredPermission={PERMISSIONS.SYSTEM.MANAGE_SETTINGS}>
             {withSuspense(<SmsTemplatesPage />)}
+          </PermissionRoute>
+        ),
+      },
+      {
+        path: 'system-settings/rr-notifications',
+        element: (
+          <PermissionRoute requiredPermission={PERMISSIONS.SYSTEM.MANAGE_SETTINGS}>
+            {withSuspense(<RRNotificationsPage />)}
           </PermissionRoute>
         ),
       },

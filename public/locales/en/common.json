@@ -18,6 +18,7 @@
     "roles": "Roles",
     "departments": "Departments",
     "smsTemplates": "SMS Templates",
+    "rrNotifications": "RR Notifications",
     "targetActions": "Target Actions",
     "taChains": "TA Chains",
     "taDictionary": "Dictionary",
@@ -2707,6 +2708,31 @@
         "added": "Template added",
         "removed": "Template removed"
       }
+    },
+    "rrNotifications": {
+      "title": "RR Notifications",
+      "description": "Configure bell reminders for the responsible operator before each scheduled Restructuring Agreement payment. Sent daily by the system.",
+      "enable": "Enable RR notifications",
+      "enableHint": "When off, no reminders are sent — pending notifications remain in the bell.",
+      "daysBefore": "Days before due date",
+      "daysBeforeHint": "Add one or more values (1–365). One reminder per value per payment.",
+      "daysChip": "{{n}} days",
+      "daysRequired": "Add at least one days-before value.",
+      "template": "Notification text",
+      "variablesDetected": "Variables detected",
+      "availableVariables": "Available variables",
+      "clickToInsert": "Click to insert",
+      "removeVariable": "Remove one occurrence",
+      "removeHint": "Click × to remove one occurrence at a time. Use the textarea directly for precise edits.",
+      "variables": {
+        "clientName": "Client's full name",
+        "amount": "Scheduled payment amount",
+        "dueDate": "Scheduled due date",
+        "daysLeft": "Days remaining until the due date"
+      },
+      "preview": "Preview",
+      "saved": "Saved",
+      "maxDaysReached": "Max 10 entries"
     },
     "documentGeneration": {
       "title": "Document Generation",
