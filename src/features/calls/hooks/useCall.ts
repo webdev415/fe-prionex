@@ -2,17 +2,16 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { callService } from '../api/callService'
 import type { OriginateCallRequest, CallHistoryFilters, UpdateCallOutcomeRequest } from '../types'
+import { invalidateCallRelatedQueries } from '../utils/queryInvalidation'
 
 export function useOriginateCall() {
   const queryClient = useQueryClient()
 
   return useMutation({
     mutationFn: (request: OriginateCallRequest) => callService.originateCall(request),
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       toast.success('Call initiated successfully')
-      // Invalidate call history to refetch
-      queryClient.invalidateQueries({ queryKey: ['callHistory'] })
-      queryClient.invalidateQueries({ queryKey: ['clients', 'detail'] })
+      invalidateCallRelatedQueries(queryClient, variables.client_id)
     },
     onError: (_error: unknown) => {
       // Error handling is done in the component via onError callback
@@ -61,9 +60,8 @@ export function useUpdateCallOutcome() {
       callService.updateCallOutcome(callId, outcome),
     onSuccess: () => {
       toast.success('Call outcome saved')
-      queryClient.invalidateQueries({ queryKey: ['callHistory'] })
       queryClient.invalidateQueries({ queryKey: ['callDetails'] })
-      queryClient.invalidateQueries({ queryKey: ['clients', 'detail'] })
+      invalidateCallRelatedQueries(queryClient)
     },
     onError: () => {
       toast.error('Failed to save call outcome')
@@ -86,14 +84,12 @@ export function useHangupCall() {
     mutationFn: (callId: string) => callService.hangupCall(callId),
     onSuccess: () => {
       toast.success('Call ended')
-      queryClient.invalidateQueries({ queryKey: ['callHistory'] })
       queryClient.invalidateQueries({ queryKey: ['callDetails'] })
-      queryClient.invalidateQueries({ queryKey: ['clients', 'detail'] })
+      invalidateCallRelatedQueries(queryClient)
     },
     onError: () => {
       toast.error('Failed to end call')
-      queryClient.invalidateQueries({ queryKey: ['callHistory'] })
-      queryClient.invalidateQueries({ queryKey: ['clients', 'detail'] })
+      invalidateCallRelatedQueries(queryClient)
     },
   })
 }
