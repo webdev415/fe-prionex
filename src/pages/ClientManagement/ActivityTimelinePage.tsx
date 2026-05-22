@@ -721,6 +721,7 @@ export function ActivityTimelinePage() {
           setOpenCallModal(null)
           setIsCallModalOpen(false)
         }}
+        clientId={client?.id}
         clientName={client?.fullName ?? ''}
         phoneNumber={client?.phones?.[0]?.number || ''}
         initialState="initial"

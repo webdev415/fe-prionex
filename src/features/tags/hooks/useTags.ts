@@ -9,6 +9,7 @@ import { toast } from 'sonner'
 import { tagsApi } from '../api/tagsApi'
 import { useAuthStore } from '@/stores/authStore'
 import { filterTagsForRole } from '../utils/visibility'
+import { clientKeys } from '@/features/clients/hooks/useClients'
 import type {
   TagCreate,
   TagDefinitionCreate,
@@ -146,7 +147,7 @@ export function useAssignClientTag() {
       tagsApi.assignClientTag(clientId, tagId),
     onSuccess: (_, { clientId }) => {
       queryClient.invalidateQueries({ queryKey: ['clients', clientId, 'tags'] })
-      queryClient.invalidateQueries({ queryKey: ['clients'] })
+      queryClient.invalidateQueries({ queryKey: clientKeys.lists() })
     },
     onError: (error: Error) => {
       toast.error(error.message || 'Failed to assign tag')
@@ -165,7 +166,7 @@ export function useRemoveClientTag() {
       tagsApi.removeClientTag(clientId, tagId),
     onSuccess: (_, { clientId }) => {
       queryClient.invalidateQueries({ queryKey: ['clients', clientId, 'tags'] })
-      queryClient.invalidateQueries({ queryKey: ['clients'] })
+      queryClient.invalidateQueries({ queryKey: clientKeys.lists() })
     },
     onError: (error: Error) => {
       toast.error(error.message || 'Failed to remove tag')
@@ -183,7 +184,7 @@ export function useBulkTagClients() {
     mutationFn: (data: { client_ids: number[]; tag_ids: number[]; action: 'add' | 'remove' }) =>
       tagsApi.bulkTagClients(data),
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['clients'] })
+      queryClient.invalidateQueries({ queryKey: clientKeys.lists() })
       queryClient.invalidateQueries({ queryKey: tagsKeys.lists() })
       toast.success(
         `Successfully ${variables.action === 'add' ? 'added tags to' : 'removed tags from'} ${variables.client_ids.length} client(s)`

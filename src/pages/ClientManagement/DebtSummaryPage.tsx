@@ -1486,6 +1486,7 @@ export function DebtSummaryPage() {
       <CallDialogModal
         open={isCallModalOpen}
         onClose={handleCloseCallModal}
+        clientId={client?.id}
         clientName={client?.fullName || ''}
         phoneNumber={client?.phones?.[0]?.number || ''}
         callId={currentCallId}
