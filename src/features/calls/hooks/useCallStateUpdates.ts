@@ -30,7 +30,11 @@ interface CallStateChangedEvent {
  * Hook to listen for real-time call state updates via Socket.IO
  * and invalidate the query cache to trigger re-fetching of call details
  */
-export function useCallStateUpdates(agentExtension: string | null, callId: string | null) {
+export function useCallStateUpdates(
+  agentExtension: string | null,
+  callId: string | null,
+  clientId?: number | null
+) {
   const socketRef = useRef<Socket | null>(null)
   const queryClient = useQueryClient()
 
@@ -75,7 +79,10 @@ export function useCallStateUpdates(agentExtension: string | null, callId: strin
         // Invalidate the call details query to trigger immediate re-fetch
         queryClient.invalidateQueries({ queryKey: ['callDetails', callId] })
 
-        invalidateCallRelatedQueries(queryClient, getClientIdFromCallEventData(eventData))
+        invalidateCallRelatedQueries(
+          queryClient,
+          clientId ?? getClientIdFromCallEventData(eventData)
+        )
       }
     }
 
@@ -85,5 +92,5 @@ export function useCallStateUpdates(agentExtension: string | null, callId: strin
     return () => {
       socket.off('call.state_changed', handleCallStateChanged)
     }
-  }, [agentExtension, callId, queryClient])
+  }, [agentExtension, callId, clientId, queryClient])
 }

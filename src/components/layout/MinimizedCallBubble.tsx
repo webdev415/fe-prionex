@@ -57,7 +57,7 @@ export function MinimizedCallBubble() {
           callState: newState,
           elapsedTime: callDetails.total_duration ?? liveElapsedTime,
         })
-        invalidateCallRelatedQueries(queryClient)
+        invalidateCallRelatedQueries(queryClient, minimizedCall.clientId)
       }
     }
   }, [callDetails]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -287,6 +287,7 @@ export function MinimizedCallBubble() {
           open={isRestored}
           onClose={handleClose}
           onMinimize={handleMinimize}
+          clientId={minimizedCall.clientId}
           clientName={minimizedCall.clientName}
           phoneNumber={minimizedCall.phoneNumber}
           callId={minimizedCall.callId}

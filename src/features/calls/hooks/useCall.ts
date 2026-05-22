@@ -77,7 +77,7 @@ export function useAMIHealth() {
   })
 }
 
-export function useHangupCall() {
+export function useHangupCall(clientId?: number | null) {
   const queryClient = useQueryClient()
 
   return useMutation({
@@ -85,11 +85,11 @@ export function useHangupCall() {
     onSuccess: () => {
       toast.success('Call ended')
       queryClient.invalidateQueries({ queryKey: ['callDetails'] })
-      invalidateCallRelatedQueries(queryClient)
+      invalidateCallRelatedQueries(queryClient, clientId)
     },
     onError: () => {
       toast.error('Failed to end call')
-      invalidateCallRelatedQueries(queryClient)
+      invalidateCallRelatedQueries(queryClient, clientId)
     },
   })
 }
