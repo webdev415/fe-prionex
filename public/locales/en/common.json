@@ -1460,7 +1460,6 @@
         "interactionLoggedDate": "Interaction Logged Date",
         "selectOperator": "Select operator",
         "portfolio": "Creditor/Seller",
-        "status": "Status",
         "tags": "Tags",
         "responsibleEmployee": "Responsible employee",
         "responsibleSearcher": "Responsible searcher",
@@ -1474,9 +1473,7 @@
         "noUsersAvailable": "No users available"
       },
       "statuses": {
-        "new": "New",
         "active": "Active",
-        "closed": "Closed",
         "inprogress": "In Progress",
         "paid": "Paid",
         "defaulted": "Defaulted",

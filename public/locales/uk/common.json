@@ -1463,7 +1463,6 @@
         "interactionLoggedDate": "Дата запису взаємодії",
         "selectOperator": "Оберіть оператора",
         "portfolio": "Кредитор/Продавець",
-        "status": "Статус",
         "responsibleEmployee": "Відповідальний співробітник",
         "responsibleSearcher": "Відповідальний пошуковик",
         "selectEmployee": "Виберіть співробітника",
@@ -1477,9 +1476,7 @@
         "days": "днів"
       },
       "statuses": {
-        "new": "Новий",
         "active": "Активний",
-        "closed": "Закритий",
         "inprogress": "В процесі",
         "paid": "Сплачено",
         "defaulted": "Прострочено",
