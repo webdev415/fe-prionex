@@ -85,10 +85,6 @@ function mapFiltersToAPIParams(
     params.debt_max = filters.debtRangeTo
   }
 
-  if (filters.status && filters.status.length > 0) {
-    params.status = filters.status.join(',')
-  }
-
   if (filters.promiseDateFrom) {
     params.promise_date_from = filters.promiseDateFrom
   }
@@ -379,28 +375,6 @@ describe('Client Management Filter Integration', () => {
     })
   })
 
-  describe('Status Filter (Legacy)', () => {
-    it('should map status array to comma-separated string', () => {
-      const filters: ClientFilters = {
-        status: ['active', 'new', 'closed'],
-      }
-
-      const params = mapFiltersToAPIParams(filters)
-
-      expect(params.status).toBe('active,new,closed')
-    })
-
-    it('should handle single status', () => {
-      const filters: ClientFilters = {
-        status: ['active'],
-      }
-
-      const params = mapFiltersToAPIParams(filters)
-
-      expect(params.status).toBe('active')
-    })
-  })
-
   describe('Combined Filters', () => {
     it('should map all 8 filters simultaneously', () => {
       const filters: ClientFilters = {
@@ -416,7 +390,6 @@ describe('Client Management Filter Integration', () => {
         totalDebtRangeTo: 50000,
         dpdRangeFrom: 10,
         dpdRangeTo: 60,
-        status: ['active', 'new'],
       }
 
       const params = mapFiltersToAPIParams(filters)
@@ -434,7 +407,6 @@ describe('Client Management Filter Integration', () => {
       expect(params.total_debt_max).toBe(50000)
       expect(params.dpd_min).toBe(10)
       expect(params.dpd_max).toBe(60)
-      expect(params.status).toBe('active,new')
     })
 
     it('should include pagination and sorting in params', () => {
@@ -470,7 +442,6 @@ describe('Client Management Filter Integration', () => {
       expect(params.principal_min).toBeUndefined()
       expect(params.total_debt_min).toBeUndefined()
       expect(params.dpd_min).toBeUndefined()
-      expect(params.status).toBeUndefined()
     })
 
     it('should handle zero values in number filters', () => {
@@ -628,14 +599,12 @@ describe('Client Management Filter Integration', () => {
     it('should combine assignment date with existing filters', () => {
       const filters: ClientFilters = {
         responsibleEmployee: '42',
-        status: ['active'],
         assignmentDateFrom: '2026-01-01',
         assignmentDateTo: '2026-01-31',
       }
 
       const params = mapFiltersToAPIParams(filters)
       expect(params.responsible_employee_id).toBe(42)
-      expect(params.status).toBe('active')
       expect(params.assignment_date_from).toBe('2026-01-01')
       expect(params.assignment_date_to).toBe('2026-01-31')
     })

@@ -1545,7 +1545,6 @@
         "interactionLoggedDate": "Дата записи взаимодействия",
         "selectOperator": "Выберите оператора",
         "portfolio": "Кредитор/Продавец",
-        "status": "Статус",
         "responsibleEmployee": "Ответственный сотрудник",
         "responsibleSearcher": "Ответственный поисковик",
         "selectEmployee": "Выберите сотрудника",
@@ -1559,9 +1558,7 @@
         "days": "дней"
       },
       "statuses": {
-        "new": "Новый",
         "active": "Активный",
-        "closed": "Закрытый",
         "inprogress": "В процессе",
         "paid": "Оплачено",
         "defaulted": "Просрочено",
