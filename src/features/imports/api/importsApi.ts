@@ -179,20 +179,35 @@ export async function getImportJobs(
     params: backendParams,
   })
 
-  // Backend returns array, frontend expects paginated object
-  const jobs = Array.isArray(response.data) ? response.data : []
-  const transformedJobs = jobs.map(transformImportJob)
+  // Backend returns a paginated envelope: { items, total, page, limit }.
+  // The total reflects the full filtered set; the FE pagination control
+  // uses it to compute the correct page count.
+  // `items` is typed via the transformer's own parameter to avoid having
+  // to export a separate type from transformers.ts.
+  const data = response.data as {
+    items: Parameters<typeof transformImportJob>[0][]
+    total: number
+    page: number
+    limit: number
+  }
+  const transformedJobs = (data.items || []).map(transformImportJob)
 
-  // Only handle exclude_status client-side (if backend doesn't support it)
+  // exclude_status is filtered client-side. NOTE: this can make
+  // the rendered page show fewer rows than `limit` and the total can
+  // overcount by however many in_progress/pending jobs exist. The clean
+  // fix is to push exclude_status into the backend list_jobs filter so
+  // both items and total respect it (Q5 in KAN-533 plan; pending).
   let filteredJobs = transformedJobs
   if (params.exclude_status && params.exclude_status.length > 0) {
     filteredJobs = filteredJobs.filter((job) => !params.exclude_status!.includes(job.status))
   }
 
-  // Return paginated response
-  // Note: If backend supports pagination, you might get total count from backend
-  // For now, assuming backend returns all matching results
-  return wrapInPagination(filteredJobs, page, pageSize, filteredJobs.length)
+  return {
+    items: filteredJobs,
+    total: data.total,
+    page: data.page,
+    page_size: data.limit,
+  }
 }
 
 /**
