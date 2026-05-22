@@ -3,6 +3,10 @@ import { io, Socket } from 'socket.io-client'
 import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import type { CallStateEvent, ConnectionStatus } from '../types'
+import {
+  getClientIdFromCallEventData,
+  invalidateCallRelatedQueries,
+} from '../utils/queryInvalidation'
 
 const WS_URL =
   import.meta.env.VITE_WS_URL !== undefined ? import.meta.env.VITE_WS_URL : 'http://localhost:8005'
@@ -84,11 +88,7 @@ export function useCallWebSocket(agentExtension: string | null) {
         queryKey: ['callDetails', event.call_id],
       })
 
-      // Update call/SMS history on client detail page
-      queryClient.invalidateQueries({
-        queryKey: ['clients', 'detail'],
-        exact: false,
-      })
+      invalidateCallRelatedQueries(queryClient, getClientIdFromCallEventData(event.data))
     })
 
     // Handle disconnection

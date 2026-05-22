@@ -4120,6 +4120,7 @@ export function ClientDetailPage() {
             handleCloseCallModal()
             setSelectedPhoneForCall('')
           }}
+          clientId={client.id}
           clientName={client.fullName}
           phoneNumber={selectedPhoneForCall || client.phones?.[0]?.number || ''}
           callId={currentCallId}
