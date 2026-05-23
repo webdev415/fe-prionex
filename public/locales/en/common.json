@@ -106,8 +106,11 @@
       "tasks": "Tasks",
       "calls": "Calls",
       "tags": "Tags",
-      "taChains": "TA Chains"
+      "taChains": "TA Chains",
+      "rrPayments": "RR Payments"
     },
+    "daysLeft_one": "in {{count}} day",
+    "daysLeft_other": "in {{count}} days",
     "payment": {
       "pending": "pending",
       "daysPending_one": "{{count}}d",

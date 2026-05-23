@@ -106,8 +106,13 @@
       "tasks": "Завдання",
       "calls": "Дзвінки",
       "tags": "Теги",
-      "taChains": "Ланцюжки ЦД"
+      "taChains": "Ланцюжки ЦД",
+      "rrPayments": "Платежі РР"
     },
+    "daysLeft_one": "через {{count}} день",
+    "daysLeft_few": "через {{count}} дні",
+    "daysLeft_many": "через {{count}} днів",
+    "daysLeft_other": "через {{count}} днів",
     "payment": {
       "pending": "очікує",
       "daysPending_one": "{{count}} день",
