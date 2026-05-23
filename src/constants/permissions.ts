@@ -37,11 +37,10 @@ export const PERMISSIONS = {
   },
 
   /**
-   * Messaging Category (6 permissions)
+   * Messaging Category (5 permissions)
    * Controls access to the new unified messaging-service surfaces.
    */
   MESSAGING: {
-    VIEW_BULK_MESSAGING: 'view_bulk_messaging',
     MANAGE_DRAFTS: 'manage_drafts',
     LAUNCH_CAMPAIGNS: 'launch_campaigns',
     VIEW_CAMPAIGN_ANALYTICS: 'view_campaign_analytics',
@@ -303,14 +302,13 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   view_call_history: 'View call recordings and SMS history',
 
   // Messaging
-  view_bulk_messaging: 'View the bulk messaging workflow and message drafts',
-  manage_drafts: 'Create, edit, and delete messaging drafts',
-  launch_campaigns: 'Preview recipients and launch campaigns',
+  manage_drafts: 'Create, edit, and delete messaging drafts; open the Message Drafts settings page',
+  launch_campaigns: 'Bulk Messaging on client management; preview recipients and launch campaigns',
   view_campaign_analytics:
     'View campaign analytics, campaign recipients, CSV exports, and unified client message history',
   manage_messaging_integrations:
-    'Configure messaging provider integrations and test service connections',
-  send_messages: 'Send single messages through the unified messaging service',
+    'Create, edit, delete, test, and toggle messaging integrations (not list/read)',
+  send_messages: 'Send single messages; read usable integrations and drafts for the send modal',
 
   // Reports
   view_own_reports: 'View own performance statistics',
