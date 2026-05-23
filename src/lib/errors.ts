@@ -24,8 +24,20 @@ export function getErrorMessage(error: unknown): string {
 
     if (axiosError.response?.data) {
       // Try to get error message from response
-      const data = axiosError.response.data
+      const data = axiosError.response.data as Record<string, unknown>
       if (typeof data === 'string') return data
+
+      // Messaging microservice envelope: { error: { code, message, details } }
+      const nestedError = data.error
+      if (
+        nestedError &&
+        typeof nestedError === 'object' &&
+        nestedError !== null &&
+        'message' in nestedError &&
+        typeof (nestedError as { message?: unknown }).message === 'string'
+      ) {
+        return (nestedError as { message: string }).message
+      }
 
       // Handle detail field - can be string, array of strings, or array of validation objects
       if (data.detail) {
@@ -56,7 +68,7 @@ export function getErrorMessage(error: unknown): string {
         }
       }
 
-      if (data.message) return data.message
+      if (typeof data.message === 'string' && data.message) return data.message
     }
 
     // Network errors

@@ -60,6 +60,8 @@ type CallLogCardProps = {
   setIsCallRecordingModalOpen?: (open: boolean) => void
   setSelectedSMSData?: React.Dispatch<React.SetStateAction<SMSData | null>>
   setIsViewSMSModalOpen?: (open: boolean) => void
+  /** When set (and not a call card), click invokes this instead of the legacy SMS modal. */
+  onSelect?: () => void
 }
 
 /**
@@ -99,16 +101,47 @@ export function CallLogCard({
   setIsCallRecordingModalOpen,
   setSelectedSMSData,
   setIsViewSMSModalOpen,
+  onSelect,
 }: CallLogCardProps) {
   const { t } = useTranslation('common')
   const { isCallActive, setOpenCallModal } = useCallStore()
+  const isCall = !!type
 
-  // KAN-490: outcome classification is centralised in @/lib/callOutcome.
-  const outcomeRender = classifyCallOutcome(status)
-  const palette = OUTCOME_PALETTE_CLASSES[outcomeRender.palette]
-  const translatedStatus = outcomeRender.labelKey
-    ? t(outcomeRender.labelKey, outcomeRender.fallback)
-    : outcomeRender.fallback
+  const getTranslatedStatus = (value: string) => {
+    const s = value?.toUpperCase()
+    switch (s) {
+      case 'COMPLETED':
+      case 'ANSWERED':
+        return t('pages.clients.statuses.answered')
+      case 'NO_ANSWER':
+      case 'NO ANSWER':
+        return t('pages.clients.statuses.noAnswer')
+      case 'DELIVERED':
+        return t('pages.clients.statuses.delivered')
+      case 'FAILED':
+        return t('pages.clients.statuses.failed')
+      case 'PENDING':
+      case 'INITIATED':
+      case 'RINGING':
+        return t('pages.clients.statuses.pending')
+      case 'SENT':
+        return t('pages.clients.statuses.sent', 'Sent')
+      case 'SKIPPED':
+        return t('pages.clients.statuses.skipped', 'Skipped')
+      default:
+        return value
+    }
+  }
+
+  // KAN-490: call outcomes (Busy, Cancel, Congestion, etc.) live in @/lib/callOutcome.
+  const callOutcome = isCall ? classifyCallOutcome(status) : null
+  const callPalette = callOutcome ? OUTCOME_PALETTE_CLASSES[callOutcome.palette] : null
+  const callStatusLabel =
+    callOutcome && status
+      ? callOutcome.labelKey
+        ? t(callOutcome.labelKey, callOutcome.fallback)
+        : callOutcome.fallback
+      : ''
 
   const getTranslatedCallType = (callType: string) => {
     switch (callType) {
@@ -121,10 +154,61 @@ export function CallLogCard({
     }
   }
 
-  // Handle card click
+  const getStatusDotColor = () => {
+    const s = status?.toUpperCase()
+    if (s === 'COMPLETED' || s === 'ANSWERED' || s === 'DELIVERED') {
+      return 'bg-success-500'
+    }
+    if (s === 'FAILED' || s === 'NO_ANSWER' || s === 'NO ANSWER') {
+      return 'bg-error-500'
+    }
+    if (s === 'INITIATED' || s === 'RINGING' || s === 'PENDING' || s === 'SENT') {
+      return 'bg-warning-500'
+    }
+    if (s === 'SKIPPED') {
+      return 'bg-gray-400'
+    }
+    return 'bg-gray-500'
+  }
+
+  const getStatusBorderColor = () => {
+    const s = status?.toUpperCase()
+    if (s === 'COMPLETED' || s === 'ANSWERED' || s === 'DELIVERED') {
+      return 'bg-success-200'
+    }
+    if (s === 'FAILED' || s === 'NO_ANSWER' || s === 'NO ANSWER') {
+      return 'bg-error-200'
+    }
+    if (s === 'INITIATED' || s === 'RINGING' || s === 'PENDING' || s === 'SENT') {
+      return 'bg-warning-200'
+    }
+    if (s === 'SKIPPED') {
+      return 'bg-gray-200'
+    }
+    return 'bg-gray-200'
+  }
+
+  const getStatusTextColor = () => {
+    const s = status?.toUpperCase()
+    if (s === 'COMPLETED' || s === 'ANSWERED' || s === 'DELIVERED') {
+      return 'text-success-500'
+    }
+    if (s === 'FAILED' || s === 'NO_ANSWER' || s === 'NO ANSWER') {
+      return 'text-error-500'
+    }
+    if (s === 'INITIATED' || s === 'RINGING' || s === 'PENDING' || s === 'SENT') {
+      return 'text-warning-500'
+    }
+    if (s === 'SKIPPED') {
+      return 'text-gray-500'
+    }
+    return 'text-gray-500'
+  }
+
+  const smsStatusLabel = !isCall && status ? getTranslatedStatus(status) : ''
+
   const handleCardClick = () => {
     if (type) {
-      // Call card clicked
       if (isCallActive()) {
         toast.warning(
           t('pages.clients.modals.callDialog.callInProgress') ||
@@ -133,7 +217,6 @@ export function CallLogCard({
         return
       }
 
-      // Check if recording exists
       if (!recording_path) {
         toast.info(
           t('pages.clients.modals.callLogCard.noRecording') ||
@@ -159,8 +242,9 @@ export function CallLogCard({
       })
       setOpenCallModal('call-recording')
       setIsCallRecordingModalOpen?.(true)
+    } else if (onSelect) {
+      onSelect()
     } else {
-      // SMS card clicked
       setSelectedSMSData?.({
         date: date || '',
         time: time || '',
@@ -176,8 +260,6 @@ export function CallLogCard({
     }
   }
 
-  const isCall = !!type
-
   return (
     <button
       onClick={handleCardClick}
@@ -187,17 +269,13 @@ export function CallLogCard({
       )}
     >
       <div className="flex h-full min-w-0 items-start gap-2 md:gap-4">
-        {/* Left Section - Icon */}
         <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[#F0F0F0] md:h-10 md:w-10">
           <div className="text-secondary-800/50 group-hover:text-secondary-800">{icon}</div>
         </div>
 
-        {/* Middle Section - Content */}
         <div className="flex min-w-0 flex-1 flex-col gap-0.5 overflow-hidden md:gap-1">
           {isCall ? (
-            /* Call Card Content */
             <>
-              {/* Line 1: Direction + Status */}
               <div className="flex min-w-0 items-center gap-2">
                 <span className="flex shrink-0 flex-row items-center gap-1 text-sm text-[#666666]">
                   <span>
@@ -222,21 +300,18 @@ export function CallLogCard({
                 <span
                   className={cn(
                     'flex h-3 w-3 shrink-0 items-center justify-center rounded-full',
-                    palette.ring
+                    callPalette?.ring
                   )}
                 >
-                  <span className={cn('h-1.5 w-1.5 rounded-full', palette.dot)} />
+                  <span className={cn('h-1.5 w-1.5 rounded-full', callPalette?.dot)} />
                 </span>
-                <span className={cn('shrink-0 text-sm', palette.text)}>
-                  {status ? translatedStatus : ''}
-                </span>
+                <span className={cn('shrink-0 text-sm', callPalette?.text)}>{callStatusLabel}</span>
                 <TelephonyTypeBadge
                   type={telephony_type}
                   direction={direction ?? (type === 'Incoming' ? 'inbound' : 'outbound')}
                 />
               </div>
 
-              {/* Line 2: Time + Duration */}
               <div className="flex min-w-0 items-center gap-2">
                 <span className="shrink-0 text-sm font-bold text-[#333333]">{time}</span>
                 <span className="shrink-0 text-sm text-[#666666]">
@@ -244,36 +319,30 @@ export function CallLogCard({
                 </span>
               </div>
 
-              {/* Line 3: Phone Number */}
               <div className="truncate text-sm text-[#666666]">{phone}</div>
 
-              {/* Line 4: Line Information */}
               {line && <div className="truncate text-sm text-[#666666]">{line}</div>}
             </>
           ) : (
-            /* SMS Card Content */
             <>
-              {/* Line 1: Status */}
               <div className="flex min-w-0 shrink-0 items-center gap-2">
                 <span
                   className={cn(
                     'flex h-3 w-3 shrink-0 items-center justify-center rounded-full',
-                    palette.ring
+                    getStatusBorderColor()
                   )}
                 >
-                  <span className={cn('h-1.5 w-1.5 rounded-full', palette.dot)} />
+                  <span className={cn('h-1.5 w-1.5 rounded-full', getStatusDotColor())} />
                 </span>
-                <span className={cn('shrink-0 text-sm', palette.text)}>
-                  {status ? translatedStatus : ''}
+                <span className={cn('shrink-0 text-sm', getStatusTextColor())}>
+                  {smsStatusLabel}
                 </span>
               </div>
 
-              {/* Line 2: Message Title (Template) */}
               <div className="truncate text-sm font-bold text-[#333333]">
                 {template || t('pages.clients.modals.sendSMS.customMessage') || 'Custom Message'}
               </div>
 
-              {/* Line 3: Message Content */}
               <div className="line-clamp-2 overflow-hidden text-sm break-words text-[#666666]">
                 {message}
               </div>
@@ -281,19 +350,15 @@ export function CallLogCard({
           )}
         </div>
 
-        {/* Right Section - Metadata */}
         <div className="flex shrink-0 flex-col items-end gap-0.5 md:gap-1">
-          {/* Date */}
           {date && (
             <div className="text-[10px] whitespace-nowrap text-[#888888] md:text-xs">{date}</div>
           )}
 
-          {/* Time */}
           {time && (
             <div className="text-[10px] whitespace-nowrap text-[#888888] md:text-xs">{time}</div>
           )}
 
-          {/* Agent/Operator Name */}
           {operator && (
             <div className="mt-auto text-[10px] font-medium whitespace-nowrap text-[#333333] md:text-xs">
               {operator}

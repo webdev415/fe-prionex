@@ -18,9 +18,10 @@ import { TooltipProvider } from '@/components/ui/Tooltip'
 import { ClientFiltersBar } from './components/ClientFiltersBar'
 import { AssignClientModal } from './components/AssignClientModal'
 import { BulkAssignClientModal } from './components/BulkAssignClientModal'
-import { formatDate, formatDateTime } from '@/lib/formatters'
+import { formatDate } from '@/lib/formatters'
 import { TagSelectorModal } from './components/TagSelectorModal'
 import { BulkTagModal } from './components/BulkTagModal'
+import { BulkSendMessageModal } from './components/BulkSendMessageModal'
 import { ClientManagementPageSkeleton } from './components/ClientManagementPageSkeleton'
 import { Icons } from '@/lib/icons'
 import {
@@ -48,6 +49,7 @@ import { PermissionGuard } from '@/components/auth'
 import { PERMISSIONS } from '@/constants/permissions'
 import { useTags } from '@/features/tags/hooks/useTags'
 import { isAdminRole, isHiddenVisibility } from '@/features/tags/utils/visibility'
+import { toast } from 'sonner'
 
 // Display type matching page requirements
 interface DisplayClient {
@@ -72,7 +74,6 @@ interface DisplayClient {
   searcherName: string
   assignmentDate: string
   lastInteractionResult: string
-  lastInteractionDate: string | null
 }
 
 // Default thresholds (fallback if API not available)
@@ -126,7 +127,6 @@ const mapAPIClientToDisplay = (
       : '-',
     assignmentDate: client.assignment_date ? formatDate(client.assignment_date) : '-',
     lastInteractionResult: client.last_interaction_result_name || '—',
-    lastInteractionDate: client.last_interaction_date ?? null,
   }
 }
 
@@ -344,6 +344,7 @@ export function ClientManagementPage() {
   const [assignModalClientId, setAssignModalClientId] = useState<number | null>(null)
   const [showBulkAssignModal, setShowBulkAssignModal] = useState(false)
   const [showBulkTagModal, setShowBulkTagModal] = useState(false)
+  const [showBulkSendMessageModal, setShowBulkSendMessageModal] = useState(false)
   const [bulkTagAction, setBulkTagAction] = useState<'add' | 'remove'>('add')
   const [tagModalOpen, setTagModalOpen] = useState(false)
   const [selectedClientForTags, setSelectedClientForTags] = useState<{
@@ -606,7 +607,6 @@ export function ClientManagementPage() {
       debt: 'total_debt',
       assignmentDate: 'assignment_date',
       lastInteractionResult: 'last_interaction_result',
-      lastInteractionDate: 'last_interaction_date',
     }
 
     const params: Record<string, unknown> = {
@@ -756,6 +756,14 @@ export function ClientManagementPage() {
     searchType,
   ])
 
+  /** Filters + sort for bulk messaging when "select all" is used (no pagination). */
+  const clientListFilterParams = useMemo(() => {
+    const { skip, limit, ...rest } = apiParams
+    void skip
+    void limit
+    return rest
+  }, [apiParams])
+
   // Fetch clients from API
   const { data: clientsResponse, isLoading, isFetching, isError, error } = useClients(apiParams)
 
@@ -885,6 +893,20 @@ export function ClientManagementPage() {
   const handleBulkRemoveTags = () => {
     setBulkTagAction('remove')
     setShowBulkTagModal(true)
+  }
+
+  const handleBulkSendMessage = () => {
+    if (totalSelectedCount === 0) {
+      toast.error(
+        t(
+          'pages.clients.bulkActions.selectClientsFirst',
+          'Select at least one client before starting a bulk action'
+        )
+      )
+      return
+    }
+
+    setShowBulkSendMessageModal(true)
   }
 
   const handleBulkAssignSubmit = (assignmentData: {
@@ -1245,13 +1267,6 @@ export function ClientManagementPage() {
 
   // Get tag icon based on tag name
 
-  // Per client request (2026-05-19): hide Checkbox / Creditor / Actions
-  // columns and the matching "Bulk Actions" header dropdown from the
-  // dashboard view. The columns and surrounding bulk-action state are
-  // intentionally kept in the source so flipping this flag back to
-  // ``true`` restores them with no code change. Do not delete.
-  const SHOW_LEGACY_DASHBOARD_COLUMNS = false
-
   const columns: Column<DisplayClient>[] = [
     {
       key: 'id',
@@ -1341,15 +1356,11 @@ export function ClientManagementPage() {
       align: 'left',
       render: (client) => client.phoneNumber,
     },
-    ...(SHOW_LEGACY_DASHBOARD_COLUMNS
-      ? [
-          {
-            key: 'creditor',
-            header: t('pages.clients.tableHeaders.creditor'),
-            align: 'left' as const,
-          },
-        ]
-      : []),
+    {
+      key: 'creditor',
+      header: t('pages.clients.tableHeaders.creditor'),
+      align: 'left',
+    },
     {
       key: 'debt',
       header: t('pages.clients.tableHeaders.totalDebt'),
@@ -1405,105 +1416,90 @@ export function ClientManagementPage() {
       sortKey: 'lastInteractionResult',
       render: (client) => client.lastInteractionResult,
     },
-    ...(SHOW_LEGACY_DASHBOARD_COLUMNS
-      ? [
-          {
-            key: 'actions',
-            header: t('pages.clients.tableHeaders.actions'),
-            align: 'center' as const,
-            render: (client: DisplayClient) => {
-              // Disable assign button when bulk actions are active (items are selected)
-              const isBulkActionActive = selectedClients.size > 0 || allClientsSelected
-              return (
-                <div
-                  className="flex items-center justify-center gap-2 sm:gap-4"
-                  data-testid={`client-actions-${client.id}`}
-                >
-                  {/* Desktop: Individual buttons */}
-                  <div className="hidden items-center gap-4 lg:flex">
-                    <PermissionGuard permission={PERMISSIONS.CLIENTS.EDIT}>
-                      <LinkButton
-                        variant="regular-black"
-                        size="xs"
-                        onClick={() => handleAssign(client.id)}
-                        leftIcon={<Icons.PencilEdit size={16} color="#05040D" strokeWidth={1.5} />}
-                        disabled={isBulkActionActive}
-                      >
-                        {t('pages.clients.assign')}
-                      </LinkButton>
-                    </PermissionGuard>
-                    <PermissionGuard permission={PERMISSIONS.CLIENTS.EDIT}>
-                      <LinkButton
-                        variant="regular-black"
-                        size="xs"
-                        onClick={() => handleManageTags(client.id, client.fullName)}
-                        leftIcon={<Icons.File size={16} color="#05040D" strokeWidth={1.5} />}
-                        disabled={isBulkActionActive}
-                        data-testid={`tag-button-${client.id}`}
-                      >
-                        {t('pages.clients.manageTags')}
-                      </LinkButton>
-                    </PermissionGuard>
-                  </div>
-
-                  {/* Mobile/Tablet: Dropdown button group */}
-                  <div className="lg:hidden">
-                    <DropdownMenu
-                      modal={false}
-                      open={openDropdownClientId === client.id}
-                      onOpenChange={(open) => setOpenDropdownClientId(open ? client.id : null)}
-                    >
-                      <DropdownMenuTrigger asChild>
-                        <button
-                          type="button"
-                          className="text-dark-500 flex h-8 w-8 cursor-pointer items-center justify-center rounded-md border border-gray-300 bg-white transition-colors hover:bg-gray-100 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-                          aria-label={t('pages.clients.tableHeaders.actions')}
-                          disabled={isBulkActionActive}
-                        >
-                          <Icons.FilterVertical size={16} strokeWidth={1.5} />
-                        </button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="bg-white">
-                        <PermissionGuard permission={PERMISSIONS.CLIENTS.EDIT}>
-                          <DropdownMenuItem
-                            onClick={() => handleAssign(client.id)}
-                            className="text-dark-500 flex cursor-pointer items-center gap-2 text-sm"
-                            disabled={isBulkActionActive}
-                          >
-                            <Icons.PencilEdit size={16} strokeWidth={1.5} />
-                            <span>{t('pages.clients.assign')}</span>
-                          </DropdownMenuItem>
-                        </PermissionGuard>
-                        <PermissionGuard permission={PERMISSIONS.CLIENTS.EDIT}>
-                          <DropdownMenuItem
-                            onClick={() => handleManageTags(client.id, client.fullName)}
-                            className="text-dark-500 flex cursor-pointer items-center gap-2 text-sm"
-                            disabled={isBulkActionActive}
-                            data-testid={`tag-button-${client.id}`}
-                          >
-                            <Icons.File size={16} strokeWidth={1.5} />
-                            <span>{t('pages.clients.manageTags')}</span>
-                          </DropdownMenuItem>
-                        </PermissionGuard>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </div>
-              )
-            },
-          },
-        ]
-      : []),
     {
-      key: 'lastInteractionDate',
-      header: t('pages.clients.tableHeaders.lastOutgoingTaDate', 'Last outgoing TA date'),
-      align: 'left',
-      sortable: true,
-      sortKey: 'lastInteractionDate',
-      render: (client) =>
-        client.lastInteractionDate
-          ? formatDateTime(client.lastInteractionDate, user?.timezone)
-          : '—',
+      key: 'actions',
+      header: t('pages.clients.tableHeaders.actions'),
+      align: 'center',
+      render: (client) => {
+        // Disable assign button when bulk actions are active (items are selected)
+        const isBulkActionActive = selectedClients.size > 0 || allClientsSelected
+        return (
+          <div
+            className="flex items-center justify-center gap-2 sm:gap-4"
+            data-testid={`client-actions-${client.id}`}
+          >
+            {/* Desktop: Individual buttons */}
+            <div className="hidden items-center gap-4 lg:flex">
+              <PermissionGuard permission={PERMISSIONS.CLIENTS.EDIT}>
+                <LinkButton
+                  variant="regular-black"
+                  size="xs"
+                  onClick={() => handleAssign(client.id)}
+                  leftIcon={<Icons.PencilEdit size={16} color="#05040D" strokeWidth={1.5} />}
+                  disabled={isBulkActionActive}
+                >
+                  {t('pages.clients.assign')}
+                </LinkButton>
+              </PermissionGuard>
+              <PermissionGuard permission={PERMISSIONS.CLIENTS.EDIT}>
+                <LinkButton
+                  variant="regular-black"
+                  size="xs"
+                  onClick={() => handleManageTags(client.id, client.fullName)}
+                  leftIcon={<Icons.File size={16} color="#05040D" strokeWidth={1.5} />}
+                  disabled={isBulkActionActive}
+                  data-testid={`tag-button-${client.id}`}
+                >
+                  {t('pages.clients.manageTags')}
+                </LinkButton>
+              </PermissionGuard>
+            </div>
+
+            {/* Mobile/Tablet: Dropdown button group */}
+            <div className="lg:hidden">
+              <DropdownMenu
+                modal={false}
+                open={openDropdownClientId === client.id}
+                onOpenChange={(open) => setOpenDropdownClientId(open ? client.id : null)}
+              >
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type="button"
+                    className="text-dark-500 flex h-8 w-8 cursor-pointer items-center justify-center rounded-md border border-gray-300 bg-white transition-colors hover:bg-gray-100 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                    aria-label={t('pages.clients.tableHeaders.actions')}
+                    disabled={isBulkActionActive}
+                  >
+                    <Icons.FilterVertical size={16} strokeWidth={1.5} />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="bg-white">
+                  <PermissionGuard permission={PERMISSIONS.CLIENTS.EDIT}>
+                    <DropdownMenuItem
+                      onClick={() => handleAssign(client.id)}
+                      className="text-dark-500 flex cursor-pointer items-center gap-2 text-sm"
+                      disabled={isBulkActionActive}
+                    >
+                      <Icons.PencilEdit size={16} strokeWidth={1.5} />
+                      <span>{t('pages.clients.assign')}</span>
+                    </DropdownMenuItem>
+                  </PermissionGuard>
+                  <PermissionGuard permission={PERMISSIONS.CLIENTS.EDIT}>
+                    <DropdownMenuItem
+                      onClick={() => handleManageTags(client.id, client.fullName)}
+                      className="text-dark-500 flex cursor-pointer items-center gap-2 text-sm"
+                      disabled={isBulkActionActive}
+                      data-testid={`tag-button-${client.id}`}
+                    >
+                      <Icons.File size={16} strokeWidth={1.5} />
+                      <span>{t('pages.clients.manageTags')}</span>
+                    </DropdownMenuItem>
+                  </PermissionGuard>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </div>
+        )
+      },
     },
   ]
 
@@ -1602,7 +1598,7 @@ export function ClientManagementPage() {
               onSort={handleSort}
               emptyMessage={t('pages.clients.noClientsFound')}
               className="flex flex-col items-start self-stretch"
-              enableBulkSelection={SHOW_LEGACY_DASHBOARD_COLUMNS}
+              enableBulkSelection
               selectedItems={selectedClients}
               onSelectionChange={handleSelectionChange}
               totalCount={totalCount}
@@ -1611,76 +1607,81 @@ export function ClientManagementPage() {
               excludedItemsCount={excludedClients.size}
               excludedItems={excludedClients}
               headerActions={
-                SHOW_LEGACY_DASHBOARD_COLUMNS ? (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="primary"
-                        size="sm"
-                        className="h-9 gap-1.5 rounded-lg px-3 text-xs sm:h-10 sm:gap-2 sm:px-4 sm:text-sm"
-                      >
-                        <Icons.Settings
-                          size={16}
-                          className="text-dark-500 sm:h-[18px] sm:w-[18px]"
-                          strokeWidth={1.5}
-                        />
-                        <span className="hidden font-medium sm:inline">Bulk Actions</span>
-                        <span className="font-medium sm:hidden">Actions</span>
-                        <Icons.ArrowDown
-                          size={14}
-                          className="text-dark-500 sm:h-4 sm:w-4"
-                          strokeWidth={1.5}
-                        />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent
-                      align="end"
-                      className="w-56 rounded-lg border border-gray-200 bg-white p-1 shadow-lg"
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      className="h-9 gap-1.5 rounded-lg px-3 text-xs sm:h-10 sm:gap-2 sm:px-4 sm:text-sm"
                     >
-                      <PermissionGuard permission={PERMISSIONS.CLIENTS.EDIT}>
-                        <DropdownMenuItem
-                          onClick={handleBulkAssign}
-                          className="flex cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 transition-colors hover:bg-gray-50 focus:bg-gray-50"
-                        >
-                          <Icons.UserCheck01
-                            size={18}
-                            className="text-dark-500"
-                            strokeWidth={1.5}
-                          />
-                          <span className="text-dark-500 text-sm font-medium">
-                            {t('pages.clients.bulkActions.assignEmployee', 'Assign Employee')}
-                          </span>
-                        </DropdownMenuItem>
-                      </PermissionGuard>
-                      <PermissionGuard permission={PERMISSIONS.CLIENTS.ASSIGN_TAGS}>
-                        <DropdownMenuItem
-                          onClick={handleBulkAddTags}
-                          className="flex cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 transition-colors hover:bg-gray-50 focus:bg-gray-50"
-                        >
-                          <Icons.PlusSignCircle
-                            size={18}
-                            className="text-dark-500"
-                            strokeWidth={1.5}
-                          />
-                          <span className="text-dark-500 text-sm font-medium">
-                            {t('pages.clients.bulkActions.addTags', 'Add Tags')}
-                          </span>
-                        </DropdownMenuItem>
-                      </PermissionGuard>
-                      <PermissionGuard permission={PERMISSIONS.CLIENTS.ASSIGN_TAGS}>
-                        <DropdownMenuItem
-                          onClick={handleBulkRemoveTags}
-                          className="flex cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 transition-colors hover:bg-gray-50 focus:bg-gray-50"
-                        >
-                          <Icons.Remove02 size={18} className="text-dark-500" strokeWidth={1.5} />
-                          <span className="text-dark-500 text-sm font-medium">
-                            {t('pages.clients.bulkActions.removeTags', 'Remove Tags')}
-                          </span>
-                        </DropdownMenuItem>
-                      </PermissionGuard>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                ) : null
+                      <Icons.Settings
+                        size={16}
+                        className="text-dark-500 sm:h-[18px] sm:w-[18px]"
+                        strokeWidth={1.5}
+                      />
+                      <span className="hidden font-medium sm:inline">Bulk Actions</span>
+                      <span className="font-medium sm:hidden">Actions</span>
+                      <Icons.ArrowDown
+                        size={14}
+                        className="text-dark-500 sm:h-4 sm:w-4"
+                        strokeWidth={1.5}
+                      />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent
+                    align="end"
+                    className="w-56 rounded-lg border border-gray-200 bg-white p-1 shadow-lg"
+                  >
+                    <PermissionGuard permission={PERMISSIONS.CLIENTS.EDIT}>
+                      <DropdownMenuItem
+                        onClick={handleBulkAssign}
+                        className="flex cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 transition-colors hover:bg-gray-50 focus:bg-gray-50"
+                      >
+                        <Icons.UserCheck01 size={18} className="text-dark-500" strokeWidth={1.5} />
+                        <span className="text-dark-500 text-sm font-medium">
+                          {t('pages.clients.bulkActions.assignEmployee', 'Assign Employee')}
+                        </span>
+                      </DropdownMenuItem>
+                    </PermissionGuard>
+                    <PermissionGuard permission={PERMISSIONS.CLIENTS.ASSIGN_TAGS}>
+                      <DropdownMenuItem
+                        onClick={handleBulkAddTags}
+                        className="flex cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 transition-colors hover:bg-gray-50 focus:bg-gray-50"
+                      >
+                        <Icons.PlusSignCircle
+                          size={18}
+                          className="text-dark-500"
+                          strokeWidth={1.5}
+                        />
+                        <span className="text-dark-500 text-sm font-medium">
+                          {t('pages.clients.bulkActions.addTags', 'Add Tags')}
+                        </span>
+                      </DropdownMenuItem>
+                    </PermissionGuard>
+                    <PermissionGuard permission={PERMISSIONS.CLIENTS.ASSIGN_TAGS}>
+                      <DropdownMenuItem
+                        onClick={handleBulkRemoveTags}
+                        className="flex cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 transition-colors hover:bg-gray-50 focus:bg-gray-50"
+                      >
+                        <Icons.Remove02 size={18} className="text-dark-500" strokeWidth={1.5} />
+                        <span className="text-dark-500 text-sm font-medium">
+                          {t('pages.clients.bulkActions.removeTags', 'Remove Tags')}
+                        </span>
+                      </DropdownMenuItem>
+                    </PermissionGuard>
+                    <PermissionGuard permission={PERMISSIONS.MESSAGING.LAUNCH_CAMPAIGNS}>
+                      <DropdownMenuItem
+                        onClick={handleBulkSendMessage}
+                        className="flex cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 transition-colors hover:bg-gray-50 focus:bg-gray-50"
+                      >
+                        <Icons.MailSend01 size={18} className="text-dark-500" strokeWidth={1.5} />
+                        <span className="text-dark-500 text-sm font-medium">
+                          {t('pages.clients.bulkActions.sendMessage', 'Send Message')}
+                        </span>
+                      </DropdownMenuItem>
+                    </PermissionGuard>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               }
             />
           </div>
@@ -1745,6 +1746,23 @@ export function ClientManagementPage() {
           clientCount={totalSelectedCount}
           action={bulkTagAction}
           onClose={() => setShowBulkTagModal(false)}
+        />
+
+        <BulkSendMessageModal
+          open={showBulkSendMessageModal}
+          clientIds={Array.from(selectedClients).map(Number)}
+          selectedClients={selectedClientsData}
+          totalSelectedCount={totalSelectedCount}
+          allClientsSelectedAcrossPages={allClientsSelected}
+          excludedClientIds={Array.from(excludedClients)}
+          clientListFilterParams={clientListFilterParams}
+          onClose={() => setShowBulkSendMessageModal(false)}
+          onLaunched={() => {
+            setShowBulkSendMessageModal(false)
+            setSelectedClients(new Set())
+            setAllClientsSelected(false)
+            setExcludedClients(new Set())
+          }}
         />
       </div>
     </TooltipProvider>

@@ -1,0 +1,404 @@
+/**
+ * RR Notifications system settings page.
+ *
+ * Admin configures: enable/disable, days-before array (multiple values
+ * supported), and the notification template text with substitution
+ * variables. The daily cron in notification-service reads these
+ * settings each run.
+ */
+
+import { useMemo, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { toast } from 'sonner'
+import { Button } from '@/components/ui/Button'
+import { Input } from '@/components/ui/Input'
+import { Label } from '@/components/ui/Label'
+import { Textarea } from '@/components/ui/Textarea'
+import { ToggleSwitch } from '@/components/ui/ToggleSwitch'
+import { Icons } from '@/lib/icons'
+import { useAuthStore } from '@/stores/authStore'
+import {
+  useRRNotificationSettings,
+  useUpdateRRNotificationSettings,
+} from '@/features/notifications/hooks/useRRNotificationSettings'
+import { getErrorMessage } from '@/lib/errors'
+
+interface AvailableVar {
+  name: 'client_name' | 'amount' | 'due_date' | 'days_left'
+  /** i18n key under pages.rrNotifications.variables.* */
+  i18nKey: string
+}
+
+const AVAILABLE_VARS: AvailableVar[] = [
+  { name: 'client_name', i18nKey: 'clientName' },
+  { name: 'amount', i18nKey: 'amount' },
+  { name: 'due_date', i18nKey: 'dueDate' },
+  { name: 'days_left', i18nKey: 'daysLeft' },
+]
+
+const SAMPLE_CTX: Record<string, string> = {
+  client_name: 'Ivan Petrov',
+  amount: '5,000.00',
+  due_date: '2026-05-28',
+  days_left: '3',
+}
+
+function renderTemplate(template: string, ctx: Record<string, string>): string {
+  return template.replace(/\{([a-zA-Z_][a-zA-Z0-9_]*)\}/g, (m, key) =>
+    Object.prototype.hasOwnProperty.call(ctx, key) ? ctx[key] : m
+  )
+}
+
+export function RRNotificationsPage() {
+  const { t } = useTranslation('common')
+  const { user } = useAuthStore()
+  const projectId = user?.active_project_id ? parseInt(user.active_project_id, 10) : undefined
+
+  const { data: settings, isPending } = useRRNotificationSettings(projectId)
+  const updateMut = useUpdateRRNotificationSettings(projectId)
+
+  // Derived-state form pattern. ``edits`` is null until the user
+  // touches a field; once they do, we switch to fully-controlled
+  // values from ``edits``. After a successful save the mutation
+  // invalidates the query, settings refetches, and we reset edits to
+  // null so the form reflects the fresh server state. This avoids a
+  // useEffect-driven sync (lint rule react-hooks/set-state-in-effect).
+  type FormState = {
+    enabled: boolean
+    daysBefore: number[]
+    templateText: string
+  }
+  const [edits, setEdits] = useState<FormState | null>(null)
+  const [dayInput, setDayInput] = useState('')
+
+  const enabled = edits?.enabled ?? settings?.enabled ?? false
+  const daysBefore = edits?.daysBefore ?? settings?.days_before ?? [3]
+  const templateText = edits?.templateText ?? settings?.template_text ?? ''
+
+  const setEnabled = (v: boolean) =>
+    setEdits({
+      enabled: v,
+      daysBefore,
+      templateText,
+    })
+  const setDaysBefore = (v: number[]) =>
+    setEdits({
+      enabled,
+      daysBefore: v,
+      templateText,
+    })
+  const setTemplateText = (v: string) =>
+    setEdits({
+      enabled,
+      daysBefore,
+      templateText: v,
+    })
+
+  const previewBody = useMemo(() => renderTemplate(templateText, SAMPLE_CTX), [templateText])
+
+  // Variables currently used in the template — surfaced as chips so
+  // the admin can confirm at a glance which placeholders are wired.
+  const detectedVariables = useMemo(() => {
+    const found = new Set<string>()
+    for (const m of templateText.matchAll(/\{([a-zA-Z_][a-zA-Z0-9_]*)\}/g)) {
+      found.add(m[1])
+    }
+    return Array.from(found)
+  }, [templateText])
+
+  // Click-to-insert: pop ``{varname}`` into the textarea at the
+  // current caret. Mirrors the SMS Templates form pattern so admins
+  // get the same muscle memory across both settings pages.
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null)
+  const insertVariable = (name: string) => {
+    const ta = textareaRef.current
+    const token = `{${name}}`
+    if (!ta) {
+      setTemplateText(templateText + token)
+      return
+    }
+    const start = ta.selectionStart ?? templateText.length
+    const end = ta.selectionEnd ?? templateText.length
+    const next = templateText.substring(0, start) + token + templateText.substring(end)
+    setTemplateText(next)
+    setTimeout(() => {
+      ta.focus()
+      const pos = start + token.length
+      ta.setSelectionRange(pos, pos)
+    }, 0)
+  }
+
+  const addDay = () => {
+    const n = parseInt(dayInput, 10)
+    if (!Number.isFinite(n) || n < 1 || n > 365) return
+    if (daysBefore.includes(n)) {
+      setDayInput('')
+      return
+    }
+    if (daysBefore.length >= 10) {
+      toast.error(t('pages.rrNotifications.maxDaysReached', 'Max 10 entries'))
+      return
+    }
+    setDaysBefore([...daysBefore, n].sort((a, b) => b - a))
+    setDayInput('')
+  }
+
+  const removeDay = (n: number) => setDaysBefore(daysBefore.filter((d) => d !== n))
+
+  const isDirty =
+    settings == null ||
+    enabled !== settings.enabled ||
+    templateText !== settings.template_text ||
+    JSON.stringify(daysBefore) !== JSON.stringify(settings.days_before)
+
+  const isSaveDisabled =
+    !isDirty || daysBefore.length === 0 || !templateText.trim() || updateMut.isPending
+
+  const handleSave = async () => {
+    try {
+      await updateMut.mutateAsync({
+        enabled,
+        days_before: daysBefore,
+        template_text: templateText,
+      })
+      // Drop local edits so the form reflects the freshly-refetched
+      // server state on the next render. Query invalidation in the
+      // hook triggers the refetch automatically.
+      setEdits(null)
+      toast.success(t('pages.rrNotifications.saved', 'Saved'))
+    } catch (err) {
+      toast.error(getErrorMessage(err))
+    }
+  }
+
+  return (
+    <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 p-6">
+      <div className="flex flex-col gap-2 border-b border-gray-100 pb-4">
+        <h1 className="text-dark-500 text-2xl font-light">
+          {t('pages.rrNotifications.title', 'RR Notifications')}
+        </h1>
+        <p className="max-w-2xl text-sm text-gray-500">
+          {t(
+            'pages.rrNotifications.description',
+            'Configure bell reminders for the responsible operator before each scheduled Restructuring Agreement payment. Sent daily by the system.'
+          )}
+        </p>
+      </div>
+
+      {isPending ? (
+        <div className="rounded-md border border-gray-200 bg-white p-6 text-sm text-gray-500">
+          {t('common.loading')}
+        </div>
+      ) : (
+        <div className="flex flex-col gap-5 rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+          {/* Enable toggle */}
+          <div className="flex items-center justify-between">
+            <div className="flex flex-col gap-0.5">
+              <Label className="text-sm font-medium text-gray-800">
+                {t('pages.rrNotifications.enable', 'Enable RR notifications')}
+              </Label>
+              <span className="text-xs text-gray-500">
+                {t(
+                  'pages.rrNotifications.enableHint',
+                  'When off, no reminders are sent — pending notifications remain in the bell.'
+                )}
+              </span>
+            </div>
+            <ToggleSwitch
+              checked={enabled}
+              onChange={setEnabled}
+              aria-label={t('pages.rrNotifications.enable', 'Enable RR notifications')}
+            />
+          </div>
+
+          {/* Days before */}
+          <div className="flex flex-col gap-2">
+            <Label className="text-sm font-medium text-gray-800">
+              {t('pages.rrNotifications.daysBefore', 'Days before due date')}
+            </Label>
+            <span className="text-xs text-gray-500">
+              {t(
+                'pages.rrNotifications.daysBeforeHint',
+                'Add one or more values (1–365). One reminder per value per payment.'
+              )}
+            </span>
+            <div className="flex flex-wrap items-center gap-2">
+              {daysBefore.map((n) => (
+                <span
+                  key={n}
+                  className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700"
+                >
+                  {t('pages.rrNotifications.daysChip', '{{n}} days', { n })}
+                  <button
+                    type="button"
+                    onClick={() => removeDay(n)}
+                    className="rounded-full hover:bg-blue-100"
+                    aria-label={t('actions.remove', 'Remove')}
+                  >
+                    <Icons.Close size={12} strokeWidth={2.5} />
+                  </button>
+                </span>
+              ))}
+              <div className="flex items-center gap-1">
+                <Input
+                  type="number"
+                  min={1}
+                  max={365}
+                  value={dayInput}
+                  onChange={(e) => setDayInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      addDay()
+                    }
+                  }}
+                  placeholder="3"
+                  className="h-8 w-20 text-xs"
+                />
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="xs"
+                  onClick={addDay}
+                  disabled={!dayInput}
+                >
+                  {t('actions.add', 'Add')}
+                </Button>
+              </div>
+            </div>
+            {daysBefore.length === 0 && (
+              <span className="text-xs text-amber-600">
+                {t('pages.rrNotifications.daysRequired', 'Add at least one days-before value.')}
+              </span>
+            )}
+          </div>
+
+          {/* Template text */}
+          <div className="flex flex-col gap-2">
+            <Label className="text-sm font-medium text-gray-800">
+              {t('pages.rrNotifications.template', 'Notification text')}
+            </Label>
+            <Textarea
+              ref={(el) => {
+                textareaRef.current = el
+              }}
+              value={templateText}
+              onChange={(e) => setTemplateText(e.target.value)}
+              rows={4}
+              className="text-sm"
+              placeholder="{client_name} has a scheduled RR payment of {amount} due on {due_date}"
+            />
+
+            {/* Variables detected — chips showing which vars are
+                currently used in the template. The × removes every
+                ``{var}`` occurrence at once; for finer control the
+                admin can also edit the textarea directly. */}
+            {detectedVariables.length > 0 && (
+              <div className="flex flex-col gap-1">
+                <Label className="text-xs font-medium text-gray-600">
+                  {t('pages.rrNotifications.variablesDetected', 'Variables detected')}:
+                </Label>
+                <div className="flex flex-wrap gap-2">
+                  {detectedVariables.map((v) => {
+                    const token = `{${v}}`
+                    // Count occurrences so we can show "× 3" when the
+                    // same variable is used multiple times — makes it
+                    // obvious to the admin that there's more than one.
+                    const count = templateText.split(token).length - 1
+                    return (
+                      <span
+                        key={v}
+                        className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-white px-3 py-1 text-xs font-medium text-gray-700"
+                      >
+                        {token}
+                        {count > 1 && (
+                          <span className="rounded bg-gray-100 px-1.5 text-[10px] text-gray-600">
+                            ×{count}
+                          </span>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            // Remove only the LAST occurrence — "undo
+                            // the most-recently-inserted" intuition.
+                            // To remove all, the admin clicks × until
+                            // the chip disappears, OR edits the text
+                            // directly.
+                            const idx = templateText.lastIndexOf(token)
+                            if (idx < 0) return
+                            setTemplateText(
+                              templateText.substring(0, idx) +
+                                templateText.substring(idx + token.length)
+                            )
+                          }}
+                          className="ml-0.5 rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-700"
+                          aria-label={t('actions.remove', 'Remove')}
+                          title={t('pages.rrNotifications.removeVariable', 'Remove one occurrence')}
+                        >
+                          <Icons.Close size={12} strokeWidth={2.5} />
+                        </button>
+                      </span>
+                    )
+                  })}
+                </div>
+                <span className="text-[11px] text-gray-500">
+                  {t(
+                    'pages.rrNotifications.removeHint',
+                    'Click × on a chip to remove all occurrences, or edit the text directly.'
+                  )}
+                </span>
+              </div>
+            )}
+
+            {/* Available variables — clickable list that inserts
+                at the textarea caret. */}
+            <div className="flex flex-col gap-2 rounded-lg border border-gray-200 bg-gray-50 p-4">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs font-medium text-gray-700">
+                  {t('pages.rrNotifications.availableVariables', 'Available variables')}:
+                </Label>
+                <span className="text-[11px] text-gray-500">
+                  {t('pages.rrNotifications.clickToInsert', 'Click to insert')}
+                </span>
+              </div>
+              <div className="flex flex-col gap-2">
+                {AVAILABLE_VARS.map((v) => (
+                  <button
+                    key={v.name}
+                    type="button"
+                    onClick={() => insertVariable(v.name)}
+                    className="flex items-start gap-4 self-stretch rounded px-2 py-1.5 text-left text-xs transition-colors hover:bg-white"
+                  >
+                    <code className="w-[120px] shrink-0 font-mono text-gray-700">
+                      {`{${v.name}}`}
+                    </code>
+                    <span className="flex-1 text-gray-600">
+                      {t(`pages.rrNotifications.variables.${v.i18nKey}`)}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Live preview */}
+            <div className="rounded border border-dashed border-gray-200 bg-white px-3 py-2 text-xs">
+              <span className="font-medium text-gray-600">
+                {t('pages.rrNotifications.preview', 'Preview')}:{' '}
+              </span>
+              <span className="text-gray-700">{previewBody}</span>
+            </div>
+          </div>
+
+          {/* Save */}
+          <div className="flex justify-end">
+            <Button variant="primary" onClick={handleSave} disabled={isSaveDisabled}>
+              {updateMut.isPending ? t('actions.saving', 'Saving...') : t('actions.save', 'Save')}
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+export default RRNotificationsPage
