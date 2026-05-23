@@ -103,8 +103,13 @@
       "tasks": "Задачи",
       "calls": "Звонки",
       "tags": "Теги",
-      "taChains": "Цепочки ЦД"
+      "taChains": "Цепочки ЦД",
+      "rrPayments": "Платежи РР"
     },
+    "daysLeft_one": "через {{count}} день",
+    "daysLeft_few": "через {{count}} дня",
+    "daysLeft_many": "через {{count}} дней",
+    "daysLeft_other": "через {{count}} дней",
     "payment": {
       "pending": "ожидает",
       "daysPending_one": "{{count}} день",
