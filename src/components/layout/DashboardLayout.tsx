@@ -752,7 +752,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             path: '/dashboard/system-settings/messaging-drafts',
             label: t('navigation.messagingDrafts', 'Message Drafts'),
             icon: 'mail-send-01',
-            requiredPermission: PERMISSIONS.MESSAGING.VIEW_BULK_MESSAGING,
+            requiredPermission: PERMISSIONS.MESSAGING.MANAGE_DRAFTS,
           },
           {
             path: '/dashboard/system-settings/tags',

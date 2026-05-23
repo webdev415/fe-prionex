@@ -305,7 +305,7 @@ export const router = createBrowserRouter([
       {
         path: 'system-settings/messaging-drafts',
         element: (
-          <PermissionRoute requiredPermission={PERMISSIONS.MESSAGING.VIEW_BULK_MESSAGING}>
+          <PermissionRoute requiredPermission={PERMISSIONS.MESSAGING.MANAGE_DRAFTS}>
             {withSuspense(<MessagingDraftsPage />)}
           </PermissionRoute>
         ),
