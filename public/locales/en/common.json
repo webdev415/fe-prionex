@@ -1923,7 +1923,20 @@
           "cancellationReason": "Cancellation Reason:",
           "printReceipt": "Print Receipt",
           "downloadReceiptPDF": "Download Receipt PDF",
-          "close": "Close"
+          "close": "Close",
+          "reassignEmployee": "Reassign employee"
+        },
+        "reassignEmployee": {
+          "title": "Reassign Employee",
+          "description": "Change the employee recorded against this payment.",
+          "currentLabel": "Currently assigned",
+          "newLabel": "New employee",
+          "selectPlaceholder": "Select an employee...",
+          "searchPlaceholder": "Search employees...",
+          "loadingOperators": "Loading employees...",
+          "cancel": "Cancel",
+          "confirm": "Save",
+          "saving": "Saving..."
         },
         "cancelPayment": {
           "title": "Cancel Payment: Confirmation Required",

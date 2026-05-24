@@ -2225,7 +2225,20 @@
           "cancellationReason": "Причина скасування:",
           "printReceipt": "Друкувати квитанцію",
           "downloadReceiptPDF": "Завантажити квитанцію PDF",
-          "close": "Закрити"
+          "close": "Закрити",
+          "reassignEmployee": "Змінити співробітника"
+        },
+        "reassignEmployee": {
+          "title": "Змінити співробітника",
+          "description": "Змініть співробітника, закріпленого за цим платежем.",
+          "currentLabel": "Зараз закріплено",
+          "newLabel": "Новий співробітник",
+          "selectPlaceholder": "Оберіть співробітника...",
+          "searchPlaceholder": "Пошук співробітників...",
+          "loadingOperators": "Завантаження співробітників...",
+          "cancel": "Скасувати",
+          "confirm": "Зберегти",
+          "saving": "Збереження..."
         },
         "cancelPayment": {
           "title": "Скасувати платіж: Потрібне підтвердження",

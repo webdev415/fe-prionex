@@ -12,7 +12,7 @@ import { getDateStringInTimezone } from '@/lib/dateUtils'
 import { useAuthStore } from '@/stores/authStore'
 import { useParams, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
-import { useURLState, useAutoPersistedState } from '@/hooks'
+import { useURLState, useAutoPersistedState, useHasPermission } from '@/hooks'
 import { Icons } from '@/lib/icons'
 import { Button } from '@/components/ui/Button'
 import { LinkButton } from '@/components/ui/LinkButton'
@@ -40,6 +40,7 @@ import {
 import { PaymentDetailsModal } from './components/PaymentDetailsModal'
 import { CancelPaymentModal } from './components/CancelPaymentModal'
 import { EditPaymentModal } from './components/EditPaymentModal'
+import { ReassignPaymentEmployeeModal } from './components/ReassignPaymentEmployeeModal'
 import { useClient } from '@/features/clients/hooks/useClients'
 import { CallDialogModal, type CallType, type CallStatus } from './components/CallDialogModal'
 import { useCallStore } from '@/stores/callStore'
@@ -51,6 +52,7 @@ import {
   useVerifyPayment,
   useCancelPayment,
   useEditPayment,
+  useReassignPaymentEmployee,
   useExportPaymentsCSV,
   usePayment,
   useGenerateReceipt,
@@ -438,6 +440,11 @@ export function PaymentHistoryPage() {
   const { mutate: editPaymentMutation } = useEditPayment()
   const { mutate: exportPaymentsMutation } = useExportPaymentsCSV()
   const { mutate: generateReceiptMutation } = useGenerateReceipt()
+  const { mutate: reassignEmployeeMutation, isPending: isReassigning } =
+    useReassignPaymentEmployee()
+
+  const canReassignEmployee = useHasPermission(PERMISSIONS.CLIENTS.VERIFY_PAYMENT)
+  const [isReassignModalOpen, setIsReassignModalOpen] = useState(false)
 
   // Fetch payment details when selectedPayment changes
   const backendPayment = paymentHistoryData?.payments.find((p) => p.id === selectedPayment?.id)
@@ -1921,6 +1928,28 @@ export function PaymentHistoryPage() {
               clientId: clientId,
               format: 'pdf',
             })
+          }}
+          onReassignEmployee={
+            canReassignEmployee && backendPayment?.status === 'verified'
+              ? () => setIsReassignModalOpen(true)
+              : undefined
+          }
+        />
+      )}
+
+      {/* Reassign Employee Modal */}
+      {selectedPayment && backendPayment && (
+        <ReassignPaymentEmployeeModal
+          open={isReassignModalOpen}
+          onClose={() => setIsReassignModalOpen(false)}
+          currentEmployeeName={paymentDetails?.recorded_by_username || 'Unknown'}
+          currentUserId={paymentDetails?.recorded_by_user_id ?? null}
+          isSubmitting={isReassigning}
+          onConfirm={(newUserId) => {
+            reassignEmployeeMutation(
+              { paymentId: backendPayment.id, request: { recorded_by_user_id: newUserId } },
+              { onSuccess: () => setIsReassignModalOpen(false) }
+            )
           }}
         />
       )}
