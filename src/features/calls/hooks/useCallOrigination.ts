@@ -157,8 +157,10 @@ export function useCallOrigination() {
   }
 
   const handleCallEnd = () => {
+    // Allow starting another call while the ended summary is still visible.
+    // Keep currentCallId until handleCloseCallModal so call details keep polling
+    // until the backend records COMPLETED/FAILED (avoids call_db race on auto-close).
     setOpenCallModal(null)
-    setCurrentCallId(null)
     setActiveCallType('white-line')
   }
 
