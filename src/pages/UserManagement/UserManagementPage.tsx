@@ -205,10 +205,14 @@ export function UserManagementPage() {
           const projectRoles = user.projects.map((p) => {
             const projectName = p.project_name || t('pages.users.unknownProject')
             const roleName = p.role_name || t('pages.users.noRole')
+            const orgParts = [p.department_name, p.group_name].filter(Boolean)
             return (
               <div key={`${p.project_id}-${p.role_id}`} className="py-0.5">
                 <span className="font-medium">{projectName}</span>
                 <span className="text-gray-600"> ({roleName})</span>
+                {orgParts.length > 0 && (
+                  <div className="text-xs text-gray-500">{orgParts.join(' · ')}</div>
+                )}
               </div>
             )
           })

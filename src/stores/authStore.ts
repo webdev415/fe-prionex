@@ -2,38 +2,15 @@ import { create } from 'zustand'
 import { authApi } from '@/features/auth/api/authApi'
 import { setAccessToken, getAccessToken } from '@/lib/api'
 import { applyPersistedLanguageFromServer } from '@/lib/i18n'
-import type { User, LoginRequest, AuthErrorState, CurrentUserResponse } from '@/types/api'
+import type { User, LoginRequest, AuthErrorState } from '@/types/api'
+import {
+  buildUserFromJwtToken,
+  mapBackendUserToUser,
+  mergeUserFromProjectsResponse,
+  toLoginUserFallback,
+} from '@/lib/mapBackendUser'
 
-function mapBackendUserToUser(backendUser: CurrentUserResponse): User {
-  return {
-    id: String(backendUser.id),
-    username: backendUser.username,
-    email: backendUser.email,
-    firstName: backendUser.first_name,
-    lastName: backendUser.last_name,
-    projects:
-      backendUser.projects?.map((p) => ({
-        id: String(p.id),
-        name: p.name,
-        code: p.code,
-        roles: [{ id: String(p.id), name: p.role_name }],
-      })) || [],
-    active_project_id: backendUser.active_project ? String(backendUser.active_project.id) : null,
-    active_role_id: backendUser.role ? String(backendUser.role.id) : null,
-    active_role_name: backendUser.role?.name || null,
-    active_department_id: backendUser.department_id ?? null,
-    permissions: backendUser.permissions || [],
-    createdAt: backendUser.created_at,
-    updatedAt: backendUser.created_at,
-    asterisk_extension: backendUser.asterisk_extension,
-    is_agent: backendUser.is_agent,
-    agent_status: backendUser.agent_status,
-    timezone: backendUser.timezone,
-    language: backendUser.language,
-    mustChangePassword: backendUser.must_change_password ?? false,
-    twoFactorEnabled: backendUser.two_factor_enabled ?? false,
-  }
-}
+export { mapBackendUserToUser } from '@/lib/mapBackendUser'
 
 interface AuthState {
   user: User | null
@@ -65,6 +42,27 @@ interface AuthState {
   clearError: () => void
   startImpersonation: (userId: number) => Promise<void>
   exitImpersonation: () => Promise<void>
+}
+
+/** Load full profile from /users/me, or JWT + /users/me/projects when /me fails. */
+async function resolveAuthUser(
+  token: string,
+  loginUser?: ReturnType<typeof toLoginUserFallback>
+): Promise<User> {
+  try {
+    const userResponse = await authApi.me()
+    applyPersistedLanguageFromServer(userResponse.data.language)
+    return mapBackendUserToUser(userResponse.data)
+  } catch {
+    let user = buildUserFromJwtToken(token, loginUser)
+    try {
+      const projectsResponse = await authApi.myProjects()
+      user = mergeUserFromProjectsResponse(user, projectsResponse.data)
+    } catch {
+      // Keep JWT-derived user (permissions, names from login payload)
+    }
+    return user
+  }
 }
 
 // Helper function to parse JWT token
@@ -152,32 +150,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           hasCheckedAuth: true,
         })
       } catch {
-        // Failed to fetch /users/me - fall back to login response data
-
-        // Map login response user data to frontend User type (without permissions)
-        const user: User = {
-          id: String(loginUser.id),
-          username: loginUser.username,
-          email: undefined,
-          firstName: undefined,
-          lastName: undefined,
-          projects:
-            loginUser.projects?.map((projectId) => ({
-              id: String(projectId),
-              name: '',
-              roles: [],
-            })) || [],
-          active_project_id: loginUser.active_project_id
-            ? String(loginUser.active_project_id)
-            : null,
-          active_role_id: loginUser.active_role_id ? String(loginUser.active_role_id) : null,
-          active_role_name: loginUser.active_role_name || null,
-          active_department_id: null,
-          permissions: [], // No permissions available from login response
-          createdAt: undefined,
-          updatedAt: undefined,
-          mustChangePassword: false,
-        }
+        const user = await resolveAuthUser(
+          token,
+          toLoginUserFallback(loginUser as unknown as Record<string, unknown>)
+        )
 
         set({
           user,
@@ -316,32 +292,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           hasCheckedAuth: true,
         })
       } catch {
-        // Failed to fetch /users/me - fall back to login response data
-
-        // Map login response user data to frontend User type (without permissions)
-        const user: User = {
-          id: String(loginUser.id),
-          username: loginUser.username,
-          email: undefined,
-          firstName: undefined,
-          lastName: undefined,
-          projects:
-            loginUser.projects?.map((projectId) => ({
-              id: String(projectId),
-              name: '',
-              roles: [],
-            })) || [],
-          active_project_id: loginUser.active_project_id
-            ? String(loginUser.active_project_id)
-            : null,
-          active_role_id: loginUser.active_role_id ? String(loginUser.active_role_id) : null,
-          active_role_name: loginUser.active_role_name || null,
-          active_department_id: null,
-          permissions: [], // No permissions available from login response
-          createdAt: undefined,
-          updatedAt: undefined,
-          mustChangePassword: false,
-        }
+        const user = await resolveAuthUser(
+          token,
+          toLoginUserFallback(loginUser as unknown as Record<string, unknown>)
+        )
 
         set({
           user,
@@ -411,29 +365,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           hasCheckedAuth: true,
         })
       } catch {
-        const user: User = {
-          id: String(loginUser.id),
-          username: loginUser.username,
-          email: undefined,
-          firstName: undefined,
-          lastName: undefined,
-          projects:
-            loginUser.projects?.map((projectId) => ({
-              id: String(projectId),
-              name: '',
-              roles: [],
-            })) || [],
-          active_project_id: loginUser.active_project_id
-            ? String(loginUser.active_project_id)
-            : null,
-          active_role_id: loginUser.active_role_id ? String(loginUser.active_role_id) : null,
-          active_role_name: loginUser.active_role_name || null,
-          active_department_id: null,
-          permissions: [],
-          createdAt: undefined,
-          updatedAt: undefined,
-          mustChangePassword: false,
-          twoFactorEnabled: true, // they just used 2FA, so it's on
+        const user = {
+          ...(await resolveAuthUser(
+            token,
+            toLoginUserFallback(loginUser as unknown as Record<string, unknown>)
+          )),
+          twoFactorEnabled: true,
         }
 
         set({
@@ -567,41 +504,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             })
           }
         } catch {
-          // Failed to fetch user data, but token is valid
-          // Fallback: Extract basic user info from JWT token
-
-          // Parse JWT token to extract basic user information
           const tokenPayload = parseJwt(token)
           if (tokenPayload && tokenPayload.user_id && tokenPayload.username) {
-            // Create minimal user object from JWT token data
-            const user: User = {
-              id: String(tokenPayload.user_id),
-              username: String(tokenPayload.username),
-              email: undefined,
-              firstName: undefined,
-              lastName: undefined,
-              projects: tokenPayload.project_ids
-                ? (tokenPayload.project_ids as number[]).map((projectId) => ({
-                    id: String(projectId),
-                    name: '',
-                    roles: [],
-                  }))
-                : [],
-              active_project_id: tokenPayload.active_project_id
-                ? String(tokenPayload.active_project_id)
-                : null,
-              active_role_id: tokenPayload.active_role_id
-                ? String(tokenPayload.active_role_id)
-                : null,
-              active_role_name: tokenPayload.active_role_name
-                ? String(tokenPayload.active_role_name)
-                : null,
-              active_department_id: null,
-              permissions: [], // No permissions available from token
-              timezone: tokenPayload.timezone ? String(tokenPayload.timezone) : undefined,
-              createdAt: undefined,
-              updatedAt: undefined,
-              mustChangePassword: false,
+            const user = await resolveAuthUser(token)
+            if (tokenPayload.timezone) {
+              user.timezone = String(tokenPayload.timezone)
             }
 
             if (isImpersonating) {
@@ -689,13 +596,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       return
     }
 
+    const token = getAccessToken()
+    if (!token) return
+
     try {
-      const userResponse = await authApi.me()
-      const backendUser = userResponse.data
-
-      const user = mapBackendUserToUser(backendUser)
-      applyPersistedLanguageFromServer(backendUser.language)
-
+      const user = await resolveAuthUser(token)
       set({ user })
     } catch (error) {
       console.error('Failed to refresh user data:', error)
@@ -752,37 +657,45 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         localStorage.setItem('impersonation_original_admin', JSON.stringify(originalAdmin))
       }
 
-      // Map backend impersonated user data to frontend User type
-      // Note: Backend returns impersonated_user, active_project, and permissions separately
-      const impersonatedUserMapped: User = {
-        id: String(impersonated_user.id),
-        username: impersonated_user.username,
-        email: impersonated_user.email,
-        firstName: impersonated_user.first_name,
-        lastName: impersonated_user.last_name,
-        // Create a single-item projects array with the active project
-        projects: [
-          {
-            id: String(active_project.project_id),
-            name: active_project.project_name,
-            roles: [{ id: String(active_project.role_id), name: active_project.role_name }],
-          },
-        ],
-        active_project_id: String(active_project.project_id),
-        active_role_id: String(active_project.role_id),
-        active_role_name: active_project.role_name,
-        active_department_id: null,
-        permissions: permissions || [],
-        createdAt: undefined,
-        updatedAt: undefined,
+      // Load full profile via /me so project list, agent fields, and names are complete
+      let impersonatedUserMapped: User
+      try {
+        const meResponse = await authApi.me()
+        impersonatedUserMapped = mapBackendUserToUser(meResponse.data)
+      } catch {
+        impersonatedUserMapped = {
+          id: String(impersonated_user.id),
+          username: impersonated_user.username,
+          email: impersonated_user.email,
+          firstName: impersonated_user.first_name,
+          lastName: impersonated_user.last_name,
+          fullName:
+            [impersonated_user.first_name, impersonated_user.last_name]
+              .filter(Boolean)
+              .join(' ')
+              .trim() || undefined,
+          projects: [
+            {
+              id: String(active_project.project_id),
+              name: active_project.project_name,
+              roles: [{ id: String(active_project.role_id), name: active_project.role_name }],
+            },
+          ],
+          active_project_id: String(active_project.project_id),
+          active_role_id: String(active_project.role_id),
+          active_role_name: active_project.role_name,
+          active_department_id: null,
+          permissions: permissions || [],
+          is_agent: false,
+          agent_status: 'offline',
+        }
       }
 
-      // Update state with impersonated user details
       set({
         isImpersonating: true,
         impersonatedUser: impersonatedUserMapped,
         originalAdminUser: originalAdmin,
-        user: impersonatedUserMapped, // Current user becomes impersonated user
+        user: impersonatedUserMapped,
         isLoading: false,
       })
     } catch (error: unknown) {
@@ -842,33 +755,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       // Restore original admin user (prefer from state, fallback to response)
       const originalAdmin = get().originalAdminUser
 
-      // Map backend admin user data to frontend User type
-      const adminUserMapped: User = {
-        id: String(admin_user.id),
-        username: admin_user.username,
-        email: admin_user.email,
-        firstName: admin_user.first_name,
-        lastName: admin_user.last_name,
-        projects:
-          admin_user.projects?.map(
-            (p: { id: number; name: string; code: string; role_name: string }) => ({
-              id: String(p.id),
-              name: p.name,
-              roles: [{ id: String(p.id), name: p.role_name }],
-            })
-          ) || [],
-        active_project_id: admin_user.active_project ? String(admin_user.active_project.id) : null,
-        active_role_id: admin_user.role ? String(admin_user.role.id) : null,
-        active_role_name: admin_user.role?.name || null,
-        active_department_id: admin_user.department_id ?? null,
-        permissions: admin_user.permissions || [],
-        createdAt: admin_user.created_at,
-        updatedAt: admin_user.created_at,
-        asterisk_extension: admin_user.asterisk_extension,
-        is_agent: admin_user.is_agent,
-        agent_status: admin_user.agent_status,
-        timezone: admin_user.timezone,
-      }
+      const adminUserMapped = mapBackendUserToUser(admin_user)
 
       // Clear stored admin from localStorage
       localStorage.removeItem('impersonation_original_admin')

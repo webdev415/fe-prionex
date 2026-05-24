@@ -13,6 +13,10 @@ export interface ProjectRole {
   project_name: string
   role_id: number
   role_name: string
+  department_id?: number | null
+  department_name?: string | null
+  group_id?: number | null
+  group_name?: string | null
 }
 
 /**
@@ -21,6 +25,7 @@ export interface ProjectRole {
 export interface ProjectRoleAssignment {
   project_id: number
   role_id: number
+  group_id?: number
 }
 
 /**
@@ -135,11 +140,5 @@ export interface UnlockAccountResponse {
  * User detail with project assignments
  */
 export interface UserDetailResponse extends ApiUser {
-  projects?: Array<{
-    project_id: number
-    project_name: string
-    project_code?: string
-    role_id: number
-    role_name: string
-  }>
+  projects?: ProjectRole[]
 }

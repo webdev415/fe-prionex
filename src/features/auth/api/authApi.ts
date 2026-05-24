@@ -32,6 +32,23 @@ export const authApi = {
 
   me: () => api.get<CurrentUserResponse>('/api/v1/users/me'),
 
+  myProjects: () =>
+    api.get<{
+      user_id: number
+      username: string
+      active_project_id: number
+      projects: Array<{
+        project_id: number
+        project_name: string
+        project_code: string
+        role_id: number
+        role_name: string
+        permissions: string[]
+        is_active: boolean
+      }>
+      total_projects: number
+    }>('/api/v1/users/me/projects'),
+
   updateMyProfile: (data: UpdateMyProfileInput) =>
     api.patch<CurrentUserResponse>('/api/v1/users/me', data),
 
