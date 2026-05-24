@@ -13,6 +13,7 @@ import { taskApi } from '../api/taskApi'
 import { interactionApi } from '../api/interactionApi'
 import { callSmsApi } from '../api/callSmsApi'
 import { documentApi } from '../api/documentApi'
+import { isNonAnsweredOutcome } from '@/lib/callOutcome'
 import type {
   AssignClientRequest,
   BulkAssignClientRequest,
@@ -357,7 +358,7 @@ export function useClientCallSmsHistory(clientId: number, enabled = true) {
       // Map calls to UI shape
       const mappedCalls = (callsData.calls ?? []).map((c) => {
         const dt = c.initiated_at ? new Date(c.initiated_at) : new Date()
-        const durationSecs = c.talk_duration ?? 0
+        const durationSecs = isNonAnsweredOutcome(c.outcome) ? 0 : (c.talk_duration ?? 0)
         const durationMin = Math.floor(durationSecs / 60)
         const durationSec = durationSecs % 60
         return {
