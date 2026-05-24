@@ -112,7 +112,7 @@ export function RecordPaymentModal({
   const isClosedDebtCorrection = selectedDebt?.status === 'closed'
 
   const amountValue = parseFloat(paymentAmount) || 0
-  const minAmount = 100
+  const minAmount = 0.01
   const maxAmount = isClosedDebtCorrection ? Number.POSITIVE_INFINITY : currentDebt
   const newDebt = currentDebt - amountValue
   const hasDebt = newDebt > 0

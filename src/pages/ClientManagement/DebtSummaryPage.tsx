@@ -23,6 +23,7 @@ import { RecordPaymentModal } from './components/RecordPaymentModal'
 import { PaymentVerificationQueueModal } from './components/PaymentVerificationQueueModal'
 import { PaymentDetailsModal } from './components/PaymentDetailsModal'
 import { CancelPaymentModal } from './components/CancelPaymentModal'
+import { ReassignPaymentEmployeeModal } from './components/ReassignPaymentEmployeeModal'
 import { useClient } from '@/features/clients/hooks/useClients'
 import { CallDialogModal, type CallType, type CallStatus } from './components/CallDialogModal'
 import { useCallStore } from '@/stores/callStore'
@@ -33,6 +34,7 @@ import {
   useVerifyPayment,
   useCancelPayment,
   useGenerateReceipt,
+  useReassignPaymentEmployee,
 } from '@/features/payments'
 import { useUser } from '@/features/users/hooks/useUser'
 import { frontendToBackendPaymentMethod } from '@/features/payments/utils'
@@ -161,6 +163,9 @@ export function DebtSummaryPage() {
   const { mutate: verifyPaymentMutation } = useVerifyPayment()
   const { mutate: cancelPaymentMutation } = useCancelPayment()
   const { mutate: generateReceiptMutation } = useGenerateReceipt()
+  const { mutate: reassignEmployeeMutation, isPending: isReassigning } =
+    useReassignPaymentEmployee()
+  const [isReassignModalOpen, setIsReassignModalOpen] = useState(false)
 
   // Call functionality state
   const { isCallActive, setOpenCallModal } = useCallStore()
@@ -1489,7 +1494,7 @@ export function DebtSummaryPage() {
         telephonyUnavailable={isTelephonyUnavailable}
         onCallStart={(callType: CallType, dialPhone: string) => {
           if (!dialPhone?.trim()) return
-          handleOriginateCall(
+          return handleOriginateCall(
             dialPhone,
             client?.fullName || '',
             client?.id?.toString() || '',
@@ -1627,6 +1632,31 @@ export function DebtSummaryPage() {
               clientId: apiClient?.id, // Also pass clientId as fallback
               format: 'pdf',
             })
+          }}
+          onReassignEmployee={
+            canVerifyPayment && selectedPaymentData?.status === 'verified'
+              ? () => setIsReassignModalOpen(true)
+              : undefined
+          }
+        />
+      )}
+
+      {/* Reassign Employee Modal */}
+      {selectedPayment && selectedPaymentData && (
+        <ReassignPaymentEmployeeModal
+          open={isReassignModalOpen}
+          onClose={() => setIsReassignModalOpen(false)}
+          currentEmployeeName={createdByUser?.username || 'Unknown'}
+          currentUserId={selectedPaymentData.recorded_by_user_id ?? null}
+          isSubmitting={isReassigning}
+          onConfirm={(newUserId) => {
+            reassignEmployeeMutation(
+              {
+                paymentId: selectedPaymentData.id,
+                request: { recorded_by_user_id: newUserId },
+              },
+              { onSuccess: () => setIsReassignModalOpen(false) }
+            )
           }}
         />
       )}

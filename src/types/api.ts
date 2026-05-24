@@ -60,6 +60,9 @@ export interface CurrentUserResponse {
     code: string
   }
   department_id?: number | null
+  department_name?: string | null
+  group_id?: number | null
+  group_name?: string | null
   active_department_id?: number | null
   projects: Array<{
     id: number
@@ -84,11 +87,15 @@ export interface User {
   email?: string
   firstName?: string
   lastName?: string
+  fullName?: string
   projects: UserProject[]
   active_project_id: string | null
   active_role_id: string | null
   active_role_name: string | null
   active_department_id: number | null
+  active_department_name?: string | null
+  active_group_id?: number | null
+  active_group_name?: string | null
   permissions?: string[]
   createdAt?: string
   updatedAt?: string

@@ -683,6 +683,9 @@
         "isAgent": "Агент",
         "assignProjects": "Призначити проєкти",
         "rolePerProject": "Роль на проєкт",
+        "department": "Відділ",
+        "group": "Група",
+        "noGroup": "Без групи",
         "notAssigned": "Не призначено",
         "noRolesAvailable": "Ролей недоступно",
         "errorCreating": "Помилка створення користувача",
@@ -941,7 +944,8 @@
       "actions": {
         "view": "Переглянути",
         "edit": "Редагувати",
-        "delete": "Видалити"
+        "delete": "Видалити",
+        "groups": "Групи"
       },
       "modals": {
         "create": {
@@ -985,6 +989,53 @@
       "status": {
         "active": "Активний",
         "inactive": "Неактивний"
+      }
+    },
+    "groups": {
+      "title": "Групи",
+      "newGroup": "Нова група",
+      "noGroups": "Груп не знайдено",
+      "tableHeaders": {
+        "name": "Назва",
+        "description": "Опис",
+        "assignedOperators": "Призначені оператори",
+        "actions": "Дії"
+      },
+      "actions": { "edit": "Редагувати", "delete": "Видалити" },
+      "modals": {
+        "create": { "title": "Створити групу" },
+        "edit": {
+          "title": "Редагувати групу",
+          "failedToLoad": "Не вдалося завантажити дані групи."
+        },
+        "manage": {
+          "title": "Групи в {{departmentName}}",
+          "defaultTitle": "Групи відділу"
+        },
+        "archive": {
+          "title": "Архівувати групу: {{groupName}}",
+          "defaultTitle": "Архівувати групу",
+          "confirmMessage": "Ви впевнені, що хочете архівувати групу «{{groupName}}»?",
+          "hasAssignedOperators": "У цій групі {{count}} оператор(ів). Вони будуть від'єднані від групи.",
+          "archiving": "Архівація...",
+          "archiveGroup": "Архівувати групу",
+          "failedToArchive": "Не вдалося архівувати групу.",
+          "failedToLoad": "Не вдалося завантажити дані групи.",
+          "groupNotFound": "Групу не знайдено"
+        }
+      },
+      "forms": {
+        "name": "Назва",
+        "description": "Опис",
+        "department": "Відділ",
+        "placeholders": {
+          "name": "Введіть назву групи",
+          "description": "Опишіть групу"
+        },
+        "errors": {
+          "failedToCreate": "Не вдалося створити групу.",
+          "failedToUpdate": "Не вдалося оновити групу."
+        }
       }
     },
     "imports": {
@@ -1485,6 +1536,10 @@
         "defaulted": "Прострочено",
         "answered": "Відповів",
         "noAnswer": "Не відповів",
+        "busy": "Зайнято",
+        "cancel": "Скасовано",
+        "unavailable": "Недоступний",
+        "congestion": "Перевантажена мережа",
         "sent": "Відправлено",
         "delivered": "Доставлено",
         "failed": "Не вдалося",
@@ -1934,6 +1989,8 @@
           "callType": "Тип дзвінка",
           "whiteLine": "Біла лінія",
           "grayLine": "Сіра лінія",
+          "lineWhite": "Біла",
+          "lineGray": "Сіра",
           "spamCalls": "Спам дзвінки",
           "markAsSpam": "Позначити як спам",
           "callNow": "Зателефонувати зараз",
@@ -2225,7 +2282,20 @@
           "cancellationReason": "Причина скасування:",
           "printReceipt": "Друкувати квитанцію",
           "downloadReceiptPDF": "Завантажити квитанцію PDF",
-          "close": "Закрити"
+          "close": "Закрити",
+          "reassignEmployee": "Змінити співробітника"
+        },
+        "reassignEmployee": {
+          "title": "Змінити співробітника",
+          "description": "Змініть співробітника, закріпленого за цим платежем.",
+          "currentLabel": "Зараз закріплено",
+          "newLabel": "Новий співробітник",
+          "selectPlaceholder": "Оберіть співробітника...",
+          "searchPlaceholder": "Пошук співробітників...",
+          "loadingOperators": "Завантаження співробітників...",
+          "cancel": "Скасувати",
+          "confirm": "Зберегти",
+          "saving": "Збереження..."
         },
         "cancelPayment": {
           "title": "Скасувати платіж: Потрібне підтвердження",
@@ -3337,6 +3407,8 @@
       "title": "Налаштування профілю",
       "accountSecurity": "Безпека облікового запису",
       "roleLabel": "Роль:",
+      "departmentLabel": "Відділ:",
+      "groupLabel": "Група:",
       "resetPassword": "Скинути пароль",
       "passwordChanged": "Пароль змінено",
       "passwordChangeFailed": "Не вдалося змінити пароль",

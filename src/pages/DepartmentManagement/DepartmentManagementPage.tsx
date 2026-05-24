@@ -35,6 +35,7 @@ import {
   DepartmentDetailModal,
   EditDepartmentModal,
   ArchiveDepartmentModal,
+  DepartmentGroupsModal,
   DepartmentManagementPageSkeleton,
   DepartmentManagementTablesSkeleton,
 } from './components'
@@ -45,6 +46,7 @@ export function DepartmentManagementPage() {
   const [selectedDepartmentId, setSelectedDepartmentId] = useState<number | null>(null)
   const [editDepartmentId, setEditDepartmentId] = useState<number | null>(null)
   const [archiveDepartmentId, setArchiveDepartmentId] = useState<number | null>(null)
+  const [groupsDepartmentId, setGroupsDepartmentId] = useState<number | null>(null)
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null)
   const [openDropdownDepartmentId, setOpenDropdownDepartmentId] = useState<number | null>(null)
 
@@ -151,6 +153,16 @@ export function DepartmentManagementPage() {
               <button
                 type="button"
                 className="text-dark-500 flex items-center gap-1 text-xs font-medium transition-colors hover:opacity-80"
+                onClick={() => setGroupsDepartmentId(department.id)}
+              >
+                <Icons.Users size={16} color="#05040D" strokeWidth={1.5} />
+                {t('pages.departments.actions.groups')}
+              </button>
+            </PermissionGuard>
+            <PermissionGuard permission={PERMISSIONS.SYSTEM.MANAGE_ROLES}>
+              <button
+                type="button"
+                className="text-dark-500 flex items-center gap-1 text-xs font-medium transition-colors hover:opacity-80"
                 onClick={() => setArchiveDepartmentId(department.id)}
               >
                 <Icons.Delete size={16} color="#05040D" strokeWidth={1.5} />
@@ -190,6 +202,15 @@ export function DepartmentManagementPage() {
                   >
                     <Icons.PencilEdit size={16} strokeWidth={1.5} />
                     <span>{t('pages.departments.actions.edit')}</span>
+                  </DropdownMenuItem>
+                </PermissionGuard>
+                <PermissionGuard permission={PERMISSIONS.SYSTEM.MANAGE_ROLES}>
+                  <DropdownMenuItem
+                    onClick={() => setGroupsDepartmentId(department.id)}
+                    className="text-dark-500 flex cursor-pointer items-center gap-2 text-sm"
+                  >
+                    <Icons.Users size={16} strokeWidth={1.5} />
+                    <span>{t('pages.departments.actions.groups')}</span>
                   </DropdownMenuItem>
                 </PermissionGuard>
                 <PermissionGuard permission={PERMISSIONS.SYSTEM.MANAGE_ROLES}>
@@ -358,6 +379,14 @@ export function DepartmentManagementPage() {
             setArchiveDepartmentId(null)
             refetch()
           }}
+        />
+      )}
+
+      {groupsDepartmentId && (
+        <DepartmentGroupsModal
+          open={groupsDepartmentId !== null}
+          departmentId={groupsDepartmentId}
+          onClose={() => setGroupsDepartmentId(null)}
         />
       )}
     </div>

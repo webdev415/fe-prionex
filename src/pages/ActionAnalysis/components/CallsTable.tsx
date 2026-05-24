@@ -6,6 +6,11 @@ import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 import { formatDateTime } from '@/lib/formatters'
 import { formatUkrainePhoneForDisplay } from '@/lib/phone'
+import {
+  classifyCallOutcome,
+  isNonAnsweredOutcome,
+  OUTCOME_PALETTE_CLASSES,
+} from '@/lib/callOutcome'
 import type { CallMonitoringItem } from '@/features/actionAnalysis'
 
 type Row = CallMonitoringItem & { id: string }
@@ -17,18 +22,8 @@ function formatDuration(seconds: number | null | undefined): string {
   return `${m}:${String(s).padStart(2, '0')}`
 }
 
-function isAnswered(c: CallMonitoringItem): boolean {
-  return c.outcome === 'answered' || c.state === 'COMPLETED'
-}
-
 interface Props {
   data: CallMonitoringItem[]
-  /**
-   * Single open-the-call entry point — the row's recording button writes
-   * `?call_id=…` to the URL, the parent (`CallsTab`) opens the merged
-   * Recording + Details modal in response. KAN-409 follow-up collapsed the
-   * separate "View detail" action into this same path.
-   */
   onOpenCall: (call: CallMonitoringItem) => void
 }
 
@@ -48,25 +43,22 @@ export function CallsTable({ data, onOpenCall }: Props) {
     {
       key: 'duration',
       header: t('pages.actionAnalysis.columns.duration', 'Duration'),
-      render: (r) => (
-        <span className="text-sm text-gray-700">{formatDuration(r.talk_duration)}</span>
-      ),
+      render: (r) => {
+        const display = isNonAnsweredOutcome(r.outcome) ? null : r.talk_duration
+        return <span className="text-sm text-gray-700">{formatDuration(display)}</span>
+      },
     },
     {
       key: 'status',
       header: t('pages.actionAnalysis.columns.status', 'Status'),
       render: (r) => {
-        const answered = isAnswered(r)
+        const outcome = classifyCallOutcome(r.outcome ?? r.state)
+        const palette = OUTCOME_PALETTE_CLASSES[outcome.palette]
         return (
           <span
-            className={cn(
-              'inline-flex rounded-full px-2 py-0.5 text-xs font-medium',
-              answered ? 'bg-success-50 text-success-700' : 'bg-gray-100 text-gray-700'
-            )}
+            className={cn('inline-flex rounded-full px-2 py-0.5 text-xs font-medium', palette.pill)}
           >
-            {answered
-              ? t('pages.actionAnalysis.filters.statuses.answered', 'Answered')
-              : t('pages.actionAnalysis.filters.statuses.notAnswered', 'Not answered')}
+            {outcome.labelKey ? t(outcome.labelKey, outcome.fallback) : outcome.fallback}
           </span>
         )
       },

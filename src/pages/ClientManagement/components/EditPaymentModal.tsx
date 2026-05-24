@@ -117,7 +117,7 @@ export function EditPaymentModal({ open, onClose, payment, onSave }: EditPayment
     }
   }
 
-  const minAmount = 100
+  const minAmount = 0.01
   const maxAmount = originalDebt
 
   // Validate payment amount on change

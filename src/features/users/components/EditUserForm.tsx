@@ -25,7 +25,7 @@ import {
 } from '@/components/ui/Select'
 import type { UserDetailResponse } from '../types'
 import { useProjects } from '@/features/projects'
-import { useProjectRoles } from '@/features/roles'
+import { ProjectRoleGroupRow } from './ProjectRoleGroupRow'
 import type { ApiProject } from '@/features/projects/types'
 import { Checkbox } from '@/components/ui/Checkbox'
 
@@ -33,51 +33,6 @@ interface EditUserFormProps {
   user: UserDetailResponse
   onSuccess: () => void
   onCancel?: () => void
-}
-
-interface ProjectRoleRowProps {
-  projectId: number
-  projectName?: string
-  selectedRoleId: number | undefined
-  onRoleChange: (roleId: number) => void
-}
-
-function ProjectRoleRow({
-  projectId,
-  projectName,
-  selectedRoleId,
-  onRoleChange,
-}: ProjectRoleRowProps) {
-  const { t } = useTranslation('common')
-  const { data: rolesData } = useProjectRoles(projectId)
-  const availableRoles = (rolesData?.roles || []).filter((role) => role.is_active)
-
-  return (
-    <div className="grid w-full grid-cols-1 items-center gap-2 sm:grid-cols-2 sm:gap-4">
-      <span className="text-dark-500 text-sm font-light">{projectName}:</span>
-      <Select
-        value={selectedRoleId?.toString() || ''}
-        onValueChange={(value) => onRoleChange(parseInt(value, 10))}
-      >
-        <SelectTrigger className="border-light-50 text-dark-500 mt-1 w-full border text-sm">
-          <SelectValue placeholder={t('pages.users.forms.notAssigned')} />
-        </SelectTrigger>
-        <SelectContent>
-          {availableRoles.length > 0 ? (
-            availableRoles.map((role) => (
-              <SelectItem key={role.id} value={role.id.toString()}>
-                {role.name}
-              </SelectItem>
-            ))
-          ) : (
-            <SelectItem value="no-roles-available" disabled>
-              {t('pages.users.forms.noRolesAvailable')}
-            </SelectItem>
-          )}
-        </SelectContent>
-      </Select>
-    </div>
-  )
 }
 
 export function EditUserForm({ user, onSuccess }: EditUserFormProps) {
@@ -95,6 +50,13 @@ export function EditUserForm({ user, onSuccess }: EditUserFormProps) {
     const initial: Record<number, number> = {}
     ;(user.projects || []).forEach((p) => {
       initial[p.project_id] = p.role_id
+    })
+    return initial
+  })
+  const [projectGroups, setProjectGroups] = useState<Record<number, number | undefined>>(() => {
+    const initial: Record<number, number | undefined> = {}
+    ;(user.projects || []).forEach((p) => {
+      initial[p.project_id] = p.group_id ?? undefined
     })
     return initial
   })
@@ -162,6 +124,7 @@ export function EditUserForm({ user, onSuccess }: EditUserFormProps) {
       payload.project_assignments = selectedProjects.map((projectId) => ({
         project_id: projectId,
         role_id: projectRoles[projectId],
+        group_id: projectGroups[projectId],
       }))
     }
 
@@ -411,6 +374,11 @@ export function EditUserForm({ user, onSuccess }: EditUserFormProps) {
                         delete next[project.id]
                         return next
                       })
+                      setProjectGroups((prev) => {
+                        const next = { ...prev }
+                        delete next[project.id]
+                        return next
+                      })
                     }
                   }}
                 />
@@ -429,13 +397,22 @@ export function EditUserForm({ user, onSuccess }: EditUserFormProps) {
           </h3>
           <div className="space-y-3">
             {selectedProjects.map((projectId) => (
-              <ProjectRoleRow
+              <ProjectRoleGroupRow
                 key={projectId}
                 projectId={projectId}
                 projectName={projects.find((p) => p.id === projectId)?.name}
                 selectedRoleId={projectRoles[projectId]}
-                onRoleChange={(roleId) =>
+                selectedGroupId={projectGroups[projectId]}
+                onRoleChange={(roleId) => {
                   setProjectRoles((prev) => ({ ...prev, [projectId]: roleId }))
+                  setProjectGroups((prev) => {
+                    const next = { ...prev }
+                    delete next[projectId]
+                    return next
+                  })
+                }}
+                onGroupChange={(groupId) =>
+                  setProjectGroups((prev) => ({ ...prev, [projectId]: groupId }))
                 }
               />
             ))}

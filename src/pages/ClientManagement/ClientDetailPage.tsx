@@ -3666,6 +3666,16 @@ export function ClientDetailPage() {
                                                 ? (call.recording_path as string | null)
                                                 : null
                                             }
+                                            direction={
+                                              'direction' in call
+                                                ? (call.direction as string | null)
+                                                : null
+                                            }
+                                            telephony_type={
+                                              'telephony_type' in call
+                                                ? (call.telephony_type as string | null)
+                                                : null
+                                            }
                                             icon={
                                               <Icons.PlayCircle02
                                                 size={20}
@@ -4133,7 +4143,7 @@ export function ClientDetailPage() {
           telephonyUnavailable={isTelephonyUnavailable}
           onCallStart={(callType: CallType, dialPhone: string) => {
             if (!dialPhone?.trim()) return
-            handleOriginateCall(dialPhone, client.fullName, client.id.toString(), callType)
+            return handleOriginateCall(dialPhone, client.fullName, client.id.toString(), callType)
           }}
           onCallEnd={(_duration: number, _status: CallStatus) => {
             handleCallEnd()

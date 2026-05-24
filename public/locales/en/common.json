@@ -680,6 +680,9 @@
         "isAgent": "Is Agent",
         "assignProjects": "Assign Projects",
         "rolePerProject": "Role per Project",
+        "department": "Department",
+        "group": "Group",
+        "noGroup": "No group",
         "notAssigned": "Not assigned",
         "noRolesAvailable": "No roles available",
         "errorCreating": "Error creating user",
@@ -938,7 +941,8 @@
       "actions": {
         "view": "View",
         "edit": "Edit",
-        "delete": "Delete"
+        "delete": "Delete",
+        "groups": "Groups"
       },
       "modals": {
         "create": {
@@ -982,6 +986,56 @@
       "status": {
         "active": "Active",
         "inactive": "Inactive"
+      }
+    },
+    "groups": {
+      "title": "Groups",
+      "newGroup": "New Group",
+      "noGroups": "No groups found",
+      "tableHeaders": {
+        "name": "Name",
+        "description": "Description",
+        "assignedOperators": "Assigned Operators",
+        "actions": "Actions"
+      },
+      "actions": {
+        "edit": "Edit",
+        "delete": "Delete"
+      },
+      "modals": {
+        "create": { "title": "Create Group" },
+        "edit": {
+          "title": "Edit Group",
+          "failedToLoad": "Failed to load group data. Please try again."
+        },
+        "manage": {
+          "title": "Groups in {{departmentName}}",
+          "defaultTitle": "Department Groups"
+        },
+        "archive": {
+          "title": "Archive Group: {{groupName}}",
+          "defaultTitle": "Archive Group",
+          "confirmMessage": "Are you sure you want to archive the group \"{{groupName}}\"?",
+          "hasAssignedOperators": "This group has {{count}} assigned operator(s). They will be unassigned from the group.",
+          "archiving": "Archiving...",
+          "archiveGroup": "Archive Group",
+          "failedToArchive": "Failed to archive group. Please try again.",
+          "failedToLoad": "Failed to load group data. Please try again.",
+          "groupNotFound": "Group not found"
+        }
+      },
+      "forms": {
+        "name": "Name",
+        "description": "Description",
+        "department": "Department",
+        "placeholders": {
+          "name": "Enter group name",
+          "description": "Describe this group"
+        },
+        "errors": {
+          "failedToCreate": "Failed to create group. Please try again.",
+          "failedToUpdate": "Failed to update group. Please try again."
+        }
       }
     },
     "imports": {
@@ -1482,6 +1536,10 @@
         "defaulted": "Defaulted",
         "answered": "Answered",
         "noAnswer": "No Answer",
+        "busy": "Busy",
+        "cancel": "Cancelled",
+        "unavailable": "Unavailable",
+        "congestion": "Congestion",
         "sent": "Sent",
         "delivered": "Delivered",
         "failed": "Failed",
@@ -1626,6 +1684,8 @@
           "callType": "Call Type",
           "whiteLine": "White Line",
           "grayLine": "Gray Line",
+          "lineWhite": "White",
+          "lineGray": "Gray",
           "spamCalls": "Spam calls",
           "markAsSpam": "Mark as Spam",
           "callNow": "Call Now",
@@ -1923,7 +1983,20 @@
           "cancellationReason": "Cancellation Reason:",
           "printReceipt": "Print Receipt",
           "downloadReceiptPDF": "Download Receipt PDF",
-          "close": "Close"
+          "close": "Close",
+          "reassignEmployee": "Reassign employee"
+        },
+        "reassignEmployee": {
+          "title": "Reassign Employee",
+          "description": "Change the employee recorded against this payment.",
+          "currentLabel": "Currently assigned",
+          "newLabel": "New employee",
+          "selectPlaceholder": "Select an employee...",
+          "searchPlaceholder": "Search employees...",
+          "loadingOperators": "Loading employees...",
+          "cancel": "Cancel",
+          "confirm": "Save",
+          "saving": "Saving..."
         },
         "cancelPayment": {
           "title": "Cancel Payment: Confirmation Required",
@@ -3858,6 +3931,8 @@
       "title": "Profile Settings",
       "accountSecurity": "Account Security",
       "roleLabel": "Role:",
+      "departmentLabel": "Department:",
+      "groupLabel": "Group:",
       "resetPassword": "Reset Password",
       "passwordChanged": "Password changed",
       "passwordChangeFailed": "Failed to change password",

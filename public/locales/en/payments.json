@@ -17,6 +17,8 @@
     "component": "Component",
     "verified_note": "Allocation applied",
     "error": "Unable to load breakdown. Please try again.",
-    "retry": "Retry"
+    "retry": "Retry",
+    "unmatched": "Unmatched / Overpayment",
+    "unmatched_tooltip": "Amount could not be fully matched against the debt's current component balances. Often indicates an overpayment or stale debt data."
   }
 }
