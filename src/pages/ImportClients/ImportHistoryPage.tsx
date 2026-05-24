@@ -372,14 +372,13 @@ export function ImportHistoryPage() {
   const showFullPageSkeleton = isPending
   const showTableSkeleton = isPending || isFetching
 
-  // Convert API data to ImportHistoryItem format
-  // Filter out any in_progress and pending jobs as a safety measure (should be handled by API, but filter client-side too)
-  // Allow cancelled jobs to be shown
+  // Convert API data to ImportHistoryItem format.
+  // The backend is the source of truth for what belongs in history — it
+  // excludes processing/pending/validated. We must NOT re-filter here: the
+  // page is already sliced to `limit` rows server-side, so dropping any row
+  // client-side would render fewer than `limit` and shorten the page.
   const importHistory = useMemo(() => {
-    const jobs = (importJobsData?.items || []).filter(
-      (job) => job.status !== 'in_progress' && job.status !== 'pending'
-    )
-    return jobs.map(mapImportJobToHistoryItem)
+    return (importJobsData?.items || []).map(mapImportJobToHistoryItem)
   }, [importJobsData])
 
   // Extract unique users from all import history (for filter dropdown)
@@ -394,9 +393,8 @@ export function ImportHistoryPage() {
   })
 
   const availableUsers = useMemo(() => {
-    const allJobs = (allJobsData?.items || []).filter(
-      (job) => job.status !== 'in_progress' && job.status !== 'pending'
-    )
+    // Backend already excludes processing/pending/validated, so no client re-filter.
+    const allJobs = allJobsData?.items || []
     // Extract unique usernames and filter out null/undefined
     const users = new Set(
       allJobs.map((job) => job.uploaded_by).filter((username): username is string => !!username)
