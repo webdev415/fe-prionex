@@ -111,8 +111,10 @@ import { ChainExecutor, TAInteractionHistory } from './components/taChains'
 import { formatUkrainePhoneForDisplay } from '@/lib/phone'
 import { isAdminRole, isHiddenVisibility } from '@/features/tags/utils/visibility'
 import {
+  ALL_MESSAGING_SEND_PERMISSIONS,
   buildOperatorNamesMap,
   countMessagingHistoryByOutcome,
+  destinationOwnerLabelKey,
   downloadBlob,
   formatLauncherName,
   messagingApi,
@@ -360,7 +362,7 @@ export function ClientDetailPage() {
     isValidClientId
   )
   const canAccessMessagingHistory = useHasAnyPermission([
-    PERMISSIONS.MESSAGING.SEND_MESSAGES,
+    ...ALL_MESSAGING_SEND_PERMISSIONS,
     PERMISSIONS.MESSAGING.VIEW_CAMPAIGN_ANALYTICS,
   ])
   const { data: messagingHistory = [], isLoading: isMessagingHistoryLoading } =
@@ -1003,6 +1005,7 @@ export function ClientDetailPage() {
     service: string
     launchedBy?: string
     destination: string
+    destinationOwner?: string
     status: string
     body: string
     subject?: string
@@ -2364,7 +2367,7 @@ export function ClientDetailPage() {
                             <Icons.ChatFeedback01 size={16} className="flex-shrink-0" />
                           </button>
                         </PermissionGuard>
-                        <PermissionGuard permission={PERMISSIONS.MESSAGING.SEND_MESSAGES}>
+                        <PermissionGuard permissions={ALL_MESSAGING_SEND_PERMISSIONS} mode="any">
                           <button
                             onClick={() => {
                               setSelectedPhoneForMessage(phone.number)
@@ -2750,7 +2753,10 @@ export function ClientDetailPage() {
                                 <Icons.ChatFeedback01 size={16} className="flex-shrink-0" />
                               </button>
                             </PermissionGuard>
-                            <PermissionGuard permission={PERMISSIONS.MESSAGING.SEND_MESSAGES}>
+                            <PermissionGuard
+                              permissions={ALL_MESSAGING_SEND_PERMISSIONS}
+                              mode="any"
+                            >
                               <button
                                 onClick={() => {
                                   setSelectedPhoneForMessage(client.work?.workPhone || '')
@@ -3265,7 +3271,8 @@ export function ClientDetailPage() {
                                       </button>
                                     </PermissionGuard>
                                     <PermissionGuard
-                                      permission={PERMISSIONS.MESSAGING.SEND_MESSAGES}
+                                      permissions={ALL_MESSAGING_SEND_PERMISSIONS}
+                                      mode="any"
                                     >
                                       <button
                                         onClick={() => {
@@ -3802,7 +3809,23 @@ export function ClientDetailPage() {
                                                 messagingLauncherNames
                                               ) || undefined
                                             }
-                                            phone={msg.destination || '-'}
+                                            phone={
+                                              msg.channel === 'sms' || msg.channel === 'viber'
+                                                ? msg.destination || '-'
+                                                : undefined
+                                            }
+                                            destinationOwnerLabel={
+                                              msg.channel === 'sms' && msg.destination_owner
+                                                ? (() => {
+                                                    const key = destinationOwnerLabelKey(
+                                                      msg.destination_owner
+                                                    )
+                                                    return key
+                                                      ? t(key, msg.destination_owner)
+                                                      : undefined
+                                                  })()
+                                                : undefined
+                                            }
                                             sent_at={msg.sent_at ?? undefined}
                                             delivered_at={msg.delivered_at ?? undefined}
                                             icon={
@@ -3823,6 +3846,16 @@ export function ClientDetailPage() {
                                                   messagingLauncherNames
                                                 ),
                                                 destination: msg.destination || '-',
+                                                destinationOwner: msg.destination_owner
+                                                  ? (() => {
+                                                      const key = destinationOwnerLabelKey(
+                                                        msg.destination_owner
+                                                      )
+                                                      return key
+                                                        ? t(key, msg.destination_owner)
+                                                        : msg.destination_owner
+                                                    })()
+                                                  : undefined,
                                                 status: msg.status,
                                                 body: msg.body || '',
                                                 subject: msg.subject ?? undefined,
@@ -4224,7 +4257,23 @@ export function ClientDetailPage() {
                                                     messagingLauncherNames
                                                   ) || undefined
                                                 }
-                                                phone={item.destination || '-'}
+                                                phone={
+                                                  item.channel === 'sms' || item.channel === 'viber'
+                                                    ? item.destination || '-'
+                                                    : undefined
+                                                }
+                                                destinationOwnerLabel={
+                                                  item.channel === 'sms' && item.destination_owner
+                                                    ? (() => {
+                                                        const key = destinationOwnerLabelKey(
+                                                          item.destination_owner
+                                                        )
+                                                        return key
+                                                          ? t(key, item.destination_owner)
+                                                          : undefined
+                                                      })()
+                                                    : undefined
+                                                }
                                                 sent_at={item.sent_at ?? undefined}
                                                 delivered_at={item.delivered_at ?? undefined}
                                                 icon={
@@ -4245,6 +4294,16 @@ export function ClientDetailPage() {
                                                       messagingLauncherNames
                                                     ),
                                                     destination: item.destination || '-',
+                                                    destinationOwner: item.destination_owner
+                                                      ? (() => {
+                                                          const key = destinationOwnerLabelKey(
+                                                            item.destination_owner
+                                                          )
+                                                          return key
+                                                            ? t(key, item.destination_owner)
+                                                            : item.destination_owner
+                                                        })()
+                                                      : undefined,
                                                     status: item.status,
                                                     body: item.body || '-',
                                                     subject: item.subject || undefined,
@@ -4680,6 +4739,12 @@ export function ClientDetailPage() {
           clientId={clientId}
           clientName={client.fullName}
           phones={client.phones?.map((p) => p.number)}
+          phoneOptions={client.phones?.map((p) => ({
+            number: p.number,
+            contactTypeId: p.contactTypeId,
+            contactTypeCode: p.contactTypeCode,
+            label: p.type,
+          }))}
           workPhone={
             client.work?.workPhone && client.work.workPhone !== '-'
               ? client.work.workPhone

@@ -19,6 +19,7 @@ export interface ViewMessageModalProps {
     service: string
     launchedBy?: string
     destination: string
+    destinationOwner?: string
     status: string
     body: string
     subject?: string
@@ -150,6 +151,12 @@ export function ViewMessageModal({ open, onClose, messageData }: ViewMessageModa
                 <DetailRow label={t('pages.clients.modals.viewMessage.destination', 'Destination')}>
                   <span className="font-mono text-[0.8125rem] tracking-wide">
                     {messageData.destination || '—'}
+                    {messageData.destinationOwner ? (
+                      <span className="font-sans text-gray-600">
+                        {' '}
+                        · {messageData.destinationOwner}
+                      </span>
+                    ) : null}
                   </span>
                 </DetailRow>
                 <DetailRow label={t('pages.clients.modals.viewMessage.status', 'Status')}>

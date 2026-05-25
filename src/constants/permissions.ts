@@ -37,15 +37,19 @@ export const PERMISSIONS = {
   },
 
   /**
-   * Messaging Category (5 permissions)
-   * Controls access to the new unified messaging-service surfaces.
+   * Messaging Category (9 permissions)
+   * Controls access to the unified messaging-service surfaces.
    */
   MESSAGING: {
     MANAGE_DRAFTS: 'manage_drafts',
-    LAUNCH_CAMPAIGNS: 'launch_campaigns',
     VIEW_CAMPAIGN_ANALYTICS: 'view_campaign_analytics',
     MANAGE_INTEGRATIONS: 'manage_messaging_integrations',
-    SEND_MESSAGES: 'send_messages',
+    SEND_MESSAGE_SMS: 'send_message_sms',
+    SEND_MESSAGE_VIBER: 'send_message_viber',
+    SEND_MESSAGE_EMAIL: 'send_message_email',
+    LAUNCH_CAMPAIGN_SMS: 'launch_campaign_sms',
+    LAUNCH_CAMPAIGN_VIBER: 'launch_campaign_viber',
+    LAUNCH_CAMPAIGN_EMAIL: 'launch_campaign_email',
   },
 
   /**
@@ -303,12 +307,16 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
 
   // Messaging
   manage_drafts: 'Create, edit, and delete messaging drafts; open the Message Drafts settings page',
-  launch_campaigns: 'Bulk Messaging on client management; preview recipients and launch campaigns',
   view_campaign_analytics:
     'View campaign analytics, campaign recipients, CSV exports, and unified client message history',
   manage_messaging_integrations:
     'Create, edit, delete, test, and toggle messaging integrations (not list/read)',
-  send_messages: 'Send single messages; read usable integrations and drafts for the send modal',
+  send_message_sms: 'Send single SMS; read integrations and drafts for SMS send',
+  send_message_viber: 'Send single Viber messages; read integrations and drafts for Viber send',
+  send_message_email: 'Send single emails; read integrations and drafts for email send',
+  launch_campaign_sms: 'Bulk Messaging: launch SMS campaigns',
+  launch_campaign_viber: 'Bulk Messaging: launch Viber campaigns',
+  launch_campaign_email: 'Bulk Messaging: launch email campaigns',
 
   // Reports
   view_own_reports: 'View own performance statistics',
