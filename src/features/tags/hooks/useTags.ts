@@ -104,6 +104,7 @@ export function useDeleteTag() {
     mutationFn: (id: number) => tagsApi.deleteTag(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: tagsKeys.lists() })
+      queryClient.invalidateQueries({ queryKey: clientKeys.lists() })
       toast.success('Tag deleted successfully')
     },
     onError: (error: Error) => {

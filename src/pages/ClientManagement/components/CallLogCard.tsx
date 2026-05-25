@@ -107,31 +107,12 @@ export function CallLogCard({
   const { isCallActive, setOpenCallModal } = useCallStore()
   const isCall = !!type
 
-  const getTranslatedStatus = (value: string) => {
-    const s = value?.toUpperCase()
-    switch (s) {
-      case 'COMPLETED':
-      case 'ANSWERED':
-        return t('pages.clients.statuses.answered')
-      case 'NO_ANSWER':
-      case 'NO ANSWER':
-        return t('pages.clients.statuses.noAnswer')
-      case 'DELIVERED':
-        return t('pages.clients.statuses.delivered')
-      case 'FAILED':
-        return t('pages.clients.statuses.failed')
-      case 'PENDING':
-      case 'INITIATED':
-      case 'RINGING':
-        return t('pages.clients.statuses.pending')
-      case 'SENT':
-        return t('pages.clients.statuses.sent', 'Sent')
-      case 'SKIPPED':
-        return t('pages.clients.statuses.skipped', 'Skipped')
-      default:
-        return value
-    }
-  }
+  // KAN-490: outcome classification is centralised in @/lib/callOutcome.
+  const outcomeRender = classifyCallOutcome(status)
+  const palette = OUTCOME_PALETTE_CLASSES[outcomeRender.palette]
+  const translatedStatus = outcomeRender.labelKey
+    ? t(outcomeRender.labelKey, outcomeRender.fallback)
+    : outcomeRender.fallback
 
   // KAN-490: call outcomes (Busy, Cancel, Congestion, etc.) live in @/lib/callOutcome.
   const callOutcome = isCall ? classifyCallOutcome(status) : null
@@ -154,59 +135,7 @@ export function CallLogCard({
     }
   }
 
-  const getStatusDotColor = () => {
-    const s = status?.toUpperCase()
-    if (s === 'COMPLETED' || s === 'ANSWERED' || s === 'DELIVERED') {
-      return 'bg-success-500'
-    }
-    if (s === 'FAILED' || s === 'NO_ANSWER' || s === 'NO ANSWER') {
-      return 'bg-error-500'
-    }
-    if (s === 'INITIATED' || s === 'RINGING' || s === 'PENDING' || s === 'SENT') {
-      return 'bg-warning-500'
-    }
-    if (s === 'SKIPPED') {
-      return 'bg-gray-400'
-    }
-    return 'bg-gray-500'
-  }
-
-  const getStatusBorderColor = () => {
-    const s = status?.toUpperCase()
-    if (s === 'COMPLETED' || s === 'ANSWERED' || s === 'DELIVERED') {
-      return 'bg-success-200'
-    }
-    if (s === 'FAILED' || s === 'NO_ANSWER' || s === 'NO ANSWER') {
-      return 'bg-error-200'
-    }
-    if (s === 'INITIATED' || s === 'RINGING' || s === 'PENDING' || s === 'SENT') {
-      return 'bg-warning-200'
-    }
-    if (s === 'SKIPPED') {
-      return 'bg-gray-200'
-    }
-    return 'bg-gray-200'
-  }
-
-  const getStatusTextColor = () => {
-    const s = status?.toUpperCase()
-    if (s === 'COMPLETED' || s === 'ANSWERED' || s === 'DELIVERED') {
-      return 'text-success-500'
-    }
-    if (s === 'FAILED' || s === 'NO_ANSWER' || s === 'NO ANSWER') {
-      return 'text-error-500'
-    }
-    if (s === 'INITIATED' || s === 'RINGING' || s === 'PENDING' || s === 'SENT') {
-      return 'text-warning-500'
-    }
-    if (s === 'SKIPPED') {
-      return 'text-gray-500'
-    }
-    return 'text-gray-500'
-  }
-
-  const smsStatusLabel = !isCall && status ? getTranslatedStatus(status) : ''
-
+  // Handle card click
   const handleCardClick = () => {
     if (type) {
       if (isCallActive()) {
@@ -300,10 +229,13 @@ export function CallLogCard({
                 <span
                   className={cn(
                     'flex h-3 w-3 shrink-0 items-center justify-center rounded-full',
-                    callPalette?.ring
+                    palette.ring
                   )}
                 >
-                  <span className={cn('h-1.5 w-1.5 rounded-full', callPalette?.dot)} />
+                  <span className={cn('h-1.5 w-1.5 rounded-full', palette.dot)} />
+                </span>
+                <span className={cn('shrink-0 text-sm', palette.text)}>
+                  {status ? translatedStatus : ''}
                 </span>
                 <span className={cn('shrink-0 text-sm', callPalette?.text)}>{callStatusLabel}</span>
                 <TelephonyTypeBadge
@@ -329,13 +261,13 @@ export function CallLogCard({
                 <span
                   className={cn(
                     'flex h-3 w-3 shrink-0 items-center justify-center rounded-full',
-                    getStatusBorderColor()
+                    palette.ring
                   )}
                 >
-                  <span className={cn('h-1.5 w-1.5 rounded-full', getStatusDotColor())} />
+                  <span className={cn('h-1.5 w-1.5 rounded-full', palette.dot)} />
                 </span>
-                <span className={cn('shrink-0 text-sm', getStatusTextColor())}>
-                  {smsStatusLabel}
+                <span className={cn('shrink-0 text-sm', palette.text)}>
+                  {status ? translatedStatus : ''}
                 </span>
               </div>
 
