@@ -88,8 +88,8 @@ const mapAPIClientToDisplay = (
   thresholds: PriorityThresholds,
   userNameMap: Map<number, string>,
   showHiddenTags: boolean,
-  /** When set (operator + catalog loaded): only show tags whose name exists in tag-service catalog (hidden tags are omitted there). */
-  operatorAllowedTagNames: Set<string> | null
+  /** When set (operator + catalog loaded): only show tags present in tag-service catalog (hidden tags are omitted there). */
+  operatorAllowedTags: { names: Set<string>; codes: Set<string> } | null
 ): DisplayClient => {
   const fullName = [client.first_name, client.middle_name, client.last_name]
     .filter(Boolean)
@@ -102,8 +102,10 @@ const mapAPIClientToDisplay = (
     tags: (client.tags || []).filter((tag) => {
       if (showHiddenTags) return true
       if (isHiddenVisibility(tag.visibility)) return false
-      if (operatorAllowedTagNames !== null) {
-        return operatorAllowedTagNames.has(tag.name)
+      if (operatorAllowedTags !== null) {
+        const code = (tag as { code?: string | null }).code
+        if (code && operatorAllowedTags.codes.has(code)) return true
+        return operatorAllowedTags.names.has(tag.name)
       }
       return true
     }),
@@ -786,10 +788,16 @@ export function ClientManagementPage() {
   // Tag-service list for operators excludes hidden tags — use names to filter client-list embedded tags
   // when client-service rows omit or stale-sync visibility (different DB ids than tag-service).
   const { data: operatorTagCatalog } = useTags(activeProjectIdNum)
-  const operatorAllowedTagNames = useMemo(() => {
+  const operatorAllowedTags = useMemo(() => {
     if (showHiddenTags) return null
     if (operatorTagCatalog === undefined) return null
-    return new Set(operatorTagCatalog.map((t) => t.name))
+    const names = new Set<string>()
+    const codes = new Set<string>()
+    for (const t of operatorTagCatalog) {
+      names.add(t.name)
+      if (t.code) codes.add(t.code)
+    }
+    return { names, codes }
   }, [showHiddenTags, operatorTagCatalog])
   const { data: operators } = useOperators(activeProjectId ? Number(activeProjectId) : null)
   const userNameMap = useMemo(() => {
@@ -809,15 +817,9 @@ export function ClientManagementPage() {
   // Map API clients to display format
   const displayClients = useMemo(() => {
     return apiClients.map((client) =>
-      mapAPIClientToDisplay(
-        client,
-        thresholds,
-        userNameMap,
-        showHiddenTags,
-        operatorAllowedTagNames
-      )
+      mapAPIClientToDisplay(client, thresholds, userNameMap, showHiddenTags, operatorAllowedTags)
     )
-  }, [apiClients, thresholds, userNameMap, showHiddenTags, operatorAllowedTagNames])
+  }, [apiClients, thresholds, userNameMap, showHiddenTags, operatorAllowedTags])
 
   // Count applied filters
   const appliedFiltersCount = useMemo(() => {
