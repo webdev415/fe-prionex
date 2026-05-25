@@ -1630,7 +1630,9 @@
         "sent": "Sent",
         "delivered": "Delivered",
         "failed": "Failed",
-        "pending": "Pending"
+        "pending": "Pending",
+        "skipped": "Skipped",
+        "bounced": "Bounced"
       },
       "modals": {
         "addNote": {
@@ -4531,6 +4533,12 @@
         "delivered": "delivered",
         "resultsLine": "{{delivered}}/{{total}} delivered"
       },
+      "cost": {
+        "actual": "Actual",
+        "estimated": "Est.",
+        "partial": "Partial",
+        "unavailable": "—"
+      },
       "table": {
         "code": "Code",
         "name": "Campaign",
@@ -4539,6 +4547,7 @@
         "service": "Service",
         "status": "Status",
         "summary": "Results",
+        "cost": "Cost",
         "launchedBy": "Launched by",
         "launchedAt": "Launched",
         "actions": "Actions",
@@ -4558,6 +4567,7 @@
         "launchedBy": "Launched by",
         "launchedAt": "Launched at",
         "completedAt": "Completed at",
+        "cost": "Cost",
         "selectionPayload": "Audience",
         "selectionIds": "{{count}} clients selected by ID",
         "selectionFilter": "Clients matching saved list filters",

@@ -12,6 +12,7 @@ import { cn } from '@/lib/utils'
 import { formatDateTime } from '@/lib/formatters'
 import {
   buildOperatorNamesMap,
+  formatCampaignCostDisplay,
   formatLauncherName,
   getMessagingServiceLabel,
   MESSAGING_CHANNELS,
@@ -158,6 +159,20 @@ export function MessagingCampaignsPage() {
             total: campaign.total_recipients,
             defaultValue: `${campaign.delivered_count}/${campaign.total_recipients} delivered`,
           }),
+      },
+      {
+        key: 'cost',
+        header: t('pages.messagingCampaigns.table.cost', 'Cost'),
+        align: 'right',
+        render: (campaign) => {
+          const { amount, badge } = formatCampaignCostDisplay(campaign, t)
+          return (
+            <div className="flex flex-col items-end gap-0.5">
+              <span className="tabular-nums">{amount}</span>
+              {badge ? <span className="text-xs font-light text-gray-500">{badge}</span> : null}
+            </div>
+          )
+        },
       },
       {
         key: 'initiated_by',

@@ -250,6 +250,9 @@ export interface MessagingCampaignSummary {
   initiated_by: number
   launched_at: string
   completed_at: string | null
+  total_cost: string | null
+  cost_currency: string | null
+  cost_status: string | null
 }
 
 export interface MessagingCampaignListResponse {
