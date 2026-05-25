@@ -41,6 +41,7 @@ import { frontendToBackendPaymentMethod } from '@/features/payments/utils'
 import type {
   PaymentMethod as BackendPaymentMethod,
   PaymentStatus as BackendPaymentStatus,
+  PaymentType,
 } from '@/features/payments/api/types'
 import { PermissionGuard } from '@/components/auth'
 import { PERMISSIONS } from '@/constants/permissions'
@@ -852,6 +853,8 @@ export function DebtSummaryPage() {
     last4Digits?: string
     paymentMethodDetails?: string
     debtId?: number
+    /** KAN-507: required at the form layer; the modal never fires without it. */
+    paymentType: PaymentType
   }) => {
     const clientId = id ? Number(id) : 0
     if (!clientId) {
@@ -882,6 +885,7 @@ export function DebtSummaryPage() {
           data.referenceNumber || (data.method === 'Card' ? `****${data.last4Digits}` : undefined),
         notes: undefined, // Can be added later if needed
         internal_notes: undefined, // Can be added later if needed
+        payment_type: data.paymentType,
       },
       {
         onSuccess: (payment) => {
@@ -1474,6 +1478,7 @@ export function DebtSummaryPage() {
           debts={apiClient?.debts}
           onSave={handleRecordPayment}
           canVerify={canVerifyPayment}
+          clientId={clientId}
         />
       )}
 

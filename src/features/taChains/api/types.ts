@@ -12,6 +12,10 @@ export interface TAChainStepIn {
   delay_minutes?: number
   not_in_the_past?: boolean
   contact_source?: ContactSource | null
+  // Credit-step admin flag: include debts with status='closed' in the
+  // executor's picker (true) or only status='active' (false). Default
+  // false. Meaningful only when the step's TA has field_type='credit'.
+  show_closed_credits?: boolean
 }
 
 export interface TAChainStep {
@@ -25,6 +29,7 @@ export interface TAChainStep {
   delay_minutes: number
   not_in_the_past: boolean
   contact_source: ContactSource | null
+  show_closed_credits: boolean
   position_x: number | null
   position_y: number | null
 }

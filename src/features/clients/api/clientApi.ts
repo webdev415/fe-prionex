@@ -17,7 +17,9 @@ import type {
   ClientDetail,
   ClientProfileResponse,
   ContactResponse,
+  ContactTypeCreatePayload,
   ContactTypeOption,
+  ContactTypePatchPayload,
   CreateAddressRequest,
   CreateClientRequest,
   CreateContactRequest,
@@ -488,10 +490,33 @@ export async function getRROverpayments(
 }
 
 /**
- * Get all contact types from the lookup table
+ * Get contact types from the lookup table (optionally filtered by status).
  */
-export async function getContactTypes(): Promise<ContactTypeOption[]> {
-  const response = await api.get<ContactTypeOption[]>(`${BASE_URL}/contact-types`)
+export async function getContactTypes(params?: {
+  status?: 'all' | 'active' | 'hidden'
+}): Promise<ContactTypeOption[]> {
+  const status = params?.status ?? 'all'
+  const response = await api.get<ContactTypeOption[]>(`${BASE_URL}/contact-types`, {
+    params: { status },
+  })
+  return response.data
+}
+
+export async function createContactType(
+  payload: ContactTypeCreatePayload
+): Promise<ContactTypeOption> {
+  const response = await api.post<ContactTypeOption>(`${BASE_URL}/contact-types`, payload)
+  return response.data
+}
+
+export async function patchContactType(
+  typeId: number,
+  payload: ContactTypePatchPayload
+): Promise<ContactTypeOption> {
+  const response = await api.patch<ContactTypeOption>(
+    `${BASE_URL}/contact-types/${typeId}`,
+    payload
+  )
   return response.data
 }
 
@@ -522,6 +547,8 @@ export const clientApi = {
   updateContact,
   deleteContact,
   getContactTypes,
+  createContactType,
+  patchContactType,
   updateEmployment,
   updatePassport,
   getClientRestructuringAgreements,

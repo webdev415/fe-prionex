@@ -18,6 +18,7 @@
     "roles": "Roles",
     "departments": "Departments",
     "smsTemplates": "SMS Templates",
+    "rrNotifications": "RR Notifications",
     "targetActions": "Target Actions",
     "taChains": "TA Chains",
     "taDictionary": "Dictionary",
@@ -35,7 +36,11 @@
     "scoringConfiguration": "Scoring Configuration",
     "systemSettings": "System Settings",
     "tags": "Tags",
-    "actionAnalysis": "Action Analysis"
+    "actionAnalysis": "Action Analysis",
+    "messagingIntegrations": "Messaging Integrations",
+    "messagingDrafts": "Message Drafts",
+    "campaignAnalytics": "Campaign Analytics",
+    "contactTypes": "Contact Types"
   },
   "search": {
     "placeholder": "Search",
@@ -101,8 +106,11 @@
       "tasks": "Tasks",
       "calls": "Calls",
       "tags": "Tags",
-      "taChains": "TA Chains"
+      "taChains": "TA Chains",
+      "rrPayments": "RR Payments"
     },
+    "daysLeft_one": "in {{count}} day",
+    "daysLeft_other": "in {{count}} days",
     "payment": {
       "pending": "pending",
       "daysPending_one": "{{count}}d",
@@ -375,6 +383,49 @@
           "extended": "Extended",
           "rejected": "Rejected",
           "incoming_line_result": "Incoming line result"
+        },
+        "confirmedAtRangeHeading": "Confirmed at",
+        "confirmedAtFrom": "From",
+        "confirmedAtTo": "To",
+        "paymentDateRangeHeading": "Payment date",
+        "paymentDateFrom": "From",
+        "paymentDateTo": "To",
+        "selectedCount": "{{count}} selected",
+        "paymentMethod": "Payment method",
+        "paymentMethods": {
+          "all": "All methods",
+          "bank_transfer": "Bank transfer",
+          "online_gateway": "Online (link)",
+          "cash": "Cash",
+          "card": "Card",
+          "other": "Other"
+        },
+        "paymentStatuses": {
+          "all": "All",
+          "pending": "Pending",
+          "verified": "Confirmed",
+          "cancelled": "Rejected"
+        },
+        "paymentType": "Payment type",
+        "paymentTypes": {
+          "all": "All types",
+          "payment_by_rr": "Payment by RR",
+          "partial_payment": "Partial payment",
+          "full_payment": "Full payment"
+        },
+        "amountMin": "Min amount",
+        "amountMax": "Max amount",
+        "amountMinPlaceholder": "0.00",
+        "amountMaxPlaceholder": "e.g. 1000.00",
+        "paymentSortOptions": {
+          "recorded_at_desc": "Created (newest)",
+          "recorded_at_asc": "Created (oldest)",
+          "verified_at_desc": "Confirmed (newest)",
+          "verified_at_asc": "Confirmed (oldest)",
+          "amount_desc": "Amount (high → low)",
+          "amount_asc": "Amount (low → high)",
+          "payment_date_desc": "Payment date (newest)",
+          "payment_date_asc": "Payment date (oldest)"
         }
       },
       "columns": {
@@ -407,7 +458,15 @@
         "priority": "Priority",
         "topic": "Topic",
         "dueDate": "Due date",
-        "dueTime": "Due time"
+        "dueTime": "Due time",
+        "loanNumber": "Loan number",
+        "loanSaleDate": "Date of loan sale",
+        "paymentType": "Payment type",
+        "operator": "Operator",
+        "createdAt": "Created at",
+        "confirmedAt": "Confirmed at",
+        "amount": "Amount",
+        "paymentMethod": "Payment method"
       },
       "callType": {
         "incoming": "Incoming",
@@ -454,7 +513,20 @@
         "title": "Tasks due by date",
         "subtitle": "Total tasks due within the current filter range.",
         "totalLabel": "tasks due",
-        "empty": "No tasks due in the selected range."
+        "empty": "No tasks due in the selected range.",
+        "emptyMonth": "No tasks due this month.",
+        "today": "Today",
+        "prevMonth": "Previous month",
+        "nextMonth": "Next month",
+        "weekdayShort": {
+          "mon": "Mon",
+          "tue": "Tue",
+          "wed": "Wed",
+          "thu": "Thu",
+          "fri": "Fri",
+          "sat": "Sat",
+          "sun": "Sun"
+        }
       },
       "errors": {
         "loadFailed": "Failed to load calls",
@@ -466,6 +538,7 @@
         "loadScriptAnalyticsFailed": "Failed to load script analytics.",
         "loadTaHistoryFailed": "Failed to load TA history",
         "loadTaskHistoryFailed": "Failed to load task history",
+        "loadPaymentHistoryFailed": "Failed to load payment history",
         "departmentNoOperators": "No operators in this department for the current project.",
         "exportFailed": "Export failed",
         "callNotFound": "Call not found"
@@ -488,10 +561,26 @@
         "interactions": "Interaction History",
         "taHistory": "TA History",
         "taskHistory": "Task History",
+        "paymentHistory": "Payment History",
         "timeline": "Timeline",
         "screenTime": "Screen Time",
         "heatmap": "Heatmap",
         "scriptAnalytics": "Script Analytics"
+      },
+      "scope": {
+        "label": "View scope",
+        "my": "My actions",
+        "group": "Group actions",
+        "department": "Department actions",
+        "all": "All actions",
+        "groupComingSoon": "Coming soon"
+      },
+      "paymentHistoryEmpty": "No payments match the current filters",
+      "paymentHistorySummary": {
+        "totalPayments": "payments",
+        "totalAmount": "total",
+        "verified": "confirmed",
+        "pending": "pending"
       },
       "timeline": {
         "callId": "Call ID",
@@ -1467,7 +1556,8 @@
       "bulkActions": {
         "assignEmployee": "Assign Employee",
         "addTags": "Add Tags",
-        "removeTags": "Remove Tags"
+        "removeTags": "Remove Tags",
+        "sendMessage": "Send message"
       },
       "manageTags": "Manage Tags",
       "errorLoading": "Failed to load clients",
@@ -1514,7 +1604,6 @@
         "interactionLoggedDate": "Interaction Logged Date",
         "selectOperator": "Select operator",
         "portfolio": "Creditor/Seller",
-        "status": "Status",
         "tags": "Tags",
         "responsibleEmployee": "Responsible employee",
         "responsibleSearcher": "Responsible searcher",
@@ -1528,9 +1617,7 @@
         "noUsersAvailable": "No users available"
       },
       "statuses": {
-        "new": "New",
         "active": "Active",
-        "closed": "Closed",
         "inprogress": "In Progress",
         "paid": "Paid",
         "defaulted": "Defaulted",
@@ -1783,6 +1870,92 @@
           "smsFailedDuplicate": "Duplicate message rejected by provider. Please change the message text and try again.",
           "sendSMS": "Send SMS"
         },
+        "sendMessage": {
+          "title": "Send message to {{clientName}}",
+          "channel": "Channel",
+          "service": "Service",
+          "servicePlaceholder": "Select a service",
+          "loadingIntegrations": "Loading integrations...",
+          "noChannels": "No enabled channels are available",
+          "noIntegrations": "No enabled integrations for this channel",
+          "recipient": "Recipient",
+          "clientEmail": "Client email",
+          "clientPhoneSms": "Client phone (SMS)",
+          "clientPhoneViber": "Client phone (Viber)",
+          "noEmail": "This client has no email address on file.",
+          "noPhone": "This client has no phone number on file.",
+          "selectPhone": "Select phone number",
+          "workPhone": "work",
+          "quotaStatus": "{{sent}} / {{limit}} messages sent today",
+          "quotaExceeded": "Daily limit reached ({{limit}} / {{limit}}). Cannot send.",
+          "quotaExceededHint": "Daily message limit reached for this recipient",
+          "draft": "Draft",
+          "draftPlaceholder": "Select a draft",
+          "loadingDrafts": "Loading drafts...",
+          "noDraft": "No draft (custom message)",
+          "senderName": "Sender name",
+          "senderNamePlaceholder": "CRM Prionex",
+          "subject": "Subject",
+          "subjectPlaceholder": "Reminder about your account",
+          "body": "Message body",
+          "bodyHint": "Edit the message before sending. Variables like {{client_name}} are filled from client data.",
+          "preview": "Message preview",
+          "previewTo": "To",
+          "previewSender": "Sender",
+          "previewSubject": "Subject",
+          "previewBody": "Message",
+          "send": "Send message",
+          "toastQueued": "Message queued successfully"
+        },
+        "viewMessage": {
+          "title": "Message details",
+          "source": "Source",
+          "launchedBy": "Launched by",
+          "destination": "Destination",
+          "status": "Status",
+          "subject": "Subject",
+          "timeline": "Delivery timeline",
+          "sentAt": "Sent",
+          "deliveredAt": "Delivered",
+          "body": "Message",
+          "failure": "Failure details",
+          "failedAt": "Failed at",
+          "sourceSingle": "Single",
+          "sourceBulk": "Bulk"
+        },
+        "bulkSendMessage": {
+          "title": "Send message to {{count}} clients",
+          "selectedClients": "Selected clients preview",
+          "recipientCount": "{{count}} recipients will receive this message",
+          "filteredSelectAllHint": "All clients matching your current search and filters are included (across all pages).",
+          "andMore": "and {{count}} more clients",
+          "campaignName": "Campaign name",
+          "campaignNamePlaceholder": "May payment reminder",
+          "defaultCampaignName": "Bulk {{channel}} campaign — {{date}}",
+          "channel": "Channel",
+          "service": "Service",
+          "servicePlaceholder": "Select a service",
+          "loadingIntegrations": "Loading integrations...",
+          "noChannels": "No enabled channels are available",
+          "noServices": "No enabled integrations for this channel",
+          "draft": "Draft",
+          "draftPlaceholder": "Select a draft",
+          "loadingDrafts": "Loading drafts...",
+          "noDraft": "No draft (custom message)",
+          "noDrafts": "No drafts available for this channel",
+          "customMessage": "Custom message",
+          "bodyHint": "Variables like {{client_name}} are filled per recipient at send time.",
+          "draftPreview": "Message preview",
+          "draftPreviewHint": "Variables such as {{client_name}} and {{debt_amount}} are shown as written. Each recipient receives a message with values filled from their own client data at send time.",
+          "previewSubject": "Subject",
+          "previewSender": "Sender",
+          "previewBody": "Message",
+          "launch": "Launch campaign",
+          "resolveFailed": "Could not load the full client list for this campaign.",
+          "noRecipients": "No recipients match the current selection.",
+          "recipientCap": "Only the first {{cap}} recipients will be included.",
+          "campaignLaunched": "Campaign {{code}} launched"
+        },
         "viewSMS": {
           "title": "View SMS",
           "dateTime": "Date/Time",
@@ -1893,6 +2066,9 @@
           "last4DigitsMustBe4": "Last 4 digits must be exactly 4 numbers",
           "paymentMethodDetails": "Payment Method Details",
           "paymentMethodDetailsPlaceholder": "Enter additional payment details (optional)",
+          "paymentTypeLabel": "Payment type",
+          "paymentTypePlaceholder": "Select payment type",
+          "paymentTypeRequired": "Payment type is required",
           "impactPreview": "Impact Preview",
           "currentTotalDebt": "Current Total Debt:",
           "paymentAmountLabel": "Payment Amount:",
@@ -2138,6 +2314,7 @@
         "typeOfCommunication": "Type of communication",
         "calls": "Calls",
         "sms": "SMS",
+        "messaging": "Messaging",
         "notes": "Notes",
         "all": "All",
         "dateRange": "Date range",
@@ -2387,6 +2564,12 @@
         "latestCalls": "Latest Calls",
         "latestSms": "Latest SMS",
         "latestCallsAndSms": "Latest Calls and SMS",
+        "latestMessages": "Latest messages",
+        "sendMessage": "Send message",
+        "totalMessages": "Total messages",
+        "noMessagingHistory": "No messaging history is available for this client yet",
+        "noCallSmsHistory": "No calls, SMS, or messaging history for this client yet",
+        "exportMessagingCsvFailed": "Failed to export messaging history",
         "tabs": {
           "personal": "Personal",
           "work": "Work",
@@ -2604,7 +2787,9 @@
         "clearFilters": "Clear",
         "deleteTitle": "Delete interaction",
         "deleteConfirm": "Are you sure you want to delete this interaction? This cannot be undone.",
-        "deleteSuccess": "Interaction deleted"
+        "deleteSuccess": "Interaction deleted",
+        "showFullNote": "Show",
+        "hideFullNote": "Hide"
       },
       "editInteraction": {
         "title": "Edit interaction",
@@ -2769,11 +2954,39 @@
       "addButton": "Add template",
       "chainFallback": "Chain #{{id}}",
       "taFallback": "TA #{{id}}",
+      "departmentFallback": "Dept #{{id}}",
       "presetChip": "{{label}}: {{value}}",
+      "departments": "Departments",
+      "departmentsRequired": "Select at least one department.",
       "toasts": {
         "added": "Template added",
         "removed": "Template removed"
       }
+    },
+    "rrNotifications": {
+      "title": "RR Notifications",
+      "description": "Configure bell reminders for the responsible operator before each scheduled Restructuring Agreement payment. Sent daily by the system.",
+      "enable": "Enable RR notifications",
+      "enableHint": "When off, no reminders are sent — pending notifications remain in the bell.",
+      "daysBefore": "Days before due date",
+      "daysBeforeHint": "Add one or more values (1–365). One reminder per value per payment.",
+      "daysChip": "{{n}} days",
+      "daysRequired": "Add at least one days-before value.",
+      "template": "Notification text",
+      "variablesDetected": "Variables detected",
+      "availableVariables": "Available variables",
+      "clickToInsert": "Click to insert",
+      "removeVariable": "Remove one occurrence",
+      "removeHint": "Click × to remove one occurrence at a time. Use the textarea directly for precise edits.",
+      "variables": {
+        "clientName": "Client's full name",
+        "amount": "Scheduled payment amount",
+        "dueDate": "Scheduled due date",
+        "daysLeft": "Days remaining until the due date"
+      },
+      "preview": "Preview",
+      "saved": "Saved",
+      "maxDaysReached": "Max 10 entries"
     },
     "documentGeneration": {
       "title": "Document Generation",
@@ -3012,7 +3225,8 @@
         "selectTA": "Select a TA",
         "delayMinutes": "Delay (minutes)",
         "required": "Required",
-        "notInPast": "Date cannot be in the past"
+        "notInPast": "Date cannot be in the past",
+        "showClosedCredits": "Show closed credits"
       },
       "modals": {
         "create": {
@@ -3209,6 +3423,38 @@
           "templateWillBePermanentlyRemoved": "The template will be permanently removed from the system.",
           "deleting": "Deleting..."
         }
+      }
+    },
+    "contactTypes": {
+      "title": "Contact Types",
+      "add": "+ Add contact type",
+      "createTitle": "New contact type",
+      "editTitle": "Edit contact type",
+      "fieldName": "Name",
+      "fieldDefaultLine": "Default Call Line",
+      "fieldSpam": "Spam Allowed",
+      "fieldPrimary": "Show as Primary Phone",
+      "fieldSort": "Sort Order",
+      "white": "White",
+      "gray": "Gray",
+      "hidden": "Hidden",
+      "active": "Active",
+      "hide": "Hide",
+      "restore": "Restore",
+      "filterStatus": "Status",
+      "filterAll": "All",
+      "filterActive": "Active",
+      "filterHidden": "Hidden",
+      "errorLoading": "Failed to load contact types",
+      "retry": "Retry",
+      "columns": {
+        "sortOrder": "Sort Order",
+        "name": "Name",
+        "defaultLine": "Default Call Line",
+        "spamAllowed": "Spam Allowed",
+        "primary": "Show as Primary Phone",
+        "status": "Status",
+        "actions": "Actions"
       }
     },
     "tags": {
@@ -4180,7 +4426,7 @@
         "quickRanges": "Quick ranges",
         "today": "Today",
         "yesterday": "Yesterday",
-        "last7": "Last 7",
+        "last7": "Last 7 days",
         "last30": "Last 30 days",
         "selectEmployee": "Select employee",
         "allTypes": "All Types",
@@ -4257,6 +4503,230 @@
           "ipAddress": "IP Address",
           "successStatus": "Success Status"
         }
+      }
+    },
+    "messagingCampaigns": {
+      "description": "Review bulk and single-send campaigns, inspect recipient outcomes, and export delivery results.",
+      "empty": "No campaigns matched the current filters",
+      "exportFailed": "Failed to export campaign recipients",
+      "filters": {
+        "searchLabel": "Search",
+        "searchPlaceholder": "Search campaign, code, or service",
+        "status": "Status",
+        "channel": "Channel",
+        "launcher": "Launched by",
+        "allStatuses": "All statuses",
+        "allChannels": "All channels",
+        "allLaunchers": "All launchers",
+        "searchLauncher": "Search launcher..."
+      },
+      "status": {
+        "queued": "Queued",
+        "sending": "Sending",
+        "completed": "Completed",
+        "partially_failed": "Partially failed",
+        "failed": "Failed"
+      },
+      "summary": {
+        "delivered": "delivered",
+        "resultsLine": "{{delivered}}/{{total}} delivered"
+      },
+      "table": {
+        "code": "Code",
+        "name": "Campaign",
+        "source": "Source",
+        "channel": "Channel",
+        "service": "Service",
+        "status": "Status",
+        "summary": "Results",
+        "launchedBy": "Launched by",
+        "launchedAt": "Launched",
+        "actions": "Actions",
+        "client": "Client",
+        "destination": "Destination",
+        "sentAt": "Sent",
+        "deliveredAt": "Delivered",
+        "error": "Error"
+      },
+      "actions": {
+        "viewDetails": "View details",
+        "export": "Export CSV"
+      },
+      "detail": {
+        "title": "Campaign details",
+        "source": "Source",
+        "launchedBy": "Launched by",
+        "launchedAt": "Launched at",
+        "completedAt": "Completed at",
+        "selectionPayload": "Audience",
+        "selectionIds": "{{count}} clients selected by ID",
+        "selectionFilter": "Clients matching saved list filters",
+        "selectionUnknown": "Custom selection",
+        "campaignMessage": "Campaign message",
+        "draftUsed": "Draft",
+        "senderName": "Sender",
+        "subject": "Subject",
+        "body": "Body",
+        "recipientResults": "Recipient results",
+        "recipientResultsHint": "Showing the latest 100 recipient rows for this campaign.",
+        "noRecipients": "No recipient results available yet",
+        "stats": {
+          "total": "Total",
+          "sent": "Sent",
+          "delivered": "Delivered",
+          "failed": "Failed",
+          "skipped": "Skipped"
+        }
+      }
+    },
+    "messagingDrafts": {
+      "description": "Manage reusable message bodies for SMS, Viber, and email campaigns.",
+      "createTitle": "Create draft",
+      "editTitle": "Edit draft",
+      "empty": "No drafts matched the current filters",
+      "filters": {
+        "search": "Search draft name or content",
+        "channel": "Channel",
+        "allChannels": "All channels"
+      },
+      "table": {
+        "name": "Draft",
+        "channel": "Channel",
+        "senderName": "Sender",
+        "updatedAt": "Updated",
+        "actions": "Actions"
+      },
+      "actions": {
+        "newDraft": "New draft",
+        "view": "View draft"
+      },
+      "form": {
+        "name": "Draft name",
+        "namePlaceholder": "Payment reminder",
+        "channel": "Channel",
+        "senderName": "Sender name",
+        "senderNamePlaceholder": "CRM Prionex",
+        "senderNameEmailPlaceholder": "CRM Prionex Support",
+        "subject": "Subject",
+        "subjectPlaceholder": "Reminder about your account",
+        "subjectRequiredError": "Subject is required for email drafts.",
+        "body": "Message body",
+        "bodyRequired": "Message body is required.",
+        "bodyTooLong": "Body exceeds the {{max}}-character limit for {{channel}}.",
+        "charCount": "{{count}} / {{max}}",
+        "bodyPlaceholderSms": "Hi {{client_name}}, your payment of {{debt_amount}} UAH is due on {{due_date}}. — CRM Prionex",
+        "bodyPlaceholderViber": "Hi {{client_name}}, your payment of {{debt_amount}} UAH is due on {{due_date}}. Tap reply to confirm.",
+        "bodyPlaceholderEmail": "Dear {{client_name}},\n\nThis is a reminder that your payment of {{debt_amount}} UAH for contract {{contract_number}} is due on {{due_date}}.\n\nBest regards,\n{{operator_name}}"
+      },
+      "view": {
+        "title": "View draft",
+        "titleWithName": "View draft: {{name}}",
+        "templateBody": "Message template",
+        "variables": "Variables in this draft"
+      },
+      "delete": {
+        "title": "Delete draft",
+        "confirmMessage": "Are you sure you want to delete the draft \"{{name}}\"?",
+        "cannotUndo": "This action cannot be undone",
+        "permanentRemoval": "The draft will be permanently removed."
+      },
+      "toasts": {
+        "created": "Draft created successfully",
+        "updated": "Draft updated successfully",
+        "deleted": "Draft deleted successfully"
+      }
+    },
+    "messagingIntegrations": {
+      "description": "Configure provider credentials, enable channels per service, and verify connection health.",
+      "channelToggleAria": "Enable {{channel}} channel",
+      "channelToggleHint": "Use these toggles to enable or disable the service channels supported by this provider.",
+      "providerNotImplemented": "Live API connection is not available for this provider yet. Save credentials for later; Test and messaging are disabled.",
+      "testDisabledHint": "Enter and save complete credentials for a supported provider before testing.",
+      "table": {
+        "channels": "Channels",
+        "lastTested": "Last tested"
+      },
+      "actions": {
+        "test": "Test",
+        "configure": "Configure"
+      },
+      "form": {
+        "credentials": "Credentials",
+        "editCredentials": "Edit credentials",
+        "storedValuePlaceholder": "Saved ({{hint}}) — leave blank to keep",
+        "staticConfigHint": "API URL and callback URL are configured by your administrator in the server environment, not here."
+      },
+      "status": {
+        "configured": "Configured",
+        "error": "Error",
+        "unconfigured": "Unconfigured",
+        "not_configured": "Not configured"
+      },
+      "services": {
+        "turbosms": "TurboSMS",
+        "omnicell": "OmniCell",
+        "vodafone_obm": "Vodafone OBM",
+        "my2_viber": "My2 Viber",
+        "intel_tele": "Intel-Tele.com"
+      },
+      "credentials": {
+        "turbosms": {
+          "api_key": { "label": "API key" },
+          "sender": { "label": "Sender" }
+        },
+        "omnicell": {
+          "username": { "label": "Username" },
+          "password": { "label": "Password" },
+          "sender": { "label": "SMS sender (Alpha name)" }
+        },
+        "vodafone_obm": {
+          "username": {
+            "label": "OBM login (Settings → Logins)",
+            "placeholder": "Legal-entity login string, or phone/email if cabinet allows"
+          },
+          "password": { "label": "Cabinet password" },
+          "sender": {
+            "label": "Sender (Alpha name)",
+            "placeholder": "Approved sender, e.g. TechnoFin"
+          },
+          "sender_id": {
+            "label": "Sender ID (optional)",
+            "placeholder": "Numeric id from OBM Sender name, e.g. 5581072"
+          }
+        },
+        "my2_viber": {
+          "api_key": {
+            "label": "API token",
+            "placeholder": "From my2.viber.net.ua → Profile → API"
+          },
+          "sender": {
+            "label": "Sender (Alpha name)",
+            "placeholder": "Approved Viber sender from cabinet, e.g. default"
+          }
+        },
+        "intel_tele": {
+          "username": {
+            "label": "Cabinet login",
+            "placeholder": "e.g. fc.technofinance@gmail.com"
+          },
+          "api_key": {
+            "label": "API key / SMTP password",
+            "placeholder": "e.intel-tele.com → Automation → API and SMTP (same value for both)"
+          },
+          "from_email": {
+            "label": "From email",
+            "placeholder": "Verified sender, e.g. info@techno-finance.com"
+          },
+          "from_name": { "label": "From name" },
+          "reply_to_email": { "label": "Reply-to email" },
+          "reply_to_name": { "label": "Reply-to name" }
+        }
+      },
+      "toasts": {
+        "saved": "Integration saved successfully",
+        "updated": "Integration updated successfully",
+        "deleted": "Integration deleted successfully",
+        "testCompleted": "Integration test completed"
       }
     },
     "forbidden": {
