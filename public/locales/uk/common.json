@@ -1632,7 +1632,9 @@
         "sent": "Відправлено",
         "delivered": "Доставлено",
         "failed": "Не вдалося",
-        "pending": "Очікується"
+        "pending": "Очікується",
+        "skipped": "Пропущено",
+        "bounced": "Відхилено"
       },
       "activity": {
         "score": "Оцінка",
@@ -4546,6 +4548,12 @@
         "delivered": "доставлено",
         "resultsLine": "{{delivered}}/{{total}} доставлено"
       },
+      "cost": {
+        "actual": "Фактично",
+        "estimated": "Оцінка",
+        "partial": "Частково",
+        "unavailable": "—"
+      },
       "table": {
         "code": "Код",
         "name": "Кампанія",
@@ -4554,6 +4562,7 @@
         "service": "Сервіс",
         "status": "Статус",
         "summary": "Результати",
+        "cost": "Вартість",
         "launchedBy": "Запустив",
         "launchedAt": "Запущено",
         "actions": "Дії",
@@ -4573,6 +4582,7 @@
         "launchedBy": "Запустив",
         "launchedAt": "Час запуску",
         "completedAt": "Час завершення",
+        "cost": "Вартість",
         "selectionPayload": "Аудиторія",
         "selectionIds": "{{count}} клієнтів обрано за ID",
         "selectionFilter": "Клієнти за фільтрами списку",

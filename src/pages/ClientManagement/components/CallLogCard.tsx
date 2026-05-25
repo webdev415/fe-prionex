@@ -117,16 +117,6 @@ export function CallLogCard({
     ? t(outcomeRender.labelKey, outcomeRender.fallback)
     : outcomeRender.fallback
 
-  // KAN-490: call outcomes (Busy, Cancel, Congestion, etc.) live in @/lib/callOutcome.
-  const callOutcome = isCall ? classifyCallOutcome(status) : null
-  const callPalette = callOutcome ? OUTCOME_PALETTE_CLASSES[callOutcome.palette] : null
-  const callStatusLabel =
-    callOutcome && status
-      ? callOutcome.labelKey
-        ? t(callOutcome.labelKey, callOutcome.fallback)
-        : callOutcome.fallback
-      : ''
-
   const getTranslatedCallType = (callType: string) => {
     switch (callType) {
       case 'Incoming':
@@ -240,7 +230,6 @@ export function CallLogCard({
                 <span className={cn('shrink-0 text-sm', palette.text)}>
                   {status ? translatedStatus : ''}
                 </span>
-                <span className={cn('shrink-0 text-sm', callPalette?.text)}>{callStatusLabel}</span>
                 <TelephonyTypeBadge
                   type={telephony_type}
                   direction={direction ?? (type === 'Incoming' ? 'inbound' : 'outbound')}

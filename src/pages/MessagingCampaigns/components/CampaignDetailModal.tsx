@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils'
 import { formatDateTime } from '@/lib/formatters'
 import {
   downloadBlob,
+  formatCampaignCostDisplay,
   formatLauncherName,
   getMessagingServiceLabel,
   messagingApi,
@@ -342,6 +343,19 @@ export function CampaignDetailModal({
                 </DetailRow>
                 <DetailRow label={t('pages.messagingCampaigns.detail.completedAt', 'Completed at')}>
                   {formatDateTime(campaign.completed_at ?? undefined)}
+                </DetailRow>
+                <DetailRow label={t('pages.messagingCampaigns.detail.cost', 'Cost')}>
+                  {(() => {
+                    const { amount, badge } = formatCampaignCostDisplay(campaign, t)
+                    return (
+                      <span>
+                        {amount}
+                        {badge ? (
+                          <span className="ml-2 text-xs font-light text-gray-500">({badge})</span>
+                        ) : null}
+                      </span>
+                    )
+                  })()}
                 </DetailRow>
                 <DetailRow
                   label={t('pages.messagingCampaigns.detail.selectionPayload', 'Audience')}
