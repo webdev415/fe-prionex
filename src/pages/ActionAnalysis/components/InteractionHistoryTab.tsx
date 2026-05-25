@@ -33,7 +33,9 @@ export function InteractionHistoryTab() {
 
   const activeProjectId = useAuthStore((s) => s.user?.active_project_id)
   const userTimezone = useAuthStore((s) => s.user?.timezone)
-  const { data: operators = [] } = useOperators(activeProjectId ? Number(activeProjectId) : null)
+  const { data: operators = [] } = useOperators(activeProjectId ? Number(activeProjectId) : null, {
+    includeInactive: true,
+  })
   const { data: contactTypes = [] } = useInteractionContactTypes()
   const { data: results = [] } = useInteractionResults()
 
