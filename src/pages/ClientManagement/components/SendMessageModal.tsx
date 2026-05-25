@@ -17,6 +17,7 @@ import { formatMoneyUAHTwoDecimals } from '@/lib/formatters'
 import { useClient } from '@/features/clients/hooks/useClients'
 import { authApi } from '@/features/auth/api/authApi'
 import { useAuthStore } from '@/stores/authStore'
+import { useHasPermission } from '@/hooks/usePermissions'
 import {
   MESSAGING_CHANNELS,
   buildClientMessagingVariables,
@@ -26,13 +27,16 @@ import {
   isMessagingIntegrationUsable,
   renderMessagingTemplate,
   resolveCurrentUserFromQuery,
+  resolveDestinationOwner,
   resolveDestinationPhone,
+  sendPermissionForChannel,
   useDestinationQuota,
   useMessagingDrafts,
   useMessagingIntegrations,
   useSendMessage,
   MessagingVariablesPalette,
   insertMessagingVariableAtCursor,
+  type ClientPhoneOption,
   type MessagingTemplateFocusField,
 } from '@/features/messaging'
 import type { MessagingChannel, MessagingDraft } from '@/features/messaging'
@@ -97,6 +101,7 @@ export interface SendMessageModalProps {
   clientName: string
   loans?: Array<{ id: number; loanNumber: string; totalToRepay: number }>
   phones?: string[]
+  phoneOptions?: ClientPhoneOption[]
   workPhone?: string
   email?: string | null
   initialPhone?: string
@@ -110,6 +115,7 @@ export function SendMessageModal({
   clientName,
   loans = [],
   phones: phonesProp,
+  phoneOptions: phoneOptionsProp,
   workPhone,
   email: emailProp,
   initialPhone,
@@ -117,6 +123,9 @@ export function SendMessageModal({
 }: SendMessageModalProps) {
   const { t } = useTranslation('common')
   const { user } = useAuthStore()
+  const canSendSms = useHasPermission(sendPermissionForChannel('sms'))
+  const canSendViber = useHasPermission(sendPermissionForChannel('viber'))
+  const canSendEmail = useHasPermission(sendPermissionForChannel('email'))
   const [channel, setChannel] = useState<MessagingChannel>('sms')
   const [service, setService] = useState('')
   const [draftId, setDraftId] = useState('none')
@@ -147,13 +156,22 @@ export function SendMessageModal({
     loans.length > 0 ? loans[0].id : null
   )
 
+  const phoneOptions = useMemo((): ClientPhoneOption[] => {
+    if (phoneOptionsProp?.length) {
+      return phoneOptionsProp
+    }
+    return collectClientPhones(phonesProp, clientData?.phone_primary).map((number) => ({
+      number,
+    }))
+  }, [clientData?.phone_primary, phoneOptionsProp, phonesProp])
+
   const clientPhones = useMemo(() => {
-    const base = collectClientPhones(phonesProp, clientData?.phone_primary)
+    const base = phoneOptions.map((o) => o.number)
     if (workPhone && workPhone.trim() && !base.includes(workPhone.trim())) {
       return [...base, workPhone.trim()]
     }
     return base
-  }, [clientData?.phone_primary, phonesProp, workPhone])
+  }, [phoneOptions, workPhone])
 
   const clientEmail = (emailProp ?? clientData?.email ?? '').trim()
 
@@ -177,10 +195,15 @@ export function SendMessageModal({
 
   const availableChannels = useMemo(
     () =>
-      MESSAGING_CHANNELS.filter((item) =>
-        integrations.some((integration) => isMessagingIntegrationUsable(integration, item))
-      ),
-    [integrations]
+      MESSAGING_CHANNELS.filter((item) => {
+        const allowed =
+          (item === 'sms' && canSendSms) ||
+          (item === 'viber' && canSendViber) ||
+          (item === 'email' && canSendEmail)
+        if (!allowed) return false
+        return integrations.some((integration) => isMessagingIntegrationUsable(integration, item))
+      }),
+    [canSendEmail, canSendSms, canSendViber, integrations]
   )
 
   const availableIntegrations = useMemo(
@@ -350,6 +373,17 @@ export function SendMessageModal({
       sender_name: senderName.trim() || null,
       variables: variableValues,
       destination_override: destinationKind === 'phone' ? selectedPhone || null : null,
+      destination_owner:
+        destinationKind === 'phone' && selectedPhone
+          ? resolveDestinationOwner(selectedPhone, phoneOptions, workPhone)
+          : destinationKind === 'email'
+            ? 'client'
+            : null,
+      destination_contact_type_id:
+        destinationKind === 'phone' && selectedPhone
+          ? (phoneOptions.find((o) => o.number.trim() === selectedPhone.trim())?.contactTypeId ??
+            null)
+          : null,
     })
 
     onSent?.()
@@ -510,14 +544,21 @@ export function SendMessageModal({
                         />
                       </SelectTrigger>
                       <SelectContent>
-                        {clientPhones.map((phone) => (
-                          <SelectItem key={phone} value={phone}>
-                            {phone}
-                            {phone === workPhone
-                              ? ` (${t('pages.clients.modals.sendMessage.workPhone', 'work')})`
-                              : ''}
-                          </SelectItem>
-                        ))}
+                        {clientPhones.map((phone) => {
+                          const opt = phoneOptions.find((o) => o.number === phone)
+                          const ownerKey =
+                            phone === workPhone
+                              ? 'pages.clients.modals.sendMessage.workPhone'
+                              : opt?.contactTypeCode === 'referrer'
+                                ? 'pages.clients.messageHistory.destinationOwner.referrer'
+                                : 'pages.clients.messageHistory.destinationOwner.client'
+                          return (
+                            <SelectItem key={phone} value={phone}>
+                              {phone}
+                              {` (${t(ownerKey, opt?.label ?? (phone === workPhone ? 'work' : 'client'))})`}
+                            </SelectItem>
+                          )
+                        })}
                       </SelectContent>
                     </Select>
                   ) : (

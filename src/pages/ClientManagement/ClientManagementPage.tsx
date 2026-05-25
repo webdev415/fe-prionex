@@ -47,6 +47,7 @@ import { useURLState } from '@/hooks/useURLState'
 import type { Priority } from './types'
 import { PermissionGuard } from '@/components/auth'
 import { PERMISSIONS } from '@/constants/permissions'
+import { ALL_MESSAGING_LAUNCH_PERMISSIONS } from '@/features/messaging'
 import { useTags } from '@/features/tags/hooks/useTags'
 import { isAdminRole, isHiddenVisibility } from '@/features/tags/utils/visibility'
 import { toast } from 'sonner'
@@ -1671,7 +1672,7 @@ export function ClientManagementPage() {
                         </span>
                       </DropdownMenuItem>
                     </PermissionGuard>
-                    <PermissionGuard permission={PERMISSIONS.MESSAGING.LAUNCH_CAMPAIGNS}>
+                    <PermissionGuard permissions={ALL_MESSAGING_LAUNCH_PERMISSIONS} mode="any">
                       <DropdownMenuItem
                         onClick={handleBulkSendMessage}
                         className="flex cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 transition-colors hover:bg-gray-50 focus:bg-gray-50"

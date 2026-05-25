@@ -62,6 +62,8 @@ type CallLogCardProps = {
   setIsViewSMSModalOpen?: (open: boolean) => void
   /** When set (and not a call card), click invokes this instead of the legacy SMS modal. */
   onSelect?: () => void
+  /** e.g. "Client" / "Referrer" — shown with phone on message cards. */
+  destinationOwnerLabel?: string
 }
 
 /**
@@ -102,6 +104,7 @@ export function CallLogCard({
   setSelectedSMSData,
   setIsViewSMSModalOpen,
   onSelect,
+  destinationOwnerLabel,
 }: CallLogCardProps) {
   const { t } = useTranslation('common')
   const { isCallActive, setOpenCallModal } = useCallStore()
@@ -278,6 +281,14 @@ export function CallLogCard({
               <div className="line-clamp-2 overflow-hidden text-sm break-words text-[#666666]">
                 {message}
               </div>
+              {phone && phone !== '-' && (
+                <div className="truncate text-sm text-[#666666]">
+                  {phone}
+                  {destinationOwnerLabel ? (
+                    <span className="text-[#888888]"> · {destinationOwnerLabel}</span>
+                  ) : null}
+                </div>
+              )}
             </>
           )}
         </div>

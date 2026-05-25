@@ -333,6 +333,8 @@ export interface MessagingSingleSendRequest {
   sender_name?: string | null
   variables?: Record<string, unknown>
   destination_override?: string | null
+  destination_owner?: string | null
+  destination_contact_type_id?: number | null
   name?: string | null
 }
 
@@ -354,6 +356,8 @@ export interface MessagingClientHistoryItem {
   initiated_by?: number
   initiatedBy?: number
   destination: string | null
+  destination_owner?: string | null
+  destination_contact_type_id?: number | null
   body: string | null
   subject: string | null
   status: string

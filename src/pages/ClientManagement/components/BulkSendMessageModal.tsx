@@ -14,11 +14,13 @@ import {
   SelectValue,
 } from '@/components/ui/Select'
 import { Icons } from '@/lib/icons'
+import { useHasPermission } from '@/hooks/usePermissions'
 import {
   BULK_MESSAGING_RECIPIENT_CAP,
   MESSAGING_CHANNELS,
   fetchFilteredClientIds,
   isMessagingIntegrationUsable,
+  launchPermissionForChannel,
   useCreateMessagingCampaign,
   useMessagingDrafts,
   useMessagingIntegrations,
@@ -112,6 +114,9 @@ export function BulkSendMessageModal({
   onLaunched,
 }: BulkSendMessageModalProps) {
   const { t } = useTranslation('common')
+  const canLaunchSms = useHasPermission(launchPermissionForChannel('sms'))
+  const canLaunchViber = useHasPermission(launchPermissionForChannel('viber'))
+  const canLaunchEmail = useHasPermission(launchPermissionForChannel('email'))
   const [campaignName, setCampaignName] = useState('')
   const [channel, setChannel] = useState<MessagingChannel>('sms')
   const [service, setService] = useState('')
@@ -138,10 +143,15 @@ export function BulkSendMessageModal({
 
   const availableChannels = useMemo(
     () =>
-      MESSAGING_CHANNELS.filter((item) =>
-        integrations.some((integration) => isMessagingIntegrationUsable(integration, item))
-      ),
-    [integrations]
+      MESSAGING_CHANNELS.filter((item) => {
+        const allowed =
+          (item === 'sms' && canLaunchSms) ||
+          (item === 'viber' && canLaunchViber) ||
+          (item === 'email' && canLaunchEmail)
+        if (!allowed) return false
+        return integrations.some((integration) => isMessagingIntegrationUsable(integration, item))
+      }),
+    [canLaunchEmail, canLaunchSms, canLaunchViber, integrations]
   )
 
   const availableIntegrations = useMemo(
