@@ -103,8 +103,13 @@
       "tasks": "Задачи",
       "calls": "Звонки",
       "tags": "Теги",
-      "taChains": "Цепочки ЦД"
+      "taChains": "Цепочки ЦД",
+      "rrPayments": "Платежи РР"
     },
+    "daysLeft_one": "через {{count}} день",
+    "daysLeft_few": "через {{count}} дня",
+    "daysLeft_many": "через {{count}} дней",
+    "daysLeft_other": "через {{count}} дней",
     "payment": {
       "pending": "ожидает",
       "daysPending_one": "{{count}} день",
@@ -1545,7 +1550,6 @@
         "interactionLoggedDate": "Дата записи взаимодействия",
         "selectOperator": "Выберите оператора",
         "portfolio": "Кредитор/Продавец",
-        "status": "Статус",
         "responsibleEmployee": "Ответственный сотрудник",
         "responsibleSearcher": "Ответственный поисковик",
         "selectEmployee": "Выберите сотрудника",
@@ -1559,9 +1563,7 @@
         "days": "дней"
       },
       "statuses": {
-        "new": "Новый",
         "active": "Активный",
-        "closed": "Закрытый",
         "inprogress": "В процессе",
         "paid": "Оплачено",
         "defaulted": "Просрочено",

@@ -90,8 +90,8 @@ const mapAPIClientToDisplay = (
   thresholds: PriorityThresholds,
   userNameMap: Map<number, string>,
   showHiddenTags: boolean,
-  /** When set (operator + catalog loaded): only show tags whose name exists in tag-service catalog (hidden tags are omitted there). */
-  operatorAllowedTagNames: Set<string> | null
+  /** When set (operator + catalog loaded): only show tags present in tag-service catalog (hidden tags are omitted there). */
+  operatorAllowedTags: { names: Set<string>; codes: Set<string> } | null
 ): DisplayClient => {
   const fullName = [client.first_name, client.middle_name, client.last_name]
     .filter(Boolean)
@@ -104,8 +104,10 @@ const mapAPIClientToDisplay = (
     tags: (client.tags || []).filter((tag) => {
       if (showHiddenTags) return true
       if (isHiddenVisibility(tag.visibility)) return false
-      if (operatorAllowedTagNames !== null) {
-        return operatorAllowedTagNames.has(tag.name)
+      if (operatorAllowedTags !== null) {
+        const code = (tag as { code?: string | null }).code
+        if (code && operatorAllowedTags.codes.has(code)) return true
+        return operatorAllowedTags.names.has(tag.name)
       }
       return true
     }),
@@ -175,9 +177,6 @@ export interface ClientFilters {
   // Portfolio/Sellers Filter (now stores IDs only)
   portfolio?: number[]
 
-  // Status Filter
-  status?: string[]
-
   // Assignment Filters
   responsibleEmployee?: string
   responsibleSearcher?: string
@@ -215,7 +214,6 @@ export function ClientManagementPage() {
 
   // URL state for filters
   const [portfolioFilter, setPortfolioFilter] = useURLState<number[]>('sellers', [])
-  const [statusFilter, setStatusFilter] = useURLState<string[]>('status', [])
   const [tagIdsFilter, setTagIdsFilter] = useURLState<number[]>('tags', [])
   const [lastInteractionResultIdsFilter, setLastInteractionResultIdsFilter] = useURLState<number[]>(
     'lastInteractionResults',
@@ -281,7 +279,6 @@ export function ClientManagementPage() {
   const filters: ClientFilters = useMemo(
     () => ({
       portfolio: portfolioFilter,
-      status: statusFilter,
       tagIds: tagIdsFilter,
       lastInteractionResultIds: lastInteractionResultIdsFilter,
       responsibleEmployee: responsibleEmployeeFilter || undefined,
@@ -309,7 +306,6 @@ export function ClientManagementPage() {
     }),
     [
       portfolioFilter,
-      statusFilter,
       tagIdsFilter,
       lastInteractionResultIdsFilter,
       responsibleEmployeeFilter,
@@ -371,7 +367,6 @@ export function ClientManagementPage() {
       sortBy,
       sortOrder,
       portfolioFilter,
-      statusFilter,
       tagIdsFilter,
       responsibleEmployeeFilter,
       responsibleSearcherFilter,
@@ -406,7 +401,6 @@ export function ClientManagementPage() {
       responsibleEmployeeFilter !== '' ||
       responsibleSearcherFilter !== '' ||
       portfolioFilter.length > 0 ||
-      statusFilter.length > 0 ||
       tagIdsFilter.length > 0 ||
       lastInteractionResultIdsFilter.length > 0 ||
       unassignedOnlyFilter ||
@@ -445,7 +439,6 @@ export function ClientManagementPage() {
     sortBy,
     sortOrder,
     portfolioFilter,
-    statusFilter,
     tagIdsFilter,
     lastInteractionResultIdsFilter,
     responsibleEmployeeFilter,
@@ -484,7 +477,6 @@ export function ClientManagementPage() {
       searchQuery !== '' ||
       responsibleEmployeeFilter !== '' ||
       portfolioFilter.length > 0 ||
-      statusFilter.length > 0 ||
       tagIdsFilter.length > 0 ||
       lastInteractionResultIdsFilter.length > 0 ||
       unassignedOnlyFilter ||
@@ -512,7 +504,6 @@ export function ClientManagementPage() {
           setTimeout(() => {
             if (parsed.selectedPriorities) setSelectedPriorities(parsed.selectedPriorities)
             if (parsed.portfolioFilter) setPortfolioFilter(parsed.portfolioFilter)
-            if (parsed.statusFilter) setStatusFilter(parsed.statusFilter)
             if (parsed.tagIdsFilter) setTagIdsFilter(parsed.tagIdsFilter)
             if (parsed.responsibleEmployeeFilter)
               setResponsibleEmployeeFilter(parsed.responsibleEmployeeFilter)
@@ -689,10 +680,6 @@ export function ClientManagementPage() {
       params.debt_max = filters.debtRangeTo
     }
 
-    if (filters.status && filters.status.length > 0) {
-      params.status = filters.status.join(',')
-    }
-
     // FILTER 9: Tags
     if (filters.tagIds && filters.tagIds.length > 0) {
       params.tag_ids = filters.tagIds.join(',')
@@ -797,10 +784,16 @@ export function ClientManagementPage() {
   // Tag-service list for operators excludes hidden tags — use names to filter client-list embedded tags
   // when client-service rows omit or stale-sync visibility (different DB ids than tag-service).
   const { data: operatorTagCatalog } = useTags(activeProjectIdNum)
-  const operatorAllowedTagNames = useMemo(() => {
+  const operatorAllowedTags = useMemo(() => {
     if (showHiddenTags) return null
     if (operatorTagCatalog === undefined) return null
-    return new Set(operatorTagCatalog.map((t) => t.name))
+    const names = new Set<string>()
+    const codes = new Set<string>()
+    for (const t of operatorTagCatalog) {
+      names.add(t.name)
+      if (t.code) codes.add(t.code)
+    }
+    return { names, codes }
   }, [showHiddenTags, operatorTagCatalog])
   const { data: operators } = useOperators(activeProjectId ? Number(activeProjectId) : null)
   const userNameMap = useMemo(() => {
@@ -820,15 +813,9 @@ export function ClientManagementPage() {
   // Map API clients to display format
   const displayClients = useMemo(() => {
     return apiClients.map((client) =>
-      mapAPIClientToDisplay(
-        client,
-        thresholds,
-        userNameMap,
-        showHiddenTags,
-        operatorAllowedTagNames
-      )
+      mapAPIClientToDisplay(client, thresholds, userNameMap, showHiddenTags, operatorAllowedTags)
     )
-  }, [apiClients, thresholds, userNameMap, showHiddenTags, operatorAllowedTagNames])
+  }, [apiClients, thresholds, userNameMap, showHiddenTags, operatorAllowedTags])
 
   // Count applied filters
   const appliedFiltersCount = useMemo(() => {
@@ -847,7 +834,6 @@ export function ClientManagementPage() {
     if (filters.portfolio && filters.portfolio.length > 0) count++
     if (filters.tagIds && filters.tagIds.length > 0) count++
     if (filters.lastInteractionResultIds && filters.lastInteractionResultIds.length > 0) count++
-    if (filters.status && filters.status.length > 0) count++
     if (filters.responsibleEmployee) count++
     if (filters.responsibleSearcher) count++
     if (filters.unassignedOnly) count++
@@ -1117,14 +1103,6 @@ export function ClientManagementPage() {
       return
     }
 
-    if (newFilters._action === 'toggleStatus') {
-      const status = newFilters._value as string
-      const checked = newFilters._checked as boolean
-      setStatusFilter((prev) => (checked ? [...prev, status] : prev.filter((s) => s !== status)))
-      setCurrentPage(1)
-      return
-    }
-
     if (newFilters._action === 'toggleTag') {
       const tagId = newFilters._value as number
       const checked = newFilters._checked as boolean
@@ -1147,9 +1125,6 @@ export function ClientManagementPage() {
     // Only update if value has actually changed (use JSON.stringify for deep comparison)
     if (JSON.stringify(newFilters.portfolio) !== JSON.stringify(portfolioFilter)) {
       setPortfolioFilter(newFilters.portfolio || [])
-    }
-    if (JSON.stringify(newFilters.status) !== JSON.stringify(statusFilter)) {
-      setStatusFilter(newFilters.status || [])
     }
     if (JSON.stringify(newFilters.tagIds) !== JSON.stringify(tagIdsFilter)) {
       setTagIdsFilter(newFilters.tagIds || [])
@@ -1235,7 +1210,6 @@ export function ClientManagementPage() {
     // Clear all URL state filters (useURLState will handle URL updates after debounce)
     setSelectedPriorities([])
     setPortfolioFilter([])
-    setStatusFilter([])
     setTagIdsFilter([])
     setLastInteractionResultIdsFilter([])
     setResponsibleEmployeeFilter('')

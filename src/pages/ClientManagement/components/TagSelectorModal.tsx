@@ -21,6 +21,7 @@ import {
 import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Icons } from '@/lib/icons'
+import { sortTagsWithSelectedFirst } from '@/features/tags/utils/sortTags'
 import { useDebounce } from '@/hooks/useDebounce'
 import { useHasPermission } from '@/hooks'
 import { PERMISSIONS } from '@/constants/permissions'
@@ -78,12 +79,12 @@ export const TagSelectorModal = memo(function TagSelectorModal({
     }
   }, [clientTags])
 
-  // Memoize filtered tags to avoid recalculating on every render
-  const filteredTags = useMemo(
-    () =>
-      allTags?.filter((tag) => tag.name.toLowerCase().includes(debouncedSearchQuery.toLowerCase())),
-    [allTags, debouncedSearchQuery]
-  )
+  // Memoize filtered tags; pin selected tags to the top for quick access
+  const filteredTags = useMemo(() => {
+    const q = debouncedSearchQuery.toLowerCase()
+    const matched = (allTags ?? []).filter((tag) => tag.name.toLowerCase().includes(q))
+    return sortTagsWithSelectedFirst(matched, selectedTagIds)
+  }, [allTags, debouncedSearchQuery, selectedTagIds])
 
   // Memoize handleToggleTag to prevent re-creating function on every render.
   // Tags with `requires_payload=true` (e.g. promise_to_pay) cannot be added

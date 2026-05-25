@@ -106,8 +106,11 @@
       "tasks": "Tasks",
       "calls": "Calls",
       "tags": "Tags",
-      "taChains": "TA Chains"
+      "taChains": "TA Chains",
+      "rrPayments": "RR Payments"
     },
+    "daysLeft_one": "in {{count}} day",
+    "daysLeft_other": "in {{count}} days",
     "payment": {
       "pending": "pending",
       "daysPending_one": "{{count}}d",
@@ -1601,7 +1604,6 @@
         "interactionLoggedDate": "Interaction Logged Date",
         "selectOperator": "Select operator",
         "portfolio": "Creditor/Seller",
-        "status": "Status",
         "tags": "Tags",
         "responsibleEmployee": "Responsible employee",
         "responsibleSearcher": "Responsible searcher",
@@ -1615,9 +1617,7 @@
         "noUsersAvailable": "No users available"
       },
       "statuses": {
-        "new": "New",
         "active": "Active",
-        "closed": "Closed",
         "inprogress": "In Progress",
         "paid": "Paid",
         "defaulted": "Defaulted",
