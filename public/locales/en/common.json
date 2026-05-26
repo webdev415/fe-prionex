@@ -2356,6 +2356,64 @@
         "makePayment": "Make Payment",
         "payments": "Payments",
         "writesOff": "Writes-off",
+        "writeOffModal": {
+          "title": "Write off debt",
+          "chooseALoan": "Choose a loan",
+          "chooseALoanPlaceholder": "Select a loan…",
+          "noActiveLoans": "This client has no active loans available for write-off.",
+          "amountPlaceholder": "Amount to write off",
+          "balanceHint": "Component balance: {{amount}}",
+          "cancellationDate": "Automatic cancellation date",
+          "cancellationDatePlaceholder": "Select date",
+          "notes": "Notes",
+          "notesPlaceholder": "Optional reason or context",
+          "totalAmount": "Total amount written off",
+          "saveSuccess": "Write-off created.",
+          "components": {
+            "principal": "Principal debt",
+            "interest": "Interest debt",
+            "penalty": "Penalty debt",
+            "fine": "Fine debt",
+            "commission": "Commissions debt"
+          },
+          "errors": {
+            "cancellationDateInPast": "Cancellation date must be strictly after today.",
+            "amountMustBePositive": "Amount must be greater than zero.",
+            "noComponentsToWriteOff": "Enter at least one component amount greater than zero.",
+            "debtNotFound": "Loan not found.",
+            "debtNotOpen": "This loan is not active.",
+            "insufficientBalance": "Requested {{requested}} exceeds available balance {{available}}.",
+            "permissionDenied": "You do not have permission to perform this action.",
+            "featureDisabled": "Write-off feature is currently disabled."
+          }
+        },
+        "writeOffCancelDialog": {
+          "title": "Cancel write-off",
+          "body": "Cancel the {{accrualType}} write-off of {{amount}}? Cancellation is permanent — the entry will remain in the audit log but stop contributing to balances.",
+          "reasonLabel": "Reason",
+          "reasonPlaceholder": "Optional — recorded on the entry",
+          "confirmButton": "Yes, cancel",
+          "cancelSuccess": "Write-off cancelled."
+        },
+        "writeOffEditDialog": {
+          "title": "Edit write-off",
+          "immutabilityNote": "Only the cancellation date and notes are editable. To change the amount or accrual type, cancel and recreate.",
+          "saveSuccess": "Write-off updated."
+        },
+        "writeOffSection": {
+          "title": "Write-offs on this loan",
+          "tabActive": "Active",
+          "tabCancelled": "Cancelled",
+          "loadError": "Failed to load write-offs.",
+          "noActiveEntries": "No active write-offs on this loan.",
+          "noCancelledEntries": "No cancelled write-offs on this loan.",
+          "expiresOn": "Expires on",
+          "createdBy": "by",
+          "cancellationSource": {
+            "manual": "Cancelled manually",
+            "auto": "Auto-cancelled by expiry"
+          }
+        },
         "paymentToPrimaryCreditor": "Payment to the primary creditor",
         "operators": "Operators",
         "searchers": "Searchers",

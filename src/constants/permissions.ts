@@ -28,6 +28,18 @@ export const PERMISSIONS = {
   },
 
   /**
+   * Write-offs Category (4 permissions, KAN-245)
+   * Controls access to the per-accrual-type debt write-off CRUD.
+   * Seeded by auth migration 028.
+   */
+  WRITEOFFS: {
+    VIEW: 'view_writeoffs',
+    CREATE: 'create_writeoffs',
+    EDIT: 'edit_writeoffs',
+    CANCEL: 'cancel_writeoffs',
+  },
+
+  /**
    * Communication Category (3 permissions)
    * Controls access to calling and messaging features
    */
@@ -354,4 +366,10 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
     'Manually restore a Cancelled restructuring agreement to Connected (rare; mistaken cancellation)',
   rr_disconnect: 'Manually disconnect a restructuring agreement (status → Cancelled with reason)',
   rr_complete: 'Manually mark a restructuring agreement as Completed',
+
+  // Write-offs (KAN-245)
+  view_writeoffs: 'List and read individual debt write-off entries',
+  create_writeoffs: 'Create one or more write-off entries on a debt',
+  edit_writeoffs: 'Edit cancellation_date or notes on an existing write-off entry',
+  cancel_writeoffs: 'Cancel an active write-off entry',
 }

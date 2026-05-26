@@ -1775,6 +1775,64 @@
         "makePayment": "Зробити платіж",
         "payments": "Платежі",
         "writesOff": "Списання",
+        "writeOffModal": {
+          "title": "Списати борг",
+          "chooseALoan": "Оберіть кредит",
+          "chooseALoanPlaceholder": "Виберіть кредит…",
+          "noActiveLoans": "У цього клієнта немає активних кредитів для списання.",
+          "amountPlaceholder": "Сума списання",
+          "balanceHint": "Залишок компонента: {{amount}}",
+          "cancellationDate": "Дата автоматичного скасування",
+          "cancellationDatePlaceholder": "Виберіть дату",
+          "notes": "Примітки",
+          "notesPlaceholder": "Необов'язкова причина або контекст",
+          "totalAmount": "Загальна сума списання",
+          "saveSuccess": "Списання створено.",
+          "components": {
+            "principal": "Основна сума",
+            "interest": "Відсотки",
+            "penalty": "Пеня",
+            "fine": "Штраф",
+            "commission": "Комісія"
+          },
+          "errors": {
+            "cancellationDateInPast": "Дата скасування має бути строго після сьогодні.",
+            "amountMustBePositive": "Сума має бути більшою за нуль.",
+            "noComponentsToWriteOff": "Введіть принаймні одну ненульову суму компонента.",
+            "debtNotFound": "Кредит не знайдено.",
+            "debtNotOpen": "Цей кредит не активний.",
+            "insufficientBalance": "Запитана сума {{requested}} перевищує доступний залишок {{available}}.",
+            "permissionDenied": "У вас немає дозволу на виконання цієї дії.",
+            "featureDisabled": "Функція списання наразі вимкнена."
+          }
+        },
+        "writeOffCancelDialog": {
+          "title": "Скасувати списання",
+          "body": "Скасувати списання {{accrualType}} на суму {{amount}}? Скасування остаточне — запис залишиться в журналі, але перестане впливати на баланси.",
+          "reasonLabel": "Причина",
+          "reasonPlaceholder": "Необов'язково — зберігається на записі",
+          "confirmButton": "Так, скасувати",
+          "cancelSuccess": "Списання скасовано."
+        },
+        "writeOffEditDialog": {
+          "title": "Редагувати списання",
+          "immutabilityNote": "Можна редагувати лише дату скасування та примітки. Щоб змінити суму чи тип нарахування, скасуйте та створіть заново.",
+          "saveSuccess": "Списання оновлено."
+        },
+        "writeOffSection": {
+          "title": "Списання за цим кредитом",
+          "tabActive": "Активні",
+          "tabCancelled": "Скасовані",
+          "loadError": "Не вдалося завантажити списання.",
+          "noActiveEntries": "Немає активних списань за цим кредитом.",
+          "noCancelledEntries": "Немає скасованих списань за цим кредитом.",
+          "expiresOn": "Діє до",
+          "createdBy": "ким",
+          "cancellationSource": {
+            "manual": "Скасовано вручну",
+            "auto": "Автоматичне скасування за датою"
+          }
+        },
         "paymentToPrimaryCreditor": "Платіж основному кредитору",
         "operators": "Оператори",
         "searchers": "Пошуковики",
