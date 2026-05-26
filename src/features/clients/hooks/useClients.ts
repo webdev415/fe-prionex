@@ -34,6 +34,7 @@ export const clientKeys = {
   all: ['clients'] as const,
   lists: () => [...clientKeys.all, 'list'] as const,
   list: (params: GetClientsParams) => [...clientKeys.lists(), params] as const,
+  assigneeIds: () => [...clientKeys.all, 'assignee-ids'] as const,
   details: () => [...clientKeys.all, 'detail'] as const,
   detail: (id: number) => [...clientKeys.details(), id] as const,
   profile: (id: number) => [...clientKeys.details(), id, 'profile'] as const,
@@ -68,6 +69,21 @@ export function useClients(params: GetClientsParams = {}) {
     staleTime: 2 * 60_000,
     refetchInterval: 5 * 60_000,
     enabled: true,
+  })
+}
+
+/**
+ * Distinct responsible employee / searcher user ids (for the active project).
+ * Used to decide which inactive operators appear in the Client List filter
+ * dropdowns. Assignments change slowly → generous staleTime (not refetched on
+ * every filter change).
+ */
+export function useClientAssigneeIds(enabled = true) {
+  return useQuery({
+    queryKey: clientKeys.assigneeIds(),
+    queryFn: () => clientApi.getClientAssigneeIds(),
+    staleTime: 5 * 60_000,
+    enabled,
   })
 }
 

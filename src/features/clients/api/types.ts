@@ -3,6 +3,16 @@
  * Based on TIN-based brand isolation architecture
  */
 
+/**
+ * Distinct responsible employee / searcher user ids for the active project
+ * (non-deleted clients). Used to gate which inactive operators appear in the
+ * Client List filter dropdowns.
+ */
+export interface ClientAssigneeIdsResponse {
+  employee_ids: number[]
+  searcher_ids: number[]
+}
+
 export interface DebtDetail {
   id: number
   seller_id?: number
