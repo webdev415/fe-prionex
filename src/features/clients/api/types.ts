@@ -258,18 +258,19 @@ export interface GetClientsParams {
   dpd_min?: number
   dpd_max?: number
 
-  // Filter: Promise-to-pay Date
-  promise_date_from?: string // YYYY-MM-DD format
-  promise_date_to?: string // YYYY-MM-DD format
+  // Filter: Target Action Date — date value(s) entered by the user
+  // inside a TA's date-typed step(s). The BE picks the latest
+  // TA-with-date per client; if ANY of those values falls in the
+  // range, the client matches. TAs without date values are skipped
+  // even when newer.
+  ta_date_from?: string // YYYY-MM-DD format
+  ta_date_to?: string // YYYY-MM-DD format
 
-  // Filter: Callback/Next-action Date
-  callback_date_from?: string // YYYY-MM-DD format
-  callback_date_to?: string // YYYY-MM-DD format
-
-  // Filter: Interaction operator
+  // Filter: Interaction Created By — operator on the client's latest TA
   interaction_user_id?: number
 
-  // Filter: Interaction logged date (applies to promise and callback subqueries)
+  // Filter: Interaction Logged Date — created_at of the latest TA,
+  // independent of TA date-value presence
   interaction_date_from?: string // YYYY-MM-DD format
   interaction_date_to?: string // YYYY-MM-DD format
 
