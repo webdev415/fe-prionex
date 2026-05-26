@@ -169,7 +169,12 @@
     "deleting": "Видалення...",
     "back": "Назад",
     "yes": "Так",
-    "no": "Ні"
+    "no": "Ні",
+    "save": "Зберегти",
+    "cancel": "Скасувати",
+    "edit": "Редагувати",
+    "close": "Закрити",
+    "optional": "необов'язково"
   },
   "logout": {
     "confirmTitle": "Підтвердити вихід",
@@ -1782,6 +1787,7 @@
           "noActiveLoans": "У цього клієнта немає активних кредитів для списання.",
           "amountPlaceholder": "Сума списання",
           "balanceHint": "Залишок компонента: {{amount}}",
+          "noBalanceHint": "Немає залишку для списання.",
           "cancellationDate": "Дата автоматичного скасування",
           "cancellationDatePlaceholder": "Виберіть дату",
           "notes": "Примітки",
@@ -1802,8 +1808,7 @@
             "debtNotFound": "Кредит не знайдено.",
             "debtNotOpen": "Цей кредит не активний.",
             "insufficientBalance": "Запитана сума {{requested}} перевищує доступний залишок {{available}}.",
-            "permissionDenied": "У вас немає дозволу на виконання цієї дії.",
-            "featureDisabled": "Функція списання наразі вимкнена."
+            "permissionDenied": "У вас немає дозволу на виконання цієї дії."
           }
         },
         "writeOffCancelDialog": {

@@ -36,6 +36,7 @@ import type { Priority } from './types'
 import { TagBadge } from '@/components/ui/TagBadge'
 import { ClientTagTraceModal } from '@/pages/Tags/components/ClientTagTraceModal'
 import { CallDialogModal, type CallType, type CallStatus } from './components/CallDialogModal'
+import { ClientWriteoffsTable } from './components/ClientWriteoffsTable'
 import { WriteoffCreateModal } from './components/WriteoffCreateModal'
 import { CallRecordingModal } from './components/CallRecordingModal'
 import { ViewSMSModal } from './components/ViewSMSModal'
@@ -372,6 +373,8 @@ export function ClientDetailPage() {
   const canEditClient = useHasPermission(PERMISSIONS.CLIENTS.EDIT)
   // KAN-245 — gate the Loans-tab "Write-off" button on create_writeoffs.
   const canCreateWriteoff = useHasPermission(PERMISSIONS.WRITEOFFS.CREATE)
+  // KAN-245 — gate the Payments → "Writes-off" sub-tab's per-loan list.
+  const canViewWriteoffs = useHasPermission(PERMISSIONS.WRITEOFFS.VIEW)
   const hasEligibleLoanForWriteoff = useMemo(
     () => (loans ?? []).some((d) => d.status === 'active'),
     [loans]
@@ -3013,11 +3016,33 @@ export function ClientDetailPage() {
                             />
                           )}
                           {activePaymentTab === 'writes-off' && (
-                            <DataTable
-                              columns={writeOffColumns}
-                              data={client.writesOffs}
-                              className="w-full"
-                            />
+                            <div className="flex w-full flex-col gap-6 pb-4">
+                              {/* KAN-245: single flat DataTable across every
+                                  loan, layout-matching the legacy
+                                  ``writeOffColumns`` look. Active / Cancelled
+                                  tabs sit above the table inside the
+                                  component itself. */}
+                              {canViewWriteoffs && client.loans.length > 0 && (
+                                <ClientWriteoffsTable
+                                  loans={client.loans.map((loan) => ({
+                                    id: loan.id,
+                                    loanNumber: loan.loanNumber,
+                                    counterparty: loan.counterparty,
+                                    saleDate: loan.saleDate,
+                                  }))}
+                                />
+                              )}
+                              {/* Legacy historical write-offs (pre-KAN-245).
+                                  Kept so operators can still see migrated
+                                  rows that never went through the new flow. */}
+                              {client.writesOffs.length > 0 && (
+                                <DataTable
+                                  columns={writeOffColumns}
+                                  data={client.writesOffs}
+                                  className="w-full"
+                                />
+                              )}
+                            </div>
                           )}
                           {activePaymentTab === 'primary-creditor' && (
                             <DataTable

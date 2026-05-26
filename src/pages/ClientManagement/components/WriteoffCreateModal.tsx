@@ -102,7 +102,6 @@ const ERROR_CODE_I18N: Record<string, string> = {
   DEBT_NOT_OPEN: 'pages.clients.detail.writeOffModal.errors.debtNotOpen',
   INSUFFICIENT_BALANCE: 'pages.clients.detail.writeOffModal.errors.insufficientBalance',
   PERMISSION_DENIED: 'pages.clients.detail.writeOffModal.errors.permissionDenied',
-  FEATURE_DISABLED: 'pages.clients.detail.writeOffModal.errors.featureDisabled',
 }
 
 // ---------------------------------------------------------------------------
@@ -202,20 +201,31 @@ export function WriteoffCreateModal({
 
   const hasAnyPositiveAmount = totalAmount > 0
 
-  // Per-component balance preview from the selected debt's amounts.
-  // Best-effort: the live ``available_balance(c)`` requires the backend
-  // aggregator. Here we surface the static debt baseline so the operator
-  // sees an order-of-magnitude hint; the real check happens on submit.
+  // Per-component live "available for write-off" balance — surfaced by the
+  // backend's _build_debt_dict via the writeoff_balance_aggregator. Updates
+  // automatically on the next client-detail read after a create/cancel.
+  // Falls back to the static debt baseline if the field is missing (which
+  // happens when the client-service is older than this client; safe
+  // best-effort hint, real check happens on submit).
   const getStaticBalanceHint = (accrual: AccrualType): number | null => {
     if (!selectedDebt) return null
-    const colMap: Record<AccrualType, keyof DebtDetail> = {
+    const liveMap: Record<AccrualType, string> = {
+      principal: 'principal_available_writeoff_balance',
+      interest: 'interest_available_writeoff_balance',
+      penalty: 'penalty_available_writeoff_balance',
+      fine: 'fine_available_writeoff_balance',
+      commission: 'commission_available_writeoff_balance',
+    }
+    const fallbackMap: Record<AccrualType, keyof DebtDetail> = {
       principal: 'principal_amount',
       interest: 'interest_amount',
       penalty: 'penalties_amount',
       fine: 'fines_amount',
       commission: 'fees_amount',
     }
-    const raw = (selectedDebt as unknown as Record<string, unknown>)[colMap[accrual] as string]
+    const bag = selectedDebt as unknown as Record<string, unknown>
+    const live = bag[liveMap[accrual]]
+    const raw = live ?? bag[fallbackMap[accrual] as string]
     if (raw == null) return null
     const n = typeof raw === 'string' ? Number(raw) : (raw as number)
     return Number.isFinite(n) ? n : null
@@ -308,7 +318,11 @@ export function WriteoffCreateModal({
   return (
     <Modal open={open} onClose={onClose} maxWidth="xl">
       <ModalHeader
-        icon={<Icons.MoneyRemove01 size={24} />}
+        icon={
+          <div className="bg-primary-300 flex h-10 w-10 items-center justify-center rounded-full sm:h-12 sm:w-12">
+            <Icons.MoneyRemove01 size={20} className="text-dark-500 sm:size-6" strokeWidth={1.5} />
+          </div>
+        }
         title={t('pages.clients.detail.writeOffModal.title')}
       />
       <ModalContent>
@@ -354,6 +368,11 @@ export function WriteoffCreateModal({
             {ACCRUAL_TYPES.map((accrual) => {
               const row = rows[accrual]
               const hint = getStaticBalanceHint(accrual)
+              // A component with no available balance (zero or null after
+              // paid/written-off/active deductions) cannot accept further
+              // entries — display an explicit "no balance" message and
+              // disable the inputs so the operator doesn't waste a click.
+              const hasBalance = hint !== null && hint > 0
               return (
                 <div
                   key={accrual}
@@ -366,13 +385,14 @@ export function WriteoffCreateModal({
                       type="text"
                       inputMode="decimal"
                       value={row.amount}
+                      disabled={!hasBalance}
                       onChange={(e) => updateRow(accrual, { amount: e.target.value })}
                       helperText={
-                        hint !== null && hint > 0
+                        hasBalance
                           ? t('pages.clients.detail.writeOffModal.balanceHint', {
-                              amount: formatMoneyUAHTwoDecimals(hint),
+                              amount: formatMoneyUAHTwoDecimals(hint as number),
                             })
-                          : undefined
+                          : t('pages.clients.detail.writeOffModal.noBalanceHint')
                       }
                     />
                     <DateSelect
@@ -383,6 +403,7 @@ export function WriteoffCreateModal({
                       value={row.date}
                       onChange={({ value }) => updateRow(accrual, { date: value })}
                       min={tomorrow}
+                      disabled={!hasBalance}
                     />
                   </div>
                   {row.errors.length > 0 && (

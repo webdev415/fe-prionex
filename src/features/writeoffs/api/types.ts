@@ -111,7 +111,6 @@ export type WriteoffErrorCode =
   | 'WRITEOFF_AMOUNT_IMMUTABLE'
   | 'WRITEOFF_ACCRUAL_TYPE_IMMUTABLE'
   | 'PERMISSION_DENIED'
-  | 'FEATURE_DISABLED'
 
 export interface WriteoffFieldError {
   code: WriteoffErrorCode

@@ -53,7 +53,11 @@ export function WriteoffCancelDialog({ open, onClose, entry }: WriteoffCancelDia
   return (
     <Modal open={open} onClose={onClose} maxWidth="md">
       <ModalHeader
-        icon={<Icons.Cancel01 size={24} />}
+        icon={
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-100 sm:h-12 sm:w-12">
+            <Icons.CancelCircle size={20} className="text-red-600 sm:size-6" strokeWidth={2} />
+          </div>
+        }
         title={t('pages.clients.detail.writeOffCancelDialog.title')}
       />
       <ModalContent>

@@ -101,7 +101,11 @@ export function WriteoffEditDialog({ open, onClose, entry }: WriteoffEditDialogP
   return (
     <Modal open={open} onClose={onClose} maxWidth="md">
       <ModalHeader
-        icon={<Icons.Edit size={24} />}
+        icon={
+          <div className="bg-primary-300 flex h-10 w-10 items-center justify-center rounded-full sm:h-12 sm:w-12">
+            <Icons.PencilEdit02 size={20} className="text-dark-500 sm:size-6" strokeWidth={1.5} />
+          </div>
+        }
         title={t('pages.clients.detail.writeOffEditDialog.title')}
       />
       <ModalContent>

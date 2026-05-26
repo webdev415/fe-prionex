@@ -166,7 +166,12 @@
     "deleting": "Deleting...",
     "back": "Back",
     "yes": "Yes",
-    "no": "No"
+    "no": "No",
+    "save": "Save",
+    "cancel": "Cancel",
+    "edit": "Edit",
+    "close": "Close",
+    "optional": "optional"
   },
   "logout": {
     "confirmTitle": "Confirm Logout",
@@ -2363,6 +2368,7 @@
           "noActiveLoans": "This client has no active loans available for write-off.",
           "amountPlaceholder": "Amount to write off",
           "balanceHint": "Component balance: {{amount}}",
+          "noBalanceHint": "No balance available to write off.",
           "cancellationDate": "Automatic cancellation date",
           "cancellationDatePlaceholder": "Select date",
           "notes": "Notes",
@@ -2383,8 +2389,7 @@
             "debtNotFound": "Loan not found.",
             "debtNotOpen": "This loan is not active.",
             "insufficientBalance": "Requested {{requested}} exceeds available balance {{available}}.",
-            "permissionDenied": "You do not have permission to perform this action.",
-            "featureDisabled": "Write-off feature is currently disabled."
+            "permissionDenied": "You do not have permission to perform this action."
           }
         },
         "writeOffCancelDialog": {

@@ -129,6 +129,10 @@ export function useEditWriteoff(
     onSuccess: (entry) => {
       queryClient.invalidateQueries({ queryKey: writeoffKeys.detail(entryId) })
       queryClient.invalidateQueries({ queryKey: writeoffKeys.byDebt(entry.debt_id) })
+      // Bust list-shaped queries too — ClientWriteoffsTable uses
+      // writeoffKeys.list(debtId, params), which doesn't share a prefix
+      // with byDebt. Without this the table doesn't refresh.
+      queryClient.invalidateQueries({ queryKey: writeoffKeys.lists() })
     },
     onError: (error: AxiosError<WriteoffValidationErrorResponse>) => {
       const structured = extractWriteoffErrors(error)
@@ -154,6 +158,12 @@ export function useCancelWriteoff(
     onSuccess: (entry) => {
       queryClient.invalidateQueries({ queryKey: writeoffKeys.detail(entryId) })
       queryClient.invalidateQueries({ queryKey: writeoffKeys.byDebt(entry.debt_id) })
+      // Bust list-shaped queries too — ClientWriteoffsTable uses
+      // writeoffKeys.list(debtId, {status, ...}) which lives under
+      // writeoffKeys.lists() (not under byDebt). Without this the
+      // entry stays visible in the Active tab and never appears in the
+      // Cancelled tab until the page is refreshed manually.
+      queryClient.invalidateQueries({ queryKey: writeoffKeys.lists() })
       queryClient.invalidateQueries({ queryKey: ['clients'] })
     },
     onError: (error: AxiosError<WriteoffValidationErrorResponse>) => {

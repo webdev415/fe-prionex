@@ -134,7 +134,7 @@ export function DebtWriteoffSection({ debtId, showHeader = true }: DebtWriteoffS
                     <Button
                       variant="outline"
                       size="xs"
-                      leftIcon={<Icons.Edit size={16} />}
+                      leftIcon={<Icons.PencilEdit02 size={16} strokeWidth={1.5} />}
                       onClick={() => setEditTarget(entry)}
                     >
                       {t('common.edit')}
@@ -144,7 +144,7 @@ export function DebtWriteoffSection({ debtId, showHeader = true }: DebtWriteoffS
                     <Button
                       variant="danger"
                       size="xs"
-                      leftIcon={<Icons.Cancel01 size={16} />}
+                      leftIcon={<Icons.Delete size={16} strokeWidth={2} />}
                       onClick={() => setCancelTarget(entry)}
                     >
                       {t('common.cancel')}
