@@ -17,9 +17,16 @@ import type { Step1Data } from './Step1LoanSource'
 import { getErrorMessage } from '@/lib/errors'
 
 // Logical names mirror the backend's vendor-schema logical names
-// (`users`, `credits`, `payments`, `write_offs`). `documents` stays here as
-// a pseudo-row used to surface the ZIP in the dataset table.
-export type DatasetType = 'users' | 'credits' | 'payments' | 'write_offs' | 'documents'
+// (`users`, `credits`, `payments`, `write_offs`, `prolongations`).
+// `documents` stays here as a pseudo-row used to surface the ZIP in the
+// dataset table.
+export type DatasetType =
+  | 'users'
+  | 'credits'
+  | 'payments'
+  | 'write_offs'
+  | 'prolongations'
+  | 'documents'
 
 export interface DatasetFile {
   id: string
@@ -48,6 +55,10 @@ const INITIAL_DATASETS: Omit<DatasetFile, 'id'>[] = [
   { type: 'credits', name: 'Credits', status: 'required', file: null },
   { type: 'payments', name: 'Payments', status: 'optional', file: null },
   { type: 'write_offs', name: 'Write-offs', status: 'optional', file: null },
+  // KAN-245 — EG creditor prolongations file (CSV). Optional, since
+  // vendors that don't ship this file (e.g. finmarket_finbust_v1) should
+  // not be blocked by its absence on the upload form.
+  { type: 'prolongations', name: 'Prolongations', status: 'optional', file: null },
   { type: 'documents', name: 'ZIP bundle', status: 'optional', file: null },
 ]
 
@@ -120,10 +131,15 @@ export function Step2VendorDump({
     files.forEach((file) => {
       const fileName = file.name.toLowerCase()
       // Match basename against vendor-schema logical names. Order matters:
-      // longest / most-specific first so ``write_offs`` doesn't slot into
-      // ``payments``, etc.
+      // most-specific substring first so ``write_offs`` doesn't slot into
+      // ``payments``, and ``prolongations`` is checked before ``users``
+      // even though it doesn't currently collide — keeps the table data-
+      // driven if filename patterns ever overlap.
       if (fileName.includes('write_off') || fileName.includes('writeoff')) {
         const idx = updatedFiles.findIndex((f) => f.type === 'write_offs')
+        if (idx !== -1) updatedFiles[idx].file = file
+      } else if (fileName.includes('prolong')) {
+        const idx = updatedFiles.findIndex((f) => f.type === 'prolongations')
         if (idx !== -1) updatedFiles[idx].file = file
       } else if (fileName.includes('credit')) {
         const idx = updatedFiles.findIndex((f) => f.type === 'credits')

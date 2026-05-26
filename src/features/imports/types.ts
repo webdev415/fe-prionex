@@ -40,8 +40,11 @@ export interface ImportJob {
   vendor_phases?: VendorFilePhase[]
 }
 
-// Vendor file logical name — the four CSV/XLSX files in a vendor bundle
-export type VendorFileLogical = 'users' | 'credits' | 'payments' | 'write_offs'
+// Vendor file logical name — the CSV/XLSX files in a vendor bundle.
+// ``prolongations`` was added under KAN-245 for the EG creditor; it
+// ingests through ``client_service.bulk_prolongations`` and is FK-safe
+// because it runs after credits.
+export type VendorFileLogical = 'users' | 'credits' | 'payments' | 'write_offs' | 'prolongations'
 
 // Per-file phase status used by the vendor Import Details panel
 export type VendorPhaseStatus = 'pending' | 'in_progress' | 'completed' | 'failed'
