@@ -3,7 +3,11 @@ import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/Button'
 import { Modal, ModalContent, ModalFooter, ModalHeader } from '@/components/ui/Modal'
 import { Icons } from '@/lib/icons'
-import type { MessagingChannel, MessagingDraft } from '@/features/messaging'
+import {
+  CampaignViberContentSection,
+  type MessagingChannel,
+  type MessagingDraft,
+} from '@/features/messaging'
 import { CHANNEL_SPECS, extractDraftVariables } from './draftModalShared'
 
 function ReadOnlyField({ label, value }: { label: string; value: string }) {
@@ -76,6 +80,11 @@ export function DraftViewModal({ draft, open, onClose }: DraftViewModalProps) {
             <ReadOnlyField
               label={t('pages.messagingDrafts.view.templateBody', 'Message template')}
               value={draft.body}
+            />
+
+            <CampaignViberContentSection
+              channel={draft.channel}
+              snapshot={{ viber: draft.channel_options?.viber }}
             />
 
             {draftVariables.length > 0 && (

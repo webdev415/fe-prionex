@@ -19,8 +19,14 @@ import { cn } from '@/lib/utils'
 import {
   MESSAGING_CHANNELS,
   MessagingVariablesPalette,
+  ViberRichContentFields,
+  buildDraftChannelOptions,
   insertMessagingVariableAtCursor,
+  readDraftViberFormState,
+  resetViberImages,
+  viberPublicUrls,
   type MessagingTemplateFocusField,
+  type MessagingViberImageAttachment,
   useCreateMessagingDraft,
   useMessagingDrafts,
   useUpdateMessagingDraft,
@@ -142,6 +148,11 @@ function DraftFormModal({ draft, open, onClose }: DraftFormModalProps) {
   const [senderName, setSenderName] = useState('')
   const [subject, setSubject] = useState('')
   const [body, setBody] = useState('')
+  const [viberAddImage, setViberAddImage] = useState(false)
+  const [viberImages, setViberImages] = useState<MessagingViberImageAttachment[]>([])
+  const [viberAddButton, setViberAddButton] = useState(false)
+  const [viberButtonName, setViberButtonName] = useState('')
+  const [viberButtonUrl, setViberButtonUrl] = useState('')
 
   // Track which text field was focused last so the variable palette knows
   // where to insert the chosen variable.
@@ -158,6 +169,12 @@ function DraftFormModal({ draft, open, onClose }: DraftFormModalProps) {
     setSenderName(draft?.sender_name ?? '')
     setSubject(draft?.subject ?? '')
     setBody(draft?.body ?? '')
+    const viberForm = readDraftViberFormState(draft)
+    setViberAddImage(viberForm.addImage)
+    setViberImages(viberForm.images)
+    setViberAddButton(viberForm.addButton)
+    setViberButtonName(viberForm.buttonName)
+    setViberButtonUrl(viberForm.buttonUrl)
     lastFocusedRef.current = 'body'
   }, [draft, open])
   /* eslint-enable react-hooks/set-state-in-effect */
@@ -177,9 +194,17 @@ function DraftFormModal({ draft, open, onClose }: DraftFormModalProps) {
     if (CHANNEL_SPECS[next].senderMaxLength < senderName.length) {
       setSenderName(senderName.slice(0, CHANNEL_SPECS[next].senderMaxLength))
     }
+    if (next !== 'viber') {
+      setViberAddImage(false)
+      setViberImages((prev) => resetViberImages(prev))
+      setViberAddButton(false)
+      setViberButtonName('')
+      setViberButtonUrl('')
+    }
   }
 
   const isPending = createDraftMutation.isPending || updateDraftMutation.isPending
+  const viberImageUploading = viberImages.some((image) => image.uploading)
   const trimmedName = name.trim()
   const trimmedBody = body.trim()
   const trimmedSubject = subject.trim()
@@ -192,10 +217,22 @@ function DraftFormModal({ draft, open, onClose }: DraftFormModalProps) {
 
   const subjectInvalid = spec.subjectRequired && !trimmedSubject
 
-  const canSubmit = !!trimmedName && !!trimmedBody && !subjectInvalid && !bodyTooLong && !isPending
+  const canSubmit =
+    !!trimmedName &&
+    !!trimmedBody &&
+    !subjectInvalid &&
+    !bodyTooLong &&
+    !viberImageUploading &&
+    !isPending
 
   const handleSubmit = async () => {
     if (!canSubmit) return
+
+    const channelOptions = buildDraftChannelOptions(channel, {
+      urlImages: viberPublicUrls(viberImages),
+      buttonName: viberButtonName,
+      buttonUrl: viberButtonUrl,
+    })
 
     const payload = {
       name: trimmedName,
@@ -204,6 +241,7 @@ function DraftFormModal({ draft, open, onClose }: DraftFormModalProps) {
       subject: spec.showSubject ? trimmedSubject || null : null,
       body: trimmedBody,
       available_variables: null,
+      channel_options: channelOptions,
     }
 
     if (isEditing && draft) {
@@ -383,6 +421,23 @@ function DraftFormModal({ draft, open, onClose }: DraftFormModalProps) {
         </div>
 
         <MessagingVariablesPalette className="mt-4" onInsert={insertVariableAtCursor} />
+
+        {channel === 'viber' && (
+          <ViberRichContentFields
+            className="mt-4"
+            imageRemovalMode="template-editor"
+            addImage={viberAddImage}
+            onAddImageChange={setViberAddImage}
+            images={viberImages}
+            onImagesChange={setViberImages}
+            addButton={viberAddButton}
+            onAddButtonChange={setViberAddButton}
+            buttonName={viberButtonName}
+            onButtonNameChange={setViberButtonName}
+            buttonUrl={viberButtonUrl}
+            onButtonUrlChange={setViberButtonUrl}
+          />
+        )}
       </ModalContent>
       <ModalFooter>
         <Button type="button" variant="cancel" onClick={onClose} className="w-full rounded-md">
