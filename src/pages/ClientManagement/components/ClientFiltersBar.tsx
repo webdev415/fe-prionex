@@ -25,7 +25,7 @@ import { useOperators } from '@/features/users/hooks/useUsers'
 import { useTags } from '@/features/tags/hooks/useTags'
 import { useTAChains } from '@/features/taChains'
 import { useAuthStore } from '@/stores/authStore'
-import { getDateStringInTimezone } from '@/lib/dateUtils'
+import { formatPickerDateAsYMD } from '@/lib/dateUtils'
 import type { ClientFilters } from '../ClientManagementPage'
 
 // Debounced number input component to avoid re-rendering on every keystroke
@@ -146,7 +146,6 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
 
   // Fetch active users for employee and searcher dropdowns
   const activeProjectId = useAuthStore((s) => s.user?.active_project_id)
-  const userTimezone = useAuthStore((s) => s.user?.timezone)
   const { data: operators } = useOperators(activeProjectId ? Number(activeProjectId) : null)
 
   // Map users to dropdown options (full name format)
@@ -158,10 +157,17 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
     }))
   }, [operators])
 
+  // Date-only filters: pass the picked day straight through (no
+  // timezone math). The previous implementation ran the Date through
+  // ``getDateStringInTimezone(date, userTimezone)``; a browser-vs-profile
+  // timezone mismatch then shifted the calendar day by ±1 (you click
+  // May 27, the API receives May 26 or May 28). The picker returns a
+  // Date at local-midnight for the chosen day, so reading the local
+  // year/month/day parts gives exactly what the user clicked.
   const handleFilterDateChange = (field: FilterDateField, date: Date | null) => {
     onFilterChange({
       ...filters,
-      [field]: date ? getDateStringInTimezone(date, userTimezone) : undefined,
+      [field]: date ? formatPickerDateAsYMD(date) : undefined,
     })
   }
 
