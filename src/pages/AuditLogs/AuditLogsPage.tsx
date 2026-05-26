@@ -7,6 +7,7 @@
 import { useState, useCallback, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
+import { Link } from 'react-router-dom'
 import { SearchFiltersBar } from './components/SearchFiltersBar'
 import { AuditLogDetailModal } from './components/AuditLogDetailModal'
 import { CSVExportDialog, type CSVExportOptions } from './components/CSVExportDialog'
@@ -51,6 +52,8 @@ export interface AuditLog {
   username: string
   role?: string
   action: string // UPDATE, CREATE, LOGIN_FAILED, etc.
+  action_raw?: string // raw event_type, e.g. "auth.login_success" (for entity links)
+  record_client_id?: number // client id from record_after (call / ta_interaction rows)
   entity_type?: string // user, client, sms_template, etc. (legacy single filter)
   entity_types?: string[] // Multiple entity types filter
   entity_id?: string
@@ -89,9 +92,262 @@ export interface AuditLogFilters {
   role?: string
 }
 
+// Auth audit actions whose `resource_id` is a user — these link to that user
+// in the Users table. Role/department auth events are intentionally excluded
+// (their resource_id is a role/department, not a user). An explicit allowlist
+// means any future auth action defaults to no-link rather than a wrong link.
+const USER_CENTRIC_AUTH_ACTIONS = new Set<string>([
+  'auth.login_success',
+  'auth.logout',
+  'auth.login_failed',
+  'auth.two_factor.verify_success',
+  'auth.two_factor.verify_failed',
+  'auth.two_factor.setup_initiated',
+  'auth.two_factor.enabled',
+  'auth.two_factor.disabled',
+  'auth.two_factor.backup_codes_regenerated',
+  'auth.two_factor.backup_code_used',
+  'auth.two_factor.disabled_by_admin',
+  'auth.two_factor.reenabled_by_admin',
+  'auth.impersonation_start',
+  'auth.impersonation_exit',
+  'auth.session_invalidated',
+  'auth.permission_denied',
+  'auth.permission_granted',
+  'auth.admin_unlock_account',
+  'auth.password_reset_by_admin',
+  'auth.password_changed_by_user',
+  // user-management — resource_id is the affected user
+  'auth.user.created',
+  'auth.user.updated',
+  'auth.user.deactivated',
+  'auth.user.reactivated',
+])
+
+// Auth role-management actions → the Roles page. Their resource_id is a role
+// id (not a user), so they go to /dashboard/roles, never the users link.
+const ROLE_AUTH_ACTIONS = new Set<string>([
+  'auth.role.created',
+  'auth.role.updated',
+  'auth.role.deleted',
+  'auth.role.archived',
+])
+
+// Auth department-management actions → the Departments page. resource_id is a
+// department id. Departments share the `manage_roles` permission.
+const DEPARTMENT_AUTH_ACTIONS = new Set<string>([
+  'auth.department.created',
+  'auth.department.updated',
+  'auth.department.deleted',
+])
+
+// Auth project-management actions → the Projects page. resource_id is a
+// project id. Gated on its own `manage_projects` permission.
+const PROJECT_AUTH_ACTIONS = new Set<string>([
+  'auth.project.created',
+  'auth.project.updated',
+  'auth.project.archived',
+  'auth.project.restored',
+])
+
+// Selected client-management actions → that client's detail page. entity_id is
+// the client id for the four single-client actions; the clients.bulk_* ones
+// are multi-client (no entity_id) and so render plain text.
+const CLIENT_LINK_ACTIONS = new Set<string>([
+  'client.created',
+  'client.updated',
+  'client.deleted',
+  'client.assigned',
+  // clients.bulk_assigned moved to CLIENT_LIST_LINK_ACTIONS (→ /dashboard; no
+  // single client id). clients.bulk_reassigned stays here but never matches (no
+  // entity_id) → renders plain text.
+  'clients.bulk_reassigned',
+  // client.tag.* — each row is per-client (resource_id = the client), incl.
+  // the bulk variants which write one audit row per client.
+  'client.tag.assigned',
+  'client.tag.removed',
+  'client.tag.bulk_assigned',
+  'client.tag.bulk_removed',
+  // client.interaction.* — resource_id = the client
+  'client.interaction.created',
+  'client.interaction.updated',
+  // client.rr.* (restructuring) — resource_id = the client
+  'client.rr.connected',
+  'client.rr.completed',
+  'client.rr.disconnected',
+  'client.rr.status_changed',
+  'client.rr.overpayment_recorded',
+  // client.task.* — resource_id = the client
+  'client.task.created',
+  'client.task.updated',
+  'client.task.deleted',
+  'client.task.completed',
+  'client.task.cancelled',
+  // debt.* — only the resource_type="client" rows (guarded below); the
+  // resource_type="debt" rows carry a debt id, not a client, so they must NOT
+  // resolve via entity_id.
+  'debt.closed',
+  'debt.closure_date_updated',
+])
+
+// Client search/filter events → the clients list (the dashboard index). These
+// are list-level (no resource_id / client_id), so they link to the list page,
+// not a client detail, and do not re-apply the logged search/filter.
+const CLIENT_LIST_LINK_ACTIONS = new Set<string>([
+  'client.searched',
+  'client.list.filtered',
+  // multi-client bulk wrappers — no single client id, so link to the list
+  'clients.bulk_assigned',
+  'clients.bulk_tag_assigned',
+  'clients.bulk_tag_removed',
+])
+
+// Resource types whose audit rows store the client id in `record_after`
+// (not `resource_id`, which is the call / interaction / contact / address /
+// passport / employment / document / sms entity). Their Entity links to that
+// client. For sms, only UI-driven sends (sms.sent / send-path sms.failed) carry
+// a client_id; provider webhook callbacks have none and stay plain text.
+const RECORD_AFTER_CLIENT_TYPES = new Set<string>([
+  'call',
+  'ta_interaction',
+  'contact',
+  'address',
+  'passport',
+  'employment',
+  'document',
+  'sms',
+])
+
+// Tag-domain entity types → the tabbed Tags page (?tab=). Each resource_type is
+// unique to its family. The client.tag.* assignment events are resource_type
+// "client" and link to the client via CLIENT_LINK_ACTIONS — not here.
+const TAG_PAGE_BY_TYPE: Record<string, string> = {
+  tag: '/dashboard/system-settings/tags',
+  segment: '/dashboard/system-settings/tags?tab=segments',
+  tag_rule: '/dashboard/system-settings/tags?tab=rules',
+  tag_settings: '/dashboard/system-settings/tags?tab=settings',
+}
+
+// Resolve the in-app destination for an audit row's Entity, or null if it
+// shouldn't be a link (no destination, or the viewer lacks permission).
+function auditEntityLink(
+  log: AuditLog,
+  perms: {
+    canViewUsers: boolean
+    canManageRoles: boolean
+    canManageProjects: boolean
+    canViewClients: boolean
+    canViewSellers: boolean
+    canManageSettings: boolean
+    canViewDocJournal: boolean
+    canViewScoringHistory: boolean
+    canViewTags: boolean
+    canImportData: boolean
+  }
+): string | null {
+  // User-centric auth → that user. Gate on the action allowlist + entity_id
+  // (NOT entity_type: auth.user.* rows are stored as resource_type "user").
+  if (log.entity_id && log.action_raw && USER_CENTRIC_AUTH_ACTIONS.has(log.action_raw)) {
+    return perms.canViewUsers ? `/dashboard/users?user_id=${log.entity_id}` : null
+  }
+  // Role-management auth → the Roles page (list).
+  if (log.action_raw && ROLE_AUTH_ACTIONS.has(log.action_raw)) {
+    return perms.canManageRoles ? '/dashboard/roles' : null
+  }
+  // Department-management auth → the Departments page (list). Same permission.
+  if (log.action_raw && DEPARTMENT_AUTH_ACTIONS.has(log.action_raw)) {
+    return perms.canManageRoles ? '/dashboard/departments' : null
+  }
+  // Project-management auth → the Projects page (list).
+  if (log.action_raw && PROJECT_AUTH_ACTIONS.has(log.action_raw)) {
+    return perms.canManageProjects ? '/dashboard/projects' : null
+  }
+  // Selected client-management events → that client's detail. Requires
+  // entity_type 'client' so the `debt.*` rows that are typed as `debt`
+  // (entity_id = a debt id, not a client) don't mislink; entity_id is the
+  // client id. clients.bulk_* have no entity_id, so they fall through to null.
+  if (
+    log.entity_type === 'client' &&
+    log.action_raw &&
+    CLIENT_LINK_ACTIONS.has(log.action_raw) &&
+    log.entity_id
+  ) {
+    return perms.canViewClients ? `/dashboard/clients/${log.entity_id}` : null
+  }
+  // Client search/filter events → the clients list (dashboard index). List-level
+  // (no entity_id); a generic link to the list, not a re-applied search/filter.
+  if (log.action_raw && CLIENT_LIST_LINK_ACTIONS.has(log.action_raw)) {
+    return perms.canViewClients ? '/dashboard' : null
+  }
+  // Call / TA-interaction events → the related client. The client id is on
+  // record_after (not resource_id), surfaced as `record_client_id`; only
+  // links when present (e.g. monitoring export / unmatched calls have none).
+  if (log.entity_type && RECORD_AFTER_CLIENT_TYPES.has(log.entity_type) && log.record_client_id) {
+    return perms.canViewClients ? `/dashboard/clients/${log.record_client_id}` : null
+  }
+  // Payment events → that payment's client Debt Summary page (client id from
+  // record_after). Distinct destination from the other record_after types,
+  // which go to the plain client detail. Only links when a client_id is
+  // present (historical rows / pre-field edits stay plain text).
+  if (log.entity_type === 'payment' && log.record_client_id) {
+    return perms.canViewClients ? `/dashboard/clients/${log.record_client_id}/debt-summary` : null
+  }
+  // Non-client management entities → their own list/management page (no
+  // per-item deep-link; gate by entity type + the page's permission).
+  if (log.entity_type === 'seller') {
+    return perms.canViewSellers ? '/dashboard/sellers' : null
+  }
+  if (log.entity_type === 'target_action' || log.entity_type === 'ta_chain') {
+    return perms.canManageSettings ? '/dashboard/system-settings/target-actions' : null
+  }
+  // Document templates → the Document Generation page. resource_type is the
+  // generic "template" (shared with SMS templates), so gate on the action, not
+  // entity_type.
+  if (log.action_raw?.startsWith('document_template.')) {
+    return perms.canViewDocJournal ? '/dashboard/system-settings/document-generation' : null
+  }
+  // SMS templates → the SMS Templates page. Same generic "template"
+  // resource_type, so gate on the action too.
+  if (log.action_raw?.startsWith('sms.template.')) {
+    return perms.canManageSettings ? '/dashboard/system-settings/sms-templates' : null
+  }
+  // Scoring config events → the Scoring Configuration history page (list-style
+  // link; resource_type "scoring_config"). Gated on VIEW_HISTORY to match the
+  // history route. The score-calculation runs (resource_type "scoring") have no
+  // per-run page and fall through to plain text.
+  if (log.entity_type === 'scoring_config') {
+    return perms.canViewScoringHistory
+      ? '/dashboard/system-settings/scoring-configuration/history'
+      : null
+  }
+  // Tag-domain events (tag / segment / tag_rule / tag_settings) → the tabbed
+  // Tags page, deep-linked to the matching tab. All gate on TAGS.VIEW (the route
+  // permission); the page handles its own per-tab sub-permission gating.
+  if (log.entity_type && TAG_PAGE_BY_TYPE[log.entity_type]) {
+    return perms.canViewTags ? TAG_PAGE_BY_TYPE[log.entity_type] : null
+  }
+  // Import job events → the Import History page. resource_type "import_job" is
+  // unique to these, so gate on entity_type (list-page link; the per-job
+  // history/:id route is intentionally not used here).
+  if (log.entity_type === 'import_job') {
+    return perms.canImportData ? '/dashboard/import/history' : null
+  }
+  return null
+}
+
 export function AuditLogsPage() {
   const { t } = useTranslation('common')
   const canViewAuditLogs = useHasPermission(PERMISSIONS.SYSTEM.VIEW_AUDIT_LOGS)
+  const canViewUsers = useHasPermission(PERMISSIONS.USERS.VIEW)
+  const canManageRoles = useHasPermission(PERMISSIONS.SYSTEM.MANAGE_ROLES)
+  const canManageProjects = useHasPermission(PERMISSIONS.PROJECTS.MANAGE)
+  const canViewClients = useHasPermission(PERMISSIONS.CLIENTS.VIEW)
+  const canViewSellers = useHasPermission(PERMISSIONS.SELLERS.VIEW)
+  const canManageSettings = useHasPermission(PERMISSIONS.SYSTEM.MANAGE_SETTINGS)
+  const canViewDocJournal = useHasPermission(PERMISSIONS.DOCUMENT_GENERATION.VIEW_JOURNAL)
+  const canViewScoringHistory = useHasPermission(PERMISSIONS.SCORING_CONFIG.VIEW_HISTORY)
+  const canViewTags = useHasPermission(PERMISSIONS.TAGS.VIEW)
+  const canImportData = useHasPermission(PERMISSIONS.DATA.IMPORT)
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE)
   const [filters, setFilters] = useState<AuditLogFilters>({})
@@ -331,6 +587,20 @@ export function AuditLogsPage() {
     const actionDisplay =
       log.action.split('.').pop()?.toUpperCase().replace(/_/g, ' ') || log.action
 
+    // Some rows carry the client id inside record_after rather than
+    // resource_id (call, ta_interaction, the client sub-entities, and payment);
+    // surface it for the client link. Payment kept separate from
+    // RECORD_AFTER_CLIENT_TYPES because it links to a different destination.
+    let recordClientId: number | undefined
+    if (
+      log.resource_type &&
+      (RECORD_AFTER_CLIENT_TYPES.has(log.resource_type) || log.resource_type === 'payment') &&
+      log.record_after
+    ) {
+      const cid = Number((log.record_after as Record<string, unknown>).client_id)
+      if (Number.isFinite(cid) && cid > 0) recordClientId = cid
+    }
+
     return {
       id: log.id,
       timestamp: log.timestamp,
@@ -339,6 +609,8 @@ export function AuditLogsPage() {
       username: log.username || 'unknown',
       role: log.user_role ?? undefined,
       action: actionDisplay,
+      action_raw: log.action,
+      record_client_id: recordClientId,
       entity_type: log.resource_type,
       entity_id: log.resource_id?.toString() || log.resource_identifier || undefined,
       entity_name: entityName,
@@ -765,11 +1037,35 @@ export function AuditLogsPage() {
         key: 'entity',
         header: t('pages.auditLogs.tableHeaders.entity'),
         sortable: false,
-        render: (log) => (
-          <span className="truncate overflow-hidden text-sm leading-[150%] font-light tracking-[-0.28px] text-[#1E1E1E]">
-            {formatEntity(log)}
-          </span>
-        ),
+        render: (log) => {
+          const to = auditEntityLink(log, {
+            canViewUsers,
+            canManageRoles,
+            canManageProjects,
+            canViewClients,
+            canViewSellers,
+            canManageSettings,
+            canViewDocJournal,
+            canViewScoringHistory,
+            canViewTags,
+            canImportData,
+          })
+          if (to) {
+            return (
+              <Link
+                to={to}
+                className="text-primary-600 truncate overflow-hidden text-sm leading-[150%] font-light tracking-[-0.28px] hover:underline"
+              >
+                {formatEntity(log)}
+              </Link>
+            )
+          }
+          return (
+            <span className="truncate overflow-hidden text-sm leading-[150%] font-light tracking-[-0.28px] text-[#1E1E1E]">
+              {formatEntity(log)}
+            </span>
+          )
+        },
       },
       {
         key: 'details',
@@ -793,7 +1089,23 @@ export function AuditLogsPage() {
         ),
       },
     ],
-    [formatTimestamp, formatEntity, formatDetails, handleViewDetails, t]
+    [
+      formatTimestamp,
+      formatEntity,
+      formatDetails,
+      handleViewDetails,
+      t,
+      canViewUsers,
+      canManageRoles,
+      canManageProjects,
+      canViewClients,
+      canViewSellers,
+      canManageSettings,
+      canViewDocJournal,
+      canViewScoringHistory,
+      canViewTags,
+      canImportData,
+    ]
   )
 
   // Show access denied message for users without view_audit_logs permission
