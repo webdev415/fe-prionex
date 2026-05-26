@@ -4586,7 +4586,78 @@
           "delivered": "Delivered",
           "failed": "Failed",
           "skipped": "Skipped"
+        },
+        "viber": {
+          "images": "Images",
+          "my2UsesFirst": "My2 sends the first image",
+          "button": "Button"
         }
+      },
+      "viber": {
+        "richContentTitle": "Viber rich content (My2)",
+        "addImage": "Add image",
+        "imageUrl": "Image URL",
+        "imageUrlPlaceholder": "https://example.com/image.jpg",
+        "imageUrlHelper": "Public HTTPS URL My2 will use when sending (required).",
+        "imageUploadClick": "Click to upload",
+        "imageUploadOrDrop": "or drag and drop",
+        "imageUploadConstraints": "JPEG, PNG, GIF, WebP — max 5 MB",
+        "imageUploadChange": "Click or drop to replace image",
+        "imageTypeError": "Only JPEG, PNG, GIF, or WebP images are accepted.",
+        "imageSizeError": "Image is too large (max {{max}} MB).",
+        "imageUploading": "Uploading image…",
+        "imageUploadReady": "Image ready to send",
+        "imageUploadFailed": "Could not upload image",
+        "imageDeleteFailed": "Could not delete image",
+        "imageDeleted": "Image removed",
+        "imageMultiHint": "One image per Viber message.",
+        "imageMaxCount": "You can attach up to {{max}} images.",
+        "removeImage": "Remove image",
+        "confirmRemoveDraftImage": "Remove this image from the message? The draft template will keep its image.",
+        "imageDetached": "Image removed from this message",
+        "addButton": "Add button",
+        "buttonLabel": "Button label",
+        "buttonLabelPlaceholder": "Pay now",
+        "buttonUrl": "Button URL",
+        "buttonUrlPlaceholder": "https://example.com/pay"
+      },
+      "csvLaunch": {
+        "open": "Launch from CSV",
+        "title": "Launch campaign from CSV",
+        "subtitle": "Upload recipients, compose the message, and launch.",
+        "recipientsSection": "CSV recipients",
+        "templateHint": "Required columns (exact order): {{columns}}. Each client_id must exist in your project.",
+        "upload": {
+          "sectionTitle": "Upload CSV File",
+          "descriptionPhone": "CSV with client_id, phone, and name columns (exact order)",
+          "descriptionEmail": "CSV with client_id, email, and name columns (exact order)",
+          "downloadTemplate": "Download Template",
+          "downloading": "Downloading…",
+          "clickToUpload": "Click to upload",
+          "orDragAndDrop": "or drag and drop",
+          "constraints": "CSV only, max 10 MB, max {{max}} rows",
+          "validating": "Validating CSV…",
+          "selectedFile": "Selected file: {{name}}",
+          "errors": {
+            "onlyCsv": "Only CSV files are supported.",
+            "fileTooLarge": "File exceeds maximum size of 10 MB ({{size}} MB)."
+          }
+        },
+        "channel": "Channel",
+        "service": "Service",
+        "selectService": "Select service",
+        "downloadTemplate": "Download template",
+        "uploadCsv": "Upload CSV",
+        "parsing": "Parsing…",
+        "parseSummary": "{{eligible}} eligible of {{total}} rows",
+        "campaignName": "Campaign name",
+        "customMessage": "Custom message",
+        "subject": "Subject",
+        "message": "Message",
+        "launch": "Launch campaign",
+        "defaultName": "CSV {{channel}} campaign",
+        "templateFailed": "Could not download template",
+        "parseFailed": "Could not parse CSV file"
       }
     },
     "messagingDrafts": {

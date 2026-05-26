@@ -26,6 +26,12 @@ import {
   useMessagingIntegrations,
   getMessagingServiceLabel,
   MessagingVariablesPalette,
+  ViberRichContentFields,
+  buildViberContentForSend,
+  readDraftViberFormState,
+  resetViberImages,
+  viberPublicUrls,
+  type MessagingViberImageAttachment,
   insertMessagingVariableAtCursor,
   type MessagingTemplateFocusField,
 } from '@/features/messaging'
@@ -126,6 +132,11 @@ export function BulkSendMessageModal({
   const [senderName, setSenderName] = useState('')
   const [contentTouched, setContentTouched] = useState(false)
   const [isResolvingRecipients, setIsResolvingRecipients] = useState(false)
+  const [viberAddImage, setViberAddImage] = useState(false)
+  const [viberImages, setViberImages] = useState<MessagingViberImageAttachment[]>([])
+  const [viberAddButton, setViberAddButton] = useState(false)
+  const [viberButtonName, setViberButtonName] = useState('')
+  const [viberButtonUrl, setViberButtonUrl] = useState('')
 
   const subjectRef = useRef<HTMLInputElement | null>(null)
   const bodyRef = useRef<HTMLTextAreaElement | null>(null)
@@ -138,6 +149,7 @@ export function BulkSendMessageModal({
   const createCampaignMutation = useCreateMessagingCampaign()
   const channelSpec = CHANNEL_SPECS[channel]
   const isCustomMessage = draftId === NO_DRAFT_VALUE
+  const isMy2Viber = channel === 'viber' && service === 'my2_viber'
 
   const excludedSet = useMemo(() => new Set(excludedClientIds), [excludedClientIds])
 
@@ -213,6 +225,11 @@ export function BulkSendMessageModal({
     setDraftId(NO_DRAFT_VALUE)
     resetCustomMessageFields({ setBody, setSubject, setSenderName })
     setContentTouched(false)
+    setViberAddImage(false)
+    setViberImages((prev) => resetViberImages(prev))
+    setViberAddButton(false)
+    setViberButtonName('')
+    setViberButtonUrl('')
     lastFocusedRef.current = 'body'
   }, [open])
 
@@ -235,8 +252,13 @@ export function BulkSendMessageModal({
   const hasSelection =
     totalSelectedCount > 0 && (allClientsSelectedAcrossPages || clientIds.length > 0)
 
+  const hasViberRich =
+    isMy2Viber &&
+    ((viberAddImage && viberPublicUrls(viberImages).length > 0) ||
+      (viberAddButton && viberButtonName.trim() && viberButtonUrl.trim()))
   const hasMessageContent =
-    body.trim().length > 0 && (!channelSpec.subjectRequired || subject.trim().length > 0)
+    (body.trim().length > 0 || hasViberRich) &&
+    (!channelSpec.subjectRequired || subject.trim().length > 0)
 
   const canLaunch =
     hasSelection &&
@@ -257,6 +279,11 @@ export function BulkSendMessageModal({
     setDraftId(NO_DRAFT_VALUE)
     setContentTouched(false)
     resetCustomMessageFields({ setBody, setSubject, setSenderName })
+    setViberAddImage(false)
+    setViberImages((prev) => resetViberImages(prev))
+    setViberAddButton(false)
+    setViberButtonName('')
+    setViberButtonUrl('')
     if (senderName.length > spec.senderMaxLength) {
       setSenderName(senderName.slice(0, spec.senderMaxLength))
     }
@@ -265,16 +292,30 @@ export function BulkSendMessageModal({
     }
   }
 
+  const applyViberFromDraft = (draft: MessagingDraft | null) => {
+    const viberForm = readDraftViberFormState(draft)
+    setViberAddImage(viberForm.addImage)
+    setViberImages((prev) => {
+      resetViberImages(prev)
+      return viberForm.images
+    })
+    setViberAddButton(viberForm.addButton)
+    setViberButtonName(viberForm.buttonName)
+    setViberButtonUrl(viberForm.buttonUrl)
+  }
+
   const handleDraftChange = (value: string) => {
     setDraftId(value)
     setContentTouched(false)
     if (value === NO_DRAFT_VALUE) {
       resetCustomMessageFields({ setBody, setSubject, setSenderName })
+      applyViberFromDraft(null)
       return
     }
     const draft = drafts.find((item) => String(item.id) === value)
     if (draft) {
       applyDraftToForm(draft, channel, { setBody, setSubject, setSenderName })
+      applyViberFromDraft(draft)
     }
   }
 
@@ -339,6 +380,14 @@ export function BulkSendMessageModal({
       )
     }
 
+    const viberContent = isMy2Viber
+      ? buildViberContentForSend({
+          urlImages: viberPublicUrls(viberImages),
+          buttonName: viberButtonName,
+          buttonUrl: viberButtonUrl,
+        })
+      : null
+
     try {
       await createCampaignMutation.mutateAsync({
         name: campaignName.trim(),
@@ -347,7 +396,7 @@ export function BulkSendMessageModal({
         ...(useDraftIdOnLaunch
           ? { draft_id: selectedDraft!.id }
           : {
-              body: body.trim(),
+              ...(body.trim() ? { body: body.trim() } : {}),
               subject: channelSpec.showSubject ? subject.trim() || null : null,
               sender_name: senderName.trim() || null,
             }),
@@ -356,6 +405,7 @@ export function BulkSendMessageModal({
           ids,
         },
         source: 'bulk',
+        viber_content: viberContent ?? null,
       })
 
       onLaunched?.()
@@ -614,6 +664,21 @@ export function BulkSendMessageModal({
                 />
 
                 <MessagingVariablesPalette onInsert={handleInsertVariable} />
+
+                {isMy2Viber && (
+                  <ViberRichContentFields
+                    addImage={viberAddImage}
+                    onAddImageChange={setViberAddImage}
+                    images={viberImages}
+                    onImagesChange={setViberImages}
+                    addButton={viberAddButton}
+                    onAddButtonChange={setViberAddButton}
+                    buttonName={viberButtonName}
+                    onButtonNameChange={setViberButtonName}
+                    buttonUrl={viberButtonUrl}
+                    onButtonUrlChange={setViberButtonUrl}
+                  />
+                )}
 
                 {body.trim().length > 0 && (
                   <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">

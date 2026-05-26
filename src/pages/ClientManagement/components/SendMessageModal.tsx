@@ -35,6 +35,12 @@ import {
   useMessagingIntegrations,
   useSendMessage,
   MessagingVariablesPalette,
+  ViberRichContentFields,
+  buildViberContentForSend,
+  readDraftViberFormState,
+  resetViberImages,
+  viberPublicUrls,
+  type MessagingViberImageAttachment,
   insertMessagingVariableAtCursor,
   type ClientPhoneOption,
   type MessagingTemplateFocusField,
@@ -134,6 +140,11 @@ export function SendMessageModal({
   const [senderName, setSenderName] = useState('')
   const [contentTouched, setContentTouched] = useState(false)
   const [selectedPhone, setSelectedPhone] = useState('')
+  const [viberAddImage, setViberAddImage] = useState(false)
+  const [viberImages, setViberImages] = useState<MessagingViberImageAttachment[]>([])
+  const [viberAddButton, setViberAddButton] = useState(false)
+  const [viberButtonName, setViberButtonName] = useState('')
+  const [viberButtonUrl, setViberButtonUrl] = useState('')
 
   const subjectRef = useRef<HTMLInputElement | null>(null)
   const bodyRef = useRef<HTMLTextAreaElement | null>(null)
@@ -181,6 +192,7 @@ export function SendMessageModal({
     [channelDrafts, draftId]
   )
   const channelSpec = CHANNEL_SPECS[channel]
+  const isMy2Viber = channel === 'viber' && service === 'my2_viber'
   const showSubject = channelSpec.showSubject
   const destinationKind = getChannelDestinationLabel(channel)
   const hasPhoneDestination = destinationKind === 'phone' && !!selectedPhone.trim()
@@ -253,6 +265,11 @@ export function SendMessageModal({
     setDraftId('none')
     setService('')
     setContentTouched(false)
+    setViberAddImage(false)
+    setViberImages((prev) => resetViberImages(prev))
+    setViberAddButton(false)
+    setViberButtonName('')
+    setViberButtonUrl('')
     setSelectedLoanId(loans.length > 0 ? loans[0].id : null)
     setSelectedPhone(resolveDestinationPhone(clientPhones, initialPhone))
     lastFocusedRef.current = 'body'
@@ -312,6 +329,11 @@ export function SendMessageModal({
     setDraftId('none')
     setContentTouched(false)
     resetMessageFields({ setBody, setSubject, setSenderName })
+    setViberAddImage(false)
+    setViberImages((prev) => resetViberImages(prev))
+    setViberAddButton(false)
+    setViberButtonName('')
+    setViberButtonUrl('')
     setService(integrationsForChannel[0]?.service ?? '')
 
     if (senderName.length > spec.senderMaxLength) {
@@ -322,12 +344,25 @@ export function SendMessageModal({
     }
   }
 
+  const applyViberFromDraft = (draft: MessagingDraft | null) => {
+    const viberForm = readDraftViberFormState(draft)
+    setViberAddImage(viberForm.addImage)
+    setViberImages((prev) => {
+      resetViberImages(prev)
+      return viberForm.images
+    })
+    setViberAddButton(viberForm.addButton)
+    setViberButtonName(viberForm.buttonName)
+    setViberButtonUrl(viberForm.buttonUrl)
+  }
+
   const handleDraftChange = (value: string) => {
     setDraftId(value)
     setContentTouched(false)
 
     if (value === 'none') {
       resetMessageFields({ setBody, setSubject, setSenderName })
+      applyViberFromDraft(null)
       return
     }
 
@@ -335,6 +370,7 @@ export function SendMessageModal({
     if (!draft) return
 
     applyDraftContent(draft, channel, { setBody, setSubject, setSenderName })
+    applyViberFromDraft(draft)
   }
 
   const useDraftIdOnSend =
@@ -346,11 +382,16 @@ export function SendMessageModal({
 
   const quotaExceeded = quotaData != null && !quotaData.allowed
 
+  const hasViberRich =
+    isMy2Viber &&
+    ((viberAddImage && viberPublicUrls(viberImages).length > 0) ||
+      (viberAddButton && viberButtonName.trim() && viberButtonUrl.trim()))
+
   const canSend =
     clientId > 0 &&
     !!service &&
     hasDestination &&
-    body.trim().length > 0 &&
+    (body.trim().length > 0 || hasViberRich) &&
     (!channelSpec.subjectRequired || subject.trim().length > 0) &&
     !quotaExceeded &&
     !sendMessageMutation.isPending
@@ -363,14 +404,23 @@ export function SendMessageModal({
   const handleSend = async () => {
     if (!canSend) return
 
+    const viberContent = isMy2Viber
+      ? buildViberContentForSend({
+          urlImages: viberPublicUrls(viberImages),
+          buttonName: viberButtonName,
+          buttonUrl: viberButtonUrl,
+        })
+      : null
+
     await sendMessageMutation.mutateAsync({
       client_id: clientId,
       channel,
       service,
       draft_id: useDraftIdOnSend ? selectedDraft!.id : null,
-      body: useDraftIdOnSend ? null : body.trim(),
+      body: useDraftIdOnSend ? null : body.trim() || null,
       subject: showSubject ? subject.trim() || null : null,
       sender_name: senderName.trim() || null,
+      viber_content: viberContent,
       variables: variableValues,
       destination_override: destinationKind === 'phone' ? selectedPhone || null : null,
       destination_owner:
@@ -713,6 +763,22 @@ export function SendMessageModal({
             />
 
             <MessagingVariablesPalette onInsert={handleInsertVariable} disabled={!hasDestination} />
+
+            {isMy2Viber && (
+              <ViberRichContentFields
+                addImage={viberAddImage}
+                onAddImageChange={setViberAddImage}
+                images={viberImages}
+                onImagesChange={setViberImages}
+                addButton={viberAddButton}
+                onAddButtonChange={setViberAddButton}
+                buttonName={viberButtonName}
+                onButtonNameChange={setViberButtonName}
+                buttonUrl={viberButtonUrl}
+                onButtonUrlChange={setViberButtonUrl}
+                disabled={!hasDestination}
+              />
+            )}
 
             <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
               <div className="mb-3 flex flex-wrap items-center gap-2">

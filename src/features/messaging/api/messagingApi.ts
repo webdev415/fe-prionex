@@ -4,6 +4,7 @@ import type {
   MessagingCampaignDetail,
   MessagingCampaignRecipient,
   MessagingCampaignListResponse,
+  MessagingCsvParseResponse,
   MessagingChannel,
   MessagingClientHistoryItem,
   MessagingDestinationQuota,
@@ -196,6 +197,39 @@ export const messagingApi = {
     return api
       .post<MessagingCampaignDetail>(`${BASE_URL}/campaigns`, payload)
       .then((response) => response.data)
+  },
+
+  uploadViberImage(file: File) {
+    const formData = new FormData()
+    formData.append('file', file)
+    return api
+      .post<{ url: string; stored_name: string }>(`${BASE_URL}/viber/images`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+      .then((response) => response.data)
+  },
+
+  deleteViberImage(storedName: string) {
+    return api.delete(`${BASE_URL}/viber/images/${encodeURIComponent(storedName)}`)
+  },
+
+  parseCampaignCsv(channel: MessagingChannel, file: File) {
+    const formData = new FormData()
+    formData.append('file', file)
+    return api
+      .post<MessagingCsvParseResponse>(`${BASE_URL}/campaigns/recipients/parse-csv`, formData, {
+        params: { channel },
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+      .then((response) => response.data)
+  },
+
+  async downloadCampaignCsvTemplate(channel: MessagingChannel): Promise<Blob> {
+    const response = await api.get(`${BASE_URL}/campaigns/recipients/csv-template`, {
+      params: { channel },
+      responseType: 'blob',
+    })
+    return response.data as Blob
   },
 
   async exportCampaign(campaignId: number): Promise<Blob> {

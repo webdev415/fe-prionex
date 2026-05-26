@@ -7,6 +7,8 @@ import {
   type CampaignAnalyticsFilters,
 } from './components/CampaignAnalyticsFiltersBar'
 import { CampaignDetailModal } from './components/CampaignDetailModal'
+import { CsvCampaignLaunchModal } from './components/CsvCampaignLaunchModal'
+import { Button } from '@/components/ui/Button'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 import { formatDateTime } from '@/lib/formatters'
@@ -19,7 +21,12 @@ import {
 } from '@/features/messaging'
 import { MessagingCampaignsTableSkeleton } from './components/MessagingCampaignsPageSkeleton'
 import type { MessagingCampaignSummary } from '@/features/messaging'
-import { useMessagingCampaigns } from '@/features/messaging'
+import {
+  launchPermissionForChannel,
+  useMessagingCampaigns,
+  useMessagingIntegrations,
+} from '@/features/messaging'
+import { useHasAnyPermission } from '@/hooks/usePermissions'
 import { useOperators } from '@/features/users/hooks/useUsers'
 import { useAuthStore } from '@/stores/authStore'
 
@@ -45,6 +52,15 @@ export function MessagingCampaignsPage() {
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE)
   const [selectedCampaignId, setSelectedCampaignId] = useState<number | null>(null)
+  const [csvLaunchOpen, setCsvLaunchOpen] = useState(false)
+
+  const canLaunchCsv = useHasAnyPermission([
+    launchPermissionForChannel('sms'),
+    launchPermissionForChannel('viber'),
+    launchPermissionForChannel('email'),
+  ])
+  const { data: integrations = [] } = useMessagingIntegrations(csvLaunchOpen || canLaunchCsv)
+  const canLaunchCsvWithIntegration = canLaunchCsv && integrations.length > 0
 
   const handleFilterChange = useCallback((filters: CampaignAnalyticsFilters) => {
     setAppliedFilters(filters)
@@ -212,16 +228,29 @@ export function MessagingCampaignsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-2">
-        <h1 className="text-dark-500 text-xl font-light sm:text-2xl">
-          {t('navigation.campaignAnalytics', 'Campaign Analytics')}
-        </h1>
-        <p className="mt-1 text-sm font-light text-gray-600">
-          {t(
-            'pages.messagingCampaigns.description',
-            'Review bulk and single-send campaigns, inspect recipient outcomes, and export delivery results.'
-          )}
-        </p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex flex-col gap-2">
+          <h1 className="text-dark-500 text-xl font-light sm:text-2xl">
+            {t('navigation.campaignAnalytics', 'Campaign Analytics')}
+          </h1>
+          <p className="mt-1 text-sm font-light text-gray-600">
+            {t(
+              'pages.messagingCampaigns.description',
+              'Review bulk and single-send campaigns, inspect recipient outcomes, and export delivery results.'
+            )}
+          </p>
+        </div>
+        {canLaunchCsvWithIntegration && (
+          <Button
+            type="button"
+            variant="primary"
+            className="shrink-0"
+            leftIcon={<Icons.FileImport size={16} />}
+            onClick={() => setCsvLaunchOpen(true)}
+          >
+            {t('pages.messagingCampaigns.csvLaunch.open', 'Launch from CSV')}
+          </Button>
+        )}
       </div>
 
       <CampaignAnalyticsFiltersBar
@@ -264,6 +293,14 @@ export function MessagingCampaignsPage() {
         campaignId={selectedCampaignId}
         operatorNames={operatorNames}
         onClose={() => setSelectedCampaignId(null)}
+      />
+
+      <CsvCampaignLaunchModal
+        open={csvLaunchOpen}
+        onClose={() => setCsvLaunchOpen(false)}
+        onLaunched={() => {
+          setCsvLaunchOpen(false)
+        }}
       />
     </div>
   )

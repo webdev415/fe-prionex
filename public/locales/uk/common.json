@@ -4601,7 +4601,78 @@
           "delivered": "Доставлено",
           "failed": "Помилки",
           "skipped": "Пропущено"
+        },
+        "viber": {
+          "images": "Зображення",
+          "my2UsesFirst": "My2 надсилає перше зображення",
+          "button": "Кнопка"
         }
+      },
+      "viber": {
+        "richContentTitle": "Розширений контент Viber (My2)",
+        "addImage": "Додати зображення",
+        "imageUrl": "URL зображення",
+        "imageUrlPlaceholder": "https://example.com/image.jpg",
+        "imageUrlHelper": "Публічний HTTPS URL для My2 (обовʼязково).",
+        "imageUploadClick": "Натисніть, щоб завантажити",
+        "imageUploadOrDrop": "або перетягніть файл",
+        "imageUploadConstraints": "JPEG, PNG, GIF, WebP — до 5 МБ",
+        "imageUploadChange": "Натисніть або перетягніть, щоб замінити",
+        "imageTypeError": "Дозволені лише JPEG, PNG, GIF або WebP.",
+        "imageSizeError": "Зображення завелике (макс. {{max}} МБ).",
+        "imageUploading": "Завантаження зображення…",
+        "imageUploadReady": "Зображення готове до відправки",
+        "imageUploadFailed": "Не вдалося завантажити зображення",
+        "imageDeleteFailed": "Не вдалося видалити зображення",
+        "imageDeleted": "Зображення видалено",
+        "imageMultiHint": "Одне зображення на повідомлення Viber.",
+        "imageMaxCount": "Можна додати до {{max}} зображень.",
+        "removeImage": "Видалити зображення",
+        "confirmRemoveDraftImage": "Прибрати зображення з цього повідомлення? У шаблоні чернетки зображення залишиться.",
+        "imageDetached": "Зображення прибрано з цього повідомлення",
+        "addButton": "Додати кнопку",
+        "buttonLabel": "Текст кнопки",
+        "buttonLabelPlaceholder": "Сплатити",
+        "buttonUrl": "URL кнопки",
+        "buttonUrlPlaceholder": "https://example.com/pay"
+      },
+      "csvLaunch": {
+        "open": "Запуск з CSV",
+        "title": "Запуск кампанії з CSV",
+        "subtitle": "Завантажте одержувачів, підготуйте повідомлення та запустіть.",
+        "recipientsSection": "Одержувачі з CSV",
+        "templateHint": "Обовʼязкові стовпці (точний порядок): {{columns}}. Кожен client_id має існувати у вашому проєкті.",
+        "upload": {
+          "sectionTitle": "Завантажити CSV-файл",
+          "descriptionPhone": "CSV зі стовпцями client_id, phone та name (точний порядок)",
+          "descriptionEmail": "CSV зі стовпцями client_id, email та name (точний порядок)",
+          "downloadTemplate": "Завантажити шаблон",
+          "downloading": "Завантаження…",
+          "clickToUpload": "Натисніть, щоб завантажити",
+          "orDragAndDrop": "або перетягніть файл",
+          "constraints": "Лише CSV, макс. 10 МБ, до {{max}} рядків",
+          "validating": "Перевірка CSV…",
+          "selectedFile": "Обраний файл: {{name}}",
+          "errors": {
+            "onlyCsv": "Підтримуються лише CSV-файли.",
+            "fileTooLarge": "Файл перевищує максимальний розмір 10 МБ ({{size}} МБ)."
+          }
+        },
+        "channel": "Канал",
+        "service": "Сервіс",
+        "selectService": "Оберіть сервіс",
+        "downloadTemplate": "Завантажити шаблон",
+        "uploadCsv": "Завантажити CSV",
+        "parsing": "Обробка…",
+        "parseSummary": "{{eligible}} придатних з {{total}} рядків",
+        "campaignName": "Назва кампанії",
+        "customMessage": "Власне повідомлення",
+        "subject": "Тема",
+        "message": "Повідомлення",
+        "launch": "Запустити кампанію",
+        "defaultName": "CSV кампанія {{channel}}",
+        "templateFailed": "Не вдалося завантажити шаблон",
+        "parseFailed": "Не вдалося розібрати CSV"
       }
     },
     "messagingDrafts": {

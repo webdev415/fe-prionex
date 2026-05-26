@@ -13,6 +13,7 @@ import {
   formatCampaignCostDisplay,
   formatLauncherName,
   getMessagingServiceLabel,
+  CampaignViberContentSection,
   messagingApi,
   messagingStatusForCallLogCard,
 } from '@/features/messaging'
@@ -404,6 +405,7 @@ export function CampaignDetailModal({
                       {bodyTemplate || '—'}
                     </div>
                   </div>
+                  <CampaignViberContentSection snapshot={snapshot} channel={campaign.channel} />
                 </div>
               </section>
 

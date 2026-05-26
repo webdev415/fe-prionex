@@ -1,5 +1,23 @@
 export type MessagingChannel = 'sms' | 'viber' | 'email'
-export type MessagingSource = 'single' | 'bulk'
+export type MessagingSource = 'single' | 'bulk' | 'csv'
+
+export type MessagingViberContentType =
+  | 'ONLY_MESSAGE'
+  | 'ONLY_IMAGE'
+  | 'ONLY_BUTTON'
+  | 'MESSAGE_AND_BUTTON'
+  | 'IMAGE_AND_BUTTON'
+  | 'MESSAGE_IMAGE_AND_BUTTON'
+
+export interface MessagingViberContent {
+  content_type?: MessagingViberContentType
+  /** Primary image URL sent to My2 (first of url_images). */
+  url_image?: string
+  /** All hosted images (My2 API supports one; all are shown in campaign details). */
+  url_images?: string[]
+  button_name?: string
+  button_url?: string
+}
 
 export const MESSAGING_CHANNELS: MessagingChannel[] = ['sms', 'viber', 'email']
 
@@ -167,6 +185,7 @@ export interface MessagingDraft {
   subject: string | null
   sender_name: string | null
   available_variables: string[] | null
+  channel_options?: Record<string, unknown> | null
   created_by: number | null
   created_at: string
   updated_at: string | null
@@ -179,6 +198,7 @@ export interface MessagingDraftCreate {
   subject?: string | null
   sender_name?: string | null
   available_variables?: string[] | null
+  channel_options?: Record<string, unknown> | null
 }
 
 export interface MessagingDraftUpdate {
@@ -187,6 +207,7 @@ export interface MessagingDraftUpdate {
   subject?: string | null
   sender_name?: string | null
   available_variables?: string[] | null
+  channel_options?: Record<string, unknown> | null
 }
 
 export interface MessagingDraftPreviewResponse {
@@ -269,7 +290,7 @@ export interface MessagingCampaignDetail extends MessagingCampaignSummary {
 export interface MessagingCampaignRecipient {
   id: number
   campaign_id: number
-  client_id: number
+  client_id: number | null
   client_name?: string | null
   destination: string | null
   rendered_body: string | null
@@ -302,9 +323,15 @@ export interface MessagingSelectionPayloadFilter {
   limit?: number
 }
 
+export interface MessagingSelectionPayloadCsv {
+  mode: 'csv'
+  upload_id: string
+}
+
 export type MessagingSelectionPayload =
   | MessagingSelectionPayloadIds
   | MessagingSelectionPayloadFilter
+  | MessagingSelectionPayloadCsv
   | Record<string, unknown>
 
 export interface MessagingCampaignCreate {
@@ -317,6 +344,23 @@ export interface MessagingCampaignCreate {
   sender_name?: string | null
   selection_payload: MessagingSelectionPayload
   source?: MessagingSource
+  viber_content?: MessagingViberContent | null
+}
+
+export interface MessagingCsvParseResponse {
+  upload_id: string
+  channel: MessagingChannel
+  total: number
+  eligible: number
+  skipped: number
+  skipped_by_reason: Record<string, number>
+  duplicate_destinations: number
+  sample: Array<{
+    row_number: number
+    client_id?: number | null
+    destination?: string | null
+    name?: string | null
+  }>
 }
 
 export interface MessagingDestinationQuota {
@@ -339,6 +383,7 @@ export interface MessagingSingleSendRequest {
   destination_owner?: string | null
   destination_contact_type_id?: number | null
   name?: string | null
+  viber_content?: MessagingViberContent | null
 }
 
 export interface MessagingSingleSendResponse {
