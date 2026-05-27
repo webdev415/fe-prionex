@@ -53,16 +53,9 @@ const formatCampaignDateStamp = (language: string) =>
     day: '2-digit',
   }).format(new Date())
 
-function draftSnapshotMatches(
-  draft: MessagingDraft,
-  body: string,
-  subject: string,
-  senderName: string
-): boolean {
+function draftSnapshotMatches(draft: MessagingDraft, body: string, subject: string): boolean {
   return (
-    body.trim() === draft.body.trim() &&
-    (subject.trim() || '') === (draft.subject || '').trim() &&
-    (senderName.trim() || '') === (draft.sender_name || '').trim()
+    body.trim() === draft.body.trim() && (subject.trim() || '') === (draft.subject || '').trim()
   )
 }
 
@@ -72,23 +65,19 @@ function applyDraftToForm(
   setters: {
     setBody: (body: string) => void
     setSubject: (subject: string) => void
-    setSenderName: (sender: string) => void
   }
 ) {
   const spec = CHANNEL_SPECS[channel]
   setters.setBody(draft.body)
   setters.setSubject(spec.showSubject ? draft.subject || '' : '')
-  setters.setSenderName((draft.sender_name || '').slice(0, spec.senderMaxLength))
 }
 
 function resetCustomMessageFields(setters: {
   setBody: (body: string) => void
   setSubject: (subject: string) => void
-  setSenderName: (sender: string) => void
 }) {
   setters.setBody('')
   setters.setSubject('')
-  setters.setSenderName('')
 }
 
 interface CsvCampaignLaunchModalProps {
@@ -110,7 +99,6 @@ export function CsvCampaignLaunchModal({ open, onClose, onLaunched }: CsvCampaig
   const [draftId, setDraftId] = useState(NO_DRAFT_VALUE)
   const [body, setBody] = useState('')
   const [subject, setSubject] = useState('')
-  const [senderName, setSenderName] = useState('')
   const [contentTouched, setContentTouched] = useState(false)
   const [parseResult, setParseResult] = useState<MessagingCsvParseResponse | null>(null)
   const [isParsing, setIsParsing] = useState(false)
@@ -160,9 +148,7 @@ export function CsvCampaignLaunchModal({ open, onClose, onLaunched }: CsvCampaig
   )
 
   const useDraftIdOnLaunch =
-    selectedDraft !== null &&
-    !contentTouched &&
-    draftSnapshotMatches(selectedDraft, body, subject, senderName)
+    selectedDraft !== null && !contentTouched && draftSnapshotMatches(selectedDraft, body, subject)
 
   const previewLabel = isCustomMessage
     ? t('pages.clients.modals.bulkSendMessage.customMessage', 'Custom message')
@@ -220,7 +206,6 @@ export function CsvCampaignLaunchModal({ open, onClose, onLaunched }: CsvCampaig
       setParseResult(null)
       setBody('')
       setSubject('')
-      setSenderName('')
       setDraftId(NO_DRAFT_VALUE)
       setContentTouched(false)
       setViberAddImage(false)
@@ -240,7 +225,7 @@ export function CsvCampaignLaunchModal({ open, onClose, onLaunched }: CsvCampaig
     setUploadedFileName(null)
     setDraftId(NO_DRAFT_VALUE)
     setContentTouched(false)
-    resetCustomMessageFields({ setBody, setSubject, setSenderName })
+    resetCustomMessageFields({ setBody, setSubject })
     setViberAddImage(false)
     setViberImages((prev) => resetViberImages(prev))
     setViberAddButton(false)
@@ -271,15 +256,12 @@ export function CsvCampaignLaunchModal({ open, onClose, onLaunched }: CsvCampaig
     setChannel(nextChannel)
     setDraftId(NO_DRAFT_VALUE)
     setContentTouched(false)
-    resetCustomMessageFields({ setBody, setSubject, setSenderName })
+    resetCustomMessageFields({ setBody, setSubject })
     setViberAddImage(false)
     setViberImages((prev) => resetViberImages(prev))
     setViberAddButton(false)
     setViberButtonName('')
     setViberButtonUrl('')
-    if (senderName.length > spec.senderMaxLength) {
-      setSenderName(senderName.slice(0, spec.senderMaxLength))
-    }
     if (body.length > spec.bodyMaxLength) {
       setBody(body.slice(0, spec.bodyMaxLength))
     }
@@ -301,13 +283,13 @@ export function CsvCampaignLaunchModal({ open, onClose, onLaunched }: CsvCampaig
     setDraftId(value)
     setContentTouched(false)
     if (value === NO_DRAFT_VALUE) {
-      resetCustomMessageFields({ setBody, setSubject, setSenderName })
+      resetCustomMessageFields({ setBody, setSubject })
       applyViberFromDraft(null)
       return
     }
     const draft = drafts.find((item) => String(item.id) === value)
     if (draft) {
-      applyDraftToForm(draft, channel, { setBody, setSubject, setSenderName })
+      applyDraftToForm(draft, channel, { setBody, setSubject })
       applyViberFromDraft(draft)
     }
   }
@@ -439,7 +421,6 @@ export function CsvCampaignLaunchModal({ open, onClose, onLaunched }: CsvCampaig
           : {
               ...(body.trim() ? { body: body.trim() } : {}),
               subject: channelSpec.showSubject ? subject.trim() || null : null,
-              sender_name: senderName.trim() || null,
             }),
         selection_payload: {
           mode: 'csv',
@@ -693,16 +674,6 @@ export function CsvCampaignLaunchModal({ open, onClose, onLaunched }: CsvCampaig
               </div>
 
               <div className="space-y-4">
-                <Input
-                  label={t('pages.clients.modals.sendMessage.senderName', 'Sender name')}
-                  value={senderName}
-                  onChange={(e) => {
-                    setSenderName(e.target.value)
-                    setContentTouched(true)
-                  }}
-                  maxLength={channelSpec.senderMaxLength}
-                />
-
                 {channelSpec.showSubject && (
                   <Input
                     ref={subjectRef}

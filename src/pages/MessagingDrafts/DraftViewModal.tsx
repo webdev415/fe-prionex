@@ -65,10 +65,6 @@ export function DraftViewModal({ draft, open, onClose }: DraftViewModalProps) {
                 label={t('pages.messagingDrafts.form.channel', 'Channel')}
                 value={draft.channel.toUpperCase()}
               />
-              <ReadOnlyField
-                label={t('pages.messagingDrafts.form.senderName', 'Sender name')}
-                value={draft.sender_name || '-'}
-              />
               {showSubject && (
                 <ReadOnlyField
                   label={t('pages.messagingDrafts.form.subject', 'Subject')}

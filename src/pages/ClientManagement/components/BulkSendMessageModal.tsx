@@ -70,16 +70,9 @@ const formatCampaignDateStamp = (language: string) =>
     day: '2-digit',
   }).format(new Date())
 
-function draftSnapshotMatches(
-  draft: MessagingDraft,
-  body: string,
-  subject: string,
-  senderName: string
-): boolean {
+function draftSnapshotMatches(draft: MessagingDraft, body: string, subject: string): boolean {
   return (
-    body.trim() === draft.body.trim() &&
-    (subject.trim() || '') === (draft.subject || '').trim() &&
-    (senderName.trim() || '') === (draft.sender_name || '').trim()
+    body.trim() === draft.body.trim() && (subject.trim() || '') === (draft.subject || '').trim()
   )
 }
 
@@ -89,23 +82,19 @@ function applyDraftToForm(
   setters: {
     setBody: (body: string) => void
     setSubject: (subject: string) => void
-    setSenderName: (sender: string) => void
   }
 ) {
   const spec = CHANNEL_SPECS[channel]
   setters.setBody(draft.body)
   setters.setSubject(spec.showSubject ? draft.subject || '' : '')
-  setters.setSenderName((draft.sender_name || '').slice(0, spec.senderMaxLength))
 }
 
 function resetCustomMessageFields(setters: {
   setBody: (body: string) => void
   setSubject: (subject: string) => void
-  setSenderName: (sender: string) => void
 }) {
   setters.setBody('')
   setters.setSubject('')
-  setters.setSenderName('')
 }
 
 export function BulkSendMessageModal({
@@ -129,7 +118,6 @@ export function BulkSendMessageModal({
   const [draftId, setDraftId] = useState(NO_DRAFT_VALUE)
   const [body, setBody] = useState('')
   const [subject, setSubject] = useState('')
-  const [senderName, setSenderName] = useState('')
   const [contentTouched, setContentTouched] = useState(false)
   const [isResolvingRecipients, setIsResolvingRecipients] = useState(false)
   const [viberAddImage, setViberAddImage] = useState(false)
@@ -177,9 +165,7 @@ export function BulkSendMessageModal({
   )
 
   const useDraftIdOnLaunch =
-    selectedDraft !== null &&
-    !contentTouched &&
-    draftSnapshotMatches(selectedDraft, body, subject, senderName)
+    selectedDraft !== null && !contentTouched && draftSnapshotMatches(selectedDraft, body, subject)
 
   const previewLabel = isCustomMessage
     ? t('pages.clients.modals.bulkSendMessage.customMessage', 'Custom message')
@@ -223,7 +209,7 @@ export function BulkSendMessageModal({
     if (!open) return
 
     setDraftId(NO_DRAFT_VALUE)
-    resetCustomMessageFields({ setBody, setSubject, setSenderName })
+    resetCustomMessageFields({ setBody, setSubject })
     setContentTouched(false)
     setViberAddImage(false)
     setViberImages((prev) => resetViberImages(prev))
@@ -278,15 +264,12 @@ export function BulkSendMessageModal({
     setChannel(nextChannel)
     setDraftId(NO_DRAFT_VALUE)
     setContentTouched(false)
-    resetCustomMessageFields({ setBody, setSubject, setSenderName })
+    resetCustomMessageFields({ setBody, setSubject })
     setViberAddImage(false)
     setViberImages((prev) => resetViberImages(prev))
     setViberAddButton(false)
     setViberButtonName('')
     setViberButtonUrl('')
-    if (senderName.length > spec.senderMaxLength) {
-      setSenderName(senderName.slice(0, spec.senderMaxLength))
-    }
     if (body.length > spec.bodyMaxLength) {
       setBody(body.slice(0, spec.bodyMaxLength))
     }
@@ -308,13 +291,13 @@ export function BulkSendMessageModal({
     setDraftId(value)
     setContentTouched(false)
     if (value === NO_DRAFT_VALUE) {
-      resetCustomMessageFields({ setBody, setSubject, setSenderName })
+      resetCustomMessageFields({ setBody, setSubject })
       applyViberFromDraft(null)
       return
     }
     const draft = drafts.find((item) => String(item.id) === value)
     if (draft) {
-      applyDraftToForm(draft, channel, { setBody, setSubject, setSenderName })
+      applyDraftToForm(draft, channel, { setBody, setSubject })
       applyViberFromDraft(draft)
     }
   }
@@ -398,7 +381,6 @@ export function BulkSendMessageModal({
           : {
               ...(body.trim() ? { body: body.trim() } : {}),
               subject: channelSpec.showSubject ? subject.trim() || null : null,
-              sender_name: senderName.trim() || null,
             }),
         selection_payload: {
           mode: 'ids',
@@ -610,20 +592,6 @@ export function BulkSendMessageModal({
               </div>
 
               <div className="space-y-4">
-                <Input
-                  label={t('pages.clients.modals.sendMessage.senderName', 'Sender name')}
-                  value={senderName}
-                  onChange={(event) => {
-                    setSenderName(event.target.value)
-                    setContentTouched(true)
-                  }}
-                  maxLength={channelSpec.senderMaxLength}
-                  placeholder={t(
-                    'pages.clients.modals.sendMessage.senderNamePlaceholder',
-                    'CRM Prionex'
-                  )}
-                />
-
                 {channelSpec.showSubject && (
                   <Input
                     ref={subjectRef}
@@ -708,14 +676,6 @@ export function BulkSendMessageModal({
                             {t('pages.clients.modals.bulkSendMessage.previewSubject', 'Subject')}:
                           </span>{' '}
                           <span className="font-mono text-gray-600">{subject.trim() || '—'}</span>
-                        </div>
-                      )}
-                      {(senderName || '').trim() && (
-                        <div>
-                          <span className="text-dark-500 font-medium">
-                            {t('pages.clients.modals.bulkSendMessage.previewSender', 'Sender')}:
-                          </span>{' '}
-                          <span className="text-gray-600">{senderName}</span>
                         </div>
                       )}
                       <div>
