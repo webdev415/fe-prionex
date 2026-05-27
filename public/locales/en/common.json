@@ -404,6 +404,8 @@
           "partial_payment": "Partial payment",
           "full_payment": "Full payment"
         },
+        "paymentCommentSearch": "Payment comment",
+        "paymentCommentSearchPlaceholder": "Search in payment comments…",
         "amountMin": "Min amount",
         "amountMax": "Max amount",
         "amountMinPlaceholder": "0.00",
@@ -453,6 +455,7 @@
         "loanNumber": "Loan number",
         "loanSaleDate": "Date of loan sale",
         "paymentType": "Payment type",
+        "paymentComment": "Payment comment",
         "operator": "Operator",
         "createdAt": "Created at",
         "confirmedAt": "Confirmed at",
@@ -1436,7 +1439,7 @@
             "amount": "Amount",
             "date": "Date",
             "method": "Method",
-            "paymentType": "Payment Type",
+            "paymentComment": "Payment Comment",
             "type": "Type",
             "status": "Status",
             "note": "Note"
