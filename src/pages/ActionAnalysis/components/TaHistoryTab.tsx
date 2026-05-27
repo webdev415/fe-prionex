@@ -26,7 +26,9 @@ export function TaHistoryTab() {
 
   const activeProjectId = useAuthStore((s) => s.user?.active_project_id)
   const userTimezone = useAuthStore((s) => s.user?.timezone)
-  const { data: operators = [] } = useOperators(activeProjectId ? Number(activeProjectId) : null)
+  const { data: operators = [] } = useOperators(activeProjectId ? Number(activeProjectId) : null, {
+    includeInactive: true,
+  })
   const { data: chainsResp } = useTAChains({ include_inactive: true })
   const chains = useMemo(() => chainsResp?.items ?? [], [chainsResp])
   const { data: tasResp } = useTargetActions({ include_hidden: true })
