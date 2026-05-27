@@ -156,22 +156,22 @@ export interface ClientFilters {
   dateOfSaleFrom?: string
   dateOfSaleTo?: string
 
-  // Promise Date Filter
-  promiseDateFrom?: string
-  promiseDateTo?: string
-
-  // Callback Date Filter
-  callbackDateFrom?: string
-  callbackDateTo?: string
+  // Target Action Date Filter — merges the legacy Promise + Callback
+  // date pickers into one range. Reads the user-entered date value(s)
+  // inside the most-recent TA-with-date for each client (see the BE
+  // filter for the precise rule).
+  taDateFrom?: string
+  taDateTo?: string
 
   // Assignment Date Filter
   assignmentDateFrom?: string
   assignmentDateTo?: string
 
-  // Interaction Created By
+  // Interaction Created By — operator who created the latest TA
   interactionUserId?: string
 
-  // Interaction Logged Date (applies to promise and callback subqueries)
+  // Interaction Logged Date — created_at of the latest TA, regardless
+  // of whether the TA carries any date values
   interactionDateFrom?: string
   interactionDateTo?: string
 
@@ -245,16 +245,11 @@ export function ClientManagementPage() {
   const [totalDebtRangeToFilter, setTotalDebtRangeToFilter] = useURLState<number>('totalDebtMax', 0)
   const [dpdRangeFromFilter, setDpdRangeFromFilter] = useURLState<number>('dpdMin', 0)
   const [dpdRangeToFilter, setDpdRangeToFilter] = useURLState<number>('dpdMax', 0)
-  const [promiseDateFromFilter, setPromiseDateFromFilter] = useURLState<string>(
-    'promiseDateFrom',
-    ''
-  )
-  const [promiseDateToFilter, setPromiseDateToFilter] = useURLState<string>('promiseDateTo', '')
-  const [callbackDateFromFilter, setCallbackDateFromFilter] = useURLState<string>(
-    'callbackDateFrom',
-    ''
-  )
-  const [callbackDateToFilter, setCallbackDateToFilter] = useURLState<string>('callbackDateTo', '')
+  // URL query keys for the unified Target Action Date range. CamelCase
+  // matches every other URL filter on this page; the snake_case
+  // ta_date_from/to is only used at the API boundary.
+  const [taDateFromFilter, setTaDateFromFilter] = useURLState<string>('taDateFrom', '')
+  const [taDateToFilter, setTaDateToFilter] = useURLState<string>('taDateTo', '')
   const [interactionUserIdFilter, setInteractionUserIdFilter] = useURLState<string>(
     'interactionUserId',
     ''
@@ -295,10 +290,8 @@ export function ClientManagementPage() {
       totalDebtRangeTo: totalDebtRangeToFilter || undefined,
       dpdRangeFrom: dpdRangeFromFilter || undefined,
       dpdRangeTo: dpdRangeToFilter || undefined,
-      promiseDateFrom: promiseDateFromFilter || undefined,
-      promiseDateTo: promiseDateToFilter || undefined,
-      callbackDateFrom: callbackDateFromFilter || undefined,
-      callbackDateTo: callbackDateToFilter || undefined,
+      taDateFrom: taDateFromFilter || undefined,
+      taDateTo: taDateToFilter || undefined,
       interactionUserId: interactionUserIdFilter || undefined,
       interactionDateFrom: interactionDateFromFilter || undefined,
       interactionDateTo: interactionDateToFilter || undefined,
@@ -322,10 +315,8 @@ export function ClientManagementPage() {
       totalDebtRangeToFilter,
       dpdRangeFromFilter,
       dpdRangeToFilter,
-      promiseDateFromFilter,
-      promiseDateToFilter,
-      callbackDateFromFilter,
-      callbackDateToFilter,
+      taDateFromFilter,
+      taDateToFilter,
       interactionUserIdFilter,
       interactionDateFromFilter,
       interactionDateToFilter,
@@ -382,10 +373,8 @@ export function ClientManagementPage() {
       totalDebtRangeToFilter,
       dpdRangeFromFilter,
       dpdRangeToFilter,
-      promiseDateFromFilter,
-      promiseDateToFilter,
-      callbackDateFromFilter,
-      callbackDateToFilter,
+      taDateFromFilter,
+      taDateToFilter,
       interactionUserIdFilter,
       interactionDateFromFilter,
       interactionDateToFilter,
@@ -407,10 +396,8 @@ export function ClientManagementPage() {
       unassignedOnlyFilter ||
       dateOfSaleFromFilter !== '' ||
       dateOfSaleToFilter !== '' ||
-      promiseDateFromFilter !== '' ||
-      promiseDateToFilter !== '' ||
-      callbackDateFromFilter !== '' ||
-      callbackDateToFilter !== '' ||
+      taDateFromFilter !== '' ||
+      taDateToFilter !== '' ||
       interactionUserIdFilter !== '' ||
       interactionDateFromFilter !== '' ||
       interactionDateToFilter !== '' ||
@@ -455,10 +442,8 @@ export function ClientManagementPage() {
     totalDebtRangeToFilter,
     dpdRangeFromFilter,
     dpdRangeToFilter,
-    promiseDateFromFilter,
-    promiseDateToFilter,
-    callbackDateFromFilter,
-    callbackDateToFilter,
+    taDateFromFilter,
+    taDateToFilter,
     interactionUserIdFilter,
     interactionDateFromFilter,
     interactionDateToFilter,
@@ -483,10 +468,8 @@ export function ClientManagementPage() {
       unassignedOnlyFilter ||
       dateOfSaleFromFilter !== '' ||
       dateOfSaleToFilter !== '' ||
-      promiseDateFromFilter !== '' ||
-      promiseDateToFilter !== '' ||
-      callbackDateFromFilter !== '' ||
-      callbackDateToFilter !== '' ||
+      taDateFromFilter !== '' ||
+      taDateToFilter !== '' ||
       interactionUserIdFilter !== '' ||
       interactionDateFromFilter !== '' ||
       interactionDateToFilter !== '' ||
@@ -525,11 +508,27 @@ export function ClientManagementPage() {
               setTotalDebtRangeToFilter(parsed.totalDebtRangeToFilter)
             if (parsed.dpdRangeFromFilter) setDpdRangeFromFilter(parsed.dpdRangeFromFilter)
             if (parsed.dpdRangeToFilter) setDpdRangeToFilter(parsed.dpdRangeToFilter)
-            if (parsed.promiseDateFromFilter) setPromiseDateFromFilter(parsed.promiseDateFromFilter)
-            if (parsed.promiseDateToFilter) setPromiseDateToFilter(parsed.promiseDateToFilter)
-            if (parsed.callbackDateFromFilter)
-              setCallbackDateFromFilter(parsed.callbackDateFromFilter)
-            if (parsed.callbackDateToFilter) setCallbackDateToFilter(parsed.callbackDateToFilter)
+            // Migrate legacy localStorage entries (promiseDate*/callbackDate*)
+            // into the merged Target Action Date range. Min/max so a
+            // partial legacy state widens (never narrows) the new
+            // range. Remove this block once all saved states have been
+            // rewritten under the new keys.
+            const legacyDateFroms = [
+              parsed.taDateFromFilter,
+              parsed.promiseDateFromFilter,
+              parsed.callbackDateFromFilter,
+            ].filter(Boolean) as string[]
+            const legacyDateTos = [
+              parsed.taDateToFilter,
+              parsed.promiseDateToFilter,
+              parsed.callbackDateToFilter,
+            ].filter(Boolean) as string[]
+            if (legacyDateFroms.length) {
+              setTaDateFromFilter(legacyDateFroms.reduce((a, b) => (a < b ? a : b)))
+            }
+            if (legacyDateTos.length) {
+              setTaDateToFilter(legacyDateTos.reduce((a, b) => (a > b ? a : b)))
+            }
             if (parsed.interactionUserIdFilter)
               setInteractionUserIdFilter(parsed.interactionUserIdFilter)
             if (parsed.interactionDateFromFilter)
@@ -701,20 +700,15 @@ export function ClientManagementPage() {
       params.priorities = priorityValues
     }
 
-    // FILTER 11: Promise Date Range
-    if (filters.promiseDateFrom) {
-      params.promise_date_from = filters.promiseDateFrom
+    // FILTER 11: Target Action Date — single range replaces the legacy
+    // Promise + Callback pair. BE picks the latest TA-with-date per
+    // client and matches when ANY of that TA's date values is in the
+    // range.
+    if (filters.taDateFrom) {
+      params.ta_date_from = filters.taDateFrom
     }
-    if (filters.promiseDateTo) {
-      params.promise_date_to = filters.promiseDateTo
-    }
-
-    // FILTER 12: Callback Date Range
-    if (filters.callbackDateFrom) {
-      params.callback_date_from = filters.callbackDateFrom
-    }
-    if (filters.callbackDateTo) {
-      params.callback_date_to = filters.callbackDateTo
+    if (filters.taDateTo) {
+      params.ta_date_to = filters.taDateTo
     }
 
     // FILTER 13: Interaction Created By
@@ -827,8 +821,7 @@ export function ClientManagementPage() {
     // DPD Range not yet implemented (days past due not calculated)
     // if (filters.dpdRangeFrom || filters.dpdRangeTo) count++
     if (filters.dateOfSaleFrom || filters.dateOfSaleTo) count++
-    if (filters.promiseDateFrom || filters.promiseDateTo) count++
-    if (filters.callbackDateFrom || filters.callbackDateTo) count++
+    if (filters.taDateFrom || filters.taDateTo) count++
     if (filters.interactionUserId) count++
     if (filters.interactionDateFrom || filters.interactionDateTo) count++
     if (filters.assignmentDateFrom || filters.assignmentDateTo) count++
@@ -1175,17 +1168,11 @@ export function ClientManagementPage() {
     if (newFilters.dpdRangeTo !== dpdRangeToFilter) {
       setDpdRangeToFilter(newFilters.dpdRangeTo || 0)
     }
-    if (newFilters.promiseDateFrom !== promiseDateFromFilter) {
-      setPromiseDateFromFilter(newFilters.promiseDateFrom || '')
+    if (newFilters.taDateFrom !== taDateFromFilter) {
+      setTaDateFromFilter(newFilters.taDateFrom || '')
     }
-    if (newFilters.promiseDateTo !== promiseDateToFilter) {
-      setPromiseDateToFilter(newFilters.promiseDateTo || '')
-    }
-    if (newFilters.callbackDateFrom !== callbackDateFromFilter) {
-      setCallbackDateFromFilter(newFilters.callbackDateFrom || '')
-    }
-    if (newFilters.callbackDateTo !== callbackDateToFilter) {
-      setCallbackDateToFilter(newFilters.callbackDateTo || '')
+    if (newFilters.taDateTo !== taDateToFilter) {
+      setTaDateToFilter(newFilters.taDateTo || '')
     }
     if (newFilters.interactionUserId !== interactionUserIdFilter) {
       setInteractionUserIdFilter(newFilters.interactionUserId || '')
@@ -1226,10 +1213,8 @@ export function ClientManagementPage() {
     setTotalDebtRangeToFilter(0)
     setDpdRangeFromFilter(0)
     setDpdRangeToFilter(0)
-    setPromiseDateFromFilter('')
-    setPromiseDateToFilter('')
-    setCallbackDateFromFilter('')
-    setCallbackDateToFilter('')
+    setTaDateFromFilter('')
+    setTaDateToFilter('')
     setInteractionUserIdFilter('')
     setInteractionDateFromFilter('')
     setInteractionDateToFilter('')

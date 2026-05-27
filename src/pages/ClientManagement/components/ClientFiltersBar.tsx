@@ -26,7 +26,7 @@ import { useClientAssigneeIds } from '@/features/clients/hooks/useClients'
 import { useTags } from '@/features/tags/hooks/useTags'
 import { useTAChains } from '@/features/taChains'
 import { useAuthStore } from '@/stores/authStore'
-import { getDateStringInTimezone } from '@/lib/dateUtils'
+import { formatPickerDateAsYMD } from '@/lib/dateUtils'
 import type { ClientFilters } from '../ClientManagementPage'
 
 // Debounced number input component to avoid re-rendering on every keystroke
@@ -95,10 +95,8 @@ interface ClientFiltersBarProps {
 type FilterDateField =
   | 'dateOfSaleFrom'
   | 'dateOfSaleTo'
-  | 'promiseDateFrom'
-  | 'promiseDateTo'
-  | 'callbackDateFrom'
-  | 'callbackDateTo'
+  | 'taDateFrom'
+  | 'taDateTo'
   | 'interactionDateFrom'
   | 'interactionDateTo'
   | 'assignmentDateFrom'
@@ -150,7 +148,6 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
   // for Responsible Employee, searcher for Responsible Searcher, either role
   // for Interaction Created By.
   const activeProjectId = useAuthStore((s) => s.user?.active_project_id)
-  const userTimezone = useAuthStore((s) => s.user?.timezone)
   const { data: operators } = useOperators(activeProjectId ? Number(activeProjectId) : null, {
     includeInactive: true,
   })
@@ -201,10 +198,17 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
     [operators, searcherIds]
   )
 
+  // Date-only filters: pass the picked day straight through (no
+  // timezone math). The previous implementation ran the Date through
+  // ``getDateStringInTimezone(date, userTimezone)``; a browser-vs-profile
+  // timezone mismatch then shifted the calendar day by ±1 (you click
+  // May 27, the API receives May 26 or May 28). The picker returns a
+  // Date at local-midnight for the chosen day, so reading the local
+  // year/month/day parts gives exactly what the user clicked.
   const handleFilterDateChange = (field: FilterDateField, date: Date | null) => {
     onFilterChange({
       ...filters,
-      [field]: date ? getDateStringInTimezone(date, userTimezone) : undefined,
+      [field]: date ? formatPickerDateAsYMD(date) : undefined,
     })
   }
 
@@ -418,16 +422,19 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
             <div className="hidden sm:flex sm:min-w-[220px] sm:flex-1" />
           </div>
 
-          {/* Promise date & Callback date */}
+          {/* Target Action Date — replaces the legacy Promise + Callback
+              date pickers. Matches when ANY date value entered into the
+              latest TA-with-date for the client falls in
+              [taDateFrom, taDateTo]. */}
           <div className="flex w-full flex-col gap-4 self-stretch lg:flex-row lg:items-center lg:gap-10">
             <div className="flex w-full flex-col gap-2 sm:flex-1 sm:flex-row sm:items-center sm:gap-3">
               <label className="text-dark-500 w-full shrink-0 text-xs leading-[150%] font-medium tracking-[-0.24px] sm:max-w-[9.5rem] sm:min-w-[7.25rem] sm:text-sm sm:tracking-[-0.28px] sm:whitespace-normal">
-                {t('pages.clients.filters.promiseDate', 'Promise Date')}
+                {t('pages.clients.filters.targetActionDate', 'Target Action Date')}
               </label>
               <div className="flex w-full flex-1 items-center gap-2">
                 <DateSelect
-                  value={filters.promiseDateFrom || null}
-                  onChange={({ value }) => handleFilterDateChange('promiseDateFrom', value)}
+                  value={filters.taDateFrom || null}
+                  onChange={({ value }) => handleFilterDateChange('taDateFrom', value)}
                   placeholder={t('pages.clients.filters.min')}
                   format="yyyy-MM-dd"
                   className="flex flex-1 flex-col gap-2"
@@ -436,38 +443,17 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                   -
                 </span>
                 <DateSelect
-                  value={filters.promiseDateTo || null}
-                  onChange={({ value }) => handleFilterDateChange('promiseDateTo', value)}
+                  value={filters.taDateTo || null}
+                  onChange={({ value }) => handleFilterDateChange('taDateTo', value)}
                   placeholder={t('pages.clients.filters.max')}
                   format="yyyy-MM-dd"
                   className="flex flex-1 flex-col gap-2"
                 />
               </div>
             </div>
-            <div className="flex w-full flex-col gap-2 sm:flex-1 sm:flex-row sm:items-center sm:gap-3">
-              <label className="text-dark-500 w-full shrink-0 text-xs leading-[150%] font-medium tracking-[-0.24px] sm:max-w-[9.5rem] sm:min-w-[7.25rem] sm:text-sm sm:tracking-[-0.28px] sm:whitespace-normal">
-                {t('pages.clients.filters.callbackDate', 'Callback Date')}
-              </label>
-              <div className="flex w-full flex-1 items-center gap-2">
-                <DateSelect
-                  value={filters.callbackDateFrom || null}
-                  onChange={({ value }) => handleFilterDateChange('callbackDateFrom', value)}
-                  placeholder={t('pages.clients.filters.min')}
-                  format="yyyy-MM-dd"
-                  className="flex flex-1 flex-col gap-2"
-                />
-                <span className="text-sm leading-[155%] font-medium tracking-[-0.28px] text-gray-700 sm:text-base sm:tracking-[-0.32px]">
-                  -
-                </span>
-                <DateSelect
-                  value={filters.callbackDateTo || null}
-                  onChange={({ value }) => handleFilterDateChange('callbackDateTo', value)}
-                  placeholder={t('pages.clients.filters.max')}
-                  format="yyyy-MM-dd"
-                  className="flex flex-1 flex-col gap-2"
-                />
-              </div>
-            </div>
+            {/* Spacer mirrors the second column from the previous two-row
+                layout so adjacent rows stay aligned. */}
+            <div className="hidden sm:flex sm:min-w-[220px] sm:flex-1" />
           </div>
 
           {/* Interaction Logged Date (range) & Interaction Created By (operator) */}
