@@ -184,16 +184,21 @@ SelectLabel.displayName = SelectPrimitive.Label.displayName
 const SelectItem = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Item>,
   React.ComponentPropsWithoutRef<typeof SelectPrimitive.Item>
->(({ className, children, textValue, ...props }, ref) => {
+>(({ className, children, textValue, style, ...props }, ref) => {
   const query = React.useContext(SelectSearchContext)
 
-  // Filter: hide item if search query doesn't match visible text
-  if (query.trim()) {
-    const text = (textValue ?? getItemFilterText(children)).trim()
-    if (!text.toLowerCase().includes(query.toLowerCase().trim())) {
-      return null
-    }
-  }
+  // Filter: HIDE (not unmount) items whose visible text doesn't match the
+  // search query. Returning null here would unmount items on each keystroke,
+  // which makes Radix re-assert focus over its changed item collection and
+  // steals focus from the search input (focus lost after the 1st char —
+  // KAN-545). Keeping items mounted with display:none keeps the collection
+  // stable, so the search input retains focus.
+  const hidden =
+    !!query.trim() &&
+    !(textValue ?? getItemFilterText(children))
+      .trim()
+      .toLowerCase()
+      .includes(query.toLowerCase().trim())
 
   return (
     <SelectPrimitive.Item
@@ -202,6 +207,7 @@ const SelectItem = React.forwardRef<
         'text-dark-500 relative flex w-full cursor-default items-center rounded-sm py-1.5 pr-8 pl-2 text-sm font-light outline-none select-none focus:bg-gray-100 data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
         className
       )}
+      style={hidden ? { ...style, display: 'none' } : style}
       {...props}
     >
       <span className="absolute right-2 flex h-3.5 w-3.5 items-center justify-center">
