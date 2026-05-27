@@ -1478,6 +1478,7 @@
         "tags": "Tags",
         "phoneNumber": "Phone number",
         "createdDate": "Added On",
+        "lastPurchaseDate": "Last Purchase Date",
         "creditor": "Creditor",
         "debt": "Debt",
         "totalDebt": "Total Debt",
