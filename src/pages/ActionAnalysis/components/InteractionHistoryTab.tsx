@@ -24,6 +24,7 @@ import {
   resolveInteractionUsers,
   type InteractionBarState,
 } from '../lib/interactionsUrlState'
+import { useScopedUserIds } from '../lib/scope'
 import { InteractionFiltersBar } from './InteractionFiltersBar'
 import { InteractionHistoryTable } from './InteractionHistoryTable'
 
@@ -54,22 +55,24 @@ export function InteractionHistoryTab() {
     )
   }, [searchParams, setSearchParams, userTimezone])
 
+  const scoped = useScopedUserIds(operators)
+
   const resolvedUsers = useMemo(
-    () => resolveInteractionUsers(barState, operators),
-    [barState, operators]
+    () => resolveInteractionUsers(barState, operators, scoped.userIds),
+    [barState, operators, scoped.userIds]
   )
 
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
 
   const queryFilters: InteractionMonitoringFilters = useMemo(() => {
-    const base = toInteractionMonitoringQuery(barState, operators)
+    const base = toInteractionMonitoringQuery(barState, operators, scoped.userIds)
     return {
       ...base,
       page,
       page_size: pageSize,
     }
-  }, [barState, operators, page, pageSize])
+  }, [barState, operators, scoped.userIds, page, pageSize])
 
   const queryEnabled =
     (barState.period !== 'custom' || !!(barState.customFromDate && barState.customToDate)) &&
@@ -137,6 +140,7 @@ export function InteractionHistoryTab() {
         onApply={handleApply}
         onClear={handleClear}
         userTimezone={userTimezone}
+        scope={scoped}
       />
 
       <div className="text-sm text-gray-700">

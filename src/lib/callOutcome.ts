@@ -8,8 +8,13 @@ export interface CallOutcomeRender {
   palette: OutcomePalette
 }
 
+/** Normalize status for switch matching (calls use spaces; messaging uses underscores). */
+function normalizeOutcomeStatus(status: string | null | undefined): string {
+  return (status ?? '').trim().toUpperCase().replace(/\s+/g, '_')
+}
+
 export function classifyCallOutcome(status: string | null | undefined): CallOutcomeRender {
-  const s = status?.toUpperCase() ?? ''
+  const s = normalizeOutcomeStatus(status)
   switch (s) {
     case 'COMPLETED':
     case 'ANSWERED':
@@ -19,7 +24,6 @@ export function classifyCallOutcome(status: string | null | undefined): CallOutc
         palette: 'success',
       }
     case 'NO_ANSWER':
-    case 'NO ANSWER':
       return {
         labelKey: 'pages.clients.statuses.noAnswer',
         fallback: 'No answer',
@@ -32,6 +36,7 @@ export function classifyCallOutcome(status: string | null | undefined): CallOutc
         palette: 'gray',
       }
     case 'CANCEL':
+    case 'CANCELLED':
       return {
         labelKey: 'pages.clients.statuses.cancel',
         fallback: 'Cancelled',
@@ -60,6 +65,42 @@ export function classifyCallOutcome(status: string | null | undefined): CallOutc
         labelKey: 'pages.clients.statuses.delivered',
         fallback: 'Delivered',
         palette: 'success',
+      }
+    case 'SENT':
+      return {
+        labelKey: 'pages.clients.statuses.sent',
+        fallback: 'Sent',
+        palette: 'warning',
+      }
+    case 'SKIPPED':
+      return {
+        labelKey: 'pages.clients.statuses.skipped',
+        fallback: 'Skipped',
+        palette: 'gray',
+      }
+    case 'BOUNCED':
+      return {
+        labelKey: 'pages.clients.statuses.bounced',
+        fallback: 'Bounced',
+        palette: 'error',
+      }
+    case 'QUEUED':
+      return {
+        labelKey: 'pages.messagingCampaigns.status.queued',
+        fallback: 'Queued',
+        palette: 'warning',
+      }
+    case 'SENDING':
+      return {
+        labelKey: 'pages.messagingCampaigns.status.sending',
+        fallback: 'Sending',
+        palette: 'warning',
+      }
+    case 'PARTIALLY_FAILED':
+      return {
+        labelKey: 'pages.messagingCampaigns.status.partially_failed',
+        fallback: 'Partially failed',
+        palette: 'warning',
       }
     case 'PENDING':
     case 'INITIATED':

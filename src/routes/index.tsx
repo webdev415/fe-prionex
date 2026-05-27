@@ -61,6 +61,26 @@ const SmsTemplatesPage = lazy(() =>
     default: m.SmsTemplatesPage,
   }))
 )
+const MessagingCampaignsPage = lazy(() =>
+  import('@/pages/MessagingCampaigns').then((m) => ({
+    default: m.MessagingCampaignsPage,
+  }))
+)
+const MessagingDraftsPage = lazy(() =>
+  import('@/pages/MessagingDrafts').then((m) => ({
+    default: m.MessagingDraftsPage,
+  }))
+)
+const MessagingIntegrationsPage = lazy(() =>
+  import('@/pages/MessagingIntegrations').then((m) => ({
+    default: m.MessagingIntegrationsPage,
+  }))
+)
+const RRNotificationsPage = lazy(() =>
+  import('@/pages/RRNotifications').then((m) => ({
+    default: m.RRNotificationsPage,
+  }))
+)
 const TAManagementPage = lazy(() =>
   import('@/pages/TAManagement').then((m) => ({
     default: m.TAManagementPage,
@@ -105,6 +125,9 @@ const AuditLogsPage = lazy(() =>
   import('@/pages/AuditLogs').then((m) => ({ default: m.AuditLogsPage }))
 )
 const TagsPage = lazy(() => import('@/pages/Tags/TagsPage').then((m) => ({ default: m.TagsPage })))
+const ContactTypesPage = lazy(() =>
+  import('@/pages/ContactTypes/ContactTypesPage').then((m) => ({ default: m.ContactTypesPage }))
+)
 const ProfileSettingsPage = lazy(() =>
   import('@/pages/ProfileSettings/ProfileSettingsPage').then((m) => ({
     default: m.ProfileSettingsPage,
@@ -212,6 +235,18 @@ export const router = createBrowserRouter([
         ),
       },
       {
+        path: 'messaging',
+        element: <Navigate to="/dashboard/messaging/campaigns" replace />,
+      },
+      {
+        path: 'messaging/campaigns',
+        element: (
+          <PermissionRoute requiredPermission={PERMISSIONS.MESSAGING.VIEW_CAMPAIGN_ANALYTICS}>
+            {withSuspense(<MessagingCampaignsPage />)}
+          </PermissionRoute>
+        ),
+      },
+      {
         path: 'projects',
         element: (
           <PermissionRoute requiredPermission={PERMISSIONS.PROJECTS.MANAGE}>
@@ -268,6 +303,30 @@ export const router = createBrowserRouter([
         ),
       },
       {
+        path: 'system-settings/messaging-drafts',
+        element: (
+          <PermissionRoute requiredPermission={PERMISSIONS.MESSAGING.MANAGE_DRAFTS}>
+            {withSuspense(<MessagingDraftsPage />)}
+          </PermissionRoute>
+        ),
+      },
+      {
+        path: 'system-settings/messaging-integrations',
+        element: (
+          <PermissionRoute requiredPermission={PERMISSIONS.MESSAGING.MANAGE_INTEGRATIONS}>
+            {withSuspense(<MessagingIntegrationsPage />)}
+          </PermissionRoute>
+        ),
+      },
+      {
+        path: 'system-settings/contact-types',
+        element: (
+          <PermissionRoute requiredPermission={PERMISSIONS.CONTACT_TYPES.VIEW}>
+            {withSuspense(<ContactTypesPage />)}
+          </PermissionRoute>
+        ),
+      },
+      {
         path: 'system-settings/scoring-configuration',
         element: (
           <PermissionRoute requiredPermission={PERMISSIONS.SCORING_CONFIG.VIEW}>
@@ -288,6 +347,14 @@ export const router = createBrowserRouter([
         element: (
           <PermissionRoute requiredPermission={PERMISSIONS.SYSTEM.MANAGE_SETTINGS}>
             {withSuspense(<SmsTemplatesPage />)}
+          </PermissionRoute>
+        ),
+      },
+      {
+        path: 'system-settings/rr-notifications',
+        element: (
+          <PermissionRoute requiredPermission={PERMISSIONS.SYSTEM.MANAGE_SETTINGS}>
+            {withSuspense(<RRNotificationsPage />)}
           </PermissionRoute>
         ),
       },

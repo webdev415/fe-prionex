@@ -162,15 +162,9 @@ const mockProfileData = {
 describe('EditClientModal', () => {
   const mockOnClose = vi.fn()
   const mockUpdateClientAsync = vi.fn().mockResolvedValue(undefined)
-  const mockCreateContactAsync = vi.fn().mockResolvedValue(undefined)
-  const mockUpdateContactAsync = vi.fn().mockResolvedValue(undefined)
-  const mockDeleteContactAsync = vi.fn().mockResolvedValue(undefined)
   const mockCreateAddress = vi.fn()
   const mockUpdateAddress = vi.fn()
   const mockDeleteAddress = vi.fn()
-  const mockCreateContact = vi.fn()
-  const mockUpdateContact = vi.fn()
-  const mockDeleteContact = vi.fn()
   const mockUpdateEmployment = vi.fn()
   const mockUpdatePassport = vi.fn()
 
@@ -217,27 +211,6 @@ describe('EditClientModal', () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any)
 
-    vi.mocked(useClientsModule.useCreateContact).mockReturnValue({
-      mutate: mockCreateContact,
-      mutateAsync: mockCreateContactAsync,
-      isPending: false,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } as any)
-
-    vi.mocked(useClientsModule.useUpdateContact).mockReturnValue({
-      mutate: mockUpdateContact,
-      mutateAsync: mockUpdateContactAsync,
-      isPending: false,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } as any)
-
-    vi.mocked(useClientsModule.useDeleteContact).mockReturnValue({
-      mutate: mockDeleteContact,
-      mutateAsync: mockDeleteContactAsync,
-      isPending: false,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } as any)
-
     vi.mocked(useClientsModule.useUpdateEmployment).mockReturnValue({
       mutate: mockUpdateEmployment,
       isPending: false,
@@ -252,7 +225,17 @@ describe('EditClientModal', () => {
 
     vi.mocked(useClientsModule.useContactTypes).mockReturnValue({
       data: [
-        { id: 7, code: 'third_party_mobile', name: 'Third party mobile phone', is_phone: true },
+        {
+          id: 7,
+          code: 'third_party_mobile',
+          name: 'Third party mobile phone',
+          is_phone: true,
+          sort_order: 10,
+          default_call_line: 'white',
+          spam_allowed: true,
+          show_as_primary_phone: false,
+          is_hidden: false,
+        },
       ],
       isLoading: false,
       isError: false,
@@ -289,12 +272,11 @@ describe('EditClientModal', () => {
       expect(taxInput).not.toBeDisabled()
     })
 
-    it('should render phone numbers section', () => {
+    it('should not render dedicated phone numbers section (managed on client card)', () => {
       render(<EditClientModal {...defaultProps} />, { wrapper: createWrapper() })
 
-      expect(screen.getByText('Phone Numbers')).toBeInTheDocument()
-      expect(screen.getByDisplayValue('+380501234567')).toBeInTheDocument()
-      expect(screen.getByDisplayValue('+380671234567')).toBeInTheDocument()
+      expect(screen.queryByText('Phone Numbers')).not.toBeInTheDocument()
+      expect(screen.queryByTestId('edit-client-save-phones')).not.toBeInTheDocument()
     })
 
     it('should render addresses section with existing addresses', () => {
@@ -531,19 +513,11 @@ describe('EditClientModal', () => {
         expect(screen.getByDisplayValue('+380441234567')).toBeDisabled()
       })
 
-      it('should keep phone fields editable for operators', () => {
-        render(<EditClientModal {...defaultProps} />, { wrapper: createWrapper() })
-
-        expect(screen.getByDisplayValue('+380501234567')).not.toBeDisabled()
-        expect(screen.getByDisplayValue('+380671234567')).not.toBeDisabled()
-      })
-
       it('should hide document and work save buttons for operators', () => {
         render(<EditClientModal {...defaultProps} />, { wrapper: createWrapper() })
 
         expect(screen.queryByTestId('edit-client-save-personal')).not.toBeInTheDocument()
         expect(screen.queryByTestId('edit-client-save-passport')).not.toBeInTheDocument()
-        expect(screen.getByTestId('edit-client-save-phones')).toBeInTheDocument()
       })
 
       it('should hide address management buttons for operators', () => {
@@ -552,16 +526,6 @@ describe('EditClientModal', () => {
         expect(screen.queryByText('Add Address')).not.toBeInTheDocument()
         expect(screen.queryAllByTestId('edit-address-btn')).toHaveLength(0)
         expect(screen.queryAllByTestId('delete-address-btn')).toHaveLength(0)
-      })
-
-      it('should not call updateClient for operators (phones saved via contacts)', async () => {
-        render(<EditClientModal {...defaultProps} />, { wrapper: createWrapper() })
-
-        fireEvent.click(screen.getByTestId('edit-client-save-phones'))
-
-        await waitFor(() => {
-          expect(mockUpdateClientAsync).not.toHaveBeenCalled()
-        })
       })
     })
 
@@ -588,7 +552,6 @@ describe('EditClientModal', () => {
 
         expect(screen.getByTestId('edit-client-save-personal')).toBeInTheDocument()
         expect(screen.getByTestId('edit-client-save-passport')).toBeInTheDocument()
-        expect(screen.getByTestId('edit-client-save-phones')).toBeInTheDocument()
       })
 
       it('should show address management buttons', () => {

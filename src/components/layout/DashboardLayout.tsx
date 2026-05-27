@@ -545,9 +545,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         let backendSearchType: SearchType = 'all'
         if (type === 'phone') {
           backendSearchType = 'phone'
-        } else if (type === 'name' || type === 'tin') {
-          // Map name/tin to name search (backend name search includes TIN)
+        } else if (type === 'name') {
           backendSearchType = 'name'
+        } else if (type === 'tin') {
+          backendSearchType = 'tin'
         } else if (type === 'email') {
           backendSearchType = 'email'
         } else if (type === 'contract_number') {
@@ -566,7 +567,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           id: item.id,
           name: item.full_name,
           debt: item.total_debt,
-          phone: item.phone_primary ?? '',
+          phone: (item.phones ?? []).join(', '),
           email: item.email_primary ?? '',
           priority: mapPriorityLevel(item.priority_level),
           score: item.priority_score,
@@ -694,6 +695,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         requiredPermission: PERMISSIONS.REPORTS.VIEW_ALL_REPORTS,
       },
       {
+        path: '/dashboard/messaging/campaigns',
+        icon: 'mail-send-01',
+        label: t('navigation.campaignAnalytics', 'Campaign Analytics'),
+        requiredPermission: PERMISSIONS.MESSAGING.VIEW_CAMPAIGN_ANALYTICS,
+      },
+      {
         path: '/dashboard/action-analysis',
         icon: 'analytics-01',
         label: t('navigation.actionAnalysis'),
@@ -733,13 +740,32 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         path: '/dashboard/system-settings',
         icon: 'setting-07',
         label: t('navigation.systemSettings', 'System Settings'),
-        requiredPermission: PERMISSIONS.SYSTEM.MANAGE_SETTINGS,
+        requiredPermissions: [PERMISSIONS.SYSTEM.MANAGE_SETTINGS, PERMISSIONS.CONTACT_TYPES.VIEW],
+        mode: 'any' as const,
         subItems: [
+          {
+            path: '/dashboard/system-settings/messaging-integrations',
+            label: t('navigation.messagingIntegrations', 'Messaging Integrations'),
+            icon: 'mail-send-01',
+            requiredPermission: PERMISSIONS.MESSAGING.MANAGE_INTEGRATIONS,
+          },
+          {
+            path: '/dashboard/system-settings/messaging-drafts',
+            label: t('navigation.messagingDrafts', 'Message Drafts'),
+            icon: 'mail-send-01',
+            requiredPermission: PERMISSIONS.MESSAGING.MANAGE_DRAFTS,
+          },
           {
             path: '/dashboard/system-settings/tags',
             label: t('navigation.tags', 'Tags'),
             icon: 'file-01',
             requiredPermission: PERMISSIONS.TAGS.VIEW,
+          },
+          {
+            path: '/dashboard/system-settings/contact-types',
+            label: t('navigation.contactTypes', 'Contact Types'),
+            icon: 'user-multiple-02',
+            requiredPermission: PERMISSIONS.CONTACT_TYPES.VIEW,
           },
           {
             path: '/dashboard/system-settings/scoring-configuration',
@@ -776,6 +802,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               PERMISSIONS.DOCUMENT_GENERATION.DELETE_TEMPLATES,
             ],
             mode: 'any' as const,
+          },
+          {
+            path: '/dashboard/system-settings/rr-notifications',
+            label: t('navigation.rrNotifications', 'RR Notifications'),
+            icon: 'mail',
+            requiredPermission: PERMISSIONS.SYSTEM.MANAGE_SETTINGS,
           },
         ],
       },

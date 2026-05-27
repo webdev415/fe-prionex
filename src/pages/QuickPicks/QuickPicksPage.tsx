@@ -6,6 +6,7 @@ import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/Button'
+import { Checkbox } from '@/components/ui/Checkbox'
 import { Input } from '@/components/ui/Input'
 import { Label } from '@/components/ui/Label'
 import {
@@ -90,7 +91,10 @@ export function QuickPicksPage() {
     is_active: true,
     page_size: 100,
   })
-  const departments = departmentsData?.departments ?? []
+  const departments = useMemo(
+    () => departmentsData?.departments ?? [],
+    [departmentsData?.departments]
+  )
 
   const [selectedDeptId, setSelectedDeptId] = useState<string>('')
   const deptId = selectedDeptId ? parseInt(selectedDeptId, 10) : undefined
@@ -113,6 +117,24 @@ export function QuickPicksPage() {
   const [newChainId, setNewChainId] = useState<string>('')
   const [newName, setNewName] = useState('')
   const [newPresets, setNewPresets] = useState<Record<string, string>>({})
+  // Multi-department selection for the new pick.
+  //
+  // We derive the *displayed* selection so it follows the top-filter
+  // department when the user hasn't manually touched the checkboxes,
+  // and switches to the user's explicit set once they have. This
+  // avoids a useEffect-driven sync (lint forbids set-state in effects)
+  // while still giving the convenient one-click default for the common
+  // single-dept case.
+  const [userPickedDepts, setUserPickedDepts] = useState(false)
+  const [explicitDeptIds, setExplicitDeptIds] = useState<number[]>([])
+  const newDeptIds = userPickedDepts ? explicitDeptIds : deptId !== undefined ? [deptId] : []
+
+  // Lookup map for rendering department chips on each existing pick.
+  const departmentNameById = useMemo(() => {
+    const m = new Map<number, string>()
+    for (const d of departments) m.set(d.id, d.name)
+    return m
+  }, [departments])
 
   // Get chain detail for step editor
   const newChainIdNum = newChainId ? parseInt(newChainId, 10) : null
@@ -124,8 +146,16 @@ export function QuickPicksPage() {
     setNewName('')
   }
 
+  const toggleNewDept = (departmentId: number) => {
+    const next = newDeptIds.includes(departmentId)
+      ? newDeptIds.filter((id) => id !== departmentId)
+      : [...newDeptIds, departmentId]
+    setExplicitDeptIds(next)
+    setUserPickedDepts(true)
+  }
+
   const handleAdd = async () => {
-    if (!newChainId || !deptId || !newName.trim()) return
+    if (!newChainId || newDeptIds.length === 0 || !newName.trim()) return
     try {
       // Filter out empty preset values
       const presets: Record<string, string> = {}
@@ -134,13 +164,18 @@ export function QuickPicksPage() {
       }
       await createMut.mutateAsync({
         chain_id: parseInt(newChainId, 10),
-        department_id: deptId,
+        department_ids: newDeptIds,
         name: newName.trim(),
         preset_values: Object.keys(presets).length > 0 ? presets : undefined,
       })
       setNewChainId('')
       setNewName('')
       setNewPresets({})
+      // Drop the user's explicit choice so the form falls back to the
+      // top-filter department as the default for the next pick they
+      // add — same convenient seed as before the first submit.
+      setExplicitDeptIds([])
+      setUserPickedDepts(false)
       toast.success(t('pages.quickPicks.toasts.added'))
     } catch (err) {
       toast.error(getErrorMessage(err))
@@ -241,6 +276,19 @@ export function QuickPicksPage() {
                       </Button>
                     </PermissionGuard>
                   </div>
+                  {qp.department_ids.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {qp.department_ids.map((dId) => (
+                        <span
+                          key={dId}
+                          className="rounded bg-blue-50 px-2 py-0.5 text-[10px] font-medium text-blue-700"
+                        >
+                          {departmentNameById.get(dId) ??
+                            t('pages.quickPicks.departmentFallback', { id: dId })}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                   {qp.preset_values && Object.keys(qp.preset_values).length > 0 && (
                     <div className="flex flex-wrap gap-2">
                       {Object.entries(qp.preset_values).map(([taId, val]) => {
@@ -283,6 +331,37 @@ export function QuickPicksPage() {
                     placeholder={t('pages.quickPicks.templateNamePlaceholder')}
                     maxLength={150}
                   />
+                </div>
+
+                {/* Departments (multi-select) — at least one is required. */}
+                <div className="flex flex-col gap-1">
+                  <Label className="text-xs text-gray-600">
+                    {t('pages.quickPicks.departments')}
+                  </Label>
+                  <div className="flex max-h-40 flex-col gap-1 overflow-y-auto rounded border border-gray-200 bg-white px-2 py-2">
+                    {departments.length === 0 && (
+                      <span className="px-1 text-[11px] text-gray-400">
+                        {t('pages.quickPicks.loadingDepartments')}
+                      </span>
+                    )}
+                    {departments.map((d) => {
+                      const checked = newDeptIds.includes(d.id)
+                      return (
+                        <label
+                          key={d.id}
+                          className="flex cursor-pointer items-center gap-2 rounded px-1 py-0.5 hover:bg-gray-50"
+                        >
+                          <Checkbox checked={checked} onCheckedChange={() => toggleNewDept(d.id)} />
+                          <span className="text-xs text-gray-700">{d.name}</span>
+                        </label>
+                      )
+                    })}
+                  </div>
+                  {newDeptIds.length === 0 && (
+                    <span className="text-[11px] text-amber-600">
+                      {t('pages.quickPicks.departmentsRequired')}
+                    </span>
+                  )}
                 </div>
 
                 {/* Chain picker */}
@@ -392,7 +471,9 @@ export function QuickPicksPage() {
                   variant="primary"
                   className="w-full"
                   onClick={handleAdd}
-                  disabled={!newChainId || !newName.trim() || createMut.isPending}
+                  disabled={
+                    !newChainId || !newName.trim() || newDeptIds.length === 0 || createMut.isPending
+                  }
                 >
                   <Icons.Add size={16} strokeWidth={2} />
                   {t('pages.quickPicks.addButton')}

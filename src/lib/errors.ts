@@ -7,6 +7,31 @@
 import axios from 'axios'
 import type { AxiosError } from 'axios'
 
+const CSV_SKIP_REASON_LABELS: Record<string, string> = {
+  missing_client_id: 'missing client_id',
+  invalid_client_id: 'invalid client_id (use CRM client ID, not tax ID or phone)',
+  client_not_found: 'client_id not found in project',
+  missing_phone: 'missing phone',
+  invalid_phone: 'invalid phone',
+  missing_email: 'missing email',
+  invalid_email: 'invalid email',
+  duplicate_destination: 'duplicate destination',
+}
+
+function formatMessagingErrorDetails(details: unknown): string | null {
+  if (!details || typeof details !== 'object') return null
+  const record = details as Record<string, unknown>
+  const skipped = record.skipped_by_reason
+  if (!skipped || typeof skipped !== 'object') return null
+  const parts = Object.entries(skipped as Record<string, number>)
+    .filter(([, count]) => typeof count === 'number' && count > 0)
+    .map(([reason, count]) => {
+      const label = CSV_SKIP_REASON_LABELS[reason] ?? reason.replace(/_/g, ' ')
+      return `${count}× ${label}`
+    })
+  return parts.length > 0 ? `(${parts.join('; ')})` : null
+}
+
 /**
  * Get a user-friendly error message from an error object
  */
@@ -24,8 +49,27 @@ export function getErrorMessage(error: unknown): string {
 
     if (axiosError.response?.data) {
       // Try to get error message from response
-      const data = axiosError.response.data
+      const data = axiosError.response.data as Record<string, unknown>
       if (typeof data === 'string') return data
+
+      // Messaging microservice envelope: { error: { code, message, details } }
+      const nestedError = data.error
+      if (
+        nestedError &&
+        typeof nestedError === 'object' &&
+        nestedError !== null &&
+        'message' in nestedError &&
+        typeof (nestedError as { message?: unknown }).message === 'string'
+      ) {
+        const message = (nestedError as { message: string }).message
+        const details = (nestedError as { details?: unknown }).details
+        const detailSuffix = formatMessagingErrorDetails(details)
+        // Backend CSV errors often embed skip reasons in message; avoid duplicating.
+        if (detailSuffix && !message.includes('row(s):')) {
+          return `${message} ${detailSuffix}`
+        }
+        return message
+      }
 
       // Handle detail field - can be string, array of strings, or array of validation objects
       if (data.detail) {
@@ -56,7 +100,7 @@ export function getErrorMessage(error: unknown): string {
         }
       }
 
-      if (data.message) return data.message
+      if (typeof data.message === 'string' && data.message) return data.message
     }
 
     // Network errors

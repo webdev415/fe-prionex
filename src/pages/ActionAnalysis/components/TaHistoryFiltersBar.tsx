@@ -21,6 +21,7 @@ import {
   type StepValueEntry,
   type TaHistoryBarState,
 } from '../lib/taHistoryUrlState'
+import type { ScopedUserIds } from '../lib/scope'
 import { DateRangeQuickFilter } from './DateRangeQuickFilter'
 import { EmployeeFilterDropdown } from './EmployeeFilterDropdown'
 import { StepFilterDropdown } from './StepFilterDropdown'
@@ -35,6 +36,8 @@ interface Props {
   onApply: (next: TaHistoryBarState) => void
   onClear: () => void
   userTimezone?: string | null
+  /** Page-level scope (KAN-506) — drives the picker-disabled flags. */
+  scope?: ScopedUserIds
 }
 
 function parseYmd(dateStr: string | undefined): Date | null {
@@ -70,8 +73,16 @@ export function TaHistoryFiltersBar({
   onApply,
   onClear,
   userTimezone,
+  scope,
 }: Props) {
   const { t } = useTranslation('common')
+
+  const scopeLockedDeptLabel = scope?.departmentPickerDisabled
+    ? t(scope.disabledLabelKey, 'Scoped')
+    : undefined
+  const scopeLockedEmpLabel = scope?.employeePickerDisabled
+    ? t(scope.disabledLabelKey, 'Scoped')
+    : undefined
 
   const [draft, setDraft] = useSyncedState<TaHistoryBarState>(value, value)
 
@@ -170,6 +181,7 @@ export function TaHistoryFiltersBar({
             </span>
             <Select
               value={departmentSelectValue}
+              disabled={scope?.departmentPickerDisabled}
               onValueChange={(v) => {
                 if (v === 'all') {
                   update({ departmentId: null })
@@ -180,7 +192,10 @@ export function TaHistoryFiltersBar({
             >
               <SelectTrigger className="h-[45px] w-full">
                 <SelectValue
-                  placeholder={t('pages.actionAnalysis.filters.allDepartments', 'All departments')}
+                  placeholder={
+                    scopeLockedDeptLabel ??
+                    t('pages.actionAnalysis.filters.allDepartments', 'All departments')
+                  }
                 />
               </SelectTrigger>
               <SelectContent>
@@ -200,8 +215,8 @@ export function TaHistoryFiltersBar({
             operators={operators}
             selectedIds={draft.employeeIds}
             onChange={(ids) => update({ departmentId: null, employeeIds: ids })}
-            disabled={draft.departmentId != null}
-            disabledLabel={departmentName}
+            disabled={draft.departmentId != null || scope?.employeePickerDisabled}
+            disabledLabel={scopeLockedEmpLabel ?? departmentName}
             label={t('pages.actionAnalysis.filters.employee', 'Employee')}
           />
 

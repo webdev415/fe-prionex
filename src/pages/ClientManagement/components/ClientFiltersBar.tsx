@@ -101,10 +101,6 @@ type FilterDateField =
   | 'assignmentDateFrom'
   | 'assignmentDateTo'
 
-// Status options matching backend Client.status field (services/client/app/routers/clients.py:440)
-// Valid statuses: new, active, closed
-const statusOptions = ['new', 'active', 'closed']
-
 export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarProps) {
   const { t } = useTranslation('common')
   const [portfolioDropdownOpen, setPortfolioDropdownOpen] = useState(false)
@@ -481,7 +477,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
             </div>
           </div>
 
-          {/* Third Row: Portfolio & Status */}
+          {/* Third Row: Portfolio */}
           <div className="flex w-full flex-col gap-4 self-stretch lg:flex-row lg:items-center lg:gap-10">
             {/* Portfolio */}
             <div className="flex w-full flex-col gap-2 sm:min-w-[220px] sm:flex-1 sm:flex-row sm:items-center sm:gap-3">
@@ -543,39 +539,6 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                     />
                   </div>
                 )}
-              </div>
-            </div>
-
-            {/* Status */}
-            <div className="flex w-full flex-col gap-2 sm:min-w-[220px] sm:flex-1 sm:flex-row sm:items-center sm:gap-3">
-              <label className="text-dark-500 w-full text-xs leading-[150%] font-medium tracking-[-0.24px] sm:w-[100px] sm:text-sm sm:tracking-[-0.28px]">
-                {t('pages.clients.filters.status')}
-              </label>
-              <div className="flex w-full flex-1 flex-wrap items-center gap-4 sm:gap-8">
-                {statusOptions.map((status) => {
-                  const statusKey = status.toLowerCase().replace(/[\s_]/g, '')
-                  return (
-                    <label
-                      key={status}
-                      className="flex cursor-pointer items-center gap-1.5 sm:gap-2"
-                    >
-                      <Checkbox
-                        checked={(filters.status || []).includes(status)}
-                        onCheckedChange={(checked) => {
-                          // Pass toggle action - parent will use functional update to avoid stale state
-                          onFilterChange({
-                            _action: 'toggleStatus',
-                            _value: status,
-                            _checked: checked,
-                          } as unknown as ClientFilters)
-                        }}
-                      />
-                      <span className="text-dark-500 text-xs sm:text-sm">
-                        {t(`pages.clients.statuses.${statusKey}`)}
-                      </span>
-                    </label>
-                  )
-                })}
               </div>
             </div>
           </div>

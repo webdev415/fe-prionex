@@ -4,8 +4,7 @@
  * Centralized permission definitions that match the backend RBAC system.
  * These permissions control access to features, routes, and UI elements.
  *
- * Backend Source: /home/pst/dev/prionex/api-prionex/services/auth/alembic/versions/20251122_0002_002_seed_initial_data.py
- * Total Permissions: 43
+ * Backend Source: api-prionex/services/auth/alembic (seed + incremental migrations)
  */
 
 export const PERMISSIONS = {
@@ -28,6 +27,18 @@ export const PERMISSIONS = {
   },
 
   /**
+   * Write-offs Category (4 permissions, KAN-245)
+   * Controls access to the per-accrual-type debt write-off CRUD.
+   * Seeded by auth migration 028.
+   */
+  WRITEOFFS: {
+    VIEW: 'view_writeoffs',
+    CREATE: 'create_writeoffs',
+    EDIT: 'edit_writeoffs',
+    CANCEL: 'cancel_writeoffs',
+  },
+
+  /**
    * Communication Category (3 permissions)
    * Controls access to calling and messaging features
    */
@@ -35,6 +46,22 @@ export const PERMISSIONS = {
     MAKE_CALLS: 'make_calls',
     SEND_SMS: 'send_sms',
     VIEW_CALL_HISTORY: 'view_call_history',
+  },
+
+  /**
+   * Messaging Category (9 permissions)
+   * Controls access to the unified messaging-service surfaces.
+   */
+  MESSAGING: {
+    MANAGE_DRAFTS: 'manage_drafts',
+    VIEW_CAMPAIGN_ANALYTICS: 'view_campaign_analytics',
+    MANAGE_INTEGRATIONS: 'manage_messaging_integrations',
+    SEND_MESSAGE_SMS: 'send_message_sms',
+    SEND_MESSAGE_VIBER: 'send_message_viber',
+    SEND_MESSAGE_EMAIL: 'send_message_email',
+    LAUNCH_CAMPAIGN_SMS: 'launch_campaign_sms',
+    LAUNCH_CAMPAIGN_VIBER: 'launch_campaign_viber',
+    LAUNCH_CAMPAIGN_EMAIL: 'launch_campaign_email',
   },
 
   /**
@@ -173,6 +200,7 @@ export const PERMISSIONS = {
     VIEW_SCRIPT_ANALYTICS: 'view_script_analytics',
     VIEW_TA_HISTORY: 'view_ta_history',
     VIEW_TASK_HISTORY: 'view_task_history',
+    VIEW_PAYMENT_HISTORY: 'view_payment_history',
   },
 
   /**
@@ -186,6 +214,15 @@ export const PERMISSIONS = {
     CREATE_EDIT_TEMPLATES: 'create_edit_document_templates',
     DELETE_TEMPLATES: 'delete_document_templates',
     GENERATE: 'generate_document',
+  },
+
+  /**
+   * Contact Types (CRM Settings directory for phone contact labels)
+   */
+  CONTACT_TYPES: {
+    VIEW: 'view_contact_types',
+    CREATE: 'create_contact_types',
+    EDIT: 'edit_contact_types',
   },
 
   /**
@@ -242,6 +279,7 @@ export function getAllPermissions(): Permission[] {
 export const PERMISSION_CATEGORIES = {
   CLIENTS: 'Clients',
   COMMUNICATION: 'Communication',
+  MESSAGING: 'Messaging',
   REPORTS: 'Reports',
   DATA: 'Data',
   USERS: 'Users',
@@ -253,6 +291,7 @@ export const PERMISSION_CATEGORIES = {
   TA_CHAINS: 'TA Chains',
   ACTION_ANALYSIS: 'Action Analysis',
   DOCUMENT_GENERATION: 'Document Generation',
+  CONTACT_TYPES: 'Contact Types',
   RESTRUCTURING: 'Restructuring',
 } as const
 
@@ -277,6 +316,19 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   make_calls: 'Make outbound phone calls to clients',
   send_sms: 'Send SMS messages to clients',
   view_call_history: 'View call recordings and SMS history',
+
+  // Messaging
+  manage_drafts: 'Create, edit, and delete messaging drafts; open the Message Drafts settings page',
+  view_campaign_analytics:
+    'View campaign analytics, campaign recipients, CSV exports, and unified client message history',
+  manage_messaging_integrations:
+    'Create, edit, delete, test, and toggle messaging integrations (not list/read)',
+  send_message_sms: 'Send single SMS; read integrations and drafts for SMS send',
+  send_message_viber: 'Send single Viber messages; read integrations and drafts for Viber send',
+  send_message_email: 'Send single emails; read integrations and drafts for email send',
+  launch_campaign_sms: 'Bulk Messaging: launch SMS campaigns',
+  launch_campaign_viber: 'Bulk Messaging: launch Viber campaigns',
+  launch_campaign_email: 'Bulk Messaging: launch email campaigns',
 
   // Reports
   view_own_reports: 'View own performance statistics',
@@ -337,6 +389,7 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
     'View Script Analytics & anomaly detection (interaction-result distribution and auto-flags)',
   view_ta_history: 'View TA History sub-tab (chain interactions with chain + step filters)',
   view_task_history: 'View Task History sub-tab (all operator tasks with filters)',
+  view_payment_history: 'View Payment History sub-tab (all operator payments with filters)',
 
   // Document Generation
   view_document_journal: 'View the journal of all generated and uploaded documents',
@@ -344,6 +397,11 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   create_edit_document_templates: 'Create and edit document templates',
   delete_document_templates: 'Delete document templates',
   generate_document: 'Generate a document on the client card',
+
+  // Contact Types (CRM Settings)
+  view_contact_types: 'View Contact Types directory in Settings',
+  create_contact_types: 'Create new contact types (requires view permission)',
+  edit_contact_types: 'Edit contact types and hide or restore them (requires view permission)',
 
   // Restructuring — per-transition gates on the RR action buttons
   rr_transition_connected_to_violated:
@@ -354,4 +412,10 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
     'Manually restore a Cancelled restructuring agreement to Connected (rare; mistaken cancellation)',
   rr_disconnect: 'Manually disconnect a restructuring agreement (status → Cancelled with reason)',
   rr_complete: 'Manually mark a restructuring agreement as Completed',
+
+  // Write-offs (KAN-245)
+  view_writeoffs: 'List and read individual debt write-off entries',
+  create_writeoffs: 'Create one or more write-off entries on a debt',
+  edit_writeoffs: 'Edit cancellation_date or notes on an existing write-off entry',
+  cancel_writeoffs: 'Cancel an active write-off entry',
 }
