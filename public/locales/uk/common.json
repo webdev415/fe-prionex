@@ -424,6 +424,8 @@
           "partial_payment": "Частковий платіж",
           "full_payment": "Повний платіж"
         },
+        "paymentCommentSearch": "Коментар до оплати",
+        "paymentCommentSearchPlaceholder": "Пошук у коментарях…",
         "amountMin": "Сума від",
         "amountMax": "Сума до",
         "amountMinPlaceholder": "0.00",
@@ -473,6 +475,7 @@
         "loanNumber": "Номер позики",
         "loanSaleDate": "Дата продажу позики",
         "paymentType": "Тип платежу",
+        "paymentComment": "Коментар до оплати",
         "operator": "Оператор",
         "createdAt": "Створено",
         "confirmedAt": "Підтверджено",
@@ -1520,7 +1523,7 @@
             "amount": "Сума",
             "date": "Дата",
             "method": "Спосіб",
-            "paymentType": "Тип платежу",
+            "paymentComment": "Коментар до оплати",
             "type": "Тип",
             "status": "Статус",
             "note": "Примітка"

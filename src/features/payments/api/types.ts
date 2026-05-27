@@ -38,7 +38,8 @@ export interface Payment {
   fines_paid: string
   payment_method: PaymentMethod
   payment_method_details?: string
-  payment_type?: string
+  payment_type?: PaymentType | null
+  payment_comment?: string | null
   seller_name?: string
   status: PaymentStatus
   payment_date: string // ISO date string

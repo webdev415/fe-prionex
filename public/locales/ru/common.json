@@ -415,6 +415,8 @@
           "partial_payment": "Частичный платёж",
           "full_payment": "Полный платёж"
         },
+        "paymentCommentSearch": "Комментарий к оплате",
+        "paymentCommentSearchPlaceholder": "Поиск в комментариях…",
         "amountMin": "Сумма от",
         "amountMax": "Сумма до",
         "amountMinPlaceholder": "0.00",
@@ -464,6 +466,7 @@
         "loanNumber": "Номер займа",
         "loanSaleDate": "Дата продажи займа",
         "paymentType": "Тип платежа",
+        "paymentComment": "Комментарий к оплате",
         "operator": "Оператор",
         "createdAt": "Создан",
         "confirmedAt": "Подтверждён",
@@ -1460,6 +1463,7 @@
             "amount": "Сумма",
             "date": "Дата",
             "method": "Способ",
+            "paymentComment": "Комментарий к оплате",
             "type": "Тип",
             "status": "Статус",
             "note": "Примечание"

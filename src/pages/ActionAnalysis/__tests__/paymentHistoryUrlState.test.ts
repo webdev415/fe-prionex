@@ -103,14 +103,31 @@ describe('paymentHistoryUrlState', () => {
     expect(out.statuses).toEqual(['verified'])
   })
 
-  it('preserves arbitrary payment_type strings (legacy free-text rows)', () => {
-    // Legacy rows pre-KAN-507 hold free text; the deep-link URL must round-trip
-    // even values not in the controlled vocabulary.
+  it('drops payment_type values outside the controlled vocab', () => {
     const params = new URLSearchParams()
     params.append('payment_type', 'основной долг')
     params.append('payment_type', 'payment_by_rr')
     const out = readPaymentHistoryUrlState(params)
-    expect(out.paymentTypes).toEqual(['основной долг', 'payment_by_rr'])
+    expect(out.paymentTypes).toEqual(['payment_by_rr'])
+  })
+
+  it('round-trips paymentCommentSearch under payment_comment_search', () => {
+    const state: PaymentHistoryBarState = {
+      ...PAYMENT_HISTORY_FILTERS_DEFAULT,
+      paymentCommentSearch: 'проценты',
+    }
+    const params = writePaymentHistoryUrlState(new URLSearchParams(), state)
+    expect(params.get('payment_comment_search')).toBe('проценты')
+    expect(roundtrip(state)).toEqual(state)
+  })
+
+  it('trims whitespace-only paymentCommentSearch to undefined', () => {
+    const state: PaymentHistoryBarState = {
+      ...PAYMENT_HISTORY_FILTERS_DEFAULT,
+      paymentCommentSearch: '   ',
+    }
+    const params = writePaymentHistoryUrlState(new URLSearchParams(), state)
+    expect(params.get('payment_comment_search')).toBeNull()
   })
 
   it('drops unknown sort silently and falls back to default', () => {
