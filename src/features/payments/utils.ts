@@ -10,6 +10,7 @@ import type {
 
 // Export receipt generator utilities
 export * from './utils/receiptGenerator'
+export * from './utils/verifiedPaymentsByContract'
 
 // Frontend display formats
 export type FrontendPaymentMethod = 'Bank Transfer' | 'Online Gateway' | 'Cash' | 'Card' | 'Other'

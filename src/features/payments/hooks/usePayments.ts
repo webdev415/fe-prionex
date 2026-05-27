@@ -14,6 +14,10 @@ import {
   getPendingVerificationPayments,
   getPaymentDebtBreakdown,
 } from '../api/paymentApi'
+export {
+  useClientAllVerifiedPayments,
+  fetchAllClientVerifiedPayments,
+} from './useClientAllVerifiedPayments'
 import type {
   PaymentListParams,
   ClientPaymentHistoryParams,

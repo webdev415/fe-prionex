@@ -2483,6 +2483,12 @@
           "totalVerified": "Всього підтверджено:",
           "pendingVerification": "Очікує підтвердження:"
         },
+        "verifiedByContract": {
+          "title": "Підтверджені платежі за договором",
+          "contract": "Договір №{{number}}",
+          "payments": "{{count}} платежів",
+          "payments_one": "1 платіж"
+        },
         "noPaymentHistory": "Історія платежів не знайдена",
         "failedToLoadClient": "Не вдалося завантажити клієнта",
         "errorOccurred": "Сталася помилка"

@@ -31,11 +31,15 @@ import { useCallOrigination } from '@/features/calls/hooks/useCallOrigination'
 import {
   useRecordPayment,
   useClientPaymentHistory,
+  useClientAllVerifiedPayments,
   useVerifyPayment,
   useCancelPayment,
   useGenerateReceipt,
   useReassignPaymentEmployee,
+  buildPurchaseDateMap,
+  buildVerifiedPaymentsByContract,
 } from '@/features/payments'
+import { VerifiedPaymentsByContract } from './components/VerifiedPaymentsByContract'
 import { useUser } from '@/features/users/hooks/useUser'
 import { frontendToBackendPaymentMethod } from '@/features/payments/utils'
 import type {
@@ -71,7 +75,6 @@ interface DebtSummaryData {
     date: string
   }
   payments: Payment[]
-  totalVerified: number
   pendingVerification: number
 }
 
@@ -203,6 +206,23 @@ export function DebtSummaryPage() {
       limit: 50,
     },
     { enabled: !!clientId }
+  )
+
+  const { data: allVerifiedPayments = [] } = useClientAllVerifiedPayments(clientId, !!clientId)
+
+  const purchaseDateMap = useMemo(() => buildPurchaseDateMap(apiClient?.debts), [apiClient?.debts])
+
+  const verifiedByContract = useMemo(
+    () =>
+      apiClient
+        ? buildVerifiedPaymentsByContract(apiClient.debts, allVerifiedPayments, purchaseDateMap)
+        : [],
+    [apiClient, allVerifiedPayments, purchaseDateMap]
+  )
+
+  const totalVerifiedFullHistory = useMemo(
+    () => verifiedByContract.reduce((sum, row) => sum + row.totalVerified, 0),
+    [verifiedByContract]
   )
 
   // Load user details for payment details modal audit trail
@@ -393,9 +413,7 @@ export function DebtSummaryPage() {
       }
     }
 
-    const verifiedPayments = payments.filter((p) => p.status === 'verified')
     const pendingPayments = payments.filter((p) => p.status === 'pending')
-    const totalVerified = verifiedPayments.reduce((sum, p) => sum + p.amount, 0)
     const pendingVerification = pendingPayments.reduce((sum, p) => sum + p.amount, 0)
 
     // Use real debts from client if available to compute days past due
@@ -420,7 +438,6 @@ export function DebtSummaryPage() {
         date: lastPaymentDate,
       },
       payments,
-      totalVerified,
       pendingVerification,
     }
 
@@ -1447,7 +1464,7 @@ export function DebtSummaryPage() {
                     {t('pages.clients.debtSummary.summary.totalVerified')}
                   </span>
                   <span className="text-dark-500 line-clamp-1 flex-1 overflow-hidden text-left text-xs leading-[150%] font-medium tracking-[-0.28px] sm:text-sm">
-                    {formatMoneyUAHTwoDecimals(debtSummary.totalVerified)}
+                    {formatMoneyUAHTwoDecimals(totalVerifiedFullHistory)}
                   </span>
                 </div>
                 <div className="flex flex-1 flex-col items-start gap-1 px-4 py-3 sm:flex-row sm:items-center sm:px-6 sm:py-4">
@@ -1459,6 +1476,8 @@ export function DebtSummaryPage() {
                   </span>
                 </div>
               </div>
+
+              <VerifiedPaymentsByContract contracts={verifiedByContract} />
             </div>
           </div>
         </div>
