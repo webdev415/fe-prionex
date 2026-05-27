@@ -4785,7 +4785,7 @@
         "charCount": "{{count}} / {{max}}",
         "bodyPlaceholderSms": "Вітаємо, {{client_name}}! Сума {{debt_amount}} грн має бути сплачена до {{due_date}}. — CRM Prionex",
         "bodyPlaceholderViber": "Вітаємо, {{client_name}}! Сума {{debt_amount}} грн має бути сплачена до {{due_date}}. Відповідайте, щоб підтвердити.",
-        "bodyPlaceholderEmail": "Шановний(а) {{client_name}},\n\nНагадуємо, що платіж {{debt_amount}} грн за договором {{contract_number}} має бути здійснений до {{due_date}}.\n\nЗ повагою,\n{{operator_name}}"
+        "bodyPlaceholderEmail": "Шановний(а) {{client_name}},\n\nНагадуємо, що платіж {{debt_amount}} грн за договором {{contract_number}} має бути здійснений до {{due_date}}.\n\nЗ повагою,\nCRM Prionex"
       },
       "view": {
         "title": "Перегляд чернетки",

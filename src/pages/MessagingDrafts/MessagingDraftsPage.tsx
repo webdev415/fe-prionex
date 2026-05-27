@@ -412,7 +412,7 @@ function DraftFormModal({ draft, open, onClose }: DraftFormModalProps) {
                     )
                   : t(
                       'pages.messagingDrafts.form.bodyPlaceholderEmail',
-                      'Dear {{client_name}},\n\nThis is a reminder that your payment of {{debt_amount}} UAH for contract {{contract_number}} is due on {{due_date}}.\n\nBest regards,\n{{operator_name}}'
+                      'Dear {{client_name}},\n\nThis is a reminder that your payment of {{debt_amount}} UAH for contract {{contract_number}} is due on {{due_date}}.\n\nBest regards,\nCRM Prionex'
                     )
             }
             textareaSize="lg"
