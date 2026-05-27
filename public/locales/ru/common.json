@@ -2496,6 +2496,12 @@
           "totalVerified": "Всего подтверждено:",
           "pendingVerification": "Ожидает подтверждения:"
         },
+        "verifiedByContract": {
+          "title": "Подтверждённые платежи по договору",
+          "contract": "Договор №{{number}}",
+          "payments": "{{count}} платежей",
+          "payments_one": "1 платеж"
+        },
         "noPaymentHistory": "История платежей не найдена",
         "failedToLoadClient": "Не удалось загрузить клиента",
         "errorOccurred": "Произошла ошибка"

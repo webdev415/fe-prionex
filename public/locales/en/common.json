@@ -2699,6 +2699,12 @@
           "totalVerified": "Total Verified:",
           "pendingVerification": "Pending Verification:"
         },
+        "verifiedByContract": {
+          "title": "Verified Payments by Contract",
+          "contract": "Contract #{{number}}",
+          "payments": "{{count}} payments",
+          "payments_one": "1 payment"
+        },
         "noPaymentHistory": "No payment history found",
         "failedToLoadClient": "Failed to load client",
         "errorOccurred": "An error occurred"
