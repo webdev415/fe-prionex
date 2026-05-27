@@ -404,7 +404,7 @@ export function BulkSendMessageModal({
       <ModalHeader
         icon={
           <div className="bg-primary-300 flex h-8 w-8 items-center justify-center rounded-full">
-            <Icons.MailSend01 size={18} className="text-dark-500" strokeWidth={1.5} />
+            <Icons.MessageMultiple01 size={18} className="text-dark-500" strokeWidth={1.5} />
           </div>
         }
         title={t('pages.clients.modals.bulkSendMessage.title', {

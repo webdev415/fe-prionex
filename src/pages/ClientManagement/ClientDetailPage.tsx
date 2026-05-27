@@ -2376,7 +2376,7 @@ export function ClientDetailPage() {
                             className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 md:h-[20px] md:w-[20px]"
                             title={t('pages.clients.detail.sendMessage', 'Send message')}
                           >
-                            <Icons.MailSend01 size={16} className="flex-shrink-0" />
+                            <Icons.Message01 size={16} className="flex-shrink-0" />
                           </button>
                         </PermissionGuard>
                         <PermissionGuard permission={PERMISSIONS.CLIENTS.CREATE_INTERACTIONS}>
@@ -2765,7 +2765,7 @@ export function ClientDetailPage() {
                                 className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 md:h-[20px] md:w-[20px]"
                                 title={t('pages.clients.detail.sendMessage', 'Send message')}
                               >
-                                <Icons.MailSend01 size={16} className="flex-shrink-0" />
+                                <Icons.Message01 size={16} className="flex-shrink-0" />
                               </button>
                             </PermissionGuard>
                             <PermissionGuard permission={PERMISSIONS.CLIENTS.CREATE_INTERACTIONS}>
@@ -3285,7 +3285,7 @@ export function ClientDetailPage() {
                                           'Send message'
                                         )}
                                       >
-                                        <Icons.MailSend01 size={16} className="flex-shrink-0" />
+                                        <Icons.Message01 size={16} className="flex-shrink-0" />
                                       </button>
                                     </PermissionGuard>
                                     <PermissionGuard
