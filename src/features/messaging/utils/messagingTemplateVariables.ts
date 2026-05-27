@@ -4,8 +4,6 @@ import type { MutableRefObject, RefObject } from 'react'
 export const MESSAGING_AVAILABLE_VARIABLES = [
   { name: 'client_name', key: 'clientFirstName' },
   { name: 'debt_amount', key: 'currentDebtAmount' },
-  { name: 'operator_name', key: 'operatorName' },
-  { name: 'operator_phone', key: 'operatorPhone' },
   { name: 'due_date', key: 'paymentDueDate' },
   { name: 'contract_number', key: 'contractLoanNumber' },
 ] as const

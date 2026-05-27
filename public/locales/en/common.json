@@ -4697,7 +4697,7 @@
         "charCount": "{{count}} / {{max}}",
         "bodyPlaceholderSms": "Hi {{client_name}}, your payment of {{debt_amount}} UAH is due on {{due_date}}. — CRM Prionex",
         "bodyPlaceholderViber": "Hi {{client_name}}, your payment of {{debt_amount}} UAH is due on {{due_date}}. Tap reply to confirm.",
-        "bodyPlaceholderEmail": "Dear {{client_name}},\n\nThis is a reminder that your payment of {{debt_amount}} UAH for contract {{contract_number}} is due on {{due_date}}.\n\nBest regards,\n{{operator_name}}"
+        "bodyPlaceholderEmail": "Dear {{client_name}},\n\nThis is a reminder that your payment of {{debt_amount}} UAH for contract {{contract_number}} is due on {{due_date}}.\n\nBest regards,\nCRM Prionex"
       },
       "view": {
         "title": "View draft",
