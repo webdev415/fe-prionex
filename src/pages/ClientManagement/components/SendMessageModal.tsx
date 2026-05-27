@@ -416,7 +416,7 @@ export function SendMessageModal({
       client_id: clientId,
       channel,
       service,
-      draft_id: useDraftIdOnSend ? selectedDraft!.id : null,
+      draft_id: selectedDraft?.id ?? null,
       body: useDraftIdOnSend ? null : body.trim() || null,
       subject: showSubject ? subject.trim() || null : null,
       sender_name: senderName.trim() || null,
