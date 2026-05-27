@@ -41,7 +41,7 @@ export function DraftViewModal({ draft, open, onClose }: DraftViewModalProps) {
       <ModalHeader
         icon={
           <div className="bg-primary-300 flex h-8 w-8 items-center justify-center rounded-full">
-            <Icons.View size={18} className="text-dark-500" strokeWidth={1.5} />
+            <Icons.BubbleChatEdit size={18} className="text-dark-500" strokeWidth={1.5} />
           </div>
         }
         title={
@@ -64,10 +64,6 @@ export function DraftViewModal({ draft, open, onClose }: DraftViewModalProps) {
               <ReadOnlyField
                 label={t('pages.messagingDrafts.form.channel', 'Channel')}
                 value={draft.channel.toUpperCase()}
-              />
-              <ReadOnlyField
-                label={t('pages.messagingDrafts.form.senderName', 'Sender name')}
-                value={draft.sender_name || '-'}
               />
               {showSubject && (
                 <ReadOnlyField

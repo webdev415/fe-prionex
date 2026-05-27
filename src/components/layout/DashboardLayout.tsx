@@ -76,11 +76,33 @@ interface ExtendedSidebarItem extends SidebarItem {
   requiredPermission?: Permission
   requiredPermissions?: Permission[]
   mode?: 'any' | 'all'
-  subItems?: (SidebarSubItem & {
-    requiredPermission?: Permission
-    requiredPermissions?: Permission[]
-    mode?: 'any' | 'all'
-  })[]
+  subItems?: ExtendedSidebarSubItem[]
+}
+
+type ExtendedSidebarSubItem = SidebarSubItem & {
+  requiredPermission?: Permission
+  requiredPermissions?: Permission[]
+  mode?: 'any' | 'all'
+  children?: ExtendedSidebarSubItem[]
+}
+
+function filterSidebarSubItems(
+  subItems: ExtendedSidebarSubItem[],
+  hasPermission: (perm?: Permission, perms?: Permission[], mode?: 'any' | 'all') => boolean
+): ExtendedSidebarSubItem[] {
+  return subItems.flatMap((subItem) => {
+    if (subItem.children && subItem.children.length > 0) {
+      const filteredChildren = (subItem.children as ExtendedSidebarSubItem[]).filter((child) =>
+        hasPermission(child.requiredPermission, child.requiredPermissions, child.mode)
+      )
+      if (filteredChildren.length === 0) return []
+      return [{ ...subItem, children: filteredChildren }]
+    }
+
+    return hasPermission(subItem.requiredPermission, subItem.requiredPermissions, subItem.mode)
+      ? [subItem]
+      : []
+  })
 }
 
 // Mobile Header Menu Component - groups header actions into dropdown on mobile
@@ -737,24 +759,36 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         requiredPermission: PERMISSIONS.SYSTEM.VIEW_AUDIT_LOGS,
       },
       {
+        path: '/dashboard/messaging-settings',
+        icon: 'message-multiple-01',
+        label: t('navigation.messagingSettings', 'Messaging Settings'),
+        requiredPermissions: [
+          PERMISSIONS.MESSAGING.MANAGE_INTEGRATIONS,
+          PERMISSIONS.MESSAGING.MANAGE_DRAFTS,
+        ],
+        mode: 'any' as const,
+        subItems: [
+          {
+            path: '/dashboard/system-settings/messaging-integrations',
+            label: t('navigation.messagingIntegrations', 'Messaging Integrations'),
+            icon: 'message-secure-01',
+            requiredPermission: PERMISSIONS.MESSAGING.MANAGE_INTEGRATIONS,
+          },
+          {
+            path: '/dashboard/system-settings/messaging-drafts',
+            label: t('navigation.messagingDrafts', 'Message Drafts'),
+            icon: 'bubble-chat-edit',
+            requiredPermission: PERMISSIONS.MESSAGING.MANAGE_DRAFTS,
+          },
+        ],
+      },
+      {
         path: '/dashboard/system-settings',
         icon: 'setting-07',
         label: t('navigation.systemSettings', 'System Settings'),
         requiredPermissions: [PERMISSIONS.SYSTEM.MANAGE_SETTINGS, PERMISSIONS.CONTACT_TYPES.VIEW],
         mode: 'any' as const,
         subItems: [
-          {
-            path: '/dashboard/system-settings/messaging-integrations',
-            label: t('navigation.messagingIntegrations', 'Messaging Integrations'),
-            icon: 'mail-send-01',
-            requiredPermission: PERMISSIONS.MESSAGING.MANAGE_INTEGRATIONS,
-          },
-          {
-            path: '/dashboard/system-settings/messaging-drafts',
-            label: t('navigation.messagingDrafts', 'Message Drafts'),
-            icon: 'mail-send-01',
-            requiredPermission: PERMISSIONS.MESSAGING.MANAGE_DRAFTS,
-          },
           {
             path: '/dashboard/system-settings/tags',
             label: t('navigation.tags', 'Tags'),
@@ -833,9 +867,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       .map((item) => {
         // Filter sub-items first based on permissions
         if (item.subItems) {
-          const filteredSubItems = item.subItems.filter((subItem) =>
-            hasPermission(subItem.requiredPermission, subItem.requiredPermissions, subItem.mode)
-          )
+          const filteredSubItems = filterSidebarSubItems(item.subItems, hasPermission)
           return { ...item, subItems: filteredSubItems }
         }
         return item
@@ -852,12 +884,14 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         return hasPermission(item.requiredPermission, item.requiredPermissions, item.mode)
       })
 
-    // Separate System Settings to render at bottom
-    const systemSettingsItem = filteredItems.find(
-      (item) => item.path === '/dashboard/system-settings'
+    // Pin settings menus at the bottom of the sidebar (Messaging above System Settings)
+    const bottomNavPaths = ['/dashboard/messaging-settings', '/dashboard/system-settings'] as const
+    const bottomItems = bottomNavPaths
+      .map((path) => filteredItems.find((item) => item.path === path))
+      .filter((item): item is ExtendedSidebarItem => item != null)
+    const regularItems = filteredItems.filter(
+      (item) => !bottomNavPaths.includes(item.path as (typeof bottomNavPaths)[number])
     )
-    const regularItems = filteredItems.filter((item) => item.path !== '/dashboard/system-settings')
-    const bottomItems = systemSettingsItem ? [systemSettingsItem] : []
 
     return { navItems: regularItems, bottomNavItems: bottomItems }
     // i18n.language is needed to recalculate navigation items when language changes

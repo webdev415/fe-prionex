@@ -62,16 +62,9 @@ const formatClientNameInitials = (fullName: string): string => {
   return fullName
 }
 
-function draftSnapshotMatches(
-  draft: MessagingDraft,
-  body: string,
-  subject: string,
-  senderName: string
-): boolean {
+function draftSnapshotMatches(draft: MessagingDraft, body: string, subject: string): boolean {
   return (
-    body.trim() === draft.body.trim() &&
-    (subject.trim() || '') === (draft.subject || '').trim() &&
-    (senderName.trim() || '') === (draft.sender_name || '').trim()
+    body.trim() === draft.body.trim() && (subject.trim() || '') === (draft.subject || '').trim()
   )
 }
 
@@ -81,23 +74,19 @@ function applyDraftContent(
   setters: {
     setBody: (body: string) => void
     setSubject: (subject: string) => void
-    setSenderName: (sender: string) => void
   }
 ) {
   const spec = CHANNEL_SPECS[channel]
   setters.setBody(draft.body)
   setters.setSubject(spec.showSubject ? draft.subject || '' : '')
-  setters.setSenderName((draft.sender_name || '').slice(0, spec.senderMaxLength))
 }
 
 function resetMessageFields(setters: {
   setBody: (body: string) => void
   setSubject: (subject: string) => void
-  setSenderName: (sender: string) => void
 }) {
   setters.setBody('')
   setters.setSubject('')
-  setters.setSenderName('')
 }
 
 export interface SendMessageModalProps {
@@ -137,7 +126,6 @@ export function SendMessageModal({
   const [draftId, setDraftId] = useState('none')
   const [body, setBody] = useState('')
   const [subject, setSubject] = useState('')
-  const [senderName, setSenderName] = useState('')
   const [contentTouched, setContentTouched] = useState(false)
   const [selectedPhone, setSelectedPhone] = useState('')
   const [viberAddImage, setViberAddImage] = useState(false)
@@ -261,7 +249,6 @@ export function SendMessageModal({
     setChannel('sms')
     setBody('')
     setSubject('')
-    setSenderName('')
     setDraftId('none')
     setService('')
     setContentTouched(false)
@@ -328,7 +315,7 @@ export function SendMessageModal({
     setChannel(nextChannel)
     setDraftId('none')
     setContentTouched(false)
-    resetMessageFields({ setBody, setSubject, setSenderName })
+    resetMessageFields({ setBody, setSubject })
     setViberAddImage(false)
     setViberImages((prev) => resetViberImages(prev))
     setViberAddButton(false)
@@ -336,9 +323,6 @@ export function SendMessageModal({
     setViberButtonUrl('')
     setService(integrationsForChannel[0]?.service ?? '')
 
-    if (senderName.length > spec.senderMaxLength) {
-      setSenderName(senderName.slice(0, spec.senderMaxLength))
-    }
     if (body.length > spec.bodyMaxLength) {
       setBody(body.slice(0, spec.bodyMaxLength))
     }
@@ -361,7 +345,7 @@ export function SendMessageModal({
     setContentTouched(false)
 
     if (value === 'none') {
-      resetMessageFields({ setBody, setSubject, setSenderName })
+      resetMessageFields({ setBody, setSubject })
       applyViberFromDraft(null)
       return
     }
@@ -369,14 +353,12 @@ export function SendMessageModal({
     const draft = channelDrafts.find((item) => String(item.id) === value)
     if (!draft) return
 
-    applyDraftContent(draft, channel, { setBody, setSubject, setSenderName })
+    applyDraftContent(draft, channel, { setBody, setSubject })
     applyViberFromDraft(draft)
   }
 
   const useDraftIdOnSend =
-    selectedDraft !== null &&
-    !contentTouched &&
-    draftSnapshotMatches(selectedDraft, body, subject, senderName)
+    selectedDraft !== null && !contentTouched && draftSnapshotMatches(selectedDraft, body, subject)
 
   const hasDestination = destinationKind === 'email' ? hasEmailDestination : hasPhoneDestination
 
@@ -419,7 +401,6 @@ export function SendMessageModal({
       draft_id: selectedDraft?.id ?? null,
       body: useDraftIdOnSend ? null : body.trim() || null,
       subject: showSubject ? subject.trim() || null : null,
-      sender_name: senderName.trim() || null,
       viber_content: viberContent,
       variables: variableValues,
       destination_override: destinationKind === 'phone' ? selectedPhone || null : null,
@@ -452,7 +433,7 @@ export function SendMessageModal({
       <ModalHeader
         icon={
           <div className="bg-primary-300 flex h-8 w-8 items-center justify-center rounded-full">
-            <Icons.MailSend01 size={18} className="text-dark-500" strokeWidth={1.5} />
+            <Icons.Message01 size={18} className="text-dark-500" strokeWidth={1.5} />
           </div>
         }
         title={t('pages.clients.modals.sendMessage.title', {
@@ -650,52 +631,31 @@ export function SendMessageModal({
               )}
             </div>
 
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <div>
-                <label className="text-dark-500 mb-1.5 block text-sm font-light">
-                  {t('pages.clients.modals.sendMessage.draft', 'Draft')}
-                </label>
-                <Select
-                  value={draftId}
-                  onValueChange={handleDraftChange}
-                  disabled={!hasDestination}
-                >
-                  <SelectTrigger>
-                    <SelectValue
-                      placeholder={
-                        draftsLoading
-                          ? t('pages.clients.modals.sendMessage.loadingDrafts', 'Loading drafts...')
-                          : t('pages.clients.modals.sendMessage.draftPlaceholder', 'Select a draft')
-                      }
-                    />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">
-                      {t('pages.clients.modals.sendMessage.noDraft', 'No draft (custom message)')}
+            <div>
+              <label className="text-dark-500 mb-1.5 block text-sm font-light">
+                {t('pages.clients.modals.sendMessage.draft', 'Draft')}
+              </label>
+              <Select value={draftId} onValueChange={handleDraftChange} disabled={!hasDestination}>
+                <SelectTrigger>
+                  <SelectValue
+                    placeholder={
+                      draftsLoading
+                        ? t('pages.clients.modals.sendMessage.loadingDrafts', 'Loading drafts...')
+                        : t('pages.clients.modals.sendMessage.draftPlaceholder', 'Select a draft')
+                    }
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">
+                    {t('pages.clients.modals.sendMessage.noDraft', 'No draft (custom message)')}
+                  </SelectItem>
+                  {channelDrafts.map((draft) => (
+                    <SelectItem key={draft.id} value={String(draft.id)}>
+                      {draft.name}
                     </SelectItem>
-                    {channelDrafts.map((draft) => (
-                      <SelectItem key={draft.id} value={String(draft.id)}>
-                        {draft.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <Input
-                label={t('pages.clients.modals.sendMessage.senderName', 'Sender name')}
-                value={senderName}
-                onChange={(event) => {
-                  setSenderName(event.target.value)
-                  setContentTouched(true)
-                }}
-                maxLength={channelSpec.senderMaxLength}
-                disabled={!hasDestination}
-                placeholder={t(
-                  'pages.clients.modals.sendMessage.senderNamePlaceholder',
-                  'CRM Prionex'
-                )}
-              />
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             {loans.length > 0 && (
@@ -797,12 +757,6 @@ export function SendMessageModal({
                   <span className="text-gray-600">
                     {destinationKind === 'email' ? clientEmail || '—' : selectedPhone || '—'}
                   </span>
-                </div>
-                <div>
-                  <span className="text-dark-500 font-medium">
-                    {t('pages.clients.modals.sendMessage.previewSender', 'Sender')}:
-                  </span>{' '}
-                  <span className="text-gray-600">{senderName.trim() || '—'}</span>
                 </div>
                 {showSubject && (
                   <div>

@@ -257,7 +257,6 @@ export function CampaignDetailModal({
   const snapshot = campaign?.message_snapshot ?? {}
   const bodyTemplate = snapshotString(snapshot, 'body')
   const subjectTemplate = snapshotString(snapshot, 'subject')
-  const senderName = snapshotString(snapshot, 'sender_name')
   const snapshotDraftName = snapshotString(snapshot, 'name')
   const showDraftUsed = campaign != null && campaign.draft_id != null && !!snapshotDraftName
 
@@ -376,14 +375,6 @@ export function CampaignDetailModal({
                         {t('pages.messagingCampaigns.detail.draftUsed', 'Draft')}
                       </span>
                       <p className="text-dark-500 mt-0.5 font-medium">{snapshotDraftName}</p>
-                    </div>
-                  )}
-                  {senderName && (
-                    <div>
-                      <span className="text-xs font-light text-gray-500">
-                        {t('pages.messagingCampaigns.detail.senderName', 'Sender')}
-                      </span>
-                      <p className="text-dark-500 mt-0.5 font-medium">{senderName}</p>
                     </div>
                   )}
                   {subjectTemplate && campaign.channel === 'email' && (

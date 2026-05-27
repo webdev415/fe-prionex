@@ -1662,7 +1662,11 @@ export function ClientManagementPage() {
                         onClick={handleBulkSendMessage}
                         className="flex cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 transition-colors hover:bg-gray-50 focus:bg-gray-50"
                       >
-                        <Icons.MailSend01 size={18} className="text-dark-500" strokeWidth={1.5} />
+                        <Icons.MessageMultiple01
+                          size={18}
+                          className="text-dark-500"
+                          strokeWidth={1.5}
+                        />
                         <span className="text-dark-500 text-sm font-medium">
                           {t('pages.clients.bulkActions.sendMessage', 'Send Message')}
                         </span>

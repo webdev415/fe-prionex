@@ -145,7 +145,6 @@ function DraftFormModal({ draft, open, onClose }: DraftFormModalProps) {
 
   const [name, setName] = useState('')
   const [channel, setChannel] = useState<MessagingChannel>('sms')
-  const [senderName, setSenderName] = useState('')
   const [subject, setSubject] = useState('')
   const [body, setBody] = useState('')
   const [viberAddImage, setViberAddImage] = useState(false)
@@ -166,7 +165,6 @@ function DraftFormModal({ draft, open, onClose }: DraftFormModalProps) {
 
     setName(draft?.name ?? '')
     setChannel(draft?.channel ?? 'sms')
-    setSenderName(draft?.sender_name ?? '')
     setSubject(draft?.subject ?? '')
     setBody(draft?.body ?? '')
     const viberForm = readDraftViberFormState(draft)
@@ -190,9 +188,6 @@ function DraftFormModal({ draft, open, onClose }: DraftFormModalProps) {
     setChannel(next)
     if (!CHANNEL_SPECS[next].showSubject) {
       setSubject('')
-    }
-    if (CHANNEL_SPECS[next].senderMaxLength < senderName.length) {
-      setSenderName(senderName.slice(0, CHANNEL_SPECS[next].senderMaxLength))
     }
     if (next !== 'viber') {
       setViberAddImage(false)
@@ -237,7 +232,7 @@ function DraftFormModal({ draft, open, onClose }: DraftFormModalProps) {
     const payload = {
       name: trimmedName,
       channel,
-      sender_name: senderName.trim() || null,
+      sender_name: null,
       subject: spec.showSubject ? trimmedSubject || null : null,
       body: trimmedBody,
       available_variables: null,
@@ -284,7 +279,7 @@ function DraftFormModal({ draft, open, onClose }: DraftFormModalProps) {
       <ModalHeader
         icon={
           <div className="bg-primary-300 flex h-8 w-8 items-center justify-center rounded-full">
-            <Icons.MailSend01 size={18} className="text-dark-500" strokeWidth={1.5} />
+            <Icons.BubbleChatEdit size={18} className="text-dark-500" strokeWidth={1.5} />
           </div>
         }
         title={
@@ -321,35 +316,6 @@ function DraftFormModal({ draft, open, onClose }: DraftFormModalProps) {
                 ))}
               </SelectContent>
             </Select>
-          </div>
-
-          <div>
-            <div className="mb-1.5 flex items-baseline justify-between gap-3">
-              <label htmlFor="draft-sender-name" className="text-dark-500 text-sm font-light">
-                {t('pages.messagingDrafts.form.senderName', 'Sender name')}
-              </label>
-              <span className="shrink-0 text-xs text-gray-500 tabular-nums">
-                {t('pages.messagingDrafts.form.charCount', {
-                  count: senderName.length,
-                  max: spec.senderMaxLength,
-                  defaultValue: `${senderName.length} / ${spec.senderMaxLength}`,
-                })}
-              </span>
-            </div>
-            <Input
-              id="draft-sender-name"
-              value={senderName}
-              onChange={(event) => setSenderName(event.target.value.slice(0, spec.senderMaxLength))}
-              placeholder={
-                channel === 'email'
-                  ? t(
-                      'pages.messagingDrafts.form.senderNameEmailPlaceholder',
-                      'CRM Prionex Support'
-                    )
-                  : t('pages.messagingDrafts.form.senderNamePlaceholder', 'CRM Prionex')
-              }
-              maxLength={spec.senderMaxLength}
-            />
           </div>
 
           {spec.showSubject && (
@@ -496,12 +462,6 @@ export function MessagingDraftsPage() {
         header: t('pages.messagingDrafts.table.channel', 'Channel'),
         align: 'left',
         render: (draft) => draft.channel.toUpperCase(),
-      },
-      {
-        key: 'sender_name',
-        header: t('pages.messagingDrafts.table.senderName', 'Sender'),
-        align: 'left',
-        render: (draft) => draft.sender_name || '-',
       },
       {
         key: 'updated_at',

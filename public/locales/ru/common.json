@@ -36,6 +36,9 @@
     "scoringConfiguration": "Конфигурация оценки",
     "systemSettings": "Системные настройки",
     "tags": "Теги",
+    "messagingSettings": "Настройки сообщений",
+    "messagingIntegrations": "Интеграции сообщений",
+    "messagingDrafts": "Черновики сообщений",
     "contactTypes": "Типы контактов",
     "actionAnalysis": "Анализ действий"
   },
