@@ -2588,6 +2588,7 @@
           "title": "Write-offs on this loan",
           "tabActive": "Active",
           "tabCancelled": "Cancelled",
+          "tabLegacy": "Legacy",
           "loadError": "Failed to load write-offs.",
           "noActiveEntries": "No active write-offs on this loan.",
           "noCancelledEntries": "No cancelled write-offs on this loan.",

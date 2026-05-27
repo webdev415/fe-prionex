@@ -39,11 +39,25 @@ export interface ClientWriteoffsTableLoan {
   saleDate: string
 }
 
-export interface ClientWriteoffsTableProps {
-  loans: ClientWriteoffsTableLoan[]
+/**
+ * Legacy-table inputs (pre-KAN-245 ``debt_writeoffs`` rows surfaced
+ * by the client-detail endpoint as ``client.writesOffs``). The parent
+ * keeps the data shape + column definitions; we just render them
+ * under the third "Legacy" tab.
+ */
+export interface ClientWriteoffsLegacyData<T> {
+  rows: T[]
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  columns: any[]
 }
 
-type Tab = 'active' | 'cancelled'
+export interface ClientWriteoffsTableProps<TLegacyRow = unknown> {
+  loans: ClientWriteoffsTableLoan[]
+  /** Optional pre-KAN-245 legacy rows + columns; rendered under "Legacy" tab. */
+  legacy?: ClientWriteoffsLegacyData<TLegacyRow>
+}
+
+type Tab = 'active' | 'cancelled' | 'legacy'
 
 /** Row shape rendered in the table — entry + parent-loan metadata.
  *
@@ -59,7 +73,10 @@ type Row = WriteoffEntry & {
   saleDate: string
 }
 
-export function ClientWriteoffsTable({ loans }: ClientWriteoffsTableProps) {
+export function ClientWriteoffsTable<TLegacyRow extends { id: number | string }>({
+  loans,
+  legacy,
+}: ClientWriteoffsTableProps<TLegacyRow>) {
   const { t, i18n } = useTranslation('common')
   const canCancel = useHasPermission(PERMISSIONS.WRITEOFFS.CANCEL)
   const canEdit = useHasPermission(PERMISSIONS.WRITEOFFS.EDIT)
@@ -68,14 +85,17 @@ export function ClientWriteoffsTable({ loans }: ClientWriteoffsTableProps) {
   const [cancelTarget, setCancelTarget] = useState<WriteoffEntry | null>(null)
   const [editTarget, setEditTarget] = useState<WriteoffEntry | null>(null)
 
-  // Fan out one query per loan, scoped by the current tab. Reuses the
-  // same query keys as useWriteoffsForDebt so the create/edit/cancel
-  // mutations' invalidations land here too.
+  // Only fan out per-loan queries when we're on a writeoff-entries tab.
+  // The legacy tab renders pre-supplied rows from the parent; skipping
+  // the network fetch there avoids a wasted refetch when the operator
+  // is browsing historical data.
+  const queryStatus: 'active' | 'cancelled' = tab === 'cancelled' ? 'cancelled' : 'active'
   const queries = useQueries({
     queries: loans.map((loan) => ({
-      queryKey: writeoffKeys.list(loan.id, { status: tab, page_size: 200 }),
-      queryFn: () => writeoffsApi.listWriteoffsForDebt(loan.id, { status: tab, page_size: 200 }),
-      enabled: !!loan.id,
+      queryKey: writeoffKeys.list(loan.id, { status: queryStatus, page_size: 200 }),
+      queryFn: () =>
+        writeoffsApi.listWriteoffsForDebt(loan.id, { status: queryStatus, page_size: 200 }),
+      enabled: !!loan.id && tab !== 'legacy',
       staleTime: 15_000,
     })),
   })
@@ -214,7 +234,7 @@ export function ClientWriteoffsTable({ loans }: ClientWriteoffsTableProps) {
 
   return (
     <div className="flex w-full flex-col gap-3">
-      {/* Active / Cancelled tabs */}
+      {/* Active / Cancelled / Legacy tabs */}
       <div className="flex gap-2">
         <button
           type="button"
@@ -238,16 +258,36 @@ export function ClientWriteoffsTable({ loans }: ClientWriteoffsTableProps) {
         >
           {t('pages.clients.detail.writeOffSection.tabCancelled')}
         </button>
+        {legacy && (
+          <button
+            type="button"
+            className={`rounded px-3 py-1 text-xs ${
+              tab === 'legacy'
+                ? 'bg-secondary-800 text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+            onClick={() => setTab('legacy')}
+          >
+            {t('pages.clients.detail.writeOffSection.tabLegacy')}
+          </button>
+        )}
       </div>
 
-      {hasError && (
+      {tab !== 'legacy' && hasError && (
         <p className="text-error-500 text-sm">
           {t('pages.clients.detail.writeOffSection.loadError')}
         </p>
       )}
 
-      {isLoading && <p className="text-sm text-gray-500">{t('common.loading')}</p>}
-      <DataTable columns={columns} data={rows} className="w-full" />
+      {tab !== 'legacy' && isLoading && (
+        <p className="text-sm text-gray-500">{t('common.loading')}</p>
+      )}
+
+      {tab !== 'legacy' && <DataTable columns={columns} data={rows} className="w-full" />}
+
+      {tab === 'legacy' && legacy && (
+        <DataTable columns={legacy.columns} data={legacy.rows} className="w-full" />
+      )}
 
       {cancelTarget && (
         <WriteoffCancelDialog

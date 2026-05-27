@@ -3185,8 +3185,10 @@ export function ClientDetailPage() {
                               {/* KAN-245: single flat DataTable across every
                                   loan, layout-matching the legacy
                                   ``writeOffColumns`` look. Active / Cancelled
-                                  tabs sit above the table inside the
-                                  component itself. */}
+                                  / Legacy tabs sit above the table inside
+                                  the component itself; the third tab
+                                  surfaces the pre-KAN-245
+                                  ``client.writesOffs`` rows. */}
                               {canViewWriteoffs && client.loans.length > 0 && (
                                 <ClientWriteoffsTable
                                   loans={client.loans.map((loan) => ({
@@ -3195,16 +3197,14 @@ export function ClientDetailPage() {
                                     counterparty: loan.counterparty,
                                     saleDate: loan.saleDate,
                                   }))}
-                                />
-                              )}
-                              {/* Legacy historical write-offs (pre-KAN-245).
-                                  Kept so operators can still see migrated
-                                  rows that never went through the new flow. */}
-                              {client.writesOffs.length > 0 && (
-                                <DataTable
-                                  columns={writeOffColumns}
-                                  data={client.writesOffs}
-                                  className="w-full"
+                                  legacy={
+                                    client.writesOffs.length > 0
+                                      ? {
+                                          rows: client.writesOffs,
+                                          columns: writeOffColumns,
+                                        }
+                                      : undefined
+                                  }
                                 />
                               )}
                             </div>
