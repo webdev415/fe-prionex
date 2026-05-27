@@ -271,6 +271,7 @@
         "allOperators": "All operators",
         "employee": "Employee",
         "allEmployees": "All employees",
+        "blockedSuffix": "(blocked)",
         "period": "Period",
         "status": "Status",
         "minDuration": "Min duration (s)",
