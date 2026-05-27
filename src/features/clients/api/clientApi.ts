@@ -14,6 +14,7 @@ import type {
   BulkAssignClientRequest,
   BulkAssignmentResponse,
   Client,
+  ClientAssigneeIdsResponse,
   ClientDetail,
   ClientProfileResponse,
   ContactResponse,
@@ -39,6 +40,15 @@ import type {
 } from './types'
 
 const BASE_URL = '/api/v1/clients'
+
+/**
+ * Distinct responsible employee / searcher user ids for the active project
+ * (non-deleted clients). Used to gate inactive operators in the filter dropdowns.
+ */
+export async function getClientAssigneeIds(): Promise<ClientAssigneeIdsResponse> {
+  const response = await api.get<ClientAssigneeIdsResponse>(`${BASE_URL}/assignee-ids`)
+  return response.data
+}
 
 /**
  * Get list of clients for user's active project
@@ -526,6 +536,7 @@ export async function patchContactType(
  */
 export const clientApi = {
   getClients,
+  getClientAssigneeIds,
   getClientById,
   createClient,
   updateClient,
