@@ -261,6 +261,7 @@
         "allOperators": "Усі оператори",
         "employee": "Співробітник",
         "allEmployees": "Усі співробітники",
+        "blockedSuffix": "(заблоковано)",
         "period": "Період",
         "status": "Статус",
         "minDuration": "Мін. тривалість (с)",
