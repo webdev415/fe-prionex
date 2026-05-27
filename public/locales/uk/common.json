@@ -181,6 +181,29 @@
     "confirmMessage": "Ви впевнені, що хочете вийти? Вам потрібно буде знову увійти, щоб отримати доступ до системи."
   },
   "pages": {
+    "operations": {
+      "bulkWriteoffImport": {
+        "title": "Масове списання — імпорт",
+        "subtitle": "Завантажте CSV для створення кількох записів списань одразу. Обов'язкові колонки: loan_id, cancellation_date, principal, interest, fine, penalty, commission.",
+        "upload": "Завантажити",
+        "downloadTemplate": "Завантажити шаблон",
+        "columnsHint": "Обов'язкові колонки: {{columns}}",
+        "headerErrorTitle": "Не вдалося розпізнати заголовок CSV.",
+        "missingColumns": "Відсутні обов'язкові колонки",
+        "unrecognisedColumns": "Невідомі колонки",
+        "rowsIn": "Зчитано рядків",
+        "rowsSucceeded": "Успішно",
+        "rowsFailed": "З помилками",
+        "entriesCreated": "Створено записів",
+        "batchId": "ID пакета",
+        "rowNumber": "Рядок",
+        "loanId": "ID кредиту",
+        "status": "Статус",
+        "detail": "Деталі",
+        "statusCreated": "Створено",
+        "statusFailed": "Помилка"
+      }
+    },
     "aiAssistant": {
       "headerButtonAria": "Відкрити AI-асистента",
       "greeting": "Вітаю! Я AI-асистент Prionex.",

@@ -178,6 +178,29 @@
     "confirmMessage": "Are you sure you want to logout? You will need to login again to access the system."
   },
   "pages": {
+    "operations": {
+      "bulkWriteoffImport": {
+        "title": "Bulk write-off import",
+        "subtitle": "Upload a CSV to create multiple write-off entries at once. Required columns: loan_id, cancellation_date, principal, interest, fine, penalty, commission.",
+        "upload": "Upload",
+        "downloadTemplate": "Download template",
+        "columnsHint": "Required columns: {{columns}}",
+        "headerErrorTitle": "CSV header could not be parsed.",
+        "missingColumns": "Missing required columns",
+        "unrecognisedColumns": "Unrecognised columns",
+        "rowsIn": "Rows read",
+        "rowsSucceeded": "Rows succeeded",
+        "rowsFailed": "Rows failed",
+        "entriesCreated": "Entries created",
+        "batchId": "Batch ID",
+        "rowNumber": "Row",
+        "loanId": "Loan ID",
+        "status": "Status",
+        "detail": "Detail",
+        "statusCreated": "Created",
+        "statusFailed": "Failed"
+      }
+    },
     "aiAssistant": {
       "headerButtonAria": "Open AI assistant",
       "greeting": "Hello! I'm the Prionex AI Assistant.",
