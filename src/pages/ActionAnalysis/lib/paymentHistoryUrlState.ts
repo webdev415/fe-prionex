@@ -43,12 +43,8 @@ const PAYMENT_MONITORING_SORTS: readonly PaymentMonitoringSort[] = [
  * scope selector locks the picker (scope=my/group), this is ignored at query
  * time but kept on the URL for round-trip stability.
  *
- * `paymentTypes` narrows by KAN-507's controlled vocab (the new
- * payments.payment_type column).
- *
  * `paymentCommentSearch` is a free-text substring (ILIKE '%term%') over
- * payments.payment_comment (vendor CSV classification) — mirrors the
- * TA History "Notes search" pattern.
+ * payments.payment_comment — mirrors the TA History "Notes search" pattern.
  */
 export interface PaymentHistoryBarState {
   period?: CallMonitoringPeriod
@@ -127,8 +123,7 @@ export function readPaymentHistoryUrlState(params: URLSearchParams): PaymentHist
     PAYMENT_METHOD_VALUES
   )
   const statuses = parseEnumList<PaymentStatus>(params.getAll('status'), PAYMENT_STATUS_VALUES)
-  // Post KAN-507 split the column is the controlled vocab — drop anything
-  // else from the URL silently (deep-link relic from the pre-split filter).
+  // Drop any URL values outside the controlled vocab (pre-split deep-link relics).
   const paymentTypes = parseEnumList<PaymentType>(
     params.getAll('payment_type'),
     PAYMENT_TYPE_VALUES

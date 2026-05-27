@@ -103,9 +103,7 @@ describe('paymentHistoryUrlState', () => {
     expect(out.statuses).toEqual(['verified'])
   })
 
-  it('drops payment_type values outside the controlled vocab (post KAN-507 split)', () => {
-    // Pre-split deep-links may carry free-text values; after the split the
-    // column is controlled vocab — anything else is silently discarded.
+  it('drops payment_type values outside the controlled vocab', () => {
     const params = new URLSearchParams()
     params.append('payment_type', 'основной долг')
     params.append('payment_type', 'payment_by_rr')

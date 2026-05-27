@@ -14,13 +14,6 @@ export interface PaymentPreviewRow {
   payment_amount: number
   payment_date: string
   payment_method: string
-  /**
-   * Free-text vendor classification from the CSV (was `payment_type`
-   * pre-KAN-507 split). Lands on `payments.payment_comment` after the
-   * upload is executed. The CSV column header is still `payment_type` /
-   * `тип_оплати` / `tipo` etc.; only the canonical resolved name and the
-   * downstream column changed.
-   */
   payment_comment: string | null
   status: PaymentRowStatus
   has_pending_match: boolean | null

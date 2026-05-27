@@ -38,17 +38,7 @@ export interface Payment {
   fines_paid: string
   payment_method: PaymentMethod
   payment_method_details?: string
-  /**
-   * KAN-507 controlled vocab written by the operator modal — one of
-   * `payment_by_rr` / `partial_payment` / `full_payment` or null on
-   * pre-KAN-507 rows and vendor-CSV-only payments.
-   */
   payment_type?: PaymentType | null
-  /**
-   * Vendor-CSV free-text classification (was the legacy `payment_type`
-   * column pre-KAN-507 split). Rendered verbatim in the Payment History
-   * "Payment Comment" column.
-   */
   payment_comment?: string | null
   seller_name?: string
   status: PaymentStatus

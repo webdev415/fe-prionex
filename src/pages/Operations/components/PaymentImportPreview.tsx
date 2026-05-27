@@ -127,9 +127,8 @@ function usePaymentPreviewColumns(t: TFunction<'common'>): Column<PreviewRowWith
       },
       {
         // Free-text vendor classification carried over from the CSV (e.g.
-        // "Изипей"). Lands on payments.payment_comment after execute. Kept
-        // separate from the New/Pending badge so each column shows one
-        // piece of information.
+        // "Изипей"). Kept separate from the New/Pending badge so each
+        // column shows one piece of information.
         key: 'payment_comment',
         header: t(`${c}.paymentComment`),
         render: (row: PreviewRowWithId) => {

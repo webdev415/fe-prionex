@@ -260,13 +260,8 @@ export interface PaymentMonitoringFilters {
   user_ids?: number[]
   payment_method_in?: PaymentMethod[]
   status_in?: PaymentStatus[]
-  /** KAN-507 controlled vocab on payments.payment_type. */
   payment_type_in?: PaymentType[]
-  /**
-   * Free-text substring search over payments.payment_comment (vendor CSV
-   * classification). Mirrors the "Notes search" pattern on TA History —
-   * ILIKE '%term%', backed by a trigram GIN index server-side.
-   */
+  /** Free-text substring (ILIKE '%term%') over payments.payment_comment. */
   payment_comment_search?: string
   amount_min?: number
   amount_max?: number
@@ -284,9 +279,7 @@ export interface PaymentMonitoringItem {
   debt_contract_number: string | null
   seller_company: string | null
   purchase_date: string | null // YYYY-MM-DD
-  /** KAN-507 controlled vocab on payments.payment_type — NULL for pre-KAN-507 rows and vendor-CSV-only payments. */
   payment_type: PaymentType | null
-  /** Vendor-CSV free-text classification on payments.payment_comment (was the legacy payment_type column). */
   payment_comment: string | null
   recorded_by_user_id: number | null
   recorded_by_full_name: string | null
