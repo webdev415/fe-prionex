@@ -55,7 +55,7 @@ const INITIAL_DATASETS: Omit<DatasetFile, 'id'>[] = [
   { type: 'credits', name: 'Credits', status: 'required', file: null },
   { type: 'payments', name: 'Payments', status: 'optional', file: null },
   { type: 'write_offs', name: 'Write-offs', status: 'optional', file: null },
-  // KAN-245 — EG creditor prolongations file (CSV). Optional, since
+  // KAN-491 — EG creditor prolongations file (CSV). Optional, since
   // vendors that don't ship this file (e.g. finmarket_finbust_v1) should
   // not be blocked by its absence on the upload form.
   { type: 'prolongations', name: 'Prolongations', status: 'optional', file: null },

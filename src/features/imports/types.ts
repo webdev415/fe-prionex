@@ -41,7 +41,7 @@ export interface ImportJob {
 }
 
 // Vendor file logical name — the CSV/XLSX files in a vendor bundle.
-// ``prolongations`` was added under KAN-245 for the EG creditor; it
+// ``prolongations`` was added under KAN-491 for the EG creditor; it
 // ingests through ``client_service.bulk_prolongations`` and is FK-safe
 // because it runs after credits.
 export type VendorFileLogical = 'users' | 'credits' | 'payments' | 'write_offs' | 'prolongations'

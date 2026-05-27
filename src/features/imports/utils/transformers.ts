@@ -202,7 +202,7 @@ const VENDOR_PHASE_DISPLAY: Array<{
     display_name: 'Write-offs',
     target_db: 'client-DB debt_writeoffs',
   },
-  // KAN-245 — EG creditor prolongations file. Optional in some vendor
+  // KAN-491 — EG creditor prolongations file. Optional in some vendor
   // bundles; phases for omitted files collapse to "completed" the same
   // way write_offs already does.
   {
