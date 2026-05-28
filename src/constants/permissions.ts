@@ -10,19 +10,22 @@
 
 export const PERMISSIONS = {
   /**
-   * Clients Category (9 permissions)
+   * Clients Category (12 permissions)
    * Controls access to client data and management
    */
   CLIENTS: {
     VIEW: 'view_clients',
     VIEW_FULL_CLIENT_DATA: 'view_full_client_data',
     EDIT: 'edit_clients',
+    REASSIGN_RESPONSIBLE: 'reassign_client_responsible',
     ASSIGN_TAGS: 'assign_client_tags',
     EDIT_DEBT: 'edit_client_debt',
     CLOSE_DEBT: 'close_client_debt',
     VERIFY_PAYMENT: 'verify_payment',
     DELETE: 'delete_clients',
     CREATE_INTERACTIONS: 'create_interactions',
+    EDIT_INTERACTIONS: 'edit_interactions',
+    DELETE_INTERACTIONS: 'delete_interactions',
     CREATE_TASKS: 'create_tasks',
     VIEW_TASKS: 'view_tasks',
   },
@@ -263,13 +266,16 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   // Clients
   view_clients: 'View client data and information',
   view_full_client_data: 'View unmasked client PII (name, phone, TIN) in dashboards',
-  edit_clients: 'Edit client information (except debt amounts and tags)',
+  edit_clients: 'Edit client information (except reassignment, debt amounts and tags)',
+  reassign_client_responsible: 'Change the responsible operator or searcher on a client',
   assign_client_tags: 'Assign and remove tags on client profiles',
   edit_client_debt: 'Edit debt amounts and DPD (Days Past Due)',
   close_client_debt: 'Close/finalize a client debt (irreversible)',
   verify_payment: 'Verify and cancel client payments',
   delete_clients: 'Delete client records (soft delete)',
   create_interactions: 'Create client interactions (add notes)',
+  edit_interactions: 'Edit existing TA interactions on the client profile',
+  delete_interactions: 'Delete existing TA interactions on the client profile',
   create_tasks: 'Create and manage tasks for clients',
   view_tasks: 'View tasks for clients',
 

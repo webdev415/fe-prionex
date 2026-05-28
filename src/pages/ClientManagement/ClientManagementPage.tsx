@@ -1433,17 +1433,17 @@ export function ClientManagementPage() {
           >
             {/* Desktop: Individual buttons */}
             <div className="hidden items-center gap-4 lg:flex">
-              <PermissionGuard permission={PERMISSIONS.CLIENTS.EDIT}>
-                <LinkButton
-                  variant="regular-black"
-                  size="xs"
-                  onClick={() => handleAssign(client.id)}
-                  leftIcon={<Icons.PencilEdit size={16} color="#05040D" strokeWidth={1.5} />}
-                  disabled={isBulkActionActive}
-                >
-                  {t('pages.clients.assign')}
-                </LinkButton>
-              </PermissionGuard>
+              {/* Reassign trigger is always visible; warn-on-click happens on the
+                  modal's Submit (PERMISSIONS.CLIENTS.REASSIGN_RESPONSIBLE). */}
+              <LinkButton
+                variant="regular-black"
+                size="xs"
+                onClick={() => handleAssign(client.id)}
+                leftIcon={<Icons.PencilEdit size={16} color="#05040D" strokeWidth={1.5} />}
+                disabled={isBulkActionActive}
+              >
+                {t('pages.clients.assign')}
+              </LinkButton>
               <PermissionGuard permission={PERMISSIONS.CLIENTS.EDIT}>
                 <LinkButton
                   variant="regular-black"
@@ -1476,16 +1476,16 @@ export function ClientManagementPage() {
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="bg-white">
-                  <PermissionGuard permission={PERMISSIONS.CLIENTS.EDIT}>
-                    <DropdownMenuItem
-                      onClick={() => handleAssign(client.id)}
-                      className="text-dark-500 flex cursor-pointer items-center gap-2 text-sm"
-                      disabled={isBulkActionActive}
-                    >
-                      <Icons.PencilEdit size={16} strokeWidth={1.5} />
-                      <span>{t('pages.clients.assign')}</span>
-                    </DropdownMenuItem>
-                  </PermissionGuard>
+                  {/* Reassign trigger is always visible; warn-on-click happens on the
+                      modal's Submit (PERMISSIONS.CLIENTS.REASSIGN_RESPONSIBLE). */}
+                  <DropdownMenuItem
+                    onClick={() => handleAssign(client.id)}
+                    className="text-dark-500 flex cursor-pointer items-center gap-2 text-sm"
+                    disabled={isBulkActionActive}
+                  >
+                    <Icons.PencilEdit size={16} strokeWidth={1.5} />
+                    <span>{t('pages.clients.assign')}</span>
+                  </DropdownMenuItem>
                   <PermissionGuard permission={PERMISSIONS.CLIENTS.EDIT}>
                     <DropdownMenuItem
                       onClick={() => handleManageTags(client.id, client.fullName)}
@@ -1635,17 +1635,17 @@ export function ClientManagementPage() {
                     align="end"
                     className="w-56 rounded-lg border border-gray-200 bg-white p-1 shadow-lg"
                   >
-                    <PermissionGuard permission={PERMISSIONS.CLIENTS.EDIT}>
-                      <DropdownMenuItem
-                        onClick={handleBulkAssign}
-                        className="flex cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 transition-colors hover:bg-gray-50 focus:bg-gray-50"
-                      >
-                        <Icons.UserCheck01 size={18} className="text-dark-500" strokeWidth={1.5} />
-                        <span className="text-dark-500 text-sm font-medium">
-                          {t('pages.clients.bulkActions.assignEmployee', 'Assign Employee')}
-                        </span>
-                      </DropdownMenuItem>
-                    </PermissionGuard>
+                    {/* Bulk-assign trigger is always visible; warn-on-click happens on the
+                        modal's Submit (PERMISSIONS.CLIENTS.REASSIGN_RESPONSIBLE). */}
+                    <DropdownMenuItem
+                      onClick={handleBulkAssign}
+                      className="flex cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 transition-colors hover:bg-gray-50 focus:bg-gray-50"
+                    >
+                      <Icons.UserCheck01 size={18} className="text-dark-500" strokeWidth={1.5} />
+                      <span className="text-dark-500 text-sm font-medium">
+                        {t('pages.clients.bulkActions.assignEmployee', 'Assign Employee')}
+                      </span>
+                    </DropdownMenuItem>
                     <PermissionGuard permission={PERMISSIONS.CLIENTS.ASSIGN_TAGS}>
                       <DropdownMenuItem
                         onClick={handleBulkAddTags}
