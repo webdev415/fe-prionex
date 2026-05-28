@@ -74,6 +74,8 @@ export interface TopOperatorUI {
   operatorName: string
   callsMade: number
   contactRate: number
+  smsSent: number
+  messagesSent: number
 }
 
 /**
@@ -263,6 +265,8 @@ export interface DailyTrendUI {
   callsAnswered: number
   smsSent: number
   smsDelivered: number
+  messagesSent: number
+  messagesDelivered: number
 }
 
 /**

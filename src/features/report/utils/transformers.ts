@@ -281,6 +281,8 @@ function transformTopOperator(op: BackendDashboardResponse['top_operators'][0]):
     operatorName: op.operator_name,
     callsMade: op.calls_made,
     contactRate: op.contact_rate,
+    smsSent: op.sms_sent ?? 0,
+    messagesSent: op.messages_sent ?? 0,
   }
 }
 
@@ -778,6 +780,8 @@ function transformDailyTrend(
     callsAnswered: trend.calls_answered,
     smsSent: trend.sms_sent,
     smsDelivered: trend.sms_delivered,
+    messagesSent: trend.messages_sent ?? 0,
+    messagesDelivered: trend.messages_delivered ?? 0,
   }
 }
 

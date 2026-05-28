@@ -59,6 +59,8 @@ export interface BackendTopOperator {
   operator_name: string
   calls_made: number
   contact_rate: number
+  sms_sent?: number
+  messages_sent?: number
 }
 
 /**
@@ -282,6 +284,8 @@ export interface BackendDailyTrend {
   calls_answered: number
   sms_sent: number
   sms_delivered: number
+  messages_sent?: number
+  messages_delivered?: number
 }
 
 /**
