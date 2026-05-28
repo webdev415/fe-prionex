@@ -705,19 +705,19 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         label: t('navigation.teamManagement', 'Team Management'),
         subItems: [
           {
-            path: '/dashboard/users',
+            path: '/dashboard/team-management/users',
             label: t('navigation.users'),
             icon: 'user-search-01',
             requiredPermission: PERMISSIONS.USERS.VIEW,
           },
           {
-            path: '/dashboard/roles',
+            path: '/dashboard/team-management/roles',
             label: t('navigation.roles'),
             icon: 'user-circle-02',
             requiredPermission: PERMISSIONS.SYSTEM.MANAGE_ROLES,
           },
           {
-            path: '/dashboard/departments',
+            path: '/dashboard/team-management/departments',
             label: t('navigation.departments'),
             icon: 'briefcase-01',
             requiredPermission: PERMISSIONS.SYSTEM.MANAGE_ROLES,
