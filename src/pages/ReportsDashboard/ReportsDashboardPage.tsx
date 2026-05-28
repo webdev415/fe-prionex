@@ -31,7 +31,6 @@ import {
   useContactRateModal,
   useSMSSentModal,
   useMessagesSentModal,
-  useCommunicationStatistics,
   type Period,
 } from '@/features/report'
 import { PermissionGuard } from '@/components/auth'
@@ -169,15 +168,6 @@ export function ReportsDashboardPage() {
     enabled: showMessagesModal,
     userTimezone,
   })
-
-  const { data: communicationStats } = useCommunicationStatistics({
-    projectId,
-    fromDate: actualDateRange.from,
-    toDate: actualDateRange.to,
-    timezone: userTimezone,
-  })
-
-  const messagesSentKpi = communicationStats?.messagingStatistics.totalSent ?? 0
 
   const isTableLoading = isOperatorLoading || isOperatorFetching
 
@@ -352,12 +342,11 @@ export function ReportsDashboardPage() {
           />
           <KPICard
             title={t('pages.reports.kpi.messagesSent')}
-            value={messagesSentKpi.toString()}
-            change={0}
-            changeType="increase"
+            value={dashboardData.kpis.messagesSent.toString()}
+            change={dashboardData.kpis.messagesTrend.change}
+            changeType={dashboardData.kpis.messagesTrend.changeType}
             icon="message"
             period={selectedPeriod}
-            hideTrend
             onViewDetails={() => setShowMessagesModal(true)}
           />
           <KPICard

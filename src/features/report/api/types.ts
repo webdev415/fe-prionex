@@ -64,10 +64,19 @@ export interface BackendTopOperator {
 /**
  * Dashboard KPIs from backend
  */
+export interface MessagingSentKPIValue {
+  value: number
+  delivery_rate: number
+  trend: KPITrend
+  delivered?: number
+  failed?: number
+}
+
 export interface BackendDashboardKPIs {
   calls_made: KPIValue
   contact_rate: KPIValue
-  sms_sent: KPIValue
+  sms_sent: MessagingSentKPIValue
+  messages_sent: MessagingSentKPIValue
   payments_collected: PaymentKPIValue
 }
 

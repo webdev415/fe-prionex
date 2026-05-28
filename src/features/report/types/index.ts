@@ -50,6 +50,7 @@ export interface DashboardKPIsUI {
   callsMade: number
   contactRate: number
   smsSent: number
+  messagesSent: number
   paymentsCollected: number
   paymentsCount: number
   paymentsVerified: number
@@ -61,6 +62,7 @@ export interface DashboardKPIsUI {
   callsTrend: KPITrendUI
   contactRateTrend: KPITrendUI
   smsTrend: KPITrendUI
+  messagesTrend: KPITrendUI
   paymentsTrend: KPITrendUI
 }
 
