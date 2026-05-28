@@ -748,14 +748,14 @@ export function ClientDetailPage() {
       // Operators/searchers from assignment history
       operators: (operatorsSection?.operators ?? []).map((o) => ({
         id: o.id,
-        date: formatDate(o.assigned_at ?? undefined),
+        date: formatDateTime(o.assigned_at ?? undefined, userTimezone),
         whoAppointed: o.assigned_by_name ?? '-',
         whoIsResponsible: o.new_employee_name ?? '-',
         note: o.assignment_reason ?? '-',
       })),
       searchers: (operatorsSection?.searchers ?? []).map((s) => ({
         id: s.id,
-        date: formatDate(s.assigned_at ?? undefined),
+        date: formatDateTime(s.assigned_at ?? undefined, userTimezone),
         whoAppointed: s.assigned_by_name ?? '-',
         whoIsResponsible: s.new_searcher_name ?? '-',
         note: s.assignment_reason ?? '-',
@@ -832,6 +832,7 @@ export function ClientDetailPage() {
     responsibleEmployeeDepartment,
     showHiddenTags,
     t,
+    userTimezone,
   ])
 
   const displayedActivities = useMemo(
