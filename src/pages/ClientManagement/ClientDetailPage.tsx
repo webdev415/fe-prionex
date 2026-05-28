@@ -173,11 +173,23 @@ export function ClientDetailPage() {
   useEffect(() => {
     if (!id) return
     const numericId = Number(id)
+    // Client IDs are PostgreSQL INTEGER (int32, max 2_147_483_647) across all
+    // services that consume this ID downstream. An out-of-range value (e.g.
+    // a 13-digit Date.now()-style value from a stale URL or a paste error)
+    // would 500 every backend call AND poison the analytics tracking_events
+    // pipeline (its client_id column is also int32). Guard at the boundary:
+    // bounce the operator back to the list with a toast instead of letting
+    // the bad value spread.
+    if (!Number.isFinite(numericId) || numericId < 1 || numericId > 2147483647) {
+      toast.error(`Invalid client ID: ${id}`)
+      navigate('/dashboard/clients', { replace: true })
+      return
+    }
     trackEvent('client_card_open', {
-      clientId: Number.isFinite(numericId) ? numericId : null,
+      clientId: numericId,
       meta: { client_id: id },
     })
-  }, [id, trackEvent])
+  }, [id, trackEvent, navigate])
 
   // Returns true if the value looks like a Ukrainian phone number,
   // regardless of the contact type's isPhone flag
@@ -4118,6 +4130,7 @@ export function ClientDetailPage() {
             handleCloseCallModal()
             setSelectedPhoneForCall('')
           }}
+          clientId={client.id}
           clientName={client.fullName}
           phoneNumber={selectedPhoneForCall || client.phones?.[0]?.number || ''}
           callId={currentCallId}

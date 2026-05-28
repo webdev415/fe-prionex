@@ -1,6 +1,10 @@
 import { useEffect, useRef } from 'react'
 import { io, Socket } from 'socket.io-client'
 import { useQueryClient } from '@tanstack/react-query'
+import {
+  getClientIdFromCallEventData,
+  invalidateCallRelatedQueries,
+} from '../utils/queryInvalidation'
 
 const WS_URL =
   import.meta.env.VITE_WS_URL !== undefined ? import.meta.env.VITE_WS_URL : 'http://localhost:8005'
@@ -9,8 +13,11 @@ interface CallStateChangedEventData {
   call_id: string
   state: string
   customer_number: string
+  client_id?: unknown
+  clientId?: unknown
   total_duration?: number
   hangup_cause?: number
+  [key: string]: unknown
 }
 
 interface CallStateChangedEvent {
@@ -23,7 +30,11 @@ interface CallStateChangedEvent {
  * Hook to listen for real-time call state updates via Socket.IO
  * and invalidate the query cache to trigger re-fetching of call details
  */
-export function useCallStateUpdates(agentExtension: string | null, callId: string | null) {
+export function useCallStateUpdates(
+  agentExtension: string | null,
+  callId: string | null,
+  clientId?: number | null
+) {
   const socketRef = useRef<Socket | null>(null)
   const queryClient = useQueryClient()
 
@@ -68,11 +79,10 @@ export function useCallStateUpdates(agentExtension: string | null, callId: strin
         // Invalidate the call details query to trigger immediate re-fetch
         queryClient.invalidateQueries({ queryKey: ['callDetails', callId] })
 
-        // Also invalidate call/SMS history on client detail page
-        queryClient.invalidateQueries({
-          queryKey: ['clients', 'detail'],
-          exact: false,
-        })
+        invalidateCallRelatedQueries(
+          queryClient,
+          clientId ?? getClientIdFromCallEventData(eventData)
+        )
       }
     }
 
@@ -82,5 +92,5 @@ export function useCallStateUpdates(agentExtension: string | null, callId: strin
     return () => {
       socket.off('call.state_changed', handleCallStateChanged)
     }
-  }, [agentExtension, callId, queryClient])
+  }, [agentExtension, callId, clientId, queryClient])
 }

@@ -35,6 +35,7 @@ export type CallStatus = 'answered' | 'missed' | 'rejected'
 export interface CallDialogModalProps {
   open: boolean
   onClose: () => void
+  clientId?: number | null
   clientName: string
   phoneNumber: string
   initialCallType?: CallType
@@ -86,6 +87,7 @@ function isValidManualDialPhone(digits: string): boolean {
 export function CallDialogModal({
   open,
   onClose,
+  clientId,
   clientName,
   phoneNumber,
   initialCallType = 'white-line',
@@ -119,10 +121,10 @@ export function CallDialogModal({
 
   // Listen for real-time call state updates via Socket.IO
   const agentExtension = authUser?.asterisk_extension || null
-  useCallStateUpdates(agentExtension, callId || null)
+  useCallStateUpdates(agentExtension, callId || null, clientId)
 
   // Hangup mutation
-  const hangupMutation = useHangupCall()
+  const hangupMutation = useHangupCall(clientId)
   const callDetailsState = callDetails?.state
 
   // Track modal open state
@@ -499,6 +501,7 @@ export function CallDialogModal({
       phoneNumber,
       // Separate field for what the minimized-bubble tooltip should show.
       displayPhone,
+      clientId,
       callId: overrides?.callId ?? callId ?? null,
       callState: overrides?.callState ?? callState,
       callType,

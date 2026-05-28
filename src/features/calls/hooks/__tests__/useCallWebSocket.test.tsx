@@ -146,7 +146,7 @@ describe('useCallWebSocket', () => {
         queryKey: ['callDetails', 'CALL-123'],
       })
       expect(invalidateQueriesSpy).toHaveBeenCalledWith({
-        queryKey: ['clients', 'detail'],
+        queryKey: ['callHistory'],
         exact: false,
       })
     })

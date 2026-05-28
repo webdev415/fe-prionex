@@ -555,6 +555,15 @@ export interface AssignmentHistoryResponse {
   current_searcher?: { id: number; name: string } | null
 }
 
+export interface AssignmentHistoryCombinedResponse {
+  employee_history: AssignmentHistoryEntry[]
+  searcher_history: AssignmentHistoryEntry[]
+  total_employee: number
+  total_searcher: number
+  current_employee?: { id: number; name: string } | null
+  current_searcher?: { id: number; name: string } | null
+}
+
 // --- Payment Response Types ---
 
 export interface PaymentResponse {
