@@ -6,7 +6,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { useAuth } from '@/features/auth'
@@ -73,6 +73,18 @@ export function UserManagementPage() {
   const [openDropdownUserId, setOpenDropdownUserId] = useState<number | null>(null)
   const [resetPasswordUser, setResetPasswordUser] = useState<ApiUser | null>(null)
   const [toggleTwoFactorUser, setToggleTwoFactorUser] = useState<ApiUser | null>(null)
+  const [searchParams, setSearchParams] = useSearchParams()
+
+  // Deep-link: open a user's detail when arrived with ?user_id=<id> (e.g. from
+  // an Audit Log Entity link). Closing the modal clears the param.
+  useEffect(() => {
+    const raw = searchParams.get('user_id')
+    if (!raw) return
+    const id = Number(raw)
+    if (Number.isFinite(id) && id > 0) {
+      setViewUserId(id)
+    }
+  }, [searchParams])
 
   // Close dropdown when screen size crosses breakpoint (in either direction)
   useEffect(() => {
@@ -106,6 +118,11 @@ export function UserManagementPage() {
 
   const handleCloseView = () => {
     setViewUserId(null)
+    if (searchParams.has('user_id')) {
+      const next = new URLSearchParams(searchParams)
+      next.delete('user_id')
+      setSearchParams(next, { replace: true })
+    }
   }
 
   const handleCloseEdit = () => {

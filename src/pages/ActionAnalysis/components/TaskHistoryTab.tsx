@@ -20,6 +20,7 @@ import {
   toTaskHistoryAnalyticsQuery,
   type TaskHistoryBarState,
 } from '../lib/taskHistoryUrlState'
+import { useScopedUserIds } from '../lib/scope'
 import { TaskHistoryAnalytics } from './TaskHistoryAnalytics'
 import { TaskHistoryFiltersBar } from './TaskHistoryFiltersBar'
 import { TaskHistoryTable } from './TaskHistoryTable'
@@ -50,18 +51,31 @@ export function TaskHistoryTab() {
     )
   }, [searchParams, setSearchParams, userTimezone])
 
-  // Department picker resolves to a user_id list on the frontend (same as
-  // TaHistoryTab) — keeps the backend filter shape uniform.
+  // Page-level scope (KAN-506) decides the base user_ids[]; the tab-level
+  // Department/Employee pickers refine within that scope. Scope locks out the
+  // pickers entirely when narrower than "all" (handled in the filter bar).
+  const scoped = useScopedUserIds(operators)
+
   const assignedToUserIds = useMemo<number[] | undefined>(() => {
+    // Tab-level Department refinement still applies as long as the scope
+    // allows it (scope=all and scope=department both leave the employee
+    // picker editable, and scope=department additionally locks Department to
+    // the current user's own — handled inside the filter bar).
     if (barState.departmentId != null) {
       const ids = operators
         .filter((o) => o.department_id === barState.departmentId)
         .map((o) => o.id)
-      return ids.length ? ids : []
+      const intersected =
+        scoped.userIds == null ? ids : ids.filter((id) => scoped.userIds!.includes(id))
+      return intersected.length ? intersected : []
     }
-    if (barState.employeeIds.length > 0) return barState.employeeIds
-    return undefined
-  }, [barState.departmentId, barState.employeeIds, operators])
+    if (barState.employeeIds.length > 0) {
+      if (scoped.userIds == null) return barState.employeeIds
+      const scopeSet = new Set(scoped.userIds)
+      return barState.employeeIds.filter((id) => scopeSet.has(id))
+    }
+    return scoped.userIds
+  }, [barState.departmentId, barState.employeeIds, operators, scoped.userIds])
 
   const createdByIn = useMemo<number[] | undefined>(
     () => (barState.authorIds.length > 0 ? barState.authorIds : undefined),
@@ -69,7 +83,8 @@ export function TaskHistoryTab() {
   )
 
   const isDeptEmpty =
-    barState.departmentId != null && (assignedToUserIds == null || assignedToUserIds.length === 0)
+    (barState.departmentId != null || scoped.isEmptyResolution) &&
+    (assignedToUserIds == null || assignedToUserIds.length === 0)
 
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
@@ -155,6 +170,7 @@ export function TaskHistoryTab() {
         onApply={handleApply}
         onClear={handleClear}
         userTimezone={userTimezone}
+        scope={scoped}
       />
 
       <div className="text-sm text-gray-700">

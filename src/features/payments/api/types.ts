@@ -7,6 +7,19 @@ export type PaymentMethod = 'bank_transfer' | 'online_gateway' | 'cash' | 'card'
 
 export type PaymentStatus = 'pending' | 'verified' | 'cancelled'
 
+/**
+ * KAN-507 controlled-vocabulary values written through the operator-facing
+ * record / edit endpoints. The backend keeps `payment_type` Optional on the
+ * wire for back-compat; the FE form makes it required.
+ */
+export type PaymentType = 'payment_by_rr' | 'partial_payment' | 'full_payment'
+
+export const PAYMENT_TYPE_VALUES: readonly PaymentType[] = [
+  'payment_by_rr',
+  'partial_payment',
+  'full_payment',
+]
+
 export interface Payment {
   id: number
   payment_number: string
@@ -25,7 +38,8 @@ export interface Payment {
   fines_paid: string
   payment_method: PaymentMethod
   payment_method_details?: string
-  payment_type?: string
+  payment_type?: PaymentType | null
+  payment_comment?: string | null
   seller_name?: string
   status: PaymentStatus
   payment_date: string // ISO date string
@@ -107,6 +121,12 @@ export interface RecordPaymentRequest {
   related_call_id?: number
   payment_plan_id?: number
   installment_id?: number
+  /**
+   * KAN-507 controlled value. Required at the FE form layer; backend keeps it
+   * Optional on the wire for back-compat. When the picked debt has an open RR,
+   * the form auto-pre-fills `payment_by_rr` (operator can override).
+   */
+  payment_type?: PaymentType
 }
 
 export interface VerifyPaymentRequest {
@@ -120,6 +140,8 @@ export interface CancelPaymentRequest {
 export interface EditPaymentRequest {
   amount?: number
   payment_method?: PaymentMethod
+  /** KAN-507 controlled value; backend rejects anything outside the enum. */
+  payment_type?: PaymentType
   payment_method_details?: string
   bank_reference?: string
   notes?: string

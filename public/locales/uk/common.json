@@ -17,7 +17,9 @@
     "sellers": "Продавці",
     "roles": "Ролі",
     "departments": "Відділи",
+    "teamManagement": "Керування командою",
     "smsTemplates": "SMS Шаблони",
+    "rrNotifications": "Сповіщення РР",
     "targetActions": "Цільові дії",
     "taChains": "Ланцюжки ЦД",
     "taDictionary": "Словник",
@@ -35,7 +37,12 @@
     "scoringConfiguration": "Конфігурація оцінки",
     "systemSettings": "Системні налаштування",
     "tags": "Теги",
-    "actionAnalysis": "Аналіз дій"
+    "actionAnalysis": "Аналіз дій",
+    "messagingSettings": "Налаштування повідомлень",
+    "messagingIntegrations": "Інтеграції повідомлень",
+    "messagingDrafts": "Чернетки повідомлень",
+    "campaignAnalytics": "Аналітика кампаній",
+    "contactTypes": "Типи контактів"
   },
   "search": {
     "placeholder": "Пошук",
@@ -101,8 +108,13 @@
       "tasks": "Завдання",
       "calls": "Дзвінки",
       "tags": "Теги",
-      "taChains": "Ланцюжки ЦД"
+      "taChains": "Ланцюжки ЦД",
+      "rrPayments": "Платежі РР"
     },
+    "daysLeft_one": "через {{count}} день",
+    "daysLeft_few": "через {{count}} дні",
+    "daysLeft_many": "через {{count}} днів",
+    "daysLeft_other": "через {{count}} днів",
     "payment": {
       "pending": "очікує",
       "daysPending_one": "{{count}} день",
@@ -169,7 +181,12 @@
     "deleting": "Видалення...",
     "back": "Назад",
     "yes": "Так",
-    "no": "Ні"
+    "no": "Ні",
+    "save": "Зберегти",
+    "cancel": "Скасувати",
+    "edit": "Редагувати",
+    "close": "Закрити",
+    "optional": "необов'язково"
   },
   "logout": {
     "confirmTitle": "Підтвердити вихід",
@@ -261,6 +278,7 @@
         "allOperators": "Усі оператори",
         "employee": "Співробітник",
         "allEmployees": "Усі співробітники",
+        "blockedSuffix": "(заблоковано)",
         "period": "Період",
         "status": "Статус",
         "minDuration": "Мін. тривалість (с)",
@@ -378,6 +396,51 @@
           "extended": "Продовжено",
           "rejected": "Відхилено",
           "incoming_line_result": "Результат вхідної лінії"
+        },
+        "confirmedAtRangeHeading": "Підтверджено",
+        "confirmedAtFrom": "Від",
+        "confirmedAtTo": "До",
+        "paymentDateRangeHeading": "Дата платежу",
+        "paymentDateFrom": "Від",
+        "paymentDateTo": "До",
+        "selectedCount": "Вибрано: {{count}}",
+        "paymentMethod": "Спосіб оплати",
+        "paymentMethods": {
+          "all": "Усі способи",
+          "bank_transfer": "Банківський переказ",
+          "online_gateway": "Онлайн (посилання)",
+          "cash": "Готівка",
+          "card": "Картка",
+          "other": "Інше"
+        },
+        "paymentStatuses": {
+          "all": "Усі",
+          "pending": "Очікує",
+          "verified": "Підтверджено",
+          "cancelled": "Відхилено"
+        },
+        "paymentType": "Тип платежу",
+        "paymentTypes": {
+          "all": "Усі типи",
+          "payment_by_rr": "Платіж за РР",
+          "partial_payment": "Частковий платіж",
+          "full_payment": "Повний платіж"
+        },
+        "paymentCommentSearch": "Коментар до оплати",
+        "paymentCommentSearchPlaceholder": "Пошук у коментарях…",
+        "amountMin": "Сума від",
+        "amountMax": "Сума до",
+        "amountMinPlaceholder": "0.00",
+        "amountMaxPlaceholder": "напр. 1000.00",
+        "paymentSortOptions": {
+          "recorded_at_desc": "Створено (нові)",
+          "recorded_at_asc": "Створено (старі)",
+          "verified_at_desc": "Підтверджено (нові)",
+          "verified_at_asc": "Підтверджено (старі)",
+          "amount_desc": "Сума (за спаданням)",
+          "amount_asc": "Сума (за зростанням)",
+          "payment_date_desc": "Дата платежу (нові)",
+          "payment_date_asc": "Дата платежу (старі)"
         }
       },
       "columns": {
@@ -410,7 +473,16 @@
         "priority": "Пріоритет",
         "topic": "Тема",
         "dueDate": "Термін (дата)",
-        "dueTime": "Термін (час)"
+        "dueTime": "Термін (час)",
+        "loanNumber": "Номер позики",
+        "loanSaleDate": "Дата продажу позики",
+        "paymentType": "Тип платежу",
+        "paymentComment": "Коментар до оплати",
+        "operator": "Оператор",
+        "createdAt": "Створено",
+        "confirmedAt": "Підтверджено",
+        "amount": "Сума",
+        "paymentMethod": "Спосіб оплати"
       },
       "callType": {
         "incoming": "Вхідний",
@@ -457,7 +529,20 @@
         "title": "Завдання за термінами",
         "subtitle": "Загальна кількість завдань із терміном у поточному діапазоні.",
         "totalLabel": "завдань із терміном",
-        "empty": "Немає завдань із терміном у вибраному діапазоні."
+        "empty": "Немає завдань із терміном у вибраному діапазоні.",
+        "emptyMonth": "Немає завдань із терміном у цьому місяці.",
+        "today": "Сьогодні",
+        "prevMonth": "Попередній місяць",
+        "nextMonth": "Наступний місяць",
+        "weekdayShort": {
+          "mon": "Пн",
+          "tue": "Вт",
+          "wed": "Ср",
+          "thu": "Чт",
+          "fri": "Пт",
+          "sat": "Сб",
+          "sun": "Нд"
+        }
       },
       "errors": {
         "loadFailed": "Не вдалося завантажити дзвінки",
@@ -469,6 +554,7 @@
         "loadScriptAnalyticsFailed": "Не вдалося завантажити аналітику скриптів.",
         "loadTaHistoryFailed": "Не вдалося завантажити історію ЦД",
         "loadTaskHistoryFailed": "Не вдалося завантажити історію завдань",
+        "loadPaymentHistoryFailed": "Не вдалося завантажити історію платежів",
         "departmentNoOperators": "У цьому відділі немає операторів у поточному проєкті.",
         "exportFailed": "Не вдалося експортувати",
         "callNotFound": "Дзвінок не знайдено"
@@ -491,10 +577,26 @@
         "interactions": "Історія взаємодій",
         "taHistory": "Історія ЦД",
         "taskHistory": "Історія завдань",
+        "paymentHistory": "Історія платежів",
         "timeline": "Таймлайн",
         "screenTime": "Екранний час",
         "heatmap": "Теплова карта",
         "scriptAnalytics": "Аналітика скриптів"
+      },
+      "scope": {
+        "label": "Область перегляду",
+        "my": "Мої дії",
+        "group": "Дії групи",
+        "department": "Дії відділу",
+        "all": "Усі дії",
+        "groupComingSoon": "Незабаром"
+      },
+      "paymentHistoryEmpty": "Немає платежів, що відповідають фільтрам",
+      "paymentHistorySummary": {
+        "totalPayments": "платежів",
+        "totalAmount": "всього",
+        "verified": "підтверджено",
+        "pending": "очікує"
       },
       "timeline": {
         "callId": "ID дзвінка",
@@ -1423,7 +1525,7 @@
             "amount": "Сума",
             "date": "Дата",
             "method": "Спосіб",
-            "paymentType": "Тип платежу",
+            "paymentComment": "Коментар до оплати",
             "type": "Тип",
             "status": "Статус",
             "note": "Примітка"
@@ -1468,7 +1570,8 @@
       "bulkActions": {
         "assignEmployee": "Призначити співробітника",
         "addTags": "Додати теги",
-        "removeTags": "Видалити теги"
+        "removeTags": "Видалити теги",
+        "sendMessage": "Надіслати повідомлення"
       },
       "errorLoading": "Не вдалося завантажити клієнтів",
       "errorOccurred": "Сталася помилка",
@@ -1508,13 +1611,11 @@
         "amountOfDebtRange": "Сума окремого боргу",
         "dateOfSale": "Дата продажу боргу",
         "assignmentDate": "Дата призначення",
-        "promiseDate": "Обіцянка",
-        "callbackDate": "Зворотний дзвінок",
+        "targetActionDate": "Дата цільової дії",
         "interactionCreatedBy": "Створено взаємодію",
         "interactionLoggedDate": "Дата запису взаємодії",
         "selectOperator": "Оберіть оператора",
         "portfolio": "Кредитор/Продавець",
-        "status": "Статус",
         "responsibleEmployee": "Відповідальний співробітник",
         "responsibleSearcher": "Відповідальний пошуковик",
         "selectEmployee": "Виберіть співробітника",
@@ -1528,9 +1629,7 @@
         "days": "днів"
       },
       "statuses": {
-        "new": "Новий",
         "active": "Активний",
-        "closed": "Закритий",
         "inprogress": "В процесі",
         "paid": "Сплачено",
         "defaulted": "Прострочено",
@@ -1543,7 +1642,9 @@
         "sent": "Відправлено",
         "delivered": "Доставлено",
         "failed": "Не вдалося",
-        "pending": "Очікується"
+        "pending": "Очікується",
+        "skipped": "Пропущено",
+        "bounced": "Відхилено"
       },
       "activity": {
         "score": "Оцінка",
@@ -1554,6 +1655,7 @@
         "typeOfCommunication": "Тип комунікації",
         "calls": "Дзвінки",
         "sms": "SMS",
+        "messaging": "Повідомлення",
         "notes": "Примітки",
         "all": "Всі",
         "dateRange": "Діапазон дат",
@@ -1775,6 +1877,65 @@
         "makePayment": "Зробити платіж",
         "payments": "Платежі",
         "writesOff": "Списання",
+        "writeOffModal": {
+          "title": "Списати борг",
+          "chooseALoan": "Оберіть кредит",
+          "chooseALoanPlaceholder": "Виберіть кредит…",
+          "noActiveLoans": "У цього клієнта немає активних кредитів для списання.",
+          "amountPlaceholder": "Сума списання",
+          "balanceHint": "Залишок компонента: {{amount}}",
+          "noBalanceHint": "Немає залишку для списання.",
+          "cancellationDate": "Дата автоматичного скасування",
+          "cancellationDatePlaceholder": "Виберіть дату",
+          "notes": "Примітки",
+          "notesPlaceholder": "Необов'язкова причина або контекст",
+          "totalAmount": "Загальна сума списання",
+          "saveSuccess": "Списання створено.",
+          "components": {
+            "principal": "Основна сума",
+            "interest": "Відсотки",
+            "penalty": "Пеня",
+            "fine": "Штраф",
+            "commission": "Комісія"
+          },
+          "errors": {
+            "cancellationDateInPast": "Дата скасування має бути строго після сьогодні.",
+            "amountMustBePositive": "Сума має бути більшою за нуль.",
+            "noComponentsToWriteOff": "Введіть принаймні одну ненульову суму компонента.",
+            "debtNotFound": "Кредит не знайдено.",
+            "debtNotOpen": "Цей кредит не активний.",
+            "insufficientBalance": "Запитана сума {{requested}} перевищує доступний залишок {{available}}.",
+            "permissionDenied": "У вас немає дозволу на виконання цієї дії."
+          }
+        },
+        "writeOffCancelDialog": {
+          "title": "Скасувати списання",
+          "body": "Скасувати списання {{accrualType}} на суму {{amount}}? Скасування остаточне — запис залишиться в журналі, але перестане впливати на баланси.",
+          "reasonLabel": "Причина",
+          "reasonPlaceholder": "Необов'язково — зберігається на записі",
+          "confirmButton": "Так, скасувати",
+          "cancelSuccess": "Списання скасовано."
+        },
+        "writeOffEditDialog": {
+          "title": "Редагувати списання",
+          "immutabilityNote": "Можна редагувати лише дату скасування та примітки. Щоб змінити суму чи тип нарахування, скасуйте та створіть заново.",
+          "saveSuccess": "Списання оновлено."
+        },
+        "writeOffSection": {
+          "title": "Списання за цим кредитом",
+          "tabActive": "Активні",
+          "tabCancelled": "Скасовані",
+          "tabLegacy": "Архів",
+          "loadError": "Не вдалося завантажити списання.",
+          "noActiveEntries": "Немає активних списань за цим кредитом.",
+          "noCancelledEntries": "Немає скасованих списань за цим кредитом.",
+          "expiresOn": "Діє до",
+          "createdBy": "ким",
+          "cancellationSource": {
+            "manual": "Скасовано вручну",
+            "auto": "Автоматичне скасування за датою"
+          }
+        },
         "paymentToPrimaryCreditor": "Платіж основному кредитору",
         "operators": "Оператори",
         "searchers": "Пошуковики",
@@ -1806,6 +1967,12 @@
         "latestCalls": "Останні дзвінки",
         "latestSms": "Останні SMS",
         "latestCallsAndSms": "Останні дзвінки та SMS",
+        "latestMessages": "Останні повідомлення",
+        "sendMessage": "Надіслати повідомлення",
+        "totalMessages": "Усього повідомлень",
+        "noMessagingHistory": "Історія повідомлень для цього клієнта ще відсутня",
+        "noCallSmsHistory": "Ще немає дзвінків, SMS або історії повідомлень для цього клієнта",
+        "exportMessagingCsvFailed": "Не вдалося експортувати історію повідомлень",
         "tabs": {
           "personal": "Особисте",
           "work": "Робота",
@@ -2088,6 +2255,92 @@
           "smsFailedDuplicate": "Дублюване повідомлення відхилено провайдером. Змініть текст і спробуйте ще раз.",
           "sendSMS": "Відправити SMS"
         },
+        "sendMessage": {
+          "title": "Надіслати повідомлення — {{clientName}}",
+          "channel": "Канал",
+          "service": "Сервіс",
+          "servicePlaceholder": "Оберіть сервіс",
+          "loadingIntegrations": "Завантаження інтеграцій...",
+          "noChannels": "Немає доступних увімкнених каналів",
+          "noIntegrations": "Немає увімкнених інтеграцій для цього каналу",
+          "recipient": "Отримувач",
+          "clientEmail": "Email клієнта",
+          "clientPhoneSms": "Телефон клієнта (SMS)",
+          "clientPhoneViber": "Телефон клієнта (Viber)",
+          "noEmail": "У клієнта не вказано email.",
+          "noPhone": "У клієнта не вказано номер телефону.",
+          "selectPhone": "Оберіть номер телефону",
+          "workPhone": "робочий",
+          "quotaStatus": "{{sent}} / {{limit}} повідомлень сьогодні",
+          "quotaExceeded": "Денний ліміт досягнуто ({{limit}} / {{limit}}). Надсилання неможливе.",
+          "quotaExceededHint": "Денний ліміт повідомлень для цього отримувача вичерпано",
+          "draft": "Чернетка",
+          "draftPlaceholder": "Оберіть чернетку",
+          "loadingDrafts": "Завантаження чернеток...",
+          "noDraft": "Без чернетки (власний текст)",
+          "senderName": "Ім'я відправника",
+          "senderNamePlaceholder": "CRM Prionex",
+          "subject": "Тема",
+          "subjectPlaceholder": "Нагадування щодо вашого рахунку",
+          "body": "Текст повідомлення",
+          "bodyHint": "Відредагуйте текст перед надсиланням. Змінні на кшталт {{client_name}} підставляються з даних клієнта.",
+          "preview": "Попередній перегляд",
+          "previewTo": "Кому",
+          "previewSender": "Відправник",
+          "previewSubject": "Тема",
+          "previewBody": "Повідомлення",
+          "send": "Надіслати повідомлення",
+          "toastQueued": "Повідомлення поставлено в чергу"
+        },
+        "viewMessage": {
+          "title": "Деталі повідомлення",
+          "source": "Джерело",
+          "launchedBy": "Запустив",
+          "destination": "Отримувач",
+          "status": "Статус",
+          "subject": "Тема",
+          "timeline": "Часова шкала доставки",
+          "sentAt": "Надіслано",
+          "deliveredAt": "Доставлено",
+          "body": "Повідомлення",
+          "failure": "Деталі помилки",
+          "failedAt": "Час помилки",
+          "sourceSingle": "Одиночне",
+          "sourceBulk": "Масове"
+        },
+        "bulkSendMessage": {
+          "title": "Надіслати повідомлення {{count}} клієнтам",
+          "selectedClients": "Попередній перегляд обраних клієнтів",
+          "recipientCount": "{{count}} отримувачів отримають це повідомлення",
+          "filteredSelectAllHint": "Усі клієнти за поточним пошуком і фільтрами включені (на всіх сторінках).",
+          "andMore": "та ще {{count}} клієнтів",
+          "campaignName": "Назва кампанії",
+          "campaignNamePlaceholder": "Нагадування про оплату за травень",
+          "defaultCampaignName": "Масова кампанія {{channel}} — {{date}}",
+          "channel": "Канал",
+          "service": "Сервіс",
+          "servicePlaceholder": "Оберіть сервіс",
+          "loadingIntegrations": "Завантаження інтеграцій...",
+          "noChannels": "Немає доступних увімкнених каналів",
+          "noServices": "Немає увімкнених інтеграцій для цього каналу",
+          "draft": "Чернетка",
+          "draftPlaceholder": "Оберіть чернетку",
+          "loadingDrafts": "Завантаження чернеток...",
+          "noDraft": "Без чернетки (власний текст)",
+          "noDrafts": "Немає чернеток для цього каналу",
+          "customMessage": "Власний текст",
+          "bodyHint": "Змінні на кшталт {{client_name}} підставляються для кожного отримувача під час надсилання.",
+          "draftPreview": "Попередній перегляд",
+          "draftPreviewHint": "Змінні на кшталт {{client_name}} та {{debt_amount}} показані як у шаблоні. Кожен отримувач отримає повідомлення зі своїми даними під час надсилання.",
+          "previewSubject": "Тема",
+          "previewSender": "Відправник",
+          "previewBody": "Повідомлення",
+          "launch": "Запустити кампанію",
+          "resolveFailed": "Не вдалося завантажити повний список клієнтів для кампанії.",
+          "noRecipients": "Немає отримувачів за поточним вибором.",
+          "recipientCap": "Буде включено лише перших {{cap}} отримувачів.",
+          "campaignLaunched": "Кампанію {{code}} запущено"
+        },
         "viewSMS": {
           "title": "Переглянути SMS",
           "dateTime": "Дата/Час",
@@ -2192,6 +2445,9 @@
           "last4DigitsMustBe4": "Останні 4 цифри повинні бути рівно 4 числами",
           "paymentMethodDetails": "Деталі способу оплати",
           "paymentMethodDetailsPlaceholder": "Введіть додаткові деталі оплати (необов'язково)",
+          "paymentTypeLabel": "Тип платежу",
+          "paymentTypePlaceholder": "Виберіть тип платежу",
+          "paymentTypeRequired": "Тип платежу обовʼязковий",
           "impactPreview": "Попередній перегляд впливу",
           "currentTotalDebt": "Поточний загальний борг:",
           "paymentAmountLabel": "Сума платежу:",
@@ -2482,6 +2738,12 @@
         "summary": {
           "totalVerified": "Всього підтверджено:",
           "pendingVerification": "Очікує підтвердження:"
+        },
+        "verifiedByContract": {
+          "title": "Підтверджені платежі за договором",
+          "contract": "Договір №{{number}}",
+          "payments": "{{count}} платежів",
+          "payments_one": "1 платіж"
         },
         "noPaymentHistory": "Історія платежів не знайдена",
         "failedToLoadClient": "Не вдалося завантажити клієнта",
@@ -2777,7 +3039,8 @@
         "selectTA": "Оберіть ЦД",
         "delayMinutes": "Затримка (хв)",
         "required": "Обов'язково",
-        "notInPast": "Дата не може бути в минулому"
+        "notInPast": "Дата не може бути в минулому",
+        "showClosedCredits": "Показувати закриті кредити"
       },
       "modals": {
         "create": {
@@ -3021,11 +3284,39 @@
       "addButton": "Додати шаблон",
       "chainFallback": "Ланцюжок #{{id}}",
       "taFallback": "ЦД #{{id}}",
+      "departmentFallback": "Відділ #{{id}}",
       "presetChip": "{{label}}: {{value}}",
+      "departments": "Відділи",
+      "departmentsRequired": "Оберіть щонайменше один відділ.",
       "toasts": {
         "added": "Шаблон додано",
         "removed": "Шаблон вилучено"
       }
+    },
+    "rrNotifications": {
+      "title": "Сповіщення РР",
+      "description": "Налаштуйте нагадування у дзвіночку для відповідального оператора перед кожним запланованим платежем за угодою про реструктуризацію. Надсилаються системою щодня.",
+      "enable": "Увімкнути сповіщення РР",
+      "enableHint": "Коли вимкнено, нові нагадування не надсилаються — наявні залишаються у дзвіночку.",
+      "daysBefore": "Днів до дати платежу",
+      "daysBeforeHint": "Додайте одне або кілька значень (1–365). На кожне значення — окреме нагадування.",
+      "daysChip": "{{n}} днів",
+      "daysRequired": "Додайте хоча б одне значення.",
+      "template": "Текст сповіщення",
+      "variablesDetected": "Виявлені змінні",
+      "availableVariables": "Доступні змінні",
+      "clickToInsert": "Натисніть, щоб вставити",
+      "removeVariable": "Видалити одне входження",
+      "removeHint": "Натискайте × — за раз видаляється одне входження. Для точних правок редагуйте текст напряму.",
+      "variables": {
+        "clientName": "Повне ім'я клієнта",
+        "amount": "Сума запланованого платежу",
+        "dueDate": "Запланована дата платежу",
+        "daysLeft": "Днів залишилось до дати платежу"
+      },
+      "preview": "Попередній перегляд",
+      "saved": "Збережено",
+      "maxDaysReached": "Максимум 10 значень"
     },
     "documentGeneration": {
       "title": "Генерація документів",
@@ -3658,7 +3949,7 @@
         "quickRanges": "Швидкі діапазони",
         "today": "Сьогодні",
         "yesterday": "Вчора",
-        "last7": "Останні 7",
+        "last7": "Останні 7 днів",
         "last30": "Останні 30 днів",
         "selectEmployee": "Виберіть співробітника",
         "allTypes": "Всі типи",
@@ -3735,6 +4026,38 @@
           "ipAddress": "IP адреса",
           "successStatus": "Статус успіху"
         }
+      }
+    },
+    "contactTypes": {
+      "title": "Типи контактів",
+      "add": "+ Додати тип контакту",
+      "createTitle": "Новий тип контакту",
+      "editTitle": "Редагувати тип контакту",
+      "fieldName": "Назва",
+      "fieldDefaultLine": "Лінія дзвінка за замовчуванням",
+      "fieldSpam": "Дозволити спам",
+      "fieldPrimary": "Показувати як основний телефон",
+      "fieldSort": "Порядок сортування",
+      "white": "Біла",
+      "gray": "Сіра",
+      "hidden": "Приховано",
+      "active": "Активно",
+      "hide": "Приховати",
+      "restore": "Відновити",
+      "filterStatus": "Статус",
+      "filterAll": "Усі",
+      "filterActive": "Активні",
+      "filterHidden": "Приховані",
+      "errorLoading": "Не вдалося завантажити типи контактів",
+      "retry": "Повторити",
+      "columns": {
+        "sortOrder": "Порядок",
+        "name": "Назва",
+        "defaultLine": "Лінія дзвінка",
+        "spamAllowed": "Спам",
+        "primary": "Основний телефон",
+        "status": "Статус",
+        "actions": "Дії"
       }
     },
     "tags": {
@@ -4273,6 +4596,309 @@
       "activateSegment": "Активувати сегмент",
       "deactivateRule": "Деактивувати правило",
       "deactivateSegment": "Деактивувати сегмент"
+    },
+    "messagingCampaigns": {
+      "description": "Переглядайте масові та одиночні кампанії, результати отримувачів і експортуйте доставку.",
+      "empty": "Немає кампаній за поточними фільтрами",
+      "exportFailed": "Не вдалося експортувати отримувачів кампанії",
+      "filters": {
+        "searchLabel": "Пошук",
+        "searchPlaceholder": "Пошук за кампанією, кодом або сервісом",
+        "status": "Статус",
+        "channel": "Канал",
+        "launcher": "Запустив",
+        "allStatuses": "Усі статуси",
+        "allChannels": "Усі канали",
+        "allLaunchers": "Усі запуски",
+        "searchLauncher": "Пошук запускача..."
+      },
+      "status": {
+        "queued": "У черзі",
+        "sending": "Надсилання",
+        "completed": "Завершено",
+        "partially_failed": "Частково не вдалося",
+        "failed": "Не вдалося"
+      },
+      "summary": {
+        "delivered": "доставлено",
+        "resultsLine": "{{delivered}}/{{total}} доставлено"
+      },
+      "cost": {
+        "actual": "Фактично",
+        "estimated": "Оцінка",
+        "partial": "Частково",
+        "unavailable": "—"
+      },
+      "table": {
+        "code": "Код",
+        "name": "Кампанія",
+        "source": "Джерело",
+        "channel": "Канал",
+        "service": "Сервіс",
+        "status": "Статус",
+        "summary": "Результати",
+        "cost": "Вартість",
+        "launchedBy": "Запустив",
+        "launchedAt": "Запущено",
+        "actions": "Дії",
+        "client": "Клієнт",
+        "destination": "Отримувач",
+        "sentAt": "Надіслано",
+        "deliveredAt": "Доставлено",
+        "error": "Помилка"
+      },
+      "actions": {
+        "viewDetails": "Переглянути деталі",
+        "export": "Експорт CSV"
+      },
+      "detail": {
+        "title": "Деталі кампанії",
+        "source": "Джерело",
+        "launchedBy": "Запустив",
+        "launchedAt": "Час запуску",
+        "completedAt": "Час завершення",
+        "cost": "Вартість",
+        "selectionPayload": "Аудиторія",
+        "selectionIds": "{{count}} клієнтів обрано за ID",
+        "selectionFilter": "Клієнти за фільтрами списку",
+        "selectionUnknown": "Інший вибір",
+        "campaignMessage": "Повідомлення кампанії",
+        "draftUsed": "Чернетка",
+        "senderName": "Відправник",
+        "subject": "Тема",
+        "body": "Текст",
+        "recipientResults": "Результати отримувачів",
+        "recipientResultsHint": "Показано останні 100 рядків для цієї кампанії.",
+        "noRecipients": "Результатів для отримувачів ще немає",
+        "stats": {
+          "total": "Усього",
+          "sent": "Надіслано",
+          "delivered": "Доставлено",
+          "failed": "Помилки",
+          "skipped": "Пропущено"
+        },
+        "viber": {
+          "images": "Зображення",
+          "my2UsesFirst": "My2 надсилає перше зображення",
+          "button": "Кнопка"
+        }
+      },
+      "viber": {
+        "richContentTitle": "Розширений контент Viber (My2)",
+        "addImage": "Додати зображення",
+        "imageUrl": "URL зображення",
+        "imageUrlPlaceholder": "https://example.com/image.jpg",
+        "imageUrlHelper": "Публічний HTTPS URL для My2 (обовʼязково).",
+        "imageUploadClick": "Натисніть, щоб завантажити",
+        "imageUploadOrDrop": "або перетягніть файл",
+        "imageUploadConstraints": "JPEG, PNG, GIF, WebP — до 5 МБ",
+        "imageUploadChange": "Натисніть або перетягніть, щоб замінити",
+        "imageTypeError": "Дозволені лише JPEG, PNG, GIF або WebP.",
+        "imageSizeError": "Зображення завелике (макс. {{max}} МБ).",
+        "imageUploading": "Завантаження зображення…",
+        "imageUploadReady": "Зображення готове до відправки",
+        "imageUploadFailed": "Не вдалося завантажити зображення",
+        "imageDeleteFailed": "Не вдалося видалити зображення",
+        "imageDeleted": "Зображення видалено",
+        "imageMultiHint": "Одне зображення на повідомлення Viber.",
+        "imageMaxCount": "Можна додати до {{max}} зображень.",
+        "removeImage": "Видалити зображення",
+        "confirmRemoveDraftImage": "Прибрати зображення з цього повідомлення? У шаблоні чернетки зображення залишиться.",
+        "imageDetached": "Зображення прибрано з цього повідомлення",
+        "addButton": "Додати кнопку",
+        "buttonLabel": "Текст кнопки",
+        "buttonLabelPlaceholder": "Сплатити",
+        "buttonUrl": "URL кнопки",
+        "buttonUrlPlaceholder": "https://example.com/pay"
+      },
+      "csvLaunch": {
+        "open": "Запуск з CSV",
+        "title": "Запуск кампанії з CSV",
+        "subtitle": "Завантажте одержувачів, підготуйте повідомлення та запустіть.",
+        "recipientsSection": "Одержувачі з CSV",
+        "templateHint": "Обовʼязкові стовпці (точний порядок): {{columns}}. Кожен client_id має існувати у вашому проєкті.",
+        "upload": {
+          "sectionTitle": "Завантажити CSV-файл",
+          "descriptionPhone": "CSV зі стовпцями client_id, phone та name (точний порядок)",
+          "descriptionEmail": "CSV зі стовпцями client_id, email та name (точний порядок)",
+          "downloadTemplate": "Завантажити шаблон",
+          "downloading": "Завантаження…",
+          "clickToUpload": "Натисніть, щоб завантажити",
+          "orDragAndDrop": "або перетягніть файл",
+          "constraints": "Лише CSV, макс. 10 МБ, до {{max}} рядків",
+          "validating": "Перевірка CSV…",
+          "selectedFile": "Обраний файл: {{name}}",
+          "errors": {
+            "onlyCsv": "Підтримуються лише CSV-файли.",
+            "fileTooLarge": "Файл перевищує максимальний розмір 10 МБ ({{size}} МБ)."
+          }
+        },
+        "channel": "Канал",
+        "service": "Сервіс",
+        "selectService": "Оберіть сервіс",
+        "downloadTemplate": "Завантажити шаблон",
+        "uploadCsv": "Завантажити CSV",
+        "parsing": "Обробка…",
+        "parseSummary": "{{eligible}} придатних з {{total}} рядків",
+        "campaignName": "Назва кампанії",
+        "customMessage": "Власне повідомлення",
+        "subject": "Тема",
+        "message": "Повідомлення",
+        "launch": "Запустити кампанію",
+        "defaultName": "CSV кампанія {{channel}}",
+        "templateFailed": "Не вдалося завантажити шаблон",
+        "parseFailed": "Не вдалося розібрати CSV"
+      }
+    },
+    "messagingDrafts": {
+      "description": "Керуйте шаблонами текстів для SMS-, Viber- та email-кампаній.",
+      "createTitle": "Створити чернетку",
+      "editTitle": "Редагувати чернетку",
+      "empty": "Немає чернеток за поточними фільтрами",
+      "filters": {
+        "search": "Пошук за назвою або текстом чернетки",
+        "channel": "Канал",
+        "allChannels": "Усі канали"
+      },
+      "table": {
+        "name": "Чернетка",
+        "channel": "Канал",
+        "senderName": "Відправник",
+        "updatedAt": "Оновлено",
+        "actions": "Дії"
+      },
+      "actions": {
+        "newDraft": "Нова чернетка",
+        "view": "Переглянути чернетку"
+      },
+      "form": {
+        "name": "Назва чернетки",
+        "namePlaceholder": "Нагадування про оплату",
+        "channel": "Канал",
+        "senderName": "Ім'я відправника",
+        "senderNamePlaceholder": "CRM Prionex",
+        "senderNameEmailPlaceholder": "CRM Prionex Support",
+        "subject": "Тема",
+        "subjectPlaceholder": "Нагадування щодо вашого рахунку",
+        "subjectRequiredError": "Тема обов'язкова для email-чернеток.",
+        "body": "Текст повідомлення",
+        "bodyRequired": "Текст повідомлення обов'язковий.",
+        "bodyTooLong": "Текст перевищує ліміт {{max}} символів для {{channel}}.",
+        "charCount": "{{count}} / {{max}}",
+        "bodyPlaceholderSms": "Вітаємо, {{client_name}}! Сума {{debt_amount}} грн має бути сплачена до {{due_date}}. — CRM Prionex",
+        "bodyPlaceholderViber": "Вітаємо, {{client_name}}! Сума {{debt_amount}} грн має бути сплачена до {{due_date}}. Відповідайте, щоб підтвердити.",
+        "bodyPlaceholderEmail": "Шановний(а) {{client_name}},\n\nНагадуємо, що платіж {{debt_amount}} грн за договором {{contract_number}} має бути здійснений до {{due_date}}.\n\nЗ повагою,\nCRM Prionex"
+      },
+      "view": {
+        "title": "Перегляд чернетки",
+        "titleWithName": "Чернетка: {{name}}",
+        "templateBody": "Шаблон повідомлення",
+        "variables": "Змінні в цій чернетці"
+      },
+      "delete": {
+        "title": "Видалити чернетку",
+        "confirmMessage": "Видалити чернетку «{{name}}»?",
+        "cannotUndo": "Цю дію не можна скасувати",
+        "permanentRemoval": "Чернетку буде видалено назавжди."
+      },
+      "toasts": {
+        "created": "Чернетку створено",
+        "updated": "Чернетку оновлено",
+        "deleted": "Чернетку видалено"
+      }
+    },
+    "messagingIntegrations": {
+      "description": "Налаштуйте облікові дані провайдерів, увімкніть канали для кожного сервісу та перевірте стан підключення.",
+      "channelToggleAria": "Увімкнути канал {{channel}}",
+      "channelToggleHint": "Цими перемикачами вмикайте або вимикайте канали, які підтримує цей провайдер.",
+      "providerNotImplemented": "Живе API-підключення для цього провайдера ще недоступне. Збережіть облікові дані на майбутнє; тест і надсилання повідомлень вимкнено.",
+      "testDisabledHint": "Введіть і збережіть повні облікові дані для підтримуваного провайдера перед тестуванням.",
+      "table": {
+        "channels": "Канали",
+        "lastTested": "Останнє тестування"
+      },
+      "actions": {
+        "test": "Тест",
+        "configure": "Налаштувати"
+      },
+      "form": {
+        "credentials": "Облікові дані",
+        "editCredentials": "Редагувати облікові дані",
+        "storedValuePlaceholder": "Збережено ({{hint}}) — залиште порожнім, щоб не змінювати",
+        "staticConfigHint": "URL API та callback налаштовує адміністратор у середовищі сервера, не тут."
+      },
+      "status": {
+        "configured": "Налаштовано",
+        "error": "Помилка",
+        "unconfigured": "Не налаштовано",
+        "not_configured": "Не налаштовано"
+      },
+      "services": {
+        "turbosms": "TurboSMS",
+        "omnicell": "OmniCell",
+        "vodafone_obm": "Vodafone OBM",
+        "my2_viber": "My2 Viber",
+        "intel_tele": "Intel-Tele.com"
+      },
+      "credentials": {
+        "turbosms": {
+          "api_key": { "label": "API-ключ" },
+          "sender": { "label": "Відправник" }
+        },
+        "omnicell": {
+          "username": { "label": "Ім'я користувача" },
+          "password": { "label": "Пароль" },
+          "sender": { "label": "SMS-відправник (альфа-ім'я)" }
+        },
+        "vodafone_obm": {
+          "username": {
+            "label": "Логін OBM (Налаштування → Логіни)",
+            "placeholder": "Логін юридичної особи або телефон/e-mail, якщо кабінет дозволяє"
+          },
+          "password": { "label": "Пароль кабінету" },
+          "sender": {
+            "label": "Відправник (альфа-ім'я)",
+            "placeholder": "Затверджений відправник, напр. TechnoFin"
+          },
+          "sender_id": {
+            "label": "ID відправника (необов'язково)",
+            "placeholder": "Числовий id з OBM Sender name, напр. 5581072"
+          }
+        },
+        "my2_viber": {
+          "api_key": {
+            "label": "API-токен",
+            "placeholder": "З my2.viber.net.ua → Профіль → API"
+          },
+          "sender": {
+            "label": "Відправник (альфа-ім'я)",
+            "placeholder": "Затверджений Viber-відправник з кабінету, напр. default"
+          }
+        },
+        "intel_tele": {
+          "username": {
+            "label": "Логін кабінету",
+            "placeholder": "напр. fc.technofinance@gmail.com"
+          },
+          "api_key": {
+            "label": "API-ключ / пароль SMTP",
+            "placeholder": "e.intel-tele.com → Автоматизація → API та SMTP (одне значення)"
+          },
+          "from_email": {
+            "label": "Email відправника",
+            "placeholder": "Підтверджений відправник, напр. info@techno-finance.com"
+          },
+          "from_name": { "label": "Ім'я відправника" },
+          "reply_to_email": { "label": "Email для відповіді" },
+          "reply_to_name": { "label": "Ім'я для відповіді" }
+        }
+      },
+      "toasts": {
+        "saved": "Інтеграцію збережено",
+        "updated": "Інтеграцію оновлено",
+        "deleted": "Інтеграцію видалено",
+        "testCompleted": "Тест інтеграції завершено"
+      }
     },
     "forbidden": {
       "title": "Доступ заборонено",
