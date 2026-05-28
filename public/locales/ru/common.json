@@ -3588,7 +3588,9 @@
         "permanent": "Бессрочный",
         "ttl": "По времени (TTL)",
         "loanClosure": "До закрытия кредита",
-        "loan_closure": "До закрытия кредита"
+        "loan_closure": "До закрытия кредита",
+        "target_action_date": "Дата целевого действия",
+        "targetActionDate": "Дата целевого действия"
       },
       "protectedWarning": "Для удаления требуется подтверждение руководителя",
       "removalRequests": {

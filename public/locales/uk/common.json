@@ -3826,7 +3826,9 @@
         "permanent": "Безстроковий",
         "ttl": "За часом (TTL)",
         "loanClosure": "До закриття кредиту",
-        "loan_closure": "До закриття кредиту"
+        "loan_closure": "До закриття кредиту",
+        "target_action_date": "Дата цільової дії",
+        "targetActionDate": "Дата цільової дії"
       },
       "protectedWarning": "Для видалення потрібне підтвердження керівника",
       "removalRequests": {
