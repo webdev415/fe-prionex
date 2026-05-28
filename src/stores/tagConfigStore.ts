@@ -220,6 +220,21 @@ export const DEFAULT_AVAILABLE_EVENTS: EventConfig[] = [
     ],
   },
   {
+    value: 'message.sent',
+    label: 'Message sent',
+    fields: [
+      { value: 'campaign_id', label: 'campaign_id', type: 'number' },
+      { value: 'recipient_id', label: 'recipient_id', type: 'number' },
+      { value: 'channel', label: 'channel', type: 'text' },
+      { value: 'service', label: 'service', type: 'text' },
+      { value: 'destination', label: 'destination', type: 'text' },
+      { value: 'external_message_id', label: 'external_message_id', type: 'text' },
+      { value: 'source', label: 'source', type: 'text' },
+      { value: 'draft_id', label: 'draft_id', type: 'number' },
+      { value: 'status', label: 'status', type: 'text' },
+    ],
+  },
+  {
     value: 'call.outcome.updated',
     label: 'Call outcome updated',
     fields: [

@@ -482,3 +482,121 @@ export function useSMSSentModal({
     },
   }
 }
+
+// ============================================================================
+// Messages Sent Modal Hook (messaging-service; parallel to SMS)
+// ============================================================================
+
+export interface MessagesSentModalData {
+  totalSent: number
+  delivered: number
+  failed: number
+  pending: number
+  deliveryRate: number
+  byChannel: { channel: string; count: number }[]
+  topDrafts: { name: string; count: number }[]
+  byOperator: { name: string; messagesSent: number }[]
+}
+
+export interface UseMessagesSentModalParams {
+  projectId: number
+  period: Period
+  enabled?: boolean
+  userTimezone?: string | null
+}
+
+/**
+ * Hook for Messages Sent modal data (messaging statistics + operator breakdown).
+ */
+export function useMessagesSentModal({
+  projectId,
+  period,
+  enabled = true,
+  userTimezone,
+}: UseMessagesSentModalParams) {
+  const { from: fromDate, to: toDate } = getDateRangeForPeriod(period, userTimezone)
+
+  const operatorQuery = useOperatorPerformance({
+    projectId,
+    fromDate,
+    toDate,
+    timezone: userTimezone,
+    enabled,
+  })
+
+  const communicationQuery = useCommunicationStatistics({
+    projectId,
+    fromDate,
+    toDate,
+    timezone: userTimezone,
+    enabled,
+  })
+
+  const isLoading = operatorQuery.isLoading || communicationQuery.isLoading
+  const error = operatorQuery.error || communicationQuery.error
+
+  const data = useMemo<MessagesSentModalData | undefined>(() => {
+    const messagingStats = communicationQuery.data?.messagingStatistics
+    const operators = operatorQuery.data?.operators || []
+
+    if (!messagingStats && operators.length === 0) {
+      return undefined
+    }
+
+    const totalSent =
+      messagingStats?.totalSent ?? operators.reduce((sum, op) => sum + op.summary.messagesSent, 0)
+
+    let delivered: number
+    let failed: number
+    let pending: number
+    let deliveryRate: number
+
+    if (messagingStats) {
+      delivered = messagingStats.delivered
+      failed = messagingStats.failed
+      pending = Math.max(0, totalSent - delivered - failed)
+      deliveryRate = messagingStats.deliveryRate
+    } else {
+      deliveryRate = 0
+      delivered = 0
+      failed = 0
+      pending = totalSent
+    }
+
+    const byChannel = Object.entries(messagingStats?.byChannel ?? {})
+      .map(([channel, count]) => ({ channel, count }))
+      .sort((a, b) => b.count - a.count)
+
+    const topDrafts = (messagingStats?.topDrafts ?? []).map((draft) => ({
+      name: draft.name,
+      count: draft.count,
+    }))
+
+    return {
+      totalSent,
+      delivered,
+      failed,
+      pending,
+      deliveryRate,
+      byChannel,
+      topDrafts,
+      byOperator: operators
+        .map((op) => ({
+          name: op.operatorName,
+          messagesSent: op.summary.messagesSent,
+        }))
+        .filter((row) => row.messagesSent > 0)
+        .sort((a, b) => b.messagesSent - a.messagesSent),
+    }
+  }, [operatorQuery.data, communicationQuery.data])
+
+  return {
+    data,
+    isLoading,
+    error,
+    refetch: () => {
+      operatorQuery.refetch()
+      communicationQuery.refetch()
+    },
+  }
+}

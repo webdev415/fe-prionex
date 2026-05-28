@@ -28,3 +28,8 @@ export {
   type SMSRecord,
   type SMSStatus,
 } from './SMSSentDetailModal'
+
+export {
+  MessagesSentDetailModal,
+  type MessagesSentDetailModalProps,
+} from './MessagesSentDetailModal'

@@ -3867,6 +3867,12 @@
           "template_name": "SMS template",
           "segments": "SMS segments",
           "gateway_provider": "Gateway provider",
+          "campaign_id": "Campaign ID",
+          "recipient_id": "Recipient ID",
+          "service": "Messaging provider",
+          "destination": "Destination",
+          "external_message_id": "External message ID",
+          "draft_id": "Draft ID",
           "call_id": "Call ID",
           "outcome": "Call outcome",
           "disposition": "Disposition",
@@ -3908,6 +3914,7 @@
           "interaction.created": "Interaction created",
           "payment.verified": "Payment verified",
           "sms.sent": "SMS sent",
+          "message.sent": "Message sent",
           "call.outcome.updated": "Call outcome updated",
           "scoring.completed": "Scoring completed",
           "client.imported": "Client imported",
@@ -4297,6 +4304,7 @@
         "callsMade": "Calls Made",
         "contactRate": "Contact Rate",
         "smsSent": "SMS Sent",
+        "messagesSent": "Messages Sent",
         "paymentsCollected": "Payments Collected",
         "vs": "vs",
         "yesterday": "yesterday",
@@ -4325,6 +4333,7 @@
         "contactRate": "Contact Rate",
         "avgDuration": "Avg Duration",
         "sms": "SMS",
+        "messages": "Messages",
         "payments": "Payments",
         "total": "Total"
       },
@@ -4368,6 +4377,25 @@
         "pending": "Pending",
         "deliveryRate": "Delivery Rate",
         "byOperator": "By Operator"
+      },
+      "messagesModal": {
+        "title": "Messages Sent",
+        "noData": "No data available",
+        "totalSent": "Total Sent",
+        "deliveryStats": "Delivery Statistics",
+        "delivered": "Delivered",
+        "failed": "Failed",
+        "pending": "Pending",
+        "deliveryRate": "Delivery Rate",
+        "byChannel": "By Channel",
+        "topDrafts": "Top Drafts",
+        "byOperator": "By Operator",
+        "messages": "messages",
+        "channels": {
+          "sms": "SMS",
+          "viber": "Viber",
+          "email": "Email"
+        }
       },
       "paymentsModal": {
         "title": "Payments Collected",

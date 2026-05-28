@@ -16,6 +16,7 @@ import {
   CallsMadeDetailModal,
   ContactRateDetailModal,
   SMSSentDetailModal,
+  MessagesSentDetailModal,
 } from './components'
 import { Button } from '@/components/ui/Button'
 import { Icons } from '@/lib/icons'
@@ -29,6 +30,8 @@ import {
   useCallsMadeModal,
   useContactRateModal,
   useSMSSentModal,
+  useMessagesSentModal,
+  useCommunicationStatistics,
   type Period,
 } from '@/features/report'
 import { PermissionGuard } from '@/components/auth'
@@ -67,6 +70,7 @@ export function ReportsDashboardPage() {
   const [showCallsModal, setShowCallsModal] = useState(false)
   const [showContactRateModal, setShowContactRateModal] = useState(false)
   const [showSMSModal, setShowSMSModal] = useState(false)
+  const [showMessagesModal, setShowMessagesModal] = useState(false)
   const [showPaymentsModal, setShowPaymentsModal] = useState(false)
 
   // Filter states - lifted up to trigger API refetch
@@ -158,6 +162,22 @@ export function ReportsDashboardPage() {
     enabled: showSMSModal,
     userTimezone,
   })
+
+  const messagesModalQuery = useMessagesSentModal({
+    projectId,
+    period: selectedPeriod,
+    enabled: showMessagesModal,
+    userTimezone,
+  })
+
+  const { data: communicationStats } = useCommunicationStatistics({
+    projectId,
+    fromDate: actualDateRange.from,
+    toDate: actualDateRange.to,
+    timezone: userTimezone,
+  })
+
+  const messagesSentKpi = communicationStats?.messagingStatistics.totalSent ?? 0
 
   const isTableLoading = isOperatorLoading || isOperatorFetching
 
@@ -331,6 +351,16 @@ export function ReportsDashboardPage() {
             onViewDetails={() => setShowSMSModal(true)}
           />
           <KPICard
+            title={t('pages.reports.kpi.messagesSent')}
+            value={messagesSentKpi.toString()}
+            change={0}
+            changeType="increase"
+            icon="message"
+            period={selectedPeriod}
+            hideTrend
+            onViewDetails={() => setShowMessagesModal(true)}
+          />
+          <KPICard
             title={t('pages.reports.kpi.paymentsCollected')}
             value={dashboardData.kpis.paymentsCollected.toString()}
             change={dashboardData.kpis.paymentsTrend.change}
@@ -391,6 +421,18 @@ export function ReportsDashboardPage() {
           data={smsModalQuery.data}
           isLoading={smsModalQuery.isLoading}
           error={smsModalQuery.error as Error | null}
+        />
+      )}
+
+      {/* Messages Sent Detail Modal (messaging-service) */}
+      {showMessagesModal && (
+        <MessagesSentDetailModal
+          open={showMessagesModal}
+          onClose={() => setShowMessagesModal(false)}
+          period={selectedPeriod}
+          data={messagesModalQuery.data}
+          isLoading={messagesModalQuery.isLoading}
+          error={messagesModalQuery.error as Error | null}
         />
       )}
 

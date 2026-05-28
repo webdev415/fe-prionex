@@ -30,6 +30,7 @@ import type {
   CommunicationStatisticsUI,
   CallStatisticsUI,
   SMSStatisticsUI,
+  MessagingStatisticsUI,
   HourlyBreakdownUI,
   DailyTrendUI,
   AgentPerformanceRow,
@@ -362,6 +363,7 @@ function transformOperator(
       avgCallDuration: op.summary.avg_call_duration,
       avgCallDurationFormatted: formatDuration(op.summary.avg_call_duration),
       smsSent: op.summary.sms_sent,
+      messagesSent: op.summary.messages_sent ?? 0,
       paymentsCollected: parseNumber(op.summary.payments_collected),
       paymentsCount: op.summary.payments_count,
     },
@@ -491,6 +493,7 @@ export function transformToAgentPerformanceRows(
     contactRate: op.summary.contactRate,
     avgDuration: op.summary.avgCallDurationFormatted,
     sms: op.summary.smsSent,
+    messages: op.summary.messagesSent,
     payments: op.summary.paymentsCollected,
   }))
 }
@@ -622,6 +625,7 @@ export function transformCommunicationStatistics(
     },
     callStatistics: transformCallStatistics(data.call_statistics),
     smsStatistics: transformSMSStatistics(data.sms_statistics),
+    messagingStatistics: transformMessagingStatistics(data.messaging_statistics),
     hourlyBreakdown: (data.hourly_breakdown || []).map(transformHourlyBreakdown),
     dailyTrends: (data.daily_trends || []).map(transformDailyTrend),
     generatedAt: data.generated_at,
@@ -705,6 +709,35 @@ function transformSMSStatistics(
     delivered: stats.delivered,
     failed: stats.failed,
     deliveryRate: stats.delivery_rate,
+  }
+}
+
+const EMPTY_MESSAGING_STATISTICS: MessagingStatisticsUI = {
+  totalSent: 0,
+  delivered: 0,
+  failed: 0,
+  deliveryRate: 0,
+  byChannel: {},
+  topDrafts: [],
+}
+
+function transformMessagingStatistics(
+  stats: BackendCommunicationStatisticsResponse['messaging_statistics'] | undefined
+): MessagingStatisticsUI {
+  if (!stats) {
+    return EMPTY_MESSAGING_STATISTICS
+  }
+  return {
+    totalSent: stats.total_sent,
+    delivered: stats.delivered,
+    failed: stats.failed,
+    deliveryRate: stats.delivery_rate,
+    byChannel: stats.by_channel ?? {},
+    topDrafts: (stats.top_drafts ?? []).map((draft) => ({
+      name: draft.name,
+      count: draft.count,
+      cost: draft.cost ?? 0,
+    })),
   }
 }
 

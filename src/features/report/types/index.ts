@@ -121,6 +121,7 @@ export interface OperatorSummaryUI {
   avgCallDuration: number
   avgCallDurationFormatted: string
   smsSent: number
+  messagesSent: number
   paymentsCollected: number
   paymentsCount: number
 }
@@ -221,6 +222,27 @@ export interface SMSStatisticsUI {
 }
 
 /**
+ * Top messaging draft for UI
+ */
+export interface MessagingDraftUI {
+  name: string
+  count: number
+  cost: number
+}
+
+/**
+ * Messaging statistics for UI (parallel to SMSStatisticsUI)
+ */
+export interface MessagingStatisticsUI {
+  totalSent: number
+  delivered: number
+  failed: number
+  deliveryRate: number
+  byChannel: Record<string, number>
+  topDrafts: MessagingDraftUI[]
+}
+
+/**
  * Hourly breakdown entry for UI (hours already converted to local time)
  */
 export interface HourlyBreakdownUI {
@@ -252,6 +274,7 @@ export interface CommunicationStatisticsUI {
   }
   callStatistics: CallStatisticsUI
   smsStatistics: SMSStatisticsUI
+  messagingStatistics: MessagingStatisticsUI
   /** Hourly breakdown with hours converted to local time. Empty when no data. */
   hourlyBreakdown: HourlyBreakdownUI[]
   dailyTrends: DailyTrendUI[]
@@ -272,5 +295,6 @@ export interface AgentPerformanceRow {
   contactRate: number
   avgDuration: string
   sms: number
+  messages: number
   payments: number
 }

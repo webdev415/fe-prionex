@@ -127,6 +127,8 @@ export interface BackendOperatorSummary {
   total_talk_time: number
   avg_call_duration: number
   sms_sent: number
+  /** Messaging-service sends (parallel to legacy sms_sent). */
+  messages_sent?: number
   payments_collected: number | string
   payments_count: number
 }
@@ -242,6 +244,27 @@ export interface BackendSMSStatistics {
 }
 
 /**
+ * Top messaging draft usage row
+ */
+export interface BackendMessagingDraft {
+  name: string
+  count: number
+  cost?: number
+}
+
+/**
+ * Messaging statistics (messaging-service; parallel to sms_statistics)
+ */
+export interface BackendMessagingStatistics {
+  total_sent: number
+  delivered: number
+  failed: number
+  delivery_rate: number
+  by_channel: Record<string, number>
+  top_drafts: BackendMessagingDraft[]
+}
+
+/**
  * Daily communication trend
  */
 export interface BackendDailyTrend {
@@ -261,6 +284,7 @@ export interface BackendCommunicationStatisticsResponse {
   date_range: DateRange
   call_statistics: BackendCallStatistics
   sms_statistics: BackendSMSStatistics
+  messaging_statistics?: BackendMessagingStatistics
   hourly_breakdown?: BackendHourlyBreakdown[]
   daily_trends?: BackendDailyTrend[]
   generated_at: string
