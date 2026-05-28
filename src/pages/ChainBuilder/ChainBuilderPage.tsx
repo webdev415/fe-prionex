@@ -51,6 +51,16 @@ import { useTags } from '@/features/tags/hooks/useTags'
 import { useTargetActions } from '@/features/targetActions/hooks/useTargetActions'
 import type { TargetAction } from '@/features/targetActions/api/types'
 import { useSMSTemplates } from '@/features/sms'
+import {
+  useMessagingDrafts,
+  useMessagingIntegrations,
+} from '@/features/messaging/hooks/useMessaging'
+import {
+  MESSAGING_CHANNELS,
+  getMessagingServiceLabel,
+  isMessagingIntegrationUsable,
+  type MessagingChannel,
+} from '@/features/messaging/api/types'
 import { useAuthStore } from '@/stores/authStore'
 import { getErrorMessage } from '@/lib/errors'
 
@@ -76,7 +86,14 @@ const BLOCKER_TYPES = [
   'tag_present',
   'in_cooldown',
 ]
-const EFFECT_TYPES = ['add_tag', 'remove_tag', 'create_task', 'send_sms', 'add_to_spam']
+const EFFECT_TYPES = [
+  'add_tag',
+  'remove_tag',
+  'create_task',
+  'send_sms',
+  'send_message',
+  'add_to_spam',
+]
 
 function ChainBuilderMainSkeleton() {
   return (
@@ -149,6 +166,16 @@ export function ChainBuilderPage() {
     () => smsTemplatesData?.templates ?? [],
     [smsTemplatesData?.templates]
   )
+  const [messageChannel, setMessageChannel] = useState<MessagingChannel>('sms')
+  const { data: messagingDrafts = [] } = useMessagingDrafts(messageChannel)
+  const { data: messagingIntegrations = [] } = useMessagingIntegrations(!!projectId)
+  const usableMessagingServices = useMemo(
+    () =>
+      messagingIntegrations.filter((integration) =>
+        isMessagingIntegrationUsable(integration, messageChannel)
+      ),
+    [messagingIntegrations, messageChannel]
+  )
   const { data: taskSubjects = [] } = useTaskSubjects()
   const { data: operators = [] } = useOperators(projectId ?? null)
   const taskSubjectOptions = useMemo(
@@ -193,6 +220,27 @@ export function ChainBuilderPage() {
         } else if (key === 'sms_template_id') {
           const tpl = smsTemplates.find((tplItem) => tplItem.id === Number(value))
           parts.push(t('pages.chainBuilder.config.template', { label: tpl?.name ?? `#${value}` }))
+        } else if (key === 'draft_id') {
+          const draft = messagingDrafts.find((d) => d.id === Number(value))
+          parts.push(
+            t('pages.chainBuilder.config.messagingDraft', {
+              label: draft?.name ?? `#${value}`,
+            })
+          )
+        } else if (key === 'channel') {
+          parts.push(
+            t('pages.chainBuilder.config.channel', {
+              label: t(`pages.messaging.channels.${String(value)}`, {
+                defaultValue: String(value),
+              }),
+            })
+          )
+        } else if (key === 'service') {
+          parts.push(
+            t('pages.chainBuilder.config.messagingService', {
+              label: getMessagingServiceLabel(String(value)),
+            })
+          )
         } else if (key === 'source_chain_id' || key === 'blocking_chain_id') {
           const ch = chains.find((cItem) => cItem.id === Number(value))
           parts.push(t('pages.chainBuilder.config.chain', { label: ch?.name ?? `#${value}` }))
@@ -235,7 +283,7 @@ export function ChainBuilderPage() {
       }
       return parts.join(' · ')
     },
-    [tags, smsTemplates, chains, subjectNameById, operatorNameById, chain, t]
+    [tags, smsTemplates, messagingDrafts, chains, subjectNameById, operatorNameById, chain, t]
   )
 
   const typeLabel = useCallback(
@@ -861,6 +909,9 @@ export function ChainBuilderPage() {
                               onValueChange={(v) => {
                                 setNewEffectType(v)
                                 setNewEffectConfig({})
+                                if (v === 'send_message') {
+                                  setMessageChannel('sms')
+                                }
                               }}
                             >
                               <SelectTrigger className="h-8 text-xs">
@@ -917,6 +968,84 @@ export function ChainBuilderPage() {
                                   ))}
                                 </SelectContent>
                               </Select>
+                            )}
+                            {newEffectType === 'send_message' && (
+                              <>
+                                <select
+                                  className="h-8 rounded-md border border-gray-200 px-2 text-xs text-gray-800"
+                                  value={messageChannel}
+                                  onChange={(e) => {
+                                    const ch = e.target.value as MessagingChannel
+                                    setMessageChannel(ch)
+                                    setNewEffectConfig({
+                                      channel: ch,
+                                      service: '',
+                                      draft_id: '',
+                                    })
+                                  }}
+                                >
+                                  {MESSAGING_CHANNELS.map((ch) => (
+                                    <option key={ch} value={ch}>
+                                      {t(`pages.messaging.channels.${ch}`, {
+                                        defaultValue: ch,
+                                      })}
+                                    </option>
+                                  ))}
+                                </select>
+                                {usableMessagingServices.length === 0 ? (
+                                  <div className="rounded-md border border-amber-200 bg-amber-50 px-2 py-1.5 text-[11px] text-amber-700">
+                                    {t('pages.chainBuilder.sendMessageNoIntegration')}
+                                  </div>
+                                ) : (
+                                  <select
+                                    className="h-8 rounded-md border border-gray-200 px-2 text-xs text-gray-800"
+                                    value={newEffectConfig.service ?? ''}
+                                    onChange={(e) =>
+                                      setNewEffectConfig({
+                                        ...newEffectConfig,
+                                        channel: messageChannel,
+                                        service: e.target.value,
+                                        draft_id: '',
+                                      })
+                                    }
+                                  >
+                                    <option value="">
+                                      {t('pages.chainBuilder.placeholders.selectMessagingService')}
+                                    </option>
+                                    {usableMessagingServices.map((integration) => (
+                                      <option key={integration.service} value={integration.service}>
+                                        {getMessagingServiceLabel(integration.service)}
+                                      </option>
+                                    ))}
+                                  </select>
+                                )}
+                                <Select
+                                  value={newEffectConfig.draft_id ?? ''}
+                                  onValueChange={(v) =>
+                                    setNewEffectConfig({
+                                      ...newEffectConfig,
+                                      channel: messageChannel,
+                                      draft_id: v,
+                                    })
+                                  }
+                                  disabled={!newEffectConfig.service}
+                                >
+                                  <SelectTrigger className="h-8 text-xs">
+                                    <SelectValue
+                                      placeholder={t(
+                                        'pages.chainBuilder.placeholders.selectMessagingDraft'
+                                      )}
+                                    />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {messagingDrafts.map((draft) => (
+                                      <SelectItem key={draft.id} value={String(draft.id)}>
+                                        {draft.name}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </>
                             )}
                             {newEffectType === 'create_task' && (
                               <>
@@ -1145,6 +1274,10 @@ export function ChainBuilderPage() {
                                 (newEffectType === 'add_tag' && !ec.tag_id) ||
                                 (newEffectType === 'remove_tag' && !ec.tag_id) ||
                                 (newEffectType === 'send_sms' && !ec.sms_template_id) ||
+                                (newEffectType === 'send_message' &&
+                                  (!ec.service ||
+                                    !ec.draft_id ||
+                                    usableMessagingServices.length === 0)) ||
                                 (newEffectType === 'add_to_spam' &&
                                   (contactSteps.length === 0 || !ec.phone_ref)) ||
                                 (newEffectType === 'create_task' &&
@@ -1172,6 +1305,10 @@ export function ChainBuilderPage() {
                                       if (ec.due_date_ref) cfg.due_date_ref = ec.due_date_ref
                                     } else if (newEffectType === 'add_to_spam') {
                                       cfg.phone_ref = parseInt(ec.phone_ref!, 10)
+                                    } else if (newEffectType === 'send_message') {
+                                      cfg.channel = messageChannel
+                                      cfg.service = ec.service
+                                      cfg.draft_id = parseInt(ec.draft_id!, 10)
                                     }
                                     try {
                                       await createEffect.mutateAsync({

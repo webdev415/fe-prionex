@@ -2848,6 +2848,7 @@
       "effectRemoveTag": "Зняти тег",
       "effectTask": "Завдання: зворотний дзвінок створено",
       "effectSMS": "Подія: SMS надіслано",
+      "effectMessage": "Подія: повідомлення надіслано",
       "effectSpam": "Додано до списку спаму",
       "dictionary": {
         "level1": "Рівень 1 — Тип взаємодії",
@@ -3189,6 +3190,8 @@
         "debtStatus": "Статус (напр. прострочка)",
         "daysCooldown": "Днів (напр. 30)",
         "selectSmsTemplate": "Оберіть SMS-шаблон...",
+        "selectMessagingService": "Оберіть провайдера messaging...",
+        "selectMessagingDraft": "Оберіть чернетку повідомлення...",
         "subjectRequired": "Тема (обов'язково)",
         "searchSubjects": "Пошук тем...",
         "titleOptional": "Заголовок (необов'язково)",
@@ -3244,12 +3247,17 @@
           "remove_tag": "Зняти тег",
           "create_task": "Створити задачу",
           "send_sms": "Надіслати SMS",
+          "send_message": "Надіслати повідомлення (messaging)",
           "add_to_spam": "У спам"
         }
       },
+      "sendMessageNoIntegration": "Немає налаштованої інтеграції messaging для цього каналу. Додайте її в налаштуваннях Messaging.",
       "config": {
         "tag": "тег: {{label}}",
         "template": "шаблон: {{label}}",
+        "messagingDraft": "чернетка: {{label}}",
+        "channel": "канал: {{label}}",
+        "messagingService": "провайдер: {{label}}",
         "chain": "ланцюжок: {{label}}",
         "subject": "тема: {{label}}",
         "user": "користувач: {{label}}",

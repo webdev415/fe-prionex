@@ -2813,6 +2813,7 @@
       "effectRemoveTag": "Remove tag",
       "effectTask": "Task: Callback created",
       "effectSMS": "Event: SMS sent",
+      "effectMessage": "Event: Message sent",
       "effectSpam": "Added to spam list",
       "dictionary": {
         "level1": "Level 1 — Interaction type",
@@ -2936,6 +2937,8 @@
         "debtStatus": "Status (e.g. overdue)",
         "daysCooldown": "Days (e.g. 30)",
         "selectSmsTemplate": "Select SMS template...",
+        "selectMessagingService": "Select messaging provider...",
+        "selectMessagingDraft": "Select message draft...",
         "subjectRequired": "Subject (required)",
         "searchSubjects": "Search subjects...",
         "titleOptional": "Title (optional override)",
@@ -2991,12 +2994,17 @@
           "remove_tag": "Remove tag",
           "create_task": "Create task",
           "send_sms": "Send SMS",
+          "send_message": "Send message (messaging)",
           "add_to_spam": "Add to spam"
         }
       },
+      "sendMessageNoIntegration": "No configured messaging integration for this channel. Set one up under Messaging Settings.",
       "config": {
         "tag": "tag: {{label}}",
         "template": "template: {{label}}",
+        "messagingDraft": "draft: {{label}}",
+        "channel": "channel: {{label}}",
+        "messagingService": "provider: {{label}}",
         "chain": "chain: {{label}}",
         "subject": "subject: {{label}}",
         "user": "user: {{label}}",

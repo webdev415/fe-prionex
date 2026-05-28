@@ -2092,6 +2092,9 @@ export function ChainExecutor({
                             {ef.effect_type === 'send_sms' && (
                               <span>{t('pages.clientChains.effectSMS')}</span>
                             )}
+                            {ef.effect_type === 'send_message' && (
+                              <span>{t('pages.clientChains.effectMessage')}</span>
+                            )}
                             {ef.effect_type === 'add_to_spam' && (
                               <span>{t('pages.clientChains.effectSpam')}</span>
                             )}
