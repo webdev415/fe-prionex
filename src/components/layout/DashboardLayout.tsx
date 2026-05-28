@@ -729,28 +729,35 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         requiredPermission: PERMISSIONS.ACTION_ANALYSIS.VIEW,
       },
       {
-        path: '/dashboard/users',
-        icon: 'user-search-01',
-        label: t('navigation.users'),
-        requiredPermission: PERMISSIONS.USERS.VIEW,
+        path: '/dashboard/team-management',
+        icon: 'user-multiple-02',
+        label: t('navigation.teamManagement', 'Team Management'),
+        subItems: [
+          {
+            path: '/dashboard/team-management/users',
+            label: t('navigation.users'),
+            icon: 'user-search-01',
+            requiredPermission: PERMISSIONS.USERS.VIEW,
+          },
+          {
+            path: '/dashboard/team-management/roles',
+            label: t('navigation.roles'),
+            icon: 'user-circle-02',
+            requiredPermission: PERMISSIONS.SYSTEM.MANAGE_ROLES,
+          },
+          {
+            path: '/dashboard/team-management/departments',
+            label: t('navigation.departments'),
+            icon: 'briefcase-01',
+            requiredPermission: PERMISSIONS.SYSTEM.MANAGE_ROLES,
+          },
+        ],
       },
       {
         path: '/dashboard/sellers',
         icon: 'user-multiple',
         label: t('navigation.sellers'),
         requiredPermission: PERMISSIONS.SELLERS.VIEW,
-      },
-      {
-        path: '/dashboard/roles',
-        icon: 'user-circle-02',
-        label: t('navigation.roles'),
-        requiredPermission: PERMISSIONS.SYSTEM.MANAGE_ROLES,
-      },
-      {
-        path: '/dashboard/departments',
-        icon: 'briefcase-01',
-        label: t('navigation.departments'),
-        requiredPermission: PERMISSIONS.SYSTEM.MANAGE_ROLES,
       },
       {
         path: '/dashboard/audit-logs',
