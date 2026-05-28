@@ -44,7 +44,6 @@ import { useUser } from '@/features/users/hooks/useUser'
 import type {
   PaymentMethod as BackendPaymentMethod,
   PaymentStatus as BackendPaymentStatus,
-  PaymentType,
 } from '@/features/payments/api/types'
 import { PermissionGuard } from '@/components/auth'
 import { PERMISSIONS } from '@/constants/permissions'
