@@ -7,7 +7,7 @@
 export type TagCategory = 'status' | 'risk' | 'behavior' | 'communication' | 'system' | 'custom'
 export type TagVisibility = 'ui' | 'analytics' | 'system' | 'hidden'
 export type TagOrigin = 'system' | 'custom'
-export type ExpiryType = 'permanent' | 'ttl' | 'loan_closure'
+export type ExpiryType = 'permanent' | 'ttl' | 'loan_closure' | 'target_action_date'
 
 // Backward-compatible Tag interface
 export interface Tag {

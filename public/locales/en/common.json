@@ -3735,7 +3735,9 @@
         "permanent": "Permanent",
         "ttl": "Time-based (TTL)",
         "loanClosure": "Until loan closure",
-        "loan_closure": "Until loan closure"
+        "loan_closure": "Until loan closure",
+        "target_action_date": "Target Action Date",
+        "targetActionDate": "Target Action Date"
       },
       "protectedWarning": "Removal requires manager approval",
       "removalRequests": {
