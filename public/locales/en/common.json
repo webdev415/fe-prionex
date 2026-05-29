@@ -761,6 +761,37 @@
           "noCalls": "No recent calls for this operator.",
           "hasRecording": "Recording available",
           "noRecording": "No recording"
+        },
+        "kanban": {
+          "transitionSuccess": "Moved to {{state}}",
+          "transitionFailed": "Could not move the card."
+        },
+        "pendingFeature": {
+          "dependsOn": "This action will be available once {{issue}} ships.",
+          "assignTask": {
+            "title": "Assign a correction task",
+            "description": "Assigns a coaching task to the operator with a due date and reviewable outcome."
+          },
+          "assignMaterial": {
+            "title": "Assign a course or drill",
+            "description": "Pushes training material to the operator and tracks completion on the dashboard."
+          }
+        },
+        "scheduleOneOnOne": {
+          "title": "Schedule 1-on-1",
+          "operator": "Operator",
+          "scheduledAt": "Date and time",
+          "duration": "Duration (minutes)",
+          "notes": "Notes (optional)",
+          "notesPlaceholder": "What do you want to cover in this session?",
+          "submit": "Schedule session",
+          "submitting": "Scheduling…",
+          "success": "1-on-1 scheduled. The operator has been notified.",
+          "errors": {
+            "noOperator": "Select an operator first.",
+            "noDate": "Pick a date and time.",
+            "generic": "Could not schedule the session."
+          }
         }
       },
       "paymentHistoryEmpty": "No payments match the current filters",

@@ -27,12 +27,16 @@ import { PERMISSIONS } from '@/constants/permissions'
  * applicable in later steps) calls the appropriate handler prop.
  */
 export interface QuickActionOverlayProps {
+  onAssignTask?: () => void
   onScheduleOneOnOne?: () => void
+  onAssignMaterial?: () => void
   onRateDialogue?: () => void
 }
 
 export function QuickActionOverlay({
+  onAssignTask,
   onScheduleOneOnOne,
+  onAssignMaterial,
   onRateDialogue,
 }: QuickActionOverlayProps) {
   const { t } = useTranslation('common')
@@ -47,32 +51,12 @@ export function QuickActionOverlay({
   const canAssignMaterial = userPermissions.includes(PERMISSIONS.ACTION_ANALYSIS.VIEW_INBOX)
   const canRateDialogue = userPermissions.includes(PERMISSIONS.ACTION_ANALYSIS.CREATE_SCORECARD)
 
-  const handleAssignTask = () => {
-    setOpen(false)
+  const fallbackToast = () =>
     toast.info(t('pages.actionAnalysis.inbox.quickActions.comingSoon', 'Coming soon'))
-  }
 
-  const handleScheduleOneOnOne = () => {
+  const handleClick = (handler?: () => void) => () => {
     setOpen(false)
-    if (onScheduleOneOnOne) {
-      onScheduleOneOnOne()
-    } else {
-      toast.info(t('pages.actionAnalysis.inbox.quickActions.comingSoon', 'Coming soon'))
-    }
-  }
-
-  const handleAssignMaterial = () => {
-    setOpen(false)
-    toast.info(t('pages.actionAnalysis.inbox.quickActions.comingSoon', 'Coming soon'))
-  }
-
-  const handleRateDialogue = () => {
-    setOpen(false)
-    if (onRateDialogue) {
-      onRateDialogue()
-    } else {
-      toast.info(t('pages.actionAnalysis.inbox.quickActions.comingSoon', 'Coming soon'))
-    }
+    ;(handler ?? fallbackToast)()
   }
 
   if (!canAssignTask && !canScheduleOneOnOne && !canAssignMaterial && !canRateDialogue) {
@@ -93,7 +77,7 @@ export function QuickActionOverlay({
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-72">
         {canAssignTask ? (
-          <DropdownMenuItem onClick={handleAssignTask} className="gap-3 py-2.5">
+          <DropdownMenuItem onClick={handleClick(onAssignTask)} className="gap-3 py-2.5">
             <Icons.Brochure size={20} className="text-primary-600" />
             <div className="flex flex-col">
               <span className="text-sm font-medium">
@@ -110,7 +94,7 @@ export function QuickActionOverlay({
         ) : null}
 
         {canScheduleOneOnOne ? (
-          <DropdownMenuItem onClick={handleScheduleOneOnOne} className="gap-3 py-2.5">
+          <DropdownMenuItem onClick={handleClick(onScheduleOneOnOne)} className="gap-3 py-2.5">
             <Icons.Calendar size={20} className="text-primary-600" />
             <div className="flex flex-col">
               <span className="text-sm font-medium">
@@ -127,7 +111,7 @@ export function QuickActionOverlay({
         ) : null}
 
         {canAssignMaterial ? (
-          <DropdownMenuItem onClick={handleAssignMaterial} className="gap-3 py-2.5">
+          <DropdownMenuItem onClick={handleClick(onAssignMaterial)} className="gap-3 py-2.5">
             <Icons.Activity01 size={20} className="text-primary-600" />
             <div className="flex flex-col">
               <span className="text-sm font-medium">
@@ -144,7 +128,7 @@ export function QuickActionOverlay({
         ) : null}
 
         {canRateDialogue ? (
-          <DropdownMenuItem onClick={handleRateDialogue} className="gap-3 py-2.5">
+          <DropdownMenuItem onClick={handleClick(onRateDialogue)} className="gap-3 py-2.5">
             <Icons.SecurityValidation size={20} className="text-primary-600" />
             <div className="flex flex-col">
               <span className="text-sm font-medium">

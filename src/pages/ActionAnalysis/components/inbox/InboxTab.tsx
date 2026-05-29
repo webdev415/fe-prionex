@@ -11,6 +11,8 @@ import { readInboxState, writeInboxState } from '../../lib/inboxUrlState'
 import { ScopeSelector } from '../ScopeSelector'
 import { InboxViewModeToggle } from './InboxViewModeToggle'
 import { OperatorListView } from './OperatorListView'
+import { OperatorKanbanView } from './OperatorKanbanView'
+import { OperatorGridView } from './OperatorGridView'
 import { PERMISSIONS } from '@/constants/permissions'
 
 /**
@@ -27,9 +29,15 @@ import { PERMISSIONS } from '@/constants/permissions'
  */
 export interface InboxTabProps {
   onOpenRateDialogue?: () => void
+  onOpenScheduleOneOnOne?: () => void
+  onOpenAssignTask?: () => void
 }
 
-export function InboxTab({ onOpenRateDialogue }: InboxTabProps = {}) {
+export function InboxTab({
+  onOpenRateDialogue,
+  onOpenScheduleOneOnOne,
+  onOpenAssignTask,
+}: InboxTabProps = {}) {
   const { t } = useTranslation('common')
   const [searchParams, setSearchParams] = useSearchParams()
   const userPermissions = useAuthStore((s) => s.user?.permissions ?? [])
@@ -95,7 +103,13 @@ export function InboxTab({ onOpenRateDialogue }: InboxTabProps = {}) {
         {canSelectScope ? <ScopeSelector /> : null}
       </div>
 
-      <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(320px,_400px)_1fr]">
+      <div
+        className={
+          inboxState.view === 'kanban' || inboxState.view === 'grid'
+            ? 'grid grid-cols-1 gap-3 xl:grid-cols-[1fr_minmax(320px,_400px)]'
+            : 'grid grid-cols-1 gap-3 lg:grid-cols-[minmax(320px,_400px)_1fr]'
+        }
+      >
         <div>
           {effectiveUserIds.length === 0 ? (
             <div className="rounded-2xl bg-white/60 p-6 text-center text-sm text-gray-500">
@@ -104,6 +118,22 @@ export function InboxTab({ onOpenRateDialogue }: InboxTabProps = {}) {
                 'No operators in the current scope.'
               )}
             </div>
+          ) : inboxState.view === 'kanban' ? (
+            <OperatorKanbanView
+              rows={rows}
+              operators={operators}
+              selectedOperatorId={inboxState.operatorId}
+              onSelect={handleSelectOperator}
+              isLoading={isLoading}
+            />
+          ) : inboxState.view === 'grid' ? (
+            <OperatorGridView
+              rows={rows}
+              operators={operators}
+              selectedOperatorId={inboxState.operatorId}
+              onSelect={handleSelectOperator}
+              isLoading={isLoading}
+            />
           ) : (
             <OperatorListView
               rows={rows}
@@ -124,6 +154,16 @@ export function InboxTab({ onOpenRateDialogue }: InboxTabProps = {}) {
             toDate={inboxState.customToDate}
             onListen={
               onOpenRateDialogue ??
+              (() =>
+                toast.info(t('pages.actionAnalysis.inbox.quickActions.comingSoon', 'Coming soon')))
+            }
+            onPlanOneOnOne={
+              onOpenScheduleOneOnOne ??
+              (() =>
+                toast.info(t('pages.actionAnalysis.inbox.quickActions.comingSoon', 'Coming soon')))
+            }
+            onAssignTask={
+              onOpenAssignTask ??
               (() =>
                 toast.info(t('pages.actionAnalysis.inbox.quickActions.comingSoon', 'Coming soon')))
             }

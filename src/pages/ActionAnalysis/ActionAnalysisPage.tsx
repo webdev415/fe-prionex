@@ -27,6 +27,8 @@ import { ScoresTab } from './components/scores/ScoresTab'
 import { ScopeSelector } from './components/ScopeSelector'
 import { InboxTab } from './components/inbox/InboxTab'
 import { RateDialogueDialog } from './components/inbox/RateDialogueDialog'
+import { ScheduleOneOnOneDialog } from './components/inbox/ScheduleOneOnOneDialog'
+import { PendingFeatureDialog } from './components/inbox/PendingFeatureDialog'
 import { HeaderKpiStrip } from './components/chrome/HeaderKpiStrip'
 import { readInboxState } from './lib/inboxUrlState'
 import { readCallsUrlState, toCallMonitoringQuery } from './lib/callsUrlState'
@@ -201,6 +203,44 @@ export function ActionAnalysisPage() {
     setRateDialogueOpen(true)
   }
 
+  // KAN-413 step 6 — Schedule 1-on-1 dialog, same page-level pattern as
+  // the rate dialogue picker.
+  const [scheduleOneOnOneOpen, setScheduleOneOnOneOpen] = useState(false)
+  const handleOpenScheduleOneOnOne = () => {
+    if (!inboxBarState.operatorId) {
+      toast.info(
+        t(
+          'pages.actionAnalysis.inbox.scheduleOneOnOne.errors.noOperator',
+          'Select an operator first.'
+        )
+      )
+      return
+    }
+    setScheduleOneOnOneOpen(true)
+  }
+
+  // KAN-413 step 9 — Quick Actions #1 (Assign task) + #3 (Assign material).
+  // Real flows depend on KAN-411 and KAN-416. Until those land, both open a
+  // placeholder dialog so trainers see what's coming + the issue gate.
+  const [pendingFeature, setPendingFeature] = useState<null | 'assignTask' | 'assignMaterial'>(null)
+  const handleOpenPendingFeature = (kind: 'assignTask' | 'assignMaterial') => () => {
+    if (!inboxBarState.operatorId) {
+      toast.info(
+        t(
+          'pages.actionAnalysis.inbox.scheduleOneOnOne.errors.noOperator',
+          'Select an operator first.'
+        )
+      )
+      return
+    }
+    setPendingFeature(kind)
+  }
+
+  const focusedOperatorName = useMemo(() => {
+    if (!inboxBarState.operatorId) return undefined
+    return operators.find((o) => o.id === inboxBarState.operatorId)?.full_name
+  }, [inboxBarState.operatorId, operators])
+
   const headerKpisFilters = useMemo(
     () => ({
       user_ids: scoped.userIds,
@@ -277,7 +317,13 @@ export function ActionAnalysisPage() {
       </div>
 
       {showHeaderChrome ? (
-        <HeaderKpiStrip filters={headerKpisFilters} onRateDialogue={handleOpenRateDialogue} />
+        <HeaderKpiStrip
+          filters={headerKpisFilters}
+          onRateDialogue={handleOpenRateDialogue}
+          onScheduleOneOnOne={handleOpenScheduleOneOnOne}
+          onAssignTask={handleOpenPendingFeature('assignTask')}
+          onAssignMaterial={handleOpenPendingFeature('assignMaterial')}
+        />
       ) : null}
 
       <div className="border-b border-gray-200">
@@ -306,7 +352,11 @@ export function ActionAnalysisPage() {
       </div>
 
       {activeTopTab === 'inbox' ? (
-        <InboxTab onOpenRateDialogue={handleOpenRateDialogue} />
+        <InboxTab
+          onOpenRateDialogue={handleOpenRateDialogue}
+          onOpenScheduleOneOnOne={handleOpenScheduleOneOnOne}
+          onOpenAssignTask={handleOpenPendingFeature('assignTask')}
+        />
       ) : activeTopTab === 'scores' ? (
         <ScoresTab />
       ) : activeTopTab === 'calls' ? (
@@ -359,6 +409,34 @@ export function ActionAnalysisPage() {
         open={rateDialogueOpen}
         onClose={() => setRateDialogueOpen(false)}
         operatorId={inboxBarState.operatorId}
+      />
+
+      <ScheduleOneOnOneDialog
+        open={scheduleOneOnOneOpen}
+        onClose={() => setScheduleOneOnOneOpen(false)}
+        operatorId={inboxBarState.operatorId}
+      />
+
+      <PendingFeatureDialog
+        open={pendingFeature === 'assignTask'}
+        onClose={() => setPendingFeature(null)}
+        titleKey="pages.actionAnalysis.inbox.pendingFeature.assignTask.title"
+        titleFallback="Assign a correction task"
+        descriptionKey="pages.actionAnalysis.inbox.pendingFeature.assignTask.description"
+        descriptionFallback="Assigns a coaching task to the operator with a due date and reviewable outcome."
+        dependsOnIssue="KAN-411"
+        operatorName={focusedOperatorName}
+      />
+
+      <PendingFeatureDialog
+        open={pendingFeature === 'assignMaterial'}
+        onClose={() => setPendingFeature(null)}
+        titleKey="pages.actionAnalysis.inbox.pendingFeature.assignMaterial.title"
+        titleFallback="Assign a course or drill"
+        descriptionKey="pages.actionAnalysis.inbox.pendingFeature.assignMaterial.description"
+        descriptionFallback="Pushes training material to the operator and tracks completion on the dashboard."
+        dependsOnIssue="KAN-416"
+        operatorName={focusedOperatorName}
       />
     </div>
   )

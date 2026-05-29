@@ -22,7 +22,9 @@ import { QuickActionOverlay } from './QuickActionOverlay'
 export interface HeaderKpiStripProps {
   filters: HeaderKpisFilters
   enabled?: boolean
+  onAssignTask?: () => void
   onScheduleOneOnOne?: () => void
+  onAssignMaterial?: () => void
   onRateDialogue?: () => void
   onSearchSubmit?: (query: string) => void
 }
@@ -63,7 +65,9 @@ function KpiTile({ label, value, delta, isLoading }: KpiTileProps) {
 export function HeaderKpiStrip({
   filters,
   enabled = true,
+  onAssignTask,
   onScheduleOneOnOne,
+  onAssignMaterial,
   onRateDialogue,
   onSearchSubmit,
 }: HeaderKpiStripProps) {
@@ -137,7 +141,9 @@ export function HeaderKpiStrip({
         />
 
         <QuickActionOverlay
+          onAssignTask={onAssignTask}
           onScheduleOneOnOne={onScheduleOneOnOne}
+          onAssignMaterial={onAssignMaterial}
           onRateDialogue={onRateDialogue}
         />
       </div>

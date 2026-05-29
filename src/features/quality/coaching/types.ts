@@ -109,3 +109,21 @@ export interface OperatorDetailFilters {
   from_date?: string
   to_date?: string
 }
+
+export interface ScheduleOneOnOnePayload {
+  operator_id: number
+  /** ISO 8601 string; backend rejects past times. */
+  scheduled_at: string
+  duration_minutes?: number
+  notes?: string | null
+}
+
+export interface TransitionAssignmentPayload {
+  to_state: AssignmentState
+  notes?: string | null
+}
+
+export interface TakeChargePayload {
+  operator_id: number
+  notes?: string | null
+}

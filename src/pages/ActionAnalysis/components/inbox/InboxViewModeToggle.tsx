@@ -30,7 +30,7 @@ export function InboxViewModeToggle({ value, onChange }: InboxViewModeToggleProp
     >
       {ACTION_ANALYSIS_INBOX_VIEW_MODES.map((mode) => {
         const isActive = mode === value
-        const disabled = mode !== 'inbox' // Kanban + Grid land in steps 7-8.
+        const disabled = false
         const { key, fallback } = VIEW_MODE_LABEL[mode]
         return (
           <button
