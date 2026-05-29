@@ -1,4 +1,6 @@
-import { useEffect, useMemo, useState } from 'react'
+// prod-hide: `useState` removed from this import when the Inbox/Quick-Action
+// state block was wrapped. Restore by adding `, useState` back.
+import { useEffect, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -22,16 +24,19 @@ import { PaymentHistoryTab } from './components/PaymentHistoryTab'
 import { TimelineTab } from './components/TimelineTab'
 import { ScreenTimeTab } from './components/ScreenTimeTab'
 import { HeatmapTab } from './components/HeatmapTab'
-import { ScriptAnalyticsTab } from './components/ScriptAnalyticsTab'
-import { ScoresTab } from './components/scores/ScoresTab'
 import { ScopeSelector } from './components/ScopeSelector'
-import { InboxTab } from './components/inbox/InboxTab'
-import { RateDialogueDialog } from './components/inbox/RateDialogueDialog'
-import { ScheduleOneOnOneDialog } from './components/inbox/ScheduleOneOnOneDialog'
-import { PendingFeatureDialog } from './components/inbox/PendingFeatureDialog'
-import { HeaderKpiStrip } from './components/chrome/HeaderKpiStrip'
-import { WorkspaceBanner } from './components/chrome/WorkspaceBanner'
-import { readInboxState } from './lib/inboxUrlState'
+// prod-hide START — restore by uncommenting these import lines.
+// import { ScriptAnalyticsTab } from './components/ScriptAnalyticsTab'
+// import { ScoresTab } from './components/scores/ScoresTab'
+// import { InboxTab } from './components/inbox/InboxTab'
+// import { RateDialogueDialog } from './components/inbox/RateDialogueDialog'
+// import { ScheduleOneOnOneDialog } from './components/inbox/ScheduleOneOnOneDialog'
+// import { PendingFeatureDialog } from './components/inbox/PendingFeatureDialog'
+// import { HeaderKpiStrip } from './components/chrome/HeaderKpiStrip'
+// import { WorkspaceBanner } from './components/chrome/WorkspaceBanner'
+// prod-hide END
+// prod-hide: readInboxState only used inside the hidden Inbox state block.
+// import { readInboxState } from './lib/inboxUrlState'
 import { readCallsUrlState, toCallMonitoringQuery } from './lib/callsUrlState'
 import {
   readInteractionBarState,
@@ -106,6 +111,31 @@ function isSubTab(value: string | null): value is ActionAnalysisCallsSubTabId {
   return value !== null && (ACTION_ANALYSIS_CALLS_SUB_TABS as string[]).includes(value)
 }
 
+// ─────────────────────────────────────────────────────────────
+// TEMPORARY PROD HIDE (2026-05-29)
+// Surfaces that are NOT in the prod-visible allowlists below are
+// commented out in JSX with `/* prod-hide START */ … /* prod-hide END */`
+// markers. To restore all hidden surfaces:
+//   1. Delete the two arrays below.
+//   2. Remove the corresponding `.filter(...)` calls in `visibleTopTabs`
+//      and `visibleSubTabs`.
+//   3. Drop the prod-hide redirect useEffect.
+//   4. Search this file for "prod-hide START" and uncomment those blocks.
+//   5. Remove `// eslint-disable-next-line @typescript-eslint/no-unused-vars`
+//      on the now-orphaned imports.
+// ─────────────────────────────────────────────────────────────
+const PROD_VISIBLE_TOP_TABS: ActionAnalysisTopTabId[] = ['calls']
+const PROD_VISIBLE_SUB_TABS: ActionAnalysisCallsSubTabId[] = [
+  'list',
+  'interactions',
+  'ta-history',
+  'task-history',
+  'payment-history',
+  'timeline',
+  'screen-time',
+  'heatmap',
+]
+
 export function ActionAnalysisPage() {
   const { t } = useTranslation('common')
   const [searchParams, setSearchParams] = useSearchParams()
@@ -126,6 +156,20 @@ export function ActionAnalysisPage() {
 
   const activeTopTab: ActionAnalysisTopTabId = isTopTab(rawTab) ? rawTab : 'calls'
   const activeSubTab: ActionAnalysisCallsSubTabId = isSubTab(rawSub) ? rawSub : 'list'
+
+  // prod-hide START — redirect bookmarks that point at hidden tabs/sub-tabs.
+  // Restore: delete this useEffect entirely.
+  useEffect(() => {
+    const topTabHidden = !PROD_VISIBLE_TOP_TABS.includes(activeTopTab)
+    const subTabHidden = activeTopTab === 'calls' && !PROD_VISIBLE_SUB_TABS.includes(activeSubTab)
+    if (topTabHidden || subTabHidden) {
+      const next = new URLSearchParams(searchParams)
+      next.set('tab', 'calls')
+      next.set('sub', 'list')
+      setSearchParams(next, { replace: true })
+    }
+  }, [activeTopTab, activeSubTab, searchParams, setSearchParams])
+  // prod-hide END
 
   const activeProjectId = useAuthStore((s) => s.user?.active_project_id)
   const { data: operators = [] } = useOperators(activeProjectId ? Number(activeProjectId) : null)
@@ -176,23 +220,22 @@ export function ActionAnalysisPage() {
   // for users with `view_inbox`; existing tabs remain visible to anyone
   // with `view_action_analysis` since their sub-tab gating is unchanged.
   const visibleTopTabs = useMemo(() => {
-    return ACTION_ANALYSIS_TOP_TABS.filter((tab) => {
-      const required = TOP_TAB_PERMISSIONS[tab]
-      if (!required) return true
-      return userPermissions.includes(required)
-    })
+    return ACTION_ANALYSIS_TOP_TABS.filter((tab) => PROD_VISIBLE_TOP_TABS.includes(tab)).filter(
+      (tab) => {
+        const required = TOP_TAB_PERMISSIONS[tab]
+        if (!required) return true
+        return userPermissions.includes(required)
+      }
+    )
   }, [userPermissions])
 
-  // KAN-413 — Header KPI strip + Quick Action overlay are Trainer Workplace
-  // chrome, shared across every top tab. They render only when the user has
-  // `view_inbox` since the strip is driven by the /coaching/header-kpis
-  // endpoint that gates on it.
+  // prod-hide START — KAN-413 page-level state for Inbox/Quick-Action
+  // surfaces. Wrapped in a block comment so TypeScript doesn't see the
+  // declarations (avoids TS6133). Restore: remove the /* and */ wrappers.
+  /*
   const showHeaderChrome = userPermissions.includes(PERMISSIONS.ACTION_ANALYSIS.VIEW_INBOX)
   const inboxBarState = readInboxState(searchParams)
 
-  // KAN-413 step 5 — Rate dialogue picker. Picker is page-level so both the
-  // Header Quick Action and the OperatorDetailPanel "Listen to the call"
-  // button can open it for whichever operator is focused.
   const [rateDialogueOpen, setRateDialogueOpen] = useState(false)
   const handleOpenRateDialogue = () => {
     if (!inboxBarState.operatorId) {
@@ -204,8 +247,6 @@ export function ActionAnalysisPage() {
     setRateDialogueOpen(true)
   }
 
-  // KAN-413 step 6 — Schedule 1-on-1 dialog, same page-level pattern as
-  // the rate dialogue picker.
   const [scheduleOneOnOneOpen, setScheduleOneOnOneOpen] = useState(false)
   const handleOpenScheduleOneOnOne = () => {
     if (!inboxBarState.operatorId) {
@@ -220,9 +261,6 @@ export function ActionAnalysisPage() {
     setScheduleOneOnOneOpen(true)
   }
 
-  // KAN-413 step 9 — Quick Actions #1 (Assign task) + #3 (Assign material).
-  // Real flows depend on KAN-411 and KAN-416. Until those land, both open a
-  // placeholder dialog so trainers see what's coming + the issue gate.
   const [pendingFeature, setPendingFeature] = useState<null | 'assignTask' | 'assignMaterial'>(null)
   const handleOpenPendingFeature = (kind: 'assignTask' | 'assignMaterial') => () => {
     if (!inboxBarState.operatorId) {
@@ -251,6 +289,9 @@ export function ActionAnalysisPage() {
     }),
     [scoped.userIds, inboxBarState.period, inboxBarState.customFromDate, inboxBarState.customToDate]
   )
+  */
+  // prod-hide END
+  // prod-hide END
 
   const setActiveSubTab = (sub: ActionAnalysisCallsSubTabId) => {
     const next = new URLSearchParams(searchParams)
@@ -280,7 +321,9 @@ export function ActionAnalysisPage() {
     activeTopTab === 'calls' && (activeSubTab === 'list' || activeSubTab === 'interactions')
 
   const visibleSubTabs = useMemo(() => {
-    return ACTION_ANALYSIS_CALLS_SUB_TABS.filter((sub) => {
+    return ACTION_ANALYSIS_CALLS_SUB_TABS.filter((sub) =>
+      PROD_VISIBLE_SUB_TABS.includes(sub)
+    ).filter((sub) => {
       const meta = SUB_TAB_LABEL_KEYS[sub]
       if (!meta.permission) return true
       return userPermissions.includes(meta.permission)
@@ -317,6 +360,8 @@ export function ActionAnalysisPage() {
         ) : null}
       </div>
 
+      {/* prod-hide START — Trainer Workplace header KPI strip + Quick Action overlay */}
+      {/*
       {showHeaderChrome ? (
         <HeaderKpiStrip
           filters={headerKpisFilters}
@@ -326,6 +371,8 @@ export function ActionAnalysisPage() {
           onAssignMaterial={handleOpenPendingFeature('assignMaterial')}
         />
       ) : null}
+      */}
+      {/* prod-hide END */}
 
       <div className="border-b border-gray-200">
         <div className="-mb-px flex flex-wrap gap-6" role="tablist">
@@ -352,7 +399,11 @@ export function ActionAnalysisPage() {
         </div>
       </div>
 
-      {activeTopTab === 'inbox' ? (
+      {/* prod-hide START — Inbox + Scores top-tab branches. The redirect
+          useEffect above coerces stale ?tab=inbox / ?tab=scores URLs to
+          ?tab=calls so these branches never render in prod. */}
+      {/*
+      activeTopTab === 'inbox' ? (
         <InboxTab
           onOpenRateDialogue={handleOpenRateDialogue}
           onOpenScheduleOneOnOne={handleOpenScheduleOneOnOne}
@@ -360,7 +411,10 @@ export function ActionAnalysisPage() {
         />
       ) : activeTopTab === 'scores' ? (
         <ScoresTab />
-      ) : activeTopTab === 'calls' ? (
+      ) :
+      */}
+      {/* prod-hide END */}
+      {activeTopTab === 'calls' ? (
         <>
           <div className="flex flex-wrap gap-2">
             {visibleSubTabs.map((sub) => {
@@ -394,7 +448,9 @@ export function ActionAnalysisPage() {
             {activeSubTab === 'timeline' && <TimelineTab />}
             {activeSubTab === 'screen-time' && <ScreenTimeTab />}
             {activeSubTab === 'heatmap' && <HeatmapTab />}
-            {activeSubTab === 'script-analytics' && <ScriptAnalyticsTab />}
+            {/* prod-hide START — Script Analytics sub-tab not on prod whitelist */}
+            {/* {activeSubTab === 'script-analytics' && <ScriptAnalyticsTab />} */}
+            {/* prod-hide END */}
           </div>
         </>
       ) : (
@@ -406,6 +462,8 @@ export function ActionAnalysisPage() {
         </div>
       )}
 
+      {/* prod-hide START — Inbox-related dialogs + bottom workspace banner */}
+      {/*
       <RateDialogueDialog
         open={rateDialogueOpen}
         onClose={() => setRateDialogueOpen(false)}
@@ -441,6 +499,8 @@ export function ActionAnalysisPage() {
       />
 
       {showHeaderChrome ? <WorkspaceBanner /> : null}
+      */}
+      {/* prod-hide END */}
     </div>
   )
 }
