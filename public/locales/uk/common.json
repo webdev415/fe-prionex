@@ -32,6 +32,7 @@
     "bulkOperatorAssignment": "Масове призначення операторів",
     "bulkPaymentVerification": "Масова верифікація платежів",
     "bulkTagAssignment": "Масове призначення тегів",
+    "bulkWriteoffImport": "Масовий імпорт списань",
     "auditLogs": "Журнал аудиту",
     "reports": "Звіти",
     "scoringConfiguration": "Конфігурація оцінки",

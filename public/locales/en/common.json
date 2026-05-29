@@ -32,6 +32,7 @@
     "bulkOperatorAssignment": "Bulk Operator Assignment",
     "bulkPaymentVerification": "Bulk Payment Verification",
     "bulkTagAssignment": "Bulk Tag Assignment",
+    "bulkWriteoffImport": "Bulk Write-off Import",
     "auditLogs": "Audit Logs",
     "reports": "Reports",
     "scoringConfiguration": "Scoring Configuration",
