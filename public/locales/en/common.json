@@ -3002,7 +3002,8 @@
         "departmentNoneFound": "No departments found",
         "departmentSelectedCount": "{{count}} selected",
         "departmentClear": "Clear",
-        "systemHidden": "System (hidden) — only the system or an admin can launch"
+        "systemHidden": "System (hidden) — only the system or an admin can launch",
+        "structurallyLocked": "This chain has recorded interactions. Step layout and chain type are frozen — clone the chain to make structural changes. Name, description and department scope can still be edited."
       },
       "steps": {
         "title": "Steps",
