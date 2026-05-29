@@ -25,6 +25,9 @@ import { HeatmapTab } from './components/HeatmapTab'
 import { ScriptAnalyticsTab } from './components/ScriptAnalyticsTab'
 import { ScoresTab } from './components/scores/ScoresTab'
 import { ScopeSelector } from './components/ScopeSelector'
+import { InboxTab } from './components/inbox/InboxTab'
+import { HeaderKpiStrip } from './components/chrome/HeaderKpiStrip'
+import { readInboxState } from './lib/inboxUrlState'
 import { readCallsUrlState, toCallMonitoringQuery } from './lib/callsUrlState'
 import {
   readInteractionBarState,
@@ -34,10 +37,15 @@ import {
 import { useScopedUserIds } from './lib/scope'
 
 const TOP_TAB_LABEL_KEYS: Record<ActionAnalysisTopTabId, { key: string; fallback: string }> = {
+  inbox: { key: 'pages.actionAnalysis.topTabs.inbox', fallback: 'Inbox' },
   calls: { key: 'pages.actionAnalysis.topTabs.calls', fallback: 'Calls' },
   scores: { key: 'pages.actionAnalysis.topTabs.scores', fallback: 'Scores' },
   training: { key: 'pages.actionAnalysis.topTabs.training', fallback: 'Training' },
   settings: { key: 'pages.actionAnalysis.topTabs.settings', fallback: 'Settings' },
+}
+
+const TOP_TAB_PERMISSIONS: Partial<Record<ActionAnalysisTopTabId, string>> = {
+  inbox: PERMISSIONS.ACTION_ANALYSIS.VIEW_INBOX,
 }
 
 const SUB_TAB_LABEL_KEYS: Record<
@@ -160,6 +168,33 @@ export function ActionAnalysisPage() {
     setSearchParams(next, { replace: true })
   }
 
+  // KAN-413 — visible top tabs filtered by permission. `inbox` only shows
+  // for users with `view_inbox`; existing tabs remain visible to anyone
+  // with `view_action_analysis` since their sub-tab gating is unchanged.
+  const visibleTopTabs = useMemo(() => {
+    return ACTION_ANALYSIS_TOP_TABS.filter((tab) => {
+      const required = TOP_TAB_PERMISSIONS[tab]
+      if (!required) return true
+      return userPermissions.includes(required)
+    })
+  }, [userPermissions])
+
+  // KAN-413 — Header KPI strip + Quick Action overlay are Trainer Workplace
+  // chrome, shared across every top tab. They render only when the user has
+  // `view_inbox` since the strip is driven by the /coaching/header-kpis
+  // endpoint that gates on it.
+  const showHeaderChrome = userPermissions.includes(PERMISSIONS.ACTION_ANALYSIS.VIEW_INBOX)
+  const inboxBarState = readInboxState(searchParams)
+  const headerKpisFilters = useMemo(
+    () => ({
+      user_ids: scoped.userIds,
+      period: inboxBarState.period,
+      from_date: inboxBarState.customFromDate,
+      to_date: inboxBarState.customToDate,
+    }),
+    [scoped.userIds, inboxBarState.period, inboxBarState.customFromDate, inboxBarState.customToDate]
+  )
+
   const setActiveSubTab = (sub: ActionAnalysisCallsSubTabId) => {
     const next = new URLSearchParams(searchParams)
     next.set('tab', 'calls')
@@ -225,9 +260,11 @@ export function ActionAnalysisPage() {
         ) : null}
       </div>
 
+      {showHeaderChrome ? <HeaderKpiStrip filters={headerKpisFilters} /> : null}
+
       <div className="border-b border-gray-200">
         <div className="-mb-px flex flex-wrap gap-6" role="tablist">
-          {ACTION_ANALYSIS_TOP_TABS.map((tab) => {
+          {visibleTopTabs.map((tab) => {
             const { key, fallback } = TOP_TAB_LABEL_KEYS[tab]
             const isActive = activeTopTab === tab
             return (
@@ -250,7 +287,9 @@ export function ActionAnalysisPage() {
         </div>
       </div>
 
-      {activeTopTab === 'scores' ? (
+      {activeTopTab === 'inbox' ? (
+        <InboxTab />
+      ) : activeTopTab === 'scores' ? (
         <ScoresTab />
       ) : activeTopTab === 'calls' ? (
         <>

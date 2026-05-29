@@ -570,6 +570,7 @@
         "placeholder": "Interaction History tab — coming soon"
       },
       "topTabs": {
+        "inbox": "Inbox",
         "calls": "Calls",
         "scores": "Scores",
         "training": "Training",
@@ -683,6 +684,76 @@
         "department": "Department actions",
         "all": "All actions",
         "groupComingSoon": "Coming soon"
+      },
+      "inbox": {
+        "searchPlaceholder": "Operator name or phone number",
+        "headerKpis": {
+          "inProgress": "In progress",
+          "averageScore": "Average score",
+          "teamPlan": "Team plan",
+          "tasksToday": "Tasks today",
+          "oneOnOneToday": "1-on-1 today"
+        },
+        "viewModes": {
+          "label": "View mode",
+          "inbox": "Inbox",
+          "kanban": "Kanban",
+          "grid": "Grid",
+          "comingSoon": "Coming soon",
+          "comingSoonShort": "soon"
+        },
+        "kanbanColumns": {
+          "wait": "Wait",
+          "in_progress": "In progress",
+          "awaiting_training": "Awaiting training",
+          "scheduled": "Scheduled",
+          "closed": "Closed"
+        },
+        "list": {
+          "loading": "Loading queue…",
+          "empty": "No operators in the current scope.",
+          "emptyScope": "No operators in the current scope.",
+          "triggerCount": "{{count}} triggers"
+        },
+        "detail": {
+          "selectOperator": "Select an operator to see details.",
+          "loading": "Loading…",
+          "loadFailed": "Could not load operator details.",
+          "redFlagsHeadline": "{{count}} red flags",
+          "latestRatings": "Latest dialogue ratings",
+          "noScorecards": "No scorecards in the selected period.",
+          "kpis": {
+            "scriptAdherence": "Script",
+            "scorecardAvg": "Scorecard",
+            "conversion": "Conversion",
+            "tasksOnTime": "Tasks on time"
+          },
+          "trainerActions": {
+            "listen": "Listen to the call",
+            "assignTask": "Assign a task",
+            "planOneOnOne": "Plan 1-on-1",
+            "takeCharge": "Take charge"
+          }
+        },
+        "quickActions": {
+          "button": "Quick Action",
+          "comingSoon": "Coming soon",
+          "assignTask": "Assign task",
+          "assignTaskHint": "Operator · topic · deadline",
+          "scheduleOneOnOne": "Schedule 1-on-1",
+          "scheduleOneOnOneHint": "Operator · date · time",
+          "assignCourse": "Assign course / drill",
+          "assignCourseHint": "Operator · material",
+          "rateDialogue": "Rate dialogue",
+          "rateDialogueHint": "Open scorecard"
+        },
+        "triggers": {
+          "low_script_adherence": "Low script adherence",
+          "low_scorecard_average": "Low scorecard average",
+          "low_conversion_rate": "Low conversion rate",
+          "overdue_correction_tasks": "Overdue correction tasks",
+          "active_auto_flags": "Active auto-flags"
+        }
       },
       "paymentHistoryEmpty": "No payments match the current filters",
       "paymentHistorySummary": {
