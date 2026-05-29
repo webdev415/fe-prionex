@@ -1,0 +1,1 @@
+export { MessagingIntegrationsPage } from './MessagingIntegrationsPage'

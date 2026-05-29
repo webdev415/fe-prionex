@@ -173,7 +173,7 @@ export function ProjectDetailPanel({
           </div>
           <div className="flex">
             <button
-              onClick={() => navigate('/dashboard/roles')}
+              onClick={() => navigate('/dashboard/team-management/roles')}
               className="bg-secondary-800 mt-3 flex items-center gap-1.5 rounded p-2.5 text-xs font-[500] text-white"
             >
               <Icons.UserCircle02Icon size={20} className="text-primary-400" />

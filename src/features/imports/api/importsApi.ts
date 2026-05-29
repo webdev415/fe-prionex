@@ -129,7 +129,7 @@ export async function getImportJobs(
   }
 
   // Build backend query parameters - send all filter parameters directly
-  const backendParams: Record<string, string | number | undefined> = {
+  const backendParams: Record<string, string | number | string[] | undefined> = {
     limit: pageSize,
     offset: (page - 1) * pageSize,
   }
@@ -150,6 +150,22 @@ export async function getImportJobs(
   // Add status filter
   if (backendStatus) {
     backendParams.status = backendStatus
+  }
+
+  // Add exclude_status filter. Pushed to the backend (not filtered client-side)
+  // so rows are excluded BEFORE limit/offset and the count — otherwise a
+  // fixed-size page would render fewer than `limit` rows and `total` would
+  // overcount. Expand each FE status to the backend status(es) it represents:
+  //   'in_progress' -> 'processing'
+  //   'pending'     -> 'pending' + 'validated'  (the FE collapses both into
+  //                    'pending' via mapStatus, since a 'validated' job is a
+  //                    not-yet-executed preview, not finished history)
+  if (params.exclude_status && params.exclude_status.length > 0) {
+    backendParams.exclude_status = params.exclude_status.flatMap((s) => {
+      if (s === 'in_progress') return ['processing']
+      if (s === 'pending') return ['pending', 'validated']
+      return [s]
+    })
   }
 
   // Add search parameter (filename search)
@@ -177,22 +193,31 @@ export async function getImportJobs(
 
   const response = await api.get('/api/v1/import/jobs', {
     params: backendParams,
+    // Serialize array params as repeated keys (exclude_status=processing&
+    // exclude_status=pending) — the shape FastAPI's list[...] query expects.
+    paramsSerializer: { indexes: null },
   })
 
-  // Backend returns array, frontend expects paginated object
-  const jobs = Array.isArray(response.data) ? response.data : []
-  const transformedJobs = jobs.map(transformImportJob)
-
-  // Only handle exclude_status client-side (if backend doesn't support it)
-  let filteredJobs = transformedJobs
-  if (params.exclude_status && params.exclude_status.length > 0) {
-    filteredJobs = filteredJobs.filter((job) => !params.exclude_status!.includes(job.status))
+  // Backend returns a paginated envelope: { items, total, page, limit }.
+  // `total` and `items` already respect exclude_status (filtered server-side),
+  // so the FE no longer post-filters — that's what guarantees a full `limit`
+  // rows per page and an accurate page count.
+  // `items` is typed via the transformer's own parameter to avoid having
+  // to export a separate type from transformers.ts.
+  const data = response.data as {
+    items: Parameters<typeof transformImportJob>[0][]
+    total: number
+    page: number
+    limit: number
   }
+  const transformedJobs = (data.items || []).map(transformImportJob)
 
-  // Return paginated response
-  // Note: If backend supports pagination, you might get total count from backend
-  // For now, assuming backend returns all matching results
-  return wrapInPagination(filteredJobs, page, pageSize, filteredJobs.length)
+  return {
+    items: transformedJobs,
+    total: data.total,
+    page: data.page,
+    page_size: data.limit,
+  }
 }
 
 /**

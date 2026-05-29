@@ -14,10 +14,13 @@ import type {
   BulkAssignClientRequest,
   BulkAssignmentResponse,
   Client,
+  ClientAssigneeIdsResponse,
   ClientDetail,
   ClientProfileResponse,
   ContactResponse,
+  ContactTypeCreatePayload,
   ContactTypeOption,
+  ContactTypePatchPayload,
   CreateAddressRequest,
   CreateClientRequest,
   CreateContactRequest,
@@ -37,6 +40,15 @@ import type {
 } from './types'
 
 const BASE_URL = '/api/v1/clients'
+
+/**
+ * Distinct responsible employee / searcher user ids for the active project
+ * (non-deleted clients). Used to gate inactive operators in the filter dropdowns.
+ */
+export async function getClientAssigneeIds(): Promise<ClientAssigneeIdsResponse> {
+  const response = await api.get<ClientAssigneeIdsResponse>(`${BASE_URL}/assignee-ids`)
+  return response.data
+}
 
 /**
  * Get list of clients for user's active project
@@ -488,10 +500,33 @@ export async function getRROverpayments(
 }
 
 /**
- * Get all contact types from the lookup table
+ * Get contact types from the lookup table (optionally filtered by status).
  */
-export async function getContactTypes(): Promise<ContactTypeOption[]> {
-  const response = await api.get<ContactTypeOption[]>(`${BASE_URL}/contact-types`)
+export async function getContactTypes(params?: {
+  status?: 'all' | 'active' | 'hidden'
+}): Promise<ContactTypeOption[]> {
+  const status = params?.status ?? 'all'
+  const response = await api.get<ContactTypeOption[]>(`${BASE_URL}/contact-types`, {
+    params: { status },
+  })
+  return response.data
+}
+
+export async function createContactType(
+  payload: ContactTypeCreatePayload
+): Promise<ContactTypeOption> {
+  const response = await api.post<ContactTypeOption>(`${BASE_URL}/contact-types`, payload)
+  return response.data
+}
+
+export async function patchContactType(
+  typeId: number,
+  payload: ContactTypePatchPayload
+): Promise<ContactTypeOption> {
+  const response = await api.patch<ContactTypeOption>(
+    `${BASE_URL}/contact-types/${typeId}`,
+    payload
+  )
   return response.data
 }
 
@@ -501,6 +536,7 @@ export async function getContactTypes(): Promise<ContactTypeOption[]> {
  */
 export const clientApi = {
   getClients,
+  getClientAssigneeIds,
   getClientById,
   createClient,
   updateClient,
@@ -522,6 +558,8 @@ export const clientApi = {
   updateContact,
   deleteContact,
   getContactTypes,
+  createContactType,
+  patchContactType,
   updateEmployment,
   updatePassport,
   getClientRestructuringAgreements,

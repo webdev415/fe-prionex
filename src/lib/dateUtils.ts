@@ -49,6 +49,25 @@ export function getDateStringInTimezone(date: Date = new Date(), timezone?: stri
 }
 
 /**
+ * Format a ``react-datepicker`` Date as a plain "YYYY-MM-DD" string using its
+ * **local** year/month/day parts — no timezone conversion.
+ *
+ * Use this for **date-only** filters where the user picks a calendar date
+ * (no time component, no timezone meaning). ``react-datepicker`` returns a
+ * Date at local-midnight for the picked day; reading ``getFullYear`` /
+ * ``getMonth`` / ``getDate`` on it gives back exactly the day the user
+ * clicked, regardless of any browser-vs-profile timezone mismatch.
+ *
+ * Do NOT use this for "now"-derived dates like `today` — those are real
+ * moments in time and must be resolved in the user's profile timezone
+ * (use ``getDateStringInTimezone`` instead).
+ */
+export function formatPickerDateAsYMD(date: Date): string {
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
+}
+
+/**
  * Format a UTC Date object as a "YYYY-MM-DDTHH:mm" string in the given IANA timezone.
  * Used for datetime fields (Promise date, Callback date) that include time component.
  */

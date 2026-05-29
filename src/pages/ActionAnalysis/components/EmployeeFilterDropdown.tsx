@@ -156,18 +156,28 @@ export function EmployeeFilterDropdown({
                       {t('pages.actionAnalysis.filters.allEmployees', 'All employees')}
                     </span>
                   </label>
-                  {filteredOperators.map((op) => (
-                    <label
-                      key={op.id}
-                      className="text-dark-500 flex cursor-pointer items-center gap-3 px-3 py-2.5 hover:bg-gray-50"
-                    >
-                      <Checkbox
-                        checked={selectedIds.includes(op.id)}
-                        onCheckedChange={() => toggleOne(op.id)}
-                      />
-                      <span className="text-sm">{op.full_name}</span>
-                    </label>
-                  ))}
+                  {filteredOperators.map((op) => {
+                    const isInactive = op.status !== 'active'
+                    return (
+                      <label
+                        key={op.id}
+                        className="text-dark-500 flex cursor-pointer items-center gap-3 px-3 py-2.5 hover:bg-gray-50"
+                      >
+                        <Checkbox
+                          checked={selectedIds.includes(op.id)}
+                          onCheckedChange={() => toggleOne(op.id)}
+                        />
+                        <span className={cn('text-sm', isInactive && 'text-gray-400')}>
+                          {op.full_name}
+                          {isInactive && (
+                            <span className="ml-1 text-xs text-gray-400">
+                              {t('pages.actionAnalysis.filters.blockedSuffix', '(blocked)')}
+                            </span>
+                          )}
+                        </span>
+                      </label>
+                    )
+                  })}
                 </div>
               )}
             </div>

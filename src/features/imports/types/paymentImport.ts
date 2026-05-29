@@ -14,7 +14,7 @@ export interface PaymentPreviewRow {
   payment_amount: number
   payment_date: string
   payment_method: string
-  payment_type: string | null
+  payment_comment: string | null
   status: PaymentRowStatus
   has_pending_match: boolean | null
   error: string | null

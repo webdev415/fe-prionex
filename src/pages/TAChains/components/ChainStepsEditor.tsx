@@ -83,6 +83,7 @@ export function ChainStepsEditor({ steps, onChange, disabled }: ChainStepsEditor
         delay_minutes: 0,
         not_in_the_past: false,
         contact_source: firstTA.field_type === 'contact' ? 'client' : null,
+        show_closed_credits: false,
       },
     ])
   }
@@ -259,6 +260,19 @@ export function ChainStepsEditor({ steps, onChange, disabled }: ChainStepsEditor
                     </SelectContent>
                   </Select>
                 </div>
+              )}
+
+              {ta?.field_type === 'credit' && (
+                <label className="flex cursor-pointer items-center gap-2 text-xs text-gray-600">
+                  <input
+                    type="checkbox"
+                    checked={step.show_closed_credits ?? false}
+                    onChange={(e) => update(index, { show_closed_credits: e.target.checked })}
+                    disabled={disabled}
+                    className="h-4 w-4 rounded border-gray-300"
+                  />
+                  <span>{t('pages.taChains.steps.showClosedCredits', 'Show closed credits')}</span>
+                </label>
               )}
             </li>
           )
