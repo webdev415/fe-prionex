@@ -28,9 +28,9 @@ export const ROUTES = {
   LOGIN: '/login',
   DASHBOARD: '/dashboard',
   CLIENT: '/dashboard/client',
-  USERS: '/dashboard/users',
+  USERS: '/dashboard/team-management/users',
   PROJECTS: '/dashboard/projects',
-  ROLES: '/dashboard/roles',
+  ROLES: '/dashboard/team-management/roles',
 } as const
 
 /**

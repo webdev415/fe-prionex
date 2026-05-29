@@ -78,10 +78,17 @@ export const TagSelectorModal = memo(function TagSelectorModal({
     }
   }, [clientTags])
 
-  // Memoize filtered tags to avoid recalculating on every render
+  // Memoize filtered tags to avoid recalculating on every render.
+  // Also drop tags with expiry_type='target_action_date' — these are
+  // assigned only via chain effects (the expires_at comes from a TA
+  // date field); the backend rejects manual assignments for them.
   const filteredTags = useMemo(
     () =>
-      allTags?.filter((tag) => tag.name.toLowerCase().includes(debouncedSearchQuery.toLowerCase())),
+      allTags?.filter(
+        (tag) =>
+          tag.name.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) &&
+          (tag.expiry_type ?? 'permanent') !== 'target_action_date'
+      ),
     [allTags, debouncedSearchQuery]
   )
 

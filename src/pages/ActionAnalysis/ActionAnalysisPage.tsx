@@ -18,16 +18,20 @@ import { CallsTab } from './components/CallsTab'
 import { InteractionHistoryTab } from './components/InteractionHistoryTab'
 import { TaHistoryTab } from './components/TaHistoryTab'
 import { TaskHistoryTab } from './components/TaskHistoryTab'
+import { PaymentHistoryTab } from './components/PaymentHistoryTab'
 import { TimelineTab } from './components/TimelineTab'
 import { ScreenTimeTab } from './components/ScreenTimeTab'
 import { HeatmapTab } from './components/HeatmapTab'
 import { ScriptAnalyticsTab } from './components/ScriptAnalyticsTab'
+import { ScoresTab } from './components/scores/ScoresTab'
+import { ScopeSelector } from './components/ScopeSelector'
 import { readCallsUrlState, toCallMonitoringQuery } from './lib/callsUrlState'
 import {
   readInteractionBarState,
   resolveInteractionUsers,
   toInteractionMonitoringQuery,
 } from './lib/interactionsUrlState'
+import { useScopedUserIds } from './lib/scope'
 
 const TOP_TAB_LABEL_KEYS: Record<ActionAnalysisTopTabId, { key: string; fallback: string }> = {
   calls: { key: 'pages.actionAnalysis.topTabs.calls', fallback: 'Calls' },
@@ -54,6 +58,11 @@ const SUB_TAB_LABEL_KEYS: Record<
     key: 'pages.actionAnalysis.subTabs.taskHistory',
     fallback: 'Task History',
     permission: PERMISSIONS.ACTION_ANALYSIS.VIEW_TASK_HISTORY,
+  },
+  'payment-history': {
+    key: 'pages.actionAnalysis.subTabs.paymentHistory',
+    fallback: 'Payment History',
+    permission: PERMISSIONS.ACTION_ANALYSIS.VIEW_PAYMENT_HISTORY,
   },
   timeline: {
     key: 'pages.actionAnalysis.subTabs.timeline',
@@ -109,6 +118,10 @@ export function ActionAnalysisPage() {
   const activeProjectId = useAuthStore((s) => s.user?.active_project_id)
   const { data: operators = [] } = useOperators(activeProjectId ? Number(activeProjectId) : null)
 
+  // Page-level scope (KAN-506): drives user_ids[] for every Calls sub-tab and
+  // the header-level export so the exported file matches what's on screen.
+  const scoped = useScopedUserIds(operators)
+
   const exportCallsMutation = useExportCalls()
   const exportInteractionsMutation = useExportInteractions()
 
@@ -122,11 +135,11 @@ export function ActionAnalysisPage() {
       const s = readInteractionBarState(searchParams)
       const usable = s.period !== 'custom' || !!(s.customFromDate && s.customToDate)
       if (!usable) return false
-      const resolved = resolveInteractionUsers(s, operators)
+      const resolved = resolveInteractionUsers(s, operators, scoped.userIds)
       return resolved.kind !== 'empty'
     }
     return false
-  }, [activeTopTab, activeSubTab, searchParams, operators])
+  }, [activeTopTab, activeSubTab, searchParams, operators, scoped.userIds])
 
   const isExportingListOrInteractions =
     activeSubTab === 'list'
@@ -162,7 +175,7 @@ export function ActionAnalysisPage() {
         await exportCallsMutation.mutateAsync(payload)
       } else if (activeSubTab === 'interactions') {
         const state = readInteractionBarState(searchParams)
-        const payload = toInteractionMonitoringQuery(state, operators)
+        const payload = toInteractionMonitoringQuery(state, operators, scoped.userIds)
         await exportInteractionsMutation.mutateAsync(payload)
       }
     } catch (err) {
@@ -237,7 +250,9 @@ export function ActionAnalysisPage() {
         </div>
       </div>
 
-      {activeTopTab === 'calls' ? (
+      {activeTopTab === 'scores' ? (
+        <ScoresTab />
+      ) : activeTopTab === 'calls' ? (
         <>
           <div className="flex flex-wrap gap-2">
             {visibleSubTabs.map((sub) => {
@@ -260,11 +275,14 @@ export function ActionAnalysisPage() {
             })}
           </div>
 
+          <ScopeSelector />
+
           <div>
             {activeSubTab === 'list' && <CallsTab />}
             {activeSubTab === 'interactions' && <InteractionHistoryTab />}
             {activeSubTab === 'ta-history' && <TaHistoryTab />}
             {activeSubTab === 'task-history' && <TaskHistoryTab />}
+            {activeSubTab === 'payment-history' && <PaymentHistoryTab />}
             {activeSubTab === 'timeline' && <TimelineTab />}
             {activeSubTab === 'screen-time' && <ScreenTimeTab />}
             {activeSubTab === 'heatmap' && <HeatmapTab />}

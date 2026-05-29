@@ -18,6 +18,7 @@
     "roles": "Роли",
     "departments": "Отделы",
     "smsTemplates": "SMS Шаблоны",
+    "rrNotifications": "Уведомления РР",
     "targetActions": "Целевые действия",
     "taChains": "Цепочки ЦД",
     "taDictionary": "Словарь",
@@ -35,6 +36,10 @@
     "scoringConfiguration": "Конфигурация оценки",
     "systemSettings": "Системные настройки",
     "tags": "Теги",
+    "messagingSettings": "Настройки сообщений",
+    "messagingIntegrations": "Интеграции сообщений",
+    "messagingDrafts": "Черновики сообщений",
+    "contactTypes": "Типы контактов",
     "actionAnalysis": "Анализ действий"
   },
   "search": {
@@ -101,8 +106,13 @@
       "tasks": "Задачи",
       "calls": "Звонки",
       "tags": "Теги",
-      "taChains": "Цепочки ЦД"
+      "taChains": "Цепочки ЦД",
+      "rrPayments": "Платежи РР"
     },
+    "daysLeft_one": "через {{count}} день",
+    "daysLeft_few": "через {{count}} дня",
+    "daysLeft_many": "через {{count}} дней",
+    "daysLeft_other": "через {{count}} дней",
     "payment": {
       "pending": "ожидает",
       "daysPending_one": "{{count}} день",
@@ -263,6 +273,13 @@
         "allEmployees": "Все сотрудники",
         "period": "Период",
         "status": "Статус",
+        "allStatuses": "Все статусы",
+        "markerType": "Тип маркера",
+        "allMarkerTypes": "Все типы",
+        "feedbackType": "Тип отзыва",
+        "allFeedbackTypes": "Все типы",
+        "granularity": "Гранулярность",
+        "selectOperator": "Выберите оператора…",
         "minDuration": "Мин. длительность (с)",
         "maxDuration": "Макс. длительность (с)",
         "contactType": "Тип контакта",
@@ -378,6 +395,51 @@
           "extended": "Продлено",
           "rejected": "Отклонено",
           "incoming_line_result": "Итог входящей линии"
+        },
+        "confirmedAtRangeHeading": "Подтверждён",
+        "confirmedAtFrom": "С",
+        "confirmedAtTo": "По",
+        "paymentDateRangeHeading": "Дата платежа",
+        "paymentDateFrom": "С",
+        "paymentDateTo": "По",
+        "selectedCount": "Выбрано: {{count}}",
+        "paymentMethod": "Способ оплаты",
+        "paymentMethods": {
+          "all": "Все способы",
+          "bank_transfer": "Банковский перевод",
+          "online_gateway": "Онлайн (ссылка)",
+          "cash": "Наличные",
+          "card": "Карта",
+          "other": "Другое"
+        },
+        "paymentStatuses": {
+          "all": "Все",
+          "pending": "В ожидании",
+          "verified": "Подтверждён",
+          "cancelled": "Отклонён"
+        },
+        "paymentType": "Тип платежа",
+        "paymentTypes": {
+          "all": "Все типы",
+          "payment_by_rr": "Платёж по РР",
+          "partial_payment": "Частичный платёж",
+          "full_payment": "Полный платёж"
+        },
+        "paymentCommentSearch": "Комментарий к оплате",
+        "paymentCommentSearchPlaceholder": "Поиск в комментариях…",
+        "amountMin": "Сумма от",
+        "amountMax": "Сумма до",
+        "amountMinPlaceholder": "0.00",
+        "amountMaxPlaceholder": "напр. 1000.00",
+        "paymentSortOptions": {
+          "recorded_at_desc": "Создан (новые)",
+          "recorded_at_asc": "Создан (старые)",
+          "verified_at_desc": "Подтверждён (новые)",
+          "verified_at_asc": "Подтверждён (старые)",
+          "amount_desc": "Сумма (по убыванию)",
+          "amount_asc": "Сумма (по возрастанию)",
+          "payment_date_desc": "Дата платежа (новые)",
+          "payment_date_asc": "Дата платежа (старые)"
         }
       },
       "columns": {
@@ -410,7 +472,24 @@
         "priority": "Приоритет",
         "topic": "Тема",
         "dueDate": "Срок (дата)",
-        "dueTime": "Срок (время)"
+        "dueTime": "Срок (время)",
+        "loanNumber": "Номер займа",
+        "loanSaleDate": "Дата продажи займа",
+        "paymentType": "Тип платежа",
+        "paymentComment": "Комментарий к оплате",
+        "operator": "Оператор",
+        "createdAt": "Создан",
+        "confirmedAt": "Подтверждён",
+        "amount": "Сумма",
+        "paymentMethod": "Способ оплаты",
+        "date": "Дата",
+        "template": "Шаблон",
+        "weightedScore": "Балл",
+        "markerType": "Тип",
+        "timestamp": "Время",
+        "comment": "Комментарий",
+        "feedbackType": "Тип",
+        "preview": "Текст"
       },
       "callType": {
         "incoming": "Входящий",
@@ -457,7 +536,20 @@
         "title": "Задачи по срокам",
         "subtitle": "Общее число задач со сроком в выбранном диапазоне.",
         "totalLabel": "задач со сроком",
-        "empty": "Нет задач со сроком в выбранном диапазоне."
+        "empty": "Нет задач со сроком в выбранном диапазоне.",
+        "emptyMonth": "Нет задач со сроком в этом месяце.",
+        "today": "Сегодня",
+        "prevMonth": "Предыдущий месяц",
+        "nextMonth": "Следующий месяц",
+        "weekdayShort": {
+          "mon": "Пн",
+          "tue": "Вт",
+          "wed": "Ср",
+          "thu": "Чт",
+          "fri": "Пт",
+          "sat": "Сб",
+          "sun": "Вс"
+        }
       },
       "errors": {
         "loadFailed": "Не удалось загрузить звонки",
@@ -469,6 +561,15 @@
         "loadScriptAnalyticsFailed": "Не удалось загрузить аналитику скриптов.",
         "loadTaHistoryFailed": "Не удалось загрузить историю ТА",
         "loadTaskHistoryFailed": "Не удалось загрузить историю задач",
+        "loadPaymentHistoryFailed": "Не удалось загрузить историю платежей",
+        "loadScorecardsFailed": "Не удалось загрузить скоркарты",
+        "loadScorecardFailed": "Не удалось загрузить скоркарту",
+        "loadMarkersFailed": "Не удалось загрузить маркеры",
+        "loadFeedbackFailed": "Не удалось загрузить отзывы",
+        "loadDynamicsFailed": "Не удалось загрузить динамику оценок",
+        "noOperators": "Нет операторов в текущей области.",
+        "noScoresPermission": "У вас нет прав на просмотр данных по оценке качества.",
+        "emptyScopeResolution": "Выбранная область не содержит операторов.",
         "departmentNoOperators": "В этом отделе нет операторов в текущем проекте.",
         "exportFailed": "Не удалось экспортировать",
         "callNotFound": "Звонок не найден"
@@ -491,10 +592,115 @@
         "interactions": "История взаимодействий",
         "taHistory": "История ТА",
         "taskHistory": "История задач",
+        "paymentHistory": "История платежей",
         "timeline": "Таймлайн",
         "screenTime": "Экранное время",
         "heatmap": "Тепловая карта",
         "scriptAnalytics": "Аналитика скриптов"
+      },
+      "scoresSubTabs": {
+        "scorecards": "Скоркарты",
+        "markers": "Маркеры",
+        "feedback": "Обратная связь",
+        "dynamics": "Динамика оценок"
+      },
+      "scorecard": {
+        "title": "Оценка качества",
+        "template": "Шаблон",
+        "selectTemplate": "Выберите шаблон…",
+        "startEvaluation": "Начать оценку",
+        "history": "Предыдущие скоркарты по этому звонку",
+        "computedScore": "Балл",
+        "perCallComment": "Общий комментарий",
+        "saveDraft": "Сохранить черновик",
+        "markCompleted": "Отметить завершённой",
+        "sendToOperator": "Отправить оператору",
+        "status": {
+          "draft": "Черновик",
+          "completed": "Завершена",
+          "sent": "Отправлена"
+        }
+      },
+      "scorecardsEmpty": "Нет скоркарт в текущей области.",
+      "scorecardsTotalSuffix": "скоркарт",
+      "markers": {
+        "addMarker": "Добавить маркер",
+        "type": "Тип",
+        "comment": "Комментарий",
+        "commentPlaceholder": "Комментарий (необязательно)",
+        "save": "Сохранить",
+        "types": {
+          "error": "Ошибка",
+          "good_moment": "Хороший момент",
+          "script_violation": "Нарушение скрипта",
+          "stop_word": "Стоп-слово",
+          "unmotivated_pause": "Немотивированная пауза",
+          "note": "Заметка"
+        },
+        "status": {
+          "draft": "Черновик",
+          "sent": "Отправлен"
+        }
+      },
+      "markersEmpty": "Нет маркеров в текущей области.",
+      "markersTotalSuffix": "маркеров",
+      "feedback": {
+        "leave": "Оставить отзыв",
+        "typeLabel": "Тип",
+        "text": "Текст отзыва",
+        "send": "Отправить",
+        "includeTimestamp": "Включить текущую позицию воспроизведения",
+        "reply": "Ответить",
+        "replyPlaceholder": "Напишите ответ…",
+        "markRead": "Отметить прочитанным",
+        "markComplete": "Отметить выполненным",
+        "threadEmpty": "Ответов пока нет.",
+        "types": {
+          "praise": "Похвала",
+          "note": "Заметка",
+          "correction_task": "Задание на исправление"
+        },
+        "status": {
+          "unread": "Не прочитано",
+          "read": "Прочитано",
+          "completed": "Выполнено"
+        },
+        "role": {
+          "trainer": "Тренер",
+          "operator": "Оператор"
+        }
+      },
+      "feedbackEmpty": "Нет отзывов в текущей области.",
+      "feedbackTotalSuffix": "записей",
+      "dynamics": {
+        "empty": "Нет завершённых скоркарт в этом диапазоне.",
+        "selectOperatorHint": "Выберите оператора, чтобы увидеть динамику оценок.",
+        "operator": "Оператор",
+        "teamAvg": "Среднее по команде",
+        "periodAvg": "Среднее за период",
+        "periodMin": "Мин.",
+        "periodMax": "Макс.",
+        "scorecardCount": "Скоркарты",
+        "granularity": {
+          "day": "По дням",
+          "week": "По неделям",
+          "month": "По месяцам"
+        }
+      },
+      "scope": {
+        "label": "Область просмотра",
+        "my": "Мои действия",
+        "group": "Действия группы",
+        "department": "Действия отдела",
+        "all": "Все действия",
+        "groupComingSoon": "Скоро"
+      },
+      "paymentHistoryEmpty": "Нет платежей, соответствующих фильтрам",
+      "paymentHistorySummary": {
+        "totalPayments": "платежей",
+        "totalAmount": "всего",
+        "verified": "подтверждено",
+        "pending": "в ожидании"
       },
       "timeline": {
         "callId": "ID звонка",
@@ -1372,6 +1578,7 @@
             "amount": "Сумма",
             "date": "Дата",
             "method": "Способ",
+            "paymentComment": "Комментарий к оплате",
             "type": "Тип",
             "status": "Статус",
             "note": "Примечание"
@@ -1456,13 +1663,11 @@
         "amountOfDebtRange": "Сумма отдельного долга",
         "dateOfSale": "Дата продажи долга",
         "assignmentDate": "Дата назначения",
-        "promiseDate": "Обещание",
-        "callbackDate": "Обратный звонок",
+        "targetActionDate": "Дата целевого действия",
         "interactionCreatedBy": "Создано взаимодействие",
         "interactionLoggedDate": "Дата записи взаимодействия",
         "selectOperator": "Выберите оператора",
         "portfolio": "Кредитор/Продавец",
-        "status": "Статус",
         "responsibleEmployee": "Ответственный сотрудник",
         "responsibleSearcher": "Ответственный поисковик",
         "selectEmployee": "Выберите сотрудника",
@@ -1476,9 +1681,7 @@
         "days": "дней"
       },
       "statuses": {
-        "new": "Новый",
         "active": "Активный",
-        "closed": "Закрытый",
         "inprogress": "В процессе",
         "paid": "Оплачено",
         "defaulted": "Просрочено",
@@ -2130,6 +2333,9 @@
           "last4DigitsMustBe4": "Последние 4 цифры должны быть ровно 4 числами",
           "paymentMethodDetails": "Детали способа оплаты",
           "paymentMethodDetailsPlaceholder": "Введите дополнительные детали оплаты (необязательно)",
+          "paymentTypeLabel": "Тип платежа",
+          "paymentTypePlaceholder": "Выберите тип платежа",
+          "paymentTypeRequired": "Тип платежа обязателен",
           "impactPreview": "Предварительный просмотр влияния",
           "currentTotalDebt": "Текущий общий долг:",
           "paymentAmountLabel": "Сумма платежа:",
@@ -2407,6 +2613,12 @@
         "summary": {
           "totalVerified": "Всего подтверждено:",
           "pendingVerification": "Ожидает подтверждения:"
+        },
+        "verifiedByContract": {
+          "title": "Подтверждённые платежи по договору",
+          "contract": "Договор №{{number}}",
+          "payments": "{{count}} платежей",
+          "payments_one": "1 платеж"
         },
         "noPaymentHistory": "История платежей не найдена",
         "failedToLoadClient": "Не удалось загрузить клиента",
@@ -2698,7 +2910,8 @@
         "selectTA": "Выберите ЦД",
         "delayMinutes": "Задержка (мин)",
         "required": "Обязательно",
-        "notInPast": "Дата не может быть в прошлом"
+        "notInPast": "Дата не может быть в прошлом",
+        "showClosedCredits": "Показывать закрытые кредиты"
       },
       "modals": {
         "create": {
@@ -2790,6 +3003,31 @@
         "hidden": "Целевое действие скрыто",
         "unhidden": "Целевое действие восстановлено"
       }
+    },
+    "rrNotifications": {
+      "title": "Уведомления РР",
+      "description": "Настройте напоминания в колокольчике для ответственного оператора перед каждым запланированным платежом по соглашению о реструктуризации. Отправляются системой ежедневно.",
+      "enable": "Включить уведомления РР",
+      "enableHint": "Когда выключено, новые напоминания не отправляются — существующие остаются в колокольчике.",
+      "daysBefore": "Дней до даты платежа",
+      "daysBeforeHint": "Добавьте одно или несколько значений (1–365). На каждое значение — отдельное напоминание.",
+      "daysChip": "{{n}} дней",
+      "daysRequired": "Добавьте хотя бы одно значение.",
+      "template": "Текст уведомления",
+      "variablesDetected": "Обнаруженные переменные",
+      "availableVariables": "Доступные переменные",
+      "clickToInsert": "Нажмите, чтобы вставить",
+      "removeVariable": "Удалить одно вхождение",
+      "removeHint": "Нажимайте × — за раз удаляется одно вхождение. Для точных правок редактируйте текст напрямую.",
+      "variables": {
+        "clientName": "Полное имя клиента",
+        "amount": "Сумма запланированного платежа",
+        "dueDate": "Запланированная дата платежа",
+        "daysLeft": "Дней осталось до даты платежа"
+      },
+      "preview": "Предпросмотр",
+      "saved": "Сохранено",
+      "maxDaysReached": "Максимум 10 значений"
     },
     "documentGeneration": {
       "title": "Генерация документов",
@@ -3420,7 +3658,7 @@
         "quickRanges": "Быстрые диапазоны",
         "today": "Сегодня",
         "yesterday": "Вчера",
-        "last7": "Последние 7",
+        "last7": "Последние 7 дней",
         "last30": "Последние 30 дней",
         "selectEmployee": "Выберите сотрудника",
         "allTypes": "Все типы",
@@ -3497,6 +3735,38 @@
           "ipAddress": "IP адрес",
           "successStatus": "Статус успеха"
         }
+      }
+    },
+    "contactTypes": {
+      "title": "Типы контактов",
+      "add": "+ Добавить тип контакта",
+      "createTitle": "Новый тип контакта",
+      "editTitle": "Редактировать тип контакта",
+      "fieldName": "Название",
+      "fieldDefaultLine": "Линия звонка по умолчанию",
+      "fieldSpam": "Разрешить спам",
+      "fieldPrimary": "Показывать как основной телефон",
+      "fieldSort": "Порядок сортировки",
+      "white": "Белая",
+      "gray": "Серая",
+      "hidden": "Скрыт",
+      "active": "Активен",
+      "hide": "Скрыть",
+      "restore": "Восстановить",
+      "filterStatus": "Статус",
+      "filterAll": "Все",
+      "filterActive": "Активные",
+      "filterHidden": "Скрытые",
+      "errorLoading": "Не удалось загрузить типы контактов",
+      "retry": "Повторить",
+      "columns": {
+        "sortOrder": "Порядок",
+        "name": "Название",
+        "defaultLine": "Линия звонка",
+        "spamAllowed": "Спам",
+        "primary": "Основной телефон",
+        "status": "Статус",
+        "actions": "Действия"
       }
     },
     "tags": {
@@ -3588,7 +3858,9 @@
         "permanent": "Бессрочный",
         "ttl": "По времени (TTL)",
         "loanClosure": "До закрытия кредита",
-        "loan_closure": "До закрытия кредита"
+        "loan_closure": "До закрытия кредита",
+        "target_action_date": "Дата целевого действия",
+        "targetActionDate": "Дата целевого действия"
       },
       "protectedWarning": "Для удаления требуется подтверждение руководителя",
       "removalRequests": {

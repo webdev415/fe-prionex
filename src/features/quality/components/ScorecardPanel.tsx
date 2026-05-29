@@ -1,0 +1,426 @@
+/**
+ * ScorecardPanel — side panel rendered next to the CallRecordingModal (KAN-410, Feature 2.1).
+ *
+ * Renders the active scorecard template with collapsible sections, per-criterion
+ * inputs (binary toggle or 0..5 buttons), comment fields, and a status indicator.
+ * Autosaves drafts via `useScorecardDraft`; trainer-controlled buttons flip
+ * status (draft -> completed -> sent).
+ *
+ * The panel is mounted inside the `CallReviewLayout` wrapper (Action Analysis
+ * flow only); operator-side call sites that open the modal don't pass a
+ * `scorecardPanel` prop and get the legacy single-panel layout unchanged.
+ */
+import { useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { Button } from '@/components/ui/Button'
+import { Icons } from '@/lib/icons'
+import { useScorecardDraft } from '../hooks/useScorecardDraft'
+import {
+  useScorecard,
+  useScorecardHistoryForCall,
+  useCreateScorecard,
+  useSendScorecard,
+  useUpdateScorecard,
+} from '../hooks/useScorecards'
+import { useTemplates } from '../hooks/useTemplates'
+import { computeWeightedScorePreview } from '../lib/scoringPreview'
+import type { Criterion, Section } from '../types'
+
+interface ScorecardPanelProps {
+  callId: string
+  operatorId: number
+  /** When set, the panel opens that scorecard rather than the latest draft. */
+  scorecardId?: number | null
+  /** Callback after the trainer presses "Send to operator". */
+  onSent?: (scorecardId: number) => void
+}
+
+export function ScorecardPanel({
+  callId,
+  operatorId,
+  scorecardId: pinnedScorecardId,
+  onSent,
+}: ScorecardPanelProps) {
+  const { t } = useTranslation('common')
+  const templatesQuery = useTemplates(false)
+  const historyQuery = useScorecardHistoryForCall(callId)
+
+  // `manuallySelectedId` is what the user clicks (template start, history row).
+  // The effective active id is derived during render from three sources in
+  // priority order: the pinned prop, an explicit user click, then the first
+  // outstanding draft on this call. No effects, no cascading renders.
+  const [manuallySelectedId, setManuallySelectedId] = useState<number | null>(null)
+  const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(null)
+
+  const autoDraftId = historyQuery.data?.find((h) => h.status === 'draft')?.id ?? null
+  const activeScorecardId = pinnedScorecardId ?? manuallySelectedId ?? autoDraftId ?? null
+
+  const activeQuery = useScorecard(activeScorecardId, activeScorecardId != null)
+  const createMutation = useCreateScorecard()
+  const updateMutation = useUpdateScorecard()
+  const sendMutation = useSendScorecard()
+
+  const activeScorecard = activeQuery.data
+  const sections: Section[] = useMemo(() => {
+    if (activeScorecard?.template_snapshot.sections) {
+      return activeScorecard.template_snapshot.sections
+    }
+    const picked = templatesQuery.data?.find((tpl) => tpl.id === selectedTemplateId)
+    return picked?.sections ?? []
+  }, [activeScorecard, templatesQuery.data, selectedTemplateId])
+
+  const draftState = useMemo(() => {
+    if (!activeScorecard) return null
+    return {
+      scores: activeScorecard.scores,
+      overall_comment: activeScorecard.overall_comment ?? '',
+    }
+  }, [activeScorecard])
+
+  const draft = useScorecardDraft({
+    scorecardId: activeScorecardId,
+    initial: draftState,
+    enabled: activeScorecard?.status === 'draft',
+  })
+
+  const livePreview = useMemo(
+    () => computeWeightedScorePreview(sections, draft.scores),
+    [sections, draft.scores]
+  )
+
+  const status = activeScorecard?.status ?? 'draft'
+  const canEdit = status === 'draft'
+
+  const handleStartNew = async () => {
+    if (!selectedTemplateId) return
+    const created = await createMutation.mutateAsync({
+      call_id: callId,
+      operator_id: operatorId,
+      template_id: selectedTemplateId,
+      status: 'draft',
+    })
+    setManuallySelectedId(created.id)
+  }
+
+  const handleMarkCompleted = async () => {
+    if (!activeScorecardId) return
+    await draft.flush()
+    await updateMutation.mutateAsync({
+      scorecardId: activeScorecardId,
+      payload: { status: 'completed' },
+    })
+  }
+
+  const handleSend = async () => {
+    if (!activeScorecardId) return
+    const sent = await sendMutation.mutateAsync(activeScorecardId)
+    onSent?.(sent.id)
+  }
+
+  // ---- Render branches ----
+
+  // No scorecard yet → show template picker
+  if (!activeScorecardId) {
+    return (
+      <aside className="flex h-full flex-col gap-3 rounded-xl bg-white p-4 shadow-sm">
+        <h2 className="text-dark-500 text-lg font-medium">
+          {t('pages.actionAnalysis.scorecard.title', 'Quality evaluation')}
+        </h2>
+
+        {historyQuery.data && historyQuery.data.length > 0 ? (
+          <div className="rounded-lg bg-gray-50 p-3 text-sm text-gray-700">
+            <div className="mb-2 font-medium">
+              {t('pages.actionAnalysis.scorecard.history', 'Previous scorecards on this call')}
+            </div>
+            <ul className="space-y-1">
+              {historyQuery.data.map((row) => (
+                <li key={row.id}>
+                  <button
+                    type="button"
+                    onClick={() => setManuallySelectedId(row.id)}
+                    className="text-primary-600 hover:underline"
+                  >
+                    {new Date(row.created_at).toLocaleString()} —{' '}
+                    {t(`pages.actionAnalysis.scorecard.status.${row.status}`, row.status)}
+                    {row.weighted_score != null ? ` (${row.weighted_score})` : ''}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+
+        <label className="text-sm font-medium text-gray-700">
+          {t('pages.actionAnalysis.scorecard.template', 'Template')}
+        </label>
+        <select
+          className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+          value={selectedTemplateId ?? ''}
+          onChange={(e) => setSelectedTemplateId(e.target.value ? Number(e.target.value) : null)}
+          disabled={templatesQuery.isLoading}
+        >
+          <option value="">
+            {t('pages.actionAnalysis.scorecard.selectTemplate', 'Select a template…')}
+          </option>
+          {templatesQuery.data?.map((tpl) => (
+            <option key={tpl.id} value={tpl.id}>
+              {tpl.name}
+            </option>
+          ))}
+        </select>
+
+        <Button
+          variant="primary"
+          size="md"
+          onClick={handleStartNew}
+          disabled={!selectedTemplateId || createMutation.isPending}
+          className="rounded-full"
+        >
+          {t('pages.actionAnalysis.scorecard.startEvaluation', 'Start evaluation')}
+        </Button>
+      </aside>
+    )
+  }
+
+  if (activeQuery.isLoading) {
+    return (
+      <aside className="flex h-full items-center justify-center rounded-xl bg-white p-4 shadow-sm">
+        <Icons.Spinner className="h-5 w-5" />
+      </aside>
+    )
+  }
+
+  if (!activeScorecard) {
+    return (
+      <aside className="rounded-xl bg-white p-4 text-sm text-red-600 shadow-sm">
+        {t('pages.actionAnalysis.errors.loadScorecardFailed', 'Failed to load scorecard')}
+      </aside>
+    )
+  }
+
+  return (
+    <aside className="flex h-full flex-col gap-3 rounded-xl bg-white p-4 shadow-sm">
+      <header className="flex items-center justify-between">
+        <h2 className="text-dark-500 text-lg font-medium">
+          {activeScorecard.template_snapshot.name}
+        </h2>
+        <span className="rounded-full bg-gray-100 px-2 py-1 text-xs font-medium text-gray-700">
+          {t(`pages.actionAnalysis.scorecard.status.${status}`, status)}
+        </span>
+      </header>
+
+      <div className="bg-primary-50 text-primary-700 rounded-lg p-3 text-sm">
+        {t('pages.actionAnalysis.scorecard.computedScore', 'Score')}:{' '}
+        <span className="text-lg font-semibold">
+          {livePreview != null ? livePreview.toFixed(2) : '—'}
+        </span>
+      </div>
+
+      <div className="flex-1 overflow-y-auto">
+        {sections.map((section) => (
+          <SectionEditor
+            key={section.key}
+            section={section}
+            scores={draft.scores}
+            disabled={!canEdit}
+            onChange={draft.setScore}
+          />
+        ))}
+
+        <label className="mt-3 block text-sm font-medium text-gray-700">
+          {t('pages.actionAnalysis.scorecard.perCallComment', 'Overall comment')}
+        </label>
+        <textarea
+          className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+          rows={3}
+          value={draft.overallComment}
+          onChange={(e) => draft.setOverallComment(e.target.value)}
+          disabled={!canEdit}
+        />
+      </div>
+
+      <footer className="flex flex-wrap gap-2">
+        {canEdit ? (
+          <>
+            <Button
+              variant="secondary"
+              size="md"
+              onClick={() => draft.flush()}
+              disabled={draft.isSaving}
+              className="rounded-full"
+            >
+              {t('pages.actionAnalysis.scorecard.saveDraft', 'Save draft')}
+            </Button>
+            <Button
+              variant="primary"
+              size="md"
+              onClick={handleMarkCompleted}
+              disabled={updateMutation.isPending}
+              className="rounded-full"
+            >
+              {t('pages.actionAnalysis.scorecard.markCompleted', 'Mark completed')}
+            </Button>
+          </>
+        ) : null}
+
+        {status === 'completed' ? (
+          <Button
+            variant="primary"
+            size="md"
+            onClick={handleSend}
+            disabled={sendMutation.isPending}
+            className="rounded-full"
+          >
+            {t('pages.actionAnalysis.scorecard.sendToOperator', 'Send to operator')}
+          </Button>
+        ) : null}
+      </footer>
+    </aside>
+  )
+}
+
+interface SectionEditorProps {
+  section: Section
+  scores: Record<string, { value: number | boolean | null; comment?: string | null }>
+  disabled: boolean
+  onChange: (criterionKey: string, value: number | boolean | null, comment?: string | null) => void
+}
+
+function SectionEditor({ section, scores, disabled, onChange }: SectionEditorProps) {
+  const [collapsed, setCollapsed] = useState(false)
+  return (
+    <section className="mt-3 rounded-lg border border-gray-100">
+      <button
+        type="button"
+        onClick={() => setCollapsed(!collapsed)}
+        className="flex w-full items-center justify-between px-3 py-2 text-left text-sm font-medium text-gray-700"
+      >
+        <span>{section.name}</span>
+        <Icons.ArrowDown
+          size={16}
+          className={`transition-transform ${collapsed ? '-rotate-90' : ''}`}
+        />
+      </button>
+      {!collapsed ? (
+        <div className="space-y-3 px-3 py-3">
+          {section.criteria.map((criterion) => (
+            <CriterionRow
+              key={criterion.key}
+              criterion={criterion}
+              entry={scores[criterion.key]}
+              disabled={disabled}
+              onChange={onChange}
+            />
+          ))}
+        </div>
+      ) : null}
+    </section>
+  )
+}
+
+interface CriterionRowProps {
+  criterion: Criterion
+  entry?: { value: number | boolean | null; comment?: string | null }
+  disabled: boolean
+  onChange: (criterionKey: string, value: number | boolean | null, comment?: string | null) => void
+}
+
+function CriterionRow({ criterion, entry, disabled, onChange }: CriterionRowProps) {
+  return (
+    <div className="rounded-md bg-gray-50 px-3 py-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <span className="text-sm text-gray-700">{criterion.name}</span>
+        {criterion.scale === 'binary' ? (
+          <BinaryInput
+            value={(entry?.value as boolean | null) ?? null}
+            disabled={disabled}
+            onChange={(v) => onChange(criterion.key, v)}
+          />
+        ) : (
+          <ScaleInput
+            value={(entry?.value as number | null) ?? null}
+            disabled={disabled}
+            onChange={(v) => onChange(criterion.key, v)}
+          />
+        )}
+      </div>
+      <input
+        type="text"
+        placeholder="Comment (optional)"
+        defaultValue={entry?.comment ?? ''}
+        disabled={disabled}
+        onBlur={(e) => onChange(criterion.key, entry?.value ?? null, e.target.value)}
+        className="mt-2 w-full rounded-md border border-gray-200 px-2 py-1 text-xs"
+      />
+    </div>
+  )
+}
+
+function BinaryInput({
+  value,
+  disabled,
+  onChange,
+}: {
+  value: boolean | null
+  disabled: boolean
+  onChange: (next: boolean | null) => void
+}) {
+  return (
+    <div className="flex gap-1">
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => onChange(value === true ? null : true)}
+        className={`rounded-full border px-3 py-1 text-xs font-medium ${
+          value === true
+            ? 'bg-primary-500 border-primary-500 text-white'
+            : 'border-gray-200 bg-white text-gray-700'
+        }`}
+      >
+        ✓
+      </button>
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => onChange(value === false ? null : false)}
+        className={`rounded-full border px-3 py-1 text-xs font-medium ${
+          value === false
+            ? 'border-red-500 bg-red-500 text-white'
+            : 'border-gray-200 bg-white text-gray-700'
+        }`}
+      >
+        ✗
+      </button>
+    </div>
+  )
+}
+
+function ScaleInput({
+  value,
+  disabled,
+  onChange,
+}: {
+  value: number | null
+  disabled: boolean
+  onChange: (next: number | null) => void
+}) {
+  return (
+    <div className="flex gap-1">
+      {[0, 1, 2, 3, 4, 5].map((n) => (
+        <button
+          key={n}
+          type="button"
+          disabled={disabled}
+          onClick={() => onChange(value === n ? null : n)}
+          className={`h-7 w-7 rounded-full border text-xs font-medium ${
+            value === n
+              ? 'bg-primary-500 border-primary-500 text-white'
+              : 'border-gray-200 bg-white text-gray-700'
+          }`}
+        >
+          {n}
+        </button>
+      ))}
+    </div>
+  )
+}

@@ -604,6 +604,20 @@ export function TagFormModal({
                   )}
                 </p>
               )}
+              {/* target_action_date — the expiry comes from a date field
+                  inside the TA that triggers the tag effect. The fixed-
+                  date and TTL-hours inputs are intentionally hidden:
+                  they're ignored by the backend for this type, and the
+                  date-field selection happens in the chain effect
+                  editor (not here in the tag definition). */}
+              {watch('expiry_type') === 'target_action_date' && (
+                <p className="mt-2 text-xs text-amber-600">
+                  {t(
+                    'pages.tags.fields.targetActionDateNote',
+                    'Expiry is set from a date field in the Target Action that triggers this tag. Tags of this type cannot be assigned manually by operators — only via chain effects.'
+                  )}
+                </p>
+              )}
             </div>
 
             {/* Protected Tag */}

@@ -139,6 +139,10 @@ import {
   Mic02Icon,
   Tag01Icon,
   LockComputerIcon,
+  BubbleChatEditIcon,
+  MessageSecure01Icon,
+  MessageMultiple01Icon,
+  Message01Icon,
 } from '@hugeicons/core-free-icons'
 /**
  * Icon component props
@@ -334,6 +338,14 @@ export const Icons = {
   AiBrain03: (props: Omit<IconProps, 'icon'>) => <Icon icon={AiBrain03Icon} {...props} />,
   Mic02: (props: Omit<IconProps, 'icon'>) => <Icon icon={Mic02Icon} {...props} />,
   LockComputer: (props: Omit<IconProps, 'icon'>) => <Icon icon={LockComputerIcon} {...props} />,
+  BubbleChatEdit: (props: Omit<IconProps, 'icon'>) => <Icon icon={BubbleChatEditIcon} {...props} />,
+  MessageSecure01: (props: Omit<IconProps, 'icon'>) => (
+    <Icon icon={MessageSecure01Icon} {...props} />
+  ),
+  MessageMultiple01: (props: Omit<IconProps, 'icon'>) => (
+    <Icon icon={MessageMultiple01Icon} {...props} />
+  ),
+  Message01: (props: Omit<IconProps, 'icon'>) => <Icon icon={Message01Icon} {...props} />,
 }
 
 /**
@@ -463,6 +475,10 @@ export {
   AiBrain03Icon,
   Mic02Icon,
   LockComputerIcon,
+  BubbleChatEditIcon,
+  MessageSecure01Icon,
+  MessageMultiple01Icon,
+  Message01Icon,
 }
 
 /**

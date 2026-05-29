@@ -39,6 +39,17 @@ export interface DateSelectProps {
 const parseDate = (date: Date | string | null | undefined): Date | null => {
   if (!date) return null
   if (date instanceof Date) return date
+  // Date-only strings ("YYYY-MM-DD") represent a calendar day, not a
+  // moment in time. ``new Date("2026-05-27")`` would parse them as UTC
+  // midnight; browsers west of UTC then render them as the previous
+  // local day inside react-datepicker (clicking 27 shows 26). Build
+  // the Date at **local** midnight so the picker's input matches the
+  // calendar cell the user clicked.
+  const ymdMatch = date.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  if (ymdMatch) {
+    const [, y, m, d] = ymdMatch
+    return new Date(+y, +m - 1, +d, 0, 0, 0, 0)
+  }
   const parsed = new Date(date)
   return isNaN(parsed.getTime()) ? null : parsed
 }

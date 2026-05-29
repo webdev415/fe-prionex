@@ -14,6 +14,7 @@ export {
   useTaskSubjects,
   taskHistoryKeys,
 } from './hooks/useTaskHistory'
+export { usePaymentMonitoring, paymentMonitoringKeys } from './hooks/usePaymentMonitoring'
 export {
   getCallMonitoring,
   exportCallMonitoring,
@@ -25,6 +26,7 @@ export {
   getTaskHistory,
   getTaskHistoryAnalytics,
   listTaskSubjects,
+  getPaymentMonitoring,
   actionAnalysisService,
 } from './api/actionAnalysisService'
 export type {
@@ -52,5 +54,18 @@ export type {
   TaskHistoryAnalyticsResponse,
   TaskHistoryAnalyticsFilters,
   TaskSubject,
+  PaymentMethod,
+  PaymentStatus,
+  PaymentType,
+  PaymentMonitoringSort,
+  PaymentMonitoringFilters,
+  PaymentMonitoringItem,
+  PaymentMonitoringSummary,
+  PaymentMonitoringResponse,
 } from './types'
-export { TELEPHONY_TYPE_VALUES } from './types'
+export {
+  TELEPHONY_TYPE_VALUES,
+  PAYMENT_METHOD_VALUES,
+  PAYMENT_STATUS_VALUES,
+  PAYMENT_TYPE_VALUES,
+} from './types'
