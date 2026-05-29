@@ -184,6 +184,11 @@ export const PERMISSIONS = {
     CREATE_FEEDBACK: 'create_feedback',
     VIEW_FEEDBACK: 'view_feedback',
     VIEW_SCORE_DYNAMICS: 'view_score_dynamics',
+    // KAN-413 — Inbox triage queue
+    VIEW_INBOX: 'view_inbox',
+    MANAGE_COACHING_ASSIGNMENTS: 'manage_coaching_assignments',
+    CREATE_ONE_ON_ONE: 'create_one_on_one',
+    SELECT_INBOX_SCOPE: 'select_inbox_scope',
   },
 
   /**
@@ -359,6 +364,11 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   create_feedback: 'Leave structured feedback (praise / note / correction task) on a call',
   view_feedback: 'View structured feedback threads across operators',
   view_score_dynamics: 'View operator score-dynamics chart, per-section breakdown, and alerts',
+  // KAN-413 — Inbox triage queue
+  view_inbox: 'View the Inbox triage queue, header KPIs, and per-operator coaching detail',
+  manage_coaching_assignments: 'Take charge of an operator and transition Kanban workflow state',
+  create_one_on_one: 'Schedule a 1-on-1 session with an operator',
+  select_inbox_scope: 'Show the My / Group / Department / All scope selector on the Inbox tab',
 
   // Document Generation
   view_document_journal: 'View the journal of all generated and uploaded documents',
