@@ -13,7 +13,11 @@ import type { BulkWriteoffResponse } from './bulkUploadTypes'
 export async function uploadWriteoffBulk(file: File): Promise<BulkWriteoffResponse> {
   const formData = new FormData()
   formData.append('file', file)
-  const response = await api.post<BulkWriteoffResponse>('/api/v1/writeoffs/bulk', formData)
+  const response = await api.post<BulkWriteoffResponse>('/api/v1/writeoffs/bulk', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  })
   return response.data
 }
 
