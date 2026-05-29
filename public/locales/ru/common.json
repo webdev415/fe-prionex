@@ -581,6 +581,7 @@
         "placeholder": "Вкладка «История взаимодействий» — скоро будет доступна"
       },
       "topTabs": {
+        "inbox": "Входящие",
         "calls": "Звонки",
         "scores": "Оценки",
         "training": "Обучение",
@@ -694,6 +695,115 @@
         "department": "Действия отдела",
         "all": "Все действия",
         "groupComingSoon": "Скоро"
+      },
+      "inbox": {
+        "searchPlaceholder": "Имя оператора или номер телефона",
+        "headerKpis": {
+          "inProgress": "В работе",
+          "averageScore": "Средний балл",
+          "teamPlan": "План команды",
+          "tasksToday": "Задачи сегодня",
+          "oneOnOneToday": "1-на-1 сегодня"
+        },
+        "viewModes": {
+          "label": "Режим отображения",
+          "inbox": "Входящие",
+          "kanban": "Канбан",
+          "grid": "Сетка",
+          "comingSoon": "Скоро",
+          "comingSoonShort": "скоро"
+        },
+        "kanbanColumns": {
+          "wait": "Ожидание",
+          "in_progress": "В работе",
+          "awaiting_training": "Ожидает обучения",
+          "scheduled": "Запланировано",
+          "closed": "Закрыто"
+        },
+        "list": {
+          "loading": "Загрузка очереди…",
+          "empty": "Нет операторов в текущей области.",
+          "emptyScope": "Нет операторов в текущей области.",
+          "triggerCount": "{{count}} триггеров"
+        },
+        "detail": {
+          "selectOperator": "Выберите оператора, чтобы увидеть детали.",
+          "loading": "Загрузка…",
+          "loadFailed": "Не удалось загрузить детали оператора.",
+          "redFlagsHeadline": "{{count}} красных флагов",
+          "latestRatings": "Последние оценки диалогов",
+          "noScorecards": "За выбранный период нет оценок.",
+          "kpis": {
+            "scriptAdherence": "Скрипт",
+            "scorecardAvg": "Оценка",
+            "conversion": "Конверсия",
+            "tasksOnTime": "Задачи вовремя"
+          },
+          "trainerActions": {
+            "listen": "Прослушать звонок",
+            "assignTask": "Назначить задачу",
+            "planOneOnOne": "Запланировать 1-на-1",
+            "takeCharge": "Взять в работу"
+          }
+        },
+        "quickActions": {
+          "button": "Быстрое действие",
+          "comingSoon": "Скоро",
+          "assignTask": "Назначить задачу",
+          "assignTaskHint": "Оператор · тема · дедлайн",
+          "scheduleOneOnOne": "Запланировать 1-на-1",
+          "scheduleOneOnOneHint": "Оператор · дата · время",
+          "assignCourse": "Назначить курс / дрилл",
+          "assignCourseHint": "Оператор · материал",
+          "rateDialogue": "Оценить диалог",
+          "rateDialogueHint": "Открыть оценочный лист"
+        },
+        "triggers": {
+          "low_script_adherence": "Низкое следование скрипту",
+          "low_scorecard_average": "Низкий средний балл",
+          "low_conversion_rate": "Низкая конверсия",
+          "overdue_correction_tasks": "Просроченные корректирующие задачи",
+          "active_auto_flags": "Активные авто-флаги"
+        },
+        "rateDialogue": {
+          "title": "Выберите звонок для оценки",
+          "noOperator": "Сначала выберите оператора.",
+          "noExtension": "У этого оператора нет внутреннего номера и нет звонков для оценки.",
+          "noCalls": "Нет недавних звонков для этого оператора.",
+          "hasRecording": "Запись доступна",
+          "noRecording": "Без записи"
+        },
+        "kanban": {
+          "transitionSuccess": "Перемещено в «{{state}}»",
+          "transitionFailed": "Не удалось переместить карточку."
+        },
+        "pendingFeature": {
+          "dependsOn": "Это действие станет доступно после релиза {{issue}}.",
+          "assignTask": {
+            "title": "Назначить корректирующую задачу",
+            "description": "Назначает оператору задачу с дедлайном и контролем выполнения."
+          },
+          "assignMaterial": {
+            "title": "Назначить курс или дрилл",
+            "description": "Отправляет учебный материал оператору и отслеживает прогресс."
+          }
+        },
+        "scheduleOneOnOne": {
+          "title": "Запланировать 1-на-1",
+          "operator": "Оператор",
+          "scheduledAt": "Дата и время",
+          "duration": "Длительность (минут)",
+          "notes": "Заметки (необязательно)",
+          "notesPlaceholder": "Что вы хотите обсудить на встрече?",
+          "submit": "Запланировать встречу",
+          "submitting": "Планируем…",
+          "success": "1-на-1 запланирована. Оператор уведомлён.",
+          "errors": {
+            "noOperator": "Сначала выберите оператора.",
+            "noDate": "Выберите дату и время.",
+            "generic": "Не удалось запланировать встречу."
+          }
+        }
       },
       "paymentHistoryEmpty": "Нет платежей, соответствующих фильтрам",
       "paymentHistorySummary": {

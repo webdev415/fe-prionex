@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -25,6 +25,12 @@ import { HeatmapTab } from './components/HeatmapTab'
 import { ScriptAnalyticsTab } from './components/ScriptAnalyticsTab'
 import { ScoresTab } from './components/scores/ScoresTab'
 import { ScopeSelector } from './components/ScopeSelector'
+import { InboxTab } from './components/inbox/InboxTab'
+import { RateDialogueDialog } from './components/inbox/RateDialogueDialog'
+import { ScheduleOneOnOneDialog } from './components/inbox/ScheduleOneOnOneDialog'
+import { PendingFeatureDialog } from './components/inbox/PendingFeatureDialog'
+import { HeaderKpiStrip } from './components/chrome/HeaderKpiStrip'
+import { readInboxState } from './lib/inboxUrlState'
 import { readCallsUrlState, toCallMonitoringQuery } from './lib/callsUrlState'
 import {
   readInteractionBarState,
@@ -34,10 +40,15 @@ import {
 import { useScopedUserIds } from './lib/scope'
 
 const TOP_TAB_LABEL_KEYS: Record<ActionAnalysisTopTabId, { key: string; fallback: string }> = {
+  inbox: { key: 'pages.actionAnalysis.topTabs.inbox', fallback: 'Inbox' },
   calls: { key: 'pages.actionAnalysis.topTabs.calls', fallback: 'Calls' },
   scores: { key: 'pages.actionAnalysis.topTabs.scores', fallback: 'Scores' },
   training: { key: 'pages.actionAnalysis.topTabs.training', fallback: 'Training' },
   settings: { key: 'pages.actionAnalysis.topTabs.settings', fallback: 'Settings' },
+}
+
+const TOP_TAB_PERMISSIONS: Partial<Record<ActionAnalysisTopTabId, string>> = {
+  inbox: PERMISSIONS.ACTION_ANALYSIS.VIEW_INBOX,
 }
 
 const SUB_TAB_LABEL_KEYS: Record<
@@ -160,6 +171,86 @@ export function ActionAnalysisPage() {
     setSearchParams(next, { replace: true })
   }
 
+  // KAN-413 — visible top tabs filtered by permission. `inbox` only shows
+  // for users with `view_inbox`; existing tabs remain visible to anyone
+  // with `view_action_analysis` since their sub-tab gating is unchanged.
+  const visibleTopTabs = useMemo(() => {
+    return ACTION_ANALYSIS_TOP_TABS.filter((tab) => {
+      const required = TOP_TAB_PERMISSIONS[tab]
+      if (!required) return true
+      return userPermissions.includes(required)
+    })
+  }, [userPermissions])
+
+  // KAN-413 — Header KPI strip + Quick Action overlay are Trainer Workplace
+  // chrome, shared across every top tab. They render only when the user has
+  // `view_inbox` since the strip is driven by the /coaching/header-kpis
+  // endpoint that gates on it.
+  const showHeaderChrome = userPermissions.includes(PERMISSIONS.ACTION_ANALYSIS.VIEW_INBOX)
+  const inboxBarState = readInboxState(searchParams)
+
+  // KAN-413 step 5 — Rate dialogue picker. Picker is page-level so both the
+  // Header Quick Action and the OperatorDetailPanel "Listen to the call"
+  // button can open it for whichever operator is focused.
+  const [rateDialogueOpen, setRateDialogueOpen] = useState(false)
+  const handleOpenRateDialogue = () => {
+    if (!inboxBarState.operatorId) {
+      toast.info(
+        t('pages.actionAnalysis.inbox.rateDialogue.noOperator', 'Select an operator first.')
+      )
+      return
+    }
+    setRateDialogueOpen(true)
+  }
+
+  // KAN-413 step 6 — Schedule 1-on-1 dialog, same page-level pattern as
+  // the rate dialogue picker.
+  const [scheduleOneOnOneOpen, setScheduleOneOnOneOpen] = useState(false)
+  const handleOpenScheduleOneOnOne = () => {
+    if (!inboxBarState.operatorId) {
+      toast.info(
+        t(
+          'pages.actionAnalysis.inbox.scheduleOneOnOne.errors.noOperator',
+          'Select an operator first.'
+        )
+      )
+      return
+    }
+    setScheduleOneOnOneOpen(true)
+  }
+
+  // KAN-413 step 9 — Quick Actions #1 (Assign task) + #3 (Assign material).
+  // Real flows depend on KAN-411 and KAN-416. Until those land, both open a
+  // placeholder dialog so trainers see what's coming + the issue gate.
+  const [pendingFeature, setPendingFeature] = useState<null | 'assignTask' | 'assignMaterial'>(null)
+  const handleOpenPendingFeature = (kind: 'assignTask' | 'assignMaterial') => () => {
+    if (!inboxBarState.operatorId) {
+      toast.info(
+        t(
+          'pages.actionAnalysis.inbox.scheduleOneOnOne.errors.noOperator',
+          'Select an operator first.'
+        )
+      )
+      return
+    }
+    setPendingFeature(kind)
+  }
+
+  const focusedOperatorName = useMemo(() => {
+    if (!inboxBarState.operatorId) return undefined
+    return operators.find((o) => o.id === inboxBarState.operatorId)?.full_name
+  }, [inboxBarState.operatorId, operators])
+
+  const headerKpisFilters = useMemo(
+    () => ({
+      user_ids: scoped.userIds,
+      period: inboxBarState.period,
+      from_date: inboxBarState.customFromDate,
+      to_date: inboxBarState.customToDate,
+    }),
+    [scoped.userIds, inboxBarState.period, inboxBarState.customFromDate, inboxBarState.customToDate]
+  )
+
   const setActiveSubTab = (sub: ActionAnalysisCallsSubTabId) => {
     const next = new URLSearchParams(searchParams)
     next.set('tab', 'calls')
@@ -225,9 +316,19 @@ export function ActionAnalysisPage() {
         ) : null}
       </div>
 
+      {showHeaderChrome ? (
+        <HeaderKpiStrip
+          filters={headerKpisFilters}
+          onRateDialogue={handleOpenRateDialogue}
+          onScheduleOneOnOne={handleOpenScheduleOneOnOne}
+          onAssignTask={handleOpenPendingFeature('assignTask')}
+          onAssignMaterial={handleOpenPendingFeature('assignMaterial')}
+        />
+      ) : null}
+
       <div className="border-b border-gray-200">
         <div className="-mb-px flex flex-wrap gap-6" role="tablist">
-          {ACTION_ANALYSIS_TOP_TABS.map((tab) => {
+          {visibleTopTabs.map((tab) => {
             const { key, fallback } = TOP_TAB_LABEL_KEYS[tab]
             const isActive = activeTopTab === tab
             return (
@@ -250,7 +351,13 @@ export function ActionAnalysisPage() {
         </div>
       </div>
 
-      {activeTopTab === 'scores' ? (
+      {activeTopTab === 'inbox' ? (
+        <InboxTab
+          onOpenRateDialogue={handleOpenRateDialogue}
+          onOpenScheduleOneOnOne={handleOpenScheduleOneOnOne}
+          onOpenAssignTask={handleOpenPendingFeature('assignTask')}
+        />
+      ) : activeTopTab === 'scores' ? (
         <ScoresTab />
       ) : activeTopTab === 'calls' ? (
         <>
@@ -297,6 +404,40 @@ export function ActionAnalysisPage() {
           )}
         </div>
       )}
+
+      <RateDialogueDialog
+        open={rateDialogueOpen}
+        onClose={() => setRateDialogueOpen(false)}
+        operatorId={inboxBarState.operatorId}
+      />
+
+      <ScheduleOneOnOneDialog
+        open={scheduleOneOnOneOpen}
+        onClose={() => setScheduleOneOnOneOpen(false)}
+        operatorId={inboxBarState.operatorId}
+      />
+
+      <PendingFeatureDialog
+        open={pendingFeature === 'assignTask'}
+        onClose={() => setPendingFeature(null)}
+        titleKey="pages.actionAnalysis.inbox.pendingFeature.assignTask.title"
+        titleFallback="Assign a correction task"
+        descriptionKey="pages.actionAnalysis.inbox.pendingFeature.assignTask.description"
+        descriptionFallback="Assigns a coaching task to the operator with a due date and reviewable outcome."
+        dependsOnIssue="KAN-411"
+        operatorName={focusedOperatorName}
+      />
+
+      <PendingFeatureDialog
+        open={pendingFeature === 'assignMaterial'}
+        onClose={() => setPendingFeature(null)}
+        titleKey="pages.actionAnalysis.inbox.pendingFeature.assignMaterial.title"
+        titleFallback="Assign a course or drill"
+        descriptionKey="pages.actionAnalysis.inbox.pendingFeature.assignMaterial.description"
+        descriptionFallback="Pushes training material to the operator and tracks completion on the dashboard."
+        dependsOnIssue="KAN-416"
+        operatorName={focusedOperatorName}
+      />
     </div>
   )
 }
