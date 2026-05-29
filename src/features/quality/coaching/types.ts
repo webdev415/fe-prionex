@@ -40,6 +40,8 @@ export interface QueueOperator {
   assignment: AssignmentSummary | null
   kpis: OperatorKpis
   triggers: string[]
+  /** ISO 8601 timestamp of the operator's most recent quality activity. */
+  last_active_at: string | null
 }
 
 export interface QueueResponse {

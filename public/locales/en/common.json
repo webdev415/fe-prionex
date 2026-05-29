@@ -699,6 +699,10 @@
         "all": "All actions",
         "groupComingSoon": "Coming soon"
       },
+      "workspaceBanner": {
+        "label": "Coach's Workspace",
+        "assignedTo": "You are assigned to {{department}}"
+      },
       "inbox": {
         "searchPlaceholder": "Operator name or phone number",
         "headerKpis": {
@@ -734,6 +738,10 @@
           "loading": "Loading…",
           "loadFailed": "Could not load operator details.",
           "redFlagsHeadline": "{{count}} red flags",
+          "redFlagsSubtitle": "Coaching attention needed — recent triggers have accumulated.",
+          "riskyTag": "Risky",
+          "whyInQueue": "Why entered the queue",
+          "noTriggers": "No active triggers in the selected period.",
           "latestRatings": "Latest dialogue ratings",
           "noScorecards": "No scorecards in the selected period.",
           "kpis": {

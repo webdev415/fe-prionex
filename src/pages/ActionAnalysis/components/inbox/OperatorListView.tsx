@@ -22,9 +22,9 @@ export interface OperatorListViewProps {
 }
 
 const SCORE_BAND_BG: Record<ScoreBand, string> = {
-  red: 'bg-red-50 text-red-700 ring-red-200',
-  amber: 'bg-yellow-50 text-yellow-700 ring-yellow-200',
-  green: 'bg-green-50 text-green-700 ring-green-200',
+  red: 'bg-red-500 text-white ring-red-300',
+  amber: 'bg-amber-400 text-white ring-amber-300',
+  green: 'bg-green-500 text-white ring-green-300',
 }
 
 const ASSIGNMENT_STATE_LABEL: Record<
@@ -63,6 +63,30 @@ function operatorDisplayName(operatorId: number, operators: OperatorUser[]): str
   return operator?.full_name || `#${operatorId}`
 }
 
+function operatorDepartmentName(operatorId: number, operators: OperatorUser[]): string | null {
+  const operator = operators.find((o) => o.id === operatorId)
+  return operator?.department_name ?? null
+}
+
+function formatRelative(isoTimestamp: string | null | undefined): string | null {
+  if (!isoTimestamp) return null
+  const then = new Date(isoTimestamp).getTime()
+  if (Number.isNaN(then)) return null
+  const diffMs = Date.now() - then
+  if (diffMs < 0) return null
+  const minutes = Math.floor(diffMs / 60_000)
+  if (minutes < 1) return 'now'
+  if (minutes < 60) return `${minutes}m ago`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `${hours}h ago`
+  const days = Math.floor(hours / 24)
+  if (days < 30) return `${days}d ago`
+  const months = Math.floor(days / 30)
+  if (months < 12) return `${months}mo ago`
+  const years = Math.floor(months / 12)
+  return `${years}y ago`
+}
+
 export function OperatorListView({
   rows,
   operators,
@@ -92,8 +116,10 @@ export function OperatorListView({
     <ul className="flex flex-col gap-1.5">
       {rows.map((row) => {
         const name = operatorDisplayName(row.operator_id, operators)
+        const departmentName = operatorDepartmentName(row.operator_id, operators)
         const isSelected = row.operator_id === selectedOperatorId
         const stateMeta = row.assignment ? ASSIGNMENT_STATE_LABEL[row.assignment.state] : null
+        const lastActive = formatRelative(row.last_active_at)
 
         return (
           <li key={row.operator_id}>
@@ -107,11 +133,26 @@ export function OperatorListView({
                   : 'hover:border-primary-200 border-gray-100',
               ].join(' ')}
             >
-              <div className="bg-primary-100 text-primary-700 flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-sm font-semibold">
-                {name.slice(0, 1).toUpperCase()}
+              <div className="relative flex-shrink-0">
+                <div className="bg-primary-100 text-primary-700 flex h-9 w-9 items-center justify-center rounded-full text-sm font-semibold">
+                  {name.slice(0, 1).toUpperCase()}
+                </div>
+                {row.triggers.length > 0 ? (
+                  <span
+                    aria-label="red flag"
+                    className="absolute -top-0.5 -right-0.5 inline-block h-2.5 w-2.5 rounded-full border-2 border-white bg-red-500"
+                  />
+                ) : null}
               </div>
               <div className="flex min-w-0 flex-1 flex-col">
-                <span className="text-dark-500 truncate text-sm font-medium">{name}</span>
+                <div className="flex min-w-0 items-center gap-1.5">
+                  <span className="text-dark-500 truncate text-sm font-medium">{name}</span>
+                  {departmentName ? (
+                    <span className="bg-primary-50 text-primary-700 flex-shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-medium uppercase">
+                      {departmentName}
+                    </span>
+                  ) : null}
+                </div>
                 <div className="mt-0.5 flex items-center gap-1.5">
                   {stateMeta ? (
                     <span
@@ -120,8 +161,11 @@ export function OperatorListView({
                       {t(stateMeta.key, stateMeta.fallback)}
                     </span>
                   ) : null}
+                  {lastActive ? (
+                    <span className="text-[10px] text-gray-500">{lastActive}</span>
+                  ) : null}
                   {row.triggers.length > 0 ? (
-                    <span className="text-[10px] text-gray-500">
+                    <span className="text-[10px] font-medium text-red-600">
                       {t('pages.actionAnalysis.inbox.list.triggerCount', '{{count}} triggers', {
                         count: row.triggers.length,
                       })}

@@ -704,6 +704,10 @@
         "all": "Усі дії",
         "groupComingSoon": "Незабаром"
       },
+      "workspaceBanner": {
+        "label": "Робоче місце тренера",
+        "assignedTo": "Ви призначені до {{department}}"
+      },
       "inbox": {
         "searchPlaceholder": "Ім'я оператора або номер телефону",
         "headerKpis": {
@@ -739,6 +743,10 @@
           "loading": "Завантаження…",
           "loadFailed": "Не вдалося завантажити деталі оператора.",
           "redFlagsHeadline": "{{count}} червоних прапорців",
+          "redFlagsSubtitle": "Потрібна увага тренера — накопичилися тригери.",
+          "riskyTag": "Ризик",
+          "whyInQueue": "Чому потрапив у чергу",
+          "noTriggers": "У обраному періоді немає активних тригерів.",
           "latestRatings": "Останні оцінки діалогів",
           "noScorecards": "За обраний період немає оцінок.",
           "kpis": {
