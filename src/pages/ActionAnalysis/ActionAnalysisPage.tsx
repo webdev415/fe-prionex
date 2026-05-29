@@ -30,6 +30,7 @@ import { RateDialogueDialog } from './components/inbox/RateDialogueDialog'
 import { ScheduleOneOnOneDialog } from './components/inbox/ScheduleOneOnOneDialog'
 import { PendingFeatureDialog } from './components/inbox/PendingFeatureDialog'
 import { HeaderKpiStrip } from './components/chrome/HeaderKpiStrip'
+import { WorkspaceBanner } from './components/chrome/WorkspaceBanner'
 import { readInboxState } from './lib/inboxUrlState'
 import { readCallsUrlState, toCallMonitoringQuery } from './lib/callsUrlState'
 import {
@@ -438,6 +439,8 @@ export function ActionAnalysisPage() {
         dependsOnIssue="KAN-416"
         operatorName={focusedOperatorName}
       />
+
+      {showHeaderChrome ? <WorkspaceBanner /> : null}
     </div>
   )
 }

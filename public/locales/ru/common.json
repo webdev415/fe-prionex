@@ -696,6 +696,10 @@
         "all": "Все действия",
         "groupComingSoon": "Скоро"
       },
+      "workspaceBanner": {
+        "label": "Рабочее место тренера",
+        "assignedTo": "Вы назначены в {{department}}"
+      },
       "inbox": {
         "searchPlaceholder": "Имя оператора или номер телефона",
         "headerKpis": {
@@ -731,6 +735,10 @@
           "loading": "Загрузка…",
           "loadFailed": "Не удалось загрузить детали оператора.",
           "redFlagsHeadline": "{{count}} красных флагов",
+          "redFlagsSubtitle": "Нужно внимание тренера — накопились триггеры.",
+          "riskyTag": "Риск",
+          "whyInQueue": "Почему попал в очередь",
+          "noTriggers": "В выбранном периоде нет активных триггеров.",
           "latestRatings": "Последние оценки диалогов",
           "noScorecards": "За выбранный период нет оценок.",
           "kpis": {

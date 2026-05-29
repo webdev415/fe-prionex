@@ -21,9 +21,9 @@ export interface OperatorGridViewProps {
 }
 
 const SCORE_BAND_BG: Record<ScoreBand, string> = {
-  red: 'bg-red-50 text-red-700 ring-red-200',
-  amber: 'bg-yellow-50 text-yellow-700 ring-yellow-200',
-  green: 'bg-green-50 text-green-700 ring-green-200',
+  red: 'bg-red-500 text-white ring-red-300',
+  amber: 'bg-amber-400 text-white ring-amber-300',
+  green: 'bg-green-500 text-white ring-green-300',
 }
 
 const ASSIGNMENT_STATE_TONE: Record<AssignmentState, string> = {
@@ -59,9 +59,27 @@ function operatorDisplayName(operatorId: number, operators: OperatorUser[]): str
   return operator?.full_name || `#${operatorId}`
 }
 
-function formatPct(value: number | null | undefined): string {
-  if (value == null) return '—'
-  return `${value.toFixed(0)}%`
+function operatorDepartmentName(operatorId: number, operators: OperatorUser[]): string | null {
+  const operator = operators.find((o) => o.id === operatorId)
+  return operator?.department_name ?? null
+}
+
+function formatRelative(isoTimestamp: string | null | undefined): string | null {
+  if (!isoTimestamp) return null
+  const then = new Date(isoTimestamp).getTime()
+  if (Number.isNaN(then)) return null
+  const diffMs = Date.now() - then
+  if (diffMs < 0) return null
+  const minutes = Math.floor(diffMs / 60_000)
+  if (minutes < 1) return 'now'
+  if (minutes < 60) return `${minutes}m ago`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `${hours}h ago`
+  const days = Math.floor(hours / 24)
+  if (days < 30) return `${days}d ago`
+  const months = Math.floor(days / 30)
+  if (months < 12) return `${months}mo ago`
+  return `${Math.floor(months / 12)}y ago`
 }
 
 export function OperatorGridView({
@@ -93,6 +111,8 @@ export function OperatorGridView({
     <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
       {rows.map((row) => {
         const name = operatorDisplayName(row.operator_id, operators)
+        const departmentName = operatorDepartmentName(row.operator_id, operators)
+        const lastActive = formatRelative(row.last_active_at)
         const isSelected = row.operator_id === selectedOperatorId
         const stateLabel = row.assignment ? ASSIGNMENT_STATE_LABEL_KEYS[row.assignment.state] : null
         return (
@@ -108,40 +128,61 @@ export function OperatorGridView({
               ].join(' ')}
             >
               <header className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <div className="bg-primary-100 text-primary-700 flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-sm font-semibold">
-                    {name.slice(0, 1).toUpperCase()}
-                  </div>
-                  <div className="flex min-w-0 flex-col">
-                    <span className="text-dark-500 truncate text-sm font-medium">{name}</span>
-                    {stateLabel ? (
+                <div className="flex min-w-0 items-center gap-2">
+                  <div className="relative flex-shrink-0">
+                    <div className="bg-primary-100 text-primary-700 flex h-9 w-9 items-center justify-center rounded-full text-sm font-semibold">
+                      {name.slice(0, 1).toUpperCase()}
+                    </div>
+                    {row.triggers.length > 0 ? (
                       <span
-                        className={`mt-0.5 inline-block w-fit rounded-full px-2 py-0.5 text-[10px] font-medium ${ASSIGNMENT_STATE_TONE[row.assignment!.state]}`}
-                      >
-                        {t(stateLabel.key, stateLabel.fallback)}
-                      </span>
+                        aria-label="red flag"
+                        className="absolute -top-0.5 -right-0.5 inline-block h-2.5 w-2.5 rounded-full border-2 border-white bg-red-500"
+                      />
                     ) : null}
+                  </div>
+                  <div className="flex min-w-0 flex-col gap-0.5">
+                    <span className="text-dark-500 truncate text-sm font-medium">{name}</span>
+                    <div className="flex flex-wrap items-center gap-1">
+                      {departmentName ? (
+                        <span className="bg-primary-50 text-primary-700 rounded-full px-1.5 py-0.5 text-[9px] font-medium uppercase">
+                          {departmentName}
+                        </span>
+                      ) : null}
+                      {stateLabel ? (
+                        <span
+                          className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${ASSIGNMENT_STATE_TONE[row.assignment!.state]}`}
+                        >
+                          {t(stateLabel.key, stateLabel.fallback)}
+                        </span>
+                      ) : null}
+                      {lastActive ? (
+                        <span className="text-[9px] text-gray-500">{lastActive}</span>
+                      ) : null}
+                    </div>
                   </div>
                 </div>
                 <span
-                  className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-semibold ring-1 ${SCORE_BAND_BG[row.score_band]}`}
+                  className={`flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full text-base font-bold ring-1 ${SCORE_BAND_BG[row.score_band]}`}
                 >
                   {row.composite_score}
                 </span>
               </header>
 
               <div className="grid grid-cols-3 gap-1.5 border-t border-gray-100 pt-2">
-                <KpiCell
+                <ProgressRing
                   label={t('pages.actionAnalysis.inbox.detail.kpis.scriptAdherence', 'Script')}
-                  value={formatPct(row.kpis.script_adherence_pct)}
+                  pct={row.kpis.script_adherence_pct}
+                  tone="emerald"
                 />
-                <KpiCell
+                <ProgressRing
                   label={t('pages.actionAnalysis.inbox.detail.kpis.scorecardAvg', 'Scorecard')}
-                  value={formatPct(row.kpis.avg_scorecard_pct)}
+                  pct={row.kpis.avg_scorecard_pct}
+                  tone="blue"
                 />
-                <KpiCell
+                <ProgressRing
                   label={t('pages.actionAnalysis.inbox.detail.kpis.conversion', 'Conversion')}
-                  value={formatPct(row.kpis.conversion_rate)}
+                  pct={row.kpis.conversion_rate}
+                  tone="amber"
                 />
               </div>
 
@@ -160,11 +201,57 @@ export function OperatorGridView({
   )
 }
 
-function KpiCell({ label, value }: { label: string; value: string }) {
+type RingTone = 'emerald' | 'blue' | 'amber'
+
+const RING_STROKES: Record<RingTone, string> = {
+  emerald: 'stroke-emerald-500',
+  blue: 'stroke-blue-500',
+  amber: 'stroke-amber-500',
+}
+
+function ProgressRing({
+  label,
+  pct,
+  tone,
+}: {
+  label: string
+  pct: number | null | undefined
+  tone: RingTone
+}) {
+  const display = pct == null ? '—' : `${Math.round(pct)}%`
+  const clamped = Math.max(0, Math.min(100, pct ?? 0))
+  // SVG ring math: 24×24 viewbox, radius 10 → circumference ≈ 62.83
+  const circumference = 2 * Math.PI * 10
+  const dashOffset = circumference * (1 - clamped / 100)
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-col items-center gap-0.5">
+      <div className="relative h-9 w-9">
+        <svg viewBox="0 0 24 24" className="h-9 w-9 -rotate-90">
+          <circle
+            cx="12"
+            cy="12"
+            r="10"
+            className="stroke-gray-200"
+            strokeWidth="2.5"
+            fill="none"
+          />
+          <circle
+            cx="12"
+            cy="12"
+            r="10"
+            className={RING_STROKES[tone]}
+            strokeWidth="2.5"
+            fill="none"
+            strokeLinecap="round"
+            strokeDasharray={circumference}
+            strokeDashoffset={dashOffset}
+          />
+        </svg>
+        <span className="text-dark-500 absolute inset-0 flex items-center justify-center text-[10px] font-semibold">
+          {display}
+        </span>
+      </div>
       <span className="text-[9px] font-medium tracking-wide text-gray-500 uppercase">{label}</span>
-      <span className="text-dark-500 text-xs font-semibold">{value}</span>
     </div>
   )
 }
