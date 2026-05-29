@@ -491,7 +491,9 @@ export interface MessagesSentModalData {
   totalSent: number
   delivered: number
   failed: number
-  pending: number
+  skipped: number
+  queued: number
+  inFlight: number
   deliveryRate: number
   byChannel: { channel: string; count: number }[]
   topDrafts: { name: string; count: number }[]
@@ -548,19 +550,25 @@ export function useMessagesSentModal({
 
     let delivered: number
     let failed: number
-    let pending: number
+    let skipped: number
+    let queued: number
+    let inFlight: number
     let deliveryRate: number
 
     if (messagingStats) {
       delivered = messagingStats.delivered
       failed = messagingStats.failed
-      pending = Math.max(0, totalSent - delivered - failed)
+      skipped = messagingStats.skipped
+      queued = messagingStats.queued
+      inFlight = messagingStats.inFlight
       deliveryRate = messagingStats.deliveryRate
     } else {
       deliveryRate = 0
       delivered = 0
       failed = 0
-      pending = totalSent
+      skipped = 0
+      queued = 0
+      inFlight = 0
     }
 
     const byChannel = Object.entries(messagingStats?.byChannel ?? {})
@@ -576,7 +584,9 @@ export function useMessagesSentModal({
       totalSent,
       delivered,
       failed,
-      pending,
+      skipped,
+      queued,
+      inFlight,
       deliveryRate,
       byChannel,
       topDrafts,

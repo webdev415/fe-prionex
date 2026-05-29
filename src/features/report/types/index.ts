@@ -241,6 +241,9 @@ export interface MessagingStatisticsUI {
   totalSent: number
   delivered: number
   failed: number
+  skipped: number
+  queued: number
+  inFlight: number
   deliveryRate: number
   byChannel: Record<string, number>
   topDrafts: MessagingDraftUI[]

@@ -270,6 +270,9 @@ export interface BackendMessagingStatistics {
   total_sent: number
   delivered: number
   failed: number
+  skipped?: number
+  queued?: number
+  in_flight?: number
   delivery_rate: number
   by_channel: Record<string, number>
   top_drafts: BackendMessagingDraft[]

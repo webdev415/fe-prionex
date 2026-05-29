@@ -159,9 +159,9 @@ export function MessagesSentDetailModal({
 
             <div className="mb-4 flex flex-col items-start gap-2 self-stretch">
               <span className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
-                {t('pages.reports.messagesModal.deliveryStats', 'Delivery Statistics')}:
+                {t('pages.reports.messagesModal.statusBreakdown', 'Status breakdown')}:
               </span>
-              <div className="flex w-full gap-4 self-stretch">
+              <div className="grid w-full grid-cols-2 gap-3 self-stretch sm:grid-cols-3 lg:grid-cols-5">
                 <StatCard
                   icon={<Icons.Success size={24} strokeWidth={1.5} />}
                   value={data.delivered}
@@ -176,8 +176,20 @@ export function MessagesSentDetailModal({
                 />
                 <StatCard
                   icon={<Icons.Clock01 size={24} strokeWidth={1.5} />}
-                  value={data.pending}
-                  label={t('pages.reports.messagesModal.pending', 'Pending')}
+                  value={data.inFlight}
+                  label={t('pages.reports.messagesModal.inFlight', 'In flight')}
+                  color="warning"
+                />
+                <StatCard
+                  icon={<Icons.Clock04 size={24} strokeWidth={1.5} />}
+                  value={data.queued}
+                  label={t('pages.reports.messagesModal.queued', 'Queued')}
+                  color="warning"
+                />
+                <StatCard
+                  icon={<Icons.Warning size={24} strokeWidth={1.5} />}
+                  value={data.skipped}
+                  label={t('pages.reports.messagesModal.skipped', 'Skipped')}
                   color="warning"
                 />
               </div>
