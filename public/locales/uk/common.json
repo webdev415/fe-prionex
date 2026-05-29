@@ -1693,6 +1693,7 @@
         "tags": "Теги",
         "phoneNumber": "Номер телефону",
         "createdDate": "Додано",
+        "lastPurchaseDate": "Дата останньої купівлі",
         "creditor": "Кредитор",
         "debt": "Борг",
         "totalDebt": "Загальний борг",
