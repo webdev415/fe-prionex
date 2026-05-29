@@ -276,6 +276,13 @@
         "blockedSuffix": "(blocked)",
         "period": "Period",
         "status": "Status",
+        "allStatuses": "All statuses",
+        "markerType": "Marker type",
+        "allMarkerTypes": "All types",
+        "feedbackType": "Feedback type",
+        "allFeedbackTypes": "All types",
+        "granularity": "Granularity",
+        "selectOperator": "Select an operator…",
         "minDuration": "Min duration (s)",
         "maxDuration": "Max duration (s)",
         "contactType": "Contact type",
@@ -477,7 +484,15 @@
         "createdAt": "Created at",
         "confirmedAt": "Confirmed at",
         "amount": "Amount",
-        "paymentMethod": "Payment method"
+        "paymentMethod": "Payment method",
+        "date": "Date",
+        "template": "Template",
+        "weightedScore": "Score",
+        "markerType": "Type",
+        "timestamp": "Timestamp",
+        "comment": "Comment",
+        "feedbackType": "Type",
+        "preview": "Text"
       },
       "callType": {
         "incoming": "Incoming",
@@ -550,6 +565,14 @@
         "loadTaHistoryFailed": "Failed to load TA history",
         "loadTaskHistoryFailed": "Failed to load task history",
         "loadPaymentHistoryFailed": "Failed to load payment history",
+        "loadScorecardsFailed": "Failed to load scorecards",
+        "loadScorecardFailed": "Failed to load scorecard",
+        "loadMarkersFailed": "Failed to load markers",
+        "loadFeedbackFailed": "Failed to load feedback",
+        "loadDynamicsFailed": "Failed to load score dynamics",
+        "noOperators": "No operators in scope.",
+        "noScoresPermission": "You do not have permission to view any quality scoring data.",
+        "emptyScopeResolution": "The selected scope returned no operators.",
         "departmentNoOperators": "No operators in this department for the current project.",
         "exportFailed": "Export failed",
         "callNotFound": "Call not found"
@@ -577,6 +600,95 @@
         "screenTime": "Screen Time",
         "heatmap": "Heatmap",
         "scriptAnalytics": "Script Analytics"
+      },
+      "scoresSubTabs": {
+        "scorecards": "Scorecards",
+        "markers": "Markers",
+        "feedback": "Feedback",
+        "dynamics": "Score Dynamics"
+      },
+      "scorecard": {
+        "title": "Quality evaluation",
+        "template": "Template",
+        "selectTemplate": "Select a template…",
+        "startEvaluation": "Start evaluation",
+        "history": "Previous scorecards on this call",
+        "computedScore": "Score",
+        "perCallComment": "Overall comment",
+        "saveDraft": "Save draft",
+        "markCompleted": "Mark completed",
+        "sendToOperator": "Send to operator",
+        "status": {
+          "draft": "Draft",
+          "completed": "Completed",
+          "sent": "Sent"
+        }
+      },
+      "scorecardsEmpty": "No scorecards in scope.",
+      "scorecardsTotalSuffix": "scorecards",
+      "markers": {
+        "addMarker": "Add marker",
+        "type": "Type",
+        "comment": "Comment",
+        "commentPlaceholder": "Optional comment",
+        "save": "Save",
+        "types": {
+          "error": "Error",
+          "good_moment": "Good moment",
+          "script_violation": "Script violation",
+          "stop_word": "Stop word",
+          "unmotivated_pause": "Unmotivated pause",
+          "note": "Note"
+        },
+        "status": {
+          "draft": "Draft",
+          "sent": "Sent"
+        }
+      },
+      "markersEmpty": "No markers in scope.",
+      "markersTotalSuffix": "markers",
+      "feedback": {
+        "leave": "Leave feedback",
+        "typeLabel": "Type",
+        "text": "Feedback text",
+        "send": "Send",
+        "includeTimestamp": "Include current playback position",
+        "reply": "Reply",
+        "replyPlaceholder": "Write a reply…",
+        "markRead": "Mark read",
+        "markComplete": "Mark completed",
+        "threadEmpty": "No replies yet.",
+        "types": {
+          "praise": "Praise",
+          "note": "Note",
+          "correction_task": "Correction task"
+        },
+        "status": {
+          "unread": "Unread",
+          "read": "Read",
+          "completed": "Completed"
+        },
+        "role": {
+          "trainer": "Trainer",
+          "operator": "Operator"
+        }
+      },
+      "feedbackEmpty": "No feedback in scope.",
+      "feedbackTotalSuffix": "items",
+      "dynamics": {
+        "empty": "No completed scorecards in this range.",
+        "selectOperatorHint": "Pick an operator to view their score dynamics.",
+        "operator": "Operator",
+        "teamAvg": "Team average",
+        "periodAvg": "Period avg",
+        "periodMin": "Min",
+        "periodMax": "Max",
+        "scorecardCount": "Scorecards",
+        "granularity": {
+          "day": "Daily",
+          "week": "Weekly",
+          "month": "Monthly"
+        }
       },
       "scope": {
         "label": "View scope",

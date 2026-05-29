@@ -273,6 +273,13 @@
         "allEmployees": "Все сотрудники",
         "period": "Период",
         "status": "Статус",
+        "allStatuses": "Все статусы",
+        "markerType": "Тип маркера",
+        "allMarkerTypes": "Все типы",
+        "feedbackType": "Тип отзыва",
+        "allFeedbackTypes": "Все типы",
+        "granularity": "Гранулярность",
+        "selectOperator": "Выберите оператора…",
         "minDuration": "Мин. длительность (с)",
         "maxDuration": "Макс. длительность (с)",
         "contactType": "Тип контакта",
@@ -474,7 +481,15 @@
         "createdAt": "Создан",
         "confirmedAt": "Подтверждён",
         "amount": "Сумма",
-        "paymentMethod": "Способ оплаты"
+        "paymentMethod": "Способ оплаты",
+        "date": "Дата",
+        "template": "Шаблон",
+        "weightedScore": "Балл",
+        "markerType": "Тип",
+        "timestamp": "Время",
+        "comment": "Комментарий",
+        "feedbackType": "Тип",
+        "preview": "Текст"
       },
       "callType": {
         "incoming": "Входящий",
@@ -547,6 +562,14 @@
         "loadTaHistoryFailed": "Не удалось загрузить историю ТА",
         "loadTaskHistoryFailed": "Не удалось загрузить историю задач",
         "loadPaymentHistoryFailed": "Не удалось загрузить историю платежей",
+        "loadScorecardsFailed": "Не удалось загрузить скоркарты",
+        "loadScorecardFailed": "Не удалось загрузить скоркарту",
+        "loadMarkersFailed": "Не удалось загрузить маркеры",
+        "loadFeedbackFailed": "Не удалось загрузить отзывы",
+        "loadDynamicsFailed": "Не удалось загрузить динамику оценок",
+        "noOperators": "Нет операторов в текущей области.",
+        "noScoresPermission": "У вас нет прав на просмотр данных по оценке качества.",
+        "emptyScopeResolution": "Выбранная область не содержит операторов.",
         "departmentNoOperators": "В этом отделе нет операторов в текущем проекте.",
         "exportFailed": "Не удалось экспортировать",
         "callNotFound": "Звонок не найден"
@@ -574,6 +597,95 @@
         "screenTime": "Экранное время",
         "heatmap": "Тепловая карта",
         "scriptAnalytics": "Аналитика скриптов"
+      },
+      "scoresSubTabs": {
+        "scorecards": "Скоркарты",
+        "markers": "Маркеры",
+        "feedback": "Обратная связь",
+        "dynamics": "Динамика оценок"
+      },
+      "scorecard": {
+        "title": "Оценка качества",
+        "template": "Шаблон",
+        "selectTemplate": "Выберите шаблон…",
+        "startEvaluation": "Начать оценку",
+        "history": "Предыдущие скоркарты по этому звонку",
+        "computedScore": "Балл",
+        "perCallComment": "Общий комментарий",
+        "saveDraft": "Сохранить черновик",
+        "markCompleted": "Отметить завершённой",
+        "sendToOperator": "Отправить оператору",
+        "status": {
+          "draft": "Черновик",
+          "completed": "Завершена",
+          "sent": "Отправлена"
+        }
+      },
+      "scorecardsEmpty": "Нет скоркарт в текущей области.",
+      "scorecardsTotalSuffix": "скоркарт",
+      "markers": {
+        "addMarker": "Добавить маркер",
+        "type": "Тип",
+        "comment": "Комментарий",
+        "commentPlaceholder": "Комментарий (необязательно)",
+        "save": "Сохранить",
+        "types": {
+          "error": "Ошибка",
+          "good_moment": "Хороший момент",
+          "script_violation": "Нарушение скрипта",
+          "stop_word": "Стоп-слово",
+          "unmotivated_pause": "Немотивированная пауза",
+          "note": "Заметка"
+        },
+        "status": {
+          "draft": "Черновик",
+          "sent": "Отправлен"
+        }
+      },
+      "markersEmpty": "Нет маркеров в текущей области.",
+      "markersTotalSuffix": "маркеров",
+      "feedback": {
+        "leave": "Оставить отзыв",
+        "typeLabel": "Тип",
+        "text": "Текст отзыва",
+        "send": "Отправить",
+        "includeTimestamp": "Включить текущую позицию воспроизведения",
+        "reply": "Ответить",
+        "replyPlaceholder": "Напишите ответ…",
+        "markRead": "Отметить прочитанным",
+        "markComplete": "Отметить выполненным",
+        "threadEmpty": "Ответов пока нет.",
+        "types": {
+          "praise": "Похвала",
+          "note": "Заметка",
+          "correction_task": "Задание на исправление"
+        },
+        "status": {
+          "unread": "Не прочитано",
+          "read": "Прочитано",
+          "completed": "Выполнено"
+        },
+        "role": {
+          "trainer": "Тренер",
+          "operator": "Оператор"
+        }
+      },
+      "feedbackEmpty": "Нет отзывов в текущей области.",
+      "feedbackTotalSuffix": "записей",
+      "dynamics": {
+        "empty": "Нет завершённых скоркарт в этом диапазоне.",
+        "selectOperatorHint": "Выберите оператора, чтобы увидеть динамику оценок.",
+        "operator": "Оператор",
+        "teamAvg": "Среднее по команде",
+        "periodAvg": "Среднее за период",
+        "periodMin": "Мин.",
+        "periodMax": "Макс.",
+        "scorecardCount": "Скоркарты",
+        "granularity": {
+          "day": "По дням",
+          "week": "По неделям",
+          "month": "По месяцам"
+        }
       },
       "scope": {
         "label": "Область просмотра",

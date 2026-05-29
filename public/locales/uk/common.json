@@ -281,6 +281,13 @@
         "blockedSuffix": "(заблоковано)",
         "period": "Період",
         "status": "Статус",
+        "allStatuses": "Усі статуси",
+        "markerType": "Тип маркера",
+        "allMarkerTypes": "Усі типи",
+        "feedbackType": "Тип відгуку",
+        "allFeedbackTypes": "Усі типи",
+        "granularity": "Гранулярність",
+        "selectOperator": "Оберіть оператора…",
         "minDuration": "Мін. тривалість (с)",
         "maxDuration": "Макс. тривалість (с)",
         "contactType": "Тип контакту",
@@ -482,7 +489,15 @@
         "createdAt": "Створено",
         "confirmedAt": "Підтверджено",
         "amount": "Сума",
-        "paymentMethod": "Спосіб оплати"
+        "paymentMethod": "Спосіб оплати",
+        "date": "Дата",
+        "template": "Шаблон",
+        "weightedScore": "Бал",
+        "markerType": "Тип",
+        "timestamp": "Час",
+        "comment": "Коментар",
+        "feedbackType": "Тип",
+        "preview": "Текст"
       },
       "callType": {
         "incoming": "Вхідний",
@@ -555,6 +570,14 @@
         "loadTaHistoryFailed": "Не вдалося завантажити історію ЦД",
         "loadTaskHistoryFailed": "Не вдалося завантажити історію завдань",
         "loadPaymentHistoryFailed": "Не вдалося завантажити історію платежів",
+        "loadScorecardsFailed": "Не вдалося завантажити скоркарти",
+        "loadScorecardFailed": "Не вдалося завантажити скоркарту",
+        "loadMarkersFailed": "Не вдалося завантажити маркери",
+        "loadFeedbackFailed": "Не вдалося завантажити відгуки",
+        "loadDynamicsFailed": "Не вдалося завантажити динаміку оцінок",
+        "noOperators": "Немає операторів у поточній області.",
+        "noScoresPermission": "У вас немає прав на перегляд даних з оцінки якості.",
+        "emptyScopeResolution": "Обрана область не містить операторів.",
         "departmentNoOperators": "У цьому відділі немає операторів у поточному проєкті.",
         "exportFailed": "Не вдалося експортувати",
         "callNotFound": "Дзвінок не знайдено"
@@ -582,6 +605,95 @@
         "screenTime": "Екранний час",
         "heatmap": "Теплова карта",
         "scriptAnalytics": "Аналітика скриптів"
+      },
+      "scoresSubTabs": {
+        "scorecards": "Скоркарти",
+        "markers": "Маркери",
+        "feedback": "Зворотний зв'язок",
+        "dynamics": "Динаміка оцінок"
+      },
+      "scorecard": {
+        "title": "Оцінка якості",
+        "template": "Шаблон",
+        "selectTemplate": "Оберіть шаблон…",
+        "startEvaluation": "Розпочати оцінку",
+        "history": "Попередні скоркарти за цим дзвінком",
+        "computedScore": "Бал",
+        "perCallComment": "Загальний коментар",
+        "saveDraft": "Зберегти чернетку",
+        "markCompleted": "Позначити завершеною",
+        "sendToOperator": "Надіслати оператору",
+        "status": {
+          "draft": "Чернетка",
+          "completed": "Завершена",
+          "sent": "Надіслана"
+        }
+      },
+      "scorecardsEmpty": "Немає скоркарт у поточній області.",
+      "scorecardsTotalSuffix": "скоркарт",
+      "markers": {
+        "addMarker": "Додати маркер",
+        "type": "Тип",
+        "comment": "Коментар",
+        "commentPlaceholder": "Коментар (необов'язково)",
+        "save": "Зберегти",
+        "types": {
+          "error": "Помилка",
+          "good_moment": "Гарний момент",
+          "script_violation": "Порушення скрипту",
+          "stop_word": "Стоп-слово",
+          "unmotivated_pause": "Невмотивована пауза",
+          "note": "Нотатка"
+        },
+        "status": {
+          "draft": "Чернетка",
+          "sent": "Надіслано"
+        }
+      },
+      "markersEmpty": "Немає маркерів у поточній області.",
+      "markersTotalSuffix": "маркерів",
+      "feedback": {
+        "leave": "Залишити відгук",
+        "typeLabel": "Тип",
+        "text": "Текст відгуку",
+        "send": "Надіслати",
+        "includeTimestamp": "Включити поточну позицію відтворення",
+        "reply": "Відповісти",
+        "replyPlaceholder": "Напишіть відповідь…",
+        "markRead": "Позначити прочитаним",
+        "markComplete": "Позначити виконаним",
+        "threadEmpty": "Відповідей поки немає.",
+        "types": {
+          "praise": "Похвала",
+          "note": "Нотатка",
+          "correction_task": "Завдання на виправлення"
+        },
+        "status": {
+          "unread": "Не прочитано",
+          "read": "Прочитано",
+          "completed": "Виконано"
+        },
+        "role": {
+          "trainer": "Тренер",
+          "operator": "Оператор"
+        }
+      },
+      "feedbackEmpty": "Немає відгуків у поточній області.",
+      "feedbackTotalSuffix": "записів",
+      "dynamics": {
+        "empty": "Немає завершених скоркарт у цьому діапазоні.",
+        "selectOperatorHint": "Оберіть оператора, щоб побачити динаміку оцінок.",
+        "operator": "Оператор",
+        "teamAvg": "Середнє по команді",
+        "periodAvg": "Середнє за період",
+        "periodMin": "Мін.",
+        "periodMax": "Макс.",
+        "scorecardCount": "Скоркарти",
+        "granularity": {
+          "day": "По днях",
+          "week": "По тижнях",
+          "month": "По місяцях"
+        }
       },
       "scope": {
         "label": "Область перегляду",

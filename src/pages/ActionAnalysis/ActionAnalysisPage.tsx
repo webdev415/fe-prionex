@@ -23,6 +23,7 @@ import { TimelineTab } from './components/TimelineTab'
 import { ScreenTimeTab } from './components/ScreenTimeTab'
 import { HeatmapTab } from './components/HeatmapTab'
 import { ScriptAnalyticsTab } from './components/ScriptAnalyticsTab'
+import { ScoresTab } from './components/scores/ScoresTab'
 import { ScopeSelector } from './components/ScopeSelector'
 import { readCallsUrlState, toCallMonitoringQuery } from './lib/callsUrlState'
 import {
@@ -249,7 +250,9 @@ export function ActionAnalysisPage() {
         </div>
       </div>
 
-      {activeTopTab === 'calls' ? (
+      {activeTopTab === 'scores' ? (
+        <ScoresTab />
+      ) : activeTopTab === 'calls' ? (
         <>
           <div className="flex flex-wrap gap-2">
             {visibleSubTabs.map((sub) => {
