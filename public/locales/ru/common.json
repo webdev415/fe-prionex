@@ -18,6 +18,7 @@
     "roles": "Роли",
     "departments": "Отделы",
     "smsTemplates": "SMS Шаблоны",
+    "rrNotifications": "Уведомления РР",
     "targetActions": "Целевые действия",
     "taChains": "Цепочки ЦД",
     "taDictionary": "Словарь",
@@ -35,6 +36,10 @@
     "scoringConfiguration": "Конфигурация оценки",
     "systemSettings": "Системные настройки",
     "tags": "Теги",
+    "messagingSettings": "Настройки сообщений",
+    "messagingIntegrations": "Интеграции сообщений",
+    "messagingDrafts": "Черновики сообщений",
+    "contactTypes": "Типы контактов",
     "actionAnalysis": "Анализ действий"
   },
   "search": {
@@ -101,8 +106,13 @@
       "tasks": "Задачи",
       "calls": "Звонки",
       "tags": "Теги",
-      "taChains": "Цепочки ЦД"
+      "taChains": "Цепочки ЦД",
+      "rrPayments": "Платежи РР"
     },
+    "daysLeft_one": "через {{count}} день",
+    "daysLeft_few": "через {{count}} дня",
+    "daysLeft_many": "через {{count}} дней",
+    "daysLeft_other": "через {{count}} дней",
     "payment": {
       "pending": "ожидает",
       "daysPending_one": "{{count}} день",
@@ -248,11 +258,6 @@
       "mockTableRowClients": "Клиенты",
       "mockTableRowDebt": "Долг в зоне риска",
       "mockTableRowOverdue": "Доля просрочки"
-    },
-    "myFeedback": {
-      "title": "Мои отзывы",
-      "subtitle": "Все отзывы, которые ваши тренеры отправили вам.",
-      "empty": "Отзывов пока нет — ваши тренеры ничего не присылали."
     },
     "actionAnalysis": {
       "title": "Анализ действий",
@@ -420,6 +425,8 @@
           "partial_payment": "Частичный платёж",
           "full_payment": "Полный платёж"
         },
+        "paymentCommentSearch": "Комментарий к оплате",
+        "paymentCommentSearchPlaceholder": "Поиск в комментариях…",
         "amountMin": "Сумма от",
         "amountMax": "Сумма до",
         "amountMinPlaceholder": "0.00",
@@ -469,6 +476,7 @@
         "loanNumber": "Номер займа",
         "loanSaleDate": "Дата продажи займа",
         "paymentType": "Тип платежа",
+        "paymentComment": "Комментарий к оплате",
         "operator": "Оператор",
         "createdAt": "Создан",
         "confirmedAt": "Подтверждён",
@@ -1680,6 +1688,7 @@
             "amount": "Сумма",
             "date": "Дата",
             "method": "Способ",
+            "paymentComment": "Комментарий к оплате",
             "type": "Тип",
             "status": "Статус",
             "note": "Примечание"
@@ -1764,13 +1773,11 @@
         "amountOfDebtRange": "Сумма отдельного долга",
         "dateOfSale": "Дата продажи долга",
         "assignmentDate": "Дата назначения",
-        "promiseDate": "Обещание",
-        "callbackDate": "Обратный звонок",
+        "targetActionDate": "Дата целевого действия",
         "interactionCreatedBy": "Создано взаимодействие",
         "interactionLoggedDate": "Дата записи взаимодействия",
         "selectOperator": "Выберите оператора",
         "portfolio": "Кредитор/Продавец",
-        "status": "Статус",
         "responsibleEmployee": "Ответственный сотрудник",
         "responsibleSearcher": "Ответственный поисковик",
         "selectEmployee": "Выберите сотрудника",
@@ -1784,9 +1791,7 @@
         "days": "дней"
       },
       "statuses": {
-        "new": "Новый",
         "active": "Активный",
-        "closed": "Закрытый",
         "inprogress": "В процессе",
         "paid": "Оплачено",
         "defaulted": "Просрочено",
@@ -2719,6 +2724,12 @@
           "totalVerified": "Всего подтверждено:",
           "pendingVerification": "Ожидает подтверждения:"
         },
+        "verifiedByContract": {
+          "title": "Подтверждённые платежи по договору",
+          "contract": "Договор №{{number}}",
+          "payments": "{{count}} платежей",
+          "payments_one": "1 платеж"
+        },
         "noPaymentHistory": "История платежей не найдена",
         "failedToLoadClient": "Не удалось загрузить клиента",
         "errorOccurred": "Произошла ошибка"
@@ -3009,7 +3020,8 @@
         "selectTA": "Выберите ЦД",
         "delayMinutes": "Задержка (мин)",
         "required": "Обязательно",
-        "notInPast": "Дата не может быть в прошлом"
+        "notInPast": "Дата не может быть в прошлом",
+        "showClosedCredits": "Показывать закрытые кредиты"
       },
       "modals": {
         "create": {
@@ -3101,6 +3113,31 @@
         "hidden": "Целевое действие скрыто",
         "unhidden": "Целевое действие восстановлено"
       }
+    },
+    "rrNotifications": {
+      "title": "Уведомления РР",
+      "description": "Настройте напоминания в колокольчике для ответственного оператора перед каждым запланированным платежом по соглашению о реструктуризации. Отправляются системой ежедневно.",
+      "enable": "Включить уведомления РР",
+      "enableHint": "Когда выключено, новые напоминания не отправляются — существующие остаются в колокольчике.",
+      "daysBefore": "Дней до даты платежа",
+      "daysBeforeHint": "Добавьте одно или несколько значений (1–365). На каждое значение — отдельное напоминание.",
+      "daysChip": "{{n}} дней",
+      "daysRequired": "Добавьте хотя бы одно значение.",
+      "template": "Текст уведомления",
+      "variablesDetected": "Обнаруженные переменные",
+      "availableVariables": "Доступные переменные",
+      "clickToInsert": "Нажмите, чтобы вставить",
+      "removeVariable": "Удалить одно вхождение",
+      "removeHint": "Нажимайте × — за раз удаляется одно вхождение. Для точных правок редактируйте текст напрямую.",
+      "variables": {
+        "clientName": "Полное имя клиента",
+        "amount": "Сумма запланированного платежа",
+        "dueDate": "Запланированная дата платежа",
+        "daysLeft": "Дней осталось до даты платежа"
+      },
+      "preview": "Предпросмотр",
+      "saved": "Сохранено",
+      "maxDaysReached": "Максимум 10 значений"
     },
     "documentGeneration": {
       "title": "Генерация документов",
@@ -3731,7 +3768,7 @@
         "quickRanges": "Быстрые диапазоны",
         "today": "Сегодня",
         "yesterday": "Вчера",
-        "last7": "Последние 7",
+        "last7": "Последние 7 дней",
         "last30": "Последние 30 дней",
         "selectEmployee": "Выберите сотрудника",
         "allTypes": "Все типы",
@@ -3808,6 +3845,38 @@
           "ipAddress": "IP адрес",
           "successStatus": "Статус успеха"
         }
+      }
+    },
+    "contactTypes": {
+      "title": "Типы контактов",
+      "add": "+ Добавить тип контакта",
+      "createTitle": "Новый тип контакта",
+      "editTitle": "Редактировать тип контакта",
+      "fieldName": "Название",
+      "fieldDefaultLine": "Линия звонка по умолчанию",
+      "fieldSpam": "Разрешить спам",
+      "fieldPrimary": "Показывать как основной телефон",
+      "fieldSort": "Порядок сортировки",
+      "white": "Белая",
+      "gray": "Серая",
+      "hidden": "Скрыт",
+      "active": "Активен",
+      "hide": "Скрыть",
+      "restore": "Восстановить",
+      "filterStatus": "Статус",
+      "filterAll": "Все",
+      "filterActive": "Активные",
+      "filterHidden": "Скрытые",
+      "errorLoading": "Не удалось загрузить типы контактов",
+      "retry": "Повторить",
+      "columns": {
+        "sortOrder": "Порядок",
+        "name": "Название",
+        "defaultLine": "Линия звонка",
+        "spamAllowed": "Спам",
+        "primary": "Основной телефон",
+        "status": "Статус",
+        "actions": "Действия"
       }
     },
     "tags": {
@@ -3899,7 +3968,9 @@
         "permanent": "Бессрочный",
         "ttl": "По времени (TTL)",
         "loanClosure": "До закрытия кредита",
-        "loan_closure": "До закрытия кредита"
+        "loan_closure": "До закрытия кредита",
+        "target_action_date": "Дата целевого действия",
+        "targetActionDate": "Дата целевого действия"
       },
       "protectedWarning": "Для удаления требуется подтверждение руководителя",
       "removalRequests": {

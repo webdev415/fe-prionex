@@ -226,6 +226,9 @@ function buildPaymentMonitoringParams(filters: PaymentMonitoringFilters): URLSea
   filters.payment_method_in?.forEach((m) => params.append('payment_method_in', m))
   filters.status_in?.forEach((s) => params.append('status_in', s))
   filters.payment_type_in?.forEach((t) => params.append('payment_type_in', t))
+  if (filters.payment_comment_search && filters.payment_comment_search.trim()) {
+    params.set('payment_comment_search', filters.payment_comment_search.trim())
+  }
   if (filters.amount_min != null) params.set('amount_min', String(filters.amount_min))
   if (filters.amount_max != null) params.set('amount_max', String(filters.amount_max))
   if (filters.sort) params.set('sort', filters.sort)

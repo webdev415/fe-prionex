@@ -358,6 +358,7 @@ const DEFAULT_CONFIG = {
     { value: 'permanent', label: 'Permanent' },
     { value: 'ttl', label: 'TTL' },
     { value: 'loan_closure', label: 'Loan Closure' },
+    { value: 'target_action_date', label: 'Target Action Date' },
   ],
   presetColors: [
     '#FF6B6B',

@@ -14,6 +14,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/DropdownMenu'
 import type { Tag } from '@/features/tags/types'
+import { sortTagsWithSelectedFirst } from '@/features/tags/utils/sortTags'
 import { useTranslation } from 'react-i18next'
 
 interface TagsDropdownProps {
@@ -36,11 +37,12 @@ export function TagsDropdown({
   const [tempSelection, setTempSelection] = useState<number[]>(selectedTagIds)
   const [isOpen, setIsOpen] = useState(false)
 
-  // Filter tags based on search
+  // Filter tags based on search, then pin selected tags to the top
   const filteredTags = useMemo(() => {
-    if (!searchQuery.trim()) return tags
-    return tags.filter((tag) => tag.name.toLowerCase().includes(searchQuery.toLowerCase()))
-  }, [tags, searchQuery])
+    const q = searchQuery.trim().toLowerCase()
+    const matched = q ? tags.filter((tag) => tag.name.toLowerCase().includes(q)) : tags
+    return sortTagsWithSelectedFirst(matched, tempSelection)
+  }, [tags, searchQuery, tempSelection])
 
   // Initialize temp selection when dropdown opens
   const handleOpenChange = (open: boolean) => {

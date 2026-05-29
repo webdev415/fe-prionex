@@ -1,13 +1,11 @@
 /**
  * FeedbackThreadView — single-feedback detail + threaded replies (KAN-410, Feature 2.3).
  *
- * Reusable in two surfaces:
- * - Trainer feedback inbox (FeedbackSubTab) when a row is clicked
- * - Operator self-view (/dashboard/my-feedback)
- *
- * The `viewerRole` prop decides which side-only actions render — operators
- * can mark-read and (for correction_task) mark-completed; both parties can
- * post replies.
+ * Rendered today from the trainer feedback inbox (FeedbackSubTab) when a
+ * row is clicked. The `viewerRole` prop decides which side-only actions
+ * render — operators (when this view is later mounted in the trainer
+ * workplace) get mark-read and, for correction_task, mark-completed; both
+ * parties can post replies.
  */
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'

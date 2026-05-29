@@ -38,18 +38,14 @@ export function useScorecardDraft({
   debounceMs = 2000,
 }: UseScorecardDraftArgs) {
   const [state, setState] = useState<DraftState>(initial ?? EMPTY_DRAFT)
-  // Adjusting state during render (React docs pattern) — avoids the
-  // set-state-in-effect lint rule. Both `trackedScorecardId` and
-  // `trackedInitial` mirror the props we resync from; whenever either
-  // diverges we reset `state` directly, which restarts the render with the
-  // new state on the same frame.
+  // Render-time adjustment (React docs pattern) — replaces the
+  // setState-in-effect block flagged by react-hooks/set-state-in-effect.
   const [trackedScorecardId, setTrackedScorecardId] = useState<number | null>(scorecardId)
   const [trackedInitial, setTrackedInitial] = useState<DraftState | null>(initial)
   const [dirty, setDirty] = useState(false)
-  // Mirror `dirty` into a ref so the debounce timer and the unmount-flush
-  // cleanup can read the latest value without re-creating themselves on
-  // every dirty flip. Refs are only touched inside effects and callbacks,
-  // never during render.
+  // Mirror `dirty` into a ref so the debounce timer + unmount-flush cleanup
+  // can read the latest value without re-creating themselves on every flip.
+  // Refs are only touched inside effects and callbacks, never during render.
   const dirtyRef = useRef(dirty)
   useEffect(() => {
     dirtyRef.current = dirty
@@ -64,7 +60,7 @@ export function useScorecardDraft({
     setState(initial ?? EMPTY_DRAFT)
     setDirty(false)
   } else if (initial !== trackedInitial && initial != null && !dirty) {
-    // Same scorecard, but a fresher server snapshot arrived (refetch). Take
+    // Same scorecard, but a fresher server snapshot arrived (refetch). Adopt
     // it only if the user hasn't typed anything dirty.
     setTrackedInitial(initial)
     setState(initial)

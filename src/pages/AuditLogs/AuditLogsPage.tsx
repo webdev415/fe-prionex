@@ -7,6 +7,7 @@
 import { useState, useCallback, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
+import { Link } from 'react-router-dom'
 import { SearchFiltersBar } from './components/SearchFiltersBar'
 import { AuditLogDetailModal } from './components/AuditLogDetailModal'
 import { CSVExportDialog, type CSVExportOptions } from './components/CSVExportDialog'
@@ -30,8 +31,9 @@ import {
 } from '@/features/audit'
 import type { AuditLogResponse } from '@/features/audit/api/types'
 import { toast } from 'sonner'
-import { useHasPermission } from '@/hooks/usePermissions'
+import { useHasPermission, useUserPermissions } from '@/hooks/usePermissions'
 import { PERMISSIONS } from '@/constants/permissions'
+import { auditEntityLink, RECORD_AFTER_CLIENT_TYPES } from './auditEntityLink'
 
 const DEFAULT_PAGE_SIZE = 10
 
@@ -51,6 +53,8 @@ export interface AuditLog {
   username: string
   role?: string
   action: string // UPDATE, CREATE, LOGIN_FAILED, etc.
+  action_raw?: string // raw event_type, e.g. "auth.login_success" (for entity links)
+  record_client_id?: number // client id from record_after (call / ta_interaction rows)
   entity_type?: string // user, client, sms_template, etc. (legacy single filter)
   entity_types?: string[] // Multiple entity types filter
   entity_id?: string
@@ -92,6 +96,13 @@ export interface AuditLogFilters {
 export function AuditLogsPage() {
   const { t } = useTranslation('common')
   const canViewAuditLogs = useHasPermission(PERMISSIONS.SYSTEM.VIEW_AUDIT_LOGS)
+  // Single permission checker for the Entity-link resolver (auditEntityLink),
+  // built once from the user's permissions instead of one hook per destination.
+  const userPermissions = useUserPermissions()
+  const hasPermission = useMemo(() => {
+    const granted = new Set<string>(userPermissions)
+    return (permission: string) => granted.has(permission)
+  }, [userPermissions])
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE)
   const [filters, setFilters] = useState<AuditLogFilters>({})
@@ -331,6 +342,20 @@ export function AuditLogsPage() {
     const actionDisplay =
       log.action.split('.').pop()?.toUpperCase().replace(/_/g, ' ') || log.action
 
+    // Some rows carry the client id inside record_after rather than
+    // resource_id (call, ta_interaction, the client sub-entities, and payment);
+    // surface it for the client link. Payment kept separate from
+    // RECORD_AFTER_CLIENT_TYPES because it links to a different destination.
+    let recordClientId: number | undefined
+    if (
+      log.resource_type &&
+      (RECORD_AFTER_CLIENT_TYPES.has(log.resource_type) || log.resource_type === 'payment') &&
+      log.record_after
+    ) {
+      const cid = Number((log.record_after as Record<string, unknown>).client_id)
+      if (Number.isFinite(cid) && cid > 0) recordClientId = cid
+    }
+
     return {
       id: log.id,
       timestamp: log.timestamp,
@@ -339,6 +364,8 @@ export function AuditLogsPage() {
       username: log.username || 'unknown',
       role: log.user_role ?? undefined,
       action: actionDisplay,
+      action_raw: log.action,
+      record_client_id: recordClientId,
       entity_type: log.resource_type,
       entity_id: log.resource_id?.toString() || log.resource_identifier || undefined,
       entity_name: entityName,
@@ -765,11 +792,24 @@ export function AuditLogsPage() {
         key: 'entity',
         header: t('pages.auditLogs.tableHeaders.entity'),
         sortable: false,
-        render: (log) => (
-          <span className="truncate overflow-hidden text-sm leading-[150%] font-light tracking-[-0.28px] text-[#1E1E1E]">
-            {formatEntity(log)}
-          </span>
-        ),
+        render: (log) => {
+          const to = auditEntityLink(log, hasPermission)
+          if (to) {
+            return (
+              <Link
+                to={to}
+                className="text-primary-600 truncate overflow-hidden text-sm leading-[150%] font-light tracking-[-0.28px] hover:underline"
+              >
+                {formatEntity(log)}
+              </Link>
+            )
+          }
+          return (
+            <span className="truncate overflow-hidden text-sm leading-[150%] font-light tracking-[-0.28px] text-[#1E1E1E]">
+              {formatEntity(log)}
+            </span>
+          )
+        },
       },
       {
         key: 'details',
@@ -793,7 +833,7 @@ export function AuditLogsPage() {
         ),
       },
     ],
-    [formatTimestamp, formatEntity, formatDetails, handleViewDetails, t]
+    [formatTimestamp, formatEntity, formatDetails, handleViewDetails, t, hasPermission]
   )
 
   // Show access denied message for users without view_audit_logs permission

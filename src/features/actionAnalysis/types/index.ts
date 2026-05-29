@@ -275,8 +275,9 @@ export interface PaymentMonitoringFilters {
   user_ids?: number[]
   payment_method_in?: PaymentMethod[]
   status_in?: PaymentStatus[]
-  /** Stored values from KAN-507; legacy free-text rows match by exact equality. */
-  payment_type_in?: string[]
+  payment_type_in?: PaymentType[]
+  /** Free-text substring (ILIKE '%term%') over payments.payment_comment. */
+  payment_comment_search?: string
   amount_min?: number
   amount_max?: number
   sort?: PaymentMonitoringSort
@@ -293,8 +294,8 @@ export interface PaymentMonitoringItem {
   debt_contract_number: string | null
   seller_company: string | null
   purchase_date: string | null // YYYY-MM-DD
-  /** Raw column — typically `PaymentType` once KAN-507 ships; legacy rows hold free text. */
-  payment_type: string | null
+  payment_type: PaymentType | null
+  payment_comment: string | null
   recorded_by_user_id: number | null
   recorded_by_full_name: string | null
   recorded_at: string | null

@@ -61,6 +61,26 @@ const SmsTemplatesPage = lazy(() =>
     default: m.SmsTemplatesPage,
   }))
 )
+const MessagingCampaignsPage = lazy(() =>
+  import('@/pages/MessagingCampaigns').then((m) => ({
+    default: m.MessagingCampaignsPage,
+  }))
+)
+const MessagingDraftsPage = lazy(() =>
+  import('@/pages/MessagingDrafts').then((m) => ({
+    default: m.MessagingDraftsPage,
+  }))
+)
+const MessagingIntegrationsPage = lazy(() =>
+  import('@/pages/MessagingIntegrations').then((m) => ({
+    default: m.MessagingIntegrationsPage,
+  }))
+)
+const RRNotificationsPage = lazy(() =>
+  import('@/pages/RRNotifications').then((m) => ({
+    default: m.RRNotificationsPage,
+  }))
+)
 const TAManagementPage = lazy(() =>
   import('@/pages/TAManagement').then((m) => ({
     default: m.TAManagementPage,
@@ -86,11 +106,6 @@ const ActionAnalysisPage = lazy(() =>
     default: m.ActionAnalysisPage,
   }))
 )
-const MyFeedbackPage = lazy(() =>
-  import('@/pages/MyFeedback').then((m) => ({
-    default: m.MyFeedbackPage,
-  }))
-)
 const SellerManagementPage = lazy(() =>
   import('@/pages/SellerManagement').then((m) => ({
     default: m.SellerManagementPage,
@@ -110,6 +125,9 @@ const AuditLogsPage = lazy(() =>
   import('@/pages/AuditLogs').then((m) => ({ default: m.AuditLogsPage }))
 )
 const TagsPage = lazy(() => import('@/pages/Tags/TagsPage').then((m) => ({ default: m.TagsPage })))
+const ContactTypesPage = lazy(() =>
+  import('@/pages/ContactTypes/ContactTypesPage').then((m) => ({ default: m.ContactTypesPage }))
+)
 const ProfileSettingsPage = lazy(() =>
   import('@/pages/ProfileSettings/ProfileSettingsPage').then((m) => ({
     default: m.ProfileSettingsPage,
@@ -181,7 +199,7 @@ export const router = createBrowserRouter([
         element: withSuspense(<AiAssistantPage />),
       },
       {
-        path: 'users',
+        path: 'team-management/users',
         element: (
           <PermissionRoute requiredPermission={PERMISSIONS.USERS.VIEW}>
             {withSuspense(<UserManagementPage />)}
@@ -217,6 +235,18 @@ export const router = createBrowserRouter([
         ),
       },
       {
+        path: 'messaging',
+        element: <Navigate to="/dashboard/messaging/campaigns" replace />,
+      },
+      {
+        path: 'messaging/campaigns',
+        element: (
+          <PermissionRoute requiredPermission={PERMISSIONS.MESSAGING.VIEW_CAMPAIGN_ANALYTICS}>
+            {withSuspense(<MessagingCampaignsPage />)}
+          </PermissionRoute>
+        ),
+      },
+      {
         path: 'projects',
         element: (
           <PermissionRoute requiredPermission={PERMISSIONS.PROJECTS.MANAGE}>
@@ -225,7 +255,7 @@ export const router = createBrowserRouter([
         ),
       },
       {
-        path: 'roles',
+        path: 'team-management/roles',
         element: (
           <PermissionRoute requiredPermission={PERMISSIONS.SYSTEM.MANAGE_ROLES}>
             {withSuspense(<RoleManagementPage />)}
@@ -233,12 +263,33 @@ export const router = createBrowserRouter([
         ),
       },
       {
-        path: 'departments',
+        path: 'team-management/departments',
         element: (
           <PermissionRoute requiredPermission={PERMISSIONS.SYSTEM.MANAGE_ROLES}>
             {withSuspense(<DepartmentManagementPage />)}
           </PermissionRoute>
         ),
+      },
+      // Backward-compat redirects: legacy top-level paths (/dashboard/users,
+      // /roles, /departments) now bounce to the grouped /team-management/* URLs
+      // so existing bookmarks and external links keep working. The parent
+      // /team-management path redirects to the first child (mirrors the
+      // /dashboard/import → /dashboard/import/clients pattern above).
+      {
+        path: 'team-management',
+        element: <Navigate to="/dashboard/team-management/users" replace />,
+      },
+      {
+        path: 'users',
+        element: <Navigate to="/dashboard/team-management/users" replace />,
+      },
+      {
+        path: 'roles',
+        element: <Navigate to="/dashboard/team-management/roles" replace />,
+      },
+      {
+        path: 'departments',
+        element: <Navigate to="/dashboard/team-management/departments" replace />,
       },
       {
         path: 'reports',
@@ -257,14 +308,6 @@ export const router = createBrowserRouter([
         ),
       },
       {
-        // KAN-410 — operator-self feedback inbox. Auth-only (no permission
-        // gate): every operator sees their own feedback. When a real
-        // operator profile page lands later, this content can be re-mounted
-        // as a tab there.
-        path: 'my-feedback',
-        element: withSuspense(<MyFeedbackPage />),
-      },
-      {
         path: 'sellers',
         element: (
           <PermissionRoute requiredPermission={PERMISSIONS.SELLERS.VIEW}>
@@ -277,6 +320,30 @@ export const router = createBrowserRouter([
         element: (
           <PermissionRoute requiredPermission={PERMISSIONS.TAGS.VIEW}>
             {withSuspense(<TagsPage />)}
+          </PermissionRoute>
+        ),
+      },
+      {
+        path: 'system-settings/messaging-drafts',
+        element: (
+          <PermissionRoute requiredPermission={PERMISSIONS.MESSAGING.MANAGE_DRAFTS}>
+            {withSuspense(<MessagingDraftsPage />)}
+          </PermissionRoute>
+        ),
+      },
+      {
+        path: 'system-settings/messaging-integrations',
+        element: (
+          <PermissionRoute requiredPermission={PERMISSIONS.MESSAGING.MANAGE_INTEGRATIONS}>
+            {withSuspense(<MessagingIntegrationsPage />)}
+          </PermissionRoute>
+        ),
+      },
+      {
+        path: 'system-settings/contact-types',
+        element: (
+          <PermissionRoute requiredPermission={PERMISSIONS.CONTACT_TYPES.VIEW}>
+            {withSuspense(<ContactTypesPage />)}
           </PermissionRoute>
         ),
       },
@@ -301,6 +368,14 @@ export const router = createBrowserRouter([
         element: (
           <PermissionRoute requiredPermission={PERMISSIONS.SYSTEM.MANAGE_SETTINGS}>
             {withSuspense(<SmsTemplatesPage />)}
+          </PermissionRoute>
+        ),
+      },
+      {
+        path: 'system-settings/rr-notifications',
+        element: (
+          <PermissionRoute requiredPermission={PERMISSIONS.SYSTEM.MANAGE_SETTINGS}>
+            {withSuspense(<RRNotificationsPage />)}
           </PermissionRoute>
         ),
       },

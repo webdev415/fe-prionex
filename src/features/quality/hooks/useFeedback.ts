@@ -4,7 +4,6 @@ import {
   exportFeedback,
   getFeedback,
   listFeedback,
-  listMyFeedback,
   markFeedbackCompleted,
   markFeedbackRead,
   replyToFeedback,
@@ -14,7 +13,6 @@ import type { FeedbackCreatePayload, FeedbackListFilters } from '../types'
 export const feedbackKeys = {
   all: ['quality', 'feedback'] as const,
   list: (filters: FeedbackListFilters) => [...feedbackKeys.all, 'list', filters] as const,
-  myList: (filters: FeedbackListFilters) => [...feedbackKeys.all, 'me', filters] as const,
   detail: (feedbackId: number) => [...feedbackKeys.all, 'detail', feedbackId] as const,
 }
 
@@ -22,18 +20,6 @@ export function useFeedback(filters: FeedbackListFilters, enabled = true) {
   return useQuery({
     queryKey: feedbackKeys.list(filters),
     queryFn: () => listFeedback(filters),
-    enabled,
-    staleTime: 30_000,
-  })
-}
-
-export function useMyFeedback(
-  filters: Omit<FeedbackListFilters, 'operator_id' | 'trainer_id'>,
-  enabled = true
-) {
-  return useQuery({
-    queryKey: feedbackKeys.myList(filters as FeedbackListFilters),
-    queryFn: () => listMyFeedback(filters),
     enabled,
     staleTime: 30_000,
   })

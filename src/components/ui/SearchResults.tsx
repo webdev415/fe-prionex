@@ -144,7 +144,7 @@ export function SearchResults({
                   <div className="truncate">
                     {t('search.debt')}: {formatCurrency(result.debt)} ₴
                   </div>
-                  <div className="truncate">
+                  <div className="break-words">
                     {t('search.phone')}: {result.phone}
                   </div>
                   {result.email && (

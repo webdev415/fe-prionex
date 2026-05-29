@@ -1,6 +1,11 @@
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { CallMonitoringPeriod, PaymentMethod, PaymentStatus } from '@/features/actionAnalysis'
+import type {
+  CallMonitoringPeriod,
+  PaymentMethod,
+  PaymentStatus,
+  PaymentType,
+} from '@/features/actionAnalysis'
 import {
   PAYMENT_METHOD_VALUES,
   PAYMENT_STATUS_VALUES,
@@ -149,13 +154,32 @@ export function PaymentHistoryFiltersBar({
             allLabel={t('pages.actionAnalysis.filters.paymentStatuses.all', 'All')}
           />
 
-          <MultiCheckboxDropdown<string>
+          <MultiCheckboxDropdown<PaymentType>
             label={t('pages.actionAnalysis.filters.paymentType', 'Payment type')}
             options={typeOptions}
             selected={draft.paymentTypes}
             onChange={(next) => update({ paymentTypes: next })}
             allLabel={t('pages.actionAnalysis.filters.paymentTypes.all', 'All types')}
           />
+
+          <div className="flex flex-col gap-1.5">
+            <span className="text-dark-500 text-xs font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
+              {t('pages.actionAnalysis.filters.paymentCommentSearch', 'Payment comment')}
+            </span>
+            <Input
+              type="text"
+              className="h-[45px]"
+              placeholder={t(
+                'pages.actionAnalysis.filters.paymentCommentSearchPlaceholder',
+                'Search in payment comments…'
+              )}
+              value={draft.paymentCommentSearch ?? ''}
+              onChange={(e) => {
+                const v = e.target.value
+                update({ paymentCommentSearch: v === '' ? undefined : v })
+              }}
+            />
+          </div>
 
           <div className="flex flex-col gap-1.5">
             <span className="text-dark-500 text-xs font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">

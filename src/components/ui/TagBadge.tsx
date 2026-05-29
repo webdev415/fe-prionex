@@ -24,8 +24,8 @@ interface TagBadgeProps {
   isSystem?: boolean
   /** Protected tag — shows lock icon and disables remove */
   isProtected?: boolean
-  /** Expiry type: 'permanent' | 'ttl' | 'loan_closure' */
-  expiryType?: 'permanent' | 'ttl' | 'loan_closure'
+  /** Expiry type: 'permanent' | 'ttl' | 'loan_closure' | 'target_action_date' */
+  expiryType?: 'permanent' | 'ttl' | 'loan_closure' | 'target_action_date'
 }
 
 export const TagBadge = memo(function TagBadge({

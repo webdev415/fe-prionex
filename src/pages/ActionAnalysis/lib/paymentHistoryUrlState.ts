@@ -4,6 +4,7 @@ import type {
   PaymentMonitoringFilters,
   PaymentMonitoringSort,
   PaymentStatus,
+  PaymentType,
 } from '@/features/actionAnalysis'
 import {
   PAYMENT_METHOD_VALUES,
@@ -42,8 +43,8 @@ const PAYMENT_MONITORING_SORTS: readonly PaymentMonitoringSort[] = [
  * scope selector locks the picker (scope=my/group), this is ignored at query
  * time but kept on the URL for round-trip stability.
  *
- * `paymentTypes` accepts arbitrary strings to keep legacy free-text values
- * round-trippable; the FE filter UI only exposes KAN-507's three values.
+ * `paymentCommentSearch` is a free-text substring (ILIKE '%term%') over
+ * payments.payment_comment — mirrors the TA History "Notes search" pattern.
  */
 export interface PaymentHistoryBarState {
   period?: CallMonitoringPeriod
@@ -56,7 +57,8 @@ export interface PaymentHistoryBarState {
   employeeIds: number[]
   paymentMethods: PaymentMethod[]
   statuses: PaymentStatus[]
-  paymentTypes: string[]
+  paymentTypes: PaymentType[]
+  paymentCommentSearch?: string
   amountMin?: number
   amountMax?: number
   sort: PaymentMonitoringSort
@@ -74,6 +76,7 @@ export const PAYMENT_HISTORY_FILTERS_DEFAULT: PaymentHistoryBarState = {
   paymentMethods: [],
   statuses: [],
   paymentTypes: [],
+  paymentCommentSearch: undefined,
   amountMin: undefined,
   amountMax: undefined,
   sort: DEFAULT_SORT,
@@ -120,9 +123,14 @@ export function readPaymentHistoryUrlState(params: URLSearchParams): PaymentHist
     PAYMENT_METHOD_VALUES
   )
   const statuses = parseEnumList<PaymentStatus>(params.getAll('status'), PAYMENT_STATUS_VALUES)
-  // Legacy free-text values are preserved verbatim; new ones must come from KAN-507.
-  // The UI only exposes the controlled list, so anything else is a deep-link relic.
-  const paymentTypes = params.getAll('payment_type').filter((v) => v.length > 0)
+  // Drop any URL values outside the controlled vocab (pre-split deep-link relics).
+  const paymentTypes = parseEnumList<PaymentType>(
+    params.getAll('payment_type'),
+    PAYMENT_TYPE_VALUES
+  )
+  const paymentCommentSearchRaw = params.get('payment_comment_search')
+  const paymentCommentSearch =
+    paymentCommentSearchRaw && paymentCommentSearchRaw.trim() ? paymentCommentSearchRaw : undefined
 
   return {
     period,
@@ -136,6 +144,7 @@ export function readPaymentHistoryUrlState(params: URLSearchParams): PaymentHist
     paymentMethods,
     statuses,
     paymentTypes,
+    paymentCommentSearch,
     amountMin: parseNonNegativeNumber(params.get('amount_min')),
     amountMax: parseNonNegativeNumber(params.get('amount_max')),
     sort:
@@ -161,6 +170,7 @@ export function writePaymentHistoryUrlState(
     'payment_method',
     'status',
     'payment_type',
+    'payment_comment_search',
     'amount_min',
     'amount_max',
     'sort',
@@ -179,6 +189,9 @@ export function writePaymentHistoryUrlState(
   for (const m of state.paymentMethods) next.append('payment_method', m)
   for (const s of state.statuses) next.append('status', s)
   for (const t of state.paymentTypes) next.append('payment_type', t)
+  if (state.paymentCommentSearch && state.paymentCommentSearch.trim()) {
+    next.set('payment_comment_search', state.paymentCommentSearch.trim())
+  }
   if (state.amountMin != null) next.set('amount_min', String(state.amountMin))
   if (state.amountMax != null) next.set('amount_max', String(state.amountMax))
   if (state.sort && state.sort !== DEFAULT_SORT) next.set('sort', state.sort)
@@ -279,6 +292,10 @@ export function toPaymentMonitoringQuery(
     payment_method_in: state.paymentMethods.length > 0 ? state.paymentMethods : undefined,
     status_in: state.statuses.length > 0 ? state.statuses : undefined,
     payment_type_in: state.paymentTypes.length > 0 ? state.paymentTypes : undefined,
+    payment_comment_search:
+      state.paymentCommentSearch && state.paymentCommentSearch.trim()
+        ? state.paymentCommentSearch.trim()
+        : undefined,
     amount_min: state.amountMin,
     amount_max: state.amountMax,
     sort: state.sort,

@@ -193,15 +193,6 @@ export async function listFeedback(filters: FeedbackListFilters): Promise<PageRe
   return response.data
 }
 
-export async function listMyFeedback(
-  filters: Omit<FeedbackListFilters, 'operator_id' | 'trainer_id'>
-): Promise<PageResponse<Feedback>> {
-  const response = await api.get<PageResponse<Feedback>>('/api/v1/quality/feedback/me', {
-    params: buildFeedbackListParams(filters as FeedbackListFilters),
-  })
-  return response.data
-}
-
 export async function getFeedback(feedbackId: number): Promise<Feedback> {
   const response = await api.get<Feedback>(`/api/v1/quality/feedback/${feedbackId}`)
   return response.data
@@ -300,7 +291,6 @@ export const qualityService = {
   listMarkers,
   exportMarkers,
   listFeedback,
-  listMyFeedback,
   getFeedback,
   createFeedback,
   replyToFeedback,
