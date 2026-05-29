@@ -118,6 +118,23 @@ const EMPTY_INSTANT_VALUE: InstantStepValue = {
   creditId: '',
 }
 
+// KAN-XXX — picker bounds for chain steps that have the admin
+// "Date cannot be in the past" checkbox enabled. Returns the props to
+// hand to ``<DateSelect>``: ``min`` blocks past calendar days,
+// ``minTime`` + ``maxTime`` block earlier hours of *today* (react-
+// datepicker's time column otherwise lists every interval regardless
+// of the selected date). Browser-local "now" is the right reference
+// because the picker also displays in browser local; the timezone-
+// aware save path (toUtcIsoIfDate) handles the value direction on its
+// own.
+function notInPastBounds(notInPast: boolean | undefined) {
+  if (!notInPast) return {}
+  const now = new Date()
+  const endOfDay = new Date(now)
+  endOfDay.setHours(23, 59, 59, 999)
+  return { min: now, minTime: now, maxTime: endOfDay }
+}
+
 // Date-type steps store the picker output as a naive browser-local string
 // (e.g. "2026-04-30T00:53"). The user is mentally typing in their profile
 // timezone (e.g. Kyiv), which may differ from the browser tz. So at submit
@@ -1565,6 +1582,10 @@ export function ChainExecutor({
                               showTimeSelect
                               timeFormat="HH:mm"
                               timeIntervals={15}
+                              {...notInPastBounds(
+                                steps.find((s) => s.step_order === editingStep.stepOrder)
+                                  ?.not_in_the_past
+                              )}
                             />
                           ) : editingStep.fieldType === 'amount' ? (
                             <Input
@@ -1762,6 +1783,7 @@ export function ChainExecutor({
                           showTimeSelect
                           timeFormat="HH:mm"
                           timeIntervals={15}
+                          {...notInPastBounds(currentStep?.not_in_the_past)}
                         />
                       ) : currentTA.field_type === 'amount' ? (
                         <Input
@@ -2313,6 +2335,7 @@ function InstantStepCard({
           showTimeSelect
           timeFormat="HH:mm"
           timeIntervals={15}
+          {...notInPastBounds(step.not_in_the_past)}
         />
       ) : ta.field_type === 'amount' ? (
         <Input
