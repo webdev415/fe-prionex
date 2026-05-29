@@ -156,8 +156,7 @@ export function MinimizedCallBubble() {
       onSuccess: () => {
         const total = callDetails?.total_duration ?? minimizedCall.elapsedTime ?? liveElapsedTime
         setMinimizedCall({ ...minimizedCall, callState: 'ended', elapsedTime: total })
-        queryClient.invalidateQueries({ queryKey: ['callHistory'] })
-        queryClient.invalidateQueries({ queryKey: ['clients', 'detail'] })
+        invalidateCallRelatedQueries(queryClient, minimizedCall.clientId)
       },
       onError: () => {
         // Match the modal: force-end on the FE regardless of AMI errors.

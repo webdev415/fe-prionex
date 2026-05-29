@@ -38,8 +38,6 @@ const STATUS_BADGE: Record<string, string> = {
   cancelled: 'bg-error-50 text-error-700',
 }
 
-const PAYMENT_TYPE_KEYS = new Set(['payment_by_rr', 'partial_payment', 'full_payment'])
-
 interface Props {
   data: PaymentMonitoringItem[]
   userTimezone?: string | null
@@ -77,15 +75,24 @@ export function PaymentHistoryTable({ data, userTimezone, sort, onSortChange }: 
     {
       key: 'paymentType',
       header: t('pages.actionAnalysis.columns.paymentType', 'Payment type'),
-      render: (r) => {
-        const raw = r.payment_type
-        if (!raw) return <span className="text-sm text-gray-500">—</span>
-        // Translate KAN-507 controlled values; legacy free-text renders verbatim.
-        const label = PAYMENT_TYPE_KEYS.has(raw)
-          ? t(`pages.actionAnalysis.filters.paymentTypes.${raw}`, raw)
-          : raw
-        return <span className="text-sm text-gray-700">{label}</span>
-      },
+      render: (r) =>
+        r.payment_type ? (
+          <span className="text-sm text-gray-700">
+            {t(`pages.actionAnalysis.filters.paymentTypes.${r.payment_type}`, r.payment_type)}
+          </span>
+        ) : (
+          <span className="text-sm text-gray-500">—</span>
+        ),
+    },
+    {
+      key: 'paymentComment',
+      header: t('pages.actionAnalysis.columns.paymentComment', 'Payment comment'),
+      render: (r) =>
+        r.payment_comment ? (
+          <span className="text-sm text-gray-700">{r.payment_comment}</span>
+        ) : (
+          <span className="text-sm text-gray-500">—</span>
+        ),
     },
     {
       key: 'operator',

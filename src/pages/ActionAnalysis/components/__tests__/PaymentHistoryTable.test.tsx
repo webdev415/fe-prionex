@@ -22,6 +22,7 @@ function makeRow(overrides: Partial<PaymentMonitoringItem> = {}): PaymentMonitor
     seller_company: 'Acme',
     purchase_date: '2024-03-15',
     payment_type: 'payment_by_rr',
+    payment_comment: null,
     recorded_by_user_id: 10,
     recorded_by_full_name: 'Alice Adams',
     recorded_at: '2026-05-10T12:00:00Z',
@@ -55,12 +56,20 @@ describe('PaymentHistoryTable', () => {
     ).toBeInTheDocument()
   })
 
-  it('renders legacy free-text payment_type verbatim (pre-KAN-507 rows)', () => {
-    renderTable([makeRow({ payment_type: 'основной долг' })])
+  it('renders vendor-CSV free text on the Payment Comment column', () => {
+    renderTable([makeRow({ payment_type: null, payment_comment: 'основной долг' })])
     expect(screen.getByText('основной долг')).toBeInTheDocument()
   })
 
-  it('shows em-dash for missing verified_at and purchase_date', () => {
+  it('renders Payment Type and Payment Comment cells independently when both are set', () => {
+    renderTable([makeRow({ payment_type: 'full_payment', payment_comment: 'проценты' })])
+    expect(
+      screen.getByText('pages.actionAnalysis.filters.paymentTypes.full_payment')
+    ).toBeInTheDocument()
+    expect(screen.getByText('проценты')).toBeInTheDocument()
+  })
+
+  it('shows em-dash for missing verified_at, purchase_date, and payment_comment', () => {
     renderTable([
       makeRow({
         id: 99,
@@ -69,10 +78,11 @@ describe('PaymentHistoryTable', () => {
         debt_contract_number: 'LN-X',
         recorded_by_full_name: 'Bob',
         payment_type: 'full_payment',
+        payment_comment: null,
       }),
     ])
-    // Two em-dashes: Date of loan sale + Confirmed at
-    expect(screen.getAllByText('—')).toHaveLength(2)
+    // Three em-dashes: Date of loan sale + Payment comment + Confirmed at
+    expect(screen.getAllByText('—')).toHaveLength(3)
   })
 
   it('renders the status badge with the correct i18n key', () => {

@@ -21,6 +21,7 @@ import { BulkAssignClientModal } from './components/BulkAssignClientModal'
 import { formatDate } from '@/lib/formatters'
 import { TagSelectorModal } from './components/TagSelectorModal'
 import { BulkTagModal } from './components/BulkTagModal'
+import { BulkSendMessageModal } from './components/BulkSendMessageModal'
 import { ClientManagementPageSkeleton } from './components/ClientManagementPageSkeleton'
 import { Icons } from '@/lib/icons'
 import {
@@ -46,8 +47,10 @@ import { useURLState } from '@/hooks/useURLState'
 import type { Priority } from './types'
 import { PermissionGuard } from '@/components/auth'
 import { PERMISSIONS } from '@/constants/permissions'
+import { ALL_MESSAGING_LAUNCH_PERMISSIONS } from '@/features/messaging'
 import { useTags } from '@/features/tags/hooks/useTags'
 import { isAdminRole, isHiddenVisibility } from '@/features/tags/utils/visibility'
+import { toast } from 'sonner'
 
 // Display type matching page requirements
 interface DisplayClient {
@@ -88,8 +91,8 @@ const mapAPIClientToDisplay = (
   thresholds: PriorityThresholds,
   userNameMap: Map<number, string>,
   showHiddenTags: boolean,
-  /** When set (operator + catalog loaded): only show tags whose name exists in tag-service catalog (hidden tags are omitted there). */
-  operatorAllowedTagNames: Set<string> | null
+  /** When set (operator + catalog loaded): only show tags present in tag-service catalog (hidden tags are omitted there). */
+  operatorAllowedTags: { names: Set<string>; codes: Set<string> } | null
 ): DisplayClient => {
   const fullName = [client.first_name, client.middle_name, client.last_name]
     .filter(Boolean)
@@ -102,8 +105,10 @@ const mapAPIClientToDisplay = (
     tags: (client.tags || []).filter((tag) => {
       if (showHiddenTags) return true
       if (isHiddenVisibility(tag.visibility)) return false
-      if (operatorAllowedTagNames !== null) {
-        return operatorAllowedTagNames.has(tag.name)
+      if (operatorAllowedTags !== null) {
+        const code = (tag as { code?: string | null }).code
+        if (code && operatorAllowedTags.codes.has(code)) return true
+        return operatorAllowedTags.names.has(tag.name)
       }
       return true
     }),
@@ -151,30 +156,27 @@ export interface ClientFilters {
   dateOfSaleFrom?: string
   dateOfSaleTo?: string
 
-  // Promise Date Filter
-  promiseDateFrom?: string
-  promiseDateTo?: string
-
-  // Callback Date Filter
-  callbackDateFrom?: string
-  callbackDateTo?: string
+  // Target Action Date Filter — merges the legacy Promise + Callback
+  // date pickers into one range. Reads the user-entered date value(s)
+  // inside the most-recent TA-with-date for each client (see the BE
+  // filter for the precise rule).
+  taDateFrom?: string
+  taDateTo?: string
 
   // Assignment Date Filter
   assignmentDateFrom?: string
   assignmentDateTo?: string
 
-  // Interaction Created By
+  // Interaction Created By — operator who created the latest TA
   interactionUserId?: string
 
-  // Interaction Logged Date (applies to promise and callback subqueries)
+  // Interaction Logged Date — created_at of the latest TA, regardless
+  // of whether the TA carries any date values
   interactionDateFrom?: string
   interactionDateTo?: string
 
   // Portfolio/Sellers Filter (now stores IDs only)
   portfolio?: number[]
-
-  // Status Filter
-  status?: string[]
 
   // Assignment Filters
   responsibleEmployee?: string
@@ -213,7 +215,6 @@ export function ClientManagementPage() {
 
   // URL state for filters
   const [portfolioFilter, setPortfolioFilter] = useURLState<number[]>('sellers', [])
-  const [statusFilter, setStatusFilter] = useURLState<string[]>('status', [])
   const [tagIdsFilter, setTagIdsFilter] = useURLState<number[]>('tags', [])
   const [lastInteractionResultIdsFilter, setLastInteractionResultIdsFilter] = useURLState<number[]>(
     'lastInteractionResults',
@@ -244,16 +245,11 @@ export function ClientManagementPage() {
   const [totalDebtRangeToFilter, setTotalDebtRangeToFilter] = useURLState<number>('totalDebtMax', 0)
   const [dpdRangeFromFilter, setDpdRangeFromFilter] = useURLState<number>('dpdMin', 0)
   const [dpdRangeToFilter, setDpdRangeToFilter] = useURLState<number>('dpdMax', 0)
-  const [promiseDateFromFilter, setPromiseDateFromFilter] = useURLState<string>(
-    'promiseDateFrom',
-    ''
-  )
-  const [promiseDateToFilter, setPromiseDateToFilter] = useURLState<string>('promiseDateTo', '')
-  const [callbackDateFromFilter, setCallbackDateFromFilter] = useURLState<string>(
-    'callbackDateFrom',
-    ''
-  )
-  const [callbackDateToFilter, setCallbackDateToFilter] = useURLState<string>('callbackDateTo', '')
+  // URL query keys for the unified Target Action Date range. CamelCase
+  // matches every other URL filter on this page; the snake_case
+  // ta_date_from/to is only used at the API boundary.
+  const [taDateFromFilter, setTaDateFromFilter] = useURLState<string>('taDateFrom', '')
+  const [taDateToFilter, setTaDateToFilter] = useURLState<string>('taDateTo', '')
   const [interactionUserIdFilter, setInteractionUserIdFilter] = useURLState<string>(
     'interactionUserId',
     ''
@@ -279,7 +275,6 @@ export function ClientManagementPage() {
   const filters: ClientFilters = useMemo(
     () => ({
       portfolio: portfolioFilter,
-      status: statusFilter,
       tagIds: tagIdsFilter,
       lastInteractionResultIds: lastInteractionResultIdsFilter,
       responsibleEmployee: responsibleEmployeeFilter || undefined,
@@ -295,10 +290,8 @@ export function ClientManagementPage() {
       totalDebtRangeTo: totalDebtRangeToFilter || undefined,
       dpdRangeFrom: dpdRangeFromFilter || undefined,
       dpdRangeTo: dpdRangeToFilter || undefined,
-      promiseDateFrom: promiseDateFromFilter || undefined,
-      promiseDateTo: promiseDateToFilter || undefined,
-      callbackDateFrom: callbackDateFromFilter || undefined,
-      callbackDateTo: callbackDateToFilter || undefined,
+      taDateFrom: taDateFromFilter || undefined,
+      taDateTo: taDateToFilter || undefined,
       interactionUserId: interactionUserIdFilter || undefined,
       interactionDateFrom: interactionDateFromFilter || undefined,
       interactionDateTo: interactionDateToFilter || undefined,
@@ -307,7 +300,6 @@ export function ClientManagementPage() {
     }),
     [
       portfolioFilter,
-      statusFilter,
       tagIdsFilter,
       lastInteractionResultIdsFilter,
       responsibleEmployeeFilter,
@@ -323,10 +315,8 @@ export function ClientManagementPage() {
       totalDebtRangeToFilter,
       dpdRangeFromFilter,
       dpdRangeToFilter,
-      promiseDateFromFilter,
-      promiseDateToFilter,
-      callbackDateFromFilter,
-      callbackDateToFilter,
+      taDateFromFilter,
+      taDateToFilter,
       interactionUserIdFilter,
       interactionDateFromFilter,
       interactionDateToFilter,
@@ -348,6 +338,7 @@ export function ClientManagementPage() {
   const [assignModalClientId, setAssignModalClientId] = useState<number | null>(null)
   const [showBulkAssignModal, setShowBulkAssignModal] = useState(false)
   const [showBulkTagModal, setShowBulkTagModal] = useState(false)
+  const [showBulkSendMessageModal, setShowBulkSendMessageModal] = useState(false)
   const [bulkTagAction, setBulkTagAction] = useState<'add' | 'remove'>('add')
   const [tagModalOpen, setTagModalOpen] = useState(false)
   const [selectedClientForTags, setSelectedClientForTags] = useState<{
@@ -368,7 +359,6 @@ export function ClientManagementPage() {
       sortBy,
       sortOrder,
       portfolioFilter,
-      statusFilter,
       tagIdsFilter,
       responsibleEmployeeFilter,
       responsibleSearcherFilter,
@@ -383,10 +373,8 @@ export function ClientManagementPage() {
       totalDebtRangeToFilter,
       dpdRangeFromFilter,
       dpdRangeToFilter,
-      promiseDateFromFilter,
-      promiseDateToFilter,
-      callbackDateFromFilter,
-      callbackDateToFilter,
+      taDateFromFilter,
+      taDateToFilter,
       interactionUserIdFilter,
       interactionDateFromFilter,
       interactionDateToFilter,
@@ -403,16 +391,13 @@ export function ClientManagementPage() {
       responsibleEmployeeFilter !== '' ||
       responsibleSearcherFilter !== '' ||
       portfolioFilter.length > 0 ||
-      statusFilter.length > 0 ||
       tagIdsFilter.length > 0 ||
       lastInteractionResultIdsFilter.length > 0 ||
       unassignedOnlyFilter ||
       dateOfSaleFromFilter !== '' ||
       dateOfSaleToFilter !== '' ||
-      promiseDateFromFilter !== '' ||
-      promiseDateToFilter !== '' ||
-      callbackDateFromFilter !== '' ||
-      callbackDateToFilter !== '' ||
+      taDateFromFilter !== '' ||
+      taDateToFilter !== '' ||
       interactionUserIdFilter !== '' ||
       interactionDateFromFilter !== '' ||
       interactionDateToFilter !== '' ||
@@ -442,7 +427,6 @@ export function ClientManagementPage() {
     sortBy,
     sortOrder,
     portfolioFilter,
-    statusFilter,
     tagIdsFilter,
     lastInteractionResultIdsFilter,
     responsibleEmployeeFilter,
@@ -458,10 +442,8 @@ export function ClientManagementPage() {
     totalDebtRangeToFilter,
     dpdRangeFromFilter,
     dpdRangeToFilter,
-    promiseDateFromFilter,
-    promiseDateToFilter,
-    callbackDateFromFilter,
-    callbackDateToFilter,
+    taDateFromFilter,
+    taDateToFilter,
     interactionUserIdFilter,
     interactionDateFromFilter,
     interactionDateToFilter,
@@ -481,16 +463,13 @@ export function ClientManagementPage() {
       searchQuery !== '' ||
       responsibleEmployeeFilter !== '' ||
       portfolioFilter.length > 0 ||
-      statusFilter.length > 0 ||
       tagIdsFilter.length > 0 ||
       lastInteractionResultIdsFilter.length > 0 ||
       unassignedOnlyFilter ||
       dateOfSaleFromFilter !== '' ||
       dateOfSaleToFilter !== '' ||
-      promiseDateFromFilter !== '' ||
-      promiseDateToFilter !== '' ||
-      callbackDateFromFilter !== '' ||
-      callbackDateToFilter !== '' ||
+      taDateFromFilter !== '' ||
+      taDateToFilter !== '' ||
       interactionUserIdFilter !== '' ||
       interactionDateFromFilter !== '' ||
       interactionDateToFilter !== '' ||
@@ -509,7 +488,6 @@ export function ClientManagementPage() {
           setTimeout(() => {
             if (parsed.selectedPriorities) setSelectedPriorities(parsed.selectedPriorities)
             if (parsed.portfolioFilter) setPortfolioFilter(parsed.portfolioFilter)
-            if (parsed.statusFilter) setStatusFilter(parsed.statusFilter)
             if (parsed.tagIdsFilter) setTagIdsFilter(parsed.tagIdsFilter)
             if (parsed.responsibleEmployeeFilter)
               setResponsibleEmployeeFilter(parsed.responsibleEmployeeFilter)
@@ -530,11 +508,27 @@ export function ClientManagementPage() {
               setTotalDebtRangeToFilter(parsed.totalDebtRangeToFilter)
             if (parsed.dpdRangeFromFilter) setDpdRangeFromFilter(parsed.dpdRangeFromFilter)
             if (parsed.dpdRangeToFilter) setDpdRangeToFilter(parsed.dpdRangeToFilter)
-            if (parsed.promiseDateFromFilter) setPromiseDateFromFilter(parsed.promiseDateFromFilter)
-            if (parsed.promiseDateToFilter) setPromiseDateToFilter(parsed.promiseDateToFilter)
-            if (parsed.callbackDateFromFilter)
-              setCallbackDateFromFilter(parsed.callbackDateFromFilter)
-            if (parsed.callbackDateToFilter) setCallbackDateToFilter(parsed.callbackDateToFilter)
+            // Migrate legacy localStorage entries (promiseDate*/callbackDate*)
+            // into the merged Target Action Date range. Min/max so a
+            // partial legacy state widens (never narrows) the new
+            // range. Remove this block once all saved states have been
+            // rewritten under the new keys.
+            const legacyDateFroms = [
+              parsed.taDateFromFilter,
+              parsed.promiseDateFromFilter,
+              parsed.callbackDateFromFilter,
+            ].filter(Boolean) as string[]
+            const legacyDateTos = [
+              parsed.taDateToFilter,
+              parsed.promiseDateToFilter,
+              parsed.callbackDateToFilter,
+            ].filter(Boolean) as string[]
+            if (legacyDateFroms.length) {
+              setTaDateFromFilter(legacyDateFroms.reduce((a, b) => (a < b ? a : b)))
+            }
+            if (legacyDateTos.length) {
+              setTaDateToFilter(legacyDateTos.reduce((a, b) => (a > b ? a : b)))
+            }
             if (parsed.interactionUserIdFilter)
               setInteractionUserIdFilter(parsed.interactionUserIdFilter)
             if (parsed.interactionDateFromFilter)
@@ -686,10 +680,6 @@ export function ClientManagementPage() {
       params.debt_max = filters.debtRangeTo
     }
 
-    if (filters.status && filters.status.length > 0) {
-      params.status = filters.status.join(',')
-    }
-
     // FILTER 9: Tags
     if (filters.tagIds && filters.tagIds.length > 0) {
       params.tag_ids = filters.tagIds.join(',')
@@ -710,20 +700,15 @@ export function ClientManagementPage() {
       params.priorities = priorityValues
     }
 
-    // FILTER 11: Promise Date Range
-    if (filters.promiseDateFrom) {
-      params.promise_date_from = filters.promiseDateFrom
+    // FILTER 11: Target Action Date — single range replaces the legacy
+    // Promise + Callback pair. BE picks the latest TA-with-date per
+    // client and matches when ANY of that TA's date values is in the
+    // range.
+    if (filters.taDateFrom) {
+      params.ta_date_from = filters.taDateFrom
     }
-    if (filters.promiseDateTo) {
-      params.promise_date_to = filters.promiseDateTo
-    }
-
-    // FILTER 12: Callback Date Range
-    if (filters.callbackDateFrom) {
-      params.callback_date_from = filters.callbackDateFrom
-    }
-    if (filters.callbackDateTo) {
-      params.callback_date_to = filters.callbackDateTo
+    if (filters.taDateTo) {
+      params.ta_date_to = filters.taDateTo
     }
 
     // FILTER 13: Interaction Created By
@@ -768,6 +753,14 @@ export function ClientManagementPage() {
     searchType,
   ])
 
+  /** Filters + sort for bulk messaging when "select all" is used (no pagination). */
+  const clientListFilterParams = useMemo(() => {
+    const { skip, limit, ...rest } = apiParams
+    void skip
+    void limit
+    return rest
+  }, [apiParams])
+
   // Fetch clients from API
   const { data: clientsResponse, isLoading, isFetching, isError, error } = useClients(apiParams)
 
@@ -786,10 +779,16 @@ export function ClientManagementPage() {
   // Tag-service list for operators excludes hidden tags — use names to filter client-list embedded tags
   // when client-service rows omit or stale-sync visibility (different DB ids than tag-service).
   const { data: operatorTagCatalog } = useTags(activeProjectIdNum)
-  const operatorAllowedTagNames = useMemo(() => {
+  const operatorAllowedTags = useMemo(() => {
     if (showHiddenTags) return null
     if (operatorTagCatalog === undefined) return null
-    return new Set(operatorTagCatalog.map((t) => t.name))
+    const names = new Set<string>()
+    const codes = new Set<string>()
+    for (const t of operatorTagCatalog) {
+      names.add(t.name)
+      if (t.code) codes.add(t.code)
+    }
+    return { names, codes }
   }, [showHiddenTags, operatorTagCatalog])
   const { data: operators } = useOperators(activeProjectId ? Number(activeProjectId) : null)
   const userNameMap = useMemo(() => {
@@ -809,15 +808,9 @@ export function ClientManagementPage() {
   // Map API clients to display format
   const displayClients = useMemo(() => {
     return apiClients.map((client) =>
-      mapAPIClientToDisplay(
-        client,
-        thresholds,
-        userNameMap,
-        showHiddenTags,
-        operatorAllowedTagNames
-      )
+      mapAPIClientToDisplay(client, thresholds, userNameMap, showHiddenTags, operatorAllowedTags)
     )
-  }, [apiClients, thresholds, userNameMap, showHiddenTags, operatorAllowedTagNames])
+  }, [apiClients, thresholds, userNameMap, showHiddenTags, operatorAllowedTags])
 
   // Count applied filters
   const appliedFiltersCount = useMemo(() => {
@@ -828,15 +821,13 @@ export function ClientManagementPage() {
     // DPD Range not yet implemented (days past due not calculated)
     // if (filters.dpdRangeFrom || filters.dpdRangeTo) count++
     if (filters.dateOfSaleFrom || filters.dateOfSaleTo) count++
-    if (filters.promiseDateFrom || filters.promiseDateTo) count++
-    if (filters.callbackDateFrom || filters.callbackDateTo) count++
+    if (filters.taDateFrom || filters.taDateTo) count++
     if (filters.interactionUserId) count++
     if (filters.interactionDateFrom || filters.interactionDateTo) count++
     if (filters.assignmentDateFrom || filters.assignmentDateTo) count++
     if (filters.portfolio && filters.portfolio.length > 0) count++
     if (filters.tagIds && filters.tagIds.length > 0) count++
     if (filters.lastInteractionResultIds && filters.lastInteractionResultIds.length > 0) count++
-    if (filters.status && filters.status.length > 0) count++
     if (filters.responsibleEmployee) count++
     if (filters.responsibleSearcher) count++
     if (filters.unassignedOnly) count++
@@ -898,6 +889,20 @@ export function ClientManagementPage() {
   const handleBulkRemoveTags = () => {
     setBulkTagAction('remove')
     setShowBulkTagModal(true)
+  }
+
+  const handleBulkSendMessage = () => {
+    if (totalSelectedCount === 0) {
+      toast.error(
+        t(
+          'pages.clients.bulkActions.selectClientsFirst',
+          'Select at least one client before starting a bulk action'
+        )
+      )
+      return
+    }
+
+    setShowBulkSendMessageModal(true)
   }
 
   const handleBulkAssignSubmit = (assignmentData: {
@@ -1092,14 +1097,6 @@ export function ClientManagementPage() {
       return
     }
 
-    if (newFilters._action === 'toggleStatus') {
-      const status = newFilters._value as string
-      const checked = newFilters._checked as boolean
-      setStatusFilter((prev) => (checked ? [...prev, status] : prev.filter((s) => s !== status)))
-      setCurrentPage(1)
-      return
-    }
-
     if (newFilters._action === 'toggleTag') {
       const tagId = newFilters._value as number
       const checked = newFilters._checked as boolean
@@ -1122,9 +1119,6 @@ export function ClientManagementPage() {
     // Only update if value has actually changed (use JSON.stringify for deep comparison)
     if (JSON.stringify(newFilters.portfolio) !== JSON.stringify(portfolioFilter)) {
       setPortfolioFilter(newFilters.portfolio || [])
-    }
-    if (JSON.stringify(newFilters.status) !== JSON.stringify(statusFilter)) {
-      setStatusFilter(newFilters.status || [])
     }
     if (JSON.stringify(newFilters.tagIds) !== JSON.stringify(tagIdsFilter)) {
       setTagIdsFilter(newFilters.tagIds || [])
@@ -1174,17 +1168,11 @@ export function ClientManagementPage() {
     if (newFilters.dpdRangeTo !== dpdRangeToFilter) {
       setDpdRangeToFilter(newFilters.dpdRangeTo || 0)
     }
-    if (newFilters.promiseDateFrom !== promiseDateFromFilter) {
-      setPromiseDateFromFilter(newFilters.promiseDateFrom || '')
+    if (newFilters.taDateFrom !== taDateFromFilter) {
+      setTaDateFromFilter(newFilters.taDateFrom || '')
     }
-    if (newFilters.promiseDateTo !== promiseDateToFilter) {
-      setPromiseDateToFilter(newFilters.promiseDateTo || '')
-    }
-    if (newFilters.callbackDateFrom !== callbackDateFromFilter) {
-      setCallbackDateFromFilter(newFilters.callbackDateFrom || '')
-    }
-    if (newFilters.callbackDateTo !== callbackDateToFilter) {
-      setCallbackDateToFilter(newFilters.callbackDateTo || '')
+    if (newFilters.taDateTo !== taDateToFilter) {
+      setTaDateToFilter(newFilters.taDateTo || '')
     }
     if (newFilters.interactionUserId !== interactionUserIdFilter) {
       setInteractionUserIdFilter(newFilters.interactionUserId || '')
@@ -1210,7 +1198,6 @@ export function ClientManagementPage() {
     // Clear all URL state filters (useURLState will handle URL updates after debounce)
     setSelectedPriorities([])
     setPortfolioFilter([])
-    setStatusFilter([])
     setTagIdsFilter([])
     setLastInteractionResultIdsFilter([])
     setResponsibleEmployeeFilter('')
@@ -1226,10 +1213,8 @@ export function ClientManagementPage() {
     setTotalDebtRangeToFilter(0)
     setDpdRangeFromFilter(0)
     setDpdRangeToFilter(0)
-    setPromiseDateFromFilter('')
-    setPromiseDateToFilter('')
-    setCallbackDateFromFilter('')
-    setCallbackDateToFilter('')
+    setTaDateFromFilter('')
+    setTaDateToFilter('')
     setInteractionUserIdFilter('')
     setInteractionDateFromFilter('')
     setInteractionDateToFilter('')
@@ -1672,6 +1657,21 @@ export function ClientManagementPage() {
                         </span>
                       </DropdownMenuItem>
                     </PermissionGuard>
+                    <PermissionGuard permissions={ALL_MESSAGING_LAUNCH_PERMISSIONS} mode="any">
+                      <DropdownMenuItem
+                        onClick={handleBulkSendMessage}
+                        className="flex cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 transition-colors hover:bg-gray-50 focus:bg-gray-50"
+                      >
+                        <Icons.MessageMultiple01
+                          size={18}
+                          className="text-dark-500"
+                          strokeWidth={1.5}
+                        />
+                        <span className="text-dark-500 text-sm font-medium">
+                          {t('pages.clients.bulkActions.sendMessage', 'Send Message')}
+                        </span>
+                      </DropdownMenuItem>
+                    </PermissionGuard>
                   </DropdownMenuContent>
                 </DropdownMenu>
               }
@@ -1738,6 +1738,23 @@ export function ClientManagementPage() {
           clientCount={totalSelectedCount}
           action={bulkTagAction}
           onClose={() => setShowBulkTagModal(false)}
+        />
+
+        <BulkSendMessageModal
+          open={showBulkSendMessageModal}
+          clientIds={Array.from(selectedClients).map(Number)}
+          selectedClients={selectedClientsData}
+          totalSelectedCount={totalSelectedCount}
+          allClientsSelectedAcrossPages={allClientsSelected}
+          excludedClientIds={Array.from(excludedClients)}
+          clientListFilterParams={clientListFilterParams}
+          onClose={() => setShowBulkSendMessageModal(false)}
+          onLaunched={() => {
+            setShowBulkSendMessageModal(false)
+            setSelectedClients(new Set())
+            setAllClientsSelected(false)
+            setExcludedClients(new Set())
+          }}
         />
       </div>
     </TooltipProvider>

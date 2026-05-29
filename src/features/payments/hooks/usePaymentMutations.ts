@@ -65,6 +65,7 @@ export function useRecordPayment() {
       // Invalidate payment-related queries
       queryClient.invalidateQueries({ queryKey: ['payments'] })
       queryClient.invalidateQueries({ queryKey: ['client-payment-history'] })
+      queryClient.invalidateQueries({ queryKey: ['client-all-verified-payments'] })
       queryClient.invalidateQueries({ queryKey: ['payment-stats'] })
       // Invalidate client queries to update debt
       queryClient.invalidateQueries({ queryKey: ['client', data.client_id] })
@@ -103,6 +104,7 @@ export function useVerifyPayment() {
       queryClient.invalidateQueries({ queryKey: ['payment', data.payment_number] })
       queryClient.invalidateQueries({ queryKey: ['payments'] })
       queryClient.invalidateQueries({ queryKey: ['client-payment-history'] })
+      queryClient.invalidateQueries({ queryKey: ['client-all-verified-payments'] })
       queryClient.invalidateQueries({ queryKey: ['payment-stats'] })
       // Invalidate client queries to update debt
       queryClient.invalidateQueries({ queryKey: ['client', data.client_id] })
@@ -141,6 +143,7 @@ export function useCancelPayment() {
       queryClient.invalidateQueries({ queryKey: ['payment', data.payment_number] })
       queryClient.invalidateQueries({ queryKey: ['payments'] })
       queryClient.invalidateQueries({ queryKey: ['client-payment-history'] })
+      queryClient.invalidateQueries({ queryKey: ['client-all-verified-payments'] })
       queryClient.invalidateQueries({ queryKey: ['payment-stats'] })
       // Invalidate client queries to update debt
       queryClient.invalidateQueries({ queryKey: ['client', data.client_id] })
@@ -174,6 +177,7 @@ export function useEditPayment() {
       queryClient.invalidateQueries({ queryKey: ['payment', data.payment_number] })
       queryClient.invalidateQueries({ queryKey: ['payments'] })
       queryClient.invalidateQueries({ queryKey: ['client-payment-history'] })
+      queryClient.invalidateQueries({ queryKey: ['client-all-verified-payments'] })
       queryClient.invalidateQueries({ queryKey: ['payment-stats'] })
       // Invalidate client queries to update debt
       queryClient.invalidateQueries({ queryKey: ['client', data.client_id] })
@@ -211,6 +215,7 @@ export function useReassignPaymentEmployee() {
       queryClient.invalidateQueries({ queryKey: ['payment', data.payment_number] })
       queryClient.invalidateQueries({ queryKey: ['payments'] })
       queryClient.invalidateQueries({ queryKey: ['client-payment-history'] })
+      queryClient.invalidateQueries({ queryKey: ['client-all-verified-payments'] })
       queryClient.invalidateQueries({ queryKey: ['payment-stats'] })
 
       toast.success('Employee reassigned successfully')

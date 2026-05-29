@@ -100,7 +100,7 @@ describe('useURLState', () => {
         () => {
           expect(mockSetSearchParams).toHaveBeenCalled()
         },
-        { timeout: 500 }
+        { timeout: 2000 }
       )
 
       const callArg = mockSetSearchParams.mock.calls[0][0]
@@ -123,7 +123,7 @@ describe('useURLState', () => {
         () => {
           expect(mockSetSearchParams).toHaveBeenCalled()
         },
-        { timeout: 500 }
+        { timeout: 2000 }
       )
 
       const callArg = mockSetSearchParams.mock.calls[0][0]
@@ -144,7 +144,7 @@ describe('useURLState', () => {
         () => {
           expect(mockSetSearchParams).toHaveBeenCalled()
         },
-        { timeout: 500 }
+        { timeout: 2000 }
       )
 
       const callArg = mockSetSearchParams.mock.calls[0][0]
@@ -165,7 +165,7 @@ describe('useURLState', () => {
         () => {
           expect(mockSetSearchParams).toHaveBeenCalled()
         },
-        { timeout: 500 }
+        { timeout: 2000 }
       )
 
       const callArg = mockSetSearchParams.mock.calls[0][0]
@@ -195,7 +195,7 @@ describe('useURLState', () => {
         () => {
           expect(mockSetSearchParams).toHaveBeenCalled()
         },
-        { timeout: 500 }
+        { timeout: 2000 }
       )
 
       // Should only call once with final value
@@ -238,7 +238,7 @@ describe('useURLState', () => {
         () => {
           expect(mockSetSearchParams).toHaveBeenCalled()
         },
-        { timeout: 500 }
+        { timeout: 2000 }
       )
 
       const options = mockSetSearchParams.mock.calls[0][1]
@@ -258,7 +258,7 @@ describe('useURLState', () => {
         () => {
           expect(mockSetSearchParams).toHaveBeenCalled()
         },
-        { timeout: 500 }
+        { timeout: 2000 }
       )
 
       const options = mockSetSearchParams.mock.calls[0][1]

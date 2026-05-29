@@ -126,16 +126,16 @@ function usePaymentPreviewColumns(t: TFunction<'common'>): Column<PreviewRowWith
         ),
       },
       {
-        // Free-text payment_type carried over from the CSV (e.g. "Изипей").
-        // Kept separate from the New/Pending badge so each column shows one
-        // piece of information.
-        key: 'payment_type',
-        header: t(`${c}.paymentType`),
+        // Free-text vendor classification carried over from the CSV (e.g.
+        // "Изипей"). Kept separate from the New/Pending badge so each
+        // column shows one piece of information.
+        key: 'payment_comment',
+        header: t(`${c}.paymentComment`),
         render: (row: PreviewRowWithId) => {
           if (row.status === 'error') return <span className="text-xs text-gray-400">—</span>
-          const typeText = row.payment_type?.trim() || null
-          return typeText ? (
-            <span className="text-xs text-gray-700">{typeText}</span>
+          const commentText = row.payment_comment?.trim() || null
+          return commentText ? (
+            <span className="text-xs text-gray-700">{commentText}</span>
           ) : (
             <span className="text-xs text-gray-400">—</span>
           )
