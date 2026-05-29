@@ -192,7 +192,15 @@
     "operations": {
       "bulkWriteoffImport": {
         "title": "Bulk write-off import",
-        "subtitle": "Upload a CSV to create multiple write-off entries at once. Required columns: loan_id, cancellation_date, principal, interest, fine, penalty, commission.",
+        "subtitle": "Upload a CSV to create multiple write-off entries at once.",
+        "sectionTitle": "Upload write-off CSV",
+        "descriptionIntro": "Required columns:",
+        "clickToUpload": "Click to upload",
+        "orDragAndDrop": "or drag and drop",
+        "constraints": "CSV only, up to 5 MB / 1000 rows",
+        "validating": "Uploading...",
+        "uploadAnother": "Upload another file",
+        "resultsTitle": "Import results",
         "upload": "Upload",
         "downloadTemplate": "Download template",
         "columnsHint": "Required columns: {{columns}}",
@@ -209,7 +217,11 @@
         "status": "Status",
         "detail": "Detail",
         "statusCreated": "Created",
-        "statusFailed": "Failed"
+        "statusFailed": "Failed",
+        "errors": {
+          "onlyCsv": "Only CSV files are supported",
+          "fileTooLarge": "File is too large ({{size}} MB). Maximum is 5 MB."
+        }
       }
     },
     "aiAssistant": {

@@ -197,7 +197,15 @@
     "operations": {
       "bulkWriteoffImport": {
         "title": "Масове списання — імпорт",
-        "subtitle": "Завантажте CSV для створення кількох записів списань одразу. Обов'язкові колонки: loan_id, cancellation_date, principal, interest, fine, penalty, commission.",
+        "subtitle": "Завантажте CSV для створення кількох записів списань одразу.",
+        "sectionTitle": "Завантажити CSV списань",
+        "descriptionIntro": "Обов'язкові колонки:",
+        "clickToUpload": "Натисніть, щоб завантажити",
+        "orDragAndDrop": "або перетягніть файл сюди",
+        "constraints": "Лише CSV, до 5 МБ / 1000 рядків",
+        "validating": "Завантаження...",
+        "uploadAnother": "Завантажити інший файл",
+        "resultsTitle": "Результати імпорту",
         "upload": "Завантажити",
         "downloadTemplate": "Завантажити шаблон",
         "columnsHint": "Обов'язкові колонки: {{columns}}",
@@ -214,7 +222,11 @@
         "status": "Статус",
         "detail": "Деталі",
         "statusCreated": "Створено",
-        "statusFailed": "Помилка"
+        "statusFailed": "Помилка",
+        "errors": {
+          "onlyCsv": "Підтримуються лише файли CSV",
+          "fileTooLarge": "Файл завеликий ({{size}} МБ). Максимум — 5 МБ."
+        }
       }
     },
     "aiAssistant": {
