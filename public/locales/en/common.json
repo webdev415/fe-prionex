@@ -261,11 +261,6 @@
       "mockTableRowDebt": "Debt at risk",
       "mockTableRowOverdue": "Overdue ratio"
     },
-    "myFeedback": {
-      "title": "My Feedback",
-      "subtitle": "All feedback your trainers have sent you.",
-      "empty": "No feedback yet — your trainers haven’t sent any."
-    },
     "actionAnalysis": {
       "title": "Action Analysis",
       "subtitle": "Call monitoring and interaction history for the trainer team.",

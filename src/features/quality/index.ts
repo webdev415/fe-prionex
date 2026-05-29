@@ -18,7 +18,6 @@ export {
   listMarkers,
   exportMarkers,
   listFeedback,
-  listMyFeedback,
   getFeedback,
   createFeedback,
   replyToFeedback,
@@ -55,7 +54,6 @@ export {
 } from './hooks/useMarkers'
 export {
   useFeedback,
-  useMyFeedback,
   useFeedbackDetail,
   useCreateFeedback,
   useReplyToFeedback,
