@@ -18,6 +18,7 @@ import {
 import { useSyncedState } from '@/hooks'
 import { Icons } from '@/lib/icons'
 import { CALL_FILTERS_DEFAULT } from '../lib/callsUrlState'
+import type { ScopedUserIds } from '../lib/scope'
 import { DateRangeQuickFilter } from './DateRangeQuickFilter'
 import { EmployeeFilterDropdown } from './EmployeeFilterDropdown'
 
@@ -34,10 +35,16 @@ interface Props {
   onApply: (next: CallFiltersBarValue) => void
   onClear: () => void
   userTimezone?: string | null
+  /** Page-level scope (KAN-506) — drives the picker-disabled flags. */
+  scope?: ScopedUserIds
 }
 
-export function CallFiltersBar({ value, operators, onApply, onClear, userTimezone }: Props) {
+export function CallFiltersBar({ value, operators, onApply, onClear, userTimezone, scope }: Props) {
   const { t } = useTranslation('common')
+
+  const scopeLockedEmpLabel = scope?.employeePickerDisabled
+    ? t(scope.disabledLabelKey, 'Scoped')
+    : undefined
 
   const operatorsWithExt = useMemo(
     () => operators.filter((o) => !!o.asterisk_extension),
@@ -103,6 +110,8 @@ export function CallFiltersBar({ value, operators, onApply, onClear, userTimezon
             operators={operatorsWithExt}
             selectedIds={selectedOperatorIds}
             onChange={handleEmployeesChange}
+            disabled={scope?.employeePickerDisabled}
+            disabledLabel={scopeLockedEmpLabel}
             label={t('pages.actionAnalysis.filters.employee', 'Employee')}
           />
 

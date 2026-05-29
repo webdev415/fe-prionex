@@ -17,10 +17,32 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 
 export interface SidebarSubItem {
-  path: string
+  path?: string
   label: string
   icon?: string
   disabled?: boolean
+  /** Group heading with nested links (parent must not have `path`). */
+  children?: SidebarSubItem[]
+}
+
+function countSubmenuRows(subItems?: SidebarSubItem[]): number {
+  if (!subItems) return 0
+  return subItems.reduce((total, subItem) => {
+    if (subItem.children && subItem.children.length > 0) {
+      return total + 1 + subItem.children.length
+    }
+    return total + 1
+  }, 0)
+}
+
+function subItemIsActive(
+  subItem: SidebarSubItem,
+  isActivePath: (path: string) => boolean
+): boolean {
+  if (subItem.children?.length) {
+    return subItem.children.some((child) => child.path && isActivePath(child.path))
+  }
+  return Boolean(subItem.path && isActivePath(subItem.path))
 }
 
 export interface SidebarItem {
@@ -76,6 +98,9 @@ const iconMap: Record<
   'sliders-horizontal': (props) => <Icons.SlidersHorizontal {...props} />,
   'user-multiple-02': (props) => <Icons.UserMultiple02 {...props} />,
   'tag-01': (props) => <Icons.Tag01 {...props} />,
+  'message-multiple-01': (props) => <Icons.MessageMultiple01 {...props} />,
+  'message-secure-01': (props) => <Icons.MessageSecure01 {...props} />,
+  'bubble-chat-edit': (props) => <Icons.BubbleChatEdit {...props} />,
 }
 
 /**
@@ -108,7 +133,7 @@ export function Sidebar({ items = [], bottomItems = [], actions = [], className 
    */
   const hasActiveSubItem = (subItems?: SidebarSubItem[]) => {
     if (!subItems) return false
-    return subItems.some((subItem) => isActivePath(subItem.path))
+    return subItems.some((subItem) => subItemIsActive(subItem, isActivePath))
   }
 
   // Derive effective submenu index - close when sidebar is not visible
@@ -142,7 +167,7 @@ export function Sidebar({ items = [], bottomItems = [], actions = [], className 
       // Calculate submenu height estimate (approximate based on number of items)
       const allItems = [...items, ...bottomItems]
       const item = allItems[index]
-      const submenuItemCount = item?.subItems?.length || 0
+      const submenuItemCount = countSubmenuRows(item?.subItems)
       const submenuHeight = Math.min(submenuItemCount * 40 + 16, 400) // ~40px per item + padding, max 400px
 
       // Horizontal positioning
@@ -315,7 +340,8 @@ export function Sidebar({ items = [], bottomItems = [], actions = [], className 
 
             const hasSubItems = item.subItems && item.subItems.length > 0
             const isActive =
-              !item.disabled && (isActivePath(item.path) || hasActiveSubItem(item.subItems))
+              !item.disabled &&
+              (hasSubItems ? hasActiveSubItem(item.subItems) : isActivePath(item.path))
             const isDisabled = item.disabled
             // Use unique key combining path and label to avoid duplicates
             const uniqueKey = `${item.path}-${item.label}-${index}`
@@ -486,7 +512,8 @@ export function Sidebar({ items = [], bottomItems = [], actions = [], className 
 
                 const hasSubItems = item.subItems && item.subItems.length > 0
                 const isActive =
-                  !item.disabled && (isActivePath(item.path) || hasActiveSubItem(item.subItems))
+                  !item.disabled &&
+                  (hasSubItems ? hasActiveSubItem(item.subItems) : isActivePath(item.path))
                 const isDisabled = item.disabled
                 const uniqueKey = `${item.path}-${item.label}-bottom-${index}`
 
@@ -706,8 +733,94 @@ export function Sidebar({ items = [], bottomItems = [], actions = [], className 
             }}
           >
             {visibleSubmenuItem.subItems.map((subItem, subIndex) => {
+              const subUniqueKey = `${subItem.path ?? 'group'}-${subItem.label}-${subIndex}`
+
+              if (subItem.children && subItem.children.length > 0) {
+                const GroupIconComponent = subItem.icon ? iconMap[subItem.icon] : null
+                const isGroupActive = subItemIsActive(subItem, isActivePath)
+
+                return (
+                  <div key={subUniqueKey} className="py-1">
+                    <div
+                      className={cn(
+                        'flex h-9 items-center px-3 text-xs font-semibold tracking-wide uppercase',
+                        isGroupActive ? 'text-secondary-800' : 'text-gray-500'
+                      )}
+                    >
+                      {GroupIconComponent && (
+                        <GroupIconComponent
+                          size={16}
+                          className="mr-2 shrink-0 text-gray-500"
+                          strokeWidth={1.5}
+                        />
+                      )}
+                      <span className="truncate">{subItem.label}</span>
+                    </div>
+                    <div className="mt-0.5 space-y-0.5 pl-1">
+                      {subItem.children.map((child, childIndex) => {
+                        if (!child.path) return null
+                        const isChildActive = !child.disabled && isActivePath(child.path)
+                        const childKey = `${child.path}-${child.label}-${childIndex}`
+                        const ChildIconComponent = child.icon ? iconMap[child.icon] : null
+
+                        if (child.disabled) {
+                          return (
+                            <div
+                              key={childKey}
+                              className="flex h-10 cursor-not-allowed items-center px-3 opacity-50"
+                            >
+                              {ChildIconComponent && (
+                                <ChildIconComponent
+                                  size={18}
+                                  className="mr-3 shrink-0 text-gray-400"
+                                  strokeWidth={1.5}
+                                />
+                              )}
+                              <span className="truncate text-sm text-gray-400">{child.label}</span>
+                            </div>
+                          )
+                        }
+
+                        return (
+                          <NavLink
+                            key={childKey}
+                            to={child.path}
+                            onClick={() => {
+                              setOpenSubmenuIndex(null)
+                              setSubmenuPosition(null)
+                              if (isHoverOpen && !isOpenSideBar) {
+                                setHoverOpen(false)
+                              }
+                            }}
+                            className={cn(
+                              'flex h-10 items-center rounded-lg px-3 transition-colors duration-200',
+                              isChildActive
+                                ? 'bg-secondary-800 text-white'
+                                : 'text-dark-500 hover:bg-gray-50'
+                            )}
+                          >
+                            {ChildIconComponent && (
+                              <ChildIconComponent
+                                size={18}
+                                className={cn(
+                                  'mr-3 shrink-0',
+                                  isChildActive ? 'text-primary-300' : 'text-gray-600'
+                                )}
+                                strokeWidth={1.5}
+                              />
+                            )}
+                            <span className="truncate text-sm font-medium">{child.label}</span>
+                          </NavLink>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )
+              }
+
+              if (!subItem.path) return null
+
               const isSubActive = !subItem.disabled && isActivePath(subItem.path)
-              const subUniqueKey = `${subItem.path}-${subItem.label}-${subIndex}`
               const SubIconComponent = subItem.icon ? iconMap[subItem.icon] : null
 
               if (subItem.disabled) {
@@ -735,13 +848,11 @@ export function Sidebar({ items = [], bottomItems = [], actions = [], className 
                   onClick={() => {
                     setOpenSubmenuIndex(null)
                     setSubmenuPosition(null)
-                    // Collapse sidebar if it was opened by hover
                     if (isHoverOpen && !isOpenSideBar) {
                       setHoverOpen(false)
                     }
                   }}
                   className={cn(
-                    // Rounded submenu rows
                     'flex h-10 items-center rounded-lg px-3 transition-colors duration-200',
                     isSubActive ? 'bg-secondary-800 text-white' : 'text-dark-500 hover:bg-gray-50'
                   )}

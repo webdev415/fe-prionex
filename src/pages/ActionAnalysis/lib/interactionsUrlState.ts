@@ -154,23 +154,56 @@ export type ResolvedInteractionUsers =
   | { kind: 'ids'; ids: number[] }
   | { kind: 'empty' }
 
+/**
+ * Resolve effective user_ids[] for the interaction-monitoring query.
+ *
+ * `scopedUserIds` (KAN-506) is the result of the page-level Scope selector:
+ *   - `undefined` → no scope filter (scope=all or scope=group placeholder),
+ *   - `[]`        → scope locked to a context with zero matching users
+ *                   (e.g. scope=department but the dept has no operators),
+ *   - `number[]`  → effective scope.
+ *
+ * Tab-level Department / Employee pickers refine within the scope. When the
+ * intersection is empty AND scope was non-empty, we return `empty` so the UI
+ * renders the no-data state instead of issuing a wide query.
+ */
 export function resolveInteractionUsers(
   state: InteractionBarState,
-  operators: OperatorUser[]
+  operators: OperatorUser[],
+  scopedUserIds?: number[] | undefined
 ): ResolvedInteractionUsers {
+  // 1. Tab-level Department picker — local refinement.
+  let localIds: number[] | 'none' | 'all' = 'all'
   if (state.departmentId != null) {
     const ids = operators.filter((o) => o.department_id === state.departmentId).map((o) => o.id)
-    return ids.length ? { kind: 'ids', ids } : { kind: 'empty' }
+    localIds = ids.length ? ids : 'none'
+  } else if (state.employeeIds.length > 0) {
+    localIds = state.employeeIds
   }
-  if (state.employeeIds.length > 0) return { kind: 'ids', ids: state.employeeIds }
-  return { kind: 'all' }
+
+  // 2. Apply the page-level scope as an intersecting filter.
+  //    `undefined` → no scope; pass `localIds` through.
+  if (scopedUserIds === undefined) {
+    if (localIds === 'all') return { kind: 'all' }
+    if (localIds === 'none') return { kind: 'empty' }
+    return { kind: 'ids', ids: localIds }
+  }
+  // Scope is set but empty (e.g. scope=department with no operators).
+  if (scopedUserIds.length === 0) return { kind: 'empty' }
+
+  if (localIds === 'all') return { kind: 'ids', ids: scopedUserIds }
+  if (localIds === 'none') return { kind: 'empty' }
+  const scopeSet = new Set(scopedUserIds)
+  const intersected = localIds.filter((id) => scopeSet.has(id))
+  return intersected.length ? { kind: 'ids', ids: intersected } : { kind: 'empty' }
 }
 
 export function toInteractionMonitoringQuery(
   state: InteractionBarState,
-  operators: OperatorUser[]
+  operators: OperatorUser[],
+  scopedUserIds?: number[] | undefined
 ): InteractionMonitoringFilters {
-  const resolved = resolveInteractionUsers(state, operators)
+  const resolved = resolveInteractionUsers(state, operators, scopedUserIds)
   const user_ids = resolved.kind === 'ids' ? resolved.ids : undefined
 
   let from_datetime: string | undefined
