@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -26,6 +26,7 @@ import { ScriptAnalyticsTab } from './components/ScriptAnalyticsTab'
 import { ScoresTab } from './components/scores/ScoresTab'
 import { ScopeSelector } from './components/ScopeSelector'
 import { InboxTab } from './components/inbox/InboxTab'
+import { RateDialogueDialog } from './components/inbox/RateDialogueDialog'
 import { HeaderKpiStrip } from './components/chrome/HeaderKpiStrip'
 import { readInboxState } from './lib/inboxUrlState'
 import { readCallsUrlState, toCallMonitoringQuery } from './lib/callsUrlState'
@@ -185,6 +186,21 @@ export function ActionAnalysisPage() {
   // endpoint that gates on it.
   const showHeaderChrome = userPermissions.includes(PERMISSIONS.ACTION_ANALYSIS.VIEW_INBOX)
   const inboxBarState = readInboxState(searchParams)
+
+  // KAN-413 step 5 — Rate dialogue picker. Picker is page-level so both the
+  // Header Quick Action and the OperatorDetailPanel "Listen to the call"
+  // button can open it for whichever operator is focused.
+  const [rateDialogueOpen, setRateDialogueOpen] = useState(false)
+  const handleOpenRateDialogue = () => {
+    if (!inboxBarState.operatorId) {
+      toast.info(
+        t('pages.actionAnalysis.inbox.rateDialogue.noOperator', 'Select an operator first.')
+      )
+      return
+    }
+    setRateDialogueOpen(true)
+  }
+
   const headerKpisFilters = useMemo(
     () => ({
       user_ids: scoped.userIds,
@@ -260,7 +276,9 @@ export function ActionAnalysisPage() {
         ) : null}
       </div>
 
-      {showHeaderChrome ? <HeaderKpiStrip filters={headerKpisFilters} /> : null}
+      {showHeaderChrome ? (
+        <HeaderKpiStrip filters={headerKpisFilters} onRateDialogue={handleOpenRateDialogue} />
+      ) : null}
 
       <div className="border-b border-gray-200">
         <div className="-mb-px flex flex-wrap gap-6" role="tablist">
@@ -288,7 +306,7 @@ export function ActionAnalysisPage() {
       </div>
 
       {activeTopTab === 'inbox' ? (
-        <InboxTab />
+        <InboxTab onOpenRateDialogue={handleOpenRateDialogue} />
       ) : activeTopTab === 'scores' ? (
         <ScoresTab />
       ) : activeTopTab === 'calls' ? (
@@ -336,6 +354,12 @@ export function ActionAnalysisPage() {
           )}
         </div>
       )}
+
+      <RateDialogueDialog
+        open={rateDialogueOpen}
+        onClose={() => setRateDialogueOpen(false)}
+        operatorId={inboxBarState.operatorId}
+      />
     </div>
   )
 }

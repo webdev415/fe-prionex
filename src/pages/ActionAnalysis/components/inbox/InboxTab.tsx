@@ -20,8 +20,16 @@ import { PERMISSIONS } from '@/constants/permissions'
  * list, and the right-side detail panel. Header KPI strip + Quick Action
  * overlay live on ActionAnalysisPage so they're shared across every top
  * tab in the Trainer Workplace.
+ *
+ * `onOpenRateDialogue` is wired up to the OperatorDetailPanel "Listen to the
+ * call" button. The picker dialog itself lives at page level so the Header
+ * Quick Action and this button share state.
  */
-export function InboxTab() {
+export interface InboxTabProps {
+  onOpenRateDialogue?: () => void
+}
+
+export function InboxTab({ onOpenRateDialogue }: InboxTabProps = {}) {
   const { t } = useTranslation('common')
   const [searchParams, setSearchParams] = useSearchParams()
   const userPermissions = useAuthStore((s) => s.user?.permissions ?? [])
@@ -114,8 +122,10 @@ export function InboxTab() {
             period={inboxState.period}
             fromDate={inboxState.customFromDate}
             toDate={inboxState.customToDate}
-            onListen={() =>
-              toast.info(t('pages.actionAnalysis.inbox.quickActions.comingSoon', 'Coming soon'))
+            onListen={
+              onOpenRateDialogue ??
+              (() =>
+                toast.info(t('pages.actionAnalysis.inbox.quickActions.comingSoon', 'Coming soon')))
             }
           />
         </div>

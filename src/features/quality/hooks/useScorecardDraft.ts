@@ -17,6 +17,8 @@ interface UseScorecardDraftArgs {
   debounceMs?: number
 }
 
+const EMPTY_DRAFT: DraftState = { scores: {}, overall_comment: '' }
+
 /**
  * Local draft state with debounced autosave to the server.
  *
@@ -35,27 +37,42 @@ export function useScorecardDraft({
   enabled = true,
   debounceMs = 2000,
 }: UseScorecardDraftArgs) {
-  const [state, setState] = useState<DraftState>(initial ?? { scores: {}, overall_comment: '' })
-  const initialKeyRef = useRef<number | null>(scorecardId)
-  const dirtyRef = useRef<boolean>(false)
+  const [state, setState] = useState<DraftState>(initial ?? EMPTY_DRAFT)
+  // Adjusting state during render (React docs pattern) — avoids the
+  // set-state-in-effect lint rule. Both `trackedScorecardId` and
+  // `trackedInitial` mirror the props we resync from; whenever either
+  // diverges we reset `state` directly, which restarts the render with the
+  // new state on the same frame.
+  const [trackedScorecardId, setTrackedScorecardId] = useState<number | null>(scorecardId)
+  const [trackedInitial, setTrackedInitial] = useState<DraftState | null>(initial)
+  const [dirty, setDirty] = useState(false)
+  // Mirror `dirty` into a ref so the debounce timer and the unmount-flush
+  // cleanup can read the latest value without re-creating themselves on
+  // every dirty flip. Refs are only touched inside effects and callbacks,
+  // never during render.
+  const dirtyRef = useRef(dirty)
+  useEffect(() => {
+    dirtyRef.current = dirty
+  }, [dirty])
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const updateMutation = useUpdateScorecard()
 
-  // When the editor swaps to a different scorecard, reset local state from
-  // the server snapshot.
-  useEffect(() => {
-    if (scorecardId !== initialKeyRef.current) {
-      initialKeyRef.current = scorecardId
-      dirtyRef.current = false
-      setState(initial ?? { scores: {}, overall_comment: '' })
-    } else if (initial != null && !dirtyRef.current) {
-      setState(initial)
-    }
-  }, [scorecardId, initial])
+  if (scorecardId !== trackedScorecardId) {
+    // Editor swapped to a different scorecard — reset from the server snapshot.
+    setTrackedScorecardId(scorecardId)
+    setTrackedInitial(initial)
+    setState(initial ?? EMPTY_DRAFT)
+    setDirty(false)
+  } else if (initial !== trackedInitial && initial != null && !dirty) {
+    // Same scorecard, but a fresher server snapshot arrived (refetch). Take
+    // it only if the user hasn't typed anything dirty.
+    setTrackedInitial(initial)
+    setState(initial)
+  }
 
   const flush = useCallback(async () => {
     if (!scorecardId || !dirtyRef.current) return
-    dirtyRef.current = false
+    setDirty(false)
     const payload: ScorecardUpdatePayload = {
       scores: state.scores,
       overall_comment: state.overall_comment || null,
@@ -65,7 +82,7 @@ export function useScorecardDraft({
 
   // Debounced autosave.
   useEffect(() => {
-    if (!enabled || !scorecardId || !dirtyRef.current) return
+    if (!enabled || !scorecardId || !dirty) return
     if (timerRef.current) clearTimeout(timerRef.current)
     timerRef.current = setTimeout(() => {
       void flush()
@@ -73,7 +90,7 @@ export function useScorecardDraft({
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current)
     }
-  }, [state, enabled, scorecardId, debounceMs, flush])
+  }, [state, enabled, scorecardId, debounceMs, dirty, flush])
 
   // Flush on unmount so closing the modal doesn't drop the last edit.
   useEffect(() => {
@@ -84,7 +101,7 @@ export function useScorecardDraft({
 
   const setScore = useCallback(
     (criterionKey: string, value: number | boolean | null, comment?: string | null) => {
-      dirtyRef.current = true
+      setDirty(true)
       setState((prev) => ({
         ...prev,
         scores: {
@@ -97,12 +114,12 @@ export function useScorecardDraft({
   )
 
   const setOverallComment = useCallback((next: string) => {
-    dirtyRef.current = true
+    setDirty(true)
     setState((prev) => ({ ...prev, overall_comment: next }))
   }, [])
 
   const reset = useCallback((next: DraftState) => {
-    dirtyRef.current = false
+    setDirty(false)
     setState(next)
   }, [])
 

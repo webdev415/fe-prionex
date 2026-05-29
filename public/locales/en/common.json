@@ -753,6 +753,14 @@
           "low_conversion_rate": "Low conversion rate",
           "overdue_correction_tasks": "Overdue correction tasks",
           "active_auto_flags": "Active auto-flags"
+        },
+        "rateDialogue": {
+          "title": "Pick a call to rate",
+          "noOperator": "Select an operator first.",
+          "noExtension": "This operator has no telephony extension and no calls to rate.",
+          "noCalls": "No recent calls for this operator.",
+          "hasRecording": "Recording available",
+          "noRecording": "No recording"
         }
       },
       "paymentHistoryEmpty": "No payments match the current filters",
