@@ -214,10 +214,20 @@
         "batchId": "Batch ID",
         "rowNumber": "Row",
         "loanId": "Loan ID",
+        "clientId": "Client ID",
+        "cancellationDate": "Cancellation date",
+        "components": "Components",
         "status": "Status",
         "detail": "Detail",
         "statusCreated": "Created",
         "statusFailed": "Failed",
+        "component": {
+          "principal": "Principal",
+          "interest": "Interest",
+          "fine": "Fine",
+          "penalty": "Penalty",
+          "commission": "Commission"
+        },
         "errors": {
           "onlyCsv": "Only CSV files are supported",
           "fileTooLarge": "File is too large ({{size}} MB). Maximum is 5 MB."

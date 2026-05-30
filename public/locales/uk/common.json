@@ -219,10 +219,20 @@
         "batchId": "ID пакета",
         "rowNumber": "Рядок",
         "loanId": "ID кредиту",
+        "clientId": "ID клієнта",
+        "cancellationDate": "Дата списання",
+        "components": "Компоненти",
         "status": "Статус",
         "detail": "Деталі",
         "statusCreated": "Створено",
         "statusFailed": "Помилка",
+        "component": {
+          "principal": "Тіло",
+          "interest": "Відсотки",
+          "fine": "Штраф",
+          "penalty": "Пеня",
+          "commission": "Комісія"
+        },
         "errors": {
           "onlyCsv": "Підтримуються лише файли CSV",
           "fileTooLarge": "Файл завеликий ({{size}} МБ). Максимум — 5 МБ."

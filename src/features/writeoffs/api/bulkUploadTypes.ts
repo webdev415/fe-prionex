@@ -26,6 +26,7 @@ export interface BulkWriteoffRowError {
 export interface BulkWriteoffRow {
   row: number
   loan_id: number | null
+  client_id: number | null
   status: 'created' | 'failed'
   entry_ids?: number[]
   errors?: BulkWriteoffRowError[]

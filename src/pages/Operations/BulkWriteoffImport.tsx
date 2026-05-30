@@ -5,6 +5,11 @@
  * upload zone that auto-uploads on file selection (no separate Upload
  * button). After upload, the per-row results render in place of the
  * dropzone; an "Upload another" button resets the state.
+ *
+ * The results table joins the parsed CSV input (cancellation date +
+ * per-component amounts) with the backend per-row response by
+ * row_number, so each row shows the operator the same line they
+ * uploaded plus the import outcome.
  */
 
 import { useCallback, useMemo, useRef, useState } from 'react'
@@ -24,6 +29,15 @@ import type {
 const CSV_TEMPLATE_HEADER = 'loan_id,cancellation_date,principal,interest,fine,penalty,commission'
 const CSV_TEMPLATE_EXAMPLE = '1234,28.07.2026,500.00,250.00,0,0,0'
 const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5 MB — matches backend _MAX_UPLOAD_BYTES
+const COMPONENT_KEYS = ['principal', 'interest', 'fine', 'penalty', 'commission'] as const
+
+type ComponentKey = (typeof COMPONENT_KEYS)[number]
+
+interface ParsedCsvRow {
+  loan_id: string
+  cancellation_date: string
+  components: Record<ComponentKey, string>
+}
 
 function downloadTemplate() {
   const blob = new Blob([CSV_TEMPLATE_HEADER + '\n' + CSV_TEMPLATE_EXAMPLE + '\n'], {
@@ -39,12 +53,72 @@ function downloadTemplate() {
   URL.revokeObjectURL(url)
 }
 
+/**
+ * Lightweight CSV → Map<row_number, ParsedCsvRow>.
+ *
+ * Best-effort: matches columns by header name (case-insensitive, BOM-
+ * stripped). Returns an empty map if the header doesn't look right —
+ * the backend is the source of truth for header validation, this is
+ * purely for display enrichment.
+ */
+async function parseCsvForDisplay(file: File): Promise<Map<number, ParsedCsvRow>> {
+  const text = await file.text()
+  const lines = text.replace(/^\uFEFF/, '').split(/\r?\n/)
+  if (lines.length === 0) return new Map()
+
+  const header = (lines[0] ?? '').split(',').map((c) =>
+    c
+      .trim()
+      .toLowerCase()
+      .replace(/^\uFEFF/, '')
+  )
+
+  const idx = (name: string) => header.indexOf(name)
+  const colLoan = idx('loan_id')
+  const colDate = idx('cancellation_date')
+  const colIdx: Record<ComponentKey, number> = {
+    principal: idx('principal'),
+    interest: idx('interest'),
+    fine: idx('fine'),
+    penalty: idx('penalty'),
+    commission: idx('commission'),
+  }
+  if (colLoan < 0 || colDate < 0) return new Map()
+
+  const map = new Map<number, ParsedCsvRow>()
+  for (let i = 1; i < lines.length; i++) {
+    const raw = lines[i]
+    if (raw == null || raw.trim() === '') continue
+    const cells = raw.split(',').map((c) => c.trim())
+    const components = COMPONENT_KEYS.reduce(
+      (acc, k) => {
+        acc[k] = colIdx[k] >= 0 ? (cells[colIdx[k]] ?? '') : ''
+        return acc
+      },
+      {} as Record<ComponentKey, string>
+    )
+    map.set(i, {
+      loan_id: cells[colLoan] ?? '',
+      cancellation_date: cells[colDate] ?? '',
+      components,
+    })
+  }
+  return map
+}
+
+type EnrichedRow = BulkWriteoffRow & {
+  id: number
+  cancellation_date?: string
+  components?: Record<ComponentKey, string>
+}
+
 export function BulkWriteoffImportPage() {
   const { t } = useTranslation('common')
   const p = 'pages.operations.bulkWriteoffImport'
 
   const [headerError, setHeaderError] = useState<BulkWriteoffHeaderError | null>(null)
   const [result, setResult] = useState<BulkWriteoffResponse | null>(null)
+  const [parsedCsv, setParsedCsv] = useState<Map<number, ParsedCsvRow>>(new Map())
   const [dragActive, setDragActive] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -71,7 +145,7 @@ export function BulkWriteoffImportPage() {
   )
 
   const triggerUpload = useCallback(
-    (file: File) => {
+    async (file: File) => {
       const err = validateFile(file)
       if (err) {
         toast.error(err)
@@ -79,6 +153,10 @@ export function BulkWriteoffImportPage() {
       }
       setHeaderError(null)
       setResult(null)
+
+      const parsed = await parseCsvForDisplay(file)
+      setParsedCsv(parsed)
+
       upload.mutate(file, {
         onSuccess: (res) => setResult(res),
       })
@@ -102,7 +180,7 @@ export function BulkWriteoffImportPage() {
       e.stopPropagation()
       setDragActive(false)
       const file = e.dataTransfer.files?.[0]
-      if (file) triggerUpload(file)
+      if (file) void triggerUpload(file)
     },
     [triggerUpload]
   )
@@ -110,7 +188,7 @@ export function BulkWriteoffImportPage() {
   const handleFileChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0]
-      if (file) triggerUpload(file)
+      if (file) void triggerUpload(file)
       if (inputRef.current) inputRef.current.value = ''
     },
     [triggerUpload]
@@ -119,9 +197,10 @@ export function BulkWriteoffImportPage() {
   const resetState = useCallback(() => {
     setHeaderError(null)
     setResult(null)
+    setParsedCsv(new Map())
   }, [])
 
-  const rowColumns = useMemo<Column<BulkWriteoffRow>[]>(
+  const rowColumns = useMemo<Column<EnrichedRow>[]>(
     () => [
       {
         key: 'row',
@@ -129,10 +208,37 @@ export function BulkWriteoffImportPage() {
         align: 'right',
       },
       {
+        key: 'client_id',
+        header: t(`${p}.clientId`),
+        align: 'left',
+        render: (r) => (r.client_id == null ? '—' : String(r.client_id)),
+      },
+      {
         key: 'loan_id',
         header: t(`${p}.loanId`),
         align: 'left',
         render: (r) => (r.loan_id == null ? '—' : String(r.loan_id)),
+      },
+      {
+        key: 'cancellation_date',
+        header: t(`${p}.cancellationDate`),
+        align: 'left',
+        render: (r) => r.cancellation_date || '—',
+      },
+      {
+        key: 'components',
+        header: t(`${p}.components`),
+        align: 'left',
+        render: (r) => {
+          const c = r.components
+          if (!c) return '—'
+          const parts = COMPONENT_KEYS.flatMap((k) => {
+            const raw = (c[k] ?? '').trim()
+            if (raw === '' || raw === '0' || Number(raw) === 0) return []
+            return [`${t(`${p}.component.${k}`)}: ${raw}`]
+          })
+          return parts.length === 0 ? '—' : parts.join(', ')
+        },
       },
       {
         key: 'status',
@@ -155,7 +261,8 @@ export function BulkWriteoffImportPage() {
         align: 'left',
         render: (r) => {
           if (r.status === 'created') {
-            return `IDs: ${(r.entry_ids ?? []).join(', ')}`
+            const ids = r.entry_ids ?? []
+            return ids.length === 0 ? '—' : `IDs: ${ids.join(', ')}`
           }
           const errs = r.errors ?? []
           return errs
@@ -167,7 +274,18 @@ export function BulkWriteoffImportPage() {
     [t, p]
   )
 
-  const tableRows = useMemo(() => (result?.rows ?? []).map((r) => ({ ...r, id: r.row })), [result])
+  const tableRows = useMemo<EnrichedRow[]>(() => {
+    const rows = result?.rows ?? []
+    return rows.map((r) => {
+      const csv = parsedCsv.get(r.row)
+      return {
+        ...r,
+        id: r.row,
+        cancellation_date: csv?.cancellation_date,
+        components: csv?.components,
+      }
+    })
+  }, [result, parsedCsv])
 
   return (
     <div>
