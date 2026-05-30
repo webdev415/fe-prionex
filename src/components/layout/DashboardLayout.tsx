@@ -76,11 +76,33 @@ interface ExtendedSidebarItem extends SidebarItem {
   requiredPermission?: Permission
   requiredPermissions?: Permission[]
   mode?: 'any' | 'all'
-  subItems?: (SidebarSubItem & {
-    requiredPermission?: Permission
-    requiredPermissions?: Permission[]
-    mode?: 'any' | 'all'
-  })[]
+  subItems?: ExtendedSidebarSubItem[]
+}
+
+type ExtendedSidebarSubItem = SidebarSubItem & {
+  requiredPermission?: Permission
+  requiredPermissions?: Permission[]
+  mode?: 'any' | 'all'
+  children?: ExtendedSidebarSubItem[]
+}
+
+function filterSidebarSubItems(
+  subItems: ExtendedSidebarSubItem[],
+  hasPermission: (perm?: Permission, perms?: Permission[], mode?: 'any' | 'all') => boolean
+): ExtendedSidebarSubItem[] {
+  return subItems.flatMap((subItem) => {
+    if (subItem.children && subItem.children.length > 0) {
+      const filteredChildren = (subItem.children as ExtendedSidebarSubItem[]).filter((child) =>
+        hasPermission(child.requiredPermission, child.requiredPermissions, child.mode)
+      )
+      if (filteredChildren.length === 0) return []
+      return [{ ...subItem, children: filteredChildren }]
+    }
+
+    return hasPermission(subItem.requiredPermission, subItem.requiredPermissions, subItem.mode)
+      ? [subItem]
+      : []
+  })
 }
 
 // Mobile Header Menu Component - groups header actions into dropdown on mobile
@@ -545,9 +567,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         let backendSearchType: SearchType = 'all'
         if (type === 'phone') {
           backendSearchType = 'phone'
-        } else if (type === 'name' || type === 'tin') {
-          // Map name/tin to name search (backend name search includes TIN)
+        } else if (type === 'name') {
           backendSearchType = 'name'
+        } else if (type === 'tin') {
+          backendSearchType = 'tin'
         } else if (type === 'email') {
           backendSearchType = 'email'
         } else if (type === 'contract_number') {
@@ -566,7 +589,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           id: item.id,
           name: item.full_name,
           debt: item.total_debt,
-          phone: item.phone_primary ?? '',
+          phone: (item.phones ?? []).join(', '),
           email: item.email_primary ?? '',
           priority: mapPriorityLevel(item.priority_level),
           score: item.priority_score,
@@ -679,6 +702,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             icon: 'transaction-history',
             requiredPermission: PERMISSIONS.DATA.IMPORT_PAYMENTS,
           },
+          {
+            path: '/dashboard/import/bulk-writeoff-import',
+            label: t('navigation.bulkWriteoffImport', 'Bulk Write-off Import'),
+            icon: 'file-import',
+            requiredPermission: PERMISSIONS.WRITEOFFS.BULK,
+          },
         ],
       },
       {
@@ -694,16 +723,41 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         requiredPermission: PERMISSIONS.REPORTS.VIEW_ALL_REPORTS,
       },
       {
+        path: '/dashboard/messaging/campaigns',
+        icon: 'mail-send-01',
+        label: t('navigation.campaignAnalytics', 'Campaign Analytics'),
+        requiredPermission: PERMISSIONS.MESSAGING.VIEW_CAMPAIGN_ANALYTICS,
+      },
+      {
         path: '/dashboard/action-analysis',
         icon: 'analytics-01',
         label: t('navigation.actionAnalysis'),
         requiredPermission: PERMISSIONS.ACTION_ANALYSIS.VIEW,
       },
       {
-        path: '/dashboard/users',
-        icon: 'user-search-01',
-        label: t('navigation.users'),
-        requiredPermission: PERMISSIONS.USERS.VIEW,
+        path: '/dashboard/team-management',
+        icon: 'user-multiple-02',
+        label: t('navigation.teamManagement', 'Team Management'),
+        subItems: [
+          {
+            path: '/dashboard/team-management/users',
+            label: t('navigation.users'),
+            icon: 'user-search-01',
+            requiredPermission: PERMISSIONS.USERS.VIEW,
+          },
+          {
+            path: '/dashboard/team-management/roles',
+            label: t('navigation.roles'),
+            icon: 'user-circle-02',
+            requiredPermission: PERMISSIONS.SYSTEM.MANAGE_ROLES,
+          },
+          {
+            path: '/dashboard/team-management/departments',
+            label: t('navigation.departments'),
+            icon: 'briefcase-01',
+            requiredPermission: PERMISSIONS.SYSTEM.MANAGE_ROLES,
+          },
+        ],
       },
       {
         path: '/dashboard/sellers',
@@ -712,34 +766,53 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         requiredPermission: PERMISSIONS.SELLERS.VIEW,
       },
       {
-        path: '/dashboard/roles',
-        icon: 'user-circle-02',
-        label: t('navigation.roles'),
-        requiredPermission: PERMISSIONS.SYSTEM.MANAGE_ROLES,
-      },
-      {
-        path: '/dashboard/departments',
-        icon: 'briefcase-01',
-        label: t('navigation.departments'),
-        requiredPermission: PERMISSIONS.SYSTEM.MANAGE_ROLES,
-      },
-      {
         path: '/dashboard/audit-logs',
         icon: 'transaction-history',
         label: t('navigation.auditLogs'),
         requiredPermission: PERMISSIONS.SYSTEM.VIEW_AUDIT_LOGS,
       },
       {
+        path: '/dashboard/messaging-settings',
+        icon: 'message-multiple-01',
+        label: t('navigation.messagingSettings', 'Messaging Settings'),
+        requiredPermissions: [
+          PERMISSIONS.MESSAGING.MANAGE_INTEGRATIONS,
+          PERMISSIONS.MESSAGING.MANAGE_DRAFTS,
+        ],
+        mode: 'any' as const,
+        subItems: [
+          {
+            path: '/dashboard/system-settings/messaging-integrations',
+            label: t('navigation.messagingIntegrations', 'Messaging Integrations'),
+            icon: 'message-secure-01',
+            requiredPermission: PERMISSIONS.MESSAGING.MANAGE_INTEGRATIONS,
+          },
+          {
+            path: '/dashboard/system-settings/messaging-drafts',
+            label: t('navigation.messagingDrafts', 'Message Drafts'),
+            icon: 'bubble-chat-edit',
+            requiredPermission: PERMISSIONS.MESSAGING.MANAGE_DRAFTS,
+          },
+        ],
+      },
+      {
         path: '/dashboard/system-settings',
         icon: 'setting-07',
         label: t('navigation.systemSettings', 'System Settings'),
-        requiredPermission: PERMISSIONS.SYSTEM.MANAGE_SETTINGS,
+        requiredPermissions: [PERMISSIONS.SYSTEM.MANAGE_SETTINGS, PERMISSIONS.CONTACT_TYPES.VIEW],
+        mode: 'any' as const,
         subItems: [
           {
             path: '/dashboard/system-settings/tags',
             label: t('navigation.tags', 'Tags'),
             icon: 'file-01',
             requiredPermission: PERMISSIONS.TAGS.VIEW,
+          },
+          {
+            path: '/dashboard/system-settings/contact-types',
+            label: t('navigation.contactTypes', 'Contact Types'),
+            icon: 'user-multiple-02',
+            requiredPermission: PERMISSIONS.CONTACT_TYPES.VIEW,
           },
           {
             path: '/dashboard/system-settings/scoring-configuration',
@@ -777,6 +850,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             ],
             mode: 'any' as const,
           },
+          {
+            path: '/dashboard/system-settings/rr-notifications',
+            label: t('navigation.rrNotifications', 'RR Notifications'),
+            icon: 'mail',
+            requiredPermission: PERMISSIONS.SYSTEM.MANAGE_SETTINGS,
+          },
         ],
       },
     ]
@@ -801,9 +880,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       .map((item) => {
         // Filter sub-items first based on permissions
         if (item.subItems) {
-          const filteredSubItems = item.subItems.filter((subItem) =>
-            hasPermission(subItem.requiredPermission, subItem.requiredPermissions, subItem.mode)
-          )
+          const filteredSubItems = filterSidebarSubItems(item.subItems, hasPermission)
           return { ...item, subItems: filteredSubItems }
         }
         return item
@@ -820,12 +897,14 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         return hasPermission(item.requiredPermission, item.requiredPermissions, item.mode)
       })
 
-    // Separate System Settings to render at bottom
-    const systemSettingsItem = filteredItems.find(
-      (item) => item.path === '/dashboard/system-settings'
+    // Pin settings menus at the bottom of the sidebar (Messaging above System Settings)
+    const bottomNavPaths = ['/dashboard/messaging-settings', '/dashboard/system-settings'] as const
+    const bottomItems = bottomNavPaths
+      .map((path) => filteredItems.find((item) => item.path === path))
+      .filter((item): item is ExtendedSidebarItem => item != null)
+    const regularItems = filteredItems.filter(
+      (item) => !bottomNavPaths.includes(item.path as (typeof bottomNavPaths)[number])
     )
-    const regularItems = filteredItems.filter((item) => item.path !== '/dashboard/system-settings')
-    const bottomItems = systemSettingsItem ? [systemSettingsItem] : []
 
     return { navItems: regularItems, bottomNavItems: bottomItems }
     // i18n.language is needed to recalculate navigation items when language changes

@@ -70,6 +70,7 @@ interface Props {
     remaining_debt_amount?: string | number | null
     days_past_due?: number | null
     seller_company?: string | null
+    status?: string | null
   }>
   /**
    * Context-aware entry filter. When set, the chain list is narrowed to
@@ -115,6 +116,23 @@ const EMPTY_INSTANT_VALUE: InstantStepValue = {
   promiseDate: '',
   promiseAmount: '',
   creditId: '',
+}
+
+// KAN-XXX — picker bounds for chain steps that have the admin
+// "Date cannot be in the past" checkbox enabled. Returns the props to
+// hand to ``<DateSelect>``: ``min`` blocks past calendar days,
+// ``minTime`` + ``maxTime`` block earlier hours of *today* (react-
+// datepicker's time column otherwise lists every interval regardless
+// of the selected date). Browser-local "now" is the right reference
+// because the picker also displays in browser local; the timezone-
+// aware save path (toUtcIsoIfDate) handles the value direction on its
+// own.
+function notInPastBounds(notInPast: boolean | undefined) {
+  if (!notInPast) return {}
+  const now = new Date()
+  const endOfDay = new Date(now)
+  endOfDay.setHours(23, 59, 59, 999)
+  return { min: now, minTime: now, maxTime: endOfDay }
 }
 
 // Date-type steps store the picker output as a naive browser-local string
@@ -317,6 +335,16 @@ export function ChainExecutor({
   const contactPhonesSource =
     currentTA?.field_type === 'contact' ? (currentStep?.contact_source ?? 'client') : null
   const { data: contactPhones } = useClientPhones(clientId, contactPhonesSource)
+
+  // Filter the debt list per the current step's "show closed credits"
+  // admin flag. Default (flag false) hides closed debts; flag true
+  // shows both active and closed. Computed against currentStep so the
+  // wizard's primary credit picker and the dropdown's require_credit
+  // follow-up both honour the same setting on the same step.
+  const visibleDebts = useMemo(() => {
+    if (currentStep?.show_closed_credits) return debts
+    return debts.filter((d) => (d.status ?? '').toLowerCase() !== 'closed')
+  }, [debts, currentStep?.show_closed_credits])
 
   const isLastStep = (activeInstance?.current_step_order ?? 1) >= steps.length
 
@@ -1554,6 +1582,10 @@ export function ChainExecutor({
                               showTimeSelect
                               timeFormat="HH:mm"
                               timeIntervals={15}
+                              {...notInPastBounds(
+                                steps.find((s) => s.step_order === editingStep.stepOrder)
+                                  ?.not_in_the_past
+                              )}
                             />
                           ) : editingStep.fieldType === 'amount' ? (
                             <Input
@@ -1751,6 +1783,7 @@ export function ChainExecutor({
                           showTimeSelect
                           timeFormat="HH:mm"
                           timeIntervals={15}
+                          {...notInPastBounds(currentStep?.not_in_the_past)}
                         />
                       ) : currentTA.field_type === 'amount' ? (
                         <Input
@@ -1764,12 +1797,12 @@ export function ChainExecutor({
                         />
                       ) : currentTA.field_type === 'credit' ? (
                         <div className="flex flex-col gap-2">
-                          {debts.length === 0 ? (
+                          {visibleDebts.length === 0 ? (
                             <span className="text-xs text-gray-500">
                               {t('pages.clientChains.noCredits')}
                             </span>
                           ) : (
-                            debts.map((d) => {
+                            visibleDebts.map((d) => {
                               const creditKey = String(d.id)
                               const selectedIds = stepValue ? stepValue.split(',') : []
                               const isChecked = selectedIds.includes(creditKey)
@@ -1888,7 +1921,7 @@ export function ChainExecutor({
                   </div>
                 )}
 
-                {debts.length > 0 && selectedDropdownValue?.require_credit && (
+                {visibleDebts.length > 0 && selectedDropdownValue?.require_credit && (
                   <div className="flex flex-col gap-1">
                     <Label className="text-sm text-gray-700">
                       {t('pages.clientChains.credit')} <span className="text-red-500">*</span>
@@ -1898,7 +1931,7 @@ export function ChainExecutor({
                         <SelectValue placeholder={t('pages.clientChains.creditPlaceholder')} />
                       </SelectTrigger>
                       <SelectContent>
-                        {debts.map((d) => (
+                        {visibleDebts.map((d) => (
                           <SelectItem key={d.id} value={String(d.id)}>
                             #{d.contract_number ?? d.id}
                             {d.seller_company ? ` — ${d.seller_company}` : ''}
@@ -2240,6 +2273,7 @@ interface InstantStepCardProps {
     remaining_debt_amount?: string | number | null
     days_past_due?: number | null
     seller_company?: string | null
+    status?: string | null
   }>
   clientId: number
 }
@@ -2258,6 +2292,13 @@ function InstantStepCard({
     clientId,
     ta.field_type === 'contact' ? (step.contact_source ?? 'client') : null
   )
+
+  // Mirror the wizard-mode debt filter: hide closed debts unless the
+  // step's show_closed_credits admin flag is set.
+  const visibleDebts = useMemo(() => {
+    if (step.show_closed_credits) return debts
+    return debts.filter((d) => (d.status ?? '').toLowerCase() !== 'closed')
+  }, [debts, step.show_closed_credits])
 
   const dv =
     ta.field_type === 'dropdown' && value.value
@@ -2294,6 +2335,7 @@ function InstantStepCard({
           showTimeSelect
           timeFormat="HH:mm"
           timeIntervals={15}
+          {...notInPastBounds(step.not_in_the_past)}
         />
       ) : ta.field_type === 'amount' ? (
         <Input
@@ -2307,10 +2349,10 @@ function InstantStepCard({
         />
       ) : ta.field_type === 'credit' ? (
         <div className="flex flex-col gap-2">
-          {debts.length === 0 ? (
+          {visibleDebts.length === 0 ? (
             <span className="text-xs text-gray-500">{t('pages.clientChains.noCredits')}</span>
           ) : (
-            debts.map((d) => {
+            visibleDebts.map((d) => {
               const creditKey = String(d.id)
               const selectedIds = value.value ? value.value.split(',') : []
               const isChecked = selectedIds.includes(creditKey)
@@ -2419,7 +2461,7 @@ function InstantStepCard({
           />
         </div>
       )}
-      {dv?.require_credit && debts.length > 0 && (
+      {dv?.require_credit && visibleDebts.length > 0 && (
         <div className="mt-1 flex flex-col gap-1">
           <Label className="text-xs text-gray-600">
             {t('pages.clientChains.credit')} <span className="text-red-500">*</span>
@@ -2429,7 +2471,7 @@ function InstantStepCard({
               <SelectValue placeholder={t('pages.clientChains.creditPlaceholder')} />
             </SelectTrigger>
             <SelectContent>
-              {debts.map((d) => (
+              {visibleDebts.map((d) => (
                 <SelectItem key={d.id} value={String(d.id)}>
                   #{d.contract_number ?? d.id}
                   {d.seller_company ? ` — ${d.seller_company}` : ''}

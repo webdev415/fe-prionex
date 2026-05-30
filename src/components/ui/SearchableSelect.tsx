@@ -23,6 +23,8 @@ interface SearchableSelectProps {
   onValueChange: (value: string) => void
   placeholder?: string
   searchPlaceholder?: string
+  /** When false, the dropdown lists options only (no search field). Default true. */
+  searchable?: boolean
   disabled?: boolean
   className?: string
 }
@@ -34,6 +36,7 @@ export function SearchableSelect({
   onValueChange,
   placeholder = 'Select...',
   searchPlaceholder = 'Search...',
+  searchable = true,
   disabled = false,
   className,
 }: SearchableSelectProps) {
@@ -62,9 +65,10 @@ export function SearchableSelect({
     })
   }, [value, options])
 
-  const filtered = query.trim()
-    ? options.filter((o) => o.name.toLowerCase().includes(query.trim().toLowerCase()))
-    : options
+  const filtered =
+    searchable && query.trim()
+      ? options.filter((o) => o.name.toLowerCase().includes(query.trim().toLowerCase()))
+      : options
 
   const open = () => {
     if (disabled) return
@@ -83,14 +87,14 @@ export function SearchableSelect({
     close()
   }
 
-  // Focus the search input when dropdown opens
+  // Focus the search input when dropdown opens (searchable mode only)
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && searchable) {
       requestAnimationFrame(() => {
         searchRef.current?.focus()
       })
     }
-  }, [isOpen])
+  }, [isOpen, searchable])
 
   // Close on outside click
   const handleOutsideClick = useCallback((e: MouseEvent) => {
@@ -131,9 +135,9 @@ export function SearchableSelect({
           }
         }}
         className={cn(
-          'flex h-[45px] w-full items-center justify-between overflow-hidden rounded-lg border border-gray-400 bg-white px-3 py-2 text-sm font-light shadow-none focus:outline-none',
+          'focus:border-primary-500 flex h-[45px] w-full items-center justify-between overflow-hidden rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-light shadow-none focus:outline-none',
           disabled ? 'cursor-default opacity-50' : 'cursor-pointer',
-          isOpen && 'border-primary-500 ring-primary-500 ring-2'
+          isOpen && 'border-primary-500'
         )}
       >
         <span
@@ -153,24 +157,25 @@ export function SearchableSelect({
       {/* Dropdown */}
       {isOpen && (
         <div className="absolute top-[calc(100%+4px)] right-0 left-0 z-[200] rounded-lg border border-gray-200 bg-white shadow-lg">
-          {/* Search input — sticky so it stays visible while scrolling */}
-          <div className="sticky top-0 z-10 border-b border-gray-100 bg-white p-2">
-            <div className="relative">
-              <Icons.Search
-                size={14}
-                className="absolute top-1/2 left-2.5 -translate-y-1/2 text-gray-400"
-                strokeWidth={1.5}
-              />
-              <input
-                ref={searchRef}
-                type="text"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder={searchPlaceholder}
-                className="text-dark-500 focus:border-primary-500 focus:ring-primary-500 h-8 w-full rounded-md border border-gray-200 bg-gray-50 pr-3 pl-7 text-xs placeholder:text-gray-400 focus:ring-1 focus:outline-none"
-              />
+          {searchable && (
+            <div className="sticky top-0 z-10 border-b border-gray-100 bg-white p-2">
+              <div className="relative">
+                <Icons.Search
+                  size={14}
+                  className="absolute top-1/2 left-2.5 -translate-y-1/2 text-gray-400"
+                  strokeWidth={1.5}
+                />
+                <input
+                  ref={searchRef}
+                  type="text"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder={searchPlaceholder}
+                  className="text-dark-500 focus:border-primary-500 h-8 w-full rounded-md border border-gray-200 bg-gray-50 pr-3 pl-7 text-xs placeholder:text-gray-400 focus:outline-none"
+                />
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Options list */}
           <ul

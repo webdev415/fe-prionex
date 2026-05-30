@@ -28,11 +28,30 @@ export interface DateSelectProps {
   showTimeSelect?: boolean
   timeFormat?: string
   timeIntervals?: number
+  // Restrict the selectable time-of-day inside the time column. ``minDate``
+  // alone only restricts calendar days, so a "no past values" picker still
+  // lets the operator pick 09:00 when it's already 11:00 today. Pass the
+  // current moment for ``minTime`` and the end-of-day for ``maxTime`` when
+  // a day-of-now is selected to block earlier slots in the time list.
+  // Both default to the day's natural bounds.
+  minTime?: Date
+  maxTime?: Date
 }
 
 const parseDate = (date: Date | string | null | undefined): Date | null => {
   if (!date) return null
   if (date instanceof Date) return date
+  // Date-only strings ("YYYY-MM-DD") represent a calendar day, not a
+  // moment in time. ``new Date("2026-05-27")`` would parse them as UTC
+  // midnight; browsers west of UTC then render them as the previous
+  // local day inside react-datepicker (clicking 27 shows 26). Build
+  // the Date at **local** midnight so the picker's input matches the
+  // calendar cell the user clicked.
+  const ymdMatch = date.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  if (ymdMatch) {
+    const [, y, m, d] = ymdMatch
+    return new Date(+y, +m - 1, +d, 0, 0, 0, 0)
+  }
   const parsed = new Date(date)
   return isNaN(parsed.getTime()) ? null : parsed
 }
@@ -56,6 +75,8 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
       showTimeSelect,
       timeFormat = 'HH:mm',
       timeIntervals = 15,
+      minTime,
+      maxTime,
     },
     ref
   ) => {
@@ -214,6 +235,12 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
               showTimeSelect={showTimeSelect}
               timeFormat={timeFormat}
               timeIntervals={timeIntervals}
+              // react-datepicker's minTime/maxTime only apply when the
+              // selected day equals "today" (their behaviour), which is
+              // exactly the case we need to guard. Other days fall back
+              // to the natural 00:00–23:59 range.
+              minTime={minTime}
+              maxTime={maxTime}
               calendarStartDay={1}
               showYearDropdown
               scrollableYearDropdown

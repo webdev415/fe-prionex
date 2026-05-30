@@ -202,7 +202,7 @@ export function ProjectDetailModal({
               <button
                 onClick={() => {
                   onClose()
-                  navigate('/dashboard/roles')
+                  navigate('/dashboard/team-management/roles')
                 }}
                 className="bg-secondary-800 mt-3 flex items-center gap-1.5 rounded p-2.5 text-xs font-[500] text-white"
               >

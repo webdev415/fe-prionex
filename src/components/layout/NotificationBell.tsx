@@ -160,6 +160,9 @@ export function NotificationBell() {
   const taChainNotifications = notifications.filter(
     (n) => n.type === NotificationType.TA_CHAIN_CREATED
   )
+  const rrPaymentNotifications = notifications.filter(
+    (n) => n.type === NotificationType.RR_PAYMENT_DUE
+  )
 
   const markAsReadMutation = useMarkAsRead()
 
@@ -323,6 +326,21 @@ export function NotificationBell() {
                 )}
                 {taChainNotifications.map((n) => (
                   <TaChainNotificationItem
+                    key={n.id}
+                    notification={n}
+                    onNavigate={handleNavigate}
+                    onDismiss={handleDismiss}
+                  />
+                ))}
+
+                {/* RR Payment reminders section */}
+                {rrPaymentNotifications.length > 0 && (
+                  <div className="border-b border-gray-100 px-4 py-2 text-xs font-semibold text-black">
+                    {t('notificationBell.sections.rrPayments', 'RR Payments')}
+                  </div>
+                )}
+                {rrPaymentNotifications.map((n) => (
+                  <RRPaymentNotificationItem
                     key={n.id}
                     notification={n}
                     onNavigate={handleNavigate}
@@ -634,6 +652,68 @@ function TaChainNotificationItem({
         <span className="text-[11px] text-gray-400">
           {n.created_at ? formatRelativeTime(n.created_at, t) : ''}
         </span>
+      </button>
+      <button
+        type="button"
+        aria-label={t('notificationBell.dismissAria')}
+        onClick={(e) => onDismiss(e, n.id)}
+        className="absolute top-2 right-2 flex h-5 w-5 items-center justify-center rounded text-gray-300 opacity-0 transition-opacity group-hover:opacity-100 hover:text-gray-600"
+      >
+        <Icons.Cancel01 size={12} strokeWidth={2} />
+      </button>
+    </div>
+  )
+}
+
+// ─── RR payment reminder item ──────────────────────────────────────
+// Created by the daily rr-payment-reminders cron in notification-service.
+// Metadata carries: client_id, rr_id, due_date, days_left, amount.
+// The body is the admin-configured template, already substituted.
+function RRPaymentNotificationItem({
+  notification: n,
+  onNavigate,
+  onDismiss,
+}: {
+  notification: NotificationItem
+  onNavigate: NavigateFn
+  onDismiss: DismissFn
+}) {
+  const { t } = useTranslation('common')
+  const meta = n.metadata
+  return (
+    <div className="group relative flex border-b border-gray-100 transition-colors last:border-b-0 hover:bg-gray-50">
+      <button
+        type="button"
+        disabled={!meta.client_id}
+        onClick={() => onNavigate(n.id, meta.client_id, n.read)}
+        className="flex min-w-0 flex-1 flex-col gap-1.5 px-4 py-3 text-left disabled:cursor-default"
+      >
+        <div className="flex flex-wrap items-center gap-1.5 pr-5">
+          {!n.read && <span className="h-2 w-2 shrink-0 rounded-full bg-blue-500" />}
+          <p className="line-clamp-1 text-xs font-semibold text-black">{n.title}</p>
+          {meta.amount && (
+            <span className="rounded bg-blue-100 px-1.5 py-0.5 text-[10px] font-medium text-blue-600">
+              ₴ {meta.amount}
+            </span>
+          )}
+        </div>
+        {n.body && <p className="w-full min-w-0 truncate text-xs text-black">{n.body}</p>}
+        <div className="flex items-center gap-1 text-black">
+          <Icons.Clock01 size={11} strokeWidth={1.5} />
+          <span className="text-[11px]">
+            {meta.due_date ?? '—'}
+            {typeof meta.days_left === 'number' && (
+              <span className="ml-1 text-gray-500">
+                (
+                {t('notificationBell.daysLeft', {
+                  count: meta.days_left,
+                  defaultValue: 'in {{count}} days',
+                })}
+                )
+              </span>
+            )}
+          </span>
+        </div>
       </button>
       <button
         type="button"

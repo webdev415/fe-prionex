@@ -10,7 +10,7 @@ import { api } from '@/lib/api'
 /**
  * Search type enum matching backend
  */
-export type SearchType = 'phone' | 'name' | 'email' | 'contract_number' | 'all'
+export type SearchType = 'phone' | 'name' | 'email' | 'contract_number' | 'tin' | 'all'
 
 /**
  * Priority level from backend
@@ -23,7 +23,7 @@ export type PriorityLevel = 'critical' | 'high' | 'medium' | 'low'
 export interface EnhancedSearchResult {
   id: number
   full_name: string
-  phone_primary: string | null
+  phones: string[]
   email_primary: string | null
   tax_id: string
   priority_score: number

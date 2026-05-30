@@ -237,10 +237,19 @@ export function EditTAInteractionModal({
   const handleSave = async () => {
     if (!interaction) return
     const trimmedNotes = notes.trim()
-    // stepValues is keyed by step.id (unique). The API expects step_data keyed
-    // by target_action_id, so re-key on the way out. If the chain reuses a
-    // target_action_id across multiple steps, later step_orders win — same
-    // last-write-wins behavior the API has always had on this column.
+    // ``stepValues`` is keyed by ``step.id`` (unique per step row).
+    // On save we re-key by ``step_order`` — the canonical convention
+    // used by chain_automation (wizard path). Previously this code
+    // wrote under ``target_action_id``, which collapsed values whenever
+    // a chain reused the same Target Action across multiple steps:
+    // both iterations targeted the same key and the later step's value
+    // overwrote the earlier one. The history renderer falls back from
+    // ``step_order`` to ``target_action_id``, so after that overwrite
+    // every duplicate-TA step rendered the same value — visible as
+    // duplicates in the Result column on every page load after an
+    // edit-save. Writing by step_order keeps each step's slot
+    // independent and matches the read path's primary lookup; the
+    // fallback stays for legacy rows produced by the old edit path.
     const sortedStepsForSave = chain?.steps
       ? [...chain.steps].sort((a, b) => a.step_order - b.step_order)
       : []
@@ -248,7 +257,7 @@ export function EditTAInteractionModal({
     for (const step of sortedStepsForSave) {
       const v = stepValues[String(step.id)]
       if (v !== undefined && v !== '') {
-        cleanedStepData[String(step.target_action_id)] = v
+        cleanedStepData[String(step.step_order)] = v
       }
     }
 

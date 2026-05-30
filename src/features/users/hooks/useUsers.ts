@@ -41,10 +41,18 @@ export function useUsers(params: UserListParams = {}) {
  * Fetch active operators for a project — accessible to ALL users (not admin-only).
  * Use this for any dropdown that non-admin users can see.
  */
-export function useOperators(projectId: number | null | undefined) {
+export function useOperators(
+  projectId: number | null | undefined,
+  options: { includeInactive?: boolean } = {}
+) {
+  // includeInactive returns active + inactive (never deleted), for filters
+  // that must let you pick a now-blocked user. The status is part of the
+  // queryKey so the active-only and all-status lists cache separately and
+  // existing callers (default active-only) are unaffected.
+  const status = options.includeInactive ? 'all' : 'active'
   return useQuery({
-    queryKey: ['users', 'operators', projectId],
-    queryFn: () => usersApi.getOperators(projectId!),
+    queryKey: ['users', 'operators', projectId, status],
+    queryFn: () => usersApi.getOperators(projectId!, status),
     enabled: !!projectId,
     staleTime: 2 * 60_000,
     select: (data) => data.operators,
