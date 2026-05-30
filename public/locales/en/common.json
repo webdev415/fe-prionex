@@ -202,6 +202,7 @@
         "uploadAnother": "Upload another file",
         "resultsTitle": "Import results",
         "upload": "Upload",
+        "viewHistory": "View history",
         "downloadTemplate": "Download template",
         "columnsHint": "Required columns: {{columns}}",
         "headerErrorTitle": "CSV header could not be parsed.",
@@ -1293,6 +1294,8 @@
           "simple": "Simple",
           "vendor": "Vendor Dump",
           "operatorAssignment": "Operator Assignment",
+          "paymentImport": "Payment Import",
+          "writeoffImport": "Write-off Import",
           "tagAssignment": "Tag assignment",
           "tagRemoval": "Tag removal"
         },

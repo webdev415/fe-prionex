@@ -14,6 +14,7 @@
 
 import { useCallback, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/Button'
@@ -114,7 +115,12 @@ type EnrichedRow = BulkWriteoffRow & {
 
 export function BulkWriteoffImportPage() {
   const { t } = useTranslation('common')
+  const navigate = useNavigate()
   const p = 'pages.operations.bulkWriteoffImport'
+
+  const handleViewHistory = useCallback(() => {
+    navigate('/dashboard/import/history?import_type=writeoff_import')
+  }, [navigate])
 
   const [headerError, setHeaderError] = useState<BulkWriteoffHeaderError | null>(null)
   const [result, setResult] = useState<BulkWriteoffResponse | null>(null)
@@ -292,14 +298,24 @@ export function BulkWriteoffImportPage() {
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-dark-500 text-xl font-light sm:text-2xl">{t(`${p}.title`)}</h1>
 
-        <Button
-          variant="primary"
-          onClick={downloadTemplate}
-          leftIcon={<Icons.Download size={20} className="text-dark-500" />}
-          className="flex h-10 w-full flex-row items-center justify-center rounded-full text-xs leading-[150%] font-medium sm:h-12 sm:w-auto"
-        >
-          {t(`${p}.downloadTemplate`)}
-        </Button>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <Button
+            variant="white-secondary"
+            onClick={handleViewHistory}
+            leftIcon={<Icons.TransactionHistory size={20} className="text-dark-500" />}
+            className="flex h-10 w-full flex-row items-center justify-center rounded-full text-xs leading-[150%] font-medium sm:h-12 sm:w-auto"
+          >
+            {t(`${p}.viewHistory`)}
+          </Button>
+          <Button
+            variant="primary"
+            onClick={downloadTemplate}
+            leftIcon={<Icons.Download size={20} className="text-dark-500" />}
+            className="flex h-10 w-full flex-row items-center justify-center rounded-full text-xs leading-[150%] font-medium sm:h-12 sm:w-auto"
+          >
+            {t(`${p}.downloadTemplate`)}
+          </Button>
+        </div>
       </div>
 
       <div className="rounded-xl border border-gray-200 bg-white/50 p-4 shadow-sm sm:p-6">

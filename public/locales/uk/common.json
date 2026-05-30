@@ -207,6 +207,7 @@
         "uploadAnother": "Завантажити інший файл",
         "resultsTitle": "Результати імпорту",
         "upload": "Завантажити",
+        "viewHistory": "Переглянути історію",
         "downloadTemplate": "Завантажити шаблон",
         "columnsHint": "Обов'язкові колонки: {{columns}}",
         "headerErrorTitle": "Не вдалося розпізнати заголовок CSV.",
@@ -1295,6 +1296,8 @@
           "simple": "Простий",
           "vendor": "Вивантаження продавця",
           "operatorAssignment": "Призначення операторів",
+          "paymentImport": "Імпорт платежів",
+          "writeoffImport": "Імпорт списань",
           "tagAssignment": "Призначення тегів",
           "tagRemoval": "Видалення тегів"
         },
