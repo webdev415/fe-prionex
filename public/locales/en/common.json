@@ -32,6 +32,7 @@
     "bulkOperatorAssignment": "Bulk Operator Assignment",
     "bulkPaymentVerification": "Bulk Payment Verification",
     "bulkTagAssignment": "Bulk Tag Assignment",
+    "bulkWriteoffImport": "Bulk Write-off Import",
     "auditLogs": "Audit Logs",
     "reports": "Reports",
     "scoringConfiguration": "Scoring Configuration",
@@ -188,6 +189,53 @@
     "confirmMessage": "Are you sure you want to logout? You will need to login again to access the system."
   },
   "pages": {
+    "operations": {
+      "bulkWriteoffImport": {
+        "title": "Bulk write-off import",
+        "subtitle": "Upload a CSV to create multiple write-off entries at once.",
+        "sectionTitle": "Upload write-off CSV",
+        "descriptionIntro": "Required columns:",
+        "clickToUpload": "Click to upload",
+        "orDragAndDrop": "or drag and drop",
+        "constraints": "CSV only, up to 5 MB / 1000 rows",
+        "validating": "Uploading...",
+        "uploadAnother": "Upload another file",
+        "resultsTitle": "Import results",
+        "upload": "Upload",
+        "viewHistory": "View history",
+        "downloadTemplate": "Download template",
+        "columnsHint": "Required columns: {{columns}}",
+        "headerErrorTitle": "CSV header could not be parsed.",
+        "missingColumns": "Missing required columns",
+        "unrecognisedColumns": "Unrecognised columns",
+        "rowsIn": "Rows read",
+        "rowsSucceeded": "Rows succeeded",
+        "rowsFailed": "Rows failed",
+        "entriesCreated": "Entries created",
+        "batchId": "Batch ID",
+        "rowNumber": "Row",
+        "loanId": "Loan ID",
+        "loanNumber": "Loan number",
+        "clientId": "Client ID",
+        "cancellationDate": "Cancellation date",
+        "components": "Components",
+        "status": "Status",
+        "detail": "Detail",
+        "statusCreated": "Created",
+        "statusFailed": "Failed",
+        "component": {
+          "principal": "Principal",
+          "interest": "Interest",
+          "fine": "Fine",
+          "penalty": "Penalty",
+          "commission": "Commission"
+        },
+        "errors": {
+          "onlyCsv": "Only CSV files are supported",
+          "fileTooLarge": "File is too large ({{size}} MB). Maximum is 5 MB."
+        }
+      }
+    },
     "aiAssistant": {
       "headerButtonAria": "Open AI assistant",
       "greeting": "Hello! I'm the Prionex AI Assistant.",
@@ -1476,6 +1524,8 @@
           "simple": "Simple",
           "vendor": "Vendor Dump",
           "operatorAssignment": "Operator Assignment",
+          "paymentImport": "Payment Import",
+          "writeoffImport": "Write-off Import",
           "tagAssignment": "Tag assignment",
           "tagRemoval": "Tag removal"
         },

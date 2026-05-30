@@ -146,6 +146,10 @@ function ImportTypeBadge({
       label: t('pages.imports.history.importTypes.paymentImport', 'Payment Import'),
       className: 'bg-blue-600 text-white',
     },
+    writeoff_import: {
+      label: t('pages.imports.history.importTypes.writeoffImport', 'Write-off Import'),
+      className: 'bg-orange-600 text-white',
+    },
   }
 
   if (importType === 'tag_assignment') {
@@ -586,6 +590,9 @@ export function ImportHistoryPage() {
         return
       case 'payment_import':
         navigate('/dashboard/import/bulk-payment-import')
+        return
+      case 'writeoff_import':
+        navigate('/dashboard/import/bulk-writeoff-import')
         return
       default:
         navigate('/dashboard/import/clients')

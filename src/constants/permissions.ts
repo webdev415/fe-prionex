@@ -36,6 +36,9 @@ export const PERMISSIONS = {
     CREATE: 'create_writeoffs',
     EDIT: 'edit_writeoffs',
     CANCEL: 'cancel_writeoffs',
+    // Bulk CSV upload — gates the new bulk-import page. Required in
+    // addition to CREATE.
+    BULK: 'bulk_writeoff_operations',
   },
 
   /**
@@ -448,4 +451,6 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   create_writeoffs: 'Create one or more write-off entries on a debt',
   edit_writeoffs: 'Edit cancellation_date or notes on an existing write-off entry',
   cancel_writeoffs: 'Cancel an active write-off entry',
+  bulk_writeoff_operations:
+    'Upload a bulk write-off CSV — gates the bulk-import page (required alongside create_writeoffs)',
 }

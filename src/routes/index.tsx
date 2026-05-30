@@ -153,6 +153,11 @@ const BulkTagAssignmentPage = lazy(() =>
     default: m.BulkTagAssignmentPage,
   }))
 )
+const BulkWriteoffImportPage = lazy(() =>
+  import('@/pages/Operations').then((m) => ({
+    default: m.BulkWriteoffImportPage,
+  }))
+)
 
 const withSuspense = (element: React.ReactElement) => (
   <Suspense fallback={<AppLoadingFallback />}>{element}</Suspense>
@@ -437,6 +442,16 @@ export const router = createBrowserRouter([
           <PermissionRoute requiredPermission={PERMISSIONS.DATA.IMPORT_PAYMENTS}>
             <Suspense fallback={<BulkPaymentVerificationPageSkeleton />}>
               <BulkPaymentVerificationPage />
+            </Suspense>
+          </PermissionRoute>
+        ),
+      },
+      {
+        path: 'import/bulk-writeoff-import',
+        element: (
+          <PermissionRoute requiredPermission={PERMISSIONS.WRITEOFFS.BULK}>
+            <Suspense fallback={<AppLoadingFallback />}>
+              <BulkWriteoffImportPage />
             </Suspense>
           </PermissionRoute>
         ),
