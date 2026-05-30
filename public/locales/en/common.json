@@ -214,6 +214,7 @@
         "batchId": "Batch ID",
         "rowNumber": "Row",
         "loanId": "Loan ID",
+        "loanNumber": "Loan number",
         "clientId": "Client ID",
         "cancellationDate": "Cancellation date",
         "components": "Components",

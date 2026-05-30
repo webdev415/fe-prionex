@@ -219,6 +219,7 @@
         "batchId": "ID пакета",
         "rowNumber": "Рядок",
         "loanId": "ID кредиту",
+        "loanNumber": "Номер кредиту",
         "clientId": "ID клієнта",
         "cancellationDate": "Дата списання",
         "components": "Компоненти",

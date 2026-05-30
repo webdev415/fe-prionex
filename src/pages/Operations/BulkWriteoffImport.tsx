@@ -214,10 +214,10 @@ export function BulkWriteoffImportPage() {
         render: (r) => (r.client_id == null ? '—' : String(r.client_id)),
       },
       {
-        key: 'loan_id',
-        header: t(`${p}.loanId`),
+        key: 'loan_number',
+        header: t(`${p}.loanNumber`),
         align: 'left',
-        render: (r) => (r.loan_id == null ? '—' : String(r.loan_id)),
+        render: (r) => r.loan_number ?? (r.loan_id == null ? '—' : String(r.loan_id)),
       },
       {
         key: 'cancellation_date',
