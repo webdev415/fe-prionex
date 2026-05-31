@@ -4326,6 +4326,8 @@
       "active": "Активно",
       "hide": "Приховати",
       "restore": "Відновити",
+      "hideFromClientDetail": "Приховати на картці",
+      "showOnClientDetail": "Показати на картці",
       "filterStatus": "Статус",
       "filterAll": "Усі",
       "filterActive": "Активні",
@@ -4338,8 +4340,13 @@
         "defaultLine": "Лінія дзвінка",
         "spamAllowed": "Спам",
         "primary": "Основний телефон",
+        "showInClientDetail": "Показувати на картці клієнта",
         "status": "Статус",
         "actions": "Дії"
+      },
+      "toasts": {
+        "hiddenFromClientDetail": "Приховано в розділі телефонів картки клієнта",
+        "shownOnClientDetail": "Показано в розділі телефонів картки клієнта"
       }
     },
     "tags": {

@@ -3872,6 +3872,8 @@
       "active": "Активен",
       "hide": "Скрыть",
       "restore": "Восстановить",
+      "hideFromClientDetail": "Скрыть на карточке",
+      "showOnClientDetail": "Показать на карточке",
       "filterStatus": "Статус",
       "filterAll": "Все",
       "filterActive": "Активные",
@@ -3884,8 +3886,13 @@
         "defaultLine": "Линия звонка",
         "spamAllowed": "Спам",
         "primary": "Основной телефон",
+        "showInClientDetail": "Показывать на карточке клиента",
         "status": "Статус",
         "actions": "Действия"
+      },
+      "toasts": {
+        "hiddenFromClientDetail": "Скрыто в разделе телефонов карточки клиента",
+        "shownOnClientDetail": "Показано в разделе телефонов карточки клиента"
       }
     },
     "tags": {
