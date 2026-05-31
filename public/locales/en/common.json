@@ -3800,6 +3800,8 @@
       "active": "Active",
       "hide": "Hide",
       "restore": "Restore",
+      "hideFromClientDetail": "Hide from client",
+      "showOnClientDetail": "Show on client",
       "filterStatus": "Status",
       "filterAll": "All",
       "filterActive": "Active",
@@ -3812,8 +3814,13 @@
         "defaultLine": "Default Call Line",
         "spamAllowed": "Spam Allowed",
         "primary": "Show as Primary Phone",
+        "showInClientDetail": "Show in Client Detail",
         "status": "Status",
         "actions": "Actions"
+      },
+      "toasts": {
+        "hiddenFromClientDetail": "Hidden from client detail phone section",
+        "shownOnClientDetail": "Shown on client detail phone section"
       }
     },
     "tags": {

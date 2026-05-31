@@ -116,6 +116,23 @@ export function ContactTypesPage() {
     )
   }
 
+  const toggleShowInClientDetail = (row: ContactTypeOption) => {
+    patchMutation.mutate(
+      { typeId: row.id, payload: { show_in_client_detail: !row.show_in_client_detail } },
+      {
+        onSuccess: () => {
+          refetch()
+          toast.success(
+            row.show_in_client_detail
+              ? t('pages.contactTypes.toasts.hiddenFromClientDetail', 'Hidden from client detail')
+              : t('pages.contactTypes.toasts.shownOnClientDetail', 'Shown on client detail')
+          )
+        },
+        onError: (error) => toast.error(getErrorMessage(error)),
+      }
+    )
+  }
+
   const filteredRows = useMemo(() => rows, [rows])
 
   // Column defs reference handlers — do not wrap in useMemo without listing those
@@ -157,6 +174,11 @@ export function ContactTypesPage() {
       render: (r) => (r.show_as_primary_phone ? t('common.yes') : t('common.no')),
     },
     {
+      key: 'show_in_client_detail',
+      header: t('pages.contactTypes.columns.showInClientDetail', 'Show in Client Detail'),
+      render: (r) => (r.show_in_client_detail ? t('common.yes') : t('common.no')),
+    },
+    {
       key: 'is_hidden',
       header: t('pages.contactTypes.columns.status', 'Status'),
       render: (r) =>
@@ -180,6 +202,11 @@ export function ContactTypesPage() {
               {r.is_hidden
                 ? t('pages.contactTypes.restore', 'Restore')
                 : t('pages.contactTypes.hide', 'Hide')}
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => toggleShowInClientDetail(r)}>
+              {r.show_in_client_detail
+                ? t('pages.contactTypes.hideFromClientDetail', 'Hide from client')
+                : t('pages.contactTypes.showOnClientDetail', 'Show on client')}
             </Button>
           </PermissionGuard>
         </div>
