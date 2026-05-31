@@ -117,21 +117,33 @@ const EMPTY_INSTANT_VALUE: InstantStepValue = {
   creditId: '',
 }
 
+// Stable, module-level predicate for the time column. Hoisted so its
+// identity doesn't change every render — react-datepicker compares
+// ``filterTime`` by reference, and a fresh closure each render forces
+// the time list to re-render. The callback recomputes "now" itself,
+// so the lack of a per-render closure doesn't stale it.
+//   • Future days: every slot allowed (so tomorrow at 01:00 stays
+//     clickable — react-datepicker's static ``minTime``/``maxTime``
+//     would mistakenly grey it out).
+//   • Today: only slots ``>= now`` are allowed.
+const filterFromNow = (time: Date): boolean => {
+  const now = new Date()
+  const isSameDay =
+    time.getFullYear() === now.getFullYear() &&
+    time.getMonth() === now.getMonth() &&
+    time.getDate() === now.getDate()
+  return isSameDay ? time.getTime() >= now.getTime() : true
+}
+
 // KAN-XXX — picker bounds for chain steps that have the admin
-// "Date cannot be in the past" checkbox enabled. Returns the props to
-// hand to ``<DateSelect>``: ``min`` blocks past calendar days,
-// ``minTime`` + ``maxTime`` block earlier hours of *today* (react-
-// datepicker's time column otherwise lists every interval regardless
-// of the selected date). Browser-local "now" is the right reference
-// because the picker also displays in browser local; the timezone-
-// aware save path (toUtcIsoIfDate) handles the value direction on its
-// own.
+// "Date cannot be in the past" checkbox enabled. ``min`` blocks past
+// calendar days; ``filterTime`` is the stable predicate above.
+// Browser-local "now" is the right reference because the picker also
+// displays in browser local; the timezone-aware save path
+// (toUtcIsoIfDate) handles the value direction on its own.
 function notInPastBounds(notInPast: boolean | undefined) {
   if (!notInPast) return {}
-  const now = new Date()
-  const endOfDay = new Date(now)
-  endOfDay.setHours(23, 59, 59, 999)
-  return { min: now, minTime: now, maxTime: endOfDay }
+  return { min: new Date(), filterTime: filterFromNow }
 }
 
 // Date-type steps store the picker output as a naive browser-local string
