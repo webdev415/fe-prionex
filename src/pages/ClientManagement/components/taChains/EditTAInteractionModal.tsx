@@ -37,6 +37,26 @@ import type { ContactSource } from '@/features/taChains/api/types'
 import { getErrorMessage } from '@/lib/errors'
 import { formatMoneyKopeckTight } from '@/lib/formatters'
 
+// Mirrors ChainExecutor's helper of the same name — kept duplicated
+// (one short function) instead of extracted to a shared util to avoid
+// a barrel just for two call sites. ``filterFromNow`` is hoisted to
+// module scope so react-datepicker sees a stable ``filterTime`` prop
+// identity across renders (a fresh closure per render thrashes the
+// time list, especially when called inside the steps ``.map()``).
+const filterFromNow = (time: Date): boolean => {
+  const now = new Date()
+  const isSameDay =
+    time.getFullYear() === now.getFullYear() &&
+    time.getMonth() === now.getMonth() &&
+    time.getDate() === now.getDate()
+  return isSameDay ? time.getTime() >= now.getTime() : true
+}
+
+function notInPastBounds(notInPast: boolean | undefined) {
+  if (!notInPast) return {}
+  return { min: new Date(), filterTime: filterFromNow }
+}
+
 function ContactStepEdit({
   clientId,
   source,
@@ -349,6 +369,7 @@ export function EditTAInteractionModal({
                             showTimeSelect
                             timeFormat="HH:mm"
                             timeIntervals={15}
+                            {...notInPastBounds(step.not_in_the_past)}
                           />
                           {value && !isValid && (
                             <span className="text-xs text-amber-600">

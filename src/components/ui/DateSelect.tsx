@@ -28,14 +28,18 @@ export interface DateSelectProps {
   showTimeSelect?: boolean
   timeFormat?: string
   timeIntervals?: number
-  // Restrict the selectable time-of-day inside the time column. ``minDate``
-  // alone only restricts calendar days, so a "no past values" picker still
-  // lets the operator pick 09:00 when it's already 11:00 today. Pass the
-  // current moment for ``minTime`` and the end-of-day for ``maxTime`` when
-  // a day-of-now is selected to block earlier slots in the time list.
-  // Both default to the day's natural bounds.
+  // Restrict the selectable time-of-day inside the time column.
+  // ``minTime``/``maxTime`` are react-datepicker's static bounds and
+  // apply to **every** selected calendar day, so they're only correct
+  // when the same restriction holds regardless of the day. For
+  // day-aware rules (e.g. "block past times today but allow any time
+  // on future days"), use ``filterTime`` instead — react-datepicker
+  // calls it with a Date that carries both the selected day and the
+  // slot's time-of-day, so the callback can decide per slot.
   minTime?: Date
   maxTime?: Date
+  /** Per-slot predicate. Return ``true`` to keep, ``false`` to grey out. */
+  filterTime?: (time: Date) => boolean
 }
 
 const parseDate = (date: Date | string | null | undefined): Date | null => {
@@ -77,6 +81,7 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
       timeIntervals = 15,
       minTime,
       maxTime,
+      filterTime,
     },
     ref
   ) => {
@@ -241,6 +246,7 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
               // to the natural 00:00–23:59 range.
               minTime={minTime}
               maxTime={maxTime}
+              filterTime={filterTime}
               calendarStartDay={1}
               showYearDropdown
               scrollableYearDropdown
