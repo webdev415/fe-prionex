@@ -550,6 +550,7 @@ export interface ContactTypeOption {
   default_call_line: string
   spam_allowed: boolean
   show_as_primary_phone: boolean
+  show_in_client_detail: boolean
   is_hidden: boolean
 }
 
@@ -566,6 +567,7 @@ export interface ContactTypePatchPayload {
   default_call_line?: 'white' | 'gray'
   spam_allowed?: boolean
   show_as_primary_phone?: boolean
+  show_in_client_detail?: boolean
   sort_order?: number
   is_hidden?: boolean
 }
