@@ -2793,6 +2793,8 @@
         "writeOff": "Write-off",
         "reversal": "Reversal",
         "closeLoan": "Close Loan",
+        "reopenLoan": "Reopen Loan",
+        "confirmReopenLoan": "Are you sure you want to reopen this credit?",
         "editClosureDate": "Edit closure date",
         "closureDate": "Closure date",
         "closureDateRequired": "Closure date is required",
