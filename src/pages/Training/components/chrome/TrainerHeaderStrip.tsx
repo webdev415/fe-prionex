@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/Button'
 import { MOCK_HEADER_KPIS } from '../../mocks/trainerWorkplaceMocks'
 
 /**
- * Header strip for the Trainer Workplace redesign â€” search input, KPI tiles,
+ * Header strip for the Trainer Workplace redesign — search input, KPI tiles,
  * Quick Action button. Mock-data variant; the eventual hook-backed version
  * lives in `chrome/HeaderKpiStrip.tsx`.
  *
@@ -122,9 +122,7 @@ export function TrainerHeaderStrip({ onQuickAction }: TrainerHeaderStripProps) {
                 <div className="flex items-baseline gap-1">
                   <span className="text-dark-500 text-sm font-semibold">{tile.value}</span>
                   {tile.delta ? (
-                    <span className="text-primary-600 text-[10px] font-medium">
-                      â†— {tile.delta}
-                    </span>
+                    <span className="text-primary-600 text-[10px] font-medium">↗ {tile.delta}</span>
                   ) : null}
                 </div>
               </div>

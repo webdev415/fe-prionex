@@ -284,7 +284,7 @@ export const router = createBrowserRouter([
       // /roles, /departments) now bounce to the grouped /team-management/* URLs
       // so existing bookmarks and external links keep working. The parent
       // /team-management path redirects to the first child (mirrors the
-      // /dashboard/import â†’ /dashboard/import/clients pattern above).
+      // /dashboard/import → /dashboard/import/clients pattern above).
       {
         path: 'team-management',
         element: <Navigate to="/dashboard/team-management/users" replace />,

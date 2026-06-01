@@ -82,9 +82,9 @@ export function CallsTab() {
   const scoped = useScopedUserIds(operators)
 
   // Scope drives an effective list of Asterisk extensions (the call service
-  // filters by extension, not user_id). Map scope.userIds â†’ extensions through
+  // filters by extension, not user_id). Map scope.userIds → extensions through
   // the cached operators list; operators without an extension are silently
-  // dropped â€” they can't have made calls anyway.
+  // dropped — they can't have made calls anyway.
   const scopedExtensions = useMemo<string[] | undefined>(() => {
     if (scoped.userIds == null) return undefined
     if (scoped.userIds.length === 0) return [] // scope=department with no operators
@@ -124,7 +124,7 @@ export function CallsTab() {
   )
   const { data, error, isPending } = useCallMonitoring(queryFilters, callsQueryEnabled)
 
-  // Modal state lives entirely in the URL (?call_id=â€¦) so deep-links work:
+  // Modal state lives entirely in the URL (?call_id=…) so deep-links work:
   // pasting the URL into another browser opens the modal with that exact call.
   const selectedCallId = searchParams.get(CALL_ID_PARAM)
   const calls = useMemo(() => data?.calls ?? [], [data?.calls])
@@ -234,7 +234,7 @@ export function CallsTab() {
   //   - `date` is the raw ISO so the modal's `new Date(dateStr)` parses cleanly
   //     and renders e.g. "April 28, 2026 16:39" instead of the previous
   //     "undefined NaN, NaN 16:39" caused by feeding it `DD-MM-YYYY`.
-  //   - `clientId` enables the modal's clientNameâ†’client-page link for the
+  //   - `clientId` enables the modal's clientName→client-page link for the
   //     trainer flow without affecting operator-side call sites.
   const modalCallData = useMemo(() => {
     if (!detailForModal) return null

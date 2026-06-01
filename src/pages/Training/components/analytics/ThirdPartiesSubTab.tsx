@@ -10,7 +10,7 @@ import { PeriodFilterStrip, type PeriodOption } from './PeriodFilterStrip'
 
 /**
  * Third Parties sub-tab (KAN-415). Calls to people other than the
- * registered client â€” KPI strip + result-coloured table.
+ * registered client — KPI strip + result-coloured table.
  */
 const RESULT_TONE: Record<ThirdPartyResult, string> = {
   promise: 'bg-emerald-100 text-emerald-700',

@@ -1,5 +1,5 @@
 ﻿/**
- * DynamicsSubTab â€” operator score-dynamics chart (KAN-410, Feature 2.4).
+ * DynamicsSubTab — operator score-dynamics chart (KAN-410, Feature 2.4).
  *
  * Lets a trainer pick an operator and a period and renders the Recharts
  * line chart with operator + team-average lines plus a quick stats row
@@ -60,7 +60,7 @@ export function DynamicsSubTab() {
               className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
             >
               <option value="">
-                {t('pages.training.filters.selectOperator', 'Select an operatorâ€¦')}
+                {t('pages.training.filters.selectOperator', 'Select an operator…')}
               </option>
               {operators.map((op) => (
                 <option key={op.id} value={op.id}>
@@ -114,7 +114,7 @@ export function DynamicsSubTab() {
           className="h-[40px] rounded-full text-xs"
         >
           {exportMutation.isPending
-            ? t('pages.training.actions.exporting', 'Exportingâ€¦')
+            ? t('pages.training.actions.exporting', 'Exporting…')
             : t('pages.training.actions.exportExcel', 'Export to Excel')}
         </Button>
       </div>
@@ -128,7 +128,7 @@ export function DynamicsSubTab() {
         </div>
       ) : dynamicsQuery.isLoading ? (
         <div className="rounded-xl bg-white/50 p-12 text-center text-sm text-gray-500 shadow-sm">
-          {t('common.loading', 'Loadingâ€¦')}
+          {t('common.loading', 'Loading…')}
         </div>
       ) : dynamicsQuery.isError ? (
         <div className="rounded-xl bg-white/50 p-12 text-center text-sm text-red-500 shadow-sm">
@@ -176,7 +176,7 @@ function Stat({
     <div className="rounded-lg bg-white px-3 py-2 shadow-sm">
       <div className="text-xs text-gray-500">{label}</div>
       <div className="text-dark-500 text-lg font-medium">
-        {value == null ? 'â€”' : isCount ? value : Number(value).toFixed(2)}
+        {value == null ? '—' : isCount ? value : Number(value).toFixed(2)}
       </div>
     </div>
   )

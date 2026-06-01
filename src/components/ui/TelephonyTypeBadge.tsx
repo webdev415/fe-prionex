@@ -4,7 +4,7 @@ import type { TelephonyType } from '@/features/training'
 interface Props {
   type?: TelephonyType | string | null
   /** Inbound calls render as an em-dash regardless of stored type
-   * (KAN-476 defense-in-depth â€” telephony type is outbound-only). */
+   * (KAN-476 defense-in-depth — telephony type is outbound-only). */
   direction?: string | null
 }
 
@@ -18,7 +18,7 @@ export function TelephonyTypeBadge({ type, direction }: Props) {
   const { t } = useTranslation('common')
 
   if (direction === 'inbound') {
-    return <span className="text-sm text-gray-400">â€”</span>
+    return <span className="text-sm text-gray-400">—</span>
   }
   if (type === 'white') {
     return (
@@ -34,5 +34,5 @@ export function TelephonyTypeBadge({ type, direction }: Props) {
       </span>
     )
   }
-  return <span className="text-sm text-gray-400">â€”</span>
+  return <span className="text-sm text-gray-400">—</span>
 }

@@ -38,7 +38,7 @@ export function TeamCard({ team }: TeamCardProps) {
           </button>
           <span className="text-dark-500 text-sm font-medium">{team.name}</span>
           <span className="text-[11px] text-gray-500">
-            {team.managerName} Â· {team.memberCount}{' '}
+            {team.managerName} · {team.memberCount}{' '}
             {t('pages.training.team.dept.employees', 'employees')}
           </span>
           <span className="text-primary-600 text-[11px] font-medium">

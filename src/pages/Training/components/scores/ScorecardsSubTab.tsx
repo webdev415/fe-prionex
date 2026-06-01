@@ -1,5 +1,5 @@
 ﻿/**
- * ScorecardsSubTab â€” cross-operator scorecard list (KAN-410, Feature 2.1).
+ * ScorecardsSubTab — cross-operator scorecard list (KAN-410, Feature 2.1).
  *
  * Read-side view: trainers see every completed scorecard in scope. Per-call
  * scorecard fill-in lives on the CallRecordingModal (step 6 follow-up wires
@@ -96,7 +96,7 @@ export function ScorecardsSubTab() {
           className="h-[40px] rounded-full text-xs"
         >
           {exportMutation.isPending
-            ? t('pages.training.actions.exporting', 'Exportingâ€¦')
+            ? t('pages.training.actions.exporting', 'Exporting…')
             : t('pages.training.actions.exportExcel', 'Export to Excel')}
         </Button>
       </div>
@@ -118,7 +118,7 @@ export function ScorecardsSubTab() {
             {isLoading ? (
               <tr>
                 <td className="px-3 py-6 text-center text-gray-400" colSpan={5}>
-                  {t('common.loading', 'Loadingâ€¦')}
+                  {t('common.loading', 'Loading…')}
                 </td>
               </tr>
             ) : isError ? (
@@ -155,7 +155,7 @@ export function ScorecardsSubTab() {
                     </span>
                   </td>
                   <td className="px-3 py-2 text-right font-mono">
-                    {row.weighted_score != null ? row.weighted_score : 'â€”'}
+                    {row.weighted_score != null ? row.weighted_score : '—'}
                   </td>
                 </tr>
               ))
@@ -167,7 +167,7 @@ export function ScorecardsSubTab() {
       {totalPages > 1 ? (
         <div className="flex items-center justify-between text-sm text-gray-600">
           <span>
-            {t('common.page', 'Page')} {page} {t('common.of', 'of')} {totalPages} Â· {total}{' '}
+            {t('common.page', 'Page')} {page} {t('common.of', 'of')} {totalPages} · {total}{' '}
             {t('pages.training.scorecardsTotalSuffix', 'scorecards')}
           </span>
           <div className="flex gap-2">

@@ -1,5 +1,5 @@
 ﻿/**
- * AddMarkerButton â€” "Add marker" affordance shown beneath the call player
+ * AddMarkerButton — "Add marker" affordance shown beneath the call player
  * in the trainer Action Analysis flow (KAN-410, Feature 2.2).
  *
  * Opens a small popover with type select + optional comment. Reads the

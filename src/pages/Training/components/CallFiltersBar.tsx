@@ -35,7 +35,7 @@ interface Props {
   onApply: (next: CallFiltersBarValue) => void
   onClear: () => void
   userTimezone?: string | null
-  /** Page-level scope (KAN-506) â€” drives the picker-disabled flags. */
+  /** Page-level scope (KAN-506) — drives the picker-disabled flags. */
   scope?: ScopedUserIds
 }
 

@@ -109,7 +109,7 @@ export function MaterialsLibraryTab() {
                     {badge.label}
                   </span>
                   <span>{formatSize(m.sizeBytes)}</span>
-                  <span>Â·</span>
+                  <span>·</span>
                   <span>{m.updatedLabel}</span>
                 </div>
                 <span className="text-[10px] text-gray-400">

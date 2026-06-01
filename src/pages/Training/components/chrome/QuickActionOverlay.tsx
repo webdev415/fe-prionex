@@ -13,14 +13,14 @@ import { useAuthStore } from '@/stores/authStore'
 import { PERMISSIONS } from '@/constants/permissions'
 
 /**
- * Quick Action overlay â€” top-right floating menu invoked from the Trainer
+ * Quick Action overlay — top-right floating menu invoked from the Trainer
  * Workplace header strip.
  *
  * Four actions per [Figma/Action Overlay.png]:
- *   1. Assign task          â€” stubbed; lands in KAN-411 (step 9 of KAN-413)
- *   2. Schedule 1-on-1      â€” stubbed; real flow in step 6
- *   3. Assign course/drill  â€” stubbed; lands in KAN-416 (step 9 of KAN-413)
- *   4. Rate dialogue        â€” stubbed; real flow in step 5
+ *   1. Assign task          — stubbed; lands in KAN-411 (step 9 of KAN-413)
+ *   2. Schedule 1-on-1      — stubbed; real flow in step 6
+ *   3. Assign course/drill  — stubbed; lands in KAN-416 (step 9 of KAN-413)
+ *   4. Rate dialogue        — stubbed; real flow in step 5
  *
  * Each button is gated on its respective permission; absent perms hide the
  * row. Clicking a stubbed action toasts a "coming soon" message and (where
@@ -45,7 +45,7 @@ export function QuickActionOverlay({
 
   const canAssignTask = userPermissions.includes(PERMISSIONS.CLIENTS.CREATE_TASKS)
   const canScheduleOneOnOne = userPermissions.includes(PERMISSIONS.TRAINING.CREATE_ONE_ON_ONE)
-  // Course/drill assignment lands in KAN-416 â€” no permission constant yet.
+  // Course/drill assignment lands in KAN-416 — no permission constant yet.
   const canAssignMaterial = userPermissions.includes(PERMISSIONS.TRAINING.VIEW_INBOX)
   const canRateDialogue = userPermissions.includes(PERMISSIONS.TRAINING.CREATE_SCORECARD)
 
@@ -84,7 +84,7 @@ export function QuickActionOverlay({
               <span className="text-xs text-gray-500">
                 {t(
                   'pages.training.inbox.quickActions.assignTaskHint',
-                  'Operator Â· topic Â· deadline'
+                  'Operator · topic · deadline'
                 )}
               </span>
             </div>
@@ -101,7 +101,7 @@ export function QuickActionOverlay({
               <span className="text-xs text-gray-500">
                 {t(
                   'pages.training.inbox.quickActions.scheduleOneOnOneHint',
-                  'Operator Â· date Â· time'
+                  'Operator · date · time'
                 )}
               </span>
             </div>
@@ -116,7 +116,7 @@ export function QuickActionOverlay({
                 {t('pages.training.inbox.quickActions.assignCourse', 'Assign course / drill')}
               </span>
               <span className="text-xs text-gray-500">
-                {t('pages.training.inbox.quickActions.assignCourseHint', 'Operator Â· material')}
+                {t('pages.training.inbox.quickActions.assignCourseHint', 'Operator · material')}
               </span>
             </div>
           </DropdownMenuItem>

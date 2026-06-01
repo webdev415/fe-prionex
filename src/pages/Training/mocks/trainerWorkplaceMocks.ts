@@ -1517,3 +1517,53 @@ export const MOCK_OPERATOR_DETAIL: MockOperatorDetail = {
     'Strong on empathy — keep pairing with the soft-collection track.',
   ],
 }
+
+// ─────────────────────────────────────────────────────────────
+// Heat Map (KAN-502) — day-of-week × hour interaction volume
+// ─────────────────────────────────────────────────────────────
+
+export const HEATMAP_DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+export const HEATMAP_HOURS = [
+  '08:00',
+  '09:00',
+  '10:00',
+  '11:00',
+  '12:00',
+  '13:00',
+  '14:00',
+  '15:00',
+  '16:00',
+  '17:00',
+  '18:00',
+  '19:00',
+  '20:00',
+  '21:00',
+]
+
+// 7 days × 14 hours = 98 cells. Values are interaction counts shaped to look
+// like a normal collections-team rhythm (lunch dip + late-day peak).
+function buildHeatmapGrid(): number[][] {
+  const dayCurve = [0.95, 1.0, 1.05, 1.0, 0.92, 0.55, 0.3]
+  const hourCurve = [0.5, 0.85, 1.1, 1.25, 1.0, 0.65, 0.9, 1.2, 1.35, 1.4, 1.15, 0.85, 0.5, 0.2]
+  return dayCurve.map((d) =>
+    hourCurve.map((h) => {
+      const base = d * h * 14
+      const jitter = ((d * h * 17) % 7) - 3
+      return Math.max(0, Math.round(base + jitter))
+    })
+  )
+}
+
+export const MOCK_HEATMAP_GRID: number[][] = buildHeatmapGrid()
+
+export const MOCK_HEATMAP_PEAK = {
+  day: 'Wednesday',
+  hour: '17:00',
+  value: Math.max(...MOCK_HEATMAP_GRID.flat()),
+}
+
+export const MOCK_HEATMAP_TOTALS = {
+  totalInteractions: MOCK_HEATMAP_GRID.flat().reduce((a, b) => a + b, 0),
+  workingHours: '08:00 – 21:00',
+  busiestDay: 'Wednesday',
+}

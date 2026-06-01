@@ -3,14 +3,14 @@ import type { OperatorUser } from '@/features/users/api/usersApi'
 import type { AssignmentState, QueueOperator, ScoreBand } from '@/features/quality/coaching/types'
 
 /**
- * Left-panel operator list â€” the "Inbox" view mode.
+ * Left-panel operator list — the "Inbox" view mode.
  *
  * Each row shows: avatar/initial, name, current Kanban state chip, composite
- * score badge color-banded to red/amber/green. Click â†’ focuses the operator
+ * score badge color-banded to red/amber/green. Click → focuses the operator
  * in the right detail panel via `onSelect`.
  *
  * Kanban + Grid views (steps 7-8) consume the same `QueueOperator[]` data
- * but arrange it differently â€” this component is intentionally simple to
+ * but arrange it differently — this component is intentionally simple to
  * keep the data contract clean.
  */
 export interface OperatorListViewProps {
@@ -99,7 +99,7 @@ export function OperatorListView({
   if (isLoading) {
     return (
       <div className="rounded-2xl bg-white/60 p-6 text-center text-sm text-gray-500">
-        {t('pages.training.inbox.list.loading', 'Loading queueâ€¦')}
+        {t('pages.training.inbox.list.loading', 'Loading queue…')}
       </div>
     )
   }

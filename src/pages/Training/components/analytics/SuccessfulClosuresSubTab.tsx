@@ -10,7 +10,7 @@ import { PeriodFilterStrip, type PeriodOption } from './PeriodFilterStrip'
 
 /**
  * Successful Closures sub-tab (KAN-415). KPI strip + funnel chart
- * (interactions â†’ promises â†’ payments â†’ closure) + closures table.
+ * (interactions → promises → payments → closure) + closures table.
  */
 export function SuccessfulClosuresSubTab() {
   const { t } = useTranslation('common')
@@ -34,7 +34,7 @@ export function SuccessfulClosuresSubTab() {
           tone="text-dark-500"
         />
         <KpiTile
-          label={t('pages.training.closures.kpi.conversion', 'Conversion Pâ†’P')}
+          label={t('pages.training.closures.kpi.conversion', 'Conversion P→P')}
           value={`${k.conversionPromisePaymentPct}%`}
           tone="text-violet-600"
         />
@@ -51,7 +51,7 @@ export function SuccessfulClosuresSubTab() {
           <h3 className="text-dark-500 text-sm font-semibold">
             {t(
               'pages.training.closures.funnel.title',
-              'Funnel Â· interactions â†’ promises â†’ payments'
+              'Funnel · interactions → promises → payments'
             )}
           </h3>
           <span className="text-[11px] text-gray-500">
@@ -78,7 +78,7 @@ export function SuccessfulClosuresSubTab() {
                 {stage.pct}%
               </span>
               {idx < MOCK_CLOSURES_FUNNEL.length - 1 ? (
-                <span className="text-[10px] text-gray-400">â†“</span>
+                <span className="text-[10px] text-gray-400">↓</span>
               ) : null}
             </div>
           ))}
@@ -136,7 +136,7 @@ function ClosureRow({ row }: { row: MockClosureRow }) {
       <td className="px-4 py-3 text-gray-700">{row.client}</td>
       <td className="px-4 py-3 text-gray-600">{row.agreement}</td>
       <td className="px-4 py-3 text-right font-medium text-gray-700">
-        {row.paymentAmount.toLocaleString()} â‚´
+        {row.paymentAmount.toLocaleString()} ₴
       </td>
       <td className="px-4 py-3">
         <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-medium text-emerald-700">

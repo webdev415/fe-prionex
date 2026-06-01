@@ -34,17 +34,17 @@ const PAYMENT_MONITORING_SORTS: readonly PaymentMonitoringSort[] = [
  *
  * `verifiedFromDate`/`verifiedToDate` are the optional separate Confirmed-at
  * range (filters `verified_at`). YYYY-MM-DD strings; converted to ISO at
- * query time (start-of-day â†’ end-of-day).
+ * query time (start-of-day → end-of-day).
  *
  * `paymentFromDate`/`paymentToDate` are the optional separate Payment-date
- * range (filters `payment_date`, which is a DATE column â€” sent verbatim).
+ * range (filters `payment_date`, which is a DATE column — sent verbatim).
  *
  * `employeeIds` is the tab-level Operator refinement. When the page-level
  * scope selector locks the picker (scope=my/group), this is ignored at query
  * time but kept on the URL for round-trip stability.
  *
  * `paymentCommentSearch` is a free-text substring (ILIKE '%term%') over
- * payments.payment_comment â€” mirrors the TA History "Notes search" pattern.
+ * payments.payment_comment — mirrors the TA History "Notes search" pattern.
  */
 export interface PaymentHistoryBarState {
   period?: CallMonitoringPeriod
@@ -228,7 +228,7 @@ function resolveRecordedAtRange(state: PaymentHistoryBarState): {
   return {}
 }
 
-/** Compose YYYY-MM-DD bounds into an ISO datetime window (start-of-day â†’ end-of-day local). */
+/** Compose YYYY-MM-DD bounds into an ISO datetime window (start-of-day → end-of-day local). */
 function resolveYmdWindow(
   from: string | undefined,
   to: string | undefined
@@ -255,7 +255,7 @@ function resolveYmdWindow(
  * `scopedUserIds === undefined` means "no scope filter" (scope=all). When set,
  * we intersect with the tab-level employee refinement. When the intersection is
  * empty AND the user explicitly picked an employee, we pass that empty list
- * through so the backend returns nothing (UI will render the empty state) â€”
+ * through so the backend returns nothing (UI will render the empty state) —
  * silently ignoring the user's choice would be worse than showing zero rows.
  */
 function resolveEffectiveUserIds(
@@ -284,7 +284,7 @@ export function toPaymentMonitoringQuery(
     ...resolveRecordedAtRange(state),
     verified_at_from: verified.fromIso,
     verified_at_to: verified.toIso,
-    // payment_date is a DATE column â€” send the YYYY-MM-DD strings verbatim;
+    // payment_date is a DATE column — send the YYYY-MM-DD strings verbatim;
     // FastAPI parses them as `date` and Postgres compares without timezone.
     payment_date_from: state.paymentFromDate,
     payment_date_to: state.paymentToDate,

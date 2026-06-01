@@ -3,8 +3,6 @@ import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router-dom'
 import { ACTION_ANALYSIS_SUB_TABS, type ActionAnalysisSubTabId } from '../../types'
 import { InteractionHistoryTab } from '../InteractionHistoryTab'
-import { ScreenTimeTab } from '../ScreenTimeTab'
-import { HeatmapTab } from '../HeatmapTab'
 import { WeeklyTasksSubTab } from './WeeklyTasksSubTab'
 import { PromisesAndCallbacksSubTab } from './PromisesAndCallbacksSubTab'
 import { SuccessfulClosuresSubTab } from './SuccessfulClosuresSubTab'
@@ -12,10 +10,12 @@ import { LeaksSubTab } from './LeaksSubTab'
 import { ThirdPartiesSubTab } from './ThirdPartiesSubTab'
 import { ScriptAnalyticsRedesignSubTab } from './ScriptAnalyticsRedesignSubTab'
 import { InteractionsKpiStrip } from './InteractionsKpiStrip'
+import { MockTimeAtWorkSubTab } from './MockTimeAtWorkSubTab'
+import { MockHeatMapSubTab } from './MockHeatMapSubTab'
 
 /**
  * Action Analysis inner orchestrator (KAN-415). Hosts the 9-sub-tab strip and
- * dispatches to each sub-tab body. Order from plan Â§3.3:
+ * dispatches to each sub-tab body. Order from plan §3.3:
  *   Interactions / Weekly Tasks / Promises / Closures / Leaks / Third
  *   Parties / Heat Map / Time at Work / Script Analytics.
  */
@@ -107,8 +107,8 @@ export function ActionAnalysisInnerTab() {
         {activeSubTab === 'successful-closures' && <SuccessfulClosuresSubTab />}
         {activeSubTab === 'leaks' && <LeaksSubTab />}
         {activeSubTab === 'third-parties' && <ThirdPartiesSubTab />}
-        {activeSubTab === 'heatmap' && <HeatmapTab />}
-        {activeSubTab === 'time-at-work' && <ScreenTimeTab />}
+        {activeSubTab === 'heatmap' && <MockHeatMapSubTab />}
+        {activeSubTab === 'time-at-work' && <MockTimeAtWorkSubTab />}
         {activeSubTab === 'script-analytics' && <ScriptAnalyticsRedesignSubTab />}
       </div>
     </div>

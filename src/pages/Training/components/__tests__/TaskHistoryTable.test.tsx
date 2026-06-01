@@ -77,7 +77,7 @@ describe('TaskHistoryTable', () => {
       }),
     ])
     // Two em-dashes: Due date + Due time
-    expect(screen.getAllByText('â€”')).toHaveLength(2)
+    expect(screen.getAllByText('—')).toHaveLength(2)
   })
 
   it('renders the sort selector with the active value', () => {

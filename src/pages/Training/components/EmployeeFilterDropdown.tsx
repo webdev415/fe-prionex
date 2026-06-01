@@ -81,7 +81,7 @@ export function EmployeeFilterDropdown({
     else onChange([...allIds])
   }
 
-  // "All" is shown when nothing is selected OR everything is selected â€” both
+  // "All" is shown when nothing is selected OR everything is selected — both
   // states semantically mean "no operator filter applied". Matches the UX of
   // other multi-select dropdowns in the app (e.g. the Audit Logs entity-type
   // picker), which treats fully-selected as "All".

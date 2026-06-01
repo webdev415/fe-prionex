@@ -15,7 +15,7 @@ import {
   toCallMonitoringQuery,
 } from '../callsUrlState'
 
-describe('callsUrlState â€” telephony_types', () => {
+describe('callsUrlState — telephony_types', () => {
   it('writes a comma-joined param when telephony_types is set', () => {
     const out = writeCallsUrlState(new URLSearchParams(), {
       ...CALL_FILTERS_DEFAULT,
@@ -56,7 +56,7 @@ describe('callsUrlState â€” telephony_types', () => {
     expect(state.telephony_types).toBeUndefined()
   })
 
-  it('roundtrips through write â†’ read with all canonical values preserved', () => {
+  it('roundtrips through write → read with all canonical values preserved', () => {
     const telephony_types: TelephonyType[] = ['white', 'grey', 'unknown']
     const original = { ...CALL_FILTERS_DEFAULT, telephony_types }
     const written = writeCallsUrlState(new URLSearchParams(), original)

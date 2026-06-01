@@ -36,7 +36,7 @@ interface Props {
   onApply: (next: TaHistoryBarState) => void
   onClear: () => void
   userTimezone?: string | null
-  /** Page-level scope (KAN-506) â€” drives the picker-disabled flags. */
+  /** Page-level scope (KAN-506) — drives the picker-disabled flags. */
   scope?: ScopedUserIds
 }
 
@@ -265,7 +265,7 @@ export function TaHistoryFiltersBar({
             <Input
               type="text"
               className="h-[45px]"
-              placeholder={t('pages.training.filters.notesSearchPlaceholder', 'Search in notesâ€¦')}
+              placeholder={t('pages.training.filters.notesSearchPlaceholder', 'Search in notes…')}
               value={draft.notesSearch ?? ''}
               onChange={(e) => {
                 const v = e.target.value
@@ -413,7 +413,7 @@ function StepValueRow({ step, ta, value, onChange }: StepValueRowProps) {
           <Input
             type="text"
             className="h-[45px] w-full"
-            placeholder={t('pages.training.filters.stepValuePlaceholder', 'Searchâ€¦')}
+            placeholder={t('pages.training.filters.stepValuePlaceholder', 'Search…')}
             value={value.eq ?? ''}
             onChange={(e) => {
               const v = e.target.value

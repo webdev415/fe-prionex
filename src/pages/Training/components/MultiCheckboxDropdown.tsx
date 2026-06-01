@@ -22,7 +22,7 @@ interface Props<V extends string> {
   onChange: (next: V[]) => void
   /** Trigger label when nothing is selected OR every option is selected. */
   allLabel: string
-  /** Trigger label suffix when N > 1 are selected â€” interpolated with {{count}}. */
+  /** Trigger label suffix when N > 1 are selected — interpolated with {{count}}. */
   countLabelKey?: string
   disabled?: boolean
   /** Override label shown on the trigger when disabled (e.g. scope lock). */
@@ -33,10 +33,10 @@ interface Props<V extends string> {
  * Reusable multi-select dropdown with a checkbox list. Used by the Payment
  * History filter bar for Payment method / Status / Payment type so the three
  * filters share one visual idiom (mirrors EmployeeFilterDropdown but without
- * the search input â€” fine for short controlled-vocabulary lists).
+ * the search input — fine for short controlled-vocabulary lists).
  *
  * The trigger collapses "all selected" and "none selected" to the same
- * "All â€¦" label since both semantically mean "no filter applied" downstream.
+ * "All …" label since both semantically mean "no filter applied" downstream.
  */
 export function MultiCheckboxDropdown<V extends string>({
   label,

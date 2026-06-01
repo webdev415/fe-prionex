@@ -64,7 +64,7 @@ export function readTaHistoryUrlState(params: URLSearchParams): TaHistoryBarStat
     .filter((n) => Number.isFinite(n) && n > 0)
 
   // Per-step value sub-filters only carry meaning when at least one step is
-  // picked AND a chain is set (resolver needs the chain to map ta_id â†’ step).
+  // picked AND a chain is set (resolver needs the chain to map ta_id → step).
   const stepValues: Record<number, StepValueEntry> = {}
   if (chainId != null && targetActionIds.length > 0) {
     const eqMap = parseStepValueList(params.getAll('step_eq'))

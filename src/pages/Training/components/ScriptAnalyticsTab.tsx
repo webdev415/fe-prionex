@@ -79,7 +79,7 @@ export function ScriptAnalyticsTab() {
           className="h-[45px] rounded-full sm:px-6"
         >
           {exportMutation.isPending
-            ? t('pages.training.actions.exporting', 'Exportingâ€¦')
+            ? t('pages.training.actions.exporting', 'Exporting…')
             : t('pages.training.actions.exportExcel', 'Export to Excel')}
         </Button>
       </div>

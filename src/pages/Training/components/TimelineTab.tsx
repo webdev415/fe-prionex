@@ -11,7 +11,7 @@ import { TableSkeleton } from '@/components/ui/TableSkeleton'
 import { readTimelineBarState, writeTimelineBarState } from '../lib/analyticsUrlState'
 
 function formatOffset(seconds?: number | null): string {
-  if (seconds == null || !Number.isFinite(seconds)) return 'â€”'
+  if (seconds == null || !Number.isFinite(seconds)) return '—'
   const sign = seconds < 0 ? '-' : ''
   const abs = Math.abs(Math.round(seconds))
   const mins = Math.floor(abs / 60)
@@ -92,7 +92,7 @@ export function TimelineTab() {
             className="h-[45px] rounded-full sm:px-6"
           >
             {exportMutation.isPending
-              ? t('pages.training.actions.exporting', 'Exportingâ€¦')
+              ? t('pages.training.actions.exporting', 'Exporting…')
               : t('pages.training.actions.exportExcel', 'Export to Excel')}
           </Button>
         </div>
@@ -144,7 +144,7 @@ export function TimelineTab() {
                     {formatOffset(event.offset_seconds)}
                   </td>
                   <td className="px-4 py-2 font-medium text-gray-800">{event.event_type}</td>
-                  <td className="px-4 py-2 text-gray-600">{event.page_ref ?? 'â€”'}</td>
+                  <td className="px-4 py-2 text-gray-600">{event.page_ref ?? '—'}</td>
                   <td className="px-4 py-2 font-mono text-xs text-gray-500">
                     {new Date(event.ts).toLocaleString()}
                   </td>

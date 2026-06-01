@@ -49,11 +49,11 @@ function splitDueDate(
   isoDate: string | null | undefined,
   timezone?: string | null
 ): { date: string; time: string } {
-  if (!isoDate) return { date: 'â€”', time: 'â€”' }
+  if (!isoDate) return { date: '—', time: '—' }
   const formatted = formatTaskDueDateForDisplay(isoDate, timezone)
-  if (formatted === 'â€”') return { date: 'â€”', time: 'â€”' }
+  if (formatted === '—') return { date: '—', time: '—' }
   const [date, time] = formatted.split(' ')
-  return { date: date ?? 'â€”', time: time ?? 'â€”' }
+  return { date: date ?? '—', time: time ?? '—' }
 }
 
 export function TaskHistoryTable({ data, userTimezone, sort, onSortChange }: Props) {
@@ -67,7 +67,7 @@ export function TaskHistoryTable({ data, userTimezone, sort, onSortChange }: Pro
       header: t('pages.training.columns.createdDate', 'Created date'),
       render: (r) => (
         <span className="text-sm text-gray-700">
-          {r.created_at ? formatDateTime(r.created_at, userTimezone) : 'â€”'}
+          {r.created_at ? formatDateTime(r.created_at, userTimezone) : '—'}
         </span>
       ),
     },
@@ -89,14 +89,12 @@ export function TaskHistoryTable({ data, userTimezone, sort, onSortChange }: Pro
     {
       key: 'author',
       header: t('pages.training.columns.author', 'Author'),
-      render: (r) => <span className="text-sm text-gray-700">{r.created_by_name ?? 'â€”'}</span>,
+      render: (r) => <span className="text-sm text-gray-700">{r.created_by_name ?? '—'}</span>,
     },
     {
       key: 'assignee',
       header: t('pages.training.columns.assignee', 'Assignee'),
-      render: (r) => (
-        <span className="text-sm text-gray-700">{r.assigned_to_username ?? 'â€”'}</span>
-      ),
+      render: (r) => <span className="text-sm text-gray-700">{r.assigned_to_username ?? '—'}</span>,
     },
     {
       key: 'priority',
@@ -127,7 +125,7 @@ export function TaskHistoryTable({ data, userTimezone, sort, onSortChange }: Pro
       header: t('pages.training.columns.topic', 'Topic'),
       render: (r) => (
         <span className="text-sm text-gray-700" title={r.subject_name ?? undefined}>
-          {r.subject_name ?? 'â€”'}
+          {r.subject_name ?? '—'}
         </span>
       ),
     },

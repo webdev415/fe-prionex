@@ -8,7 +8,7 @@ import type { CoachingPeriod, ScoreBand, AssignmentState, ScorecardSummary } fro
  *   - KAN-413 Inbox (all three view modes)
  *   - KAN-414 Team tab (clicking a team operator card)
  *
- * Layout follows [Figma/ENG - Training _ Inbox View _ A.png] â€” header with
+ * Layout follows [Figma/ENG - Training _ Inbox View _ A.png] — header with
  * avatar + tags + big composite score circle on the right, red-flag headline
  * banner, 4 KPI tiles in a row, "Why entered the queue" trigger pill list,
  * "Latest dialogue ratings" mini-cards with score chips, trainer-actions
@@ -60,7 +60,7 @@ const ASSIGNMENT_STATE_LABEL_KEYS: Record<AssignmentState, { key: string; fallba
   },
 }
 
-function formatPct(value: number | null | undefined, fallback = 'â€”'): string {
+function formatPct(value: number | null | undefined, fallback = '—'): string {
   if (value == null) return fallback
   return `${value.toFixed(0)}%`
 }
@@ -126,7 +126,7 @@ export function OperatorDetailPanel({
   if (isLoading) {
     return (
       <aside className="flex h-full flex-col items-center justify-center rounded-2xl bg-white/60 p-10 text-sm text-gray-500">
-        {t('pages.training.inbox.detail.loading', 'Loadingâ€¦')}
+        {t('pages.training.inbox.detail.loading', 'Loading…')}
       </aside>
     )
   }
@@ -144,7 +144,7 @@ export function OperatorDetailPanel({
 
   return (
     <aside className="flex h-full flex-col gap-4 overflow-hidden rounded-2xl bg-white p-5 shadow-sm">
-      {/* Header â€” avatar + name + tag chips + big composite score circle */}
+      {/* Header — avatar + name + tag chips + big composite score circle */}
       <header className="flex items-start justify-between gap-4">
         <div className="flex items-start gap-3">
           <div className="bg-primary-100 text-primary-700 flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-full text-lg font-semibold">
@@ -194,7 +194,7 @@ export function OperatorDetailPanel({
           <p className="mt-0.5 text-xs text-red-700">
             {t(
               'pages.training.inbox.detail.redFlagsSubtitle',
-              'Coaching attention needed â€” recent triggers have accumulated.'
+              'Coaching attention needed — recent triggers have accumulated.'
             )}
           </p>
         </section>
@@ -220,7 +220,7 @@ export function OperatorDetailPanel({
         />
       </section>
 
-      {/* Why entered the queue â€” bulleted trigger list */}
+      {/* Why entered the queue — bulleted trigger list */}
       <section className="flex flex-col gap-1.5">
         <h3 className="text-xs font-medium tracking-wide text-gray-500 uppercase">
           {t('pages.training.inbox.detail.whyInQueue', 'Why entered the queue')}
@@ -247,7 +247,7 @@ export function OperatorDetailPanel({
         )}
       </section>
 
-      {/* Latest dialogue ratings â€” horizontal mini-cards with score chips */}
+      {/* Latest dialogue ratings — horizontal mini-cards with score chips */}
       <section className="flex flex-col gap-1.5">
         <h3 className="text-xs font-medium tracking-wide text-gray-500 uppercase">
           {t('pages.training.inbox.detail.latestRatings', 'Latest dialogue ratings')}
@@ -312,7 +312,7 @@ function ScorecardMiniCard({ scorecard }: { scorecard: ScorecardSummary }) {
     green: 'bg-green-500 text-white',
   }
   const displayScore =
-    scorecard.weighted_score != null ? Number(scorecard.weighted_score).toFixed(1) : 'â€”'
+    scorecard.weighted_score != null ? Number(scorecard.weighted_score).toFixed(1) : '—'
   return (
     <li className="flex flex-col gap-1.5 rounded-xl border border-gray-100 bg-white p-2.5">
       <span

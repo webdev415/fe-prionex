@@ -3,12 +3,12 @@ import type { OperatorUser } from '@/features/users/api/usersApi'
 import type { AssignmentState, QueueOperator, ScoreBand } from '@/features/quality/coaching/types'
 
 /**
- * Grid view â€” card lattice of operators. Same data contract as the Inbox
- * and Kanban views (KAN-413, plan Â§3.5). Cards are wider than the Inbox
+ * Grid view — card lattice of operators. Same data contract as the Inbox
+ * and Kanban views (KAN-413, plan §3.5). Cards are wider than the Inbox
  * list rows and stack a few KPIs visually so trainers can scan the whole
  * floor at once.
  *
- * Click a card â†’ focuses the operator in the right-side detail panel via
+ * Click a card → focuses the operator in the right-side detail panel via
  * the parent-supplied `onSelect`. No drag-drop here; transitions go through
  * the Kanban view or the detail panel's "Take charge" / 1-on-1 buttons.
  */
@@ -94,7 +94,7 @@ export function OperatorGridView({
   if (isLoading) {
     return (
       <div className="rounded-2xl bg-white/60 p-6 text-center text-sm text-gray-500">
-        {t('pages.training.inbox.list.loading', 'Loading queueâ€¦')}
+        {t('pages.training.inbox.list.loading', 'Loading queue…')}
       </div>
     )
   }
@@ -218,9 +218,9 @@ function ProgressRing({
   pct: number | null | undefined
   tone: RingTone
 }) {
-  const display = pct == null ? 'â€”' : `${Math.round(pct)}%`
+  const display = pct == null ? '—' : `${Math.round(pct)}%`
   const clamped = Math.max(0, Math.min(100, pct ?? 0))
-  // SVG ring math: 24Ã—24 viewbox, radius 10 â†’ circumference â‰ˆ 62.83
+  // SVG ring math: 24Ã—24 viewbox, radius 10 → circumference â‰ˆ 62.83
   const circumference = 2 * Math.PI * 10
   const dashOffset = circumference * (1 - clamped / 100)
   return (

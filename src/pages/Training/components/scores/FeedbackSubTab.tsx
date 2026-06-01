@@ -1,5 +1,5 @@
 ﻿/**
- * FeedbackSubTab â€” trainer-side feedback inbox (KAN-410, Feature 2.3).
+ * FeedbackSubTab — trainer-side feedback inbox (KAN-410, Feature 2.3).
  *
  * Cross-operator list with type / status filters. Row click opens the
  * threaded `FeedbackThreadView` inline below the table; trainer can reply
@@ -128,7 +128,7 @@ export function FeedbackSubTab() {
           className="h-[40px] rounded-full text-xs"
         >
           {exportMutation.isPending
-            ? t('pages.training.actions.exporting', 'Exportingâ€¦')
+            ? t('pages.training.actions.exporting', 'Exporting…')
             : t('pages.training.actions.exportExcel', 'Export to Excel')}
         </Button>
       </div>
@@ -148,7 +148,7 @@ export function FeedbackSubTab() {
             {isLoading ? (
               <tr>
                 <td className="px-3 py-6 text-center text-gray-400" colSpan={5}>
-                  {t('common.loading', 'Loadingâ€¦')}
+                  {t('common.loading', 'Loading…')}
                 </td>
               </tr>
             ) : isError ? (
@@ -210,7 +210,7 @@ export function FeedbackSubTab() {
       {totalPages > 1 ? (
         <div className="flex items-center justify-between text-sm text-gray-600">
           <span>
-            {t('common.page', 'Page')} {page} {t('common.of', 'of')} {totalPages} Â· {total}{' '}
+            {t('common.page', 'Page')} {page} {t('common.of', 'of')} {totalPages} · {total}{' '}
             {t('pages.training.feedbackTotalSuffix', 'items')}
           </span>
           <div className="flex gap-2">

@@ -158,10 +158,10 @@ export type ResolvedInteractionUsers =
  * Resolve effective user_ids[] for the interaction-monitoring query.
  *
  * `scopedUserIds` (KAN-506) is the result of the page-level Scope selector:
- *   - `undefined` â†’ no scope filter (scope=all or scope=group placeholder),
- *   - `[]`        â†’ scope locked to a context with zero matching users
+ *   - `undefined` → no scope filter (scope=all or scope=group placeholder),
+ *   - `[]`        → scope locked to a context with zero matching users
  *                   (e.g. scope=department but the dept has no operators),
- *   - `number[]`  â†’ effective scope.
+ *   - `number[]`  → effective scope.
  *
  * Tab-level Department / Employee pickers refine within the scope. When the
  * intersection is empty AND scope was non-empty, we return `empty` so the UI
@@ -172,7 +172,7 @@ export function resolveInteractionUsers(
   operators: OperatorUser[],
   scopedUserIds?: number[] | undefined
 ): ResolvedInteractionUsers {
-  // 1. Tab-level Department picker â€” local refinement.
+  // 1. Tab-level Department picker — local refinement.
   let localIds: number[] | 'none' | 'all' = 'all'
   if (state.departmentId != null) {
     const ids = operators.filter((o) => o.department_id === state.departmentId).map((o) => o.id)
@@ -182,7 +182,7 @@ export function resolveInteractionUsers(
   }
 
   // 2. Apply the page-level scope as an intersecting filter.
-  //    `undefined` â†’ no scope; pass `localIds` through.
+  //    `undefined` → no scope; pass `localIds` through.
   if (scopedUserIds === undefined) {
     if (localIds === 'all') return { kind: 'all' }
     if (localIds === 'none') return { kind: 'empty' }
@@ -216,7 +216,7 @@ export function toInteractionMonitoringQuery(
 
   // Internal-date range: convert YYYY-MM-DD bounds to ISO datetimes the
   // backend can bind. Only forwarded when both a date type AND at least one
-  // bound are set â€” backend treats a date type with no bounds as a no-op.
+  // bound are set — backend treats a date type with no bounds as a no-op.
   let internal_date_from: string | undefined
   let internal_date_to: string | undefined
   if (state.internal_date_type && (state.internal_date_from || state.internal_date_to)) {

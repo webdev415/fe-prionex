@@ -64,7 +64,7 @@ export interface RecordPaymentModalProps {
   /** Whether user has verify_payment permission. When false, hides Verified radio and Save & Verify button. */
   canVerify?: boolean
   /**
-   * Client id â€” needed to fetch the client's Restructuring Agreement list so
+   * Client id — needed to fetch the client's Restructuring Agreement list so
    * the new Payment Type field can auto-pre-fill `payment_by_rr` when the
    * picked debt has an open RR (KAN-507). Optional for back-compat with any
    * existing call sites that don't have a clientId on hand; when omitted,
@@ -117,7 +117,7 @@ export function RecordPaymentModal({
   // form layer; backend keeps it Optional on the wire for back-compat.
   const [paymentType, setPaymentType] = useState<PaymentType | ''>('')
   // Tracks whether the operator has touched the dropdown for this modal
-  // session. Auto-prefill only writes when the field is still untouched â€”
+  // session. Auto-prefill only writes when the field is still untouched —
   // switching debts must never silently overwrite an explicit choice.
   const [paymentTypeDirty, setPaymentTypeDirty] = useState(false)
   const [paymentTypeError, setPaymentTypeError] = useState<string | null>(null)
@@ -153,7 +153,7 @@ export function RecordPaymentModal({
     [selectableDebts, selectedDebtId]
   )
   // A closed-debt selection is a technical correction. It bypasses the
-  // amount-vs-current-debt cap on both client and server â€” closed debts
+  // amount-vs-current-debt cap on both client and server — closed debts
   // by definition report zero remaining balance, otherwise the feature
   // is useless.
   const isClosedDebtCorrection = selectedDebt?.status === 'closed'
@@ -505,7 +505,7 @@ export function RecordPaymentModal({
                 </RadioGroup>
               </div>
 
-              {/* Payment Type (KAN-507) â€” required dropdown with auto-prefill */}
+              {/* Payment Type (KAN-507) — required dropdown with auto-prefill */}
               <div className="flex flex-col items-start gap-2 self-stretch">
                 <Label required className="text-sm leading-[150%] font-medium tracking-[-0.28px]">
                   {t('pages.clients.modals.recordPayment.paymentTypeLabel', 'Payment type')}
@@ -697,7 +697,7 @@ export function RecordPaymentModal({
                   </RadioGroup>
                 </div>
 
-                {/* Checkboxes â€” only relevant when saving as Verified */}
+                {/* Checkboxes — only relevant when saving as Verified */}
                 {paymentStatus === 'Verified' && (
                   <div className="flex flex-col items-start gap-3 self-stretch">
                     <div className="flex items-center gap-1 self-stretch">

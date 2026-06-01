@@ -61,16 +61,14 @@ export function PaymentHistoryTable({ data, userTimezone, sort, onSortChange }: 
     {
       key: 'loanNumber',
       header: t('pages.training.columns.loanNumber', 'Loan number'),
-      render: (r) => (
-        <span className="text-sm text-gray-700">{r.debt_contract_number ?? 'â€”'}</span>
-      ),
+      render: (r) => <span className="text-sm text-gray-700">{r.debt_contract_number ?? '—'}</span>,
     },
     {
       key: 'loanSaleDate',
       header: t('pages.training.columns.loanSaleDate', 'Date of loan sale'),
       render: (r) => (
         <span className="text-sm text-gray-700">
-          {r.purchase_date ? formatDate(r.purchase_date) : 'â€”'}
+          {r.purchase_date ? formatDate(r.purchase_date) : '—'}
         </span>
       ),
     },
@@ -83,7 +81,7 @@ export function PaymentHistoryTable({ data, userTimezone, sort, onSortChange }: 
             {t(`pages.training.filters.paymentTypes.${r.payment_type}`, r.payment_type)}
           </span>
         ) : (
-          <span className="text-sm text-gray-500">â€”</span>
+          <span className="text-sm text-gray-500">—</span>
         ),
     },
     {
@@ -93,7 +91,7 @@ export function PaymentHistoryTable({ data, userTimezone, sort, onSortChange }: 
         r.payment_comment ? (
           <span className="text-sm text-gray-700">{r.payment_comment}</span>
         ) : (
-          <span className="text-sm text-gray-500">â€”</span>
+          <span className="text-sm text-gray-500">—</span>
         ),
     },
     {
@@ -108,7 +106,7 @@ export function PaymentHistoryTable({ data, userTimezone, sort, onSortChange }: 
       header: t('pages.training.columns.createdAt', 'Created at'),
       render: (r) => (
         <span className="text-sm text-gray-700">
-          {r.recorded_at ? formatDateTime(r.recorded_at, userTimezone) : 'â€”'}
+          {r.recorded_at ? formatDateTime(r.recorded_at, userTimezone) : '—'}
         </span>
       ),
     },
@@ -117,7 +115,7 @@ export function PaymentHistoryTable({ data, userTimezone, sort, onSortChange }: 
       header: t('pages.training.columns.confirmedAt', 'Confirmed at'),
       render: (r) => (
         <span className="text-sm text-gray-700">
-          {r.verified_at ? formatDateTime(r.verified_at, userTimezone) : 'â€”'}
+          {r.verified_at ? formatDateTime(r.verified_at, userTimezone) : '—'}
         </span>
       ),
     },

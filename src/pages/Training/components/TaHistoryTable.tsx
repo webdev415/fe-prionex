@@ -134,7 +134,7 @@ export function TaHistoryTable({ data, chains, tasById, userTimezone }: Props) {
     {
       key: 'chain',
       header: t('pages.training.columns.chain', 'Chain'),
-      render: (r) => <span className="text-sm text-gray-700">{r.chain_name ?? 'â€”'}</span>,
+      render: (r) => <span className="text-sm text-gray-700">{r.chain_name ?? '—'}</span>,
     },
     {
       key: 'result',
@@ -145,7 +145,7 @@ export function TaHistoryTable({ data, chains, tasById, userTimezone }: Props) {
           const fallback =
             r.dropdown_value_name ??
             r.leaf_node_name ??
-            (r.dictionary_path.length > 0 ? r.dictionary_path.join(' > ') : 'â€”')
+            (r.dictionary_path.length > 0 ? r.dictionary_path.join(' > ') : '—')
           return <span className="text-sm text-gray-700">{fallback}</span>
         }
         return (
@@ -168,7 +168,7 @@ export function TaHistoryTable({ data, chains, tasById, userTimezone }: Props) {
       header: t('pages.training.columns.createdBy', 'Created by'),
       render: (r) => (
         <span className="text-sm text-gray-700">
-          {r.recorded_by_full_name ?? r.recorded_by_name ?? 'â€”'}
+          {r.recorded_by_full_name ?? r.recorded_by_name ?? '—'}
         </span>
       ),
     },
@@ -176,14 +176,14 @@ export function TaHistoryTable({ data, chains, tasById, userTimezone }: Props) {
       key: 'responsibleAtCreation',
       header: t('pages.training.columns.responsibleAtCreation', 'Responsible at creation'),
       render: (r) => (
-        <span className="text-sm text-gray-700">{r.assigned_operator_name ?? 'â€”'}</span>
+        <span className="text-sm text-gray-700">{r.assigned_operator_name ?? '—'}</span>
       ),
     },
     {
       key: 'currentResponsible',
       header: t('pages.training.columns.currentResponsible', 'Current responsible'),
       render: (r) => (
-        <span className="text-sm text-gray-700">{r.current_responsible_name ?? 'â€”'}</span>
+        <span className="text-sm text-gray-700">{r.current_responsible_name ?? '—'}</span>
       ),
     },
     {
@@ -191,7 +191,7 @@ export function TaHistoryTable({ data, chains, tasById, userTimezone }: Props) {
       header: t('pages.training.columns.notes', 'Notes'),
       render: (r) => (
         <span className="text-sm text-gray-600" title={r.notes ?? undefined}>
-          {r.notes ? (r.notes.length > 60 ? `${r.notes.slice(0, 60)}â€¦` : r.notes) : 'â€”'}
+          {r.notes ? (r.notes.length > 60 ? `${r.notes.slice(0, 60)}…` : r.notes) : '—'}
         </span>
       ),
     },

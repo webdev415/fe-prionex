@@ -13,12 +13,12 @@ import { useAuthStore } from '@/stores/authStore'
  *
  * Trainer-only form. Posts to `/api/v1/quality/coaching/one-on-ones`. On
  * success the BE fires the `one_on_one_scheduled` notification to the
- * operator (KAN-413 Â§1.6 / step 6) and the header KPI strip refreshes via
+ * operator (KAN-413 §1.6 / step 6) and the header KPI strip refreshes via
  * the query invalidation in `useScheduleOneOnOne`.
  *
  * Notes are optional. Duration defaults to 30 min (BE default).
  *
- * Calendar integration is out of scope for v1 â€” this is a scheduling +
+ * Calendar integration is out of scope for v1 — this is a scheduling +
  * notification surface only.
  */
 export interface ScheduleOneOnOneDialogProps {
@@ -213,7 +213,7 @@ export function ScheduleOneOnOneDialog({ open, onClose, operatorId }: ScheduleOn
           className="rounded-full"
         >
           {mutation.isPending
-            ? t('pages.training.inbox.scheduleOneOnOne.submitting', 'Schedulingâ€¦')
+            ? t('pages.training.inbox.scheduleOneOnOne.submitting', 'Scheduling…')
             : t('pages.training.inbox.scheduleOneOnOne.submit', 'Schedule session')}
         </Button>
       </ModalFooter>

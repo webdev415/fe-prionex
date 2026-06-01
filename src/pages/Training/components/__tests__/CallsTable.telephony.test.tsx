@@ -2,7 +2,7 @@
  * Telephony column rendering tests for CallsTable.
  *
  * The i18n mock in src/test/setup.ts returns the translation key when no
- * lookup entry exists, so we assert against the keys directly â€” this
+ * lookup entry exists, so we assert against the keys directly — this
  * proves we're hitting the white / grey / unknown branch, without
  * needing to extend the mock for every locale string.
  */
@@ -28,7 +28,7 @@ function makeCall(overrides: Partial<CallMonitoringItem>): CallMonitoringItem {
     ring_duration: null,
     talk_duration: 60,
     total_duration: 65,
-    // Real client_id so the Client column renders a #link rather than 'â€”'
+    // Real client_id so the Client column renders a #link rather than '—'
     // and our em-dash assertions only catch the telephony column.
     client_id: 42,
     campaign_id: null,
@@ -46,7 +46,7 @@ function renderTable(rows: CallMonitoringItem[]) {
   )
 }
 
-describe('CallsTable â€” telephony column', () => {
+describe('CallsTable — telephony column', () => {
   it('renders the White badge for white calls', () => {
     renderTable([makeCall({ call_id: 'c-white', telephony_type: 'white' })])
     expect(screen.getByText('pages.training.telephonyType.white')).toBeInTheDocument()
@@ -60,7 +60,7 @@ describe('CallsTable â€” telephony column', () => {
   it('renders an em-dash for unknown calls', () => {
     renderTable([makeCall({ call_id: 'c-unknown', telephony_type: 'unknown' })])
     // The unknown branch renders a plain em-dash, not a badge key.
-    expect(screen.getByText('â€”')).toBeInTheDocument()
+    expect(screen.getByText('—')).toBeInTheDocument()
     expect(screen.queryByText('pages.training.telephonyType.white')).not.toBeInTheDocument()
     expect(screen.queryByText('pages.training.telephonyType.grey')).not.toBeInTheDocument()
   })
@@ -73,7 +73,7 @@ describe('CallsTable â€” telephony column', () => {
     ])
     expect(screen.getByText('pages.training.telephonyType.white')).toBeInTheDocument()
     expect(screen.getByText('pages.training.telephonyType.grey')).toBeInTheDocument()
-    expect(screen.getByText('â€”')).toBeInTheDocument()
+    expect(screen.getByText('—')).toBeInTheDocument()
   })
 
   it('renders em-dash for inbound calls regardless of stored telephony_type', () => {
@@ -94,7 +94,7 @@ describe('CallsTable â€” telephony column', () => {
     ])
     expect(screen.queryByText('pages.training.telephonyType.white')).not.toBeInTheDocument()
     expect(screen.queryByText('pages.training.telephonyType.grey')).not.toBeInTheDocument()
-    // Two inbound rows â†’ two em-dashes.
-    expect(screen.getAllByText('â€”')).toHaveLength(2)
+    // Two inbound rows → two em-dashes.
+    expect(screen.getAllByText('—')).toHaveLength(2)
   })
 })

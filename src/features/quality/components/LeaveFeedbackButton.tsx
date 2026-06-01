@@ -1,5 +1,5 @@
 ﻿/**
- * LeaveFeedbackButton â€” trainer-side "leave feedback" affordance (KAN-410, Feature 2.3).
+ * LeaveFeedbackButton — trainer-side "leave feedback" affordance (KAN-410, Feature 2.3).
  *
  * Opens a popup with type / text / optional timestamp fields. Timestamp is
  * pre-filled from the parent's `getCurrentTimeMs` callback (mirrors the
@@ -15,7 +15,7 @@ import { FEEDBACK_TYPES, type FeedbackType } from '../types'
 interface LeaveFeedbackButtonProps {
   callId: string
   operatorId: number
-  /** Optional â€” when provided, the popup pre-fills the timestamp field. */
+  /** Optional — when provided, the popup pre-fills the timestamp field. */
   getCurrentTimeMs?: () => number
   onCreated?: () => void
 }

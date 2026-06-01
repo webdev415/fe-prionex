@@ -17,7 +17,7 @@ import {
 import { AnalyticsFiltersBar } from './AnalyticsFiltersBar'
 
 function formatMs(ms: number): string {
-  if (!Number.isFinite(ms) || ms <= 0) return 'â€”'
+  if (!Number.isFinite(ms) || ms <= 0) return '—'
   const totalSeconds = Math.round(ms / 1000)
   if (totalSeconds < 60) return `${totalSeconds}s`
   const mins = Math.floor(totalSeconds / 60)
@@ -87,7 +87,7 @@ export function ScreenTimeTab() {
           className="h-[45px] rounded-full sm:px-6"
         >
           {exportMutation.isPending
-            ? t('pages.training.actions.exporting', 'Exportingâ€¦')
+            ? t('pages.training.actions.exporting', 'Exporting…')
             : t('pages.training.actions.exportExcel', 'Export to Excel')}
         </Button>
       </div>
@@ -117,7 +117,7 @@ export function ScreenTimeTab() {
                   {t('pages.training.screenTime.columns.operator', 'Operator')}
                 </th>
                 <th className="px-4 py-2">
-                  {t('pages.training.screenTime.columns.cardOpen', 'Avg callâ†’card')}
+                  {t('pages.training.screenTime.columns.cardOpen', 'Avg call→card')}
                 </th>
                 <th className="px-4 py-2">
                   {t('pages.training.screenTime.columns.formSubmit', 'Avg form submit')}
@@ -150,7 +150,7 @@ export function ScreenTimeTab() {
                   </td>
                   <td className="px-4 py-2 font-mono text-xs text-gray-700">
                     {op.deviation_pct == null
-                      ? 'â€”'
+                      ? '—'
                       : `${op.deviation_pct > 0 ? '+' : ''}${op.deviation_pct}%`}
                   </td>
                 </tr>

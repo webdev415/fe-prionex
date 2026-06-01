@@ -12,7 +12,7 @@ import {
 
 /**
  * Tasks top-tab (KAN-411 revised). Filter chips strip + Tasks table with
- * priority + status badges. The "Weekly tasks â€” share an overdue view"
+ * priority + status badges. The "Weekly tasks — share an overdue view"
  * banner mirrors the Figma frame.
  */
 const STATUS_TONE: Record<TaskStatus, string> = {
@@ -94,7 +94,7 @@ export function TasksTab() {
             <Icons.Warning size={14} />
           </span>
           <span className="text-xs font-medium text-red-700">
-            {t('pages.training.tasks.overdueBanner', 'Weekly tasks â€” share an overdue view')}
+            {t('pages.training.tasks.overdueBanner', 'Weekly tasks — share an overdue view')}
           </span>
         </div>
         <Button

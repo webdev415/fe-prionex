@@ -33,13 +33,13 @@ function pickInternalDate(
   if (type === 'promise_to_pay') return row.promise_to_pay_date
   if (type === 'next_action') return row.next_action_date
   if (type === 'follow_up') return row.follow_up_date
-  // No filter or `any` â†’ fall back to whichever date is present, in the
+  // No filter or `any` → fall back to whichever date is present, in the
   // order PM ranked them when describing the column.
   return row.promise_to_pay_date ?? row.next_action_date ?? row.follow_up_date ?? null
 }
 
 function formatAmount(value: string | null): string {
-  if (!value) return 'â€”'
+  if (!value) return '—'
   const n = Number(value)
   if (Number.isNaN(n)) return value
   return n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -99,7 +99,7 @@ export function InteractionHistoryTable({
           to={`/dashboard/clients/${r.client_id}`}
           className="text-primary-600 text-sm hover:underline"
         >
-          {r.client_full_name ?? 'â€”'}
+          {r.client_full_name ?? '—'}
         </Link>
       ),
     },
@@ -108,14 +108,14 @@ export function InteractionHistoryTable({
       header: t('pages.training.columns.phone', 'Phone'),
       render: (r) => (
         <span className="text-sm text-gray-700">
-          {r.phone_used ? formatUkrainePhoneForDisplay(r.phone_used, r.phone_used) : 'â€”'}
+          {r.phone_used ? formatUkrainePhoneForDisplay(r.phone_used, r.phone_used) : '—'}
         </span>
       ),
     },
     {
       key: 'responsibleAtCreation',
       header: t('pages.training.columns.responsibleAtCreation', 'Responsible at creation'),
-      render: (r) => <span className="text-sm text-gray-700">{r.user_name ?? 'â€”'}</span>,
+      render: (r) => <span className="text-sm text-gray-700">{r.user_name ?? '—'}</span>,
     },
     {
       key: 'currentResponsible',
@@ -123,7 +123,7 @@ export function InteractionHistoryTable({
       render: (r) => (
         <span className="text-sm text-gray-700">
           {r.current_responsible_user_name ??
-            (r.current_responsible_user_id ? `#${r.current_responsible_user_id}` : 'â€”')}
+            (r.current_responsible_user_id ? `#${r.current_responsible_user_id}` : '—')}
         </span>
       ),
     },
@@ -132,18 +132,18 @@ export function InteractionHistoryTable({
       header: t('pages.training.columns.internalDate', 'Date (promise / callback)'),
       render: (r) => {
         const value = pickInternalDate(r, internalDateType)
-        return <span className="text-sm text-gray-700">{value ? formatDate(value) : 'â€”'}</span>
+        return <span className="text-sm text-gray-700">{value ? formatDate(value) : '—'}</span>
       },
     },
     {
       key: 'channel',
       header: t('pages.training.columns.channel', 'Channel'),
-      render: (r) => <span className="text-sm text-gray-700">{r.channel ?? 'â€”'}</span>,
+      render: (r) => <span className="text-sm text-gray-700">{r.channel ?? '—'}</span>,
     },
     {
       key: 'contactType',
       header: t('pages.training.columns.contactType', 'Contact type'),
-      render: (r) => <span className="text-sm text-gray-700">{r.contact_type_name ?? 'â€”'}</span>,
+      render: (r) => <span className="text-sm text-gray-700">{r.contact_type_name ?? '—'}</span>,
     },
     {
       key: 'result',
@@ -156,7 +156,7 @@ export function InteractionHistoryTable({
             })}
           </span>
         ) : (
-          <span className="text-sm text-gray-400">â€”</span>
+          <span className="text-sm text-gray-400">—</span>
         ),
     },
     {
@@ -164,7 +164,7 @@ export function InteractionHistoryTable({
       header: t('pages.training.columns.promiseAmount', 'Promise amount'),
       sortable: true,
       align: 'right',
-      // Promise *date* lives in the dedicated "Internal date" column now â€”
+      // Promise *date* lives in the dedicated "Internal date" column now —
       // showing it again as a sub-line here was duplicate noise.
       render: (r) => (
         <span className="text-sm text-gray-700">{formatAmount(r.promise_to_pay_amount)}</span>

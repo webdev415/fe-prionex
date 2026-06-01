@@ -121,7 +121,7 @@ describe('TaskHistoryAnalytics (calendar view)', () => {
 
   it('shows the placeholder total while loading', () => {
     render(<TaskHistoryAnalytics buckets={[]} total={0} isLoading initialViewMonth={MAY_2026} />)
-    expect(screen.getByText('â€¦')).toBeInTheDocument()
+    expect(screen.getByText('…')).toBeInTheDocument()
   })
 
   it('renders the Today button', () => {

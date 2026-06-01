@@ -1,8 +1,8 @@
 ﻿/**
- * ScoresTab â€” the Scores top-level tab on Action Analysis (KAN-410).
+ * ScoresTab — the Scores top-level tab on Action Analysis (KAN-410).
  *
  * Hosts 4 sub-tabs (scorecards / markers / feedback / dynamics) gated by
- * their matching `view_*` sub-permission. URL: `?tab=scores&sub=â€¦`. The
+ * their matching `view_*` sub-permission. URL: `?tab=scores&sub=…`. The
  * page-level `ScopeSelector` (KAN-506) renders above the sub-tabs so a
  * trainer's "My / Department / All" scope applies uniformly across all
  * four review surfaces.

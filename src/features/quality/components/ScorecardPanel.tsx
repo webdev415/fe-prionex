@@ -1,5 +1,5 @@
 ﻿/**
- * ScorecardPanel â€” side panel rendered next to the CallRecordingModal (KAN-410, Feature 2.1).
+ * ScorecardPanel — side panel rendered next to the CallRecordingModal (KAN-410, Feature 2.1).
  *
  * Renders the active scorecard template with collapsible sections, per-criterion
  * inputs (binary toggle or 0..5 buttons), comment fields, and a status indicator.
@@ -119,7 +119,7 @@ export function ScorecardPanel({
 
   // ---- Render branches ----
 
-  // No scorecard yet â†’ show template picker
+  // No scorecard yet → show template picker
   if (!activeScorecardId) {
     return (
       <aside className="flex h-full flex-col gap-3 rounded-xl bg-white p-4 shadow-sm">
@@ -140,7 +140,7 @@ export function ScorecardPanel({
                     onClick={() => setManuallySelectedId(row.id)}
                     className="text-primary-600 hover:underline"
                   >
-                    {new Date(row.created_at).toLocaleString()} â€”{' '}
+                    {new Date(row.created_at).toLocaleString()} —{' '}
                     {t(`pages.training.scorecard.status.${row.status}`, row.status)}
                     {row.weighted_score != null ? ` (${row.weighted_score})` : ''}
                   </button>
@@ -160,7 +160,7 @@ export function ScorecardPanel({
           disabled={templatesQuery.isLoading}
         >
           <option value="">
-            {t('pages.training.scorecard.selectTemplate', 'Select a templateâ€¦')}
+            {t('pages.training.scorecard.selectTemplate', 'Select a template…')}
           </option>
           {templatesQuery.data?.map((tpl) => (
             <option key={tpl.id} value={tpl.id}>
@@ -212,7 +212,7 @@ export function ScorecardPanel({
       <div className="bg-primary-50 text-primary-700 rounded-lg p-3 text-sm">
         {t('pages.training.scorecard.computedScore', 'Score')}:{' '}
         <span className="text-lg font-semibold">
-          {livePreview != null ? livePreview.toFixed(2) : 'â€”'}
+          {livePreview != null ? livePreview.toFixed(2) : '—'}
         </span>
       </div>
 
@@ -389,7 +389,7 @@ function BinaryInput({
             : 'border-gray-200 bg-white text-gray-700'
         }`}
       >
-        âœ—
+        ✗
       </button>
     </div>
   )

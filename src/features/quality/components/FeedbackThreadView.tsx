@@ -1,9 +1,9 @@
 ﻿/**
- * FeedbackThreadView â€” single-feedback detail + threaded replies (KAN-410, Feature 2.3).
+ * FeedbackThreadView — single-feedback detail + threaded replies (KAN-410, Feature 2.3).
  *
  * Rendered today from the trainer feedback inbox (FeedbackSubTab) when a
  * row is clicked. The `viewerRole` prop decides which side-only actions
- * render â€” operators (when this view is later mounted in the trainer
+ * render — operators (when this view is later mounted in the trainer
  * workplace) get mark-read and, for correction_task, mark-completed; both
  * parties can post replies.
  */
@@ -32,7 +32,7 @@ export function FeedbackThreadView({ feedbackId, viewerRole }: FeedbackThreadVie
   const [replyText, setReplyText] = useState('')
 
   if (detailQuery.isLoading) {
-    return <div className="p-4 text-sm text-gray-400">{t('common.loading', 'Loadingâ€¦')}</div>
+    return <div className="p-4 text-sm text-gray-400">{t('common.loading', 'Loading…')}</div>
   }
   if (detailQuery.isError || !detailQuery.data) {
     return (
@@ -106,7 +106,7 @@ export function FeedbackThreadView({ feedbackId, viewerRole }: FeedbackThreadVie
               }`}
             >
               <div className="text-xs text-gray-500">
-                {t(`pages.training.feedback.role.${reply.author_role}`, reply.author_role)} Â·{' '}
+                {t(`pages.training.feedback.role.${reply.author_role}`, reply.author_role)} ·{' '}
                 {new Date(reply.created_at).toLocaleString()}
               </div>
               <div>{reply.text}</div>
@@ -124,7 +124,7 @@ export function FeedbackThreadView({ feedbackId, viewerRole }: FeedbackThreadVie
           rows={2}
           value={replyText}
           onChange={(e) => setReplyText(e.target.value)}
-          placeholder={t('pages.training.feedback.replyPlaceholder', 'Write a replyâ€¦')}
+          placeholder={t('pages.training.feedback.replyPlaceholder', 'Write a reply…')}
           className="w-full rounded-md border border-gray-200 px-2 py-1 text-sm"
         />
         <div className="flex flex-wrap justify-end gap-2">

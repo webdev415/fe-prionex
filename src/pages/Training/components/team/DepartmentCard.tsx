@@ -44,7 +44,7 @@ export function DepartmentCard({ department }: DepartmentCardProps) {
             <span className="text-sm font-semibold">{department.name}</span>
             <span className="text-[11px] text-white/70">
               {t('pages.training.team.dept.manager', 'Manager')}: {department.managerName}
-              {' Â· '}
+              {' · '}
               {department.memberCount} {t('pages.training.team.dept.employees', 'employees')}
             </span>
           </div>

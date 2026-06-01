@@ -137,7 +137,7 @@ function PromiseRow({ row }: { row: MockPromiseRow }) {
       <td className="px-4 py-3 text-gray-700">{row.client}</td>
       <td className="px-4 py-3 text-gray-600">{row.agreement}</td>
       <td className="px-4 py-3 text-right font-medium text-gray-700">
-        {row.amount.toLocaleString()} â‚´
+        {row.amount.toLocaleString()} ₴
       </td>
       <td className="px-4 py-3 text-gray-600">{row.paymentDateLabel}</td>
       <td className="px-4 py-3">

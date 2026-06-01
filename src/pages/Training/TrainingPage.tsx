@@ -39,13 +39,13 @@ import {
 import { useScopedUserIds } from './lib/scope'
 
 /**
- * TrainingPage â€” Trainer Workplace shell (renamed from ActionAnalysisPage).
+ * TrainingPage — Trainer Workplace shell (renamed from ActionAnalysisPage).
  *
- * After the redesign (this round, plan Â§1 + Â§2.1), the page is a 6-top-tab
+ * After the redesign (this round, plan §1 + §2.1), the page is a 6-top-tab
  * router: Inbox / Team / Action Analysis / Dialogue Evaluation /
  * Trainings and Sessions / Tasks. Sub-tabs are owned per top-tab.
  *
- * Sub-tab content is currently wired against mock data â€” backend hooks land
+ * Sub-tab content is currently wired against mock data — backend hooks land
  * with each KAN-498..504 ticket.
  */
 const TOP_TAB_LABEL_KEYS: Record<TrainingTopTabId, { key: string; fallback: string }> = {
@@ -64,7 +64,7 @@ const TOP_TAB_LABEL_KEYS: Record<TrainingTopTabId, { key: string; fallback: stri
     fallback: 'Trainings and Sessions',
   },
   tasks: { key: 'pages.training.topTabs.tasks', fallback: 'Tasks' },
-  // Legacy IDs â€” kept for the read-shim path below.
+  // Legacy IDs — kept for the read-shim path below.
   calls: { key: 'pages.training.topTabs.calls', fallback: 'Calls' },
   scores: { key: 'pages.training.topTabs.scores', fallback: 'Scores' },
   training: { key: 'pages.training.topTabs.training', fallback: 'Training' },
@@ -87,7 +87,7 @@ const TOP_TAB_ICONS: Record<
   settings: Icons.Settings,
 }
 
-// Visible tab order â€” drives the strip render.
+// Visible tab order — drives the strip render.
 const VISIBLE_TOP_TABS: TrainingTopTabId[] = [
   'inbox',
   'team',
@@ -152,7 +152,7 @@ function isLegacyCallsSubTab(value: string | null): value is ActionAnalysisCalls
   return value !== null && (ACTION_ANALYSIS_CALLS_SUB_TABS as string[]).includes(value)
 }
 
-// URL read-shims per plan Â§2.8 â€” translate legacy bookmarks to the new
+// URL read-shims per plan §2.8 — translate legacy bookmarks to the new
 // top-tab grammar.
 const LEGACY_TAB_SHIMS: Record<string, { tab: TrainingTopTabId; sub?: string }> = {
   calls: { tab: 'action-analysis', sub: 'interactions' },
@@ -202,7 +202,7 @@ export function TrainingPage() {
 
   const visibleTopTabs = useMemo(() => VISIBLE_TOP_TABS, [])
 
-  // â”€â”€â”€ Legacy ?tab=calls path â€” kept alive so existing CallsTab still works
+  // â”€â”€â”€ Legacy ?tab=calls path — kept alive so existing CallsTab still works
   // until Phase B fully drops the calls top-tab. Read-shim above redirects
   // most users, but trainers who deep-link to ?tab=calls&sub=list still hit
   // the original surface.
@@ -261,7 +261,7 @@ export function TrainingPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Header strip â€” shared across every top-tab */}
+      {/* Header strip — shared across every top-tab */}
       <TrainerHeaderStrip onQuickAction={handleQuickAction} />
 
       {/* Top-tab strip */}
@@ -327,7 +327,7 @@ export function TrainingPage() {
 }
 
 /**
- * Legacy ?tab=calls branch. Kept until Phase B drops it entirely â€” the
+ * Legacy ?tab=calls branch. Kept until Phase B drops it entirely — the
  * read-shim handles new users, but deep-linked bookmarks still render here.
  */
 function LegacyCallsBranch({
@@ -390,7 +390,7 @@ function LegacyCallsBranch({
             className="h-[36px] rounded-full text-xs"
           >
             {isExporting
-              ? t('pages.training.actions.exporting', 'Exportingâ€¦')
+              ? t('pages.training.actions.exporting', 'Exporting…')
               : t('pages.training.actions.exportExcel', 'Export to Excel')}
           </Button>
         ) : null}

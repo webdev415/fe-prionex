@@ -5,12 +5,12 @@ import { Icons } from '@/lib/icons'
 
 /**
  * Generic placeholder modal for Quick Actions whose backend lives in a
- * downstream KAN issue. Used for #1 (Assign task â†’ KAN-411) and #3 (Assign
- * course/drill â†’ KAN-416) until those land.
+ * downstream KAN issue. Used for #1 (Assign task → KAN-411) and #3 (Assign
+ * course/drill → KAN-416) until those land.
  *
  * Shows the title, a 1-liner about what the action will do, the operator
  * being targeted, and the issue ID gating the rollout. Calmer than a
- * sonner toast â€” trainers can see what's coming and click out cleanly.
+ * sonner toast — trainers can see what's coming and click out cleanly.
  */
 export interface PendingFeatureDialogProps {
   open: boolean

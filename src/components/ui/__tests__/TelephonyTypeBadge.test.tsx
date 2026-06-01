@@ -22,7 +22,7 @@ describe('TelephonyTypeBadge', () => {
 
   it('renders an em-dash for unknown', () => {
     render(<TelephonyTypeBadge type="unknown" direction="outbound" />)
-    expect(screen.getByText('â€”')).toBeInTheDocument()
+    expect(screen.getByText('—')).toBeInTheDocument()
     expect(screen.queryByText('pages.training.telephonyType.white')).not.toBeInTheDocument()
   })
 
@@ -30,16 +30,16 @@ describe('TelephonyTypeBadge', () => {
     // Defense-in-depth: even if a stray inbound row carries 'white' or
     // 'grey' via DB drift, the UI must still hide it.
     const { rerender } = render(<TelephonyTypeBadge type="white" direction="inbound" />)
-    expect(screen.getByText('â€”')).toBeInTheDocument()
+    expect(screen.getByText('—')).toBeInTheDocument()
     expect(screen.queryByText('pages.training.telephonyType.white')).not.toBeInTheDocument()
 
     rerender(<TelephonyTypeBadge type="grey" direction="inbound" />)
-    expect(screen.getByText('â€”')).toBeInTheDocument()
+    expect(screen.getByText('—')).toBeInTheDocument()
     expect(screen.queryByText('pages.training.telephonyType.grey')).not.toBeInTheDocument()
   })
 
   it('renders an em-dash when type is null/undefined', () => {
     render(<TelephonyTypeBadge type={null} direction="outbound" />)
-    expect(screen.getByText('â€”')).toBeInTheDocument()
+    expect(screen.getByText('—')).toBeInTheDocument()
   })
 })

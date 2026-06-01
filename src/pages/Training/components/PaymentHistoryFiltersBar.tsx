@@ -171,7 +171,7 @@ export function PaymentHistoryFiltersBar({
               className="h-[45px]"
               placeholder={t(
                 'pages.training.filters.paymentCommentSearchPlaceholder',
-                'Search in payment commentsâ€¦'
+                'Search in payment comments…'
               )}
               value={draft.paymentCommentSearch ?? ''}
               onChange={(e) => {
@@ -218,7 +218,7 @@ export function PaymentHistoryFiltersBar({
           </div>
         </div>
 
-        {/* Independent secondary date range â€” Confirmed at (Payment.verified_at). */}
+        {/* Independent secondary date range — Confirmed at (Payment.verified_at). */}
         <div className="flex flex-col gap-3 rounded-lg border border-gray-200 bg-white/60 p-4">
           <span className="text-dark-500 text-xs font-semibold tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
             {t('pages.training.filters.confirmedAtRangeHeading', 'Confirmed at')}
@@ -255,7 +255,7 @@ export function PaymentHistoryFiltersBar({
           </div>
         </div>
 
-        {/* Independent tertiary date range â€” Payment date (Payment.payment_date, DATE). */}
+        {/* Independent tertiary date range — Payment date (Payment.payment_date, DATE). */}
         <div className="flex flex-col gap-3 rounded-lg border border-gray-200 bg-white/60 p-4">
           <span className="text-dark-500 text-xs font-semibold tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
             {t('pages.training.filters.paymentDateRangeHeading', 'Payment date')}

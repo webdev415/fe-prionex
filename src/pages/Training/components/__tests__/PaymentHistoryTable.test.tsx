@@ -80,7 +80,7 @@ describe('PaymentHistoryTable', () => {
       }),
     ])
     // Three em-dashes: Date of loan sale + Payment comment + Confirmed at
-    expect(screen.getAllByText('â€”')).toHaveLength(3)
+    expect(screen.getAllByText('—')).toHaveLength(3)
   })
 
   it('renders the status badge with the correct i18n key', () => {

@@ -92,6 +92,7 @@ describe('RecordPaymentModal — credit dropdown label', () => {
   })
 })
 
+
 describe('RecordPaymentModal — Payment Type (KAN-507)', () => {
   it('auto-prefills payment_by_rr when the picked debt has a Connected RR', () => {
     mockRrList.mockReturnValue([
@@ -219,7 +220,7 @@ describe('RecordPaymentModal — Payment Type (KAN-507)', () => {
     expect(
       screen.queryByText('pages.training.filters.paymentTypes.payment_by_rr')
     ).not.toBeInTheDocument()
-    // Placeholder is back â€” the operator must re-pick a valid option.
+    // Placeholder is back — the operator must re-pick a valid option.
     expect(
       screen.getByText('pages.clients.modals.recordPayment.paymentTypePlaceholder')
     ).toBeInTheDocument()

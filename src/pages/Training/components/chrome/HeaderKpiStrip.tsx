@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/Input'
 import { QuickActionOverlay } from './QuickActionOverlay'
 
 /**
- * Trainer Workplace header strip (KAN-413, plan Â§1.5 / Â§3.4).
+ * Trainer Workplace header strip (KAN-413, plan §1.5 / §3.4).
  *
  * Mounted above the top-tab strip on ActionAnalysisPage. Renders:
  *   - Search box (operator name or phone)
@@ -16,7 +16,7 @@ import { QuickActionOverlay } from './QuickActionOverlay'
  *   - Quick Action button (opens the overlay)
  *
  * KPIs come from a single `GET /coaching/header-kpis` call. The strip is
- * inert when the user lacks `view_inbox` â€” parent decides whether to render
+ * inert when the user lacks `view_inbox` — parent decides whether to render
  * it at all by passing `enabled`.
  */
 export interface HeaderKpiStripProps {
@@ -47,7 +47,7 @@ function KpiTile({ label, value, delta, isLoading }: KpiTileProps) {
     <div className="flex min-w-[120px] flex-col items-start rounded-2xl bg-white/60 px-4 py-2 shadow-sm">
       <span className="text-[10px] font-medium tracking-wide text-gray-500 uppercase">{label}</span>
       <div className="flex items-baseline gap-2">
-        <span className="text-dark-500 text-lg font-semibold">{isLoading ? 'â€¦' : value}</span>
+        <span className="text-dark-500 text-lg font-semibold">{isLoading ? '…' : value}</span>
         {delta ? (
           <span
             className={`text-[11px] font-medium ${

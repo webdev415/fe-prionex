@@ -6,13 +6,13 @@ import type { AssignmentState, QueueOperator, ScoreBand } from '@/features/quali
 import { useTransitionAssignment } from '@/features/quality/coaching/hooks'
 
 /**
- * Kanban view â€” five columns matching the trainer assignment state machine
- * (KAN-413, plan Â§1.4). Drag a card from one column to another to call
+ * Kanban view — five columns matching the trainer assignment state machine
+ * (KAN-413, plan §1.4). Drag a card from one column to another to call
  * `POST /coaching/assignments/{id}/transition` with the target state.
  *
- * Disallowed transitions (`closed` is terminal; `wait â†’ awaiting_training`
+ * Disallowed transitions (`closed` is terminal; `wait → awaiting_training`
  * has to go through `in_progress`) are filtered server-side and surfaced as
- * a toast. The client doesn't pre-validate â€” keeps the rule in one place.
+ * a toast. The client doesn't pre-validate — keeps the rule in one place.
  *
  * Only operators with an active assignment row appear here. Operators
  * surfaced by the queue endpoint without an assignment (`assignment === null`)
@@ -205,7 +205,7 @@ export function OperatorKanbanView({
   if (isLoading) {
     return (
       <div className="rounded-2xl bg-white/60 p-6 text-center text-sm text-gray-500">
-        {t('pages.training.inbox.list.loading', 'Loading queueâ€¦')}
+        {t('pages.training.inbox.list.loading', 'Loading queue…')}
       </div>
     )
   }

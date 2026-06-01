@@ -135,7 +135,7 @@ export function HeatmapTab() {
           className="h-[45px] rounded-full sm:px-6"
         >
           {exportMutation.isPending
-            ? t('pages.training.actions.exporting', 'Exportingâ€¦')
+            ? t('pages.training.actions.exporting', 'Exporting…')
             : t('pages.training.actions.exportExcel', 'Export to Excel')}
         </Button>
       </div>
@@ -213,7 +213,7 @@ export function HeatmapTab() {
                       const bucket = byHour.get(hour)
                       const color = bucket ? STATE_COLORS[bucket.dominant_state] : '#f3f4f6'
                       const tooltip = bucket
-                        ? `${bucket.dominant_state} â€¢ a:${bucket.minute_breakdown.active_call} p:${bucket.minute_breakdown.post_call} w:${bucket.minute_breakdown.waiting} i:${bucket.minute_breakdown.idle} b:${bucket.minute_breakdown.break}`
+                        ? `${bucket.dominant_state} • a:${bucket.minute_breakdown.active_call} p:${bucket.minute_breakdown.post_call} w:${bucket.minute_breakdown.waiting} i:${bucket.minute_breakdown.idle} b:${bucket.minute_breakdown.break}`
                         : 'no data'
                       return (
                         <td key={hour} className="px-0.5 py-0.5">

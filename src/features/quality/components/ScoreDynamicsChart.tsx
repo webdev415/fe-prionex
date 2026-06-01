@@ -1,12 +1,12 @@
 ﻿/**
- * ScoreDynamicsChart â€” operator score-over-time line chart (KAN-410, Feature 2.4).
+ * ScoreDynamicsChart — operator score-over-time line chart (KAN-410, Feature 2.4).
  *
  * Recharts line chart with:
  * - Operator line (primary)
  * - Team-average line (faded, dashed) so the trainer can compare at a glance
  * - Reference dots clickable to open the underlying scorecard (TODO follow-up)
  *
- * The component is a pure presentation layer â€” data comes from `useOperatorDynamics`.
+ * The component is a pure presentation layer — data comes from `useOperatorDynamics`.
  */
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -151,7 +151,7 @@ export function ScoreDynamicsChart({ data, onPointClick }: ScoreDynamicsChartPro
 
 function formatBucket(iso: string, granularity: string): string {
   // The backend already sends YYYY-MM-DD for the bucket start. For week /
-  // month granularity we keep the start date as the label â€” adding format
+  // month granularity we keep the start date as the label — adding format
   // logic per locale here would duplicate the i18next plumbing for a chart
   // axis. Good enough for v1.
   if (granularity === 'month') return iso.slice(0, 7) // YYYY-MM

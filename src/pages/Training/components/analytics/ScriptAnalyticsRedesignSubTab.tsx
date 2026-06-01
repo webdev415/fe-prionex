@@ -6,7 +6,7 @@ import {
 } from '../../mocks/trainerWorkplaceMocks'
 
 /**
- * Script Analytics redesign â€” Auto-flagged calls list + result distribution
+ * Script Analytics redesign — Auto-flagged calls list + result distribution
  * by operator. The funnel + pain-points view from KAN-503 lands in a later
  * step; this is the boilerplate for the current-state view.
  */
@@ -25,7 +25,7 @@ export function ScriptAnalyticsRedesignSubTab() {
       <div className="rounded-2xl border border-gray-100 bg-white shadow-sm">
         <div className="border-b border-gray-100 px-4 py-3">
           <h3 className="text-dark-500 text-sm font-semibold">
-            {t('pages.training.script.alerts.title', 'Automatic flags â€” require attention')}
+            {t('pages.training.script.alerts.title', 'Automatic flags — require attention')}
           </h3>
         </div>
         <ul className="divide-y divide-gray-100">
@@ -99,7 +99,7 @@ export function ScriptAnalyticsRedesignSubTab() {
                 <td className="px-4 py-3 text-right text-violet-600">{row.willPass}</td>
                 <td className="px-4 py-3 text-right">
                   <span className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-medium text-red-600">
-                    ðŸš© {row.flags}
+                    🚩 {row.flags}
                   </span>
                 </td>
               </tr>

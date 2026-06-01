@@ -64,7 +64,7 @@ export function PaymentHistoryTab() {
   )
 
   // Don't fire the request when the scope or refinement resolves to an empty
-  // user-id list â€” the backend would 200 with 0 rows; we render the empty
+  // user-id list — the backend would 200 with 0 rows; we render the empty
   // state ourselves with a clearer "no matching scope" message.
   const isEmptyByScope =
     scoped.isEmptyResolution ||

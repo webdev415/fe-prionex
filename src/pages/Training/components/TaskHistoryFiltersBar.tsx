@@ -44,7 +44,7 @@ interface Props {
   onApply: (next: TaskHistoryBarState) => void
   onClear: () => void
   userTimezone?: string | null
-  /** Page-level scope (KAN-506) â€” drives the picker-disabled flags. Optional
+  /** Page-level scope (KAN-506) — drives the picker-disabled flags. Optional
    *  so the bar still renders standalone for tests / future surfaces. */
   scope?: ScopedUserIds
 }

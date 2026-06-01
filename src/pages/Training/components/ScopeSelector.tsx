@@ -20,9 +20,9 @@ const SCOPE_LABEL_KEY: Record<ActionAnalysisScope, { key: string; fallback: stri
 /**
  * Page-level scope selector (KAN-506). Lives on ActionAnalysisPage just
  * below the sub-tab strip. Renders four segmented pills; clicking writes
- * `?scope=â€¦` and lets every Calls sub-tab pick up the new value via
+ * `?scope=…` and lets every Calls sub-tab pick up the new value via
  * `useScopedUserIds`. The "Group" pill is disabled until the Group entity
- * ships (see KAN-506 Â§1.4).
+ * ships (see KAN-506 §1.4).
  */
 export function ScopeSelector() {
   const { t } = useTranslation('common')

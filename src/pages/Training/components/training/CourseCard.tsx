@@ -4,7 +4,7 @@ import { Icons } from '@/lib/icons'
 import type { MockCourse } from '../../mocks/trainerWorkplaceMocks'
 
 /**
- * Course card â€” title, author, category, level, duration, module count,
+ * Course card — title, author, category, level, duration, module count,
  * enrolled count, avg completion. Used in the Courses Catalogue grid.
  */
 export interface CourseCardProps {
@@ -43,7 +43,7 @@ export function CourseCard({ course }: CourseCardProps) {
             {t('pages.training.training.courses.author', 'Author')}: {course.author}
           </span>
           <span className="text-[11px] text-gray-400">
-            {course.category} Â· {LEVEL_LABEL[course.level]}
+            {course.category} · {LEVEL_LABEL[course.level]}
           </span>
         </div>
 

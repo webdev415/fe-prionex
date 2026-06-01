@@ -113,7 +113,7 @@ export function InteractionHistoryTab() {
     sortBy: InteractionMonitoringSortBy,
     sortDir: InteractionMonitoringSortDir
   ) => {
-    // Sort changes commit immediately (no Apply step) â€” clicking a column
+    // Sort changes commit immediately (no Apply step) — clicking a column
     // header is meant as a one-click reorder, not a draft edit.
     setSearchParams(
       writeInteractionBarState(new URLSearchParams(searchParams), {

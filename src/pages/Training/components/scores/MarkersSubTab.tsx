@@ -1,5 +1,5 @@
 ﻿/**
- * MarkersSubTab â€” cross-call marker browser (KAN-410, Feature 2.2).
+ * MarkersSubTab — cross-call marker browser (KAN-410, Feature 2.2).
  *
  * Trainers filter every marker in scope by type / status and export to xlsx.
  * The per-call marker creation flow lives on the call recording modal
@@ -127,7 +127,7 @@ export function MarkersSubTab() {
           className="h-[40px] rounded-full text-xs"
         >
           {exportMutation.isPending
-            ? t('pages.training.actions.exporting', 'Exportingâ€¦')
+            ? t('pages.training.actions.exporting', 'Exporting…')
             : t('pages.training.actions.exportExcel', 'Export to Excel')}
         </Button>
       </div>
@@ -148,7 +148,7 @@ export function MarkersSubTab() {
             {isLoading ? (
               <tr>
                 <td className="px-3 py-6 text-center text-gray-400" colSpan={6}>
-                  {t('common.loading', 'Loadingâ€¦')}
+                  {t('common.loading', 'Loading…')}
                 </td>
               </tr>
             ) : isError ? (
@@ -189,7 +189,7 @@ export function MarkersSubTab() {
                     {formatTimestamp(row.timestamp_ms)}
                   </td>
                   <td className="max-w-[24rem] truncate px-3 py-2 text-gray-600">
-                    {row.comment ?? 'â€”'}
+                    {row.comment ?? '—'}
                   </td>
                   <td className="px-3 py-2">
                     <span
@@ -212,7 +212,7 @@ export function MarkersSubTab() {
       {totalPages > 1 ? (
         <div className="flex items-center justify-between text-sm text-gray-600">
           <span>
-            {t('common.page', 'Page')} {page} {t('common.of', 'of')} {totalPages} Â· {total}{' '}
+            {t('common.page', 'Page')} {page} {t('common.of', 'of')} {totalPages} · {total}{' '}
             {t('pages.training.markersTotalSuffix', 'markers')}
           </span>
           <div className="flex gap-2">

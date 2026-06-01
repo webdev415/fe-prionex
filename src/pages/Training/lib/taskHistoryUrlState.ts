@@ -33,7 +33,7 @@ const TASK_STATUSES: readonly TaskStatus[] = [
  * and always filter `created_at` (the Created date column).
  *
  * `dueFromDate`/`dueFromTime` + `dueToDate`/`dueToTime` are the two
- * separate filters under Status â€” they compose into one `due_date_from`/
+ * separate filters under Status — they compose into one `due_date_from`/
  * `due_date_to` window on `Task.due_date`. Time inputs are optional and
  * default to `00:00` / `23:59:59.999` when only a date is set.
  *

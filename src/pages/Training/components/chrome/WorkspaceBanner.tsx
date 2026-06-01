@@ -6,7 +6,7 @@ import { useAuthStore } from '@/stores/authStore'
  * (KAN-413 Figma A-frame). Renders the trainer's project + role + department
  * so the operator under coaching is always anchored to the right context.
  *
- * Pieces are joined by " Â· " and missing parts are silently omitted, so the
+ * Pieces are joined by " · " and missing parts are silently omitted, so the
  * banner stays clean for users who don't have a department assigned.
  */
 export function WorkspaceBanner() {
@@ -35,7 +35,7 @@ export function WorkspaceBanner() {
       role="status"
       className="border-primary-200 bg-primary-50/90 text-primary-900 sticky bottom-0 z-10 -mx-4 mt-4 flex flex-wrap items-center justify-between gap-2 border-t px-4 py-2 text-[11px] font-medium backdrop-blur sm:-mx-6 sm:px-6"
     >
-      <span>{parts.join(' Â· ')}</span>
+      <span>{parts.join(' · ')}</span>
       <span className="text-primary-700/80 flex flex-wrap items-center gap-2">
         {assignmentLabel ? <span>{assignmentLabel}</span> : null}
         {roleName ? (

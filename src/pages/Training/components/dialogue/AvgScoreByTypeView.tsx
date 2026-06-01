@@ -65,7 +65,7 @@ function BarRow({
         <span className="text-dark-500 text-sm font-medium">{label}</span>
         <div className="flex items-baseline gap-2">
           <span className="text-dark-500 text-lg font-semibold">{value}</span>
-          <span className="text-[10px] text-gray-500">/100 Â· {count} scorecards</span>
+          <span className="text-[10px] text-gray-500">/100 · {count} scorecards</span>
         </div>
       </div>
       <div className="h-4 overflow-hidden rounded-full bg-gray-100">

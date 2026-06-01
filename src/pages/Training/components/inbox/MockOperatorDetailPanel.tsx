@@ -109,17 +109,20 @@ export function MockOperatorDetailPanel({ operator }: MockOperatorDetailPanelPro
             {t('pages.training.inbox.detail.viewDynamics', 'View dynamics')} →
           </span>
         </div>
-        <div className="flex h-20 items-end gap-2">
+        <div className="flex h-24 items-stretch gap-2">
           {detail.scoreSeries.map((p) => {
-            const height = (p.value / seriesMax) * 100
+            const heightPct = (p.value / seriesMax) * 100
             return (
-              <div key={p.label} className="flex flex-1 flex-col items-center gap-1">
-                <div className="flex w-full flex-1 items-end">
+              <div key={p.label} className="flex flex-1 flex-col items-center justify-end gap-1">
+                <div className="relative flex h-full w-full items-end justify-center">
                   <div
-                    className="bg-primary-400 w-full rounded-t"
-                    style={{ height: `${height}%` }}
+                    className="bg-primary-400 w-full rounded-t-sm transition-all"
+                    style={{ height: `${heightPct}%` }}
                     title={`${p.label}: ${p.value}`}
                   />
+                  <span className="absolute -top-3 text-[8px] font-medium text-gray-500">
+                    {p.value}
+                  </span>
                 </div>
                 <span className="text-[9px] text-gray-500">{p.label}</span>
               </div>

@@ -1,0 +1,132 @@
+import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import {
+  MOCK_TIME_AT_WORK,
+  MOCK_TIME_AT_WORK_KPIS,
+  type MockTimeAtWorkRow,
+} from '../../mocks/trainerWorkplaceMocks'
+import { PeriodFilterStrip, type PeriodOption } from './PeriodFilterStrip'
+
+/**
+ * Time at Work sub-tab (KAN-415). Mock-data variant of the legacy
+ * ScreenTimeTab — KPI strip showing team-level averages on top, table of
+ * per-operator timing stats below. Mirrors the Figma "Time at Work" frame.
+ */
+export function MockTimeAtWorkSubTab() {
+  const { t } = useTranslation('common')
+  const [period, setPeriod] = useState<PeriodOption>('today')
+  const k = MOCK_TIME_AT_WORK_KPIS
+
+  const tiles = [
+    {
+      key: 'to-lead',
+      label: t('pages.training.timeAtWork.kpi.toLead', 'To lead (average)'),
+      value: k.toLeadAvg,
+    },
+    {
+      key: 'credits',
+      label: t('pages.training.timeAtWork.kpi.credits', 'Credits (average)'),
+      value: k.creditsAvg,
+    },
+    {
+      key: 'to-form',
+      label: t('pages.training.timeAtWork.kpi.toForm', 'To form'),
+      value: k.toFormAvg,
+    },
+    {
+      key: 'downtime',
+      label: t('pages.training.timeAtWork.kpi.downtime', 'Downtime'),
+      value: k.downtimeAvg,
+    },
+    {
+      key: 'after-call',
+      label: t('pages.training.timeAtWork.kpi.afterCall', 'After call (average)'),
+      value: k.afterCallAvg,
+    },
+  ]
+
+  return (
+    <div className="flex flex-col gap-4">
+      <PeriodFilterStrip value={period} onChange={setPeriod} />
+
+      {/* KPI strip */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+        {tiles.map((tile) => (
+          <div
+            key={tile.key}
+            className="flex flex-col gap-1 rounded-2xl border border-gray-100 bg-white p-3 shadow-sm"
+          >
+            <span className="text-[10px] tracking-wide text-gray-500 uppercase">{tile.label}</span>
+            <span className="text-dark-500 text-xl font-semibold">{tile.value}</span>
+          </div>
+        ))}
+      </div>
+
+      <h2 className="text-dark-500 text-base font-semibold">
+        {t('pages.training.timeAtWork.title', 'Time in work by operators')}
+      </h2>
+
+      {/* Table */}
+      <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
+        <table className="w-full text-xs">
+          <thead className="bg-gray-50 text-left text-[10px] text-gray-500 uppercase">
+            <tr>
+              <th className="px-4 py-3">
+                {t('pages.training.timeAtWork.cols.operator', 'Operator')}
+              </th>
+              <th className="px-4 py-3 text-right">
+                {t('pages.training.timeAtWork.cols.calls', 'Calls')}
+              </th>
+              <th className="px-4 py-3 text-right">
+                {t('pages.training.timeAtWork.cols.timeToLead', 'Time to lead')}
+              </th>
+              <th className="px-4 py-3 text-right">
+                {t('pages.training.timeAtWork.cols.successCredits', 'Succ. Credits')}
+              </th>
+              <th className="px-4 py-3 text-right">
+                {t('pages.training.timeAtWork.cols.fillForms', 'Fill forms')}
+              </th>
+              <th className="px-4 py-3 text-right">
+                {t('pages.training.timeAtWork.cols.downtime', 'Downtime (AHT)')}
+              </th>
+              <th className="px-4 py-3 text-right">
+                {t('pages.training.timeAtWork.cols.afterCall', 'After call')}
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {MOCK_TIME_AT_WORK.map((row) => (
+              <TimeAtWorkRow key={row.id} row={row} />
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
+
+function TimeAtWorkRow({ row }: { row: MockTimeAtWorkRow }) {
+  return (
+    <tr className="border-t border-gray-100 hover:bg-gray-50">
+      <td className="px-4 py-3">
+        <div className="flex items-center gap-2">
+          <div
+            className="flex h-7 w-7 items-center justify-center rounded-full text-[10px] font-semibold text-gray-700"
+            style={{ backgroundColor: row.avatarColor }}
+          >
+            {row.initials}
+          </div>
+          <span className="text-dark-500 text-xs font-medium">{row.operator}</span>
+        </div>
+      </td>
+      <td className="text-dark-500 px-4 py-3 text-right font-semibold">{row.calls}</td>
+      <td className="px-4 py-3 text-right text-gray-700">{row.timeToLead}</td>
+      <td className="px-4 py-3 text-right text-emerald-600">{row.successCredits}</td>
+      <td className="px-4 py-3 text-right text-gray-700">{row.fillForms}</td>
+      <td className="px-4 py-3 text-right text-amber-600">{row.downtime}</td>
+      <td className="px-4 py-3 text-right text-violet-600">{row.afterCall}</td>
+    </tr>
+  )
+}
+
+export default MockTimeAtWorkSubTab

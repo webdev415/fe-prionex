@@ -12,7 +12,7 @@ import {
 /**
  * Weekly Tasks sub-tab under Action Analysis (KAN-415). Renders a per-day
  * KPI strip + the task list filtered to the current week. Heatmap row
- * (week Ã— day) ships in a later step â€” this boilerplate uses the KPI strip
+ * (week Ã— day) ships in a later step — this boilerplate uses the KPI strip
  * to communicate the day breakdown.
  */
 const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
@@ -79,7 +79,7 @@ export function WeeklyTasksSubTab() {
       <div className="flex items-center justify-between rounded-2xl border border-red-100 bg-red-50/60 px-4 py-2.5">
         <div className="flex items-center gap-2 text-xs font-medium text-red-700">
           <Icons.Warning size={14} />
-          {t('pages.training.weeklyTasks.overdueBanner', 'Weekly tasks â€” share an overdue view')}
+          {t('pages.training.weeklyTasks.overdueBanner', 'Weekly tasks — share an overdue view')}
         </div>
         <Button variant="ghost" size="sm" className="rounded-full text-[11px] text-red-700">
           {t('pages.training.tasks.overdueBannerCta', 'View overdue')}

@@ -60,7 +60,7 @@ export function TaskHistoryTab() {
     // Tab-level Department refinement still applies as long as the scope
     // allows it (scope=all and scope=department both leave the employee
     // picker editable, and scope=department additionally locks Department to
-    // the current user's own â€” handled inside the filter bar).
+    // the current user's own — handled inside the filter bar).
     if (barState.departmentId != null) {
       const ids = operators
         .filter((o) => o.department_id === barState.departmentId)

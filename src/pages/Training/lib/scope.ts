@@ -1,7 +1,7 @@
 ﻿/**
- * Page-level scope selector for Action Analysis â†’ Calls (KAN-506).
+ * Page-level scope selector for Action Analysis → Calls (KAN-506).
  *
- * The scope value lives on the URL (`?scope=â€¦`) and applies to every Calls
+ * The scope value lives on the URL (`?scope=…`) and applies to every Calls
  * sub-tab: it drives the effective `user_ids[]` filter each sub-tab sends to
  * its backend. Tab-level employee / department pickers continue to exist but
  * become refinements within the active scope (see `useScopedUserIds`).
@@ -59,7 +59,7 @@ export interface ScopedUserIds {
   /**
    * True when scope=department but the current user has no department or
    * no operators in it. Sub-tabs should render an explicit empty-state
-   * instead of issuing a request with `user_ids=[]` (which would 200 â†’ 0).
+   * instead of issuing a request with `user_ids=[]` (which would 200 → 0).
    */
   isEmptyResolution: boolean
 }
@@ -76,13 +76,13 @@ const SCOPE_LABEL_KEY: Record<ActionAnalysisScope, string> = {
  * picker-disabled flags. Each sub-tab consumes this hook and passes the
  * resolved `userIds` to its backend filter.
  *
- * Resolution rules (also documented in [Epic/KAN-506-Plan.md](Epic/KAN-506-Plan.md) Â§3.4):
- *   - `my`         â†’ `[me.id]`; both pickers disabled.
- *   - `group`      â†’ `undefined` (no-op until Groups land); both pickers disabled.
- *   - `department` â†’ operators sharing the current user's department; department
+ * Resolution rules (also documented in [Epic/KAN-506-Plan.md](Epic/KAN-506-Plan.md) §3.4):
+ *   - `my`         → `[me.id]`; both pickers disabled.
+ *   - `group`      → `undefined` (no-op until Groups land); both pickers disabled.
+ *   - `department` → operators sharing the current user's department; department
  *                    picker disabled (locked), employee picker enabled as a refinement.
- *                    If no department or no operators â†’ `userIds=[]` + isEmptyResolution.
- *   - `all`        â†’ `undefined`; both pickers fully enabled.
+ *                    If no department or no operators → `userIds=[]` + isEmptyResolution.
+ *   - `all`        → `undefined`; both pickers fully enabled.
  */
 export function useScopedUserIds(operators: OperatorUser[]): ScopedUserIds {
   const [searchParams] = useSearchParams()

@@ -16,7 +16,7 @@ import { OperatorGridView } from './OperatorGridView'
 import { PERMISSIONS } from '@/constants/permissions'
 
 /**
- * Inbox top-tab container (KAN-413, plan Â§3.5).
+ * Inbox top-tab container (KAN-413, plan §3.5).
  *
  * Hosts the view-mode toggle, scope selector (role-gated), the operator
  * list, and the right-side detail panel. Header KPI strip + Quick Action

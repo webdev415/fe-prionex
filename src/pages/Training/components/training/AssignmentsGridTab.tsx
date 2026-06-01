@@ -140,7 +140,7 @@ function AssignmentRow({ assignment }: { assignment: MockAssignment }) {
           <div className="flex flex-col">
             <span className="text-dark-500 text-xs font-medium">{assignment.operator.name}</span>
             <span className="text-[10px] text-gray-500">
-              {assignment.operator.team} Â· ext. {assignment.operator.extension}
+              {assignment.operator.team} · ext. {assignment.operator.extension}
             </span>
           </div>
         </div>
@@ -150,7 +150,7 @@ function AssignmentRow({ assignment }: { assignment: MockAssignment }) {
           <span className="text-dark-500 text-xs font-medium">{assignment.courseTitle}</span>
           <span className="text-[10px] text-gray-500">
             {Math.floor(assignment.courseDurationMinutes / 60)}h{' '}
-            {assignment.courseDurationMinutes % 60}m Â· {assignment.courseModules} modules
+            {assignment.courseDurationMinutes % 60}m · {assignment.courseModules} modules
           </span>
         </div>
       </td>

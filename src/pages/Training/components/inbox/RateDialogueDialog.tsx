@@ -17,7 +17,7 @@ import { CallReviewLayout } from '../CallReviewLayout'
  *
  * If the operator has no recorded asterisk_extension (e.g. an admin user
  * who never received a phone provisioning), the dialog shows an empty
- * state â€” there are no calls to rate.
+ * state — there are no calls to rate.
  */
 export interface RateDialogueDialogProps {
   open: boolean
@@ -27,7 +27,7 @@ export interface RateDialogueDialogProps {
 
 function formatTime(value: string): { date: string; time: string } {
   const d = new Date(value)
-  if (Number.isNaN(d.getTime())) return { date: 'â€”', time: '' }
+  if (Number.isNaN(d.getTime())) return { date: '—', time: '' }
   return {
     date: d.toLocaleDateString(),
     time: d.toLocaleTimeString(undefined, {
@@ -98,7 +98,7 @@ export function RateDialogueDialog({ open, onClose, operatorId }: RateDialogueDi
     if (isLoading) {
       return (
         <p className="px-4 py-8 text-center text-sm text-gray-500">
-          {t('pages.training.inbox.detail.loading', 'Loadingâ€¦')}
+          {t('pages.training.inbox.detail.loading', 'Loading…')}
         </p>
       )
     }
@@ -137,10 +137,10 @@ export function RateDialogueDialog({ open, onClose, operatorId }: RateDialogueDi
                     >
                       <div className="flex flex-col">
                         <span className="text-dark-500 font-medium">
-                          {start.date} Â· {start.time}
+                          {start.date} · {start.time}
                         </span>
                         <span className="text-xs text-gray-500">
-                          {call.customer_number} Â· {formatDuration(call.talk_duration)}
+                          {call.customer_number} · {formatDuration(call.talk_duration)}
                         </span>
                       </div>
                       <span className="text-xs text-gray-500">

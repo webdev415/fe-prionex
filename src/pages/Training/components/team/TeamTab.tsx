@@ -5,7 +5,7 @@ import { MOCK_DEPARTMENTS } from '../../mocks/trainerWorkplaceMocks'
 import { DepartmentCard } from './DepartmentCard'
 
 /**
- * Team top-tab (KAN-414). Department â†’ Team â†’ Operator hierarchy with
+ * Team top-tab (KAN-414). Department → Team → Operator hierarchy with
  * department filter chips, online/offline state per operator, mini composite
  * scores. Clicking an operator opens the shared Operator Detail Panel
  * (placeholder until KAN-413 promotion lands).
@@ -25,7 +25,7 @@ export function TeamTab() {
     { id: 'all' as const, label: t('pages.training.team.chips.all', 'All my departments') },
     ...MOCK_DEPARTMENTS.map((d) => ({
       id: d.id,
-      label: `${t('pages.training.team.chips.dept', 'Dept')} ${d.name.split('Â·')[0].replace('Department ', '').trim()}: ${d.name.split('Â·')[1]?.trim() ?? ''}`,
+      label: `${t('pages.training.team.chips.dept', 'Dept')} ${d.name.split('·')[0].replace('Department ', '').trim()}: ${d.name.split('·')[1]?.trim() ?? ''}`,
     })),
     {
       id: 'restructuring' as const,

@@ -8,9 +8,9 @@ const VIEW_MODE_LABEL: Record<TrainingInboxViewMode, { key: string; fallback: st
 }
 
 /**
- * Three-way Inbox / Kanban / Grid toggle (KAN-413, plan Â§3.5).
+ * Three-way Inbox / Kanban / Grid toggle (KAN-413, plan §3.5).
  *
- * Kanban + Grid are disabled in step 4 â€” their components land in steps 7
+ * Kanban + Grid are disabled in step 4 — their components land in steps 7
  * and 8. The disabled buttons still render so the user sees the full layout
  * preview from day one (matches the Figma chrome).
  */

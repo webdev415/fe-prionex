@@ -115,7 +115,7 @@ export function DialogueEvaluationTab() {
         })}
       </div>
 
-      {/* Body â€” left list + right detail panel */}
+      {/* Body — left list + right detail panel */}
       {activeView === 'average-score' ? (
         <AvgScoreByTypeView />
       ) : (
@@ -168,7 +168,7 @@ function ScorecardDetailPanel({ selectedId }: { selectedId: number | null }) {
         <div className="flex flex-col">
           <span className="text-dark-500 text-sm font-semibold">{row.operatorName}</span>
           <span className="text-[11px] text-gray-500">
-            {row.dateLabel} Â· {row.duration}
+            {row.dateLabel} · {row.duration}
           </span>
         </div>
         <span className="bg-primary-50 text-primary-700 ml-auto rounded-full px-3 py-1 text-xs font-semibold">

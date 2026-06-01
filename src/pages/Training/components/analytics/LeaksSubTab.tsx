@@ -5,7 +5,7 @@ import { MOCK_LEAKS, MOCK_LEAKS_KPIS, type MockLeakRow } from '../../mocks/train
 import { PeriodFilterStrip, type PeriodOption } from './PeriodFilterStrip'
 
 /**
- * Leaks sub-tab (KAN-415). Escalations / lost-client view â€” KPI strip +
+ * Leaks sub-tab (KAN-415). Escalations / lost-client view — KPI strip +
  * follow-up filter chips + table.
  */
 export function LeaksSubTab() {
@@ -47,7 +47,7 @@ export function LeaksSubTab() {
           <Icons.Warning size={14} />
           {t(
             'pages.training.leaks.escalationBanner',
-            'Escalations without follow-up â€” take action'
+            'Escalations without follow-up — take action'
           )}
         </div>
       </div>
@@ -118,7 +118,7 @@ function LeakRow({ row }: { row: MockLeakRow }) {
       <td className="px-4 py-3 text-gray-700">{row.client}</td>
       <td className="px-4 py-3 text-gray-600">{row.agreement}</td>
       <td className="px-4 py-3 text-right font-medium text-gray-700">
-        {row.promiseAmount.toLocaleString()} â‚´
+        {row.promiseAmount.toLocaleString()} ₴
       </td>
       <td className="px-4 py-3 text-gray-600">{row.promiseDateLabel}</td>
       <td className="px-4 py-3">
