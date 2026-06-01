@@ -1,36 +1,48 @@
 ﻿import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
-import { Button } from '@/components/ui/Button'
 import { Icons } from '@/lib/icons'
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/DropdownMenu'
 import { useAuthStore } from '@/stores/authStore'
 import { PERMISSIONS } from '@/constants/permissions'
 
 /**
- * Quick Action overlay — top-right floating menu invoked from the Trainer
- * Workplace header strip.
- *
- * Four actions per [Figma/Action Overlay.png]:
- *   1. Assign task          — stubbed; lands in KAN-411 (step 9 of KAN-413)
- *   2. Schedule 1-on-1      — stubbed; real flow in step 6
- *   3. Assign course/drill  — stubbed; lands in KAN-416 (step 9 of KAN-413)
- *   4. Rate dialogue        — stubbed; real flow in step 5
- *
- * Each button is gated on its respective permission; absent perms hide the
- * row. Clicking a stubbed action toasts a "coming soon" message and (where
- * applicable in later steps) calls the appropriate handler prop.
+ * Quick Action — Figma "Double Button - Fast Action" + Action Overlay menu.
  */
 export interface QuickActionOverlayProps {
   onAssignTask?: () => void
   onScheduleOneOnOne?: () => void
   onAssignMaterial?: () => void
   onRateDialogue?: () => void
+}
+
+interface ActionRowProps {
+  icon: React.ReactNode
+  title: string
+  subtitle: string
+  onClick: () => void
+}
+
+function ActionRow({ icon, title, subtitle, onClick }: ActionRowProps) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-gray-50"
+    >
+      <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-[#204E4D]">
+        {icon}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-sm font-medium text-[#05040D]">{title}</span>
+        <span className="block text-xs text-[#7B7B7B]">{subtitle}</span>
+      </span>
+    </button>
+  )
 }
 
 export function QuickActionOverlay({
@@ -45,9 +57,9 @@ export function QuickActionOverlay({
 
   const canAssignTask = userPermissions.includes(PERMISSIONS.CLIENTS.CREATE_TASKS)
   const canScheduleOneOnOne = userPermissions.includes(PERMISSIONS.TRAINING.CREATE_ONE_ON_ONE)
-  // Course/drill assignment lands in KAN-416 — no permission constant yet.
   const canAssignMaterial = userPermissions.includes(PERMISSIONS.TRAINING.VIEW_INBOX)
   const canRateDialogue = userPermissions.includes(PERMISSIONS.TRAINING.CREATE_SCORECARD)
+  const canViewTraining = userPermissions.includes(PERMISSIONS.TRAINING.VIEW_INBOX)
 
   const fallbackToast = () =>
     toast.info(t('pages.training.inbox.quickActions.comingSoon', 'Coming soon'))
@@ -57,83 +69,88 @@ export function QuickActionOverlay({
     ;(handler ?? fallbackToast)()
   }
 
-  if (!canAssignTask && !canScheduleOneOnOne && !canAssignMaterial && !canRateDialogue) {
+  const hasAnyAction =
+    canAssignTask || canScheduleOneOnOne || canAssignMaterial || canRateDialogue || canViewTraining
+
+  if (!hasAnyAction) {
     return null
   }
+
+  const showAssignTask = canAssignTask || canViewTraining
+  const showSchedule = canScheduleOneOnOne || canViewTraining
+  const showMaterial = canAssignMaterial
+  const showRate = canRateDialogue || canViewTraining
 
   return (
     <DropdownMenu open={open} onOpenChange={setOpen}>
       <DropdownMenuTrigger asChild>
-        <Button
-          variant="primary"
-          size="md"
-          leftIcon={<Icons.Add size={16} className="text-white" />}
-          className="h-[45px] rounded-full px-5 text-xs"
+        <button
+          type="button"
+          className="mb-1 flex h-[42px] items-center gap-3 rounded-full border border-white bg-[#204E4D] py-1 pr-5 pl-1 text-white shadow-sm transition-colors hover:bg-[#1a403f]"
         >
-          {t('pages.training.inbox.quickActions.button', 'Quick Action')}
-        </Button>
+          <span className="flex h-[34px] w-[34px] flex-shrink-0 items-center justify-center rounded-full bg-[#BBFB5B]">
+            <Icons.Add size={18} className="text-[#05040D]" />
+          </span>
+          <span className="text-xs font-medium tracking-tight">
+            {t('pages.training.inbox.quickActions.button', 'Quick Action')}
+          </span>
+          <Icons.ArrowDown02
+            size={16}
+            className={`text-white transition-transform ${open ? 'rotate-180' : ''}`}
+          />
+        </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-72">
-        {canAssignTask ? (
-          <DropdownMenuItem onClick={handleClick(onAssignTask)} className="gap-3 py-2.5">
-            <Icons.Brochure size={20} className="text-primary-600" />
-            <div className="flex flex-col">
-              <span className="text-sm font-medium">
-                {t('pages.training.inbox.quickActions.assignTask', 'Assign task')}
-              </span>
-              <span className="text-xs text-gray-500">
-                {t(
-                  'pages.training.inbox.quickActions.assignTaskHint',
-                  'Operator · topic · deadline'
-                )}
-              </span>
-            </div>
-          </DropdownMenuItem>
+      <DropdownMenuContent
+        align="end"
+        className="w-[min(100vw-2rem,320px)] overflow-hidden rounded-2xl border border-[#EBECE8] p-0 shadow-lg"
+      >
+        {showAssignTask ? (
+          <ActionRow
+            icon={<Icons.CheckmarkSquare03 size={16} className="text-[#BBFB5B]" />}
+            title={t('pages.training.inbox.quickActions.assignTask', 'Assign task')}
+            subtitle={t(
+              'pages.training.inbox.quickActions.assignTaskHint',
+              'Operator · topic · deadline'
+            )}
+            onClick={handleClick(canAssignTask ? onAssignTask : undefined)}
+          />
         ) : null}
-
-        {canScheduleOneOnOne ? (
-          <DropdownMenuItem onClick={handleClick(onScheduleOneOnOne)} className="gap-3 py-2.5">
-            <Icons.Calendar size={20} className="text-primary-600" />
-            <div className="flex flex-col">
-              <span className="text-sm font-medium">
-                {t('pages.training.inbox.quickActions.scheduleOneOnOne', 'Schedule 1-on-1')}
-              </span>
-              <span className="text-xs text-gray-500">
-                {t(
-                  'pages.training.inbox.quickActions.scheduleOneOnOneHint',
-                  'Operator · date · time'
-                )}
-              </span>
-            </div>
-          </DropdownMenuItem>
+        {showAssignTask && (showSchedule || showMaterial || showRate) ? (
+          <div className="mx-4 border-t border-[#EBECE8]" />
         ) : null}
-
-        {canAssignMaterial ? (
-          <DropdownMenuItem onClick={handleClick(onAssignMaterial)} className="gap-3 py-2.5">
-            <Icons.Activity01 size={20} className="text-primary-600" />
-            <div className="flex flex-col">
-              <span className="text-sm font-medium">
-                {t('pages.training.inbox.quickActions.assignCourse', 'Assign course / drill')}
-              </span>
-              <span className="text-xs text-gray-500">
-                {t('pages.training.inbox.quickActions.assignCourseHint', 'Operator · material')}
-              </span>
-            </div>
-          </DropdownMenuItem>
+        {showSchedule ? (
+          <ActionRow
+            icon={<Icons.Calendar size={16} className="text-[#BBFB5B]" />}
+            title={t('pages.training.inbox.quickActions.scheduleOneOnOne', 'Schedule 1-on-1')}
+            subtitle={t(
+              'pages.training.inbox.quickActions.scheduleOneOnOneHint',
+              'Operator · date · time'
+            )}
+            onClick={handleClick(canScheduleOneOnOne ? onScheduleOneOnOne : undefined)}
+          />
         ) : null}
-
-        {canRateDialogue ? (
-          <DropdownMenuItem onClick={handleClick(onRateDialogue)} className="gap-3 py-2.5">
-            <Icons.SecurityValidation size={20} className="text-primary-600" />
-            <div className="flex flex-col">
-              <span className="text-sm font-medium">
-                {t('pages.training.inbox.quickActions.rateDialogue', 'Rate dialogue')}
-              </span>
-              <span className="text-xs text-gray-500">
-                {t('pages.training.inbox.quickActions.rateDialogueHint', 'Open scorecard')}
-              </span>
-            </div>
-          </DropdownMenuItem>
+        {showSchedule && (showMaterial || showRate) ? (
+          <div className="mx-4 border-t border-[#EBECE8]" />
+        ) : null}
+        {showMaterial ? (
+          <ActionRow
+            icon={<Icons.Activity01 size={16} className="text-[#BBFB5B]" />}
+            title={t('pages.training.inbox.quickActions.assignCourse', 'Assign course / drill')}
+            subtitle={t(
+              'pages.training.inbox.quickActions.assignCourseHint',
+              'Operator · material'
+            )}
+            onClick={handleClick(onAssignMaterial)}
+          />
+        ) : null}
+        {showMaterial && showRate ? <div className="mx-4 border-t border-[#EBECE8]" /> : null}
+        {showRate ? (
+          <ActionRow
+            icon={<Icons.SecurityValidation size={16} className="text-[#BBFB5B]" />}
+            title={t('pages.training.inbox.quickActions.rateDialogue', 'Rate dialogue')}
+            subtitle={t('pages.training.inbox.quickActions.rateDialogueHint', 'Open scorecard')}
+            onClick={handleClick(canRateDialogue ? onRateDialogue : undefined)}
+          />
         ) : null}
       </DropdownMenuContent>
     </DropdownMenu>

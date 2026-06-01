@@ -2,11 +2,11 @@
 import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
 import { MOCK_HEADER_KPIS } from '../../mocks/trainerWorkplaceMocks'
+import { HeaderKpiTile } from './HeaderKpiTile'
 
 /**
- * Header KPI strip for the Trainer Workplace — five metric cards only.
- * Global operator search lives in the app shell (DashboardLayout), not here.
- * Quick Action lives on the top-tab row (TrainingPage).
+ * Header KPI strip — five Figma "Work Type" metric cards.
+ * Quick Action lives on the tab row (TrainingPage).
  */
 export interface TrainerHeaderStripProps {
   onQuickAction?: () => void
@@ -17,9 +17,10 @@ interface KpiTileConfig {
   label: string
   value: string
   delta?: string
-  accent: string
-  borderAccent: string
   icon: (props: { size?: number; className?: string }) => ReactElement
+  iconColor: string
+  iconBg: string
+  accentColor: string
 }
 
 export function TrainerHeaderStrip(_props: TrainerHeaderStripProps) {
@@ -32,72 +33,65 @@ export function TrainerHeaderStrip(_props: TrainerHeaderStripProps) {
       label: t('pages.training.inbox.headerKpis.inProgress', 'In progress'),
       value: String(k.inProgress),
       delta: `+${k.averageScoreDeltaPct}%`,
-      accent: 'bg-amber-50 text-amber-700',
-      borderAccent: 'border-b-amber-400',
       icon: Icons.Briefcase01,
+      iconColor: 'text-[#EAB308]',
+      iconBg: 'bg-[#EAB308]/10',
+      accentColor: '#EAB308',
     },
     {
       key: 'avg-score',
       label: t('pages.training.inbox.headerKpis.averageScore', 'Average score'),
       value: `${k.averageScore}/${k.averageScoreOutOf}`,
       delta: `+${k.averageScoreDeltaPct}%`,
-      accent: 'bg-cyan-50 text-cyan-700',
-      borderAccent: 'border-b-cyan-400',
       icon: Icons.ChartRing,
+      iconColor: 'text-[#359791]',
+      iconBg: 'bg-[#359791]/10',
+      accentColor: '#359791',
     },
     {
       key: 'team-plan',
       label: t('pages.training.inbox.headerKpis.teamPlan', 'Team plan'),
       value: `${k.teamPlanPct}%`,
       delta: `+${k.teamPlanDeltaPct}%`,
-      accent: 'bg-violet-50 text-violet-700',
-      borderAccent: 'border-b-violet-400',
       icon: Icons.PieChart02,
+      iconColor: 'text-[#8B5CF6]',
+      iconBg: 'bg-[#8B5CF6]/10',
+      accentColor: '#8B5CF6',
     },
     {
       key: 'tasks-today',
       label: t('pages.training.inbox.headerKpis.tasksToday', 'Tasks today'),
       value: String(k.tasksToday),
-      accent: 'bg-blue-50 text-blue-700',
-      borderAccent: 'border-b-blue-400',
       icon: Icons.Brochure,
+      iconColor: 'text-[#3B82F6]',
+      iconBg: 'bg-[#3B82F6]/10',
+      accentColor: '#3B82F6',
     },
     {
       key: 'one-on-one-today',
       label: t('pages.training.inbox.headerKpis.oneOnOneToday', '1-on-1 today'),
       value: String(k.oneOnOneToday),
-      accent: 'bg-emerald-50 text-emerald-700',
-      borderAccent: 'border-b-emerald-400',
       icon: Icons.Calendar,
+      iconColor: 'text-[#22C55E]',
+      iconBg: 'bg-[#22C55E]/10',
+      accentColor: '#22C55E',
     },
   ]
 
   return (
-    <div className="flex flex-wrap items-stretch gap-2">
-      {tiles.map((tile) => {
-        const TileIcon = tile.icon
-        return (
-          <div
-            key={tile.key}
-            className={`flex min-h-[72px] min-w-[140px] flex-1 flex-col justify-between rounded-xl border-b-4 bg-white px-3 py-2 shadow-sm ${tile.borderAccent}`}
-          >
-            <div className="flex items-center gap-2">
-              <div
-                className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg ${tile.accent}`}
-              >
-                <TileIcon size={16} />
-              </div>
-              <span className="text-[11px] text-gray-600">{tile.label}</span>
-            </div>
-            <div className="flex items-baseline gap-1 pl-10">
-              <span className="text-lg font-semibold text-[#05040D]">{tile.value}</span>
-              {tile.delta ? (
-                <span className="text-[10px] font-medium text-emerald-600">↗ {tile.delta}</span>
-              ) : null}
-            </div>
-          </div>
-        )
-      })}
+    <div className="flex flex-wrap items-stretch gap-3">
+      {tiles.map((tile) => (
+        <HeaderKpiTile
+          key={tile.key}
+          label={tile.label}
+          value={tile.value}
+          delta={tile.delta}
+          icon={tile.icon}
+          iconColor={tile.iconColor}
+          iconBg={tile.iconBg}
+          accentColor={tile.accentColor}
+        />
+      ))}
     </div>
   )
 }

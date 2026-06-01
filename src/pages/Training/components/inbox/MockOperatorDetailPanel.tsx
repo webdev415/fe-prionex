@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
 import {
@@ -28,16 +29,55 @@ const SCORE_TEXT: Record<ScoreBand, string> = {
   green: 'text-emerald-600',
 }
 
-const QUEUE_CARD: Record<'red' | 'amber' | 'green', { bg: string; border: string; title: string }> =
-  {
-    red: { bg: 'bg-red-50', border: 'border-red-100', title: 'text-red-600' },
-    amber: { bg: 'bg-yellow-50', border: 'border-yellow-100', title: 'text-amber-700' },
-    green: { bg: 'bg-emerald-50', border: 'border-emerald-100', title: 'text-emerald-700' },
-  }
+const QUEUE_CARD: Record<
+  'red' | 'amber' | 'green',
+  { bg: string; border: string; title: string; icon: string }
+> = {
+  red: {
+    bg: 'bg-[#FEF2F2]',
+    border: 'border-[#FEE2E2]',
+    title: 'text-[#EF4444]',
+    icon: 'text-[#EF4444]',
+  },
+  amber: {
+    bg: 'bg-[#FEFCE8]',
+    border: 'border-[#FEF08A]',
+    title: 'text-[#A16207]',
+    icon: 'text-[#CA8A04]',
+  },
+  green: {
+    bg: 'bg-emerald-50',
+    border: 'border-emerald-100',
+    title: 'text-emerald-700',
+    icon: 'text-emerald-600',
+  },
+}
+
+const RATING_RING: Record<'red' | 'amber' | 'green', string> = {
+  red: 'stroke-[#EF4444]',
+  amber: 'stroke-amber-500',
+  green: 'stroke-emerald-500',
+}
+
+const RATING_TEXT: Record<'red' | 'amber' | 'green', string> = {
+  red: 'text-[#EF4444]',
+  amber: 'text-amber-600',
+  green: 'text-emerald-600',
+}
 
 const STAT_CARD: Record<'red' | 'gray', string> = {
   red: 'border-red-100 bg-red-50',
   gray: 'bg-[#F7F7F7]',
+}
+
+const WHY_QUEUE_ICONS: Record<
+  'rating' | 'plan' | 'training' | 'delay',
+  (className: string) => ReactNode
+> = {
+  rating: (className) => <Icons.Analytics01 size={14} className={className} />,
+  plan: (className) => <Icons.PieChart08 size={14} className={className} />,
+  training: (className) => <Icons.Brochure size={14} className={className} />,
+  delay: (className) => <Icons.Clock01 size={14} className={className} />,
 }
 
 export function MockOperatorDetailPanel({
@@ -94,7 +134,7 @@ export function MockOperatorDetailPanel({
           <MockInboxEventFeed />
         </div>
       ) : (
-        <div className="flex flex-col gap-4 p-5">
+        <div className="flex flex-col gap-5 p-5">
           {/* Header */}
           <div className="flex gap-4 border-b border-gray-100 pb-4">
             <div className="relative flex-shrink-0">
@@ -181,9 +221,9 @@ export function MockOperatorDetailPanel({
           </div>
 
           {/* Why entered + side widgets */}
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_220px]">
+          <div className="grid grid-cols-1 gap-5 min-[480px]:grid-cols-[minmax(0,1fr)_minmax(180px,42%)]">
             <div>
-              <h3 className="mb-2 text-sm font-medium text-[#05040D]">
+              <h3 className="mb-3 text-sm font-medium tracking-[-0.02em] text-[#05040D]">
                 {t('pages.training.inbox.detail.whyInQueue', 'Why entered the queue')}
               </h3>
               <div className="flex flex-col gap-2">
@@ -192,14 +232,16 @@ export function MockOperatorDetailPanel({
                   return (
                     <div
                       key={item.id}
-                      className={`flex items-center gap-3 rounded-lg border px-3 py-3 ${tone.bg} ${tone.border}`}
+                      className={`flex items-center gap-3 rounded-lg border p-3 ${tone.bg} ${tone.border}`}
                     >
-                      <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-white">
-                        <Icons.Warning size={14} className={tone.title} />
+                      <span className="flex h-[30px] w-[30px] flex-shrink-0 items-center justify-center rounded-full bg-white p-2">
+                        {WHY_QUEUE_ICONS[item.icon](tone.icon)}
                       </span>
-                      <div className="min-w-0">
-                        <p className={`text-xs font-semibold ${tone.title}`}>{item.label}</p>
-                        <p className="text-[11px] text-[#676767]">{item.meta}</p>
+                      <div className="flex min-w-0 flex-col gap-0.5">
+                        <p className={`text-xs leading-4 font-semibold ${tone.title}`}>
+                          {item.label}
+                        </p>
+                        <p className="text-[11px] leading-[15px] text-[#676767]">{item.meta}</p>
                       </div>
                     </div>
                   )
@@ -207,60 +249,71 @@ export function MockOperatorDetailPanel({
               </div>
             </div>
 
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-5">
               <div>
-                <h3 className="mb-2 text-sm font-medium text-[#05040D]">
+                <h3 className="mb-3 text-sm font-medium tracking-[-0.02em] text-[#05040D]">
                   {t('pages.training.inbox.detail.latestRatings', 'Latest dialogue ratings')}
                 </h3>
                 {detail.latestDialogueRatings.map((r) => (
-                  <div
-                    key={r.id}
-                    className="flex items-center gap-2 rounded-lg border border-[#EBECE8] bg-white p-3"
-                  >
-                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#204E4D]/10">
-                      <Icons.ChatFeedback01 size={14} className="text-[#204E4D]" />
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-xs font-medium text-[#05040D]">{r.label}</p>
-                    </div>
-                    <span className="rounded-full bg-red-500 px-2 py-1 text-xs font-semibold text-white">
-                      {r.score}
-                    </span>
-                  </div>
+                  <DialogueRatingCard key={r.id} rating={r} />
                 ))}
               </div>
 
               <div>
-                <h3 className="mb-2 text-sm font-medium text-[#05040D]">
+                <h3 className="mb-3 text-sm font-medium tracking-[-0.02em] text-[#05040D]">
                   {t('pages.training.inbox.detail.nextOneOnOne', 'Next 1-on-1 session')}
                 </h3>
-                <div className="rounded-lg border border-[#EBECE8] bg-white p-3">
-                  <p className="text-xs font-medium text-[#05040D]">{detail.nextOneOnOne.topic}</p>
-                  <p className="mt-1 text-[11px] text-[#676767]">{detail.nextOneOnOne.dateLabel}</p>
+                <div className="flex items-center gap-3 rounded-lg bg-[#F3FAF9] p-3">
+                  <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-[#204E4D]">
+                    <Icons.Calendar size={20} className="text-white" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs leading-4 font-semibold text-[#05040D]">
+                      {detail.nextOneOnOne.topic}
+                    </p>
+                    <p className="mt-0.5 text-[11px] leading-4 text-[#374151]">
+                      {detail.nextOneOnOne.dateLabel}
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
 
           {showTabs ? (
-            <div>
-              <h3 className="mb-2 text-[10px] font-medium tracking-wide text-gray-600 uppercase">
+            <div className="rounded-xl border border-[#EBECE8] bg-white p-4 shadow-sm">
+              <h3 className="mb-3 text-[10px] font-medium tracking-wide text-[#6B7280] uppercase">
                 {t('pages.training.inbox.detail.trainerActionsLabel', 'Trainer actions')}
               </h3>
               <div className="grid grid-cols-2 gap-2">
                 <TrainerAction
-                  icon={<Icons.PlayCircle02 size={14} />}
+                  icon={<Icons.PlayCircle02 size={16} className="text-[#05040D]" />}
                   label="Listen in real-time"
                 />
-                <TrainerAction icon={<Icons.Phone size={14} />} label="Listen to the call" />
-                <TrainerAction icon={<Icons.Brochure size={14} />} label="Assign course" />
-                <TrainerAction icon={<Icons.Calendar size={14} />} label="1-on-1 session" />
-                <TrainerAction icon={<Icons.Brochure size={14} />} label="Assign drill" />
                 <TrainerAction
-                  icon={<Icons.CheckmarkSquare03 size={14} />}
+                  icon={<Icons.Phone size={16} className="text-[#05040D]" />}
+                  label="Listen to the call"
+                />
+                <TrainerAction
+                  icon={<Icons.Brochure size={16} className="text-[#05040D]" />}
+                  label="Assign course"
+                />
+                <TrainerAction
+                  icon={<Icons.Calendar size={16} className="text-[#05040D]" />}
+                  label="1-on-1 session"
+                />
+                <TrainerAction
+                  icon={<Icons.Brochure size={16} className="text-[#05040D]" />}
+                  label="Assign drill"
+                />
+                <TrainerAction
+                  icon={<Icons.CheckmarkSquare03 size={16} className="text-[#05040D]" />}
                   label="Task checklist"
                 />
-                <TrainerAction icon={<Icons.ChatFeedback01 size={14} />} label="Leave a comment" />
+                <TrainerAction
+                  icon={<Icons.ChatFeedback01 size={16} className="text-[#05040D]" />}
+                  label="Leave a comment"
+                />
               </div>
             </div>
           ) : null}
@@ -270,16 +323,69 @@ export function MockOperatorDetailPanel({
   )
 }
 
-function TrainerAction({ icon, label }: { icon: React.ReactNode; label: string }) {
+function DialogueRatingCard({
+  rating,
+}: {
+  rating: (typeof MOCK_OPERATOR_DETAIL)['latestDialogueRatings'][number]
+}) {
+  const ringRadius = 17
+  const circumference = 2 * Math.PI * ringRadius
+  const progress = (rating.score / rating.scoreOutOf) * circumference
+  const offset = circumference - progress
+
+  return (
+    <div className="flex items-center gap-3 rounded-lg bg-[#F2F3F0]/50 p-3">
+      <div className="relative h-10 w-10 flex-shrink-0">
+        <svg viewBox="0 0 40 40" className="h-10 w-10 -rotate-90">
+          <circle
+            cx="20"
+            cy="20"
+            r={ringRadius}
+            strokeWidth="2"
+            fill="none"
+            className="stroke-[#EDEDED]"
+          />
+          <circle
+            cx="20"
+            cy="20"
+            r={ringRadius}
+            strokeWidth="2"
+            fill="none"
+            strokeLinecap="round"
+            strokeDasharray={circumference}
+            strokeDashoffset={offset}
+            className={RATING_RING[rating.tone]}
+          />
+        </svg>
+        <span
+          className={`absolute inset-0 flex items-center justify-center text-xs font-semibold ${RATING_TEXT[rating.tone]}`}
+        >
+          {rating.score}
+        </span>
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="text-xs leading-4 font-medium text-[#05040D]">{rating.label}</p>
+        {rating.meta ? (
+          <p className="text-[10px] leading-[15px] text-[#6B7280]">{rating.meta}</p>
+        ) : null}
+      </div>
+      <Icons.Mic02 size={16} className="flex-shrink-0 text-[#204E4D]" />
+    </div>
+  )
+}
+
+function TrainerAction({ icon, label }: { icon: ReactNode; label: string }) {
   return (
     <button
       type="button"
-      className="flex items-center gap-2 rounded-lg border border-gray-100 bg-white px-2.5 py-2 text-left text-[11px] font-medium text-gray-700 hover:border-gray-200"
+      className="flex items-center gap-2.5 rounded-md border border-[#EDEDED] bg-white px-3 py-2.5 text-left hover:border-gray-300"
     >
-      <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-[#204E4D]/10 text-[#204E4D]">
+      <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-[#F2F3F0]">
         {icon}
       </span>
-      <span className="truncate">{label}</span>
+      <span className="truncate text-xs leading-4 font-medium tracking-[-0.02em] text-[#05040D]">
+        {label}
+      </span>
     </button>
   )
 }

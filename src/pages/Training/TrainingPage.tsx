@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, type ReactElement } from 'react'
+﻿import { useEffect, useMemo, useState, type ReactElement } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -24,6 +24,10 @@ import { ScreenTimeTab } from './components/ScreenTimeTab'
 import { HeatmapTab } from './components/HeatmapTab'
 import { ScopeSelector } from './components/ScopeSelector'
 import { TrainerHeaderStrip } from './components/chrome/TrainerHeaderStrip'
+import { QuickActionOverlay } from './components/chrome/QuickActionOverlay'
+import { PendingFeatureDialog } from './components/inbox/PendingFeatureDialog'
+import { ScheduleOneOnOneDialog } from './components/inbox/ScheduleOneOnOneDialog'
+import { RateDialogueDialog } from './components/inbox/RateDialogueDialog'
 import { MockInboxTab } from './components/inbox/MockInboxTab'
 import { TeamTab } from './components/team/TeamTab'
 import { ActionAnalysisInnerTab } from './components/analytics/ActionAnalysisInnerTab'
@@ -248,9 +252,16 @@ export function TrainingPage() {
     }
   }
 
-  const handleQuickAction = () => {
-    toast.info(t('pages.training.inbox.quickActions.comingSoon', 'Coming soon'))
-  }
+  const [quickActionDialog, setQuickActionDialog] = useState<
+    'assign' | 'oneOnOne' | 'material' | 'rate' | null
+  >(null)
+
+  const inboxOperatorId = useMemo(() => {
+    const raw = searchParams.get('operatorId')
+    if (!raw) return undefined
+    const id = Number(raw)
+    return Number.isFinite(id) ? id : undefined
+  }, [searchParams])
 
   const setLegacySubTab = (sub: ActionAnalysisCallsSubTabId) => {
     const next = new URLSearchParams(searchParams)
@@ -262,7 +273,7 @@ export function TrainingPage() {
   return (
     <div className="flex flex-col gap-4">
       {/* Header strip — shared across every top-tab */}
-      <TrainerHeaderStrip onQuickAction={handleQuickAction} />
+      <TrainerHeaderStrip />
 
       {/* Top-tab strip + Quick Action (Figma tab row) */}
       <div className="border-b border-gray-200">
@@ -291,17 +302,43 @@ export function TrainingPage() {
               )
             })}
           </div>
-          <Button
-            variant="primary"
-            size="md"
-            onClick={handleQuickAction}
-            leftIcon={<Icons.Add size={16} className="text-white" />}
-            className="mb-1 h-10 rounded-full bg-[#204E4D] px-4 text-xs hover:bg-[#1a403f]"
-          >
-            {t('pages.training.inbox.quickActions.button', 'Quick Action')}
-          </Button>
+          <QuickActionOverlay
+            onAssignTask={() => setQuickActionDialog('assign')}
+            onScheduleOneOnOne={() => setQuickActionDialog('oneOnOne')}
+            onAssignMaterial={() => setQuickActionDialog('material')}
+            onRateDialogue={() => setQuickActionDialog('rate')}
+          />
         </div>
       </div>
+
+      <PendingFeatureDialog
+        open={quickActionDialog === 'assign'}
+        onClose={() => setQuickActionDialog(null)}
+        titleKey="pages.training.inbox.quickActions.assignTask"
+        titleFallback="Assign task"
+        descriptionKey="pages.training.inbox.pendingFeature.assignTaskDescription"
+        descriptionFallback="Create a correction task for an operator with a topic and deadline."
+        dependsOnIssue="KAN-411"
+      />
+      <PendingFeatureDialog
+        open={quickActionDialog === 'material'}
+        onClose={() => setQuickActionDialog(null)}
+        titleKey="pages.training.inbox.quickActions.assignCourse"
+        titleFallback="Assign course / drill"
+        descriptionKey="pages.training.inbox.pendingFeature.assignCourseDescription"
+        descriptionFallback="Assign training material or a drill exercise to an operator."
+        dependsOnIssue="KAN-416"
+      />
+      <ScheduleOneOnOneDialog
+        open={quickActionDialog === 'oneOnOne'}
+        onClose={() => setQuickActionDialog(null)}
+        operatorId={inboxOperatorId}
+      />
+      <RateDialogueDialog
+        open={quickActionDialog === 'rate'}
+        onClose={() => setQuickActionDialog(null)}
+        operatorId={inboxOperatorId}
+      />
 
       {/* Top-tab body */}
       {activeTopTab === 'inbox' ? (

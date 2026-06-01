@@ -1808,10 +1808,17 @@ export interface MockOperatorDetail {
   // Figma "Inbox View A" body sections
   statusBannerText: string
   statsRow: { label: string; value: string; subValue?: string; cardTone: 'red' | 'gray' }[]
-  whyInQueue: { id: number; label: string; meta: string; tone: 'red' | 'amber' | 'green' }[]
+  whyInQueue: {
+    id: number
+    label: string
+    meta: string
+    tone: 'red' | 'amber' | 'green'
+    icon: 'rating' | 'plan' | 'training' | 'delay'
+  }[]
   latestDialogueRatings: {
     id: number
     label: string
+    meta?: string
     triggerCount: number
     score: number
     scoreOutOf: number
@@ -1845,32 +1852,37 @@ export const MOCK_OPERATOR_DETAIL: MockOperatorDetail = {
     {
       id: 1,
       label: 'Low dialogue rating',
-      meta: '38 points · call #C-1016',
+      meta: '38 points - call #C-1016',
       tone: 'red',
+      icon: 'rating',
     },
     {
       id: 2,
       label: 'Daily plan not being met',
       meta: '14% at 11:00',
       tone: 'amber',
+      icon: 'plan',
     },
     {
       id: 3,
       label: 'Overdue training',
-      meta: 'Course "Empathy" overdue',
+      meta: "Course 'Empathy' overdue",
       tone: 'red',
+      icon: 'training',
     },
     {
       id: 4,
       label: 'Delay / little online',
       meta: '47 min delay',
       tone: 'amber',
+      icon: 'delay',
     },
   ],
   latestDialogueRatings: [
     {
       id: 1,
       label: 'Conflict with client',
+      meta: '05/11 at 16:55 · #1016',
       triggerCount: 4,
       score: 38,
       scoreOutOf: 100,
