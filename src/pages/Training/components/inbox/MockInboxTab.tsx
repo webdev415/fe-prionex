@@ -68,9 +68,7 @@ export function MockInboxTab() {
                 type="button"
                 onClick={() => setPriority(chip.id)}
                 className={`flex items-center gap-1 rounded-full px-4 py-2 text-xs font-medium transition-colors ${
-                  isActive
-                    ? 'bg-[#204E4D] text-white'
-                    : 'bg-white text-[#05040D] hover:bg-gray-50'
+                  isActive ? 'bg-[#204E4D] text-white' : 'bg-white text-[#05040D] hover:bg-gray-50'
                 }`}
               >
                 {t(chip.key, chip.fallback)}

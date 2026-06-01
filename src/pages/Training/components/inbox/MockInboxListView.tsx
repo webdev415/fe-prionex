@@ -88,8 +88,7 @@ export function MockInboxListView({ rows, selectedOperatorId, onSelect }: MockIn
                   <p className="truncate text-xs font-semibold text-[#05040D]">{row.name}</p>
                   {row.triggers.length > 0 ? (
                     <p className="text-[11px] text-[#676767]">
-                      {row.triggers.length}{' '}
-                      {t('pages.training.inbox.list.triggers', 'triggers')}
+                      {row.triggers.length} {t('pages.training.inbox.list.triggers', 'triggers')}
                     </p>
                   ) : null}
                 </div>

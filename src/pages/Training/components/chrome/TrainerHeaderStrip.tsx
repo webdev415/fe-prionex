@@ -1,12 +1,12 @@
-﻿import { useState, type ReactElement } from 'react'
+﻿import { type ReactElement } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
-import { Input } from '@/components/ui/Input'
 import { MOCK_HEADER_KPIS } from '../../mocks/trainerWorkplaceMocks'
 
 /**
- * Header strip — search + KPI tiles per Figma Training/Inbox frames.
- * Quick Action lives on the top-tab row (TrainingPage), not here.
+ * Header KPI strip for the Trainer Workplace — five metric cards only.
+ * Global operator search lives in the app shell (DashboardLayout), not here.
+ * Quick Action lives on the top-tab row (TrainingPage).
  */
 export interface TrainerHeaderStripProps {
   onQuickAction?: () => void
@@ -24,8 +24,6 @@ interface KpiTileConfig {
 
 export function TrainerHeaderStrip(_props: TrainerHeaderStripProps) {
   const { t } = useTranslation('common')
-  const [query, setQuery] = useState('')
-
   const k = MOCK_HEADER_KPIS
 
   const tiles: KpiTileConfig[] = [
@@ -75,64 +73,31 @@ export function TrainerHeaderStrip(_props: TrainerHeaderStripProps) {
   ]
 
   return (
-    <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-      <form
-        onSubmit={(e) => e.preventDefault()}
-        className="relative flex w-full max-w-[480px] items-center"
-      >
-        <select
-          className="absolute top-1/2 left-3 z-10 -translate-y-1/2 rounded border-0 bg-transparent pr-1 text-xs text-gray-600 outline-none"
-          defaultValue="phone"
-          aria-label={t('pages.training.inbox.searchType', 'Search type')}
-        >
-          <option value="phone">
-            {t('pages.training.inbox.searchTypePhone', 'Phone number')}
-          </option>
-        </select>
-        <Input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder={t(
-            'pages.training.inbox.searchPlaceholder',
-            'Search operator, department, call…'
-          )}
-          className="h-11 w-full rounded-full border border-gray-200 bg-white pl-28 pr-12 text-xs shadow-sm"
-        />
-        <button
-          type="button"
-          className="absolute top-1/2 right-1.5 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-[#BBFB5B] text-[#05040D]"
-          aria-label="search"
-        >
-          <Icons.Search size={14} />
-        </button>
-      </form>
-
-      <div className="flex flex-wrap items-center gap-2">
-        {tiles.map((tile) => {
-          const TileIcon = tile.icon
-          return (
-            <div
-              key={tile.key}
-              className={`flex h-[72px] min-w-[130px] flex-col justify-between rounded-xl border-b-4 bg-white px-3 py-2 shadow-sm ${tile.borderAccent}`}
-            >
-              <div className="flex items-center gap-2">
-                <div
-                  className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg ${tile.accent}`}
-                >
-                  <TileIcon size={16} />
-                </div>
-                <span className="text-[11px] text-gray-600">{tile.label}</span>
+    <div className="flex flex-wrap items-stretch gap-2">
+      {tiles.map((tile) => {
+        const TileIcon = tile.icon
+        return (
+          <div
+            key={tile.key}
+            className={`flex min-h-[72px] min-w-[140px] flex-1 flex-col justify-between rounded-xl border-b-4 bg-white px-3 py-2 shadow-sm ${tile.borderAccent}`}
+          >
+            <div className="flex items-center gap-2">
+              <div
+                className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg ${tile.accent}`}
+              >
+                <TileIcon size={16} />
               </div>
-              <div className="flex items-baseline gap-1 pl-10">
-                <span className="text-lg font-semibold text-[#05040D]">{tile.value}</span>
-                {tile.delta ? (
-                  <span className="text-[10px] font-medium text-emerald-600">↗ {tile.delta}</span>
-                ) : null}
-              </div>
+              <span className="text-[11px] text-gray-600">{tile.label}</span>
             </div>
-          )
-        })}
-      </div>
+            <div className="flex items-baseline gap-1 pl-10">
+              <span className="text-lg font-semibold text-[#05040D]">{tile.value}</span>
+              {tile.delta ? (
+                <span className="text-[10px] font-medium text-emerald-600">↗ {tile.delta}</span>
+              ) : null}
+            </div>
+          </div>
+        )
+      })}
     </div>
   )
 }

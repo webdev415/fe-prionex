@@ -79,9 +79,7 @@ export function MockOperatorDetailPanel({
             type="button"
             onClick={() => onTabChange?.('feed')}
             className={`px-4 py-3 text-xs font-medium ${
-              activeTab === 'feed'
-                ? 'border-b-2 border-[#204E4D] text-[#204E4D]'
-                : 'text-gray-500'
+              activeTab === 'feed' ? 'border-b-2 border-[#204E4D] text-[#204E4D]' : 'text-gray-500'
             }`}
           >
             {t('pages.training.inbox.detail.tabFeed', 'Event Feed')} ({eventFeedCount})
@@ -248,12 +246,18 @@ export function MockOperatorDetailPanel({
                 {t('pages.training.inbox.detail.trainerActionsLabel', 'Trainer actions')}
               </h3>
               <div className="grid grid-cols-2 gap-2">
-                <TrainerAction icon={<Icons.PlayCircle02 size={14} />} label="Listen in real-time" />
+                <TrainerAction
+                  icon={<Icons.PlayCircle02 size={14} />}
+                  label="Listen in real-time"
+                />
                 <TrainerAction icon={<Icons.Phone size={14} />} label="Listen to the call" />
                 <TrainerAction icon={<Icons.Brochure size={14} />} label="Assign course" />
                 <TrainerAction icon={<Icons.Calendar size={14} />} label="1-on-1 session" />
                 <TrainerAction icon={<Icons.Brochure size={14} />} label="Assign drill" />
-                <TrainerAction icon={<Icons.CheckmarkSquare03 size={14} />} label="Task checklist" />
+                <TrainerAction
+                  icon={<Icons.CheckmarkSquare03 size={14} />}
+                  label="Task checklist"
+                />
                 <TrainerAction icon={<Icons.ChatFeedback01 size={14} />} label="Leave a comment" />
               </div>
             </div>
