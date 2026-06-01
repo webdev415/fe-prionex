@@ -1414,7 +1414,121 @@ export interface MockInboxRow {
   activityMinutes: number
   listStatusDot: 'red' | 'amber' | 'green'
   cardTimestamp: string
+  /** One-line queue context on Inbox View B employee cards. */
+  cardSummary: string
 }
+
+export interface MockInboxTeamEvent {
+  id: number
+  timeLabel: string
+  operatorName: string
+  initials: string
+  avatarColor: string
+  title: string
+  description: string
+}
+
+export const MOCK_INBOX_TEAM_EVENTS: MockInboxTeamEvent[] = [
+  {
+    id: 1,
+    timeLabel: '09:41',
+    operatorName: 'Artem Honchar',
+    initials: 'АГ',
+    avatarColor: '#FCA5A5',
+    title: 'Day plan dropped to 14%',
+    description: 'At 11:00 — below the morning threshold.',
+  },
+  {
+    id: 2,
+    timeLabel: '09:22',
+    operatorName: 'Svetlana Hordiienko',
+    initials: 'СГ',
+    avatarColor: '#E0E7FF',
+    title: 'Completed drill "Tone and Pace"',
+    description: 'Score 82/100 — passed on first attempt.',
+  },
+  {
+    id: 3,
+    timeLabel: '08:55',
+    operatorName: 'Denys Poltavets',
+    initials: 'ДП',
+    avatarColor: '#FEF3C7',
+    title: 'Entered a call',
+    description: 'Client #C-2044 — Hard Collection.',
+  },
+  {
+    id: 4,
+    timeLabel: '08:30',
+    operatorName: 'Iryna Sokol',
+    initials: 'ІС',
+    avatarColor: '#D1FAE5',
+    title: 'Training assigned',
+    description: 'Course "Empathy" — due 05/20.',
+  },
+  {
+    id: 5,
+    timeLabel: '08:12',
+    operatorName: 'Yuriy Kravtsov',
+    initials: 'ЮК',
+    avatarColor: '#E0F2EC',
+    title: 'Low dialogue rating',
+    description: '38 points on call #C-1016.',
+  },
+  {
+    id: 6,
+    timeLabel: '07:58',
+    operatorName: 'Bohdan Melnyk',
+    initials: 'БМ',
+    avatarColor: '#FFEDD5',
+    title: '1-on-1 scheduled',
+    description: '05/15 — Tough conversation follow-up.',
+  },
+  {
+    id: 7,
+    timeLabel: '07:40',
+    operatorName: 'Oleh Bondar',
+    initials: 'ОБ',
+    avatarColor: '#FCE7F3',
+    title: 'Case closed',
+    description: 'Resolution: Corrected after coaching.',
+  },
+  {
+    id: 8,
+    timeLabel: '07:22',
+    operatorName: 'Artem Honchar',
+    initials: 'АГ',
+    avatarColor: '#FCA5A5',
+    title: 'Entered the queue',
+    description: '4 triggers accumulated — critical priority.',
+  },
+  {
+    id: 9,
+    timeLabel: '07:05',
+    operatorName: 'Svetlana Hordiienko',
+    initials: 'СГ',
+    avatarColor: '#E0E7FF',
+    title: 'Weekly plan at risk',
+    description: '42% complete — 3 days left in the week.',
+  },
+  {
+    id: 10,
+    timeLabel: '06:50',
+    operatorName: 'Denys Poltavets',
+    initials: 'ДП',
+    avatarColor: '#FEF3C7',
+    title: 'Came online',
+    description: 'Shift started at 7:30.',
+  },
+  {
+    id: 11,
+    timeLabel: '06:30',
+    operatorName: 'Iryna Sokol',
+    initials: 'ІС',
+    avatarColor: '#D1FAE5',
+    title: 'Dialogue rated',
+    description: 'Score 71/100 — no triggers.',
+  },
+]
 
 const INBOX_TRIGGERS_POOL: Omit<MockInboxTrigger, 'detectedAtLabel'>[] = [
   { id: 1, code: 'missed_calls', label: '3 missed calls in a row', severity: 'critical' },
@@ -1456,6 +1570,8 @@ const FIGMA_INBOX_OPERATORS: Omit<
     activityMinutes: 46,
     listStatusDot: 'red',
     cardTimestamp: '05/13 09:22 today',
+    cardSummary:
+      '4 red flags. Escalation likely needed — case open for 0 days, but triggers have accumulated.',
   },
   {
     operatorId: 2,
@@ -1483,6 +1599,7 @@ const FIGMA_INBOX_OPERATORS: Omit<
     activityMinutes: 12,
     listStatusDot: 'amber',
     cardTimestamp: '05/13 08:45 today',
+    cardSummary: 'Weekly plan at 42% — on track but 2 dialogue flags in the last shift.',
   },
   {
     operatorId: 3,
@@ -1510,6 +1627,7 @@ const FIGMA_INBOX_OPERATORS: Omit<
     activityMinutes: 28,
     listStatusDot: 'amber',
     cardTimestamp: '05/12 16:10',
+    cardSummary: 'On a call — monitoring tone-of-voice markers from the live session.',
   },
   {
     operatorId: 4,
@@ -1537,6 +1655,7 @@ const FIGMA_INBOX_OPERATORS: Omit<
     activityMinutes: 5,
     listStatusDot: 'green',
     cardTimestamp: '05/11 14:00',
+    cardSummary: 'Awaiting training — course assignment pending confirmation.',
   },
   {
     operatorId: 5,
@@ -1564,6 +1683,7 @@ const FIGMA_INBOX_OPERATORS: Omit<
     activityMinutes: 18,
     listStatusDot: 'green',
     cardTimestamp: '05/10 11:30',
+    cardSummary: '1-on-1 scheduled — no new triggers since last session.',
   },
   {
     operatorId: 6,
@@ -1591,6 +1711,7 @@ const FIGMA_INBOX_OPERATORS: Omit<
     activityMinutes: 52,
     listStatusDot: 'red',
     cardTimestamp: '05/13 07:55 today',
+    cardSummary: 'Daily plan at 12% — escalation likely if no improvement by noon.',
   },
   {
     operatorId: 7,
@@ -1618,6 +1739,7 @@ const FIGMA_INBOX_OPERATORS: Omit<
     activityMinutes: 0,
     listStatusDot: 'green',
     cardTimestamp: '05/09 10:15',
+    cardSummary: 'Closed with resolution — corrected after last coaching session.',
   },
 ]
 

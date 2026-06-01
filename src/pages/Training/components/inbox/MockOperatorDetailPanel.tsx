@@ -1,10 +1,12 @@
 import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
 import {
+  MOCK_INBOX_TEAM_EVENTS,
   MOCK_OPERATOR_DETAIL,
   type MockInboxRow,
   type ScoreBand,
 } from '../../mocks/trainerWorkplaceMocks'
+import { MockInboxEventFeed } from './MockInboxEventFeed'
 
 export interface MockOperatorDetailPanelProps {
   operator: MockInboxRow | null
@@ -43,7 +45,7 @@ export function MockOperatorDetailPanel({
   showTabs = false,
   activeTab = 'details',
   onTabChange,
-  eventFeedCount = 0,
+  eventFeedCount = MOCK_INBOX_TEAM_EVENTS.length,
 }: MockOperatorDetailPanelProps) {
   const { t } = useTranslation('common')
 
@@ -88,8 +90,8 @@ export function MockOperatorDetailPanel({
       ) : null}
 
       {activeTab === 'feed' && showTabs ? (
-        <div className="flex flex-1 items-center justify-center p-12 text-xs text-gray-500">
-          {t('pages.training.inbox.detail.feedPlaceholder', 'Event feed coming soon')}
+        <div className="max-h-[min(720px,calc(100vh-280px))] overflow-y-auto">
+          <MockInboxEventFeed />
         </div>
       ) : (
         <div className="flex flex-col gap-4 p-5">

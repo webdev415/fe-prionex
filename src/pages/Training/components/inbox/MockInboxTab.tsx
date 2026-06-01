@@ -4,6 +4,7 @@ import { Icons } from '@/lib/icons'
 import {
   MOCK_INBOX_PRIORITY_COUNTS,
   MOCK_INBOX_ROWS,
+  MOCK_INBOX_TEAM_EVENTS,
   type InboxPriority,
   type MockInboxRow,
 } from '../../mocks/trainerWorkplaceMocks'
@@ -37,6 +38,10 @@ const PRIORITY_CHIPS: { id: InboxPriority | 'all'; key: string; fallback: string
   { id: 'low', key: 'pages.training.inbox.priority.low', fallback: 'Low' },
 ]
 
+/** Main + Details/Event Feed sidebar — same layout for Inbox B, Kanban, and Grid. */
+const BODY_LAYOUT =
+  'grid min-h-0 flex-1 grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(320px,400px)]'
+
 export function MockInboxTab() {
   const { t } = useTranslation('common')
   const [view, setView] = useState<ViewMode>('inbox')
@@ -52,11 +57,8 @@ export function MockInboxTab() {
   const selectedOperator =
     MOCK_INBOX_ROWS.find((r) => r.operatorId === selectedOperatorId) ?? filteredRows[0] ?? null
 
-  const showSidebarTabs = view === 'kanban' || view === 'grid'
-
   return (
     <div className="relative flex min-h-[calc(100vh-220px)] flex-col gap-3 pb-20">
-      {/* Filters + view toggle — Figma INBOX sub-bar */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2">
           {PRIORITY_CHIPS.map((chip) => {
@@ -105,14 +107,7 @@ export function MockInboxTab() {
         </div>
       </div>
 
-      {/* Main body */}
-      <div
-        className={`grid min-h-0 flex-1 gap-3 ${
-          view === 'inbox'
-            ? 'grid-cols-1 xl:grid-cols-[260px_minmax(0,1fr)]'
-            : 'grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(320px,400px)]'
-        }`}
-      >
+      <div className={BODY_LAYOUT}>
         {view === 'inbox' ? (
           <MockInboxListView
             rows={filteredRows}
@@ -135,10 +130,10 @@ export function MockInboxTab() {
 
         <MockOperatorDetailPanel
           operator={selectedOperator}
-          showTabs={showSidebarTabs}
+          showTabs
           activeTab={detailTab}
           onTabChange={setDetailTab}
-          eventFeedCount={11}
+          eventFeedCount={MOCK_INBOX_TEAM_EVENTS.length}
         />
       </div>
 

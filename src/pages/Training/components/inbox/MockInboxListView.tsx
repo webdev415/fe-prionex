@@ -1,18 +1,18 @@
+import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Icons } from '@/lib/icons'
 import type { MockInboxRow, ScoreBand } from '../../mocks/trainerWorkplaceMocks'
 
+/**
+ * Inbox view — Figma View B (confirmed by PM).
+ * Scrollable employee cards + sort control; pairs with the right Details / Event Feed panel.
+ */
 export interface MockInboxListViewProps {
   rows: MockInboxRow[]
   selectedOperatorId: number
   onSelect: (operatorId: number) => void
 }
 
-const STATUS_DOT: Record<MockInboxRow['listStatusDot'], string> = {
-  red: 'bg-red-500',
-  amber: 'bg-amber-400',
-  green: 'bg-emerald-500',
-}
+type SortMode = 'priority' | 'name' | 'score'
 
 const SCORE_TRACK: Record<ScoreBand, string> = {
   red: 'stroke-red-500',
@@ -26,8 +26,83 @@ const SCORE_TEXT: Record<ScoreBand, string> = {
   green: 'text-emerald-600',
 }
 
+const TAG_TONE: Record<'red' | 'amber' | 'teal', string> = {
+  red: 'bg-red-50 text-red-700 border-red-100',
+  amber: 'bg-yellow-50 text-amber-800 border-yellow-100',
+  teal: 'bg-teal-50 text-teal-700 border-teal-100',
+}
+
+const PRIORITY_RANK: Record<MockInboxRow['priority'], number> = {
+  critical: 0,
+  average: 1,
+  low: 2,
+}
+
+function formatPresence(row: MockInboxRow, t: (key: string, fallback: string) => string): string {
+  if (row.lastActiveLabel === 'In call') {
+    return t('pages.training.inbox.list.onCall', 'On the call')
+  }
+  if (row.online) {
+    return t('pages.training.inbox.detail.online', 'Online')
+  }
+  return `${t('pages.training.inbox.detail.offline', 'Offline')} · ${row.lastActiveLabel}`
+}
+
+function ScoreRing({ score, band }: { score: number; band: ScoreBand }) {
+  const radius = 18
+  const circumference = 2 * Math.PI * radius
+  const offset = circumference - (score / 100) * circumference
+  return (
+    <div className="relative h-11 w-11 flex-shrink-0">
+      <svg viewBox="0 0 44 44" className="h-11 w-11 -rotate-90">
+        <circle
+          cx="22"
+          cy="22"
+          r={radius}
+          strokeWidth="3"
+          fill="none"
+          className="stroke-[#EDEDED]"
+        />
+        <circle
+          cx="22"
+          cy="22"
+          r={radius}
+          strokeWidth="3"
+          fill="none"
+          strokeLinecap="round"
+          strokeDasharray={circumference}
+          strokeDashoffset={offset}
+          className={SCORE_TRACK[band]}
+        />
+      </svg>
+      <span
+        className={`absolute inset-0 flex items-center justify-center text-sm font-semibold ${SCORE_TEXT[band]}`}
+      >
+        {score}
+      </span>
+    </div>
+  )
+}
+
 export function MockInboxListView({ rows, selectedOperatorId, onSelect }: MockInboxListViewProps) {
   const { t } = useTranslation('common')
+  const [sort, setSort] = useState<SortMode>('priority')
+
+  const sortedRows = useMemo(() => {
+    const copy = [...rows]
+    if (sort === 'name') {
+      copy.sort((a, b) => a.name.localeCompare(b.name))
+    } else if (sort === 'score') {
+      copy.sort((a, b) => a.compositeScore - b.compositeScore)
+    } else {
+      copy.sort((a, b) => {
+        const p = PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority]
+        if (p !== 0) return p
+        return a.compositeScore - b.compositeScore
+      })
+    }
+    return copy
+  }, [rows, sort])
 
   if (rows.length === 0) {
     return (
@@ -37,88 +112,82 @@ export function MockInboxListView({ rows, selectedOperatorId, onSelect }: MockIn
     )
   }
 
-  const inProgressRows = rows.filter((r) => r.state === 'in_progress' || r.state === 'wait')
-
   return (
-    <div className="flex h-full max-h-[740px] flex-col overflow-hidden rounded-xl border border-[#EBECE8] bg-white">
-      <div className="flex items-center justify-between gap-2 border-b border-[#EBECE8] px-3 py-2.5">
-        <div className="flex items-center gap-2">
-          <Icons.Briefcase01 size={14} className="text-[#204E4D]" />
-          <span className="text-[11px] font-semibold tracking-[0.55px] text-[#05040D] uppercase">
-            {t('pages.training.inbox.list.inProgress', 'In progress')}
-          </span>
-        </div>
-        <span className="rounded-full bg-[#EDEDED] px-1.5 py-0.5 text-[10px] font-medium text-[#676767]">
-          {inProgressRows.length || rows.length}
-        </span>
+    <div className="flex min-h-0 flex-col gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-2 px-0.5">
+        <h2 className="text-sm font-semibold text-[#05040D]">
+          {t('pages.training.inbox.list.employeesInLine', '{{count}} employees in line', {
+            count: rows.length,
+          })}
+        </h2>
+        <label className="flex items-center gap-2 text-xs text-gray-600">
+          <span>{t('pages.training.inbox.list.sortLabel', 'Sorting')}:</span>
+          <select
+            value={sort}
+            onChange={(e) => setSort(e.target.value as SortMode)}
+            className="rounded-lg border border-[#EBECE8] bg-white px-2 py-1 text-xs text-[#05040D] outline-none"
+          >
+            <option value="priority">
+              {t('pages.training.inbox.list.sortByPriority', 'by priority')}
+            </option>
+            <option value="score">{t('pages.training.inbox.list.sortByScore', 'by score')}</option>
+            <option value="name">{t('pages.training.inbox.list.sortByName', 'by name')}</option>
+          </select>
+        </label>
       </div>
 
-      <ul className="flex flex-1 flex-col overflow-y-auto">
-        {rows.map((row) => {
-          const isActive = row.operatorId === selectedOperatorId
-          const radius = 14
-          const circumference = 2 * Math.PI * radius
-          const offset = circumference - (row.compositeScore / 100) * circumference
+      <ul className="flex max-h-[min(720px,calc(100vh-280px))] flex-col gap-2 overflow-y-auto pr-1">
+        {sortedRows.map((row) => {
+          const isSelected = row.operatorId === selectedOperatorId
           return (
             <li key={row.operatorId}>
               <button
                 type="button"
                 onClick={() => onSelect(row.operatorId)}
-                className={`flex w-full items-center gap-2 border-b border-[#EBECE8]/60 px-3 py-2.5 text-left transition-colors ${
-                  isActive ? 'bg-[#F7FFE5]/60' : 'hover:bg-gray-50/80'
+                className={`flex w-full flex-col gap-3 rounded-xl border bg-white p-4 text-left transition-colors ${
+                  isSelected
+                    ? 'border-[#204E4D] ring-1 ring-[#204E4D]/20'
+                    : 'border-[#EBECE8] hover:border-[#204E4D]/40'
                 }`}
               >
-                <span
-                  className={`h-2 w-2 flex-shrink-0 rounded-full ${STATUS_DOT[row.listStatusDot]}`}
-                />
-                <div className="relative flex-shrink-0">
-                  <div
-                    className="flex h-7 w-7 items-center justify-center rounded-full text-[11px] font-semibold text-[#05040D]"
-                    style={{ backgroundColor: row.avatarColor }}
-                  >
-                    {row.initials}
+                <div className="flex items-start gap-3">
+                  <div className="relative flex-shrink-0">
+                    <div
+                      className="flex h-11 w-11 items-center justify-center rounded-full text-sm font-semibold text-[#05040D]"
+                      style={{ backgroundColor: row.avatarColor }}
+                    >
+                      {row.initials}
+                    </div>
+                    <span
+                      className={`absolute -right-0.5 -bottom-0.5 h-3 w-3 rounded-full border-2 border-white ${
+                        row.online ? 'bg-emerald-500' : 'bg-gray-400'
+                      }`}
+                    />
                   </div>
-                  <span
-                    className={`absolute -right-0.5 -bottom-0.5 h-2.5 w-2.5 rounded-full border-2 border-white ${
-                      row.online ? 'bg-emerald-500' : 'bg-gray-400'
-                    }`}
-                  />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-xs font-semibold text-[#05040D]">{row.name}</p>
-                  {row.triggers.length > 0 ? (
-                    <p className="text-[11px] text-[#676767]">
-                      {row.triggers.length} {t('pages.training.inbox.list.triggers', 'triggers')}
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-[#05040D]">{row.name}</p>
+                    <p className="text-[11px] text-gray-500">
+                      {row.team} · {row.segment}
                     </p>
-                  ) : null}
+                    <p className="text-[11px] text-gray-600">{formatPresence(row, t)}</p>
+                  </div>
+                  <div className="flex flex-col items-end gap-1">
+                    <ScoreRing score={row.compositeScore} band={row.scoreBand} />
+                    <span className="text-[10px] text-gray-500">{row.cardTimestamp}</span>
+                  </div>
                 </div>
-                <div className="relative h-9 w-9 flex-shrink-0">
-                  <svg viewBox="0 0 36 36" className="h-9 w-9 -rotate-90">
-                    <circle
-                      cx="18"
-                      cy="18"
-                      r={radius}
-                      strokeWidth="3"
-                      fill="none"
-                      className="stroke-[#EDEDED]"
-                    />
-                    <circle
-                      cx="18"
-                      cy="18"
-                      r={radius}
-                      strokeWidth="3"
-                      fill="none"
-                      strokeLinecap="round"
-                      strokeDasharray={circumference}
-                      strokeDashoffset={offset}
-                      className={SCORE_TRACK[row.scoreBand]}
-                    />
-                  </svg>
-                  <span
-                    className={`absolute inset-0 flex items-center justify-center text-[11px] font-semibold ${SCORE_TEXT[row.scoreBand]}`}
-                  >
-                    {row.compositeScore}
-                  </span>
+
+                <p className="text-xs leading-relaxed text-[#05040D]">{row.cardSummary}</p>
+
+                <div className="flex flex-wrap gap-1.5">
+                  {row.triggerTags.map((tag) => (
+                    <span
+                      key={tag.label}
+                      className={`rounded-full border px-2 py-0.5 text-[10px] font-medium ${TAG_TONE[tag.tone]}`}
+                    >
+                      {tag.label}
+                    </span>
+                  ))}
                 </div>
               </button>
             </li>
