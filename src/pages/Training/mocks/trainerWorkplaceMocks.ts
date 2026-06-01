@@ -1469,6 +1469,19 @@ export interface MockOperatorScoreSeries {
 }
 
 export interface MockOperatorDetail {
+  // Figma "Inbox View A" body sections
+  statusBannerText: string
+  statsRow: { label: string; value: string; tone: string }[]
+  whyInQueue: { id: number; label: string; meta: string; tone: 'red' | 'amber' | 'green' }[]
+  latestDialogueRatings: {
+    id: number
+    label: string
+    triggerCount: number
+    score: number
+    scoreOutOf: number
+    tone: 'red' | 'amber' | 'green'
+  }[]
+  // Extra fields used elsewhere (kept for back-compat)
   recentCalls: MockOperatorRecentCall[]
   scoreSeries: MockOperatorScoreSeries[]
   criteria: { label: string; score: number; max: number }[]
@@ -1478,6 +1491,37 @@ export interface MockOperatorDetail {
 }
 
 export const MOCK_OPERATOR_DETAIL: MockOperatorDetail = {
+  statusBannerText:
+    'First flags · Escalation likely needed — no follow-up for 3 days, but triggers have accumulated.',
+  statsRow: [
+    { label: 'Score change', value: '−15%', tone: 'text-red-600' },
+    { label: 'Avg call', value: '15 min', tone: 'text-dark-500' },
+    { label: 'Tasks done', value: '20/24', tone: 'text-emerald-600' },
+    { label: 'Idle today', value: '46 min', tone: 'text-amber-600' },
+  ],
+  whyInQueue: [
+    { id: 1, label: 'Lost client of pending request', meta: 'Triggered 2d ago', tone: 'red' },
+    { id: 2, label: 'Direction training', meta: 'Course "Objections" overdue', tone: 'amber' },
+    { id: 3, label: 'Active intervention', meta: '1-on-1 planned 20.05', tone: 'green' },
+  ],
+  latestDialogueRatings: [
+    {
+      id: 1,
+      label: 'Conflict with client',
+      triggerCount: 3,
+      score: 42,
+      scoreOutOf: 100,
+      tone: 'red',
+    },
+    {
+      id: 2,
+      label: 'Tough conversation',
+      triggerCount: 4,
+      score: 58,
+      scoreOutOf: 100,
+      tone: 'amber',
+    },
+  ],
   recentCalls: Array.from({ length: 5 }, (_, i) => {
     const score = 50 + ((i * 13) % 45)
     return {

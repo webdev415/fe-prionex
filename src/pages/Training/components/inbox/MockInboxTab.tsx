@@ -11,6 +11,7 @@ import { MockInboxListView } from './MockInboxListView'
 import { MockInboxKanbanView } from './MockInboxKanbanView'
 import { MockInboxGridView } from './MockInboxGridView'
 import { MockOperatorDetailPanel } from './MockOperatorDetailPanel'
+import { MockWorkspaceBanner } from '../chrome/MockWorkspaceBanner'
 
 /**
  * Boilerplate Inbox top-tab (mock data). Replaces the "coming soon"
@@ -113,25 +114,29 @@ export function MockInboxTab() {
         </div>
       </div>
 
-      {/* State filter chips */}
+      {/* State filter chips — active chips show an "X" to clear, matching the
+          Figma "All my departments x" / "Average x" pattern. */}
       <div className="flex flex-wrap items-center gap-2">
         <button
           type="button"
           onClick={() => setStateFilter('all')}
           className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-medium transition-colors ${
             stateFilter === 'all'
-              ? 'bg-primary-500 border-primary-500 text-white'
+              ? 'border-primary-400 bg-primary-50 text-primary-700'
               : 'border-gray-200 bg-white text-gray-700'
           }`}
         >
           {t('pages.training.inbox.filters.all', 'All states')}
           <span
             className={`rounded-full px-1.5 py-0.5 text-[9px] ${
-              stateFilter === 'all' ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-600'
+              stateFilter === 'all'
+                ? 'bg-primary-100 text-primary-700'
+                : 'bg-gray-100 text-gray-600'
             }`}
           >
             {MOCK_INBOX_ROWS.length}
           </span>
+          {stateFilter === 'all' ? <Icons.Close size={10} className="text-primary-600" /> : null}
         </button>
         {(Object.keys(STATE_FILTER_LABELS) as InboxAssignmentState[]).map((s) => {
           const isActive = stateFilter === s
@@ -139,21 +144,22 @@ export function MockInboxTab() {
             <button
               key={s}
               type="button"
-              onClick={() => setStateFilter(s)}
+              onClick={() => setStateFilter(isActive ? 'all' : s)}
               className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-medium transition-colors ${
                 isActive
-                  ? 'bg-primary-500 border-primary-500 text-white'
+                  ? 'border-primary-400 bg-primary-50 text-primary-700'
                   : 'border-gray-200 bg-white text-gray-700'
               }`}
             >
               {STATE_FILTER_LABELS[s]}
               <span
                 className={`rounded-full px-1.5 py-0.5 text-[9px] ${
-                  isActive ? 'bg-white/20 text-white' : STATE_FILTER_TONES[s]
+                  isActive ? 'bg-primary-100 text-primary-700' : STATE_FILTER_TONES[s]
                 }`}
               >
                 {MOCK_INBOX_STATE_COUNTS[s]}
               </span>
+              {isActive ? <Icons.Close size={10} className="text-primary-600" /> : null}
             </button>
           )
         })}
@@ -176,6 +182,8 @@ export function MockInboxTab() {
       ) : (
         <MockInboxGridView rows={filteredRows} onSelect={setSelectedOperatorId} />
       )}
+
+      <MockWorkspaceBanner />
     </div>
   )
 }
