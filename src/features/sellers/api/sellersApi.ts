@@ -11,6 +11,7 @@ import type {
   SellerDetailResponse,
   CreateSellerInput,
   UpdateSellerInput,
+  FactoringAgreement,
 } from '../types'
 
 /**
@@ -65,10 +66,23 @@ export async function deleteSeller(
   return response.data
 }
 
+/**
+ * List factoring agreements for a seller (KAN-557).
+ * BE scopes results to the caller's active_project_id via the
+ * agreement → debts → clients chain. Empty-agreement rows are excluded.
+ */
+export async function listFactoringAgreements(sellerId: number): Promise<FactoringAgreement[]> {
+  const response = await api.get<FactoringAgreement[]>(
+    `/api/v1/sellers/${sellerId}/factoring-agreements`
+  )
+  return response.data
+}
+
 export const sellersApi = {
   getSellers,
   getSeller,
   createSeller,
   updateSeller,
   deleteSeller,
+  listFactoringAgreements,
 }
