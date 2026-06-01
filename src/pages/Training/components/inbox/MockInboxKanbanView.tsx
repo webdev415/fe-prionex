@@ -5,82 +5,158 @@ import {
   type ScoreBand,
 } from '../../mocks/trainerWorkplaceMocks'
 
-/**
- * Mock-data Kanban view — 5 columns matching the Inbox states. Mirrors the
- * Kanban Figma frame.
- */
 export interface MockInboxKanbanViewProps {
   rows: MockInboxRow[]
+  selectedOperatorId?: number
   onSelect: (operatorId: number) => void
 }
 
-const COLUMN_ORDER: { state: InboxAssignmentState; label: string; tone: string }[] = [
-  { state: 'wait', label: 'Wait', tone: 'border-amber-200 bg-amber-50/40' },
-  { state: 'in_progress', label: 'In progress', tone: 'border-blue-200 bg-blue-50/40' },
+const COLUMN_ORDER: {
+  state: InboxAssignmentState
+  label: string
+  subtitle: string
+  tone: string
+}[] = [
+  {
+    state: 'wait',
+    label: 'New',
+    subtitle: 'Just arrived',
+    tone: 'border-amber-100 bg-amber-50/30',
+  },
+  {
+    state: 'in_progress',
+    label: 'In progress',
+    subtitle: 'The coach has taken it on',
+    tone: 'border-blue-100 bg-blue-50/30',
+  },
   {
     state: 'awaiting_training',
     label: 'Awaiting training',
-    tone: 'border-violet-200 bg-violet-50/40',
+    subtitle: 'Assigned course/drill',
+    tone: 'border-violet-100 bg-violet-50/30',
   },
-  { state: 'scheduled', label: 'Scheduled', tone: 'border-indigo-200 bg-indigo-50/40' },
-  { state: 'closed', label: 'Closed', tone: 'border-gray-200 bg-gray-50/60' },
+  {
+    state: 'scheduled',
+    label: 'Scheduled 1-on-1',
+    subtitle: 'There is a session in the calendar',
+    tone: 'border-indigo-100 bg-indigo-50/30',
+  },
+  {
+    state: 'closed',
+    label: 'Closed',
+    subtitle: 'With resolution',
+    tone: 'border-gray-200 bg-gray-50/60',
+  },
 ]
 
-const SCORE_BG: Record<ScoreBand, string> = {
-  red: 'bg-red-500',
-  amber: 'bg-amber-400',
-  green: 'bg-emerald-500',
+const SCORE_TRACK: Record<ScoreBand, string> = {
+  red: 'stroke-red-500',
+  amber: 'stroke-amber-400',
+  green: 'stroke-emerald-500',
 }
 
-export function MockInboxKanbanView({ rows, onSelect }: MockInboxKanbanViewProps) {
+const TAG_TONE: Record<'red' | 'amber' | 'teal', string> = {
+  red: 'bg-red-50 text-red-700 border-red-100',
+  amber: 'bg-yellow-50 text-amber-800 border-yellow-100',
+  teal: 'bg-teal-50 text-teal-700 border-teal-100',
+}
+
+export function MockInboxKanbanView({
+  rows,
+  selectedOperatorId,
+  onSelect,
+}: MockInboxKanbanViewProps) {
   const { t } = useTranslation('common')
 
   return (
-    <div className="grid grid-cols-1 gap-3 md:grid-cols-3 xl:grid-cols-5">
+    <div className="grid min-h-[520px] grid-cols-1 gap-3 overflow-x-auto md:grid-cols-3 xl:grid-cols-5">
       {COLUMN_ORDER.map((col) => {
         const colRows = rows.filter((r) => r.state === col.state)
         return (
-          <div key={col.state} className={`flex flex-col gap-2 rounded-2xl border p-3 ${col.tone}`}>
-            <div className="flex items-center justify-between px-1">
-              <span className="text-dark-500 text-xs font-semibold">
+          <div
+            key={col.state}
+            className={`flex min-w-[200px] flex-col gap-2 rounded-xl border p-3 ${col.tone}`}
+          >
+            <div className="px-1">
+              <p className="text-xs font-semibold text-[#05040D]">
                 {t(`pages.training.inbox.kanbanColumns.${col.state}`, col.label)}
-              </span>
-              <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-medium text-gray-600">
+              </p>
+              <p className="text-[10px] text-gray-500">{col.subtitle}</p>
+              <span className="mt-1 inline-block rounded-full bg-white px-2 py-0.5 text-[10px] font-medium text-gray-600">
                 {colRows.length}
               </span>
             </div>
             <div className="flex flex-col gap-2">
-              {colRows.map((row) => (
-                <button
-                  key={row.operatorId}
-                  type="button"
-                  onClick={() => onSelect(row.operatorId)}
-                  className="hover:border-primary-200 flex items-center gap-2 rounded-xl border border-gray-100 bg-white p-2.5 text-left transition-colors"
-                >
-                  <div className="relative flex-shrink-0">
-                    <div
-                      className="flex h-9 w-9 items-center justify-center rounded-full text-[10px] font-semibold text-gray-700"
-                      style={{ backgroundColor: row.avatarColor }}
-                    >
-                      {row.initials}
-                    </div>
-                    <span
-                      className={`absolute -right-0.5 -bottom-0.5 inline-block h-2 w-2 rounded-full border-2 border-white ${
-                        row.online ? 'bg-emerald-500' : 'bg-gray-300'
-                      }`}
-                    />
-                  </div>
-                  <div className="flex min-w-0 flex-1 flex-col">
-                    <span className="text-dark-500 truncate text-xs font-medium">{row.name}</span>
-                    <span className="text-[10px] text-gray-500">{row.team}</span>
-                  </div>
-                  <span
-                    className={`flex h-7 w-7 items-center justify-center rounded-full text-[10px] font-semibold text-white ${SCORE_BG[row.scoreBand]}`}
+              {colRows.map((row) => {
+                const isSelected = row.operatorId === selectedOperatorId
+                const radius = 12
+                const circumference = 2 * Math.PI * radius
+                const offset = circumference - (row.compositeScore / 100) * circumference
+                return (
+                  <button
+                    key={row.operatorId}
+                    type="button"
+                    onClick={() => onSelect(row.operatorId)}
+                    className={`flex flex-col gap-2 rounded-xl border bg-white p-2.5 text-left transition-colors ${
+                      isSelected
+                        ? 'border-[#204E4D] ring-1 ring-[#204E4D]/20'
+                        : 'border-[#EBECE8] hover:border-[#204E4D]/40'
+                    }`}
                   >
-                    {row.compositeScore}
-                  </span>
-                </button>
-              ))}
+                    <div className="flex items-center gap-2">
+                      <div
+                        className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full text-[10px] font-semibold"
+                        style={{ backgroundColor: row.avatarColor }}
+                      >
+                        {row.initials}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-xs font-semibold text-[#05040D]">
+                          {row.name.split(' ')[0]} {row.name.split(' ')[1]?.[0]}.
+                        </p>
+                        <p className="truncate text-[10px] text-gray-500">{row.team}</p>
+                      </div>
+                      <div className="relative h-8 w-8 flex-shrink-0">
+                        <svg viewBox="0 0 32 32" className="h-8 w-8 -rotate-90">
+                          <circle
+                            cx="16"
+                            cy="16"
+                            r={radius}
+                            strokeWidth="2.5"
+                            fill="none"
+                            className="stroke-gray-100"
+                          />
+                          <circle
+                            cx="16"
+                            cy="16"
+                            r={radius}
+                            strokeWidth="2.5"
+                            fill="none"
+                            strokeLinecap="round"
+                            strokeDasharray={circumference}
+                            strokeDashoffset={offset}
+                            className={SCORE_TRACK[row.scoreBand]}
+                          />
+                        </svg>
+                        <span className="absolute inset-0 flex items-center justify-center text-[9px] font-semibold text-gray-700">
+                          {row.compositeScore}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      {row.triggerTags.map((tag) => (
+                        <span
+                          key={tag.label}
+                          className={`rounded-full border px-1.5 py-0.5 text-[9px] font-medium ${TAG_TONE[tag.tone]}`}
+                        >
+                          {tag.label}
+                        </span>
+                      ))}
+                    </div>
+                    <p className="text-[10px] text-gray-500">{row.cardTimestamp}</p>
+                  </button>
+                )
+              })}
               {colRows.length === 0 ? (
                 <div className="rounded-lg bg-white/60 p-3 text-center text-[10px] text-gray-400">
                   {t('pages.training.inbox.kanban.empty', 'Empty')}

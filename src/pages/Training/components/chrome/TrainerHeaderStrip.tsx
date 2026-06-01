@@ -2,16 +2,11 @@
 import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
 import { Input } from '@/components/ui/Input'
-import { Button } from '@/components/ui/Button'
 import { MOCK_HEADER_KPIS } from '../../mocks/trainerWorkplaceMocks'
 
 /**
- * Header strip for the Trainer Workplace redesign — search input, KPI tiles,
- * Quick Action button. Mock-data variant; the eventual hook-backed version
- * lives in `chrome/HeaderKpiStrip.tsx`.
- *
- * Layout per the Figma frames (all top-tabs share the strip): rounded pills,
- * subtle gradient backgrounds for the KPI tiles, primary-green accents.
+ * Header strip — search + KPI tiles per Figma Training/Inbox frames.
+ * Quick Action lives on the top-tab row (TrainingPage), not here.
  */
 export interface TrainerHeaderStripProps {
   onQuickAction?: () => void
@@ -23,10 +18,11 @@ interface KpiTileConfig {
   value: string
   delta?: string
   accent: string
+  borderAccent: string
   icon: (props: { size?: number; className?: string }) => ReactElement
 }
 
-export function TrainerHeaderStrip({ onQuickAction }: TrainerHeaderStripProps) {
+export function TrainerHeaderStrip(_props: TrainerHeaderStripProps) {
   const { t } = useTranslation('common')
   const [query, setQuery] = useState('')
 
@@ -37,15 +33,18 @@ export function TrainerHeaderStrip({ onQuickAction }: TrainerHeaderStripProps) {
       key: 'in-progress',
       label: t('pages.training.inbox.headerKpis.inProgress', 'In progress'),
       value: String(k.inProgress),
+      delta: `+${k.averageScoreDeltaPct}%`,
       accent: 'bg-amber-50 text-amber-700',
-      icon: Icons.Clock01,
+      borderAccent: 'border-b-amber-400',
+      icon: Icons.Briefcase01,
     },
     {
       key: 'avg-score',
       label: t('pages.training.inbox.headerKpis.averageScore', 'Average score'),
       value: `${k.averageScore}/${k.averageScoreOutOf}`,
       delta: `+${k.averageScoreDeltaPct}%`,
-      accent: 'bg-emerald-50 text-emerald-700',
+      accent: 'bg-cyan-50 text-cyan-700',
+      borderAccent: 'border-b-cyan-400',
       icon: Icons.ChartRing,
     },
     {
@@ -54,6 +53,7 @@ export function TrainerHeaderStrip({ onQuickAction }: TrainerHeaderStripProps) {
       value: `${k.teamPlanPct}%`,
       delta: `+${k.teamPlanDeltaPct}%`,
       accent: 'bg-violet-50 text-violet-700',
+      borderAccent: 'border-b-violet-400',
       icon: Icons.PieChart02,
     },
     {
@@ -61,84 +61,77 @@ export function TrainerHeaderStrip({ onQuickAction }: TrainerHeaderStripProps) {
       label: t('pages.training.inbox.headerKpis.tasksToday', 'Tasks today'),
       value: String(k.tasksToday),
       accent: 'bg-blue-50 text-blue-700',
+      borderAccent: 'border-b-blue-400',
       icon: Icons.Brochure,
     },
     {
       key: 'one-on-one-today',
       label: t('pages.training.inbox.headerKpis.oneOnOneToday', '1-on-1 today'),
       value: String(k.oneOnOneToday),
-      accent: 'bg-pink-50 text-pink-700',
+      accent: 'bg-emerald-50 text-emerald-700',
+      borderAccent: 'border-b-emerald-400',
       icon: Icons.Calendar,
     },
   ]
 
   return (
     <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-      {/* Search box (left) */}
-      <div className="flex flex-1 items-center gap-2">
-        <form
-          onSubmit={(e) => e.preventDefault()}
-          className="relative flex w-full max-w-[320px] items-center"
+      <form
+        onSubmit={(e) => e.preventDefault()}
+        className="relative flex w-full max-w-[480px] items-center"
+      >
+        <select
+          className="absolute top-1/2 left-3 z-10 -translate-y-1/2 rounded border-0 bg-transparent pr-1 text-xs text-gray-600 outline-none"
+          defaultValue="phone"
+          aria-label={t('pages.training.inbox.searchType', 'Search type')}
         >
-          <Icons.Search
-            size={16}
-            className="absolute top-1/2 left-3 -translate-y-1/2 text-gray-400"
-          />
-          <Input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder={t(
-              'pages.training.inbox.searchPlaceholder',
-              'Operator name or phone number'
-            )}
-            className="h-[44px] w-full rounded-full bg-white pl-9 text-xs shadow-sm"
-          />
-          <button
-            type="button"
-            className="bg-primary-500 absolute top-1/2 right-1.5 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full text-white"
-            aria-label="search"
-          >
-            <Icons.Search size={14} className="text-white" />
-          </button>
-        </form>
-      </div>
+          <option value="phone">
+            {t('pages.training.inbox.searchTypePhone', 'Phone number')}
+          </option>
+        </select>
+        <Input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder={t(
+            'pages.training.inbox.searchPlaceholder',
+            'Search operator, department, call…'
+          )}
+          className="h-11 w-full rounded-full border border-gray-200 bg-white pl-28 pr-12 text-xs shadow-sm"
+        />
+        <button
+          type="button"
+          className="absolute top-1/2 right-1.5 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-[#BBFB5B] text-[#05040D]"
+          aria-label="search"
+        >
+          <Icons.Search size={14} />
+        </button>
+      </form>
 
-      {/* KPI tiles + Quick Action (right) */}
       <div className="flex flex-wrap items-center gap-2">
         {tiles.map((tile) => {
           const TileIcon = tile.icon
           return (
             <div
               key={tile.key}
-              className="flex h-[60px] min-w-[140px] items-center gap-2 rounded-2xl bg-white px-3 shadow-sm"
+              className={`flex h-[72px] min-w-[130px] flex-col justify-between rounded-xl border-b-4 bg-white px-3 py-2 shadow-sm ${tile.borderAccent}`}
             >
-              <div
-                className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl ${tile.accent}`}
-              >
-                <TileIcon size={18} />
-              </div>
-              <div className="flex flex-col leading-tight">
-                <span className="text-[11px] text-gray-500">{tile.label}</span>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-dark-500 text-sm font-semibold">{tile.value}</span>
-                  {tile.delta ? (
-                    <span className="text-primary-600 text-[10px] font-medium">↗ {tile.delta}</span>
-                  ) : null}
+              <div className="flex items-center gap-2">
+                <div
+                  className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg ${tile.accent}`}
+                >
+                  <TileIcon size={16} />
                 </div>
+                <span className="text-[11px] text-gray-600">{tile.label}</span>
+              </div>
+              <div className="flex items-baseline gap-1 pl-10">
+                <span className="text-lg font-semibold text-[#05040D]">{tile.value}</span>
+                {tile.delta ? (
+                  <span className="text-[10px] font-medium text-emerald-600">↗ {tile.delta}</span>
+                ) : null}
               </div>
             </div>
           )
         })}
-
-        <Button
-          variant="primary"
-          size="md"
-          onClick={onQuickAction}
-          leftIcon={<Icons.Add size={16} className="text-white" />}
-          className="h-[44px] rounded-full px-5 text-xs"
-        >
-          {t('pages.training.inbox.quickActions.button', 'Quick Action')}
-        </Button>
       </div>
     </div>
   )

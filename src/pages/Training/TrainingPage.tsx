@@ -264,31 +264,42 @@ export function TrainingPage() {
       {/* Header strip — shared across every top-tab */}
       <TrainerHeaderStrip onQuickAction={handleQuickAction} />
 
-      {/* Top-tab strip */}
+      {/* Top-tab strip + Quick Action (Figma tab row) */}
       <div className="border-b border-gray-200">
-        <div className="-mb-px flex flex-wrap items-center gap-1" role="tablist">
-          {visibleTopTabs.map((tab) => {
-            const { key, fallback } = TOP_TAB_LABEL_KEYS[tab]
-            const TabIcon = TOP_TAB_ICONS[tab]
-            const isActive = activeTopTab === tab
-            return (
-              <button
-                key={tab}
-                type="button"
-                role="tab"
-                aria-selected={isActive}
-                onClick={() => setActiveTopTab(tab)}
-                className={`flex items-center gap-2 border-b-2 px-3 py-3 text-xs font-medium whitespace-nowrap transition-colors ${
-                  isActive
-                    ? 'border-primary-500 text-primary-600'
-                    : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
-                }`}
-              >
-                <TabIcon size={14} className={isActive ? 'text-primary-600' : 'text-gray-500'} />
-                {t(key, fallback)}
-              </button>
-            )
-          })}
+        <div className="-mb-px flex flex-wrap items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center gap-1" role="tablist">
+            {visibleTopTabs.map((tab) => {
+              const { key, fallback } = TOP_TAB_LABEL_KEYS[tab]
+              const TabIcon = TOP_TAB_ICONS[tab]
+              const isActive = activeTopTab === tab
+              return (
+                <button
+                  key={tab}
+                  type="button"
+                  role="tab"
+                  aria-selected={isActive}
+                  onClick={() => setActiveTopTab(tab)}
+                  className={`flex items-center gap-2 border-b-2 px-3 py-3 text-xs font-medium whitespace-nowrap transition-colors ${
+                    isActive
+                      ? 'border-[#204E4D] text-[#204E4D]'
+                      : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
+                  }`}
+                >
+                  <TabIcon size={14} className={isActive ? 'text-[#204E4D]' : 'text-gray-500'} />
+                  {t(key, fallback)}
+                </button>
+              )
+            })}
+          </div>
+          <Button
+            variant="primary"
+            size="md"
+            onClick={handleQuickAction}
+            leftIcon={<Icons.Add size={16} className="text-white" />}
+            className="mb-1 h-10 rounded-full bg-[#204E4D] px-4 text-xs hover:bg-[#1a403f]"
+          >
+            {t('pages.training.inbox.quickActions.button', 'Quick Action')}
+          </Button>
         </div>
       </div>
 

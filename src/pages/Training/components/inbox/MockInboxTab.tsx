@@ -1,10 +1,10 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
 import {
+  MOCK_INBOX_PRIORITY_COUNTS,
   MOCK_INBOX_ROWS,
-  MOCK_INBOX_STATE_COUNTS,
-  type InboxAssignmentState,
+  type InboxPriority,
   type MockInboxRow,
 } from '../../mocks/trainerWorkplaceMocks'
 import { MockInboxListView } from './MockInboxListView'
@@ -13,17 +13,14 @@ import { MockInboxGridView } from './MockInboxGridView'
 import { MockOperatorDetailPanel } from './MockOperatorDetailPanel'
 import { MockWorkspaceBanner } from '../chrome/MockWorkspaceBanner'
 
-/**
- * Boilerplate Inbox top-tab (mock data). Replaces the "coming soon"
- * placeholder while KAN-413's real coaching hooks land. Mirrors the
- * Figma frames:
- *   • Inbox View A — list + right-side detail panel
- *   • Kanban View — 5 state columns
- *   • Grid View — operator tiles
- */
 type ViewMode = 'inbox' | 'kanban' | 'grid'
 
-const VIEW_MODES: { id: ViewMode; key: string; fallback: string; icon: typeof Icons.Menu11 }[] = [
+const VIEW_MODES: {
+  id: ViewMode
+  key: string
+  fallback: string
+  icon: typeof Icons.Mail
+}[] = [
   { id: 'inbox', key: 'pages.training.inbox.viewMode.inbox', fallback: 'Inbox', icon: Icons.Mail },
   {
     id: 'kanban',
@@ -34,67 +31,62 @@ const VIEW_MODES: { id: ViewMode; key: string; fallback: string; icon: typeof Ic
   { id: 'grid', key: 'pages.training.inbox.viewMode.grid', fallback: 'Grid', icon: Icons.Pivot },
 ]
 
-const SCOPE_CHIPS: { id: string; key: string; fallback: string }[] = [
-  { id: 'my', key: 'pages.training.inbox.scope.my', fallback: 'My' },
-  { id: 'group', key: 'pages.training.inbox.scope.group', fallback: 'Group' },
-  { id: 'department', key: 'pages.training.inbox.scope.department', fallback: 'Department' },
-  { id: 'all', key: 'pages.training.inbox.scope.all', fallback: 'All' },
+const PRIORITY_CHIPS: { id: InboxPriority | 'all'; key: string; fallback: string }[] = [
+  { id: 'all', key: 'pages.training.inbox.priority.all', fallback: 'All priorities' },
+  { id: 'average', key: 'pages.training.inbox.priority.average', fallback: 'Average' },
+  { id: 'low', key: 'pages.training.inbox.priority.low', fallback: 'Low' },
 ]
-
-const STATE_FILTER_LABELS: Record<InboxAssignmentState, string> = {
-  wait: 'Wait',
-  in_progress: 'In progress',
-  awaiting_training: 'Awaiting training',
-  scheduled: 'Scheduled',
-  closed: 'Closed',
-}
-
-const STATE_FILTER_TONES: Record<InboxAssignmentState, string> = {
-  wait: 'bg-amber-50 text-amber-700',
-  in_progress: 'bg-blue-50 text-blue-700',
-  awaiting_training: 'bg-violet-50 text-violet-700',
-  scheduled: 'bg-indigo-50 text-indigo-700',
-  closed: 'bg-gray-100 text-gray-600',
-}
 
 export function MockInboxTab() {
   const { t } = useTranslation('common')
   const [view, setView] = useState<ViewMode>('inbox')
-  const [scope, setScope] = useState<string>('my')
-  const [stateFilter, setStateFilter] = useState<InboxAssignmentState | 'all'>('all')
-  const [selectedOperatorId, setSelectedOperatorId] = useState<number>(
-    MOCK_INBOX_ROWS[1]?.operatorId ?? 0
-  )
+  const [priority, setPriority] = useState<InboxPriority | 'all'>('all')
+  const [selectedOperatorId, setSelectedOperatorId] = useState<number>(1)
+  const [detailTab, setDetailTab] = useState<'details' | 'feed'>('details')
 
-  const filteredRows: MockInboxRow[] =
-    stateFilter === 'all' ? MOCK_INBOX_ROWS : MOCK_INBOX_ROWS.filter((r) => r.state === stateFilter)
+  const filteredRows: MockInboxRow[] = useMemo(() => {
+    if (priority === 'all') return MOCK_INBOX_ROWS
+    return MOCK_INBOX_ROWS.filter((r) => r.priority === priority)
+  }, [priority])
+
+  const selectedOperator =
+    MOCK_INBOX_ROWS.find((r) => r.operatorId === selectedOperatorId) ?? filteredRows[0] ?? null
+
+  const showSidebarTabs = view === 'kanban' || view === 'grid'
 
   return (
-    <div className="flex min-h-[calc(100vh-220px)] flex-col gap-3 pb-16">
-      {/* Sub-strip — scope chips on left, view-mode toggle on right
-          (matches Figma Inbox View A frame). */}
+    <div className="relative flex min-h-[calc(100vh-220px)] flex-col gap-3 pb-20">
+      {/* Filters + view toggle — Figma INBOX sub-bar */}
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          {SCOPE_CHIPS.map((s) => {
-            const isActive = s.id === scope
+        <div className="flex flex-wrap items-center gap-2">
+          {PRIORITY_CHIPS.map((chip) => {
+            const isActive = priority === chip.id
+            const count = MOCK_INBOX_PRIORITY_COUNTS[chip.id]
             return (
               <button
-                key={s.id}
+                key={chip.id}
                 type="button"
-                onClick={() => setScope(s.id)}
-                className={`rounded-full border px-3 py-1.5 text-[11px] font-medium transition-colors ${
+                onClick={() => setPriority(chip.id)}
+                className={`flex items-center gap-1 rounded-full px-4 py-2 text-xs font-medium transition-colors ${
                   isActive
-                    ? 'bg-primary-50 border-primary-300 text-primary-700'
-                    : 'border-gray-200 bg-white text-gray-600'
+                    ? 'bg-[#204E4D] text-white'
+                    : 'bg-white text-[#05040D] hover:bg-gray-50'
                 }`}
               >
-                {t(s.key, s.fallback)}
+                {t(chip.key, chip.fallback)}
+                <span
+                  className={`rounded-full px-1.5 py-0.5 text-[10px] font-medium ${
+                    isActive ? 'bg-[#BBFB5B] text-[#05040D]' : 'bg-[#EDEDED] text-[#05040D]'
+                  }`}
+                >
+                  {count}
+                </span>
               </button>
             )
           })}
         </div>
 
-        <div className="flex items-center gap-1 rounded-full bg-white p-1 shadow-sm">
+        <div className="flex items-center rounded-lg border border-white bg-white p-1 shadow-sm">
           {VIEW_MODES.map((vm) => {
             const VmIcon = vm.icon
             const isActive = view === vm.id
@@ -103,11 +95,11 @@ export function MockInboxTab() {
                 key={vm.id}
                 type="button"
                 onClick={() => setView(vm.id)}
-                className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-medium transition-colors ${
-                  isActive ? 'bg-primary-500 text-white' : 'text-gray-600 hover:bg-gray-100'
+                className={`flex items-center gap-2 rounded-md px-7 py-2 text-xs font-medium transition-colors ${
+                  isActive ? 'bg-[#204E4D] text-white' : 'text-[#05040D] hover:bg-gray-50'
                 }`}
               >
-                <VmIcon size={12} className={isActive ? 'text-white' : 'text-gray-500'} />
+                <VmIcon size={14} className={isActive ? 'text-white' : 'text-gray-500'} />
                 {t(vm.key, vm.fallback)}
               </button>
             )
@@ -115,77 +107,47 @@ export function MockInboxTab() {
         </div>
       </div>
 
-      {/* State filter chips — active chips show an "X" to clear, matching the
-          Figma "All my departments x" / "Average x" pattern. */}
-      <div className="flex flex-wrap items-center gap-2">
-        <button
-          type="button"
-          onClick={() => setStateFilter('all')}
-          className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-medium transition-colors ${
-            stateFilter === 'all'
-              ? 'border-primary-400 bg-primary-50 text-primary-700'
-              : 'border-gray-200 bg-white text-gray-700'
-          }`}
-        >
-          {t('pages.training.inbox.filters.all', 'All states')}
-          <span
-            className={`rounded-full px-1.5 py-0.5 text-[9px] ${
-              stateFilter === 'all'
-                ? 'bg-primary-100 text-primary-700'
-                : 'bg-gray-100 text-gray-600'
-            }`}
-          >
-            {MOCK_INBOX_ROWS.length}
-          </span>
-          {stateFilter === 'all' ? <Icons.Close size={10} className="text-primary-600" /> : null}
-        </button>
-        {(Object.keys(STATE_FILTER_LABELS) as InboxAssignmentState[]).map((s) => {
-          const isActive = stateFilter === s
-          return (
-            <button
-              key={s}
-              type="button"
-              onClick={() => setStateFilter(isActive ? 'all' : s)}
-              className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-medium transition-colors ${
-                isActive
-                  ? 'border-primary-400 bg-primary-50 text-primary-700'
-                  : 'border-gray-200 bg-white text-gray-700'
-              }`}
-            >
-              {STATE_FILTER_LABELS[s]}
-              <span
-                className={`rounded-full px-1.5 py-0.5 text-[9px] ${
-                  isActive ? 'bg-primary-100 text-primary-700' : STATE_FILTER_TONES[s]
-                }`}
-              >
-                {MOCK_INBOX_STATE_COUNTS[s]}
-              </span>
-              {isActive ? <Icons.Close size={10} className="text-primary-600" /> : null}
-            </button>
-          )
-        })}
-      </div>
-
-      {/* Body */}
-      {view === 'inbox' ? (
-        <div className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(360px,_440px)_1fr]">
+      {/* Main body */}
+      <div
+        className={`grid min-h-0 flex-1 gap-3 ${
+          view === 'inbox'
+            ? 'grid-cols-1 xl:grid-cols-[260px_minmax(0,1fr)]'
+            : 'grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(320px,400px)]'
+        }`}
+      >
+        {view === 'inbox' ? (
           <MockInboxListView
             rows={filteredRows}
-            selectedOperatorId={selectedOperatorId}
+            selectedOperatorId={selectedOperator?.operatorId ?? 0}
             onSelect={setSelectedOperatorId}
           />
-          <MockOperatorDetailPanel
-            operator={MOCK_INBOX_ROWS.find((r) => r.operatorId === selectedOperatorId) ?? null}
+        ) : view === 'kanban' ? (
+          <MockInboxKanbanView
+            rows={filteredRows}
+            selectedOperatorId={selectedOperator?.operatorId}
+            onSelect={setSelectedOperatorId}
           />
-        </div>
-      ) : view === 'kanban' ? (
-        <MockInboxKanbanView rows={filteredRows} onSelect={setSelectedOperatorId} />
-      ) : (
-        <MockInboxGridView rows={filteredRows} onSelect={setSelectedOperatorId} />
-      )}
+        ) : (
+          <MockInboxGridView
+            rows={filteredRows}
+            selectedOperatorId={selectedOperator?.operatorId}
+            onSelect={setSelectedOperatorId}
+          />
+        )}
 
-      <div className="mt-auto">
-        <MockWorkspaceBanner />
+        <MockOperatorDetailPanel
+          operator={selectedOperator}
+          showTabs={showSidebarTabs}
+          activeTab={detailTab}
+          onTabChange={setDetailTab}
+          eventFeedCount={11}
+        />
+      </div>
+
+      <div className="pointer-events-none fixed right-0 bottom-4 left-0 z-20 flex justify-center px-4 lg:left-[var(--sidebar-width,0px)]">
+        <div className="pointer-events-auto w-full max-w-[1110px]">
+          <MockWorkspaceBanner />
+        </div>
       </div>
     </div>
   )

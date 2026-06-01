@@ -1368,12 +1368,20 @@ export type InboxAssignmentState =
   | 'scheduled'
   | 'closed'
 
+export type InboxPriority = 'critical' | 'average' | 'low'
+
 export interface MockInboxTrigger {
   id: number
   code: string
   label: string
   severity: 'info' | 'warn' | 'critical'
   detectedAtLabel: string
+}
+
+/** Colored trigger chips on Kanban / Grid cards (Figma). */
+export interface MockInboxTriggerTag {
+  label: string
+  tone: 'red' | 'amber' | 'teal'
 }
 
 export interface MockInboxRow {
@@ -1383,14 +1391,29 @@ export interface MockInboxRow {
   avatarColor: string
   team: string
   department: string
+  segment: string
+  extension: string
   online: boolean
   lastActiveLabel: string
   state: InboxAssignmentState
+  priority: InboxPriority
   compositeScore: number
   scoreBand: ScoreBand
   scoreDeltaPct: number
   triggers: MockInboxTrigger[]
+  triggerTags: MockInboxTriggerTag[]
   flagged: boolean
+  queueEnteredLabel: string
+  dailyPlanPct: number
+  dailyPlanDone: number
+  dailyPlanTotal: number
+  onlineDuration: string
+  onlineSince: string
+  experienceYear: string
+  experienceDate: string
+  activityMinutes: number
+  listStatusDot: 'red' | 'amber' | 'green'
+  cardTimestamp: string
 }
 
 const INBOX_TRIGGERS_POOL: Omit<MockInboxTrigger, 'detectedAtLabel'>[] = [
@@ -1402,47 +1425,238 @@ const INBOX_TRIGGERS_POOL: Omit<MockInboxTrigger, 'detectedAtLabel'>[] = [
   { id: 6, code: 'no_summary', label: 'Missing dialogue summary', severity: 'info' },
 ]
 
-function buildInboxRow(idx: number, state: InboxAssignmentState): MockInboxRow {
-  const name = OPERATOR_NAMES[idx % OPERATOR_NAMES.length]
-  const parts = name.split(' ')
-  const score = 38 + ((idx * 11) % 55)
-  const triggersCount = idx % 3
+/** Figma INBOX frames — operator roster, scores, and trigger tags. */
+const FIGMA_INBOX_OPERATORS: Omit<
+  MockInboxRow,
+  'triggers' | 'triggerTags' | 'scoreBand' | 'flagged'
+>[] = [
+  {
+    operatorId: 1,
+    name: 'Artem Honchar',
+    initials: 'АГ',
+    avatarColor: '#FCA5A5',
+    team: 'A - Hard Collection',
+    department: 'Hard Collection',
+    segment: 'Charlie',
+    extension: '5022',
+    online: false,
+    lastActiveLabel: '46 min',
+    state: 'in_progress',
+    priority: 'critical',
+    compositeScore: 42,
+    scoreDeltaPct: -8,
+    queueEnteredLabel: 'entered the queue on 05/13 at 09:22 (today)',
+    dailyPlanPct: 15,
+    dailyPlanDone: 8,
+    dailyPlanTotal: 55,
+    onlineDuration: '1h 04m',
+    onlineSince: 'from 8:00',
+    experienceYear: '2024',
+    experienceDate: '11/21/2024',
+    activityMinutes: 46,
+    listStatusDot: 'red',
+    cardTimestamp: '05/13 09:22 today',
+  },
+  {
+    operatorId: 2,
+    name: 'Svetlana Hordiienko',
+    initials: 'СГ',
+    avatarColor: '#E0E7FF',
+    team: 'A - Hard Collection',
+    department: 'Hard Collection',
+    segment: 'Bravo',
+    extension: '5018',
+    online: true,
+    lastActiveLabel: 'Online',
+    state: 'in_progress',
+    priority: 'average',
+    compositeScore: 58,
+    scoreDeltaPct: 2,
+    queueEnteredLabel: 'entered the queue on 05/13 at 08:45 (today)',
+    dailyPlanPct: 42,
+    dailyPlanDone: 23,
+    dailyPlanTotal: 55,
+    onlineDuration: '2h 10m',
+    onlineSince: 'from 7:30',
+    experienceYear: '2023',
+    experienceDate: '03/14/2023',
+    activityMinutes: 12,
+    listStatusDot: 'amber',
+    cardTimestamp: '05/13 08:45 today',
+  },
+  {
+    operatorId: 3,
+    name: 'Denys Poltavets',
+    initials: 'ДП',
+    avatarColor: '#FEF3C7',
+    team: 'B - Soft Collection',
+    department: 'Soft Collection',
+    segment: 'Alpha',
+    extension: '5031',
+    online: false,
+    lastActiveLabel: 'In call',
+    state: 'wait',
+    priority: 'average',
+    compositeScore: 61,
+    scoreDeltaPct: -3,
+    queueEnteredLabel: 'entered the queue on 05/12 at 16:10',
+    dailyPlanPct: 38,
+    dailyPlanDone: 21,
+    dailyPlanTotal: 55,
+    onlineDuration: '45m',
+    onlineSince: 'from 9:15',
+    experienceYear: '2022',
+    experienceDate: '08/02/2022',
+    activityMinutes: 28,
+    listStatusDot: 'amber',
+    cardTimestamp: '05/12 16:10',
+  },
+  {
+    operatorId: 4,
+    name: 'Iryna Sokol',
+    initials: 'ІС',
+    avatarColor: '#D1FAE5',
+    team: 'A - Hard Collection',
+    department: 'Hard Collection',
+    segment: 'Charlie',
+    extension: '5044',
+    online: true,
+    lastActiveLabel: 'Online',
+    state: 'awaiting_training',
+    priority: 'low',
+    compositeScore: 72,
+    scoreDeltaPct: 5,
+    queueEnteredLabel: 'entered the queue on 05/11 at 14:00',
+    dailyPlanPct: 68,
+    dailyPlanDone: 37,
+    dailyPlanTotal: 55,
+    onlineDuration: '3h 20m',
+    onlineSince: 'from 7:00',
+    experienceYear: '2021',
+    experienceDate: '01/19/2021',
+    activityMinutes: 5,
+    listStatusDot: 'green',
+    cardTimestamp: '05/11 14:00',
+  },
+  {
+    operatorId: 5,
+    name: 'Bohdan Melnyk',
+    initials: 'БМ',
+    avatarColor: '#FFEDD5',
+    team: 'B - Soft Collection',
+    department: 'Soft Collection',
+    segment: 'Delta',
+    extension: '5055',
+    online: false,
+    lastActiveLabel: '22 min',
+    state: 'scheduled',
+    priority: 'low',
+    compositeScore: 78,
+    scoreDeltaPct: 4,
+    queueEnteredLabel: 'entered the queue on 05/10 at 11:30',
+    dailyPlanPct: 81,
+    dailyPlanDone: 44,
+    dailyPlanTotal: 55,
+    onlineDuration: '55m',
+    onlineSince: 'from 10:00',
+    experienceYear: '2020',
+    experienceDate: '06/08/2020',
+    activityMinutes: 18,
+    listStatusDot: 'green',
+    cardTimestamp: '05/10 11:30',
+  },
+  {
+    operatorId: 6,
+    name: 'Yuriy Kravtsov',
+    initials: 'ЮК',
+    avatarColor: '#E0F2EC',
+    team: 'A - Hard Collection',
+    department: 'Hard Collection',
+    segment: 'Bravo',
+    extension: '5062',
+    online: true,
+    lastActiveLabel: 'Online',
+    state: 'wait',
+    priority: 'critical',
+    compositeScore: 39,
+    scoreDeltaPct: -12,
+    queueEnteredLabel: 'entered the queue on 05/13 at 07:55 (today)',
+    dailyPlanPct: 12,
+    dailyPlanDone: 7,
+    dailyPlanTotal: 55,
+    onlineDuration: '1h 30m',
+    onlineSince: 'from 8:00',
+    experienceYear: '2024',
+    experienceDate: '09/03/2024',
+    activityMinutes: 52,
+    listStatusDot: 'red',
+    cardTimestamp: '05/13 07:55 today',
+  },
+  {
+    operatorId: 7,
+    name: 'Oleh Bondar',
+    initials: 'ОБ',
+    avatarColor: '#FCE7F3',
+    team: 'A - Hard Collection',
+    department: 'Hard Collection',
+    segment: 'Charlie',
+    extension: '5070',
+    online: false,
+    lastActiveLabel: '1h ago',
+    state: 'closed',
+    priority: 'average',
+    compositeScore: 65,
+    scoreDeltaPct: 1,
+    queueEnteredLabel: 'entered the queue on 05/09 at 10:15',
+    dailyPlanPct: 55,
+    dailyPlanDone: 30,
+    dailyPlanTotal: 55,
+    onlineDuration: '—',
+    onlineSince: '—',
+    experienceYear: '2019',
+    experienceDate: '04/22/2019',
+    activityMinutes: 0,
+    listStatusDot: 'green',
+    cardTimestamp: '05/09 10:15',
+  },
+]
+
+function buildInboxRow(base: (typeof FIGMA_INBOX_OPERATORS)[number]): MockInboxRow {
+  const triggersCount = base.priority === 'critical' ? 4 : base.priority === 'average' ? 2 : 1
   const triggers = INBOX_TRIGGERS_POOL.slice(0, triggersCount).map((t, j) => ({
     ...t,
     detectedAtLabel: `${j + 1}h ago`,
   }))
+  const triggerTags: MockInboxTriggerTag[] =
+    base.priority === 'critical'
+      ? [
+          { label: 'Assessment', tone: 'red' },
+          { label: 'Weekly Plan', tone: 'red' },
+          { label: 'Downtime +1', tone: 'amber' },
+        ]
+      : base.priority === 'average'
+        ? [
+            { label: 'Rating', tone: 'red' },
+            { label: 'Weekly Plan', tone: 'red' },
+          ]
+        : [{ label: 'Idle', tone: 'amber' }]
   return {
-    operatorId: idx + 1,
-    name,
-    initials: `${parts[0][0]}${parts[1]?.[0] ?? ''}`.toUpperCase(),
-    avatarColor: AVATAR_PALETTE[idx % AVATAR_PALETTE.length],
-    team: idx % 2 === 0 ? 'Team "Alpha"' : 'Team "Bravo"',
-    department: 'Hard Collection',
-    online: idx % 4 !== 0,
-    lastActiveLabel: idx % 4 === 0 ? '15m ago' : 'Online',
-    state,
-    compositeScore: score,
-    scoreBand: scoreBandFor(score),
-    scoreDeltaPct: ((idx * 3) % 11) - 5,
+    ...base,
+    scoreBand: scoreBandFor(base.compositeScore),
     triggers,
+    triggerTags,
     flagged: triggersCount > 0,
   }
 }
 
-export const MOCK_INBOX_ROWS: MockInboxRow[] = [
-  buildInboxRow(0, 'wait'),
-  buildInboxRow(1, 'in_progress'),
-  buildInboxRow(2, 'in_progress'),
-  buildInboxRow(3, 'awaiting_training'),
-  buildInboxRow(4, 'wait'),
-  buildInboxRow(5, 'scheduled'),
-  buildInboxRow(6, 'in_progress'),
-  buildInboxRow(7, 'closed'),
-  buildInboxRow(8, 'wait'),
-  buildInboxRow(9, 'awaiting_training'),
-  buildInboxRow(10, 'closed'),
-  buildInboxRow(11, 'scheduled'),
-]
+export const MOCK_INBOX_ROWS: MockInboxRow[] = FIGMA_INBOX_OPERATORS.map(buildInboxRow)
+
+export const MOCK_INBOX_PRIORITY_COUNTS: Record<InboxPriority | 'all', number> = {
+  all: MOCK_INBOX_ROWS.length,
+  critical: MOCK_INBOX_ROWS.filter((r) => r.priority === 'critical').length,
+  average: MOCK_INBOX_ROWS.filter((r) => r.priority === 'average').length,
+  low: MOCK_INBOX_ROWS.filter((r) => r.priority === 'low').length,
+}
 
 export const MOCK_INBOX_STATE_COUNTS: Record<InboxAssignmentState, number> = {
   wait: MOCK_INBOX_ROWS.filter((r) => r.state === 'wait').length,
@@ -1471,7 +1685,7 @@ export interface MockOperatorScoreSeries {
 export interface MockOperatorDetail {
   // Figma "Inbox View A" body sections
   statusBannerText: string
-  statsRow: { label: string; value: string; tone: string }[]
+  statsRow: { label: string; value: string; subValue?: string; cardTone: 'red' | 'gray' }[]
   whyInQueue: { id: number; label: string; meta: string; tone: 'red' | 'amber' | 'green' }[]
   latestDialogueRatings: {
     id: number
@@ -1481,6 +1695,7 @@ export interface MockOperatorDetail {
     scoreOutOf: number
     tone: 'red' | 'amber' | 'green'
   }[]
+  nextOneOnOne: { topic: string; dateLabel: string; triggerCount: number }
   // Extra fields used elsewhere (kept for back-compat)
   recentCalls: MockOperatorRecentCall[]
   scoreSeries: MockOperatorScoreSeries[]
@@ -1492,34 +1707,52 @@ export interface MockOperatorDetail {
 
 export const MOCK_OPERATOR_DETAIL: MockOperatorDetail = {
   statusBannerText:
-    'First flags · Escalation likely needed — no follow-up for 3 days, but triggers have accumulated.',
+    '4 red flags. Escalation likely needed — case open for 0 days, but triggers have accumulated.',
   statsRow: [
-    { label: 'Score change', value: '−15%', tone: 'text-red-600' },
-    { label: 'Avg call', value: '15 min', tone: 'text-dark-500' },
-    { label: 'Tasks done', value: '20/24', tone: 'text-emerald-600' },
-    { label: 'Idle today', value: '46 min', tone: 'text-amber-600' },
+    { label: 'Daily plan', value: '15%', subValue: '8/55', cardTone: 'red' },
+    { label: 'Online', value: '1h 04m', subValue: 'from 8:00', cardTone: 'gray' },
+    { label: 'Internship', value: '2024', subValue: '11/21/2024', cardTone: 'gray' },
+    { label: 'Activity', value: '46 min', subValue: 'last signal', cardTone: 'gray' },
   ],
+  nextOneOnOne: {
+    topic: 'Tough conversation: 4 triggers',
+    dateLabel: '05/15',
+    triggerCount: 4,
+  },
   whyInQueue: [
-    { id: 1, label: 'Lost client of pending request', meta: 'Triggered 2d ago', tone: 'red' },
-    { id: 2, label: 'Direction training', meta: 'Course "Objections" overdue', tone: 'amber' },
-    { id: 3, label: 'Active intervention', meta: '1-on-1 planned 20.05', tone: 'green' },
+    {
+      id: 1,
+      label: 'Low dialogue rating',
+      meta: '38 points · call #C-1016',
+      tone: 'red',
+    },
+    {
+      id: 2,
+      label: 'Daily plan not being met',
+      meta: '14% at 11:00',
+      tone: 'amber',
+    },
+    {
+      id: 3,
+      label: 'Overdue training',
+      meta: 'Course "Empathy" overdue',
+      tone: 'red',
+    },
+    {
+      id: 4,
+      label: 'Delay / little online',
+      meta: '47 min delay',
+      tone: 'amber',
+    },
   ],
   latestDialogueRatings: [
     {
       id: 1,
       label: 'Conflict with client',
-      triggerCount: 3,
-      score: 42,
+      triggerCount: 4,
+      score: 38,
       scoreOutOf: 100,
       tone: 'red',
-    },
-    {
-      id: 2,
-      label: 'Tough conversation',
-      triggerCount: 4,
-      score: 58,
-      scoreOutOf: 100,
-      tone: 'amber',
     },
   ],
   recentCalls: Array.from({ length: 5 }, (_, i) => {
