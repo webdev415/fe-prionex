@@ -77,6 +77,7 @@ import {
   useRestructuringAgreementDetail,
   useCreateRestructuringAgreement,
   useCloseDebt,
+  useReopenDebt,
   useUpdateDebtClosureDate,
   useCompleteRestructuringAgreement,
   useTransitionRRStatus,
@@ -238,6 +239,8 @@ export function ClientDetailPage() {
   })
   const [connectRrError, setConnectRrError] = useState<string | null>(null)
   const [closeLoanConfirm, setCloseLoanConfirm] = useState<number | null>(null) // debtId to close
+  // Reopen-loan confirmation modal: holds the debt_id to reopen, or null when closed.
+  const [reopenLoanConfirm, setReopenLoanConfirm] = useState<number | null>(null)
   // Local state for the closure-date picker inside the close-loan modal.
   // Defaults to today; max = today (future dates rejected).
   const [closeLoanClosureDate, setCloseLoanClosureDate] = useState<Date | null>(null)
@@ -359,6 +362,7 @@ export function ClientDetailPage() {
   )
   const { mutate: createRr, isPending: isCreatingRr } = useCreateRestructuringAgreement()
   const { mutate: closeDebt, isPending: isClosingDebt } = useCloseDebt()
+  const { mutate: reopenDebt, isPending: isReopeningDebt } = useReopenDebt()
   const { mutate: updateClosureDate, isPending: isUpdatingClosureDate } = useUpdateDebtClosureDate()
   const { mutate: completeRa, isPending: isCompletingRa } = useCompleteRestructuringAgreement()
   const { mutate: transitionRr, isPending: isTransitioningRr } = useTransitionRRStatus()
@@ -691,6 +695,7 @@ export function ClientDetailPage() {
         // Closure date — surfaced for closed debts so the user can see it and,
         // with the close_client_debt permission, edit it after closure.
         creditClosedDate: d.credit_closed_date ?? null,
+        creditReopenedDate: d.credit_reopened_date ?? null,
         // Legacy TABLE460.f53 — eligible-for-return amount carried over from
         // the sale. Surfaced as its own column only when at least one loan row
         // has it and it diverges from remainingDebtAmount (see loanColumns).
@@ -1447,22 +1452,32 @@ export function ClientDetailPage() {
         if (loan.status === 'closed') {
           return (
             <PermissionGuard permission={PERMISSIONS.CLIENTS.CLOSE_DEBT}>
-              <button
-                onClick={() => {
-                  setEditClosureDateDebtId(loan.id)
-                  setEditClosureDateValue(
-                    loan.creditClosedDate
-                      ? parseISODateAtMidnight(loan.creditClosedDate)
-                      : getTodayAtMidnight()
-                  )
-                  setEditClosureDateError(null)
-                }}
-                disabled={isUpdatingClosureDate}
-                className="p-1 text-blue-600 hover:text-blue-800 disabled:opacity-50"
-                title={t('pages.clients.detail.editClosureDate', 'Edit closure date')}
-              >
-                <Icons.Edit size={18} />
-              </button>
+              <div className="flex items-center justify-center gap-1">
+                <button
+                  onClick={() => {
+                    setEditClosureDateDebtId(loan.id)
+                    setEditClosureDateValue(
+                      loan.creditClosedDate
+                        ? parseISODateAtMidnight(loan.creditClosedDate)
+                        : getTodayAtMidnight()
+                    )
+                    setEditClosureDateError(null)
+                  }}
+                  disabled={isUpdatingClosureDate}
+                  className="p-1 text-blue-600 hover:text-blue-800 disabled:opacity-50"
+                  title={t('pages.clients.detail.editClosureDate', 'Edit closure date')}
+                >
+                  <Icons.Edit size={18} />
+                </button>
+                <button
+                  onClick={() => setReopenLoanConfirm(loan.id)}
+                  disabled={isReopeningDebt}
+                  className="p-1 text-amber-600 hover:text-amber-800 disabled:opacity-50"
+                  title={t('pages.clients.detail.reopenLoan', 'Reopen loan')}
+                >
+                  <Icons.Reload size={18} />
+                </button>
+              </div>
             </PermissionGuard>
           )
         }
@@ -5443,6 +5458,56 @@ export function ClientDetailPage() {
               {isClosingDebt
                 ? t('actions.saving', 'Saving...')
                 : t('pages.clients.detail.closeLoan')}
+            </Button>
+          </ModalFooter>
+        </Modal>
+
+        {/* Reopen Loan Modal — confirmation only, no date picker. */}
+        <Modal
+          open={reopenLoanConfirm !== null}
+          onClose={() => setReopenLoanConfirm(null)}
+          maxWidth="md"
+        >
+          <ModalHeader
+            icon={
+              <div className="bg-primary-400 flex h-8 w-8 items-center justify-center rounded-full">
+                <Icons.Reload size={20} className="text-dark-500" strokeWidth={2} />
+              </div>
+            }
+            title={t('pages.clients.detail.reopenLoan', 'Reopen loan')}
+          />
+          <ModalContent>
+            <p className="text-dark-500 mb-4 text-base font-light">
+              {t(
+                'pages.clients.detail.confirmReopenLoan',
+                'Are you sure you want to reopen this credit?'
+              )}
+            </p>
+          </ModalContent>
+          <ModalFooter>
+            <Button
+              type="button"
+              variant="cancel"
+              onClick={() => setReopenLoanConfirm(null)}
+              disabled={isReopeningDebt}
+              className="h-[45px] flex-1 text-sm"
+            >
+              {t('actions.cancel')}
+            </Button>
+            <Button
+              type="button"
+              variant="primary"
+              onClick={() => {
+                if (reopenLoanConfirm === null) return
+                reopenDebt(
+                  { clientId, debtId: reopenLoanConfirm },
+                  { onSettled: () => setReopenLoanConfirm(null) }
+                )
+              }}
+              disabled={isReopeningDebt}
+              className="h-[45px] flex-1 text-sm"
+            >
+              {isReopeningDebt ? t('actions.saving', 'Saving...') : t('actions.confirm', 'Confirm')}
             </Button>
           </ModalFooter>
         </Modal>

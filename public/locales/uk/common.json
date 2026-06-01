@@ -2125,6 +2125,8 @@
         "writeOff": "Списання",
         "reversal": "Сторно",
         "closeLoan": "Закрити позику",
+        "reopenLoan": "Поновити позику",
+        "confirmReopenLoan": "Ви впевнені, що хочете поновити цей кредит?",
         "editClosureDate": "Редагувати дату закриття",
         "closureDate": "Дата закриття",
         "closureDateRequired": "Дата закриття обов'язкова",

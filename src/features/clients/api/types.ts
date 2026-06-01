@@ -41,6 +41,7 @@ export interface DebtDetail {
   credit_issued_date?: string | null
   credit_term_days?: number | null
   credit_closed_date?: string | null
+  credit_reopened_date?: string | null
   portfolio_name?: string | null
   // Enriched fields from loans refactor
   principal_paid?: string | null
