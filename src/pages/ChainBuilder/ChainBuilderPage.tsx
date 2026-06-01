@@ -277,6 +277,19 @@ export function ChainBuilderPage() {
               ? t('pages.chainBuilder.config.phone', { step: stepRef(step) })
               : t('pages.chainBuilder.config.phoneUnknown', { id: String(value) })
           )
+        } else if (key === 'email_ref') {
+          const step = (chain?.steps ?? []).find((s) => s.id === Number(value))
+          parts.push(
+            step
+              ? t('pages.chainBuilder.config.email', {
+                  step: stepRef(step),
+                  defaultValue: `Email: ${stepRef(step)}`,
+                })
+              : t('pages.chainBuilder.config.emailUnknown', {
+                  id: String(value),
+                  defaultValue: `Email step #${String(value)}`,
+                })
+          )
         } else {
           parts.push(t('pages.chainBuilder.config.generic', { key, value: String(value) }))
         }
@@ -464,6 +477,14 @@ export function ChainBuilderPage() {
   const contactSteps = useMemo(
     () => steps.filter((s) => s.target_action_field_type === 'contact'),
     [steps]
+  )
+  const phoneContactSteps = useMemo(
+    () => contactSteps.filter((s) => (s.contact_medium ?? 'phone') !== 'email'),
+    [contactSteps]
+  )
+  const emailContactSteps = useMemo(
+    () => contactSteps.filter((s) => s.contact_medium === 'email'),
+    [contactSteps]
   )
   const dateSteps = useMemo(
     () => steps.filter((s) => s.target_action_field_type === 'date'),
@@ -912,8 +933,8 @@ export function ChainBuilderPage() {
                                 if (v === 'send_message') {
                                   setMessageChannel('sms')
                                   setNewEffectConfig(
-                                    contactSteps.length === 1
-                                      ? { phone_ref: String(contactSteps[0].id) }
+                                    phoneContactSteps.length === 1
+                                      ? { phone_ref: String(phoneContactSteps[0].id) }
                                       : {}
                                   )
                                 }
@@ -982,11 +1003,19 @@ export function ChainBuilderPage() {
                                   onChange={(e) => {
                                     const ch = e.target.value as MessagingChannel
                                     setMessageChannel(ch)
-                                    setNewEffectConfig({
+                                    const next: Record<string, string> = {
                                       channel: ch,
                                       service: '',
                                       draft_id: '',
-                                    })
+                                    }
+                                    if (ch === 'sms' || ch === 'viber') {
+                                      if (phoneContactSteps.length === 1) {
+                                        next.phone_ref = String(phoneContactSteps[0].id)
+                                      }
+                                    } else if (ch === 'email' && emailContactSteps.length === 1) {
+                                      next.email_ref = String(emailContactSteps[0].id)
+                                    }
+                                    setNewEffectConfig(next)
                                   }}
                                 >
                                   {MESSAGING_CHANNELS.map((ch) => (
@@ -1051,7 +1080,7 @@ export function ChainBuilderPage() {
                                   </SelectContent>
                                 </Select>
                                 {(messageChannel === 'sms' || messageChannel === 'viber') &&
-                                  (contactSteps.length === 0 ? (
+                                  (phoneContactSteps.length === 0 ? (
                                     <div className="rounded-md border border-amber-200 bg-amber-50 px-2 py-1.5 text-[11px] text-amber-700">
                                       {t('pages.chainBuilder.addToSpamNoContactSteps')}
                                     </div>
@@ -1059,17 +1088,60 @@ export function ChainBuilderPage() {
                                     <select
                                       className="h-8 rounded-md border border-gray-200 px-2 text-xs text-gray-800"
                                       value={newEffectConfig.phone_ref ?? ''}
-                                      onChange={(e) =>
-                                        setNewEffectConfig({
+                                      onChange={(e) => {
+                                        const next: Record<string, string> = {
                                           ...newEffectConfig,
                                           phone_ref: e.target.value,
-                                        })
-                                      }
+                                        }
+                                        delete next.email_ref
+                                        setNewEffectConfig(next)
+                                      }}
                                     >
                                       <option value="">
                                         {t('pages.chainBuilder.placeholders.phoneSourceRequired')}
                                       </option>
-                                      {contactSteps.map((s) => (
+                                      {phoneContactSteps.map((s) => (
+                                        <option key={s.id} value={String(s.id)}>
+                                          {t('pages.chainBuilder.config.stepRef', {
+                                            order: s.step_order,
+                                            name:
+                                              s.target_action_name ??
+                                              t('pages.chainBuilder.taFallback', {
+                                                id: s.target_action_id,
+                                              }),
+                                          })}
+                                        </option>
+                                      ))}
+                                    </select>
+                                  ))}
+                                {messageChannel === 'email' &&
+                                  (emailContactSteps.length === 0 ? (
+                                    <p className="text-[11px] text-gray-500">
+                                      {t(
+                                        'pages.chainBuilder.sendMessageEmailRefOptional',
+                                        'Optional: add an email contact step to pick the address from chain data. Otherwise the client primary email is used.'
+                                      )}
+                                    </p>
+                                  ) : (
+                                    <select
+                                      className="h-8 rounded-md border border-gray-200 px-2 text-xs text-gray-800"
+                                      value={newEffectConfig.email_ref ?? ''}
+                                      onChange={(e) => {
+                                        const next: Record<string, string> = {
+                                          ...newEffectConfig,
+                                          email_ref: e.target.value,
+                                        }
+                                        delete next.phone_ref
+                                        setNewEffectConfig(next)
+                                      }}
+                                    >
+                                      <option value="">
+                                        {t(
+                                          'pages.chainBuilder.placeholders.emailSourceOptional',
+                                          'Primary email (default)'
+                                        )}
+                                      </option>
+                                      {emailContactSteps.map((s) => (
                                         <option key={s.id} value={String(s.id)}>
                                           {t('pages.chainBuilder.config.stepRef', {
                                             order: s.step_order,
@@ -1225,7 +1297,7 @@ export function ChainBuilderPage() {
                               </>
                             )}
                             {newEffectType === 'add_to_spam' &&
-                              (contactSteps.length === 0 ? (
+                              (phoneContactSteps.length === 0 ? (
                                 <div className="rounded-md border border-amber-200 bg-amber-50 px-2 py-1.5 text-[11px] text-amber-700">
                                   {t('pages.chainBuilder.addToSpamNoContactSteps')}
                                 </div>
@@ -1243,7 +1315,7 @@ export function ChainBuilderPage() {
                                   <option value="">
                                     {t('pages.chainBuilder.placeholders.phoneSourceRequired')}
                                   </option>
-                                  {contactSteps.map((s) => (
+                                  {phoneContactSteps.map((s) => (
                                     <option key={s.id} value={String(s.id)}>
                                       {t('pages.chainBuilder.config.stepRef', {
                                         order: s.step_order,
@@ -1317,9 +1389,9 @@ export function ChainBuilderPage() {
                                     !ec.draft_id ||
                                     usableMessagingServices.length === 0 ||
                                     ((messageChannel === 'sms' || messageChannel === 'viber') &&
-                                      (contactSteps.length === 0 || !ec.phone_ref)))) ||
+                                      (phoneContactSteps.length === 0 || !ec.phone_ref)))) ||
                                 (newEffectType === 'add_to_spam' &&
-                                  (contactSteps.length === 0 || !ec.phone_ref)) ||
+                                  (phoneContactSteps.length === 0 || !ec.phone_ref)) ||
                                 (newEffectType === 'create_task' &&
                                   (!ec.subject_id ||
                                     !ec.assignee_mode ||
@@ -1354,6 +1426,9 @@ export function ChainBuilderPage() {
                                         ec.phone_ref
                                       ) {
                                         cfg.phone_ref = parseInt(ec.phone_ref, 10)
+                                      }
+                                      if (messageChannel === 'email' && ec.email_ref) {
+                                        cfg.email_ref = parseInt(ec.email_ref, 10)
                                       }
                                     }
                                     try {

@@ -32,7 +32,9 @@ import {
 } from '@/features/taInteractions/hooks/useTAInteractions'
 import { useTAChain } from '@/features/taChains/hooks/useTAChains'
 import { useTargetActions } from '@/features/targetActions/hooks/useTargetActions'
+import { useClientEmails } from '@/features/clients/hooks/useClientEmails'
 import { useClientPhones } from '@/features/clients/hooks/useClientPhones'
+import type { ContactMedium } from '@/features/taChains/api/types'
 import type { ContactSource } from '@/features/taChains/api/types'
 import { getErrorMessage } from '@/lib/errors'
 import { formatMoneyKopeckTight } from '@/lib/formatters'
@@ -40,21 +42,25 @@ import { formatMoneyKopeckTight } from '@/lib/formatters'
 function ContactStepEdit({
   clientId,
   source,
+  contactMedium,
   value,
   onChange,
 }: {
   clientId: number
   source: ContactSource | null
+  contactMedium?: ContactMedium
   value: string
   onChange: (v: string) => void
 }) {
   const { t } = useTranslation('common')
-  const { data: phonesData } = useClientPhones(clientId, source ?? 'client')
-  // step_data stores the phone string verbatim, so the Select compares
+  const isEmail = contactMedium === 'email'
+  const { data: phonesData } = useClientPhones(clientId, !isEmail ? (source ?? 'client') : null)
+  const { data: emailsData } = useClientEmails(clientId, isEmail ? (source ?? 'client') : null)
+  // step_data stores the contact string verbatim, so the Select compares
   // by contact_value not id. If the saved value isn't in the current
-  // phone list (contact deleted/renamed), still show it as a stale entry.
-  const phones = phonesData ?? []
-  const valueIsKnown = phones.some((p) => p.contact_value === value)
+  // list (contact deleted/renamed), still show it as a stale entry.
+  const contacts = (isEmail ? emailsData : phonesData) ?? []
+  const valueIsKnown = contacts.some((p) => p.contact_value === value)
   return (
     <Select value={value} onValueChange={onChange}>
       <SelectTrigger>
@@ -69,7 +75,7 @@ function ContactStepEdit({
             </span>
           </SelectItem>
         )}
-        {phones.map((p) => (
+        {contacts.map((p) => (
           <SelectItem key={p.id} value={p.contact_value}>
             {p.contact_value}
             {p.type_name ? ` (${p.type_name})` : ''}
@@ -366,6 +372,7 @@ export function EditTAInteractionModal({
                     <ContactStepEdit
                       clientId={interaction.client_id}
                       source={step.contact_source}
+                      contactMedium={step.contact_medium}
                       value={value}
                       onChange={(v) => setStepValue(step.id, v)}
                     />
