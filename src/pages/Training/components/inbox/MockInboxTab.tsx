@@ -70,29 +70,10 @@ export function MockInboxTab() {
     stateFilter === 'all' ? MOCK_INBOX_ROWS : MOCK_INBOX_ROWS.filter((r) => r.state === stateFilter)
 
   return (
-    <div className="flex flex-col gap-3">
-      {/* Sub-strip — view mode toggle + scope chips + state-filter chips */}
+    <div className="flex min-h-[calc(100vh-220px)] flex-col gap-3 pb-16">
+      {/* Sub-strip — scope chips on left, view-mode toggle on right
+          (matches Figma Inbox View A frame). */}
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2 rounded-full bg-white p-1 shadow-sm">
-          {VIEW_MODES.map((vm) => {
-            const VmIcon = vm.icon
-            const isActive = view === vm.id
-            return (
-              <button
-                key={vm.id}
-                type="button"
-                onClick={() => setView(vm.id)}
-                className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-medium transition-colors ${
-                  isActive ? 'bg-primary-500 text-white' : 'text-gray-600 hover:bg-gray-100'
-                }`}
-              >
-                <VmIcon size={12} className={isActive ? 'text-white' : 'text-gray-500'} />
-                {t(vm.key, vm.fallback)}
-              </button>
-            )
-          })}
-        </div>
-
         <div className="flex items-center gap-2">
           {SCOPE_CHIPS.map((s) => {
             const isActive = s.id === scope
@@ -108,6 +89,26 @@ export function MockInboxTab() {
                 }`}
               >
                 {t(s.key, s.fallback)}
+              </button>
+            )
+          })}
+        </div>
+
+        <div className="flex items-center gap-1 rounded-full bg-white p-1 shadow-sm">
+          {VIEW_MODES.map((vm) => {
+            const VmIcon = vm.icon
+            const isActive = view === vm.id
+            return (
+              <button
+                key={vm.id}
+                type="button"
+                onClick={() => setView(vm.id)}
+                className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-medium transition-colors ${
+                  isActive ? 'bg-primary-500 text-white' : 'text-gray-600 hover:bg-gray-100'
+                }`}
+              >
+                <VmIcon size={12} className={isActive ? 'text-white' : 'text-gray-500'} />
+                {t(vm.key, vm.fallback)}
               </button>
             )
           })}
@@ -183,7 +184,9 @@ export function MockInboxTab() {
         <MockInboxGridView rows={filteredRows} onSelect={setSelectedOperatorId} />
       )}
 
-      <MockWorkspaceBanner />
+      <div className="mt-auto">
+        <MockWorkspaceBanner />
+      </div>
     </div>
   )
 }

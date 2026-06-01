@@ -84,11 +84,20 @@ export function MockOperatorDetailPanel({ operator }: MockOperatorDetailPanelPro
             </span>
           </div>
         </div>
-        <span
-          className={`flex h-12 w-12 items-center justify-center rounded-full text-sm font-semibold text-white ${SCORE_BG[operator.scoreBand]}`}
-        >
-          {operator.compositeScore}
-        </span>
+        <div className="flex flex-col items-end gap-1">
+          <span
+            className={`flex h-16 w-16 items-center justify-center rounded-full text-lg font-semibold text-white shadow-md ring-4 ring-white ${SCORE_BG[operator.scoreBand]}`}
+          >
+            {operator.compositeScore}
+          </span>
+          <span
+            className={`text-[10px] font-medium ${
+              operator.scoreDeltaPct >= 0 ? 'text-emerald-600' : 'text-red-600'
+            }`}
+          >
+            {operator.scoreDeltaPct >= 0 ? '↗' : '↘'} {Math.abs(operator.scoreDeltaPct)}%
+          </span>
+        </div>
       </div>
 
       {/* Red status banner */}
@@ -172,19 +181,27 @@ export function MockOperatorDetailPanel({ operator }: MockOperatorDetailPanelPro
       {/* Trainer actions list */}
       <div className="flex flex-col gap-2 rounded-xl border border-gray-100 bg-gray-50/40 p-3">
         <span className="text-[10px] font-medium tracking-wide text-gray-600 uppercase">
-          {t('pages.training.inbox.detail.trainerActions', 'Trainer actions')}
+          {t('pages.training.inbox.detail.trainerActionsLabel', 'Trainer actions')}
         </span>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           <ActionTile
             icon={<Icons.PlayCircle02 size={14} />}
-            label="Listen to a call"
+            label={t('pages.training.inbox.detail.trainerActions.listen', 'Listen to the call')}
             tone="emerald"
           />
-          <ActionTile icon={<Icons.Calendar size={14} />} label="Plan 1-on-1" tone="blue" />
-          <ActionTile icon={<Icons.Brochure size={14} />} label="Assign task" tone="violet" />
+          <ActionTile
+            icon={<Icons.Calendar size={14} />}
+            label={t('pages.training.inbox.detail.trainerActions.planOneOnOne', 'Plan 1-on-1')}
+            tone="blue"
+          />
+          <ActionTile
+            icon={<Icons.Brochure size={14} />}
+            label={t('pages.training.inbox.detail.trainerActions.assignTask', 'Assign a task')}
+            tone="violet"
+          />
           <ActionTile
             icon={<Icons.ChatFeedback01 size={14} />}
-            label="Leave feedback"
+            label={t('pages.training.inbox.detail.trainerActions.takeCharge', 'Take charge')}
             tone="amber"
           />
         </div>

@@ -13,7 +13,7 @@ import { Icons } from '@/lib/icons'
 export function MockWorkspaceBanner() {
   const { t } = useTranslation('common')
   return (
-    <div className="bg-primary-700 sticky bottom-0 z-10 -mx-4 mt-4 flex flex-wrap items-center justify-between gap-2 rounded-t-2xl px-4 py-2.5 text-white shadow-lg sm:-mx-6 sm:px-6">
+    <div className="bg-primary-700 -mx-4 flex flex-wrap items-center justify-between gap-2 rounded-t-2xl px-4 py-2.5 text-white shadow-lg sm:-mx-6 sm:px-6">
       <div className="flex items-center gap-2 text-[11px]">
         <Icons.UserCircle02Icon size={14} className="text-white/80" />
         <span className="font-semibold">
