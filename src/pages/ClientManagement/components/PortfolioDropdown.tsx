@@ -13,6 +13,7 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from '@/components/ui/DropdownMenu'
+import { Icons } from '@/lib/icons'
 
 interface PortfolioOption {
   id: number
@@ -26,6 +27,13 @@ interface PortfolioDropdownProps {
   onSelectionChange: (sellerIds: number[]) => void
   onOpenChange?: (open: boolean) => void
   trigger: React.ReactNode
+  /**
+   * Opt-in clear-all. When provided AND the selection is non-empty, a small
+   * "×" button is rendered next to the trigger that clears the whole
+   * selection. Other usages are unaffected because it only renders when
+   * onClear is set.
+   */
+  onClear?: () => void
 }
 
 export function PortfolioDropdown({
@@ -34,6 +42,7 @@ export function PortfolioDropdown({
   onSelectionChange,
   onOpenChange,
   trigger,
+  onClear,
 }: PortfolioDropdownProps) {
   const { t } = useTranslation('common')
   const [searchQuery, setSearchQuery] = useState('')
@@ -81,11 +90,25 @@ export function PortfolioDropdown({
     setIsOpen(false)
   }
 
+  const showClear = !!onClear && selectedSellerIds.length > 0
+
   return (
     <DropdownMenu open={isOpen} onOpenChange={handleOpenChange} modal={false}>
-      <DropdownMenuTrigger asChild className="outline-none">
-        {trigger}
-      </DropdownMenuTrigger>
+      <span className="inline-flex items-center gap-1">
+        <DropdownMenuTrigger asChild className="outline-none">
+          {trigger}
+        </DropdownMenuTrigger>
+        {showClear && (
+          <button
+            type="button"
+            onClick={onClear}
+            aria-label="Clear"
+            className="flex shrink-0 items-center text-gray-400 hover:text-gray-600"
+          >
+            <Icons.Cancel01 size={14} />
+          </button>
+        )}
+      </span>
       <DropdownMenuContent
         align="start"
         sideOffset={8}
