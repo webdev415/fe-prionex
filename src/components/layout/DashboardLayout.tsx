@@ -1,4 +1,4 @@
-import { type ReactNode, useState, useMemo, useCallback, useRef, useEffect } from 'react'
+﻿import { type ReactNode, useState, useMemo, useCallback, useRef, useEffect } from 'react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/features/auth'
@@ -221,7 +221,7 @@ function MobileHeaderMenu({ onLogoutClick }: { onLogoutClick?: () => void }) {
             <span className="text-xs font-medium text-white">{getStatusText()}</span>
           </div>
 
-          {/* Call details — hidden in 'initial' state since nothing has been committed yet */}
+          {/* Call details â€” hidden in 'initial' state since nothing has been committed yet */}
           {minimizedCall.callState !== 'initial' && (
             <div className="flex flex-col gap-2 border-t border-gray-700 pt-2">
               {minimizedCall.callType && (
@@ -531,7 +531,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       // Phone search needs enough digits to be both useful (results small
       // enough to render) and fast (enrichment doesn't choke on tens of
       // thousands of candidate contacts). The backend enforces the same
-      // threshold — see PHONE_MIN_DIGITS in services/client/.../search.py.
+      // threshold â€” see PHONE_MIN_DIGITS in services/client/.../search.py.
       // Doing the gate client-side avoids a round trip entirely and lets
       // us show the user a clear "keep typing" hint.
       if (type === 'phone') {
@@ -732,10 +732,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         requiredPermission: PERMISSIONS.MESSAGING.VIEW_CAMPAIGN_ANALYTICS,
       },
       {
-        path: '/dashboard/action-analysis',
+        path: '/dashboard/training',
         icon: 'analytics-01',
-        label: t('navigation.actionAnalysis'),
-        requiredPermission: PERMISSIONS.ACTION_ANALYSIS.VIEW,
+        label: t('navigation.training', 'Training'),
+        requiredPermission: PERMISSIONS.TRAINING.VIEW,
       },
       {
         path: '/dashboard/team-management',
@@ -927,7 +927,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       <div
         className={cn(
           'bg-light-50 bg-dashboard-light min-h-screen bg-cover bg-center',
-          /* Long scroll (chat): fixed attachment paints vs viewport so the SVG does not “run out” mid-page */
+          /* Long scroll (chat): fixed attachment paints vs viewport so the SVG does not â€œrun outâ€ mid-page */
           isAiAssistantRoute ? '[background-attachment:fixed]' : 'bg-no-repeat'
         )}
       >

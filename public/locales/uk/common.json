@@ -1,4 +1,4 @@
-{
+﻿{
   "app": {
     "name": "CRM Prionex",
     "description": "Система управління взаємовідносинами з клієнтами"
@@ -38,7 +38,7 @@
     "scoringConfiguration": "Конфігурація оцінки",
     "systemSettings": "Системні налаштування",
     "tags": "Теги",
-    "actionAnalysis": "Аналіз дій",
+    "training": "Навчання",
     "messagingSettings": "Налаштування повідомлень",
     "messagingIntegrations": "Інтеграції повідомлень",
     "messagingDrafts": "Чернетки повідомлень",
@@ -344,7 +344,7 @@
       "mockTableRowDebt": "Борг у зоні ризику",
       "mockTableRowOverdue": "Частка прострочених"
     },
-    "actionAnalysis": {
+    "training": {
       "title": "Аналіз дій",
       "subtitle": "Моніторинг дзвінків та історія взаємодій для команди тренерів.",
       "tabs": {

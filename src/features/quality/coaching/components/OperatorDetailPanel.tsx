@@ -1,4 +1,4 @@
-import { useTranslation } from 'react-i18next'
+﻿import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
 import { useOperatorCoachingDetail } from '../hooks'
 import type { CoachingPeriod, ScoreBand, AssignmentState, ScorecardSummary } from '../types'
@@ -8,7 +8,7 @@ import type { CoachingPeriod, ScoreBand, AssignmentState, ScorecardSummary } fro
  *   - KAN-413 Inbox (all three view modes)
  *   - KAN-414 Team tab (clicking a team operator card)
  *
- * Layout follows [Figma/ENG - Training _ Inbox View _ A.png] — header with
+ * Layout follows [Figma/ENG - Training _ Inbox View _ A.png] â€” header with
  * avatar + tags + big composite score circle on the right, red-flag headline
  * banner, 4 KPI tiles in a row, "Why entered the queue" trigger pill list,
  * "Latest dialogue ratings" mini-cards with score chips, trainer-actions
@@ -41,26 +41,26 @@ const ASSIGNMENT_STATE_TONE: Record<AssignmentState, string> = {
 }
 
 const ASSIGNMENT_STATE_LABEL_KEYS: Record<AssignmentState, { key: string; fallback: string }> = {
-  wait: { key: 'pages.actionAnalysis.inbox.kanbanColumns.wait', fallback: 'Wait' },
+  wait: { key: 'pages.training.inbox.kanbanColumns.wait', fallback: 'Wait' },
   in_progress: {
-    key: 'pages.actionAnalysis.inbox.kanbanColumns.in_progress',
+    key: 'pages.training.inbox.kanbanColumns.in_progress',
     fallback: 'In progress',
   },
   awaiting_training: {
-    key: 'pages.actionAnalysis.inbox.kanbanColumns.awaiting_training',
+    key: 'pages.training.inbox.kanbanColumns.awaiting_training',
     fallback: 'Awaiting training',
   },
   scheduled: {
-    key: 'pages.actionAnalysis.inbox.kanbanColumns.scheduled',
+    key: 'pages.training.inbox.kanbanColumns.scheduled',
     fallback: 'Scheduled',
   },
   closed: {
-    key: 'pages.actionAnalysis.inbox.kanbanColumns.closed',
+    key: 'pages.training.inbox.kanbanColumns.closed',
     fallback: 'Closed',
   },
 }
 
-function formatPct(value: number | null | undefined, fallback = '—'): string {
+function formatPct(value: number | null | undefined, fallback = 'â€”'): string {
   if (value == null) return fallback
   return `${value.toFixed(0)}%`
 }
@@ -118,10 +118,7 @@ export function OperatorDetailPanel({
   if (!enabled) {
     return (
       <aside className="flex h-full flex-col items-center justify-center rounded-2xl bg-white/60 p-10 text-center text-sm text-gray-500">
-        {t(
-          'pages.actionAnalysis.inbox.detail.selectOperator',
-          'Select an operator to see details.'
-        )}
+        {t('pages.training.inbox.detail.selectOperator', 'Select an operator to see details.')}
       </aside>
     )
   }
@@ -129,7 +126,7 @@ export function OperatorDetailPanel({
   if (isLoading) {
     return (
       <aside className="flex h-full flex-col items-center justify-center rounded-2xl bg-white/60 p-10 text-sm text-gray-500">
-        {t('pages.actionAnalysis.inbox.detail.loading', 'Loading…')}
+        {t('pages.training.inbox.detail.loading', 'Loadingâ€¦')}
       </aside>
     )
   }
@@ -137,7 +134,7 @@ export function OperatorDetailPanel({
   if (isError || !data) {
     return (
       <aside className="flex h-full flex-col items-center justify-center rounded-2xl bg-white/60 p-10 text-sm text-red-600">
-        {t('pages.actionAnalysis.inbox.detail.loadFailed', 'Could not load operator details.')}
+        {t('pages.training.inbox.detail.loadFailed', 'Could not load operator details.')}
       </aside>
     )
   }
@@ -147,7 +144,7 @@ export function OperatorDetailPanel({
 
   return (
     <aside className="flex h-full flex-col gap-4 overflow-hidden rounded-2xl bg-white p-5 shadow-sm">
-      {/* Header — avatar + name + tag chips + big composite score circle */}
+      {/* Header â€” avatar + name + tag chips + big composite score circle */}
       <header className="flex items-start justify-between gap-4">
         <div className="flex items-start gap-3">
           <div className="bg-primary-100 text-primary-700 flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-full text-lg font-semibold">
@@ -168,7 +165,7 @@ export function OperatorDetailPanel({
               {data.kpis.red_flag_count > 0 ? (
                 <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-medium text-red-700">
                   <span className="inline-block h-1.5 w-1.5 rounded-full bg-red-500" />
-                  {t('pages.actionAnalysis.inbox.detail.riskyTag', 'Risky')}
+                  {t('pages.training.inbox.detail.riskyTag', 'Risky')}
                 </span>
               ) : null}
               {lastActive ? (
@@ -190,14 +187,14 @@ export function OperatorDetailPanel({
       {data.triggers.length > 0 ? (
         <section className="rounded-xl border border-red-200 bg-red-50 px-3 py-2.5">
           <p className="text-sm font-medium text-red-800">
-            {t('pages.actionAnalysis.inbox.detail.redFlagsHeadline', '{{count}} red flags', {
+            {t('pages.training.inbox.detail.redFlagsHeadline', '{{count}} red flags', {
               count: data.kpis.red_flag_count || data.triggers.length,
             })}
           </p>
           <p className="mt-0.5 text-xs text-red-700">
             {t(
-              'pages.actionAnalysis.inbox.detail.redFlagsSubtitle',
-              'Coaching attention needed — recent triggers have accumulated.'
+              'pages.training.inbox.detail.redFlagsSubtitle',
+              'Coaching attention needed â€” recent triggers have accumulated.'
             )}
           </p>
         </section>
@@ -206,32 +203,32 @@ export function OperatorDetailPanel({
       {/* 4 KPI tiles */}
       <section className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         <KpiTile
-          label={t('pages.actionAnalysis.inbox.detail.kpis.scriptAdherence', 'Script')}
+          label={t('pages.training.inbox.detail.kpis.scriptAdherence', 'Script')}
           value={formatPct(data.kpis.script_adherence_pct)}
         />
         <KpiTile
-          label={t('pages.actionAnalysis.inbox.detail.kpis.scorecardAvg', 'Scorecard')}
+          label={t('pages.training.inbox.detail.kpis.scorecardAvg', 'Scorecard')}
           value={formatPct(data.kpis.avg_scorecard_pct)}
         />
         <KpiTile
-          label={t('pages.actionAnalysis.inbox.detail.kpis.conversion', 'Conversion')}
+          label={t('pages.training.inbox.detail.kpis.conversion', 'Conversion')}
           value={formatPct(data.kpis.conversion_rate)}
         />
         <KpiTile
-          label={t('pages.actionAnalysis.inbox.detail.kpis.tasksOnTime', 'Tasks on time')}
+          label={t('pages.training.inbox.detail.kpis.tasksOnTime', 'Tasks on time')}
           value={formatPct(data.kpis.task_completion_on_time_pct)}
         />
       </section>
 
-      {/* Why entered the queue — bulleted trigger list */}
+      {/* Why entered the queue â€” bulleted trigger list */}
       <section className="flex flex-col gap-1.5">
         <h3 className="text-xs font-medium tracking-wide text-gray-500 uppercase">
-          {t('pages.actionAnalysis.inbox.detail.whyInQueue', 'Why entered the queue')}
+          {t('pages.training.inbox.detail.whyInQueue', 'Why entered the queue')}
         </h3>
         {data.triggers.length === 0 ? (
           <p className="text-xs text-gray-500">
             {t(
-              'pages.actionAnalysis.inbox.detail.noTriggers',
+              'pages.training.inbox.detail.noTriggers',
               'No active triggers in the selected period.'
             )}
           </p>
@@ -243,24 +240,21 @@ export function OperatorDetailPanel({
                 className="flex items-center gap-2 rounded-lg bg-orange-50 px-2.5 py-1.5 text-xs font-medium text-orange-800"
               >
                 <span className="inline-block h-1.5 w-1.5 rounded-full bg-orange-500" />
-                {t(`pages.actionAnalysis.inbox.triggers.${trigger}`, trigger.replace(/_/g, ' '))}
+                {t(`pages.training.inbox.triggers.${trigger}`, trigger.replace(/_/g, ' '))}
               </li>
             ))}
           </ul>
         )}
       </section>
 
-      {/* Latest dialogue ratings — horizontal mini-cards with score chips */}
+      {/* Latest dialogue ratings â€” horizontal mini-cards with score chips */}
       <section className="flex flex-col gap-1.5">
         <h3 className="text-xs font-medium tracking-wide text-gray-500 uppercase">
-          {t('pages.actionAnalysis.inbox.detail.latestRatings', 'Latest dialogue ratings')}
+          {t('pages.training.inbox.detail.latestRatings', 'Latest dialogue ratings')}
         </h3>
         {data.latest_scorecards.length === 0 ? (
           <p className="text-xs text-gray-500">
-            {t(
-              'pages.actionAnalysis.inbox.detail.noScorecards',
-              'No scorecards in the selected period.'
-            )}
+            {t('pages.training.inbox.detail.noScorecards', 'No scorecards in the selected period.')}
           </p>
         ) : (
           <ul className="grid grid-cols-2 gap-1.5 sm:grid-cols-3 lg:grid-cols-4">
@@ -275,22 +269,22 @@ export function OperatorDetailPanel({
       <footer className="mt-auto flex flex-wrap gap-2 border-t border-gray-100 pt-3">
         <ActionButton
           icon={<Icons.Phone size={14} />}
-          label={t('pages.actionAnalysis.inbox.detail.trainerActions.listen', 'Listen to the call')}
+          label={t('pages.training.inbox.detail.trainerActions.listen', 'Listen to the call')}
           onClick={onListen}
         />
         <ActionButton
           icon={<Icons.Brochure size={14} />}
-          label={t('pages.actionAnalysis.inbox.detail.trainerActions.assignTask', 'Assign a task')}
+          label={t('pages.training.inbox.detail.trainerActions.assignTask', 'Assign a task')}
           onClick={onAssignTask}
         />
         <ActionButton
           icon={<Icons.Calendar size={14} />}
-          label={t('pages.actionAnalysis.inbox.detail.trainerActions.planOneOnOne', 'Plan 1-on-1')}
+          label={t('pages.training.inbox.detail.trainerActions.planOneOnOne', 'Plan 1-on-1')}
           onClick={onPlanOneOnOne}
         />
         <ActionButton
           icon={<Icons.Tick01 size={14} />}
-          label={t('pages.actionAnalysis.inbox.detail.trainerActions.takeCharge', 'Take charge')}
+          label={t('pages.training.inbox.detail.trainerActions.takeCharge', 'Take charge')}
           onClick={onTakeCharge}
           primary
         />
@@ -318,7 +312,7 @@ function ScorecardMiniCard({ scorecard }: { scorecard: ScorecardSummary }) {
     green: 'bg-green-500 text-white',
   }
   const displayScore =
-    scorecard.weighted_score != null ? Number(scorecard.weighted_score).toFixed(1) : '—'
+    scorecard.weighted_score != null ? Number(scorecard.weighted_score).toFixed(1) : 'â€”'
   return (
     <li className="flex flex-col gap-1.5 rounded-xl border border-gray-100 bg-white p-2.5">
       <span

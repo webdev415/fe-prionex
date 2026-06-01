@@ -1,4 +1,4 @@
-/** RR status_id taxonomy mirrored from rr_status_service.py:
+﻿/** RR status_id taxonomy mirrored from rr_status_service.py:
  *   1 = CONNECTED, 2 = VIOLATED, 3 = CANCELLED, 4 = COMPLETED, 5 = COMPLETED_EARLY.
  */
 
@@ -103,7 +103,7 @@ describe('RecordPaymentModal — Payment Type (KAN-507)', () => {
     // The select trigger renders the active option's translated key. Our
     // i18n mock returns keys verbatim when no entry exists in the table.
     expect(
-      screen.getByText('pages.actionAnalysis.filters.paymentTypes.payment_by_rr')
+      screen.getByText('pages.training.filters.paymentTypes.payment_by_rr')
     ).toBeInTheDocument()
   })
 
@@ -111,7 +111,7 @@ describe('RecordPaymentModal — Payment Type (KAN-507)', () => {
     mockRrList.mockReturnValue([])
     renderModal()
     expect(
-      screen.queryByText('pages.actionAnalysis.filters.paymentTypes.payment_by_rr')
+      screen.queryByText('pages.training.filters.paymentTypes.payment_by_rr')
     ).not.toBeInTheDocument()
     // Placeholder is visible instead.
     expect(
@@ -132,7 +132,7 @@ describe('RecordPaymentModal — Payment Type (KAN-507)', () => {
       ] as RestructuringAgreementSummary[])
       renderModal()
       expect(
-        screen.queryByText('pages.actionAnalysis.filters.paymentTypes.payment_by_rr')
+        screen.queryByText('pages.training.filters.paymentTypes.payment_by_rr')
       ).not.toBeInTheDocument()
       expect(
         screen.getByText('pages.clients.modals.recordPayment.paymentTypePlaceholder')
@@ -151,13 +151,11 @@ describe('RecordPaymentModal — Payment Type (KAN-507)', () => {
 
     // Partial + Full are available; Payment by RR is not.
     expect(
-      screen.getByText('pages.actionAnalysis.filters.paymentTypes.partial_payment')
+      screen.getByText('pages.training.filters.paymentTypes.partial_payment')
     ).toBeInTheDocument()
+    expect(screen.getByText('pages.training.filters.paymentTypes.full_payment')).toBeInTheDocument()
     expect(
-      screen.getByText('pages.actionAnalysis.filters.paymentTypes.full_payment')
-    ).toBeInTheDocument()
-    expect(
-      screen.queryByText('pages.actionAnalysis.filters.paymentTypes.payment_by_rr')
+      screen.queryByText('pages.training.filters.paymentTypes.payment_by_rr')
     ).not.toBeInTheDocument()
   })
 
@@ -175,14 +173,12 @@ describe('RecordPaymentModal — Payment Type (KAN-507)', () => {
     // payment_by_rr appears both on the trigger (active value) and in the
     // listbox, so assert > 0 occurrences rather than an exact instance.
     expect(
-      screen.getAllByText('pages.actionAnalysis.filters.paymentTypes.payment_by_rr').length
+      screen.getAllByText('pages.training.filters.paymentTypes.payment_by_rr').length
     ).toBeGreaterThan(0)
     expect(
-      screen.getByText('pages.actionAnalysis.filters.paymentTypes.partial_payment')
+      screen.getByText('pages.training.filters.paymentTypes.partial_payment')
     ).toBeInTheDocument()
-    expect(
-      screen.getByText('pages.actionAnalysis.filters.paymentTypes.full_payment')
-    ).toBeInTheDocument()
+    expect(screen.getByText('pages.training.filters.paymentTypes.full_payment')).toBeInTheDocument()
   })
 
   it('clears a stale payment_by_rr when the picked debt loses its Connected RR', () => {
@@ -201,7 +197,7 @@ describe('RecordPaymentModal — Payment Type (KAN-507)', () => {
       />
     )
     expect(
-      screen.getByText('pages.actionAnalysis.filters.paymentTypes.payment_by_rr')
+      screen.getByText('pages.training.filters.paymentTypes.payment_by_rr')
     ).toBeInTheDocument()
 
     // RR list now reports the same debt with status_id=2 (Violated).
@@ -221,9 +217,9 @@ describe('RecordPaymentModal — Payment Type (KAN-507)', () => {
     )
 
     expect(
-      screen.queryByText('pages.actionAnalysis.filters.paymentTypes.payment_by_rr')
+      screen.queryByText('pages.training.filters.paymentTypes.payment_by_rr')
     ).not.toBeInTheDocument()
-    // Placeholder is back — the operator must re-pick a valid option.
+    // Placeholder is back â€” the operator must re-pick a valid option.
     expect(
       screen.getByText('pages.clients.modals.recordPayment.paymentTypePlaceholder')
     ).toBeInTheDocument()

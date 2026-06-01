@@ -1,9 +1,9 @@
-/**
- * FeedbackThreadView — single-feedback detail + threaded replies (KAN-410, Feature 2.3).
+﻿/**
+ * FeedbackThreadView â€” single-feedback detail + threaded replies (KAN-410, Feature 2.3).
  *
  * Rendered today from the trainer feedback inbox (FeedbackSubTab) when a
  * row is clicked. The `viewerRole` prop decides which side-only actions
- * render — operators (when this view is later mounted in the trainer
+ * render â€” operators (when this view is later mounted in the trainer
  * workplace) get mark-read and, for correction_task, mark-completed; both
  * parties can post replies.
  */
@@ -32,12 +32,12 @@ export function FeedbackThreadView({ feedbackId, viewerRole }: FeedbackThreadVie
   const [replyText, setReplyText] = useState('')
 
   if (detailQuery.isLoading) {
-    return <div className="p-4 text-sm text-gray-400">{t('common.loading', 'Loading…')}</div>
+    return <div className="p-4 text-sm text-gray-400">{t('common.loading', 'Loadingâ€¦')}</div>
   }
   if (detailQuery.isError || !detailQuery.data) {
     return (
       <div className="p-4 text-sm text-red-500">
-        {t('pages.actionAnalysis.errors.loadFeedbackFailed', 'Failed to load feedback')}
+        {t('pages.training.errors.loadFeedbackFailed', 'Failed to load feedback')}
       </div>
     )
   }
@@ -64,7 +64,7 @@ export function FeedbackThreadView({ feedbackId, viewerRole }: FeedbackThreadVie
         <div>
           <div className="text-dark-500 font-medium">
             {t(
-              `pages.actionAnalysis.feedback.types.${feedback.feedback_type}`,
+              `pages.training.feedback.types.${feedback.feedback_type}`,
               feedback.feedback_type.replace(/_/g, ' ')
             )}
           </div>
@@ -81,7 +81,7 @@ export function FeedbackThreadView({ feedbackId, viewerRole }: FeedbackThreadVie
                 : 'bg-gray-100 text-gray-700'
           }`}
         >
-          {t(`pages.actionAnalysis.feedback.status.${feedback.status}`, feedback.status)}
+          {t(`pages.training.feedback.status.${feedback.status}`, feedback.status)}
         </span>
       </header>
 
@@ -106,7 +106,7 @@ export function FeedbackThreadView({ feedbackId, viewerRole }: FeedbackThreadVie
               }`}
             >
               <div className="text-xs text-gray-500">
-                {t(`pages.actionAnalysis.feedback.role.${reply.author_role}`, reply.author_role)} ·{' '}
+                {t(`pages.training.feedback.role.${reply.author_role}`, reply.author_role)} Â·{' '}
                 {new Date(reply.created_at).toLocaleString()}
               </div>
               <div>{reply.text}</div>
@@ -115,7 +115,7 @@ export function FeedbackThreadView({ feedbackId, viewerRole }: FeedbackThreadVie
         </ul>
       ) : (
         <div className="text-xs text-gray-400">
-          {t('pages.actionAnalysis.feedback.threadEmpty', 'No replies yet.')}
+          {t('pages.training.feedback.threadEmpty', 'No replies yet.')}
         </div>
       )}
 
@@ -124,7 +124,7 @@ export function FeedbackThreadView({ feedbackId, viewerRole }: FeedbackThreadVie
           rows={2}
           value={replyText}
           onChange={(e) => setReplyText(e.target.value)}
-          placeholder={t('pages.actionAnalysis.feedback.replyPlaceholder', 'Write a reply…')}
+          placeholder={t('pages.training.feedback.replyPlaceholder', 'Write a replyâ€¦')}
           className="w-full rounded-md border border-gray-200 px-2 py-1 text-sm"
         />
         <div className="flex flex-wrap justify-end gap-2">
@@ -136,7 +136,7 @@ export function FeedbackThreadView({ feedbackId, viewerRole }: FeedbackThreadVie
               disabled={markReadMutation.isPending}
               className="rounded-full"
             >
-              {t('pages.actionAnalysis.feedback.markRead', 'Mark read')}
+              {t('pages.training.feedback.markRead', 'Mark read')}
             </Button>
           ) : null}
           {canComplete ? (
@@ -147,7 +147,7 @@ export function FeedbackThreadView({ feedbackId, viewerRole }: FeedbackThreadVie
               disabled={markCompletedMutation.isPending}
               className="rounded-full"
             >
-              {t('pages.actionAnalysis.feedback.markComplete', 'Mark completed')}
+              {t('pages.training.feedback.markComplete', 'Mark completed')}
             </Button>
           ) : null}
           <Button
@@ -157,7 +157,7 @@ export function FeedbackThreadView({ feedbackId, viewerRole }: FeedbackThreadVie
             disabled={replyMutation.isPending || !replyText.trim()}
             className="rounded-full"
           >
-            {t('pages.actionAnalysis.feedback.reply', 'Reply')}
+            {t('pages.training.feedback.reply', 'Reply')}
           </Button>
         </div>
       </div>

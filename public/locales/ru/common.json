@@ -1,4 +1,4 @@
-{
+﻿{
   "app": {
     "name": "CRM Prionex",
     "description": "Система управления взаимоотношениями с клиентами"
@@ -40,7 +40,7 @@
     "messagingIntegrations": "Интеграции сообщений",
     "messagingDrafts": "Черновики сообщений",
     "contactTypes": "Типы контактов",
-    "actionAnalysis": "Анализ действий"
+    "training": "Обучение"
   },
   "search": {
     "placeholder": "Поиск",
@@ -289,7 +289,7 @@
       "mockTableRowDebt": "Долг в зоне риска",
       "mockTableRowOverdue": "Доля просрочки"
     },
-    "actionAnalysis": {
+    "training": {
       "title": "Анализ действий",
       "subtitle": "Мониторинг звонков и история взаимодействий для команды тренеров.",
       "tabs": {

@@ -193,13 +193,13 @@ export const PERMISSIONS = {
   },
 
   /**
-   * Action Analysis Category (16 permissions)
-   * Controls access to the Action Analysis page and its drill-downs.
-   * KAN-409 added the four operator-analytics sub-permissions; KAN-410
-   * adds the eight quality-scoring sub-permissions (Scorecard, Markers,
-   * Feedback, Score Dynamics).
+   * Training Category (16 permissions)
+   * Controls access to the Training page (formerly Action Analysis) and
+   * its drill-downs. String values keep the `view_action_analysis` /
+   * `view_*` prefixes because they are persisted in the backend `roles`
+   * table — renaming them would require a server-side migration.
    */
-  ACTION_ANALYSIS: {
+  TRAINING: {
     VIEW: 'view_action_analysis',
     VIEW_CLICK_TRACKING: 'view_click_tracking',
     VIEW_SCREEN_TIME: 'view_screen_time',

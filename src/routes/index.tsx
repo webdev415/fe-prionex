@@ -1,4 +1,4 @@
-/* eslint-disable react-refresh/only-export-components */
+﻿/* eslint-disable react-refresh/only-export-components */
 import { lazy, Suspense } from 'react'
 import { createBrowserRouter, Navigate, Outlet } from 'react-router-dom'
 import { ProtectedRoute } from './ProtectedRoute'
@@ -101,9 +101,9 @@ const ReportsDashboardPage = lazy(() =>
     default: m.ReportsDashboardPage,
   }))
 )
-const ActionAnalysisPage = lazy(() =>
-  import('@/pages/ActionAnalysis').then((m) => ({
-    default: m.ActionAnalysisPage,
+const TrainingPage = lazy(() =>
+  import('@/pages/Training').then((m) => ({
+    default: m.TrainingPage,
   }))
 )
 const SellerManagementPage = lazy(() =>
@@ -284,7 +284,7 @@ export const router = createBrowserRouter([
       // /roles, /departments) now bounce to the grouped /team-management/* URLs
       // so existing bookmarks and external links keep working. The parent
       // /team-management path redirects to the first child (mirrors the
-      // /dashboard/import → /dashboard/import/clients pattern above).
+      // /dashboard/import â†’ /dashboard/import/clients pattern above).
       {
         path: 'team-management',
         element: <Navigate to="/dashboard/team-management/users" replace />,
@@ -310,12 +310,18 @@ export const router = createBrowserRouter([
         ),
       },
       {
-        path: 'action-analysis',
+        path: 'training',
         element: (
-          <PermissionRoute requiredPermission={PERMISSIONS.ACTION_ANALYSIS.VIEW}>
-            {withSuspense(<ActionAnalysisPage />)}
+          <PermissionRoute requiredPermission={PERMISSIONS.TRAINING.VIEW}>
+            {withSuspense(<TrainingPage />)}
           </PermissionRoute>
         ),
+      },
+      // Read-shim: keep the legacy /dashboard/action-analysis URL working
+      // for bookmarks that pointed at the old Trainer Workplace surface.
+      {
+        path: 'action-analysis',
+        element: <Navigate to="/dashboard/training" replace />,
       },
       {
         path: 'sellers',
