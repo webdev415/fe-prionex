@@ -2,43 +2,66 @@ import { useTranslation } from 'react-i18next'
 import { MOCK_INBOX_TEAM_EVENTS } from '../../mocks/trainerWorkplaceMocks'
 
 /**
- * Team event stream — Figma Inbox View B / shared with Kanban & Grid sidebars.
+ * Event Feed tab — Figma `Details-RightView - ENG (1).svg` (360px panel).
  */
 export function MockInboxEventFeed() {
   const { t } = useTranslation('common')
 
   return (
-    <div className="flex flex-col gap-3 p-4">
-      <div className="flex items-center justify-between">
-        <span className="text-xs font-semibold text-[#05040D]">
-          {t('pages.training.inbox.feed.live', 'Live')}
-        </span>
-        <span className="text-[10px] text-gray-500">
+    <div className="flex flex-col px-4 pt-3 pb-4">
+      <div className="mb-1 flex items-center justify-between py-2">
+        <div className="flex items-center gap-2">
+          <span className="relative flex h-3 w-3 items-center justify-center">
+            <span className="absolute inline-flex h-3 w-3 rounded-full bg-[#22C55E] opacity-30" />
+            <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[#22C55E]" />
+          </span>
+          <span className="text-xs font-semibold text-[#05040D]">
+            {t('pages.training.inbox.feed.live', 'Live')}
+          </span>
+        </div>
+        <span className="text-[11px] text-[#676767]">
           {t('pages.training.inbox.feed.today', 'Today')}
         </span>
       </div>
-      <h3 className="text-sm font-medium text-[#05040D]">
-        {t('pages.training.inbox.feed.latestTeamEvents', 'Latest team events')}
-      </h3>
-      <ul className="flex flex-col gap-2">
-        {MOCK_INBOX_TEAM_EVENTS.map((event) => (
+
+      <ul className="flex flex-col">
+        {MOCK_INBOX_TEAM_EVENTS.map((event, index) => (
           <li
             key={event.id}
-            className="flex gap-2 rounded-lg border border-[#EBECE8] bg-[#FAFAFA] px-3 py-2.5"
+            className={`flex gap-3 py-4 ${
+              index < MOCK_INBOX_TEAM_EVENTS.length - 1 ? 'border-b border-[#EBECE8]' : ''
+            }`}
           >
-            <div
-              className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full text-[10px] font-semibold text-[#05040D]"
-              style={{ backgroundColor: event.avatarColor }}
-            >
-              {event.initials}
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="flex items-baseline justify-between gap-2">
-                <span className="truncate text-xs font-semibold text-[#05040D]">{event.title}</span>
-                <span className="flex-shrink-0 text-[10px] text-gray-500">{event.timeLabel}</span>
+            <div className="relative flex-shrink-0">
+              <div
+                className="flex h-7 w-7 items-center justify-center rounded-full text-[10px] font-semibold text-[#05040D]"
+                style={{ backgroundColor: event.avatarRingBg }}
+              >
+                {event.initials}
               </div>
-              <p className="text-[10px] text-gray-500">{event.operatorName}</p>
-              <p className="mt-0.5 text-[11px] text-gray-600">{event.description}</p>
+              {event.statusDotColor ? (
+                <span
+                  className="absolute -right-0.5 -bottom-0.5 h-1.5 w-1.5 rounded-full border border-white"
+                  style={{ backgroundColor: event.statusDotColor }}
+                />
+              ) : null}
+            </div>
+
+            <span
+              className="mt-0.5 h-5 w-5 flex-shrink-0 rounded-full"
+              style={{ backgroundColor: event.badgeColor }}
+              aria-hidden
+            />
+
+            <div className="min-w-0 flex-1">
+              <div className="flex items-start justify-between gap-2">
+                <p className="text-xs leading-4 font-semibold text-[#05040D]">{event.title}</p>
+                <span className="flex-shrink-0 text-[11px] leading-4 text-[#676767]">
+                  {event.timeLabel}
+                </span>
+              </div>
+              <p className="mt-0.5 text-[11px] leading-4 text-[#676767]">{event.operatorName}</p>
+              <p className="mt-1 text-[11px] leading-[15px] text-[#374151]">{event.description}</p>
             </div>
           </li>
         ))}

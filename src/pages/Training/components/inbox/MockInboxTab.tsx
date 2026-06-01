@@ -38,9 +38,8 @@ const PRIORITY_CHIPS: { id: InboxPriority | 'all'; key: string; fallback: string
   { id: 'low', key: 'pages.training.inbox.priority.low', fallback: 'Low' },
 ]
 
-/** Main + Details/Event Feed sidebar — same layout for Inbox B, Kanban, and Grid. */
-const BODY_LAYOUT =
-  'grid min-h-0 flex-1 grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(320px,400px)]'
+/** Main + Details/Event Feed sidebar — Figma Details-RightView 360px panel. */
+const BODY_LAYOUT = 'grid min-h-0 flex-1 grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1fr)_360px]'
 
 export function MockInboxTab() {
   const { t } = useTranslation('common')

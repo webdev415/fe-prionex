@@ -1423,7 +1423,12 @@ export interface MockInboxTeamEvent {
   timeLabel: string
   operatorName: string
   initials: string
-  avatarColor: string
+  /** Large avatar ring — Figma Details-RightView Event Feed */
+  avatarRingBg: string
+  /** 20px type badge beside avatar */
+  badgeColor: string
+  /** Small status dot on avatar ring */
+  statusDotColor?: string
   title: string
   description: string
 }
@@ -1434,7 +1439,9 @@ export const MOCK_INBOX_TEAM_EVENTS: MockInboxTeamEvent[] = [
     timeLabel: '09:41',
     operatorName: 'Artem Honchar',
     initials: 'АГ',
-    avatarColor: '#FCA5A5',
+    avatarRingBg: '#FEF2F2',
+    badgeColor: '#FCA5A5',
+    statusDotColor: '#EF4444',
     title: 'Day plan dropped to 14%',
     description: 'At 11:00 — below the morning threshold.',
   },
@@ -1443,7 +1450,8 @@ export const MOCK_INBOX_TEAM_EVENTS: MockInboxTeamEvent[] = [
     timeLabel: '09:22',
     operatorName: 'Svetlana Hordiienko',
     initials: 'СГ',
-    avatarColor: '#E0E7FF',
+    avatarRingBg: '#EFF6FF',
+    badgeColor: '#BFDBFE',
     title: 'Completed drill "Tone and Pace"',
     description: 'Score 82/100 — passed on first attempt.',
   },
@@ -1452,7 +1460,8 @@ export const MOCK_INBOX_TEAM_EVENTS: MockInboxTeamEvent[] = [
     timeLabel: '08:55',
     operatorName: 'Denys Poltavets',
     initials: 'ДП',
-    avatarColor: '#FEF3C7',
+    avatarRingBg: '#F0FDF4',
+    badgeColor: '#BBFB5B',
     title: 'Entered a call',
     description: 'Client #C-2044 — Hard Collection.',
   },
@@ -1461,7 +1470,8 @@ export const MOCK_INBOX_TEAM_EVENTS: MockInboxTeamEvent[] = [
     timeLabel: '08:30',
     operatorName: 'Iryna Sokol',
     initials: 'ІС',
-    avatarColor: '#D1FAE5',
+    avatarRingBg: '#FEFCE8',
+    badgeColor: '#FCA5A5',
     title: 'Training assigned',
     description: 'Course "Empathy" — due 05/20.',
   },
@@ -1470,7 +1480,8 @@ export const MOCK_INBOX_TEAM_EVENTS: MockInboxTeamEvent[] = [
     timeLabel: '08:12',
     operatorName: 'Yuriy Kravtsov',
     initials: 'ЮК',
-    avatarColor: '#E0F2EC',
+    avatarRingBg: '#FEFCE8',
+    badgeColor: '#FDE047',
     title: 'Low dialogue rating',
     description: '38 points on call #C-1016.',
   },
@@ -1479,7 +1490,9 @@ export const MOCK_INBOX_TEAM_EVENTS: MockInboxTeamEvent[] = [
     timeLabel: '07:58',
     operatorName: 'Bohdan Melnyk',
     initials: 'БМ',
-    avatarColor: '#FFEDD5',
+    avatarRingBg: '#FEFCE8',
+    badgeColor: '#BFDBFE',
+    statusDotColor: '#3B82F6',
     title: '1-on-1 scheduled',
     description: '05/15 — Tough conversation follow-up.',
   },
@@ -1488,7 +1501,8 @@ export const MOCK_INBOX_TEAM_EVENTS: MockInboxTeamEvent[] = [
     timeLabel: '07:40',
     operatorName: 'Oleh Bondar',
     initials: 'ОБ',
-    avatarColor: '#FCE7F3',
+    avatarRingBg: '#F0FDF4',
+    badgeColor: '#7ACEC5',
     title: 'Case closed',
     description: 'Resolution: Corrected after coaching.',
   },
@@ -1497,7 +1511,9 @@ export const MOCK_INBOX_TEAM_EVENTS: MockInboxTeamEvent[] = [
     timeLabel: '07:22',
     operatorName: 'Artem Honchar',
     initials: 'АГ',
-    avatarColor: '#FCA5A5',
+    avatarRingBg: '#FEF2F2',
+    badgeColor: '#FCA5A5',
+    statusDotColor: '#EF4444',
     title: 'Entered the queue',
     description: '4 triggers accumulated — critical priority.',
   },
@@ -1506,7 +1522,8 @@ export const MOCK_INBOX_TEAM_EVENTS: MockInboxTeamEvent[] = [
     timeLabel: '07:05',
     operatorName: 'Svetlana Hordiienko',
     initials: 'СГ',
-    avatarColor: '#E0E7FF',
+    avatarRingBg: '#EFF6FF',
+    badgeColor: '#BFDBFE',
     title: 'Weekly plan at risk',
     description: '42% complete — 3 days left in the week.',
   },
@@ -1515,7 +1532,8 @@ export const MOCK_INBOX_TEAM_EVENTS: MockInboxTeamEvent[] = [
     timeLabel: '06:50',
     operatorName: 'Denys Poltavets',
     initials: 'ДП',
-    avatarColor: '#FEF3C7',
+    avatarRingBg: '#FEFCE8',
+    badgeColor: '#FCA5A5',
     title: 'Came online',
     description: 'Shift started at 7:30.',
   },
@@ -1524,7 +1542,9 @@ export const MOCK_INBOX_TEAM_EVENTS: MockInboxTeamEvent[] = [
     timeLabel: '06:30',
     operatorName: 'Iryna Sokol',
     initials: 'ІС',
-    avatarColor: '#D1FAE5',
+    avatarRingBg: '#FEF2F2',
+    badgeColor: '#BFDBFE',
+    statusDotColor: '#EF4444',
     title: 'Dialogue rated',
     description: 'Score 71/100 — no triggers.',
   },
