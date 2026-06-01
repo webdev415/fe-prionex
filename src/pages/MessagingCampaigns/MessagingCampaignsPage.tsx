@@ -102,6 +102,10 @@ export function MessagingCampaignsPage() {
   const campaigns = campaignList?.items ?? []
   const totalItems = campaignList?.total ?? 0
   const totalPages = totalItems > 0 ? Math.ceil(totalItems / pageSize) : 0
+  const selectedListCampaign =
+    selectedCampaignId != null
+      ? (campaigns.find((row) => row.id === selectedCampaignId) ?? null)
+      : null
 
   const campaignStatusLabel = useCallback(
     (status: string) =>
@@ -291,6 +295,7 @@ export function MessagingCampaignsPage() {
 
       <CampaignDetailModal
         campaignId={selectedCampaignId}
+        listCampaign={selectedListCampaign}
         operatorNames={operatorNames}
         onClose={() => setSelectedCampaignId(null)}
       />

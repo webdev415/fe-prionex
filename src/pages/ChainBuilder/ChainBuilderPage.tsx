@@ -911,6 +911,11 @@ export function ChainBuilderPage() {
                                 setNewEffectConfig({})
                                 if (v === 'send_message') {
                                   setMessageChannel('sms')
+                                  setNewEffectConfig(
+                                    contactSteps.length === 1
+                                      ? { phone_ref: String(contactSteps[0].id) }
+                                      : {}
+                                  )
                                 }
                               }}
                             >
@@ -1045,6 +1050,39 @@ export function ChainBuilderPage() {
                                     ))}
                                   </SelectContent>
                                 </Select>
+                                {(messageChannel === 'sms' || messageChannel === 'viber') &&
+                                  (contactSteps.length === 0 ? (
+                                    <div className="rounded-md border border-amber-200 bg-amber-50 px-2 py-1.5 text-[11px] text-amber-700">
+                                      {t('pages.chainBuilder.addToSpamNoContactSteps')}
+                                    </div>
+                                  ) : (
+                                    <select
+                                      className="h-8 rounded-md border border-gray-200 px-2 text-xs text-gray-800"
+                                      value={newEffectConfig.phone_ref ?? ''}
+                                      onChange={(e) =>
+                                        setNewEffectConfig({
+                                          ...newEffectConfig,
+                                          phone_ref: e.target.value,
+                                        })
+                                      }
+                                    >
+                                      <option value="">
+                                        {t('pages.chainBuilder.placeholders.phoneSourceRequired')}
+                                      </option>
+                                      {contactSteps.map((s) => (
+                                        <option key={s.id} value={String(s.id)}>
+                                          {t('pages.chainBuilder.config.stepRef', {
+                                            order: s.step_order,
+                                            name:
+                                              s.target_action_name ??
+                                              t('pages.chainBuilder.taFallback', {
+                                                id: s.target_action_id,
+                                              }),
+                                          })}
+                                        </option>
+                                      ))}
+                                    </select>
+                                  ))}
                               </>
                             )}
                             {newEffectType === 'create_task' && (
@@ -1277,7 +1315,9 @@ export function ChainBuilderPage() {
                                 (newEffectType === 'send_message' &&
                                   (!ec.service ||
                                     !ec.draft_id ||
-                                    usableMessagingServices.length === 0)) ||
+                                    usableMessagingServices.length === 0 ||
+                                    ((messageChannel === 'sms' || messageChannel === 'viber') &&
+                                      (contactSteps.length === 0 || !ec.phone_ref)))) ||
                                 (newEffectType === 'add_to_spam' &&
                                   (contactSteps.length === 0 || !ec.phone_ref)) ||
                                 (newEffectType === 'create_task' &&
@@ -1309,6 +1349,12 @@ export function ChainBuilderPage() {
                                       cfg.channel = messageChannel
                                       cfg.service = ec.service
                                       cfg.draft_id = parseInt(ec.draft_id!, 10)
+                                      if (
+                                        (messageChannel === 'sms' || messageChannel === 'viber') &&
+                                        ec.phone_ref
+                                      ) {
+                                        cfg.phone_ref = parseInt(ec.phone_ref, 10)
+                                      }
                                     }
                                     try {
                                       await createEffect.mutateAsync({

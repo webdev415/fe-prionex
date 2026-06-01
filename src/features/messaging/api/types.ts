@@ -285,6 +285,8 @@ export interface MessagingCampaignDetail extends MessagingCampaignSummary {
   draft_id: number | null
   message_snapshot: Record<string, unknown>
   selection_payload: Record<string, unknown>
+  sample_rendered_body?: string | null
+  sample_rendered_subject?: string | null
 }
 
 export interface MessagingCampaignRecipient {
