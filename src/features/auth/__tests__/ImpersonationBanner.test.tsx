@@ -9,16 +9,19 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { ImpersonationBanner } from '../components/ImpersonationBanner'
+import type { User } from '@/types/api'
 
-const mockImpersonatedUser = {
+const mockImpersonatedUser: User = {
   id: '5',
   username: 'john_doe',
   email: 'john@example.com',
   firstName: 'John',
   lastName: 'Doe',
+  active_role_id: '10',
   active_role_name: 'Admin',
   active_project_id: '1',
-  projects: [{ id: '1', name: 'Test Project' }],
+  active_department_id: null,
+  projects: [{ id: '1', name: 'Test Project', roles: [] }],
 }
 
 const mockOnExitImpersonation = vi.fn()
@@ -55,7 +58,7 @@ describe('ImpersonationBanner', () => {
       expect(screen.getByText(/impersonation mode/i)).toBeInTheDocument()
     })
 
-    it('should display impersonated username', () => {
+    it('should display impersonated user full name', () => {
       render(
         <ImpersonationBanner
           isImpersonating={true}
@@ -65,7 +68,7 @@ describe('ImpersonationBanner', () => {
         />
       )
 
-      expect(screen.getByText(/john_doe/i)).toBeInTheDocument()
+      expect(screen.getByText(/John Doe/i)).toBeInTheDocument()
     })
 
     it('should display "Viewing as" message', () => {
@@ -174,7 +177,7 @@ describe('ImpersonationBanner', () => {
   })
 
   describe('User information display', () => {
-    it('should display username and role', () => {
+    it('should display full name and role', () => {
       render(
         <ImpersonationBanner
           isImpersonating={true}
@@ -184,7 +187,7 @@ describe('ImpersonationBanner', () => {
         />
       )
 
-      expect(screen.getByText(/john_doe/i)).toBeInTheDocument()
+      expect(screen.getByText(/John Doe/i)).toBeInTheDocument()
       expect(screen.getByText(/Admin/i)).toBeInTheDocument()
     })
 
