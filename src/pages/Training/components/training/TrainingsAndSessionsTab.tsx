@@ -1,17 +1,31 @@
-﻿import { useMemo } from 'react'
+import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router-dom'
 import { TRAININGS_AND_SESSIONS_SUB_TABS, type TrainingsAndSessionsSubTabId } from '../../types'
 import { CoursesCatalogTab } from './CoursesCatalogTab'
 import { AssignmentsGridTab } from './AssignmentsGridTab'
 import { MaterialsLibraryTab } from './MaterialsLibraryTab'
+import { GroupTrainingsTab } from './GroupTrainingsTab'
+import { DrillsTab } from './DrillsTab'
+import { OneOnOneCalendarTab } from './OneOnOneCalendarTab'
+import { TestsTab } from './TestsTab'
 
 /**
- * Trainings and Sessions top-tab orchestrator (KAN-498/499). Three sub-tabs:
- * Courses Catalogue / Assignments Grid / Materials Library. URL: `?sub=â€¦`.
+ * Trainings and Sessions top-tab orchestrator. Hosts the 7 Figma sub-tabs
+ * (Courses / Group Trainings / Drills / Calendar / Tests / Assignments /
+ * Materials). Per-plan-§3.4 only Courses + Assignments + Materials have
+ * backend in this round; the other four ship on mock data for design
+ * completeness ahead of KAN-416.
  */
 const SUB_TAB_LABELS: Record<TrainingsAndSessionsSubTabId, { key: string; fallback: string }> = {
   courses: { key: 'pages.training.training.subTabs.courses', fallback: 'Courses' },
+  'group-trainings': {
+    key: 'pages.training.training.subTabs.groupTrainings',
+    fallback: 'Group trainings',
+  },
+  drills: { key: 'pages.training.training.subTabs.drills', fallback: 'Drills' },
+  calendar: { key: 'pages.training.training.subTabs.calendar', fallback: 'Calendar' },
+  tests: { key: 'pages.training.training.subTabs.tests', fallback: 'Tests' },
   assignments: {
     key: 'pages.training.training.subTabs.assignments',
     fallback: 'Assignments',
@@ -63,6 +77,10 @@ export function TrainingsAndSessionsTab() {
       </div>
 
       {activeSubTab === 'courses' && <CoursesCatalogTab />}
+      {activeSubTab === 'group-trainings' && <GroupTrainingsTab />}
+      {activeSubTab === 'drills' && <DrillsTab />}
+      {activeSubTab === 'calendar' && <OneOnOneCalendarTab />}
+      {activeSubTab === 'tests' && <TestsTab />}
       {activeSubTab === 'assignments' && <AssignmentsGridTab />}
       {activeSubTab === 'materials' && <MaterialsLibraryTab />}
     </div>

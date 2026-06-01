@@ -54,8 +54,18 @@ export type ActionAnalysisScoresSubTabId = 'scorecards' | 'markers' | 'feedback'
 // Grid (step 8) follow. Lives at page level since the Inbox top-tab owns it.
 export type TrainingInboxViewMode = 'inbox' | 'kanban' | 'grid'
 
-// KAN-498 / KAN-499 — Trainings and Sessions top-tab sub-tabs.
-export type TrainingsAndSessionsSubTabId = 'courses' | 'assignments' | 'materials'
+// KAN-498 / KAN-499 — Trainings and Sessions top-tab sub-tabs. KAN-416's
+// expanded surface (group trainings / drills / calendar / tests) is part of
+// the Figma source, so the boilerplate ships it with mock data even though
+// backend lands in a later round.
+export type TrainingsAndSessionsSubTabId =
+  | 'courses'
+  | 'group-trainings'
+  | 'drills'
+  | 'calendar'
+  | 'tests'
+  | 'assignments'
+  | 'materials'
 
 // KAN-504 — Dialogue Evaluation view modes (live as a single ?view= state,
 // per plan §3.9 — these are view filters, not real sub-tabs).
@@ -114,6 +124,10 @@ export const TRAINING_INBOX_VIEW_MODES: TrainingInboxViewMode[] = ['inbox', 'kan
 
 export const TRAININGS_AND_SESSIONS_SUB_TABS: TrainingsAndSessionsSubTabId[] = [
   'courses',
+  'group-trainings',
+  'drills',
+  'calendar',
+  'tests',
   'assignments',
   'materials',
 ]

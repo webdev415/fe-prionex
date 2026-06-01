@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Mock data for the Trainer Workplace redesign (KAN-413/414/415/416 +
  * KAN-498..504). This file is the single source of truth for all FE
  * boilerplate built ahead of the backend endpoints. Each export mirrors the
@@ -320,6 +320,396 @@ export const MOCK_COURSES: MockCourse[] = [
     avgCompletionPct: 61,
     status: 'archived',
     coverGradient: COURSE_GRADIENTS[5],
+  },
+]
+
+// ─────────────────────────────────────────────────────────────
+// Trainings & Sessions — Group Trainings (Figma step 2)
+// ─────────────────────────────────────────────────────────────
+
+export type GroupTrainingType = 'webinar' | 'workshop' | 'masterclass'
+
+export interface MockGroupTraining {
+  id: number
+  title: string
+  type: GroupTrainingType
+  trainer: string
+  dateLabel: string
+  timeLabel: string
+  participantsRegistered: number
+  participantsCapacity: number
+  category: string
+  isRegistered: boolean
+  status: 'upcoming' | 'recording_available' | 'cancelled'
+  coverGradient: string
+}
+
+export const MOCK_GROUP_TRAININGS: MockGroupTraining[] = [
+  {
+    id: 1,
+    title: 'Hard Collection — call escalations',
+    type: 'workshop',
+    trainer: 'Sergii Tarasov',
+    dateLabel: '14.06',
+    timeLabel: '10:00-12:00',
+    participantsRegistered: 12,
+    participantsCapacity: 18,
+    category: 'Hard Collection',
+    isRegistered: true,
+    status: 'upcoming',
+    coverGradient: 'linear-gradient(135deg, #D1FAE5 0%, #ECFDF5 100%)',
+  },
+  {
+    id: 2,
+    title: 'Tone of voice — practical drill',
+    type: 'masterclass',
+    trainer: 'Olena Lytvynenko',
+    dateLabel: '15.06',
+    timeLabel: '15:00-16:30',
+    participantsRegistered: 8,
+    participantsCapacity: 12,
+    category: 'Soft Skills',
+    isRegistered: false,
+    status: 'upcoming',
+    coverGradient: 'linear-gradient(135deg, #DBEAFE 0%, #EFF6FF 100%)',
+  },
+  {
+    id: 3,
+    title: 'Restructuring agreements analysis',
+    type: 'webinar',
+    trainer: 'Volodymyr Senchuk',
+    dateLabel: '16.06',
+    timeLabel: '11:00-12:30',
+    participantsRegistered: 22,
+    participantsCapacity: 30,
+    category: 'Analytics',
+    isRegistered: true,
+    status: 'upcoming',
+    coverGradient: 'linear-gradient(135deg, #FEF3C7 0%, #FFFBEB 100%)',
+  },
+  {
+    id: 4,
+    title: 'How to win back your voice',
+    type: 'workshop',
+    trainer: 'Mariia Petrenko',
+    dateLabel: '18.06',
+    timeLabel: '14:00-15:30',
+    participantsRegistered: 5,
+    participantsCapacity: 15,
+    category: 'Soft Skills',
+    isRegistered: false,
+    status: 'upcoming',
+    coverGradient: 'linear-gradient(135deg, #FCE7F3 0%, #FDF2F8 100%)',
+  },
+  {
+    id: 5,
+    title: 'Overview of the new product',
+    type: 'webinar',
+    trainer: 'Anna Kovalenko',
+    dateLabel: '20.06',
+    timeLabel: '10:00-11:00',
+    participantsRegistered: 30,
+    participantsCapacity: 50,
+    category: 'Product',
+    isRegistered: false,
+    status: 'upcoming',
+    coverGradient: 'linear-gradient(135deg, #E0E7FF 0%, #EEF2FF 100%)',
+  },
+  {
+    id: 6,
+    title: 'Technical seminar — CRM tips',
+    type: 'masterclass',
+    trainer: 'Andrii Shevchuk',
+    dateLabel: '22.06',
+    timeLabel: '13:00-14:30',
+    participantsRegistered: 10,
+    participantsCapacity: 20,
+    category: 'Tools',
+    isRegistered: false,
+    status: 'upcoming',
+    coverGradient: 'linear-gradient(135deg, #FFE4E6 0%, #FFF1F2 100%)',
+  },
+]
+
+// ─────────────────────────────────────────────────────────────
+// Trainings & Sessions — Short Drills (Figma step 3)
+// ─────────────────────────────────────────────────────────────
+
+export interface MockDrill {
+  id: number
+  title: string
+  durationMinutes: number
+  attempts: number
+  topic: string
+  coverGradient: string
+}
+
+export const MOCK_DRILLS: MockDrill[] = [
+  {
+    id: 1,
+    title: '5 objections in 5 minutes',
+    durationMinutes: 5,
+    attempts: 145,
+    topic: 'Objections',
+    coverGradient: 'linear-gradient(135deg, #D1FAE5 0%, #ECFDF5 100%)',
+  },
+  {
+    id: 2,
+    title: 'Topic talk — fast pitch',
+    durationMinutes: 10,
+    attempts: 117,
+    topic: 'Pitch',
+    coverGradient: 'linear-gradient(135deg, #DBEAFE 0%, #EFF6FF 100%)',
+  },
+  {
+    id: 3,
+    title: 'Active listening practice',
+    durationMinutes: 4,
+    attempts: 41,
+    topic: 'Listening',
+    coverGradient: 'linear-gradient(135deg, #FEF3C7 0%, #FFFBEB 100%)',
+  },
+  {
+    id: 4,
+    title: 'Close in 30 seconds',
+    durationMinutes: 1,
+    attempts: 78,
+    topic: 'Closing',
+    coverGradient: 'linear-gradient(135deg, #FCE7F3 0%, #FDF2F8 100%)',
+  },
+  {
+    id: 5,
+    title: 'Topic talk — quick win',
+    durationMinutes: 2,
+    attempts: 20,
+    topic: 'Pitch',
+    coverGradient: 'linear-gradient(135deg, #E0E7FF 0%, #EEF2FF 100%)',
+  },
+]
+
+// ─────────────────────────────────────────────────────────────
+// Trainings & Sessions — 1-on-1 Calendar (Figma step 4)
+// ─────────────────────────────────────────────────────────────
+
+export type SessionFormat = 'in_person' | 'zoom' | 'phone'
+
+export interface MockOneOnOneSession {
+  id: number
+  timeLabel: string
+  dateLabel: string
+  title: string
+  topic: string
+  trainerName: string
+  trainerInitials: string
+  trainerAvatar: string
+  operatorName: string
+  operatorInitials: string
+  operatorAvatar: string
+  durationLabel: string
+  format: SessionFormat
+  isPlanned: boolean
+}
+
+export const MOCK_ONE_ON_ONES_PLANNED: MockOneOnOneSession[] = [
+  {
+    id: 1,
+    timeLabel: '14:00',
+    dateLabel: '15.06',
+    title: 'Simple time management',
+    topic: 'Time management',
+    trainerName: 'Yulia Marchuk',
+    trainerInitials: 'YM',
+    trainerAvatar: AVATAR_PALETTE[0],
+    operatorName: 'Kateryna Antonova',
+    operatorInitials: 'KA',
+    operatorAvatar: AVATAR_PALETTE[1],
+    durationLabel: '30 min',
+    format: 'in_person',
+    isPlanned: true,
+  },
+  {
+    id: 2,
+    timeLabel: '15:00',
+    dateLabel: '15.06',
+    title: 'Dialogue analysis #1012',
+    topic: 'Dialogue feedback',
+    trainerName: 'Anna Kovalenko',
+    trainerInitials: 'AK',
+    trainerAvatar: AVATAR_PALETTE[2],
+    operatorName: 'Iryna Sokol',
+    operatorInitials: 'IS',
+    operatorAvatar: AVATAR_PALETTE[3],
+    durationLabel: '45 min',
+    format: 'zoom',
+    isPlanned: true,
+  },
+  {
+    id: 3,
+    timeLabel: '15:00',
+    dateLabel: '15.06',
+    title: 'Dialogue analysis #101000',
+    topic: 'Restructuring',
+    trainerName: 'Sergii Tarasov',
+    trainerInitials: 'ST',
+    trainerAvatar: AVATAR_PALETTE[4],
+    operatorName: 'Svetlana Hordienko',
+    operatorInitials: 'SH',
+    operatorAvatar: AVATAR_PALETTE[5],
+    durationLabel: '30 min',
+    format: 'zoom',
+    isPlanned: true,
+  },
+]
+
+export const MOCK_ONE_ON_ONES_PAST: MockOneOnOneSession[] = [
+  {
+    id: 4,
+    timeLabel: '14:00',
+    dateLabel: '12.06',
+    title: 'Working with objections',
+    topic: 'Objections',
+    trainerName: 'Yulia Marchuk',
+    trainerInitials: 'YM',
+    trainerAvatar: AVATAR_PALETTE[0],
+    operatorName: 'Artem Honchar',
+    operatorInitials: 'AH',
+    operatorAvatar: AVATAR_PALETTE[6],
+    durationLabel: '30 min',
+    format: 'in_person',
+    isPlanned: false,
+  },
+  {
+    id: 5,
+    timeLabel: '11:00',
+    dateLabel: '11.06',
+    title: 'Tone of voice review',
+    topic: 'Tone',
+    trainerName: 'Olena Lytvynenko',
+    trainerInitials: 'OL',
+    trainerAvatar: AVATAR_PALETTE[7],
+    operatorName: 'Bohdan Melnyk',
+    operatorInitials: 'BM',
+    operatorAvatar: AVATAR_PALETTE[0],
+    durationLabel: '45 min',
+    format: 'phone',
+    isPlanned: false,
+  },
+  {
+    id: 6,
+    timeLabel: '16:30',
+    dateLabel: '10.06',
+    title: 'Restructuring agreements',
+    topic: 'Restructuring',
+    trainerName: 'Volodymyr Senchuk',
+    trainerInitials: 'VS',
+    trainerAvatar: AVATAR_PALETTE[1],
+    operatorName: 'Marina Shevchenko',
+    operatorInitials: 'MS',
+    operatorAvatar: AVATAR_PALETTE[2],
+    durationLabel: '60 min',
+    format: 'zoom',
+    isPlanned: false,
+  },
+]
+
+// ─────────────────────────────────────────────────────────────
+// Trainings & Sessions — Tests (Figma step 5)
+// ─────────────────────────────────────────────────────────────
+
+export type TestStatus = 'passed' | 'failed' | 'in_progress' | 'not_started'
+
+export interface MockTest {
+  id: number
+  title: string
+  course: string
+  category: string
+  authorName: string
+  authorInitials: string
+  authorAvatar: string
+  deadlineLabel: string
+  scoreLabel: string
+  status: TestStatus
+  coverGradient: string
+}
+
+export const MOCK_TESTS: MockTest[] = [
+  {
+    id: 1,
+    title: 'Test "Objections"',
+    course: 'Working with objections',
+    category: 'Hard Collection',
+    authorName: 'Denys Poltavets',
+    authorInitials: 'DP',
+    authorAvatar: AVATAR_PALETTE[0],
+    deadlineLabel: '15.05',
+    scoreLabel: '96 / 100',
+    status: 'passed',
+    coverGradient: 'linear-gradient(135deg, #D1FAE5 0%, #ECFDF5 100%)',
+  },
+  {
+    id: 2,
+    title: 'Test "Structure"',
+    course: 'Successful dialogue structure',
+    category: 'Hard Collection',
+    authorName: 'Iryna Smol',
+    authorInitials: 'IS',
+    authorAvatar: AVATAR_PALETTE[1],
+    deadlineLabel: '15.05',
+    scoreLabel: '78 / 100',
+    status: 'passed',
+    coverGradient: 'linear-gradient(135deg, #DBEAFE 0%, #EFF6FF 100%)',
+  },
+  {
+    id: 3,
+    title: 'Test "Closure"',
+    course: 'Closing complex agreements',
+    category: 'Hard Collection',
+    authorName: 'Denys Poltavets',
+    authorInitials: 'DP',
+    authorAvatar: AVATAR_PALETTE[2],
+    deadlineLabel: '15.05',
+    scoreLabel: '96 / 100',
+    status: 'passed',
+    coverGradient: 'linear-gradient(135deg, #FEF3C7 0%, #FFFBEB 100%)',
+  },
+  {
+    id: 4,
+    title: 'Test "Empathy"',
+    course: 'Empathy and active listening',
+    category: 'Soft Skills',
+    authorName: 'Kateryna Antonova',
+    authorInitials: 'KA',
+    authorAvatar: AVATAR_PALETTE[3],
+    deadlineLabel: '15.05',
+    scoreLabel: '54 / 100',
+    status: 'failed',
+    coverGradient: 'linear-gradient(135deg, #FCE7F3 0%, #FDF2F8 100%)',
+  },
+  {
+    id: 5,
+    title: 'Test "Objections"',
+    course: 'Working with objections',
+    category: 'Hard Collection',
+    authorName: 'Artem Honchar',
+    authorInitials: 'AH',
+    authorAvatar: AVATAR_PALETTE[4],
+    deadlineLabel: '15.05',
+    scoreLabel: '41 / 100',
+    status: 'failed',
+    coverGradient: 'linear-gradient(135deg, #E0E7FF 0%, #EEF2FF 100%)',
+  },
+  {
+    id: 6,
+    title: 'Test "Closure"',
+    course: 'Closing complex agreements',
+    category: 'Hard Collection',
+    authorName: 'Denys Poltavets',
+    authorInitials: 'DP',
+    authorAvatar: AVATAR_PALETTE[5],
+    deadlineLabel: '15.05',
+    scoreLabel: '96 / 100',
+    status: 'passed',
+    coverGradient: 'linear-gradient(135deg, #FFE4E6 0%, #FFF1F2 100%)',
   },
 ]
 
@@ -966,3 +1356,164 @@ export const MOCK_INTERACTIONS: MockInteractionRow[] = Array.from({ length: 10 }
   deal: '–',
   amountPromised: i % 4 === 0 ? 2300 + i * 100 : undefined,
 }))
+
+// ─────────────────────────────────────────────────────────────
+// Inbox tab mocks (KAN-413)
+// ─────────────────────────────────────────────────────────────
+
+export type InboxAssignmentState =
+  | 'wait'
+  | 'in_progress'
+  | 'awaiting_training'
+  | 'scheduled'
+  | 'closed'
+
+export interface MockInboxTrigger {
+  id: number
+  code: string
+  label: string
+  severity: 'info' | 'warn' | 'critical'
+  detectedAtLabel: string
+}
+
+export interface MockInboxRow {
+  operatorId: number
+  name: string
+  initials: string
+  avatarColor: string
+  team: string
+  department: string
+  online: boolean
+  lastActiveLabel: string
+  state: InboxAssignmentState
+  compositeScore: number
+  scoreBand: ScoreBand
+  scoreDeltaPct: number
+  triggers: MockInboxTrigger[]
+  flagged: boolean
+}
+
+const INBOX_TRIGGERS_POOL: Omit<MockInboxTrigger, 'detectedAtLabel'>[] = [
+  { id: 1, code: 'missed_calls', label: '3 missed calls in a row', severity: 'critical' },
+  { id: 2, code: 'low_score', label: 'Score dropped 15%', severity: 'critical' },
+  { id: 3, code: 'silence', label: 'Long silence 18s', severity: 'warn' },
+  { id: 4, code: 'tone', label: 'Tone-of-voice flag', severity: 'warn' },
+  { id: 5, code: 'overdue_promise', label: 'Overdue promise', severity: 'warn' },
+  { id: 6, code: 'no_summary', label: 'Missing dialogue summary', severity: 'info' },
+]
+
+function buildInboxRow(idx: number, state: InboxAssignmentState): MockInboxRow {
+  const name = OPERATOR_NAMES[idx % OPERATOR_NAMES.length]
+  const parts = name.split(' ')
+  const score = 38 + ((idx * 11) % 55)
+  const triggersCount = idx % 3
+  const triggers = INBOX_TRIGGERS_POOL.slice(0, triggersCount).map((t, j) => ({
+    ...t,
+    detectedAtLabel: `${j + 1}h ago`,
+  }))
+  return {
+    operatorId: idx + 1,
+    name,
+    initials: `${parts[0][0]}${parts[1]?.[0] ?? ''}`.toUpperCase(),
+    avatarColor: AVATAR_PALETTE[idx % AVATAR_PALETTE.length],
+    team: idx % 2 === 0 ? 'Team "Alpha"' : 'Team "Bravo"',
+    department: 'Hard Collection',
+    online: idx % 4 !== 0,
+    lastActiveLabel: idx % 4 === 0 ? '15m ago' : 'Online',
+    state,
+    compositeScore: score,
+    scoreBand: scoreBandFor(score),
+    scoreDeltaPct: ((idx * 3) % 11) - 5,
+    triggers,
+    flagged: triggersCount > 0,
+  }
+}
+
+export const MOCK_INBOX_ROWS: MockInboxRow[] = [
+  buildInboxRow(0, 'wait'),
+  buildInboxRow(1, 'in_progress'),
+  buildInboxRow(2, 'in_progress'),
+  buildInboxRow(3, 'awaiting_training'),
+  buildInboxRow(4, 'wait'),
+  buildInboxRow(5, 'scheduled'),
+  buildInboxRow(6, 'in_progress'),
+  buildInboxRow(7, 'closed'),
+  buildInboxRow(8, 'wait'),
+  buildInboxRow(9, 'awaiting_training'),
+  buildInboxRow(10, 'closed'),
+  buildInboxRow(11, 'scheduled'),
+]
+
+export const MOCK_INBOX_STATE_COUNTS: Record<InboxAssignmentState, number> = {
+  wait: MOCK_INBOX_ROWS.filter((r) => r.state === 'wait').length,
+  in_progress: MOCK_INBOX_ROWS.filter((r) => r.state === 'in_progress').length,
+  awaiting_training: MOCK_INBOX_ROWS.filter((r) => r.state === 'awaiting_training').length,
+  scheduled: MOCK_INBOX_ROWS.filter((r) => r.state === 'scheduled').length,
+  closed: MOCK_INBOX_ROWS.filter((r) => r.state === 'closed').length,
+}
+
+// Detail panel — per-operator recent calls + score breakdown + 1-on-1 history.
+
+export interface MockOperatorRecentCall {
+  id: number
+  dateLabel: string
+  durationLabel: string
+  result: 'Promise' | 'Refusal' | 'Missed' | 'Positive'
+  score: number
+  scoreBand: ScoreBand
+}
+
+export interface MockOperatorScoreSeries {
+  label: string
+  value: number
+}
+
+export interface MockOperatorDetail {
+  recentCalls: MockOperatorRecentCall[]
+  scoreSeries: MockOperatorScoreSeries[]
+  criteria: { label: string; score: number; max: number }[]
+  recentOneOnOnes: { dateLabel: string; topic: string; status: 'done' | 'planned' }[]
+  feedbackThreadCount: number
+  notes: string[]
+}
+
+export const MOCK_OPERATOR_DETAIL: MockOperatorDetail = {
+  recentCalls: Array.from({ length: 5 }, (_, i) => {
+    const score = 50 + ((i * 13) % 45)
+    return {
+      id: i + 1,
+      dateLabel: `${13 - i}.05 1${i % 9}:${30 + i}`,
+      durationLabel: `${2 + (i % 4)}:${String(10 + i).slice(-2)}`,
+      result:
+        i % 4 === 0 ? 'Promise' : i % 4 === 1 ? 'Refusal' : i % 4 === 2 ? 'Missed' : 'Positive',
+      score,
+      scoreBand: scoreBandFor(score),
+    }
+  }),
+  scoreSeries: [
+    { label: 'Mon', value: 65 },
+    { label: 'Tue', value: 71 },
+    { label: 'Wed', value: 60 },
+    { label: 'Thu', value: 78 },
+    { label: 'Fri', value: 72 },
+    { label: 'Sat', value: 68 },
+    { label: 'Sun', value: 75 },
+  ],
+  criteria: [
+    { label: 'Greeting', score: 5, max: 5 },
+    { label: 'Information gathering', score: 8, max: 10 },
+    { label: 'Tone & orientation', score: 9, max: 10 },
+    { label: 'Objection handling', score: 14, max: 20 },
+    { label: 'Motivation', score: 16, max: 20 },
+    { label: 'Summary', score: 7, max: 10 },
+  ],
+  recentOneOnOnes: [
+    { dateLabel: '12.05 10:30', topic: 'Objection handling refresh', status: 'done' },
+    { dateLabel: '20.05 15:00', topic: 'Tone of voice coaching', status: 'planned' },
+  ],
+  feedbackThreadCount: 3,
+  notes: [
+    'Tends to skip the summary step in long calls.',
+    'Strong on empathy — keep pairing with the soft-collection track.',
+  ],
+}

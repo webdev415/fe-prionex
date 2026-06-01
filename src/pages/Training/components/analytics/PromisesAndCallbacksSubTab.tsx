@@ -1,4 +1,5 @@
-﻿import { useTranslation } from 'react-i18next'
+﻿import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
 import {
   MOCK_PROMISES,
@@ -6,6 +7,7 @@ import {
   type MockPromiseRow,
   type PromiseStatus,
 } from '../../mocks/trainerWorkplaceMocks'
+import { PeriodFilterStrip, type PeriodOption } from './PeriodFilterStrip'
 
 /**
  * Promises and Callbacks sub-tab (KAN-415). KPI strip + table of promised
@@ -27,7 +29,13 @@ const STATUS_LABEL: Record<PromiseStatus, string> = {
 
 export function PromisesAndCallbacksSubTab() {
   const { t } = useTranslation('common')
+  const [period, setPeriod] = useState<PeriodOption>('today')
+  const [statusFilter, setStatusFilter] = useState<'all' | PromiseStatus>('all')
   const k = MOCK_PROMISES_KPIS
+
+  const filteredRows = MOCK_PROMISES.filter(
+    (r) => statusFilter === 'all' || r.status === statusFilter
+  )
 
   return (
     <div className="flex flex-col gap-4">
@@ -66,6 +74,18 @@ export function PromisesAndCallbacksSubTab() {
         </span>
       </div>
 
+      {/* Period + status filter strip */}
+      <PeriodFilterStrip
+        value={period}
+        onChange={setPeriod}
+        extraChips={(['all', 'pending', 'paid', 'overdue', 'expected'] as const).map((s) => ({
+          id: s,
+          label: s === 'all' ? 'All statuses' : STATUS_LABEL[s],
+          active: statusFilter === s,
+          onClick: () => setStatusFilter(s),
+        }))}
+      />
+
       {/* Table */}
       <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white">
         <table className="w-full text-xs">
@@ -89,7 +109,7 @@ export function PromisesAndCallbacksSubTab() {
             </tr>
           </thead>
           <tbody>
-            {MOCK_PROMISES.map((row) => (
+            {filteredRows.map((row) => (
               <PromiseRow key={row.id} row={row} />
             ))}
           </tbody>

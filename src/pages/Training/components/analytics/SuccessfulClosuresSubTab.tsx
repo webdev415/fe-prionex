@@ -1,10 +1,12 @@
-﻿import { useTranslation } from 'react-i18next'
+﻿import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   MOCK_CLOSURES,
   MOCK_CLOSURES_FUNNEL,
   MOCK_CLOSURES_KPIS,
   type MockClosureRow,
 } from '../../mocks/trainerWorkplaceMocks'
+import { PeriodFilterStrip, type PeriodOption } from './PeriodFilterStrip'
 
 /**
  * Successful Closures sub-tab (KAN-415). KPI strip + funnel chart
@@ -12,10 +14,13 @@ import {
  */
 export function SuccessfulClosuresSubTab() {
   const { t } = useTranslation('common')
+  const [period, setPeriod] = useState<PeriodOption>('today')
   const k = MOCK_CLOSURES_KPIS
 
   return (
     <div className="flex flex-col gap-4">
+      <PeriodFilterStrip value={period} onChange={setPeriod} />
+
       {/* KPI strip */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <KpiTile

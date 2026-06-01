@@ -1,6 +1,8 @@
-﻿import { useTranslation } from 'react-i18next'
+﻿import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
 import { MOCK_LEAKS, MOCK_LEAKS_KPIS, type MockLeakRow } from '../../mocks/trainerWorkplaceMocks'
+import { PeriodFilterStrip, type PeriodOption } from './PeriodFilterStrip'
 
 /**
  * Leaks sub-tab (KAN-415). Escalations / lost-client view â€” KPI strip +
@@ -8,10 +10,13 @@ import { MOCK_LEAKS, MOCK_LEAKS_KPIS, type MockLeakRow } from '../../mocks/train
  */
 export function LeaksSubTab() {
   const { t } = useTranslation('common')
+  const [period, setPeriod] = useState<PeriodOption>('today')
   const k = MOCK_LEAKS_KPIS
 
   return (
     <div className="flex flex-col gap-4">
+      <PeriodFilterStrip value={period} onChange={setPeriod} />
+
       <div className="rounded-2xl border border-emerald-100 bg-emerald-50/60 px-4 py-3 text-[11px] text-emerald-700">
         {t(
           'pages.training.leaks.healthBanner',

@@ -1,10 +1,12 @@
-﻿import { useTranslation } from 'react-i18next'
+﻿import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   MOCK_THIRD_PARTIES,
   MOCK_THIRD_PARTIES_KPIS,
   type MockThirdPartyRow,
   type ThirdPartyResult,
 } from '../../mocks/trainerWorkplaceMocks'
+import { PeriodFilterStrip, type PeriodOption } from './PeriodFilterStrip'
 
 /**
  * Third Parties sub-tab (KAN-415). Calls to people other than the
@@ -26,10 +28,13 @@ const RESULT_LABEL: Record<ThirdPartyResult, string> = {
 
 export function ThirdPartiesSubTab() {
   const { t } = useTranslation('common')
+  const [period, setPeriod] = useState<PeriodOption>('today')
   const k = MOCK_THIRD_PARTIES_KPIS
 
   return (
     <div className="flex flex-col gap-4">
+      <PeriodFilterStrip value={period} onChange={setPeriod} />
+
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <KpiTile
           label={t('pages.training.thirdParties.kpi.calls', 'Calls to 3 parties')}

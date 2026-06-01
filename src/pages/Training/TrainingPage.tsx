@@ -24,6 +24,7 @@ import { ScreenTimeTab } from './components/ScreenTimeTab'
 import { HeatmapTab } from './components/HeatmapTab'
 import { ScopeSelector } from './components/ScopeSelector'
 import { TrainerHeaderStrip } from './components/chrome/TrainerHeaderStrip'
+import { MockInboxTab } from './components/inbox/MockInboxTab'
 import { TeamTab } from './components/team/TeamTab'
 import { ActionAnalysisInnerTab } from './components/analytics/ActionAnalysisInnerTab'
 import { DialogueEvaluationTab } from './components/dialogue/DialogueEvaluationTab'
@@ -293,7 +294,7 @@ export function TrainingPage() {
 
       {/* Top-tab body */}
       {activeTopTab === 'inbox' ? (
-        <InboxPlaceholderTab onQuickAction={handleQuickAction} />
+        <MockInboxTab />
       ) : activeTopTab === 'team' ? (
         <TeamTab />
       ) : activeTopTab === 'action-analysis' ? (
@@ -321,28 +322,6 @@ export function TrainingPage() {
           )}
         </div>
       )}
-    </div>
-  )
-}
-
-/**
- * Inbox placeholder body â€” re-uses the existing InboxTab once permission
- * gating + backend coaching tables are in place. For the boilerplate phase we
- * show the same Figma-style operator list with mock state.
- */
-function InboxPlaceholderTab({ onQuickAction: _onQuickAction }: { onQuickAction?: () => void }) {
-  const { t } = useTranslation('common')
-  return (
-    <div className="flex flex-col gap-3 rounded-2xl border border-gray-100 bg-white p-6 text-center text-xs text-gray-500 shadow-sm">
-      <span className="text-dark-500 text-sm font-medium">
-        {t('pages.training.inbox.boilerplate.title', 'Inbox â€” coming online')}
-      </span>
-      <span>
-        {t(
-          'pages.training.inbox.boilerplate.body',
-          'Operator queue with composite-score banding + coaching state. KAN-413 backend wiring lands first; this placeholder keeps the strip alive.'
-        )}
-      </span>
     </div>
   )
 }
