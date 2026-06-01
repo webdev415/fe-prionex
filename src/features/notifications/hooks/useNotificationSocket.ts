@@ -8,6 +8,10 @@ const WS_URL =
   import.meta.env.VITE_WS_URL !== undefined ? import.meta.env.VITE_WS_URL : 'http://localhost:8005'
 
 const MAX_RECONNECT_ATTEMPTS = 10
+// Hard cap on WS-driven refetches: never invalidate the bell's queries
+// more than once per ``INVALIDATE_MIN_INTERVAL_MS``. Defends the FE
+// against a chatty WS server or a reconnect loop.
+const INVALIDATE_MIN_INTERVAL_MS = 1000
 
 interface UseNotificationSocketReturn {
   connected: boolean
@@ -20,6 +24,7 @@ export function useNotificationSocket(
   const queryClient = useQueryClient()
   const socketRef = useRef<Socket | null>(null)
   const callbackRef = useRef(onNewNotification)
+  const lastInvalidateAtRef = useRef<{ list: number; count: number }>({ list: 0, count: 0 })
   const [connected, setConnected] = useState(false)
   const [reconnecting, setReconnecting] = useState(false)
 
@@ -43,6 +48,21 @@ export function useNotificationSocket(
       reconnectionDelayMax: 30000,
     })
 
+    // Throttled invalidation — at most one refetch every
+    // INVALIDATE_MIN_INTERVAL_MS per (target) query bucket.
+    const throttledInvalidate = (target: 'list' | 'count') => {
+      const now = Date.now()
+      if (now - lastInvalidateAtRef.current[target] < INVALIDATE_MIN_INTERVAL_MS) return
+      lastInvalidateAtRef.current[target] = now
+      if (target === 'count') {
+        queryClient.invalidateQueries({ queryKey: ['notifications', 'unread-count'] })
+      } else {
+        // Refetch BOTH list + count when a new notification arrives.
+        queryClient.invalidateQueries({ queryKey: ['notifications'] })
+        lastInvalidateAtRef.current.count = now
+      }
+    }
+
     socket.on('connect', () => {
       setConnected(true)
       setReconnecting(false)
@@ -61,12 +81,12 @@ export function useNotificationSocket(
     })
 
     socket.on('notification.new', (notification: NotificationItem) => {
-      queryClient.invalidateQueries({ queryKey: ['notifications'] })
+      throttledInvalidate('list')
       callbackRef.current?.(notification)
     })
 
     socket.on('notification.count', () => {
-      queryClient.invalidateQueries({ queryKey: ['notifications'] })
+      throttledInvalidate('count')
     })
 
     socketRef.current = socket

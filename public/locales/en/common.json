@@ -32,6 +32,7 @@
     "bulkOperatorAssignment": "Bulk Operator Assignment",
     "bulkPaymentVerification": "Bulk Payment Verification",
     "bulkTagAssignment": "Bulk Tag Assignment",
+    "bulkWriteoffImport": "Bulk Write-off Import",
     "auditLogs": "Audit Logs",
     "reports": "Reports",
     "scoringConfiguration": "Scoring Configuration",
@@ -188,6 +189,53 @@
     "confirmMessage": "Are you sure you want to logout? You will need to login again to access the system."
   },
   "pages": {
+    "operations": {
+      "bulkWriteoffImport": {
+        "title": "Bulk write-off import",
+        "subtitle": "Upload a CSV to create multiple write-off entries at once.",
+        "sectionTitle": "Upload write-off CSV",
+        "descriptionIntro": "Required columns:",
+        "clickToUpload": "Click to upload",
+        "orDragAndDrop": "or drag and drop",
+        "constraints": "CSV only, up to 5 MB / 1000 rows",
+        "validating": "Uploading...",
+        "uploadAnother": "Upload another file",
+        "resultsTitle": "Import results",
+        "upload": "Upload",
+        "viewHistory": "View history",
+        "downloadTemplate": "Download template",
+        "columnsHint": "Required columns: {{columns}}",
+        "headerErrorTitle": "CSV header could not be parsed.",
+        "missingColumns": "Missing required columns",
+        "unrecognisedColumns": "Unrecognised columns",
+        "rowsIn": "Rows read",
+        "rowsSucceeded": "Rows succeeded",
+        "rowsFailed": "Rows failed",
+        "entriesCreated": "Entries created",
+        "batchId": "Batch ID",
+        "rowNumber": "Row",
+        "loanId": "Loan ID",
+        "loanNumber": "Loan number",
+        "clientId": "Client ID",
+        "cancellationDate": "Cancellation date",
+        "components": "Components",
+        "status": "Status",
+        "detail": "Detail",
+        "statusCreated": "Created",
+        "statusFailed": "Failed",
+        "component": {
+          "principal": "Principal",
+          "interest": "Interest",
+          "fine": "Fine",
+          "penalty": "Penalty",
+          "commission": "Commission"
+        },
+        "errors": {
+          "onlyCsv": "Only CSV files are supported",
+          "fileTooLarge": "File is too large ({{size}} MB). Maximum is 5 MB."
+        }
+      }
+    },
     "aiAssistant": {
       "headerButtonAria": "Open AI assistant",
       "greeting": "Hello! I'm the Prionex AI Assistant.",
@@ -584,6 +632,7 @@
         "placeholder": "Interaction History tab — coming soon"
       },
       "topTabs": {
+        "inbox": "Inbox",
         "calls": "Calls",
         "scores": "Scores",
         "training": "Training",
@@ -697,6 +746,123 @@
         "department": "Department actions",
         "all": "All actions",
         "groupComingSoon": "Coming soon"
+      },
+      "workspaceBanner": {
+        "label": "Coach's Workspace",
+        "assignedTo": "You are assigned to {{department}}"
+      },
+      "inbox": {
+        "searchPlaceholder": "Operator name or phone number",
+        "headerKpis": {
+          "inProgress": "In progress",
+          "averageScore": "Average score",
+          "teamPlan": "Team plan",
+          "tasksToday": "Tasks today",
+          "oneOnOneToday": "1-on-1 today"
+        },
+        "viewModes": {
+          "label": "View mode",
+          "inbox": "Inbox",
+          "kanban": "Kanban",
+          "grid": "Grid",
+          "comingSoon": "Coming soon",
+          "comingSoonShort": "soon"
+        },
+        "kanbanColumns": {
+          "wait": "Wait",
+          "in_progress": "In progress",
+          "awaiting_training": "Awaiting training",
+          "scheduled": "Scheduled",
+          "closed": "Closed"
+        },
+        "list": {
+          "loading": "Loading queue…",
+          "empty": "No operators in the current scope.",
+          "emptyScope": "No operators in the current scope.",
+          "triggerCount": "{{count}} triggers"
+        },
+        "detail": {
+          "selectOperator": "Select an operator to see details.",
+          "loading": "Loading…",
+          "loadFailed": "Could not load operator details.",
+          "redFlagsHeadline": "{{count}} red flags",
+          "redFlagsSubtitle": "Coaching attention needed — recent triggers have accumulated.",
+          "riskyTag": "Risky",
+          "whyInQueue": "Why entered the queue",
+          "noTriggers": "No active triggers in the selected period.",
+          "latestRatings": "Latest dialogue ratings",
+          "noScorecards": "No scorecards in the selected period.",
+          "kpis": {
+            "scriptAdherence": "Script",
+            "scorecardAvg": "Scorecard",
+            "conversion": "Conversion",
+            "tasksOnTime": "Tasks on time"
+          },
+          "trainerActions": {
+            "listen": "Listen to the call",
+            "assignTask": "Assign a task",
+            "planOneOnOne": "Plan 1-on-1",
+            "takeCharge": "Take charge"
+          }
+        },
+        "quickActions": {
+          "button": "Quick Action",
+          "comingSoon": "Coming soon",
+          "assignTask": "Assign task",
+          "assignTaskHint": "Operator · topic · deadline",
+          "scheduleOneOnOne": "Schedule 1-on-1",
+          "scheduleOneOnOneHint": "Operator · date · time",
+          "assignCourse": "Assign course / drill",
+          "assignCourseHint": "Operator · material",
+          "rateDialogue": "Rate dialogue",
+          "rateDialogueHint": "Open scorecard"
+        },
+        "triggers": {
+          "low_script_adherence": "Low script adherence",
+          "low_scorecard_average": "Low scorecard average",
+          "low_conversion_rate": "Low conversion rate",
+          "overdue_correction_tasks": "Overdue correction tasks",
+          "active_auto_flags": "Active auto-flags"
+        },
+        "rateDialogue": {
+          "title": "Pick a call to rate",
+          "noOperator": "Select an operator first.",
+          "noExtension": "This operator has no telephony extension and no calls to rate.",
+          "noCalls": "No recent calls for this operator.",
+          "hasRecording": "Recording available",
+          "noRecording": "No recording"
+        },
+        "kanban": {
+          "transitionSuccess": "Moved to {{state}}",
+          "transitionFailed": "Could not move the card."
+        },
+        "pendingFeature": {
+          "dependsOn": "This action will be available once {{issue}} ships.",
+          "assignTask": {
+            "title": "Assign a correction task",
+            "description": "Assigns a coaching task to the operator with a due date and reviewable outcome."
+          },
+          "assignMaterial": {
+            "title": "Assign a course or drill",
+            "description": "Pushes training material to the operator and tracks completion on the dashboard."
+          }
+        },
+        "scheduleOneOnOne": {
+          "title": "Schedule 1-on-1",
+          "operator": "Operator",
+          "scheduledAt": "Date and time",
+          "duration": "Duration (minutes)",
+          "notes": "Notes (optional)",
+          "notesPlaceholder": "What do you want to cover in this session?",
+          "submit": "Schedule session",
+          "submitting": "Scheduling…",
+          "success": "1-on-1 scheduled. The operator has been notified.",
+          "errors": {
+            "noOperator": "Select an operator first.",
+            "noDate": "Pick a date and time.",
+            "generic": "Could not schedule the session."
+          }
+        }
       },
       "paymentHistoryEmpty": "No payments match the current filters",
       "paymentHistorySummary": {
@@ -1358,6 +1524,8 @@
           "simple": "Simple",
           "vendor": "Vendor Dump",
           "operatorAssignment": "Operator Assignment",
+          "paymentImport": "Payment Import",
+          "writeoffImport": "Write-off Import",
           "tagAssignment": "Tag assignment",
           "tagRemoval": "Tag removal"
         },
@@ -1691,6 +1859,7 @@
         "tags": "Tags",
         "phoneNumber": "Phone number",
         "createdDate": "Added On",
+        "lastPurchaseDate": "Last Purchase Date",
         "creditor": "Creditor",
         "debt": "Debt",
         "totalDebt": "Total Debt",
@@ -3402,7 +3571,8 @@
         "departmentNoneFound": "No departments found",
         "departmentSelectedCount": "{{count}} selected",
         "departmentClear": "Clear",
-        "systemHidden": "System (hidden) — only the system or an admin can launch"
+        "systemHidden": "System (hidden) — only the system or an admin can launch",
+        "structurallyLocked": "This chain has recorded interactions. Step layout and chain type are frozen — clone the chain to make structural changes. Name, description and department scope can still be edited."
       },
       "steps": {
         "title": "Steps",
@@ -3630,6 +3800,8 @@
       "active": "Active",
       "hide": "Hide",
       "restore": "Restore",
+      "hideFromClientDetail": "Hide from client",
+      "showOnClientDetail": "Show on client",
       "filterStatus": "Status",
       "filterAll": "All",
       "filterActive": "Active",
@@ -3642,8 +3814,13 @@
         "defaultLine": "Default Call Line",
         "spamAllowed": "Spam Allowed",
         "primary": "Show as Primary Phone",
+        "showInClientDetail": "Show in Client Detail",
         "status": "Status",
         "actions": "Actions"
+      },
+      "toasts": {
+        "hiddenFromClientDetail": "Hidden from client detail phone section",
+        "shownOnClientDetail": "Shown on client detail phone section"
       }
     },
     "tags": {

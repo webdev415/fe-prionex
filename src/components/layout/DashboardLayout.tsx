@@ -702,6 +702,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             icon: 'transaction-history',
             requiredPermission: PERMISSIONS.DATA.IMPORT_PAYMENTS,
           },
+          {
+            path: '/dashboard/import/bulk-writeoff-import',
+            label: t('navigation.bulkWriteoffImport', 'Bulk Write-off Import'),
+            icon: 'file-import',
+            requiredPermission: PERMISSIONS.WRITEOFFS.BULK,
+          },
         ],
       },
       {

@@ -48,6 +48,14 @@ export interface TAChain {
   created_by: number | null
   created_at: string
   updated_at: string
+  // KAN-XXX — chain edit lock. ``is_structurally_locked`` is true when
+  // any ta_interactions have been recorded against this chain; the BE
+  // refuses ``steps`` / ``chain_type`` changes in that state. The Chain
+  // Builder reads it to disable the structural editing UI and surface a
+  // "Clone to modify" prompt. Boolean only — no count is fetched, so
+  // the lock probe doesn't get more expensive as a chain accumulates
+  // history.
+  is_structurally_locked?: boolean
 }
 
 export interface TAChainListResponse {
