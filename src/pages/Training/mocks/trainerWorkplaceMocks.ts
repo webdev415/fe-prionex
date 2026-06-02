@@ -1132,6 +1132,14 @@ export interface MockScorecardRow {
   scoreDelta?: number
   exampleLabel?: string
   audioDuration?: string
+  /** Figma dialogue-evaluation row — small icons under the trigger column. */
+  triggerFlags?: {
+    promise?: boolean
+    refusal?: boolean
+    missedCall?: boolean
+    willPass?: boolean
+    flagged?: boolean
+  }
 }
 
 export type CriterionRating = 'not_done' | 'weak' | 'normal' | 'excellent'
@@ -1218,6 +1226,13 @@ export const MOCK_SCORECARD_ROWS: MockScorecardRow[] = Array.from({ length: 12 }
     scoreDelta: i % 3 === 0 ? 3 : i % 5 === 0 ? -2 : undefined,
     exampleLabel: i % 2 === 0 ? 'Sample example' : undefined,
     audioDuration: `${3 + (i % 5)}:${String(10 + i).slice(-2)}`,
+    triggerFlags: {
+      promise: i % 2 === 0,
+      refusal: i % 5 === 0,
+      missedCall: i % 3 === 0,
+      willPass: i % 4 === 0,
+      flagged: i % 4 === 0,
+    },
   }
 })
 

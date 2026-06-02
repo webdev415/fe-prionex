@@ -1,4 +1,5 @@
-﻿import { useTranslation } from 'react-i18next'
+﻿import { type ReactElement } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
 import type { MockScorecardRow } from '../../mocks/trainerWorkplaceMocks'
 import {
@@ -21,10 +22,69 @@ const CATEGORY_TONE: Record<MockScorecardRow['category'], string> = {
   Risk: 'bg-[#FEF2F2] text-[#B91C1C]',
 }
 
-function scoreBadgeClass(score: number): string {
-  if (score >= 80) return 'bg-[#15803D] text-white'
-  if (score >= 60) return 'bg-[#EAB308] text-[#05040D]'
-  return 'bg-[#EF4444] text-white'
+/** Figma score-ring tones — stroke + text both tinted by the band. */
+function scoreBandTones(score: number): { ring: string; text: string } {
+  if (score >= 80) return { ring: 'stroke-[#15803D]', text: 'text-[#15803D]' }
+  if (score >= 60) return { ring: 'stroke-[#EAB308]', text: 'text-[#A16207]' }
+  return { ring: 'stroke-[#EF4444]', text: 'text-[#B91C1C]' }
+}
+
+/** Per-trigger glyph + tint — matches the small icon set in the Figma row. */
+type TriggerFlagKey = keyof NonNullable<MockScorecardRow['triggerFlags']>
+
+const TRIGGER_ICONS: {
+  key: TriggerFlagKey
+  icon: (props: { size?: number; className?: string }) => ReactElement
+  tone: string
+  bg: string
+}[] = [
+  { key: 'promise', icon: Icons.TransactionHistory, tone: 'text-[#15803D]', bg: 'bg-[#ECFDF5]' },
+  { key: 'refusal', icon: Icons.Close, tone: 'text-[#B91C1C]', bg: 'bg-[#FEF2F2]' },
+  { key: 'missedCall', icon: Icons.CallEnd, tone: 'text-[#C2410C]', bg: 'bg-[#FFF7ED]' },
+  { key: 'willPass', icon: Icons.UserCheck01, tone: 'text-[#6D28D9]', bg: 'bg-[#F5F3FF]' },
+  { key: 'flagged', icon: Icons.Warning, tone: 'text-[#B91C1C]', bg: 'bg-[#FEF2F2]' },
+]
+
+interface ScoreRingProps {
+  score: number
+  outOf: number
+}
+
+function ScoreRing({ score, outOf }: ScoreRingProps) {
+  const radius = 18
+  const circumference = 2 * Math.PI * radius
+  const offset = circumference - (score / outOf) * circumference
+  const tones = scoreBandTones(score)
+  return (
+    <div className="relative h-11 w-11 flex-shrink-0">
+      <svg viewBox="0 0 44 44" className="h-11 w-11 -rotate-90">
+        <circle
+          cx="22"
+          cy="22"
+          r={radius}
+          strokeWidth="3"
+          fill="none"
+          className="stroke-[#EDEDED]"
+        />
+        <circle
+          cx="22"
+          cy="22"
+          r={radius}
+          strokeWidth="3"
+          fill="none"
+          strokeLinecap="round"
+          strokeDasharray={circumference}
+          strokeDashoffset={offset}
+          className={tones.ring}
+        />
+      </svg>
+      <span
+        className={`absolute inset-0 flex items-center justify-center text-[11px] font-semibold ${tones.text}`}
+      >
+        {score}
+      </span>
+    </div>
+  )
 }
 
 /** Figma left pane — table with #F7F7F7 header, lime selected tint, score + action icons. */
@@ -88,9 +148,27 @@ export function ScorecardListView({ rows, selectedId, onSelect }: ScorecardListV
                 </span>
               </td>
               <td className={ANALYTICS_TABLE_TD}>{row.duration}</td>
-              <td className={ANALYTICS_TABLE_TD}>{row.trigger}</td>
+              <td className={ANALYTICS_TABLE_TD}>
+                <div className="flex items-center gap-1">
+                  {TRIGGER_ICONS.filter((tr) => row.triggerFlags?.[tr.key]).map((tr) => {
+                    const TrIcon = tr.icon
+                    return (
+                      <span
+                        key={tr.key}
+                        className={`inline-flex h-5 w-5 items-center justify-center rounded-full ${tr.bg}`}
+                        title={tr.key}
+                      >
+                        <TrIcon size={10} className={tr.tone} />
+                      </span>
+                    )
+                  })}
+                  {!Object.values(row.triggerFlags ?? {}).some(Boolean) ? (
+                    <span className="text-[11px] text-[#6B7280]">{row.trigger}</span>
+                  ) : null}
+                </div>
+              </td>
               <td className={`${ANALYTICS_TABLE_TD} text-right`}>
-                <div className="flex items-center justify-end gap-1.5">
+                <div className="flex items-center justify-end gap-2">
                   {row.scoreDelta != null ? (
                     <span
                       className={`text-[10px] font-semibold ${
@@ -101,11 +179,7 @@ export function ScorecardListView({ rows, selectedId, onSelect }: ScorecardListV
                       {row.scoreDelta}
                     </span>
                   ) : null}
-                  <span
-                    className={`inline-flex min-w-[3rem] items-center justify-center rounded-full px-2 py-1 text-[10px] font-semibold ${scoreBadgeClass(row.score)}`}
-                  >
-                    {row.score}/{row.scoreOutOf}
-                  </span>
+                  <ScoreRing score={row.score} outOf={row.scoreOutOf} />
                 </div>
               </td>
               <td className={`${ANALYTICS_TABLE_TD} max-w-[120px] truncate text-[#4B5563]`}>

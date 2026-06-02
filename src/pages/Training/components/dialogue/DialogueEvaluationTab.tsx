@@ -1,40 +1,23 @@
 ﻿import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
-import { DIALOGUE_EVALUATION_VIEW_MODES, type DialogueEvaluationViewMode } from '../../types'
 import { MOCK_SCORECARD_ROWS } from '../../mocks/trainerWorkplaceMocks'
 import { TrainingSegmentedStrip } from '../chrome/TrainingSegmentedStrip'
-import { TrainingFilterChips } from '../training/TrainingToolbar'
 import { PendingFeatureDialog } from '../inbox/PendingFeatureDialog'
+import { EmployeeMultiSelect } from './EmployeeMultiSelect'
 import { ScorecardListView } from './ScorecardListView'
 import { ScorecardDetailPanel } from './ScorecardDetailPanel'
-import { AvgScoreByTypeView } from './AvgScoreByTypeView'
-
-const VIEW_MODE_LABELS: Record<DialogueEvaluationViewMode, { key: string; fallback: string }> = {
-  scorecard: { key: 'pages.training.dialogue.viewModes.scorecard', fallback: 'Scorecard' },
-  calendar: { key: 'pages.training.dialogue.viewModes.calendar', fallback: 'Calendar' },
-  drafts: { key: 'pages.training.dialogue.viewModes.drafts', fallback: 'Drafts' },
-  'average-score': {
-    key: 'pages.training.dialogue.viewModes.averageScore',
-    fallback: 'Average score',
-  },
-  'coach-notes': {
-    key: 'pages.training.dialogue.viewModes.coachNotes',
-    fallback: "Coach's notes",
-  },
-  closed: { key: 'pages.training.dialogue.viewModes.closed', fallback: 'Closed' },
-}
 
 type CategoryChip = 'all' | 'new' | 'average' | 'risk'
 
 export function DialogueEvaluationTab() {
   const { t } = useTranslation('common')
-  const [activeView, setActiveView] = useState<DialogueEvaluationViewMode>('scorecard')
   const [activeCategory, setActiveCategory] = useState<CategoryChip>('all')
   const [selectedRowId, setSelectedRowId] = useState<number | null>(
     MOCK_SCORECARD_ROWS[0]?.id ?? null
   )
   const [scheduleOpen, setScheduleOpen] = useState(false)
+  const [selectedEmployeeIds, setSelectedEmployeeIds] = useState<number[]>([])
 
   const categoryCounts = useMemo(
     () => ({
@@ -63,15 +46,6 @@ export function DialogueEvaluationTab() {
     [t, categoryCounts]
   )
 
-  const viewModes = useMemo(
-    () =>
-      DIALOGUE_EVALUATION_VIEW_MODES.map((v) => {
-        const meta = VIEW_MODE_LABELS[v]
-        return { id: v, label: t(meta.key, meta.fallback) }
-      }),
-    [t]
-  )
-
   const filteredRows = MOCK_SCORECARD_ROWS.filter((r) => {
     if (activeCategory === 'all') return true
     if (activeCategory === 'new') return r.category === 'New'
@@ -88,34 +62,27 @@ export function DialogueEvaluationTab() {
           activeId={activeCategory}
           onChange={(id) => setActiveCategory(id as CategoryChip)}
         />
-        <button
-          type="button"
-          onClick={() => setScheduleOpen(true)}
-          className="inline-flex h-10 items-center gap-2 rounded-md bg-[#BBFB5B] px-4 text-xs font-medium text-[#05040D] transition-colors hover:bg-[#a8e848]"
-        >
-          <Icons.Add size={14} />
-          {t('pages.training.dialogue.scheduleSession', 'Schedule a session')}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setScheduleOpen(true)}
+            className="inline-flex h-10 items-center gap-2 rounded-md bg-[#BBFB5B] px-4 text-xs font-medium text-[#05040D] transition-colors hover:bg-[#a8e848]"
+          >
+            <Icons.Add size={14} />
+            {t('pages.training.dialogue.scheduleSession', 'Schedule a session')}
+          </button>
+          <EmployeeMultiSelect value={selectedEmployeeIds} onChange={setSelectedEmployeeIds} />
+        </div>
       </div>
 
-      <TrainingFilterChips
-        items={viewModes}
-        activeId={activeView}
-        onChange={(id) => setActiveView(id as DialogueEvaluationViewMode)}
-      />
-
-      {activeView === 'average-score' ? (
-        <AvgScoreByTypeView />
-      ) : (
-        <div className="grid grid-cols-1 gap-3 xl:grid-cols-[1fr_400px]">
-          <ScorecardListView
-            rows={filteredRows}
-            selectedId={selectedRowId}
-            onSelect={setSelectedRowId}
-          />
-          <ScorecardDetailPanel selectedId={selectedRowId} />
-        </div>
-      )}
+      <div className="grid grid-cols-1 gap-3 xl:grid-cols-[1fr_400px]">
+        <ScorecardListView
+          rows={filteredRows}
+          selectedId={selectedRowId}
+          onSelect={setSelectedRowId}
+        />
+        <ScorecardDetailPanel selectedId={selectedRowId} />
+      </div>
 
       <PendingFeatureDialog
         open={scheduleOpen}
