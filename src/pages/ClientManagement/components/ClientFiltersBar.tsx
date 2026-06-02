@@ -25,6 +25,10 @@ import { useOperators } from '@/features/users/hooks/useUsers'
 import { useClientAssigneeIds } from '@/features/clients/hooks/useClients'
 import { useTags } from '@/features/tags/hooks/useTags'
 import { useTAChains } from '@/features/taChains'
+import { useTargetActions } from '@/features/targetActions/hooks/useTargetActions'
+import type { TargetAction } from '@/features/targetActions/api/types'
+import { ClientStepFilterDropdown } from './ClientStepFilterDropdown'
+import { ClientStepValueRow, type StepValueEntry } from './ClientStepValueRow'
 import { useAuthStore } from '@/stores/authStore'
 import { formatPickerDateAsYMD } from '@/lib/dateUtils'
 import type { ClientFilters } from '../ClientManagementPage'
@@ -130,6 +134,59 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
       .map((c) => ({ id: c.id, value: c.name }))
       .sort((a, b) => a.value.localeCompare(b.value))
   }, [chainsData])
+
+  // Chain + Step picker — same chain dataset as above but ALL chain types
+  // are eligible (operators may want to filter on automatic chains too).
+  // The picked chain's embedded ``steps`` drive the Step dropdown.
+  const allChains = useMemo(
+    () => [...(chainsData?.items ?? [])].sort((a, b) => a.name.localeCompare(b.name)),
+    [chainsData]
+  )
+  const selectedChainId = filters.chainId
+  const selectedChain = useMemo(
+    () => (selectedChainId ? allChains.find((c) => c.id === selectedChainId) : undefined),
+    [allChains, selectedChainId]
+  )
+  const chainSteps = useMemo(() => selectedChain?.steps ?? [], [selectedChain])
+  const selectedChainStepIds = useMemo(() => filters.chainStepIds ?? [], [filters.chainStepIds])
+  const stepValues = filters.stepValues ?? {}
+
+  // TargetActions catalog — needed for field_type / dropdown_values so
+  // ClientStepValueRow can render the right input flavor per step.
+  const { data: tasResp } = useTargetActions({ include_hidden: true })
+  const tasById = useMemo(() => {
+    const m = new Map<number, TargetAction>()
+    for (const ta of tasResp?.items ?? []) m.set(ta.id, ta)
+    return m
+  }, [tasResp])
+
+  // Selected steps in chain order, paired with their resolved TA. Keyed
+  // by ``step.id`` (not target_action_id) so a chain with duplicate-TA
+  // steps keeps them independent.
+  const selectedStepRows = useMemo(() => {
+    const picked = new Set(selectedChainStepIds)
+    return [...chainSteps]
+      .filter((s) => picked.has(s.id))
+      .sort((a, b) => a.step_order - b.step_order)
+      .map((s) => ({ step: s, ta: tasById.get(s.target_action_id) ?? null }))
+  }, [chainSteps, selectedChainStepIds, tasById])
+
+  const handleStepValueChange = (stepId: number, patch: Partial<StepValueEntry>) => {
+    const prevEntry = stepValues[stepId] ?? {}
+    const merged: StepValueEntry = { ...prevEntry, ...patch }
+    // Strip empty keys so the URL stays clean.
+    const clean: StepValueEntry = {}
+    if (merged.eq) clean.eq = merged.eq
+    if (merged.min) clean.min = merged.min
+    if (merged.max) clean.max = merged.max
+    const next = { ...stepValues }
+    if (clean.eq || clean.min || clean.max) {
+      next[stepId] = clean
+    } else {
+      delete next[stepId]
+    }
+    onFilterChange({ ...filters, stepValues: next })
+  }
 
   // Map sellers to portfolio options (store seller objects for easy ID access)
   const portfolioOptions = useMemo(() => {
@@ -721,6 +778,85 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
             </div>
             <div className="hidden sm:flex sm:min-w-[220px] sm:flex-1" />
           </div>
+
+          {/* Chain + Step Filter Row — narrows clients to those with at
+              least one TA interaction in the picked chain and (optionally)
+              in one of the picked steps. Chain reset wipes the step picks
+              and their per-step values; see ClientManagementPage's
+              handleFilterChange for the cascade. */}
+          <div className="flex w-full flex-col gap-4 self-stretch lg:flex-row lg:items-start lg:gap-10">
+            <div className="flex w-full flex-col gap-2 sm:min-w-[220px] sm:flex-1 sm:flex-row sm:items-center sm:gap-3">
+              <label className="text-dark-500 w-full text-xs leading-[150%] font-medium tracking-[-0.24px] sm:w-auto sm:shrink-0 sm:text-sm sm:tracking-[-0.28px]">
+                {t('pages.clients.filters.chain', 'Chain')}
+              </label>
+              <div className="flex w-full flex-1 flex-col items-start gap-2">
+                <Select
+                  value={selectedChainId != null ? String(selectedChainId) : 'all'}
+                  onValueChange={(v) => {
+                    if (v === 'all') {
+                      onFilterChange({
+                        ...filters,
+                        chainId: undefined,
+                        chainStepIds: [],
+                      })
+                    } else {
+                      onFilterChange({
+                        ...filters,
+                        chainId: Number(v),
+                        chainStepIds: [],
+                      })
+                    }
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={t('pages.clients.filters.allChains', 'All chains')} />
+                  </SelectTrigger>
+                  <SelectContent searchable>
+                    <SelectItem value="all">
+                      {t('pages.clients.filters.allChains', 'All chains')}
+                    </SelectItem>
+                    {allChains.map((c) => (
+                      <SelectItem key={c.id} value={String(c.id)}>
+                        {c.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="flex w-full flex-col gap-2 sm:min-w-[220px] sm:flex-1 sm:flex-row sm:items-center sm:gap-3">
+              <label className="text-dark-500 w-full text-xs leading-[150%] font-medium tracking-[-0.24px] sm:w-auto sm:shrink-0 sm:text-sm sm:tracking-[-0.28px]">
+                {t('pages.clients.filters.chainStep', 'Step')}
+              </label>
+              <div className="flex w-full flex-1 flex-col items-start gap-2">
+                <ClientStepFilterDropdown
+                  steps={chainSteps}
+                  selectedIds={selectedChainStepIds}
+                  onChange={(ids) =>
+                    onFilterChange({
+                      ...filters,
+                      chainStepIds: ids,
+                    })
+                  }
+                  disabled={selectedChainId == null}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Per-step value filter rows — one per picked step. Layout
+              matches the standard filter row (label-left + control,
+              full row width). Input flavor follows the step's
+              target_action.field_type. */}
+          {selectedStepRows.map(({ step, ta }) => (
+            <ClientStepValueRow
+              key={step.id}
+              step={step}
+              ta={ta}
+              value={stepValues[step.id] ?? {}}
+              onChange={(patch) => handleStepValueChange(step.id, patch)}
+            />
+          ))}
 
           {/* Fifth Row: Responsible employee & Responsible searcher */}
           <div className="flex w-full flex-col gap-4 self-stretch lg:flex-row lg:items-start lg:gap-10">
