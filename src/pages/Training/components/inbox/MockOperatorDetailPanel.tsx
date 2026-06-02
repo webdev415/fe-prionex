@@ -53,18 +53,6 @@ const QUEUE_CARD: Record<
   },
 }
 
-const RATING_RING: Record<'red' | 'amber' | 'green', string> = {
-  red: 'stroke-[#EF4444]',
-  amber: 'stroke-amber-500',
-  green: 'stroke-emerald-500',
-}
-
-const RATING_TEXT: Record<'red' | 'amber' | 'green', string> = {
-  red: 'text-[#EF4444]',
-  amber: 'text-amber-600',
-  green: 'text-emerald-600',
-}
-
 const WHY_QUEUE_ICONS: Record<
   'rating' | 'plan' | 'training' | 'delay',
   (className: string) => ReactNode
@@ -274,33 +262,43 @@ export function MockOperatorDetailPanel({
               </div>
             </div>
 
-            <div>
-              <h3 className="mb-3 text-sm font-medium tracking-[-0.02em] text-[#05040D]">
-                {t('pages.training.inbox.detail.latestRatings', 'Latest dialogue ratings')}
-              </h3>
-              {detail.latestDialogueRatings.map((r) => (
-                <DialogueRatingCard key={r.id} rating={r} />
-              ))}
-            </div>
-
-            <div>
-              <h3 className="mb-3 text-sm font-medium tracking-[-0.02em] text-[#05040D]">
-                {t('pages.training.inbox.detail.nextOneOnOne', 'Next 1-on-1 session')}
-              </h3>
-              <div className="flex min-h-[64px] items-center gap-3 rounded-lg bg-[#F3FAF9] p-3">
-                <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-[#204E4D]">
-                  <Icons.Calendar size={20} className="text-white" />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs leading-4 font-semibold text-[#05040D]">
-                    {detail.nextOneOnOne.topic}
-                  </p>
-                  <p className="mt-0.5 text-[11px] leading-4 text-[#374151]">
-                    {detail.nextOneOnOne.dateLabel}
-                  </p>
+            {showTabs ? (
+              <div>
+                <h3 className="mb-3 text-sm font-medium tracking-[-0.02em] text-[#05040D]">
+                  {t('pages.training.inbox.detail.trainerActionsLabel', 'Trainer actions')}
+                </h3>
+                <div className="grid grid-cols-2 gap-1.5">
+                  <TrainerAction
+                    icon={<Icons.Mic02 size={16} className="text-[#05040D]" />}
+                    label="Listen in real-time"
+                  />
+                  <TrainerAction
+                    icon={<Icons.Phone size={16} className="text-[#05040D]" />}
+                    label="Listen to the call"
+                  />
+                  <TrainerAction
+                    icon={<Icons.Brochure size={16} className="text-[#05040D]" />}
+                    label="Assign course"
+                  />
+                  <TrainerAction
+                    icon={<Icons.CheckmarkSquare03 size={16} className="text-[#05040D]" />}
+                    label="Task checklist"
+                  />
+                  <TrainerAction
+                    icon={<Icons.Brochure size={16} className="text-[#05040D]" />}
+                    label="Assign drill"
+                  />
+                  <TrainerAction
+                    icon={<Icons.Calendar size={16} className="text-[#05040D]" />}
+                    label="1-on-1 session"
+                  />
+                  <TrainerAction
+                    icon={<Icons.ChatFeedback01 size={16} className="text-[#05040D]" />}
+                    label="Leave a comment"
+                  />
                 </div>
               </div>
-            </div>
+            ) : null}
           </div>
         </div>
       )}
@@ -308,54 +306,17 @@ export function MockOperatorDetailPanel({
   )
 }
 
-function DialogueRatingCard({
-  rating,
-}: {
-  rating: (typeof MOCK_OPERATOR_DETAIL)['latestDialogueRatings'][number]
-}) {
-  const ringRadius = 17
-  const circumference = 2 * Math.PI * ringRadius
-  const progress = (rating.score / rating.scoreOutOf) * circumference
-  const offset = circumference - progress
-
+function TrainerAction({ icon, label }: { icon: ReactNode; label: string }) {
   return (
-    <div className="flex min-h-[64px] items-center gap-3 rounded-lg bg-[#F2F3F0]/50 p-3">
-      <div className="relative h-10 w-10 flex-shrink-0">
-        <svg viewBox="0 0 40 40" className="h-10 w-10 -rotate-90">
-          <circle
-            cx="20"
-            cy="20"
-            r={ringRadius}
-            strokeWidth="2"
-            fill="none"
-            className="stroke-[#EDEDED]"
-          />
-          <circle
-            cx="20"
-            cy="20"
-            r={ringRadius}
-            strokeWidth="2"
-            fill="none"
-            strokeLinecap="round"
-            strokeDasharray={circumference}
-            strokeDashoffset={offset}
-            className={RATING_RING[rating.tone]}
-          />
-        </svg>
-        <span
-          className={`absolute inset-0 flex items-center justify-center text-xs font-semibold ${RATING_TEXT[rating.tone]}`}
-        >
-          {rating.score}
-        </span>
-      </div>
-      <div className="min-w-0 flex-1">
-        <p className="text-xs leading-4 font-medium text-[#05040D]">{rating.label}</p>
-        {rating.meta ? (
-          <p className="text-[10px] leading-[15px] text-[#6B7280]">{rating.meta}</p>
-        ) : null}
-      </div>
-      <Icons.Mic02 size={16} className="flex-shrink-0 text-[#204E4D]" />
-    </div>
+    <button
+      type="button"
+      className="flex h-[34.5px] items-center gap-1 rounded-md border border-[#DFDFDF] bg-white px-3 text-left"
+    >
+      <span className="flex h-4 w-4 flex-shrink-0 items-center justify-center">{icon}</span>
+      <span className="truncate text-xs leading-4 font-medium tracking-[-0.02em] text-[#05040D]">
+        {label}
+      </span>
+    </button>
   )
 }
 
