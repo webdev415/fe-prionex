@@ -1,12 +1,11 @@
 /**
  * Per-step value filter row for the Client list bar.
  *
- * Self-contained — no imports from `pages/ActionAnalysis/`. The row's
- * layout matches the surrounding ClientFiltersBar rows: label on the
- * left, control on the right, full row width with the standard right-
- * column spacer. The input flavor (date min/max, amount min/max,
- * dropdown eq, text/credit/contact eq) follows the step's target_action
- * field_type.
+ * Self-contained — no imports from `pages/ActionAnalysis/`. The row is a
+ * single label-left + control cell sized to fill its container; the
+ * parent ClientFiltersBar lays the rows out two-per-line on lg+ screens.
+ * The input flavor (date min/max, amount min/max, dropdown eq,
+ * text/credit/contact eq) follows the step's target_action field_type.
  */
 import { useTranslation } from 'react-i18next'
 import type { TAChainStep } from '@/features/taChains/api/types'
@@ -79,101 +78,98 @@ export function ClientStepValueRow({ step, ta, value, onChange }: ClientStepValu
   )
 
   return (
-    <div className="flex w-full flex-col gap-4 self-stretch lg:flex-row lg:items-center lg:gap-10">
-      <div className="flex w-full flex-col gap-2 sm:flex-1 sm:flex-row sm:items-center sm:gap-3">
-        <label
-          className="text-dark-500 w-full shrink-0 truncate text-xs leading-[150%] font-medium tracking-[-0.24px] sm:max-w-[9.5rem] sm:min-w-[7.25rem] sm:text-sm sm:tracking-[-0.28px]"
-          title={labelText}
-        >
-          {labelText}
-        </label>
-        <div className="flex w-full flex-1 items-center gap-2">
-          {fieldType === 'date' && (
-            <>
-              <DateSelect
-                value={parseYmd(value.min)}
-                onChange={({ value: v }) => onChange({ min: formatYmd(v) ?? undefined })}
-                placeholder={minPlaceholder}
-                format="yyyy-MM-dd"
-                className="flex flex-1 flex-col gap-2"
-              />
-              <span className="text-sm leading-[155%] font-medium tracking-[-0.28px] text-gray-700 sm:text-base sm:tracking-[-0.32px]">
-                -
-              </span>
-              <DateSelect
-                value={parseYmd(value.max)}
-                onChange={({ value: v }) => onChange({ max: formatYmd(v) ?? undefined })}
-                placeholder={maxPlaceholder}
-                format="yyyy-MM-dd"
-                className="flex flex-1 flex-col gap-2"
-              />
-            </>
-          )}
-          {fieldType === 'amount' && (
-            <>
-              <Input
-                type="number"
-                className={`flex-1 ${STEP_VALUE_INPUT_CLASS}`}
-                placeholder={minPlaceholder}
-                value={value.min ?? ''}
-                onChange={(e) => {
-                  const v = e.target.value
-                  onChange({ min: v === '' ? undefined : v })
-                }}
-              />
-              <span className="text-sm leading-[155%] font-medium tracking-[-0.28px] text-gray-700 sm:text-base sm:tracking-[-0.32px]">
-                -
-              </span>
-              <Input
-                type="number"
-                className={`flex-1 ${STEP_VALUE_INPUT_CLASS}`}
-                placeholder={maxPlaceholder}
-                value={value.max ?? ''}
-                onChange={(e) => {
-                  const v = e.target.value
-                  onChange({ max: v === '' ? undefined : v })
-                }}
-              />
-            </>
-          )}
-          {fieldType === 'dropdown' && (
-            <Select
-              value={value.eq ?? 'all'}
-              onValueChange={(v) => onChange({ eq: v === 'all' ? undefined : v })}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder={allValuesPlaceholder} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{allValuesPlaceholder}</SelectItem>
-                {(ta?.dropdown_values ?? [])
-                  .filter((dv) => !dv.is_hidden)
-                  .map((dv) => (
-                    <SelectItem key={dv.id} value={dv.value}>
-                      {dv.value}
-                    </SelectItem>
-                  ))}
-              </SelectContent>
-            </Select>
-          )}
-          {(fieldType === 'text' || fieldType === 'credit' || fieldType === 'contact') && (
+    <div className="flex w-full flex-col gap-2 self-stretch sm:flex-row sm:items-center sm:gap-3">
+      <label
+        className="text-dark-500 w-full shrink-0 truncate text-xs leading-[150%] font-medium tracking-[-0.24px] sm:max-w-[9.5rem] sm:min-w-[7.25rem] sm:text-sm sm:tracking-[-0.28px]"
+        title={labelText}
+      >
+        {labelText}
+      </label>
+      <div className="flex w-full flex-1 items-center gap-2">
+        {fieldType === 'date' && (
+          <>
+            <DateSelect
+              value={parseYmd(value.min)}
+              onChange={({ value: v }) => onChange({ min: formatYmd(v) ?? undefined })}
+              placeholder={minPlaceholder}
+              format="yyyy-MM-dd"
+              className="flex flex-1 flex-col gap-2"
+            />
+            <span className="text-sm leading-[155%] font-medium tracking-[-0.28px] text-gray-700 sm:text-base sm:tracking-[-0.32px]">
+              -
+            </span>
+            <DateSelect
+              value={parseYmd(value.max)}
+              onChange={({ value: v }) => onChange({ max: formatYmd(v) ?? undefined })}
+              placeholder={maxPlaceholder}
+              format="yyyy-MM-dd"
+              className="flex flex-1 flex-col gap-2"
+            />
+          </>
+        )}
+        {fieldType === 'amount' && (
+          <>
             <Input
-              type="text"
-              className={`w-full ${STEP_VALUE_INPUT_CLASS}`}
-              placeholder={searchPlaceholder}
-              value={value.eq ?? ''}
+              type="number"
+              className={`flex-1 ${STEP_VALUE_INPUT_CLASS}`}
+              placeholder={minPlaceholder}
+              value={value.min ?? ''}
               onChange={(e) => {
                 const v = e.target.value
-                onChange({ eq: v === '' ? undefined : v })
+                onChange({ min: v === '' ? undefined : v })
               }}
             />
-          )}
-          {fieldType === null && (
-            <span className="text-xs text-gray-500 italic">{noFilterLabel}</span>
-          )}
-        </div>
+            <span className="text-sm leading-[155%] font-medium tracking-[-0.28px] text-gray-700 sm:text-base sm:tracking-[-0.32px]">
+              -
+            </span>
+            <Input
+              type="number"
+              className={`flex-1 ${STEP_VALUE_INPUT_CLASS}`}
+              placeholder={maxPlaceholder}
+              value={value.max ?? ''}
+              onChange={(e) => {
+                const v = e.target.value
+                onChange({ max: v === '' ? undefined : v })
+              }}
+            />
+          </>
+        )}
+        {fieldType === 'dropdown' && (
+          <Select
+            value={value.eq ?? 'all'}
+            onValueChange={(v) => onChange({ eq: v === 'all' ? undefined : v })}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder={allValuesPlaceholder} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{allValuesPlaceholder}</SelectItem>
+              {(ta?.dropdown_values ?? [])
+                .filter((dv) => !dv.is_hidden)
+                .map((dv) => (
+                  <SelectItem key={dv.id} value={dv.value}>
+                    {dv.value}
+                  </SelectItem>
+                ))}
+            </SelectContent>
+          </Select>
+        )}
+        {(fieldType === 'text' || fieldType === 'credit' || fieldType === 'contact') && (
+          <Input
+            type="text"
+            className={`w-full ${STEP_VALUE_INPUT_CLASS}`}
+            placeholder={searchPlaceholder}
+            value={value.eq ?? ''}
+            onChange={(e) => {
+              const v = e.target.value
+              onChange({ eq: v === '' ? undefined : v })
+            }}
+          />
+        )}
+        {fieldType === null && (
+          <span className="text-xs text-gray-500 italic">{noFilterLabel}</span>
+        )}
       </div>
-      <div className="hidden sm:flex sm:min-w-[220px] sm:flex-1" />
     </div>
   )
 }

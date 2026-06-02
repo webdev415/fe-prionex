@@ -844,19 +844,22 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
             </div>
           </div>
 
-          {/* Per-step value filter rows — one per picked step. Layout
-              matches the standard filter row (label-left + control,
-              full row width). Input flavor follows the step's
-              target_action.field_type. */}
-          {selectedStepRows.map(({ step, ta }) => (
-            <ClientStepValueRow
-              key={step.id}
-              step={step}
-              ta={ta}
-              value={stepValues[step.id] ?? {}}
-              onChange={(patch) => handleStepValueChange(step.id, patch)}
-            />
-          ))}
+          {/* Per-step value filter rows — one per picked step, laid out
+              two-per-line on lg+ (single column on small screens). Input
+              flavor follows the step's target_action.field_type. */}
+          {selectedStepRows.length > 0 && (
+            <div className="grid w-full grid-cols-1 gap-4 self-stretch lg:grid-cols-2 lg:gap-x-10">
+              {selectedStepRows.map(({ step, ta }) => (
+                <ClientStepValueRow
+                  key={step.id}
+                  step={step}
+                  ta={ta}
+                  value={stepValues[step.id] ?? {}}
+                  onChange={(patch) => handleStepValueChange(step.id, patch)}
+                />
+              ))}
+            </div>
+          )}
 
           {/* Fifth Row: Responsible employee & Responsible searcher */}
           <div className="flex w-full flex-col gap-4 self-stretch lg:flex-row lg:items-start lg:gap-10">
