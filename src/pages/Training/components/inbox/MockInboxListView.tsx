@@ -165,19 +165,18 @@ export function MockInboxListView({ rows, selectedOperatorId, onSelect }: MockIn
                     />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold text-[#05040D]">{row.name}</p>
-                    <p className="text-[11px] text-gray-500">
+                    <span className="text-sm font-semibold text-[#05040D]">{row.name} </span>
+                    <span className="text-[11px] text-gray-500">
                       {row.team} · {row.segment}
-                    </p>
-                    <p className="text-[11px] text-gray-600">{formatPresence(row, t)}</p>
+                    </span>
+                    <span className="text-[11px] text-gray-600">{formatPresence(row, t)}</span>
+                    <p className="text-xs leading-relaxed text-[#05040D]">{row.cardSummary}</p>
                   </div>
                   <div className="flex flex-col items-end gap-1">
                     <ScoreRing score={row.compositeScore} band={row.scoreBand} />
                     <span className="text-[10px] text-gray-500">{row.cardTimestamp}</span>
                   </div>
                 </div>
-
-                <p className="text-xs leading-relaxed text-[#05040D]">{row.cardSummary}</p>
 
                 <div className="flex flex-wrap gap-1.5">
                   {row.triggerTags.map((tag) => (

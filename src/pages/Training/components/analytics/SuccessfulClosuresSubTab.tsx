@@ -97,12 +97,8 @@ export function SuccessfulClosuresSubTab() {
                     ))}
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-medium text-[#676767]">
-                      {stage.pct}%
-                    </span>
-                    {!isLast ? (
-                      <span className="text-[10px] text-[#9CA3AF]">↓</span>
-                    ) : null}
+                    <span className="text-[11px] font-medium text-[#676767]">{stage.pct}%</span>
+                    {!isLast ? <span className="text-[10px] text-[#9CA3AF]">↓</span> : null}
                   </div>
                 </div>
                 {!isLast ? (
