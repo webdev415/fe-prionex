@@ -63,10 +63,13 @@ export function MockInboxGridView({ rows, selectedOperatorId, onSelect }: MockIn
               </div>
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-semibold text-[#05040D]">{row.name}</p>
-                <p className="truncate text-[11px] text-gray-500">
-                  {row.team} · {row.segment}
-                </p>
-                <p className="text-[11px] text-gray-500">
+                <div className="mt-0.5 flex items-center gap-1.5">
+                  <span className="rounded-full border border-[#FED7AA] bg-[#FFF7ED] px-1.5 py-0.5 text-[9px] font-medium text-[#C2410C]">
+                    {row.segment}
+                  </span>
+                  <span className="truncate text-[11px] text-gray-500">{row.team}</span>
+                </div>
+                <p className="mt-0.5 text-[11px] text-gray-500">
                   {row.online
                     ? t('pages.training.inbox.grid.online', 'Online')
                     : t('pages.training.inbox.detail.offline', 'Offline')}
@@ -102,6 +105,8 @@ export function MockInboxGridView({ rows, selectedOperatorId, onSelect }: MockIn
                 </span>
               </div>
             </div>
+
+            <div className="border-t border-[#EBECE8]" />
 
             <div className="grid grid-cols-2 gap-2 text-[10px]">
               <div>
