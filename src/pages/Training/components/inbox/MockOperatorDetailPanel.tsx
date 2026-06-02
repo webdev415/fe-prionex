@@ -105,20 +105,33 @@ export function MockOperatorDetailPanel({
           <button
             type="button"
             onClick={() => onTabChange?.('details')}
-            className={`flex-1 px-4 py-3 text-xs font-medium ${
+            className={`flex flex-1 items-center gap-2 px-4 py-3 text-xs font-medium ${
               activeTab === 'details' ? 'text-[#204E4D]' : 'text-[#676767]'
             }`}
           >
+            <Icons.UserStatus
+              size={16}
+              className={activeTab === 'details' ? 'text-[#204E4D]' : ''}
+            />
             {t('pages.training.inbox.detail.tabDetails', 'Details')}
           </button>
           <button
             type="button"
             onClick={() => onTabChange?.('feed')}
-            className={`flex-1 px-4 py-3 text-xs font-medium ${
+            className={`flex flex-1 items-center justify-between gap-2 px-4 py-3 text-xs font-medium ${
               activeTab === 'feed' ? 'text-[#204E4D]' : 'text-[#676767]'
             }`}
           >
-            {t('pages.training.inbox.detail.tabFeed', 'Event Feed')} ({eventFeedCount})
+            <span className="flex items-center gap-2">
+              <Icons.Activity01
+                size={16}
+                className={activeTab === 'feed' ? 'text-[#204E4D]' : ''}
+              />
+              {t('pages.training.inbox.detail.tabFeed', 'Event Feed')}
+            </span>
+            <span className="rounded-full bg-[#EBECE8] px-2 py-0.5 text-[11px] font-medium text-[#05040D]">
+              {eventFeedCount}
+            </span>
           </button>
           <span
             className={`absolute bottom-0 h-0.5 w-1/2 bg-[#80D80A] transition-transform ${
@@ -288,44 +301,6 @@ export function MockOperatorDetailPanel({
                 </div>
               </div>
             </div>
-
-            {showTabs ? (
-              <div>
-                <h3 className="mb-3 text-[10px] font-medium tracking-wide text-[#6B7280] uppercase">
-                  {t('pages.training.inbox.detail.trainerActionsLabel', 'Trainer actions')}
-                </h3>
-                <div className="grid grid-cols-2 gap-2">
-                  <TrainerAction
-                    icon={<Icons.PlayCircle02 size={16} className="text-[#05040D]" />}
-                    label="Listen in real-time"
-                  />
-                  <TrainerAction
-                    icon={<Icons.Phone size={16} className="text-[#05040D]" />}
-                    label="Listen to the call"
-                  />
-                  <TrainerAction
-                    icon={<Icons.Brochure size={16} className="text-[#05040D]" />}
-                    label="Assign course"
-                  />
-                  <TrainerAction
-                    icon={<Icons.Calendar size={16} className="text-[#05040D]" />}
-                    label="1-on-1 session"
-                  />
-                  <TrainerAction
-                    icon={<Icons.Brochure size={16} className="text-[#05040D]" />}
-                    label="Assign drill"
-                  />
-                  <TrainerAction
-                    icon={<Icons.CheckmarkSquare03 size={16} className="text-[#05040D]" />}
-                    label="Task checklist"
-                  />
-                  <TrainerAction
-                    icon={<Icons.ChatFeedback01 size={16} className="text-[#05040D]" />}
-                    label="Leave a comment"
-                  />
-                </div>
-              </div>
-            ) : null}
           </div>
         </div>
       )}
@@ -381,22 +356,6 @@ function DialogueRatingCard({
       </div>
       <Icons.Mic02 size={16} className="flex-shrink-0 text-[#204E4D]" />
     </div>
-  )
-}
-
-function TrainerAction({ icon, label }: { icon: ReactNode; label: string }) {
-  return (
-    <button
-      type="button"
-      className="flex items-center gap-2.5 rounded-md border border-[#EDEDED] bg-white px-3 py-2.5 text-left hover:border-gray-300"
-    >
-      <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-[#F2F3F0]">
-        {icon}
-      </span>
-      <span className="truncate text-xs leading-4 font-medium tracking-[-0.02em] text-[#05040D]">
-        {label}
-      </span>
-    </button>
   )
 }
 
