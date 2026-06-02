@@ -4,6 +4,29 @@ import { MOCK_DEPARTMENTS } from '../../mocks/trainerWorkplaceMocks'
 import { TrainingSegmentedStrip } from '../chrome/TrainingSegmentedStrip'
 import { DepartmentCard } from './DepartmentCard'
 
+/** Figma — `In norm / Behind / In queue` dot legend shown to the right of the
+ *  department filter chips. Explains the operator-row status indicators. */
+const STATUS_LEGEND = [
+  {
+    id: 'in_norm',
+    dot: 'bg-[#22C55E]',
+    key: 'pages.training.team.workStatus.inNorm',
+    fallback: 'In norm',
+  },
+  {
+    id: 'behind',
+    dot: 'bg-[#CA8A04]',
+    key: 'pages.training.team.workStatus.behind',
+    fallback: 'Behind',
+  },
+  {
+    id: 'in_queue',
+    dot: 'bg-[#EF4444]',
+    key: 'pages.training.team.workStatus.inQueue',
+    fallback: 'In queue',
+  },
+] as const
+
 type DeptFilter = 'all' | string
 
 /**
@@ -36,16 +59,30 @@ export function TeamTab() {
 
   return (
     <div className="flex flex-col gap-4">
-      <TrainingSegmentedStrip
-        items={chips.map((chip) => ({
-          id: chip.id,
-          label: chip.label,
-          count: chip.count,
-        }))}
-        activeId={selectedDepartmentId}
-        onChange={(id) => setSelectedDepartmentId(id as DeptFilter)}
-        showActiveClose
-      />
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <TrainingSegmentedStrip
+          items={chips.map((chip) => ({
+            id: chip.id,
+            label: chip.label,
+            count: chip.count,
+          }))}
+          activeId={selectedDepartmentId}
+          onChange={(id) => setSelectedDepartmentId(id as DeptFilter)}
+          showActiveClose
+        />
+
+        <div className="flex items-center gap-4">
+          {STATUS_LEGEND.map((item) => (
+            <span
+              key={item.id}
+              className="flex items-center gap-1.5 text-xs font-medium text-[#05040D]"
+            >
+              <span className={`inline-block h-2 w-2 rounded-full ${item.dot}`} />
+              {t(item.key, item.fallback)}
+            </span>
+          ))}
+        </div>
+      </div>
 
       <div className="flex flex-col gap-4">
         {departments.map((dept) => (

@@ -15,6 +15,14 @@ export type ScoreBand = 'red' | 'amber' | 'green'
 
 export type OperatorPresenceStatus = 'online' | 'offline' | 'busy' | 'on_call'
 
+/**
+ * Figma Team tab — work status pill rendered next to the operator name.
+ *   in_norm   → green dot · operator is hitting the plan
+ *   behind    → amber dot · operator is lagging the plan
+ *   in_queue  → red dot   · operator is queued for a coaching intervention
+ */
+export type OperatorWorkStatus = 'in_norm' | 'behind' | 'in_queue'
+
 export interface MockOperator {
   id: number
   name: string
@@ -31,6 +39,8 @@ export interface MockOperator {
   presenceStatus?: OperatorPresenceStatus
   /** Daily plan progress 0–100 (operator card bar) */
   dailyPlanPct?: number
+  /** Figma Team tab — work status pill (In norm / Behind / In queue) */
+  workStatus?: OperatorWorkStatus
 }
 
 const AVATAR_PALETTE = [
@@ -102,12 +112,19 @@ const PRESENCE_LABEL: Record<OperatorPresenceStatus, string> = {
   on_call: 'On the call',
 }
 
+function deriveWorkStatus(score: number, dailyPlanPct: number): OperatorWorkStatus {
+  if (score < 60 || dailyPlanPct < 50) return 'in_queue'
+  if (score < 75 || dailyPlanPct < 75) return 'behind'
+  return 'in_norm'
+}
+
 function buildOperator(id: number, team: string, department: string, score: number): MockOperator {
   const name = OPERATOR_NAMES[id % OPERATOR_NAMES.length]
   const parts = name.split(' ')
   const initials = `${parts[0][0]}${parts[1]?.[0] ?? ''}`.toUpperCase()
   const presenceStatus: OperatorPresenceStatus =
     id % 4 === 0 ? 'offline' : id % 4 === 1 ? 'on_call' : id % 4 === 2 ? 'busy' : 'online'
+  const dailyPlanPct = 40 + ((id * 17) % 55)
   return {
     id,
     name,
@@ -121,7 +138,8 @@ function buildOperator(id: number, team: string, department: string, score: numb
     scoreBand: scoreBandFor(score),
     lastActiveLabel: PRESENCE_LABEL[presenceStatus],
     presenceStatus,
-    dailyPlanPct: 40 + ((id * 17) % 55),
+    dailyPlanPct,
+    workStatus: deriveWorkStatus(score, dailyPlanPct),
   }
 }
 
@@ -150,6 +168,7 @@ function teamOp(
     lastActiveLabel: PRESENCE_LABEL[presenceStatus],
     presenceStatus,
     dailyPlanPct,
+    workStatus: deriveWorkStatus(score, dailyPlanPct),
   }
 }
 
