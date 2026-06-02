@@ -36,6 +36,9 @@ export const PERMISSIONS = {
     CREATE: 'create_writeoffs',
     EDIT: 'edit_writeoffs',
     CANCEL: 'cancel_writeoffs',
+    // Bulk CSV upload — gates the new bulk-import page. Required in
+    // addition to CREATE.
+    BULK: 'bulk_writeoff_operations',
   },
 
   /**
@@ -187,10 +190,11 @@ export const PERMISSIONS = {
   },
 
   /**
-   * Action Analysis Category (6 permissions)
-   * Controls access to the Action Analysis page and its drill-downs
-   * (KAN-409 added the four operator-analytics sub-permissions; the
-   * follow-up added `view_ta_history` for the TA History sub-tab).
+   * Action Analysis Category (16 permissions)
+   * Controls access to the Action Analysis page and its drill-downs.
+   * KAN-409 added the four operator-analytics sub-permissions; KAN-410
+   * adds the eight quality-scoring sub-permissions (Scorecard, Markers,
+   * Feedback, Score Dynamics).
    */
   ACTION_ANALYSIS: {
     VIEW: 'view_action_analysis',
@@ -201,6 +205,20 @@ export const PERMISSIONS = {
     VIEW_TA_HISTORY: 'view_ta_history',
     VIEW_TASK_HISTORY: 'view_task_history',
     VIEW_PAYMENT_HISTORY: 'view_payment_history',
+    // KAN-410 — Quality Scoring
+    MANAGE_SCORECARD_TEMPLATES: 'manage_scorecard_templates',
+    CREATE_SCORECARD: 'create_scorecard',
+    VIEW_SCORECARD: 'view_scorecard',
+    MANAGE_MARKERS: 'manage_markers',
+    VIEW_MARKERS: 'view_markers',
+    CREATE_FEEDBACK: 'create_feedback',
+    VIEW_FEEDBACK: 'view_feedback',
+    VIEW_SCORE_DYNAMICS: 'view_score_dynamics',
+    // KAN-413 — Inbox triage queue
+    VIEW_INBOX: 'view_inbox',
+    MANAGE_COACHING_ASSIGNMENTS: 'manage_coaching_assignments',
+    CREATE_ONE_ON_ONE: 'create_one_on_one',
+    SELECT_INBOX_SCOPE: 'select_inbox_scope',
   },
 
   /**
@@ -390,6 +408,21 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   view_ta_history: 'View TA History sub-tab (chain interactions with chain + step filters)',
   view_task_history: 'View Task History sub-tab (all operator tasks with filters)',
   view_payment_history: 'View Payment History sub-tab (all operator payments with filters)',
+  // KAN-410 — Quality Scoring
+  manage_scorecard_templates:
+    'Manage scorecard templates (create / edit / archive sections, criteria, weights)',
+  create_scorecard: 'Fill in and submit a quality-evaluation scorecard against a call recording',
+  view_scorecard: 'View completed scorecards across operators',
+  manage_markers: 'Create, edit, and delete timestamp markers on call recordings',
+  view_markers: 'View timestamp markers across calls',
+  create_feedback: 'Leave structured feedback (praise / note / correction task) on a call',
+  view_feedback: 'View structured feedback threads across operators',
+  view_score_dynamics: 'View operator score-dynamics chart, per-section breakdown, and alerts',
+  // KAN-413 — Inbox triage queue
+  view_inbox: 'View the Inbox triage queue, header KPIs, and per-operator coaching detail',
+  manage_coaching_assignments: 'Take charge of an operator and transition Kanban workflow state',
+  create_one_on_one: 'Schedule a 1-on-1 session with an operator',
+  select_inbox_scope: 'Show the My / Group / Department / All scope selector on the Inbox tab',
 
   // Document Generation
   view_document_journal: 'View the journal of all generated and uploaded documents',
@@ -418,4 +451,6 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   create_writeoffs: 'Create one or more write-off entries on a debt',
   edit_writeoffs: 'Edit cancellation_date or notes on an existing write-off entry',
   cancel_writeoffs: 'Cancel an active write-off entry',
+  bulk_writeoff_operations:
+    'Upload a bulk write-off CSV — gates the bulk-import page (required alongside create_writeoffs)',
 }

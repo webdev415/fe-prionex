@@ -243,8 +243,13 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
         const phones = new Set<string>()
         const isPhoneShaped = (val: string): boolean => {
           // 10–15 digits after stripping non-digit chars. Debt ids are
-          // <=7 digits in this project, so this range cannot collide
-          // with a credit value.
+          // <=7 digits in this project, but a credit-typed step can hold
+          // **multiple** comma-separated ids (e.g. "604948,609498"). The
+          // previous version naively stripped the comma too and ended up
+          // with a 12-digit string, which fell inside the phone window
+          // and leaked debt ids into the Phone column. Reject any value
+          // containing a comma up front — a phone number never has one.
+          if (val.includes(',')) return false
           const digits = val.replace(/\D/g, '')
           return digits.length >= 10 && digits.length <= 15
         }
@@ -300,8 +305,40 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
             // Fell through (e.g. credit-typed step holding a phone after
             // drift) — show raw so the step isn't silently dropped.
           }
-          if (fieldType === 'amount') return formatMoneyKopeckTight(val)
-          if (fieldType === 'date') return formatDateTime(val, user?.timezone)
+          // Universal chain-drift guard. The renderer can't trust the
+          // step's *current* declared field_type because the chain
+          // admin may have retyped a step after a TA was saved — the
+          // stored value's shape is the more reliable signal. Three
+          // layers, from most to least confident:
+          //   (a) If the value clearly looks like an ISO datetime,
+          //       render it as a date regardless of declared type
+          //       (handles date → anything drift, e.g. "₴2026.00"
+          //       coming from a year inside a date string).
+          //   (b) For amount type, only format as money when the value
+          //       is a clean numeric string; otherwise show raw
+          //       (handles anything → amount drift).
+          //   (c) For date type at this point we know it's NOT an
+          //       ISO date — show raw instead of producing garbage
+          //       from formatDateTime parsing e.g. "1500.50" as a
+          //       timestamp (handles anything → date drift).
+          const trimmed = val.trim()
+          const isoDatetimePattern =
+            /^\d{4}-\d{2}-\d{2}([T ]\d{2}:\d{2}(:\d{2})?(\.\d+)?(Z|[+-]\d{2}:\d{2})?)?$/
+          if (isoDatetimePattern.test(trimmed)) {
+            return formatDateTime(trimmed, user?.timezone)
+          }
+          if (fieldType === 'amount') {
+            const looksNumeric = /^-?\d+(\.\d+)?$/.test(trimmed)
+            if (looksNumeric && Number.isFinite(parseFloat(trimmed))) {
+              return formatMoneyKopeckTight(trimmed)
+            }
+            return val
+          }
+          if (fieldType === 'date') {
+            // Not an ISO date (the detector above would have caught
+            // it). Don't run formatDateTime; show raw.
+            return val
+          }
           return val
         }
 
@@ -311,6 +348,11 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
         let consumedPromiseDate = false
         let consumedPromiseAmount = false
         let consumedCredit = false
+        // Track credit-typed step values we've already rendered so a
+        // chain with two redundant credit steps doesn't print the same
+        // ``#100, #200`` list twice. Other field types are *not* deduped
+        // — e.g. two identical dropdown picks are intentional history.
+        const seenCreditValues = new Set<string>()
 
         if (row.step_data && Object.keys(row.step_data).length > 0) {
           const chain = chains.find((c) => c.id === row.chain_id)
@@ -365,6 +407,22 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
               // clean of phones.
               if (ta?.field_type === 'credit' && !formattedValue) {
                 formattedValue = val
+              }
+              // Suppress repeat credit selections across the whole
+              // chain (not just adjacent ones). Chains designed with
+              // two credit-typed steps — one inside each dropdown
+              // branch (e.g. "Домовленість" + "Можлива оплата") —
+              // used to render the same ``#100, #200`` list twice with
+              // only the dropdown label between them. The second copy
+              // is never new information; collapse it so the Result
+              // column matches what the operator actually decided.
+              // Limited to credit-typed steps; other types (amounts,
+              // dropdowns, dates) can legitimately repeat.
+              if (ta?.field_type === 'credit' && formattedValue !== '') {
+                if (seenCreditValues.has(formattedValue)) {
+                  continue
+                }
+                seenCreditValues.add(formattedValue)
               }
               entries.push({ value: formattedValue, followUps })
             }

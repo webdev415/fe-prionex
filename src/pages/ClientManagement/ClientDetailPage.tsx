@@ -28,6 +28,9 @@ import {
 } from '@/components/ui/Select'
 import { EditInteractionModal } from './components/EditInteractionModal'
 import { AddTaskModal } from './components/AddTaskModal'
+import { AssignClientModal } from './components/AssignClientModal'
+import { RecordPaymentModal } from './components/RecordPaymentModal'
+import { useRecordPaymentFlow } from '@/features/payments/hooks/useRecordPaymentFlow'
 // import { DeleteClientModal } from './components/DeleteClientModal'
 import { EditClientModal } from './components/EditClientModal'
 import { AssignRoleModal, type AssignRoleMode } from './components/AssignRoleModal'
@@ -58,6 +61,7 @@ import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/comp
 // } from '@/components/ui/DropdownMenu'
 // import { useUserRole } from '@/hooks/usePermissions'
 import {
+  useClient,
   useClientProfile,
   useClientLoans,
   useClientPaymentsSection,
@@ -73,6 +77,7 @@ import {
   useRestructuringAgreementDetail,
   useCreateRestructuringAgreement,
   useCloseDebt,
+  useReopenDebt,
   useUpdateDebtClosureDate,
   useCompleteRestructuringAgreement,
   useTransitionRRStatus,
@@ -234,6 +239,8 @@ export function ClientDetailPage() {
   })
   const [connectRrError, setConnectRrError] = useState<string | null>(null)
   const [closeLoanConfirm, setCloseLoanConfirm] = useState<number | null>(null) // debtId to close
+  // Reopen-loan confirmation modal: holds the debt_id to reopen, or null when closed.
+  const [reopenLoanConfirm, setReopenLoanConfirm] = useState<number | null>(null)
   // Local state for the closure-date picker inside the close-loan modal.
   // Defaults to today; max = today (future dates rejected).
   const [closeLoanClosureDate, setCloseLoanClosureDate] = useState<Date | null>(null)
@@ -325,6 +332,10 @@ export function ClientDetailPage() {
     error: profileError,
   } = useClientProfile(clientId, isValidClientId)
   const { data: loans = [], isLoading: isLoansLoading } = useClientLoans(clientId, isValidClientId)
+  // Authoritative client detail (carries server-computed ``total_debt``) — same
+  // hook + query key the Debt Summary page uses, so react-query dedupes the call.
+  // Powers the RecordPaymentModal's ``currentDebt`` prop with the identical value.
+  const { data: clientDetail } = useClient(clientId, isValidClientId)
   const eligibleLoansForRr = useMemo(
     () => (loans ?? []).filter((loan) => (loan.status ?? '').trim().toLowerCase() !== 'closed'),
     [loans]
@@ -351,6 +362,7 @@ export function ClientDetailPage() {
   )
   const { mutate: createRr, isPending: isCreatingRr } = useCreateRestructuringAgreement()
   const { mutate: closeDebt, isPending: isClosingDebt } = useCloseDebt()
+  const { mutate: reopenDebt, isPending: isReopeningDebt } = useReopenDebt()
   const { mutate: updateClosureDate, isPending: isUpdatingClosureDate } = useUpdateDebtClosureDate()
   const { mutate: completeRa, isPending: isCompletingRa } = useCompleteRestructuringAgreement()
   const { mutate: transitionRr, isPending: isTransitioningRr } = useTransitionRRStatus()
@@ -480,6 +492,42 @@ export function ClientDetailPage() {
 
   // Assign client mutation (used by AssignRoleModal)
   const assignClientMutation = useAssignClient()
+
+  // Single-client assign (Operators tab "+") — opens AssignClientModal,
+  // mirrors the per-row assign flow on the client list.
+  const [isAssignClientOpen, setIsAssignClientOpen] = useState(false)
+  const handleAssignClientSubmit = (assignmentData: {
+    employeeId?: string
+    searcherId?: string
+    reason: string
+  }) => {
+    if (!clientId) return
+    assignClientMutation.mutate(
+      {
+        clientId,
+        data: {
+          responsible_employee_id: assignmentData.employeeId
+            ? parseInt(assignmentData.employeeId)
+            : undefined,
+          responsible_searcher_id: assignmentData.searcherId
+            ? parseInt(assignmentData.searcherId)
+            : undefined,
+          assignment_reason: assignmentData.reason,
+        },
+      },
+      {
+        onSuccess: () => setIsAssignClientOpen(false),
+      }
+    )
+  }
+
+  // Record Payment (Payments tab "+") — shares the exact same flow as the
+  // Debt Summary "Record Payment" button via useRecordPaymentFlow.
+  const [isRecordPaymentModalOpen, setIsRecordPaymentModalOpen] = useState(false)
+  const { handleRecordPayment, canVerifyPayment } = useRecordPaymentFlow({
+    clientId,
+    onSuccess: () => setIsRecordPaymentModalOpen(false),
+  })
 
   // Compose single client object from profile + sections for the rest of the page
   // Maps backend response fields to UI-expected shape for backward compatibility
@@ -647,6 +695,7 @@ export function ClientDetailPage() {
         // Closure date — surfaced for closed debts so the user can see it and,
         // with the close_client_debt permission, edit it after closure.
         creditClosedDate: d.credit_closed_date ?? null,
+        creditReopenedDate: d.credit_reopened_date ?? null,
         // Legacy TABLE460.f53 — eligible-for-return amount carried over from
         // the sale. Surfaced as its own column only when at least one loan row
         // has it and it diverges from remainingDebtAmount (see loanColumns).
@@ -748,14 +797,14 @@ export function ClientDetailPage() {
       // Operators/searchers from assignment history
       operators: (operatorsSection?.operators ?? []).map((o) => ({
         id: o.id,
-        date: formatDate(o.assigned_at ?? undefined),
+        date: formatDateTime(o.assigned_at ?? undefined, userTimezone),
         whoAppointed: o.assigned_by_name ?? '-',
         whoIsResponsible: o.new_employee_name ?? '-',
         note: o.assignment_reason ?? '-',
       })),
       searchers: (operatorsSection?.searchers ?? []).map((s) => ({
         id: s.id,
-        date: formatDate(s.assigned_at ?? undefined),
+        date: formatDateTime(s.assigned_at ?? undefined, userTimezone),
         whoAppointed: s.assigned_by_name ?? '-',
         whoIsResponsible: s.new_searcher_name ?? '-',
         note: s.assignment_reason ?? '-',
@@ -832,6 +881,7 @@ export function ClientDetailPage() {
     responsibleEmployeeDepartment,
     showHiddenTags,
     t,
+    userTimezone,
   ])
 
   const displayedActivities = useMemo(
@@ -1402,22 +1452,32 @@ export function ClientDetailPage() {
         if (loan.status === 'closed') {
           return (
             <PermissionGuard permission={PERMISSIONS.CLIENTS.CLOSE_DEBT}>
-              <button
-                onClick={() => {
-                  setEditClosureDateDebtId(loan.id)
-                  setEditClosureDateValue(
-                    loan.creditClosedDate
-                      ? parseISODateAtMidnight(loan.creditClosedDate)
-                      : getTodayAtMidnight()
-                  )
-                  setEditClosureDateError(null)
-                }}
-                disabled={isUpdatingClosureDate}
-                className="p-1 text-blue-600 hover:text-blue-800 disabled:opacity-50"
-                title={t('pages.clients.detail.editClosureDate', 'Edit closure date')}
-              >
-                <Icons.Edit size={18} />
-              </button>
+              <div className="flex items-center justify-center gap-1">
+                <button
+                  onClick={() => {
+                    setEditClosureDateDebtId(loan.id)
+                    setEditClosureDateValue(
+                      loan.creditClosedDate
+                        ? parseISODateAtMidnight(loan.creditClosedDate)
+                        : getTodayAtMidnight()
+                    )
+                    setEditClosureDateError(null)
+                  }}
+                  disabled={isUpdatingClosureDate}
+                  className="p-1 text-blue-600 hover:text-blue-800 disabled:opacity-50"
+                  title={t('pages.clients.detail.editClosureDate', 'Edit closure date')}
+                >
+                  <Icons.Edit size={18} />
+                </button>
+                <button
+                  onClick={() => setReopenLoanConfirm(loan.id)}
+                  disabled={isReopeningDebt}
+                  className="p-1 text-amber-600 hover:text-amber-800 disabled:opacity-50"
+                  title={t('pages.clients.detail.reopenLoan', 'Reopen loan')}
+                >
+                  <Icons.Reload size={18} />
+                </button>
+              </div>
             </PermissionGuard>
           )
         }
@@ -2107,17 +2167,7 @@ export function ClientDetailPage() {
                 {t('pages.clientChains.logInteraction')}
               </Button>
             </PermissionGuard>
-            <PermissionGuard permission={PERMISSIONS.CLIENTS.CREATE_TASKS}>
-              <Button
-                size="md"
-                variant="outline"
-                leftIcon={<Icons.Clock01 size={20} />}
-                className="flex w-full flex-1 flex-row rounded-full text-xs font-medium md:text-sm xl:w-auto xl:flex-none"
-                onClick={() => setIsTaskModalOpen(true)}
-              >
-                {t('pages.clients.tasks.addTask', 'Add Task')}
-              </Button>
-            </PermissionGuard>
+            {/* Header "Add Task" button removed — entry moved to the Tasks tab "+" hover button. */}
             <PermissionGuard permission={PERMISSIONS.COMMUNICATION.MAKE_CALLS}>
               <Button
                 size="md"
@@ -2862,7 +2912,7 @@ export function ClientDetailPage() {
                     data-tab="payments"
                     onClick={() => setActiveRightCardTab('payments')}
                     className={cn(
-                      'hover:bg-primary-200/10 flex shrink-0 cursor-pointer items-center justify-center gap-2 border-b-2 px-3 py-4 transition-colors md:px-4',
+                      'group hover:bg-primary-200/10 flex shrink-0 cursor-pointer items-center justify-center gap-2 border-b-2 px-3 py-4 transition-colors md:px-4',
                       activeRightCardTab === 'payments'
                         ? 'border-primary-300 text-secondary-800 bg-primary-300/10'
                         : 'hover:text-secondary-800 border-transparent text-gray-600'
@@ -2872,6 +2922,30 @@ export function ClientDetailPage() {
                     <span className="text-xs font-medium whitespace-nowrap md:text-sm">
                       {t('pages.clients.detail.payments')}
                     </span>
+                    {/* Hover quick-action "+" — opens Record Payment modal, never switches tabs */}
+                    <PermissionGuard permission={PERMISSIONS.CLIENTS.EDIT_DEBT}>
+                      <span
+                        role="button"
+                        aria-label={t('pages.clients.debtSummary.recordPayment')}
+                        tabIndex={-1}
+                        onPointerDown={(e) => e.stopPropagation()}
+                        onClick={(e) => {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          setIsRecordPaymentModalOpen(true)
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            setIsRecordPaymentModalOpen(true)
+                          }
+                        }}
+                        className="bg-primary-300 ml-1 hidden h-5 w-5 items-center justify-center rounded-full text-xs font-bold text-white group-hover:flex"
+                      >
+                        +
+                      </span>
+                    </PermissionGuard>
                   </button>
                   {/* Tab 3: Recommenders */}
                   <button
@@ -2896,7 +2970,7 @@ export function ClientDetailPage() {
                     data-tab="operators"
                     onClick={() => setActiveRightCardTab('operators')}
                     className={cn(
-                      'hover:bg-primary-200/10 flex shrink-0 cursor-pointer items-center justify-center gap-2 border-b-2 px-3 py-4 transition-colors md:px-4',
+                      'group hover:bg-primary-200/10 flex shrink-0 cursor-pointer items-center justify-center gap-2 border-b-2 px-3 py-4 transition-colors md:px-4',
                       activeRightCardTab === 'operators'
                         ? 'border-primary-300 text-secondary-800 bg-primary-300/10'
                         : 'hover:text-secondary-800 border-transparent text-gray-600'
@@ -2906,6 +2980,30 @@ export function ClientDetailPage() {
                     <span className="text-xs font-medium whitespace-nowrap md:text-sm">
                       {t('pages.clients.detail.operators')}
                     </span>
+                    {/* Hover quick-action "+" — opens single-client Assign modal, never switches tabs */}
+                    <PermissionGuard permission={PERMISSIONS.CLIENTS.EDIT}>
+                      <span
+                        role="button"
+                        aria-label={t('pages.clients.modals.assignClient.title', 'Assign client')}
+                        tabIndex={-1}
+                        onPointerDown={(e) => e.stopPropagation()}
+                        onClick={(e) => {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          setIsAssignClientOpen(true)
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            setIsAssignClientOpen(true)
+                          }
+                        }}
+                        className="bg-primary-300 ml-1 hidden h-5 w-5 items-center justify-center rounded-full text-xs font-bold text-white group-hover:flex"
+                      >
+                        +
+                      </span>
+                    </PermissionGuard>
                   </button>
                   {/* Tab 4: Call/SMS */}
                   <button
@@ -2930,7 +3028,7 @@ export function ClientDetailPage() {
                     data-tab="tasks"
                     onClick={() => setActiveRightCardTab('tasks')}
                     className={cn(
-                      'hover:bg-primary-200/10 flex shrink-0 cursor-pointer items-center justify-center gap-2 border-b-2 px-3 py-4 transition-colors md:px-4',
+                      'group hover:bg-primary-200/10 flex shrink-0 cursor-pointer items-center justify-center gap-2 border-b-2 px-3 py-4 transition-colors md:px-4',
                       activeRightCardTab === 'tasks'
                         ? 'border-primary-300 text-secondary-800 bg-primary-300/10'
                         : 'hover:text-secondary-800 border-transparent text-gray-600'
@@ -2940,18 +3038,39 @@ export function ClientDetailPage() {
                     <span className="text-xs font-medium whitespace-nowrap md:text-sm">
                       {t('pages.clients.detail.tabs.tasks')}
                     </span>
+                    {/* Hover quick-action "+" — opens Add Task modal, never switches tabs.
+                        Replaces the removed header "Add Task" button. */}
+                    <PermissionGuard permission={PERMISSIONS.CLIENTS.CREATE_TASKS}>
+                      <span
+                        role="button"
+                        aria-label={t('pages.clients.tasks.addTask', 'Add Task')}
+                        tabIndex={-1}
+                        onPointerDown={(e) => e.stopPropagation()}
+                        onClick={(e) => {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          setIsTaskModalOpen(true)
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            setIsTaskModalOpen(true)
+                          }
+                        }}
+                        className="bg-primary-300 ml-1 hidden h-5 w-5 items-center justify-center rounded-full text-xs font-bold text-white group-hover:flex"
+                      >
+                        +
+                      </span>
+                    </PermissionGuard>
                   </button>
-                  {/* Tab 6: Docs */}
+                  {/* Tab 6: Docs — retrofitted to the uniform pattern: tab click always
+                      switches tab; the "+" is a separate inner span that opens the upload
+                      modal without switching tabs, hover-visible from any active tab. */}
                   <button
                     type="button"
                     data-tab="documents"
-                    onClick={() => {
-                      if (activeRightCardTab === 'documents') {
-                        setIsUploadDocModalOpen(true)
-                      } else {
-                        setActiveRightCardTab('documents')
-                      }
-                    }}
+                    onClick={() => setActiveRightCardTab('documents')}
                     className={cn(
                       'group hover:bg-primary-200/10 flex shrink-0 cursor-pointer items-center justify-center gap-2 border-b-2 px-3 py-4 transition-colors md:px-4',
                       activeRightCardTab === 'documents'
@@ -2959,20 +3078,31 @@ export function ClientDetailPage() {
                         : 'hover:text-secondary-800 border-transparent text-gray-600'
                     )}
                   >
-                    {activeRightCardTab === 'documents' ? (
-                      <>
-                        <span className="group-hover:hidden">
-                          <Icons.File size={20} className="shrink-0 text-current" />
-                        </span>
-                        <span className="bg-primary-300 hidden h-5 w-5 items-center justify-center rounded-full text-xs font-bold text-white group-hover:flex">
-                          +
-                        </span>
-                      </>
-                    ) : (
-                      <Icons.File size={20} className="shrink-0 text-current" />
-                    )}
+                    <Icons.File size={20} className="shrink-0 text-current" />
                     <span className="text-xs font-medium whitespace-nowrap md:text-sm">
                       {t('pages.clients.detail.tabs.docs')}
+                    </span>
+                    {/* Hover quick-action "+" — opens upload modal, never switches tabs */}
+                    <span
+                      role="button"
+                      aria-label={t('pages.clients.detail.uploadDocument', 'Upload document')}
+                      tabIndex={-1}
+                      onPointerDown={(e) => e.stopPropagation()}
+                      onClick={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        setIsUploadDocModalOpen(true)
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          setIsUploadDocModalOpen(true)
+                        }
+                      }}
+                      className="bg-primary-300 ml-1 hidden h-5 w-5 items-center justify-center rounded-full text-xs font-bold text-white group-hover:flex"
+                    >
+                      +
                     </span>
                   </button>
                 </div>
@@ -4662,6 +4792,32 @@ export function ClientDetailPage() {
           />
         )}
 
+        {/* Single-client Assign modal — opened by the Operators tab "+" hover button.
+            Same component used per-row on the client list. */}
+        <AssignClientModal
+          open={isAssignClientOpen}
+          clientId={clientId}
+          onClose={() => setIsAssignClientOpen(false)}
+          onAssign={handleAssignClientSubmit}
+        />
+
+        {/* Record Payment modal — opened by the Payments tab "+" hover button.
+            Shares the same modal-prop sources as the Debt Summary "Record Payment"
+            trigger so both entry points present identical context to the modal:
+              - currentDebt: profile.total_debt (server-authoritative; same source
+                DebtSummary's apiClient.total_debt uses);
+              - debts: the loans array from the same GET /clients/{id} endpoint;
+              - customerName: the client's full_name. */}
+        <RecordPaymentModal
+          open={isRecordPaymentModalOpen}
+          onClose={() => setIsRecordPaymentModalOpen(false)}
+          customerName={client.fullName}
+          currentDebt={Number(clientDetail?.total_debt ?? 0)}
+          debts={loans}
+          canVerify={canVerifyPayment}
+          onSave={handleRecordPayment}
+        />
+
         {/* Call Dialog Modal */}
         <CallDialogModal
           open={isCallModalOpen}
@@ -5275,6 +5431,56 @@ export function ClientDetailPage() {
               {isClosingDebt
                 ? t('actions.saving', 'Saving...')
                 : t('pages.clients.detail.closeLoan')}
+            </Button>
+          </ModalFooter>
+        </Modal>
+
+        {/* Reopen Loan Modal — confirmation only, no date picker. */}
+        <Modal
+          open={reopenLoanConfirm !== null}
+          onClose={() => setReopenLoanConfirm(null)}
+          maxWidth="md"
+        >
+          <ModalHeader
+            icon={
+              <div className="bg-primary-400 flex h-8 w-8 items-center justify-center rounded-full">
+                <Icons.Reload size={20} className="text-dark-500" strokeWidth={2} />
+              </div>
+            }
+            title={t('pages.clients.detail.reopenLoan', 'Reopen loan')}
+          />
+          <ModalContent>
+            <p className="text-dark-500 mb-4 text-base font-light">
+              {t(
+                'pages.clients.detail.confirmReopenLoan',
+                'Are you sure you want to reopen this credit?'
+              )}
+            </p>
+          </ModalContent>
+          <ModalFooter>
+            <Button
+              type="button"
+              variant="cancel"
+              onClick={() => setReopenLoanConfirm(null)}
+              disabled={isReopeningDebt}
+              className="h-[45px] flex-1 text-sm"
+            >
+              {t('actions.cancel')}
+            </Button>
+            <Button
+              type="button"
+              variant="primary"
+              onClick={() => {
+                if (reopenLoanConfirm === null) return
+                reopenDebt(
+                  { clientId, debtId: reopenLoanConfirm },
+                  { onSettled: () => setReopenLoanConfirm(null) }
+                )
+              }}
+              disabled={isReopeningDebt}
+              className="h-[45px] flex-1 text-sm"
+            >
+              {isReopeningDebt ? t('actions.saving', 'Saving...') : t('actions.confirm', 'Confirm')}
             </Button>
           </ModalFooter>
         </Modal>

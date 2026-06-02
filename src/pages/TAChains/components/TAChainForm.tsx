@@ -52,6 +52,14 @@ export function TAChainForm({ formId, initial, onSuccess }: TAChainFormProps) {
   const updateMut = useUpdateTAChain()
 
   const isEdit = !!initial
+  // KAN-XXX — once any operator has recorded a TA against this chain
+  // the BE refuses changes to `steps` / `chain_type`, because retyping
+  // a step (e.g. ``date`` → ``amount``) would silently rewrite history.
+  // Mirror that gate in the form: keep name/description/department
+  // editable, but freeze the structural fields and show a banner with
+  // the "Clone to modify" path. Boolean only — see the BE notes on why
+  // we don't fetch a precise interaction count.
+  const isLocked = !!initial?.is_structurally_locked
 
   const [name, setName] = useState(initial?.name ?? '')
   const [description, setDescription] = useState(initial?.description ?? '')
@@ -100,16 +108,27 @@ export function TAChainForm({ formId, initial, onSuccess }: TAChainFormProps) {
 
     try {
       if (isEdit && initial) {
+        // Omit ``chain_type`` and ``steps`` from the payload when the
+        // chain is locked — sending them unchanged would still trigger
+        // the BE's structural-changes-requested branch (and a 409).
+        // Cosmetic fields are always sent.
         await updateMut.mutateAsync({
           id: initial.id,
-          payload: {
-            name: name.trim(),
-            description: description || undefined,
-            chain_type: chainType,
-            department_ids: departmentIds,
-            is_system_hidden: isSystemHidden,
-            steps,
-          },
+          payload: isLocked
+            ? {
+                name: name.trim(),
+                description: description || undefined,
+                department_ids: departmentIds,
+                is_system_hidden: isSystemHidden,
+              }
+            : {
+                name: name.trim(),
+                description: description || undefined,
+                chain_type: chainType,
+                department_ids: departmentIds,
+                is_system_hidden: isSystemHidden,
+                steps,
+              },
         })
         toast.success(t('pages.taChains.toasts.updated'))
       } else {
@@ -131,6 +150,17 @@ export function TAChainForm({ formId, initial, onSuccess }: TAChainFormProps) {
 
   return (
     <form id={formId} onSubmit={handleSubmit} className="flex flex-col gap-4">
+      {isLocked && (
+        <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+          <span className="font-semibold">⚠</span>
+          <span>
+            {t(
+              'pages.taChains.form.structurallyLocked',
+              'This chain has recorded interactions. Step layout and chain type are frozen — clone the chain to make structural changes. Name, description and department scope can still be edited.'
+            )}
+          </span>
+        </div>
+      )}
       <div className="flex flex-col gap-1">
         <Label htmlFor="chain-name">{t('pages.taChains.form.name')}</Label>
         <Input
@@ -154,7 +184,11 @@ export function TAChainForm({ formId, initial, onSuccess }: TAChainFormProps) {
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div className="flex flex-col gap-1">
           <Label>{t('pages.taChains.form.chainType')}</Label>
-          <Select value={chainType} onValueChange={(v) => setChainType(v as ChainType)}>
+          <Select
+            value={chainType}
+            onValueChange={(v) => setChainType(v as ChainType)}
+            disabled={isLocked}
+          >
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>
@@ -280,7 +314,7 @@ export function TAChainForm({ formId, initial, onSuccess }: TAChainFormProps) {
         {t('pages.taChains.form.systemHidden')}
       </label>
 
-      <ChainStepsEditor steps={steps} onChange={setSteps} />
+      <ChainStepsEditor steps={steps} onChange={setSteps} disabled={isLocked} />
     </form>
   )
 }

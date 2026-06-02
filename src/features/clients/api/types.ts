@@ -41,6 +41,7 @@ export interface DebtDetail {
   credit_issued_date?: string | null
   credit_term_days?: number | null
   credit_closed_date?: string | null
+  credit_reopened_date?: string | null
   portfolio_name?: string | null
   // Enriched fields from loans refactor
   principal_paid?: string | null
@@ -138,6 +139,9 @@ export interface Client {
   debt_count: number
   total_debt: string
   primary_creditor?: string | null
+  // Max purchase_date across all of the client's loans (active + closed);
+  // null when the client has no loans.
+  last_purchase_date?: string | null
 
   // Last interaction result — name + id of the result attached to the
   // most recent non-deleted interaction. ``null`` means no interaction
@@ -228,7 +232,6 @@ export interface GetClientsParams {
   sort_by_priority?: boolean // Legacy parameter
   sort_by?:
     | 'priority_score'
-    | 'created_at'
     | 'first_name'
     | 'last_name'
     | 'id'
@@ -238,6 +241,7 @@ export interface GetClientsParams {
     | 'total_debt'
     | 'assignment_date'
     | 'last_interaction_result'
+    | 'last_purchase_date'
   sort_order?: 'asc' | 'desc'
 
   // Filter: Portfolio/Sellers
@@ -547,6 +551,7 @@ export interface ContactTypeOption {
   default_call_line: string
   spam_allowed: boolean
   show_as_primary_phone: boolean
+  show_in_client_detail: boolean
   is_hidden: boolean
 }
 
@@ -563,6 +568,7 @@ export interface ContactTypePatchPayload {
   default_call_line?: 'white' | 'gray'
   spam_allowed?: boolean
   show_as_primary_phone?: boolean
+  show_in_client_detail?: boolean
   sort_order?: number
   is_hidden?: boolean
 }

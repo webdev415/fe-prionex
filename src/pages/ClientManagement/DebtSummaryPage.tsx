@@ -29,7 +29,6 @@ import { CallDialogModal, type CallType, type CallStatus } from './components/Ca
 import { useCallStore } from '@/stores/callStore'
 import { useCallOrigination } from '@/features/calls/hooks/useCallOrigination'
 import {
-  useRecordPayment,
   useClientPaymentHistory,
   useClientAllVerifiedPayments,
   useVerifyPayment,
@@ -39,13 +38,12 @@ import {
   buildPurchaseDateMap,
   buildVerifiedPaymentsByContract,
 } from '@/features/payments'
+import { useRecordPaymentFlow } from '@/features/payments/hooks/useRecordPaymentFlow'
 import { VerifiedPaymentsByContract } from './components/VerifiedPaymentsByContract'
 import { useUser } from '@/features/users/hooks/useUser'
-import { frontendToBackendPaymentMethod } from '@/features/payments/utils'
 import type {
   PaymentMethod as BackendPaymentMethod,
   PaymentStatus as BackendPaymentStatus,
-  PaymentType,
 } from '@/features/payments/api/types'
 import { PermissionGuard } from '@/components/auth'
 import { PERMISSIONS } from '@/constants/permissions'
@@ -151,6 +149,9 @@ export function DebtSummaryPage() {
   const { t } = useTranslation('common')
   const userTimezone = useAuthStore((state) => state.user?.timezone)
   const { id } = useParams<{ id: string }>()
+  // Hoisted so hooks below (useRecordPaymentFlow) can pass it. Same value as
+  // before, just declared earlier; downstream usages are unchanged.
+  const clientId = id ? Number(id) : 0
   const navigate = useNavigate()
   const [debtSummary, setDebtSummary] = useState<DebtSummaryData | null>(null)
   const [isRecordPaymentModalOpen, setIsRecordPaymentModalOpen] = useState(false)
@@ -162,8 +163,14 @@ export function DebtSummaryPage() {
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null)
   const canVerifyPayment = useHasPermission(PERMISSIONS.CLIENTS.VERIFY_PAYMENT)
 
-  // Payment mutations (must be declared before any conditional returns)
-  const { mutate: recordPaymentMutation } = useRecordPayment()
+  // Payment mutations (must be declared before any conditional returns).
+  // ``handleRecordPayment`` is provided by the shared useRecordPaymentFlow hook
+  // (same hook used by the Client Profile "+" entry point) so both modal mounts
+  // run the identical record-then-verify flow.
+  const { handleRecordPayment } = useRecordPaymentFlow({
+    clientId,
+    onSuccess: () => setIsRecordPaymentModalOpen(false),
+  })
   const { mutate: verifyPaymentMutation } = useVerifyPayment()
   const { mutate: cancelPaymentMutation } = useCancelPayment()
   const { mutate: generateReceiptMutation } = useGenerateReceipt()
@@ -190,8 +197,8 @@ export function DebtSummaryPage() {
     handleCallEnd,
   } = useCallOrigination()
 
-  // Fetch client data from API (same as ClientDetailPage)
-  const clientId = id ? Number(id) : 0
+  // Fetch client data from API (same as ClientDetailPage). ``clientId`` is
+  // hoisted above (right after useParams) so earlier hooks can use it.
   const {
     data: apiClient,
     isLoading: isLoadingClient,
@@ -858,79 +865,6 @@ export function DebtSummaryPage() {
   }
 
   // Remove the paymentColumns array - we'll build the table directly
-
-  const handleRecordPayment = (data: {
-    amount: number
-    date: Date
-    method: 'Bank Transfer' | 'Online Gateway' | 'Cash' | 'Card' | 'Other'
-    status: 'Pending Verification' | 'Verified'
-    generateReceipt: boolean
-    updateBalance: boolean
-    referenceNumber?: string
-    last4Digits?: string
-    paymentMethodDetails?: string
-    debtId?: number
-    /** KAN-507: required at the form layer; the modal never fires without it. */
-    paymentType: PaymentType
-  }) => {
-    const clientId = id ? Number(id) : 0
-    if (!clientId) {
-      toast.error('Client ID is required')
-      return
-    }
-
-    // Convert frontend format to backend format
-    // react-datepicker creates dates in LOCAL time, so use local getters
-    const year = data.date.getFullYear()
-    const month = data.date.getMonth() + 1 // 0-11 -> 1-12
-    const day = data.date.getDate()
-
-    // Format as YYYY-MM-DD string
-    const paymentDate = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
-
-    const backendMethod = frontendToBackendPaymentMethod(data.method)
-
-    recordPaymentMutation(
-      {
-        client_id: clientId,
-        debt_id: data.debtId,
-        amount: data.amount,
-        payment_date: paymentDate,
-        payment_method: backendMethod,
-        payment_method_details: data.paymentMethodDetails,
-        bank_reference:
-          data.referenceNumber || (data.method === 'Card' ? `****${data.last4Digits}` : undefined),
-        notes: undefined, // Can be added later if needed
-        internal_notes: undefined, // Can be added later if needed
-        payment_type: data.paymentType,
-      },
-      {
-        onSuccess: (payment) => {
-          // If user chose "Save & verify", immediately verify the payment
-          if (data.status === 'Verified') {
-            const paymentNumber = payment.payment_number || payment.id?.toString()
-            if (paymentNumber) {
-              verifyPaymentMutation(
-                {
-                  paymentId: paymentNumber,
-                  request: {},
-                },
-                {
-                  onSuccess: () => {
-                    setIsRecordPaymentModalOpen(false)
-                  },
-                }
-              )
-              return
-            }
-          }
-
-          // "Save as pending" – just close modal; queries are already invalidated by hook
-          setIsRecordPaymentModalOpen(false)
-        },
-      }
-    )
-  }
 
   return (
     <div className="flex flex-1 flex-col items-start gap-5 self-stretch">

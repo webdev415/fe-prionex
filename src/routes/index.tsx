@@ -153,6 +153,11 @@ const BulkTagAssignmentPage = lazy(() =>
     default: m.BulkTagAssignmentPage,
   }))
 )
+const BulkWriteoffImportPage = lazy(() =>
+  import('@/pages/Operations').then((m) => ({
+    default: m.BulkWriteoffImportPage,
+  }))
+)
 
 const withSuspense = (element: React.ReactElement) => (
   <Suspense fallback={<AppLoadingFallback />}>{element}</Suspense>
@@ -199,7 +204,7 @@ export const router = createBrowserRouter([
         element: withSuspense(<AiAssistantPage />),
       },
       {
-        path: 'users',
+        path: 'team-management/users',
         element: (
           <PermissionRoute requiredPermission={PERMISSIONS.USERS.VIEW}>
             {withSuspense(<UserManagementPage />)}
@@ -255,7 +260,7 @@ export const router = createBrowserRouter([
         ),
       },
       {
-        path: 'roles',
+        path: 'team-management/roles',
         element: (
           <PermissionRoute requiredPermission={PERMISSIONS.SYSTEM.MANAGE_ROLES}>
             {withSuspense(<RoleManagementPage />)}
@@ -263,12 +268,33 @@ export const router = createBrowserRouter([
         ),
       },
       {
-        path: 'departments',
+        path: 'team-management/departments',
         element: (
           <PermissionRoute requiredPermission={PERMISSIONS.SYSTEM.MANAGE_ROLES}>
             {withSuspense(<DepartmentManagementPage />)}
           </PermissionRoute>
         ),
+      },
+      // Backward-compat redirects: legacy top-level paths (/dashboard/users,
+      // /roles, /departments) now bounce to the grouped /team-management/* URLs
+      // so existing bookmarks and external links keep working. The parent
+      // /team-management path redirects to the first child (mirrors the
+      // /dashboard/import → /dashboard/import/clients pattern above).
+      {
+        path: 'team-management',
+        element: <Navigate to="/dashboard/team-management/users" replace />,
+      },
+      {
+        path: 'users',
+        element: <Navigate to="/dashboard/team-management/users" replace />,
+      },
+      {
+        path: 'roles',
+        element: <Navigate to="/dashboard/team-management/roles" replace />,
+      },
+      {
+        path: 'departments',
+        element: <Navigate to="/dashboard/team-management/departments" replace />,
       },
       {
         path: 'reports',
@@ -416,6 +442,16 @@ export const router = createBrowserRouter([
           <PermissionRoute requiredPermission={PERMISSIONS.DATA.IMPORT_PAYMENTS}>
             <Suspense fallback={<BulkPaymentVerificationPageSkeleton />}>
               <BulkPaymentVerificationPage />
+            </Suspense>
+          </PermissionRoute>
+        ),
+      },
+      {
+        path: 'import/bulk-writeoff-import',
+        element: (
+          <PermissionRoute requiredPermission={PERMISSIONS.WRITEOFFS.BULK}>
+            <Suspense fallback={<AppLoadingFallback />}>
+              <BulkWriteoffImportPage />
             </Suspense>
           </PermissionRoute>
         ),

@@ -972,6 +972,65 @@ export function ChainBuilderPage() {
                                 </SelectContent>
                               </Select>
                             )}
+                            {/* add_tag — if the selected tag has expiry_type
+                                = target_action_date, the chain effect must
+                                also point at a specific date-typed step in
+                                this chain. The BE rejects the save without
+                                ta_date_step_order, so we mirror that here
+                                by requiring it before "Add". */}
+                            {newEffectType === 'add_tag' &&
+                              (() => {
+                                const selectedTag = tags.find(
+                                  (tg) => String(tg.id) === String(newEffectConfig.tag_id)
+                                )
+                                if (
+                                  !selectedTag ||
+                                  (selectedTag.expiry_type ?? 'permanent') !== 'target_action_date'
+                                ) {
+                                  return null
+                                }
+                                if (dateSteps.length === 0) {
+                                  return (
+                                    <p className="text-xs text-amber-600">
+                                      {t(
+                                        'pages.chainBuilder.placeholders.noDateStepsForTag',
+                                        'This chain has no date-type steps; add one before using a Target-Action-Date tag.'
+                                      )}
+                                    </p>
+                                  )
+                                }
+                                return (
+                                  <Select
+                                    value={newEffectConfig.ta_date_step_order ?? ''}
+                                    onValueChange={(v) =>
+                                      setNewEffectConfig({
+                                        ...newEffectConfig,
+                                        ta_date_step_order: v,
+                                      })
+                                    }
+                                  >
+                                    <SelectTrigger className="h-8 text-xs">
+                                      <SelectValue
+                                        placeholder={t(
+                                          'pages.chainBuilder.placeholders.selectDateField',
+                                          'Date field from TA *'
+                                        )}
+                                      />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {dateSteps.map((s) => (
+                                        <SelectItem key={s.id} value={String(s.step_order)}>
+                                          {s.step_order}.{' '}
+                                          {s.target_action_name ??
+                                            t('pages.chainBuilder.taFallback', {
+                                              id: s.target_action_id,
+                                            })}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                )
+                              })()}
                             {newEffectType === 'send_sms' && (
                               <Select
                                 value={newEffectConfig.sms_template_id ?? ''}
@@ -1380,8 +1439,21 @@ export function ChainBuilderPage() {
                             )}
                             {(() => {
                               const ec = newEffectConfig
+                              // add_tag with a target_action_date tag must
+                              // also carry ta_date_step_order — mirrors the
+                              // BE validation in ta_chain_builder.
+                              const selectedAddTag =
+                                newEffectType === 'add_tag'
+                                  ? tags.find((tg) => String(tg.id) === String(ec.tag_id))
+                                  : null
+                              const addTagNeedsDate =
+                                (selectedAddTag?.expiry_type ?? 'permanent') ===
+                                'target_action_date'
                               const addEffectDisabled =
                                 (newEffectType === 'add_tag' && !ec.tag_id) ||
+                                (newEffectType === 'add_tag' &&
+                                  addTagNeedsDate &&
+                                  !ec.ta_date_step_order) ||
                                 (newEffectType === 'remove_tag' && !ec.tag_id) ||
                                 (newEffectType === 'send_sms' && !ec.sms_template_id) ||
                                 (newEffectType === 'send_message' &&
@@ -1403,6 +1475,9 @@ export function ChainBuilderPage() {
                                   onClick={async () => {
                                     const cfg: Record<string, unknown> = {}
                                     if (ec.tag_id) cfg.tag_id = parseInt(ec.tag_id, 10)
+                                    if (newEffectType === 'add_tag' && addTagNeedsDate) {
+                                      cfg.ta_date_step_order = parseInt(ec.ta_date_step_order!, 10)
+                                    }
                                     if (ec.sms_template_id)
                                       cfg.sms_template_id = parseInt(ec.sms_template_id, 10)
                                     if (newEffectType === 'create_task') {

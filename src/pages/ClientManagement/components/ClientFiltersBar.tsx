@@ -36,12 +36,14 @@ function DebouncedNumberInput({
   placeholder,
   className,
   formatWithCommas = false,
+  onClear,
 }: {
   value: number | undefined
   onChange: (value: number | undefined) => void
   placeholder?: string
   className?: string
   formatWithCommas?: boolean
+  onClear?: () => void
 }) {
   const [localValue, setLocalValue] = useState(value?.toString() || '')
   const [isFocused, setIsFocused] = useState(false)
@@ -74,6 +76,17 @@ function DebouncedNumberInput({
       ? new Intl.NumberFormat('uk-UA').format(Number(localValue.replace(/,/g, '')))
       : localValue
 
+  // × is opt-in (onClear) and only meaningful when there is a value to clear.
+  // Clearing resets local state immediately and routes through the existing
+  // onClear handler (which calls the field's normal change handler with empty).
+  const handleClear =
+    onClear && displayValue
+      ? () => {
+          setLocalValue('')
+          onClear()
+        }
+      : undefined
+
   return (
     <Input
       type="text"
@@ -83,6 +96,7 @@ function DebouncedNumberInput({
       onBlur={handleBlur}
       placeholder={placeholder}
       className={className}
+      onClear={handleClear}
     />
   )
 }
@@ -266,6 +280,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                       debtRangeFrom: value,
                     })
                   }
+                  onClear={() => onFilterChange({ ...filters, debtRangeFrom: undefined })}
                   placeholder={t('pages.clients.filters.min')}
                   className="flex flex-1 flex-col items-start gap-2"
                   formatWithCommas={true}
@@ -281,6 +296,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                       debtRangeTo: value,
                     })
                   }
+                  onClear={() => onFilterChange({ ...filters, debtRangeTo: undefined })}
                   placeholder={t('pages.clients.filters.max')}
                   className="flex flex-1 flex-col items-start gap-2"
                   formatWithCommas={true}
@@ -301,6 +317,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                       dpdRangeFrom: value,
                     })
                   }
+                  onClear={() => onFilterChange({ ...filters, dpdRangeFrom: undefined })}
                   placeholder={t('pages.clients.filters.min')}
                   className="flex flex-1 flex-col items-start gap-2"
                 />
@@ -315,6 +332,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                       dpdRangeTo: value,
                     })
                   }
+                  onClear={() => onFilterChange({ ...filters, dpdRangeTo: undefined })}
                   placeholder={t('pages.clients.filters.max')}
                   className="flex flex-1 flex-col items-start gap-2"
                 />
@@ -344,6 +362,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                       totalDebtRangeFrom: value,
                     })
                   }
+                  onClear={() => onFilterChange({ ...filters, totalDebtRangeFrom: undefined })}
                   placeholder={t('pages.clients.filters.min')}
                   className="flex flex-1 flex-col items-start gap-2"
                   formatWithCommas={true}
@@ -359,6 +378,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                       totalDebtRangeTo: value,
                     })
                   }
+                  onClear={() => onFilterChange({ ...filters, totalDebtRangeTo: undefined })}
                   placeholder={t('pages.clients.filters.max')}
                   className="flex flex-1 flex-col items-start gap-2"
                   formatWithCommas={true}
@@ -375,6 +395,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                 <DateSelect
                   value={filters.dateOfSaleFrom || null}
                   onChange={({ value }) => handleFilterDateChange('dateOfSaleFrom', value)}
+                  onClear={() => onFilterChange({ ...filters, dateOfSaleFrom: undefined })}
                   placeholder={t('pages.clients.filters.min')}
                   format="yyyy-MM-dd"
                   className="flex flex-1 flex-col gap-2"
@@ -385,6 +406,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                 <DateSelect
                   value={filters.dateOfSaleTo || null}
                   onChange={({ value }) => handleFilterDateChange('dateOfSaleTo', value)}
+                  onClear={() => onFilterChange({ ...filters, dateOfSaleTo: undefined })}
                   placeholder={t('pages.clients.filters.max')}
                   format="yyyy-MM-dd"
                   className="flex flex-1 flex-col gap-2"
@@ -403,6 +425,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                 <DateSelect
                   value={filters.assignmentDateFrom || null}
                   onChange={({ value }) => handleFilterDateChange('assignmentDateFrom', value)}
+                  onClear={() => onFilterChange({ ...filters, assignmentDateFrom: undefined })}
                   placeholder={t('pages.clients.filters.min')}
                   format="yyyy-MM-dd"
                   className="flex flex-1 flex-col gap-2"
@@ -413,6 +436,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                 <DateSelect
                   value={filters.assignmentDateTo || null}
                   onChange={({ value }) => handleFilterDateChange('assignmentDateTo', value)}
+                  onClear={() => onFilterChange({ ...filters, assignmentDateTo: undefined })}
                   placeholder={t('pages.clients.filters.max')}
                   format="yyyy-MM-dd"
                   className="flex flex-1 flex-col gap-2"
@@ -435,6 +459,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                 <DateSelect
                   value={filters.taDateFrom || null}
                   onChange={({ value }) => handleFilterDateChange('taDateFrom', value)}
+                  onClear={() => onFilterChange({ ...filters, taDateFrom: undefined })}
                   placeholder={t('pages.clients.filters.min')}
                   format="yyyy-MM-dd"
                   className="flex flex-1 flex-col gap-2"
@@ -445,6 +470,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                 <DateSelect
                   value={filters.taDateTo || null}
                   onChange={({ value }) => handleFilterDateChange('taDateTo', value)}
+                  onClear={() => onFilterChange({ ...filters, taDateTo: undefined })}
                   placeholder={t('pages.clients.filters.max')}
                   format="yyyy-MM-dd"
                   className="flex flex-1 flex-col gap-2"
@@ -466,6 +492,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                 <DateSelect
                   value={filters.interactionDateFrom || null}
                   onChange={({ value }) => handleFilterDateChange('interactionDateFrom', value)}
+                  onClear={() => onFilterChange({ ...filters, interactionDateFrom: undefined })}
                   placeholder={t('pages.clients.filters.min')}
                   format="yyyy-MM-dd"
                   className="flex flex-1 flex-col gap-2"
@@ -476,6 +503,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                 <DateSelect
                   value={filters.interactionDateTo || null}
                   onChange={({ value }) => handleFilterDateChange('interactionDateTo', value)}
+                  onClear={() => onFilterChange({ ...filters, interactionDateTo: undefined })}
                   placeholder={t('pages.clients.filters.max')}
                   format="yyyy-MM-dd"
                   className="flex flex-1 flex-col gap-2"
@@ -495,6 +523,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                       interactionUserId: value === 'none' ? undefined : value,
                     })
                   }
+                  onClear={() => onFilterChange({ ...filters, interactionUserId: undefined })}
                 >
                   <SelectTrigger>
                     <SelectValue
@@ -566,6 +595,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                       portfolios={portfolioOptions}
                       selectedSellerIds={selectedSellerIds}
                       onSelectionChange={handlePortfolioChange}
+                      onClear={() => handlePortfolioChange([])}
                       onOpenChange={setPortfolioDropdownOpen}
                       trigger={
                         <button
@@ -633,6 +663,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                       tags={tags}
                       selectedTagIds={selectedTagIds}
                       onSelectionChange={handleTagsChange}
+                      onClear={() => handleTagsChange([])}
                       onOpenChange={setTagsDropdownOpen}
                       trigger={
                         <button
@@ -674,6 +705,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                   options={sortedInteractionResults}
                   selectedIds={filters.lastInteractionResultIds || []}
                   onSelectionChange={handleLastInteractionResultChange}
+                  onClear={() => handleLastInteractionResultChange([])}
                   onOpenChange={setLastInteractionResultDropdownOpen}
                   trigger={
                     <button
@@ -738,6 +770,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                       responsibleEmployee: value === 'none' ? undefined : value,
                     })
                   }
+                  onClear={() => onFilterChange({ ...filters, responsibleEmployee: undefined })}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder={t('pages.clients.filters.selectEmployee')} />
@@ -782,6 +815,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                       responsibleSearcher: value === 'none' ? undefined : value,
                     })
                   }
+                  onClear={() => onFilterChange({ ...filters, responsibleSearcher: undefined })}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder={t('pages.clients.filters.selectSearcher')} />

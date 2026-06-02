@@ -66,7 +66,7 @@ interface DisplayClient {
     expiry_type?: 'permanent' | 'ttl' | 'loan_closure'
   }>
   phoneNumber: string
-  createdDate: string
+  lastPurchaseDate: string
   creditor: string
   debt: string
   priority: 'Critical' | 'High' | 'Medium' | 'Low'
@@ -115,7 +115,7 @@ const mapAPIClientToDisplay = (
     // phone_primary is now resolved from contacts by backend
     phoneNumber:
       client.phone_primary && !/^0+$/.test(client.phone_primary) ? client.phone_primary : '-',
-    createdDate: client.created_at ? formatDate(client.created_at) : '-',
+    lastPurchaseDate: client.last_purchase_date ? formatDate(client.last_purchase_date) : '-',
     creditor: client.primary_creditor || '-',
     debt: client.total_debt || '0',
     priority:
@@ -601,7 +601,7 @@ export function ClientManagementPage() {
       score: 'priority_score',
       fullName: 'first_name',
       id: 'id',
-      createdDate: 'created_at',
+      lastPurchaseDate: 'last_purchase_date',
       taxIdNumber: 'tax_id',
       employeeName: 'responsible_employee_id',
       searcherName: 'responsible_searcher_id',
@@ -1373,11 +1373,11 @@ export function ClientManagementPage() {
       sortKey: 'score',
     },
     {
-      key: 'createdDate',
-      header: t('pages.clients.tableHeaders.createdDate'),
+      key: 'lastPurchaseDate',
+      header: t('pages.clients.tableHeaders.lastPurchaseDate'),
       align: 'left',
       sortable: true,
-      sortKey: 'createdDate',
+      sortKey: 'lastPurchaseDate',
     },
     {
       key: 'employeeName',

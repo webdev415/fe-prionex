@@ -39,6 +39,26 @@ import type { ContactSource } from '@/features/taChains/api/types'
 import { getErrorMessage } from '@/lib/errors'
 import { formatMoneyKopeckTight } from '@/lib/formatters'
 
+// Mirrors ChainExecutor's helper of the same name — kept duplicated
+// (one short function) instead of extracted to a shared util to avoid
+// a barrel just for two call sites. ``filterFromNow`` is hoisted to
+// module scope so react-datepicker sees a stable ``filterTime`` prop
+// identity across renders (a fresh closure per render thrashes the
+// time list, especially when called inside the steps ``.map()``).
+const filterFromNow = (time: Date): boolean => {
+  const now = new Date()
+  const isSameDay =
+    time.getFullYear() === now.getFullYear() &&
+    time.getMonth() === now.getMonth() &&
+    time.getDate() === now.getDate()
+  return isSameDay ? time.getTime() >= now.getTime() : true
+}
+
+function notInPastBounds(notInPast: boolean | undefined) {
+  if (!notInPast) return {}
+  return { min: new Date(), filterTime: filterFromNow }
+}
+
 function ContactStepEdit({
   clientId,
   source,
@@ -243,10 +263,19 @@ export function EditTAInteractionModal({
   const handleSave = async () => {
     if (!interaction) return
     const trimmedNotes = notes.trim()
-    // stepValues is keyed by step.id (unique). The API expects step_data keyed
-    // by target_action_id, so re-key on the way out. If the chain reuses a
-    // target_action_id across multiple steps, later step_orders win — same
-    // last-write-wins behavior the API has always had on this column.
+    // ``stepValues`` is keyed by ``step.id`` (unique per step row).
+    // On save we re-key by ``step_order`` — the canonical convention
+    // used by chain_automation (wizard path). Previously this code
+    // wrote under ``target_action_id``, which collapsed values whenever
+    // a chain reused the same Target Action across multiple steps:
+    // both iterations targeted the same key and the later step's value
+    // overwrote the earlier one. The history renderer falls back from
+    // ``step_order`` to ``target_action_id``, so after that overwrite
+    // every duplicate-TA step rendered the same value — visible as
+    // duplicates in the Result column on every page load after an
+    // edit-save. Writing by step_order keeps each step's slot
+    // independent and matches the read path's primary lookup; the
+    // fallback stays for legacy rows produced by the old edit path.
     const sortedStepsForSave = chain?.steps
       ? [...chain.steps].sort((a, b) => a.step_order - b.step_order)
       : []
@@ -254,7 +283,7 @@ export function EditTAInteractionModal({
     for (const step of sortedStepsForSave) {
       const v = stepValues[String(step.id)]
       if (v !== undefined && v !== '') {
-        cleanedStepData[String(step.target_action_id)] = v
+        cleanedStepData[String(step.step_order)] = v
       }
     }
 
@@ -346,6 +375,7 @@ export function EditTAInteractionModal({
                             showTimeSelect
                             timeFormat="HH:mm"
                             timeIntervals={15}
+                            {...notInPastBounds(step.not_in_the_past)}
                           />
                           {value && !isValid && (
                             <span className="text-xs text-amber-600">
