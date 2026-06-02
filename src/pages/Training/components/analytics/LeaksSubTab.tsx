@@ -4,6 +4,7 @@ import { Icons } from '@/lib/icons'
 import { MOCK_LEAKS, MOCK_LEAKS_KPIS, type MockLeakRow } from '../../mocks/trainerWorkplaceMocks'
 import { PeriodFilterStrip, type PeriodOption } from './PeriodFilterStrip'
 import { AnalyticsMockTable } from './AnalyticsMockTable'
+import { AnalyticsKpiTile } from './AnalyticsKpiTile'
 import {
   ANALYTICS_TABLE_HEAD,
   ANALYTICS_TABLE_ROW,
@@ -62,20 +63,21 @@ export function LeaksSubTab() {
       </div>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <KpiTile
+        <AnalyticsKpiTile
           label={t('pages.training.leaks.kpi.totalEscalations', 'Total escalations')}
           value={k.totalEscalations}
-          tone="text-dark-500"
         />
-        <KpiTile
+        <AnalyticsKpiTile
           label={t('pages.training.leaks.kpi.notFollowedUp', 'Not followed up')}
           value={k.notFollowedUp}
-          tone="text-red-600"
+          valueTone="text-red-600"
+          accentColor="bg-[#EF4444]"
         />
-        <KpiTile
+        <AnalyticsKpiTile
           label={t('pages.training.leaks.kpi.followedUp', 'Followed up')}
           value={k.followedUp}
-          tone="text-emerald-600"
+          valueTone="text-emerald-600"
+          accentColor="bg-[#22C55E]"
         />
       </div>
 
@@ -121,15 +123,6 @@ export function LeaksSubTab() {
           ))}
         </tbody>
       </AnalyticsMockTable>
-    </div>
-  )
-}
-
-function KpiTile({ label, value, tone }: { label: string; value: number | string; tone: string }) {
-  return (
-    <div className="flex flex-col gap-1 rounded-2xl border border-gray-100 bg-white p-3 shadow-sm">
-      <span className="text-[10px] tracking-wide text-gray-500 uppercase">{label}</span>
-      <span className={`text-2xl font-semibold ${tone}`}>{value}</span>
     </div>
   )
 }

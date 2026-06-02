@@ -9,6 +9,7 @@ import {
 } from '../../mocks/trainerWorkplaceMocks'
 import { PeriodFilterStrip, type PeriodOption } from './PeriodFilterStrip'
 import { AnalyticsMockTable } from './AnalyticsMockTable'
+import { AnalyticsKpiTile } from './AnalyticsKpiTile'
 import {
   ANALYTICS_TABLE_HEAD,
   ANALYTICS_TABLE_ROW,
@@ -46,27 +47,29 @@ export function PromisesAndCallbacksSubTab() {
 
   return (
     <div className="flex flex-col gap-4">
-      {/* KPI strip */}
+      {/* KPI strip — shared AnalyticsKpiTile pattern */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <KpiTile
+        <AnalyticsKpiTile
           label={t('pages.training.promises.kpi.total', 'Total promises')}
           value={`${k.total.amount.toLocaleString()} ${k.total.currency}`}
-          tone="text-dark-500"
         />
-        <KpiTile
+        <AnalyticsKpiTile
           label={t('pages.training.promises.kpi.paid', 'Paid')}
           value={`${k.paid.amount.toLocaleString()} ${k.paid.currency}`}
-          tone="text-emerald-600"
+          valueTone="text-emerald-600"
+          accentColor="bg-[#22C55E]"
         />
-        <KpiTile
+        <AnalyticsKpiTile
           label={t('pages.training.promises.kpi.pending', 'Pending')}
           value={`${k.pending.count} promises`}
-          tone="text-amber-600"
+          valueTone="text-amber-600"
+          accentColor="bg-[#CA8A04]"
         />
-        <KpiTile
+        <AnalyticsKpiTile
           label={t('pages.training.promises.kpi.expected', 'Expected')}
           value={`${k.expected.amount.toLocaleString()} ${k.expected.currency}`}
-          tone="text-blue-600"
+          valueTone="text-blue-600"
+          accentColor="bg-[#3B82F6]"
         />
       </div>
 
@@ -125,15 +128,6 @@ export function PromisesAndCallbacksSubTab() {
           ))}
         </tbody>
       </AnalyticsMockTable>
-    </div>
-  )
-}
-
-function KpiTile({ label, value, tone }: { label: string; value: string; tone: string }) {
-  return (
-    <div className="flex flex-col gap-1 rounded-2xl border border-gray-100 bg-white p-3 shadow-sm">
-      <span className="text-[10px] tracking-wide text-gray-500 uppercase">{label}</span>
-      <span className={`text-lg font-semibold ${tone}`}>{value}</span>
     </div>
   )
 }

@@ -8,6 +8,7 @@ import {
 } from '../../mocks/trainerWorkplaceMocks'
 import { PeriodFilterStrip, type PeriodOption } from './PeriodFilterStrip'
 import { AnalyticsMockTable } from './AnalyticsMockTable'
+import { AnalyticsKpiTile } from './AnalyticsKpiTile'
 import {
   ANALYTICS_TABLE_HEAD,
   ANALYTICS_TABLE_ROW,
@@ -57,20 +58,21 @@ export function ThirdPartiesSubTab() {
       />
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <KpiTile
+        <AnalyticsKpiTile
           label={t('pages.training.thirdParties.kpi.calls', 'Calls to 3 parties')}
           value={k.callsToThirdParties}
-          tone="text-dark-500"
         />
-        <KpiTile
+        <AnalyticsKpiTile
           label={t('pages.training.thirdParties.kpi.passedToClient', 'Passed to the client')}
           value={k.passedToClient}
-          tone="text-amber-600"
+          valueTone="text-amber-600"
+          accentColor="bg-[#CA8A04]"
         />
-        <KpiTile
+        <AnalyticsKpiTile
           label={t('pages.training.thirdParties.kpi.positiveResult', 'Positive result')}
           value={k.positiveResult}
-          tone="text-emerald-600"
+          valueTone="text-emerald-600"
+          accentColor="bg-[#22C55E]"
         />
       </div>
 
@@ -103,15 +105,6 @@ export function ThirdPartiesSubTab() {
           ))}
         </tbody>
       </AnalyticsMockTable>
-    </div>
-  )
-}
-
-function KpiTile({ label, value, tone }: { label: string; value: number | string; tone: string }) {
-  return (
-    <div className="flex flex-col gap-1 rounded-2xl border border-gray-100 bg-white p-3 shadow-sm">
-      <span className="text-[10px] tracking-wide text-gray-500 uppercase">{label}</span>
-      <span className={`text-2xl font-semibold ${tone}`}>{value}</span>
     </div>
   )
 }

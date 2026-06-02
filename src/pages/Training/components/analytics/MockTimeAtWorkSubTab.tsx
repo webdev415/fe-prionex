@@ -7,6 +7,7 @@ import {
 } from '../../mocks/trainerWorkplaceMocks'
 import { PeriodFilterStrip, type PeriodOption } from './PeriodFilterStrip'
 import { AnalyticsMockTable } from './AnalyticsMockTable'
+import { AnalyticsKpiTile } from './AnalyticsKpiTile'
 import {
   ANALYTICS_TABLE_HEAD,
   ANALYTICS_TABLE_ROW,
@@ -56,16 +57,10 @@ export function MockTimeAtWorkSubTab() {
     <div className="flex flex-col gap-4">
       <PeriodFilterStrip value={period} onChange={setPeriod} />
 
-      {/* KPI strip */}
+      {/* KPI strip — shared AnalyticsKpiTile pattern */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
         {tiles.map((tile) => (
-          <div
-            key={tile.key}
-            className="flex flex-col gap-1 rounded-2xl border border-gray-100 bg-white p-3 shadow-sm"
-          >
-            <span className="text-[10px] tracking-wide text-gray-500 uppercase">{tile.label}</span>
-            <span className="text-dark-500 text-xl font-semibold">{tile.value}</span>
-          </div>
+          <AnalyticsKpiTile key={tile.key} label={tile.label} value={tile.value} />
         ))}
       </div>
 

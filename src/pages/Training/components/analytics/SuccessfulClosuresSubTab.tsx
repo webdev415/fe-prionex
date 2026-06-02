@@ -8,6 +8,7 @@ import {
 } from '../../mocks/trainerWorkplaceMocks'
 import { PeriodFilterStrip, type PeriodOption } from './PeriodFilterStrip'
 import { AnalyticsMockTable } from './AnalyticsMockTable'
+import { AnalyticsKpiTile } from './AnalyticsKpiTile'
 import {
   ANALYTICS_TABLE_HEAD,
   ANALYTICS_TABLE_ROW,
@@ -28,27 +29,29 @@ export function SuccessfulClosuresSubTab() {
     <div className="flex flex-col gap-4">
       <PeriodFilterStrip value={period} onChange={setPeriod} />
 
-      {/* KPI strip */}
+      {/* KPI strip — shared AnalyticsKpiTile pattern */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <KpiTile
+        <AnalyticsKpiTile
           label={t('pages.training.closures.kpi.closures', 'Successful closures')}
           value={String(k.successfulClosures)}
-          tone="text-emerald-600"
+          valueTone="text-emerald-600"
+          accentColor="bg-[#22C55E]"
         />
-        <KpiTile
+        <AnalyticsKpiTile
           label={t('pages.training.closures.kpi.totalAmount', 'Total amount')}
           value={`${k.totalAmount.amount.toLocaleString()} ${k.totalAmount.currency}`}
-          tone="text-dark-500"
         />
-        <KpiTile
+        <AnalyticsKpiTile
           label={t('pages.training.closures.kpi.conversion', 'Conversion P→P')}
           value={`${k.conversionPromisePaymentPct}%`}
-          tone="text-violet-600"
+          valueTone="text-violet-600"
+          accentColor="bg-[#8B5CF6]"
         />
-        <KpiTile
+        <AnalyticsKpiTile
           label={t('pages.training.closures.kpi.leader', 'Closure leader')}
           value={k.closureLeader}
-          tone="text-blue-600"
+          valueTone="text-blue-600"
+          accentColor="bg-[#3B82F6]"
         />
       </div>
 
@@ -121,15 +124,6 @@ export function SuccessfulClosuresSubTab() {
           ))}
         </tbody>
       </AnalyticsMockTable>
-    </div>
-  )
-}
-
-function KpiTile({ label, value, tone }: { label: string; value: string; tone: string }) {
-  return (
-    <div className="flex flex-col gap-1 rounded-2xl border border-gray-100 bg-white p-3 shadow-sm">
-      <span className="text-[10px] tracking-wide text-gray-500 uppercase">{label}</span>
-      <span className={`text-lg font-semibold ${tone}`}>{value}</span>
     </div>
   )
 }

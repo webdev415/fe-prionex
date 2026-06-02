@@ -8,6 +8,7 @@ import {
   MOCK_HEATMAP_TOTALS,
 } from '../../mocks/trainerWorkplaceMocks'
 import { PeriodFilterStrip, type PeriodOption } from './PeriodFilterStrip'
+import { AnalyticsKpiTile } from './AnalyticsKpiTile'
 
 /**
  * Mock Heat Map sub-tab (KAN-502). 7 day × 14 hour interaction-volume grid
@@ -66,22 +67,23 @@ export function MockHeatMapSubTab() {
         }
       />
 
-      {/* KPI strip */}
+      {/* KPI strip — shared AnalyticsKpiTile pattern */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <KpiTile
+        <AnalyticsKpiTile
           label={t('pages.training.heatmap.kpi.totalInteractions', 'Total interactions')}
           value={MOCK_HEATMAP_TOTALS.totalInteractions.toLocaleString()}
-          tone="text-dark-500"
         />
-        <KpiTile
+        <AnalyticsKpiTile
           label={t('pages.training.heatmap.kpi.workingHours', 'Working hours')}
           value={MOCK_HEATMAP_TOTALS.workingHours}
-          tone="text-blue-600"
+          valueTone="text-blue-600"
+          accentColor="bg-[#3B82F6]"
         />
-        <KpiTile
+        <AnalyticsKpiTile
           label={t('pages.training.heatmap.kpi.peakSlot', 'Peak slot')}
           value={`${MOCK_HEATMAP_PEAK.day} · ${MOCK_HEATMAP_PEAK.hour}`}
-          tone="text-emerald-600"
+          valueTone="text-emerald-600"
+          accentColor="bg-[#22C55E]"
         />
       </div>
 
@@ -137,15 +139,6 @@ export function MockHeatMapSubTab() {
           </table>
         </div>
       </div>
-    </div>
-  )
-}
-
-function KpiTile({ label, value, tone }: { label: string; value: string; tone: string }) {
-  return (
-    <div className="flex flex-col gap-1 rounded-2xl border border-gray-100 bg-white p-3 shadow-sm">
-      <span className="text-[10px] tracking-wide text-gray-500 uppercase">{label}</span>
-      <span className={`text-lg font-semibold ${tone}`}>{value}</span>
     </div>
   )
 }
