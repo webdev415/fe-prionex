@@ -16,6 +16,11 @@ interface StepFilterDropdownProps {
   onChange: (ids: number[]) => void
   disabled?: boolean
   label?: string
+  /** Key extractor — defaults to ``s.target_action_id`` (preserves TA History
+   * behavior, where steps that share a TA are intentionally toggled together).
+   * Pass ``(s) => s.id`` for the Client list filter, where each chain step is
+   * independent even when two steps reference the same target_action. */
+  getKey?: (step: TAChainStep) => number
 }
 
 export function StepFilterDropdown({
@@ -24,6 +29,7 @@ export function StepFilterDropdown({
   onChange,
   disabled = false,
   label,
+  getKey = (s) => s.target_action_id,
 }: StepFilterDropdownProps) {
   const { t } = useTranslation('common')
   const [searchQuery, setSearchQuery] = useState('')
@@ -67,7 +73,7 @@ export function StepFilterDropdown({
     return () => window.removeEventListener('resize', onResize)
   }, [isOpen, updateTriggerWidth])
 
-  const allIds = useMemo(() => ordered.map((s) => s.target_action_id), [ordered])
+  const allIds = useMemo(() => ordered.map((s) => getKey(s)), [ordered, getKey])
   const isAllSelected = selectedIds.length === allIds.length && allIds.length > 0
 
   const toggleOne = (id: number) => {
@@ -93,8 +99,8 @@ export function StepFilterDropdown({
     : selectedIds.length === 0 || isAllSelected
       ? t('pages.actionAnalysis.filters.allChainSteps', 'All steps')
       : selectedIds.length === 1
-        ? ordered.find((s) => s.target_action_id === selectedIds[0])
-          ? labelFor(ordered.find((s) => s.target_action_id === selectedIds[0])!)
+        ? ordered.find((s) => getKey(s) === selectedIds[0])
+          ? labelFor(ordered.find((s) => getKey(s) === selectedIds[0])!)
           : t('pages.actionAnalysis.filters.selectedStepsCount', '{{count}} selected', {
               count: 1,
             })
@@ -168,8 +174,8 @@ export function StepFilterDropdown({
                       className="text-dark-500 flex cursor-pointer items-center gap-3 px-3 py-2.5 hover:bg-gray-50"
                     >
                       <Checkbox
-                        checked={selectedIds.includes(s.target_action_id)}
-                        onCheckedChange={() => toggleOne(s.target_action_id)}
+                        checked={selectedIds.includes(getKey(s))}
+                        onCheckedChange={() => toggleOne(getKey(s))}
                       />
                       <span className="text-sm">{labelFor(s)}</span>
                     </label>

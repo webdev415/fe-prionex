@@ -44,6 +44,7 @@ import { mapScoreToPriority } from '@/features/clients/api/configApi'
 import type { Client as APIClient } from '@/features/clients/api/types'
 import type { PriorityThresholds } from '@/features/clients/api/configApi'
 import { useURLState } from '@/hooks/useURLState'
+import type { StepValueEntry } from '@/pages/ActionAnalysis/lib/taHistoryUrlState'
 import type { Priority } from './types'
 import { PermissionGuard } from '@/components/auth'
 import { PERMISSIONS } from '@/constants/permissions'
@@ -191,8 +192,50 @@ export interface ClientFilters {
   // config so admin-managed result changes show up without a deploy.
   lastInteractionResultIds?: number[]
 
+  // Chain Filter — TA Chain ID. Narrows to clients with at least one
+  // ta_interaction in this chain. Pairs with `chainStepIds`.
+  chainId?: number
+
+  // Step Filter — multi-select chain step IDs (``ta_chain_steps.id``)
+  // within the selected chain. Ignored unless chainId is set. Per-step
+  // (not per-target_action) so a chain with two steps that share the
+  // same TA — e.g. Contact → Credit → Credit — toggles each independently.
+  chainStepIds?: number[]
+
+  // Step Value Filters — per-selected-step value bounds, keyed by
+  // chain step ID. Matches the TA History step-value panel: dates and
+  // numbers carry min/max, dropdowns/text carry eq. Empty entries are
+  // dropped so the URL stays clean.
+  stepValues?: Record<number, StepValueEntry>
+
   // Priority Filter
   priorities?: Priority[]
+}
+
+/** Encode {[ta_id]: {eq,min,max}} as a compact URL-safe JSON string. Empty → ''. */
+function encodeStepValues(values: Record<number, StepValueEntry>): string {
+  if (!values || Object.keys(values).length === 0) return ''
+  return JSON.stringify(values)
+}
+
+function decodeStepValues(raw: string): Record<number, StepValueEntry> {
+  if (!raw) return {}
+  try {
+    const parsed = JSON.parse(raw) as Record<string, StepValueEntry>
+    const out: Record<number, StepValueEntry> = {}
+    for (const [k, v] of Object.entries(parsed)) {
+      const id = Number(k)
+      if (!Number.isFinite(id)) continue
+      const clean: StepValueEntry = {}
+      if (v?.eq) clean.eq = v.eq
+      if (v?.min) clean.min = v.min
+      if (v?.max) clean.max = v.max
+      if (clean.eq || clean.min || clean.max) out[id] = clean
+    }
+    return out
+  } catch {
+    return {}
+  }
 }
 
 export function ClientManagementPage() {
@@ -270,6 +313,19 @@ export function ClientManagementPage() {
     'assignmentDateTo',
     ''
   )
+  // Chain + Step filter URL state. ``chainId === 0`` means "no chain
+  // picked" so the picker behaves the same as the placeholder. Steps are
+  // disabled in the UI when no chain is selected.
+  const [chainIdFilter, setChainIdFilter] = useURLState<number>('chainId', 0)
+  const [chainStepIdsFilter, setChainStepIdsFilter] = useURLState<number[]>('chainSteps', [])
+  // Step-value sub-filters are a nested object (target_action_id → {eq,min,max}),
+  // which useURLState can't serialize directly, so we round-trip it through a
+  // single JSON-encoded string URL param.
+  const [stepValuesRawFilter, setStepValuesRawFilter] = useURLState<string>('stepValues', '')
+  const stepValuesFilter = useMemo(
+    () => decodeStepValues(stepValuesRawFilter),
+    [stepValuesRawFilter]
+  )
 
   // Compute filters object from URL state
   const filters: ClientFilters = useMemo(
@@ -297,6 +353,9 @@ export function ClientManagementPage() {
       interactionDateTo: interactionDateToFilter || undefined,
       assignmentDateFrom: assignmentDateFromFilter || undefined,
       assignmentDateTo: assignmentDateToFilter || undefined,
+      chainId: chainIdFilter || undefined,
+      chainStepIds: chainStepIdsFilter,
+      stepValues: stepValuesFilter,
     }),
     [
       portfolioFilter,
@@ -322,6 +381,9 @@ export function ClientManagementPage() {
       interactionDateToFilter,
       assignmentDateFromFilter,
       assignmentDateToFilter,
+      chainIdFilter,
+      chainStepIdsFilter,
+      stepValuesFilter,
     ]
   )
 
@@ -380,6 +442,9 @@ export function ClientManagementPage() {
       interactionDateToFilter,
       assignmentDateFromFilter,
       assignmentDateToFilter,
+      chainIdFilter,
+      chainStepIdsFilter,
+      stepValuesRawFilter,
       searchQuery,
       searchType,
     }
@@ -410,7 +475,10 @@ export function ClientManagementPage() {
       totalDebtRangeFromFilter > 0 ||
       totalDebtRangeToFilter > 0 ||
       dpdRangeFromFilter > 0 ||
-      dpdRangeToFilter > 0
+      dpdRangeToFilter > 0 ||
+      chainIdFilter > 0 ||
+      chainStepIdsFilter.length > 0 ||
+      stepValuesRawFilter !== ''
 
     if (hasActiveFilters && STORAGE_KEY) {
       try {
@@ -449,6 +517,9 @@ export function ClientManagementPage() {
     interactionDateToFilter,
     assignmentDateFromFilter,
     assignmentDateToFilter,
+    chainIdFilter,
+    chainStepIdsFilter,
+    stepValuesRawFilter,
     searchQuery,
     searchType,
   ])
@@ -539,6 +610,10 @@ export function ClientManagementPage() {
               setAssignmentDateFromFilter(parsed.assignmentDateFromFilter)
             if (parsed.assignmentDateToFilter)
               setAssignmentDateToFilter(parsed.assignmentDateToFilter)
+            if (parsed.chainIdFilter) setChainIdFilter(parsed.chainIdFilter)
+            if (Array.isArray(parsed.chainStepIdsFilter))
+              setChainStepIdsFilter(parsed.chainStepIdsFilter)
+            if (parsed.stepValuesRawFilter) setStepValuesRawFilter(parsed.stepValuesRawFilter)
             if (parsed.currentPage) setCurrentPage(parsed.currentPage)
             if (parsed.rowsPerPage) setRowsPerPage(parsed.rowsPerPage)
             if (parsed.sortBy) setSortBy(parsed.sortBy)
@@ -735,6 +810,33 @@ export function ClientManagementPage() {
       params.assignment_date_to = filters.assignmentDateTo
     }
 
+    // FILTER 15b: TA Chain + Step. Step list only ships when a chain is
+    // selected — BE silently ignores orphan steps but no point shipping them.
+    // Step selection is by ``ta_chain_steps.id`` (not target_action_id), so
+    // a chain with two steps that share the same TA stays independently
+    // toggleable.
+    if (filters.chainId) {
+      params.chain_id = filters.chainId
+      if (filters.chainStepIds && filters.chainStepIds.length > 0) {
+        params.step_ids = filters.chainStepIds.join(',')
+      }
+      // Per-step value sub-filters. Format `<step_id>:<value>`, comma-separated.
+      const eqList: string[] = []
+      const minList: string[] = []
+      const maxList: string[] = []
+      const sv = filters.stepValues ?? {}
+      for (const id of filters.chainStepIds ?? []) {
+        const entry = sv[id]
+        if (!entry) continue
+        if (entry.eq) eqList.push(`${id}:${entry.eq}`)
+        if (entry.min) minList.push(`${id}:${entry.min}`)
+        if (entry.max) maxList.push(`${id}:${entry.max}`)
+      }
+      if (eqList.length) params.step_value_eq = eqList.join(',')
+      if (minList.length) params.step_value_min = minList.join(',')
+      if (maxList.length) params.step_value_max = maxList.join(',')
+    }
+
     // FILTER 16: Search (from global header search)
     if (searchQuery.trim()) {
       params.q = searchQuery.trim()
@@ -831,6 +933,9 @@ export function ClientManagementPage() {
     if (filters.responsibleEmployee) count++
     if (filters.responsibleSearcher) count++
     if (filters.unassignedOnly) count++
+    if (filters.chainId) count++
+    if (filters.chainStepIds && filters.chainStepIds.length > 0) count++
+    if (filters.stepValues && Object.keys(filters.stepValues).length > 0) count++
     if (selectedPriorities.length > 0) count++
     return count
   }, [filters, selectedPriorities])
@@ -1189,6 +1294,35 @@ export function ClientManagementPage() {
     if (newFilters.assignmentDateTo !== assignmentDateToFilter) {
       setAssignmentDateToFilter(newFilters.assignmentDateTo || '')
     }
+    // Chain change resets the step picks and their per-step values — the
+    // step set belongs to the old chain and its values would land on
+    // orphan steps on the BE.
+    if (newFilters.chainId !== chainIdFilter) {
+      setChainIdFilter(newFilters.chainId || 0)
+      setChainStepIdsFilter([])
+      setStepValuesRawFilter('')
+    } else {
+      const nextIds = newFilters.chainStepIds ?? []
+      const stepsChanged = JSON.stringify(nextIds) !== JSON.stringify(chainStepIdsFilter)
+      if (stepsChanged) {
+        setChainStepIdsFilter(nextIds)
+        // Drop value entries for steps that were just deselected so the
+        // BE doesn't keep filtering on hidden inputs.
+        const picked = new Set(nextIds)
+        const filtered: Record<number, StepValueEntry> = {}
+        for (const [k, v] of Object.entries(stepValuesFilter)) {
+          const id = Number(k)
+          if (picked.has(id)) filtered[id] = v
+        }
+        setStepValuesRawFilter(encodeStepValues(filtered))
+      }
+      if (newFilters.stepValues !== undefined) {
+        const encoded = encodeStepValues(newFilters.stepValues)
+        if (encoded !== stepValuesRawFilter) {
+          setStepValuesRawFilter(encoded)
+        }
+      }
+    }
 
     // Reset to page 1 when filters change
     setCurrentPage(1)
@@ -1220,6 +1354,9 @@ export function ClientManagementPage() {
     setInteractionDateToFilter('')
     setAssignmentDateFromFilter('')
     setAssignmentDateToFilter('')
+    setChainIdFilter(0)
+    setChainStepIdsFilter([])
+    setStepValuesRawFilter('')
 
     // Reset to first page
     setCurrentPage(1)
