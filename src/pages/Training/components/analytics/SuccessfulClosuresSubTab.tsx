@@ -55,43 +55,67 @@ export function SuccessfulClosuresSubTab() {
         />
       </div>
 
-      {/* Funnel chart */}
-      <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
+      {/* Funnel chart — Figma "Tab 4" frame: 4 horizontal stage cells, each
+          with count + label + mini-bar visualization + percentage. Stages
+          flow left → right with chevron separators between them. */}
+      <div className="rounded-xl border border-[#EBECE8] bg-white p-4 shadow-[0px_1px_2px_rgba(0,0,0,0.04)]">
         <div className="mb-4 flex items-baseline justify-between">
-          <h3 className="text-dark-500 text-sm font-semibold">
+          <h3 className="text-sm font-semibold text-[#05040D]">
             {t(
               'pages.training.closures.funnel.title',
               'Funnel · interactions → promises → payments'
             )}
           </h3>
-          <span className="text-[11px] text-gray-500">
+          <span className="text-[11px] text-[#676767]">
             {t('pages.training.closures.funnel.period', 'Today, real-time')}
           </span>
         </div>
-        <div className="flex flex-col gap-3">
-          {MOCK_CLOSURES_FUNNEL.map((stage, idx) => (
-            <div key={stage.label} className="flex items-center gap-3">
-              <div className="w-24 flex-shrink-0 text-[11px] font-medium text-gray-700">
-                {stage.label}
-              </div>
-              <div className="relative flex-1">
-                <div className="h-8 overflow-hidden rounded-lg bg-gray-100">
-                  <div
-                    className="flex h-full items-center justify-end rounded-lg bg-[#204E4D] pr-2 text-[10px] font-medium text-white"
-                    style={{ width: `${stage.pct}%` }}
-                  >
-                    {stage.actual}
+        <div className="flex flex-wrap items-stretch gap-2">
+          {MOCK_CLOSURES_FUNNEL.map((stage, idx) => {
+            const isLast = idx === MOCK_CLOSURES_FUNNEL.length - 1
+            // Approximate the Figma "stacked unit bars" with 10 vertical
+            // segments — fill ratio = stage.pct.
+            const filledSegments = Math.round((stage.pct / 100) * 10)
+            return (
+              <div key={stage.label} className="flex flex-1 items-center gap-2">
+                <div className="flex flex-1 flex-col gap-2 rounded-lg bg-[#F7F7F7] px-3 py-3">
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-2xl leading-none font-semibold text-[#05040D]">
+                      {stage.actual}
+                    </span>
+                    <span className="text-[11px] font-medium text-[#676767]">{stage.label}</span>
+                  </div>
+                  {/* Mini stacked-unit bar visualization */}
+                  <div className="flex h-3 gap-0.5">
+                    {Array.from({ length: 10 }).map((_, j) => (
+                      <span
+                        key={j}
+                        className={`flex-1 rounded-sm ${
+                          j < filledSegments ? 'bg-[#204E4D]' : 'bg-[#EDEDED]'
+                        }`}
+                      />
+                    ))}
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-medium text-[#676767]">
+                      {stage.pct}%
+                    </span>
+                    {!isLast ? (
+                      <span className="text-[10px] text-[#9CA3AF]">↓</span>
+                    ) : null}
                   </div>
                 </div>
+                {!isLast ? (
+                  <span
+                    className="hidden text-base font-medium text-[#9CA3AF] lg:inline-block"
+                    aria-hidden
+                  >
+                    →
+                  </span>
+                ) : null}
               </div>
-              <span className="w-12 text-right text-[11px] font-medium text-gray-600">
-                {stage.pct}%
-              </span>
-              {idx < MOCK_CLOSURES_FUNNEL.length - 1 ? (
-                <span className="text-[10px] text-gray-400">↓</span>
-              ) : null}
-            </div>
-          ))}
+            )
+          })}
         </div>
       </div>
 
