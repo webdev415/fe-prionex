@@ -13,6 +13,8 @@
 
 export type ScoreBand = 'red' | 'amber' | 'green'
 
+export type OperatorPresenceStatus = 'online' | 'offline' | 'busy' | 'on_call'
+
 export interface MockOperator {
   id: number
   name: string
@@ -25,6 +27,10 @@ export interface MockOperator {
   score: number
   scoreBand: ScoreBand
   lastActiveLabel: string
+  /** Figma Team tab — presence label + dot color */
+  presenceStatus?: OperatorPresenceStatus
+  /** Daily plan progress 0–100 (operator card bar) */
+  dailyPlanPct?: number
 }
 
 const AVATAR_PALETTE = [
@@ -89,32 +95,72 @@ const OPERATOR_NAMES = [
   'Mykyta Tarasenko',
 ]
 
+const PRESENCE_LABEL: Record<OperatorPresenceStatus, string> = {
+  online: 'Online',
+  offline: 'Offline',
+  busy: 'Busy',
+  on_call: 'On the call',
+}
+
 function buildOperator(id: number, team: string, department: string, score: number): MockOperator {
   const name = OPERATOR_NAMES[id % OPERATOR_NAMES.length]
   const parts = name.split(' ')
   const initials = `${parts[0][0]}${parts[1]?.[0] ?? ''}`.toUpperCase()
+  const presenceStatus: OperatorPresenceStatus =
+    id % 4 === 0 ? 'offline' : id % 4 === 1 ? 'on_call' : id % 4 === 2 ? 'busy' : 'online'
   return {
     id,
     name,
     initials,
-    avatarColor: AVATAR_PALETTE[id % AVATAR_PALETTE.length],
+    avatarColor: '#BBFB5B',
     team,
     department,
-    extension: `12${String(id).padStart(2, '0')}`,
-    online: id % 3 !== 0,
+    extension: `${2000 + id}`,
+    online: presenceStatus !== 'offline',
     score,
     scoreBand: scoreBandFor(score),
-    lastActiveLabel: id % 3 === 0 ? '15m ago' : 'Online',
+    lastActiveLabel: PRESENCE_LABEL[presenceStatus],
+    presenceStatus,
+    dailyPlanPct: 40 + ((id * 17) % 55),
+  }
+}
+
+function teamOp(
+  id: number,
+  name: string,
+  initials: string,
+  team: string,
+  department: string,
+  extension: string,
+  score: number,
+  presenceStatus: OperatorPresenceStatus,
+  dailyPlanPct: number
+): MockOperator {
+  return {
+    id,
+    name,
+    initials,
+    avatarColor: '#BBFB5B',
+    team,
+    department,
+    extension,
+    online: presenceStatus !== 'offline',
+    score,
+    scoreBand: scoreBandFor(score),
+    lastActiveLabel: PRESENCE_LABEL[presenceStatus],
+    presenceStatus,
+    dailyPlanPct,
   }
 }
 
 export interface MockTeam {
   id: string
   name: string
-  managerName: string
+  teamLeadName: string
   memberCount: number
   averageScore: number
   scoreBand: ScoreBand
+  queueCount: number
   operators: MockOperator[]
 }
 
@@ -122,56 +168,136 @@ export interface MockDepartment {
   id: string
   name: string
   managerName: string
+  managerInitials: string
   memberCount: number
+  teamCount: number
   averageScore: number
   scoreBand: ScoreBand
+  queueCount: number
   teams: MockTeam[]
 }
 
+/** Figma `ENG - Training _ Team.svg` roster */
 export const MOCK_DEPARTMENTS: MockDepartment[] = [
   {
     id: 'dept-a',
     name: 'Department A · Hard Collection',
-    managerName: 'Volodymyr Senchuk',
+    managerName: 'Volodymyr Korsa',
+    managerInitials: 'VK',
     memberCount: 18,
-    averageScore: 75,
-    scoreBand: 'green',
+    teamCount: 3,
+    averageScore: 73,
+    scoreBand: 'amber',
+    queueCount: 4,
     teams: [
       {
         id: 'team-alpha',
         name: 'Team "Alpha"',
-        managerName: 'Volodymyr Senchuk',
-        memberCount: 6,
-        averageScore: 76,
+        teamLeadName: 'Dmytro Shpak',
+        memberCount: 3,
+        averageScore: 88,
         scoreBand: 'green',
+        queueCount: 0,
         operators: [
-          buildOperator(1, 'Team "Alpha"', 'Hard Collection', 82),
-          buildOperator(2, 'Team "Alpha"', 'Hard Collection', 78),
-          buildOperator(3, 'Team "Alpha"', 'Hard Collection', 71),
+          teamOp(
+            1,
+            'Kateryna Antonova',
+            'KA',
+            'Team "Alpha"',
+            'Hard Collection',
+            '2097',
+            93,
+            'on_call',
+            93
+          ),
+          teamOp(
+            2,
+            'Oleh Bondar',
+            'OB',
+            'Team "Alpha"',
+            'Hard Collection',
+            '1004',
+            81,
+            'online',
+            76
+          ),
+          teamOp(
+            3,
+            'Marina Shevchenko',
+            'MS',
+            'Team "Alpha"',
+            'Hard Collection',
+            '2098',
+            67,
+            'busy',
+            52
+          ),
         ],
       },
       {
         id: 'team-bravo',
         name: 'Team "Bravo"',
-        managerName: 'Olena Lytvynenko',
-        memberCount: 6,
-        averageScore: 68,
-        scoreBand: 'amber',
+        teamLeadName: 'Olena Hryshchuk',
+        memberCount: 2,
+        averageScore: 71,
+        scoreBand: 'green',
+        queueCount: 2,
         operators: [
-          buildOperator(4, 'Team "Bravo"', 'Hard Collection', 65),
-          buildOperator(5, 'Team "Bravo"', 'Hard Collection', 72),
+          teamOp(
+            4,
+            'Denys Poltavets',
+            'DP',
+            'Team "Bravo"',
+            'Hard Collection',
+            '2052',
+            74,
+            'online',
+            68
+          ),
+          teamOp(
+            5,
+            'Iryna Sokol',
+            'IS',
+            'Team "Bravo"',
+            'Hard Collection',
+            '2055',
+            68,
+            'online',
+            61
+          ),
         ],
       },
       {
         id: 'team-charlie',
         name: 'Team "Charlie"',
-        managerName: 'Sergii Kovalenko',
-        memberCount: 6,
-        averageScore: 77,
-        scoreBand: 'green',
+        teamLeadName: 'Ivan Petrenko',
+        memberCount: 2,
+        averageScore: 65,
+        scoreBand: 'amber',
+        queueCount: 1,
         operators: [
-          buildOperator(6, 'Team "Charlie"', 'Hard Collection', 80),
-          buildOperator(7, 'Team "Charlie"', 'Hard Collection', 74),
+          teamOp(
+            6,
+            'Artem Honchar',
+            'AH',
+            'Team "Charlie"',
+            'Hard Collection',
+            '5022',
+            58,
+            'offline',
+            38
+          ),
+          teamOp(
+            7,
+            'Oleksandra Bila',
+            'OB',
+            'Team "Charlie"',
+            'Hard Collection',
+            '5023',
+            72,
+            'online',
+            84
+          ),
         ],
       },
     ],
@@ -179,33 +305,124 @@ export const MOCK_DEPARTMENTS: MockDepartment[] = [
   {
     id: 'dept-b',
     name: 'Department B · Soft Collection',
-    managerName: 'Mariia Petrenko',
-    memberCount: 12,
+    managerName: 'Natalia Pokrova',
+    managerInitials: 'NP',
+    memberCount: 14,
+    teamCount: 2,
     averageScore: 70,
     scoreBand: 'green',
+    queueCount: 2,
     teams: [
       {
         id: 'team-delta',
         name: 'Team "Delta"',
-        managerName: 'Mariia Petrenko',
-        memberCount: 4,
+        teamLeadName: 'Anna Sydorenko',
+        memberCount: 2,
         averageScore: 73,
         scoreBand: 'green',
+        queueCount: 0,
         operators: [
-          buildOperator(8, 'Team "Delta"', 'Soft Collection', 78),
-          buildOperator(9, 'Team "Delta"', 'Soft Collection', 67),
+          teamOp(
+            8,
+            'Natalia Yefremova',
+            'NY',
+            'Team "Delta"',
+            'Soft Collection',
+            '3041',
+            78,
+            'online',
+            71
+          ),
+          teamOp(
+            9,
+            'Serhiy Lytvyn',
+            'SL',
+            'Team "Delta"',
+            'Soft Collection',
+            '3042',
+            69,
+            'busy',
+            55
+          ),
         ],
       },
       {
         id: 'team-echo',
         name: 'Team "Echo"',
-        managerName: 'Andrii Shevchuk',
-        memberCount: 4,
+        teamLeadName: 'Mykhailo Yakobchuk',
+        memberCount: 1,
         averageScore: 64,
         scoreBand: 'amber',
+        queueCount: 0,
         operators: [
-          buildOperator(10, 'Team "Echo"', 'Soft Collection', 60),
-          buildOperator(11, 'Team "Echo"', 'Soft Collection', 68),
+          teamOp(
+            10,
+            'Yuriy Kravtsov',
+            'YK',
+            'Team "Echo"',
+            'Soft Collection',
+            '3051',
+            64,
+            'on_call',
+            47
+          ),
+        ],
+      },
+    ],
+  },
+  {
+    id: 'dept-c',
+    name: 'Department C · Restructuring',
+    managerName: 'Ihor Hnatiuk',
+    managerInitials: 'IH',
+    memberCount: 12,
+    teamCount: 2,
+    averageScore: 68,
+    scoreBand: 'amber',
+    queueCount: 3,
+    teams: [
+      {
+        id: 'team-foxtrot',
+        name: 'Team "Foxtrot"',
+        teamLeadName: 'Taras Kushnir',
+        memberCount: 1,
+        averageScore: 71,
+        scoreBand: 'green',
+        queueCount: 1,
+        operators: [
+          teamOp(
+            11,
+            'Bohdan Melnyk',
+            'BM',
+            'Team "Foxtrot"',
+            'Restructuring',
+            '4015',
+            71,
+            'online',
+            62
+          ),
+        ],
+      },
+      {
+        id: 'team-golf',
+        name: 'Team "Golf"',
+        teamLeadName: 'Yuriy Romanov',
+        memberCount: 1,
+        averageScore: 62,
+        scoreBand: 'amber',
+        queueCount: 2,
+        operators: [
+          teamOp(
+            12,
+            'Svitlana Hordiienko',
+            'SH',
+            'Team "Golf"',
+            'Restructuring',
+            '4020',
+            62,
+            'offline',
+            41
+          ),
         ],
       },
     ],
@@ -893,7 +1110,75 @@ export interface MockScorecardRow {
   score: number
   scoreOutOf: number
   scorecardType: ScorecardType
+  scoreDelta?: number
+  exampleLabel?: string
+  audioDuration?: string
 }
+
+export type CriterionRating = 'not_done' | 'weak' | 'normal' | 'excellent'
+
+export interface MockScorecardCriterion {
+  id: string
+  label: string
+  weight: number
+  score: number
+  maxScore: number
+  rating: CriterionRating
+}
+
+export const DEFAULT_SCORECARD_CRITERIA: MockScorecardCriterion[] = [
+  {
+    id: 'greeting',
+    label: 'Greeting per script',
+    weight: 10,
+    score: 10,
+    maxScore: 10,
+    rating: 'excellent',
+  },
+  {
+    id: 'reason',
+    label: 'Reason for the call',
+    weight: 10,
+    score: 10,
+    maxScore: 10,
+    rating: 'excellent',
+  },
+  {
+    id: 'info',
+    label: 'Information gathering',
+    weight: 10,
+    score: 8,
+    maxScore: 10,
+    rating: 'normal',
+  },
+  {
+    id: 'tone',
+    label: 'Tone & orientation',
+    weight: 10,
+    score: 9,
+    maxScore: 10,
+    rating: 'excellent',
+  },
+  {
+    id: 'objections',
+    label: 'Objection handling',
+    weight: 20,
+    score: 18,
+    maxScore: 20,
+    rating: 'excellent',
+  },
+  {
+    id: 'motivation',
+    label: 'Motivation & visualisation',
+    weight: 20,
+    score: 16,
+    maxScore: 20,
+    rating: 'normal',
+  },
+  { id: 'negotiation', label: 'Negotiation', weight: 15, score: 11, maxScore: 15, rating: 'weak' },
+  { id: 'summary', label: 'Summary', weight: 10, score: 8, maxScore: 10, rating: 'normal' },
+  { id: 'crm', label: 'CRM entry', weight: 5, score: 4, maxScore: 5, rating: 'excellent' },
+]
 
 export const MOCK_SCORECARD_ROWS: MockScorecardRow[] = Array.from({ length: 12 }, (_, i) => {
   const score = 60 + ((i * 7) % 40)
@@ -911,6 +1196,9 @@ export const MOCK_SCORECARD_ROWS: MockScorecardRow[] = Array.from({ length: 12 }
     score,
     scoreOutOf: 100,
     scorecardType: i % 3 === 0 ? 'third_party' : 'client',
+    scoreDelta: i % 3 === 0 ? 3 : i % 5 === 0 ? -2 : undefined,
+    exampleLabel: i % 2 === 0 ? 'Sample example' : undefined,
+    audioDuration: `${3 + (i % 5)}:${String(10 + i).slice(-2)}`,
   }
 })
 
@@ -939,6 +1227,9 @@ export interface MockTaskRow {
   author: string
   priority: TaskPriority
   status: TaskStatus
+  /** Mock scope for Tasks sub-tab filtering. */
+  assignmentScope: 'by_me' | 'to_scope'
+  deadlineLabel?: string
 }
 
 export const MOCK_TASKS: MockTaskRow[] = [
@@ -950,6 +1241,8 @@ export const MOCK_TASKS: MockTaskRow[] = [
     author: 'Yulia Marchuk',
     priority: 'critical',
     status: 'in_progress',
+    assignmentScope: 'by_me',
+    deadlineLabel: 'May 18',
   },
   {
     id: 2,
@@ -959,6 +1252,8 @@ export const MOCK_TASKS: MockTaskRow[] = [
     author: 'Yulia Marchuk',
     priority: 'critical',
     status: 'open',
+    assignmentScope: 'by_me',
+    deadlineLabel: 'May 20',
   },
   {
     id: 3,
@@ -968,6 +1263,8 @@ export const MOCK_TASKS: MockTaskRow[] = [
     author: 'Yulia Marchuk',
     priority: 'high',
     status: 'in_progress',
+    assignmentScope: 'to_scope',
+    deadlineLabel: 'May 17',
   },
   {
     id: 4,
@@ -977,6 +1274,8 @@ export const MOCK_TASKS: MockTaskRow[] = [
     author: 'Yulia Marchuk',
     priority: 'medium',
     status: 'completed',
+    assignmentScope: 'by_me',
+    deadlineLabel: 'May 14',
   },
   {
     id: 5,
@@ -986,6 +1285,8 @@ export const MOCK_TASKS: MockTaskRow[] = [
     author: 'Yulia Marchuk',
     priority: 'low',
     status: 'completed',
+    assignmentScope: 'to_scope',
+    deadlineLabel: 'May 12',
   },
   {
     id: 6,
@@ -995,6 +1296,8 @@ export const MOCK_TASKS: MockTaskRow[] = [
     author: 'Yulia Marchuk',
     priority: 'high',
     status: 'completed',
+    assignmentScope: 'by_me',
+    deadlineLabel: 'May 11',
   },
   {
     id: 7,
@@ -1004,6 +1307,30 @@ export const MOCK_TASKS: MockTaskRow[] = [
     author: 'Yulia Marchuk',
     priority: 'medium',
     status: 'open',
+    assignmentScope: 'to_scope',
+    deadlineLabel: 'May 15',
+  },
+  {
+    id: 8,
+    dateLabel: '05/09',
+    title: 'Review overdue promise follow-up',
+    executor: 'Volodymyr Senchuk',
+    author: 'Yulia Marchuk',
+    priority: 'critical',
+    status: 'overdue',
+    assignmentScope: 'by_me',
+    deadlineLabel: 'May 08',
+  },
+  {
+    id: 9,
+    dateLabel: '05/08',
+    title: 'Escalation callback — Dept B',
+    executor: 'Anna Kovalenko',
+    author: 'Sergii Tarasov',
+    priority: 'high',
+    status: 'overdue',
+    assignmentScope: 'to_scope',
+    deadlineLabel: 'May 07',
   },
 ]
 
@@ -1016,11 +1343,11 @@ export interface MockTaskKpis {
 }
 
 export const MOCK_TASK_KPIS: MockTaskKpis = {
-  total: 11,
-  open: 4,
-  inProgress: 3,
-  overdue: 2,
-  completed: 2,
+  total: MOCK_TASKS.length,
+  open: MOCK_TASKS.filter((t) => t.status === 'open').length,
+  inProgress: MOCK_TASKS.filter((t) => t.status === 'in_progress').length,
+  overdue: MOCK_TASKS.filter((t) => t.status === 'overdue').length,
+  completed: MOCK_TASKS.filter((t) => t.status === 'completed').length,
 }
 
 // ─────────────────────────────────────────────────────────────

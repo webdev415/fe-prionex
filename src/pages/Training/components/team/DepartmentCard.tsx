@@ -2,66 +2,93 @@
 import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
 import type { MockDepartment } from '../../mocks/trainerWorkplaceMocks'
+import { TEAM_SCORE_TEXT } from './teamStyles'
 import { TeamCard } from './TeamCard'
 
-/**
- * Collapsible department-level band on the Team tab. Header shows the
- * department name + manager + member count + avg-score badge; body lists
- * member teams as `TeamCard`s.
- */
 export interface DepartmentCardProps {
   department: MockDepartment
 }
 
-const BAND_BG: Record<MockDepartment['scoreBand'], string> = {
-  red: 'bg-red-500',
-  amber: 'bg-amber-400',
-  green: 'bg-emerald-500',
+function StatColumn({
+  label,
+  value,
+  suffix,
+  valueClassName,
+}: {
+  label: string
+  value: string | number
+  suffix?: string
+  valueClassName?: string
+}) {
+  return (
+    <div className="flex flex-col items-end">
+      <span className="text-[10px] font-medium tracking-[0.05em] text-[#6B7280] uppercase">
+        {label}
+      </span>
+      <div className="flex items-baseline gap-0.5">
+        <span className={`text-base font-semibold ${valueClassName ?? 'text-[#05040D]'}`}>
+          {value}
+        </span>
+        {suffix ? <span className="text-xs text-[#6B7280]">{suffix}</span> : null}
+      </div>
+    </div>
+  )
 }
 
+/** Figma department band — white card, #204E4D manager tile, avg + in-queue stats */
 export function DepartmentCard({ department }: DepartmentCardProps) {
   const { t } = useTranslation('common')
   const [expanded, setExpanded] = useState(true)
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
-      {/* Header band */}
-      <div className="bg-primary-700 flex items-center justify-between px-5 py-3 text-white">
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={() => setExpanded((v) => !v)}
-            className="flex h-7 w-7 items-center justify-center rounded-full bg-white/15"
-            aria-label="toggle"
-          >
-            {expanded ? (
-              <Icons.ArrowUp size={14} className="text-white" />
-            ) : (
-              <Icons.ArrowDown size={14} className="text-white" />
-            )}
-          </button>
-          <div className="flex flex-col">
-            <span className="text-sm font-semibold">{department.name}</span>
-            <span className="text-[11px] text-white/70">
-              {t('pages.training.team.dept.manager', 'Manager')}: {department.managerName}
-              {' · '}
-              {department.memberCount} {t('pages.training.team.dept.employees', 'employees')}
-            </span>
-          </div>
+    <div className="overflow-hidden rounded-xl border border-[#EBECE8] bg-white shadow-[0px_1px_2px_rgba(0,0,0,0.04)]">
+      <div className="flex flex-wrap items-center gap-3 border-b border-[#EBECE8] px-5 py-4">
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-[#204E4D] text-xs font-semibold text-[#BBFB5B]"
+          aria-label={expanded ? 'Collapse department' : 'Expand department'}
+        >
+          {department.managerInitials}
+        </button>
+
+        <div className="min-w-0 flex-1">
+          <h2 className="text-base leading-6 font-semibold text-[#05040D]">{department.name}</h2>
+          <p className="text-xs leading-4 text-[#4B5563]">
+            {t('pages.training.team.dept.manager', 'Manager')}: {department.managerName}
+            {' · '}
+            {department.memberCount} {t('pages.training.team.dept.employees', 'employees')}
+            {' · '}
+            {department.teamCount} {t('pages.training.team.dept.teams', 'teams')}
+          </p>
         </div>
-        <div className="flex items-center gap-3">
-          <span
-            className={`flex h-9 w-9 items-center justify-center rounded-full text-xs font-semibold ring-2 ring-white/30 ${BAND_BG[department.scoreBand]}`}
-          >
-            {department.averageScore}
-          </span>
-          <span className="text-[11px] text-white/80">/100</span>
+
+        <div className="flex items-start gap-3">
+          <StatColumn
+            label={t('pages.training.team.dept.average', 'Average')}
+            value={department.averageScore}
+            suffix="/100"
+            valueClassName={TEAM_SCORE_TEXT[department.scoreBand]}
+          />
+          <StatColumn
+            label={t('pages.training.team.dept.inQueue', 'In queue')}
+            value={department.queueCount}
+            valueClassName="text-[#B91C1C]"
+          />
         </div>
+
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md text-[#676767] hover:bg-[#F7F7F7]"
+          aria-hidden
+        >
+          {expanded ? <Icons.ArrowUp size={14} /> : <Icons.ArrowDown size={14} />}
+        </button>
       </div>
 
-      {/* Teams list */}
       {expanded ? (
-        <div className="flex flex-col gap-2 p-3">
+        <div className="flex flex-col gap-0 bg-white">
           {department.teams.map((team) => (
             <TeamCard key={team.id} team={team} />
           ))}

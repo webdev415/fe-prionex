@@ -1,25 +1,46 @@
-﻿import { useState } from 'react'
+﻿import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Button } from '@/components/ui/Button'
+import { useSearchParams } from 'react-router-dom'
 import { Icons } from '@/lib/icons'
+import { TASKS_SUB_TABS, type TasksSubTabId } from '../../types'
 import {
-  MOCK_TASKS,
   MOCK_TASK_KPIS,
   type MockTaskRow,
   type TaskPriority,
   type TaskStatus,
 } from '../../mocks/trainerWorkplaceMocks'
+import { TrainingSegmentedStrip } from '../chrome/TrainingSegmentedStrip'
+import { HeaderKpiTile } from '../chrome/HeaderKpiTile'
+import { AnalyticsMockTable } from '../analytics/AnalyticsMockTable'
+import {
+  ANALYTICS_TABLE_HEAD,
+  ANALYTICS_TABLE_ROW,
+  ANALYTICS_TABLE_TD,
+  ANALYTICS_TABLE_TH,
+} from '../analytics/analyticsTableStyles'
+import { AnalyticsRadioChips } from '../analytics/AnalyticsRadioChips'
+import { PendingFeatureDialog } from '../inbox/PendingFeatureDialog'
+import { TrainingPrimaryButton } from '../training/TrainingToolbar'
+import { TASKS_SUB_TAB_COUNTS, filterTasksBySubTab } from './tasksSubTabCounts'
 
-/**
- * Tasks top-tab (KAN-411 revised). Filter chips strip + Tasks table with
- * priority + status badges. The "Weekly tasks — share an overdue view"
- * banner mirrors the Figma frame.
- */
+const SUB_TAB_LABELS: Record<TasksSubTabId, { key: string; fallback: string }> = {
+  'assigned-by-me': {
+    key: 'pages.training.tasks.subTabs.assignedByMe',
+    fallback: 'Assigned by me',
+  },
+  'assigned-to-scope': {
+    key: 'pages.training.tasks.subTabs.assignedToScope',
+    fallback: 'Assigned to scope',
+  },
+  overdue: { key: 'pages.training.tasks.subTabs.overdue', fallback: 'Overdue' },
+  completed: { key: 'pages.training.tasks.subTabs.completed', fallback: 'Completed' },
+}
+
 const STATUS_TONE: Record<TaskStatus, string> = {
-  open: 'bg-amber-100 text-amber-700',
-  in_progress: 'bg-blue-100 text-blue-700',
-  overdue: 'bg-red-100 text-red-700',
-  completed: 'bg-emerald-100 text-emerald-700',
+  open: 'bg-[#FFFBEB] text-[#D97706]',
+  in_progress: 'bg-[#EFF6FF] text-[#2563EB]',
+  overdue: 'bg-[#FEF2F2] text-[#B91C1C]',
+  completed: 'bg-[#F0FDF4] text-[#15803D]',
 }
 
 const STATUS_LABEL: Record<TaskStatus, string> = {
@@ -43,118 +64,180 @@ const PRIORITY_LABEL: Record<TaskPriority, string> = {
   low: 'Low',
 }
 
+function isSubTab(value: string | null): value is TasksSubTabId {
+  return value !== null && (TASKS_SUB_TABS as string[]).includes(value)
+}
+
 export function TasksTab() {
   const { t } = useTranslation('common')
+  const [searchParams, setSearchParams] = useSearchParams()
   const [statusFilter, setStatusFilter] = useState<TaskStatus | 'all'>('all')
+  const [createOpen, setCreateOpen] = useState(false)
 
-  const kpi = MOCK_TASK_KPIS
-  const filtered = MOCK_TASKS.filter(
-    (task) => statusFilter === 'all' || task.status === statusFilter
+  const rawSub = searchParams.get('sub')
+  const activeSubTab: TasksSubTabId = isSubTab(rawSub) ? rawSub : 'assigned-by-me'
+
+  const setActiveSubTab = (sub: TasksSubTabId) => {
+    const next = new URLSearchParams(searchParams)
+    next.set('tab', 'tasks')
+    next.set('sub', sub)
+    setSearchParams(next, { replace: true })
+    if (sub === 'overdue') setStatusFilter('all')
+  }
+
+  const subTabs = useMemo(
+    () =>
+      TASKS_SUB_TABS.map((sub) => {
+        const meta = SUB_TAB_LABELS[sub]
+        return {
+          id: sub,
+          label: t(meta.key, meta.fallback),
+          count: TASKS_SUB_TAB_COUNTS[sub],
+        }
+      }),
+    [t]
   )
 
-  const chips: { id: TaskStatus | 'all'; label: string; count: number; tone: string }[] = [
-    {
-      id: 'all',
-      label: t('pages.training.tasks.chips.all', 'All tasks'),
-      count: kpi.total,
-      tone: 'bg-primary-50 text-primary-700',
-    },
-    {
-      id: 'open',
-      label: t('pages.training.tasks.chips.open', 'Open'),
-      count: kpi.open,
-      tone: 'bg-amber-50 text-amber-700',
-    },
-    {
-      id: 'in_progress',
-      label: t('pages.training.tasks.chips.inProgress', 'In progress'),
-      count: kpi.inProgress,
-      tone: 'bg-blue-50 text-blue-700',
-    },
-    {
-      id: 'overdue',
-      label: t('pages.training.tasks.chips.overdue', 'Overdue'),
-      count: kpi.overdue,
-      tone: 'bg-red-50 text-red-700',
-    },
-    {
-      id: 'completed',
-      label: t('pages.training.tasks.chips.completed', 'Completed'),
-      count: kpi.completed,
-      tone: 'bg-emerald-50 text-emerald-700',
-    },
-  ]
+  const kpi = MOCK_TASK_KPIS
+
+  const filtered = useMemo(() => {
+    const base = filterTasksBySubTab(activeSubTab)
+    if (statusFilter === 'all') return base
+    return base.filter((task) => task.status === statusFilter)
+  }, [activeSubTab, statusFilter])
+
+  const statusChips = useMemo(
+    () =>
+      (['all', 'open', 'in_progress', 'overdue', 'completed'] as const).map((s) => ({
+        id: s,
+        label: s === 'all' ? t('pages.training.tasks.chips.all', 'All statuses') : STATUS_LABEL[s],
+        active: statusFilter === s,
+        onClick: () => setStatusFilter(s),
+      })),
+    [statusFilter, t]
+  )
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Overdue-week banner (mirrors the Figma frame) */}
-      <div className="flex items-center justify-between gap-3 rounded-2xl border border-red-100 bg-red-50/60 px-4 py-3">
-        <div className="flex items-center gap-2">
-          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-red-100 text-red-600">
-            <Icons.Warning size={14} />
-          </span>
-          <span className="text-xs font-medium text-red-700">
-            {t('pages.training.tasks.overdueBanner', 'Weekly tasks — share an overdue view')}
-          </span>
-        </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="rounded-full text-[11px] text-red-700"
-          leftIcon={<Icons.View size={12} className="text-red-700" />}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <TrainingSegmentedStrip
+          items={subTabs}
+          activeId={activeSubTab}
+          onChange={(id) => setActiveSubTab(id as TasksSubTabId)}
+        />
+        <TrainingPrimaryButton
+          onClick={() => setCreateOpen(true)}
+          leftIcon={<Icons.Add size={14} className="text-white" />}
         >
-          {t('pages.training.tasks.overdueBannerCta', 'View overdue')}
-        </Button>
+          {t('pages.training.tasks.create', 'Create task')}
+        </TrainingPrimaryButton>
       </div>
 
-      {/* Status chips */}
-      <div className="flex flex-wrap items-center gap-2">
-        {chips.map((chip) => {
-          const isActive = chip.id === statusFilter
-          return (
-            <button
-              key={chip.id}
-              type="button"
-              onClick={() => setStatusFilter(chip.id)}
-              className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-medium transition-colors ${
-                isActive
-                  ? 'bg-primary-500 border-primary-500 text-white'
-                  : 'border-gray-200 bg-white text-gray-700'
-              }`}
-            >
-              {chip.label}
-              <span
-                className={`rounded-full px-1.5 py-0.5 text-[9px] ${
-                  isActive ? 'bg-white/20 text-white' : chip.tone
-                }`}
-              >
-                {chip.count}
-              </span>
-            </button>
-          )
-        })}
+      <div className="flex flex-wrap gap-3">
+        <HeaderKpiTile
+          label={t('pages.training.tasks.kpis.total', 'Total tasks')}
+          value={String(kpi.total)}
+          icon={Icons.CheckmarkSquare03}
+          iconColor="text-[#204E4D]"
+          iconBg="bg-white"
+          accentColor="#204E4D"
+        />
+        <HeaderKpiTile
+          label={t('pages.training.tasks.kpis.open', 'Open')}
+          value={String(kpi.open)}
+          icon={Icons.Clock01}
+          iconColor="text-[#D97706]"
+          iconBg="bg-white"
+          accentColor="#D97706"
+        />
+        <HeaderKpiTile
+          label={t('pages.training.tasks.kpis.inProgress', 'In progress')}
+          value={String(kpi.inProgress)}
+          icon={Icons.Activity01}
+          iconColor="text-[#2563EB]"
+          iconBg="bg-white"
+          accentColor="#2563EB"
+        />
+        <HeaderKpiTile
+          label={t('pages.training.tasks.kpis.overdue', 'Overdue')}
+          value={String(kpi.overdue)}
+          icon={Icons.Warning}
+          iconColor="text-[#EF4444]"
+          iconBg="bg-white"
+          accentColor="#EF4444"
+        />
       </div>
 
-      {/* Tasks table */}
-      <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white">
-        <table className="w-full text-xs">
-          <thead className="bg-gray-50 text-left text-[10px] text-gray-500 uppercase">
-            <tr>
-              <th className="px-4 py-3">{t('pages.training.tasks.cols.date', 'Date/Time')}</th>
-              <th className="px-4 py-3">{t('pages.training.tasks.cols.task', 'Task')}</th>
-              <th className="px-4 py-3">{t('pages.training.tasks.cols.executor', 'Executor')}</th>
-              <th className="px-4 py-3">{t('pages.training.tasks.cols.author', 'Author')}</th>
-              <th className="px-4 py-3">{t('pages.training.tasks.cols.priority', 'Priority')}</th>
-              <th className="px-4 py-3">{t('pages.training.tasks.cols.status', 'Status')}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map((task) => (
-              <TaskRow key={task.id} task={task} />
-            ))}
-          </tbody>
-        </table>
+      {kpi.overdue > 0 ? (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#FECACA] bg-[#FEF2F2] px-4 py-3">
+          <div className="flex items-center gap-2">
+            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#FEE2E2] text-[#B91C1C]">
+              <Icons.Warning size={14} />
+            </span>
+            <span className="text-xs font-medium text-[#B91C1C]">
+              {t('pages.training.tasks.overdueBanner', 'Weekly tasks — share an overdue view')}
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setActiveSubTab('overdue')}
+            className="inline-flex items-center gap-1 rounded-md border border-[#FECACA] bg-white px-3 py-1.5 text-[11px] font-medium text-[#B91C1C] hover:bg-[#FFF5F5]"
+          >
+            <Icons.View size={12} />
+            {t('pages.training.tasks.overdueBannerCta', 'View overdue')}
+          </button>
+        </div>
+      ) : null}
+
+      <div className="rounded-lg border border-[#EBECE8] bg-white px-4 py-3 shadow-[0px_1px_2px_rgba(0,0,0,0.04)]">
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="text-xs font-medium text-[#05040D]">
+            {t('pages.training.interactions.status.label', 'Status')}
+          </span>
+          <AnalyticsRadioChips items={statusChips} />
+        </div>
       </div>
+
+      <AnalyticsMockTable>
+        <thead className={ANALYTICS_TABLE_HEAD}>
+          <tr>
+            <th className={ANALYTICS_TABLE_TH}>
+              {t('pages.training.tasks.cols.date', 'Date/Time')}
+            </th>
+            <th className={ANALYTICS_TABLE_TH}>{t('pages.training.tasks.cols.task', 'Task')}</th>
+            <th className={ANALYTICS_TABLE_TH}>
+              {t('pages.training.tasks.cols.executor', 'Executor')}
+            </th>
+            <th className={ANALYTICS_TABLE_TH}>
+              {t('pages.training.tasks.cols.author', 'Author')}
+            </th>
+            <th className={ANALYTICS_TABLE_TH}>
+              {t('pages.training.tasks.cols.deadline', 'Deadline')}
+            </th>
+            <th className={ANALYTICS_TABLE_TH}>
+              {t('pages.training.tasks.cols.priority', 'Priority')}
+            </th>
+            <th className={ANALYTICS_TABLE_TH}>
+              {t('pages.training.tasks.cols.status', 'Status')}
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {filtered.map((task) => (
+            <TaskRow key={task.id} task={task} />
+          ))}
+        </tbody>
+      </AnalyticsMockTable>
+
+      <PendingFeatureDialog
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        titleKey="pages.training.tasks.create"
+        titleFallback="Create task"
+        descriptionKey="pages.training.tasks.pending.create"
+        descriptionFallback="Assign a correction or coaching task to an operator with a deadline."
+        dependsOnIssue="KAN-411"
+      />
     </div>
   )
 }
@@ -163,18 +246,19 @@ function TaskRow({ task }: { task: MockTaskRow }) {
   const priorityTone = PRIORITY_TONE[task.priority]
   const statusTone = STATUS_TONE[task.status]
   return (
-    <tr className="border-t border-gray-100 hover:bg-gray-50">
-      <td className="px-4 py-3 text-gray-600">{task.dateLabel}</td>
-      <td className="text-dark-500 px-4 py-3 font-medium">{task.title}</td>
-      <td className="px-4 py-3 text-gray-700">{task.executor}</td>
-      <td className="px-4 py-3 text-gray-600">{task.author}</td>
-      <td className="px-4 py-3">
+    <tr className={ANALYTICS_TABLE_ROW}>
+      <td className={ANALYTICS_TABLE_TD}>{task.dateLabel}</td>
+      <td className={`${ANALYTICS_TABLE_TD} font-medium text-[#05040D]`}>{task.title}</td>
+      <td className={ANALYTICS_TABLE_TD}>{task.executor}</td>
+      <td className={ANALYTICS_TABLE_TD}>{task.author}</td>
+      <td className={ANALYTICS_TABLE_TD}>{task.deadlineLabel ?? '—'}</td>
+      <td className={ANALYTICS_TABLE_TD}>
         <span className={`inline-flex items-center gap-1.5 ${priorityTone.text}`}>
           <span className={`inline-block h-2 w-2 rounded-full ${priorityTone.dot}`} />
           <span className="text-[11px] font-medium">{PRIORITY_LABEL[task.priority]}</span>
         </span>
       </td>
-      <td className="px-4 py-3">
+      <td className={ANALYTICS_TABLE_TD}>
         <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${statusTone}`}>
           {STATUS_LABEL[task.status]}
         </span>

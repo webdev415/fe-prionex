@@ -119,8 +119,10 @@ export function DateRangeQuickFilter({
                 type="button"
                 onClick={() => handleQuickRange(qr.id)}
                 className={cn(
-                  'text-dark-500 flex cursor-pointer items-center justify-center gap-2 rounded-md bg-white px-3 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px] shadow-sm sm:flex-1 sm:px-4',
-                  active ? 'bg-primary-500 text-white' : 'hover:bg-gray-50'
+                  'flex cursor-pointer items-center justify-center gap-2 rounded-md px-3 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px] sm:flex-1 sm:px-4',
+                  active
+                    ? 'bg-[#204E4D] text-white shadow-sm'
+                    : 'bg-white text-[#05040D] shadow-sm hover:bg-[#F7F7F7]'
                 )}
               >
                 {t(qr.key, qr.fallback)}

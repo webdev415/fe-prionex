@@ -8,6 +8,13 @@ import {
   type PromiseStatus,
 } from '../../mocks/trainerWorkplaceMocks'
 import { PeriodFilterStrip, type PeriodOption } from './PeriodFilterStrip'
+import { AnalyticsMockTable } from './AnalyticsMockTable'
+import {
+  ANALYTICS_TABLE_HEAD,
+  ANALYTICS_TABLE_ROW,
+  ANALYTICS_TABLE_TD,
+  ANALYTICS_TABLE_TH,
+} from './analyticsTableStyles'
 
 /**
  * Promises and Callbacks sub-tab (KAN-415). KPI strip + table of promised
@@ -86,35 +93,38 @@ export function PromisesAndCallbacksSubTab() {
         }))}
       />
 
-      {/* Table */}
-      <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white">
-        <table className="w-full text-xs">
-          <thead className="bg-gray-50 text-left text-[10px] text-gray-500 uppercase">
-            <tr>
-              <th className="px-4 py-3">{t('pages.training.promises.cols.date', 'Date/Time')}</th>
-              <th className="px-4 py-3">
-                {t('pages.training.promises.cols.operator', 'Operator')}
-              </th>
-              <th className="px-4 py-3">{t('pages.training.promises.cols.client', 'Client')}</th>
-              <th className="px-4 py-3">
-                {t('pages.training.promises.cols.agreement', 'Agreement')}
-              </th>
-              <th className="px-4 py-3 text-right">
-                {t('pages.training.promises.cols.amount', 'Amount')}
-              </th>
-              <th className="px-4 py-3">
-                {t('pages.training.promises.cols.paymentDate', 'Payment date')}
-              </th>
-              <th className="px-4 py-3">{t('pages.training.promises.cols.status', 'Status')}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredRows.map((row) => (
-              <PromiseRow key={row.id} row={row} />
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <AnalyticsMockTable>
+        <thead className={ANALYTICS_TABLE_HEAD}>
+          <tr>
+            <th className={ANALYTICS_TABLE_TH}>
+              {t('pages.training.promises.cols.date', 'Date/Time')}
+            </th>
+            <th className={ANALYTICS_TABLE_TH}>
+              {t('pages.training.promises.cols.operator', 'Operator')}
+            </th>
+            <th className={ANALYTICS_TABLE_TH}>
+              {t('pages.training.promises.cols.client', 'Client')}
+            </th>
+            <th className={ANALYTICS_TABLE_TH}>
+              {t('pages.training.promises.cols.agreement', 'Agreement')}
+            </th>
+            <th className={`${ANALYTICS_TABLE_TH} text-right`}>
+              {t('pages.training.promises.cols.amount', 'Amount')}
+            </th>
+            <th className={ANALYTICS_TABLE_TH}>
+              {t('pages.training.promises.cols.paymentDate', 'Payment date')}
+            </th>
+            <th className={ANALYTICS_TABLE_TH}>
+              {t('pages.training.promises.cols.status', 'Status')}
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {filteredRows.map((row) => (
+            <PromiseRow key={row.id} row={row} />
+          ))}
+        </tbody>
+      </AnalyticsMockTable>
     </div>
   )
 }
@@ -131,16 +141,16 @@ function KpiTile({ label, value, tone }: { label: string; value: string; tone: s
 function PromiseRow({ row }: { row: MockPromiseRow }) {
   const tone = STATUS_TONE[row.status]
   return (
-    <tr className="border-t border-gray-100 hover:bg-gray-50">
-      <td className="px-4 py-3 text-gray-600">{row.dateLabel}</td>
-      <td className="text-dark-500 px-4 py-3 font-medium">{row.operator}</td>
-      <td className="px-4 py-3 text-gray-700">{row.client}</td>
-      <td className="px-4 py-3 text-gray-600">{row.agreement}</td>
-      <td className="px-4 py-3 text-right font-medium text-gray-700">
+    <tr className={ANALYTICS_TABLE_ROW}>
+      <td className={ANALYTICS_TABLE_TD}>{row.dateLabel}</td>
+      <td className={`${ANALYTICS_TABLE_TD} font-medium text-[#05040D]`}>{row.operator}</td>
+      <td className={ANALYTICS_TABLE_TD}>{row.client}</td>
+      <td className={ANALYTICS_TABLE_TD}>{row.agreement}</td>
+      <td className={`${ANALYTICS_TABLE_TD} text-right font-medium`}>
         {row.amount.toLocaleString()} ₴
       </td>
-      <td className="px-4 py-3 text-gray-600">{row.paymentDateLabel}</td>
-      <td className="px-4 py-3">
+      <td className={ANALYTICS_TABLE_TD}>{row.paymentDateLabel}</td>
+      <td className={ANALYTICS_TABLE_TD}>
         <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${tone}`}>
           {STATUS_LABEL[row.status]}
         </span>

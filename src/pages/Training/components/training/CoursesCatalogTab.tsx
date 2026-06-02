@@ -1,88 +1,117 @@
 ﻿import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Button } from '@/components/ui/Button'
-import { Input } from '@/components/ui/Input'
 import { Icons } from '@/lib/icons'
+import type { MockCourse } from '../../mocks/trainerWorkplaceMocks'
 import { MOCK_COURSES } from '../../mocks/trainerWorkplaceMocks'
+import { PendingFeatureDialog } from '../inbox/PendingFeatureDialog'
 import { CourseCard } from './CourseCard'
+import { TrainingFilterChips, TrainingPrimaryButton, TrainingSearchBar } from './TrainingToolbar'
 
-/**
- * Course Catalogue sub-tab (KAN-498). Search + category chips + "Add Course"
- * toolbar; card grid below.
- */
 const CATEGORY_CHIPS = [
-  'All categories',
-  'Hard Collection',
-  'Soft Skills',
-  'Tone',
-  'Analytics',
-  'Compliance',
+  { id: 'all', label: 'All categories' },
+  { id: 'Hard Collection', label: 'Hard Collection' },
+  { id: 'Soft Skills', label: 'Soft Skills' },
+  { id: 'Tone', label: 'Tone' },
+  { id: 'Analytics', label: 'Analytics' },
+  { id: 'Compliance', label: 'Compliance' },
 ]
+
+type DialogKind = 'add' | 'details' | 'assign' | null
 
 export function CoursesCatalogTab() {
   const { t } = useTranslation('common')
   const [query, setQuery] = useState('')
-  const [category, setCategory] = useState('All categories')
+  const [category, setCategory] = useState('all')
+  const [dialog, setDialog] = useState<DialogKind>(null)
+  const [selectedCourse, setSelectedCourse] = useState<MockCourse | null>(null)
 
   const filtered = MOCK_COURSES.filter((c) => {
     const matchesQuery = !query || c.title.toLowerCase().includes(query.toLowerCase())
-    const matchesCategory = category === 'All categories' || c.category === category
+    const matchesCategory = category === 'all' || c.category === category
     return matchesQuery && matchesCategory
   })
+
+  const openDetails = (course: MockCourse) => {
+    setSelectedCourse(course)
+    setDialog('details')
+  }
+
+  const openAssign = (course: MockCourse) => {
+    setSelectedCourse(course)
+    setDialog('assign')
+  }
 
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-dark-500 text-base font-semibold">
+        <h2 className="text-base font-semibold text-[#05040D]">
           {t('pages.training.training.courses.title', 'Course catalog')}
         </h2>
-        <Button
-          variant="primary"
-          size="md"
+        <TrainingPrimaryButton
+          onClick={() => setDialog('add')}
           leftIcon={<Icons.Add size={14} className="text-white" />}
-          className="h-[40px] rounded-full px-4 text-xs"
         >
           {t('pages.training.training.courses.addCourse', 'Add a course')}
-        </Button>
+        </TrainingPrimaryButton>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="relative">
-          <Icons.Search
-            size={14}
-            className="absolute top-1/2 left-3 -translate-y-1/2 text-gray-400"
-          />
-          <Input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder={t('pages.training.training.courses.searchPlaceholder', 'Search...')}
-            className="h-[36px] w-[240px] rounded-full bg-white pl-9 text-xs"
-          />
-        </div>
-        {CATEGORY_CHIPS.map((c) => {
-          const isActive = c === category
-          return (
-            <button
-              key={c}
-              type="button"
-              onClick={() => setCategory(c)}
-              className={`rounded-full border px-3 py-1 text-[11px] font-medium transition-colors ${
-                isActive
-                  ? 'bg-primary-50 border-primary-300 text-primary-700'
-                  : 'border-gray-200 bg-white text-gray-600'
-              }`}
-            >
-              {c}
-            </button>
-          )
-        })}
+      <div className="flex flex-wrap items-center gap-3">
+        <TrainingSearchBar
+          value={query}
+          onChange={setQuery}
+          placeholder={t('pages.training.training.courses.searchPlaceholder', 'Search...')}
+        />
+        <TrainingFilterChips items={CATEGORY_CHIPS} activeId={category} onChange={setCategory} />
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
         {filtered.map((course) => (
-          <CourseCard key={course.id} course={course} />
+          <CourseCard
+            key={course.id}
+            course={course}
+            onDetails={openDetails}
+            onAssign={openAssign}
+          />
         ))}
       </div>
+
+      <PendingFeatureDialog
+        open={dialog === 'add'}
+        onClose={() => setDialog(null)}
+        titleKey="pages.training.training.courses.addCourse"
+        titleFallback="Add a course"
+        descriptionKey="pages.training.training.pending.addCourse"
+        descriptionFallback="Create a new course with modules, materials, and assignment rules."
+        dependsOnIssue="KAN-416"
+      />
+
+      <PendingFeatureDialog
+        open={dialog === 'details'}
+        onClose={() => {
+          setDialog(null)
+          setSelectedCourse(null)
+        }}
+        titleKey="pages.training.training.courses.details"
+        titleFallback="Course details"
+        descriptionKey="pages.training.training.pending.courseDetails"
+        descriptionFallback="Open the full course outline, modules, and enrollment stats."
+        dependsOnIssue="KAN-416"
+        operatorName={selectedCourse?.title}
+      />
+
+      <PendingFeatureDialog
+        open={dialog === 'assign'}
+        onClose={() => {
+          setDialog(null)
+          setSelectedCourse(null)
+        }}
+        titleKey="pages.training.training.courses.assign"
+        titleFallback="Assign course"
+        descriptionKey="pages.training.training.pending.assignCourse"
+        descriptionFallback="Assign this course to operators or teams with a deadline."
+        dependsOnIssue="KAN-416"
+        operatorName={selectedCourse?.title}
+      />
     </div>
   )
 }

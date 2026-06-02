@@ -1,16 +1,18 @@
 import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
+import { AnalyticsRadioChips, type AnalyticsRadioChipItem } from './AnalyticsRadioChips'
 
 /**
  * Shared period selector used by every Action Analysis sub-tab. Mirrors the
- * "Period · Today · Yesterday · 7 days · 30 days" pill row in the Figma.
+ * Figma white filter bar with period pills + optional status radio chips.
  */
 export type PeriodOption = 'today' | 'yesterday' | '7d' | '30d' | 'custom'
 
 export interface PeriodFilterStripProps {
   value?: PeriodOption
   onChange?: (next: PeriodOption) => void
-  extraChips?: { id: string; label: string; active?: boolean; onClick?: () => void }[]
+  extraChips?: AnalyticsRadioChipItem[]
+  statusLabel?: string
   rightSlot?: React.ReactNode
 }
 
@@ -26,51 +28,49 @@ export function PeriodFilterStrip({
   value = 'today',
   onChange,
   extraChips = [],
+  statusLabel,
   rightSlot,
 }: PeriodFilterStripProps) {
   const { t } = useTranslation('common')
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-gray-100 bg-white px-3 py-2 shadow-sm">
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="text-[10px] font-medium tracking-wide text-gray-500 uppercase">
+    <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[#EBECE8] bg-white px-4 py-3 shadow-[0px_1px_2px_rgba(0,0,0,0.04)]">
+      <div className="flex flex-wrap items-center gap-3">
+        <span className="text-xs font-medium tracking-[-0.02em] text-[#05040D]">
           {t('pages.training.period.label', 'Period')}
         </span>
-        {PERIODS.map((p) => {
-          const isActive = p.id === value
-          return (
-            <button
-              key={p.id}
-              type="button"
-              onClick={() => onChange?.(p.id)}
-              className={`flex items-center gap-1 rounded-full border px-3 py-1 text-[11px] font-medium transition-colors ${
-                isActive
-                  ? 'bg-primary-500 border-primary-500 text-white'
-                  : 'border-gray-200 bg-white text-gray-600'
-              }`}
-            >
-              {p.id === 'custom' ? (
-                <Icons.Calendar size={11} className={isActive ? 'text-white' : 'text-gray-500'} />
-              ) : null}
-              {t(p.key, p.fallback)}
-            </button>
-          )
-        })}
-        {extraChips.length > 0 ? <span className="mx-1 h-4 w-px bg-gray-200" aria-hidden /> : null}
-        {extraChips.map((chip) => (
-          <button
-            key={chip.id}
-            type="button"
-            onClick={chip.onClick}
-            className={`rounded-full border px-3 py-1 text-[11px] font-medium transition-colors ${
-              chip.active
-                ? 'bg-primary-50 border-primary-300 text-primary-700'
-                : 'border-gray-200 bg-white text-gray-600'
-            }`}
-          >
-            {chip.label}
-          </button>
-        ))}
+        <div className="inline-flex flex-wrap gap-1 rounded-md border border-[#EBECE8] bg-[#F7F7F7] p-0.5">
+          {PERIODS.map((p) => {
+            const isActive = p.id === value
+            return (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => onChange?.(p.id)}
+                className={`flex items-center gap-1 rounded px-3 py-1.5 text-xs font-medium tracking-[-0.02em] transition-colors ${
+                  isActive ? 'bg-[#204E4D] text-white shadow-sm' : 'text-[#545454] hover:bg-white'
+                }`}
+              >
+                {p.id === 'custom' ? (
+                  <Icons.Calendar
+                    size={12}
+                    className={isActive ? 'text-white' : 'text-[#676767]'}
+                  />
+                ) : null}
+                {t(p.key, p.fallback)}
+              </button>
+            )
+          })}
+        </div>
+        {extraChips.length > 0 ? (
+          <>
+            <span className="hidden h-6 w-px bg-[#EDEDED] sm:block" aria-hidden />
+            <span className="text-xs font-medium tracking-[-0.02em] text-[#05040D]">
+              {statusLabel ?? t('pages.training.interactions.status.label', 'Status')}
+            </span>
+            <AnalyticsRadioChips items={extraChips} />
+          </>
+        ) : null}
       </div>
       {rightSlot ? <div className="flex items-center gap-2">{rightSlot}</div> : null}
     </div>

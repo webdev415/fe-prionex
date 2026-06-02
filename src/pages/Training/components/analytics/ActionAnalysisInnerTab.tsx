@@ -9,6 +9,7 @@ import { SuccessfulClosuresSubTab } from './SuccessfulClosuresSubTab'
 import { LeaksSubTab } from './LeaksSubTab'
 import { ThirdPartiesSubTab } from './ThirdPartiesSubTab'
 import { ScriptAnalyticsRedesignSubTab } from './ScriptAnalyticsRedesignSubTab'
+import { TrainingSegmentedStrip } from '../chrome/TrainingSegmentedStrip'
 import { InteractionsKpiStrip } from './InteractionsKpiStrip'
 import { MockTimeAtWorkSubTab } from './MockTimeAtWorkSubTab'
 import { MockHeatMapSubTab } from './MockHeatMapSubTab'
@@ -70,30 +71,25 @@ export function ActionAnalysisInnerTab() {
     setSearchParams(next, { replace: true })
   }
 
-  const subTabs = useMemo(() => ACTION_ANALYSIS_SUB_TABS, [])
+  const subTabs = useMemo(
+    () =>
+      ACTION_ANALYSIS_SUB_TABS.map((sub) => {
+        const meta = SUB_TAB_LABELS[sub]
+        return {
+          id: sub,
+          label: t(meta.key, meta.fallback),
+        }
+      }),
+    [t]
+  )
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap gap-2">
-        {subTabs.map((sub) => {
-          const meta = SUB_TAB_LABELS[sub]
-          const isActive = activeSubTab === sub
-          return (
-            <button
-              key={sub}
-              type="button"
-              onClick={() => setActiveSubTab(sub)}
-              className={`rounded-full border px-3 py-1.5 text-[11px] font-medium transition-colors ${
-                isActive
-                  ? 'bg-primary-500 border-primary-500 text-white'
-                  : 'hover:border-primary-300 border-gray-200 bg-white text-gray-700'
-              }`}
-            >
-              {t(meta.key, meta.fallback)}
-            </button>
-          )
-        })}
-      </div>
+      <TrainingSegmentedStrip
+        items={subTabs}
+        activeId={activeSubTab}
+        onChange={(id) => setActiveSubTab(id as ActionAnalysisSubTabId)}
+      />
 
       <div>
         {activeSubTab === 'interactions' && (

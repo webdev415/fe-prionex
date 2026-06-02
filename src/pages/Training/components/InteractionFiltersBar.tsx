@@ -24,7 +24,8 @@ import type { ScopedUserIds } from '../lib/scope'
 import { DateRangeQuickFilter } from './DateRangeQuickFilter'
 import { EmployeeFilterDropdown } from './EmployeeFilterDropdown'
 
-const FILTER_SURFACE = 'rounded-xl bg-white/50 p-4 shadow-sm sm:p-6'
+const FILTER_SURFACE =
+  'rounded-xl border border-[#EBECE8] bg-white p-4 shadow-[0px_1px_2px_rgba(0,0,0,0.04)] sm:p-6'
 
 interface Props {
   value: InteractionBarState
@@ -388,9 +389,8 @@ export function InteractionFiltersBar({
           </Button>
           <Button
             type="button"
-            variant="secondary"
             onClick={handleApply}
-            className="h-[45px] w-full rounded sm:w-auto sm:px-8"
+            className="h-[45px] w-full rounded bg-[#204E4D] text-white hover:bg-[#1a3f3e] sm:w-auto sm:px-8"
           >
             {t('pages.training.filters.applyFilters', 'Apply Filters')}
           </Button>

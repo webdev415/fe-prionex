@@ -3,6 +3,13 @@ import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
 import { MOCK_LEAKS, MOCK_LEAKS_KPIS, type MockLeakRow } from '../../mocks/trainerWorkplaceMocks'
 import { PeriodFilterStrip, type PeriodOption } from './PeriodFilterStrip'
+import { AnalyticsMockTable } from './AnalyticsMockTable'
+import {
+  ANALYTICS_TABLE_HEAD,
+  ANALYTICS_TABLE_ROW,
+  ANALYTICS_TABLE_TD,
+  ANALYTICS_TABLE_TH,
+} from './analyticsTableStyles'
 
 /**
  * Leaks sub-tab (KAN-415). Escalations / lost-client view — KPI strip +
@@ -11,11 +18,41 @@ import { PeriodFilterStrip, type PeriodOption } from './PeriodFilterStrip'
 export function LeaksSubTab() {
   const { t } = useTranslation('common')
   const [period, setPeriod] = useState<PeriodOption>('today')
+  const [followUpFilter, setFollowUpFilter] = useState<'all' | 'not' | 'done'>('all')
   const k = MOCK_LEAKS_KPIS
+
+  const rows = MOCK_LEAKS.filter((row) => {
+    if (followUpFilter === 'not') return !row.followedUp
+    if (followUpFilter === 'done') return row.followedUp
+    return true
+  })
 
   return (
     <div className="flex flex-col gap-4">
-      <PeriodFilterStrip value={period} onChange={setPeriod} />
+      <PeriodFilterStrip
+        value={period}
+        onChange={setPeriod}
+        extraChips={[
+          {
+            id: 'all',
+            label: 'All',
+            active: followUpFilter === 'all',
+            onClick: () => setFollowUpFilter('all'),
+          },
+          {
+            id: 'not',
+            label: 'Not followed up',
+            active: followUpFilter === 'not',
+            onClick: () => setFollowUpFilter('not'),
+          },
+          {
+            id: 'done',
+            label: 'Followed up',
+            active: followUpFilter === 'done',
+            onClick: () => setFollowUpFilter('done'),
+          },
+        ]}
+      />
 
       <div className="rounded-2xl border border-emerald-100 bg-emerald-50/60 px-4 py-3 text-[11px] text-emerald-700">
         {t(
@@ -52,49 +89,38 @@ export function LeaksSubTab() {
         </div>
       </div>
 
-      {/* Follow-up chips */}
-      <div className="flex flex-wrap items-center gap-2">
-        {['All', 'Not followed up', 'Followed up'].map((label, idx) => (
-          <button
-            key={label}
-            type="button"
-            className={`rounded-full border px-3 py-1 text-[11px] font-medium transition-colors ${
-              idx === 0
-                ? 'bg-primary-500 border-primary-500 text-white'
-                : 'border-gray-200 bg-white text-gray-600'
-            }`}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-
-      <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white">
-        <table className="w-full text-xs">
-          <thead className="bg-gray-50 text-left text-[10px] text-gray-500 uppercase">
-            <tr>
-              <th className="px-4 py-3">{t('pages.training.leaks.cols.operator', 'Operator')}</th>
-              <th className="px-4 py-3">{t('pages.training.leaks.cols.client', 'Client')}</th>
-              <th className="px-4 py-3">{t('pages.training.leaks.cols.agreement', 'Agreement')}</th>
-              <th className="px-4 py-3 text-right">
-                {t('pages.training.leaks.cols.amount', 'Amount of promise')}
-              </th>
-              <th className="px-4 py-3">
-                {t('pages.training.leaks.cols.dateOfPromise', 'Date of promise')}
-              </th>
-              <th className="px-4 py-3">{t('pages.training.leaks.cols.followUp', 'Follow-up')}</th>
-              <th className="px-4 py-3">
-                {t('pages.training.leaks.cols.callAfter', 'Call after escalation')}
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {MOCK_LEAKS.map((row) => (
-              <LeakRow key={row.id} row={row} />
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <AnalyticsMockTable>
+        <thead className={ANALYTICS_TABLE_HEAD}>
+          <tr>
+            <th className={ANALYTICS_TABLE_TH}>
+              {t('pages.training.leaks.cols.operator', 'Operator')}
+            </th>
+            <th className={ANALYTICS_TABLE_TH}>
+              {t('pages.training.leaks.cols.client', 'Client')}
+            </th>
+            <th className={ANALYTICS_TABLE_TH}>
+              {t('pages.training.leaks.cols.agreement', 'Agreement')}
+            </th>
+            <th className={`${ANALYTICS_TABLE_TH} text-right`}>
+              {t('pages.training.leaks.cols.amount', 'Amount of promise')}
+            </th>
+            <th className={ANALYTICS_TABLE_TH}>
+              {t('pages.training.leaks.cols.dateOfPromise', 'Date of promise')}
+            </th>
+            <th className={ANALYTICS_TABLE_TH}>
+              {t('pages.training.leaks.cols.followUp', 'Follow-up')}
+            </th>
+            <th className={ANALYTICS_TABLE_TH}>
+              {t('pages.training.leaks.cols.callAfter', 'Call after escalation')}
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row) => (
+            <LeakRow key={row.id} row={row} />
+          ))}
+        </tbody>
+      </AnalyticsMockTable>
     </div>
   )
 }
@@ -113,20 +139,20 @@ function LeakRow({ row }: { row: MockLeakRow }) {
     ? 'bg-emerald-100 text-emerald-700'
     : 'bg-red-100 text-red-700'
   return (
-    <tr className="border-t border-gray-100 hover:bg-gray-50">
-      <td className="text-dark-500 px-4 py-3 font-medium">{row.operator}</td>
-      <td className="px-4 py-3 text-gray-700">{row.client}</td>
-      <td className="px-4 py-3 text-gray-600">{row.agreement}</td>
-      <td className="px-4 py-3 text-right font-medium text-gray-700">
+    <tr className={ANALYTICS_TABLE_ROW}>
+      <td className={`${ANALYTICS_TABLE_TD} font-medium text-[#05040D]`}>{row.operator}</td>
+      <td className={ANALYTICS_TABLE_TD}>{row.client}</td>
+      <td className={ANALYTICS_TABLE_TD}>{row.agreement}</td>
+      <td className={`${ANALYTICS_TABLE_TD} text-right font-medium`}>
         {row.promiseAmount.toLocaleString()} ₴
       </td>
-      <td className="px-4 py-3 text-gray-600">{row.promiseDateLabel}</td>
-      <td className="px-4 py-3">
+      <td className={ANALYTICS_TABLE_TD}>{row.promiseDateLabel}</td>
+      <td className={ANALYTICS_TABLE_TD}>
         <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${followUpTone}`}>
           {row.followedUp ? 'Followed up' : 'Not followed up'}
         </span>
       </td>
-      <td className="px-4 py-3 text-gray-600">{row.callAfterEscalationLabel}</td>
+      <td className={ANALYTICS_TABLE_TD}>{row.callAfterEscalationLabel}</td>
     </tr>
   )
 }

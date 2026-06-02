@@ -54,7 +54,7 @@ export function MockHeatMapSubTab() {
             <select
               value={department}
               onChange={(e) => setDepartment(e.target.value)}
-              className="h-7 rounded-full border border-gray-200 bg-white px-3 text-[11px] text-gray-700 focus:outline-none"
+              className="h-8 rounded-lg border border-[#DFDFDF] bg-white px-3 text-xs text-[#05040D] focus:outline-none"
             >
               <option value="all">
                 {t('pages.training.heatmap.allDepartments', 'All departments')}

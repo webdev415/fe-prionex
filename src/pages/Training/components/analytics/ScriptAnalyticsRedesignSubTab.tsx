@@ -4,6 +4,13 @@ import {
   MOCK_SCRIPT_DISTRIBUTION,
   type MockScriptAlert,
 } from '../../mocks/trainerWorkplaceMocks'
+import { AnalyticsMockTable } from './AnalyticsMockTable'
+import {
+  ANALYTICS_TABLE_HEAD,
+  ANALYTICS_TABLE_ROW,
+  ANALYTICS_TABLE_TD,
+  ANALYTICS_TABLE_TH,
+} from './analyticsTableStyles'
 
 /**
  * Script Analytics redesign — Auto-flagged calls list + result distribution
@@ -52,52 +59,60 @@ export function ScriptAnalyticsRedesignSubTab() {
             {t('pages.training.script.distribution.allDepts', 'All departments')}
           </span>
         </div>
-        <table className="w-full text-xs">
-          <thead className="bg-gray-50 text-left text-[10px] text-gray-500 uppercase">
+        <AnalyticsMockTable>
+          <thead className={ANALYTICS_TABLE_HEAD}>
             <tr>
-              <th className="px-4 py-3">
+              <th className={ANALYTICS_TABLE_TH}>
                 {t('pages.training.script.distribution.cols.operator', 'Operator')}
               </th>
-              <th className="px-4 py-3 text-right">
+              <th className={`${ANALYTICS_TABLE_TH} text-right`}>
                 {t('pages.training.script.distribution.cols.total', 'Total')}
               </th>
-              <th className="px-4 py-3 text-right">
+              <th className={`${ANALYTICS_TABLE_TH} text-right`}>
                 {t('pages.training.script.distribution.cols.promises', 'Promises')}
               </th>
-              <th className="px-4 py-3 text-right">
+              <th className={`${ANALYTICS_TABLE_TH} text-right`}>
                 {t('pages.training.script.distribution.cols.refusals', 'Refusals')}
               </th>
-              <th className="px-4 py-3 text-right">
+              <th className={`${ANALYTICS_TABLE_TH} text-right`}>
                 {t('pages.training.script.distribution.cols.missedCalls', 'Missed calls')}
               </th>
-              <th className="px-4 py-3 text-right">
+              <th className={`${ANALYTICS_TABLE_TH} text-right`}>
                 {t('pages.training.script.distribution.cols.willPass', 'Will pass')}
               </th>
-              <th className="px-4 py-3 text-right">
+              <th className={`${ANALYTICS_TABLE_TH} text-right`}>
                 {t('pages.training.script.distribution.cols.flags', 'Flags')}
               </th>
             </tr>
           </thead>
           <tbody>
             {MOCK_SCRIPT_DISTRIBUTION.map((row) => (
-              <tr key={row.id} className="border-t border-gray-100 hover:bg-gray-50">
-                <td className="px-4 py-3">
+              <tr key={row.id} className={ANALYTICS_TABLE_ROW}>
+                <td className={ANALYTICS_TABLE_TD}>
                   <div className="flex items-center gap-2">
                     <div
-                      className="flex h-7 w-7 items-center justify-center rounded-full text-[10px] font-semibold text-gray-700"
+                      className="flex h-7 w-7 items-center justify-center rounded-full text-[10px] font-semibold text-[#05040D]"
                       style={{ backgroundColor: row.avatarColor }}
                     >
                       {row.initials}
                     </div>
-                    <span className="text-dark-500 text-xs font-medium">{row.operator}</span>
+                    <span className="text-xs font-medium text-[#05040D]">{row.operator}</span>
                   </div>
                 </td>
-                <td className="text-dark-500 px-4 py-3 text-right font-semibold">{row.total}</td>
-                <td className="px-4 py-3 text-right text-emerald-600">{row.promises}</td>
-                <td className="px-4 py-3 text-right text-red-600">{row.refusals}</td>
-                <td className="px-4 py-3 text-right text-amber-600">{row.missedCalls}</td>
-                <td className="px-4 py-3 text-right text-violet-600">{row.willPass}</td>
-                <td className="px-4 py-3 text-right">
+                <td className={`${ANALYTICS_TABLE_TD} text-right font-semibold text-[#05040D]`}>
+                  {row.total}
+                </td>
+                <td className={`${ANALYTICS_TABLE_TD} text-right text-emerald-600`}>
+                  {row.promises}
+                </td>
+                <td className={`${ANALYTICS_TABLE_TD} text-right text-red-600`}>{row.refusals}</td>
+                <td className={`${ANALYTICS_TABLE_TD} text-right text-amber-600`}>
+                  {row.missedCalls}
+                </td>
+                <td className={`${ANALYTICS_TABLE_TD} text-right text-violet-600`}>
+                  {row.willPass}
+                </td>
+                <td className={`${ANALYTICS_TABLE_TD} text-right`}>
                   <span className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-medium text-red-600">
                     🚩 {row.flags}
                   </span>
@@ -105,7 +120,7 @@ export function ScriptAnalyticsRedesignSubTab() {
               </tr>
             ))}
           </tbody>
-        </table>
+        </AnalyticsMockTable>
       </div>
     </div>
   )

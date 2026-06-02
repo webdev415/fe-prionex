@@ -7,6 +7,13 @@ import {
   type MockClosureRow,
 } from '../../mocks/trainerWorkplaceMocks'
 import { PeriodFilterStrip, type PeriodOption } from './PeriodFilterStrip'
+import { AnalyticsMockTable } from './AnalyticsMockTable'
+import {
+  ANALYTICS_TABLE_HEAD,
+  ANALYTICS_TABLE_ROW,
+  ANALYTICS_TABLE_TD,
+  ANALYTICS_TABLE_TH,
+} from './analyticsTableStyles'
 
 /**
  * Successful Closures sub-tab (KAN-415). KPI strip + funnel chart
@@ -67,7 +74,7 @@ export function SuccessfulClosuresSubTab() {
               <div className="relative flex-1">
                 <div className="h-8 overflow-hidden rounded-lg bg-gray-100">
                   <div
-                    className="bg-primary-500 flex h-full items-center justify-end rounded-lg pr-2 text-[10px] font-medium text-white"
+                    className="flex h-full items-center justify-end rounded-lg bg-[#204E4D] pr-2 text-[10px] font-medium text-white"
                     style={{ width: `${stage.pct}%` }}
                   >
                     {stage.actual}
@@ -85,36 +92,35 @@ export function SuccessfulClosuresSubTab() {
         </div>
       </div>
 
-      {/* Closures table */}
-      <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white">
-        <table className="w-full text-xs">
-          <thead className="bg-gray-50 text-left text-[10px] text-gray-500 uppercase">
-            <tr>
-              <th className="px-4 py-3">
-                {t('pages.training.closures.cols.date', 'Closure date')}
-              </th>
-              <th className="px-4 py-3">
-                {t('pages.training.closures.cols.operator', 'Operator')}
-              </th>
-              <th className="px-4 py-3">{t('pages.training.closures.cols.client', 'Client')}</th>
-              <th className="px-4 py-3">
-                {t('pages.training.closures.cols.agreement', 'Agreement')}
-              </th>
-              <th className="px-4 py-3 text-right">
-                {t('pages.training.closures.cols.amount', 'Payment amount')}
-              </th>
-              <th className="px-4 py-3">
-                {t('pages.training.closures.cols.status', 'Status in CRM')}
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {MOCK_CLOSURES.map((row) => (
-              <ClosureRow key={row.id} row={row} />
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <AnalyticsMockTable>
+        <thead className={ANALYTICS_TABLE_HEAD}>
+          <tr>
+            <th className={ANALYTICS_TABLE_TH}>
+              {t('pages.training.closures.cols.date', 'Closure date')}
+            </th>
+            <th className={ANALYTICS_TABLE_TH}>
+              {t('pages.training.closures.cols.operator', 'Operator')}
+            </th>
+            <th className={ANALYTICS_TABLE_TH}>
+              {t('pages.training.closures.cols.client', 'Client')}
+            </th>
+            <th className={ANALYTICS_TABLE_TH}>
+              {t('pages.training.closures.cols.agreement', 'Agreement')}
+            </th>
+            <th className={`${ANALYTICS_TABLE_TH} text-right`}>
+              {t('pages.training.closures.cols.amount', 'Payment amount')}
+            </th>
+            <th className={ANALYTICS_TABLE_TH}>
+              {t('pages.training.closures.cols.status', 'Status in CRM')}
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {MOCK_CLOSURES.map((row) => (
+            <ClosureRow key={row.id} row={row} />
+          ))}
+        </tbody>
+      </AnalyticsMockTable>
     </div>
   )
 }
@@ -130,15 +136,15 @@ function KpiTile({ label, value, tone }: { label: string; value: string; tone: s
 
 function ClosureRow({ row }: { row: MockClosureRow }) {
   return (
-    <tr className="border-t border-gray-100 hover:bg-gray-50">
-      <td className="px-4 py-3 text-gray-600">{row.closureDateLabel}</td>
-      <td className="text-dark-500 px-4 py-3 font-medium">{row.operator}</td>
-      <td className="px-4 py-3 text-gray-700">{row.client}</td>
-      <td className="px-4 py-3 text-gray-600">{row.agreement}</td>
-      <td className="px-4 py-3 text-right font-medium text-gray-700">
+    <tr className={ANALYTICS_TABLE_ROW}>
+      <td className={ANALYTICS_TABLE_TD}>{row.closureDateLabel}</td>
+      <td className={`${ANALYTICS_TABLE_TD} font-medium text-[#05040D]`}>{row.operator}</td>
+      <td className={ANALYTICS_TABLE_TD}>{row.client}</td>
+      <td className={ANALYTICS_TABLE_TD}>{row.agreement}</td>
+      <td className={`${ANALYTICS_TABLE_TD} text-right font-medium`}>
         {row.paymentAmount.toLocaleString()} ₴
       </td>
-      <td className="px-4 py-3">
+      <td className={ANALYTICS_TABLE_TD}>
         <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-medium text-emerald-700">
           {row.statusInCrm}
         </span>

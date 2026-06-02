@@ -1,4 +1,5 @@
-﻿import { useTranslation } from 'react-i18next'
+﻿import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
 import { Button } from '@/components/ui/Button'
 import {
@@ -8,6 +9,14 @@ import {
   type TaskPriority,
   type TaskStatus,
 } from '../../mocks/trainerWorkplaceMocks'
+import { PeriodFilterStrip, type PeriodOption } from './PeriodFilterStrip'
+import { AnalyticsMockTable } from './AnalyticsMockTable'
+import {
+  ANALYTICS_TABLE_HEAD,
+  ANALYTICS_TABLE_ROW,
+  ANALYTICS_TABLE_TD,
+  ANALYTICS_TABLE_TH,
+} from './analyticsTableStyles'
 
 /**
  * Weekly Tasks sub-tab under Action Analysis (KAN-415). Renders a per-day
@@ -47,9 +56,14 @@ const PRIORITY_LABEL: Record<TaskPriority, string> = {
 
 export function WeeklyTasksSubTab() {
   const { t } = useTranslation('common')
+  const [period, setPeriod] = useState<PeriodOption>('today')
+  const [statusFilter, setStatusFilter] = useState<'all' | TaskStatus>('all')
   const k = MOCK_WEEKLY_TASKS_KPIS
 
   const dayValues = [k.monday, k.tuesday, k.wednesday, k.thursday, k.friday, k.saturday]
+  const filteredTasks = MOCK_TASKS.filter(
+    (task) => statusFilter === 'all' || task.status === statusFilter
+  )
 
   return (
     <div className="flex flex-col gap-4">
@@ -86,43 +100,44 @@ export function WeeklyTasksSubTab() {
         </Button>
       </div>
 
-      {/* Status chips (placeholder) */}
-      <div className="flex flex-wrap items-center gap-2">
-        {['All tasks', 'Open', 'In progress', 'Overdue', 'Completed'].map((label, idx) => (
-          <button
-            key={label}
-            type="button"
-            className={`rounded-full border px-3 py-1 text-[11px] font-medium transition-colors ${
-              idx === 0
-                ? 'bg-primary-500 border-primary-500 text-white'
-                : 'border-gray-200 bg-white text-gray-600'
-            }`}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
+      <PeriodFilterStrip
+        value={period}
+        onChange={setPeriod}
+        extraChips={(['all', 'open', 'in_progress', 'overdue', 'completed'] as const).map((s) => ({
+          id: s,
+          label: s === 'all' ? 'All tasks' : STATUS_LABEL[s],
+          active: statusFilter === s,
+          onClick: () => setStatusFilter(s),
+        }))}
+      />
 
-      {/* Tasks list */}
-      <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white">
-        <table className="w-full text-xs">
-          <thead className="bg-gray-50 text-left text-[10px] text-gray-500 uppercase">
-            <tr>
-              <th className="px-4 py-3">{t('pages.training.tasks.cols.date', 'Date/Time')}</th>
-              <th className="px-4 py-3">{t('pages.training.tasks.cols.task', 'Task')}</th>
-              <th className="px-4 py-3">{t('pages.training.tasks.cols.executor', 'Executor')}</th>
-              <th className="px-4 py-3">{t('pages.training.tasks.cols.author', 'Author')}</th>
-              <th className="px-4 py-3">{t('pages.training.tasks.cols.priority', 'Priority')}</th>
-              <th className="px-4 py-3">{t('pages.training.tasks.cols.status', 'Status')}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {MOCK_TASKS.map((task) => (
-              <TaskRow key={task.id} task={task} />
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <AnalyticsMockTable>
+        <thead className={ANALYTICS_TABLE_HEAD}>
+          <tr>
+            <th className={ANALYTICS_TABLE_TH}>
+              {t('pages.training.tasks.cols.date', 'Date/Time')}
+            </th>
+            <th className={ANALYTICS_TABLE_TH}>{t('pages.training.tasks.cols.task', 'Task')}</th>
+            <th className={ANALYTICS_TABLE_TH}>
+              {t('pages.training.tasks.cols.executor', 'Executor')}
+            </th>
+            <th className={ANALYTICS_TABLE_TH}>
+              {t('pages.training.tasks.cols.author', 'Author')}
+            </th>
+            <th className={ANALYTICS_TABLE_TH}>
+              {t('pages.training.tasks.cols.priority', 'Priority')}
+            </th>
+            <th className={ANALYTICS_TABLE_TH}>
+              {t('pages.training.tasks.cols.status', 'Status')}
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {filteredTasks.map((task) => (
+            <TaskRow key={task.id} task={task} />
+          ))}
+        </tbody>
+      </AnalyticsMockTable>
     </div>
   )
 }
@@ -130,18 +145,18 @@ export function WeeklyTasksSubTab() {
 function TaskRow({ task }: { task: MockTaskRow }) {
   const priority = PRIORITY_TONE[task.priority]
   return (
-    <tr className="border-t border-gray-100 hover:bg-gray-50">
-      <td className="px-4 py-3 text-gray-600">{task.dateLabel}</td>
-      <td className="text-dark-500 px-4 py-3 font-medium">{task.title}</td>
-      <td className="px-4 py-3 text-gray-700">{task.executor}</td>
-      <td className="px-4 py-3 text-gray-600">{task.author}</td>
-      <td className="px-4 py-3">
+    <tr className={ANALYTICS_TABLE_ROW}>
+      <td className={ANALYTICS_TABLE_TD}>{task.dateLabel}</td>
+      <td className={`${ANALYTICS_TABLE_TD} font-medium text-[#05040D]`}>{task.title}</td>
+      <td className={ANALYTICS_TABLE_TD}>{task.executor}</td>
+      <td className={ANALYTICS_TABLE_TD}>{task.author}</td>
+      <td className={ANALYTICS_TABLE_TD}>
         <span className={`inline-flex items-center gap-1.5 ${priority.text}`}>
           <span className={`inline-block h-2 w-2 rounded-full ${priority.dot}`} />
           <span className="text-[11px] font-medium">{PRIORITY_LABEL[task.priority]}</span>
         </span>
       </td>
-      <td className="px-4 py-3">
+      <td className={ANALYTICS_TABLE_TD}>
         <span
           className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${STATUS_TONE[task.status]}`}
         >

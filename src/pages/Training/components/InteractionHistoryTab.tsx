@@ -27,6 +27,7 @@ import {
 import { useScopedUserIds } from '../lib/scope'
 import { InteractionFiltersBar } from './InteractionFiltersBar'
 import { InteractionHistoryTable } from './InteractionHistoryTable'
+import { InteractionResultQuickFilter } from './analytics/InteractionResultQuickFilter'
 
 export function InteractionHistoryTab() {
   const { t } = useTranslation('common')
@@ -126,9 +127,21 @@ export function InteractionHistoryTab() {
     setPage(1)
   }
 
+  const handleResultQuickFilter = (resultId: number | undefined) => {
+    setSearchParams(
+      writeInteractionBarState(new URLSearchParams(searchParams), {
+        ...barState,
+        result_ids: resultId != null ? [resultId] : undefined,
+      }),
+      { replace: true }
+    )
+    setPage(1)
+  }
+
   const items = resolvedUsers.kind === 'empty' ? [] : (data?.items ?? [])
   const total = resolvedUsers.kind === 'empty' ? 0 : (data?.total ?? 0)
   const totalPages = Math.max(1, Math.ceil(total / pageSize))
+  const selectedResultId = barState.result_ids?.[0]
 
   const emptyDeptMessage = resolvedUsers.kind === 'empty'
 
@@ -145,10 +158,12 @@ export function InteractionHistoryTab() {
         scope={scoped}
       />
 
-      <div className="text-sm text-gray-700">
-        <span className="font-medium">{total}</span>{' '}
-        {t('pages.training.summary.totalInteractions', 'interactions')}
-      </div>
+      <InteractionResultQuickFilter
+        results={results}
+        selectedResultId={selectedResultId}
+        onChange={handleResultQuickFilter}
+        total={emptyDeptMessage ? undefined : total}
+      />
 
       {emptyDeptMessage ? (
         <div className="rounded-md border border-gray-200 bg-gray-50 p-3 text-sm text-gray-700">

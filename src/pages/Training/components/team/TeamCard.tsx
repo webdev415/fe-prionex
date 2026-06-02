@@ -2,58 +2,61 @@
 import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
 import type { MockTeam } from '../../mocks/trainerWorkplaceMocks'
+import { TEAM_SCORE_TEXT } from './teamStyles'
 import { OperatorRow } from './OperatorRow'
 
-/**
- * Per-team band on the Team tab. Header summarises team manager, member
- * count, online count and avg-score band; body lists operators.
- */
 export interface TeamCardProps {
   team: MockTeam
-}
-
-const BAND_BG: Record<MockTeam['scoreBand'], string> = {
-  red: 'bg-red-500',
-  amber: 'bg-amber-400',
-  green: 'bg-emerald-500',
 }
 
 export function TeamCard({ team }: TeamCardProps) {
   const { t } = useTranslation('common')
   const [expanded, setExpanded] = useState(true)
 
-  const onlineCount = team.operators.filter((o) => o.online).length
-
   return (
-    <div className="rounded-xl border border-gray-100 bg-gray-50/60">
-      <div className="flex items-center justify-between px-4 py-2.5">
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={() => setExpanded((v) => !v)}
-            className="bg-primary-100 text-primary-700 flex h-6 w-6 items-center justify-center rounded-full"
-            aria-label="toggle"
-          >
-            {expanded ? <Icons.ArrowUp size={12} /> : <Icons.ArrowDown size={12} />}
-          </button>
-          <span className="text-dark-500 text-sm font-medium">{team.name}</span>
-          <span className="text-[11px] text-gray-500">
-            {team.managerName} · {team.memberCount}{' '}
-            {t('pages.training.team.dept.employees', 'employees')}
-          </span>
-          <span className="text-primary-600 text-[11px] font-medium">
-            {onlineCount} {t('pages.training.team.team.online', 'online')}
-          </span>
+    <div className="border-b border-[#EBECE8] last:border-b-0">
+      <button
+        type="button"
+        onClick={() => setExpanded((v) => !v)}
+        className="flex w-full items-center gap-3 px-5 py-3 text-left hover:bg-[#FAFAFA]"
+      >
+        <Icons.ArrowUp
+          size={14}
+          className={`flex-shrink-0 text-[#676767] transition-transform ${expanded ? 'rotate-0' : '-rotate-90'}`}
+        />
+        <div className="min-w-0 flex-1">
+          <p className="text-sm leading-5 font-semibold text-[#05040D]">{team.name}</p>
+          <p className="text-[11px] leading-4 text-[#4B5563]">
+            {t('pages.training.team.team.teamLead', 'Team Lead')}: {team.teamLeadName}
+            {' · '}
+            {team.memberCount} {t('pages.training.team.dept.employees', 'employees')}
+          </p>
         </div>
-        <span
-          className={`flex h-7 w-7 items-center justify-center rounded-full text-[11px] font-semibold text-white ${BAND_BG[team.scoreBand]}`}
-        >
-          {team.averageScore}
-        </span>
-      </div>
+        <div className="flex items-start gap-3">
+          <div className="flex flex-col items-end">
+            <span className="text-[10px] font-medium tracking-[0.05em] text-[#6B7280] uppercase">
+              {t('pages.training.team.dept.average', 'Average')}
+            </span>
+            <span
+              className="text-sm font-semibold"
+              style={{ color: TEAM_SCORE_TEXT[team.scoreBand] }}
+            >
+              {team.averageScore}
+            </span>
+          </div>
+          {team.queueCount > 0 ? (
+            <div className="flex flex-col items-end">
+              <span className="text-[10px] font-medium tracking-[0.05em] text-[#6B7280] uppercase">
+                {t('pages.training.team.dept.inQueue', 'In queue')}
+              </span>
+              <span className="text-sm font-semibold text-[#B91C1C]">{team.queueCount}</span>
+            </div>
+          ) : null}
+        </div>
+      </button>
 
       {expanded ? (
-        <div className="flex flex-col gap-1.5 px-3 pb-3">
+        <div className="grid grid-cols-1 gap-3 px-5 pb-4 md:grid-cols-2 xl:grid-cols-3">
           {team.operators.map((op) => (
             <OperatorRow key={op.id} operator={op} />
           ))}

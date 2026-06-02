@@ -96,8 +96,7 @@ export function MockOperatorDetailPanel({
   const detail = MOCK_OPERATOR_DETAIL
   const scoreRadius = 17
   const scoreCircumference = 2 * Math.PI * scoreRadius
-  const scoreOffset =
-    scoreCircumference - (operator.compositeScore / 100) * scoreCircumference
+  const scoreOffset = scoreCircumference - (operator.compositeScore / 100) * scoreCircumference
 
   return (
     <div className="flex w-full max-w-[360px] flex-col overflow-hidden rounded-xl border border-[#EBECE8] bg-white">
@@ -226,7 +225,9 @@ export function MockOperatorDetailPanel({
                     {stat.value}
                   </span>
                   {stat.subValue ? (
-                    <span className="text-[11px] leading-[15px] text-[#676767]">{stat.subValue}</span>
+                    <span className="text-[11px] leading-[15px] text-[#676767]">
+                      {stat.subValue}
+                    </span>
                   ) : null}
                 </div>
               ))}

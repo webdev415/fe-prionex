@@ -9,8 +9,7 @@ import type {
   InteractionMonitoringSortBy,
   InteractionMonitoringSortDir,
 } from '@/features/training'
-
-type Row = InteractionMonitoringItem & { id: number }
+import { interactionResultBadgeTone } from './analytics/interactionResultBadge'
 
 interface Props {
   data: InteractionMonitoringItem[]
@@ -25,6 +24,8 @@ interface Props {
    */
   internalDateType?: InteractionInternalDateType
 }
+
+type Row = InteractionMonitoringItem
 
 function pickInternalDate(
   row: InteractionMonitoringItem,
@@ -54,7 +55,7 @@ export function InteractionHistoryTable({
 }: Props) {
   const { t } = useTranslation('common')
 
-  const rows: Row[] = data.map((i) => ({ ...i, id: i.id }))
+  const rows: Row[] = data
 
   const sortConfig: SortConfig = {
     key: sortBy === 'promise_amount' ? 'promise_amount' : 'date',
@@ -148,16 +149,19 @@ export function InteractionHistoryTable({
     {
       key: 'result',
       header: t('pages.training.columns.result', 'Result'),
-      render: (r) =>
-        r.result_code ? (
-          <span className="text-sm text-gray-700">
-            {t(`interactionResults.${r.result_code}`, {
-              defaultValue: r.result_name ?? r.result_code,
-            })}
+      render: (r) => {
+        if (!r.result_code) return <span className="text-sm text-gray-400">—</span>
+        const label = t(`interactionResults.${r.result_code}`, {
+          defaultValue: r.result_name ?? r.result_code,
+        })
+        return (
+          <span
+            className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${interactionResultBadgeTone(r.result_code)}`}
+          >
+            {label}
           </span>
-        ) : (
-          <span className="text-sm text-gray-400">—</span>
-        ),
+        )
+      },
     },
     {
       key: 'promise_amount',

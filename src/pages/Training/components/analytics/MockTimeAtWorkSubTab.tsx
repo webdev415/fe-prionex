@@ -6,6 +6,13 @@ import {
   type MockTimeAtWorkRow,
 } from '../../mocks/trainerWorkplaceMocks'
 import { PeriodFilterStrip, type PeriodOption } from './PeriodFilterStrip'
+import { AnalyticsMockTable } from './AnalyticsMockTable'
+import {
+  ANALYTICS_TABLE_HEAD,
+  ANALYTICS_TABLE_ROW,
+  ANALYTICS_TABLE_TD,
+  ANALYTICS_TABLE_TH,
+} from './analyticsTableStyles'
 
 /**
  * Time at Work sub-tab (KAN-415). Mock-data variant of the legacy
@@ -66,49 +73,46 @@ export function MockTimeAtWorkSubTab() {
         {t('pages.training.timeAtWork.title', 'Time in work by operators')}
       </h2>
 
-      {/* Table */}
-      <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
-        <table className="w-full text-xs">
-          <thead className="bg-gray-50 text-left text-[10px] text-gray-500 uppercase">
-            <tr>
-              <th className="px-4 py-3">
-                {t('pages.training.timeAtWork.cols.operator', 'Operator')}
-              </th>
-              <th className="px-4 py-3 text-right">
-                {t('pages.training.timeAtWork.cols.calls', 'Calls')}
-              </th>
-              <th className="px-4 py-3 text-right">
-                {t('pages.training.timeAtWork.cols.timeToLead', 'Time to lead')}
-              </th>
-              <th className="px-4 py-3 text-right">
-                {t('pages.training.timeAtWork.cols.successCredits', 'Succ. Credits')}
-              </th>
-              <th className="px-4 py-3 text-right">
-                {t('pages.training.timeAtWork.cols.fillForms', 'Fill forms')}
-              </th>
-              <th className="px-4 py-3 text-right">
-                {t('pages.training.timeAtWork.cols.downtime', 'Downtime (AHT)')}
-              </th>
-              <th className="px-4 py-3 text-right">
-                {t('pages.training.timeAtWork.cols.afterCall', 'After call')}
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {MOCK_TIME_AT_WORK.map((row) => (
-              <TimeAtWorkRow key={row.id} row={row} />
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <AnalyticsMockTable>
+        <thead className={ANALYTICS_TABLE_HEAD}>
+          <tr>
+            <th className={ANALYTICS_TABLE_TH}>
+              {t('pages.training.timeAtWork.cols.operator', 'Operator')}
+            </th>
+            <th className={`${ANALYTICS_TABLE_TH} text-right`}>
+              {t('pages.training.timeAtWork.cols.calls', 'Calls')}
+            </th>
+            <th className={`${ANALYTICS_TABLE_TH} text-right`}>
+              {t('pages.training.timeAtWork.cols.timeToLead', 'Time to lead')}
+            </th>
+            <th className={`${ANALYTICS_TABLE_TH} text-right`}>
+              {t('pages.training.timeAtWork.cols.successCredits', 'Succ. Credits')}
+            </th>
+            <th className={`${ANALYTICS_TABLE_TH} text-right`}>
+              {t('pages.training.timeAtWork.cols.fillForms', 'Fill forms')}
+            </th>
+            <th className={`${ANALYTICS_TABLE_TH} text-right`}>
+              {t('pages.training.timeAtWork.cols.downtime', 'Downtime (AHT)')}
+            </th>
+            <th className={`${ANALYTICS_TABLE_TH} text-right`}>
+              {t('pages.training.timeAtWork.cols.afterCall', 'After call')}
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {MOCK_TIME_AT_WORK.map((row) => (
+            <TimeAtWorkRow key={row.id} row={row} />
+          ))}
+        </tbody>
+      </AnalyticsMockTable>
     </div>
   )
 }
 
 function TimeAtWorkRow({ row }: { row: MockTimeAtWorkRow }) {
   return (
-    <tr className="border-t border-gray-100 hover:bg-gray-50">
-      <td className="px-4 py-3">
+    <tr className={ANALYTICS_TABLE_ROW}>
+      <td className={ANALYTICS_TABLE_TD}>
         <div className="flex items-center gap-2">
           <div
             className="flex h-7 w-7 items-center justify-center rounded-full text-[10px] font-semibold text-gray-700"
@@ -119,12 +123,14 @@ function TimeAtWorkRow({ row }: { row: MockTimeAtWorkRow }) {
           <span className="text-dark-500 text-xs font-medium">{row.operator}</span>
         </div>
       </td>
-      <td className="text-dark-500 px-4 py-3 text-right font-semibold">{row.calls}</td>
-      <td className="px-4 py-3 text-right text-gray-700">{row.timeToLead}</td>
-      <td className="px-4 py-3 text-right text-emerald-600">{row.successCredits}</td>
-      <td className="px-4 py-3 text-right text-gray-700">{row.fillForms}</td>
-      <td className="px-4 py-3 text-right text-amber-600">{row.downtime}</td>
-      <td className="px-4 py-3 text-right text-violet-600">{row.afterCall}</td>
+      <td className={`${ANALYTICS_TABLE_TD} text-right font-semibold text-[#05040D]`}>
+        {row.calls}
+      </td>
+      <td className={`${ANALYTICS_TABLE_TD} text-right`}>{row.timeToLead}</td>
+      <td className={`${ANALYTICS_TABLE_TD} text-right text-emerald-600`}>{row.successCredits}</td>
+      <td className={`${ANALYTICS_TABLE_TD} text-right`}>{row.fillForms}</td>
+      <td className={`${ANALYTICS_TABLE_TD} text-right text-amber-600`}>{row.downtime}</td>
+      <td className={`${ANALYTICS_TABLE_TD} text-right text-violet-600`}>{row.afterCall}</td>
     </tr>
   )
 }

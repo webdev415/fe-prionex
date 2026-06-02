@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router-dom'
 import { TRAININGS_AND_SESSIONS_SUB_TABS, type TrainingsAndSessionsSubTabId } from '../../types'
+import { TrainingSegmentedStrip } from '../chrome/TrainingSegmentedStrip'
 import { CoursesCatalogTab } from './CoursesCatalogTab'
 import { AssignmentsGridTab } from './AssignmentsGridTab'
 import { MaterialsLibraryTab } from './MaterialsLibraryTab'
@@ -9,14 +10,8 @@ import { GroupTrainingsTab } from './GroupTrainingsTab'
 import { DrillsTab } from './DrillsTab'
 import { OneOnOneCalendarTab } from './OneOnOneCalendarTab'
 import { TestsTab } from './TestsTab'
+import { TRAINING_SUB_TAB_COUNTS } from './trainingSubTabCounts'
 
-/**
- * Trainings and Sessions top-tab orchestrator. Hosts the 7 Figma sub-tabs
- * (Courses / Group Trainings / Drills / Calendar / Tests / Assignments /
- * Materials). Per-plan-§3.4 only Courses + Assignments + Materials have
- * backend in this round; the other four ship on mock data for design
- * completeness ahead of KAN-416.
- */
 const SUB_TAB_LABELS: Record<TrainingsAndSessionsSubTabId, { key: string; fallback: string }> = {
   courses: { key: 'pages.training.training.subTabs.courses', fallback: 'Courses' },
   'group-trainings': {
@@ -51,30 +46,26 @@ export function TrainingsAndSessionsTab() {
     setSearchParams(next, { replace: true })
   }
 
-  const subTabs = useMemo(() => TRAININGS_AND_SESSIONS_SUB_TABS, [])
+  const subTabs = useMemo(
+    () =>
+      TRAININGS_AND_SESSIONS_SUB_TABS.map((sub) => {
+        const meta = SUB_TAB_LABELS[sub]
+        return {
+          id: sub,
+          label: t(meta.key, meta.fallback),
+          count: TRAINING_SUB_TAB_COUNTS[sub],
+        }
+      }),
+    [t]
+  )
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap gap-2">
-        {subTabs.map((sub) => {
-          const meta = SUB_TAB_LABELS[sub]
-          const isActive = activeSubTab === sub
-          return (
-            <button
-              key={sub}
-              type="button"
-              onClick={() => setActiveSubTab(sub)}
-              className={`rounded-full border px-4 py-1.5 text-xs font-medium transition-colors ${
-                isActive
-                  ? 'bg-primary-500 border-primary-500 text-white'
-                  : 'hover:border-primary-300 border-gray-200 bg-white text-gray-700'
-              }`}
-            >
-              {t(meta.key, meta.fallback)}
-            </button>
-          )
-        })}
-      </div>
+      <TrainingSegmentedStrip
+        items={subTabs}
+        activeId={activeSubTab}
+        onChange={(id) => setActiveSubTab(id as TrainingsAndSessionsSubTabId)}
+      />
 
       {activeSubTab === 'courses' && <CoursesCatalogTab />}
       {activeSubTab === 'group-trainings' && <GroupTrainingsTab />}

@@ -1,102 +1,143 @@
-﻿import { useTranslation } from 'react-i18next'
-import { Button } from '@/components/ui/Button'
+﻿import type { ReactElement } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
-import type { MockCourse } from '../../mocks/trainerWorkplaceMocks'
+import type { CourseLevel, MockCourse } from '../../mocks/trainerWorkplaceMocks'
 
-/**
- * Course card — title, author, category, level, duration, module count,
- * enrolled count, avg completion. Used in the Courses Catalogue grid.
- */
 export interface CourseCardProps {
   course: MockCourse
+  onDetails?: (course: MockCourse) => void
+  onAssign?: (course: MockCourse) => void
 }
 
-const STATUS_BADGE: Record<MockCourse['status'], { label: string; tone: string }> = {
-  published: { label: 'Published', tone: 'bg-emerald-50 text-emerald-700' },
-  draft: { label: 'Draft', tone: 'bg-amber-50 text-amber-700' },
-  archived: { label: 'Archived', tone: 'bg-gray-100 text-gray-600' },
-}
-
-const LEVEL_LABEL: Record<MockCourse['level'], string> = {
+const LEVEL_LABEL: Record<CourseLevel, string> = {
   beginner: 'Beginner',
   intermediate: 'Intermediate',
   advanced: 'Advanced',
 }
 
-export function CourseCard({ course }: CourseCardProps) {
+const LEVEL_STARS: Record<CourseLevel, number> = {
+  beginner: 1,
+  intermediate: 2,
+  advanced: 3,
+}
+
+function formatDuration(minutes: number): string {
+  const h = Math.floor(minutes / 60)
+  const m = minutes % 60
+  if (h === 0) return `${m} min`
+  if (m === 0) return `${h}h`
+  return `${h}h ${m}m`
+}
+
+function StatTile({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: (props: { size?: number; className?: string }) => ReactElement
+  label: string
+  value: string | number
+}) {
+  return (
+    <div className="flex flex-1 flex-col gap-2 rounded-lg bg-[#F7F7F7] p-3">
+      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white shadow-[0px_1px_6px_rgba(0,0,0,0.05)]">
+        <Icon size={18} className="text-[#204E4D]" />
+      </div>
+      <div className="flex flex-col gap-0.5">
+        <span className="text-xs font-light tracking-[-0.02em] text-[#4B5563]">{label}</span>
+        <span className="text-base font-semibold text-[#05040D]">{value}</span>
+      </div>
+    </div>
+  )
+}
+
+/** Figma `Card Course` — teal shell, gradient header, white body, stat tiles, amber progress. */
+export function CourseCard({ course, onDetails, onAssign }: CourseCardProps) {
   const { t } = useTranslation('common')
-  const status = STATUS_BADGE[course.status]
+  const filledStars = LEVEL_STARS[course.level]
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
-      <div className="relative h-[100px] w-full" style={{ background: course.coverGradient }}>
-        <span
-          className={`absolute top-3 right-3 rounded-full px-2.5 py-0.5 text-[10px] font-medium ${status.tone}`}
-        >
-          {status.label}
-        </span>
+    <div className="flex flex-col overflow-hidden rounded-xl bg-[#E3F6F3]">
+      <div className="relative flex h-24 items-start justify-between px-4 py-5">
+        <div
+          className="absolute inset-0 bg-gradient-to-br from-[#F3FAF9] via-white to-[#D5F2ED]/50"
+          aria-hidden
+        />
+        <div className="relative z-[2] flex h-14 w-14 items-center justify-center rounded-full bg-white shadow-[0px_1px_6px_rgba(0,0,0,0.05)]">
+          <Icons.File size={22} className="text-[#7ACEC5]" />
+        </div>
+        <div className="relative z-[2] flex flex-col items-end gap-1">
+          <span className="rounded-full bg-white px-3 py-1 text-xs font-medium text-[#204E4D]">
+            {LEVEL_LABEL[course.level]}
+          </span>
+          <div className="flex items-center gap-0.5">
+            {[1, 2, 3].map((n) => (
+              <span
+                key={n}
+                className={`h-2 w-2 rounded-sm ${n <= filledStars ? 'bg-[#204E4D]' : 'bg-[#DFDFDF]'}`}
+              />
+            ))}
+          </div>
+        </div>
       </div>
-      <div className="flex flex-col gap-3 p-4">
-        <div className="flex flex-col">
-          <h3 className="text-dark-500 text-sm font-semibold">{course.title}</h3>
-          <span className="text-[11px] text-gray-500">
-            {t('pages.training.training.courses.author', 'Author')}: {course.author}
-          </span>
-          <span className="text-[11px] text-gray-400">
-            {course.category} · {LEVEL_LABEL[course.level]}
-          </span>
-        </div>
 
-        <div className="grid grid-cols-3 gap-1.5">
-          <div className="flex flex-col items-center rounded-lg bg-gray-50 py-1.5">
-            <span className="text-dark-500 text-xs font-semibold">
-              {Math.floor(course.durationMinutes / 60)}h {course.durationMinutes % 60}m
-            </span>
-            <span className="text-[9px] text-gray-500 uppercase">
-              {t('pages.training.training.courses.duration', 'Duration')}
-            </span>
-          </div>
-          <div className="flex flex-col items-center rounded-lg bg-gray-50 py-1.5">
-            <span className="text-dark-500 text-xs font-semibold">{course.moduleCount}</span>
-            <span className="text-[9px] text-gray-500 uppercase">
-              {t('pages.training.training.courses.modules', 'Modules')}
-            </span>
-          </div>
-          <div className="flex flex-col items-center rounded-lg bg-gray-50 py-1.5">
-            <span className="text-dark-500 text-xs font-semibold">{course.enrolledCount}</span>
-            <span className="text-[9px] text-gray-500 uppercase">
-              {t('pages.training.training.courses.enrolled', 'Enrolled')}
-            </span>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-gray-100">
-            <div
-              className="bg-primary-500 h-full rounded-full"
-              style={{ width: `${course.avgCompletionPct}%` }}
-            />
-          </div>
-          <span className="text-[10px] font-medium text-gray-600">{course.avgCompletionPct}%</span>
+      <div className="flex flex-col gap-5 rounded-t-xl bg-white p-5">
+        <div className="flex flex-col gap-1">
+          <h3 className="text-base font-semibold text-[#05040D]">{course.title}</h3>
+          <p className="text-xs text-[#4B5563]">
+            {t('pages.training.training.courses.author', 'Author')}: {course.author} ·{' '}
+            {course.category}
+          </p>
         </div>
 
         <div className="flex gap-2">
-          <Button
-            variant="secondary"
-            size="sm"
-            className="flex-1 rounded-full text-[11px]"
-            leftIcon={<Icons.View size={12} />}
+          <StatTile
+            icon={Icons.Clock01}
+            label={t('pages.training.training.courses.duration', 'Duration')}
+            value={formatDuration(course.durationMinutes)}
+          />
+          <StatTile
+            icon={Icons.File}
+            label={t('pages.training.training.courses.modules', 'Modules')}
+            value={course.moduleCount}
+          />
+          <StatTile
+            icon={Icons.Users}
+            label={t('pages.training.training.courses.enrolled', 'Enrolled')}
+            value={course.enrolledCount}
+          />
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center justify-between text-xs">
+            <span className="font-medium text-[#4B5563]">
+              {t('pages.training.training.courses.avgCompletion', 'Average completion')}
+            </span>
+            <span className="font-bold text-[#05040D]">{course.avgCompletionPct}%</span>
+          </div>
+          <div className="h-1.5 overflow-hidden rounded-full bg-[#EBECE8]">
+            <div
+              className="h-full rounded-full bg-[#EAB308]"
+              style={{ width: `${course.avgCompletionPct}%` }}
+            />
+          </div>
+        </div>
+
+        <div className="flex gap-3">
+          <button
+            type="button"
+            onClick={() => onDetails?.(course)}
+            className="flex flex-1 items-center justify-center rounded-md border border-[#EDEDED] bg-white px-3 py-2.5 text-xs font-medium text-[#05040D] transition-colors hover:bg-[#F7F7F7]"
           >
             {t('pages.training.training.courses.details', 'Details')}
-          </Button>
-          <Button
-            variant="primary"
-            size="sm"
-            className="flex-1 rounded-full text-[11px]"
-            leftIcon={<Icons.Add size={12} className="text-white" />}
+          </button>
+          <button
+            type="button"
+            onClick={() => onAssign?.(course)}
+            className="flex flex-1 items-center justify-center rounded-md bg-[#204E4D] px-3 py-2.5 text-xs font-medium text-white transition-colors hover:bg-[#1a3f3e]"
           >
             {t('pages.training.training.courses.assign', 'Assign')}
-          </Button>
+          </button>
         </div>
       </div>
     </div>

@@ -1,21 +1,18 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Button } from '@/components/ui/Button'
 import { Icons } from '@/lib/icons'
 import { MOCK_TESTS, type MockTest, type TestStatus } from '../../mocks/trainerWorkplaceMocks'
+import { PendingFeatureDialog } from '../inbox/PendingFeatureDialog'
+import { TrainingFilterChips, TrainingPrimaryButton } from './TrainingToolbar'
 
-/**
- * Tests sub-tab — Figma step 5. Card grid of post-course tests with pass /
- * fail status and per-card retake CTA.
- */
 const STATUS_TONE: Record<TestStatus, { label: string; tone: string }> = {
-  passed: { label: 'Passed', tone: 'bg-emerald-100 text-emerald-700' },
-  failed: { label: 'Failed', tone: 'bg-red-100 text-red-700' },
-  in_progress: { label: 'In progress', tone: 'bg-amber-100 text-amber-700' },
-  not_started: { label: 'Not started', tone: 'bg-gray-100 text-gray-600' },
+  passed: { label: 'Passed', tone: 'bg-[#F0FDF4] text-[#15803D]' },
+  failed: { label: 'Failed', tone: 'bg-[#FEF2F2] text-[#B91C1C]' },
+  in_progress: { label: 'In progress', tone: 'bg-[#FFFBEB] text-[#D97706]' },
+  not_started: { label: 'Not started', tone: 'bg-[#F3F4F6] text-[#4B5563]' },
 }
 
-const FILTERS: { id: TestStatus | 'all'; label: string }[] = [
+const FILTERS = [
   { id: 'all', label: 'All tests' },
   { id: 'passed', label: 'Passed' },
   { id: 'failed', label: 'Failed' },
@@ -26,50 +23,45 @@ const FILTERS: { id: TestStatus | 'all'; label: string }[] = [
 export function TestsTab() {
   const { t } = useTranslation('common')
   const [filter, setFilter] = useState<TestStatus | 'all'>('all')
+  const [createOpen, setCreateOpen] = useState(false)
 
   const filtered = filter === 'all' ? MOCK_TESTS : MOCK_TESTS.filter((tt) => tt.status === filter)
 
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-dark-500 text-base font-semibold">
+        <h2 className="text-base font-semibold text-[#05040D]">
           {t('pages.training.tests.title', 'Tests')}
         </h2>
-        <Button
-          variant="primary"
-          size="md"
+        <TrainingPrimaryButton
+          onClick={() => setCreateOpen(true)}
           leftIcon={<Icons.Add size={14} className="text-white" />}
-          className="h-[40px] rounded-full px-4 text-xs"
         >
           {t('pages.training.tests.create', 'Create a test')}
-        </Button>
+        </TrainingPrimaryButton>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2">
-        {FILTERS.map((f) => {
-          const isActive = f.id === filter
-          return (
-            <button
-              key={f.id}
-              type="button"
-              onClick={() => setFilter(f.id)}
-              className={`rounded-full border px-3 py-1 text-[11px] font-medium transition-colors ${
-                isActive
-                  ? 'bg-primary-500 border-primary-500 text-white'
-                  : 'border-gray-200 bg-white text-gray-600'
-              }`}
-            >
-              {f.label}
-            </button>
-          )
-        })}
-      </div>
+      <TrainingFilterChips
+        items={FILTERS}
+        activeId={filter}
+        onChange={(id) => setFilter(id as TestStatus | 'all')}
+      />
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
         {filtered.map((tt) => (
           <TestCard key={tt.id} test={tt} />
         ))}
       </div>
+
+      <PendingFeatureDialog
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        titleKey="pages.training.tests.create"
+        titleFallback="Create a test"
+        descriptionKey="pages.training.training.pending.createTest"
+        descriptionFallback="Create a post-course test with scoring and retake rules."
+        dependsOnIssue="KAN-416"
+      />
     </div>
   )
 }
@@ -79,8 +71,11 @@ function TestCard({ test }: { test: MockTest }) {
   const status = STATUS_TONE[test.status]
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
-      <div className="relative h-[70px] w-full" style={{ background: test.coverGradient }}>
+    <div className="overflow-hidden rounded-xl border border-[#EBECE8] bg-white shadow-[0px_1px_2px_rgba(0,0,0,0.04)]">
+      <div
+        className="relative h-[70px] w-full bg-gradient-to-br from-[#F3FAF9] to-[#E3F6F3]"
+        style={{ background: test.coverGradient }}
+      >
         <span
           className={`absolute top-3 right-3 rounded-full px-2.5 py-0.5 text-[10px] font-medium ${status.tone}`}
         >
@@ -89,59 +84,55 @@ function TestCard({ test }: { test: MockTest }) {
       </div>
       <div className="flex flex-col gap-3 p-4">
         <div className="flex flex-col">
-          <h3 className="text-dark-500 text-sm font-semibold">{test.title}</h3>
-          <span className="text-[11px] text-gray-500">
+          <h3 className="text-sm font-semibold text-[#05040D]">{test.title}</h3>
+          <span className="text-[11px] text-[#6B7280]">
             {t('pages.training.tests.course', 'Course')}: {test.course}
           </span>
-          <span className="text-[11px] text-gray-400">{test.category}</span>
+          <span className="text-[11px] text-[#9CA3AF]">{test.category}</span>
         </div>
 
-        <div className="flex items-center gap-2 rounded-lg bg-gray-50/60 px-3 py-2">
+        <div className="flex items-center gap-2 rounded-lg bg-[#F7F7F7] px-3 py-2">
           <div
-            className="flex h-7 w-7 items-center justify-center rounded-full text-[10px] font-semibold text-gray-700"
+            className="flex h-7 w-7 items-center justify-center rounded-full text-[10px] font-semibold text-[#05040D]"
             style={{ backgroundColor: test.authorAvatar }}
           >
             {test.authorInitials}
           </div>
           <div className="flex min-w-0 flex-1 flex-col">
-            <span className="text-dark-500 truncate text-[11px] font-medium">
+            <span className="truncate text-[11px] font-medium text-[#05040D]">
               {test.authorName}
             </span>
-            <span className="text-[10px] text-gray-500">
+            <span className="text-[10px] text-[#6B7280]">
               {t('pages.training.tests.deadline', 'Deadline')}: {test.deadlineLabel}
             </span>
           </div>
           <span
             className={`text-xs font-semibold ${
               test.status === 'passed'
-                ? 'text-emerald-600'
+                ? 'text-[#15803D]'
                 : test.status === 'failed'
-                  ? 'text-red-600'
-                  : 'text-gray-500'
+                  ? 'text-[#B91C1C]'
+                  : 'text-[#6B7280]'
             }`}
           >
             {test.scoreLabel}
           </span>
         </div>
 
-        <Button
-          variant={test.status === 'failed' ? 'primary' : 'secondary'}
-          size="sm"
-          className="rounded-full text-[11px]"
-          leftIcon={
-            test.status === 'passed' ? (
-              <Icons.View size={12} />
-            ) : (
-              <Icons.Play size={12} className={test.status === 'failed' ? 'text-white' : ''} />
-            )
-          }
+        <button
+          type="button"
+          className={`rounded-md px-3 py-2 text-[11px] font-medium ${
+            test.status === 'failed'
+              ? 'bg-[#204E4D] text-white'
+              : 'border border-[#EDEDED] bg-white text-[#05040D]'
+          }`}
         >
           {test.status === 'passed'
             ? t('pages.training.tests.viewResults', 'View results')
             : test.status === 'failed'
               ? t('pages.training.tests.retake', 'Retake')
               : t('pages.training.tests.start', 'Start')}
-        </Button>
+        </button>
       </div>
     </div>
   )
