@@ -2795,6 +2795,13 @@
         "closeLoan": "Close Loan",
         "editClosureDate": "Edit closure date",
         "closureDate": "Closure date",
+        "loanInfo": "Agreement info",
+        "factoringInfo": {
+          "empty": "This debt is not linked to a factoring agreement.",
+          "legalName": "Legal name",
+          "previousLender": "Who sold",
+          "purchaseDate": "Purchase date"
+        },
         "closureDateRequired": "Closure date is required",
         "closureDateFuture": "Closure date cannot be in the future",
         "sendToUBCI": "Send to UBCI",

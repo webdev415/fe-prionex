@@ -11,6 +11,7 @@ import { toast } from 'sonner'
 import { Icons } from '@/lib/icons'
 import { DocumentsAccordion } from './components/DocumentsAccordion'
 import { DocumentUploadModal } from './components/DocumentUploadModal'
+import { LoanFactoringInfo } from './components/LoanFactoringInfo'
 import { formatDate, formatDateTime, formatMoneyUAHTwoDecimals } from '@/lib/formatters'
 import { Button } from '@/components/ui/Button'
 import { DataTable, type Column } from '@/components/ui/DataTable'
@@ -246,6 +247,16 @@ export function ClientDetailPage() {
   const [editClosureDateDebtId, setEditClosureDateDebtId] = useState<number | null>(null)
   const [editClosureDateValue, setEditClosureDateValue] = useState<Date | null>(null)
   const [editClosureDateError, setEditClosureDateError] = useState<string | null>(null)
+  // KAN-557 §3: row IDs whose factoring-agreement info panel is currently expanded.
+  // Multi-row expand is allowed — Set lets parent track an arbitrary subset.
+  const [expandedDebtIds, setExpandedDebtIds] = useState<Set<number>>(new Set())
+  const toggleDebtExpand = (id: number) =>
+    setExpandedDebtIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
   const [completeRrConfirm, setCompleteRrConfirm] = useState<number | null>(null) // raId to complete
   // Disconnect modal: holds the raId to disconnect + the operator's reason.
   // null when closed; reason starts empty and is required by the backend.
@@ -683,7 +694,17 @@ export function ClientDetailPage() {
         loanNumber: d.contract_number,
         issueDate: formatDate(d.credit_issued_date ?? undefined),
         counterparty: d.seller_company,
-        saleDate: formatDate(d.purchase_date ?? undefined),
+        // KAN-557 §3: if the per-debt purchase_date is empty, fall back to
+        // the linked factoring agreement's contract_purchase_date.
+        saleDate: formatDate(
+          d.purchase_date ?? d.factoring_agreement?.contract_purchase_date ?? undefined
+        ),
+        // KAN-557 §3: factoring chain surfaced via the row-expansion "Info" button.
+        sellerLegalName: d.seller_legal_name ?? null,
+        factoringAgreementPreviousLender: d.factoring_agreement?.previous_lender ?? null,
+        factoringAgreementPurchaseDate: d.factoring_agreement?.contract_purchase_date
+          ? formatDate(d.factoring_agreement.contract_purchase_date)
+          : null,
         principalAmount: Number(d.principal_amount ?? 0),
         principalDebt: Number(d.principal_debt ?? d.principal_amount ?? 0),
         remainingDebtAmount: Number(d.remaining_debt_amount ?? 0),
@@ -1426,47 +1447,64 @@ export function ClientDetailPage() {
       header: t('pages.clients.detail.tableHeaders.actions'),
       align: 'center',
       render: (loan) => {
+        // KAN-557 §3: "Info" button — always visible, opens expansion below.
+        const infoButton = (
+          <button
+            onClick={() => toggleDebtExpand(loan.id)}
+            className="p-1 text-gray-500 hover:text-gray-700"
+            title={t('pages.clients.detail.loanInfo', 'Agreement info')}
+            aria-label={t('pages.clients.detail.loanInfo', 'Agreement info')}
+          >
+            <Icons.Info size={18} />
+          </button>
+        )
         if (loan.status === 'active') {
           return (
-            <PermissionGuard permission={PERMISSIONS.CLIENTS.CLOSE_DEBT}>
-              <button
-                onClick={() => {
-                  setCloseLoanConfirm(loan.id)
-                  setCloseLoanClosureDate(getTodayAtMidnight())
-                  setCloseLoanDateError(null)
-                }}
-                disabled={isClosingDebt}
-                className="p-1 text-green-600 hover:text-green-800 disabled:opacity-50"
-                title={t('pages.clients.detail.closeLoan')}
-              >
-                <Icons.Success size={18} />
-              </button>
-            </PermissionGuard>
+            <div className="flex items-center justify-center gap-2">
+              {infoButton}
+              <PermissionGuard permission={PERMISSIONS.CLIENTS.CLOSE_DEBT}>
+                <button
+                  onClick={() => {
+                    setCloseLoanConfirm(loan.id)
+                    setCloseLoanClosureDate(getTodayAtMidnight())
+                    setCloseLoanDateError(null)
+                  }}
+                  disabled={isClosingDebt}
+                  className="p-1 text-green-600 hover:text-green-800 disabled:opacity-50"
+                  title={t('pages.clients.detail.closeLoan')}
+                >
+                  <Icons.Success size={18} />
+                </button>
+              </PermissionGuard>
+            </div>
           )
         }
         if (loan.status === 'closed') {
           return (
-            <PermissionGuard permission={PERMISSIONS.CLIENTS.CLOSE_DEBT}>
-              <button
-                onClick={() => {
-                  setEditClosureDateDebtId(loan.id)
-                  setEditClosureDateValue(
-                    loan.creditClosedDate
-                      ? parseISODateAtMidnight(loan.creditClosedDate)
-                      : getTodayAtMidnight()
-                  )
-                  setEditClosureDateError(null)
-                }}
-                disabled={isUpdatingClosureDate}
-                className="p-1 text-blue-600 hover:text-blue-800 disabled:opacity-50"
-                title={t('pages.clients.detail.editClosureDate', 'Edit closure date')}
-              >
-                <Icons.Edit size={18} />
-              </button>
-            </PermissionGuard>
+            <div className="flex items-center justify-center gap-2">
+              {infoButton}
+              <PermissionGuard permission={PERMISSIONS.CLIENTS.CLOSE_DEBT}>
+                <button
+                  onClick={() => {
+                    setEditClosureDateDebtId(loan.id)
+                    setEditClosureDateValue(
+                      loan.creditClosedDate
+                        ? parseISODateAtMidnight(loan.creditClosedDate)
+                        : getTodayAtMidnight()
+                    )
+                    setEditClosureDateError(null)
+                  }}
+                  disabled={isUpdatingClosureDate}
+                  className="p-1 text-blue-600 hover:text-blue-800 disabled:opacity-50"
+                  title={t('pages.clients.detail.editClosureDate', 'Edit closure date')}
+                >
+                  <Icons.Edit size={18} />
+                </button>
+              </PermissionGuard>
+            </div>
           )
         }
-        return null
+        return infoButton
       },
     },
   ]
@@ -3157,6 +3195,14 @@ export function ClientDetailPage() {
                             return true
                           })}
                           className="w-full"
+                          expandedIds={expandedDebtIds}
+                          renderExpanded={(loan) => (
+                            <LoanFactoringInfo
+                              legalName={loan.sellerLegalName}
+                              previousLender={loan.factoringAgreementPreviousLender}
+                              purchaseDate={loan.factoringAgreementPurchaseDate}
+                            />
+                          )}
                         />
                       )}
                     </div>

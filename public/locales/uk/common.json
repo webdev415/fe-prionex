@@ -2127,6 +2127,13 @@
         "closeLoan": "Закрити позику",
         "editClosureDate": "Редагувати дату закриття",
         "closureDate": "Дата закриття",
+        "loanInfo": "Інформація про договір",
+        "factoringInfo": {
+          "empty": "Цей борг не пов'язаний з договором факторингу.",
+          "legalName": "Юридична назва",
+          "previousLender": "Хто продав",
+          "purchaseDate": "Дата купівлі"
+        },
         "closureDateRequired": "Дата закриття обов'язкова",
         "closureDateFuture": "Дата закриття не може бути в майбутньому",
         "sendToUBCI": "Відправити в UBCI",
