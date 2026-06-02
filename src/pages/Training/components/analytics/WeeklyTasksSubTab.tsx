@@ -70,25 +70,36 @@ export function WeeklyTasksSubTab() {
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Per-week KPI strip — "The week N" + per-day count with status bar */}
-      <div className="flex flex-wrap items-center gap-1 rounded-xl border border-[#EBECE8] bg-white p-3 shadow-[0px_1px_2px_rgba(0,0,0,0.04)]">
-        <div className="mr-3 flex flex-col gap-0.5 border-r border-[#EBECE8] pr-4">
-          <span className="text-[10px] tracking-wide text-[#676767] uppercase">
+      {/* Per-week KPI strip — separate tiles per day, matches the KPI-tile
+          pattern used by other Action Analysis sub-tabs (Promises / Closures
+          / Time at Work). */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
+        {/* "The week" total tile */}
+        <div className="flex flex-col gap-1 rounded-xl border border-[#EBECE8] bg-white px-4 py-3 shadow-[0px_1px_2px_rgba(0,0,0,0.04)]">
+          <span className="text-[10px] font-medium tracking-wide text-[#676767] uppercase">
             {t('pages.training.weeklyTasks.kpi.week', 'The week')}
           </span>
-          <span className="text-xl font-semibold text-[#05040D]">{k.weekTotal}</span>
+          <span className="text-2xl font-semibold text-[#05040D]">{k.weekTotal}</span>
+          <span className={`h-1 w-8 rounded-full ${DAY_STATUS_BAR.overdue}`} aria-hidden />
         </div>
+
+        {/* Day tiles */}
         {k.days.map((day) => (
-          <div key={day.label} className="flex min-w-[44px] flex-col items-center gap-1 px-2">
-            <span className="text-[10px] tracking-wide text-[#676767] uppercase">{day.label}</span>
+          <div
+            key={day.label}
+            className="flex flex-col gap-1 rounded-xl border border-[#EBECE8] bg-white px-4 py-3 shadow-[0px_1px_2px_rgba(0,0,0,0.04)]"
+          >
+            <span className="text-[10px] font-medium tracking-wide text-[#676767] uppercase">
+              {day.label}
+            </span>
             <span
-              className={`text-sm font-semibold ${
+              className={`text-2xl font-semibold ${
                 day.count === 0 ? 'text-[#A1A1A1]' : 'text-[#05040D]'
               }`}
             >
               {day.count}
             </span>
-            <span className={`h-1 w-6 rounded-full ${DAY_STATUS_BAR[day.status]}`} aria-hidden />
+            <span className={`h-1 w-8 rounded-full ${DAY_STATUS_BAR[day.status]}`} aria-hidden />
           </div>
         ))}
       </div>
