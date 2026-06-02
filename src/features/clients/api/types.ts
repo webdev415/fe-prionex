@@ -293,6 +293,23 @@ export interface GetClientsParams {
   // interaction has one of these result ids.
   last_interaction_result_ids?: string
 
+  // Filter: TA Chain + Steps — narrows to clients with at least one
+  // ta_interaction in this chain, optionally restricted to interactions
+  // that carry data for one of the picked steps. ``step_ids`` is keyed
+  // by ``ta_chain_steps.id`` (not target_action_id) so a chain with two
+  // steps that share the same target_action stays independently
+  // filterable. Ignored without ``chain_id``.
+  chain_id?: number
+  step_ids?: string // Comma-separated ta_chain_steps.id values
+
+  // Filter: Per-step value bounds. Format: ``<step_id>:<value>`` items
+  // comma-separated (step_id = ta_chain_steps.id). The BE coerces by the
+  // step's field_type (numeric/date for min/max, exact/ILIKE for eq) and
+  // drops entries whose step_id isn't in ``step_ids``.
+  step_value_eq?: string
+  step_value_min?: string
+  step_value_max?: string
+
   // Filter: Assignment Date (date of latest assignment record for current employee)
   assignment_date_from?: string // YYYY-MM-DD format
   assignment_date_to?: string // YYYY-MM-DD format
