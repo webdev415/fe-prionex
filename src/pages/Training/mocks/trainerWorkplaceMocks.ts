@@ -1373,24 +1373,35 @@ export const MOCK_TASK_KPIS: MockTaskKpis = {
 // Action Analysis — Weekly Tasks heatmap (KAN-415)
 // ─────────────────────────────────────────────────────────────
 
+/**
+ * Per-day status for the Figma Weekly-Tasks KPI strip indicator bar.
+ *   overdue — red bar (at least one task on this day is overdue)
+ *   healthy — green bar (all tasks for this day are on-track or done)
+ *   none    — gray bar / no bar (zero tasks)
+ */
+export type WeeklyDayStatus = 'overdue' | 'healthy' | 'none'
+
+export interface MockWeeklyDay {
+  label: string
+  count: number
+  status: WeeklyDayStatus
+}
+
 export interface MockWeeklyTasksKpis {
   weekTotal: number
-  monday: number
-  tuesday: number
-  wednesday: number
-  thursday: number
-  friday: number
-  saturday: number
+  days: MockWeeklyDay[]
 }
 
 export const MOCK_WEEKLY_TASKS_KPIS: MockWeeklyTasksKpis = {
   weekTotal: 11,
-  monday: 1,
-  tuesday: 4,
-  wednesday: 2,
-  thursday: 0,
-  friday: 2,
-  saturday: 2,
+  days: [
+    { label: 'Mon', count: 1, status: 'overdue' },
+    { label: 'Tue', count: 4, status: 'overdue' },
+    { label: 'Wed', count: 2, status: 'overdue' },
+    { label: 'Thu', count: 7, status: 'healthy' },
+    { label: 'Fri', count: 2, status: 'overdue' },
+    { label: 'Sat', count: 0, status: 'none' },
+  ],
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -1687,6 +1698,7 @@ export const MOCK_INTERACTIONS_KPIS = {
   promises: 36,
   refusals: 18,
   willPass: 26,
+  missedCalls: 26,
   averageDuration: '15 min',
 }
 

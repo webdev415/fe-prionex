@@ -49,6 +49,15 @@ export function InteractionsKpiStrip() {
       accentColor: '#8B5CF6',
     },
     {
+      key: 'missed-calls',
+      label: t('pages.training.interactions.kpi.missedCalls', 'Missed Calls'),
+      value: String(k.missedCalls),
+      icon: Icons.CallEnd,
+      iconColor: 'text-[#F97316]',
+      iconBg: 'bg-white',
+      accentColor: '#F97316',
+    },
+    {
       key: 'avg-duration',
       label: t('pages.training.interactions.kpi.avgDuration', 'Average duration'),
       value: k.averageDuration,

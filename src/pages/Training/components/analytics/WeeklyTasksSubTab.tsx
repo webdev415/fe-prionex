@@ -8,8 +8,8 @@ import {
   type MockTaskRow,
   type TaskPriority,
   type TaskStatus,
+  type WeeklyDayStatus,
 } from '../../mocks/trainerWorkplaceMocks'
-import { PeriodFilterStrip, type PeriodOption } from './PeriodFilterStrip'
 import { AnalyticsMockTable } from './AnalyticsMockTable'
 import {
   ANALYTICS_TABLE_HEAD,
@@ -19,12 +19,17 @@ import {
 } from './analyticsTableStyles'
 
 /**
- * Weekly Tasks sub-tab under Action Analysis (KAN-415). Renders a per-day
- * KPI strip + the task list filtered to the current week. Heatmap row
- * (week Ã— day) ships in a later step — this boilerplate uses the KPI strip
- * to communicate the day breakdown.
+ * Weekly Tasks sub-tab under Action Analysis (KAN-415). Mirrors the Figma
+ * Tab-2 frame: "The week N" left counter + 6 day tiles with status bar,
+ * overdue banner, status filter chips, table.
  */
-const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+
+/** Per-day status indicator bar tone (Figma small underline beneath count). */
+const DAY_STATUS_BAR: Record<WeeklyDayStatus, string> = {
+  overdue: 'bg-[#EF4444]',
+  healthy: 'bg-[#22C55E]',
+  none: 'bg-[#EDEDED]',
+}
 
 const STATUS_TONE: Record<TaskStatus, string> = {
   open: 'bg-amber-100 text-amber-700',
@@ -56,60 +61,77 @@ const PRIORITY_LABEL: Record<TaskPriority, string> = {
 
 export function WeeklyTasksSubTab() {
   const { t } = useTranslation('common')
-  const [period, setPeriod] = useState<PeriodOption>('today')
   const [statusFilter, setStatusFilter] = useState<'all' | TaskStatus>('all')
   const k = MOCK_WEEKLY_TASKS_KPIS
 
-  const dayValues = [k.monday, k.tuesday, k.wednesday, k.thursday, k.friday, k.saturday]
   const filteredTasks = MOCK_TASKS.filter(
     (task) => statusFilter === 'all' || task.status === statusFilter
   )
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Per-week KPI strip */}
-      <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-gray-100 bg-white p-3 shadow-sm">
-        <div className="flex flex-col gap-0.5 border-r border-gray-100 pr-4">
-          <span className="text-[10px] text-gray-500 uppercase">
+      {/* Per-week KPI strip — "The week N" + per-day count with status bar */}
+      <div className="flex flex-wrap items-center gap-1 rounded-xl border border-[#EBECE8] bg-white p-3 shadow-[0px_1px_2px_rgba(0,0,0,0.04)]">
+        <div className="mr-3 flex flex-col gap-0.5 border-r border-[#EBECE8] pr-4">
+          <span className="text-[10px] tracking-wide text-[#676767] uppercase">
             {t('pages.training.weeklyTasks.kpi.week', 'The week')}
           </span>
-          <span className="text-dark-500 text-xl font-semibold">{k.weekTotal}</span>
+          <span className="text-xl font-semibold text-[#05040D]">{k.weekTotal}</span>
         </div>
-        {DAY_LABELS.map((d, idx) => (
-          <div key={d} className="flex flex-col items-center gap-0.5 px-2">
-            <span className="text-[10px] text-gray-500 uppercase">{d}</span>
+        {k.days.map((day) => (
+          <div key={day.label} className="flex min-w-[44px] flex-col items-center gap-1 px-2">
+            <span className="text-[10px] tracking-wide text-[#676767] uppercase">{day.label}</span>
             <span
               className={`text-sm font-semibold ${
-                dayValues[idx] === 0 ? 'text-gray-300' : 'text-dark-500'
+                day.count === 0 ? 'text-[#A1A1A1]' : 'text-[#05040D]'
               }`}
             >
-              {dayValues[idx]}
+              {day.count}
             </span>
+            <span className={`h-1 w-6 rounded-full ${DAY_STATUS_BAR[day.status]}`} aria-hidden />
           </div>
         ))}
       </div>
 
       {/* Weekly overdue banner */}
-      <div className="flex items-center justify-between rounded-2xl border border-red-100 bg-red-50/60 px-4 py-2.5">
-        <div className="flex items-center gap-2 text-xs font-medium text-red-700">
+      <div className="flex items-center justify-between rounded-xl border border-[#FECACA] bg-[#FEF2F2] px-4 py-2.5">
+        <div className="flex items-center gap-2 text-xs font-medium text-[#B91C1C]">
           <Icons.Warning size={14} />
           {t('pages.training.weeklyTasks.overdueBanner', 'Weekly tasks — share an overdue view')}
         </div>
-        <Button variant="ghost" size="sm" className="rounded-full text-[11px] text-red-700">
+        <Button variant="ghost" size="sm" className="rounded-full text-[11px] text-[#B91C1C]">
           {t('pages.training.tasks.overdueBannerCta', 'View overdue')}
         </Button>
       </div>
 
-      <PeriodFilterStrip
-        value={period}
-        onChange={setPeriod}
-        extraChips={(['all', 'open', 'in_progress', 'overdue', 'completed'] as const).map((s) => ({
-          id: s,
-          label: s === 'all' ? 'All tasks' : STATUS_LABEL[s],
-          active: statusFilter === s,
-          onClick: () => setStatusFilter(s),
-        }))}
-      />
+      {/* Status filter chips — Figma Tab 2 shows status pills only (no period selector) */}
+      <div className="flex flex-wrap items-center gap-2">
+        {(['all', 'open', 'in_progress', 'overdue', 'completed'] as const).map((s) => {
+          const isActive = statusFilter === s
+          const label = s === 'all' ? 'All tasks' : STATUS_LABEL[s]
+          const count =
+            s === 'all' ? MOCK_TASKS.length : MOCK_TASKS.filter((task) => task.status === s).length
+          return (
+            <button
+              key={s}
+              type="button"
+              onClick={() => setStatusFilter(s)}
+              className={`flex items-center gap-1.5 rounded-full px-4 py-2 text-xs font-medium transition-colors ${
+                isActive ? 'bg-[#204E4D] text-white' : 'bg-white text-[#05040D] hover:bg-gray-50'
+              }`}
+            >
+              {label}
+              <span
+                className={`rounded-full px-1.5 py-0.5 text-[10px] font-medium ${
+                  isActive ? 'bg-[#BBFB5B] text-[#05040D]' : 'bg-[#EDEDED] text-[#05040D]'
+                }`}
+              >
+                {count}
+              </span>
+            </button>
+          )
+        })}
+      </div>
 
       <AnalyticsMockTable>
         <thead className={ANALYTICS_TABLE_HEAD}>
