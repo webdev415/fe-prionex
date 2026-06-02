@@ -279,6 +279,8 @@ export interface MessagingCampaignSummary {
 export interface MessagingCampaignListResponse {
   items: MessagingCampaignSummary[]
   total: number
+  filtered_total_cost?: string | null
+  filtered_cost_currency?: string | null
 }
 
 export interface MessagingCampaignDetail extends MessagingCampaignSummary {

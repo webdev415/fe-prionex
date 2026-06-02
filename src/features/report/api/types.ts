@@ -274,6 +274,8 @@ export interface BackendMessagingStatistics {
   queued?: number
   in_flight?: number
   delivery_rate: number
+  total_cost?: number | null
+  cost_currency?: string | null
   by_channel: Record<string, number>
   top_drafts: BackendMessagingDraft[]
 }

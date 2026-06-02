@@ -14,6 +14,7 @@ import { cn } from '@/lib/utils'
 import { formatDateTime } from '@/lib/formatters'
 import {
   buildOperatorNamesMap,
+  formatCampaignCostAmount,
   formatCampaignCostDisplay,
   formatLauncherName,
   getMessagingServiceLabel,
@@ -263,6 +264,26 @@ export function MessagingCampaignsPage() {
         launcherOptions={launcherOptions}
         isLoading={isPending || isFetching}
       />
+
+      {!showTableSkeleton && totalItems > 0 && (
+        <div className="flex flex-col gap-1 self-stretch rounded-xl border border-gray-200 bg-white/70 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+          <span className="text-dark-500 text-sm font-medium tracking-[-0.28px]">
+            {t('pages.messagingCampaigns.summary.filteredCampaigns', {
+              count: totalItems,
+              defaultValue: '{{count}} campaigns match filters',
+            })}
+          </span>
+          <span className="text-dark-500 text-sm font-medium tracking-[-0.28px]">
+            {t('pages.messagingCampaigns.summary.totalCost', 'Total cost')}:{' '}
+            <span className="font-semibold tabular-nums">
+              {formatCampaignCostAmount(
+                campaignList?.filtered_total_cost,
+                campaignList?.filtered_cost_currency
+              ) ?? t('pages.messagingCampaigns.cost.unavailable', '—')}
+            </span>
+          </span>
+        </div>
+      )}
 
       {showTableSkeleton ? (
         <MessagingCampaignsTableSkeleton rows={pageSize} />

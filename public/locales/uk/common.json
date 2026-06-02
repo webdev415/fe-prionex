@@ -4106,6 +4106,7 @@
         "title": "Відправлено повідомлень",
         "noData": "Дані недоступні",
         "totalSent": "Всього відправлено",
+        "totalCost": "Загальна вартість",
         "deliveryStats": "Статистика доставки",
         "delivered": "Доставлено",
         "failed": "Не доставлено",
@@ -4950,7 +4951,9 @@
       },
       "summary": {
         "delivered": "доставлено",
-        "resultsLine": "{{delivered}}/{{total}} доставлено"
+        "resultsLine": "{{delivered}}/{{total}} доставлено",
+        "filteredCampaigns": "{{count}} кампаній відповідають фільтрам",
+        "totalCost": "Загальна вартість"
       },
       "cost": {
         "actual": "Фактично",

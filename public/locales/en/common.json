@@ -4676,6 +4676,7 @@
         "title": "Messages Sent",
         "noData": "No data available",
         "totalSent": "Total Sent",
+        "totalCost": "Total Cost",
         "deliveryStats": "Delivery Statistics",
         "delivered": "Delivered",
         "failed": "Failed",
@@ -4935,7 +4936,9 @@
       },
       "summary": {
         "delivered": "delivered",
-        "resultsLine": "{{delivered}}/{{total}} delivered"
+        "resultsLine": "{{delivered}}/{{total}} delivered",
+        "filteredCampaigns": "{{count}} campaigns match filters",
+        "totalCost": "Total cost"
       },
       "cost": {
         "actual": "Actual",

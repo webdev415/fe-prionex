@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/Button'
 import { ProgressBar } from '@/components/ui/ProgressBar'
 import { Icons } from '@/lib/icons'
 import type { Period } from '../types'
+import { formatCampaignCostAmount } from '@/features/messaging'
 import type { MessagesSentModalData } from '@/features/report'
 
 export interface MessagesSentDetailModalProps {
@@ -151,9 +152,16 @@ export function MessagesSentDetailModal({
           renderEmpty()
         ) : (
           <>
-            <div className="mb-4 flex flex-col items-center gap-4 self-stretch">
+            <div className="mb-4 flex flex-col items-center gap-3 self-stretch">
               <div className="text-dark-500 text-2xl leading-tight font-medium tracking-[-0.48px]">
                 {t('pages.reports.messagesModal.totalSent')}: {data.totalSent}
+              </div>
+              <div className="text-dark-500 text-base leading-tight font-medium tracking-[-0.32px]">
+                {t('pages.reports.messagesModal.totalCost', 'Total Cost')}:{' '}
+                <span className="tabular-nums">
+                  {formatCampaignCostAmount(data.totalCost, data.costCurrency) ??
+                    t('pages.messagingCampaigns.cost.unavailable', '—')}
+                </span>
               </div>
             </div>
 

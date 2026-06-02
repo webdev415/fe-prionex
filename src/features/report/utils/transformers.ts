@@ -724,6 +724,8 @@ const EMPTY_MESSAGING_STATISTICS: MessagingStatisticsUI = {
   queued: 0,
   inFlight: 0,
   deliveryRate: 0,
+  totalCost: null,
+  costCurrency: null,
   byChannel: {},
   topDrafts: [],
 }
@@ -742,6 +744,9 @@ function transformMessagingStatistics(
     queued: stats.queued ?? 0,
     inFlight: stats.in_flight ?? 0,
     deliveryRate: stats.delivery_rate,
+    totalCost:
+      stats.total_cost === null || stats.total_cost === undefined ? null : Number(stats.total_cost),
+    costCurrency: stats.cost_currency ?? null,
     byChannel: stats.by_channel ?? {},
     topDrafts: (stats.top_drafts ?? []).map((draft) => ({
       name: draft.name,

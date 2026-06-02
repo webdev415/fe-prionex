@@ -245,6 +245,8 @@ export interface MessagingStatisticsUI {
   queued: number
   inFlight: number
   deliveryRate: number
+  totalCost: number | null
+  costCurrency: string | null
   byChannel: Record<string, number>
   topDrafts: MessagingDraftUI[]
 }

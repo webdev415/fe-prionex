@@ -495,6 +495,8 @@ export interface MessagesSentModalData {
   queued: number
   inFlight: number
   deliveryRate: number
+  totalCost: number | null
+  costCurrency: string | null
   byChannel: { channel: string; count: number }[]
   topDrafts: { name: string; count: number }[]
   byOperator: { name: string; messagesSent: number }[]
@@ -588,6 +590,8 @@ export function useMessagesSentModal({
       queued,
       inFlight,
       deliveryRate,
+      totalCost: messagingStats?.totalCost ?? null,
+      costCurrency: messagingStats?.costCurrency ?? null,
       byChannel,
       topDrafts,
       byOperator: operators
