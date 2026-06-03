@@ -1253,6 +1253,22 @@ export const MOCK_AVG_BY_TYPE: MockAvgByType = {
 export type TaskPriority = 'critical' | 'high' | 'medium' | 'low'
 export type TaskStatus = 'open' | 'in_progress' | 'overdue' | 'completed'
 
+/** Figma Tasks Kanban column (Ukrainian source: "ДО РОБОТИ / У РОБОТІ /
+ *  ЗАПЛАНОВАНО / ГОТОВО"). */
+export type TaskKanbanColumn = 'to_do' | 'in_progress' | 'planned' | 'done'
+
+/** Figma Tasks filter chip — All / Today / Tomorrow / Week. */
+export type TaskTimeBucket = 'today' | 'tomorrow' | 'this_week'
+
+/** Per-card category — drives the small icon on the top-left of the card. */
+export type TaskCategory =
+  | 'listen'
+  | 'assign_drill'
+  | 'check_test'
+  | 'checklist'
+  | 'prepare'
+  | 'session'
+
 export interface MockTaskRow {
   id: number
   dateLabel: string
@@ -1264,108 +1280,155 @@ export interface MockTaskRow {
   /** Mock scope for Tasks sub-tab filtering. */
   assignmentScope: 'by_me' | 'to_scope'
   deadlineLabel?: string
+  /** Figma Tasks Kanban column placement. */
+  kanbanColumn?: TaskKanbanColumn
+  /** Figma Tasks card subtitle (action verb, e.g. "Listen + rate"). */
+  subtitle?: string
+  /** Figma Tasks card category icon. */
+  category?: TaskCategory
+  /** Figma Tasks card timestamp ("today 16:00", "tomorrow 11:00", "17.05"). */
+  cardTimestamp?: string
+  /** Figma Tasks operator initials + colored avatar. */
+  operatorInitials?: string
+  operatorAvatarColor?: string
+  /** Figma Tasks filter-chip bucket. */
+  timeBucket?: TaskTimeBucket
 }
 
 export const MOCK_TASKS: MockTaskRow[] = [
+  // Column 1 — ДО РОБОТИ (To do) · 5 cards
   {
     id: 1,
-    dateLabel: '05/15',
-    title: 'Script — closing the deal',
-    executor: 'Andrii Pavlenko',
+    dateLabel: '05/16',
+    title: 'Listen and rate 3 calls',
+    subtitle: 'Listen + rate',
+    category: 'listen',
+    executor: 'Artem Honchar',
+    operatorInitials: 'AH',
+    operatorAvatarColor: '#FEE4E2',
     author: 'Yulia Marchuk',
-    priority: 'critical',
-    status: 'in_progress',
+    priority: 'high',
+    status: 'open',
     assignmentScope: 'by_me',
-    deadlineLabel: 'May 18',
+    kanbanColumn: 'to_do',
+    cardTimestamp: 'today 16:00',
+    timeBucket: 'today',
+    deadlineLabel: 'today 16:00',
   },
   {
     id: 2,
     dateLabel: '05/16',
-    title: 'Call processing — milestone 1',
-    executor: 'Kateryna Antonova',
+    title: 'Assign drill "Objections"',
+    subtitle: 'Assign training',
+    category: 'assign_drill',
+    executor: 'Denys Poltavets',
+    operatorInitials: 'DP',
+    operatorAvatarColor: '#FEF3C7',
     author: 'Yulia Marchuk',
-    priority: 'critical',
+    priority: 'medium',
     status: 'open',
     assignmentScope: 'by_me',
-    deadlineLabel: 'May 20',
+    kanbanColumn: 'to_do',
+    cardTimestamp: 'today',
+    timeBucket: 'today',
+    deadlineLabel: 'today',
   },
   {
     id: 3,
     dateLabel: '05/15',
-    title: 'Analysis of result distribution',
-    executor: 'Oleh Bondar',
+    title: 'Check test after course "Closing"',
+    subtitle: 'Check test',
+    category: 'check_test',
+    executor: 'Bohdan Melnyk',
+    operatorInitials: 'BM',
+    operatorAvatarColor: '#DBEAFE',
     author: 'Yulia Marchuk',
-    priority: 'high',
-    status: 'in_progress',
-    assignmentScope: 'to_scope',
-    deadlineLabel: 'May 17',
+    priority: 'low',
+    status: 'open',
+    assignmentScope: 'by_me',
+    kanbanColumn: 'to_do',
+    cardTimestamp: '15.05',
+    timeBucket: 'this_week',
+    deadlineLabel: '15.05',
   },
   {
     id: 4,
-    dateLabel: '05/13',
-    title: 'Soft refusal technique',
-    executor: 'Marina Shevchenko',
+    dateLabel: '05/17',
+    title: 'Weekly checklist: 3 courses + test',
+    subtitle: 'Checklist for N days',
+    category: 'checklist',
+    executor: 'Artem Honchar',
+    operatorInitials: 'AH',
+    operatorAvatarColor: '#FEE4E2',
     author: 'Yulia Marchuk',
-    priority: 'medium',
-    status: 'completed',
+    priority: 'high',
+    status: 'open',
     assignmentScope: 'by_me',
-    deadlineLabel: 'May 14',
+    kanbanColumn: 'to_do',
+    cardTimestamp: '17.05',
+    timeBucket: 'this_week',
+    deadlineLabel: '17.05',
   },
   {
     id: 5,
-    dateLabel: '05/12',
-    title: 'Course "Effective Calling"',
-    executor: 'Oleksandra Bila',
+    dateLabel: '05/14',
+    title: 'Listen to 5 random calls',
+    subtitle: 'Listen + rate',
+    category: 'listen',
+    executor: 'Oleh Bondar',
+    operatorInitials: 'OB',
+    operatorAvatarColor: '#E0E7FF',
     author: 'Yulia Marchuk',
     priority: 'low',
-    status: 'completed',
-    assignmentScope: 'to_scope',
-    deadlineLabel: 'May 12',
+    status: 'open',
+    assignmentScope: 'by_me',
+    kanbanColumn: 'to_do',
+    cardTimestamp: '14.05',
+    timeBucket: 'this_week',
+    deadlineLabel: '14.05',
   },
+
+  // Column 2 — У РОБОТІ (In progress) · 1 card
   {
     id: 6,
-    dateLabel: '05/11',
-    title: 'Correction of greeting script',
-    executor: 'Oksana Tkachenko',
+    dateLabel: '05/16',
+    title: 'Prepare materials for 1-on-1',
+    subtitle: '1-on-1 session',
+    category: 'prepare',
+    executor: 'Svitlana Hordiienko',
+    operatorInitials: 'SH',
+    operatorAvatarColor: '#FCE7F3',
     author: 'Yulia Marchuk',
     priority: 'high',
-    status: 'completed',
+    status: 'in_progress',
     assignmentScope: 'by_me',
-    deadlineLabel: 'May 11',
+    kanbanColumn: 'in_progress',
+    cardTimestamp: 'today 14:00',
+    timeBucket: 'today',
+    deadlineLabel: 'today 14:00',
   },
+
+  // Column 3 — ЗАПЛАНОВАНО (Planned) · 1 card
   {
     id: 7,
-    dateLabel: '05/10',
-    title: 'Training "Callback on lead"',
+    dateLabel: '05/17',
+    title: '1-on-1 session',
+    subtitle: '1-on-1 session',
+    category: 'session',
     executor: 'Iryna Sokol',
+    operatorInitials: 'IS',
+    operatorAvatarColor: '#D1FAE5',
     author: 'Yulia Marchuk',
     priority: 'medium',
     status: 'open',
-    assignmentScope: 'to_scope',
-    deadlineLabel: 'May 15',
-  },
-  {
-    id: 8,
-    dateLabel: '05/09',
-    title: 'Review overdue promise follow-up',
-    executor: 'Volodymyr Senchuk',
-    author: 'Yulia Marchuk',
-    priority: 'critical',
-    status: 'overdue',
     assignmentScope: 'by_me',
-    deadlineLabel: 'May 08',
+    kanbanColumn: 'planned',
+    cardTimestamp: 'tomorrow 11:00',
+    timeBucket: 'tomorrow',
+    deadlineLabel: 'tomorrow 11:00',
   },
-  {
-    id: 9,
-    dateLabel: '05/08',
-    title: 'Escalation callback — Dept B',
-    executor: 'Anna Kovalenko',
-    author: 'Sergii Tarasov',
-    priority: 'high',
-    status: 'overdue',
-    assignmentScope: 'to_scope',
-    deadlineLabel: 'May 07',
-  },
+
+  // Column 4 — ГОТОВО (Done) · 0 cards in the demo
 ]
 
 export interface MockTaskKpis {

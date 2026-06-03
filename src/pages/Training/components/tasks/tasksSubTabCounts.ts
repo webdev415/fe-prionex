@@ -1,23 +1,26 @@
 import { MOCK_TASKS } from '../../mocks/trainerWorkplaceMocks'
 import type { TasksSubTabId } from '../../types'
 
+/**
+ * Per-chip counts for the Tasks filter row (Figma: All / Today / Tomorrow /
+ * Week). Filters operate on `task.timeBucket`.
+ */
 export const TASKS_SUB_TAB_COUNTS: Record<TasksSubTabId, number> = {
-  'assigned-by-me': MOCK_TASKS.filter((t) => t.assignmentScope === 'by_me').length,
-  'assigned-to-scope': MOCK_TASKS.filter((t) => t.assignmentScope === 'to_scope').length,
-  overdue: MOCK_TASKS.filter((t) => t.status === 'overdue').length,
-  completed: MOCK_TASKS.filter((t) => t.status === 'completed').length,
+  all: MOCK_TASKS.length,
+  today: MOCK_TASKS.filter((t) => t.timeBucket === 'today').length,
+  tomorrow: MOCK_TASKS.filter((t) => t.timeBucket === 'tomorrow').length,
+  this_week: MOCK_TASKS.filter((t) => t.timeBucket === 'this_week').length,
 }
 
 export function filterTasksBySubTab(subTab: TasksSubTabId) {
   switch (subTab) {
-    case 'assigned-by-me':
-      return MOCK_TASKS.filter((t) => t.assignmentScope === 'by_me')
-    case 'assigned-to-scope':
-      return MOCK_TASKS.filter((t) => t.assignmentScope === 'to_scope')
-    case 'overdue':
-      return MOCK_TASKS.filter((t) => t.status === 'overdue')
-    case 'completed':
-      return MOCK_TASKS.filter((t) => t.status === 'completed')
+    case 'today':
+      return MOCK_TASKS.filter((t) => t.timeBucket === 'today')
+    case 'tomorrow':
+      return MOCK_TASKS.filter((t) => t.timeBucket === 'tomorrow')
+    case 'this_week':
+      return MOCK_TASKS.filter((t) => t.timeBucket === 'this_week')
+    case 'all':
     default:
       return MOCK_TASKS
   }

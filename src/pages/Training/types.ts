@@ -77,8 +77,9 @@ export type DialogueEvaluationViewMode =
   | 'coach-notes'
   | 'closed'
 
-// Tasks top-tab sub-tabs (open question §6.5 — v1 ships these four).
-export type TasksSubTabId = 'assigned-by-me' | 'assigned-to-scope' | 'overdue' | 'completed'
+// Tasks top-tab time-bucket chips (Figma source: All / Today / Tomorrow /
+// Week). Drives the chip row above the Kanban board.
+export type TasksSubTabId = 'all' | 'today' | 'tomorrow' | 'this_week'
 
 export const TRAINING_TOP_TABS: TrainingTopTabId[] = [
   'inbox',
@@ -141,12 +142,7 @@ export const DIALOGUE_EVALUATION_VIEW_MODES: DialogueEvaluationViewMode[] = [
   'closed',
 ]
 
-export const TASKS_SUB_TABS: TasksSubTabId[] = [
-  'assigned-by-me',
-  'assigned-to-scope',
-  'overdue',
-  'completed',
-]
+export const TASKS_SUB_TABS: TasksSubTabId[] = ['all', 'today', 'tomorrow', 'this_week']
 
 // Legacy 1-level tab id, retained for the URL-compat shim.
 export type ActionAnalysisTabId = 'calls' | 'interactions'
