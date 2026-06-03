@@ -168,12 +168,6 @@ export function MockOperatorDetailPanel({
                 <p className="mt-1 text-[11px] leading-4 text-[#676767]">
                   A · {operator.department} · {operator.segment} · {operator.queueEnteredLabel}
                 </p>
-                {operator.priority === 'critical' ? (
-                  <span className="mt-2 inline-flex rounded-full bg-[#FEF2F2] px-2.5 py-0.5 text-[11px] font-medium text-[#EF4444]">
-                    {t('pages.training.inbox.detail.critical', 'Critical')}
-                  </span>
-                ) : null}
-                <p className="mt-2 text-xs leading-4 text-[#05040D]">{detail.statusBannerText}</p>
               </div>
 
               <div className="relative h-12 w-12 flex-shrink-0">
@@ -185,7 +179,7 @@ export function MockOperatorDetailPanel({
                     strokeWidth="4"
                     fill="none"
                     className="stroke-[#EDEDED]"
-                  />
+                    />
                   <circle
                     cx="24"
                     cy="24"
@@ -196,11 +190,11 @@ export function MockOperatorDetailPanel({
                     strokeDasharray={scoreCircumference}
                     strokeDashoffset={scoreOffset}
                     className={SCORE_RING[operator.scoreBand]}
-                  />
+                    />
                 </svg>
                 <span
                   className={`absolute inset-0 flex items-center justify-center text-sm font-semibold ${SCORE_TEXT[operator.scoreBand]}`}
-                >
+                  >
                   {operator.compositeScore}
                 </span>
               </div>
@@ -209,15 +203,15 @@ export function MockOperatorDetailPanel({
 
           <div className="flex flex-col gap-5 px-4 pb-4">
             {/* KPI row — 4×103×80 cards */}
-            <div className="grid grid-cols-4 gap-2">
+            <div className="grid grid-cols-3 gap-2">
               {detail.statsRow.map((stat, index) => (
                 <div
-                  key={stat.label}
-                  className={`flex min-h-20 flex-col justify-center rounded-lg border px-2 py-2.5 ${
-                    index === 0 || stat.cardTone === 'red'
-                      ? 'border-[#FEE2E2] bg-[#FEF2F2]'
-                      : 'border-[#EBECE8] bg-white'
-                  }`}
+                key={stat.label}
+                className={`flex min-h-20 flex-col justify-center rounded-lg border px-2 py-2.5 ${
+                  index === 0 || stat.cardTone === 'red'
+                  ? 'border-[#FEE2E2] bg-[#FEF2F2]'
+                  : 'border-[#EBECE8] bg-white'
+                }`}
                 >
                   <span className="text-[10px] leading-3 font-medium tracking-wide text-[#676767] uppercase">
                     {stat.label}
@@ -236,9 +230,16 @@ export function MockOperatorDetailPanel({
 
             {/* Why entered the queue — full-width stacked cards */}
             <div>
-              <h3 className="mb-3 text-sm font-medium tracking-[-0.02em] text-[#05040D]">
-                {t('pages.training.inbox.detail.whyInQueue', 'Why entered the queue')}
-              </h3>
+              <div className="flex flex-row justify-between">
+                <span className="mb-3 text-sm font-medium tracking-[-0.02em] text-[#05040D]">
+                  {t('pages.training.inbox.detail.whyInQueue', 'Why entered the queue')}
+                </span>
+                {operator.priority === 'critical' ? (
+                  <span className="inline-flex rounded-full bg-[#FEF2F2] px-2.5 py-0.5 text-[11px] font-medium text-[#EF4444]">
+                    {t('pages.training.inbox.detail.critical', 'Critical')}
+                  </span>
+                ) : null} 
+              </div>
               <div className="flex flex-col gap-1.5">
                 {detail.whyInQueue.map((item) => {
                   const tone = QUEUE_CARD[item.tone]

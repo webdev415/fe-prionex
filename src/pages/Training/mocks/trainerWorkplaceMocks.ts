@@ -2297,7 +2297,6 @@ export const MOCK_OPERATOR_DETAIL: MockOperatorDetail = {
     { label: 'Daily plan', value: '15%', subValue: '8/55', cardTone: 'red' },
     { label: 'Online', value: '1h 04m', subValue: 'from 8:00', cardTone: 'gray' },
     { label: 'Internship', value: '2024', subValue: '11/21/2024', cardTone: 'gray' },
-    { label: 'Activity', value: '46 min', subValue: 'last signal', cardTone: 'gray' },
   ],
   nextOneOnOne: {
     topic: 'Tough conversation: 4 triggers',
