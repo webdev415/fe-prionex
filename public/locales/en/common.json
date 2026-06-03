@@ -1439,6 +1439,7 @@
       "step1": {
         "loanSourceMetadata": "Loan Source / Metadata",
         "sellerCreditor": "Seller / Creditor",
+        "legalNameInline": "(Legal name: {{legalName}})",
         "projectCode": "Project Code:",
         "purchaseDate": "Purchase date:",
         "comment": "Comment:",
@@ -1459,7 +1460,24 @@
           "loadingSellers": "Loading sellers..."
         },
         "noProjectsAvailable": "No projects available",
-        "noSellersAvailable": "No sellers available"
+        "noSellersAvailable": "No sellers available",
+        "factoringAgreement": {
+          "title": "Factoring agreement",
+          "pickSellerFirst": "Pick a seller first.",
+          "pickExisting": "Pick existing",
+          "createNew": "Create new",
+          "loading": "Loading…",
+          "selectExisting": "Select agreement",
+          "emptyForSeller": "No agreements yet — create one",
+          "fields": {
+            "number": "Agreement number",
+            "previousLender": "Who sold",
+            "previousLenderPlaceholderWithFallback": "If left blank, the seller's legal name will be inserted.",
+            "previousLenderPlaceholderGeneric": "Enter the entity that sold the debt",
+            "contractPurchaseDate": "Contract purchase date",
+            "contractPurchaseDatePlaceholder": "Select contract purchase date"
+          }
+        }
       },
       "step2": {
         "simple": {

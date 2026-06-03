@@ -264,6 +264,13 @@ export function ImportClientsPage() {
     comment: '',
     importType: 'simple',
     schemaCode: '',
+    factoringAgreementMode: 'existing',
+    factoringAgreementId: '',
+    newFactoringAgreement: {
+      agreement_number: '',
+      previous_lender: '',
+      contract_purchase_date: '',
+    },
   })
 
   const [step2Data, setStep2Data] = useState<Step2Data>({
@@ -298,11 +305,22 @@ export function ImportClientsPage() {
   }
 
   const isStep1Valid = () => {
-    const baseValid =
-      step1Data.sellerId !== '' && step1Data.projectCode !== '' && step1Data.purchaseDate !== ''
+    const baseValid = step1Data.sellerId !== '' && step1Data.projectCode !== ''
     if (!baseValid) return false
     // Vendor flow needs a schema selected before step 2 can proceed.
     if (step1Data.importType === 'vendor' && !step1Data.schemaCode) return false
+    // Simple flow requires a factoring agreement — either pick existing
+    // or fill in the minimum field (agreement_number) of the new-create form.
+    // The purchase date for debts is now derived from the agreement
+    // (existing pick or create-new input) rather than entered separately.
+    if (step1Data.importType === 'simple') {
+      if (step1Data.factoringAgreementMode === 'existing') {
+        if (!step1Data.factoringAgreementId) return false
+      } else {
+        if (!step1Data.newFactoringAgreement.agreement_number.trim()) return false
+        if (!step1Data.newFactoringAgreement.contract_purchase_date) return false
+      }
+    }
     return true
   }
 

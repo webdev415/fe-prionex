@@ -1441,6 +1441,7 @@
       "step1": {
         "loanSourceMetadata": "Джерело позики / Метадані",
         "sellerCreditor": "Продавець / Кредитор",
+        "legalNameInline": "(Юридична назва: {{legalName}})",
         "projectCode": "Код проєкту:",
         "purchaseDate": "Дата покупки:",
         "comment": "Коментар:",
@@ -1461,7 +1462,24 @@
           "loadingSellers": "Завантаження продавців..."
         },
         "noProjectsAvailable": "Немає доступних проєктів",
-        "noSellersAvailable": "Немає доступних продавців"
+        "noSellersAvailable": "Немає доступних продавців",
+        "factoringAgreement": {
+          "title": "Договір факторингу",
+          "pickSellerFirst": "Спочатку оберіть продавця.",
+          "pickExisting": "Вибрати існуючий",
+          "createNew": "Створити новий",
+          "loading": "Завантаження…",
+          "selectExisting": "Виберіть договір",
+          "emptyForSeller": "Договорів ще немає — створіть",
+          "fields": {
+            "number": "Номер договору",
+            "previousLender": "Хто продав",
+            "previousLenderPlaceholderWithFallback": "Якщо залишити порожнім, буде вставлено юридичну назву продавця.",
+            "previousLenderPlaceholderGeneric": "Введіть особу, яка продала борг",
+            "contractPurchaseDate": "Дата купівлі за договором",
+            "contractPurchaseDatePlaceholder": "Виберіть дату купівлі за договором"
+          }
+        }
       },
       "step2": {
         "simple": {

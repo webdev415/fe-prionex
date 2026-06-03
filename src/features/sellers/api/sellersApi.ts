@@ -67,13 +67,25 @@ export async function deleteSeller(
 }
 
 /**
- * List factoring agreements for a seller (KAN-557).
- * BE scopes results to the caller's active_project_id via the
- * agreement → debts → clients chain. Empty-agreement rows are excluded.
+ * List factoring agreements for a seller.
+ *
+ * Default behaviour scopes results to the caller's active_project_id via the
+ * agreement → debts → clients chain and excludes empty agreements. Pass
+ * `includeEmpty: true` to get all agreements for the seller globally,
+ * including those with zero linked debts (used by the import wizard so
+ * the operator can pick a just-created agreement).
  */
-export async function listFactoringAgreements(sellerId: number): Promise<FactoringAgreement[]> {
+export async function listFactoringAgreements(
+  sellerId: number,
+  options: { includeEmpty?: boolean } = {}
+): Promise<FactoringAgreement[]> {
+  const params: Record<string, boolean> = {}
+  if (options.includeEmpty) {
+    params.include_empty = true
+  }
   const response = await api.get<FactoringAgreement[]>(
-    `/api/v1/sellers/${sellerId}/factoring-agreements`
+    `/api/v1/sellers/${sellerId}/factoring-agreements`,
+    { params }
   )
   return response.data
 }
