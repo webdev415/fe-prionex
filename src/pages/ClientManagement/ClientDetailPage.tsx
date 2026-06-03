@@ -247,7 +247,7 @@ export function ClientDetailPage() {
   const [editClosureDateDebtId, setEditClosureDateDebtId] = useState<number | null>(null)
   const [editClosureDateValue, setEditClosureDateValue] = useState<Date | null>(null)
   const [editClosureDateError, setEditClosureDateError] = useState<string | null>(null)
-  // KAN-557 §3: row IDs whose factoring-agreement info panel is currently expanded.
+  // Row IDs whose factoring-agreement info panel is currently expanded.
   // Multi-row expand is allowed — Set lets parent track an arbitrary subset.
   const [expandedDebtIds, setExpandedDebtIds] = useState<Set<number>>(new Set())
   const toggleDebtExpand = (id: number) =>
@@ -694,12 +694,12 @@ export function ClientDetailPage() {
         loanNumber: d.contract_number,
         issueDate: formatDate(d.credit_issued_date ?? undefined),
         counterparty: d.seller_company,
-        // KAN-557 §3: if the per-debt purchase_date is empty, fall back to
+        // If the per-debt purchase_date is empty, fall back to
         // the linked factoring agreement's contract_purchase_date.
         saleDate: formatDate(
           d.purchase_date ?? d.factoring_agreement?.contract_purchase_date ?? undefined
         ),
-        // KAN-557 §3: factoring chain surfaced via the row-expansion "Info" button.
+        // Factoring chain surfaced via the row-expansion "Info" button.
         sellerLegalName: d.seller_legal_name ?? null,
         factoringAgreementPreviousLender: d.factoring_agreement?.previous_lender ?? null,
         factoringAgreementPurchaseDate: d.factoring_agreement?.contract_purchase_date
@@ -1447,7 +1447,7 @@ export function ClientDetailPage() {
       header: t('pages.clients.detail.tableHeaders.actions'),
       align: 'center',
       render: (loan) => {
-        // KAN-557 §3: "Info" button — always visible, opens expansion below.
+        // "Info" button — always visible, opens expansion below.
         const infoButton = (
           <button
             onClick={() => toggleDebtExpand(loan.id)}

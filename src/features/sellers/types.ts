@@ -34,7 +34,7 @@ export interface Seller {
   notes?: string
 
   /**
-   * Full legal entity name of the primary creditor (KAN-557).
+   * Full legal entity name of the primary creditor.
    * E.g., 'ТОВ "ФК "Є ГРОШІ"'. `seller_name` remains the operator-facing label.
    */
   legal_name?: string | null
@@ -48,7 +48,7 @@ export interface Seller {
 
 /**
  * Factoring agreement — the contract under which the project purchased
- * a batch of debts (KAN-557).
+ * a batch of debts.
  * Returned by GET /api/v1/sellers/{seller_id}/factoring-agreements.
  */
 export interface FactoringAgreement {
@@ -65,6 +65,20 @@ export interface FactoringAgreement {
   created_at: string
   /** Count of debts (in the caller's project) linked to this agreement. */
   debt_count: number
+}
+
+/**
+ * Paginated envelope returned by
+ * GET /api/v1/sellers/{seller_id}/factoring-agreements.
+ *
+ * Mirrors the shape used by SellerListResponse / ImportJobsPage —
+ * { items, total, page, page_size }.
+ */
+export interface FactoringAgreementPage {
+  items: FactoringAgreement[]
+  total: number
+  page: number
+  page_size: number
 }
 
 /**
@@ -154,7 +168,7 @@ export interface UpdateSellerInput {
   tax_id?: string
   notes?: string
   is_active?: boolean
-  /** Full legal entity name of the primary creditor (KAN-557). */
+  /** Full legal entity name of the primary creditor. */
   legal_name?: string | null
 }
 

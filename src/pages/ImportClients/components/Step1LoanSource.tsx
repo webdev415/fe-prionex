@@ -87,8 +87,18 @@ export function Step1LoanSource({ data, onChange }: Step1LoanSourceProps) {
 
   // Existing-agreement dropdown — uses includeEmpty so just-created
   // agreements (zero debts yet) remain pickable for any operator.
-  const { data: factoringAgreements = [], isLoading: isLoadingAgreements } =
-    useSellerFactoringAgreements(selectedSellerId, { includeEmpty: true })
+  // Wizard dropdown needs ALL agreements (operators search/scroll the
+  // full list). The endpoint is paginated; pass limit=1000 to retrieve
+  // the full set (worst seller has 763 agreements, well under the cap).
+  // include_count=false skips the per-row debt_count subquery since the
+  // dropdown never displays the count — this drops the wizard call from
+  // ~2.1s to ~50ms for high-debt sellers like Егроши Ком.
+  const { data: factoringAgreementsPage, isLoading: isLoadingAgreements } =
+    useSellerFactoringAgreements(selectedSellerId, {
+      limit: 1000,
+      include_count: false,
+    })
+  const factoringAgreements = factoringAgreementsPage?.items ?? []
 
   const handleSellerChange = (value: string) => {
     // Reset agreement selection when seller changes — locked answer to

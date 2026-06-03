@@ -14,7 +14,7 @@ export interface ClientAssigneeIdsResponse {
 }
 
 /**
- * Minimal factoring-agreement projection embedded in a debt response (KAN-557 §3).
+ * Minimal factoring-agreement projection embedded in a debt response.
  */
 export interface DebtFactoringAgreement {
   id: number
@@ -27,7 +27,7 @@ export interface DebtDetail {
   id: number
   seller_id?: number
   seller_company: string
-  /** KAN-557 §3: full legal name of the seller (primary creditor). */
+  /** Full legal name of the seller (primary creditor). */
   seller_legal_name?: string | null
   contract_number: string
   original_debt_amount: string
@@ -65,9 +65,9 @@ export interface DebtDetail {
   // Surfaced on the loans table only when it differs from remaining_debt_amount.
   legacy_f53?: string | null
 
-  // KAN-557 §3: linked factoring agreement (if any). Surfaces the
-  // legal_name + previous_lender + agreement purchase date to the
-  // client-detail Info expansion without an extra round-trip.
+  // Linked factoring agreement (if any). Surfaces the legal_name +
+  // previous_lender + agreement purchase date to the client-detail
+  // Info expansion without an extra round-trip.
   factoring_agreement_id?: number | null
   factoring_agreement?: DebtFactoringAgreement | null
 }

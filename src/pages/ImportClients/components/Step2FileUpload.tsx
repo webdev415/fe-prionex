@@ -54,9 +54,13 @@ export function Step2FileUpload({
   // batch's debts.purchase_date — there is no longer a separate
   // top-level Purchase date input in step 1.
   const sellerIdNumber = step1Data.sellerId ? parseInt(step1Data.sellerId, 10) : null
-  const { data: factoringAgreements = [] } = useSellerFactoringAgreements(sellerIdNumber, {
-    includeEmpty: true,
+  // Same as Step1 — wizard needs the full agreement list, not a page,
+  // and we skip include_count since debt_count is never displayed here.
+  const { data: factoringAgreementsPage } = useSellerFactoringAgreements(sellerIdNumber, {
+    limit: 1000,
+    include_count: false,
   })
+  const factoringAgreements = factoringAgreementsPage?.items ?? []
 
   // Reset mutation state when import is no longer in progress (allows new imports)
   useEffect(() => {

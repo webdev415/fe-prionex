@@ -1,5 +1,5 @@
 /**
- * LoanFactoringInfo (KAN-557 §3)
+ * LoanFactoringInfo
  *
  * Renders the factoring-agreement details for a single debt, shown inside
  * the expandable row on `ClientDetailPage`'s loan table. Three locked

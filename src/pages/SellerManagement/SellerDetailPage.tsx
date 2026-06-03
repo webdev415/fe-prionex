@@ -1,5 +1,5 @@
 /**
- * SellerDetailPage (KAN-557)
+ * SellerDetailPage
  *
  * Dedicated detail view for one seller. Shows the seller's identity
  * (name + legal name) plus a read-only table of factoring agreements
@@ -12,15 +12,28 @@ import { useTranslation } from 'react-i18next'
 import { Link, useParams } from 'react-router-dom'
 import { Icons } from '@/lib/icons'
 import { ErrorState } from '@/components/ErrorState'
+import { Pagination } from '@/components/ui/Pagination'
+import { useURLState } from '@/hooks'
 import { useSellerDetail, useSellerFactoringAgreements } from '@/features/sellers'
+
+const DEFAULT_PAGE_SIZE = 10
 
 export function SellerDetailPage() {
   const { t } = useTranslation('common')
   const { id } = useParams<{ id: string }>()
   const sellerId = id ? Number(id) : undefined
 
+  // URL-backed pagination state (`?agreementPage=2&agreementPageSize=20`)
+  // — uses the standard pattern from SellerManagementPage so refreshing
+  // or sharing a link preserves the page.
+  const [currentPage, setCurrentPage] = useURLState<number>('agreementPage', 1)
+  const [pageSize, setPageSize] = useURLState<number>('agreementPageSize', DEFAULT_PAGE_SIZE)
+
   const sellerQuery = useSellerDetail(sellerId ?? 0, false)
-  const agreementsQuery = useSellerFactoringAgreements(sellerId)
+  const agreementsQuery = useSellerFactoringAgreements(sellerId, {
+    skip: (currentPage - 1) * pageSize,
+    limit: pageSize,
+  })
 
   if (!sellerId || Number.isNaN(sellerId)) {
     return (
@@ -52,7 +65,10 @@ export function SellerDetailPage() {
   }
 
   const seller = sellerQuery.data
-  const agreements = agreementsQuery.data ?? []
+  const agreementsPage = agreementsQuery.data
+  const agreements = agreementsPage?.items ?? []
+  const totalAgreements = agreementsPage?.total ?? 0
+  const totalPages = Math.max(1, Math.ceil(totalAgreements / pageSize))
 
   return (
     <div className="space-y-6">
@@ -102,50 +118,65 @@ export function SellerDetailPage() {
             )}
           </p>
         ) : (
-          <div className="overflow-x-auto rounded-md border border-gray-200">
-            <table className="min-w-full divide-y divide-gray-200 text-sm">
-              <thead className="bg-gray-50">
-                <tr className="text-xs font-medium tracking-wide text-gray-500 uppercase">
-                  <th className="px-4 py-3 text-center">
-                    {t(
-                      'pages.sellers.detail.factoringAgreements.columns.number',
-                      'Agreement number'
-                    )}
-                  </th>
-                  <th className="px-4 py-3 text-center">
-                    {t(
-                      'pages.sellers.detail.factoringAgreements.columns.previousLender',
-                      'Who sold'
-                    )}
-                  </th>
-                  <th className="px-4 py-3 text-center">
-                    {t(
-                      'pages.sellers.detail.factoringAgreements.columns.purchaseDate',
-                      'Purchase date'
-                    )}
-                  </th>
-                  <th className="px-4 py-3 text-center">
-                    {t(
-                      'pages.sellers.detail.factoringAgreements.columns.debtCount',
-                      'Number of debts'
-                    )}
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {agreements.map((a) => (
-                  <tr key={a.id} className="text-dark-500 odd:bg-white even:bg-gray-50">
-                    <td className="px-4 py-3 text-center font-medium">{a.agreement_number}</td>
-                    <td className="px-4 py-3 text-center font-light">{a.previous_lender || '—'}</td>
-                    <td className="px-4 py-3 text-center font-light">
-                      {a.contract_purchase_date || '—'}
-                    </td>
-                    <td className="px-4 py-3 text-center font-medium">{a.debt_count}</td>
+          <>
+            <div className="overflow-x-auto rounded-md border border-gray-200">
+              <table className="min-w-full divide-y divide-gray-200 text-sm">
+                <thead className="bg-gray-50">
+                  <tr className="text-xs font-medium tracking-wide text-gray-500 uppercase">
+                    <th className="px-4 py-3 text-center">
+                      {t(
+                        'pages.sellers.detail.factoringAgreements.columns.number',
+                        'Agreement number'
+                      )}
+                    </th>
+                    <th className="px-4 py-3 text-center">
+                      {t(
+                        'pages.sellers.detail.factoringAgreements.columns.previousLender',
+                        'Who sold'
+                      )}
+                    </th>
+                    <th className="px-4 py-3 text-center">
+                      {t(
+                        'pages.sellers.detail.factoringAgreements.columns.purchaseDate',
+                        'Purchase date'
+                      )}
+                    </th>
+                    <th className="px-4 py-3 text-center">
+                      {t(
+                        'pages.sellers.detail.factoringAgreements.columns.debtCount',
+                        'Number of debts'
+                      )}
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {agreements.map((a) => (
+                    <tr key={a.id} className="text-dark-500 odd:bg-white even:bg-gray-50">
+                      <td className="px-4 py-3 text-center font-medium">{a.agreement_number}</td>
+                      <td className="px-4 py-3 text-center font-light">
+                        {a.previous_lender || '—'}
+                      </td>
+                      <td className="px-4 py-3 text-center font-light">
+                        {a.contract_purchase_date || '—'}
+                      </td>
+                      <td className="px-4 py-3 text-center font-medium">{a.debt_count}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              pageSize={pageSize}
+              onPageChange={setCurrentPage}
+              onPageSizeChange={(newSize) => {
+                setPageSize(newSize)
+                setCurrentPage(1)
+              }}
+            />
+          </>
         )}
       </div>
     </div>
