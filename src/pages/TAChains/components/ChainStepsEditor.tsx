@@ -19,7 +19,7 @@ import {
   SelectValue,
 } from '@/components/ui/Select'
 import { useTargetActions } from '@/features/targetActions/hooks/useTargetActions'
-import type { TAChainStepIn } from '@/features/taChains/api/types'
+import type { ContactMedium, TAChainStepIn } from '@/features/taChains/api/types'
 
 interface ChainStepsEditorProps {
   steps: TAChainStepIn[]
@@ -83,6 +83,7 @@ export function ChainStepsEditor({ steps, onChange, disabled }: ChainStepsEditor
         delay_minutes: 0,
         not_in_the_past: false,
         contact_source: firstTA.field_type === 'contact' ? 'client' : null,
+        contact_medium: firstTA.field_type === 'contact' ? 'phone' : undefined,
         show_closed_credits: false,
       },
     ])
@@ -174,8 +175,10 @@ export function ChainStepsEditor({ steps, onChange, disabled }: ChainStepsEditor
                       const next: Partial<TAChainStepIn> = { target_action_id: newId }
                       if (newTA?.field_type === 'contact') {
                         next.contact_source = step.contact_source ?? 'client'
+                        next.contact_medium = step.contact_medium ?? 'phone'
                       } else {
                         next.contact_source = null
+                        next.contact_medium = undefined
                       }
                       update(index, next)
                     }}
@@ -236,30 +239,57 @@ export function ChainStepsEditor({ steps, onChange, disabled }: ChainStepsEditor
               </div>
 
               {ta?.field_type === 'contact' && (
-                <div className="flex flex-col gap-1">
-                  <label className="text-xs text-gray-600">
-                    {t('pages.taChains.steps.contactSource', 'Contact source')}
-                  </label>
-                  <Select
-                    value={step.contact_source ?? 'client'}
-                    onValueChange={(v) =>
-                      update(index, { contact_source: v as 'client' | 'recommender' })
-                    }
-                    disabled={disabled}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="client">
-                        {t('pages.taChains.steps.contactSourceClient', 'Client contacts')}
-                      </SelectItem>
-                      <SelectItem value="recommender">
-                        {t('pages.taChains.steps.contactSourceRecommender', 'Recommender contacts')}
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+                <>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-xs text-gray-600">
+                      {t('pages.taChains.steps.contactMedium', 'Contact medium')}
+                    </label>
+                    <Select
+                      value={step.contact_medium ?? 'phone'}
+                      onValueChange={(v) => update(index, { contact_medium: v as ContactMedium })}
+                      disabled={disabled}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="phone">
+                          {t('pages.taChains.steps.contactMediumPhone', 'Phone numbers')}
+                        </SelectItem>
+                        <SelectItem value="email">
+                          {t('pages.taChains.steps.contactMediumEmail', 'Email addresses')}
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-xs text-gray-600">
+                      {t('pages.taChains.steps.contactSource', 'Contact source')}
+                    </label>
+                    <Select
+                      value={step.contact_source ?? 'client'}
+                      onValueChange={(v) =>
+                        update(index, { contact_source: v as 'client' | 'recommender' })
+                      }
+                      disabled={disabled}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="client">
+                          {t('pages.taChains.steps.contactSourceClient', 'Client contacts')}
+                        </SelectItem>
+                        <SelectItem value="recommender">
+                          {t(
+                            'pages.taChains.steps.contactSourceRecommender',
+                            'Recommender contacts'
+                          )}
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </>
               )}
 
               {ta?.field_type === 'credit' && (

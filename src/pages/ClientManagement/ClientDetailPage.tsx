@@ -121,9 +121,9 @@ import {
   ALL_MESSAGING_SEND_PERMISSIONS,
   buildOperatorNamesMap,
   countMessagingHistoryByOutcome,
-  destinationOwnerLabelKey,
   downloadBlob,
   formatLauncherName,
+  formatMessagingHistoryDestination,
   messagingApi,
   messagingStatusForCallLogCard,
   useMessagingClientHistory,
@@ -3966,6 +3966,11 @@ export function ClientDetailPage() {
                                             timeZone: userTimezone || undefined,
                                           }
                                         )
+                                        const destDisplay = formatMessagingHistoryDestination(msg, {
+                                          t,
+                                          language: i18n.language,
+                                          contactTypesById,
+                                        })
                                         return (
                                           <CallLogCard
                                             key={`messaging-${msg.recipient_id}`}
@@ -3985,22 +3990,11 @@ export function ClientDetailPage() {
                                               ) || undefined
                                             }
                                             phone={
-                                              msg.channel === 'sms' || msg.channel === 'viber'
-                                                ? msg.destination || '-'
+                                              destDisplay.destination !== '-'
+                                                ? destDisplay.destination
                                                 : undefined
                                             }
-                                            destinationOwnerLabel={
-                                              msg.channel === 'sms' && msg.destination_owner
-                                                ? (() => {
-                                                    const key = destinationOwnerLabelKey(
-                                                      msg.destination_owner
-                                                    )
-                                                    return key
-                                                      ? t(key, msg.destination_owner)
-                                                      : undefined
-                                                  })()
-                                                : undefined
-                                            }
+                                            destinationOwnerLabel={destDisplay.ownerSuffix}
                                             sent_at={msg.sent_at ?? undefined}
                                             delivered_at={msg.delivered_at ?? undefined}
                                             icon={
@@ -4020,17 +4014,8 @@ export function ClientDetailPage() {
                                                   msg.initiated_by,
                                                   messagingLauncherNames
                                                 ),
-                                                destination: msg.destination || '-',
-                                                destinationOwner: msg.destination_owner
-                                                  ? (() => {
-                                                      const key = destinationOwnerLabelKey(
-                                                        msg.destination_owner
-                                                      )
-                                                      return key
-                                                        ? t(key, msg.destination_owner)
-                                                        : msg.destination_owner
-                                                    })()
-                                                  : undefined,
+                                                destination: destDisplay.destination,
+                                                destinationOwner: destDisplay.ownerSuffix,
                                                 status: msg.status,
                                                 body: msg.body || '',
                                                 subject: msg.subject ?? undefined,
@@ -4414,6 +4399,14 @@ export function ClientDetailPage() {
                                                 timeZone: userTimezone || undefined,
                                               }
                                             )
+                                            const destDisplay = formatMessagingHistoryDestination(
+                                              item,
+                                              {
+                                                t,
+                                                language: i18n.language,
+                                                contactTypesById,
+                                              }
+                                            )
                                             return (
                                               <CallLogCard
                                                 key={item.recipient_id}
@@ -4433,22 +4426,11 @@ export function ClientDetailPage() {
                                                   ) || undefined
                                                 }
                                                 phone={
-                                                  item.channel === 'sms' || item.channel === 'viber'
-                                                    ? item.destination || '-'
+                                                  destDisplay.destination !== '-'
+                                                    ? destDisplay.destination
                                                     : undefined
                                                 }
-                                                destinationOwnerLabel={
-                                                  item.channel === 'sms' && item.destination_owner
-                                                    ? (() => {
-                                                        const key = destinationOwnerLabelKey(
-                                                          item.destination_owner
-                                                        )
-                                                        return key
-                                                          ? t(key, item.destination_owner)
-                                                          : undefined
-                                                      })()
-                                                    : undefined
-                                                }
+                                                destinationOwnerLabel={destDisplay.ownerSuffix}
                                                 sent_at={item.sent_at ?? undefined}
                                                 delivered_at={item.delivered_at ?? undefined}
                                                 icon={
@@ -4468,17 +4450,8 @@ export function ClientDetailPage() {
                                                       item.initiated_by,
                                                       messagingLauncherNames
                                                     ),
-                                                    destination: item.destination || '-',
-                                                    destinationOwner: item.destination_owner
-                                                      ? (() => {
-                                                          const key = destinationOwnerLabelKey(
-                                                            item.destination_owner
-                                                          )
-                                                          return key
-                                                            ? t(key, item.destination_owner)
-                                                            : item.destination_owner
-                                                        })()
-                                                      : undefined,
+                                                    destination: destDisplay.destination,
+                                                    destinationOwner: destDisplay.ownerSuffix,
                                                     status: item.status,
                                                     body: item.body || '-',
                                                     subject: item.subject || undefined,

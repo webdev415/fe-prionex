@@ -3132,6 +3132,7 @@
       "effectRemoveTag": "Зняти тег",
       "effectTask": "Завдання: зворотний дзвінок створено",
       "effectSMS": "Подія: SMS надіслано",
+      "effectMessage": "Подія: повідомлення надіслано",
       "effectSpam": "Додано до списку спаму",
       "dictionary": {
         "level1": "Рівень 1 — Тип взаємодії",
@@ -3474,6 +3475,8 @@
         "debtStatus": "Статус (напр. прострочка)",
         "daysCooldown": "Днів (напр. 30)",
         "selectSmsTemplate": "Оберіть SMS-шаблон...",
+        "selectMessagingService": "Оберіть провайдера messaging...",
+        "selectMessagingDraft": "Оберіть чернетку повідомлення...",
         "subjectRequired": "Тема (обов'язково)",
         "searchSubjects": "Пошук тем...",
         "titleOptional": "Заголовок (необов'язково)",
@@ -3529,12 +3532,17 @@
           "remove_tag": "Зняти тег",
           "create_task": "Створити задачу",
           "send_sms": "Надіслати SMS",
+          "send_message": "Надіслати повідомлення (messaging)",
           "add_to_spam": "У спам"
         }
       },
+      "sendMessageNoIntegration": "Немає налаштованої інтеграції messaging для цього каналу. Додайте її в налаштуваннях Messaging.",
       "config": {
         "tag": "тег: {{label}}",
         "template": "шаблон: {{label}}",
+        "messagingDraft": "чернетка: {{label}}",
+        "channel": "канал: {{label}}",
+        "messagingService": "провайдер: {{label}}",
         "chain": "ланцюжок: {{label}}",
         "subject": "тема: {{label}}",
         "user": "користувач: {{label}}",
@@ -4020,6 +4028,7 @@
         "callsMade": "Зроблено дзвінків",
         "contactRate": "Контактність",
         "smsSent": "Відправлено SMS",
+        "messagesSent": "Відправлено повідомлень",
         "paymentsCollected": "Зібрано платежів",
         "vs": "порівняно з",
         "yesterday": "вчора",
@@ -4048,6 +4057,7 @@
         "contactRate": "Контактність",
         "avgDuration": "Середня тривалість",
         "sms": "SMS",
+        "messages": "Повідомлення",
         "payments": "Платежі",
         "total": "Всього"
       },
@@ -4091,6 +4101,26 @@
         "pending": "В очікуванні",
         "deliveryRate": "Процент доставки",
         "byOperator": "За операторами"
+      },
+      "messagesModal": {
+        "title": "Відправлено повідомлень",
+        "noData": "Дані недоступні",
+        "totalSent": "Всього відправлено",
+        "totalCost": "Загальна вартість",
+        "deliveryStats": "Статистика доставки",
+        "delivered": "Доставлено",
+        "failed": "Не доставлено",
+        "pending": "В очікуванні",
+        "deliveryRate": "Процент доставки",
+        "byChannel": "За каналом",
+        "topDrafts": "Топ чернеток",
+        "byOperator": "За операторами",
+        "messages": "повідомлень",
+        "channels": {
+          "sms": "SMS",
+          "viber": "Viber",
+          "email": "Email"
+        }
       },
       "paymentsModal": {
         "title": "Зібрані платежі",
@@ -4679,6 +4709,12 @@
           "template_name": "Шаблон SMS",
           "segments": "Сегменти SMS",
           "gateway_provider": "Шлюз провайдера",
+          "campaign_id": "ID кампанії",
+          "recipient_id": "ID отримувача",
+          "service": "Провайдер messaging",
+          "destination": "Адресат",
+          "external_message_id": "Зовнішній ID повідомлення",
+          "draft_id": "ID чернетки",
           "call_id": "ID дзвінка",
           "outcome": "Результат дзвінка",
           "disposition": "Диспозиція",
@@ -4720,6 +4756,7 @@
           "interaction.created": "Створено взаємодію",
           "payment.verified": "Платіж підтверджено",
           "sms.sent": "SMS надіслано",
+          "message.sent": "Повідомлення надіслано",
           "call.outcome.updated": "Результат дзвінка оновлено",
           "scoring.completed": "Скоринг завершено",
           "client.imported": "Клієнта імпортовано",
@@ -4914,7 +4951,9 @@
       },
       "summary": {
         "delivered": "доставлено",
-        "resultsLine": "{{delivered}}/{{total}} доставлено"
+        "resultsLine": "{{delivered}}/{{total}} доставлено",
+        "filteredCampaigns": "{{count}} кампаній відповідають фільтрам",
+        "totalCost": "Загальна вартість"
       },
       "cost": {
         "actual": "Фактично",
