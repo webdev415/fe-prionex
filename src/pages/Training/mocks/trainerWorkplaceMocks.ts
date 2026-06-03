@@ -1759,15 +1759,23 @@ export const MOCK_SCRIPT_DISTRIBUTION: MockScriptDistribution[] = Array.from(
 // Action Analysis — Interactions (existing surface, with new visuals)
 // ─────────────────────────────────────────────────────────────
 
+export type InteractionSource = 'Promise' | 'Missed call' | 'Refusal' | 'Will pass' | 'Positive'
+
 export interface MockInteractionRow {
   id: number
   dateLabel: string
   operator: string
+  /** Initials for the small avatar in the operator column. */
+  operatorInitials?: string
+  /** Avatar background color for the operator column. */
+  operatorAvatarColor?: string
   duration: string
-  source: 'Promise' | 'Missed call' | 'Refusal' | 'Positive'
+  source: InteractionSource
+  /** "Break in row" — gap since the previous call by the same operator. */
   breakInRowLabel: string
   client: string
   deal: string
+  /** Optional promised amount (in ₴). */
   amountPromised?: number
 }
 
@@ -1780,18 +1788,32 @@ export const MOCK_INTERACTIONS_KPIS = {
   averageDuration: '15 min',
 }
 
-export const MOCK_INTERACTIONS: MockInteractionRow[] = Array.from({ length: 10 }, (_, i) => ({
-  id: i + 1,
-  dateLabel: `May ${10 + (i % 6)} 1${i % 9}:30`,
-  operator: OPERATOR_NAMES[i % OPERATOR_NAMES.length],
-  duration: `${2 + (i % 5)}:${String(10 + i).slice(-2)}`,
-  source:
-    i % 4 === 0 ? 'Promise' : i % 4 === 1 ? 'Missed call' : i % 4 === 2 ? 'Refusal' : 'Positive',
-  breakInRowLabel: i % 3 === 0 ? '14m' : i % 3 === 1 ? '7m' : '23m',
-  client: `Client #${i + 1}`,
-  deal: '–',
-  amountPromised: i % 4 === 0 ? 2300 + i * 100 : undefined,
-}))
+const INTERACTION_SOURCES: InteractionSource[] = [
+  'Promise',
+  'Missed call',
+  'Refusal',
+  'Will pass',
+  'Positive',
+]
+
+export const MOCK_INTERACTIONS: MockInteractionRow[] = Array.from({ length: 12 }, (_, i) => {
+  const operator = OPERATOR_NAMES[i % OPERATOR_NAMES.length]
+  const parts = operator.split(' ')
+  const source = INTERACTION_SOURCES[i % INTERACTION_SOURCES.length]
+  return {
+    id: i + 1,
+    dateLabel: `May ${10 + (i % 6)} 1${i % 9}:30`,
+    operator,
+    operatorInitials: `${parts[0][0]}${parts[1]?.[0] ?? ''}`.toUpperCase(),
+    operatorAvatarColor: AVATAR_PALETTE[i % AVATAR_PALETTE.length],
+    duration: `${2 + (i % 5)}:${String(10 + i).slice(-2)}`,
+    source,
+    breakInRowLabel: i % 3 === 0 ? '14m' : i % 3 === 1 ? '7m' : '23m',
+    client: `Client #${i + 1}`,
+    deal: i % 2 === 0 ? `AGR-${1000 + i}` : '–',
+    amountPromised: source === 'Promise' ? 2300 + i * 100 : undefined,
+  }
+})
 
 // ─────────────────────────────────────────────────────────────
 // Inbox tab mocks (KAN-413)

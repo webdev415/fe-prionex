@@ -2,7 +2,7 @@
 import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router-dom'
 import { ACTION_ANALYSIS_SUB_TABS, type ActionAnalysisSubTabId } from '../../types'
-import { InteractionHistoryTab } from '../InteractionHistoryTab'
+import { MockInteractionsTab } from './MockInteractionsTab'
 import { WeeklyTasksSubTab } from './WeeklyTasksSubTab'
 import { PromisesAndCallbacksSubTab } from './PromisesAndCallbacksSubTab'
 import { SuccessfulClosuresSubTab } from './SuccessfulClosuresSubTab'
@@ -95,7 +95,7 @@ export function ActionAnalysisInnerTab() {
         {activeSubTab === 'interactions' && (
           <div className="flex flex-col gap-4">
             <InteractionsKpiStrip />
-            <InteractionHistoryTab />
+            <MockInteractionsTab />
           </div>
         )}
         {activeSubTab === 'weekly-tasks' && <WeeklyTasksSubTab />}
