@@ -78,6 +78,7 @@ import {
   useRestructuringAgreementDetail,
   useCreateRestructuringAgreement,
   useCloseDebt,
+  useReopenDebt,
   useUpdateDebtClosureDate,
   useCompleteRestructuringAgreement,
   useTransitionRRStatus,
@@ -121,9 +122,9 @@ import {
   ALL_MESSAGING_SEND_PERMISSIONS,
   buildOperatorNamesMap,
   countMessagingHistoryByOutcome,
-  destinationOwnerLabelKey,
   downloadBlob,
   formatLauncherName,
+  formatMessagingHistoryDestination,
   messagingApi,
   messagingStatusForCallLogCard,
   useMessagingClientHistory,
@@ -239,6 +240,8 @@ export function ClientDetailPage() {
   })
   const [connectRrError, setConnectRrError] = useState<string | null>(null)
   const [closeLoanConfirm, setCloseLoanConfirm] = useState<number | null>(null) // debtId to close
+  // Reopen-loan confirmation modal: holds the debt_id to reopen, or null when closed.
+  const [reopenLoanConfirm, setReopenLoanConfirm] = useState<number | null>(null)
   // Local state for the closure-date picker inside the close-loan modal.
   // Defaults to today; max = today (future dates rejected).
   const [closeLoanClosureDate, setCloseLoanClosureDate] = useState<Date | null>(null)
@@ -370,6 +373,7 @@ export function ClientDetailPage() {
   )
   const { mutate: createRr, isPending: isCreatingRr } = useCreateRestructuringAgreement()
   const { mutate: closeDebt, isPending: isClosingDebt } = useCloseDebt()
+  const { mutate: reopenDebt, isPending: isReopeningDebt } = useReopenDebt()
   const { mutate: updateClosureDate, isPending: isUpdatingClosureDate } = useUpdateDebtClosureDate()
   const { mutate: completeRa, isPending: isCompletingRa } = useCompleteRestructuringAgreement()
   const { mutate: transitionRr, isPending: isTransitioningRr } = useTransitionRRStatus()
@@ -712,6 +716,7 @@ export function ClientDetailPage() {
         // Closure date — surfaced for closed debts so the user can see it and,
         // with the close_client_debt permission, edit it after closure.
         creditClosedDate: d.credit_closed_date ?? null,
+        creditReopenedDate: d.credit_reopened_date ?? null,
         // Legacy TABLE460.f53 — eligible-for-return amount carried over from
         // the sale. Surfaced as its own column only when at least one loan row
         // has it and it diverges from remainingDebtAmount (see loanColumns).
@@ -1484,22 +1489,32 @@ export function ClientDetailPage() {
             <div className="flex items-center justify-center gap-2">
               {infoButton}
               <PermissionGuard permission={PERMISSIONS.CLIENTS.CLOSE_DEBT}>
-                <button
-                  onClick={() => {
-                    setEditClosureDateDebtId(loan.id)
-                    setEditClosureDateValue(
-                      loan.creditClosedDate
-                        ? parseISODateAtMidnight(loan.creditClosedDate)
-                        : getTodayAtMidnight()
-                    )
-                    setEditClosureDateError(null)
-                  }}
-                  disabled={isUpdatingClosureDate}
-                  className="p-1 text-blue-600 hover:text-blue-800 disabled:opacity-50"
-                  title={t('pages.clients.detail.editClosureDate', 'Edit closure date')}
-                >
-                  <Icons.Edit size={18} />
-                </button>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => {
+                      setEditClosureDateDebtId(loan.id)
+                      setEditClosureDateValue(
+                        loan.creditClosedDate
+                          ? parseISODateAtMidnight(loan.creditClosedDate)
+                          : getTodayAtMidnight()
+                      )
+                      setEditClosureDateError(null)
+                    }}
+                    disabled={isUpdatingClosureDate}
+                    className="p-1 text-blue-600 hover:text-blue-800 disabled:opacity-50"
+                    title={t('pages.clients.detail.editClosureDate', 'Edit closure date')}
+                  >
+                    <Icons.Edit size={18} />
+                  </button>
+                  <button
+                    onClick={() => setReopenLoanConfirm(loan.id)}
+                    disabled={isReopeningDebt}
+                    className="p-1 text-amber-600 hover:text-amber-800 disabled:opacity-50"
+                    title={t('pages.clients.detail.reopenLoan', 'Reopen loan')}
+                  >
+                    <Icons.Reload size={18} />
+                  </button>
+                </div>
               </PermissionGuard>
             </div>
           )
@@ -3997,6 +4012,11 @@ export function ClientDetailPage() {
                                             timeZone: userTimezone || undefined,
                                           }
                                         )
+                                        const destDisplay = formatMessagingHistoryDestination(msg, {
+                                          t,
+                                          language: i18n.language,
+                                          contactTypesById,
+                                        })
                                         return (
                                           <CallLogCard
                                             key={`messaging-${msg.recipient_id}`}
@@ -4016,22 +4036,11 @@ export function ClientDetailPage() {
                                               ) || undefined
                                             }
                                             phone={
-                                              msg.channel === 'sms' || msg.channel === 'viber'
-                                                ? msg.destination || '-'
+                                              destDisplay.destination !== '-'
+                                                ? destDisplay.destination
                                                 : undefined
                                             }
-                                            destinationOwnerLabel={
-                                              msg.channel === 'sms' && msg.destination_owner
-                                                ? (() => {
-                                                    const key = destinationOwnerLabelKey(
-                                                      msg.destination_owner
-                                                    )
-                                                    return key
-                                                      ? t(key, msg.destination_owner)
-                                                      : undefined
-                                                  })()
-                                                : undefined
-                                            }
+                                            destinationOwnerLabel={destDisplay.ownerSuffix}
                                             sent_at={msg.sent_at ?? undefined}
                                             delivered_at={msg.delivered_at ?? undefined}
                                             icon={
@@ -4051,17 +4060,8 @@ export function ClientDetailPage() {
                                                   msg.initiated_by,
                                                   messagingLauncherNames
                                                 ),
-                                                destination: msg.destination || '-',
-                                                destinationOwner: msg.destination_owner
-                                                  ? (() => {
-                                                      const key = destinationOwnerLabelKey(
-                                                        msg.destination_owner
-                                                      )
-                                                      return key
-                                                        ? t(key, msg.destination_owner)
-                                                        : msg.destination_owner
-                                                    })()
-                                                  : undefined,
+                                                destination: destDisplay.destination,
+                                                destinationOwner: destDisplay.ownerSuffix,
                                                 status: msg.status,
                                                 body: msg.body || '',
                                                 subject: msg.subject ?? undefined,
@@ -4445,6 +4445,14 @@ export function ClientDetailPage() {
                                                 timeZone: userTimezone || undefined,
                                               }
                                             )
+                                            const destDisplay = formatMessagingHistoryDestination(
+                                              item,
+                                              {
+                                                t,
+                                                language: i18n.language,
+                                                contactTypesById,
+                                              }
+                                            )
                                             return (
                                               <CallLogCard
                                                 key={item.recipient_id}
@@ -4464,22 +4472,11 @@ export function ClientDetailPage() {
                                                   ) || undefined
                                                 }
                                                 phone={
-                                                  item.channel === 'sms' || item.channel === 'viber'
-                                                    ? item.destination || '-'
+                                                  destDisplay.destination !== '-'
+                                                    ? destDisplay.destination
                                                     : undefined
                                                 }
-                                                destinationOwnerLabel={
-                                                  item.channel === 'sms' && item.destination_owner
-                                                    ? (() => {
-                                                        const key = destinationOwnerLabelKey(
-                                                          item.destination_owner
-                                                        )
-                                                        return key
-                                                          ? t(key, item.destination_owner)
-                                                          : undefined
-                                                      })()
-                                                    : undefined
-                                                }
+                                                destinationOwnerLabel={destDisplay.ownerSuffix}
                                                 sent_at={item.sent_at ?? undefined}
                                                 delivered_at={item.delivered_at ?? undefined}
                                                 icon={
@@ -4499,17 +4496,8 @@ export function ClientDetailPage() {
                                                       item.initiated_by,
                                                       messagingLauncherNames
                                                     ),
-                                                    destination: item.destination || '-',
-                                                    destinationOwner: item.destination_owner
-                                                      ? (() => {
-                                                          const key = destinationOwnerLabelKey(
-                                                            item.destination_owner
-                                                          )
-                                                          return key
-                                                            ? t(key, item.destination_owner)
-                                                            : item.destination_owner
-                                                        })()
-                                                      : undefined,
+                                                    destination: destDisplay.destination,
+                                                    destinationOwner: destDisplay.ownerSuffix,
                                                     status: item.status,
                                                     body: item.body || '-',
                                                     subject: item.subject || undefined,
@@ -5489,6 +5477,56 @@ export function ClientDetailPage() {
               {isClosingDebt
                 ? t('actions.saving', 'Saving...')
                 : t('pages.clients.detail.closeLoan')}
+            </Button>
+          </ModalFooter>
+        </Modal>
+
+        {/* Reopen Loan Modal — confirmation only, no date picker. */}
+        <Modal
+          open={reopenLoanConfirm !== null}
+          onClose={() => setReopenLoanConfirm(null)}
+          maxWidth="md"
+        >
+          <ModalHeader
+            icon={
+              <div className="bg-primary-400 flex h-8 w-8 items-center justify-center rounded-full">
+                <Icons.Reload size={20} className="text-dark-500" strokeWidth={2} />
+              </div>
+            }
+            title={t('pages.clients.detail.reopenLoan', 'Reopen loan')}
+          />
+          <ModalContent>
+            <p className="text-dark-500 mb-4 text-base font-light">
+              {t(
+                'pages.clients.detail.confirmReopenLoan',
+                'Are you sure you want to reopen this credit?'
+              )}
+            </p>
+          </ModalContent>
+          <ModalFooter>
+            <Button
+              type="button"
+              variant="cancel"
+              onClick={() => setReopenLoanConfirm(null)}
+              disabled={isReopeningDebt}
+              className="h-[45px] flex-1 text-sm"
+            >
+              {t('actions.cancel')}
+            </Button>
+            <Button
+              type="button"
+              variant="primary"
+              onClick={() => {
+                if (reopenLoanConfirm === null) return
+                reopenDebt(
+                  { clientId, debtId: reopenLoanConfirm },
+                  { onSettled: () => setReopenLoanConfirm(null) }
+                )
+              }}
+              disabled={isReopeningDebt}
+              className="h-[45px] flex-1 text-sm"
+            >
+              {isReopeningDebt ? t('actions.saving', 'Saving...') : t('actions.confirm', 'Confirm')}
             </Button>
           </ModalFooter>
         </Modal>

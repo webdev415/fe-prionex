@@ -30,6 +30,7 @@ import type {
   CommunicationStatisticsUI,
   CallStatisticsUI,
   SMSStatisticsUI,
+  MessagingStatisticsUI,
   HourlyBreakdownUI,
   DailyTrendUI,
   AgentPerformanceRow,
@@ -226,6 +227,7 @@ export function transformDashboard(data: BackendDashboardResponse): DashboardUI 
       callsMade: data.kpis.calls_made.value,
       contactRate: data.kpis.contact_rate.value,
       smsSent: data.kpis.sms_sent.value,
+      messagesSent: data.kpis.messages_sent?.value ?? 0,
       paymentsCollected: parseNumber(payments.total_amount),
       paymentsCount: payments.payment_count || 0,
       paymentsVerified: parseNumber(payments.verified_amount || 0),
@@ -236,6 +238,7 @@ export function transformDashboard(data: BackendDashboardResponse): DashboardUI 
       callsTrend: transformTrend(data.kpis.calls_made.trend),
       contactRateTrend: transformTrend(data.kpis.contact_rate.trend),
       smsTrend: transformTrend(data.kpis.sms_sent.trend),
+      messagesTrend: transformTrend(data.kpis.messages_sent?.trend),
       paymentsTrend: transformTrend(payments.trend),
     },
     topOperators: data.top_operators.map(transformTopOperator),
@@ -278,6 +281,8 @@ function transformTopOperator(op: BackendDashboardResponse['top_operators'][0]):
     operatorName: op.operator_name,
     callsMade: op.calls_made,
     contactRate: op.contact_rate,
+    smsSent: op.sms_sent ?? 0,
+    messagesSent: op.messages_sent ?? 0,
   }
 }
 
@@ -362,6 +367,7 @@ function transformOperator(
       avgCallDuration: op.summary.avg_call_duration,
       avgCallDurationFormatted: formatDuration(op.summary.avg_call_duration),
       smsSent: op.summary.sms_sent,
+      messagesSent: op.summary.messages_sent ?? 0,
       paymentsCollected: parseNumber(op.summary.payments_collected),
       paymentsCount: op.summary.payments_count,
     },
@@ -491,6 +497,7 @@ export function transformToAgentPerformanceRows(
     contactRate: op.summary.contactRate,
     avgDuration: op.summary.avgCallDurationFormatted,
     sms: op.summary.smsSent,
+    messages: op.summary.messagesSent,
     payments: op.summary.paymentsCollected,
   }))
 }
@@ -622,6 +629,7 @@ export function transformCommunicationStatistics(
     },
     callStatistics: transformCallStatistics(data.call_statistics),
     smsStatistics: transformSMSStatistics(data.sms_statistics),
+    messagingStatistics: transformMessagingStatistics(data.messaging_statistics),
     hourlyBreakdown: (data.hourly_breakdown || []).map(transformHourlyBreakdown),
     dailyTrends: (data.daily_trends || []).map(transformDailyTrend),
     generatedAt: data.generated_at,
@@ -708,6 +716,46 @@ function transformSMSStatistics(
   }
 }
 
+const EMPTY_MESSAGING_STATISTICS: MessagingStatisticsUI = {
+  totalSent: 0,
+  delivered: 0,
+  failed: 0,
+  skipped: 0,
+  queued: 0,
+  inFlight: 0,
+  deliveryRate: 0,
+  totalCost: null,
+  costCurrency: null,
+  byChannel: {},
+  topDrafts: [],
+}
+
+function transformMessagingStatistics(
+  stats: BackendCommunicationStatisticsResponse['messaging_statistics'] | undefined
+): MessagingStatisticsUI {
+  if (!stats) {
+    return EMPTY_MESSAGING_STATISTICS
+  }
+  return {
+    totalSent: stats.total_sent,
+    delivered: stats.delivered,
+    failed: stats.failed,
+    skipped: stats.skipped ?? 0,
+    queued: stats.queued ?? 0,
+    inFlight: stats.in_flight ?? 0,
+    deliveryRate: stats.delivery_rate,
+    totalCost:
+      stats.total_cost === null || stats.total_cost === undefined ? null : Number(stats.total_cost),
+    costCurrency: stats.cost_currency ?? null,
+    byChannel: stats.by_channel ?? {},
+    topDrafts: (stats.top_drafts ?? []).map((draft) => ({
+      name: draft.name,
+      count: draft.count,
+      cost: draft.cost ?? 0,
+    })),
+  }
+}
+
 /**
  * Transform daily trend data
  *
@@ -743,6 +791,8 @@ function transformDailyTrend(
     callsAnswered: trend.calls_answered,
     smsSent: trend.sms_sent,
     smsDelivered: trend.sms_delivered,
+    messagesSent: trend.messages_sent ?? 0,
+    messagesDelivered: trend.messages_delivered ?? 0,
   }
 }
 
