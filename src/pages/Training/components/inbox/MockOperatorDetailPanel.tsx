@@ -179,7 +179,7 @@ export function MockOperatorDetailPanel({
                     strokeWidth="4"
                     fill="none"
                     className="stroke-[#EDEDED]"
-                    />
+                  />
                   <circle
                     cx="24"
                     cy="24"
@@ -190,11 +190,11 @@ export function MockOperatorDetailPanel({
                     strokeDasharray={scoreCircumference}
                     strokeDashoffset={scoreOffset}
                     className={SCORE_RING[operator.scoreBand]}
-                    />
+                  />
                 </svg>
                 <span
                   className={`absolute inset-0 flex items-center justify-center text-sm font-semibold ${SCORE_TEXT[operator.scoreBand]}`}
-                  >
+                >
                   {operator.compositeScore}
                 </span>
               </div>
@@ -206,12 +206,12 @@ export function MockOperatorDetailPanel({
             <div className="grid grid-cols-3 gap-2">
               {detail.statsRow.map((stat, index) => (
                 <div
-                key={stat.label}
-                className={`flex min-h-20 flex-col justify-center rounded-lg border px-2 py-2.5 ${
-                  index === 0 || stat.cardTone === 'red'
-                  ? 'border-[#FEE2E2] bg-[#FEF2F2]'
-                  : 'border-[#EBECE8] bg-white'
-                }`}
+                  key={stat.label}
+                  className={`flex min-h-20 flex-col justify-center rounded-lg border px-2 py-2.5 ${
+                    index === 0 || stat.cardTone === 'red'
+                      ? 'border-[#FEE2E2] bg-[#FEF2F2]'
+                      : 'border-[#EBECE8] bg-white'
+                  }`}
                 >
                   <span className="text-[10px] leading-3 font-medium tracking-wide text-[#676767] uppercase">
                     {stat.label}
@@ -238,7 +238,7 @@ export function MockOperatorDetailPanel({
                   <span className="inline-flex rounded-full bg-[#FEF2F2] px-2.5 py-0.5 text-[11px] font-medium text-[#EF4444]">
                     {t('pages.training.inbox.detail.critical', 'Critical')}
                   </span>
-                ) : null} 
+                ) : null}
               </div>
               <div className="flex flex-col gap-1.5">
                 {detail.whyInQueue.map((item) => {

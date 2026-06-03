@@ -193,7 +193,7 @@ function TaskKanbanCard({ task }: { task: MockTaskRow }) {
         >
           <CatIcon size={12} />
         </span>
-        <span className="text-dark-500 flex-1 text-xs font-semibold leading-snug text-[#05040D]">
+        <span className="text-dark-500 flex-1 text-xs leading-snug font-semibold text-[#05040D]">
           {task.title}
         </span>
         <span

@@ -1288,6 +1288,8 @@ export interface MockTaskRow {
   category?: TaskCategory
   /** Figma Tasks card timestamp ("today 16:00", "tomorrow 11:00", "17.05"). */
   cardTimestamp?: string
+  /** Figma Weekly Tasks table — clock time shown beneath the date (e.g. "14:00"). */
+  timeLabel?: string
   /** Figma Tasks operator initials + colored avatar. */
   operatorInitials?: string
   operatorAvatarColor?: string
@@ -1312,6 +1314,7 @@ export const MOCK_TASKS: MockTaskRow[] = [
     assignmentScope: 'by_me',
     kanbanColumn: 'to_do',
     cardTimestamp: 'today 16:00',
+    timeLabel: '16:00',
     timeBucket: 'today',
     deadlineLabel: 'today 16:00',
   },
@@ -1330,6 +1333,7 @@ export const MOCK_TASKS: MockTaskRow[] = [
     assignmentScope: 'by_me',
     kanbanColumn: 'to_do',
     cardTimestamp: 'today',
+    timeLabel: '09:00',
     timeBucket: 'today',
     deadlineLabel: 'today',
   },
@@ -1348,6 +1352,7 @@ export const MOCK_TASKS: MockTaskRow[] = [
     assignmentScope: 'by_me',
     kanbanColumn: 'to_do',
     cardTimestamp: '15.05',
+    timeLabel: '11:30',
     timeBucket: 'this_week',
     deadlineLabel: '15.05',
   },
@@ -1366,6 +1371,7 @@ export const MOCK_TASKS: MockTaskRow[] = [
     assignmentScope: 'by_me',
     kanbanColumn: 'to_do',
     cardTimestamp: '17.05',
+    timeLabel: '15:00',
     timeBucket: 'this_week',
     deadlineLabel: '17.05',
   },
@@ -1384,6 +1390,7 @@ export const MOCK_TASKS: MockTaskRow[] = [
     assignmentScope: 'by_me',
     kanbanColumn: 'to_do',
     cardTimestamp: '14.05',
+    timeLabel: '13:00',
     timeBucket: 'this_week',
     deadlineLabel: '14.05',
   },
@@ -1404,6 +1411,7 @@ export const MOCK_TASKS: MockTaskRow[] = [
     assignmentScope: 'by_me',
     kanbanColumn: 'in_progress',
     cardTimestamp: 'today 14:00',
+    timeLabel: '14:00',
     timeBucket: 'today',
     deadlineLabel: 'today 14:00',
   },
@@ -1424,6 +1432,7 @@ export const MOCK_TASKS: MockTaskRow[] = [
     assignmentScope: 'by_me',
     kanbanColumn: 'planned',
     cardTimestamp: 'tomorrow 11:00',
+    timeLabel: '11:00',
     timeBucket: 'tomorrow',
     deadlineLabel: 'tomorrow 11:00',
   },
@@ -1460,7 +1469,14 @@ export const MOCK_TASK_KPIS: MockTaskKpis = {
 export type WeeklyDayStatus = 'overdue' | 'healthy' | 'none'
 
 export interface MockWeeklyDay {
+  /** Short abbreviation (e.g. "Mon"). Used as a fallback. */
   label: string
+  /** Full day name shown in the tile body (e.g. "Monday"). */
+  fullLabel: string
+  /** Calendar date label shown above the day name (e.g. "05/13"). */
+  dateLabel: string
+  /** Marks the tile as "today" — adds the "today" sub-label in the Figma. */
+  isToday: boolean
   count: number
   status: WeeklyDayStatus
 }
@@ -1473,12 +1489,54 @@ export interface MockWeeklyTasksKpis {
 export const MOCK_WEEKLY_TASKS_KPIS: MockWeeklyTasksKpis = {
   weekTotal: 11,
   days: [
-    { label: 'Mon', count: 1, status: 'overdue' },
-    { label: 'Tue', count: 4, status: 'overdue' },
-    { label: 'Wed', count: 2, status: 'overdue' },
-    { label: 'Thu', count: 7, status: 'healthy' },
-    { label: 'Fri', count: 2, status: 'overdue' },
-    { label: 'Sat', count: 0, status: 'none' },
+    {
+      label: 'Mon',
+      fullLabel: 'Monday',
+      dateLabel: '05/13',
+      isToday: true,
+      count: 2,
+      status: 'overdue',
+    },
+    {
+      label: 'Tue',
+      fullLabel: 'Tuesday',
+      dateLabel: '05/14',
+      isToday: false,
+      count: 3,
+      status: 'overdue',
+    },
+    {
+      label: 'Wed',
+      fullLabel: 'Wednesday',
+      dateLabel: '05/15',
+      isToday: false,
+      count: 4,
+      status: 'overdue',
+    },
+    {
+      label: 'Thu',
+      fullLabel: 'Thursday',
+      dateLabel: '05/16',
+      isToday: false,
+      count: 2,
+      status: 'overdue',
+    },
+    {
+      label: 'Fri',
+      fullLabel: 'Friday',
+      dateLabel: '05/17',
+      isToday: false,
+      count: 9,
+      status: 'overdue',
+    },
+    {
+      label: 'Sat',
+      fullLabel: 'Saturday',
+      dateLabel: '05/18',
+      isToday: false,
+      count: 0,
+      status: 'none',
+    },
   ],
 }
 
