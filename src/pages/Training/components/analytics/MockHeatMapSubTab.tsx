@@ -1,61 +1,100 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Icons } from '@/lib/icons'
 import {
-  HEATMAP_DAYS,
   HEATMAP_HOURS,
-  MOCK_HEATMAP_GRID,
-  MOCK_HEATMAP_PEAK,
-  MOCK_HEATMAP_TOTALS,
+  MOCK_HEATMAP_OPERATORS,
+  type HeatmapState,
 } from '../../mocks/trainerWorkplaceMocks'
-import { PeriodFilterStrip, type PeriodOption } from './PeriodFilterStrip'
-import { AnalyticsKpiTile } from './AnalyticsKpiTile'
 
 /**
- * Mock Heat Map sub-tab (KAN-502). 7 day × 14 hour interaction-volume grid
- * with a green ramp legend. Replaces the legacy operator × time HeatmapTab
- * per the redesign — team-level call volume by weekday/hour.
+ * Mock Heat Map sub-tab (KAN-502). Mirrors the Figma frame:
+ *   1) Top strip — state legend chips (Call / After the call / Waiting /
+ *      Idle / Break / Offline) on the left, "Department" dropdown on the
+ *      right.
+ *   2) Heatmap title + subtitle ("Dominant state by hour - today").
+ *   3) Grid — rows are operators (avatar + name), columns are hours, each
+ *      cell colored by the dominant state for that hour.
  */
-const RAMP_CLASSES = [
-  'bg-gray-100',
-  'bg-emerald-100',
-  'bg-emerald-200',
-  'bg-emerald-300',
-  'bg-emerald-500',
-  'bg-emerald-700',
+
+const STATE_BG: Record<HeatmapState, string> = {
+  call: 'bg-[#D1FAE5]',
+  after_call: 'bg-[#DBEAFE]',
+  waiting: 'bg-[#FEF3C7]',
+  idle: 'bg-[#FEE2E2]',
+  break: 'bg-[#E5E7EB]',
+  offline: 'bg-[#F3F4F6]',
+}
+
+/** Darker accent color for the left-edge inset of each heatmap cell. */
+const STATE_ACCENT: Record<HeatmapState, string> = {
+  call: '#86EFAC',
+  after_call: '#93C5FD',
+  waiting: '#FCD34D',
+  idle: '#FCA5A5',
+  break: '#CBD5E1',
+  offline: '#E5E7EB',
+}
+
+const STATE_DOT: Record<HeatmapState, string> = {
+  call: 'bg-[#22C55E]',
+  after_call: 'bg-[#3B82F6]',
+  waiting: 'bg-[#F59E0B]',
+  idle: 'bg-[#EF4444]',
+  break: 'bg-[#9CA3AF]',
+  offline: 'bg-white border border-[#D1D5DB]',
+}
+
+const STATE_ORDER: HeatmapState[] = [
+  'call',
+  'after_call',
+  'waiting',
+  'idle',
+  'break',
+  'offline',
 ]
 
-function bucketFor(value: number, max: number): number {
-  if (max === 0 || value === 0) return 0
-  const ratio = value / max
-  if (ratio < 0.15) return 1
-  if (ratio < 0.35) return 2
-  if (ratio < 0.55) return 3
-  if (ratio < 0.8) return 4
-  return 5
+const STATE_LABEL: Record<HeatmapState, { key: string; fallback: string }> = {
+  call: { key: 'pages.training.heatmap.state.call', fallback: 'Call' },
+  after_call: { key: 'pages.training.heatmap.state.afterCall', fallback: 'After the call' },
+  waiting: { key: 'pages.training.heatmap.state.waiting', fallback: 'Waiting' },
+  idle: { key: 'pages.training.heatmap.state.idle', fallback: 'Idle' },
+  break: { key: 'pages.training.heatmap.state.break', fallback: 'Break' },
+  offline: { key: 'pages.training.heatmap.state.offline', fallback: 'Offline' },
 }
 
 export function MockHeatMapSubTab() {
   const { t } = useTranslation('common')
-  const [period, setPeriod] = useState<PeriodOption>('today')
   const [department, setDepartment] = useState('all')
-
-  const flat = MOCK_HEATMAP_GRID.flat()
-  const maxVal = Math.max(...flat)
 
   return (
     <div className="flex flex-col gap-4">
-      <PeriodFilterStrip
-        value={period}
-        onChange={setPeriod}
-        rightSlot={
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] tracking-wide text-gray-500 uppercase">
-              {t('pages.training.heatmap.department', 'Department')}
+      {/* Top strip — state legend + department dropdown */}
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[#EBECE8] bg-white px-4 py-3 shadow-[0px_1px_2px_rgba(0,0,0,0.04)]">
+        <div className="flex flex-wrap items-center gap-4">
+          <span className="text-xs font-medium tracking-[-0.02em] text-[#05040D]">
+            {t('pages.training.heatmap.stand', 'Stand')}:
+          </span>
+          {STATE_ORDER.map((s) => (
+            <span key={s} className="flex items-center gap-1.5 text-xs text-[#05040D]">
+              <span
+                className={`block h-2.5 w-2.5 rounded-full ${STATE_DOT[s]}`}
+                aria-hidden
+              />
+              {t(STATE_LABEL[s].key, STATE_LABEL[s].fallback)}
             </span>
+          ))}
+        </div>
+
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-medium tracking-[-0.02em] text-[#05040D]">
+            {t('pages.training.heatmap.department', 'Department')}
+          </span>
+          <div className="relative min-w-[180px]">
             <select
               value={department}
               onChange={(e) => setDepartment(e.target.value)}
-              className="h-8 rounded-lg border border-[#DFDFDF] bg-white px-3 text-xs text-[#05040D] focus:outline-none"
+              className="h-9 w-full appearance-none rounded-lg border border-[#EBECE8] bg-white px-3 pr-8 text-xs text-[#05040D] focus:outline-none"
             >
               <option value="all">
                 {t('pages.training.heatmap.allDepartments', 'All departments')}
@@ -63,95 +102,69 @@ export function MockHeatMapSubTab() {
               <option value="hard">Hard Collection</option>
               <option value="soft">Soft Collection</option>
             </select>
+            <Icons.ArrowDown
+              size={12}
+              className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-[#676767]"
+            />
           </div>
-        }
-      />
-
-      {/* KPI strip — shared AnalyticsKpiTile pattern */}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <AnalyticsKpiTile
-          label={t('pages.training.heatmap.kpi.totalInteractions', 'Total interactions')}
-          value={MOCK_HEATMAP_TOTALS.totalInteractions.toLocaleString()}
-        />
-        <AnalyticsKpiTile
-          label={t('pages.training.heatmap.kpi.workingHours', 'Working hours')}
-          value={MOCK_HEATMAP_TOTALS.workingHours}
-          valueTone="text-blue-600"
-          accentColor="bg-[#3B82F6]"
-        />
-        <AnalyticsKpiTile
-          label={t('pages.training.heatmap.kpi.peakSlot', 'Peak slot')}
-          value={`${MOCK_HEATMAP_PEAK.day} · ${MOCK_HEATMAP_PEAK.hour}`}
-          valueTone="text-emerald-600"
-          accentColor="bg-[#22C55E]"
-        />
+        </div>
       </div>
 
       {/* Heatmap card */}
-      <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
-        <div className="mb-4 flex items-baseline justify-between">
-          <div>
-            <h3 className="text-dark-500 text-sm font-semibold">
-              {t('pages.training.heatmap.title', 'Call volume by weekday & hour')}
-            </h3>
-            <p className="text-[11px] text-gray-500">
-              {t(
-                'pages.training.heatmap.subtitle',
-                'Darker cells indicate higher interaction volume.'
-              )}
-            </p>
-          </div>
-          <Legend />
+      <div className="overflow-hidden rounded-xl border border-[#EBECE8] bg-white p-4 shadow-[0px_1px_2px_rgba(0,0,0,0.04)]">
+        <div className="mb-4">
+          <h3 className="text-sm font-semibold text-[#05040D]">
+            {t('pages.training.heatmap.title', 'Heatmap of activity')}
+          </h3>
+          <p className="text-[11px] text-[#676767]">
+            {t('pages.training.heatmap.subtitle', 'Dominant state by hour · today')}
+          </p>
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full border-separate border-spacing-1">
+          <table className="w-full border-separate border-spacing-y-2">
             <thead>
               <tr>
-                <th className="w-12" />
+                <th className="w-44" />
                 {HEATMAP_HOURS.map((hr) => (
-                  <th key={hr} className="text-[9px] font-medium text-gray-500">
+                  <th
+                    key={hr}
+                    className="px-1 text-center text-[10px] font-medium text-[#676767]"
+                  >
                     {hr}
                   </th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {HEATMAP_DAYS.map((day, dIdx) => (
-                <tr key={day}>
-                  <td className="pr-2 text-right text-[10px] font-medium text-gray-600">{day}</td>
-                  {HEATMAP_HOURS.map((hr, hIdx) => {
-                    const value = MOCK_HEATMAP_GRID[dIdx][hIdx]
-                    const bucket = bucketFor(value, maxVal)
-                    return (
-                      <td
-                        key={`${day}-${hr}`}
-                        className={`h-7 rounded-md ${RAMP_CLASSES[bucket]} relative`}
-                        title={`${day} ${hr} — ${value} interactions`}
+              {MOCK_HEATMAP_OPERATORS.map((op) => (
+                <tr key={op.id}>
+                  <td className="pr-3 align-middle">
+                    <div className="flex items-center gap-2">
+                      <span
+                        className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-[10px] font-semibold text-[#05040D]"
+                        style={{ backgroundColor: op.avatarColor }}
                       >
-                        <span className="sr-only">{value}</span>
-                      </td>
-                    )
-                  })}
+                        {op.initials}
+                      </span>
+                      <span className="text-xs font-medium text-[#05040D]">{op.name}</span>
+                    </div>
+                  </td>
+                  {op.states.map((state, idx) => (
+                    <td key={idx} className="px-0.5 align-middle">
+                      <span
+                        className={`block h-7 w-full rounded-md ${STATE_BG[state]}`}
+                        style={{ boxShadow: `inset 3px 0 0 ${STATE_ACCENT[state]}` }}
+                        title={`${op.name} · ${HEATMAP_HOURS[idx]} · ${t(STATE_LABEL[state].key, STATE_LABEL[state].fallback)}`}
+                      />
+                    </td>
+                  ))}
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       </div>
-    </div>
-  )
-}
-
-function Legend() {
-  const { t } = useTranslation('common')
-  return (
-    <div className="flex items-center gap-2 text-[10px] text-gray-500">
-      <span>{t('pages.training.heatmap.legend.less', 'Less')}</span>
-      {RAMP_CLASSES.map((cls, idx) => (
-        <span key={idx} className={`block h-3 w-3 rounded ${cls}`} />
-      ))}
-      <span>{t('pages.training.heatmap.legend.more', 'More')}</span>
     </div>
   )
 }

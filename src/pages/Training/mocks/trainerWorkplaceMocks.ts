@@ -2801,13 +2801,15 @@ export const MOCK_OPERATOR_DETAIL: MockOperatorDetail = {
 }
 
 // ─────────────────────────────────────────────────────────────
-// Heat Map (KAN-502) — day-of-week × hour interaction volume
+// Heat Map (KAN-502) — operator × hour dominant-state grid
 // ─────────────────────────────────────────────────────────────
 
-export const HEATMAP_DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+/** Dominant state per operator-hour cell — drives the cell color in Heatmap. */
+export type HeatmapState = 'call' | 'after_call' | 'waiting' | 'idle' | 'break' | 'offline'
+
 export const HEATMAP_HOURS = [
-  '08:00',
-  '09:00',
+  '8:00',
+  '9:00',
   '10:00',
   '11:00',
   '12:00',
@@ -2816,36 +2818,78 @@ export const HEATMAP_HOURS = [
   '15:00',
   '16:00',
   '17:00',
-  '18:00',
-  '19:00',
-  '20:00',
-  '21:00',
 ]
 
-// 7 days × 14 hours = 98 cells. Values are interaction counts shaped to look
-// like a normal collections-team rhythm (lunch dip + late-day peak).
-function buildHeatmapGrid(): number[][] {
-  const dayCurve = [0.95, 1.0, 1.05, 1.0, 0.92, 0.55, 0.3]
-  const hourCurve = [0.5, 0.85, 1.1, 1.25, 1.0, 0.65, 0.9, 1.2, 1.35, 1.4, 1.15, 0.85, 0.5, 0.2]
-  return dayCurve.map((d) =>
-    hourCurve.map((h) => {
-      const base = d * h * 14
-      const jitter = ((d * h * 17) % 7) - 3
-      return Math.max(0, Math.round(base + jitter))
-    })
-  )
+export interface MockHeatmapOperator {
+  id: number
+  name: string
+  initials: string
+  avatarColor: string
+  /** Dominant state per hour, aligned to HEATMAP_HOURS. */
+  states: HeatmapState[]
 }
 
-export const MOCK_HEATMAP_GRID: number[][] = buildHeatmapGrid()
+const HEATMAP_OPERATORS_BASE: { name: string; states: HeatmapState[] }[] = [
+  {
+    name: 'Kateryna A.',
+    states: ['call', 'after_call', 'waiting', 'idle', 'waiting', 'call', 'idle', 'after_call', 'waiting', 'offline'],
+  },
+  {
+    name: 'Oleg B.',
+    states: ['call', 'call', 'after_call', 'waiting', 'idle', 'after_call', 'waiting', 'call', 'offline', 'call'],
+  },
+  {
+    name: 'Marina Sh.',
+    states: ['call', 'after_call', 'waiting', 'idle', 'waiting', 'call', 'waiting', 'offline', 'call', 'call'],
+  },
+  {
+    name: 'Denys P.',
+    states: ['after_call', 'waiting', 'idle', 'waiting', 'idle', 'waiting', 'call', 'call', 'after_call', 'call'],
+  },
+  {
+    name: 'Iryna S.',
+    states: ['waiting', 'call', 'idle', 'after_call', 'waiting', 'offline', 'call', 'call', 'call', 'after_call'],
+  },
+  {
+    name: 'Artem H.',
+    states: ['call', 'idle', 'idle', 'after_call', 'waiting', 'offline', 'call', 'call', 'offline', 'offline'],
+  },
+  {
+    name: 'Oleksandra B.',
+    states: ['idle', 'after_call', 'call', 'call', 'call', 'call', 'after_call', 'waiting', 'call', 'call'],
+  },
+  {
+    name: 'Natalia Ye.',
+    states: ['call', 'call', 'after_call', 'call', 'call', 'call', 'idle', 'offline', 'waiting', 'offline'],
+  },
+  {
+    name: 'Serhiy L.',
+    states: ['call', 'call', 'call', 'call', 'idle', 'after_call', 'waiting', 'call', 'call', 'call'],
+  },
+  {
+    name: 'Yuriy K.',
+    states: ['call', 'after_call', 'waiting', 'waiting', 'after_call', 'waiting', 'call', 'offline', 'call', 'call'],
+  },
+  {
+    name: 'Bohdan M.',
+    states: ['call', 'after_call', 'waiting', 'call', 'idle', 'after_call', 'waiting', 'call', 'call', 'offline'],
+  },
+  {
+    name: 'Svitlana S.',
+    states: ['call', 'call', 'waiting', 'call', 'idle', 'call', 'after_call', 'call', 'call', 'call'],
+  },
+]
 
-export const MOCK_HEATMAP_PEAK = {
-  day: 'Wednesday',
-  hour: '17:00',
-  value: Math.max(...MOCK_HEATMAP_GRID.flat()),
-}
-
-export const MOCK_HEATMAP_TOTALS = {
-  totalInteractions: MOCK_HEATMAP_GRID.flat().reduce((a, b) => a + b, 0),
-  workingHours: '08:00 – 21:00',
-  busiestDay: 'Wednesday',
-}
+export const MOCK_HEATMAP_OPERATORS: MockHeatmapOperator[] = HEATMAP_OPERATORS_BASE.map(
+  (row, i) => {
+    const parts = row.name.split(' ')
+    const initials = `${parts[0][0]}${parts[1]?.[0] ?? ''}`.toUpperCase()
+    return {
+      id: i + 1,
+      name: row.name,
+      initials,
+      avatarColor: AVATAR_PALETTE[i % AVATAR_PALETTE.length],
+      states: row.states,
+    }
+  }
+)
