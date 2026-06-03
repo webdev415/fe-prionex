@@ -2,6 +2,7 @@
  * Step 1: Loan Source & Import Type
  */
 
+import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Input } from '@/components/ui/Input'
 import { Textarea } from '@/components/ui/Textarea'
@@ -29,7 +30,6 @@ export interface NewFactoringAgreementInput {
 export interface Step1Data {
   sellerId: string // Seller ID as string (for Select component compatibility)
   projectCode: string
-  purchaseDate: string
   comment: string
   importType: 'simple' | 'vendor'
   // Vendor flow only — vendor_schemas.code chosen on upload.
@@ -40,6 +40,11 @@ export interface Step1Data {
   factoringAgreementMode: 'existing' | 'new'
   factoringAgreementId: string
   newFactoringAgreement: NewFactoringAgreementInput
+  // Derived: legal_name of the currently-selected seller, or null.
+  // Lets isStep1Valid require "Who sold" in create-new mode when null —
+  // without a legal_name the BE has no fallback for previous_lender, so
+  // leaving the field blank would create an agreement with NULL who-sold.
+  selectedSellerLegalName: string | null
 }
 
 const EMPTY_NEW_FACTORING_AGREEMENT: NewFactoringAgreementInput = {
@@ -99,6 +104,17 @@ export function Step1LoanSource({ data, onChange }: Step1LoanSourceProps) {
       include_count: false,
     })
   const factoringAgreements = factoringAgreementsPage?.items ?? []
+
+  // Keep the derived `selectedSellerLegalName` in sync with the seller
+  // dropdown selection. Runs on initial mount AND when the sellers list
+  // arrives async (pre-populated sellerId without a loaded sellers list
+  // would otherwise leave the field stale at null).
+  useEffect(() => {
+    const legal = selectedSeller?.legal_name ?? null
+    if (legal !== data.selectedSellerLegalName) {
+      onChange({ selectedSellerLegalName: legal })
+    }
+  }, [selectedSeller?.legal_name, data.selectedSellerLegalName, onChange])
 
   const handleSellerChange = (value: string) => {
     // Reset agreement selection when seller changes — locked answer to
@@ -215,101 +231,102 @@ export function Step1LoanSource({ data, onChange }: Step1LoanSourceProps) {
             </div>
           </div>
 
-          {/* Factoring agreement (simple flow only) */}
-          {data.importType === 'simple' && (
-            <div className="space-y-3">
-              <Label required className="mb-1.5 block">
-                {t('pages.imports.step1.factoringAgreement.title', 'Factoring agreement')}
-              </Label>
+          {/* Factoring agreement (both simple and vendor flows) */}
+          <div className="space-y-3">
+            <Label required className="mb-1.5 block">
+              {t('pages.imports.step1.factoringAgreement.title', 'Factoring agreement')}
+            </Label>
 
-              {!selectedSellerId ? (
-                <p className="text-sm font-light text-gray-500">
-                  {t(
-                    'pages.imports.step1.factoringAgreement.pickSellerFirst',
-                    'Pick a seller first.'
-                  )}
-                </p>
-              ) : (
-                <>
-                  <div className="flex flex-col gap-2 sm:flex-row sm:gap-6">
-                    <label className="flex items-center gap-2 text-sm">
-                      <input
-                        type="radio"
-                        name="factoringAgreementMode"
-                        value="existing"
-                        checked={data.factoringAgreementMode === 'existing'}
-                        onChange={() => handleAgreementModeChange('existing')}
-                      />
-                      {t('pages.imports.step1.factoringAgreement.pickExisting', 'Pick existing')}
-                    </label>
-                    <label className="flex items-center gap-2 text-sm">
-                      <input
-                        type="radio"
-                        name="factoringAgreementMode"
-                        value="new"
-                        checked={data.factoringAgreementMode === 'new'}
-                        onChange={() => handleAgreementModeChange('new')}
-                      />
-                      {t('pages.imports.step1.factoringAgreement.createNew', 'Create new')}
-                    </label>
-                  </div>
+            {!selectedSellerId ? (
+              <p className="text-sm font-light text-gray-500">
+                {t(
+                  'pages.imports.step1.factoringAgreement.pickSellerFirst',
+                  'Pick a seller first.'
+                )}
+              </p>
+            ) : (
+              <>
+                <div className="flex flex-col gap-2 sm:flex-row sm:gap-6">
+                  <label className="flex items-center gap-2 text-sm">
+                    <input
+                      type="radio"
+                      name="factoringAgreementMode"
+                      value="existing"
+                      checked={data.factoringAgreementMode === 'existing'}
+                      onChange={() => handleAgreementModeChange('existing')}
+                    />
+                    {t('pages.imports.step1.factoringAgreement.pickExisting', 'Pick existing')}
+                  </label>
+                  <label className="flex items-center gap-2 text-sm">
+                    <input
+                      type="radio"
+                      name="factoringAgreementMode"
+                      value="new"
+                      checked={data.factoringAgreementMode === 'new'}
+                      onChange={() => handleAgreementModeChange('new')}
+                    />
+                    {t('pages.imports.step1.factoringAgreement.createNew', 'Create new')}
+                  </label>
+                </div>
 
-                  {data.factoringAgreementMode === 'existing' && (
-                    <Select
-                      value={data.factoringAgreementId}
-                      onValueChange={(value) => onChange({ factoringAgreementId: value })}
-                      disabled={isLoadingAgreements}
-                    >
-                      <SelectTrigger className="w-full" id="factoring-agreement-id">
-                        <SelectValue
-                          placeholder={
-                            isLoadingAgreements
-                              ? t('pages.imports.step1.factoringAgreement.loading', 'Loading…')
-                              : factoringAgreements.length === 0
-                                ? t(
-                                    'pages.imports.step1.factoringAgreement.emptyForSeller',
-                                    'No agreements yet — create one'
-                                  )
-                                : t(
-                                    'pages.imports.step1.factoringAgreement.selectExisting',
-                                    'Select agreement'
-                                  )
-                          }
-                        />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {factoringAgreements.map((fa) => {
-                          const lender = fa.previous_lender ?? '—'
-                          const dateStr = fa.contract_purchase_date ?? '—'
-                          return (
-                            <SelectItem key={fa.id} value={fa.id.toString()}>
-                              {fa.agreement_number} — {lender} ({dateStr})
-                            </SelectItem>
-                          )
-                        })}
-                      </SelectContent>
-                    </Select>
-                  )}
-
-                  {data.factoringAgreementMode === 'new' && (
-                    <div className="space-y-3 rounded-md border border-gray-200 bg-gray-50 p-3">
-                      <Input
-                        label={t(
-                          'pages.imports.step1.factoringAgreement.fields.number',
-                          'Agreement number'
-                        )}
-                        required
-                        value={data.newFactoringAgreement.agreement_number}
-                        onChange={(e) =>
-                          handleNewAgreementFieldChange('agreement_number', e.target.value)
+                {data.factoringAgreementMode === 'existing' && (
+                  <Select
+                    value={data.factoringAgreementId}
+                    onValueChange={(value) => onChange({ factoringAgreementId: value })}
+                    disabled={isLoadingAgreements}
+                  >
+                    <SelectTrigger className="w-full" id="factoring-agreement-id">
+                      <SelectValue
+                        placeholder={
+                          isLoadingAgreements
+                            ? t('pages.imports.step1.factoringAgreement.loading', 'Loading…')
+                            : factoringAgreements.length === 0
+                              ? t(
+                                  'pages.imports.step1.factoringAgreement.emptyForSeller',
+                                  'No agreements yet — create one'
+                                )
+                              : t(
+                                  'pages.imports.step1.factoringAgreement.selectExisting',
+                                  'Select agreement'
+                                )
                         }
-                        maxLength={100}
                       />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {factoringAgreements.map((fa) => {
+                        const lender = fa.previous_lender ?? '—'
+                        const dateStr = fa.contract_purchase_date ?? '—'
+                        return (
+                          <SelectItem key={fa.id} value={fa.id.toString()}>
+                            {fa.agreement_number} — {lender} ({dateStr})
+                          </SelectItem>
+                        )
+                      })}
+                    </SelectContent>
+                  </Select>
+                )}
+
+                {data.factoringAgreementMode === 'new' && (
+                  <div className="space-y-3 rounded-md border border-gray-200 bg-gray-50 p-3">
+                    <Input
+                      label={t(
+                        'pages.imports.step1.factoringAgreement.fields.number',
+                        'Agreement number'
+                      )}
+                      required
+                      value={data.newFactoringAgreement.agreement_number}
+                      onChange={(e) =>
+                        handleNewAgreementFieldChange('agreement_number', e.target.value)
+                      }
+                      maxLength={100}
+                    />
+                    <div>
                       <Input
                         label={t(
                           'pages.imports.step1.factoringAgreement.fields.previousLender',
                           'Who sold'
                         )}
+                        required={!selectedSeller?.legal_name}
                         value={data.newFactoringAgreement.previous_lender}
                         onChange={(e) =>
                           handleNewAgreementFieldChange('previous_lender', e.target.value)
@@ -327,67 +344,75 @@ export function Step1LoanSource({ data, onChange }: Step1LoanSourceProps) {
                               )
                         }
                       />
-                      <DateSelect
-                        id="new-fa-contract-purchase-date"
-                        label={t(
-                          'pages.imports.step1.factoringAgreement.fields.contractPurchaseDate',
-                          'Contract purchase date'
-                        )}
-                        required
-                        value={
-                          data.newFactoringAgreement.contract_purchase_date
-                            ? (() => {
-                                // Convert UTC datetime ISO back to a Date object that
-                                // react-datepicker renders as the correct calendar day in
-                                // the user's timezone (mirrors the old top-level picker's
-                                // timezone-aware display logic).
-                                const utcDate = new Date(
-                                  data.newFactoringAgreement.contract_purchase_date
-                                )
-                                if (userTimezone) {
-                                  const formatter = new Intl.DateTimeFormat('en-CA', {
-                                    timeZone: userTimezone,
-                                    year: 'numeric',
-                                    month: '2-digit',
-                                    day: '2-digit',
-                                  })
-                                  const dateStr = formatter.format(utcDate)
-                                  const [year, month, day] = dateStr.split('-').map(Number)
-                                  return new Date(year, month - 1, day, 12, 0, 0)
-                                }
-                                return utcDate
-                              })()
-                            : null
-                        }
-                        onChange={(args) => {
-                          if (!args.value) {
-                            handleNewAgreementFieldChange('contract_purchase_date', '')
-                            return
-                          }
-                          // Mirror the old picker — store the chosen day as a UTC
-                          // datetime ISO (noon UTC). BE strips the time portion
-                          // before persisting to the date column.
-                          const selectedDate = args.value
-                          const year = selectedDate.getFullYear()
-                          const month = selectedDate.getMonth()
-                          const day = selectedDate.getDate()
-                          const utcDate = new Date(Date.UTC(year, month, day, 12, 0, 0))
-                          handleNewAgreementFieldChange(
-                            'contract_purchase_date',
-                            utcDate.toISOString()
-                          )
-                        }}
-                        placeholder={t(
-                          'pages.imports.step1.factoringAgreement.fields.contractPurchaseDatePlaceholder',
-                          'Select contract purchase date'
-                        )}
-                      />
+                      {!selectedSeller?.legal_name && (
+                        <p className="mt-1.5 text-xs text-gray-500">
+                          {t(
+                            'pages.imports.step1.factoringAgreement.fields.previousLenderRequiredHint',
+                            'This seller has no legal name on file, so "Who sold" is required.'
+                          )}
+                        </p>
+                      )}
                     </div>
-                  )}
-                </>
-              )}
-            </div>
-          )}
+                    <DateSelect
+                      id="new-fa-contract-purchase-date"
+                      label={t(
+                        'pages.imports.step1.factoringAgreement.fields.contractPurchaseDate',
+                        'Contract purchase date'
+                      )}
+                      required
+                      value={
+                        data.newFactoringAgreement.contract_purchase_date
+                          ? (() => {
+                              // Convert UTC datetime ISO back to a Date object that
+                              // react-datepicker renders as the correct calendar day in
+                              // the user's timezone (mirrors the old top-level picker's
+                              // timezone-aware display logic).
+                              const utcDate = new Date(
+                                data.newFactoringAgreement.contract_purchase_date
+                              )
+                              if (userTimezone) {
+                                const formatter = new Intl.DateTimeFormat('en-CA', {
+                                  timeZone: userTimezone,
+                                  year: 'numeric',
+                                  month: '2-digit',
+                                  day: '2-digit',
+                                })
+                                const dateStr = formatter.format(utcDate)
+                                const [year, month, day] = dateStr.split('-').map(Number)
+                                return new Date(year, month - 1, day, 12, 0, 0)
+                              }
+                              return utcDate
+                            })()
+                          : null
+                      }
+                      onChange={(args) => {
+                        if (!args.value) {
+                          handleNewAgreementFieldChange('contract_purchase_date', '')
+                          return
+                        }
+                        // Mirror the old picker — store the chosen day as a UTC
+                        // datetime ISO (noon UTC). BE strips the time portion
+                        // before persisting to the date column.
+                        const selectedDate = args.value
+                        const year = selectedDate.getFullYear()
+                        const month = selectedDate.getMonth()
+                        const day = selectedDate.getDate()
+                        const utcDate = new Date(Date.UTC(year, month, day, 12, 0, 0))
+                        handleNewAgreementFieldChange(
+                          'contract_purchase_date',
+                          utcDate.toISOString()
+                        )
+                      }}
+                      placeholder={t(
+                        'pages.imports.step1.factoringAgreement.fields.contractPurchaseDatePlaceholder',
+                        'Select contract purchase date'
+                      )}
+                    />
+                  </div>
+                )}
+              </>
+            )}
+          </div>
 
           {/* Comment */}
           <div className="relative">
