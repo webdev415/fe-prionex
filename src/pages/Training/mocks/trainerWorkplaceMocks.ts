@@ -1671,8 +1671,10 @@ export interface MockClosureRow {
   id: number
   closureDateLabel: string
   operator: string
+  operatorInitials?: string
+  operatorAvatarColor?: string
   client: string
-  agreement: string
+  deal: string
   paymentAmount: number
   statusInCrm: string
 }
@@ -1682,24 +1684,83 @@ export const MOCK_CLOSURES_KPIS = {
   totalAmount: { amount: 59000, currency: '₴' },
   conversionPromisePaymentPct: 19,
   closureLeader: 'Antonova K.',
+  closureLeaderSubValue: '3 closures',
 }
 
 export const MOCK_CLOSURES_FUNNEL = [
   { label: 'Interactions', actual: 90, expected: 100, pct: 100 },
   { label: 'Promises', actual: 36, expected: 90, pct: 40 },
-  { label: 'Payments', actual: 17, expected: 36, pct: 47 },
-  { label: 'Closure', actual: 7, expected: 17, pct: 41 },
+  { label: 'Closure', actual: 7, expected: 36, pct: 10 },
 ]
 
-export const MOCK_CLOSURES: MockClosureRow[] = Array.from({ length: 8 }, (_, i) => ({
-  id: i + 1,
-  closureDateLabel: '13.05',
-  operator: OPERATOR_NAMES[i % OPERATOR_NAMES.length],
-  client: `Client #${i + 1}`,
-  agreement: `AGR-${2000 + i}`,
-  paymentAmount: 5000 + i * 400,
-  statusInCrm: 'Paid',
-}))
+const CLOSURE_ROWS: Omit<MockClosureRow, 'id' | 'operatorInitials' | 'operatorAvatarColor'>[] = [
+  {
+    closureDateLabel: '13.05 10:22',
+    operator: 'Kateryna Antonova',
+    client: '#230014',
+    deal: 'D-6811',
+    paymentAmount: 12000,
+    statusInCrm: 'Paid',
+  },
+  {
+    closureDateLabel: '13.05 11:15',
+    operator: 'Sofia Lytvyn',
+    client: '#231500',
+    deal: 'D-6944',
+    paymentAmount: 8500,
+    statusInCrm: 'Paid',
+  },
+  {
+    closureDateLabel: '12.05 16:48',
+    operator: 'Natalia Yefremova',
+    client: '#232800',
+    deal: 'D-7001',
+    paymentAmount: 5200,
+    statusInCrm: 'Paid',
+  },
+  {
+    closureDateLabel: '12.05 14:30',
+    operator: 'Oleh Bondar',
+    client: '#233100',
+    deal: 'D-7055',
+    paymentAmount: 3800,
+    statusInCrm: 'Paid',
+  },
+  {
+    closureDateLabel: '11.05 15:10',
+    operator: 'Oleksandra Bila',
+    client: '#234400',
+    deal: 'D-7122',
+    paymentAmount: 15000,
+    statusInCrm: 'Paid',
+  },
+  {
+    closureDateLabel: '11.05 12:05',
+    operator: 'Yurii Kravtsov',
+    client: '#235600',
+    deal: 'D-7200',
+    paymentAmount: 9700,
+    statusInCrm: 'Paid',
+  },
+  {
+    closureDateLabel: '10.05 17:42',
+    operator: 'Bohdan Melnyk',
+    client: '#236700',
+    deal: 'D-7288',
+    paymentAmount: 4900,
+    statusInCrm: 'Paid',
+  },
+]
+
+export const MOCK_CLOSURES: MockClosureRow[] = CLOSURE_ROWS.map((row, i) => {
+  const parts = row.operator.split(' ')
+  return {
+    id: i + 1,
+    ...row,
+    operatorInitials: `${parts[0][0]}${parts[1]?.[0] ?? ''}`.toUpperCase(),
+    operatorAvatarColor: AVATAR_PALETTE[i % AVATAR_PALETTE.length],
+  }
+})
 
 // ─────────────────────────────────────────────────────────────
 // Leaks (KAN-415)
