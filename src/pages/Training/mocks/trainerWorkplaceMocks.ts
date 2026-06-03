@@ -1546,35 +1546,120 @@ export const MOCK_WEEKLY_TASKS_KPIS: MockWeeklyTasksKpis = {
 
 export type PromiseStatus = 'pending' | 'paid' | 'overdue' | 'expected'
 
+/** Promise-row priority — drives the right-side chip filter (All / Critical / Average / Low). */
+export type PromisePriority = 'critical' | 'average' | 'low'
+
 export interface MockPromiseRow {
   id: number
   dateLabel: string
   operator: string
+  operatorInitials?: string
+  operatorAvatarColor?: string
   client: string
   agreement: string
   amount: number
   paymentDateLabel: string
   status: PromiseStatus
+  priority: PromisePriority
 }
 
 export const MOCK_PROMISES_KPIS = {
   total: { amount: 44000, currency: '₴' },
   paid: { amount: 44000, currency: '₴' },
-  pending: { count: 18 },
-  expected: { amount: 44000, currency: '₴' },
+  overdue: { count: 18 },
+  pending: { count: 44000 },
 }
 
-export const MOCK_PROMISES: MockPromiseRow[] = Array.from({ length: 10 }, (_, i) => {
-  const op = OPERATOR_NAMES[i % OPERATOR_NAMES.length]
+const PROMISE_ROWS: Omit<MockPromiseRow, 'id' | 'operatorInitials' | 'operatorAvatarColor'>[] = [
+  {
+    dateLabel: '05/13 09:14',
+    operator: 'Kateryna Antonova',
+    client: '#230114',
+    agreement: 'D-7012',
+    amount: 4500,
+    paymentDateLabel: '05/15',
+    status: 'expected',
+    priority: 'average',
+  },
+  {
+    dateLabel: '05/13 10:31',
+    operator: 'Oleh Bondar',
+    client: '#231088',
+    agreement: 'D-7044',
+    amount: 2200,
+    paymentDateLabel: '05/16',
+    status: 'expected',
+    priority: 'low',
+  },
+  {
+    dateLabel: '05/12 14:22',
+    operator: 'Kateryna Antonova',
+    client: '#232001',
+    agreement: 'D-7102',
+    amount: 7800,
+    paymentDateLabel: '05/13',
+    status: 'overdue',
+    priority: 'critical',
+  },
+  {
+    dateLabel: '05/13 11:05',
+    operator: 'Marina Shevchenko',
+    client: '#233500',
+    agreement: 'D-7215',
+    amount: 1500,
+    paymentDateLabel: '05/14',
+    status: 'expected',
+    priority: 'average',
+  },
+  {
+    dateLabel: '05/12 16:40',
+    operator: 'Natalia Yefremova',
+    client: '#234010',
+    agreement: 'D-7318',
+    amount: 9200,
+    paymentDateLabel: '05/14',
+    status: 'expected',
+    priority: 'critical',
+  },
+  {
+    dateLabel: '05/11 15:10',
+    operator: 'Sofia Lytvyn',
+    client: '#235100',
+    agreement: 'D-7421',
+    amount: 3300,
+    paymentDateLabel: '05/13',
+    status: 'paid',
+    priority: 'low',
+  },
+  {
+    dateLabel: '05/13 08:55',
+    operator: 'Denys Polyakov',
+    client: '#236200',
+    agreement: 'D-7519',
+    amount: 5000,
+    paymentDateLabel: '05/20',
+    status: 'expected',
+    priority: 'average',
+  },
+  {
+    dateLabel: '05/10 13:44',
+    operator: 'Iryna Sokol',
+    client: '#237300',
+    agreement: 'D-7621',
+    amount: 1800,
+    paymentDateLabel: '05/13',
+    status: 'overdue',
+    priority: 'critical',
+  },
+]
+
+export const MOCK_PROMISES: MockPromiseRow[] = PROMISE_ROWS.map((row, i) => {
+  const parts = row.operator.split(' ')
   return {
     id: i + 1,
-    dateLabel: `12.05 1${i % 10}:30`,
-    operator: op,
-    client: `Client #${i + 1}`,
-    agreement: `AGR-${1000 + i}`,
-    amount: 4500 + i * 350,
-    paymentDateLabel: '13.05',
-    status: i % 4 === 0 ? 'paid' : i % 4 === 1 ? 'pending' : i % 4 === 2 ? 'expected' : 'overdue',
+    ...row,
+    operatorInitials: `${parts[0][0]}${parts[1]?.[0] ?? ''}`.toUpperCase(),
+    operatorAvatarColor: AVATAR_PALETTE[i % AVATAR_PALETTE.length],
   }
 })
 
