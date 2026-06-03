@@ -3372,8 +3372,11 @@ export function ClientDetailPage() {
                         </tr>
                       </thead>
                       <tbody>
-                        {client.recommenders.map((contact) => (
-                          <tr key={contact.id} className="border-b border-gray-100 last:border-0">
+                        {client.recommenders.map((contact, index) => (
+                          <tr
+                            key={contact.id ?? `recommender-${index}-${contact.contactValue}`}
+                            className="border-b border-gray-100 last:border-0"
+                          >
                             <td className="py-2 pr-3">
                               <div className="flex flex-col items-start gap-1">
                                 <div className="flex items-center gap-0.5">
