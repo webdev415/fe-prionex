@@ -1769,6 +1769,10 @@ export const MOCK_CLOSURES: MockClosureRow[] = CLOSURE_ROWS.map((row, i) => {
 export interface MockLeakRow {
   id: number
   operator: string
+  operatorInitials?: string
+  operatorAvatarColor?: string
+  /** Presence dot rendered over the avatar (online/busy/offline). */
+  operatorPresence?: 'online' | 'busy' | 'offline'
   client: string
   agreement: string
   promiseAmount: number
@@ -1783,16 +1787,88 @@ export const MOCK_LEAKS_KPIS = {
   followedUp: 2,
 }
 
-export const MOCK_LEAKS: MockLeakRow[] = Array.from({ length: 7 }, (_, i) => ({
-  id: i + 1,
-  operator: OPERATOR_NAMES[i % OPERATOR_NAMES.length],
-  client: `Client #${i + 11}`,
-  agreement: `AGR-${3000 + i}`,
-  promiseAmount: 3000 + i * 500,
-  promiseDateLabel: '12.05',
-  followedUp: i % 3 === 0,
-  callAfterEscalationLabel: i % 3 === 0 ? '13.05 14:30' : 'No call',
-}))
+/** Per-operator presence dot shown on the avatar in the Leaks table. */
+export type LeakOperatorPresence = 'online' | 'busy' | 'offline'
+
+const LEAK_ROWS: Omit<
+  MockLeakRow,
+  'id' | 'operatorInitials' | 'operatorAvatarColor' | 'operatorPresence'
+>[] = [
+  {
+    operator: 'Denys Polyakov',
+    client: '#236200',
+    agreement: 'D-7519',
+    promiseAmount: 5000,
+    promiseDateLabel: '13.05',
+    followedUp: false,
+    callAfterEscalationLabel: 'No call',
+  },
+  {
+    operator: 'Iryna Sokol',
+    client: '#237300',
+    agreement: 'D-7621',
+    promiseAmount: 1800,
+    promiseDateLabel: '10.05',
+    followedUp: false,
+    callAfterEscalationLabel: 'No call',
+  },
+  {
+    operator: 'Artem Honchar',
+    client: '#239800',
+    agreement: 'D-7890',
+    promiseAmount: 3200,
+    promiseDateLabel: '13.05',
+    followedUp: true,
+    callAfterEscalationLabel: '13.05 12:10',
+  },
+  {
+    operator: 'Bohdan Melnyk',
+    client: '#241000',
+    agreement: 'D-7942',
+    promiseAmount: 7500,
+    promiseDateLabel: '12.05',
+    followedUp: false,
+    callAfterEscalationLabel: 'No call',
+  },
+  {
+    operator: 'Sofia Lytvyn',
+    client: '#242100',
+    agreement: 'D-8001',
+    promiseAmount: 2100,
+    promiseDateLabel: '13.05',
+    followedUp: true,
+    callAfterEscalationLabel: '13.05 11:30',
+  },
+  {
+    operator: 'Marina Shevchenko',
+    client: '#243200',
+    agreement: 'D-8102',
+    promiseAmount: 4800,
+    promiseDateLabel: '11.05',
+    followedUp: false,
+    callAfterEscalationLabel: 'No call',
+  },
+]
+
+const LEAK_PRESENCE: LeakOperatorPresence[] = [
+  'online',
+  'online',
+  'online',
+  'offline',
+  'online',
+  'busy',
+]
+
+export const MOCK_LEAKS: MockLeakRow[] = LEAK_ROWS.map((row, i) => {
+  const parts = row.operator.split(' ')
+  return {
+    id: i + 1,
+    ...row,
+    operatorInitials: `${parts[0][0]}${parts[1]?.[0] ?? ''}`.toUpperCase(),
+    operatorAvatarColor: AVATAR_PALETTE[i % AVATAR_PALETTE.length],
+    operatorPresence: LEAK_PRESENCE[i % LEAK_PRESENCE.length],
+  }
+})
 
 // ─────────────────────────────────────────────────────────────
 // Third Parties (KAN-415)
