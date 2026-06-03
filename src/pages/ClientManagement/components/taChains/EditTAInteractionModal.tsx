@@ -14,7 +14,7 @@ import { Modal, ModalHeader, ModalContent, ModalFooter } from '@/components/ui/M
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { DateSelect } from '@/components/ui/DateSelect'
-import { getDateTimeStringInTimezone } from '@/lib/dateUtils'
+import { getDateTimeStringInTimezone, isWallTimeInPast } from '@/lib/dateUtils'
 import { Label } from '@/components/ui/Label'
 import { Textarea } from '@/components/ui/Textarea'
 import {
@@ -37,24 +37,16 @@ import type { ContactSource } from '@/features/taChains/api/types'
 import { getErrorMessage } from '@/lib/errors'
 import { formatMoneyKopeckTight } from '@/lib/formatters'
 
-// Mirrors ChainExecutor's helper of the same name — kept duplicated
-// (one short function) instead of extracted to a shared util to avoid
-// a barrel just for two call sites. ``filterFromNow`` is hoisted to
-// module scope so react-datepicker sees a stable ``filterTime`` prop
-// identity across renders (a fresh closure per render thrashes the
-// time list, especially when called inside the steps ``.map()``).
-const filterFromNow = (time: Date): boolean => {
-  const now = new Date()
-  const isSameDay =
-    time.getFullYear() === now.getFullYear() &&
-    time.getMonth() === now.getMonth() &&
-    time.getDate() === now.getDate()
-  return isSameDay ? time.getTime() >= now.getTime() : true
-}
+// Shared display/entry format for the manually-typeable date field.
+const MANUAL_DATE_FORMAT = 'dd.MM.yyyy HH:mm'
+const MANUAL_DATE_DEFAULT_TIME = '09:00'
 
-function notInPastBounds(notInPast: boolean | undefined) {
-  if (!notInPast) return {}
-  return { min: new Date(), filterTime: filterFromNow }
+// "Date cannot be in the past" is validated on save (the user may enter a
+// past date by typing or calendar, but submission is blocked). Values here
+// are naive browser-local strings, so the check uses browser-local "now".
+function stepDateIsPast(value: string, notInPast: boolean | undefined): boolean {
+  if (!notInPast || !value) return false
+  return isWallTimeInPast(value)
 }
 
 function ContactStepEdit({
@@ -174,6 +166,18 @@ export function EditTAInteractionModal({
   const [promiseAmount, setPromiseAmount] = useState<string>('')
   const [creditId, setCreditId] = useState<string>('')
   const [notes, setNotes] = useState<string>('')
+  // step.id values whose date field currently holds invalid/incomplete text.
+  const [invalidDateSteps, setInvalidDateSteps] = useState<Set<number>>(new Set())
+
+  const setDateValidity = (stepId: number, invalid: boolean) =>
+    setInvalidDateSteps((prev) => {
+      const has = prev.has(stepId)
+      if (invalid === has) return prev
+      const next = new Set(prev)
+      if (invalid) next.add(stepId)
+      else next.delete(stepId)
+      return next
+    })
 
   // Hydrate once interaction + chain definition + (if applicable) instance are
   // all loaded, so we don't overwrite the user's edits when a slower query
@@ -256,6 +260,22 @@ export function EditTAInteractionModal({
 
   const handleSave = async () => {
     if (!interaction) return
+
+    // Block invalid/incomplete manual date entries.
+    if (invalidDateSteps.size > 0) {
+      toast.error(t('pages.clientChains.errors.dateInvalid'))
+      return
+    }
+    // Block past dates on steps that forbid them.
+    for (const step of orderedSteps) {
+      const ta = taById.get(step.target_action_id)
+      if (ta?.field_type !== 'date') continue
+      if (stepDateIsPast(stepValues[String(step.id)] ?? '', step.not_in_the_past)) {
+        toast.error(t('pages.clientChains.errors.datePast'))
+        return
+      }
+    }
+
     const trimmedNotes = notes.trim()
     // ``stepValues`` is keyed by ``step.id`` (unique per step row).
     // On save we re-key by ``step_order`` — the canonical convention
@@ -365,11 +385,13 @@ export function EditTAInteractionModal({
                             onChange={({ value: v }) =>
                               setStepValue(step.id, v ? getDateTimeStringInTimezone(v) : '')
                             }
-                            format="dd/MM/yyyy HH:mm"
+                            onValidityChange={(invalid) => setDateValidity(step.id, invalid)}
+                            allowManualInput
+                            defaultTime={MANUAL_DATE_DEFAULT_TIME}
+                            format={MANUAL_DATE_FORMAT}
                             showTimeSelect
                             timeFormat="HH:mm"
                             timeIntervals={15}
-                            {...notInPastBounds(step.not_in_the_past)}
                           />
                           {value && !isValid && (
                             <span className="text-xs text-amber-600">
