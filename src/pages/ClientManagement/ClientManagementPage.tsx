@@ -1212,8 +1212,7 @@ export function ClientManagementPage() {
       setTaDateToFilter(newFilters.taDateTo || '')
     }
     if (
-      JSON.stringify(newFilters.interactionUserIds) !==
-      JSON.stringify(interactionUserIdsFilter)
+      JSON.stringify(newFilters.interactionUserIds) !== JSON.stringify(interactionUserIdsFilter)
     ) {
       setInteractionUserIdsFilter(newFilters.interactionUserIds || [])
     }

@@ -501,11 +501,9 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                       interactionUserIds: ids,
                     })
                   }
-                  searchPlaceholder={t(
-                    'pages.clients.filters.selectOperator',
-                    'Select operator'
-                  )}
+                  searchPlaceholder={t('pages.clients.filters.selectOperator', 'Select operator')}
                   emptyText={t('pages.clients.filters.noUsersAvailable')}
+                  selectAllLabel={t('pages.clients.filters.selectAllOperators', 'All operators')}
                   testId="interaction-user-multiselect-trigger"
                   trigger={
                     <button
@@ -515,11 +513,17 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                       <span className="truncate">
                         {(() => {
                           const selected = filters.interactionUserIds ?? []
-                          if (selected.length === 0) {
-                            return t(
-                              'pages.clients.filters.selectOperator',
-                              'Select operator'
-                            )
+                          const allCount = interactionUserOptions.length
+                          // "All operators" both when nothing is selected
+                          // AND when everything is selected — same as the
+                          // reference EmployeeFilterDropdown on Action
+                          // Analysis. Both states semantically mean "no
+                          // narrowing".
+                          if (
+                            selected.length === 0 ||
+                            (allCount > 0 && selected.length === allCount)
+                          ) {
+                            return t('pages.clients.filters.selectAllOperators', 'All operators')
                           }
                           if (selected.length <= 2) {
                             return interactionUserOptions
@@ -756,6 +760,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                   }
                   searchPlaceholder={t('pages.clients.filters.selectEmployee')}
                   emptyText={t('pages.clients.filters.noUsersAvailable')}
+                  selectAllLabel={t('pages.clients.filters.selectAllEmployees', 'All employees')}
                   testId="responsible-employee-multiselect-trigger"
                   trigger={
                     <button
@@ -765,8 +770,12 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                       <span className="truncate">
                         {(() => {
                           const selected = filters.responsibleEmployeeIds ?? []
-                          if (selected.length === 0) {
-                            return t('pages.clients.filters.selectEmployee')
+                          const allCount = employeeOptions.length
+                          if (
+                            selected.length === 0 ||
+                            (allCount > 0 && selected.length === allCount)
+                          ) {
+                            return t('pages.clients.filters.selectAllEmployees', 'All employees')
                           }
                           if (selected.length <= 2) {
                             return employeeOptions
