@@ -367,6 +367,7 @@ export function AgentPerformanceTable({
             </span>
             <div className="flex items-center gap-3">
               <DateSelect
+                variant="filter"
                 key={`date-from-${selectedPeriod}`}
                 disabled={true} // Disable manual date selection when period is selected
                 value={dateRange.from}
@@ -378,6 +379,7 @@ export function AgentPerformanceTable({
                 -
               </span>
               <DateSelect
+                variant="filter"
                 key={`date-to-${selectedPeriod}`}
                 disabled={true} // Disable manual date selection when period is selected
                 value={dateRange.to}

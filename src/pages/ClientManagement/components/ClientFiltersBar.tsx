@@ -373,10 +373,10 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
               </label>
               <div className="flex w-full flex-1 items-center gap-2">
                 <DateSelect
+                  variant="filter"
                   value={filters.dateOfSaleFrom || null}
                   onChange={({ value }) => handleFilterDateChange('dateOfSaleFrom', value)}
                   placeholder={t('pages.clients.filters.min')}
-                  format="yyyy-MM-dd"
                   className="flex flex-1 flex-col gap-2"
                 />
                 <span className="text-sm leading-[155%] font-medium tracking-[-0.28px] text-gray-700 sm:text-base sm:tracking-[-0.32px]">
@@ -386,7 +386,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                   value={filters.dateOfSaleTo || null}
                   onChange={({ value }) => handleFilterDateChange('dateOfSaleTo', value)}
                   placeholder={t('pages.clients.filters.max')}
-                  format="yyyy-MM-dd"
+                  variant="filter"
                   className="flex flex-1 flex-col gap-2"
                 />
               </div>
@@ -404,7 +404,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                   value={filters.assignmentDateFrom || null}
                   onChange={({ value }) => handleFilterDateChange('assignmentDateFrom', value)}
                   placeholder={t('pages.clients.filters.min')}
-                  format="yyyy-MM-dd"
+                  variant="filter"
                   className="flex flex-1 flex-col gap-2"
                 />
                 <span className="text-sm leading-[155%] font-medium tracking-[-0.28px] text-gray-700 sm:text-base sm:tracking-[-0.32px]">
@@ -414,7 +414,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                   value={filters.assignmentDateTo || null}
                   onChange={({ value }) => handleFilterDateChange('assignmentDateTo', value)}
                   placeholder={t('pages.clients.filters.max')}
-                  format="yyyy-MM-dd"
+                  variant="filter"
                   className="flex flex-1 flex-col gap-2"
                 />
               </div>
@@ -436,7 +436,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                   value={filters.taDateFrom || null}
                   onChange={({ value }) => handleFilterDateChange('taDateFrom', value)}
                   placeholder={t('pages.clients.filters.min')}
-                  format="yyyy-MM-dd"
+                  variant="filter"
                   className="flex flex-1 flex-col gap-2"
                 />
                 <span className="text-sm leading-[155%] font-medium tracking-[-0.28px] text-gray-700 sm:text-base sm:tracking-[-0.32px]">
@@ -446,7 +446,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                   value={filters.taDateTo || null}
                   onChange={({ value }) => handleFilterDateChange('taDateTo', value)}
                   placeholder={t('pages.clients.filters.max')}
-                  format="yyyy-MM-dd"
+                  variant="filter"
                   className="flex flex-1 flex-col gap-2"
                 />
               </div>
@@ -467,7 +467,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                   value={filters.interactionDateFrom || null}
                   onChange={({ value }) => handleFilterDateChange('interactionDateFrom', value)}
                   placeholder={t('pages.clients.filters.min')}
-                  format="yyyy-MM-dd"
+                  variant="filter"
                   className="flex flex-1 flex-col gap-2"
                 />
                 <span className="text-sm leading-[155%] font-medium tracking-[-0.28px] text-gray-700 sm:text-base sm:tracking-[-0.32px]">
@@ -477,7 +477,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                   value={filters.interactionDateTo || null}
                   onChange={({ value }) => handleFilterDateChange('interactionDateTo', value)}
                   placeholder={t('pages.clients.filters.max')}
-                  format="yyyy-MM-dd"
+                  variant="filter"
                   className="flex flex-1 flex-col gap-2"
                 />
               </div>

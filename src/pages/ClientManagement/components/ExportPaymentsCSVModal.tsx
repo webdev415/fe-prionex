@@ -228,6 +228,7 @@ export function ExportPaymentsCSVModal({
                 </Label>
                 <div className="flex w-full flex-1 items-center gap-2 self-stretch sm:gap-3">
                   <DateSelect
+                    variant="filter"
                     value={startDate}
                     onChange={({ value }) => setStartDate(value)}
                     placeholder={t('pages.clients.modals.exportPaymentsCSV.startDate')}
@@ -237,6 +238,7 @@ export function ExportPaymentsCSVModal({
                     -
                   </span>
                   <DateSelect
+                    variant="filter"
                     value={endDate}
                     onChange={({ value }) => setEndDate(value)}
                     placeholder={t('pages.clients.modals.exportPaymentsCSV.endDate')}

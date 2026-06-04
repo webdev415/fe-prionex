@@ -2,14 +2,33 @@
  * DateSelect Component
  *
  * A styled date input component using react-datepicker.
- * Matches the design with calendar icon and placeholder support.
+ * ``variant="filter"`` enables DD.MM.YYYY masked keyboard input for date filters.
  */
 
-import { forwardRef, useId } from 'react'
+import {
+  createContext,
+  forwardRef,
+  useCallback,
+  useContext,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type InputHTMLAttributes,
+} from 'react'
 import DatePicker from 'react-datepicker'
 import 'react-datepicker/dist/react-datepicker.css'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
+import {
+  DMY_DOT_MASK_PLACEHOLDER,
+  formatDateAsDmyDot,
+  maskDmyDotFromDigits,
+  validateDmyDotInput,
+} from '@/lib/dmyDotDate'
+
+export const DATE_FILTER_FORMAT = 'dd.MM.yyyy'
 
 export interface DateSelectProps {
   label?: string
@@ -25,32 +44,19 @@ export interface DateSelectProps {
   min?: Date | string
   max?: Date | string
   format?: string
+  /** Date filter fields: DD.MM.YYYY mask, inline validation, calendar kept. */
+  variant?: 'default' | 'filter'
   showTimeSelect?: boolean
   timeFormat?: string
   timeIntervals?: number
-  // Restrict the selectable time-of-day inside the time column.
-  // ``minTime``/``maxTime`` are react-datepicker's static bounds and
-  // apply to **every** selected calendar day, so they're only correct
-  // when the same restriction holds regardless of the day. For
-  // day-aware rules (e.g. "block past times today but allow any time
-  // on future days"), use ``filterTime`` instead — react-datepicker
-  // calls it with a Date that carries both the selected day and the
-  // slot's time-of-day, so the callback can decide per slot.
   minTime?: Date
   maxTime?: Date
-  /** Per-slot predicate. Return ``true`` to keep, ``false`` to grey out. */
   filterTime?: (time: Date) => boolean
 }
 
 const parseDate = (date: Date | string | null | undefined): Date | null => {
   if (!date) return null
   if (date instanceof Date) return date
-  // Date-only strings ("YYYY-MM-DD") represent a calendar day, not a
-  // moment in time. ``new Date("2026-05-27")`` would parse them as UTC
-  // midnight; browsers west of UTC then render them as the previous
-  // local day inside react-datepicker (clicking 27 shows 26). Build
-  // the Date at **local** midnight so the picker's input matches the
-  // calendar cell the user clicked.
   const ymdMatch = date.match(/^(\d{4})-(\d{2})-(\d{2})$/)
   if (ymdMatch) {
     const [, y, m, d] = ymdMatch
@@ -60,22 +66,106 @@ const parseDate = (date: Date | string | null | undefined): Date | null => {
   return isNaN(parsed.getTime()) ? null : parsed
 }
 
+type FilterInputProps = InputHTMLAttributes<HTMLInputElement> & {
+  hasError?: boolean
+}
+
+const FilterDateInput = forwardRef<HTMLInputElement, FilterInputProps>(
+  ({ hasError, className, ...props }, ref) => (
+    <input
+      ref={ref}
+      {...props}
+      className={cn(
+        'h-[45px] w-full rounded-md border bg-white pr-4 pl-10 text-sm font-light text-[#05040D] transition-all outline-none placeholder:text-gray-500',
+        hasError
+          ? 'border-red-500 focus:border-red-500'
+          : 'border-gray-300 focus:border-[var(--color-primary-500)]',
+        className
+      )}
+    />
+  )
+)
+FilterDateInput.displayName = 'FilterDateInput'
+
+type FilterInputBridge = {
+  inputText: string
+  onMaskedChange: (e: ChangeEvent<HTMLInputElement>) => void
+  hasError: boolean
+  inputId: string
+  placeholder: string
+  disabled?: boolean
+  helperId?: string
+  helperText?: string
+  ensureTextOnFocus: () => void
+}
+
+const FilterPickerInputContext = createContext<FilterInputBridge | null>(null)
+
+/** Drop react-datepicker-controlled props; we drive value/onChange/placeholder ourselves. */
+function pickerPassthroughProps(
+  props: InputHTMLAttributes<HTMLInputElement>
+): Omit<InputHTMLAttributes<HTMLInputElement>, 'value' | 'onChange' | 'placeholder'> {
+  const passthrough = { ...props }
+  delete passthrough.value
+  delete passthrough.onChange
+  delete passthrough.placeholder
+  return passthrough
+}
+
+const FilterPickerInput = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>(
+  (pickerProps, ref) => {
+    const bridge = useContext(FilterPickerInputContext)
+    if (!bridge) return null
+
+    const { onFocus, onClick, onBlur } = pickerProps
+    const rest = pickerPassthroughProps(pickerProps)
+
+    return (
+      <FilterDateInput
+        ref={ref}
+        {...rest}
+        id={bridge.inputId}
+        value={bridge.inputText}
+        onChange={bridge.onMaskedChange}
+        onFocus={(e) => {
+          bridge.ensureTextOnFocus()
+          onFocus?.(e)
+        }}
+        onClick={(e) => {
+          bridge.ensureTextOnFocus()
+          onClick?.(e)
+        }}
+        onBlur={onBlur}
+        disabled={bridge.disabled}
+        placeholder={bridge.placeholder}
+        hasError={bridge.hasError}
+        inputMode="numeric"
+        autoComplete="off"
+        aria-describedby={bridge.helperText ? bridge.helperId : undefined}
+        aria-invalid={bridge.hasError || undefined}
+      />
+    )
+  }
+)
+FilterPickerInput.displayName = 'FilterPickerInput'
+
 const DateSelect = forwardRef<DatePicker, DateSelectProps>(
   (
     {
       label,
-      error,
+      error: externalError,
       required,
       helperText,
       className,
       id,
       value,
-      placeholder = 'Select date',
+      placeholder: _placeholder,
       onChange,
       disabled,
       min,
       max,
-      format = 'MM/dd/yyyy',
+      format,
+      variant = 'default',
       showTimeSelect,
       timeFormat = 'HH:mm',
       timeIntervals = 15,
@@ -87,15 +177,168 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
   ) => {
     const generatedId = useId()
     const inputId = id || generatedId
-    const errorId = `${inputId}-error`
     const helperId = `${inputId}-helper`
+    const isFilter = variant === 'filter' && !showTimeSelect
 
-    const handleChange = (date: Date | null) => {
-      onChange?.({ value: date })
+    const resolvedFormat = format ?? (isFilter ? DATE_FILTER_FORMAT : 'MM/dd/yyyy')
+    const filterPlaceholder = DMY_DOT_MASK_PLACEHOLDER
+    const resolvedPlaceholder = isFilter ? filterPlaceholder : (_placeholder ?? 'Select date')
+
+    const minDate = parseDate(min)
+    const maxDate = parseDate(max)
+    const selectedDate = parseDate(value)
+
+    const initialText = () => {
+      const d = parseDate(value)
+      return d ? formatDateAsDmyDot(d) : ''
     }
 
+    const [inputText, setInputText] = useState(initialText)
+    const [hasInternalError, setHasInternalError] = useState(false)
+    const lastCommittedRef = useRef<number | null>(selectedDate?.getTime() ?? null)
+
+    useEffect(() => {
+      if (!isFilter) return
+      const d = parseDate(value)
+      const valueTime = d?.getTime() ?? null
+      if (valueTime === lastCommittedRef.current) return
+      lastCommittedRef.current = valueTime
+      // Sync mask text when value changes externally (e.g. Clear All), not from typing.
+      /* eslint-disable react-hooks/set-state-in-effect -- prop-driven reset of local edit buffer */
+      setInputText(d ? formatDateAsDmyDot(d) : '')
+      setHasInternalError(false)
+      /* eslint-enable react-hooks/set-state-in-effect */
+    }, [value, isFilter])
+
+    const commitDate = useCallback(
+      (date: Date | null) => {
+        lastCommittedRef.current = date?.getTime() ?? null
+        onChange?.({ value: date })
+      },
+      [onChange]
+    )
+
+    const ensureTextOnFocus = useCallback(() => {
+      if (selectedDate) {
+        const masked = formatDateAsDmyDot(selectedDate)
+        setInputText(masked)
+        lastCommittedRef.current = selectedDate.getTime()
+      }
+    }, [selectedDate, setInputText])
+
+    const applyMaskedText = useCallback(
+      (masked: string) => {
+        setInputText(masked)
+        const result = validateDmyDotInput(masked, minDate, maxDate)
+        if (result.status === 'empty') {
+          setHasInternalError(false)
+          if (lastCommittedRef.current !== null) commitDate(null)
+          return
+        }
+        if (result.status === 'valid') {
+          setHasInternalError(false)
+          if (lastCommittedRef.current !== result.date.getTime()) {
+            commitDate(result.date)
+          }
+          return
+        }
+        setHasInternalError(true)
+        if (lastCommittedRef.current !== null) commitDate(null)
+      },
+      [minDate, maxDate, commitDate, setInputText, setHasInternalError]
+    )
+
+    const handleFilterInputChange = useCallback(
+      (e: ChangeEvent<HTMLInputElement>) => {
+        applyMaskedText(maskDmyDotFromDigits(e.target.value))
+      },
+      [applyMaskedText]
+    )
+
+    const handleCalendarChange = useCallback(
+      (date: Date | null) => {
+        if (!isFilter) {
+          onChange?.({ value: date })
+          return
+        }
+        if (!date) {
+          setInputText('')
+          setHasInternalError(false)
+          commitDate(null)
+          return
+        }
+        const masked = formatDateAsDmyDot(date)
+        const result = validateDmyDotInput(masked, minDate, maxDate)
+        setInputText(masked)
+        if (result.status === 'valid') {
+          setHasInternalError(false)
+          commitDate(result.date)
+        } else {
+          setHasInternalError(true)
+          if (lastCommittedRef.current !== null) commitDate(null)
+        }
+      },
+      [isFilter, onChange, minDate, maxDate, commitDate, setInputText, setHasInternalError]
+    )
+
+    const hasError = !!externalError || hasInternalError
+
+    const filterBridge: FilterInputBridge | null = isFilter
+      ? {
+          inputText,
+          onMaskedChange: handleFilterInputChange,
+          hasError,
+          inputId,
+          placeholder: filterPlaceholder,
+          disabled,
+          helperId,
+          helperText,
+          ensureTextOnFocus,
+        }
+      : null
+
+    const datePicker = (
+      <DatePicker
+        ref={ref}
+        id={inputId}
+        className={
+          isFilter
+            ? undefined
+            : cn(
+                'h-[45px] w-full rounded-md border bg-white pr-4 pl-10 text-sm font-light text-[#05040D] transition-all outline-none placeholder:text-gray-500',
+                hasError
+                  ? 'border-red-500 focus:border-red-500'
+                  : 'border-gray-300 focus:border-[var(--color-primary-500)]'
+              )
+        }
+        selected={selectedDate}
+        onChange={handleCalendarChange}
+        onChangeRaw={isFilter ? undefined : (e) => e?.preventDefault()}
+        dateFormat={resolvedFormat}
+        placeholderText={resolvedPlaceholder}
+        disabled={disabled}
+        minDate={minDate || undefined}
+        maxDate={maxDate || undefined}
+        aria-describedby={helperText ? helperId : undefined}
+        showPopperArrow={false}
+        popperPlacement="bottom-start"
+        popperProps={{ strategy: 'fixed' }}
+        showTimeSelect={showTimeSelect}
+        timeFormat={timeFormat}
+        timeIntervals={timeIntervals}
+        minTime={minTime}
+        maxTime={maxTime}
+        filterTime={filterTime}
+        calendarStartDay={1}
+        showYearDropdown
+        scrollableYearDropdown
+        yearDropdownItemNumber={10}
+        customInput={isFilter ? <FilterPickerInput /> : undefined}
+      />
+    )
+
     return (
-      <div className={`w-full ${className || ''}`}>
+      <div className={cn('w-full', className)}>
         {label && (
           <label htmlFor={inputId} className="text-dark-500 mb-1.5 block text-sm font-light">
             {label}
@@ -114,7 +357,7 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
               width: 100%;
             }
             .date-select-wrapper .react-datepicker__input-container input:focus {
-              box-shadow: 0 0 0 2px ${error ? 'rgba(239, 68, 68, 0.2)' : 'rgba(128, 216, 10, 0.2)'};
+              box-shadow: 0 0 0 2px ${hasError ? 'rgba(239, 68, 68, 0.2)' : 'rgba(128, 216, 10, 0.2)'};
             }
             .date-select-wrapper .react-datepicker__input-container input:disabled {
               opacity: 0.5;
@@ -215,51 +458,16 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
             }
           `}</style>
           <div className="date-select-wrapper">
-            <DatePicker
-              ref={ref}
-              id={inputId}
-              className={cn(
-                'h-[45px] w-full rounded-md border bg-white pr-4 pl-10 text-sm font-light text-[#05040D] transition-all outline-none placeholder:text-gray-500',
-                error
-                  ? 'border-red-500 focus:border-red-500'
-                  : 'border-gray-300 focus:border-[var(--color-primary-500)]',
-                className
-              )}
-              selected={parseDate(value)}
-              onChange={handleChange}
-              onChangeRaw={(e) => e?.preventDefault()}
-              dateFormat={format}
-              placeholderText={placeholder}
-              disabled={disabled}
-              minDate={parseDate(min) || undefined}
-              maxDate={parseDate(max) || undefined}
-              aria-describedby={error ? errorId : helperText ? helperId : undefined}
-              showPopperArrow={false}
-              popperPlacement="bottom-start"
-              popperProps={{ strategy: 'fixed' }}
-              showTimeSelect={showTimeSelect}
-              timeFormat={timeFormat}
-              timeIntervals={timeIntervals}
-              // react-datepicker's minTime/maxTime only apply when the
-              // selected day equals "today" (their behaviour), which is
-              // exactly the case we need to guard. Other days fall back
-              // to the natural 00:00–23:59 range.
-              minTime={minTime}
-              maxTime={maxTime}
-              filterTime={filterTime}
-              calendarStartDay={1}
-              showYearDropdown
-              scrollableYearDropdown
-              yearDropdownItemNumber={10}
-            />
+            {isFilter ? (
+              <FilterPickerInputContext.Provider value={filterBridge}>
+                {datePicker}
+              </FilterPickerInputContext.Provider>
+            ) : (
+              datePicker
+            )}
           </div>
         </div>
-        {error && (
-          <p id={errorId} className="mt-1.5 text-xs text-red-500" role="alert">
-            {error}
-          </p>
-        )}
-        {helperText && !error && (
+        {helperText && !hasError && (
           <p id={helperId} className="mt-1.5 text-xs text-gray-500">
             {helperText}
           </p>

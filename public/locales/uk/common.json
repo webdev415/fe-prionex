@@ -5273,5 +5273,10 @@
     "sent_documents": "Відправлено документи",
     "no_numbers": "Немає номерів",
     "numbers_found": "Номери знайдено"
+  },
+  "dateValidation": {
+    "incompleteDate": "Введіть повну дату (ДД.ММ.РРРР)",
+    "invalidDate": "Невірна дата",
+    "outOfRange": "Дата поза допустимим діапазоном"
   }
 }
