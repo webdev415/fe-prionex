@@ -2026,36 +2026,121 @@ export interface MockTimeAtWorkRow {
   operator: string
   initials: string
   avatarColor: string
+  department: string
   calls: number
-  timeToLead: string
-  successCredits: number
-  fillForms: number
-  downtime: string
+  /** Average seconds-to-card (e.g. "25c"). */
+  timeToCard: string
+  /** Including-credits duration label (e.g. "1min 33s"). */
+  inclCredits: string
+  /** Fill-form duration label (e.g. "37c"). */
+  fillForms: string
+  /** Downtime per shift label (e.g. "58 min"). */
+  downtimeShift: string
+  /** After-call duration label (e.g. "45c"). */
   afterCall: string
 }
 
 export const MOCK_TIME_AT_WORK_KPIS = {
-  toLeadAvg: '12s',
+  toCardAvg: '12c',
   creditsAvg: '45c',
   toFormAvg: '18c',
   downtimeAvg: '28 min',
   afterCallAvg: '22c',
 }
 
-export const MOCK_TIME_AT_WORK: MockTimeAtWorkRow[] = Array.from({ length: 10 }, (_, i) => {
-  const name = OPERATOR_NAMES[i % OPERATOR_NAMES.length]
-  const parts = name.split(' ')
+const TIME_AT_WORK_ROWS: Omit<
+  MockTimeAtWorkRow,
+  'id' | 'initials' | 'avatarColor'
+>[] = [
+  {
+    operator: 'Bohdan Melnyk',
+    department: 'Department C',
+    calls: 18,
+    timeToCard: '25c',
+    inclCredits: '1min 33s',
+    fillForms: '37c',
+    downtimeShift: '58 min',
+    afterCall: '45c',
+  },
+  {
+    operator: 'Svitlana Hordiienko',
+    department: 'Department C',
+    calls: 5,
+    timeToCard: '25c',
+    inclCredits: '1min 33s',
+    fillForms: '37c',
+    downtimeShift: '58 min',
+    afterCall: '46c',
+  },
+  {
+    operator: 'Serhii Lytvyn',
+    department: 'Department B',
+    calls: 9,
+    timeToCard: '23c',
+    inclCredits: '1min 25s',
+    fillForms: '34c',
+    downtimeShift: '53 min',
+    afterCall: '42c',
+  },
+  {
+    operator: 'Yurii Kravtsov',
+    department: 'Department B',
+    calls: 10,
+    timeToCard: '23c',
+    inclCredits: '1min 26s',
+    fillForms: '34c',
+    downtimeShift: '53 min',
+    afterCall: '42c',
+  },
+  {
+    operator: 'Nataliia Yefremova',
+    department: 'Department B',
+    calls: 8,
+    timeToCard: '22c',
+    inclCredits: '1min 24s',
+    fillForms: '34c',
+    downtimeShift: '52 min',
+    afterCall: '41c',
+  },
+  {
+    operator: 'Artem Honchar',
+    department: 'Department A',
+    calls: 17,
+    timeToCard: '21c',
+    inclCredits: '1min 20s',
+    fillForms: '32c',
+    downtimeShift: '50 min',
+    afterCall: '39c',
+  },
+  {
+    operator: 'Oleksandra Bila',
+    department: 'Department A',
+    calls: 18,
+    timeToCard: '22c',
+    inclCredits: '1min 21s',
+    fillForms: '32c',
+    downtimeShift: '50 min',
+    afterCall: '40c',
+  },
+  {
+    operator: 'Denys Poltavets',
+    department: 'Department A',
+    calls: 15,
+    timeToCard: '21c',
+    inclCredits: '1min 18s',
+    fillForms: '31c',
+    downtimeShift: '49 min',
+    afterCall: '38c',
+  },
+]
+
+export const MOCK_TIME_AT_WORK: MockTimeAtWorkRow[] = TIME_AT_WORK_ROWS.map((row, i) => {
+  const parts = row.operator.split(' ')
   return {
     id: i + 1,
-    operator: name,
-    initials: `${parts[0][0]}${parts[1]?.[0] ?? ''}`,
+    ...row,
+    initials: `${parts[0][0]}${parts[1]?.[0] ?? ''}`.toUpperCase(),
     avatarColor: AVATAR_PALETTE[i % AVATAR_PALETTE.length],
-    calls: 5 + i,
-    timeToLead: `${8 + i}s`,
-    successCredits: 30 + i * 2,
-    fillForms: 12 + i,
-    downtime: `${20 + i} min`,
-    afterCall: `${15 + i}s`,
   }
 })
 
