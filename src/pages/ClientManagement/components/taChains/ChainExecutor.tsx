@@ -59,6 +59,7 @@ import { getErrorMessage } from '@/lib/errors'
 import { useChainExecutorStore } from '@/stores/chainExecutorStore'
 import { formatMoneyKopeckTight } from '@/lib/formatters'
 import { useClientPhones } from '@/features/clients/hooks/useClientPhones'
+import { collectFromSnapshot } from './taChainSaveData'
 
 interface Props {
   clientId: number
@@ -463,6 +464,10 @@ export function ChainExecutor({
   // Minimize / restore
   const { minimized: minimizedState, setMinimized, clear: clearMinimized } = useChainExecutorStore()
   const restoredRef = useRef(false)
+  // Tracks the last "all-at-once" selection the reset effect applied, so it
+  // only resets on a genuine chain change — not on async data reloads or a
+  // restore. Pre-seeded during restore (see below).
+  const lastInstantSelectionRef = useRef<string | null>(null)
 
   // Restore form state from minimized store on mount
   useEffect(() => {
@@ -479,6 +484,18 @@ export function ChainExecutor({
       collectedPromiseDateRef.current = fs.collectedPromiseDate
       collectedPromiseAmountRef.current = fs.collectedPromiseAmount
       collectedCreditIdRef.current = fs.collectedCreditId
+      // "All-at-once" mode: restore the chain selection + entered values.
+      // (Optional fields — absent in snapshots saved before this existed.)
+      if (fs.selectedChainId !== undefined) {
+        setSelectedChainId(fs.selectedChainId)
+        if (fs.instantValues !== undefined) setInstantValues(fs.instantValues)
+        if (fs.instantNotes !== undefined) setInstantNotes(fs.instantNotes)
+        if (fs.notifyResponsible !== undefined) setNotifyResponsible(fs.notifyResponsible)
+        // Pre-mark this selection as already applied so the reset effect treats
+        // the restored chain as "settled" and doesn't wipe the restored values
+        // when selectedChainId lands on the next render.
+        lastInstantSelectionRef.current = `${fs.selectedChainId}|`
+      }
       restoredRef.current = true
       clearMinimized()
     }
@@ -506,6 +523,11 @@ export function ChainExecutor({
         collectedPromiseDate: collectedPromiseDateRef.current,
         collectedPromiseAmount: collectedPromiseAmountRef.current,
         collectedCreditId: collectedCreditIdRef.current,
+        // "All-at-once" mode state (no server snapshot exists for it).
+        selectedChainId,
+        instantValues,
+        instantNotes,
+        notifyResponsible,
       },
     })
     onMinimize?.()
@@ -622,7 +644,23 @@ export function ChainExecutor({
   // executor was opened from a phone row, every instant contact step
   // whose source matches starts pre-filled with that phone so the
   // operator can save with one click.
+  //
+  // IMPORTANT: only reset on an actual SELECTION change. The effect's other
+  // deps (effectiveChain / taById) resolve asynchronously and used to re-fire
+  // this reset, wiping values the user had already entered — including values
+  // just restored from a minimized "all-at-once" session. We track the last
+  // selection and bail out when it hasn't changed.
   useEffect(() => {
+    // Skip the restore pass entirely: the restore effect sets selectedChainId/
+    // instantValues via state setters that land on the next render, and it
+    // pre-seeds lastInstantSelectionRef to the restored chain so that follow-up
+    // render is treated as already-settled. Resetting here would wipe them.
+    if (restoredRef.current) return
+
+    const selectionKey = `${selectedChainId}|${activeInstance?.id ?? ''}`
+    if (lastInstantSelectionRef.current === selectionKey) return
+    lastInstantSelectionRef.current = selectionKey
+
     if (prefilledPhone && contactSource && effectiveChain) {
       const seed: Record<number, InstantStepValue> = {}
       for (const step of effectiveChain.steps ?? []) {
@@ -911,14 +949,24 @@ export function ChainExecutor({
       return
     }
 
+    // Rebuild the collected values from the authoritative server snapshot
+    // (chain_instances.step_data) before saving. Each step is snapshotted to
+    // the backend as it's advanced, so this copy is always complete — even
+    // after a minimize/restore cycle that wiped the in-memory refs (TA fields
+    // missing from history after minimize/restore). The in-memory refs win on
+    // conflict, since they hold the current step and any local edits not yet
+    // pushed to the server.
+    const snap = collectFromSnapshot(activeInstance.step_data)
+    const mergedStepData = { ...snap.stepData, ...collectedStepDataRef.current }
+    const mergedDropdownIds = { ...snap.dropdownIds, ...collectedDropdownValueIdsRef.current }
+
     // Use current step's dropdown value or first collected one
     const finalDropdownValueId =
-      selectedDropdownValue?.id ??
-      Object.values(collectedDropdownValueIdsRef.current)[0] ??
-      undefined
-    const finalPromiseDate = promiseDate || collectedPromiseDateRef.current
-    const finalPromiseAmount = promiseAmount || collectedPromiseAmountRef.current
-    const finalCreditId = creditId || collectedCreditIdRef.current
+      selectedDropdownValue?.id ?? Object.values(mergedDropdownIds)[0] ?? undefined
+    const finalPromiseDate = promiseDate || collectedPromiseDateRef.current || snap.promiseDate
+    const finalPromiseAmount =
+      promiseAmount || collectedPromiseAmountRef.current || snap.promiseAmount
+    const finalCreditId = creditId || collectedCreditIdRef.current || snap.creditId
 
     setIsFinalizing(true)
     try {
@@ -931,10 +979,7 @@ export function ChainExecutor({
         promise_date: finalPromiseDate ? `${finalPromiseDate}T00:00:00` : undefined,
         promise_amount: finalPromiseAmount ? parseFloat(finalPromiseAmount) : undefined,
         notes: notes || undefined,
-        step_data:
-          Object.keys(collectedStepDataRef.current).length > 0
-            ? collectedStepDataRef.current
-            : undefined,
+        step_data: Object.keys(mergedStepData).length > 0 ? mergedStepData : undefined,
         notify_responsible: showNotifyResponsibleCheckbox ? notifyResponsible : false,
       })
       const result = await advanceMut.mutateAsync({
