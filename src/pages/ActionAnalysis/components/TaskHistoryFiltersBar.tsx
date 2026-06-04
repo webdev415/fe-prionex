@@ -302,7 +302,7 @@ export function TaskHistoryFiltersBar({
                 onChange={({ value: v }) => update({ dueFromDate: dateToYmd(v) ?? undefined })}
                 placeholder={t('pages.actionAnalysis.filters.selectStartDate', 'Select start date')}
                 max={dueTo ?? undefined}
-                format="yyyy-MM-dd"
+                variant="filter"
                 className="min-w-0 flex-1 [&_input]:h-[45px]"
               />
             </div>
@@ -329,7 +329,7 @@ export function TaskHistoryFiltersBar({
                 onChange={({ value: v }) => update({ dueToDate: dateToYmd(v) ?? undefined })}
                 placeholder={t('pages.actionAnalysis.filters.selectEndDate', 'Select end date')}
                 min={dueFrom ?? undefined}
-                format="yyyy-MM-dd"
+                variant="filter"
                 className="min-w-0 flex-1 [&_input]:h-[45px]"
               />
             </div>

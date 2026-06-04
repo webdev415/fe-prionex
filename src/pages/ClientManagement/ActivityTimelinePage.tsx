@@ -229,8 +229,6 @@ export function ActivityTimelinePage() {
     }))
   }, [activitiesResponse, loans, t])
 
-  const dateInputFormat = i18n.language?.startsWith('en') ? 'MM/dd/yyyy' : 'dd/MM/yyyy'
-
   const numberFormatLocale = intlLocaleForUiLanguage(i18n.language)
 
   const totalCount = activitiesResponse?.total ?? 0
@@ -493,7 +491,7 @@ export function ActivityTimelinePage() {
                 }}
                 max={dateTo ?? undefined}
                 placeholder={t('pages.clients.filters.min')}
-                format={dateInputFormat}
+                variant="filter"
                 className="flex flex-1 flex-col gap-2"
               />
               <span className="text-sm leading-[155%] font-medium tracking-[-0.28px] text-gray-700 sm:text-base sm:tracking-[-0.32px]">
@@ -507,7 +505,7 @@ export function ActivityTimelinePage() {
                 }}
                 min={dateFrom ?? undefined}
                 placeholder={t('pages.clients.filters.max')}
-                format={dateInputFormat}
+                variant="filter"
                 className="flex flex-1 flex-col gap-2"
               />
             </div>
@@ -529,7 +527,7 @@ export function ActivityTimelinePage() {
                 }}
                 max={promiseDateTo ?? undefined}
                 placeholder={t('pages.clients.filters.min')}
-                format={dateInputFormat}
+                variant="filter"
                 className="flex flex-1 flex-col gap-2"
               />
               <span className="text-sm leading-[155%] font-medium tracking-[-0.28px] text-gray-700 sm:text-base sm:tracking-[-0.32px]">
@@ -543,7 +541,7 @@ export function ActivityTimelinePage() {
                 }}
                 min={promiseDateFrom ?? undefined}
                 placeholder={t('pages.clients.filters.max')}
-                format={dateInputFormat}
+                variant="filter"
                 className="flex flex-1 flex-col gap-2"
               />
             </div>
@@ -561,7 +559,7 @@ export function ActivityTimelinePage() {
                 }}
                 max={callbackDateTo ?? undefined}
                 placeholder={t('pages.clients.filters.min')}
-                format={dateInputFormat}
+                variant="filter"
                 className="flex flex-1 flex-col gap-2"
               />
               <span className="text-sm leading-[155%] font-medium tracking-[-0.28px] text-gray-700 sm:text-base sm:tracking-[-0.32px]">
@@ -575,7 +573,7 @@ export function ActivityTimelinePage() {
                 }}
                 min={callbackDateFrom ?? undefined}
                 placeholder={t('pages.clients.filters.max')}
-                format={dateInputFormat}
+                variant="filter"
                 className="flex flex-1 flex-col gap-2"
               />
             </div>

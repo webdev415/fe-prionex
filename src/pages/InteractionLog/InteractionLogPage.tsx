@@ -46,7 +46,7 @@ function parseClientIdInput(raw: string): number | undefined {
 }
 
 export function InteractionLogPage() {
-  const { t, i18n } = useTranslation('common')
+  const { t } = useTranslation('common')
   const user = useAuthStore((s) => s.user)
 
   const [pendingFilters, setPendingFilters] = useState({
@@ -130,8 +130,6 @@ export function InteractionLogPage() {
     setAppliedFilters(cleared)
     setPage(1)
   }
-
-  const dateInputFormat = i18n.language?.startsWith('en') ? 'MM/dd/yyyy' : 'dd/MM/yyyy'
 
   const handleExport = async () => {
     try {
@@ -310,7 +308,7 @@ export function InteractionLogPage() {
                 }
                 max={parseDateString(pendingFilters.dateTo) || undefined}
                 placeholder={t('pages.clientChains.history.selectStartDate')}
-                format={dateInputFormat}
+                variant="filter"
                 className="[&_input]:h-[45px] [&_input]:rounded-md [&_input]:border-gray-200 [&_input]:text-xs [&_input]:font-normal"
               />
             </div>
@@ -325,7 +323,7 @@ export function InteractionLogPage() {
                 }
                 min={parseDateString(pendingFilters.dateFrom) || undefined}
                 placeholder={t('pages.clientChains.history.selectEndDate')}
-                format={dateInputFormat}
+                variant="filter"
                 className="[&_input]:h-[45px] [&_input]:rounded-md [&_input]:border-gray-200 [&_input]:text-xs [&_input]:font-normal"
               />
             </div>

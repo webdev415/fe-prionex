@@ -343,26 +343,26 @@ export function SearchFiltersBar({
                 </span>
                 <div className="flex flex-1 items-center gap-2">
                   <DateSelect
+                    variant="filter"
                     key={`date-from-${localFilters.date_from || 'empty'}`}
                     value={dateFromValue}
                     onChange={handleDateFromChange}
                     placeholder={t('pages.auditLogs.searchFilters.selectStartDate')}
                     disabled={isLoading}
                     max={dateFromMax}
-                    format="MM/dd/yyyy"
                     className="flex-1 [&_input]:h-9 [&_input]:text-xs"
                   />
                   <span className="text-base leading-[150%] font-medium tracking-[-0.28px] text-gray-700">
                     -
                   </span>
                   <DateSelect
+                    variant="filter"
                     key={`date-to-${localFilters.date_to || 'empty'}`}
                     value={dateToValue}
                     onChange={handleDateToChange}
                     placeholder={t('pages.auditLogs.searchFilters.selectEndDate')}
                     disabled={isLoading}
                     min={dateToMin}
-                    format="MM/dd/yyyy"
                     className="flex-1 [&_input]:h-9 [&_input]:text-xs"
                   />
                 </div>

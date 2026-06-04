@@ -5383,5 +5383,10 @@
     "sent_documents": "Sent documents",
     "no_numbers": "No numbers",
     "numbers_found": "Numbers found"
+  },
+  "dateValidation": {
+    "incompleteDate": "Enter a complete date (DD.MM.YYYY)",
+    "invalidDate": "Invalid date",
+    "outOfRange": "Date is outside the allowed range"
   }
 }
