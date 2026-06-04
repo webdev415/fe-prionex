@@ -137,7 +137,11 @@
     "byOperator": "від {{name}}",
     "errors": {
       "dismissFailed": "Не вдалося приховати повідомлення",
-      "markAllReadFailed": "Не вдалося позначити всі як прочитані"
+      "markAllReadFailed": "Не вдалося позначити всі як прочитані",
+      "cancelFailed": "Не вдалося скасувати завдання",
+      "completeFailed": "Не вдалося завершити завдання",
+      "starFailed": "Не вдалося закріпити",
+      "unstarFailed": "Не вдалося відкріпити"
     },
     "taskPriority": {
       "high": "високий",
@@ -162,7 +166,29 @@
       "daysAgo_few": "{{count}} дні тому",
       "daysAgo_many": "{{count}} днів тому"
     },
-    "dismissAria": "Закрити повідомлення"
+    "dismissAria": "Закрити повідомлення",
+    "tabs": {
+      "tasks": "Завдання",
+      "starred": "Закріплені",
+      "payments": "Очікувані платежі",
+      "calls": "Вхідні дзвінки"
+    },
+    "empty": {
+      "tasks": "Немає прострочених завдань",
+      "starred": "Немає закріплених завдань",
+      "payments": "Немає очікуваних платежів",
+      "calls": "Немає вхідних дзвінків"
+    },
+    "taskActions": {
+      "completeAria": "Завершити завдання",
+      "completeTitle": "Завершити завдання",
+      "cancelAria": "Скасувати завдання",
+      "cancelTitle": "Скасувати завдання",
+      "starAria": "Закріпити завдання",
+      "starTitle": "Закріпити завдання",
+      "unstarAria": "Відкріпити",
+      "unstarTitle": "Відкріпити"
+    }
   },
   "common": {
     "step": "Крок",
@@ -1381,9 +1407,14 @@
         "assignedOperators": "Призначені оператори",
         "actions": "Дії"
       },
-      "actions": { "edit": "Редагувати", "delete": "Видалити" },
+      "actions": {
+        "edit": "Редагувати",
+        "delete": "Видалити"
+      },
       "modals": {
-        "create": { "title": "Створити групу" },
+        "create": {
+          "title": "Створити групу"
+        },
         "edit": {
           "title": "Редагувати групу",
           "failedToLoad": "Не вдалося завантажити дані групи."
@@ -5133,20 +5164,32 @@
       },
       "credentials": {
         "turbosms": {
-          "api_key": { "label": "API-ключ" },
-          "sender": { "label": "Відправник" }
+          "api_key": {
+            "label": "API-ключ"
+          },
+          "sender": {
+            "label": "Відправник"
+          }
         },
         "omnicell": {
-          "username": { "label": "Ім'я користувача" },
-          "password": { "label": "Пароль" },
-          "sender": { "label": "SMS-відправник (альфа-ім'я)" }
+          "username": {
+            "label": "Ім'я користувача"
+          },
+          "password": {
+            "label": "Пароль"
+          },
+          "sender": {
+            "label": "SMS-відправник (альфа-ім'я)"
+          }
         },
         "vodafone_obm": {
           "username": {
             "label": "Логін OBM (Налаштування → Логіни)",
             "placeholder": "Логін юридичної особи або телефон/e-mail, якщо кабінет дозволяє"
           },
-          "password": { "label": "Пароль кабінету" },
+          "password": {
+            "label": "Пароль кабінету"
+          },
           "sender": {
             "label": "Відправник (альфа-ім'я)",
             "placeholder": "Затверджений відправник, напр. TechnoFin"
@@ -5179,9 +5222,15 @@
             "label": "Email відправника",
             "placeholder": "Підтверджений відправник, напр. info@techno-finance.com"
           },
-          "from_name": { "label": "Ім'я відправника" },
-          "reply_to_email": { "label": "Email для відповіді" },
-          "reply_to_name": { "label": "Ім'я для відповіді" }
+          "from_name": {
+            "label": "Ім'я відправника"
+          },
+          "reply_to_email": {
+            "label": "Email для відповіді"
+          },
+          "reply_to_name": {
+            "label": "Ім'я для відповіді"
+          }
         }
       },
       "toasts": {
