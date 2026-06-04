@@ -2007,6 +2007,8 @@
         "writeOff": "Списание",
         "reversal": "Сторно",
         "closeLoan": "Закрыть займ",
+        "reopenLoan": "Восстановить займ",
+        "confirmReopenLoan": "Вы уверены, что хотите восстановить этот кредит?",
         "sendToUBCI": "Отправить в UBCI",
         "rrCalculator": "RR Калькулятор",
         "rrDetail": "Детали соглашения о реструктуризации",
@@ -3564,6 +3566,7 @@
         "callsMade": "Сделано звонков",
         "contactRate": "Контактность",
         "smsSent": "Отправлено SMS",
+        "messagesSent": "Отправлено сообщений",
         "paymentsCollected": "Собрано платежей",
         "vs": "по сравнению с",
         "yesterday": "вчера",
@@ -3592,6 +3595,7 @@
         "contactRate": "Контактность",
         "avgDuration": "Средняя длительность",
         "sms": "SMS",
+        "messages": "Сообщения",
         "payments": "Платежи",
         "total": "Всего"
       },
@@ -3635,6 +3639,26 @@
         "pending": "В ожидании",
         "deliveryRate": "Процент доставки",
         "byOperator": "По операторам"
+      },
+      "messagesModal": {
+        "title": "Отправлено сообщений",
+        "noData": "Данные недоступны",
+        "totalSent": "Всего отправлено",
+        "totalCost": "Общая стоимость",
+        "deliveryStats": "Статистика доставки",
+        "delivered": "Доставлено",
+        "failed": "Не доставлено",
+        "pending": "В ожидании",
+        "deliveryRate": "Процент доставки",
+        "byChannel": "По каналу",
+        "topDrafts": "Топ черновиков",
+        "byOperator": "По операторам",
+        "messages": "сообщений",
+        "channels": {
+          "sms": "SMS",
+          "viber": "Viber",
+          "email": "Email"
+        }
       },
       "paymentsModal": {
         "title": "Собранные платежи",
@@ -4238,6 +4262,12 @@
           "phone_number": "Номер телефона",
           "segments": "Сегменты SMS",
           "gateway_provider": "Шлюз провайдера",
+          "campaign_id": "ID кампании",
+          "recipient_id": "ID получателя",
+          "service": "Провайдер messaging",
+          "destination": "Адресат",
+          "external_message_id": "Внешний ID сообщения",
+          "draft_id": "ID черновика",
           "agent_extension": "Внутренний номер оператора",
           "interaction_id": "ID взаимодействия",
           "payment_confirmation_date": "Дата подтверждения платежа"
@@ -4264,6 +4294,7 @@
           "interaction.created": "Создано взаимодействие",
           "payment.verified": "Платёж подтверждён",
           "sms.sent": "SMS отправлено",
+          "message.sent": "Сообщение отправлено",
           "call.outcome.updated": "Результат звонка обновлён",
           "scoring.completed": "Скоринг завершён",
           "client.imported": "Клиент импортирован",

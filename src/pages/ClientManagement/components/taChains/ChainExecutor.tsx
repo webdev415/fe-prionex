@@ -58,6 +58,7 @@ import { useQuickPicks } from '@/features/quickPicks/hooks/useQuickPicks'
 import { getErrorMessage } from '@/lib/errors'
 import { useChainExecutorStore } from '@/stores/chainExecutorStore'
 import { formatMoneyKopeckTight } from '@/lib/formatters'
+import { useClientEmails } from '@/features/clients/hooks/useClientEmails'
 import { useClientPhones } from '@/features/clients/hooks/useClientPhones'
 
 interface Props {
@@ -342,11 +343,19 @@ export function ChainExecutor({
   const currentStep = steps.find((s) => s.step_order === (activeInstance?.current_step_order ?? 1))
   const currentTA = currentStep ? taById.get(currentStep.target_action_id) : null
 
-  // Phone list for contact-type steps. Hook always runs but is disabled when
-  // not applicable.
-  const contactPhonesSource =
+  // Contact list for contact-type steps (phone or email per step contact_medium).
+  const contactStepSource =
     currentTA?.field_type === 'contact' ? (currentStep?.contact_source ?? 'client') : null
-  const { data: contactPhones } = useClientPhones(clientId, contactPhonesSource)
+  const isEmailContactStep = currentStep?.contact_medium === 'email'
+  const { data: contactPhones } = useClientPhones(
+    clientId,
+    contactStepSource && !isEmailContactStep ? contactStepSource : null
+  )
+  const { data: contactEmails } = useClientEmails(
+    clientId,
+    contactStepSource && isEmailContactStep ? contactStepSource : null
+  )
+  const contactOptions = isEmailContactStep ? contactEmails : contactPhones
 
   // Filter the debt list per the current step's "show closed credits"
   // admin flag. Default (flag false) hides closed debts; flag true
@@ -423,12 +432,25 @@ export function ChainExecutor({
   const [showRewindWarning, setShowRewindWarning] = useState(false)
 
   // Phone list for the step currently being edited (may differ from active step)
-  const editingContactSource = useMemo(() => {
+  const editingContactMeta = useMemo(() => {
     if (!editingStep || editingStep.fieldType !== 'contact') return null
     const stepDef = steps.find((s) => s.step_order === editingStep.stepOrder)
-    return (stepDef?.contact_source ?? 'client') as 'client' | 'recommender'
+    return {
+      source: (stepDef?.contact_source ?? 'client') as 'client' | 'recommender',
+      isEmail: stepDef?.contact_medium === 'email',
+    }
   }, [editingStep, steps])
-  const { data: editingContactPhones } = useClientPhones(clientId, editingContactSource)
+  const { data: editingContactPhones } = useClientPhones(
+    clientId,
+    editingContactMeta && !editingContactMeta.isEmail ? editingContactMeta.source : null
+  )
+  const { data: editingContactEmails } = useClientEmails(
+    clientId,
+    editingContactMeta?.isEmail ? editingContactMeta.source : null
+  )
+  const editingContactOptions = editingContactMeta?.isEmail
+    ? editingContactEmails
+    : editingContactPhones
   // Set true once the final save round-trip starts. Gates the body render
   // so the user never sees a re-rendered step (e.g. a branched-back step 2)
   // during the brief window between mutations finishing and `onSave` closing
@@ -1528,19 +1550,24 @@ export function ChainExecutor({
                             </Select>
                           ) : editingStep.fieldType === 'contact' ? (
                             <div className="flex flex-col gap-1">
-                              {!editingContactPhones ? (
+                              {!editingContactOptions ? (
                                 <span className="text-xs text-gray-500">{t('common.loading')}</span>
-                              ) : editingContactPhones.length === 0 ? (
+                              ) : editingContactOptions.length === 0 ? (
                                 <span className="text-xs text-gray-500">
-                                  {t(
-                                    'pages.clientChains.noContacts',
-                                    'No phones available for this source.'
-                                  )}
+                                  {editingContactMeta?.isEmail
+                                    ? t(
+                                        'pages.clientChains.noEmails',
+                                        'No emails available for this source.'
+                                      )
+                                    : t(
+                                        'pages.clientChains.noContacts',
+                                        'No phones available for this source.'
+                                      )}
                                 </span>
                               ) : (
-                                editingContactPhones.map((p) => {
+                                editingContactOptions.map((p) => {
                                   const isChecked = editingStep.value === p.contact_value
-                                  const showComment = editingContactSource === 'recommender'
+                                  const showComment = editingContactMeta?.source === 'recommender'
                                   return (
                                     <label
                                       key={p.id}
@@ -1848,17 +1875,22 @@ export function ChainExecutor({
                         </div>
                       ) : currentTA.field_type === 'contact' ? (
                         <div className="flex flex-col gap-2">
-                          {!contactPhones ? (
+                          {!contactOptions ? (
                             <span className="text-xs text-gray-500">{t('common.loading')}</span>
-                          ) : contactPhones.length === 0 ? (
+                          ) : contactOptions.length === 0 ? (
                             <span className="text-xs text-gray-500">
-                              {t(
-                                'pages.clientChains.noContacts',
-                                'No phones available for this source.'
-                              )}
+                              {isEmailContactStep
+                                ? t(
+                                    'pages.clientChains.noEmails',
+                                    'No emails available for this source.'
+                                  )
+                                : t(
+                                    'pages.clientChains.noContacts',
+                                    'No phones available for this source.'
+                                  )}
                             </span>
                           ) : (
-                            contactPhones.map((p) => {
+                            contactOptions.map((p) => {
                               const isChecked = stepValue === p.contact_value
                               const showComment = currentStep?.contact_source === 'recommender'
                               return (
@@ -2126,6 +2158,9 @@ export function ChainExecutor({
                             {ef.effect_type === 'send_sms' && (
                               <span>{t('pages.clientChains.effectSMS')}</span>
                             )}
+                            {ef.effect_type === 'send_message' && (
+                              <span>{t('pages.clientChains.effectMessage')}</span>
+                            )}
                             {ef.effect_type === 'add_to_spam' && (
                               <span>{t('pages.clientChains.effectSpam')}</span>
                             )}
@@ -2300,10 +2335,17 @@ function InstantStepCard({
   clientId,
 }: InstantStepCardProps) {
   const { t } = useTranslation('common')
+  const contactSource = ta.field_type === 'contact' ? (step.contact_source ?? 'client') : null
+  const isEmailContact = step.contact_medium === 'email'
   const { data: phones } = useClientPhones(
     clientId,
-    ta.field_type === 'contact' ? (step.contact_source ?? 'client') : null
+    contactSource && !isEmailContact ? contactSource : null
   )
+  const { data: emails } = useClientEmails(
+    clientId,
+    contactSource && isEmailContact ? contactSource : null
+  )
+  const contactOptions = isEmailContact ? emails : phones
 
   // Mirror the wizard-mode debt filter: hide closed debts unless the
   // step's show_closed_credits admin flag is set.
@@ -2398,14 +2440,16 @@ function InstantStepCard({
         </div>
       ) : ta.field_type === 'contact' ? (
         <div className="flex flex-col gap-2">
-          {!phones ? (
+          {!contactOptions ? (
             <span className="text-xs text-gray-500">{t('common.loading')}</span>
-          ) : phones.length === 0 ? (
+          ) : contactOptions.length === 0 ? (
             <span className="text-xs text-gray-500">
-              {t('pages.clientChains.noContacts', 'No phones available for this source.')}
+              {isEmailContact
+                ? t('pages.clientChains.noEmails', 'No emails available for this source.')
+                : t('pages.clientChains.noContacts', 'No phones available for this source.')}
             </span>
           ) : (
-            phones.map((p) => {
+            contactOptions.map((p) => {
               const isChecked = value.value === p.contact_value
               const showComment = step.contact_source === 'recommender'
               return (

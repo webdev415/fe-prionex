@@ -2793,6 +2793,8 @@
         "writeOff": "Write-off",
         "reversal": "Reversal",
         "closeLoan": "Close Loan",
+        "reopenLoan": "Reopen Loan",
+        "confirmReopenLoan": "Are you sure you want to reopen this credit?",
         "editClosureDate": "Edit closure date",
         "closureDate": "Closure date",
         "closureDateRequired": "Closure date is required",
@@ -3095,6 +3097,7 @@
       "effectRemoveTag": "Remove tag",
       "effectTask": "Task: Callback created",
       "effectSMS": "Event: SMS sent",
+      "effectMessage": "Event: Message sent",
       "effectSpam": "Added to spam list",
       "dictionary": {
         "level1": "Level 1 — Interaction type",
@@ -3218,6 +3221,8 @@
         "debtStatus": "Status (e.g. overdue)",
         "daysCooldown": "Days (e.g. 30)",
         "selectSmsTemplate": "Select SMS template...",
+        "selectMessagingService": "Select messaging provider...",
+        "selectMessagingDraft": "Select message draft...",
         "subjectRequired": "Subject (required)",
         "searchSubjects": "Search subjects...",
         "titleOptional": "Title (optional override)",
@@ -3273,12 +3278,17 @@
           "remove_tag": "Remove tag",
           "create_task": "Create task",
           "send_sms": "Send SMS",
+          "send_message": "Send message (messaging)",
           "add_to_spam": "Add to spam"
         }
       },
+      "sendMessageNoIntegration": "No configured messaging integration for this channel. Set one up under Messaging Settings.",
       "config": {
         "tag": "tag: {{label}}",
         "template": "template: {{label}}",
+        "messagingDraft": "draft: {{label}}",
+        "channel": "channel: {{label}}",
+        "messagingService": "provider: {{label}}",
         "chain": "chain: {{label}}",
         "subject": "subject: {{label}}",
         "user": "user: {{label}}",
@@ -4151,6 +4161,12 @@
           "template_name": "SMS template",
           "segments": "SMS segments",
           "gateway_provider": "Gateway provider",
+          "campaign_id": "Campaign ID",
+          "recipient_id": "Recipient ID",
+          "service": "Messaging provider",
+          "destination": "Destination",
+          "external_message_id": "External message ID",
+          "draft_id": "Draft ID",
           "call_id": "Call ID",
           "outcome": "Call outcome",
           "disposition": "Disposition",
@@ -4192,6 +4208,7 @@
           "interaction.created": "Interaction created",
           "payment.verified": "Payment verified",
           "sms.sent": "SMS sent",
+          "message.sent": "Message sent",
           "call.outcome.updated": "Call outcome updated",
           "scoring.completed": "Scoring completed",
           "client.imported": "Client imported",
@@ -4581,6 +4598,7 @@
         "callsMade": "Calls Made",
         "contactRate": "Contact Rate",
         "smsSent": "SMS Sent",
+        "messagesSent": "Messages Sent",
         "paymentsCollected": "Payments Collected",
         "vs": "vs",
         "yesterday": "yesterday",
@@ -4609,6 +4627,7 @@
         "contactRate": "Contact Rate",
         "avgDuration": "Avg Duration",
         "sms": "SMS",
+        "messages": "Messages",
         "payments": "Payments",
         "total": "Total"
       },
@@ -4652,6 +4671,26 @@
         "pending": "Pending",
         "deliveryRate": "Delivery Rate",
         "byOperator": "By Operator"
+      },
+      "messagesModal": {
+        "title": "Messages Sent",
+        "noData": "No data available",
+        "totalSent": "Total Sent",
+        "totalCost": "Total Cost",
+        "deliveryStats": "Delivery Statistics",
+        "delivered": "Delivered",
+        "failed": "Failed",
+        "pending": "Pending",
+        "deliveryRate": "Delivery Rate",
+        "byChannel": "By Channel",
+        "topDrafts": "Top Drafts",
+        "byOperator": "By Operator",
+        "messages": "messages",
+        "channels": {
+          "sms": "SMS",
+          "viber": "Viber",
+          "email": "Email"
+        }
       },
       "paymentsModal": {
         "title": "Payments Collected",
@@ -4897,7 +4936,9 @@
       },
       "summary": {
         "delivered": "delivered",
-        "resultsLine": "{{delivered}}/{{total}} delivered"
+        "resultsLine": "{{delivered}}/{{total}} delivered",
+        "filteredCampaigns": "{{count}} campaigns match filters",
+        "totalCost": "Total cost"
       },
       "cost": {
         "actual": "Actual",
