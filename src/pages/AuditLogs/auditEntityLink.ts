@@ -118,6 +118,7 @@ const CLIENT_LINK_ACTIONS = new Set<string>([
   // resource_type="debt" rows carry a debt id, not a client, so they must NOT
   // resolve via entity_id.
   'debt.closed',
+  'debt.reopened',
   'debt.closure_date_updated',
 ])
 

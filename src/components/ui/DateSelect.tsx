@@ -56,6 +56,12 @@ export interface DateSelectProps {
   showTimeSelect?: boolean
   timeFormat?: string
   timeIntervals?: number
+  /**
+   * Opt-in per-field clear. When provided AND a date is set, a small "×"
+   * button is rendered on the right that calls this callback. Other usages of
+   * DateSelect are unaffected because the × only renders when onClear is set.
+   */
+  onClear?: () => void
   // Restrict the selectable time-of-day inside the time column.
   // ``minTime``/``maxTime`` are react-datepicker's static bounds and
   // apply to **every** selected calendar day, so they're only correct
@@ -125,6 +131,7 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
       showTimeSelect,
       timeFormat = 'HH:mm',
       timeIntervals = 15,
+      onClear,
       minTime,
       maxTime,
       filterTime,
@@ -238,6 +245,8 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
 
     const effectivePlaceholder =
       allowManualInput && placeholder === 'Select date' ? 'DD.MM.YYYY HH:MM' : placeholder
+    // × only renders when opt-in onClear is provided AND a date is set.
+    const showClear = !!onClear && parseDate(value) !== null
 
     return (
       <div className={`w-full ${className || ''}`}>
@@ -400,6 +409,16 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
               yearDropdownItemNumber={10}
             />
           </div>
+          {showClear && (
+            <button
+              type="button"
+              onClick={onClear}
+              aria-label="Clear"
+              className="absolute inset-y-0 right-0 z-10 flex items-center pr-3 text-gray-400 hover:text-gray-600"
+            >
+              <Icons.Cancel01 size={14} />
+            </button>
+          )}
         </div>
         {error && (
           <p id={errorId} className="mt-1.5 text-xs text-red-500" role="alert">
