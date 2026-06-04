@@ -7,6 +7,7 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import { RecordPaymentModal } from '../RecordPaymentModal'
 import type { DebtDetail, RestructuringAgreementSummary } from '@/features/clients/api/types'
 import * as useClientsModule from '@/features/clients/hooks/useClients'
+import { formatMoneyUAHTwoDecimals } from '@/lib/formatters'
 
 // Hoist a single source of truth for the RR-list mock so tests can swap it.
 const mockRrList = vi.fn<() => RestructuringAgreementSummary[]>(() => [])
@@ -60,6 +61,35 @@ beforeEach(() => {
         isError: false,
       }) as unknown as ReturnType<typeof useClientsModule.useClientRestructuringAgreements>
   )
+})
+
+describe('RecordPaymentModal — credit dropdown label', () => {
+  it('shows credit number, counterparty name, and total debt separated by dots', () => {
+    renderModal({
+      debts: [
+        makeDebt({
+          id: 1,
+          contract_number: 'LN-001',
+          seller_company: 'Acme Bank',
+          remaining_debt_amount: '5000.00',
+        }),
+        makeDebt({
+          id: 2,
+          contract_number: 'LN-002',
+          seller_company: 'Beta LLC',
+          remaining_debt_amount: '1200.50',
+        }),
+      ],
+    })
+
+    const contractSelect = screen.getAllByRole('combobox')[0]
+    fireEvent.click(contractSelect)
+
+    const label1 = `LN-001 • Acme Bank • ${formatMoneyUAHTwoDecimals('5000.00')}`
+    const label2 = `LN-002 • Beta LLC • ${formatMoneyUAHTwoDecimals('1200.50')}`
+    expect(screen.getAllByText(label1).length).toBeGreaterThan(0)
+    expect(screen.getByText(label2)).toBeInTheDocument()
+  })
 })
 
 describe('RecordPaymentModal — Payment Type (KAN-507)', () => {
