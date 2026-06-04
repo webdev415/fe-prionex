@@ -13,10 +13,22 @@ export interface ClientAssigneeIdsResponse {
   searcher_ids: number[]
 }
 
+/**
+ * Minimal factoring-agreement projection embedded in a debt response.
+ */
+export interface DebtFactoringAgreement {
+  id: number
+  agreement_number: string
+  previous_lender?: string | null
+  contract_purchase_date?: string | null
+}
+
 export interface DebtDetail {
   id: number
   seller_id?: number
   seller_company: string
+  /** Full legal name of the seller (primary creditor). */
+  seller_legal_name?: string | null
   contract_number: string
   original_debt_amount: string
   remaining_debt_amount: string
@@ -53,6 +65,12 @@ export interface DebtDetail {
   // Legacy TABLE460.f53 — total amount eligible for return after sale.
   // Surfaced on the loans table only when it differs from remaining_debt_amount.
   legacy_f53?: string | null
+
+  // Linked factoring agreement (if any). Surfaces the legal_name +
+  // previous_lender + agreement purchase date to the client-detail
+  // Info expansion without an extra round-trip.
+  factoring_agreement_id?: number | null
+  factoring_agreement?: DebtFactoringAgreement | null
 }
 
 export interface RestructuringAgreementSummary {

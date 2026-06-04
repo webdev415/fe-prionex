@@ -1441,6 +1441,7 @@
       "step1": {
         "loanSourceMetadata": "Loan Source / Metadata",
         "sellerCreditor": "Seller / Creditor",
+        "legalNameInline": "(Legal name: {{legalName}})",
         "projectCode": "Project Code:",
         "purchaseDate": "Purchase date:",
         "comment": "Comment:",
@@ -1461,7 +1462,24 @@
           "loadingSellers": "Loading sellers..."
         },
         "noProjectsAvailable": "No projects available",
-        "noSellersAvailable": "No sellers available"
+        "noSellersAvailable": "No sellers available",
+        "factoringAgreement": {
+          "title": "Factoring agreement",
+          "pickSellerFirst": "Pick a seller first.",
+          "pickExisting": "Pick existing",
+          "createNew": "Create new",
+          "loading": "Loading…",
+          "selectExisting": "Select agreement",
+          "emptyForSeller": "No agreements yet — create one",
+          "fields": {
+            "number": "Agreement number",
+            "previousLender": "Who sold",
+            "previousLenderPlaceholderWithFallback": "If left blank, the seller's legal name will be inserted.",
+            "previousLenderPlaceholderGeneric": "Enter the entity that sold the debt",
+            "contractPurchaseDate": "Contract purchase date",
+            "contractPurchaseDatePlaceholder": "Select contract purchase date"
+          }
+        }
       },
       "step2": {
         "simple": {
@@ -2800,6 +2818,13 @@
         "confirmReopenLoan": "Are you sure you want to reopen this credit?",
         "editClosureDate": "Edit closure date",
         "closureDate": "Closure date",
+        "loanInfo": "Agreement info",
+        "factoringInfo": {
+          "empty": "This debt is not linked to a factoring agreement.",
+          "legalName": "Legal name",
+          "previousLender": "Who sold",
+          "purchaseDate": "Purchase date"
+        },
         "closureDateRequired": "Closure date is required",
         "closureDateFuture": "Closure date cannot be in the future",
         "sendToUBCI": "Send to UBCI",
@@ -4413,6 +4438,7 @@
       "tableHeaders": {
         "sellerCode": "Seller Code",
         "sellerName": "Seller Name",
+        "legalName": "Legal Name",
         "sellerType": "Seller Type",
         "status": "Status",
         "companyEmail": "Company Email",
@@ -4430,7 +4456,28 @@
       },
       "actions": {
         "edit": "Edit",
-        "delete": "Delete"
+        "delete": "Delete",
+        "viewAgreements": "View Agreements"
+      },
+      "detail": {
+        "back": "Back to sellers",
+        "loading": "Loading seller...",
+        "notFound": "Seller not found",
+        "notFoundMessage": "The requested seller does not exist or you do not have access.",
+        "invalidId": "Invalid seller ID",
+        "invalidIdMessage": "No seller ID was provided.",
+        "factoringAgreements": {
+          "title": "Factoring Agreements",
+          "loading": "Loading agreements...",
+          "error": "Failed to load factoring agreements.",
+          "empty": "No factoring agreements for this seller yet.",
+          "columns": {
+            "number": "Agreement number",
+            "previousLender": "Who sold",
+            "purchaseDate": "Purchase date",
+            "debtCount": "Number of debts"
+          }
+        }
       },
       "modals": {
         "create": {
@@ -4496,6 +4543,7 @@
           "sellerCodeReadOnly": "Seller code cannot be changed after creation",
           "sellerName": "Seller Name",
           "sellerType": "Seller Type",
+          "legalName": "Full legal name",
           "taxId": "Tax ID / Business Registration Number",
           "contactPerson": "Contact Person",
           "contactEmail": "Contact Email",
@@ -4506,9 +4554,22 @@
           "saving": "Saving...",
           "loadingSellerData": "Loading seller data...",
           "sellerNotFound": "Seller not found",
+          "factoringAgreements": {
+            "title": "Factoring Agreements",
+            "loading": "Loading agreements...",
+            "error": "Failed to load factoring agreements.",
+            "empty": "No factoring agreements for this seller yet.",
+            "columns": {
+              "number": "Agreement number",
+              "previousLender": "Who sold",
+              "purchaseDate": "Purchase date",
+              "debtCount": "Number of debts"
+            }
+          },
           "placeholders": {
             "sellerName": "Enter seller company name",
             "sellerType": "Select seller type",
+            "legalName": "e.g., JSC \"FC \"Є ГРОШІ\"",
             "taxId": "Enter tax ID or business registration number",
             "contactPerson": "Enter contact person name",
             "contactEmail": "Enter contact email",
