@@ -3114,7 +3114,9 @@
         "promiseAmountRequired": "This result requires a promise amount.",
         "creditRequired": "This result requires selecting a credit.",
         "stepFieldRequired": "{{name}} is required.",
-        "stepRequired": "Please fill in this step before continuing."
+        "stepRequired": "Please fill in this step before continuing.",
+        "dateInvalid": "Please enter a valid date and time in DD.MM.YYYY HH:MM format.",
+        "datePast": "Date cannot be in the past."
       },
       "pickToContinue": "Pick a chain above to continue.",
       "stepsPreview": "Steps in this chain",
