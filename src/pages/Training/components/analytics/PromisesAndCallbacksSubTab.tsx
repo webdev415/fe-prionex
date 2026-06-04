@@ -78,7 +78,7 @@ export function PromisesAndCallbacksSubTab() {
         <AnalyticsKpiTile
           label={t('pages.training.promises.kpi.total', 'Total promises')}
           value={`${k.total.amount.toLocaleString()} ${k.total.currency}`}
-          icon={<span className="text-lg font-semibold leading-none">Σ</span>}
+          icon={<span className="text-lg leading-none font-semibold">Σ</span>}
           iconBg="bg-[#F7F7F7]"
           iconTone="text-[#05040D]"
         />

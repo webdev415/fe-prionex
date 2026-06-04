@@ -107,7 +107,7 @@ export function SuccessfulClosuresSubTab() {
         <AnalyticsKpiTile
           label={t('pages.training.closures.kpi.totalAmount', 'Total Amount')}
           value={`${k.totalAmount.amount.toLocaleString()} ${k.totalAmount.currency}`}
-          icon={<span className="text-lg font-semibold leading-none">Σ</span>}
+          icon={<span className="text-lg leading-none font-semibold">Σ</span>}
           iconBg="bg-[#F7F7F7]"
           iconTone="text-[#05040D]"
         />
@@ -147,7 +147,10 @@ export function SuccessfulClosuresSubTab() {
           {MOCK_CLOSURES_FUNNEL.map((stage) => {
             const filledSegments = Math.round((stage.pct / 100) * 10)
             return (
-              <div key={stage.label} className="flex flex-col gap-2 rounded-lg bg-[#F7F7F7] px-4 py-3">
+              <div
+                key={stage.label}
+                className="flex flex-col gap-2 rounded-lg bg-[#F7F7F7] px-4 py-3"
+              >
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex flex-col">
                     <span className="text-2xl leading-none font-semibold text-[#05040D]">
@@ -274,9 +277,7 @@ export function SuccessfulClosuresSubTab() {
             <th className={ANALYTICS_TABLE_TH}>
               {t('pages.training.closures.cols.client', 'Client')}
             </th>
-            <th className={ANALYTICS_TABLE_TH}>
-              {t('pages.training.closures.cols.deal', 'Deal')}
-            </th>
+            <th className={ANALYTICS_TABLE_TH}>{t('pages.training.closures.cols.deal', 'Deal')}</th>
             <th className={ANALYTICS_TABLE_TH}>
               {t('pages.training.closures.cols.amount', 'Payment Amount')}
             </th>

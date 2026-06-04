@@ -45,14 +45,7 @@ const STATE_DOT: Record<HeatmapState, string> = {
   offline: 'bg-white border border-[#D1D5DB]',
 }
 
-const STATE_ORDER: HeatmapState[] = [
-  'call',
-  'after_call',
-  'waiting',
-  'idle',
-  'break',
-  'offline',
-]
+const STATE_ORDER: HeatmapState[] = ['call', 'after_call', 'waiting', 'idle', 'break', 'offline']
 
 const STATE_LABEL: Record<HeatmapState, { key: string; fallback: string }> = {
   call: { key: 'pages.training.heatmap.state.call', fallback: 'Call' },
@@ -77,10 +70,7 @@ export function MockHeatMapSubTab() {
           </span>
           {STATE_ORDER.map((s) => (
             <span key={s} className="flex items-center gap-1.5 text-xs text-[#05040D]">
-              <span
-                className={`block h-2.5 w-2.5 rounded-full ${STATE_DOT[s]}`}
-                aria-hidden
-              />
+              <span className={`block h-2.5 w-2.5 rounded-full ${STATE_DOT[s]}`} aria-hidden />
               {t(STATE_LABEL[s].key, STATE_LABEL[s].fallback)}
             </span>
           ))}
@@ -127,10 +117,7 @@ export function MockHeatMapSubTab() {
               <tr>
                 <th className="w-44" />
                 {HEATMAP_HOURS.map((hr) => (
-                  <th
-                    key={hr}
-                    className="px-1 text-center text-[10px] font-medium text-[#676767]"
-                  >
+                  <th key={hr} className="px-1 text-center text-[10px] font-medium text-[#676767]">
                     {hr}
                   </th>
                 ))}

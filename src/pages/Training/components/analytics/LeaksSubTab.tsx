@@ -116,10 +116,7 @@ export function LeaksSubTab() {
         <Icons.Warning size={16} className="mt-0.5 flex-shrink-0 text-[#EF4444]" />
         <div className="flex flex-col gap-0.5">
           <span className="text-xs font-semibold text-[#EF4444]">
-            {t(
-              'pages.training.leaks.escalationBanner',
-              '4 escalations without follow-up'
-            )}
+            {t('pages.training.leaks.escalationBanner', '4 escalations without follow-up')}
           </span>
           <span className="text-[11px] text-[#676767]">
             {t(

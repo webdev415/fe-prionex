@@ -37,11 +37,14 @@ const SORT_OPTIONS: { id: SortKey; key: string; fallback: string }[] = [
 const ALL_DEPARTMENTS = Array.from(new Set(MOCK_TIME_AT_WORK.map((r) => r.department))).sort()
 
 /** Pill used for numeric metric cells (Time to card, Incl. Credits, etc.). */
-function MetricPill({ children, tone = 'red' }: { children: React.ReactNode; tone?: 'red' | 'green' }) {
-  const palette =
-    tone === 'green'
-      ? 'bg-[#ECFDF5] text-[#047857]'
-      : 'bg-[#FEF2F2] text-[#B91C1C]'
+function MetricPill({
+  children,
+  tone = 'red',
+}: {
+  children: React.ReactNode
+  tone?: 'red' | 'green'
+}) {
+  const palette = tone === 'green' ? 'bg-[#ECFDF5] text-[#047857]' : 'bg-[#FEF2F2] text-[#B91C1C]'
   return (
     <span className={`inline-block rounded-full px-2.5 py-0.5 text-[11px] font-medium ${palette}`}>
       {children}

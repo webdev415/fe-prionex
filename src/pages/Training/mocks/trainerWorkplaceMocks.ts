@@ -2048,10 +2048,7 @@ export const MOCK_TIME_AT_WORK_KPIS = {
   afterCallAvg: '22c',
 }
 
-const TIME_AT_WORK_ROWS: Omit<
-  MockTimeAtWorkRow,
-  'id' | 'initials' | 'avatarColor'
->[] = [
+const TIME_AT_WORK_ROWS: Omit<MockTimeAtWorkRow, 'id' | 'initials' | 'avatarColor'>[] = [
   {
     operator: 'Bohdan Melnyk',
     department: 'Department C',
@@ -2150,54 +2147,79 @@ export const MOCK_TIME_AT_WORK: MockTimeAtWorkRow[] = TIME_AT_WORK_ROWS.map((row
 
 export interface MockScriptAlert {
   id: number
-  message: string
-  operator: string
-  timeLabel: string
+  /** Short category label rendered as a colored pill on the left. */
+  category: string
+  /** Severity drives the category pill color tone. */
   severity: 'info' | 'warn' | 'critical'
+  operator: string
+  operatorInitials: string
+  operatorAvatarColor: string
+  /** Longer description line explaining the flag. */
+  description: string
+  /** Short date/time label rendered before the action buttons. */
+  dateLabel: string
 }
 
 export const MOCK_SCRIPT_ALERTS: MockScriptAlert[] = [
   {
     id: 1,
-    message: 'Series of missed calls',
-    operator: 'Artem Honchar',
-    timeLabel: 'today, 12:00',
+    category: 'Series of missed calls',
     severity: 'critical',
+    operator: 'Artem Honchar',
+    operatorInitials: 'AH',
+    operatorAvatarColor: '#FEE4E2',
+    description: '5 consecutive calls - "missed call"',
+    dateLabel: '05/13 09:40',
   },
   {
     id: 2,
-    message: 'Quick refusal · 7s',
-    operator: 'Denys Polyakov',
-    timeLabel: 'today, 11:42',
+    category: 'Quick result (< 10s)',
     severity: 'warn',
+    operator: 'Denys Poltavets',
+    operatorInitials: 'DP',
+    operatorAvatarColor: '#E0E7FF',
+    description: 'Result posted 7s after the call',
+    dateLabel: '05/13 10:15',
   },
   {
     id: 3,
-    message: 'No promise after the consent',
-    operator: 'Oleh Bondar',
-    timeLabel: 'today, 11:20',
-    severity: 'info',
+    category: 'No promises for several days',
+    severity: 'warn',
+    operator: 'Iryna Sokil',
+    operatorInitials: 'IS',
+    operatorAvatarColor: '#FCE7F3',
+    description: 'Did not use "promise" for 3 consecutive days',
+    dateLabel: '05/13 08:00',
   },
   {
     id: 4,
-    message: 'Result without script · 1m',
-    operator: 'Iryna Sokol',
-    timeLabel: 'today, 10:55',
-    severity: 'warn',
+    category: 'Result without card',
+    severity: 'critical',
+    operator: 'Oleg Bondar',
+    operatorInitials: 'OB',
+    operatorAvatarColor: '#D1FAE5',
+    description: "Result without opening the client's card",
+    dateLabel: '05/13 11:00',
   },
   {
     id: 5,
-    message: 'Promise without credit-card data',
-    operator: 'Yurii Kravtsov',
-    timeLabel: 'today, 10:30',
+    category: 'Promise without the Credits tab',
     severity: 'info',
+    operator: 'Yuriy Kravtsov',
+    operatorInitials: 'YK',
+    operatorAvatarColor: '#E0E7FF',
+    description: '"Promise" - the Credits tab was not opened',
+    dateLabel: '05/13 09:55',
   },
   {
     id: 6,
-    message: 'Rapid call · 12s',
-    operator: 'Marina Shevchenko',
-    timeLabel: 'today, 09:48',
+    category: 'Repeat call < 10 min',
     severity: 'critical',
+    operator: 'Marina Shevchenko',
+    operatorInitials: 'MS',
+    operatorAvatarColor: '#FEF3C7',
+    description: 'Same client - repeat call after 8 min',
+    dateLabel: '05/13 12:10',
   },
 ]
 
@@ -2206,33 +2228,113 @@ export interface MockScriptDistribution {
   operator: string
   initials: string
   avatarColor: string
+  department: string
   total: number
   promises: number
+  promisesPct: number
   refusals: number
+  refusalsPct: number
   missedCalls: number
+  missedCallsPct: number
   willPass: number
+  willPassPct: number
   flags: number
 }
 
-export const MOCK_SCRIPT_DISTRIBUTION: MockScriptDistribution[] = Array.from(
-  { length: 5 },
-  (_, i) => {
-    const name = OPERATOR_NAMES[i % OPERATOR_NAMES.length]
-    const parts = name.split(' ')
+const SCRIPT_DISTRIBUTION_ROWS: Omit<MockScriptDistribution, 'id' | 'initials' | 'avatarColor'>[] =
+  [
+    {
+      operator: 'Oleg Bondar',
+      department: 'Department A',
+      total: 6,
+      promises: 2,
+      promisesPct: 33,
+      refusals: 1,
+      refusalsPct: 17,
+      missedCalls: 2,
+      missedCallsPct: 33,
+      willPass: 1,
+      willPassPct: 17,
+      flags: 1,
+    },
+    {
+      operator: 'Marina Shevchenko',
+      department: 'Department A',
+      total: 7,
+      promises: 3,
+      promisesPct: 43,
+      refusals: 2,
+      refusalsPct: 29,
+      missedCalls: 2,
+      missedCallsPct: 29,
+      willPass: 0,
+      willPassPct: 0,
+      flags: 1,
+    },
+    {
+      operator: 'Iryna Sokil',
+      department: 'Department A',
+      total: 9,
+      promises: 4,
+      promisesPct: 44,
+      refusals: 2,
+      refusalsPct: 22,
+      missedCalls: 2,
+      missedCallsPct: 22,
+      willPass: 1,
+      willPassPct: 11,
+      flags: 1,
+    },
+    {
+      operator: 'Artem Honchar',
+      department: 'Department A',
+      total: 11,
+      promises: 5,
+      promisesPct: 45,
+      refusals: 3,
+      refusalsPct: 27,
+      missedCalls: 2,
+      missedCallsPct: 18,
+      willPass: 1,
+      willPassPct: 10,
+      flags: 2,
+    },
+    {
+      operator: 'Denys Poltavets',
+      department: 'Department A',
+      total: 8,
+      promises: 3,
+      promisesPct: 38,
+      refusals: 2,
+      refusalsPct: 25,
+      missedCalls: 2,
+      missedCallsPct: 25,
+      willPass: 1,
+      willPassPct: 12,
+      flags: 1,
+    },
+  ]
+
+export const MOCK_SCRIPT_DISTRIBUTION: MockScriptDistribution[] = SCRIPT_DISTRIBUTION_ROWS.map(
+  (row, i) => {
+    const parts = row.operator.split(' ')
     return {
       id: i + 1,
-      operator: name,
-      initials: `${parts[0][0]}${parts[1]?.[0] ?? ''}`,
+      ...row,
+      initials: `${parts[0][0]}${parts[1]?.[0] ?? ''}`.toUpperCase(),
       avatarColor: AVATAR_PALETTE[i % AVATAR_PALETTE.length],
-      total: 30 + i * 3,
-      promises: 8 + i,
-      refusals: 5 + i,
-      missedCalls: 3 + i,
-      willPass: 2 + (i % 3),
-      flags: i + 1,
     }
   }
 )
+
+/** Footer banner data shown at the bottom of Script Analytics. */
+export const MOCK_COACH_CONTEXT = {
+  title: "Coach's Workspace",
+  region: 'UA',
+  product: 'Consumer Loans',
+  assignmentText: "You are assigned to the department 'Department A · Hard Collection'.",
+  operatorsInOperation: 7,
+}
 
 // ─────────────────────────────────────────────────────────────
 // Action Analysis — Interactions (existing surface, with new visuals)
@@ -2917,51 +3019,183 @@ export interface MockHeatmapOperator {
 const HEATMAP_OPERATORS_BASE: { name: string; states: HeatmapState[] }[] = [
   {
     name: 'Kateryna A.',
-    states: ['call', 'after_call', 'waiting', 'idle', 'waiting', 'call', 'idle', 'after_call', 'waiting', 'offline'],
+    states: [
+      'call',
+      'after_call',
+      'waiting',
+      'idle',
+      'waiting',
+      'call',
+      'idle',
+      'after_call',
+      'waiting',
+      'offline',
+    ],
   },
   {
     name: 'Oleg B.',
-    states: ['call', 'call', 'after_call', 'waiting', 'idle', 'after_call', 'waiting', 'call', 'offline', 'call'],
+    states: [
+      'call',
+      'call',
+      'after_call',
+      'waiting',
+      'idle',
+      'after_call',
+      'waiting',
+      'call',
+      'offline',
+      'call',
+    ],
   },
   {
     name: 'Marina Sh.',
-    states: ['call', 'after_call', 'waiting', 'idle', 'waiting', 'call', 'waiting', 'offline', 'call', 'call'],
+    states: [
+      'call',
+      'after_call',
+      'waiting',
+      'idle',
+      'waiting',
+      'call',
+      'waiting',
+      'offline',
+      'call',
+      'call',
+    ],
   },
   {
     name: 'Denys P.',
-    states: ['after_call', 'waiting', 'idle', 'waiting', 'idle', 'waiting', 'call', 'call', 'after_call', 'call'],
+    states: [
+      'after_call',
+      'waiting',
+      'idle',
+      'waiting',
+      'idle',
+      'waiting',
+      'call',
+      'call',
+      'after_call',
+      'call',
+    ],
   },
   {
     name: 'Iryna S.',
-    states: ['waiting', 'call', 'idle', 'after_call', 'waiting', 'offline', 'call', 'call', 'call', 'after_call'],
+    states: [
+      'waiting',
+      'call',
+      'idle',
+      'after_call',
+      'waiting',
+      'offline',
+      'call',
+      'call',
+      'call',
+      'after_call',
+    ],
   },
   {
     name: 'Artem H.',
-    states: ['call', 'idle', 'idle', 'after_call', 'waiting', 'offline', 'call', 'call', 'offline', 'offline'],
+    states: [
+      'call',
+      'idle',
+      'idle',
+      'after_call',
+      'waiting',
+      'offline',
+      'call',
+      'call',
+      'offline',
+      'offline',
+    ],
   },
   {
     name: 'Oleksandra B.',
-    states: ['idle', 'after_call', 'call', 'call', 'call', 'call', 'after_call', 'waiting', 'call', 'call'],
+    states: [
+      'idle',
+      'after_call',
+      'call',
+      'call',
+      'call',
+      'call',
+      'after_call',
+      'waiting',
+      'call',
+      'call',
+    ],
   },
   {
     name: 'Natalia Ye.',
-    states: ['call', 'call', 'after_call', 'call', 'call', 'call', 'idle', 'offline', 'waiting', 'offline'],
+    states: [
+      'call',
+      'call',
+      'after_call',
+      'call',
+      'call',
+      'call',
+      'idle',
+      'offline',
+      'waiting',
+      'offline',
+    ],
   },
   {
     name: 'Serhiy L.',
-    states: ['call', 'call', 'call', 'call', 'idle', 'after_call', 'waiting', 'call', 'call', 'call'],
+    states: [
+      'call',
+      'call',
+      'call',
+      'call',
+      'idle',
+      'after_call',
+      'waiting',
+      'call',
+      'call',
+      'call',
+    ],
   },
   {
     name: 'Yuriy K.',
-    states: ['call', 'after_call', 'waiting', 'waiting', 'after_call', 'waiting', 'call', 'offline', 'call', 'call'],
+    states: [
+      'call',
+      'after_call',
+      'waiting',
+      'waiting',
+      'after_call',
+      'waiting',
+      'call',
+      'offline',
+      'call',
+      'call',
+    ],
   },
   {
     name: 'Bohdan M.',
-    states: ['call', 'after_call', 'waiting', 'call', 'idle', 'after_call', 'waiting', 'call', 'call', 'offline'],
+    states: [
+      'call',
+      'after_call',
+      'waiting',
+      'call',
+      'idle',
+      'after_call',
+      'waiting',
+      'call',
+      'call',
+      'offline',
+    ],
   },
   {
     name: 'Svitlana S.',
-    states: ['call', 'call', 'waiting', 'call', 'idle', 'call', 'after_call', 'call', 'call', 'call'],
+    states: [
+      'call',
+      'call',
+      'waiting',
+      'call',
+      'idle',
+      'call',
+      'after_call',
+      'call',
+      'call',
+      'call',
+    ],
   },
 ]
 

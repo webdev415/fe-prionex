@@ -53,13 +53,7 @@ const PRESENCE_DOT: Record<NonNullable<MockThirdPartyRow['operatorPresence']>, s
 
 const ALL_OPERATORS = Array.from(new Set(MOCK_THIRD_PARTIES.map((r) => r.operator))).sort()
 
-const RESULT_CHIPS: ResultFilter[] = [
-  'all',
-  'promise',
-  'refusal',
-  'missed_call',
-  'will_pass_on',
-]
+const RESULT_CHIPS: ResultFilter[] = ['all', 'promise', 'refusal', 'missed_call', 'will_pass_on']
 
 export function ThirdPartiesSubTab() {
   const { t } = useTranslation('common')
@@ -74,7 +68,9 @@ export function ThirdPartiesSubTab() {
   })
 
   const resultCount = (id: ResultFilter): number =>
-    id === 'all' ? MOCK_THIRD_PARTIES.length : MOCK_THIRD_PARTIES.filter((r) => r.result === id).length
+    id === 'all'
+      ? MOCK_THIRD_PARTIES.length
+      : MOCK_THIRD_PARTIES.filter((r) => r.result === id).length
 
   return (
     <div className="flex flex-col gap-4">
@@ -147,9 +143,7 @@ export function ThirdPartiesSubTab() {
                 type="button"
                 onClick={() => setResultFilter(id)}
                 className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
-                  isActive
-                    ? 'bg-[#204E4D] text-white'
-                    : 'text-[#545454] hover:bg-[#F7F7F7]'
+                  isActive ? 'bg-[#204E4D] text-white' : 'text-[#545454] hover:bg-[#F7F7F7]'
                 }`}
               >
                 {label}
@@ -200,10 +194,7 @@ export function ThirdPartiesSubTab() {
               key={row.id}
               row={row}
               yesLabel={t('pages.training.thirdParties.returned.yes', 'Yes')}
-              didNotReturnLabel={t(
-                'pages.training.thirdParties.returned.no',
-                'Did not return'
-              )}
+              didNotReturnLabel={t('pages.training.thirdParties.returned.no', 'Did not return')}
             />
           ))}
         </tbody>
