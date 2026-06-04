@@ -15,6 +15,7 @@ import { ErrorState } from '@/components/ErrorState'
 import { Pagination } from '@/components/ui/Pagination'
 import { useURLState } from '@/hooks'
 import { useSellerDetail, useSellerFactoringAgreements } from '@/features/sellers'
+import { formatDate } from '@/lib/formatters'
 
 const DEFAULT_PAGE_SIZE = 10
 
@@ -157,7 +158,7 @@ export function SellerDetailPage() {
                         {a.previous_lender || '—'}
                       </td>
                       <td className="px-4 py-3 text-center font-light">
-                        {a.contract_purchase_date || '—'}
+                        {formatDate(a.contract_purchase_date ?? undefined)}
                       </td>
                       <td className="px-4 py-3 text-center font-medium">{a.debt_count}</td>
                     </tr>
