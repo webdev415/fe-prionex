@@ -2307,7 +2307,8 @@
           "payloadTagHint": "This tag requires PTP date and/or amount — a separate form will open",
           "saveTags": "Save Tags",
           "tagsUpdated": "Tags updated for {{name}}",
-          "updateFailed": "Failed to update tags"
+          "updateFailed": "Failed to update tags",
+          "protectedRemoveBlocked": "Protected tags can only be removed by authorized roles"
         },
         "deleteClient": {
           "title": "Delete Client",

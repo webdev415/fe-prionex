@@ -42,6 +42,8 @@ export interface TagDefinition extends Tag {
   notification_roles?: string[]
   is_protected: boolean
   protected_removal_roles: string[]
+  /** Set by API for the current user — whether they may uncheck/remove a protected tag */
+  can_remove_protected?: boolean
   expiry_type: ExpiryType
   /** Restrict to departments; omit / empty = all departments */
   department_ids?: number[] | null
