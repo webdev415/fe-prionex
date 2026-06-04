@@ -1381,9 +1381,14 @@
         "assignedOperators": "Призначені оператори",
         "actions": "Дії"
       },
-      "actions": { "edit": "Редагувати", "delete": "Видалити" },
+      "actions": {
+        "edit": "Редагувати",
+        "delete": "Видалити"
+      },
       "modals": {
-        "create": { "title": "Створити групу" },
+        "create": {
+          "title": "Створити групу"
+        },
         "edit": {
           "title": "Редагувати групу",
           "failedToLoad": "Не вдалося завантажити дані групи."
@@ -1441,6 +1446,7 @@
       "step1": {
         "loanSourceMetadata": "Джерело позики / Метадані",
         "sellerCreditor": "Продавець / Кредитор",
+        "legalNameInline": "(Юридична назва: {{legalName}})",
         "projectCode": "Код проєкту:",
         "purchaseDate": "Дата покупки:",
         "comment": "Коментар:",
@@ -1461,7 +1467,24 @@
           "loadingSellers": "Завантаження продавців..."
         },
         "noProjectsAvailable": "Немає доступних проєктів",
-        "noSellersAvailable": "Немає доступних продавців"
+        "noSellersAvailable": "Немає доступних продавців",
+        "factoringAgreement": {
+          "title": "Договір факторингу",
+          "pickSellerFirst": "Спочатку оберіть продавця.",
+          "pickExisting": "Вибрати існуючий",
+          "createNew": "Створити новий",
+          "loading": "Завантаження…",
+          "selectExisting": "Виберіть договір",
+          "emptyForSeller": "Договорів ще немає — створіть",
+          "fields": {
+            "number": "Номер договору",
+            "previousLender": "Хто продав",
+            "previousLenderPlaceholderWithFallback": "Якщо залишити порожнім, буде вставлено юридичну назву продавця.",
+            "previousLenderPlaceholderGeneric": "Введіть особу, яка продала борг",
+            "contractPurchaseDate": "Дата купівлі за договором",
+            "contractPurchaseDatePlaceholder": "Виберіть дату купівлі за договором"
+          }
+        }
       },
       "step2": {
         "simple": {
@@ -1870,7 +1893,8 @@
         "employee": "Співробітник",
         "searcher": "Пошуковець",
         "assignmentDate": "Дата призначення",
-        "actions": "Дії"
+        "actions": "Дії",
+        "lastOutgoingTADate": "Дата останньої вихідної ЦД"
       },
       "priorities": {
         "critical": "Критичний",
@@ -1889,7 +1913,7 @@
       "filters": {
         "debtRange": "Загальний борг клієнта",
         "dpdRange": "Діапазон DPD",
-        "amountOfDebtRange": "Сума окремого боргу",
+        "amountOfDebtRange": "Сума основної заборгованості",
         "dateOfSale": "Дата продажу боргу",
         "assignmentDate": "Дата призначення",
         "targetActionDate": "Дата цільової дії",
@@ -2125,8 +2149,17 @@
         "writeOff": "Списання",
         "reversal": "Сторно",
         "closeLoan": "Закрити позику",
+        "reopenLoan": "Поновити позику",
+        "confirmReopenLoan": "Ви впевнені, що хочете поновити цей кредит?",
         "editClosureDate": "Редагувати дату закриття",
         "closureDate": "Дата закриття",
+        "loanInfo": "Інформація про договір",
+        "factoringInfo": {
+          "empty": "Цей борг не пов'язаний з договором факторингу.",
+          "legalName": "Юридична назва",
+          "previousLender": "Хто продав",
+          "purchaseDate": "Дата купівлі"
+        },
         "closureDateRequired": "Дата закриття обов'язкова",
         "closureDateFuture": "Дата закриття не може бути в майбутньому",
         "sendToUBCI": "Відправити в UBCI",
@@ -3130,6 +3163,7 @@
       "effectRemoveTag": "Зняти тег",
       "effectTask": "Завдання: зворотний дзвінок створено",
       "effectSMS": "Подія: SMS надіслано",
+      "effectMessage": "Подія: повідомлення надіслано",
       "effectSpam": "Додано до списку спаму",
       "dictionary": {
         "level1": "Рівень 1 — Тип взаємодії",
@@ -3143,7 +3177,9 @@
         "promiseAmountRequired": "Для цього результату потрібна сума обіцянки.",
         "creditRequired": "Для цього результату потрібно обрати кредит.",
         "stepFieldRequired": "Поле «{{name}}» обов'язкове.",
-        "stepRequired": "Заповніть цей крок перед продовженням."
+        "stepRequired": "Заповніть цей крок перед продовженням.",
+        "dateInvalid": "Введіть коректні дату й час у форматі ДД.ММ.РРРР ГГ:ХХ.",
+        "datePast": "Дата не може бути в минулому."
       },
       "pickToContinue": "Оберіть ланцюжок вище, щоб продовжити.",
       "stepsPreview": "Кроки в цьому ланцюжку",
@@ -3472,6 +3508,8 @@
         "debtStatus": "Статус (напр. прострочка)",
         "daysCooldown": "Днів (напр. 30)",
         "selectSmsTemplate": "Оберіть SMS-шаблон...",
+        "selectMessagingService": "Оберіть провайдера messaging...",
+        "selectMessagingDraft": "Оберіть чернетку повідомлення...",
         "subjectRequired": "Тема (обов'язково)",
         "searchSubjects": "Пошук тем...",
         "titleOptional": "Заголовок (необов'язково)",
@@ -3527,12 +3565,17 @@
           "remove_tag": "Зняти тег",
           "create_task": "Створити задачу",
           "send_sms": "Надіслати SMS",
+          "send_message": "Надіслати повідомлення (messaging)",
           "add_to_spam": "У спам"
         }
       },
+      "sendMessageNoIntegration": "Немає налаштованої інтеграції messaging для цього каналу. Додайте її в налаштуваннях Messaging.",
       "config": {
         "tag": "тег: {{label}}",
         "template": "шаблон: {{label}}",
+        "messagingDraft": "чернетка: {{label}}",
+        "channel": "канал: {{label}}",
+        "messagingService": "провайдер: {{label}}",
         "chain": "ланцюжок: {{label}}",
         "subject": "тема: {{label}}",
         "user": "користувач: {{label}}",
@@ -3828,6 +3871,7 @@
       "tableHeaders": {
         "sellerCode": "Код продавця",
         "sellerName": "Назва продавця",
+        "legalName": "Юридична назва",
         "sellerType": "Тип продавця",
         "status": "Статус",
         "companyEmail": "Електронна пошта компанії",
@@ -3845,7 +3889,28 @@
       },
       "actions": {
         "edit": "Редагувати",
-        "delete": "Видалити"
+        "delete": "Видалити",
+        "viewAgreements": "Переглянути договори"
+      },
+      "detail": {
+        "back": "Назад до списку продавців",
+        "loading": "Завантаження продавця...",
+        "notFound": "Продавця не знайдено",
+        "notFoundMessage": "Запитуваний продавець не існує або у вас немає доступу.",
+        "invalidId": "Невірний ID продавця",
+        "invalidIdMessage": "ID продавця не вказано.",
+        "factoringAgreements": {
+          "title": "Договори факторингу",
+          "loading": "Завантаження договорів...",
+          "error": "Не вдалося завантажити договори факторингу.",
+          "empty": "У цього продавця ще немає договорів факторингу.",
+          "columns": {
+            "number": "Номер договору",
+            "previousLender": "Хто продав",
+            "purchaseDate": "Дата купівлі",
+            "debtCount": "Кількість боргів"
+          }
+        }
       },
       "modals": {
         "create": {
@@ -3914,10 +3979,23 @@
           "sellerCodeReadOnly": "Код продавця не можна змінити після створення",
           "sellerName": "Назва продавця",
           "sellerType": "Тип продавця",
+          "legalName": "Повне юридичне найменування",
           "contactEmail": "Контактний email",
           "saveChanges": "Зберегти зміни",
           "companyName": "Назва компанії *",
           "taxId": "Податковий номер / Реєстраційний номер бізнесу",
+          "factoringAgreements": {
+            "title": "Договори факторингу",
+            "loading": "Завантаження договорів...",
+            "error": "Не вдалося завантажити договори факторингу.",
+            "empty": "У цього продавця ще немає договорів факторингу.",
+            "columns": {
+              "number": "Номер договору",
+              "previousLender": "Хто продав",
+              "purchaseDate": "Дата купівлі",
+              "debtCount": "Кількість боргів"
+            }
+          },
           "website": "Веб-сайт",
           "email": "Електронна пошта",
           "contactName": "Ім'я",
@@ -3935,6 +4013,7 @@
           "placeholders": {
             "sellerName": "Введіть назву компанії продавця",
             "sellerType": "Виберіть тип продавця",
+            "legalName": "напр., ТОВ \"ФК \"Є ГРОШІ\"",
             "contactEmail": "Введіть контактний email",
             "address": "Введіть адресу",
             "contactPerson": "Введіть ім'я контактної особи",
@@ -4018,6 +4097,7 @@
         "callsMade": "Зроблено дзвінків",
         "contactRate": "Контактність",
         "smsSent": "Відправлено SMS",
+        "messagesSent": "Відправлено повідомлень",
         "paymentsCollected": "Зібрано платежів",
         "vs": "порівняно з",
         "yesterday": "вчора",
@@ -4046,6 +4126,7 @@
         "contactRate": "Контактність",
         "avgDuration": "Середня тривалість",
         "sms": "SMS",
+        "messages": "Повідомлення",
         "payments": "Платежі",
         "total": "Всього"
       },
@@ -4089,6 +4170,26 @@
         "pending": "В очікуванні",
         "deliveryRate": "Процент доставки",
         "byOperator": "За операторами"
+      },
+      "messagesModal": {
+        "title": "Відправлено повідомлень",
+        "noData": "Дані недоступні",
+        "totalSent": "Всього відправлено",
+        "totalCost": "Загальна вартість",
+        "deliveryStats": "Статистика доставки",
+        "delivered": "Доставлено",
+        "failed": "Не доставлено",
+        "pending": "В очікуванні",
+        "deliveryRate": "Процент доставки",
+        "byChannel": "За каналом",
+        "topDrafts": "Топ чернеток",
+        "byOperator": "За операторами",
+        "messages": "повідомлень",
+        "channels": {
+          "sms": "SMS",
+          "viber": "Viber",
+          "email": "Email"
+        }
       },
       "paymentsModal": {
         "title": "Зібрані платежі",
@@ -4677,6 +4778,12 @@
           "template_name": "Шаблон SMS",
           "segments": "Сегменти SMS",
           "gateway_provider": "Шлюз провайдера",
+          "campaign_id": "ID кампанії",
+          "recipient_id": "ID отримувача",
+          "service": "Провайдер messaging",
+          "destination": "Адресат",
+          "external_message_id": "Зовнішній ID повідомлення",
+          "draft_id": "ID чернетки",
           "call_id": "ID дзвінка",
           "outcome": "Результат дзвінка",
           "disposition": "Диспозиція",
@@ -4718,6 +4825,7 @@
           "interaction.created": "Створено взаємодію",
           "payment.verified": "Платіж підтверджено",
           "sms.sent": "SMS надіслано",
+          "message.sent": "Повідомлення надіслано",
           "call.outcome.updated": "Результат дзвінка оновлено",
           "scoring.completed": "Скоринг завершено",
           "client.imported": "Клієнта імпортовано",
@@ -4912,7 +5020,9 @@
       },
       "summary": {
         "delivered": "доставлено",
-        "resultsLine": "{{delivered}}/{{total}} доставлено"
+        "resultsLine": "{{delivered}}/{{total}} доставлено",
+        "filteredCampaigns": "{{count}} кампаній відповідають фільтрам",
+        "totalCost": "Загальна вартість"
       },
       "cost": {
         "actual": "Фактично",
@@ -5133,20 +5243,32 @@
       },
       "credentials": {
         "turbosms": {
-          "api_key": { "label": "API-ключ" },
-          "sender": { "label": "Відправник" }
+          "api_key": {
+            "label": "API-ключ"
+          },
+          "sender": {
+            "label": "Відправник"
+          }
         },
         "omnicell": {
-          "username": { "label": "Ім'я користувача" },
-          "password": { "label": "Пароль" },
-          "sender": { "label": "SMS-відправник (альфа-ім'я)" }
+          "username": {
+            "label": "Ім'я користувача"
+          },
+          "password": {
+            "label": "Пароль"
+          },
+          "sender": {
+            "label": "SMS-відправник (альфа-ім'я)"
+          }
         },
         "vodafone_obm": {
           "username": {
             "label": "Логін OBM (Налаштування → Логіни)",
             "placeholder": "Логін юридичної особи або телефон/e-mail, якщо кабінет дозволяє"
           },
-          "password": { "label": "Пароль кабінету" },
+          "password": {
+            "label": "Пароль кабінету"
+          },
           "sender": {
             "label": "Відправник (альфа-ім'я)",
             "placeholder": "Затверджений відправник, напр. TechnoFin"
@@ -5179,9 +5301,15 @@
             "label": "Email відправника",
             "placeholder": "Підтверджений відправник, напр. info@techno-finance.com"
           },
-          "from_name": { "label": "Ім'я відправника" },
-          "reply_to_email": { "label": "Email для відповіді" },
-          "reply_to_name": { "label": "Ім'я для відповіді" }
+          "from_name": {
+            "label": "Ім'я відправника"
+          },
+          "reply_to_email": {
+            "label": "Email для відповіді"
+          },
+          "reply_to_name": {
+            "label": "Ім'я для відповіді"
+          }
         }
       },
       "toasts": {

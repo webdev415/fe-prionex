@@ -248,22 +248,20 @@ export function ImportClientsPage() {
       }
     : null
 
-  // Initialize purchase date: get current date/time, store as UTC
-  // The date will be displayed in user's timezone, but stored as UTC
-  const getInitialPurchaseDate = () => {
-    const now = new Date()
-    // Store current time as UTC (backend expects UTC)
-    // Display conversion happens in Step1LoanSource component
-    return now.toISOString()
-  }
-
   const [step1Data, setStep1Data] = useState<Step1Data>({
     sellerId: '',
     projectCode: '',
-    purchaseDate: getInitialPurchaseDate(), // UTC datetime (backend will store as UTC)
     comment: '',
     importType: 'simple',
     schemaCode: '',
+    factoringAgreementMode: 'existing',
+    factoringAgreementId: '',
+    newFactoringAgreement: {
+      agreement_number: '',
+      previous_lender: '',
+      contract_purchase_date: '',
+    },
+    selectedSellerLegalName: null,
   })
 
   const [step2Data, setStep2Data] = useState<Step2Data>({
@@ -298,11 +296,30 @@ export function ImportClientsPage() {
   }
 
   const isStep1Valid = () => {
-    const baseValid =
-      step1Data.sellerId !== '' && step1Data.projectCode !== '' && step1Data.purchaseDate !== ''
+    const baseValid = step1Data.sellerId !== '' && step1Data.projectCode !== ''
     if (!baseValid) return false
     // Vendor flow needs a schema selected before step 2 can proceed.
     if (step1Data.importType === 'vendor' && !step1Data.schemaCode) return false
+    // Both simple and vendor flows require a factoring agreement —
+    // either pick existing or fill in the minimum field (agreement_number)
+    // of the new-create form. The purchase date for debts is derived
+    // from the agreement (existing pick or create-new input) rather than
+    // entered separately.
+    if (step1Data.factoringAgreementMode === 'existing') {
+      if (!step1Data.factoringAgreementId) return false
+    } else {
+      if (!step1Data.newFactoringAgreement.agreement_number.trim()) return false
+      if (!step1Data.newFactoringAgreement.contract_purchase_date) return false
+      // Sellers without legal_name have no BE fallback for previous_lender,
+      // so the operator must fill "Who sold" explicitly — otherwise the
+      // new agreement would land with previous_lender = NULL.
+      if (
+        !step1Data.selectedSellerLegalName &&
+        !step1Data.newFactoringAgreement.previous_lender.trim()
+      ) {
+        return false
+      }
+    }
     return true
   }
 

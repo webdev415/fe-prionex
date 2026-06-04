@@ -2,7 +2,8 @@
  * DateSelect Component
  *
  * A styled date input component using react-datepicker.
- * ``variant="filter"`` enables DD.MM.YYYY masked keyboard input for date filters.
+ * - ``variant="filter"``: DD.MM.YYYY masked date-only filters
+ * - ``allowManualInput``: DD.MM.YYYY HH:MM masked datetime entry (TA chains, etc.)
  */
 
 import {
@@ -19,8 +20,10 @@ import {
 } from 'react'
 import DatePicker from 'react-datepicker'
 import 'react-datepicker/dist/react-datepicker.css'
+import { format as formatFns } from 'date-fns'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
+import { DATETIME_DISPLAY_FORMAT, maskDateTimeInput, parseManualDateTime } from '@/lib/dateUtils'
 import {
   DMY_DOT_MASK_PLACEHOLDER,
   formatDateAsDmyDot,
@@ -29,6 +32,28 @@ import {
 } from '@/lib/dmyDotDate'
 
 export const DATE_FILTER_FORMAT = 'dd.MM.yyyy'
+
+/**
+ * Custom input for ``allowManualInput``. react-datepicker injects value/onChange;
+ * we ignore both and drive the field from masked ``text`` state.
+ */
+const MaskedDateTimeInput = forwardRef<
+  HTMLInputElement,
+  InputHTMLAttributes<HTMLInputElement> & {
+    text: string
+    onTextChange: (raw: string) => void
+  }
+>(function MaskedDateTimeInput({ value: _v, onChange: _oc, text, onTextChange, ...rest }, ref) {
+  return (
+    <input
+      {...rest}
+      ref={ref}
+      value={text}
+      onChange={(e) => onTextChange(e.target.value)}
+      inputMode="numeric"
+    />
+  )
+})
 
 export interface DateSelectProps {
   label?: string
@@ -44,14 +69,24 @@ export interface DateSelectProps {
   min?: Date | string
   max?: Date | string
   format?: string
-  /** Date filter fields: DD.MM.YYYY mask, inline validation, calendar kept. */
+  /** Date filter fields: DD.MM.YYYY mask, calendar kept, filter not applied when invalid. */
   variant?: 'default' | 'filter'
   showTimeSelect?: boolean
   timeFormat?: string
   timeIntervals?: number
+  /** Opt-in clear button when a date is set. */
+  onClear?: () => void
   minTime?: Date
   maxTime?: Date
   filterTime?: (time: Date) => boolean
+  /**
+   * Allow typing DD.MM.YYYY HH:MM (not used together with ``variant="filter"``).
+   */
+  allowManualInput?: boolean
+  /** First-time default time (e.g. ``"09:00"``) when ``showTimeSelect`` is on. */
+  defaultTime?: string
+  /** Fires when manual-input validity changes (manual mode only). */
+  onValidityChange?: (invalid: boolean) => void
 }
 
 const parseDate = (date: Date | string | null | undefined): Date | null => {
@@ -76,7 +111,7 @@ const FilterDateInput = forwardRef<HTMLInputElement, FilterInputProps>(
       ref={ref}
       {...props}
       className={cn(
-        'h-[45px] w-full rounded-md border bg-white pr-4 pl-10 text-sm font-light text-[#05040D] transition-all outline-none placeholder:text-gray-500',
+        'h-[45px] w-full rounded-md border bg-white pl-10 text-sm font-light text-[#05040D] transition-all outline-none placeholder:text-gray-500',
         hasError
           ? 'border-red-500 focus:border-red-500'
           : 'border-gray-300 focus:border-[var(--color-primary-500)]',
@@ -96,12 +131,12 @@ type FilterInputBridge = {
   disabled?: boolean
   helperId?: string
   helperText?: string
+  inputClassName?: string
   ensureTextOnFocus: () => void
 }
 
 const FilterPickerInputContext = createContext<FilterInputBridge | null>(null)
 
-/** Drop react-datepicker-controlled props; we drive value/onChange/placeholder ourselves. */
 function pickerPassthroughProps(
   props: InputHTMLAttributes<HTMLInputElement>
 ): Omit<InputHTMLAttributes<HTMLInputElement>, 'value' | 'onChange' | 'placeholder'> {
@@ -139,6 +174,7 @@ const FilterPickerInput = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLI
         disabled={bridge.disabled}
         placeholder={bridge.placeholder}
         hasError={bridge.hasError}
+        className={bridge.inputClassName}
         inputMode="numeric"
         autoComplete="off"
         aria-describedby={bridge.helperText ? bridge.helperId : undefined}
@@ -153,13 +189,13 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
   (
     {
       label,
-      error: externalError,
+      error,
       required,
       helperText,
       className,
       id,
       value,
-      placeholder: _placeholder,
+      placeholder = 'Select date',
       onChange,
       disabled,
       min,
@@ -169,9 +205,13 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
       showTimeSelect,
       timeFormat = 'HH:mm',
       timeIntervals = 15,
+      onClear,
       minTime,
       maxTime,
       filterTime,
+      allowManualInput = false,
+      defaultTime,
+      onValidityChange,
     },
     ref
   ) => {
@@ -179,21 +219,25 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
     const inputId = id || generatedId
     const helperId = `${inputId}-helper`
     const isFilter = variant === 'filter' && !showTimeSelect
+    const isManualDateTime = allowManualInput && !isFilter
 
     const resolvedFormat = format ?? (isFilter ? DATE_FILTER_FORMAT : 'MM/dd/yyyy')
-    const filterPlaceholder = DMY_DOT_MASK_PLACEHOLDER
-    const resolvedPlaceholder = isFilter ? filterPlaceholder : (_placeholder ?? 'Select date')
+    const resolvedPlaceholder = isFilter
+      ? DMY_DOT_MASK_PLACEHOLDER
+      : isManualDateTime && placeholder === 'Select date'
+        ? 'DD.MM.YYYY HH:MM'
+        : placeholder
 
     const minDate = parseDate(min)
     const maxDate = parseDate(max)
     const selectedDate = parseDate(value)
+    const showClear = !!onClear && selectedDate !== null
 
-    const initialText = () => {
+    // ── Filter variant state ─────────────────────────────────────────────
+    const [filterText, setFilterText] = useState(() => {
       const d = parseDate(value)
       return d ? formatDateAsDmyDot(d) : ''
-    }
-
-    const [inputText, setInputText] = useState(initialText)
+    })
     const [hasInternalError, setHasInternalError] = useState(false)
     const lastCommittedRef = useRef<number | null>(selectedDate?.getTime() ?? null)
 
@@ -203,14 +247,11 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
       const valueTime = d?.getTime() ?? null
       if (valueTime === lastCommittedRef.current) return
       lastCommittedRef.current = valueTime
-      // Sync mask text when value changes externally (e.g. Clear All), not from typing.
-      /* eslint-disable react-hooks/set-state-in-effect -- prop-driven reset of local edit buffer */
-      setInputText(d ? formatDateAsDmyDot(d) : '')
+      setFilterText(d ? formatDateAsDmyDot(d) : '')
       setHasInternalError(false)
-      /* eslint-enable react-hooks/set-state-in-effect */
     }, [value, isFilter])
 
-    const commitDate = useCallback(
+    const commitFilterDate = useCallback(
       (date: Date | null) => {
         lastCommittedRef.current = date?.getTime() ?? null
         onChange?.({ value: date })
@@ -218,82 +259,174 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
       [onChange]
     )
 
-    const ensureTextOnFocus = useCallback(() => {
+    const ensureFilterTextOnFocus = useCallback(() => {
       if (selectedDate) {
         const masked = formatDateAsDmyDot(selectedDate)
-        setInputText(masked)
+        setFilterText(masked)
         lastCommittedRef.current = selectedDate.getTime()
       }
-    }, [selectedDate, setInputText])
+    }, [selectedDate])
 
-    const applyMaskedText = useCallback(
+    const applyFilterMaskedText = useCallback(
       (masked: string) => {
-        setInputText(masked)
+        setFilterText(masked)
         const result = validateDmyDotInput(masked, minDate, maxDate)
         if (result.status === 'empty') {
           setHasInternalError(false)
-          if (lastCommittedRef.current !== null) commitDate(null)
+          if (lastCommittedRef.current !== null) commitFilterDate(null)
           return
         }
         if (result.status === 'valid') {
           setHasInternalError(false)
           if (lastCommittedRef.current !== result.date.getTime()) {
-            commitDate(result.date)
+            commitFilterDate(result.date)
           }
           return
         }
         setHasInternalError(true)
-        if (lastCommittedRef.current !== null) commitDate(null)
+        if (lastCommittedRef.current !== null) commitFilterDate(null)
       },
-      [minDate, maxDate, commitDate, setInputText, setHasInternalError]
+      [minDate, maxDate, commitFilterDate]
     )
 
     const handleFilterInputChange = useCallback(
       (e: ChangeEvent<HTMLInputElement>) => {
-        applyMaskedText(maskDmyDotFromDigits(e.target.value))
+        applyFilterMaskedText(maskDmyDotFromDigits(e.target.value))
       },
-      [applyMaskedText]
+      [applyFilterMaskedText]
     )
 
-    const handleCalendarChange = useCallback(
-      (date: Date | null) => {
-        if (!isFilter) {
-          onChange?.({ value: date })
+    // ── Manual datetime state ────────────────────────────────────────────
+    const [manualText, setManualText] = useState(() => {
+      const d = parseDate(value)
+      return d ? formatFns(d, DATETIME_DISPLAY_FORMAT) : ''
+    })
+    const [manualInvalid, setManualInvalid] = useState(false)
+    const lastSyncedManualValue = useRef(manualText)
+
+    useEffect(() => {
+      if (!isManualDateTime) return
+      const d = parseDate(value)
+      const formatted = d ? formatFns(d, DATETIME_DISPLAY_FORMAT) : ''
+      if (formatted === lastSyncedManualValue.current) return
+      lastSyncedManualValue.current = formatted
+      setManualText(formatted)
+      setManualInvalid(false)
+      onValidityChange?.(false)
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [value, isManualDateTime])
+
+    useEffect(() => {
+      if (!isManualDateTime) return
+      return () => {
+        onValidityChange?.(false)
+      }
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isManualDateTime])
+
+    const applyDefaultTime = useCallback(
+      (date: Date): Date => {
+        if (!defaultTime || parseDate(value)) return date
+        const [h, m] = defaultTime.split(':').map(Number)
+        const next = new Date(date)
+        next.setHours(h || 0, m || 0, 0, 0)
+        return next
+      },
+      [defaultTime, value]
+    )
+
+    const handleManualType = useCallback(
+      (raw: string) => {
+        const masked = maskDateTimeInput(raw)
+        setManualText(masked)
+        if (masked === '') {
+          setManualInvalid(false)
+          onValidityChange?.(false)
+          onChange?.({ value: null })
           return
         }
-        if (!date) {
-          setInputText('')
-          setHasInternalError(false)
-          commitDate(null)
-          return
-        }
-        const masked = formatDateAsDmyDot(date)
-        const result = validateDmyDotInput(masked, minDate, maxDate)
-        setInputText(masked)
-        if (result.status === 'valid') {
-          setHasInternalError(false)
-          commitDate(result.date)
+        const parsed = parseManualDateTime(masked)
+        if (parsed) {
+          setManualInvalid(false)
+          onValidityChange?.(false)
+          onChange?.({ value: parsed })
         } else {
-          setHasInternalError(true)
-          if (lastCommittedRef.current !== null) commitDate(null)
+          setManualInvalid(true)
+          onValidityChange?.(true)
         }
       },
-      [isFilter, onChange, minDate, maxDate, commitDate, setInputText, setHasInternalError]
+      [onChange, onValidityChange]
     )
 
-    const hasError = !!externalError || hasInternalError
+    const handlePickerChange = useCallback(
+      (date: Date | null) => {
+        if (isFilter) {
+          if (!date) {
+            setFilterText('')
+            setHasInternalError(false)
+            commitFilterDate(null)
+            return
+          }
+          const masked = formatDateAsDmyDot(date)
+          const result = validateDmyDotInput(masked, minDate, maxDate)
+          setFilterText(masked)
+          if (result.status === 'valid') {
+            setHasInternalError(false)
+            commitFilterDate(result.date)
+          } else {
+            setHasInternalError(true)
+            if (lastCommittedRef.current !== null) commitFilterDate(null)
+          }
+          return
+        }
+
+        const next = date ? applyDefaultTime(date) : null
+        if (isManualDateTime) {
+          const formatted = next ? formatFns(next, DATETIME_DISPLAY_FORMAT) : ''
+          setManualText(formatted)
+          lastSyncedManualValue.current = formatted
+          setManualInvalid(false)
+          onValidityChange?.(false)
+        }
+        onChange?.({ value: next })
+      },
+      [
+        isFilter,
+        isManualDateTime,
+        minDate,
+        maxDate,
+        commitFilterDate,
+        applyDefaultTime,
+        onChange,
+        onValidityChange,
+      ]
+    )
+
+    const hasError =
+      !!error || (isFilter && hasInternalError) || (isManualDateTime && manualInvalid)
+
+    const inputPadding = showClear ? 'pr-10' : 'pr-4'
+    const inputClassName = cn(
+      'h-[45px] w-full rounded-md border bg-white pl-10 text-sm font-light text-[#05040D] transition-all outline-none placeholder:text-gray-500',
+      inputPadding,
+      hasError
+        ? 'border-red-500 focus:border-red-500'
+        : 'border-gray-300 focus:border-[var(--color-primary-500)]',
+      !isFilter ? className : undefined
+    )
 
     const filterBridge: FilterInputBridge | null = isFilter
       ? {
-          inputText,
+          inputText: filterText,
           onMaskedChange: handleFilterInputChange,
           hasError,
           inputId,
-          placeholder: filterPlaceholder,
+          placeholder: resolvedPlaceholder,
           disabled,
           helperId,
           helperText,
-          ensureTextOnFocus,
+          inputClassName: cn(inputPadding, className),
+          ensureTextOnFocus: ensureFilterTextOnFocus,
         }
       : null
 
@@ -301,25 +434,24 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
       <DatePicker
         ref={ref}
         id={inputId}
-        className={
-          isFilter
-            ? undefined
-            : cn(
-                'h-[45px] w-full rounded-md border bg-white pr-4 pl-10 text-sm font-light text-[#05040D] transition-all outline-none placeholder:text-gray-500',
-                hasError
-                  ? 'border-red-500 focus:border-red-500'
-                  : 'border-gray-300 focus:border-[var(--color-primary-500)]'
-              )
-        }
+        className={isFilter ? undefined : inputClassName}
         selected={selectedDate}
-        onChange={handleCalendarChange}
-        onChangeRaw={isFilter ? undefined : (e) => e?.preventDefault()}
+        onChange={handlePickerChange}
+        {...(isFilter || isManualDateTime
+          ? {
+              customInput: isFilter ? (
+                <FilterPickerInput />
+              ) : (
+                <MaskedDateTimeInput text={manualText} onTextChange={handleManualType} />
+              ),
+            }
+          : { onChangeRaw: (e?: React.SyntheticEvent) => e?.preventDefault() })}
         dateFormat={resolvedFormat}
         placeholderText={resolvedPlaceholder}
         disabled={disabled}
         minDate={minDate || undefined}
         maxDate={maxDate || undefined}
-        aria-describedby={helperText ? helperId : undefined}
+        aria-describedby={error ? undefined : helperText ? helperId : undefined}
         showPopperArrow={false}
         popperPlacement="bottom-start"
         popperProps={{ strategy: 'fixed' }}
@@ -333,12 +465,11 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
         showYearDropdown
         scrollableYearDropdown
         yearDropdownItemNumber={10}
-        customInput={isFilter ? <FilterPickerInput /> : undefined}
       />
     )
 
     return (
-      <div className={cn('w-full', className)}>
+      <div className={cn('w-full', isFilter ? className : undefined)}>
         {label && (
           <label htmlFor={inputId} className="text-dark-500 mb-1.5 block text-sm font-light">
             {label}
@@ -466,8 +597,23 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
               datePicker
             )}
           </div>
+          {showClear && (
+            <button
+              type="button"
+              onClick={onClear}
+              aria-label="Clear"
+              className="absolute inset-y-0 right-0 z-10 flex items-center pr-3 text-gray-400 hover:text-gray-600"
+            >
+              <Icons.Cancel01 size={14} />
+            </button>
+          )}
         </div>
-        {helperText && !hasError && (
+        {error && (
+          <p className="mt-1.5 text-xs text-red-500" role="alert">
+            {error}
+          </p>
+        )}
+        {helperText && !error && (
           <p id={helperId} className="mt-1.5 text-xs text-gray-500">
             {helperText}
           </p>

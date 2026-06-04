@@ -111,6 +111,11 @@ const SellerManagementPage = lazy(() =>
     default: m.SellerManagementPage,
   }))
 )
+const SellerDetailPage = lazy(() =>
+  import('@/pages/SellerManagement').then((m) => ({
+    default: m.SellerDetailPage,
+  }))
+)
 const ScoringConfigurationPage = lazy(() =>
   import('@/pages/ScoringConfiguration').then((m) => ({
     default: m.ScoringConfigurationPage,
@@ -317,6 +322,14 @@ export const router = createBrowserRouter([
         element: (
           <PermissionRoute requiredPermission={PERMISSIONS.SELLERS.VIEW}>
             {withSuspense(<SellerManagementPage />)}
+          </PermissionRoute>
+        ),
+      },
+      {
+        path: 'sellers/:id',
+        element: (
+          <PermissionRoute requiredPermission={PERMISSIONS.SELLERS.VIEW}>
+            {withSuspense(<SellerDetailPage />)}
           </PermissionRoute>
         ),
       },

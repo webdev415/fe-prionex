@@ -51,6 +51,15 @@ const getStored = (): MinimizedChainExecutorInfo | null => {
     const stored = localStorage.getItem(STORAGE_KEY)
     if (!stored) return null
     const parsed = JSON.parse(stored) as MinimizedChainExecutorInfo
+    if (
+      typeof parsed.clientId !== 'number' ||
+      typeof parsed.clientName !== 'string' ||
+      typeof parsed.timestamp !== 'number' ||
+      !Array.isArray(parsed.debts)
+    ) {
+      localStorage.removeItem(STORAGE_KEY)
+      return null
+    }
     const maxAge = 24 * 60 * 60 * 1000
     if (Date.now() - parsed.timestamp > maxAge) {
       localStorage.removeItem(STORAGE_KEY)

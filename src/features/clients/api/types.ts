@@ -13,10 +13,22 @@ export interface ClientAssigneeIdsResponse {
   searcher_ids: number[]
 }
 
+/**
+ * Minimal factoring-agreement projection embedded in a debt response.
+ */
+export interface DebtFactoringAgreement {
+  id: number
+  agreement_number: string
+  previous_lender?: string | null
+  contract_purchase_date?: string | null
+}
+
 export interface DebtDetail {
   id: number
   seller_id?: number
   seller_company: string
+  /** Full legal name of the seller (primary creditor). */
+  seller_legal_name?: string | null
   contract_number: string
   original_debt_amount: string
   remaining_debt_amount: string
@@ -41,6 +53,7 @@ export interface DebtDetail {
   credit_issued_date?: string | null
   credit_term_days?: number | null
   credit_closed_date?: string | null
+  credit_reopened_date?: string | null
   portfolio_name?: string | null
   // Enriched fields from loans refactor
   principal_paid?: string | null
@@ -52,6 +65,12 @@ export interface DebtDetail {
   // Legacy TABLE460.f53 — total amount eligible for return after sale.
   // Surfaced on the loans table only when it differs from remaining_debt_amount.
   legacy_f53?: string | null
+
+  // Linked factoring agreement (if any). Surfaces the legal_name +
+  // previous_lender + agreement purchase date to the client-detail
+  // Info expansion without an extra round-trip.
+  factoring_agreement_id?: number | null
+  factoring_agreement?: DebtFactoringAgreement | null
 }
 
 export interface RestructuringAgreementSummary {
@@ -147,6 +166,11 @@ export interface Client {
   // logged yet. The table renders "—" in that case.
   last_interaction_result_id?: number | null
   last_interaction_result_name?: string | null
+
+  // Timestamp of the most recent (non-archived) TA interaction, performed by
+  // an employee of any role. ``null`` when no TA has been logged yet — the
+  // table renders "—". ISO datetime string.
+  last_ta_date?: string | null
 
   // Assignment (Sprint 2 - Phase A)
   responsible_employee_id?: number | null
@@ -251,7 +275,11 @@ export interface GetClientsParams {
   sale_date_to?: string // YYYY-MM-DD format
 
   // Filter: Assignment
+  /** @deprecated use responsible_employee_ids (multi-select OR). Folded
+   * into the list at the BE for one deprecation release. */
   responsible_employee_id?: number
+  /** Comma-separated employee user IDs, OR semantics. Example: '101,102,103'. */
+  responsible_employee_ids?: string
   responsible_searcher_id?: number
   unassigned_only?: boolean
 
@@ -280,7 +308,10 @@ export interface GetClientsParams {
   ta_date_to?: string // YYYY-MM-DD format
 
   // Filter: Interaction Created By — operator on the client's latest TA
+  /** @deprecated use interaction_user_ids (multi-select OR). */
   interaction_user_id?: number
+  /** Comma-separated operator user IDs, OR semantics on the latest-TA recorded_by. */
+  interaction_user_ids?: string
 
   // Filter: Interaction Logged Date — created_at of the latest TA,
   // independent of TA date-value presence
@@ -291,6 +322,23 @@ export interface GetClientsParams {
   // interaction_result IDs. Narrows clients to those whose most recent
   // interaction has one of these result ids.
   last_interaction_result_ids?: string
+
+  // Filter: TA Chain + Steps — narrows to clients with at least one
+  // ta_interaction in this chain, optionally restricted to interactions
+  // that carry data for one of the picked steps. ``step_ids`` is keyed
+  // by ``ta_chain_steps.id`` (not target_action_id) so a chain with two
+  // steps that share the same target_action stays independently
+  // filterable. Ignored without ``chain_id``.
+  chain_id?: number
+  step_ids?: string // Comma-separated ta_chain_steps.id values
+
+  // Filter: Per-step value bounds. Format: ``<step_id>:<value>`` items
+  // comma-separated (step_id = ta_chain_steps.id). The BE coerces by the
+  // step's field_type (numeric/date for min/max, exact/ILIKE for eq) and
+  // drops entries whose step_id isn't in ``step_ids``.
+  step_value_eq?: string
+  step_value_min?: string
+  step_value_max?: string
 
   // Filter: Assignment Date (date of latest assignment record for current employee)
   assignment_date_from?: string // YYYY-MM-DD format
