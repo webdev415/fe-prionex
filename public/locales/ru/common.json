@@ -1759,7 +1759,8 @@
         "employee": "Сотрудник",
         "searcher": "Розыскник",
         "assignmentDate": "Дата назначения",
-        "actions": "Действия"
+        "actions": "Действия",
+        "lastOutgoingTADate": "Дата последнего исходящего ЦД"
       },
       "priorities": {
         "critical": "Критический",

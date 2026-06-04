@@ -18,7 +18,7 @@ import { TooltipProvider } from '@/components/ui/Tooltip'
 import { ClientFiltersBar } from './components/ClientFiltersBar'
 import { AssignClientModal } from './components/AssignClientModal'
 import { BulkAssignClientModal } from './components/BulkAssignClientModal'
-import { formatDate } from '@/lib/formatters'
+import { formatDate, formatDateTime } from '@/lib/formatters'
 import { TagSelectorModal } from './components/TagSelectorModal'
 import { BulkTagModal } from './components/BulkTagModal'
 import { BulkSendMessageModal } from './components/BulkSendMessageModal'
@@ -75,6 +75,9 @@ interface DisplayClient {
   searcherName: string
   assignmentDate: string
   lastInteractionResult: string
+  // Raw ISO timestamp of the latest TA (or '' when none). Formatted with the
+  // user's timezone in the column render, so it's stored unformatted here.
+  lastTaDate: string
 }
 
 // Default thresholds (fallback if API not available)
@@ -130,6 +133,7 @@ const mapAPIClientToDisplay = (
       : '-',
     assignmentDate: client.assignment_date ? formatDate(client.assignment_date) : '-',
     lastInteractionResult: client.last_interaction_result_name || '—',
+    lastTaDate: client.last_ta_date || '',
   }
 }
 
@@ -609,6 +613,7 @@ export function ClientManagementPage() {
       debt: 'total_debt',
       assignmentDate: 'assignment_date',
       lastInteractionResult: 'last_interaction_result',
+      lastOutgoingTADate: 'last_ta_date',
     }
 
     const params: Record<string, unknown> = {
@@ -1489,7 +1494,23 @@ export function ClientManagementPage() {
         )
       },
     },
+    {
+      key: 'lastOutgoingTADate',
+      header: t('pages.clients.tableHeaders.lastOutgoingTADate', 'Last outgoing TA date'),
+      align: 'left',
+      sortable: true,
+      sortKey: 'lastOutgoingTADate',
+      render: (client) =>
+        client.lastTaDate ? formatDateTime(client.lastTaDate, user?.timezone) : '—',
+    },
   ]
+
+  // Columns hidden from the dashboard table per product spec. They remain
+  // defined above (data + render intact) and are only filtered out at render
+  // time, so re-enabling one is a one-line change here. The bulk-selection
+  // checkbox is rendered by DataTable itself and is intentionally kept.
+  const HIDDEN_COLUMN_KEYS = new Set(['creditor', 'actions'])
+  const visibleColumns = columns.filter((c) => !HIDDEN_COLUMN_KEYS.has(c.key))
 
   // Show initial loading state (only when no data exists yet)
   if (isLoading && apiClients.length === 0) {
@@ -1580,7 +1601,7 @@ export function ClientManagementPage() {
         ) : (
           <div className="mx-0 w-full overflow-x-auto px-0">
             <DataTable
-              columns={columns}
+              columns={visibleColumns}
               data={filteredClients}
               sortConfig={sortConfig}
               onSort={handleSort}
