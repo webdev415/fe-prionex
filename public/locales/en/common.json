@@ -1381,7 +1381,9 @@
         "delete": "Delete"
       },
       "modals": {
-        "create": { "title": "Create Group" },
+        "create": {
+          "title": "Create Group"
+        },
         "edit": {
           "title": "Edit Group",
           "failedToLoad": "Failed to load group data. Please try again."
@@ -1868,7 +1870,8 @@
         "employee": "Employee",
         "searcher": "Searcher",
         "assignmentDate": "Assignment Date",
-        "actions": "Actions"
+        "actions": "Actions",
+        "lastOutgoingTADate": "Last outgoing TA date"
       },
       "priorities": {
         "critical": "Critical",
@@ -5159,20 +5162,32 @@
       },
       "credentials": {
         "turbosms": {
-          "api_key": { "label": "API key" },
-          "sender": { "label": "Sender" }
+          "api_key": {
+            "label": "API key"
+          },
+          "sender": {
+            "label": "Sender"
+          }
         },
         "omnicell": {
-          "username": { "label": "Username" },
-          "password": { "label": "Password" },
-          "sender": { "label": "SMS sender (Alpha name)" }
+          "username": {
+            "label": "Username"
+          },
+          "password": {
+            "label": "Password"
+          },
+          "sender": {
+            "label": "SMS sender (Alpha name)"
+          }
         },
         "vodafone_obm": {
           "username": {
             "label": "OBM login (Settings → Logins)",
             "placeholder": "Legal-entity login string, or phone/email if cabinet allows"
           },
-          "password": { "label": "Cabinet password" },
+          "password": {
+            "label": "Cabinet password"
+          },
           "sender": {
             "label": "Sender (Alpha name)",
             "placeholder": "Approved sender, e.g. TechnoFin"
@@ -5205,9 +5220,15 @@
             "label": "From email",
             "placeholder": "Verified sender, e.g. info@techno-finance.com"
           },
-          "from_name": { "label": "From name" },
-          "reply_to_email": { "label": "Reply-to email" },
-          "reply_to_name": { "label": "Reply-to name" }
+          "from_name": {
+            "label": "From name"
+          },
+          "reply_to_email": {
+            "label": "Reply-to email"
+          },
+          "reply_to_name": {
+            "label": "Reply-to name"
+          }
         }
       },
       "toasts": {

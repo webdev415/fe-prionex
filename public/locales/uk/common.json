@@ -1381,9 +1381,14 @@
         "assignedOperators": "Призначені оператори",
         "actions": "Дії"
       },
-      "actions": { "edit": "Редагувати", "delete": "Видалити" },
+      "actions": {
+        "edit": "Редагувати",
+        "delete": "Видалити"
+      },
       "modals": {
-        "create": { "title": "Створити групу" },
+        "create": {
+          "title": "Створити групу"
+        },
         "edit": {
           "title": "Редагувати групу",
           "failedToLoad": "Не вдалося завантажити дані групи."
@@ -1870,7 +1875,8 @@
         "employee": "Співробітник",
         "searcher": "Пошуковець",
         "assignmentDate": "Дата призначення",
-        "actions": "Дії"
+        "actions": "Дії",
+        "lastOutgoingTADate": "Дата останньої вихідної ЦД"
       },
       "priorities": {
         "critical": "Критичний",
@@ -5174,20 +5180,32 @@
       },
       "credentials": {
         "turbosms": {
-          "api_key": { "label": "API-ключ" },
-          "sender": { "label": "Відправник" }
+          "api_key": {
+            "label": "API-ключ"
+          },
+          "sender": {
+            "label": "Відправник"
+          }
         },
         "omnicell": {
-          "username": { "label": "Ім'я користувача" },
-          "password": { "label": "Пароль" },
-          "sender": { "label": "SMS-відправник (альфа-ім'я)" }
+          "username": {
+            "label": "Ім'я користувача"
+          },
+          "password": {
+            "label": "Пароль"
+          },
+          "sender": {
+            "label": "SMS-відправник (альфа-ім'я)"
+          }
         },
         "vodafone_obm": {
           "username": {
             "label": "Логін OBM (Налаштування → Логіни)",
             "placeholder": "Логін юридичної особи або телефон/e-mail, якщо кабінет дозволяє"
           },
-          "password": { "label": "Пароль кабінету" },
+          "password": {
+            "label": "Пароль кабінету"
+          },
           "sender": {
             "label": "Відправник (альфа-ім'я)",
             "placeholder": "Затверджений відправник, напр. TechnoFin"
@@ -5220,9 +5238,15 @@
             "label": "Email відправника",
             "placeholder": "Підтверджений відправник, напр. info@techno-finance.com"
           },
-          "from_name": { "label": "Ім'я відправника" },
-          "reply_to_email": { "label": "Email для відповіді" },
-          "reply_to_name": { "label": "Ім'я для відповіді" }
+          "from_name": {
+            "label": "Ім'я відправника"
+          },
+          "reply_to_email": {
+            "label": "Email для відповіді"
+          },
+          "reply_to_name": {
+            "label": "Ім'я для відповіді"
+          }
         }
       },
       "toasts": {
