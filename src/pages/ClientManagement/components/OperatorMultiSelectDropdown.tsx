@@ -33,6 +33,9 @@ interface OperatorMultiSelectDropdownProps {
   trigger: React.ReactNode
   searchPlaceholder?: string
   emptyText?: string
+  /** Label for the "select all / clear all" toggle row at the top of the
+   * list. Translated by the caller; defaults to a generic "Select all". */
+  selectAllLabel?: string
   testId?: string
 }
 
@@ -44,6 +47,7 @@ export function OperatorMultiSelectDropdown({
   trigger,
   searchPlaceholder,
   emptyText,
+  selectAllLabel,
   testId,
 }: OperatorMultiSelectDropdownProps) {
   const { t } = useTranslation('common')
@@ -60,6 +64,9 @@ export function OperatorMultiSelectDropdown({
     return [...selected, ...rest]
   }, [options, searchQuery, selectedIds])
 
+  const allIds = useMemo(() => options.map((o) => o.id), [options])
+  const isAllSelected = allIds.length > 0 && selectedIds.length === allIds.length
+
   const handleOpenChange = (open: boolean) => {
     setIsOpen(open)
     onOpenChange?.(open)
@@ -75,6 +82,13 @@ export function OperatorMultiSelectDropdown({
       ? selectedIds.filter((x) => x !== id)
       : [...selectedIds, id]
     onSelectionChange(next)
+  }
+
+  // Toggles every option on / off in one click. Always operates over the
+  // FULL options list (not the search-filtered slice) — same as the
+  // reference EmployeeFilterDropdown on Action Analysis.
+  const handleToggleAll = () => {
+    onSelectionChange(isAllSelected ? [] : [...allIds])
   }
 
   return (
@@ -100,30 +114,46 @@ export function OperatorMultiSelectDropdown({
         </div>
 
         <div className="max-h-[240px] overflow-y-auto p-2">
-          {filteredOptions.length === 0 ? (
+          {options.length === 0 ? (
             <div className="py-4 text-center text-sm text-gray-500">
               {emptyText ?? t('pages.clients.filters.noUsersAvailable', 'No users available')}
             </div>
           ) : (
             <div className="space-y-1">
-              {filteredOptions.map((opt) => (
-                <label
-                  key={opt.id}
-                  className="text-dark-500 flex cursor-pointer items-center gap-2 rounded px-2 py-2 hover:bg-gray-50"
-                >
-                  <Checkbox
-                    checked={selectedIds.includes(opt.id)}
-                    onCheckedChange={() => handleToggle(opt.id)}
-                  />
-                  {opt.isInactive ? (
-                    <span className="text-sm text-gray-400">
-                      {opt.name} {t('pages.clients.filters.inactiveSuffix', '(blocked)')}
-                    </span>
-                  ) : (
-                    <span className="text-sm">{opt.name}</span>
-                  )}
-                </label>
-              ))}
+              {/* Select-all toggle — always visible above the per-item list.
+                  Operates on the full options list, not the search slice,
+                  matching the reference EmployeeFilterDropdown on Action
+                  Analysis. */}
+              <label className="text-dark-500 flex cursor-pointer items-center gap-2 rounded px-2 py-2 hover:bg-gray-50">
+                <Checkbox checked={isAllSelected} onCheckedChange={handleToggleAll} />
+                <span className="text-sm font-medium">
+                  {selectAllLabel ?? t('pages.clients.filters.selectAll', 'Select all')}
+                </span>
+              </label>
+              {filteredOptions.length === 0 ? (
+                <div className="py-4 text-center text-sm text-gray-500">
+                  {t('pages.clients.filters.noMatchingUsers', 'No matches')}
+                </div>
+              ) : (
+                filteredOptions.map((opt) => (
+                  <label
+                    key={opt.id}
+                    className="text-dark-500 flex cursor-pointer items-center gap-2 rounded px-2 py-2 hover:bg-gray-50"
+                  >
+                    <Checkbox
+                      checked={selectedIds.includes(opt.id)}
+                      onCheckedChange={() => handleToggle(opt.id)}
+                    />
+                    {opt.isInactive ? (
+                      <span className="text-sm text-gray-400">
+                        {opt.name} {t('pages.clients.filters.inactiveSuffix', '(blocked)')}
+                      </span>
+                    ) : (
+                      <span className="text-sm">{opt.name}</span>
+                    )}
+                  </label>
+                ))
+              )}
             </div>
           )}
         </div>
