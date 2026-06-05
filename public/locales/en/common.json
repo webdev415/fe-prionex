@@ -166,13 +166,15 @@
       "tasks": "Tasks",
       "starred": "Starred",
       "payments": "Pending Payments",
-      "calls": "Inbound Calls"
+      "calls": "Inbound Calls",
+      "rrPayments": "RR Payments"
     },
     "empty": {
       "tasks": "No overdue tasks",
       "starred": "No starred tasks",
       "payments": "No pending payments",
-      "calls": "No inbound calls"
+      "calls": "No inbound calls",
+      "rrPayments": "No RR payments due"
     },
     "taskActions": {
       "completeAria": "Complete task",

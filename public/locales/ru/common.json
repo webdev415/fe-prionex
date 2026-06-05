@@ -168,13 +168,15 @@
       "tasks": "Tasks",
       "starred": "Starred",
       "payments": "Pending Payments",
-      "calls": "Inbound Calls"
+      "calls": "Inbound Calls",
+      "rrPayments": "RR платежи"
     },
     "empty": {
       "tasks": "No overdue tasks",
       "starred": "No starred tasks",
       "payments": "No pending payments",
-      "calls": "No inbound calls"
+      "calls": "No inbound calls",
+      "rrPayments": "Нет платежей RR"
     },
     "taskActions": {
       "completeAria": "Complete task",

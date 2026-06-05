@@ -90,11 +90,11 @@ function formatRelativeTime(isoDate: string, t: TFunction): string {
   }
 }
 
-// Tab structure per KAN-588. Order matters: this is the rendered order
-// in the horizontal tab strip. Extending the system to support new
-// notification types in the future = add a new tab key here + a new
-// render branch in the tab-content panel.
-const TABS = ['tasks', 'starred', 'payments', 'calls'] as const
+// Tab structure for the bell dropdown. Order matters: this is the
+// rendered order in the horizontal tab strip. Extending the system to
+// support new notification types in the future = add a new tab key
+// here + a new render branch in the tab-content panel.
+const TABS = ['tasks', 'starred', 'payments', 'calls', 'rrPayments'] as const
 type Tab = (typeof TABS)[number]
 
 function EmptyState({ label }: { t: TFunction; label: string }) {
@@ -178,6 +178,7 @@ export function NotificationBell() {
     (n) =>
       n.type === NotificationType.INCOMING_CALL || n.type === NotificationType.CALLBACK_REQUESTED
   )
+  const rrPaymentsTabItems = notifications.filter((n) => n.type === NotificationType.RR_PAYMENT_DUE)
 
   const markAsReadMutation = useMarkAsRead()
   const starMutation = useStarNotification()
@@ -318,7 +319,9 @@ export function NotificationBell() {
                     ? starredTabItems.length
                     : tab === 'payments'
                       ? paymentsTabItems.length
-                      : callsTabItems.length
+                      : tab === 'calls'
+                        ? callsTabItems.length
+                        : rrPaymentsTabItems.length
               const isActive = activeTab === tab
               return (
                 <button
@@ -409,6 +412,23 @@ export function NotificationBell() {
               ) : (
                 callsTabItems.map((n) => (
                   <CallNotificationItem
+                    key={n.id}
+                    notification={n}
+                    onNavigate={handleNavigate}
+                    onDismiss={handleDismiss}
+                  />
+                ))
+              ))}
+
+            {activeTab === 'rrPayments' &&
+              (rrPaymentsTabItems.length === 0 ? (
+                <EmptyState
+                  t={t}
+                  label={t('notificationBell.empty.rrPayments', 'No RR payments due')}
+                />
+              ) : (
+                rrPaymentsTabItems.map((n) => (
+                  <RRPaymentNotificationItem
                     key={n.id}
                     notification={n}
                     onNavigate={handleNavigate}
@@ -576,7 +596,7 @@ function TaskNotificationItem({
       {/* Action cluster — visible on hover. Complete + Star/Unstar +
           Cancel. Star toggles to Unstar in the Starred tab (driven by
           n.starred). The X icon (Cancel01) is repurposed from
-          "dismiss notification" to "cancel task" per KAN-588. */}
+          "dismiss notification" to "cancel task". */}
       <div className="absolute top-2 right-2 flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
         {taskId !== undefined && (
           <button
@@ -656,6 +676,68 @@ function CallNotificationItem({
         <span className="text-[11px] text-gray-400">
           {n.created_at ? formatRelativeTime(n.created_at, t) : ''}
         </span>
+      </button>
+      <button
+        type="button"
+        aria-label={t('notificationBell.dismissAria')}
+        onClick={(e) => onDismiss(e, n.id)}
+        className="absolute top-2 right-2 flex h-5 w-5 items-center justify-center rounded text-gray-300 opacity-0 transition-opacity group-hover:opacity-100 hover:text-gray-600"
+      >
+        <Icons.Cancel01 size={12} strokeWidth={2} />
+      </button>
+    </div>
+  )
+}
+
+// ─── RR Payment notification item ────────────────────────────────
+// Dismiss-only action (operators clear the card; the next poll cycle
+// in notification-service handles natural cleanup).
+
+function RRPaymentNotificationItem({
+  notification: n,
+  onNavigate,
+  onDismiss,
+}: {
+  notification: NotificationItem
+  onNavigate: NavigateFn
+  onDismiss: DismissFn
+}) {
+  const { t } = useTranslation('common')
+  const meta = n.metadata
+  return (
+    <div className="group relative flex border-b border-gray-100 transition-colors last:border-b-0 hover:bg-gray-50">
+      <button
+        type="button"
+        disabled={!meta.client_id}
+        onClick={() => onNavigate(n.id, meta.client_id, n.read)}
+        className="flex min-w-0 flex-1 flex-col gap-1.5 px-4 py-3 text-left disabled:cursor-default"
+      >
+        <div className="flex flex-wrap items-center gap-1.5 pr-5">
+          {!n.read && <span className="h-2 w-2 shrink-0 rounded-full bg-blue-500" />}
+          <p className="line-clamp-1 text-xs font-semibold text-black">{n.title}</p>
+          {meta.amount && (
+            <span className="rounded bg-blue-100 px-1.5 py-0.5 text-[10px] font-medium text-blue-600">
+              ₴ {meta.amount}
+            </span>
+          )}
+        </div>
+        {n.body && <p className="w-full min-w-0 truncate text-xs text-black">{n.body}</p>}
+        <div className="flex items-center gap-1 text-black">
+          <Icons.Clock01 size={11} strokeWidth={1.5} />
+          <span className="text-[11px]">
+            {meta.due_date ?? '—'}
+            {typeof meta.days_left === 'number' && (
+              <span className="ml-1 text-gray-500">
+                (
+                {t('notificationBell.daysLeft', {
+                  count: meta.days_left,
+                  defaultValue: 'in {{count}} days',
+                })}
+                )
+              </span>
+            )}
+          </span>
+        </div>
       </button>
       <button
         type="button"
