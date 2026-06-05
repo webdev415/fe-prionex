@@ -28,8 +28,6 @@
   },
   "permissions": {
     "required": "You don't have permission to do that ({{permission}})",
-    "editTAInteraction": "You don't have permission to edit TA interactions",
-    "deleteTAInteraction": "You don't have permission to delete TA interactions",
     "reassignClient": "You don't have permission to reassign clients",
     "bulkAssign": "You don't have permission to bulk-assign clients"
   }

@@ -31,7 +31,7 @@ import { TableSkeleton } from '@/components/ui/TableSkeleton'
 import { formatDate, formatDateTime, formatMoneyKopeckTight } from '@/lib/formatters'
 import { Icons } from '@/lib/icons'
 import { PERMISSIONS } from '@/constants/permissions'
-import { useGuardedAction } from '@/hooks'
+import { useHasPermission } from '@/hooks'
 import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { Pagination } from '@/components/ui/Pagination'
@@ -117,15 +117,9 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
   }
   const { t, i18n } = useTranslation('common')
   const togglePinMut = useTogglePinTAInteraction()
-  // Pattern Y: buttons always render; warn-on-click if the user lacks the perm.
-  const guardEdit = useGuardedAction(
-    PERMISSIONS.CLIENTS.EDIT_INTERACTIONS,
-    'errors:permissions.editTAInteraction'
-  )
-  const guardDelete = useGuardedAction(
-    PERMISSIONS.CLIENTS.DELETE_INTERACTIONS,
-    'errors:permissions.deleteTAInteraction'
-  )
+  // Pattern X: hide buttons entirely when the user lacks the permission.
+  const canEditInteractions = useHasPermission(PERMISSIONS.CLIENTS.EDIT_INTERACTIONS)
+  const canDeleteInteractions = useHasPermission(PERMISSIONS.CLIENTS.DELETE_INTERACTIONS)
   const handleTogglePin = async (id: number) => {
     try {
       await togglePinMut.mutateAsync(id)
@@ -510,24 +504,28 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
           >
             <Icons.Pin size={14} strokeWidth={1.5} />
           </button>
-          <button
-            type="button"
-            onClick={() => guardEdit(() => setEditingId(row.id))}
-            className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-800"
-            aria-label={t('actions.edit')}
-            title={t('actions.edit')}
-          >
-            <Icons.PencilEdit size={14} strokeWidth={1.5} />
-          </button>
-          <button
-            type="button"
-            onClick={() => guardDelete(() => setDeletingId(row.id))}
-            className="rounded p-1 text-gray-400 hover:bg-red-50 hover:text-red-600"
-            aria-label={t('actions.delete')}
-            title={t('actions.delete')}
-          >
-            <Icons.Delete size={14} strokeWidth={1.5} />
-          </button>
+          {canEditInteractions && (
+            <button
+              type="button"
+              onClick={() => setEditingId(row.id)}
+              className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-800"
+              aria-label={t('actions.edit')}
+              title={t('actions.edit')}
+            >
+              <Icons.PencilEdit size={14} strokeWidth={1.5} />
+            </button>
+          )}
+          {canDeleteInteractions && (
+            <button
+              type="button"
+              onClick={() => setDeletingId(row.id)}
+              className="rounded p-1 text-gray-400 hover:bg-red-50 hover:text-red-600"
+              aria-label={t('actions.delete')}
+              title={t('actions.delete')}
+            >
+              <Icons.Delete size={14} strokeWidth={1.5} />
+            </button>
+          )}
         </div>
       ),
     },
