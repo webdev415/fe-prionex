@@ -550,6 +550,15 @@ export function ChainExecutor({
 
   // Reset on chain change
   useEffect(() => {
+    // Don't wipe state on the restore mount. When reopening a minimized
+    // session the restore effect (above) has just repopulated completedSteps,
+    // the collected refs, and the current-step fields from the saved snapshot;
+    // this reset runs right after it on the same mount and would clobber them
+    // (e.g. the completed-step cards vanish after restore). The hydration
+    // effect is also gated by ``restoredRef``, so it won't rebuild them either
+    // — leaving the form blank. Skipping here lets the restored state stand.
+    // Mirrors the instant-mode reset effect below, which already guards this.
+    if (restoredRef.current) return
     collectedStepDataRef.current = {}
     collectedDropdownValueIdsRef.current = {}
     collectedPromiseDateRef.current = ''
