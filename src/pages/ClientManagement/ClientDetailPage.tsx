@@ -2351,16 +2351,16 @@ export function ClientDetailPage() {
                         {client.responsibleEmployee}
                       </p>
                     )}
-                    <PermissionGuard permission={PERMISSIONS.CLIENTS.EDIT}>
-                      <button
-                        onClick={() => setAssignRoleModalMode('employee')}
-                        className="shrink-0 text-gray-400 transition-colors hover:text-gray-700"
-                        title="Assign employee"
-                        type="button"
-                      >
-                        <Icons.PencilEdit02 size={14} strokeWidth={1.5} />
-                      </button>
-                    </PermissionGuard>
+                    {/* Reassign trigger is always visible; warn-on-click happens on
+                        the modal's Submit (PERMISSIONS.CLIENTS.REASSIGN_RESPONSIBLE). */}
+                    <button
+                      onClick={() => setAssignRoleModalMode('employee')}
+                      className="shrink-0 text-gray-400 transition-colors hover:text-gray-700"
+                      title="Assign employee"
+                      type="button"
+                    >
+                      <Icons.PencilEdit02 size={14} strokeWidth={1.5} />
+                    </button>
                   </div>
                 </div>
                 <div className="flex min-h-8 items-center self-stretch p-0">
@@ -2373,16 +2373,16 @@ export function ClientDetailPage() {
                         {client.responsibleResearcher}
                       </p>
                     )}
-                    <PermissionGuard permission={PERMISSIONS.CLIENTS.EDIT}>
-                      <button
-                        onClick={() => setAssignRoleModalMode('searcher')}
-                        className="shrink-0 text-gray-400 transition-colors hover:text-gray-700"
-                        title="Assign searcher"
-                        type="button"
-                      >
-                        <Icons.PencilEdit02 size={14} strokeWidth={1.5} />
-                      </button>
-                    </PermissionGuard>
+                    {/* Reassign trigger is always visible; warn-on-click happens on
+                        the modal's Submit (PERMISSIONS.CLIENTS.REASSIGN_RESPONSIBLE). */}
+                    <button
+                      onClick={() => setAssignRoleModalMode('searcher')}
+                      className="shrink-0 text-gray-400 transition-colors hover:text-gray-700"
+                      title="Assign searcher"
+                      type="button"
+                    >
+                      <Icons.PencilEdit02 size={14} strokeWidth={1.5} />
+                    </button>
                   </div>
                 </div>
               </div>

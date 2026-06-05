@@ -30,8 +30,8 @@ import type { TAInteraction } from '@/features/taInteractions/api/types'
 import { TableSkeleton } from '@/components/ui/TableSkeleton'
 import { formatDate, formatDateTime, formatMoneyKopeckTight } from '@/lib/formatters'
 import { Icons } from '@/lib/icons'
-import { PermissionGuard } from '@/components/auth'
 import { PERMISSIONS } from '@/constants/permissions'
+import { useHasPermission } from '@/hooks'
 import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { Pagination } from '@/components/ui/Pagination'
@@ -117,6 +117,9 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
   }
   const { t } = useTranslation('common')
   const togglePinMut = useTogglePinTAInteraction()
+  // Pattern X: hide buttons entirely when the user lacks the permission.
+  const canEditInteractions = useHasPermission(PERMISSIONS.CLIENTS.EDIT_INTERACTIONS)
+  const canDeleteInteractions = useHasPermission(PERMISSIONS.CLIENTS.DELETE_INTERACTIONS)
   const handleTogglePin = async (id: number) => {
     try {
       await togglePinMut.mutateAsync(id)
@@ -557,7 +560,7 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
           >
             <Icons.Pin size={14} strokeWidth={1.5} />
           </button>
-          <PermissionGuard permission={PERMISSIONS.SYSTEM.MANAGE_SETTINGS}>
+          {canEditInteractions && (
             <button
               type="button"
               onClick={() => setEditingId(row.id)}
@@ -567,6 +570,8 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
             >
               <Icons.PencilEdit size={14} strokeWidth={1.5} />
             </button>
+          )}
+          {canDeleteInteractions && (
             <button
               type="button"
               onClick={() => setDeletingId(row.id)}
@@ -576,7 +581,7 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
             >
               <Icons.Delete size={14} strokeWidth={1.5} />
             </button>
-          </PermissionGuard>
+          )}
         </div>
       ),
     },
