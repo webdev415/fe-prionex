@@ -4552,10 +4552,5 @@
     "sent_documents": "Отправлены документы",
     "no_numbers": "Нет номеров",
     "numbers_found": "Номера найдены"
-  },
-  "dateValidation": {
-    "incompleteDate": "Введите полную дату (ДД.ММ.ГГГГ)",
-    "invalidDate": "Неверная дата",
-    "outOfRange": "Дата вне допустимого диапазона"
   }
 }

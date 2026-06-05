@@ -233,7 +233,7 @@ export function PaymentHistoryFiltersBar({
                 onChange={({ value: v }) => update({ verifiedFromDate: dateToYmd(v) ?? undefined })}
                 placeholder={t('pages.actionAnalysis.filters.selectStartDate', 'Select start date')}
                 max={verifiedTo ?? undefined}
-                variant="filter"
+                format="yyyy-MM-dd"
                 className="min-w-0 flex-1 [&_input]:h-[45px]"
               />
             </div>
@@ -246,7 +246,7 @@ export function PaymentHistoryFiltersBar({
                 onChange={({ value: v }) => update({ verifiedToDate: dateToYmd(v) ?? undefined })}
                 placeholder={t('pages.actionAnalysis.filters.selectEndDate', 'Select end date')}
                 min={verifiedFrom ?? undefined}
-                variant="filter"
+                format="yyyy-MM-dd"
                 className="min-w-0 flex-1 [&_input]:h-[45px]"
               />
             </div>
@@ -268,7 +268,7 @@ export function PaymentHistoryFiltersBar({
                 onChange={({ value: v }) => update({ paymentFromDate: dateToYmd(v) ?? undefined })}
                 placeholder={t('pages.actionAnalysis.filters.selectStartDate', 'Select start date')}
                 max={paymentTo ?? undefined}
-                variant="filter"
+                format="yyyy-MM-dd"
                 className="min-w-0 flex-1 [&_input]:h-[45px]"
               />
             </div>
@@ -281,7 +281,7 @@ export function PaymentHistoryFiltersBar({
                 onChange={({ value: v }) => update({ paymentToDate: dateToYmd(v) ?? undefined })}
                 placeholder={t('pages.actionAnalysis.filters.selectEndDate', 'Select end date')}
                 min={paymentFrom ?? undefined}
-                variant="filter"
+                format="yyyy-MM-dd"
                 className="min-w-0 flex-1 [&_input]:h-[45px]"
               />
             </div>

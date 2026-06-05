@@ -115,7 +115,7 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
     if (String(numId).length >= 9) return null // looks like a phone, not a debt id
     return debtContractMap.get(numId) ?? null
   }
-  const { t } = useTranslation('common')
+  const { t, i18n } = useTranslation('common')
   const togglePinMut = useTogglePinTAInteraction()
   const handleTogglePin = async (id: number) => {
     try {
@@ -207,6 +207,8 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
     setAppliedFilters(cleared)
     setPage(1)
   }
+
+  const dateInputFormat = i18n.language?.startsWith('en') ? 'MM/dd/yyyy' : 'dd/MM/yyyy'
 
   const columns: Column<TAInteraction>[] = [
     {
@@ -622,7 +624,7 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
                 }
                 max={parseDateString(pendingFilters.dateTo) || undefined}
                 placeholder={t('pages.clientChains.history.selectStartDate')}
-                variant="filter"
+                format={dateInputFormat}
                 className="[&_input]:h-[45px] [&_input]:rounded-md [&_input]:border-gray-200 [&_input]:text-xs [&_input]:font-normal"
               />
             </div>
@@ -637,7 +639,7 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
                 }
                 min={parseDateString(pendingFilters.dateFrom) || undefined}
                 placeholder={t('pages.clientChains.history.selectEndDate')}
-                variant="filter"
+                format={dateInputFormat}
                 className="[&_input]:h-[45px] [&_input]:rounded-md [&_input]:border-gray-200 [&_input]:text-xs [&_input]:font-normal"
               />
             </div>
