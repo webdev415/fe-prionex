@@ -134,7 +134,11 @@
     "byOperator": "by {{name}}",
     "errors": {
       "dismissFailed": "Failed to dismiss notification",
-      "markAllReadFailed": "Failed to mark all as read"
+      "markAllReadFailed": "Failed to mark all as read",
+      "cancelFailed": "Failed to cancel task",
+      "completeFailed": "Failed to complete task",
+      "starFailed": "Failed to star",
+      "unstarFailed": "Failed to unstar"
     },
     "taskPriority": {
       "high": "high",
@@ -157,7 +161,31 @@
       "daysAgo_one": "{{count}}d ago",
       "daysAgo_other": "{{count}}d ago"
     },
-    "dismissAria": "Dismiss notification"
+    "dismissAria": "Dismiss notification",
+    "tabs": {
+      "tasks": "Tasks",
+      "starred": "Starred",
+      "payments": "Pending Payments",
+      "calls": "Inbound Calls",
+      "rrPayments": "RR Payments"
+    },
+    "empty": {
+      "tasks": "No overdue tasks",
+      "starred": "No starred tasks",
+      "payments": "No pending payments",
+      "calls": "No inbound calls",
+      "rrPayments": "No RR payments due"
+    },
+    "taskActions": {
+      "completeAria": "Complete task",
+      "completeTitle": "Complete task",
+      "cancelAria": "Cancel task",
+      "cancelTitle": "Cancel task",
+      "starAria": "Star task",
+      "starTitle": "Star task",
+      "unstarAria": "Unstar",
+      "unstarTitle": "Unstar"
+    }
   },
   "common": {
     "step": "Step",

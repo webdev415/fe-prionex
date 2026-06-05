@@ -37,6 +37,7 @@ import {
   ArrowDown01Icon,
   ArrowUp01Icon,
   PinIcon,
+  StarIcon,
   EyeIcon,
   ViewIcon,
   LockIcon,
@@ -217,6 +218,16 @@ export const Icons = {
   ArrowDown: (props: Omit<IconProps, 'icon'>) => <Icon icon={ArrowDown01Icon} {...props} />,
   ArrowUp: (props: Omit<IconProps, 'icon'>) => <Icon icon={ArrowUp01Icon} {...props} />,
   Pin: (props: Omit<IconProps, 'icon'>) => <Icon icon={PinIcon} {...props} />,
+  // Star — outlined (unstarred state).
+  Star: (props: Omit<IconProps, 'icon'>) => <Icon icon={StarIcon} {...props} />,
+  // StarFilled — same StarIcon path, but the path is filled with
+  // currentColor via a Tailwind arbitrary variant. hugeicons-free has
+  // no native solid star, so this fakes the filled glyph using the
+  // existing outline path. Parent button color (e.g. text-yellow-500)
+  // drives the fill.
+  StarFilled: ({ className, ...props }: Omit<IconProps, 'icon'>) => (
+    <Icon icon={StarIcon} {...props} className={`[&_path]:fill-current ${className ?? ''}`} />
+  ),
   // Checkmark (using CheckmarkCircle02Icon)
   Checkmark: (props: Omit<IconProps, 'icon'>) => <Icon icon={CheckmarkCircle02Icon} {...props} />,
   Cancel01: (props: Omit<IconProps, 'icon'>) => <Icon icon={Cancel01Icon} {...props} />,
@@ -378,6 +389,7 @@ export {
   ArrowDown01Icon,
   ArrowUp01Icon,
   PinIcon,
+  StarIcon,
   EyeIcon,
   ViewIcon,
   LockIcon,

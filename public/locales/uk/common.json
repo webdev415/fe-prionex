@@ -137,7 +137,11 @@
     "byOperator": "від {{name}}",
     "errors": {
       "dismissFailed": "Не вдалося приховати повідомлення",
-      "markAllReadFailed": "Не вдалося позначити всі як прочитані"
+      "markAllReadFailed": "Не вдалося позначити всі як прочитані",
+      "cancelFailed": "Не вдалося скасувати завдання",
+      "completeFailed": "Не вдалося завершити завдання",
+      "starFailed": "Не вдалося закріпити",
+      "unstarFailed": "Не вдалося відкріпити"
     },
     "taskPriority": {
       "high": "високий",
@@ -162,7 +166,31 @@
       "daysAgo_few": "{{count}} дні тому",
       "daysAgo_many": "{{count}} днів тому"
     },
-    "dismissAria": "Закрити повідомлення"
+    "dismissAria": "Закрити повідомлення",
+    "tabs": {
+      "tasks": "Завдання",
+      "starred": "Закріплені",
+      "payments": "Очікувані платежі",
+      "calls": "Вхідні дзвінки",
+      "rrPayments": "RR платежі"
+    },
+    "empty": {
+      "tasks": "Немає прострочених завдань",
+      "starred": "Немає закріплених завдань",
+      "payments": "Немає очікуваних платежів",
+      "calls": "Немає вхідних дзвінків",
+      "rrPayments": "Немає платежів RR"
+    },
+    "taskActions": {
+      "completeAria": "Завершити завдання",
+      "completeTitle": "Завершити завдання",
+      "cancelAria": "Скасувати завдання",
+      "cancelTitle": "Скасувати завдання",
+      "starAria": "Закріпити завдання",
+      "starTitle": "Закріпити завдання",
+      "unstarAria": "Відкріпити",
+      "unstarTitle": "Відкріпити"
+    }
   },
   "common": {
     "step": "Крок",
