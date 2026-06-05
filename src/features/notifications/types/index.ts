@@ -20,6 +20,7 @@ export interface NotificationItem {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   metadata: Record<string, any>
   read: boolean
+  starred: boolean
   created_at: string
   read_at: string | null
 }

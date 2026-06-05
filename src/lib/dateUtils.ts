@@ -23,37 +23,47 @@ import type { Period } from '@/features/report/types'
  */
 export const DATETIME_DISPLAY_FORMAT = 'dd.MM.yyyy HH:mm'
 
-// Per-segment rules for the smart mask, in field order: day, month, year,
-// hour, minute. ``padGt`` is the classic datetime-mask shortcut — if the
-// first digit can't possibly start a valid value (e.g. ``9`` for an hour,
-// max 23), treat it as the second digit and prepend a ``0`` (``9`` → ``09``),
-// auto-advancing to the next field. A completed two-digit value is clamped
-// into ``[min, max]`` so impossible numbers can never be entered: ``35`` day
-// → ``31``, ``00`` day → ``01``. Day/month start at 1; hour/minute start at 0
-// (midnight is valid). The year is free-form (4 digits, no range).
-const DATETIME_SEGMENTS: ReadonlyArray<{
+/**
+ * Display + manual-entry format for date-only filter fields (no time).
+ */
+export const DATE_DISPLAY_FORMAT = 'dd.MM.yyyy'
+
+type MaskSegment = {
   len: number
   padGt?: number
   min?: number
   max?: number
-}> = [
-  { len: 2, padGt: 3, min: 1, max: 31 }, // day
-  { len: 2, padGt: 1, min: 1, max: 12 }, // month
-  { len: 4 }, // year
+}
+
+// Per-segment rules for the smart mask. ``padGt`` is the classic mask shortcut —
+// if the first digit can't possibly start a valid value (e.g. ``9`` for a day,
+// max 31), treat it as the second digit and prepend a ``0`` (``9`` → ``09``),
+// auto-advancing to the next field. A completed two-digit value is clamped
+// into ``[min, max]`` so impossible numbers can never be entered: ``35`` day
+// → ``31``, ``00`` day → ``01``. Day/month start at 1; hour/minute start at 0
+// (midnight is valid). The year is free-form (4 digits, no range).
+const DATE_SEGMENTS: ReadonlyArray<MaskSegment> = [
+  { len: 2, padGt: 3, min: 1, max: 31 }, // DD
+  { len: 2, padGt: 1, min: 1, max: 12 }, // MM
+  { len: 4 }, // YYYY
+]
+
+const DATETIME_SEGMENTS: ReadonlyArray<MaskSegment> = [
+  ...DATE_SEGMENTS,
   { len: 2, padGt: 2, min: 0, max: 23 }, // hour
   { len: 2, padGt: 5, min: 0, max: 59 }, // minute
 ]
 
 /**
- * Reduce a raw digit stream to range-valid ``DDMMYYYYHHMM`` digits, applying
- * the per-segment pad/clamp rules above so the user can't even type an
- * impossible day/month/hour/minute. Partial input is preserved.
+ * Reduce a raw digit stream using per-segment pad/clamp rules so the user
+ * can't type impossible day/month (or hour/minute when included). Partial
+ * input is preserved.
  */
-function smartDateTimeDigits(raw: string): string {
+function smartMaskedDigits(raw: string, segments: ReadonlyArray<MaskSegment>): string {
   const input = raw.replace(/\D/g, '')
   let out = ''
   let i = 0
-  for (const seg of DATETIME_SEGMENTS) {
+  for (const seg of segments) {
     if (i >= input.length) break
     if (seg.padGt === undefined) {
       // Year — take up to its length, no clamping.
@@ -80,6 +90,16 @@ function smartDateTimeDigits(raw: string): string {
     out += String(val).padStart(2, '0')
   }
   return out
+}
+
+/** Date-only digit stream (DD + MM + YYYY) with DD ≤ 31 and MM ≤ 12. */
+function smartDateDigits(raw: string): string {
+  return smartMaskedDigits(raw, DATE_SEGMENTS)
+}
+
+/** Datetime digit stream (DD + MM + YYYY + HH + MM). */
+function smartDateTimeDigits(raw: string): string {
+  return smartMaskedDigits(raw, DATETIME_SEGMENTS)
 }
 
 /**
@@ -135,6 +155,33 @@ export function parseManualDateTime(masked: string): Date | null {
   const parsed = parseFns(masked, DATETIME_DISPLAY_FORMAT, new Date())
   if (!isValidFns(parsed)) return null
   if (formatFns(parsed, DATETIME_DISPLAY_FORMAT) !== masked) return null
+  return parsed
+}
+
+/**
+ * Auto-insert ``DD.MM.YYYY`` separators as the user types, while live-blocking
+ * out-of-range day/month values (days ≤ 31, months ≤ 12). Same DD/MM rules as
+ * ``maskDateTimeInput``.
+ */
+export function maskDateInput(raw: string): string {
+  const d = smartDateDigits(raw)
+  let out = d.slice(0, 2)
+  if (d.length > 2) out += '.' + d.slice(2, 4)
+  if (d.length > 4) out += '.' + d.slice(4, 8)
+  return out
+}
+
+/**
+ * Strictly parse a ``DD.MM.YYYY`` string. Returns a Date only when the input
+ * is **complete** (8 digits) and **valid** — incomplete input (``01.06``) and
+ * impossible calendar dates (``31.02.2026``) return ``null``.
+ */
+export function parseManualDate(masked: string): Date | null {
+  const digits = masked.replace(/\D/g, '')
+  if (digits.length !== 8) return null
+  const parsed = parseFns(masked, DATE_DISPLAY_FORMAT, new Date())
+  if (!isValidFns(parsed)) return null
+  if (formatFns(parsed, DATE_DISPLAY_FORMAT) !== masked) return null
   return parsed
 }
 

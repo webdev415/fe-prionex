@@ -5,6 +5,7 @@
 export type ChainType = 'manual' | 'automatic'
 
 export type ContactSource = 'client' | 'recommender'
+export type ContactMedium = 'phone' | 'email'
 
 export interface TAChainStepIn {
   target_action_id: number
@@ -12,6 +13,7 @@ export interface TAChainStepIn {
   delay_minutes?: number
   not_in_the_past?: boolean
   contact_source?: ContactSource | null
+  contact_medium?: ContactMedium
   // Credit-step admin flag: include debts with status='closed' in the
   // executor's picker (true) or only status='active' (false). Default
   // false. Meaningful only when the step's TA has field_type='credit'.
@@ -29,6 +31,7 @@ export interface TAChainStep {
   delay_minutes: number
   not_in_the_past: boolean
   contact_source: ContactSource | null
+  contact_medium: ContactMedium
   show_closed_credits: boolean
   position_x: number | null
   position_y: number | null

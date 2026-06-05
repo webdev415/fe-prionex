@@ -14,7 +14,12 @@ import { Modal, ModalHeader, ModalContent, ModalFooter } from '@/components/ui/M
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { DateSelect } from '@/components/ui/DateSelect'
-import { getDateTimeStringInTimezone, isWallTimeInPast } from '@/lib/dateUtils'
+import {
+  getDateTimeStringInTimezone,
+  isWallTimeInPast,
+  wallTimeAsTimezoneToUtcIso,
+} from '@/lib/dateUtils'
+import { useAuthStore } from '@/stores/authStore'
 import { Label } from '@/components/ui/Label'
 import { Textarea } from '@/components/ui/Textarea'
 import {
@@ -32,7 +37,9 @@ import {
 } from '@/features/taInteractions/hooks/useTAInteractions'
 import { useTAChain } from '@/features/taChains/hooks/useTAChains'
 import { useTargetActions } from '@/features/targetActions/hooks/useTargetActions'
+import { useClientEmails } from '@/features/clients/hooks/useClientEmails'
 import { useClientPhones } from '@/features/clients/hooks/useClientPhones'
+import type { ContactMedium } from '@/features/taChains/api/types'
 import type { ContactSource } from '@/features/taChains/api/types'
 import { getErrorMessage } from '@/lib/errors'
 import { formatMoneyKopeckTight } from '@/lib/formatters'
@@ -67,24 +74,51 @@ function notInPastBounds(notInPast: boolean | undefined) {
   return { min: new Date(), filterTime: filterFromNow }
 }
 
+// Mirrors ChainExecutor's helper of the same name. A date-type step value
+// comes out of the picker as a naive "YYYY-MM-DDTHH:mm" wall time; convert
+// it to a UTC ISO string (with a trailing Z) using the user's profile
+// timezone so EDITED dates persist in the SAME format the create/wizard
+// path stores. Without this the edit path saved the naive wall time as-is
+// (no Z); the display layer then treated that as UTC and re-shifted it by
+// the profile offset — the "date jumps +N hours after editing" bug.
+// Non-date values and already-absolute strings (Z / ±HH:MM) pass through.
+function toUtcIsoIfDate(
+  value: string | null | undefined,
+  fieldType: string | null | undefined,
+  profileTimezone: string | null | undefined
+): string | null {
+  if (!value) return null
+  if (fieldType !== 'date') return value
+  if (/[Zz]$|[+-]\d{2}:\d{2}$/.test(value)) return value // already absolute
+  if (!profileTimezone) {
+    const d = new Date(value)
+    return isNaN(d.getTime()) ? value : d.toISOString()
+  }
+  return wallTimeAsTimezoneToUtcIso(value, profileTimezone)
+}
+
 function ContactStepEdit({
   clientId,
   source,
+  contactMedium,
   value,
   onChange,
 }: {
   clientId: number
   source: ContactSource | null
+  contactMedium?: ContactMedium
   value: string
   onChange: (v: string) => void
 }) {
   const { t } = useTranslation('common')
-  const { data: phonesData } = useClientPhones(clientId, source ?? 'client')
-  // step_data stores the phone string verbatim, so the Select compares
+  const isEmail = contactMedium === 'email'
+  const { data: phonesData } = useClientPhones(clientId, !isEmail ? (source ?? 'client') : null)
+  const { data: emailsData } = useClientEmails(clientId, isEmail ? (source ?? 'client') : null)
+  // step_data stores the contact string verbatim, so the Select compares
   // by contact_value not id. If the saved value isn't in the current
-  // phone list (contact deleted/renamed), still show it as a stale entry.
-  const phones = phonesData ?? []
-  const valueIsKnown = phones.some((p) => p.contact_value === value)
+  // list (contact deleted/renamed), still show it as a stale entry.
+  const contacts = (isEmail ? emailsData : phonesData) ?? []
+  const valueIsKnown = contacts.some((p) => p.contact_value === value)
   return (
     <Select value={value} onValueChange={onChange}>
       <SelectTrigger>
@@ -99,7 +133,7 @@ function ContactStepEdit({
             </span>
           </SelectItem>
         )}
-        {phones.map((p) => (
+        {contacts.map((p) => (
           <SelectItem key={p.id} value={p.contact_value}>
             {p.contact_value}
             {p.type_name ? ` (${p.type_name})` : ''}
@@ -151,6 +185,7 @@ export function EditTAInteractionModal({
   debts = [],
 }: Props) {
   const { t } = useTranslation('common')
+  const { user } = useAuthStore()
 
   const { data: interaction } = useTAInteraction(open ? interactionId : null)
   const { data: chain } = useTAChain(interaction?.chain_id ?? null)
@@ -315,7 +350,11 @@ export function EditTAInteractionModal({
     for (const step of sortedStepsForSave) {
       const v = stepValues[String(step.id)]
       if (v !== undefined && v !== '') {
-        cleanedStepData[String(step.step_order)] = v
+        // Convert date-type values to UTC ISO (with Z) so edits persist in
+        // the same format as the create/wizard path; other types pass
+        // through unchanged. See toUtcIsoIfDate above.
+        const fieldType = taById.get(step.target_action_id)?.field_type
+        cleanedStepData[String(step.step_order)] = toUtcIsoIfDate(v, fieldType, user?.timezone) ?? v
       }
     }
 
@@ -443,6 +482,7 @@ export function EditTAInteractionModal({
                     <ContactStepEdit
                       clientId={interaction.client_id}
                       source={step.contact_source}
+                      contactMedium={step.contact_medium}
                       value={value}
                       onChange={(v) => setStepValue(step.id, v)}
                     />

@@ -6,22 +6,12 @@
  */
 
 import { Icons } from '@/lib/icons'
+import { getUserDisplayName } from '@/lib/mapBackendUser'
+import type { User } from '@/types/api'
 
 export interface ImpersonationBannerProps {
   isImpersonating: boolean
-  impersonatedUser: {
-    id: string
-    username: string
-    email?: string
-    firstName?: string
-    lastName?: string
-    active_role_name?: string | null
-    active_project_id?: string | null
-    projects?: Array<{
-      id: string
-      name: string
-    }>
-  } | null
+  impersonatedUser: User | null
   onExitImpersonation: () => void
   isLoading: boolean
 }
@@ -53,7 +43,7 @@ export function ImpersonationBanner({
         <div className="font-light">
           Viewing as:{' '}
           <span className="font-medium">
-            {impersonatedUser.username}({roleName})
+            {getUserDisplayName(impersonatedUser)}({roleName})
           </span>
         </div>
         <div className="font-light">

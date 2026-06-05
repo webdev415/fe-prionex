@@ -34,6 +34,17 @@ export interface MinimizedChainExecutorInfo {
     collectedPromiseDate: string
     collectedPromiseAmount: string
     collectedCreditId: string
+    // "All-at-once" (instant) mode state. Unlike the step-by-step mode, this
+    // is never snapshotted to the server until final save, so it must be
+    // preserved here to survive a minimize/restore cycle. Optional for
+    // backward-compat with snapshots written before this field existed.
+    selectedChainId?: string
+    instantValues?: Record<
+      number,
+      { value: string; promiseDate: string; promiseAmount: string; creditId: string }
+    >
+    instantNotes?: string
+    notifyResponsible?: boolean
   }
 }
 
@@ -51,6 +62,15 @@ const getStored = (): MinimizedChainExecutorInfo | null => {
     const stored = localStorage.getItem(STORAGE_KEY)
     if (!stored) return null
     const parsed = JSON.parse(stored) as MinimizedChainExecutorInfo
+    if (
+      typeof parsed.clientId !== 'number' ||
+      typeof parsed.clientName !== 'string' ||
+      typeof parsed.timestamp !== 'number' ||
+      !Array.isArray(parsed.debts)
+    ) {
+      localStorage.removeItem(STORAGE_KEY)
+      return null
+    }
     const maxAge = 24 * 60 * 60 * 1000
     if (Date.now() - parsed.timestamp > maxAge) {
       localStorage.removeItem(STORAGE_KEY)
