@@ -41,12 +41,30 @@ import { formatMoneyKopeckTight } from '@/lib/formatters'
 const MANUAL_DATE_FORMAT = 'dd.MM.yyyy HH:mm'
 const MANUAL_DATE_DEFAULT_TIME = '09:00'
 
-// "Date cannot be in the past" is validated on save (the user may enter a
-// past date by typing or calendar, but submission is blocked). Values here
-// are naive browser-local strings, so the check uses browser-local "now".
+// "Date cannot be in the past" (KAN-578): the calendar disables past days +
+// past time slots; manual typing can still enter a past value, which is
+// flagged inline and blocked on save. Values here are naive browser-local
+// strings, so the checks use browser-local "now".
 function stepDateIsPast(value: string, notInPast: boolean | undefined): boolean {
   if (!notInPast || !value) return false
   return isWallTimeInPast(value)
+}
+
+// Stable, module-level time-slot predicate (keep future slots; grey out past
+// slots for today). Hoisted so react-datepicker sees a stable identity.
+const filterFromNow = (time: Date): boolean => {
+  const now = new Date()
+  const isSameDay =
+    time.getFullYear() === now.getFullYear() &&
+    time.getMonth() === now.getMonth() &&
+    time.getDate() === now.getDate()
+  return isSameDay ? time.getTime() >= now.getTime() : true
+}
+
+// Calendar bounds for a not-in-the-past step: block past days + past times.
+function notInPastBounds(notInPast: boolean | undefined) {
+  if (!notInPast) return {}
+  return { min: new Date(), filterTime: filterFromNow }
 }
 
 function ContactStepEdit({
@@ -392,6 +410,13 @@ export function EditTAInteractionModal({
                             showTimeSelect
                             timeFormat="HH:mm"
                             timeIntervals={15}
+                            invalidText={t('pages.clientChains.errors.dateInvalid')}
+                            error={
+                              stepDateIsPast(value, step.not_in_the_past)
+                                ? t('pages.clientChains.errors.datePast')
+                                : undefined
+                            }
+                            {...notInPastBounds(step.not_in_the_past)}
                           />
                           {value && !isValid && (
                             <span className="text-xs text-amber-600">

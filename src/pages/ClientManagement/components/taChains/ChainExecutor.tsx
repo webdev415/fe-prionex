@@ -131,12 +131,14 @@ const EMPTY_INSTANT_VALUE: InstantStepValue = {
 const MANUAL_DATE_FORMAT = 'dd.MM.yyyy HH:mm'
 const MANUAL_DATE_DEFAULT_TIME = '09:00'
 
-// "Date cannot be in the past" is now validated at save time rather than by
-// disabling past slots in the picker: the spec requires letting the user
-// *enter* a past date (by typing or calendar) and then blocking submission
-// with a visible error. ``isWallTimeInPast`` evaluates "now" in the user's
-// profile timezone, mirroring ``toUtcIsoIfDate``. Returns true when the step
-// has the constraint enabled and the entered value is strictly in the past.
+// "Date cannot be in the past" enforcement has two layers (KAN-578):
+//   1. The calendar disables past days + greys out past time slots for today
+//      (``notInPastBounds`` below), so the picker can't produce a past value.
+//   2. Manual typing bypasses the calendar, so a past value can still be
+//      *entered* — it's flagged inline immediately and blocks advancing the
+//      step (``stepDateIsPast``).
+// ``isWallTimeInPast`` evaluates "now" in the user's profile timezone,
+// mirroring ``toUtcIsoIfDate``.
 function stepDateIsPast(
   value: string | null | undefined,
   fieldType: string | null | undefined,
@@ -145,6 +147,29 @@ function stepDateIsPast(
 ): boolean {
   if (!notInPast || fieldType !== 'date' || !value) return false
   return isWallTimeInPast(value, timezone)
+}
+
+// Stable, module-level time-slot predicate: keep future slots; for *today*
+// grey out slots already in the past. Hoisted so react-datepicker sees a
+// stable ``filterTime`` identity across renders (a fresh closure per render
+// thrashes the time list). It recomputes "now" itself, so it never goes stale.
+const filterFromNow = (time: Date): boolean => {
+  const now = new Date()
+  const isSameDay =
+    time.getFullYear() === now.getFullYear() &&
+    time.getMonth() === now.getMonth() &&
+    time.getDate() === now.getDate()
+  return isSameDay ? time.getTime() >= now.getTime() : true
+}
+
+// Calendar bounds for a step that forbids past dates: block past days via
+// ``min`` and past time-of-day (today only) via ``filterTime``. Returns {} for
+// unconstrained steps so the picker is unrestricted. Browser-local "now" is
+// the right reference because the picker displays in browser-local; the
+// timezone-aware save path handles the stored value separately.
+function notInPastBounds(notInPast: boolean | undefined) {
+  if (!notInPast) return {}
+  return { min: new Date(), filterTime: filterFromNow }
 }
 
 // Date-type steps store the picker output as a naive browser-local string
@@ -819,6 +844,20 @@ export function ChainExecutor({
   const handleAutoAdvance = async () => {
     if (!activeInstance || !activeChain || !currentStep || isLastStep || isAutoAdvancing) return
     if (!isStepComplete()) return
+
+    // Block advancing this step when its date is invalid or in the past
+    // (KAN-578): validation happens per-step, not only at final save. The
+    // inline error under the field already shows why; this guards the action.
+    if (wizardDateInvalid) {
+      toast.error(t('pages.clientChains.errors.dateInvalid'))
+      return
+    }
+    if (
+      stepDateIsPast(stepValue, currentTA?.field_type, currentStep?.not_in_the_past, user?.timezone)
+    ) {
+      toast.error(t('pages.clientChains.errors.datePast'))
+      return
+    }
 
     setIsAutoAdvancing(true)
 
@@ -1635,6 +1674,22 @@ export function ChainExecutor({
                               showTimeSelect
                               timeFormat="HH:mm"
                               timeIntervals={15}
+                              invalidText={t('pages.clientChains.errors.dateInvalid')}
+                              error={
+                                stepDateIsPast(
+                                  editingStep.value,
+                                  editingStep.fieldType,
+                                  steps.find((s) => s.step_order === editingStep.stepOrder)
+                                    ?.not_in_the_past,
+                                  user?.timezone
+                                )
+                                  ? t('pages.clientChains.errors.datePast')
+                                  : undefined
+                              }
+                              {...notInPastBounds(
+                                steps.find((s) => s.step_order === editingStep.stepOrder)
+                                  ?.not_in_the_past
+                              )}
                             />
                           ) : editingStep.fieldType === 'amount' ? (
                             <Input
@@ -1835,6 +1890,18 @@ export function ChainExecutor({
                           showTimeSelect
                           timeFormat="HH:mm"
                           timeIntervals={15}
+                          invalidText={t('pages.clientChains.errors.dateInvalid')}
+                          error={
+                            stepDateIsPast(
+                              stepValue,
+                              currentTA.field_type,
+                              currentStep?.not_in_the_past,
+                              user?.timezone
+                            )
+                              ? t('pages.clientChains.errors.datePast')
+                              : undefined
+                          }
+                          {...notInPastBounds(currentStep?.not_in_the_past)}
                         />
                       ) : currentTA.field_type === 'amount' ? (
                         <Input
@@ -2339,6 +2406,7 @@ function InstantStepCard({
   clientId,
 }: InstantStepCardProps) {
   const { t } = useTranslation('common')
+  const cardUser = useAuthStore((s) => s.user)
   const { data: phones } = useClientPhones(
     clientId,
     ta.field_type === 'contact' ? (step.contact_source ?? 'client') : null
@@ -2389,6 +2457,13 @@ function InstantStepCard({
           showTimeSelect
           timeFormat="HH:mm"
           timeIntervals={15}
+          invalidText={t('pages.clientChains.errors.dateInvalid')}
+          error={
+            stepDateIsPast(value.value, ta.field_type, step.not_in_the_past, cardUser?.timezone)
+              ? t('pages.clientChains.errors.datePast')
+              : undefined
+          }
+          {...notInPastBounds(step.not_in_the_past)}
         />
       ) : ta.field_type === 'amount' ? (
         <Input
