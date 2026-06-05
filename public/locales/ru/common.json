@@ -467,6 +467,7 @@
         "chain": "Цепочка",
         "notes": "Заметки",
         "createdDate": "Дата создания",
+        "clientId": "ID клиента",
         "author": "Автор",
         "assignee": "Исполнитель",
         "priority": "Приоритет",
