@@ -353,7 +353,7 @@ function StepValueRow({ step, ta, value, onChange }: StepValueRowProps) {
               onChange={({ value: v }) => onChange({ min: formatYmd(v) ?? undefined })}
               placeholder={t('pages.actionAnalysis.filters.selectStartDate', 'Select start date')}
               max={maxDate ?? undefined}
-              variant="filter"
+              format="yyyy-MM-dd"
               className="min-w-0 flex-1 [&_input]:h-[45px]"
             />
             <DateSelect
@@ -361,7 +361,7 @@ function StepValueRow({ step, ta, value, onChange }: StepValueRowProps) {
               onChange={({ value: v }) => onChange({ max: formatYmd(v) ?? undefined })}
               placeholder={t('pages.actionAnalysis.filters.selectEndDate', 'Select end date')}
               min={minDate ?? undefined}
-              variant="filter"
+              format="yyyy-MM-dd"
               className="min-w-0 flex-1 [&_input]:h-[45px]"
             />
           </>

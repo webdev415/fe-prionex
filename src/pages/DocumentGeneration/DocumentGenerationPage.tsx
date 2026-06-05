@@ -390,7 +390,6 @@ export function DocumentGenerationPage() {
                 {t('pages.documentGeneration.filters.dateFrom', 'Date from')}
               </label>
               <DateSelect
-                variant="filter"
                 value={ymdToDate(filters.date_from)}
                 onChange={({ value }) => updateFilter('date_from', dateToYmd(value))}
                 max={ymdToDate(filters.date_to) ?? undefined}
@@ -403,7 +402,6 @@ export function DocumentGenerationPage() {
                 {t('pages.documentGeneration.filters.dateTo', 'Date to')}
               </label>
               <DateSelect
-                variant="filter"
                 value={ymdToDate(filters.date_to)}
                 onChange={({ value }) => updateFilter('date_to', dateToYmd(value))}
                 min={ymdToDate(filters.date_from) ?? undefined}

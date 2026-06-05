@@ -1445,7 +1445,6 @@ export function PaymentHistoryPage() {
                   </span>
                   <div className="flex items-center gap-3 self-stretch">
                     <DateSelect
-                      variant="filter"
                       value={startDate}
                       onChange={({ value }) => setStartDate(value)}
                       placeholder={t('pages.clients.paymentHistory.filters.startDate')}
@@ -1453,7 +1452,6 @@ export function PaymentHistoryPage() {
                     />
                     <span className="text-dark-500 text-xs sm:text-base">-</span>
                     <DateSelect
-                      variant="filter"
                       value={endDate}
                       onChange={({ value }) => setEndDate(value)}
                       placeholder={t('pages.clients.paymentHistory.filters.endDate')}

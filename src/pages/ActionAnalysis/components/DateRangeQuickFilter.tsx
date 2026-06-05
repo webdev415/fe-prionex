@@ -86,7 +86,7 @@ export function DateRangeQuickFilter({
               onChange={({ value }) => handleDateChange('from', value)}
               placeholder={t('pages.actionAnalysis.filters.selectStartDate', 'Select start date')}
               max={toValue ?? undefined}
-              variant="filter"
+              format="yyyy-MM-dd"
               className="flex-1 [&_input]:h-9 [&_input]:text-xs"
             />
             <span className="text-base leading-[150%] font-medium tracking-[-0.28px] text-gray-700">
@@ -97,7 +97,7 @@ export function DateRangeQuickFilter({
               onChange={({ value }) => handleDateChange('to', value)}
               placeholder={t('pages.actionAnalysis.filters.selectEndDate', 'Select end date')}
               min={fromValue ?? undefined}
-              variant="filter"
+              format="yyyy-MM-dd"
               className="flex-1 [&_input]:h-9 [&_input]:text-xs"
             />
           </div>
