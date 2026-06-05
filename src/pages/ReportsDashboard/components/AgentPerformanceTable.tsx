@@ -384,6 +384,8 @@ export function AgentPerformanceTable({
                 onChange={({ value }) => {
                   onFromDateChange(value ? getDateStringInTimezone(value, userTimezone) : null)
                 }}
+                allowManualInput
+                format="dd.MM.yyyy"
               />
               <span className="text-base leading-[155%] font-medium tracking-[-0.32px] text-gray-700">
                 -
@@ -395,6 +397,8 @@ export function AgentPerformanceTable({
                 onChange={({ value }) => {
                   onToDateChange(value ? getDateStringInTimezone(value, userTimezone) : null)
                 }}
+                allowManualInput
+                format="dd.MM.yyyy"
               />
             </div>
           </div>

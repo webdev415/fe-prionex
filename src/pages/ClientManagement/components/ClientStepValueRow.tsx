@@ -92,7 +92,8 @@ export function ClientStepValueRow({ step, ta, value, onChange }: ClientStepValu
               value={parseYmd(value.min)}
               onChange={({ value: v }) => onChange({ min: formatYmd(v) ?? undefined })}
               placeholder={minPlaceholder}
-              format="yyyy-MM-dd"
+              allowManualInput
+              format="dd.MM.yyyy"
               className="flex flex-1 flex-col gap-2"
             />
             <span className="text-sm leading-[155%] font-medium tracking-[-0.28px] text-gray-700 sm:text-base sm:tracking-[-0.32px]">
@@ -102,7 +103,8 @@ export function ClientStepValueRow({ step, ta, value, onChange }: ClientStepValu
               value={parseYmd(value.max)}
               onChange={({ value: v }) => onChange({ max: formatYmd(v) ?? undefined })}
               placeholder={maxPlaceholder}
-              format="yyyy-MM-dd"
+              allowManualInput
+              format="dd.MM.yyyy"
               className="flex flex-1 flex-col gap-2"
             />
           </>

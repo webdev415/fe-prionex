@@ -459,7 +459,8 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                   onChange={({ value }) => handleFilterDateChange('dateOfSaleFrom', value)}
                   onClear={() => onFilterChange({ ...filters, dateOfSaleFrom: undefined })}
                   placeholder={t('pages.clients.filters.min')}
-                  format="yyyy-MM-dd"
+                  allowManualInput
+                  format="dd.MM.yyyy"
                   className="flex flex-1 flex-col gap-2"
                 />
                 <span className="text-sm leading-[155%] font-medium tracking-[-0.28px] text-gray-700 sm:text-base sm:tracking-[-0.32px]">
@@ -470,7 +471,8 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                   onChange={({ value }) => handleFilterDateChange('dateOfSaleTo', value)}
                   onClear={() => onFilterChange({ ...filters, dateOfSaleTo: undefined })}
                   placeholder={t('pages.clients.filters.max')}
-                  format="yyyy-MM-dd"
+                  allowManualInput
+                  format="dd.MM.yyyy"
                   className="flex flex-1 flex-col gap-2"
                 />
               </div>
@@ -489,7 +491,8 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                   onChange={({ value }) => handleFilterDateChange('assignmentDateFrom', value)}
                   onClear={() => onFilterChange({ ...filters, assignmentDateFrom: undefined })}
                   placeholder={t('pages.clients.filters.min')}
-                  format="yyyy-MM-dd"
+                  allowManualInput
+                  format="dd.MM.yyyy"
                   className="flex flex-1 flex-col gap-2"
                 />
                 <span className="text-sm leading-[155%] font-medium tracking-[-0.28px] text-gray-700 sm:text-base sm:tracking-[-0.32px]">
@@ -500,7 +503,8 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                   onChange={({ value }) => handleFilterDateChange('assignmentDateTo', value)}
                   onClear={() => onFilterChange({ ...filters, assignmentDateTo: undefined })}
                   placeholder={t('pages.clients.filters.max')}
-                  format="yyyy-MM-dd"
+                  allowManualInput
+                  format="dd.MM.yyyy"
                   className="flex flex-1 flex-col gap-2"
                 />
               </div>
@@ -523,7 +527,8 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                   onChange={({ value }) => handleFilterDateChange('taDateFrom', value)}
                   onClear={() => onFilterChange({ ...filters, taDateFrom: undefined })}
                   placeholder={t('pages.clients.filters.min')}
-                  format="yyyy-MM-dd"
+                  allowManualInput
+                  format="dd.MM.yyyy"
                   className="flex flex-1 flex-col gap-2"
                 />
                 <span className="text-sm leading-[155%] font-medium tracking-[-0.28px] text-gray-700 sm:text-base sm:tracking-[-0.32px]">
@@ -534,7 +539,8 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                   onChange={({ value }) => handleFilterDateChange('taDateTo', value)}
                   onClear={() => onFilterChange({ ...filters, taDateTo: undefined })}
                   placeholder={t('pages.clients.filters.max')}
-                  format="yyyy-MM-dd"
+                  allowManualInput
+                  format="dd.MM.yyyy"
                   className="flex flex-1 flex-col gap-2"
                 />
               </div>
@@ -556,7 +562,8 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                   onChange={({ value }) => handleFilterDateChange('interactionDateFrom', value)}
                   onClear={() => onFilterChange({ ...filters, interactionDateFrom: undefined })}
                   placeholder={t('pages.clients.filters.min')}
-                  format="yyyy-MM-dd"
+                  allowManualInput
+                  format="dd.MM.yyyy"
                   className="flex flex-1 flex-col gap-2"
                 />
                 <span className="text-sm leading-[155%] font-medium tracking-[-0.28px] text-gray-700 sm:text-base sm:tracking-[-0.32px]">
@@ -567,7 +574,8 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                   onChange={({ value }) => handleFilterDateChange('interactionDateTo', value)}
                   onClear={() => onFilterChange({ ...filters, interactionDateTo: undefined })}
                   placeholder={t('pages.clients.filters.max')}
-                  format="yyyy-MM-dd"
+                  allowManualInput
+                  format="dd.MM.yyyy"
                   className="flex flex-1 flex-col gap-2"
                 />
               </div>
