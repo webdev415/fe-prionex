@@ -53,6 +53,8 @@
     "searching": "Поиск...",
     "noResults": "Клиенты по запросу «{{query}}» не найдены.",
     "phoneMinDigits": "Введите минимум {{count}} цифр для поиска по телефону.",
+    "clientContactIndicator": "Контакт клиента",
+    "recommenderContactIndicator": "Контакт поручителя",
     "debt": "Долг",
     "phone": "Телефон",
     "viewAllResults": "Показать все результаты"
@@ -3065,7 +3067,10 @@
         "delayMinutes": "Задержка (мин)",
         "required": "Обязательно",
         "notInPast": "Дата не может быть в прошлом",
-        "showClosedCredits": "Показывать закрытые кредиты"
+        "showClosedCredits": "Показывать закрытые кредиты",
+        "contactSource": "Источник контакта",
+        "contactSourceClient": "Контакты клиента",
+        "contactSourceRecommender": "Контакты поручителя"
       },
       "modals": {
         "create": {
@@ -3922,6 +3927,10 @@
       "fieldDefaultLine": "Линия звонка по умолчанию",
       "fieldSpam": "Разрешить спам",
       "fieldPrimary": "Показывать как основной телефон",
+      "fieldContactSource": "Источник контакта",
+      "fieldContactSourceHint": "Категоризирует тип контакта. Используется для визуальных индикаторов в поиске и фильтрации контактов в условиях цепочки целевых действий.",
+      "client": "Клиент",
+      "recommender": "Поручитель",
       "fieldSort": "Порядок сортировки",
       "white": "Белая",
       "gray": "Серая",
@@ -3941,6 +3950,7 @@
         "sortOrder": "Порядок",
         "name": "Название",
         "defaultLine": "Линия звонка",
+        "contactSource": "Источник контакта",
         "spamAllowed": "Спам",
         "primary": "Основной телефон",
         "showInClientDetail": "Показывать на карточке клиента",

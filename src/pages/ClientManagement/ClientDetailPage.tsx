@@ -294,24 +294,6 @@ export function ClientDetailPage() {
   )
   const chainExecutorMinimizeRef = useRef<(() => void) | null>(null)
 
-  // Classify a contact_type_id into the chain-picker bucket the backend
-  // uses (see /api/v1/clients/{id}/phones?source=...). Client bucket =
-  // the debtor's own phones (mobile/home/work + registration variants).
-  // Recommender bucket = guarantor + third-party phones. Any other type
-  // id (or null) falls back to 'recommender' since this helper is only
-  // called from the recommenders tab where non-classified phones live.
-  // The two id sets MUST stay in sync with
-  // services/client/app/routers/clients.py:CONTACT_SOURCE_TYPE_IDS.
-  const classifyContactSource = (
-    contactTypeId: number | null | undefined
-  ): 'client' | 'recommender' => {
-    const CLIENT_PHONE_TYPE_IDS = new Set([1, 2, 3, 19, 29])
-    if (contactTypeId != null && CLIENT_PHONE_TYPE_IDS.has(contactTypeId)) {
-      return 'client'
-    }
-    return 'recommender'
-  }
-
   // Call origination hook (provides user, call state, handlers)
   const userTimezone = useAuthStore((state) => state.user?.timezone)
   const activeRoleName = useAuthStore((state) => state.user?.active_role_name)
@@ -436,6 +418,15 @@ export function ClientDetailPage() {
     contactTypes.forEach((ct) => m.set(ct.id, ct))
     return m
   }, [contactTypes])
+
+  const classifyContactSource = (
+    contactTypeId: number | null | undefined
+  ): 'client' | 'recommender' => {
+    if (contactTypeId == null) {
+      return 'recommender'
+    }
+    return contactTypesById.get(contactTypeId)?.contact_source ?? 'recommender'
+  }
 
   const defaultNewContactTypeId = useMemo(
     () => pickDefaultActiveContactTypeId(contactTypes),

@@ -56,6 +56,8 @@
     "searching": "Пошук...",
     "noResults": "Клієнтів за запитом «{{query}}» не знайдено.",
     "phoneMinDigits": "Введіть щонайменше {{count}} цифр для пошуку за телефоном.",
+    "clientContactIndicator": "Контакт клієнта",
+    "recommenderContactIndicator": "Контакт поручителя",
     "debt": "Борг",
     "phone": "Телефон",
     "viewAllResults": "Переглянути всі результати"
@@ -3388,7 +3390,10 @@
         "delayMinutes": "Затримка (хв)",
         "required": "Обов'язково",
         "notInPast": "Дата не може бути в минулому",
-        "showClosedCredits": "Показувати закриті кредити"
+        "showClosedCredits": "Показувати закриті кредити",
+        "contactSource": "Джерело контакту",
+        "contactSourceClient": "Контакти клієнта",
+        "contactSourceRecommender": "Контакти поручителя"
       },
       "modals": {
         "create": {
@@ -4450,6 +4455,10 @@
       "fieldDefaultLine": "Лінія дзвінка за замовчуванням",
       "fieldSpam": "Дозволити спам",
       "fieldPrimary": "Показувати як основний телефон",
+      "fieldContactSource": "Джерело контакту",
+      "fieldContactSourceHint": "Категоризує тип контакту. Використовується для візуальних індикаторів у пошуку та фільтрації контактів у умовах ланцюга цільових дій.",
+      "client": "Клієнт",
+      "recommender": "Поручитель",
       "fieldSort": "Порядок сортування",
       "white": "Біла",
       "gray": "Сіра",
@@ -4469,6 +4478,7 @@
         "sortOrder": "Порядок",
         "name": "Назва",
         "defaultLine": "Лінія дзвінка",
+        "contactSource": "Джерело контакту",
         "spamAllowed": "Спам",
         "primary": "Основний телефон",
         "showInClientDetail": "Показувати на картці клієнта",

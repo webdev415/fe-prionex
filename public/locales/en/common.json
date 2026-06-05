@@ -56,6 +56,8 @@
     "searching": "Searching...",
     "noResults": "No clients found for '{{query}}'.",
     "phoneMinDigits": "Type at least {{count}} digits to search by phone.",
+    "clientContactIndicator": "Client contact",
+    "recommenderContactIndicator": "Recommender contact",
     "debt": "Debt",
     "phone": "Phone",
     "viewAllResults": "View all results"
@@ -3655,7 +3657,10 @@
         "delayMinutes": "Delay (minutes)",
         "required": "Required",
         "notInPast": "Date cannot be in the past",
-        "showClosedCredits": "Show closed credits"
+        "showClosedCredits": "Show closed credits",
+        "contactSource": "Contact source",
+        "contactSourceClient": "Client contacts",
+        "contactSourceRecommender": "Recommender contacts"
       },
       "modals": {
         "create": {
@@ -3863,6 +3868,10 @@
       "fieldDefaultLine": "Default Call Line",
       "fieldSpam": "Spam Allowed",
       "fieldPrimary": "Show as Primary Phone",
+      "fieldContactSource": "Contact Source",
+      "fieldContactSourceHint": "Categories the contact type. Used for visual indicators in search and for contact filtering in Target Action chain conditions.",
+      "client": "Client",
+      "recommender": "Recommender",
       "fieldSort": "Sort Order",
       "white": "White",
       "gray": "Gray",
@@ -3882,6 +3891,7 @@
         "sortOrder": "Sort Order",
         "name": "Name",
         "defaultLine": "Default Call Line",
+        "contactSource": "Contact Source",
         "spamAllowed": "Spam Allowed",
         "primary": "Show as Primary Phone",
         "showInClientDetail": "Show in Client Detail",

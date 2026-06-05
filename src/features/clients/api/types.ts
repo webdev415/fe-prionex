@@ -589,6 +589,8 @@ export interface ContactResponse {
   updated_at?: string | null
 }
 
+export type ContactSource = 'client' | 'recommender'
+
 export interface ContactTypeOption {
   id: number
   code: string
@@ -600,6 +602,7 @@ export interface ContactTypeOption {
   show_as_primary_phone: boolean
   show_in_client_detail: boolean
   is_hidden: boolean
+  contact_source: ContactSource
 }
 
 export interface ContactTypeCreatePayload {
@@ -608,6 +611,7 @@ export interface ContactTypeCreatePayload {
   spam_allowed: boolean
   show_as_primary_phone: boolean
   sort_order: number
+  contact_source?: ContactSource
 }
 
 export interface ContactTypePatchPayload {
@@ -618,6 +622,7 @@ export interface ContactTypePatchPayload {
   show_in_client_detail?: boolean
   sort_order?: number
   is_hidden?: boolean
+  contact_source?: ContactSource
 }
 
 export interface WriteoffsResponse {
