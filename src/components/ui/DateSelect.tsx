@@ -9,9 +9,17 @@ import { forwardRef, useEffect, useId, useRef, useState } from 'react'
 import DatePicker from 'react-datepicker'
 import 'react-datepicker/dist/react-datepicker.css'
 import { format as formatFns } from 'date-fns'
+import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
-import { DATETIME_DISPLAY_FORMAT, maskDateTimeInput, parseManualDateTime } from '@/lib/dateUtils'
+import {
+  DATE_DISPLAY_FORMAT,
+  DATETIME_DISPLAY_FORMAT,
+  maskDateInput,
+  maskDateTimeInput,
+  parseManualDate,
+  parseManualDateTime,
+} from '@/lib/dateUtils'
 
 /**
  * Custom input used when ``allowManualInput`` is on. react-datepicker clones
@@ -75,9 +83,10 @@ export interface DateSelectProps {
   /** Per-slot predicate. Return ``true`` to keep, ``false`` to grey out. */
   filterTime?: (time: Date) => boolean
   /**
-   * Allow typing the value directly with a ``DD.MM.YYYY HH:MM`` mask, in
-   * addition to the calendar picker. When off (default) the field stays
-   * calendar-only (legacy behaviour for other call sites).
+   * Allow typing the value directly, in addition to the calendar picker.
+   * With ``showTimeSelect``: ``DD.MM.YYYY HH:MM`` mask (TA date fields).
+   * Without ``showTimeSelect``: ``DD.MM.YYYY`` mask (date filter fields).
+   * When off (default) the field stays calendar-only (legacy behaviour).
    */
   allowManualInput?: boolean
   /**
@@ -145,12 +154,18 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
     const inputId = id || generatedId
     const errorId = `${inputId}-error`
     const helperId = `${inputId}-helper`
+    const { t } = useTranslation('common')
+
+    const isDateOnlyManual = allowManualInput && !showTimeSelect
+    const isDatetimeManual = allowManualInput && !!showTimeSelect
+    const manualDisplayFormat = isDateOnlyManual ? DATE_DISPLAY_FORMAT : DATETIME_DISPLAY_FORMAT
 
     // ── Manual-input state (only used when allowManualInput) ──────────────
     // Visible masked text. Driven by us, not react-datepicker.
     const [text, setText] = useState<string>(() => {
+      if (!allowManualInput) return ''
       const d = parseDate(value)
-      return d ? formatFns(d, DATETIME_DISPLAY_FORMAT) : ''
+      return d ? formatFns(d, manualDisplayFormat) : ''
     })
     // Whether the field currently holds invalid/incomplete typed text.
     const [manualInvalid, setManualInvalid] = useState(false)
@@ -164,7 +179,7 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
     useEffect(() => {
       if (!allowManualInput) return
       const d = parseDate(value)
-      const formatted = d ? formatFns(d, DATETIME_DISPLAY_FORMAT) : ''
+      const formatted = d ? formatFns(d, manualDisplayFormat) : ''
       if (formatted === lastSyncedValue.current) return
       lastSyncedValue.current = formatted
       setText(formatted)
@@ -201,18 +216,18 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
     const handleChange = (date: Date | null) => {
       const next = date ? applyDefaultTime(date) : null
       if (allowManualInput) {
-        setText(next ? formatFns(next, DATETIME_DISPLAY_FORMAT) : '')
+        setText(next ? formatFns(next, manualDisplayFormat) : '')
         setManualInvalid(false)
         onValidityChange?.(false)
       }
       onChange?.({ value: next })
     }
 
-    // Typed input: mask, then commit only when complete + valid. Manual entry
-    // always includes the time (the mask requires HH:MM), so the 09:00 default
-    // doesn't apply here — the typed time wins.
+    // Typed input: mask, then commit only when complete + valid. Datetime
+    // manual entry always includes the time (the mask requires HH:MM), so the
+    // 09:00 default doesn't apply there — the typed time wins.
     const handleManualType = (raw: string) => {
-      const masked = maskDateTimeInput(raw)
+      const masked = isDateOnlyManual ? maskDateInput(raw) : maskDateTimeInput(raw)
       setText(masked)
       if (masked === '') {
         setManualInvalid(false)
@@ -220,7 +235,7 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
         onChange?.({ value: null })
         return
       }
-      const parsed = parseManualDateTime(masked)
+      const parsed = isDateOnlyManual ? parseManualDate(masked) : parseManualDateTime(masked)
       if (parsed) {
         setManualInvalid(false)
         onValidityChange?.(false)
@@ -235,6 +250,12 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
     // Red styling for both an explicit error and an in-progress invalid entry.
     const hasError = !!error || manualInvalid
 
+    // TA datetime fields: inline error under the input while typing invalid text.
+    // Date filter fields: border only — no inline message.
+    const manualInlineError =
+      manualInvalid && isDatetimeManual ? t('pages.clientChains.errors.dateInvalid') : undefined
+    const displayedError = error || manualInlineError
+
     const inputClassName = cn(
       'h-[45px] w-full rounded-md border bg-white pr-4 pl-10 text-sm font-light text-[#05040D] transition-all outline-none placeholder:text-gray-500',
       hasError
@@ -244,7 +265,11 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
     )
 
     const effectivePlaceholder =
-      allowManualInput && placeholder === 'Select date' ? 'DD.MM.YYYY HH:MM' : placeholder
+      allowManualInput && placeholder === 'Select date'
+        ? isDateOnlyManual
+          ? 'DD.MM.YYYY'
+          : 'DD.MM.YYYY HH:MM'
+        : placeholder
     // × only renders when opt-in onClear is provided AND a date is set.
     const showClear = !!onClear && parseDate(value) !== null
 
@@ -389,7 +414,7 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
               disabled={disabled}
               minDate={parseDate(min) || undefined}
               maxDate={parseDate(max) || undefined}
-              aria-describedby={error ? errorId : helperText ? helperId : undefined}
+              aria-describedby={displayedError ? errorId : helperText ? helperId : undefined}
               showPopperArrow={false}
               popperPlacement="bottom-start"
               popperProps={{ strategy: 'fixed' }}
@@ -420,12 +445,12 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
             </button>
           )}
         </div>
-        {error && (
+        {displayedError && (
           <p id={errorId} className="mt-1.5 text-xs text-red-500" role="alert">
-            {error}
+            {displayedError}
           </p>
         )}
-        {helperText && !error && (
+        {helperText && !displayedError && (
           <p id={helperId} className="mt-1.5 text-xs text-gray-500">
             {helperText}
           </p>
