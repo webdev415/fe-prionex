@@ -102,14 +102,11 @@ export function ScoreDynamicsChart({ data, onPointClick }: ScoreDynamicsChartPro
           <XAxis dataKey="bucket_label" stroke="#6b7280" fontSize={12} />
           <YAxis domain={[0, 5]} stroke="#6b7280" fontSize={12} />
           <Tooltip
-            formatter={(v) => {
-              // Recharts types the formatter param as `ValueType`
-              // (number | string | (number|string)[]). Normalise to a single
-              // number for the score axis; fall back to the raw value if it
-              // isn't numeric for some reason.
+            formatter={(v: number | string | (number | string)[] | undefined) => {
               if (v == null) return '—'
-              const n = typeof v === 'number' ? v : Number(v)
-              return Number.isFinite(n) ? n.toFixed(2) : String(v)
+              const raw = Array.isArray(v) ? v[0] : v
+              const n = typeof raw === 'number' ? raw : Number(raw)
+              return Number.isFinite(n) ? n.toFixed(2) : String(raw)
             }}
           />
           <Legend />

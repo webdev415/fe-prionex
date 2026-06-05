@@ -110,6 +110,7 @@ export function ChainStepsEditor({ steps, onChange, disabled }: ChainStepsEditor
         delay_minutes: 0,
         not_in_the_past: false,
         contact_source: firstTA.field_type === 'contact' ? 'client' : null,
+        contact_medium: firstTA.field_type === 'contact' ? 'phone' : undefined,
         show_closed_credits: false,
       },
     ])
@@ -201,8 +202,10 @@ export function ChainStepsEditor({ steps, onChange, disabled }: ChainStepsEditor
                       const next: Partial<TAChainStepIn> = { target_action_id: newId }
                       if (newTA?.field_type === 'contact') {
                         next.contact_source = step.contact_source ?? 'client'
+                        next.contact_medium = step.contact_medium ?? 'phone'
                       } else {
                         next.contact_source = null
+                        next.contact_medium = undefined
                       }
                       update(index, next)
                     }}

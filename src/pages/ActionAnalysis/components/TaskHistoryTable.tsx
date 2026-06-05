@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import {
   Select,
@@ -69,6 +70,21 @@ export function TaskHistoryTable({ data, userTimezone, sort, onSortChange }: Pro
           {r.created_at ? formatDateTime(r.created_at, userTimezone) : '—'}
         </span>
       ),
+    },
+    {
+      key: 'clientId',
+      header: t('pages.actionAnalysis.columns.clientId', 'Client ID'),
+      render: (r) =>
+        r.client_id == null ? (
+          <span className="text-sm text-gray-700">—</span>
+        ) : (
+          <Link
+            to={`/dashboard/clients/${r.client_id}`}
+            className="text-primary-600 text-sm hover:underline"
+          >
+            #{r.client_id}
+          </Link>
+        ),
     },
     {
       key: 'author',

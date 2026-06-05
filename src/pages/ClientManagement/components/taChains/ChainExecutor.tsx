@@ -22,7 +22,11 @@ import { toast } from 'sonner'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { DateSelect } from '@/components/ui/DateSelect'
-import { getDateTimeStringInTimezone, wallTimeAsTimezoneToUtcIso } from '@/lib/dateUtils'
+import {
+  getDateTimeStringInTimezone,
+  isWallTimeInPast,
+  wallTimeAsTimezoneToUtcIso,
+} from '@/lib/dateUtils'
 import { Label } from '@/components/ui/Label'
 import { Textarea } from '@/components/ui/Textarea'
 import {
@@ -58,7 +62,9 @@ import { useQuickPicks } from '@/features/quickPicks/hooks/useQuickPicks'
 import { getErrorMessage } from '@/lib/errors'
 import { useChainExecutorStore } from '@/stores/chainExecutorStore'
 import { formatMoneyKopeckTight } from '@/lib/formatters'
+import { useClientEmails } from '@/features/clients/hooks/useClientEmails'
 import { useClientPhones } from '@/features/clients/hooks/useClientPhones'
+import { collectFromSnapshot } from './taChainSaveData'
 
 interface Props {
   clientId: number
@@ -96,6 +102,9 @@ interface InstantStepValue {
   promiseDate: string
   promiseAmount: string
   creditId: string
+  // True while the date field holds incomplete/invalid typed text, so the
+  // save handler can block submission.
+  dateInvalid?: boolean
 }
 
 function ChainExecutorSkeleton() {
@@ -116,35 +125,28 @@ const EMPTY_INSTANT_VALUE: InstantStepValue = {
   promiseDate: '',
   promiseAmount: '',
   creditId: '',
+  dateInvalid: false,
 }
 
-// Stable, module-level predicate for the time column. Hoisted so its
-// identity doesn't change every render — react-datepicker compares
-// ``filterTime`` by reference, and a fresh closure each render forces
-// the time list to re-render. The callback recomputes "now" itself,
-// so the lack of a per-render closure doesn't stale it.
-//   • Future days: every slot allowed (so tomorrow at 01:00 stays
-//     clickable — react-datepicker's static ``minTime``/``maxTime``
-//     would mistakenly grey it out).
-//   • Today: only slots ``>= now`` are allowed.
-const filterFromNow = (time: Date): boolean => {
-  const now = new Date()
-  const isSameDay =
-    time.getFullYear() === now.getFullYear() &&
-    time.getMonth() === now.getMonth() &&
-    time.getDate() === now.getDate()
-  return isSameDay ? time.getTime() >= now.getTime() : true
-}
+// Shared props for the manually-typeable TA date field. Format uses dots
+// (DD.MM.YYYY HH:MM) and a 09:00 default on first entry, per spec.
+const MANUAL_DATE_FORMAT = 'dd.MM.yyyy HH:mm'
+const MANUAL_DATE_DEFAULT_TIME = '09:00'
 
-// KAN-XXX — picker bounds for chain steps that have the admin
-// "Date cannot be in the past" checkbox enabled. ``min`` blocks past
-// calendar days; ``filterTime`` is the stable predicate above.
-// Browser-local "now" is the right reference because the picker also
-// displays in browser local; the timezone-aware save path
-// (toUtcIsoIfDate) handles the value direction on its own.
-function notInPastBounds(notInPast: boolean | undefined) {
-  if (!notInPast) return {}
-  return { min: new Date(), filterTime: filterFromNow }
+// "Date cannot be in the past" is now validated at save time rather than by
+// disabling past slots in the picker: the spec requires letting the user
+// *enter* a past date (by typing or calendar) and then blocking submission
+// with a visible error. ``isWallTimeInPast`` evaluates "now" in the user's
+// profile timezone, mirroring ``toUtcIsoIfDate``. Returns true when the step
+// has the constraint enabled and the entered value is strictly in the past.
+function stepDateIsPast(
+  value: string | null | undefined,
+  fieldType: string | null | undefined,
+  notInPast: boolean | undefined,
+  timezone: string | null | undefined
+): boolean {
+  if (!notInPast || fieldType !== 'date' || !value) return false
+  return isWallTimeInPast(value, timezone)
 }
 
 // Date-type steps store the picker output as a naive browser-local string
@@ -342,11 +344,19 @@ export function ChainExecutor({
   const currentStep = steps.find((s) => s.step_order === (activeInstance?.current_step_order ?? 1))
   const currentTA = currentStep ? taById.get(currentStep.target_action_id) : null
 
-  // Phone list for contact-type steps. Hook always runs but is disabled when
-  // not applicable.
-  const contactPhonesSource =
+  // Contact list for contact-type steps (phone or email per step contact_medium).
+  const contactStepSource =
     currentTA?.field_type === 'contact' ? (currentStep?.contact_source ?? 'client') : null
-  const { data: contactPhones } = useClientPhones(clientId, contactPhonesSource)
+  const isEmailContactStep = currentStep?.contact_medium === 'email'
+  const { data: contactPhones } = useClientPhones(
+    clientId,
+    contactStepSource && !isEmailContactStep ? contactStepSource : null
+  )
+  const { data: contactEmails } = useClientEmails(
+    clientId,
+    contactStepSource && isEmailContactStep ? contactStepSource : null
+  )
+  const contactOptions = isEmailContactStep ? contactEmails : contactPhones
 
   // Filter the debt list per the current step's "show closed credits"
   // admin flag. Default (flag false) hides closed debts; flag true
@@ -421,14 +431,32 @@ export function ChainExecutor({
   }
   const [editingStep, setEditingStep] = useState<EditingStep | null>(null)
   const [showRewindWarning, setShowRewindWarning] = useState(false)
+  // Manual date entry that is currently incomplete/invalid blocks saving.
+  // Tracked separately for the wizard's active step and the inline step editor
+  // (instant mode keeps its flag inside InstantStepValue.dateInvalid).
+  const [wizardDateInvalid, setWizardDateInvalid] = useState(false)
+  const [editDateInvalid, setEditDateInvalid] = useState(false)
 
   // Phone list for the step currently being edited (may differ from active step)
-  const editingContactSource = useMemo(() => {
+  const editingContactMeta = useMemo(() => {
     if (!editingStep || editingStep.fieldType !== 'contact') return null
     const stepDef = steps.find((s) => s.step_order === editingStep.stepOrder)
-    return (stepDef?.contact_source ?? 'client') as 'client' | 'recommender'
+    return {
+      source: (stepDef?.contact_source ?? 'client') as 'client' | 'recommender',
+      isEmail: stepDef?.contact_medium === 'email',
+    }
   }, [editingStep, steps])
-  const { data: editingContactPhones } = useClientPhones(clientId, editingContactSource)
+  const { data: editingContactPhones } = useClientPhones(
+    clientId,
+    editingContactMeta && !editingContactMeta.isEmail ? editingContactMeta.source : null
+  )
+  const { data: editingContactEmails } = useClientEmails(
+    clientId,
+    editingContactMeta?.isEmail ? editingContactMeta.source : null
+  )
+  const editingContactOptions = editingContactMeta?.isEmail
+    ? editingContactEmails
+    : editingContactPhones
   // Set true once the final save round-trip starts. Gates the body render
   // so the user never sees a re-rendered step (e.g. a branched-back step 2)
   // during the brief window between mutations finishing and `onSave` closing
@@ -463,6 +491,10 @@ export function ChainExecutor({
   // Minimize / restore
   const { minimized: minimizedState, setMinimized, clear: clearMinimized } = useChainExecutorStore()
   const restoredRef = useRef(false)
+  // Tracks the last "all-at-once" selection the reset effect applied, so it
+  // only resets on a genuine chain change — not on async data reloads or a
+  // restore. Pre-seeded during restore (see below).
+  const lastInstantSelectionRef = useRef<string | null>(null)
 
   // Restore form state from minimized store on mount
   useEffect(() => {
@@ -479,6 +511,18 @@ export function ChainExecutor({
       collectedPromiseDateRef.current = fs.collectedPromiseDate
       collectedPromiseAmountRef.current = fs.collectedPromiseAmount
       collectedCreditIdRef.current = fs.collectedCreditId
+      // "All-at-once" mode: restore the chain selection + entered values.
+      // (Optional fields — absent in snapshots saved before this existed.)
+      if (fs.selectedChainId !== undefined) {
+        setSelectedChainId(fs.selectedChainId)
+        if (fs.instantValues !== undefined) setInstantValues(fs.instantValues)
+        if (fs.instantNotes !== undefined) setInstantNotes(fs.instantNotes)
+        if (fs.notifyResponsible !== undefined) setNotifyResponsible(fs.notifyResponsible)
+        // Pre-mark this selection as already applied so the reset effect treats
+        // the restored chain as "settled" and doesn't wipe the restored values
+        // when selectedChainId lands on the next render.
+        lastInstantSelectionRef.current = `${fs.selectedChainId}|`
+      }
       restoredRef.current = true
       clearMinimized()
     }
@@ -506,6 +550,11 @@ export function ChainExecutor({
         collectedPromiseDate: collectedPromiseDateRef.current,
         collectedPromiseAmount: collectedPromiseAmountRef.current,
         collectedCreditId: collectedCreditIdRef.current,
+        // "All-at-once" mode state (no server snapshot exists for it).
+        selectedChainId,
+        instantValues,
+        instantNotes,
+        notifyResponsible,
       },
     })
     onMinimize?.()
@@ -528,6 +577,15 @@ export function ChainExecutor({
 
   // Reset on chain change
   useEffect(() => {
+    // Don't wipe state on the restore mount. When reopening a minimized
+    // session the restore effect (above) has just repopulated completedSteps,
+    // the collected refs, and the current-step fields from the saved snapshot;
+    // this reset runs right after it on the same mount and would clobber them
+    // (e.g. the completed-step cards vanish after restore). The hydration
+    // effect is also gated by ``restoredRef``, so it won't rebuild them either
+    // — leaving the form blank. Skipping here lets the restored state stand.
+    // Mirrors the instant-mode reset effect below, which already guards this.
+    if (restoredRef.current) return
     collectedStepDataRef.current = {}
     collectedDropdownValueIdsRef.current = {}
     collectedPromiseDateRef.current = ''
@@ -622,7 +680,23 @@ export function ChainExecutor({
   // executor was opened from a phone row, every instant contact step
   // whose source matches starts pre-filled with that phone so the
   // operator can save with one click.
+  //
+  // IMPORTANT: only reset on an actual SELECTION change. The effect's other
+  // deps (effectiveChain / taById) resolve asynchronously and used to re-fire
+  // this reset, wiping values the user had already entered — including values
+  // just restored from a minimized "all-at-once" session. We track the last
+  // selection and bail out when it hasn't changed.
   useEffect(() => {
+    // Skip the restore pass entirely: the restore effect sets selectedChainId/
+    // instantValues via state setters that land on the next render, and it
+    // pre-seeds lastInstantSelectionRef to the restored chain so that follow-up
+    // render is treated as already-settled. Resetting here would wipe them.
+    if (restoredRef.current) return
+
+    const selectionKey = `${selectedChainId}|${activeInstance?.id ?? ''}`
+    if (lastInstantSelectionRef.current === selectionKey) return
+    lastInstantSelectionRef.current = selectionKey
+
     if (prefilledPhone && contactSource && effectiveChain) {
       const seed: Record<number, InstantStepValue> = {}
       for (const step of effectiveChain.steps ?? []) {
@@ -763,6 +837,21 @@ export function ChainExecutor({
 
   const handleSaveEditStep = () => {
     if (!editingStep) return
+    if (editDateInvalid) {
+      toast.error(t('pages.clientChains.errors.dateInvalid'))
+      return
+    }
+    if (
+      stepDateIsPast(
+        editingStep.value,
+        editingStep.fieldType,
+        steps.find((s) => s.step_order === editingStep.stepOrder)?.not_in_the_past,
+        user?.timezone
+      )
+    ) {
+      toast.error(t('pages.clientChains.errors.datePast'))
+      return
+    }
     if (stepHasBranch(editingStep.stepOrder)) {
       setShowRewindWarning(true)
     } else {
@@ -894,6 +983,16 @@ export function ChainExecutor({
     if (creditId && !collectedCreditIdRef.current) collectedCreditIdRef.current = creditId
 
     // Validate
+    if (wizardDateInvalid) {
+      toast.error(t('pages.clientChains.errors.dateInvalid'))
+      return
+    }
+    if (
+      stepDateIsPast(stepValue, currentTA?.field_type, currentStep?.not_in_the_past, user?.timezone)
+    ) {
+      toast.error(t('pages.clientChains.errors.datePast'))
+      return
+    }
     if (currentStep?.is_required && !stepValue.trim()) {
       toast.error(t('pages.clientChains.errors.stepRequired'))
       return
@@ -911,14 +1010,24 @@ export function ChainExecutor({
       return
     }
 
+    // Rebuild the collected values from the authoritative server snapshot
+    // (chain_instances.step_data) before saving. Each step is snapshotted to
+    // the backend as it's advanced, so this copy is always complete — even
+    // after a minimize/restore cycle that wiped the in-memory refs (TA fields
+    // missing from history after minimize/restore). The in-memory refs win on
+    // conflict, since they hold the current step and any local edits not yet
+    // pushed to the server.
+    const snap = collectFromSnapshot(activeInstance.step_data)
+    const mergedStepData = { ...snap.stepData, ...collectedStepDataRef.current }
+    const mergedDropdownIds = { ...snap.dropdownIds, ...collectedDropdownValueIdsRef.current }
+
     // Use current step's dropdown value or first collected one
     const finalDropdownValueId =
-      selectedDropdownValue?.id ??
-      Object.values(collectedDropdownValueIdsRef.current)[0] ??
-      undefined
-    const finalPromiseDate = promiseDate || collectedPromiseDateRef.current
-    const finalPromiseAmount = promiseAmount || collectedPromiseAmountRef.current
-    const finalCreditId = creditId || collectedCreditIdRef.current
+      selectedDropdownValue?.id ?? Object.values(mergedDropdownIds)[0] ?? undefined
+    const finalPromiseDate = promiseDate || collectedPromiseDateRef.current || snap.promiseDate
+    const finalPromiseAmount =
+      promiseAmount || collectedPromiseAmountRef.current || snap.promiseAmount
+    const finalCreditId = creditId || collectedCreditIdRef.current || snap.creditId
 
     setIsFinalizing(true)
     try {
@@ -931,10 +1040,7 @@ export function ChainExecutor({
         promise_date: finalPromiseDate ? `${finalPromiseDate}T00:00:00` : undefined,
         promise_amount: finalPromiseAmount ? parseFloat(finalPromiseAmount) : undefined,
         notes: notes || undefined,
-        step_data:
-          Object.keys(collectedStepDataRef.current).length > 0
-            ? collectedStepDataRef.current
-            : undefined,
+        step_data: Object.keys(mergedStepData).length > 0 ? mergedStepData : undefined,
         notify_responsible: showNotifyResponsibleCheckbox ? notifyResponsible : false,
       })
       const result = await advanceMut.mutateAsync({
@@ -999,6 +1105,14 @@ export function ChainExecutor({
       const ta = taById.get(step.target_action_id)
       if (!ta) continue
       const v = instantValues[step.id] ?? EMPTY_INSTANT_VALUE
+      if (v.dateInvalid) {
+        toast.error(t('pages.clientChains.errors.dateInvalid'))
+        return
+      }
+      if (stepDateIsPast(v.value, ta.field_type, step.not_in_the_past, user?.timezone)) {
+        toast.error(t('pages.clientChains.errors.datePast'))
+        return
+      }
       if (step.is_required && !v.value.trim()) {
         toast.error(
           t('pages.clientChains.errors.stepFieldRequired', {
@@ -1528,19 +1642,24 @@ export function ChainExecutor({
                             </Select>
                           ) : editingStep.fieldType === 'contact' ? (
                             <div className="flex flex-col gap-1">
-                              {!editingContactPhones ? (
+                              {!editingContactOptions ? (
                                 <span className="text-xs text-gray-500">{t('common.loading')}</span>
-                              ) : editingContactPhones.length === 0 ? (
+                              ) : editingContactOptions.length === 0 ? (
                                 <span className="text-xs text-gray-500">
-                                  {t(
-                                    'pages.clientChains.noContacts',
-                                    'No phones available for this source.'
-                                  )}
+                                  {editingContactMeta?.isEmail
+                                    ? t(
+                                        'pages.clientChains.noEmails',
+                                        'No emails available for this source.'
+                                      )
+                                    : t(
+                                        'pages.clientChains.noContacts',
+                                        'No phones available for this source.'
+                                      )}
                                 </span>
                               ) : (
-                                editingContactPhones.map((p) => {
+                                editingContactOptions.map((p) => {
                                   const isChecked = editingStep.value === p.contact_value
-                                  const showComment = editingContactSource === 'recommender'
+                                  const showComment = editingContactMeta?.source === 'recommender'
                                   return (
                                     <label
                                       key={p.id}
@@ -1590,14 +1709,13 @@ export function ChainExecutor({
                                     : prev
                                 )
                               }
-                              format="dd/MM/yyyy HH:mm"
+                              onValidityChange={setEditDateInvalid}
+                              allowManualInput
+                              defaultTime={MANUAL_DATE_DEFAULT_TIME}
+                              format={MANUAL_DATE_FORMAT}
                               showTimeSelect
                               timeFormat="HH:mm"
                               timeIntervals={15}
-                              {...notInPastBounds(
-                                steps.find((s) => s.step_order === editingStep.stepOrder)
-                                  ?.not_in_the_past
-                              )}
                             />
                           ) : editingStep.fieldType === 'amount' ? (
                             <Input
@@ -1791,11 +1909,13 @@ export function ChainExecutor({
                           onChange={({ value }) =>
                             setStepValue(value ? getDateTimeStringInTimezone(value) : '')
                           }
-                          format="dd/MM/yyyy HH:mm"
+                          onValidityChange={setWizardDateInvalid}
+                          allowManualInput
+                          defaultTime={MANUAL_DATE_DEFAULT_TIME}
+                          format={MANUAL_DATE_FORMAT}
                           showTimeSelect
                           timeFormat="HH:mm"
                           timeIntervals={15}
-                          {...notInPastBounds(currentStep?.not_in_the_past)}
                         />
                       ) : currentTA.field_type === 'amount' ? (
                         <Input
@@ -1848,17 +1968,22 @@ export function ChainExecutor({
                         </div>
                       ) : currentTA.field_type === 'contact' ? (
                         <div className="flex flex-col gap-2">
-                          {!contactPhones ? (
+                          {!contactOptions ? (
                             <span className="text-xs text-gray-500">{t('common.loading')}</span>
-                          ) : contactPhones.length === 0 ? (
+                          ) : contactOptions.length === 0 ? (
                             <span className="text-xs text-gray-500">
-                              {t(
-                                'pages.clientChains.noContacts',
-                                'No phones available for this source.'
-                              )}
+                              {isEmailContactStep
+                                ? t(
+                                    'pages.clientChains.noEmails',
+                                    'No emails available for this source.'
+                                  )
+                                : t(
+                                    'pages.clientChains.noContacts',
+                                    'No phones available for this source.'
+                                  )}
                             </span>
                           ) : (
-                            contactPhones.map((p) => {
+                            contactOptions.map((p) => {
                               const isChecked = stepValue === p.contact_value
                               const showComment = currentStep?.contact_source === 'recommender'
                               return (
@@ -2126,6 +2251,9 @@ export function ChainExecutor({
                             {ef.effect_type === 'send_sms' && (
                               <span>{t('pages.clientChains.effectSMS')}</span>
                             )}
+                            {ef.effect_type === 'send_message' && (
+                              <span>{t('pages.clientChains.effectMessage')}</span>
+                            )}
                             {ef.effect_type === 'add_to_spam' && (
                               <span>{t('pages.clientChains.effectSpam')}</span>
                             )}
@@ -2300,10 +2428,17 @@ function InstantStepCard({
   clientId,
 }: InstantStepCardProps) {
   const { t } = useTranslation('common')
+  const contactSource = ta.field_type === 'contact' ? (step.contact_source ?? 'client') : null
+  const isEmailContact = step.contact_medium === 'email'
   const { data: phones } = useClientPhones(
     clientId,
-    ta.field_type === 'contact' ? (step.contact_source ?? 'client') : null
+    contactSource && !isEmailContact ? contactSource : null
   )
+  const { data: emails } = useClientEmails(
+    clientId,
+    contactSource && isEmailContact ? contactSource : null
+  )
+  const contactOptions = isEmailContact ? emails : phones
 
   // Mirror the wizard-mode debt filter: hide closed debts unless the
   // step's show_closed_credits admin flag is set.
@@ -2343,11 +2478,13 @@ function InstantStepCard({
         <DateSelect
           value={value.value || null}
           onChange={({ value: v }) => onChange({ value: v ? getDateTimeStringInTimezone(v) : '' })}
-          format="dd/MM/yyyy HH:mm"
+          onValidityChange={(invalid) => onChange({ dateInvalid: invalid })}
+          allowManualInput
+          defaultTime={MANUAL_DATE_DEFAULT_TIME}
+          format={MANUAL_DATE_FORMAT}
           showTimeSelect
           timeFormat="HH:mm"
           timeIntervals={15}
-          {...notInPastBounds(step.not_in_the_past)}
         />
       ) : ta.field_type === 'amount' ? (
         <Input
@@ -2398,14 +2535,16 @@ function InstantStepCard({
         </div>
       ) : ta.field_type === 'contact' ? (
         <div className="flex flex-col gap-2">
-          {!phones ? (
+          {!contactOptions ? (
             <span className="text-xs text-gray-500">{t('common.loading')}</span>
-          ) : phones.length === 0 ? (
+          ) : contactOptions.length === 0 ? (
             <span className="text-xs text-gray-500">
-              {t('pages.clientChains.noContacts', 'No phones available for this source.')}
+              {isEmailContact
+                ? t('pages.clientChains.noEmails', 'No emails available for this source.')
+                : t('pages.clientChains.noContacts', 'No phones available for this source.')}
             </span>
           ) : (
-            phones.map((p) => {
+            contactOptions.map((p) => {
               const isChecked = value.value === p.contact_value
               const showComment = step.contact_source === 'recommender'
               return (

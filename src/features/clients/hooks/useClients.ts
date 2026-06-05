@@ -728,6 +728,32 @@ export function useCloseDebt() {
 }
 
 /**
+ * Reopen a closed debt (set status back to 'active'). Linked RRs in a
+ * terminal state are cascaded to Cancelled by the backend.
+ */
+export function useReopenDebt() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ clientId, debtId }: { clientId: number; debtId: number }) =>
+      clientApi.reopenDebt(clientId, debtId),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: clientKeys.loans(variables.clientId), exact: true })
+      queryClient.invalidateQueries({
+        queryKey: clientKeys.detail(variables.clientId),
+        exact: true,
+      })
+      queryClient.invalidateQueries({ queryKey: clientKeys.lists() })
+      toast.success('Loan reopened successfully')
+    },
+    onError: (error: AxiosError<{ detail?: string }>) => {
+      const message = error?.response?.data?.detail || 'Failed to reopen loan'
+      toast.error(message)
+    },
+  })
+}
+
+/**
  * Edit the closure date on an already-closed debt.
  */
 export function useUpdateDebtClosureDate() {

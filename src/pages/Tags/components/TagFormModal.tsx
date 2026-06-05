@@ -112,9 +112,24 @@ export function TagFormModal({
 
   const [departmentIds, setDepartmentIds] = useState<number[]>([])
 
-  // Fetch roles from API
-  const { data: rolesData } = useRoles({ is_active: true, page_size: 100 })
-  const availableRoles = (rolesData?.roles || []).filter((r) => r.is_active).map((r) => r.name)
+  // Roles for protected-removal checkboxes: active project only, unique by name.
+  const { data: rolesData } = useRoles({
+    is_active: true,
+    page_size: 100,
+    project_id: projectId,
+  })
+  const availableRoles = useMemo(() => {
+    const seen = new Set<string>()
+    const unique: { id: number; name: string }[] = []
+    for (const role of rolesData?.roles ?? []) {
+      if (!role.is_active || seen.has(role.name)) {
+        continue
+      }
+      seen.add(role.name)
+      unique.push({ id: role.id, name: role.name })
+    }
+    return unique.sort((a, b) => a.name.localeCompare(b.name))
+  }, [rolesData])
 
   const toggleSection = (section: string) => {
     setExpandedSections((prev) => ({ ...prev, [section]: !prev[section] }))
@@ -648,25 +663,25 @@ export function TagFormModal({
                   <Label>{t('pages.tags.fields.protectedRoles', 'Roles allowed to remove')}</Label>
                   <div className="flex flex-wrap gap-2">
                     {availableRoles.map((role) => (
-                      <label key={role} className="flex cursor-pointer items-center gap-1.5">
+                      <label key={role.id} className="flex cursor-pointer items-center gap-1.5">
                         <input
                           type="checkbox"
-                          checked={(watch('protected_removal_roles') || []).includes(role)}
+                          checked={(watch('protected_removal_roles') || []).includes(role.name)}
                           onChange={(e) => {
                             const current = watch('protected_removal_roles') || []
                             if (e.target.checked) {
-                              setValue('protected_removal_roles', [...current, role])
+                              setValue('protected_removal_roles', [...current, role.name])
                             } else {
                               setValue(
                                 'protected_removal_roles',
-                                current.filter((r: string) => r !== role)
+                                current.filter((r: string) => r !== role.name)
                               )
                             }
                           }}
                           className="h-3.5 w-3.5 rounded border-gray-300"
                           disabled={isSystemTag}
                         />
-                        <span className="text-sm text-gray-700">{role}</span>
+                        <span className="text-sm text-gray-700">{role.name}</span>
                       </label>
                     ))}
                     {availableRoles.length === 0 && (

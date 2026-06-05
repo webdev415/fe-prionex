@@ -136,7 +136,11 @@
     "byOperator": "от {{name}}",
     "errors": {
       "dismissFailed": "Не удалось скрыть уведомление",
-      "markAllReadFailed": "Не удалось отметить все как прочитанные"
+      "markAllReadFailed": "Не удалось отметить все как прочитанные",
+      "cancelFailed": "Failed to cancel task",
+      "completeFailed": "Failed to complete task",
+      "starFailed": "Failed to star",
+      "unstarFailed": "Failed to unstar"
     },
     "taskPriority": {
       "high": "высокий",
@@ -161,7 +165,31 @@
       "daysAgo_few": "{{count}} дня назад",
       "daysAgo_many": "{{count}} дней назад"
     },
-    "dismissAria": "Закрыть уведомление"
+    "dismissAria": "Закрыть уведомление",
+    "tabs": {
+      "tasks": "Tasks",
+      "starred": "Starred",
+      "payments": "Pending Payments",
+      "calls": "Inbound Calls",
+      "rrPayments": "RR платежи"
+    },
+    "empty": {
+      "tasks": "No overdue tasks",
+      "starred": "No starred tasks",
+      "payments": "No pending payments",
+      "calls": "No inbound calls",
+      "rrPayments": "Нет платежей RR"
+    },
+    "taskActions": {
+      "completeAria": "Complete task",
+      "completeTitle": "Complete task",
+      "cancelAria": "Cancel task",
+      "cancelTitle": "Cancel task",
+      "starAria": "Star task",
+      "starTitle": "Star task",
+      "unstarAria": "Unstar",
+      "unstarTitle": "Unstar"
+    }
   },
   "common": {
     "step": "Шаг",
@@ -469,6 +497,7 @@
         "chain": "Цепочка",
         "notes": "Заметки",
         "createdDate": "Дата создания",
+        "clientId": "ID клиента",
         "author": "Автор",
         "assignee": "Исполнитель",
         "priority": "Приоритет",
@@ -1761,7 +1790,8 @@
         "employee": "Сотрудник",
         "searcher": "Розыскник",
         "assignmentDate": "Дата назначения",
-        "actions": "Действия"
+        "actions": "Действия",
+        "lastOutgoingTADate": "Дата последнего исходящего ЦД"
       },
       "priorities": {
         "critical": "Критический",
@@ -1780,7 +1810,7 @@
       "filters": {
         "debtRange": "Общий долг клиента",
         "dpdRange": "Диапазон DPD",
-        "amountOfDebtRange": "Сумма отдельного долга",
+        "amountOfDebtRange": "Сумма основного долга",
         "dateOfSale": "Дата продажи долга",
         "assignmentDate": "Дата назначения",
         "targetActionDate": "Дата целевого действия",
@@ -2009,6 +2039,8 @@
         "writeOff": "Списание",
         "reversal": "Сторно",
         "closeLoan": "Закрыть займ",
+        "reopenLoan": "Восстановить займ",
+        "confirmReopenLoan": "Вы уверены, что хотите восстановить этот кредит?",
         "sendToUBCI": "Отправить в UBCI",
         "rrCalculator": "RR Калькулятор",
         "rrDetail": "Детали соглашения о реструктуризации",
@@ -2401,7 +2433,8 @@
           "payloadTagHint": "Тег требует ЦД и/или сумму — откроется отдельная форма",
           "saveTags": "Сохранить теги",
           "tagsUpdated": "Теги обновлены для {{name}}",
-          "updateFailed": "Не удалось обновить теги"
+          "updateFailed": "Не удалось обновить теги",
+          "protectedRemoveBlocked": "Защищённые теги могут снимать только уполномоченные роли"
         },
         "deleteClient": {
           "title": "Удалить клиента",
@@ -2857,7 +2890,9 @@
         "promiseAmountRequired": "Для этого результата нужна сумма обещания.",
         "creditRequired": "Для этого результата нужно выбрать кредит.",
         "stepFieldRequired": "Поле «{{name}}» обязательно.",
-        "stepRequired": "Заполните этот шаг перед продолжением."
+        "stepRequired": "Заполните этот шаг перед продолжением.",
+        "dateInvalid": "Введите корректные дату и время в формате ДД.ММ.ГГГГ ЧЧ:ММ.",
+        "datePast": "Дата не может быть в прошлом."
       },
       "pickToContinue": "Выберите цепочку выше, чтобы продолжить.",
       "stepsPreview": "Шаги в этой цепочке",
@@ -3569,6 +3604,7 @@
         "callsMade": "Сделано звонков",
         "contactRate": "Контактность",
         "smsSent": "Отправлено SMS",
+        "messagesSent": "Отправлено сообщений",
         "paymentsCollected": "Собрано платежей",
         "vs": "по сравнению с",
         "yesterday": "вчера",
@@ -3597,6 +3633,7 @@
         "contactRate": "Контактность",
         "avgDuration": "Средняя длительность",
         "sms": "SMS",
+        "messages": "Сообщения",
         "payments": "Платежи",
         "total": "Всего"
       },
@@ -3640,6 +3677,26 @@
         "pending": "В ожидании",
         "deliveryRate": "Процент доставки",
         "byOperator": "По операторам"
+      },
+      "messagesModal": {
+        "title": "Отправлено сообщений",
+        "noData": "Данные недоступны",
+        "totalSent": "Всего отправлено",
+        "totalCost": "Общая стоимость",
+        "deliveryStats": "Статистика доставки",
+        "delivered": "Доставлено",
+        "failed": "Не доставлено",
+        "pending": "В ожидании",
+        "deliveryRate": "Процент доставки",
+        "byChannel": "По каналу",
+        "topDrafts": "Топ черновиков",
+        "byOperator": "По операторам",
+        "messages": "сообщений",
+        "channels": {
+          "sms": "SMS",
+          "viber": "Viber",
+          "email": "Email"
+        }
       },
       "paymentsModal": {
         "title": "Собранные платежи",
@@ -4248,6 +4305,12 @@
           "phone_number": "Номер телефона",
           "segments": "Сегменты SMS",
           "gateway_provider": "Шлюз провайдера",
+          "campaign_id": "ID кампании",
+          "recipient_id": "ID получателя",
+          "service": "Провайдер messaging",
+          "destination": "Адресат",
+          "external_message_id": "Внешний ID сообщения",
+          "draft_id": "ID черновика",
           "agent_extension": "Внутренний номер оператора",
           "interaction_id": "ID взаимодействия",
           "payment_confirmation_date": "Дата подтверждения платежа"
@@ -4274,6 +4337,7 @@
           "interaction.created": "Создано взаимодействие",
           "payment.verified": "Платёж подтверждён",
           "sms.sent": "SMS отправлено",
+          "message.sent": "Сообщение отправлено",
           "call.outcome.updated": "Результат звонка обновлён",
           "scoring.completed": "Скоринг завершён",
           "client.imported": "Клиент импортирован",

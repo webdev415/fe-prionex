@@ -59,15 +59,26 @@ export interface BackendTopOperator {
   operator_name: string
   calls_made: number
   contact_rate: number
+  sms_sent?: number
+  messages_sent?: number
 }
 
 /**
  * Dashboard KPIs from backend
  */
+export interface MessagingSentKPIValue {
+  value: number
+  delivery_rate: number
+  trend: KPITrend
+  delivered?: number
+  failed?: number
+}
+
 export interface BackendDashboardKPIs {
   calls_made: KPIValue
   contact_rate: KPIValue
-  sms_sent: KPIValue
+  sms_sent: MessagingSentKPIValue
+  messages_sent: MessagingSentKPIValue
   payments_collected: PaymentKPIValue
 }
 
@@ -127,6 +138,8 @@ export interface BackendOperatorSummary {
   total_talk_time: number
   avg_call_duration: number
   sms_sent: number
+  /** Messaging-service sends (parallel to legacy sms_sent). */
+  messages_sent?: number
   payments_collected: number | string
   payments_count: number
 }
@@ -242,6 +255,32 @@ export interface BackendSMSStatistics {
 }
 
 /**
+ * Top messaging draft usage row
+ */
+export interface BackendMessagingDraft {
+  name: string
+  count: number
+  cost?: number
+}
+
+/**
+ * Messaging statistics (messaging-service; parallel to sms_statistics)
+ */
+export interface BackendMessagingStatistics {
+  total_sent: number
+  delivered: number
+  failed: number
+  skipped?: number
+  queued?: number
+  in_flight?: number
+  delivery_rate: number
+  total_cost?: number | null
+  cost_currency?: string | null
+  by_channel: Record<string, number>
+  top_drafts: BackendMessagingDraft[]
+}
+
+/**
  * Daily communication trend
  */
 export interface BackendDailyTrend {
@@ -250,6 +289,8 @@ export interface BackendDailyTrend {
   calls_answered: number
   sms_sent: number
   sms_delivered: number
+  messages_sent?: number
+  messages_delivered?: number
 }
 
 /**
@@ -261,6 +302,7 @@ export interface BackendCommunicationStatisticsResponse {
   date_range: DateRange
   call_statistics: BackendCallStatistics
   sms_statistics: BackendSMSStatistics
+  messaging_statistics?: BackendMessagingStatistics
   hourly_breakdown?: BackendHourlyBreakdown[]
   daily_trends?: BackendDailyTrend[]
   generated_at: string

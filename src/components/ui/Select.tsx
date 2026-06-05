@@ -18,7 +18,30 @@ function getItemFilterText(node: React.ReactNode): string {
   return ''
 }
 
-const Select = SelectPrimitive.Root
+// Context to pass the opt-in clear callback down to the trigger. The × on the
+// trigger only renders when onClear is provided AND a value is selected, so
+// other usages of Select (no onClear) are completely unaffected.
+type SelectClearContextValue = {
+  onClear?: () => void
+  hasValue: boolean
+}
+const SelectClearContext = React.createContext<SelectClearContextValue>({
+  hasValue: false,
+})
+
+const Select = ({
+  onClear,
+  children,
+  ...props
+}: React.ComponentProps<typeof SelectPrimitive.Root> & { onClear?: () => void }) => {
+  const hasValue = props.value !== undefined && props.value !== ''
+  return (
+    <SelectClearContext.Provider value={{ onClear, hasValue }}>
+      <SelectPrimitive.Root {...props}>{children}</SelectPrimitive.Root>
+    </SelectClearContext.Provider>
+  )
+}
+Select.displayName = 'Select'
 
 const SelectGroup = SelectPrimitive.Group
 
@@ -38,23 +61,57 @@ SelectValue.displayName = SelectPrimitive.Value.displayName
 const SelectTrigger = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Trigger>,
   React.ComponentPropsWithoutRef<typeof SelectPrimitive.Trigger>
->(({ className, children, style, ...props }, ref) => (
-  <SelectPrimitive.Trigger
-    ref={ref}
-    className={cn(
-      'ring-offset-background data-[placeholder]:text-muted-foreground text-dark-500 flex h-[45px] w-full items-center justify-between rounded-lg border border-gray-400 bg-white px-3 py-2 text-sm font-light whitespace-nowrap shadow-none focus:ring-0 focus:outline-none disabled:opacity-50 [&>span]:line-clamp-1',
-      props.disabled ? 'cursor-default' : 'cursor-pointer',
-      className
-    )}
-    style={style}
-    {...props}
-  >
-    {children}
-    <div className="opacity-50">
-      <Icons.ArrowDown size={16} className="text-current" />
-    </div>
-  </SelectPrimitive.Trigger>
-))
+>(({ className, children, style, ...props }, ref) => {
+  const { onClear, hasValue } = React.useContext(SelectClearContext)
+  const showClear = !!onClear && hasValue && !props.disabled
+
+  return (
+    <SelectPrimitive.Trigger
+      ref={ref}
+      className={cn(
+        'ring-offset-background data-[placeholder]:text-muted-foreground text-dark-500 flex h-[45px] w-full items-center justify-between rounded-lg border border-gray-400 bg-white px-3 py-2 text-sm font-light whitespace-nowrap shadow-none focus:ring-0 focus:outline-none disabled:opacity-50 [&>span]:line-clamp-1',
+        props.disabled ? 'cursor-default' : 'cursor-pointer',
+        className
+      )}
+      style={style}
+      {...props}
+    >
+      {children}
+      <div className="ml-2 flex shrink-0 items-center gap-1">
+        {showClear && (
+          <span
+            role="button"
+            aria-label="Clear"
+            tabIndex={-1}
+            // Stop pointerdown so Radix doesn't open the menu on the same click.
+            onPointerDown={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+            }}
+            onClick={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              onClear?.()
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault()
+                e.stopPropagation()
+                onClear?.()
+              }
+            }}
+            className="flex items-center text-gray-400 hover:text-gray-600"
+          >
+            <Icons.Cancel01 size={14} />
+          </span>
+        )}
+        <div className="opacity-50">
+          <Icons.ArrowDown size={16} className="text-current" />
+        </div>
+      </div>
+    </SelectPrimitive.Trigger>
+  )
+})
 SelectTrigger.displayName = SelectPrimitive.Trigger.displayName
 
 const SelectScrollUpButton = React.forwardRef<

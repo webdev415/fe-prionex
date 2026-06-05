@@ -14,10 +14,11 @@ import {
   formatLauncherName,
   getMessagingServiceLabel,
   CampaignViberContentSection,
+  mergeCampaignCostFields,
   messagingApi,
   messagingStatusForCallLogCard,
 } from '@/features/messaging'
-import type { MessagingCampaignRecipient } from '@/features/messaging'
+import type { MessagingCampaignRecipient, MessagingCampaignSummary } from '@/features/messaging'
 import { useMessagingCampaign, useMessagingCampaignRecipients } from '@/features/messaging'
 
 const formatStatusFallback = (status: string) =>
@@ -137,12 +138,15 @@ function CampaignDetailSkeleton() {
 
 export interface CampaignDetailModalProps {
   campaignId: number | null
+  /** List row snapshot — used to show cost when detail API omits cost fields. */
+  listCampaign?: MessagingCampaignSummary | null
   operatorNames: Map<number, string>
   onClose: () => void
 }
 
 export function CampaignDetailModal({
   campaignId,
+  listCampaign = null,
   operatorNames,
   onClose,
 }: CampaignDetailModalProps) {
@@ -154,6 +158,8 @@ export function CampaignDetailModal({
     [t]
   )
   const { data: campaign, isLoading } = useMessagingCampaign(campaignId ?? 0, campaignId !== null)
+  const summary = campaign ?? listCampaign
+  const costSource = mergeCampaignCostFields(campaign, listCampaign) ?? summary
   const { data: recipients, isLoading: recipientsLoading } = useMessagingCampaignRecipients(
     campaignId ?? 0,
     { limit: 100, offset: 0 },
@@ -259,6 +265,10 @@ export function CampaignDetailModal({
   const subjectTemplate = snapshotString(snapshot, 'subject')
   const snapshotDraftName = snapshotString(snapshot, 'name')
   const showDraftUsed = campaign != null && campaign.draft_id != null && !!snapshotDraftName
+  const renderedBody = campaign?.sample_rendered_body?.trim() || null
+  const renderedSubject = campaign?.sample_rendered_subject?.trim() || null
+  const displayBody = renderedBody || bodyTemplate
+  const displaySubject = renderedSubject || subjectTemplate
 
   return (
     <Modal
@@ -275,78 +285,76 @@ export function CampaignDetailModal({
                 <Icons.MailSend01 size={20} className="text-dark-500 sm:size-6" strokeWidth={1.5} />
               </div>
             }
-            title={campaign?.name ?? t('pages.messagingCampaigns.detail.title', 'Campaign details')}
+            title={summary?.name ?? t('pages.messagingCampaigns.detail.title', 'Campaign details')}
           />
-          {campaign ? (
+          {summary ? (
             <div className="-mt-1 flex flex-wrap items-center gap-2 pl-12 sm:pl-[3.75rem]">
-              <span className="font-mono text-xs tracking-tight text-gray-500">
-                {campaign.code}
-              </span>
+              <span className="font-mono text-xs tracking-tight text-gray-500">{summary.code}</span>
               <span className="inline-flex items-center rounded-full bg-white/80 px-2.5 py-0.5 text-xs font-medium text-gray-700 ring-1 ring-gray-200/80 ring-inset">
-                {campaign.channel.toUpperCase()}
+                {summary.channel.toUpperCase()}
               </span>
               <span className="inline-flex items-center rounded-full bg-white/80 px-2.5 py-0.5 text-xs font-medium text-gray-600 ring-1 ring-gray-200/80 ring-inset">
                 {t(
-                  `pages.messagingIntegrations.services.${campaign.service}`,
-                  getMessagingServiceLabel(campaign.service)
+                  `pages.messagingIntegrations.services.${summary.service}`,
+                  getMessagingServiceLabel(summary.service)
                 )}
               </span>
               <span
                 className={cn(
                   'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset',
-                  campaignStatusBadgeClasses(campaign.status)
+                  campaignStatusBadgeClasses(summary.status)
                 )}
               >
-                {statusLabel(campaign.status)}
+                {statusLabel(summary.status)}
               </span>
             </div>
           ) : null}
         </div>
 
         <ModalContent className="max-h-none min-h-0 flex-1 overflow-y-auto py-2 sm:max-h-none sm:py-3 md:max-h-none">
-          {isLoading || !campaign ? (
+          {isLoading && !summary ? (
             <CampaignDetailSkeleton />
-          ) : (
+          ) : summary ? (
             <div className="flex flex-col gap-5 sm:gap-6">
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5">
                 <MetricCard
                   label={t('pages.messagingCampaigns.detail.stats.total', 'Total')}
-                  value={campaign.total_recipients}
+                  value={summary.total_recipients}
                 />
                 <MetricCard
                   label={t('pages.messagingCampaigns.detail.stats.sent', 'Sent')}
-                  value={campaign.sent_count}
+                  value={summary.sent_count}
                 />
                 <MetricCard
                   label={t('pages.messagingCampaigns.detail.stats.delivered', 'Delivered')}
-                  value={campaign.delivered_count}
+                  value={summary.delivered_count}
                 />
                 <MetricCard
                   label={t('pages.messagingCampaigns.detail.stats.failed', 'Failed')}
-                  value={campaign.failed_count}
+                  value={summary.failed_count}
                 />
                 <MetricCard
                   label={t('pages.messagingCampaigns.detail.stats.skipped', 'Skipped')}
-                  value={campaign.skipped_count}
+                  value={summary.skipped_count}
                 />
               </div>
 
               <section className="rounded-2xl border border-gray-200/80 bg-gradient-to-b from-white to-gray-50/80 px-4 py-1 shadow-sm sm:px-5">
                 <DetailRow label={t('pages.messagingCampaigns.detail.source', 'Source')}>
-                  {formatSourceLabel(campaign.source, t)}
+                  {formatSourceLabel(summary.source, t)}
                 </DetailRow>
                 <DetailRow label={t('pages.messagingCampaigns.detail.launchedBy', 'Launched by')}>
-                  {formatLauncherName(campaign.initiated_by, operatorNames) || '—'}
+                  {formatLauncherName(summary.initiated_by, operatorNames) || '—'}
                 </DetailRow>
                 <DetailRow label={t('pages.messagingCampaigns.detail.launchedAt', 'Launched at')}>
-                  {formatDateTime(campaign.launched_at)}
+                  {formatDateTime(summary.launched_at)}
                 </DetailRow>
                 <DetailRow label={t('pages.messagingCampaigns.detail.completedAt', 'Completed at')}>
-                  {formatDateTime(campaign.completed_at ?? undefined)}
+                  {formatDateTime(summary.completed_at ?? undefined)}
                 </DetailRow>
                 <DetailRow label={t('pages.messagingCampaigns.detail.cost', 'Cost')}>
                   {(() => {
-                    const { amount, badge } = formatCampaignCostDisplay(campaign, t)
+                    const { amount, badge } = formatCampaignCostDisplay(costSource ?? summary, t)
                     return (
                       <span>
                         {amount}
@@ -360,7 +368,9 @@ export function CampaignDetailModal({
                 <DetailRow
                   label={t('pages.messagingCampaigns.detail.selectionPayload', 'Audience')}
                 >
-                  {formatSelectionSummary(campaign.selection_payload, t)}
+                  {campaign?.selection_payload
+                    ? formatSelectionSummary(campaign.selection_payload, t)
+                    : '—'}
                 </DetailRow>
               </section>
 
@@ -377,26 +387,28 @@ export function CampaignDetailModal({
                       <p className="text-dark-500 mt-0.5 font-medium">{snapshotDraftName}</p>
                     </div>
                   )}
-                  {subjectTemplate && campaign.channel === 'email' && (
+                  {displaySubject && summary.channel === 'email' && (
                     <div>
                       <span className="text-xs font-light text-gray-500">
                         {t('pages.messagingCampaigns.detail.subject', 'Subject')}
                       </span>
-                      <p className="text-dark-500 mt-0.5 font-medium">{subjectTemplate}</p>
+                      <p className="text-dark-500 mt-0.5 font-medium">{displaySubject}</p>
                     </div>
                   )}
                   <div>
                     <span className="text-xs font-light text-gray-500">
-                      {t('pages.messagingCampaigns.detail.body', 'Body')}
+                      {renderedBody
+                        ? t('pages.messagingCampaigns.detail.sentBody', 'Sent message')
+                        : t('pages.messagingCampaigns.detail.body', 'Body')}
                     </span>
                     <div
                       className="text-dark-500 mt-1.5 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap ring-1 ring-gray-100 ring-inset"
                       role="article"
                     >
-                      {bodyTemplate || '—'}
+                      {displayBody || '—'}
                     </div>
                   </div>
-                  <CampaignViberContentSection snapshot={snapshot} channel={campaign.channel} />
+                  <CampaignViberContentSection snapshot={snapshot} channel={summary.channel} />
                 </div>
               </section>
 
@@ -426,7 +438,7 @@ export function CampaignDetailModal({
                 )}
               </section>
             </div>
-          )}
+          ) : null}
         </ModalContent>
 
         <ModalFooter className="bg-light-50 mt-auto shrink-0 flex-col gap-2 sm:flex-row">

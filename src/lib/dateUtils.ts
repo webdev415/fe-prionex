@@ -10,7 +10,180 @@
  * user's configured timezone", otherwise a UTC+2 user sees yesterday's data.
  */
 
+import { format as formatFns, isValid as isValidFns, parse as parseFns } from 'date-fns'
 import type { Period } from '@/features/report/types'
+
+// ---------------------------------------------------------------------------
+// Manual date/time entry (DD.MM.YYYY HH:MM)
+// ---------------------------------------------------------------------------
+
+/**
+ * Display + manual-entry format for datetime fields that accept keyboard
+ * input. Dots for the date, colon for the time, 24-hour, no seconds.
+ */
+export const DATETIME_DISPLAY_FORMAT = 'dd.MM.yyyy HH:mm'
+
+/**
+ * Display + manual-entry format for date-only filter fields (no time).
+ */
+export const DATE_DISPLAY_FORMAT = 'dd.MM.yyyy'
+
+type MaskSegment = {
+  len: number
+  padGt?: number
+  min?: number
+  max?: number
+}
+
+// Per-segment rules for the smart mask. ``padGt`` is the classic mask shortcut —
+// if the first digit can't possibly start a valid value (e.g. ``9`` for a day,
+// max 31), treat it as the second digit and prepend a ``0`` (``9`` → ``09``),
+// auto-advancing to the next field. A completed two-digit value is clamped
+// into ``[min, max]`` so impossible numbers can never be entered: ``35`` day
+// → ``31``, ``00`` day → ``01``. Day/month start at 1; hour/minute start at 0
+// (midnight is valid). The year is free-form (4 digits, no range).
+const DATE_SEGMENTS: ReadonlyArray<MaskSegment> = [
+  { len: 2, padGt: 3, min: 1, max: 31 }, // DD
+  { len: 2, padGt: 1, min: 1, max: 12 }, // MM
+  { len: 4 }, // YYYY
+]
+
+const DATETIME_SEGMENTS: ReadonlyArray<MaskSegment> = [
+  ...DATE_SEGMENTS,
+  { len: 2, padGt: 2, min: 0, max: 23 }, // hour
+  { len: 2, padGt: 5, min: 0, max: 59 }, // minute
+]
+
+/**
+ * Reduce a raw digit stream using per-segment pad/clamp rules so the user
+ * can't type impossible day/month (or hour/minute when included). Partial
+ * input is preserved.
+ */
+function smartMaskedDigits(raw: string, segments: ReadonlyArray<MaskSegment>): string {
+  const input = raw.replace(/\D/g, '')
+  let out = ''
+  let i = 0
+  for (const seg of segments) {
+    if (i >= input.length) break
+    if (seg.padGt === undefined) {
+      // Year — take up to its length, no clamping.
+      const take = input.slice(i, i + seg.len)
+      out += take
+      i += take.length
+      continue
+    }
+    const first = input[i]
+    i += 1
+    if (Number(first) > seg.padGt) {
+      out += '0' + first // impossible as a first digit → pad + advance
+      continue
+    }
+    if (i >= input.length) {
+      out += first // only one digit typed so far
+      break
+    }
+    const second = input[i]
+    i += 1
+    let val = Number(first) * 10 + Number(second)
+    if (seg.max !== undefined && val > seg.max) val = seg.max
+    if (seg.min !== undefined && val < seg.min) val = seg.min
+    out += String(val).padStart(2, '0')
+  }
+  return out
+}
+
+/** Date-only digit stream (DD + MM + YYYY) with DD ≤ 31 and MM ≤ 12. */
+function smartDateDigits(raw: string): string {
+  return smartMaskedDigits(raw, DATE_SEGMENTS)
+}
+
+/** Datetime digit stream (DD + MM + YYYY + HH + MM). */
+function smartDateTimeDigits(raw: string): string {
+  return smartMaskedDigits(raw, DATETIME_SEGMENTS)
+}
+
+/**
+ * Auto-insert the ``DD.MM.YYYY HH:MM`` separators as the user types, while
+ * live-blocking out-of-range values (hours ≤ 23, minutes ≤ 59, months ≤ 12,
+ * days ≤ 31). Keeps only digits (so backspacing over a separator works),
+ * then re-inserts ``.``/space/``:`` once the following group begins. Partial
+ * input is preserved — typing ``1506`` yields ``15.06`` and ``9`` (an
+ * impossible day start) yields ``09``.
+ */
+export function maskDateTimeInput(raw: string): string {
+  const d = smartDateTimeDigits(raw)
+  let out = d.slice(0, 2)
+  if (d.length > 2) out += '.' + d.slice(2, 4)
+  if (d.length > 4) out += '.' + d.slice(4, 8)
+  if (d.length > 8) out += ' ' + d.slice(8, 10)
+  if (d.length > 10) out += ':' + d.slice(10, 12)
+  return out
+}
+
+/**
+ * Strictly parse a ``DD.MM.YYYY HH:MM`` string. Returns a Date only when the
+ * input is **complete** (all 12 digits) and **valid** — incomplete input
+ * (date without time) and impossible values (``35.13.2026``, ``10.06.2026
+ * 25:00``) return ``null`` so the caller can flag them. The round-trip
+ * format check rejects any value date-fns would silently normalise.
+ */
+export function parseManualDateTime(masked: string): Date | null {
+  const digits = masked.replace(/\D/g, '')
+  if (digits.length !== 12) return null
+  const parsed = parseFns(masked, DATETIME_DISPLAY_FORMAT, new Date())
+  if (!isValidFns(parsed)) return null
+  if (formatFns(parsed, DATETIME_DISPLAY_FORMAT) !== masked) return null
+  return parsed
+}
+
+/**
+ * Auto-insert ``DD.MM.YYYY`` separators as the user types, while live-blocking
+ * out-of-range day/month values (days ≤ 31, months ≤ 12). Same DD/MM rules as
+ * ``maskDateTimeInput``.
+ */
+export function maskDateInput(raw: string): string {
+  const d = smartDateDigits(raw)
+  let out = d.slice(0, 2)
+  if (d.length > 2) out += '.' + d.slice(2, 4)
+  if (d.length > 4) out += '.' + d.slice(4, 8)
+  return out
+}
+
+/**
+ * Strictly parse a ``DD.MM.YYYY`` string. Returns a Date only when the input
+ * is **complete** (8 digits) and **valid** — incomplete input (``01.06``) and
+ * impossible calendar dates (``31.02.2026``) return ``null``.
+ */
+export function parseManualDate(masked: string): Date | null {
+  const digits = masked.replace(/\D/g, '')
+  if (digits.length !== 8) return null
+  const parsed = parseFns(masked, DATE_DISPLAY_FORMAT, new Date())
+  if (!isValidFns(parsed)) return null
+  if (formatFns(parsed, DATE_DISPLAY_FORMAT) !== masked) return null
+  return parsed
+}
+
+/**
+ * Is the given naive wall-time value ("YYYY-MM-DDTHH:mm") — or an absolute
+ * ISO string — strictly before "now"? Mirrors ``toUtcIsoIfDate`` so the
+ * "date cannot be in the past" check is evaluated in the user's profile
+ * timezone, not the browser's.
+ */
+export function isWallTimeInPast(value: string, timezone?: string | null): boolean {
+  if (!value) return false
+  let iso: string
+  if (/[Zz]$|[+-]\d{2}:\d{2}$/.test(value)) {
+    iso = value
+  } else if (timezone) {
+    iso = wallTimeAsTimezoneToUtcIso(value, timezone)
+  } else {
+    const d = new Date(value)
+    if (isNaN(d.getTime())) return false
+    iso = d.toISOString()
+  }
+  const t = new Date(iso).getTime()
+  return !isNaN(t) && t < Date.now()
+}
 
 // ---------------------------------------------------------------------------
 // Core helper
