@@ -595,6 +595,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           email: item.email_primary ?? '',
           priority: mapPriorityLevel(item.priority_level),
           score: item.priority_score,
+          contactSource: item.contact_source ?? null,
         }))
 
         setSearchResults(results)
