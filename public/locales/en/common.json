@@ -546,6 +546,7 @@
         "chain": "Chain",
         "notes": "Notes",
         "createdDate": "Created date",
+        "clientId": "Client ID",
         "author": "Author",
         "assignee": "Assignee",
         "priority": "Priority",

@@ -551,6 +551,7 @@
         "chain": "Ланцюг",
         "notes": "Нотатки",
         "createdDate": "Дата створення",
+        "clientId": "ID клієнта",
         "author": "Автор",
         "assignee": "Виконавець",
         "priority": "Пріоритет",

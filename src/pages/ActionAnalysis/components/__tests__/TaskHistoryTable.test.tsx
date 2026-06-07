@@ -7,6 +7,7 @@
 
 import { describe, expect, it, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
 
 import { TaskHistoryTable } from '../TaskHistoryTable'
 import type { TaskHistoryItem } from '@/features/actionAnalysis'
@@ -40,7 +41,11 @@ function makeTask(overrides: Partial<TaskHistoryItem> = {}): TaskHistoryItem {
 }
 
 function renderTable(rows: TaskHistoryItem[]) {
-  return render(<TaskHistoryTable data={rows} sort="created_at_desc" onSortChange={vi.fn()} />)
+  return render(
+    <MemoryRouter>
+      <TaskHistoryTable data={rows} sort="created_at_desc" onSortChange={vi.fn()} />
+    </MemoryRouter>
+  )
 }
 
 describe('TaskHistoryTable', () => {
@@ -76,8 +81,48 @@ describe('TaskHistoryTable', () => {
   })
 
   it('renders the sort selector with the active value', () => {
-    render(<TaskHistoryTable data={[makeTask()]} sort="due_date_asc" onSortChange={vi.fn()} />)
+    render(
+      <MemoryRouter>
+        <TaskHistoryTable data={[makeTask()]} sort="due_date_asc" onSortChange={vi.fn()} />
+      </MemoryRouter>
+    )
     // Sort label is rendered next to the Select.
     expect(screen.getByText('pages.actionAnalysis.filters.sortBy')).toBeInTheDocument()
+  })
+
+  // KAN-576: Client ID column.
+  it('renders the Client ID cell as a link to /dashboard/clients/:id', () => {
+    renderTable([makeTask({ client_id: 42 })])
+    const link = screen.getByText('#42').closest('a')
+    expect(link).not.toBeNull()
+    expect(link?.getAttribute('href')).toBe('/dashboard/clients/42')
+  })
+
+  it('renders an em-dash with no link when client_id is null', () => {
+    renderTable([
+      makeTask({
+        id: 77,
+        client_id: null,
+        // Keep other nullable cells populated so em-dash count is bounded.
+        due_date: '2026-05-15T14:30:00',
+        assigned_to_username: 'Alice',
+        created_by_name: 'Bob',
+        subject_name: 'Topic',
+      }),
+    ])
+    // Only the Client ID cell should be an em-dash for this row.
+    expect(screen.getAllByText('—')).toHaveLength(1)
+    expect(screen.queryByText(/^#/)).toBeNull()
+  })
+
+  it('places the Client ID header between Created date and Author', () => {
+    renderTable([makeTask()])
+    const headers = screen.getAllByRole('columnheader').map((h) => h.textContent?.trim())
+    const createdIdx = headers.indexOf('pages.actionAnalysis.columns.createdDate')
+    const clientIdx = headers.indexOf('pages.actionAnalysis.columns.clientId')
+    const authorIdx = headers.indexOf('pages.actionAnalysis.columns.author')
+    expect(createdIdx).toBeGreaterThanOrEqual(0)
+    expect(clientIdx).toBe(createdIdx + 1)
+    expect(authorIdx).toBe(clientIdx + 1)
   })
 })
