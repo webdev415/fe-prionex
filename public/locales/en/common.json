@@ -134,7 +134,11 @@
     "byOperator": "by {{name}}",
     "errors": {
       "dismissFailed": "Failed to dismiss notification",
-      "markAllReadFailed": "Failed to mark all as read"
+      "markAllReadFailed": "Failed to mark all as read",
+      "cancelFailed": "Failed to cancel task",
+      "completeFailed": "Failed to complete task",
+      "starFailed": "Failed to star",
+      "unstarFailed": "Failed to unstar"
     },
     "taskPriority": {
       "high": "high",
@@ -157,7 +161,31 @@
       "daysAgo_one": "{{count}}d ago",
       "daysAgo_other": "{{count}}d ago"
     },
-    "dismissAria": "Dismiss notification"
+    "dismissAria": "Dismiss notification",
+    "tabs": {
+      "tasks": "Tasks",
+      "starred": "Starred",
+      "payments": "Pending Payments",
+      "calls": "Inbound Calls",
+      "rrPayments": "RR Payments"
+    },
+    "empty": {
+      "tasks": "No overdue tasks",
+      "starred": "No starred tasks",
+      "payments": "No pending payments",
+      "calls": "No inbound calls",
+      "rrPayments": "No RR payments due"
+    },
+    "taskActions": {
+      "completeAria": "Complete task",
+      "completeTitle": "Complete task",
+      "cancelAria": "Cancel task",
+      "cancelTitle": "Cancel task",
+      "starAria": "Star task",
+      "starTitle": "Star task",
+      "unstarAria": "Unstar",
+      "unstarTitle": "Unstar"
+    }
   },
   "common": {
     "step": "Step",
@@ -1381,7 +1409,9 @@
         "delete": "Delete"
       },
       "modals": {
-        "create": { "title": "Create Group" },
+        "create": {
+          "title": "Create Group"
+        },
         "edit": {
           "title": "Edit Group",
           "failedToLoad": "Failed to load group data. Please try again."
@@ -5118,20 +5148,32 @@
       },
       "credentials": {
         "turbosms": {
-          "api_key": { "label": "API key" },
-          "sender": { "label": "Sender" }
+          "api_key": {
+            "label": "API key"
+          },
+          "sender": {
+            "label": "Sender"
+          }
         },
         "omnicell": {
-          "username": { "label": "Username" },
-          "password": { "label": "Password" },
-          "sender": { "label": "SMS sender (Alpha name)" }
+          "username": {
+            "label": "Username"
+          },
+          "password": {
+            "label": "Password"
+          },
+          "sender": {
+            "label": "SMS sender (Alpha name)"
+          }
         },
         "vodafone_obm": {
           "username": {
             "label": "OBM login (Settings → Logins)",
             "placeholder": "Legal-entity login string, or phone/email if cabinet allows"
           },
-          "password": { "label": "Cabinet password" },
+          "password": {
+            "label": "Cabinet password"
+          },
           "sender": {
             "label": "Sender (Alpha name)",
             "placeholder": "Approved sender, e.g. TechnoFin"
@@ -5164,9 +5206,15 @@
             "label": "From email",
             "placeholder": "Verified sender, e.g. info@techno-finance.com"
           },
-          "from_name": { "label": "From name" },
-          "reply_to_email": { "label": "Reply-to email" },
-          "reply_to_name": { "label": "Reply-to name" }
+          "from_name": {
+            "label": "From name"
+          },
+          "reply_to_email": {
+            "label": "Reply-to email"
+          },
+          "reply_to_name": {
+            "label": "Reply-to name"
+          }
         }
       },
       "toasts": {

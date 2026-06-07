@@ -134,7 +134,11 @@
     "byOperator": "от {{name}}",
     "errors": {
       "dismissFailed": "Не удалось скрыть уведомление",
-      "markAllReadFailed": "Не удалось отметить все как прочитанные"
+      "markAllReadFailed": "Не удалось отметить все как прочитанные",
+      "cancelFailed": "Failed to cancel task",
+      "completeFailed": "Failed to complete task",
+      "starFailed": "Failed to star",
+      "unstarFailed": "Failed to unstar"
     },
     "taskPriority": {
       "high": "высокий",
@@ -159,7 +163,31 @@
       "daysAgo_few": "{{count}} дня назад",
       "daysAgo_many": "{{count}} дней назад"
     },
-    "dismissAria": "Закрыть уведомление"
+    "dismissAria": "Закрыть уведомление",
+    "tabs": {
+      "tasks": "Tasks",
+      "starred": "Starred",
+      "payments": "Pending Payments",
+      "calls": "Inbound Calls",
+      "rrPayments": "RR платежи"
+    },
+    "empty": {
+      "tasks": "No overdue tasks",
+      "starred": "No starred tasks",
+      "payments": "No pending payments",
+      "calls": "No inbound calls",
+      "rrPayments": "Нет платежей RR"
+    },
+    "taskActions": {
+      "completeAria": "Complete task",
+      "completeTitle": "Complete task",
+      "cancelAria": "Cancel task",
+      "cancelTitle": "Cancel task",
+      "starAria": "Star task",
+      "starTitle": "Star task",
+      "unstarAria": "Unstar",
+      "unstarTitle": "Unstar"
+    }
   },
   "common": {
     "step": "Шаг",
