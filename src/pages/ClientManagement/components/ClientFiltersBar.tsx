@@ -20,6 +20,7 @@ import { Icons } from '@/lib/icons'
 import { PortfolioDropdown } from './PortfolioDropdown'
 import { TagsDropdown } from './TagsDropdown'
 import { LastInteractionResultDropdown } from './LastInteractionResultDropdown'
+import { OperatorMultiSelectDropdown } from './OperatorMultiSelectDropdown'
 import { useSellers } from '@/features/sellers/hooks/useSellers'
 import { useOperators } from '@/features/users/hooks/useUsers'
 import { useClientAssigneeIds } from '@/features/clients/hooks/useClients'
@@ -164,12 +165,14 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
   }, [assigneeIds])
 
   // active → always shown; inactive → only if present in the gate set.
+  // Multi-select variants (KAN-572): the operator-dropdown component
+  // and the URL state both use numeric ids, so emit those directly.
   const interactionUserOptions = useMemo(
     () =>
       (operators ?? [])
         .filter((u) => u.status === 'active' || anyAssignedIds.has(u.id))
         .map((u) => ({
-          id: u.id.toString(),
+          id: u.id,
           name: u.full_name,
           isInactive: u.status !== 'active',
         })),
@@ -180,12 +183,14 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
       (operators ?? [])
         .filter((u) => u.status === 'active' || employeeIds.has(u.id))
         .map((u) => ({
-          id: u.id.toString(),
+          id: u.id,
           name: u.full_name,
           isInactive: u.status !== 'active',
         })),
     [operators, employeeIds]
   )
+  // Searcher still feeds the legacy single-select (not in KAN-572 scope),
+  // so its id stays as a string for SelectItem compatibility.
   const searcherOptions = useMemo(
     () =>
       (operators ?? [])
@@ -325,9 +330,9 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
             </div>
           </div>
 
-          {/* Second Row: Amount of debt range & Date of sale */}
+          {/* Second Row: Principal Amount range & Date of sale */}
           <div className="flex w-full flex-col gap-4 self-stretch lg:flex-row lg:items-center lg:gap-10">
-            {/* Individual Debt Amount (total_debt_min/max) */}
+            {/* Principal Amount (principal_min/max on open loans) — KAN-572. */}
             <div className="flex w-full flex-col gap-2 sm:flex-1 sm:flex-row sm:items-center sm:gap-3">
               <label className="text-dark-500 w-full text-xs leading-[150%] font-medium tracking-[-0.24px] sm:w-[100px] sm:text-sm sm:tracking-[-0.28px]">
                 {t('pages.clients.filters.amountOfDebtRange')}
@@ -337,11 +342,11 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                   ₴
                 </span>
                 <DebouncedNumberInput
-                  value={filters.totalDebtRangeFrom}
+                  value={filters.principalRangeFrom}
                   onChange={(value) =>
                     onFilterChange({
                       ...filters,
-                      totalDebtRangeFrom: value,
+                      principalRangeFrom: value,
                     })
                   }
                   placeholder={t('pages.clients.filters.min')}
@@ -352,11 +357,11 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                   -
                 </span>
                 <DebouncedNumberInput
-                  value={filters.totalDebtRangeTo}
+                  value={filters.principalRangeTo}
                   onChange={(value) =>
                     onFilterChange({
                       ...filters,
-                      totalDebtRangeTo: value,
+                      principalRangeTo: value,
                     })
                   }
                   placeholder={t('pages.clients.filters.max')}
@@ -487,43 +492,57 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                 {t('pages.clients.filters.interactionCreatedBy', 'Interaction Created By')}
               </label>
               <div className="flex w-full flex-1 flex-col items-start gap-2">
-                <Select
-                  value={filters.interactionUserId || undefined}
-                  onValueChange={(value) =>
+                <OperatorMultiSelectDropdown
+                  options={interactionUserOptions}
+                  selectedIds={filters.interactionUserIds ?? []}
+                  onSelectionChange={(ids) =>
                     onFilterChange({
                       ...filters,
-                      interactionUserId: value === 'none' ? undefined : value,
+                      interactionUserIds: ids,
                     })
                   }
-                >
-                  <SelectTrigger>
-                    <SelectValue
-                      placeholder={t('pages.clients.filters.selectOperator', 'Select operator')}
-                    />
-                  </SelectTrigger>
-                  <SelectContent searchable>
-                    <SelectItem value="none">
-                      {t('pages.clients.filters.selectOperator', 'Select operator')}
-                    </SelectItem>
-                    {interactionUserOptions.length === 0 ? (
-                      <div className="px-2 py-6 text-center text-sm text-gray-500">
-                        {t('pages.clients.filters.noUsersAvailable')}
+                  searchPlaceholder={t('pages.clients.filters.selectOperator', 'Select operator')}
+                  emptyText={t('pages.clients.filters.noUsersAvailable')}
+                  selectAllLabel={t('pages.clients.filters.selectAllOperators', 'All operators')}
+                  testId="interaction-user-multiselect-trigger"
+                  trigger={
+                    <button
+                      type="button"
+                      className="text-dark-500 flex h-[45px] w-full cursor-pointer items-center justify-between gap-2 rounded-lg border border-gray-400 bg-white px-3 py-2 text-left text-sm font-light whitespace-nowrap shadow-none focus:ring-0 focus:outline-none"
+                    >
+                      <span className="truncate">
+                        {(() => {
+                          const selected = filters.interactionUserIds ?? []
+                          const allCount = interactionUserOptions.length
+                          // "All operators" both when nothing is selected
+                          // AND when everything is selected — same as the
+                          // reference EmployeeFilterDropdown on Action
+                          // Analysis. Both states semantically mean "no
+                          // narrowing".
+                          if (
+                            selected.length === 0 ||
+                            (allCount > 0 && selected.length === allCount)
+                          ) {
+                            return t('pages.clients.filters.selectAllOperators', 'All operators')
+                          }
+                          if (selected.length <= 2) {
+                            return interactionUserOptions
+                              .filter((o) => selected.includes(o.id))
+                              .map((o) => o.name)
+                              .join(', ')
+                          }
+                          return t('pages.clients.filters.selectedCount', {
+                            defaultValue: '{{count}} selected',
+                            count: selected.length,
+                          })
+                        })()}
+                      </span>
+                      <div className="shrink-0 opacity-50">
+                        <Icons.ArrowDown size={16} className="text-current" />
                       </div>
-                    ) : (
-                      interactionUserOptions.map((user) => (
-                        <SelectItem key={user.id} value={user.id}>
-                          {user.isInactive ? (
-                            <span className="text-gray-400">
-                              {user.name} {t('pages.clients.filters.inactiveSuffix', '(blocked)')}
-                            </span>
-                          ) : (
-                            user.name
-                          )}
-                        </SelectItem>
-                      ))
-                    )}
-                  </SelectContent>
-                </Select>
+                    </button>
+                  }
+                />
               </div>
             </div>
           </div>
@@ -724,47 +743,58 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
 
           {/* Fifth Row: Responsible employee & Responsible searcher */}
           <div className="flex w-full flex-col gap-4 self-stretch lg:flex-row lg:items-start lg:gap-10">
-            {/* Responsible employee */}
+            {/* Responsible employee (multi-select OR, KAN-572) */}
             <div className="flex w-full flex-col gap-2 sm:min-w-[220px] sm:flex-1 sm:flex-row sm:items-center sm:gap-3">
               <label className="text-dark-500 w-full text-xs leading-[150%] font-medium tracking-[-0.24px] sm:w-auto sm:text-sm sm:tracking-[-0.28px]">
                 {t('pages.clients.filters.responsibleEmployee')}
               </label>
               <div className="flex w-full flex-1 flex-col items-start gap-2">
-                <Select
-                  value={filters.responsibleEmployee || undefined}
-                  onValueChange={(value) =>
+                <OperatorMultiSelectDropdown
+                  options={employeeOptions}
+                  selectedIds={filters.responsibleEmployeeIds ?? []}
+                  onSelectionChange={(ids) =>
                     onFilterChange({
                       ...filters,
-                      responsibleEmployee: value === 'none' ? undefined : value,
+                      responsibleEmployeeIds: ids,
                     })
                   }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder={t('pages.clients.filters.selectEmployee')} />
-                  </SelectTrigger>
-                  <SelectContent searchable>
-                    <SelectItem value="none">
-                      {t('pages.clients.filters.selectEmployee')}
-                    </SelectItem>
-                    {employeeOptions.length === 0 ? (
-                      <div className="px-2 py-6 text-center text-sm text-gray-500">
-                        {t('pages.clients.filters.noUsersAvailable')}
+                  searchPlaceholder={t('pages.clients.filters.selectEmployee')}
+                  emptyText={t('pages.clients.filters.noUsersAvailable')}
+                  selectAllLabel={t('pages.clients.filters.selectAllEmployees', 'All employees')}
+                  testId="responsible-employee-multiselect-trigger"
+                  trigger={
+                    <button
+                      type="button"
+                      className="text-dark-500 flex h-[45px] w-full cursor-pointer items-center justify-between gap-2 rounded-lg border border-gray-400 bg-white px-3 py-2 text-left text-sm font-light whitespace-nowrap shadow-none focus:ring-0 focus:outline-none"
+                    >
+                      <span className="truncate">
+                        {(() => {
+                          const selected = filters.responsibleEmployeeIds ?? []
+                          const allCount = employeeOptions.length
+                          if (
+                            selected.length === 0 ||
+                            (allCount > 0 && selected.length === allCount)
+                          ) {
+                            return t('pages.clients.filters.selectAllEmployees', 'All employees')
+                          }
+                          if (selected.length <= 2) {
+                            return employeeOptions
+                              .filter((o) => selected.includes(o.id))
+                              .map((o) => o.name)
+                              .join(', ')
+                          }
+                          return t('pages.clients.filters.selectedCount', {
+                            defaultValue: '{{count}} selected',
+                            count: selected.length,
+                          })
+                        })()}
+                      </span>
+                      <div className="shrink-0 opacity-50">
+                        <Icons.ArrowDown size={16} className="text-current" />
                       </div>
-                    ) : (
-                      employeeOptions.map((user) => (
-                        <SelectItem key={user.id} value={user.id}>
-                          {user.isInactive ? (
-                            <span className="text-gray-400">
-                              {user.name} {t('pages.clients.filters.inactiveSuffix', '(blocked)')}
-                            </span>
-                          ) : (
-                            user.name
-                          )}
-                        </SelectItem>
-                      ))
-                    )}
-                  </SelectContent>
-                </Select>
+                    </button>
+                  }
+                />
               </div>
             </div>
 

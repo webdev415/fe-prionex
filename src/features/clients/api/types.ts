@@ -251,7 +251,11 @@ export interface GetClientsParams {
   sale_date_to?: string // YYYY-MM-DD format
 
   // Filter: Assignment
+  /** @deprecated use responsible_employee_ids (multi-select OR). Folded
+   * into the list at the BE for one deprecation release. */
   responsible_employee_id?: number
+  /** Comma-separated employee user IDs, OR semantics. Example: '101,102,103'. */
+  responsible_employee_ids?: string
   responsible_searcher_id?: number
   unassigned_only?: boolean
 
@@ -280,7 +284,10 @@ export interface GetClientsParams {
   ta_date_to?: string // YYYY-MM-DD format
 
   // Filter: Interaction Created By — operator on the client's latest TA
+  /** @deprecated use interaction_user_ids (multi-select OR). */
   interaction_user_id?: number
+  /** Comma-separated operator user IDs, OR semantics on the latest-TA recorded_by. */
+  interaction_user_ids?: string
 
   // Filter: Interaction Logged Date — created_at of the latest TA,
   // independent of TA date-value presence

@@ -1806,7 +1806,7 @@
       "filters": {
         "debtRange": "Общий долг клиента",
         "dpdRange": "Диапазон DPD",
-        "amountOfDebtRange": "Сумма отдельного долга",
+        "amountOfDebtRange": "Сумма основного долга",
         "dateOfSale": "Дата продажи долга",
         "assignmentDate": "Дата назначения",
         "targetActionDate": "Дата целевого действия",

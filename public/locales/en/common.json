@@ -1917,7 +1917,7 @@
       "filters": {
         "debtRange": "Total Client Debt",
         "dpdRange": "DPD Range",
-        "amountOfDebtRange": "Individual Debt Amount",
+        "amountOfDebtRange": "Principal Amount",
         "dateOfSale": "Debt Sale Date",
         "assignmentDate": "Assignment Date",
         "targetActionDate": "Target Action Date",
