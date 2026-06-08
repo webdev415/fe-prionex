@@ -5,10 +5,7 @@ import { toast } from 'sonner'
 import { PERMISSIONS } from '@/constants/permissions'
 import { useAuthStore } from '@/stores/authStore'
 import { useOperators } from '@/features/users/hooks'
-import {
-  useTakeCharge,
-  useTeamRoster,
-} from '@/features/quality/coaching/hooks'
+import { useTakeCharge, useTeamRoster } from '@/features/quality/coaching/hooks'
 import { OperatorDetailPanel } from '@/features/quality/coaching/components/OperatorDetailPanel'
 import { useScopedUserIds } from '../../lib/scope'
 import { deriveDepartmentChips, deriveTeamRoster } from '../../lib/teamRosterAdapter'
@@ -89,7 +86,11 @@ export function TeamTab({
     return Number.isFinite(parsed) ? parsed : undefined
   }, [rawDepartment])
 
-  const { data: rosterPayload, isLoading, isError } = useTeamRoster(
+  const {
+    data: rosterPayload,
+    isLoading,
+    isError,
+  } = useTeamRoster(
     {
       department_id: departmentIdFilter,
       user_ids: effectiveUserIds,
@@ -144,19 +145,22 @@ export function TeamTab({
   }
 
   // Pull metadata for the panel header from the loaded roster — saves a
-  // join inside the panel itself.
-  const selectedRow = useMemo(() => {
-    if (!selectedOperatorId) return undefined
-    for (const dept of departments) {
-      for (const team of dept.teams) {
-        const op = team.operators.find((o) => o.id === selectedOperatorId)
-        if (op) {
-          return { operator: op, team, department: dept }
-        }
-      }
-    }
-    return undefined
-  }, [departments, selectedOperatorId])
+  // join inside the panel itself. Single chained expression so React
+  // Compiler can preserve the memoization (the previous imperative
+  // for/return form tripped `react-hooks/preserve-manual-memoization`).
+  const selectedRow = useMemo(
+    () =>
+      selectedOperatorId == null
+        ? undefined
+        : departments
+            .flatMap((dept) =>
+              dept.teams.flatMap((team) =>
+                team.operators.map((operator) => ({ operator, team, department: dept }))
+              )
+            )
+            .find((row) => row.operator.id === selectedOperatorId),
+    [departments, selectedOperatorId]
+  )
 
   const takeChargeMutation = useTakeCharge()
   const canTakeCharge = userPermissions.includes(PERMISSIONS.TRAINING.MANAGE_COACHING_ASSIGNMENTS)

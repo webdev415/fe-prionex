@@ -1,4 +1,4 @@
-﻿import type { MockOperator, ScoreBand } from '../../mocks/trainerWorkplaceMocks'
+﻿import type { TeamOperatorRow, ScoreBand } from '../../mocks/trainerWorkplaceMocks'
 import {
   operatorPresence,
   PRESENCE_DOT,
@@ -8,7 +8,7 @@ import {
 } from './teamStyles'
 
 export interface OperatorRowProps {
-  operator: MockOperator
+  operator: TeamOperatorRow
   onSelect?: (operatorId: number) => void
 }
 
@@ -93,8 +93,7 @@ export function OperatorRow({ operator, onSelect }: OperatorRowProps) {
         <span
           className="absolute inset-0 flex items-center justify-center text-xs font-semibold"
           style={{
-            color:
-              operator.hasScore !== false ? TEAM_SCORE_TEXT[operator.scoreBand] : '#9CA3AF',
+            color: operator.hasScore !== false ? TEAM_SCORE_TEXT[operator.scoreBand] : '#9CA3AF',
           }}
         >
           {operator.hasScore !== false ? operator.score : '—'}

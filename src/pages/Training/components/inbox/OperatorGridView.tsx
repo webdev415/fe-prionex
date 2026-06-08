@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { type MockInboxRow, type ScoreBand } from '../../mocks/trainerWorkplaceMocks'
+import { type InboxCardRow, type ScoreBand } from '../../mocks/trainerWorkplaceMocks'
 
 /**
  * Grid view of the Inbox queue (KAN-413 §3.5).
@@ -11,7 +11,7 @@ import { type MockInboxRow, type ScoreBand } from '../../mocks/trainerWorkplaceM
  * operator detail endpoint surfaces them.
  */
 export interface OperatorGridViewProps {
-  rows: MockInboxRow[]
+  rows: InboxCardRow[]
   selectedOperatorId?: number
   onSelect: (operatorId: number) => void
   isLoading?: boolean

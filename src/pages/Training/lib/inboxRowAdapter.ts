@@ -1,13 +1,9 @@
 import type { OperatorUser } from '@/features/users/api/usersApi'
-import type {
-  AssignmentState,
-  QueueOperator,
-  ScoreBand,
-} from '@/features/quality/coaching/types'
+import type { AssignmentState, QueueOperator, ScoreBand } from '@/features/quality/coaching/types'
 import type {
   InboxAssignmentState,
   InboxPriority,
-  MockInboxRow,
+  InboxCardRow,
   MockInboxTrigger,
   MockInboxTriggerTag,
 } from '../mocks/trainerWorkplaceMocks'
@@ -16,7 +12,7 @@ import type {
  * Derive a Figma-faithful UI row from a `QueueOperator` returned by
  * `GET /api/v1/quality/coaching/queue`.
  *
- * Many of the rich fields on `MockInboxRow` (avatar colour, daily-plan
+ * Many of the rich fields on `InboxCardRow` (avatar colour, daily-plan
  * progress, online duration, segment, extension, etc.) are not yet returned
  * by the BE — they come from the per-operator detail endpoint and the
  * project context. Until those land we derive what we can from the queue
@@ -151,11 +147,19 @@ function summaryFor(row: QueueOperator): string {
   return `Composite score ${row.composite_score}`
 }
 
-export function deriveInboxRow(row: QueueOperator, operators: OperatorUser[]): MockInboxRow {
+function parseHireDate(iso: string | null | undefined): { year: string; date: string } {
+  if (!iso) return { year: '', date: '' }
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return { year: '', date: '' }
+  return { year: String(d.getFullYear()), date: d.toLocaleDateString() }
+}
+
+export function deriveInboxRow(row: QueueOperator, operators: OperatorUser[]): InboxCardRow {
   const operator = operators.find((o) => o.id === row.operator_id)
   const name = operator?.full_name ?? `#${row.operator_id}`
   const departmentName = operator?.department_name ?? '—'
   const extension = operator?.asterisk_extension ?? ''
+  const hire = parseHireDate(operator?.hired_at)
   const { triggers, triggerTags } = buildTriggerSummaries(row)
   const online = isOnline(row.last_active_at)
   const lastActiveLabel = online ? 'Online' : `Offline · ${formatRelative(row.last_active_at)} ago`
@@ -167,7 +171,9 @@ export function deriveInboxRow(row: QueueOperator, operators: OperatorUser[]): M
     avatarColor: avatarColorFor(row.operator_id),
     team: departmentName,
     department: departmentName,
-    segment: row.score_band === 'red' ? 'Hard collection' : 'Standard',
+    // `segment` was a hardcoded "Hard collection / Standard" string in the
+    // mock; the real value is the operator's department name.
+    segment: departmentName,
     extension,
     online,
     lastActiveLabel,
@@ -186,18 +192,15 @@ export function deriveInboxRow(row: QueueOperator, operators: OperatorUser[]): M
     dailyPlanTotal: 0,
     onlineDuration: online ? '—' : '0m',
     onlineSince: row.last_active_at ? formatClock(row.last_active_at) : '',
-    experienceYear: '',
-    experienceDate: '',
+    experienceYear: hire.year,
+    experienceDate: hire.date,
     activityMinutes: 0,
-    listStatusDot: row.score_band,
+    listStatusDot: row.score_band ?? 'amber',
     cardTimestamp: formatRelative(row.last_active_at),
     cardSummary: summaryFor(row),
   }
 }
 
-export function deriveInboxRows(
-  rows: QueueOperator[],
-  operators: OperatorUser[]
-): MockInboxRow[] {
+export function deriveInboxRows(rows: QueueOperator[], operators: OperatorUser[]): InboxCardRow[] {
   return rows.map((r) => deriveInboxRow(r, operators))
 }

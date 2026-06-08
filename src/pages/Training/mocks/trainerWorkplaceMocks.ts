@@ -23,7 +23,7 @@ export type OperatorPresenceStatus = 'online' | 'offline' | 'busy' | 'on_call'
  */
 export type OperatorWorkStatus = 'in_norm' | 'behind' | 'in_queue'
 
-export interface MockOperator {
+export interface TeamOperatorRow {
   id: number
   name: string
   initials: string
@@ -101,7 +101,12 @@ function deriveWorkStatus(score: number, dailyPlanPct: number): OperatorWorkStat
   return 'in_norm'
 }
 
-function buildOperator(id: number, team: string, department: string, score: number): MockOperator {
+function buildOperator(
+  id: number,
+  team: string,
+  department: string,
+  score: number
+): TeamOperatorRow {
   const name = OPERATOR_NAMES[id % OPERATOR_NAMES.length]
   const parts = name.split(' ')
   const initials = `${parts[0][0]}${parts[1]?.[0] ?? ''}`.toUpperCase()
@@ -136,7 +141,7 @@ function teamOp(
   score: number,
   presenceStatus: OperatorPresenceStatus,
   dailyPlanPct: number
-): MockOperator {
+): TeamOperatorRow {
   return {
     id,
     name,
@@ -155,7 +160,7 @@ function teamOp(
   }
 }
 
-export interface MockTeam {
+export interface TeamGroupRow {
   id: string
   name: string
   teamLeadName: string
@@ -163,10 +168,10 @@ export interface MockTeam {
   averageScore: number
   scoreBand: ScoreBand
   queueCount: number
-  operators: MockOperator[]
+  operators: TeamOperatorRow[]
 }
 
-export interface MockDepartment {
+export interface TeamDepartmentRow {
   id: string
   name: string
   managerName: string
@@ -176,11 +181,11 @@ export interface MockDepartment {
   averageScore: number
   scoreBand: ScoreBand
   queueCount: number
-  teams: MockTeam[]
+  teams: TeamGroupRow[]
 }
 
 /** Figma `ENG - Training _ Team.svg` roster */
-export const MOCK_DEPARTMENTS: MockDepartment[] = [
+export const MOCK_DEPARTMENTS: TeamDepartmentRow[] = [
   {
     id: 'dept-a',
     name: 'Department A · Hard Collection',
@@ -940,7 +945,7 @@ export type AssignmentStatus = 'not_started' | 'in_progress' | 'done' | 'overdue
 
 export interface MockAssignment {
   id: number
-  operator: MockOperator
+  operator: TeamOperatorRow
   courseId: number
   courseTitle: string
   courseCategory: string
@@ -2406,7 +2411,7 @@ export interface MockInboxTriggerTag {
   tone: 'red' | 'amber' | 'teal'
 }
 
-export interface MockInboxRow {
+export interface InboxCardRow {
   operatorId: number
   name: string
   initials: string
@@ -2586,7 +2591,7 @@ const INBOX_TRIGGERS_POOL: Omit<MockInboxTrigger, 'detectedAtLabel'>[] = [
 
 /** Figma INBOX frames — operator roster, scores, and trigger tags. */
 const FIGMA_INBOX_OPERATORS: Omit<
-  MockInboxRow,
+  InboxCardRow,
   'triggers' | 'triggerTags' | 'scoreBand' | 'flagged'
 >[] = [
   {
@@ -2788,7 +2793,7 @@ const FIGMA_INBOX_OPERATORS: Omit<
   },
 ]
 
-function buildInboxRow(base: (typeof FIGMA_INBOX_OPERATORS)[number]): MockInboxRow {
+function buildInboxRow(base: (typeof FIGMA_INBOX_OPERATORS)[number]): InboxCardRow {
   const triggersCount = base.priority === 'critical' ? 4 : base.priority === 'average' ? 2 : 1
   const triggers = INBOX_TRIGGERS_POOL.slice(0, triggersCount).map((t, j) => ({
     ...t,
@@ -2816,7 +2821,7 @@ function buildInboxRow(base: (typeof FIGMA_INBOX_OPERATORS)[number]): MockInboxR
   }
 }
 
-export const MOCK_INBOX_ROWS: MockInboxRow[] = FIGMA_INBOX_OPERATORS.map(buildInboxRow)
+export const MOCK_INBOX_ROWS: InboxCardRow[] = FIGMA_INBOX_OPERATORS.map(buildInboxRow)
 
 export const MOCK_INBOX_PRIORITY_COUNTS: Record<InboxPriority | 'all', number> = {
   all: MOCK_INBOX_ROWS.length,

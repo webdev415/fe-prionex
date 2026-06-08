@@ -107,9 +107,7 @@ function buildTeamEventsParams(filters: TeamEventsFilters): URLSearchParams {
   return params
 }
 
-export async function getTeamEvents(
-  filters: TeamEventsFilters = {}
-): Promise<TeamEventsResponse> {
+export async function getTeamEvents(filters: TeamEventsFilters = {}): Promise<TeamEventsResponse> {
   const response = await api.get<TeamEventsResponse>(`${BASE}/team-events`, {
     params: buildTeamEventsParams(filters),
   })
@@ -125,9 +123,7 @@ function buildTeamRosterParams(filters: TeamRosterFilters): URLSearchParams {
   return params
 }
 
-export async function getTeamRoster(
-  filters: TeamRosterFilters = {}
-): Promise<TeamRosterResponse> {
+export async function getTeamRoster(filters: TeamRosterFilters = {}): Promise<TeamRosterResponse> {
   const response = await api.get<TeamRosterResponse>(`${BASE}/team-roster`, {
     params: buildTeamRosterParams(filters),
   })

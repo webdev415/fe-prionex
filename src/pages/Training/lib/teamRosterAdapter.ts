@@ -5,14 +5,15 @@ import type {
   TeamRosterTeam,
 } from '@/features/quality/coaching/types'
 import type {
-  MockDepartment,
-  MockOperator,
-  MockTeam,
+  TeamDepartmentRow,
+  TeamOperatorRow,
+  TeamGroupRow,
+  OperatorWorkStatus,
   ScoreBand,
 } from '../mocks/trainerWorkplaceMocks'
 
 /**
- * Map the BE `TeamRosterResponse` shape to the FE `MockDepartment[]` shape
+ * Map the BE `TeamRosterResponse` shape to the FE `TeamDepartmentRow[]` shape
  * the existing Figma-faithful card components (`DepartmentCard`,
  * `TeamCard`, `OperatorRow`) consume. The card JSX stays unchanged — only
  * the data source switches.
@@ -76,11 +77,24 @@ function bandFor(score: number | null, band: ScoreBand | null): ScoreBand {
   return 'red'
 }
 
+/** Work-status pill (Figma legend: In norm / Behind / In queue).
+ *  Derived from assignment state + score band — the BE doesn't model this
+ *  concept directly, but the trainer needs the at-a-glance signal:
+ *    in_queue  — operator has an active coaching queue assignment OR red band
+ *    behind    — amber band
+ *    in_norm   — green band or no signal
+ */
+function deriveWorkStatus(op: TeamRosterOperator): OperatorWorkStatus {
+  if (op.assignment_state === 'wait' || op.score_band === 'red') return 'in_queue'
+  if (op.score_band === 'amber') return 'behind'
+  return 'in_norm'
+}
+
 function deriveOperator(
   op: TeamRosterOperator,
   teamName: string,
   departmentName: string
-): MockOperator {
+): TeamOperatorRow {
   const online = op.online
   const hasScore = op.composite_score !== null && op.composite_score !== undefined
   return {
@@ -90,7 +104,7 @@ function deriveOperator(
     avatarColor: avatarColorFor(op.operator_id),
     team: teamName,
     department: departmentName,
-    extension: '',
+    extension: op.asterisk_extension ?? '',
     online,
     score: op.composite_score ?? 0,
     scoreBand: bandFor(op.composite_score, op.score_band),
@@ -98,13 +112,12 @@ function deriveOperator(
     lastActiveLabel: formatLastActive(op.last_active_at, online),
     presenceStatus: online ? 'online' : 'offline',
     dailyPlanPct: 0,
+    workStatus: deriveWorkStatus(op),
   }
 }
 
-function deriveTeam(team: TeamRosterTeam, departmentName: string): MockTeam {
-  const operators = team.operators.map((op) =>
-    deriveOperator(op, team.name, departmentName)
-  )
+function deriveTeam(team: TeamRosterTeam, departmentName: string): TeamGroupRow {
+  const operators = team.operators.map((op) => deriveOperator(op, team.name, departmentName))
   return {
     id: `group-${team.group_id}`,
     name: team.name,
@@ -112,18 +125,20 @@ function deriveTeam(team: TeamRosterTeam, departmentName: string): MockTeam {
     memberCount: team.member_count,
     averageScore: team.average_score ?? 0,
     scoreBand: bandFor(team.average_score, team.score_band),
-    queueCount: 0, // queue_count is rolled up at the department level only
+    queueCount: team.queue_count,
     operators,
   }
 }
 
-function deriveDepartment(dept: TeamRosterDepartment): MockDepartment {
+function deriveDepartment(dept: TeamRosterDepartment): TeamDepartmentRow {
   const teams = dept.teams.map((team) => deriveTeam(team, dept.name))
+  const managerName = dept.manager_name ?? '—'
+  const managerInitials = dept.manager_name ? initialsFor(dept.manager_name) : '—'
   return {
     id: `dept-${dept.department_id}`,
     name: dept.name,
-    managerName: '—',
-    managerInitials: '—',
+    managerName,
+    managerInitials,
     memberCount: dept.member_count,
     teamCount: teams.length,
     averageScore: dept.average_score ?? 0,
@@ -133,7 +148,7 @@ function deriveDepartment(dept: TeamRosterDepartment): MockDepartment {
   }
 }
 
-export function deriveTeamRoster(roster: TeamRosterResponse): MockDepartment[] {
+export function deriveTeamRoster(roster: TeamRosterResponse): TeamDepartmentRow[] {
   return roster.departments.map(deriveDepartment)
 }
 

@@ -169,6 +169,9 @@ export interface TeamEventsFilters {
 export interface TeamRosterOperator {
   operator_id: number
   full_name: string
+  asterisk_extension?: string | null
+  /** ISO 8601 yyyy-mm-dd. */
+  hired_at?: string | null
   composite_score: number | null
   score_band: ScoreBand | null
   last_active_at: string | null
@@ -183,6 +186,7 @@ export interface TeamRosterTeam {
   team_lead_name: string | null
   member_count: number
   online_count: number
+  queue_count: number
   average_score: number | null
   score_band: ScoreBand | null
   operators: TeamRosterOperator[]
@@ -191,6 +195,8 @@ export interface TeamRosterTeam {
 export interface TeamRosterDepartment {
   department_id: number
   name: string
+  manager_user_id: number | null
+  manager_name: string | null
   member_count: number
   queue_count: number
   average_score: number | null

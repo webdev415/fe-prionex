@@ -101,9 +101,10 @@ function initialsFor(name: string): string {
   return `${parts[0][0]}${parts[1][0]}`.toUpperCase()
 }
 
-function categorizeTrigger(
-  code: string
-): { tone: 'red' | 'amber' | 'green'; icon: 'rating' | 'plan' | 'training' | 'delay' } {
+function categorizeTrigger(code: string): {
+  tone: 'red' | 'amber' | 'green'
+  icon: 'rating' | 'plan' | 'training' | 'delay'
+} {
   const c = code.toLowerCase()
   if (c.includes('rating') || c.includes('scorecard') || c.includes('conflict')) {
     return { tone: 'red', icon: 'rating' }
@@ -186,20 +187,24 @@ export function OperatorDetailPanel({
   }
 
   const displayName = operatorName ?? `#${data.operator_id}`
+  // Score and band are nullable for operators with no source signal
+  // (see queue_service no-data fix). Render `—` with a neutral ring when
+  // either is missing so the panel doesn't lie or render with broken UI.
   const score = data.composite_score
-  const band = data.score_band
+  const band: ScoreBand = data.score_band ?? 'amber'
+  const hasScore = score !== null && score !== undefined
   const scoreRadius = 17
   const scoreCircumference = 2 * Math.PI * scoreRadius
-  const scoreOffset = scoreCircumference - (score / 100) * scoreCircumference
+  const scoreOffset = hasScore
+    ? scoreCircumference - (score / 100) * scoreCircumference
+    : scoreCircumference
 
   const statsRow: { label: string; value: string; subValue?: string; cardTone: 'red' | 'gray' }[] =
     [
       {
         label: t('pages.training.inbox.detail.stats.scorecard', 'Avg scorecard'),
         value:
-          data.kpis.avg_scorecard_pct != null
-            ? `${Math.round(data.kpis.avg_scorecard_pct)}%`
-            : '—',
+          data.kpis.avg_scorecard_pct != null ? `${Math.round(data.kpis.avg_scorecard_pct)}%` : '—',
         cardTone: band === 'red' ? 'red' : 'gray',
       },
       {
@@ -338,22 +343,26 @@ export function OperatorDetailPanel({
                     fill="none"
                     className="stroke-[#EDEDED]"
                   />
-                  <circle
-                    cx="24"
-                    cy="24"
-                    r={scoreRadius}
-                    strokeWidth="2"
-                    fill="none"
-                    strokeLinecap="round"
-                    strokeDasharray={scoreCircumference}
-                    strokeDashoffset={scoreOffset}
-                    className={SCORE_RING[band]}
-                  />
+                  {hasScore ? (
+                    <circle
+                      cx="24"
+                      cy="24"
+                      r={scoreRadius}
+                      strokeWidth="2"
+                      fill="none"
+                      strokeLinecap="round"
+                      strokeDasharray={scoreCircumference}
+                      strokeDashoffset={scoreOffset}
+                      className={SCORE_RING[band]}
+                    />
+                  ) : null}
                 </svg>
                 <span
-                  className={`absolute inset-0 flex items-center justify-center text-sm font-semibold ${SCORE_TEXT[band]}`}
+                  className={`absolute inset-0 flex items-center justify-center text-sm font-semibold ${
+                    hasScore ? SCORE_TEXT[band] : 'text-gray-400'
+                  }`}
                 >
-                  {score}
+                  {hasScore ? score : '—'}
                 </span>
               </div>
             </div>
@@ -420,9 +429,7 @@ export function OperatorDetailPanel({
                             {item.label}
                           </p>
                           {item.meta ? (
-                            <p className="text-[11px] leading-[15px] text-[#676767]">
-                              {item.meta}
-                            </p>
+                            <p className="text-[11px] leading-[15px] text-[#676767]">{item.meta}</p>
                           ) : null}
                         </div>
                       </div>

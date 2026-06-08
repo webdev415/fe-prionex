@@ -1,19 +1,19 @@
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { MockInboxRow, ScoreBand } from '../../mocks/trainerWorkplaceMocks'
+import type { InboxCardRow, ScoreBand } from '../../mocks/trainerWorkplaceMocks'
 
 /**
  * Inbox view — Figma View B (confirmed by PM).
  *
  * Promoted from `MockInboxListView` so the Figma-faithful card style stays
  * authoritative while the data source switches to the BE-derived
- * `MockInboxRow` shape produced by [`inboxRowAdapter`](../../lib/inboxRowAdapter.ts).
+ * `InboxCardRow` shape produced by [`inboxRowAdapter`](../../lib/inboxRowAdapter.ts).
  *
  * Pairs with the right Details / Event Feed panel; click → focuses the
  * operator in the right detail panel via `onSelect`.
  */
 export interface OperatorListViewProps {
-  rows: MockInboxRow[]
+  rows: InboxCardRow[]
   selectedOperatorId: number
   onSelect: (operatorId: number) => void
   isLoading?: boolean
@@ -39,13 +39,13 @@ const TAG_TONE: Record<'red' | 'amber' | 'teal', string> = {
   teal: 'bg-teal-50 text-teal-700 border-teal-100',
 }
 
-const PRIORITY_RANK: Record<MockInboxRow['priority'], number> = {
+const PRIORITY_RANK: Record<InboxCardRow['priority'], number> = {
   critical: 0,
   average: 1,
   low: 2,
 }
 
-function formatPresence(row: MockInboxRow, t: (key: string, fallback: string) => string): string {
+function formatPresence(row: InboxCardRow, t: (key: string, fallback: string) => string): string {
   if (row.lastActiveLabel === 'In call') {
     return t('pages.training.inbox.list.onCall', 'On the call')
   }

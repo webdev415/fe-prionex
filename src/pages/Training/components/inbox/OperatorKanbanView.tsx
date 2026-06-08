@@ -4,7 +4,7 @@ import { useTransitionAssignment } from '@/features/quality/coaching/hooks'
 import type { AssignmentState } from '@/features/quality/coaching/types'
 import {
   type InboxAssignmentState,
-  type MockInboxRow,
+  type InboxCardRow,
   type ScoreBand,
 } from '../../mocks/trainerWorkplaceMocks'
 
@@ -18,7 +18,7 @@ import {
  * (dnd-kit) lands with the next round.
  */
 export interface OperatorKanbanViewProps {
-  rows: MockInboxRow[]
+  rows: InboxCardRow[]
   /** Resolves `operator_id` → `assignment.id` for the transition endpoint. */
   assignmentIdByOperator: Map<number, number | null>
   selectedOperatorId?: number

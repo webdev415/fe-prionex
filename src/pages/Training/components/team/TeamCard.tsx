@@ -1,12 +1,12 @@
 ﻿import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
-import type { MockTeam } from '../../mocks/trainerWorkplaceMocks'
+import type { TeamGroupRow } from '../../mocks/trainerWorkplaceMocks'
 import { TEAM_SCORE_TEXT } from './teamStyles'
 import { OperatorRow } from './OperatorRow'
 
 export interface TeamCardProps {
-  team: MockTeam
+  team: TeamGroupRow
   /** Wired by the Team tab to mount the shared OperatorDetailPanel. */
   onSelectOperator?: (operatorId: number) => void
 }

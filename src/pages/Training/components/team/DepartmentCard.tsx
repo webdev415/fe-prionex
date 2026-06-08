@@ -1,12 +1,12 @@
 ﻿import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
-import type { MockDepartment } from '../../mocks/trainerWorkplaceMocks'
+import type { TeamDepartmentRow } from '../../mocks/trainerWorkplaceMocks'
 import { TEAM_SCORE_TEXT } from './teamStyles'
 import { TeamCard } from './TeamCard'
 
 export interface DepartmentCardProps {
-  department: MockDepartment
+  department: TeamDepartmentRow
   onSelectOperator?: (operatorId: number) => void
 }
 

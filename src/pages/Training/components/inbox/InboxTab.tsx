@@ -3,11 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { useOperators } from '@/features/users/hooks'
-import {
-  useInboxQueue,
-  useTakeCharge,
-  useTeamEvents,
-} from '@/features/quality/coaching/hooks'
+import { useInboxQueue, useTakeCharge, useTeamEvents } from '@/features/quality/coaching/hooks'
 import { OperatorDetailPanel } from '@/features/quality/coaching/components/OperatorDetailPanel'
 import { useAuthStore } from '@/stores/authStore'
 import { Icons } from '@/lib/icons'
@@ -326,7 +322,6 @@ export function InboxTab({
           onTakeCharge={handleTakeCharge}
         />
       </div>
-
     </div>
   )
 }

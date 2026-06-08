@@ -1,11 +1,7 @@
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useTeamEvents } from '@/features/quality/coaching/hooks'
-import type {
-  TeamEvent,
-  TeamEventSeverity,
-  TeamEventType,
-} from '@/features/quality/coaching/types'
+import type { TeamEvent, TeamEventSeverity, TeamEventType } from '@/features/quality/coaching/types'
 import { useOperators } from '@/features/users/hooks'
 import { useAuthStore } from '@/stores/authStore'
 

@@ -39,9 +39,7 @@ export function CoachWorkspaceBanner() {
 
       <p className="text-sm font-light text-[#05040D]">
         {projectName ? <span className="text-[#05040D]">· {projectName}</span> : null}
-        {projectName && departmentName ? (
-          <span className="mx-2 text-[#05040D]/40">·</span>
-        ) : null}
+        {projectName && departmentName ? <span className="mx-2 text-[#05040D]/40">·</span> : null}
         {departmentName
           ? t('pages.training.workspaceBanner.assignedTo', 'You are assigned to {{department}}', {
               department: departmentName,
