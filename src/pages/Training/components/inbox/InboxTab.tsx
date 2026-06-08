@@ -1,37 +1,69 @@
-﻿import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { useOperators } from '@/features/users/hooks'
-import { useInboxQueue } from '@/features/quality/coaching/hooks'
+import { useInboxQueue, useTakeCharge } from '@/features/quality/coaching/hooks'
 import { OperatorDetailPanel } from '@/features/quality/coaching/components/OperatorDetailPanel'
 import { useAuthStore } from '@/stores/authStore'
+import { Icons } from '@/lib/icons'
+import { PERMISSIONS } from '@/constants/permissions'
 import { useScopedUserIds } from '../../lib/scope'
 import { readInboxState, writeInboxState } from '../../lib/inboxUrlState'
+import { deriveInboxRows } from '../../lib/inboxRowAdapter'
+import {
+  MOCK_INBOX_TEAM_EVENTS,
+  type InboxPriority,
+} from '../../mocks/trainerWorkplaceMocks'
 import { ScopeSelector } from '../ScopeSelector'
-import { InboxViewModeToggle } from './InboxViewModeToggle'
+import { MockWorkspaceBanner } from '../chrome/MockWorkspaceBanner'
+import { InboxEventFeed } from './InboxEventFeed'
 import { OperatorListView } from './OperatorListView'
 import { OperatorKanbanView } from './OperatorKanbanView'
 import { OperatorGridView } from './OperatorGridView'
-import { PERMISSIONS } from '@/constants/permissions'
 
 /**
  * Inbox top-tab container (KAN-413, plan §3.5).
  *
- * Hosts the view-mode toggle, scope selector (role-gated), the operator
- * list, and the right-side detail panel. Header KPI strip + Quick Action
- * overlay live on ActionAnalysisPage so they're shared across every top
- * tab in the Trainer Workplace.
- *
- * `onOpenRateDialogue` is wired up to the OperatorDetailPanel "Listen to the
- * call" button. The picker dialog itself lives at page level so the Header
- * Quick Action and this button share state.
+ * Layout mirrors Figma `Inbox View A/B` — priority chip strip + segmented
+ * view-mode toggle on top, main + 360px right detail panel grid below, and
+ * the bottom-pinned `MockWorkspaceBanner`. Data comes from
+ * `GET /api/v1/quality/coaching/queue`; the adapter in
+ * [`inboxRowAdapter`](../../lib/inboxRowAdapter.ts) maps the BE rows onto the
+ * Figma-faithful row shape consumed by the view components.
  */
 export interface InboxTabProps {
   onOpenRateDialogue?: () => void
   onOpenScheduleOneOnOne?: () => void
   onOpenAssignTask?: () => void
 }
+
+type ViewMode = 'inbox' | 'kanban' | 'grid'
+
+const VIEW_MODES: {
+  id: ViewMode
+  key: string
+  fallback: string
+  icon: typeof Icons.Mail
+}[] = [
+  { id: 'inbox', key: 'pages.training.inbox.viewMode.inbox', fallback: 'Inbox', icon: Icons.Mail },
+  {
+    id: 'kanban',
+    key: 'pages.training.inbox.viewMode.kanban',
+    fallback: 'Kanban',
+    icon: Icons.Menu11,
+  },
+  { id: 'grid', key: 'pages.training.inbox.viewMode.grid', fallback: 'Grid', icon: Icons.Pivot },
+]
+
+const PRIORITY_CHIPS: { id: InboxPriority | 'all'; key: string; fallback: string }[] = [
+  { id: 'all', key: 'pages.training.inbox.priority.all', fallback: 'All priorities' },
+  { id: 'critical', key: 'pages.training.inbox.priority.critical', fallback: 'Critical' },
+  { id: 'average', key: 'pages.training.inbox.priority.average', fallback: 'Average' },
+  { id: 'low', key: 'pages.training.inbox.priority.low', fallback: 'Low' },
+]
+
+const BODY_LAYOUT = 'grid min-h-0 flex-1 grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1fr)_360px]'
 
 export function InboxTab({
   onOpenRateDialogue,
@@ -51,7 +83,6 @@ export function InboxTab({
   // Scope-selector role-gating: users without select_inbox_scope are pinned
   // to 'my' scope regardless of any ?scope= URL param.
   const canSelectScope = userPermissions.includes(PERMISSIONS.TRAINING.SELECT_INBOX_SCOPE)
-
   const currentUserId = useAuthStore((s) => (s.user?.id ? Number(s.user.id) : null))
 
   const effectiveUserIds = useMemo<number[]>(() => {
@@ -63,6 +94,24 @@ export function InboxTab({
     }
     return scoped.userIds
   }, [canSelectScope, currentUserId, scoped.userIds, operators])
+
+  // ?priority= chip state — defaults to 'all' and round-trips through the
+  // URL so deep links survive a reload.
+  const priorityParam = searchParams.get('priority')
+  const priority: InboxPriority | 'all' =
+    priorityParam === 'critical' ||
+    priorityParam === 'average' ||
+    priorityParam === 'low' ||
+    priorityParam === 'all'
+      ? (priorityParam as InboxPriority | 'all')
+      : 'all'
+
+  const setPriority = (next: InboxPriority | 'all') => {
+    const params = new URLSearchParams(searchParams)
+    if (next === 'all') params.delete('priority')
+    else params.set('priority', next)
+    setSearchParams(params, { replace: true })
+  }
 
   const { data: queue, isLoading } = useInboxQueue(
     {
@@ -77,91 +126,204 @@ export function InboxTab({
     effectiveUserIds.length > 0
   )
 
-  const rows = queue?.data ?? []
+  const derivedRows = useMemo(
+    () => deriveInboxRows(queue?.data ?? [], operators),
+    [queue, operators]
+  )
+
+  const filteredRows = useMemo(() => {
+    if (priority === 'all') return derivedRows
+    return derivedRows.filter((r) => r.priority === priority)
+  }, [derivedRows, priority])
+
+  // Operator-id → assignment.id resolver so the Kanban view can call the
+  // transition endpoint without re-fetching.
+  const assignmentIdByOperator = useMemo(() => {
+    const map = new Map<number, number | null>()
+    for (const row of queue?.data ?? []) {
+      map.set(row.operator_id, row.assignment?.id ?? null)
+    }
+    return map
+  }, [queue])
+
+  const priorityCounts = useMemo(() => {
+    const counts: Record<InboxPriority | 'all', number> = {
+      all: derivedRows.length,
+      critical: 0,
+      average: 0,
+      low: 0,
+    }
+    for (const row of derivedRows) {
+      counts[row.priority] += 1
+    }
+    return counts
+  }, [derivedRows])
+
+  const setViewMode = (next: ViewMode) => {
+    setSearchParams(writeInboxState(searchParams, { view: next }), { replace: true })
+  }
 
   const handleSelectOperator = (operatorId: number) => {
-    setSearchParams(writeInboxState(searchParams, { operatorId }), {
-      replace: true,
-    })
+    setSearchParams(writeInboxState(searchParams, { operatorId }), { replace: true })
   }
 
-  const handleViewModeChange = (next: typeof inboxState.view) => {
-    setSearchParams(writeInboxState(searchParams, { view: next }), {
-      replace: true,
-    })
-  }
+  const selectedRow = useMemo(
+    () => filteredRows.find((r) => r.operatorId === inboxState.operatorId) ?? filteredRows[0],
+    [filteredRows, inboxState.operatorId]
+  )
 
-  const selectedOperatorName = useMemo(() => {
-    if (!inboxState.operatorId) return undefined
-    return operators.find((o) => o.id === inboxState.operatorId)?.full_name
-  }, [inboxState.operatorId, operators])
+  // Details / Event Feed tab strip inside the right-side panel. Local
+  // state — not URL-shareable for now since the feed is a side surface.
+  const [detailTab, setDetailTab] = useState<'details' | 'feed'>('details')
+
+  // Trainer permissions — drive the disabled state on the panel buttons.
+  const takeChargeMutation = useTakeCharge()
+  const canTakeCharge = userPermissions.includes(PERMISSIONS.TRAINING.MANAGE_COACHING_ASSIGNMENTS)
+
+  const handleTakeCharge = async () => {
+    if (!selectedRow) return
+    if (!canTakeCharge) {
+      toast.error(
+        t(
+          'pages.training.inbox.takeCharge.forbidden',
+          'You do not have permission to take charge of operators.'
+        )
+      )
+      return
+    }
+    try {
+      await takeChargeMutation.mutateAsync({ operator_id: selectedRow.operatorId })
+      toast.success(
+        t('pages.training.inbox.takeCharge.success', 'You are now coaching this operator.')
+      )
+    } catch (err) {
+      const detail =
+        err instanceof Error
+          ? err.message
+          : t('pages.training.inbox.takeCharge.errors.generic', 'Could not take charge.')
+      toast.error(detail)
+    }
+  }
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="relative flex min-h-[calc(100vh-220px)] flex-col gap-3 pb-20">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <InboxViewModeToggle value={inboxState.view} onChange={handleViewModeChange} />
-        {canSelectScope ? <ScopeSelector /> : null}
-      </div>
-
-      <div
-        className={
-          inboxState.view === 'kanban' || inboxState.view === 'grid'
-            ? 'grid grid-cols-1 gap-3 xl:grid-cols-[1fr_minmax(320px,_400px)]'
-            : 'grid grid-cols-1 gap-3 lg:grid-cols-[minmax(320px,_400px)_1fr]'
-        }
-      >
-        <div>
-          {effectiveUserIds.length === 0 ? (
-            <div className="rounded-2xl bg-white/60 p-6 text-center text-sm text-gray-500">
-              {t('pages.training.inbox.list.emptyScope', 'No operators in the current scope.')}
-            </div>
-          ) : inboxState.view === 'kanban' ? (
-            <OperatorKanbanView
-              rows={rows}
-              operators={operators}
-              selectedOperatorId={inboxState.operatorId}
-              onSelect={handleSelectOperator}
-              isLoading={isLoading}
-            />
-          ) : inboxState.view === 'grid' ? (
-            <OperatorGridView
-              rows={rows}
-              operators={operators}
-              selectedOperatorId={inboxState.operatorId}
-              onSelect={handleSelectOperator}
-              isLoading={isLoading}
-            />
-          ) : (
-            <OperatorListView
-              rows={rows}
-              operators={operators}
-              selectedOperatorId={inboxState.operatorId}
-              onSelect={handleSelectOperator}
-              isLoading={isLoading}
-            />
-          )}
+        <div className="flex flex-wrap items-center gap-2">
+          {PRIORITY_CHIPS.map((chip) => {
+            const isActive = priority === chip.id
+            const count = priorityCounts[chip.id]
+            return (
+              <button
+                key={chip.id}
+                type="button"
+                onClick={() => setPriority(chip.id)}
+                className={`flex items-center gap-1 rounded-full px-4 py-2 text-xs font-medium transition-colors ${
+                  isActive ? 'bg-[#204E4D] text-white' : 'bg-white text-[#05040D] hover:bg-gray-50'
+                }`}
+              >
+                {t(chip.key, chip.fallback)}
+                <span
+                  className={`rounded-full px-1.5 py-0.5 text-[10px] font-medium ${
+                    isActive ? 'bg-[#BBFB5B] text-[#05040D]' : 'bg-[#EDEDED] text-[#05040D]'
+                  }`}
+                >
+                  {count}
+                </span>
+              </button>
+            )
+          })}
         </div>
 
-        <div className="min-h-[400px]">
-          <OperatorDetailPanel
-            operatorId={inboxState.operatorId}
-            operatorName={selectedOperatorName}
-            period={inboxState.period}
-            fromDate={inboxState.customFromDate}
-            toDate={inboxState.customToDate}
-            onListen={
-              onOpenRateDialogue ??
-              (() => toast.info(t('pages.training.inbox.quickActions.comingSoon', 'Coming soon')))
-            }
-            onPlanOneOnOne={
-              onOpenScheduleOneOnOne ??
-              (() => toast.info(t('pages.training.inbox.quickActions.comingSoon', 'Coming soon')))
-            }
-            onAssignTask={
-              onOpenAssignTask ??
-              (() => toast.info(t('pages.training.inbox.quickActions.comingSoon', 'Coming soon')))
-            }
+        <div className="flex items-center gap-3">
+          {canSelectScope ? <ScopeSelector /> : null}
+          <div className="flex items-center rounded-lg border border-white bg-white p-1 shadow-sm">
+            {VIEW_MODES.map((vm) => {
+              const VmIcon = vm.icon
+              const isActive = inboxState.view === vm.id
+              return (
+                <button
+                  key={vm.id}
+                  type="button"
+                  onClick={() => setViewMode(vm.id)}
+                  className={`flex items-center gap-2 rounded-md px-7 py-2 text-xs font-medium transition-colors ${
+                    isActive ? 'bg-[#204E4D] text-white' : 'text-[#05040D] hover:bg-gray-50'
+                  }`}
+                >
+                  <VmIcon size={14} className={isActive ? 'text-white' : 'text-gray-500'} />
+                  {t(vm.key, vm.fallback)}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      </div>
+
+      <div className={BODY_LAYOUT}>
+        {effectiveUserIds.length === 0 ? (
+          <div className="rounded-xl border border-[#EBECE8] bg-white p-6 text-center text-xs text-gray-500">
+            {t('pages.training.inbox.list.emptyScope', 'No operators in the current scope.')}
+          </div>
+        ) : inboxState.view === 'kanban' ? (
+          <OperatorKanbanView
+            rows={filteredRows}
+            assignmentIdByOperator={assignmentIdByOperator}
+            selectedOperatorId={selectedRow?.operatorId}
+            onSelect={handleSelectOperator}
+            isLoading={isLoading}
           />
+        ) : inboxState.view === 'grid' ? (
+          <OperatorGridView
+            rows={filteredRows}
+            selectedOperatorId={selectedRow?.operatorId}
+            onSelect={handleSelectOperator}
+            isLoading={isLoading}
+          />
+        ) : (
+          <OperatorListView
+            rows={filteredRows}
+            selectedOperatorId={selectedRow?.operatorId ?? 0}
+            onSelect={handleSelectOperator}
+            isLoading={isLoading}
+          />
+        )}
+
+        <OperatorDetailPanel
+          operatorId={selectedRow?.operatorId}
+          operatorName={selectedRow?.name}
+          avatarColor={selectedRow?.avatarColor}
+          initials={selectedRow?.initials}
+          online={selectedRow?.online}
+          extension={selectedRow?.extension}
+          department={selectedRow?.department}
+          segment={selectedRow?.segment}
+          queueEnteredLabel={selectedRow?.queueEnteredLabel}
+          period={inboxState.period}
+          fromDate={inboxState.customFromDate}
+          toDate={inboxState.customToDate}
+          showTabs
+          activeTab={detailTab}
+          onTabChange={setDetailTab}
+          eventFeedCount={MOCK_INBOX_TEAM_EVENTS.length}
+          feedSlot={<InboxEventFeed />}
+          onListen={
+            onOpenRateDialogue ??
+            (() => toast.info(t('pages.training.inbox.quickActions.comingSoon', 'Coming soon')))
+          }
+          onPlanOneOnOne={
+            onOpenScheduleOneOnOne ??
+            (() => toast.info(t('pages.training.inbox.quickActions.comingSoon', 'Coming soon')))
+          }
+          onAssignTask={
+            onOpenAssignTask ??
+            (() => toast.info(t('pages.training.inbox.quickActions.comingSoon', 'Coming soon')))
+          }
+          onTakeCharge={handleTakeCharge}
+        />
+      </div>
+
+      <div className="pointer-events-none fixed right-0 bottom-4 left-0 z-20 flex justify-center px-4 lg:left-[var(--sidebar-width,0px)]">
+        <div className="pointer-events-auto w-full max-w-[1110px]">
+          <MockWorkspaceBanner />
         </div>
       </div>
     </div>

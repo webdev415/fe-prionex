@@ -1,104 +1,124 @@
-﻿import { useTranslation } from 'react-i18next'
-import type { OperatorUser } from '@/features/users/api/usersApi'
-import type { AssignmentState, QueueOperator, ScoreBand } from '@/features/quality/coaching/types'
+import { useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import type { MockInboxRow, ScoreBand } from '../../mocks/trainerWorkplaceMocks'
 
 /**
- * Left-panel operator list — the "Inbox" view mode.
+ * Inbox view — Figma View B (confirmed by PM).
  *
- * Each row shows: avatar/initial, name, current Kanban state chip, composite
- * score badge color-banded to red/amber/green. Click → focuses the operator
- * in the right detail panel via `onSelect`.
+ * Promoted from `MockInboxListView` so the Figma-faithful card style stays
+ * authoritative while the data source switches to the BE-derived
+ * `MockInboxRow` shape produced by [`inboxRowAdapter`](../../lib/inboxRowAdapter.ts).
  *
- * Kanban + Grid views (steps 7-8) consume the same `QueueOperator[]` data
- * but arrange it differently — this component is intentionally simple to
- * keep the data contract clean.
+ * Pairs with the right Details / Event Feed panel; click → focuses the
+ * operator in the right detail panel via `onSelect`.
  */
 export interface OperatorListViewProps {
-  rows: QueueOperator[]
-  operators: OperatorUser[]
-  selectedOperatorId: number | undefined
+  rows: MockInboxRow[]
+  selectedOperatorId: number
   onSelect: (operatorId: number) => void
   isLoading?: boolean
 }
 
-const SCORE_BAND_BG: Record<ScoreBand, string> = {
-  red: 'bg-red-500 text-white ring-red-300',
-  amber: 'bg-amber-400 text-white ring-amber-300',
-  green: 'bg-green-500 text-white ring-green-300',
+type SortMode = 'priority' | 'name' | 'score'
+
+const SCORE_TRACK: Record<ScoreBand, string> = {
+  red: 'stroke-red-500',
+  amber: 'stroke-amber-400',
+  green: 'stroke-emerald-500',
 }
 
-const ASSIGNMENT_STATE_LABEL: Record<
-  AssignmentState,
-  { key: string; fallback: string; tone: string }
-> = {
-  wait: {
-    key: 'pages.training.inbox.kanbanColumns.wait',
-    fallback: 'Wait',
-    tone: 'bg-yellow-100 text-yellow-700',
-  },
-  in_progress: {
-    key: 'pages.training.inbox.kanbanColumns.in_progress',
-    fallback: 'In progress',
-    tone: 'bg-blue-100 text-blue-700',
-  },
-  awaiting_training: {
-    key: 'pages.training.inbox.kanbanColumns.awaiting_training',
-    fallback: 'Awaiting training',
-    tone: 'bg-purple-100 text-purple-700',
-  },
-  scheduled: {
-    key: 'pages.training.inbox.kanbanColumns.scheduled',
-    fallback: 'Scheduled',
-    tone: 'bg-indigo-100 text-indigo-700',
-  },
-  closed: {
-    key: 'pages.training.inbox.kanbanColumns.closed',
-    fallback: 'Closed',
-    tone: 'bg-gray-100 text-gray-700',
-  },
+const SCORE_TEXT: Record<ScoreBand, string> = {
+  red: 'text-red-500',
+  amber: 'text-amber-600',
+  green: 'text-emerald-600',
 }
 
-function operatorDisplayName(operatorId: number, operators: OperatorUser[]): string {
-  const operator = operators.find((o) => o.id === operatorId)
-  return operator?.full_name || `#${operatorId}`
+const TAG_TONE: Record<'red' | 'amber' | 'teal', string> = {
+  red: 'bg-red-50 text-red-700 border-red-100',
+  amber: 'bg-yellow-50 text-amber-800 border-yellow-100',
+  teal: 'bg-teal-50 text-teal-700 border-teal-100',
 }
 
-function operatorDepartmentName(operatorId: number, operators: OperatorUser[]): string | null {
-  const operator = operators.find((o) => o.id === operatorId)
-  return operator?.department_name ?? null
+const PRIORITY_RANK: Record<MockInboxRow['priority'], number> = {
+  critical: 0,
+  average: 1,
+  low: 2,
 }
 
-function formatRelative(isoTimestamp: string | null | undefined): string | null {
-  if (!isoTimestamp) return null
-  const then = new Date(isoTimestamp).getTime()
-  if (Number.isNaN(then)) return null
-  const diffMs = Date.now() - then
-  if (diffMs < 0) return null
-  const minutes = Math.floor(diffMs / 60_000)
-  if (minutes < 1) return 'now'
-  if (minutes < 60) return `${minutes}m ago`
-  const hours = Math.floor(minutes / 60)
-  if (hours < 24) return `${hours}h ago`
-  const days = Math.floor(hours / 24)
-  if (days < 30) return `${days}d ago`
-  const months = Math.floor(days / 30)
-  if (months < 12) return `${months}mo ago`
-  const years = Math.floor(months / 12)
-  return `${years}y ago`
+function formatPresence(row: MockInboxRow, t: (key: string, fallback: string) => string): string {
+  if (row.lastActiveLabel === 'In call') {
+    return t('pages.training.inbox.list.onCall', 'On the call')
+  }
+  if (row.online) {
+    return t('pages.training.inbox.detail.online', 'Online')
+  }
+  return row.lastActiveLabel
+}
+
+function ScoreRing({ score, band }: { score: number; band: ScoreBand }) {
+  const radius = 18
+  const circumference = 2 * Math.PI * radius
+  const offset = circumference - (score / 100) * circumference
+  return (
+    <div className="relative h-11 w-11 flex-shrink-0">
+      <svg viewBox="0 0 44 44" className="h-11 w-11 -rotate-90">
+        <circle
+          cx="22"
+          cy="22"
+          r={radius}
+          strokeWidth="3"
+          fill="none"
+          className="stroke-[#EDEDED]"
+        />
+        <circle
+          cx="22"
+          cy="22"
+          r={radius}
+          strokeWidth="3"
+          fill="none"
+          strokeLinecap="round"
+          strokeDasharray={circumference}
+          strokeDashoffset={offset}
+          className={SCORE_TRACK[band]}
+        />
+      </svg>
+      <span
+        className={`absolute inset-0 flex items-center justify-center text-sm font-semibold ${SCORE_TEXT[band]}`}
+      >
+        {score}
+      </span>
+    </div>
+  )
 }
 
 export function OperatorListView({
   rows,
-  operators,
   selectedOperatorId,
   onSelect,
   isLoading,
 }: OperatorListViewProps) {
   const { t } = useTranslation('common')
+  const [sort, setSort] = useState<SortMode>('priority')
+
+  const sortedRows = useMemo(() => {
+    const copy = [...rows]
+    if (sort === 'name') {
+      copy.sort((a, b) => a.name.localeCompare(b.name))
+    } else if (sort === 'score') {
+      copy.sort((a, b) => a.compositeScore - b.compositeScore)
+    } else {
+      copy.sort((a, b) => {
+        const p = PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority]
+        if (p !== 0) return p
+        return a.compositeScore - b.compositeScore
+      })
+    }
+    return copy
+  }, [rows, sort])
 
   if (isLoading) {
     return (
-      <div className="rounded-2xl bg-white/60 p-6 text-center text-sm text-gray-500">
+      <div className="rounded-xl border border-[#EBECE8] bg-white p-6 text-center text-xs text-gray-500">
         {t('pages.training.inbox.list.loading', 'Loading queue…')}
       </div>
     )
@@ -106,83 +126,94 @@ export function OperatorListView({
 
   if (rows.length === 0) {
     return (
-      <div className="rounded-2xl bg-white/60 p-6 text-center text-sm text-gray-500">
+      <div className="rounded-xl border border-[#EBECE8] bg-white p-6 text-center text-xs text-gray-500">
         {t('pages.training.inbox.list.empty', 'No operators in the current scope.')}
       </div>
     )
   }
 
   return (
-    <ul className="flex flex-col gap-1.5">
-      {rows.map((row) => {
-        const name = operatorDisplayName(row.operator_id, operators)
-        const departmentName = operatorDepartmentName(row.operator_id, operators)
-        const isSelected = row.operator_id === selectedOperatorId
-        const stateMeta = row.assignment ? ASSIGNMENT_STATE_LABEL[row.assignment.state] : null
-        const lastActive = formatRelative(row.last_active_at)
+    <div className="flex min-h-0 flex-col gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-2 px-0.5">
+        <h2 className="text-sm font-semibold text-[#05040D]">
+          {t('pages.training.inbox.list.employeesInLine', '{{count}} employees in line', {
+            count: rows.length,
+          })}
+        </h2>
+        <label className="flex items-center gap-2 text-xs text-gray-600">
+          <span>{t('pages.training.inbox.list.sortLabel', 'Sorting')}:</span>
+          <select
+            value={sort}
+            onChange={(e) => setSort(e.target.value as SortMode)}
+            className="rounded-lg border border-[#EBECE8] bg-white px-2 py-1 text-xs text-[#05040D] outline-none"
+          >
+            <option value="priority">
+              {t('pages.training.inbox.list.sortByPriority', 'by priority')}
+            </option>
+            <option value="score">{t('pages.training.inbox.list.sortByScore', 'by score')}</option>
+            <option value="name">{t('pages.training.inbox.list.sortByName', 'by name')}</option>
+          </select>
+        </label>
+      </div>
 
-        return (
-          <li key={row.operator_id}>
-            <button
-              type="button"
-              onClick={() => onSelect(row.operator_id)}
-              className={[
-                'flex w-full items-center gap-3 rounded-xl border bg-white p-3 text-left transition-colors',
-                isSelected
-                  ? 'border-primary-400 ring-primary-100 ring-2'
-                  : 'hover:border-primary-200 border-gray-100',
-              ].join(' ')}
-            >
-              <div className="relative flex-shrink-0">
-                <div className="bg-primary-100 text-primary-700 flex h-9 w-9 items-center justify-center rounded-full text-sm font-semibold">
-                  {name.slice(0, 1).toUpperCase()}
-                </div>
-                {row.triggers.length > 0 ? (
-                  <span
-                    aria-label="red flag"
-                    className="absolute -top-0.5 -right-0.5 inline-block h-2.5 w-2.5 rounded-full border-2 border-white bg-red-500"
-                  />
-                ) : null}
-              </div>
-              <div className="flex min-w-0 flex-1 flex-col">
-                <div className="flex min-w-0 items-center gap-1.5">
-                  <span className="text-dark-500 truncate text-sm font-medium">{name}</span>
-                  {departmentName ? (
-                    <span className="bg-primary-50 text-primary-700 flex-shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-medium uppercase">
-                      {departmentName}
-                    </span>
-                  ) : null}
-                </div>
-                <div className="mt-0.5 flex items-center gap-1.5">
-                  {stateMeta ? (
-                    <span
-                      className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${stateMeta.tone}`}
-                    >
-                      {t(stateMeta.key, stateMeta.fallback)}
-                    </span>
-                  ) : null}
-                  {lastActive ? (
-                    <span className="text-[10px] text-gray-500">{lastActive}</span>
-                  ) : null}
-                  {row.triggers.length > 0 ? (
-                    <span className="text-[10px] font-medium text-red-600">
-                      {t('pages.training.inbox.list.triggerCount', '{{count}} triggers', {
-                        count: row.triggers.length,
-                      })}
-                    </span>
-                  ) : null}
-                </div>
-              </div>
-              <span
-                className={`flex h-9 w-9 items-center justify-center rounded-full text-sm font-semibold ring-1 ${SCORE_BAND_BG[row.score_band]}`}
+      <ul className="flex max-h-[min(720px,calc(100vh-280px))] flex-col gap-2 overflow-y-auto pr-1">
+        {sortedRows.map((row) => {
+          const isSelected = row.operatorId === selectedOperatorId
+          return (
+            <li key={row.operatorId}>
+              <button
+                type="button"
+                onClick={() => onSelect(row.operatorId)}
+                className={`flex w-full flex-col gap-3 rounded-xl border bg-white p-4 text-left transition-colors ${
+                  isSelected
+                    ? 'border-[#204E4D] ring-1 ring-[#204E4D]/20'
+                    : 'border-[#EBECE8] hover:border-[#204E4D]/40'
+                }`}
               >
-                {row.composite_score}
-              </span>
-            </button>
-          </li>
-        )
-      })}
-    </ul>
+                <div className="flex items-start gap-3">
+                  <div className="relative flex-shrink-0">
+                    <div
+                      className="flex h-11 w-11 items-center justify-center rounded-full text-sm font-semibold text-[#05040D]"
+                      style={{ backgroundColor: row.avatarColor }}
+                    >
+                      {row.initials}
+                    </div>
+                    <span
+                      className={`absolute -right-0.5 -bottom-0.5 h-3 w-3 rounded-full border-2 border-white ${
+                        row.online ? 'bg-emerald-500' : 'bg-gray-400'
+                      }`}
+                    />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <span className="text-sm font-semibold text-[#05040D]">{row.name} </span>
+                    <span className="text-[11px] text-gray-500">
+                      {row.team} · {row.segment}
+                    </span>
+                    <span className="text-[11px] text-gray-600">{formatPresence(row, t)}</span>
+                    <p className="text-xs leading-relaxed text-[#05040D]">{row.cardSummary}</p>
+                  </div>
+                  <div className="flex flex-col items-end gap-1">
+                    <ScoreRing score={row.compositeScore} band={row.scoreBand} />
+                    <span className="text-[10px] text-gray-500">{row.cardTimestamp}</span>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap gap-1.5">
+                  {row.triggerTags.map((tag) => (
+                    <span
+                      key={tag.label}
+                      className={`rounded-full border px-2 py-0.5 text-[10px] font-medium ${TAG_TONE[tag.tone]}`}
+                    >
+                      {tag.label}
+                    </span>
+                  ))}
+                </div>
+              </button>
+            </li>
+          )
+        })}
+      </ul>
+    </div>
   )
 }
 

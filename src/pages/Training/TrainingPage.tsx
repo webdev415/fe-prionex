@@ -28,7 +28,7 @@ import { QuickActionOverlay } from './components/chrome/QuickActionOverlay'
 import { PendingFeatureDialog } from './components/inbox/PendingFeatureDialog'
 import { ScheduleOneOnOneDialog } from './components/inbox/ScheduleOneOnOneDialog'
 import { RateDialogueDialog } from './components/inbox/RateDialogueDialog'
-import { MockInboxTab } from './components/inbox/MockInboxTab'
+import { InboxTab } from './components/inbox/InboxTab'
 import { TeamTab } from './components/team/TeamTab'
 import { ActionAnalysisInnerTab } from './components/analytics/ActionAnalysisInnerTab'
 import { DialogueEvaluationTab } from './components/dialogue/DialogueEvaluationTab'
@@ -40,7 +40,9 @@ import {
   resolveInteractionUsers,
   toInteractionMonitoringQuery,
 } from './lib/interactionsUrlState'
+import { readInboxState } from './lib/inboxUrlState'
 import { useScopedUserIds } from './lib/scope'
+import type { HeaderKpisFilters } from '@/features/quality/coaching/types'
 
 /**
  * TrainingPage — Trainer Workplace shell (renamed from ActionAnalysisPage).
@@ -256,12 +258,35 @@ export function TrainingPage() {
     'assign' | 'oneOnOne' | 'material' | 'rate' | null
   >(null)
 
+  // Matches `writeInboxState` (`?operator_id=`); the camelCase variant was
+  // a hold-over from the mock surface.
   const inboxOperatorId = useMemo(() => {
-    const raw = searchParams.get('operatorId')
+    const raw = searchParams.get('operator_id')
     if (!raw) return undefined
     const id = Number(raw)
     return Number.isFinite(id) ? id : undefined
   }, [searchParams])
+
+  // Header KPI strip filters — shared across every top-tab so the same
+  // period / scope drives the global trainer numbers. Users without
+  // `select_inbox_scope` are pinned to their own ids (mirrors InboxTab §3.5).
+  const inboxUrlState = useMemo(() => readInboxState(searchParams), [searchParams])
+  const currentUserId = useAuthStore((s) => (s.user?.id ? Number(s.user.id) : null))
+  const canSelectInboxScope = userPermissions.includes(PERMISSIONS.TRAINING.SELECT_INBOX_SCOPE)
+  const headerScopedUserIds = useMemo<number[] | undefined>(() => {
+    if (!canSelectInboxScope) {
+      return currentUserId != null ? [currentUserId] : []
+    }
+    return scoped.userIds
+  }, [canSelectInboxScope, currentUserId, scoped.userIds])
+
+  const headerKpisFilters: HeaderKpisFilters = {
+    user_ids: headerScopedUserIds,
+    period: inboxUrlState.period,
+    from_date: inboxUrlState.customFromDate,
+    to_date: inboxUrlState.customToDate,
+  }
+  const canViewInbox = userPermissions.includes(PERMISSIONS.TRAINING.VIEW_INBOX)
 
   const setLegacySubTab = (sub: ActionAnalysisCallsSubTabId) => {
     const next = new URLSearchParams(searchParams)
@@ -273,7 +298,7 @@ export function TrainingPage() {
   return (
     <div className="flex flex-col gap-4">
       {/* Header strip — shared across every top-tab */}
-      <TrainerHeaderStrip />
+      <TrainerHeaderStrip filters={headerKpisFilters} enabled={canViewInbox} />
 
       {/* Top-tab strip + Quick Action (Figma tab row) */}
       <div className="border-b border-gray-200">
@@ -342,7 +367,11 @@ export function TrainingPage() {
 
       {/* Top-tab body */}
       {activeTopTab === 'inbox' ? (
-        <MockInboxTab />
+        <InboxTab
+          onOpenRateDialogue={() => setQuickActionDialog('rate')}
+          onOpenScheduleOneOnOne={() => setQuickActionDialog('oneOnOne')}
+          onOpenAssignTask={() => setQuickActionDialog('assign')}
+        />
       ) : activeTopTab === 'team' ? (
         <TeamTab />
       ) : activeTopTab === 'action-analysis' ? (

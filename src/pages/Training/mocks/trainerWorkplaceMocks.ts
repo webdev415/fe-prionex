@@ -61,32 +61,6 @@ function scoreBandFor(score: number): ScoreBand {
 }
 
 // ─────────────────────────────────────────────────────────────
-// Header KPI strip mocks (KAN-413 §2.3)
-// ─────────────────────────────────────────────────────────────
-
-export interface MockHeaderKpis {
-  inProgress: number
-  averageScore: number
-  averageScoreOutOf: number
-  averageScoreDeltaPct: number
-  teamPlanPct: number
-  teamPlanDeltaPct: number
-  tasksToday: number
-  oneOnOneToday: number
-}
-
-export const MOCK_HEADER_KPIS: MockHeaderKpis = {
-  inProgress: 3,
-  averageScore: 67,
-  averageScoreOutOf: 100,
-  averageScoreDeltaPct: 5,
-  teamPlanPct: 57,
-  teamPlanDeltaPct: 5,
-  tasksToday: 3,
-  oneOnOneToday: 1,
-}
-
-// ─────────────────────────────────────────────────────────────
 // Team tab mocks (KAN-414)
 // ─────────────────────────────────────────────────────────────
 

@@ -1,198 +1,107 @@
-﻿import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
-import type { OperatorUser } from '@/features/users/api/usersApi'
-import type { AssignmentState, QueueOperator, ScoreBand } from '@/features/quality/coaching/types'
 import { useTransitionAssignment } from '@/features/quality/coaching/hooks'
+import type { AssignmentState } from '@/features/quality/coaching/types'
+import {
+  type InboxAssignmentState,
+  type MockInboxRow,
+  type ScoreBand,
+} from '../../mocks/trainerWorkplaceMocks'
 
 /**
- * Kanban view — five columns matching the trainer assignment state machine
- * (KAN-413, plan §1.4). Drag a card from one column to another to call
- * `POST /coaching/assignments/{id}/transition` with the target state.
+ * Kanban view of the Inbox queue (KAN-413 §3.5).
  *
- * Disallowed transitions (`closed` is terminal; `wait → awaiting_training`
- * has to go through `in_progress`) are filtered server-side and surfaced as
- * a toast. The client doesn't pre-validate — keeps the rule in one place.
- *
- * Only operators with an active assignment row appear here. Operators
- * surfaced by the queue endpoint without an assignment (`assignment === null`)
- * stay in the Inbox view; trainers click "Take charge" in the detail panel
- * to put them in `in_progress` and onto the board.
- *
- * Native HTML5 drag-and-drop, no extra dependency.
+ * Visual layout mirrors the Figma `Kanban View` frame (promoted from the
+ * `MockInboxKanbanView`). Cards carry the `assignment.id` returned by the
+ * BE so column changes can fire `POST /assignments/{id}/transition`.
+ * Double-click promotes a card to the next column — drag-and-drop wiring
+ * (dnd-kit) lands with the next round.
  */
 export interface OperatorKanbanViewProps {
-  rows: QueueOperator[]
-  operators: OperatorUser[]
-  selectedOperatorId: number | undefined
+  rows: MockInboxRow[]
+  /** Resolves `operator_id` → `assignment.id` for the transition endpoint. */
+  assignmentIdByOperator: Map<number, number | null>
+  selectedOperatorId?: number
   onSelect: (operatorId: number) => void
   isLoading?: boolean
 }
 
-const COLUMN_ORDER: AssignmentState[] = [
-  'wait',
-  'in_progress',
-  'awaiting_training',
-  'scheduled',
-  'closed',
+const COLUMN_ORDER: {
+  state: InboxAssignmentState
+  label: string
+  subtitle: string
+  tone: string
+}[] = [
+  {
+    state: 'wait',
+    label: 'New',
+    subtitle: 'Just arrived',
+    tone: 'border-amber-100 bg-amber-50/30',
+  },
+  {
+    state: 'in_progress',
+    label: 'In progress',
+    subtitle: 'The coach has taken it on',
+    tone: 'border-blue-100 bg-blue-50/30',
+  },
+  {
+    state: 'awaiting_training',
+    label: 'Awaiting training',
+    subtitle: 'Assigned course/drill',
+    tone: 'border-violet-100 bg-violet-50/30',
+  },
+  {
+    state: 'scheduled',
+    label: 'Scheduled 1-on-1',
+    subtitle: 'There is a session in the calendar',
+    tone: 'border-indigo-100 bg-indigo-50/30',
+  },
+  {
+    state: 'closed',
+    label: 'Closed',
+    subtitle: 'With resolution',
+    tone: 'border-gray-200 bg-gray-50/60',
+  },
 ]
 
-const COLUMN_META: Record<
-  AssignmentState,
-  { key: string; fallback: string; chipTone: string; columnTone: string }
-> = {
-  wait: {
-    key: 'pages.training.inbox.kanbanColumns.wait',
-    fallback: 'Wait',
-    chipTone: 'bg-yellow-100 text-yellow-700',
-    columnTone: 'bg-yellow-50/40',
-  },
-  in_progress: {
-    key: 'pages.training.inbox.kanbanColumns.in_progress',
-    fallback: 'In progress',
-    chipTone: 'bg-blue-100 text-blue-700',
-    columnTone: 'bg-blue-50/40',
-  },
-  awaiting_training: {
-    key: 'pages.training.inbox.kanbanColumns.awaiting_training',
-    fallback: 'Awaiting training',
-    chipTone: 'bg-purple-100 text-purple-700',
-    columnTone: 'bg-purple-50/40',
-  },
-  scheduled: {
-    key: 'pages.training.inbox.kanbanColumns.scheduled',
-    fallback: 'Scheduled',
-    chipTone: 'bg-indigo-100 text-indigo-700',
-    columnTone: 'bg-indigo-50/40',
-  },
-  closed: {
-    key: 'pages.training.inbox.kanbanColumns.closed',
-    fallback: 'Closed',
-    chipTone: 'bg-gray-100 text-gray-700',
-    columnTone: 'bg-gray-50/40',
-  },
+const SCORE_TRACK: Record<ScoreBand, string> = {
+  red: 'stroke-red-500',
+  amber: 'stroke-amber-400',
+  green: 'stroke-emerald-500',
 }
 
-const SCORE_BAND_BG: Record<ScoreBand, string> = {
-  red: 'bg-red-500 text-white ring-red-300',
-  amber: 'bg-amber-400 text-white ring-amber-300',
-  green: 'bg-green-500 text-white ring-green-300',
-}
-
-const DRAG_MIME = 'application/x-coaching-assignment'
-
-interface DragPayload {
-  assignmentId: number
-  operatorId: number
-  fromState: AssignmentState
-}
-
-function operatorDisplayName(operatorId: number, operators: OperatorUser[]): string {
-  const operator = operators.find((o) => o.id === operatorId)
-  return operator?.full_name || `#${operatorId}`
-}
-
-function operatorDepartmentName(operatorId: number, operators: OperatorUser[]): string | null {
-  const operator = operators.find((o) => o.id === operatorId)
-  return operator?.department_name ?? null
-}
-
-function formatRelative(isoTimestamp: string | null | undefined): string | null {
-  if (!isoTimestamp) return null
-  const then = new Date(isoTimestamp).getTime()
-  if (Number.isNaN(then)) return null
-  const diffMs = Date.now() - then
-  if (diffMs < 0) return null
-  const minutes = Math.floor(diffMs / 60_000)
-  if (minutes < 1) return 'now'
-  if (minutes < 60) return `${minutes}m`
-  const hours = Math.floor(minutes / 60)
-  if (hours < 24) return `${hours}h`
-  const days = Math.floor(hours / 24)
-  if (days < 30) return `${days}d`
-  const months = Math.floor(days / 30)
-  if (months < 12) return `${months}mo`
-  return `${Math.floor(months / 12)}y`
+const TAG_TONE: Record<'red' | 'amber' | 'teal', string> = {
+  red: 'bg-red-50 text-red-700 border-red-100',
+  amber: 'bg-yellow-50 text-amber-800 border-yellow-100',
+  teal: 'bg-teal-50 text-teal-700 border-teal-100',
 }
 
 export function OperatorKanbanView({
   rows,
-  operators,
+  assignmentIdByOperator,
   selectedOperatorId,
   onSelect,
   isLoading,
 }: OperatorKanbanViewProps) {
   const { t } = useTranslation('common')
   const transitionMutation = useTransitionAssignment()
-  const [dragOverColumn, setDragOverColumn] = useState<AssignmentState | null>(null)
 
-  const grouped = useMemo(() => {
-    const buckets: Record<AssignmentState, QueueOperator[]> = {
-      wait: [],
-      in_progress: [],
-      awaiting_training: [],
-      scheduled: [],
-      closed: [],
-    }
-    for (const row of rows) {
-      if (row.assignment) {
-        buckets[row.assignment.state].push(row)
-      }
-    }
-    return buckets
-  }, [rows])
-
-  const handleDragStart = (e: React.DragEvent<HTMLButtonElement>, row: QueueOperator) => {
-    if (!row.assignment) {
-      e.preventDefault()
+  const handleMove = async (operatorId: number, target: InboxAssignmentState) => {
+    const assignmentId = assignmentIdByOperator.get(operatorId)
+    if (!assignmentId) {
+      toast.error(
+        t(
+          'pages.training.inbox.kanban.noAssignment',
+          'No active assignment yet — take charge first.'
+        )
+      )
       return
     }
-    const payload: DragPayload = {
-      assignmentId: row.assignment.id,
-      operatorId: row.operator_id,
-      fromState: row.assignment.state,
-    }
-    e.dataTransfer.setData(DRAG_MIME, JSON.stringify(payload))
-    e.dataTransfer.effectAllowed = 'move'
-  }
-
-  const handleDragOver = (e: React.DragEvent<HTMLDivElement>, column: AssignmentState) => {
-    // Only accept our own payload so we don't intercept browser-internal drags.
-    if (Array.from(e.dataTransfer.types).includes(DRAG_MIME)) {
-      e.preventDefault()
-      e.dataTransfer.dropEffect = 'move'
-      if (dragOverColumn !== column) setDragOverColumn(column)
-    }
-  }
-
-  const handleDragLeave = (column: AssignmentState) => {
-    if (dragOverColumn === column) setDragOverColumn(null)
-  }
-
-  const handleDrop = async (e: React.DragEvent<HTMLDivElement>, column: AssignmentState) => {
-    e.preventDefault()
-    setDragOverColumn(null)
-
-    const raw = e.dataTransfer.getData(DRAG_MIME)
-    if (!raw) return
-    let payload: DragPayload
-    try {
-      payload = JSON.parse(raw) as DragPayload
-    } catch {
-      return
-    }
-    if (payload.fromState === column) return
-
     try {
       await transitionMutation.mutateAsync({
-        assignmentId: payload.assignmentId,
-        payload: { to_state: column },
+        assignmentId,
+        payload: { to_state: target as AssignmentState },
       })
-      toast.success(
-        t('pages.training.inbox.kanban.transitionSuccess', 'Moved to {{state}}', {
-          state: t(COLUMN_META[column].key, COLUMN_META[column].fallback),
-        })
-      )
     } catch (err) {
       const detail =
         err instanceof Error
@@ -204,98 +113,114 @@ export function OperatorKanbanView({
 
   if (isLoading) {
     return (
-      <div className="rounded-2xl bg-white/60 p-6 text-center text-sm text-gray-500">
+      <div className="rounded-xl border border-[#EBECE8] bg-white p-6 text-center text-xs text-gray-500">
         {t('pages.training.inbox.list.loading', 'Loading queue…')}
       </div>
     )
   }
 
   return (
-    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-      {COLUMN_ORDER.map((column) => {
-        const meta = COLUMN_META[column]
-        const bucket = grouped[column]
-        const isDropTarget = dragOverColumn === column
+    <div className="grid min-h-[520px] grid-cols-1 gap-3 overflow-x-auto md:grid-cols-3 xl:grid-cols-5">
+      {COLUMN_ORDER.map((col) => {
+        const colRows = rows.filter((r) => r.state === col.state)
         return (
           <div
-            key={column}
-            onDragOver={(e) => handleDragOver(e, column)}
-            onDragLeave={() => handleDragLeave(column)}
-            onDrop={(e) => handleDrop(e, column)}
-            className={[
-              'flex min-h-[400px] flex-col gap-2 rounded-2xl p-3 transition-colors',
-              meta.columnTone,
-              isDropTarget ? 'ring-primary-400 ring-2' : '',
-            ]
-              .filter(Boolean)
-              .join(' ')}
+            key={col.state}
+            className={`flex min-w-[200px] flex-col gap-2 rounded-xl border p-3 ${col.tone}`}
           >
-            <header className="flex items-center justify-between gap-2 px-1">
-              <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${meta.chipTone}`}>
-                {t(meta.key, meta.fallback)}
+            <div className="px-1">
+              <p className="text-xs font-semibold text-[#05040D]">
+                {t(`pages.training.inbox.kanbanColumns.${col.state}`, col.label)}
+              </p>
+              <p className="text-[10px] text-gray-500">{col.subtitle}</p>
+              <span className="mt-1 inline-block rounded-full bg-white px-2 py-0.5 text-[10px] font-medium text-gray-600">
+                {colRows.length}
               </span>
-              <span className="text-[10px] font-medium text-gray-500">{bucket.length}</span>
-            </header>
-
-            <ul className="flex flex-col gap-1.5">
-              {bucket.map((row) => {
-                const name = operatorDisplayName(row.operator_id, operators)
-                const departmentName = operatorDepartmentName(row.operator_id, operators)
-                const lastActive = formatRelative(row.last_active_at)
-                const isSelected = row.operator_id === selectedOperatorId
+            </div>
+            <div className="flex flex-col gap-2">
+              {colRows.map((row) => {
+                const isSelected = row.operatorId === selectedOperatorId
+                const radius = 12
+                const circumference = 2 * Math.PI * radius
+                const offset = circumference - (row.compositeScore / 100) * circumference
                 return (
-                  <li key={row.operator_id}>
-                    <button
-                      type="button"
-                      draggable
-                      onDragStart={(e) => handleDragStart(e, row)}
-                      onClick={() => onSelect(row.operator_id)}
-                      className={[
-                        'flex w-full items-start gap-2 rounded-xl border bg-white p-2.5 text-left transition-colors',
-                        isSelected
-                          ? 'border-primary-400 ring-primary-100 ring-2'
-                          : 'hover:border-primary-200 border-gray-100',
-                      ].join(' ')}
-                    >
-                      <div className="relative flex-shrink-0">
-                        <div className="bg-primary-100 text-primary-700 flex h-9 w-9 items-center justify-center rounded-full text-xs font-semibold">
-                          {name.slice(0, 1).toUpperCase()}
-                        </div>
-                        {row.triggers.length > 0 ? (
-                          <span
-                            aria-label="red flag"
-                            className="absolute -top-0.5 -right-0.5 inline-block h-2.5 w-2.5 rounded-full border-2 border-white bg-red-500"
-                          />
-                        ) : null}
-                      </div>
-                      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                        <span className="text-dark-500 truncate text-xs font-medium">{name}</span>
-                        <div className="flex flex-wrap items-center gap-1">
-                          {departmentName ? (
-                            <span className="bg-primary-50 text-primary-700 rounded-full px-1.5 py-0.5 text-[9px] font-medium uppercase">
-                              {departmentName}
-                            </span>
-                          ) : null}
-                          {lastActive ? (
-                            <span className="text-[9px] text-gray-500">{lastActive}</span>
-                          ) : null}
-                          {row.triggers.length > 0 ? (
-                            <span className="text-[9px] font-medium text-red-600">
-                              {row.triggers.length}âš‘
-                            </span>
-                          ) : null}
-                        </div>
-                      </div>
-                      <span
-                        className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-xs font-semibold ring-1 ${SCORE_BAND_BG[row.score_band]}`}
+                  <button
+                    key={row.operatorId}
+                    type="button"
+                    onClick={() => onSelect(row.operatorId)}
+                    onDoubleClick={() => {
+                      const idx = COLUMN_ORDER.findIndex((c) => c.state === row.state)
+                      const next = COLUMN_ORDER[idx + 1]
+                      if (next) {
+                        void handleMove(row.operatorId, next.state)
+                      }
+                    }}
+                    className={`flex flex-col gap-2 rounded-xl border bg-white p-2.5 text-left transition-colors ${
+                      isSelected
+                        ? 'border-[#204E4D] ring-1 ring-[#204E4D]/20'
+                        : 'border-[#EBECE8] hover:border-[#204E4D]/40'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <div
+                        className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full text-[10px] font-semibold"
+                        style={{ backgroundColor: row.avatarColor }}
                       >
-                        {row.composite_score}
-                      </span>
-                    </button>
-                  </li>
+                        {row.initials}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-xs font-semibold text-[#05040D]">
+                          {row.name.split(' ')[0]} {row.name.split(' ')[1]?.[0]}.
+                        </p>
+                        <p className="truncate text-[10px] text-gray-500">{row.team}</p>
+                      </div>
+                      <div className="relative h-8 w-8 flex-shrink-0">
+                        <svg viewBox="0 0 32 32" className="h-8 w-8 -rotate-90">
+                          <circle
+                            cx="16"
+                            cy="16"
+                            r={radius}
+                            strokeWidth="2.5"
+                            fill="none"
+                            className="stroke-gray-100"
+                          />
+                          <circle
+                            cx="16"
+                            cy="16"
+                            r={radius}
+                            strokeWidth="2.5"
+                            fill="none"
+                            strokeLinecap="round"
+                            strokeDasharray={circumference}
+                            strokeDashoffset={offset}
+                            className={SCORE_TRACK[row.scoreBand]}
+                          />
+                        </svg>
+                        <span className="absolute inset-0 flex items-center justify-center text-[9px] font-semibold text-gray-700">
+                          {row.compositeScore}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      {row.triggerTags.map((tag) => (
+                        <span
+                          key={tag.label}
+                          className={`rounded-full border px-1.5 py-0.5 text-[9px] font-medium ${TAG_TONE[tag.tone]}`}
+                        >
+                          {tag.label}
+                        </span>
+                      ))}
+                    </div>
+                    <p className="text-[10px] text-gray-500">{row.cardTimestamp}</p>
+                  </button>
                 )
               })}
-            </ul>
+              {colRows.length === 0 ? (
+                <div className="rounded-lg bg-white/60 p-3 text-center text-[10px] text-gray-400">
+                  {t('pages.training.inbox.kanban.empty', 'Empty')}
+                </div>
+              ) : null}
+            </div>
           </div>
         )
       })}
