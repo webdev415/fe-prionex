@@ -222,6 +222,8 @@ export const PERMISSIONS = {
     MANAGE_COACHING_ASSIGNMENTS: 'manage_coaching_assignments',
     CREATE_ONE_ON_ONE: 'create_one_on_one',
     SELECT_INBOX_SCOPE: 'select_inbox_scope',
+    // KAN-414 — Team tab (department / group rollup)
+    VIEW_TEAM: 'view_team',
   },
 
   /**

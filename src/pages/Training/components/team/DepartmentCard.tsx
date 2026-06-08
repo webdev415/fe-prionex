@@ -7,6 +7,7 @@ import { TeamCard } from './TeamCard'
 
 export interface DepartmentCardProps {
   department: MockDepartment
+  onSelectOperator?: (operatorId: number) => void
 }
 
 function StatColumn({
@@ -36,7 +37,7 @@ function StatColumn({
 }
 
 /** Figma department band — white card, #204E4D manager tile, avg + in-queue stats */
-export function DepartmentCard({ department }: DepartmentCardProps) {
+export function DepartmentCard({ department, onSelectOperator }: DepartmentCardProps) {
   const { t } = useTranslation('common')
   const [expanded, setExpanded] = useState(true)
 
@@ -49,14 +50,24 @@ export function DepartmentCard({ department }: DepartmentCardProps) {
           className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-[#204E4D] text-xs font-semibold text-[#BBFB5B]"
           aria-label={expanded ? 'Collapse department' : 'Expand department'}
         >
-          {department.managerInitials}
+          {/* Fall back to a generic department glyph when no manager is set so
+              the tile doesn't render as a dash. */}
+          {department.managerInitials && department.managerInitials !== '—' ? (
+            department.managerInitials
+          ) : (
+            <Icons.UserMultiple02 size={16} className="text-[#BBFB5B]" />
+          )}
         </button>
 
         <div className="min-w-0 flex-1">
           <h2 className="text-base leading-6 font-semibold text-[#05040D]">{department.name}</h2>
           <p className="text-xs leading-4 text-[#4B5563]">
-            {t('pages.training.team.dept.manager', 'Manager')}: {department.managerName}
-            {' · '}
+            {department.managerName && department.managerName !== '—' ? (
+              <>
+                {t('pages.training.team.dept.manager', 'Manager')}: {department.managerName}
+                {' · '}
+              </>
+            ) : null}
             {department.memberCount} {t('pages.training.team.dept.employees', 'employees')}
             {' · '}
             {department.teamCount} {t('pages.training.team.dept.teams', 'teams')}
@@ -90,7 +101,7 @@ export function DepartmentCard({ department }: DepartmentCardProps) {
       {expanded ? (
         <div className="flex flex-col gap-0 bg-white">
           {department.teams.map((team) => (
-            <TeamCard key={team.id} team={team} />
+            <TeamCard key={team.id} team={team} onSelectOperator={onSelectOperator} />
           ))}
         </div>
       ) : null}

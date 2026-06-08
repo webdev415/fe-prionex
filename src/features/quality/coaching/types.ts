@@ -160,3 +160,46 @@ export interface TeamEventsFilters {
   hours?: number
   limit?: number
 }
+
+// ── Team tab (KAN-414) ─────────────────────────────────────────────────
+
+export interface TeamRosterOperator {
+  operator_id: number
+  full_name: string
+  composite_score: number | null
+  score_band: ScoreBand | null
+  last_active_at: string | null
+  online: boolean
+  assignment_state: AssignmentState | null
+}
+
+export interface TeamRosterTeam {
+  group_id: number
+  name: string
+  team_lead_user_id: number | null
+  team_lead_name: string | null
+  member_count: number
+  online_count: number
+  average_score: number | null
+  score_band: ScoreBand | null
+  operators: TeamRosterOperator[]
+}
+
+export interface TeamRosterDepartment {
+  department_id: number
+  name: string
+  member_count: number
+  queue_count: number
+  average_score: number | null
+  score_band: ScoreBand | null
+  teams: TeamRosterTeam[]
+}
+
+export interface TeamRosterResponse {
+  departments: TeamRosterDepartment[]
+}
+
+export interface TeamRosterFilters {
+  department_id?: number
+  user_ids?: number[]
+}

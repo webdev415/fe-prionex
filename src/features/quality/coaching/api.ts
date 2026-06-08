@@ -12,6 +12,8 @@ import type {
   TakeChargePayload,
   TeamEventsFilters,
   TeamEventsResponse,
+  TeamRosterFilters,
+  TeamRosterResponse,
   TransitionAssignmentPayload,
 } from './types'
 
@@ -110,6 +112,24 @@ export async function getTeamEvents(
 ): Promise<TeamEventsResponse> {
   const response = await api.get<TeamEventsResponse>(`${BASE}/team-events`, {
     params: buildTeamEventsParams(filters),
+  })
+  return response.data
+}
+
+function buildTeamRosterParams(filters: TeamRosterFilters): URLSearchParams {
+  const params = new URLSearchParams()
+  if (filters.department_id != null) {
+    params.set('department_id', String(filters.department_id))
+  }
+  filters.user_ids?.forEach((id) => params.append('user_ids', String(id)))
+  return params
+}
+
+export async function getTeamRoster(
+  filters: TeamRosterFilters = {}
+): Promise<TeamRosterResponse> {
+  const response = await api.get<TeamRosterResponse>(`${BASE}/team-roster`, {
+    params: buildTeamRosterParams(filters),
   })
   return response.data
 }

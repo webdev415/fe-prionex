@@ -373,7 +373,11 @@ export function TrainingPage() {
           onOpenAssignTask={() => setQuickActionDialog('assign')}
         />
       ) : activeTopTab === 'team' ? (
-        <TeamTab />
+        <TeamTab
+          onOpenRateDialogue={() => setQuickActionDialog('rate')}
+          onOpenScheduleOneOnOne={() => setQuickActionDialog('oneOnOne')}
+          onOpenAssignTask={() => setQuickActionDialog('assign')}
+        />
       ) : activeTopTab === 'action-analysis' ? (
         <ActionAnalysisInnerTab />
       ) : activeTopTab === 'dialogue-evaluation' ? (

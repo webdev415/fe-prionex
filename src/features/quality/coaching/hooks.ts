@@ -4,6 +4,7 @@ import {
   getInboxQueue,
   getOperatorCoachingDetail,
   getTeamEvents,
+  getTeamRoster,
   listOneOnOnes,
   scheduleOneOnOne,
   takeChargeOfOperator,
@@ -17,6 +18,7 @@ import type {
   ScheduleOneOnOnePayload,
   TakeChargePayload,
   TeamEventsFilters,
+  TeamRosterFilters,
   TransitionAssignmentPayload,
 } from './types'
 
@@ -30,6 +32,8 @@ export const coachingKeys = {
     [...coachingKeys.all, 'one-on-ones', filters] as const,
   teamEvents: (filters: TeamEventsFilters) =>
     [...coachingKeys.all, 'team-events', filters] as const,
+  teamRoster: (filters: TeamRosterFilters) =>
+    [...coachingKeys.all, 'team-roster', filters] as const,
 }
 
 export function useInboxQueue(filters: QueueFilters, enabled = true) {
@@ -117,5 +121,17 @@ export function useTeamEvents(filters: TeamEventsFilters = {}, enabled = true) {
     // Feed refreshes faster than the queue — trainer cares about "what
     // just happened" so we revalidate aggressively.
     staleTime: 15_000,
+  })
+}
+
+export function useTeamRoster(filters: TeamRosterFilters = {}, enabled = true) {
+  return useQuery({
+    queryKey: coachingKeys.teamRoster(filters),
+    queryFn: () => getTeamRoster(filters),
+    enabled,
+    // Online state is the spec's 60s freshness floor — re-fetch at the
+    // same cadence so the dot updates in line with the data source.
+    staleTime: 60_000,
+    refetchInterval: 60_000,
   })
 }

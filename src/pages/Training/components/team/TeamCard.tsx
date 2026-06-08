@@ -7,9 +7,11 @@ import { OperatorRow } from './OperatorRow'
 
 export interface TeamCardProps {
   team: MockTeam
+  /** Wired by the Team tab to mount the shared OperatorDetailPanel. */
+  onSelectOperator?: (operatorId: number) => void
 }
 
-export function TeamCard({ team }: TeamCardProps) {
+export function TeamCard({ team, onSelectOperator }: TeamCardProps) {
   const { t } = useTranslation('common')
   const [expanded, setExpanded] = useState(true)
 
@@ -58,7 +60,7 @@ export function TeamCard({ team }: TeamCardProps) {
       {expanded ? (
         <div className="grid grid-cols-1 gap-3 px-5 pb-4 md:grid-cols-2 xl:grid-cols-3">
           {team.operators.map((op) => (
-            <OperatorRow key={op.id} operator={op} />
+            <OperatorRow key={op.id} operator={op} onSelect={onSelectOperator} />
           ))}
         </div>
       ) : null}

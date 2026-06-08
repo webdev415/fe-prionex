@@ -51,22 +51,26 @@ export function OperatorRow({ operator, onSelect }: OperatorRowProps) {
           >
             {operator.lastActiveLabel}
           </span>
-          <span className="text-[10px] leading-[15px] text-[#6B7280]">
-            ext {operator.extension}
-          </span>
+          {operator.extension ? (
+            <span className="text-[10px] leading-[15px] text-[#6B7280]">
+              ext {operator.extension}
+            </span>
+          ) : null}
         </div>
-        <div className="mt-2 flex items-center gap-2">
-          <div className="h-[3px] min-w-0 flex-1 overflow-hidden rounded-full bg-[#EBECE8]">
-            <div
-              className="h-full rounded-full"
-              style={{
-                width: `${planPct}%`,
-                backgroundColor: PLAN_BAR[operator.scoreBand],
-              }}
-            />
+        {operator.dailyPlanPct != null && operator.dailyPlanPct > 0 ? (
+          <div className="mt-2 flex items-center gap-2">
+            <div className="h-[3px] min-w-0 flex-1 overflow-hidden rounded-full bg-[#EBECE8]">
+              <div
+                className="h-full rounded-full"
+                style={{
+                  width: `${planPct}%`,
+                  backgroundColor: PLAN_BAR[operator.scoreBand],
+                }}
+              />
+            </div>
+            <span className="text-[10px] leading-[15px] text-[#4B5563]">{planPct}%</span>
           </div>
-          <span className="text-[10px] leading-[15px] text-[#4B5563]">{planPct}%</span>
-        </div>
+        ) : null}
       </div>
 
       <div className="relative h-10 w-10 flex-shrink-0">
