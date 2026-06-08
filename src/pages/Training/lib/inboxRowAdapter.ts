@@ -157,7 +157,7 @@ function parseHireDate(iso: string | null | undefined): { year: string; date: st
 export function deriveInboxRow(row: QueueOperator, operators: OperatorUser[]): InboxCardRow {
   const operator = operators.find((o) => o.id === row.operator_id)
   const name = operator?.full_name ?? `#${row.operator_id}`
-  const departmentName = operator?.department_name ?? '—'
+  const departmentName = operator?.department_name ?? ''
   const extension = operator?.asterisk_extension ?? ''
   const hire = parseHireDate(operator?.hired_at)
   const { triggers, triggerTags } = buildTriggerSummaries(row)

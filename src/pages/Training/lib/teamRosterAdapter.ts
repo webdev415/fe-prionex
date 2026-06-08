@@ -109,6 +109,7 @@ function deriveOperator(
     score: op.composite_score ?? 0,
     scoreBand: bandFor(op.composite_score, op.score_band),
     hasScore,
+    hiredAt: op.hired_at ?? null,
     lastActiveLabel: formatLastActive(op.last_active_at, online),
     presenceStatus: online ? 'online' : 'offline',
     dailyPlanPct: 0,

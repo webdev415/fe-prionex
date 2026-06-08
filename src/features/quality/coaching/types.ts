@@ -64,6 +64,12 @@ export interface OperatorDetail extends QueueOperator {
   latest_scorecards: ScorecardSummary[]
   active_markers_count: number
   open_tasks_count: number
+  group_id?: number | null
+  group_name?: string | null
+  asterisk_extension?: string | null
+  hired_at?: string | null
+  today_active_minutes?: number | null
+  today_first_active_at?: string | null
 }
 
 export interface HeaderKpis {

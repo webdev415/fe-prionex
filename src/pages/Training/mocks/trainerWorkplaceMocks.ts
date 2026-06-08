@@ -37,6 +37,9 @@ export interface TeamOperatorRow {
   /** False when the BE returned a null composite score (no source data).
    *  Views render a `—` ring instead of the `score` value. */
   hasScore?: boolean
+  /** Operator hire date (ISO yyyy-mm-dd); surfaces in the detail panel
+   *  "Experience" card. */
+  hiredAt?: string | null
   lastActiveLabel: string
   /** Figma Team tab — presence label + dot color */
   presenceStatus?: OperatorPresenceStatus

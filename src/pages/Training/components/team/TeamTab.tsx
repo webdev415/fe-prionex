@@ -250,17 +250,36 @@ export function TeamTab({
                 avatarColor={selectedRow?.operator.avatarColor}
                 initials={selectedRow?.operator.initials}
                 online={selectedRow?.operator.online}
+                extension={selectedRow?.operator.extension}
                 department={selectedRow?.department.name}
-                segment={selectedRow?.team.name}
+                groupName={selectedRow?.team.name}
+                segment={selectedRow?.department.name}
+                hiredAt={selectedRow?.operator.hiredAt ?? undefined}
+                dailyPlanPct={selectedRow?.operator.dailyPlanPct}
+                onListenRealtime={() =>
+                  toast.info(t('pages.training.inbox.quickActions.comingSoon', 'Coming soon'))
+                }
                 onListen={
                   onOpenRateDialogue ??
                   (() =>
                     toast.info(t('pages.training.inbox.quickActions.comingSoon', 'Coming soon')))
                 }
+                onRate={() =>
+                  toast.info(t('pages.training.inbox.quickActions.comingSoon', 'Coming soon'))
+                }
+                onAssignCourse={() =>
+                  toast.info(t('pages.training.inbox.quickActions.comingSoon', 'Coming soon'))
+                }
+                onAssignDrill={() =>
+                  toast.info(t('pages.training.inbox.quickActions.comingSoon', 'Coming soon'))
+                }
                 onPlanOneOnOne={
                   onOpenScheduleOneOnOne ??
                   (() =>
                     toast.info(t('pages.training.inbox.quickActions.comingSoon', 'Coming soon')))
+                }
+                onLeaveComment={() =>
+                  toast.info(t('pages.training.inbox.quickActions.comingSoon', 'Coming soon'))
                 }
                 onAssignTask={
                   onOpenAssignTask ??

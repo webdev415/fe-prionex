@@ -27,10 +27,20 @@ export interface OperatorDetailPanelProps {
   extension?: string
   /** Department label shown in the header chrome. */
   department?: string
+  /** Team / group label (e.g. "Charlie"). */
+  groupName?: string
   /** Segment label (Hard/Soft collection etc.). */
   segment?: string
-  /** "Queue entered" label like "2h ago" derived from `assignment.updated_at`. */
-  queueEnteredLabel?: string
+  /** Today's accumulated work minutes (analytics screen-time). */
+  todayActiveMinutes?: number | null
+  /** ISO-8601 timestamp of the first activity event today. */
+  todayFirstActiveAt?: string | null
+  /** Daily plan progress (KAN-411 task quotas; placeholder until shipped). */
+  dailyPlanPct?: number | null
+  dailyPlanDone?: number | null
+  dailyPlanTotal?: number | null
+  /** Operator hire date (ISO yyyy-mm-dd). */
+  hiredAt?: string | null
   period?: CoachingPeriod
   fromDate?: string
   toDate?: string
@@ -42,9 +52,16 @@ export interface OperatorDetailPanelProps {
    *  Kept as a slot so the coaching feature module stays decoupled from the
    *  page-layer mock data that still backs the feed. */
   feedSlot?: ReactNode
+  /** Trainer action handlers — Figma shows 8 actions in a 2-col grid. */
+  onListenRealtime?: () => void
   onListen?: () => void
-  onAssignTask?: () => void
+  onRate?: () => void
+  onAssignCourse?: () => void
+  onAssignDrill?: () => void
   onPlanOneOnOne?: () => void
+  onLeaveComment?: () => void
+  onAssignTask?: () => void
+  /** Legacy "Take charge" handler — retained for the Team-tab side panel. */
   onTakeCharge?: () => void
 }
 
@@ -126,6 +143,28 @@ function humanizeTrigger(code: string): string {
     .trim()
 }
 
+function formatTodayActive(minutes: number | null | undefined): string {
+  if (minutes == null || minutes <= 0) return '—'
+  const h = Math.floor(minutes / 60)
+  const m = minutes % 60
+  if (h <= 0) return `${m} min`
+  return `${h}h ${String(m).padStart(2, '0')}min`
+}
+
+function formatClock(iso: string | null | undefined): string {
+  if (!iso) return ''
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return ''
+  return d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
+}
+
+function formatHireDate(iso: string | null | undefined): { year: string; date: string } {
+  if (!iso) return { year: '—', date: '' }
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return { year: '—', date: '' }
+  return { year: String(d.getFullYear()), date: d.toLocaleDateString() }
+}
+
 export function OperatorDetailPanel({
   operatorId,
   operatorName,
@@ -134,8 +173,14 @@ export function OperatorDetailPanel({
   online = false,
   extension,
   department,
+  groupName,
   segment,
-  queueEnteredLabel,
+  todayActiveMinutes,
+  todayFirstActiveAt,
+  dailyPlanPct,
+  dailyPlanDone,
+  dailyPlanTotal,
+  hiredAt,
   period = 'last_7d',
   fromDate,
   toDate,
@@ -144,9 +189,14 @@ export function OperatorDetailPanel({
   onTabChange,
   eventFeedCount = 0,
   feedSlot,
+  onListenRealtime,
   onListen,
-  onAssignTask,
+  onRate,
+  onAssignCourse,
+  onAssignDrill,
   onPlanOneOnOne,
+  onLeaveComment,
+  onAssignTask,
   onTakeCharge,
 }: OperatorDetailPanelProps) {
   const { t } = useTranslation('common')
@@ -199,41 +249,93 @@ export function OperatorDetailPanel({
     ? scoreCircumference - (score / 100) * scoreCircumference
     : scoreCircumference
 
+  // Figma `Details-RightView` stats row: DAILY PLAN / ONLINE / EXPERIENCE.
+  // - Daily plan: red-tinted when behind; placeholder until KAN-411 ships
+  //   the task-quota endpoint.
+  // - Online: today's accumulated work-time + clock-in label, derived from
+  //   analytics-service screen-time (todayActiveMinutes prop).
+  // - Experience: operator hire year + full date (from users.hired_at).
+  // Prefer parent-passed props (already-cached values from the row
+  // adapter), fall back to whatever the BE detail payload included.
+  const effectiveGroupName = groupName ?? data.group_name ?? undefined
+  const effectiveExtension = extension ?? data.asterisk_extension ?? undefined
+  const effectiveHiredAt = hiredAt ?? data.hired_at ?? null
+  const effectiveTodayMinutes = todayActiveMinutes ?? data.today_active_minutes ?? null
+  const effectiveTodayFirstAt = todayFirstActiveAt ?? data.today_first_active_at ?? null
+  const planHasData = dailyPlanPct != null && dailyPlanTotal != null && dailyPlanTotal > 0
+  const planBehind = planHasData && (dailyPlanPct ?? 0) < 50
+  const hire = formatHireDate(effectiveHiredAt)
   const statsRow: { label: string; value: string; subValue?: string; cardTone: 'red' | 'gray' }[] =
     [
       {
-        label: t('pages.training.inbox.detail.stats.scorecard', 'Avg scorecard'),
-        value:
-          data.kpis.avg_scorecard_pct != null ? `${Math.round(data.kpis.avg_scorecard_pct)}%` : '—',
-        cardTone: band === 'red' ? 'red' : 'gray',
+        label: t('pages.training.inbox.detail.stats.dailyPlan', 'Daily plan'),
+        value: planHasData ? `${Math.round(dailyPlanPct ?? 0)}%` : '—',
+        subValue:
+          planHasData && dailyPlanDone != null ? `${dailyPlanDone}/${dailyPlanTotal}` : undefined,
+        cardTone: planBehind ? 'red' : 'gray',
       },
       {
-        label: t('pages.training.inbox.detail.stats.scriptAdherence', 'Script adherence'),
-        value:
-          data.kpis.script_adherence_pct != null
-            ? `${Math.round(data.kpis.script_adherence_pct)}%`
-            : '—',
+        label: t('pages.training.inbox.detail.stats.online', 'Online'),
+        value: formatTodayActive(effectiveTodayMinutes),
+        subValue: effectiveTodayFirstAt
+          ? t('pages.training.inbox.detail.stats.onlineFrom', 'from {{time}}', {
+              time: formatClock(effectiveTodayFirstAt),
+            })
+          : undefined,
         cardTone: 'gray',
       },
       {
-        label: t('pages.training.inbox.detail.stats.openTasks', 'Open tasks'),
-        value: String(data.open_tasks_count),
-        subValue:
-          data.active_markers_count > 0
-            ? t('pages.training.inbox.detail.stats.markers', '{{count}} markers', {
-                count: data.active_markers_count,
-              })
-            : undefined,
-        cardTone: data.kpis.red_flag_count > 0 ? 'red' : 'gray',
+        label: t('pages.training.inbox.detail.stats.experience', 'Experience'),
+        value: hire.year,
+        subValue: hire.date || undefined,
+        cardTone: 'gray',
       },
     ]
+
+  // Per-trigger meta line — derived from the operator's KPIs so each
+  // trigger card has context under its title (Figma: "38 points · call
+  // #C-1016", "14% at 11:00 · 4th day in a row", etc.). When a specific
+  // call/score isn't available, fall back to the latest scorecard or the
+  // raw KPI value so the line is never empty for known triggers.
+  // Alias `data` into a non-null const so TS preserves narrowing across
+  // the closure boundary below (across an arrow function TS would widen
+  // `data` back to the hook's union type and require null checks).
+  const detail = data
+  const latestScorecard = detail.latest_scorecards?.[0]
+  const triggerMeta = (code: string): string => {
+    const c = code.toLowerCase()
+    if (c.includes('rating') || c.includes('scorecard') || c.includes('conflict')) {
+      if (latestScorecard?.weighted_score != null && latestScorecard.call_id) {
+        return `${Math.round(Number(latestScorecard.weighted_score))} pts · call #${latestScorecard.call_id.slice(0, 6)}`
+      }
+      if (detail.kpis.avg_scorecard_pct != null) {
+        return `Avg ${Math.round(detail.kpis.avg_scorecard_pct)}%`
+      }
+      return ''
+    }
+    if (c.includes('plan') || c.includes('daily')) {
+      if (dailyPlanPct != null && dailyPlanTotal != null) {
+        return `${Math.round(dailyPlanPct)}% — ${dailyPlanDone ?? 0}/${dailyPlanTotal}`
+      }
+      return ''
+    }
+    if (c.includes('training') || c.includes('course') || c.includes('drill')) {
+      return data.open_tasks_count > 0 ? `${data.open_tasks_count} open` : ''
+    }
+    if (c.includes('delay') || c.includes('idle') || c.includes('no_calls')) {
+      return effectiveTodayMinutes != null
+        ? `${formatTodayActive(effectiveTodayMinutes)} today`
+        : ''
+    }
+    return ''
+  }
 
   const whyInQueue = data.triggers.map((code, idx) => {
     const meta = categorizeTrigger(code)
     return {
       id: idx + 1,
       label: humanizeTrigger(code),
-      meta: '',
+      meta: triggerMeta(code),
       tone: meta.tone,
       icon: meta.icon,
     }
@@ -315,21 +417,36 @@ export function OperatorDetailPanel({
               </div>
 
               <div className="min-w-0 flex-1 pt-0.5">
-                <div className="flex flex-wrap items-center gap-1.5">
-                  <h2 className="text-sm font-semibold text-[#05040D]">{displayName}</h2>
-                  <span className="text-[11px] text-[#676767]">
+                <h2 className="text-sm font-semibold text-[#05040D]">{displayName}</h2>
+                <p className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[11px] leading-4 text-[#676767]">
+                  {[department, segment, effectiveGroupName]
+                    .filter((v): v is string => Boolean(v))
+                    .map((seg, idx, arr) => (
+                      <span key={`seg-${idx}`}>
+                        {seg}
+                        {idx < arr.length - 1 ? <span className="ml-1.5">·</span> : null}
+                      </span>
+                    ))}
+                  {effectiveExtension ? (
+                    <>
+                      <span className="mx-1">·</span>
+                      <span className="rounded-full bg-[#EBECE8] px-2 py-0.5 text-[10px] font-medium text-[#05040D]">
+                        ext {effectiveExtension}
+                      </span>
+                    </>
+                  ) : null}
+                  <span className="mx-1">·</span>
+                  <span>
                     {online
                       ? t('pages.training.inbox.detail.online', 'Online')
                       : t('pages.training.inbox.detail.offline', 'Offline')}
                   </span>
-                  {extension ? (
-                    <span className="rounded-full bg-[#EBECE8] px-2 py-0.5 text-[11px] font-medium text-[#05040D]">
-                      ext {extension}
-                    </span>
+                  {effectiveTodayMinutes != null && effectiveTodayMinutes > 0 ? (
+                    <>
+                      <span className="mx-1">·</span>
+                      <span>{formatTodayActive(effectiveTodayMinutes)}</span>
+                    </>
                   ) : null}
-                </div>
-                <p className="mt-1 text-[11px] leading-4 text-[#676767]">
-                  {[department, segment, queueEnteredLabel].filter(Boolean).join(' · ')}
                 </p>
               </div>
 
@@ -443,16 +560,40 @@ export function OperatorDetailPanel({
               <h3 className="mb-3 text-sm font-medium tracking-[-0.02em] text-[#05040D]">
                 {t('pages.training.inbox.detail.trainerActionsLabel', 'Trainer actions')}
               </h3>
+              {/* Figma — 8 actions in a 2-col grid. Buttons without a
+                  handler render disabled (60% opacity) so trainers see
+                  what's coming without functional surprises. The legacy
+                  `onTakeCharge` prop still wires the Team-tab "Take
+                  charge" flow when the trainer opens the panel from the
+                  Team tab. */}
               <div className="grid grid-cols-2 gap-1.5">
+                <TrainerAction
+                  icon={<Icons.Mic02 size={16} className="text-[#05040D]" />}
+                  label={t(
+                    'pages.training.inbox.detail.actions.listenRealtime',
+                    'Listen in real-time'
+                  )}
+                  onClick={onListenRealtime}
+                />
                 <TrainerAction
                   icon={<Icons.Phone size={16} className="text-[#05040D]" />}
                   label={t('pages.training.inbox.detail.actions.listen', 'Listen to the call')}
                   onClick={onListen}
                 />
                 <TrainerAction
-                  icon={<Icons.CheckmarkSquare03 size={16} className="text-[#05040D]" />}
-                  label={t('pages.training.inbox.detail.actions.assignTask', 'Assign task')}
-                  onClick={onAssignTask}
+                  icon={<Icons.ChartRing size={16} className="text-[#05040D]" />}
+                  label={t('pages.training.inbox.detail.actions.rate', 'Rate')}
+                  onClick={onRate}
+                />
+                <TrainerAction
+                  icon={<Icons.Brochure size={16} className="text-[#05040D]" />}
+                  label={t('pages.training.inbox.detail.actions.assignCourse', 'Assign course')}
+                  onClick={onAssignCourse}
+                />
+                <TrainerAction
+                  icon={<Icons.PieChart02 size={16} className="text-[#05040D]" />}
+                  label={t('pages.training.inbox.detail.actions.assignDrill', 'Assign drill')}
+                  onClick={onAssignDrill}
                 />
                 <TrainerAction
                   icon={<Icons.Calendar size={16} className="text-[#05040D]" />}
@@ -460,11 +601,25 @@ export function OperatorDetailPanel({
                   onClick={onPlanOneOnOne}
                 />
                 <TrainerAction
-                  icon={<Icons.UserStatus size={16} className="text-[#05040D]" />}
-                  label={t('pages.training.inbox.detail.actions.takeCharge', 'Take charge')}
-                  onClick={onTakeCharge}
+                  icon={<Icons.ChatFeedback01 size={16} className="text-[#05040D]" />}
+                  label={t('pages.training.inbox.detail.actions.leaveComment', 'Leave a comment')}
+                  onClick={onLeaveComment}
+                />
+                <TrainerAction
+                  icon={<Icons.CheckmarkSquare03 size={16} className="text-[#05040D]" />}
+                  label={t('pages.training.inbox.detail.actions.task', 'Task / checklist')}
+                  onClick={onAssignTask}
                 />
               </div>
+              {onTakeCharge ? (
+                <button
+                  type="button"
+                  onClick={onTakeCharge}
+                  className="mt-2 flex h-[34.5px] w-full items-center justify-center gap-1 rounded-md border border-[#204E4D] bg-[#204E4D] text-xs font-medium tracking-[-0.02em] text-white"
+                >
+                  {t('pages.training.inbox.detail.actions.takeCharge', 'Take charge')}
+                </button>
+              ) : null}
             </div>
           </div>
         </div>

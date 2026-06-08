@@ -166,6 +166,12 @@ export function InboxTab({
     () => filteredRows.find((r) => r.operatorId === inboxState.operatorId) ?? filteredRows[0],
     [filteredRows, inboxState.operatorId]
   )
+  // OperatorUser carries fields the queue payload doesn't (group_name,
+  // hired_at) — the panel needs them for the subtitle / Experience card.
+  const selectedOperatorUser = useMemo(
+    () => (selectedRow ? operators.find((o) => o.id === selectedRow.operatorId) : undefined),
+    [operators, selectedRow]
+  )
 
   // Details / Event Feed tab strip inside the right-side panel. Local
   // state — not URL-shareable for now since the feed is a side surface.
@@ -297,8 +303,12 @@ export function InboxTab({
           online={selectedRow?.online}
           extension={selectedRow?.extension}
           department={selectedRow?.department}
+          groupName={selectedOperatorUser?.group_name ?? undefined}
           segment={selectedRow?.segment}
-          queueEnteredLabel={selectedRow?.queueEnteredLabel}
+          hiredAt={selectedOperatorUser?.hired_at ?? undefined}
+          dailyPlanPct={selectedRow?.dailyPlanPct}
+          dailyPlanDone={selectedRow?.dailyPlanDone}
+          dailyPlanTotal={selectedRow?.dailyPlanTotal}
           period={inboxState.period}
           fromDate={inboxState.customFromDate}
           toDate={inboxState.customToDate}
@@ -307,13 +317,28 @@ export function InboxTab({
           onTabChange={setDetailTab}
           eventFeedCount={teamEventsCount}
           feedSlot={<InboxEventFeed userIds={effectiveUserIds} />}
+          onListenRealtime={() =>
+            toast.info(t('pages.training.inbox.quickActions.comingSoon', 'Coming soon'))
+          }
           onListen={
             onOpenRateDialogue ??
             (() => toast.info(t('pages.training.inbox.quickActions.comingSoon', 'Coming soon')))
           }
+          onRate={() =>
+            toast.info(t('pages.training.inbox.quickActions.comingSoon', 'Coming soon'))
+          }
+          onAssignCourse={() =>
+            toast.info(t('pages.training.inbox.quickActions.comingSoon', 'Coming soon'))
+          }
+          onAssignDrill={() =>
+            toast.info(t('pages.training.inbox.quickActions.comingSoon', 'Coming soon'))
+          }
           onPlanOneOnOne={
             onOpenScheduleOneOnOne ??
             (() => toast.info(t('pages.training.inbox.quickActions.comingSoon', 'Coming soon')))
+          }
+          onLeaveComment={() =>
+            toast.info(t('pages.training.inbox.quickActions.comingSoon', 'Coming soon'))
           }
           onAssignTask={
             onOpenAssignTask ??
