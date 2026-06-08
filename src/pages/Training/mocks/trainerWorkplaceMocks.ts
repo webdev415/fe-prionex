@@ -64,11 +64,93 @@ function scoreBandFor(score: number): ScoreBand {
 // Team tab mocks (KAN-414)
 // ─────────────────────────────────────────────────────────────
 
-// KAN-414 — Team-tab mock data was promoted to the real
-// `useTeamRoster` hook + `teamRosterAdapter` (see TeamTab.tsx). The mock
-// helpers (`buildOperator`, `teamOp`, MOCK_DEPARTMENTS) were dropped;
-// only the row-shape types below remain as the UI contract for the
-// `DepartmentCard` / `TeamCard` / `OperatorRow` components.
+// KAN-414 — the Team tab itself now reads `useTeamRoster` + the real
+// `teamRosterAdapter` (see TeamTab.tsx); `MOCK_DEPARTMENTS` is kept
+// intact only as a reference fixture, not consumed at runtime. The
+// helpers below stay because other Trainer-Workplace surfaces
+// (calibration sessions, scorecards, etc.) still reuse them.
+
+const OPERATOR_NAMES = [
+  'Kateryna Antonova',
+  'Oleh Bondar',
+  'Marina Shevchenko',
+  'Denys Polyakov',
+  'Iryna Sokol',
+  'Artem Honchar',
+  'Oleksandra Bila',
+  'Natalia Yefremova',
+  'Yurii Kravtsov',
+  'Bohdan Melnyk',
+  'Sofia Lytvyn',
+  'Mykyta Tarasenko',
+]
+
+const PRESENCE_LABEL: Record<OperatorPresenceStatus, string> = {
+  online: 'Online',
+  offline: 'Offline',
+  busy: 'Busy',
+  on_call: 'On the call',
+}
+
+function deriveWorkStatus(score: number, dailyPlanPct: number): OperatorWorkStatus {
+  if (score < 60 || dailyPlanPct < 50) return 'in_queue'
+  if (score < 75 || dailyPlanPct < 75) return 'behind'
+  return 'in_norm'
+}
+
+function buildOperator(id: number, team: string, department: string, score: number): MockOperator {
+  const name = OPERATOR_NAMES[id % OPERATOR_NAMES.length]
+  const parts = name.split(' ')
+  const initials = `${parts[0][0]}${parts[1]?.[0] ?? ''}`.toUpperCase()
+  const presenceStatus: OperatorPresenceStatus =
+    id % 4 === 0 ? 'offline' : id % 4 === 1 ? 'on_call' : id % 4 === 2 ? 'busy' : 'online'
+  const dailyPlanPct = 40 + ((id * 17) % 55)
+  return {
+    id,
+    name,
+    initials,
+    avatarColor: '#BBFB5B',
+    team,
+    department,
+    extension: `${2000 + id}`,
+    online: presenceStatus !== 'offline',
+    score,
+    scoreBand: scoreBandFor(score),
+    lastActiveLabel: PRESENCE_LABEL[presenceStatus],
+    presenceStatus,
+    dailyPlanPct,
+    workStatus: deriveWorkStatus(score, dailyPlanPct),
+  }
+}
+
+function teamOp(
+  id: number,
+  name: string,
+  initials: string,
+  team: string,
+  department: string,
+  extension: string,
+  score: number,
+  presenceStatus: OperatorPresenceStatus,
+  dailyPlanPct: number
+): MockOperator {
+  return {
+    id,
+    name,
+    initials,
+    avatarColor: '#BBFB5B',
+    team,
+    department,
+    extension,
+    online: presenceStatus !== 'offline',
+    score,
+    scoreBand: scoreBandFor(score),
+    lastActiveLabel: PRESENCE_LABEL[presenceStatus],
+    presenceStatus,
+    dailyPlanPct,
+    workStatus: deriveWorkStatus(score, dailyPlanPct),
+  }
+}
 
 export interface MockTeam {
   id: string

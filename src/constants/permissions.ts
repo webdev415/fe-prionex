@@ -431,6 +431,8 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   manage_coaching_assignments: 'Take charge of an operator and transition Kanban workflow state',
   create_one_on_one: 'Schedule a 1-on-1 session with an operator',
   select_inbox_scope: 'Show the My / Group / Department / All scope selector on the Inbox tab',
+  // KAN-414 — Team tab
+  view_team: 'View the Team tab — department / team rollup with per-operator composite scores',
 
   // Document Generation
   view_document_journal: 'View the journal of all generated and uploaded documents',
