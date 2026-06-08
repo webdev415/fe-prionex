@@ -4,17 +4,14 @@ import { useOperators } from '@/features/users/hooks'
 import { Icons } from '@/lib/icons'
 
 /**
- * Bottom floating workspace bar — Figma `Popup-Trainer` frame.
+ * Bottom-pinned "Coach's Workspace" banner — Figma `Popup-Trainer` frame.
  *
- * Visual layout matches the Figma frame; data comes from the real
- * `authStore` (project + role + department) and the cached operator list
- * (count of operators in the active project). Falls back gracefully to
- * placeholders for any field the auth payload doesn't provide.
- *
- * Kept under the legacy `MockWorkspaceBanner` filename so existing imports
- * continue to work; export name is unchanged.
+ * Mounted page-wide on `TrainingPage` so every Trainer Workplace top-tab
+ * shows the same context strip (role · project · department · operators
+ * in operation). Data comes from the real `authStore` (role / project /
+ * department) and the cached operator list for the active project.
  */
-export function MockWorkspaceBanner() {
+export function CoachWorkspaceBanner() {
   const { t } = useTranslation('common')
   const user = useAuthStore((s) => s.user)
   const activeProjectId = useAuthStore((s) => s.user?.active_project_id)
@@ -71,4 +68,4 @@ export function MockWorkspaceBanner() {
   )
 }
 
-export default MockWorkspaceBanner
+export default CoachWorkspaceBanner

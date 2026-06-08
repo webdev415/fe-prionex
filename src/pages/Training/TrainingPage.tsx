@@ -25,6 +25,7 @@ import { HeatmapTab } from './components/HeatmapTab'
 import { ScopeSelector } from './components/ScopeSelector'
 import { TrainerHeaderStrip } from './components/chrome/TrainerHeaderStrip'
 import { QuickActionOverlay } from './components/chrome/QuickActionOverlay'
+import { CoachWorkspaceBanner } from './components/chrome/CoachWorkspaceBanner'
 import { PendingFeatureDialog } from './components/inbox/PendingFeatureDialog'
 import { ScheduleOneOnOneDialog } from './components/inbox/ScheduleOneOnOneDialog'
 import { RateDialogueDialog } from './components/inbox/RateDialogueDialog'
@@ -403,6 +404,13 @@ export function TrainingPage() {
           )}
         </div>
       )}
+
+      {/* Bottom-pinned Coach's Workspace banner — shared across every top-tab. */}
+      <div className="pointer-events-none fixed right-0 bottom-4 left-0 z-20 flex justify-center px-4 lg:left-[var(--sidebar-width,0px)]">
+        <div className="pointer-events-auto w-full max-w-[1110px]">
+          <CoachWorkspaceBanner />
+        </div>
+      </div>
     </div>
   )
 }

@@ -16,8 +16,6 @@ import { useScopedUserIds } from '../../lib/scope'
 import { readInboxState, writeInboxState } from '../../lib/inboxUrlState'
 import { deriveInboxRows } from '../../lib/inboxRowAdapter'
 import { type InboxPriority } from '../../mocks/trainerWorkplaceMocks'
-import { ScopeSelector } from '../ScopeSelector'
-import { MockWorkspaceBanner } from '../chrome/MockWorkspaceBanner'
 import { InboxEventFeed } from './InboxEventFeed'
 import { OperatorListView } from './OperatorListView'
 import { OperatorKanbanView } from './OperatorKanbanView'
@@ -28,7 +26,7 @@ import { OperatorGridView } from './OperatorGridView'
  *
  * Layout mirrors Figma `Inbox View A/B` — priority chip strip + segmented
  * view-mode toggle on top, main + 360px right detail panel grid below, and
- * the bottom-pinned `MockWorkspaceBanner`. Data comes from
+ * a list/detail grid. Data comes from
  * `GET /api/v1/quality/coaching/queue`; the adapter in
  * [`inboxRowAdapter`](../../lib/inboxRowAdapter.ts) maps the BE rows onto the
  * Figma-faithful row shape consumed by the view components.
@@ -244,7 +242,6 @@ export function InboxTab({
         </div>
 
         <div className="flex items-center gap-3">
-          {canSelectScope ? <ScopeSelector /> : null}
           <div className="flex items-center rounded-lg border border-white bg-white p-1 shadow-sm">
             {VIEW_MODES.map((vm) => {
               const VmIcon = vm.icon
@@ -330,11 +327,6 @@ export function InboxTab({
         />
       </div>
 
-      <div className="pointer-events-none fixed right-0 bottom-4 left-0 z-20 flex justify-center px-4 lg:left-[var(--sidebar-width,0px)]">
-        <div className="pointer-events-auto w-full max-w-[1110px]">
-          <MockWorkspaceBanner />
-        </div>
-      </div>
     </div>
   )
 }

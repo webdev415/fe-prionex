@@ -13,7 +13,6 @@ import { OperatorDetailPanel } from '@/features/quality/coaching/components/Oper
 import { useScopedUserIds } from '../../lib/scope'
 import { deriveDepartmentChips, deriveTeamRoster } from '../../lib/teamRosterAdapter'
 import { TrainingSegmentedStrip } from '../chrome/TrainingSegmentedStrip'
-import { ScopeSelector } from '../ScopeSelector'
 import { DepartmentCard } from './DepartmentCard'
 
 /**
@@ -197,7 +196,6 @@ export function TeamTab({
         />
 
         <div className="flex items-center gap-4">
-          {canSelectScope ? <ScopeSelector /> : null}
           {STATUS_LEGEND.map((item) => (
             <span
               key={item.id}
