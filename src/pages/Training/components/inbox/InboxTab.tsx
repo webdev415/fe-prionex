@@ -3,7 +3,11 @@ import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { useOperators } from '@/features/users/hooks'
-import { useInboxQueue, useTakeCharge } from '@/features/quality/coaching/hooks'
+import {
+  useInboxQueue,
+  useTakeCharge,
+  useTeamEvents,
+} from '@/features/quality/coaching/hooks'
 import { OperatorDetailPanel } from '@/features/quality/coaching/components/OperatorDetailPanel'
 import { useAuthStore } from '@/stores/authStore'
 import { Icons } from '@/lib/icons'
@@ -11,10 +15,7 @@ import { PERMISSIONS } from '@/constants/permissions'
 import { useScopedUserIds } from '../../lib/scope'
 import { readInboxState, writeInboxState } from '../../lib/inboxUrlState'
 import { deriveInboxRows } from '../../lib/inboxRowAdapter'
-import {
-  MOCK_INBOX_TEAM_EVENTS,
-  type InboxPriority,
-} from '../../mocks/trainerWorkplaceMocks'
+import { type InboxPriority } from '../../mocks/trainerWorkplaceMocks'
 import { ScopeSelector } from '../ScopeSelector'
 import { MockWorkspaceBanner } from '../chrome/MockWorkspaceBanner'
 import { InboxEventFeed } from './InboxEventFeed'
@@ -176,6 +177,14 @@ export function InboxTab({
   // state — not URL-shareable for now since the feed is a side surface.
   const [detailTab, setDetailTab] = useState<'details' | 'feed'>('details')
 
+  // Headline count badge next to the "Event Feed" tab. Same scope as the
+  // inbox queue so the trainer sees activity from their operators only.
+  const { data: teamEventsData } = useTeamEvents(
+    { user_ids: effectiveUserIds, hours: 24, limit: 20 },
+    effectiveUserIds.length > 0
+  )
+  const teamEventsCount = teamEventsData?.data.length ?? 0
+
   // Trainer permissions — drive the disabled state on the panel buttons.
   const takeChargeMutation = useTakeCharge()
   const canTakeCharge = userPermissions.includes(PERMISSIONS.TRAINING.MANAGE_COACHING_ASSIGNMENTS)
@@ -303,8 +312,8 @@ export function InboxTab({
           showTabs
           activeTab={detailTab}
           onTabChange={setDetailTab}
-          eventFeedCount={MOCK_INBOX_TEAM_EVENTS.length}
-          feedSlot={<InboxEventFeed />}
+          eventFeedCount={teamEventsCount}
+          feedSlot={<InboxEventFeed userIds={effectiveUserIds} />}
           onListen={
             onOpenRateDialogue ??
             (() => toast.info(t('pages.training.inbox.quickActions.comingSoon', 'Coming soon')))

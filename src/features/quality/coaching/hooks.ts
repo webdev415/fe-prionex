@@ -3,6 +3,7 @@ import {
   getHeaderKpis,
   getInboxQueue,
   getOperatorCoachingDetail,
+  getTeamEvents,
   listOneOnOnes,
   scheduleOneOnOne,
   takeChargeOfOperator,
@@ -15,6 +16,7 @@ import type {
   QueueFilters,
   ScheduleOneOnOnePayload,
   TakeChargePayload,
+  TeamEventsFilters,
   TransitionAssignmentPayload,
 } from './types'
 
@@ -26,6 +28,8 @@ export const coachingKeys = {
     [...coachingKeys.all, 'header-kpis', filters] as const,
   oneOnOnes: (filters: ListOneOnOnesFilters) =>
     [...coachingKeys.all, 'one-on-ones', filters] as const,
+  teamEvents: (filters: TeamEventsFilters) =>
+    [...coachingKeys.all, 'team-events', filters] as const,
 }
 
 export function useInboxQueue(filters: QueueFilters, enabled = true) {
@@ -102,5 +106,16 @@ export function useHeaderKpis(filters: HeaderKpisFilters, enabled = true) {
     queryFn: () => getHeaderKpis(filters),
     enabled,
     staleTime: 30_000,
+  })
+}
+
+export function useTeamEvents(filters: TeamEventsFilters = {}, enabled = true) {
+  return useQuery({
+    queryKey: coachingKeys.teamEvents(filters),
+    queryFn: () => getTeamEvents(filters),
+    enabled,
+    // Feed refreshes faster than the queue — trainer cares about "what
+    // just happened" so we revalidate aggressively.
+    staleTime: 15_000,
   })
 }

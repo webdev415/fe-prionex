@@ -10,6 +10,8 @@ import type {
   QueueResponse,
   ScheduleOneOnOnePayload,
   TakeChargePayload,
+  TeamEventsFilters,
+  TeamEventsResponse,
   TransitionAssignmentPayload,
 } from './types'
 
@@ -92,6 +94,23 @@ export async function transitionAssignment(
 
 export async function takeChargeOfOperator(payload: TakeChargePayload): Promise<AssignmentSummary> {
   const response = await api.post<AssignmentSummary>(`${BASE}/assignments/take-charge`, payload)
+  return response.data
+}
+
+function buildTeamEventsParams(filters: TeamEventsFilters): URLSearchParams {
+  const params = new URLSearchParams()
+  filters.user_ids?.forEach((id) => params.append('user_ids', String(id)))
+  if (filters.hours != null) params.set('hours', String(filters.hours))
+  if (filters.limit != null) params.set('limit', String(filters.limit))
+  return params
+}
+
+export async function getTeamEvents(
+  filters: TeamEventsFilters = {}
+): Promise<TeamEventsResponse> {
+  const response = await api.get<TeamEventsResponse>(`${BASE}/team-events`, {
+    params: buildTeamEventsParams(filters),
+  })
   return response.data
 }
 

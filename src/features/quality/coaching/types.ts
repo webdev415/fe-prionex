@@ -129,3 +129,34 @@ export interface TakeChargePayload {
   operator_id: number
   notes?: string | null
 }
+
+export type TeamEventType =
+  | 'score_drop'
+  | 'score_growth'
+  | 'one_on_one_scheduled'
+  | 'one_on_one_completed'
+  | 'assignment_taken'
+  | 'assignment_closed'
+
+export type TeamEventSeverity = 'info' | 'warn' | 'critical'
+
+export interface TeamEvent {
+  id: string
+  type: TeamEventType
+  severity: TeamEventSeverity
+  occurred_at: string
+  operator_id: number
+  operator_name?: string | null
+  title: string
+  description?: string | null
+}
+
+export interface TeamEventsResponse {
+  data: TeamEvent[]
+}
+
+export interface TeamEventsFilters {
+  user_ids?: number[]
+  hours?: number
+  limit?: number
+}
