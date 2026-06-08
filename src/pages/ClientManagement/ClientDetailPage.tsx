@@ -775,7 +775,7 @@ export function ClientDetailPage() {
               paymentMethod: p.payment_method,
               status: p.status,
               paymentDistribution: p.payment_type ?? '-',
-              employee: p.recorded_by_username ?? '-',
+              employee: p.assigned_user_full_name ?? '-',
             })
           }
         })
