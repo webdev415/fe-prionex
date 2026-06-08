@@ -118,22 +118,26 @@ export function OperatorGridView({
                     fill="none"
                     className="stroke-[#EDEDED]"
                   />
-                  <circle
-                    cx="24"
-                    cy="24"
-                    r={radius}
-                    strokeWidth="3"
-                    fill="none"
-                    strokeLinecap="round"
-                    strokeDasharray={circumference}
-                    strokeDashoffset={offset}
-                    className={SCORE_TRACK[row.scoreBand]}
-                  />
+                  {row.hasScore !== false ? (
+                    <circle
+                      cx="24"
+                      cy="24"
+                      r={radius}
+                      strokeWidth="3"
+                      fill="none"
+                      strokeLinecap="round"
+                      strokeDasharray={circumference}
+                      strokeDashoffset={offset}
+                      className={SCORE_TRACK[row.scoreBand]}
+                    />
+                  ) : null}
                 </svg>
                 <span
-                  className={`absolute inset-0 flex items-center justify-center text-sm font-semibold ${SCORE_TEXT[row.scoreBand]}`}
+                  className={`absolute inset-0 flex items-center justify-center text-sm font-semibold ${
+                    row.hasScore !== false ? SCORE_TEXT[row.scoreBand] : 'text-gray-400'
+                  }`}
                 >
-                  {row.compositeScore}
+                  {row.hasScore !== false ? row.compositeScore : '—'}
                 </span>
               </div>
             </div>

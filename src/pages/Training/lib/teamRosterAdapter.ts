@@ -82,6 +82,7 @@ function deriveOperator(
   departmentName: string
 ): MockOperator {
   const online = op.online
+  const hasScore = op.composite_score !== null && op.composite_score !== undefined
   return {
     id: op.operator_id,
     name: op.full_name,
@@ -93,6 +94,7 @@ function deriveOperator(
     online,
     score: op.composite_score ?? 0,
     scoreBand: bandFor(op.composite_score, op.score_band),
+    hasScore,
     lastActiveLabel: formatLastActive(op.last_active_at, online),
     presenceStatus: online ? 'online' : 'offline',
     dailyPlanPct: 0,

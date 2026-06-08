@@ -55,10 +55,18 @@ function formatPresence(row: MockInboxRow, t: (key: string, fallback: string) =>
   return row.lastActiveLabel
 }
 
-function ScoreRing({ score, band }: { score: number; band: ScoreBand }) {
+function ScoreRing({
+  score,
+  band,
+  hasScore = true,
+}: {
+  score: number
+  band: ScoreBand
+  hasScore?: boolean
+}) {
   const radius = 18
   const circumference = 2 * Math.PI * radius
-  const offset = circumference - (score / 100) * circumference
+  const offset = hasScore ? circumference - (score / 100) * circumference : circumference
   return (
     <div className="relative h-11 w-11 flex-shrink-0">
       <svg viewBox="0 0 44 44" className="h-11 w-11 -rotate-90">
@@ -70,22 +78,26 @@ function ScoreRing({ score, band }: { score: number; band: ScoreBand }) {
           fill="none"
           className="stroke-[#EDEDED]"
         />
-        <circle
-          cx="22"
-          cy="22"
-          r={radius}
-          strokeWidth="3"
-          fill="none"
-          strokeLinecap="round"
-          strokeDasharray={circumference}
-          strokeDashoffset={offset}
-          className={SCORE_TRACK[band]}
-        />
+        {hasScore ? (
+          <circle
+            cx="22"
+            cy="22"
+            r={radius}
+            strokeWidth="3"
+            fill="none"
+            strokeLinecap="round"
+            strokeDasharray={circumference}
+            strokeDashoffset={offset}
+            className={SCORE_TRACK[band]}
+          />
+        ) : null}
       </svg>
       <span
-        className={`absolute inset-0 flex items-center justify-center text-sm font-semibold ${SCORE_TEXT[band]}`}
+        className={`absolute inset-0 flex items-center justify-center text-sm font-semibold ${
+          hasScore ? SCORE_TEXT[band] : 'text-gray-400'
+        }`}
       >
-        {score}
+        {hasScore ? score : '—'}
       </span>
     </div>
   )
@@ -193,7 +205,11 @@ export function OperatorListView({
                     <p className="text-xs leading-relaxed text-[#05040D]">{row.cardSummary}</p>
                   </div>
                   <div className="flex flex-col items-end gap-1">
-                    <ScoreRing score={row.compositeScore} band={row.scoreBand} />
+                    <ScoreRing
+                      score={row.compositeScore}
+                      band={row.scoreBand}
+                      hasScore={row.hasScore !== false}
+                    />
                     <span className="text-[10px] text-gray-500">{row.cardTimestamp}</span>
                   </div>
                 </div>

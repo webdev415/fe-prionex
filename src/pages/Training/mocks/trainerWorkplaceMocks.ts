@@ -34,6 +34,9 @@ export interface MockOperator {
   online: boolean
   score: number
   scoreBand: ScoreBand
+  /** False when the BE returned a null composite score (no source data).
+   *  Views render a `—` ring instead of the `score` value. */
+  hasScore?: boolean
   lastActiveLabel: string
   /** Figma Team tab — presence label + dot color */
   presenceStatus?: OperatorPresenceStatus
@@ -2418,6 +2421,9 @@ export interface MockInboxRow {
   priority: InboxPriority
   compositeScore: number
   scoreBand: ScoreBand
+  /** False when the BE returned a null composite score (no source data).
+   *  Views render a `—` ring instead of the actual `compositeScore` value. */
+  hasScore?: boolean
   scoreDeltaPct: number
   triggers: MockInboxTrigger[]
   triggerTags: MockInboxTriggerTag[]

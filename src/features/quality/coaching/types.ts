@@ -35,8 +35,11 @@ export interface AssignmentSummary {
 
 export interface QueueOperator {
   operator_id: number
-  composite_score: number
-  score_band: ScoreBand
+  /** `null` for operators with no source data (no scorecards / no
+   *  analytics / no interactions). FE renders `—` instead of an inflated
+   *  optimistic floor. */
+  composite_score: number | null
+  score_band: ScoreBand | null
   assignment: AssignmentSummary | null
   kpis: OperatorKpis
   triggers: string[]

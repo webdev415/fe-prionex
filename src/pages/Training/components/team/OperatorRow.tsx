@@ -76,23 +76,28 @@ export function OperatorRow({ operator, onSelect }: OperatorRowProps) {
       <div className="relative h-10 w-10 flex-shrink-0">
         <svg viewBox="0 0 40 40" className="h-10 w-10 -rotate-90">
           <circle cx="20" cy="20" r={radius} strokeWidth="2" fill="none" stroke="#EDEDED" />
-          <circle
-            cx="20"
-            cy="20"
-            r={radius}
-            strokeWidth="2"
-            fill="none"
-            strokeLinecap="round"
-            strokeDasharray={circumference}
-            strokeDashoffset={offset}
-            stroke={TEAM_SCORE_RING[operator.scoreBand]}
-          />
+          {operator.hasScore !== false ? (
+            <circle
+              cx="20"
+              cy="20"
+              r={radius}
+              strokeWidth="2"
+              fill="none"
+              strokeLinecap="round"
+              strokeDasharray={circumference}
+              strokeDashoffset={offset}
+              stroke={TEAM_SCORE_RING[operator.scoreBand]}
+            />
+          ) : null}
         </svg>
         <span
           className="absolute inset-0 flex items-center justify-center text-xs font-semibold"
-          style={{ color: TEAM_SCORE_TEXT[operator.scoreBand] }}
+          style={{
+            color:
+              operator.hasScore !== false ? TEAM_SCORE_TEXT[operator.scoreBand] : '#9CA3AF',
+          }}
         >
-          {operator.score}
+          {operator.hasScore !== false ? operator.score : '—'}
         </span>
       </div>
     </button>

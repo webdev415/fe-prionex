@@ -184,20 +184,26 @@ export function OperatorKanbanView({
                             fill="none"
                             className="stroke-gray-100"
                           />
-                          <circle
-                            cx="16"
-                            cy="16"
-                            r={radius}
-                            strokeWidth="2.5"
-                            fill="none"
-                            strokeLinecap="round"
-                            strokeDasharray={circumference}
-                            strokeDashoffset={offset}
-                            className={SCORE_TRACK[row.scoreBand]}
-                          />
+                          {row.hasScore !== false ? (
+                            <circle
+                              cx="16"
+                              cy="16"
+                              r={radius}
+                              strokeWidth="2.5"
+                              fill="none"
+                              strokeLinecap="round"
+                              strokeDasharray={circumference}
+                              strokeDashoffset={offset}
+                              className={SCORE_TRACK[row.scoreBand]}
+                            />
+                          ) : null}
                         </svg>
-                        <span className="absolute inset-0 flex items-center justify-center text-[9px] font-semibold text-gray-700">
-                          {row.compositeScore}
+                        <span
+                          className={`absolute inset-0 flex items-center justify-center text-[9px] font-semibold ${
+                            row.hasScore !== false ? 'text-gray-700' : 'text-gray-400'
+                          }`}
+                        >
+                          {row.hasScore !== false ? row.compositeScore : '—'}
                         </span>
                       </div>
                     </div>
