@@ -118,9 +118,9 @@ describe('TaskHistoryTable', () => {
   it('places the Client ID header between Created date and Author', () => {
     renderTable([makeTask()])
     const headers = screen.getAllByRole('columnheader').map((h) => h.textContent?.trim())
-    const createdIdx = headers.indexOf('pages.actionAnalysis.columns.createdDate')
-    const clientIdx = headers.indexOf('pages.actionAnalysis.columns.clientId')
-    const authorIdx = headers.indexOf('pages.actionAnalysis.columns.author')
+    const createdIdx = headers.indexOf('pages.training.columns.createdDate')
+    const clientIdx = headers.indexOf('pages.training.columns.clientId')
+    const authorIdx = headers.indexOf('pages.training.columns.author')
     expect(createdIdx).toBeGreaterThanOrEqual(0)
     expect(clientIdx).toBe(createdIdx + 1)
     expect(authorIdx).toBe(clientIdx + 1)

@@ -73,7 +73,7 @@ export function TaskHistoryTable({ data, userTimezone, sort, onSortChange }: Pro
     },
     {
       key: 'clientId',
-      header: t('pages.actionAnalysis.columns.clientId', 'Client ID'),
+      header: t('pages.training.columns.clientId', 'Client ID'),
       render: (r) =>
         r.client_id == null ? (
           <span className="text-sm text-gray-700">—</span>
