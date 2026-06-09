@@ -716,11 +716,18 @@ export function PaymentHistoryPage() {
     ) {
       const dates = paymentHistoryData.payments
         .map((payment) => {
-          const dateStr = payment.payment_date
+          // Derive the window from recorded_at — the SAME column the query
+          // filters on (date_field: 'recorded_at') and the date shown in the
+          // table. Using payment_date here set the range on the wrong column:
+          // for payments recorded long after their nominal payment_date (e.g.
+          // imported history), every row's recorded_at fell outside that window
+          // and the list came back empty while totals stayed non-zero.
+          // recorded_at is a full ISO timestamp (nullable for auto-created
+          // verified rows), so parse it directly and skip nulls.
+          const dateStr = payment.recorded_at
           if (!dateStr) return null
-          const [year, month, day] = dateStr.split('-').map(Number)
-          if (isNaN(year) || isNaN(month) || isNaN(day)) return null
-          return new Date(year, month - 1, day)
+          const d = new Date(dateStr)
+          return isNaN(d.getTime()) ? null : d
         })
         .filter((d): d is Date => d !== null)
 
