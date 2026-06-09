@@ -224,6 +224,12 @@ export const PERMISSIONS = {
     SELECT_INBOX_SCOPE: 'select_inbox_scope',
     // KAN-414 — Team tab (department / group rollup)
     VIEW_TEAM: 'view_team',
+    // KAN-411 — Operator training (correction tasks / leaderboard / flags / library)
+    MANAGE_CORRECTION_TASKS: 'manage_correction_tasks',
+    VIEW_LEADERBOARD: 'view_leaderboard',
+    MANAGE_BADGES: 'manage_badges',
+    VIEW_AUTO_FLAGS: 'view_auto_flags',
+    MANAGE_CALL_LIBRARY: 'manage_call_library',
   },
 
   /**
@@ -433,6 +439,15 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   select_inbox_scope: 'Show the My / Group / Department / All scope selector on the Inbox tab',
   // KAN-414 — Team tab
   view_team: 'View the Team tab — department / team rollup with per-operator composite scores',
+  // KAN-411 — Operator training
+  manage_correction_tasks:
+    'Create / confirm / return correction tasks linked to calls (KAN-411 Feature 3.1)',
+  view_leaderboard:
+    'View the operator leaderboard with composite-score ranking + badges (KAN-411 Feature 3.2)',
+  manage_badges: 'Manually award badges to operators (KAN-411 Feature 3.2)',
+  view_auto_flags: 'Review the auto-flag inbox of suspicious calls (KAN-411 Feature 3.3)',
+  manage_call_library:
+    'Curate the training call library and assign learning plans (KAN-411 Feature 3.4)',
 
   // Document Generation
   view_document_journal: 'View the journal of all generated and uploaded documents',
