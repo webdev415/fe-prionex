@@ -126,21 +126,27 @@ export function deriveTaskRow(
 ): MockTaskRow {
   const operator = operators.find((o) => o.id === task.operator_id)
   const operatorName = operator?.full_name ?? `#${task.operator_id ?? '—'}`
+  const author = operators.find((o) => o.id === task.created_by)
+  const authorName = author?.full_name ?? `#${task.created_by}`
   const kanbanColumn = statusToKanbanColumn(task.status)
   return {
     id: task.id,
     title: task.title,
-    subtitle: task.description ?? null,
+    // `subtitle` is typed `string | undefined` on MockTaskRow — coerce null to undefined.
+    subtitle: task.description ?? undefined,
     category: deriveCategory(task.task_type),
     priority: derivePriority(task.priority),
     status: deriveTaskStatus(task.status, task.is_overdue),
     kanbanColumn,
     executor: operatorName,
+    author: authorName,
+    assignmentScope: 'by_me',
     operatorInitials: initialsFor(operatorName),
     operatorAvatarColor: avatarColorFor(task.operator_id ?? null),
     dateLabel: formatDateLabel(task.due_date),
     cardTimestamp: formatDateLabel(task.due_date) || formatDateLabel(task.created_at),
     timeBucket: deriveTimeBucket(task.due_date),
+    _correctionStatus: task.status,
   }
 }
 

@@ -1286,6 +1286,18 @@ export interface MockTaskRow {
   operatorAvatarColor?: string
   /** Figma Tasks filter-chip bucket. */
   timeBucket?: TaskTimeBucket
+  /** KAN-411 — raw BE correction-task status. Drives the trainer-side
+   *  Confirm / Return buttons on the Kanban card (only `completed`
+   *  tasks are eligible). Underscore-prefixed because it's an internal
+   *  passthrough field, not part of the mock contract. */
+  _correctionStatus?:
+    | 'created'
+    | 'notified'
+    | 'read'
+    | 'in_progress'
+    | 'completed'
+    | 'confirmed'
+    | 'returned_for_revision'
 }
 
 export const MOCK_TASKS: MockTaskRow[] = [

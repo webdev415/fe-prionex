@@ -5,7 +5,11 @@ import { toast } from 'sonner'
 import { Icons } from '@/lib/icons'
 import { useAuthStore } from '@/stores/authStore'
 import { useOperators } from '@/features/users/hooks'
-import { useCorrectionTasks } from '@/features/training'
+import {
+  useCorrectionTasks,
+  useTransitionCorrectionTask,
+} from '@/features/training'
+import { PERMISSIONS } from '@/constants/permissions'
 import { TASKS_SUB_TABS, type TasksSubTabId } from '../../types'
 import {
   type MockTaskRow,
@@ -139,6 +143,41 @@ export function TasksTab({ onAssignTask }: TasksTabProps = {}) {
     )
   }, [filtered])
 
+  // Trainer-side transition mutation — drives the Confirm / Return
+  // buttons on completed cards. Operator-side progression is fired from
+  // the operator's My-Tasks surface (not this trainer board).
+  const transitionMutation = useTransitionCorrectionTask()
+  const userPermissions = useAuthStore((s) => s.user?.permissions ?? [])
+  const canManageCorrection = userPermissions.includes(
+    PERMISSIONS.TRAINING.MANAGE_CORRECTION_TASKS
+  )
+
+  const handleTransition = async (
+    taskId: number,
+    toState: 'confirmed' | 'returned_for_revision'
+  ) => {
+    try {
+      await transitionMutation.mutateAsync({
+        taskId,
+        payload: { to_state: toState },
+      })
+      toast.success(
+        toState === 'confirmed'
+          ? t('pages.training.tasks.actions.confirmed', 'Task confirmed.')
+          : t('pages.training.tasks.actions.returned', 'Task returned for revision.')
+      )
+    } catch (err) {
+      const detail =
+        err instanceof Error
+          ? err.message
+          : t(
+              'pages.training.tasks.actions.error',
+              'Could not move the task.'
+            )
+      toast.error(detail)
+    }
+  }
+
   const handleNewTask = () => {
     if (onAssignTask) {
       onAssignTask()
@@ -225,7 +264,13 @@ export function TasksTab({ onAssignTask }: TasksTabProps = {}) {
                 ) : (
                   <div className="flex flex-col gap-2">
                     {cards.map((task) => (
-                      <TaskKanbanCard key={task.id} task={task} />
+                      <TaskKanbanCard
+                        key={task.id}
+                        task={task}
+                        canManageCorrection={canManageCorrection}
+                        onTransition={handleTransition}
+                        transitionPending={transitionMutation.isPending}
+                      />
                     ))}
                   </div>
                 )}
@@ -238,10 +283,29 @@ export function TasksTab({ onAssignTask }: TasksTabProps = {}) {
   )
 }
 
-function TaskKanbanCard({ task }: { task: MockTaskRow }) {
+interface TaskKanbanCardProps {
+  task: MockTaskRow
+  canManageCorrection?: boolean
+  onTransition?: (
+    taskId: number,
+    toState: 'confirmed' | 'returned_for_revision'
+  ) => void
+  transitionPending?: boolean
+}
+
+function TaskKanbanCard({
+  task,
+  canManageCorrection = false,
+  onTransition,
+  transitionPending = false,
+}: TaskKanbanCardProps) {
+  const { t } = useTranslation('common')
   const cat = task.category ? CATEGORY_ICON[task.category] : CATEGORY_ICON.checklist
   const CatIcon = cat.icon
   const priority = PRIORITY_PILL[task.priority]
+  // Trainer Confirm / Return only on operator-completed correction tasks.
+  const showTrainerActions =
+    canManageCorrection && task._correctionStatus === 'completed' && !!onTransition
 
   return (
     <div className="flex flex-col gap-2 rounded-lg border border-[#EBECE8] bg-white p-3 shadow-[0px_1px_2px_rgba(0,0,0,0.04)] transition-shadow hover:shadow-md">
@@ -282,6 +346,28 @@ function TaskKanbanCard({ task }: { task: MockTaskRow }) {
         </div>
         <span className="text-[10px] text-[#9CA3AF]">{task.cardTimestamp ?? task.dateLabel}</span>
       </div>
+
+      {/* Trainer actions — only on completed correction tasks awaiting review. */}
+      {showTrainerActions ? (
+        <div className="mt-1 flex gap-1.5">
+          <button
+            type="button"
+            onClick={() => onTransition?.(task.id, 'confirmed')}
+            disabled={transitionPending}
+            className="flex-1 rounded-md bg-[#204E4D] px-2 py-1 text-[10px] font-semibold text-white disabled:opacity-60"
+          >
+            {t('pages.training.tasks.actions.confirm', 'Confirm')}
+          </button>
+          <button
+            type="button"
+            onClick={() => onTransition?.(task.id, 'returned_for_revision')}
+            disabled={transitionPending}
+            className="flex-1 rounded-md border border-[#EF4444] px-2 py-1 text-[10px] font-semibold text-[#EF4444] disabled:opacity-60"
+          >
+            {t('pages.training.tasks.actions.return', 'Return')}
+          </button>
+        </div>
+      ) : null}
     </div>
   )
 }
