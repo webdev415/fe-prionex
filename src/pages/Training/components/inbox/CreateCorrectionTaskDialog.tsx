@@ -93,7 +93,9 @@ export function CreateCorrectionTaskDialog({
     },
     open && !!extension
   )
-  const calls = callsData?.calls ?? []
+  // Wrap in useMemo so the logical fallback doesn't churn a new array
+  // identity on every render and break the downstream useMemo's deps.
+  const calls = useMemo(() => callsData?.calls ?? [], [callsData])
 
   const [callId, setCallId] = useState<string>('')
   const [taskType, setTaskType] = useState<CorrectionTaskType>('listen_reflect')
@@ -121,20 +123,14 @@ export function CreateCorrectionTaskDialog({
     }
   }
 
-  const selectedCall = useMemo(
-    () => calls.find((c) => c.call_id === callId),
-    [calls, callId]
-  )
+  const selectedCall = useMemo(() => calls.find((c) => c.call_id === callId), [calls, callId])
 
   const mutation = useCreateCorrectionTask()
 
   const handleSubmit = async () => {
     if (!operatorId) {
       toast.error(
-        t(
-          'pages.training.correction.errors.noOperator',
-          'Select an operator from the Inbox first.'
-        )
+        t('pages.training.correction.errors.noOperator', 'Select an operator from the Inbox first.')
       )
       return
     }
@@ -182,19 +178,14 @@ export function CreateCorrectionTaskDialog({
       const detail =
         err instanceof Error
           ? err.message
-          : t(
-              'pages.training.correction.errors.generic',
-              'Could not create the correction task.'
-            )
+          : t('pages.training.correction.errors.generic', 'Could not create the correction task.')
       toast.error(detail)
     }
   }
 
   return (
     <Modal open={open} onClose={onClose} maxWidth="md">
-      <ModalHeader
-        title={t('pages.training.correction.title', 'Assign correction task')}
-      />
+      <ModalHeader title={t('pages.training.correction.title', 'Assign correction task')} />
       <ModalContent>
         <div className="flex flex-col gap-4">
           {!operatorId ? (
@@ -232,10 +223,7 @@ export function CreateCorrectionTaskDialog({
               </p>
             ) : calls.length === 0 ? (
               <p className="text-xs text-gray-500">
-                {t(
-                  'pages.training.correction.noCalls',
-                  'No calls found in the last 30 days.'
-                )}
+                {t('pages.training.correction.noCalls', 'No calls found in the last 30 days.')}
               </p>
             ) : (
               <select
@@ -244,9 +232,7 @@ export function CreateCorrectionTaskDialog({
                 onChange={(e) => setCallId(e.target.value)}
                 className="rounded-md border border-gray-200 px-3 py-2 text-sm focus:outline-none"
               >
-                <option value="">
-                  {t('pages.training.correction.pickCall', 'Pick a call…')}
-                </option>
+                <option value="">{t('pages.training.correction.pickCall', 'Pick a call…')}</option>
                 {calls.map((call) => {
                   const initiated = call.initiated_at
                     ? new Date(call.initiated_at).toLocaleString()
@@ -264,10 +250,7 @@ export function CreateCorrectionTaskDialog({
 
           {selectedCall ? (
             <div className="flex flex-col gap-1">
-              <label
-                htmlFor="correction-call-ts"
-                className="text-xs font-medium text-gray-600"
-              >
+              <label htmlFor="correction-call-ts" className="text-xs font-medium text-gray-600">
                 {t(
                   'pages.training.correction.timestamp',
                   'Timestamp in recording (seconds, optional)'
@@ -304,10 +287,7 @@ export function CreateCorrectionTaskDialog({
               </select>
             </div>
             <div className="flex flex-col gap-1">
-              <label
-                htmlFor="correction-priority"
-                className="text-xs font-medium text-gray-600"
-              >
+              <label htmlFor="correction-priority" className="text-xs font-medium text-gray-600">
                 {t('pages.training.correction.priority', 'Priority')}
               </label>
               <select
@@ -343,10 +323,7 @@ export function CreateCorrectionTaskDialog({
           </div>
 
           <div className="flex flex-col gap-1">
-            <label
-              htmlFor="correction-description"
-              className="text-xs font-medium text-gray-600"
-            >
+            <label htmlFor="correction-description" className="text-xs font-medium text-gray-600">
               {t('pages.training.correction.descriptionField', 'What to do')}
             </label>
             <textarea

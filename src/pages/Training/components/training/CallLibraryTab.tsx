@@ -57,10 +57,7 @@ export function CallLibraryTab() {
       { id: 'all', label: t('pages.training.training.library.filters.all', 'All') },
       ...LIBRARY_CATEGORIES.map((c) => ({
         id: c,
-        label: t(
-          `pages.training.training.library.categories.${c}`,
-          CATEGORY_BADGE[c].label
-        ),
+        label: t(`pages.training.training.library.categories.${c}`, CATEGORY_BADGE[c].label),
       })),
     ],
     [t]
@@ -135,7 +132,14 @@ export function CallLibraryTab() {
               onOpen={() => bumpView.mutate(card.id)}
               onToggleHelpful={() => toggleHelpful.mutate(card.id)}
               onArchive={() => {
-                if (window.confirm(t('pages.training.training.library.confirmArchive', 'Remove this call from the library?'))) {
+                if (
+                  window.confirm(
+                    t(
+                      'pages.training.training.library.confirmArchive',
+                      'Remove this call from the library?'
+                    )
+                  )
+                ) {
                   archive.mutate(card.id)
                 }
               }}
@@ -176,37 +180,23 @@ function LibraryCardTile({
         <span
           className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${badge.bg} ${badge.tone}`}
         >
-          {t(
-            `pages.training.training.library.categories.${card.category}`,
-            badge.label
-          )}
+          {t(`pages.training.training.library.categories.${card.category}`, badge.label)}
         </span>
         {canManage && (
           <button
             type="button"
             onClick={onArchive}
             className="rounded-full p-1 text-[#6B7280] hover:bg-[#F7F7F7] hover:text-[#B91C1C]"
-            aria-label={t(
-              'pages.training.training.library.archive',
-              'Remove from library'
-            )}
+            aria-label={t('pages.training.training.library.archive', 'Remove from library')}
           >
             <Icons.Delete size={14} />
           </button>
         )}
       </div>
-      <button
-        type="button"
-        onClick={onOpen}
-        className="flex flex-col items-start gap-1 text-left"
-      >
-        <span className="line-clamp-2 text-sm font-medium text-[#05040D]">
-          {card.title}
-        </span>
+      <button type="button" onClick={onOpen} className="flex flex-col items-start gap-1 text-left">
+        <span className="line-clamp-2 text-sm font-medium text-[#05040D]">{card.title}</span>
         {card.description && (
-          <span className="line-clamp-3 text-[11px] text-[#6B7280]">
-            {card.description}
-          </span>
+          <span className="line-clamp-3 text-[11px] text-[#6B7280]">{card.description}</span>
         )}
       </button>
       {card.tags.length > 0 && (
@@ -233,9 +223,7 @@ function LibraryCardTile({
           type="button"
           onClick={onToggleHelpful}
           className={`inline-flex items-center gap-1 rounded-full px-2 py-1 transition-colors ${
-            card.voted_helpful
-              ? 'bg-[#F0FDF4] text-[#15803D]'
-              : 'text-[#6B7280] hover:bg-[#F7F7F7]'
+            card.voted_helpful ? 'bg-[#F0FDF4] text-[#15803D]' : 'text-[#6B7280] hover:bg-[#F7F7F7]'
           }`}
         >
           <Icons.Star size={12} />

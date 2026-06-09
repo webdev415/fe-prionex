@@ -26,9 +26,7 @@ export async function getLeaderboard(
   return response.data
 }
 
-export async function getOperatorBadges(
-  operatorId: number
-): Promise<OperatorBadge[]> {
+export async function getOperatorBadges(operatorId: number): Promise<OperatorBadge[]> {
   const response = await api.get<{ data: OperatorBadge[] }>(
     `${BASE}/operators/${operatorId}/badges`
   )
@@ -36,15 +34,11 @@ export async function getOperatorBadges(
 }
 
 export async function listBadgeDefinitions(): Promise<BadgeDefinition[]> {
-  const response = await api.get<{ data: BadgeDefinition[] }>(
-    `${BASE}/badges/definitions`
-  )
+  const response = await api.get<{ data: BadgeDefinition[] }>(`${BASE}/badges/definitions`)
   return response.data.data
 }
 
-export async function awardBadgeManually(
-  payload: ManualBadgeAwardPayload
-): Promise<OperatorBadge> {
+export async function awardBadgeManually(payload: ManualBadgeAwardPayload): Promise<OperatorBadge> {
   const response = await api.post<OperatorBadge>(`${BASE}/badges/award`, payload)
   return response.data
 }

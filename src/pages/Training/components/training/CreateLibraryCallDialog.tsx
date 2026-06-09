@@ -5,10 +5,7 @@ import { Modal, ModalContent, ModalFooter, ModalHeader } from '@/components/ui/M
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { useCreateLibraryCall } from '@/features/training/hooks/useLibraryCalls'
-import {
-  LIBRARY_CATEGORIES,
-  type LibraryCategory,
-} from '@/features/training/types/library'
+import { LIBRARY_CATEGORIES, type LibraryCategory } from '@/features/training/types/library'
 
 /**
  * Trainer-side direct path: add a curated call to the library without first
@@ -66,10 +63,7 @@ export function CreateLibraryCallDialog({
     }
     if (!title.trim()) {
       toast.error(
-        t(
-          'pages.training.training.library.errors.noTitle',
-          'Give the library entry a short title.'
-        )
+        t('pages.training.training.library.errors.noTitle', 'Give the library entry a short title.')
       )
       return
     }
@@ -85,12 +79,7 @@ export function CreateLibraryCallDialog({
         description: description.trim() || undefined,
         tags,
       })
-      toast.success(
-        t(
-          'pages.training.training.library.success',
-          'Call added to the library.'
-        )
-      )
+      toast.success(t('pages.training.training.library.success', 'Call added to the library.'))
       onClose()
     } catch (err) {
       const detail =
@@ -106,9 +95,7 @@ export function CreateLibraryCallDialog({
 
   return (
     <Modal open={open} onClose={onClose} maxWidth="md">
-      <ModalHeader
-        title={t('pages.training.training.library.add', 'Add to library')}
-      />
+      <ModalHeader title={t('pages.training.training.library.add', 'Add to library')} />
       <ModalContent>
         <div className="flex flex-col gap-4">
           <div className="flex flex-col gap-1">
@@ -164,11 +151,11 @@ export function CreateLibraryCallDialog({
           </div>
 
           <div className="flex flex-col gap-1">
-            <label
-              htmlFor="library-description"
-              className="text-xs font-medium text-gray-600"
-            >
-              {t('pages.training.training.library.descriptionField', 'Why this call is worth listening to')}
+            <label htmlFor="library-description" className="text-xs font-medium text-gray-600">
+              {t(
+                'pages.training.training.library.descriptionField',
+                'Why this call is worth listening to'
+              )}
             </label>
             <textarea
               id="library-description"

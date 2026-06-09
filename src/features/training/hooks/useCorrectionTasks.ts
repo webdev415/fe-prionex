@@ -14,15 +14,11 @@ import type {
 
 export const correctionKeys = {
   all: ['training', 'correction'] as const,
-  list: (filters: CorrectionTaskListFilters) =>
-    [...correctionKeys.all, 'list', filters] as const,
+  list: (filters: CorrectionTaskListFilters) => [...correctionKeys.all, 'list', filters] as const,
   stats: (filters: GetStatsFilters) => [...correctionKeys.all, 'stats', filters] as const,
 }
 
-export function useCorrectionTasks(
-  filters: CorrectionTaskListFilters = {},
-  enabled = true
-) {
+export function useCorrectionTasks(filters: CorrectionTaskListFilters = {}, enabled = true) {
   return useQuery({
     queryKey: correctionKeys.list(filters),
     queryFn: () => listCorrectionTasks(filters),
@@ -55,13 +51,8 @@ export function useCreateCorrectionTask() {
 export function useTransitionCorrectionTask() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: ({
-      taskId,
-      payload,
-    }: {
-      taskId: number
-      payload: CorrectionTransitionPayload
-    }) => transitionCorrectionTask(taskId, payload),
+    mutationFn: ({ taskId, payload }: { taskId: number; payload: CorrectionTransitionPayload }) =>
+      transitionCorrectionTask(taskId, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: correctionKeys.all })
       queryClient.invalidateQueries({ queryKey: ['quality', 'coaching'] })

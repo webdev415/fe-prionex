@@ -3,14 +3,8 @@ import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
 import { useAuthStore } from '@/stores/authStore'
 import { useOperators } from '@/features/users/hooks'
-import {
-  useLeaderboard,
-  leaderboardExportUrl,
-} from '@/features/training'
-import type {
-  LeaderboardPeriod,
-  LeaderboardRow,
-} from '@/features/training'
+import { useLeaderboard, leaderboardExportUrl } from '@/features/training'
+import type { LeaderboardPeriod, LeaderboardRow } from '@/features/training'
 
 const PERIOD_LABELS: { id: LeaderboardPeriod; key: string; fallback: string }[] = [
   { id: 'week', key: 'pages.training.team.leaderboard.period.week', fallback: 'This week' },
@@ -39,9 +33,7 @@ export function LeaderboardView() {
   })
 
   const activeProjectId = useAuthStore((s) => s.user?.active_project_id)
-  const { data: operators = [] } = useOperators(
-    activeProjectId ? Number(activeProjectId) : null
-  )
+  const { data: operators = [] } = useOperators(activeProjectId ? Number(activeProjectId) : null)
   const nameByOp = useMemo(() => {
     const out = new Map<number, string>()
     operators.forEach((o) => out.set(Number(o.id), o.full_name || `#${o.id}`))
@@ -62,9 +54,7 @@ export function LeaderboardView() {
                 type="button"
                 onClick={() => setPeriod(opt.id)}
                 className={`rounded-md px-3 py-1.5 text-xs font-medium tracking-[-0.02em] transition-colors ${
-                  isActive
-                    ? 'bg-[#204E4D] text-white'
-                    : 'text-[#545454] hover:bg-[#F7F7F7]'
+                  isActive ? 'bg-[#204E4D] text-white' : 'text-[#545454] hover:bg-[#F7F7F7]'
                 }`}
               >
                 {t(opt.key, opt.fallback)}
@@ -118,22 +108,16 @@ export function LeaderboardView() {
         </div>
       ) : isError ? (
         <div className="rounded-xl border border-[#FEE2E2] bg-[#FEF2F2] p-4 text-xs text-[#B91C1C]">
-          {t(
-            'pages.training.team.leaderboard.loadError',
-            'Could not load the leaderboard.'
-          )}
+          {t('pages.training.team.leaderboard.loadError', 'Could not load the leaderboard.')}
         </div>
       ) : rows.length === 0 ? (
         <div className="rounded-xl border border-dashed border-[#EBECE8] bg-white p-8 text-center text-xs text-[#6B7280]">
-          {t(
-            'pages.training.team.leaderboard.empty',
-            'No operators ranked yet for this period.'
-          )}
+          {t('pages.training.team.leaderboard.empty', 'No operators ranked yet for this period.')}
         </div>
       ) : (
         <div className="overflow-x-auto rounded-xl border border-[#EBECE8] bg-white">
           <table className="w-full text-xs">
-            <thead className="border-b border-[#F1F1EE] text-[10px] uppercase tracking-wide text-[#6B7280]">
+            <thead className="border-b border-[#F1F1EE] text-[10px] tracking-wide text-[#6B7280] uppercase">
               <tr>
                 <th className="w-[60px] px-3 py-2 text-left">
                   {t('pages.training.team.leaderboard.rank', 'Rank')}
@@ -148,22 +132,13 @@ export function LeaderboardView() {
                   {t('pages.training.team.leaderboard.rankDelta', 'Δ Rank')}
                 </th>
                 <th className="hidden w-[120px] px-3 py-2 text-right md:table-cell">
-                  {t(
-                    'pages.training.team.leaderboard.components.scorecard',
-                    'Avg scorecard'
-                  )}
+                  {t('pages.training.team.leaderboard.components.scorecard', 'Avg scorecard')}
                 </th>
                 <th className="hidden w-[120px] px-3 py-2 text-right md:table-cell">
-                  {t(
-                    'pages.training.team.leaderboard.components.tasks',
-                    'Tasks on-time'
-                  )}
+                  {t('pages.training.team.leaderboard.components.tasks', 'Tasks on-time')}
                 </th>
                 <th className="hidden w-[100px] px-3 py-2 text-right lg:table-cell">
-                  {t(
-                    'pages.training.team.leaderboard.components.script',
-                    'Script'
-                  )}
+                  {t('pages.training.team.leaderboard.components.script', 'Script')}
                 </th>
               </tr>
             </thead>
@@ -192,9 +167,7 @@ function LeaderboardRowItem({ row, name }: { row: LeaderboardRow; name: string }
         <RankBadge rank={row.rank} />
       </td>
       <td className="px-3 py-2 text-[#05040D]">{name}</td>
-      <td className="px-3 py-2 text-right font-semibold text-[#05040D]">
-        {row.score}
-      </td>
+      <td className="px-3 py-2 text-right font-semibold text-[#05040D]">{row.score}</td>
       <td className="px-3 py-2 text-right">
         <RankDelta delta={row.rank_change_vs_prior} />
       </td>

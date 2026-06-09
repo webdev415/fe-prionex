@@ -1,8 +1,5 @@
 import type { OperatorUser } from '@/features/users/api/usersApi'
-import type {
-  CorrectionTask,
-  CorrectionTaskStatus,
-} from '@/features/training'
+import type { CorrectionTask, CorrectionTaskStatus } from '@/features/training'
 import type {
   MockTaskRow,
   TaskCategory,
@@ -120,10 +117,7 @@ function formatDateLabel(iso: string | null): string {
   return d.toLocaleDateString()
 }
 
-export function deriveTaskRow(
-  task: CorrectionTask,
-  operators: OperatorUser[]
-): MockTaskRow {
+export function deriveTaskRow(task: CorrectionTask, operators: OperatorUser[]): MockTaskRow {
   const operator = operators.find((o) => o.id === task.operator_id)
   const operatorName = operator?.full_name ?? `#${task.operator_id ?? '—'}`
   const author = operators.find((o) => o.id === task.created_by)
@@ -150,9 +144,6 @@ export function deriveTaskRow(
   }
 }
 
-export function deriveTaskRows(
-  tasks: CorrectionTask[],
-  operators: OperatorUser[]
-): MockTaskRow[] {
+export function deriveTaskRows(tasks: CorrectionTask[], operators: OperatorUser[]): MockTaskRow[] {
   return tasks.map((t) => deriveTaskRow(t, operators))
 }

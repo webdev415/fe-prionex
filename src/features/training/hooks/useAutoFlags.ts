@@ -19,8 +19,7 @@ import type {
 
 export const autoFlagsKeys = {
   all: ['training', 'auto-flags'] as const,
-  list: (filters: FlagEventListFilters) =>
-    [...autoFlagsKeys.all, 'list', filters] as const,
+  list: (filters: FlagEventListFilters) => [...autoFlagsKeys.all, 'list', filters] as const,
   unreviewedCount: () => [...autoFlagsKeys.all, 'unreviewed-count'] as const,
   rules: () => [...autoFlagsKeys.all, 'rules'] as const,
 }
@@ -69,13 +68,8 @@ export function useConfirmFlag() {
 export function useDismissFlag() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: ({
-      flagId,
-      payload,
-    }: {
-      flagId: number
-      payload?: FlagEventDismissPayload
-    }) => dismissFlag(flagId, payload),
+    mutationFn: ({ flagId, payload }: { flagId: number; payload?: FlagEventDismissPayload }) =>
+      dismissFlag(flagId, payload),
     onSuccess: () => invalidateFlags(queryClient),
   })
 }
@@ -83,8 +77,7 @@ export function useDismissFlag() {
 export function useBulkDismissFlags() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (payload: FlagEventBulkDismissPayload) =>
-      bulkDismissFlags(payload),
+    mutationFn: (payload: FlagEventBulkDismissPayload) => bulkDismissFlags(payload),
     onSuccess: () => invalidateFlags(queryClient),
   })
 }
@@ -110,13 +103,8 @@ export function useConvertFlagToTask() {
 export function useUpdateAutoFlagRule() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: ({
-      ruleId,
-      payload,
-    }: {
-      ruleId: number
-      payload: AutoFlagRuleUpdatePayload
-    }) => updateAutoFlagRule(ruleId, payload),
+    mutationFn: ({ ruleId, payload }: { ruleId: number; payload: AutoFlagRuleUpdatePayload }) =>
+      updateAutoFlagRule(ruleId, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: autoFlagsKeys.rules() })
     },

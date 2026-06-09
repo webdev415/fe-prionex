@@ -40,10 +40,7 @@ export async function transitionCorrectionTask(
   taskId: number,
   payload: CorrectionTransitionPayload
 ): Promise<CorrectionTask> {
-  const response = await api.patch<CorrectionTask>(
-    `${BASE}/${taskId}/transition`,
-    payload
-  )
+  const response = await api.patch<CorrectionTask>(`${BASE}/${taskId}/transition`, payload)
   return response.data
 }
 
@@ -53,9 +50,7 @@ export interface GetStatsFilters {
   period_to?: string
 }
 
-export async function getCorrectionStats(
-  filters: GetStatsFilters
-): Promise<CorrectionStats> {
+export async function getCorrectionStats(filters: GetStatsFilters): Promise<CorrectionStats> {
   const params = new URLSearchParams()
   params.set('operator_id', String(filters.operator_id))
   if (filters.period_from) params.set('period_from', filters.period_from)

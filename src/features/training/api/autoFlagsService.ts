@@ -29,26 +29,19 @@ function buildListParams(filters: FlagEventListFilters): URLSearchParams {
 export async function listFlags(
   filters: FlagEventListFilters = {}
 ): Promise<FlagEventListResponse> {
-  const response = await api.get<FlagEventListResponse>(
-    `${QUALITY_BASE}/flags`,
-    {
-      params: buildListParams(filters),
-    }
-  )
+  const response = await api.get<FlagEventListResponse>(`${QUALITY_BASE}/flags`, {
+    params: buildListParams(filters),
+  })
   return response.data
 }
 
 export async function getUnreviewedCount(): Promise<number> {
-  const response = await api.get<{ count: number }>(
-    `${QUALITY_BASE}/flags/unreviewed-count`
-  )
+  const response = await api.get<{ count: number }>(`${QUALITY_BASE}/flags/unreviewed-count`)
   return response.data.count
 }
 
 export async function confirmFlag(flagId: number): Promise<FlagEventCard> {
-  const response = await api.post<FlagEventCard>(
-    `${QUALITY_BASE}/flags/${flagId}/confirm`
-  )
+  const response = await api.post<FlagEventCard>(`${QUALITY_BASE}/flags/${flagId}/confirm`)
   return response.data
 }
 
@@ -56,10 +49,7 @@ export async function dismissFlag(
   flagId: number,
   payload: FlagEventDismissPayload = {}
 ): Promise<FlagEventCard> {
-  const response = await api.post<FlagEventCard>(
-    `${QUALITY_BASE}/flags/${flagId}/dismiss`,
-    payload
-  )
+  const response = await api.post<FlagEventCard>(`${QUALITY_BASE}/flags/${flagId}/dismiss`, payload)
   return response.data
 }
 
@@ -85,9 +75,7 @@ export async function convertFlagToTask(
 }
 
 export async function listAutoFlagRules(): Promise<AutoFlagRule[]> {
-  const response = await api.get<{ data: AutoFlagRule[] }>(
-    `${ANALYTICS_BASE}/auto-flag-rules`
-  )
+  const response = await api.get<{ data: AutoFlagRule[] }>(`${ANALYTICS_BASE}/auto-flag-rules`)
   return response.data.data
 }
 

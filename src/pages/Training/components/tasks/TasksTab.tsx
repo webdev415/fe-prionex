@@ -1,14 +1,11 @@
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { Icons } from '@/lib/icons'
 import { useAuthStore } from '@/stores/authStore'
 import { useOperators } from '@/features/users/hooks'
-import {
-  useCorrectionTasks,
-  useTransitionCorrectionTask,
-} from '@/features/training'
+import { useCorrectionTasks, useTransitionCorrectionTask } from '@/features/training'
 import { PERMISSIONS } from '@/constants/permissions'
 import { TASKS_SUB_TABS, type TasksSubTabId } from '../../types'
 import {
@@ -108,10 +105,7 @@ export function TasksTab({ onAssignTask }: TasksTabProps = {}) {
   const { data: operators = [] } = useOperators(activeProjectId ? Number(activeProjectId) : null)
   const { data: rawTasks = [], isLoading, isError } = useCorrectionTasks({ limit: 200 })
 
-  const derivedTasks = useMemo(
-    () => deriveTaskRows(rawTasks, operators),
-    [rawTasks, operators]
-  )
+  const derivedTasks = useMemo(() => deriveTaskRows(rawTasks, operators), [rawTasks, operators])
 
   // Filter chips use the same time-bucket the adapter computes from due_date.
   const filtered = useMemo(() => {
@@ -148,9 +142,7 @@ export function TasksTab({ onAssignTask }: TasksTabProps = {}) {
   // the operator's My-Tasks surface (not this trainer board).
   const transitionMutation = useTransitionCorrectionTask()
   const userPermissions = useAuthStore((s) => s.user?.permissions ?? [])
-  const canManageCorrection = userPermissions.includes(
-    PERMISSIONS.TRAINING.MANAGE_CORRECTION_TASKS
-  )
+  const canManageCorrection = userPermissions.includes(PERMISSIONS.TRAINING.MANAGE_CORRECTION_TASKS)
 
   const handleTransition = async (
     taskId: number,
@@ -170,10 +162,7 @@ export function TasksTab({ onAssignTask }: TasksTabProps = {}) {
       const detail =
         err instanceof Error
           ? err.message
-          : t(
-              'pages.training.tasks.actions.error',
-              'Could not move the task.'
-            )
+          : t('pages.training.tasks.actions.error', 'Could not move the task.')
       toast.error(detail)
     }
   }
@@ -286,10 +275,7 @@ export function TasksTab({ onAssignTask }: TasksTabProps = {}) {
 interface TaskKanbanCardProps {
   task: MockTaskRow
   canManageCorrection?: boolean
-  onTransition?: (
-    taskId: number,
-    toState: 'confirmed' | 'returned_for_revision'
-  ) => void
+  onTransition?: (taskId: number, toState: 'confirmed' | 'returned_for_revision') => void
   transitionPending?: boolean
 }
 

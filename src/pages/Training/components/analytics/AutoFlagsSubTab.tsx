@@ -12,11 +12,7 @@ import {
   useDismissFlag,
   useFlags,
 } from '@/features/training'
-import type {
-  AutoFlagRule,
-  FlagEventCard,
-  FlagEventStatus,
-} from '@/features/training'
+import type { AutoFlagRule, FlagEventCard, FlagEventStatus } from '@/features/training'
 
 const STATUS_TABS: { id: FlagEventStatus; key: string; fallback: string }[] = [
   { id: 'pending', key: 'pages.training.autoFlags.status.pending', fallback: 'Pending' },
@@ -37,9 +33,7 @@ const PAGE_SIZE = 50
 export function AutoFlagsSubTab() {
   const { t } = useTranslation('common')
   const activeProjectId = useAuthStore((s) => s.user?.active_project_id)
-  const { data: operators = [] } = useOperators(
-    activeProjectId ? Number(activeProjectId) : null
-  )
+  const { data: operators = [] } = useOperators(activeProjectId ? Number(activeProjectId) : null)
   const nameByOp = useMemo(() => {
     const out = new Map<number, string>()
     operators.forEach((o) => out.set(Number(o.id), o.full_name || `#${o.id}`))
@@ -77,15 +71,13 @@ export function AutoFlagsSubTab() {
       await confirmMut.mutateAsync(flagId)
       toast.success(t('pages.training.autoFlags.toast.confirmed', 'Flag confirmed'))
     } catch (err) {
-      toast.error(extractError(err, t))
+      toast.error(extractError(err, t('pages.training.autoFlags.toast.error', 'Action failed')))
     }
   }
   const handleDismiss = async (flagId: number) => {
     const reason = window.prompt(
-      t(
-        'pages.training.autoFlags.dismissPrompt',
-        'Why dismiss this flag? (Optional)'
-      ) ?? 'Reason (optional)'
+      t('pages.training.autoFlags.dismissPrompt', 'Why dismiss this flag? (Optional)') ??
+        'Reason (optional)'
     )
     try {
       await dismissMut.mutateAsync({
@@ -94,39 +86,30 @@ export function AutoFlagsSubTab() {
       })
       toast.success(t('pages.training.autoFlags.toast.dismissed', 'Flag dismissed'))
     } catch (err) {
-      toast.error(extractError(err, t))
+      toast.error(extractError(err, t('pages.training.autoFlags.toast.error', 'Action failed')))
     }
   }
   const handleConvert = async (flagId: number) => {
     try {
       const result = await convertMut.mutateAsync({ flagId, payload: {} })
       toast.success(
-        t(
-          'pages.training.autoFlags.toast.converted',
-          'Correction task created and flag confirmed'
-        )
+        t('pages.training.autoFlags.toast.converted', 'Correction task created and flag confirmed')
       )
       return result
     } catch (err) {
-      toast.error(extractError(err, t))
+      toast.error(extractError(err, t('pages.training.autoFlags.toast.error', 'Action failed')))
     }
   }
   const handleBulkDismiss = async () => {
     if (!ruleCode) {
       toast.error(
-        t(
-          'pages.training.autoFlags.bulkRequiresRule',
-          'Pick a single rule before bulk-dismissing.'
-        )
+        t('pages.training.autoFlags.bulkRequiresRule', 'Pick a single rule before bulk-dismissing.')
       )
       return
     }
     if (
       !window.confirm(
-        t(
-          'pages.training.autoFlags.bulkConfirm',
-          'Dismiss every pending flag for this rule?'
-        )
+        t('pages.training.autoFlags.bulkConfirm', 'Dismiss every pending flag for this rule?')
       )
     ) {
       return
@@ -140,7 +123,7 @@ export function AutoFlagsSubTab() {
         })
       )
     } catch (err) {
-      toast.error(extractError(err, t))
+      toast.error(extractError(err, t('pages.training.autoFlags.toast.error', 'Action failed')))
     }
   }
 
@@ -159,9 +142,7 @@ export function AutoFlagsSubTab() {
                 type="button"
                 onClick={() => setStatus(tab.id)}
                 className={`rounded-md px-3 py-1.5 text-xs font-medium tracking-[-0.02em] transition-colors ${
-                  isActive
-                    ? 'bg-[#204E4D] text-white'
-                    : 'text-[#545454] hover:bg-[#F7F7F7]'
+                  isActive ? 'bg-[#204E4D] text-white' : 'text-[#545454] hover:bg-[#F7F7F7]'
                 }`}
               >
                 {t(tab.key, tab.fallback)}
@@ -176,9 +157,7 @@ export function AutoFlagsSubTab() {
             onChange={(e) => setRuleCode(e.target.value || undefined)}
             className="h-9 rounded-md border border-[#DFDFDF] bg-white px-3 text-xs text-[#545454]"
           >
-            <option value="">
-              {t('pages.training.autoFlags.allRules', 'All rules')}
-            </option>
+            <option value="">{t('pages.training.autoFlags.allRules', 'All rules')}</option>
             {rules.map((rule) => (
               <option key={rule.code} value={rule.code}>
                 {rule.name}
@@ -225,21 +204,13 @@ export function AutoFlagsSubTab() {
             <FlagRow
               key={flag.id}
               flag={flag}
-              operatorName={
-                nameByOp.get(flag.operator_id) ?? `#${flag.operator_id}`
-              }
+              operatorName={nameByOp.get(flag.operator_id) ?? `#${flag.operator_id}`}
               ruleName={ruleByCode.get(flag.rule_code)?.name ?? flag.rule_code}
-              isLocalEvaluable={
-                ruleByCode.get(flag.rule_code)?.is_local_evaluable ?? false
-              }
+              isLocalEvaluable={ruleByCode.get(flag.rule_code)?.is_local_evaluable ?? false}
               onConfirm={() => handleConfirm(flag.id)}
               onDismiss={() => handleDismiss(flag.id)}
               onConvert={() => handleConvert(flag.id)}
-              isMutating={
-                confirmMut.isPending ||
-                dismissMut.isPending ||
-                convertMut.isPending
-              }
+              isMutating={confirmMut.isPending || dismissMut.isPending || convertMut.isPending}
             />
           ))}
         </div>
@@ -271,25 +242,18 @@ function FlagRow({
 }: FlagRowProps) {
   const { t } = useTranslation('common')
   const detected = new Date(flag.detected_at)
-  const detectedLabel = Number.isNaN(detected.getTime())
-    ? '—'
-    : detected.toLocaleString()
+  const detectedLabel = Number.isNaN(detected.getTime()) ? '—' : detected.toLocaleString()
   const isPending = flag.status === 'pending'
   return (
     <div className="flex flex-col gap-2 rounded-xl border border-[#EBECE8] bg-white p-4 shadow-[0px_1px_2px_rgba(0,0,0,0.04)]">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex min-w-0 flex-col gap-1">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-sm font-semibold text-[#05040D]">
-              {ruleName}
-            </span>
+            <span className="text-sm font-semibold text-[#05040D]">{ruleName}</span>
             <StatusBadge status={flag.status} />
             {!isLocalEvaluable ? (
               <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-medium text-amber-700">
-                {t(
-                  'pages.training.autoFlags.pendingDataSource',
-                  'Pending data source'
-                )}
+                {t('pages.training.autoFlags.pendingDataSource', 'Pending data source')}
               </span>
             ) : null}
           </div>
@@ -299,8 +263,7 @@ function FlagRow({
               <>
                 {' · '}
                 <span title={flag.call_id}>
-                  {t('pages.training.autoFlags.call', 'Call')}:{' '}
-                  {flag.call_id.slice(0, 8)}…
+                  {t('pages.training.autoFlags.call', 'Call')}: {flag.call_id.slice(0, 8)}…
                 </span>
               </>
             ) : null}
@@ -309,8 +272,7 @@ function FlagRow({
           </p>
           {flag.dismiss_reason ? (
             <p className="text-[11px] text-[#6B7280]">
-              {t('pages.training.autoFlags.dismissReason', 'Reason')}:{' '}
-              {flag.dismiss_reason}
+              {t('pages.training.autoFlags.dismissReason', 'Reason')}: {flag.dismiss_reason}
             </p>
           ) : null}
         </div>
@@ -331,10 +293,7 @@ function FlagRow({
               title={
                 flag.call_id
                   ? undefined
-                  : t(
-                      'pages.training.autoFlags.noCallTitle',
-                      'Flag has no associated call'
-                    ) ?? ''
+                  : (t('pages.training.autoFlags.noCallTitle', 'Flag has no associated call') ?? '')
               }
               className="inline-flex h-8 items-center gap-1 rounded-md border border-[#204E4D] bg-white px-3 text-[11px] font-medium text-[#204E4D] hover:bg-[#F0FDF4] disabled:opacity-50"
             >
@@ -382,9 +341,9 @@ function StatusBadge({ status }: { status: FlagEventStatus }) {
   )
 }
 
-function extractError(err: unknown, t: (k: string, def?: string) => string): string {
+function extractError(err: unknown, fallback: string): string {
   if (err instanceof Error) return err.message
-  return t('pages.training.autoFlags.toast.error', 'Action failed')
+  return fallback
 }
 
 export default AutoFlagsSubTab

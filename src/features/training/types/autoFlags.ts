@@ -10,11 +10,7 @@
 
 export type FlagEventStatus = 'pending' | 'confirmed' | 'dismissed'
 
-export const FLAG_EVENT_STATUSES: readonly FlagEventStatus[] = [
-  'pending',
-  'confirmed',
-  'dismissed',
-]
+export const FLAG_EVENT_STATUSES: readonly FlagEventStatus[] = ['pending', 'confirmed', 'dismissed']
 
 export interface FlagEventCard {
   id: number

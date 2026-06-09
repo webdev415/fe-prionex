@@ -10,17 +10,13 @@ import type { ManualBadgeAwardPayload } from '../types/leaderboard'
 
 export const leaderboardKeys = {
   all: ['training', 'leaderboard'] as const,
-  snapshot: (params: GetLeaderboardParams) =>
-    [...leaderboardKeys.all, 'snapshot', params] as const,
+  snapshot: (params: GetLeaderboardParams) => [...leaderboardKeys.all, 'snapshot', params] as const,
   badgeDefinitions: () => [...leaderboardKeys.all, 'badge-defs'] as const,
   operatorBadges: (operatorId: number) =>
     [...leaderboardKeys.all, 'operator-badges', operatorId] as const,
 }
 
-export function useLeaderboard(
-  params: GetLeaderboardParams = {},
-  enabled = true
-) {
+export function useLeaderboard(params: GetLeaderboardParams = {}, enabled = true) {
   return useQuery({
     queryKey: leaderboardKeys.snapshot(params),
     queryFn: () => getLeaderboard(params),

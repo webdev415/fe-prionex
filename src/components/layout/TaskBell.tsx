@@ -67,10 +67,7 @@ export function TaskBell() {
   // task cards; the trainer-side Confirm / Return buttons live in the
   // Tasks tab (TasksTab.tsx).
   const transitionMutation = useTransitionCorrectionTask()
-  const handleOperatorTransition = async (
-    taskId: number,
-    toState: 'in_progress' | 'completed'
-  ) => {
+  const handleOperatorTransition = async (taskId: number, toState: 'in_progress' | 'completed') => {
     try {
       await transitionMutation.mutateAsync({
         taskId,

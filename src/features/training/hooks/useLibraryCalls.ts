@@ -16,16 +16,12 @@ import type {
 
 export const libraryKeys = {
   all: ['training', 'library'] as const,
-  list: (filters: LibraryCallListFilters) =>
-    [...libraryKeys.all, 'list', filters] as const,
+  list: (filters: LibraryCallListFilters) => [...libraryKeys.all, 'list', filters] as const,
   tags: () => [...libraryKeys.all, 'tags'] as const,
   detail: (id: number) => [...libraryKeys.all, 'detail', id] as const,
 }
 
-export function useLibraryCalls(
-  filters: LibraryCallListFilters = {},
-  enabled = true
-) {
+export function useLibraryCalls(filters: LibraryCallListFilters = {}, enabled = true) {
   return useQuery({
     queryKey: libraryKeys.list(filters),
     queryFn: () => listLibraryCalls(filters),
@@ -56,13 +52,8 @@ export function useCreateLibraryCall() {
 export function useUpdateLibraryCall() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: ({
-      id,
-      payload,
-    }: {
-      id: number
-      payload: LibraryCallUpdatePayload
-    }) => updateLibraryCall(id, payload),
+    mutationFn: ({ id, payload }: { id: number; payload: LibraryCallUpdatePayload }) =>
+      updateLibraryCall(id, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: libraryKeys.all })
     },

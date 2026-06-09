@@ -59,9 +59,7 @@ export function OperatorBadgesGallery({ operatorId }: OperatorBadgesGalleryProps
 function BadgeChip({ badge }: { badge: OperatorBadge }) {
   const { t } = useTranslation('common')
   const awarded = new Date(badge.awarded_at)
-  const awardedLabel = Number.isNaN(awarded.getTime())
-    ? ''
-    : awarded.toLocaleDateString()
+  const awardedLabel = Number.isNaN(awarded.getTime()) ? '' : awarded.toLocaleDateString()
   return (
     <div
       title={`${badge.name}${badge.description ? ` — ${badge.description}` : ''}\n${awardedLabel}`}

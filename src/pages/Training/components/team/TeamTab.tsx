@@ -227,119 +227,115 @@ export function TeamTab({
         })}
       </div>
 
-      {activeView === 'leaderboard' ? (
-        <LeaderboardView />
-      ) : (
-        <RosterView />
-      )}
+      {activeView === 'leaderboard' ? <LeaderboardView /> : <RosterView />}
     </div>
   )
 
   function RosterView() {
     return (
       <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <TrainingSegmentedStrip
-          items={chips}
-          activeId={activeDepartmentId}
-          onChange={setDepartment}
-          showActiveClose
-        />
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <TrainingSegmentedStrip
+            items={chips}
+            activeId={activeDepartmentId}
+            onChange={setDepartment}
+            showActiveClose
+          />
 
-        <div className="flex items-center gap-4">
-          {STATUS_LEGEND.map((item) => (
-            <span
-              key={item.id}
-              className="flex items-center gap-1.5 text-xs font-medium text-[#05040D]"
-            >
-              <span className={`inline-block h-2 w-2 rounded-full ${item.dot}`} />
-              {t(item.key, item.fallback)}
-            </span>
-          ))}
-        </div>
-      </div>
-
-      {isLoading ? (
-        <div className="rounded-xl border border-[#EBECE8] bg-white p-6 text-center text-xs text-gray-500">
-          {t('pages.training.team.loading', 'Loading team roster…')}
-        </div>
-      ) : isError ? (
-        <div className="rounded-xl border border-[#EBECE8] bg-white p-6 text-center text-xs text-red-500">
-          {t('pages.training.team.error', 'Could not load team roster.')}
-        </div>
-      ) : visibleDepartments.length === 0 ? (
-        <div className="rounded-xl border border-[#EBECE8] bg-white p-6 text-center text-xs text-gray-500">
-          {t('pages.training.team.empty', 'No departments in the current scope.')}
-        </div>
-      ) : (
-        <div
-          className={
-            selectedOperatorId
-              ? 'grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1fr)_360px]'
-              : 'grid grid-cols-1 gap-3'
-          }
-        >
-          <div className="flex flex-col gap-4">
-            {visibleDepartments.map((dept) => (
-              <DepartmentCard
-                key={dept.id}
-                department={dept}
-                onSelectOperator={setSelectedOperator}
-              />
+          <div className="flex items-center gap-4">
+            {STATUS_LEGEND.map((item) => (
+              <span
+                key={item.id}
+                className="flex items-center gap-1.5 text-xs font-medium text-[#05040D]"
+              >
+                <span className={`inline-block h-2 w-2 rounded-full ${item.dot}`} />
+                {t(item.key, item.fallback)}
+              </span>
             ))}
           </div>
-
-          {selectedOperatorId ? (
-            <div className="min-h-[400px]">
-              <OperatorDetailPanel
-                operatorId={selectedOperatorId}
-                operatorName={selectedRow?.operator.name}
-                avatarColor={selectedRow?.operator.avatarColor}
-                initials={selectedRow?.operator.initials}
-                online={selectedRow?.operator.online}
-                extension={selectedRow?.operator.extension}
-                department={selectedRow?.department.name}
-                groupName={selectedRow?.team.name}
-                segment={selectedRow?.department.name}
-                hiredAt={selectedRow?.operator.hiredAt ?? undefined}
-                dailyPlanPct={selectedRow?.operator.dailyPlanPct}
-                onListenRealtime={() =>
-                  toast.info(t('pages.training.inbox.quickActions.comingSoon', 'Coming soon'))
-                }
-                onListen={
-                  onOpenRateDialogue ??
-                  (() =>
-                    toast.info(t('pages.training.inbox.quickActions.comingSoon', 'Coming soon')))
-                }
-                onRate={() =>
-                  toast.info(t('pages.training.inbox.quickActions.comingSoon', 'Coming soon'))
-                }
-                onAssignCourse={() =>
-                  toast.info(t('pages.training.inbox.quickActions.comingSoon', 'Coming soon'))
-                }
-                onAssignDrill={() =>
-                  toast.info(t('pages.training.inbox.quickActions.comingSoon', 'Coming soon'))
-                }
-                onPlanOneOnOne={
-                  onOpenScheduleOneOnOne ??
-                  (() =>
-                    toast.info(t('pages.training.inbox.quickActions.comingSoon', 'Coming soon')))
-                }
-                onLeaveComment={() =>
-                  toast.info(t('pages.training.inbox.quickActions.comingSoon', 'Coming soon'))
-                }
-                onAssignTask={
-                  onOpenAssignTask ??
-                  (() =>
-                    toast.info(t('pages.training.inbox.quickActions.comingSoon', 'Coming soon')))
-                }
-                onTakeCharge={handleTakeCharge}
-                badgesSlot={<OperatorBadgesGallery operatorId={selectedOperatorId} />}
-              />
-            </div>
-          ) : null}
         </div>
-      )}
+
+        {isLoading ? (
+          <div className="rounded-xl border border-[#EBECE8] bg-white p-6 text-center text-xs text-gray-500">
+            {t('pages.training.team.loading', 'Loading team roster…')}
+          </div>
+        ) : isError ? (
+          <div className="rounded-xl border border-[#EBECE8] bg-white p-6 text-center text-xs text-red-500">
+            {t('pages.training.team.error', 'Could not load team roster.')}
+          </div>
+        ) : visibleDepartments.length === 0 ? (
+          <div className="rounded-xl border border-[#EBECE8] bg-white p-6 text-center text-xs text-gray-500">
+            {t('pages.training.team.empty', 'No departments in the current scope.')}
+          </div>
+        ) : (
+          <div
+            className={
+              selectedOperatorId
+                ? 'grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1fr)_360px]'
+                : 'grid grid-cols-1 gap-3'
+            }
+          >
+            <div className="flex flex-col gap-4">
+              {visibleDepartments.map((dept) => (
+                <DepartmentCard
+                  key={dept.id}
+                  department={dept}
+                  onSelectOperator={setSelectedOperator}
+                />
+              ))}
+            </div>
+
+            {selectedOperatorId ? (
+              <div className="min-h-[400px]">
+                <OperatorDetailPanel
+                  operatorId={selectedOperatorId}
+                  operatorName={selectedRow?.operator.name}
+                  avatarColor={selectedRow?.operator.avatarColor}
+                  initials={selectedRow?.operator.initials}
+                  online={selectedRow?.operator.online}
+                  extension={selectedRow?.operator.extension}
+                  department={selectedRow?.department.name}
+                  groupName={selectedRow?.team.name}
+                  segment={selectedRow?.department.name}
+                  hiredAt={selectedRow?.operator.hiredAt ?? undefined}
+                  dailyPlanPct={selectedRow?.operator.dailyPlanPct}
+                  onListenRealtime={() =>
+                    toast.info(t('pages.training.inbox.quickActions.comingSoon', 'Coming soon'))
+                  }
+                  onListen={
+                    onOpenRateDialogue ??
+                    (() =>
+                      toast.info(t('pages.training.inbox.quickActions.comingSoon', 'Coming soon')))
+                  }
+                  onRate={() =>
+                    toast.info(t('pages.training.inbox.quickActions.comingSoon', 'Coming soon'))
+                  }
+                  onAssignCourse={() =>
+                    toast.info(t('pages.training.inbox.quickActions.comingSoon', 'Coming soon'))
+                  }
+                  onAssignDrill={() =>
+                    toast.info(t('pages.training.inbox.quickActions.comingSoon', 'Coming soon'))
+                  }
+                  onPlanOneOnOne={
+                    onOpenScheduleOneOnOne ??
+                    (() =>
+                      toast.info(t('pages.training.inbox.quickActions.comingSoon', 'Coming soon')))
+                  }
+                  onLeaveComment={() =>
+                    toast.info(t('pages.training.inbox.quickActions.comingSoon', 'Coming soon'))
+                  }
+                  onAssignTask={
+                    onOpenAssignTask ??
+                    (() =>
+                      toast.info(t('pages.training.inbox.quickActions.comingSoon', 'Coming soon')))
+                  }
+                  onTakeCharge={handleTakeCharge}
+                  badgesSlot={<OperatorBadgesGallery operatorId={selectedOperatorId} />}
+                />
+              </div>
+            ) : null}
+          </div>
+        )}
       </div>
     )
   }

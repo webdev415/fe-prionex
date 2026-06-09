@@ -61,12 +61,8 @@ export async function archiveLibraryCall(id: number): Promise<void> {
   await api.delete(`${BASE}/${id}`)
 }
 
-export async function toggleLibraryHelpful(
-  id: number
-): Promise<LibraryHelpfulToggleResponse> {
-  const response = await api.post<LibraryHelpfulToggleResponse>(
-    `${BASE}/${id}/helpful`
-  )
+export async function toggleLibraryHelpful(id: number): Promise<LibraryHelpfulToggleResponse> {
+  const response = await api.post<LibraryHelpfulToggleResponse>(`${BASE}/${id}/helpful`)
   return response.data
 }
 
