@@ -153,3 +153,39 @@ export type {
   OperatorBadge,
 } from './types/leaderboard'
 export { LEADERBOARD_PERIODS } from './types/leaderboard'
+
+// KAN-411 Feature 3.3 — auto-flag queue + rules.
+export {
+  useFlags,
+  useUnreviewedFlagsCount,
+  useAutoFlagRules,
+  useConfirmFlag,
+  useDismissFlag,
+  useBulkDismissFlags,
+  useConvertFlagToTask,
+  useUpdateAutoFlagRule,
+  autoFlagsKeys,
+} from './hooks/useAutoFlags'
+export {
+  listFlags,
+  getUnreviewedCount,
+  confirmFlag,
+  dismissFlag,
+  bulkDismissFlags,
+  convertFlagToTask,
+  listAutoFlagRules,
+  updateAutoFlagRule,
+} from './api/autoFlagsService'
+export type {
+  AutoFlagRule,
+  AutoFlagRuleUpdatePayload,
+  FlagEventBulkDismissPayload,
+  FlagEventBulkDismissResponse,
+  FlagEventCard,
+  FlagEventConvertToTaskPayload,
+  FlagEventDismissPayload,
+  FlagEventListFilters,
+  FlagEventListResponse,
+  FlagEventStatus,
+} from './types/autoFlags'
+export { FLAG_EVENT_STATUSES } from './types/autoFlags'

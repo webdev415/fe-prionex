@@ -1,7 +1,9 @@
 ﻿import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router-dom'
+import { useUnreviewedFlagsCount } from '@/features/training'
 import { ACTION_ANALYSIS_SUB_TABS, type ActionAnalysisSubTabId } from '../../types'
+import { AutoFlagsSubTab } from './AutoFlagsSubTab'
 import { MockInteractionsTab } from './MockInteractionsTab'
 import { WeeklyTasksSubTab } from './WeeklyTasksSubTab'
 import { PromisesAndCallbacksSubTab } from './PromisesAndCallbacksSubTab'
@@ -51,6 +53,10 @@ const SUB_TAB_LABELS: Record<ActionAnalysisSubTabId, { key: string; fallback: st
     key: 'pages.training.analyticsSubTabs.scriptAnalytics',
     fallback: 'Script Analytics',
   },
+  'auto-flags': {
+    key: 'pages.training.analyticsSubTabs.autoFlags',
+    fallback: 'Auto-flags',
+  },
 }
 
 function isSubTab(value: string | null): value is ActionAnalysisSubTabId {
@@ -71,6 +77,12 @@ export function ActionAnalysisInnerTab() {
     setSearchParams(next, { replace: true })
   }
 
+  // KAN-411 Feature 3.3 — pending auto-flag count drives the chip badge
+  // for the Auto-flags sub-tab. Hook polls every 60s per plan §4.3 (the
+  // sidebar-badge equivalent is deferred — Sidebar doesn't expose a
+  // badge slot today, and decorating it would touch unrelated layout).
+  const { data: pendingFlagCount } = useUnreviewedFlagsCount()
+
   const subTabs = useMemo(
     () =>
       ACTION_ANALYSIS_SUB_TABS.map((sub) => {
@@ -78,9 +90,13 @@ export function ActionAnalysisInnerTab() {
         return {
           id: sub,
           label: t(meta.key, meta.fallback),
+          count:
+            sub === 'auto-flags' && pendingFlagCount && pendingFlagCount > 0
+              ? pendingFlagCount
+              : undefined,
         }
       }),
-    [t]
+    [t, pendingFlagCount]
   )
 
   return (
@@ -106,6 +122,7 @@ export function ActionAnalysisInnerTab() {
         {activeSubTab === 'heatmap' && <MockHeatMapSubTab />}
         {activeSubTab === 'time-at-work' && <MockTimeAtWorkSubTab />}
         {activeSubTab === 'script-analytics' && <ScriptAnalyticsRedesignSubTab />}
+        {activeSubTab === 'auto-flags' && <AutoFlagsSubTab />}
       </div>
     </div>
   )

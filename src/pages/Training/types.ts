@@ -32,6 +32,7 @@ export type ActionAnalysisSubTabId =
   | 'heatmap'
   | 'time-at-work'
   | 'script-analytics'
+  | 'auto-flags'
 
 // Legacy `calls` sub-tab union. Kept so the existing CallsTab branches still
 // compile while the prod-hide URL grammar is in place.
@@ -101,6 +102,7 @@ export const ACTION_ANALYSIS_SUB_TABS: ActionAnalysisSubTabId[] = [
   'heatmap',
   'time-at-work',
   'script-analytics',
+  'auto-flags',
 ]
 
 export const ACTION_ANALYSIS_CALLS_SUB_TABS: ActionAnalysisCallsSubTabId[] = [
