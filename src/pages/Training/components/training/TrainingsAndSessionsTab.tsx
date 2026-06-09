@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router-dom'
 import { TRAININGS_AND_SESSIONS_SUB_TABS, type TrainingsAndSessionsSubTabId } from '../../types'
 import { TrainingSegmentedStrip } from '../chrome/TrainingSegmentedStrip'
+import { CallLibraryTab } from './CallLibraryTab'
 import { CoursesCatalogTab } from './CoursesCatalogTab'
 import { AssignmentsGridTab } from './AssignmentsGridTab'
 import { MaterialsLibraryTab } from './MaterialsLibraryTab'
@@ -26,6 +27,10 @@ const SUB_TAB_LABELS: Record<TrainingsAndSessionsSubTabId, { key: string; fallba
     fallback: 'Assignments',
   },
   materials: { key: 'pages.training.training.subTabs.materials', fallback: 'Materials' },
+  'call-library': {
+    key: 'pages.training.training.subTabs.callLibrary',
+    fallback: 'Call library',
+  },
 }
 
 function isSubTab(value: string | null): value is TrainingsAndSessionsSubTabId {
@@ -74,6 +79,7 @@ export function TrainingsAndSessionsTab() {
       {activeSubTab === 'tests' && <TestsTab />}
       {activeSubTab === 'assignments' && <AssignmentsGridTab />}
       {activeSubTab === 'materials' && <MaterialsLibraryTab />}
+      {activeSubTab === 'call-library' && <CallLibraryTab />}
     </div>
   )
 }

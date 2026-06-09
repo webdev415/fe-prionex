@@ -66,6 +66,7 @@ export type TrainingsAndSessionsSubTabId =
   | 'tests'
   | 'assignments'
   | 'materials'
+  | 'call-library'
 
 // KAN-504 — Dialogue Evaluation view modes (live as a single ?view= state,
 // per plan §3.9 — these are view filters, not real sub-tabs).
@@ -131,6 +132,7 @@ export const TRAININGS_AND_SESSIONS_SUB_TABS: TrainingsAndSessionsSubTabId[] = [
   'tests',
   'assignments',
   'materials',
+  'call-library',
 ]
 
 export const DIALOGUE_EVALUATION_VIEW_MODES: DialogueEvaluationViewMode[] = [

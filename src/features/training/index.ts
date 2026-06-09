@@ -94,3 +94,36 @@ export type {
   CorrectionTransitionPayload,
   CorrectionStats,
 } from './types/correction'
+
+// KAN-411 Feature 3.4 — training call library.
+export {
+  useLibraryCalls,
+  useLibraryTags,
+  useCreateLibraryCall,
+  useUpdateLibraryCall,
+  useArchiveLibraryCall,
+  useToggleLibraryHelpful,
+  useBumpLibraryView,
+  libraryKeys,
+} from './hooks/useLibraryCalls'
+export {
+  listLibraryCalls,
+  listLibraryTags,
+  getLibraryCall,
+  createLibraryCall,
+  updateLibraryCall,
+  archiveLibraryCall,
+  toggleLibraryHelpful,
+  bumpLibraryView,
+} from './api/libraryService'
+export type {
+  LibraryCallCard,
+  LibraryCallCreatePayload,
+  LibraryCallListFilters,
+  LibraryCallListResponse,
+  LibraryCallUpdatePayload,
+  LibraryCategory,
+  LibraryHelpfulToggleResponse,
+  LibraryTagsResponse,
+} from './types/library'
+export { LIBRARY_CATEGORIES } from './types/library'

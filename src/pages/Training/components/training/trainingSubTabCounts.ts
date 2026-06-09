@@ -19,4 +19,7 @@ export const TRAINING_SUB_TAB_COUNTS: Record<TrainingsAndSessionsSubTabId, numbe
   tests: MOCK_TESTS.length,
   assignments: MOCK_ASSIGNMENTS.length,
   materials: MOCK_MATERIALS.length,
+  // Real count is wired in by the CallLibraryTab via the list endpoint's
+  // `total`. Strip badge stays at 0 until the view loads.
+  'call-library': 0,
 }

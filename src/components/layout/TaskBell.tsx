@@ -17,6 +17,8 @@ import { Icons } from '@/lib/icons'
 import { useMyTasks } from '@/features/clients/hooks/useClients'
 import { usePendingVerificationPayments } from '@/features/payments/hooks/usePayments'
 import { taskApi } from '@/features/clients/api/taskApi'
+import { useTransitionCorrectionTask } from '@/features/training'
+import { toast } from 'sonner'
 import { useAuthStore } from '@/stores/authStore'
 import { formatTaskDueDateForDisplay } from '@/lib/formatters'
 import { cn } from '@/lib/utils'
@@ -44,6 +46,14 @@ function formatDateTime(isoDate: string, timezone?: string): string {
   }
 }
 
+/** KAN-411 Feature 3.1 — correction-task type values (mirrors task-service). */
+const CORRECTION_TASK_TYPES = new Set([
+  'correction',
+  'listen_reflect',
+  'practice_next_call',
+  'study_material',
+])
+
 export function TaskBell() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
@@ -52,6 +62,29 @@ export function TaskBell() {
   const pendingPayments = pendingPaymentsResponse?.items ?? []
   const userTimezone = useAuthStore((state) => state.user?.timezone)
   const count = tasks.length + pendingPayments.length
+
+  // KAN-411 — operator-side lifecycle mutation. Used only on correction
+  // task cards; the trainer-side Confirm / Return buttons live in the
+  // Tasks tab (TasksTab.tsx).
+  const transitionMutation = useTransitionCorrectionTask()
+  const handleOperatorTransition = async (
+    taskId: number,
+    toState: 'in_progress' | 'completed'
+  ) => {
+    try {
+      await transitionMutation.mutateAsync({
+        taskId,
+        payload: { to_state: toState },
+      })
+      // Bell list invalidates via the hook's onSuccess (training-correction
+      // + coaching namespaces). Also refresh the legacy my-tasks key the
+      // bell itself reads from.
+      queryClient.invalidateQueries({ queryKey: ['tasks', 'my-tasks'] })
+    } catch (err) {
+      const detail = err instanceof Error ? err.message : 'Could not update the task.'
+      toast.error(detail)
+    }
+  }
 
   const [isOpen, setIsOpen] = useState(false)
   const [isShaking, setIsShaking] = useState(false)
@@ -271,6 +304,44 @@ export function TaskBell() {
                         </span>
                       </div>
                     </button>
+
+                    {/* KAN-411 — operator-side lifecycle buttons for correction
+                        tasks. Shown only when task_type is a correction sub-type
+                        and the operator can still progress the row forward.
+                        Sits outside the main click button so clicks here don't
+                        navigate to the client surface. */}
+                    {task.task_type && CORRECTION_TASK_TYPES.has(task.task_type) ? (
+                      <div className="mt-1 flex gap-1.5 px-3 pb-2">
+                        {task.status === 'notified' ||
+                        task.status === 'read' ||
+                        task.status === 'returned_for_revision' ? (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              void handleOperatorTransition(task.id, 'in_progress')
+                            }}
+                            disabled={transitionMutation.isPending}
+                            className="flex-1 rounded-md border border-[#204E4D] px-2 py-1 text-[10px] font-semibold text-[#204E4D] disabled:opacity-60"
+                          >
+                            Mark in progress
+                          </button>
+                        ) : null}
+                        {task.status === 'in_progress' ? (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              void handleOperatorTransition(task.id, 'completed')
+                            }}
+                            disabled={transitionMutation.isPending}
+                            className="flex-1 rounded-md bg-[#204E4D] px-2 py-1 text-[10px] font-semibold text-white disabled:opacity-60"
+                          >
+                            Mark completed
+                          </button>
+                        ) : null}
+                      </div>
+                    ) : null}
 
                     {/* Dismiss (X) button */}
                     <button
