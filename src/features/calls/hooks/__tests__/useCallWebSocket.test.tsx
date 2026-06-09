@@ -56,7 +56,8 @@ describe('useCallWebSocket', () => {
 
     expect(mockSocket.on).toHaveBeenCalledWith('connect', expect.any(Function))
     expect(mockSocket.on).toHaveBeenCalledWith('disconnect', expect.any(Function))
-    expect(mockSocket.on).toHaveBeenCalledWith('call.state.changed', expect.any(Function))
+    // call-service emits "call.state_changed" (underscore) — must match exactly.
+    expect(mockSocket.on).toHaveBeenCalledWith('call.state_changed', expect.any(Function))
   })
 
   it('should not connect when agent extension is null', () => {
@@ -137,7 +138,7 @@ describe('useCallWebSocket', () => {
 
     // Simulate call state changed event
     const stateChangeHandler = mockSocket.on.mock.calls.find(
-      (call) => call[0] === 'call.state.changed'
+      (call) => call[0] === 'call.state_changed'
     )?.[1]
     stateChangeHandler?.(mockEvent)
 
@@ -306,7 +307,7 @@ describe('useCallWebSocket', () => {
     renderHook(() => useCallWebSocket(agentExtension), { wrapper })
 
     const stateChangeHandler = mockSocket.on.mock.calls.find(
-      (call) => call[0] === 'call.state.changed'
+      (call) => call[0] === 'call.state_changed'
     )?.[1]
 
     // Simulate multiple events
