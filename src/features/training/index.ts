@@ -69,3 +69,28 @@ export {
   PAYMENT_STATUS_VALUES,
   PAYMENT_TYPE_VALUES,
 } from './types'
+
+// KAN-411 Feature 3.1 — correction tasks.
+export {
+  useCorrectionTasks,
+  useCorrectionStats,
+  useCreateCorrectionTask,
+  useTransitionCorrectionTask,
+  correctionKeys,
+} from './hooks/useCorrectionTasks'
+export {
+  createCorrectionTask,
+  listCorrectionTasks,
+  transitionCorrectionTask,
+  getCorrectionStats,
+} from './api/correctionTaskService'
+export type {
+  CorrectionTask,
+  CorrectionTaskCreatePayload,
+  CorrectionTaskListFilters,
+  CorrectionTaskPriority,
+  CorrectionTaskStatus,
+  CorrectionTaskType,
+  CorrectionTransitionPayload,
+  CorrectionStats,
+} from './types/correction'

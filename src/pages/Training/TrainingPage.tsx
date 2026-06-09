@@ -27,6 +27,7 @@ import { TrainerHeaderStrip } from './components/chrome/TrainerHeaderStrip'
 import { QuickActionOverlay } from './components/chrome/QuickActionOverlay'
 import { CoachWorkspaceBanner } from './components/chrome/CoachWorkspaceBanner'
 import { PendingFeatureDialog } from './components/inbox/PendingFeatureDialog'
+import { CreateCorrectionTaskDialog } from './components/inbox/CreateCorrectionTaskDialog'
 import { ScheduleOneOnOneDialog } from './components/inbox/ScheduleOneOnOneDialog'
 import { RateDialogueDialog } from './components/inbox/RateDialogueDialog'
 import { InboxTab } from './components/inbox/InboxTab'
@@ -337,14 +338,12 @@ export function TrainingPage() {
         </div>
       </div>
 
-      <PendingFeatureDialog
+      {/* KAN-411 Feature 3.1 — Quick Action #1 ("Assign task") is now
+          functional via task-service's correction-task endpoints. */}
+      <CreateCorrectionTaskDialog
         open={quickActionDialog === 'assign'}
         onClose={() => setQuickActionDialog(null)}
-        titleKey="pages.training.inbox.quickActions.assignTask"
-        titleFallback="Assign task"
-        descriptionKey="pages.training.inbox.pendingFeature.assignTaskDescription"
-        descriptionFallback="Create a correction task for an operator with a topic and deadline."
-        dependsOnIssue="KAN-411"
+        operatorId={inboxOperatorId}
       />
       <PendingFeatureDialog
         open={quickActionDialog === 'material'}
@@ -386,7 +385,7 @@ export function TrainingPage() {
       ) : activeTopTab === 'trainings-and-sessions' ? (
         <TrainingsAndSessionsTab />
       ) : activeTopTab === 'tasks' ? (
-        <TasksTab />
+        <TasksTab onAssignTask={() => setQuickActionDialog('assign')} />
       ) : activeTopTab === 'calls' ? (
         <LegacyCallsBranch
           subTab={legacySubTab}

@@ -1,7 +1,11 @@
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router-dom'
+import { toast } from 'sonner'
 import { Icons } from '@/lib/icons'
+import { useAuthStore } from '@/stores/authStore'
+import { useOperators } from '@/features/users/hooks'
+import { useCorrectionTasks } from '@/features/training'
 import { TASKS_SUB_TABS, type TasksSubTabId } from '../../types'
 import {
   type MockTaskRow,
@@ -9,9 +13,8 @@ import {
   type TaskKanbanColumn,
   type TaskPriority,
 } from '../../mocks/trainerWorkplaceMocks'
-import { PendingFeatureDialog } from '../inbox/PendingFeatureDialog'
+import { deriveTaskRows, deriveTimeBucket } from '../../lib/correctionTaskAdapter'
 import { TrainingPrimaryButton } from '../training/TrainingToolbar'
-import { TASKS_SUB_TAB_COUNTS, filterTasksBySubTab } from './tasksSubTabCounts'
 
 /** Figma Tasks tab — 4 chip filters + green "New task" CTA + 4-column
  *  Kanban board (ДО РОБОТИ / У РОБОТІ / ЗАПЛАНОВАНО / ГОТОВО).
@@ -67,10 +70,25 @@ function isSubTab(value: string | null): value is TasksSubTabId {
   return value !== null && (TASKS_SUB_TABS as string[]).includes(value)
 }
 
-export function TasksTab() {
+/** KAN-411 Feature 3.1 — trainer-facing Tasks tab.
+ *
+ *  Reads from task-service's `/api/v1/tasks/correction` (real data) and
+ *  buckets rows into the Figma 4-column Kanban via
+ *  `correctionTaskAdapter`. The "New task" CTA is intentionally disabled
+ *  here because the canonical creation flow is the Inbox Quick Action
+ *  ("Assign task") which requires an operator + call context. Opening it
+ *  here would have nowhere to anchor the call picker.
+ */
+export interface TasksTabProps {
+  /** Hint from `TrainingPage` so the trainer can be deep-linked to the
+   *  Inbox's Quick Action when they click "New task" here. Optional —
+   *  when undefined the button shows a "go to Inbox" toast. */
+  onAssignTask?: () => void
+}
+
+export function TasksTab({ onAssignTask }: TasksTabProps = {}) {
   const { t } = useTranslation('common')
   const [searchParams, setSearchParams] = useSearchParams()
-  const [createOpen, setCreateOpen] = useState(false)
 
   const rawSub = searchParams.get('sub')
   const activeSubTab: TasksSubTabId = isSubTab(rawSub) ? rawSub : 'all'
@@ -82,7 +100,34 @@ export function TasksTab() {
     setSearchParams(next, { replace: true })
   }
 
-  const filtered = useMemo(() => filterTasksBySubTab(activeSubTab), [activeSubTab])
+  const activeProjectId = useAuthStore((s) => s.user?.active_project_id)
+  const { data: operators = [] } = useOperators(activeProjectId ? Number(activeProjectId) : null)
+  const { data: rawTasks = [], isLoading, isError } = useCorrectionTasks({ limit: 200 })
+
+  const derivedTasks = useMemo(
+    () => deriveTaskRows(rawTasks, operators),
+    [rawTasks, operators]
+  )
+
+  // Filter chips use the same time-bucket the adapter computes from due_date.
+  const filtered = useMemo(() => {
+    if (activeSubTab === 'all') return derivedTasks
+    return derivedTasks.filter((task) => task.timeBucket === activeSubTab)
+  }, [activeSubTab, derivedTasks])
+
+  const subTabCounts = useMemo(() => {
+    const counts: Record<TasksSubTabId, number> = {
+      all: derivedTasks.length,
+      today: 0,
+      tomorrow: 0,
+      this_week: 0,
+    }
+    for (const task of derivedTasks) {
+      const bucket = task.timeBucket ?? deriveTimeBucket(null)
+      if (bucket in counts) counts[bucket as TasksSubTabId] += 1
+    }
+    return counts
+  }, [derivedTasks])
 
   const tasksByColumn = useMemo(() => {
     return KANBAN_COLUMNS.reduce<Record<TaskKanbanColumn, MockTaskRow[]>>(
@@ -94,6 +139,19 @@ export function TasksTab() {
     )
   }, [filtered])
 
+  const handleNewTask = () => {
+    if (onAssignTask) {
+      onAssignTask()
+      return
+    }
+    toast.info(
+      t(
+        'pages.training.tasks.newTaskHint',
+        'Pick an operator from the Inbox tab, then use the "Assign task" Quick Action to anchor the task to a call.'
+      )
+    )
+  }
+
   return (
     <div className="flex flex-col gap-4">
       {/* Filter chips + New task button */}
@@ -102,7 +160,7 @@ export function TasksTab() {
           {TASKS_SUB_TABS.map((sub) => {
             const meta = SUB_TAB_LABELS[sub]
             const isActive = activeSubTab === sub
-            const count = TASKS_SUB_TAB_COUNTS[sub]
+            const count = subTabCounts[sub]
             return (
               <button
                 key={sub}
@@ -125,56 +183,57 @@ export function TasksTab() {
           })}
         </div>
         <TrainingPrimaryButton
-          onClick={() => setCreateOpen(true)}
+          onClick={handleNewTask}
           leftIcon={<Icons.Add size={14} className="text-white" />}
         >
           {t('pages.training.tasks.create', 'New task')}
         </TrainingPrimaryButton>
       </div>
 
-      {/* Kanban board — 4 columns */}
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
-        {KANBAN_COLUMNS.map((col) => {
-          const cards = tasksByColumn[col.id]
-          return (
-            <div key={col.id} className="flex flex-col gap-3 rounded-xl bg-[#F7F7F7]/60 p-3">
-              <div className="flex items-center justify-between px-1">
-                <div className="flex items-center gap-2">
-                  <span className={`inline-block h-2 w-2 rounded-full ${col.dot}`} />
-                  <span className="text-[11px] font-semibold tracking-wide text-[#05040D] uppercase">
-                    {t(col.key, col.fallback)}
+      {/* Loading / error / empty states above the board. */}
+      {isLoading ? (
+        <div className="rounded-xl border border-[#EBECE8] bg-white p-6 text-center text-xs text-gray-500">
+          {t('pages.training.tasks.loading', 'Loading correction tasks…')}
+        </div>
+      ) : isError ? (
+        <div className="rounded-xl border border-[#EBECE8] bg-white p-6 text-center text-xs text-red-500">
+          {t('pages.training.tasks.error', 'Could not load tasks. Please retry shortly.')}
+        </div>
+      ) : (
+        /* Kanban board — 4 columns */
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+          {KANBAN_COLUMNS.map((col) => {
+            const cards = tasksByColumn[col.id]
+            return (
+              <div key={col.id} className="flex flex-col gap-3 rounded-xl bg-[#F7F7F7]/60 p-3">
+                <div className="flex items-center justify-between px-1">
+                  <div className="flex items-center gap-2">
+                    <span className={`inline-block h-2 w-2 rounded-full ${col.dot}`} />
+                    <span className="text-[11px] font-semibold tracking-wide text-[#05040D] uppercase">
+                      {t(col.key, col.fallback)}
+                    </span>
+                  </div>
+                  <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-medium text-[#05040D]">
+                    {cards.length}
                   </span>
                 </div>
-                <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-medium text-[#05040D]">
-                  {cards.length}
-                </span>
+
+                {cards.length === 0 ? (
+                  <div className="flex h-32 items-center justify-center rounded-lg border border-dashed border-[#E5E7EB] bg-white text-[11px] text-[#9CA3AF]">
+                    {t('pages.training.tasks.kanban.empty', 'Empty')}
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-2">
+                    {cards.map((task) => (
+                      <TaskKanbanCard key={task.id} task={task} />
+                    ))}
+                  </div>
+                )}
               </div>
-
-              {cards.length === 0 ? (
-                <div className="flex h-32 items-center justify-center rounded-lg border border-dashed border-[#E5E7EB] bg-white text-[11px] text-[#9CA3AF]">
-                  {t('pages.training.tasks.kanban.empty', 'Empty')}
-                </div>
-              ) : (
-                <div className="flex flex-col gap-2">
-                  {cards.map((task) => (
-                    <TaskKanbanCard key={task.id} task={task} />
-                  ))}
-                </div>
-              )}
-            </div>
-          )
-        })}
-      </div>
-
-      <PendingFeatureDialog
-        open={createOpen}
-        onClose={() => setCreateOpen(false)}
-        titleKey="pages.training.tasks.create"
-        titleFallback="New task"
-        descriptionKey="pages.training.tasks.pending.create"
-        descriptionFallback="Assign a correction or coaching task to an operator with a deadline."
-        dependsOnIssue="KAN-411"
-      />
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }
