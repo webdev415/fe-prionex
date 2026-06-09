@@ -317,6 +317,10 @@ export function PaymentHistoryPage() {
       to_date: endDate ? getDateStringInTimezone(endDate, userTimezone) : undefined,
       date_field: 'recorded_at',
       tz: userTimezone,
+      // Show to-us payments only — exclude pre-acquisition (primary-creditor)
+      // payments, consistent with the debt-summary view. The server also drops
+      // them from total_amount_paid so the totals stay consistent with the list.
+      exclude_pre_acquisition: true,
     },
     { enabled: !!clientId, keepPreviousDataBetweenFetches: true }
   )
