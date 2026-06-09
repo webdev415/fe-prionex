@@ -264,8 +264,7 @@ export function PaymentHistoryPage() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null)
   const [openDropdownPaymentId, setOpenDropdownPaymentId] = useState<number | null>(null)
-  const dateRangeInitialized = useRef(false)
-  const dateFiltersCleared = useRef(false)
+  const initialFilterChecked = useRef(false)
 
   // Sorting state
   const [sortConfig, setSortConfig] = useState<{ key: string; order: 'asc' | 'desc' } | null>(null)
@@ -678,73 +677,26 @@ export function PaymentHistoryPage() {
     }
   }
 
-  // Clear restrictive date filters immediately if they cause no results
+  // No default date filter: payment history shows ALL payments on load and the
+  // URL stays clean (no start_date/end_date) until the user explicitly picks
+  // dates. We previously auto-filled the picker with the data's date span and
+  // wrote it back into the URL — that injected a filter that could hide data
+  // (and left stale ranges behind on shared/bookmarked links).
+  //
+  // The one case we still handle: a date range that ARRIVED in the URL and
+  // hides every payment (e.g. a stale or shared link). On the first data load
+  // we clear it once so the user doesn't land on an inexplicably empty
+  // history. A range the user selects later is left untouched — even if it
+  // legitimately returns nothing.
   useEffect(() => {
-    if (
-      paymentHistoryData &&
-      paymentHistoryData.total_payments > 0 &&
-      paymentHistoryData.payments.length === 0 &&
-      (startDate || endDate)
-    ) {
-      // Date filter is too restrictive - clear it immediately to show all payments
-      setStartDate(null)
-      setEndDate(null)
-      dateRangeInitialized.current = false
-      dateFiltersCleared.current = true
-    }
-  }, [paymentHistoryData, setStartDate, setEndDate, startDate, endDate])
-
-  // Clear date filters on initial load if they're set to a single day (likely wrong/restrictive)
-  useEffect(() => {
-    // Only run once on mount - clear single-day filters that are likely wrong
-    // This prevents restrictive date filters from hiding all payments
-    if (!dateFiltersCleared.current && startDateUrl && endDateUrl && startDateUrl === endDateUrl) {
-      // Single day filter on initial load - clear it immediately to show all payments
+    if (initialFilterChecked.current || !paymentHistoryData) return
+    initialFilterChecked.current = true
+    const hasIncomingDateFilter = Boolean(startDateUrl || endDateUrl)
+    if (hasIncomingDateFilter && paymentHistoryData.payments.length === 0) {
       setStartDateUrl('')
       setEndDateUrl('')
-      dateFiltersCleared.current = true
     }
-  }, [startDateUrl, endDateUrl, setStartDateUrl, setEndDateUrl])
-
-  // Initialize date range from payment history data (only after we have payments)
-  useEffect(() => {
-    // Only initialize if we have payments and haven't initialized yet
-    if (
-      paymentHistoryData &&
-      paymentHistoryData.payments.length > 0 &&
-      !dateRangeInitialized.current
-    ) {
-      const dates = paymentHistoryData.payments
-        .map((payment) => {
-          // Derive the window from recorded_at — the SAME column the query
-          // filters on (date_field: 'recorded_at') and the date shown in the
-          // table. Using payment_date here set the range on the wrong column:
-          // for payments recorded long after their nominal payment_date (e.g.
-          // imported history), every row's recorded_at fell outside that window
-          // and the list came back empty while totals stayed non-zero.
-          // recorded_at is a full ISO timestamp (nullable for auto-created
-          // verified rows), so parse it directly and skip nulls.
-          const dateStr = payment.recorded_at
-          if (!dateStr) return null
-          const d = new Date(dateStr)
-          return isNaN(d.getTime()) ? null : d
-        })
-        .filter((d): d is Date => d !== null)
-
-      if (dates.length > 0) {
-        const minDate = new Date(Math.min(...dates.map((d) => d.getTime())))
-        const maxDate = new Date(Math.max(...dates.map((d) => d.getTime())))
-
-        // Only set date range if it covers multiple days or if it's the actual payment date range
-        // Don't set if it's a single day (that would be too restrictive)
-        if (minDate.getTime() !== maxDate.getTime() || dates.length === 1) {
-          setStartDate(minDate)
-          setEndDate(maxDate)
-          dateRangeInitialized.current = true
-        }
-      }
-    }
-  }, [paymentHistoryData, setStartDate, setEndDate])
+  }, [paymentHistoryData, startDateUrl, endDateUrl, setStartDateUrl, setEndDateUrl])
 
   const formatCurrency = (amount: string | number) => {
     const num = typeof amount === 'string' ? parseFloat(amount) : amount
