@@ -127,3 +127,29 @@ export type {
   LibraryTagsResponse,
 } from './types/library'
 export { LIBRARY_CATEGORIES } from './types/library'
+
+// KAN-411 Feature 3.2 — leaderboard + badges.
+export {
+  useLeaderboard,
+  useBadgeDefinitions,
+  useOperatorBadges,
+  useAwardBadgeManually,
+  leaderboardKeys,
+} from './hooks/useLeaderboard'
+export {
+  getLeaderboard,
+  getOperatorBadges,
+  listBadgeDefinitions,
+  awardBadgeManually,
+  leaderboardExportUrl,
+} from './api/leaderboardService'
+export type {
+  BadgeDefinition,
+  LeaderboardPeriod,
+  LeaderboardResponse,
+  LeaderboardRow,
+  LeaderboardScoreComponents,
+  ManualBadgeAwardPayload,
+  OperatorBadge,
+} from './types/leaderboard'
+export { LEADERBOARD_PERIODS } from './types/leaderboard'

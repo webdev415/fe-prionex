@@ -52,6 +52,9 @@ export interface OperatorDetailPanelProps {
    *  Kept as a slot so the coaching feature module stays decoupled from the
    *  page-layer mock data that still backs the feed. */
   feedSlot?: ReactNode
+  /** Optional badges gallery (KAN-411 Feature 3.2). Rendered between the
+   *  "Why entered the queue" block and the trainer actions when supplied. */
+  badgesSlot?: ReactNode
   /** Trainer action handlers — Figma shows 8 actions in a 2-col grid. */
   onListenRealtime?: () => void
   onListen?: () => void
@@ -189,6 +192,7 @@ export function OperatorDetailPanel({
   onTabChange,
   eventFeedCount = 0,
   feedSlot,
+  badgesSlot,
   onListenRealtime,
   onListen,
   onRate,
@@ -555,6 +559,8 @@ export function OperatorDetailPanel({
                 )}
               </div>
             </div>
+
+            {badgesSlot ? <div>{badgesSlot}</div> : null}
 
             <div>
               <h3 className="mb-3 text-sm font-medium tracking-[-0.02em] text-[#05040D]">

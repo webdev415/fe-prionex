@@ -11,6 +11,10 @@ import { useScopedUserIds } from '../../lib/scope'
 import { deriveDepartmentChips, deriveTeamRoster } from '../../lib/teamRosterAdapter'
 import { TrainingSegmentedStrip } from '../chrome/TrainingSegmentedStrip'
 import { DepartmentCard } from './DepartmentCard'
+import { LeaderboardView } from './LeaderboardView'
+import { OperatorBadgesGallery } from './OperatorBadgesGallery'
+
+type TeamViewMode = 'roster' | 'leaderboard'
 
 /**
  * Team top-tab — Figma `ENG - Training _ Team.svg` (KAN-414).
@@ -77,6 +81,18 @@ export function TeamTab({
   // ?department= URL state. The chip strip is derived from the response.
   const rawDepartment = searchParams.get('department')
   const activeDepartmentId = rawDepartment ?? 'all'
+
+  // ?view=roster|leaderboard — Leaderboard is the KAN-411 Feature 3.2 sub-
+  // view. Default 'roster' keeps existing behaviour for users hitting
+  // /training?tab=team without the new query.
+  const rawView = searchParams.get('view')
+  const activeView: TeamViewMode = rawView === 'leaderboard' ? 'leaderboard' : 'roster'
+  const setView = (next: TeamViewMode) => {
+    const params = new URLSearchParams(searchParams)
+    if (next === 'roster') params.delete('view')
+    else params.set('view', next)
+    setSearchParams(params, { replace: true })
+  }
 
   const departmentIdFilter = useMemo<number | undefined>(() => {
     if (rawDepartment == null || rawDepartment === 'all') return undefined
@@ -191,6 +207,37 @@ export function TeamTab({
 
   return (
     <div className="flex flex-col gap-4">
+      <div className="inline-flex max-w-full flex-wrap gap-1 self-start rounded-lg border border-[#EBECE8] bg-white p-1 shadow-[0px_1px_2px_rgba(0,0,0,0.04)]">
+        {(['roster', 'leaderboard'] as const).map((mode) => {
+          const isActive = mode === activeView
+          return (
+            <button
+              key={mode}
+              type="button"
+              onClick={() => setView(mode)}
+              className={`rounded-md px-3 py-1.5 text-xs font-medium tracking-[-0.02em] transition-colors ${
+                isActive ? 'bg-[#204E4D] text-white' : 'text-[#545454] hover:bg-[#F7F7F7]'
+              }`}
+            >
+              {mode === 'roster'
+                ? t('pages.training.team.view.roster', 'Roster')
+                : t('pages.training.team.view.leaderboard', 'Leaderboard')}
+            </button>
+          )
+        })}
+      </div>
+
+      {activeView === 'leaderboard' ? (
+        <LeaderboardView />
+      ) : (
+        <RosterView />
+      )}
+    </div>
+  )
+
+  function RosterView() {
+    return (
+      <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <TrainingSegmentedStrip
           items={chips}
@@ -287,13 +334,18 @@ export function TeamTab({
                     toast.info(t('pages.training.inbox.quickActions.comingSoon', 'Coming soon')))
                 }
                 onTakeCharge={handleTakeCharge}
+                badgesSlot={<OperatorBadgesGallery operatorId={selectedOperatorId} />}
               />
             </div>
           ) : null}
         </div>
       )}
-    </div>
-  )
+      </div>
+    )
+  }
+
+  // TeamTab end — RosterView is hoisted inside the closure so it
+  // captures `chips`, `selectedRow`, handlers, etc. without prop drilling.
 }
 
 export default TeamTab
