@@ -2,7 +2,7 @@
  * UserSearchBar Component
  *
  * Search bar with criterion selector for User Management.
- * Matches the client SearchBar layout; search runs on button click or Enter.
+ * Matches the client SearchBar layout; search runs while typing, on button click, or Enter.
  */
 
 import { useEffect, useState } from 'react'
