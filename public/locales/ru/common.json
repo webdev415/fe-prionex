@@ -287,7 +287,13 @@
       "mockTableColValue": "Значение",
       "mockTableRowClients": "Клиенты",
       "mockTableRowDebt": "Долг в зоне риска",
-      "mockTableRowOverdue": "Доля просрочки"
+      "mockTableRowOverdue": "Доля просрочки",
+      "betaBadge": "БЕТА — реальный бэкенд",
+      "apiError": "Ассистент сейчас недоступен. Попробуйте ещё раз.",
+      "feedbackUseful": "Полезно",
+      "feedbackNotUseful": "Не полезно",
+      "feedbackClear": "Понятно",
+      "feedbackUnclear": "Непонятно"
     },
     "actionAnalysis": {
       "title": "Анализ действий",

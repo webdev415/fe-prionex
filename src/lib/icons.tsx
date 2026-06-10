@@ -144,6 +144,8 @@ import {
   MessageSecure01Icon,
   MessageMultiple01Icon,
   Message01Icon,
+  ThumbsUpIcon,
+  ThumbsDownIcon,
 } from '@hugeicons/core-free-icons'
 /**
  * Icon component props
@@ -198,6 +200,8 @@ export const Icons = {
   Filter: (props: Omit<IconProps, 'icon'>) => <Icon icon={FilterIcon} {...props} />,
   Eye: (props: Omit<IconProps, 'icon'>) => <Icon icon={EyeIcon} {...props} />,
   View: (props: Omit<IconProps, 'icon'>) => <Icon icon={ViewIcon} {...props} />,
+  ThumbsUp: (props: Omit<IconProps, 'icon'>) => <Icon icon={ThumbsUpIcon} {...props} />,
+  ThumbsDown: (props: Omit<IconProps, 'icon'>) => <Icon icon={ThumbsDownIcon} {...props} />,
 
   // Status
   Info: (props: Omit<IconProps, 'icon'>) => <Icon icon={InformationCircleIcon} {...props} />,

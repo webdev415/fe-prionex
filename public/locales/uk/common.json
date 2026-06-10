@@ -342,7 +342,13 @@
       "mockTableColValue": "Значення",
       "mockTableRowClients": "Клієнти",
       "mockTableRowDebt": "Борг у зоні ризику",
-      "mockTableRowOverdue": "Частка прострочених"
+      "mockTableRowOverdue": "Частка прострочених",
+      "betaBadge": "БЕТА — реальний бекенд",
+      "apiError": "Асистент зараз недоступний. Спробуйте ще раз.",
+      "feedbackUseful": "Корисно",
+      "feedbackNotUseful": "Не корисно",
+      "feedbackClear": "Зрозуміло",
+      "feedbackUnclear": "Незрозуміло"
     },
     "actionAnalysis": {
       "title": "Аналіз дій",

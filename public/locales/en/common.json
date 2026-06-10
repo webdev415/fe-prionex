@@ -337,7 +337,13 @@
       "mockTableColValue": "Value",
       "mockTableRowClients": "Clients",
       "mockTableRowDebt": "Debt at risk",
-      "mockTableRowOverdue": "Overdue ratio"
+      "mockTableRowOverdue": "Overdue ratio",
+      "betaBadge": "BETA — live backend",
+      "apiError": "The assistant is unavailable right now. Please try again.",
+      "feedbackUseful": "Helpful",
+      "feedbackNotUseful": "Not helpful",
+      "feedbackClear": "Clear",
+      "feedbackUnclear": "Unclear"
     },
     "actionAnalysis": {
       "title": "Action Analysis",

@@ -143,6 +143,11 @@ const AiAssistantPage = lazy(() =>
     default: m.AiAssistantPage,
   }))
 )
+const AiAssistantBetaPage = lazy(() =>
+  import('@/pages/AiAssistant/AiAssistantBetaPage').then((m) => ({
+    default: m.AiAssistantBetaPage,
+  }))
+)
 const BulkOperatorAssignmentPage = lazy(() =>
   import('@/pages/Operations').then((m) => ({
     default: m.BulkOperatorAssignmentPage,
@@ -207,6 +212,10 @@ export const router = createBrowserRouter([
       {
         path: 'ai-assistant',
         element: withSuspense(<AiAssistantPage />),
+      },
+      {
+        path: 'ai-assistant-beta',
+        element: withSuspense(<AiAssistantBetaPage />),
       },
       {
         path: 'team-management/users',
