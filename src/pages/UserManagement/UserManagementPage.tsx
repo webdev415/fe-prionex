@@ -11,7 +11,7 @@ import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { useAuth } from '@/features/auth'
 import { useUsers } from '@/features/users/hooks/useUsers'
-import { useURLState, useAutoPersistedState, useSyncedState } from '@/hooks'
+import { useURLState, useAutoPersistedState } from '@/hooks'
 import { PermissionGuard } from '@/components/auth'
 import { PERMISSIONS } from '@/constants/permissions'
 import { CreateUserModal } from './components/CreateUserModal'
@@ -49,17 +49,12 @@ export function UserManagementPage() {
   // URL state for pagination and search
   const [currentPage, setCurrentPage] = useURLState<number>('page', 1)
   const [pageSize, setPageSize] = useURLState<number>('pageSize', DEFAULT_PAGE_SIZE)
-  const [appliedSearch, setAppliedSearch] = useURLState<string>('search', '', { debounce: 0 })
-  const [appliedSearchField, setAppliedSearchField] = useURLState<UserSearchField>(
+  const [searchQuery, setSearchQuery] = useURLState<string>('search', '')
+  const [searchField, setSearchField] = useURLState<UserSearchField>(
     'searchField',
     DEFAULT_SEARCH_FIELD,
     { debounce: 0 }
   )
-  const [searchField, setSearchField] = useSyncedState<UserSearchField>(
-    appliedSearchField,
-    DEFAULT_SEARCH_FIELD
-  )
-  const [searchInput, setSearchInput] = useSyncedState(appliedSearch, '')
 
   // Add persistence for state
   useAutoPersistedState(
@@ -67,14 +62,14 @@ export function UserManagementPage() {
     {
       currentPage,
       pageSize,
-      searchQuery: appliedSearch,
-      searchField: appliedSearchField,
+      searchQuery,
+      searchField,
     },
     {
       currentPage: setCurrentPage,
       pageSize: setPageSize,
-      searchQuery: setAppliedSearch,
-      searchField: setAppliedSearchField,
+      searchQuery: setSearchQuery,
+      searchField: setSearchField,
     }
   )
 
@@ -123,8 +118,8 @@ export function UserManagementPage() {
   const { data, isLoading, isError, error } = useUsers({
     page: currentPage,
     page_size: pageSize,
-    search: appliedSearch || undefined,
-    search_field: appliedSearch ? appliedSearchField : undefined,
+    search: searchQuery.trim() || undefined,
+    search_field: searchQuery.trim() ? searchField : undefined,
   })
 
   const users = data?.users || []
@@ -198,18 +193,32 @@ export function UserManagementPage() {
   }
 
   const handleSearch = useCallback(() => {
-    setAppliedSearch(searchInput.trim())
-    setAppliedSearchField(searchField)
     setCurrentPage(1)
-  }, [searchInput, searchField, setAppliedSearch, setAppliedSearchField, setCurrentPage])
+  }, [setCurrentPage])
 
   const handleClearSearch = useCallback(() => {
-    setSearchInput('')
-    setAppliedSearch('')
+    setSearchQuery('')
     setSearchField(DEFAULT_SEARCH_FIELD)
-    setAppliedSearchField(DEFAULT_SEARCH_FIELD)
     setCurrentPage(1)
-  }, [setSearchInput, setAppliedSearch, setSearchField, setAppliedSearchField, setCurrentPage])
+  }, [setSearchQuery, setSearchField, setCurrentPage])
+
+  const handleSearchFieldChange = useCallback(
+    (field: UserSearchField) => {
+      setSearchField(field)
+      if (searchQuery.trim()) {
+        setCurrentPage(1)
+      }
+    },
+    [searchQuery, setSearchField, setCurrentPage]
+  )
+
+  const handleSearchQueryChange = useCallback(
+    (value: string) => {
+      setSearchQuery(value)
+      setCurrentPage(1)
+    },
+    [setSearchQuery, setCurrentPage]
+  )
 
   // Check if user is active (for toggle state)
   const isActive = (user: ApiUser) => {
@@ -514,10 +523,10 @@ export function UserManagementPage() {
       <div className="mb-6 flex w-full items-center gap-4">
         <div className="flex items-center gap-3">
           <UserSearchBar
-            value={searchInput}
+            value={searchQuery}
             searchField={searchField}
-            onValueChange={setSearchInput}
-            onSearchFieldChange={setSearchField}
+            onValueChange={handleSearchQueryChange}
+            onSearchFieldChange={handleSearchFieldChange}
             onSearch={handleSearch}
             onClear={handleClearSearch}
             isLoading={isLoading}
