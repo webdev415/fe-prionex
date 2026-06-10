@@ -1,5 +1,6 @@
 import axios, { type AxiosError, type InternalAxiosRequestConfig } from 'axios'
 import { useAuthStore } from '@/stores/authStore'
+import { buildLoginUrlWithReturn } from '@/features/auth/utils/safeReturnUrl'
 
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL !== undefined
@@ -91,7 +92,7 @@ if (isBrowser && typeof window.addEventListener === 'function') {
         impersonatedUser: null,
         originalAdminUser: null,
       })
-      window.location.href = '/login'
+      window.location.href = buildLoginUrlWithReturn()
     } else if (event.newValue !== accessToken) {
       // Token was set/changed in another tab (login) — sync in-memory
       accessToken = event.newValue
@@ -214,7 +215,7 @@ api.interceptors.response.use(
           originalAdminUser: null,
         })
 
-        window.location.href = '/login'
+        window.location.href = buildLoginUrlWithReturn()
         return Promise.reject(refreshError)
       } finally {
         isRefreshing = false
