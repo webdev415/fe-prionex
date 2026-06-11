@@ -83,8 +83,7 @@ export function OperatorMultiSelectDropdown({
 
   const allIds = useMemo(() => options.map((o) => o.id), [options])
   // Tracks the real operator options only; the special option is independent.
-  const isAllSelected =
-    allIds.length > 0 && allIds.every((id) => selectedIds.includes(id))
+  const isAllSelected = allIds.length > 0 && allIds.every((id) => selectedIds.includes(id))
 
   const handleOpenChange = (open: boolean) => {
     setIsOpen(open)
@@ -109,9 +108,7 @@ export function OperatorMultiSelectDropdown({
   // is preserved across the toggle.
   const handleToggleAll = () => {
     const keepSpecial =
-      specialOption && selectedIds.includes(specialOption.id)
-        ? [specialOption.id]
-        : []
+      specialOption && selectedIds.includes(specialOption.id) ? [specialOption.id] : []
     onSelectionChange(isAllSelected ? keepSpecial : [...allIds, ...keepSpecial])
   }
 

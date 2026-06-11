@@ -524,9 +524,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                           // Split the "No Interactions" sentinel out so it
                           // never counts as a real operator selection.
                           const hasNoInteractions = selected.includes(NO_INTERACTIONS_ID)
-                          const realSelected = selected.filter(
-                            (id) => id !== NO_INTERACTIONS_ID
-                          )
+                          const realSelected = selected.filter((id) => id !== NO_INTERACTIONS_ID)
                           const allCount = interactionUserOptions.length
                           // "All operators" when nothing or every operator is
                           // selected — both mean "no narrowing". Not when the
@@ -795,9 +793,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                           // Split the "No Responsible" sentinel out so it never
                           // counts as a real employee selection.
                           const hasNoResponsible = selected.includes(NO_RESPONSIBLE_ID)
-                          const realSelected = selected.filter(
-                            (id) => id !== NO_RESPONSIBLE_ID
-                          )
+                          const realSelected = selected.filter((id) => id !== NO_RESPONSIBLE_ID)
                           const allCount = employeeOptions.length
                           if (
                             !hasNoResponsible &&

@@ -1938,6 +1938,8 @@
         "unassignedOnly": "Тільки непризначені",
         "tags": "Теги",
         "noUsersAvailable": "Немає доступних користувачів",
+        "noResponsible": "Без відповідального",
+        "noInteractions": "Без взаємодій",
         "more": "більше",
         "min": "Мін",
         "max": "Макс",
