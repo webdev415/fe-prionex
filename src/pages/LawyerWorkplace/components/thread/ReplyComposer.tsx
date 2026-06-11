@@ -1,4 +1,5 @@
 import { Attachment01Icon } from '@hugeicons/core-free-icons'
+import { useTranslation } from 'react-i18next'
 import { Textarea } from '@/components/ui/Textarea'
 import { Button } from '@/components/ui/Button'
 import { LinkButton } from '@/components/ui/LinkButton'
@@ -28,12 +29,15 @@ export function ReplyComposer({
   markAsNbuResponse,
   onMarkAsNbuResponseChange,
 }: ReplyComposerProps) {
+  const { t } = useTranslation('common')
+
   return (
     <div className="flex shrink-0 flex-col gap-2 bg-[linear-gradient(180deg,#F2F3F0_0%,#FFF_100%)] px-5 py-3">
-      {/* Reply-from row */}
       <div className="flex items-center justify-between gap-3 py-2">
         <div className="flex min-w-0 flex-wrap items-center gap-2">
-          <span className="text-light-700 text-[11px]">Reply from</span>
+          <span className="text-light-700 text-[11px]">
+            {t('pages.lawyerWorkplace.reply.replyFrom', 'Reply from')}
+          </span>
           <span className="bg-light-100 text-secondary-900 truncate rounded-full border border-gray-200 px-2 py-0.5 text-[10.5px] font-normal">
             {fromMailbox}
           </span>
@@ -62,22 +66,21 @@ export function ReplyComposer({
               )}
             />
           </div>
-          Mark as NBU response
+          {t('pages.lawyerWorkplace.reply.markNbuResponse', 'Mark as NBU response')}
         </label>
       </div>
 
-      {/* Textarea with send button */}
       <div className="flex flex-row items-end rounded-lg border border-gray-200 bg-white p-3">
         <Textarea
           value={value}
           onChange={(e) => onChange(e.target.value)}
           rows={4}
           className="text-dark-500 min-h-[110px] w-full resize-none overflow-y-scroll rounded border-none bg-transparent p-0 text-[13px] shadow-none outline-none [scrollbar-width:none] focus:ring-0 focus:ring-offset-0 [&::-webkit-scrollbar]:hidden"
-          placeholder="Write your reply..."
+          placeholder={t('pages.lawyerWorkplace.reply.placeholder', 'Write your reply...')}
         />
         <Button
           type="button"
-          aria-label="Send"
+          aria-label={t('pages.lawyerWorkplace.reply.send', 'Send')}
           size="icon-sm"
           className="bg-primary-300 text-dark-500 hover:bg-primary-500 active:bg-primary-600 shrink-0 rounded-full"
         >
@@ -85,7 +88,6 @@ export function ReplyComposer({
         </Button>
       </div>
 
-      {/* Action buttons */}
       <div className="flex items-center justify-between px-1">
         <div className="flex items-center gap-0.5">
           <LinkButton
@@ -94,7 +96,7 @@ export function ReplyComposer({
             size="xs"
             leftIcon={<Icons.User size={13} strokeWidth={1.5} />}
           >
-            Reassign
+            {t('pages.lawyerWorkplace.reply.reassign', 'Reassign')}
           </LinkButton>
           <LinkButton
             type="button"
@@ -102,7 +104,7 @@ export function ReplyComposer({
             size="xs"
             leftIcon={<Icons.File size={13} strokeWidth={1.5} />}
           >
-            Save draft
+            {t('pages.lawyerWorkplace.reply.saveDraft', 'Save draft')}
           </LinkButton>
         </div>
 
@@ -113,7 +115,7 @@ export function ReplyComposer({
             size="xs"
             leftIcon={<Icon icon={Attachment01Icon} size={13} strokeWidth={1.5} />}
           >
-            Attach
+            {t('pages.lawyerWorkplace.reply.attach', 'Attach')}
           </LinkButton>
 
           <DropdownMenu>
@@ -126,13 +128,22 @@ export function ReplyComposer({
                 rightIcon={<Icons.ArrowDown size={11} strokeWidth={2} />}
                 className="bg-transparent"
               >
-                Template
+                {t('pages.lawyerWorkplace.reply.template', 'Template')}
               </LinkButton>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="min-w-[160px]">
-              <DropdownMenuItem>Complaint response</DropdownMenuItem>
-              <DropdownMenuItem>NBU acknowledgement</DropdownMenuItem>
-              <DropdownMenuItem>Extension request</DropdownMenuItem>
+              <DropdownMenuItem>
+                {t('pages.lawyerWorkplace.reply.templates.complaintResponse', 'Complaint response')}
+              </DropdownMenuItem>
+              <DropdownMenuItem>
+                {t(
+                  'pages.lawyerWorkplace.reply.templates.nbuAcknowledgement',
+                  'NBU acknowledgement'
+                )}
+              </DropdownMenuItem>
+              <DropdownMenuItem>
+                {t('pages.lawyerWorkplace.reply.templates.extensionRequest', 'Extension request')}
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>

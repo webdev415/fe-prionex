@@ -127,7 +127,12 @@ export function LawyerWorkplacePage() {
             <span className="bg-success-700 h-2 w-2 shrink-0 rounded-full" aria-hidden="true" />
             <span>{t('pages.lawyerWorkplace.footer.syncHint', 'Email Service · sync hourly')}</span>
             <span className="text-gray-300">|</span>
-            <span>{t('pages.lawyerWorkplace.footer.mailboxes', '6 mailboxes connected')}</span>
+            <span>
+              {t('pages.lawyerWorkplace.footer.mailboxesCount', {
+                count: 6,
+                defaultValue: '6 mailboxes connected',
+              })}
+            </span>
           </div>
           <span className="text-light-700 text-[11px]">
             {t('pages.lawyerWorkplace.version', 'v0.7.18')}

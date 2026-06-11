@@ -350,8 +350,9 @@
       "incoming": {
         "title": "Incoming",
         "empty": "No letters in this folder",
-        "syncHint": "Email Service · sync hourly",
-        "mailboxesConnected": "{{count}} mailboxes connected"
+        "count": "{{total}} / {{unprocessed}}",
+        "scrollUp": "Scroll up",
+        "scrollDown": "Scroll down"
       },
       "folders": {
         "inbox": "Inbox",
@@ -363,48 +364,86 @@
         "new": "New",
         "inProgress": "In progress"
       },
-      "status": {
-        "new": "NEW",
-        "inProgress": "IN PROGRESS",
-        "onBoard": "ON BOARD",
-        "sentToKanban": "SENT TO KANBAN",
-        "autoProcessed": "AUTO-PROCESSED"
+      "letterItem": {
+        "unclassified": "Unclassified",
+        "unidentified": "unidentified",
+        "status": {
+          "new": "NEW",
+          "inProgress": "IN PROGRESS",
+          "onBoard": "ON BOARD",
+          "sentToKanban": "KANBAN",
+          "autoProcessed": "AUTO"
+        }
       },
-      "unidentifiedType": "Type unknown",
-      "notIdentified": "Not identified",
+      "dates": {
+        "yesterdayTime": "Yesterday · {{time}}"
+      },
       "thread": {
         "selectLetter": "Select a letter to view the thread",
         "archive": "Archive",
         "received": "RECEIVED",
         "sent": "SENT",
         "download": "Download",
-        "replyFrom": "Reply from legal@prionex.ua",
+        "toMailbox": "to {{mailbox}}",
+        "viaLabel": "via {{label}}",
+        "messagesInThread": "{{count}} messages in thread",
+        "attachmentPdf": "PDF",
+        "attachmentDoc": "DOC"
+      },
+      "reply": {
+        "replyFrom": "Reply from",
         "markNbuResponse": "Mark as NBU response",
-        "replyPlaceholder": "Write your reply...",
+        "placeholder": "Write your reply...",
         "reassign": "Reassign",
         "saveDraft": "Save draft",
         "attach": "Attach",
         "template": "Template",
-        "send": "Send"
+        "send": "Send",
+        "templates": {
+          "complaintResponse": "Complaint response",
+          "nbuAcknowledgement": "NBU acknowledgement",
+          "extensionRequest": "Extension request"
+        }
       },
       "parameters": {
         "title": "Letter parameters",
-        "selectLetter": "Select a letter to edit parameters",
-        "autoConfidence": "AUTO — {{percent}}%",
+        "selectLetter": "Select a letter to view parameters",
+        "autoBadge": "AUTO · {{percent}}%",
         "type": "Type",
         "selectType": "Select type",
         "types": {
           "complaint": "Complaint",
           "nbuInquiry": "NBU inquiry",
-          "courtClaim": "Court claim"
+          "courtClaim": "Court claim",
+          "attorneyRequest": "Attorney request",
+          "inquiry": "Inquiry"
         },
         "client": "Client",
         "contract": "Contract",
         "dueDate": "Due date",
         "lawyer": "Lawyer",
+        "notIdentified": "Not identified",
         "auto": "Auto",
-        "confirmationStatus": "Manager confirmation {{confirmed}}/{{total}} parameters",
-        "confirmAndCreate": "Confirm & create task"
+        "managerConfirmation": "Manager confirmation",
+        "parametersCount": "{{confirmed}}/{{total}} parameters",
+        "confirmAndCreate": "Confirm & create task",
+        "clients": {
+          "cl08114": "CL-08114 · I. Petrenko",
+          "cl12409": "CL-12409 · O. Kovalenko",
+          "cl06441": "CL-06441 · P. Melnyk",
+          "cl09908": "CL-09908 · V. Khomenko",
+          "cl03305": "CL-03305 · M. Bondarenko",
+          "cl07750": "CL-07750 · L. Savchenko",
+          "cl04412": "CL-04412 · T. Romaniuk",
+          "cl05588": "CL-05588 · H. Tkachenko",
+          "cl02211": "CL-02211 · O. Vasylenko"
+        },
+        "lawyers": {
+          "lawyer1": "Volodymyr Doroshenko (3)",
+          "lawyer2": "Maria Ivanenko (1)",
+          "lawyer3": "D. Kovalchuk (2)",
+          "lawyer4": "O. Hrytsenko (4)"
+        }
       },
       "kanban": {
         "title": "Legal tasks kanban",
@@ -421,7 +460,8 @@
       "version": "v0.7.18",
       "footer": {
         "syncHint": "Email Service · sync hourly",
-        "mailboxes": "6 mailboxes connected"
+        "mailboxes": "6 mailboxes connected",
+        "mailboxesCount": "{{count}} mailboxes connected"
       }
     },
     "actionAnalysis": {

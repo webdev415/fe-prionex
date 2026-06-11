@@ -343,6 +343,132 @@
       "mockTableRowDebt": "Борг у зоні ризику",
       "mockTableRowOverdue": "Частка прострочених"
     },
+    "lawyerWorkplace": {
+      "navAria": "Навігація робочого місця юриста",
+      "tabs": {
+        "inbox": "Вхідні",
+        "kanban": "Канбан",
+        "documents": "Документи",
+        "settings": "Налаштування",
+        "newCount": "{{count}} нових"
+      },
+      "incoming": {
+        "title": "Вхідні",
+        "empty": "У цій папці немає листів",
+        "count": "{{total}} / {{unprocessed}}",
+        "scrollUp": "Прокрутити вгору",
+        "scrollDown": "Прокрутити вниз"
+      },
+      "folders": {
+        "inbox": "Вхідні",
+        "quarantine": "Карантин",
+        "sent": "Надіслані"
+      },
+      "filters": {
+        "allMailboxes": "Усі скриньки",
+        "new": "Нові",
+        "inProgress": "В роботі"
+      },
+      "letterItem": {
+        "unclassified": "Без класифікації",
+        "unidentified": "неідентифіковано",
+        "status": {
+          "new": "НОВИЙ",
+          "inProgress": "В РОБОТІ",
+          "onBoard": "НА ДОШЦІ",
+          "sentToKanban": "КАНБАН",
+          "autoProcessed": "АВТО"
+        }
+      },
+      "dates": {
+        "yesterdayTime": "Вчора · {{time}}"
+      },
+      "thread": {
+        "selectLetter": "Оберіть лист, щоб переглянути ланцюжок",
+        "archive": "Архівувати",
+        "received": "ОТРИМАНО",
+        "sent": "НАДІСЛАНО",
+        "download": "Завантажити",
+        "toMailbox": "кому {{mailbox}}",
+        "viaLabel": "через {{label}}",
+        "messagesInThread": "{{count}} повідомлень у ланцюжку",
+        "attachmentPdf": "PDF",
+        "attachmentDoc": "DOC"
+      },
+      "reply": {
+        "replyFrom": "Відповідь з",
+        "markNbuResponse": "Позначити як відповідь НБУ",
+        "placeholder": "Напишіть відповідь...",
+        "reassign": "Передати",
+        "saveDraft": "Зберегти чернетку",
+        "attach": "Додати файл",
+        "template": "Шаблон",
+        "send": "Надіслати",
+        "templates": {
+          "complaintResponse": "Відповідь на скаргу",
+          "nbuAcknowledgement": "Підтвердження НБУ",
+          "extensionRequest": "Запит на продовження"
+        }
+      },
+      "parameters": {
+        "title": "Параметри листа",
+        "selectLetter": "Оберіть лист, щоб переглянути параметри",
+        "autoBadge": "АВТО · {{percent}}%",
+        "type": "Тип",
+        "selectType": "Оберіть тип",
+        "types": {
+          "complaint": "Скарга",
+          "nbuInquiry": "Запит НБУ",
+          "courtClaim": "Судовий позов",
+          "attorneyRequest": "Запит адвоката",
+          "inquiry": "Запит"
+        },
+        "client": "Клієнт",
+        "contract": "Договір",
+        "dueDate": "Термін",
+        "lawyer": "Юрист",
+        "notIdentified": "Не ідентифіковано",
+        "auto": "Авто",
+        "managerConfirmation": "Підтвердження менеджера",
+        "parametersCount": "{{confirmed}}/{{total}} параметрів",
+        "confirmAndCreate": "Підтвердити та створити задачу",
+        "clients": {
+          "cl08114": "CL-08114 · I. Petrenko",
+          "cl12409": "CL-12409 · O. Kovalenko",
+          "cl06441": "CL-06441 · P. Melnyk",
+          "cl09908": "CL-09908 · V. Khomenko",
+          "cl03305": "CL-03305 · M. Bondarenko",
+          "cl07750": "CL-07750 · L. Savchenko",
+          "cl04412": "CL-04412 · T. Romaniuk",
+          "cl05588": "CL-05588 · H. Tkachenko",
+          "cl02211": "CL-02211 · O. Vasylenko"
+        },
+        "lawyers": {
+          "lawyer1": "Volodymyr Doroshenko (3)",
+          "lawyer2": "Maria Ivanenko (1)",
+          "lawyer3": "D. Kovalchuk (2)",
+          "lawyer4": "O. Hrytsenko (4)"
+        }
+      },
+      "kanban": {
+        "title": "Канбан юридичних задач",
+        "comingSoon": "Канбан-дошка для юридичного відділу — незабаром у KAN-526."
+      },
+      "documents": {
+        "title": "Документи",
+        "comingSoon": "Інтеграція журналу документів — незабаром."
+      },
+      "settings": {
+        "title": "Налаштування",
+        "comingSoon": "Довідник типів листів і налаштування скриньок — незабаром."
+      },
+      "version": "v0.7.18",
+      "footer": {
+        "syncHint": "Email Service · синхронізація щогодини",
+        "mailboxes": "6 скриньок підключено",
+        "mailboxesCount": "{{count}} скриньок підключено"
+      }
+    },
     "actionAnalysis": {
       "title": "Аналіз дій",
       "subtitle": "Моніторинг дзвінків та історія взаємодій для команди тренерів.",

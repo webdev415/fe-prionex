@@ -1,57 +1,13 @@
+import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/Button'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
+import { formatDateSeparator, formatLetterTime } from '../../utils/formatters'
 import type { LetterDetail, ThreadAttachment } from '../../types'
 import { ReplyComposer } from './ReplyComposer'
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-
-const MONTHS = [
-  'Jan',
-  'Feb',
-  'Mar',
-  'Apr',
-  'May',
-  'Jun',
-  'Jul',
-  'Aug',
-  'Sep',
-  'Oct',
-  'Nov',
-  'Dec',
-] as const
-
 function formatReferenceId(referenceId: string): string {
   return referenceId.replace(/-/g, ' · ')
-}
-
-function formatTime(iso: string): string {
-  const d = new Date(iso)
-  const hhmm = d.toLocaleTimeString(undefined, {
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  })
-
-  const now = new Date()
-  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
-  const msgStart = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()
-  const diffDays = Math.round((todayStart - msgStart) / 86_400_000)
-
-  if (diffDays === 0) return hhmm
-  if (diffDays === 1) return `Yesterday · ${hhmm}`
-  return `${MONTHS[d.getMonth()]} ${d.getDate()} · ${hhmm}`
-}
-
-function formatDateSeparator(iso: string): string {
-  const d = new Date(iso)
-  const datePart = d.toLocaleDateString('en-US', {
-    month: 'long',
-    day: 'numeric',
-    year: 'numeric',
-  })
-  const weekday = d.toLocaleDateString('en-US', { weekday: 'long' })
-  return `${datePart} · ${weekday}`
 }
 
 function initials(name: string): string {
@@ -63,8 +19,6 @@ function initials(name: string): string {
     .toUpperCase()
 }
 
-// ─── Date separator ───────────────────────────────────────────────────────────
-
 function DateSeparator({ label }: { label: string }) {
   return (
     <div className="mb-4 flex items-center gap-3">
@@ -75,14 +29,15 @@ function DateSeparator({ label }: { label: string }) {
   )
 }
 
-// ─── Attachment pill ──────────────────────────────────────────────────────────
-
 function AttachmentPill({ attachment }: { attachment: ThreadAttachment }) {
+  const { t } = useTranslation('common')
   const isPdf = attachment.mimeType === 'application/pdf'
   return (
     <div className="flex h-[56px] min-w-[220px] items-center gap-2.5 rounded-[12px] border border-gray-100 bg-white px-2.5 py-2 shadow-sm">
       <span className="text-secondary-800 flex shrink-0 items-center justify-center rounded rounded-[12px] bg-gray-50 px-2 py-3 text-[12px] font-medium tracking-wide uppercase">
-        {isPdf ? 'PDF' : 'DOC'}
+        {isPdf
+          ? t('pages.lawyerWorkplace.thread.attachmentPdf', 'PDF')
+          : t('pages.lawyerWorkplace.thread.attachmentDoc', 'DOC')}
       </span>
       <div className="min-w-0 flex-1">
         <p className="text-dark-500 truncate text-[11px] font-medium">{attachment.filename}</p>
@@ -91,7 +46,7 @@ function AttachmentPill({ attachment }: { attachment: ThreadAttachment }) {
       <button
         type="button"
         className="text-light-700 hover:text-secondary-700 shrink-0 cursor-pointer transition-colors"
-        aria-label="Download"
+        aria-label={t('pages.lawyerWorkplace.thread.download', 'Download')}
       >
         <Icons.CloudDownload size={18} strokeWidth={2} />
       </button>
@@ -99,16 +54,14 @@ function AttachmentPill({ attachment }: { attachment: ThreadAttachment }) {
   )
 }
 
-// ─── Thread message card ──────────────────────────────────────────────────────
-
 function MessageCard({ message }: { message: LetterDetail['thread'][number] }) {
+  const { t, i18n } = useTranslation('common')
   const isIncoming = message.direction === 'incoming'
   const hasBody = message.body.trim().length > 0
   const hasAttachments = (message.attachments?.length ?? 0) > 0
 
   return (
     <div className="overflow-hidden rounded-[12px] bg-white shadow-sm">
-      {/* Message header */}
       <div className="flex items-start gap-3 px-4 pt-3.5 pb-2.5">
         <div className="bg-secondary-100 text-secondary-800 mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full font-sans text-[14px] font-medium">
           {initials(message.senderName)}
@@ -122,7 +75,10 @@ function MessageCard({ message }: { message: LetterDetail['thread'][number] }) {
           {message.toMailbox && (
             <p className="text-light-700 mt-0.5 flex flex-wrap items-center gap-0.5 text-[11px]">
               <span>
-                to {message.toMailbox}
+                {t('pages.lawyerWorkplace.thread.toMailbox', {
+                  mailbox: message.toMailbox,
+                  defaultValue: `to ${message.toMailbox}`,
+                })}
                 {message.viaLabel ? ` · ${message.viaLabel}` : ''}
               </span>
             </p>
@@ -130,19 +86,22 @@ function MessageCard({ message }: { message: LetterDetail['thread'][number] }) {
         </div>
 
         <div className="shrink-0 text-right">
-          <p className="text-light-700 text-[10.5px]">{formatTime(message.sentAt)}</p>
+          <p className="text-light-700 text-[10.5px]">
+            {formatLetterTime(message.sentAt, t, i18n.language)}
+          </p>
           <p
             className={cn(
               'mt-0.5 text-[9.5px] font-normal tracking-wider uppercase',
               isIncoming ? 'text-success-700' : 'text-secondary-700'
             )}
           >
-            {isIncoming ? 'RECEIVED' : 'SENT'}
+            {isIncoming
+              ? t('pages.lawyerWorkplace.thread.received', 'RECEIVED')
+              : t('pages.lawyerWorkplace.thread.sent', 'SENT')}
           </p>
         </div>
       </div>
 
-      {/* Body — divider only appears when body exists */}
       {hasBody && (
         <div className="border-t border-gray-200 px-4 py-3">
           <p className="text-dark-500 text-[13px] leading-relaxed whitespace-pre-wrap">
@@ -151,7 +110,6 @@ function MessageCard({ message }: { message: LetterDetail['thread'][number] }) {
         </div>
       )}
 
-      {/* Attachments — no divider above when body is absent; dashed divider when body exists */}
       {hasAttachments && (
         <div
           className={cn(
@@ -168,8 +126,6 @@ function MessageCard({ message }: { message: LetterDetail['thread'][number] }) {
   )
 }
 
-// ─── Main panel ───────────────────────────────────────────────────────────────
-
 export interface EmailThreadPanelProps {
   letter: LetterDetail | null
   replyDraft: string
@@ -185,10 +141,14 @@ export function EmailThreadPanel({
   markAsNbuResponse,
   onMarkAsNbuResponseChange,
 }: EmailThreadPanelProps) {
+  const { t, i18n } = useTranslation('common')
+
   if (!letter) {
     return (
       <div className="flex h-full min-h-0 flex-1 items-center justify-center bg-gray-50/50">
-        <p className="text-sm text-gray-400">Select a letter to view the thread</p>
+        <p className="text-sm text-gray-400">
+          {t('pages.lawyerWorkplace.thread.selectLetter', 'Select a letter to view the thread')}
+        </p>
       </div>
     )
   }
@@ -197,9 +157,7 @@ export function EmailThreadPanel({
 
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col bg-gray-50/20">
-      {/* ── Thread header ─────────────────────────────────────── */}
       <div className="shrink-0 border-b border-gray-200 bg-white px-6 py-4">
-        {/* Row 1: reference badge + subject (inline) */}
         <div className="mb-1.5 flex min-w-0 items-center gap-5">
           <span className="bg-light-100 text-light-700 shrink-0 rounded-full border border-gray-200 px-2.5 py-0.5 text-[11px] font-medium tracking-wide uppercase">
             {formatReferenceId(letter.referenceId)}
@@ -209,7 +167,6 @@ export function EmailThreadPanel({
           </h3>
         </div>
 
-        {/* Row 2: email path + archive (archive aligned with this row) */}
         <div className="flex items-center justify-between gap-3">
           <p className="min-w-0 truncate text-[11.5px]">
             <span className="text-dark-500">{letter.senderEmail}</span>
@@ -221,7 +178,14 @@ export function EmailThreadPanel({
             </span>
             <span className="text-light-700">{letter.recipientEmail}</span>
             {threadCount > 1 && (
-              <span className="text-light-700"> / {threadCount} messages in thread</span>
+              <span className="text-light-700">
+                {' '}
+                /{' '}
+                {t('pages.lawyerWorkplace.thread.messagesInThread', {
+                  count: threadCount,
+                  defaultValue: `${threadCount} messages in thread`,
+                })}
+              </span>
             )}
           </p>
           <Button
@@ -231,29 +195,29 @@ export function EmailThreadPanel({
             className="text-light-700 hover:text-dark-500 shrink-0 text-[12px] hover:bg-gray-50"
             leftIcon={<Icons.Download05 size={16} strokeWidth={1.5} />}
           >
-            Archive
+            {t('pages.lawyerWorkplace.thread.archive', 'Archive')}
           </Button>
         </div>
       </div>
 
-      {/* ── Message list (scrollable) ─────────────────────────── */}
       <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-4">
         {letter.thread.map((message, index) => {
           const showDateSep =
             index === 0 ||
-            formatDateSeparator(message.sentAt) !==
-              formatDateSeparator(letter.thread[index - 1]!.sentAt)
+            formatDateSeparator(message.sentAt, i18n.language) !==
+              formatDateSeparator(letter.thread[index - 1]!.sentAt, i18n.language)
 
           return (
             <div key={message.id}>
-              {showDateSep && <DateSeparator label={formatDateSeparator(message.sentAt)} />}
+              {showDateSep && (
+                <DateSeparator label={formatDateSeparator(message.sentAt, i18n.language)} />
+              )}
               <MessageCard message={message} />
             </div>
           )
         })}
       </div>
 
-      {/* ── Reply composer (fixed at bottom) ─────────────────── */}
       <ReplyComposer
         fromMailbox={letter.recipientEmail}
         toMailbox={letter.senderEmail}

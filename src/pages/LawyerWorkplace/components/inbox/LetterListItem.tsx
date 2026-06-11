@@ -1,18 +1,31 @@
+import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
+import { formatLetterTime } from '../../utils/formatters'
 import type { LetterListItem as LetterListItemType } from '../../types'
 
-// ─── Status badge ─────────────────────────────────────────────────────────────
-
-const STATUS_META: Record<LetterListItemType['status'], { label: string; className: string }> = {
-  new: { label: 'NEW', className: 'bg-error-100 text-error-700' },
-  in_progress: { label: 'IN PROGRESS', className: 'bg-secondary-100 text-secondary-800' },
-  on_board: { label: 'ON BOARD', className: 'bg-warning-100 text-warning-700' },
-  sent_to_kanban: { label: 'KANBAN', className: 'bg-blue-100 text-blue-500' },
-  auto_processed: { label: 'AUTO', className: 'bg-gray-100 text-gray-600' },
+const STATUS_KEYS: Record<LetterListItemType['status'], { labelKey: string; className: string }> = {
+  new: {
+    labelKey: 'pages.lawyerWorkplace.letterItem.status.new',
+    className: 'bg-error-100 text-error-700',
+  },
+  in_progress: {
+    labelKey: 'pages.lawyerWorkplace.letterItem.status.inProgress',
+    className: 'bg-secondary-100 text-secondary-800',
+  },
+  on_board: {
+    labelKey: 'pages.lawyerWorkplace.letterItem.status.onBoard',
+    className: 'bg-warning-100 text-warning-700',
+  },
+  sent_to_kanban: {
+    labelKey: 'pages.lawyerWorkplace.letterItem.status.sentToKanban',
+    className: 'bg-blue-100 text-blue-500',
+  },
+  auto_processed: {
+    labelKey: 'pages.lawyerWorkplace.letterItem.status.autoProcessed',
+    className: 'bg-gray-100 text-gray-600',
+  },
 }
-
-// ─── Type badge colours ───────────────────────────────────────────────────────
 
 const TYPE_COLOUR: Record<string, string> = {
   complaint: 'bg-error-100 text-error-700',
@@ -22,45 +35,6 @@ const TYPE_COLOUR: Record<string, string> = {
   inquiry: 'bg-success-100 text-success-700',
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-const MONTHS = [
-  'Jan',
-  'Feb',
-  'Mar',
-  'Apr',
-  'May',
-  'Jun',
-  'Jul',
-  'Aug',
-  'Sep',
-  'Oct',
-  'Nov',
-  'Dec',
-] as const
-
-function formatTime(iso: string): string {
-  const d = new Date(iso)
-  const hhmm = d.toLocaleTimeString(undefined, {
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  })
-
-  // Midnight-normalize for pure calendar-day comparison
-  const now = new Date()
-  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
-  const msgStart = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()
-  const diffDays = Math.round((todayStart - msgStart) / 86_400_000)
-
-  if (diffDays === 0) return hhmm // today → "09:12"
-  if (diffDays === 1) return `Yesterday · ${hhmm}` // yesterday → "Yesterday · 09:12"
-  // Older → "Jun 9 · 09:12"  (short month, no year to keep it compact)
-  return `${MONTHS[d.getMonth()]} ${d.getDate()} · ${hhmm}`
-}
-
-// ─── Component ────────────────────────────────────────────────────────────────
-
 export interface LetterListItemProps {
   letter: LetterListItemType
   isSelected: boolean
@@ -68,7 +42,8 @@ export interface LetterListItemProps {
 }
 
 export function LetterListItem({ letter, isSelected, onSelect }: LetterListItemProps) {
-  const status = STATUS_META[letter.status]
+  const { t, i18n } = useTranslation('common')
+  const status = STATUS_KEYS[letter.status]
   const typeColour = letter.letterType
     ? (TYPE_COLOUR[letter.letterType] ?? 'bg-gray-100 text-gray-600')
     : null
@@ -86,15 +61,15 @@ export function LetterListItem({ letter, isSelected, onSelect }: LetterListItemP
             : 'border-white bg-white hover:bg-gray-50/40'
       )}
     >
-      {/* Row 1: Sender name + time */}
       <div className="mb-1.5 flex items-baseline justify-between gap-2">
         <span className="text-dark-500 min-w-0 truncate text-[13px] leading-tight font-medium">
           {letter.senderName}
         </span>
-        <span className="text-light-700 shrink-0 text-[11px]">{formatTime(letter.receivedAt)}</span>
+        <span className="text-light-700 shrink-0 text-[11px]">
+          {formatLetterTime(letter.receivedAt, t, i18n.language)}
+        </span>
       </div>
 
-      {/* Row 2: sender → mailbox (inline; mailbox wraps to next line when needed) + status badge */}
       <div className="mb-0.5 flex items-start gap-2">
         <p className="text-light-700 flex min-w-0 flex-1 flex-wrap text-[11.5px] leading-snug">
           <span className="inline-flex items-center whitespace-nowrap">
@@ -109,7 +84,6 @@ export function LetterListItem({ letter, isSelected, onSelect }: LetterListItemP
           <span>{letter.mailbox}</span>
         </p>
 
-        {/* Status badge — right-aligned on email row */}
         {status && (
           <span
             className={cn(
@@ -117,17 +91,15 @@ export function LetterListItem({ letter, isSelected, onSelect }: LetterListItemP
               status.className
             )}
           >
-            {status.label}
+            {t(status.labelKey)}
           </span>
         )}
       </div>
 
-      {/* Row 3: Subject */}
       <p className="text-dark-500 mt-2 mb-2 line-clamp-2 text-[12.5px] leading-snug">
         {letter.subject}
       </p>
 
-      {/* Row 4: Type badge + client info */}
       <div className="flex flex-wrap items-center gap-1.5">
         {typeColour ? (
           <span
@@ -142,7 +114,7 @@ export function LetterListItem({ letter, isSelected, onSelect }: LetterListItemP
         ) : (
           <span className="bg-light-100 border-dotted-[1px] text-light-700 flex items-center gap-1 rounded-full border-gray-200 px-2 py-0.5 text-[10.5px] font-medium">
             <span className="bg-light-700 h-1.5 w-1.5 rounded-full" />
-            <span>Unclassified</span>
+            <span>{t('pages.lawyerWorkplace.letterItem.unclassified', 'Unclassified')}</span>
           </span>
         )}
 
@@ -153,7 +125,9 @@ export function LetterListItem({ letter, isSelected, onSelect }: LetterListItemP
             <span className="text-light-700 text-[11px]">{letter.clientCode}</span>
           </div>
         ) : (
-          <em className="text-error-700 text-[11px] italic">unidentified</em>
+          <em className="text-error-700 text-[11px] italic">
+            {t('pages.lawyerWorkplace.letterItem.unidentified', 'unidentified')}
+          </em>
         )}
       </div>
     </button>
