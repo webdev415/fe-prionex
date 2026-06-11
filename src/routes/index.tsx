@@ -139,15 +139,12 @@ const ProfileSettingsPage = lazy(() =>
   }))
 )
 const AiAssistantPage = lazy(() =>
-  import('@/pages/AiAssistant/AiAssistantPage').then((m) => ({
-    default: m.AiAssistantPage,
-  }))
-)
-const AiAssistantBetaPage = lazy(() =>
   import('@/pages/AiAssistant/AiAssistantBetaPage').then((m) => ({
     default: m.AiAssistantBetaPage,
   }))
 )
+// /ai-assistant теперь рендерит бета-страницу с реальным API (@/features/aiAssistant).
+// Старая мок-страница (AiAssistantPage.tsx, buildMockAssistantReply) удалена.
 const BulkOperatorAssignmentPage = lazy(() =>
   import('@/pages/Operations').then((m) => ({
     default: m.BulkOperatorAssignmentPage,
@@ -212,10 +209,6 @@ export const router = createBrowserRouter([
       {
         path: 'ai-assistant',
         element: withSuspense(<AiAssistantPage />),
-      },
-      {
-        path: 'ai-assistant-beta',
-        element: withSuspense(<AiAssistantBetaPage />),
       },
       {
         path: 'team-management/users',
