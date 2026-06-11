@@ -1763,7 +1763,10 @@
             "tags": "Теги",
             "status": "Статус",
             "note": "Примітка",
-            "unknownTagTitle": "Тег не знайдено в цьому проєкті"
+            "protectedTagNote": "Захищений тег: {{names}}",
+            "requirePermissionNote": "Потрібен дозвіл! Захищений тег: {{names}}",
+            "unknownTagTitle": "Тег не знайдено в цьому проєкті",
+            "blockedProtectedTagTitle": "У вас немає дозволу на видалення цього захищеного тега"
           },
           "statuses": {
             "ready": "Готово",

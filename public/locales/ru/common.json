@@ -1649,7 +1649,10 @@
             "tags": "Теги",
             "status": "Статус",
             "note": "Примечание",
-            "unknownTagTitle": "Тег не найден в этом проекте"
+            "protectedTagNote": "Защищённый тег: {{names}}",
+            "requirePermissionNote": "Требуется разрешение! Защищённый тег: {{names}}",
+            "unknownTagTitle": "Тег не найден в этом проекте",
+            "blockedProtectedTagTitle": "У вас нет прав на удаление этого защищённого тега"
           },
           "statuses": {
             "ready": "Готово",
