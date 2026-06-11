@@ -25,6 +25,20 @@ export interface OperatorOption {
   isInactive: boolean
 }
 
+// KAN-607: negative sentinel ids carried inside the responsibleEmployeeIds /
+// interactionUserIds arrays to represent the special "null" filter options.
+// Real operator ids are always positive, so these never collide. The backend
+// (`clients.py`) interprets them as "IS NULL" / "zero interactions".
+export const NO_RESPONSIBLE_ID = -1
+export const NO_INTERACTIONS_ID = -1
+
+/** A static "null" option pinned below the select-all row: always visible
+ * (never hidden by the search) and excluded from the select-all toggle. */
+export interface SpecialOption {
+  id: number
+  label: string
+}
+
 interface OperatorMultiSelectDropdownProps {
   options: OperatorOption[]
   selectedIds: number[]
@@ -36,6 +50,8 @@ interface OperatorMultiSelectDropdownProps {
   /** Label for the "select all / clear all" toggle row at the top of the
    * list. Translated by the caller; defaults to a generic "Select all". */
   selectAllLabel?: string
+  /** Optional pinned "null" option (KAN-607). */
+  specialOption?: SpecialOption
   testId?: string
 }
 
@@ -48,6 +64,7 @@ export function OperatorMultiSelectDropdown({
   searchPlaceholder,
   emptyText,
   selectAllLabel,
+  specialOption,
   testId,
 }: OperatorMultiSelectDropdownProps) {
   const { t } = useTranslation('common')
@@ -65,7 +82,9 @@ export function OperatorMultiSelectDropdown({
   }, [options, searchQuery, selectedIds])
 
   const allIds = useMemo(() => options.map((o) => o.id), [options])
-  const isAllSelected = allIds.length > 0 && selectedIds.length === allIds.length
+  // Tracks the real operator options only; the special option is independent.
+  const isAllSelected =
+    allIds.length > 0 && allIds.every((id) => selectedIds.includes(id))
 
   const handleOpenChange = (open: boolean) => {
     setIsOpen(open)
@@ -86,9 +105,14 @@ export function OperatorMultiSelectDropdown({
 
   // Toggles every option on / off in one click. Always operates over the
   // FULL options list (not the search-filtered slice) — same as the
-  // reference EmployeeFilterDropdown on Action Analysis.
+  // reference EmployeeFilterDropdown on Action Analysis. The special option
+  // is preserved across the toggle.
   const handleToggleAll = () => {
-    onSelectionChange(isAllSelected ? [] : [...allIds])
+    const keepSpecial =
+      specialOption && selectedIds.includes(specialOption.id)
+        ? [specialOption.id]
+        : []
+    onSelectionChange(isAllSelected ? keepSpecial : [...allIds, ...keepSpecial])
   }
 
   return (
@@ -114,7 +138,7 @@ export function OperatorMultiSelectDropdown({
         </div>
 
         <div className="max-h-[240px] overflow-y-auto p-2">
-          {options.length === 0 ? (
+          {options.length === 0 && !specialOption ? (
             <div className="py-4 text-center text-sm text-gray-500">
               {emptyText ?? t('pages.clients.filters.noUsersAvailable', 'No users available')}
             </div>
@@ -124,13 +148,26 @@ export function OperatorMultiSelectDropdown({
                   Operates on the full options list, not the search slice,
                   matching the reference EmployeeFilterDropdown on Action
                   Analysis. */}
-              <label className="text-dark-500 flex cursor-pointer items-center gap-2 rounded px-2 py-2 hover:bg-gray-50">
-                <Checkbox checked={isAllSelected} onCheckedChange={handleToggleAll} />
-                <span className="text-sm font-medium">
-                  {selectAllLabel ?? t('pages.clients.filters.selectAll', 'Select all')}
-                </span>
-              </label>
-              {filteredOptions.length === 0 ? (
+              {options.length > 0 && (
+                <label className="text-dark-500 flex cursor-pointer items-center gap-2 rounded px-2 py-2 hover:bg-gray-50">
+                  <Checkbox checked={isAllSelected} onCheckedChange={handleToggleAll} />
+                  <span className="text-sm font-medium">
+                    {selectAllLabel ?? t('pages.clients.filters.selectAll', 'Select all')}
+                  </span>
+                </label>
+              )}
+              {/* Special "null" option, pinned below select-all and never
+                  filtered by the search query. */}
+              {specialOption && (
+                <label className="text-dark-500 flex cursor-pointer items-center gap-2 rounded px-2 py-2 hover:bg-gray-50">
+                  <Checkbox
+                    checked={selectedIds.includes(specialOption.id)}
+                    onCheckedChange={() => handleToggle(specialOption.id)}
+                  />
+                  <span className="text-sm font-medium">{specialOption.label}</span>
+                </label>
+              )}
+              {options.length > 0 && filteredOptions.length === 0 ? (
                 <div className="py-4 text-center text-sm text-gray-500">
                   {t('pages.clients.filters.noMatchingUsers', 'No matches')}
                 </div>
