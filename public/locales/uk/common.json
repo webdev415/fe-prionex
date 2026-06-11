@@ -345,6 +345,8 @@
     },
     "lawyerWorkplace": {
       "navAria": "Навігація робочого місця юриста",
+      "navScrollLeft": "Прокрутити вкладки вліво",
+      "navScrollRight": "Прокрутити вкладки вправо",
       "tabs": {
         "inbox": "Вхідні",
         "kanban": "Канбан",
@@ -385,6 +387,8 @@
       },
       "thread": {
         "selectLetter": "Оберіть лист, щоб переглянути ланцюжок",
+        "backToList": "Назад до списку",
+        "parameters": "Параметри",
         "archive": "Архівувати",
         "received": "ОТРИМАНО",
         "sent": "НАДІСЛАНО",
@@ -398,6 +402,7 @@
       "reply": {
         "replyFrom": "Відповідь з",
         "markNbuResponse": "Позначити як відповідь НБУ",
+        "markNbuShort": "НБУ",
         "placeholder": "Напишіть відповідь...",
         "reassign": "Передати",
         "saveDraft": "Зберегти чернетку",
@@ -413,6 +418,7 @@
       "parameters": {
         "title": "Параметри листа",
         "selectLetter": "Оберіть лист, щоб переглянути параметри",
+        "close": "Закрити параметри",
         "autoBadge": "АВТО · {{percent}}%",
         "type": "Тип",
         "selectType": "Оберіть тип",

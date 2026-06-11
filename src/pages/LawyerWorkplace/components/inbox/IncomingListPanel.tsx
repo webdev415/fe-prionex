@@ -164,7 +164,7 @@ export function IncomingListPanel({
                 type="button"
                 onClick={() => onFolderChange(f.id)}
                 className={cn(
-                  'flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-md px-2 py-2 text-[12px] font-medium transition-all',
+                  'flex min-w-0 flex-1 cursor-pointer items-center justify-center gap-1 rounded-md px-1.5 py-2 text-[11px] font-medium transition-all sm:gap-1.5 sm:px-2 sm:text-[12px]',
                   isActive
                     ? 'bg-secondary-800 text-white shadow-sm'
                     : 'text-dark-500 hover:text-dark-500 hover:bg-gray-50'
@@ -177,12 +177,12 @@ export function IncomingListPanel({
           })}
         </div>
 
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
             onClick={() => onFilterChange('all')}
             className={cn(
-              'flex cursor-pointer items-center gap-2 rounded-full px-4 py-2 text-[12px] transition-colors',
+              'flex cursor-pointer items-center gap-2 rounded-full px-3 py-1.5 text-[11px] transition-colors sm:px-4 sm:py-2 sm:text-[12px]',
               activeFilter === 'all'
                 ? 'bg-secondary-800 text-white'
                 : 'text-dark-500 bg-white hover:bg-gray-50'
@@ -196,7 +196,7 @@ export function IncomingListPanel({
             type="button"
             onClick={() => onFilterChange('new')}
             className={cn(
-              'flex cursor-pointer items-center gap-1.5 rounded-full px-4 py-2 text-[12px] transition-colors',
+              'flex cursor-pointer items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] transition-colors sm:px-4 sm:py-2 sm:text-[12px]',
               activeFilter === 'new'
                 ? 'bg-secondary-800 text-white'
                 : 'text-dark-500 bg-white hover:bg-gray-50'
@@ -210,7 +210,7 @@ export function IncomingListPanel({
             type="button"
             onClick={() => onFilterChange('in_progress')}
             className={cn(
-              'flex cursor-pointer items-center gap-1.5 rounded-full px-4 py-2 text-[12px] transition-colors',
+              'flex cursor-pointer items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] transition-colors sm:px-4 sm:py-2 sm:text-[12px]',
               activeFilter === 'in_progress'
                 ? 'bg-secondary-800 text-white'
                 : 'text-dark-500 bg-white hover:bg-gray-50'

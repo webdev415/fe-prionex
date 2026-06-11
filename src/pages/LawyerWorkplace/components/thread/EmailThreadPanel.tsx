@@ -33,7 +33,7 @@ function AttachmentPill({ attachment }: { attachment: ThreadAttachment }) {
   const { t } = useTranslation('common')
   const isPdf = attachment.mimeType === 'application/pdf'
   return (
-    <div className="flex h-[56px] min-w-[220px] items-center gap-2.5 rounded-[12px] border border-gray-100 bg-white px-2.5 py-2 shadow-sm">
+    <div className="flex h-[56px] min-w-0 items-center gap-2.5 rounded-[12px] border border-gray-100 bg-white px-2.5 py-2 shadow-sm sm:min-w-[220px]">
       <span className="text-secondary-800 flex shrink-0 items-center justify-center rounded rounded-[12px] bg-gray-50 px-2 py-3 text-[12px] font-medium tracking-wide uppercase">
         {isPdf
           ? t('pages.lawyerWorkplace.thread.attachmentPdf', 'PDF')
@@ -132,6 +132,8 @@ export interface EmailThreadPanelProps {
   onReplyDraftChange: (value: string) => void
   markAsNbuResponse: boolean
   onMarkAsNbuResponseChange: (checked: boolean) => void
+  onBack?: () => void
+  onOpenParameters?: () => void
 }
 
 export function EmailThreadPanel({
@@ -140,6 +142,8 @@ export function EmailThreadPanel({
   onReplyDraftChange,
   markAsNbuResponse,
   onMarkAsNbuResponseChange,
+  onBack,
+  onOpenParameters,
 }: EmailThreadPanelProps) {
   const { t, i18n } = useTranslation('common')
 
@@ -155,30 +159,75 @@ export function EmailThreadPanel({
 
   const threadCount = letter.thread.length
 
+  const showCompactNav = Boolean(onBack || onOpenParameters)
+
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col bg-gray-50/20">
-      <div className="shrink-0 border-b border-gray-200 bg-white px-6 py-4">
-        <div className="mb-1.5 flex min-w-0 items-center gap-5">
-          <span className="bg-light-100 text-light-700 shrink-0 rounded-full border border-gray-200 px-2.5 py-0.5 text-[11px] font-medium tracking-wide uppercase">
-            {formatReferenceId(letter.referenceId)}
-          </span>
-          <h3 className="text-dark-500 min-w-0 truncate text-[18px] leading-snug font-medium">
-            {letter.subject}
-          </h3>
+      {showCompactNav && (
+        <div className="flex shrink-0 items-center justify-between border-b border-gray-100 bg-white px-3 py-2 xl:hidden">
+          {onBack ? (
+            <button
+              type="button"
+              onClick={onBack}
+              className="text-dark-500 hover:text-secondary-800 flex cursor-pointer items-center gap-1.5 text-[13px] font-medium lg:hidden"
+            >
+              <Icons.ArrowLeft size={18} strokeWidth={1.5} />
+              {t('pages.lawyerWorkplace.thread.backToList', 'Back to list')}
+            </button>
+          ) : (
+            <span className="hidden lg:block" />
+          )}
+
+          {onOpenParameters && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="xs"
+              className="text-light-700 hover:text-dark-500 ml-auto text-[12px] hover:bg-gray-50"
+              leftIcon={<Icons.Setting07 size={16} strokeWidth={1.5} />}
+              onClick={onOpenParameters}
+            >
+              {t('pages.lawyerWorkplace.thread.parameters', 'Parameters')}
+            </Button>
+          )}
+        </div>
+      )}
+
+      <div className="shrink-0 border-b border-gray-200 bg-white px-3 py-2.5 sm:px-6 sm:py-4">
+        <div className="mb-1.5 flex min-w-0 items-start gap-2 sm:items-center sm:gap-5">
+          <div className="flex min-w-0 flex-1 flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-5">
+            <span className="bg-light-100 text-light-700 w-fit shrink-0 rounded-full border border-gray-200 px-2.5 py-0.5 text-[11px] font-medium tracking-wide uppercase">
+              {formatReferenceId(letter.referenceId)}
+            </span>
+            <h3 className="text-dark-500 min-w-0 text-[15px] leading-snug font-medium sm:truncate sm:text-[18px]">
+              {letter.subject}
+            </h3>
+          </div>
+          <Button
+            type="button"
+            variant="ghost"
+            size="xs"
+            aria-label={t('pages.lawyerWorkplace.thread.archive', 'Archive')}
+            title={t('pages.lawyerWorkplace.thread.archive', 'Archive')}
+            className="text-light-700 hover:text-dark-500 shrink-0 text-[12px] hover:bg-gray-50 sm:hidden"
+            leftIcon={<Icons.Download05 size={16} strokeWidth={1.5} />}
+          />
         </div>
 
-        <div className="flex items-center justify-between gap-3">
-          <p className="min-w-0 truncate text-[11.5px]">
-            <span className="text-dark-500">{letter.senderEmail}</span>
+        <div className="flex min-w-0 items-center justify-between gap-2 sm:gap-3">
+          <p className="min-w-0 flex-1 text-[10.5px] sm:truncate sm:text-[11.5px]">
+            <span className="text-dark-500 break-all sm:break-normal">{letter.senderEmail}</span>
             <span
               className="text-light-700 inline-flex items-center px-0.5 py-0.5 align-middle"
               aria-hidden="true"
             >
               <Icons.ArrowRight02 size={10} strokeWidth={1.5} />
             </span>
-            <span className="text-light-700">{letter.recipientEmail}</span>
+            <span className="text-light-700 break-all sm:break-normal">
+              {letter.recipientEmail}
+            </span>
             {threadCount > 1 && (
-              <span className="text-light-700">
+              <span className="text-light-700 block sm:inline">
                 {' '}
                 /{' '}
                 {t('pages.lawyerWorkplace.thread.messagesInThread', {
@@ -192,7 +241,7 @@ export function EmailThreadPanel({
             type="button"
             variant="ghost"
             size="xs"
-            className="text-light-700 hover:text-dark-500 shrink-0 text-[12px] hover:bg-gray-50"
+            className="text-light-700 hover:text-dark-500 hidden shrink-0 text-[12px] hover:bg-gray-50 sm:inline-flex"
             leftIcon={<Icons.Download05 size={16} strokeWidth={1.5} />}
           >
             {t('pages.lawyerWorkplace.thread.archive', 'Archive')}
@@ -200,7 +249,7 @@ export function EmailThreadPanel({
         </div>
       </div>
 
-      <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-4">
+      <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-3 py-4 sm:px-5">
         {letter.thread.map((message, index) => {
           const showDateSep =
             index === 0 ||

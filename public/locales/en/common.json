@@ -340,6 +340,8 @@
     },
     "lawyerWorkplace": {
       "navAria": "Lawyer Workplace navigation",
+      "navScrollLeft": "Scroll tabs left",
+      "navScrollRight": "Scroll tabs right",
       "tabs": {
         "inbox": "Inbox",
         "kanban": "Kanban",
@@ -380,6 +382,8 @@
       },
       "thread": {
         "selectLetter": "Select a letter to view the thread",
+        "backToList": "Back to list",
+        "parameters": "Parameters",
         "archive": "Archive",
         "received": "RECEIVED",
         "sent": "SENT",
@@ -393,6 +397,7 @@
       "reply": {
         "replyFrom": "Reply from",
         "markNbuResponse": "Mark as NBU response",
+        "markNbuShort": "NBU",
         "placeholder": "Write your reply...",
         "reassign": "Reassign",
         "saveDraft": "Save draft",
@@ -408,6 +413,7 @@
       "parameters": {
         "title": "Letter parameters",
         "selectLetter": "Select a letter to view parameters",
+        "close": "Close parameters",
         "autoBadge": "AUTO · {{percent}}%",
         "type": "Type",
         "selectType": "Select type",

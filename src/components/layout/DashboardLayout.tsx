@@ -957,7 +957,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           <header
             className={cn(
               'bg-light-50 fixed top-0 right-0 z-20 flex h-[60px] justify-between border-l border-white/10 px-3 shadow-sm transition-all duration-300 sm:px-4 lg:px-6',
-              isLawyerWorkplaceRoute ? 'items-stretch' : 'items-center',
+              isLawyerWorkplaceRoute ? 'items-stretch overflow-hidden' : 'items-center',
               'left-0 lg:left-18', // Mobile: full width, Desktop: margin for collapsed sidebar
               isOpenSideBar && 'lg:left-60' // Desktop: expanded sidebar
             )}
@@ -967,7 +967,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               className={cn(
                 'relative flex gap-2 lg:gap-3',
                 isLawyerWorkplaceRoute
-                  ? 'min-w-0 flex-1 items-stretch self-stretch'
+                  ? 'min-w-0 flex-1 items-stretch self-stretch overflow-hidden'
                   : 'items-center'
               )}
             >
@@ -1019,7 +1019,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
             {/* Right side: Desktop - individual buttons, Mobile - grouped dropdown */}
             {/* Desktop: Project Selector, Language Switcher and User Profile */}
-            <div className="hidden items-center gap-3 self-center lg:flex">
+            <div className="hidden shrink-0 items-center gap-3 self-center lg:flex">
               <MinimizedCallBubble />
               <MinimizedChainExecutorBubble />
               <NotificationBell />
@@ -1028,7 +1028,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             </div>
 
             {/* Mobile: Notification bell + dropdown menu */}
-            <div className="flex items-center gap-2 self-center lg:hidden">
+            <div className="flex shrink-0 items-center gap-1.5 self-center sm:gap-2 lg:hidden">
               <MinimizedCallBubble />
               <MinimizedChainExecutorBubble />
               <NotificationBell />

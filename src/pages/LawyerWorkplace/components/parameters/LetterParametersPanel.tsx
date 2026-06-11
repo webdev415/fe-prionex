@@ -124,14 +124,15 @@ function ParameterDropdown({ label, children, items, placeholder = '—' }: Para
 
 export interface LetterParametersPanelProps {
   letter: LetterDetail | null
+  onClose?: () => void
 }
 
-export function LetterParametersPanel({ letter }: LetterParametersPanelProps) {
+export function LetterParametersPanel({ letter, onClose }: LetterParametersPanelProps) {
   const { t, i18n } = useTranslation('common')
 
   if (!letter) {
     return (
-      <div className="flex h-full w-[22%] shrink-0 items-center justify-center border-l border-gray-200 bg-white">
+      <div className="flex h-full w-full shrink-0 items-center justify-center border-l border-gray-200 bg-white">
         <p className="px-4 text-center text-sm text-gray-400">
           {t('pages.lawyerWorkplace.parameters.selectLetter', 'Select a letter to view parameters')}
         </p>
@@ -169,20 +170,32 @@ export function LetterParametersPanel({ letter }: LetterParametersPanelProps) {
   const lawyerLabel = getLawyerLabel(p.lawyerId || 'auto', p.lawyerLabel)
 
   return (
-    <div className="flex h-full w-[22%] shrink-0 flex-col justify-between border-l border-gray-100 bg-white/50">
+    <div className="flex h-full w-full shrink-0 flex-col justify-between overflow-y-auto border-l border-gray-100 bg-white">
       <div className="flex w-full flex-col items-start gap-4 px-[18px] py-[16px]">
-        <div className="flex w-full items-center justify-between self-stretch">
+        <div className="flex w-full items-center justify-between gap-2 self-stretch">
           <span className="text-dark-500 text-[14px] font-medium">
             {t('pages.lawyerWorkplace.parameters.title', 'Letter parameters')}
           </span>
-          {p.autoConfidence > 0 && (
-            <span className="bg-primary-300 text-secondary-800 rounded-full px-[9px] py-[2px] text-[9.5px] font-normal">
-              {t('pages.lawyerWorkplace.parameters.autoBadge', {
-                percent: p.autoConfidence,
-                defaultValue: `AUTO · ${p.autoConfidence}%`,
-              })}
-            </span>
-          )}
+          <div className="flex shrink-0 items-center gap-2">
+            {p.autoConfidence > 0 && (
+              <span className="bg-primary-300 text-secondary-800 rounded-full px-[9px] py-[2px] text-[9.5px] font-normal">
+                {t('pages.lawyerWorkplace.parameters.autoBadge', {
+                  percent: p.autoConfidence,
+                  defaultValue: `AUTO · ${p.autoConfidence}%`,
+                })}
+              </span>
+            )}
+            {onClose && (
+              <button
+                type="button"
+                onClick={onClose}
+                className="text-light-700 hover:text-dark-500 flex h-7 w-7 cursor-pointer items-center justify-center rounded-md transition-colors hover:bg-gray-100 xl:hidden"
+                aria-label={t('pages.lawyerWorkplace.parameters.close', 'Close parameters')}
+              >
+                <Icons.Cancel01 size={18} strokeWidth={1.5} />
+              </button>
+            )}
+          </div>
         </div>
 
         <ParameterDropdown
