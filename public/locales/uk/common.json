@@ -43,7 +43,8 @@
     "messagingIntegrations": "Інтеграції повідомлень",
     "messagingDrafts": "Чернетки повідомлень",
     "campaignAnalytics": "Аналітика кампаній",
-    "contactTypes": "Типи контактів"
+    "contactTypes": "Типи контактів",
+    "lawyerWorkplace": "Робоче місце юриста"
   },
   "search": {
     "placeholder": "Пошук",

@@ -34,6 +34,7 @@ import {
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/Tooltip'
 import { searchClients, mapPriorityLevel, type SearchType } from '@/api/clientSearchApi'
 import { RouteChangeTracker, TrackingProvider } from '@/features/operatorAnalytics'
+import { LawyerWorkplaceHeaderNav } from '@/pages/LawyerWorkplace/components/LawyerWorkplaceHeaderNav'
 
 // Minimum digit count required to fire a phone-type search. Mirrors the
 // backend guard at services/client/app/routers/search.py (PHONE_MIN_DIGITS).
@@ -737,6 +738,13 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         requiredPermission: PERMISSIONS.ACTION_ANALYSIS.VIEW,
       },
       {
+        path: '/dashboard/lawyer-workplace',
+        icon: 'work',
+        label: t('navigation.lawyerWorkplace', 'Lawyer Workplace'),
+        requiredPermissions: [PERMISSIONS.LEGAL_WORKPLACE.VIEW, PERMISSIONS.SYSTEM.MANAGE_SETTINGS],
+        mode: 'any' as const,
+      },
+      {
         path: '/dashboard/team-management',
         icon: 'user-multiple-02',
         label: t('navigation.teamManagement', 'Team Management'),
@@ -920,6 +928,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     location.pathname === '/dashboard/ai-assistant' ||
     location.pathname === '/dashboard/ai-assistant/'
 
+  const isLawyerWorkplaceRoute =
+    location.pathname === '/dashboard/lawyer-workplace' ||
+    location.pathname.startsWith('/dashboard/lawyer-workplace/')
+
   return (
     <TrackingProvider>
       <RouteChangeTracker />
@@ -944,17 +956,28 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           {/* Fixed Header */}
           <header
             className={cn(
-              'bg-light-50 fixed top-0 right-0 z-20 flex h-[60px] items-center justify-between border-l border-white/10 px-3 shadow-sm transition-all duration-300 sm:px-4 lg:px-6',
+              'bg-light-50 fixed top-0 right-0 z-20 flex h-[60px] justify-between border-l border-white/10 px-3 shadow-sm transition-all duration-300 sm:px-4 lg:px-6',
+              isLawyerWorkplaceRoute ? 'items-stretch' : 'items-center',
               'left-0 lg:left-18', // Mobile: full width, Desktop: margin for collapsed sidebar
               isOpenSideBar && 'lg:left-60' // Desktop: expanded sidebar
             )}
           >
-            {/* Left side: Menu button (mobile) + Search Bar */}
-            <div className="relative flex items-center gap-2 lg:gap-3">
+            {/* Left side: Menu button (mobile) + Search Bar or Lawyer Workplace nav */}
+            <div
+              className={cn(
+                'relative flex gap-2 lg:gap-3',
+                isLawyerWorkplaceRoute
+                  ? 'min-w-0 flex-1 items-stretch self-stretch'
+                  : 'items-center'
+              )}
+            >
               {/* Mobile menu button */}
               <button
                 onClick={toggleSidebar}
-                className="focus:ring-primary-500 group flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-gray-200 bg-white shadow-sm transition-all duration-200 hover:border-gray-300 hover:bg-gray-50 hover:shadow-md focus:ring-2 focus:ring-offset-2 focus:outline-none active:bg-gray-100 active:shadow-sm disabled:cursor-not-allowed disabled:opacity-50 lg:hidden"
+                className={cn(
+                  'focus:ring-primary-500 group flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-gray-200 bg-white shadow-sm transition-all duration-200 hover:border-gray-300 hover:bg-gray-50 hover:shadow-md focus:ring-2 focus:ring-offset-2 focus:outline-none active:bg-gray-100 active:shadow-sm disabled:cursor-not-allowed disabled:opacity-50 lg:hidden',
+                  isLawyerWorkplaceRoute && 'self-center'
+                )}
                 aria-label="Toggle menu"
               >
                 <Icons.Menu11
@@ -964,36 +987,39 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                 />
               </button>
 
-              {/* Search Bar with Results */}
-              <div className="relative flex items-center gap-2" ref={searchContainerRef}>
-                <SearchBar
-                  placeholder={t('search.placeholder')}
-                  searchOptions={searchOptions}
-                  defaultSearchType="phone"
-                  onSearch={handleSearch}
-                  onSearchChange={handleSearchChange}
-                  isLoading={isSearching}
-                  value={localSearchQuery}
-                  searchTypeValue={localSearchType}
-                />
-                {showSearchDropdown && (
-                  <SearchResults
-                    query={localSearchQuery}
-                    searchType={localSearchType}
-                    results={searchResults}
+              {isLawyerWorkplaceRoute ? (
+                <LawyerWorkplaceHeaderNav />
+              ) : (
+                <div className="relative flex items-center gap-2" ref={searchContainerRef}>
+                  <SearchBar
+                    placeholder={t('search.placeholder')}
+                    searchOptions={searchOptions}
+                    defaultSearchType="phone"
+                    onSearch={handleSearch}
+                    onSearchChange={handleSearchChange}
                     isLoading={isSearching}
-                    error={searchError}
-                    hint={searchHint}
-                    onViewAll={handleViewAllResults}
-                    onResultClick={handleResultClick}
+                    value={localSearchQuery}
+                    searchTypeValue={localSearchType}
                   />
-                )}
-              </div>
+                  {showSearchDropdown && (
+                    <SearchResults
+                      query={localSearchQuery}
+                      searchType={localSearchType}
+                      results={searchResults}
+                      isLoading={isSearching}
+                      error={searchError}
+                      hint={searchHint}
+                      onViewAll={handleViewAllResults}
+                      onResultClick={handleResultClick}
+                    />
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Right side: Desktop - individual buttons, Mobile - grouped dropdown */}
             {/* Desktop: Project Selector, Language Switcher and User Profile */}
-            <div className="hidden items-center gap-3 lg:flex">
+            <div className="hidden items-center gap-3 self-center lg:flex">
               <MinimizedCallBubble />
               <MinimizedChainExecutorBubble />
               <NotificationBell />
@@ -1002,7 +1028,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             </div>
 
             {/* Mobile: Notification bell + dropdown menu */}
-            <div className="flex items-center gap-2 lg:hidden">
+            <div className="flex items-center gap-2 self-center lg:hidden">
               <MinimizedCallBubble />
               <MinimizedChainExecutorBubble />
               <NotificationBell />

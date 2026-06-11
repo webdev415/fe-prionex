@@ -43,7 +43,8 @@
     "messagingIntegrations": "Messaging Integrations",
     "messagingDrafts": "Message Drafts",
     "campaignAnalytics": "Campaign Analytics",
-    "contactTypes": "Contact Types"
+    "contactTypes": "Contact Types",
+    "lawyerWorkplace": "Lawyer Workplace"
   },
   "search": {
     "placeholder": "Search",
@@ -336,6 +337,92 @@
       "mockTableRowClients": "Clients",
       "mockTableRowDebt": "Debt at risk",
       "mockTableRowOverdue": "Overdue ratio"
+    },
+    "lawyerWorkplace": {
+      "navAria": "Lawyer Workplace navigation",
+      "tabs": {
+        "inbox": "Inbox",
+        "kanban": "Kanban",
+        "documents": "Documents",
+        "settings": "Settings",
+        "newCount": "{{count}} new"
+      },
+      "incoming": {
+        "title": "Incoming",
+        "empty": "No letters in this folder",
+        "syncHint": "Email Service · sync hourly",
+        "mailboxesConnected": "{{count}} mailboxes connected"
+      },
+      "folders": {
+        "inbox": "Inbox",
+        "quarantine": "Quarantine",
+        "sent": "Sent"
+      },
+      "filters": {
+        "allMailboxes": "All mailboxes",
+        "new": "New",
+        "inProgress": "In progress"
+      },
+      "status": {
+        "new": "NEW",
+        "inProgress": "IN PROGRESS",
+        "onBoard": "ON BOARD",
+        "sentToKanban": "SENT TO KANBAN",
+        "autoProcessed": "AUTO-PROCESSED"
+      },
+      "unidentifiedType": "Type unknown",
+      "notIdentified": "Not identified",
+      "thread": {
+        "selectLetter": "Select a letter to view the thread",
+        "archive": "Archive",
+        "received": "RECEIVED",
+        "sent": "SENT",
+        "download": "Download",
+        "replyFrom": "Reply from legal@prionex.ua",
+        "markNbuResponse": "Mark as NBU response",
+        "replyPlaceholder": "Write your reply...",
+        "reassign": "Reassign",
+        "saveDraft": "Save draft",
+        "attach": "Attach",
+        "template": "Template",
+        "send": "Send"
+      },
+      "parameters": {
+        "title": "Letter parameters",
+        "selectLetter": "Select a letter to edit parameters",
+        "autoConfidence": "AUTO — {{percent}}%",
+        "type": "Type",
+        "selectType": "Select type",
+        "types": {
+          "complaint": "Complaint",
+          "nbuInquiry": "NBU inquiry",
+          "courtClaim": "Court claim"
+        },
+        "client": "Client",
+        "contract": "Contract",
+        "dueDate": "Due date",
+        "lawyer": "Lawyer",
+        "auto": "Auto",
+        "confirmationStatus": "Manager confirmation {{confirmed}}/{{total}} parameters",
+        "confirmAndCreate": "Confirm & create task"
+      },
+      "kanban": {
+        "title": "Legal tasks kanban",
+        "comingSoon": "Kanban board for legal department tasks — coming in KAN-526."
+      },
+      "documents": {
+        "title": "Documents",
+        "comingSoon": "Document journal integration — coming soon."
+      },
+      "settings": {
+        "title": "Settings",
+        "comingSoon": "Letter type directory and mailbox settings — coming soon."
+      },
+      "version": "v0.7.18",
+      "footer": {
+        "syncHint": "Email Service · sync hourly",
+        "mailboxes": "6 mailboxes connected"
+      }
     },
     "actionAnalysis": {
       "title": "Action Analysis",
