@@ -41,39 +41,20 @@ const PRIORITIES = [
   { value: 'low', labelKey: 'pages.clients.tasks.priority.low', fallback: 'Low' },
 ]
 
-// "Now" as a Date whose hours/minutes match the Kyiv wall clock,
-// regardless of system tz. Used as the reference for both the day floor
-// (min) and the per-slot filter (filterTime) on the Due Date picker
-// (KAN-608).
-function nowInKyiv(): Date {
-  const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Europe/Kyiv',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false,
-  }).formatToParts(new Date())
-  const get = (t: string) => Number(parts.find((p) => p.type === t)?.value ?? 0)
-  return new Date(
-    get('year'),
-    get('month') - 1,
-    get('day'),
-    get('hour'),
-    get('minute'),
-    get('second')
-  )
-}
-
 // Module-level so react-datepicker sees a stable filterTime identity
 // across renders. Recomputes "now" itself, so the lack of a per-render
 // closure doesn't make it stale.
 //   • Future days: every slot allowed
-//   • Today: only slots >= now (Kyiv) allowed
-const filterFromNowKyiv = (time: Date): boolean => {
-  const now = nowInKyiv()
+//   • Today: only slots whose absolute instant is >= now are allowed
+//
+// We compare absolute instants via getTime() (KAN-608). The picker
+// renders slots in browser local time, so for every operator the
+// disabled boundary aligns with their own wall clock NOW — which IS
+// the same absolute moment Europe/Kyiv is at. The BE validator
+// compares the same absolute moment against ZoneInfo('Europe/Kyiv'),
+// so FE and BE agree on past/future regardless of browser timezone.
+const filterFromNow = (time: Date): boolean => {
+  const now = new Date()
   const isSameDay =
     time.getFullYear() === now.getFullYear() &&
     time.getMonth() === now.getMonth() &&
@@ -113,7 +94,7 @@ export function AddTaskModal({ open, clientId, onClose }: AddTaskModalProps) {
   // Picker day floor — computed once at mount. The BE validator is the
   // source of truth, so a stale floor on a long-open modal at worst
   // produces a 422 that lands here as an inline error (KAN-608).
-  const minDate = useMemo(() => nowInKyiv(), [])
+  const minDate = useMemo(() => new Date(), [])
 
   // Reset form when modal opens
   useEffect(() => {
@@ -267,7 +248,7 @@ export function AddTaskModal({ open, clientId, onClose }: AddTaskModalProps) {
             timeFormat="HH:mm"
             timeIntervals={15}
             min={minDate}
-            filterTime={filterFromNowKyiv}
+            filterTime={filterFromNow}
             error={dueDateError ?? undefined}
           />
 
