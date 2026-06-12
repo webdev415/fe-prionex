@@ -212,29 +212,6 @@ export function AiAssistantBetaPage() {
     shouldHydrateConversation
   )
 
-  useEffect(() => {
-    const detail = conversationQuery.data
-    if (!detail || !shouldHydrateConversation) return
-    setConversationId(detail.id)
-    setChatMessages(
-      detail.messages.map((item) => ({
-        id: `server-${item.id}`,
-        role: item.role,
-        content: item.content,
-        serverMessageId: item.role === 'assistant' ? item.id : undefined,
-      }))
-    )
-  }, [conversationQuery.data, shouldHydrateConversation])
-
-  useEffect(() => {
-    if (!conversationQuery.isError) return
-    // The persisted conversation no longer exists — drop the stale pointer.
-    // Transient errors (network, 5xx) keep it so a later visit can retry.
-    if (isAxiosError(conversationQuery.error) && conversationQuery.error.response?.status === 404) {
-      clearStoredConversation()
-    }
-  }, [conversationQuery.isError, conversationQuery.error, clearStoredConversation])
-
   // Write-through: settings survive unmount/reload and stay scoped to the user.
   useEffect(() => {
     if (userId == null) return
@@ -431,6 +408,30 @@ export function AiAssistantBetaPage() {
       window.requestAnimationFrame(scrollToEnd)
     })
   }, [])
+
+  useEffect(() => {
+    const detail = conversationQuery.data
+    if (!detail || !shouldHydrateConversation) return
+    setConversationId(detail.id)
+    setChatMessages(
+      detail.messages.map((item) => ({
+        id: `server-${item.id}`,
+        role: item.role,
+        content: item.content,
+        serverMessageId: item.role === 'assistant' ? item.id : undefined,
+      }))
+    )
+    window.setTimeout(() => scrollToConversationBottom('auto'), 0)
+  }, [conversationQuery.data, shouldHydrateConversation, scrollToConversationBottom])
+
+  useEffect(() => {
+    if (!conversationQuery.isError) return
+    // The persisted conversation no longer exists — drop the stale pointer.
+    // Transient errors (network, 5xx) keep it so a later visit can retry.
+    if (isAxiosError(conversationQuery.error) && conversationQuery.error.response?.status === 404) {
+      clearStoredConversation()
+    }
+  }, [conversationQuery.isError, conversationQuery.error, clearStoredConversation])
 
   const updateScrollToLatestVisibility = useCallback(() => {
     const scrollContainer = scrollContainerRef.current
@@ -991,7 +992,7 @@ export function AiAssistantBetaPage() {
               }}
               placeholder={t('pages.aiAssistant.inputPlaceholder')}
               className={cn(
-                'ai-chat-input-scrollbar max-h-[min(40vh,16rem)] min-h-[88px] resize-none overflow-y-auto border-0 bg-transparent py-2 pr-2 pl-1 text-sm shadow-none sm:max-h-none sm:min-h-[120px] sm:text-base',
+                'ai-chat-input-scrollbar max-h-[min(40vh,16rem)] min-h-[52px] resize-none overflow-y-auto border-0 bg-transparent py-2 pr-2 pl-1 text-sm shadow-none sm:max-h-none sm:min-h-[120px] sm:text-base',
                 'placeholder:text-gray-400 focus-visible:ring-0 focus-visible:ring-offset-0'
               )}
               aria-label={t('pages.aiAssistant.inputPlaceholder')}
@@ -1093,31 +1094,35 @@ export function AiAssistantBetaPage() {
                 </button>
               </div>
             </div>
-            <p className="mt-2 text-center text-[11px] leading-snug text-gray-400 sm:text-right">
+            {/* Enter-to-send hint is keyboard-only guidance — pointless on touch. */}
+            <p className="mt-2 hidden text-center text-[11px] leading-snug text-gray-400 sm:block sm:text-right">
               {t('pages.aiAssistant.inputHint')}
             </p>
           </div>
 
-          {assistantSettings.showQuickSuggestionsAfterResponse && (
-            <div className="mt-4 flex w-full min-w-0 flex-col gap-2 sm:mt-6 sm:flex-row sm:flex-wrap sm:justify-center sm:gap-3 lg:gap-4">
-              {QUICK_ACTION_KEYS.map((key) => (
-                <button
-                  key={key}
-                  type="button"
-                  disabled={isAssistantResponding}
-                  className={cn(
-                    'text-secondary-800 w-full cursor-pointer rounded-full border border-white bg-white/70 px-4 py-2.5 text-center text-sm leading-[150%] font-light tracking-[-0.02em] sm:w-auto sm:px-5 sm:py-3 sm:text-base sm:leading-[155%] sm:tracking-[-0.32px]',
-                    'hover:border-primary-300 hover:bg-primary-50/40 transition-colors disabled:cursor-not-allowed disabled:opacity-60'
-                  )}
-                  onClick={() => {
-                    void submitPrompt(quickActionPrompts[key])
-                  }}
-                >
-                  {t(`pages.aiAssistant.${key}`)}
-                </button>
-              ))}
-            </div>
-          )}
+          {/* In an active chat on mobile/tablet the stacked quick actions eat
+              most of the viewport inside the fixed dock — hide them there. */}
+          {assistantSettings.showQuickSuggestionsAfterResponse &&
+            (!hasConversation || !isMobileOrTablet) && (
+              <div className="mt-4 flex w-full min-w-0 flex-col gap-2 sm:mt-6 sm:flex-row sm:flex-wrap sm:justify-center sm:gap-3 lg:gap-4">
+                {QUICK_ACTION_KEYS.map((key) => (
+                  <button
+                    key={key}
+                    type="button"
+                    disabled={isAssistantResponding}
+                    className={cn(
+                      'text-secondary-800 w-full cursor-pointer rounded-full border border-white bg-white/70 px-4 py-2.5 text-center text-sm leading-[150%] font-light tracking-[-0.02em] sm:w-auto sm:px-5 sm:py-3 sm:text-base sm:leading-[155%] sm:tracking-[-0.32px]',
+                      'hover:border-primary-300 hover:bg-primary-50/40 transition-colors disabled:cursor-not-allowed disabled:opacity-60'
+                    )}
+                    onClick={() => {
+                      void submitPrompt(quickActionPrompts[key])
+                    }}
+                  >
+                    {t(`pages.aiAssistant.${key}`)}
+                  </button>
+                ))}
+              </div>
+            )}
         </div>
       </div>
 
