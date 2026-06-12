@@ -23,6 +23,21 @@ import type {
   AssistantFeedbackComprehension,
   AssistantFeedbackRating,
 } from '@/features/aiAssistant/api'
+import {
+  blobToBase64,
+  extractImageFiles,
+  MAX_ATTACHMENTS,
+  toChatAttachmentPayload,
+  validateImageFile,
+  type AttachmentType,
+  type PendingAttachment,
+} from '@/features/aiAssistant/attachments'
+import { useServerDictation } from '@/features/aiAssistant/useServerDictation'
+import {
+  useVoiceMessageRecorder,
+  type VoiceMessageResult,
+} from '@/features/aiAssistant/useVoiceMessageRecorder'
+import { prepareTtsText, resolveTtsVoice, useTtsPlayer } from '@/features/aiAssistant/tts'
 import { useAuthStore } from '@/stores/authStore'
 import {
   DEFAULT_ASSISTANT_SETTINGS,
@@ -46,6 +61,13 @@ type AssistDropdownProps = {
 
 type ChatRole = 'user' | 'assistant'
 
+/** Attachment rendered inside a feed bubble (object URL lives client-side only). */
+type LocalAttachment = {
+  type: AttachmentType
+  mime: string
+  url: string
+}
+
 type ChatMessage = {
   id: string
   role: ChatRole
@@ -53,7 +75,30 @@ type ChatMessage = {
   isLoading?: boolean
   isError?: boolean
   serverMessageId?: number
+  attachments?: LocalAttachment[]
 }
+
+function joinDictation(prev: string, text: string): string {
+  if (!prev) return text
+  return /\s$/.test(prev) ? `${prev}${text}` : `${prev} ${text}`
+}
+
+/** Whisper language hint; empty string → server-side auto-detection. */
+function resolveDictationLanguage(language?: string): string {
+  if (!language) return ''
+  if (language.startsWith('uk')) return 'uk'
+  if (language.startsWith('ru')) return 'ru'
+  if (language.startsWith('en')) return 'en'
+  return ''
+}
+
+function formatRecordingTime(totalSec: number): string {
+  const minutes = Math.floor(totalSec / 60)
+  const seconds = totalSec % 60
+  return `${minutes}:${String(seconds).padStart(2, '0')}`
+}
+
+const LONG_PRESS_MS = 500
 
 type MessageFeedback = {
   rating?: AssistantFeedbackRating
@@ -192,6 +237,8 @@ export function AiAssistantBetaPage() {
   const [isMobileOrTablet, setIsMobileOrTablet] = useState(() => window.innerWidth < 1024)
   const [voiceStatus, setVoiceStatus] = useState<'idle' | 'listening'>('idle')
   const [interimTranscript, setInterimTranscript] = useState('')
+  const [dictationDraft, setDictationDraft] = useState('')
+  const [pendingImages, setPendingImages] = useState<PendingAttachment[]>([])
   const [showScrollToLatest, setShowScrollToLatest] = useState(false)
   const [dockHeight, setDockHeight] = useState(320)
   const settingsPanelRef = useRef<HTMLDivElement>(null)
@@ -201,6 +248,13 @@ export function AiAssistantBetaPage() {
   const chatBottomRef = useRef<HTMLDivElement>(null)
   const scrollContainerRef = useRef<HTMLElement | null>(null)
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const dictationGhostRef = useRef<HTMLDivElement>(null)
+  const lastDictationFinalRef = useRef('')
+  const longPressTimerRef = useRef<number | null>(null)
+  const longPressFiredRef = useRef(false)
+  /** Every object URL minted for attachments — revoked on reset/unmount. */
+  const attachmentUrlsRef = useRef<string[]>([])
   const responseTokenRef = useRef(0)
   const hasConversation = chatMessages.length > 0
 
@@ -339,16 +393,143 @@ export function AiAssistantBetaPage() {
     }
   }, [i18n.language, t])
 
+  // Primary voice input: server-side streaming STT (whisper + corrector layer
+  // behind WS /ai-assistant/ws/transcribe). The draft is rendered as a grey
+  // non-editable tail over the textarea; `final` commits the text and
+  // `corrected` silently upgrades it. Any failure falls back to the browser
+  // SpeechRecognition above.
+  const {
+    status: dictationStatus,
+    start: startDictation,
+    stop: stopDictation,
+    cancel: cancelDictation,
+  } = useServerDictation({
+    language: resolveDictationLanguage(i18n.language),
+    onDraft: (text) => setDictationDraft(text),
+    onFinal: (text) => {
+      setDictationDraft('')
+      const cleaned = text.trim()
+      lastDictationFinalRef.current = cleaned
+      if (cleaned) {
+        setMessage((prev) => joinDictation(prev, cleaned))
+      }
+      window.requestAnimationFrame(() => {
+        const el = textareaRef.current
+        if (!el) return
+        el.focus()
+        const len = el.value.length
+        el.setSelectionRange(len, len)
+      })
+    },
+    onCorrected: (text) => {
+      const finalText = lastDictationFinalRef.current
+      const corrected = text.trim()
+      if (!finalText || !corrected || corrected === finalText) return
+      // Upgrade only when the user has not touched the dictated tail yet.
+      setMessage((prev) =>
+        prev.endsWith(finalText) ? prev.slice(0, prev.length - finalText.length) + corrected : prev
+      )
+      lastDictationFinalRef.current = corrected
+    },
+    onError: () => {
+      setDictationDraft('')
+      toast.error(t('pages.aiAssistant.voiceFallback'))
+      startVoiceRecognition()
+    },
+  })
+
+  const startServerDictation = useCallback(() => {
+    lastDictationFinalRef.current = ''
+    setDictationDraft('')
+    void startDictation()
+  }, [startDictation])
+
+  const ttsPlayer = useTtsPlayer(() => toast.error(t('pages.aiAssistant.ttsError')))
+  const { stop: stopTts } = ttsPlayer
+
+  // Voice message (long-press on the mic): record → send as an `audio`
+  // attachment; the gateway transcribes it and answers with regular text.
+  // `sendVoiceMessageRef` breaks the declaration cycle with submitPrompt.
+  const sendVoiceMessageRef = useRef<(result: VoiceMessageResult) => void>(() => {})
+  const voiceRecorder = useVoiceMessageRecorder({
+    onComplete: (result) => sendVoiceMessageRef.current(result),
+    onError: (reason) =>
+      toast.error(
+        t(
+          reason === 'tooLarge'
+            ? 'pages.aiAssistant.voiceMessageTooLarge'
+            : 'pages.aiAssistant.voicePermissionDenied'
+        )
+      ),
+  })
+  const {
+    status: recorderStatus,
+    elapsedSec: recorderElapsedSec,
+    stop: stopVoiceMessage,
+    cancel: cancelVoiceMessage,
+    start: startVoiceMessage,
+  } = voiceRecorder
+
   useEffect(() => {
-    if (voiceStatus !== 'listening') return
+    if (recorderStatus !== 'recording') return
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
+      if (e.key === 'Escape') cancelVoiceMessage()
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [recorderStatus, cancelVoiceMessage])
+
+  const clearPendingImages = useCallback(() => {
+    setPendingImages((current) => {
+      // Object URLs stay alive while a sent message still shows them in the
+      // feed; pending chips that never left the composer are revoked here.
+      current.forEach((item) => {
+        URL.revokeObjectURL(item.previewUrl)
+        attachmentUrlsRef.current = attachmentUrlsRef.current.filter(
+          (url) => url !== item.previewUrl
+        )
+      })
+      return current.length > 0 ? [] : current
+    })
+  }, [])
+
+  useEffect(() => {
+    const recordingActive =
+      voiceStatus === 'listening' ||
+      dictationStatus === 'listening' ||
+      dictationStatus === 'finalizing'
+    if (!recordingActive) return
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return
+      if (dictationStatus === 'listening') {
+        stopDictation()
+      } else if (dictationStatus === 'finalizing') {
+        cancelDictation()
+      } else {
         stopVoiceRecognition()
       }
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [voiceStatus, stopVoiceRecognition])
+  }, [voiceStatus, dictationStatus, stopDictation, cancelDictation, stopVoiceRecognition])
+
+  // Keep the grey draft tail visible: the textarea autosizes up to a max
+  // height, after which both layers scroll to the bottom in lockstep.
+  useEffect(() => {
+    if (!dictationDraft) return
+    const el = textareaRef.current
+    if (el) el.scrollTop = el.scrollHeight
+    const ghost = dictationGhostRef.current
+    if (ghost) ghost.scrollTop = ghost.scrollHeight
+  }, [dictationDraft, message])
+
+  useEffect(() => {
+    const urls = attachmentUrlsRef.current
+    return () => {
+      urls.forEach((url) => URL.revokeObjectURL(url))
+      urls.length = 0
+    }
+  }, [])
 
   useEffect(() => {
     return () => {
@@ -498,12 +679,17 @@ export function AiAssistantBetaPage() {
   // persisted conversation pointer is handled separately by the callers.
   const resetChatState = useCallback(() => {
     stopVoiceRecognition()
+    cancelDictation()
+    cancelVoiceMessage()
+    stopTts()
+    setDictationDraft('')
+    clearPendingImages()
     responseTokenRef.current += 1
     setChatMessages((current) => (current.length > 0 ? [] : current))
     setConversationId(null)
     setFeedbackByMessage({})
     setIsAssistantResponding(false)
-  }, [stopVoiceRecognition])
+  }, [stopVoiceRecognition, cancelDictation, cancelVoiceMessage, stopTts, clearPendingImages])
 
   const clientOptions = useMemo(
     () => [
@@ -599,6 +785,9 @@ export function AiAssistantBetaPage() {
               onChange={(checked) => {
                 if (!checked) {
                   stopVoiceRecognition()
+                  cancelDictation()
+                  cancelVoiceMessage()
+                  setDictationDraft('')
                 }
                 applySettings((s) => ({ ...s, voiceInputEnabled: checked }))
               }}
@@ -752,12 +941,34 @@ export function AiAssistantBetaPage() {
   }, [clearStoredConversation, resetChatState])
 
   const submitPrompt = useCallback(
-    async (rawPrompt: string) => {
+    async (rawPrompt: string, attachments?: PendingAttachment[]) => {
       const prompt = rawPrompt.trim()
-      if (!prompt || isAssistantResponding) return
+      const attachmentList = attachments ?? []
+      const hasAudio = attachmentList.some((item) => item.type === 'audio')
+      if (isAssistantResponding) return
+      if (!prompt && !hasAudio) {
+        // Backend rule: an empty message is valid only with a voice note;
+        // images alone are a 422 — nudge the user instead of failing silently.
+        if (attachmentList.length > 0) {
+          toast.error(t('pages.aiAssistant.attachmentNeedsText'))
+        }
+        return
+      }
 
       setMessage('')
-      appendChatMessage({ role: 'user', content: prompt })
+      setPendingImages((current) => (current.length > 0 ? [] : current))
+      appendChatMessage({
+        role: 'user',
+        content: prompt,
+        attachments:
+          attachmentList.length > 0
+            ? attachmentList.map((item) => ({
+                type: item.type,
+                mime: item.mime,
+                url: item.previewUrl,
+              }))
+            : undefined,
+      })
       setIsAssistantResponding(true)
 
       const loadingId = appendChatMessage({
@@ -776,6 +987,8 @@ export function AiAssistantBetaPage() {
             : undefined,
           response_mode: assistantSettings.responseMode,
           output_format: assistantSettings.outputFormat,
+          attachments:
+            attachmentList.length > 0 ? toChatAttachmentPayload(attachmentList) : undefined,
         })
         if (requestToken !== responseTokenRef.current) {
           return
@@ -835,6 +1048,175 @@ export function AiAssistantBetaPage() {
     ]
   )
 
+  // Latest-ref wiring: the recorder hook is declared before submitPrompt.
+  useEffect(() => {
+    sendVoiceMessageRef.current = (result: VoiceMessageResult) => {
+      void (async () => {
+        try {
+          const data_b64 = await blobToBase64(result.blob)
+          const previewUrl = URL.createObjectURL(result.blob)
+          attachmentUrlsRef.current.push(previewUrl)
+          await submitPrompt('', [
+            {
+              id: `voice-${Date.now()}`,
+              type: 'audio',
+              mime: result.mime,
+              data_b64,
+              previewUrl,
+              sizeBytes: result.blob.size,
+            },
+          ])
+        } catch {
+          toast.error(t('pages.aiAssistant.voiceError'))
+        }
+      })()
+    }
+  }, [submitPrompt, t])
+
+  const addImageFiles = useCallback(
+    async (files: File[]) => {
+      if (files.length === 0) return
+      const room = MAX_ATTACHMENTS - pendingImages.length
+      let unsupported = false
+      let tooLarge = false
+      let overflow = files.length > Math.max(room, 0)
+      const accepted: PendingAttachment[] = []
+      for (const file of files.slice(0, Math.max(room, 0))) {
+        const error = validateImageFile(file, 0)
+        if (error === 'unsupportedType') {
+          unsupported = true
+          continue
+        }
+        if (error === 'tooLarge') {
+          tooLarge = true
+          continue
+        }
+        try {
+          const data_b64 = await blobToBase64(file)
+          const previewUrl = URL.createObjectURL(file)
+          attachmentUrlsRef.current.push(previewUrl)
+          accepted.push({
+            id: `img-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+            type: 'image',
+            mime: file.type,
+            data_b64,
+            previewUrl,
+            sizeBytes: file.size,
+          })
+        } catch {
+          unsupported = true
+        }
+      }
+      if (room <= 0) overflow = true
+      if (overflow) toast.error(t('pages.aiAssistant.attachImageTooMany'))
+      if (unsupported) toast.error(t('pages.aiAssistant.attachImageUnsupported'))
+      if (tooLarge) toast.error(t('pages.aiAssistant.attachImageTooLarge'))
+      if (accepted.length > 0) {
+        setPendingImages((current) => [...current, ...accepted].slice(0, MAX_ATTACHMENTS))
+      }
+    },
+    [pendingImages.length, t]
+  )
+
+  const removePendingImage = useCallback((id: string) => {
+    setPendingImages((current) => {
+      const target = current.find((item) => item.id === id)
+      if (target) {
+        URL.revokeObjectURL(target.previewUrl)
+        attachmentUrlsRef.current = attachmentUrlsRef.current.filter(
+          (url) => url !== target.previewUrl
+        )
+      }
+      return current.filter((item) => item.id !== id)
+    })
+  }, [])
+
+  const handlePaste = useCallback(
+    (event: React.ClipboardEvent<HTMLTextAreaElement>) => {
+      const files = extractImageFiles(event.clipboardData.items)
+      if (files.length === 0) return
+      event.preventDefault()
+      void addImageFiles(files)
+    },
+    [addImageFiles]
+  )
+
+  const handleDrop = useCallback(
+    (event: React.DragEvent<HTMLDivElement>) => {
+      if (event.dataTransfer.files.length === 0) return
+      // Always swallow file drops — otherwise the browser navigates to the
+      // dropped file; non-image files surface the unsupported-type toast.
+      event.preventDefault()
+      const files = extractImageFiles(event.dataTransfer.files)
+      if (files.length === 0) {
+        toast.error(t('pages.aiAssistant.attachImageUnsupported'))
+        return
+      }
+      void addImageFiles(files)
+    },
+    [addImageFiles, t]
+  )
+
+  const clearLongPressTimer = useCallback(() => {
+    if (longPressTimerRef.current != null) {
+      window.clearTimeout(longPressTimerRef.current)
+      longPressTimerRef.current = null
+    }
+  }, [])
+
+  const handleMicPointerDown = useCallback(() => {
+    if (!assistantSettings.voiceInputEnabled) return
+    const everythingIdle =
+      dictationStatus === 'idle' && recorderStatus === 'idle' && voiceStatus === 'idle'
+    if (!everythingIdle) return
+    clearLongPressTimer()
+    longPressTimerRef.current = window.setTimeout(() => {
+      longPressTimerRef.current = null
+      longPressFiredRef.current = true
+      void startVoiceMessage()
+    }, LONG_PRESS_MS)
+  }, [
+    assistantSettings.voiceInputEnabled,
+    dictationStatus,
+    recorderStatus,
+    voiceStatus,
+    clearLongPressTimer,
+    startVoiceMessage,
+  ])
+
+  const handleMicClick = useCallback(() => {
+    if (longPressFiredRef.current) {
+      // The click that follows a long-press release belongs to the
+      // voice-message gesture — ignore it.
+      longPressFiredRef.current = false
+      return
+    }
+    if (!assistantSettings.voiceInputEnabled) return
+    if (recorderStatus === 'recording') {
+      stopVoiceMessage()
+      return
+    }
+    if (dictationStatus === 'listening') {
+      stopDictation()
+      return
+    }
+    if (dictationStatus === 'finalizing') return
+    if (voiceStatus === 'listening') {
+      stopVoiceRecognition()
+      return
+    }
+    startServerDictation()
+  }, [
+    assistantSettings.voiceInputEnabled,
+    recorderStatus,
+    dictationStatus,
+    voiceStatus,
+    stopVoiceMessage,
+    stopDictation,
+    stopVoiceRecognition,
+    startServerDictation,
+  ])
+
   const handleFeedback = useCallback(
     (messageId: number, patch: Partial<MessageFeedback>) => {
       const previous = feedbackByMessage[messageId]
@@ -864,13 +1246,40 @@ export function AiAssistantBetaPage() {
       isGroupLocked && 'cursor-default'
     )
 
+  const renderTtsButton = (item: ChatMessage) => {
+    const isTtsPlaying = ttsPlayer.playingId === item.id
+    const isTtsLoading = ttsPlayer.loadingId === item.id
+    return (
+      <button
+        type="button"
+        aria-label={t(isTtsPlaying ? 'pages.aiAssistant.ttsStop' : 'pages.aiAssistant.ttsListen')}
+        aria-pressed={isTtsPlaying}
+        onClick={() =>
+          ttsPlayer.toggle(item.id, prepareTtsText(item.content), resolveTtsVoice(i18n.language))
+        }
+        className={feedbackButtonClass(isTtsPlaying || isTtsLoading, false)}
+      >
+        {isTtsLoading ? (
+          <span
+            className="h-3.5 w-3.5 animate-spin rounded-full border border-gray-400 border-t-transparent"
+            aria-hidden
+          />
+        ) : isTtsPlaying ? (
+          <Icons.Pause size={14} strokeWidth={1.5} />
+        ) : (
+          <Icons.VolumeHigh size={14} strokeWidth={1.5} />
+        )}
+      </button>
+    )
+  }
+
   const renderFeedbackControls = (serverMessageId: number) => {
     const feedback = feedbackByMessage[serverMessageId] ?? {}
     const ratingLocked = feedback.rating != null
     const comprehensionLocked = feedback.comprehension != null
 
     return (
-      <div className="mt-1.5 flex flex-wrap items-center gap-1.5 px-1">
+      <>
         <button
           type="button"
           aria-label={t('pages.aiAssistant.feedbackUseful')}
@@ -910,11 +1319,26 @@ export function AiAssistantBetaPage() {
         >
           {t('pages.aiAssistant.feedbackUnclear')}
         </button>
-      </div>
+      </>
     )
   }
 
+  /** TTS playback + feedback in one row under an assistant bubble. */
+  const renderAssistantActions = (item: ChatMessage) => (
+    <div className="mt-1.5 flex flex-wrap items-center gap-1.5 px-1">
+      {renderTtsButton(item)}
+      {item.serverMessageId != null && (
+        <>
+          <span className="mx-0.5 h-4 w-px bg-gray-200" aria-hidden />
+          {renderFeedbackControls(item.serverMessageId)}
+        </>
+      )}
+    </div>
+  )
+
   const activeSidebarConversationId = conversationId ?? storedConversationId
+  const isVoiceActive =
+    voiceStatus === 'listening' || dictationStatus !== 'idle' || recorderStatus === 'recording'
 
   return (
     <div
@@ -1001,6 +1425,29 @@ export function AiAssistantBetaPage() {
                         item.isError && 'border-error-200 bg-error-50/60 text-error-700'
                       )}
                     >
+                      {item.attachments && item.attachments.length > 0 && (
+                        <div className={cn('flex flex-col gap-2', item.content && 'mb-2')}>
+                          {item.attachments.map((attachment, index) =>
+                            attachment.type === 'image' ? (
+                              <img
+                                key={index}
+                                src={attachment.url}
+                                alt={t('pages.aiAssistant.attachedImageAlt')}
+                                className="max-h-48 max-w-full rounded-lg object-contain"
+                              />
+                            ) : (
+                              // eslint-disable-next-line jsx-a11y/media-has-caption -- voice note, no transcript available client-side
+                              <audio
+                                key={index}
+                                controls
+                                src={attachment.url}
+                                aria-label={t('pages.aiAssistant.voiceMessageBubbleLabel')}
+                                className="h-10 max-w-full"
+                              />
+                            )
+                          )}
+                        </div>
+                      )}
                       {item.isLoading ? (
                         <span className="inline-flex items-center gap-1.5 py-1">
                           <span className="bg-secondary-500 h-1.5 w-1.5 animate-bounce rounded-full [animation-delay:-0.2s]" />
@@ -1017,8 +1464,8 @@ export function AiAssistantBetaPage() {
                     </div>
                     {item.role === 'assistant' &&
                       !item.isLoading &&
-                      item.serverMessageId != null &&
-                      renderFeedbackControls(item.serverMessageId)}
+                      !item.isError &&
+                      renderAssistantActions(item)}
                   </div>
                 </div>
               ))}
@@ -1062,23 +1509,74 @@ export function AiAssistantBetaPage() {
           </button>
         )}
         <div className="pointer-events-auto mx-auto w-full max-w-5xl min-w-0 2xl:max-w-6xl">
-          <div className="border-light-200 shadow-dark-500/5 rounded-2xl border border-white/60 bg-white/95 p-3 shadow-lg sm:rounded-3xl sm:p-5">
-            <Textarea
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault()
-                  void submitPrompt(message)
-                }
-              }}
-              placeholder={t('pages.aiAssistant.inputPlaceholder')}
-              className={cn(
-                'ai-chat-input-scrollbar max-h-[min(40vh,16rem)] min-h-[52px] resize-none overflow-y-auto border-0 bg-transparent py-2 pr-2 pl-1 text-sm shadow-none sm:max-h-none sm:min-h-[120px] sm:text-base',
-                'placeholder:text-gray-400 focus-visible:ring-0 focus-visible:ring-offset-0'
+          <div
+            className="border-light-200 shadow-dark-500/5 rounded-2xl border border-white/60 bg-white/95 p-3 shadow-lg sm:rounded-3xl sm:p-5"
+            onDragOver={(e) => {
+              if (e.dataTransfer.types.includes('Files')) e.preventDefault()
+            }}
+            onDrop={handleDrop}
+          >
+            {pendingImages.length > 0 && (
+              <div className="mb-2 flex flex-wrap gap-2" data-testid="pending-attachments">
+                {pendingImages.map((image) => (
+                  <div
+                    key={image.id}
+                    className="relative h-16 w-16 overflow-hidden rounded-lg border border-gray-200 bg-white"
+                  >
+                    <img
+                      src={image.previewUrl}
+                      alt={t('pages.aiAssistant.attachedImageAlt')}
+                      className="h-full w-full object-cover"
+                    />
+                    <button
+                      type="button"
+                      aria-label={t('pages.aiAssistant.attachImageRemove')}
+                      onClick={() => removePendingImage(image.id)}
+                      className="absolute top-0.5 right-0.5 flex h-5 w-5 cursor-pointer items-center justify-center rounded-full bg-black/60 text-white transition-colors hover:bg-black/80"
+                    >
+                      <Icons.Cancel01 size={12} strokeWidth={2} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="relative">
+              <Textarea
+                ref={textareaRef}
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                onPaste={handlePaste}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault()
+                    void submitPrompt(message, pendingImages)
+                  }
+                }}
+                // The grey draft ghost is drawn over the textarea — the
+                // placeholder underneath would collide with it visually.
+                placeholder={dictationDraft ? '' : t('pages.aiAssistant.inputPlaceholder')}
+                className={cn(
+                  'ai-chat-input-scrollbar max-h-[min(40vh,16rem)] min-h-[52px] resize-none overflow-y-auto border-0 bg-transparent py-2 pr-2 pl-1 text-sm shadow-none sm:max-h-none sm:min-h-[120px] sm:text-base',
+                  'placeholder:text-gray-400 focus-visible:ring-0 focus-visible:ring-offset-0'
+                )}
+                aria-label={t('pages.aiAssistant.inputPlaceholder')}
+              />
+              {/* Grey non-editable dictation tail: a ghost layer with the same
+                  metrics as the textarea — the committed text is transparent,
+                  the live draft continues it in grey. */}
+              {dictationDraft && (
+                <div
+                  ref={dictationGhostRef}
+                  aria-hidden
+                  data-testid="dictation-ghost"
+                  className="ai-chat-input-scrollbar pointer-events-none absolute inset-0 max-h-[min(40vh,16rem)] min-h-[52px] overflow-y-auto py-2 pr-2 pl-1 text-sm font-light break-words whitespace-pre-wrap sm:max-h-none sm:min-h-[120px] sm:text-base"
+                >
+                  <span className="text-transparent">{message}</span>
+                  <span className="text-gray-400">{(message ? ' ' : '') + dictationDraft}</span>
+                </div>
               )}
-              aria-label={t('pages.aiAssistant.inputPlaceholder')}
-            />
+            </div>
 
             {voiceStatus === 'listening' && (
               <div
@@ -1092,6 +1590,53 @@ export function AiAssistantBetaPage() {
                     ? interimTranscript
                     : t('pages.aiAssistant.voiceListening')}
                 </span>
+              </div>
+            )}
+
+            {voiceStatus !== 'listening' && dictationStatus !== 'idle' && (
+              <div
+                className="border-primary-200 bg-primary-50/60 text-dark-500 mb-2 flex items-center gap-2 rounded-xl border border-dashed px-3 py-2 text-xs font-light"
+                role="status"
+                aria-live="polite"
+              >
+                <span className="bg-primary-500 inline-flex h-2 w-2 shrink-0 animate-pulse rounded-full" />
+                <span className="min-w-0 flex-1">
+                  {dictationStatus === 'finalizing'
+                    ? t('pages.aiAssistant.voiceFinalizing')
+                    : t('pages.aiAssistant.voiceListening')}
+                </span>
+              </div>
+            )}
+
+            {recorderStatus === 'recording' && (
+              <div
+                className="border-error-200 bg-error-50/60 text-dark-500 mb-2 flex items-center gap-2 rounded-xl border border-dashed px-3 py-2 text-xs font-light"
+                role="status"
+                aria-live="polite"
+              >
+                <span className="bg-error-500 inline-flex h-2 w-2 shrink-0 animate-pulse rounded-full" />
+                <span className="min-w-0 flex-1">
+                  {t('pages.aiAssistant.voiceMessageRecording')}
+                </span>
+                <span className="shrink-0 font-mono text-[11px] text-gray-600 tabular-nums">
+                  {formatRecordingTime(recorderElapsedSec)} / 2:00
+                </span>
+                <button
+                  type="button"
+                  aria-label={t('pages.aiAssistant.voiceMessageCancel')}
+                  onClick={cancelVoiceMessage}
+                  className="hover:text-error-600 flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded-full text-gray-500 transition-colors"
+                >
+                  <Icons.Cancel01 size={14} strokeWidth={1.5} />
+                </button>
+                <button
+                  type="button"
+                  aria-label={t('pages.aiAssistant.voiceMessageSend')}
+                  onClick={stopVoiceMessage}
+                  className="bg-primary-500 hover:bg-primary-600 flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded-full text-white transition-colors"
+                >
+                  <Icons.MailSend01 size={14} strokeWidth={1.5} />
+                </button>
               </div>
             )}
 
@@ -1137,32 +1682,36 @@ export function AiAssistantBetaPage() {
                 <button
                   type="button"
                   aria-label={
-                    voiceStatus === 'listening'
+                    isVoiceActive
                       ? t('pages.aiAssistant.voiceStopRecording')
                       : t('pages.aiAssistant.voiceStartRecording')
                   }
-                  aria-pressed={voiceStatus === 'listening'}
+                  title={t('pages.aiAssistant.voiceHoldHint')}
+                  aria-pressed={isVoiceActive}
                   disabled={!assistantSettings.voiceInputEnabled}
-                  onClick={() => {
-                    if (!assistantSettings.voiceInputEnabled) return
-                    if (voiceStatus === 'listening') {
-                      stopVoiceRecognition()
-                    } else {
-                      startVoiceRecognition()
+                  onClick={handleMicClick}
+                  onPointerDown={handleMicPointerDown}
+                  onPointerUp={clearLongPressTimer}
+                  onPointerLeave={clearLongPressTimer}
+                  onPointerCancel={clearLongPressTimer}
+                  onContextMenu={(e) => {
+                    // Long-press on touch devices must not open the context menu.
+                    if (recorderStatus === 'recording' || longPressTimerRef.current != null) {
+                      e.preventDefault()
                     }
                   }}
                   className={cn(
                     'flex h-10 w-10 shrink-0 items-center justify-center self-center rounded-full shadow-md transition-colors sm:h-9 sm:w-9',
                     !assistantSettings.voiceInputEnabled && 'cursor-not-allowed bg-gray-200',
                     assistantSettings.voiceInputEnabled &&
-                      voiceStatus === 'idle' &&
+                      !isVoiceActive &&
                       'bg-primary-300 hover:bg-primary-500 cursor-pointer',
                     assistantSettings.voiceInputEnabled &&
-                      voiceStatus === 'listening' &&
+                      isVoiceActive &&
                       'bg-error-500 hover:bg-error-600 cursor-pointer ring-2 ring-red-400/60 ring-offset-2'
                   )}
                 >
-                  {voiceStatus === 'listening' ? (
+                  {isVoiceActive ? (
                     <Icons.Pause size={18} strokeWidth={1.5} className="text-white" />
                   ) : (
                     <Icons.Mic02
