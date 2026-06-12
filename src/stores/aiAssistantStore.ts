@@ -44,10 +44,16 @@ interface AiAssistantState {
   userId: string | null
   conversationId: number | null
   settings: AssistantSettings | null
+  /**
+   * Conversation-history panel collapsed state. Pure UI preference, so it is
+   * intentionally not scoped per user.
+   */
+  historySidebarCollapsed: boolean
 
   setActiveConversation: (userId: string, conversationId: number) => void
   clearConversation: () => void
   saveSettings: (userId: string, settings: AssistantSettings) => void
+  setHistorySidebarCollapsed: (collapsed: boolean) => void
   conversationIdFor: (userId: string | null) => number | null
   settingsFor: (userId: string | null) => AssistantSettings | null
 }
@@ -58,6 +64,7 @@ export const useAiAssistantStore = create<AiAssistantState>()(
       userId: null,
       conversationId: null,
       settings: null,
+      historySidebarCollapsed: false,
 
       setActiveConversation: (userId, conversationId) =>
         set((state) => ({
@@ -67,6 +74,8 @@ export const useAiAssistantStore = create<AiAssistantState>()(
         })),
 
       clearConversation: () => set({ conversationId: null }),
+
+      setHistorySidebarCollapsed: (collapsed) => set({ historySidebarCollapsed: collapsed }),
 
       saveSettings: (userId, settings) =>
         set((state) => ({
@@ -93,6 +102,7 @@ export const useAiAssistantStore = create<AiAssistantState>()(
         userId: state.userId,
         conversationId: state.conversationId,
         settings: state.settings,
+        historySidebarCollapsed: state.historySidebarCollapsed,
       }),
     }
   )

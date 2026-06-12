@@ -30,6 +30,7 @@ import {
   type AssistantSettings,
 } from '@/stores/aiAssistantStore'
 import { isAxiosError } from 'axios'
+import { ConversationSidebar } from './ConversationSidebar'
 
 const QUICK_ACTION_KEYS = ['quickClientData', 'quickDebt', 'quickReport', 'quickEmployee'] as const
 type QuickActionKey = (typeof QUICK_ACTION_KEYS)[number]
@@ -170,6 +171,8 @@ export function AiAssistantBetaPage() {
   const setActiveConversation = useAiAssistantStore((state) => state.setActiveConversation)
   const clearStoredConversation = useAiAssistantStore((state) => state.clearConversation)
   const saveSettings = useAiAssistantStore((state) => state.saveSettings)
+  const isHistoryCollapsed = useAiAssistantStore((state) => state.historySidebarCollapsed)
+  const setHistoryCollapsed = useAiAssistantStore((state) => state.setHistorySidebarCollapsed)
   const [message, setMessage] = useState('')
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([])
   const [isAssistantResponding, setIsAssistantResponding] = useState(false)
@@ -181,6 +184,10 @@ export function AiAssistantBetaPage() {
     () => useAiAssistantStore.getState().settingsFor(userId) ?? DEFAULT_ASSISTANT_SETTINGS
   )
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
+  const [isHistoryDrawerOpen, setIsHistoryDrawerOpen] = useState(false)
+  // An explicit click in the history panel must load the conversation even
+  // when "remember conversation context" is off.
+  const [isExplicitSelection, setIsExplicitSelection] = useState(false)
   const [isMobileOrTablet, setIsMobileOrTablet] = useState(() => window.innerWidth < 1024)
   const [voiceStatus, setVoiceStatus] = useState<'idle' | 'listening'>('idle')
   const [interimTranscript, setInterimTranscript] = useState('')
@@ -202,11 +209,13 @@ export function AiAssistantBetaPage() {
   // Re-hydrate the dialog persisted for this user: history lives on the
   // backend, the store only keeps the conversation pointer. Hydration is
   // skipped as soon as the user starts a conversation in this mount.
+  // Switching a conversation from the history panel resets the local chat
+  // state and re-arms this flag, so the same mechanism loads the new dialog.
   const shouldHydrateConversation =
     storedConversationId != null &&
     conversationId == null &&
     chatMessages.length === 0 &&
-    assistantSettings.rememberConversationContext
+    (assistantSettings.rememberConversationContext || isExplicitSelection)
   const conversationQuery = useAssistantConversation(
     storedConversationId ?? 0,
     shouldHydrateConversation
@@ -421,6 +430,7 @@ export function AiAssistantBetaPage() {
         serverMessageId: item.role === 'assistant' ? item.id : undefined,
       }))
     )
+    setIsExplicitSelection(false)
     window.setTimeout(() => scrollToConversationBottom('auto'), 0)
   }, [conversationQuery.data, shouldHydrateConversation, scrollToConversationBottom])
 
@@ -482,6 +492,17 @@ export function AiAssistantBetaPage() {
     if (!hasConversation) return
     window.requestAnimationFrame(() => updateScrollToLatestVisibility())
   }, [hasConversation, isOpenSideBar, updateScrollToLatestVisibility])
+
+  // Drop the local chat state (messages, feedback, in-flight response). The
+  // persisted conversation pointer is handled separately by the callers.
+  const resetChatState = useCallback(() => {
+    stopVoiceRecognition()
+    responseTokenRef.current += 1
+    setChatMessages((current) => (current.length > 0 ? [] : current))
+    setConversationId(null)
+    setFeedbackByMessage({})
+    setIsAssistantResponding(false)
+  }, [stopVoiceRecognition])
 
   const clientOptions = useMemo(
     () => [
@@ -668,15 +689,8 @@ export function AiAssistantBetaPage() {
           <button
             type="button"
             onClick={() => {
-              stopVoiceRecognition()
-              responseTokenRef.current += 1
+              resetChatState()
               setMessage('')
-              if (chatMessages.length > 0) {
-                setChatMessages([])
-              }
-              setConversationId(null)
-              setFeedbackByMessage({})
-              setIsAssistantResponding(false)
             }}
             className="text-error-700 border-error-200/80 bg-error-50/50 hover:bg-error-50 focus-visible:ring-error-400 flex w-full items-center justify-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
           >
@@ -716,6 +730,25 @@ export function AiAssistantBetaPage() {
     setChatMessages((current) => [...current, next])
     return id
   }, [])
+
+  const handleSelectConversation = useCallback(
+    (id: number) => {
+      setIsHistoryDrawerOpen(false)
+      if (userId == null || id === conversationId) return
+      resetChatState()
+      setIsExplicitSelection(true)
+      setActiveConversation(userId, id)
+    },
+    [conversationId, resetChatState, setActiveConversation, userId]
+  )
+
+  const handleNewChat = useCallback(() => {
+    setIsHistoryDrawerOpen(false)
+    resetChatState()
+    setMessage('')
+    setIsExplicitSelection(false)
+    clearStoredConversation()
+  }, [clearStoredConversation, resetChatState])
 
   const submitPrompt = useCallback(
     async (rawPrompt: string) => {
@@ -880,13 +913,57 @@ export function AiAssistantBetaPage() {
     )
   }
 
+  const activeSidebarConversationId = conversationId ?? storedConversationId
+
   return (
     <div
       ref={pageRootRef}
       className={cn(
-        'relative flex min-h-[calc(100vh-5.5rem)] w-full min-w-0 flex-1 flex-col self-stretch overflow-x-hidden supports-[height:100dvh]:min-h-[calc(100dvh-5.5rem)]'
+        'relative flex min-h-[calc(100vh-5.5rem)] w-full min-w-0 flex-1 flex-col self-stretch overflow-x-hidden supports-[height:100dvh]:min-h-[calc(100dvh-5.5rem)]',
+        // Reserve space for the fixed history panel (its width + a 1rem gap).
+        !isMobileOrTablet &&
+          'lg:transition-[padding] lg:duration-300 ' +
+            (isHistoryCollapsed ? 'lg:pl-[4.5rem]' : 'lg:pl-[18.5rem]')
       )}
     >
+      {/* Conversation history — Claude-style panel on the left (desktop only,
+          the mobile counterpart is the drawer overlay below). Fixed like the
+          input dock: the page scrolls at window level (<main> only grows), so
+          sticky positioning cannot pin the panel. Left offset clears the
+          dashboard sidebar rail (72px collapsed / 240px expanded) plus the
+          28px <main> padding. */}
+      {!isMobileOrTablet && (
+        <aside
+          className={cn(
+            'fixed top-[80px] bottom-[20px] z-10 hidden transition-[left,width] duration-300 lg:block',
+            isHistoryCollapsed ? 'w-14' : 'w-[17.5rem]',
+            isOpenSideBar ? 'left-[16.75rem]' : 'left-[6.25rem]'
+          )}
+        >
+          <ConversationSidebar
+            activeConversationId={activeSidebarConversationId}
+            onSelectConversation={handleSelectConversation}
+            onNewChat={handleNewChat}
+            collapsed={isHistoryCollapsed}
+            onCollapsedChange={setHistoryCollapsed}
+          />
+        </aside>
+      )}
+
+      {/* Mobile history trigger: fixed below the dashboard header so it stays
+          reachable in a scrolled chat (sticky elements never pin here — see
+          the note on the panel above). */}
+      {isMobileOrTablet && (
+        <button
+          type="button"
+          aria-label={t('pages.aiAssistant.historyOpenAria')}
+          onClick={() => setIsHistoryDrawerOpen(true)}
+          className="border-light-200 text-dark-500 hover:bg-light-50 fixed top-[68px] left-3 z-30 flex h-9 w-9 items-center justify-center rounded-full border bg-white/95 shadow-md transition-colors lg:hidden"
+        >
+          <Icons.MessageMultiple01 size={18} strokeWidth={1.5} />
+        </button>
+      )}
+
       <div className="pointer-events-none sticky top-0 z-30 flex w-full justify-center px-3 pt-2">
         <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-300 bg-amber-50/95 px-3 py-1 text-[11px] font-medium text-amber-700 shadow-sm">
           <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-amber-500" aria-hidden />
@@ -965,8 +1042,12 @@ export function AiAssistantBetaPage() {
       <div
         ref={dockRef}
         className={cn(
-          'from-light-50 via-light-50/95 pointer-events-none fixed right-0 bottom-0 left-0 z-20 flex w-full min-w-0 shrink-0 flex-col items-center bg-gradient-to-t to-transparent px-3 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] transition-[left] duration-300 sm:px-8 sm:pt-6 md:px-10 lg:left-9 lg:px-14 xl:px-20',
-          isOpenSideBar && 'lg:left-30'
+          // Desktop left offset = right edge of the fixed history panel
+          // (dashboard rail + main padding + panel width), so the dock
+          // gradient never overlaps the panel.
+          'from-light-50 via-light-50/95 pointer-events-none fixed right-0 bottom-0 left-0 z-20 flex w-full min-w-0 shrink-0 flex-col items-center bg-gradient-to-t to-transparent px-3 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] transition-[left] duration-300 sm:px-8 sm:pt-6 md:px-10 lg:px-14 xl:px-20',
+          !isOpenSideBar && (isHistoryCollapsed ? 'lg:left-[9.75rem]' : 'lg:left-[23.75rem]'),
+          isOpenSideBar && (isHistoryCollapsed ? 'lg:left-[20.25rem]' : 'lg:left-[34.25rem]')
         )}
       >
         {hasConversation && showScrollToLatest && (
@@ -1125,6 +1206,29 @@ export function AiAssistantBetaPage() {
             )}
         </div>
       </div>
+
+      {/* Mobile chat history: left drawer above the content with a dimmed
+          backdrop, closed by tapping outside. */}
+      {isMobileOrTablet && isHistoryDrawerOpen && (
+        <div className="fixed inset-0 z-40 lg:hidden">
+          <button
+            type="button"
+            aria-label={t('pages.aiAssistant.historyCloseAria')}
+            className="absolute inset-0 bg-black/30"
+            onClick={() => setIsHistoryDrawerOpen(false)}
+          />
+          <div className="absolute top-0 bottom-0 left-0 flex w-[min(85vw,20rem)] flex-col bg-white shadow-2xl">
+            <ConversationSidebar
+              variant="drawer"
+              activeConversationId={activeSidebarConversationId}
+              onSelectConversation={handleSelectConversation}
+              onNewChat={handleNewChat}
+              onClose={() => setIsHistoryDrawerOpen(false)}
+              className="pb-[max(0.5rem,env(safe-area-inset-bottom))]"
+            />
+          </div>
+        </div>
+      )}
 
       {isMobileOrTablet && isSettingsOpen && (
         <div className="fixed inset-0 z-40">
