@@ -190,13 +190,16 @@
   background: #ffffff !important;
   border-color: #e5e7eb !important;
 }
+
 .react-flow__controls-button svg {
   fill: #374151 !important;
   color: #374151 !important;
 }
+
 .react-flow__controls-button:hover {
   background: #f3f4f6 !important;
 }
+
 /* Override the CSS variable React Flow uses for icon color */
 .react-flow__controls {
   --xy-controls-button-color-default: #374151;
@@ -208,24 +211,29 @@
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
   }
+
   .select-scrollbar {
     scrollbar-width: thin;
     scrollbar-color: #b5b5b5 #f0f0f0;
     overflow-y: auto;
   }
+
   .select-scrollbar::-webkit-scrollbar {
     width: 8px;
   }
+
   .select-scrollbar::-webkit-scrollbar-track {
     background: #f0f0f0;
     border-radius: 9999px;
   }
+
   .select-scrollbar::-webkit-scrollbar-thumb {
     background: #c0c0c0;
     border-radius: 9999px;
     border: 2px solid #f0f0f0;
     min-height: 30px;
   }
+
   .select-scrollbar::-webkit-scrollbar-thumb:hover {
     background: #9a9a9a;
   }
@@ -236,9 +244,11 @@
     scrollbar-color: #c8c8c8 transparent;
     overflow-y: auto;
   }
+
   .ai-chat-input-scrollbar::-webkit-scrollbar {
     width: 6px;
   }
+
   /* Hide stepper arrows (all WebKit button variants) */
   .ai-chat-input-scrollbar::-webkit-scrollbar-button,
   .ai-chat-input-scrollbar::-webkit-scrollbar-button:vertical:start:decrement,
@@ -253,6 +263,7 @@
     appearance: none;
     -webkit-appearance: none;
   }
+
   .ai-chat-input-scrollbar::-webkit-scrollbar-track,
   .ai-chat-input-scrollbar::-webkit-scrollbar-track-piece {
     margin-block: 4px;
@@ -261,9 +272,11 @@
     -webkit-box-shadow: none;
     box-shadow: none;
   }
+
   .ai-chat-input-scrollbar::-webkit-scrollbar-corner {
     background: transparent;
   }
+
   .ai-chat-input-scrollbar::-webkit-scrollbar-thumb {
     border-radius: 9999px;
     border: 2px solid transparent;
@@ -271,9 +284,11 @@
     background-clip: padding-box;
     min-height: 28px;
   }
+
   .ai-chat-input-scrollbar::-webkit-scrollbar-thumb:hover {
     background-color: #90947b;
   }
+
   .ai-chat-input-scrollbar::-webkit-scrollbar-thumb:active {
     background-color: #80d80a;
   }
@@ -292,18 +307,23 @@
   .text-display-2xl {
     font-size: 72px;
   }
+
   .text-display-xl {
     font-size: 60px;
   }
+
   .text-display-lg {
     font-size: 48px;
   }
+
   .text-display-md {
     font-size: 36px;
   }
+
   .text-display-sm {
     font-size: 30px;
   }
+
   .text-display-xs {
     font-size: 24px;
   }
@@ -312,15 +332,19 @@
   .text-body-xl {
     font-size: 20px;
   }
+
   .text-body-lg {
     font-size: 18px;
   }
+
   .text-body-md {
     font-size: 16px;
   }
+
   .text-body-sm {
     font-size: 14px;
   }
+
   .text-body-xs {
     font-size: 12px;
   }
@@ -329,16 +353,20 @@
   .modal-content-scroll::-webkit-scrollbar {
     width: 6px;
   }
+
   .modal-content-scroll::-webkit-scrollbar-track {
     background: transparent;
   }
+
   .modal-content-scroll::-webkit-scrollbar-thumb {
     background: #c8c8c8;
     border-radius: 3px;
   }
+
   .modal-content-scroll::-webkit-scrollbar-thumb:hover {
     background: #adadad;
   }
+
   /* Firefox */
   .modal-content-scroll {
     scrollbar-width: thin;
@@ -349,16 +377,20 @@
   .client-panel-scroll::-webkit-scrollbar {
     width: 5px;
   }
+
   .client-panel-scroll::-webkit-scrollbar-track {
     background: transparent;
   }
+
   .client-panel-scroll::-webkit-scrollbar-thumb {
     background: #d4d4d4;
     border-radius: 3px;
   }
+
   .client-panel-scroll::-webkit-scrollbar-thumb:hover {
     background: #adadad;
   }
+
   /* Firefox */
   .client-panel-scroll {
     scrollbar-width: thin;
@@ -369,18 +401,22 @@
   .data-table-scroll::-webkit-scrollbar {
     height: 8px;
   }
+
   .data-table-scroll::-webkit-scrollbar-track {
     background: #ebece8;
     border-radius: 0 0 12px 12px;
   }
+
   .data-table-scroll::-webkit-scrollbar-thumb {
     background: #90947b;
     border-radius: 4px;
     border: 1px solid #ebece8;
   }
+
   .data-table-scroll::-webkit-scrollbar-thumb:hover {
     background: #6f715d;
   }
+
   /* Firefox */
   .data-table-scroll {
     scrollbar-width: thin;
@@ -388,37 +424,77 @@
     margin: 0;
     padding: 0;
   }
+
+  /* Lawyer Workplace — vertical board scroll (light-50 background) */
+  .lawyer-workplace-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: #bbc0b1 transparent;
+    scrollbar-gutter: stable;
+  }
+
+  .lawyer-workplace-scroll::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  .lawyer-workplace-scroll::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .lawyer-workplace-scroll::-webkit-scrollbar-thumb {
+    background-color: #c5c9ba;
+    border: 2px solid transparent;
+    border-radius: 999px;
+    background-clip: padding-box;
+  }
+
+  .lawyer-workplace-scroll::-webkit-scrollbar-thumb:hover {
+    background-color: #90947b;
+  }
+
+  .lawyer-workplace-scroll::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+
   .sidebar-scrollbar {
     scrollbar-gutter: stable;
   }
+
   /* Sidebar Scrollbar - Modern and elegant */
   .sidebar-scrollbar::-webkit-scrollbar {
     width: 8px;
   }
+
   .sidebar-scrollbar::-webkit-scrollbar-button {
     display: none;
     height: 0;
     width: 0;
   }
+
   .sidebar-scrollbar::-webkit-scrollbar-button:start:decrement,
   .sidebar-scrollbar::-webkit-scrollbar-button:end:increment {
     display: none;
   }
+
   .sidebar-scrollbar::-webkit-scrollbar-track {
     background: transparent;
     margin: 0;
   }
+
   .sidebar-scrollbar::-webkit-scrollbar-thumb {
     background: #9ca3af;
     border-radius: 3px;
     transition: all 0.2s ease;
   }
+
   .sidebar-scrollbar::-webkit-scrollbar-thumb:hover {
     background: #6b7280;
   }
+
   .sidebar-scrollbar::-webkit-scrollbar-thumb:active {
     background: #4b5563;
   }
+
   /* Firefox */
   .sidebar-scrollbar {
     scrollbar-width: thin;
@@ -437,6 +513,7 @@
     border-radius: 0.5rem;
     transition: colors 200ms;
   }
+
   .btn-primary:hover {
     background-color: #008fd6;
   }
@@ -448,6 +525,7 @@
     border-radius: 0.5rem;
     transition: colors 200ms;
   }
+
   .btn-secondary:hover {
     background-color: #888888;
   }
@@ -461,9 +539,11 @@
     outline: none;
     transition: all 200ms;
   }
+
   .input-field::placeholder {
     color: #a1a1a1;
   }
+
   .input-field:focus {
     border-color: #0ca8eb;
     box-shadow: 0 0 0 1px #0ca8eb;
@@ -482,21 +562,27 @@
   100% {
     transform: rotate(0deg);
   }
+
   15% {
     transform: rotate(14deg);
   }
+
   30% {
     transform: rotate(-12deg);
   }
+
   45% {
     transform: rotate(10deg);
   }
+
   60% {
     transform: rotate(-8deg);
   }
+
   75% {
     transform: rotate(5deg);
   }
+
   90% {
     transform: rotate(-3deg);
   }

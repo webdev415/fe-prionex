@@ -13,7 +13,8 @@ import { cn } from '@/lib/utils'
 import { IncomingListPanel } from './components/inbox/IncomingListPanel'
 import { EmailThreadPanel } from './components/thread/EmailThreadPanel'
 import { LetterParametersPanel } from './components/parameters/LetterParametersPanel'
-import { LegalKanbanPlaceholder } from './components/kanban/LegalKanbanPlaceholder'
+import { LegalKanbanBoard } from './components/kanban/LegalKanbanBoard'
+import { LawyerWorkspaceBanner } from './components/LawyerWorkspaceBanner'
 import { PlaceholderTab } from './components/PlaceholderTab'
 import { getLetterDetail, MOCK_LETTERS } from './mockData'
 import type { IncomingFolder, IncomingMailboxFilter, LawyerWorkplaceTab } from './types'
@@ -77,7 +78,12 @@ export function LawyerWorkplacePage() {
     // -mx/-mb cancel horizontal and bottom DashboardLayout padding.
     <div className="-mx-4 -mt-[20px] -mb-4 flex h-[calc(100vh-60px)] flex-col overflow-hidden sm:-mx-6 sm:-mb-6 lg:-mx-[28px] lg:-mb-[20px]">
       {/* ── Panels (flex-1 so they fill all space above the footer) ─── */}
-      <div className="min-h-0 flex-1 overflow-hidden">
+      <div
+        className={cn(
+          'min-h-0 flex-1',
+          activeTab === 'kanban' ? 'lawyer-workplace-scroll overflow-auto' : 'overflow-hidden'
+        )}
+      >
         {activeTab === 'inbox' && (
           <div className="relative flex h-full overflow-hidden">
             {/* Incoming list — full width on mobile, ~38% on tablet, 28% on desktop */}
@@ -149,8 +155,9 @@ export function LawyerWorkplacePage() {
         )}
 
         {activeTab === 'kanban' && (
-          <div className="flex h-full overflow-hidden">
-            <LegalKanbanPlaceholder />
+          <div className="relative w-full min-w-0">
+            <LegalKanbanBoard />
+            <LawyerWorkspaceBanner />
           </div>
         )}
 

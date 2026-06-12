@@ -152,6 +152,7 @@ import {
   Download05Icon,
   Sent02Icon,
   AddCircleIcon,
+  MenuCollapseIcon,
 } from '@hugeicons/core-free-icons'
 /**
  * Icon component props
@@ -373,6 +374,7 @@ export const Icons = {
   Download05: (props: Omit<IconProps, 'icon'>) => <Icon icon={Download05Icon} {...props} />,
   Sent02: (props: Omit<IconProps, 'icon'>) => <Icon icon={Sent02Icon} {...props} />,
   AddCircle: (props: Omit<IconProps, 'icon'>) => <Icon icon={AddCircleIcon} {...props} />,
+  MenuCollapse: (props: Omit<IconProps, 'icon'>) => <Icon icon={MenuCollapseIcon} {...props} />,
 }
 
 /**
@@ -515,6 +517,7 @@ export {
   Download05Icon,
   Sent02Icon,
   AddCircleIcon,
+  MenuCollapseIcon,
 }
 
 /**

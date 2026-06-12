@@ -453,7 +453,34 @@
       },
       "kanban": {
         "title": "Legal tasks kanban",
-        "comingSoon": "Kanban board for legal department tasks — coming in KAN-526."
+        "comingSoon": "Kanban board for legal department tasks — coming in KAN-526.",
+        "department": "Legal department",
+        "activeCount": "{{count}} active",
+        "exportCsv": "Export CSV",
+        "newTask": "New Task",
+        "newTaskShort": "New",
+        "overdueBadge": "Overdue",
+        "noDeadline": "no deadline set",
+        "dueLabel": "due:",
+        "byLabel": "by",
+        "closedLabel": "closed",
+        "today": "today",
+        "filters": {
+          "thisWeek": "Due this week",
+          "thisMonth": "Due this month",
+          "allLawyers": "All Lawyers",
+          "allTypes": "All Types"
+        },
+        "columns": {
+          "unclassified": "UNCLASSIFIED",
+          "inProgress": "IN PROGRESS",
+          "overdue": "OVERDUE",
+          "ready": "READY"
+        },
+        "types": {
+          "unclassified": "unclassified",
+          "typePending": "type pending"
+        }
       },
       "documents": {
         "title": "Documents",
@@ -464,6 +491,15 @@
         "comingSoon": "Letter type directory and mailbox settings — coming soon."
       },
       "version": "v0.7.18",
+      "workspaceBanner": {
+        "lawBadge": "Law",
+        "title": "Lawyers's Workspace",
+        "assignedToDepartment": "You are assigned to the department '{{department}}'.",
+        "operatorsInOperation": "operators in operation",
+        "openWorkspaceMenu": "Open workspace menu",
+        "collapse": "Minimize workspace banner",
+        "expand": "Expand workspace banner"
+      },
       "footer": {
         "syncHint": "Email Service · sync hourly",
         "mailboxes": "6 mailboxes connected",

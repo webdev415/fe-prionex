@@ -458,7 +458,34 @@
       },
       "kanban": {
         "title": "Канбан юридичних задач",
-        "comingSoon": "Канбан-дошка для юридичного відділу — незабаром у KAN-526."
+        "comingSoon": "Канбан-дошка для юридичного відділу — незабаром у KAN-526.",
+        "department": "Юридичний відділ",
+        "activeCount": "{{count}} активних",
+        "exportCsv": "Експорт CSV",
+        "newTask": "Нова задача",
+        "newTaskShort": "Нова",
+        "overdueBadge": "Прострочено",
+        "noDeadline": "без терміну",
+        "dueLabel": "термін:",
+        "byLabel": "до",
+        "closedLabel": "закрито",
+        "today": "сьогодні",
+        "filters": {
+          "thisWeek": "Цього тижня",
+          "thisMonth": "Цього місяця",
+          "allLawyers": "Всі юристи",
+          "allTypes": "Всі типи"
+        },
+        "columns": {
+          "unclassified": "БЕЗ КЛАСИФІКАЦІЇ",
+          "inProgress": "В РОБОТІ",
+          "overdue": "ПРОСТРОЧЕНО",
+          "ready": "ГОТОВО"
+        },
+        "types": {
+          "unclassified": "некласифіковано",
+          "typePending": "тип не визначено"
+        }
       },
       "documents": {
         "title": "Документи",
@@ -469,6 +496,15 @@
         "comingSoon": "Довідник типів листів і налаштування скриньок — незабаром."
       },
       "version": "v0.7.18",
+      "workspaceBanner": {
+        "lawBadge": "Law",
+        "title": "Робоче місце юристів",
+        "assignedToDepartment": "Ви закріплені за відділом «{{department}}».",
+        "operatorsInOperation": "операторів у роботі",
+        "openWorkspaceMenu": "Відкрити меню робочого місця",
+        "collapse": "Згорнути банер робочого місця",
+        "expand": "Розгорнути банер робочого місця"
+      },
       "footer": {
         "syncHint": "Email Service · синхронізація щогодини",
         "mailboxes": "6 скриньок підключено",
