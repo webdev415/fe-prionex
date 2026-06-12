@@ -11,6 +11,8 @@ export type KanbanTaskType =
   | 'attorney_request'
   | 'inquiry'
 
+export type KanbanTaskPriority = 'highest' | 'high' | 'medium' | 'low' | 'lowest'
+
 export interface KanbanTask {
   id: string
   type: KanbanTaskType
@@ -21,6 +23,7 @@ export interface KanbanTask {
   deadline: string | null
   /** ISO date: when the task was closed (READY column) */
   closedAt: string | null
+  priority: KanbanTaskPriority
   /** Two-letter initials, e.g. "VD" */
   assigneeInitials: string
   /** Display name after initials, e.g. "Doroshenko" */
@@ -62,6 +65,7 @@ export const MOCK_KANBAN_TASKS: KanbanTask[] = [
     closedAt: null,
     assigneeInitials: 'ON',
     assigneeName: 'manager',
+    priority: 'medium',
     columnId: 'unclassified',
   },
   {
@@ -74,6 +78,7 @@ export const MOCK_KANBAN_TASKS: KanbanTask[] = [
     closedAt: null,
     assigneeInitials: 'ON',
     assigneeName: 'manager',
+    priority: 'low',
     columnId: 'unclassified',
   },
   {
@@ -86,6 +91,7 @@ export const MOCK_KANBAN_TASKS: KanbanTask[] = [
     closedAt: null,
     assigneeInitials: 'ON',
     assigneeName: 'manager',
+    priority: 'high',
     columnId: 'unclassified',
   },
 
@@ -100,6 +106,7 @@ export const MOCK_KANBAN_TASKS: KanbanTask[] = [
     closedAt: null,
     assigneeInitials: 'VD',
     assigneeName: 'Doroshenko',
+    priority: 'high',
     columnId: 'in_progress',
   },
   {
@@ -112,6 +119,7 @@ export const MOCK_KANBAN_TASKS: KanbanTask[] = [
     closedAt: null,
     assigneeInitials: 'LK',
     assigneeName: 'Kostenko',
+    priority: 'highest',
     columnId: 'in_progress',
   },
   {
@@ -124,6 +132,7 @@ export const MOCK_KANBAN_TASKS: KanbanTask[] = [
     closedAt: null,
     assigneeInitials: 'SM',
     assigneeName: 'Melnychenko',
+    priority: 'medium',
     columnId: 'in_progress',
   },
   {
@@ -136,6 +145,7 @@ export const MOCK_KANBAN_TASKS: KanbanTask[] = [
     closedAt: null,
     assigneeInitials: 'VD',
     assigneeName: 'Doroshenko',
+    priority: 'low',
     columnId: 'in_progress',
   },
   {
@@ -148,6 +158,7 @@ export const MOCK_KANBAN_TASKS: KanbanTask[] = [
     closedAt: null,
     assigneeInitials: 'VD',
     assigneeName: 'Doroshenko',
+    priority: 'high',
     columnId: 'in_progress',
   },
   {
@@ -160,6 +171,7 @@ export const MOCK_KANBAN_TASKS: KanbanTask[] = [
     closedAt: null,
     assigneeInitials: 'SM',
     assigneeName: 'Melnychenko',
+    priority: 'medium',
     columnId: 'in_progress',
   },
   {
@@ -172,6 +184,7 @@ export const MOCK_KANBAN_TASKS: KanbanTask[] = [
     closedAt: null,
     assigneeInitials: 'LK',
     assigneeName: 'Kostenko',
+    priority: 'low',
     columnId: 'in_progress',
   },
   {
@@ -184,6 +197,7 @@ export const MOCK_KANBAN_TASKS: KanbanTask[] = [
     closedAt: null,
     assigneeInitials: 'VD',
     assigneeName: 'Doroshenko',
+    priority: 'high',
     columnId: 'in_progress',
   },
   {
@@ -196,6 +210,7 @@ export const MOCK_KANBAN_TASKS: KanbanTask[] = [
     closedAt: null,
     assigneeInitials: 'SM',
     assigneeName: 'Melnychenko',
+    priority: 'medium',
     columnId: 'in_progress',
   },
   {
@@ -208,6 +223,7 @@ export const MOCK_KANBAN_TASKS: KanbanTask[] = [
     closedAt: null,
     assigneeInitials: 'LK',
     assigneeName: 'Kostenko',
+    priority: 'lowest',
     columnId: 'in_progress',
   },
 
@@ -222,6 +238,7 @@ export const MOCK_KANBAN_TASKS: KanbanTask[] = [
     closedAt: null,
     assigneeInitials: 'VD',
     assigneeName: 'Doroshenko',
+    priority: 'highest',
     columnId: 'overdue',
   },
   {
@@ -234,6 +251,7 @@ export const MOCK_KANBAN_TASKS: KanbanTask[] = [
     closedAt: null,
     assigneeInitials: 'LK',
     assigneeName: 'Kostenko',
+    priority: 'high',
     columnId: 'overdue',
   },
 
@@ -248,6 +266,7 @@ export const MOCK_KANBAN_TASKS: KanbanTask[] = [
     closedAt: rel(-25),
     assigneeInitials: 'VD',
     assigneeName: 'Doroshenko',
+    priority: 'medium',
     columnId: 'ready',
   },
   {
@@ -260,6 +279,7 @@ export const MOCK_KANBAN_TASKS: KanbanTask[] = [
     closedAt: rel(-26),
     assigneeInitials: 'VD',
     assigneeName: 'Doroshenko',
+    priority: 'low',
     columnId: 'ready',
   },
   {
@@ -272,6 +292,7 @@ export const MOCK_KANBAN_TASKS: KanbanTask[] = [
     closedAt: rel(-26),
     assigneeInitials: 'LK',
     assigneeName: 'Kostenko',
+    priority: 'low',
     columnId: 'ready',
   },
   {
@@ -284,6 +305,7 @@ export const MOCK_KANBAN_TASKS: KanbanTask[] = [
     closedAt: rel(-26),
     assigneeInitials: 'SM',
     assigneeName: 'Melnychenko',
+    priority: 'medium',
     columnId: 'ready',
   },
 ]

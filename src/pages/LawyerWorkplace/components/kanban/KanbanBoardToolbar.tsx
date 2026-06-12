@@ -15,6 +15,7 @@ interface KanbanBoardToolbarProps {
   onLawyerFilterChange: (value: string) => void
   typeFilter: string
   onTypeFilterChange: (value: string) => void
+  onNewTask: () => void
 }
 
 export const KanbanBoardToolbar = forwardRef<HTMLDivElement, KanbanBoardToolbarProps>(
@@ -27,6 +28,7 @@ export const KanbanBoardToolbar = forwardRef<HTMLDivElement, KanbanBoardToolbarP
       onLawyerFilterChange,
       typeFilter,
       onTypeFilterChange,
+      onNewTask,
     },
     ref
   ) {
@@ -55,7 +57,7 @@ export const KanbanBoardToolbar = forwardRef<HTMLDivElement, KanbanBoardToolbarP
               size="md"
               icon={<Icons.Add size={20} strokeWidth={2} />}
               iconPosition="left"
-              onClick={() => {}}
+              onClick={onNewTask}
               className="hidden h-[45px] lg:flex"
             >
               {t('pages.lawyerWorkplace.kanban.newTask', 'New Task')}

@@ -480,6 +480,24 @@
         "types": {
           "unclassified": "unclassified",
           "typePending": "type pending"
+        },
+        "createTask": {
+          "title": "Create a Task",
+          "lawyer": "Lawyer",
+          "type": "Type",
+          "deadline": "Deadline",
+          "priority": "Priority",
+          "description": "Description",
+          "descriptionPlaceholder": "Enter task description...",
+          "selectDeadline": "Select deadline",
+          "submit": "Create",
+          "priorities": {
+            "highest": "Highest",
+            "high": "High",
+            "medium": "Medium",
+            "low": "Low",
+            "lowest": "Lowest"
+          }
         }
       },
       "documents": {

@@ -153,6 +153,9 @@ import {
   Sent02Icon,
   AddCircleIcon,
   MenuCollapseIcon,
+  ArrowDownDoubleIcon,
+  ArrowUpDoubleIcon,
+  EqualSignIcon,
 } from '@hugeicons/core-free-icons'
 /**
  * Icon component props
@@ -375,6 +378,11 @@ export const Icons = {
   Sent02: (props: Omit<IconProps, 'icon'>) => <Icon icon={Sent02Icon} {...props} />,
   AddCircle: (props: Omit<IconProps, 'icon'>) => <Icon icon={AddCircleIcon} {...props} />,
   MenuCollapse: (props: Omit<IconProps, 'icon'>) => <Icon icon={MenuCollapseIcon} {...props} />,
+  ArrowDownDouble: (props: Omit<IconProps, 'icon'>) => (
+    <Icon icon={ArrowDownDoubleIcon} {...props} />
+  ),
+  ArrowUpDouble: (props: Omit<IconProps, 'icon'>) => <Icon icon={ArrowUpDoubleIcon} {...props} />,
+  EqualSign: (props: Omit<IconProps, 'icon'>) => <Icon icon={EqualSignIcon} {...props} />,
 }
 
 /**
@@ -518,6 +526,9 @@ export {
   Sent02Icon,
   AddCircleIcon,
   MenuCollapseIcon,
+  ArrowDownDoubleIcon,
+  ArrowUpDoubleIcon,
+  EqualSignIcon,
 }
 
 /**

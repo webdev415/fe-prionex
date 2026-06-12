@@ -11,11 +11,13 @@ import {
 import { KanbanBoardToolbar } from './KanbanBoardToolbar'
 import { KanbanColumnHeader } from './KanbanColumnHeader'
 import { KanbanColumnLane } from './KanbanColumnLane'
+import { CreateKanbanTaskModal } from './CreateKanbanTaskModal'
 
 export function LegalKanbanBoard() {
   const [deadlineFilter, setDeadlineFilter] = useState<DeadlineFilter>('this_week')
   const [lawyerFilter, setLawyerFilter] = useState(LAWYERS[0]!)
   const [typeFilter, setTypeFilter] = useState(TASK_TYPES[0]!)
+  const [createTaskOpen, setCreateTaskOpen] = useState(false)
 
   const toolbarRef = useRef<HTMLDivElement>(null)
   const [toolbarHeight, setToolbarHeight] = useState(0)
@@ -43,7 +45,10 @@ export function LegalKanbanBoard() {
         onLawyerFilterChange={setLawyerFilter}
         typeFilter={typeFilter}
         onTypeFilterChange={setTypeFilter}
+        onNewTask={() => setCreateTaskOpen(true)}
       />
+
+      <CreateKanbanTaskModal open={createTaskOpen} onClose={() => setCreateTaskOpen(false)} />
 
       <div className={cn('px-5 pb-8 lg:px-7', GRID_MIN_WIDTH, 'w-full')}>
         <div

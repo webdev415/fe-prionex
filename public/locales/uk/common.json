@@ -485,6 +485,24 @@
         "types": {
           "unclassified": "некласифіковано",
           "typePending": "тип не визначено"
+        },
+        "createTask": {
+          "title": "Створити задачу",
+          "lawyer": "Юрист",
+          "type": "Тип",
+          "deadline": "Дедлайн",
+          "priority": "Пріоритет",
+          "description": "Опис",
+          "descriptionPlaceholder": "Введіть опис задачі...",
+          "selectDeadline": "Оберіть дедлайн",
+          "submit": "Створити",
+          "priorities": {
+            "highest": "Найвищий",
+            "high": "Високий",
+            "medium": "Середній",
+            "low": "Низький",
+            "lowest": "Найнижчий"
+          }
         }
       },
       "documents": {

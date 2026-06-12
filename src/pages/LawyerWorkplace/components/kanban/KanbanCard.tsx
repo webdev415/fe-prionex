@@ -5,7 +5,9 @@ import type { KanbanTask } from '../../kanban/kanbanData'
 import { formatKanbanMonthDay } from '../../utils/formatters'
 import { KanbanAssigneeChip } from './KanbanAssigneeChip'
 import { KanbanClientChip } from './KanbanClientChip'
+import { KanbanPriorityIcon } from './KanbanPriorityOption'
 import { KanbanTypeBadge } from './KanbanTypeBadge'
+import { CREATE_TASK_PRIORITIES } from './constants'
 
 interface KanbanCardProps {
   task: KanbanTask
@@ -16,6 +18,7 @@ export function KanbanCard({ task }: KanbanCardProps) {
   const isOverdue = task.columnId === 'overdue'
   const isReady = task.columnId === 'ready'
   const isUnclassified = task.columnId === 'unclassified'
+  const priorityConfig = CREATE_TASK_PRIORITIES.find((item) => item.id === task.priority)
 
   return (
     <div
@@ -81,7 +84,16 @@ export function KanbanCard({ task }: KanbanCardProps) {
           </span>
         ) : null}
 
-        <KanbanAssigneeChip initials={task.assigneeInitials} name={task.assigneeName} />
+        <div className="flex shrink-0 items-center gap-1.5">
+          <span
+            className="flex h-4 w-4 items-center justify-center"
+            title={priorityConfig ? t(priorityConfig.key, priorityConfig.fallback) : undefined}
+            aria-hidden="true"
+          >
+            <KanbanPriorityIcon priority={task.priority} />
+          </span>
+          <KanbanAssigneeChip initials={task.assigneeInitials} name={task.assigneeName} />
+        </div>
       </div>
     </div>
   )

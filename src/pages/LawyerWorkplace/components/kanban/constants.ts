@@ -1,4 +1,6 @@
-import type { KanbanTaskType } from '../../kanban/kanbanData'
+import type { KanbanTaskType, KanbanTaskPriority } from '../../kanban/kanbanData'
+
+export type { KanbanTaskPriority }
 
 export type DeadlineFilter = 'this_week' | 'this_month'
 
@@ -77,5 +79,58 @@ export const DEADLINE_FILTERS: {
     id: 'this_month',
     key: 'pages.lawyerWorkplace.kanban.filters.thisMonth',
     fallback: 'Due this month',
+  },
+]
+
+export const CREATE_TASK_LAWYERS = [
+  'Yulia Demchuk',
+  'V. Doroshenko',
+  'L. Kostenko',
+  'S. Melnychenko',
+] as const
+
+export const CREATE_TASK_TYPES: Exclude<KanbanTaskType, 'unclassified' | 'type_pending'>[] = [
+  'complaint',
+  'nbu_inquiry',
+  'court_claim',
+  'attorney_request',
+  'inquiry',
+]
+
+export const CREATE_TASK_PRIORITIES: {
+  id: KanbanTaskPriority
+  key: string
+  fallback: string
+  textClass: string
+}[] = [
+  {
+    id: 'highest',
+    key: 'pages.lawyerWorkplace.kanban.createTask.priorities.highest',
+    fallback: 'Highest',
+    textClass: 'text-error-600',
+  },
+  {
+    id: 'high',
+    key: 'pages.lawyerWorkplace.kanban.createTask.priorities.high',
+    fallback: 'High',
+    textClass: 'text-error-600',
+  },
+  {
+    id: 'medium',
+    key: 'pages.lawyerWorkplace.kanban.createTask.priorities.medium',
+    fallback: 'Medium',
+    textClass: 'text-dark-500',
+  },
+  {
+    id: 'low',
+    key: 'pages.lawyerWorkplace.kanban.createTask.priorities.low',
+    fallback: 'Low',
+    textClass: 'text-information-600',
+  },
+  {
+    id: 'lowest',
+    key: 'pages.lawyerWorkplace.kanban.createTask.priorities.lowest',
+    fallback: 'Lowest',
+    textClass: 'text-information-600',
   },
 ]
