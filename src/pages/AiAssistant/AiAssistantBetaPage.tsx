@@ -1143,12 +1143,18 @@ export function AiAssistantBetaPage() {
 
   const handleDrop = useCallback(
     (event: React.DragEvent<HTMLDivElement>) => {
-      const files = extractImageFiles(event.dataTransfer.files)
-      if (files.length === 0) return
+      if (event.dataTransfer.files.length === 0) return
+      // Always swallow file drops — otherwise the browser navigates to the
+      // dropped file; non-image files surface the unsupported-type toast.
       event.preventDefault()
+      const files = extractImageFiles(event.dataTransfer.files)
+      if (files.length === 0) {
+        toast.error(t('pages.aiAssistant.attachImageUnsupported'))
+        return
+      }
       void addImageFiles(files)
     },
-    [addImageFiles]
+    [addImageFiles, t]
   )
 
   const clearLongPressTimer = useCallback(() => {
