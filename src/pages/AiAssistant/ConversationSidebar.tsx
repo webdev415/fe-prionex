@@ -191,7 +191,10 @@ export function ConversationSidebar({
   }
 
   const handleToggleArchived = (item: AssistantConversationSummary) => {
-    const archived = !showArchived
+    // Derive the next state from the item itself, not from the view mode —
+    // an optimistic update racing a refetch may leave an already-archived
+    // item briefly visible in the active list (and vice versa).
+    const archived = !item.archived
     updateMutation.mutate({ id: item.id, patch: { archived } }, { onError: notifyUpdateError })
     if (archived && item.id === activeConversationId) {
       // Archiving the open dialog closes it — the page falls back to a new chat.
@@ -560,7 +563,7 @@ export function ConversationSidebar({
                           className={MENU_ITEM_CLASS}
                           onSelect={() => handleToggleArchived(item)}
                         >
-                          {showArchived ? (
+                          {item.archived ? (
                             <>
                               <Icons.Unarchive size={14} strokeWidth={1.5} />
                               {t('pages.aiAssistant.historyUnarchiveAction')}
