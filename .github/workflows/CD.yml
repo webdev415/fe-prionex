@@ -16,6 +16,12 @@ on:
           - production
           - dev
 
+# Deploys to the same ref queue up (cancel-in-progress: false), so two quick
+# merges never race down/rm/up against each other. Same pattern as api-prionex.
+concurrency:
+  group: cd-${{ github.ref }}
+  cancel-in-progress: false
+
 env:
   REGISTRY: ghcr.io
   # Docker image name must be lowercase; hard-code repo path to avoid case issues
@@ -179,17 +185,16 @@ jobs:
             # Ensure crm-network exists
             docker network create crm-network 2>/dev/null || true
 
-            # Pull the latest image (use branch-specific tag if available, otherwise latest)
+            # Pull the branch-specific image; fail fast if it is missing.
+            # No fallback to :latest — that could silently deploy a prod image to dev.
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ${{ env.REGISTRY }} -u ${{ github.actor }} --password-stdin
-            # Try to pull branch-specific image first, fallback to latest
             BRANCH_NAME=$(echo "$GITHUB_REF" | sed 's/refs\/heads\///')
-            if docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:$BRANCH_NAME 2>/dev/null; then
+            if docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:$BRANCH_NAME; then
               export DOCKER_IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:$BRANCH_NAME"
               echo "✅ Using branch-specific image: $DOCKER_IMAGE"
             else
-              docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-              export DOCKER_IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest"
-              echo "✅ Using latest image: $DOCKER_IMAGE"
+              echo "❌ Image ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:$BRANCH_NAME not found — aborting deploy (fail fast, no :latest fallback)"
+              exit 1
             fi
 
             # Stop and remove existing container to avoid name conflict
@@ -213,16 +218,24 @@ jobs:
           key: ${{ steps.set-env.outputs.DEPLOY_ENV == 'production' && secrets.PROD_SSH_KEY || secrets.DEV_SSH_KEY }}
           port: 22
           script: |
+            # Check the fe-prionex container itself (compose healthcheck: wget 127.0.0.1:80),
+            # not localhost:3000 (that is Metabase, a different container).
             echo "Waiting for frontend to be healthy (up to 5 minutes)..."
             for i in $(seq 1 60); do
-              if curl -sf http://localhost:3000 > /dev/null 2>&1; then
-                echo "✅ Frontend is healthy"
+              STATUS=$(docker inspect -f '{{.State.Health.Status}}' fe-prionex 2>/dev/null || echo "not-found")
+              if [ "$STATUS" = "healthy" ]; then
+                echo "✅ Frontend container is healthy"
                 exit 0
               fi
-              echo "  Attempt $i/60 - waiting 5s..."
+              echo "  Attempt $i/60 - container status: $STATUS - waiting 5s..."
               sleep 5
             done
-            echo "❌ Frontend failed to respond within 5 minutes"
+            # Fallback: container healthcheck inconclusive — probe the published port directly
+            if curl -sf http://localhost:8080 > /dev/null 2>&1; then
+              echo "✅ Frontend responds on :8080 (container healthcheck inconclusive)"
+              exit 0
+            fi
+            echo "❌ Frontend failed to become healthy within 5 minutes"
             exit 1
 
       - name: Deploy notification
