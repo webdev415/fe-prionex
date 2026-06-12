@@ -13,6 +13,7 @@ vi.mock('@/features/aiAssistant/api', async (importOriginal) => {
     getConversations: vi.fn().mockResolvedValue([]),
     sendChatMessage: vi.fn(),
     sendFeedback: vi.fn(),
+    updateConversation: vi.fn(),
   }
 })
 
@@ -23,15 +24,24 @@ const mockedGetConversations = vi.mocked(getConversations)
 const HOUR = 60 * 60 * 1000
 const DAY = 24 * HOUR
 
-function summary(id: number, lastMessageAt: string | null, createdAt?: string) {
+function summary(
+  id: number,
+  lastMessageAt: string | null,
+  createdAt?: string,
+  extra: Partial<AssistantConversationSummary> = {}
+) {
   return {
     id,
     user_id: 7,
     project_id: 1,
     channel: 'web',
     status: 'active',
+    title: null,
+    pinned: false,
+    archived: false,
     created_at: createdAt ?? new Date(Date.now() - 10 * DAY).toISOString(),
     last_message_at: lastMessageAt,
+    ...extra,
   } satisfies AssistantConversationSummary
 }
 
@@ -133,6 +143,65 @@ describe('ConversationSidebar', () => {
     expect(screen.getByTestId('conversation-item-41')).toBeInTheDocument()
     expect(screen.queryByTestId('conversation-item-42')).not.toBeInTheDocument()
     expect(screen.queryByTestId('conversation-item-40')).not.toBeInTheDocument()
+  })
+
+  it('shows the user-given title and falls back to "Chat #id" when it is null', async () => {
+    mockedGetConversations.mockResolvedValue([
+      summary(50, new Date().toISOString(), undefined, { title: 'Долг по Иванову' }),
+      summary(51, new Date().toISOString()),
+    ])
+
+    renderSidebar()
+
+    expect(await screen.findByText('Долг по Иванову')).toBeInTheDocument()
+    // The unnamed chat falls back to the "Chat #id" label.
+    expect(screen.getByTestId('conversation-item-51').textContent).toContain(
+      'pages.aiAssistant.historyConversationTitle'
+    )
+  })
+
+  it('renders pinned conversations in a dedicated top group', async () => {
+    mockedGetConversations.mockResolvedValue([
+      summary(60, new Date().toISOString()),
+      // Pinned but old — without pinning it would land in "Earlier".
+      summary(61, new Date(Date.now() - 3 * DAY).toISOString(), undefined, { pinned: true }),
+    ])
+
+    renderSidebar()
+
+    const pinnedHeader = await screen.findByText('pages.aiAssistant.historyPinned')
+    const pinnedItem = screen.getByTestId('conversation-item-61')
+    const regularItem = screen.getByTestId('conversation-item-60')
+
+    // Pinned group renders above the date groups, regardless of timestamps.
+    expect(
+      pinnedHeader.compareDocumentPosition(pinnedItem) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy()
+    expect(
+      pinnedItem.compareDocumentPosition(regularItem) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy()
+    // The pinned chat must not duplicate into "Earlier".
+    expect(screen.queryByText('pages.aiAssistant.historyEarlier')).not.toBeInTheDocument()
+  })
+
+  it('filters by title case-insensitively and shows an empty state for no matches', async () => {
+    mockedGetConversations.mockResolvedValue([
+      summary(70, new Date().toISOString(), undefined, { title: 'Отчёт по Платежам' }),
+      summary(71, new Date().toISOString(), undefined, { title: 'Скоринг' }),
+    ])
+
+    renderSidebar()
+
+    await screen.findByTestId('conversation-item-70')
+    const searchInput = screen.getByPlaceholderText('pages.aiAssistant.historySearchPlaceholder')
+
+    fireEvent.change(searchInput, { target: { value: 'платеж' } })
+    expect(screen.getByTestId('conversation-item-70')).toBeInTheDocument()
+    expect(screen.queryByTestId('conversation-item-71')).not.toBeInTheDocument()
+
+    fireEvent.change(searchInput, { target: { value: 'нет такого' } })
+    expect(screen.queryByTestId('conversation-item-70')).not.toBeInTheDocument()
+    expect(screen.getByText('pages.aiAssistant.historyNoResults')).toBeInTheDocument()
   })
 
   it('shows an empty state without conversations', async () => {

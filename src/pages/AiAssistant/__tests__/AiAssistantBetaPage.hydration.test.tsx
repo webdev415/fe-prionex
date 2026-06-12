@@ -29,6 +29,9 @@ const CONVERSATION_DETAIL: AssistantConversationDetail = {
   project_id: 1,
   channel: 'web',
   status: 'active',
+  title: null,
+  pinned: false,
+  archived: false,
   created_at: '2026-06-11T10:00:00Z',
   last_message_at: '2026-06-11T10:01:00Z',
   messages: [

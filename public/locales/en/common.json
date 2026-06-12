@@ -358,7 +358,20 @@
       "historyCollapseAria": "Collapse chat history",
       "historyExpandAria": "Expand chat history",
       "historyOpenAria": "Open chat history",
-      "historyCloseAria": "Close chat history"
+      "historyCloseAria": "Close chat history",
+      "historyPinned": "Pinned",
+      "historyPin": "Pin",
+      "historyUnpin": "Unpin",
+      "historyRename": "Rename",
+      "historyRenamePlaceholder": "Chat name",
+      "historyRenameTooLong": "Maximum {{max}} characters",
+      "historyMenuAria": "Chat actions",
+      "historyArchive": "Archive",
+      "historyArchiveAction": "Move to archive",
+      "historyUnarchiveAction": "Restore from archive",
+      "historyArchiveEmpty": "The archive is empty.",
+      "historyBackToChats": "Back to chats",
+      "historyUpdateError": "Failed to update the chat."
     },
     "actionAnalysis": {
       "title": "Action Analysis",
