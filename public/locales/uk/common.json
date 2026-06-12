@@ -363,7 +363,20 @@
       "historyCollapseAria": "Згорнути історію чатів",
       "historyExpandAria": "Розгорнути історію чатів",
       "historyOpenAria": "Відкрити історію чатів",
-      "historyCloseAria": "Закрити історію чатів"
+      "historyCloseAria": "Закрити історію чатів",
+      "historyPinned": "Закріплені",
+      "historyPin": "Закріпити",
+      "historyUnpin": "Відкріпити",
+      "historyRename": "Перейменувати",
+      "historyRenamePlaceholder": "Назва чату",
+      "historyRenameTooLong": "Не більше {{max}} символів",
+      "historyMenuAria": "Дії з чатом",
+      "historyArchive": "Архів",
+      "historyArchiveAction": "В архів",
+      "historyUnarchiveAction": "Повернути з архіву",
+      "historyArchiveEmpty": "Архів порожній.",
+      "historyBackToChats": "Назад до чатів",
+      "historyUpdateError": "Не вдалося оновити чат."
     },
     "actionAnalysis": {
       "title": "Аналіз дій",

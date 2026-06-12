@@ -308,7 +308,20 @@
       "historyCollapseAria": "Свернуть историю чатов",
       "historyExpandAria": "Развернуть историю чатов",
       "historyOpenAria": "Открыть историю чатов",
-      "historyCloseAria": "Закрыть историю чатов"
+      "historyCloseAria": "Закрыть историю чатов",
+      "historyPinned": "Закреплённые",
+      "historyPin": "Закрепить",
+      "historyUnpin": "Открепить",
+      "historyRename": "Переименовать",
+      "historyRenamePlaceholder": "Название чата",
+      "historyRenameTooLong": "Не более {{max}} символов",
+      "historyMenuAria": "Действия с чатом",
+      "historyArchive": "Архив",
+      "historyArchiveAction": "В архив",
+      "historyUnarchiveAction": "Вернуть из архива",
+      "historyArchiveEmpty": "Архив пуст.",
+      "historyBackToChats": "Назад к чатам",
+      "historyUpdateError": "Не удалось обновить чат."
     },
     "actionAnalysis": {
       "title": "Анализ действий",

@@ -37,6 +37,9 @@ function summary(id: number, lastMessageAt: string): AssistantConversationSummar
     project_id: 1,
     channel: 'web',
     status: 'active',
+    title: null,
+    pinned: false,
+    archived: false,
     created_at: lastMessageAt,
     last_message_at: lastMessageAt,
   }
