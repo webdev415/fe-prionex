@@ -1,4 +1,5 @@
 import { api } from '@/lib/api'
+import type { ChatAttachmentPayload } from './attachments'
 
 const BASE = '/api/v1/ai-assistant'
 
@@ -6,10 +7,13 @@ export type AssistantResponseMode = 'short' | 'detailed'
 export type AssistantOutputFormat = 'text' | 'tableFirst' | 'mixed'
 
 export interface AssistantChatRequest {
+  /** May be empty when an `audio` attachment carries the message (PR #638). */
   message: string
   conversation_id?: number
   response_mode: AssistantResponseMode
   output_format: AssistantOutputFormat
+  /** Images (screenshot paste) and/or one voice note; ≤3 total (PR #633/#638). */
+  attachments?: ChatAttachmentPayload[]
 }
 
 export interface AssistantToolCall {
