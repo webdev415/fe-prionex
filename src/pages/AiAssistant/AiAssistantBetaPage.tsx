@@ -14,13 +14,22 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/DropdownMenu'
-import { useSendAssistantMessage, useSendFeedback } from '@/features/aiAssistant/hooks'
+import {
+  useAssistantConversation,
+  useSendAssistantMessage,
+  useSendFeedback,
+} from '@/features/aiAssistant/hooks'
 import type {
   AssistantFeedbackComprehension,
   AssistantFeedbackRating,
-  AssistantOutputFormat,
-  AssistantResponseMode,
 } from '@/features/aiAssistant/api'
+import { useAuthStore } from '@/stores/authStore'
+import {
+  DEFAULT_ASSISTANT_SETTINGS,
+  useAiAssistantStore,
+  type AssistantSettings,
+} from '@/stores/aiAssistantStore'
+import { isAxiosError } from 'axios'
 
 const QUICK_ACTION_KEYS = ['quickClientData', 'quickDebt', 'quickReport', 'quickEmployee'] as const
 type QuickActionKey = (typeof QUICK_ACTION_KEYS)[number]
@@ -31,20 +40,6 @@ type AssistDropdownProps = {
   options: { value: string; label: string }[]
   onChange: (value: string) => void
   triggerClassName?: string
-}
-
-type ResponseMode = AssistantResponseMode
-type OutputFormat = AssistantOutputFormat
-
-type AssistantSettings = {
-  responseMode: ResponseMode
-  outputFormat: OutputFormat
-  voiceInputEnabled: boolean
-  useSelectedClientAutomatically: boolean
-  useSelectedPeriodAutomatically: boolean
-  rememberConversationContext: boolean
-  showQuickSuggestionsAfterResponse: boolean
-  autoScrollToLatestAnswer: boolean
 }
 
 type ChatRole = 'user' | 'assistant'
@@ -61,17 +56,6 @@ type ChatMessage = {
 type MessageFeedback = {
   rating?: AssistantFeedbackRating
   comprehension?: AssistantFeedbackComprehension
-}
-
-const DEFAULT_SETTINGS: AssistantSettings = {
-  responseMode: 'short',
-  outputFormat: 'mixed',
-  voiceInputEnabled: true,
-  useSelectedClientAutomatically: true,
-  useSelectedPeriodAutomatically: true,
-  rememberConversationContext: true,
-  showQuickSuggestionsAfterResponse: true,
-  autoScrollToLatestAnswer: true,
 }
 
 // Styling for markdown produced by the assistant (no typography plugin in the
@@ -181,6 +165,11 @@ function AssistFilterDropdown({
 export function AiAssistantBetaPage() {
   const { t, i18n } = useTranslation('common')
   const isOpenSideBar = useSidebarStore((state) => state.isOpenSideBar)
+  const userId = useAuthStore((state) => state.user?.id ?? null)
+  const storedConversationId = useAiAssistantStore((state) => state.conversationIdFor(userId))
+  const setActiveConversation = useAiAssistantStore((state) => state.setActiveConversation)
+  const clearStoredConversation = useAiAssistantStore((state) => state.clearConversation)
+  const saveSettings = useAiAssistantStore((state) => state.saveSettings)
   const [message, setMessage] = useState('')
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([])
   const [isAssistantResponding, setIsAssistantResponding] = useState(false)
@@ -188,7 +177,9 @@ export function AiAssistantBetaPage() {
   const [feedbackByMessage, setFeedbackByMessage] = useState<Record<number, MessageFeedback>>({})
   const [clientScope, setClientScope] = useState('all')
   const [period, setPeriod] = useState('all')
-  const [assistantSettings, setAssistantSettings] = useState<AssistantSettings>(DEFAULT_SETTINGS)
+  const [assistantSettings, setAssistantSettings] = useState<AssistantSettings>(
+    () => useAiAssistantStore.getState().settingsFor(userId) ?? DEFAULT_ASSISTANT_SETTINGS
+  )
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [isMobileOrTablet, setIsMobileOrTablet] = useState(() => window.innerWidth < 1024)
   const [voiceStatus, setVoiceStatus] = useState<'idle' | 'listening'>('idle')
@@ -207,6 +198,48 @@ export function AiAssistantBetaPage() {
 
   const { mutateAsync: sendChat } = useSendAssistantMessage()
   const { mutate: mutateFeedback } = useSendFeedback()
+
+  // Re-hydrate the dialog persisted for this user: history lives on the
+  // backend, the store only keeps the conversation pointer. Hydration is
+  // skipped as soon as the user starts a conversation in this mount.
+  const shouldHydrateConversation =
+    storedConversationId != null &&
+    conversationId == null &&
+    chatMessages.length === 0 &&
+    assistantSettings.rememberConversationContext
+  const conversationQuery = useAssistantConversation(
+    storedConversationId ?? 0,
+    shouldHydrateConversation
+  )
+
+  useEffect(() => {
+    const detail = conversationQuery.data
+    if (!detail || !shouldHydrateConversation) return
+    setConversationId(detail.id)
+    setChatMessages(
+      detail.messages.map((item) => ({
+        id: `server-${item.id}`,
+        role: item.role,
+        content: item.content,
+        serverMessageId: item.role === 'assistant' ? item.id : undefined,
+      }))
+    )
+  }, [conversationQuery.data, shouldHydrateConversation])
+
+  useEffect(() => {
+    if (!conversationQuery.isError) return
+    // The persisted conversation no longer exists — drop the stale pointer.
+    // Transient errors (network, 5xx) keep it so a later visit can retry.
+    if (isAxiosError(conversationQuery.error) && conversationQuery.error.response?.status === 404) {
+      clearStoredConversation()
+    }
+  }, [conversationQuery.isError, conversationQuery.error, clearStoredConversation])
+
+  // Write-through: settings survive unmount/reload and stay scoped to the user.
+  useEffect(() => {
+    if (userId == null) return
+    saveSettings(userId, assistantSettings)
+  }, [assistantSettings, saveSettings, userId])
 
   useEffect(() => {
     const onResize = () => setIsMobileOrTablet(window.innerWidth < 1024)
@@ -713,6 +746,9 @@ export function AiAssistantBetaPage() {
           return
         }
         setConversationId(result.conversation_id)
+        if (userId != null && assistantSettings.rememberConversationContext) {
+          setActiveConversation(userId, result.conversation_id)
+        }
         setChatMessages((current) =>
           current.map((item) =>
             item.id === loadingId
@@ -758,7 +794,9 @@ export function AiAssistantBetaPage() {
       isAssistantResponding,
       scrollToConversationBottom,
       sendChat,
+      setActiveConversation,
       t,
+      userId,
     ]
   )
 
