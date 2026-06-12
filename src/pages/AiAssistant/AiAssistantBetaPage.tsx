@@ -31,6 +31,7 @@ import {
 } from '@/stores/aiAssistantStore'
 import { isAxiosError } from 'axios'
 import { ConversationSidebar } from './ConversationSidebar'
+import { getDockDesktopBoxClasses } from './dockGeometry'
 
 const QUICK_ACTION_KEYS = ['quickClientData', 'quickDebt', 'quickReport', 'quickEmployee'] as const
 type QuickActionKey = (typeof QUICK_ACTION_KEYS)[number]
@@ -1042,12 +1043,12 @@ export function AiAssistantBetaPage() {
       <div
         ref={dockRef}
         className={cn(
-          // Desktop left offset = right edge of the fixed history panel
-          // (dashboard rail + main padding + panel width), so the dock
-          // gradient never overlaps the panel.
+          // Desktop: pin the fixed dock to the exact same box as the chat
+          // content area (see dockGeometry.ts), so the input card and the
+          // quick actions share one column centre with the message ribbon in
+          // every sidebar combination. Mobile keeps the full-width box.
           'from-light-50 via-light-50/95 pointer-events-none fixed right-0 bottom-0 left-0 z-20 flex w-full min-w-0 shrink-0 flex-col items-center bg-gradient-to-t to-transparent px-3 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] transition-[left] duration-300 sm:px-8 sm:pt-6 md:px-10 lg:px-14 xl:px-20',
-          !isOpenSideBar && (isHistoryCollapsed ? 'lg:left-[9.75rem]' : 'lg:left-[23.75rem]'),
-          isOpenSideBar && (isHistoryCollapsed ? 'lg:left-[20.25rem]' : 'lg:left-[34.25rem]')
+          getDockDesktopBoxClasses(isOpenSideBar, isHistoryCollapsed)
         )}
       >
         {hasConversation && showScrollToLatest && (
