@@ -1,6 +1,14 @@
-import { useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useLayoutEffect, useMemo, useRef, useState, type DragEvent } from 'react'
 import { cn } from '@/lib/utils'
-import { KANBAN_COLUMNS, MOCK_KANBAN_TASKS } from '../../kanban/kanbanData'
+import {
+  buildKanbanColumns,
+  KANBAN_DRAG_MIME,
+  MOCK_KANBAN_TASKS,
+  moveKanbanTask,
+  type KanbanColumnId,
+  type KanbanDragPayload,
+  type KanbanTask,
+} from '../../kanban/kanbanData'
 import {
   applyKanbanFilters,
   GRID_MIN_WIDTH,
@@ -16,11 +24,14 @@ import { CreateKanbanTaskModal } from './CreateKanbanTaskModal'
 import { ThreadDrawer } from './ThreadDrawer'
 
 export function LegalKanbanBoard() {
+  const [tasks, setTasks] = useState<KanbanTask[]>(() => [...MOCK_KANBAN_TASKS])
   const [deadlineFilter, setDeadlineFilter] = useState<DeadlineFilter>('this_week')
   const [lawyerFilter, setLawyerFilter] = useState(LAWYERS[0]!)
   const [typeFilter, setTypeFilter] = useState(TASK_TYPES[0]!)
   const [createTaskOpen, setCreateTaskOpen] = useState(false)
   const [threadLetterId, setThreadLetterId] = useState<string | null>(null)
+  const [dragOverColumn, setDragOverColumn] = useState<KanbanColumnId | null>(null)
+  const [draggingTaskId, setDraggingTaskId] = useState<string | null>(null)
 
   const toolbarRef = useRef<HTMLDivElement>(null)
   const [toolbarHeight, setToolbarHeight] = useState(0)
@@ -35,14 +46,74 @@ export function LegalKanbanBoard() {
     return () => ro.disconnect()
   }, [])
 
+  const columns = useMemo(() => buildKanbanColumns(tasks), [tasks])
+
   const filteredColumns = useMemo(
-    () => applyKanbanFilters(KANBAN_COLUMNS, lawyerFilter, typeFilter),
-    [lawyerFilter, typeFilter]
+    () => applyKanbanFilters(columns, lawyerFilter, typeFilter),
+    [columns, lawyerFilter, typeFilter]
   )
 
   const totalActive = useMemo(
-    () => MOCK_KANBAN_TASKS.filter((t) => t.columnId !== 'completed').length,
-    []
+    () => tasks.filter((task) => task.columnId !== 'completed').length,
+    [tasks]
+  )
+
+  const handleMoveTask = useCallback((taskId: string, toColumnId: KanbanColumnId) => {
+    setTasks((prev) => moveKanbanTask(prev, taskId, toColumnId))
+  }, [])
+
+  const handleDragStart = useCallback((event: DragEvent, task: KanbanTask) => {
+    if (task.columnId === 'completed') {
+      event.preventDefault()
+      return
+    }
+
+    const payload: KanbanDragPayload = {
+      taskId: task.id,
+      fromColumnId: task.columnId,
+    }
+    event.dataTransfer.setData(KANBAN_DRAG_MIME, JSON.stringify(payload))
+    event.dataTransfer.effectAllowed = 'move'
+    setDraggingTaskId(task.id)
+  }, [])
+
+  const handleDragEnd = useCallback(() => {
+    setDraggingTaskId(null)
+    setDragOverColumn(null)
+  }, [])
+
+  const handleDragOver = useCallback((event: DragEvent, columnId: KanbanColumnId) => {
+    if (Array.from(event.dataTransfer.types).includes(KANBAN_DRAG_MIME)) {
+      event.preventDefault()
+      event.dataTransfer.dropEffect = 'move'
+      setDragOverColumn((prev) => (prev === columnId ? prev : columnId))
+    }
+  }, [])
+
+  const handleDragLeave = useCallback((columnId: KanbanColumnId) => {
+    setDragOverColumn((prev) => (prev === columnId ? null : prev))
+  }, [])
+
+  const handleDrop = useCallback(
+    (event: DragEvent, columnId: KanbanColumnId) => {
+      event.preventDefault()
+      setDragOverColumn(null)
+      setDraggingTaskId(null)
+
+      const raw = event.dataTransfer.getData(KANBAN_DRAG_MIME)
+      if (!raw) return
+
+      let payload: KanbanDragPayload
+      try {
+        payload = JSON.parse(raw) as KanbanDragPayload
+      } catch {
+        return
+      }
+
+      if (payload.fromColumnId === columnId) return
+      handleMoveTask(payload.taskId, columnId)
+    },
+    [handleMoveTask]
   )
 
   return (
@@ -78,7 +149,19 @@ export function LegalKanbanBoard() {
           style={{ gridTemplateColumns: GRID_TEMPLATE }}
         >
           {filteredColumns.map((col) => (
-            <KanbanColumnLane key={col.id} column={col} onCardClick={setThreadLetterId} />
+            <KanbanColumnLane
+              key={col.id}
+              column={col}
+              draggingTaskId={draggingTaskId}
+              isDropTarget={dragOverColumn === col.id}
+              onCardClick={setThreadLetterId}
+              onDragStart={handleDragStart}
+              onDragEnd={handleDragEnd}
+              onDragOver={(event) => handleDragOver(event, col.id)}
+              onDragLeave={() => handleDragLeave(col.id)}
+              onDrop={(event) => handleDrop(event, col.id)}
+              onMoveTask={handleMoveTask}
+            />
           ))}
         </div>
       </div>

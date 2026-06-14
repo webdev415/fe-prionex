@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type DragEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import DatePicker from 'react-datepicker'
 import 'react-datepicker/dist/react-datepicker.css'
@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/DropdownMenu'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
-import type { KanbanTask, KanbanTaskType } from '../../kanban/kanbanData'
+import type { KanbanColumnId, KanbanTask, KanbanTaskType } from '../../kanban/kanbanData'
 import { formatKanbanMonthDay } from '../../utils/formatters'
 import {
   ASSIGNEE_COLOURS,
@@ -72,6 +72,11 @@ const COLUMN_MOVE_OPTIONS = [
     fallback: 'In Progress',
   },
   {
+    id: 'overdue' as const,
+    labelKey: 'pages.lawyerWorkplace.kanban.columns.overdue',
+    fallback: 'Overdue',
+  },
+  {
     id: 'completed' as const,
     labelKey: 'pages.lawyerWorkplace.kanban.columns.completed',
     fallback: 'Done',
@@ -80,10 +85,21 @@ const COLUMN_MOVE_OPTIONS = [
 
 interface KanbanCardProps {
   task: KanbanTask
+  isDragging?: boolean
   onCardClick?: (letterId: string) => void
+  onMoveTask?: (taskId: string, columnId: KanbanColumnId) => void
+  onDragStart?: (event: DragEvent, task: KanbanTask) => void
+  onDragEnd?: () => void
 }
 
-export function KanbanCard({ task, onCardClick }: KanbanCardProps) {
+export function KanbanCard({
+  task,
+  isDragging = false,
+  onCardClick,
+  onMoveTask,
+  onDragStart,
+  onDragEnd,
+}: KanbanCardProps) {
   const { t } = useTranslation('common')
   const isOverdue = task.columnId === 'overdue'
   const isCompleted = task.columnId === 'completed'
@@ -124,7 +140,8 @@ export function KanbanCard({ task, onCardClick }: KanbanCardProps) {
         'relative rounded-lg bg-white p-3 shadow-[0_1px_2px_0_rgba(5,4,13,0.04)]',
         isClickable ? 'cursor-pointer transition-shadow hover:shadow-md' : 'cursor-default',
         isOverdue ? 'border-error-400 border-l-2' : '',
-        isCompleted ? 'opacity-75' : ''
+        isCompleted ? 'opacity-75' : '',
+        isDragging && 'opacity-40'
       )}
     >
       {/* Row 1: type/overdue badge + task ID */}
@@ -137,9 +154,29 @@ export function KanbanCard({ task, onCardClick }: KanbanCardProps) {
         ) : (
           <KanbanTypeBadge type={taskType} />
         )}
-        <span className="text-light-400 shrink-0 text-[10px] font-medium tracking-wide">
-          {task.id}
-        </span>
+        <div className="flex shrink-0 items-center gap-1">
+          {!isCompleted && (
+            <button
+              type="button"
+              draggable
+              onDragStart={(event) => onDragStart?.(event, task)}
+              onDragEnd={onDragEnd}
+              onClick={(event) => event.stopPropagation()}
+              aria-label={t('pages.lawyerWorkplace.kanban.dragTask', 'Drag task')}
+              className="text-light-400 hover:text-light-600 flex h-5 w-4 cursor-grab items-center justify-center rounded active:cursor-grabbing"
+            >
+              <svg width="8" height="12" viewBox="0 0 8 12" fill="currentColor" aria-hidden="true">
+                <circle cx="2" cy="2" r="1.2" />
+                <circle cx="6" cy="2" r="1.2" />
+                <circle cx="2" cy="6" r="1.2" />
+                <circle cx="6" cy="6" r="1.2" />
+                <circle cx="2" cy="10" r="1.2" />
+                <circle cx="6" cy="10" r="1.2" />
+              </svg>
+            </button>
+          )}
+          <span className="text-light-400 text-[10px] font-medium tracking-wide">{task.id}</span>
+        </div>
       </div>
 
       {/* Overdue: type badge on own row */}
@@ -254,6 +291,10 @@ export function KanbanCard({ task, onCardClick }: KanbanCardProps) {
                       <DropdownMenuItem
                         key={col.id}
                         className="cursor-pointer rounded-md px-2 py-1.5 text-[12px] focus:bg-gray-50"
+                        onClick={(event) => {
+                          event.stopPropagation()
+                          onMoveTask?.(task.id, col.id)
+                        }}
                       >
                         {t(col.labelKey, col.fallback)}
                       </DropdownMenuItem>

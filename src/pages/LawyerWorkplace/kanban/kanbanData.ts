@@ -333,30 +333,76 @@ export const MOCK_KANBAN_TASKS: KanbanTask[] = [
 
 // ─── Column definitions ───────────────────────────────────────────────────────
 
-export const KANBAN_COLUMNS: KanbanColumnDef[] = [
+export const KANBAN_DRAG_MIME = 'application/x-legal-kanban-task'
+
+export interface KanbanDragPayload {
+  taskId: string
+  fromColumnId: KanbanColumnId
+}
+
+const KANBAN_COLUMN_META: Pick<KanbanColumnDef, 'id' | 'labelKey' | 'dotClass'>[] = [
   {
     id: 'not_defined',
     labelKey: 'pages.lawyerWorkplace.kanban.columns.notDefined',
     dotClass: 'bg-gray-600',
-    tasks: MOCK_KANBAN_TASKS.filter((t) => t.columnId === 'not_defined'),
   },
   {
     id: 'in_progress',
     labelKey: 'pages.lawyerWorkplace.kanban.columns.inProgress',
     dotClass: 'bg-information-500',
-    tasks: MOCK_KANBAN_TASKS.filter((t) => t.columnId === 'in_progress'),
   },
   {
     id: 'overdue',
     labelKey: 'pages.lawyerWorkplace.kanban.columns.overdue',
     dotClass: 'bg-error-500',
-    tasks: MOCK_KANBAN_TASKS.filter((t) => t.columnId === 'overdue'),
   },
   {
     id: 'completed',
     labelKey: 'pages.lawyerWorkplace.kanban.columns.completed',
     dotClass: 'bg-success-500',
-    tasks: MOCK_KANBAN_TASKS.filter((t) => t.columnId === 'completed'),
-    todayCount: 4,
   },
 ]
+
+function isClosedToday(closedAt: string | null): boolean {
+  if (!closedAt) return false
+  const closed = new Date(closedAt)
+  const now = new Date()
+  return (
+    closed.getFullYear() === now.getFullYear() &&
+    closed.getMonth() === now.getMonth() &&
+    closed.getDate() === now.getDate()
+  )
+}
+
+/** Build column defs from a flat task list (used by the live board state). */
+export function buildKanbanColumns(tasks: KanbanTask[]): KanbanColumnDef[] {
+  const completedToday = tasks.filter(
+    (task) => task.columnId === 'completed' && isClosedToday(task.closedAt)
+  ).length
+
+  return KANBAN_COLUMN_META.map((meta) => ({
+    ...meta,
+    tasks: tasks.filter((task) => task.columnId === meta.id),
+    ...(meta.id === 'completed' && completedToday > 0 ? { todayCount: completedToday } : {}),
+  }))
+}
+
+/** Move a task to another column, updating closedAt when entering/leaving DONE. */
+export function moveKanbanTask(
+  tasks: KanbanTask[],
+  taskId: string,
+  toColumnId: KanbanColumnId
+): KanbanTask[] {
+  return tasks.map((task) => {
+    if (task.id !== taskId || task.columnId === toColumnId) return task
+
+    const now = new Date().toISOString()
+    return {
+      ...task,
+      columnId: toColumnId,
+      closedAt: toColumnId === 'completed' ? (task.closedAt ?? now) : null,
+    }
+  })
+}
+
+export const KANBAN_COLUMNS: KanbanColumnDef[] = buildKanbanColumns(MOCK_KANBAN_TASKS)
