@@ -255,7 +255,7 @@ export const MOCK_KANBAN_TASKS: KanbanTask[] = [
     assigneeName: 'Doroshenko',
     priority: 'highest',
     columnId: 'overdue',
-    letterId: null,
+    letterId: 'letter-17',
   },
   {
     id: 'TASK-2698',
@@ -269,7 +269,7 @@ export const MOCK_KANBAN_TASKS: KanbanTask[] = [
     assigneeName: 'Kostenko',
     priority: 'high',
     columnId: 'overdue',
-    letterId: null,
+    letterId: 'letter-18',
   },
 
   // ── COMPLETED ────────────────────────────────────────────────────────────────

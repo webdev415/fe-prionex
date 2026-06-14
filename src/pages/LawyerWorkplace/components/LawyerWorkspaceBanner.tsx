@@ -25,7 +25,7 @@ export function LawyerWorkspaceBanner({ className }: LawyerWorkspaceBannerProps)
   return (
     <div
       className={cn(
-        'pointer-events-none fixed inset-x-0 bottom-6 z-50 flex justify-center p-7',
+        'pointer-events-none fixed inset-x-0 bottom-6 z-30 flex justify-center p-7',
         className
       )}
     >

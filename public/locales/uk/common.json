@@ -477,10 +477,10 @@
           "allTypes": "Всі типи"
         },
         "columns": {
-          "unclassified": "БЕЗ КЛАСИФІКАЦІЇ",
+          "notDefined": "НЕ ВИЗНАЧЕНО",
           "inProgress": "В РОБОТІ",
           "overdue": "ПРОСТРОЧЕНО",
-          "ready": "ГОТОВО"
+          "completed": "ВИКОНАНО"
         },
         "types": {
           "unclassified": "некласифіковано",

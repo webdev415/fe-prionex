@@ -520,7 +520,7 @@
           "notDefined": "NOT DEFINED",
           "inProgress": "IN PROGRESS",
           "overdue": "OVERDUE",
-          "completed": "COMPLETED"
+          "completed": "DONE"
         },
         "types": {
           "unclassified": "unclassified",
