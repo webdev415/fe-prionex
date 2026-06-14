@@ -1,6 +1,6 @@
 export type LawyerWorkplaceTab = 'inbox' | 'kanban' | 'documents' | 'settings'
 
-export type IncomingMailboxFilter = 'all' | 'new' | 'in_progress'
+export type IncomingMailboxFilter = 'all' | 'new' | 'in_progress' | 'done'
 
 export type IncomingFolder = 'inbox' | 'quarantine' | 'sent'
 

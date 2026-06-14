@@ -15,7 +15,9 @@ import { EmailThreadPanel } from './components/thread/EmailThreadPanel'
 import { LetterParametersPanel } from './components/parameters/LetterParametersPanel'
 import { LegalKanbanBoard } from './components/kanban/LegalKanbanBoard'
 import { LawyerWorkspaceBanner } from './components/LawyerWorkspaceBanner'
+import { LegalSettingsTab } from './components/settings/LegalSettingsTab'
 import { PlaceholderTab } from './components/PlaceholderTab'
+import { NewOutgoingLetterModal } from './components/thread/NewOutgoingLetterModal'
 import { getLetterDetail, MOCK_LETTERS } from './mockData'
 import type { IncomingFolder, IncomingMailboxFilter, LawyerWorkplaceTab } from './types'
 
@@ -43,7 +45,9 @@ export function LawyerWorkplacePage() {
   )
   const [inboxPane, setInboxPane] = useState<InboxPane>('list')
   const [replyDraft, setReplyDraft] = useState('')
-  const [markAsNbuResponse, setMarkAsNbuResponse] = useState(false)
+  // Track letters that have been confirmed via the parameters panel
+  const [confirmedLetterIds, setConfirmedLetterIds] = useState<Set<string>>(new Set())
+  const [newLetterOpen, setNewLetterOpen] = useState(false)
 
   const selectedLetter = useMemo(
     () => (selectedLetterId ? getLetterDetail(selectedLetterId) : null),
@@ -56,9 +60,19 @@ export function LawyerWorkplacePage() {
       items = items.filter((l) => l.status === 'new')
     } else if (activeFilter === 'in_progress') {
       items = items.filter((l) => l.status === 'in_progress')
+    } else if (activeFilter === 'done') {
+      items = items.filter(
+        (l) =>
+          l.status === 'sent_to_kanban' || l.status === 'on_board' || l.status === 'auto_processed'
+      )
     }
     return items.sort((a, b) => new Date(b.receivedAt).getTime() - new Date(a.receivedAt).getTime())
   }, [activeFilter])
+
+  const unprocessedCount = useMemo(
+    () => MOCK_LETTERS.filter((l) => l.isUnprocessed && !confirmedLetterIds.has(l.id)).length,
+    [confirmedLetterIds]
+  )
 
   const handleSelectLetter = (letterId: string) => {
     setSelectedLetterId(letterId)
@@ -69,7 +83,14 @@ export function LawyerWorkplacePage() {
     }
   }
 
+  const handleConfirmLetter = (letterId: string) => {
+    setConfirmedLetterIds((prev) => new Set([...prev, letterId]))
+  }
+
   const closeParameters = () => setInboxPane('thread')
+
+  // Auto-processed letters should not show the parameters panel
+  const showParametersPanel = selectedLetter !== null && selectedLetter.status !== 'auto_processed'
 
   return (
     // Fixed-height column flush against the 60px header (no gap).
@@ -77,6 +98,7 @@ export function LawyerWorkplacePage() {
     // Height is calc(100vh-60px) so the page still ends at the viewport bottom.
     // -mx/-mb cancel horizontal and bottom DashboardLayout padding.
     <div className="-mx-4 -mt-[20px] -mb-4 flex h-[calc(100vh-60px)] flex-col overflow-hidden sm:-mx-6 sm:-mb-6 lg:-mx-[28px] lg:-mb-[20px]">
+      <NewOutgoingLetterModal open={newLetterOpen} onClose={() => setNewLetterOpen(false)} />
       {/* ── Panels (flex-1 so they fill all space above the footer) ─── */}
       <div
         className={cn(
@@ -99,9 +121,11 @@ export function LawyerWorkplacePage() {
                 selectedLetterId={selectedLetterId}
                 activeFolder={activeFolder}
                 activeFilter={activeFilter}
+                unprocessedCount={unprocessedCount}
                 onFolderChange={setActiveFolder}
                 onFilterChange={setActiveFilter}
                 onSelectLetter={handleSelectLetter}
+                onNewLetter={() => setNewLetterOpen(true)}
               />
             </div>
 
@@ -116,41 +140,54 @@ export function LawyerWorkplacePage() {
                 letter={selectedLetter}
                 replyDraft={replyDraft}
                 onReplyDraftChange={setReplyDraft}
-                markAsNbuResponse={markAsNbuResponse}
-                onMarkAsNbuResponseChange={setMarkAsNbuResponse}
                 onBack={isCompactInbox ? () => setInboxPane('list') : undefined}
-                onOpenParameters={!isDesktopThreeCol ? () => setInboxPane('parameters') : undefined}
+                onOpenParameters={
+                  !isDesktopThreeCol && showParametersPanel
+                    ? () => setInboxPane('parameters')
+                    : undefined
+                }
               />
             </div>
 
-            {/* Parameters — third column on xl+ */}
-            {isDesktopThreeCol && (
+            {/* Parameters — third column on xl+ (hidden for auto-processed) */}
+            {isDesktopThreeCol && showParametersPanel && (
               <div className="h-full w-[22%] shrink-0">
-                <LetterParametersPanel letter={selectedLetter} />
+                <LetterParametersPanel letter={selectedLetter} onConfirm={handleConfirmLetter} />
               </div>
             )}
 
             {/* Parameters — full-screen pane on mobile */}
-            {isCompactInbox && inboxPane === 'parameters' && (
+            {isCompactInbox && inboxPane === 'parameters' && showParametersPanel && (
               <div className="absolute inset-0 z-30 flex h-full w-full flex-col bg-white">
-                <LetterParametersPanel letter={selectedLetter} onClose={closeParameters} />
+                <LetterParametersPanel
+                  letter={selectedLetter}
+                  onClose={closeParameters}
+                  onConfirm={handleConfirmLetter}
+                />
               </div>
             )}
 
             {/* Parameters — slide-over on tablet (lg–xl) */}
-            {!isCompactInbox && !isDesktopThreeCol && inboxPane === 'parameters' && (
-              <>
-                <button
-                  type="button"
-                  className="absolute inset-0 z-40 bg-black/20"
-                  aria-label={t('pages.lawyerWorkplace.parameters.close', 'Close parameters')}
-                  onClick={closeParameters}
-                />
-                <div className="absolute inset-y-0 right-0 z-50 w-[min(380px,92vw)] bg-white shadow-2xl">
-                  <LetterParametersPanel letter={selectedLetter} onClose={closeParameters} />
-                </div>
-              </>
-            )}
+            {!isCompactInbox &&
+              !isDesktopThreeCol &&
+              inboxPane === 'parameters' &&
+              showParametersPanel && (
+                <>
+                  <button
+                    type="button"
+                    className="absolute inset-0 z-40 bg-black/20"
+                    aria-label={t('pages.lawyerWorkplace.parameters.close', 'Close parameters')}
+                    onClick={closeParameters}
+                  />
+                  <div className="absolute inset-y-0 right-0 z-50 w-[min(380px,92vw)] bg-white shadow-2xl">
+                    <LetterParametersPanel
+                      letter={selectedLetter}
+                      onClose={closeParameters}
+                      onConfirm={handleConfirmLetter}
+                    />
+                  </div>
+                </>
+              )}
           </div>
         )}
 
@@ -173,13 +210,8 @@ export function LawyerWorkplacePage() {
         )}
 
         {activeTab === 'settings' && (
-          <div className="flex h-full overflow-hidden">
-            <PlaceholderTab
-              titleKey="pages.lawyerWorkplace.settings.title"
-              titleFallback="Settings"
-              descriptionKey="pages.lawyerWorkplace.settings.comingSoon"
-              descriptionFallback="Letter type directory and mailbox settings — coming soon."
-            />
+          <div className="flex h-full overflow-auto">
+            <LegalSettingsTab />
           </div>
         )}
       </div>

@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Attachment01Icon } from '@hugeicons/core-free-icons'
 import { useTranslation } from 'react-i18next'
 import { Textarea } from '@/components/ui/Textarea'
@@ -12,38 +13,85 @@ import {
 import { Icon, Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 
+const MOCK_MAILBOXES = [
+  'legal@prionex.ua',
+  'court@prionex.ua',
+  'nbu@prionex.ua',
+  'accounting@prionex.ua',
+]
+
+type EdoType = 'outgoing' | 'nbu' | 'none'
+
+const EDO_OPTIONS: { id: EdoType; labelKey: string; fallback: string; badge?: string }[] = [
+  {
+    id: 'outgoing',
+    labelKey: 'pages.lawyerWorkplace.reply.edoOutgoing',
+    fallback: 'Outgoing (ВИХ)',
+    badge: 'ВИХ',
+  },
+  {
+    id: 'nbu',
+    labelKey: 'pages.lawyerWorkplace.reply.edoNbu',
+    fallback: 'NBU reply (НБУ)',
+    badge: 'НБУ',
+  },
+  {
+    id: 'none',
+    labelKey: 'pages.lawyerWorkplace.reply.edoNone',
+    fallback: 'Do not register',
+  },
+]
+
 export interface ReplyComposerProps {
   fromMailbox: string
   toMailbox: string
   value: string
   onChange: (value: string) => void
-  markAsNbuResponse: boolean
-  onMarkAsNbuResponseChange: (checked: boolean) => void
 }
 
-export function ReplyComposer({
-  fromMailbox,
-  toMailbox,
-  value,
-  onChange,
-  markAsNbuResponse,
-  onMarkAsNbuResponseChange,
-}: ReplyComposerProps) {
+export function ReplyComposer({ fromMailbox, toMailbox, value, onChange }: ReplyComposerProps) {
   const { t } = useTranslation('common')
-  const nbuLabel = t('pages.lawyerWorkplace.reply.markNbuResponse', 'Mark as NBU response')
-  const nbuShortLabel = t('pages.lawyerWorkplace.reply.markNbuShort', 'NBU')
+  const [selectedMailbox, setSelectedMailbox] = useState(fromMailbox)
+  const [edoType, setEdoType] = useState<EdoType>('none')
+
+  const selectedEdo = EDO_OPTIONS.find((o) => o.id === edoType) ?? EDO_OPTIONS[2]!
 
   return (
     <div className="flex shrink-0 flex-col gap-2 bg-[linear-gradient(180deg,#F2F3F0_0%,#FFF_100%)] px-3 py-2.5 sm:px-5 sm:py-3">
+      {/* From / To row */}
       <div className="flex items-center justify-between gap-2 py-0.5 sm:gap-3 sm:py-2">
         <div className="flex min-w-0 flex-1 flex-col gap-1 sm:flex-row sm:flex-wrap sm:items-center sm:gap-2">
           <span className="text-light-700 shrink-0 text-[10px] sm:text-[11px]">
             {t('pages.lawyerWorkplace.reply.replyFrom', 'Reply from')}
           </span>
           <div className="flex min-w-0 items-center gap-1 sm:gap-2">
-            <span className="bg-light-100 text-secondary-900 max-w-[42vw] truncate rounded-full border border-gray-200 px-2 py-0.5 text-[10px] font-normal sm:max-w-none sm:text-[10.5px]">
-              {fromMailbox}
-            </span>
+            {/* Interactive mailbox selector */}
+            <DropdownMenu modal={false}>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className="bg-light-100 text-secondary-900 flex max-w-[42vw] items-center gap-1 truncate rounded-full border border-gray-200 px-2 py-0.5 text-[10px] font-normal transition-colors hover:bg-gray-100 sm:max-w-none sm:text-[10.5px]"
+                >
+                  <span className="truncate">{selectedMailbox}</span>
+                  <Icons.ArrowDown size={10} strokeWidth={2} className="shrink-0 text-gray-400" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="min-w-[200px] p-1.5">
+                {MOCK_MAILBOXES.map((mb) => (
+                  <DropdownMenuItem
+                    key={mb}
+                    className={cn(
+                      'cursor-pointer rounded-md px-2.5 py-1.5 text-[12px] focus:bg-gray-50',
+                      mb === selectedMailbox && 'bg-gray-50 font-medium'
+                    )}
+                    onClick={() => setSelectedMailbox(mb)}
+                  >
+                    {mb}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
             <span className="text-light-400 inline-flex shrink-0 items-center" aria-hidden="true">
               <Icons.ArrowRight02 size={10} strokeWidth={1.5} />
             </span>
@@ -53,34 +101,56 @@ export function ReplyComposer({
           </div>
         </div>
 
-        <label
-          className="text-light-700 flex shrink-0 cursor-pointer items-center gap-1 sm:gap-1.5"
-          title={nbuLabel}
-        >
-          <div
-            role="checkbox"
-            aria-checked={markAsNbuResponse}
-            aria-label={nbuLabel}
-            tabIndex={0}
-            onClick={() => onMarkAsNbuResponseChange(!markAsNbuResponse)}
-            onKeyDown={(e) => e.key === 'Enter' && onMarkAsNbuResponseChange(!markAsNbuResponse)}
-            className={cn(
-              'flex h-4 w-7 shrink-0 items-center rounded-full px-0.5 transition-colors',
-              markAsNbuResponse ? 'bg-secondary-500' : 'bg-gray-300'
-            )}
-          >
-            <div
+        {/* EDO type selector */}
+        <DropdownMenu modal={false}>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
               className={cn(
-                'h-3 w-3 rounded-full bg-white shadow transition-transform',
-                markAsNbuResponse ? 'translate-x-3' : 'translate-x-0'
+                'flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] transition-colors sm:text-[11px]',
+                edoType !== 'none'
+                  ? 'border-secondary-300 bg-secondary-50 text-secondary-800'
+                  : 'border-gray-200 bg-white text-gray-500 hover:bg-gray-50'
               )}
-            />
-          </div>
-          <span className="text-[10px] sm:hidden">{nbuShortLabel}</span>
-          <span className="hidden text-[11.5px] sm:inline">{nbuLabel}</span>
-        </label>
+            >
+              {selectedEdo.badge ? (
+                <span className="font-semibold">{selectedEdo.badge}</span>
+              ) : (
+                <Icons.File size={11} strokeWidth={1.5} />
+              )}
+              <span className="hidden sm:inline">
+                {edoType === 'none'
+                  ? t('pages.lawyerWorkplace.reply.edoLabel', 'EDO')
+                  : t(selectedEdo.labelKey, selectedEdo.fallback)}
+              </span>
+              <Icons.ArrowDown size={9} strokeWidth={2} className="text-gray-400" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="min-w-[190px] p-1.5">
+            {EDO_OPTIONS.map((opt) => (
+              <DropdownMenuItem
+                key={opt.id}
+                className={cn(
+                  'cursor-pointer rounded-md px-2.5 py-1.5 text-[12px] focus:bg-gray-50',
+                  opt.id === edoType && 'bg-gray-50 font-medium'
+                )}
+                onClick={() => setEdoType(opt.id)}
+              >
+                <span className="flex items-center gap-2">
+                  {opt.badge && (
+                    <span className="text-secondary-800 bg-secondary-50 rounded px-1 text-[10px] font-bold">
+                      {opt.badge}
+                    </span>
+                  )}
+                  {t(opt.labelKey, opt.fallback)}
+                </span>
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
+      {/* Textarea + send */}
       <div className="flex flex-row items-end rounded-lg border border-gray-200 bg-white p-2.5 sm:p-3">
         <Textarea
           value={value}
@@ -99,6 +169,7 @@ export function ReplyComposer({
         </Button>
       </div>
 
+      {/* Toolbar buttons */}
       <div className="flex items-center gap-0.5 overflow-x-auto px-0.5 [scrollbar-width:none] sm:justify-between sm:overflow-visible sm:px-1 [&::-webkit-scrollbar]:hidden">
         <LinkButton
           type="button"

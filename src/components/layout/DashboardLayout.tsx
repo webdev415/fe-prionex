@@ -35,6 +35,9 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { searchClients, mapPriorityLevel, type SearchType } from '@/api/clientSearchApi'
 import { RouteChangeTracker, TrackingProvider } from '@/features/operatorAnalytics'
 import { LawyerWorkplaceHeaderNav } from '@/pages/LawyerWorkplace/components/LawyerWorkplaceHeaderNav'
+import { MOCK_LETTERS } from '@/pages/LawyerWorkplace/mockData'
+
+const LAWYER_WORKPLACE_UNPROCESSED = MOCK_LETTERS.filter((l) => l.isUnprocessed).length
 
 // Minimum digit count required to fire a phone-type search. Mirrors the
 // backend guard at services/client/app/routers/search.py (PHONE_MIN_DIGITS).
@@ -743,6 +746,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         label: t('navigation.lawyerWorkplace', 'Lawyer Workplace'),
         requiredPermissions: [PERMISSIONS.LEGAL_WORKPLACE.VIEW, PERMISSIONS.SYSTEM.MANAGE_SETTINGS],
         mode: 'any' as const,
+        badge: LAWYER_WORKPLACE_UNPROCESSED > 0 ? LAWYER_WORKPLACE_UNPROCESSED : undefined,
       },
       {
         path: '/dashboard/team-management',

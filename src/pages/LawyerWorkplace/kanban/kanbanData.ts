@@ -1,6 +1,6 @@
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-export type KanbanColumnId = 'unclassified' | 'in_progress' | 'overdue' | 'ready'
+export type KanbanColumnId = 'not_defined' | 'in_progress' | 'overdue' | 'completed'
 
 export type KanbanTaskType =
   | 'unclassified'
@@ -21,7 +21,7 @@ export interface KanbanTask {
   clientName: string | null
   /** ISO date: when the task response is / was due */
   deadline: string | null
-  /** ISO date: when the task was closed (READY column) */
+  /** ISO date: when the task was closed (COMPLETED column) */
   closedAt: string | null
   priority: KanbanTaskPriority
   /** Two-letter initials, e.g. "VD" */
@@ -29,6 +29,8 @@ export interface KanbanTask {
   /** Display name after initials, e.g. "Doroshenko" */
   assigneeName: string
   columnId: KanbanColumnId
+  /** ID of the source letter in mockData (links card → email thread) */
+  letterId: string | null
 }
 
 export interface KanbanColumnDef {
@@ -54,7 +56,7 @@ function rel(offsetDays: number): string {
 // ─── Mock tasks ───────────────────────────────────────────────────────────────
 
 export const MOCK_KANBAN_TASKS: KanbanTask[] = [
-  // ── UNCLASSIFIED ────────────────────────────────────────────────────────────
+  // ── NOT DEFINED ─────────────────────────────────────────────────────────────
   {
     id: 'TASK-2784',
     type: 'unclassified',
@@ -66,7 +68,8 @@ export const MOCK_KANBAN_TASKS: KanbanTask[] = [
     assigneeInitials: 'ON',
     assigneeName: 'manager',
     priority: 'medium',
-    columnId: 'unclassified',
+    columnId: 'not_defined',
+    letterId: 'letter-14',
   },
   {
     id: 'TASK-2789',
@@ -79,7 +82,8 @@ export const MOCK_KANBAN_TASKS: KanbanTask[] = [
     assigneeInitials: 'ON',
     assigneeName: 'manager',
     priority: 'low',
-    columnId: 'unclassified',
+    columnId: 'not_defined',
+    letterId: 'letter-5',
   },
   {
     id: 'TASK-2791',
@@ -92,7 +96,8 @@ export const MOCK_KANBAN_TASKS: KanbanTask[] = [
     assigneeInitials: 'ON',
     assigneeName: 'manager',
     priority: 'high',
-    columnId: 'unclassified',
+    columnId: 'not_defined',
+    letterId: null,
   },
 
   // ── IN PROGRESS ─────────────────────────────────────────────────────────────
@@ -108,6 +113,7 @@ export const MOCK_KANBAN_TASKS: KanbanTask[] = [
     assigneeName: 'Doroshenko',
     priority: 'high',
     columnId: 'in_progress',
+    letterId: 'letter-1',
   },
   {
     id: 'TASK-2806',
@@ -121,6 +127,7 @@ export const MOCK_KANBAN_TASKS: KanbanTask[] = [
     assigneeName: 'Kostenko',
     priority: 'highest',
     columnId: 'in_progress',
+    letterId: 'letter-2',
   },
   {
     id: 'TASK-2802',
@@ -134,6 +141,7 @@ export const MOCK_KANBAN_TASKS: KanbanTask[] = [
     assigneeName: 'Melnychenko',
     priority: 'medium',
     columnId: 'in_progress',
+    letterId: 'letter-4',
   },
   {
     id: 'TASK-2799',
@@ -147,6 +155,7 @@ export const MOCK_KANBAN_TASKS: KanbanTask[] = [
     assigneeName: 'Doroshenko',
     priority: 'low',
     columnId: 'in_progress',
+    letterId: 'letter-3',
   },
   {
     id: 'TASK-2794',
@@ -160,6 +169,7 @@ export const MOCK_KANBAN_TASKS: KanbanTask[] = [
     assigneeName: 'Doroshenko',
     priority: 'high',
     columnId: 'in_progress',
+    letterId: 'letter-6',
   },
   {
     id: 'TASK-2788',
@@ -173,6 +183,7 @@ export const MOCK_KANBAN_TASKS: KanbanTask[] = [
     assigneeName: 'Melnychenko',
     priority: 'medium',
     columnId: 'in_progress',
+    letterId: 'letter-7',
   },
   {
     id: 'TASK-2781',
@@ -186,6 +197,7 @@ export const MOCK_KANBAN_TASKS: KanbanTask[] = [
     assigneeName: 'Kostenko',
     priority: 'low',
     columnId: 'in_progress',
+    letterId: 'letter-8',
   },
   {
     id: 'TASK-2776',
@@ -199,6 +211,7 @@ export const MOCK_KANBAN_TASKS: KanbanTask[] = [
     assigneeName: 'Doroshenko',
     priority: 'high',
     columnId: 'in_progress',
+    letterId: 'letter-9',
   },
   {
     id: 'TASK-2770',
@@ -212,6 +225,7 @@ export const MOCK_KANBAN_TASKS: KanbanTask[] = [
     assigneeName: 'Melnychenko',
     priority: 'medium',
     columnId: 'in_progress',
+    letterId: 'letter-y2',
   },
   {
     id: 'TASK-2765',
@@ -225,6 +239,7 @@ export const MOCK_KANBAN_TASKS: KanbanTask[] = [
     assigneeName: 'Kostenko',
     priority: 'lowest',
     columnId: 'in_progress',
+    letterId: 'letter-16',
   },
 
   // ── OVERDUE ─────────────────────────────────────────────────────────────────
@@ -240,6 +255,7 @@ export const MOCK_KANBAN_TASKS: KanbanTask[] = [
     assigneeName: 'Doroshenko',
     priority: 'highest',
     columnId: 'overdue',
+    letterId: null,
   },
   {
     id: 'TASK-2698',
@@ -253,9 +269,10 @@ export const MOCK_KANBAN_TASKS: KanbanTask[] = [
     assigneeName: 'Kostenko',
     priority: 'high',
     columnId: 'overdue',
+    letterId: null,
   },
 
-  // ── READY ────────────────────────────────────────────────────────────────────
+  // ── COMPLETED ────────────────────────────────────────────────────────────────
   {
     id: 'TASK-2755',
     type: 'attorney_request',
@@ -267,7 +284,8 @@ export const MOCK_KANBAN_TASKS: KanbanTask[] = [
     assigneeInitials: 'VD',
     assigneeName: 'Doroshenko',
     priority: 'medium',
-    columnId: 'ready',
+    columnId: 'completed',
+    letterId: null,
   },
   {
     id: 'TASK-2748',
@@ -280,7 +298,8 @@ export const MOCK_KANBAN_TASKS: KanbanTask[] = [
     assigneeInitials: 'VD',
     assigneeName: 'Doroshenko',
     priority: 'low',
-    columnId: 'ready',
+    columnId: 'completed',
+    letterId: null,
   },
   {
     id: 'TASK-2742',
@@ -293,7 +312,8 @@ export const MOCK_KANBAN_TASKS: KanbanTask[] = [
     assigneeInitials: 'LK',
     assigneeName: 'Kostenko',
     priority: 'low',
-    columnId: 'ready',
+    columnId: 'completed',
+    letterId: null,
   },
   {
     id: 'TASK-2733',
@@ -306,7 +326,8 @@ export const MOCK_KANBAN_TASKS: KanbanTask[] = [
     assigneeInitials: 'SM',
     assigneeName: 'Melnychenko',
     priority: 'medium',
-    columnId: 'ready',
+    columnId: 'completed',
+    letterId: null,
   },
 ]
 
@@ -314,10 +335,10 @@ export const MOCK_KANBAN_TASKS: KanbanTask[] = [
 
 export const KANBAN_COLUMNS: KanbanColumnDef[] = [
   {
-    id: 'unclassified',
-    labelKey: 'pages.lawyerWorkplace.kanban.columns.unclassified',
+    id: 'not_defined',
+    labelKey: 'pages.lawyerWorkplace.kanban.columns.notDefined',
     dotClass: 'bg-gray-600',
-    tasks: MOCK_KANBAN_TASKS.filter((t) => t.columnId === 'unclassified'),
+    tasks: MOCK_KANBAN_TASKS.filter((t) => t.columnId === 'not_defined'),
   },
   {
     id: 'in_progress',
@@ -332,10 +353,10 @@ export const KANBAN_COLUMNS: KanbanColumnDef[] = [
     tasks: MOCK_KANBAN_TASKS.filter((t) => t.columnId === 'overdue'),
   },
   {
-    id: 'ready',
-    labelKey: 'pages.lawyerWorkplace.kanban.columns.ready',
+    id: 'completed',
+    labelKey: 'pages.lawyerWorkplace.kanban.columns.completed',
     dotClass: 'bg-success-500',
-    tasks: MOCK_KANBAN_TASKS.filter((t) => t.columnId === 'ready'),
+    tasks: MOCK_KANBAN_TASKS.filter((t) => t.columnId === 'completed'),
     todayCount: 4,
   },
 ]

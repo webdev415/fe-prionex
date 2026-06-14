@@ -23,7 +23,7 @@ const STATUS_KEYS: Record<LetterListItemType['status'], { labelKey: string; clas
   },
   auto_processed: {
     labelKey: 'pages.lawyerWorkplace.letterItem.status.autoProcessed',
-    className: 'bg-gray-100 text-gray-600',
+    className: 'bg-success-100 text-success-700',
   },
 }
 
@@ -48,6 +48,8 @@ export function LetterListItem({ letter, isSelected, onSelect }: LetterListItemP
     ? (TYPE_COLOUR[letter.letterType] ?? 'bg-gray-100 text-gray-600')
     : null
 
+  const isAutoProcessed = letter.status === 'auto_processed'
+
   return (
     <button
       type="button"
@@ -57,8 +59,10 @@ export function LetterListItem({ letter, isSelected, onSelect }: LetterListItemP
         isSelected
           ? 'border-primary-500 bg-primary-50'
           : letter.isUnprocessed
-            ? 'bg-error-50 hover:bg-error-100/60 border-white'
-            : 'border-white bg-white hover:bg-gray-50/40'
+            ? 'border-l-warning-400 border-l-2 border-white bg-orange-50/60 hover:bg-orange-100/40'
+            : isAutoProcessed
+              ? 'border-success-100 bg-success-50/30 hover:bg-success-50/60'
+              : 'border-white bg-white hover:bg-gray-50/40'
       )}
     >
       <div className="mb-1.5 flex items-baseline justify-between gap-2">
@@ -116,6 +120,14 @@ export function LetterListItem({ letter, isSelected, onSelect }: LetterListItemP
             <span className="bg-light-700 h-1.5 w-1.5 rounded-full" />
             <span>{t('pages.lawyerWorkplace.letterItem.unclassified', 'Unclassified')}</span>
           </span>
+        )}
+
+        {/* Auto-processed: green dot indicator */}
+        {isAutoProcessed && (
+          <span
+            className="bg-success-500 ml-1 inline-block h-1.5 w-1.5 rounded-full"
+            aria-hidden="true"
+          />
         )}
 
         {letter.clientCode && letter.clientName ? (

@@ -364,7 +364,20 @@
       "filters": {
         "allMailboxes": "All mailboxes",
         "new": "New",
-        "inProgress": "In progress"
+        "inProgress": "In progress",
+        "done": "Done"
+      },
+      "incoming": {
+        "title": "Incoming",
+        "empty": "No letters in this folder",
+        "count": "{{total}} / {{unprocessed}}",
+        "scrollUp": "Scroll up",
+        "scrollDown": "Scroll down",
+        "searchPlaceholder": "Sender, subject...",
+        "sectionUnprocessed": "Unprocessed",
+        "sectionInProgress": "In progress",
+        "sectionSentToKanban": "Sent to kanban",
+        "newLetter": "New letter"
       },
       "letterItem": {
         "unclassified": "Unclassified",
@@ -392,7 +405,10 @@
         "viaLabel": "via {{label}}",
         "messagesInThread": "{{count}} messages in thread",
         "attachmentPdf": "PDF",
-        "attachmentDoc": "DOC"
+        "attachmentDoc": "DOC",
+        "newLetter": "New letter",
+        "closeThread": "Close thread",
+        "emailThread": "Email thread"
       },
       "reply": {
         "replyFrom": "Reply from",
@@ -404,17 +420,44 @@
         "attach": "Attach",
         "template": "Template",
         "send": "Send",
+        "edoLabel": "EDO",
+        "edoOutgoing": "Outgoing (ВИХ)",
+        "edoNbu": "NBU reply (НБУ)",
+        "edoNone": "Do not register",
         "templates": {
           "complaintResponse": "Complaint response",
           "nbuAcknowledgement": "NBU acknowledgement",
           "extensionRequest": "Extension request"
         }
       },
+      "newLetter": {
+        "title": "New Outgoing Letter",
+        "from": "From",
+        "to": "To",
+        "recipientType": "Recipient",
+        "toClient": "CRM client",
+        "toInstitution": "Institution / Court / NBU",
+        "client": "Client",
+        "selectClient": "Search client...",
+        "selectEmail": "Select email...",
+        "institutionPlaceholder": "e.g. consumers@bank.gov.ua",
+        "noClient": "No client (general letter)",
+        "subject": "Subject",
+        "subjectPlaceholder": "Letter subject...",
+        "body": "Message",
+        "bodyPlaceholder": "Write your message...",
+        "edoType": "EDO document type",
+        "send": "Send"
+      },
       "parameters": {
         "title": "Letter parameters",
         "selectLetter": "Select a letter to view parameters",
         "close": "Close parameters",
         "autoBadge": "AUTO · {{percent}}%",
+        "autoProcessed": "AUTO",
+        "taskOnBoard": "Task created on kanban",
+        "viewTask": "View →",
+        "selectDueDate": "Select date",
         "type": "Type",
         "selectType": "Select type",
         "types": {
@@ -465,6 +508,8 @@
         "byLabel": "by",
         "closedLabel": "closed",
         "today": "today",
+        "emailThread": "Email thread",
+        "changeAssignee": "Change assignee",
         "filters": {
           "thisWeek": "Due this week",
           "thisMonth": "Due this month",
@@ -472,10 +517,10 @@
           "allTypes": "All Types"
         },
         "columns": {
-          "unclassified": "UNCLASSIFIED",
+          "notDefined": "NOT DEFINED",
           "inProgress": "IN PROGRESS",
           "overdue": "OVERDUE",
-          "ready": "READY"
+          "completed": "COMPLETED"
         },
         "types": {
           "unclassified": "unclassified",
@@ -506,7 +551,28 @@
       },
       "settings": {
         "title": "Settings",
-        "comingSoon": "Letter type directory and mailbox settings — coming soon."
+        "comingSoon": "Letter type directory and mailbox settings — coming soon.",
+        "letterTypesTitle": "Letter Type Directory",
+        "letterTypesDesc": "Configurable list of incoming letter types and their default response deadlines.",
+        "lawyerPriorityTitle": "Lawyer Priority Types",
+        "lawyerPriorityDesc": "Define which letter types each lawyer handles by priority. Used by the auto-assignment algorithm.",
+        "addType": "+ Add type",
+        "typeName": "Name",
+        "defaultDeadline": "Default deadline",
+        "status": "Status",
+        "active": "Active",
+        "archived": "Archived",
+        "workingDays": "working days",
+        "lawyer": "Lawyer",
+        "priorityTypes": "Priority types",
+        "activeTasks": "Active tasks",
+        "noPriority": "None (fallback only)"
+      },
+      "activityLog": {
+        "title": "Activity",
+        "letterReceived": "Letter received",
+        "classified": "Auto-classified",
+        "taskCreated": "Task created on kanban board"
       },
       "version": "v0.7.18",
       "workspaceBanner": {

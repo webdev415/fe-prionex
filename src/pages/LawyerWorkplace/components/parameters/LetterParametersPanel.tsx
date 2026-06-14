@@ -1,5 +1,7 @@
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/Button'
+import { DateSelect } from '@/components/ui/DateSelect'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -7,10 +9,13 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/DropdownMenu'
 import { Label } from '@/components/ui/Label'
+import { SearchableSelect } from '@/components/ui/SearchableSelect'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 import { formatDueDate } from '../../utils/formatters'
 import type { LetterDetail } from '../../types'
+
+// ─── Colour maps ──────────────────────────────────────────────────────────────
 
 const TYPE_COLOURS: Record<string, string> = {
   complaint: 'bg-error-100 text-error-700',
@@ -51,17 +56,43 @@ function TypeBadge({ type, label }: { type: string; label: string }) {
   )
 }
 
-const CLIENT_OPTIONS = [
-  { value: 'not_identified', labelKey: 'pages.lawyerWorkplace.parameters.notIdentified' },
-  { value: 'cl-08114', labelKey: 'pages.lawyerWorkplace.parameters.clients.cl08114' },
-  { value: 'cl-12409', labelKey: 'pages.lawyerWorkplace.parameters.clients.cl12409' },
-  { value: 'cl-06441', labelKey: 'pages.lawyerWorkplace.parameters.clients.cl06441' },
-  { value: 'cl-09908', labelKey: 'pages.lawyerWorkplace.parameters.clients.cl09908' },
-  { value: 'cl-03305', labelKey: 'pages.lawyerWorkplace.parameters.clients.cl03305' },
-  { value: 'cl-07750', labelKey: 'pages.lawyerWorkplace.parameters.clients.cl07750' },
-  { value: 'cl-04412', labelKey: 'pages.lawyerWorkplace.parameters.clients.cl04412' },
-  { value: 'cl-05588', labelKey: 'pages.lawyerWorkplace.parameters.clients.cl05588' },
-  { value: 'cl-02211', labelKey: 'pages.lawyerWorkplace.parameters.clients.cl02211' },
+// ─── Mock data ────────────────────────────────────────────────────────────────
+
+const CLIENT_OPTIONS_SEARCHABLE = [
+  { id: 'not_identified', name: 'Not identified' },
+  { id: 'cl-08114', name: 'CL-08114 · I. Petrenko' },
+  { id: 'cl-12409', name: 'CL-12409 · O. Kovalenko' },
+  { id: 'cl-06441', name: 'CL-06441 · P. Melnyk' },
+  { id: 'cl-09908', name: 'CL-09908 · V. Khomenko' },
+  { id: 'cl-03305', name: 'CL-03305 · M. Bondarenko' },
+  { id: 'cl-07750', name: 'CL-07750 · L. Savchenko' },
+  { id: 'cl-04412', name: 'CL-04412 · T. Romaniuk' },
+  { id: 'cl-05588', name: 'CL-05588 · H. Tkachenko' },
+  { id: 'cl-02211', name: 'CL-02211 · O. Vasylenko' },
+]
+
+const LAWYER_OPTIONS = [
+  { value: 'auto', labelKey: 'pages.lawyerWorkplace.parameters.auto', display: 'Auto' },
+  {
+    value: 'lawyer-1',
+    labelKey: 'pages.lawyerWorkplace.parameters.lawyers.lawyer1',
+    display: 'V. Doroshenko (3)',
+  },
+  {
+    value: 'lawyer-2',
+    labelKey: 'pages.lawyerWorkplace.parameters.lawyers.lawyer2',
+    display: 'M. Ivanenko (1)',
+  },
+  {
+    value: 'lawyer-3',
+    labelKey: 'pages.lawyerWorkplace.parameters.lawyers.lawyer3',
+    display: 'D. Kovalchuk (2)',
+  },
+  {
+    value: 'lawyer-4',
+    labelKey: 'pages.lawyerWorkplace.parameters.lawyers.lawyer4',
+    display: 'O. Hrytsenko (4)',
+  },
 ] as const
 
 const CONTRACT_OPTIONS = [
@@ -71,24 +102,31 @@ const CONTRACT_OPTIONS = [
   { value: 'cr-03305', label: 'CR-03305' },
 ] as const
 
-const LAWYER_OPTIONS = [
-  { value: 'auto', labelKey: 'pages.lawyerWorkplace.parameters.auto' },
-  { value: 'lawyer-1', labelKey: 'pages.lawyerWorkplace.parameters.lawyers.lawyer1' },
-  { value: 'lawyer-2', labelKey: 'pages.lawyerWorkplace.parameters.lawyers.lawyer2' },
-  { value: 'lawyer-3', labelKey: 'pages.lawyerWorkplace.parameters.lawyers.lawyer3' },
-  { value: 'lawyer-4', labelKey: 'pages.lawyerWorkplace.parameters.lawyers.lawyer4' },
-] as const
+// ─── Shared sub-components ────────────────────────────────────────────────────
 
-interface ParameterDropdownProps {
-  label: string
-  children: React.ReactNode
-  items: readonly { key: string; label: string; content?: React.ReactNode }[]
-  placeholder?: string
+function ReadonlyField({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex w-full flex-col items-start gap-1.5">
+      <Label className="text-dark-500 text-[12px] font-normal">{label}</Label>
+      <div className="text-dark-500 text-[13px] font-light">{children}</div>
+    </div>
+  )
 }
 
-function ParameterDropdown({ label, children, items, placeholder = '—' }: ParameterDropdownProps) {
-  const hasValue = children !== null && children !== undefined && children !== false
-
+function ParameterDropdown({
+  label,
+  value,
+  placeholder = '—',
+  items,
+  onSelect,
+}: {
+  label: string
+  value: React.ReactNode
+  placeholder?: string
+  items: { key: string; content: React.ReactNode }[]
+  onSelect?: (key: string) => void
+}) {
+  const hasValue = value !== null && value !== undefined && value !== false
   return (
     <div className="flex w-full flex-col items-start gap-2">
       <Label className="text-dark-500 text-[12px] font-normal">{label}</Label>
@@ -99,7 +137,7 @@ function ParameterDropdown({ label, children, items, placeholder = '—' }: Para
             className="text-dark-500 focus:border-primary-500 flex h-9 w-full items-center justify-between rounded-[8px] border border-gray-200 bg-white px-3 py-2 text-[14px] font-light outline-none"
           >
             <span className="min-w-0 flex-1 truncate text-left">
-              {hasValue ? children : <span className="text-gray-400">{placeholder}</span>}
+              {hasValue ? value : <span className="text-gray-400">{placeholder}</span>}
             </span>
             <Icons.ArrowDown size={16} className="ml-2 shrink-0 text-gray-400" strokeWidth={1.5} />
           </button>
@@ -112,8 +150,9 @@ function ParameterDropdown({ label, children, items, placeholder = '—' }: Para
             <DropdownMenuItem
               key={item.key}
               className="cursor-pointer rounded-md px-2 py-1.5 text-[13px] focus:bg-gray-50"
+              onClick={() => onSelect?.(item.key)}
             >
-              {item.content ?? item.label}
+              {item.content}
             </DropdownMenuItem>
           ))}
         </DropdownMenuContent>
@@ -122,13 +161,60 @@ function ParameterDropdown({ label, children, items, placeholder = '—' }: Para
   )
 }
 
+// ─── Activity log ─────────────────────────────────────────────────────────────
+
+interface ActivityLogEntry {
+  timestamp: string
+  eventKey: string
+  fallback: string
+}
+
+function ActivityLog({ entries }: { entries: ActivityLogEntry[] }) {
+  const { t, i18n } = useTranslation('common')
+  return (
+    <div className="flex w-full flex-col gap-0">
+      {entries.map((entry, idx) => (
+        <div key={idx} className="flex items-start gap-2.5 py-1.5">
+          <div className="flex flex-col items-center">
+            <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-gray-300" />
+            {idx < entries.length - 1 && <span className="mt-1 h-full w-px flex-1 bg-gray-100" />}
+          </div>
+          <div className="flex min-w-0 flex-col">
+            <span className="text-dark-500 text-[11px] leading-snug">
+              {t(entry.eventKey, entry.fallback)}
+            </span>
+            <span className="text-light-500 text-[10px]">
+              {new Date(entry.timestamp).toLocaleString(i18n.language, {
+                hour: '2-digit',
+                minute: '2-digit',
+                month: 'short',
+                day: 'numeric',
+              })}
+            </span>
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// ─── Main component ───────────────────────────────────────────────────────────
+
 export interface LetterParametersPanelProps {
   letter: LetterDetail | null
   onClose?: () => void
+  onConfirm?: (letterId: string) => void
 }
 
-export function LetterParametersPanel({ letter, onClose }: LetterParametersPanelProps) {
+export function LetterParametersPanel({ letter, onClose, onConfirm }: LetterParametersPanelProps) {
   const { t, i18n } = useTranslation('common')
+
+  // Editable state (Mode A)
+  const [selectedType, setSelectedType] = useState<string>('')
+  const [selectedClientId, setSelectedClientId] = useState<string>('')
+  const [selectedLawyerId, setSelectedLawyerId] = useState<string>('auto')
+  const [selectedDueDate, setSelectedDueDate] = useState<Date | null>(null)
+  const [confirmed, setConfirmed] = useState(false)
 
   if (!letter) {
     return (
@@ -140,35 +226,148 @@ export function LetterParametersPanel({ letter, onClose }: LetterParametersPanel
     )
   }
 
-  const { parameters: p } = letter
-  const allConfirmed = p.confirmedCount >= p.totalParameters
+  const { parameters: p, status } = letter
 
   const getTypeLabel = (type: string) =>
     TYPE_I18N[type as (typeof TYPE_KEYS)[number]]
       ? t(TYPE_I18N[type as (typeof TYPE_KEYS)[number]])
       : type
 
-  const getClientLabel = (clientId: string, clientLabel: string) => {
-    const match = CLIENT_OPTIONS.find((option) => option.value === clientId)
-    if (match) return t(match.labelKey)
-    if (!clientLabel || clientLabel === 'Not identified') {
-      return t('pages.lawyerWorkplace.parameters.notIdentified', 'Not identified')
-    }
-    return clientLabel.replace(/^(\S+)\s+/, '$1 · ')
-  }
+  // ── Mode C: auto-processed — caller hides the panel, so nothing to render ──
 
-  const getLawyerLabel = (lawyerId: string, lawyerLabel: string) => {
-    const match = LAWYER_OPTIONS.find((option) => option.value === lawyerId)
-    if (match) return t(match.labelKey)
-    return lawyerLabel || t('pages.lawyerWorkplace.parameters.auto', 'Auto')
-  }
+  // ── Mode B: read-only (sent_to_kanban / on_board / auto_processed) ──────────
+  const isReadOnly =
+    status === 'sent_to_kanban' || status === 'on_board' || status === 'auto_processed'
 
   const typeLabel = p.letterType ? getTypeLabel(p.letterType) : null
-  const clientLabel = getClientLabel(p.clientId || 'not_identified', p.clientLabel)
-  const contractLabel =
-    CONTRACT_OPTIONS.find((option) => option.value === p.contractId)?.label ?? p.contractLabel ?? ''
-  const lawyerLabel = getLawyerLabel(p.lawyerId || 'auto', p.lawyerLabel)
+  const lawyerDisplay =
+    LAWYER_OPTIONS.find((o) => o.value === (selectedLawyerId || p.lawyerId))?.display ??
+    p.lawyerLabel ??
+    'Auto'
 
+  const canConfirm =
+    (selectedType || p.letterType) &&
+    (selectedClientId || p.clientId) &&
+    (selectedDueDate || p.dueDate) &&
+    !confirmed
+
+  const mockActivityLog: ActivityLogEntry[] = [
+    {
+      timestamp: letter.receivedAt,
+      eventKey: 'pages.lawyerWorkplace.activityLog.letterReceived',
+      fallback: 'Letter received',
+    },
+    ...(p.autoConfidence > 0
+      ? [
+          {
+            timestamp: letter.receivedAt,
+            eventKey: 'pages.lawyerWorkplace.activityLog.classified',
+            fallback: `Auto-classified (${p.autoConfidence}% confidence)`,
+          },
+        ]
+      : []),
+    ...(isReadOnly || confirmed
+      ? [
+          {
+            timestamp: new Date().toISOString(),
+            eventKey: 'pages.lawyerWorkplace.activityLog.taskCreated',
+            fallback: 'Task created on kanban board',
+          },
+        ]
+      : []),
+  ]
+
+  if (isReadOnly && !confirmed) {
+    // ── MODE B: Read-only view ─────────────────────────────────────────────────
+    return (
+      <div className="flex h-full w-full shrink-0 flex-col border-l border-gray-100 bg-white">
+        <div className="flex w-full flex-col items-start gap-4 overflow-y-auto px-[18px] py-[16px]">
+          <div className="flex w-full items-center justify-between gap-2">
+            <span className="text-dark-500 text-[14px] font-medium">
+              {t('pages.lawyerWorkplace.parameters.title', 'Letter parameters')}
+            </span>
+            <div className="flex shrink-0 items-center gap-2">
+              {status === 'auto_processed' && (
+                <span className="bg-success-100 text-success-700 rounded-full px-[9px] py-[2px] text-[9.5px] font-medium">
+                  {t('pages.lawyerWorkplace.parameters.autoProcessed', 'AUTO')}
+                </span>
+              )}
+              {p.autoConfidence > 0 && (
+                <span className="bg-primary-300 text-secondary-800 rounded-full px-[9px] py-[2px] text-[9.5px] font-normal">
+                  {t('pages.lawyerWorkplace.parameters.autoBadge', {
+                    percent: p.autoConfidence,
+                    defaultValue: `AUTO · ${p.autoConfidence}%`,
+                  })}
+                </span>
+              )}
+              {onClose && (
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="text-light-700 hover:text-dark-500 flex h-7 w-7 cursor-pointer items-center justify-center rounded-md transition-colors hover:bg-gray-100 xl:hidden"
+                >
+                  <Icons.Cancel01 size={18} strokeWidth={1.5} />
+                </button>
+              )}
+            </div>
+          </div>
+
+          {typeLabel && p.letterType && (
+            <ReadonlyField label={t('pages.lawyerWorkplace.parameters.type', 'Type')}>
+              <TypeBadge type={p.letterType} label={typeLabel} />
+            </ReadonlyField>
+          )}
+
+          <ReadonlyField label={t('pages.lawyerWorkplace.parameters.client', 'Client')}>
+            {p.clientLabel || t('pages.lawyerWorkplace.parameters.notIdentified', 'Not identified')}
+          </ReadonlyField>
+
+          {p.dueDate && (
+            <ReadonlyField label={t('pages.lawyerWorkplace.parameters.dueDate', 'Due date')}>
+              <span className="text-dark-500">{formatDueDate(p.dueDate, i18n.language)}</span>
+              {p.dueDateHint && (
+                <span className="text-error-500 ml-2 text-[11px]">{p.dueDateHint}</span>
+              )}
+            </ReadonlyField>
+          )}
+
+          <ReadonlyField label={t('pages.lawyerWorkplace.parameters.lawyer', 'Lawyer')}>
+            {p.lawyerLabel || 'Auto'}
+          </ReadonlyField>
+
+          {/* Link to kanban task */}
+          <div className="border-primary-200 bg-primary-50 flex w-full items-center justify-between rounded-lg border px-3 py-2.5">
+            <div className="flex items-center gap-2">
+              <Icons.CheckmarkSquare03
+                size={16}
+                strokeWidth={1.5}
+                className="text-primary-600 shrink-0"
+              />
+              <span className="text-primary-900 text-[12px] font-medium">
+                {t('pages.lawyerWorkplace.parameters.taskOnBoard', 'Task created on kanban')}
+              </span>
+            </div>
+            <button
+              type="button"
+              className="text-primary-700 text-[11px] font-medium hover:underline"
+            >
+              {t('pages.lawyerWorkplace.parameters.viewTask', 'View →')}
+            </button>
+          </div>
+
+          {/* Activity log */}
+          <div className="flex w-full flex-col gap-2">
+            <span className="text-light-600 text-[11px] font-medium tracking-wider uppercase">
+              {t('pages.lawyerWorkplace.activityLog.title', 'Activity')}
+            </span>
+            <ActivityLog entries={mockActivityLog} />
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // ── MODE A: Editable ─────────────────────────────────────────────────────────
   return (
     <div className="flex h-full w-full shrink-0 flex-col justify-between overflow-y-auto border-l border-gray-100 bg-white">
       <div className="flex w-full flex-col items-start gap-4 px-[18px] py-[16px]">
@@ -190,7 +389,6 @@ export function LetterParametersPanel({ letter, onClose }: LetterParametersPanel
                 type="button"
                 onClick={onClose}
                 className="text-light-700 hover:text-dark-500 flex h-7 w-7 cursor-pointer items-center justify-center rounded-md transition-colors hover:bg-gray-100 xl:hidden"
-                aria-label={t('pages.lawyerWorkplace.parameters.close', 'Close parameters')}
               >
                 <Icons.Cancel01 size={18} strokeWidth={1.5} />
               </button>
@@ -198,73 +396,73 @@ export function LetterParametersPanel({ letter, onClose }: LetterParametersPanel
           </div>
         </div>
 
+        {/* Type */}
         <ParameterDropdown
           label={t('pages.lawyerWorkplace.parameters.type', 'Type')}
           placeholder={t('pages.lawyerWorkplace.parameters.selectType', 'Select type')}
+          value={
+            selectedType || p.letterType ? (
+              <TypeBadge
+                type={selectedType || p.letterType}
+                label={getTypeLabel(selectedType || p.letterType)}
+              />
+            ) : null
+          }
+          onSelect={setSelectedType}
           items={TYPE_KEYS.map((type) => {
             const label = getTypeLabel(type)
-            return {
-              key: type,
-              label,
-              content: <TypeBadge type={type} label={label} />,
-            }
+            return { key: type, content: <TypeBadge type={type} label={label} /> }
           })}
-        >
-          {typeLabel && p.letterType && <TypeBadge type={p.letterType} label={typeLabel} />}
-        </ParameterDropdown>
+        />
 
-        <ParameterDropdown
-          label={t('pages.lawyerWorkplace.parameters.client', 'Client')}
-          items={CLIENT_OPTIONS.map((option) => ({
-            key: option.value,
-            label: t(option.labelKey),
-          }))}
-        >
-          {clientLabel}
-        </ParameterDropdown>
+        {/* Client — searchable */}
+        <div className="flex w-full flex-col gap-2">
+          <Label className="text-dark-500 text-[12px] font-normal">
+            {t('pages.lawyerWorkplace.parameters.client', 'Client')}
+          </Label>
+          <SearchableSelect
+            options={CLIENT_OPTIONS_SEARCHABLE}
+            value={selectedClientId || p.clientId || ''}
+            onValueChange={setSelectedClientId}
+            placeholder={t('pages.lawyerWorkplace.parameters.notIdentified', 'Not identified')}
+          />
+        </div>
 
-        <ParameterDropdown
-          label={t('pages.lawyerWorkplace.parameters.contract', 'Contract')}
-          items={CONTRACT_OPTIONS.map((option) => ({ key: option.value, label: option.label }))}
-        >
-          {contractLabel}
-        </ParameterDropdown>
+        {/* Due date — DateSelect */}
+        <div className="flex w-full flex-col gap-2">
+          <Label className="text-dark-500 text-[12px] font-normal">
+            {t('pages.lawyerWorkplace.parameters.dueDate', 'Due date')}
+          </Label>
+          <DateSelect
+            id="params-due-date"
+            value={selectedDueDate ?? (p.dueDate ? new Date(p.dueDate) : null)}
+            onChange={({ value }) => setSelectedDueDate(value)}
+            placeholder={t('pages.lawyerWorkplace.parameters.selectDueDate', 'Select date')}
+            format="dd/MM/yyyy"
+            min={new Date()}
+            className="h-9 rounded-[8px] border-gray-200 text-[14px] font-light"
+          />
+        </div>
 
-        <ParameterDropdown
-          label={t('pages.lawyerWorkplace.parameters.dueDate', 'Due date')}
-          items={
-            p.dueDate
-              ? [
-                  {
-                    key: p.dueDate,
-                    label: formatDueDate(p.dueDate, i18n.language),
-                  },
-                ]
-              : [{ key: '2026-05-26', label: formatDueDate('2026-05-26', i18n.language) }]
-          }
-        >
-          {p.dueDate && (
-            <>
-              <span className="text-dark-500">{formatDueDate(p.dueDate, i18n.language)}</span>
-              {p.dueDateHint && (
-                <>
-                  <span className="text-light-700"> · </span>
-                  <span className="text-error-500">{p.dueDateHint}</span>
-                </>
-              )}
-            </>
-          )}
-        </ParameterDropdown>
-
+        {/* Lawyer */}
         <ParameterDropdown
           label={t('pages.lawyerWorkplace.parameters.lawyer', 'Lawyer')}
-          items={LAWYER_OPTIONS.map((option) => ({
-            key: option.value,
-            label: t(option.labelKey),
+          value={lawyerDisplay}
+          onSelect={setSelectedLawyerId}
+          items={LAWYER_OPTIONS.map((opt) => ({
+            key: opt.value,
+            content: <span className="text-dark-500 text-[13px] font-light">{opt.display}</span>,
           }))}
-        >
-          {lawyerLabel}
-        </ParameterDropdown>
+        />
+
+        {/* Contract */}
+        <ParameterDropdown
+          label={t('pages.lawyerWorkplace.parameters.contract', 'Contract')}
+          value={
+            CONTRACT_OPTIONS.find((o) => o.value === p.contractId)?.label ?? p.contractLabel ?? null
+          }
+          items={CONTRACT_OPTIONS.map((opt) => ({ key: opt.value, content: opt.label }))}
+        />
       </div>
 
       <div className="bg-light-50 flex w-full flex-col items-center justify-center gap-2 border-t border-gray-200 px-[18px] py-[16px]">
@@ -285,7 +483,12 @@ export function LetterParametersPanel({ letter, onClose }: LetterParametersPanel
           variant="primary"
           size="md"
           className="w-full px-10 py-7"
-          disabled={!allConfirmed && letter.isUnprocessed}
+          disabled={!canConfirm}
+          onClick={() => {
+            if (!canConfirm) return
+            setConfirmed(true)
+            onConfirm?.(letter.id)
+          }}
         >
           <Icons.AddCircle size={24} strokeWidth={1.5} />
           <span className="text-[14px] font-medium">

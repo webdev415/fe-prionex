@@ -130,8 +130,6 @@ export interface EmailThreadPanelProps {
   letter: LetterDetail | null
   replyDraft: string
   onReplyDraftChange: (value: string) => void
-  markAsNbuResponse: boolean
-  onMarkAsNbuResponseChange: (checked: boolean) => void
   onBack?: () => void
   onOpenParameters?: () => void
 }
@@ -140,8 +138,6 @@ export function EmailThreadPanel({
   letter,
   replyDraft,
   onReplyDraftChange,
-  markAsNbuResponse,
-  onMarkAsNbuResponseChange,
   onBack,
   onOpenParameters,
 }: EmailThreadPanelProps) {
@@ -205,11 +201,11 @@ export function EmailThreadPanel({
           </div>
           <Button
             type="button"
-            variant="ghost"
+            variant="outline"
             size="xs"
             aria-label={t('pages.lawyerWorkplace.thread.archive', 'Archive')}
             title={t('pages.lawyerWorkplace.thread.archive', 'Archive')}
-            className="text-light-700 hover:text-dark-500 shrink-0 text-[12px] hover:bg-gray-50 sm:hidden"
+            className="shrink-0 rounded-md text-[12px] sm:hidden"
             leftIcon={<Icons.Download05 size={16} strokeWidth={1.5} />}
           />
         </div>
@@ -239,9 +235,9 @@ export function EmailThreadPanel({
           </p>
           <Button
             type="button"
-            variant="ghost"
+            variant="outline"
             size="xs"
-            className="text-light-700 hover:text-dark-500 hidden shrink-0 text-[12px] hover:bg-gray-50 sm:inline-flex"
+            className="hidden rounded-md text-[12px] sm:inline-flex"
             leftIcon={<Icons.Download05 size={16} strokeWidth={1.5} />}
           >
             {t('pages.lawyerWorkplace.thread.archive', 'Archive')}
@@ -272,8 +268,6 @@ export function EmailThreadPanel({
         toMailbox={letter.senderEmail}
         value={replyDraft}
         onChange={onReplyDraftChange}
-        markAsNbuResponse={markAsNbuResponse}
-        onMarkAsNbuResponseChange={onMarkAsNbuResponseChange}
       />
     </div>
   )

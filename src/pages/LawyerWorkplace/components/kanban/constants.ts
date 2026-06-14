@@ -1,10 +1,17 @@
-import type { KanbanTaskType, KanbanTaskPriority } from '../../kanban/kanbanData'
+import type { KanbanColumnDef, KanbanTaskType, KanbanTaskPriority } from '../../kanban/kanbanData'
 
 export type { KanbanTaskPriority }
 
 export type DeadlineFilter = 'this_week' | 'this_month'
 
-export const LAWYERS = ['All Lawyers', 'V. Doroshenko', 'L. Kostenko', 'S. Melnychenko']
+export const LAWYERS = ['All Lawyers', 'Doroshenko', 'Kostenko', 'Melnychenko']
+
+/** Map from filter label to assigneeName values used in KanbanTask */
+export const LAWYER_FILTER_MAP: Record<string, string> = {
+  Doroshenko: 'Doroshenko',
+  Kostenko: 'Kostenko',
+  Melnychenko: 'Melnychenko',
+}
 
 export const TASK_TYPES = [
   'All Types',
@@ -14,6 +21,32 @@ export const TASK_TYPES = [
   'Attorney request',
   'Inquiry',
 ]
+
+/** Map from filter label to KanbanTaskType values */
+export const TYPE_FILTER_MAP: Record<string, KanbanTaskType> = {
+  Complaint: 'complaint',
+  'NBU inquiry': 'nbu_inquiry',
+  'Court claim': 'court_claim',
+  'Attorney request': 'attorney_request',
+  Inquiry: 'inquiry',
+}
+
+/** Build filtered columns from base columns applying lawyer + type filters */
+export function applyKanbanFilters(
+  columns: KanbanColumnDef[],
+  lawyerFilter: string,
+  typeFilter: string
+): KanbanColumnDef[] {
+  return columns.map((col) => ({
+    ...col,
+    tasks: col.tasks.filter((task) => {
+      const lawyerMatch =
+        lawyerFilter === LAWYERS[0] || task.assigneeName === LAWYER_FILTER_MAP[lawyerFilter]
+      const typeMatch = typeFilter === TASK_TYPES[0] || task.type === TYPE_FILTER_MAP[typeFilter]
+      return lawyerMatch && typeMatch
+    }),
+  }))
+}
 
 export const GRID_TEMPLATE = 'repeat(4, minmax(240px, 1fr))'
 export const GRID_MIN_WIDTH = 'min-w-[960px]'
