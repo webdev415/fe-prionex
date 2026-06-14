@@ -20,6 +20,8 @@ import {
   ASSIGNEE_COLOURS,
   CREATE_TASK_PRIORITIES,
   CREATE_TASK_TYPES,
+  KANBAN_ASSIGNEE_OPTIONS,
+  KANBAN_COLUMN_MOVE_OPTIONS,
   type KanbanTaskPriority,
 } from './constants'
 import { KanbanAssigneeChip } from './KanbanAssigneeChip'
@@ -41,12 +43,8 @@ function fmtMonthDay(d: Date): string {
   return `${mm}/${dd}`
 }
 
-const ASSIGNEE_OPTIONS = [
-  { initials: 'VD', name: 'Doroshenko' },
-  { initials: 'LK', name: 'Kostenko' },
-  { initials: 'SM', name: 'Melnychenko' },
-  { initials: 'ON', name: 'manager' },
-]
+const ASSIGNEE_OPTIONS = KANBAN_ASSIGNEE_OPTIONS
+const COLUMN_MOVE_OPTIONS = KANBAN_COLUMN_MOVE_OPTIONS
 
 const CLIENT_OPTIONS = [
   { code: 'CL-08114', name: 'I. Petrenko' },
@@ -58,29 +56,6 @@ const CLIENT_OPTIONS = [
   { code: 'CL-04412', name: 'T. Romaniuk' },
   { code: 'CL-05588', name: 'H. Tkachenko' },
   { code: 'CL-02211', name: 'O. Vasylenko' },
-]
-
-const COLUMN_MOVE_OPTIONS = [
-  {
-    id: 'not_defined' as const,
-    labelKey: 'pages.lawyerWorkplace.kanban.columns.notDefined',
-    fallback: 'Not Defined',
-  },
-  {
-    id: 'in_progress' as const,
-    labelKey: 'pages.lawyerWorkplace.kanban.columns.inProgress',
-    fallback: 'In Progress',
-  },
-  {
-    id: 'overdue' as const,
-    labelKey: 'pages.lawyerWorkplace.kanban.columns.overdue',
-    fallback: 'Overdue',
-  },
-  {
-    id: 'completed' as const,
-    labelKey: 'pages.lawyerWorkplace.kanban.columns.completed',
-    fallback: 'Done',
-  },
 ]
 
 interface KanbanCardProps {
@@ -112,6 +87,11 @@ export function KanbanCard({
   const [clientName, setClientName] = useState<string | null>(task.clientName ?? null)
 
   const priorityConfig = CREATE_TASK_PRIORITIES.find((item) => item.id === priority)
+
+  const getAssigneeLabel = (initials: string, fallbackName: string) => {
+    const option = ASSIGNEE_OPTIONS.find((item) => item.initials === initials)
+    return option ? t(option.nameKey, option.fallback) : fallbackName
+  }
 
   const isClickable = task.letterId && !isCompleted
 
@@ -296,7 +276,7 @@ export function KanbanCard({
                           onMoveTask?.(task.id, col.id)
                         }}
                       >
-                        {t(col.labelKey, col.fallback)}
+                        {t(col.labelKey)}
                       </DropdownMenuItem>
                     ))}
                   </DropdownMenuSubContent>
@@ -414,7 +394,7 @@ export function KanbanCard({
                         onClick={(e) => {
                           e.stopPropagation()
                           setAssigneeInitials(opt.initials)
-                          setAssigneeName(opt.name)
+                          setAssigneeName(opt.assigneeName)
                         }}
                       >
                         <span className="flex items-center gap-2">
@@ -426,7 +406,7 @@ export function KanbanCard({
                           >
                             {opt.initials}
                           </span>
-                          <span className="text-dark-500">{opt.name}</span>
+                          <span className="text-dark-500">{t(opt.nameKey, opt.fallback)}</span>
                           {opt.initials === assigneeInitials && (
                             <Icons.Checkmark
                               size={12}
@@ -484,7 +464,10 @@ export function KanbanCard({
           )}
 
           {/* Assignee: always static — edit via "..." menu */}
-          <KanbanAssigneeChip initials={assigneeInitials} name={assigneeName} />
+          <KanbanAssigneeChip
+            initials={assigneeInitials}
+            name={getAssigneeLabel(assigneeInitials, assigneeName)}
+          />
         </div>
       </div>
     </div>

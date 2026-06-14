@@ -14,9 +14,10 @@ import { Textarea } from '@/components/ui/Textarea'
 import { Icons } from '@/lib/icons'
 import type { KanbanTaskType } from '../../kanban/kanbanData'
 import {
-  CREATE_TASK_LAWYERS,
+  CREATE_TASK_LAWYER_OPTIONS,
   CREATE_TASK_PRIORITIES,
   CREATE_TASK_TYPES,
+  type CreateTaskLawyerId,
   type KanbanTaskPriority,
 } from './constants'
 import { KanbanTypeBadge } from './KanbanTypeBadge'
@@ -87,22 +88,29 @@ function FormSelect({ label, value, onSelect, items, leftIcon }: FormSelectProps
 export function CreateKanbanTaskModal({ open, onClose }: CreateKanbanTaskModalProps) {
   const { t } = useTranslation('common')
 
-  const [lawyer, setLawyer] = useState<string>(CREATE_TASK_LAWYERS[0]!)
+  const [lawyer, setLawyer] = useState<CreateTaskLawyerId>(CREATE_TASK_LAWYER_OPTIONS[0]!.id)
   const [taskType, setTaskType] = useState<KanbanTaskType>('complaint')
   const [deadline, setDeadline] = useState<Date | null>(getTomorrowDate())
   const [priority, setPriority] = useState<KanbanTaskPriority>('high')
-  const [description, setDescription] = useState('Letter in Russian — needs translation')
+  const [description, setDescription] = useState('')
+
+  const defaultDescription = t(
+    'pages.lawyerWorkplace.kanban.createTask.defaultDescription',
+    'Letter in Russian — needs translation'
+  )
+
+  const selectedLawyer = CREATE_TASK_LAWYER_OPTIONS.find((item) => item.id === lawyer)
 
   useEffect(() => {
     if (!open) return
     requestAnimationFrame(() => {
-      setLawyer(CREATE_TASK_LAWYERS[0]!)
+      setLawyer(CREATE_TASK_LAWYER_OPTIONS[0]!.id)
       setTaskType('complaint')
       setDeadline(getTomorrowDate())
       setPriority('high')
-      setDescription('Letter in Russian — needs translation')
+      setDescription(defaultDescription)
     })
-  }, [open])
+  }, [defaultDescription, open])
 
   const selectedPriority = CREATE_TASK_PRIORITIES.find((item) => item.id === priority)
 
@@ -125,11 +133,15 @@ export function CreateKanbanTaskModal({ open, onClose }: CreateKanbanTaskModalPr
         <div className="flex flex-col gap-4">
           <FormSelect
             label={t('pages.lawyerWorkplace.kanban.createTask.lawyer', 'Lawyer')}
-            value={lawyer}
-            onSelect={setLawyer}
-            items={CREATE_TASK_LAWYERS.map((name) => ({
-              key: name,
-              content: name,
+            value={
+              selectedLawyer
+                ? t(selectedLawyer.key, selectedLawyer.fallback)
+                : t(CREATE_TASK_LAWYER_OPTIONS[0]!.key, CREATE_TASK_LAWYER_OPTIONS[0]!.fallback)
+            }
+            onSelect={(key) => setLawyer(key as CreateTaskLawyerId)}
+            items={CREATE_TASK_LAWYER_OPTIONS.map((option) => ({
+              key: option.id,
+              content: t(option.key, option.fallback),
             }))}
           />
 

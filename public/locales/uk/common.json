@@ -397,7 +397,8 @@
         "viaLabel": "через {{label}}",
         "messagesInThread": "{{count}} повідомлень у ланцюжку",
         "attachmentPdf": "PDF",
-        "attachmentDoc": "DOC"
+        "attachmentDoc": "DOC",
+        "closeThread": "Закрити ланцюжок"
       },
       "reply": {
         "replyFrom": "Відповідь з",
@@ -470,11 +471,27 @@
         "byLabel": "до",
         "closedLabel": "закрито",
         "today": "сьогодні",
+        "emailThread": "Листування",
+        "changeAssignee": "Змінити виконавця",
+        "emptyColumn": "Немає задач",
+        "dragTask": "Перетягнути задачу",
+        "moreOptions": "Додаткові дії",
+        "moveTo": "Перемістити в",
+        "setClient": "Призначити клієнта",
+        "changeType": "Змінити тип",
+        "changePriority": "Змінити пріоритет",
+        "setDeadline": "Встановити дедлайн",
+        "copyKey": "Копіювати ключ задачі",
         "filters": {
           "thisWeek": "Цього тижня",
           "thisMonth": "Цього місяця",
           "allLawyers": "Всі юристи",
-          "allTypes": "Всі типи"
+          "allTypes": "Всі типи",
+          "lawyers": {
+            "doroshenko": "Дорошенко",
+            "kostenko": "Костенко",
+            "melnychenko": "Мельниченко"
+          }
         },
         "columns": {
           "notDefined": "НЕ ВИЗНАЧЕНО",
@@ -486,6 +503,12 @@
           "unclassified": "некласифіковано",
           "typePending": "тип не визначено"
         },
+        "assignees": {
+          "doroshenko": "Дорошенко",
+          "kostenko": "Костенко",
+          "melnychenko": "Мельниченко",
+          "manager": "менеджер"
+        },
         "createTask": {
           "title": "Створити задачу",
           "lawyer": "Юрист",
@@ -494,8 +517,15 @@
           "priority": "Пріоритет",
           "description": "Опис",
           "descriptionPlaceholder": "Введіть опис задачі...",
+          "defaultDescription": "Лист російською — потрібен переклад",
           "selectDeadline": "Оберіть дедлайн",
           "submit": "Створити",
+          "lawyers": {
+            "demchuk": "Юлія Демчук",
+            "doroshenko": "В. Дорошенко",
+            "kostenko": "Л. Костенко",
+            "melnychenko": "С. Мельниченко"
+          },
           "priorities": {
             "highest": "Найвищий",
             "high": "Високий",
@@ -738,7 +768,6 @@
         "chain": "Ланцюг",
         "notes": "Нотатки",
         "createdDate": "Дата створення",
-        "clientId": "ID клієнта",
         "author": "Автор",
         "assignee": "Виконавець",
         "priority": "Пріоритет",

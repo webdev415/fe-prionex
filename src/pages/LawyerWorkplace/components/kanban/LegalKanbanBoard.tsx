@@ -13,9 +13,9 @@ import {
   applyKanbanFilters,
   GRID_MIN_WIDTH,
   GRID_TEMPLATE,
-  LAWYERS,
-  TASK_TYPES,
   type DeadlineFilter,
+  type LawyerFilterId,
+  type TypeFilterId,
 } from './constants'
 import { KanbanBoardToolbar } from './KanbanBoardToolbar'
 import { KanbanColumnHeader } from './KanbanColumnHeader'
@@ -26,8 +26,8 @@ import { ThreadDrawer } from './ThreadDrawer'
 export function LegalKanbanBoard() {
   const [tasks, setTasks] = useState<KanbanTask[]>(() => [...MOCK_KANBAN_TASKS])
   const [deadlineFilter, setDeadlineFilter] = useState<DeadlineFilter>('this_week')
-  const [lawyerFilter, setLawyerFilter] = useState(LAWYERS[0]!)
-  const [typeFilter, setTypeFilter] = useState(TASK_TYPES[0]!)
+  const [lawyerFilter, setLawyerFilter] = useState<LawyerFilterId>('all')
+  const [typeFilter, setTypeFilter] = useState<TypeFilterId>('all')
   const [createTaskOpen, setCreateTaskOpen] = useState(false)
   const [threadLetterId, setThreadLetterId] = useState<string | null>(null)
   const [dragOverColumn, setDragOverColumn] = useState<KanbanColumnId | null>(null)

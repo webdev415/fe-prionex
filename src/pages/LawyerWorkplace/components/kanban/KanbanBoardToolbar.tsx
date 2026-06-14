@@ -4,17 +4,24 @@ import { Button } from '@/components/ui/Button'
 import { DoubleButton } from '@/components/ui/DoubleButton'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
-import { DEADLINE_FILTERS, LAWYERS, TASK_TYPES, type DeadlineFilter } from './constants'
+import {
+  DEADLINE_FILTERS,
+  LAWYER_FILTER_OPTIONS,
+  TYPE_FILTER_OPTIONS,
+  type DeadlineFilter,
+  type LawyerFilterId,
+  type TypeFilterId,
+} from './constants'
 import { KanbanFilterDropdown } from './KanbanFilterDropdown'
 
 interface KanbanBoardToolbarProps {
   totalActive: number
   deadlineFilter: DeadlineFilter
   onDeadlineFilterChange: (filter: DeadlineFilter) => void
-  lawyerFilter: string
-  onLawyerFilterChange: (value: string) => void
-  typeFilter: string
-  onTypeFilterChange: (value: string) => void
+  lawyerFilter: LawyerFilterId
+  onLawyerFilterChange: (value: LawyerFilterId) => void
+  typeFilter: TypeFilterId
+  onTypeFilterChange: (value: TypeFilterId) => void
   onNewTask: () => void
 }
 
@@ -96,12 +103,12 @@ export const KanbanBoardToolbar = forwardRef<HTMLDivElement, KanbanBoardToolbarP
           <div className="flex items-center gap-3">
             <KanbanFilterDropdown
               value={lawyerFilter}
-              options={LAWYERS}
+              options={LAWYER_FILTER_OPTIONS}
               onChange={onLawyerFilterChange}
             />
             <KanbanFilterDropdown
               value={typeFilter}
-              options={TASK_TYPES}
+              options={TYPE_FILTER_OPTIONS}
               onChange={onTypeFilterChange}
             />
           </div>

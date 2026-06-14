@@ -510,11 +510,25 @@
         "today": "today",
         "emailThread": "Email thread",
         "changeAssignee": "Change assignee",
+        "emptyColumn": "No tasks",
+        "dragTask": "Drag task",
+        "moreOptions": "More options",
+        "moveTo": "Move to",
+        "setClient": "Set client",
+        "changeType": "Change type",
+        "changePriority": "Change priority",
+        "setDeadline": "Set deadline",
+        "copyKey": "Copy task key",
         "filters": {
           "thisWeek": "Due this week",
           "thisMonth": "Due this month",
           "allLawyers": "All Lawyers",
-          "allTypes": "All Types"
+          "allTypes": "All Types",
+          "lawyers": {
+            "doroshenko": "Doroshenko",
+            "kostenko": "Kostenko",
+            "melnychenko": "Melnychenko"
+          }
         },
         "columns": {
           "notDefined": "NOT DEFINED",
@@ -526,6 +540,12 @@
           "unclassified": "unclassified",
           "typePending": "type pending"
         },
+        "assignees": {
+          "doroshenko": "Doroshenko",
+          "kostenko": "Kostenko",
+          "melnychenko": "Melnychenko",
+          "manager": "manager"
+        },
         "createTask": {
           "title": "Create a Task",
           "lawyer": "Lawyer",
@@ -534,8 +554,15 @@
           "priority": "Priority",
           "description": "Description",
           "descriptionPlaceholder": "Enter task description...",
+          "defaultDescription": "Letter in Russian — needs translation",
           "selectDeadline": "Select deadline",
           "submit": "Create",
+          "lawyers": {
+            "demchuk": "Yulia Demchuk",
+            "doroshenko": "V. Doroshenko",
+            "kostenko": "L. Kostenko",
+            "melnychenko": "S. Melnychenko"
+          },
           "priorities": {
             "highest": "Highest",
             "high": "High",

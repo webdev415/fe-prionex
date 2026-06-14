@@ -4,45 +4,108 @@ export type { KanbanTaskPriority }
 
 export type DeadlineFilter = 'this_week' | 'this_month'
 
-export const LAWYERS = ['All Lawyers', 'Doroshenko', 'Kostenko', 'Melnychenko']
+export type LawyerFilterId = 'all' | 'doroshenko' | 'kostenko' | 'melnychenko'
 
-/** Map from filter label to assigneeName values used in KanbanTask */
-export const LAWYER_FILTER_MAP: Record<string, string> = {
-  Doroshenko: 'Doroshenko',
-  Kostenko: 'Kostenko',
-  Melnychenko: 'Melnychenko',
+export type TypeFilterId =
+  | 'all'
+  | 'complaint'
+  | 'nbu_inquiry'
+  | 'court_claim'
+  | 'attorney_request'
+  | 'inquiry'
+
+export interface KanbanFilterOption<T extends string = string> {
+  id: T
+  key: string
+  fallback: string
 }
 
-export const TASK_TYPES = [
-  'All Types',
-  'Complaint',
-  'NBU inquiry',
-  'Court claim',
-  'Attorney request',
-  'Inquiry',
+export interface LawyerFilterOption extends KanbanFilterOption<LawyerFilterId> {
+  assigneeName?: string
+}
+
+export interface TypeFilterOption extends KanbanFilterOption<TypeFilterId> {
+  taskType?: KanbanTaskType
+}
+
+export const LAWYER_FILTER_OPTIONS: LawyerFilterOption[] = [
+  {
+    id: 'all',
+    key: 'pages.lawyerWorkplace.kanban.filters.allLawyers',
+    fallback: 'All Lawyers',
+  },
+  {
+    id: 'doroshenko',
+    key: 'pages.lawyerWorkplace.kanban.filters.lawyers.doroshenko',
+    fallback: 'Doroshenko',
+    assigneeName: 'Doroshenko',
+  },
+  {
+    id: 'kostenko',
+    key: 'pages.lawyerWorkplace.kanban.filters.lawyers.kostenko',
+    fallback: 'Kostenko',
+    assigneeName: 'Kostenko',
+  },
+  {
+    id: 'melnychenko',
+    key: 'pages.lawyerWorkplace.kanban.filters.lawyers.melnychenko',
+    fallback: 'Melnychenko',
+    assigneeName: 'Melnychenko',
+  },
 ]
 
-/** Map from filter label to KanbanTaskType values */
-export const TYPE_FILTER_MAP: Record<string, KanbanTaskType> = {
-  Complaint: 'complaint',
-  'NBU inquiry': 'nbu_inquiry',
-  'Court claim': 'court_claim',
-  'Attorney request': 'attorney_request',
-  Inquiry: 'inquiry',
-}
+export const TYPE_FILTER_OPTIONS: TypeFilterOption[] = [
+  {
+    id: 'all',
+    key: 'pages.lawyerWorkplace.kanban.filters.allTypes',
+    fallback: 'All Types',
+  },
+  {
+    id: 'complaint',
+    key: 'pages.lawyerWorkplace.parameters.types.complaint',
+    fallback: 'Complaint',
+    taskType: 'complaint',
+  },
+  {
+    id: 'nbu_inquiry',
+    key: 'pages.lawyerWorkplace.parameters.types.nbuInquiry',
+    fallback: 'NBU inquiry',
+    taskType: 'nbu_inquiry',
+  },
+  {
+    id: 'court_claim',
+    key: 'pages.lawyerWorkplace.parameters.types.courtClaim',
+    fallback: 'Court claim',
+    taskType: 'court_claim',
+  },
+  {
+    id: 'attorney_request',
+    key: 'pages.lawyerWorkplace.parameters.types.attorneyRequest',
+    fallback: 'Attorney request',
+    taskType: 'attorney_request',
+  },
+  {
+    id: 'inquiry',
+    key: 'pages.lawyerWorkplace.parameters.types.inquiry',
+    fallback: 'Inquiry',
+    taskType: 'inquiry',
+  },
+]
 
 /** Build filtered columns from base columns applying lawyer + type filters */
 export function applyKanbanFilters(
   columns: KanbanColumnDef[],
-  lawyerFilter: string,
-  typeFilter: string
+  lawyerFilter: LawyerFilterId,
+  typeFilter: TypeFilterId
 ): KanbanColumnDef[] {
+  const lawyerOption = LAWYER_FILTER_OPTIONS.find((option) => option.id === lawyerFilter)
+  const typeOption = TYPE_FILTER_OPTIONS.find((option) => option.id === typeFilter)
+
   return columns.map((col) => ({
     ...col,
     tasks: col.tasks.filter((task) => {
-      const lawyerMatch =
-        lawyerFilter === LAWYERS[0] || task.assigneeName === LAWYER_FILTER_MAP[lawyerFilter]
-      const typeMatch = typeFilter === TASK_TYPES[0] || task.type === TYPE_FILTER_MAP[typeFilter]
+      const lawyerMatch = lawyerFilter === 'all' || task.assigneeName === lawyerOption?.assigneeName
+      const typeMatch = typeFilter === 'all' || task.type === typeOption?.taskType
       return lawyerMatch && typeMatch
     }),
   }))
@@ -91,11 +154,11 @@ export const TYPE_I18N_KEYS: Record<KanbanTaskType, string> = {
 export const TYPE_SHORT_LABELS: Record<KanbanTaskType, string> = {
   unclassified: 'unclassified',
   type_pending: 'type pending',
-  complaint: 'complaint',
-  nbu_inquiry: 'NBU',
-  court_claim: 'court',
-  attorney_request: 'attorney req.',
-  inquiry: 'inquiry',
+  complaint: 'Complaint',
+  nbu_inquiry: 'NBU inquiry',
+  court_claim: 'Court claim',
+  attorney_request: 'Attorney request',
+  inquiry: 'Inquiry',
 }
 
 export const DEADLINE_FILTERS: {
@@ -115,12 +178,30 @@ export const DEADLINE_FILTERS: {
   },
 ]
 
-export const CREATE_TASK_LAWYERS = [
-  'Yulia Demchuk',
-  'V. Doroshenko',
-  'L. Kostenko',
-  'S. Melnychenko',
+export const CREATE_TASK_LAWYER_OPTIONS = [
+  {
+    id: 'demchuk',
+    key: 'pages.lawyerWorkplace.kanban.createTask.lawyers.demchuk',
+    fallback: 'Yulia Demchuk',
+  },
+  {
+    id: 'doroshenko',
+    key: 'pages.lawyerWorkplace.kanban.createTask.lawyers.doroshenko',
+    fallback: 'V. Doroshenko',
+  },
+  {
+    id: 'kostenko',
+    key: 'pages.lawyerWorkplace.kanban.createTask.lawyers.kostenko',
+    fallback: 'L. Kostenko',
+  },
+  {
+    id: 'melnychenko',
+    key: 'pages.lawyerWorkplace.kanban.createTask.lawyers.melnychenko',
+    fallback: 'S. Melnychenko',
+  },
 ] as const
+
+export type CreateTaskLawyerId = (typeof CREATE_TASK_LAWYER_OPTIONS)[number]['id']
 
 export const CREATE_TASK_TYPES: Exclude<KanbanTaskType, 'unclassified' | 'type_pending'>[] = [
   'complaint',
@@ -165,5 +246,51 @@ export const CREATE_TASK_PRIORITIES: {
     key: 'pages.lawyerWorkplace.kanban.createTask.priorities.lowest',
     fallback: 'Lowest',
     textClass: 'text-information-600',
+  },
+]
+
+export const KANBAN_ASSIGNEE_OPTIONS = [
+  {
+    initials: 'VD',
+    nameKey: 'pages.lawyerWorkplace.kanban.assignees.doroshenko',
+    fallback: 'Doroshenko',
+    assigneeName: 'Doroshenko',
+  },
+  {
+    initials: 'LK',
+    nameKey: 'pages.lawyerWorkplace.kanban.assignees.kostenko',
+    fallback: 'Kostenko',
+    assigneeName: 'Kostenko',
+  },
+  {
+    initials: 'SM',
+    nameKey: 'pages.lawyerWorkplace.kanban.assignees.melnychenko',
+    fallback: 'Melnychenko',
+    assigneeName: 'Melnychenko',
+  },
+  {
+    initials: 'ON',
+    nameKey: 'pages.lawyerWorkplace.kanban.assignees.manager',
+    fallback: 'manager',
+    assigneeName: 'manager',
+  },
+] as const
+
+export const KANBAN_COLUMN_MOVE_OPTIONS = [
+  {
+    id: 'not_defined' as const,
+    labelKey: 'pages.lawyerWorkplace.kanban.columns.notDefined',
+  },
+  {
+    id: 'in_progress' as const,
+    labelKey: 'pages.lawyerWorkplace.kanban.columns.inProgress',
+  },
+  {
+    id: 'overdue' as const,
+    labelKey: 'pages.lawyerWorkplace.kanban.columns.overdue',
+  },
+  {
+    id: 'completed' as const,
+    labelKey: 'pages.lawyerWorkplace.kanban.columns.completed',
   },
 ]
