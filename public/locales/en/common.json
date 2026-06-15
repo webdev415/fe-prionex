@@ -575,7 +575,50 @@
       },
       "documents": {
         "title": "Documents",
-        "comingSoon": "Document journal integration — coming soon."
+        "department": "Legal department",
+        "comingSoon": "Document journal integration — coming soon.",
+        "generateDocument": "Generate document",
+        "addIncoming": "Add incoming",
+        "searchPlaceholder": "Search by name, client, document #...",
+        "empty": "No documents found",
+        "stats": {
+          "incoming": "IN · incoming",
+          "outgoing": "OUT · outgoing",
+          "nbu": "NBU · responses",
+          "generated": "Generated",
+          "countOfYear": "{{count}} / {{year}}",
+          "generatedPercent": "{{percent}}%"
+        },
+        "filters": {
+          "allTypes": "All types",
+          "incoming": "IN",
+          "outgoing": "OUT",
+          "nbu": "NBU",
+          "uploaded": "Uploaded",
+          "generated": "Generated"
+        },
+        "types": {
+          "incoming": "Incoming",
+          "outgoing": "Outgoing",
+          "nbuResponse": "NBU response"
+        },
+        "actions": {
+          "generated": "generated",
+          "uploaded": "uploaded"
+        },
+        "columns": {
+          "number": "Number",
+          "documentName": "Document name",
+          "type": "Type",
+          "clientContract": "Client - Contract",
+          "action": "Action",
+          "assignee": "Assignee",
+          "date": "Date"
+        },
+        "dates": {
+          "today": "today",
+          "yesterday": "yesterday"
+        }
       },
       "settings": {
         "title": "Settings",

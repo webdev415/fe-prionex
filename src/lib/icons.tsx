@@ -156,6 +156,7 @@ import {
   ArrowDownDoubleIcon,
   ArrowUpDoubleIcon,
   EqualSignIcon,
+  ArtificialIntelligence08Icon,
 } from '@hugeicons/core-free-icons'
 /**
  * Icon component props
@@ -383,6 +384,9 @@ export const Icons = {
   ),
   ArrowUpDouble: (props: Omit<IconProps, 'icon'>) => <Icon icon={ArrowUpDoubleIcon} {...props} />,
   EqualSign: (props: Omit<IconProps, 'icon'>) => <Icon icon={EqualSignIcon} {...props} />,
+  ArtificialIntelligence08: (props: Omit<IconProps, 'icon'>) => (
+    <Icon icon={ArtificialIntelligence08Icon} {...props} />
+  ),
 }
 
 /**
@@ -529,6 +533,7 @@ export {
   ArrowDownDoubleIcon,
   ArrowUpDoubleIcon,
   EqualSignIcon,
+  ArtificialIntelligence08Icon,
 }
 
 /**

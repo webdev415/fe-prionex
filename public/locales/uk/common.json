@@ -538,7 +538,50 @@
       },
       "documents": {
         "title": "Документи",
-        "comingSoon": "Інтеграція журналу документів — незабаром."
+        "department": "Юридичний відділ",
+        "comingSoon": "Інтеграція журналу документів — незабаром.",
+        "generateDocument": "Згенерувати документ",
+        "addIncoming": "Додати вхідний",
+        "searchPlaceholder": "Пошук за назвою, клієнтом, № документа...",
+        "empty": "Документів не знайдено",
+        "stats": {
+          "incoming": "IN · вхідні",
+          "outgoing": "OUT · вихідні",
+          "nbu": "НБУ · відповіді",
+          "generated": "Згенеровано",
+          "countOfYear": "{{count}} / {{year}}",
+          "generatedPercent": "{{percent}}%"
+        },
+        "filters": {
+          "allTypes": "Усі типи",
+          "incoming": "IN",
+          "outgoing": "OUT",
+          "nbu": "НБУ",
+          "uploaded": "Завантажено",
+          "generated": "Згенеровано"
+        },
+        "types": {
+          "incoming": "Вхідний",
+          "outgoing": "Вихідний",
+          "nbuResponse": "Відповідь НБУ"
+        },
+        "actions": {
+          "generated": "згенеровано",
+          "uploaded": "завантажено"
+        },
+        "columns": {
+          "number": "Номер",
+          "documentName": "Назва документа",
+          "type": "Тип",
+          "clientContract": "Клієнт - Договір",
+          "action": "Дія",
+          "assignee": "Виконавець",
+          "date": "Дата"
+        },
+        "dates": {
+          "today": "сьогодні",
+          "yesterday": "вчора"
+        }
       },
       "settings": {
         "title": "Налаштування",

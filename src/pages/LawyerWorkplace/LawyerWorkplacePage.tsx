@@ -13,9 +13,9 @@ import { IncomingListPanel } from './components/inbox/IncomingListPanel'
 import { EmailThreadPanel } from './components/thread/EmailThreadPanel'
 import { LetterParametersPanel } from './components/parameters/LetterParametersPanel'
 import { LegalKanbanBoard } from './components/kanban/LegalKanbanBoard'
+import { LegalDocumentsTab } from './components/documents/LegalDocumentsTab'
 import { LawyerWorkspaceBanner } from './components/LawyerWorkspaceBanner'
 import { LegalSettingsTab } from './components/settings/LegalSettingsTab'
-import { PlaceholderTab } from './components/PlaceholderTab'
 import { NewOutgoingLetterModal } from './components/thread/NewOutgoingLetterModal'
 import { LawyerWorkplaceLayoutProvider } from './context/LawyerWorkplaceLayoutProvider'
 import { useLawyerWorkplaceLayout } from './context/lawyerWorkplaceLayout'
@@ -187,13 +187,9 @@ function LawyerWorkplacePageContent() {
         )}
 
         {activeTab === 'documents' && (
-          <div className="flex h-full overflow-hidden">
-            <PlaceholderTab
-              titleKey="pages.lawyerWorkplace.documents.title"
-              titleFallback="Documents"
-              descriptionKey="pages.lawyerWorkplace.documents.comingSoon"
-              descriptionFallback="Document journal integration — coming soon."
-            />
+          <div className="relative flex h-full min-h-0 flex-col">
+            <LegalDocumentsTab />
+            <LawyerWorkspaceBanner />
           </div>
         )}
 
