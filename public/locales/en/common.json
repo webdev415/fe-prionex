@@ -1836,7 +1836,10 @@
             "tags": "Tags",
             "status": "Status",
             "note": "Note",
-            "unknownTagTitle": "Tag not found in this project"
+            "protectedTagNote": "Protected tag: {{names}}",
+            "requirePermissionNote": "Require permission! Protected tag: {{names}}",
+            "unknownTagTitle": "Tag not found in this project",
+            "blockedProtectedTagTitle": "You do not have permission to remove this protected tag"
           },
           "statuses": {
             "ready": "Ready",
