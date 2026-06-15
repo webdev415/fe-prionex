@@ -13,6 +13,7 @@ import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 import {
+  applyDefaultTimeToDate,
   DATE_DISPLAY_FORMAT,
   DATETIME_DISPLAY_FORMAT,
   maskDateInput,
@@ -101,6 +102,12 @@ export interface DateSelectProps {
    * Only fires in manual-input mode.
    */
   onValidityChange?: (invalid: boolean) => void
+  /**
+   * Inline message shown (red, below the field) when the manually-typed value
+   * is incomplete/invalid. Lets the caller surface a translated error right at
+   * the input, instead of only on save. Ignored when ``error`` is set.
+   */
+  invalidText?: string
 }
 
 const parseDate = (date: Date | string | null | undefined): Date | null => {
@@ -147,6 +154,7 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
       allowManualInput = false,
       defaultTime,
       onValidityChange,
+      invalidText,
     },
     ref
   ) => {
@@ -197,24 +205,28 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
 
-    // Apply the default time (e.g. 09:00) only on the FIRST date set — i.e.
-    // when there is no committed value yet. On later changes we leave the
-    // time alone: react-datepicker's own setSelected re-applies the previously
-    // selected time when only the day changes, so changing the date keeps the
-    // time the user already has (per spec). Keying off the current ``value``
-    // (rather than a one-way flag) also keeps this correct when the same
-    // component instance is reused across wizard steps.
-    const applyDefaultTime = (date: Date): Date => {
-      if (!defaultTime || parseDate(value)) return date
-      const [h, m] = defaultTime.split(':').map(Number)
-      const next = new Date(date)
-      next.setHours(h || 0, m || 0, 0, 0)
-      return next
-    }
-
-    // Calendar selection (and time-list clicks) come through here.
-    const handleChange = (date: Date | null) => {
-      const next = date ? applyDefaultTime(date) : null
+    // Apply the default time (e.g. 09:00) only when the user sets the DATE
+    // first — a calendar *day* click — and there's no committed value yet.
+    //   • Case "date first" (day click, no value): seed 09:00. The user then
+    //     refines the time if they want.
+    //   • Case "time first" (time-list click, no value): keep the chosen time
+    //     — the user explicitly picked it, so don't stomp it with 09:00.
+    // We distinguish the two via react-datepicker's onChange signature: a day
+    // click passes an ``event`` (setSelected), a time-list click does not
+    // (handleTimeChange calls onChange with the date only). On later changes a
+    // value already exists, so the default never re-applies and react-datepicker
+    // preserves the existing time when only the day changes.
+    // Calendar selection (and time-list clicks) come through here. A day click
+    // carries a React event; a time-list click calls onChange with no event.
+    const handleChange = (date: Date | null, event?: React.SyntheticEvent) => {
+      const fromDayClick = !!event
+      const next = date
+        ? applyDefaultTimeToDate(date, {
+            defaultTime,
+            hasExistingValue: !!parseDate(value),
+            fromDayClick,
+          })
+        : null
       if (allowManualInput) {
         setText(next ? formatFns(next, manualDisplayFormat) : '')
         setManualInvalid(false)
@@ -445,12 +457,16 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
             </button>
           )}
         </div>
-        {displayedError && (
+        {error ? (
           <p id={errorId} className="mt-1.5 text-xs text-red-500" role="alert">
             {displayedError}
           </p>
-        )}
-        {helperText && !displayedError && (
+        ) : manualInvalid && invalidText ? (
+          <p id={errorId} className="mt-1.5 text-xs text-red-500" role="alert">
+            {invalidText}
+          </p>
+        ) : null}
+        {helperText && !error && !(manualInvalid && invalidText) && (
           <p id={helperId} className="mt-1.5 text-xs text-gray-500">
             {helperText}
           </p>

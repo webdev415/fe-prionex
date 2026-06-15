@@ -1,6 +1,63 @@
 import { describe, expect, it } from 'vitest'
 import { format } from 'date-fns'
-import { DATETIME_DISPLAY_FORMAT, maskDateTimeInput, parseManualDateTime } from '@/lib/dateUtils'
+import {
+  applyDefaultTimeToDate,
+  DATETIME_DISPLAY_FORMAT,
+  maskDateTimeInput,
+  parseManualDateTime,
+} from '@/lib/dateUtils'
+
+describe('applyDefaultTimeToDate — KAN-578 default-time split', () => {
+  const hm = (d: Date) => `${d.getHours()}:${d.getMinutes()}`
+
+  it('Case 2 — date first (day click, no value): seeds the default time', () => {
+    const dayAtMidnight = new Date(2026, 5, 15, 0, 0, 0, 0)
+    const out = applyDefaultTimeToDate(dayAtMidnight, {
+      defaultTime: '09:00',
+      hasExistingValue: false,
+      fromDayClick: true,
+    })
+    expect(hm(out)).toBe('9:0')
+    // does not mutate the input
+    expect(hm(dayAtMidnight)).toBe('0:0')
+  })
+
+  it('Case 1 — time first (time click, no value): keeps the chosen time', () => {
+    const todayAtChosenTime = new Date(2026, 5, 4, 14, 30, 0, 0)
+    const out = applyDefaultTimeToDate(todayAtChosenTime, {
+      defaultTime: '09:00',
+      hasExistingValue: false,
+      fromDayClick: false,
+    })
+    expect(hm(out)).toBe('14:30')
+  })
+
+  it('Case 1 edge — time first picking 00:00: keeps 00:00 (not overridden)', () => {
+    const todayAtMidnight = new Date(2026, 5, 4, 0, 0, 0, 0)
+    const out = applyDefaultTimeToDate(todayAtMidnight, {
+      defaultTime: '09:00',
+      hasExistingValue: false,
+      fromDayClick: false,
+    })
+    expect(hm(out)).toBe('0:0')
+  })
+
+  it('later changes (value already set): never re-seeds, even on a day click', () => {
+    const dayAtMidnight = new Date(2026, 5, 20, 0, 0, 0, 0)
+    const out = applyDefaultTimeToDate(dayAtMidnight, {
+      defaultTime: '09:00',
+      hasExistingValue: true,
+      fromDayClick: true,
+    })
+    expect(hm(out)).toBe('0:0')
+  })
+
+  it('no defaultTime configured: returns the date unchanged', () => {
+    const d = new Date(2026, 5, 15, 0, 0, 0, 0)
+    const out = applyDefaultTimeToDate(d, { hasExistingValue: false, fromDayClick: true })
+    expect(hm(out)).toBe('0:0')
+  })
+})
 
 describe('maskDateTimeInput', () => {
   it('auto-inserts separators progressively as digits are typed', () => {

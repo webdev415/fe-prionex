@@ -121,6 +121,28 @@ export function maskDateTimeInput(raw: string): string {
 }
 
 /**
+ * Decide the value to commit when a calendar selection is made, applying a
+ * default time-of-day only when the user set the DATE first (KAN-578 case
+ * split). The default seeds the time **only** when all hold:
+ *   • a ``defaultTime`` is configured (e.g. "09:00"),
+ *   • there is no committed value yet (first selection),
+ *   • the selection came from a calendar **day** click (``fromDayClick``).
+ * A time-first pick (``fromDayClick === false``) keeps the user's chosen time,
+ * and any later selection (``hasExistingValue``) leaves the time untouched.
+ */
+export function applyDefaultTimeToDate(
+  date: Date,
+  opts: { defaultTime?: string; hasExistingValue: boolean; fromDayClick: boolean }
+): Date {
+  const { defaultTime, hasExistingValue, fromDayClick } = opts
+  if (!defaultTime || hasExistingValue || !fromDayClick) return date
+  const [h, m] = defaultTime.split(':').map(Number)
+  const next = new Date(date)
+  next.setHours(h || 0, m || 0, 0, 0)
+  return next
+}
+
+/**
  * Strictly parse a ``DD.MM.YYYY HH:MM`` string. Returns a Date only when the
  * input is **complete** (all 12 digits) and **valid** — incomplete input
  * (date without time) and impossible values (``35.13.2026``, ``10.06.2026
