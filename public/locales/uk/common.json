@@ -692,7 +692,189 @@
       },
       "settings": {
         "title": "Налаштування",
-        "comingSoon": "Довідник типів листів і налаштування скриньок — незабаром."
+        "departmentConfig": "Конфігурація юридичного відділу",
+        "comingSoon": "Довідник типів листів і налаштування скриньок — незабаром.",
+        "addType": "Додати тип",
+        "discardChanges": "Скасувати зміни",
+        "saveChanges": "Зберегти зміни",
+        "saveSuccess": "Зміни збережено",
+        "lawyer": "Юрист",
+        "status": "Статус",
+        "subTabs": {
+          "letterTypes": "Типи листів",
+          "lawyers": "Юристи",
+          "mailboxes": "Скриньки",
+          "templates": "Шаблони"
+        },
+        "letterTypes": {
+          "listTitle": "Типи листів",
+          "listMeta": "SLA {{sla}} р.д. • {{examples}} прикладів",
+          "previewFallback": "Скарга клієнта",
+          "basicInfo": "Базова інформація",
+          "displayName": "Відображувана назва",
+          "responseSla": "SLA відповіді",
+          "businessDays": "робочих днів",
+          "description": "Опис",
+          "priorityAssignment": "Призначення пріоритету",
+          "priorityHint": "★ = наскільки цей юрист має бути пріоритетним для цього типу",
+          "activeLoad": "{{current}} / {{max}} активних",
+          "trainingExamples": "Навчальні приклади",
+          "examplesMeta": "{{count}} прикладів - для векторної бази даних",
+          "addTrainingExample": "+ Додати навчальний приклад (вставте справжній лист)",
+          "newTrainingExample": "Новий навчальний приклад",
+          "clickToEditExample": "Натисніть, щоб редагувати цей приклад справжнім листом з архіву...",
+          "fromNewSender": "від New sender",
+          "editTrainingExample": "Редагувати навчальний приклад",
+          "addTrainingExampleTitle": "Додати навчальний приклад",
+          "exampleTitle": "Назва",
+          "exampleTitlePlaceholder": "напр. Скарга щодо відсотків за прострочення",
+          "exampleBody": "Текст листа (вставте з архіву)",
+          "exampleBodyPlaceholder": "Вставте повний текст листа тут...",
+          "exampleSource": "Відправник",
+          "exampleSourcePlaceholder": "І. Петренко",
+          "keywordHints": "Підказки ключових слів",
+          "keywordHintsHint": "необов’язково - використовується, коли впевненість AI < 70%",
+          "keywordPlaceholder": "Введіть ключове слово та натисніть Enter..",
+          "starRating": "Рейтинг зірок",
+          "roles": {
+            "primary": "PRIMARY",
+            "backup": "BACKUP",
+            "secondary": "SECONDARY",
+            "off": "OFF"
+          },
+          "items": {
+            "customerComplaint": "Скарга клієнта",
+            "nbuInquiry": "Запит НБУ",
+            "courtClaim": "Судовий позов",
+            "attorneyRequest": "Запит адвоката",
+            "generalInquiry": "Загальний запит"
+          },
+          "descriptions": {
+            "customerComplaint": "Прямі скарги клієнтів щодо обслуговування, нарахувань або обробки платежів.",
+            "nbuInquiry": "Регуляторні запити Національного банку України, що потребують офіційних відповідей про відповідність.",
+            "courtClaim": "Судові подання, повістки та позови, що потребують своєчасних процесуальних відповідей.",
+            "attorneyRequest": "Запити від зовнішніх адвокатів щодо документів, умов врегулювання або статусу справи.",
+            "generalInquiry": "Загальні вхідні запити, що не підходять до інших категорій. Маршрутизуються за змістом."
+          },
+          "examples": {
+            "latePaymentTitle": "Скарга на відсотки за прострочення",
+            "latePaymentBody": "Пишу, щоб подати офіційну скаргу щодо нарахованих відсотків за рахунком CR-2024-00518. Нараховані штрафи, здається, перевищують договірну ставку.",
+            "collectionHarassmentTitle": "Скарга на переслідування",
+            "collectionHarassmentBody": "Щодня телефонують на мій особистий номер, попри моє прохання спілкуватися лише письмово. Прошу надати письмовий графік зворотних дзвінків.",
+            "incorrectBalanceTitle": "Суперечка щодо балансу",
+            "incorrectBalanceBody": "Додаю банківські виписки з частковими платежами, які не зараховано. Прошу переглянути та виправити залишок.",
+            "serviceQualityTitle": "Скарга на якість обслуговування",
+            "serviceQualityBody": "Під час останнього дзвінка оператор поводився непрофесійно та відмовився назвати своє ім’я. Прошу письмове вибачення.",
+            "earlyRepaymentTitle": "Суперечка щодо штрафу за дострокове погашення",
+            "earlyRepaymentBody": "Вважаю, що штраф за дострокове погашення не передбачено договором. Прошу надати посилання на пункт або скасувати нарахування.",
+            "thirdPartyTitle": "Скарга на контакт з третіми особами",
+            "thirdPartyBody": "Колектор зв’язався з моїм роботодавцем без моєї згоди. Прошу підтвердити, що це більше не повториться.",
+            "creditReportTitle": "Помилка в кредитному бюро",
+            "creditReportBody": "У кредитній історії досі застарілий статус прострочення, хоча врегулювання завершено минулого року. Прошу оновити записи.",
+            "fromPetrenko": "від I. Petrenko",
+            "fromMelnyk": "від S. Melnyk",
+            "fromBohdanenko": "від O. Bohdanenko",
+            "fromNalivaiko": "від A. Nalivaiko",
+            "fromKovalenko": "від N. Kovalenko",
+            "fromShevchenko": "від M. Shevchenko",
+            "fromKravchenko": "від T. Kravchenko",
+            "fromSystem": "з порталу НБУ",
+            "fromCourt": "від окружного суду",
+            "fromAttorney": "від адвоката опонента",
+            "nbuCreditHistory": "Запит НБУ на розкриття кредитної історії — квартальна звітність",
+            "nbuAudit": "Подальший аудит НБУ — запит документації щодо стягнення",
+            "nbuForm5": "Подання форми 5-ПР — верифікація позичальника",
+            "courtSummons": "Повістка окружного суду — цивільна справа про стягнення боргу #4521/2026",
+            "counterclaim": "Зустрічний позов — боржник стверджує незаконні методи стягнення",
+            "attorneyDocs": "Запит документів — повна історія договору та реєстр платежів",
+            "paymentPlan": "Запит на план платежів — клієнт просить варіанти реструктуризації"
+          }
+        },
+        "lawyers": {
+          "autoAssignmentTitle": "Алгоритм призначення",
+          "autoAssignmentDesc": "Коли новий лист класифіковано, система обирає відповідального юриста за допомогою <strong>двох пріоритетних сигналів</strong>. Якщо будь-який юрист досягає свого <strong>максимального ліміту активних справ</strong>, його виключають з підбору за спеціалізацією, а навантаження рівномірно розподіляється між рештою команди через round-robin.",
+          "steps": {
+            "step1Badge": "КРОК 1",
+            "step1Title": "Відповідність спеціалізації",
+            "step1Desc": "Юристи, чия спеціалізація включає цей тип листа (★ рейтинг у профілі)",
+            "step2Badge": "КРОК 2",
+            "step2Title": "Найменше навантаження",
+            "step2Desc": "Серед спеціалістів нижче ліміту призначити того, у кого найменше активних задач.",
+            "fallbackBadge": "FALLBACK",
+            "fallbackTitleBefore": "Усі спеціалісти зайняті",
+            "fallbackTitleAfter": "round-robin",
+            "fallbackDesc": "Якщо кожен спеціаліст досяг ліміту, задачу отримує наступний доступний юрист (будь-яка спеціалізація)."
+          },
+          "departmentTitle": "Юридичний відділ · {{count}} юристів",
+          "departmentDesc": "Налаштуйте максимальне навантаження та спеціалізації для кожного",
+          "export": "Експорт",
+          "exportSoon": "Експорт незабаром",
+          "addLawyer": "Додати юриста",
+          "letterTypesColumn": "Типи листів",
+          "currentWorkload": "Поточне навантаження",
+          "maxInFlight": "Макс. одночасно",
+          "ofActive": "{{current}} з {{max}}",
+          "ofActiveSuffix": "з {{max}}",
+          "workload": {
+            "high": "Майже на межі",
+            "healthy": "Здорове навантаження",
+            "plenty": "Багато резерву"
+          },
+          "status": {
+            "online": "online",
+            "away": "away"
+          },
+          "people": {
+            "doroshenko": "Volodymyr Doroshenko",
+            "kostenko": "Larysa Kostenko",
+            "melnychenko": "Serhii Melnychenko",
+            "kovalchuk": "Anna Kovalchuk",
+            "hrytsenko": "Olena Hrytsenko",
+            "bondarenko": "Pavlo Bondarenko"
+          },
+          "roles": {
+            "doroshenko": "Senior · complaints lead",
+            "kostenko": "NBU · regulatory specialist",
+            "kostenkoShort": "NBU specialist",
+            "melnychenko": "Court · litigation",
+            "melnychenkoShort": "Court litigation",
+            "kovalchuk": "Junior · general inquiries",
+            "kovalchukShort": "General inquiries",
+            "hrytsenko": "Regulatory · compliance associate",
+            "bondarenko": "Documentation · correspondence",
+            "default": "Юридичний відділ"
+          }
+        },
+        "mailboxes": {
+          "title": "Скриньки",
+          "description": "Налаштуйте підключені юридичні скриньки, інтервали синхронізації та правила маршрутизації."
+        },
+        "templates": {
+          "title": "Шаблони",
+          "description": "Керуйте шаблонами вихідних листів і пресетами генерації документів."
+        },
+        "modals": {
+          "addType": {
+            "title": "Додати тип",
+            "letterTypes": "Типи листів",
+            "placeholder": "напр. Скарга клієнтa",
+            "color": "Колір",
+            "preview": "Попередній перегляд",
+            "submit": "Додати",
+            "success": "Тип листа додано"
+          },
+          "addLawyer": {
+            "title": "Додати юриста",
+            "selectLawyer": "Оберіть юриста",
+            "noLawyers": "Усі юристи вже додані",
+            "responsibleTypes": "Відповідальні типи листів",
+            "selectTypes": "Оберіть типи листів",
+            "typesSelected": "Обрано: {{count}}",
+            "addNewType": "+ Додати новий тип",
+            "submit": "Додати",
+            "success": "Юриста додано"
+          }
+        }
       },
       "version": "v0.7.18",
       "workspaceBanner": {

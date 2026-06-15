@@ -1,4 +1,3 @@
-import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/Button'
@@ -11,22 +10,12 @@ import {
   getDocumentAssigneeLabel,
   getDocumentDisplayName,
 } from './constants'
+import { DocumentDetailField } from './DocumentDetailField'
 import { DocumentTypeBadge } from './DocumentTypeBadge'
 
 interface DocumentDetailDrawerProps {
   document: LegalDocumentRow | null
   onClose: () => void
-}
-
-function DetailField({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div className="flex flex-col gap-1">
-      <span className="text-light-600 text-[11px] font-medium tracking-wide uppercase">
-        {label}
-      </span>
-      <div className="text-dark-500 text-[13px]">{children}</div>
-    </div>
-  )
 }
 
 export function DocumentDetailDrawer({ document, onClose }: DocumentDetailDrawerProps) {
@@ -88,7 +77,7 @@ export function DocumentDetailDrawer({ document, onClose }: DocumentDetailDrawer
             </div>
 
             <div className="flex flex-col gap-4">
-              <DetailField
+              <DocumentDetailField
                 label={t(
                   'pages.lawyerWorkplace.documents.columns.clientContract',
                   'Client - Contract'
@@ -96,23 +85,29 @@ export function DocumentDetailDrawer({ document, onClose }: DocumentDetailDrawer
               >
                 <p className="font-medium">{document.clientName}</p>
                 <p className="text-light-600 text-[12px]">{document.contractId}</p>
-              </DetailField>
+              </DocumentDetailField>
 
-              <DetailField label={t('pages.lawyerWorkplace.documents.columns.type', 'Type')}>
+              <DocumentDetailField
+                label={t('pages.lawyerWorkplace.documents.columns.type', 'Type')}
+              >
                 {t(DOCUMENT_TYPE_I18N_KEYS[document.type], document.type)}
-              </DetailField>
+              </DocumentDetailField>
 
-              <DetailField label={t('pages.lawyerWorkplace.documents.columns.action', 'Action')}>
+              <DocumentDetailField
+                label={t('pages.lawyerWorkplace.documents.columns.action', 'Action')}
+              >
                 {t(`pages.lawyerWorkplace.documents.actions.${document.action}`, document.action)}
-              </DetailField>
+              </DocumentDetailField>
 
-              <DetailField
+              <DocumentDetailField
                 label={t('pages.lawyerWorkplace.documents.columns.assignee', 'Assignee')}
               >
                 {getDocumentAssigneeLabel(document.assigneeId, t)}
-              </DetailField>
+              </DocumentDetailField>
 
-              <DetailField label={t('pages.lawyerWorkplace.documents.columns.date', 'Date')}>
+              <DocumentDetailField
+                label={t('pages.lawyerWorkplace.documents.columns.date', 'Date')}
+              >
                 {(() => {
                   const { dateLine, timeLine } = formatDocumentDateLines(
                     document.createdAt,
@@ -126,7 +121,7 @@ export function DocumentDetailDrawer({ document, onClose }: DocumentDetailDrawer
                     </>
                   )
                 })()}
-              </DetailField>
+              </DocumentDetailField>
             </div>
 
             <div className="mt-8 flex flex-col gap-2 sm:flex-row">

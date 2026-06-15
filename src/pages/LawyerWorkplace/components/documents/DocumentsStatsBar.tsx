@@ -3,51 +3,10 @@ import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 import { useLawyerWorkplaceLayout } from '../../context/lawyerWorkplaceLayout'
 import type { LegalDocumentStats } from '../../documents/types'
+import { DocumentsStatCard } from './DocumentsStatCard'
 
 interface DocumentsStatsBarProps {
   stats: LegalDocumentStats
-}
-
-interface StatCardProps {
-  icon: React.ReactNode
-  iconClassName: string
-  label: string
-  value: string
-}
-
-function StatCard({
-  icon,
-  iconClassName,
-  label,
-  value,
-  compact,
-}: StatCardProps & { compact: boolean }) {
-  return (
-    <div className="flex min-w-0 flex-1 items-center gap-3 rounded-xl border border-white bg-white px-3 py-3 shadow-sm sm:px-4">
-      <div
-        className={cn(
-          'flex shrink-0 items-center justify-center rounded-lg',
-          compact ? 'h-9 w-9' : 'h-10 w-10',
-          iconClassName
-        )}
-      >
-        {icon}
-      </div>
-      <div className="min-w-0">
-        <p className="text-light-600 truncate text-[10px] font-medium tracking-wide uppercase sm:text-[11px]">
-          {label}
-        </p>
-        <p
-          className={cn(
-            'text-dark-500 truncate leading-tight font-light',
-            compact ? 'text-base' : 'text-[18px]'
-          )}
-        >
-          {value}
-        </p>
-      </div>
-    </div>
-  )
 }
 
 export function DocumentsStatsBar({ stats }: DocumentsStatsBarProps) {
@@ -61,7 +20,7 @@ export function DocumentsStatsBar({ stats }: DocumentsStatsBarProps) {
         isCompact ? 'grid-cols-1 pt-3' : 'grid-cols-2 pt-4 lg:grid-cols-4 lg:pt-5'
       )}
     >
-      <StatCard
+      <DocumentsStatCard
         compact={isCompact}
         icon={<Icons.InboxIcon size={18} strokeWidth={1.5} />}
         iconClassName="bg-success-100 text-success-700"
@@ -72,7 +31,7 @@ export function DocumentsStatsBar({ stats }: DocumentsStatsBarProps) {
           defaultValue: `${stats.incomingCount} / ${stats.incomingYearTotal}`,
         })}
       />
-      <StatCard
+      <DocumentsStatCard
         compact={isCompact}
         icon={<Icons.MailSend01 size={18} strokeWidth={1.5} />}
         iconClassName="bg-[#E0F2FE] text-[#0369A1]"
@@ -83,7 +42,7 @@ export function DocumentsStatsBar({ stats }: DocumentsStatsBarProps) {
           defaultValue: `${stats.outgoingCount} / ${stats.outgoingYearTotal}`,
         })}
       />
-      <StatCard
+      <DocumentsStatCard
         compact={isCompact}
         icon={<Icons.CheckmarkBadge02 size={18} strokeWidth={1.5} />}
         iconClassName="bg-warning-100 text-warning-700"
@@ -94,7 +53,7 @@ export function DocumentsStatsBar({ stats }: DocumentsStatsBarProps) {
           defaultValue: `${stats.nbuCount} / ${stats.nbuYearTotal}`,
         })}
       />
-      <StatCard
+      <DocumentsStatCard
         compact={isCompact}
         icon={<Icons.File size={18} strokeWidth={1.5} />}
         iconClassName="bg-secondary-100 text-secondary-800"

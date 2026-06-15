@@ -6,6 +6,16 @@ import type {
   LegalDocumentTypeFilter,
 } from './types'
 
+export function matchesDocumentTypeFilter(
+  filter: LegalDocumentTypeFilter,
+  doc: LegalDocumentRow
+): boolean {
+  if (filter === 'all') return true
+  if (filter === 'uploaded') return doc.action === 'uploaded'
+  if (filter === 'generated') return doc.action === 'generated'
+  return doc.type === filter
+}
+
 export interface LegalDocumentClient {
   id: string
   name: string

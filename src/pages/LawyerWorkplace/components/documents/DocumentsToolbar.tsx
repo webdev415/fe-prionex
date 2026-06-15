@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils'
 import { useLawyerWorkplaceLayout } from '../../context/lawyerWorkplaceLayout'
 import type { LegalDocumentTypeFilter } from '../../documents/types'
 import { DOCUMENT_TYPE_FILTERS } from './constants'
+import { FilterCountBadge } from './FilterCountBadge'
 
 interface DocumentsToolbarProps {
   typeFilter: LegalDocumentTypeFilter
@@ -14,19 +15,6 @@ interface DocumentsToolbarProps {
   filterCounts: Record<LegalDocumentTypeFilter, number>
   onGenerateDocument: () => void
   onAddIncoming: () => void
-}
-
-function FilterCountBadge({ count, active }: { count: number; active: boolean }) {
-  return (
-    <span
-      className={cn(
-        'flex h-[18px] min-w-[18px] items-center justify-center rounded-full px-1 text-[10px] leading-none',
-        active ? 'bg-primary-300 text-dark-500' : 'bg-light-100 text-dark-500'
-      )}
-    >
-      {count}
-    </span>
-  )
 }
 
 export function DocumentsToolbar({
@@ -63,7 +51,7 @@ export function DocumentsToolbar({
           <span
             className={cn(
               'font-light whitespace-nowrap text-gray-500',
-              isCompact ? 'text-xs' : 'text-sm lg:text-base'
+              isCompact ? 'text-xs' : 'text-sm'
             )}
           >
             {t('pages.lawyerWorkplace.documents.department', 'Legal department')}

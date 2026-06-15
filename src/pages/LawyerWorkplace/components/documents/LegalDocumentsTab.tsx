@@ -8,6 +8,7 @@ import {
   computeDocumentStats,
   createGeneratedDocument,
   createIncomingDocument,
+  matchesDocumentTypeFilter,
 } from '../../documents/documentHelpers'
 import { MOCK_LEGAL_DOCUMENTS } from '../../documents/documentsData'
 import type { LegalDocumentRow, LegalDocumentTypeFilter } from '../../documents/types'
@@ -20,13 +21,6 @@ import { DocumentsTable } from './DocumentsTable'
 import { GenerateDocumentModal } from './GenerateDocumentModal'
 
 const DEFAULT_PAGE_SIZE = 20
-
-function matchesTypeFilter(filter: LegalDocumentTypeFilter, doc: LegalDocumentRow): boolean {
-  if (filter === 'all') return true
-  if (filter === 'uploaded') return doc.action === 'uploaded'
-  if (filter === 'generated') return doc.action === 'generated'
-  return doc.type === filter
-}
 
 export function LegalDocumentsTab() {
   const { t } = useTranslation('common')
@@ -46,7 +40,7 @@ export function LegalDocumentsTab() {
   const filteredDocuments = useMemo(() => {
     return documents
       .filter((doc) => {
-        if (!matchesTypeFilter(typeFilter, doc)) return false
+        if (!matchesDocumentTypeFilter(typeFilter, doc)) return false
         return documentMatchesSearch(doc, searchQuery, t)
       })
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
