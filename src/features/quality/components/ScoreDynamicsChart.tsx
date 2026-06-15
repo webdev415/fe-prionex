@@ -1,4 +1,4 @@
-/**
+﻿/**
  * ScoreDynamicsChart — operator score-over-time line chart (KAN-410, Feature 2.4).
  *
  * Recharts line chart with:
@@ -75,7 +75,7 @@ export function ScoreDynamicsChart({ data, onPointClick }: ScoreDynamicsChartPro
   if (rows.length === 0) {
     return (
       <div className="rounded-xl bg-white/50 p-12 text-center text-sm text-gray-500 shadow-sm">
-        {t('pages.actionAnalysis.dynamics.empty', 'No completed scorecards in this range.')}
+        {t('pages.training.dynamics.empty', 'No completed scorecards in this range.')}
       </div>
     )
   }
@@ -116,7 +116,7 @@ export function ScoreDynamicsChart({ data, onPointClick }: ScoreDynamicsChartPro
               stroke="#94a3b8"
               strokeDasharray="2 4"
               label={{
-                value: t('pages.actionAnalysis.dynamics.periodAvg', 'Period avg'),
+                value: t('pages.training.dynamics.periodAvg', 'Period avg'),
                 position: 'insideTopLeft',
                 fontSize: 10,
                 fill: '#64748b',
@@ -126,7 +126,7 @@ export function ScoreDynamicsChart({ data, onPointClick }: ScoreDynamicsChartPro
           <Line
             type="monotone"
             dataKey="operator"
-            name={t('pages.actionAnalysis.dynamics.operator', 'Operator')}
+            name={t('pages.training.dynamics.operator', 'Operator')}
             stroke="#0ea5e9"
             strokeWidth={2}
             connectNulls
@@ -136,7 +136,7 @@ export function ScoreDynamicsChart({ data, onPointClick }: ScoreDynamicsChartPro
           <Line
             type="monotone"
             dataKey="team"
-            name={t('pages.actionAnalysis.dynamics.teamAvg', 'Team average')}
+            name={t('pages.training.dynamics.teamAvg', 'Team average')}
             stroke="#64748b"
             strokeWidth={1.5}
             strokeDasharray="4 4"

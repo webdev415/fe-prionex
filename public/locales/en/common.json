@@ -1,4 +1,4 @@
-{
+﻿{
   "app": {
     "name": "CRM Prionex",
     "description": "Customer Relationship Management System"
@@ -38,7 +38,7 @@
     "scoringConfiguration": "Scoring Configuration",
     "systemSettings": "System Settings",
     "tags": "Tags",
-    "actionAnalysis": "Action Analysis",
+    "training": "Training",
     "messagingSettings": "Messaging Settings",
     "messagingIntegrations": "Messaging Integrations",
     "messagingDrafts": "Message Drafts",
@@ -390,7 +390,7 @@
       "ttsStop": "Stop playback",
       "ttsError": "Could not play the reply."
     },
-    "actionAnalysis": {
+    "training": {
       "title": "Action Analysis",
       "subtitle": "Call monitoring and interaction history for the trainer team.",
       "tabs": {

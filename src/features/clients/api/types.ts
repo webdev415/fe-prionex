@@ -738,6 +738,12 @@ export interface TaskResponse {
   internal_notes?: string | null
   client_name?: string | null
   is_dismissed?: boolean
+  // KAN-411 Feature 3.1 — correction-task fields. `task_type` is non-null
+  // for coaching tasks; the bell card renders operator-lifecycle buttons
+  // (in_progress / completed) when these fields are populated.
+  task_type?: string | null
+  call_id?: string | null
+  call_timestamp_seconds?: number | null
 }
 
 export interface TaskCommentResponse {

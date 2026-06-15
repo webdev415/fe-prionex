@@ -156,9 +156,14 @@ export interface OperatorUser {
   email: string
   status: string
   asterisk_extension?: string | null
+  /** Operator hire / internship date (ISO 8601 yyyy-mm-dd). KAN-414. */
+  hired_at?: string | null
   /** Role's department in the active project (operators list only). */
   department_id?: number | null
   department_name?: string | null
+  /** Group (team) the operator belongs to in the active project. */
+  group_id?: number | null
+  group_name?: string | null
 }
 
 /**
