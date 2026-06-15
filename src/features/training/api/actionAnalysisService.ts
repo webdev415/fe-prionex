@@ -50,6 +50,8 @@ export async function exportCallMonitoring(filters: CallMonitoringFilters): Prom
 function buildInteractionParams(filters: InteractionMonitoringFilters): URLSearchParams {
   const params = new URLSearchParams()
   filters.user_ids?.forEach((id) => params.append('user_ids', String(id)))
+  if (filters.department_id != null) params.set('department_id', String(filters.department_id))
+  if (filters.group_id != null) params.set('group_id', String(filters.group_id))
   if (filters.period) params.set('period', filters.period)
   if (filters.from_datetime) params.set('from_datetime', filters.from_datetime)
   if (filters.to_datetime) params.set('to_datetime', filters.to_datetime)

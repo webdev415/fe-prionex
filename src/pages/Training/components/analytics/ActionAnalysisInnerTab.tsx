@@ -4,17 +4,17 @@ import { useSearchParams } from 'react-router-dom'
 import { useUnreviewedFlagsCount } from '@/features/training'
 import { ACTION_ANALYSIS_SUB_TABS, type ActionAnalysisSubTabId } from '../../types'
 import { AutoFlagsSubTab } from './AutoFlagsSubTab'
-import { MockInteractionsTab } from './MockInteractionsTab'
+import { InteractionsSubTab } from './InteractionsSubTab'
 import { WeeklyTasksSubTab } from './WeeklyTasksSubTab'
 import { PromisesAndCallbacksSubTab } from './PromisesAndCallbacksSubTab'
 import { SuccessfulClosuresSubTab } from './SuccessfulClosuresSubTab'
 import { LeaksSubTab } from './LeaksSubTab'
 import { ThirdPartiesSubTab } from './ThirdPartiesSubTab'
-import { ScriptAnalyticsRedesignSubTab } from './ScriptAnalyticsRedesignSubTab'
+import { ScriptAnalyticsSubTab } from './ScriptAnalyticsSubTab'
 import { TrainingSegmentedStrip } from '../chrome/TrainingSegmentedStrip'
 import { InteractionsKpiStrip } from './InteractionsKpiStrip'
-import { MockTimeAtWorkSubTab } from './MockTimeAtWorkSubTab'
-import { MockHeatMapSubTab } from './MockHeatMapSubTab'
+import { TimeAtWorkSubTab } from './TimeAtWorkSubTab'
+import { HeatMapSubTab } from './HeatMapSubTab'
 
 /**
  * Action Analysis inner orchestrator (KAN-415). Hosts the 9-sub-tab strip and
@@ -111,7 +111,7 @@ export function ActionAnalysisInnerTab() {
         {activeSubTab === 'interactions' && (
           <div className="flex flex-col gap-4">
             <InteractionsKpiStrip />
-            <MockInteractionsTab />
+            <InteractionsSubTab />
           </div>
         )}
         {activeSubTab === 'weekly-tasks' && <WeeklyTasksSubTab />}
@@ -119,9 +119,9 @@ export function ActionAnalysisInnerTab() {
         {activeSubTab === 'successful-closures' && <SuccessfulClosuresSubTab />}
         {activeSubTab === 'leaks' && <LeaksSubTab />}
         {activeSubTab === 'third-parties' && <ThirdPartiesSubTab />}
-        {activeSubTab === 'heatmap' && <MockHeatMapSubTab />}
-        {activeSubTab === 'time-at-work' && <MockTimeAtWorkSubTab />}
-        {activeSubTab === 'script-analytics' && <ScriptAnalyticsRedesignSubTab />}
+        {activeSubTab === 'heatmap' && <HeatMapSubTab />}
+        {activeSubTab === 'time-at-work' && <TimeAtWorkSubTab />}
+        {activeSubTab === 'script-analytics' && <ScriptAnalyticsSubTab />}
         {activeSubTab === 'auto-flags' && <AutoFlagsSubTab />}
       </div>
     </div>

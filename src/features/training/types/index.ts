@@ -79,6 +79,10 @@ export type InteractionInternalDateType = 'promise_to_pay' | 'next_action' | 'fo
 
 export interface InteractionMonitoringFilters {
   user_ids?: number[]
+  // KAN-731 Phase B: server-side team-scope resolvers. The BE intersects
+  // these with `user_ids[]` after resolving via auth-service.
+  department_id?: number
+  group_id?: number
   period?: CallMonitoringPeriod
   from_datetime?: string
   to_datetime?: string
@@ -122,6 +126,10 @@ export interface InteractionMonitoringItem {
   current_responsible_user_id: number | null
   current_responsible_user_name: string | null
   summary: string | null
+  // KAN-731 Phase B: deal context surfaced as the "Угода" column on the
+  // Interactions sub-tab.
+  debt_id: number | null
+  contract_number: string | null
 }
 
 export interface InteractionMonitoringResponse {
