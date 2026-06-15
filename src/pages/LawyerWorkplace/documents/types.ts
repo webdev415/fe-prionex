@@ -1,3 +1,14 @@
+export type LegalDocumentAssigneeId =
+  | 'system'
+  | 'emailService'
+  | 'nevmerzhytska'
+  | 'kostenko'
+  | 'doroshenko'
+  | 'melnychenko'
+  | 'demchuk'
+  | 'ivanenko'
+  | 'bondarenko'
+
 export type LegalDocumentType = 'incoming' | 'outgoing' | 'nbu_response'
 
 export type LegalDocumentAction = 'generated' | 'uploaded'
@@ -13,12 +24,13 @@ export type LegalDocumentTypeFilter =
 export interface LegalDocumentRow {
   id: string
   number: string
-  name: string
+  nameKey: string
+  nameFallback: string
   type: LegalDocumentType
   clientName: string
   contractId: string
   action: LegalDocumentAction
-  assignee: string
+  assigneeId: LegalDocumentAssigneeId
   createdAt: string
 }
 

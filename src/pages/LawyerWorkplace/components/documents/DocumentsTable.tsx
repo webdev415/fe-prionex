@@ -1,15 +1,29 @@
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { DataTable, type Column } from '@/components/ui/DataTable'
+import { Pagination } from '@/components/ui/Pagination'
 import { formatDocumentDateLines } from '../../utils/formatters'
 import type { LegalDocumentRow } from '../../documents/types'
+import { getDocumentAssigneeLabel, getDocumentDisplayName } from './constants'
 import { DocumentTypeBadge } from './DocumentTypeBadge'
 
 interface DocumentsTableProps {
   documents: LegalDocumentRow[]
+  currentPage: number
+  totalPages: number
+  pageSize: number
+  onPageChange: (page: number) => void
+  onPageSizeChange: (pageSize: number) => void
 }
 
-export function DocumentsTable({ documents }: DocumentsTableProps) {
+export function DocumentsTable({
+  documents,
+  currentPage,
+  totalPages,
+  pageSize,
+  onPageChange,
+  onPageSizeChange,
+}: DocumentsTableProps) {
   const { t, i18n } = useTranslation('common')
 
   const columns: Column<LegalDocumentRow>[] = useMemo(
@@ -25,7 +39,11 @@ export function DocumentsTable({ documents }: DocumentsTableProps) {
       {
         key: 'name',
         header: t('pages.lawyerWorkplace.documents.columns.documentName', 'Document name'),
-        render: (row) => <span className="text-dark-500 text-[13px] font-medium">{row.name}</span>,
+        render: (row) => (
+          <span className="text-dark-500 text-[13px] font-medium">
+            {getDocumentDisplayName(row, t)}
+          </span>
+        ),
       },
       {
         key: 'type',
@@ -54,7 +72,11 @@ export function DocumentsTable({ documents }: DocumentsTableProps) {
       {
         key: 'assignee',
         header: t('pages.lawyerWorkplace.documents.columns.assignee', 'Assignee'),
-        render: (row) => <span className="text-dark-500 text-[13px]">{row.assignee}</span>,
+        render: (row) => (
+          <span className="text-dark-500 text-[13px]">
+            {getDocumentAssigneeLabel(row.assigneeId, t)}
+          </span>
+        ),
       },
       {
         key: 'date',
@@ -81,6 +103,16 @@ export function DocumentsTable({ documents }: DocumentsTableProps) {
         emptyMessage={t('pages.lawyerWorkplace.documents.empty', 'No documents found')}
         tableClassName="whitespace-normal"
       />
+      {totalPages > 0 && (
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          pageSize={pageSize}
+          onPageChange={onPageChange}
+          onPageSizeChange={onPageSizeChange}
+          className="px-1"
+        />
+      )}
     </div>
   )
 }

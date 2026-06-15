@@ -100,10 +100,13 @@ function LawyerWorkplacePageContent() {
   return (
     <div
       ref={layoutRef}
-      className="-mx-4 -mt-[20px] -mb-4 flex h-[calc(100vh-60px)] min-w-0 flex-col overflow-hidden sm:-mx-6 sm:-mb-6 lg:-mx-[28px] lg:-mb-[20px]"
+      className={cn(
+        '-mx-4 -mt-[20px] -mb-4 flex min-w-0 flex-col sm:-mx-6 sm:-mb-6 lg:-mx-[28px] lg:-mb-[20px]',
+        activeTab !== 'documents' && 'h-[calc(100vh-60px)] overflow-hidden'
+      )}
     >
       <NewOutgoingLetterModal open={newLetterOpen} onClose={() => setNewLetterOpen(false)} />
-      <div className="min-h-0 flex-1 overflow-hidden">
+      <div className={cn(activeTab !== 'documents' && 'min-h-0 flex-1 overflow-hidden')}>
         {activeTab === 'inbox' && (
           <div className="relative flex h-full overflow-hidden">
             <div
@@ -187,7 +190,7 @@ function LawyerWorkplacePageContent() {
         )}
 
         {activeTab === 'documents' && (
-          <div className="relative flex h-full min-h-0 flex-col">
+          <div className="relative">
             <LegalDocumentsTab />
             <LawyerWorkspaceBanner />
           </div>

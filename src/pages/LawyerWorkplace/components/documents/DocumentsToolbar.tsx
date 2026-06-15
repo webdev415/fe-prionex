@@ -37,7 +37,7 @@ export function DocumentsToolbar({
   const { isCompact, isWide } = useLawyerWorkplaceLayout()
 
   return (
-    <div className="sticky top-0 z-10 shrink-0 bg-[#F2F3F0]/95 px-4 pt-4 backdrop-blur-sm sm:px-5 lg:px-7 lg:pt-5">
+    <div className="shrink-0 px-4 pt-4 sm:px-5 lg:px-7 lg:pt-5">
       <div className="mb-5 flex items-center justify-between gap-3">
         <div
           className={cn(

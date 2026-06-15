@@ -618,6 +618,75 @@
         "dates": {
           "today": "today",
           "yesterday": "yesterday"
+        },
+        "assignees": {
+          "system": "System",
+          "emailService": "Email Service",
+          "nevmerzhytska": "O. Nevmerzhytska",
+          "kostenko": "L. Kostenko",
+          "doroshenko": "V. Doroshenko",
+          "melnychenko": "S. Melnychenko",
+          "demchuk": "Y. Demchuk",
+          "ivanenko": "M. Ivanenko",
+          "bondarenko": "A. Bondarenko"
+        },
+        "mockNames": {
+          "incoming": {
+            "courtDecision": "Copy of the decision of the District Administrative Court",
+            "criminalCertificate": "Criminal proceedings termination certificate",
+            "powerOfAttorney": "Power of attorney from the client",
+            "notarizedPassport": "Notarized copy of passport",
+            "clientComplaint": "Client complaint regarding debt collection",
+            "courtSummons": "Court summons - civil case",
+            "bankruptcyRuling": "Bankruptcy court ruling excerpt",
+            "identityVerification": "Identity verification document",
+            "medicalCertificate": "Medical certificate for deferment request",
+            "propertyOwnership": "Property ownership certificate",
+            "marriageCertificate": "Marriage certificate copy",
+            "incomeDeclaration": "Income declaration from client",
+            "executorLetter": "Executor letter from notary office",
+            "appealSubmission": "Appeal submission from debtor",
+            "counterclaim": "Counterclaim from opposing counsel",
+            "evidenceReceipts": "Evidence package - payment receipts",
+            "debtAcknowledgment": "Signed acknowledgment of debt",
+            "waiverLimitations": "Waiver of statute of limitations",
+            "idCardScan": "Client ID card scan",
+            "addressConfirmation": "Registration address confirmation"
+          },
+          "outgoing": {
+            "autoReply": "Auto-reply - IN-2026-142",
+            "settlementAgreement": "Pre-trial settlement agreement",
+            "demandLetter": "Demand letter - overdue payment",
+            "clientInquiryResponse": "Response to client inquiry",
+            "paymentSchedule": "Payment schedule proposal",
+            "defaultNotice": "Formal notice of default",
+            "restructuringOffer": "Debt restructuring offer",
+            "installmentReminder": "Reminder letter - installment due",
+            "acknowledgmentReceived": "Acknowledgment of received documents",
+            "rejectionSettlement": "Rejection of settlement terms",
+            "finalDemand": "Final demand before legal action",
+            "paymentPlanConsent": "Consent to payment plan",
+            "accountTransferNotice": "Notification of account transfer",
+            "attorneyRequestResponse": "Response to attorney request",
+            "contractClarification": "Clarification letter - contract terms",
+            "breachWarning": "Written warning - breach of agreement",
+            "partialPaymentConfirmation": "Confirmation of partial payment",
+            "courtHearingNotice": "Notice of upcoming court hearing",
+            "counterclaimReply": "Reply to counterclaim",
+            "settlementClosure": "Settlement closure letter"
+          },
+          "nbu": {
+            "creditHistoryResponse": "NBU inquiry response - credit history request",
+            "complianceReportQ1": "NBU compliance report - Q1 2026",
+            "creditBureauDisclosure": "Credit bureau data disclosure",
+            "regulatoryFiling": "NBU regulatory filing - collection activity",
+            "auditResponse": "Response to NBU audit request",
+            "form5Pr": "NBU form 5-PR submission",
+            "creditRegisterUpdate": "Credit register update confirmation",
+            "borrowerVerification": "NBU inquiry - borrower verification",
+            "annualReturn": "Annual NBU statistical return",
+            "licensingInquiry": "NBU response - licensing inquiry"
+          }
         }
       },
       "settings": {

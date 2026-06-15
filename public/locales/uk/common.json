@@ -581,6 +581,75 @@
         "dates": {
           "today": "сьогодні",
           "yesterday": "вчора"
+        },
+        "assignees": {
+          "system": "Система",
+          "emailService": "Email Service",
+          "nevmerzhytska": "О. Невмержицька",
+          "kostenko": "Л. Костенко",
+          "doroshenko": "В. Дорошенко",
+          "melnychenko": "С. Мельниченко",
+          "demchuk": "Ю. Демчук",
+          "ivanenko": "М. Іваненко",
+          "bondarenko": "А. Бондаренко"
+        },
+        "mockNames": {
+          "incoming": {
+            "courtDecision": "Копія рішення Окружного адміністративного суду",
+            "criminalCertificate": "Довідка про припинення кримінального провадження",
+            "powerOfAttorney": "Довіреність від клієнта",
+            "notarizedPassport": "Нотаріально засвідчена копія паспорта",
+            "clientComplaint": "Скарга клієнта щодо стягнення боргу",
+            "courtSummons": "Судова повістка — цивільна справа",
+            "bankruptcyRuling": "Витяг з рішення суду про банкрутство",
+            "identityVerification": "Документ для верифікації особи",
+            "medicalCertificate": "Медична довідка для запиту про відстрочку",
+            "propertyOwnership": "Довідка про право власності на майно",
+            "marriageCertificate": "Копія свідоцтва про шлюб",
+            "incomeDeclaration": "Декларація про доходи від клієнта",
+            "executorLetter": "Лист виконавця від нотаріуса",
+            "appealSubmission": "Апеляційна скарга від боржника",
+            "counterclaim": "Зустрічний позов від адвоката опонента",
+            "evidenceReceipts": "Пакет доказів — квитанції про оплату",
+            "debtAcknowledgment": "Підписане визнання боргу",
+            "waiverLimitations": "Відмова від строків позовної давності",
+            "idCardScan": "Скан ID-картки клієнта",
+            "addressConfirmation": "Підтвердження адреси реєстрації"
+          },
+          "outgoing": {
+            "autoReply": "Автовідповідь — IN-2026-142",
+            "settlementAgreement": "Домовленість про досудове врегулювання",
+            "demandLetter": "Лист вимоги — прострочений платіж",
+            "clientInquiryResponse": "Відповідь на запит клієнта",
+            "paymentSchedule": "Пропозиція графіка платежів",
+            "defaultNotice": "Офіційне повідомлення про прострочення",
+            "restructuringOffer": "Пропозиція реструктуризації боргу",
+            "installmentReminder": "Нагадування — черговий платіж",
+            "acknowledgmentReceived": "Підтвердження отримання документів",
+            "rejectionSettlement": "Відмова від умов врегулювання",
+            "finalDemand": "Остання вимога перед судовим позовом",
+            "paymentPlanConsent": "Згода на план погашення",
+            "accountTransferNotice": "Повідомлення про передачу рахунку",
+            "attorneyRequestResponse": "Відповідь на запит адвоката",
+            "contractClarification": "Лист-уточнення — умови договору",
+            "breachWarning": "Письмове попередження — порушення договору",
+            "partialPaymentConfirmation": "Підтвердження часткового платежу",
+            "courtHearingNotice": "Повідомлення про майбутнє судове засідання",
+            "counterclaimReply": "Відповідь на зустрічний позов",
+            "settlementClosure": "Лист про закриття врегулювання"
+          },
+          "nbu": {
+            "creditHistoryResponse": "Відповідь на запит НБУ — кредитна історія",
+            "complianceReportQ1": "Звіт НБУ про відповідність — Q1 2026",
+            "creditBureauDisclosure": "Розкриття даних бюро кредитних історій",
+            "regulatoryFiling": "Регуляторна подача НБУ — діяльність зі стягнення",
+            "auditResponse": "Відповідь на аудиторський запит НБУ",
+            "form5Pr": "Подання форми НБУ 5-ПР",
+            "creditRegisterUpdate": "Підтвердження оновлення кредитного реєстру",
+            "borrowerVerification": "Запит НБУ — верифікація позичальника",
+            "annualReturn": "Річна статистична звітність НБУ",
+            "licensingInquiry": "Відповідь НБУ — ліцензійний запит"
+          }
         }
       },
       "settings": {
