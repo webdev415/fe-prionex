@@ -137,8 +137,7 @@ export function InteractionsSubTab() {
   }, [operators])
 
   const filters = useMemo<InteractionMonitoringFilters>(() => {
-    const userId =
-      operatorFilter !== 'all' ? operatorIdByLabel.get(operatorFilter) : undefined
+    const userId = operatorFilter !== 'all' ? operatorIdByLabel.get(operatorFilter) : undefined
     const resultId = statusFilter !== 'all' ? Number(statusFilter) : undefined
     return {
       period: PERIOD_TO_BACKEND[period],
@@ -314,7 +313,9 @@ export function InteractionsSubTab() {
 function InteractionRow({ row }: { row: InteractionMonitoringItem }) {
   const operatorName = row.user_name ?? (row.user_id ? `#${row.user_id}` : '—')
   const initials =
-    operatorName === '—' ? '' : deriveInitials(operatorName === `#${row.user_id}` ? '' : operatorName)
+    operatorName === '—'
+      ? ''
+      : deriveInitials(operatorName === `#${row.user_id}` ? '' : operatorName)
   return (
     <tr className={ANALYTICS_TABLE_ROW}>
       <td className={ANALYTICS_TABLE_TD}>{formatInteractionDate(row.interaction_date)}</td>

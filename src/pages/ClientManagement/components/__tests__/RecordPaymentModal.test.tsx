@@ -92,7 +92,6 @@ describe('RecordPaymentModal — credit dropdown label', () => {
   })
 })
 
-
 describe('RecordPaymentModal — Payment Type (KAN-507)', () => {
   it('auto-prefills payment_by_rr when the picked debt has a Connected RR', () => {
     mockRrList.mockReturnValue([

@@ -48,14 +48,7 @@ const STATE_DOT: Record<UiHeatmapState, string> = {
   offline: 'bg-white border border-[#D1D5DB]',
 }
 
-const STATE_ORDER: UiHeatmapState[] = [
-  'call',
-  'after_call',
-  'waiting',
-  'idle',
-  'break',
-  'offline',
-]
+const STATE_ORDER: UiHeatmapState[] = ['call', 'after_call', 'waiting', 'idle', 'break', 'offline']
 
 const STATE_LABEL: Record<UiHeatmapState, { key: string; fallback: string }> = {
   call: { key: 'pages.training.heatmap.state.call', fallback: 'Call' },

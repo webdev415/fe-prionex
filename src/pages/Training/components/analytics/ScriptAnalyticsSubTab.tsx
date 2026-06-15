@@ -96,9 +96,7 @@ function avatarColorFor(operatorId: number): string {
   return AVATAR_PALETTE[Math.abs(operatorId) % AVATAR_PALETTE.length]
 }
 
-function bucketDistribution(
-  distribution: Record<string, number>
-): Record<ColumnKey, number> {
+function bucketDistribution(distribution: Record<string, number>): Record<ColumnKey, number> {
   const result: Record<ColumnKey, number> = {
     promises: 0,
     refusals: 0,
@@ -199,9 +197,7 @@ function buildDerivedData(
     const operator = byId.get(flag.operator_id)
     const operatorName = operator?.full_name ?? `#${flag.operator_id}`
     const meta = RULE_META[flag.rule]
-    const category = meta
-      ? t(meta.labelKey, meta.labelFallback)
-      : flag.rule.replace(/_/g, ' ')
+    const category = meta ? t(meta.labelKey, meta.labelFallback) : flag.rule.replace(/_/g, ' ')
     const severity: AlertSeverity = meta?.severity ?? 'warn'
     const description =
       flag.detail ??
@@ -229,7 +225,14 @@ function buildDerivedData(
 /** Inline flag SVG — preserves the visual from the prior implementation. */
 function FlagIcon({ size = 12, className = '' }: { size?: number; className?: string }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" className={className} aria-hidden>
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 16 16"
+      fill="none"
+      className={className}
+      aria-hidden
+    >
       <path
         d="M3 2v12M3 3h8l-1.5 2.5L11 8H3"
         stroke="currentColor"
@@ -248,7 +251,6 @@ export function ScriptAnalyticsSubTab() {
 
   const activeProjectId = useAuthStore((s) => s.user?.active_project_id)
   const projectIdNum = activeProjectId ? Number(activeProjectId) : null
-  const trainerName = useAuthStore((s) => s.user?.full_name ?? null)
 
   const { data: operators = [] } = useOperators(projectIdNum)
 

@@ -2020,7 +2020,6 @@ export const MOCK_THIRD_PARTIES: MockThirdPartyRow[] = THIRD_PARTY_ROWS.map((row
   }
 })
 
-
 // ─────────────────────────────────────────────────────────────
 // Inbox tab mocks (KAN-413)
 // ─────────────────────────────────────────────────────────────
@@ -2614,4 +2613,3 @@ export const MOCK_OPERATOR_DETAIL: MockOperatorDetail = {
     'Strong on empathy — keep pairing with the soft-collection track.',
   ],
 }
-
