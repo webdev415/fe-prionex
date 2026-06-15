@@ -23,7 +23,7 @@ function matchesTypeFilter(
 
 export function LegalDocumentsTab() {
   const { t } = useTranslation('common')
-  const { showWorkspaceBanner } = useLawyerWorkplaceLayout()
+  const { isCompact, showWorkspaceBanner } = useLawyerWorkplaceLayout()
   const [typeFilter, setTypeFilter] = useState<LegalDocumentTypeFilter>('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [page, setPage] = useState(1)
@@ -61,7 +61,13 @@ export function LegalDocumentsTab() {
   }
 
   return (
-    <div className={cn('bg-[#F2F3F0]', showWorkspaceBanner ? 'pb-24' : 'pb-6')}>
+    <div
+      className={cn(
+        'min-w-0 bg-[#F2F3F0]',
+        showWorkspaceBanner ? 'pb-24' : 'pb-6',
+        isCompact && !showWorkspaceBanner && 'pb-8'
+      )}
+    >
       <DocumentsStatsBar stats={LEGAL_DOCUMENT_STATS} />
       <DocumentsToolbar
         typeFilter={typeFilter}

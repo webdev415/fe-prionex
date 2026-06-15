@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
+import { useLawyerWorkplaceLayout } from '../../context/lawyerWorkplaceLayout'
 import type { LegalDocumentStats } from '../../documents/types'
 
 interface DocumentsStatsBarProps {
@@ -14,22 +15,36 @@ interface StatCardProps {
   value: string
 }
 
-function StatCard({ icon, iconClassName, label, value }: StatCardProps) {
+function StatCard({
+  icon,
+  iconClassName,
+  label,
+  value,
+  compact,
+}: StatCardProps & { compact: boolean }) {
   return (
-    <div className="flex min-w-0 flex-1 items-center gap-3 rounded-xl border border-white bg-white px-4 py-3 shadow-sm">
+    <div className="flex min-w-0 flex-1 items-center gap-3 rounded-xl border border-white bg-white px-3 py-3 shadow-sm sm:px-4">
       <div
         className={cn(
-          'flex h-10 w-10 shrink-0 items-center justify-center rounded-lg',
+          'flex shrink-0 items-center justify-center rounded-lg',
+          compact ? 'h-9 w-9' : 'h-10 w-10',
           iconClassName
         )}
       >
         {icon}
       </div>
       <div className="min-w-0">
-        <p className="text-light-600 truncate text-[11px] font-medium tracking-wide uppercase">
+        <p className="text-light-600 truncate text-[10px] font-medium tracking-wide uppercase sm:text-[11px]">
           {label}
         </p>
-        <p className="text-dark-500 truncate text-[18px] leading-tight font-light">{value}</p>
+        <p
+          className={cn(
+            'text-dark-500 truncate leading-tight font-light',
+            compact ? 'text-base' : 'text-[18px]'
+          )}
+        >
+          {value}
+        </p>
       </div>
     </div>
   )
@@ -37,10 +52,17 @@ function StatCard({ icon, iconClassName, label, value }: StatCardProps) {
 
 export function DocumentsStatsBar({ stats }: DocumentsStatsBarProps) {
   const { t } = useTranslation('common')
+  const { isCompact } = useLawyerWorkplaceLayout()
 
   return (
-    <div className="grid grid-cols-1 gap-3 px-4 pt-4 sm:grid-cols-2 sm:px-5 lg:grid-cols-4 lg:px-7 lg:pt-5">
+    <div
+      className={cn(
+        'grid gap-3 px-4 sm:px-5 lg:px-7',
+        isCompact ? 'grid-cols-1 pt-3' : 'grid-cols-2 pt-4 lg:grid-cols-4 lg:pt-5'
+      )}
+    >
       <StatCard
+        compact={isCompact}
         icon={<Icons.InboxIcon size={18} strokeWidth={1.5} />}
         iconClassName="bg-success-100 text-success-700"
         label={t('pages.lawyerWorkplace.documents.stats.incoming', 'IN · incoming')}
@@ -51,6 +73,7 @@ export function DocumentsStatsBar({ stats }: DocumentsStatsBarProps) {
         })}
       />
       <StatCard
+        compact={isCompact}
         icon={<Icons.MailSend01 size={18} strokeWidth={1.5} />}
         iconClassName="bg-[#E0F2FE] text-[#0369A1]"
         label={t('pages.lawyerWorkplace.documents.stats.outgoing', 'OUT · outgoing')}
@@ -61,6 +84,7 @@ export function DocumentsStatsBar({ stats }: DocumentsStatsBarProps) {
         })}
       />
       <StatCard
+        compact={isCompact}
         icon={<Icons.CheckmarkBadge02 size={18} strokeWidth={1.5} />}
         iconClassName="bg-warning-100 text-warning-700"
         label={t('pages.lawyerWorkplace.documents.stats.nbu', 'NBU · responses')}
@@ -71,6 +95,7 @@ export function DocumentsStatsBar({ stats }: DocumentsStatsBarProps) {
         })}
       />
       <StatCard
+        compact={isCompact}
         icon={<Icons.File size={18} strokeWidth={1.5} />}
         iconClassName="bg-secondary-100 text-secondary-800"
         label={t('pages.lawyerWorkplace.documents.stats.generated', 'Generated')}

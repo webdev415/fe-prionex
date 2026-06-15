@@ -37,12 +37,14 @@ export function DocumentsToolbar({
   const { isCompact, isWide } = useLawyerWorkplaceLayout()
 
   return (
-    <div className="shrink-0 px-4 pt-4 sm:px-5 lg:px-7 lg:pt-5">
-      <div className="mb-5 flex items-center justify-between gap-3">
+    <div
+      className={cn('min-w-0 shrink-0 px-4 sm:px-5 lg:px-7', isCompact ? 'pt-3' : 'pt-4 lg:pt-5')}
+    >
+      <div className="mb-3 flex items-start justify-between gap-2 sm:mb-4 sm:gap-3">
         <div
           className={cn(
-            'flex min-w-0 gap-2',
-            isCompact ? 'flex-col items-start' : 'flex-row items-center gap-3'
+            'flex min-w-0 gap-0.5',
+            isCompact ? 'flex-col' : 'flex-row items-center gap-3'
           )}
         >
           <h1
@@ -54,7 +56,10 @@ export function DocumentsToolbar({
             {t('pages.lawyerWorkplace.documents.title', 'Documents')}
           </h1>
           <span
-            className={cn('text-[11px] font-light whitespace-nowrap text-gray-500 sm:text-[12px]')}
+            className={cn(
+              'font-light whitespace-nowrap text-gray-500',
+              isCompact ? 'text-xs' : 'text-sm lg:text-base'
+            )}
           >
             {t('pages.lawyerWorkplace.documents.department', 'Legal department')}
           </span>
@@ -71,14 +76,14 @@ export function DocumentsToolbar({
                 )}
                 className="bg-secondary-800 hover:bg-secondary-600 flex h-10 w-10 cursor-pointer items-center justify-center rounded-full text-white transition-colors"
               >
-                <Icons.File size={18} strokeWidth={1.5} />
+                <Icons.ArtificialIntelligence08 size={18} strokeWidth={1.5} />
               </button>
               <button
                 type="button"
                 aria-label={t('pages.lawyerWorkplace.documents.addIncoming', 'Add incoming')}
                 className="bg-primary-300 text-dark-500 hover:bg-primary-400 flex h-10 w-10 cursor-pointer items-center justify-center rounded-full transition-colors"
               >
-                <Icons.AddCircle size={20} strokeWidth={2} />
+                <Icons.Add size={20} strokeWidth={2} />
               </button>
             </>
           ) : (
@@ -87,7 +92,7 @@ export function DocumentsToolbar({
                 variant="secondary"
                 size="md"
                 leftIcon={<Icons.ArtificialIntelligence08 size={18} strokeWidth={1.5} />}
-                className="h-[45px] rounded-md"
+                className={cn('rounded-md', isWide ? 'h-[45px]' : 'h-10 px-4 text-xs')}
               >
                 {t('pages.lawyerWorkplace.documents.generateDocument', 'Generate document')}
               </Button>
@@ -95,7 +100,7 @@ export function DocumentsToolbar({
                 variant="primary"
                 size="md"
                 leftIcon={<Icons.AddCircle size={18} strokeWidth={1.5} />}
-                className="h-[45px] rounded-md"
+                className={cn('rounded-md', isWide ? 'h-[45px]' : 'h-10 px-4 text-xs')}
               >
                 {t('pages.lawyerWorkplace.documents.addIncoming', 'Add incoming')}
               </Button>
@@ -106,37 +111,40 @@ export function DocumentsToolbar({
 
       <div
         className={cn(
-          'mb-4 flex min-w-0 items-center gap-3',
-          isCompact ? 'flex-col items-stretch' : 'flex-row'
+          'mb-4 flex min-w-0 gap-3',
+          isCompact ? 'flex-col items-stretch' : 'flex-row items-start'
         )}
       >
-        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
-          {DOCUMENT_TYPE_FILTERS.map((filter) => {
-            const isActive = typeFilter === filter.id
-            const count = DOCUMENT_FILTER_COUNTS[filter.id]
-            return (
-              <button
-                key={filter.id}
-                type="button"
-                onClick={() => onTypeFilterChange(filter.id)}
-                className={cn(
-                  'flex cursor-pointer items-center gap-2 rounded-full px-3 py-1.5 text-[11px] font-medium transition-colors sm:px-4 sm:py-2 sm:text-[12px]',
-                  isActive
-                    ? 'bg-secondary-800 text-white'
-                    : 'text-dark-500 bg-white/50 hover:bg-white'
-                )}
-              >
-                {t(filter.labelKey, filter.fallback)}
-                <FilterCountBadge count={count} active={isActive} />
-              </button>
-            )
-          })}
+        <div className={cn('w-full max-w-full min-w-0', !isCompact && 'flex-1')}>
+          <div className="flex flex-wrap items-center gap-1.5">
+            {DOCUMENT_TYPE_FILTERS.map((filter) => {
+              const isActive = typeFilter === filter.id
+              const count = DOCUMENT_FILTER_COUNTS[filter.id]
+              return (
+                <button
+                  key={filter.id}
+                  type="button"
+                  onClick={() => onTypeFilterChange(filter.id)}
+                  className={cn(
+                    'flex shrink-0 cursor-pointer items-center gap-2 rounded-full px-3 py-1.5 text-[11px] font-medium transition-colors sm:px-4 sm:py-2 sm:text-[12px]',
+                    isActive
+                      ? 'bg-secondary-800 text-white'
+                      : 'text-dark-500 bg-white/50 hover:bg-white'
+                  )}
+                >
+                  <span className="whitespace-nowrap">{t(filter.labelKey, filter.fallback)}</span>
+                  <FilterCountBadge count={count} active={isActive} />
+                </button>
+              )
+            })}
+          </div>
         </div>
 
         <div
           className={cn(
             'relative shrink-0',
-            isCompact ? 'w-full' : isWide ? 'w-[340px]' : 'w-[280px]'
+            isCompact ? 'w-full' : 'ml-auto w-full max-w-[280px]',
+            !isCompact && isWide && 'max-w-[340px]'
           )}
         >
           <Icons.Search

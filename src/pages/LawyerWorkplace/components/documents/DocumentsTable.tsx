@@ -2,6 +2,8 @@ import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { Pagination } from '@/components/ui/Pagination'
+import { cn } from '@/lib/utils'
+import { useLawyerWorkplaceLayout } from '../../context/lawyerWorkplaceLayout'
 import { formatDocumentDateLines } from '../../utils/formatters'
 import type { LegalDocumentRow } from '../../documents/types'
 import { getDocumentAssigneeLabel, getDocumentDisplayName } from './constants'
@@ -25,6 +27,7 @@ export function DocumentsTable({
   onPageSizeChange,
 }: DocumentsTableProps) {
   const { t, i18n } = useTranslation('common')
+  const { isCompact } = useLawyerWorkplaceLayout()
 
   const columns: Column<LegalDocumentRow>[] = useMemo(
     () => [
@@ -96,12 +99,13 @@ export function DocumentsTable({
   )
 
   return (
-    <div className="px-4 pb-6 sm:px-5 lg:px-7">
+    <div className="min-w-0 px-4 pb-6 sm:px-5 lg:px-7">
       <DataTable
         columns={columns}
         data={documents}
         emptyMessage={t('pages.lawyerWorkplace.documents.empty', 'No documents found')}
         tableClassName="whitespace-normal"
+        className={cn(isCompact && 'rounded-lg')}
       />
       {totalPages > 0 && (
         <Pagination
@@ -110,7 +114,7 @@ export function DocumentsTable({
           pageSize={pageSize}
           onPageChange={onPageChange}
           onPageSizeChange={onPageSizeChange}
-          className="px-1"
+          className={cn('px-1', isCompact && 'py-3')}
         />
       )}
     </div>
