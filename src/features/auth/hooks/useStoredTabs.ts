@@ -31,7 +31,7 @@ import {
  */
 export function useStoredTabs(options: { enabled: boolean }) {
   return useQuery<TabSnapshotResponse>({
-    queryKey: ['kan585', 'storedTabs'],
+    queryKey: ['tabSession', 'storedTabs'],
     queryFn: fetchSnapshot,
     enabled: options.enabled,
     staleTime: 0,

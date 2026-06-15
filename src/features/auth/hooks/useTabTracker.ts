@@ -36,8 +36,8 @@ import { upsertTabUrl } from '@/features/auth/api/tabSessionApi'
 import { getAccessToken } from '@/lib/api'
 import { useAuthStore } from '@/stores/authStore'
 
-const TAB_ID_KEY = 'kan585_tab_id'
-const TAB_ID_WINDOW_NAME_PREFIX = 'kan585_tab:'
+const TAB_ID_KEY = 'tabSession_tab_id'
+const TAB_ID_WINDOW_NAME_PREFIX = 'tabSession_tab:'
 
 const EXCLUDED_PATHS = ['/login', '/change-password']
 
