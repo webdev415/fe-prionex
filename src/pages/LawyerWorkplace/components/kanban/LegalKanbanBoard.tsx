@@ -1,5 +1,6 @@
-import { useCallback, useLayoutEffect, useMemo, useRef, useState, type DragEvent } from 'react'
+import { useCallback, useMemo, useRef, useState, type DragEvent } from 'react'
 import { cn } from '@/lib/utils'
+import { useLawyerWorkplaceLayout } from '../../context/lawyerWorkplaceLayout'
 import {
   buildKanbanColumns,
   KANBAN_DRAG_MIME,
@@ -11,12 +12,15 @@ import {
 } from '../../kanban/kanbanData'
 import {
   applyKanbanFilters,
-  GRID_MIN_WIDTH,
-  GRID_TEMPLATE,
+  KANBAN_SCROLL_COLUMN_WIDTH_CLASS,
   type DeadlineFilter,
   type LawyerFilterId,
   type TypeFilterId,
 } from './constants'
+import {
+  KanbanBoardScrollNavigator,
+  KANBAN_SCROLL_CONTAINER_ID,
+} from './KanbanBoardScrollNavigator'
 import { KanbanBoardToolbar } from './KanbanBoardToolbar'
 import { KanbanColumnHeader } from './KanbanColumnHeader'
 import { KanbanColumnLane } from './KanbanColumnLane'
@@ -24,6 +28,8 @@ import { CreateKanbanTaskModal } from './CreateKanbanTaskModal'
 import { ThreadDrawer } from './ThreadDrawer'
 
 export function LegalKanbanBoard() {
+  const { isKanbanGrid, showWorkspaceBanner } = useLawyerWorkplaceLayout()
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
   const [tasks, setTasks] = useState<KanbanTask[]>(() => [...MOCK_KANBAN_TASKS])
   const [deadlineFilter, setDeadlineFilter] = useState<DeadlineFilter>('this_week')
   const [lawyerFilter, setLawyerFilter] = useState<LawyerFilterId>('all')
@@ -32,19 +38,6 @@ export function LegalKanbanBoard() {
   const [threadLetterId, setThreadLetterId] = useState<string | null>(null)
   const [dragOverColumn, setDragOverColumn] = useState<KanbanColumnId | null>(null)
   const [draggingTaskId, setDraggingTaskId] = useState<string | null>(null)
-
-  const toolbarRef = useRef<HTMLDivElement>(null)
-  const [toolbarHeight, setToolbarHeight] = useState(0)
-
-  useLayoutEffect(() => {
-    const el = toolbarRef.current
-    if (!el) return
-    const sync = () => setToolbarHeight(el.offsetHeight)
-    sync()
-    const ro = new ResizeObserver(sync)
-    ro.observe(el)
-    return () => ro.disconnect()
-  }, [])
 
   const columns = useMemo(() => buildKanbanColumns(tasks), [tasks])
 
@@ -117,9 +110,8 @@ export function LegalKanbanBoard() {
   )
 
   return (
-    <div className="w-full min-w-0">
+    <div className="flex h-full min-h-0 w-full min-w-0 flex-col">
       <KanbanBoardToolbar
-        ref={toolbarRef}
         totalActive={totalActive}
         deadlineFilter={deadlineFilter}
         onDeadlineFilterChange={setDeadlineFilter}
@@ -134,37 +126,76 @@ export function LegalKanbanBoard() {
 
       <ThreadDrawer letterId={threadLetterId} onClose={() => setThreadLetterId(null)} />
 
-      <div className={cn('px-5 pb-8 lg:px-7', GRID_MIN_WIDTH, 'w-full')}>
+      <div
+        className={cn(
+          'lawyer-workplace-scroll min-h-0 flex-1 overflow-y-auto',
+          isKanbanGrid
+            ? showWorkspaceBanner
+              ? 'pb-24'
+              : 'pb-6'
+            : showWorkspaceBanner
+              ? 'pb-36'
+              : 'pb-20'
+        )}
+      >
         <div
-          className="sticky z-10 grid gap-3 bg-[#F2F3F0] backdrop-blur-sm lg:gap-4"
-          style={{ top: toolbarHeight, gridTemplateColumns: GRID_TEMPLATE }}
+          id={KANBAN_SCROLL_CONTAINER_ID}
+          ref={scrollContainerRef}
+          className={cn(
+            'overscroll-x-contain',
+            isKanbanGrid
+              ? 'overflow-x-visible'
+              : cn(
+                  'overflow-x-auto scroll-smooth px-4 sm:px-5 lg:px-7',
+                  '[scrollbar-width:none] [&::-webkit-scrollbar]:hidden'
+                )
+          )}
         >
-          {filteredColumns.map((col) => (
-            <KanbanColumnHeader key={col.id} column={col} />
-          ))}
-        </div>
-
-        <div
-          className="grid items-stretch gap-3 lg:gap-4"
-          style={{ gridTemplateColumns: GRID_TEMPLATE }}
-        >
-          {filteredColumns.map((col) => (
-            <KanbanColumnLane
-              key={col.id}
-              column={col}
-              draggingTaskId={draggingTaskId}
-              isDropTarget={dragOverColumn === col.id}
-              onCardClick={setThreadLetterId}
-              onDragStart={handleDragStart}
-              onDragEnd={handleDragEnd}
-              onDragOver={(event) => handleDragOver(event, col.id)}
-              onDragLeave={() => handleDragLeave(col.id)}
-              onDrop={(event) => handleDrop(event, col.id)}
-              onMoveTask={handleMoveTask}
-            />
-          ))}
+          <div
+            className={cn(
+              'pb-6',
+              isKanbanGrid
+                ? 'grid w-full grid-cols-4 gap-3 px-4 sm:px-5 lg:gap-4 lg:px-7'
+                : 'flex w-max snap-x snap-mandatory gap-3 lg:gap-4'
+            )}
+          >
+            {filteredColumns.map((col) => (
+              <div
+                key={col.id}
+                className={cn(
+                  'flex flex-col',
+                  isKanbanGrid
+                    ? 'min-w-0 shrink'
+                    : cn('shrink-0 snap-start', KANBAN_SCROLL_COLUMN_WIDTH_CLASS)
+                )}
+              >
+                <div className="sticky top-0 z-10">
+                  <KanbanColumnHeader column={col} />
+                </div>
+                <KanbanColumnLane
+                  column={col}
+                  draggingTaskId={draggingTaskId}
+                  isDropTarget={dragOverColumn === col.id}
+                  onCardClick={setThreadLetterId}
+                  onDragStart={handleDragStart}
+                  onDragEnd={handleDragEnd}
+                  onDragOver={(event) => handleDragOver(event, col.id)}
+                  onDragLeave={() => handleDragLeave(col.id)}
+                  onDrop={(event) => handleDrop(event, col.id)}
+                  onMoveTask={handleMoveTask}
+                />
+              </div>
+            ))}
+          </div>
         </div>
       </div>
+
+      {!isKanbanGrid && (
+        <KanbanBoardScrollNavigator
+          scrollContainerRef={scrollContainerRef}
+          columns={filteredColumns}
+        />
+      )}
     </div>
   )
 }

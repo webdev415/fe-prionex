@@ -304,7 +304,8 @@ export function LetterParametersPanel({ letter, onClose, onConfirm }: LetterPara
                 <button
                   type="button"
                   onClick={onClose}
-                  className="text-light-700 hover:text-dark-500 flex h-7 w-7 cursor-pointer items-center justify-center rounded-md transition-colors hover:bg-gray-100 xl:hidden"
+                  aria-label={t('pages.lawyerWorkplace.parameters.close', 'Close parameters')}
+                  className="text-light-700 hover:text-dark-500 flex h-7 w-7 cursor-pointer items-center justify-center rounded-md transition-colors hover:bg-gray-100"
                 >
                   <Icons.Cancel01 size={18} strokeWidth={1.5} />
                 </button>
@@ -388,7 +389,8 @@ export function LetterParametersPanel({ letter, onClose, onConfirm }: LetterPara
               <button
                 type="button"
                 onClick={onClose}
-                className="text-light-700 hover:text-dark-500 flex h-7 w-7 cursor-pointer items-center justify-center rounded-md transition-colors hover:bg-gray-100 xl:hidden"
+                aria-label={t('pages.lawyerWorkplace.parameters.close', 'Close parameters')}
+                className="text-light-700 hover:text-dark-500 flex h-7 w-7 cursor-pointer items-center justify-center rounded-md transition-colors hover:bg-gray-100"
               >
                 <Icons.Cancel01 size={18} strokeWidth={1.5} />
               </button>

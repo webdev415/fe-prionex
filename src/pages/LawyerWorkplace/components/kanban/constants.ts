@@ -111,8 +111,8 @@ export function applyKanbanFilters(
   }))
 }
 
-export const GRID_TEMPLATE = 'repeat(4, minmax(240px, 1fr))'
-export const GRID_MIN_WIDTH = 'min-w-[960px]'
+/** Fixed column width in horizontal-scroll mode (parent uses w-max, not min-w-full). */
+export const KANBAN_SCROLL_COLUMN_WIDTH_CLASS = 'w-[280px]'
 
 export const TYPE_COLOURS: Record<KanbanTaskType, string> = {
   unclassified: 'bg-gray-100 text-gray-500',

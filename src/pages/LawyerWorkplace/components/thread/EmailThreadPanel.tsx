@@ -160,26 +160,26 @@ export function EmailThreadPanel({
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col bg-gray-50/20">
       {showCompactNav && (
-        <div className="flex shrink-0 items-center justify-between border-b border-gray-100 bg-white px-3 py-2 xl:hidden">
+        <div className="flex shrink-0 items-center justify-between border-b border-gray-100 bg-white px-3 py-2">
           {onBack ? (
             <button
               type="button"
               onClick={onBack}
-              className="text-dark-500 hover:text-secondary-800 flex cursor-pointer items-center gap-1.5 text-[13px] font-medium lg:hidden"
+              className="text-dark-500 hover:text-secondary-800 flex cursor-pointer items-center gap-1.5 text-[13px] font-medium"
             >
               <Icons.ArrowLeft size={18} strokeWidth={1.5} />
               {t('pages.lawyerWorkplace.thread.backToList', 'Back to list')}
             </button>
           ) : (
-            <span className="hidden lg:block" />
+            <span />
           )}
 
           {onOpenParameters && (
             <Button
               type="button"
-              variant="ghost"
+              variant="cancel"
               size="xs"
-              className="text-light-700 hover:text-dark-500 ml-auto text-[12px] hover:bg-gray-50"
+              className="ml-auto rounded-md text-[12px]"
               leftIcon={<Icons.Setting07 size={16} strokeWidth={1.5} />}
               onClick={onOpenParameters}
             >

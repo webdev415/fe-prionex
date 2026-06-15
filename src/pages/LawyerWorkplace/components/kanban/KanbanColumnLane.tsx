@@ -59,7 +59,7 @@ export function KanbanColumnLane({
           </p>
         )}
       </div>
-      <div className="min-h-[50vh] flex-1" aria-hidden="true" />
+      <div className="min-h-24 flex-1" aria-hidden="true" />
     </div>
   )
 }

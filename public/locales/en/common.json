@@ -519,6 +519,7 @@
         "changePriority": "Change priority",
         "setDeadline": "Set deadline",
         "copyKey": "Copy task key",
+        "scrollNavigator": "Scroll kanban columns",
         "filters": {
           "thisWeek": "Due this week",
           "thisMonth": "Due this month",

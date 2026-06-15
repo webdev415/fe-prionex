@@ -119,7 +119,6 @@ export function KanbanCard({
       className={cn(
         'relative rounded-lg bg-white p-3 shadow-[0_1px_2px_0_rgba(5,4,13,0.04)]',
         isClickable ? 'cursor-pointer transition-shadow hover:shadow-md' : 'cursor-default',
-        isOverdue ? 'border-error-400 border-l-2' : '',
         isCompleted ? 'opacity-75' : '',
         isDragging && 'opacity-40'
       )}
@@ -143,7 +142,7 @@ export function KanbanCard({
               onDragEnd={onDragEnd}
               onClick={(event) => event.stopPropagation()}
               aria-label={t('pages.lawyerWorkplace.kanban.dragTask', 'Drag task')}
-              className="text-light-400 hover:text-light-600 flex h-5 w-4 cursor-grab items-center justify-center rounded active:cursor-grabbing"
+              className="text-light-400 hover:text-light-600 flex h-8 w-8 cursor-grab items-center justify-center rounded active:cursor-grabbing sm:h-5 sm:w-4"
             >
               <svg width="8" height="12" viewBox="0 0 8 12" fill="currentColor" aria-hidden="true">
                 <circle cx="2" cy="2" r="1.2" />
@@ -236,7 +235,7 @@ export function KanbanCard({
                 <button
                   type="button"
                   onClick={(e) => e.stopPropagation()}
-                  className="text-light-400 hover:text-dark-500 focus-visible:ring-primary-500 flex h-5 w-5 items-center justify-center rounded hover:bg-gray-100 focus:outline-none focus-visible:ring-2"
+                  className="text-light-400 hover:text-dark-500 focus-visible:ring-primary-500 flex h-8 w-8 items-center justify-center rounded hover:bg-gray-100 focus:outline-none focus-visible:ring-2 sm:h-5 sm:w-5"
                   title={t('pages.lawyerWorkplace.kanban.moreOptions', 'More options')}
                 >
                   {/* Three-dot icon (not in icon set, rendered inline) */}

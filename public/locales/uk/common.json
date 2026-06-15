@@ -482,6 +482,7 @@
         "changePriority": "Змінити пріоритет",
         "setDeadline": "Встановити дедлайн",
         "copyKey": "Копіювати ключ задачі",
+        "scrollNavigator": "Прокрутити колонки канбану",
         "filters": {
           "thisWeek": "Цього тижня",
           "thisMonth": "Цього місяця",

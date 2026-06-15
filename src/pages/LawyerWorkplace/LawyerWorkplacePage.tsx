@@ -8,7 +8,6 @@
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router-dom'
-import { useMediaQuery } from '@/hooks/useMediaQuery'
 import { cn } from '@/lib/utils'
 import { IncomingListPanel } from './components/inbox/IncomingListPanel'
 import { EmailThreadPanel } from './components/thread/EmailThreadPanel'
@@ -18,6 +17,8 @@ import { LawyerWorkspaceBanner } from './components/LawyerWorkspaceBanner'
 import { LegalSettingsTab } from './components/settings/LegalSettingsTab'
 import { PlaceholderTab } from './components/PlaceholderTab'
 import { NewOutgoingLetterModal } from './components/thread/NewOutgoingLetterModal'
+import { LawyerWorkplaceLayoutProvider } from './context/LawyerWorkplaceLayoutProvider'
+import { useLawyerWorkplaceLayout } from './context/lawyerWorkplaceLayout'
 import { getLetterDetail, MOCK_LETTERS } from './mockData'
 import type { IncomingFolder, IncomingMailboxFilter, LawyerWorkplaceTab } from './types'
 
@@ -30,13 +31,19 @@ function isWorkplaceTab(value: string | null): value is LawyerWorkplaceTab {
 }
 
 export function LawyerWorkplacePage() {
+  return (
+    <LawyerWorkplaceLayoutProvider>
+      <LawyerWorkplacePageContent />
+    </LawyerWorkplaceLayoutProvider>
+  )
+}
+
+function LawyerWorkplacePageContent() {
   const { t } = useTranslation('common')
+  const { ref: layoutRef, isCompact, isWide } = useLawyerWorkplaceLayout()
   const [searchParams] = useSearchParams()
   const rawTab = searchParams.get('tab')
   const activeTab: LawyerWorkplaceTab = isWorkplaceTab(rawTab) ? rawTab : 'inbox'
-
-  const isCompactInbox = useMediaQuery('(max-width: 1023px)')
-  const isDesktopThreeCol = useMediaQuery('(min-width: 1280px)')
 
   const [activeFolder, setActiveFolder] = useState<IncomingFolder>('inbox')
   const [activeFilter, setActiveFilter] = useState<IncomingMailboxFilter>('all')
@@ -45,7 +52,6 @@ export function LawyerWorkplacePage() {
   )
   const [inboxPane, setInboxPane] = useState<InboxPane>('list')
   const [replyDraft, setReplyDraft] = useState('')
-  // Track letters that have been confirmed via the parameters panel
   const [confirmedLetterIds, setConfirmedLetterIds] = useState<Set<string>>(new Set())
   const [newLetterOpen, setNewLetterOpen] = useState(false)
 
@@ -78,7 +84,7 @@ export function LawyerWorkplacePage() {
     setSelectedLetterId(letterId)
     const detail = getLetterDetail(letterId)
     setReplyDraft(detail?.replyDraft ?? '')
-    if (isCompactInbox) {
+    if (isCompact) {
       setInboxPane('thread')
     }
   }
@@ -89,31 +95,22 @@ export function LawyerWorkplacePage() {
 
   const closeParameters = () => setInboxPane('thread')
 
-  // Auto-processed letters should not show the parameters panel
   const showParametersPanel = selectedLetter !== null && selectedLetter.status !== 'auto_processed'
 
   return (
-    // Fixed-height column flush against the 60px header (no gap).
-    // -mt-[20px] cancels the extra 20px in main's pt-[80px] (header = 60px).
-    // Height is calc(100vh-60px) so the page still ends at the viewport bottom.
-    // -mx/-mb cancel horizontal and bottom DashboardLayout padding.
-    <div className="-mx-4 -mt-[20px] -mb-4 flex h-[calc(100vh-60px)] flex-col overflow-hidden sm:-mx-6 sm:-mb-6 lg:-mx-[28px] lg:-mb-[20px]">
+    <div
+      ref={layoutRef}
+      className="-mx-4 -mt-[20px] -mb-4 flex h-[calc(100vh-60px)] min-w-0 flex-col overflow-hidden sm:-mx-6 sm:-mb-6 lg:-mx-[28px] lg:-mb-[20px]"
+    >
       <NewOutgoingLetterModal open={newLetterOpen} onClose={() => setNewLetterOpen(false)} />
-      {/* ── Panels (flex-1 so they fill all space above the footer) ─── */}
-      <div
-        className={cn(
-          'min-h-0 flex-1',
-          activeTab === 'kanban' ? 'lawyer-workplace-scroll overflow-auto' : 'overflow-hidden'
-        )}
-      >
+      <div className="min-h-0 flex-1 overflow-hidden">
         {activeTab === 'inbox' && (
           <div className="relative flex h-full overflow-hidden">
-            {/* Incoming list — full width on mobile, ~38% on tablet, 28% on desktop */}
             <div
               className={cn(
                 'h-full shrink-0',
-                'w-full lg:w-[38%] xl:w-[28%]',
-                inboxPane !== 'list' && 'hidden lg:block'
+                isCompact ? 'w-full' : isWide ? 'w-[28%]' : 'w-[38%]',
+                inboxPane !== 'list' && isCompact && 'hidden'
               )}
             >
               <IncomingListPanel
@@ -129,35 +126,30 @@ export function LawyerWorkplacePage() {
               />
             </div>
 
-            {/* Email thread — hidden on mobile until a letter is selected */}
             <div
               className={cn(
                 'min-h-0 flex-1 flex-col',
-                inboxPane === 'thread' || !isCompactInbox ? 'flex' : 'hidden'
+                inboxPane === 'thread' || !isCompact ? 'flex' : 'hidden'
               )}
             >
               <EmailThreadPanel
                 letter={selectedLetter}
                 replyDraft={replyDraft}
                 onReplyDraftChange={setReplyDraft}
-                onBack={isCompactInbox ? () => setInboxPane('list') : undefined}
+                onBack={isCompact ? () => setInboxPane('list') : undefined}
                 onOpenParameters={
-                  !isDesktopThreeCol && showParametersPanel
-                    ? () => setInboxPane('parameters')
-                    : undefined
+                  !isWide && showParametersPanel ? () => setInboxPane('parameters') : undefined
                 }
               />
             </div>
 
-            {/* Parameters — third column on xl+ (hidden for auto-processed) */}
-            {isDesktopThreeCol && showParametersPanel && (
+            {isWide && showParametersPanel && (
               <div className="h-full w-[22%] shrink-0">
                 <LetterParametersPanel letter={selectedLetter} onConfirm={handleConfirmLetter} />
               </div>
             )}
 
-            {/* Parameters — full-screen pane on mobile */}
-            {isCompactInbox && inboxPane === 'parameters' && showParametersPanel && (
+            {isCompact && inboxPane === 'parameters' && showParametersPanel && (
               <div className="absolute inset-0 z-30 flex h-full w-full flex-col bg-white">
                 <LetterParametersPanel
                   letter={selectedLetter}
@@ -167,32 +159,28 @@ export function LawyerWorkplacePage() {
               </div>
             )}
 
-            {/* Parameters — slide-over on tablet (lg–xl) */}
-            {!isCompactInbox &&
-              !isDesktopThreeCol &&
-              inboxPane === 'parameters' &&
-              showParametersPanel && (
-                <>
-                  <button
-                    type="button"
-                    className="absolute inset-0 z-40 bg-black/20"
-                    aria-label={t('pages.lawyerWorkplace.parameters.close', 'Close parameters')}
-                    onClick={closeParameters}
+            {!isCompact && !isWide && inboxPane === 'parameters' && showParametersPanel && (
+              <>
+                <button
+                  type="button"
+                  className="absolute inset-0 z-40 bg-black/20"
+                  aria-label={t('pages.lawyerWorkplace.parameters.close', 'Close parameters')}
+                  onClick={closeParameters}
+                />
+                <div className="absolute inset-y-0 right-0 z-50 w-[min(380px,92%)] bg-white shadow-2xl">
+                  <LetterParametersPanel
+                    letter={selectedLetter}
+                    onClose={closeParameters}
+                    onConfirm={handleConfirmLetter}
                   />
-                  <div className="absolute inset-y-0 right-0 z-50 w-[min(380px,92vw)] bg-white shadow-2xl">
-                    <LetterParametersPanel
-                      letter={selectedLetter}
-                      onClose={closeParameters}
-                      onConfirm={handleConfirmLetter}
-                    />
-                  </div>
-                </>
-              )}
+                </div>
+              </>
+            )}
           </div>
         )}
 
         {activeTab === 'kanban' && (
-          <div className="relative w-full min-w-0">
+          <div className="relative flex h-full min-h-0 flex-col">
             <LegalKanbanBoard />
             <LawyerWorkspaceBanner />
           </div>
@@ -216,7 +204,6 @@ export function LawyerWorkplacePage() {
         )}
       </div>
 
-      {/* ── Full-width footer bar (inbox tab only) ─────────────────── */}
       {activeTab === 'inbox' && (
         <div className="flex shrink-0 flex-col gap-1 border-t border-gray-100 bg-white px-3 py-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3 sm:px-5">
           <div className="text-light-700 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] sm:text-[11px]">
