@@ -1,4 +1,5 @@
 import type { LetterTypeConfig, LetterTypePriorityAssignment, TrainingExample } from '../types'
+import { formatSourceWithPrefix } from './settingsI18n'
 
 export function cloneLetterType(type: LetterTypeConfig): LetterTypeConfig {
   return {
@@ -67,12 +68,10 @@ export function createLetterTypeFromInput(
 
 export function createTrainingExampleFromForm(
   existingId: string | undefined,
-  values: { title: string; body: string; source: string }
+  values: { title: string; body: string; source: string },
+  sourcePrefix: string
 ): TrainingExample {
   const id = existingId ?? `ex-${Date.now()}`
-  const sourceFallback = values.source.trim().startsWith('from ')
-    ? values.source.trim()
-    : `from ${values.source.trim()}`
 
   return {
     id,
@@ -81,6 +80,6 @@ export function createTrainingExampleFromForm(
     bodyKey: `custom:body:${id}`,
     bodyFallback: values.body.trim(),
     sourceKey: `custom:source:${id}`,
-    sourceFallback,
+    sourceFallback: formatSourceWithPrefix(values.source, sourcePrefix),
   }
 }

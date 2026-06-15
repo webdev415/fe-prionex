@@ -141,7 +141,7 @@ export const INITIAL_LETTER_TYPES: LetterTypeConfig[] = [
       'wrongful',
       'unacceptable',
       'demand',
-      'consumer protection',
+      'consumerProtection',
     ],
   },
   {

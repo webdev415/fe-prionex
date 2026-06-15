@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
+import { getKeywordHintLabel } from '../../../../settings/utils/settingsI18n'
 
 interface KeywordHintsFieldProps {
   keywords: string[]
@@ -24,7 +25,7 @@ export function KeywordHintsField({ keywords, onChange }: KeywordHintsFieldProps
           key={keyword}
           className="bg-secondary-100 text-secondary-800 inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-medium"
         >
-          {keyword}
+          {getKeywordHintLabel(keyword, t)}
           <button
             type="button"
             onClick={() => onChange(keywords.filter((item) => item !== keyword))}

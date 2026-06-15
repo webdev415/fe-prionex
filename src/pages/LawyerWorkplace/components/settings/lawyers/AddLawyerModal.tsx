@@ -178,7 +178,7 @@ export function AddLawyerModal({
                 }}
               >
                 <Icons.AddCircle size={16} strokeWidth={1.5} className="mr-2" />
-                {t('pages.lawyerWorkplace.settings.modals.addLawyer.addNewType', '+ Add new type')}
+                {t('pages.lawyerWorkplace.settings.modals.addLawyer.addNewType', 'Add new type')}
               </DropdownMenuItem>
               {letterTypes.map((letterType) => (
                 <DropdownMenuItem

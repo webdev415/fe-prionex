@@ -5,6 +5,7 @@ import { Label } from '@/components/ui/Label'
 import { Modal, ModalContent, ModalFooter, ModalHeader } from '@/components/ui/Modal'
 import { cn } from '@/lib/utils'
 import type { TrainingExample } from '../../../../settings/types'
+import { stripSourcePrefix } from '../../../../settings/utils/settingsI18n'
 
 export interface TrainingExampleFormValues {
   title: string
@@ -30,7 +31,7 @@ function getInitialValues(
   return {
     title: t(example.titleKey, example.titleFallback),
     body: t(example.bodyKey, example.bodyFallback),
-    source: t(example.sourceKey, example.sourceFallback).replace(/^from\s+/i, ''),
+    source: stripSourcePrefix(t(example.sourceKey, example.sourceFallback)),
   }
 }
 
@@ -125,7 +126,7 @@ export function EditTrainingExampleModal({
           </Label>
           <div className="relative">
             <span className="text-light-600 pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-[13px]">
-              from
+              {t('pages.lawyerWorkplace.settings.letterTypes.exampleSourcePrefix', 'from')}
             </span>
             <input
               type="text"

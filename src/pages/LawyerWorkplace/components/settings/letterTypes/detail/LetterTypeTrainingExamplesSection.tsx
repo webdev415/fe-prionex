@@ -6,6 +6,7 @@ import {
   removeTrainingExample,
   upsertTrainingExample,
 } from '../../../../settings/utils/letterTypeHelpers'
+import { getSourcePrefix } from '../../../../settings/utils/settingsI18n'
 import {
   EditTrainingExampleModal,
   type TrainingExampleFormValues,
@@ -63,7 +64,7 @@ export function LetterTypeTrainingExamplesSection({
 
   const handleSave = (values: TrainingExampleFormValues) => {
     const isCreate = editingExample === null
-    const example = createTrainingExampleFromForm(editingExample?.id, values)
+    const example = createTrainingExampleFromForm(editingExample?.id, values, getSourcePrefix(t))
     onDraftChange(upsertTrainingExample(draft, example))
 
     if (isCreate) {

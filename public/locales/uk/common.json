@@ -723,7 +723,8 @@
           "addTrainingExample": "+ Додати навчальний приклад (вставте справжній лист)",
           "newTrainingExample": "Новий навчальний приклад",
           "clickToEditExample": "Натисніть, щоб редагувати цей приклад справжнім листом з архіву...",
-          "fromNewSender": "від New sender",
+          "fromNewSender": "від Нового відправника",
+          "exampleSourcePrefix": "від",
           "editTrainingExample": "Редагувати навчальний приклад",
           "addTrainingExampleTitle": "Додати навчальний приклад",
           "exampleTitle": "Назва",
@@ -735,6 +736,14 @@
           "keywordHints": "Підказки ключових слів",
           "keywordHintsHint": "необов’язково - використовується, коли впевненість AI < 70%",
           "keywordPlaceholder": "Введіть ключове слово та натисніть Enter..",
+          "keywordHintItems": {
+            "complaint": "скарга",
+            "protest": "протест",
+            "wrongful": "безпідставний",
+            "unacceptable": "неприйнятний",
+            "demand": "вимога",
+            "consumerProtection": "захист прав споживачів"
+          },
           "starRating": "Рейтинг зірок",
           "roles": {
             "primary": "PRIMARY",
@@ -821,8 +830,8 @@
             "plenty": "Багато резерву"
           },
           "status": {
-            "online": "online",
-            "away": "away"
+            "online": "в мережі",
+            "away": "відсутній"
           },
           "people": {
             "doroshenko": "Volodymyr Doroshenko",
@@ -833,15 +842,15 @@
             "bondarenko": "Pavlo Bondarenko"
           },
           "roles": {
-            "doroshenko": "Senior · complaints lead",
-            "kostenko": "NBU · regulatory specialist",
-            "kostenkoShort": "NBU specialist",
-            "melnychenko": "Court · litigation",
-            "melnychenkoShort": "Court litigation",
-            "kovalchuk": "Junior · general inquiries",
-            "kovalchukShort": "General inquiries",
-            "hrytsenko": "Regulatory · compliance associate",
-            "bondarenko": "Documentation · correspondence",
+            "doroshenko": "Senior · скарги",
+            "kostenko": "НБУ · регуляторний спеціаліст",
+            "kostenkoShort": "спеціаліст НБУ",
+            "melnychenko": "Суд · судові справи",
+            "melnychenkoShort": "судові справи",
+            "kovalchuk": "Junior · загальні запити",
+            "kovalchukShort": "загальні запити",
+            "hrytsenko": "Регуляторна · комплаєнс",
+            "bondarenko": "Документообіг · листування",
             "default": "Юридичний відділ"
           }
         },
@@ -870,7 +879,7 @@
             "responsibleTypes": "Відповідальні типи листів",
             "selectTypes": "Оберіть типи листів",
             "typesSelected": "Обрано: {{count}}",
-            "addNewType": "+ Додати новий тип",
+            "addNewType": "Додати новий тип",
             "submit": "Додати",
             "success": "Юриста додано"
           }

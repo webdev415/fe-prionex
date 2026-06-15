@@ -761,6 +761,7 @@
           "newTrainingExample": "New training example",
           "clickToEditExample": "Click to edit this example with real letter content from your archive...",
           "fromNewSender": "from New sender",
+          "exampleSourcePrefix": "from",
           "editTrainingExample": "Edit training example",
           "addTrainingExampleTitle": "Add training example",
           "exampleTitle": "Title",
@@ -772,6 +773,14 @@
           "keywordHints": "Keyword hints",
           "keywordHintsHint": "optional - used as fallback when AI confidence < 70%",
           "keywordPlaceholder": "Type a keyword and press Enter..",
+          "keywordHintItems": {
+            "complaint": "complaint",
+            "protest": "protest",
+            "wrongful": "wrongful",
+            "unacceptable": "unacceptable",
+            "demand": "demand",
+            "consumerProtection": "consumer protection"
+          },
           "starRating": "Star rating",
           "roles": {
             "primary": "PRIMARY",
@@ -907,7 +916,7 @@
             "responsibleTypes": "Responsible letter types",
             "selectTypes": "Select letter types",
             "typesSelected": "{{count}} selected",
-            "addNewType": "+ Add new type",
+            "addNewType": "Add new type",
             "submit": "Add",
             "success": "Lawyer added"
           }
