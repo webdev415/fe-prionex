@@ -34,7 +34,7 @@ import {
   useVerifyPayment,
   useCancelPayment,
   useGenerateReceipt,
-  useReassignPaymentEmployee,
+  useReassignPaymentAssignedUser,
   buildPurchaseDateMap,
   buildVerifiedPaymentsByContract,
 } from '@/features/payments'
@@ -175,7 +175,7 @@ export function DebtSummaryPage() {
   const { mutate: cancelPaymentMutation } = useCancelPayment()
   const { mutate: generateReceiptMutation } = useGenerateReceipt()
   const { mutate: reassignEmployeeMutation, isPending: isReassigning } =
-    useReassignPaymentEmployee()
+    useReassignPaymentAssignedUser()
   const [isReassignModalOpen, setIsReassignModalOpen] = useState(false)
 
   // Call functionality state
@@ -239,12 +239,8 @@ export function DebtSummaryPage() {
       ? paymentHistoryData.payments.find((p) => p.id === selectedPayment.id)
       : null
 
-  const createdByUserId = selectedPaymentData?.recorded_by_user_id ?? null
-  const verifiedByUserId = selectedPaymentData?.verified_by_user_id ?? null
   const cancelledByUserId = selectedPaymentData?.reversed_by_user_id ?? null
 
-  const { data: createdByUser } = useUser(createdByUserId)
-  const { data: verifiedByUser } = useUser(verifiedByUserId)
   const { data: cancelledByUser } = useUser(cancelledByUserId)
 
   const client = useMemo(() => {
@@ -1534,9 +1530,9 @@ export function DebtSummaryPage() {
                 paymentHistoryData?.payments.find((p) => p.id === selectedPayment.id)?.debt_after
               ) || Math.max(0, debtSummary.totalDebt - selectedPayment.amount),
             // Audit trail — resolved via useUser hooks
-            createdBy: createdByUser?.username || 'Unknown',
+            createdBy: selectedPaymentData?.assigned_user_full_name || 'Unknown',
             createdAt: selectedPaymentData?.recorded_at || 'Unknown',
-            verifiedBy: verifiedByUser?.username || undefined,
+            verifiedBy: selectedPaymentData?.verified_by_full_name || undefined,
             verifiedAt: selectedPaymentData?.verified_at || undefined,
             cancelledBy:
               cancelledByUser?.username ||
@@ -1604,14 +1600,14 @@ export function DebtSummaryPage() {
         <ReassignPaymentEmployeeModal
           open={isReassignModalOpen}
           onClose={() => setIsReassignModalOpen(false)}
-          currentEmployeeName={createdByUser?.username || 'Unknown'}
-          currentUserId={selectedPaymentData.recorded_by_user_id ?? null}
+          currentEmployeeName={selectedPaymentData.assigned_user_full_name || 'Unknown'}
+          currentUserId={selectedPaymentData.assigned_user_id ?? null}
           isSubmitting={isReassigning}
           onConfirm={(newUserId) => {
             reassignEmployeeMutation(
               {
                 paymentId: selectedPaymentData.id,
-                request: { recorded_by_user_id: newUserId },
+                request: { assigned_user_id: newUserId },
               },
               { onSuccess: () => setIsReassignModalOpen(false) }
             )
