@@ -687,6 +687,44 @@
             "annualReturn": "Annual NBU statistical return",
             "licensingInquiry": "NBU response - licensing inquiry"
           }
+        },
+        "modals": {
+          "generate": {
+            "title": "Generate document",
+            "documentType": "Document type",
+            "template": "Template",
+            "selectTemplate": "Select template",
+            "client": "Client · Contract",
+            "selectClient": "Select client",
+            "assignee": "Assignee",
+            "submit": "Generate & register",
+            "success": "Document generated",
+            "types": {
+              "outgoing": "Outgoing (ВИХ)",
+              "nbu": "NBU reply (НБУ)"
+            }
+          },
+          "incoming": {
+            "title": "Add incoming document",
+            "file": "File",
+            "changeFile": "Click to replace",
+            "dropHint": "Drag & drop or click to upload PDF, DOC, or image",
+            "documentName": "Document name",
+            "documentNamePlaceholder": "Enter document name",
+            "client": "Client · Contract",
+            "selectClient": "Select client",
+            "relatedLetter": "Related inbox letter (optional)",
+            "relatedLetterPlaceholder": "e.g. IN-2026-142",
+            "assignee": "Assignee",
+            "submit": "Register incoming",
+            "success": "Incoming document registered"
+          },
+          "detail": {
+            "title": "Document details",
+            "close": "Close document",
+            "download": "Download",
+            "downloadStarted": "Download started"
+          }
         }
       },
       "settings": {

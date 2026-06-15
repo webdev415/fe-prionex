@@ -16,6 +16,7 @@ interface DocumentsTableProps {
   pageSize: number
   onPageChange: (page: number) => void
   onPageSizeChange: (pageSize: number) => void
+  onDocumentClick: (document: LegalDocumentRow) => void
 }
 
 export function DocumentsTable({
@@ -25,6 +26,7 @@ export function DocumentsTable({
   pageSize,
   onPageChange,
   onPageSizeChange,
+  onDocumentClick,
 }: DocumentsTableProps) {
   const { t, i18n } = useTranslation('common')
   const { isCompact } = useLawyerWorkplaceLayout()
@@ -106,6 +108,7 @@ export function DocumentsTable({
         emptyMessage={t('pages.lawyerWorkplace.documents.empty', 'No documents found')}
         tableClassName="whitespace-normal"
         className={cn(isCompact && 'rounded-lg')}
+        onRowClick={onDocumentClick}
       />
       {totalPages > 0 && (
         <Pagination

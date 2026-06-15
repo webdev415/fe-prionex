@@ -4,7 +4,6 @@ import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 import { useLawyerWorkplaceLayout } from '../../context/lawyerWorkplaceLayout'
 import type { LegalDocumentTypeFilter } from '../../documents/types'
-import { DOCUMENT_FILTER_COUNTS } from '../../documents/documentsData'
 import { DOCUMENT_TYPE_FILTERS } from './constants'
 
 interface DocumentsToolbarProps {
@@ -12,6 +11,9 @@ interface DocumentsToolbarProps {
   onTypeFilterChange: (filter: LegalDocumentTypeFilter) => void
   searchQuery: string
   onSearchQueryChange: (query: string) => void
+  filterCounts: Record<LegalDocumentTypeFilter, number>
+  onGenerateDocument: () => void
+  onAddIncoming: () => void
 }
 
 function FilterCountBadge({ count, active }: { count: number; active: boolean }) {
@@ -32,6 +34,9 @@ export function DocumentsToolbar({
   onTypeFilterChange,
   searchQuery,
   onSearchQueryChange,
+  filterCounts,
+  onGenerateDocument,
+  onAddIncoming,
 }: DocumentsToolbarProps) {
   const { t } = useTranslation('common')
   const { isCompact, isWide } = useLawyerWorkplaceLayout()
@@ -70,6 +75,7 @@ export function DocumentsToolbar({
             <>
               <button
                 type="button"
+                onClick={onGenerateDocument}
                 aria-label={t(
                   'pages.lawyerWorkplace.documents.generateDocument',
                   'Generate document'
@@ -80,6 +86,7 @@ export function DocumentsToolbar({
               </button>
               <button
                 type="button"
+                onClick={onAddIncoming}
                 aria-label={t('pages.lawyerWorkplace.documents.addIncoming', 'Add incoming')}
                 className="bg-primary-300 text-dark-500 hover:bg-primary-400 flex h-10 w-10 cursor-pointer items-center justify-center rounded-full transition-colors"
               >
@@ -93,6 +100,7 @@ export function DocumentsToolbar({
                 size="md"
                 leftIcon={<Icons.ArtificialIntelligence08 size={18} strokeWidth={1.5} />}
                 className={cn('rounded-md', isWide ? 'h-[45px]' : 'h-10 px-4 text-xs')}
+                onClick={onGenerateDocument}
               >
                 {t('pages.lawyerWorkplace.documents.generateDocument', 'Generate document')}
               </Button>
@@ -101,6 +109,7 @@ export function DocumentsToolbar({
                 size="md"
                 leftIcon={<Icons.AddCircle size={18} strokeWidth={1.5} />}
                 className={cn('rounded-md', isWide ? 'h-[45px]' : 'h-10 px-4 text-xs')}
+                onClick={onAddIncoming}
               >
                 {t('pages.lawyerWorkplace.documents.addIncoming', 'Add incoming')}
               </Button>
@@ -119,7 +128,7 @@ export function DocumentsToolbar({
           <div className="flex flex-wrap items-center gap-1.5">
             {DOCUMENT_TYPE_FILTERS.map((filter) => {
               const isActive = typeFilter === filter.id
-              const count = DOCUMENT_FILTER_COUNTS[filter.id]
+              const count = filterCounts[filter.id]
               return (
                 <button
                   key={filter.id}
