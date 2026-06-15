@@ -20,12 +20,14 @@ interface LetterTypeDetailEditorProps {
   selectedType: LetterTypeConfig
   letterTypes: LetterTypeConfig[]
   onLetterTypesChange: (letterTypes: LetterTypeConfig[]) => void
+  onBack?: () => void
 }
 
 function LetterTypeDetailEditor({
   selectedType,
   letterTypes,
   onLetterTypesChange,
+  onBack,
 }: LetterTypeDetailEditorProps) {
   const { t } = useTranslation('common')
   const [draft, setDraft] = useState(() => cloneLetterType(selectedType))
@@ -52,6 +54,7 @@ function LetterTypeDetailEditor({
       onDraftChange={setDraft}
       onDiscard={handleDiscard}
       onSave={handleSave}
+      onBack={onBack}
     />
   )
 }
@@ -64,6 +67,7 @@ export function LetterTypesPanel({
   onAddType,
 }: LetterTypesPanelProps) {
   const { isCompact } = useLawyerWorkplaceLayout()
+  const [mobilePane, setMobilePane] = useState<'list' | 'detail'>('list')
 
   const selectedType = useMemo(
     () => letterTypes.find((type) => type.id === selectedId) ?? letterTypes[0] ?? null,
@@ -73,34 +77,47 @@ export function LetterTypesPanel({
   const handleSelect = (id: string) => {
     if (!letterTypes.some((item) => item.id === id)) return
     onSelectedIdChange(id)
+    if (isCompact) {
+      setMobilePane('detail')
+    }
   }
 
   if (!selectedType) {
     return null
   }
 
+  const showList = !isCompact || mobilePane === 'list'
+  const showDetail = !isCompact || mobilePane === 'detail'
+
   return (
     <div
       className={cn(
-        'min-h-[560px] gap-4 px-4 pb-6 sm:px-5 lg:px-7',
-        isCompact ? 'flex flex-col' : 'grid grid-cols-[minmax(240px,280px)_1fr]'
+        'min-w-0 gap-4 px-4 pb-6 sm:px-5 lg:px-7',
+        isCompact
+          ? 'flex min-h-0 flex-col'
+          : 'grid min-h-[560px] grid-cols-[minmax(240px,280px)_1fr]'
       )}
     >
-      <div className={cn(isCompact ? 'shrink-0' : 'min-h-0')}>
-        <LetterTypeList
-          letterTypes={letterTypes}
-          selectedId={selectedId}
-          onSelect={handleSelect}
-          onAddType={onAddType}
-        />
-      </div>
+      {showList ? (
+        <div className={cn(isCompact ? 'min-h-0 shrink-0' : 'min-h-0')}>
+          <LetterTypeList
+            letterTypes={letterTypes}
+            selectedId={selectedId}
+            onSelect={handleSelect}
+            onAddType={onAddType}
+          />
+        </div>
+      ) : null}
 
-      <LetterTypeDetailEditor
-        key={selectedId}
-        selectedType={selectedType}
-        letterTypes={letterTypes}
-        onLetterTypesChange={onLetterTypesChange}
-      />
+      {showDetail ? (
+        <LetterTypeDetailEditor
+          key={selectedId}
+          selectedType={selectedType}
+          letterTypes={letterTypes}
+          onLetterTypesChange={onLetterTypesChange}
+          onBack={isCompact ? () => setMobilePane('list') : undefined}
+        />
+      ) : null}
     </div>
   )
 }

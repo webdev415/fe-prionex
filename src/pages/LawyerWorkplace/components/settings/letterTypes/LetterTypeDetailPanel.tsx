@@ -12,6 +12,7 @@ interface LetterTypeDetailPanelProps {
   onDraftChange: (draft: LetterTypeConfig) => void
   onDiscard: () => void
   onSave: () => void
+  onBack?: () => void
 }
 
 export function LetterTypeDetailPanel({
@@ -20,12 +21,13 @@ export function LetterTypeDetailPanel({
   onDraftChange,
   onDiscard,
   onSave,
+  onBack,
 }: LetterTypeDetailPanelProps) {
   return (
-    <div className="flex min-h-0 flex-1 flex-col rounded-[12px] bg-white/50">
-      <LetterTypeDetailHeader draft={draft} />
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col rounded-[12px] bg-white/50">
+      <LetterTypeDetailHeader draft={draft} onBack={onBack} />
 
-      <div className="min-h-0 flex-1 space-y-8 overflow-y-auto px-5 py-6 sm:px-6">
+      <div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-4 py-5 sm:space-y-8 sm:px-5 sm:py-6 lg:px-6">
         <LetterTypeBasicInfoSection draft={draft} onDraftChange={onDraftChange} />
         <LetterTypePrioritySection draft={draft} onDraftChange={onDraftChange} />
         <LetterTypeTrainingExamplesSection

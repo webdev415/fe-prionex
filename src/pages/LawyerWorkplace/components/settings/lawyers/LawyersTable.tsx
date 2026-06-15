@@ -1,12 +1,18 @@
+import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/Button'
+import { Pagination } from '@/components/ui/Pagination'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
+import { useLawyerWorkplaceLayout } from '../../../context/lawyerWorkplaceLayout'
 import type { LetterTypeConfig } from '../../../settings/types'
 import type { SettingsLawyer } from '../../../settings/types'
 import { getWorkloadLabel } from '../../../settings/utils/lawyerHelpers'
 import { LetterTypeBadge } from '../LetterTypeBadge'
+
+const DEFAULT_PAGE_SIZE = 10
+const PAGE_SIZE_OPTIONS = [5, 10, 20, 50]
 
 interface LawyersTableProps {
   lawyers: SettingsLawyer[]
@@ -22,8 +28,19 @@ export function LawyersTable({
   onAddLawyer,
 }: LawyersTableProps) {
   const { t } = useTranslation('common')
+  const { isCompact } = useLawyerWorkplaceLayout()
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE)
 
   const letterTypeById = Object.fromEntries(letterTypes.map((type) => [type.id, type]))
+
+  const totalPages = lawyers.length > 0 ? Math.ceil(lawyers.length / pageSize) : 0
+  const currentPage = totalPages > 0 ? Math.min(page, totalPages) : 1
+
+  const paginatedLawyers = useMemo(() => {
+    const start = (currentPage - 1) * pageSize
+    return lawyers.slice(start, start + pageSize)
+  }, [lawyers, currentPage, pageSize])
 
   const updateMaxInFlight = (lawyerId: string, delta: number) => {
     onLawyersChange(
@@ -36,9 +53,14 @@ export function LawyersTable({
   }
 
   return (
-    <div className="overflow-hidden rounded-xl border border-gray-100 bg-white">
-      <div className="flex flex-col gap-3 border-b border-gray-100 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-        <div className="flex flex-row items-center gap-4">
+    <div className="min-w-0 overflow-hidden rounded-xl border border-gray-100 bg-white">
+      <div
+        className={cn(
+          'flex gap-3 border-b border-gray-100 px-4 py-4 sm:px-5 lg:px-6',
+          isCompact ? 'flex-col' : 'flex-row items-center justify-between'
+        )}
+      >
+        <div className="min-w-0">
           <h2 className="text-dark-500 text-[13px] font-semibold">
             {t('pages.lawyerWorkplace.settings.lawyers.departmentTitle', {
               count: lawyers.length,
@@ -52,12 +74,12 @@ export function LawyersTable({
             )}
           </p>
         </div>
-        <div className="flex shrink-0 items-center gap-2">
+        <div className={cn('flex shrink-0 items-center gap-2', isCompact && 'w-full')}>
           <Button
             variant="outline"
             size="sm"
             leftIcon={<Icons.FileDownload size={16} strokeWidth={1.5} />}
-            className="h-9 rounded-md"
+            className={cn('h-9 rounded-md', isCompact && 'flex-1')}
             onClick={() =>
               toast.info(
                 t('pages.lawyerWorkplace.settings.lawyers.exportSoon', 'Export coming soon')
@@ -71,18 +93,23 @@ export function LawyersTable({
             size="sm"
             leftIcon={<Icons.AddCircle size={18} strokeWidth={1.5} />}
             onClick={onAddLawyer}
-            className="h-9 rounded-md"
+            className={cn('h-9 rounded-md', isCompact && 'flex-1')}
           >
             {t('pages.lawyerWorkplace.settings.lawyers.addLawyer', 'Add lawyer')}
           </Button>
         </div>
       </div>
 
-      <div className="overflow-x-auto">
+      <div className="data-table-scroll w-full overflow-x-auto overflow-y-hidden pb-2">
         <table className="w-full min-w-[760px] text-left text-[13px]">
           <thead>
             <tr className="border-b border-gray-100">
-              <th className="text-light-600 px-5 py-3 text-[11px] font-medium">
+              <th
+                className={cn(
+                  'text-light-600 py-3 text-[11px] font-medium',
+                  isCompact ? 'px-4' : 'px-5'
+                )}
+              >
                 {t('pages.lawyerWorkplace.settings.lawyer', 'Lawyer')}
               </th>
               <th className="text-light-600 px-4 py-3 text-[11px] font-medium">
@@ -100,32 +127,32 @@ export function LawyersTable({
             </tr>
           </thead>
           <tbody>
-            {lawyers.map((lawyer, idx) => {
+            {paginatedLawyers.map((lawyer, idx) => {
               const progress =
                 lawyer.maxInFlight > 0 ? (lawyer.currentActive / lawyer.maxInFlight) * 100 : 0
 
               return (
                 <tr
                   key={lawyer.id}
-                  className={cn(idx < lawyers.length - 1 && 'border-b border-gray-100')}
+                  className={cn(idx < paginatedLawyers.length - 1 && 'border-b border-gray-100')}
                 >
-                  <td className="px-5 py-4">
+                  <td className={cn('py-4', isCompact ? 'px-4' : 'px-5')}>
                     <div className="flex items-center gap-3">
                       <div className="bg-secondary-100 text-secondary-800 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold">
                         {lawyer.initials}
                       </div>
-                      <div>
-                        <p className="text-dark-500 text-[13px] font-semibold">
+                      <div className="min-w-0">
+                        <p className="text-dark-500 truncate text-[13px] font-semibold">
                           {t(lawyer.nameKey, lawyer.nameFallback)}
                         </p>
-                        <p className="text-light-600 text-[11px]">
+                        <p className="text-light-600 truncate text-[11px]">
                           {t(lawyer.roleKey, lawyer.roleFallback)}
                         </p>
                       </div>
                     </div>
                   </td>
                   <td className="px-4 py-4">
-                    <div className="flex flex-wrap gap-1.5">
+                    <div className="flex min-w-[140px] flex-wrap gap-1.5">
                       {lawyer.letterTypeIds.map((typeId) => {
                         const letterType = letterTypeById[typeId]
                         if (!letterType) return null
@@ -184,7 +211,7 @@ export function LawyersTable({
                   <td className="px-4 py-4">
                     <span
                       className={cn(
-                        'inline-flex rounded-full px-2.5 py-1 text-[11px] font-medium',
+                        'inline-flex rounded-full px-2.5 py-1 text-[11px] font-medium whitespace-nowrap',
                         lawyer.status === 'online'
                           ? 'bg-success-100 text-success-700'
                           : 'bg-warning-100 text-warning-700'
@@ -202,6 +229,18 @@ export function LawyersTable({
           </tbody>
         </table>
       </div>
+
+      {totalPages > 0 && (
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          pageSize={pageSize}
+          pageSizeOptions={PAGE_SIZE_OPTIONS}
+          onPageChange={setPage}
+          onPageSizeChange={setPageSize}
+          className={cn('border-t border-gray-100 px-4 sm:px-5 lg:px-6', isCompact && 'py-3')}
+        />
+      )}
     </div>
   )
 }

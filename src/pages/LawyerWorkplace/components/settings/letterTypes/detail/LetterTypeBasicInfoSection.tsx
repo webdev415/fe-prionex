@@ -1,4 +1,6 @@
 import { useTranslation } from 'react-i18next'
+import { cn } from '@/lib/utils'
+import { useLawyerWorkplaceLayout } from '../../../../context/lawyerWorkplaceLayout'
 import type { LetterTypeConfig } from '../../../../settings/types'
 import { LetterTypeDetailSectionHeader } from './LetterTypeDetailSectionHeader'
 
@@ -12,6 +14,7 @@ export function LetterTypeBasicInfoSection({
   onDraftChange,
 }: LetterTypeBasicInfoSectionProps) {
   const { t } = useTranslation('common')
+  const { isCompact } = useLawyerWorkplaceLayout()
 
   return (
     <section>
@@ -20,7 +23,12 @@ export function LetterTypeBasicInfoSection({
       />
 
       <div className="flex w-full flex-col gap-4">
-        <div className="flex w-full flex-row items-center gap-5">
+        <div
+          className={cn(
+            'flex w-full gap-4',
+            isCompact ? 'flex-col' : 'flex-row items-center gap-5'
+          )}
+        >
           <div className="flex w-full flex-col gap-2">
             <label className="text-dark-500 text-[12px] font-medium">
               {t('pages.lawyerWorkplace.settings.letterTypes.displayName', 'Display name')}

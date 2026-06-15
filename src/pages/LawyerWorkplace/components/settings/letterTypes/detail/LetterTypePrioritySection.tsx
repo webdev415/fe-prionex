@@ -1,5 +1,7 @@
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
+import { cn } from '@/lib/utils'
+import { useLawyerWorkplaceLayout } from '../../../../context/lawyerWorkplaceLayout'
 import { PRIORITY_LAWYER_META } from '../../../../settings/settingsData'
 import type { LetterTypeConfig, LetterTypePriorityAssignment } from '../../../../settings/types'
 import { updateLetterTypePriority } from '../../../../settings/utils/letterTypeHelpers'
@@ -17,6 +19,7 @@ export function LetterTypePrioritySection({
   onDraftChange,
 }: LetterTypePrioritySectionProps) {
   const { t } = useTranslation('common')
+  const { isCompact } = useLawyerWorkplaceLayout()
 
   const priorityRows = useMemo(
     () =>
@@ -46,7 +49,12 @@ export function LetterTypePrioritySection({
         {priorityRows.map(({ lawyer, assignment }) => (
           <div
             key={lawyer.id}
-            className="grid gap-3 rounded-xl bg-white px-4 py-3 lg:grid-cols-[minmax(180px,1fr)_auto_auto_auto] lg:items-center"
+            className={cn(
+              'grid gap-3 rounded-xl bg-white px-4 py-3',
+              isCompact
+                ? 'grid-cols-1'
+                : 'lg:grid-cols-[minmax(180px,1fr)_auto_auto_auto] lg:items-center'
+            )}
           >
             <div className="flex min-w-0 items-center gap-3">
               <div className="bg-secondary-100 text-secondary-800 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold">
@@ -62,7 +70,7 @@ export function LetterTypePrioritySection({
               </div>
             </div>
 
-            <p className="text-light-600 text-[12px] lg:text-center">
+            <p className={cn('text-light-600 text-[12px]', !isCompact && 'lg:text-center')}>
               {t('pages.lawyerWorkplace.settings.letterTypes.activeLoad', {
                 current: lawyer.activeCount,
                 max: lawyer.maxActive,
@@ -70,22 +78,29 @@ export function LetterTypePrioritySection({
               })}
             </p>
 
-            <LawyerStarRating
-              value={assignment.stars}
-              onChange={(stars) =>
-                onDraftChange(
-                  updateLetterTypePriority(draft, lawyer.id, { stars: Math.max(0, stars) })
-                )
-              }
-            />
-
-            <div className="flex lg:justify-end">
-              <LawyerRoleBadge
-                role={assignment.role}
-                onSelect={(role) =>
-                  onDraftChange(updateLetterTypePriority(draft, lawyer.id, { role }))
+            <div
+              className={cn(
+                'flex items-center gap-3',
+                isCompact ? 'justify-between' : 'lg:contents'
+              )}
+            >
+              <LawyerStarRating
+                value={assignment.stars}
+                onChange={(stars) =>
+                  onDraftChange(
+                    updateLetterTypePriority(draft, lawyer.id, { stars: Math.max(0, stars) })
+                  )
                 }
               />
+
+              <div className={cn('flex', !isCompact && 'lg:justify-end')}>
+                <LawyerRoleBadge
+                  role={assignment.role}
+                  onSelect={(role) =>
+                    onDraftChange(updateLetterTypePriority(draft, lawyer.id, { role }))
+                  }
+                />
+              </div>
             </div>
           </div>
         ))}

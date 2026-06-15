@@ -51,7 +51,7 @@ export function KeywordHintsField({ keywords, onChange }: KeywordHintsFieldProps
           'pages.lawyerWorkplace.settings.letterTypes.keywordPlaceholder',
           'Type a keyword and press Enter..'
         )}
-        className="text-dark-500 min-w-[180px] flex-1 bg-transparent text-[13px] outline-none placeholder:text-gray-400"
+        className="text-dark-500 min-w-[120px] flex-1 bg-transparent text-[13px] outline-none placeholder:text-gray-400 sm:min-w-[180px]"
       />
     </div>
   )

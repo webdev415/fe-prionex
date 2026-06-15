@@ -18,7 +18,7 @@ type StepConfig = {
 
 export function AutoAssignmentCard() {
   const { t } = useTranslation('common')
-  const { isCompact } = useLawyerWorkplaceLayout()
+  const { isCompact, isWide } = useLawyerWorkplaceLayout()
 
   const steps: StepConfig[] = [
     {
@@ -68,7 +68,12 @@ export function AutoAssignmentCard() {
         />
       </p>
 
-      <div className={cn('grid gap-3', isCompact ? 'grid-cols-1' : 'grid-cols-1 lg:grid-cols-3')}>
+      <div
+        className={cn(
+          'grid gap-3',
+          isWide ? 'grid-cols-3' : isCompact ? 'grid-cols-1' : 'grid-cols-2'
+        )}
+      >
         {steps.map((step) => (
           <div key={step.titleKey} className="flex flex-col gap-2 rounded-xl bg-white p-4">
             <div className="flex flex-row items-start justify-between gap-2">

@@ -49,8 +49,8 @@ export function SettingsToolbar({ activeSubTab, onSubTabChange }: SettingsToolba
 
         <div
           className={cn(
-            'flex shrink-0 flex-wrap gap-1 rounded-md bg-white p-1 shadow-sm',
-            isCompact ? 'w-full' : 'ml-auto'
+            'flex shrink-0 gap-1 rounded-md bg-white p-1 shadow-sm',
+            isCompact ? 'w-full overflow-x-auto' : 'ml-auto flex-wrap'
           )}
         >
           {SETTINGS_SUB_TABS.map((tab) => {
@@ -61,9 +61,9 @@ export function SettingsToolbar({ activeSubTab, onSubTabChange }: SettingsToolba
                 type="button"
                 onClick={() => onSubTabChange(tab.id)}
                 className={cn(
-                  'cursor-pointer rounded-md px-3 py-1.5 text-[11px] font-medium transition-colors sm:px-4 sm:py-2 sm:text-[12px]',
+                  'cursor-pointer rounded-md px-3 py-1.5 text-[11px] font-medium whitespace-nowrap transition-colors sm:px-4 sm:py-2 sm:text-[12px]',
                   isActive ? 'bg-secondary-800 text-white' : 'text-dark-500 hover:bg-light-100',
-                  isCompact && 'flex-1 text-center'
+                  isCompact && 'min-w-0 flex-1 text-center'
                 )}
               >
                 {t(tab.labelKey, tab.fallback)}
