@@ -905,8 +905,16 @@
       "addNewUser": "Новый пользователь",
       "noUsersFound": "Пользователи не найдены",
       "errorLoading": "Ошибка загрузки пользователей",
-      "searchPlaceholder": "Поиск по имени, логину или email...",
+      "searchPlaceholder": "Поиск пользователей...",
       "searchButton": "Поиск",
+      "clearSearch": "Очистить поиск",
+      "searchCriterionLabel": "Критерий поиска",
+      "searchCriteria": {
+        "fullName": "Полное имя",
+        "username": "Имя пользователя",
+        "email": "Электронная почта",
+        "extension": "Расширение / Агент"
+      },
       "tableHeaders": {
         "username": "Имя пользователя",
         "userId": "ID пользователя",
