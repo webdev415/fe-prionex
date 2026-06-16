@@ -282,12 +282,22 @@ export function TrainingPage() {
     return scoped.userIds
   }, [canSelectInboxScope, currentUserId, scoped.userIds])
 
-  const headerKpisFilters: HeaderKpisFilters = {
-    user_ids: headerScopedUserIds,
-    period: inboxUrlState.period,
-    from_date: inboxUrlState.customFromDate,
-    to_date: inboxUrlState.customToDate,
-  }
+  // Memoized so the react-query key for `useHeaderKpis` stays stable
+  // across renders that don't change the actual filter primitives.
+  const headerKpisFilters: HeaderKpisFilters = useMemo(
+    () => ({
+      user_ids: headerScopedUserIds,
+      period: inboxUrlState.period,
+      from_date: inboxUrlState.customFromDate,
+      to_date: inboxUrlState.customToDate,
+    }),
+    [
+      headerScopedUserIds,
+      inboxUrlState.period,
+      inboxUrlState.customFromDate,
+      inboxUrlState.customToDate,
+    ]
+  )
   const canViewInbox = userPermissions.includes(PERMISSIONS.TRAINING.VIEW_INBOX)
 
   const setLegacySubTab = (sub: ActionAnalysisCallsSubTabId) => {

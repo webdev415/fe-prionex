@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { memo, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
 import { useAuthStore } from '@/stores/authStore'
@@ -17,6 +17,7 @@ import {
   ANALYTICS_TABLE_TD,
   ANALYTICS_TABLE_TH,
 } from './analyticsTableStyles'
+import { InteractionsKpiStrip } from './InteractionsKpiStrip'
 
 /**
  * Interactions sub-tab (KAN-731 Block 1 — wired to /api/v1/interactions).
@@ -163,6 +164,15 @@ export function InteractionsSubTab() {
 
   return (
     <div className="flex flex-col gap-4">
+      {/* KPI strip — shares the same query result as the table below
+       *  (rather than firing a second 500-row request). Bucket counters
+       *  render `—` until /interactions/summary aggregate ships. */}
+      <InteractionsKpiStrip
+        total={interactionsQuery.data?.total ?? 0}
+        isLoading={interactionsQuery.isLoading}
+        isError={interactionsQuery.isError}
+      />
+
       {/* Filter strip — period chips + operator/status dropdowns + Reset */}
       <div className="flex flex-wrap items-center gap-4 rounded-lg border border-[#EBECE8] bg-white px-4 py-3 shadow-[0px_1px_2px_rgba(0,0,0,0.04)]">
         <span className="text-xs font-medium tracking-[-0.02em] text-[#05040D]">
@@ -310,7 +320,11 @@ export function InteractionsSubTab() {
   )
 }
 
-function InteractionRow({ row }: { row: InteractionMonitoringItem }) {
+/** Memoized so a filter / dropdown change on the parent doesn't repaint
+ *  every row when its `row` reference is unchanged. */
+const InteractionRow = memo(InteractionRowImpl, (prev, next) => prev.row === next.row)
+
+function InteractionRowImpl({ row }: { row: InteractionMonitoringItem }) {
   const operatorName = row.user_name ?? (row.user_id ? `#${row.user_id}` : '—')
   const initials =
     operatorName === '—'
