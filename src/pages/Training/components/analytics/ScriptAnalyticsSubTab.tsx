@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { memo, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
 import { useAuthStore } from '@/stores/authStore'
@@ -263,13 +263,12 @@ export function ScriptAnalyticsSubTab() {
       .map((op) => op.id)
   }, [operators, department])
 
-  const scriptQuery = useScriptAnalytics(
-    {
-      period: 'today',
-      operator_ids: filteredOperatorIds,
-    },
-    projectIdNum != null
+  // Memoize the filter literal so the react-query key stays stable.
+  const scriptFilters = useMemo(
+    () => ({ period: 'today' as const, operator_ids: filteredOperatorIds }),
+    [filteredOperatorIds]
   )
+  const scriptQuery = useScriptAnalytics(scriptFilters, projectIdNum != null)
 
   const { alerts, rows } = useMemo(
     () => buildDerivedData(scriptQuery.data, operators, t),
@@ -484,7 +483,10 @@ function MetricBar({ count, pct, barColor }: { count: number; pct: number; barCo
   )
 }
 
-function DistributionRow({ row }: { row: UiDistributionRow }) {
+/** Memoized so a department change doesn't repaint every distribution row. */
+const DistributionRow = memo(DistributionRowImpl, (prev, next) => prev.row === next.row)
+
+function DistributionRowImpl({ row }: { row: UiDistributionRow }) {
   return (
     <tr className={ANALYTICS_TABLE_ROW}>
       <td className={ANALYTICS_TABLE_TD}>

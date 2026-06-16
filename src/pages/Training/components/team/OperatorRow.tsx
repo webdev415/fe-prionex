@@ -1,4 +1,5 @@
-﻿import type { TeamOperatorRow, ScoreBand } from '../../mocks/trainerWorkplaceMocks'
+﻿import { memo } from 'react'
+import type { TeamOperatorRow, ScoreBand } from '../../mocks/trainerWorkplaceMocks'
 import {
   operatorPresence,
   PRESENCE_DOT,
@@ -19,7 +20,7 @@ const PLAN_BAR: Record<ScoreBand, string> = {
 }
 
 /** Figma operator tile — #F7F7F7 card, lime avatar, daily plan bar, score ring */
-export function OperatorRow({ operator, onSelect }: OperatorRowProps) {
+function OperatorRowImpl({ operator, onSelect }: OperatorRowProps) {
   const presence = operatorPresence(operator)
   const planPct = operator.dailyPlanPct ?? 0
   const radius = 17
@@ -102,5 +103,11 @@ export function OperatorRow({ operator, onSelect }: OperatorRowProps) {
     </button>
   )
 }
+
+/** Memoized so a parent re-render (selection state, hover, etc.) doesn't
+ *  repaint every row when only the operator's own data is unchanged. */
+export const OperatorRow = memo(OperatorRowImpl, (prev, next) => {
+  return prev.operator === next.operator && prev.onSelect === next.onSelect
+})
 
 export default OperatorRow

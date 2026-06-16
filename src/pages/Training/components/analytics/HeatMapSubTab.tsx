@@ -163,13 +163,14 @@ export function HeatMapSubTab() {
       .map((op) => op.id)
   }, [operators, department])
 
-  const heatmapQuery = useHeatmap(
-    {
-      period: 'today',
-      operator_ids: filteredOperatorIds,
-    },
-    projectIdNum != null
+  // Memoized so the react-query key for `useHeatmap` doesn't re-hash on
+  // every parent render. `filteredOperatorIds` is already stable; the
+  // outer object literal is the only thing we need to lift.
+  const heatmapFilters = useMemo(
+    () => ({ period: 'today' as const, operator_ids: filteredOperatorIds }),
+    [filteredOperatorIds]
   )
+  const heatmapQuery = useHeatmap(heatmapFilters, projectIdNum != null)
 
   const operatorNameById = useMemo(() => {
     const m = new Map<number, string>()

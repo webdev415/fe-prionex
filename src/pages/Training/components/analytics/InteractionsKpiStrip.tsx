@@ -1,86 +1,44 @@
-import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
-import { useAuthStore } from '@/stores/authStore'
-import { useInteractionMonitoring } from '@/features/training/hooks/useInteractionMonitoring'
-import type {
-  InteractionMonitoringFilters,
-  InteractionMonitoringItem,
-} from '@/features/training/types'
 import { AnalyticsKpiTile } from './AnalyticsKpiTile'
 
 /**
- * KPI strip above the Interactions sub-tab (KAN-731 Block 1 — wired to the
- * same /api/v1/interactions endpoint the sub-tab consumes, using a wider
- * page_size for the count breakdown).
+ * KPI strip above the Interactions sub-tab (KAN-731 Block 1 — wired via
+ * props from the parent `InteractionsSubTab`).
  *
- * Layout matches the Figma frame: Interactions · Promises · Rejections ·
- * Missed Calls · Will Pass · Avg Gap. `total` drives the headline count;
- * per-result counters bucket the page sample by keyword (en/uk/ru aliases).
- * Avg Gap requires a dedicated aggregate endpoint and renders `—` for now.
+ * Before the 2026-06-15 perf pass this component fetched
+ * /api/v1/interactions independently with page_size=500 just to bucket
+ * counts client-side. That doubled the HTTP call per render and pulled
+ * 10× the data the table needed. The strip now consumes only the table's
+ * `total` field (the one accurate summary value the BE returns today).
+ * Per-result bucket counters render `—` until a dedicated
+ * /interactions/summary aggregate endpoint ships — accurate but
+ * incomplete is preferable to "first 500 rows bucketed locally".
+ *
+ * Layout (Figma): Interactions · Promises · Rejections · Missed Calls ·
+ * Will Pass · Avg Gap.
  */
 
-const COUNTER_KEYWORDS = {
-  promises: ['promise', 'обіцянк', 'обещание', 'pay'],
-  refusals: ['refus', 'відмов', 'отказ'],
-  missed: ['missed', 'no answer', 'no_answer', 'пропущ', 'без відпов', 'без ответа'],
-  willPass: ['will pass', 'will_pass', 'передаст', 'передасть'],
-} as const
-
-type CounterKey = keyof typeof COUNTER_KEYWORDS
-
-function bucket(items: InteractionMonitoringItem[]): Record<CounterKey, number> {
-  const counts: Record<CounterKey, number> = {
-    promises: 0,
-    refusals: 0,
-    missed: 0,
-    willPass: 0,
-  }
-  for (const item of items) {
-    const name = (item.result_name ?? '').toLowerCase()
-    if (!name) continue
-    for (const key of Object.keys(COUNTER_KEYWORDS) as CounterKey[]) {
-      if (COUNTER_KEYWORDS[key].some((kw) => name.includes(kw))) {
-        counts[key] += 1
-        break
-      }
-    }
-  }
-  return counts
+export interface InteractionsKpiStripProps {
+  total: number
+  isLoading: boolean
+  isError: boolean
 }
 
-export function InteractionsKpiStrip() {
+export function InteractionsKpiStrip({ total, isLoading, isError }: InteractionsKpiStripProps) {
   const { t } = useTranslation('common')
-  const activeProjectId = useAuthStore((s) => s.user?.active_project_id)
-  const projectIdNum = activeProjectId ? Number(activeProjectId) : null
 
-  // Independent query from the sub-tab table — same endpoint, wider window
-  // (page_size=500) so the per-result buckets cover more than one page of
-  // table data. Reuses the BE default-period guard so the totals match
-  // "today" out of the box.
-  const filters = useMemo<InteractionMonitoringFilters>(
-    () => ({
-      period: 'today',
-      sort_by: 'date',
-      sort_dir: 'desc',
-      page: 1,
-      page_size: 500,
-    }),
-    []
-  )
-  const interactionsQuery = useInteractionMonitoring(filters, projectIdNum != null)
-
-  const total = interactionsQuery.data?.total ?? 0
-  const counts = useMemo(
-    () => bucket(interactionsQuery.data?.items ?? []),
-    [interactionsQuery.data]
-  )
+  // Headline `total` reflects the full filtered set (BE returns `total` in
+  // the list response envelope alongside `items`). Bucket counters need a
+  // dedicated aggregate endpoint — render `—` for now.
+  const headline = isLoading ? '…' : isError ? '—' : String(total)
+  const placeholder = '—'
 
   const tiles = [
     {
       key: 'interactions',
       label: t('pages.training.interactions.kpi.total', 'Interactions'),
-      value: String(total),
+      value: headline,
       icon: <Icons.Activity01 size={18} />,
       iconBg: 'bg-[#F7F7F7]',
       iconTone: 'text-[#05040D]',
@@ -88,7 +46,7 @@ export function InteractionsKpiStrip() {
     {
       key: 'promises',
       label: t('pages.training.interactions.kpi.promises', 'Promises'),
-      value: String(counts.promises),
+      value: placeholder,
       icon: <Icons.TransactionHistory size={18} />,
       iconBg: 'bg-[#ECFDF5]',
       iconTone: 'text-[#047857]',
@@ -96,7 +54,7 @@ export function InteractionsKpiStrip() {
     {
       key: 'rejections',
       label: t('pages.training.interactions.kpi.rejections', 'Rejections'),
-      value: String(counts.refusals),
+      value: placeholder,
       icon: <Icons.Close size={18} />,
       iconBg: 'bg-[#FEF2F2]',
       iconTone: 'text-[#B91C1C]',
@@ -104,7 +62,7 @@ export function InteractionsKpiStrip() {
     {
       key: 'missed-calls',
       label: t('pages.training.interactions.kpi.missedCalls', 'Missed Calls'),
-      value: String(counts.missed),
+      value: placeholder,
       icon: <Icons.CallEnd size={18} />,
       iconBg: 'bg-[#FFF7ED]',
       iconTone: 'text-[#C2410C]',
@@ -112,18 +70,17 @@ export function InteractionsKpiStrip() {
     {
       key: 'will-pass',
       label: t('pages.training.interactions.kpi.willPass', 'Will Pass'),
-      value: String(counts.willPass),
+      value: placeholder,
       icon: <Icons.UserCheck01 size={18} />,
       iconBg: 'bg-[#EFF6FF]',
       iconTone: 'text-[#1D4ED8]',
     },
     {
       // Average gap (between interactions) needs a dedicated aggregate
-      // endpoint; the list response doesn't carry the right field. Show `—`
-      // until a /interactions/summary lands as a follow-up.
+      // endpoint; the list response doesn't carry the right field.
       key: 'avg-gap',
       label: t('pages.training.interactions.kpi.avgGap', 'Average Gap'),
-      value: '—',
+      value: placeholder,
       icon: <Icons.Clock01 size={18} />,
       iconBg: 'bg-[#F5F3FF]',
       iconTone: 'text-[#6D28D9]',

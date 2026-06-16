@@ -12,7 +12,6 @@ import { LeaksSubTab } from './LeaksSubTab'
 import { ThirdPartiesSubTab } from './ThirdPartiesSubTab'
 import { ScriptAnalyticsSubTab } from './ScriptAnalyticsSubTab'
 import { TrainingSegmentedStrip } from '../chrome/TrainingSegmentedStrip'
-import { InteractionsKpiStrip } from './InteractionsKpiStrip'
 import { TimeAtWorkSubTab } from './TimeAtWorkSubTab'
 import { HeatMapSubTab } from './HeatMapSubTab'
 
@@ -108,12 +107,7 @@ export function ActionAnalysisInnerTab() {
       />
 
       <div>
-        {activeSubTab === 'interactions' && (
-          <div className="flex flex-col gap-4">
-            <InteractionsKpiStrip />
-            <InteractionsSubTab />
-          </div>
-        )}
+        {activeSubTab === 'interactions' && <InteractionsSubTab />}
         {activeSubTab === 'weekly-tasks' && <WeeklyTasksSubTab />}
         {activeSubTab === 'promises-and-callbacks' && <PromisesAndCallbacksSubTab />}
         {activeSubTab === 'successful-closures' && <SuccessfulClosuresSubTab />}
