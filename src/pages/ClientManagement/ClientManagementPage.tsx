@@ -44,6 +44,8 @@ import { mapScoreToPriority } from '@/features/clients/api/configApi'
 import type { Client as APIClient } from '@/features/clients/api/types'
 import type { PriorityThresholds } from '@/features/clients/api/configApi'
 import { useURLState } from '@/hooks/useURLState'
+import { useOperatorFilterOptions, coversAllOptions } from './hooks/useOperatorFilterOptions'
+import { NO_INTERACTIONS_ID, NO_RESPONSIBLE_ID } from './components/OperatorMultiSelectDropdown'
 import type { StepValueEntry } from './components/ClientStepValueRow'
 import type { Priority } from './types'
 import { PermissionGuard } from '@/components/auth'
@@ -720,6 +722,23 @@ export function ClientManagementPage() {
   // NO need to debounce filters - useURLState already does this with 300ms debounce
   // const filters = useDebounce(filters, 500)
 
+  // Operator option sets (same derivation the filter dropdowns render). Used to
+  // detect the "all operators selected" case and OMIT the responsible_employee_ids
+  // / interaction_user_ids filter: sending every id is a no-op constraint that
+  // defeats the priority index and turns the dashboard query into a full-scan +
+  // sort — the heavy query behind the morning-login OOM/502s. Shares the
+  // react-query cache with ClientFiltersBar, so no extra fetch.
+  const {
+    employeeOptions,
+    interactionUserOptions,
+    isReady: operatorOptionsReady,
+  } = useOperatorFilterOptions(user?.active_project_id ? Number(user.active_project_id) : null)
+  const allEmployeeOptionIds = useMemo(() => employeeOptions.map((o) => o.id), [employeeOptions])
+  const allInteractionOptionIds = useMemo(
+    () => interactionUserOptions.map((o) => o.id),
+    [interactionUserOptions]
+  )
+
   // Toggle handler for priority card clicks
   const handlePriorityToggle = (priority: Priority) => {
     setSelectedPriorities((prev) => {
@@ -772,9 +791,19 @@ export function ClientManagementPage() {
     }
 
     // FILTER 3: Assignment - Employee (multi-select OR, KAN-572).
-    // Sent as a comma-separated string matching the BE schema.
+    // Sent as a comma-separated string matching the BE schema. When every
+    // operator is selected ("All employees", no "No Responsible" sentinel) the
+    // filter is a no-op — omit it so the BE takes the fast priority-index path
+    // instead of a 200-id IN-list full scan (the morning OOM/502 trigger). This
+    // also matches the dropdown label, which already shows "All employees" for
+    // both the empty and all-selected states.
     if (filters.responsibleEmployeeIds && filters.responsibleEmployeeIds.length > 0) {
-      params.responsible_employee_ids = filters.responsibleEmployeeIds.join(',')
+      const selected = filters.responsibleEmployeeIds
+      const hasNoResponsible = selected.includes(NO_RESPONSIBLE_ID)
+      const realIds = selected.filter((id) => id !== NO_RESPONSIBLE_ID)
+      if (!(!hasNoResponsible && coversAllOptions(realIds, allEmployeeOptionIds))) {
+        params.responsible_employee_ids = selected.join(',')
+      }
     }
 
     // FILTER 4: Assignment - Searcher
@@ -843,9 +872,16 @@ export function ClientManagementPage() {
     }
 
     // FILTER 13: Interaction Created By (multi-select OR, KAN-572).
-    // Sent as a comma-separated string matching the BE schema.
+    // Sent as a comma-separated string matching the BE schema. Same "all
+    // operators selected → omit the no-op filter" optimization as Filter 3
+    // (the "No Interactions" sentinel widens results, so it blocks the omit).
     if (filters.interactionUserIds && filters.interactionUserIds.length > 0) {
-      params.interaction_user_ids = filters.interactionUserIds.join(',')
+      const selected = filters.interactionUserIds
+      const hasNoInteractions = selected.includes(NO_INTERACTIONS_ID)
+      const realIds = selected.filter((id) => id !== NO_INTERACTIONS_ID)
+      if (!(!hasNoInteractions && coversAllOptions(realIds, allInteractionOptionIds))) {
+        params.interaction_user_ids = selected.join(',')
+      }
     }
 
     // FILTER 14: Interaction Logged Date (applies to promise/callback subqueries)
@@ -908,6 +944,8 @@ export function ClientManagementPage() {
     selectedPriorities,
     searchQuery,
     searchType,
+    allEmployeeOptionIds,
+    allInteractionOptionIds,
   ])
 
   /** Filters + sort for bulk messaging when "select all" is used (no pagination). */
@@ -918,8 +956,23 @@ export function ClientManagementPage() {
     return rest
   }, [apiParams])
 
-  // Fetch clients from API
-  const { data: clientsResponse, isLoading, isFetching, isError, error } = useClients(apiParams)
+  // Fetch clients from API. When an operator multi-select filter is active we
+  // defer the first fetch until the operator option sets have loaded — otherwise
+  // an "all operators" selection would fire the heavy 200-id query against an
+  // empty option set and then refetch the light (omitted-filter) query once the
+  // options arrive. With no operator filter active there's nothing to wait for.
+  const operatorFilterActive =
+    (filters.responsibleEmployeeIds?.length ?? 0) > 0 ||
+    (filters.interactionUserIds?.length ?? 0) > 0
+  const {
+    data: clientsResponse,
+    isLoading,
+    isFetching,
+    isError,
+    error,
+  } = useClients(apiParams, {
+    enabled: !operatorFilterActive || operatorOptionsReady,
+  })
 
   // Extract paginated data from response
   const apiClients = useMemo(() => clientsResponse?.items || [], [clientsResponse?.items])
@@ -1695,8 +1748,12 @@ export function ClientManagementPage() {
   const HIDDEN_COLUMN_KEYS = new Set(['creditor', 'actions'])
   const visibleColumns = columns.filter((c) => !HIDDEN_COLUMN_KEYS.has(c.key))
 
-  // Show initial loading state (only when no data exists yet)
-  if (isLoading && apiClients.length === 0) {
+  // Show initial loading state (only when no data exists yet). The clients query
+  // is intentionally disabled while operator options load (see useClients
+  // `enabled` above); a disabled query reports isLoading=false, so cover that
+  // gating window here too or the empty state would flash before the fetch runs.
+  const awaitingOperatorOptions = operatorFilterActive && !operatorOptionsReady
+  if ((isLoading || awaitingOperatorOptions) && apiClients.length === 0) {
     return <ClientManagementPageSkeleton />
   }
 
