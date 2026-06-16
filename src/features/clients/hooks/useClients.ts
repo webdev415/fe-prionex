@@ -480,7 +480,7 @@ export function useClientTasks(clientId: number, enabled = true) {
     queryFn: () => taskApi.getClientTasks(clientId),
     enabled: enabled && clientId > 0,
     staleTime: 30000,
-    refetchInterval: 30_000,
+    refetchInterval: 60_000, // KAN-610: 30s→60s; hook is also tab-gated now
     refetchOnMount: false,
     select: (data) => data.tasks ?? [],
   })
