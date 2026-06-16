@@ -1,4 +1,9 @@
-import type { LetterTypeColorOption, LawyerPriorityRole } from '../../settings/types'
+import type {
+  LetterTypeColorOption,
+  LawyerPriorityRole,
+  RoutingMatchType,
+  SyncInterval,
+} from '../../settings/types'
 
 export const SETTINGS_SUB_TABS = [
   {
@@ -20,6 +25,75 @@ export const SETTINGS_SUB_TABS = [
     id: 'templates' as const,
     labelKey: 'pages.lawyerWorkplace.settings.subTabs.templates',
     fallback: 'Templates',
+  },
+]
+
+export const SYNC_INTERVAL_OPTIONS: {
+  id: SyncInterval
+  labelKey: string
+  fallback: string
+}[] = [
+  {
+    id: '15m',
+    labelKey: 'pages.lawyerWorkplace.settings.mailboxes.sync.intervals.15m',
+    fallback: 'Every 15 minutes',
+  },
+  {
+    id: '30m',
+    labelKey: 'pages.lawyerWorkplace.settings.mailboxes.sync.intervals.30m',
+    fallback: 'Every 30 minutes',
+  },
+  {
+    id: '1h',
+    labelKey: 'pages.lawyerWorkplace.settings.mailboxes.sync.intervals.1h',
+    fallback: 'Every hour',
+  },
+  {
+    id: '4h',
+    labelKey: 'pages.lawyerWorkplace.settings.mailboxes.sync.intervals.4h',
+    fallback: 'Every 4 hours',
+  },
+  {
+    id: 'daily',
+    labelKey: 'pages.lawyerWorkplace.settings.mailboxes.sync.intervals.daily',
+    fallback: 'Daily',
+  },
+]
+
+export const ROUTING_MATCH_OPTIONS: {
+  id: RoutingMatchType
+  labelKey: string
+  fallback: string
+}[] = [
+  {
+    id: 'default',
+    labelKey: 'pages.lawyerWorkplace.settings.mailboxes.routing.matchDefault',
+    fallback: 'Default',
+  },
+  {
+    id: 'sender_domain',
+    labelKey: 'pages.lawyerWorkplace.settings.mailboxes.routing.matchSenderDomain',
+    fallback: 'Sender domain',
+  },
+  {
+    id: 'subject_keyword',
+    labelKey: 'pages.lawyerWorkplace.settings.mailboxes.routing.matchSubjectKeyword',
+    fallback: 'Subject keyword',
+  },
+]
+
+export const DOCUMENT_PRESET_TYPE_OPTIONS = [
+  {
+    id: 'outgoing' as const,
+    labelKey: 'pages.lawyerWorkplace.settings.templates.documentTypes.outgoing',
+    fallback: 'Outgoing (ВИХ)',
+    badge: 'ВИХ',
+  },
+  {
+    id: 'nbu_response' as const,
+    labelKey: 'pages.lawyerWorkplace.settings.templates.documentTypes.nbu',
+    fallback: 'NBU reply (НБУ)',
+    badge: 'НБУ',
   },
 ]
 

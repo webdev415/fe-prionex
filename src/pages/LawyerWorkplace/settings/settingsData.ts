@@ -1,4 +1,12 @@
-import type { LetterTypeConfig, SettingsLawyer, TrainingExample } from './types'
+import type {
+  DepartmentSyncSettings,
+  LetterTypeConfig,
+  SettingsDocumentPreset,
+  SettingsLawyer,
+  SettingsMailbox,
+  SettingsReplyTemplate,
+  TrainingExample,
+} from './types'
 
 function makeExample(
   id: string,
@@ -372,3 +380,197 @@ export const PRIORITY_LAWYER_META = [
     maxActive: 5,
   },
 ] as const
+
+export const INITIAL_DEPARTMENT_SYNC: DepartmentSyncSettings = {
+  interval: '1h',
+  lastSyncedAt: new Date(Date.now() - 12 * 60 * 1000).toISOString(),
+}
+
+export const INITIAL_SETTINGS_MAILBOXES: SettingsMailbox[] = [
+  {
+    id: 'mb-legal',
+    email: 'legal@prionex.ua',
+    displayNameKey: 'pages.lawyerWorkplace.settings.mailboxes.items.legal',
+    displayNameFallback: 'Legal department',
+    status: 'connected',
+    letterCount: 142,
+    defaultLetterTypeId: 'inquiry',
+    isDefaultOutgoing: true,
+    routingRules: [
+      { id: 'rule-legal-1', matchType: 'default', value: '', letterTypeId: 'inquiry' },
+      {
+        id: 'rule-legal-2',
+        matchType: 'subject_keyword',
+        value: 'complaint',
+        letterTypeId: 'complaint',
+      },
+    ],
+  },
+  {
+    id: 'mb-court',
+    email: 'court@prionex.ua',
+    displayNameKey: 'pages.lawyerWorkplace.settings.mailboxes.items.court',
+    displayNameFallback: 'Court correspondence',
+    status: 'connected',
+    letterCount: 38,
+    defaultLetterTypeId: 'court_claim',
+    isDefaultOutgoing: false,
+    routingRules: [
+      { id: 'rule-court-1', matchType: 'default', value: '', letterTypeId: 'court_claim' },
+      {
+        id: 'rule-court-2',
+        matchType: 'sender_domain',
+        value: 'court.gov.ua',
+        letterTypeId: 'court_claim',
+      },
+    ],
+  },
+  {
+    id: 'mb-nbu',
+    email: 'nbu@prionex.ua',
+    displayNameKey: 'pages.lawyerWorkplace.settings.mailboxes.items.nbu',
+    displayNameFallback: 'NBU regulatory',
+    status: 'connected',
+    letterCount: 56,
+    defaultLetterTypeId: 'nbu_inquiry',
+    isDefaultOutgoing: false,
+    routingRules: [
+      { id: 'rule-nbu-1', matchType: 'default', value: '', letterTypeId: 'nbu_inquiry' },
+      {
+        id: 'rule-nbu-2',
+        matchType: 'sender_domain',
+        value: 'bank.gov.ua',
+        letterTypeId: 'nbu_inquiry',
+      },
+    ],
+  },
+  {
+    id: 'mb-accounting',
+    email: 'accounting@prionex.ua',
+    displayNameKey: 'pages.lawyerWorkplace.settings.mailboxes.items.accounting',
+    displayNameFallback: 'Accounting',
+    status: 'connected',
+    letterCount: 21,
+    defaultLetterTypeId: 'inquiry',
+    isDefaultOutgoing: false,
+    routingRules: [{ id: 'rule-acc-1', matchType: 'default', value: '', letterTypeId: 'inquiry' }],
+  },
+  {
+    id: 'mb-compliance',
+    email: 'compliance@prionex.ua',
+    displayNameKey: 'pages.lawyerWorkplace.settings.mailboxes.items.compliance',
+    displayNameFallback: 'Compliance',
+    status: 'connected',
+    letterCount: 14,
+    defaultLetterTypeId: 'nbu_inquiry',
+    isDefaultOutgoing: false,
+    routingRules: [
+      { id: 'rule-comp-1', matchType: 'default', value: '', letterTypeId: 'nbu_inquiry' },
+    ],
+  },
+  {
+    id: 'mb-collections',
+    email: 'collections@prionex.ua',
+    displayNameKey: 'pages.lawyerWorkplace.settings.mailboxes.items.collections',
+    displayNameFallback: 'Collections',
+    status: 'error',
+    letterCount: 9,
+    defaultLetterTypeId: 'complaint',
+    isDefaultOutgoing: false,
+    routingRules: [
+      { id: 'rule-coll-1', matchType: 'default', value: '', letterTypeId: 'complaint' },
+    ],
+  },
+]
+
+export const INITIAL_REPLY_TEMPLATES: SettingsReplyTemplate[] = [
+  {
+    id: 'rt-complaint',
+    nameKey: 'pages.lawyerWorkplace.reply.templates.complaintResponse',
+    nameFallback: 'Complaint response',
+    bodyKey: 'pages.lawyerWorkplace.settings.templates.replyBodies.complaintResponse',
+    bodyFallback:
+      'Dear {{clientName}},\n\nThank you for your complaint dated {{date}}. We have registered your request under reference {{referenceId}} and will provide a substantive response within the SLA period.\n\nSincerely,\nLegal Department',
+    letterTypeIds: ['complaint'],
+    isActive: true,
+  },
+  {
+    id: 'rt-nbu',
+    nameKey: 'pages.lawyerWorkplace.reply.templates.nbuAcknowledgement',
+    nameFallback: 'NBU acknowledgement',
+    bodyKey: 'pages.lawyerWorkplace.settings.templates.replyBodies.nbuAcknowledgement',
+    bodyFallback:
+      'Dear Sir/Madam,\n\nWe acknowledge receipt of your NBU inquiry. The matter has been assigned to our regulatory compliance team for review and formal response.\n\nRegards,\nNBU Response Desk',
+    letterTypeIds: ['nbu_inquiry'],
+    isActive: true,
+  },
+  {
+    id: 'rt-extension',
+    nameKey: 'pages.lawyerWorkplace.reply.templates.extensionRequest',
+    nameFallback: 'Extension request',
+    bodyKey: 'pages.lawyerWorkplace.settings.templates.replyBodies.extensionRequest',
+    bodyFallback:
+      'Dear {{clientName}},\n\nWe are reviewing your request for an extension of the response deadline. We will confirm the revised timeline shortly.\n\nBest regards,\nLegal Department',
+    letterTypeIds: ['inquiry', 'attorney_request'],
+    isActive: true,
+  },
+]
+
+export const INITIAL_DOCUMENT_PRESETS: SettingsDocumentPreset[] = [
+  {
+    id: 'dp-out-1',
+    nameKey: 'pages.lawyerWorkplace.documents.mockNames.outgoing.autoReply',
+    nameFallback: 'Auto-reply - IN-2026-142',
+    documentType: 'outgoing',
+    defaultAssigneeId: 'kostenko',
+    isActive: true,
+  },
+  {
+    id: 'dp-out-2',
+    nameKey: 'pages.lawyerWorkplace.documents.mockNames.outgoing.settlementAgreement',
+    nameFallback: 'Pre-trial settlement agreement',
+    documentType: 'outgoing',
+    defaultAssigneeId: 'doroshenko',
+    isActive: true,
+  },
+  {
+    id: 'dp-out-3',
+    nameKey: 'pages.lawyerWorkplace.documents.mockNames.outgoing.demandLetter',
+    nameFallback: 'Demand letter - overdue payment',
+    documentType: 'outgoing',
+    defaultAssigneeId: 'melnychenko',
+    isActive: true,
+  },
+  {
+    id: 'dp-out-4',
+    nameKey: 'pages.lawyerWorkplace.documents.mockNames.outgoing.attorneyRequestResponse',
+    nameFallback: 'Response to attorney request',
+    documentType: 'outgoing',
+    defaultAssigneeId: 'doroshenko',
+    isActive: true,
+  },
+  {
+    id: 'dp-nbu-1',
+    nameKey: 'pages.lawyerWorkplace.documents.mockNames.nbu.creditHistoryResponse',
+    nameFallback: 'NBU inquiry response - credit history request',
+    documentType: 'nbu_response',
+    defaultAssigneeId: 'kostenko',
+    isActive: true,
+  },
+  {
+    id: 'dp-nbu-2',
+    nameKey: 'pages.lawyerWorkplace.documents.mockNames.nbu.complianceReportQ1',
+    nameFallback: 'NBU compliance report - Q1 2026',
+    documentType: 'nbu_response',
+    defaultAssigneeId: 'kostenko',
+    isActive: true,
+  },
+  {
+    id: 'dp-nbu-3',
+    nameKey: 'pages.lawyerWorkplace.documents.mockNames.nbu.auditResponse',
+    nameFallback: 'Response to NBU audit request',
+    documentType: 'nbu_response',
+    defaultAssigneeId: 'kostenko',
+    isActive: false,
+  },
+]

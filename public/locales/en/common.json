@@ -893,11 +893,121 @@
         },
         "mailboxes": {
           "title": "Mailboxes",
-          "description": "Configure connected legal mailboxes, sync intervals, and routing rules."
+          "description": "Configure connected legal mailboxes, sync intervals, and routing rules.",
+          "tableTitle": "Connected mailboxes · {{count}}",
+          "tableDesc": "Manage addresses, routing rules, and default outgoing mailbox",
+          "addMailbox": "Add mailbox",
+          "addTitle": "Add mailbox",
+          "editTitle": "Edit mailbox",
+          "addSuccess": "Mailbox added",
+          "updateSuccess": "Mailbox updated",
+          "testSync": "Test sync",
+          "testSyncSoon": "Sync test coming soon",
+          "defaultOutgoing": "Default",
+          "autoRoute": "Auto-route",
+          "duplicateEmail": "This mailbox is already connected",
+          "rulesCount": "{{count}} rules",
+          "columns": {
+            "mailbox": "Mailbox",
+            "letters": "Letters",
+            "defaultType": "Default type",
+            "routing": "Routing",
+            "actions": "Actions"
+          },
+          "status": {
+            "connected": "connected",
+            "error": "error",
+            "disabled": "disabled"
+          },
+          "fields": {
+            "email": "Email address",
+            "displayName": "Display name",
+            "displayNamePlaceholder": "Legal department",
+            "defaultType": "Default letter type",
+            "defaultOutgoing": "Use as default outgoing mailbox in reply composer"
+          },
+          "items": {
+            "legal": "Legal department",
+            "court": "Court correspondence",
+            "nbu": "NBU regulatory",
+            "accounting": "Accounting",
+            "compliance": "Compliance",
+            "collections": "Collections"
+          },
+          "sync": {
+            "title": "Email sync",
+            "description": "How often the email service pulls new messages from connected mailboxes.",
+            "lastSynced": "Last synced",
+            "lastSyncedMinutes": "{{count}} min ago",
+            "lastSyncedHours": "{{count}} h ago",
+            "intervals": {
+              "15m": "Every 15 minutes",
+              "30m": "Every 30 minutes",
+              "1h": "Every hour",
+              "4h": "Every 4 hours",
+              "daily": "Daily"
+            }
+          },
+          "routing": {
+            "title": "Routing rules",
+            "hint": "Map incoming messages to letter types by sender or subject",
+            "matchType": "Match",
+            "value": "Value",
+            "letterType": "Letter type",
+            "selectType": "Select type",
+            "addRule": "Add rule",
+            "matchDefault": "Default",
+            "matchSenderDomain": "Sender domain",
+            "matchSubjectKeyword": "Subject keyword"
+          }
         },
         "templates": {
           "title": "Templates",
-          "description": "Manage outgoing letter templates and document generation presets."
+          "description": "Manage outgoing letter templates and document generation presets.",
+          "replyTitle": "Reply templates",
+          "replyDesc": "Used in the thread reply composer template menu",
+          "documentTitle": "Document presets",
+          "documentDesc": "Used when generating outgoing and NBU documents",
+          "addReply": "Add template",
+          "addPreset": "Add preset",
+          "addReplyTitle": "Add reply template",
+          "editReplyTitle": "Edit reply template",
+          "addPresetTitle": "Add document preset",
+          "editPresetTitle": "Edit document preset",
+          "replyAddSuccess": "Reply template added",
+          "replyUpdateSuccess": "Reply template updated",
+          "presetAddSuccess": "Document preset added",
+          "presetUpdateSuccess": "Document preset updated",
+          "allTypes": "All types",
+          "active": "Active",
+          "inactive": "Inactive",
+          "noAssignee": "—",
+          "columns": {
+            "name": "Name",
+            "preview": "Preview",
+            "type": "Type",
+            "assignee": "Default assignee"
+          },
+          "documentTypes": {
+            "outgoing": "Outgoing (ВИХ)",
+            "nbu": "NBU reply (НБУ)"
+          },
+          "fields": {
+            "name": "Template name",
+            "letterTypes": "Letter types",
+            "body": "Template body",
+            "bodyPlaceholder": "Write the reply template text...",
+            "bodyHint": "Placeholders like {{clientName}} and {{referenceId}} are supported.",
+            "active": "Active in reply composer",
+            "documentType": "Document type",
+            "assignee": "Default assignee",
+            "presetActive": "Active in document generation"
+          },
+          "replyBodies": {
+            "complaintResponse": "Dear {{clientName}},\n\nThank you for your complaint dated {{date}}. We have registered your request under reference {{referenceId}} and will provide a substantive response within the SLA period.\n\nSincerely,\nLegal Department",
+            "nbuAcknowledgement": "Dear Sir/Madam,\n\nWe acknowledge receipt of your NBU inquiry. The matter has been assigned to our regulatory compliance team for review and formal response.\n\nRegards,\nNBU Response Desk",
+            "extensionRequest": "Dear {{clientName}},\n\nWe are reviewing your request for an extension of the response deadline. We will confirm the revised timeline shortly.\n\nBest regards,\nLegal Department"
+          }
         },
         "modals": {
           "addType": {

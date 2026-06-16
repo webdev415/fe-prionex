@@ -56,3 +56,54 @@ export interface SettingsLawyer {
   maxInFlight: number
   status: LawyerStatus
 }
+
+export type MailboxStatus = 'connected' | 'error' | 'disabled'
+
+export type SyncInterval = '15m' | '30m' | '1h' | '4h' | 'daily'
+
+export type RoutingMatchType = 'sender_domain' | 'subject_keyword' | 'default'
+
+export interface MailboxRoutingRule {
+  id: string
+  matchType: RoutingMatchType
+  value: string
+  letterTypeId: string
+}
+
+export interface SettingsMailbox {
+  id: string
+  email: string
+  displayNameKey: string
+  displayNameFallback: string
+  status: MailboxStatus
+  letterCount: number
+  defaultLetterTypeId: string | null
+  routingRules: MailboxRoutingRule[]
+  isDefaultOutgoing: boolean
+}
+
+export interface DepartmentSyncSettings {
+  interval: SyncInterval
+  lastSyncedAt: string
+}
+
+export interface SettingsReplyTemplate {
+  id: string
+  nameKey: string
+  nameFallback: string
+  bodyKey: string
+  bodyFallback: string
+  letterTypeIds: string[]
+  isActive: boolean
+}
+
+export type DocumentPresetType = 'outgoing' | 'nbu_response'
+
+export interface SettingsDocumentPreset {
+  id: string
+  nameKey: string
+  nameFallback: string
+  documentType: DocumentPresetType
+  defaultAssigneeId: string | null
+  isActive: boolean
+}

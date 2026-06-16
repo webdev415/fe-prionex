@@ -3,13 +3,31 @@ import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
 import { useLawyerWorkplaceLayout } from '../../context/lawyerWorkplaceLayout'
-import { INITIAL_LETTER_TYPES, INITIAL_SETTINGS_LAWYERS } from '../../settings/settingsData'
-import type { LetterTypeConfig, SettingsLawyer, SettingsSubTab } from '../../settings/types'
+import {
+  INITIAL_DEPARTMENT_SYNC,
+  INITIAL_DOCUMENT_PRESETS,
+  INITIAL_LETTER_TYPES,
+  INITIAL_REPLY_TEMPLATES,
+  INITIAL_SETTINGS_LAWYERS,
+  INITIAL_SETTINGS_MAILBOXES,
+} from '../../settings/settingsData'
+import type {
+  DepartmentSyncSettings,
+  LetterTypeConfig,
+  SettingsDocumentPreset,
+  SettingsLawyer,
+  SettingsMailbox,
+  SettingsReplyTemplate,
+  SettingsSubTab,
+} from '../../settings/types'
+import { cloneMailbox, cloneSyncSettings } from '../../settings/utils/mailboxHelpers'
+import { cloneDocumentPreset, cloneReplyTemplate } from '../../settings/utils/templateHelpers'
 import { cloneLetterType, createLetterTypeFromInput } from '../../settings/utils/letterTypeHelpers'
 import { AddLetterTypeModal } from './letterTypes/AddLetterTypeModal'
 import { LetterTypesPanel } from './letterTypes/LetterTypesPanel'
 import { LawyersPanel } from './lawyers/LawyersPanel'
-import { SettingsPlaceholderPanel } from './SettingsPlaceholderPanel'
+import { MailboxesPanel } from './mailboxes/MailboxesPanel'
+import { TemplatesPanel } from './templates/TemplatesPanel'
 import { SettingsToolbar } from './SettingsToolbar'
 
 export function LegalSettingsTab() {
@@ -21,6 +39,18 @@ export function LegalSettingsTab() {
   )
   const [lawyers, setLawyers] = useState<SettingsLawyer[]>(() =>
     INITIAL_SETTINGS_LAWYERS.map((lawyer) => ({ ...lawyer }))
+  )
+  const [mailboxes, setMailboxes] = useState<SettingsMailbox[]>(() =>
+    INITIAL_SETTINGS_MAILBOXES.map((mailbox) => cloneMailbox(mailbox))
+  )
+  const [syncSettings, setSyncSettings] = useState<DepartmentSyncSettings>(() =>
+    cloneSyncSettings(INITIAL_DEPARTMENT_SYNC)
+  )
+  const [replyTemplates, setReplyTemplates] = useState<SettingsReplyTemplate[]>(() =>
+    INITIAL_REPLY_TEMPLATES.map((template) => cloneReplyTemplate(template))
+  )
+  const [documentPresets, setDocumentPresets] = useState<SettingsDocumentPreset[]>(() =>
+    INITIAL_DOCUMENT_PRESETS.map((preset) => cloneDocumentPreset(preset))
   )
   const [addTypeOpen, setAddTypeOpen] = useState(false)
   const [selectedLetterTypeId, setSelectedLetterTypeId] = useState(letterTypes[0]?.id ?? '')
@@ -69,20 +99,22 @@ export function LegalSettingsTab() {
       )}
 
       {activeSubTab === 'mailboxes' && (
-        <SettingsPlaceholderPanel
-          titleKey="pages.lawyerWorkplace.settings.mailboxes.title"
-          titleFallback="Mailboxes"
-          descriptionKey="pages.lawyerWorkplace.settings.mailboxes.description"
-          descriptionFallback="Configure connected legal mailboxes, sync intervals, and routing rules."
+        <MailboxesPanel
+          mailboxes={mailboxes}
+          syncSettings={syncSettings}
+          letterTypes={letterTypes}
+          onMailboxesChange={setMailboxes}
+          onSyncSettingsChange={setSyncSettings}
         />
       )}
 
       {activeSubTab === 'templates' && (
-        <SettingsPlaceholderPanel
-          titleKey="pages.lawyerWorkplace.settings.templates.title"
-          titleFallback="Templates"
-          descriptionKey="pages.lawyerWorkplace.settings.templates.description"
-          descriptionFallback="Manage outgoing letter templates and document generation presets."
+        <TemplatesPanel
+          replyTemplates={replyTemplates}
+          documentPresets={documentPresets}
+          letterTypes={letterTypes}
+          onReplyTemplatesChange={setReplyTemplates}
+          onDocumentPresetsChange={setDocumentPresets}
         />
       )}
 

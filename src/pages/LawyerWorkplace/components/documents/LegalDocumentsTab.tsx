@@ -111,7 +111,7 @@ export function LegalDocumentsTab() {
     <>
       <div
         className={cn(
-          'min-w-0 bg-[#F2F3F0]',
+          'min-w-0',
           showWorkspaceBanner ? 'pb-24' : 'pb-6',
           isCompact && !showWorkspaceBanner && 'pb-8'
         )}
