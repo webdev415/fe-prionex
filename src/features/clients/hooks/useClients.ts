@@ -975,8 +975,21 @@ export function useCreateTask() {
       queryClient.invalidateQueries({ queryKey: ['tasks', 'my-tasks'] })
       toast.success('Task created successfully')
     },
-    onError: (error: AxiosError<{ detail?: string }>) => {
-      const message = error?.response?.data?.detail || 'Failed to create task'
+    onError: (
+      error: AxiosError<{
+        detail?: string | Array<{ msg: string; loc?: string[] }>
+      }> & { __handled?: boolean }
+    ) => {
+      // Inline-handled errors (e.g. due_date 422 surfaced under the
+      // date input by AddTaskModal) set __handled so we skip the toast.
+      if (error.__handled) return
+      const detail = error?.response?.data?.detail
+      let message = 'Failed to create task'
+      if (typeof detail === 'string') {
+        message = detail
+      } else if (Array.isArray(detail) && detail.length > 0) {
+        message = detail[0].msg.replace(/^Value error,\s*/, '')
+      }
       toast.error(message)
     },
   })
