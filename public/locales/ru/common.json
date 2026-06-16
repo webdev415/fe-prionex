@@ -1830,6 +1830,8 @@
         "unassignedOnly": "Только без назначения",
         "tags": "Теги",
         "noUsersAvailable": "Нет доступных пользователей",
+        "noResponsible": "Без ответственного",
+        "noInteractions": "Без взаимодействий",
         "more": "больше",
         "min": "Мин",
         "max": "Макс",

@@ -20,7 +20,11 @@ import { Icons } from '@/lib/icons'
 import { PortfolioDropdown } from './PortfolioDropdown'
 import { TagsDropdown } from './TagsDropdown'
 import { LastInteractionResultDropdown } from './LastInteractionResultDropdown'
-import { OperatorMultiSelectDropdown } from './OperatorMultiSelectDropdown'
+import {
+  NO_INTERACTIONS_ID,
+  NO_RESPONSIBLE_ID,
+  OperatorMultiSelectDropdown,
+} from './OperatorMultiSelectDropdown'
 import { useSellers } from '@/features/sellers/hooks/useSellers'
 import { useOperators } from '@/features/users/hooks/useUsers'
 import { useClientAssigneeIds } from '@/features/clients/hooks/useClients'
@@ -504,6 +508,10 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                   searchPlaceholder={t('pages.clients.filters.selectOperator', 'Select operator')}
                   emptyText={t('pages.clients.filters.noUsersAvailable')}
                   selectAllLabel={t('pages.clients.filters.selectAllOperators', 'All operators')}
+                  specialOption={{
+                    id: NO_INTERACTIONS_ID,
+                    label: t('pages.clients.filters.noInteractions', 'No Interactions'),
+                  }}
                   testId="interaction-user-multiselect-trigger"
                   trigger={
                     <button
@@ -513,27 +521,35 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                       <span className="truncate">
                         {(() => {
                           const selected = filters.interactionUserIds ?? []
+                          // Split the "No Interactions" sentinel out so it
+                          // never counts as a real operator selection.
+                          const hasNoInteractions = selected.includes(NO_INTERACTIONS_ID)
+                          const realSelected = selected.filter((id) => id !== NO_INTERACTIONS_ID)
                           const allCount = interactionUserOptions.length
-                          // "All operators" both when nothing is selected
-                          // AND when everything is selected — same as the
-                          // reference EmployeeFilterDropdown on Action
-                          // Analysis. Both states semantically mean "no
-                          // narrowing".
+                          // "All operators" when nothing or every operator is
+                          // selected — both mean "no narrowing". Not when the
+                          // special option is active.
                           if (
-                            selected.length === 0 ||
-                            (allCount > 0 && selected.length === allCount)
+                            !hasNoInteractions &&
+                            (realSelected.length === 0 ||
+                              (allCount > 0 && realSelected.length === allCount))
                           ) {
                             return t('pages.clients.filters.selectAllOperators', 'All operators')
                           }
-                          if (selected.length <= 2) {
-                            return interactionUserOptions
-                              .filter((o) => selected.includes(o.id))
-                              .map((o) => o.name)
-                              .join(', ')
+                          const labels = [
+                            ...(hasNoInteractions
+                              ? [t('pages.clients.filters.noInteractions', 'No Interactions')]
+                              : []),
+                            ...interactionUserOptions
+                              .filter((o) => realSelected.includes(o.id))
+                              .map((o) => o.name),
+                          ]
+                          if (labels.length <= 2) {
+                            return labels.join(', ')
                           }
                           return t('pages.clients.filters.selectedCount', {
                             defaultValue: '{{count}} selected',
-                            count: selected.length,
+                            count: labels.length,
                           })
                         })()}
                       </span>
@@ -761,6 +777,10 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                   searchPlaceholder={t('pages.clients.filters.selectEmployee')}
                   emptyText={t('pages.clients.filters.noUsersAvailable')}
                   selectAllLabel={t('pages.clients.filters.selectAllEmployees', 'All employees')}
+                  specialOption={{
+                    id: NO_RESPONSIBLE_ID,
+                    label: t('pages.clients.filters.noResponsible', 'No Responsible'),
+                  }}
                   testId="responsible-employee-multiselect-trigger"
                   trigger={
                     <button
@@ -770,22 +790,32 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                       <span className="truncate">
                         {(() => {
                           const selected = filters.responsibleEmployeeIds ?? []
+                          // Split the "No Responsible" sentinel out so it never
+                          // counts as a real employee selection.
+                          const hasNoResponsible = selected.includes(NO_RESPONSIBLE_ID)
+                          const realSelected = selected.filter((id) => id !== NO_RESPONSIBLE_ID)
                           const allCount = employeeOptions.length
                           if (
-                            selected.length === 0 ||
-                            (allCount > 0 && selected.length === allCount)
+                            !hasNoResponsible &&
+                            (realSelected.length === 0 ||
+                              (allCount > 0 && realSelected.length === allCount))
                           ) {
                             return t('pages.clients.filters.selectAllEmployees', 'All employees')
                           }
-                          if (selected.length <= 2) {
-                            return employeeOptions
-                              .filter((o) => selected.includes(o.id))
-                              .map((o) => o.name)
-                              .join(', ')
+                          const labels = [
+                            ...(hasNoResponsible
+                              ? [t('pages.clients.filters.noResponsible', 'No Responsible')]
+                              : []),
+                            ...employeeOptions
+                              .filter((o) => realSelected.includes(o.id))
+                              .map((o) => o.name),
+                          ]
+                          if (labels.length <= 2) {
+                            return labels.join(', ')
                           }
                           return t('pages.clients.filters.selectedCount', {
                             defaultValue: '{{count}} selected',
-                            count: selected.length,
+                            count: labels.length,
                           })
                         })()}
                       </span>
