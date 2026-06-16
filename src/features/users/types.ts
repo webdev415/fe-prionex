@@ -61,11 +61,14 @@ export interface ApiUser {
 /**
  * User list query parameters
  */
+export type UserSearchField = 'full_name' | 'username' | 'email' | 'extension'
+
 export interface UserListParams {
   page?: number
   page_size?: number
   status?: 'active' | 'inactive' | 'suspended'
   search?: string
+  search_field?: UserSearchField
 }
 
 /**

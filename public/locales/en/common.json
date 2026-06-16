@@ -956,8 +956,16 @@
       "addNewUser": "New User",
       "noUsersFound": "No users found",
       "errorLoading": "Error loading users",
-      "searchPlaceholder": "Search by name, username or email...",
+      "searchPlaceholder": "Search users...",
       "searchButton": "Search",
+      "clearSearch": "Clear search",
+      "searchCriterionLabel": "Search criterion",
+      "searchCriteria": {
+        "fullName": "Full Name",
+        "username": "Username",
+        "email": "Email",
+        "extension": "Extension / Agent"
+      },
       "tableHeaders": {
         "username": "Username",
         "userId": "User ID",
@@ -1936,7 +1944,9 @@
         "min": "Min",
         "max": "Max",
         "days": "days",
-        "noUsersAvailable": "No users available"
+        "noUsersAvailable": "No users available",
+        "noResponsible": "No Responsible",
+        "noInteractions": "No Interactions"
       },
       "statuses": {
         "active": "Active",

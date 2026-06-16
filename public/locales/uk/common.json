@@ -961,8 +961,16 @@
       "addNewUser": "Новий користувач",
       "noUsersFound": "Користувачів не знайдено",
       "errorLoading": "Помилка завантаження користувачів",
-      "searchPlaceholder": "Пошук за ім'ям, логіном або email...",
+      "searchPlaceholder": "Пошук користувачів...",
       "searchButton": "Пошук",
+      "clearSearch": "Очистити пошук",
+      "searchCriterionLabel": "Критерій пошуку",
+      "searchCriteria": {
+        "fullName": "Повне ім'я",
+        "username": "Ім'я користувача",
+        "email": "Електронна пошта",
+        "extension": "Розширення / Агент"
+      },
       "tableHeaders": {
         "username": "Ім'я користувача",
         "userId": "ID користувача",
@@ -1938,6 +1946,8 @@
         "unassignedOnly": "Тільки непризначені",
         "tags": "Теги",
         "noUsersAvailable": "Немає доступних користувачів",
+        "noResponsible": "Без відповідального",
+        "noInteractions": "Без взаємодій",
         "more": "більше",
         "min": "Мін",
         "max": "Макс",
