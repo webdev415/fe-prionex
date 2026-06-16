@@ -18,7 +18,7 @@ import { TooltipProvider } from '@/components/ui/Tooltip'
 import { ClientFiltersBar } from './components/ClientFiltersBar'
 import { AssignClientModal } from './components/AssignClientModal'
 import { BulkAssignClientModal } from './components/BulkAssignClientModal'
-import { formatDate } from '@/lib/formatters'
+import { formatDate, formatDateTime } from '@/lib/formatters'
 import { TagSelectorModal } from './components/TagSelectorModal'
 import { BulkTagModal } from './components/BulkTagModal'
 import { BulkSendMessageModal } from './components/BulkSendMessageModal'
@@ -44,6 +44,7 @@ import { mapScoreToPriority } from '@/features/clients/api/configApi'
 import type { Client as APIClient } from '@/features/clients/api/types'
 import type { PriorityThresholds } from '@/features/clients/api/configApi'
 import { useURLState } from '@/hooks/useURLState'
+import type { StepValueEntry } from './components/ClientStepValueRow'
 import type { Priority } from './types'
 import { PermissionGuard } from '@/components/auth'
 import { PERMISSIONS } from '@/constants/permissions'
@@ -75,6 +76,9 @@ interface DisplayClient {
   searcherName: string
   assignmentDate: string
   lastInteractionResult: string
+  // Raw ISO timestamp of the latest TA (or '' when none). Formatted with the
+  // user's timezone in the column render, so it's stored unformatted here.
+  lastTaDate: string
 }
 
 // Default thresholds (fallback if API not available)
@@ -130,6 +134,7 @@ const mapAPIClientToDisplay = (
       : '-',
     assignmentDate: client.assignment_date ? formatDate(client.assignment_date) : '-',
     lastInteractionResult: client.last_interaction_result_name || '—',
+    lastTaDate: client.last_ta_date || '',
   }
 }
 
@@ -191,8 +196,57 @@ export interface ClientFilters {
   // config so admin-managed result changes show up without a deploy.
   lastInteractionResultIds?: number[]
 
+  // Chain filter — TA Chain ID. Narrows to clients with at least one
+  // ta_interaction in this chain. Pairs with ``chainStepIds`` (steps in
+  // that chain) and ``stepValues`` (per-step value bounds).
+  chainId?: number
+
+  // Step filter — multi-select chain step IDs (``ta_chain_steps.id``)
+  // within the selected chain. Keyed per-step (not per-target_action)
+  // so a chain with two steps that share the same TA — e.g.
+  // Contact → Credit → Credit — toggles each independently. Ignored
+  // unless ``chainId`` is set.
+  chainStepIds?: number[]
+
+  // Step value bounds keyed by chain step ID. ``eq`` for dropdown /
+  // text / credit / contact; ``min`` + ``max`` for date / amount. Empty
+  // entries are dropped so the URL stays clean.
+  stepValues?: Record<number, StepValueEntry>
+
   // Priority Filter
   priorities?: Priority[]
+}
+
+/**
+ * Encode a per-step value map as a compact URL-safe JSON string.
+ *
+ * ``useURLState`` only serializes primitives + arrays, so the nested
+ * ``Record<step_id, StepValueEntry>`` shape round-trips through a single
+ * string URL param. Empty → ``''`` so the param disappears from the URL.
+ */
+function encodeStepValues(values: Record<number, StepValueEntry>): string {
+  if (!values || Object.keys(values).length === 0) return ''
+  return JSON.stringify(values)
+}
+
+function decodeStepValues(raw: string): Record<number, StepValueEntry> {
+  if (!raw) return {}
+  try {
+    const parsed = JSON.parse(raw) as Record<string, StepValueEntry>
+    const out: Record<number, StepValueEntry> = {}
+    for (const [k, v] of Object.entries(parsed)) {
+      const id = Number(k)
+      if (!Number.isFinite(id)) continue
+      const clean: StepValueEntry = {}
+      if (v?.eq) clean.eq = v.eq
+      if (v?.min) clean.min = v.min
+      if (v?.max) clean.max = v.max
+      if (clean.eq || clean.min || clean.max) out[id] = clean
+    }
+    return out
+  } catch {
+    return {}
+  }
 }
 
 export function ClientManagementPage() {
@@ -265,6 +319,20 @@ export function ClientManagementPage() {
     'assignmentDateTo',
     ''
   )
+  // Chain + Step filter URL state. ``chainIdFilter === 0`` is the "no
+  // chain picked" sentinel (matches the placeholder option). When the
+  // chain changes we wipe ``chainSteps`` and ``stepValues`` because both
+  // belong to the previously-selected chain.
+  const [chainIdFilter, setChainIdFilter] = useURLState<number>('chainId', 0)
+  const [chainStepIdsFilter, setChainStepIdsFilter] = useURLState<number[]>('chainSteps', [])
+  // Step-value sub-filters are a nested object (step_id → {eq,min,max}).
+  // useURLState can't serialize objects directly, so we round-trip it
+  // through a single JSON-encoded string URL param.
+  const [stepValuesRawFilter, setStepValuesRawFilter] = useURLState<string>('stepValues', '')
+  const stepValuesFilter = useMemo(
+    () => decodeStepValues(stepValuesRawFilter),
+    [stepValuesRawFilter]
+  )
 
   // Compute filters object from URL state
   const filters: ClientFilters = useMemo(
@@ -290,6 +358,9 @@ export function ClientManagementPage() {
       interactionDateTo: interactionDateToFilter || undefined,
       assignmentDateFrom: assignmentDateFromFilter || undefined,
       assignmentDateTo: assignmentDateToFilter || undefined,
+      chainId: chainIdFilter || undefined,
+      chainStepIds: chainStepIdsFilter,
+      stepValues: stepValuesFilter,
     }),
     [
       portfolioFilter,
@@ -313,6 +384,9 @@ export function ClientManagementPage() {
       interactionDateToFilter,
       assignmentDateFromFilter,
       assignmentDateToFilter,
+      chainIdFilter,
+      chainStepIdsFilter,
+      stepValuesFilter,
     ]
   )
 
@@ -408,6 +482,9 @@ export function ClientManagementPage() {
       interactionDateToFilter,
       assignmentDateFromFilter,
       assignmentDateToFilter,
+      chainIdFilter,
+      chainStepIdsFilter,
+      stepValuesRawFilter,
       searchQuery,
       searchType,
     }
@@ -436,7 +513,10 @@ export function ClientManagementPage() {
       principalRangeFromFilter > 0 ||
       principalRangeToFilter > 0 ||
       dpdRangeFromFilter > 0 ||
-      dpdRangeToFilter > 0
+      dpdRangeToFilter > 0 ||
+      chainIdFilter > 0 ||
+      chainStepIdsFilter.length > 0 ||
+      stepValuesRawFilter !== ''
 
     if (hasActiveFilters && STORAGE_KEY) {
       try {
@@ -473,6 +553,9 @@ export function ClientManagementPage() {
     interactionDateToFilter,
     assignmentDateFromFilter,
     assignmentDateToFilter,
+    chainIdFilter,
+    chainStepIdsFilter,
+    stepValuesRawFilter,
     searchQuery,
     searchType,
   ])
@@ -589,6 +672,10 @@ export function ClientManagementPage() {
               setAssignmentDateFromFilter(parsed.assignmentDateFromFilter)
             if (parsed.assignmentDateToFilter)
               setAssignmentDateToFilter(parsed.assignmentDateToFilter)
+            if (parsed.chainIdFilter) setChainIdFilter(parsed.chainIdFilter)
+            if (Array.isArray(parsed.chainStepIdsFilter))
+              setChainStepIdsFilter(parsed.chainStepIdsFilter)
+            if (parsed.stepValuesRawFilter) setStepValuesRawFilter(parsed.stepValuesRawFilter)
             if (parsed.currentPage) setCurrentPage(parsed.currentPage)
             if (parsed.rowsPerPage) setRowsPerPage(parsed.rowsPerPage)
             if (parsed.sortBy) setSortBy(parsed.sortBy)
@@ -659,6 +746,7 @@ export function ClientManagementPage() {
       debt: 'total_debt',
       assignmentDate: 'assignment_date',
       lastInteractionResult: 'last_interaction_result',
+      lastOutgoingTADate: 'last_ta_date',
     }
 
     const params: Record<string, unknown> = {
@@ -776,6 +864,34 @@ export function ClientManagementPage() {
       params.assignment_date_to = filters.assignmentDateTo
     }
 
+    // FILTER 15b: TA Chain + Step + per-step values. Steps only ship
+    // when a chain is selected — BE silently drops orphan steps but no
+    // point sending them. Step selection is keyed by
+    // ``ta_chain_steps.id`` (not target_action_id) so duplicate-TA chains
+    // stay independently filterable.
+    if (filters.chainId) {
+      params.chain_id = filters.chainId
+      if (filters.chainStepIds && filters.chainStepIds.length > 0) {
+        params.step_ids = filters.chainStepIds.join(',')
+      }
+      // Per-step value sub-filters. Format ``<step_id>:<value>``,
+      // comma-separated.
+      const eqList: string[] = []
+      const minList: string[] = []
+      const maxList: string[] = []
+      const sv = filters.stepValues ?? {}
+      for (const id of filters.chainStepIds ?? []) {
+        const entry = sv[id]
+        if (!entry) continue
+        if (entry.eq) eqList.push(`${id}:${entry.eq}`)
+        if (entry.min) minList.push(`${id}:${entry.min}`)
+        if (entry.max) maxList.push(`${id}:${entry.max}`)
+      }
+      if (eqList.length) params.step_value_eq = eqList.join(',')
+      if (minList.length) params.step_value_min = minList.join(',')
+      if (maxList.length) params.step_value_max = maxList.join(',')
+    }
+
     // FILTER 16: Search (from global header search)
     if (searchQuery.trim()) {
       params.q = searchQuery.trim()
@@ -871,6 +987,9 @@ export function ClientManagementPage() {
     if (filters.responsibleEmployeeIds && filters.responsibleEmployeeIds.length > 0) count++
     if (filters.responsibleSearcher) count++
     if (filters.unassignedOnly) count++
+    if (filters.chainId) count++
+    if (filters.chainStepIds && filters.chainStepIds.length > 0) count++
+    if (filters.stepValues && Object.keys(filters.stepValues).length > 0) count++
     if (selectedPriorities.length > 0) count++
     return count
   }, [filters, selectedPriorities])
@@ -1228,6 +1347,35 @@ export function ClientManagementPage() {
     if (newFilters.assignmentDateTo !== assignmentDateToFilter) {
       setAssignmentDateToFilter(newFilters.assignmentDateTo || '')
     }
+    // Chain change resets the step picks and their per-step values —
+    // both belong to the previously-selected chain and their IDs would
+    // be orphans on the BE otherwise.
+    if (newFilters.chainId !== chainIdFilter) {
+      setChainIdFilter(newFilters.chainId || 0)
+      setChainStepIdsFilter([])
+      setStepValuesRawFilter('')
+    } else {
+      const nextStepIds = newFilters.chainStepIds ?? []
+      const stepsChanged = JSON.stringify(nextStepIds) !== JSON.stringify(chainStepIdsFilter)
+      if (stepsChanged) {
+        setChainStepIdsFilter(nextStepIds)
+        // Drop value entries for steps that were just deselected so the
+        // BE doesn't keep filtering on inputs the operator can't see.
+        const picked = new Set(nextStepIds)
+        const filtered: Record<number, StepValueEntry> = {}
+        for (const [k, v] of Object.entries(stepValuesFilter)) {
+          const id = Number(k)
+          if (picked.has(id)) filtered[id] = v
+        }
+        setStepValuesRawFilter(encodeStepValues(filtered))
+      }
+      if (newFilters.stepValues !== undefined) {
+        const encoded = encodeStepValues(newFilters.stepValues)
+        if (encoded !== stepValuesRawFilter) {
+          setStepValuesRawFilter(encoded)
+        }
+      }
+    }
 
     // Reset to page 1 when filters change
     setCurrentPage(1)
@@ -1257,6 +1405,9 @@ export function ClientManagementPage() {
     setInteractionDateToFilter('')
     setAssignmentDateFromFilter('')
     setAssignmentDateToFilter('')
+    setChainIdFilter(0)
+    setChainStepIdsFilter([])
+    setStepValuesRawFilter('')
 
     // Reset to first page
     setCurrentPage(1)
@@ -1455,17 +1606,17 @@ export function ClientManagementPage() {
           >
             {/* Desktop: Individual buttons */}
             <div className="hidden items-center gap-4 lg:flex">
-              <PermissionGuard permission={PERMISSIONS.CLIENTS.EDIT}>
-                <LinkButton
-                  variant="regular-black"
-                  size="xs"
-                  onClick={() => handleAssign(client.id)}
-                  leftIcon={<Icons.PencilEdit size={16} color="#05040D" strokeWidth={1.5} />}
-                  disabled={isBulkActionActive}
-                >
-                  {t('pages.clients.assign')}
-                </LinkButton>
-              </PermissionGuard>
+              {/* Reassign trigger is always visible; warn-on-click happens on the
+                  modal's Submit (PERMISSIONS.CLIENTS.REASSIGN_RESPONSIBLE). */}
+              <LinkButton
+                variant="regular-black"
+                size="xs"
+                onClick={() => handleAssign(client.id)}
+                leftIcon={<Icons.PencilEdit size={16} color="#05040D" strokeWidth={1.5} />}
+                disabled={isBulkActionActive}
+              >
+                {t('pages.clients.assign')}
+              </LinkButton>
               <PermissionGuard permission={PERMISSIONS.CLIENTS.EDIT}>
                 <LinkButton
                   variant="regular-black"
@@ -1498,16 +1649,16 @@ export function ClientManagementPage() {
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="bg-white">
-                  <PermissionGuard permission={PERMISSIONS.CLIENTS.EDIT}>
-                    <DropdownMenuItem
-                      onClick={() => handleAssign(client.id)}
-                      className="text-dark-500 flex cursor-pointer items-center gap-2 text-sm"
-                      disabled={isBulkActionActive}
-                    >
-                      <Icons.PencilEdit size={16} strokeWidth={1.5} />
-                      <span>{t('pages.clients.assign')}</span>
-                    </DropdownMenuItem>
-                  </PermissionGuard>
+                  {/* Reassign trigger is always visible; warn-on-click happens on the
+                      modal's Submit (PERMISSIONS.CLIENTS.REASSIGN_RESPONSIBLE). */}
+                  <DropdownMenuItem
+                    onClick={() => handleAssign(client.id)}
+                    className="text-dark-500 flex cursor-pointer items-center gap-2 text-sm"
+                    disabled={isBulkActionActive}
+                  >
+                    <Icons.PencilEdit size={16} strokeWidth={1.5} />
+                    <span>{t('pages.clients.assign')}</span>
+                  </DropdownMenuItem>
                   <PermissionGuard permission={PERMISSIONS.CLIENTS.EDIT}>
                     <DropdownMenuItem
                       onClick={() => handleManageTags(client.id, client.fullName)}
@@ -1526,7 +1677,23 @@ export function ClientManagementPage() {
         )
       },
     },
+    {
+      key: 'lastOutgoingTADate',
+      header: t('pages.clients.tableHeaders.lastOutgoingTADate', 'Last outgoing TA date'),
+      align: 'left',
+      sortable: true,
+      sortKey: 'lastOutgoingTADate',
+      render: (client) =>
+        client.lastTaDate ? formatDateTime(client.lastTaDate, user?.timezone) : '—',
+    },
   ]
+
+  // Columns hidden from the dashboard table per product spec. They remain
+  // defined above (data + render intact) and are only filtered out at render
+  // time, so re-enabling one is a one-line change here. The bulk-selection
+  // checkbox is rendered by DataTable itself and is intentionally kept.
+  const HIDDEN_COLUMN_KEYS = new Set(['creditor', 'actions'])
+  const visibleColumns = columns.filter((c) => !HIDDEN_COLUMN_KEYS.has(c.key))
 
   // Show initial loading state (only when no data exists yet)
   if (isLoading && apiClients.length === 0) {
@@ -1617,7 +1784,7 @@ export function ClientManagementPage() {
         ) : (
           <div className="mx-0 w-full overflow-x-auto px-0">
             <DataTable
-              columns={columns}
+              columns={visibleColumns}
               data={filteredClients}
               sortConfig={sortConfig}
               onSort={handleSort}
@@ -1657,17 +1824,17 @@ export function ClientManagementPage() {
                     align="end"
                     className="w-56 rounded-lg border border-gray-200 bg-white p-1 shadow-lg"
                   >
-                    <PermissionGuard permission={PERMISSIONS.CLIENTS.EDIT}>
-                      <DropdownMenuItem
-                        onClick={handleBulkAssign}
-                        className="flex cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 transition-colors hover:bg-gray-50 focus:bg-gray-50"
-                      >
-                        <Icons.UserCheck01 size={18} className="text-dark-500" strokeWidth={1.5} />
-                        <span className="text-dark-500 text-sm font-medium">
-                          {t('pages.clients.bulkActions.assignEmployee', 'Assign Employee')}
-                        </span>
-                      </DropdownMenuItem>
-                    </PermissionGuard>
+                    {/* Bulk-assign trigger is always visible; warn-on-click happens on the
+                        modal's Submit (PERMISSIONS.CLIENTS.REASSIGN_RESPONSIBLE). */}
+                    <DropdownMenuItem
+                      onClick={handleBulkAssign}
+                      className="flex cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 transition-colors hover:bg-gray-50 focus:bg-gray-50"
+                    >
+                      <Icons.UserCheck01 size={18} className="text-dark-500" strokeWidth={1.5} />
+                      <span className="text-dark-500 text-sm font-medium">
+                        {t('pages.clients.bulkActions.assignEmployee', 'Assign Employee')}
+                      </span>
+                    </DropdownMenuItem>
                     <PermissionGuard permission={PERMISSIONS.CLIENTS.ASSIGN_TAGS}>
                       <DropdownMenuItem
                         onClick={handleBulkAddTags}

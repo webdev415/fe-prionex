@@ -37,6 +37,10 @@ import {
   ArrowDown01Icon,
   ArrowUp01Icon,
   PinIcon,
+  PinOffIcon,
+  Archive02Icon,
+  Unarchive03Icon,
+  MoreVerticalIcon,
   StarIcon,
   EyeIcon,
   ViewIcon,
@@ -157,6 +161,8 @@ import {
   ArrowUpDoubleIcon,
   EqualSignIcon,
   ArtificialIntelligence08Icon,
+  ThumbsUpIcon,
+  ThumbsDownIcon,
 } from '@hugeicons/core-free-icons'
 /**
  * Icon component props
@@ -211,6 +217,8 @@ export const Icons = {
   Filter: (props: Omit<IconProps, 'icon'>) => <Icon icon={FilterIcon} {...props} />,
   Eye: (props: Omit<IconProps, 'icon'>) => <Icon icon={EyeIcon} {...props} />,
   View: (props: Omit<IconProps, 'icon'>) => <Icon icon={ViewIcon} {...props} />,
+  ThumbsUp: (props: Omit<IconProps, 'icon'>) => <Icon icon={ThumbsUpIcon} {...props} />,
+  ThumbsDown: (props: Omit<IconProps, 'icon'>) => <Icon icon={ThumbsDownIcon} {...props} />,
 
   // Status
   Info: (props: Omit<IconProps, 'icon'>) => <Icon icon={InformationCircleIcon} {...props} />,
@@ -231,6 +239,10 @@ export const Icons = {
   ArrowDown: (props: Omit<IconProps, 'icon'>) => <Icon icon={ArrowDown01Icon} {...props} />,
   ArrowUp: (props: Omit<IconProps, 'icon'>) => <Icon icon={ArrowUp01Icon} {...props} />,
   Pin: (props: Omit<IconProps, 'icon'>) => <Icon icon={PinIcon} {...props} />,
+  PinOff: (props: Omit<IconProps, 'icon'>) => <Icon icon={PinOffIcon} {...props} />,
+  Archive: (props: Omit<IconProps, 'icon'>) => <Icon icon={Archive02Icon} {...props} />,
+  Unarchive: (props: Omit<IconProps, 'icon'>) => <Icon icon={Unarchive03Icon} {...props} />,
+  MoreVertical: (props: Omit<IconProps, 'icon'>) => <Icon icon={MoreVerticalIcon} {...props} />,
   // Star — outlined (unstarred state).
   Star: (props: Omit<IconProps, 'icon'>) => <Icon icon={StarIcon} {...props} />,
   // StarFilled — same StarIcon path, but the path is filled with
@@ -419,6 +431,10 @@ export {
   ArrowDown01Icon,
   ArrowUp01Icon,
   PinIcon,
+  PinOffIcon,
+  Archive02Icon,
+  Unarchive03Icon,
+  MoreVerticalIcon,
   StarIcon,
   EyeIcon,
   ViewIcon,

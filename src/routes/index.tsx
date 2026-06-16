@@ -1,4 +1,4 @@
-/* eslint-disable react-refresh/only-export-components */
+﻿/* eslint-disable react-refresh/only-export-components */
 import { lazy, Suspense } from 'react'
 import { createBrowserRouter, Navigate, Outlet } from 'react-router-dom'
 import { ProtectedRoute } from './ProtectedRoute'
@@ -101,9 +101,9 @@ const ReportsDashboardPage = lazy(() =>
     default: m.ReportsDashboardPage,
   }))
 )
-const ActionAnalysisPage = lazy(() =>
-  import('@/pages/ActionAnalysis').then((m) => ({
-    default: m.ActionAnalysisPage,
+const TrainingPage = lazy(() =>
+  import('@/pages/Training').then((m) => ({
+    default: m.TrainingPage,
   }))
 )
 const LawyerWorkplacePage = lazy(() =>
@@ -114,6 +114,11 @@ const LawyerWorkplacePage = lazy(() =>
 const SellerManagementPage = lazy(() =>
   import('@/pages/SellerManagement').then((m) => ({
     default: m.SellerManagementPage,
+  }))
+)
+const SellerDetailPage = lazy(() =>
+  import('@/pages/SellerManagement').then((m) => ({
+    default: m.SellerDetailPage,
   }))
 )
 const ScoringConfigurationPage = lazy(() =>
@@ -139,10 +144,12 @@ const ProfileSettingsPage = lazy(() =>
   }))
 )
 const AiAssistantPage = lazy(() =>
-  import('@/pages/AiAssistant/AiAssistantPage').then((m) => ({
-    default: m.AiAssistantPage,
+  import('@/pages/AiAssistant/AiAssistantBetaPage').then((m) => ({
+    default: m.AiAssistantBetaPage,
   }))
 )
+// /ai-assistant теперь рендерит бета-страницу с реальным API (@/features/aiAssistant).
+// Старая мок-страница (AiAssistantPage.tsx, buildMockAssistantReply) удалена.
 const BulkOperatorAssignmentPage = lazy(() =>
   import('@/pages/Operations').then((m) => ({
     default: m.BulkOperatorAssignmentPage,
@@ -310,12 +317,18 @@ export const router = createBrowserRouter([
         ),
       },
       {
-        path: 'action-analysis',
+        path: 'training',
         element: (
-          <PermissionRoute requiredPermission={PERMISSIONS.ACTION_ANALYSIS.VIEW}>
-            {withSuspense(<ActionAnalysisPage />)}
+          <PermissionRoute requiredPermission={PERMISSIONS.TRAINING.VIEW}>
+            {withSuspense(<TrainingPage />)}
           </PermissionRoute>
         ),
+      },
+      // Read-shim: keep the legacy /dashboard/action-analysis URL working
+      // for bookmarks that pointed at the old Trainer Workplace surface.
+      {
+        path: 'action-analysis',
+        element: <Navigate to="/dashboard/training" replace />,
       },
       {
         path: 'lawyer-workplace',
@@ -336,6 +349,14 @@ export const router = createBrowserRouter([
         element: (
           <PermissionRoute requiredPermission={PERMISSIONS.SELLERS.VIEW}>
             {withSuspense(<SellerManagementPage />)}
+          </PermissionRoute>
+        ),
+      },
+      {
+        path: 'sellers/:id',
+        element: (
+          <PermissionRoute requiredPermission={PERMISSIONS.SELLERS.VIEW}>
+            {withSuspense(<SellerDetailPage />)}
           </PermissionRoute>
         ),
       },

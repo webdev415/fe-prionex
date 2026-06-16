@@ -1,105 +1,206 @@
+import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
 import { useOperatorCoachingDetail } from '../hooks'
-import type { CoachingPeriod, ScoreBand, AssignmentState, ScorecardSummary } from '../types'
+import type { CoachingPeriod, ScoreBand } from '../types'
 
 /**
- * Right-side operator detail panel used by:
+ * Right-side operator detail panel (KAN-413 §3.5, §1.8). Shared by:
  *   - KAN-413 Inbox (all three view modes)
  *   - KAN-414 Team tab (clicking a team operator card)
  *
- * Layout follows [Figma/ENG - Training _ Inbox View _ A.png] — header with
- * avatar + tags + big composite score circle on the right, red-flag headline
- * banner, 4 KPI tiles in a row, "Why entered the queue" trigger pill list,
- * "Latest dialogue ratings" mini-cards with score chips, trainer-actions
- * row at the bottom.
+ * Visual layout mirrors Figma `Details-RightView - ENG.svg` (promoted from
+ * `MockOperatorDetailPanel`). KPIs that the BE doesn't yet surface
+ * (daily plan, online duration, internship date) render as `—` placeholders
+ * so the card stays the right shape; the "Why entered the queue" list is
+ * derived from `OperatorDetail.triggers` returned by the coaching detail
+ * endpoint.
  */
 export interface OperatorDetailPanelProps {
   operatorId: number | undefined
   operatorName?: string | undefined
+  /** Optional avatar tint passed in from the inbox row adapter. */
+  avatarColor?: string
+  initials?: string
+  online?: boolean
+  /** Trainer extension if known (operator's asterisk extension). */
+  extension?: string
+  /** Department label shown in the header chrome. */
+  department?: string
+  /** Team / group label (e.g. "Charlie"). */
+  groupName?: string
+  /** Segment label (Hard/Soft collection etc.). */
+  segment?: string
+  /** Today's accumulated work minutes (analytics screen-time). */
+  todayActiveMinutes?: number | null
+  /** ISO-8601 timestamp of the first activity event today. */
+  todayFirstActiveAt?: string | null
+  /** Daily plan progress (KAN-411 task quotas; placeholder until shipped). */
+  dailyPlanPct?: number | null
+  dailyPlanDone?: number | null
+  dailyPlanTotal?: number | null
+  /** Operator hire date (ISO yyyy-mm-dd). */
+  hiredAt?: string | null
   period?: CoachingPeriod
   fromDate?: string
   toDate?: string
+  showTabs?: boolean
+  activeTab?: 'details' | 'feed'
+  onTabChange?: (tab: 'details' | 'feed') => void
+  eventFeedCount?: number
+  /** Render slot for the team event feed shown when `activeTab === 'feed'`.
+   *  Kept as a slot so the coaching feature module stays decoupled from the
+   *  page-layer mock data that still backs the feed. */
+  feedSlot?: ReactNode
+  /** Optional badges gallery (KAN-411 Feature 3.2). Rendered between the
+   *  "Why entered the queue" block and the trainer actions when supplied. */
+  badgesSlot?: ReactNode
+  /** Trainer action handlers — Figma shows 8 actions in a 2-col grid. */
+  onListenRealtime?: () => void
   onListen?: () => void
-  onAssignTask?: () => void
+  onRate?: () => void
+  onAssignCourse?: () => void
+  onAssignDrill?: () => void
   onPlanOneOnOne?: () => void
+  onLeaveComment?: () => void
+  onAssignTask?: () => void
+  /** Legacy "Take charge" handler — retained for the Team-tab side panel. */
   onTakeCharge?: () => void
 }
 
-const SCORE_BAND_RING: Record<ScoreBand, string> = {
-  red: 'bg-red-500 text-white shadow-red-300 shadow-lg',
-  amber: 'bg-amber-400 text-white shadow-amber-300 shadow-lg',
-  green: 'bg-green-500 text-white shadow-green-300 shadow-lg',
+const SCORE_RING: Record<ScoreBand, string> = {
+  red: 'stroke-[#EF4444]',
+  amber: 'stroke-amber-400',
+  green: 'stroke-emerald-500',
 }
 
-const ASSIGNMENT_STATE_TONE: Record<AssignmentState, string> = {
-  wait: 'bg-yellow-100 text-yellow-700',
-  in_progress: 'bg-blue-100 text-blue-700',
-  awaiting_training: 'bg-purple-100 text-purple-700',
-  scheduled: 'bg-indigo-100 text-indigo-700',
-  closed: 'bg-gray-100 text-gray-700',
+const SCORE_TEXT: Record<ScoreBand, string> = {
+  red: 'text-[#EF4444]',
+  amber: 'text-amber-600',
+  green: 'text-emerald-600',
 }
 
-const ASSIGNMENT_STATE_LABEL_KEYS: Record<AssignmentState, { key: string; fallback: string }> = {
-  wait: { key: 'pages.actionAnalysis.inbox.kanbanColumns.wait', fallback: 'Wait' },
-  in_progress: {
-    key: 'pages.actionAnalysis.inbox.kanbanColumns.in_progress',
-    fallback: 'In progress',
+const QUEUE_CARD: Record<
+  'red' | 'amber' | 'green',
+  { bg: string; border: string; title: string; icon: string }
+> = {
+  red: {
+    bg: 'bg-[#FEF2F2]',
+    border: 'border-[#FECACA]',
+    title: 'text-[#EF4444]',
+    icon: 'text-[#EF4444]',
   },
-  awaiting_training: {
-    key: 'pages.actionAnalysis.inbox.kanbanColumns.awaiting_training',
-    fallback: 'Awaiting training',
+  amber: {
+    bg: 'bg-[#FEFCE8]',
+    border: 'border-[#FEF08A]',
+    title: 'text-[#A16207]',
+    icon: 'text-[#CA8A04]',
   },
-  scheduled: {
-    key: 'pages.actionAnalysis.inbox.kanbanColumns.scheduled',
-    fallback: 'Scheduled',
-  },
-  closed: {
-    key: 'pages.actionAnalysis.inbox.kanbanColumns.closed',
-    fallback: 'Closed',
+  green: {
+    bg: 'bg-emerald-50',
+    border: 'border-emerald-100',
+    title: 'text-emerald-700',
+    icon: 'text-emerald-600',
   },
 }
 
-function formatPct(value: number | null | undefined, fallback = '—'): string {
-  if (value == null) return fallback
-  return `${value.toFixed(0)}%`
+const WHY_QUEUE_ICONS: Record<
+  'rating' | 'plan' | 'training' | 'delay',
+  (className: string) => ReactNode
+> = {
+  rating: (className) => <Icons.Analytics01 size={14} className={className} />,
+  plan: (className) => <Icons.PieChart08 size={14} className={className} />,
+  training: (className) => <Icons.Brochure size={14} className={className} />,
+  delay: (className) => <Icons.Clock01 size={14} className={className} />,
 }
 
-function formatRelative(isoTimestamp: string | null | undefined): string | null {
-  if (!isoTimestamp) return null
-  const then = new Date(isoTimestamp).getTime()
-  if (Number.isNaN(then)) return null
-  const diffMs = Date.now() - then
-  if (diffMs < 0) return null
-  const minutes = Math.floor(diffMs / 60_000)
-  if (minutes < 1) return 'now'
-  if (minutes < 60) return `${minutes}m ago`
-  const hours = Math.floor(minutes / 60)
-  if (hours < 24) return `${hours}h ago`
-  const days = Math.floor(hours / 24)
-  if (days < 30) return `${days}d ago`
-  const months = Math.floor(days / 30)
-  if (months < 12) return `${months}mo ago`
-  return `${Math.floor(months / 12)}y ago`
+function initialsFor(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean)
+  if (parts.length === 0) return '?'
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
+  return `${parts[0][0]}${parts[1][0]}`.toUpperCase()
 }
 
-function scorecardScoreToBand(score: number | null | undefined): ScoreBand {
-  if (score == null) return 'red'
-  const pct = Number(score) * 20
-  if (pct >= 70) return 'green'
-  if (pct >= 50) return 'amber'
-  return 'red'
+function categorizeTrigger(code: string): {
+  tone: 'red' | 'amber' | 'green'
+  icon: 'rating' | 'plan' | 'training' | 'delay'
+} {
+  const c = code.toLowerCase()
+  if (c.includes('rating') || c.includes('scorecard') || c.includes('conflict')) {
+    return { tone: 'red', icon: 'rating' }
+  }
+  if (c.includes('plan') || c.includes('daily')) return { tone: 'amber', icon: 'plan' }
+  if (c.includes('training') || c.includes('course') || c.includes('drill')) {
+    return { tone: 'red', icon: 'training' }
+  }
+  if (c.includes('delay') || c.includes('idle') || c.includes('no_calls')) {
+    return { tone: 'amber', icon: 'delay' }
+  }
+  return { tone: 'amber', icon: 'rating' }
+}
+
+function humanizeTrigger(code: string): string {
+  return code
+    .replace(/[_-]/g, ' ')
+    .replace(/\b\w/g, (ch) => ch.toUpperCase())
+    .trim()
+}
+
+function formatTodayActive(minutes: number | null | undefined): string {
+  if (minutes == null || minutes <= 0) return '—'
+  const h = Math.floor(minutes / 60)
+  const m = minutes % 60
+  if (h <= 0) return `${m} min`
+  return `${h}h ${String(m).padStart(2, '0')}min`
+}
+
+function formatClock(iso: string | null | undefined): string {
+  if (!iso) return ''
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return ''
+  return d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
+}
+
+function formatHireDate(iso: string | null | undefined): { year: string; date: string } {
+  if (!iso) return { year: '—', date: '' }
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return { year: '—', date: '' }
+  return { year: String(d.getFullYear()), date: d.toLocaleDateString() }
 }
 
 export function OperatorDetailPanel({
   operatorId,
   operatorName,
+  avatarColor = '#FED7AA',
+  initials,
+  online = false,
+  extension,
+  department,
+  groupName,
+  segment,
+  todayActiveMinutes,
+  todayFirstActiveAt,
+  dailyPlanPct,
+  dailyPlanDone,
+  dailyPlanTotal,
+  hiredAt,
   period = 'last_7d',
   fromDate,
   toDate,
+  showTabs = false,
+  activeTab = 'details',
+  onTabChange,
+  eventFeedCount = 0,
+  feedSlot,
+  badgesSlot,
+  onListenRealtime,
   onListen,
-  onAssignTask,
+  onRate,
+  onAssignCourse,
+  onAssignDrill,
   onPlanOneOnOne,
+  onLeaveComment,
+  onAssignTask,
   onTakeCharge,
 }: OperatorDetailPanelProps) {
   const { t } = useTranslation('common')
@@ -117,254 +218,442 @@ export function OperatorDetailPanel({
 
   if (!enabled) {
     return (
-      <aside className="flex h-full flex-col items-center justify-center rounded-2xl bg-white/60 p-10 text-center text-sm text-gray-500">
-        {t(
-          'pages.actionAnalysis.inbox.detail.selectOperator',
-          'Select an operator to see details.'
-        )}
-      </aside>
+      <div className="w-full max-w-[360px] rounded-xl border border-[#EBECE8] bg-white p-6 text-center text-xs text-gray-500">
+        {t('pages.training.inbox.detail.empty', 'Select an operator from the list')}
+      </div>
     )
   }
 
   if (isLoading) {
     return (
-      <aside className="flex h-full flex-col items-center justify-center rounded-2xl bg-white/60 p-10 text-sm text-gray-500">
-        {t('pages.actionAnalysis.inbox.detail.loading', 'Loading…')}
-      </aside>
+      <div className="w-full max-w-[360px] rounded-xl border border-[#EBECE8] bg-white p-6 text-center text-xs text-gray-500">
+        {t('pages.training.inbox.detail.loading', 'Loading…')}
+      </div>
     )
   }
 
   if (isError || !data) {
     return (
-      <aside className="flex h-full flex-col items-center justify-center rounded-2xl bg-white/60 p-10 text-sm text-red-600">
-        {t('pages.actionAnalysis.inbox.detail.loadFailed', 'Could not load operator details.')}
-      </aside>
+      <div className="w-full max-w-[360px] rounded-xl border border-[#EBECE8] bg-white p-6 text-center text-xs text-red-500">
+        {t('pages.training.inbox.detail.error', 'Could not load operator details.')}
+      </div>
     )
   }
 
-  const stateMeta = data.assignment ? ASSIGNMENT_STATE_LABEL_KEYS[data.assignment.state] : null
-  const lastActive = formatRelative(data.last_active_at)
+  const displayName = operatorName ?? `#${data.operator_id}`
+  // Score and band are nullable for operators with no source signal
+  // (see queue_service no-data fix). Render `—` with a neutral ring when
+  // either is missing so the panel doesn't lie or render with broken UI.
+  const score = data.composite_score
+  const band: ScoreBand = data.score_band ?? 'amber'
+  const hasScore = score !== null && score !== undefined
+  const scoreRadius = 17
+  const scoreCircumference = 2 * Math.PI * scoreRadius
+  const scoreOffset = hasScore
+    ? scoreCircumference - (score / 100) * scoreCircumference
+    : scoreCircumference
+
+  // Figma `Details-RightView` stats row: DAILY PLAN / ONLINE / EXPERIENCE.
+  // - Daily plan: red-tinted when behind; placeholder until KAN-411 ships
+  //   the task-quota endpoint.
+  // - Online: today's accumulated work-time + clock-in label, derived from
+  //   analytics-service screen-time (todayActiveMinutes prop).
+  // - Experience: operator hire year + full date (from users.hired_at).
+  // Prefer parent-passed props (already-cached values from the row
+  // adapter), fall back to whatever the BE detail payload included.
+  const effectiveGroupName = groupName ?? data.group_name ?? undefined
+  const effectiveExtension = extension ?? data.asterisk_extension ?? undefined
+  const effectiveHiredAt = hiredAt ?? data.hired_at ?? null
+  const effectiveTodayMinutes = todayActiveMinutes ?? data.today_active_minutes ?? null
+  const effectiveTodayFirstAt = todayFirstActiveAt ?? data.today_first_active_at ?? null
+  const planHasData = dailyPlanPct != null && dailyPlanTotal != null && dailyPlanTotal > 0
+  const planBehind = planHasData && (dailyPlanPct ?? 0) < 50
+  const hire = formatHireDate(effectiveHiredAt)
+  const statsRow: { label: string; value: string; subValue?: string; cardTone: 'red' | 'gray' }[] =
+    [
+      {
+        label: t('pages.training.inbox.detail.stats.dailyPlan', 'Daily plan'),
+        value: planHasData ? `${Math.round(dailyPlanPct ?? 0)}%` : '—',
+        subValue:
+          planHasData && dailyPlanDone != null ? `${dailyPlanDone}/${dailyPlanTotal}` : undefined,
+        cardTone: planBehind ? 'red' : 'gray',
+      },
+      {
+        label: t('pages.training.inbox.detail.stats.online', 'Online'),
+        value: formatTodayActive(effectiveTodayMinutes),
+        subValue: effectiveTodayFirstAt
+          ? t('pages.training.inbox.detail.stats.onlineFrom', 'from {{time}}', {
+              time: formatClock(effectiveTodayFirstAt),
+            })
+          : undefined,
+        cardTone: 'gray',
+      },
+      {
+        label: t('pages.training.inbox.detail.stats.experience', 'Experience'),
+        value: hire.year,
+        subValue: hire.date || undefined,
+        cardTone: 'gray',
+      },
+    ]
+
+  // Per-trigger meta line — derived from the operator's KPIs so each
+  // trigger card has context under its title (Figma: "38 points · call
+  // #C-1016", "14% at 11:00 · 4th day in a row", etc.). When a specific
+  // call/score isn't available, fall back to the latest scorecard or the
+  // raw KPI value so the line is never empty for known triggers.
+  // Alias `data` into a non-null const so TS preserves narrowing across
+  // the closure boundary below (across an arrow function TS would widen
+  // `data` back to the hook's union type and require null checks).
+  const detail = data
+  const latestScorecard = detail.latest_scorecards?.[0]
+  const triggerMeta = (code: string): string => {
+    const c = code.toLowerCase()
+    if (c.includes('rating') || c.includes('scorecard') || c.includes('conflict')) {
+      if (latestScorecard?.weighted_score != null && latestScorecard.call_id) {
+        return `${Math.round(Number(latestScorecard.weighted_score))} pts · call #${latestScorecard.call_id.slice(0, 6)}`
+      }
+      if (detail.kpis.avg_scorecard_pct != null) {
+        return `Avg ${Math.round(detail.kpis.avg_scorecard_pct)}%`
+      }
+      return ''
+    }
+    if (c.includes('plan') || c.includes('daily')) {
+      if (dailyPlanPct != null && dailyPlanTotal != null) {
+        return `${Math.round(dailyPlanPct)}% — ${dailyPlanDone ?? 0}/${dailyPlanTotal}`
+      }
+      return ''
+    }
+    if (c.includes('training') || c.includes('course') || c.includes('drill')) {
+      return data.open_tasks_count > 0 ? `${data.open_tasks_count} open` : ''
+    }
+    if (c.includes('delay') || c.includes('idle') || c.includes('no_calls')) {
+      return effectiveTodayMinutes != null
+        ? `${formatTodayActive(effectiveTodayMinutes)} today`
+        : ''
+    }
+    return ''
+  }
+
+  const whyInQueue = data.triggers.map((code, idx) => {
+    const meta = categorizeTrigger(code)
+    return {
+      id: idx + 1,
+      label: humanizeTrigger(code),
+      meta: triggerMeta(code),
+      tone: meta.tone,
+      icon: meta.icon,
+    }
+  })
+
+  const computedInitials = initials ?? initialsFor(displayName)
 
   return (
-    <aside className="flex h-full flex-col gap-4 overflow-hidden rounded-2xl bg-white p-5 shadow-sm">
-      {/* Header — avatar + name + tag chips + big composite score circle */}
-      <header className="flex items-start justify-between gap-4">
-        <div className="flex items-start gap-3">
-          <div className="bg-primary-100 text-primary-700 flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-full text-lg font-semibold">
-            {(operatorName ?? '?').slice(0, 1).toUpperCase()}
-          </div>
-          <div className="flex flex-col gap-1">
-            <span className="text-dark-500 text-lg font-semibold">
-              {operatorName ?? `#${data.operator_id}`}
+    <div className="flex w-full max-w-[360px] flex-col overflow-hidden rounded-xl border border-[#EBECE8] bg-white">
+      {showTabs ? (
+        <div className="relative flex border-b border-[#EBECE8]">
+          <button
+            type="button"
+            onClick={() => onTabChange?.('details')}
+            className={`flex flex-1 items-center gap-2 px-4 py-3 text-xs font-medium ${
+              activeTab === 'details' ? 'text-[#204E4D]' : 'text-[#676767]'
+            }`}
+          >
+            <Icons.UserStatus
+              size={16}
+              className={activeTab === 'details' ? 'text-[#204E4D]' : ''}
+            />
+            {t('pages.training.inbox.detail.tabDetails', 'Details')}
+          </button>
+          <button
+            type="button"
+            onClick={() => onTabChange?.('feed')}
+            className={`flex flex-1 items-center justify-between gap-2 px-4 py-3 text-xs font-medium ${
+              activeTab === 'feed' ? 'text-[#204E4D]' : 'text-[#676767]'
+            }`}
+          >
+            <span className="flex items-center gap-2">
+              <Icons.Activity01
+                size={16}
+                className={activeTab === 'feed' ? 'text-[#204E4D]' : ''}
+              />
+              {t('pages.training.inbox.detail.tabFeed', 'Event Feed')}
             </span>
-            <div className="flex flex-wrap items-center gap-1.5">
-              {stateMeta ? (
-                <span
-                  className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${ASSIGNMENT_STATE_TONE[data.assignment!.state]}`}
+            <span className="rounded-full bg-[#EBECE8] px-2 py-0.5 text-[11px] font-medium text-[#05040D]">
+              {eventFeedCount}
+            </span>
+          </button>
+          <span
+            className={`absolute bottom-0 h-0.5 w-1/2 bg-[#80D80A] transition-transform ${
+              activeTab === 'feed' ? 'translate-x-full' : 'translate-x-0'
+            }`}
+            aria-hidden
+          />
+        </div>
+      ) : null}
+
+      {activeTab === 'feed' && showTabs ? (
+        <div className="max-h-[min(720px,calc(100vh-280px))] overflow-y-auto">
+          {feedSlot ?? (
+            <p className="px-4 py-8 text-center text-xs text-gray-500">
+              {t(
+                'pages.training.inbox.detail.feedComingSoon',
+                'Team event feed lands with the next round.'
+              )}
+            </p>
+          )}
+        </div>
+      ) : (
+        <div className="flex max-h-[min(720px,calc(100vh-280px))] flex-col overflow-y-auto">
+          <div className="bg-gradient-to-b from-[#F2F3F0] to-white px-4 pt-4 pb-3">
+            <div className="flex gap-3">
+              <div className="relative flex-shrink-0">
+                <div
+                  className="flex h-14 w-14 items-center justify-center rounded-full text-base font-semibold text-[#05040D]"
+                  style={{ backgroundColor: avatarColor }}
                 >
-                  {t(stateMeta.key, stateMeta.fallback)}
+                  {computedInitials}
+                </div>
+                <span
+                  className={`absolute -right-0.5 -bottom-0.5 h-2.5 w-2.5 rounded-full border-2 border-white ${
+                    online ? 'bg-[#22C55E]' : 'bg-[#A1A1A1]'
+                  }`}
+                />
+              </div>
+
+              <div className="min-w-0 flex-1 pt-0.5">
+                <h2 className="text-sm font-semibold text-[#05040D]">{displayName}</h2>
+                <p className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[11px] leading-4 text-[#676767]">
+                  {[department, segment, effectiveGroupName]
+                    .filter((v): v is string => Boolean(v))
+                    .map((seg, idx, arr) => (
+                      <span key={`seg-${idx}`}>
+                        {seg}
+                        {idx < arr.length - 1 ? <span className="ml-1.5">·</span> : null}
+                      </span>
+                    ))}
+                  {effectiveExtension ? (
+                    <>
+                      <span className="mx-1">·</span>
+                      <span className="rounded-full bg-[#EBECE8] px-2 py-0.5 text-[10px] font-medium text-[#05040D]">
+                        ext {effectiveExtension}
+                      </span>
+                    </>
+                  ) : null}
+                  <span className="mx-1">·</span>
+                  <span>
+                    {online
+                      ? t('pages.training.inbox.detail.online', 'Online')
+                      : t('pages.training.inbox.detail.offline', 'Offline')}
+                  </span>
+                  {effectiveTodayMinutes != null && effectiveTodayMinutes > 0 ? (
+                    <>
+                      <span className="mx-1">·</span>
+                      <span>{formatTodayActive(effectiveTodayMinutes)}</span>
+                    </>
+                  ) : null}
+                </p>
+              </div>
+
+              <div className="relative h-12 w-12 flex-shrink-0">
+                <svg viewBox="0 0 48 48" className="h-12 w-12 -rotate-90">
+                  <circle
+                    cx="24"
+                    cy="24"
+                    r={scoreRadius}
+                    strokeWidth="4"
+                    fill="none"
+                    className="stroke-[#EDEDED]"
+                  />
+                  {hasScore ? (
+                    <circle
+                      cx="24"
+                      cy="24"
+                      r={scoreRadius}
+                      strokeWidth="2"
+                      fill="none"
+                      strokeLinecap="round"
+                      strokeDasharray={scoreCircumference}
+                      strokeDashoffset={scoreOffset}
+                      className={SCORE_RING[band]}
+                    />
+                  ) : null}
+                </svg>
+                <span
+                  className={`absolute inset-0 flex items-center justify-center text-sm font-semibold ${
+                    hasScore ? SCORE_TEXT[band] : 'text-gray-400'
+                  }`}
+                >
+                  {hasScore ? score : '—'}
                 </span>
-              ) : null}
-              {data.kpis.red_flag_count > 0 ? (
-                <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-medium text-red-700">
-                  <span className="inline-block h-1.5 w-1.5 rounded-full bg-red-500" />
-                  {t('pages.actionAnalysis.inbox.detail.riskyTag', 'Risky')}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-5 px-4 pb-4">
+            <div className="grid grid-cols-3 gap-2">
+              {statsRow.map((stat, index) => (
+                <div
+                  key={stat.label}
+                  className={`flex min-h-20 flex-col justify-center rounded-lg border px-2 py-2.5 ${
+                    index === 0 || stat.cardTone === 'red'
+                      ? 'border-[#FEE2E2] bg-[#FEF2F2]'
+                      : 'border-[#EBECE8] bg-white'
+                  }`}
+                >
+                  <span className="text-[10px] leading-3 font-medium tracking-wide text-[#676767] uppercase">
+                    {stat.label}
+                  </span>
+                  <span className="mt-1 text-base leading-5 font-semibold text-[#05040D]">
+                    {stat.value}
+                  </span>
+                  {stat.subValue ? (
+                    <span className="text-[11px] leading-[15px] text-[#676767]">
+                      {stat.subValue}
+                    </span>
+                  ) : null}
+                </div>
+              ))}
+            </div>
+
+            <div>
+              <div className="flex flex-row justify-between">
+                <span className="mb-3 text-sm font-medium tracking-[-0.02em] text-[#05040D]">
+                  {t('pages.training.inbox.detail.whyInQueue', 'Why entered the queue')}
                 </span>
-              ) : null}
-              {lastActive ? (
-                <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-medium text-gray-700">
-                  {lastActive}
-                </span>
+                {band === 'red' ? (
+                  <span className="inline-flex rounded-full bg-[#FEF2F2] px-2.5 py-0.5 text-[11px] font-medium text-[#EF4444]">
+                    {t('pages.training.inbox.detail.critical', 'Critical')}
+                  </span>
+                ) : null}
+              </div>
+              <div className="flex flex-col gap-1.5">
+                {whyInQueue.length === 0 ? (
+                  <p className="text-[11px] text-[#676767]">
+                    {t(
+                      'pages.training.inbox.detail.noTriggers',
+                      'No triggers fired in the current window.'
+                    )}
+                  </p>
+                ) : (
+                  whyInQueue.map((item) => {
+                    const tone = QUEUE_CARD[item.tone]
+                    return (
+                      <div
+                        key={item.id}
+                        className={`flex min-h-[53px] items-center gap-3 rounded-lg border px-3 py-2.5 ${tone.bg} ${tone.border}`}
+                      >
+                        <span className="flex h-[30px] w-[30px] flex-shrink-0 items-center justify-center rounded-full bg-white">
+                          {WHY_QUEUE_ICONS[item.icon](tone.icon)}
+                        </span>
+                        <div className="flex min-w-0 flex-col gap-0.5">
+                          <p className={`text-xs leading-4 font-semibold ${tone.title}`}>
+                            {item.label}
+                          </p>
+                          {item.meta ? (
+                            <p className="text-[11px] leading-[15px] text-[#676767]">{item.meta}</p>
+                          ) : null}
+                        </div>
+                      </div>
+                    )
+                  })
+                )}
+              </div>
+            </div>
+
+            {badgesSlot ? <div>{badgesSlot}</div> : null}
+
+            <div>
+              <h3 className="mb-3 text-sm font-medium tracking-[-0.02em] text-[#05040D]">
+                {t('pages.training.inbox.detail.trainerActionsLabel', 'Trainer actions')}
+              </h3>
+              {/* Figma — 8 actions in a 2-col grid. Buttons without a
+                  handler render disabled (60% opacity) so trainers see
+                  what's coming without functional surprises. The legacy
+                  `onTakeCharge` prop still wires the Team-tab "Take
+                  charge" flow when the trainer opens the panel from the
+                  Team tab. */}
+              <div className="grid grid-cols-2 gap-1.5">
+                <TrainerAction
+                  icon={<Icons.Mic02 size={16} className="text-[#05040D]" />}
+                  label={t(
+                    'pages.training.inbox.detail.actions.listenRealtime',
+                    'Listen in real-time'
+                  )}
+                  onClick={onListenRealtime}
+                />
+                <TrainerAction
+                  icon={<Icons.Phone size={16} className="text-[#05040D]" />}
+                  label={t('pages.training.inbox.detail.actions.listen', 'Listen to the call')}
+                  onClick={onListen}
+                />
+                <TrainerAction
+                  icon={<Icons.ChartRing size={16} className="text-[#05040D]" />}
+                  label={t('pages.training.inbox.detail.actions.rate', 'Rate')}
+                  onClick={onRate}
+                />
+                <TrainerAction
+                  icon={<Icons.Brochure size={16} className="text-[#05040D]" />}
+                  label={t('pages.training.inbox.detail.actions.assignCourse', 'Assign course')}
+                  onClick={onAssignCourse}
+                />
+                <TrainerAction
+                  icon={<Icons.PieChart02 size={16} className="text-[#05040D]" />}
+                  label={t('pages.training.inbox.detail.actions.assignDrill', 'Assign drill')}
+                  onClick={onAssignDrill}
+                />
+                <TrainerAction
+                  icon={<Icons.Calendar size={16} className="text-[#05040D]" />}
+                  label={t('pages.training.inbox.detail.actions.planOneOnOne', '1-on-1 session')}
+                  onClick={onPlanOneOnOne}
+                />
+                <TrainerAction
+                  icon={<Icons.ChatFeedback01 size={16} className="text-[#05040D]" />}
+                  label={t('pages.training.inbox.detail.actions.leaveComment', 'Leave a comment')}
+                  onClick={onLeaveComment}
+                />
+                <TrainerAction
+                  icon={<Icons.CheckmarkSquare03 size={16} className="text-[#05040D]" />}
+                  label={t('pages.training.inbox.detail.actions.task', 'Task / checklist')}
+                  onClick={onAssignTask}
+                />
+              </div>
+              {onTakeCharge ? (
+                <button
+                  type="button"
+                  onClick={onTakeCharge}
+                  className="mt-2 flex h-[34.5px] w-full items-center justify-center gap-1 rounded-md border border-[#204E4D] bg-[#204E4D] text-xs font-medium tracking-[-0.02em] text-white"
+                >
+                  {t('pages.training.inbox.detail.actions.takeCharge', 'Take charge')}
+                </button>
               ) : null}
             </div>
           </div>
         </div>
-        <div
-          className={`flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-full text-xl font-bold ${SCORE_BAND_RING[data.score_band]}`}
-        >
-          {data.composite_score}
-        </div>
-      </header>
-
-      {/* Red flag headline banner */}
-      {data.triggers.length > 0 ? (
-        <section className="rounded-xl border border-red-200 bg-red-50 px-3 py-2.5">
-          <p className="text-sm font-medium text-red-800">
-            {t('pages.actionAnalysis.inbox.detail.redFlagsHeadline', '{{count}} red flags', {
-              count: data.kpis.red_flag_count || data.triggers.length,
-            })}
-          </p>
-          <p className="mt-0.5 text-xs text-red-700">
-            {t(
-              'pages.actionAnalysis.inbox.detail.redFlagsSubtitle',
-              'Coaching attention needed — recent triggers have accumulated.'
-            )}
-          </p>
-        </section>
-      ) : null}
-
-      {/* 4 KPI tiles */}
-      <section className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-        <KpiTile
-          label={t('pages.actionAnalysis.inbox.detail.kpis.scriptAdherence', 'Script')}
-          value={formatPct(data.kpis.script_adherence_pct)}
-        />
-        <KpiTile
-          label={t('pages.actionAnalysis.inbox.detail.kpis.scorecardAvg', 'Scorecard')}
-          value={formatPct(data.kpis.avg_scorecard_pct)}
-        />
-        <KpiTile
-          label={t('pages.actionAnalysis.inbox.detail.kpis.conversion', 'Conversion')}
-          value={formatPct(data.kpis.conversion_rate)}
-        />
-        <KpiTile
-          label={t('pages.actionAnalysis.inbox.detail.kpis.tasksOnTime', 'Tasks on time')}
-          value={formatPct(data.kpis.task_completion_on_time_pct)}
-        />
-      </section>
-
-      {/* Why entered the queue — bulleted trigger list */}
-      <section className="flex flex-col gap-1.5">
-        <h3 className="text-xs font-medium tracking-wide text-gray-500 uppercase">
-          {t('pages.actionAnalysis.inbox.detail.whyInQueue', 'Why entered the queue')}
-        </h3>
-        {data.triggers.length === 0 ? (
-          <p className="text-xs text-gray-500">
-            {t(
-              'pages.actionAnalysis.inbox.detail.noTriggers',
-              'No active triggers in the selected period.'
-            )}
-          </p>
-        ) : (
-          <ul className="flex flex-col gap-1">
-            {data.triggers.map((trigger) => (
-              <li
-                key={trigger}
-                className="flex items-center gap-2 rounded-lg bg-orange-50 px-2.5 py-1.5 text-xs font-medium text-orange-800"
-              >
-                <span className="inline-block h-1.5 w-1.5 rounded-full bg-orange-500" />
-                {t(`pages.actionAnalysis.inbox.triggers.${trigger}`, trigger.replace(/_/g, ' '))}
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-
-      {/* Latest dialogue ratings — horizontal mini-cards with score chips */}
-      <section className="flex flex-col gap-1.5">
-        <h3 className="text-xs font-medium tracking-wide text-gray-500 uppercase">
-          {t('pages.actionAnalysis.inbox.detail.latestRatings', 'Latest dialogue ratings')}
-        </h3>
-        {data.latest_scorecards.length === 0 ? (
-          <p className="text-xs text-gray-500">
-            {t(
-              'pages.actionAnalysis.inbox.detail.noScorecards',
-              'No scorecards in the selected period.'
-            )}
-          </p>
-        ) : (
-          <ul className="grid grid-cols-2 gap-1.5 sm:grid-cols-3 lg:grid-cols-4">
-            {data.latest_scorecards.slice(0, 4).map((sc) => (
-              <ScorecardMiniCard key={sc.id} scorecard={sc} />
-            ))}
-          </ul>
-        )}
-      </section>
-
-      {/* Trainer actions footer */}
-      <footer className="mt-auto flex flex-wrap gap-2 border-t border-gray-100 pt-3">
-        <ActionButton
-          icon={<Icons.Phone size={14} />}
-          label={t('pages.actionAnalysis.inbox.detail.trainerActions.listen', 'Listen to the call')}
-          onClick={onListen}
-        />
-        <ActionButton
-          icon={<Icons.Brochure size={14} />}
-          label={t('pages.actionAnalysis.inbox.detail.trainerActions.assignTask', 'Assign a task')}
-          onClick={onAssignTask}
-        />
-        <ActionButton
-          icon={<Icons.Calendar size={14} />}
-          label={t('pages.actionAnalysis.inbox.detail.trainerActions.planOneOnOne', 'Plan 1-on-1')}
-          onClick={onPlanOneOnOne}
-        />
-        <ActionButton
-          icon={<Icons.Tick01 size={14} />}
-          label={t('pages.actionAnalysis.inbox.detail.trainerActions.takeCharge', 'Take charge')}
-          onClick={onTakeCharge}
-          primary
-        />
-      </footer>
-    </aside>
-  )
-}
-
-function KpiTile({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex flex-col gap-1 rounded-xl border border-gray-100 bg-gray-50 px-3 py-2.5">
-      <span className="text-[9px] font-medium tracking-wide text-gray-500 uppercase">{label}</span>
-      <span className="text-dark-500 text-base font-semibold">{value}</span>
+      )}
     </div>
   )
 }
 
-function ScorecardMiniCard({ scorecard }: { scorecard: ScorecardSummary }) {
-  const band = scorecardScoreToBand(
-    scorecard.weighted_score != null ? Number(scorecard.weighted_score) : null
-  )
-  const ringClass: Record<ScoreBand, string> = {
-    red: 'bg-red-500 text-white',
-    amber: 'bg-amber-400 text-white',
-    green: 'bg-green-500 text-white',
-  }
-  const displayScore =
-    scorecard.weighted_score != null ? Number(scorecard.weighted_score).toFixed(1) : '—'
-  return (
-    <li className="flex flex-col gap-1.5 rounded-xl border border-gray-100 bg-white p-2.5">
-      <span
-        className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-semibold ${ringClass[band]}`}
-      >
-        {displayScore}
-      </span>
-      <span className="truncate text-[10px] text-gray-600">
-        {new Date(scorecard.created_at).toLocaleDateString()}
-      </span>
-      <span className="truncate text-[10px] font-medium text-gray-500 uppercase">
-        {scorecard.status}
-      </span>
-    </li>
-  )
-}
-
-function ActionButton({
+function TrainerAction({
   icon,
   label,
   onClick,
-  primary,
 }: {
-  icon: React.ReactNode
+  icon: ReactNode
   label: string
   onClick?: () => void
-  primary?: boolean
 }) {
-  const disabled = !onClick
   return (
     <button
       type="button"
       onClick={onClick}
-      disabled={disabled}
-      className={[
-        'flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors',
-        primary
-          ? 'bg-primary-500 hover:bg-primary-600 text-white'
-          : 'hover:border-primary-300 border border-gray-200 bg-white text-gray-700',
-        disabled ? 'cursor-not-allowed opacity-60' : '',
-      ]
-        .filter(Boolean)
-        .join(' ')}
+      disabled={!onClick}
+      className="flex h-[34.5px] items-center gap-1 rounded-md border border-[#DFDFDF] bg-white px-3 text-left disabled:opacity-60"
     >
-      {icon}
-      {label}
+      <span className="flex h-4 w-4 flex-shrink-0 items-center justify-center">{icon}</span>
+      <span className="truncate text-xs leading-4 font-medium tracking-[-0.02em] text-[#05040D]">
+        {label}
+      </span>
     </button>
   )
 }

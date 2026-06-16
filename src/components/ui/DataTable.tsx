@@ -21,7 +21,7 @@
  * - tableHeaderTitle: Optional title/text to display on the left side of the table header
  */
 
-import { type ReactNode, useMemo, useRef, useEffect, useState } from 'react'
+import { Fragment, type ReactNode, useMemo, useRef, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
 import { Checkbox } from './Checkbox'
@@ -71,6 +71,18 @@ export interface DataTableProps<T> {
   tableClassName?: string // Additional classes for the <table> element (e.g., 'table-fixed')
   /** Extra row classes (e.g. dim hidden rows). Applied after selection / zebra background. */
   rowClassName?: (item: T) => string | undefined
+  /**
+   * Optional renderer for an expansion panel below a row. Returns the
+   * content to display in a full-width row beneath the data row. Rendered
+   * only when ``expandedIds`` contains the row's id. Multi-row expand is
+   * supported — supply more than one id.
+   *
+   * Backwards-compatible: existing DataTable consumers that don't pass
+   * ``renderExpanded`` are unaffected.
+   */
+  renderExpanded?: (item: T) => ReactNode
+  /** Set of row IDs currently expanded. Controlled prop — parent owns the state. */
+  expandedIds?: Set<number | string>
 }
 
 export function DataTable<T extends { id: number | string }>({
@@ -96,6 +108,8 @@ export function DataTable<T extends { id: number | string }>({
   tableHeaderTitle,
   tableClassName,
   rowClassName,
+  renderExpanded,
+  expandedIds,
 }: DataTableProps<T>) {
   const { t } = useTranslation('common')
   const handleSort = (column: Column<T>) => {
@@ -352,42 +366,56 @@ export function DataTable<T extends { id: number | string }>({
                   }
                   return rowIndex % 2 === 0 ? 'bg-[#F2F3F0]' : 'bg-white'
                 }
+                const isExpanded = !!(renderExpanded && expandedIds?.has(item.id))
                 return (
-                  <tr
-                    key={item.id}
-                    className={`transition-colors ${getRowBackground()} ${onRowClick ? 'cursor-pointer' : ''} ${rowClassName?.(item) ?? ''}`}
-                    onClick={() => onRowClick?.(item)}
-                  >
-                    {/* Checkbox column for bulk selection */}
-                    {enableBulkSelection && (
-                      <td
-                        className="h-[49px] border-r border-[#EBECE8] px-4"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <Checkbox
-                          checked={isSelected}
-                          onCheckedChange={(checked) => handleSelectItem(item.id, checked === true)}
-                          aria-label={`Select item ${item.id}`}
-                        />
-                      </td>
+                  <Fragment key={item.id}>
+                    <tr
+                      className={`transition-colors ${getRowBackground()} ${onRowClick ? 'cursor-pointer' : ''} ${rowClassName?.(item) ?? ''}`}
+                      onClick={() => onRowClick?.(item)}
+                    >
+                      {/* Checkbox column for bulk selection */}
+                      {enableBulkSelection && (
+                        <td
+                          className="h-[49px] border-r border-[#EBECE8] px-4"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <Checkbox
+                            checked={isSelected}
+                            onCheckedChange={(checked) =>
+                              handleSelectItem(item.id, checked === true)
+                            }
+                            aria-label={`Select item ${item.id}`}
+                          />
+                        </td>
+                      )}
+                      {columns.map((column, colIndex) => (
+                        <td
+                          key={column.key}
+                          className={`text-dark-500 h-[49px] px-4 text-xs font-medium ${column.className ? '' : 'whitespace-nowrap'} ${
+                            column.align === 'center'
+                              ? 'text-center'
+                              : column.align === 'right'
+                                ? 'text-right'
+                                : 'text-left'
+                          } ${colIndex < columns.length - 1 ? 'border-r border-[#EBECE8]' : ''} ${column.className || ''}`}
+                        >
+                          {column.render
+                            ? column.render(item)
+                            : String((item as Record<string, unknown>)[column.key] ?? '')}
+                        </td>
+                      ))}
+                    </tr>
+                    {isExpanded && (
+                      <tr className="bg-gray-50">
+                        <td
+                          colSpan={columns.length + (enableBulkSelection ? 1 : 0)}
+                          className="px-4 py-3"
+                        >
+                          {renderExpanded!(item)}
+                        </td>
+                      </tr>
                     )}
-                    {columns.map((column, colIndex) => (
-                      <td
-                        key={column.key}
-                        className={`text-dark-500 h-[49px] px-4 text-xs font-medium ${column.className ? '' : 'whitespace-nowrap'} ${
-                          column.align === 'center'
-                            ? 'text-center'
-                            : column.align === 'right'
-                              ? 'text-right'
-                              : 'text-left'
-                        } ${colIndex < columns.length - 1 ? 'border-r border-[#EBECE8]' : ''} ${column.className || ''}`}
-                      >
-                        {column.render
-                          ? column.render(item)
-                          : String((item as Record<string, unknown>)[column.key] ?? '')}
-                      </td>
-                    ))}
-                  </tr>
+                  </Fragment>
                 )
               })
             )}

@@ -13,6 +13,8 @@ import { Input } from '@/components/ui/Input'
 import { Checkbox } from '@/components/ui/Checkbox'
 import { TagBadge } from '@/components/ui/TagBadge'
 import { useTags, useBulkTagClients } from '@/features/tags/hooks/useTags'
+import { useAuthStore } from '@/stores/authStore'
+import { canRemoveProtectedTag } from '@/features/tags/utils/protected'
 import { toast } from 'sonner'
 
 interface BulkTagModalProps {
@@ -25,6 +27,7 @@ interface BulkTagModalProps {
 
 export function BulkTagModal({ open, clientIds, clientCount, action, onClose }: BulkTagModalProps) {
   const { t } = useTranslation('common')
+  const roleName = useAuthStore((state) => state.user?.active_role_name)
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedTagIds, setSelectedTagIds] = useState<number[]>([])
 
@@ -115,12 +118,13 @@ export function BulkTagModal({ open, clientIds, clientCount, action, onClose }: 
             ) : (
               filteredTags?.map((tag) => {
                 const isProtected = !!tag.is_protected
-                const isDisabledRemove = action === 'remove' && isProtected
+                const isDisabledRemove =
+                  action === 'remove' && isProtected && !canRemoveProtectedTag(tag, roleName)
 
                 return (
                   <label
                     key={tag.id}
-                    className={`flex cursor-pointer items-center gap-2 rounded p-2 hover:bg-gray-50 ${isDisabledRemove ? 'opacity-50' : ''}`}
+                    className={`flex cursor-pointer items-center gap-2 rounded p-2 hover:bg-gray-50 ${isDisabledRemove ? 'cursor-not-allowed opacity-50' : ''}`}
                   >
                     <Checkbox
                       checked={selectedTagIds.includes(tag.id)}
