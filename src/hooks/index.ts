@@ -9,6 +9,8 @@ export {
 
 export { usePermissionRefresh } from './usePermissionRefresh'
 
+export { useGuardedAction } from './useGuardedAction'
+
 export { useURLState, type UseURLStateOptions } from './useURLState'
 
 export {

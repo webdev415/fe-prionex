@@ -99,17 +99,25 @@ function usePreviewColumns(): Column<TagPreviewRowWithId>[] {
           <div className="flex flex-wrap gap-1">
             {row.tag_names.map((name) => {
               const unknown = row.unknown_tag_names.includes(name)
+              const blocked = row.protected_blocked_names?.includes(name) ?? false
+              const struck = unknown || blocked
+              const title = unknown
+                ? t(`${p}.unknownTagTitle`, 'Tag not found in this project')
+                : blocked
+                  ? t(
+                      `${p}.blockedProtectedTagTitle`,
+                      'You do not have permission to remove this protected tag'
+                    )
+                  : undefined
               return (
                 <span
                   key={name}
                   className={`rounded-full border px-2 py-0.5 text-xs ${
-                    unknown
+                    struck
                       ? 'border-error-300 bg-error-50 text-error-700 line-through'
                       : 'border-secondary-200 bg-secondary-50 text-secondary-800'
                   }`}
-                  title={
-                    unknown ? t(`${p}.unknownTagTitle`, 'Tag not found in this project') : undefined
-                  }
+                  title={title}
                 >
                   {name}
                 </span>
@@ -126,9 +134,31 @@ function usePreviewColumns(): Column<TagPreviewRowWithId>[] {
       {
         key: 'error',
         header: t(`${p}.note`, 'Note'),
-        render: (row: TagPreviewRowWithId) => (
-          <span className="text-xs text-gray-600">{row.error || ''}</span>
-        ),
+        render: (row: TagPreviewRowWithId) => {
+          const hasAllowed = !!row.protected_allowed_names && row.protected_allowed_names.length > 0
+          const hasBlocked = !!row.protected_blocked_names && row.protected_blocked_names.length > 0
+          if (!hasAllowed && !hasBlocked) {
+            return <span className="text-xs text-gray-600">{row.error || ''}</span>
+          }
+          return (
+            <div className="flex flex-col gap-0.5 text-xs">
+              {hasAllowed && (
+                <span className="text-gray-600">
+                  {t(`${p}.protectedTagNote`, 'Protected tag: {{names}}', {
+                    names: row.protected_allowed_names.join(', '),
+                  })}
+                </span>
+              )}
+              {hasBlocked && (
+                <span className="text-error-600 font-medium">
+                  {t(`${p}.requirePermissionNote`, 'Require permission! Protected tag: {{names}}', {
+                    names: row.protected_blocked_names.join(', '),
+                  })}
+                </span>
+              )}
+            </div>
+          )
+        },
       },
     ],
     [t, p]

@@ -237,6 +237,15 @@ export function useAssignClient() {
         exact: true,
       })
       queryClient.invalidateQueries({ queryKey: clientKeys.lists() })
+      // The client-detail page reads responsible_employee_name /
+      // responsible_searcher_name from the profile query, not the detail
+      // query — so the displayed name only refreshes if we invalidate
+      // that cache too. Same convention every other mutation in this
+      // file uses (see useCreateAddress, useUpdateContact, etc.).
+      queryClient.invalidateQueries({
+        queryKey: clientKeys.profile(variables.clientId),
+        exact: true,
+      })
       // The `contact.responsible_changed` event is published after this
       // request returns and the tag-service applies any matching auto-tag
       // rules asynchronously (RabbitMQ → Celery). Refetch the client's
@@ -722,6 +731,32 @@ export function useCloseDebt() {
     },
     onError: (error: AxiosError<{ detail?: string }>) => {
       const message = error?.response?.data?.detail || 'Failed to close loan'
+      toast.error(message)
+    },
+  })
+}
+
+/**
+ * Reopen a closed debt (set status back to 'active'). Linked RRs in a
+ * terminal state are cascaded to Cancelled by the backend.
+ */
+export function useReopenDebt() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ clientId, debtId }: { clientId: number; debtId: number }) =>
+      clientApi.reopenDebt(clientId, debtId),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: clientKeys.loans(variables.clientId), exact: true })
+      queryClient.invalidateQueries({
+        queryKey: clientKeys.detail(variables.clientId),
+        exact: true,
+      })
+      queryClient.invalidateQueries({ queryKey: clientKeys.lists() })
+      toast.success('Loan reopened successfully')
+    },
+    onError: (error: AxiosError<{ detail?: string }>) => {
+      const message = error?.response?.data?.detail || 'Failed to reopen loan'
       toast.error(message)
     },
   })

@@ -19,6 +19,8 @@ import {
   SelectValue,
 } from '@/components/ui/Select'
 import { useTargetActions } from '@/features/targetActions/hooks/useTargetActions'
+import { useContactTypes } from '@/features/clients/hooks/useClients'
+import type { ContactSource } from '@/features/clients/api/types'
 import type { TAChainStepIn } from '@/features/taChains/api/types'
 
 interface ChainStepsEditorProps {
@@ -35,6 +37,31 @@ export function ChainStepsEditor({ steps, onChange, disabled }: ChainStepsEditor
   // an admin can re-use generic TAs across departments).
   const { data } = useTargetActions({ include_hidden: false })
   const allTAs = useMemo(() => data?.items ?? [], [data])
+  const { data: contactTypes = [] } = useContactTypes('all')
+
+  const contactSourceOptions = useMemo(() => {
+    const sources = [
+      ...new Set(
+        contactTypes
+          .map((ct) => ct.contact_source)
+          .filter(
+            (source): source is ContactSource => source === 'client' || source === 'recommender'
+          )
+      ),
+    ]
+    if (sources.length === 0) {
+      return ['client', 'recommender'] as ContactSource[]
+    }
+    return sources.sort((a, b) => {
+      if (a === b) return 0
+      return a === 'client' ? -1 : 1
+    })
+  }, [contactTypes])
+
+  const contactSourceLabel = (source: ContactSource) =>
+    source === 'recommender'
+      ? t('pages.taChains.steps.contactSourceRecommender', 'Recommender contacts')
+      : t('pages.taChains.steps.contactSourceClient', 'Client contacts')
 
   // Auto-repair: legacy chains created with a bug had `contact_source = null`
   // for contact-type steps. When the TA list is loaded, normalize any such
@@ -83,6 +110,7 @@ export function ChainStepsEditor({ steps, onChange, disabled }: ChainStepsEditor
         delay_minutes: 0,
         not_in_the_past: false,
         contact_source: firstTA.field_type === 'contact' ? 'client' : null,
+        contact_medium: firstTA.field_type === 'contact' ? 'phone' : undefined,
         show_closed_credits: false,
       },
     ])
@@ -174,8 +202,10 @@ export function ChainStepsEditor({ steps, onChange, disabled }: ChainStepsEditor
                       const next: Partial<TAChainStepIn> = { target_action_id: newId }
                       if (newTA?.field_type === 'contact') {
                         next.contact_source = step.contact_source ?? 'client'
+                        next.contact_medium = step.contact_medium ?? 'phone'
                       } else {
                         next.contact_source = null
+                        next.contact_medium = undefined
                       }
                       update(index, next)
                     }}
@@ -251,12 +281,11 @@ export function ChainStepsEditor({ steps, onChange, disabled }: ChainStepsEditor
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="client">
-                        {t('pages.taChains.steps.contactSourceClient', 'Client contacts')}
-                      </SelectItem>
-                      <SelectItem value="recommender">
-                        {t('pages.taChains.steps.contactSourceRecommender', 'Recommender contacts')}
-                      </SelectItem>
+                      {contactSourceOptions.map((source) => (
+                        <SelectItem key={source} value={source}>
+                          {contactSourceLabel(source)}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>

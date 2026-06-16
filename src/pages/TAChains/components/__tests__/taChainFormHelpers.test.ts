@@ -15,6 +15,7 @@ function makeStep(overrides: Partial<TAChainStep> = {}): TAChainStep {
     delay_minutes: 0,
     not_in_the_past: false,
     contact_source: null,
+    contact_medium: 'phone',
     show_closed_credits: true,
     position_x: null,
     position_y: null,

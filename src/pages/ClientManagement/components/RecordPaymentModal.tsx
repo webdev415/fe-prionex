@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Record Payment Modal
  *
  * Modal for recording a new payment for a client.
@@ -31,6 +31,19 @@ import { PAYMENT_TYPE_VALUES, type PaymentType } from '@/features/payments/api/t
 const RR_STATUS_CONNECTED = 1
 function isRrConnected(ra: RestructuringAgreementSummary): boolean {
   return ra.status_id === RR_STATUS_CONNECTED
+}
+
+/** Credit dropdown: {Credit Number} • {Counterparty Name} • {Total Debt} */
+function formatDebtSelectLabel(debt: DebtDetail, closedDebtBadge?: string): string {
+  let label = [
+    debt.contract_number,
+    debt.seller_company?.trim() || '-',
+    formatMoneyUAHTwoDecimals(debt.remaining_debt_amount),
+  ].join(' • ')
+  if (debt.status === 'closed' && closedDebtBadge) {
+    label += ` • ${closedDebtBadge}`
+  }
+  return label
 }
 
 /**
@@ -419,13 +432,10 @@ export function RecordPaymentModal({
                       <SelectContent>
                         {selectableDebts.map((debt) => (
                           <SelectItem key={debt.id} value={String(debt.id)}>
-                            {debt.contract_number}
-                            {debt.remaining_debt_amount
-                              ? ` • ${formatMoneyUAHTwoDecimals(debt.remaining_debt_amount)}`
-                              : ''}
-                            {debt.status === 'closed'
-                              ? ` • ${t('pages.clients.modals.recordPayment.closedDebtBadge')}`
-                              : ''}
+                            {formatDebtSelectLabel(
+                              debt,
+                              t('pages.clients.modals.recordPayment.closedDebtBadge')
+                            )}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -528,7 +538,7 @@ export function RecordPaymentModal({
                   <SelectContent>
                     {availablePaymentTypes.map((v) => (
                       <SelectItem key={v} value={v}>
-                        {t(`pages.actionAnalysis.filters.paymentTypes.${v}`, v)}
+                        {t(`pages.training.filters.paymentTypes.${v}`, v)}
                       </SelectItem>
                     ))}
                   </SelectContent>

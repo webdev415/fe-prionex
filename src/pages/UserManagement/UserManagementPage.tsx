@@ -20,7 +20,8 @@ import { EditUserModal } from './components/EditUserModal'
 import ChangeStatusModal from './components/ChangeStatusModal'
 import { ResetPasswordConfirmModal } from './components/ResetPasswordConfirmModal'
 import { AdminToggleTwoFactorModal } from './components/AdminToggleTwoFactorModal'
-import type { ApiUser } from '@/features/users/types'
+import { UserSearchBar } from './components/UserSearchBar'
+import type { ApiUser, UserSearchField } from '@/features/users/types'
 import { Icons } from '@/lib/icons'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { StatusBadge } from '@/components/ui/StatusBadge'
@@ -38,6 +39,7 @@ import {
 } from '@/components/ui/DropdownMenu'
 
 const DEFAULT_PAGE_SIZE = 10
+const DEFAULT_SEARCH_FIELD: UserSearchField = 'full_name'
 
 export function UserManagementPage() {
   const { t } = useTranslation('common')
@@ -48,6 +50,11 @@ export function UserManagementPage() {
   const [currentPage, setCurrentPage] = useURLState<number>('page', 1)
   const [pageSize, setPageSize] = useURLState<number>('pageSize', DEFAULT_PAGE_SIZE)
   const [searchQuery, setSearchQuery] = useURLState<string>('search', '')
+  const [searchField, setSearchField] = useURLState<UserSearchField>(
+    'searchField',
+    DEFAULT_SEARCH_FIELD,
+    { debounce: 0 }
+  )
 
   // Add persistence for state
   useAutoPersistedState(
@@ -56,11 +63,13 @@ export function UserManagementPage() {
       currentPage,
       pageSize,
       searchQuery,
+      searchField,
     },
     {
       currentPage: setCurrentPage,
       pageSize: setPageSize,
       searchQuery: setSearchQuery,
+      searchField: setSearchField,
     }
   )
 
@@ -109,7 +118,8 @@ export function UserManagementPage() {
   const { data, isLoading, isError, error } = useUsers({
     page: currentPage,
     page_size: pageSize,
-    search: searchQuery || undefined,
+    search: searchQuery.trim() || undefined,
+    search_field: searchQuery.trim() ? searchField : undefined,
   })
 
   const users = data?.users || []
@@ -185,6 +195,30 @@ export function UserManagementPage() {
   const handleSearch = useCallback(() => {
     setCurrentPage(1)
   }, [setCurrentPage])
+
+  const handleClearSearch = useCallback(() => {
+    setSearchQuery('')
+    setSearchField(DEFAULT_SEARCH_FIELD)
+    setCurrentPage(1)
+  }, [setSearchQuery, setSearchField, setCurrentPage])
+
+  const handleSearchFieldChange = useCallback(
+    (field: UserSearchField) => {
+      setSearchField(field)
+      if (searchQuery.trim()) {
+        setCurrentPage(1)
+      }
+    },
+    [searchQuery, setSearchField, setCurrentPage]
+  )
+
+  const handleSearchQueryChange = useCallback(
+    (value: string) => {
+      setSearchQuery(value)
+      setCurrentPage(1)
+    },
+    [setSearchQuery, setCurrentPage]
+  )
 
   // Check if user is active (for toggle state)
   const isActive = (user: ApiUser) => {
@@ -488,41 +522,15 @@ export function UserManagementPage() {
       {/* Search Bar */}
       <div className="mb-6 flex w-full items-center gap-4">
         <div className="flex items-center gap-3">
-          <div className="flex w-[280px] items-center gap-3 rounded-full border border-gray-200 bg-white pr-2 pl-4 shadow-sm sm:w-[400px] md:w-[500px] lg:w-[600px]">
-            <div className="flex flex-1 items-center gap-2 py-1">
-              <input
-                type="text"
-                placeholder={t('pages.users.searchPlaceholder')}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    handleSearch()
-                  }
-                }}
-                className="text-dark-500 h-9 w-full bg-transparent text-sm font-light outline-none placeholder:text-gray-500"
-              />
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery('')}
-                  className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-gray-100"
-                  type="button"
-                  aria-label="Clear search"
-                >
-                  <Icons.Close size={14} className="text-gray-500" />
-                </button>
-              )}
-            </div>
-            <button
-              type="button"
-              onClick={handleSearch}
-              disabled={isLoading}
-              className="bg-primary-300 flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-all duration-200 hover:scale-105 disabled:opacity-60"
-              aria-label={t('pages.users.searchButton')}
-            >
-              <Icons.Search size={18} className="text-dark-500" strokeWidth={1.5} />
-            </button>
-          </div>
+          <UserSearchBar
+            value={searchQuery}
+            searchField={searchField}
+            onValueChange={handleSearchQueryChange}
+            onSearchFieldChange={handleSearchFieldChange}
+            onSearch={handleSearch}
+            onClear={handleClearSearch}
+            isLoading={isLoading}
+          />
         </div>
       </div>
 
