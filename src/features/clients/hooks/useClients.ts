@@ -63,7 +63,7 @@ export const clientKeys = {
  * Get list of clients for user's active project
  * Auto-refetches every 60 seconds
  */
-export function useClients(params: GetClientsParams = {}) {
+export function useClients(params: GetClientsParams = {}, options: { enabled?: boolean } = {}) {
   return useQuery({
     queryKey: clientKeys.list(params),
     queryFn: () => clientApi.getClients(params),
@@ -71,7 +71,20 @@ export function useClients(params: GetClientsParams = {}) {
     placeholderData: (previousData) => previousData,
     staleTime: 2 * 60_000,
     refetchInterval: 5 * 60_000,
-    enabled: true,
+    // Callers may defer the first fetch until derived params are settled (e.g.
+    // until the operator option sets load, so an "all operators" selection is
+    // omitted instead of firing the heavy 200-id query then refetching).
+    enabled: options.enabled ?? true,
+    // The list query is the heaviest call on the dashboard. When it fails with a
+    // server error (e.g. a 502 from an OOM-killed worker during the morning login
+    // burst), retrying immediately just fires another expensive query into an
+    // already-starved backend and compounds the pressure. Only retry once for
+    // genuine network blips; never retry on a 4xx/5xx response.
+    retry: (failureCount, error) => {
+      const status = (error as AxiosError)?.response?.status
+      if (status && status >= 400) return false
+      return failureCount < 1
+    },
   })
 }
 
