@@ -155,6 +155,8 @@ import type {
   TaskHistoryFilters,
   TaskHistoryResponse,
   TaskSubject,
+  WeeklyBucketFilters,
+  WeeklyBucketResponse,
 } from '../types'
 
 function buildTaskHistoryParams(filters: TaskHistoryFilters): URLSearchParams {
@@ -211,6 +213,26 @@ export async function listTaskSubjects(): Promise<TaskSubject[]> {
   return response.data.subjects ?? []
 }
 
+function buildWeeklyBucketParams(filters: WeeklyBucketFilters): URLSearchParams {
+  // Repeated `?key=val` for list-shaped filters — FastAPI's
+  // `Optional[List[…]] = Query(None)` rejects Axios's default `[]` suffix.
+  const params = new URLSearchParams()
+  filters.operator_ids?.forEach((id) => params.append('operator_ids', String(id)))
+  if (filters.from_date) params.set('from_date', filters.from_date)
+  if (filters.to_date) params.set('to_date', filters.to_date)
+  filters.status_in?.forEach((s) => params.append('status_in', s))
+  filters.priority_in?.forEach((p) => params.append('priority_in', p))
+  if (filters.include_no_due_date) params.set('include_no_due_date', 'true')
+  return params
+}
+
+export async function getWeeklyBucket(filters: WeeklyBucketFilters): Promise<WeeklyBucketResponse> {
+  const response = await api.get<WeeklyBucketResponse>('/api/v1/tasks/weekly-bucket', {
+    params: buildWeeklyBucketParams(filters),
+  })
+  return response.data
+}
+
 import type { PaymentMonitoringFilters, PaymentMonitoringResponse } from '../types'
 
 function buildPaymentMonitoringParams(filters: PaymentMonitoringFilters): URLSearchParams {
@@ -259,5 +281,6 @@ export const actionAnalysisService = {
   getTaskHistory,
   getTaskHistoryAnalytics,
   listTaskSubjects,
+  getWeeklyBucket,
   getPaymentMonitoring,
 }
