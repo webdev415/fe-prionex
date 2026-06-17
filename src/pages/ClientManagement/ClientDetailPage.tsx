@@ -280,6 +280,22 @@ export function ClientDetailPage() {
   const [activeCommentTab, setActiveCommentTab] = useState<
     'ta-chains' | 'comments' | 'primary' | 'searcher' | 'dial-history'
   >('ta-chains')
+  // KAN-610: declared here (early) so the right-card data hooks below can be
+  // gated by the active tab — opening a client card no longer fires ~20 parallel
+  // requests; hidden-tab data is fetched lazily on first tab click.
+  const [activeRightCardTab, setActiveRightCardTab] = useState<
+    | 'loans'
+    | 'payments'
+    | 'recommenders'
+    | 'operators'
+    | 'call-sms-history'
+    | 'tasks'
+    | 'documents'
+    | 'ta-chains'
+  >('loans')
+  const [activeCallSmsTab, setActiveCallSmsTab] = useState<'all' | 'calls' | 'sms' | 'messaging'>(
+    'all'
+  )
   const [isChainExecutorOpen, setIsChainExecutorOpen] = useState(false)
   // Context for the chain executor when opened from a phone row. null/null
   // means "general entry point" (header Log Interaction button) — no chain
@@ -363,11 +379,11 @@ export function ClientDetailPage() {
   const { mutate: recordOverpayment, isPending: isRecordingOverpayment } = useRecordRROverpayment()
   const { data: paymentsSection, isLoading: isPaymentsLoading } = useClientPaymentsSection(
     clientId,
-    isValidClientId
+    isValidClientId && activeRightCardTab === 'payments'
   )
   const { data: callSmsHistory, isLoading: isCallSmsLoading } = useClientCallSmsHistory(
     clientId,
-    isValidClientId
+    isValidClientId && activeRightCardTab === 'call-sms-history'
   )
   const canAccessMessagingHistory = useHasAnyPermission([
     ...ALL_MESSAGING_SEND_PERMISSIONS,
@@ -377,7 +393,7 @@ export function ClientDetailPage() {
     useMessagingClientHistory(
       clientId,
       { limit: 100, offset: 0 },
-      isValidClientId && canAccessMessagingHistory
+      isValidClientId && canAccessMessagingHistory && activeRightCardTab === 'call-sms-history'
     )
   const activeProjectId = useAuthStore((s) => s.user?.active_project_id)
   const { data: messagingOperators = [] } = useOperators(
@@ -390,23 +406,28 @@ export function ClientDetailPage() {
   const canViewTasks = useHasPermission(PERMISSIONS.CLIENTS.VIEW_TASKS)
   const { data: tasks = [], isLoading: isTasksLoading } = useClientTasks(
     clientId,
-    isValidClientId && canViewTasks
+    isValidClientId && canViewTasks && activeRightCardTab === 'tasks'
   )
   const { data: operatorsSection, isLoading: isOperatorsLoading } = useClientOperatorsSection(
     clientId,
-    isValidClientId
+    isValidClientId && activeRightCardTab === 'operators'
   )
   const { data: documents = [], isLoading: isDocumentsLoading } = useClientDocuments(
     clientId,
-    isValidClientId
+    isValidClientId && activeRightCardTab === 'documents'
   )
+  // KAN-610: client interactions power only the comments/primary/searcher
+  // comment-tabs (default comment-tab is 'ta-chains'), so fetch lazily.
   const { data: activities = [], isLoading: isActivitiesLoading } = useClientActivities(
     clientId,
-    isValidClientId
+    isValidClientId &&
+      (activeCommentTab === 'comments' ||
+        activeCommentTab === 'primary' ||
+        activeCommentTab === 'searcher')
   )
   const { data: dialHistory = [], isLoading: isDialHistoryLoading } = useClientDialHistory(
     clientId,
-    isValidClientId
+    isValidClientId && activeCommentTab === 'dial-history'
   )
   const { mutate: addSpamCall } = useAddSpamCallHistory(clientId)
   const { mutate: createContact, isPending: isCreatingContact } = useCreateContact()
@@ -1052,24 +1073,14 @@ export function ClientDetailPage() {
   const [activeClientCardTab, setActiveClientCardTab] = useState<'personal' | 'passport' | 'work'>(
     'personal'
   )
-  const [activeRightCardTab, setActiveRightCardTab] = useState<
-    | 'loans'
-    | 'payments'
-    | 'recommenders'
-    | 'operators'
-    | 'call-sms-history'
-    | 'tasks'
-    | 'documents'
-    | 'ta-chains'
-  >('loans')
+  // KAN-610: activeRightCardTab moved up (near activeCommentTab) so the data
+  // hooks can gate on it for lazy loading.
   const [isUploadDocModalOpen, setIsUploadDocModalOpen] = useState(false)
   const [activePaymentTab, setActivePaymentTab] = useState<
     'payments' | 'writes-off' | 'primary-creditor'
   >('payments')
   const [activeOperatorTab, setActiveOperatorTab] = useState<'operators' | 'searchers'>('operators')
-  const [activeCallSmsTab, setActiveCallSmsTab] = useState<'all' | 'calls' | 'sms' | 'messaging'>(
-    'all'
-  )
+  // KAN-610: activeCallSmsTab moved up (near activeCommentTab) for lazy gating.
   const [selectedMessageData, setSelectedMessageData] = useState<{
     campaignName: string
     campaignCode: string

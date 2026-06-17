@@ -80,15 +80,17 @@ export function InboxTab({
   const canSelectScope = userPermissions.includes(PERMISSIONS.TRAINING.SELECT_INBOX_SCOPE)
   const currentUserId = useAuthStore((s) => (s.user?.id ? Number(s.user.id) : null))
 
-  const effectiveUserIds = useMemo<number[]>(() => {
+  // scope=all collapses to `undefined` (BE treats absent user_ids as
+  // "all in scope" — semantically equivalent). Previously this returned
+  // `operators.map((o) => o.id)`, baking a 50-200 id array into the
+  // react-query key on every operators-update and re-stringifying it
+  // into the cache key on every render.
+  const effectiveUserIds = useMemo<number[] | undefined>(() => {
     if (!canSelectScope) {
       return currentUserId != null ? [currentUserId] : []
     }
-    if (scoped.userIds === undefined) {
-      return operators.map((o) => o.id)
-    }
     return scoped.userIds
-  }, [canSelectScope, currentUserId, scoped.userIds, operators])
+  }, [canSelectScope, currentUserId, scoped.userIds])
 
   // ?priority= chip state — defaults to 'all' and round-trips through the
   // URL so deep links survive a reload.
@@ -108,8 +110,12 @@ export function InboxTab({
     setSearchParams(params, { replace: true })
   }
 
-  const { data: queue, isLoading } = useInboxQueue(
-    {
+  // Memoized so the queryKey doesn't re-hash on every render. `enabled`
+  // is true when user_ids is undefined (scope=all → BE returns the full
+  // scope) OR when user_ids is non-empty (some explicit scope produced
+  // hits). An explicit empty array short-circuits to disabled.
+  const queueFilters = useMemo(
+    () => ({
       user_ids: effectiveUserIds,
       state: inboxState.states.length > 0 ? inboxState.states : undefined,
       period: inboxState.period,
@@ -117,8 +123,18 @@ export function InboxTab({
       to_date: inboxState.customToDate,
       page: 1,
       page_size: 100,
-    },
-    effectiveUserIds.length > 0
+    }),
+    [
+      effectiveUserIds,
+      inboxState.states,
+      inboxState.period,
+      inboxState.customFromDate,
+      inboxState.customToDate,
+    ]
+  )
+  const { data: queue, isLoading } = useInboxQueue(
+    queueFilters,
+    effectiveUserIds === undefined || effectiveUserIds.length > 0
   )
 
   const derivedRows = useMemo(
@@ -179,9 +195,13 @@ export function InboxTab({
 
   // Headline count badge next to the "Event Feed" tab. Same scope as the
   // inbox queue so the trainer sees activity from their operators only.
+  const teamEventsFilters = useMemo(
+    () => ({ user_ids: effectiveUserIds, hours: 24, limit: 20 }),
+    [effectiveUserIds]
+  )
   const { data: teamEventsData } = useTeamEvents(
-    { user_ids: effectiveUserIds, hours: 24, limit: 20 },
-    effectiveUserIds.length > 0
+    teamEventsFilters,
+    effectiveUserIds === undefined || effectiveUserIds.length > 0
   )
   const teamEventsCount = teamEventsData?.data.length ?? 0
 
@@ -267,7 +287,7 @@ export function InboxTab({
       </div>
 
       <div className={BODY_LAYOUT}>
-        {effectiveUserIds.length === 0 ? (
+        {effectiveUserIds !== undefined && effectiveUserIds.length === 0 ? (
           <div className="rounded-xl border border-[#EBECE8] bg-white p-6 text-center text-xs text-gray-500">
             {t('pages.training.inbox.list.emptyScope', 'No operators in the current scope.')}
           </div>

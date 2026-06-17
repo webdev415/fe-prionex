@@ -26,14 +26,13 @@ import {
   OperatorMultiSelectDropdown,
 } from './OperatorMultiSelectDropdown'
 import { useSellers } from '@/features/sellers/hooks/useSellers'
-import { useOperators } from '@/features/users/hooks/useUsers'
-import { useClientAssigneeIds } from '@/features/clients/hooks/useClients'
 import { useTags } from '@/features/tags/hooks/useTags'
 import { useTAChains } from '@/features/taChains'
 import { useTargetActions } from '@/features/targetActions/hooks/useTargetActions'
 import type { TargetAction } from '@/features/targetActions/api/types'
 import { ClientStepFilterDropdown } from './ClientStepFilterDropdown'
 import { ClientStepValueRow, type StepValueEntry } from './ClientStepValueRow'
+import { useOperatorFilterOptions } from '../hooks/useOperatorFilterOptions'
 import { useAuthStore } from '@/stores/authStore'
 import { formatPickerDateAsYMD } from '@/lib/dateUtils'
 import type { ClientFilters } from '../ClientManagementPage'
@@ -217,65 +216,16 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
     }))
   }, [sellersResponse])
 
-  // Operators (active + inactive, non-deleted) for the three operator dropdowns,
-  // plus the per-role assignee id sets that gate which *inactive* operators
-  // appear. Rule (all three): all active operators are shown; an inactive
-  // operator is shown only if it has ≥1 client in the relevant role — employee
-  // for Responsible Employee, searcher for Responsible Searcher, either role
-  // for Interaction Created By.
+  // Operators for the three operator dropdowns. Derivation lives in the shared
+  // useOperatorFilterOptions hook so ClientManagementPage's "all operators
+  // selected → omit filter" detection uses the exact same option set this UI
+  // renders (no drift). Rule (all three): all active operators are shown; an
+  // inactive operator is shown only if it has ≥1 client in the relevant role —
+  // employee for Responsible Employee, searcher for Responsible Searcher, either
+  // role for Interaction Created By.
   const activeProjectId = useAuthStore((s) => s.user?.active_project_id)
-  const { data: operators } = useOperators(activeProjectId ? Number(activeProjectId) : null, {
-    includeInactive: true,
-  })
-  const { data: assigneeIds } = useClientAssigneeIds(!!activeProjectId)
-
-  const { employeeIds, searcherIds, anyAssignedIds } = useMemo(() => {
-    const emp = new Set<number>(assigneeIds?.employee_ids ?? [])
-    const sea = new Set<number>(assigneeIds?.searcher_ids ?? [])
-    return {
-      employeeIds: emp,
-      searcherIds: sea,
-      anyAssignedIds: new Set<number>([...emp, ...sea]),
-    }
-  }, [assigneeIds])
-
-  // active → always shown; inactive → only if present in the gate set.
-  // Multi-select variants (KAN-572): the operator-dropdown component
-  // and the URL state both use numeric ids, so emit those directly.
-  const interactionUserOptions = useMemo(
-    () =>
-      (operators ?? [])
-        .filter((u) => u.status === 'active' || anyAssignedIds.has(u.id))
-        .map((u) => ({
-          id: u.id,
-          name: u.full_name,
-          isInactive: u.status !== 'active',
-        })),
-    [operators, anyAssignedIds]
-  )
-  const employeeOptions = useMemo(
-    () =>
-      (operators ?? [])
-        .filter((u) => u.status === 'active' || employeeIds.has(u.id))
-        .map((u) => ({
-          id: u.id,
-          name: u.full_name,
-          isInactive: u.status !== 'active',
-        })),
-    [operators, employeeIds]
-  )
-  // Searcher still feeds the legacy single-select (not in KAN-572 scope),
-  // so its id stays as a string for SelectItem compatibility.
-  const searcherOptions = useMemo(
-    () =>
-      (operators ?? [])
-        .filter((u) => u.status === 'active' || searcherIds.has(u.id))
-        .map((u) => ({
-          id: u.id.toString(),
-          name: u.full_name,
-          isInactive: u.status !== 'active',
-        })),
-    [operators, searcherIds]
+  const { employeeOptions, interactionUserOptions, searcherOptions } = useOperatorFilterOptions(
+    activeProjectId ? Number(activeProjectId) : null
   )
 
   // Date-only filters: pass the picked day straight through (no

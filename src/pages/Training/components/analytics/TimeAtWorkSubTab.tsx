@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { memo, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
 import { useAuthStore } from '@/stores/authStore'
@@ -163,13 +163,12 @@ export function TimeAtWorkSubTab() {
       .map((op) => op.id)
   }, [operators, department])
 
-  const screenTimeQuery = useScreenTime(
-    {
-      period: 'today',
-      operator_ids: filteredOperatorIds,
-    },
-    projectIdNum != null
+  // Memoize the filter literal so the react-query key stays stable.
+  const screenTimeFilters = useMemo(
+    () => ({ period: 'today' as const, operator_ids: filteredOperatorIds }),
+    [filteredOperatorIds]
   )
+  const screenTimeQuery = useScreenTime(screenTimeFilters, projectIdNum != null)
 
   const rows = useMemo<OperatorRow[]>(
     () => buildRows(screenTimeQuery.data?.operators, operators),
@@ -376,7 +375,11 @@ export function TimeAtWorkSubTab() {
   )
 }
 
-function TimeAtWorkRow({ row }: { row: OperatorRow }) {
+/** Memoized so a sort/department change doesn't repaint every row when
+ *  the row's own data is unchanged. */
+const TimeAtWorkRow = memo(TimeAtWorkRowImpl, (prev, next) => prev.row === next.row)
+
+function TimeAtWorkRowImpl({ row }: { row: OperatorRow }) {
   // `highlight` covers the time_to_card_open_ms metric only (the one the
   // analytics-service benchmark currently classifies); other columns stay
   // at the neutral-red default.
