@@ -2738,6 +2738,7 @@
           "income": "Income statement",
           "outcome": "Extract / statement",
           "signature": "Digital signature",
+          "military": "Military",
           "other": "Other"
         },
         "department": "Department",
@@ -3390,6 +3391,7 @@
         "income": "Income statement",
         "outcome": "Extract / statement",
         "signature": "Digital signature",
+        "military": "Military",
         "other": "Other"
       },
       "actions": {

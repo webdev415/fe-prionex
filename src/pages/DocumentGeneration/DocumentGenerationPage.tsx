@@ -45,6 +45,7 @@ const DOCUMENT_TYPES: DocumentType[] = [
   'income',
   'outcome',
   'signature',
+  'military',
   'other',
 ]
 
