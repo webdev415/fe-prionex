@@ -1,10 +1,9 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
+import { useTaskHistory, useWeeklyBucket } from '@/features/training/hooks/useTaskHistory'
+import type { TaskHistoryItem, WeeklyBucket, WeeklyDowKey } from '@/features/training/types'
 import {
-  MOCK_TASKS,
-  MOCK_WEEKLY_TASKS_KPIS,
-  type MockTaskRow,
   type TaskPriority,
   type TaskStatus,
   type WeeklyDayStatus,
@@ -18,10 +17,14 @@ import {
 } from './analyticsTableStyles'
 
 /**
- * Weekly Tasks sub-tab under Action Analysis (KAN-415). Mirrors the Figma
- * Tab-2 frame: active "The Week N" Σ tile + day tiles with date/day/today
- * layout and status dots, dismissible overdue banner, status chips, table
- * with stacked date/time, Subject column, and chili-style priority.
+ * Weekly Tasks sub-tab under Action Analysis (KAN-732). Wired to the
+ * `/api/v1/tasks/weekly-bucket` aggregation (heatmap strip + overdue banner)
+ * and `/api/v1/tasks/history` (detail rows), scoped to the current week.
+ *
+ * Layout/UI parity with the Figma Tab-2 mock is preserved exactly: active
+ * "The Week" Σ tile + Mon–Sat day tiles with date/day/today layout and status
+ * dots, dismissible overdue banner, status chips, and a table with stacked
+ * date/time, Subject column, and chili-style priority.
  */
 
 const DAY_STATUS_DOT: Record<WeeklyDayStatus, string> = {
@@ -59,6 +62,90 @@ const PRIORITY_CHILIS: Record<TaskPriority, number> = {
   low: 0,
 }
 
+/** Mon-first day-of-week keys + the six tiles the Figma strip renders (Mon–Sat). */
+const DOW_KEYS: WeeklyDowKey[] = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']
+const DAY_FULL_LABELS = [
+  'Monday',
+  'Tuesday',
+  'Wednesday',
+  'Thursday',
+  'Friday',
+  'Saturday',
+  'Sunday',
+]
+const DAY_SHORT_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+const VISIBLE_DAY_COUNT = 6 // Mon–Sat, matching the Figma frame
+
+/** BE priority vocabulary (low/normal/high/urgent/critical) → Figma chili scale. */
+function toDisplayPriority(priority: string): TaskPriority {
+  switch (priority) {
+    case 'urgent':
+    case 'critical':
+      return 'critical'
+    case 'high':
+      return 'high'
+    case 'low':
+      return 'low'
+    default: // 'normal' and anything unexpected
+      return 'medium'
+  }
+}
+
+/** BE status + is_overdue → the four Figma chip buckets. */
+function toDisplayStatus(item: TaskHistoryItem): TaskStatus {
+  if (item.is_overdue) return 'overdue'
+  if (item.status === 'completed') return 'completed'
+  if (item.status === 'in_progress') return 'in_progress'
+  return 'open'
+}
+
+interface WeeklyTaskRow {
+  id: number
+  dateLabel: string
+  timeLabel: string
+  title: string
+  executor: string
+  author: string
+  priority: TaskPriority
+  status: TaskStatus
+}
+
+/** Parse a naive ISO due_date string directly (no timezone math — the BE stores
+ *  naive UTC and the Figma table shows the stored wall-clock). */
+function toRow(item: TaskHistoryItem): WeeklyTaskRow {
+  const iso = item.due_date ?? item.created_at ?? ''
+  const [datePart = '', timePart = ''] = iso.split('T')
+  const [, mm = '', dd = ''] = datePart.split('-')
+  const hhmm = timePart.slice(0, 5)
+  return {
+    id: item.id,
+    dateLabel: mm && dd ? `${mm}/${dd}` : '—',
+    timeLabel: hhmm,
+    title: item.subject_name ?? item.title,
+    executor: item.assigned_to_username ?? '—',
+    author: item.created_by_name ?? '—',
+    priority: toDisplayPriority(String(item.priority)),
+    status: toDisplayStatus(item),
+  }
+}
+
+interface DayTile {
+  label: string
+  fullLabel: string
+  dateLabel: string
+  isToday: boolean
+  count: number
+  status: WeeklyDayStatus
+}
+
+function pad2(n: number): string {
+  return String(n).padStart(2, '0')
+}
+
+function naiveIso(d: Date): string {
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}T00:00:00`
+}
+
 /** Inline chili-pepper SVG (no chili glyph in Icons module). */
 function ChiliIcon({ size = 14, className = '' }: { size?: number; className?: string }) {
   return (
@@ -86,11 +173,59 @@ export function WeeklyTasksSubTab() {
   const { t } = useTranslation('common')
   const [statusFilter, setStatusFilter] = useState<'all' | TaskStatus>('all')
   const [bannerDismissed, setBannerDismissed] = useState(false)
-  const k = MOCK_WEEKLY_TASKS_KPIS
 
-  const filteredTasks = MOCK_TASKS.filter(
-    (task) => statusFilter === 'all' || task.status === statusFilter
-  )
+  // Current week window (Monday 00:00 .. next Monday), recomputed once per
+  // mount; stable string content keeps the react-query key from thrashing.
+  const { weekStart, fromDate, toDate } = useMemo(() => {
+    const now = new Date()
+    const dow = (now.getDay() + 6) % 7 // 0 = Mon … 6 = Sun
+    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - dow)
+    const end = new Date(now.getFullYear(), now.getMonth(), now.getDate() - dow + 7)
+    return { weekStart: start, fromDate: naiveIso(start), toDate: naiveIso(end) }
+  }, [])
+
+  const { data: weekly, isLoading: weeklyLoading } = useWeeklyBucket({
+    from_date: fromDate,
+    to_date: toDate,
+  })
+
+  const { data: history, isLoading: historyLoading } = useTaskHistory({
+    due_date_from: fromDate,
+    due_date_to: toDate,
+    sort: 'due_date_asc',
+    limit: 200,
+  })
+
+  const bucket: WeeklyBucket | undefined = weekly?.buckets[0]
+  const weekTotal = bucket?.total ?? 0
+  const overdueTotal = weekly?.totals.overdue ?? 0
+
+  const days: DayTile[] = useMemo(() => {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    return Array.from({ length: VISIBLE_DAY_COUNT }, (_, i) => {
+      const dayDate = new Date(weekStart)
+      dayDate.setDate(weekStart.getDate() + i)
+      const key = DOW_KEYS[i]
+      const count = bucket?.day_counts[key] ?? 0
+      const overdue = bucket?.day_overdue[key] ?? 0
+      const status: WeeklyDayStatus = overdue > 0 ? 'overdue' : count > 0 ? 'healthy' : 'none'
+      return {
+        label: DAY_SHORT_LABELS[i],
+        fullLabel: DAY_FULL_LABELS[i],
+        dateLabel: `${pad2(dayDate.getMonth() + 1)}/${pad2(dayDate.getDate())}`,
+        isToday: dayDate.getTime() === today.getTime(),
+        count,
+        status,
+      }
+    })
+  }, [bucket, weekStart])
+
+  const rows = useMemo(() => (history?.items ?? []).map(toRow), [history])
+
+  const filteredRows = rows.filter((row) => statusFilter === 'all' || row.status === statusFilter)
+
+  const isLoading = weeklyLoading || historyLoading
 
   return (
     <div className="flex flex-col gap-4">
@@ -105,12 +240,12 @@ export function WeeklyTasksSubTab() {
             <span className="text-[10px] leading-tight font-medium tracking-wide text-white/70 uppercase">
               {t('pages.training.weeklyTasks.kpi.week', 'The Week')}
             </span>
-            <span className="text-xl leading-tight font-semibold text-white">{k.weekTotal}</span>
+            <span className="text-xl leading-tight font-semibold text-white">{weekTotal}</span>
           </div>
         </div>
 
         {/* Day tiles */}
-        {k.days.map((day) => (
+        {days.map((day) => (
           <div
             key={day.label}
             className="flex items-center justify-between gap-2 rounded-xl border border-[#EBECE8] bg-white px-3 py-2.5 shadow-[0px_1px_2px_rgba(0,0,0,0.04)]"
@@ -145,8 +280,8 @@ export function WeeklyTasksSubTab() {
         ))}
       </div>
 
-      {/* Weekly overdue banner — dismissible */}
-      {!bannerDismissed ? (
+      {/* Weekly overdue banner — dismissible, shown only when overdue tasks exist */}
+      {overdueTotal > 0 && !bannerDismissed ? (
         <div className="flex items-center justify-between rounded-xl border border-[#FECACA] bg-[#FEF2F2] px-4 py-2.5">
           <div className="flex items-center gap-2 text-xs font-medium text-[#B91C1C]">
             <Icons.Warning size={14} />
@@ -168,8 +303,7 @@ export function WeeklyTasksSubTab() {
         {(['all', 'open', 'in_progress', 'overdue', 'completed'] as const).map((s) => {
           const isActive = statusFilter === s
           const label = s === 'all' ? 'All tasks' : STATUS_LABEL[s]
-          const count =
-            s === 'all' ? MOCK_TASKS.length : MOCK_TASKS.filter((task) => task.status === s).length
+          const count = s === 'all' ? rows.length : rows.filter((row) => row.status === s).length
           return (
             <button
               key={s}
@@ -216,16 +350,30 @@ export function WeeklyTasksSubTab() {
           </tr>
         </thead>
         <tbody>
-          {filteredTasks.map((task) => (
-            <TaskRow key={task.id} task={task} />
-          ))}
+          {isLoading ? (
+            <tr className={ANALYTICS_TABLE_ROW}>
+              <td className={ANALYTICS_TABLE_TD} colSpan={6}>
+                <span className="text-[#676767]">{t('common.loading', 'Loading…')}</span>
+              </td>
+            </tr>
+          ) : filteredRows.length === 0 ? (
+            <tr className={ANALYTICS_TABLE_ROW}>
+              <td className={ANALYTICS_TABLE_TD} colSpan={6}>
+                <span className="text-[#676767]">
+                  {t('pages.training.weeklyTasks.empty', 'No tasks for this week')}
+                </span>
+              </td>
+            </tr>
+          ) : (
+            filteredRows.map((row) => <TaskRow key={row.id} task={row} />)
+          )}
         </tbody>
       </AnalyticsMockTable>
     </div>
   )
 }
 
-function TaskRow({ task }: { task: MockTaskRow }) {
+function TaskRow({ task }: { task: WeeklyTaskRow }) {
   const chiliCount = PRIORITY_CHILIS[task.priority]
   return (
     <tr className={ANALYTICS_TABLE_ROW}>
