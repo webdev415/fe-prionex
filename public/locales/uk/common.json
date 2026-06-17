@@ -2045,6 +2045,14 @@
         "skipped": "Пропущено",
         "bounced": "Відхилено"
       },
+      "messageHistory": {
+        "destinationOwner": {
+          "client": "Клієнт",
+          "referrer": "Поручитель",
+          "work": "Робочий телефон",
+          "other": "Інший"
+        }
+      },
       "activity": {
         "score": "Оцінка",
         "addNote": "Додати примітку",
