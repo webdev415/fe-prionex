@@ -45,6 +45,7 @@ const DOC_TYPE_VALUES = [
   'income',
   'outcome',
   'signature',
+  'military',
   'other',
 ] as const
 

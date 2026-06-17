@@ -11,6 +11,7 @@ export type DocumentType =
   | 'income'
   | 'outcome'
   | 'signature'
+  | 'military'
   | 'other'
 
 export interface DocumentJournalEntry {
