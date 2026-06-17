@@ -1,7 +1,13 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { renderHook, act, waitFor } from '@testing-library/react'
 import { useIncomingCall } from '../useIncomingCall'
+import { getAccessToken } from '@/lib/api'
 import type { IncomingCallEvent } from '../../types'
+
+// The hook requires a JWT to open the authenticated Socket.IO handshake.
+vi.mock('@/lib/api', () => ({
+  getAccessToken: vi.fn(() => 'test-jwt-token'),
+}))
 
 // Mock socket.io-client
 const mockSocket = {
@@ -32,6 +38,7 @@ describe('useIncomingCall', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.mocked(getAccessToken).mockReturnValue('test-jwt-token')
   })
 
   afterEach(() => {
@@ -48,6 +55,16 @@ describe('useIncomingCall', () => {
   it('should not connect socket when agent extension is null', () => {
     renderHook(() => useIncomingCall(null))
 
+    expect(mockSocket.on).not.toHaveBeenCalled()
+  })
+
+  it('should not connect socket when no auth token is available', () => {
+    vi.mocked(getAccessToken).mockReturnValue(null)
+
+    renderHook(() => useIncomingCall(mockAgentExtension))
+
+    // Without a JWT the server refuses the handshake, so the hook must not
+    // open a socket at all.
     expect(mockSocket.on).not.toHaveBeenCalled()
   })
 
