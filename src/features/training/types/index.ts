@@ -139,6 +139,49 @@ export interface InteractionMonitoringResponse {
   page_size: number
 }
 
+// --- Promises and Callbacks sub-tab (KAN-733) ---
+
+export type PromiseCallbackSortBy = 'date' | 'amount'
+
+export type PromiseCallbackStatus = 'paid' | 'overdue' | 'pending'
+
+export interface PromiseCallbackFilters {
+  user_ids?: number[]
+  // KAN-731 Phase B server-side team-scope resolvers (intersected by the BE).
+  department_id?: number
+  group_id?: number
+  period?: CallMonitoringPeriod
+  from_datetime?: string
+  to_datetime?: string
+  sort_by?: PromiseCallbackSortBy
+  sort_dir?: InteractionMonitoringSortDir
+  page?: number
+  page_size?: number
+}
+
+export interface PromiseCallbackItem extends InteractionMonitoringItem {
+  promise_fulfilled: boolean | null
+  // Effective due date for the "Термін оплати" column: the promise date when
+  // present, else `follow_up_date` for callback-only rows.
+  payment_term_date: string | null
+  status: PromiseCallbackStatus
+}
+
+export interface PromiseCallbackSummaryCards {
+  total_promises_amount: string
+  paid_amount: string
+  overdue_count: number
+  pending_amount: string
+}
+
+export interface PromisesAndCallbacksResponse {
+  summary_cards: PromiseCallbackSummaryCards
+  items: PromiseCallbackItem[]
+  total: number
+  page: number
+  page_size: number
+}
+
 export type TaskPriority = 'low' | 'normal' | 'high' | 'urgent' | 'critical'
 
 export type TaskStatus =
