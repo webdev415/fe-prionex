@@ -308,6 +308,39 @@ export async function getPaymentMonitoring(
   return response.data
 }
 
+import type { ClosureFilters, ClosuresResponse } from '../types'
+
+function buildClosureParams(filters: ClosureFilters): URLSearchParams {
+  // Repeated `?key=val` for list-shaped filters — FastAPI's
+  // `Optional[List[int]] = Query(None)` rejects Axios's default `[]` suffix.
+  const params = new URLSearchParams()
+  if (filters.period) params.set('period', filters.period)
+  if (filters.from_datetime) params.set('from_datetime', filters.from_datetime)
+  if (filters.to_datetime) params.set('to_datetime', filters.to_datetime)
+  filters.user_ids?.forEach((id) => params.append('user_ids', String(id)))
+  if (filters.sort_by) params.set('sort_by', filters.sort_by)
+  if (filters.sort_dir) params.set('sort_dir', filters.sort_dir)
+  if (filters.page != null) params.set('page', String(filters.page))
+  if (filters.page_size != null) params.set('page_size', String(filters.page_size))
+  return params
+}
+
+export async function getSuccessfulClosures(filters: ClosureFilters): Promise<ClosuresResponse> {
+  const response = await api.get<ClosuresResponse>('/api/v1/payments/closures', {
+    params: buildClosureParams(filters),
+  })
+  return response.data
+}
+
+export async function exportSuccessfulClosures(filters: ClosureFilters): Promise<Blob> {
+  const response = await api.get<Blob>('/api/v1/payments/closures/export', {
+    params: buildClosureParams(filters),
+    responseType: 'blob',
+    timeout: 120_000,
+  })
+  return response.data
+}
+
 export const actionAnalysisService = {
   getCallMonitoring,
   exportCallMonitoring,
@@ -323,4 +356,6 @@ export const actionAnalysisService = {
   listTaskSubjects,
   getWeeklyBucket,
   getPaymentMonitoring,
+  getSuccessfulClosures,
+  exportSuccessfulClosures,
 }
