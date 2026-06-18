@@ -107,6 +107,80 @@ describe('DataTable bulk selection across pages (Select All mode)', () => {
     expect(excludedFromEmit(emitted, PAGE_2)).toEqual([])
   })
 
+  it('shows unchecked header (same as row checkboxes) when global exclusions exist', () => {
+    render(
+      <DataTable
+        columns={columns}
+        data={PAGE_2}
+        enableBulkSelection
+        selectedItems={new Set(PAGE_1_IDS)}
+        allItemsSelected
+        excludedItems={new Set()}
+        excludedItemsCount={1}
+        onSelectionChange={vi.fn()}
+        onSelectAll={vi.fn()}
+        totalCount={14060}
+      />
+    )
+
+    expect(screen.getByRole('checkbox', { name: 'Select all' })).toHaveAttribute(
+      'data-state',
+      'unchecked'
+    )
+    expect(screen.getByRole('checkbox', { name: 'Select all' })).toHaveAttribute(
+      'aria-checked',
+      'mixed'
+    )
+  })
+
+  it('shows checked header only when there are no exclusions anywhere', () => {
+    render(
+      <DataTable
+        columns={columns}
+        data={PAGE_2}
+        enableBulkSelection
+        selectedItems={new Set(PAGE_1_IDS)}
+        allItemsSelected
+        excludedItems={new Set()}
+        excludedItemsCount={0}
+        onSelectionChange={vi.fn()}
+        onSelectAll={vi.fn()}
+        totalCount={14060}
+      />
+    )
+
+    expect(screen.getByRole('checkbox', { name: 'Select all' })).toHaveAttribute(
+      'data-state',
+      'checked'
+    )
+  })
+
+  it('shows unchecked header when current page has a local exclusion', () => {
+    render(
+      <DataTable
+        columns={columns}
+        data={PAGE_2}
+        enableBulkSelection
+        selectedItems={new Set([11, 13])}
+        allItemsSelected
+        excludedItems={new Set([12])}
+        excludedItemsCount={1}
+        onSelectionChange={vi.fn()}
+        onSelectAll={vi.fn()}
+        totalCount={14060}
+      />
+    )
+
+    expect(screen.getByRole('checkbox', { name: 'Select all' })).toHaveAttribute(
+      'data-state',
+      'unchecked'
+    )
+    expect(screen.getByRole('checkbox', { name: 'Select all' })).toHaveAttribute(
+      'aria-checked',
+      'mixed'
+    )
+  })
+
   it('normal (non all-selected) selection still toggles via the provided set', () => {
     const onSelectionChange = vi.fn<(s: Set<number | string>) => void>()
 
