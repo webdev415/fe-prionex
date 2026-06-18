@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
+import { Pagination } from '@/components/ui/Pagination'
 import { useTaskHistory, useWeeklyBucket } from '@/features/training/hooks/useTaskHistory'
 import type { TaskHistoryItem, WeeklyBucket, WeeklyDowKey } from '@/features/training/types'
 import {
@@ -173,6 +174,8 @@ export function WeeklyTasksSubTab() {
   const { t } = useTranslation('common')
   const [statusFilter, setStatusFilter] = useState<'all' | TaskStatus>('all')
   const [bannerDismissed, setBannerDismissed] = useState(false)
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(50)
 
   // Current week window (Monday 00:00 .. next Monday), recomputed once per
   // mount; stable string content keeps the react-query key from thrashing.
@@ -193,8 +196,12 @@ export function WeeklyTasksSubTab() {
     due_date_from: fromDate,
     due_date_to: toDate,
     sort: 'due_date_asc',
-    limit: 200,
+    skip: (page - 1) * pageSize,
+    limit: pageSize,
   })
+
+  const historyTotal = history?.total ?? 0
+  const totalPages = Math.max(1, Math.ceil(historyTotal / pageSize))
 
   const bucket: WeeklyBucket | undefined = weekly?.buckets[0]
   const weekTotal = bucket?.total ?? 0
@@ -371,6 +378,18 @@ export function WeeklyTasksSubTab() {
           )}
         </tbody>
       </AnalyticsMockTable>
+
+      {/* Status chips filter the current page client-side, so the pager only
+       *  shows under the unfiltered "All tasks" view. */}
+      {statusFilter === 'all' && historyTotal > pageSize ? (
+        <Pagination
+          currentPage={page}
+          totalPages={totalPages}
+          pageSize={pageSize}
+          onPageChange={setPage}
+          onPageSizeChange={setPageSize}
+        />
+      ) : null}
     </div>
   )
 }

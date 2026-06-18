@@ -323,7 +323,10 @@ export function TrainingPage() {
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    // Bottom padding clears the page-wide fixed Coach's Workspace banner
+    // (`fixed bottom-4` below), so bottom-anchored content — e.g. the Action
+    // Analysis pagers — isn't hidden behind it.
+    <div className="flex flex-col gap-4 pb-28">
       {/* Header strip — shared across every top-tab */}
       <TrainerHeaderStrip filters={headerKpisFilters} enabled={canViewInbox} />
 

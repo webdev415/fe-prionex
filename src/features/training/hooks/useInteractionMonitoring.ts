@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
+import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { getInteractionMonitoring } from '../api/actionAnalysisService'
 import type { InteractionMonitoringFilters } from '../types'
 
@@ -14,5 +14,6 @@ export function useInteractionMonitoring(filters: InteractionMonitoringFilters, 
     queryFn: () => getInteractionMonitoring(filters),
     enabled,
     staleTime: 30_000,
+    placeholderData: keepPreviousData,
   })
 }

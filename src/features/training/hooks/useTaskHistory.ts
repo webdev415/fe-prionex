@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
+import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import {
   getTaskHistory,
   getTaskHistoryAnalytics,
@@ -35,6 +35,7 @@ export function useTaskHistory(filters: TaskHistoryFilters, enabled = true) {
     queryFn: () => getTaskHistory(filters),
     enabled,
     staleTime: 30_000,
+    placeholderData: keepPreviousData,
   })
 }
 

@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
+import { Pagination } from '@/components/ui/Pagination'
 import { useAuthStore } from '@/stores/authStore'
 import { useOperators } from '@/features/users/hooks'
 import { useSuccessfulClosures } from '@/features/training/hooks/useSuccessfulClosures'
@@ -127,6 +128,20 @@ export function SuccessfulClosuresSubTab() {
   const [period, setPeriod] = useState<PeriodOption>('today')
   const [operatorFilter, setOperatorFilter] = useState<'all' | string>('all')
   const [statusFilter, setStatusFilter] = useState<'all' | string>('all')
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(50)
+
+  // Server-side filters (period/operator) invalidate the page offset, so their
+  // setters reset to page 1. The status filter is client-side over the current
+  // page, so it intentionally leaves the page unchanged.
+  const changePeriod = (p: PeriodOption) => {
+    setPeriod(p)
+    setPage(1)
+  }
+  const changeOperator = (value: string) => {
+    setOperatorFilter(value)
+    setPage(1)
+  }
 
   const activeProjectId = useAuthStore((s) => s.user?.active_project_id)
   const projectIdNum = activeProjectId ? Number(activeProjectId) : null
@@ -135,6 +150,15 @@ export function SuccessfulClosuresSubTab() {
   const operatorIdByLabel = useMemo(() => {
     const m = new Map<string, number>()
     operators.forEach((op) => m.set(op.full_name, op.id))
+    return m
+  }, [operators])
+
+  // The closures endpoint (payment-service) doesn't enrich operator_name, so we
+  // resolve it from the project operator list by id — matching how the other
+  // sub-tabs surface the operator name + avatar instead of a bare #id.
+  const operatorNameById = useMemo(() => {
+    const m = new Map<number, string>()
+    operators.forEach((op) => m.set(op.id, op.full_name))
     return m
   }, [operators])
 
@@ -152,10 +176,10 @@ export function SuccessfulClosuresSubTab() {
       user_ids: userIds,
       sort_by: 'date',
       sort_dir: 'desc',
-      page: 1,
-      page_size: 50,
+      page,
+      page_size: pageSize,
     }),
-    [backendPeriod, userIds]
+    [backendPeriod, userIds, page, pageSize]
   )
 
   const enabled = projectIdNum != null
@@ -214,6 +238,8 @@ export function SuccessfulClosuresSubTab() {
   }, [interactionsTotal, promisesTotal, closuresCount, t])
 
   const rows = useMemo(() => closuresQuery.data?.items ?? [], [closuresQuery.data])
+  const total = closuresQuery.data?.total ?? 0
+  const totalPages = Math.max(1, Math.ceil(total / pageSize))
   const statusOptions = useMemo(() => Array.from(new Set(rows.map((r) => r.status))), [rows])
   const filteredRows = useMemo(
     () => (statusFilter === 'all' ? rows : rows.filter((r) => r.status === statusFilter)),
@@ -226,6 +252,7 @@ export function SuccessfulClosuresSubTab() {
     setPeriod('today')
     setOperatorFilter('all')
     setStatusFilter('all')
+    setPage(1)
   }
 
   return (
@@ -333,7 +360,7 @@ export function SuccessfulClosuresSubTab() {
               <button
                 key={p.id}
                 type="button"
-                onClick={() => setPeriod(p.id)}
+                onClick={() => changePeriod(p.id)}
                 className="flex items-center gap-1.5 text-xs font-medium text-[#05040D]"
               >
                 <span
@@ -354,7 +381,7 @@ export function SuccessfulClosuresSubTab() {
         <div className="relative ml-2 min-w-[180px] flex-1 sm:flex-none">
           <select
             value={operatorFilter}
-            onChange={(e) => setOperatorFilter(e.target.value)}
+            onChange={(e) => changeOperator(e.target.value)}
             className="h-9 w-full appearance-none rounded-lg border border-[#EBECE8] bg-white px-3 pr-8 text-xs text-[#05040D] focus:outline-none"
           >
             <option value="all">
@@ -454,21 +481,43 @@ export function SuccessfulClosuresSubTab() {
               <ClosureRow
                 key={`${row.client_id}-${row.payment_date}-${i}`}
                 row={row}
+                operatorName={
+                  row.operator_name ??
+                  (row.operator_id != null ? (operatorNameById.get(row.operator_id) ?? null) : null)
+                }
                 onOpenClient={() => navigate(`/dashboard/clients/${row.client_id}`)}
               />
             ))
           )}
         </tbody>
       </AnalyticsMockTable>
+
+      {statusFilter === 'all' && total > pageSize ? (
+        <Pagination
+          currentPage={page}
+          totalPages={totalPages}
+          pageSize={pageSize}
+          onPageChange={setPage}
+          onPageSizeChange={setPageSize}
+        />
+      ) : null}
     </div>
   )
 }
 
-function ClosureRow({ row, onOpenClient }: { row: ClosureItem; onOpenClient: () => void }) {
-  const operatorName = row.operator_name ?? (row.operator_id ? `#${row.operator_id}` : '—')
-  const initials = row.operator_name ? deriveInitials(row.operator_name) : ''
+function ClosureRow({
+  row,
+  operatorName,
+  onOpenClient,
+}: {
+  row: ClosureItem
+  operatorName: string | null
+  onOpenClient: () => void
+}) {
+  const displayName = operatorName ?? (row.operator_id ? `#${row.operator_id}` : '—')
+  const initials = operatorName ? deriveInitials(operatorName) : ''
   return (
-    <tr className={`${ANALYTICS_TABLE_ROW} cursor-pointer`} onClick={onOpenClient}>
+    <tr className={ANALYTICS_TABLE_ROW}>
       <td className={ANALYTICS_TABLE_TD}>{formatDate(row.payment_date)}</td>
       <td className={ANALYTICS_TABLE_TD}>
         <div className="flex items-center gap-2">
@@ -480,17 +529,14 @@ function ClosureRow({ row, onOpenClient }: { row: ClosureItem; onOpenClient: () 
               {initials}
             </span>
           ) : null}
-          <span className="text-xs font-medium text-[#05040D]">{operatorName}</span>
+          <span className="text-xs font-medium text-[#05040D]">{displayName}</span>
         </div>
       </td>
       <td className={ANALYTICS_TABLE_TD}>
         <button
           type="button"
           title={row.client_name ?? undefined}
-          onClick={(e) => {
-            e.stopPropagation()
-            onOpenClient()
-          }}
+          onClick={onOpenClient}
           className="text-[#3B82F6] hover:underline"
         >
           #{row.client_id}
