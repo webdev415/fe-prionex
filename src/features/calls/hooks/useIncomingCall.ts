@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { io, Socket } from 'socket.io-client'
+import { getAccessToken } from '@/lib/api'
 import type { IncomingCallData, IncomingCallEvent } from '../types'
 
 const WS_URL =
@@ -17,7 +18,7 @@ export function useIncomingCall(agentExtension: string | null) {
     if (!agentExtension) {
       // Clean up socket if agent extension is removed
       if (socketRef.current) {
-        socketRef.current.off('call.incoming')
+        socketRef.current.disconnect()
         socketRef.current = null
       }
       return
@@ -25,9 +26,16 @@ export function useIncomingCall(agentExtension: string | null) {
 
     // Connect to WebSocket (reuse existing connection if available)
     if (!socketRef.current) {
+      // The call-service Socket.IO handshake requires a JWT; without one the
+      // server refuses the connection. Pass it via the auth payload (not the
+      // query string) to keep the token out of URLs/access logs.
+      const token = getAccessToken()
+      if (!token) return
+
       const socket: Socket = io(WS_URL, {
         transports: ['websocket'],
         query: { agent_extension: agentExtension },
+        auth: { token },
       })
 
       socketRef.current = socket
@@ -57,10 +65,14 @@ export function useIncomingCall(agentExtension: string | null) {
     socket.on('call.incoming', handleIncomingCall)
     socket.on('call.state_changed', handleCallStateChanged)
 
-    // Cleanup on unmount or when agent extension changes
+    // Cleanup on unmount or when agent extension changes — disconnect so an
+    // authenticated socket does not keep receiving call PII after the consumer
+    // unmounts or the agent changes.
     return () => {
       socket.off('call.incoming', handleIncomingCall)
       socket.off('call.state_changed', handleCallStateChanged)
+      socket.disconnect()
+      socketRef.current = null
     }
   }, [agentExtension])
 
