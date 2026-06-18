@@ -8,7 +8,11 @@
  */
 
 import { describe, expect, it, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render as rtlRender, screen } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
+
+// The client cell renders a client-page link, so the component needs a Router.
+const render = (ui: React.ReactElement) => rtlRender(<MemoryRouter>{ui}</MemoryRouter>)
 
 vi.mock('@/stores/authStore', () => ({
   useAuthStore: (selector: (state: { user: { active_project_id: number } }) => unknown) =>
@@ -83,9 +87,11 @@ describe('InteractionsSubTab', () => {
     expect(screen.getAllByText('Olena Kovalenko').length).toBeGreaterThanOrEqual(1)
   })
 
-  it('surfaces the client full name (not a #id fallback)', () => {
+  it('renders the client as a #id link to the client page (name in the title)', () => {
     render(<InteractionsSubTab />)
-    expect(screen.getByText('Smith Alice')).toBeInTheDocument()
+    const clientLink = screen.getByRole('button', { name: '#200' })
+    expect(clientLink).toBeInTheDocument()
+    expect(clientLink).toHaveAttribute('title', 'Smith Alice')
   })
 
   it('renders debt_id+contract_number in the Deal column (KAN-731 Phase B)', () => {

@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
+import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { getPromisesAndCallbacks } from '../api/actionAnalysisService'
 import type { PromiseCallbackFilters } from '../types'
 
@@ -14,5 +14,6 @@ export function usePromisesAndCallbacks(filters: PromiseCallbackFilters, enabled
     queryFn: () => getPromisesAndCallbacks(filters),
     enabled,
     staleTime: 30_000,
+    placeholderData: keepPreviousData,
   })
 }

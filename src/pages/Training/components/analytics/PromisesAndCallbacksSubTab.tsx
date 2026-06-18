@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
+import { Pagination } from '@/components/ui/Pagination'
 import { useAuthStore } from '@/stores/authStore'
 import { usePromisesAndCallbacks } from '@/features/training/hooks/usePromisesAndCallbacks'
 import type {
@@ -127,6 +129,14 @@ export function PromisesAndCallbacksSubTab() {
   const [period, setPeriod] = useState<PeriodOption>('today')
   const [priorityFilter, setPriorityFilter] = useState<'all' | PromisePriority>('all')
   const [bannerDismissed, setBannerDismissed] = useState(false)
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(50)
+
+  // Period change invalidates the current page offset — reset to page 1.
+  const changePeriod = (p: PeriodOption) => {
+    setPeriod(p)
+    setPage(1)
+  }
 
   const activeProjectId = useAuthStore((s) => s.user?.active_project_id)
   const projectIdNum = activeProjectId ? Number(activeProjectId) : null
@@ -136,16 +146,18 @@ export function PromisesAndCallbacksSubTab() {
       period: PERIOD_TO_BACKEND[period],
       sort_by: 'date',
       sort_dir: 'desc',
-      page: 1,
-      page_size: 50,
+      page,
+      page_size: pageSize,
     }),
-    [period]
+    [period, page, pageSize]
   )
 
   const query = usePromisesAndCallbacks(filters, projectIdNum != null)
 
   const cards = query.data?.summary_cards
   const items = query.data?.items ?? []
+  const total = query.data?.total ?? 0
+  const totalPages = Math.max(1, Math.ceil(total / pageSize))
   const overdueCount = cards?.overdue_count ?? 0
 
   // The BE carries no priority field yet (KAN-733 plan §Discrepancy #2), so
@@ -193,7 +205,7 @@ export function PromisesAndCallbacksSubTab() {
       {/* Overdue banner — dismissible, two-line copy (shown when overdue > 0) */}
       {overdueCount > 0 && !bannerDismissed ? (
         <div className="flex items-start justify-between gap-3 rounded-xl border border-[#FECACA] bg-[#FEF2F2] px-4 py-3">
-          <div className="align-center flex flex-row items-start gap-2.5">
+          <div className="flex items-start gap-2.5">
             <Icons.Warning size={16} className="mt-0.5 flex-shrink-0 text-[#EF4444]" />
             <div className="flex flex-col gap-0.5">
               <span className="text-xs font-semibold text-[#EF4444]">
@@ -231,7 +243,7 @@ export function PromisesAndCallbacksSubTab() {
               <button
                 key={p.id}
                 type="button"
-                onClick={() => setPeriod(p.id)}
+                onClick={() => changePeriod(p.id)}
                 className="flex items-center gap-1.5 text-xs font-medium text-[#05040D]"
               >
                 <span
@@ -330,12 +342,23 @@ export function PromisesAndCallbacksSubTab() {
           )}
         </tbody>
       </AnalyticsMockTable>
+
+      {priorityFilter === 'all' && total > pageSize ? (
+        <Pagination
+          currentPage={page}
+          totalPages={totalPages}
+          pageSize={pageSize}
+          onPageChange={setPage}
+          onPageSizeChange={setPageSize}
+        />
+      ) : null}
     </div>
   )
 }
 
 function PromiseRow({ row }: { row: PromiseCallbackItem }) {
   const { t } = useTranslation('common')
+  const navigate = useNavigate()
   const isOverdue = row.status === 'overdue'
   const rowTint = isOverdue ? 'bg-[#FEF2F2]' : ''
   const operatorName = row.user_name ?? (row.user_id ? `#${row.user_id}` : '—')
@@ -357,8 +380,15 @@ function PromiseRow({ row }: { row: PromiseCallbackItem }) {
           <span className="text-xs font-medium text-[#05040D]">{operatorName}</span>
         </div>
       </td>
-      <td className={`${ANALYTICS_TABLE_TD} text-[#3B82F6]`}>
-        {row.client_full_name ?? `#${row.client_id}`}
+      <td className={ANALYTICS_TABLE_TD}>
+        <button
+          type="button"
+          title={row.client_full_name ?? undefined}
+          onClick={() => navigate(`/dashboard/clients/${row.client_id}`)}
+          className="text-[#3B82F6] hover:underline"
+        >
+          #{row.client_id}
+        </button>
       </td>
       <td className={ANALYTICS_TABLE_TD}>{row.contract_number ?? '—'}</td>
       <td className={`${ANALYTICS_TABLE_TD} font-semibold text-[#05040D]`}>
