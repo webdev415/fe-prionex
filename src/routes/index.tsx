@@ -18,6 +18,9 @@ const ForceChangePasswordPage = lazy(() => import('@/pages/auth/ForceChangePassw
 const UserManagementPage = lazy(() =>
   import('@/pages/UserManagement').then((m) => ({ default: m.UserManagementPage }))
 )
+const IpWhitelistPage = lazy(() =>
+  import('@/pages/IpWhitelist').then((m) => ({ default: m.IpWhitelistPage }))
+)
 const ImportClientsPage = lazy(() => import('@/pages/ImportClients/ImportClientsPage'))
 const ImportHistoryPage = lazy(() => import('@/pages/ImportClients/ImportHistoryPage'))
 const ImportDetailsPage = lazy(() => import('@/pages/ImportClients/ImportDetailsPage'))
@@ -286,6 +289,14 @@ export const router = createBrowserRouter([
         element: (
           <PermissionRoute requiredPermission={PERMISSIONS.SYSTEM.MANAGE_ROLES}>
             {withSuspense(<DepartmentManagementPage />)}
+          </PermissionRoute>
+        ),
+      },
+      {
+        path: 'system-settings/ip-whitelist',
+        element: (
+          <PermissionRoute requiredPermission={PERMISSIONS.USERS.EDIT}>
+            {withSuspense(<IpWhitelistPage />)}
           </PermissionRoute>
         ),
       },
