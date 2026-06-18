@@ -1001,6 +1001,40 @@
           "fastResultPct": "Fast %",
           "distribution": "Distribution"
         }
+      },
+      "promises": {
+        "kpi": {
+          "total": "Total promises",
+          "paid": "Paid",
+          "overdue": "Overdue",
+          "pending": "Pending",
+          "promisesUnit": "promises"
+        },
+        "overdueBanner": "Overdue promises",
+        "overdueBannerHint": "{{count}} promises did not pay on time. Please arrange a follow-up call as soon as possible.",
+        "priority": {
+          "all": "All priorities",
+          "critical": "Critical",
+          "average": "Average",
+          "low": "Low"
+        },
+        "cols": {
+          "date": "Date / Time",
+          "operator": "Operator",
+          "client": "Client",
+          "agreement": "Agreement",
+          "amount": "Amount",
+          "paymentTerm": "Payment term",
+          "status": "Status"
+        },
+        "status": {
+          "pending": "Pending",
+          "paid": "Paid",
+          "overdue": "Overdue"
+        },
+        "loading": "Loading…",
+        "loadFailed": "Failed to load. Please retry.",
+        "empty": "No promises or callbacks match the filters."
       }
     },
     "users": {
