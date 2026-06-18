@@ -441,10 +441,25 @@ export function ChainBuilderPage() {
     [selectedChainId, qc]
   )
 
-  const onNodeClick = useCallback((_: unknown, node: Node) => {
-    const stepId = parseInt(node.id.replace('step-', ''), 10)
-    setSelectedStepId(stepId)
+  // Clear the per-step editor form (effect conditions/config, branch
+  // target/conditions). Used whenever the selected step or chain changes so
+  // one step's in-progress selections can't leak onto another step — audit
+  // fe-07 (stale conditions/branch target silently written to the wrong step).
+  const resetStepForm = useCallback(() => {
+    setNewEffectConditions(new Set())
+    setNewBranchConditions(new Set())
+    setNewBranchTo('')
+    setNewEffectConfig({})
   }, [])
+
+  const onNodeClick = useCallback(
+    (_: unknown, node: Node) => {
+      const stepId = parseInt(node.id.replace('step-', ''), 10)
+      if (stepId !== selectedStepId) resetStepForm()
+      setSelectedStepId(stepId)
+    },
+    [selectedStepId, resetStepForm]
+  )
 
   const stepEffects = builderData?.effects.filter((e) => e.step_id === selectedStepId) ?? []
   const stepBranches = builderData?.branches.filter((b) => b.from_step_id === selectedStepId) ?? []
@@ -502,6 +517,7 @@ export function ChainBuilderPage() {
           onValueChange={(v) => {
             setSelectedChainId(parseInt(v, 10))
             setSelectedStepId(null)
+            resetStepForm()
           }}
         >
           <SelectTrigger>
@@ -1506,14 +1522,25 @@ export function ChainBuilderPage() {
                                         cfg.email_ref = parseInt(ec.email_ref, 10)
                                       }
                                     }
+                                    // Only send conditions that belong to THIS
+                                    // step's dropdown values — guards against
+                                    // stale picks carried over from a
+                                    // previously-selected step (audit fe-07,
+                                    // defense-in-depth behind the form reset).
+                                    const validDvIds = new Set(
+                                      stepDropdownValues.map((dv) => dv.id)
+                                    )
+                                    const effectConditionIds = Array.from(
+                                      newEffectConditions
+                                    ).filter((id) => validDvIds.has(id))
                                     try {
                                       await createEffect.mutateAsync({
                                         step_id: selectedStep.id,
                                         effect_type: newEffectType,
                                         config: cfg,
                                         condition_dropdown_value_ids:
-                                          newEffectConditions.size > 0
-                                            ? Array.from(newEffectConditions)
+                                          effectConditionIds.length > 0
+                                            ? effectConditionIds
                                             : undefined,
                                       })
                                       toast.success(t('pages.chainBuilder.toasts.effectAdded'))
