@@ -853,6 +853,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             mode: 'any' as const,
           },
           {
+            path: '/dashboard/system-settings/ip-whitelist',
+            label: t('navigation.ipWhitelist', 'IP Whitelist'),
+            icon: 'sliders-horizontal',
+            requiredPermission: PERMISSIONS.USERS.EDIT,
+          },
+          {
             path: '/dashboard/system-settings/rr-notifications',
             label: t('navigation.rrNotifications', 'RR Notifications'),
             icon: 'mail',
