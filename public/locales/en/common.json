@@ -2040,6 +2040,14 @@
         "skipped": "Skipped",
         "bounced": "Bounced"
       },
+      "messageHistory": {
+        "destinationOwner": {
+          "client": "Client",
+          "referrer": "Referrer",
+          "work": "Work phone",
+          "other": "Other"
+        }
+      },
       "modals": {
         "addNote": {
           "title": "Add Note",
