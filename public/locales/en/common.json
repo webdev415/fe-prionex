@@ -3,6 +3,14 @@
     "name": "CRM Prionex",
     "description": "Customer Relationship Management System"
   },
+  "auth": {
+    "sessionRestore": {
+      "title": "Resume previous session?",
+      "body": "You have {{count}} open tabs from your previous session. Would you like to continue?",
+      "restoreButton": "Restore Session",
+      "startFreshButton": "Start Fresh"
+    }
+  },
   "navigation": {
     "home": "Home",
     "dashboard": "Dashboard",

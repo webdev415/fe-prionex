@@ -4,6 +4,7 @@ import { createBrowserRouter, Navigate, Outlet } from 'react-router-dom'
 import { ProtectedRoute } from './ProtectedRoute'
 import { PermissionRoute } from './PermissionRoute'
 import { GuestRoute } from './GuestRoute'
+import { useTabTracker } from '@/features/auth/hooks/useTabTracker'
 import { DashboardLayout } from '@/components/layout'
 import { RouteErrorElement } from '@/components/RouteErrorElement'
 import { PERMISSIONS } from '@/constants/permissions'
@@ -170,13 +171,19 @@ const withSuspense = (element: React.ReactElement) => (
   <Suspense fallback={<AppLoadingFallback />}>{element}</Suspense>
 )
 
-const DashboardLayoutRoute = () => (
-  <ProtectedRoute>
-    <DashboardLayout>
-      <Outlet />
-    </DashboardLayout>
-  </ProtectedRoute>
-)
+const DashboardLayoutRoute = () => {
+  // KAN-585: track tab navigations + close events for the session-restore
+  // feature. Hook is mounted here (inside RouterProvider tree) because it
+  // calls useLocation internally; mounting in App.tsx would throw.
+  useTabTracker()
+  return (
+    <ProtectedRoute>
+      <DashboardLayout>
+        <Outlet />
+      </DashboardLayout>
+    </ProtectedRoute>
+  )
+}
 
 export const router = createBrowserRouter([
   {
