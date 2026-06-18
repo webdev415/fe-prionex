@@ -20,6 +20,7 @@ vi.mock('@/lib/api', () => ({
 import {
   getInteractionMonitoring,
   getPromisesAndCallbacks,
+  getSuccessfulClosures,
   getWeeklyBucket,
 } from '../actionAnalysisService'
 
@@ -208,5 +209,56 @@ describe('getWeeklyBucket — param builder (KAN-732)', () => {
   it('omits include_no_due_date when false', async () => {
     await getWeeklyBucket({ include_no_due_date: false })
     expect(getParams().get('include_no_due_date')).toBeNull()
+  })
+})
+
+describe('getSuccessfulClosures — param builder (KAN-734)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockApi.get.mockResolvedValue({
+      data: {
+        summary_cards: { successful_closures_count: 0, total_amount: '0' },
+        closure_leader: null,
+        items: [],
+        total: 0,
+        page: 1,
+        page_size: 50,
+      },
+    })
+  })
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  function getParams(): URLSearchParams {
+    const [, config] = mockApi.get.mock.calls[0]
+    return config.params as URLSearchParams
+  }
+
+  it('hits /api/v1/payments/closures and omits optional params by default', async () => {
+    await getSuccessfulClosures({})
+    expect(mockApi.get).toHaveBeenCalledWith('/api/v1/payments/closures', expect.any(Object))
+    expect(getParams().toString()).toBe('')
+  })
+
+  it('repeats user_ids as multiple params, matching FastAPI Query(List[int])', async () => {
+    await getSuccessfulClosures({ user_ids: [10, 20, 30] })
+    expect(getParams().getAll('user_ids')).toEqual(['10', '20', '30'])
+  })
+
+  it('forwards period + sort + pagination untouched', async () => {
+    await getSuccessfulClosures({
+      period: 'today',
+      sort_by: 'amount',
+      sort_dir: 'asc',
+      page: 2,
+      page_size: 25,
+    })
+    const params = getParams()
+    expect(params.get('period')).toBe('today')
+    expect(params.get('sort_by')).toBe('amount')
+    expect(params.get('sort_dir')).toBe('asc')
+    expect(params.get('page')).toBe('2')
+    expect(params.get('page_size')).toBe('25')
   })
 })

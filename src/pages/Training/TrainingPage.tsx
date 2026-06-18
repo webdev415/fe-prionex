@@ -180,16 +180,31 @@ export function TrainingPage() {
   // Read-shims: rewrite legacy ?tab=... to the new grammar. Runs once on
   // mount per URL change.
   useEffect(() => {
+    // Sub-level shim (KAN-734): the legacy `payment-history` sub-tab is now
+    // `successful-closures` under action-analysis. Covers both legacy forms —
+    // `?tab=action-analysis&sub=payment-history` and the older
+    // `?tab=calls&sub=payment-history`.
+    const isLegacyPaymentHistory = rawSub === 'payment-history'
+
     if (rawTab && LEGACY_TAB_SHIMS[rawTab]) {
       const shim = LEGACY_TAB_SHIMS[rawTab]
       const next = new URLSearchParams(searchParams)
       next.set('tab', shim.tab)
-      if (shim.sub) {
+      if (isLegacyPaymentHistory) {
+        next.set('sub', 'successful-closures')
+      } else if (shim.sub) {
         next.set('sub', shim.sub)
       }
       setSearchParams(next, { replace: true })
+      return
     }
-  }, [rawTab, searchParams, setSearchParams])
+
+    if (isLegacyPaymentHistory && rawTab === 'action-analysis') {
+      const next = new URLSearchParams(searchParams)
+      next.set('sub', 'successful-closures')
+      setSearchParams(next, { replace: true })
+    }
+  }, [rawTab, rawSub, searchParams, setSearchParams])
 
   const activeTopTab: TrainingTopTabId = isTopTab(rawTab) ? rawTab : 'inbox'
 

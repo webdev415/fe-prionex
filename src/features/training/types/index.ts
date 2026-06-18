@@ -403,3 +403,58 @@ export interface PaymentMonitoringResponse {
   page: number
   limit: number
 }
+
+// ---------------------------------------------------------------------------
+// Successful Closures — Action Analysis sub-tab (KAN-734)
+// Trainer-facing list of VERIFIED payments. summary_cards + closure_leader come
+// from payment-service; the Funnel + conversion % are composed on the FE from
+// the interaction-monitoring + promises endpoints (those counts live in
+// client-service).
+// ---------------------------------------------------------------------------
+
+export type ClosureSortBy = 'date' | 'amount'
+
+export interface ClosureFilters {
+  period?: CallMonitoringPeriod
+  from_datetime?: string
+  to_datetime?: string
+  /** Operator scope — verified payments where assigned_user_id is in this list. */
+  user_ids?: number[]
+  sort_by?: ClosureSortBy
+  sort_dir?: InteractionMonitoringSortDir
+  page?: number
+  page_size?: number
+}
+
+export interface ClosureItem {
+  payment_date: string // YYYY-MM-DD — "Дата/Час"
+  operator_id: number | null
+  operator_name: string | null // "Оператор"
+  client_id: number
+  client_name: string | null // "Клієнт"
+  debt_id: number | null
+  contract_number: string | null // "Угода"
+  amount: string // "Сума"
+  payment_confirmation_date: string | null // "Дата підтвердження"
+  status: string // "Статус" — constant 'verified' for v1
+}
+
+export interface ClosureSummaryCards {
+  successful_closures_count: number
+  total_amount: string
+}
+
+export interface ClosureLeader {
+  operator_id: number
+  operator_name: string | null
+  closures_count: number
+}
+
+export interface ClosuresResponse {
+  summary_cards: ClosureSummaryCards
+  closure_leader: ClosureLeader | null
+  items: ClosureItem[]
+  total: number
+  page: number
+  page_size: number
+}
