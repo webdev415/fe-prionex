@@ -915,6 +915,20 @@
         "email": "Электронная почта",
         "extension": "Расширение / Агент"
       },
+      "filters": {
+        "role": "Роль",
+        "project": "Проект",
+        "department": "Отдел",
+        "group": "Группа",
+        "status": "Статус",
+        "all": "Все",
+        "resetToDefault": "Сбросить по умолчанию",
+        "statusOptions": {
+          "all": "Все",
+          "active": "Активные",
+          "disabled": "Отключённые"
+        }
+      },
       "tableHeaders": {
         "username": "Имя пользователя",
         "userId": "ID пользователя",
