@@ -147,42 +147,65 @@ export function DataTable<T extends { id: number | string }>({
   const handleSelectItem = (itemId: number | string, checked: boolean) => {
     if (!onSelectionChange) return
 
-    // If unchecking an item when allItemsSelected is true, we need to clear the all-selected state
-    // The parent component should handle this by clearing allItemsSelected flag
+    // In all-selected mode, `selectedItems` only holds the ids of the page where
+    // "Select All" was clicked — it does NOT contain the rows of other pages, even
+    // though those rows render as checked (from `allItemsSelected`). Building the
+    // new selection from `selectedItems` here would therefore send the parent a set
+    // with no ids for the current page, which the parent reads as "every row on this
+    // page is excluded" — silently dropping the whole page from the selection.
+    //
+    // Instead, derive the new selection from the rows the user actually sees checked
+    // on the current page (all `data` rows that aren't excluded), then apply the
+    // toggle. This lets the parent correctly recompute exclusions for the page being
+    // edited, regardless of which page "Select All" was originally clicked on.
+    if (allItemsSelected) {
+      const newSelection = new Set(
+        data.filter((item) => !excludedItems.has(item.id)).map((item) => item.id)
+      )
+      if (checked) {
+        newSelection.add(itemId)
+      } else {
+        newSelection.delete(itemId)
+      }
+      onSelectionChange(newSelection)
+      return
+    }
+
     const newSelection = new Set(selectedItems)
     if (checked) {
       newSelection.add(itemId)
     } else {
       newSelection.delete(itemId)
-      // If all items were selected and we're unchecking one, the parent will clear all-selected state
     }
     onSelectionChange(newSelection)
   }
 
-  // Check if all items are selected
-  // Only return true when allItemsSelected is true (user clicked "Select All")
-  // Don't auto-check when user manually selects all items on current page
+  // Header checkbox state in all-selected mode must reflect *global* selection, not just
+  // the current page. Otherwise a page with no local exclusions still shows a full check
+  // while the count reads "Selected N-1 of N" after the user unchecked a row elsewhere.
   const allSelected = useMemo(() => {
     if (allItemsSelected) {
-      // If all items are selected, check if any items on current page are excluded
       if (data.length === 0) return false
-      return data.every((item) => !excludedItems.has(item.id))
+      const allOnPageSelected = data.every((item) => !excludedItems.has(item.id))
+      return excludedItemsCount === 0 && allOnPageSelected
     }
     // When allItemsSelected is false, don't check the header checkbox
     // even if all items on current page are manually selected
     return false
-  }, [data, allItemsSelected, excludedItems])
+  }, [data, allItemsSelected, excludedItems, excludedItemsCount])
 
-  // Check if some items are selected
   const someSelected = useMemo(() => {
     if (allItemsSelected) {
-      // If all items are selected, check if some (but not all) items on current page are excluded
       if (data.length === 0) return false
       const excludedOnPage = data.filter((item) => excludedItems.has(item.id)).length
-      return excludedOnPage > 0 && excludedOnPage < data.length
+      const partialOnPage = excludedOnPage > 0 && excludedOnPage < data.length
+      const globalPartial = excludedItemsCount > 0
+      return globalPartial || partialOnPage
     }
     return selectedItems.size > 0 && selectedItems.size < data.length
-  }, [selectedItems, data, allItemsSelected, excludedItems])
+  }, [selectedItems, data, allItemsSelected, excludedItems, excludedItemsCount])
+
+  const headerCheckboxChecked = allSelected
 
   const hasSelectedItems = selectedItems.size > 0
 
@@ -311,9 +334,9 @@ export function DataTable<T extends { id: number | string }>({
                   onClick={(e) => e.stopPropagation()}
                 >
                   <Checkbox
-                    checked={allSelected}
+                    checked={headerCheckboxChecked}
                     onCheckedChange={handleSelectAll}
-                    className={someSelected ? 'opacity-50' : ''}
+                    aria-checked={someSelected ? 'mixed' : headerCheckboxChecked}
                     aria-label="Select all"
                   />
                 </th>
