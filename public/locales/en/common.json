@@ -1018,6 +1018,20 @@
         "email": "Email",
         "extension": "Extension / Agent"
       },
+      "filters": {
+        "role": "Role",
+        "project": "Project",
+        "department": "Department",
+        "group": "Group",
+        "status": "Status",
+        "all": "All",
+        "resetToDefault": "Reset to default",
+        "statusOptions": {
+          "all": "All",
+          "active": "Active",
+          "disabled": "Disabled"
+        }
+      },
       "tableHeaders": {
         "username": "Username",
         "userId": "User ID",

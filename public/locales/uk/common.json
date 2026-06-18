@@ -1023,6 +1023,20 @@
         "email": "Електронна пошта",
         "extension": "Розширення / Агент"
       },
+      "filters": {
+        "role": "Роль",
+        "project": "Проєкт",
+        "department": "Відділ",
+        "group": "Група",
+        "status": "Статус",
+        "all": "Усі",
+        "resetToDefault": "Скинути до типових",
+        "statusOptions": {
+          "all": "Усі",
+          "active": "Активні",
+          "disabled": "Вимкнені"
+        }
+      },
       "tableHeaders": {
         "username": "Ім'я користувача",
         "userId": "ID користувача",
