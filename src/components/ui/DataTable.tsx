@@ -133,14 +133,35 @@ export function DataTable<T extends { id: number | string }>({
   const handleSelectItem = (itemId: number | string, checked: boolean) => {
     if (!onSelectionChange) return
 
-    // If unchecking an item when allItemsSelected is true, we need to clear the all-selected state
-    // The parent component should handle this by clearing allItemsSelected flag
+    // In all-selected mode, `selectedItems` only holds the ids of the page where
+    // "Select All" was clicked — it does NOT contain the rows of other pages, even
+    // though those rows render as checked (from `allItemsSelected`). Building the
+    // new selection from `selectedItems` here would therefore send the parent a set
+    // with no ids for the current page, which the parent reads as "every row on this
+    // page is excluded" — silently dropping the whole page from the selection.
+    //
+    // Instead, derive the new selection from the rows the user actually sees checked
+    // on the current page (all `data` rows that aren't excluded), then apply the
+    // toggle. This lets the parent correctly recompute exclusions for the page being
+    // edited, regardless of which page "Select All" was originally clicked on.
+    if (allItemsSelected) {
+      const newSelection = new Set(
+        data.filter((item) => !excludedItems.has(item.id)).map((item) => item.id)
+      )
+      if (checked) {
+        newSelection.add(itemId)
+      } else {
+        newSelection.delete(itemId)
+      }
+      onSelectionChange(newSelection)
+      return
+    }
+
     const newSelection = new Set(selectedItems)
     if (checked) {
       newSelection.add(itemId)
     } else {
       newSelection.delete(itemId)
-      // If all items were selected and we're unchecking one, the parent will clear all-selected state
     }
     onSelectionChange(newSelection)
   }
