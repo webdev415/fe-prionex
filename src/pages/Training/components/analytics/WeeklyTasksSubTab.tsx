@@ -233,15 +233,15 @@ export function WeeklyTasksSubTab() {
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
         {/* "The Week" — active dark-green tile with Σ icon */}
         <div className="flex items-center gap-3 rounded-xl bg-[#204E4D] px-4 py-3 shadow-[0px_1px_2px_rgba(0,0,0,0.04)]">
-          <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-[#BBFB5B] text-base font-semibold text-[#05040D]">
+          <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-[#236260] text-base font-semibold text-[#BBFB5B]">
             Σ
           </span>
-          <div className="flex flex-col">
+          <div className="flex flex-row">
             <span className="text-[10px] leading-tight font-medium tracking-wide text-white/70 uppercase">
               {t('pages.training.weeklyTasks.kpi.week', 'The Week')}
             </span>
-            <span className="text-xl leading-tight font-semibold text-white">{weekTotal}</span>
           </div>
+          <span className="text-xl leading-tight font-semibold text-[#BBFB5B]">{weekTotal}</span>
         </div>
 
         {/* Day tiles */}
@@ -250,18 +250,20 @@ export function WeeklyTasksSubTab() {
             key={day.label}
             className="flex items-center justify-between gap-2 rounded-xl border border-[#EBECE8] bg-white px-3 py-2.5 shadow-[0px_1px_2px_rgba(0,0,0,0.04)]"
           >
-            <div className="flex min-w-0 flex-col">
+            <div className="flex min-w-0 flex-row justify-between gap-4">
               <span className="text-[10px] leading-tight font-medium text-[#676767]">
                 {day.dateLabel}
               </span>
-              <span className="text-xs leading-tight font-medium text-[#05040D]">
-                {day.fullLabel}
-              </span>
-              {day.isToday ? (
-                <span className="text-[10px] leading-tight font-medium text-[#22C55E]">
-                  {t('pages.training.weeklyTasks.today', 'today')}
+              <div className="flex flex-col">
+                <span className="text-xs leading-tight font-medium text-[#05040D]">
+                  {day.fullLabel}
                 </span>
-              ) : null}
+                {day.isToday ? (
+                  <span className="text-[10px] leading-tight font-semibold text-[#20424d]">
+                    {t('pages.training.weeklyTasks.today', 'today')}
+                  </span>
+                ) : null}
+              </div>
             </div>
             <div className="flex flex-col items-end gap-1">
               <span

@@ -40,7 +40,7 @@ export function AnalyticsKpiTile({
   if (icon) {
     // Horizontal layout — Figma "Action Analysis" KPI tile.
     return (
-      <div className="flex items-center gap-3 overflow-hidden rounded-xl border border-[#EBECE8] bg-white px-4 py-3 shadow-[0px_1px_2px_rgba(0,0,0,0.04)]">
+      <div className="flex items-center gap-3 overflow-hidden rounded-xl border border-[#EBECE8] bg-white px-2 py-2 shadow-[0px_1px_2px_rgba(0,0,0,0.04)]">
         <span
           className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full ${iconBg} ${iconTone}`}
         >
