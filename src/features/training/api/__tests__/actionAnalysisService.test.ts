@@ -17,7 +17,7 @@ vi.mock('@/lib/api', () => ({
   default: mockApi,
 }))
 
-import { getInteractionMonitoring } from '../actionAnalysisService'
+import { getInteractionMonitoring, getWeeklyBucket } from '../actionAnalysisService'
 
 describe('getInteractionMonitoring — param builder', () => {
   beforeEach(() => {
@@ -92,5 +92,57 @@ describe('getInteractionMonitoring — param builder', () => {
     expect(params.getAll('user_ids')).toEqual(['10', '20'])
     expect(params.getAll('result_ids')).toEqual(['5'])
     expect(params.get('period')).toBe('last_7d')
+  })
+})
+
+describe('getWeeklyBucket — param builder (KAN-732)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockApi.get.mockResolvedValue({
+      data: { buckets: [], totals: { today: 0, this_week: 0, overdue: 0 }, no_due_date: 0 },
+    })
+  })
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  function getParams(): URLSearchParams {
+    const [, config] = mockApi.get.mock.calls[0]
+    return config.params as URLSearchParams
+  }
+
+  it('hits /api/v1/tasks/weekly-bucket and omits optional params by default', async () => {
+    await getWeeklyBucket({})
+    expect(mockApi.get).toHaveBeenCalledWith('/api/v1/tasks/weekly-bucket', expect.any(Object))
+    expect(getParams().toString()).toBe('')
+  })
+
+  it('forwards from_date / to_date window', async () => {
+    await getWeeklyBucket({ from_date: '2026-01-05T00:00:00', to_date: '2026-01-12T00:00:00' })
+    const params = getParams()
+    expect(params.get('from_date')).toBe('2026-01-05T00:00:00')
+    expect(params.get('to_date')).toBe('2026-01-12T00:00:00')
+  })
+
+  it('repeats operator_ids / status_in / priority_in for FastAPI Query(List)', async () => {
+    await getWeeklyBucket({
+      operator_ids: [10, 20],
+      status_in: ['pending', 'in_progress'],
+      priority_in: ['high'],
+    })
+    const params = getParams()
+    expect(params.getAll('operator_ids')).toEqual(['10', '20'])
+    expect(params.getAll('status_in')).toEqual(['pending', 'in_progress'])
+    expect(params.getAll('priority_in')).toEqual(['high'])
+  })
+
+  it('emits include_no_due_date only when truthy', async () => {
+    await getWeeklyBucket({ include_no_due_date: true })
+    expect(getParams().get('include_no_due_date')).toBe('true')
+  })
+
+  it('omits include_no_due_date when false', async () => {
+    await getWeeklyBucket({ include_no_due_date: false })
+    expect(getParams().get('include_no_due_date')).toBeNull()
   })
 })

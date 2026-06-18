@@ -40,6 +40,10 @@ export function useInboxQueue(filters: QueueFilters, enabled = true) {
   return useQuery({
     queryKey: coachingKeys.queue(filters),
     queryFn: () => getInboxQueue(filters),
+    // The BE /queue treats absent/empty user_ids as an EMPTY scope (returns an
+    // empty page — see coaching.py get_queue), so firing without ids is a
+    // guaranteed no-op. Callers must resolve their scope to a concrete id list;
+    // we only run once that list is non-empty.
     enabled: enabled && (filters.user_ids?.length ?? 0) > 0,
     staleTime: 30_000,
   })

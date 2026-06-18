@@ -722,7 +722,7 @@ export function ClientDetailPage() {
           ? formatDate(d.factoring_agreement.contract_purchase_date)
           : null,
         principalAmount: Number(d.principal_amount ?? 0),
-        principalDebt: Number(d.principal_debt ?? d.principal_amount ?? 0),
+        principalDebt: d.principal_debt != null ? Number(d.principal_debt) : null,
         remainingDebtAmount: Number(d.remaining_debt_amount ?? 0),
         totalToReturn: Number(d.total_to_return ?? 0),
         // Closure date — surfaced for closed debts so the user can see it and,
@@ -1422,7 +1422,8 @@ export function ClientDetailPage() {
       key: 'principalDebt',
       header: t('pages.clients.detail.tableHeaders.principalDebt'),
       align: 'right',
-      render: (loan) => formatMoneyUAHTwoDecimals(loan.principalDebt),
+      render: (loan) =>
+        loan.principalDebt != null ? formatMoneyUAHTwoDecimals(loan.principalDebt) : '-',
     },
     ...(showEligibleForReturnColumn
       ? [

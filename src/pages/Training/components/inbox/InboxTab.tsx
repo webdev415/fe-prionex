@@ -80,17 +80,21 @@ export function InboxTab({
   const canSelectScope = userPermissions.includes(PERMISSIONS.TRAINING.SELECT_INBOX_SCOPE)
   const currentUserId = useAuthStore((s) => (s.user?.id ? Number(s.user.id) : null))
 
-  // scope=all collapses to `undefined` (BE treats absent user_ids as
-  // "all in scope" — semantically equivalent). Previously this returned
-  // `operators.map((o) => o.id)`, baking a 50-200 id array into the
-  // react-query key on every operators-update and re-stringifying it
-  // into the cache key on every render.
+  // The BE /queue endpoint treats absent/empty user_ids as an EMPTY scope
+  // (returns an empty page — see coaching.py get_queue), NOT as "all operators
+  // in scope". So a "no filter" scope (scope=all, or the group placeholder,
+  // both of which resolve `scoped.userIds` to undefined) must be expanded here
+  // to the concrete in-scope operator id list, otherwise the queue comes back
+  // empty and the panel shows "No operators in the current scope".
   const effectiveUserIds = useMemo<number[] | undefined>(() => {
     if (!canSelectScope) {
       return currentUserId != null ? [currentUserId] : []
     }
+    if (scoped.userIds === undefined) {
+      return operators.map((o) => o.id)
+    }
     return scoped.userIds
-  }, [canSelectScope, currentUserId, scoped.userIds])
+  }, [canSelectScope, currentUserId, scoped.userIds, operators])
 
   // ?priority= chip state — defaults to 'all' and round-trips through the
   // URL so deep links survive a reload.

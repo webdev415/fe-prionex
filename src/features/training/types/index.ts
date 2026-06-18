@@ -235,6 +235,39 @@ export interface TaskSubject {
 }
 
 // ---------------------------------------------------------------------------
+// Weekly Tasks — Action Analysis sub-tab (KAN-732)
+// ---------------------------------------------------------------------------
+
+export type WeeklyDowKey = 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun'
+
+export interface WeeklyBucketFilters {
+  operator_ids?: number[]
+  /** ISO datetime; lower bound on due_date. */
+  from_date?: string
+  /** ISO datetime; upper bound on due_date (exclusive). */
+  to_date?: string
+  status_in?: string[]
+  priority_in?: string[]
+  include_no_due_date?: boolean
+}
+
+export interface WeeklyBucket {
+  /** ISO date (Monday) of the week. */
+  week_start: string
+  day_counts: Record<WeeklyDowKey, number>
+  /** Per-day overdue counts — drives the per-day status dot. */
+  day_overdue: Record<WeeklyDowKey, number>
+  overdue_count: number
+  total: number
+}
+
+export interface WeeklyBucketResponse {
+  buckets: WeeklyBucket[]
+  totals: { today: number; this_week: number; overdue: number }
+  no_due_date: number
+}
+
+// ---------------------------------------------------------------------------
 // Payment Monitoring (KAN-506)
 // ---------------------------------------------------------------------------
 

@@ -2714,6 +2714,14 @@
         "skipped": "Пропущено",
         "bounced": "Відхилено"
       },
+      "messageHistory": {
+        "destinationOwner": {
+          "client": "Клієнт",
+          "referrer": "Поручитель",
+          "work": "Робочий телефон",
+          "other": "Інший"
+        }
+      },
       "activity": {
         "score": "Оцінка",
         "addNote": "Додати примітку",
@@ -2823,6 +2831,7 @@
           "income": "Довідка про доходи",
           "outcome": "Витяг",
           "signature": "ЕЦП",
+          "military": "Військовий",
           "other": "Інше"
         },
         "department": "Відділ",
@@ -4423,6 +4432,7 @@
         "income": "Довідка про доходи",
         "outcome": "Витяг / виписка",
         "signature": "Цифровий підпис",
+        "military": "Військовий",
         "other": "Інше"
       },
       "actions": {
