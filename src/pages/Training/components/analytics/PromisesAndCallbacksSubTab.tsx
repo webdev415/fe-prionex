@@ -193,17 +193,18 @@ export function PromisesAndCallbacksSubTab() {
       {/* Overdue banner — dismissible, two-line copy (shown when overdue > 0) */}
       {overdueCount > 0 && !bannerDismissed ? (
         <div className="flex items-start justify-between gap-3 rounded-xl border border-[#FECACA] bg-[#FEF2F2] px-4 py-3">
-          <div className="flex items-start gap-2.5">
+          <div className="align-center flex flex-row items-start gap-2.5">
             <Icons.Warning size={16} className="mt-0.5 flex-shrink-0 text-[#EF4444]" />
             <div className="flex flex-col gap-0.5">
               <span className="text-xs font-semibold text-[#EF4444]">
                 {t('pages.training.promises.overdueBanner', 'Overdue promises')}
               </span>
               <span className="text-[11px] text-[#676767]">
-                {t(
-                  'pages.training.promises.overdueBannerHint',
-                  '2 clients did not pay on time. Please arrange a follow-up call as soon as possible.'
-                )}
+                {t('pages.training.promises.overdueBannerHint', {
+                  count: overdueCount,
+                  defaultValue:
+                    '{{count}} promises did not pay on time. Please arrange a follow-up call as soon as possible.',
+                })}
               </span>
             </div>
           </div>
