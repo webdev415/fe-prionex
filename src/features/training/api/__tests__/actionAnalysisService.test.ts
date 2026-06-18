@@ -17,7 +17,11 @@ vi.mock('@/lib/api', () => ({
   default: mockApi,
 }))
 
-import { getInteractionMonitoring, getWeeklyBucket } from '../actionAnalysisService'
+import {
+  getInteractionMonitoring,
+  getPromisesAndCallbacks,
+  getWeeklyBucket,
+} from '../actionAnalysisService'
 
 describe('getInteractionMonitoring — param builder', () => {
   beforeEach(() => {
@@ -92,6 +96,66 @@ describe('getInteractionMonitoring — param builder', () => {
     expect(params.getAll('user_ids')).toEqual(['10', '20'])
     expect(params.getAll('result_ids')).toEqual(['5'])
     expect(params.get('period')).toBe('last_7d')
+  })
+})
+
+describe('getPromisesAndCallbacks — param builder (KAN-733)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockApi.get.mockResolvedValue({
+      data: {
+        summary_cards: {
+          total_promises_amount: '0',
+          paid_amount: '0',
+          overdue_count: 0,
+          pending_amount: '0',
+        },
+        items: [],
+        total: 0,
+        page: 1,
+        page_size: 50,
+      },
+    })
+  })
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  function getParams(): URLSearchParams {
+    const [, config] = mockApi.get.mock.calls[0]
+    return config.params as URLSearchParams
+  }
+
+  it('hits the promises-and-callbacks endpoint and omits optional params by default', async () => {
+    await getPromisesAndCallbacks({})
+    expect(mockApi.get).toHaveBeenCalledWith(
+      '/api/v1/interactions/promises-and-callbacks',
+      expect.any(Object)
+    )
+    expect(getParams().toString()).toBe('')
+  })
+
+  it('repeats user_ids and forwards scope params', async () => {
+    await getPromisesAndCallbacks({ user_ids: [10, 20], department_id: 7 })
+    const params = getParams()
+    expect(params.getAll('user_ids')).toEqual(['10', '20'])
+    expect(params.get('department_id')).toBe('7')
+  })
+
+  it('forwards period + sort + pagination', async () => {
+    await getPromisesAndCallbacks({
+      period: 'today',
+      sort_by: 'amount',
+      sort_dir: 'asc',
+      page: 2,
+      page_size: 25,
+    })
+    const params = getParams()
+    expect(params.get('period')).toBe('today')
+    expect(params.get('sort_by')).toBe('amount')
+    expect(params.get('sort_dir')).toBe('asc')
+    expect(params.get('page')).toBe('2')
+    expect(params.get('page_size')).toBe('25')
   })
 })
 

@@ -4,6 +4,8 @@ import type {
   CallMonitoringResponse,
   InteractionMonitoringFilters,
   InteractionMonitoringResponse,
+  PromiseCallbackFilters,
+  PromisesAndCallbacksResponse,
 } from '../types'
 
 function buildCallParams(filters: CallMonitoringFilters): URLSearchParams {
@@ -87,6 +89,42 @@ export async function exportInteractionMonitoring(
   const params = buildInteractionParams(filters)
   const response = await api.get<Blob>('/api/v1/interactions/export', {
     params,
+    responseType: 'blob',
+    timeout: 120_000,
+  })
+  return response.data
+}
+
+function buildPromiseCallbackParams(filters: PromiseCallbackFilters): URLSearchParams {
+  // Repeated `?key=val` for list params — FastAPI's
+  // `Optional[List[int]] = Query(None)` rejects Axios's default `[]` suffix.
+  const params = new URLSearchParams()
+  filters.user_ids?.forEach((id) => params.append('user_ids', String(id)))
+  if (filters.department_id != null) params.set('department_id', String(filters.department_id))
+  if (filters.group_id != null) params.set('group_id', String(filters.group_id))
+  if (filters.period) params.set('period', filters.period)
+  if (filters.from_datetime) params.set('from_datetime', filters.from_datetime)
+  if (filters.to_datetime) params.set('to_datetime', filters.to_datetime)
+  if (filters.sort_by) params.set('sort_by', filters.sort_by)
+  if (filters.sort_dir) params.set('sort_dir', filters.sort_dir)
+  if (filters.page != null) params.set('page', String(filters.page))
+  if (filters.page_size != null) params.set('page_size', String(filters.page_size))
+  return params
+}
+
+export async function getPromisesAndCallbacks(
+  filters: PromiseCallbackFilters
+): Promise<PromisesAndCallbacksResponse> {
+  const response = await api.get<PromisesAndCallbacksResponse>(
+    '/api/v1/interactions/promises-and-callbacks',
+    { params: buildPromiseCallbackParams(filters) }
+  )
+  return response.data
+}
+
+export async function exportPromisesAndCallbacks(filters: PromiseCallbackFilters): Promise<Blob> {
+  const response = await api.get<Blob>('/api/v1/interactions/promises-and-callbacks/export', {
+    params: buildPromiseCallbackParams(filters),
     responseType: 'blob',
     timeout: 120_000,
   })
@@ -275,6 +313,8 @@ export const actionAnalysisService = {
   exportCallMonitoring,
   getInteractionMonitoring,
   exportInteractionMonitoring,
+  getPromisesAndCallbacks,
+  exportPromisesAndCallbacks,
   listInteractionChannels,
   getTaHistory,
   exportTaHistory,
