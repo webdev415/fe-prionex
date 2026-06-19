@@ -548,6 +548,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                       interactionUserIds: ids,
                     })
                   }
+                  onClear={() => onFilterChange({ ...filters, interactionUserIds: [] })}
                   searchPlaceholder={t('pages.clients.filters.selectOperator', 'Select operator')}
                   emptyText={t('pages.clients.filters.noUsersAvailable')}
                   selectAllLabel={t('pages.clients.filters.selectAllOperators', 'All operators')}
@@ -902,6 +903,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                       responsibleEmployeeIds: ids,
                     })
                   }
+                  onClear={() => onFilterChange({ ...filters, responsibleEmployeeIds: [] })}
                   searchPlaceholder={t('pages.clients.filters.selectEmployee')}
                   emptyText={t('pages.clients.filters.noUsersAvailable')}
                   selectAllLabel={t('pages.clients.filters.selectAllEmployees', 'All employees')}
