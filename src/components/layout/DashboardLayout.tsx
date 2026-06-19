@@ -76,11 +76,33 @@ interface ExtendedSidebarItem extends SidebarItem {
   requiredPermission?: Permission
   requiredPermissions?: Permission[]
   mode?: 'any' | 'all'
-  subItems?: (SidebarSubItem & {
-    requiredPermission?: Permission
-    requiredPermissions?: Permission[]
-    mode?: 'any' | 'all'
-  })[]
+  subItems?: ExtendedSidebarSubItem[]
+}
+
+type ExtendedSidebarSubItem = SidebarSubItem & {
+  requiredPermission?: Permission
+  requiredPermissions?: Permission[]
+  mode?: 'any' | 'all'
+  children?: ExtendedSidebarSubItem[]
+}
+
+function filterSidebarSubItems(
+  subItems: ExtendedSidebarSubItem[],
+  hasPermission: (perm?: Permission, perms?: Permission[], mode?: 'any' | 'all') => boolean
+): ExtendedSidebarSubItem[] {
+  return subItems.flatMap((subItem) => {
+    if (subItem.children && subItem.children.length > 0) {
+      const filteredChildren = (subItem.children as ExtendedSidebarSubItem[]).filter((child) =>
+        hasPermission(child.requiredPermission, child.requiredPermissions, child.mode)
+      )
+      if (filteredChildren.length === 0) return []
+      return [{ ...subItem, children: filteredChildren }]
+    }
+
+    return hasPermission(subItem.requiredPermission, subItem.requiredPermissions, subItem.mode)
+      ? [subItem]
+      : []
+  })
 }
 
 // Mobile Header Menu Component - groups header actions into dropdown on mobile
@@ -291,94 +313,96 @@ function MobileHeaderMenu({ onLogoutClick }: { onLogoutClick?: () => void }) {
   }
 
   return (
-    <DropdownMenu modal={false} open={isOpen} onOpenChange={setIsOpen}>
-      <DropdownMenuTrigger asChild>
-        <button
-          type="button"
-          className="bg-secondary-800 flex h-10 w-10 cursor-pointer items-center justify-center rounded-md text-white transition-colors hover:opacity-90 focus:outline-none lg:hidden"
-          aria-label="Menu"
-        >
-          <Icons.User02 size={20} strokeWidth={1.5} className="text-primary-500" />
-        </button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56 bg-white">
-        {/* User Profile */}
-        <DropdownMenuItem disabled className="text-dark-500 text-sm">
-          <Icons.User02 size={16} className="mr-2" />
-          <span className="truncate">{displayName}</span>
-        </DropdownMenuItem>
+    <>
+      <DropdownMenu modal={false} open={isOpen} onOpenChange={setIsOpen}>
+        <DropdownMenuTrigger asChild>
+          <button
+            type="button"
+            className="bg-secondary-800 flex h-10 w-10 cursor-pointer items-center justify-center rounded-md text-white transition-colors hover:opacity-90 focus:outline-none lg:hidden"
+            aria-label="Menu"
+          >
+            <Icons.User02 size={20} strokeWidth={1.5} className="text-primary-500" />
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-56 bg-white">
+          {/* User Profile */}
+          <DropdownMenuItem disabled className="text-dark-500 text-sm">
+            <Icons.User02 size={16} className="mr-2" />
+            <span className="truncate">{displayName}</span>
+          </DropdownMenuItem>
 
-        {/* Minimized Call Bubble (if call is minimized) */}
-        {minimizedCall && (
-          <>
-            <DropdownMenuSeparator />
-            <TooltipProvider>
-              <Tooltip delayDuration={200}>
-                <TooltipTrigger asChild>
-                  <DropdownMenuItem
-                    onClick={handleRestoreCall}
-                    className={cn(
-                      'bg-secondary-800 relative flex cursor-pointer items-center rounded-md px-3 py-2 text-sm transition-all duration-200',
-                      'hover:bg-secondary-800 hover:scale-101 hover:opacity-90',
-                      'focus:bg-secondary-800 focus:text-white',
-                      'data-[highlighted]:bg-secondary-800 data-[highlighted]:text-white',
-                      isActiveCall ? 'animate-pulse' : 'animate-[pulse_3s_ease-in-out_infinite]'
-                    )}
-                  >
-                    <Icons.HeadsetConnected
-                      size={16}
+          {/* Minimized Call Bubble (if call is minimized) */}
+          {minimizedCall && (
+            <>
+              <DropdownMenuSeparator />
+              <TooltipProvider>
+                <Tooltip delayDuration={200}>
+                  <TooltipTrigger asChild>
+                    <DropdownMenuItem
+                      onClick={handleRestoreCall}
                       className={cn(
-                        'mr-2 text-white transition-transform duration-300',
-                        isActiveCall ? 'animate-pulse' : ''
+                        'bg-secondary-800 relative flex cursor-pointer items-center rounded-md px-3 py-2 text-sm transition-all duration-200',
+                        'hover:bg-secondary-800 hover:scale-101 hover:opacity-90',
+                        'focus:bg-secondary-800 focus:text-white',
+                        'data-[highlighted]:bg-secondary-800 data-[highlighted]:text-white',
+                        isActiveCall ? 'animate-pulse' : 'animate-[pulse_3s_ease-in-out_infinite]'
                       )}
-                      strokeWidth={1.5}
-                    />
-                    <span className="flex-1 truncate text-white">
-                      {minimizedCall.type === 'call-dialog'
-                        ? t('pages.clients.modals.callDialog.callClient')
-                        : t('pages.clients.modals.callRecording.title')}
-                    </span>
-                    {/* Active call indicator dot */}
-                    {isActiveCall && (
-                      <>
-                        <span className="bg-success-500 border-secondary-800 absolute -top-0.5 -right-0.5 h-2.5 w-2.5 animate-ping rounded-full border-2" />
-                        <span className="bg-success-500 border-secondary-800 absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2" />
-                      </>
-                    )}
-                  </DropdownMenuItem>
-                </TooltipTrigger>
-                <TooltipContent
-                  side="right"
-                  sideOffset={8}
-                  className="max-w-sm border border-gray-700 bg-gray-900 p-4 shadow-xl"
-                >
-                  {getTooltipContent()}
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </>
-        )}
+                    >
+                      <Icons.HeadsetConnected
+                        size={16}
+                        className={cn(
+                          'mr-2 text-white transition-transform duration-300',
+                          isActiveCall ? 'animate-pulse' : ''
+                        )}
+                        strokeWidth={1.5}
+                      />
+                      <span className="flex-1 truncate text-white">
+                        {minimizedCall.type === 'call-dialog'
+                          ? t('pages.clients.modals.callDialog.callClient')
+                          : t('pages.clients.modals.callRecording.title')}
+                      </span>
+                      {/* Active call indicator dot */}
+                      {isActiveCall && (
+                        <>
+                          <span className="bg-success-500 border-secondary-800 absolute -top-0.5 -right-0.5 h-2.5 w-2.5 animate-ping rounded-full border-2" />
+                          <span className="bg-success-500 border-secondary-800 absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2" />
+                        </>
+                      )}
+                    </DropdownMenuItem>
+                  </TooltipTrigger>
+                  <TooltipContent
+                    side="right"
+                    sideOffset={8}
+                    className="max-w-sm border border-gray-700 bg-gray-900 p-4 shadow-xl"
+                  >
+                    {getTooltipContent()}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </>
+          )}
 
-        {/* Settings */}
-        <DropdownMenuItem
-          onClick={() => {
-            setIsOpen(false)
-            navigate('/dashboard/profile')
-          }}
-          className="text-dark-500 text-sm"
-        >
-          <Icons.SlidersHorizontal size={16} className="mr-2" />
-          <span>{t('navigation.profile')}</span>
-        </DropdownMenuItem>
+          {/* Settings */}
+          <DropdownMenuItem
+            onClick={() => {
+              setIsOpen(false)
+              navigate('/dashboard/profile')
+            }}
+            className="text-dark-500 text-sm"
+          >
+            <Icons.SlidersHorizontal size={16} className="mr-2" />
+            <span>{t('navigation.profile')}</span>
+          </DropdownMenuItem>
 
-        {/* Logout */}
-        <DropdownMenuItem onClick={onLogoutClick} className="text-dark-500 text-sm">
-          <Icons.Logout size={16} className="mr-2" />
-          <span>{t('actions.logout')}</span>
-        </DropdownMenuItem>
-      </DropdownMenuContent>
+          {/* Logout */}
+          <DropdownMenuItem onClick={onLogoutClick} className="text-dark-500 text-sm">
+            <Icons.Logout size={16} className="mr-2" />
+            <span>{t('actions.logout')}</span>
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
 
-      {/* Restore call modals */}
+      {/* Restore call modals outside the dropdown root so Radix portals do not nest incorrectly */}
       {isRestored && minimizedCall?.type === 'call-dialog' && (
         <CallDialogModal
           open={isRestored}
@@ -408,7 +432,7 @@ function MobileHeaderMenu({ onLogoutClick }: { onLogoutClick?: () => void }) {
           callData={minimizedCall.callData}
         />
       )}
-    </DropdownMenu>
+    </>
   )
 }
 
@@ -545,9 +569,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         let backendSearchType: SearchType = 'all'
         if (type === 'phone') {
           backendSearchType = 'phone'
-        } else if (type === 'name' || type === 'tin') {
-          // Map name/tin to name search (backend name search includes TIN)
+        } else if (type === 'name') {
           backendSearchType = 'name'
+        } else if (type === 'tin') {
+          backendSearchType = 'tin'
         } else if (type === 'email') {
           backendSearchType = 'email'
         } else if (type === 'contract_number') {
@@ -566,7 +591,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           id: item.id,
           name: item.full_name,
           debt: item.total_debt,
-          phone: item.phone_primary ?? '',
+          phone: (item.phones ?? []).join(', '),
           email: item.email_primary ?? '',
           priority: mapPriorityLevel(item.priority_level),
           score: item.priority_score,
@@ -679,6 +704,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             icon: 'transaction-history',
             requiredPermission: PERMISSIONS.DATA.IMPORT_PAYMENTS,
           },
+          {
+            path: '/dashboard/import/bulk-writeoff-import',
+            label: t('navigation.bulkWriteoffImport', 'Bulk Write-off Import'),
+            icon: 'file-import',
+            requiredPermission: PERMISSIONS.WRITEOFFS.BULK,
+          },
         ],
       },
       {
@@ -694,16 +725,41 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         requiredPermission: PERMISSIONS.REPORTS.VIEW_ALL_REPORTS,
       },
       {
+        path: '/dashboard/messaging/campaigns',
+        icon: 'mail-send-01',
+        label: t('navigation.campaignAnalytics', 'Campaign Analytics'),
+        requiredPermission: PERMISSIONS.MESSAGING.VIEW_CAMPAIGN_ANALYTICS,
+      },
+      {
         path: '/dashboard/action-analysis',
         icon: 'analytics-01',
         label: t('navigation.actionAnalysis'),
         requiredPermission: PERMISSIONS.ACTION_ANALYSIS.VIEW,
       },
       {
-        path: '/dashboard/users',
-        icon: 'user-search-01',
-        label: t('navigation.users'),
-        requiredPermission: PERMISSIONS.USERS.VIEW,
+        path: '/dashboard/team-management',
+        icon: 'user-multiple-02',
+        label: t('navigation.teamManagement', 'Team Management'),
+        subItems: [
+          {
+            path: '/dashboard/team-management/users',
+            label: t('navigation.users'),
+            icon: 'user-search-01',
+            requiredPermission: PERMISSIONS.USERS.VIEW,
+          },
+          {
+            path: '/dashboard/team-management/roles',
+            label: t('navigation.roles'),
+            icon: 'user-circle-02',
+            requiredPermission: PERMISSIONS.SYSTEM.MANAGE_ROLES,
+          },
+          {
+            path: '/dashboard/team-management/departments',
+            label: t('navigation.departments'),
+            icon: 'briefcase-01',
+            requiredPermission: PERMISSIONS.SYSTEM.MANAGE_ROLES,
+          },
+        ],
       },
       {
         path: '/dashboard/sellers',
@@ -712,34 +768,53 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         requiredPermission: PERMISSIONS.SELLERS.VIEW,
       },
       {
-        path: '/dashboard/roles',
-        icon: 'user-circle-02',
-        label: t('navigation.roles'),
-        requiredPermission: PERMISSIONS.SYSTEM.MANAGE_ROLES,
-      },
-      {
-        path: '/dashboard/departments',
-        icon: 'briefcase-01',
-        label: t('navigation.departments'),
-        requiredPermission: PERMISSIONS.SYSTEM.MANAGE_ROLES,
-      },
-      {
         path: '/dashboard/audit-logs',
         icon: 'transaction-history',
         label: t('navigation.auditLogs'),
         requiredPermission: PERMISSIONS.SYSTEM.VIEW_AUDIT_LOGS,
       },
       {
+        path: '/dashboard/messaging-settings',
+        icon: 'message-multiple-01',
+        label: t('navigation.messagingSettings', 'Messaging Settings'),
+        requiredPermissions: [
+          PERMISSIONS.MESSAGING.MANAGE_INTEGRATIONS,
+          PERMISSIONS.MESSAGING.MANAGE_DRAFTS,
+        ],
+        mode: 'any' as const,
+        subItems: [
+          {
+            path: '/dashboard/system-settings/messaging-integrations',
+            label: t('navigation.messagingIntegrations', 'Messaging Integrations'),
+            icon: 'message-secure-01',
+            requiredPermission: PERMISSIONS.MESSAGING.MANAGE_INTEGRATIONS,
+          },
+          {
+            path: '/dashboard/system-settings/messaging-drafts',
+            label: t('navigation.messagingDrafts', 'Message Drafts'),
+            icon: 'bubble-chat-edit',
+            requiredPermission: PERMISSIONS.MESSAGING.MANAGE_DRAFTS,
+          },
+        ],
+      },
+      {
         path: '/dashboard/system-settings',
         icon: 'setting-07',
         label: t('navigation.systemSettings', 'System Settings'),
-        requiredPermission: PERMISSIONS.SYSTEM.MANAGE_SETTINGS,
+        requiredPermissions: [PERMISSIONS.SYSTEM.MANAGE_SETTINGS, PERMISSIONS.CONTACT_TYPES.VIEW],
+        mode: 'any' as const,
         subItems: [
           {
             path: '/dashboard/system-settings/tags',
             label: t('navigation.tags', 'Tags'),
             icon: 'file-01',
             requiredPermission: PERMISSIONS.TAGS.VIEW,
+          },
+          {
+            path: '/dashboard/system-settings/contact-types',
+            label: t('navigation.contactTypes', 'Contact Types'),
+            icon: 'user-multiple-02',
+            requiredPermission: PERMISSIONS.CONTACT_TYPES.VIEW,
           },
           {
             path: '/dashboard/system-settings/scoring-configuration',
@@ -777,6 +852,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             ],
             mode: 'any' as const,
           },
+          {
+            path: '/dashboard/system-settings/rr-notifications',
+            label: t('navigation.rrNotifications', 'RR Notifications'),
+            icon: 'mail',
+            requiredPermission: PERMISSIONS.SYSTEM.MANAGE_SETTINGS,
+          },
         ],
       },
     ]
@@ -801,9 +882,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       .map((item) => {
         // Filter sub-items first based on permissions
         if (item.subItems) {
-          const filteredSubItems = item.subItems.filter((subItem) =>
-            hasPermission(subItem.requiredPermission, subItem.requiredPermissions, subItem.mode)
-          )
+          const filteredSubItems = filterSidebarSubItems(item.subItems, hasPermission)
           return { ...item, subItems: filteredSubItems }
         }
         return item
@@ -820,12 +899,14 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         return hasPermission(item.requiredPermission, item.requiredPermissions, item.mode)
       })
 
-    // Separate System Settings to render at bottom
-    const systemSettingsItem = filteredItems.find(
-      (item) => item.path === '/dashboard/system-settings'
+    // Pin settings menus at the bottom of the sidebar (Messaging above System Settings)
+    const bottomNavPaths = ['/dashboard/messaging-settings', '/dashboard/system-settings'] as const
+    const bottomItems = bottomNavPaths
+      .map((path) => filteredItems.find((item) => item.path === path))
+      .filter((item): item is ExtendedSidebarItem => item != null)
+    const regularItems = filteredItems.filter(
+      (item) => !bottomNavPaths.includes(item.path as (typeof bottomNavPaths)[number])
     )
-    const regularItems = filteredItems.filter((item) => item.path !== '/dashboard/system-settings')
-    const bottomItems = systemSettingsItem ? [systemSettingsItem] : []
 
     return { navItems: regularItems, bottomNavItems: bottomItems }
     // i18n.language is needed to recalculate navigation items when language changes

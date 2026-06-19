@@ -3,6 +3,16 @@
  * Based on TIN-based brand isolation architecture
  */
 
+/**
+ * Distinct responsible employee / searcher user ids for the active project
+ * (non-deleted clients). Used to gate which inactive operators appear in the
+ * Client List filter dropdowns.
+ */
+export interface ClientAssigneeIdsResponse {
+  employee_ids: number[]
+  searcher_ids: number[]
+}
+
 export interface DebtDetail {
   id: number
   seller_id?: number
@@ -128,6 +138,9 @@ export interface Client {
   debt_count: number
   total_debt: string
   primary_creditor?: string | null
+  // Max purchase_date across all of the client's loans (active + closed);
+  // null when the client has no loans.
+  last_purchase_date?: string | null
 
   // Last interaction result — name + id of the result attached to the
   // most recent non-deleted interaction. ``null`` means no interaction
@@ -218,7 +231,6 @@ export interface GetClientsParams {
   sort_by_priority?: boolean // Legacy parameter
   sort_by?:
     | 'priority_score'
-    | 'created_at'
     | 'first_name'
     | 'last_name'
     | 'id'
@@ -228,6 +240,7 @@ export interface GetClientsParams {
     | 'total_debt'
     | 'assignment_date'
     | 'last_interaction_result'
+    | 'last_purchase_date'
   sort_order?: 'asc' | 'desc'
 
   // Filter: Portfolio/Sellers
@@ -238,7 +251,11 @@ export interface GetClientsParams {
   sale_date_to?: string // YYYY-MM-DD format
 
   // Filter: Assignment
+  /** @deprecated use responsible_employee_ids (multi-select OR). Folded
+   * into the list at the BE for one deprecation release. */
   responsible_employee_id?: number
+  /** Comma-separated employee user IDs, OR semantics. Example: '101,102,103'. */
+  responsible_employee_ids?: string
   responsible_searcher_id?: number
   unassigned_only?: boolean
 
@@ -258,18 +275,22 @@ export interface GetClientsParams {
   dpd_min?: number
   dpd_max?: number
 
-  // Filter: Promise-to-pay Date
-  promise_date_from?: string // YYYY-MM-DD format
-  promise_date_to?: string // YYYY-MM-DD format
+  // Filter: Target Action Date — date value(s) entered by the user
+  // inside a TA's date-typed step(s). The BE picks the latest
+  // TA-with-date per client; if ANY of those values falls in the
+  // range, the client matches. TAs without date values are skipped
+  // even when newer.
+  ta_date_from?: string // YYYY-MM-DD format
+  ta_date_to?: string // YYYY-MM-DD format
 
-  // Filter: Callback/Next-action Date
-  callback_date_from?: string // YYYY-MM-DD format
-  callback_date_to?: string // YYYY-MM-DD format
-
-  // Filter: Interaction operator
+  // Filter: Interaction Created By — operator on the client's latest TA
+  /** @deprecated use interaction_user_ids (multi-select OR). */
   interaction_user_id?: number
+  /** Comma-separated operator user IDs, OR semantics on the latest-TA recorded_by. */
+  interaction_user_ids?: string
 
-  // Filter: Interaction logged date (applies to promise and callback subqueries)
+  // Filter: Interaction Logged Date — created_at of the latest TA,
+  // independent of TA date-value presence
   interaction_date_from?: string // YYYY-MM-DD format
   interaction_date_to?: string // YYYY-MM-DD format
 
@@ -398,6 +419,8 @@ export interface ClientProfileResponse {
     comment?: string | null
     created_at?: string | null
     added_by_user_name?: string | null
+    default_call_line?: string | null
+    spam_allowed?: boolean | null
   }>
   addresses: Array<{
     id: number
@@ -416,11 +439,16 @@ export interface ClientProfileResponse {
     is_primary?: boolean
   }>
   additional_phones: Array<{
+    contact_id: number
+    contact_type_id: number
+    contact_type_code?: string | null
     number: string
     type: string
     label?: string | null
     created_at?: string | null
     added_by_user_name?: string | null
+    default_call_line: string
+    spam_allowed: boolean
   }>
   comments: Array<{
     id: number
@@ -525,6 +553,30 @@ export interface ContactTypeOption {
   code: string
   name: string
   is_phone: boolean
+  sort_order: number
+  default_call_line: string
+  spam_allowed: boolean
+  show_as_primary_phone: boolean
+  show_in_client_detail: boolean
+  is_hidden: boolean
+}
+
+export interface ContactTypeCreatePayload {
+  name: string
+  default_call_line: 'white' | 'gray'
+  spam_allowed: boolean
+  show_as_primary_phone: boolean
+  sort_order: number
+}
+
+export interface ContactTypePatchPayload {
+  name?: string
+  default_call_line?: 'white' | 'gray'
+  spam_allowed?: boolean
+  show_as_primary_phone?: boolean
+  show_in_client_detail?: boolean
+  sort_order?: number
+  is_hidden?: boolean
 }
 
 export interface WriteoffsResponse {

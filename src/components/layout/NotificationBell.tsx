@@ -26,6 +26,9 @@ import {
   useUnreadCount,
   useDismissNotification,
   useMarkAllAsRead,
+  useStarNotification,
+  useUnstarNotification,
+  useUpdateTaskFromBell,
 } from '@/features/notifications/hooks/useNotifications'
 import { useNotificationSocket } from '@/features/notifications/hooks/useNotificationSocket'
 import { NotificationType } from '@/features/notifications/types'
@@ -87,6 +90,22 @@ function formatRelativeTime(isoDate: string, t: TFunction): string {
   }
 }
 
+// Tab structure for the bell dropdown. Order matters: this is the
+// rendered order in the horizontal tab strip. Extending the system to
+// support new notification types in the future = add a new tab key
+// here + a new render branch in the tab-content panel.
+const TABS = ['tasks', 'starred', 'payments', 'calls', 'rrPayments'] as const
+type Tab = (typeof TABS)[number]
+
+function EmptyState({ label }: { t: TFunction; label: string }) {
+  return (
+    <div className="flex flex-col items-center justify-center gap-2 px-4 py-8 text-gray-300">
+      <Icons.Bell size={28} strokeWidth={1.5} />
+      <p className="text-xs text-gray-400">{label}</p>
+    </div>
+  )
+}
+
 export function NotificationBell() {
   const { t } = useTranslation('common')
   const navigate = useNavigate()
@@ -116,11 +135,11 @@ export function NotificationBell() {
     const prev = prevCountRef.current
     prevCountRef.current = count
     if (count > prev && prev !== 0) {
-      const t = setTimeout(() => {
+      const timer = setTimeout(() => {
         setIsShaking(true)
         setTimeout(() => setIsShaking(false), 900)
       }, 0)
-      return () => clearTimeout(t)
+      return () => clearTimeout(timer)
     }
   }, [count])
 
@@ -142,26 +161,29 @@ export function NotificationBell() {
 
   const hasNotifications = count > 0
 
-  // Group notifications by type for section headers
-  const paymentNotifications = notifications.filter(
-    (n) => n.type === NotificationType.PAYMENT_PENDING
+  // Tab state — Tasks / Starred / Pending Payments / Inbound Calls.
+  // Tasks-tab default matches operators' most-frequent action.
+  const [activeTab, setActiveTab] = useState<Tab>('tasks')
+
+  // Per-tab filtered slices (one query, filtered locally — same pattern
+  // the previous flat-list rendering used). Task tabs split on starred.
+  const tasksTabItems = notifications.filter(
+    (n) => n.type === NotificationType.TASK_OVERDUE && !n.starred
   )
-  const taskNotifications = notifications.filter((n) => n.type === NotificationType.TASK_OVERDUE)
-  const callNotifications = notifications.filter(
+  const starredTabItems = notifications.filter(
+    (n) => n.type === NotificationType.TASK_OVERDUE && n.starred
+  )
+  const paymentsTabItems = notifications.filter((n) => n.type === NotificationType.PAYMENT_PENDING)
+  const callsTabItems = notifications.filter(
     (n) =>
       n.type === NotificationType.INCOMING_CALL || n.type === NotificationType.CALLBACK_REQUESTED
   )
-  const tagNotifications = notifications.filter(
-    (n) =>
-      n.type === NotificationType.TAG_ASSIGNED ||
-      n.type === NotificationType.TAG_REMOVED ||
-      n.type === NotificationType.TAG_EXPIRED
-  )
-  const taChainNotifications = notifications.filter(
-    (n) => n.type === NotificationType.TA_CHAIN_CREATED
-  )
+  const rrPaymentsTabItems = notifications.filter((n) => n.type === NotificationType.RR_PAYMENT_DUE)
 
   const markAsReadMutation = useMarkAsRead()
+  const starMutation = useStarNotification()
+  const unstarMutation = useUnstarNotification()
+  const updateTaskMutation = useUpdateTaskFromBell()
 
   const handleNavigate = (
     notificationId: string,
@@ -177,6 +199,7 @@ export function NotificationBell() {
     }
   }
 
+  // Payment / Call cards: existing notification-dismiss behavior, unchanged.
   const handleDismiss = async (e: React.MouseEvent, notificationId: string) => {
     e.stopPropagation()
     try {
@@ -184,6 +207,47 @@ export function NotificationBell() {
     } catch {
       toast.error(t('notificationBell.errors.dismissFailed'))
     }
+  }
+
+  // Task cards: ✗ icon now CANCELS the task (not just dismisses the
+  // notification). The notification auto-dismisses on the next poll
+  // cycle when the task status drops out of the overdue set.
+  // Optimistic UI removes the card immediately so the ~15s lag is invisible.
+  const handleCancelTask = (e: React.MouseEvent, taskId: number) => {
+    e.stopPropagation()
+    updateTaskMutation.mutate(
+      { taskId, status: 'cancelled' },
+      {
+        onError: () =>
+          toast.error(t('notificationBell.errors.cancelFailed', 'Failed to cancel task')),
+      }
+    )
+  }
+
+  // Task cards: ✓ button COMPLETES the task. Same auto-dismiss flow.
+  const handleCompleteTask = (e: React.MouseEvent, taskId: number) => {
+    e.stopPropagation()
+    updateTaskMutation.mutate(
+      { taskId, status: 'completed' },
+      {
+        onError: () =>
+          toast.error(t('notificationBell.errors.completeFailed', 'Failed to complete task')),
+      }
+    )
+  }
+
+  const handleStar = (e: React.MouseEvent, notificationId: string) => {
+    e.stopPropagation()
+    starMutation.mutate(notificationId, {
+      onError: () => toast.error(t('notificationBell.errors.starFailed', 'Failed to star')),
+    })
+  }
+
+  const handleUnstar = (e: React.MouseEvent, notificationId: string) => {
+    e.stopPropagation()
+    unstarMutation.mutate(notificationId, {
+      onError: () => toast.error(t('notificationBell.errors.unstarFailed', 'Failed to unstar')),
+    })
   }
 
   return (
@@ -245,92 +309,133 @@ export function NotificationBell() {
             </div>
           </div>
 
-          {/* Notification list */}
+          {/* Tab strip — horizontal, scrollable on overflow. */}
+          <div className="flex overflow-x-auto border-b border-gray-100 text-xs">
+            {TABS.map((tab) => {
+              const count =
+                tab === 'tasks'
+                  ? tasksTabItems.length
+                  : tab === 'starred'
+                    ? starredTabItems.length
+                    : tab === 'payments'
+                      ? paymentsTabItems.length
+                      : tab === 'calls'
+                        ? callsTabItems.length
+                        : rrPaymentsTabItems.length
+              const isActive = activeTab === tab
+              return (
+                <button
+                  key={tab}
+                  type="button"
+                  onClick={() => setActiveTab(tab)}
+                  className={cn(
+                    'flex-shrink-0 border-b-2 px-3 py-2 font-medium whitespace-nowrap transition-colors',
+                    isActive
+                      ? 'border-blue-500 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700'
+                  )}
+                >
+                  {t(`notificationBell.tabs.${tab}`)}
+                  {count > 0 && (
+                    <span
+                      className={cn(
+                        'ml-1.5 rounded-full px-1.5 py-0.5 text-[10px] font-semibold',
+                        isActive ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'
+                      )}
+                    >
+                      {count}
+                    </span>
+                  )}
+                </button>
+              )
+            })}
+          </div>
+
+          {/* Tab content panel */}
           <div className="max-h-80 overflow-y-auto">
-            {notifications.length === 0 ? (
-              <div className="flex flex-col items-center justify-center gap-2 px-4 py-8 text-gray-300">
-                <Icons.Bell size={28} strokeWidth={1.5} />
-                <p className="text-xs text-gray-400">{t('notificationBell.noNotifications')}</p>
-              </div>
-            ) : (
-              <>
-                {/* Pending Payments section */}
-                {paymentNotifications.length > 0 && (
-                  <div className="border-b border-gray-100 px-4 py-2 text-xs font-semibold text-black">
-                    {t('notificationBell.sections.pendingPayments')}
-                  </div>
-                )}
-                {paymentNotifications.map((n) => (
+            {activeTab === 'tasks' &&
+              (tasksTabItems.length === 0 ? (
+                <EmptyState t={t} label={t('notificationBell.empty.tasks', 'No overdue tasks')} />
+              ) : (
+                tasksTabItems.map((n) => (
+                  <TaskNotificationItem
+                    key={n.id}
+                    notification={n}
+                    onNavigate={handleNavigate}
+                    onCancelTask={handleCancelTask}
+                    onCompleteTask={handleCompleteTask}
+                    onStar={handleStar}
+                    onUnstar={handleUnstar}
+                    userTimezone={userTimezone}
+                  />
+                ))
+              ))}
+
+            {activeTab === 'starred' &&
+              (starredTabItems.length === 0 ? (
+                <EmptyState t={t} label={t('notificationBell.empty.starred', 'No starred tasks')} />
+              ) : (
+                starredTabItems.map((n) => (
+                  <TaskNotificationItem
+                    key={n.id}
+                    notification={n}
+                    onNavigate={handleNavigate}
+                    onCancelTask={handleCancelTask}
+                    onCompleteTask={handleCompleteTask}
+                    onStar={handleStar}
+                    onUnstar={handleUnstar}
+                    userTimezone={userTimezone}
+                  />
+                ))
+              ))}
+
+            {activeTab === 'payments' &&
+              (paymentsTabItems.length === 0 ? (
+                <EmptyState
+                  t={t}
+                  label={t('notificationBell.empty.payments', 'No pending payments')}
+                />
+              ) : (
+                paymentsTabItems.map((n) => (
                   <PaymentNotificationItem
                     key={n.id}
                     notification={n}
                     userTimezone={userTimezone}
                     onNavigate={handleNavigate}
                   />
-                ))}
+                ))
+              ))}
 
-                {/* Tasks section */}
-                {taskNotifications.length > 0 && (
-                  <div className="border-b border-gray-100 px-4 py-2 text-xs font-semibold text-black">
-                    {t('notificationBell.sections.tasks')}
-                  </div>
-                )}
-                {taskNotifications.map((n) => (
-                  <TaskNotificationItem
-                    key={n.id}
-                    notification={n}
-                    onNavigate={handleNavigate}
-                    onDismiss={handleDismiss}
-                    userTimezone={userTimezone}
-                  />
-                ))}
-
-                {/* Calls section */}
-                {callNotifications.length > 0 && (
-                  <div className="border-b border-gray-100 px-4 py-2 text-xs font-semibold text-black">
-                    {t('notificationBell.sections.calls')}
-                  </div>
-                )}
-                {callNotifications.map((n) => (
+            {activeTab === 'calls' &&
+              (callsTabItems.length === 0 ? (
+                <EmptyState t={t} label={t('notificationBell.empty.calls', 'No inbound calls')} />
+              ) : (
+                callsTabItems.map((n) => (
                   <CallNotificationItem
                     key={n.id}
                     notification={n}
                     onNavigate={handleNavigate}
                     onDismiss={handleDismiss}
                   />
-                ))}
+                ))
+              ))}
 
-                {/* Tags section */}
-                {tagNotifications.length > 0 && (
-                  <div className="border-b border-gray-100 px-4 py-2 text-xs font-semibold text-black">
-                    {t('notificationBell.sections.tags')}
-                  </div>
-                )}
-                {tagNotifications.map((n) => (
-                  <TagNotificationItem
+            {activeTab === 'rrPayments' &&
+              (rrPaymentsTabItems.length === 0 ? (
+                <EmptyState
+                  t={t}
+                  label={t('notificationBell.empty.rrPayments', 'No RR payments due')}
+                />
+              ) : (
+                rrPaymentsTabItems.map((n) => (
+                  <RRPaymentNotificationItem
                     key={n.id}
                     notification={n}
                     onNavigate={handleNavigate}
                     onDismiss={handleDismiss}
                   />
-                ))}
-
-                {/* TA Chains section */}
-                {taChainNotifications.length > 0 && (
-                  <div className="border-b border-gray-100 px-4 py-2 text-xs font-semibold text-black">
-                    {t('notificationBell.sections.taChains')}
-                  </div>
-                )}
-                {taChainNotifications.map((n) => (
-                  <TaChainNotificationItem
-                    key={n.id}
-                    notification={n}
-                    onNavigate={handleNavigate}
-                    onDismiss={handleDismiss}
-                  />
-                ))}
-              </>
-            )}
+                ))
+              ))}
           </div>
         </div>
       )}
@@ -401,16 +506,23 @@ function PaymentNotificationItem({
 function TaskNotificationItem({
   notification: n,
   onNavigate,
-  onDismiss,
+  onCancelTask,
+  onCompleteTask,
+  onStar,
+  onUnstar,
   userTimezone,
 }: {
   notification: NotificationItem
   onNavigate: NavigateFn
-  onDismiss: DismissFn
+  onCancelTask: (e: React.MouseEvent, taskId: number) => void
+  onCompleteTask: (e: React.MouseEvent, taskId: number) => void
+  onStar: (e: React.MouseEvent, notificationId: string) => void
+  onUnstar: (e: React.MouseEvent, notificationId: string) => void
   userTimezone?: string
 }) {
   const { t } = useTranslation('common')
   const meta = n.metadata
+  const taskId = meta.task_id as number | undefined
   return (
     <div className="group relative flex border-b border-gray-100 transition-colors last:border-b-0 hover:bg-gray-50">
       <button
@@ -481,14 +593,55 @@ function TaskNotificationItem({
           </span>
         </div>
       </button>
-      <button
-        type="button"
-        aria-label={t('notificationBell.dismissAria')}
-        onClick={(e) => onDismiss(e, n.id)}
-        className="absolute top-2 right-2 flex h-5 w-5 items-center justify-center rounded text-gray-300 opacity-0 transition-opacity group-hover:opacity-100 hover:text-gray-600"
-      >
-        <Icons.Cancel01 size={12} strokeWidth={2} />
-      </button>
+      {/* Action cluster — visible on hover. Complete + Star/Unstar +
+          Cancel. Star toggles to Unstar in the Starred tab (driven by
+          n.starred). The X icon (Cancel01) is repurposed from
+          "dismiss notification" to "cancel task". */}
+      <div className="absolute top-2 right-2 flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+        {taskId !== undefined && (
+          <button
+            type="button"
+            aria-label={t('notificationBell.taskActions.completeAria', 'Complete task')}
+            title={t('notificationBell.taskActions.completeTitle', 'Complete task')}
+            onClick={(e) => onCompleteTask(e, taskId)}
+            className="flex h-5 w-5 items-center justify-center rounded text-gray-300 hover:bg-green-50 hover:text-green-600"
+          >
+            <Icons.Tick02 size={12} strokeWidth={2} />
+          </button>
+        )}
+        {n.starred ? (
+          <button
+            type="button"
+            aria-label={t('notificationBell.taskActions.unstarAria', 'Unstar')}
+            title={t('notificationBell.taskActions.unstarTitle', 'Unstar')}
+            onClick={(e) => onUnstar(e, n.id)}
+            className="flex h-5 w-5 items-center justify-center rounded text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+          >
+            <Icons.StarFilled size={12} strokeWidth={2} />
+          </button>
+        ) : (
+          <button
+            type="button"
+            aria-label={t('notificationBell.taskActions.starAria', 'Star task')}
+            title={t('notificationBell.taskActions.starTitle', 'Star task')}
+            onClick={(e) => onStar(e, n.id)}
+            className="flex h-5 w-5 items-center justify-center rounded text-yellow-500 hover:bg-yellow-50 hover:text-yellow-600"
+          >
+            <Icons.StarFilled size={12} strokeWidth={2} />
+          </button>
+        )}
+        {taskId !== undefined && (
+          <button
+            type="button"
+            aria-label={t('notificationBell.taskActions.cancelAria', 'Cancel task')}
+            title={t('notificationBell.taskActions.cancelTitle', 'Cancel task')}
+            onClick={(e) => onCancelTask(e, taskId)}
+            className="flex h-5 w-5 items-center justify-center rounded text-gray-300 hover:bg-red-50 hover:text-red-600"
+          >
+            <Icons.Cancel01 size={12} strokeWidth={2} />
+          </button>
+        )}
+      </div>
     </div>
   )
 }
@@ -536,9 +689,11 @@ function CallNotificationItem({
   )
 }
 
-// ─── Tag notification item ───────────────────────────────────────
+// ─── RR Payment notification item ────────────────────────────────
+// Dismiss-only action (operators clear the card; the next poll cycle
+// in notification-service handles natural cleanup).
 
-function TagNotificationItem({
+function RRPaymentNotificationItem({
   notification: n,
   onNavigate,
   onDismiss,
@@ -557,83 +712,32 @@ function TagNotificationItem({
         onClick={() => onNavigate(n.id, meta.client_id, n.read)}
         className="flex min-w-0 flex-1 flex-col gap-1.5 px-4 py-3 text-left disabled:cursor-default"
       >
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-1.5 pr-5">
           {!n.read && <span className="h-2 w-2 shrink-0 rounded-full bg-blue-500" />}
-          <Icons.Bell size={14} strokeWidth={1.5} className="text-purple-500" />
-          <p className="text-xs font-semibold text-black">{n.title}</p>
+          <p className="line-clamp-1 text-xs font-semibold text-black">{n.title}</p>
+          {meta.amount && (
+            <span className="rounded bg-blue-100 px-1.5 py-0.5 text-[10px] font-medium text-blue-600">
+              ₴ {meta.amount}
+            </span>
+          )}
         </div>
-        {n.body && <p className="text-xs text-black">{n.body}</p>}
-        <span className="text-[11px] text-gray-400">
-          {n.created_at ? formatRelativeTime(n.created_at, t) : ''}
-        </span>
-      </button>
-      <button
-        type="button"
-        aria-label={t('notificationBell.dismissAria')}
-        onClick={(e) => onDismiss(e, n.id)}
-        className="absolute top-2 right-2 flex h-5 w-5 items-center justify-center rounded text-gray-300 opacity-0 transition-opacity group-hover:opacity-100 hover:text-gray-600"
-      >
-        <Icons.Cancel01 size={12} strokeWidth={2} />
-      </button>
-    </div>
-  )
-}
-
-// ─── TA Chain notification item ──────────────────────────────────
-
-function TaChainNotificationItem({
-  notification: n,
-  onNavigate,
-  onDismiss,
-}: {
-  notification: NotificationItem
-  onNavigate: NavigateFn
-  onDismiss: DismissFn
-}) {
-  const { t } = useTranslation('common')
-  const meta = n.metadata
-  return (
-    <div className="group relative flex border-b border-gray-100 transition-colors last:border-b-0 hover:bg-gray-50">
-      <button
-        type="button"
-        disabled={!meta.client_id}
-        onClick={() => onNavigate(n.id, meta.client_id, n.read)}
-        className="flex min-w-0 flex-1 flex-col gap-1.5 px-4 py-3 text-left disabled:cursor-default"
-      >
-        <div className="flex items-center gap-2 pr-5">
-          {!n.read && <span className="h-2 w-2 shrink-0 rounded-full bg-blue-500" />}
-          <Icons.Bell size={14} strokeWidth={1.5} className="text-emerald-600" />
-          <p className="line-clamp-1 text-xs font-semibold text-black">
-            {meta.client_name ?? t('notificationBell.clientNumber', { id: meta.client_id })}
-            {meta.client_id && (
-              <span className="ml-1 font-normal text-black">
-                ({t('notificationBell.idLabel', { id: meta.client_id })})
+        {n.body && <p className="w-full min-w-0 truncate text-xs text-black">{n.body}</p>}
+        <div className="flex items-center gap-1 text-black">
+          <Icons.Clock01 size={11} strokeWidth={1.5} />
+          <span className="text-[11px]">
+            {meta.due_date ?? '—'}
+            {typeof meta.days_left === 'number' && (
+              <span className="ml-1 text-gray-500">
+                (
+                {t('notificationBell.daysLeft', {
+                  count: meta.days_left,
+                  defaultValue: 'in {{count}} days',
+                })}
+                )
               </span>
             )}
-          </p>
+          </span>
         </div>
-        {meta.chain_name && (
-          <p className="line-clamp-1 text-xs text-black">
-            <span className="font-medium">{t('notificationBell.chainLabel')}</span>{' '}
-            {meta.chain_name}
-          </p>
-        )}
-        {meta.result_name && (
-          <p className="line-clamp-1 text-xs text-black">
-            <span className="font-medium">{t('notificationBell.resultLabel')}</span>{' '}
-            <span className="rounded bg-emerald-50 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700">
-              {meta.result_name}
-            </span>
-          </p>
-        )}
-        {meta.operator_name && (
-          <p className="line-clamp-1 text-[11px] text-gray-500">
-            {t('notificationBell.byOperator', { name: meta.operator_name })}
-          </p>
-        )}
-        <span className="text-[11px] text-gray-400">
-          {n.created_at ? formatRelativeTime(n.created_at, t) : ''}
-        </span>
       </button>
       <button
         type="button"

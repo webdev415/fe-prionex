@@ -4,8 +4,9 @@ import {
   deleteQuickPick,
   getQuickPicks,
   reorderQuickPicks,
+  updateQuickPick,
 } from '../api/quickPicksApi'
-import type { QuickPickCreate } from '../api/types'
+import type { QuickPickCreate, QuickPickUpdate } from '../api/types'
 
 const KEY = ['quick-picks'] as const
 
@@ -26,6 +27,15 @@ export function useCreateQuickPick() {
   })
 }
 
+export function useUpdateQuickPick() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, payload }: { id: number; payload: QuickPickUpdate }) =>
+      updateQuickPick(id, payload),
+    onSuccess: () => qc.invalidateQueries({ queryKey: KEY }),
+  })
+}
+
 export function useDeleteQuickPick() {
   const qc = useQueryClient()
   return useMutation({
@@ -34,10 +44,19 @@ export function useDeleteQuickPick() {
   })
 }
 
+// Reorder is per-department; sort_order lives on the (pick, department)
+// junction row, so the caller must say which department's list is being
+// reordered.
 export function useReorderQuickPicks() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (items: Array<{ id: number; sort_order: number }>) => reorderQuickPicks(items),
+    mutationFn: ({
+      departmentId,
+      items,
+    }: {
+      departmentId: number
+      items: Array<{ id: number; sort_order: number }>
+    }) => reorderQuickPicks(departmentId, items),
     onSuccess: () => qc.invalidateQueries({ queryKey: KEY }),
   })
 }

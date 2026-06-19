@@ -12,6 +12,10 @@ export interface TAChainStepIn {
   delay_minutes?: number
   not_in_the_past?: boolean
   contact_source?: ContactSource | null
+  // Credit-step admin flag: include debts with status='closed' in the
+  // executor's picker (true) or only status='active' (false). Default
+  // false. Meaningful only when the step's TA has field_type='credit'.
+  show_closed_credits?: boolean
 }
 
 export interface TAChainStep {
@@ -25,6 +29,7 @@ export interface TAChainStep {
   delay_minutes: number
   not_in_the_past: boolean
   contact_source: ContactSource | null
+  show_closed_credits: boolean
   position_x: number | null
   position_y: number | null
 }
@@ -43,6 +48,14 @@ export interface TAChain {
   created_by: number | null
   created_at: string
   updated_at: string
+  // KAN-XXX — chain edit lock. ``is_structurally_locked`` is true when
+  // any ta_interactions have been recorded against this chain; the BE
+  // refuses ``steps`` / ``chain_type`` changes in that state. The Chain
+  // Builder reads it to disable the structural editing UI and surface a
+  // "Clone to modify" prompt. Boolean only — no count is fetched, so
+  // the lock probe doesn't get more expensive as a chain accumulates
+  // history.
+  is_structurally_locked?: boolean
 }
 
 export interface TAChainListResponse {

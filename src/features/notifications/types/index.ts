@@ -7,6 +7,7 @@ export const NotificationType = {
   TAG_REMOVED: 'tag_removed',
   TAG_EXPIRED: 'tag_expired',
   TA_CHAIN_CREATED: 'ta_chain_created',
+  RR_PAYMENT_DUE: 'rr_payment_due',
 } as const
 
 export type NotificationType = (typeof NotificationType)[keyof typeof NotificationType]
@@ -19,6 +20,7 @@ export interface NotificationItem {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   metadata: Record<string, any>
   read: boolean
+  starred: boolean
   created_at: string
   read_at: string | null
 }

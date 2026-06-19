@@ -8,7 +8,7 @@
 
 import { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useChainExecutorStore } from '@/stores/chainExecutorStore'
+import { useChainExecutorStore, type MinimizedChainExecutorInfo } from '@/stores/chainExecutorStore'
 import { Icons } from '@/lib/icons'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/Tooltip'
 import { Modal, ModalContent } from '@/components/ui/Modal'
@@ -18,27 +18,31 @@ export function MinimizedChainExecutorBubble() {
   const { t } = useTranslation('common')
   const { minimized, clear } = useChainExecutorStore()
   const [isRestored, setIsRestored] = useState(false)
+  // Snapshot taken when the operator restores the modal so ChainExecutor can
+  // clear the zustand store on mount without unmounting the modal.
+  const [restoredSnapshot, setRestoredSnapshot] = useState<MinimizedChainExecutorInfo | null>(null)
   const minimizeRef = useRef<(() => void) | null>(null)
-  // Keep a cached copy of the last known minimized info so the restored
-  // modal survives the store being cleared (ChainExecutor clears on mount).
-  // We update state during render (before any early return), which is the
-  // React-recommended pattern for storing information from previous renders.
-  const [cachedInfo, setCachedInfo] = useState(minimized)
-  if (minimized && minimized !== cachedInfo) setCachedInfo(minimized)
 
   if (!minimized && !isRestored) return null
 
-  const info = minimized ?? cachedInfo!
+  const info = isRestored ? restoredSnapshot : minimized
+  if (!info) return null
 
-  const handleRestore = () => setIsRestored(true)
+  const handleRestore = () => {
+    if (!minimized) return
+    setRestoredSnapshot(minimized)
+    setIsRestored(true)
+  }
 
   const handleClose = () => {
     setIsRestored(false)
+    setRestoredSnapshot(null)
     clear()
   }
 
   const handleMinimize = () => {
     setIsRestored(false)
+    setRestoredSnapshot(null)
   }
 
   return (

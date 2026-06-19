@@ -34,11 +34,34 @@ export interface DateSelectProps {
    * DateSelect are unaffected because the × only renders when onClear is set.
    */
   onClear?: () => void
+  // Restrict the selectable time-of-day inside the time column.
+  // ``minTime``/``maxTime`` are react-datepicker's static bounds and
+  // apply to **every** selected calendar day, so they're only correct
+  // when the same restriction holds regardless of the day. For
+  // day-aware rules (e.g. "block past times today but allow any time
+  // on future days"), use ``filterTime`` instead — react-datepicker
+  // calls it with a Date that carries both the selected day and the
+  // slot's time-of-day, so the callback can decide per slot.
+  minTime?: Date
+  maxTime?: Date
+  /** Per-slot predicate. Return ``true`` to keep, ``false`` to grey out. */
+  filterTime?: (time: Date) => boolean
 }
 
 const parseDate = (date: Date | string | null | undefined): Date | null => {
   if (!date) return null
   if (date instanceof Date) return date
+  // Date-only strings ("YYYY-MM-DD") represent a calendar day, not a
+  // moment in time. ``new Date("2026-05-27")`` would parse them as UTC
+  // midnight; browsers west of UTC then render them as the previous
+  // local day inside react-datepicker (clicking 27 shows 26). Build
+  // the Date at **local** midnight so the picker's input matches the
+  // calendar cell the user clicked.
+  const ymdMatch = date.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  if (ymdMatch) {
+    const [, y, m, d] = ymdMatch
+    return new Date(+y, +m - 1, +d, 0, 0, 0, 0)
+  }
   const parsed = new Date(date)
   return isNaN(parsed.getTime()) ? null : parsed
 }
@@ -63,6 +86,9 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
       timeFormat = 'HH:mm',
       timeIntervals = 15,
       onClear,
+      minTime,
+      maxTime,
+      filterTime,
     },
     ref
   ) => {
@@ -225,6 +251,13 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
               showTimeSelect={showTimeSelect}
               timeFormat={timeFormat}
               timeIntervals={timeIntervals}
+              // react-datepicker's minTime/maxTime only apply when the
+              // selected day equals "today" (their behaviour), which is
+              // exactly the case we need to guard. Other days fall back
+              // to the natural 00:00–23:59 range.
+              minTime={minTime}
+              maxTime={maxTime}
+              filterTime={filterTime}
               calendarStartDay={1}
               showYearDropdown
               scrollableYearDropdown

@@ -46,8 +46,12 @@ export function BulkTagModal({ open, clientIds, clientCount, action, onClose }: 
     }
   }, [open])
 
-  const filteredTags = tags?.filter((tag) =>
-    tag.name.toLowerCase().includes(searchQuery.toLowerCase())
+  // Drop target_action_date tags — they're assigned only via chain
+  // effects, and the bulk-assign API rejects them.
+  const filteredTags = tags?.filter(
+    (tag) =>
+      tag.name.toLowerCase().includes(searchQuery.toLowerCase()) &&
+      (tag.expiry_type ?? 'permanent') !== 'target_action_date'
   )
 
   const handleToggleTag = (tagId: number) => {
