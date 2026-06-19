@@ -182,6 +182,65 @@ export interface PromisesAndCallbacksResponse {
   page_size: number
 }
 
+// --- Leaks sub-tab (KAN-735) ---
+
+export type LeakSortBy = 'date' | 'amount'
+
+// Request-only filter ('all' shows both classes); the item itself is one of
+// the two concrete states below.
+export type LeakFollowUpStatusFilter = 'all' | 'not_followed_up' | 'followed_up'
+export type LeakFollowUpStatus = 'followed_up' | 'not_followed_up'
+
+export interface LeakFilters {
+  user_ids?: number[]
+  // KAN-731 Phase B server-side team-scope resolvers (intersected by the BE).
+  department_id?: number
+  group_id?: number
+  period?: CallMonitoringPeriod
+  from_datetime?: string
+  to_datetime?: string
+  // Window (days, from the promise due date) within which a later call counts
+  // as a follow-up. KAN-735 Block 3 — default 5 until the settings ticket ships.
+  lookback_days?: number
+  follow_up_status?: LeakFollowUpStatusFilter
+  sort_by?: LeakSortBy
+  sort_dir?: InteractionMonitoringSortDir
+  page?: number
+  page_size?: number
+}
+
+export interface LeakItem {
+  id: number
+  // When the operator logged the overdue promise (the "escalation").
+  escalation_date: string
+  operator_id: number | null
+  operator_name: string | null
+  client_id: number
+  client_full_name: string | null
+  agreement_id: number | null
+  contract_number: string | null
+  promise_amount: string | null
+  promise_date: string | null
+  follow_up_status: LeakFollowUpStatus
+  // Earliest later call with the same client inside the lookback window; null
+  // ⇒ "No call".
+  last_call_after_escalation_at: string | null
+}
+
+export interface LeakKpis {
+  total_escalations: number
+  not_followed_up: number
+  followed_up: number
+}
+
+export interface LeaksResponse {
+  kpis: LeakKpis
+  items: LeakItem[]
+  total: number
+  page: number
+  page_size: number
+}
+
 export type TaskPriority = 'low' | 'normal' | 'high' | 'urgent' | 'critical'
 
 export type TaskStatus =
