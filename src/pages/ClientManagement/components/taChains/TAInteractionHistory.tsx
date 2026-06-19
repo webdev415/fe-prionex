@@ -6,6 +6,7 @@
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { DataTable, type Column } from '@/components/ui/DataTable'
+import { extractPhones } from './taFieldMapping'
 import { Input } from '@/components/ui/Input'
 import {
   Select,
@@ -237,40 +238,12 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
       render: (row) => {
         if (!row.step_data) return <span className="text-xs text-gray-700">-</span>
         const chain = chains.find((c) => c.id === row.chain_id)
-        const stepsOrdered = chain?.steps
-          ? [...chain.steps].sort((a, b) => a.step_order - b.step_order)
-          : []
-        const sd = row.step_data as Record<string, string>
-        const phones = new Set<string>()
-        const isPhoneShaped = (val: string): boolean => {
-          // 10–15 digits after stripping non-digit chars. Debt ids are
-          // <=7 digits in this project, but a credit-typed step can hold
-          // **multiple** comma-separated ids (e.g. "604948,609498"). The
-          // previous version naively stripped the comma too and ended up
-          // with a 12-digit string, which fell inside the phone window
-          // and leaked debt ids into the Phone column. Reject any value
-          // containing a comma up front — a phone number never has one.
-          if (val.includes(',')) return false
-          const digits = val.replace(/\D/g, '')
-          return digits.length >= 10 && digits.length <= 15
-        }
-        // 1. Happy path: render whatever the current chain marks as
-        //    contact-typed. Validate shape so a retyped step (e.g.
-        //    contact → credit) doesn't pump a debt id into this cell.
-        for (const step of stepsOrdered) {
-          if (step.target_action_field_type !== 'contact') continue
-          const val = sd[String(step.step_order)] ?? sd[String(step.target_action_id)]
-          if (val && isPhoneShaped(val)) phones.add(val)
-        }
-        // 2. Drift recovery: if the chain was retyped so the original
-        //    contact step is no longer contact (was the user-reported
-        //    case), the phone still lives in step_data — pull it back
-        //    by scanning all values. We add only phone-shaped strings,
-        //    so dropdown labels and small numeric ids never appear.
-        for (const val of Object.values(sd)) {
-          if (typeof val === 'string' && isPhoneShaped(val)) phones.add(val)
-        }
-        const uniquePhones = Array.from(phones)
+        const stepsOrdered = chain?.steps ?? []
+        // extractPhones shape-checks every value (rejecting dates, datetimes,
+        // debt-id lists and dropdown labels), so a date like
+        // "2026-05-15T10:30:00" can no longer leak into the Phone column.
+        // See taFieldMapping.ts (Bug 1).
+        const uniquePhones = extractPhones(row.step_data as Record<string, unknown>, stepsOrdered)
         return (
           <span className="text-xs text-gray-700">
             {uniquePhones.length > 0 ? uniquePhones.join(', ') : '-'}
