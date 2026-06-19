@@ -11,6 +11,7 @@ import { toast } from 'sonner'
 import { Icons } from '@/lib/icons'
 import { DocumentsAccordion } from './components/DocumentsAccordion'
 import { DocumentUploadModal } from './components/DocumentUploadModal'
+import { LoanFactoringInfo } from './components/LoanFactoringInfo'
 import { formatDate, formatDateTime, formatMoneyUAHTwoDecimals } from '@/lib/formatters'
 import { Button } from '@/components/ui/Button'
 import { DataTable, type Column } from '@/components/ui/DataTable'
@@ -77,6 +78,7 @@ import {
   useRestructuringAgreementDetail,
   useCreateRestructuringAgreement,
   useCloseDebt,
+  useReopenDebt,
   useUpdateDebtClosureDate,
   useCompleteRestructuringAgreement,
   useTransitionRRStatus,
@@ -120,9 +122,9 @@ import {
   ALL_MESSAGING_SEND_PERMISSIONS,
   buildOperatorNamesMap,
   countMessagingHistoryByOutcome,
-  destinationOwnerLabelKey,
   downloadBlob,
   formatLauncherName,
+  formatMessagingHistoryDestination,
   messagingApi,
   messagingStatusForCallLogCard,
   useMessagingClientHistory,
@@ -238,6 +240,8 @@ export function ClientDetailPage() {
   })
   const [connectRrError, setConnectRrError] = useState<string | null>(null)
   const [closeLoanConfirm, setCloseLoanConfirm] = useState<number | null>(null) // debtId to close
+  // Reopen-loan confirmation modal: holds the debt_id to reopen, or null when closed.
+  const [reopenLoanConfirm, setReopenLoanConfirm] = useState<number | null>(null)
   // Local state for the closure-date picker inside the close-loan modal.
   // Defaults to today; max = today (future dates rejected).
   const [closeLoanClosureDate, setCloseLoanClosureDate] = useState<Date | null>(null)
@@ -246,6 +250,16 @@ export function ClientDetailPage() {
   const [editClosureDateDebtId, setEditClosureDateDebtId] = useState<number | null>(null)
   const [editClosureDateValue, setEditClosureDateValue] = useState<Date | null>(null)
   const [editClosureDateError, setEditClosureDateError] = useState<string | null>(null)
+  // Row IDs whose factoring-agreement info panel is currently expanded.
+  // Multi-row expand is allowed — Set lets parent track an arbitrary subset.
+  const [expandedDebtIds, setExpandedDebtIds] = useState<Set<number>>(new Set())
+  const toggleDebtExpand = (id: number) =>
+    setExpandedDebtIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
   const [completeRrConfirm, setCompleteRrConfirm] = useState<number | null>(null) // raId to complete
   // Disconnect modal: holds the raId to disconnect + the operator's reason.
   // null when closed; reason starts empty and is required by the backend.
@@ -266,6 +280,22 @@ export function ClientDetailPage() {
   const [activeCommentTab, setActiveCommentTab] = useState<
     'ta-chains' | 'comments' | 'primary' | 'searcher' | 'dial-history'
   >('ta-chains')
+  // KAN-610: declared here (early) so the right-card data hooks below can be
+  // gated by the active tab — opening a client card no longer fires ~20 parallel
+  // requests; hidden-tab data is fetched lazily on first tab click.
+  const [activeRightCardTab, setActiveRightCardTab] = useState<
+    | 'loans'
+    | 'payments'
+    | 'recommenders'
+    | 'operators'
+    | 'call-sms-history'
+    | 'tasks'
+    | 'documents'
+    | 'ta-chains'
+  >('loans')
+  const [activeCallSmsTab, setActiveCallSmsTab] = useState<'all' | 'calls' | 'sms' | 'messaging'>(
+    'all'
+  )
   const [isChainExecutorOpen, setIsChainExecutorOpen] = useState(false)
   // Context for the chain executor when opened from a phone row. null/null
   // means "general entry point" (header Log Interaction button) — no chain
@@ -279,24 +309,6 @@ export function ClientDetailPage() {
     null
   )
   const chainExecutorMinimizeRef = useRef<(() => void) | null>(null)
-
-  // Classify a contact_type_id into the chain-picker bucket the backend
-  // uses (see /api/v1/clients/{id}/phones?source=...). Client bucket =
-  // the debtor's own phones (mobile/home/work + registration variants).
-  // Recommender bucket = guarantor + third-party phones. Any other type
-  // id (or null) falls back to 'recommender' since this helper is only
-  // called from the recommenders tab where non-classified phones live.
-  // The two id sets MUST stay in sync with
-  // services/client/app/routers/clients.py:CONTACT_SOURCE_TYPE_IDS.
-  const classifyContactSource = (
-    contactTypeId: number | null | undefined
-  ): 'client' | 'recommender' => {
-    const CLIENT_PHONE_TYPE_IDS = new Set([1, 2, 3, 19, 29])
-    if (contactTypeId != null && CLIENT_PHONE_TYPE_IDS.has(contactTypeId)) {
-      return 'client'
-    }
-    return 'recommender'
-  }
 
   // Call origination hook (provides user, call state, handlers)
   const userTimezone = useAuthStore((state) => state.user?.timezone)
@@ -359,6 +371,7 @@ export function ClientDetailPage() {
   )
   const { mutate: createRr, isPending: isCreatingRr } = useCreateRestructuringAgreement()
   const { mutate: closeDebt, isPending: isClosingDebt } = useCloseDebt()
+  const { mutate: reopenDebt, isPending: isReopeningDebt } = useReopenDebt()
   const { mutate: updateClosureDate, isPending: isUpdatingClosureDate } = useUpdateDebtClosureDate()
   const { mutate: completeRa, isPending: isCompletingRa } = useCompleteRestructuringAgreement()
   const { mutate: transitionRr, isPending: isTransitioningRr } = useTransitionRRStatus()
@@ -366,11 +379,11 @@ export function ClientDetailPage() {
   const { mutate: recordOverpayment, isPending: isRecordingOverpayment } = useRecordRROverpayment()
   const { data: paymentsSection, isLoading: isPaymentsLoading } = useClientPaymentsSection(
     clientId,
-    isValidClientId
+    isValidClientId && activeRightCardTab === 'payments'
   )
   const { data: callSmsHistory, isLoading: isCallSmsLoading } = useClientCallSmsHistory(
     clientId,
-    isValidClientId
+    isValidClientId && activeRightCardTab === 'call-sms-history'
   )
   const canAccessMessagingHistory = useHasAnyPermission([
     ...ALL_MESSAGING_SEND_PERMISSIONS,
@@ -380,7 +393,7 @@ export function ClientDetailPage() {
     useMessagingClientHistory(
       clientId,
       { limit: 100, offset: 0 },
-      isValidClientId && canAccessMessagingHistory
+      isValidClientId && canAccessMessagingHistory && activeRightCardTab === 'call-sms-history'
     )
   const activeProjectId = useAuthStore((s) => s.user?.active_project_id)
   const { data: messagingOperators = [] } = useOperators(
@@ -393,23 +406,28 @@ export function ClientDetailPage() {
   const canViewTasks = useHasPermission(PERMISSIONS.CLIENTS.VIEW_TASKS)
   const { data: tasks = [], isLoading: isTasksLoading } = useClientTasks(
     clientId,
-    isValidClientId && canViewTasks
+    isValidClientId && canViewTasks && activeRightCardTab === 'tasks'
   )
   const { data: operatorsSection, isLoading: isOperatorsLoading } = useClientOperatorsSection(
     clientId,
-    isValidClientId
+    isValidClientId && activeRightCardTab === 'operators'
   )
   const { data: documents = [], isLoading: isDocumentsLoading } = useClientDocuments(
     clientId,
-    isValidClientId
+    isValidClientId && activeRightCardTab === 'documents'
   )
+  // KAN-610: client interactions power only the comments/primary/searcher
+  // comment-tabs (default comment-tab is 'ta-chains'), so fetch lazily.
   const { data: activities = [], isLoading: isActivitiesLoading } = useClientActivities(
     clientId,
-    isValidClientId
+    isValidClientId &&
+      (activeCommentTab === 'comments' ||
+        activeCommentTab === 'primary' ||
+        activeCommentTab === 'searcher')
   )
   const { data: dialHistory = [], isLoading: isDialHistoryLoading } = useClientDialHistory(
     clientId,
-    isValidClientId
+    isValidClientId && activeCommentTab === 'dial-history'
   )
   const { mutate: addSpamCall } = useAddSpamCallHistory(clientId)
   const { mutate: createContact, isPending: isCreatingContact } = useCreateContact()
@@ -421,6 +439,15 @@ export function ClientDetailPage() {
     contactTypes.forEach((ct) => m.set(ct.id, ct))
     return m
   }, [contactTypes])
+
+  const classifyContactSource = (
+    contactTypeId: number | null | undefined
+  ): 'client' | 'recommender' => {
+    if (contactTypeId == null) {
+      return 'recommender'
+    }
+    return contactTypesById.get(contactTypeId)?.contact_source ?? 'recommender'
+  }
 
   const defaultNewContactTypeId = useMemo(
     () => pickDefaultActiveContactTypeId(contactTypes),
@@ -683,14 +710,25 @@ export function ClientDetailPage() {
         loanNumber: d.contract_number,
         issueDate: formatDate(d.credit_issued_date ?? undefined),
         counterparty: d.seller_company,
-        saleDate: formatDate(d.purchase_date ?? undefined),
+        // If the per-debt purchase_date is empty, fall back to
+        // the linked factoring agreement's contract_purchase_date.
+        saleDate: formatDate(
+          d.purchase_date ?? d.factoring_agreement?.contract_purchase_date ?? undefined
+        ),
+        // Factoring chain surfaced via the row-expansion "Info" button.
+        sellerLegalName: d.seller_legal_name ?? null,
+        factoringAgreementPreviousLender: d.factoring_agreement?.previous_lender ?? null,
+        factoringAgreementPurchaseDate: d.factoring_agreement?.contract_purchase_date
+          ? formatDate(d.factoring_agreement.contract_purchase_date)
+          : null,
         principalAmount: Number(d.principal_amount ?? 0),
-        principalDebt: Number(d.principal_debt ?? d.principal_amount ?? 0),
+        principalDebt: d.principal_debt != null ? Number(d.principal_debt) : null,
         remainingDebtAmount: Number(d.remaining_debt_amount ?? 0),
         totalToReturn: Number(d.total_to_return ?? 0),
         // Closure date — surfaced for closed debts so the user can see it and,
         // with the close_client_debt permission, edit it after closure.
         creditClosedDate: d.credit_closed_date ?? null,
+        creditReopenedDate: d.credit_reopened_date ?? null,
         // Legacy TABLE460.f53 — eligible-for-return amount carried over from
         // the sale. Surfaced as its own column only when at least one loan row
         // has it and it diverges from remainingDebtAmount (see loanColumns).
@@ -1035,24 +1073,14 @@ export function ClientDetailPage() {
   const [activeClientCardTab, setActiveClientCardTab] = useState<'personal' | 'passport' | 'work'>(
     'personal'
   )
-  const [activeRightCardTab, setActiveRightCardTab] = useState<
-    | 'loans'
-    | 'payments'
-    | 'recommenders'
-    | 'operators'
-    | 'call-sms-history'
-    | 'tasks'
-    | 'documents'
-    | 'ta-chains'
-  >('loans')
+  // KAN-610: activeRightCardTab moved up (near activeCommentTab) so the data
+  // hooks can gate on it for lazy loading.
   const [isUploadDocModalOpen, setIsUploadDocModalOpen] = useState(false)
   const [activePaymentTab, setActivePaymentTab] = useState<
     'payments' | 'writes-off' | 'primary-creditor'
   >('payments')
   const [activeOperatorTab, setActiveOperatorTab] = useState<'operators' | 'searchers'>('operators')
-  const [activeCallSmsTab, setActiveCallSmsTab] = useState<'all' | 'calls' | 'sms' | 'messaging'>(
-    'all'
-  )
+  // KAN-610: activeCallSmsTab moved up (near activeCommentTab) for lazy gating.
   const [selectedMessageData, setSelectedMessageData] = useState<{
     campaignName: string
     campaignCode: string
@@ -1394,7 +1422,8 @@ export function ClientDetailPage() {
       key: 'principalDebt',
       header: t('pages.clients.detail.tableHeaders.principalDebt'),
       align: 'right',
-      render: (loan) => formatMoneyUAHTwoDecimals(loan.principalDebt),
+      render: (loan) =>
+        loan.principalDebt != null ? formatMoneyUAHTwoDecimals(loan.principalDebt) : '-',
     },
     ...(showEligibleForReturnColumn
       ? [
@@ -1426,47 +1455,74 @@ export function ClientDetailPage() {
       header: t('pages.clients.detail.tableHeaders.actions'),
       align: 'center',
       render: (loan) => {
+        // "Info" button — always visible, opens expansion below.
+        const infoButton = (
+          <button
+            onClick={() => toggleDebtExpand(loan.id)}
+            className="p-1 text-gray-500 hover:text-gray-700"
+            title={t('pages.clients.detail.loanInfo', 'Agreement info')}
+            aria-label={t('pages.clients.detail.loanInfo', 'Agreement info')}
+          >
+            <Icons.Info size={18} />
+          </button>
+        )
         if (loan.status === 'active') {
           return (
-            <PermissionGuard permission={PERMISSIONS.CLIENTS.CLOSE_DEBT}>
-              <button
-                onClick={() => {
-                  setCloseLoanConfirm(loan.id)
-                  setCloseLoanClosureDate(getTodayAtMidnight())
-                  setCloseLoanDateError(null)
-                }}
-                disabled={isClosingDebt}
-                className="p-1 text-green-600 hover:text-green-800 disabled:opacity-50"
-                title={t('pages.clients.detail.closeLoan')}
-              >
-                <Icons.Success size={18} />
-              </button>
-            </PermissionGuard>
+            <div className="flex items-center justify-center gap-2">
+              {infoButton}
+              <PermissionGuard permission={PERMISSIONS.CLIENTS.CLOSE_DEBT}>
+                <button
+                  onClick={() => {
+                    setCloseLoanConfirm(loan.id)
+                    setCloseLoanClosureDate(getTodayAtMidnight())
+                    setCloseLoanDateError(null)
+                  }}
+                  disabled={isClosingDebt}
+                  className="p-1 text-green-600 hover:text-green-800 disabled:opacity-50"
+                  title={t('pages.clients.detail.closeLoan')}
+                >
+                  <Icons.Success size={18} />
+                </button>
+              </PermissionGuard>
+            </div>
           )
         }
         if (loan.status === 'closed') {
           return (
-            <PermissionGuard permission={PERMISSIONS.CLIENTS.CLOSE_DEBT}>
-              <button
-                onClick={() => {
-                  setEditClosureDateDebtId(loan.id)
-                  setEditClosureDateValue(
-                    loan.creditClosedDate
-                      ? parseISODateAtMidnight(loan.creditClosedDate)
-                      : getTodayAtMidnight()
-                  )
-                  setEditClosureDateError(null)
-                }}
-                disabled={isUpdatingClosureDate}
-                className="p-1 text-blue-600 hover:text-blue-800 disabled:opacity-50"
-                title={t('pages.clients.detail.editClosureDate', 'Edit closure date')}
-              >
-                <Icons.Edit size={18} />
-              </button>
-            </PermissionGuard>
+            <div className="flex items-center justify-center gap-2">
+              {infoButton}
+              <PermissionGuard permission={PERMISSIONS.CLIENTS.CLOSE_DEBT}>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => {
+                      setEditClosureDateDebtId(loan.id)
+                      setEditClosureDateValue(
+                        loan.creditClosedDate
+                          ? parseISODateAtMidnight(loan.creditClosedDate)
+                          : getTodayAtMidnight()
+                      )
+                      setEditClosureDateError(null)
+                    }}
+                    disabled={isUpdatingClosureDate}
+                    className="p-1 text-blue-600 hover:text-blue-800 disabled:opacity-50"
+                    title={t('pages.clients.detail.editClosureDate', 'Edit closure date')}
+                  >
+                    <Icons.Edit size={18} />
+                  </button>
+                  <button
+                    onClick={() => setReopenLoanConfirm(loan.id)}
+                    disabled={isReopeningDebt}
+                    className="p-1 text-amber-600 hover:text-amber-800 disabled:opacity-50"
+                    title={t('pages.clients.detail.reopenLoan', 'Reopen loan')}
+                  >
+                    <Icons.Reload size={18} />
+                  </button>
+                </div>
+              </PermissionGuard>
+            </div>
           )
         }
-        return null
+        return infoButton
       },
     },
   ]
@@ -2298,16 +2354,16 @@ export function ClientDetailPage() {
                         {client.responsibleEmployee}
                       </p>
                     )}
-                    <PermissionGuard permission={PERMISSIONS.CLIENTS.EDIT}>
-                      <button
-                        onClick={() => setAssignRoleModalMode('employee')}
-                        className="shrink-0 text-gray-400 transition-colors hover:text-gray-700"
-                        title="Assign employee"
-                        type="button"
-                      >
-                        <Icons.PencilEdit02 size={14} strokeWidth={1.5} />
-                      </button>
-                    </PermissionGuard>
+                    {/* Reassign trigger is always visible; warn-on-click happens on
+                        the modal's Submit (PERMISSIONS.CLIENTS.REASSIGN_RESPONSIBLE). */}
+                    <button
+                      onClick={() => setAssignRoleModalMode('employee')}
+                      className="shrink-0 text-gray-400 transition-colors hover:text-gray-700"
+                      title="Assign employee"
+                      type="button"
+                    >
+                      <Icons.PencilEdit02 size={14} strokeWidth={1.5} />
+                    </button>
                   </div>
                 </div>
                 <div className="flex min-h-8 items-center self-stretch p-0">
@@ -2320,16 +2376,16 @@ export function ClientDetailPage() {
                         {client.responsibleResearcher}
                       </p>
                     )}
-                    <PermissionGuard permission={PERMISSIONS.CLIENTS.EDIT}>
-                      <button
-                        onClick={() => setAssignRoleModalMode('searcher')}
-                        className="shrink-0 text-gray-400 transition-colors hover:text-gray-700"
-                        title="Assign searcher"
-                        type="button"
-                      >
-                        <Icons.PencilEdit02 size={14} strokeWidth={1.5} />
-                      </button>
-                    </PermissionGuard>
+                    {/* Reassign trigger is always visible; warn-on-click happens on
+                        the modal's Submit (PERMISSIONS.CLIENTS.REASSIGN_RESPONSIBLE). */}
+                    <button
+                      onClick={() => setAssignRoleModalMode('searcher')}
+                      className="shrink-0 text-gray-400 transition-colors hover:text-gray-700"
+                      title="Assign searcher"
+                      type="button"
+                    >
+                      <Icons.PencilEdit02 size={14} strokeWidth={1.5} />
+                    </button>
                   </div>
                 </div>
               </div>
@@ -3157,6 +3213,14 @@ export function ClientDetailPage() {
                             return true
                           })}
                           className="w-full"
+                          expandedIds={expandedDebtIds}
+                          renderExpanded={(loan) => (
+                            <LoanFactoringInfo
+                              legalName={loan.sellerLegalName}
+                              previousLender={loan.factoringAgreementPreviousLender}
+                              purchaseDate={loan.factoringAgreementPurchaseDate}
+                            />
+                          )}
                         />
                       )}
                     </div>
@@ -3954,6 +4018,11 @@ export function ClientDetailPage() {
                                             timeZone: userTimezone || undefined,
                                           }
                                         )
+                                        const destDisplay = formatMessagingHistoryDestination(msg, {
+                                          t,
+                                          language: i18n.language,
+                                          contactTypesById,
+                                        })
                                         return (
                                           <CallLogCard
                                             key={`messaging-${msg.recipient_id}`}
@@ -3973,22 +4042,11 @@ export function ClientDetailPage() {
                                               ) || undefined
                                             }
                                             phone={
-                                              msg.channel === 'sms' || msg.channel === 'viber'
-                                                ? msg.destination || '-'
+                                              destDisplay.destination !== '-'
+                                                ? destDisplay.destination
                                                 : undefined
                                             }
-                                            destinationOwnerLabel={
-                                              msg.channel === 'sms' && msg.destination_owner
-                                                ? (() => {
-                                                    const key = destinationOwnerLabelKey(
-                                                      msg.destination_owner
-                                                    )
-                                                    return key
-                                                      ? t(key, msg.destination_owner)
-                                                      : undefined
-                                                  })()
-                                                : undefined
-                                            }
+                                            destinationOwnerLabel={destDisplay.ownerSuffix}
                                             sent_at={msg.sent_at ?? undefined}
                                             delivered_at={msg.delivered_at ?? undefined}
                                             icon={
@@ -4008,17 +4066,8 @@ export function ClientDetailPage() {
                                                   msg.initiated_by,
                                                   messagingLauncherNames
                                                 ),
-                                                destination: msg.destination || '-',
-                                                destinationOwner: msg.destination_owner
-                                                  ? (() => {
-                                                      const key = destinationOwnerLabelKey(
-                                                        msg.destination_owner
-                                                      )
-                                                      return key
-                                                        ? t(key, msg.destination_owner)
-                                                        : msg.destination_owner
-                                                    })()
-                                                  : undefined,
+                                                destination: destDisplay.destination,
+                                                destinationOwner: destDisplay.ownerSuffix,
                                                 status: msg.status,
                                                 body: msg.body || '',
                                                 subject: msg.subject ?? undefined,
@@ -4402,6 +4451,14 @@ export function ClientDetailPage() {
                                                 timeZone: userTimezone || undefined,
                                               }
                                             )
+                                            const destDisplay = formatMessagingHistoryDestination(
+                                              item,
+                                              {
+                                                t,
+                                                language: i18n.language,
+                                                contactTypesById,
+                                              }
+                                            )
                                             return (
                                               <CallLogCard
                                                 key={item.recipient_id}
@@ -4421,22 +4478,11 @@ export function ClientDetailPage() {
                                                   ) || undefined
                                                 }
                                                 phone={
-                                                  item.channel === 'sms' || item.channel === 'viber'
-                                                    ? item.destination || '-'
+                                                  destDisplay.destination !== '-'
+                                                    ? destDisplay.destination
                                                     : undefined
                                                 }
-                                                destinationOwnerLabel={
-                                                  item.channel === 'sms' && item.destination_owner
-                                                    ? (() => {
-                                                        const key = destinationOwnerLabelKey(
-                                                          item.destination_owner
-                                                        )
-                                                        return key
-                                                          ? t(key, item.destination_owner)
-                                                          : undefined
-                                                      })()
-                                                    : undefined
-                                                }
+                                                destinationOwnerLabel={destDisplay.ownerSuffix}
                                                 sent_at={item.sent_at ?? undefined}
                                                 delivered_at={item.delivered_at ?? undefined}
                                                 icon={
@@ -4456,17 +4502,8 @@ export function ClientDetailPage() {
                                                       item.initiated_by,
                                                       messagingLauncherNames
                                                     ),
-                                                    destination: item.destination || '-',
-                                                    destinationOwner: item.destination_owner
-                                                      ? (() => {
-                                                          const key = destinationOwnerLabelKey(
-                                                            item.destination_owner
-                                                          )
-                                                          return key
-                                                            ? t(key, item.destination_owner)
-                                                            : item.destination_owner
-                                                        })()
-                                                      : undefined,
+                                                    destination: destDisplay.destination,
+                                                    destinationOwner: destDisplay.ownerSuffix,
                                                     status: item.status,
                                                     body: item.body || '-',
                                                     subject: item.subject || undefined,
@@ -5446,6 +5483,56 @@ export function ClientDetailPage() {
               {isClosingDebt
                 ? t('actions.saving', 'Saving...')
                 : t('pages.clients.detail.closeLoan')}
+            </Button>
+          </ModalFooter>
+        </Modal>
+
+        {/* Reopen Loan Modal — confirmation only, no date picker. */}
+        <Modal
+          open={reopenLoanConfirm !== null}
+          onClose={() => setReopenLoanConfirm(null)}
+          maxWidth="md"
+        >
+          <ModalHeader
+            icon={
+              <div className="bg-primary-400 flex h-8 w-8 items-center justify-center rounded-full">
+                <Icons.Reload size={20} className="text-dark-500" strokeWidth={2} />
+              </div>
+            }
+            title={t('pages.clients.detail.reopenLoan', 'Reopen loan')}
+          />
+          <ModalContent>
+            <p className="text-dark-500 mb-4 text-base font-light">
+              {t(
+                'pages.clients.detail.confirmReopenLoan',
+                'Are you sure you want to reopen this credit?'
+              )}
+            </p>
+          </ModalContent>
+          <ModalFooter>
+            <Button
+              type="button"
+              variant="cancel"
+              onClick={() => setReopenLoanConfirm(null)}
+              disabled={isReopeningDebt}
+              className="h-[45px] flex-1 text-sm"
+            >
+              {t('actions.cancel')}
+            </Button>
+            <Button
+              type="button"
+              variant="primary"
+              onClick={() => {
+                if (reopenLoanConfirm === null) return
+                reopenDebt(
+                  { clientId, debtId: reopenLoanConfirm },
+                  { onSettled: () => setReopenLoanConfirm(null) }
+                )
+              }}
+              disabled={isReopeningDebt}
+              className="h-[45px] flex-1 text-sm"
+            >
+              {isReopeningDebt ? t('actions.saving', 'Saving...') : t('actions.confirm', 'Confirm')}
             </Button>
           </ModalFooter>
         </Modal>

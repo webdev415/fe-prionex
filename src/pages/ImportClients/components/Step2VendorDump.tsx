@@ -13,6 +13,7 @@ import { DataTable, type Column } from '@/components/ui/DataTable'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 import { useUploadImport } from '@/features/imports'
+import { useSellerFactoringAgreements } from '@/features/sellers'
 import type { Step1Data } from './Step1LoanSource'
 import { getErrorMessage } from '@/lib/errors'
 
@@ -77,6 +78,16 @@ export function Step2VendorDump({
 
   // Import mutation
   const uploadImportMutation = useUploadImport()
+
+  // Look up factoring agreements for the selected seller so the picked
+  // (or just-created) agreement's contract_purchase_date can become the
+  // batch's debts.purchase_date — same shape as Step2FileUpload.
+  const sellerIdNumber = step1Data.sellerId ? parseInt(step1Data.sellerId, 10) : null
+  const { data: factoringAgreementsPage } = useSellerFactoringAgreements(sellerIdNumber, {
+    limit: 1000,
+    include_count: false,
+  })
+  const factoringAgreements = factoringAgreementsPage?.items ?? []
 
   // Initialize datasets if not already set
   useEffect(() => {
@@ -192,7 +203,7 @@ export function Step2VendorDump({
   }
 
   const handleStartImport = async () => {
-    if (!step1Data.sellerId || !step1Data.projectCode || !step1Data.purchaseDate) {
+    if (!step1Data.sellerId || !step1Data.projectCode) {
       setImportError(t('pages.imports.step2.vendor.fillAllFields'))
       return
     }
@@ -218,6 +229,42 @@ export function Step2VendorDump({
       }
     }
 
+    // Resolve factoring agreement — exactly one of the two fields is set,
+    // controlled by Step 1's mode toggle. Derive effectivePurchaseDate
+    // from the agreement so vendor and simple flows behave identically.
+    let factoringAgreementId: number | undefined
+    let newFactoringAgreementJson: string | undefined
+    let effectivePurchaseDate: string | undefined
+    if (step1Data.factoringAgreementMode === 'existing') {
+      factoringAgreementId = step1Data.factoringAgreementId
+        ? parseInt(step1Data.factoringAgreementId, 10)
+        : undefined
+      const pickedAgreement = factoringAgreements.find(
+        (fa) => fa.id.toString() === step1Data.factoringAgreementId
+      )
+      effectivePurchaseDate = pickedAgreement?.contract_purchase_date || undefined
+    } else {
+      const newFa = step1Data.newFactoringAgreement
+      const payload: Record<string, string> = {
+        agreement_number: newFa.agreement_number.trim(),
+      }
+      if (newFa.previous_lender.trim()) {
+        payload.previous_lender = newFa.previous_lender.trim()
+      }
+      if (newFa.contract_purchase_date) {
+        // The wizard stores contract_purchase_date as a UTC ISO datetime
+        // but client-service's Pydantic schema expects a plain YYYY-MM-DD.
+        payload.contract_purchase_date = newFa.contract_purchase_date.split('T')[0]
+      }
+      newFactoringAgreementJson = JSON.stringify(payload)
+      effectivePurchaseDate = newFa.contract_purchase_date || undefined
+    }
+
+    if (!factoringAgreementId && !newFactoringAgreementJson) {
+      setImportError(t('pages.imports.step2.vendor.fillAllFields'))
+      return
+    }
+
     setImportError(null)
 
     try {
@@ -239,10 +286,12 @@ export function Step2VendorDump({
         zip_file: hasZip ? data.zipFile! : undefined,
         seller_id: parseInt(step1Data.sellerId, 10),
         project_code: step1Data.projectCode,
-        purchase_date: step1Data.purchaseDate,
+        purchase_date: effectivePurchaseDate,
         comment: step1Data.comment || undefined,
         import_type: 'vendor',
         schema_code: step1Data.schemaCode,
+        factoring_agreement_id: factoringAgreementId,
+        new_factoring_agreement_json: newFactoringAgreementJson,
       })
 
       if (onImportStarted && result.job_id) {

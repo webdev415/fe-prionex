@@ -1,4 +1,4 @@
-/**
+﻿/**
  * AddMarkerButton — "Add marker" affordance shown beneath the call player
  * in the trainer Action Analysis flow (KAN-410, Feature 2.2).
  *
@@ -60,13 +60,13 @@ export function AddMarkerButton({
         leftIcon={<Icons.Add size={14} className="text-dark-500" />}
         className="h-[40px] rounded-md text-xs sm:h-[45px] sm:text-sm"
       >
-        {t('pages.actionAnalysis.markers.addMarker', 'Add marker')}
+        {t('pages.training.markers.addMarker', 'Add marker')}
       </Button>
 
       {open ? (
         <div className="absolute right-0 z-20 mt-1 w-72 rounded-lg border border-gray-200 bg-white p-3 shadow-lg">
           <label className="text-xs font-medium text-gray-700">
-            {t('pages.actionAnalysis.markers.type', 'Type')}
+            {t('pages.training.markers.type', 'Type')}
           </label>
           <select
             value={markerType}
@@ -75,19 +75,19 @@ export function AddMarkerButton({
           >
             {MARKER_TYPES.map((mt) => (
               <option key={mt} value={mt}>
-                {t(`pages.actionAnalysis.markers.types.${mt}`, mt.replace(/_/g, ' '))}
+                {t(`pages.training.markers.types.${mt}`, mt.replace(/_/g, ' '))}
               </option>
             ))}
           </select>
 
           <label className="text-xs font-medium text-gray-700">
-            {t('pages.actionAnalysis.markers.comment', 'Comment')}
+            {t('pages.training.markers.comment', 'Comment')}
           </label>
           <textarea
             rows={2}
             value={comment}
             onChange={(e) => setComment(e.target.value)}
-            placeholder={t('pages.actionAnalysis.markers.commentPlaceholder', 'Optional comment')}
+            placeholder={t('pages.training.markers.commentPlaceholder', 'Optional comment')}
             className="mt-1 mb-3 w-full rounded-md border border-gray-200 px-2 py-1 text-sm"
           />
 
@@ -107,7 +107,7 @@ export function AddMarkerButton({
               disabled={createMutation.isPending}
               className="rounded-md"
             >
-              {t('pages.actionAnalysis.markers.save', 'Save')}
+              {t('pages.training.markers.save', 'Save')}
             </Button>
           </div>
         </div>

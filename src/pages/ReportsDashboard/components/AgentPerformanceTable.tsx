@@ -107,6 +107,7 @@ export interface AgentPerformance {
   contactRate: number
   avgDuration: string
   sms: number
+  messages: number
   payments: number
 }
 
@@ -229,6 +230,12 @@ export function AgentPerformanceTable({
       render: (item) => <span className="text-dark-500 text-xs font-medium">{item.sms}</span>,
     },
     {
+      key: 'messages',
+      header: t('pages.reports.tableHeaders.messages'),
+      align: 'center',
+      render: (item) => <span className="text-dark-500 text-xs font-medium">{item.messages}</span>,
+    },
+    {
       key: 'payments',
       header: t('pages.reports.tableHeaders.payments'),
       align: 'right',
@@ -248,6 +255,7 @@ export function AgentPerformanceTable({
         contactRate: 0,
         avgDuration: '0:00',
         sms: 0,
+        messages: 0,
         payments: 0,
       }
     }
@@ -270,6 +278,7 @@ export function AgentPerformanceTable({
       contactRate: avgContactRate,
       avgDuration,
       sms: filteredData.reduce((sum, item) => sum + item.sms, 0),
+      messages: filteredData.reduce((sum, item) => sum + item.messages, 0),
       payments: filteredData.reduce((sum, item) => sum + item.payments, 0),
     }
   }, [filteredData])
@@ -281,6 +290,7 @@ export function AgentPerformanceTable({
       'Contact Rate (%)': item.contactRate,
       'Avg Duration': item.avgDuration,
       SMS: item.sms,
+      Messages: item.messages,
       Payments: item.payments,
     }))
 
@@ -291,6 +301,7 @@ export function AgentPerformanceTable({
       'Contact Rate (%)': totals.contactRate,
       'Avg Duration': totals.avgDuration,
       SMS: totals.sms,
+      Messages: totals.messages,
       Payments: totals.payments,
     })
 
@@ -373,6 +384,8 @@ export function AgentPerformanceTable({
                 onChange={({ value }) => {
                   onFromDateChange(value ? getDateStringInTimezone(value, userTimezone) : null)
                 }}
+                allowManualInput
+                format="dd.MM.yyyy"
               />
               <span className="text-base leading-[155%] font-medium tracking-[-0.32px] text-gray-700">
                 -
@@ -384,6 +397,8 @@ export function AgentPerformanceTable({
                 onChange={({ value }) => {
                   onToDateChange(value ? getDateStringInTimezone(value, userTimezone) : null)
                 }}
+                allowManualInput
+                format="dd.MM.yyyy"
               />
             </div>
           </div>
@@ -492,6 +507,9 @@ export function AgentPerformanceTable({
                     </td>
                     <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-6 text-center text-xs font-semibold">
                       {totals.sms}
+                    </td>
+                    <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-6 text-center text-xs font-semibold">
+                      {totals.messages}
                     </td>
                     <td className="text-dark-500 h-[49px] px-6 text-right text-xs font-semibold">
                       {formatCurrency(totals.payments)} {t('pages.reports.currencySymbol')}

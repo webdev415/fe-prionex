@@ -360,6 +360,32 @@ export async function closeDebt(
 }
 
 /**
+ * Reopen a closed debt (set status back to 'active' and stamp
+ * credit_reopened_date = today on the server). Linked RRs in a terminal
+ * state are cascaded to Cancelled. The original credit_closed_date is
+ * preserved on the row as historical data.
+ *
+ * Backend 400s if the debt is not currently in status='closed'.
+ */
+export async function reopenDebt(
+  clientId: number,
+  debtId: number
+): Promise<{
+  id: number
+  status: string
+  credit_closed_date: string | null
+  credit_reopened_date: string | null
+}> {
+  const response = await api.patch<{
+    id: number
+    status: string
+    credit_closed_date: string | null
+    credit_reopened_date: string | null
+  }>(`${BASE_URL}/${clientId}/debts/${debtId}/reopen`)
+  return response.data
+}
+
+/**
  * Edit the closure date of an already-closed debt.
  * Backend rejects any closure_date later than today, and 400s if the
  * debt is not currently in status='closed'.
@@ -566,6 +592,7 @@ export const clientApi = {
   getRestructuringAgreementDetail,
   createRestructuringAgreement,
   closeDebt,
+  reopenDebt,
   updateDebtClosureDate,
   completeRestructuringAgreement,
   transitionRestructuringAgreementStatus,

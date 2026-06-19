@@ -45,6 +45,7 @@ const DOCUMENT_TYPES: DocumentType[] = [
   'income',
   'outcome',
   'signature',
+  'military',
   'other',
 ]
 
@@ -394,6 +395,8 @@ export function DocumentGenerationPage() {
                 onChange={({ value }) => updateFilter('date_from', dateToYmd(value))}
                 max={ymdToDate(filters.date_to) ?? undefined}
                 placeholder={t('pages.documentGeneration.filters.dateFrom', 'Date from')}
+                allowManualInput
+                format="dd.MM.yyyy"
                 className="rounded-lg border-gray-400"
               />
             </div>
@@ -406,6 +409,8 @@ export function DocumentGenerationPage() {
                 onChange={({ value }) => updateFilter('date_to', dateToYmd(value))}
                 min={ymdToDate(filters.date_from) ?? undefined}
                 placeholder={t('pages.documentGeneration.filters.dateTo', 'Date to')}
+                allowManualInput
+                format="dd.MM.yyyy"
                 className="rounded-lg border-gray-400"
               />
             </div>

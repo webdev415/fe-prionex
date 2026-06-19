@@ -25,5 +25,10 @@
     "timeout": "Request timed out. Please try again.",
     "rateLimit": "Too many requests. Please wait a moment.",
     "maintenance": "System is under maintenance. Please try again later."
+  },
+  "permissions": {
+    "required": "You don't have permission to do that ({{permission}})",
+    "reassignClient": "You don't have permission to reassign clients",
+    "bulkAssign": "You don't have permission to bulk-assign clients"
   }
 }
