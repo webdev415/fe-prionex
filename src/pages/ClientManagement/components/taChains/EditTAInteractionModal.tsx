@@ -32,6 +32,7 @@ import {
 } from '@/features/taInteractions/hooks/useTAInteractions'
 import { useTAChain } from '@/features/taChains/hooks/useTAChains'
 import { useTargetActions } from '@/features/targetActions/hooks/useTargetActions'
+import { resolveStepValue } from './taFieldMapping'
 import { useClientPhones } from '@/features/clients/hooks/useClientPhones'
 import type { ContactSource } from '@/features/taChains/api/types'
 import { getErrorMessage } from '@/lib/errors'
@@ -193,30 +194,17 @@ export function EditTAInteractionModal({
     const sortedSteps = chain?.steps
       ? [...chain.steps].sort((a, b) => a.step_order - b.step_order)
       : []
-    // Resolve each step's value: prefer the wizard snapshot keyed by step_order
-    // (which preserves duplicates of the same target_action_id), then fall back
-    // to interaction.step_data keyed by target_action_id.
+    // Resolve each step's value step-specifically (by step_order). The legacy
+    // target_action_id fallback is only used when a single step uses that TA —
+    // otherwise an empty step (e.g. a loan field) could inherit another step's
+    // value (e.g. a phone). See taFieldMapping.ts (Bug 2).
     for (const step of sortedSteps) {
-      let v = ''
-      const snap = matchingInstance?.step_data?.[String(step.step_order)]
-      if (snap && typeof snap === 'object') {
-        const obj = snap as { value?: string | null }
-        if (obj.value != null && String(obj.value) !== '') {
-          v = String(obj.value)
-        }
-      }
-      if (v === '') {
-        const fromInteraction = interaction.step_data?.[String(step.target_action_id)]
-        if (fromInteraction != null) {
-          if (typeof fromInteraction === 'object') {
-            const inner = (fromInteraction as Record<string, unknown>).value
-            if (inner != null) v = String(inner)
-          } else {
-            v = String(fromInteraction)
-          }
-        }
-      }
-      next[String(step.id)] = v
+      next[String(step.id)] = resolveStepValue(
+        step,
+        sortedSteps,
+        matchingInstance?.step_data,
+        interaction.step_data
+      )
     }
     setStepValues(next)
     setPromiseDate(interaction.promise_date ? interaction.promise_date.slice(0, 10) : '')

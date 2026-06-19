@@ -1,0 +1,85 @@
+import { describe, it, expect } from 'vitest'
+
+import { extractPhones, isPhoneShaped, resolveStepValue, type StepLike } from '../taFieldMapping'
+
+describe('isPhoneShaped', () => {
+  it('accepts plain and formatted phone numbers', () => {
+    expect(isPhoneShaped('380994239156')).toBe(true)
+    expect(isPhoneShaped('+380 (99) 423-91-56')).toBe(true)
+    expect(isPhoneShaped('0501234567')).toBe(true)
+  })
+
+  it('rejects datetime values (Bug 1)', () => {
+    // 14 digits — would have passed the old digit-only check.
+    expect(isPhoneShaped('2026-05-15T10:30:00')).toBe(false)
+    expect(isPhoneShaped('19/06/2026 21:45')).toBe(false)
+    expect(isPhoneShaped('2026-05-15 10:30')).toBe(false)
+  })
+
+  it('rejects debt-id lists, labels and too-short numbers', () => {
+    expect(isPhoneShaped('604948,609498')).toBe(false) // comma list
+    expect(isPhoneShaped('Promise to pay')).toBe(false) // dropdown label
+    expect(isPhoneShaped('2026-05-15')).toBe(false) // date only (8 digits)
+    expect(isPhoneShaped('88921')).toBe(false) // debt id (5 digits)
+  })
+})
+
+describe('extractPhones', () => {
+  const steps: StepLike[] = [
+    { step_order: 1, target_action_id: 10, target_action_field_type: 'contact' },
+    { step_order: 2, target_action_id: 20, target_action_field_type: 'date' },
+  ]
+
+  it('returns the phone and never the date (Bug 1 scenario)', () => {
+    const stepData = {
+      '1': '380994239156', // contact step → phone
+      '2': '2026-05-15T10:30:00', // date step → must NOT appear
+    }
+    expect(extractPhones(stepData, steps)).toEqual(['380994239156'])
+  })
+
+  it('returns [] when there is no phone-shaped value', () => {
+    expect(extractPhones({ '2': '2026-05-15T10:30:00' }, steps)).toEqual([])
+    expect(extractPhones(null, steps)).toEqual([])
+  })
+})
+
+describe('resolveStepValue', () => {
+  const contactStep: StepLike = { step_order: 1, target_action_id: 42 }
+  const loanStep: StepLike = { step_order: 2, target_action_id: 99 }
+
+  it('prefers the wizard snapshot keyed by step_order', () => {
+    const v = resolveStepValue(
+      contactStep,
+      [contactStep, loanStep],
+      { '1': { value: '380994239156' } },
+      { '42': 'legacy-should-be-ignored' }
+    )
+    expect(v).toBe('380994239156')
+  })
+
+  it('uses the target_action_id fallback only when the TA is unique', () => {
+    const v = resolveStepValue(loanStep, [contactStep, loanStep], undefined, {
+      '99': '357807',
+    })
+    expect(v).toBe('357807')
+  })
+
+  it('keeps an empty loan step empty when steps share a TA (Bug 2)', () => {
+    // Contact + loan steps share target_action_id 42; interaction data is
+    // keyed by TA id and holds the phone. The loan step must NOT inherit it.
+    const sharedContact: StepLike = { step_order: 1, target_action_id: 42 }
+    const sharedLoan: StepLike = { step_order: 2, target_action_id: 42 }
+    const v = resolveStepValue(
+      sharedLoan,
+      [sharedContact, sharedLoan],
+      undefined,
+      { '42': '380994239156' } // phone keyed by the shared TA id
+    )
+    expect(v).toBe('') // empty — no phone leak into the loan field
+  })
+
+  it('returns empty string when nothing matches', () => {
+    expect(resolveStepValue(loanStep, [contactStep, loanStep], {}, {})).toBe('')
+  })
+})
