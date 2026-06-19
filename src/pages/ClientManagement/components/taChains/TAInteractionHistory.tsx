@@ -31,8 +31,8 @@ import type { TAInteraction } from '@/features/taInteractions/api/types'
 import { TableSkeleton } from '@/components/ui/TableSkeleton'
 import { formatDate, formatDateTime, formatMoneyKopeckTight } from '@/lib/formatters'
 import { Icons } from '@/lib/icons'
-import { PermissionGuard } from '@/components/auth'
 import { PERMISSIONS } from '@/constants/permissions'
+import { useHasPermission } from '@/hooks'
 import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { Pagination } from '@/components/ui/Pagination'
@@ -116,8 +116,11 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
     if (String(numId).length >= 9) return null // looks like a phone, not a debt id
     return debtContractMap.get(numId) ?? null
   }
-  const { t, i18n } = useTranslation('common')
+  const { t } = useTranslation('common')
   const togglePinMut = useTogglePinTAInteraction()
+  // Pattern X: hide buttons entirely when the user lacks the permission.
+  const canEditInteractions = useHasPermission(PERMISSIONS.CLIENTS.EDIT_INTERACTIONS)
+  const canDeleteInteractions = useHasPermission(PERMISSIONS.CLIENTS.DELETE_INTERACTIONS)
   const handleTogglePin = async (id: number) => {
     try {
       await togglePinMut.mutateAsync(id)
@@ -208,8 +211,6 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
     setAppliedFilters(cleared)
     setPage(1)
   }
-
-  const dateInputFormat = i18n.language?.startsWith('en') ? 'MM/dd/yyyy' : 'dd/MM/yyyy'
 
   const columns: Column<TAInteraction>[] = [
     {
@@ -532,7 +533,7 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
           >
             <Icons.Pin size={14} strokeWidth={1.5} />
           </button>
-          <PermissionGuard permission={PERMISSIONS.SYSTEM.MANAGE_SETTINGS}>
+          {canEditInteractions && (
             <button
               type="button"
               onClick={() => setEditingId(row.id)}
@@ -542,6 +543,8 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
             >
               <Icons.PencilEdit size={14} strokeWidth={1.5} />
             </button>
+          )}
+          {canDeleteInteractions && (
             <button
               type="button"
               onClick={() => setDeletingId(row.id)}
@@ -551,7 +554,7 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
             >
               <Icons.Delete size={14} strokeWidth={1.5} />
             </button>
-          </PermissionGuard>
+          )}
         </div>
       ),
     },
@@ -597,7 +600,8 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
                 }
                 max={parseDateString(pendingFilters.dateTo) || undefined}
                 placeholder={t('pages.clientChains.history.selectStartDate')}
-                format={dateInputFormat}
+                allowManualInput
+                format="dd.MM.yyyy"
                 className="[&_input]:h-[45px] [&_input]:rounded-md [&_input]:border-gray-200 [&_input]:text-xs [&_input]:font-normal"
               />
             </div>
@@ -612,7 +616,8 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
                 }
                 min={parseDateString(pendingFilters.dateFrom) || undefined}
                 placeholder={t('pages.clientChains.history.selectEndDate')}
-                format={dateInputFormat}
+                allowManualInput
+                format="dd.MM.yyyy"
                 className="[&_input]:h-[45px] [&_input]:rounded-md [&_input]:border-gray-200 [&_input]:text-xs [&_input]:font-normal"
               />
             </div>

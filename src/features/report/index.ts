@@ -56,6 +56,7 @@ export {
   useCommunicationStatistics,
   useCallStatistics,
   useSMSStatistics,
+  useMessagingStatistics,
   useCommunicationTrends,
   communicationStatisticsKeys,
   type UseCommunicationStatisticsParams,
@@ -74,13 +75,16 @@ export {
   useCallsMadeModal,
   useContactRateModal,
   useSMSSentModal,
+  useMessagesSentModal,
   type CallsMadeModalData,
   type ContactRateModalData,
   type ContactRateOutcome,
   type SMSSentModalData,
+  type MessagesSentModalData,
   type UseCallsMadeModalParams,
   type UseContactRateModalParams,
   type UseSMSSentModalParams,
+  type UseMessagesSentModalParams,
 } from './hooks'
 
 // Types (Frontend UI types)
@@ -103,6 +107,8 @@ export type {
   CommunicationStatisticsUI,
   CallStatisticsUI,
   SMSStatisticsUI,
+  MessagingStatisticsUI,
+  MessagingDraftUI,
   HourlyBreakdownUI,
   DailyTrendUI,
   AgentPerformanceRow,

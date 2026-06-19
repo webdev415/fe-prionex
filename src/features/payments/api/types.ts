@@ -182,6 +182,9 @@ export interface ClientPaymentHistoryParams {
   to_date?: string // ISO date string
   date_field?: 'payment_date' | 'recorded_at'
   tz?: string // IANA timezone for date boundaries when date_field=recorded_at
+  // When true, exclude pre-acquisition (primary-creditor) payments so the list
+  // and total_amount_paid show to-us payments only, matching the debt summary.
+  exclude_pre_acquisition?: boolean
 }
 
 export interface ClientPaymentHistoryResponse {

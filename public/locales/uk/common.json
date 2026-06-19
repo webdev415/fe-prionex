@@ -1,7 +1,15 @@
-{
+﻿{
   "app": {
     "name": "CRM Prionex",
     "description": "Система управління взаємовідносинами з клієнтами"
+  },
+  "auth": {
+    "sessionRestore": {
+      "title": "Відновити попередню сесію?",
+      "body": "У вас є {{count}} відкритих вкладок з попередньої сесії. Бажаєте продовжити?",
+      "restoreButton": "Відновити сесію",
+      "startFreshButton": "Почати з нуля"
+    }
   },
   "navigation": {
     "home": "Головна",
@@ -14,6 +22,7 @@
     "importClients": "Імпорт клієнтів",
     "projects": "Проєкти",
     "users": "Користувачі",
+    "ipWhitelist": "Білий список IP",
     "sellers": "Продавці",
     "roles": "Ролі",
     "departments": "Відділи",
@@ -38,7 +47,7 @@
     "scoringConfiguration": "Конфігурація оцінки",
     "systemSettings": "Системні налаштування",
     "tags": "Теги",
-    "actionAnalysis": "Аналіз дій",
+    "training": "Навчання",
     "messagingSettings": "Налаштування повідомлень",
     "messagingIntegrations": "Інтеграції повідомлень",
     "messagingDrafts": "Чернетки повідомлень",
@@ -56,6 +65,8 @@
     "searching": "Пошук...",
     "noResults": "Клієнтів за запитом «{{query}}» не знайдено.",
     "phoneMinDigits": "Введіть щонайменше {{count}} цифр для пошуку за телефоном.",
+    "clientContactIndicator": "Контакт клієнта",
+    "recommenderContactIndicator": "Контакт поручителя",
     "debt": "Борг",
     "phone": "Телефон",
     "viewAllResults": "Переглянути всі результати"
@@ -340,9 +351,60 @@
       "mockTableColValue": "Значення",
       "mockTableRowClients": "Клієнти",
       "mockTableRowDebt": "Борг у зоні ризику",
-      "mockTableRowOverdue": "Частка прострочених"
+      "mockTableRowOverdue": "Частка прострочених",
+      "betaBadge": "БЕТА — реальний бекенд",
+      "apiError": "Асистент зараз недоступний. Спробуйте ще раз.",
+      "feedbackUseful": "Корисно",
+      "feedbackNotUseful": "Не корисно",
+      "feedbackClear": "Зрозуміло",
+      "feedbackUnclear": "Незрозуміло",
+      "historyTitle": "Чати",
+      "historyNewChat": "Новий чат",
+      "historySearchPlaceholder": "Пошук чатів",
+      "historyToday": "Сьогодні",
+      "historyYesterday": "Вчора",
+      "historyEarlier": "Раніше",
+      "historyEmpty": "Чатів поки немає — поставте перше запитання.",
+      "historyNoResults": "Нічого не знайдено",
+      "historyConversationTitle": "Чат #{{id}}",
+      "historyLoadError": "Не вдалося завантажити чати.",
+      "historyRetry": "Повторити",
+      "historyCollapseAria": "Згорнути історію чатів",
+      "historyExpandAria": "Розгорнути історію чатів",
+      "historyOpenAria": "Відкрити історію чатів",
+      "historyCloseAria": "Закрити історію чатів",
+      "historyPinned": "Закріплені",
+      "historyPin": "Закріпити",
+      "historyUnpin": "Відкріпити",
+      "historyRename": "Перейменувати",
+      "historyRenamePlaceholder": "Назва чату",
+      "historyRenameTooLong": "Не більше {{max}} символів",
+      "historyMenuAria": "Дії з чатом",
+      "historyArchive": "Архів",
+      "historyArchiveAction": "В архів",
+      "historyUnarchiveAction": "Повернути з архіву",
+      "historyArchiveEmpty": "Архів порожній.",
+      "historyBackToChats": "Назад до чатів",
+      "historyUpdateError": "Не вдалося оновити чат.",
+      "voiceFallback": "Серверне розпізнавання недоступне — перемкнулися на розпізнавання браузера.",
+      "voiceFinalizing": "Обробка мовлення…",
+      "voiceHoldHint": "Натисніть для диктування, утримуйте для голосового повідомлення",
+      "voiceMessageRecording": "Запис голосового повідомлення…",
+      "voiceMessageCancel": "Скасувати запис",
+      "voiceMessageSend": "Надіслати голосове повідомлення",
+      "voiceMessageTooLarge": "Голосове повідомлення завелике (ліміт 10MB).",
+      "voiceMessageBubbleLabel": "Голосове повідомлення",
+      "attachImageUnsupported": "Можна прикріпити лише зображення PNG, JPEG або WebP.",
+      "attachImageTooLarge": "Зображення перевищує ліміт 5MB.",
+      "attachImageTooMany": "До 3 зображень в одному повідомленні.",
+      "attachImageRemove": "Видалити зображення",
+      "attachedImageAlt": "Прикріплене зображення",
+      "attachmentNeedsText": "Додайте текст, щоб надіслати зображення.",
+      "ttsListen": "Прослухати відповідь",
+      "ttsStop": "Зупинити відтворення",
+      "ttsError": "Не вдалося відтворити відповідь."
     },
-    "actionAnalysis": {
+    "training": {
       "title": "Аналіз дій",
       "subtitle": "Моніторинг дзвінків та історія взаємодій для команди тренерів.",
       "tabs": {
@@ -551,7 +613,6 @@
         "chain": "Ланцюг",
         "notes": "Нотатки",
         "createdDate": "Дата створення",
-        "clientId": "ID клієнта",
         "author": "Автор",
         "assignee": "Виконавець",
         "priority": "Пріоритет",
@@ -954,6 +1015,40 @@
           "fastResultPct": "% швидких",
           "distribution": "Розподіл"
         }
+      },
+      "promises": {
+        "kpi": {
+          "total": "Сума обіцянок",
+          "paid": "Оплачено",
+          "overdue": "Прострочено",
+          "pending": "Очікується",
+          "promisesUnit": "обіцянок"
+        },
+        "overdueBanner": "Прострочені обіцянки",
+        "overdueBannerHint": "{{count}} обіцянок не сплачено вчасно. Будь ласка, якнайшвидше організуйте повторний дзвінок.",
+        "priority": {
+          "all": "Усі пріоритети",
+          "critical": "Критичний",
+          "average": "Середній",
+          "low": "Низький"
+        },
+        "cols": {
+          "date": "Дата / Час",
+          "operator": "Оператор",
+          "client": "Клієнт",
+          "agreement": "Угода",
+          "amount": "Сума",
+          "paymentTerm": "Термін оплати",
+          "status": "Статус"
+        },
+        "status": {
+          "pending": "Очікується",
+          "paid": "Оплачено",
+          "overdue": "Прострочено"
+        },
+        "loading": "Завантаження…",
+        "loadFailed": "Не вдалося завантажити. Спробуйте ще раз.",
+        "empty": "Немає обіцянок або дзвінків за фільтрами."
       }
     },
     "users": {
@@ -970,6 +1065,20 @@
         "username": "Ім'я користувача",
         "email": "Електронна пошта",
         "extension": "Розширення / Агент"
+      },
+      "filters": {
+        "role": "Роль",
+        "project": "Проєкт",
+        "department": "Відділ",
+        "group": "Група",
+        "status": "Статус",
+        "all": "Усі",
+        "resetToDefault": "Скинути до типових",
+        "statusOptions": {
+          "all": "Усі",
+          "active": "Активні",
+          "disabled": "Вимкнені"
+        }
       },
       "tableHeaders": {
         "username": "Ім'я користувача",
@@ -1137,6 +1246,39 @@
         "busy": "Зайнятий",
         "onCall": "На дзвінку"
       }
+    },
+    "ipWhitelist": {
+      "title": "Білий список IP",
+      "helper": "Глобальний список дозволених IP для входу. Коли перевірку увімкнено, приймаються лише входи з цих IPv4-адрес.",
+      "gateTitle": "Перевірка IP при вході",
+      "gateDescriptionEnabled": "Увімкнено — кожен вхід перевіряється за списком нижче.",
+      "gateDescriptionDisabled": "Вимкнено — вхід дозволено з будь-якого IP. Список нижче зберігається, але не застосовується.",
+      "gateToggleAria": "Перемкнути перевірку IP",
+      "gateToastEnabled": "Перевірку IP увімкнено.",
+      "gateToastDisabled": "Перевірку IP вимкнено.",
+      "gateToastError": "Не вдалося оновити налаштування перевірки IP.",
+      "ipLabel": "IPv4-адреса",
+      "labelHeading": "Підпис",
+      "labelPlaceholder": "Офіс Київ (необов'язково)",
+      "addButton": "Додати IP",
+      "colIp": "IP-адреса",
+      "colLabel": "Підпис",
+      "colUpdated": "Останнє оновлення",
+      "colActions": "Дії",
+      "loading": "Завантаження…",
+      "errorLoading": "Не вдалося завантажити список.",
+      "emptyState": "Список порожній. Додайте IP вище.",
+      "toastAdded": "IP додано до списку.",
+      "toastUpdated": "Запис оновлено.",
+      "toastDeleted": "IP видалено зі списку.",
+      "errorAdd": "Не вдалося додати IP.",
+      "errorUpdate": "Не вдалося оновити запис.",
+      "errorDelete": "Не вдалося видалити запис.",
+      "confirmDelete": "Видалити {{ip}} зі списку?",
+      "editAria": "Редагувати {{ip}}",
+      "deleteAria": "Видалити {{ip}}",
+      "saveAria": "Зберегти зміни",
+      "cancelAria": "Скасувати"
     },
     "projects": {
       "title": "Управління проєктами",
@@ -1483,6 +1625,7 @@
       "step1": {
         "loanSourceMetadata": "Джерело позики / Метадані",
         "sellerCreditor": "Продавець / Кредитор",
+        "legalNameInline": "(Юридична назва: {{legalName}})",
         "projectCode": "Код проєкту:",
         "purchaseDate": "Дата покупки:",
         "comment": "Коментар:",
@@ -1503,7 +1646,24 @@
           "loadingSellers": "Завантаження продавців..."
         },
         "noProjectsAvailable": "Немає доступних проєктів",
-        "noSellersAvailable": "Немає доступних продавців"
+        "noSellersAvailable": "Немає доступних продавців",
+        "factoringAgreement": {
+          "title": "Договір факторингу",
+          "pickSellerFirst": "Спочатку оберіть продавця.",
+          "pickExisting": "Вибрати існуючий",
+          "createNew": "Створити новий",
+          "loading": "Завантаження…",
+          "selectExisting": "Виберіть договір",
+          "emptyForSeller": "Договорів ще немає — створіть",
+          "fields": {
+            "number": "Номер договору",
+            "previousLender": "Хто продав",
+            "previousLenderPlaceholderWithFallback": "Якщо залишити порожнім, буде вставлено юридичну назву продавця.",
+            "previousLenderPlaceholderGeneric": "Введіть особу, яка продала борг",
+            "contractPurchaseDate": "Дата купівлі за договором",
+            "contractPurchaseDatePlaceholder": "Виберіть дату купівлі за договором"
+          }
+        }
       },
       "step2": {
         "simple": {
@@ -1771,7 +1931,10 @@
             "tags": "Теги",
             "status": "Статус",
             "note": "Примітка",
-            "unknownTagTitle": "Тег не знайдено в цьому проєкті"
+            "protectedTagNote": "Захищений тег: {{names}}",
+            "requirePermissionNote": "Потрібен дозвіл! Захищений тег: {{names}}",
+            "unknownTagTitle": "Тег не знайдено в цьому проєкті",
+            "blockedProtectedTagTitle": "У вас немає дозволу на видалення цього захищеного тега"
           },
           "statuses": {
             "ready": "Готово",
@@ -1912,7 +2075,8 @@
         "employee": "Співробітник",
         "searcher": "Пошуковець",
         "assignmentDate": "Дата призначення",
-        "actions": "Дії"
+        "actions": "Дії",
+        "lastOutgoingTADate": "Дата останньої вихідної ЦД"
       },
       "priorities": {
         "critical": "Критичний",
@@ -1970,6 +2134,14 @@
         "pending": "Очікується",
         "skipped": "Пропущено",
         "bounced": "Відхилено"
+      },
+      "messageHistory": {
+        "destinationOwner": {
+          "client": "Клієнт",
+          "referrer": "Поручитель",
+          "work": "Робочий телефон",
+          "other": "Інший"
+        }
       },
       "activity": {
         "score": "Оцінка",
@@ -2080,6 +2252,7 @@
           "income": "Довідка про доходи",
           "outcome": "Витяг",
           "signature": "ЕЦП",
+          "military": "Військовий",
           "other": "Інше"
         },
         "department": "Відділ",
@@ -2169,8 +2342,17 @@
         "writeOff": "Списання",
         "reversal": "Сторно",
         "closeLoan": "Закрити позику",
+        "reopenLoan": "Поновити позику",
+        "confirmReopenLoan": "Ви впевнені, що хочете поновити цей кредит?",
         "editClosureDate": "Редагувати дату закриття",
         "closureDate": "Дата закриття",
+        "loanInfo": "Інформація про договір",
+        "factoringInfo": {
+          "empty": "Цей борг не пов'язаний з договором факторингу.",
+          "legalName": "Юридична назва",
+          "previousLender": "Хто продав",
+          "purchaseDate": "Дата купівлі"
+        },
         "closureDateRequired": "Дата закриття обов'язкова",
         "closureDateFuture": "Дата закриття не може бути в майбутньому",
         "sendToUBCI": "Відправити в UBCI",
@@ -2718,7 +2900,8 @@
           "payloadTagHint": "Цей тег потребує ЦД та/або суму — відкриється окрема форма",
           "saveTags": "Зберегти теги",
           "tagsUpdated": "Теги оновлено для {{name}}",
-          "updateFailed": "Не вдалося оновити теги"
+          "updateFailed": "Не вдалося оновити теги",
+          "protectedRemoveBlocked": "Захищені теги можуть знімати лише уповноважені ролі"
         },
         "deleteClient": {
           "title": "Видалити клієнта",
@@ -3174,6 +3357,7 @@
       "effectRemoveTag": "Зняти тег",
       "effectTask": "Завдання: зворотний дзвінок створено",
       "effectSMS": "Подія: SMS надіслано",
+      "effectMessage": "Подія: повідомлення надіслано",
       "effectSpam": "Додано до списку спаму",
       "dictionary": {
         "level1": "Рівень 1 — Тип взаємодії",
@@ -3187,7 +3371,9 @@
         "promiseAmountRequired": "Для цього результату потрібна сума обіцянки.",
         "creditRequired": "Для цього результату потрібно обрати кредит.",
         "stepFieldRequired": "Поле «{{name}}» обов'язкове.",
-        "stepRequired": "Заповніть цей крок перед продовженням."
+        "stepRequired": "Заповніть цей крок перед продовженням.",
+        "dateInvalid": "Введіть коректні дату й час у форматі ДД.ММ.РРРР ГГ:ХХ.",
+        "datePast": "Дата не може бути в минулому."
       },
       "pickToContinue": "Оберіть ланцюжок вище, щоб продовжити.",
       "stepsPreview": "Кроки в цьому ланцюжку",
@@ -3366,7 +3552,10 @@
         "delayMinutes": "Затримка (хв)",
         "required": "Обов'язково",
         "notInPast": "Дата не може бути в минулому",
-        "showClosedCredits": "Показувати закриті кредити"
+        "showClosedCredits": "Показувати закриті кредити",
+        "contactSource": "Джерело контакту",
+        "contactSourceClient": "Контакти клієнта",
+        "contactSourceRecommender": "Контакти поручителя"
       },
       "modals": {
         "create": {
@@ -3516,6 +3705,8 @@
         "debtStatus": "Статус (напр. прострочка)",
         "daysCooldown": "Днів (напр. 30)",
         "selectSmsTemplate": "Оберіть SMS-шаблон...",
+        "selectMessagingService": "Оберіть провайдера messaging...",
+        "selectMessagingDraft": "Оберіть чернетку повідомлення...",
         "subjectRequired": "Тема (обов'язково)",
         "searchSubjects": "Пошук тем...",
         "titleOptional": "Заголовок (необов'язково)",
@@ -3571,12 +3762,17 @@
           "remove_tag": "Зняти тег",
           "create_task": "Створити задачу",
           "send_sms": "Надіслати SMS",
+          "send_message": "Надіслати повідомлення (messaging)",
           "add_to_spam": "У спам"
         }
       },
+      "sendMessageNoIntegration": "Немає налаштованої інтеграції messaging для цього каналу. Додайте її в налаштуваннях Messaging.",
       "config": {
         "tag": "тег: {{label}}",
         "template": "шаблон: {{label}}",
+        "messagingDraft": "чернетка: {{label}}",
+        "channel": "канал: {{label}}",
+        "messagingService": "провайдер: {{label}}",
         "chain": "ланцюжок: {{label}}",
         "subject": "тема: {{label}}",
         "user": "користувач: {{label}}",
@@ -3657,6 +3853,7 @@
         "income": "Довідка про доходи",
         "outcome": "Витяг / виписка",
         "signature": "Цифровий підпис",
+        "military": "Військовий",
         "other": "Інше"
       },
       "actions": {
@@ -3872,6 +4069,7 @@
       "tableHeaders": {
         "sellerCode": "Код продавця",
         "sellerName": "Назва продавця",
+        "legalName": "Юридична назва",
         "sellerType": "Тип продавця",
         "status": "Статус",
         "companyEmail": "Електронна пошта компанії",
@@ -3889,7 +4087,28 @@
       },
       "actions": {
         "edit": "Редагувати",
-        "delete": "Видалити"
+        "delete": "Видалити",
+        "viewAgreements": "Переглянути договори"
+      },
+      "detail": {
+        "back": "Назад до списку продавців",
+        "loading": "Завантаження продавця...",
+        "notFound": "Продавця не знайдено",
+        "notFoundMessage": "Запитуваний продавець не існує або у вас немає доступу.",
+        "invalidId": "Невірний ID продавця",
+        "invalidIdMessage": "ID продавця не вказано.",
+        "factoringAgreements": {
+          "title": "Договори факторингу",
+          "loading": "Завантаження договорів...",
+          "error": "Не вдалося завантажити договори факторингу.",
+          "empty": "У цього продавця ще немає договорів факторингу.",
+          "columns": {
+            "number": "Номер договору",
+            "previousLender": "Хто продав",
+            "purchaseDate": "Дата купівлі",
+            "debtCount": "Кількість боргів"
+          }
+        }
       },
       "modals": {
         "create": {
@@ -3958,10 +4177,23 @@
           "sellerCodeReadOnly": "Код продавця не можна змінити після створення",
           "sellerName": "Назва продавця",
           "sellerType": "Тип продавця",
+          "legalName": "Повне юридичне найменування",
           "contactEmail": "Контактний email",
           "saveChanges": "Зберегти зміни",
           "companyName": "Назва компанії *",
           "taxId": "Податковий номер / Реєстраційний номер бізнесу",
+          "factoringAgreements": {
+            "title": "Договори факторингу",
+            "loading": "Завантаження договорів...",
+            "error": "Не вдалося завантажити договори факторингу.",
+            "empty": "У цього продавця ще немає договорів факторингу.",
+            "columns": {
+              "number": "Номер договору",
+              "previousLender": "Хто продав",
+              "purchaseDate": "Дата купівлі",
+              "debtCount": "Кількість боргів"
+            }
+          },
           "website": "Веб-сайт",
           "email": "Електронна пошта",
           "contactName": "Ім'я",
@@ -3979,6 +4211,7 @@
           "placeholders": {
             "sellerName": "Введіть назву компанії продавця",
             "sellerType": "Виберіть тип продавця",
+            "legalName": "напр., ТОВ \"ФК \"Є ГРОШІ\"",
             "contactEmail": "Введіть контактний email",
             "address": "Введіть адресу",
             "contactPerson": "Введіть ім'я контактної особи",
@@ -4062,6 +4295,7 @@
         "callsMade": "Зроблено дзвінків",
         "contactRate": "Контактність",
         "smsSent": "Відправлено SMS",
+        "messagesSent": "Відправлено повідомлень",
         "paymentsCollected": "Зібрано платежів",
         "vs": "порівняно з",
         "yesterday": "вчора",
@@ -4090,6 +4324,7 @@
         "contactRate": "Контактність",
         "avgDuration": "Середня тривалість",
         "sms": "SMS",
+        "messages": "Повідомлення",
         "payments": "Платежі",
         "total": "Всього"
       },
@@ -4133,6 +4368,26 @@
         "pending": "В очікуванні",
         "deliveryRate": "Процент доставки",
         "byOperator": "За операторами"
+      },
+      "messagesModal": {
+        "title": "Відправлено повідомлень",
+        "noData": "Дані недоступні",
+        "totalSent": "Всього відправлено",
+        "totalCost": "Загальна вартість",
+        "deliveryStats": "Статистика доставки",
+        "delivered": "Доставлено",
+        "failed": "Не доставлено",
+        "pending": "В очікуванні",
+        "deliveryRate": "Процент доставки",
+        "byChannel": "За каналом",
+        "topDrafts": "Топ чернеток",
+        "byOperator": "За операторами",
+        "messages": "повідомлень",
+        "channels": {
+          "sms": "SMS",
+          "viber": "Viber",
+          "email": "Email"
+        }
       },
       "paymentsModal": {
         "title": "Зібрані платежі",
@@ -4363,6 +4618,10 @@
       "fieldDefaultLine": "Лінія дзвінка за замовчуванням",
       "fieldSpam": "Дозволити спам",
       "fieldPrimary": "Показувати як основний телефон",
+      "fieldContactSource": "Джерело контакту",
+      "fieldContactSourceHint": "Категоризує тип контакту. Використовується для візуальних індикаторів у пошуку та фільтрації контактів у умовах ланцюга цільових дій.",
+      "client": "Клієнт",
+      "recommender": "Поручитель",
       "fieldSort": "Порядок сортування",
       "white": "Біла",
       "gray": "Сіра",
@@ -4382,6 +4641,7 @@
         "sortOrder": "Порядок",
         "name": "Назва",
         "defaultLine": "Лінія дзвінка",
+        "contactSource": "Джерело контакту",
         "spamAllowed": "Спам",
         "primary": "Основний телефон",
         "showInClientDetail": "Показувати на картці клієнта",
@@ -4721,6 +4981,12 @@
           "template_name": "Шаблон SMS",
           "segments": "Сегменти SMS",
           "gateway_provider": "Шлюз провайдера",
+          "campaign_id": "ID кампанії",
+          "recipient_id": "ID отримувача",
+          "service": "Провайдер messaging",
+          "destination": "Адресат",
+          "external_message_id": "Зовнішній ID повідомлення",
+          "draft_id": "ID чернетки",
           "call_id": "ID дзвінка",
           "outcome": "Результат дзвінка",
           "disposition": "Диспозиція",
@@ -4762,6 +5028,7 @@
           "interaction.created": "Створено взаємодію",
           "payment.verified": "Платіж підтверджено",
           "sms.sent": "SMS надіслано",
+          "message.sent": "Повідомлення надіслано",
           "call.outcome.updated": "Результат дзвінка оновлено",
           "scoring.completed": "Скоринг завершено",
           "client.imported": "Клієнта імпортовано",
@@ -4956,7 +5223,9 @@
       },
       "summary": {
         "delivered": "доставлено",
-        "resultsLine": "{{delivered}}/{{total}} доставлено"
+        "resultsLine": "{{delivered}}/{{total}} доставлено",
+        "filteredCampaigns": "{{count}} кампаній відповідають фільтрам",
+        "totalCost": "Загальна вартість"
       },
       "cost": {
         "actual": "Фактично",

@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { io, Socket } from 'socket.io-client'
 import { useQueryClient } from '@tanstack/react-query'
+import { getAccessToken } from '@/lib/api'
 import {
   getClientIdFromCallEventData,
   invalidateCallRelatedQueries,
@@ -42,7 +43,7 @@ export function useCallStateUpdates(
     if (!agentExtension || !callId) {
       // Clean up socket if required parameters are missing
       if (socketRef.current) {
-        socketRef.current.off('call.state_changed')
+        socketRef.current.disconnect()
         socketRef.current = null
       }
       return
@@ -50,9 +51,16 @@ export function useCallStateUpdates(
 
     // Connect to WebSocket (reuse existing connection if available)
     if (!socketRef.current) {
+      // The call-service Socket.IO handshake requires a JWT; without one the
+      // server refuses the connection. Pass it via the auth payload (not the
+      // query string) to keep the token out of URLs/access logs.
+      const token = getAccessToken()
+      if (!token) return
+
       const socket: Socket = io(WS_URL, {
         transports: ['websocket'],
         query: { agent_extension: agentExtension },
+        auth: { token },
       })
 
       socketRef.current = socket
@@ -88,9 +96,13 @@ export function useCallStateUpdates(
 
     socket.on('call.state_changed', handleCallStateChanged)
 
-    // Cleanup on unmount or when parameters change
+    // Cleanup on unmount or when parameters change — disconnect so an
+    // authenticated socket does not keep receiving call events after the
+    // consumer unmounts or its parameters change.
     return () => {
       socket.off('call.state_changed', handleCallStateChanged)
+      socket.disconnect()
+      socketRef.current = null
     }
   }, [agentExtension, callId, clientId, queryClient])
 }

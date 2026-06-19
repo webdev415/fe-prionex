@@ -1,7 +1,15 @@
-{
+﻿{
   "app": {
     "name": "CRM Prionex",
     "description": "Customer Relationship Management System"
+  },
+  "auth": {
+    "sessionRestore": {
+      "title": "Resume previous session?",
+      "body": "You have {{count}} open tabs from your previous session. Would you like to continue?",
+      "restoreButton": "Restore Session",
+      "startFreshButton": "Start Fresh"
+    }
   },
   "navigation": {
     "home": "Home",
@@ -14,6 +22,7 @@
     "importClients": "Import Clients",
     "projects": "Projects",
     "users": "Users",
+    "ipWhitelist": "IP Whitelist",
     "sellers": "Sellers",
     "roles": "Roles",
     "departments": "Departments",
@@ -38,7 +47,7 @@
     "scoringConfiguration": "Scoring Configuration",
     "systemSettings": "System Settings",
     "tags": "Tags",
-    "actionAnalysis": "Action Analysis",
+    "training": "Training",
     "messagingSettings": "Messaging Settings",
     "messagingIntegrations": "Messaging Integrations",
     "messagingDrafts": "Message Drafts",
@@ -56,6 +65,8 @@
     "searching": "Searching...",
     "noResults": "No clients found for '{{query}}'.",
     "phoneMinDigits": "Type at least {{count}} digits to search by phone.",
+    "clientContactIndicator": "Client contact",
+    "recommenderContactIndicator": "Recommender contact",
     "debt": "Debt",
     "phone": "Phone",
     "viewAllResults": "View all results"
@@ -335,9 +346,60 @@
       "mockTableColValue": "Value",
       "mockTableRowClients": "Clients",
       "mockTableRowDebt": "Debt at risk",
-      "mockTableRowOverdue": "Overdue ratio"
+      "mockTableRowOverdue": "Overdue ratio",
+      "betaBadge": "BETA — live backend",
+      "apiError": "The assistant is unavailable right now. Please try again.",
+      "feedbackUseful": "Helpful",
+      "feedbackNotUseful": "Not helpful",
+      "feedbackClear": "Clear",
+      "feedbackUnclear": "Unclear",
+      "historyTitle": "Chats",
+      "historyNewChat": "New chat",
+      "historySearchPlaceholder": "Search chats",
+      "historyToday": "Today",
+      "historyYesterday": "Yesterday",
+      "historyEarlier": "Earlier",
+      "historyEmpty": "No chats yet — ask your first question.",
+      "historyNoResults": "Nothing found",
+      "historyConversationTitle": "Chat #{{id}}",
+      "historyLoadError": "Failed to load chats.",
+      "historyRetry": "Retry",
+      "historyCollapseAria": "Collapse chat history",
+      "historyExpandAria": "Expand chat history",
+      "historyOpenAria": "Open chat history",
+      "historyCloseAria": "Close chat history",
+      "historyPinned": "Pinned",
+      "historyPin": "Pin",
+      "historyUnpin": "Unpin",
+      "historyRename": "Rename",
+      "historyRenamePlaceholder": "Chat name",
+      "historyRenameTooLong": "Maximum {{max}} characters",
+      "historyMenuAria": "Chat actions",
+      "historyArchive": "Archive",
+      "historyArchiveAction": "Move to archive",
+      "historyUnarchiveAction": "Restore from archive",
+      "historyArchiveEmpty": "The archive is empty.",
+      "historyBackToChats": "Back to chats",
+      "historyUpdateError": "Failed to update the chat.",
+      "voiceFallback": "Server speech recognition is unavailable — switched to browser recognition.",
+      "voiceFinalizing": "Processing speech…",
+      "voiceHoldHint": "Click to dictate, hold to record a voice message",
+      "voiceMessageRecording": "Recording voice message…",
+      "voiceMessageCancel": "Cancel recording",
+      "voiceMessageSend": "Send voice message",
+      "voiceMessageTooLarge": "Voice message is too large (limit 10MB).",
+      "voiceMessageBubbleLabel": "Voice message",
+      "attachImageUnsupported": "Only PNG, JPEG or WebP images can be attached.",
+      "attachImageTooLarge": "Image exceeds the 5MB limit.",
+      "attachImageTooMany": "Up to 3 images per message.",
+      "attachImageRemove": "Remove image",
+      "attachedImageAlt": "Attached image",
+      "attachmentNeedsText": "Add a text message to send the image.",
+      "ttsListen": "Listen to the reply",
+      "ttsStop": "Stop playback",
+      "ttsError": "Could not play the reply."
     },
-    "actionAnalysis": {
+    "training": {
       "title": "Action Analysis",
       "subtitle": "Call monitoring and interaction history for the trainer team.",
       "tabs": {
@@ -546,7 +608,6 @@
         "chain": "Chain",
         "notes": "Notes",
         "createdDate": "Created date",
-        "clientId": "Client ID",
         "author": "Author",
         "assignee": "Assignee",
         "priority": "Priority",
@@ -949,6 +1010,40 @@
           "fastResultPct": "Fast %",
           "distribution": "Distribution"
         }
+      },
+      "promises": {
+        "kpi": {
+          "total": "Total promises",
+          "paid": "Paid",
+          "overdue": "Overdue",
+          "pending": "Pending",
+          "promisesUnit": "promises"
+        },
+        "overdueBanner": "Overdue promises",
+        "overdueBannerHint": "{{count}} promises did not pay on time. Please arrange a follow-up call as soon as possible.",
+        "priority": {
+          "all": "All priorities",
+          "critical": "Critical",
+          "average": "Average",
+          "low": "Low"
+        },
+        "cols": {
+          "date": "Date / Time",
+          "operator": "Operator",
+          "client": "Client",
+          "agreement": "Agreement",
+          "amount": "Amount",
+          "paymentTerm": "Payment term",
+          "status": "Status"
+        },
+        "status": {
+          "pending": "Pending",
+          "paid": "Paid",
+          "overdue": "Overdue"
+        },
+        "loading": "Loading…",
+        "loadFailed": "Failed to load. Please retry.",
+        "empty": "No promises or callbacks match the filters."
       }
     },
     "users": {
@@ -965,6 +1060,20 @@
         "username": "Username",
         "email": "Email",
         "extension": "Extension / Agent"
+      },
+      "filters": {
+        "role": "Role",
+        "project": "Project",
+        "department": "Department",
+        "group": "Group",
+        "status": "Status",
+        "all": "All",
+        "resetToDefault": "Reset to default",
+        "statusOptions": {
+          "all": "All",
+          "active": "Active",
+          "disabled": "Disabled"
+        }
       },
       "tableHeaders": {
         "username": "Username",
@@ -1132,6 +1241,39 @@
         "busy": "Busy",
         "onCall": "On Call"
       }
+    },
+    "ipWhitelist": {
+      "title": "IP Whitelist",
+      "helper": "Global allowlist of source IPs for login. When enforcement is on, only logins coming from these IPv4 addresses are accepted.",
+      "gateTitle": "IP Whitelist Enforcement",
+      "gateDescriptionEnabled": "Enabled — every login is validated against the list below.",
+      "gateDescriptionDisabled": "Disabled — logins succeed from any IP. The list below is saved but not enforced.",
+      "gateToggleAria": "Toggle IP whitelist enforcement",
+      "gateToastEnabled": "IP whitelist enforcement enabled.",
+      "gateToastDisabled": "IP whitelist enforcement disabled.",
+      "gateToastError": "Failed to update IP whitelist enforcement.",
+      "ipLabel": "IPv4 Address",
+      "labelHeading": "Label",
+      "labelPlaceholder": "Office Kyiv (optional)",
+      "addButton": "Add IP",
+      "colIp": "IP Address",
+      "colLabel": "Label",
+      "colUpdated": "Last Updated",
+      "colActions": "Actions",
+      "loading": "Loading…",
+      "errorLoading": "Failed to load the whitelist.",
+      "emptyState": "No IPs configured yet. Add one above.",
+      "toastAdded": "IP added to the whitelist.",
+      "toastUpdated": "Entry updated.",
+      "toastDeleted": "IP removed from the whitelist.",
+      "errorAdd": "Failed to add IP.",
+      "errorUpdate": "Failed to update entry.",
+      "errorDelete": "Failed to delete entry.",
+      "confirmDelete": "Remove {{ip}} from the whitelist?",
+      "editAria": "Edit {{ip}}",
+      "deleteAria": "Delete {{ip}}",
+      "saveAria": "Save changes",
+      "cancelAria": "Cancel"
     },
     "projects": {
       "title": "Project Management",
@@ -1478,6 +1620,7 @@
       "step1": {
         "loanSourceMetadata": "Loan Source / Metadata",
         "sellerCreditor": "Seller / Creditor",
+        "legalNameInline": "(Legal name: {{legalName}})",
         "projectCode": "Project Code:",
         "purchaseDate": "Purchase date:",
         "comment": "Comment:",
@@ -1498,7 +1641,24 @@
           "loadingSellers": "Loading sellers..."
         },
         "noProjectsAvailable": "No projects available",
-        "noSellersAvailable": "No sellers available"
+        "noSellersAvailable": "No sellers available",
+        "factoringAgreement": {
+          "title": "Factoring agreement",
+          "pickSellerFirst": "Pick a seller first.",
+          "pickExisting": "Pick existing",
+          "createNew": "Create new",
+          "loading": "Loading…",
+          "selectExisting": "Select agreement",
+          "emptyForSeller": "No agreements yet — create one",
+          "fields": {
+            "number": "Agreement number",
+            "previousLender": "Who sold",
+            "previousLenderPlaceholderWithFallback": "If left blank, the seller's legal name will be inserted.",
+            "previousLenderPlaceholderGeneric": "Enter the entity that sold the debt",
+            "contractPurchaseDate": "Contract purchase date",
+            "contractPurchaseDatePlaceholder": "Select contract purchase date"
+          }
+        }
       },
       "step2": {
         "simple": {
@@ -1766,7 +1926,10 @@
             "tags": "Tags",
             "status": "Status",
             "note": "Note",
-            "unknownTagTitle": "Tag not found in this project"
+            "protectedTagNote": "Protected tag: {{names}}",
+            "requirePermissionNote": "Require permission! Protected tag: {{names}}",
+            "unknownTagTitle": "Tag not found in this project",
+            "blockedProtectedTagTitle": "You do not have permission to remove this protected tag"
           },
           "statuses": {
             "ready": "Ready",
@@ -1907,7 +2070,8 @@
         "employee": "Employee",
         "searcher": "Searcher",
         "assignmentDate": "Assignment Date",
-        "actions": "Actions"
+        "actions": "Actions",
+        "lastOutgoingTADate": "Last outgoing TA date"
       },
       "priorities": {
         "critical": "Critical",
@@ -1965,6 +2129,14 @@
         "pending": "Pending",
         "skipped": "Skipped",
         "bounced": "Bounced"
+      },
+      "messageHistory": {
+        "destinationOwner": {
+          "client": "Client",
+          "referrer": "Referrer",
+          "work": "Work phone",
+          "other": "Other"
+        }
       },
       "modals": {
         "addNote": {
@@ -2348,7 +2520,8 @@
           "payloadTagHint": "This tag requires PTP date and/or amount — a separate form will open",
           "saveTags": "Save Tags",
           "tagsUpdated": "Tags updated for {{name}}",
-          "updateFailed": "Failed to update tags"
+          "updateFailed": "Failed to update tags",
+          "protectedRemoveBlocked": "Protected tags can only be removed by authorized roles"
         },
         "deleteClient": {
           "title": "Delete Client",
@@ -2748,6 +2921,7 @@
           "income": "Income statement",
           "outcome": "Extract / statement",
           "signature": "Digital signature",
+          "military": "Military",
           "other": "Other"
         },
         "department": "Department",
@@ -2834,8 +3008,17 @@
         "writeOff": "Write-off",
         "reversal": "Reversal",
         "closeLoan": "Close Loan",
+        "reopenLoan": "Reopen Loan",
+        "confirmReopenLoan": "Are you sure you want to reopen this credit?",
         "editClosureDate": "Edit closure date",
         "closureDate": "Closure date",
+        "loanInfo": "Agreement info",
+        "factoringInfo": {
+          "empty": "This debt is not linked to a factoring agreement.",
+          "legalName": "Legal name",
+          "previousLender": "Who sold",
+          "purchaseDate": "Purchase date"
+        },
         "closureDateRequired": "Closure date is required",
         "closureDateFuture": "Closure date cannot be in the future",
         "sendToUBCI": "Send to UBCI",
@@ -3136,6 +3319,7 @@
       "effectRemoveTag": "Remove tag",
       "effectTask": "Task: Callback created",
       "effectSMS": "Event: SMS sent",
+      "effectMessage": "Event: Message sent",
       "effectSpam": "Added to spam list",
       "dictionary": {
         "level1": "Level 1 — Interaction type",
@@ -3149,7 +3333,9 @@
         "promiseAmountRequired": "This result requires a promise amount.",
         "creditRequired": "This result requires selecting a credit.",
         "stepFieldRequired": "{{name}} is required.",
-        "stepRequired": "Please fill in this step before continuing."
+        "stepRequired": "Please fill in this step before continuing.",
+        "dateInvalid": "Please enter a valid date and time in DD.MM.YYYY HH:MM format.",
+        "datePast": "Date cannot be in the past."
       },
       "pickToContinue": "Pick a chain above to continue.",
       "stepsPreview": "Steps in this chain",
@@ -3259,6 +3445,8 @@
         "debtStatus": "Status (e.g. overdue)",
         "daysCooldown": "Days (e.g. 30)",
         "selectSmsTemplate": "Select SMS template...",
+        "selectMessagingService": "Select messaging provider...",
+        "selectMessagingDraft": "Select message draft...",
         "subjectRequired": "Subject (required)",
         "searchSubjects": "Search subjects...",
         "titleOptional": "Title (optional override)",
@@ -3314,12 +3502,17 @@
           "remove_tag": "Remove tag",
           "create_task": "Create task",
           "send_sms": "Send SMS",
+          "send_message": "Send message (messaging)",
           "add_to_spam": "Add to spam"
         }
       },
+      "sendMessageNoIntegration": "No configured messaging integration for this channel. Set one up under Messaging Settings.",
       "config": {
         "tag": "tag: {{label}}",
         "template": "template: {{label}}",
+        "messagingDraft": "draft: {{label}}",
+        "channel": "channel: {{label}}",
+        "messagingService": "provider: {{label}}",
         "chain": "chain: {{label}}",
         "subject": "subject: {{label}}",
         "user": "user: {{label}}",
@@ -3400,6 +3593,7 @@
         "income": "Income statement",
         "outcome": "Extract / statement",
         "signature": "Digital signature",
+        "military": "Military",
         "other": "Other"
       },
       "actions": {
@@ -3626,7 +3820,10 @@
         "delayMinutes": "Delay (minutes)",
         "required": "Required",
         "notInPast": "Date cannot be in the past",
-        "showClosedCredits": "Show closed credits"
+        "showClosedCredits": "Show closed credits",
+        "contactSource": "Contact source",
+        "contactSourceClient": "Client contacts",
+        "contactSourceRecommender": "Recommender contacts"
       },
       "modals": {
         "create": {
@@ -3834,6 +4031,10 @@
       "fieldDefaultLine": "Default Call Line",
       "fieldSpam": "Spam Allowed",
       "fieldPrimary": "Show as Primary Phone",
+      "fieldContactSource": "Contact Source",
+      "fieldContactSourceHint": "Categories the contact type. Used for visual indicators in search and for contact filtering in Target Action chain conditions.",
+      "client": "Client",
+      "recommender": "Recommender",
       "fieldSort": "Sort Order",
       "white": "White",
       "gray": "Gray",
@@ -3853,6 +4054,7 @@
         "sortOrder": "Sort Order",
         "name": "Name",
         "defaultLine": "Default Call Line",
+        "contactSource": "Contact Source",
         "spamAllowed": "Spam Allowed",
         "primary": "Show as Primary Phone",
         "showInClientDetail": "Show in Client Detail",
@@ -4192,6 +4394,12 @@
           "template_name": "SMS template",
           "segments": "SMS segments",
           "gateway_provider": "Gateway provider",
+          "campaign_id": "Campaign ID",
+          "recipient_id": "Recipient ID",
+          "service": "Messaging provider",
+          "destination": "Destination",
+          "external_message_id": "External message ID",
+          "draft_id": "Draft ID",
           "call_id": "Call ID",
           "outcome": "Call outcome",
           "disposition": "Disposition",
@@ -4233,6 +4441,7 @@
           "interaction.created": "Interaction created",
           "payment.verified": "Payment verified",
           "sms.sent": "SMS sent",
+          "message.sent": "Message sent",
           "call.outcome.updated": "Call outcome updated",
           "scoring.completed": "Scoring completed",
           "client.imported": "Client imported",
@@ -4432,6 +4641,7 @@
       "tableHeaders": {
         "sellerCode": "Seller Code",
         "sellerName": "Seller Name",
+        "legalName": "Legal Name",
         "sellerType": "Seller Type",
         "status": "Status",
         "companyEmail": "Company Email",
@@ -4449,7 +4659,28 @@
       },
       "actions": {
         "edit": "Edit",
-        "delete": "Delete"
+        "delete": "Delete",
+        "viewAgreements": "View Agreements"
+      },
+      "detail": {
+        "back": "Back to sellers",
+        "loading": "Loading seller...",
+        "notFound": "Seller not found",
+        "notFoundMessage": "The requested seller does not exist or you do not have access.",
+        "invalidId": "Invalid seller ID",
+        "invalidIdMessage": "No seller ID was provided.",
+        "factoringAgreements": {
+          "title": "Factoring Agreements",
+          "loading": "Loading agreements...",
+          "error": "Failed to load factoring agreements.",
+          "empty": "No factoring agreements for this seller yet.",
+          "columns": {
+            "number": "Agreement number",
+            "previousLender": "Who sold",
+            "purchaseDate": "Purchase date",
+            "debtCount": "Number of debts"
+          }
+        }
       },
       "modals": {
         "create": {
@@ -4515,6 +4746,7 @@
           "sellerCodeReadOnly": "Seller code cannot be changed after creation",
           "sellerName": "Seller Name",
           "sellerType": "Seller Type",
+          "legalName": "Full legal name",
           "taxId": "Tax ID / Business Registration Number",
           "contactPerson": "Contact Person",
           "contactEmail": "Contact Email",
@@ -4525,9 +4757,22 @@
           "saving": "Saving...",
           "loadingSellerData": "Loading seller data...",
           "sellerNotFound": "Seller not found",
+          "factoringAgreements": {
+            "title": "Factoring Agreements",
+            "loading": "Loading agreements...",
+            "error": "Failed to load factoring agreements.",
+            "empty": "No factoring agreements for this seller yet.",
+            "columns": {
+              "number": "Agreement number",
+              "previousLender": "Who sold",
+              "purchaseDate": "Purchase date",
+              "debtCount": "Number of debts"
+            }
+          },
           "placeholders": {
             "sellerName": "Enter seller company name",
             "sellerType": "Select seller type",
+            "legalName": "e.g., JSC \"FC \"Є ГРОШІ\"",
             "taxId": "Enter tax ID or business registration number",
             "contactPerson": "Enter contact person name",
             "contactEmail": "Enter contact email",
@@ -4622,6 +4867,7 @@
         "callsMade": "Calls Made",
         "contactRate": "Contact Rate",
         "smsSent": "SMS Sent",
+        "messagesSent": "Messages Sent",
         "paymentsCollected": "Payments Collected",
         "vs": "vs",
         "yesterday": "yesterday",
@@ -4650,6 +4896,7 @@
         "contactRate": "Contact Rate",
         "avgDuration": "Avg Duration",
         "sms": "SMS",
+        "messages": "Messages",
         "payments": "Payments",
         "total": "Total"
       },
@@ -4693,6 +4940,26 @@
         "pending": "Pending",
         "deliveryRate": "Delivery Rate",
         "byOperator": "By Operator"
+      },
+      "messagesModal": {
+        "title": "Messages Sent",
+        "noData": "No data available",
+        "totalSent": "Total Sent",
+        "totalCost": "Total Cost",
+        "deliveryStats": "Delivery Statistics",
+        "delivered": "Delivered",
+        "failed": "Failed",
+        "pending": "Pending",
+        "deliveryRate": "Delivery Rate",
+        "byChannel": "By Channel",
+        "topDrafts": "Top Drafts",
+        "byOperator": "By Operator",
+        "messages": "messages",
+        "channels": {
+          "sms": "SMS",
+          "viber": "Viber",
+          "email": "Email"
+        }
       },
       "paymentsModal": {
         "title": "Payments Collected",
@@ -4938,7 +5205,9 @@
       },
       "summary": {
         "delivered": "delivered",
-        "resultsLine": "{{delivered}}/{{total}} delivered"
+        "resultsLine": "{{delivered}}/{{total}} delivered",
+        "filteredCampaigns": "{{count}} campaigns match filters",
+        "totalCost": "Total cost"
       },
       "cost": {
         "actual": "Actual",

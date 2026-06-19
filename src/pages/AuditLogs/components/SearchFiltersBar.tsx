@@ -349,7 +349,8 @@ export function SearchFiltersBar({
                     placeholder={t('pages.auditLogs.searchFilters.selectStartDate')}
                     disabled={isLoading}
                     max={dateFromMax}
-                    format="MM/dd/yyyy"
+                    allowManualInput
+                    format="dd.MM.yyyy"
                     className="flex-1 [&_input]:h-9 [&_input]:text-xs"
                   />
                   <span className="text-base leading-[150%] font-medium tracking-[-0.28px] text-gray-700">
@@ -362,7 +363,8 @@ export function SearchFiltersBar({
                     placeholder={t('pages.auditLogs.searchFilters.selectEndDate')}
                     disabled={isLoading}
                     min={dateToMin}
-                    format="MM/dd/yyyy"
+                    allowManualInput
+                    format="dd.MM.yyyy"
                     className="flex-1 [&_input]:h-9 [&_input]:text-xs"
                   />
                 </div>
