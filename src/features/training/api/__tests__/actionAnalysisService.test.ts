@@ -19,6 +19,7 @@ vi.mock('@/lib/api', () => ({
 
 import {
   getInteractionMonitoring,
+  getLeaks,
   getPromisesAndCallbacks,
   getSuccessfulClosures,
   getWeeklyBucket,
@@ -260,5 +261,64 @@ describe('getSuccessfulClosures — param builder (KAN-734)', () => {
     expect(params.get('sort_dir')).toBe('asc')
     expect(params.get('page')).toBe('2')
     expect(params.get('page_size')).toBe('25')
+  })
+})
+
+describe('getLeaks — param builder (KAN-735)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockApi.get.mockResolvedValue({
+      data: {
+        kpis: { total_escalations: 0, not_followed_up: 0, followed_up: 0 },
+        items: [],
+        total: 0,
+        page: 1,
+        page_size: 50,
+      },
+    })
+  })
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  function getParams(): URLSearchParams {
+    const [, config] = mockApi.get.mock.calls[0]
+    return config.params as URLSearchParams
+  }
+
+  it('hits /api/v1/interactions/leaks and omits optional params by default', async () => {
+    await getLeaks({})
+    expect(mockApi.get).toHaveBeenCalledWith('/api/v1/interactions/leaks', expect.any(Object))
+    expect(getParams().toString()).toBe('')
+  })
+
+  it('repeats user_ids and forwards scope params', async () => {
+    await getLeaks({ user_ids: [10, 20], group_id: 4 })
+    const params = getParams()
+    expect(params.getAll('user_ids')).toEqual(['10', '20'])
+    expect(params.get('group_id')).toBe('4')
+  })
+
+  it('forwards lookback_days + follow_up_status (KAN-735 Block 1/3)', async () => {
+    await getLeaks({ lookback_days: 7, follow_up_status: 'not_followed_up' })
+    const params = getParams()
+    expect(params.get('lookback_days')).toBe('7')
+    expect(params.get('follow_up_status')).toBe('not_followed_up')
+  })
+
+  it('forwards period + sort + pagination untouched', async () => {
+    await getLeaks({
+      period: 'last_7d',
+      sort_by: 'amount',
+      sort_dir: 'asc',
+      page: 3,
+      page_size: 20,
+    })
+    const params = getParams()
+    expect(params.get('period')).toBe('last_7d')
+    expect(params.get('sort_by')).toBe('amount')
+    expect(params.get('sort_dir')).toBe('asc')
+    expect(params.get('page')).toBe('3')
+    expect(params.get('page_size')).toBe('20')
   })
 })

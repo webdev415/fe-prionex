@@ -4,6 +4,8 @@ import type {
   CallMonitoringResponse,
   InteractionMonitoringFilters,
   InteractionMonitoringResponse,
+  LeakFilters,
+  LeaksResponse,
   PromiseCallbackFilters,
   PromisesAndCallbacksResponse,
 } from '../types'
@@ -125,6 +127,41 @@ export async function getPromisesAndCallbacks(
 export async function exportPromisesAndCallbacks(filters: PromiseCallbackFilters): Promise<Blob> {
   const response = await api.get<Blob>('/api/v1/interactions/promises-and-callbacks/export', {
     params: buildPromiseCallbackParams(filters),
+    responseType: 'blob',
+    timeout: 120_000,
+  })
+  return response.data
+}
+
+function buildLeakParams(filters: LeakFilters): URLSearchParams {
+  // Repeated `?key=val` for list params — FastAPI's `Query(None)` rejects
+  // Axios's default `[]` suffix.
+  const params = new URLSearchParams()
+  filters.user_ids?.forEach((id) => params.append('user_ids', String(id)))
+  if (filters.department_id != null) params.set('department_id', String(filters.department_id))
+  if (filters.group_id != null) params.set('group_id', String(filters.group_id))
+  if (filters.period) params.set('period', filters.period)
+  if (filters.from_datetime) params.set('from_datetime', filters.from_datetime)
+  if (filters.to_datetime) params.set('to_datetime', filters.to_datetime)
+  if (filters.lookback_days != null) params.set('lookback_days', String(filters.lookback_days))
+  if (filters.follow_up_status) params.set('follow_up_status', filters.follow_up_status)
+  if (filters.sort_by) params.set('sort_by', filters.sort_by)
+  if (filters.sort_dir) params.set('sort_dir', filters.sort_dir)
+  if (filters.page != null) params.set('page', String(filters.page))
+  if (filters.page_size != null) params.set('page_size', String(filters.page_size))
+  return params
+}
+
+export async function getLeaks(filters: LeakFilters): Promise<LeaksResponse> {
+  const response = await api.get<LeaksResponse>('/api/v1/interactions/leaks', {
+    params: buildLeakParams(filters),
+  })
+  return response.data
+}
+
+export async function exportLeaks(filters: LeakFilters): Promise<Blob> {
+  const response = await api.get<Blob>('/api/v1/interactions/leaks/export', {
+    params: buildLeakParams(filters),
     responseType: 'blob',
     timeout: 120_000,
   })
@@ -348,6 +385,8 @@ export const actionAnalysisService = {
   exportInteractionMonitoring,
   getPromisesAndCallbacks,
   exportPromisesAndCallbacks,
+  getLeaks,
+  exportLeaks,
   listInteractionChannels,
   getTaHistory,
   exportTaHistory,
