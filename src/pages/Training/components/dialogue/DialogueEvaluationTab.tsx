@@ -1,7 +1,11 @@
-﻿import { useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
-import { MOCK_SCORECARD_ROWS } from '../../mocks/trainerWorkplaceMocks'
+import { useScorecards } from '@/features/quality'
+import { useOperators } from '@/features/users/hooks'
+import { useAuthStore } from '@/stores/authStore'
+import { buildDialogueRows } from '../../lib/dialogueScorecardAdapter'
+import { useScopedUserIds } from '../../lib/scope'
 import { TrainingSegmentedStrip } from '../chrome/TrainingSegmentedStrip'
 import { PendingFeatureDialog } from '../inbox/PendingFeatureDialog'
 import { EmployeeMultiSelect } from './EmployeeMultiSelect'
@@ -10,23 +14,43 @@ import { ScorecardDetailPanel } from './ScorecardDetailPanel'
 
 type CategoryChip = 'all' | 'new' | 'average' | 'risk'
 
+const DEFAULT_PAGE_SIZE = 50
+
 export function DialogueEvaluationTab() {
   const { t } = useTranslation('common')
   const [activeCategory, setActiveCategory] = useState<CategoryChip>('all')
-  const [selectedRowId, setSelectedRowId] = useState<number | null>(
-    MOCK_SCORECARD_ROWS[0]?.id ?? null
-  )
+  const [selectedRowId, setSelectedRowId] = useState<number | null>(null)
   const [scheduleOpen, setScheduleOpen] = useState(false)
   const [selectedEmployeeIds, setSelectedEmployeeIds] = useState<number[]>([])
 
+  const activeProjectId = useAuthStore((s) => s.user?.active_project_id)
+  const { data: operators = [] } = useOperators(activeProjectId ? Number(activeProjectId) : null)
+  const scoped = useScopedUserIds(operators)
+
+  const filters = useMemo(
+    () => ({
+      operator_id: selectedEmployeeIds.length > 0 ? selectedEmployeeIds : scoped.userIds,
+      page: 1,
+      page_size: DEFAULT_PAGE_SIZE,
+    }),
+    [selectedEmployeeIds, scoped.userIds]
+  )
+
+  const { data, isLoading, isError } = useScorecards(filters, !scoped.isEmptyResolution)
+
+  const rows = useMemo(
+    () => buildDialogueRows(data?.data ?? [], operators),
+    [data?.data, operators]
+  )
+
   const categoryCounts = useMemo(
     () => ({
-      all: MOCK_SCORECARD_ROWS.length,
-      new: MOCK_SCORECARD_ROWS.filter((r) => r.category === 'New').length,
-      average: MOCK_SCORECARD_ROWS.filter((r) => r.category === 'Average').length,
-      risk: MOCK_SCORECARD_ROWS.filter((r) => r.category === 'Risk').length,
+      all: rows.length,
+      new: rows.filter((r) => r.category === 'New').length,
+      average: rows.filter((r) => r.category === 'Average').length,
+      risk: rows.filter((r) => r.category === 'Risk').length,
     }),
-    []
+    [rows]
   )
 
   const categoryChips = useMemo(
@@ -46,13 +70,30 @@ export function DialogueEvaluationTab() {
     [t, categoryCounts]
   )
 
-  const filteredRows = MOCK_SCORECARD_ROWS.filter((r) => {
-    if (activeCategory === 'all') return true
-    if (activeCategory === 'new') return r.category === 'New'
-    if (activeCategory === 'average') return r.category === 'Average'
-    if (activeCategory === 'risk') return r.category === 'Risk'
-    return true
-  })
+  const filteredRows = useMemo(
+    () =>
+      rows.filter((r) => {
+        if (activeCategory === 'all') return true
+        if (activeCategory === 'new') return r.category === 'New'
+        if (activeCategory === 'average') return r.category === 'Average'
+        if (activeCategory === 'risk') return r.category === 'Risk'
+        return true
+      }),
+    [rows, activeCategory]
+  )
+
+  // Derive the effective selection during render (no setState-in-effect):
+  // honour the user's pick while it's still visible, else fall back to the
+  // first row in the active filter.
+  const effectiveSelectedId =
+    selectedRowId != null && filteredRows.some((r) => r.id === selectedRowId)
+      ? selectedRowId
+      : (filteredRows[0]?.id ?? null)
+
+  const selectedRow = useMemo(
+    () => rows.find((r) => r.id === effectiveSelectedId),
+    [rows, effectiveSelectedId]
+  )
 
   return (
     <div className="flex flex-col gap-4">
@@ -71,17 +112,42 @@ export function DialogueEvaluationTab() {
             <Icons.Add size={14} />
             {t('pages.training.dialogue.scheduleSession', 'Schedule a session')}
           </button>
-          <EmployeeMultiSelect value={selectedEmployeeIds} onChange={setSelectedEmployeeIds} />
+          <EmployeeMultiSelect
+            value={selectedEmployeeIds}
+            onChange={setSelectedEmployeeIds}
+            operators={operators}
+          />
         </div>
       </div>
 
       <div className="grid grid-cols-1 gap-3 xl:grid-cols-[1fr_400px]">
-        <ScorecardListView
-          rows={filteredRows}
-          selectedId={selectedRowId}
-          onSelect={setSelectedRowId}
-        />
-        <ScorecardDetailPanel selectedId={selectedRowId} />
+        {scoped.isEmptyResolution ? (
+          <div className="rounded-xl bg-white/50 p-12 text-center text-sm text-gray-500 shadow-sm">
+            {t(
+              'pages.training.errors.emptyScopeResolution',
+              'The selected scope returned no operators.'
+            )}
+          </div>
+        ) : isLoading ? (
+          <div className="rounded-xl bg-white p-12 text-center text-sm text-[#6B7280] shadow-sm">
+            {t('common.loading', 'Loading…')}
+          </div>
+        ) : isError ? (
+          <div className="rounded-xl bg-white p-12 text-center text-sm text-red-500 shadow-sm">
+            {t('pages.training.errors.loadScorecardsFailed', 'Failed to load scorecards')}
+          </div>
+        ) : filteredRows.length === 0 ? (
+          <div className="rounded-xl bg-white p-12 text-center text-sm text-[#6B7280] shadow-sm">
+            {t('pages.training.scorecardsEmpty', 'No scorecards in scope.')}
+          </div>
+        ) : (
+          <ScorecardListView
+            rows={filteredRows}
+            selectedId={effectiveSelectedId}
+            onSelect={setSelectedRowId}
+          />
+        )}
+        <ScorecardDetailPanel row={selectedRow} />
       </div>
 
       <PendingFeatureDialog

@@ -1,25 +1,58 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
-import { MOCK_INBOX_ROWS } from '../../mocks/trainerWorkplaceMocks'
+import type { OperatorUser } from '@/features/users/api/usersApi'
 
 /**
  * Multi-select employee dropdown rendered to the right of the
  * "Schedule a session" CTA on the Dialogue Evaluation tab. Mirrors the
  * Figma frame — text trigger + checkbox list + apply/clear footer.
  *
- * Pulls operator candidates from `MOCK_INBOX_ROWS` so the mock data stays
- * consistent across tabs.
+ * Operator candidates come from the live project roster (`useOperators`,
+ * passed down by the tab) — KAN-737.
  */
 export interface EmployeeMultiSelectProps {
   value: number[]
   onChange: (next: number[]) => void
+  operators: OperatorUser[]
 }
 
-export function EmployeeMultiSelect({ value, onChange }: EmployeeMultiSelectProps) {
+const AVATAR_PALETTE = [
+  '#E0F2EC',
+  '#FEF3C7',
+  '#FEE4E2',
+  '#E0E7FF',
+  '#FCE7F3',
+  '#DBEAFE',
+  '#FFEDD5',
+  '#D1FAE5',
+] as const
+
+function initialsFor(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean)
+  if (parts.length === 0) return '?'
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
+  return `${parts[0][0]}${parts[1][0]}`.toUpperCase()
+}
+
+export function EmployeeMultiSelect({ value, onChange, operators }: EmployeeMultiSelectProps) {
   const { t } = useTranslation('common')
   const [open, setOpen] = useState(false)
   const wrapperRef = useRef<HTMLDivElement | null>(null)
+
+  const candidates = useMemo(
+    () =>
+      operators.map((op, i) => {
+        const name = op.full_name ?? `#${op.id}`
+        return {
+          operatorId: op.id,
+          name,
+          initials: initialsFor(name),
+          avatarColor: AVATAR_PALETTE[i % AVATAR_PALETTE.length],
+        }
+      }),
+    [operators]
+  )
 
   useEffect(() => {
     if (!open) return
@@ -42,13 +75,13 @@ export function EmployeeMultiSelect({ value, onChange }: EmployeeMultiSelectProp
   }
 
   const clearAll = () => onChange([])
-  const selectAll = () => onChange(MOCK_INBOX_ROWS.map((r) => r.operatorId))
+  const selectAll = () => onChange(candidates.map((r) => r.operatorId))
 
   const triggerLabel =
     value.length === 0
       ? t('pages.training.dialogue.employee.all', 'All employees')
       : value.length === 1
-        ? (MOCK_INBOX_ROWS.find((r) => r.operatorId === value[0])?.name ?? '')
+        ? (candidates.find((r) => r.operatorId === value[0])?.name ?? '')
         : t('pages.training.dialogue.employee.selected', '{{count}} selected', {
             count: value.length,
           })
@@ -77,7 +110,7 @@ export function EmployeeMultiSelect({ value, onChange }: EmployeeMultiSelectProp
           <div className="flex items-center justify-between border-b border-[#EBECE8] px-3 py-2 text-[11px] text-[#676767]">
             <span>
               {t('pages.training.dialogue.employee.label', 'Employee')}{' '}
-              <span className="text-[#05040D]">({MOCK_INBOX_ROWS.length})</span>
+              <span className="text-[#05040D]">({candidates.length})</span>
             </span>
             <div className="flex items-center gap-2">
               <button type="button" onClick={selectAll} className="text-[#204E4D] hover:underline">
@@ -90,7 +123,7 @@ export function EmployeeMultiSelect({ value, onChange }: EmployeeMultiSelectProp
             </div>
           </div>
           <ul className="max-h-[240px] overflow-y-auto py-1">
-            {MOCK_INBOX_ROWS.map((row) => {
+            {candidates.map((row) => {
               const checked = value.includes(row.operatorId)
               return (
                 <li key={row.operatorId}>
