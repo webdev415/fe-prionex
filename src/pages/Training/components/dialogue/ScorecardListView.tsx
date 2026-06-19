@@ -1,7 +1,7 @@
 ﻿import { type ReactElement } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
-import type { MockScorecardRow } from '../../mocks/trainerWorkplaceMocks'
+import type { DialogueScorecardRow } from '../../lib/dialogueScorecardAdapter'
 import {
   ANALYTICS_TABLE_HEAD,
   ANALYTICS_TABLE_ROW,
@@ -11,12 +11,12 @@ import {
 import { AnalyticsMockTable } from '../analytics/AnalyticsMockTable'
 
 export interface ScorecardListViewProps {
-  rows: MockScorecardRow[]
+  rows: DialogueScorecardRow[]
   selectedId: number | null
   onSelect: (id: number) => void
 }
 
-const CATEGORY_TONE: Record<MockScorecardRow['category'], string> = {
+const CATEGORY_TONE: Record<DialogueScorecardRow['category'], string> = {
   New: 'bg-[#EFF6FF] text-[#2563EB]',
   Average: 'bg-[#FFFBEB] text-[#D97706]',
   Risk: 'bg-[#FEF2F2] text-[#B91C1C]',
@@ -30,7 +30,7 @@ function scoreBandTones(score: number): { ring: string; text: string } {
 }
 
 /** Per-trigger glyph + tint — matches the small icon set in the Figma row. */
-type TriggerFlagKey = keyof NonNullable<MockScorecardRow['triggerFlags']>
+type TriggerFlagKey = keyof NonNullable<DialogueScorecardRow['triggerFlags']>
 
 const TRIGGER_ICONS: {
   key: TriggerFlagKey

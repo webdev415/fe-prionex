@@ -1,17 +1,14 @@
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
-import {
-  DEFAULT_SCORECARD_CRITERIA,
-  MOCK_SCORECARD_ROWS,
-  type CriterionRating,
-  type MockScorecardCriterion,
-  type MockScorecardRow,
-} from '../../mocks/trainerWorkplaceMocks'
+import type {
+  DialogueCriterionRating,
+  DialogueScorecardRow,
+} from '../../lib/dialogueScorecardAdapter'
 import { PendingFeatureDialog } from '../inbox/PendingFeatureDialog'
 
 const RATING_OPTIONS: {
-  id: CriterionRating
+  id: DialogueCriterionRating
   labelKey: string
   fallback: string
   points: string
@@ -53,9 +50,8 @@ function scoreTextColor(score: number): string {
   return 'text-[#B91C1C]'
 }
 
-export function ScorecardDetailPanel({ selectedId }: { selectedId: number | null }) {
+export function ScorecardDetailPanel({ row }: { row: DialogueScorecardRow | undefined }) {
   const { t } = useTranslation('common')
-  const row = MOCK_SCORECARD_ROWS.find((r) => r.id === selectedId)
 
   if (!row) {
     return (
@@ -65,27 +61,24 @@ export function ScorecardDetailPanel({ selectedId }: { selectedId: number | null
     )
   }
 
-  return <ScorecardDetailBody key={selectedId} row={row} />
+  return <ScorecardDetailBody key={row.id} row={row} />
 }
 
-function ScorecardDetailBody({ row }: { row: MockScorecardRow }) {
+function ScorecardDetailBody({ row }: { row: DialogueScorecardRow }) {
   const { t } = useTranslation('common')
-  const [criteria, setCriteria] = useState<MockScorecardCriterion[]>(DEFAULT_SCORECARD_CRITERIA)
   const [pendingAction, setPendingAction] = useState<'edit' | 'task' | null>(null)
   const [playing, setPlaying] = useState(false)
+
+  // Criteria are rendered read-only from the live scorecard (KAN-737). Editing
+  // stays behind the "Edit score" pending dialog until KAN-504 wires it.
+  const criteria = row.criteria
 
   const filledCriteria = useMemo(
     () => criteria.filter((c) => c.rating !== 'not_done').length,
     [criteria]
   )
 
-  const setRating = (criterionId: string, rating: CriterionRating) => {
-    setCriteria((prev) => prev.map((c) => (c.id === criterionId ? { ...c, rating } : c)))
-  }
-
-  const clearCriteria = () => {
-    setCriteria((prev) => prev.map((c) => ({ ...c, rating: 'not_done' as const, score: 0 })))
-  }
+  const openEditPending = () => setPendingAction('edit')
 
   return (
     <>
@@ -109,8 +102,12 @@ function ScorecardDetailBody({ row }: { row: MockScorecardRow }) {
             </div>
             <div className="text-right">
               <div className="flex items-baseline justify-end gap-0.5">
-                <span className={`text-2xl font-semibold ${scoreTextColor(row.score)}`}>
-                  {row.score}
+                <span
+                  className={`text-2xl font-semibold ${
+                    row.hasScore ? scoreTextColor(row.score) : 'text-[#9CA3AF]'
+                  }`}
+                >
+                  {row.hasScore ? row.score : '—'}
                 </span>
                 <span className="text-xs font-light text-[#6B7280]">/{row.scoreOutOf}</span>
               </div>
@@ -164,7 +161,7 @@ function ScorecardDetailBody({ row }: { row: MockScorecardRow }) {
             </span>
             <button
               type="button"
-              onClick={clearCriteria}
+              onClick={openEditPending}
               className="flex items-center gap-1 text-[11px] text-[#7B7B7B] hover:text-[#05040D]"
             >
               <Icons.Reload size={12} />
@@ -194,7 +191,7 @@ function ScorecardDetailBody({ row }: { row: MockScorecardRow }) {
                     <button
                       key={opt.id}
                       type="button"
-                      onClick={() => setRating(criterion.id, opt.id)}
+                      onClick={openEditPending}
                       className={`relative flex min-h-[69px] flex-col rounded-md bg-white px-2 py-2 text-left transition-shadow ${
                         selected ? 'shadow-[0_0_0_2px_#80D80A,0_1px_2px_rgba(0,0,0,0.05)]' : ''
                       }`}
