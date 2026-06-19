@@ -390,21 +390,29 @@ export function UserManagementPage() {
     {
       key: 'username',
       header: t('pages.users.tableHeaders.username'),
+      sortable: true,
+      sortKey: 'username',
       render: (user) => <span className="font-medium">{user.username}</span>,
     },
     {
       key: 'fullName',
       header: t('pages.users.tableHeaders.fullName'),
+      sortable: true,
+      sortKey: 'full_name',
       render: (user) => <span>{user.full_name || '-'}</span>,
     },
     {
       key: 'email',
       header: t('pages.users.tableHeaders.email'),
+      sortable: true,
+      sortKey: 'email',
       render: (user) => <span className="text-gray-700">{user.email || '-'}</span>,
     },
     {
       key: 'projectRole',
       header: t('pages.users.tableHeaders.projectRole'),
+      sortable: true,
+      sortKey: 'project_role',
       render: (user) => {
         // Display project name with role: "Project Name (Role)"
         if (user.projects && user.projects.length > 0) {
@@ -459,6 +467,8 @@ export function UserManagementPage() {
       key: 'status',
       header: t('pages.users.tableHeaders.status'),
       align: 'center',
+      sortable: true,
+      sortKey: 'status',
       render: (user) => <StatusBadge status={getStatusType(user.status)} />,
     },
     {
