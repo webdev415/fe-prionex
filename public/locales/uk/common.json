@@ -33,6 +33,7 @@
     "bulkPaymentVerification": "Масова верифікація платежів",
     "bulkTagAssignment": "Масове призначення тегів",
     "bulkWriteoffImport": "Масовий імпорт списань",
+    "bulkSaleNotesImport": "Масовий імпорт коментарів",
     "auditLogs": "Журнал аудиту",
     "reports": "Звіти",
     "scoringConfiguration": "Конфігурація оцінки",
@@ -1571,7 +1572,8 @@
           "paymentImport": "Імпорт платежів",
           "writeoffImport": "Імпорт списань",
           "tagAssignment": "Призначення тегів",
-          "tagRemoval": "Видалення тегів"
+          "tagRemoval": "Видалення тегів",
+          "saleNotes": "Нотатки про продаж"
         },
         "uploadedBy": "Завантажено:",
         "view": "Перегляд",

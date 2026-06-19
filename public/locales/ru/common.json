@@ -31,6 +31,7 @@
     "bulkOperatorAssignment": "Массовое назначение операторов",
     "bulkPaymentVerification": "Массовая верификация платежей",
     "bulkTagAssignment": "Массовое назначение тегов",
+    "bulkSaleNotesImport": "Массовый импорт комментариев",
     "auditLogs": "Журнал аудита",
     "reports": "Отчеты",
     "scoringConfiguration": "Конфигурация оценки",
@@ -1456,8 +1457,11 @@
           "simple": "Простой",
           "vendor": "Выгрузка продавца",
           "operatorAssignment": "Назначение операторов",
+          "paymentImport": "Импорт платежей",
+          "writeoffImport": "Импорт списаний",
           "tagAssignment": "Назначение тегов",
-          "tagRemoval": "Удаление тегов"
+          "tagRemoval": "Удаление тегов",
+          "saleNotes": "Заметки о продаже"
         },
         "uploadedBy": "Загружено:",
         "view": "Просмотр",

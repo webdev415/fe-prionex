@@ -33,6 +33,7 @@
     "bulkPaymentVerification": "Bulk Payment Verification",
     "bulkTagAssignment": "Bulk Tag Assignment",
     "bulkWriteoffImport": "Bulk Write-off Import",
+    "bulkSaleNotesImport": "Bulk Sales Note Import",
     "auditLogs": "Audit Logs",
     "reports": "Reports",
     "scoringConfiguration": "Scoring Configuration",
@@ -1566,7 +1567,8 @@
           "paymentImport": "Payment Import",
           "writeoffImport": "Write-off Import",
           "tagAssignment": "Tag assignment",
-          "tagRemoval": "Tag removal"
+          "tagRemoval": "Tag removal",
+          "saleNotes": "Sale Notes"
         },
         "uploadedBy": "Uploaded by:",
         "view": "View",
