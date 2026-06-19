@@ -22,6 +22,7 @@ import {
   getLeaks,
   getPromisesAndCallbacks,
   getSuccessfulClosures,
+  getThirdParty,
   getWeeklyBucket,
 } from '../actionAnalysisService'
 
@@ -320,5 +321,71 @@ describe('getLeaks — param builder (KAN-735)', () => {
     expect(params.get('sort_dir')).toBe('asc')
     expect(params.get('page')).toBe('3')
     expect(params.get('page_size')).toBe('20')
+  })
+})
+
+describe('getThirdParty — param builder (KAN-736)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockApi.get.mockResolvedValue({
+      data: {
+        kpis: {
+          total_calls: 0,
+          returned_to_client: 0,
+          did_not_return: 0,
+          positive_count: 0,
+          refusal_count: 0,
+          will_pass_count: 0,
+        },
+        items: [],
+        total: 0,
+        page: 1,
+        page_size: 50,
+      },
+    })
+  })
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  function getParams(): URLSearchParams {
+    const [, config] = mockApi.get.mock.calls[0]
+    return config.params as URLSearchParams
+  }
+
+  it('hits /api/v1/interactions/third-party and omits optional params by default', async () => {
+    await getThirdParty({})
+    expect(mockApi.get).toHaveBeenCalledWith('/api/v1/interactions/third-party', expect.any(Object))
+    expect(getParams().toString()).toBe('')
+  })
+
+  it('repeats user_ids and forwards scope params', async () => {
+    await getThirdParty({ user_ids: [10, 20], department_id: 7 })
+    const params = getParams()
+    expect(params.getAll('user_ids')).toEqual(['10', '20'])
+    expect(params.get('department_id')).toBe('7')
+  })
+
+  it('forwards result_filter + returned_window_hours (KAN-736 §3/§5)', async () => {
+    await getThirdParty({ result_filter: 'refusal', returned_window_hours: 48 })
+    const params = getParams()
+    expect(params.get('result_filter')).toBe('refusal')
+    expect(params.get('returned_window_hours')).toBe('48')
+  })
+
+  it('forwards period + sort + pagination untouched', async () => {
+    await getThirdParty({
+      period: 'today',
+      sort_by: 'duration',
+      sort_dir: 'asc',
+      page: 2,
+      page_size: 25,
+    })
+    const params = getParams()
+    expect(params.get('period')).toBe('today')
+    expect(params.get('sort_by')).toBe('duration')
+    expect(params.get('sort_dir')).toBe('asc')
+    expect(params.get('page')).toBe('2')
+    expect(params.get('page_size')).toBe('25')
   })
 })

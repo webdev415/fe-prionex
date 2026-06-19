@@ -241,6 +241,67 @@ export interface LeaksResponse {
   page_size: number
 }
 
+// --- Third Parties sub-tab (KAN-736) ---
+
+export type ThirdPartySortBy = 'date' | 'duration'
+
+// Mock-vocabulary result chips ('all' is request-only). KAN-736 §3.
+export type ThirdPartyResultChip = 'promise' | 'refusal' | 'missed_call' | 'will_pass_on'
+export type ThirdPartyResultFilter = 'all' | ThirdPartyResultChip
+// Server-derived; the FE collapses this onto two visual states (Yes / Did not return).
+export type ThirdPartyReturnedStatus = 'yes' | 'will_pass' | 'did_not_pass'
+
+export interface ThirdPartyFilters {
+  user_ids?: number[]
+  department_id?: number
+  group_id?: number
+  period?: CallMonitoringPeriod
+  from_datetime?: string
+  to_datetime?: string
+  result_filter?: ThirdPartyResultFilter
+  // Window (hours, from the third-party call) for "returned to client". Default 24.
+  returned_window_hours?: number
+  sort_by?: ThirdPartySortBy
+  sort_dir?: InteractionMonitoringSortDir
+  page?: number
+  page_size?: number
+}
+
+export interface ThirdPartyItem {
+  id: number
+  datetime: string
+  operator_id: number | null
+  operator_name: string | null
+  primary_client_id: number
+  primary_client_full_name: string | null
+  contacted_phone: string | null
+  contact_relationship: string | null
+  duration_seconds: number | null
+  result_code: string | null
+  result_chip: ThirdPartyResultChip | null
+  returned_to_client: ThirdPartyReturnedStatus | null
+  returned_at: string | null
+  // UUID for inline recording playback; null in v1 (KAN-736 §4, deferred).
+  call_id: string | null
+}
+
+export interface ThirdPartyKpis {
+  total_calls: number
+  returned_to_client: number
+  did_not_return: number
+  positive_count: number
+  refusal_count: number
+  will_pass_count: number
+}
+
+export interface ThirdPartyResponse {
+  kpis: ThirdPartyKpis
+  items: ThirdPartyItem[]
+  total: number
+  page: number
+  page_size: number
+}
+
 export type TaskPriority = 'low' | 'normal' | 'high' | 'urgent' | 'critical'
 
 export type TaskStatus =
