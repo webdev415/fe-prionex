@@ -689,9 +689,9 @@ export interface PaymentResponse {
   notes?: string | null
   internal_notes?: string | null
   recorded_by_user_id: number
-  recorded_by_username?: string | null
+  recorded_by_full_name?: string | null
   verified_by_user_id?: number | null
-  verified_by_username?: string | null
+  verified_by_full_name?: string | null
   assigned_user_id?: number | null
   assigned_user_full_name?: string | null
   debt_contract_number?: string | null

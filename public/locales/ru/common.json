@@ -2724,7 +2724,7 @@
           "clientStatus": "Статус клиента:",
           "stillHasDebt": "еще имеет долг",
           "auditTrail": "Журнал аудита",
-          "createdBy": "Создано:",
+          "assignedTo": "Назначено:",
           "createdAt": "Создано в:",
           "verifiedBy": "Подтверждено:",
           "verifiedAt": "Подтверждено в:",

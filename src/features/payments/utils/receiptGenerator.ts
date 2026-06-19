@@ -94,18 +94,20 @@ export function convertPaymentToReceiptData(
     outstandingBalanceBefore: Number(payment.debt_before) || 0,
     paymentApplied,
     remainingBalance: Number(payment.debt_after) || 0,
-    // CHANGED — branch on recorded_by_user_id presence. For auto-created rows
-    // fall back to the verified-by user with an "(import)" suffix.
+    // Receipts render the currently-assigned operator as "Last_name First_name"
+    // (per User.full_name). For rows with no assignee (typically auto-imported
+    // and never assigned), fall back to the verified-by user with an "(import)"
+    // suffix.
     receivedBy:
-      payment.recorded_by_username ??
-      (payment.recorded_by_user_id !== null && payment.recorded_by_user_id !== undefined
-        ? `User #${payment.recorded_by_user_id}`
-        : payment.verified_by_username
-          ? `${payment.verified_by_username} (import)`
+      payment.assigned_user_full_name ??
+      (payment.assigned_user_id !== null && payment.assigned_user_id !== undefined
+        ? `User #${payment.assigned_user_id}`
+        : payment.verified_by_full_name
+          ? `${payment.verified_by_full_name} (import)`
           : payment.verified_by_user_id !== null && payment.verified_by_user_id !== undefined
             ? `User #${payment.verified_by_user_id} (import)`
             : '—'),
-    verifiedBy: payment.verified_by_username,
+    verifiedBy: payment.verified_by_full_name ?? undefined,
     verifiedOn: payment.verified_at,
     companyName: companyData?.name || '-',
     companyAddress: companyData?.address || '-',

@@ -2657,7 +2657,7 @@
           "clientStatus": "Client Status:",
           "stillHasDebt": "still has debt",
           "auditTrail": "Audit Trail",
-          "createdBy": "Created by:",
+          "assignedTo": "Assigned to:",
           "createdAt": "Created at:",
           "verifiedBy": "Verified by:",
           "verifiedAt": "Verified at:",
