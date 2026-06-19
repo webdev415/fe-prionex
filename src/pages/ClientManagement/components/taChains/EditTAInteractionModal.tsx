@@ -32,7 +32,8 @@ import {
 } from '@/features/taInteractions/hooks/useTAInteractions'
 import { useTAChain } from '@/features/taChains/hooks/useTAChains'
 import { useTargetActions } from '@/features/targetActions/hooks/useTargetActions'
-import { resolveStepValue } from './taFieldMapping'
+import { resolveStepValue, visibleCredits } from './taFieldMapping'
+// import { useClientEmails } from '@/features/clients/hooks/useClientEmails'
 import { useClientPhones } from '@/features/clients/hooks/useClientPhones'
 import type { ContactSource } from '@/features/taChains/api/types'
 import { getErrorMessage } from '@/lib/errors'
@@ -131,6 +132,7 @@ interface Props {
     remaining_debt_amount?: string | number | null
     days_past_due?: number | null
     seller_company?: string | null
+    status?: string | null
   }>
 }
 
@@ -396,15 +398,23 @@ export function EditTAInteractionModal({
                       // those as removable rows so the value isn't silently
                       // hidden when it doesn't map to any current debt.
                       const staleIds = selectedIds.filter((id) => !knownDebtIds.has(id))
+                      // Respect the step's show_closed_credits flag (Bug 4):
+                      // hide closed debts unless the flag is set, but keep any
+                      // already-selected closed debt so it isn't dropped.
+                      const shownDebts = visibleCredits(
+                        debts,
+                        step.show_closed_credits,
+                        selectedIds
+                      )
                       return (
                         <div className="flex flex-col gap-2">
-                          {debts.length === 0 && staleIds.length === 0 ? (
+                          {shownDebts.length === 0 && staleIds.length === 0 ? (
                             <span className="text-xs text-gray-500">
                               {t('pages.clientChains.noCredits')}
                             </span>
                           ) : (
                             <>
-                              {debts.map((d) => {
+                              {shownDebts.map((d) => {
                                 const creditKey = String(d.id)
                                 const isChecked = selectedIds.includes(creditKey)
                                 return (

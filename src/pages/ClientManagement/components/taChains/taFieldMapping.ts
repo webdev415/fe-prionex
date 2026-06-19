@@ -56,6 +56,31 @@ export function extractPhones(
   return Array.from(phones)
 }
 
+export interface DebtLike {
+  id: number
+  status?: string | null
+}
+
+/**
+ * Filter the debt list for a credit step's picker in the edit modal.
+ *
+ * Hides closed debts unless the step's `show_closed_credits` flag is set — but
+ * always keeps a closed debt that is **already selected** on the interaction,
+ * so editing never silently drops a previously-chosen credit. Mirrors the
+ * recording flow (ChainExecutor) so both screens stay consistent (Bug 4).
+ */
+export function visibleCredits<T extends DebtLike>(
+  debts: T[],
+  showClosedCredits: boolean | undefined,
+  selectedIds: Array<string | number> = []
+): T[] {
+  if (showClosedCredits) return debts
+  const selected = new Set(selectedIds.map(String))
+  return debts.filter(
+    (d) => (d.status ?? '').toLowerCase() !== 'closed' || selected.has(String(d.id))
+  )
+}
+
 function unwrapValue(raw: unknown): string {
   if (raw == null) return ''
   if (typeof raw === 'object') {

@@ -1,6 +1,12 @@
 import { describe, it, expect } from 'vitest'
 
-import { extractPhones, isPhoneShaped, resolveStepValue, type StepLike } from '../taFieldMapping'
+import {
+  extractPhones,
+  isPhoneShaped,
+  resolveStepValue,
+  visibleCredits,
+  type StepLike,
+} from '../taFieldMapping'
 
 describe('isPhoneShaped', () => {
   it('accepts plain and formatted phone numbers', () => {
@@ -81,5 +87,32 @@ describe('resolveStepValue', () => {
 
   it('returns empty string when nothing matches', () => {
     expect(resolveStepValue(loanStep, [contactStep, loanStep], {}, {})).toBe('')
+  })
+})
+
+describe('visibleCredits (Bug 4)', () => {
+  const debts = [
+    { id: 1, status: 'active' },
+    { id: 2, status: 'closed' },
+    { id: 3, status: 'overdue' },
+  ]
+
+  it('hides closed debts when show_closed_credits is off', () => {
+    expect(visibleCredits(debts, false).map((d) => d.id)).toEqual([1, 3])
+  })
+
+  it('shows all debts when show_closed_credits is on', () => {
+    expect(visibleCredits(debts, true).map((d) => d.id)).toEqual([1, 2, 3])
+  })
+
+  it('keeps an already-selected closed debt so editing never drops it', () => {
+    // Closed debt #2 is already selected on the interaction → keep it visible
+    // even though the flag is off, so the saved value isn't silently removed.
+    expect(visibleCredits(debts, false, ['2']).map((d) => d.id)).toEqual([1, 2, 3])
+  })
+
+  it('treats missing/blank status as not closed', () => {
+    const d = [{ id: 9 }, { id: 10, status: null }]
+    expect(visibleCredits(d, false).map((x) => x.id)).toEqual([9, 10])
   })
 })
