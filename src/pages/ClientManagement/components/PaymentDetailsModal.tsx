@@ -423,7 +423,7 @@ export function PaymentDetailsModal({
                 <div className="flex flex-1 flex-col items-start gap-2 p-0">
                   <div className="flex items-start gap-6 self-stretch">
                     <span className="text-dark-500 inline-flex items-center gap-1.5 text-xs leading-[150%] font-light tracking-[-0.28px] sm:text-sm">
-                      {t('pages.clients.modals.paymentDetails.createdBy')}{' '}
+                      {t('pages.clients.modals.paymentDetails.assignedTo')}{' '}
                       <span className="font-medium">{payment.createdBy}</span>
                       {onReassignEmployee && payment.status === 'Verified' && (
                         <button

@@ -2869,7 +2869,7 @@
           "clientStatus": "Статус клієнта:",
           "stillHasDebt": "ще має борг",
           "auditTrail": "Журнал аудиту",
-          "createdBy": "Створено:",
+          "assignedTo": "Призначено:",
           "createdAt": "Створено о:",
           "verifiedBy": "Підтверджено:",
           "verifiedAt": "Підтверджено о:",
