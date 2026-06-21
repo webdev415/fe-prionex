@@ -651,6 +651,8 @@ export interface PaymentResponse {
   recorded_by_username?: string | null
   verified_by_user_id?: number | null
   verified_by_username?: string | null
+  assigned_user_id?: number | null
+  assigned_user_full_name?: string | null
   debt_contract_number?: string | null
   seller_name?: string | null
   is_deleted: boolean
