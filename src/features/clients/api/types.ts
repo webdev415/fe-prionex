@@ -148,6 +148,11 @@ export interface Client {
   last_interaction_result_id?: number | null
   last_interaction_result_name?: string | null
 
+  // Timestamp of the most recent (non-archived) TA interaction, performed by
+  // an employee of any role. ``null`` when no TA has been logged yet — the
+  // table renders "—". ISO datetime string.
+  last_ta_date?: string | null
+
   // Assignment (Sprint 2 - Phase A)
   responsible_employee_id?: number | null
   responsible_searcher_id?: number | null
@@ -646,6 +651,8 @@ export interface PaymentResponse {
   recorded_by_username?: string | null
   verified_by_user_id?: number | null
   verified_by_username?: string | null
+  assigned_user_id?: number | null
+  assigned_user_full_name?: string | null
   debt_contract_number?: string | null
   seller_name?: string | null
   is_deleted: boolean
