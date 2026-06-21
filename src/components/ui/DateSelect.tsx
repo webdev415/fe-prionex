@@ -13,8 +13,11 @@ import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 import {
   applyDefaultTimeToDate,
+  DATE_DISPLAY_FORMAT,
   DATETIME_DISPLAY_FORMAT,
+  maskDateInput,
   maskDateTimeInput,
+  parseManualDate,
   parseManualDateTime,
 } from '@/lib/dateUtils'
 
@@ -80,9 +83,9 @@ export interface DateSelectProps {
   /** Per-slot predicate. Return ``true`` to keep, ``false`` to grey out. */
   filterTime?: (time: Date) => boolean
   /**
-   * Allow typing the value directly with a ``DD.MM.YYYY HH:MM`` mask, in
-   * addition to the calendar picker. When off (default) the field stays
-   * calendar-only (legacy behaviour for other call sites).
+   * Allow typing the value directly, in addition to the calendar picker.
+   * With ``showTimeSelect``: ``DD.MM.YYYY HH:MM`` mask. Without: ``DD.MM.YYYY``
+   * mask (date filter fields). When off (default) the field stays calendar-only.
    */
   allowManualInput?: boolean
   /**
@@ -158,11 +161,15 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
     const errorId = `${inputId}-error`
     const helperId = `${inputId}-helper`
 
+    const isDateOnlyManual = allowManualInput && !showTimeSelect
+    const manualDisplayFormat = isDateOnlyManual ? DATE_DISPLAY_FORMAT : DATETIME_DISPLAY_FORMAT
+
     // ── Manual-input state (only used when allowManualInput) ──────────────
     // Visible masked text. Driven by us, not react-datepicker.
     const [text, setText] = useState<string>(() => {
+      if (!allowManualInput) return ''
       const d = parseDate(value)
-      return d ? formatFns(d, DATETIME_DISPLAY_FORMAT) : ''
+      return d ? formatFns(d, manualDisplayFormat) : ''
     })
     // Whether the field currently holds invalid/incomplete typed text.
     const [manualInvalid, setManualInvalid] = useState(false)
@@ -176,7 +183,7 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
     useEffect(() => {
       if (!allowManualInput) return
       const d = parseDate(value)
-      const formatted = d ? formatFns(d, DATETIME_DISPLAY_FORMAT) : ''
+      const formatted = d ? formatFns(d, manualDisplayFormat) : ''
       if (formatted === lastSyncedValue.current) return
       lastSyncedValue.current = formatted
       setText(formatted)
@@ -217,7 +224,7 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
           })
         : null
       if (allowManualInput) {
-        setText(next ? formatFns(next, DATETIME_DISPLAY_FORMAT) : '')
+        setText(next ? formatFns(next, manualDisplayFormat) : '')
         setManualInvalid(false)
         onValidityChange?.(false)
       }
@@ -231,7 +238,7 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
     // always includes the time (the mask requires HH:MM), so the 09:00 default
     // doesn't apply here — the typed time wins.
     const handleManualType = (raw: string) => {
-      const masked = maskDateTimeInput(raw)
+      const masked = isDateOnlyManual ? maskDateInput(raw) : maskDateTimeInput(raw)
       setText(masked)
       if (masked === '') {
         setManualInvalid(false)
@@ -239,7 +246,7 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
         onChange?.({ value: null })
         return
       }
-      const parsed = parseManualDateTime(masked)
+      const parsed = isDateOnlyManual ? parseManualDate(masked) : parseManualDateTime(masked)
       if (parsed) {
         setManualInvalid(false)
         onValidityChange?.(false)
@@ -264,7 +271,11 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
     )
 
     const effectivePlaceholder =
-      allowManualInput && placeholder === 'Select date' ? 'DD.MM.YYYY HH:MM' : placeholder
+      allowManualInput && placeholder === 'Select date'
+        ? isDateOnlyManual
+          ? 'DD.MM.YYYY'
+          : 'DD.MM.YYYY HH:MM'
+        : placeholder
 
     return (
       <div className={`w-full ${className || ''}`}>

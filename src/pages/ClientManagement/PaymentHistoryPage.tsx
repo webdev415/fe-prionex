@@ -1448,6 +1448,8 @@ export function PaymentHistoryPage() {
                       value={startDate}
                       onChange={({ value }) => setStartDate(value)}
                       placeholder={t('pages.clients.paymentHistory.filters.startDate')}
+                      allowManualInput
+                      format="dd.MM.yyyy"
                       className="flex-1"
                     />
                     <span className="text-dark-500 text-xs sm:text-base">-</span>
@@ -1455,6 +1457,8 @@ export function PaymentHistoryPage() {
                       value={endDate}
                       onChange={({ value }) => setEndDate(value)}
                       placeholder={t('pages.clients.paymentHistory.filters.endDate')}
+                      allowManualInput
+                      format="dd.MM.yyyy"
                       className="flex-1"
                     />
                   </div>

@@ -23,6 +23,9 @@ import type { Period } from '@/features/report/types'
  */
 export const DATETIME_DISPLAY_FORMAT = 'dd.MM.yyyy HH:mm'
 
+/** Display + manual-entry format for date-only filter fields (no time). */
+export const DATE_DISPLAY_FORMAT = 'dd.MM.yyyy'
+
 // Per-segment rules for the smart mask, in field order: day, month, year,
 // hour, minute. ``padGt`` is the classic datetime-mask shortcut — if the
 // first digit can't possibly start a valid value (e.g. ``9`` for an hour,
@@ -135,6 +138,31 @@ export function parseManualDateTime(masked: string): Date | null {
   const parsed = parseFns(masked, DATETIME_DISPLAY_FORMAT, new Date())
   if (!isValidFns(parsed)) return null
   if (formatFns(parsed, DATETIME_DISPLAY_FORMAT) !== masked) return null
+  return parsed
+}
+
+/**
+ * Auto-insert ``DD.MM.YYYY`` separators as the user types. Reuses the same
+ * day/month/year smart-mask rules as ``maskDateTimeInput`` (first 8 digits).
+ */
+export function maskDateInput(raw: string): string {
+  const d = smartDateTimeDigits(raw).slice(0, 8)
+  let out = d.slice(0, 2)
+  if (d.length > 2) out += '.' + d.slice(2, 4)
+  if (d.length > 4) out += '.' + d.slice(4, 8)
+  return out
+}
+
+/**
+ * Strictly parse a ``DD.MM.YYYY`` string. Returns a Date only when the input
+ * is **complete** (8 digits) and **valid**.
+ */
+export function parseManualDate(masked: string): Date | null {
+  const digits = masked.replace(/\D/g, '')
+  if (digits.length !== 8) return null
+  const parsed = parseFns(masked, DATE_DISPLAY_FORMAT, new Date())
+  if (!isValidFns(parsed)) return null
+  if (formatFns(parsed, DATE_DISPLAY_FORMAT) !== masked) return null
   return parsed
 }
 
