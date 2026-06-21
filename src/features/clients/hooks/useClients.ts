@@ -237,6 +237,15 @@ export function useAssignClient() {
         exact: true,
       })
       queryClient.invalidateQueries({ queryKey: clientKeys.lists() })
+      // The client-detail page reads responsible_employee_name /
+      // responsible_searcher_name from the profile query, not the detail
+      // query — so the displayed name only refreshes if we invalidate
+      // that cache too. Same convention every other mutation in this
+      // file uses (see useCreateAddress, useUpdateContact, etc.).
+      queryClient.invalidateQueries({
+        queryKey: clientKeys.profile(variables.clientId),
+        exact: true,
+      })
       // The `contact.responsible_changed` event is published after this
       // request returns and the tag-service applies any matching auto-tag
       // rules asynchronously (RabbitMQ → Celery). Refetch the client's
