@@ -148,6 +148,11 @@ export interface Client {
   last_interaction_result_id?: number | null
   last_interaction_result_name?: string | null
 
+  // Timestamp of the most recent (non-archived) TA interaction, performed by
+  // an employee of any role. ``null`` when no TA has been logged yet — the
+  // table renders "—". ISO datetime string.
+  last_ta_date?: string | null
+
   // Assignment (Sprint 2 - Phase A)
   responsible_employee_id?: number | null
   responsible_searcher_id?: number | null
