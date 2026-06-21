@@ -68,9 +68,12 @@ export interface Payment {
   debt_id?: number
   // Recorded by
   recorded_by_user_id: number | null
-  recorded_by_username?: string
+  recorded_by_full_name?: string | null
   verified_by_user_id?: number
-  verified_by_username?: string
+  verified_by_full_name?: string | null
+  // Assigned operator — responsible user for this payment's collection
+  assigned_user_id?: number | null
+  assigned_user_full_name?: string | null
   // Reversal info
   reversed_at?: string
   reversed_by_user_id?: number
@@ -151,8 +154,8 @@ export interface EditPaymentRequest {
   bank_transaction_id?: string
 }
 
-export interface ReassignPaymentEmployeeRequest {
-  recorded_by_user_id: number
+export interface ReassignAssignedUserRequest {
+  assigned_user_id: number
 }
 
 export interface PaymentListParams {

@@ -1921,7 +1921,8 @@
         "employee": "Employee",
         "searcher": "Searcher",
         "assignmentDate": "Assignment Date",
-        "actions": "Actions"
+        "actions": "Actions",
+        "lastOutgoingTADate": "Last outgoing TA date"
       },
       "priorities": {
         "critical": "Critical",
@@ -2498,7 +2499,7 @@
           "clientStatus": "Client Status:",
           "stillHasDebt": "still has debt",
           "auditTrail": "Audit Trail",
-          "createdBy": "Created by:",
+          "assignedTo": "Assigned to:",
           "createdAt": "Created at:",
           "verifiedBy": "Verified by:",
           "verifiedAt": "Verified at:",
@@ -3163,7 +3164,9 @@
         "promiseAmountRequired": "This result requires a promise amount.",
         "creditRequired": "This result requires selecting a credit.",
         "stepFieldRequired": "{{name}} is required.",
-        "stepRequired": "Please fill in this step before continuing."
+        "stepRequired": "Please fill in this step before continuing.",
+        "dateInvalid": "Please enter a valid date and time in DD.MM.YYYY HH:MM format.",
+        "datePast": "Date cannot be in the past."
       },
       "pickToContinue": "Pick a chain above to continue.",
       "stepsPreview": "Steps in this chain",

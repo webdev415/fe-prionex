@@ -5,11 +5,47 @@
  * Matches the design with calendar icon and placeholder support.
  */
 
-import { forwardRef, useId } from 'react'
+import { forwardRef, useEffect, useId, useRef, useState } from 'react'
 import DatePicker from 'react-datepicker'
 import 'react-datepicker/dist/react-datepicker.css'
+import { format as formatFns } from 'date-fns'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
+import {
+  applyDefaultTimeToDate,
+  DATE_DISPLAY_FORMAT,
+  DATETIME_DISPLAY_FORMAT,
+  maskDateInput,
+  maskDateTimeInput,
+  parseManualDate,
+  parseManualDateTime,
+} from '@/lib/dateUtils'
+
+/**
+ * Custom input used when ``allowManualInput`` is on. react-datepicker clones
+ * this and injects ``value``/``onChange`` (its own typed-input handler) — we
+ * ignore both and drive the field from our own masked ``text`` state so the
+ * displayed value, masking, and validity are fully under our control. All
+ * other injected props (onClick/onFocus/onBlur/onKeyDown/className/…) are
+ * forwarded so the calendar popup still opens and closes normally.
+ */
+const MaskedDateTimeInput = forwardRef<
+  HTMLInputElement,
+  React.InputHTMLAttributes<HTMLInputElement> & {
+    text: string
+    onTextChange: (raw: string) => void
+  }
+>(function MaskedDateTimeInput({ value: _v, onChange: _oc, text, onTextChange, ...rest }, ref) {
+  return (
+    <input
+      {...rest}
+      ref={ref}
+      value={text}
+      onChange={(e) => onTextChange(e.target.value)}
+      inputMode="numeric"
+    />
+  )
+})
 
 export interface DateSelectProps {
   label?: string
@@ -28,6 +64,12 @@ export interface DateSelectProps {
   showTimeSelect?: boolean
   timeFormat?: string
   timeIntervals?: number
+  /**
+   * Opt-in per-field clear. When provided AND a date is set, a small "×"
+   * button is rendered on the right that calls this callback. Other usages of
+   * DateSelect are unaffected because the × only renders when onClear is set.
+   */
+  onClear?: () => void
   // Restrict the selectable time-of-day inside the time column.
   // ``minTime``/``maxTime`` are react-datepicker's static bounds and
   // apply to **every** selected calendar day, so they're only correct
@@ -40,6 +82,30 @@ export interface DateSelectProps {
   maxTime?: Date
   /** Per-slot predicate. Return ``true`` to keep, ``false`` to grey out. */
   filterTime?: (time: Date) => boolean
+  /**
+   * Allow typing the value directly, in addition to the calendar picker.
+   * With ``showTimeSelect``: ``DD.MM.YYYY HH:MM`` mask. Without: ``DD.MM.YYYY``
+   * mask (date filter fields). When off (default) the field stays calendar-only.
+   */
+  allowManualInput?: boolean
+  /**
+   * Time-of-day applied the first time a date is set within this field's
+   * lifetime (e.g. ``"09:00"``). Subsequent date changes keep whatever time
+   * is already there. Only meaningful with ``showTimeSelect``.
+   */
+  defaultTime?: string
+  /**
+   * Called whenever the typed value's validity changes. ``true`` means the
+   * field currently holds incomplete/invalid text that should block saving.
+   * Only fires in manual-input mode.
+   */
+  onValidityChange?: (invalid: boolean) => void
+  /**
+   * Inline message shown (red, below the field) when the manually-typed value
+   * is incomplete/invalid. Lets the caller surface a translated error right at
+   * the input, instead of only on save. Ignored when ``error`` is set.
+   */
+  invalidText?: string
 }
 
 const parseDate = (date: Date | string | null | undefined): Date | null => {
@@ -79,9 +145,14 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
       showTimeSelect,
       timeFormat = 'HH:mm',
       timeIntervals = 15,
+      onClear,
       minTime,
       maxTime,
       filterTime,
+      allowManualInput = false,
+      defaultTime,
+      onValidityChange,
+      invalidText,
     },
     ref
   ) => {
@@ -90,9 +161,121 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
     const errorId = `${inputId}-error`
     const helperId = `${inputId}-helper`
 
-    const handleChange = (date: Date | null) => {
-      onChange?.({ value: date })
+    const isDateOnlyManual = allowManualInput && !showTimeSelect
+    const manualDisplayFormat = isDateOnlyManual ? DATE_DISPLAY_FORMAT : DATETIME_DISPLAY_FORMAT
+
+    // ── Manual-input state (only used when allowManualInput) ──────────────
+    // Visible masked text. Driven by us, not react-datepicker.
+    const [text, setText] = useState<string>(() => {
+      if (!allowManualInput) return ''
+      const d = parseDate(value)
+      return d ? formatFns(d, manualDisplayFormat) : ''
+    })
+    // Whether the field currently holds invalid/incomplete typed text.
+    const [manualInvalid, setManualInvalid] = useState(false)
+
+    // Keep the visible text in sync when the committed value changes from the
+    // outside (hydration, programmatic reset). We key off the *formatted*
+    // value, not the prop identity: callers may pass a fresh Date object each
+    // render, and we must not clobber an in-progress invalid/partial entry
+    // (which never updates `value`, so its formatted value is unchanged).
+    const lastSyncedValue = useRef<string>(text)
+    useEffect(() => {
+      if (!allowManualInput) return
+      const d = parseDate(value)
+      const formatted = d ? formatFns(d, manualDisplayFormat) : ''
+      if (formatted === lastSyncedValue.current) return
+      lastSyncedValue.current = formatted
+      setText(formatted)
+      setManualInvalid(false)
+      onValidityChange?.(false)
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [value, allowManualInput])
+
+    // If a field unmounts while invalid, clear the parent's invalid flag so a
+    // stale entry can't block a later save.
+    useEffect(() => {
+      return () => {
+        if (allowManualInput) onValidityChange?.(false)
+      }
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [])
+
+    // Apply the default time (e.g. 09:00) only when the user sets the DATE
+    // first — a calendar *day* click — and there's no committed value yet.
+    //   • Case "date first" (day click, no value): seed 09:00. The user then
+    //     refines the time if they want.
+    //   • Case "time first" (time-list click, no value): keep the chosen time
+    //     — the user explicitly picked it, so don't stomp it with 09:00.
+    // We distinguish the two via react-datepicker's onChange signature: a day
+    // click passes an ``event`` (setSelected), a time-list click does not
+    // (handleTimeChange calls onChange with the date only). On later changes a
+    // value already exists, so the default never re-applies and react-datepicker
+    // preserves the existing time when only the day changes.
+    // Calendar selection (and time-list clicks) come through here. A day click
+    // carries a React event; a time-list click calls onChange with no event.
+    const handleChange = (date: Date | null, event?: React.SyntheticEvent) => {
+      const fromDayClick = !!event
+      const next = date
+        ? applyDefaultTimeToDate(date, {
+            defaultTime,
+            hasExistingValue: !!parseDate(value),
+            fromDayClick,
+          })
+        : null
+      if (allowManualInput) {
+        setText(next ? formatFns(next, manualDisplayFormat) : '')
+        setManualInvalid(false)
+        onValidityChange?.(false)
+      }
+      onChange?.({ value: next })
     }
+
+    // × only renders when opt-in onClear is provided AND a date is set.
+    const showClear = !!onClear && parseDate(value) !== null
+
+    // Typed input: mask, then commit only when complete + valid. Manual entry
+    // always includes the time (the mask requires HH:MM), so the 09:00 default
+    // doesn't apply here — the typed time wins.
+    const handleManualType = (raw: string) => {
+      const masked = isDateOnlyManual ? maskDateInput(raw) : maskDateTimeInput(raw)
+      setText(masked)
+      if (masked === '') {
+        setManualInvalid(false)
+        onValidityChange?.(false)
+        onChange?.({ value: null })
+        return
+      }
+      const parsed = isDateOnlyManual ? parseManualDate(masked) : parseManualDateTime(masked)
+      if (parsed) {
+        setManualInvalid(false)
+        onValidityChange?.(false)
+        onChange?.({ value: parsed })
+      } else {
+        // Keep the last committed value; flag the field as blocking.
+        setManualInvalid(true)
+        onValidityChange?.(true)
+      }
+    }
+
+    // Red styling for both an explicit error and an in-progress invalid entry.
+    const hasError = !!error || manualInvalid
+
+    const inputClassName = cn(
+      'h-[45px] w-full rounded-md border bg-white pr-4 pl-10 text-sm font-light text-[#05040D] transition-all outline-none placeholder:text-gray-500',
+      showClear && 'pr-10',
+      hasError
+        ? 'border-red-500 focus:border-red-500'
+        : 'border-gray-300 focus:border-[var(--color-primary-500)]',
+      className
+    )
+
+    const effectivePlaceholder =
+      allowManualInput && placeholder === 'Select date'
+        ? isDateOnlyManual
+          ? 'DD.MM.YYYY'
+          : 'DD.MM.YYYY HH:MM'
+        : placeholder
 
     return (
       <div className={`w-full ${className || ''}`}>
@@ -114,7 +297,7 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
               width: 100%;
             }
             .date-select-wrapper .react-datepicker__input-container input:focus {
-              box-shadow: 0 0 0 2px ${error ? 'rgba(239, 68, 68, 0.2)' : 'rgba(128, 216, 10, 0.2)'};
+              box-shadow: 0 0 0 2px ${hasError ? 'rgba(239, 68, 68, 0.2)' : 'rgba(128, 216, 10, 0.2)'};
             }
             .date-select-wrapper .react-datepicker__input-container input:disabled {
               opacity: 0.5;
@@ -218,18 +401,20 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
             <DatePicker
               ref={ref}
               id={inputId}
-              className={cn(
-                'h-[45px] w-full rounded-md border bg-white pr-4 pl-10 text-sm font-light text-[#05040D] transition-all outline-none placeholder:text-gray-500',
-                error
-                  ? 'border-red-500 focus:border-red-500'
-                  : 'border-gray-300 focus:border-[var(--color-primary-500)]',
-                className
-              )}
+              className={inputClassName}
               selected={parseDate(value)}
               onChange={handleChange}
-              onChangeRaw={(e) => e?.preventDefault()}
+              // Calendar-only mode blocks raw typing. Manual mode instead
+              // routes typing through the masked custom input below.
+              {...(allowManualInput
+                ? {
+                    customInput: (
+                      <MaskedDateTimeInput text={text} onTextChange={handleManualType} />
+                    ),
+                  }
+                : { onChangeRaw: (e?: React.SyntheticEvent) => e?.preventDefault() })}
               dateFormat={format}
-              placeholderText={placeholder}
+              placeholderText={effectivePlaceholder}
               disabled={disabled}
               minDate={parseDate(min) || undefined}
               maxDate={parseDate(max) || undefined}
@@ -253,13 +438,27 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
               yearDropdownItemNumber={10}
             />
           </div>
+          {showClear && (
+            <button
+              type="button"
+              onClick={onClear}
+              aria-label="Clear"
+              className="absolute inset-y-0 right-0 z-10 flex items-center pr-3 text-gray-400 hover:text-gray-600"
+            >
+              <Icons.Cancel01 size={14} />
+            </button>
+          )}
         </div>
-        {error && (
+        {error ? (
           <p id={errorId} className="mt-1.5 text-xs text-red-500" role="alert">
             {error}
           </p>
-        )}
-        {helperText && !error && (
+        ) : manualInvalid && invalidText ? (
+          <p id={errorId} className="mt-1.5 text-xs text-red-500" role="alert">
+            {invalidText}
+          </p>
+        ) : null}
+        {helperText && !error && !(manualInvalid && invalidText) && (
           <p id={helperId} className="mt-1.5 text-xs text-gray-500">
             {helperText}
           </p>

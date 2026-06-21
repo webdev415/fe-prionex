@@ -2,6 +2,7 @@
 import { forwardRef, useId } from 'react'
 import { cva, type VariantProps } from 'class-variance-authority'
 import { cn } from '@/lib/utils'
+import { Icons } from '@/lib/icons'
 
 const inputVariants = cva(
   'flex w-full rounded-lg border bg-white px-4 py-2 text-sm font-light text-dark-500 placeholder:text-gray-500 transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
@@ -35,6 +36,12 @@ export interface InputProps
   helperText?: string
   leftIcon?: React.ReactNode
   rightIcon?: React.ReactNode
+  /**
+   * Opt-in per-field clear. When provided AND the input has a value, a small
+   * "×" button is rendered on the right that calls this callback. Other usages
+   * of Input are unaffected because the × only renders when onClear is set.
+   */
+  onClear?: () => void
 }
 
 const Input = forwardRef<HTMLInputElement, InputProps>(
@@ -49,6 +56,8 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
       helperText,
       leftIcon,
       rightIcon,
+      onClear,
+      value,
       id,
       ...props
     },
@@ -60,6 +69,10 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
     const helperId = `${inputId}-helper`
 
     const effectiveVariant = error ? 'error' : variant
+
+    // × only renders when opt-in onClear is provided AND there is a value.
+    const hasValue = value !== undefined && value !== null && value !== ''
+    const showClear = !!onClear && hasValue
 
     return (
       <div className="w-full">
@@ -89,10 +102,11 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
           <input
             type={type}
             id={inputId}
+            value={value}
             className={cn(
               inputVariants({ variant: effectiveVariant, inputSize }),
               leftIcon && 'pl-10',
-              rightIcon && 'pr-10',
+              (rightIcon || showClear) && 'pr-10',
               className
             )}
             ref={ref}
@@ -100,10 +114,21 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
             aria-describedby={error ? errorId : helperText ? helperId : undefined}
             {...props}
           />
-          {rightIcon && (
-            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500">
-              {rightIcon}
-            </div>
+          {showClear ? (
+            <button
+              type="button"
+              onClick={onClear}
+              aria-label="Clear"
+              className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600"
+            >
+              <Icons.Cancel01 size={14} />
+            </button>
+          ) : (
+            rightIcon && (
+              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500">
+                {rightIcon}
+              </div>
+            )
           )}
         </div>
         {error && (

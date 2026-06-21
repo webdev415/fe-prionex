@@ -52,7 +52,7 @@ import {
   useVerifyPayment,
   useCancelPayment,
   useEditPayment,
-  useReassignPaymentEmployee,
+  useReassignPaymentAssignedUser,
   useExportPaymentsCSV,
   usePayment,
   useGenerateReceipt,
@@ -441,7 +441,7 @@ export function PaymentHistoryPage() {
   const { mutate: exportPaymentsMutation } = useExportPaymentsCSV()
   const { mutate: generateReceiptMutation } = useGenerateReceipt()
   const { mutate: reassignEmployeeMutation, isPending: isReassigning } =
-    useReassignPaymentEmployee()
+    useReassignPaymentAssignedUser()
 
   const canReassignEmployee = useHasPermission(PERMISSIONS.CLIENTS.VERIFY_PAYMENT)
   const [isReassignModalOpen, setIsReassignModalOpen] = useState(false)
@@ -1448,6 +1448,8 @@ export function PaymentHistoryPage() {
                       value={startDate}
                       onChange={({ value }) => setStartDate(value)}
                       placeholder={t('pages.clients.paymentHistory.filters.startDate')}
+                      allowManualInput
+                      format="dd.MM.yyyy"
                       className="flex-1"
                     />
                     <span className="text-dark-500 text-xs sm:text-base">-</span>
@@ -1455,6 +1457,8 @@ export function PaymentHistoryPage() {
                       value={endDate}
                       onChange={({ value }) => setEndDate(value)}
                       placeholder={t('pages.clients.paymentHistory.filters.endDate')}
+                      allowManualInput
+                      format="dd.MM.yyyy"
                       className="flex-1"
                     />
                   </div>
@@ -1890,9 +1894,9 @@ export function PaymentHistoryPage() {
               : Math.max(0, paymentHistory.totalDebt - selectedPayment.amount),
             // Audit trail from backend, fallback to 'Unknown'
             // Format dates consistently with payment date (MM/DD/YYYY)
-            createdBy: paymentDetails?.recorded_by_username || 'Unknown',
+            createdBy: paymentDetails?.assigned_user_full_name || 'Unknown',
             createdAt: paymentDetails?.recorded_at || 'Unknown',
-            verifiedBy: paymentDetails?.verified_by_username,
+            verifiedBy: paymentDetails?.verified_by_full_name || undefined,
             verifiedAt: paymentDetails?.verified_at || undefined,
             cancelledBy:
               cancelledByUser?.username ||
@@ -1942,12 +1946,12 @@ export function PaymentHistoryPage() {
         <ReassignPaymentEmployeeModal
           open={isReassignModalOpen}
           onClose={() => setIsReassignModalOpen(false)}
-          currentEmployeeName={paymentDetails?.recorded_by_username || 'Unknown'}
-          currentUserId={paymentDetails?.recorded_by_user_id ?? null}
+          currentEmployeeName={paymentDetails?.assigned_user_full_name || 'Unknown'}
+          currentUserId={paymentDetails?.assigned_user_id ?? null}
           isSubmitting={isReassigning}
           onConfirm={(newUserId) => {
             reassignEmployeeMutation(
-              { paymentId: backendPayment.id, request: { recorded_by_user_id: newUserId } },
+              { paymentId: backendPayment.id, request: { assigned_user_id: newUserId } },
               { onSuccess: () => setIsReassignModalOpen(false) }
             )
           }}
