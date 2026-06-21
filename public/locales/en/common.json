@@ -956,8 +956,30 @@
       "addNewUser": "New User",
       "noUsersFound": "No users found",
       "errorLoading": "Error loading users",
-      "searchPlaceholder": "Search by name, username or email...",
+      "searchPlaceholder": "Search users...",
       "searchButton": "Search",
+      "clearSearch": "Clear search",
+      "searchCriterionLabel": "Search criterion",
+      "searchCriteria": {
+        "fullName": "Full Name",
+        "username": "Username",
+        "email": "Email",
+        "extension": "Extension / Agent"
+      },
+      "filters": {
+        "role": "Role",
+        "project": "Project",
+        "department": "Department",
+        "group": "Group",
+        "status": "Status",
+        "all": "All",
+        "resetToDefault": "Reset to default",
+        "statusOptions": {
+          "all": "All",
+          "active": "Active",
+          "disabled": "Disabled"
+        }
+      },
       "tableHeaders": {
         "username": "Username",
         "userId": "User ID",
@@ -1899,7 +1921,8 @@
         "employee": "Employee",
         "searcher": "Searcher",
         "assignmentDate": "Assignment Date",
-        "actions": "Actions"
+        "actions": "Actions",
+        "lastOutgoingTADate": "Last outgoing TA date"
       },
       "priorities": {
         "critical": "Critical",
@@ -1936,7 +1959,9 @@
         "min": "Min",
         "max": "Max",
         "days": "days",
-        "noUsersAvailable": "No users available"
+        "noUsersAvailable": "No users available",
+        "noResponsible": "No Responsible",
+        "noInteractions": "No Interactions"
       },
       "statuses": {
         "active": "Active",
@@ -2474,7 +2499,7 @@
           "clientStatus": "Client Status:",
           "stillHasDebt": "still has debt",
           "auditTrail": "Audit Trail",
-          "createdBy": "Created by:",
+          "assignedTo": "Assigned to:",
           "createdAt": "Created at:",
           "verifiedBy": "Verified by:",
           "verifiedAt": "Verified at:",
@@ -3139,7 +3164,9 @@
         "promiseAmountRequired": "This result requires a promise amount.",
         "creditRequired": "This result requires selecting a credit.",
         "stepFieldRequired": "{{name}} is required.",
-        "stepRequired": "Please fill in this step before continuing."
+        "stepRequired": "Please fill in this step before continuing.",
+        "dateInvalid": "Please enter a valid date and time in DD.MM.YYYY HH:MM format.",
+        "datePast": "Date cannot be in the past."
       },
       "pickToContinue": "Pick a chain above to continue.",
       "stepsPreview": "Steps in this chain",

@@ -61,11 +61,33 @@ export interface ApiUser {
 /**
  * User list query parameters
  */
+export type UserSearchField = 'full_name' | 'username' | 'email' | 'extension'
+
+/** Status filter values shown in the User Management filter panel */
+export type UserStatusFilter = 'all' | 'active' | 'disabled'
+
+export type UserSortField =
+  | 'id'
+  | 'username'
+  | 'full_name'
+  | 'email'
+  | 'project_role'
+  | 'extension'
+  | 'status'
+export type UserSortOrder = 'asc' | 'desc'
+
 export interface UserListParams {
   page?: number
   page_size?: number
   status?: 'active' | 'inactive' | 'suspended'
   search?: string
+  search_field?: UserSearchField
+  role_id?: number
+  project_id?: number
+  department_id?: number
+  group_id?: number
+  sort_by?: UserSortField
+  sort_order?: UserSortOrder
 }
 
 /**

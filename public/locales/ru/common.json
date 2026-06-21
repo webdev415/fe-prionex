@@ -905,8 +905,30 @@
       "addNewUser": "Новый пользователь",
       "noUsersFound": "Пользователи не найдены",
       "errorLoading": "Ошибка загрузки пользователей",
-      "searchPlaceholder": "Поиск по имени, логину или email...",
+      "searchPlaceholder": "Поиск пользователей...",
       "searchButton": "Поиск",
+      "clearSearch": "Очистить поиск",
+      "searchCriterionLabel": "Критерий поиска",
+      "searchCriteria": {
+        "fullName": "Полное имя",
+        "username": "Имя пользователя",
+        "email": "Электронная почта",
+        "extension": "Расширение / Агент"
+      },
+      "filters": {
+        "role": "Роль",
+        "project": "Проект",
+        "department": "Отдел",
+        "group": "Группа",
+        "status": "Статус",
+        "all": "Все",
+        "resetToDefault": "Сбросить по умолчанию",
+        "statusOptions": {
+          "all": "Все",
+          "active": "Активные",
+          "disabled": "Отключённые"
+        }
+      },
       "tableHeaders": {
         "username": "Имя пользователя",
         "userId": "ID пользователя",
@@ -1788,7 +1810,8 @@
         "employee": "Сотрудник",
         "searcher": "Розыскник",
         "assignmentDate": "Дата назначения",
-        "actions": "Действия"
+        "actions": "Действия",
+        "lastOutgoingTADate": "Дата последнего исходящего ЦД"
       },
       "priorities": {
         "critical": "Критический",
@@ -1822,6 +1845,8 @@
         "unassignedOnly": "Только без назначения",
         "tags": "Теги",
         "noUsersAvailable": "Нет доступных пользователей",
+        "noResponsible": "Без ответственного",
+        "noInteractions": "Без взаимодействий",
         "more": "больше",
         "min": "Мин",
         "max": "Макс",
@@ -2564,7 +2589,7 @@
           "clientStatus": "Статус клиента:",
           "stillHasDebt": "еще имеет долг",
           "auditTrail": "Журнал аудита",
-          "createdBy": "Создано:",
+          "assignedTo": "Назначено:",
           "createdAt": "Создано в:",
           "verifiedBy": "Подтверждено:",
           "verifiedAt": "Подтверждено в:",
@@ -2884,7 +2909,9 @@
         "promiseAmountRequired": "Для этого результата нужна сумма обещания.",
         "creditRequired": "Для этого результата нужно выбрать кредит.",
         "stepFieldRequired": "Поле «{{name}}» обязательно.",
-        "stepRequired": "Заполните этот шаг перед продолжением."
+        "stepRequired": "Заполните этот шаг перед продолжением.",
+        "dateInvalid": "Введите корректные дату и время в формате ДД.ММ.ГГГГ ЧЧ:ММ.",
+        "datePast": "Дата не может быть в прошлом."
       },
       "pickToContinue": "Выберите цепочку выше, чтобы продолжить.",
       "stepsPreview": "Шаги в этой цепочке",

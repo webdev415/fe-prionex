@@ -961,8 +961,30 @@
       "addNewUser": "Новий користувач",
       "noUsersFound": "Користувачів не знайдено",
       "errorLoading": "Помилка завантаження користувачів",
-      "searchPlaceholder": "Пошук за ім'ям, логіном або email...",
+      "searchPlaceholder": "Пошук користувачів...",
       "searchButton": "Пошук",
+      "clearSearch": "Очистити пошук",
+      "searchCriterionLabel": "Критерій пошуку",
+      "searchCriteria": {
+        "fullName": "Повне ім'я",
+        "username": "Ім'я користувача",
+        "email": "Електронна пошта",
+        "extension": "Розширення / Агент"
+      },
+      "filters": {
+        "role": "Роль",
+        "project": "Проєкт",
+        "department": "Відділ",
+        "group": "Група",
+        "status": "Статус",
+        "all": "Усі",
+        "resetToDefault": "Скинути до типових",
+        "statusOptions": {
+          "all": "Усі",
+          "active": "Активні",
+          "disabled": "Вимкнені"
+        }
+      },
       "tableHeaders": {
         "username": "Ім'я користувача",
         "userId": "ID користувача",
@@ -1904,7 +1926,8 @@
         "employee": "Співробітник",
         "searcher": "Пошуковець",
         "assignmentDate": "Дата призначення",
-        "actions": "Дії"
+        "actions": "Дії",
+        "lastOutgoingTADate": "Дата останньої вихідної ЦД"
       },
       "priorities": {
         "critical": "Критичний",
@@ -1938,6 +1961,8 @@
         "unassignedOnly": "Тільки непризначені",
         "tags": "Теги",
         "noUsersAvailable": "Немає доступних користувачів",
+        "noResponsible": "Без відповідального",
+        "noInteractions": "Без взаємодій",
         "more": "більше",
         "min": "Мін",
         "max": "Макс",
@@ -2844,7 +2869,7 @@
           "clientStatus": "Статус клієнта:",
           "stillHasDebt": "ще має борг",
           "auditTrail": "Журнал аудиту",
-          "createdBy": "Створено:",
+          "assignedTo": "Призначено:",
           "createdAt": "Створено о:",
           "verifiedBy": "Підтверджено:",
           "verifiedAt": "Підтверджено о:",
@@ -3177,7 +3202,9 @@
         "promiseAmountRequired": "Для цього результату потрібна сума обіцянки.",
         "creditRequired": "Для цього результату потрібно обрати кредит.",
         "stepFieldRequired": "Поле «{{name}}» обов'язкове.",
-        "stepRequired": "Заповніть цей крок перед продовженням."
+        "stepRequired": "Заповніть цей крок перед продовженням.",
+        "dateInvalid": "Введіть коректні дату й час у форматі ДД.ММ.РРРР ГГ:ХХ.",
+        "datePast": "Дата не може бути в минулому."
       },
       "pickToContinue": "Оберіть ланцюжок вище, щоб продовжити.",
       "stepsPreview": "Кроки в цьому ланцюжку",

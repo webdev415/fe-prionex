@@ -237,6 +237,15 @@ export function useAssignClient() {
         exact: true,
       })
       queryClient.invalidateQueries({ queryKey: clientKeys.lists() })
+      // The client-detail page reads responsible_employee_name /
+      // responsible_searcher_name from the profile query, not the detail
+      // query — so the displayed name only refreshes if we invalidate
+      // that cache too. Same convention every other mutation in this
+      // file uses (see useCreateAddress, useUpdateContact, etc.).
+      queryClient.invalidateQueries({
+        queryKey: clientKeys.profile(variables.clientId),
+        exact: true,
+      })
       // The `contact.responsible_changed` event is published after this
       // request returns and the tag-service applies any matching auto-tag
       // rules asynchronously (RabbitMQ → Celery). Refetch the client's
@@ -940,8 +949,21 @@ export function useCreateTask() {
       queryClient.invalidateQueries({ queryKey: ['tasks', 'my-tasks'] })
       toast.success('Task created successfully')
     },
-    onError: (error: AxiosError<{ detail?: string }>) => {
-      const message = error?.response?.data?.detail || 'Failed to create task'
+    onError: (
+      error: AxiosError<{
+        detail?: string | Array<{ msg: string; loc?: string[] }>
+      }> & { __handled?: boolean }
+    ) => {
+      // Inline-handled errors (e.g. due_date 422 surfaced under the
+      // date input by AddTaskModal) set __handled so we skip the toast.
+      if (error.__handled) return
+      const detail = error?.response?.data?.detail
+      let message = 'Failed to create task'
+      if (typeof detail === 'string') {
+        message = detail
+      } else if (Array.isArray(detail) && detail.length > 0) {
+        message = detail[0].msg.replace(/^Value error,\s*/, '')
+      }
       toast.error(message)
     },
   })
