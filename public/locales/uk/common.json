@@ -1926,7 +1926,8 @@
         "employee": "Співробітник",
         "searcher": "Пошуковець",
         "assignmentDate": "Дата призначення",
-        "actions": "Дії"
+        "actions": "Дії",
+        "lastOutgoingTADate": "Дата останньої вихідної ЦД"
       },
       "priorities": {
         "critical": "Критичний",
