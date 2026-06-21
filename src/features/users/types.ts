@@ -66,7 +66,14 @@ export type UserSearchField = 'full_name' | 'username' | 'email' | 'extension'
 /** Status filter values shown in the User Management filter panel */
 export type UserStatusFilter = 'all' | 'active' | 'disabled'
 
-export type UserSortField = 'id'
+export type UserSortField =
+  | 'id'
+  | 'username'
+  | 'full_name'
+  | 'email'
+  | 'project_role'
+  | 'extension'
+  | 'status'
 export type UserSortOrder = 'asc' | 'desc'
 
 export interface UserListParams {
