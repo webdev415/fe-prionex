@@ -12,11 +12,7 @@ import {
   useEnrollCourse,
   useUpdateCourse,
 } from '@/features/training/hooks/useCourses'
-import type {
-  CourseCardData,
-  CourseLevel,
-  MaterialType,
-} from '@/features/training/types/courses'
+import type { CourseCardData, CourseLevel, MaterialType } from '@/features/training/types/courses'
 import { TrainingPrimaryButton } from './TrainingToolbar'
 
 const CATEGORY_OPTIONS = [
@@ -50,7 +46,6 @@ function formatDuration(minutes?: number | null): string {
   if (m === 0) return `${h}h`
   return `${h}h ${m}m`
 }
-
 
 export function CoursesCatalogTab() {
   const { t } = useTranslation('common')

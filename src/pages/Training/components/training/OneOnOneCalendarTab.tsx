@@ -1,24 +1,73 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
-import {
-  MOCK_ONE_ON_ONES_PAST,
-  MOCK_ONE_ON_ONES_PLANNED,
-  type MockOneOnOneSession,
-  type SessionFormat,
-} from '../../mocks/trainerWorkplaceMocks'
+import { useAuthStore } from '@/stores/authStore'
+import { useOperators } from '@/features/users/hooks'
+import { useOneOnOneCalendar } from '@/features/training/hooks/useOneOnOnes'
+import type { OneOnOneRecord } from '@/features/training/types/oneOnOnes'
 import { PendingFeatureDialog } from '../inbox/PendingFeatureDialog'
 import { TrainingPrimaryButton } from './TrainingToolbar'
 
-const FORMAT_TONE: Record<SessionFormat, { label: string; tone: string }> = {
-  in_person: { label: 'In person', tone: 'bg-[#F0FDF4] text-[#15803D]' },
-  zoom: { label: 'Zoom', tone: 'bg-[#EFF6FF] text-[#2563EB]' },
-  phone: { label: 'Phone', tone: 'bg-[#FFFBEB] text-[#D97706]' },
+const AVATAR_PALETTE = [
+  '#E0F2EC',
+  '#FEF3C7',
+  '#FEE4E2',
+  '#E0E7FF',
+  '#FCE7F3',
+  '#DBEAFE',
+  '#FFEDD5',
+  '#D1FAE5',
+]
+
+function avatarColorFor(id: number): string {
+  return AVATAR_PALETTE[Math.abs(id) % AVATAR_PALETTE.length]
+}
+
+function deriveInitials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean)
+  if (parts.length === 0) return '?'
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
+  return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase()
+}
+
+function formatTime(iso: string): string {
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return ''
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+}
+
+function formatDateLabel(iso: string): string {
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return iso
+  return `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}`
 }
 
 export function OneOnOneCalendarTab() {
   const { t } = useTranslation('common')
   const [planOpen, setPlanOpen] = useState(false)
+
+  const activeProjectId = useAuthStore((s) => s.user?.active_project_id)
+  const projectIdNum = activeProjectId ? Number(activeProjectId) : null
+  const { data: operators = [] } = useOperators(projectIdNum)
+  const nameById = useMemo(
+    () => new Map(operators.map((op) => [op.id, op.full_name] as const)),
+    [operators]
+  )
+
+  const { data, isLoading, isError } = useOneOnOneCalendar()
+  const sessions = useMemo(() => (data?.days ?? []).flatMap((day) => day.sessions), [data])
+
+  // Snapshot "now" once at mount so the planned/past split stays stable across
+  // renders (it refreshes on refetch); reading the clock during render is impure.
+  const [now] = useState(() => Date.now())
+  const { planned, past } = useMemo(() => {
+    const isUpcoming = (s: OneOnOneRecord) =>
+      s.status === 'scheduled' && new Date(s.scheduled_at).getTime() >= now
+    return {
+      planned: sessions.filter(isUpcoming),
+      past: sessions.filter((s) => !isUpcoming(s)),
+    }
+  }, [sessions, now])
 
   return (
     <div className="flex flex-col gap-5">
@@ -34,57 +83,99 @@ export function OneOnOneCalendarTab() {
         </TrainingPrimaryButton>
       </div>
 
-      <div className="flex flex-col gap-3">
-        <h3 className="text-sm font-semibold text-[#05040D]">
-          {t('pages.training.calendar.planned', 'Planned sessions')}
-        </h3>
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
-          {MOCK_ONE_ON_ONES_PLANNED.map((s) => (
-            <SessionCard key={s.id} session={s} />
-          ))}
-        </div>
-      </div>
+      {isLoading ? (
+        <p className="py-8 text-center text-xs text-[#676767]">{t('common.loading', 'Loading…')}</p>
+      ) : isError ? (
+        <p className="py-8 text-center text-xs text-[#EF4444]">
+          {t('pages.training.calendar.loadFailed', 'Failed to load sessions.')}
+        </p>
+      ) : sessions.length === 0 ? (
+        <p className="py-8 text-center text-xs text-[#676767]">
+          {t('pages.training.calendar.empty', 'No 1-on-1 sessions in this window.')}
+        </p>
+      ) : (
+        <>
+          <div className="flex flex-col gap-3">
+            <h3 className="text-sm font-semibold text-[#05040D]">
+              {t('pages.training.calendar.planned', 'Planned sessions')}
+            </h3>
+            {planned.length === 0 ? (
+              <p className="text-xs text-[#9CA3AF]">
+                {t('pages.training.calendar.noPlanned', 'No upcoming sessions.')}
+              </p>
+            ) : (
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+                {planned.map((s) => (
+                  <SessionCard key={s.id} session={s} nameById={nameById} planned />
+                ))}
+              </div>
+            )}
+          </div>
 
-      <div className="flex flex-col gap-3">
-        <h3 className="text-sm font-semibold text-[#05040D]">
-          {t('pages.training.calendar.past', 'Past sessions')}
-        </h3>
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
-          {MOCK_ONE_ON_ONES_PAST.map((s) => (
-            <SessionCard key={s.id} session={s} />
-          ))}
-        </div>
-      </div>
+          <div className="flex flex-col gap-3">
+            <h3 className="text-sm font-semibold text-[#05040D]">
+              {t('pages.training.calendar.past', 'Past sessions')}
+            </h3>
+            {past.length === 0 ? (
+              <p className="text-xs text-[#9CA3AF]">
+                {t('pages.training.calendar.noPast', 'No past sessions.')}
+              </p>
+            ) : (
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+                {past.map((s) => (
+                  <SessionCard key={s.id} session={s} nameById={nameById} planned={false} />
+                ))}
+              </div>
+            )}
+          </div>
+        </>
+      )}
 
       <PendingFeatureDialog
         open={planOpen}
         onClose={() => setPlanOpen(false)}
         titleKey="pages.training.calendar.plan"
         titleFallback="Plan a session"
-        descriptionKey="pages.training.training.pending.planSession"
-        descriptionFallback="Schedule a 1-on-1 coaching session with an operator."
-        dependsOnIssue="KAN-416"
+        descriptionKey="pages.training.calendar.planHint"
+        descriptionFallback="1-on-1 sessions are scheduled from the Inbox Quick Action overlay."
+        dependsOnIssue="KAN-413"
       />
     </div>
   )
 }
 
-function SessionCard({ session }: { session: MockOneOnOneSession }) {
+function SessionCard({
+  session,
+  nameById,
+  planned,
+}: {
+  session: OneOnOneRecord
+  nameById: Map<number, string>
+  planned: boolean
+}) {
   const { t } = useTranslation('common')
-  const format = FORMAT_TONE[session.format]
+  const trainerName = nameById.get(session.trainer_id) ?? `#${session.trainer_id}`
+  const operatorName = nameById.get(session.operator_id) ?? `#${session.operator_id}`
+
   return (
     <div className="flex flex-col gap-3 rounded-xl border border-[#EBECE8] bg-white p-4 shadow-[0px_1px_2px_rgba(0,0,0,0.04)]">
       <div className="flex items-start gap-3">
         <div className="flex flex-col items-center justify-center rounded-xl bg-[#F0FDF4] px-3 py-2 text-[#204E4D]">
-          <span className="text-base leading-tight font-bold">{session.timeLabel}</span>
-          <span className="text-[10px]">{session.dateLabel}</span>
+          <span className="text-base leading-tight font-bold">
+            {formatTime(session.scheduled_at)}
+          </span>
+          <span className="text-[10px]">{formatDateLabel(session.scheduled_at)}</span>
         </div>
         <div className="flex min-w-0 flex-1 flex-col">
-          <span className="truncate text-sm font-semibold text-[#05040D]">{session.title}</span>
-          <span className="text-[10px] text-[#6B7280]">{session.topic}</span>
+          <span className="truncate text-sm font-semibold text-[#05040D]">
+            {t('pages.training.calendar.sessionTitle', '1-on-1 session')}
+          </span>
+          {session.notes ? (
+            <span className="truncate text-[10px] text-[#6B7280]">{session.notes}</span>
+          ) : null}
         </div>
-        <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${format.tone}`}>
-          {format.label}
+        <span className="rounded-full bg-[#F3F4F6] px-2 py-0.5 text-[10px] font-medium text-[#6B7280] capitalize">
+          {session.status}
         </span>
       </div>
 
@@ -92,48 +183,38 @@ function SessionCard({ session }: { session: MockOneOnOneSession }) {
         <div className="flex flex-shrink-0 -space-x-1.5">
           <div
             className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-white text-[10px] font-semibold text-[#05040D]"
-            style={{ backgroundColor: session.trainerAvatar }}
+            style={{ backgroundColor: avatarColorFor(session.trainer_id) }}
           >
-            {session.trainerInitials}
+            {deriveInitials(trainerName)}
           </div>
           <div
             className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-white text-[10px] font-semibold text-[#05040D]"
-            style={{ backgroundColor: session.operatorAvatar }}
+            style={{ backgroundColor: avatarColorFor(session.operator_id) }}
           >
-            {session.operatorInitials}
+            {deriveInitials(operatorName)}
           </div>
         </div>
         <div className="flex min-w-0 flex-1 flex-col">
-          <span className="truncate text-[11px] font-medium text-[#05040D]">
-            {session.trainerName}
-          </span>
-          <span className="truncate text-[10px] text-[#6B7280]">→ {session.operatorName}</span>
+          <span className="truncate text-[11px] font-medium text-[#05040D]">{trainerName}</span>
+          <span className="truncate text-[10px] text-[#6B7280]">→ {operatorName}</span>
         </div>
-        <span className="text-[10px] text-[#6B7280]">{session.durationLabel}</span>
+        <span className="text-[10px] text-[#6B7280]">
+          {session.duration_minutes} {t('pages.training.calendar.min', 'min')}
+        </span>
       </div>
 
-      {session.isPlanned ? (
-        <div className="flex gap-2">
-          <button
-            type="button"
-            className="flex-1 rounded-md border border-[#EDEDED] bg-white py-2 text-[11px] font-medium text-[#05040D]"
-          >
-            {t('pages.training.calendar.reschedule', 'Reschedule')}
-          </button>
-          <button
-            type="button"
-            className="flex-1 rounded-md bg-[#204E4D] py-2 text-[11px] font-medium text-white"
-          >
-            {t('pages.training.calendar.join', 'Join')}
-          </button>
-        </div>
-      ) : (
+      {planned ? (
         <button
           type="button"
-          className="rounded-md border border-[#EDEDED] py-2 text-[11px] font-medium text-[#05040D]"
+          disabled
+          className="rounded-md border border-[#EDEDED] bg-white py-2 text-[11px] font-medium text-[#9CA3AF]"
         >
-          {t('pages.training.calendar.viewSummary', 'View summary')}
+          {t('pages.training.calendar.manageFromInbox', 'Manage from Inbox')}
         </button>
+      ) : (
+        <span className="text-center text-[10px] text-[#9CA3AF]">
+          {t(`pages.training.calendar.statusLabel.${session.status}`, session.status)}
+        </span>
       )}
     </div>
   )
