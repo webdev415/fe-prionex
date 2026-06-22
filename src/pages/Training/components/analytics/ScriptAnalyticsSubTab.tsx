@@ -254,19 +254,15 @@ export function ScriptAnalyticsSubTab() {
 
   const { data: operators = [] } = useOperators(projectIdNum)
 
-  // FE-side department narrowing — analytics-service script-analytics doesn't
-  // yet accept `department_ids` (flagged as a KAN-731 follow-up).
-  const filteredOperatorIds = useMemo<number[] | undefined>(() => {
-    if (department === 'all') return undefined
-    return operators
-      .filter((op) => (op.department_name ?? '').toLowerCase() === department)
-      .map((op) => op.id)
-  }, [operators, department])
-
-  // Memoize the filter literal so the react-query key stays stable.
+  // Department narrowing is applied server-side (KAN-617): the chip emits a
+  // `department_id` and analytics-service filters the rollup. `department`
+  // holds the selected id as a string ('all' = no filter).
   const scriptFilters = useMemo(
-    () => ({ period: 'today' as const, operator_ids: filteredOperatorIds }),
-    [filteredOperatorIds]
+    () => ({
+      period: 'today' as const,
+      department_ids: department === 'all' ? undefined : [Number(department)],
+    }),
+    [department]
   )
   const scriptQuery = useScriptAnalytics(scriptFilters, projectIdNum != null)
 
@@ -276,17 +272,14 @@ export function ScriptAnalyticsSubTab() {
   )
 
   const departmentOptions = useMemo<{ value: string; label: string }[]>(() => {
-    const seen = new Map<string, string>()
+    const seen = new Map<number, string>()
     operators.forEach((op) => {
-      if (op.department_name) seen.set(op.department_name.toLowerCase(), op.department_name)
+      if (op.department_id != null && op.department_name) {
+        seen.set(op.department_id, op.department_name)
+      }
     })
-    return Array.from(seen, ([value, label]) => ({ value, label }))
+    return Array.from(seen, ([id, label]) => ({ value: String(id), label }))
   }, [operators])
-
-  const visibleRows = useMemo(() => {
-    if (department === 'all') return rows
-    return rows.filter((r) => r.department.toLowerCase() === department)
-  }, [rows, department])
 
   return (
     <div className="flex flex-col gap-4">
@@ -411,7 +404,7 @@ export function ScriptAnalyticsSubTab() {
                   )}
                 </td>
               </tr>
-            ) : visibleRows.length === 0 ? (
+            ) : rows.length === 0 ? (
               <tr>
                 <td colSpan={7} className="py-6 text-center text-xs text-[#676767]">
                   {t(
@@ -421,7 +414,7 @@ export function ScriptAnalyticsSubTab() {
                 </td>
               </tr>
             ) : (
-              visibleRows.map((row) => <DistributionRow key={row.id} row={row} />)
+              rows.map((row) => <DistributionRow key={row.id} row={row} />)
             )}
           </tbody>
         </AnalyticsMockTable>
