@@ -65,7 +65,6 @@ export type TrainingsAndSessionsSubTabId =
   | 'drills'
   | 'calendar'
   | 'tests'
-  | 'assignments'
   | 'materials'
   | 'call-library'
 
@@ -132,7 +131,6 @@ export const TRAININGS_AND_SESSIONS_SUB_TABS: TrainingsAndSessionsSubTabId[] = [
   'drills',
   'calendar',
   'tests',
-  'assignments',
   'materials',
   'call-library',
 ]

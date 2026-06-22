@@ -26,8 +26,8 @@ import { ScopeSelector } from './components/ScopeSelector'
 import { TrainerHeaderStrip } from './components/chrome/TrainerHeaderStrip'
 import { QuickActionOverlay } from './components/chrome/QuickActionOverlay'
 import { CoachWorkspaceBanner } from './components/chrome/CoachWorkspaceBanner'
-import { PendingFeatureDialog } from './components/inbox/PendingFeatureDialog'
 import { CreateCorrectionTaskDialog } from './components/inbox/CreateCorrectionTaskDialog'
+import { AssignTrainingDialog } from './components/inbox/AssignTrainingDialog'
 import { ScheduleOneOnOneDialog } from './components/inbox/ScheduleOneOnOneDialog'
 import { RateDialogueDialog } from './components/inbox/RateDialogueDialog'
 import { InboxTab } from './components/inbox/InboxTab'
@@ -373,14 +373,10 @@ export function TrainingPage() {
         onClose={() => setQuickActionDialog(null)}
         operatorId={inboxOperatorId}
       />
-      <PendingFeatureDialog
+      <AssignTrainingDialog
         open={quickActionDialog === 'material'}
         onClose={() => setQuickActionDialog(null)}
-        titleKey="pages.training.inbox.quickActions.assignCourse"
-        titleFallback="Assign course / drill"
-        descriptionKey="pages.training.inbox.pendingFeature.assignCourseDescription"
-        descriptionFallback="Assign training material or a drill exercise to an operator."
-        dependsOnIssue="KAN-416"
+        operatorId={inboxOperatorId}
       />
       <ScheduleOneOnOneDialog
         open={quickActionDialog === 'oneOnOne'}
@@ -399,13 +395,10 @@ export function TrainingPage() {
           onOpenRateDialogue={() => setQuickActionDialog('rate')}
           onOpenScheduleOneOnOne={() => setQuickActionDialog('oneOnOne')}
           onOpenAssignTask={() => setQuickActionDialog('assign')}
+          onOpenAssignMaterial={() => setQuickActionDialog('material')}
         />
       ) : activeTopTab === 'team' ? (
-        <TeamTab
-          onOpenRateDialogue={() => setQuickActionDialog('rate')}
-          onOpenScheduleOneOnOne={() => setQuickActionDialog('oneOnOne')}
-          onOpenAssignTask={() => setQuickActionDialog('assign')}
-        />
+        <TeamTab />
       ) : activeTopTab === 'action-analysis' ? (
         <ActionAnalysisInnerTab />
       ) : activeTopTab === 'dialogue-evaluation' ? (
