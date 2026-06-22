@@ -395,13 +395,10 @@ export function TrainingPage() {
           onOpenRateDialogue={() => setQuickActionDialog('rate')}
           onOpenScheduleOneOnOne={() => setQuickActionDialog('oneOnOne')}
           onOpenAssignTask={() => setQuickActionDialog('assign')}
+          onOpenAssignMaterial={() => setQuickActionDialog('material')}
         />
       ) : activeTopTab === 'team' ? (
-        <TeamTab
-          onOpenRateDialogue={() => setQuickActionDialog('rate')}
-          onOpenScheduleOneOnOne={() => setQuickActionDialog('oneOnOne')}
-          onOpenAssignTask={() => setQuickActionDialog('assign')}
-        />
+        <TeamTab />
       ) : activeTopTab === 'action-analysis' ? (
         <ActionAnalysisInnerTab />
       ) : activeTopTab === 'dialogue-evaluation' ? (
