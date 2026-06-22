@@ -12,21 +12,12 @@ import {
   useEnrollCourse,
   useUpdateCourse,
 } from '@/features/training/hooks/useCourses'
-import { exportCourses } from '@/features/training/api/coursesService'
 import type {
   CourseCardData,
   CourseLevel,
-  CourseStatus,
   MaterialType,
 } from '@/features/training/types/courses'
-import { TrainingFilterChips, TrainingPrimaryButton, TrainingSearchBar } from './TrainingToolbar'
-
-const STATUS_CHIPS = [
-  { id: 'all', label: 'All' },
-  { id: 'draft', label: 'Draft' },
-  { id: 'published', label: 'Published' },
-  { id: 'archived', label: 'Archived' },
-]
+import { TrainingPrimaryButton } from './TrainingToolbar'
 
 const CATEGORY_OPTIONS = [
   'Scripts',
@@ -60,32 +51,15 @@ function formatDuration(minutes?: number | null): string {
   return `${h}h ${m}m`
 }
 
-function triggerDownload(blob: Blob, filename: string) {
-  const url = URL.createObjectURL(blob)
-  const link = document.createElement('a')
-  link.href = url
-  link.download = filename
-  document.body.appendChild(link)
-  link.click()
-  link.remove()
-  URL.revokeObjectURL(url)
-}
 
 export function CoursesCatalogTab() {
   const { t } = useTranslation('common')
   const canManage = useHasPermission('manage_courses')
-  const [query, setQuery] = useState('')
-  const [statusChip, setStatusChip] = useState('all')
   const [createOpen, setCreateOpen] = useState(false)
   const [assignCourse, setAssignCourse] = useState<CourseCardData | null>(null)
 
-  const filters = useMemo(
-    () => ({
-      q: query || undefined,
-      status: statusChip === 'all' ? undefined : (statusChip as CourseStatus),
-    }),
-    [query, statusChip]
-  )
+  // No filter toolbar in the Figma catalog — list all non-archived courses.
+  const filters = useMemo(() => ({}), [])
   const { data, isLoading, isError } = useCourses(filters)
   const courses = data?.data ?? []
 
@@ -95,32 +69,14 @@ export function CoursesCatalogTab() {
         <h2 className="text-base font-semibold text-[#05040D]">
           {t('pages.training.training.courses.title', 'Course Catalog')}
         </h2>
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => exportCourses(filters).then((b) => triggerDownload(b, 'courses.xlsx'))}
-            className="inline-flex items-center gap-1 rounded-md border border-[#EDEDED] bg-white px-3 py-2 text-xs font-medium text-[#05040D] hover:bg-[#F7F7F7]"
+        {canManage ? (
+          <TrainingPrimaryButton
+            onClick={() => setCreateOpen(true)}
+            leftIcon={<Icons.Add size={14} className="text-white" />}
           >
-            {t('common.export', 'Export')}
-          </button>
-          {canManage ? (
-            <TrainingPrimaryButton
-              onClick={() => setCreateOpen(true)}
-              leftIcon={<Icons.Add size={14} className="text-white" />}
-            >
-              {t('pages.training.training.courses.addCourse', 'Create a Course')}
-            </TrainingPrimaryButton>
-          ) : null}
-        </div>
-      </div>
-
-      <div className="flex flex-wrap items-center gap-3">
-        <TrainingSearchBar
-          value={query}
-          onChange={setQuery}
-          placeholder={t('pages.training.training.courses.searchPlaceholder', 'Search...')}
-        />
-        <TrainingFilterChips items={STATUS_CHIPS} activeId={statusChip} onChange={setStatusChip} />
+            {t('pages.training.training.courses.addCourse', 'Create a Course')}
+          </TrainingPrimaryButton>
+        ) : null}
       </div>
 
       {isLoading ? (
