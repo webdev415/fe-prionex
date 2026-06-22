@@ -11,6 +11,7 @@ import { toast } from 'sonner'
 import { Icons } from '@/lib/icons'
 import { DocumentsAccordion } from './components/DocumentsAccordion'
 import { DocumentUploadModal } from './components/DocumentUploadModal'
+import { SaleNotesSection } from './components/SaleNotesSection'
 import { formatDate, formatDateTime, formatMoneyUAHTwoDecimals } from '@/lib/formatters'
 import { Button } from '@/components/ui/Button'
 import { DataTable, type Column } from '@/components/ui/DataTable'
@@ -4703,28 +4704,7 @@ export function ClientDetailPage() {
               </div>
             ))}
 
-          {effectiveCommentTab === 'primary' &&
-            (isProfileLoading ? (
-              <TableSkeleton columns={1} rows={3} className="w-full" />
-            ) : !profile?.sale_notes?.trim() ? (
-              <div className="flex flex-col items-center gap-4 self-stretch py-16 md:gap-6">
-                <div className="flex flex-col items-center justify-center gap-4 self-stretch sm:flex-row md:gap-6">
-                  <Icons.FileRemove size={48} className="text-gray-500" strokeWidth={0.5} />
-                  <p className="text-dark-500 text-center text-xl leading-tight font-light tracking-[-0.48px] md:text-2xl">
-                    {t('pages.clients.detail.noPrimaryCreditorComments')}
-                  </p>
-                </div>
-                <p className="text-dark-500 text-center text-sm leading-[155%] font-medium tracking-[-0.32px] md:text-base">
-                  {t('pages.clients.detail.primaryCreditorCommentsDescription')}
-                </p>
-              </div>
-            ) : (
-              <div className="w-full p-4">
-                <p className="text-dark-500 text-sm leading-relaxed break-words whitespace-pre-wrap">
-                  {profile.sale_notes}
-                </p>
-              </div>
-            ))}
+          {effectiveCommentTab === 'primary' && <SaleNotesSection clientId={clientId} />}
 
           {effectiveCommentTab === 'searcher' &&
             (isActivitiesLoading ? (

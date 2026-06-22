@@ -148,6 +148,10 @@ export const RECORD_AFTER_CLIENT_TYPES = new Set<string>([
   'employment',
   'document',
   'sms',
+  // Primary creditor comments. resource_id = note id; details.client_id
+  // is mapped to record_after.client_id by audit-service, so the Entity
+  // link resolves to the parent client's detail page.
+  'client_sale_note',
 ])
 
 // Tag-domain entity types → the tabbed Tags page (?tab=). Each resource_type is
