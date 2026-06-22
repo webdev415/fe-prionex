@@ -321,11 +321,6 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
         let consumedPromiseDate = false
         let consumedPromiseAmount = false
         let consumedCredit = false
-        // Track credit-typed step values we've already rendered so a
-        // chain with two redundant credit steps doesn't print the same
-        // ``#100, #200`` list twice. Other field types are *not* deduped
-        // — e.g. two identical dropdown picks are intentional history.
-        const seenCreditValues = new Set<string>()
 
         if (row.step_data && Object.keys(row.step_data).length > 0) {
           const chain = chains.find((c) => c.id === row.chain_id)
@@ -381,22 +376,11 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
               if (ta?.field_type === 'credit' && !formattedValue) {
                 formattedValue = val
               }
-              // Suppress repeat credit selections across the whole
-              // chain (not just adjacent ones). Chains designed with
-              // two credit-typed steps — one inside each dropdown
-              // branch (e.g. "Домовленість" + "Можлива оплата") —
-              // used to render the same ``#100, #200`` list twice with
-              // only the dropdown label between them. The second copy
-              // is never new information; collapse it so the Result
-              // column matches what the operator actually decided.
-              // Limited to credit-typed steps; other types (amounts,
-              // dropdowns, dates) can legitimately repeat.
-              if (ta?.field_type === 'credit' && formattedValue !== '') {
-                if (seenCreditValues.has(formattedValue)) {
-                  continue
-                }
-                seenCreditValues.add(formattedValue)
-              }
+              // Render every saved step faithfully — including a credit
+              // that repeats across steps. Collapsing repeats used to hide
+              // that multiple steps ran, making a multi-step chain look like
+              // a single step (KAN-744). The Result column is the full
+              // workflow trail, so each step the operator completed is shown.
               entries.push({ value: formattedValue, followUps })
             }
           } else {
@@ -473,20 +457,24 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
           seen.add(numId)
           creditIds.push(display)
         }
-        if (row.credit_id) addCredit(row.credit_id)
+        // The credit(s) chosen in the chain's steps are the source of truth:
+        // show every one (multi-select is valid). Scan every step_data value —
+        // not just credit-typed steps — so a debt id saved when the step was
+        // credit but later retyped (chain drift) still shows up here. addCredit
+        // / safeCreditDisplay only accept real debts of this client, so
+        // non-credit values (phones, dropdown labels, dates) never leak in.
         if (row.step_data) {
-          // Scan every step_data value — not just credit-typed steps —
-          // so a debt id saved when the step was credit but later
-          // retyped (chain drift) still shows up here. addCredit /
-          // safeCreditDisplay only accept real debts of this client,
-          // so non-credit values (phones, dropdown labels, dates)
-          // never leak in.
           const sd = row.step_data as Record<string, string>
           for (const v of Object.values(sd)) {
             if (typeof v !== 'string') continue
             for (const id of v.split(',')) addCredit(id.trim())
           }
         }
+        // Legacy top-level credit_id is a single-value fallback used ONLY when
+        // no step carried a credit. Merging it in unconditionally surfaced a
+        // stale credit after the step credit was changed (e.g. the old number
+        // showing next to the new one, "#162040, #43820").
+        if (creditIds.length === 0 && row.credit_id) addCredit(row.credit_id)
         return (
           <span className="text-xs text-gray-700">
             {creditIds.length > 0 ? creditIds.join(', ') : '-'}
