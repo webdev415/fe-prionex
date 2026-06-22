@@ -307,8 +307,8 @@ function CreateCoursePanel({ onClose }: { onClose: () => void }) {
     'h-9 rounded-lg border border-[#EBECE8] px-3 text-xs text-[#05040D] focus:outline-none'
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-black/30">
-      <div className="flex h-full w-full max-w-[480px] flex-col bg-white shadow-2xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
+      <div className="flex max-h-[90vh] w-full max-w-md flex-col rounded-xl bg-white shadow-xl">
         <div className="flex items-center justify-between border-b border-[#EBECE8] px-5 py-4">
           <h3 className="text-base font-semibold text-[#05040D]">
             {t('pages.training.training.courses.addCourse', 'Create a Course')}
