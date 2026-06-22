@@ -230,6 +230,17 @@ export const PERMISSIONS = {
     MANAGE_BADGES: 'manage_badges',
     VIEW_AUTO_FLAGS: 'view_auto_flags',
     MANAGE_CALL_LIBRARY: 'manage_call_library',
+    // KAN-749 — Trainings & Sessions surfaces (KAN-615 epic children)
+    VIEW_COURSES: 'view_courses',
+    MANAGE_COURSES: 'manage_courses',
+    VIEW_TRAININGS: 'view_trainings',
+    MANAGE_TRAININGS: 'manage_trainings',
+    VIEW_DRILLS: 'view_drills',
+    MANAGE_DRILLS: 'manage_drills',
+    VIEW_TESTS: 'view_tests',
+    MANAGE_TESTS: 'manage_tests',
+    VIEW_MATERIALS: 'view_materials',
+    MANAGE_MATERIALS: 'manage_materials',
   },
 
   /**
@@ -448,6 +459,18 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   view_auto_flags: 'Review the auto-flag inbox of suspicious calls (KAN-411 Feature 3.3)',
   manage_call_library:
     'Curate the training call library and assign learning plans (KAN-411 Feature 3.4)',
+
+  // Trainings & Sessions (KAN-749 — KAN-615 epic children)
+  view_courses: 'Browse the course catalogue and enrolled-course progress (KAN-750)',
+  manage_courses: 'Create / publish / archive courses and assign enrollments (KAN-750)',
+  view_trainings: 'Browse scheduled group training sessions (KAN-752)',
+  manage_trainings: 'Schedule / cancel group training sessions (KAN-752)',
+  view_drills: 'Browse drill exercises and attempts (KAN-751)',
+  manage_drills: 'Create drills and review / score attempts (KAN-751)',
+  view_tests: 'Browse the Tests surface (reserved)',
+  manage_tests: 'Manage the Tests surface (reserved)',
+  view_materials: 'Browse and download the materials library (KAN-616)',
+  manage_materials: 'Upload / edit / archive materials (KAN-616)',
 
   // Document Generation
   view_document_journal: 'View the journal of all generated and uploaded documents',
