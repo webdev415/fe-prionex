@@ -207,25 +207,13 @@ function SessionCard({
   const { t } = useTranslation('common')
   const reschedule = useRescheduleCalibrationSession()
   const complete = useCompleteCalibrationSession()
+  const [postponeOpen, setPostponeOpen] = useState(false)
 
   const fmt = FORMAT_LABEL[session.format]
   const primaryId = session.participant_ids[0]
   const primary = primaryId != null ? byId.get(primaryId) : undefined
   const primaryName = primary?.full_name ?? (primaryId != null ? `#${primaryId}` : '—')
   const extra = Math.max(0, session.participant_ids.length - 1)
-
-  const onPostpone = () => {
-    const next = window.prompt(
-      t('pages.training.calendar.postponePrompt', 'New date/time (YYYY-MM-DDTHH:mm)'),
-      session.scheduled_at.slice(0, 16)
-    )
-    if (next) {
-      const iso = new Date(next).toISOString()
-      if (!Number.isNaN(new Date(iso).getTime())) {
-        reschedule.mutate({ id: session.id, scheduledAt: iso })
-      }
-    }
-  }
 
   return (
     <div className="overflow-hidden rounded-xl border border-[#EBECE8] bg-white shadow-[0px_1px_2px_rgba(0,0,0,0.04)]">
@@ -297,7 +285,7 @@ function SessionCard({
           <div className="flex gap-2">
             <button
               type="button"
-              onClick={onPostpone}
+              onClick={() => setPostponeOpen(true)}
               disabled={!canManage || reschedule.isPending}
               className="flex-1 rounded-md border border-[#EDEDED] bg-white py-2 text-[11px] font-medium text-[#05040D] hover:bg-[#F7F7F7] disabled:opacity-50"
             >
@@ -314,6 +302,91 @@ function SessionCard({
             </button>
           </div>
         ) : null}
+      </div>
+
+      {postponeOpen ? (
+        <PostponeDialog
+          currentValue={session.scheduled_at}
+          isPending={reschedule.isPending}
+          onClose={() => setPostponeOpen(false)}
+          onConfirm={(iso) =>
+            reschedule.mutate(
+              { id: session.id, scheduledAt: iso },
+              { onSuccess: () => setPostponeOpen(false) }
+            )
+          }
+        />
+      ) : null}
+    </div>
+  )
+}
+
+function PostponeDialog({
+  currentValue,
+  isPending,
+  onClose,
+  onConfirm,
+}: {
+  currentValue: string
+  isPending: boolean
+  onClose: () => void
+  onConfirm: (iso: string) => void
+}) {
+  const { t } = useTranslation('common')
+  // datetime-local wants `YYYY-MM-DDTHH:mm` in local time.
+  const [value, setValue] = useState(() => {
+    const d = new Date(currentValue)
+    if (Number.isNaN(d.getTime())) return ''
+    const pad = (n: number) => String(n).padStart(2, '0')
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+  })
+
+  const submit = () => {
+    if (!value) return
+    const d = new Date(value)
+    if (Number.isNaN(d.getTime())) return
+    onConfirm(d.toISOString())
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
+      <div className="w-full max-w-sm rounded-xl bg-white p-5 shadow-xl">
+        <div className="mb-4 flex items-center justify-between">
+          <h3 className="text-sm font-semibold text-[#05040D]">
+            {t('pages.training.calendar.postpone', 'Postpone')}
+          </h3>
+          <button type="button" onClick={onClose} aria-label="Close">
+            <Icons.Close size={18} className="text-[#676767]" />
+          </button>
+        </div>
+        <label className="flex flex-col gap-1">
+          <span className="text-xs font-medium text-[#05040D]">
+            {t('pages.training.calendar.newDateTime', 'New date & time')}
+          </span>
+          <input
+            type="datetime-local"
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            className="h-9 rounded-lg border border-[#EBECE8] px-3 text-xs text-[#05040D] focus:outline-none"
+          />
+        </label>
+        <div className="mt-4 flex justify-end gap-2">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-md border border-[#EDEDED] bg-white px-4 py-2 text-xs font-medium text-[#05040D] hover:bg-[#F7F7F7]"
+          >
+            {t('common.cancel', 'Cancel')}
+          </button>
+          <button
+            type="button"
+            onClick={submit}
+            disabled={!value || isPending}
+            className="rounded-md bg-[#204E4D] px-4 py-2 text-xs font-medium text-white hover:bg-[#1a3f3e] disabled:opacity-50"
+          >
+            {t('pages.training.calendar.postponeConfirm', 'Reschedule')}
+          </button>
+        </div>
       </div>
     </div>
   )

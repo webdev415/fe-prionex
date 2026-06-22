@@ -1,9 +1,11 @@
 import { api } from '@/lib/api'
 import type {
+  AssignParticipantsResponse,
   GroupTrainingCardData,
   GroupTrainingCreatePayload,
   GroupTrainingListFilters,
   GroupTrainingListResponse,
+  GroupTrainingParticipantsResponse,
   GroupTrainingUpdatePayload,
   RegistrationResponse,
 } from '../types/groupTrainings'
@@ -59,6 +61,21 @@ export async function registerForTraining(id: number): Promise<RegistrationRespo
 
 export async function unregisterFromTraining(id: number): Promise<RegistrationResponse> {
   const response = await api.delete<RegistrationResponse>(`${BASE}/${id}/register`)
+  return response.data
+}
+
+export async function listParticipants(id: number): Promise<GroupTrainingParticipantsResponse> {
+  const response = await api.get<GroupTrainingParticipantsResponse>(`${BASE}/${id}/participants`)
+  return response.data
+}
+
+export async function assignParticipants(
+  id: number,
+  operatorIds: number[]
+): Promise<AssignParticipantsResponse> {
+  const response = await api.post<AssignParticipantsResponse>(`${BASE}/${id}/assign`, {
+    operator_ids: operatorIds,
+  })
   return response.data
 }
 
