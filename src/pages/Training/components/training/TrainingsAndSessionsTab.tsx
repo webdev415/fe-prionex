@@ -17,10 +17,10 @@ const SUB_TAB_LABELS: Record<TrainingsAndSessionsSubTabId, { key: string; fallba
   courses: { key: 'pages.training.training.subTabs.courses', fallback: 'Courses' },
   'group-trainings': {
     key: 'pages.training.training.subTabs.groupTrainings',
-    fallback: 'Group trainings',
+    fallback: 'Group Training Sessions',
   },
-  drills: { key: 'pages.training.training.subTabs.drills', fallback: 'Drills' },
-  calendar: { key: 'pages.training.training.subTabs.calendar', fallback: 'Calendar' },
+  drills: { key: 'pages.training.training.subTabs.drills', fallback: 'Drill Exercises' },
+  calendar: { key: 'pages.training.training.subTabs.calendar', fallback: '1-on-1 Sessions' },
   tests: { key: 'pages.training.training.subTabs.tests', fallback: 'Tests' },
   assignments: {
     key: 'pages.training.training.subTabs.assignments',
