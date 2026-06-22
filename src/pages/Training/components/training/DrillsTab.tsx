@@ -10,7 +10,7 @@ import {
 } from '@/features/training/hooks/useDrills'
 import { exportDrills } from '@/features/training/api/drillsService'
 import type { DrillCardData } from '@/features/training/types/drills'
-import { TrainingPrimaryButton, TrainingSearchBar } from './TrainingToolbar'
+import { TrainingPrimaryButton } from './TrainingToolbar'
 
 function triggerDownload(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob)
@@ -58,12 +58,6 @@ export function DrillsTab() {
           ) : null}
         </div>
       </div>
-
-      <TrainingSearchBar
-        value={query}
-        onChange={setQuery}
-        placeholder={t('pages.training.drills.searchPlaceholder', 'Search...')}
-      />
 
       {isLoading ? (
         <p className="py-8 text-center text-xs text-[#676767]">{t('common.loading', 'Loading…')}</p>

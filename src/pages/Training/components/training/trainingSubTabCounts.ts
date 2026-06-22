@@ -1,4 +1,4 @@
-import { MOCK_ASSIGNMENTS, MOCK_MATERIALS, MOCK_TESTS } from '../../mocks/trainerWorkplaceMocks'
+import { MOCK_MATERIALS, MOCK_TESTS } from '../../mocks/trainerWorkplaceMocks'
 import type { TrainingsAndSessionsSubTabId } from '../../types'
 
 /** Badge counts for the Figma sub-tab strip (`Button on tab with numbers`).
@@ -12,7 +12,6 @@ export const TRAINING_SUB_TAB_COUNTS: Record<TrainingsAndSessionsSubTabId, numbe
   drills: 0,
   calendar: 0,
   tests: MOCK_TESTS.length,
-  assignments: MOCK_ASSIGNMENTS.length,
   materials: MOCK_MATERIALS.length,
   'call-library': 0,
 }

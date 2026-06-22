@@ -320,53 +320,66 @@ interface MemberPickerProps {
 
 function MemberPicker({ label, operators, selected, onChange }: MemberPickerProps) {
   const { t } = useTranslation('common')
-  const [pick, setPick] = useState('')
-  const available = operators.filter((op) => !selected.includes(op.id))
+  // Local rows: a chosen operator id, or '' for a freshly-added pending row
+  // (renders a picker until an operator is chosen). Matches the Figma flow:
+  // "+ Add" appends a row, then you pick who fills it.
+  const [slots, setSlots] = useState<Array<number | ''>>(selected)
   const nameById = new Map(operators.map((op) => [op.id, op.full_name]))
+  const chosen = new Set(slots.filter((s): s is number => s !== ''))
 
-  const add = () => {
-    const id = Number(pick)
-    if (id && !selected.includes(id)) onChange([...selected, id])
-    setPick('')
+  const commit = (next: Array<number | ''>) => {
+    setSlots(next)
+    onChange(next.filter((s): s is number => s !== ''))
   }
 
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between">
-        <span className="text-xs font-medium text-[#05040D]">{label}</span>
-        <div className="flex items-center gap-1">
-          <select
-            value={pick}
-            onChange={(e) => setPick(e.target.value)}
-            className="h-7 rounded-md border border-[#EBECE8] px-2 text-[11px] focus:outline-none"
-          >
-            <option value="">{t('common.select', 'Select…')}</option>
-            {available.map((op) => (
-              <option key={op.id} value={op.id}>
-                {op.full_name}
-              </option>
-            ))}
-          </select>
-          <button
-            type="button"
-            onClick={add}
-            disabled={!pick}
-            className="inline-flex items-center gap-1 rounded-md bg-[#204E4D] px-2 py-1 text-[11px] font-medium text-white disabled:opacity-50"
-          >
-            <Icons.Add size={11} className="text-white" />
-            {t('common.add', 'Add')}
-          </button>
-        </div>
+        <span className="text-sm font-semibold text-[#05040D]">{label}</span>
+        <button
+          type="button"
+          onClick={() => commit([...slots, ''])}
+          className="inline-flex items-center gap-1 rounded-md bg-[#204E4D] px-3 py-1.5 text-xs font-medium text-white hover:bg-[#1a3f3e]"
+        >
+          <Icons.Add size={13} className="text-white" />
+          {t('common.add', 'Add')}
+        </button>
       </div>
-      {selected.map((id, i) => (
-        <div key={id} className="flex items-center gap-2 rounded-lg bg-[#F7F7F7] px-3 py-1.5">
+      {slots.map((slot, i) => (
+        <div
+          key={i}
+          className="flex items-center gap-2 rounded-lg bg-[#F7F7F7] px-3 py-2"
+        >
           <span className="w-4 text-center text-[11px] text-[#9CA3AF]">{i + 1}</span>
-          <span className="flex-1 truncate text-xs text-[#05040D]">
-            {nameById.get(id) ?? `#${id}`}
-          </span>
+          {slot === '' ? (
+            <select
+              value=""
+              onChange={(e) => {
+                const id = Number(e.target.value)
+                if (!id) return
+                const next = [...slots]
+                next[i] = id
+                commit(next)
+              }}
+              className="h-7 flex-1 rounded-md border border-[#EBECE8] bg-white px-2 text-xs focus:outline-none"
+            >
+              <option value="">{t('common.select', 'Select…')}</option>
+              {operators
+                .filter((op) => !chosen.has(op.id))
+                .map((op) => (
+                  <option key={op.id} value={op.id}>
+                    {op.full_name}
+                  </option>
+                ))}
+            </select>
+          ) : (
+            <span className="flex-1 truncate text-xs text-[#05040D]">
+              {nameById.get(slot) ?? `#${slot}`}
+            </span>
+          )}
           <button
             type="button"
-            onClick={() => onChange(selected.filter((x) => x !== id))}
+            onClick={() => commit(slots.filter((_, j) => j !== i))}
             aria-label="Remove"
           >
             <Icons.Close size={13} className="text-[#9CA3AF]" />
@@ -416,8 +429,8 @@ function ScheduleCalibrationPanel({
   const field = 'h-9 rounded-lg border border-[#EBECE8] px-3 text-xs text-[#05040D] focus:outline-none'
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-black/30">
-      <div className="flex h-full w-full max-w-[440px] flex-col bg-white shadow-2xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
+      <div className="flex max-h-[90vh] w-full max-w-md flex-col rounded-xl bg-white shadow-xl">
         <div className="flex items-center justify-between border-b border-[#EBECE8] px-5 py-4">
           <h3 className="text-base font-semibold text-[#05040D]">
             {t('pages.training.calendar.schedule', 'Schedule a Calibration Session')}
