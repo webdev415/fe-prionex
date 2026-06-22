@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import { io, Socket } from 'socket.io-client'
 import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
+import { getAccessToken } from '@/lib/api'
 import type { CallStateEvent, ConnectionStatus } from '../types'
 import {
   getClientIdFromCallEventData,
@@ -62,10 +63,17 @@ export function useCallWebSocket(agentExtension: string | null) {
       return
     }
 
+    // The call-service Socket.IO handshake requires a JWT; without one the
+    // server refuses the connection. Pass it via the auth payload (not the
+    // query string) to keep the token out of URLs/access logs.
+    const token = getAccessToken()
+    if (!token) return
+
     // Connect to WebSocket
     const socket: Socket = io(WS_URL, {
       transports: ['websocket'],
       query: { agent_extension: agentExtension },
+      auth: { token },
     })
 
     socketRef.current = socket
