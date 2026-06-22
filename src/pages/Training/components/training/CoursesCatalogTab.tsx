@@ -7,6 +7,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { useOperators } from '@/features/users/hooks'
 import {
   useArchiveCourse,
+  useCourse,
   useCourses,
   useCreateCourse,
   useEnrollCourse,
@@ -52,6 +53,7 @@ export function CoursesCatalogTab() {
   const canManage = useHasPermission('manage_courses')
   const [createOpen, setCreateOpen] = useState(false)
   const [assignCourse, setAssignCourse] = useState<CourseCardData | null>(null)
+  const [detailsCourse, setDetailsCourse] = useState<CourseCardData | null>(null)
 
   // No filter toolbar in the Figma catalog — list all non-archived courses.
   const filters = useMemo(() => ({}), [])
@@ -92,6 +94,7 @@ export function CoursesCatalogTab() {
               course={course}
               canManage={canManage}
               onAssign={() => setAssignCourse(course)}
+              onDetails={() => setDetailsCourse(course)}
             />
           ))}
         </div>
@@ -100,6 +103,13 @@ export function CoursesCatalogTab() {
       {createOpen ? <CreateCoursePanel onClose={() => setCreateOpen(false)} /> : null}
       {assignCourse ? (
         <AssignCourseDialog course={assignCourse} onClose={() => setAssignCourse(null)} />
+      ) : null}
+      {detailsCourse ? (
+        <CourseDetailsDialog
+          course={detailsCourse}
+          canManage={canManage}
+          onClose={() => setDetailsCourse(null)}
+        />
       ) : null}
     </div>
   )
@@ -131,14 +141,14 @@ function CourseCard({
   course,
   canManage,
   onAssign,
+  onDetails,
 }: {
   course: CourseCardData
   canManage: boolean
   onAssign: () => void
+  onDetails: () => void
 }) {
   const { t } = useTranslation('common')
-  const updateCourse = useUpdateCourse()
-  const archiveCourse = useArchiveCourse()
   const filledStars = LEVEL_STARS[course.level]
 
   return (
@@ -221,27 +231,13 @@ function CourseCard({
         </div>
 
         <div className="flex gap-3">
-          {canManage && course.status === 'draft' ? (
-            <button
-              type="button"
-              onClick={() =>
-                updateCourse.mutate({ id: course.id, payload: { status: 'published' } })
-              }
-              className="flex flex-1 items-center justify-center rounded-md border border-[#EDEDED] bg-white px-3 py-2.5 text-xs font-medium text-[#05040D] transition-colors hover:bg-[#F7F7F7]"
-            >
-              {t('pages.training.training.courses.publish', 'Publish')}
-            </button>
-          ) : canManage && course.status !== 'archived' ? (
-            <button
-              type="button"
-              onClick={() => archiveCourse.mutate(course.id)}
-              className="flex flex-1 items-center justify-center rounded-md border border-[#EDEDED] bg-white px-3 py-2.5 text-xs font-medium text-[#05040D] transition-colors hover:bg-[#F7F7F7]"
-            >
-              {t('common.archive', 'Archive')}
-            </button>
-          ) : (
-            <span className="flex-1" />
-          )}
+          <button
+            type="button"
+            onClick={onDetails}
+            className="flex flex-1 items-center justify-center rounded-md border border-[#EDEDED] bg-white px-3 py-2.5 text-xs font-medium text-[#05040D] transition-colors hover:bg-[#F7F7F7]"
+          >
+            {t('pages.training.training.courses.details', 'Details')}
+          </button>
           <button
             type="button"
             onClick={onAssign}
@@ -530,6 +526,138 @@ function CreateCoursePanel({ onClose }: { onClose: () => void }) {
             {t('pages.training.training.courses.createCta', 'Create a course')}
           </button>
         </div>
+      </div>
+    </div>
+  )
+}
+
+function CourseDetailsDialog({
+  course,
+  canManage,
+  onClose,
+}: {
+  course: CourseCardData
+  canManage: boolean
+  onClose: () => void
+}) {
+  const { t } = useTranslation('common')
+  const { data: full } = useCourse(course.id)
+  const updateCourse = useUpdateCourse()
+  const archiveCourse = useArchiveCourse()
+  const detail = full ?? course
+  const lessons = detail.lessons ?? []
+  const materials = detail.materials ?? []
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
+      <div className="flex max-h-[90vh] w-full max-w-md flex-col rounded-xl bg-white shadow-xl">
+        <div className="flex items-start justify-between border-b border-[#EBECE8] px-5 py-4">
+          <div className="flex flex-col gap-1">
+            <h3 className="text-lg font-semibold text-[#05040D]">{detail.title}</h3>
+            <p className="text-xs text-[#4B5563]">
+              {detail.author_name
+                ? `${t('pages.training.training.courses.author', 'Author')}: ${detail.author_name}`
+                : ''}
+              {detail.author_name && detail.category ? ' · ' : ''}
+              {detail.category ?? ''}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="rounded-full bg-[#F0FDF4] px-2 py-0.5 text-[10px] font-medium text-[#15803D] capitalize">
+              {detail.status}
+            </span>
+            <button type="button" onClick={onClose} aria-label="Close">
+              <Icons.Close size={18} className="text-[#676767]" />
+            </button>
+          </div>
+        </div>
+
+        <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-5 py-4">
+          <div className="flex gap-2">
+            <StatTile
+              icon={Icons.Clock01}
+              label={t('pages.training.training.courses.duration', 'Duration')}
+              value={formatDuration(detail.duration_minutes)}
+            />
+            <StatTile
+              icon={Icons.File}
+              label={t('pages.training.training.courses.modules', 'Modules')}
+              value={detail.lesson_count}
+            />
+            <StatTile
+              icon={Icons.Users}
+              label={t('pages.training.training.courses.students', 'Students')}
+              value={detail.enrolled_count}
+            />
+          </div>
+
+          {detail.description ? (
+            <p className="text-xs leading-relaxed text-[#4B5563]">{detail.description}</p>
+          ) : null}
+
+          {lessons.length > 0 ? (
+            <div className="flex flex-col gap-2">
+              <span className="text-sm font-semibold text-[#05040D]">
+                {t('pages.training.training.courses.modules', 'Modules')}
+              </span>
+              {lessons.map((l, i) => (
+                <div
+                  key={l.id}
+                  className="flex items-center gap-2 rounded-lg bg-[#F7F7F7] px-3 py-2"
+                >
+                  <span className="w-4 text-center text-[11px] text-[#9CA3AF]">{i + 1}</span>
+                  <span className="flex-1 truncate text-xs text-[#05040D]">{l.title}</span>
+                </div>
+              ))}
+            </div>
+          ) : null}
+
+          {materials.length > 0 ? (
+            <div className="flex flex-col gap-2">
+              <span className="text-sm font-semibold text-[#05040D]">
+                {t('pages.training.training.courses.materials', 'Materials')}
+              </span>
+              {materials.map((m, i) => (
+                <div key={i} className="flex items-center gap-2 rounded-lg bg-[#F7F7F7] px-3 py-2">
+                  <span className="rounded bg-white px-1.5 py-0.5 text-[9px] font-semibold text-[#204E4D] uppercase">
+                    {m.type}
+                  </span>
+                  <span className="flex-1 truncate text-xs text-[#05040D]">{m.name}</span>
+                </div>
+              ))}
+            </div>
+          ) : null}
+        </div>
+
+        {canManage ? (
+          <div className="flex justify-end gap-2 border-t border-[#EBECE8] px-5 py-4">
+            {detail.status === 'draft' ? (
+              <button
+                type="button"
+                onClick={() =>
+                  updateCourse.mutate(
+                    { id: course.id, payload: { status: 'published' } },
+                    { onSuccess: onClose }
+                  )
+                }
+                disabled={updateCourse.isPending}
+                className="rounded-md bg-[#204E4D] px-4 py-2 text-xs font-semibold text-white hover:bg-[#1a3f3e] disabled:opacity-50"
+              >
+                {t('pages.training.training.courses.publish', 'Publish')}
+              </button>
+            ) : null}
+            {detail.status !== 'archived' ? (
+              <button
+                type="button"
+                onClick={() => archiveCourse.mutate(course.id, { onSuccess: onClose })}
+                disabled={archiveCourse.isPending}
+                className="rounded-md border border-[#EDEDED] bg-white px-4 py-2 text-xs font-medium text-[#05040D] hover:bg-[#F7F7F7] disabled:opacity-50"
+              >
+                {t('common.archive', 'Archive')}
+              </button>
+            ) : null}
+          </div>
+        ) : null}
       </div>
     </div>
   )
