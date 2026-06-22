@@ -235,6 +235,9 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
       onChange?.({ value: next })
     }
 
+    // × only renders when opt-in onClear is provided AND a date is set.
+    const showClear = !!onClear && parseDate(value) !== null
+
     // Typed input: mask, then commit only when complete + valid. Datetime
     // manual entry always includes the time (the mask requires HH:MM), so the
     // 09:00 default doesn't apply there — the typed time wins.
@@ -270,6 +273,7 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
 
     const inputClassName = cn(
       'h-[45px] w-full rounded-md border bg-white pr-4 pl-10 text-sm font-light text-[#05040D] transition-all outline-none placeholder:text-gray-500',
+      showClear && 'pr-10',
       hasError
         ? 'border-red-500 focus:border-red-500'
         : 'border-gray-300 focus:border-[var(--color-primary-500)]',
@@ -282,8 +286,6 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
           ? 'DD.MM.YYYY'
           : 'DD.MM.YYYY HH:MM'
         : placeholder
-    // × only renders when opt-in onClear is provided AND a date is set.
-    const showClear = !!onClear && parseDate(value) !== null
 
     return (
       <div className={`w-full ${className || ''}`}>
