@@ -41,9 +41,7 @@ export function AssignTrainingDialog({ open, onClose, operatorId }: AssignTraini
 
   const [courseIds, setCourseIds] = useState<number[]>([])
   const [drillIds, setDrillIds] = useState<number[]>([])
-  const [operatorIds, setOperatorIds] = useState<number[]>(
-    operatorId != null ? [operatorId] : []
-  )
+  const [operatorIds, setOperatorIds] = useState<number[]>(operatorId != null ? [operatorId] : [])
   const [submitting, setSubmitting] = useState(false)
 
   const canSubmit = useMemo(
@@ -69,12 +67,7 @@ export function AssignTrainingDialog({ open, onClose, operatorId }: AssignTraini
     }
   }
 
-  const itemRow = (
-    active: boolean,
-    onToggle: () => void,
-    primary: string,
-    secondary: string
-  ) => (
+  const itemRow = (active: boolean, onToggle: () => void, primary: string, secondary: string) => (
     <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-[#EBECE8] px-3 py-2 hover:bg-[#FAFAFA]">
       <input type="checkbox" checked={active} onChange={onToggle} />
       <span className="flex min-w-0 flex-1 flex-col">

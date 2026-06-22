@@ -51,10 +51,12 @@ export async function archiveCourse(id: number): Promise<void> {
 
 export async function enrollOperators(
   courseId: number,
-  operatorIds: number[]
+  operatorIds: number[],
+  startDate?: string | null
 ): Promise<EnrollResponse> {
   const response = await api.post<EnrollResponse>(`${BASE}/${courseId}/enroll`, {
     operator_ids: operatorIds,
+    start_date: startDate ?? null,
   })
   return response.data
 }

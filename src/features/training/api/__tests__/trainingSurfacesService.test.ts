@@ -43,6 +43,7 @@ describe('coursesService', () => {
     await enrollOperators(7, [10, 20])
     expect(mockApi.post).toHaveBeenCalledWith('/api/v1/quality/courses/7/enroll', {
       operator_ids: [10, 20],
+      start_date: null,
     })
   })
 })

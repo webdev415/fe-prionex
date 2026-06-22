@@ -2,9 +2,11 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
 import { useHasPermission } from '@/hooks'
+import { useAuthStore } from '@/stores/authStore'
+import { useOperators } from '@/features/users/hooks'
+import { useCourses, useEnrollCourse } from '@/features/training/hooks/useCourses'
 import {
   useCancelGroupTraining,
-  useCreateGroupTraining,
   useGroupTrainings,
   useRegisterForTraining,
   useUnregisterFromTraining,
@@ -162,22 +164,28 @@ function GroupTrainingCard({
 
 function ScheduleTrainingDialog({ onClose }: { onClose: () => void }) {
   const { t } = useTranslation('common')
-  const create = useCreateGroupTraining()
-  const [title, setTitle] = useState('')
-  const [type, setType] = useState('')
-  const [scheduledAt, setScheduledAt] = useState('')
-  const [duration, setDuration] = useState('60')
-  const [maxParticipants, setMaxParticipants] = useState('')
+  const enroll = useEnrollCourse()
+  const activeProjectId = useAuthStore((s) => s.user?.active_project_id)
+  const projectIdNum = activeProjectId ? Number(activeProjectId) : null
+  const { data: operators = [] } = useOperators(projectIdNum)
+  const { data: coursesData } = useCourses({ status: 'published' })
+  const courses = coursesData?.data ?? []
+
+  const [operatorId, setOperatorId] = useState('')
+  const [courseId, setCourseId] = useState('')
+  const [startDate, setStartDate] = useState('')
+
+  const canSubmit = operatorId && courseId
+  const field =
+    'h-9 rounded-lg border border-[#EBECE8] bg-white px-3 text-xs text-[#05040D] focus:outline-none'
 
   const submit = () => {
-    if (!title.trim() || !scheduledAt) return
-    create.mutate(
+    if (!canSubmit) return
+    enroll.mutate(
       {
-        title: title.trim(),
-        type: type.trim() || null,
-        scheduled_at: new Date(scheduledAt).toISOString(),
-        duration_minutes: duration ? Number(duration) : 60,
-        max_participants: maxParticipants ? Number(maxParticipants) : null,
+        courseId: Number(courseId),
+        operatorIds: [Number(operatorId)],
+        startDate: startDate ? new Date(startDate).toISOString() : null,
       },
       { onSuccess: onClose }
     )
@@ -185,61 +193,88 @@ function ScheduleTrainingDialog({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
-      <div className="w-full max-w-md rounded-xl bg-white p-5 shadow-xl">
-        <h3 className="mb-4 text-sm font-semibold text-[#05040D]">
-          {t('pages.training.groupTrainings.schedule', 'Schedule a training')}
-        </h3>
-        <div className="flex flex-col gap-3">
-          <input
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder={t('pages.training.groupTrainings.fieldTitle', 'Title')}
-            className="h-9 rounded-lg border border-[#EBECE8] px-3 text-xs focus:outline-none"
-          />
-          <input
-            value={type}
-            onChange={(e) => setType(e.target.value)}
-            placeholder={t('pages.training.groupTrainings.fieldType', 'Type (webinar/workshop)')}
-            className="h-9 rounded-lg border border-[#EBECE8] px-3 text-xs focus:outline-none"
-          />
-          <input
-            value={scheduledAt}
-            onChange={(e) => setScheduledAt(e.target.value)}
-            type="datetime-local"
-            className="h-9 rounded-lg border border-[#EBECE8] px-3 text-xs focus:outline-none"
-          />
-          <div className="flex gap-3">
-            <input
-              value={duration}
-              onChange={(e) => setDuration(e.target.value)}
-              type="number"
-              placeholder={t('pages.training.groupTrainings.fieldDuration', 'Duration (min)')}
-              className="h-9 flex-1 rounded-lg border border-[#EBECE8] px-3 text-xs focus:outline-none"
-            />
-            <input
-              value={maxParticipants}
-              onChange={(e) => setMaxParticipants(e.target.value)}
-              type="number"
-              placeholder={t('pages.training.groupTrainings.fieldMax', 'Max participants')}
-              className="h-9 flex-1 rounded-lg border border-[#EBECE8] px-3 text-xs focus:outline-none"
-            />
+      <div className="flex max-h-[90vh] w-full max-w-md flex-col rounded-xl bg-white shadow-xl">
+        <div className="flex items-center justify-between border-b border-[#EBECE8] px-5 py-4">
+          <div className="flex items-center gap-3">
+            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#BBFB5B]">
+              <Icons.Users size={18} className="text-[#05040D]" />
+            </span>
+            <h3 className="text-xl font-semibold text-[#05040D]">
+              {t('pages.training.groupTrainings.schedule', 'Schedule a Training')}
+            </h3>
           </div>
+          <button type="button" onClick={onClose} aria-label="Close">
+            <Icons.Close size={18} className="text-[#676767]" />
+          </button>
         </div>
-        <div className="mt-5 flex justify-end gap-2">
+
+        <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-5 py-4">
+          <label className="flex flex-col gap-1">
+            <span className="text-xs font-medium text-[#05040D]">
+              {t('pages.training.groupTrainings.operator', 'Operator')}
+            </span>
+            <select
+              value={operatorId}
+              onChange={(e) => setOperatorId(e.target.value)}
+              className={field}
+            >
+              <option value="">{t('common.select', 'Select…')}</option>
+              {operators.map((op) => (
+                <option key={op.id} value={op.id}>
+                  {op.full_name}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="flex flex-col gap-1">
+            <span className="text-xs font-medium text-[#05040D]">
+              {t('pages.training.groupTrainings.courseFromCatalog', 'Course from catalog')}
+            </span>
+            <select
+              value={courseId}
+              onChange={(e) => setCourseId(e.target.value)}
+              className={field}
+            >
+              <option value="">
+                {t('pages.training.groupTrainings.selectCourse', 'Select a course')}
+              </option>
+              {courses.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.title}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="flex flex-col gap-1">
+            <span className="text-xs font-medium text-[#05040D]">
+              {t('pages.training.groupTrainings.startDate', 'Start date')}
+            </span>
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className={field}
+            />
+          </label>
+        </div>
+
+        <div className="flex justify-end gap-2 border-t border-[#EBECE8] px-5 py-4">
           <button
             type="button"
             onClick={onClose}
-            className="rounded-md border border-[#EDEDED] bg-white px-3 py-2 text-xs font-medium text-[#05040D] hover:bg-[#F7F7F7]"
+            className="rounded-md bg-[#9CA3AF] px-5 py-2 text-xs font-medium text-white hover:bg-[#8b909c]"
           >
             {t('common.cancel', 'Cancel')}
           </button>
           <button
             type="button"
             onClick={submit}
-            disabled={!title.trim() || !scheduledAt || create.isPending}
-            className="rounded-md bg-[#204E4D] px-3 py-2 text-xs font-medium text-white hover:bg-[#1a3f3e] disabled:opacity-50"
+            disabled={!canSubmit || enroll.isPending}
+            className="rounded-md bg-[#BBFB5B] px-5 py-2 text-xs font-semibold text-[#05040D] hover:bg-[#a9e94f] disabled:opacity-50"
           >
-            {t('pages.training.groupTrainings.schedule', 'Schedule')}
+            {t('pages.training.groupTrainings.assign', 'Assign')}
           </button>
         </div>
       </div>

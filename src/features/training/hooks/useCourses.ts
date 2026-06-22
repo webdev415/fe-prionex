@@ -61,8 +61,15 @@ export function useArchiveCourse() {
 export function useEnrollCourse() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: ({ courseId, operatorIds }: { courseId: number; operatorIds: number[] }) =>
-      enrollOperators(courseId, operatorIds),
+    mutationFn: ({
+      courseId,
+      operatorIds,
+      startDate,
+    }: {
+      courseId: number
+      operatorIds: number[]
+      startDate?: string | null
+    }) => enrollOperators(courseId, operatorIds, startDate),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: coursesKeys.all }),
   })
 }

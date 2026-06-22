@@ -1,8 +1,5 @@
 import { api } from '@/lib/api'
-import type {
-  AssignmentFilters,
-  AssignmentListResponse,
-} from '../types/trainingAssignments'
+import type { AssignmentFilters, AssignmentListResponse } from '../types/trainingAssignments'
 
 const BASE = '/api/v1/quality/assignments'
 

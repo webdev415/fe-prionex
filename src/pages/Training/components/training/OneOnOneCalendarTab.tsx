@@ -77,10 +77,7 @@ export function OneOnOneCalendarTab() {
   )
 
   const { data, isLoading, isError } = useCalibrationCalendar()
-  const sessions = useMemo(
-    () => (data?.days ?? []).flatMap((day) => day.sessions),
-    [data]
-  )
+  const sessions = useMemo(() => (data?.days ?? []).flatMap((day) => day.sessions), [data])
 
   const [now] = useState(() => Date.now())
   const today = useMemo(() => new Date(now).toISOString().slice(0, 10), [now])
@@ -127,7 +124,14 @@ export function OneOnOneCalendarTab() {
             ) : (
               <Grid>
                 {planned.map((s) => (
-                  <SessionCard key={s.id} session={s} byId={byId} today={today} canManage={canManage} planned />
+                  <SessionCard
+                    key={s.id}
+                    session={s}
+                    byId={byId}
+                    today={today}
+                    canManage={canManage}
+                    planned
+                  />
                 ))}
               </Grid>
             )}
@@ -139,7 +143,14 @@ export function OneOnOneCalendarTab() {
             ) : (
               <Grid>
                 {past.map((s) => (
-                  <SessionCard key={s.id} session={s} byId={byId} today={today} canManage={canManage} planned={false} />
+                  <SessionCard
+                    key={s.id}
+                    session={s}
+                    byId={byId}
+                    today={today}
+                    canManage={canManage}
+                    planned={false}
+                  />
                 ))}
               </Grid>
             )}
@@ -279,10 +290,7 @@ function SessionCard({
             label={t('pages.training.calendar.duration', 'Duration')}
             value={`${session.duration_minutes} ${t('pages.training.calendar.min', 'min')}`}
           />
-          <StatTile
-            label={t('pages.training.calendar.location', 'Location')}
-            value={fmt.label}
-          />
+          <StatTile label={t('pages.training.calendar.location', 'Location')} value={fmt.label} />
         </div>
 
         {planned ? (
@@ -346,10 +354,7 @@ function MemberPicker({ label, operators, selected, onChange }: MemberPickerProp
         </button>
       </div>
       {slots.map((slot, i) => (
-        <div
-          key={i}
-          className="flex items-center gap-2 rounded-lg bg-[#F7F7F7] px-3 py-2"
-        >
+        <div key={i} className="flex items-center gap-2 rounded-lg bg-[#F7F7F7] px-3 py-2">
           <span className="w-4 text-center text-[11px] text-[#9CA3AF]">{i + 1}</span>
           {slot === '' ? (
             <select
@@ -426,15 +431,21 @@ function ScheduleCalibrationPanel({
     )
   }
 
-  const field = 'h-9 rounded-lg border border-[#EBECE8] px-3 text-xs text-[#05040D] focus:outline-none'
+  const field =
+    'h-9 rounded-lg border border-[#EBECE8] px-3 text-xs text-[#05040D] focus:outline-none'
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
       <div className="flex max-h-[90vh] w-full max-w-md flex-col rounded-xl bg-white shadow-xl">
         <div className="flex items-center justify-between border-b border-[#EBECE8] px-5 py-4">
-          <h3 className="text-base font-semibold text-[#05040D]">
-            {t('pages.training.calendar.schedule', 'Schedule a Calibration Session')}
-          </h3>
+          <div className="flex items-center gap-3">
+            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#BBFB5B]">
+              <Icons.Calendar size={18} className="text-[#05040D]" />
+            </span>
+            <h3 className="text-xl font-semibold text-[#05040D]">
+              {t('pages.training.calendar.schedule', 'Schedule a Calibration Session')}
+            </h3>
+          </div>
           <button type="button" onClick={onClose} aria-label="Close">
             <Icons.Close size={18} className="text-[#676767]" />
           </button>
@@ -446,13 +457,23 @@ function ScheduleCalibrationPanel({
               <span className="text-xs font-medium text-[#05040D]">
                 {t('pages.training.calendar.date', 'Date')}
               </span>
-              <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={field} />
+              <input
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                className={field}
+              />
             </label>
             <label className="flex flex-col gap-1">
               <span className="text-xs font-medium text-[#05040D]">
                 {t('pages.training.calendar.time', 'Time')}
               </span>
-              <input type="time" value={time} onChange={(e) => setTime(e.target.value)} className={field} />
+              <input
+                type="time"
+                value={time}
+                onChange={(e) => setTime(e.target.value)}
+                className={field}
+              />
             </label>
           </div>
 
@@ -460,8 +481,14 @@ function ScheduleCalibrationPanel({
             <span className="text-xs font-medium text-[#05040D]">
               {t('pages.training.calendar.courseFromCatalog', 'Course from the catalog')}
             </span>
-            <select value={courseId} onChange={(e) => setCourseId(e.target.value)} className={field}>
-              <option value="">{t('pages.training.calendar.selectCourse', 'Select a course')}</option>
+            <select
+              value={courseId}
+              onChange={(e) => setCourseId(e.target.value)}
+              className={field}
+            >
+              <option value="">
+                {t('pages.training.calendar.selectCourse', 'Select a course')}
+              </option>
               {courses.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.title}
@@ -491,7 +518,10 @@ function ScheduleCalibrationPanel({
               value={topic}
               onChange={(e) => setTopic(e.target.value)}
               rows={3}
-              placeholder={t('pages.training.calendar.topicPlaceholder', 'For example: greeting by script')}
+              placeholder={t(
+                'pages.training.calendar.topicPlaceholder',
+                'For example: greeting by script'
+              )}
               className="rounded-lg border border-[#EBECE8] px-3 py-2 text-xs text-[#05040D] focus:outline-none"
             />
           </label>
@@ -501,7 +531,7 @@ function ScheduleCalibrationPanel({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-md border border-[#EDEDED] bg-white px-4 py-2 text-xs font-medium text-[#05040D] hover:bg-[#F7F7F7]"
+            className="rounded-md bg-[#9CA3AF] px-5 py-2 text-xs font-medium text-white hover:bg-[#8b909c]"
           >
             {t('common.cancel', 'Cancel')}
           </button>

@@ -310,9 +310,14 @@ function CreateCoursePanel({ onClose }: { onClose: () => void }) {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
       <div className="flex max-h-[90vh] w-full max-w-md flex-col rounded-xl bg-white shadow-xl">
         <div className="flex items-center justify-between border-b border-[#EBECE8] px-5 py-4">
-          <h3 className="text-base font-semibold text-[#05040D]">
-            {t('pages.training.training.courses.addCourse', 'Create a Course')}
-          </h3>
+          <div className="flex items-center gap-3">
+            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#BBFB5B]">
+              <Icons.File size={18} className="text-[#05040D]" />
+            </span>
+            <h3 className="text-xl font-semibold text-[#05040D]">
+              {t('pages.training.training.courses.addCourse', 'Create a Course')}
+            </h3>
+          </div>
           <button type="button" onClick={onClose} aria-label="Close">
             <Icons.Close size={18} className="text-[#676767]" />
           </button>
@@ -512,7 +517,7 @@ function CreateCoursePanel({ onClose }: { onClose: () => void }) {
           <button
             type="button"
             onClick={onClose}
-            className="rounded-md border border-[#EDEDED] bg-white px-4 py-2 text-xs font-medium text-[#05040D] hover:bg-[#F7F7F7]"
+            className="rounded-md bg-[#9CA3AF] px-5 py-2 text-xs font-medium text-white hover:bg-[#8b909c]"
           >
             {t('common.cancel', 'Cancel')}
           </button>

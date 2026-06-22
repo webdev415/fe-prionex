@@ -17,10 +17,7 @@ export const calibrationKeys = {
     [...calibrationKeys.all, 'calendar', filters] as const,
 }
 
-export function useCalibrationCalendar(
-  filters: CalibrationCalendarFilters = {},
-  enabled = true
-) {
+export function useCalibrationCalendar(filters: CalibrationCalendarFilters = {}, enabled = true) {
   return useQuery({
     queryKey: calibrationKeys.calendar(filters),
     queryFn: () => getCalibrationCalendar(filters),
@@ -32,8 +29,7 @@ export function useCalibrationCalendar(
 export function useCreateCalibrationSession() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (payload: CreateCalibrationSessionPayload) =>
-      createCalibrationSession(payload),
+    mutationFn: (payload: CreateCalibrationSessionPayload) => createCalibrationSession(payload),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: calibrationKeys.all }),
   })
 }

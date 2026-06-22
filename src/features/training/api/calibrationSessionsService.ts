@@ -37,16 +37,12 @@ export async function rescheduleCalibrationSession(
   return response.data
 }
 
-export async function completeCalibrationSession(
-  id: number
-): Promise<CalibrationSessionCard> {
+export async function completeCalibrationSession(id: number): Promise<CalibrationSessionCard> {
   const response = await api.post<CalibrationSessionCard>(`${BASE}/${id}/complete`)
   return response.data
 }
 
-export async function cancelCalibrationSession(
-  id: number
-): Promise<CalibrationSessionCard> {
+export async function cancelCalibrationSession(id: number): Promise<CalibrationSessionCard> {
   const response = await api.post<CalibrationSessionCard>(`${BASE}/${id}/cancel`)
   return response.data
 }
