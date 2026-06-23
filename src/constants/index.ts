@@ -35,10 +35,18 @@ export const ROUTES = {
 
 /**
  * Session Constants
+ *
+ * SESSION_TTL_SECONDS mirrors the backend `SESSION_TTL_SECONDS` (KAN-759:
+ * 2-hour sliding window in Redis). The frontend uses it only to schedule a
+ * single /auth/validate heartbeat after an idle stretch — see
+ * `src/lib/sessionHeartbeat.ts`. If the backend value changes, update both;
+ * a temporary divergence is safe (early heartbeat = one extra validate ping
+ * per stretch, no user-visible regression).
  */
 export const SESSION = {
   TOKEN_KEY: 'prionex_token',
   REFRESH_TOKEN_KEY: 'refresh_token',
+  SESSION_TTL_SECONDS: 7200,
 } as const
 
 /**
