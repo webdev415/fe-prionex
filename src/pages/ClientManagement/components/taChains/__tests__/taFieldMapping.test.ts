@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 
 import {
+  creditIdsFromCreditSteps,
   extractPhones,
   isPhoneShaped,
   resolveStepValue,
@@ -114,5 +115,46 @@ describe('visibleCredits (Bug 4)', () => {
   it('treats missing/blank status as not closed', () => {
     const d = [{ id: 9 }, { id: 10, status: null }]
     expect(visibleCredits(d, false).map((x) => x.id)).toEqual([9, 10])
+  })
+})
+
+describe('creditIdsFromCreditSteps (KAN-744)', () => {
+  // Chain "Стягнення: Контакт з клієнтом": Step 2 = dropdown result,
+  // Step 3 = dropdown subtype, Step 7 = the only credit step.
+  const steps = [
+    { step_order: 2, field_type: 'dropdown' },
+    { step_order: 3, field_type: 'dropdown' },
+    { step_order: 7, field_type: 'credit' },
+  ]
+
+  it('reproduces the reported bug and shows only the credit step(s)', () => {
+    // Resolved (snapshot-first) values: Step 7 holds the two real picks; a
+    // phantom debt id has drifted into Step 3 (a dropdown). The old display
+    // surfaced #162040 from Step 3 AND missed #257867 — making one credit
+    // step look like several.
+    const resolved = {
+      '2': 'Домовленість',
+      '3': '162040', // phantom in a dropdown step — must be ignored
+      '7': '162040,257867', // the actual credit step, both picks
+    }
+    expect(creditIdsFromCreditSteps(steps, resolved)).toEqual(['162040', '257867'])
+  })
+
+  it('returns one credit when one is picked', () => {
+    expect(creditIdsFromCreditSteps(steps, { '7': '43820' })).toEqual(['43820'])
+  })
+
+  it('de-duplicates the same credit picked across multiple credit steps', () => {
+    const two = [
+      { step_order: 2, field_type: 'credit' },
+      { step_order: 3, field_type: 'credit' },
+    ]
+    expect(creditIdsFromCreditSteps(two, { '2': '88921', '3': '88921' })).toEqual(['88921'])
+  })
+
+  it('ignores credit-shaped values sitting in non-credit steps', () => {
+    expect(
+      creditIdsFromCreditSteps([{ step_order: 1, field_type: 'dropdown' }], { '1': '162040' })
+    ).toEqual([])
   })
 })
