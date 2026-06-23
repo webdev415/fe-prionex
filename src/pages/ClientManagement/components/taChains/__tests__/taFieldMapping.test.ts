@@ -89,6 +89,22 @@ describe('resolveStepValue', () => {
   it('returns empty string when nothing matches', () => {
     expect(resolveStepValue(loanStep, [contactStep, loanStep], {}, {})).toBe('')
   })
+
+  it('does NOT pull another step value when target_action_id collides with a step_order (KAN-744)', () => {
+    // Real chain "Стягнення": credit step is step_order 7 with target_action_id
+    // 10; the contact step is step_order 10. The credit step has no value. The
+    // legacy target_action_id fallback (id 10) must NOT grab step_order 10's
+    // phone — otherwise a phone shows in the credit slot.
+    const creditStep: StepLike = { step_order: 7, target_action_id: 10 }
+    const contactStep10: StepLike = { step_order: 10, target_action_id: 12 }
+    const v = resolveStepValue(
+      creditStep,
+      [creditStep, contactStep10],
+      undefined,
+      { '10': '380505918152' } // contact phone under step_order 10
+    )
+    expect(v).toBe('') // credit step stays empty — no phone leak
+  })
 })
 
 describe('visibleCredits (Bug 4)', () => {

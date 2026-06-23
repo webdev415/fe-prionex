@@ -395,17 +395,16 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
                 }
               }
 
-              let formattedValue = formatStepValue(ta?.field_type, val)
-              // Chain-layout drift: a credit-typed step whose saved value
-              // isn't a real debt for this client (e.g. step was contact
-              // when the phone was captured, then retyped to credit).
-              // Don't pretend it's a debt id (#raw) and don't silently
-              // drop the step — show the raw value so operators see the
-              // step ran, while keeping the dedicated Credit column
-              // clean of phones.
-              if (ta?.field_type === 'credit' && !formattedValue) {
-                formattedValue = val
+              // A credit step whose value resolves to no real debt for this
+              // client (e.g. a phone that bled into the credit slot) is a
+              // phantom — skip it instead of printing the raw value as if a
+              // credit step ran. Mirrors the dropdown skip above and matches
+              // the Credit column, which already excludes such values (KAN-744).
+              if (ta?.field_type === 'credit') {
+                const hasRealCredit = val.split(',').some((id) => safeCreditDisplay(id.trim()))
+                if (!hasRealCredit) continue
               }
+              const formattedValue = formatStepValue(ta?.field_type, val)
               // Render every saved step faithfully — including a credit
               // that repeats across steps. Collapsing repeats used to hide
               // that multiple steps ran, making a multi-step chain look like

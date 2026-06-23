@@ -117,7 +117,17 @@ export function resolveStepValue(
   if (byOrder !== '') return byOrder
 
   const sharesTa = allSteps.filter((s) => s.target_action_id === step.target_action_id).length > 1
-  if (!sharesTa) {
+  // Legacy fallback: older interactions keyed step_data by target_action_id.
+  // BUT target_action_id and step_order share one key namespace, so a step
+  // whose target_action_id equals ANOTHER step's step_order would wrongly
+  // grab that other step's value — e.g. the credit step (target_action_id 10)
+  // pulling in the contact step (step_order 10), so a phone shows in the
+  // credit slot (KAN-744). Only use the fallback when the id is unambiguous:
+  // the TA is unique AND its id collides with no other step's step_order.
+  const idCollidesWithAnotherStepOrder = allSteps.some(
+    (s) => s.step_order === step.target_action_id && s.step_order !== step.step_order
+  )
+  if (!sharesTa && !idCollidesWithAnotherStepOrder) {
     return unwrapValue(interactionStepData?.[String(step.target_action_id)])
   }
   return ''
