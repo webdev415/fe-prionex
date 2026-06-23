@@ -6,7 +6,7 @@
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { DataTable, type Column } from '@/components/ui/DataTable'
-import { extractPhones } from './taFieldMapping'
+import { creditIdsFromCreditSteps, extractPhones } from './taFieldMapping'
 import { Input } from '@/components/ui/Input'
 import {
   Select,
@@ -147,6 +147,13 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
 
   const { data: chainsData } = useTAChains({ include_inactive: true })
   const chains = chainsData?.items ?? []
+  // O(1) chain lookup by id — the column renderers resolve a row's chain on
+  // every render, so a Map avoids a linear scan per row per column.
+  const chainById = useMemo(() => {
+    const m = new Map<number, (typeof chains)[number]>()
+    for (const c of chainsData?.items ?? []) m.set(c.id, c)
+    return m
+  }, [chainsData])
 
   // TA lookup for identifying credit-type steps
   const { data: tasData } = useTargetActions({ include_hidden: true })
@@ -155,6 +162,27 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
     for (const ta of tasData?.items ?? []) m.set(ta.id, ta)
     return m
   }, [tasData])
+
+  // Read each row's step values from the interaction's OWN step_data, keyed by
+  // step_order. This is the single query that backs the table and is refreshed
+  // on every edit, so the displayed value is STABLE — it can't flip as a
+  // separate chain-instances (snapshot) query loads or its cache goes stale.
+  // (An earlier version read the snapshot first; because the edit mutation only
+  // invalidates the interactions query, the snapshot stayed cached and the
+  // value flickered on navigation — KAN-744.) Phantom values that drifted into
+  // the wrong step are filtered downstream by field type: credits come only
+  // from credit steps, and a dropdown step skips values that match no option.
+  // The backend keeps this copy reconciled with the wizard snapshot on
+  // create/edit, so it is the authoritative record for display.
+  const resolvedStepData = (row: TAInteraction): Record<string, string> => {
+    const sd = (row.step_data ?? {}) as Record<string, unknown>
+    const out: Record<string, string> = {}
+    for (const [k, v] of Object.entries(sd)) {
+      const s = typeof v === 'object' && v !== null ? (v as { value?: unknown }).value : v
+      if (s != null && String(s) !== '') out[k] = String(s)
+    }
+    return out
+  }
 
   // Operator lookup so we can render full names instead of usernames in the
   // Operator column. Snapshot column `recorded_by_name` keeps the username
@@ -237,13 +265,14 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
       align: 'left',
       render: (row) => {
         if (!row.step_data) return <span className="text-xs text-gray-700">-</span>
-        const chain = chains.find((c) => c.id === row.chain_id)
+        const chain = chainById.get(row.chain_id)
         const stepsOrdered = chain?.steps ?? []
         // extractPhones shape-checks every value (rejecting dates, datetimes,
         // debt-id lists and dropdown labels), so a date like
         // "2026-05-15T10:30:00" can no longer leak into the Phone column.
-        // See taFieldMapping.ts (Bug 1).
-        const uniquePhones = extractPhones(row.step_data as Record<string, unknown>, stepsOrdered)
+        // See taFieldMapping.ts (Bug 1). Resolve snapshot-first so the Phone
+        // column matches the Edit modal's per-step values.
+        const uniquePhones = extractPhones(resolvedStepData(row), stepsOrdered)
         return (
           <span className="text-xs text-gray-700">
             {uniquePhones.length > 0 ? uniquePhones.join(', ') : '-'}
@@ -257,11 +286,11 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
       align: 'left',
       render: (row) => {
         const formatStepValue = (fieldType: string | undefined, val: string): string => {
-          // Drift-tolerant credit format: even when the step's current
-          // type isn't 'credit', if the value happens to match a real
-          // debt for this client we render the contract number so the
-          // Result column stays consistent with the Credit column.
-          if (fieldType === 'credit' || debtContractMap.has(parseInt(val, 10))) {
+          // Credit-format ONLY actual credit steps. A debt-id-shaped value
+          // sitting in a non-credit step is a phantom (chain drift / a stray
+          // value) and must not be rendered as a credit — that's what made a
+          // one-credit-step chain look like it had several (KAN-744).
+          if (fieldType === 'credit') {
             const seen = new Set<number>()
             const out: string[] = []
             for (const id of val
@@ -324,15 +353,16 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
         let consumedCredit = false
 
         if (row.step_data && Object.keys(row.step_data).length > 0) {
-          const chain = chains.find((c) => c.id === row.chain_id)
+          const chain = chainById.get(row.chain_id)
           const stepsOrdered = chain?.steps
             ? [...chain.steps].sort((a, b) => a.step_order - b.step_order)
             : []
+          // Snapshot-first resolution — same source the Edit modal reads.
+          const resolved = resolvedStepData(row)
 
           if (stepsOrdered.length > 0) {
             for (const step of stepsOrdered) {
-              const sd = row.step_data as Record<string, string>
-              const val = sd[String(step.step_order)] ?? sd[String(step.target_action_id)]
+              const val = resolved[String(step.step_order)]
               if (!val) continue
               const ta = taById.get(step.target_action_id)
               // Show every saved step in the Result column (workflow
@@ -345,24 +375,23 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
               // whose picked value triggered them (matched via require_* flags).
               if (ta?.field_type === 'dropdown') {
                 const picked = ta.dropdown_values.find((dv) => dv.value === val)
-                if (picked) {
-                  if (picked.require_promise_date && row.promise_date && !consumedPromiseDate) {
-                    followUps.push(formatDate(row.promise_date))
-                    consumedPromiseDate = true
-                  }
-                  if (
-                    picked.require_promise_amount &&
-                    row.promise_amount &&
-                    !consumedPromiseAmount
-                  ) {
-                    followUps.push(formatMoneyKopeckTight(row.promise_amount))
-                    consumedPromiseAmount = true
-                  }
-                  if (picked.require_credit && row.credit_id && !consumedCredit) {
-                    const followCredit = safeCreditDisplay(row.credit_id)
-                    if (followCredit) followUps.push(followCredit)
-                    consumedCredit = true
-                  }
+                // A dropdown value that matches no real option is a phantom
+                // (e.g. a credit id drifted into this slot). The Edit modal
+                // shows it as empty, so skip the step here too rather than
+                // print a stray value as if a step ran (KAN-744).
+                if (!picked) continue
+                if (picked.require_promise_date && row.promise_date && !consumedPromiseDate) {
+                  followUps.push(formatDate(row.promise_date))
+                  consumedPromiseDate = true
+                }
+                if (picked.require_promise_amount && row.promise_amount && !consumedPromiseAmount) {
+                  followUps.push(formatMoneyKopeckTight(row.promise_amount))
+                  consumedPromiseAmount = true
+                }
+                if (picked.require_credit && row.credit_id && !consumedCredit) {
+                  const followCredit = safeCreditDisplay(row.credit_id)
+                  if (followCredit) followUps.push(followCredit)
+                  consumedCredit = true
                 }
               }
 
@@ -458,23 +487,22 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
           seen.add(numId)
           creditIds.push(display)
         }
-        // The credit(s) chosen in the chain's steps are the source of truth:
-        // show every one (multi-select is valid). Scan every step_data value —
-        // not just credit-typed steps — so a debt id saved when the step was
-        // credit but later retyped (chain drift) still shows up here. addCredit
-        // / safeCreditDisplay only accept real debts of this client, so
-        // non-credit values (phones, dropdown labels, dates) never leak in.
-        if (row.step_data) {
-          const sd = row.step_data as Record<string, string>
-          for (const v of Object.values(sd)) {
-            if (typeof v !== 'string') continue
-            for (const id of v.split(',')) addCredit(id.trim())
-          }
+        // Credits come ONLY from the chain's credit-type steps, read from the
+        // SAME snapshot-first resolution the Edit modal uses. This is what
+        // keeps the Credit column equal to the Edit modal: a debt id that
+        // drifted into a non-credit step (a phantom) is ignored, and a credit
+        // step holding several picks shows them all. See creditIdsFromCreditSteps.
+        const resolved = resolvedStepData(row)
+        const creditChain = chainById.get(row.chain_id)
+        const creditSteps = (creditChain?.steps ?? []).map((s) => ({
+          step_order: s.step_order,
+          field_type: taById.get(s.target_action_id)?.field_type,
+        }))
+        for (const id of creditIdsFromCreditSteps(creditSteps, resolved)) {
+          addCredit(id)
         }
         // Legacy top-level credit_id is a single-value fallback used ONLY when
-        // no step carried a credit. Merging it in unconditionally surfaced a
-        // stale credit after the step credit was changed (e.g. the old number
-        // showing next to the new one, "#162040, #43820").
+        // the chain has no credit step (older interactions).
         if (creditIds.length === 0 && row.credit_id) addCredit(row.credit_id)
         return (
           <span className="text-xs text-gray-700">

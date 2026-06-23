@@ -122,3 +122,45 @@ export function resolveStepValue(
   }
   return ''
 }
+
+export interface CreditStepLike {
+  step_order: number
+  field_type?: string | null
+}
+
+/**
+ * The credit ids an interaction actually recorded, taken ONLY from the
+ * chain's credit-type steps.
+ *
+ * Why "credit-type steps only": a debt id can drift into a non-credit step's
+ * slot (a phantom). The history used to surface any debt-id-shaped value from
+ * any step as a credit, so a stray id in an empty dropdown step showed up as a
+ * second credit — making a one-credit-step chain look like it had two
+ * (KAN-744). Reading only the credit steps mirrors what the Edit modal shows.
+ *
+ * `resolvedStepData` must already be snapshot-first (see resolveStepValue), so
+ * a credit step that holds several picks (e.g. "162040,257867") returns every
+ * one, while a non-credit step's drifted value is ignored. Ids are returned in
+ * step order, de-duplicated, preserving multi-select.
+ */
+export function creditIdsFromCreditSteps(
+  steps: CreditStepLike[],
+  resolvedStepData: Record<string, string>
+): string[] {
+  const out: string[] = []
+  const seen = new Set<string>()
+  for (const step of [...steps].sort((a, b) => a.step_order - b.step_order)) {
+    if (step.field_type !== 'credit') continue
+    const value = resolvedStepData[String(step.step_order)]
+    if (!value) continue
+    for (const id of value
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean)) {
+      if (seen.has(id)) continue
+      seen.add(id)
+      out.push(id)
+    }
+  }
+  return out
+}
