@@ -45,6 +45,15 @@ export const PERMISSIONS = {
   },
 
   /**
+   * Sale Notes Category (1 permission)
+   * Controls bulk upload + delete of primary creditor comments.
+   * Seeded by auth migration 039.
+   */
+  SALE_NOTES: {
+    MANAGE: 'manage_primary_creditor_comments',
+  },
+
+  /**
    * Communication Category (3 permissions)
    * Controls access to calling and messaging features
    */
@@ -383,6 +392,7 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   import_payments: 'Import payments from bank CSV files in bulk',
   export_clients: 'Export client and system data',
   manage_client_priority: 'Manually change client contact priority',
+  manage_primary_creditor_comments: 'Upload bulk sale notes and delete individual sale notes',
 
   // Users
   view_users: 'View user accounts',

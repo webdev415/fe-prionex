@@ -4,7 +4,8 @@ import { Icons } from '@/lib/icons'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
 import { useDeleteSaleNote, useSaleNotesList } from '@/features/clients/hooks/useSaleNotes'
-import { useAuthStore } from '@/stores/authStore'
+import { useHasPermission } from '@/hooks/usePermissions'
+import { PERMISSIONS } from '@/constants/permissions'
 import { SaleNoteCard } from './SaleNoteCard'
 
 interface Props {
@@ -19,17 +20,19 @@ export function SaleNotesSection({ clientId }: Props) {
   const deleteMutation = useDeleteSaleNote()
 
   // Permission gating — only operators with manage_primary_creditor_comments
-  // can see and use the trash icon (per KAN-617 spec).
-  const userPermissions = useAuthStore((s) => s.user?.permissions || [])
-  const canDelete = userPermissions.includes('manage_primary_creditor_comments')
+  // can see and use the trash icon (per KAN-617 spec). Uses the shared
+  // `useHasPermission` hook (primitive return → stable Zustand comparison)
+  // + the PERMISSIONS catalog for typo-safe constant lookup.
+  const canDelete = useHasPermission(PERMISSIONS.SALE_NOTES.MANAGE)
 
   const handleDeleteClick = (noteId: number) => setDeletingId(noteId)
   const handleCancelDelete = () => setDeletingId(null)
   const handleConfirmDelete = () => {
     if (deletingId !== null) {
-      deleteMutation.mutate(deletingId, {
-        onSuccess: () => setDeletingId(null),
-      })
+      deleteMutation.mutate(
+        { noteId: deletingId, clientId },
+        { onSuccess: () => setDeletingId(null) }
+      )
     }
   }
 

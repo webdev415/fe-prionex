@@ -26,12 +26,18 @@ export function useDeleteSaleNote() {
   const { t } = useTranslation('common')
 
   return useMutation({
-    mutationFn: (noteId: number) => saleNotesApi.deleteSaleNote(noteId),
-    onSuccess: () => {
+    // Callers pass both noteId (for the DELETE call) and clientId (for
+    // targeted cache invalidation). The DELETE response itself doesn't
+    // include client_id, so we rely on the caller — which already knows
+    // it from props on the per-client page.
+    mutationFn: ({ noteId }: { noteId: number; clientId: number }) =>
+      saleNotesApi.deleteSaleNote(noteId),
+    onSuccess: (_data, { clientId }) => {
       toast.success(t('pages.client.saleNotes.deleteSuccess', 'Comment deleted'))
-      // We don't know which client this note was on from just the noteId,
-      // so invalidate the whole tree. Cheap — server returns small lists.
-      queryClient.invalidateQueries({ queryKey: saleNotesKeys.all })
+      // Targeted invalidation — only THIS client's cache. Other clients'
+      // cached lists stay fresh, so navigating between clients doesn't
+      // trigger unnecessary refetches.
+      queryClient.invalidateQueries({ queryKey: saleNotesKeys.byClient(clientId) })
     },
     onError: (error) => {
       toast.error(getErrorMessage(error))
