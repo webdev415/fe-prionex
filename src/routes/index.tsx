@@ -111,6 +111,11 @@ const TrainingPage = lazy(() =>
     default: m.TrainingPage,
   }))
 )
+const ActionAnalysisPage = lazy(() =>
+  import('@/pages/ActionAnalysis').then((m) => ({
+    default: m.ActionAnalysisPage,
+  }))
+)
 const SellerManagementPage = lazy(() =>
   import('@/pages/SellerManagement').then((m) => ({
     default: m.SellerManagementPage,
@@ -343,11 +348,13 @@ export const router = createBrowserRouter([
           </PermissionRoute>
         ),
       },
-      // Read-shim: keep the legacy /dashboard/action-analysis URL working
-      // for bookmarks that pointed at the old Trainer Workplace surface.
       {
         path: 'action-analysis',
-        element: <Navigate to="/dashboard/training" replace />,
+        element: (
+          <PermissionRoute requiredPermission={PERMISSIONS.ACTION_ANALYSIS.VIEW}>
+            {withSuspense(<ActionAnalysisPage />)}
+          </PermissionRoute>
+        ),
       },
       {
         path: 'sellers',

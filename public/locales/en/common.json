@@ -53,7 +53,8 @@
     "messagingIntegrations": "Messaging Integrations",
     "messagingDrafts": "Message Drafts",
     "campaignAnalytics": "Campaign Analytics",
-    "contactTypes": "Contact Types"
+    "contactTypes": "Contact Types",
+    "actionAnalysis": "Action Analysis"
   },
   "search": {
     "placeholder": "Search",
@@ -5511,6 +5512,619 @@
       "message": "You don't have permission to access this page. Contact your administrator if you believe this is a mistake.",
       "goBack": "Go Back",
       "goHome": "Go to Dashboard"
+    },
+    "actionAnalysis": {
+      "title": "Action Analysis",
+      "subtitle": "Call monitoring and interaction history for the trainer team.",
+      "tabs": {
+        "calls": "Calls",
+        "interactions": "Interaction History"
+      },
+      "filters": {
+        "operator": "Operator",
+        "allOperators": "All operators",
+        "employee": "Employee",
+        "allEmployees": "All employees",
+        "blockedSuffix": "(blocked)",
+        "period": "Period",
+        "status": "Status",
+        "allStatuses": "All statuses",
+        "markerType": "Marker type",
+        "allMarkerTypes": "All types",
+        "feedbackType": "Feedback type",
+        "allFeedbackTypes": "All types",
+        "granularity": "Granularity",
+        "selectOperator": "Select an operator…",
+        "minDuration": "Min duration (s)",
+        "maxDuration": "Max duration (s)",
+        "contactType": "Contact type",
+        "allContactTypes": "All",
+        "result": "Result",
+        "allResults": "All",
+        "promiseMin": "Promise min",
+        "promiseMax": "Promise max",
+        "department": "Department",
+        "allDepartments": "All departments",
+        "employees": "Employees",
+        "employeesCount": "{{count}} selected",
+        "phone": "Phone",
+        "phonePlaceholder": "e.g. 0631234567",
+        "searchEmployees": "Search by name…",
+        "noOperatorsMatch": "No matches",
+        "clearEmployees": "Clear",
+        "applyEmployees": "Apply",
+        "dateFrom": "From",
+        "dateTo": "To",
+        "selectDate": "Select date",
+        "selectStartDate": "Select start date",
+        "selectEndDate": "Select end date",
+        "dateRange": "Date Range",
+        "quickRanges": "Quick",
+        "minDurationPlaceholder": "e.g. 30",
+        "maxDurationPlaceholder": "e.g. 600",
+        "promiseMinPlaceholder": "0.00",
+        "promiseMaxPlaceholder": "e.g. 1000",
+        "searchEmployeesPlaceholder": "Search",
+        "applyFilters": "Apply Filters",
+        "clearAll": "Clear All",
+        "periods": {
+          "today": "Today",
+          "yesterday": "Yesterday",
+          "last_7d": "Last 7 days",
+          "last_30d": "Last 30 days",
+          "last7d": "Last 7 days",
+          "last30d": "Last 30 days",
+          "custom": "Custom"
+        },
+        "selectCustomRange": "Pick a custom date range to load data.",
+        "telephonyType": "Telephony type",
+        "telephonyTypes": {
+          "all": "All",
+          "white": "White",
+          "grey": "Grey",
+          "unknown": "Unknown"
+        },
+        "channel": "Channel",
+        "allChannels": "All",
+        "internalDateType": "Internal date",
+        "internalDateTypeNone": "Off",
+        "internalDateFrom": "Internal date from",
+        "internalDateTo": "Internal date to",
+        "internalDateTypes": {
+          "promiseToPay": "Promise to pay",
+          "nextAction": "Callback / next action",
+          "followUp": "Follow-up",
+          "any": "Any of the above"
+        },
+        "chain": "Chain",
+        "allChains": "All chains",
+        "chainStep": "Step",
+        "allChainSteps": "All steps",
+        "stepValue": "Step value",
+        "stepValueFrom": "Step value from",
+        "stepValueTo": "Step value to",
+        "stepValueMin": "Step value min",
+        "stepValueMax": "Step value max",
+        "stepValuePlaceholder": "Search…",
+        "allStepValues": "All values",
+        "stepValuesHeading": "Step value filters",
+        "stepValueUnsupported": "No value filter available for this step.",
+        "selectedStepsCount": "{{count}} selected",
+        "notesSearch": "Notes search",
+        "notesSearchPlaceholder": "Search in notes…",
+        "sortBy": "Sort by",
+        "sortOptions": {
+          "created_at_desc": "Created (newest)",
+          "created_at_asc": "Created (oldest)",
+          "due_date_asc": "Due (soonest)",
+          "due_date_desc": "Due (latest)"
+        },
+        "assignee": "Assignee",
+        "author": "Author",
+        "dueRangeHeading": "Due date / time",
+        "dueDateFrom": "Due date from",
+        "dueDateTo": "Due date to",
+        "dueTimeFrom": "Due time from",
+        "dueTimeTo": "Due time to",
+        "topic": "Topic",
+        "allTopics": "All topics",
+        "group": "Group",
+        "groupComingSoon": "Coming soon",
+        "priority": "Priority",
+        "priorities": {
+          "all": "All",
+          "low": "Low",
+          "normal": "Normal",
+          "high": "High",
+          "urgent": "Urgent",
+          "critical": "Critical"
+        },
+        "statuses": {
+          "all": "All",
+          "answered": "Answered",
+          "notAnswered": "Not answered",
+          "pending": "Pending",
+          "in_progress": "In progress",
+          "completed": "Completed",
+          "cancelled": "Cancelled",
+          "extended": "Extended",
+          "rejected": "Rejected",
+          "incoming_line_result": "Incoming line result"
+        },
+        "confirmedAtRangeHeading": "Confirmed at",
+        "confirmedAtFrom": "From",
+        "confirmedAtTo": "To",
+        "paymentDateRangeHeading": "Payment date",
+        "paymentDateFrom": "From",
+        "paymentDateTo": "To",
+        "selectedCount": "{{count}} selected",
+        "paymentMethod": "Payment method",
+        "paymentMethods": {
+          "all": "All methods",
+          "bank_transfer": "Bank transfer",
+          "online_gateway": "Online (link)",
+          "cash": "Cash",
+          "card": "Card",
+          "other": "Other"
+        },
+        "paymentStatuses": {
+          "all": "All",
+          "pending": "Pending",
+          "verified": "Confirmed",
+          "cancelled": "Rejected"
+        },
+        "paymentType": "Payment type",
+        "paymentTypes": {
+          "all": "All types",
+          "payment_by_rr": "Payment by RR",
+          "partial_payment": "Partial payment",
+          "full_payment": "Full payment"
+        },
+        "paymentCommentSearch": "Payment comment",
+        "paymentCommentSearchPlaceholder": "Search in payment comments…",
+        "amountMin": "Min amount",
+        "amountMax": "Max amount",
+        "amountMinPlaceholder": "0.00",
+        "amountMaxPlaceholder": "e.g. 1000.00",
+        "paymentSortOptions": {
+          "recorded_at_desc": "Created (newest)",
+          "recorded_at_asc": "Created (oldest)",
+          "verified_at_desc": "Confirmed (newest)",
+          "verified_at_asc": "Confirmed (oldest)",
+          "amount_desc": "Amount (high → low)",
+          "amount_asc": "Amount (low → high)",
+          "payment_date_desc": "Payment date (newest)",
+          "payment_date_asc": "Payment date (oldest)"
+        }
+      },
+      "columns": {
+        "dateTime": "Date / Time",
+        "duration": "Duration",
+        "status": "Status",
+        "callType": "Call type",
+        "telephonyType": "Telephony type",
+        "phone": "Phone",
+        "agent": "Employee",
+        "client": "Client",
+        "clientId": "Client ID",
+        "promiseDate": "Promise date",
+        "recording": "Recording",
+        "viewDetail": "View detail",
+        "employee": "Employee",
+        "contactType": "Contact type",
+        "result": "Result",
+        "promiseAmount": "Promise amount",
+        "createdBy": "Created by",
+        "responsibleAtCreation": "Responsible at creation",
+        "currentResponsible": "Current responsible",
+        "internalDate": "Date (promise / callback)",
+        "channel": "Channel",
+        "chain": "Chain",
+        "notes": "Notes",
+        "createdDate": "Created date",
+        "author": "Author",
+        "assignee": "Assignee",
+        "priority": "Priority",
+        "topic": "Topic",
+        "dueDate": "Due date",
+        "dueTime": "Due time",
+        "loanNumber": "Loan number",
+        "loanSaleDate": "Date of loan sale",
+        "paymentType": "Payment type",
+        "paymentComment": "Payment comment",
+        "operator": "Operator",
+        "createdAt": "Created at",
+        "confirmedAt": "Confirmed at",
+        "amount": "Amount",
+        "paymentMethod": "Payment method",
+        "date": "Date",
+        "template": "Template",
+        "weightedScore": "Score",
+        "markerType": "Type",
+        "timestamp": "Timestamp",
+        "comment": "Comment",
+        "feedbackType": "Type",
+        "preview": "Text"
+      },
+      "callType": {
+        "incoming": "Incoming",
+        "outgoing": "Outgoing"
+      },
+      "telephonyType": {
+        "white": "White",
+        "grey": "Grey",
+        "unknown": "—"
+      },
+      "callDetail": {
+        "title": "Call details",
+        "fields": {
+          "dateTime": "Date / Time",
+          "status": "Status",
+          "callType": "Call type",
+          "employee": "Employee",
+          "phone": "Phone",
+          "duration": "Duration",
+          "client": "Client",
+          "callId": "Call ID"
+        }
+      },
+      "summary": {
+        "total": "total",
+        "outgoing": "outgoing",
+        "answered": "answered",
+        "totalInteractions": "interactions"
+      },
+      "actions": {
+        "exportExcel": "Export to Excel",
+        "exporting": "Exporting…",
+        "playRecording": "Play recording",
+        "viewDetail": "View detail"
+      },
+      "empty": "No calls match the current filters",
+      "interactionsEmpty": "No interactions match the current filters",
+      "taHistoryEmpty": "No TA interactions match the current filters",
+      "taskHistoryEmpty": "No tasks match the current filters",
+      "taskHistorySummary": {
+        "total": "tasks"
+      },
+      "taskHistoryAnalytics": {
+        "title": "Tasks due by date",
+        "subtitle": "Total tasks due within the current filter range.",
+        "totalLabel": "tasks due",
+        "empty": "No tasks due in the selected range.",
+        "emptyMonth": "No tasks due this month.",
+        "today": "Today",
+        "prevMonth": "Previous month",
+        "nextMonth": "Next month",
+        "weekdayShort": {
+          "mon": "Mon",
+          "tue": "Tue",
+          "wed": "Wed",
+          "thu": "Thu",
+          "fri": "Fri",
+          "sat": "Sat",
+          "sun": "Sun"
+        }
+      },
+      "errors": {
+        "loadFailed": "Failed to load calls",
+        "loadInteractionsFailed": "Failed to load interactions",
+        "loadTimelineFailed": "Failed to load the timeline.",
+        "invalidCallId": "Invalid Call ID. Paste a full call UUID (36 characters).",
+        "loadScreenTimeFailed": "Failed to load screen-time data.",
+        "loadHeatmapFailed": "Failed to load the heatmap.",
+        "loadScriptAnalyticsFailed": "Failed to load script analytics.",
+        "loadTaHistoryFailed": "Failed to load TA history",
+        "loadTaskHistoryFailed": "Failed to load task history",
+        "loadPaymentHistoryFailed": "Failed to load payment history",
+        "loadScorecardsFailed": "Failed to load scorecards",
+        "loadScorecardFailed": "Failed to load scorecard",
+        "loadMarkersFailed": "Failed to load markers",
+        "loadFeedbackFailed": "Failed to load feedback",
+        "loadDynamicsFailed": "Failed to load score dynamics",
+        "noOperators": "No operators in scope.",
+        "noScoresPermission": "You do not have permission to view any quality scoring data.",
+        "emptyScopeResolution": "The selected scope returned no operators.",
+        "departmentNoOperators": "No operators in this department for the current project.",
+        "exportFailed": "Export failed",
+        "callNotFound": "Call not found"
+      },
+      "calls": {
+        "placeholder": "Calls tab — coming soon"
+      },
+      "interactions": {
+        "placeholder": "Interaction History tab — coming soon"
+      },
+      "topTabs": {
+        "inbox": "Inbox",
+        "calls": "Calls",
+        "scores": "Scores",
+        "training": "Training",
+        "settings": "Settings"
+      },
+      "topTabsComingSoon": "This section will be enabled in a follow-up release.",
+      "subTabs": {
+        "list": "Call List",
+        "interactions": "Interaction History",
+        "taHistory": "TA History",
+        "taskHistory": "Task History",
+        "paymentHistory": "Payment History",
+        "timeline": "Timeline",
+        "screenTime": "Screen Time",
+        "heatmap": "Heatmap",
+        "scriptAnalytics": "Script Analytics"
+      },
+      "scoresSubTabs": {
+        "scorecards": "Scorecards",
+        "markers": "Markers",
+        "feedback": "Feedback",
+        "dynamics": "Score Dynamics"
+      },
+      "scorecard": {
+        "title": "Quality evaluation",
+        "template": "Template",
+        "selectTemplate": "Select a template…",
+        "startEvaluation": "Start evaluation",
+        "history": "Previous scorecards on this call",
+        "computedScore": "Score",
+        "perCallComment": "Overall comment",
+        "saveDraft": "Save draft",
+        "markCompleted": "Mark completed",
+        "sendToOperator": "Send to operator",
+        "status": {
+          "draft": "Draft",
+          "completed": "Completed",
+          "sent": "Sent"
+        }
+      },
+      "scorecardsEmpty": "No scorecards in scope.",
+      "scorecardsTotalSuffix": "scorecards",
+      "markers": {
+        "addMarker": "Add marker",
+        "type": "Type",
+        "comment": "Comment",
+        "commentPlaceholder": "Optional comment",
+        "save": "Save",
+        "types": {
+          "error": "Error",
+          "good_moment": "Good moment",
+          "script_violation": "Script violation",
+          "stop_word": "Stop word",
+          "unmotivated_pause": "Unmotivated pause",
+          "note": "Note"
+        },
+        "status": {
+          "draft": "Draft",
+          "sent": "Sent"
+        }
+      },
+      "markersEmpty": "No markers in scope.",
+      "markersTotalSuffix": "markers",
+      "feedback": {
+        "leave": "Leave feedback",
+        "typeLabel": "Type",
+        "text": "Feedback text",
+        "send": "Send",
+        "includeTimestamp": "Include current playback position",
+        "reply": "Reply",
+        "replyPlaceholder": "Write a reply…",
+        "markRead": "Mark read",
+        "markComplete": "Mark completed",
+        "threadEmpty": "No replies yet.",
+        "types": {
+          "praise": "Praise",
+          "note": "Note",
+          "correction_task": "Correction task"
+        },
+        "status": {
+          "unread": "Unread",
+          "read": "Read",
+          "completed": "Completed"
+        },
+        "role": {
+          "trainer": "Trainer",
+          "operator": "Operator"
+        }
+      },
+      "feedbackEmpty": "No feedback in scope.",
+      "feedbackTotalSuffix": "items",
+      "dynamics": {
+        "empty": "No completed scorecards in this range.",
+        "selectOperatorHint": "Pick an operator to view their score dynamics.",
+        "operator": "Operator",
+        "teamAvg": "Team average",
+        "periodAvg": "Period avg",
+        "periodMin": "Min",
+        "periodMax": "Max",
+        "scorecardCount": "Scorecards",
+        "granularity": {
+          "day": "Daily",
+          "week": "Weekly",
+          "month": "Monthly"
+        }
+      },
+      "scope": {
+        "label": "View scope",
+        "my": "My actions",
+        "group": "Group actions",
+        "department": "Department actions",
+        "all": "All actions",
+        "groupComingSoon": "Coming soon"
+      },
+      "workspaceBanner": {
+        "label": "Coach's Workspace",
+        "assignedTo": "You are assigned to {{department}}"
+      },
+      "inbox": {
+        "searchPlaceholder": "Operator name or phone number",
+        "headerKpis": {
+          "inProgress": "In progress",
+          "averageScore": "Average score",
+          "teamPlan": "Team plan",
+          "tasksToday": "Tasks today",
+          "oneOnOneToday": "1-on-1 today"
+        },
+        "viewModes": {
+          "label": "View mode",
+          "inbox": "Inbox",
+          "kanban": "Kanban",
+          "grid": "Grid",
+          "comingSoon": "Coming soon",
+          "comingSoonShort": "soon"
+        },
+        "kanbanColumns": {
+          "wait": "Wait",
+          "in_progress": "In progress",
+          "awaiting_training": "Awaiting training",
+          "scheduled": "Scheduled",
+          "closed": "Closed"
+        },
+        "list": {
+          "loading": "Loading queue…",
+          "empty": "No operators in the current scope.",
+          "emptyScope": "No operators in the current scope.",
+          "triggerCount": "{{count}} triggers"
+        },
+        "detail": {
+          "selectOperator": "Select an operator to see details.",
+          "loading": "Loading…",
+          "loadFailed": "Could not load operator details.",
+          "redFlagsHeadline": "{{count}} red flags",
+          "redFlagsSubtitle": "Coaching attention needed — recent triggers have accumulated.",
+          "riskyTag": "Risky",
+          "whyInQueue": "Why entered the queue",
+          "noTriggers": "No active triggers in the selected period.",
+          "latestRatings": "Latest dialogue ratings",
+          "noScorecards": "No scorecards in the selected period.",
+          "kpis": {
+            "scriptAdherence": "Script",
+            "scorecardAvg": "Scorecard",
+            "conversion": "Conversion",
+            "tasksOnTime": "Tasks on time"
+          },
+          "trainerActions": {
+            "listen": "Listen to the call",
+            "assignTask": "Assign a task",
+            "planOneOnOne": "Plan 1-on-1",
+            "takeCharge": "Take charge"
+          }
+        },
+        "quickActions": {
+          "button": "Quick Action",
+          "comingSoon": "Coming soon",
+          "assignTask": "Assign task",
+          "assignTaskHint": "Operator · topic · deadline",
+          "scheduleOneOnOne": "Schedule 1-on-1",
+          "scheduleOneOnOneHint": "Operator · date · time",
+          "assignCourse": "Assign course / drill",
+          "assignCourseHint": "Operator · material",
+          "rateDialogue": "Rate dialogue",
+          "rateDialogueHint": "Open scorecard"
+        },
+        "triggers": {
+          "low_script_adherence": "Low script adherence",
+          "low_scorecard_average": "Low scorecard average",
+          "low_conversion_rate": "Low conversion rate",
+          "overdue_correction_tasks": "Overdue correction tasks",
+          "active_auto_flags": "Active auto-flags"
+        },
+        "rateDialogue": {
+          "title": "Pick a call to rate",
+          "noOperator": "Select an operator first.",
+          "noExtension": "This operator has no telephony extension and no calls to rate.",
+          "noCalls": "No recent calls for this operator.",
+          "hasRecording": "Recording available",
+          "noRecording": "No recording"
+        },
+        "kanban": {
+          "transitionSuccess": "Moved to {{state}}",
+          "transitionFailed": "Could not move the card."
+        },
+        "pendingFeature": {
+          "dependsOn": "This action will be available once {{issue}} ships.",
+          "assignTask": {
+            "title": "Assign a correction task",
+            "description": "Assigns a coaching task to the operator with a due date and reviewable outcome."
+          },
+          "assignMaterial": {
+            "title": "Assign a course or drill",
+            "description": "Pushes training material to the operator and tracks completion on the dashboard."
+          }
+        },
+        "scheduleOneOnOne": {
+          "title": "Schedule 1-on-1",
+          "operator": "Operator",
+          "scheduledAt": "Date and time",
+          "duration": "Duration (minutes)",
+          "notes": "Notes (optional)",
+          "notesPlaceholder": "What do you want to cover in this session?",
+          "submit": "Schedule session",
+          "submitting": "Scheduling…",
+          "success": "1-on-1 scheduled. The operator has been notified.",
+          "errors": {
+            "noOperator": "Select an operator first.",
+            "noDate": "Pick a date and time.",
+            "generic": "Could not schedule the session."
+          }
+        }
+      },
+      "paymentHistoryEmpty": "No payments match the current filters",
+      "paymentHistorySummary": {
+        "totalPayments": "payments",
+        "totalAmount": "total",
+        "verified": "confirmed",
+        "pending": "pending"
+      },
+      "timeline": {
+        "callId": "Call ID",
+        "load": "Load",
+        "callIdPlaceholder": "Paste a call UUID to load the timeline",
+        "empty": "Enter a call ID above to inspect its operator action timeline.",
+        "noEvents": "No tracking events recorded for this call.",
+        "columns": {
+          "offset": "Offset",
+          "event": "Event",
+          "page": "Page",
+          "timestamp": "Timestamp"
+        }
+      },
+      "screenTime": {
+        "empty": "No screen-time data for the selected filters.",
+        "columns": {
+          "operator": "Operator",
+          "cardOpen": "Avg call→card",
+          "formSubmit": "Avg form submit",
+          "idle": "Idle total",
+          "afterCall": "After-call",
+          "deviation": "Δ vs team"
+        }
+      },
+      "heatmap": {
+        "operator": "Operator",
+        "empty": "No heatmap data for the selected filters.",
+        "filters": {
+          "state": "State filter"
+        },
+        "states": {
+          "all": "All states",
+          "active_call": "Active call",
+          "post_call": "Post-call",
+          "waiting": "Waiting",
+          "idle": "Idle",
+          "break": "Break"
+        }
+      },
+      "scriptAnalytics": {
+        "empty": "No script-analytics data for the selected filters.",
+        "teamDistribution": "Team distribution",
+        "flagsHeading": "Auto-flags",
+        "columns": {
+          "operator": "Operator",
+          "totalInteractions": "Interactions",
+          "fastResultPct": "Fast %",
+          "distribution": "Distribution"
+        }
+      }
     }
   },
   "contactTypes": {

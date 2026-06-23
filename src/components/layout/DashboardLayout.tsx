@@ -744,6 +744,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         requiredPermission: PERMISSIONS.TRAINING.VIEW,
       },
       {
+        path: '/dashboard/action-analysis',
+        icon: 'analytics-01',
+        label: t('navigation.actionAnalysis', 'Action Analysis'),
+        requiredPermission: PERMISSIONS.ACTION_ANALYSIS.VIEW,
+      },
+      {
         path: '/dashboard/team-management',
         icon: 'user-multiple-02',
         label: t('navigation.teamManagement', 'Team Management'),
