@@ -202,6 +202,32 @@ export const PERMISSIONS = {
   },
 
   /**
+   * Compatibility alias for the restored standalone Action Analysis page.
+   * The page was relocated into TRAINING in development; the client asked to
+   * keep the original page alongside it. These share the same backend
+   * permission strings as TRAINING — this alias lets the restored page keep
+   * its original `PERMISSIONS.ACTION_ANALYSIS.*` references unchanged.
+   */
+  ACTION_ANALYSIS: {
+    VIEW: 'view_action_analysis',
+    VIEW_CLICK_TRACKING: 'view_click_tracking',
+    VIEW_SCREEN_TIME: 'view_screen_time',
+    VIEW_ACTIVITY_HEATMAP: 'view_activity_heatmap',
+    VIEW_SCRIPT_ANALYTICS: 'view_script_analytics',
+    VIEW_TA_HISTORY: 'view_ta_history',
+    VIEW_TASK_HISTORY: 'view_task_history',
+    VIEW_PAYMENT_HISTORY: 'view_payment_history',
+    CREATE_SCORECARD: 'create_scorecard',
+    VIEW_SCORECARD: 'view_scorecard',
+    VIEW_MARKERS: 'view_markers',
+    VIEW_FEEDBACK: 'view_feedback',
+    VIEW_SCORE_DYNAMICS: 'view_score_dynamics',
+    VIEW_INBOX: 'view_inbox',
+    CREATE_ONE_ON_ONE: 'create_one_on_one',
+    SELECT_INBOX_SCOPE: 'select_inbox_scope',
+  },
+
+  /**
    * Training Category (16 permissions)
    * Controls access to the Training page (formerly Action Analysis) and
    * its drill-downs. String values keep the `view_action_analysis` /
