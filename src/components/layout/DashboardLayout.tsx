@@ -1,4 +1,4 @@
-import { type ReactNode, useState, useMemo, useCallback, useRef, useEffect } from 'react'
+﻿import { type ReactNode, useState, useMemo, useCallback, useRef, useEffect } from 'react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/features/auth'
@@ -595,6 +595,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           email: item.email_primary ?? '',
           priority: mapPriorityLevel(item.priority_level),
           score: item.priority_score,
+          contactSource: item.contact_source ?? null,
         }))
 
         setSearchResults(results)
@@ -731,10 +732,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         requiredPermission: PERMISSIONS.MESSAGING.VIEW_CAMPAIGN_ANALYTICS,
       },
       {
-        path: '/dashboard/action-analysis',
+        path: '/dashboard/training',
         icon: 'analytics-01',
-        label: t('navigation.actionAnalysis'),
-        requiredPermission: PERMISSIONS.ACTION_ANALYSIS.VIEW,
+        label: t('navigation.training', 'Training'),
+        requiredPermission: PERMISSIONS.TRAINING.VIEW,
       },
       {
         path: '/dashboard/team-management',
@@ -851,6 +852,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               PERMISSIONS.DOCUMENT_GENERATION.DELETE_TEMPLATES,
             ],
             mode: 'any' as const,
+          },
+          {
+            path: '/dashboard/system-settings/ip-whitelist',
+            label: t('navigation.ipWhitelist', 'IP Whitelist'),
+            icon: 'sliders-horizontal',
+            requiredPermission: PERMISSIONS.USERS.EDIT,
           },
           {
             path: '/dashboard/system-settings/rr-notifications',

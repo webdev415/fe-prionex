@@ -37,6 +37,7 @@ const TYPE_LABELS: Record<string, string> = {
   income: 'Довідка',
   outcome: 'Витяг',
   signature: 'ЕЦП',
+  military: 'Військовий',
   other: 'Інше',
 }
 
@@ -47,6 +48,7 @@ const TYPE_COLORS: Record<string, string> = {
   income: 'bg-amber-100 text-amber-700',
   outcome: 'bg-orange-100 text-orange-700',
   signature: 'bg-gray-100 text-gray-700',
+  military: 'bg-emerald-100 text-emerald-700',
   other: 'bg-slate-100 text-slate-600',
 }
 

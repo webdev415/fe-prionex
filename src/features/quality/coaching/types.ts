@@ -35,8 +35,11 @@ export interface AssignmentSummary {
 
 export interface QueueOperator {
   operator_id: number
-  composite_score: number
-  score_band: ScoreBand
+  /** `null` for operators with no source data (no scorecards / no
+   *  analytics / no interactions). FE renders `—` instead of an inflated
+   *  optimistic floor. */
+  composite_score: number | null
+  score_band: ScoreBand | null
   assignment: AssignmentSummary | null
   kpis: OperatorKpis
   triggers: string[]
@@ -61,6 +64,12 @@ export interface OperatorDetail extends QueueOperator {
   latest_scorecards: ScorecardSummary[]
   active_markers_count: number
   open_tasks_count: number
+  group_id?: number | null
+  group_name?: string | null
+  asterisk_extension?: string | null
+  hired_at?: string | null
+  today_active_minutes?: number | null
+  today_first_active_at?: string | null
 }
 
 export interface HeaderKpis {
@@ -128,4 +137,84 @@ export interface TransitionAssignmentPayload {
 export interface TakeChargePayload {
   operator_id: number
   notes?: string | null
+}
+
+export type TeamEventType =
+  | 'score_drop'
+  | 'score_growth'
+  | 'one_on_one_scheduled'
+  | 'one_on_one_completed'
+  | 'assignment_taken'
+  | 'assignment_closed'
+
+export type TeamEventSeverity = 'info' | 'warn' | 'critical'
+
+export interface TeamEvent {
+  id: string
+  type: TeamEventType
+  severity: TeamEventSeverity
+  occurred_at: string
+  operator_id: number
+  operator_name?: string | null
+  title: string
+  description?: string | null
+}
+
+export interface TeamEventsResponse {
+  data: TeamEvent[]
+}
+
+export interface TeamEventsFilters {
+  user_ids?: number[]
+  hours?: number
+  limit?: number
+}
+
+// ── Team tab (KAN-414) ─────────────────────────────────────────────────
+
+export interface TeamRosterOperator {
+  operator_id: number
+  full_name: string
+  asterisk_extension?: string | null
+  /** ISO 8601 yyyy-mm-dd. */
+  hired_at?: string | null
+  composite_score: number | null
+  score_band: ScoreBand | null
+  last_active_at: string | null
+  online: boolean
+  assignment_state: AssignmentState | null
+}
+
+export interface TeamRosterTeam {
+  group_id: number
+  name: string
+  team_lead_user_id: number | null
+  team_lead_name: string | null
+  member_count: number
+  online_count: number
+  queue_count: number
+  average_score: number | null
+  score_band: ScoreBand | null
+  operators: TeamRosterOperator[]
+}
+
+export interface TeamRosterDepartment {
+  department_id: number
+  name: string
+  manager_user_id: number | null
+  manager_name: string | null
+  member_count: number
+  queue_count: number
+  average_score: number | null
+  score_band: ScoreBand | null
+  teams: TeamRosterTeam[]
+}
+
+export interface TeamRosterResponse {
+  departments: TeamRosterDepartment[]
+}
+
+export interface TeamRosterFilters {
+  department_id?: number
+  user_ids?: number[]
 }

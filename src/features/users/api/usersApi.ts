@@ -8,13 +8,15 @@
 import api from '@/lib/api'
 import type {
   ApiUser,
-  UserListParams,
-  UserListResponse,
-  UserDetailResponse,
   CreateUserInput,
-  UpdateUserInput,
+  IpWhitelistSettings,
   ResetPasswordResponse,
   UnlockAccountResponse,
+  UpdateIpWhitelistSettingsInput,
+  UpdateUserInput,
+  UserDetailResponse,
+  UserListParams,
+  UserListResponse,
 } from '../types'
 
 /**
@@ -143,6 +145,27 @@ export async function adminReenableTwoFactor(
 }
 
 /**
+ * Read the global IP-whitelist enforcement flag.
+ *
+ * When `enabled` is false the per-user whitelist is dormant; logins
+ * succeed regardless of source IP.
+ */
+export async function getIpWhitelistSettings(): Promise<IpWhitelistSettings> {
+  const response = await api.get<IpWhitelistSettings>('/api/v1/admin/settings/ip-whitelist')
+  return response.data
+}
+
+/**
+ * Toggle the global IP-whitelist enforcement flag.
+ */
+export async function updateIpWhitelistSettings(
+  input: UpdateIpWhitelistSettingsInput
+): Promise<IpWhitelistSettings> {
+  const response = await api.put<IpWhitelistSettings>('/api/v1/admin/settings/ip-whitelist', input)
+  return response.data
+}
+
+/**
  * Exported API object for easier importing
  */
 
@@ -156,9 +179,14 @@ export interface OperatorUser {
   email: string
   status: string
   asterisk_extension?: string | null
+  /** Operator hire / internship date (ISO 8601 yyyy-mm-dd). KAN-414. */
+  hired_at?: string | null
   /** Role's department in the active project (operators list only). */
   department_id?: number | null
   department_name?: string | null
+  /** Group (team) the operator belongs to in the active project. */
+  group_id?: number | null
+  group_name?: string | null
 }
 
 /**
@@ -210,4 +238,6 @@ export const usersApi = {
   adminReenableTwoFactor,
   getOperators,
   getUserDepartment,
+  getIpWhitelistSettings,
+  updateIpWhitelistSettings,
 }
