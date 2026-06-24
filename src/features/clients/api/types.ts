@@ -52,6 +52,10 @@ export interface DebtDetail {
   // Legacy TABLE460.f53 — total amount eligible for return after sale.
   // Surfaced on the loans table only when it differs from remaining_debt_amount.
   legacy_f53?: string | null
+
+  // UBKI outbound submission state (credit bureau)
+  sent_to_credit_bureau?: boolean
+  credit_bureau_sent_date?: string | null
 }
 
 export interface RestructuringAgreementSummary {
@@ -163,6 +167,10 @@ export interface Client {
     description?: string | null
     visibility?: string | null
   }>
+
+  // UBKI outbound submission opt-out (credit bureau).
+  // When true, this client's data is never sent to UBKI (manual or scheduled).
+  do_not_send_to_ubki?: boolean
 }
 
 export interface ClientDetail extends Client {
@@ -200,6 +208,7 @@ export interface UpdateClientRequest {
   family_members_count?: number | null
   income_level?: string | null
   tax_id?: string
+  do_not_send_to_ubki?: boolean
 }
 
 export interface UpdateEmploymentRequest {
@@ -386,6 +395,7 @@ export interface ClientProfileResponse {
   is_fraudster: boolean
   is_military: boolean
   has_nbu_complaint: boolean
+  do_not_send_to_ubki?: boolean
   sale_notes?: string | null
   responsible_employee_id?: number | null
   responsible_employee_name?: string | null

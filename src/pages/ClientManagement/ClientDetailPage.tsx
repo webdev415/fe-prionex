@@ -6,7 +6,7 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { useQueries } from '@tanstack/react-query'
+import { useQueries, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Icons } from '@/lib/icons'
 import { DocumentsAccordion } from './components/DocumentsAccordion'
@@ -51,6 +51,9 @@ import {
   MessagingTabSkeleton,
 } from './components/MessagingHistorySkeleton'
 import { CallLogCard } from './components/CallLogCard'
+import { ToggleSwitch } from '@/components/ui/ToggleSwitch'
+import { useUpdateClient, clientKeys } from '@/features/clients/hooks/useClients'
+import { useSubmitDebtToUbki } from '@/features/ubki'
 import { cn } from '@/lib/utils'
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/Tooltip'
 // import {
@@ -360,6 +363,37 @@ export function ClientDetailPage() {
   const { mutate: createRr, isPending: isCreatingRr } = useCreateRestructuringAgreement()
   const { mutate: closeDebt, isPending: isClosingDebt } = useCloseDebt()
   const { mutate: updateClosureDate, isPending: isUpdatingClosureDate } = useUpdateDebtClosureDate()
+
+  // --- UBKI (credit bureau) outbound submission ---
+  const ubkiQueryClient = useQueryClient()
+  const canSubmitToUbki = useHasPermission(PERMISSIONS.UBKI.SUBMIT)
+  const { mutate: updateClientMutate, isPending: isUpdatingUbkiOptOut } = useUpdateClient()
+  const { mutate: submitDebtToUbki, isPending: isSubmittingToUbki } = useSubmitDebtToUbki()
+  // Client opt-out flag (backend exposes it on the client detail response).
+  const doNotSendToUbki = clientDetail?.do_not_send_to_ubki ?? false
+  const handleToggleUbkiOptOut = (checked: boolean) => {
+    updateClientMutate(
+      { id: clientId, data: { do_not_send_to_ubki: checked } },
+      {
+        onSuccess: () => {
+          // Refresh the full client record so the toggle reflects persisted state.
+          ubkiQueryClient.invalidateQueries({ queryKey: clientKeys.detail(clientId), exact: true })
+          toast.success(
+            t(
+              'pages.clients.detail.ubki.toasts.optOutSuccess',
+              checked ? 'Client opted out of UBKI' : 'Client re-enabled for UBKI',
+              { count: 1 }
+            )
+          )
+        },
+        onError: () => {
+          toast.error(
+            t('pages.clients.detail.ubki.toasts.submitError', 'Failed to update UBKI opt-out')
+          )
+        },
+      }
+    )
+  }
   const { mutate: completeRa, isPending: isCompletingRa } = useCompleteRestructuringAgreement()
   const { mutate: transitionRr, isPending: isTransitioningRr } = useTransitionRRStatus()
   const { mutate: disconnectRr, isPending: isDisconnectingRr } = useDisconnectRR()
@@ -696,6 +730,9 @@ export function ClientDetailPage() {
         // has it and it diverges from remainingDebtAmount (see loanColumns).
         eligibleForReturn: d.legacy_f53 != null ? Number(d.legacy_f53) : null,
         status: d.status,
+        // UBKI outbound submission state (credit bureau)
+        sentToCreditBureau: d.sent_to_credit_bureau ?? false,
+        creditBureauSentDate: d.credit_bureau_sent_date ?? null,
       })),
       // Payments mapped from PaymentResponse to UI shape
       // Split into system payments (payment_date >= purchase_date) and
@@ -1426,47 +1463,79 @@ export function ClientDetailPage() {
       header: t('pages.clients.detail.tableHeaders.actions'),
       align: 'center',
       render: (loan) => {
-        if (loan.status === 'active') {
-          return (
-            <PermissionGuard permission={PERMISSIONS.CLIENTS.CLOSE_DEBT}>
+        // Tooltip used when the UBKI send button is disabled because the
+        // client is opted out.
+        const ubkiSendTitle = doNotSendToUbki
+          ? t(
+              'pages.clients.detail.ubki.optedOutTooltip',
+              'Client is opted out of UBKI; submission is disabled.'
+            )
+          : loan.sentToCreditBureau && loan.creditBureauSentDate
+            ? t('pages.clients.detail.ubki.sentOn', 'Sent on {{date}}', {
+                date: formatDate(loan.creditBureauSentDate),
+              })
+            : t('pages.clients.detail.ubki.send', 'Send to UBKI')
+
+        return (
+          <div className="flex items-center justify-center gap-1">
+            {loan.status === 'active' && (
+              <PermissionGuard permission={PERMISSIONS.CLIENTS.CLOSE_DEBT}>
+                <button
+                  onClick={() => {
+                    setCloseLoanConfirm(loan.id)
+                    setCloseLoanClosureDate(getTodayAtMidnight())
+                    setCloseLoanDateError(null)
+                  }}
+                  disabled={isClosingDebt}
+                  className="p-1 text-green-600 hover:text-green-800 disabled:opacity-50"
+                  title={t('pages.clients.detail.closeLoan')}
+                >
+                  <Icons.Success size={18} />
+                </button>
+              </PermissionGuard>
+            )}
+            {loan.status === 'closed' && (
+              <PermissionGuard permission={PERMISSIONS.CLIENTS.CLOSE_DEBT}>
+                <button
+                  onClick={() => {
+                    setEditClosureDateDebtId(loan.id)
+                    setEditClosureDateValue(
+                      loan.creditClosedDate
+                        ? parseISODateAtMidnight(loan.creditClosedDate)
+                        : getTodayAtMidnight()
+                    )
+                    setEditClosureDateError(null)
+                  }}
+                  disabled={isUpdatingClosureDate}
+                  className="p-1 text-blue-600 hover:text-blue-800 disabled:opacity-50"
+                  title={t('pages.clients.detail.editClosureDate', 'Edit closure date')}
+                >
+                  <Icons.Edit size={18} />
+                </button>
+              </PermissionGuard>
+            )}
+            {canSubmitToUbki && (
               <button
-                onClick={() => {
-                  setCloseLoanConfirm(loan.id)
-                  setCloseLoanClosureDate(getTodayAtMidnight())
-                  setCloseLoanDateError(null)
-                }}
-                disabled={isClosingDebt}
-                className="p-1 text-green-600 hover:text-green-800 disabled:opacity-50"
-                title={t('pages.clients.detail.closeLoan')}
+                onClick={() => submitDebtToUbki({ debtId: loan.id, clientId })}
+                disabled={doNotSendToUbki || isSubmittingToUbki}
+                className={cn(
+                  'p-1 disabled:opacity-50',
+                  loan.sentToCreditBureau
+                    ? 'text-secondary-800 hover:text-secondary-900'
+                    : 'text-gray-500 hover:text-gray-700',
+                  doNotSendToUbki ? 'cursor-not-allowed' : ''
+                )}
+                title={ubkiSendTitle}
               >
-                <Icons.Success size={18} />
+                {loan.sentToCreditBureau ? (
+                  <Icons.Checkmark size={18} strokeWidth={1.5} />
+                ) : (
+                  <Icons.MailSend01 size={18} strokeWidth={1.5} />
+                )}
               </button>
-            </PermissionGuard>
-          )
-        }
-        if (loan.status === 'closed') {
-          return (
-            <PermissionGuard permission={PERMISSIONS.CLIENTS.CLOSE_DEBT}>
-              <button
-                onClick={() => {
-                  setEditClosureDateDebtId(loan.id)
-                  setEditClosureDateValue(
-                    loan.creditClosedDate
-                      ? parseISODateAtMidnight(loan.creditClosedDate)
-                      : getTodayAtMidnight()
-                  )
-                  setEditClosureDateError(null)
-                }}
-                disabled={isUpdatingClosureDate}
-                className="p-1 text-blue-600 hover:text-blue-800 disabled:opacity-50"
-                title={t('pages.clients.detail.editClosureDate', 'Edit closure date')}
-              >
-                <Icons.Edit size={18} />
-              </button>
-            </PermissionGuard>
-          )
-        }
-        return null
+            )}
+          </div>
+        )
       },
     },
   ]
@@ -2330,6 +2399,29 @@ export function ClientDetailPage() {
                         <Icons.PencilEdit02 size={14} strokeWidth={1.5} />
                       </button>
                     </PermissionGuard>
+                  </div>
+                </div>
+                {/* UBKI opt-out toggle — persisted via PUT /clients/{id} */}
+                <div className="flex min-h-8 items-center self-stretch p-0">
+                  <label
+                    className="flex-1 text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700"
+                    title={t(
+                      'pages.clients.detail.ubki.doNotSendHint',
+                      'When enabled, this client is excluded from all UBKI submissions.'
+                    )}
+                  >
+                    {t('pages.clients.detail.ubki.doNotSendLabel', 'Do not send data to UBKI')}
+                  </label>
+                  <div className="ml-2 flex items-center justify-end">
+                    <ToggleSwitch
+                      checked={doNotSendToUbki}
+                      onChange={handleToggleUbkiOptOut}
+                      disabled={!canEditClient || isUpdatingUbkiOptOut}
+                      ariaLabel={t(
+                        'pages.clients.detail.ubki.doNotSendLabel',
+                        'Do not send data to UBKI'
+                      )}
+                    />
                   </div>
                 </div>
               </div>

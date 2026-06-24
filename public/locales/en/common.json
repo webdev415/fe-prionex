@@ -546,7 +546,6 @@
         "chain": "Chain",
         "notes": "Notes",
         "createdDate": "Created date",
-        "clientId": "Client ID",
         "author": "Author",
         "assignee": "Assignee",
         "priority": "Priority",
@@ -1879,7 +1878,11 @@
         "assignEmployee": "Assign Employee",
         "addTags": "Add Tags",
         "removeTags": "Remove Tags",
-        "sendMessage": "Send message"
+        "sendMessage": "Send message",
+        "optOutUbki": "Do not send to UBKI",
+        "optInUbki": "Re-enable UBKI sending",
+        "submitUbki": "Send to UBKI",
+        "selectClientsFirst": "Select at least one client before starting a bulk action"
       },
       "manageTags": "Manage Tags",
       "errorLoading": "Failed to load clients",
@@ -1899,7 +1902,8 @@
         "employee": "Employee",
         "searcher": "Searcher",
         "assignmentDate": "Assignment Date",
-        "actions": "Actions"
+        "actions": "Actions",
+        "ubki": "UBKI"
       },
       "priorities": {
         "critical": "Critical",
@@ -2965,6 +2969,24 @@
           "callSms": "Call / SMS",
           "taChains": "TA Chains",
           "searcherComments": "Searcher Comments"
+        },
+        "ubki": {
+          "doNotSendLabel": "Do not send data to UBKI",
+          "doNotSendHint": "When enabled, this client is excluded from all UBKI submissions.",
+          "send": "Send to UBKI",
+          "sent": "Sent to UBKI",
+          "sentOn": "Sent on {{date}}",
+          "optedOut": "Opted out",
+          "optedOutTooltip": "Client is opted out of UBKI; submission is disabled.",
+          "selectFirst": "Select at least one item first",
+          "toasts": {
+            "submitSuccess": "Submitted to UBKI",
+            "submitSkipped": "Submission skipped",
+            "submitError": "Submission to UBKI failed",
+            "optOutSuccess": "{{count}} client(s) opted out of UBKI",
+            "optInSuccess": "{{count}} client(s) re-enabled for UBKI",
+            "bulkSubmitSummary": "{{success}} sent, {{skipped}} skipped, {{error}} failed"
+          }
         }
       },
       "debtSummary": {

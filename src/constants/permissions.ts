@@ -257,6 +257,16 @@ export const PERMISSIONS = {
     DISCONNECT: 'rr_disconnect',
     COMPLETE: 'rr_complete',
   },
+
+  /**
+   * UBKI Category (1 permission)
+   * Gates manual and bulk outbound submission of credit data to the
+   * UBKI credit bureau. The per-client opt-out toggle is gated by
+   * edit_clients (it is a client-record edit), not this permission.
+   */
+  UBKI: {
+    SUBMIT: 'submit_to_ubki',
+  },
 } as const
 
 /**
@@ -311,6 +321,7 @@ export const PERMISSION_CATEGORIES = {
   DOCUMENT_GENERATION: 'Document Generation',
   CONTACT_TYPES: 'Contact Types',
   RESTRUCTURING: 'Restructuring',
+  UBKI: 'UBKI',
 } as const
 
 /**
@@ -453,4 +464,7 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   cancel_writeoffs: 'Cancel an active write-off entry',
   bulk_writeoff_operations:
     'Upload a bulk write-off CSV — gates the bulk-import page (required alongside create_writeoffs)',
+
+  // UBKI — outbound credit-bureau submission
+  submit_to_ubki: 'Manually submit client credit data to the UBKI credit bureau (single and bulk)',
 }

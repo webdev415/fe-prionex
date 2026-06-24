@@ -48,6 +48,7 @@ import type { Priority } from './types'
 import { PermissionGuard } from '@/components/auth'
 import { PERMISSIONS } from '@/constants/permissions'
 import { ALL_MESSAGING_LAUNCH_PERMISSIONS } from '@/features/messaging'
+import { useBulkOptOutUbki } from '@/features/ubki'
 import { useTags } from '@/features/tags/hooks/useTags'
 import { isAdminRole, isHiddenVisibility } from '@/features/tags/utils/visibility'
 import { toast } from 'sonner'
@@ -75,6 +76,7 @@ interface DisplayClient {
   searcherName: string
   assignmentDate: string
   lastInteractionResult: string
+  doNotSendToUbki: boolean
 }
 
 // Default thresholds (fallback if API not available)
@@ -130,6 +132,7 @@ const mapAPIClientToDisplay = (
       : '-',
     assignmentDate: client.assignment_date ? formatDate(client.assignment_date) : '-',
     lastInteractionResult: client.last_interaction_result_name || '—',
+    doNotSendToUbki: client.do_not_send_to_ubki ?? false,
   }
 }
 
@@ -845,6 +848,7 @@ export function ClientManagementPage() {
   // Assignment mutations
   const assignClientMutation = useAssignClient()
   const bulkAssignClientsMutation = useBulkAssignClients()
+  const bulkOptOutUbkiMutation = useBulkOptOutUbki()
 
   // Map API clients to display format
   const displayClients = useMemo(() => {
@@ -943,6 +947,40 @@ export function ClientManagementPage() {
     }
 
     setShowBulkSendMessageModal(true)
+  }
+
+  // Resolve the currently-selected client IDs (respecting select-all-across-pages
+  // minus the explicitly excluded rows). Mirrors handleBulkAssignSubmit.
+  const resolveSelectedClientIds = (): number[] => {
+    if (allClientsSelected) {
+      return apiClients
+        .filter((client) => !excludedClients.has(client.id))
+        .map((client) => client.id)
+    }
+    return Array.from(selectedClients).map(Number)
+  }
+
+  const handleBulkUbkiOptOut = (doNotSend: boolean) => {
+    const clientIds = resolveSelectedClientIds()
+    if (clientIds.length === 0) {
+      toast.error(
+        t(
+          'pages.clients.bulkActions.selectClientsFirst',
+          'Select at least one client before starting a bulk action'
+        )
+      )
+      return
+    }
+    bulkOptOutUbkiMutation.mutate(
+      { client_ids: clientIds, do_not_send: doNotSend },
+      {
+        onSuccess: () => {
+          setSelectedClients(new Set())
+          setAllClientsSelected(false)
+          setExcludedClients(new Set())
+        },
+      }
+    )
   }
 
   const handleBulkAssignSubmit = (assignmentData: {
@@ -1442,6 +1480,25 @@ export function ClientManagementPage() {
       render: (client) => client.lastInteractionResult,
     },
     {
+      key: 'ubki',
+      header: t('pages.clients.tableHeaders.ubki', 'UBKI'),
+      align: 'center',
+      render: (client) =>
+        client.doNotSendToUbki ? (
+          <span
+            className="inline-flex items-center rounded-full bg-red-50 px-2 py-0.5 text-xs font-medium text-red-700"
+            title={t(
+              'pages.clients.detail.ubki.optedOutTooltip',
+              'Client is opted out of UBKI; submission is disabled.'
+            )}
+          >
+            {t('pages.clients.detail.ubki.optedOut', 'Opted out')}
+          </span>
+        ) : (
+          <span className="text-xs text-gray-400">-</span>
+        ),
+    },
+    {
       key: 'actions',
       header: t('pages.clients.tableHeaders.actions'),
       align: 'center',
@@ -1706,6 +1763,28 @@ export function ClientManagementPage() {
                         />
                         <span className="text-dark-500 text-sm font-medium">
                           {t('pages.clients.bulkActions.sendMessage', 'Send Message')}
+                        </span>
+                      </DropdownMenuItem>
+                    </PermissionGuard>
+                    <PermissionGuard permission={PERMISSIONS.CLIENTS.EDIT}>
+                      <DropdownMenuItem
+                        onClick={() => handleBulkUbkiOptOut(true)}
+                        className="flex cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 transition-colors hover:bg-gray-50 focus:bg-gray-50"
+                      >
+                        <Icons.Cancel01 size={18} className="text-dark-500" strokeWidth={1.5} />
+                        <span className="text-dark-500 text-sm font-medium">
+                          {t('pages.clients.bulkActions.optOutUbki', 'Do not send to UBKI')}
+                        </span>
+                      </DropdownMenuItem>
+                    </PermissionGuard>
+                    <PermissionGuard permission={PERMISSIONS.CLIENTS.EDIT}>
+                      <DropdownMenuItem
+                        onClick={() => handleBulkUbkiOptOut(false)}
+                        className="flex cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 transition-colors hover:bg-gray-50 focus:bg-gray-50"
+                      >
+                        <Icons.Reload size={18} className="text-dark-500" strokeWidth={1.5} />
+                        <span className="text-dark-500 text-sm font-medium">
+                          {t('pages.clients.bulkActions.optInUbki', 'Re-enable UBKI sending')}
                         </span>
                       </DropdownMenuItem>
                     </PermissionGuard>
