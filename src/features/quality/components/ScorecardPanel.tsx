@@ -88,6 +88,16 @@ export function ScorecardPanel({
     [sections, draft.scores]
   )
 
+  // KAN-504: the two typed templates, surfaced as an explicit Client /
+  // Third Party selector in the picker. Selecting a type loads its template.
+  const typedTemplates = useMemo(
+    () => ({
+      client: templatesQuery.data?.find((tpl) => tpl.scorecard_type === 'client') ?? null,
+      third_party: templatesQuery.data?.find((tpl) => tpl.scorecard_type === 'third_party') ?? null,
+    }),
+    [templatesQuery.data]
+  )
+
   const status = activeScorecard?.status ?? 'draft'
   const canEdit = status === 'draft'
 
@@ -149,6 +159,33 @@ export function ScorecardPanel({
             </ul>
           </div>
         ) : null}
+
+        <label className="text-sm font-medium text-gray-700">
+          {t('pages.training.scorecard.scorecardType', 'Scorecard type')}
+        </label>
+        <div className="flex gap-2">
+          {(['client', 'third_party'] as const).map((type) => {
+            const tpl = typedTemplates[type]
+            const selected = tpl != null && selectedTemplateId === tpl.id
+            return (
+              <button
+                key={type}
+                type="button"
+                disabled={!tpl}
+                onClick={() => tpl && setSelectedTemplateId(tpl.id)}
+                className={`flex-1 rounded-lg border px-3 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+                  selected
+                    ? 'border-primary-500 bg-primary-500 text-white'
+                    : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                {type === 'client'
+                  ? t('pages.training.scorecard.type.client', 'Client Dialogue')
+                  : t('pages.training.scorecard.type.thirdParty', 'Third Party Dialogue')}
+              </button>
+            )
+          })}
+        </div>
 
         <label className="text-sm font-medium text-gray-700">
           {t('pages.training.scorecard.template', 'Template')}

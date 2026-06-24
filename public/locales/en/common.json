@@ -763,6 +763,58 @@
           "draft": "Draft",
           "completed": "Completed",
           "sent": "Sent"
+        },
+        "scorecardType": "Scorecard type",
+        "type": {
+          "client": "Client Dialogue",
+          "thirdParty": "Third Party Dialogue"
+        }
+      },
+      "dialogue": {
+        "chips": {
+          "all": "All calls",
+          "low": "Low",
+          "average": "Average",
+          "high": "High"
+        },
+        "view": {
+          "list": "Scorecards",
+          "averages": "Averages"
+        },
+        "newAssessment": "New assessment",
+        "newAssessmentPicker": {
+          "title": "New assessment",
+          "operator": "Operator",
+          "select": "Select an operator…",
+          "continue": "Continue"
+        },
+        "avgByType": {
+          "title": "Average score by dialogue type",
+          "subtitle": "Average client vs third-party scorecard score over the selected period.",
+          "groupBy": "Group by",
+          "period": "Period",
+          "error": "Failed to load aggregation",
+          "empty": "No scored calls in this period.",
+          "group": {
+            "operator": "Operator",
+            "team": "Team",
+            "all": "All"
+          },
+          "periods": {
+            "today": "Today",
+            "yesterday": "Yesterday",
+            "last_7d": "Last 7 days",
+            "last_30d": "Last 30 days"
+          },
+          "col": {
+            "operator": "Operator",
+            "team": "Team",
+            "scope": "Scope",
+            "client": "Avg Client",
+            "thirdParty": "Avg Third Party",
+            "calls": "# Calls",
+            "trend": "Trend"
+          }
         }
       },
       "scorecardsEmpty": "No scorecards in scope.",
@@ -5875,6 +5927,58 @@
           "draft": "Draft",
           "completed": "Completed",
           "sent": "Sent"
+        },
+        "scorecardType": "Scorecard type",
+        "type": {
+          "client": "Client Dialogue",
+          "thirdParty": "Third Party Dialogue"
+        }
+      },
+      "dialogue": {
+        "chips": {
+          "all": "All calls",
+          "low": "Low",
+          "average": "Average",
+          "high": "High"
+        },
+        "view": {
+          "list": "Scorecards",
+          "averages": "Averages"
+        },
+        "newAssessment": "New assessment",
+        "newAssessmentPicker": {
+          "title": "New assessment",
+          "operator": "Operator",
+          "select": "Select an operator…",
+          "continue": "Continue"
+        },
+        "avgByType": {
+          "title": "Average score by dialogue type",
+          "subtitle": "Average client vs third-party scorecard score over the selected period.",
+          "groupBy": "Group by",
+          "period": "Period",
+          "error": "Failed to load aggregation",
+          "empty": "No scored calls in this period.",
+          "group": {
+            "operator": "Operator",
+            "team": "Team",
+            "all": "All"
+          },
+          "periods": {
+            "today": "Today",
+            "yesterday": "Yesterday",
+            "last_7d": "Last 7 days",
+            "last_30d": "Last 30 days"
+          },
+          "col": {
+            "operator": "Operator",
+            "team": "Team",
+            "scope": "Scope",
+            "client": "Avg Client",
+            "thirdParty": "Avg Third Party",
+            "calls": "# Calls",
+            "trend": "Trend"
+          }
         }
       },
       "scorecardsEmpty": "No scorecards in scope.",

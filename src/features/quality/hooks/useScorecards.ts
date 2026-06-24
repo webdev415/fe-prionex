@@ -3,13 +3,19 @@ import {
   createScorecard,
   exportScorecards,
   getScorecard,
+  getScorecardAggregate,
   getScorecardHistoryForCall,
   listMyScorecards,
   listScorecards,
   sendScorecard,
   updateScorecard,
 } from '../api/qualityService'
-import type { ScorecardCreatePayload, ScorecardListFilters, ScorecardUpdatePayload } from '../types'
+import type {
+  AggregateFilters,
+  ScorecardCreatePayload,
+  ScorecardListFilters,
+  ScorecardUpdatePayload,
+} from '../types'
 
 export const scorecardKeys = {
   all: ['quality', 'scorecards'] as const,
@@ -17,6 +23,16 @@ export const scorecardKeys = {
   myList: (filters: ScorecardListFilters) => [...scorecardKeys.all, 'me', filters] as const,
   detail: (scorecardId: number) => [...scorecardKeys.all, 'detail', scorecardId] as const,
   historyForCall: (callId: string) => [...scorecardKeys.all, 'history-for-call', callId] as const,
+  aggregate: (filters: AggregateFilters) => [...scorecardKeys.all, 'aggregate', filters] as const,
+}
+
+export function useScorecardAggregate(filters: AggregateFilters, enabled = true) {
+  return useQuery({
+    queryKey: scorecardKeys.aggregate(filters),
+    queryFn: () => getScorecardAggregate(filters),
+    enabled,
+    staleTime: 30_000,
+  })
 }
 
 export function useScorecards(filters: ScorecardListFilters, enabled = true) {

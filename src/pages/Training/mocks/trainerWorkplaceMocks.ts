@@ -1109,18 +1109,8 @@ export const MOCK_MATERIALS: MockMaterial[] = [
 // Scorecard list + criteria mocks (MOCK_SCORECARD_ROWS, DEFAULT_SCORECARD_CRITERIA,
 // MockScorecardRow, MockScorecardCriterion, CriterionRating, ScorecardType) were
 // retired in KAN-737 — the Dialogue Evaluation scorecard view now reads real data
-// via `useScorecards` + `dialogueScorecardAdapter`. MOCK_AVG_BY_TYPE is kept for
-// the still-mocked (orphaned) AvgScoreByTypeView.
-
-export interface MockAvgByType {
-  client: { avg: number; count: number }
-  thirdParty: { avg: number; count: number }
-}
-
-export const MOCK_AVG_BY_TYPE: MockAvgByType = {
-  client: { avg: 78, count: 134 },
-  thirdParty: { avg: 71, count: 42 },
-}
+// via `useScorecards` + `dialogueScorecardAdapter`. MOCK_AVG_BY_TYPE was retired in
+// KAN-504 — AvgScoreByTypeView now reads GET /quality/scorecards/aggregate.
 
 // ─────────────────────────────────────────────────────────────
 // Tasks tab mocks (KAN-411 revised)
