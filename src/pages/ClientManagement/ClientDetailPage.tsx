@@ -368,9 +368,11 @@ export function ClientDetailPage() {
     clientId,
     isValidClientId
   )
+  const [showAllCalls, setShowAllCalls] = useState(false)
   const { data: callSmsHistory, isLoading: isCallSmsLoading } = useClientCallSmsHistory(
     clientId,
-    isValidClientId
+    isValidClientId,
+    showAllCalls
   )
   const canAccessMessagingHistory = useHasAnyPermission([
     ...ALL_MESSAGING_SEND_PERMISSIONS,
@@ -776,7 +778,7 @@ export function ClientDetailPage() {
         writeOffMethod: w.writeoff_type ?? '-',
         employee: w.submitted_by_name ?? '-',
       })),
-      callSmsHistory: callSmsHistory ?? { all: [], calls: [], sms: [] },
+      callSmsHistory: callSmsHistory ?? { all: [], calls: [], sms: [], callsTotal: 0 },
       // Tasks mapped from TaskResponse to UI shape
       tasks: (tasks ?? []).map((t) => ({
         id: t.id,
@@ -1053,6 +1055,9 @@ export function ClientDetailPage() {
   const [activeCallSmsTab, setActiveCallSmsTab] = useState<'all' | 'calls' | 'sms' | 'messaging'>(
     'all'
   )
+  useEffect(() => {
+    setShowAllCalls(false)
+  }, [activeCallSmsTab])
   const [selectedMessageData, setSelectedMessageData] = useState<{
     campaignName: string
     campaignCode: string
@@ -4037,6 +4042,24 @@ export function ClientDetailPage() {
                                   </div>
                                 ))
                             })()}
+                            {(showAllCalls ||
+                              client.callSmsHistory.callsTotal >
+                                client.callSmsHistory.calls.length) &&
+                              client.callSmsHistory.callsTotal > 0 && (
+                                <button
+                                  type="button"
+                                  onClick={() => setShowAllCalls((v) => !v)}
+                                  className="text-secondary-800 hover:bg-secondary-800/10 self-center rounded-md px-4 py-2 text-sm font-medium transition-colors"
+                                >
+                                  {showAllCalls
+                                    ? t('pages.clients.detail.showLess', 'Show Less')
+                                    : t(
+                                        'pages.clients.detail.viewAllCalls',
+                                        'View All ({{count}})',
+                                        { count: client.callSmsHistory.callsTotal }
+                                      )}
+                                </button>
+                              )}
                           </div>
                         )}
                         {activeCallSmsTab === 'calls' && (
@@ -4199,6 +4222,34 @@ export function ClientDetailPage() {
                                   ))
                               })()}
                             </div>
+                            {!showAllCalls &&
+                              client.callSmsHistory.calls.length === 0 &&
+                              client.callSmsHistory.callsTotal > 0 && (
+                                <p className="self-center text-sm text-gray-600">
+                                  {t(
+                                    'pages.clients.detail.noCallsLast7Days',
+                                    'No call records in the last 7 days — click View All to see older records.'
+                                  )}
+                                </p>
+                              )}
+                            {(showAllCalls ||
+                              client.callSmsHistory.callsTotal >
+                                client.callSmsHistory.calls.length) &&
+                              client.callSmsHistory.callsTotal > 0 && (
+                                <button
+                                  type="button"
+                                  onClick={() => setShowAllCalls((v) => !v)}
+                                  className="text-secondary-800 hover:bg-secondary-800/10 self-center rounded-md px-4 py-2 text-sm font-medium transition-colors"
+                                >
+                                  {showAllCalls
+                                    ? t('pages.clients.detail.showLess', 'Show Less')
+                                    : t(
+                                        'pages.clients.detail.viewAllCalls',
+                                        'View All ({{count}})',
+                                        { count: client.callSmsHistory.callsTotal }
+                                      )}
+                                </button>
+                              )}
                           </div>
                         )}
                         {activeCallSmsTab === 'sms' && (
