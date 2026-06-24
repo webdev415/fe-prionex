@@ -114,6 +114,7 @@ export function Step2FileUpload({
             'client_contacts_client_mobile_phone_contact_value',
             'debts_1_contract_number',
             'debts_1_remaining_debt_amount',
+            'debts_1_seller_company_legacy',
           ]
 
           // Check for required columns (strip * from headers to support required markers)
@@ -275,7 +276,7 @@ export function Step2FileUpload({
       'debts_1_fines_amount',
       'debts_1_credit_term_days',
       'debts_1_credit_issued_date',
-      'debts_1_seller_company_legacy',
+      'debts_1_seller_company_legacy*',
       'debts_1_portfolio_name',
     ]
 

@@ -1527,7 +1527,7 @@
           "oneCsvOnly": "One CSV only,",
           "maxRows": "max 50,000 rows",
           "required": "Required",
-          "requiredColumns": "first_name, last_name, phone, tin, debt_amount",
+          "requiredColumns": "first_name, last_name, phone, tin, contract_number, debt_amount, seller_company",
           "optional": "Optional",
           "optionalColumns": "middle_name, email, overdue(days)...",
           "browseFile": "Browse File",
