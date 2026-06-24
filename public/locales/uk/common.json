@@ -551,7 +551,6 @@
         "chain": "Ланцюг",
         "notes": "Нотатки",
         "createdDate": "Дата створення",
-        "clientId": "ID клієнта",
         "author": "Автор",
         "assignee": "Виконавець",
         "priority": "Пріоритет",
@@ -2076,7 +2075,12 @@
         "deleteAddress": "Видалити адресу",
         "editContact": "Редагувати контакт",
         "deleteContact": "Видалити контакт",
-        "workPhone": "Робочий телефон"
+        "workPhone": "Робочий телефон",
+        "saveAll": "Зберегти всі розділи",
+        "savingAll": "Зберігаємо все…",
+        "saveAllSuccess": "Усі розділи збережено",
+        "saveAllPartial": "Деякі розділи не вдалося зберегти — див. помилки нижче",
+        "saveAllError": "Не вдалося зберегти розділи"
       },
       "detail": {
         "clientNotFound": "Клієнта не знайдено",

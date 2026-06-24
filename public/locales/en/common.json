@@ -546,7 +546,6 @@
         "chain": "Chain",
         "notes": "Notes",
         "createdDate": "Created date",
-        "clientId": "Client ID",
         "author": "Author",
         "assignee": "Assignee",
         "priority": "Priority",
@@ -2744,7 +2743,12 @@
         "deleteAddress": "Delete address",
         "editContact": "Edit contact",
         "deleteContact": "Delete contact",
-        "workPhone": "Work Phone"
+        "workPhone": "Work Phone",
+        "saveAll": "Save All Sections",
+        "savingAll": "Saving all…",
+        "saveAllSuccess": "All sections saved",
+        "saveAllPartial": "Some sections failed to save — check the errors below",
+        "saveAllError": "Failed to save sections"
       },
       "detail": {
         "clientNotFound": "Client not found",
