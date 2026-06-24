@@ -21,6 +21,7 @@ import type {
   TAInteractionUpdate,
 } from '../api/types'
 import type { TagDefinition } from '@/features/tags/types'
+import { clientKeys } from '@/features/clients/hooks/useClients'
 
 const INT_KEY = ['ta-interactions'] as const
 const INST_KEY = ['chain-instances'] as const
@@ -142,6 +143,7 @@ export function useCompleteChainInstance() {
         } else {
           qc.invalidateQueries({ queryKey: ['clients', updated.client_id, 'tags'] })
         }
+        qc.invalidateQueries({ queryKey: clientKeys.lists() })
       }
     },
   })
@@ -226,6 +228,7 @@ export function useAdvanceChainInstance() {
         qc.invalidateQueries({ queryKey: ['clients', updated.client_id, 'dialHistory'] })
         qc.invalidateQueries({ queryKey: ['clients', updated.client_id, 'tasks'] })
         qc.invalidateQueries({ queryKey: [...INT_KEY, 'client', updated.client_id] })
+        qc.invalidateQueries({ queryKey: clientKeys.lists() })
       }
     },
   })
