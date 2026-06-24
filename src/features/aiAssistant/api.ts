@@ -5,11 +5,19 @@ const BASE = '/api/v1/ai-assistant'
 
 export type AssistantResponseMode = 'short' | 'detailed'
 export type AssistantOutputFormat = 'text' | 'tableFirst' | 'mixed'
+/**
+ * Reasoning depth (ASSISTANT_MODES.md): `fast` (default, 26B) answers quickly;
+ * `thinking` (31B) reasons deeper but is slower and may be temporarily
+ * unavailable (503) — callers then fall back to `fast`.
+ */
+export type AssistantMode = 'fast' | 'thinking'
 
 export interface AssistantChatRequest {
   /** May be empty when an `audio` attachment carries the message (PR #638). */
   message: string
   conversation_id?: number
+  /** Reasoning depth; sent with every request. */
+  mode: AssistantMode
   response_mode: AssistantResponseMode
   output_format: AssistantOutputFormat
   /** Images (screenshot paste) and/or one voice note; ≤3 total (PR #633/#638). */

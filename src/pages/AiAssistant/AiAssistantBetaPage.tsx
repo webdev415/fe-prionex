@@ -73,6 +73,8 @@ type ChatMessage = {
   role: ChatRole
   content: string
   isLoading?: boolean
+  /** Text shown next to the typing dots while loading (e.g. "thinking…"). */
+  loadingLabel?: string
   isError?: boolean
   serverMessageId?: number
   attachments?: LocalAttachment[]
@@ -249,6 +251,7 @@ export function AiAssistantBetaPage() {
   const scrollContainerRef = useRef<HTMLElement | null>(null)
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const imageInputRef = useRef<HTMLInputElement>(null)
   const dictationGhostRef = useRef<HTMLDivElement>(null)
   const lastDictationFinalRef = useRef('')
   const longPressTimerRef = useRef<number | null>(null)
@@ -749,6 +752,44 @@ export function AiAssistantBetaPage() {
             </button>
           </div>
 
+          <p
+            className="mt-2.5 mb-1.5 text-[11px] font-medium text-gray-500"
+            title={t('pages.aiAssistant.modeTooltip')}
+          >
+            {t('pages.aiAssistant.mode')}
+          </p>
+          <div
+            className="bg-light-100/80 flex w-full rounded-lg p-0.5"
+            role="group"
+            aria-label={t('pages.aiAssistant.mode')}
+          >
+            <button
+              type="button"
+              onClick={() => applySettings((s) => ({ ...s, mode: 'fast' }))}
+              className={cn(
+                'min-h-8 flex-1 rounded-md px-2 py-1.5 text-[11px] font-medium transition-all',
+                assistantSettings.mode === 'fast'
+                  ? 'text-dark-500 bg-white shadow-sm ring-1 ring-gray-200/80'
+                  : 'hover:text-dark-500 text-gray-600'
+              )}
+            >
+              {t('pages.aiAssistant.modeFast')}
+            </button>
+            <button
+              type="button"
+              title={t('pages.aiAssistant.modeTooltip')}
+              onClick={() => applySettings((s) => ({ ...s, mode: 'thinking' }))}
+              className={cn(
+                'min-h-8 flex-1 rounded-md px-2 py-1.5 text-[11px] font-medium transition-all',
+                assistantSettings.mode === 'thinking'
+                  ? 'text-dark-500 bg-white shadow-sm ring-1 ring-gray-200/80'
+                  : 'hover:text-dark-500 text-gray-600'
+              )}
+            >
+              {t('pages.aiAssistant.modeThinking')}
+            </button>
+          </div>
+
           <p className="mt-2.5 mb-1.5 text-[11px] font-medium text-gray-500">
             {t('pages.aiAssistant.outputFormat')}
           </p>
@@ -971,10 +1012,14 @@ export function AiAssistantBetaPage() {
       })
       setIsAssistantResponding(true)
 
+      const isThinking = assistantSettings.mode === 'thinking'
       const loadingId = appendChatMessage({
         role: 'assistant',
-        content: t('pages.aiAssistant.assistantTyping'),
+        content: isThinking
+          ? t('pages.aiAssistant.assistantThinking')
+          : t('pages.aiAssistant.assistantTyping'),
         isLoading: true,
+        loadingLabel: isThinking ? t('pages.aiAssistant.assistantThinking') : undefined,
       })
       window.setTimeout(() => scrollToConversationBottom('smooth'), 0)
 
@@ -985,6 +1030,7 @@ export function AiAssistantBetaPage() {
           conversation_id: assistantSettings.rememberConversationContext
             ? (conversationId ?? undefined)
             : undefined,
+          mode: assistantSettings.mode,
           response_mode: assistantSettings.responseMode,
           output_format: assistantSettings.outputFormat,
           attachments:
@@ -1009,17 +1055,28 @@ export function AiAssistantBetaPage() {
               : item
           )
         )
-      } catch {
+      } catch (error) {
         if (requestToken !== responseTokenRef.current) {
           return
         }
-        toast.error(t('pages.aiAssistant.apiError'))
+        // 503 = the thinking model is temporarily unavailable. Fall back to the
+        // always-available fast mode and tell the user, rather than the generic
+        // error (ASSISTANT_MODES.md).
+        const isThinkingUnavailable =
+          isThinking && isAxiosError(error) && error.response?.status === 503
+        const errorMessage = isThinkingUnavailable
+          ? t('pages.aiAssistant.thinkingUnavailable')
+          : t('pages.aiAssistant.apiError')
+        if (isThinkingUnavailable) {
+          setAssistantSettings((s) => ({ ...s, mode: 'fast' }))
+        }
+        toast.error(errorMessage)
         setChatMessages((current) =>
           current.map((item) =>
             item.id === loadingId
               ? {
                   ...item,
-                  content: t('pages.aiAssistant.apiError'),
+                  content: errorMessage,
                   isLoading: false,
                   isError: true,
                 }
@@ -1035,6 +1092,7 @@ export function AiAssistantBetaPage() {
     },
     [
       appendChatMessage,
+      assistantSettings.mode,
       assistantSettings.outputFormat,
       assistantSettings.rememberConversationContext,
       assistantSettings.responseMode,
@@ -1137,6 +1195,18 @@ export function AiAssistantBetaPage() {
       if (files.length === 0) return
       event.preventDefault()
       void addImageFiles(files)
+    },
+    [addImageFiles]
+  )
+
+  const handleImageInputChange = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      const files = event.target.files
+      if (files && files.length > 0) {
+        void addImageFiles(Array.from(files))
+      }
+      // Reset so picking the same file again still fires onChange.
+      event.target.value = ''
     },
     [addImageFiles]
   )
@@ -1453,6 +1523,11 @@ export function AiAssistantBetaPage() {
                           <span className="bg-secondary-500 h-1.5 w-1.5 animate-bounce rounded-full [animation-delay:-0.2s]" />
                           <span className="bg-secondary-500 h-1.5 w-1.5 animate-bounce rounded-full [animation-delay:-0.1s]" />
                           <span className="bg-secondary-500 h-1.5 w-1.5 animate-bounce rounded-full" />
+                          {item.loadingLabel && (
+                            <span className="ml-1.5 text-xs font-light text-gray-500">
+                              {item.loadingLabel}
+                            </span>
+                          )}
                         </span>
                       ) : item.role === 'assistant' && !item.isError ? (
                         <div className={MARKDOWN_BODY_CLASS}>
@@ -1641,26 +1716,47 @@ export function AiAssistantBetaPage() {
             )}
 
             <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-3">
-              <div className="relative shrink-0">
-                <button
-                  ref={settingsTriggerRef}
-                  type="button"
-                  onClick={() => setIsSettingsOpen((open) => !open)}
-                  className="text-dark-500 hover:text-primary-600 flex min-h-9 cursor-pointer items-center gap-2 text-sm font-light transition-colors"
-                >
-                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-gray-300 bg-white text-gray-500 sm:h-6 sm:w-6">
-                    <Icons.Add size={16} strokeWidth={1.5} />
-                  </span>
-                  {t('pages.aiAssistant.settings')}
-                </button>
-                {!isMobileOrTablet && isSettingsOpen && (
-                  <div
-                    ref={settingsPanelRef}
-                    className="absolute bottom-full left-0 z-30 mb-3 flex max-h-[min(52vh,calc(100dvh-11rem))] w-[min(calc(100vw-1.5rem),28rem)] min-w-0 flex-col"
+              <div className="flex shrink-0 items-center gap-2">
+                <div className="relative shrink-0">
+                  <button
+                    ref={settingsTriggerRef}
+                    type="button"
+                    onClick={() => setIsSettingsOpen((open) => !open)}
+                    className="text-dark-500 hover:text-primary-600 flex min-h-9 cursor-pointer items-center gap-2 text-sm font-light transition-colors"
                   >
-                    {settingsPanel}
-                  </div>
-                )}
+                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-gray-300 bg-white text-gray-500 sm:h-6 sm:w-6">
+                      <Icons.Add size={16} strokeWidth={1.5} />
+                    </span>
+                    {t('pages.aiAssistant.settings')}
+                  </button>
+                  {!isMobileOrTablet && isSettingsOpen && (
+                    <div
+                      ref={settingsPanelRef}
+                      className="absolute bottom-full left-0 z-30 mb-3 flex max-h-[min(52vh,calc(100dvh-11rem))] w-[min(calc(100vw-1.5rem),28rem)] min-w-0 flex-col"
+                    >
+                      {settingsPanel}
+                    </div>
+                  )}
+                </div>
+
+                <button
+                  type="button"
+                  aria-label={t('pages.aiAssistant.attachImageButton')}
+                  title={t('pages.aiAssistant.attachImageButton')}
+                  onClick={() => imageInputRef.current?.click()}
+                  className="text-dark-500 hover:text-primary-600 flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-full border border-gray-300 bg-white text-gray-500 transition-colors sm:h-6 sm:w-6"
+                >
+                  <Icons.Attachment01 size={16} strokeWidth={1.5} />
+                </button>
+                <input
+                  ref={imageInputRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  multiple
+                  className="hidden"
+                  data-testid="attach-image-input"
+                  onChange={handleImageInputChange}
+                />
               </div>
 
               <div className="grid w-full min-w-0 grid-cols-[1fr_1fr_auto] items-center gap-2 sm:flex sm:w-auto sm:flex-wrap sm:justify-end">

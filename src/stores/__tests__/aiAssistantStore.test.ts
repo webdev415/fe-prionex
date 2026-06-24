@@ -73,4 +73,21 @@ describe('aiAssistantStore', () => {
     expect(parsed.state.userId).toBe('7')
     expect(parsed.state.conversationId).toBe(42)
   })
+
+  it('defaults the response mode to fast', () => {
+    expect(DEFAULT_ASSISTANT_SETTINGS.mode).toBe('fast')
+  })
+
+  it('persists the chosen response mode across reloads', () => {
+    useAiAssistantStore.getState().saveSettings('7', {
+      ...DEFAULT_ASSISTANT_SETTINGS,
+      mode: 'thinking',
+    })
+
+    const raw = localStorage.getItem(AI_ASSISTANT_STORAGE_KEY)
+    const parsed = JSON.parse(raw as string) as {
+      state: { settings: { mode: string } | null }
+    }
+    expect(parsed.state.settings?.mode).toBe('thinking')
+  })
 })
