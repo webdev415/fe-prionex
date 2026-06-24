@@ -113,6 +113,7 @@ export async function getClientPaymentHistory(
         to_date: params.to_date,
         date_field: params.date_field,
         tz: params.tz,
+        exclude_pre_acquisition: params.exclude_pre_acquisition,
       },
     }
   )

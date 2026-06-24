@@ -162,7 +162,7 @@ export function OperatorGridView({
                   </div>
                 </div>
                 <span
-                  className={`flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full text-base font-bold ring-1 ${SCORE_BAND_BG[row.score_band]}`}
+                  className={`flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full text-base font-bold ring-1 ${row.score_band ? SCORE_BAND_BG[row.score_band] : 'bg-gray-300 text-gray-600 ring-gray-200'}`}
                 >
                   {row.composite_score}
                 </span>

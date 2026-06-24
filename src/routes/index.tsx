@@ -1,21 +1,26 @@
-/* eslint-disable react-refresh/only-export-components */
+﻿/* eslint-disable react-refresh/only-export-components */
 import { lazy, Suspense } from 'react'
 import { createBrowserRouter, Navigate, Outlet } from 'react-router-dom'
 import { ProtectedRoute } from './ProtectedRoute'
 import { PermissionRoute } from './PermissionRoute'
 import { GuestRoute } from './GuestRoute'
+import { useTabTracker } from '@/features/auth/hooks/useTabTracker'
 import { DashboardLayout } from '@/components/layout'
 import { RouteErrorElement } from '@/components/RouteErrorElement'
 import { PERMISSIONS } from '@/constants/permissions'
 import { BulkOperatorAssignmentPageSkeleton } from '@/pages/Operations/BulkOperatorAssignmentPageSkeleton'
 import { BulkTagAssignmentPageSkeleton } from '@/pages/Operations/BulkTagAssignmentPageSkeleton'
 import { BulkPaymentVerificationPageSkeleton } from '@/pages/Operations/BulkPaymentVerificationPageSkeleton'
+import { BulkSaleNotesImportPageSkeleton } from '@/pages/Operations/BulkSaleNotesImportPageSkeleton'
 import { AppLoadingFallback } from '@/components/ui/AppLoadingFallback'
 
 const LoginPage = lazy(() => import('@/pages/auth/LoginPage'))
 const ForceChangePasswordPage = lazy(() => import('@/pages/auth/ForceChangePasswordPage'))
 const UserManagementPage = lazy(() =>
   import('@/pages/UserManagement').then((m) => ({ default: m.UserManagementPage }))
+)
+const IpWhitelistPage = lazy(() =>
+  import('@/pages/IpWhitelist').then((m) => ({ default: m.IpWhitelistPage }))
 )
 const ImportClientsPage = lazy(() => import('@/pages/ImportClients/ImportClientsPage'))
 const ImportHistoryPage = lazy(() => import('@/pages/ImportClients/ImportHistoryPage'))
@@ -101,6 +106,11 @@ const ReportsDashboardPage = lazy(() =>
     default: m.ReportsDashboardPage,
   }))
 )
+const TrainingPage = lazy(() =>
+  import('@/pages/Training').then((m) => ({
+    default: m.TrainingPage,
+  }))
+)
 const ActionAnalysisPage = lazy(() =>
   import('@/pages/ActionAnalysis').then((m) => ({
     default: m.ActionAnalysisPage,
@@ -109,6 +119,11 @@ const ActionAnalysisPage = lazy(() =>
 const SellerManagementPage = lazy(() =>
   import('@/pages/SellerManagement').then((m) => ({
     default: m.SellerManagementPage,
+  }))
+)
+const SellerDetailPage = lazy(() =>
+  import('@/pages/SellerManagement').then((m) => ({
+    default: m.SellerDetailPage,
   }))
 )
 const ScoringConfigurationPage = lazy(() =>
@@ -134,10 +149,12 @@ const ProfileSettingsPage = lazy(() =>
   }))
 )
 const AiAssistantPage = lazy(() =>
-  import('@/pages/AiAssistant/AiAssistantPage').then((m) => ({
-    default: m.AiAssistantPage,
+  import('@/pages/AiAssistant/AiAssistantBetaPage').then((m) => ({
+    default: m.AiAssistantBetaPage,
   }))
 )
+// /ai-assistant теперь рендерит бета-страницу с реальным API (@/features/aiAssistant).
+// Старая мок-страница (AiAssistantPage.tsx, buildMockAssistantReply) удалена.
 const BulkOperatorAssignmentPage = lazy(() =>
   import('@/pages/Operations').then((m) => ({
     default: m.BulkOperatorAssignmentPage,
@@ -158,18 +175,29 @@ const BulkWriteoffImportPage = lazy(() =>
     default: m.BulkWriteoffImportPage,
   }))
 )
+const BulkSaleNotesImportPage = lazy(() =>
+  import('@/pages/Operations').then((m) => ({
+    default: m.BulkSaleNotesImportPage,
+  }))
+)
 
 const withSuspense = (element: React.ReactElement) => (
   <Suspense fallback={<AppLoadingFallback />}>{element}</Suspense>
 )
 
-const DashboardLayoutRoute = () => (
-  <ProtectedRoute>
-    <DashboardLayout>
-      <Outlet />
-    </DashboardLayout>
-  </ProtectedRoute>
-)
+const DashboardLayoutRoute = () => {
+  // KAN-585: track tab navigations + close events for the session-restore
+  // feature. Hook is mounted here (inside RouterProvider tree) because it
+  // calls useLocation internally; mounting in App.tsx would throw.
+  useTabTracker()
+  return (
+    <ProtectedRoute>
+      <DashboardLayout>
+        <Outlet />
+      </DashboardLayout>
+    </ProtectedRoute>
+  )
+}
 
 export const router = createBrowserRouter([
   {
@@ -275,6 +303,14 @@ export const router = createBrowserRouter([
           </PermissionRoute>
         ),
       },
+      {
+        path: 'system-settings/ip-whitelist',
+        element: (
+          <PermissionRoute requiredPermission={PERMISSIONS.USERS.EDIT}>
+            {withSuspense(<IpWhitelistPage />)}
+          </PermissionRoute>
+        ),
+      },
       // Backward-compat redirects: legacy top-level paths (/dashboard/users,
       // /roles, /departments) now bounce to the grouped /team-management/* URLs
       // so existing bookmarks and external links keep working. The parent
@@ -305,6 +341,14 @@ export const router = createBrowserRouter([
         ),
       },
       {
+        path: 'training',
+        element: (
+          <PermissionRoute requiredPermission={PERMISSIONS.TRAINING.VIEW}>
+            {withSuspense(<TrainingPage />)}
+          </PermissionRoute>
+        ),
+      },
+      {
         path: 'action-analysis',
         element: (
           <PermissionRoute requiredPermission={PERMISSIONS.ACTION_ANALYSIS.VIEW}>
@@ -317,6 +361,14 @@ export const router = createBrowserRouter([
         element: (
           <PermissionRoute requiredPermission={PERMISSIONS.SELLERS.VIEW}>
             {withSuspense(<SellerManagementPage />)}
+          </PermissionRoute>
+        ),
+      },
+      {
+        path: 'sellers/:id',
+        element: (
+          <PermissionRoute requiredPermission={PERMISSIONS.SELLERS.VIEW}>
+            {withSuspense(<SellerDetailPage />)}
           </PermissionRoute>
         ),
       },
@@ -452,6 +504,16 @@ export const router = createBrowserRouter([
           <PermissionRoute requiredPermission={PERMISSIONS.WRITEOFFS.BULK}>
             <Suspense fallback={<AppLoadingFallback />}>
               <BulkWriteoffImportPage />
+            </Suspense>
+          </PermissionRoute>
+        ),
+      },
+      {
+        path: 'import/bulk-sale-notes-import',
+        element: (
+          <PermissionRoute requiredPermission={PERMISSIONS.SALE_NOTES.MANAGE}>
+            <Suspense fallback={<BulkSaleNotesImportPageSkeleton />}>
+              <BulkSaleNotesImportPage />
             </Suspense>
           </PermissionRoute>
         ),

@@ -22,6 +22,9 @@ import { Icons } from '@/lib/icons'
 import { PriorityBadge } from './PriorityBadge'
 import { useOperators } from '@/features/users/hooks/useUsers'
 import { useAuthStore } from '@/stores/authStore'
+import { useHasAnyPermission } from '@/hooks'
+import { PERMISSIONS } from '@/constants/permissions'
+import { toast } from 'sonner'
 
 // Format currency for Ukrainian Hryvnia
 const formatUAH = (amount: string | number) => {
@@ -96,6 +99,17 @@ export function BulkAssignClientModal({
   const [reason, setReason] = useState<string>('Workload Distribution')
   const [notes, setNotes] = useState<string>('')
 
+  // Pattern Y for bulk (Option B): the BE accepts either `edit_clients` OR
+  // `reassign_client_responsible` at the route, then per-client applies the
+  // per-field rule from KAN-562 §3 (initial vs reassignment). The FE only
+  // blocks the submit when the user has *neither* permission; otherwise let
+  // the BE return per-client failures for clients that needed the reassign
+  // perm the caller doesn't hold.
+  const hasAnyAssignPerm = useHasAnyPermission([
+    PERMISSIONS.CLIENTS.EDIT,
+    PERMISSIONS.CLIENTS.REASSIGN_RESPONSIBLE,
+  ])
+
   // Calculate summary statistics
   const summary = useMemo(() => {
     const totalDebt = selectedClients.reduce((sum, client) => sum + (Number(client.debt) || 0), 0)
@@ -123,6 +137,11 @@ export function BulkAssignClientModal({
 
     if (!reason) {
       return // Reason is required
+    }
+
+    if (!hasAnyAssignPerm) {
+      toast.warning(t('errors:permissions.bulkAssign'))
+      return
     }
 
     onAssign({

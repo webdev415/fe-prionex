@@ -164,3 +164,19 @@ export interface UnlockAccountResponse {
 export interface UserDetailResponse extends ApiUser {
   projects?: ProjectRole[]
 }
+
+/**
+ * Current state of the global IP-whitelist enforcement gate.
+ *
+ * GET /api/v1/admin/settings/ip-whitelist. When `enabled` is false
+ * the whitelist is dormant and any IP is accepted at the login gate.
+ */
+export interface IpWhitelistSettings {
+  enabled: boolean
+  updated_at?: string | null
+  updated_by?: number | null
+}
+
+export interface UpdateIpWhitelistSettingsInput {
+  enabled: boolean
+}
