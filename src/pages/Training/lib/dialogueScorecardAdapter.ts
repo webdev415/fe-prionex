@@ -16,7 +16,7 @@
 import type { OperatorUser } from '@/features/users/api/usersApi'
 import type { Scorecard } from '@/features/quality'
 
-export type DialogueScorecardCategory = 'New' | 'Average' | 'Risk'
+export type DialogueScorecardCategory = 'Low' | 'Average' | 'High'
 
 export type DialogueCriterionRating = 'not_done' | 'weak' | 'normal' | 'excellent'
 
@@ -90,15 +90,14 @@ function formatDayMonth(iso: string): string {
 }
 
 /**
- * Derive the New / Average / Risk chip bucket from the weighted score band.
- * No backend `category` field exists — see KAN-737-Plan §Discrepancy 2
- * (Risk < 60 · Average 60–79 · New ≥ 80 / no score).
+ * Derive the Low / Average / High band from the 0-100 score. No backend
+ * `category` field exists (Low < 60 · Average 60–79 · High ≥ 80 / no score).
  */
-export function deriveCategory(weightedScore: number | null): DialogueScorecardCategory {
-  if (weightedScore == null) return 'New'
-  if (weightedScore < 60) return 'Risk'
-  if (weightedScore < 80) return 'Average'
-  return 'New'
+export function deriveCategory(score100: number | null): DialogueScorecardCategory {
+  if (score100 == null) return 'High'
+  if (score100 < 60) return 'Low'
+  if (score100 < 80) return 'Average'
+  return 'High'
 }
 
 /** Map a stored criterion value onto the 4-button rating band (read-only). */
@@ -115,12 +114,21 @@ function ratingForValue(value: number | boolean | null, scale: string): Dialogue
 }
 
 /**
+ * The KAN-503 "Script stages" section is funnel-tracking data (binary,
+ * weight 0), not a quality criterion. It is captured in the scoring editor
+ * (ScorecardPanel) but excluded from the read-only quality breakdown so it
+ * doesn't distort the criteria count or show "Weight 0 pts" cards.
+ */
+const SCRIPT_STAGES_SECTION_KEY = 'script_stages'
+
+/**
  * Build the detail-panel criteria cards by flattening the template snapshot's
  * sections and joining each criterion against the `scores` JSONB payload.
  */
 export function buildCriteria(scorecard: Scorecard): DialogueScorecardCriterion[] {
   const out: DialogueScorecardCriterion[] = []
   for (const section of scorecard.template_snapshot.sections ?? []) {
+    if (section.key === SCRIPT_STAGES_SECTION_KEY) continue
     for (const criterion of section.criteria ?? []) {
       const entry = scorecard.scores?.[criterion.key]
       const rawValue = entry?.value ?? null
@@ -147,15 +155,19 @@ export function buildDialogueRow(
 ): DialogueScorecardRow {
   const operatorName = operatorLookup.get(scorecard.operator_id) ?? `#${scorecard.operator_id}`
   const hasScore = scorecard.weighted_score != null
+  // `weighted_score` is on the backend's 0-5 axis (scoring.py); ×20 once to
+  // land on the 0-100 scale the Figma views + category bands expect (KAN-504
+  // §5.4 — the point-weighted templates must render a correct /100 number).
+  const score100 = hasScore ? (scorecard.weighted_score as number) * 20 : null
   return {
     id: scorecard.id,
     dateLabel: formatDayMonth(scorecard.created_at),
     operatorName,
     operatorInitials: initialsFor(operatorName),
     avatarColor: avatarColorFor(scorecard.operator_id),
-    category: deriveCategory(scorecard.weighted_score),
+    category: deriveCategory(score100),
     hasScore,
-    score: hasScore ? Math.round(scorecard.weighted_score as number) : 0,
+    score: score100 != null ? Math.round(score100) : 0,
     scoreOutOf: 100,
     // No source on the scorecards endpoint — rendered as `—` / hidden.
     duration: '—',

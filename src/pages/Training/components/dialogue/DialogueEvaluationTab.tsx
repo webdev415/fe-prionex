@@ -1,26 +1,27 @@
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Icons } from '@/lib/icons'
 import { useScorecards } from '@/features/quality'
 import { useOperators } from '@/features/users/hooks'
 import { useAuthStore } from '@/stores/authStore'
 import { buildDialogueRows } from '../../lib/dialogueScorecardAdapter'
 import { useScopedUserIds } from '../../lib/scope'
 import { TrainingSegmentedStrip } from '../chrome/TrainingSegmentedStrip'
-import { PendingFeatureDialog } from '../inbox/PendingFeatureDialog'
 import { EmployeeMultiSelect } from './EmployeeMultiSelect'
 import { ScorecardListView } from './ScorecardListView'
 import { ScorecardDetailPanel } from './ScorecardDetailPanel'
+import { AvgScoreByTypeView } from './AvgScoreByTypeView'
+import { NewAssessmentButton } from './NewAssessmentButton'
 
-type CategoryChip = 'all' | 'new' | 'average' | 'risk'
+type CategoryChip = 'all' | 'low' | 'average' | 'high'
+type DialogueView = 'list' | 'averages'
 
 const DEFAULT_PAGE_SIZE = 50
 
 export function DialogueEvaluationTab() {
   const { t } = useTranslation('common')
   const [activeCategory, setActiveCategory] = useState<CategoryChip>('all')
+  const [view, setView] = useState<DialogueView>('list')
   const [selectedRowId, setSelectedRowId] = useState<number | null>(null)
-  const [scheduleOpen, setScheduleOpen] = useState(false)
   const [selectedEmployeeIds, setSelectedEmployeeIds] = useState<number[]>([])
 
   const activeProjectId = useAuthStore((s) => s.user?.active_project_id)
@@ -46,21 +47,22 @@ export function DialogueEvaluationTab() {
   const categoryCounts = useMemo(
     () => ({
       all: rows.length,
-      new: rows.filter((r) => r.category === 'New').length,
+      low: rows.filter((r) => r.category === 'Low').length,
       average: rows.filter((r) => r.category === 'Average').length,
-      risk: rows.filter((r) => r.category === 'Risk').length,
+      high: rows.filter((r) => r.category === 'High').length,
     }),
     [rows]
   )
 
   const categoryChips = useMemo(
     () =>
+      // KAN-504: All calls · Low · Average · High.
       (
         [
-          { id: 'all' as const, label: t('pages.training.dialogue.chips.all', 'All scores') },
-          { id: 'new' as const, label: t('pages.training.dialogue.chips.new', 'New') },
+          { id: 'all' as const, label: t('pages.training.dialogue.chips.all', 'All calls') },
+          { id: 'low' as const, label: t('pages.training.dialogue.chips.low', 'Low') },
           { id: 'average' as const, label: t('pages.training.dialogue.chips.average', 'Average') },
-          { id: 'risk' as const, label: t('pages.training.dialogue.chips.risk', 'Risk') },
+          { id: 'high' as const, label: t('pages.training.dialogue.chips.high', 'High') },
         ] as const
       ).map((c) => ({
         id: c.id,
@@ -74,9 +76,9 @@ export function DialogueEvaluationTab() {
     () =>
       rows.filter((r) => {
         if (activeCategory === 'all') return true
-        if (activeCategory === 'new') return r.category === 'New'
+        if (activeCategory === 'low') return r.category === 'Low'
         if (activeCategory === 'average') return r.category === 'Average'
-        if (activeCategory === 'risk') return r.category === 'Risk'
+        if (activeCategory === 'high') return r.category === 'High'
         return true
       }),
     [rows, activeCategory]
@@ -98,20 +100,33 @@ export function DialogueEvaluationTab() {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <TrainingSegmentedStrip
-          items={categoryChips}
-          activeId={activeCategory}
-          onChange={(id) => setActiveCategory(id as CategoryChip)}
-        />
+        {view === 'list' ? (
+          <TrainingSegmentedStrip
+            items={categoryChips}
+            activeId={activeCategory}
+            onChange={(id) => setActiveCategory(id as CategoryChip)}
+          />
+        ) : (
+          <div />
+        )}
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setScheduleOpen(true)}
-            className="inline-flex h-10 items-center gap-2 rounded-md bg-[#BBFB5B] px-4 text-xs font-medium text-[#05040D] transition-colors hover:bg-[#a8e848]"
-          >
-            <Icons.Add size={14} />
-            {t('pages.training.dialogue.scheduleSession', 'Schedule a session')}
-          </button>
+          <div className="inline-flex rounded-md border border-[#EBECE8] p-0.5">
+            {(['list', 'averages'] as const).map((v) => (
+              <button
+                key={v}
+                type="button"
+                onClick={() => setView(v)}
+                className={`h-9 rounded px-3 text-xs font-medium transition-colors ${
+                  view === v ? 'bg-[#204E4D] text-white' : 'text-[#6B7280] hover:text-[#05040D]'
+                }`}
+              >
+                {v === 'list'
+                  ? t('pages.training.dialogue.view.list', 'Scorecards')
+                  : t('pages.training.dialogue.view.averages', 'Averages')}
+              </button>
+            ))}
+          </div>
+          <NewAssessmentButton operators={operators} />
           <EmployeeMultiSelect
             value={selectedEmployeeIds}
             onChange={setSelectedEmployeeIds}
@@ -120,45 +135,39 @@ export function DialogueEvaluationTab() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-3 xl:grid-cols-[1fr_400px]">
-        {scoped.isEmptyResolution ? (
-          <div className="rounded-xl bg-white/50 p-12 text-center text-sm text-gray-500 shadow-sm">
-            {t(
-              'pages.training.errors.emptyScopeResolution',
-              'The selected scope returned no operators.'
-            )}
-          </div>
-        ) : isLoading ? (
-          <div className="rounded-xl bg-white p-12 text-center text-sm text-[#6B7280] shadow-sm">
-            {t('common.loading', 'Loading…')}
-          </div>
-        ) : isError ? (
-          <div className="rounded-xl bg-white p-12 text-center text-sm text-red-500 shadow-sm">
-            {t('pages.training.errors.loadScorecardsFailed', 'Failed to load scorecards')}
-          </div>
-        ) : filteredRows.length === 0 ? (
-          <div className="rounded-xl bg-white p-12 text-center text-sm text-[#6B7280] shadow-sm">
-            {t('pages.training.scorecardsEmpty', 'No scorecards in scope.')}
-          </div>
-        ) : (
-          <ScorecardListView
-            rows={filteredRows}
-            selectedId={effectiveSelectedId}
-            onSelect={setSelectedRowId}
-          />
-        )}
-        <ScorecardDetailPanel row={selectedRow} />
-      </div>
-
-      <PendingFeatureDialog
-        open={scheduleOpen}
-        onClose={() => setScheduleOpen(false)}
-        titleKey="pages.training.dialogue.scheduleSession"
-        titleFallback="Schedule a session"
-        descriptionKey="pages.training.dialogue.pending.scheduleSession"
-        descriptionFallback="Plan a dialogue evaluation or coaching session with an operator."
-        dependsOnIssue="KAN-504"
-      />
+      {view === 'averages' ? (
+        <AvgScoreByTypeView operatorIds={filters.operator_id} />
+      ) : (
+        <div className="grid grid-cols-1 gap-3 xl:grid-cols-[1fr_400px]">
+          {scoped.isEmptyResolution ? (
+            <div className="rounded-xl bg-white/50 p-12 text-center text-sm text-gray-500 shadow-sm">
+              {t(
+                'pages.training.errors.emptyScopeResolution',
+                'The selected scope returned no operators.'
+              )}
+            </div>
+          ) : isLoading ? (
+            <div className="rounded-xl bg-white p-12 text-center text-sm text-[#6B7280] shadow-sm">
+              {t('common.loading', 'Loading…')}
+            </div>
+          ) : isError ? (
+            <div className="rounded-xl bg-white p-12 text-center text-sm text-red-500 shadow-sm">
+              {t('pages.training.errors.loadScorecardsFailed', 'Failed to load scorecards')}
+            </div>
+          ) : filteredRows.length === 0 ? (
+            <div className="rounded-xl bg-white p-12 text-center text-sm text-[#6B7280] shadow-sm">
+              {t('pages.training.scorecardsEmpty', 'No scorecards in scope.')}
+            </div>
+          ) : (
+            <ScorecardListView
+              rows={filteredRows}
+              selectedId={effectiveSelectedId}
+              onSelect={setSelectedRowId}
+            />
+          )}
+          <ScorecardDetailPanel row={selectedRow} />
+        </div>
+      )}
     </div>
   )
 }

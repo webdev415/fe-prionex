@@ -120,25 +120,25 @@ describe('DialogueEvaluationTab', () => {
     expect(screen.getByText('pages.training.errors.emptyScopeResolution')).toBeInTheDocument()
   })
 
-  it('renders rows and filters by the Risk category chip', () => {
+  it('renders rows and filters by the Low category chip', () => {
     setScorecards({
       data: {
         data: [
-          makeScorecard(1, 41, 90), // New (>=80)
-          makeScorecard(2, 42, 50), // Risk (<60)
+          makeScorecard(1, 41, 4.5), // ×20 → 90 → High (>=80)
+          makeScorecard(2, 42, 2.5), // ×20 → 50 → Low (<60)
         ],
         pagination: { page: 1, page_size: 50, total: 2, total_pages: 1 },
       },
     })
     render(<DialogueEvaluationTab />)
 
-    // Both operators show under "All scores" (the name also repeats in the
+    // Both operators show under "All calls" (the name also repeats in the
     // detail-panel header for the auto-selected row, hence getAllByText).
     expect(screen.getAllByText('Kateryna Antonova').length).toBeGreaterThan(0)
     expect(screen.getAllByText('Oleh Bondar').length).toBeGreaterThan(0)
 
-    // Switch to the Risk chip → only the <60 scorecard remains.
-    fireEvent.click(screen.getByText('pages.training.dialogue.chips.risk'))
+    // Switch to the Low chip → only the <60 scorecard remains.
+    fireEvent.click(screen.getByText('pages.training.dialogue.chips.low'))
     expect(screen.queryByText('Kateryna Antonova')).not.toBeInTheDocument()
     expect(screen.getAllByText('Oleh Bondar').length).toBeGreaterThan(0)
   })

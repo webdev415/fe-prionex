@@ -17,9 +17,9 @@ export interface ScorecardListViewProps {
 }
 
 const CATEGORY_TONE: Record<DialogueScorecardRow['category'], string> = {
-  New: 'bg-[#EFF6FF] text-[#2563EB]',
+  High: 'bg-[#ECFDF5] text-[#15803D]',
   Average: 'bg-[#FFFBEB] text-[#D97706]',
-  Risk: 'bg-[#FEF2F2] text-[#B91C1C]',
+  Low: 'bg-[#FEF2F2] text-[#B91C1C]',
 }
 
 /** Figma score-ring tones — stroke + text both tinted by the band. */

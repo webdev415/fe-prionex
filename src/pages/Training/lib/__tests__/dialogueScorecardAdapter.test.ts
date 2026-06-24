@@ -44,7 +44,8 @@ function makeScorecard(overrides: Partial<Scorecard> = {}): Scorecard {
       crm: { value: true },
     },
     overall_comment: null,
-    weighted_score: 82,
+    // 0-5 axis (backend); the adapter ×20 → 82/100.
+    weighted_score: 4.1,
     status: 'completed',
     created_at: '2026-05-15T09:30:00',
     completed_at: '2026-05-15T09:40:00',
@@ -67,16 +68,16 @@ const OPERATORS: OperatorUser[] = [
 ]
 
 describe('deriveCategory', () => {
-  it('buckets by weighted-score band (KAN-737 §Discrepancy 2)', () => {
-    expect(deriveCategory(55)).toBe('Risk')
+  it('buckets by 0-100 score band (Low < 60 · Average 60-79 · High >= 80)', () => {
+    expect(deriveCategory(55)).toBe('Low')
     expect(deriveCategory(60)).toBe('Average')
     expect(deriveCategory(79)).toBe('Average')
-    expect(deriveCategory(80)).toBe('New')
-    expect(deriveCategory(100)).toBe('New')
+    expect(deriveCategory(80)).toBe('High')
+    expect(deriveCategory(100)).toBe('High')
   })
 
-  it('treats a null score as New', () => {
-    expect(deriveCategory(null)).toBe('New')
+  it('treats a null score as High', () => {
+    expect(deriveCategory(null)).toBe('High')
   })
 })
 
@@ -90,9 +91,9 @@ describe('buildDialogueRow', () => {
     expect(row.operatorName).toBe('Kateryna Antonova')
     expect(row.operatorInitials).toBe('KA')
     expect(row.hasScore).toBe(true)
-    expect(row.score).toBe(82)
+    expect(row.score).toBe(82) // 4.1 × 20
     expect(row.scoreOutOf).toBe(100)
-    expect(row.category).toBe('New')
+    expect(row.category).toBe('High')
     // No backend source — rendered as `—` / hidden.
     expect(row.duration).toBe('—')
     expect(row.trigger).toBe('—')
@@ -109,12 +110,12 @@ describe('buildDialogueRow', () => {
     const row = buildDialogueRow(makeScorecard({ weighted_score: null }), new Map())
     expect(row.hasScore).toBe(false)
     expect(row.score).toBe(0)
-    expect(row.category).toBe('New')
+    expect(row.category).toBe('High')
   })
 
-  it('rounds a fractional weighted_score', () => {
-    const row = buildDialogueRow(makeScorecard({ weighted_score: 73.6 }), new Map())
-    expect(row.score).toBe(74)
+  it('scales the 0-5 weighted_score ×20 and rounds to /100', () => {
+    const row = buildDialogueRow(makeScorecard({ weighted_score: 3.68 }), new Map())
+    expect(row.score).toBe(74) // 3.68 × 20 = 73.6 → 74
     expect(row.category).toBe('Average')
   })
 })
@@ -151,6 +152,33 @@ describe('buildCriteria', () => {
     const missing = weak.find((c) => c.id === 'intro.crm')!
     expect(missing.rating).toBe('not_done')
     expect(missing.score).toBe(0)
+  })
+
+  it('excludes the KAN-503 script_stages section from the quality breakdown', () => {
+    const sc = makeScorecard({
+      template_snapshot: {
+        id: 2,
+        name: 'Client Dialogue',
+        description: null,
+        call_type: null,
+        department_id: null,
+        sections: [
+          {
+            key: 'client_dialogue',
+            name: 'Client Dialogue',
+            criteria: [{ key: 'greeting', name: 'Greeting', scale: '0-5', weight: 5 }],
+          },
+          {
+            key: 'script_stages',
+            name: 'Script stages',
+            criteria: [{ key: 'stage_greeting', name: 'Greeting', scale: 'binary', weight: 0 }],
+          },
+        ],
+      },
+      scores: { greeting: { value: 4 }, stage_greeting: { value: true } },
+    })
+    const criteria = buildCriteria(sc)
+    expect(criteria.map((c) => c.id)).toEqual(['client_dialogue.greeting'])
   })
 })
 
