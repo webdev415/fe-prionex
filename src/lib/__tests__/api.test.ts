@@ -132,3 +132,199 @@ describe('api response interceptor — 401 silent redirect', () => {
     }
   })
 })
+
+describe('api response interceptor — transient-error retry (R3 #2)', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+  })
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  function makeTransientReject(
+    status: number | null,
+    options: { url?: string; method?: string; code?: string } = {}
+  ): AxiosAdapter {
+    return () =>
+      Promise.reject(
+        Object.assign(new Error(`Transient ${status ?? options.code}`), {
+          isAxiosError: true,
+          response:
+            status !== null ? { status, data: {}, headers: {}, statusText: 'Err' } : undefined,
+          code: options.code,
+          config: {
+            url: options.url ?? '/api/v1/clients',
+            method: options.method ?? 'get',
+            headers: {},
+          },
+        })
+      )
+  }
+
+  it('retries a GET that returns 502, then succeeds on retry', async () => {
+    const attempts: number[] = []
+    api.defaults.adapter = ((config) => {
+      attempts.push(attempts.length + 1)
+      if (attempts.length === 1) {
+        return Promise.reject(
+          Object.assign(new Error('Bad Gateway'), {
+            isAxiosError: true,
+            response: { status: 502, data: {}, headers: {}, statusText: 'Bad Gateway' },
+            config,
+          })
+        )
+      }
+      return Promise.resolve({
+        data: { ok: true },
+        status: 200,
+        statusText: 'OK',
+        headers: {},
+        config,
+      })
+    }) as AxiosAdapter
+
+    const promise = api.get('/api/v1/clients')
+    // Initial reject is synchronous-ish — flush microtasks + advance past 500ms backoff.
+    await vi.advanceTimersByTimeAsync(600)
+    const res = await promise
+
+    expect(res.status).toBe(200)
+    expect(attempts.length).toBe(2)
+  })
+
+  it('retries 503 + 504 + network errors on GETs', async () => {
+    for (const transient of [
+      { status: 503 },
+      { status: 504 },
+      { status: null, code: 'ECONNABORTED' },
+      { status: null, code: 'ERR_NETWORK' },
+    ]) {
+      const counter = { n: 0 }
+      api.defaults.adapter = ((config) => {
+        counter.n += 1
+        if (counter.n === 1) {
+          return Promise.reject(
+            Object.assign(new Error('Transient'), {
+              isAxiosError: true,
+              response:
+                transient.status !== null
+                  ? { status: transient.status, data: {}, headers: {}, statusText: 'Err' }
+                  : undefined,
+              code: transient.code,
+              config,
+            })
+          )
+        }
+        return Promise.resolve({
+          data: {},
+          status: 200,
+          statusText: 'OK',
+          headers: {},
+          config,
+        })
+      }) as AxiosAdapter
+
+      const promise = api.get('/api/v1/clients')
+      await vi.advanceTimersByTimeAsync(600)
+      const res = await promise
+
+      expect(res.status).toBe(200)
+      expect(counter.n).toBe(2)
+    }
+  })
+
+  it('does NOT retry POST/PUT/PATCH/DELETE (mutations) on 502', async () => {
+    for (const method of ['post', 'put', 'patch', 'delete']) {
+      let attempts = 0
+      api.defaults.adapter = ((config) => {
+        attempts += 1
+        return Promise.reject(
+          Object.assign(new Error('Bad Gateway'), {
+            isAxiosError: true,
+            response: { status: 502, data: {}, headers: {}, statusText: 'Bad Gateway' },
+            config,
+          })
+        )
+      }) as AxiosAdapter
+
+      const promise = (api as unknown as Record<string, (...args: unknown[]) => Promise<unknown>>)[
+        method
+      ]('/api/v1/clients')
+      // Attach the rejection-handler promise BEFORE advancing timers so the
+      // rejection has a listener when it settles (avoids vitest "unhandled
+      // rejection" warnings).
+      const expectation = expect(promise).rejects.toBeTruthy()
+      await vi.advanceTimersByTimeAsync(5000) // generous; we expect NO retry
+      await expectation
+
+      expect(attempts).toBe(1)
+    }
+  })
+
+  it('does NOT retry GETs to /auth/* endpoints (login loop guard)', async () => {
+    let attempts = 0
+    api.defaults.adapter = makeTransientReject(502, { url: '/api/v1/auth/me' })
+    api.defaults.adapter = ((config) => {
+      attempts += 1
+      return Promise.reject(
+        Object.assign(new Error('Bad Gateway'), {
+          isAxiosError: true,
+          response: { status: 502, data: {}, headers: {}, statusText: 'Bad Gateway' },
+          config,
+        })
+      )
+    }) as AxiosAdapter
+
+    const promise = api.get('/api/v1/auth/me')
+    const expectation = expect(promise).rejects.toBeTruthy()
+    await vi.advanceTimersByTimeAsync(5000)
+    await expectation
+
+    expect(attempts).toBe(1)
+  })
+
+  it('gives up after TRANSIENT_RETRY_MAX (2) retries on persistent 502', async () => {
+    let attempts = 0
+    api.defaults.adapter = ((config) => {
+      attempts += 1
+      return Promise.reject(
+        Object.assign(new Error('Bad Gateway'), {
+          isAxiosError: true,
+          response: { status: 502, data: {}, headers: {}, statusText: 'Bad Gateway' },
+          config,
+        })
+      )
+    }) as AxiosAdapter
+
+    const promise = api.get('/api/v1/clients')
+    const expectation = expect(promise).rejects.toBeTruthy()
+    // Two retries: 500ms + 1000ms. Advance well past.
+    await vi.advanceTimersByTimeAsync(5000)
+    await expectation
+
+    expect(attempts).toBe(3) // initial + 2 retries
+  })
+
+  it('does NOT retry on 4xx (404/422) — not transient', async () => {
+    for (const status of [400, 404, 422]) {
+      let attempts = 0
+      api.defaults.adapter = ((config) => {
+        attempts += 1
+        return Promise.reject(
+          Object.assign(new Error(`HTTP ${status}`), {
+            isAxiosError: true,
+            response: { status, data: {}, headers: {}, statusText: 'Err' },
+            config,
+          })
+        )
+      }) as AxiosAdapter
+
+      const promise = api.get('/api/v1/clients')
+      const expectation = expect(promise).rejects.toBeTruthy()
+      await vi.advanceTimersByTimeAsync(5000)
+      await expectation
+
+      expect(attempts).toBe(1)
+    }
+  })
+})

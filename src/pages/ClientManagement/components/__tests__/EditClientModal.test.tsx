@@ -69,6 +69,12 @@ vi.mock('react-i18next', () => ({
         'pages.clients.editModal.editContact': 'Edit contact',
         'pages.clients.editModal.deleteContact': 'Delete contact',
         'pages.clients.detail.tabs.passport': 'Passport',
+        'pages.clients.editModal.saveAll': 'Save All Sections',
+        'pages.clients.editModal.savingAll': 'Saving all…',
+        'pages.clients.editModal.saveAllSuccess': 'All sections saved',
+        'pages.clients.editModal.saveAllPartial':
+          'Some sections failed to save — check the errors below',
+        'pages.clients.editModal.saveAllError': 'Failed to save sections',
       }
       return translations[key] || key
     },
@@ -166,7 +172,9 @@ describe('EditClientModal', () => {
   const mockUpdateAddress = vi.fn()
   const mockDeleteAddress = vi.fn()
   const mockUpdateEmployment = vi.fn()
+  const mockUpdateEmploymentAsync = vi.fn().mockResolvedValue(undefined)
   const mockUpdatePassport = vi.fn()
+  const mockUpdatePassportAsync = vi.fn().mockResolvedValue(undefined)
 
   const defaultProps = {
     open: true,
@@ -213,12 +221,14 @@ describe('EditClientModal', () => {
 
     vi.mocked(useClientsModule.useUpdateEmployment).mockReturnValue({
       mutate: mockUpdateEmployment,
+      mutateAsync: mockUpdateEmploymentAsync,
       isPending: false,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any)
 
     vi.mocked(useClientsModule.useUpdatePassport).mockReturnValue({
       mutate: mockUpdatePassport,
+      mutateAsync: mockUpdatePassportAsync,
       isPending: false,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any)
@@ -320,6 +330,98 @@ describe('EditClientModal', () => {
       await waitFor(() => {
         expect(screen.getByText('Validation failed')).toBeInTheDocument()
       })
+    })
+  })
+
+  describe('Save All — parallel section mutations (R3 #4)', () => {
+    it('renders a Save All button when user has edit permission', () => {
+      render(<EditClientModal {...defaultProps} />, { wrapper: createWrapper() })
+      expect(screen.getByTestId('edit-client-save-all')).toBeInTheDocument()
+    })
+
+    it('hides Save All when user lacks edit permission', () => {
+      vi.mocked(useHasPermission).mockReturnValue(false)
+      render(<EditClientModal {...defaultProps} />, { wrapper: createWrapper() })
+      expect(screen.queryByTestId('edit-client-save-all')).not.toBeInTheDocument()
+    })
+
+    it('fires all 3 section mutations in parallel when Save All is clicked', async () => {
+      render(<EditClientModal {...defaultProps} />, { wrapper: createWrapper() })
+
+      fireEvent.click(screen.getByTestId('edit-client-save-all'))
+
+      await waitFor(() => {
+        expect(mockUpdateClientAsync).toHaveBeenCalledTimes(1)
+        expect(mockUpdateEmploymentAsync).toHaveBeenCalledTimes(1)
+        expect(mockUpdatePassportAsync).toHaveBeenCalledTimes(1)
+      })
+    })
+
+    it('shows one success toast when all 3 sections save successfully', async () => {
+      render(<EditClientModal {...defaultProps} />, { wrapper: createWrapper() })
+
+      fireEvent.click(screen.getByTestId('edit-client-save-all'))
+
+      await waitFor(() => {
+        expect(toast.success).toHaveBeenCalledWith('All sections saved')
+      })
+      expect(toast.error).not.toHaveBeenCalled()
+    })
+
+    it('surfaces per-section errors and a partial-success toast when some sections fail', async () => {
+      mockUpdateEmploymentAsync.mockRejectedValueOnce({
+        response: { data: { detail: 'Work failed' } },
+      })
+
+      render(<EditClientModal {...defaultProps} />, { wrapper: createWrapper() })
+
+      fireEvent.click(screen.getByTestId('edit-client-save-all'))
+
+      await waitFor(() => {
+        expect(toast.error).toHaveBeenCalledWith(
+          'Some sections failed to save — check the errors below'
+        )
+      })
+      expect(screen.getByText('Work failed')).toBeInTheDocument()
+      // Successful sections still ran
+      expect(mockUpdateClientAsync).toHaveBeenCalledTimes(1)
+      expect(mockUpdatePassportAsync).toHaveBeenCalledTimes(1)
+    })
+
+    it('shows an all-failed toast when every section rejects', async () => {
+      mockUpdateClientAsync.mockRejectedValueOnce({ response: { data: { detail: 'p' } } })
+      mockUpdateEmploymentAsync.mockRejectedValueOnce({ response: { data: { detail: 'w' } } })
+      mockUpdatePassportAsync.mockRejectedValueOnce({ response: { data: { detail: 'pp' } } })
+
+      render(<EditClientModal {...defaultProps} />, { wrapper: createWrapper() })
+
+      fireEvent.click(screen.getByTestId('edit-client-save-all'))
+
+      await waitFor(() => {
+        expect(toast.error).toHaveBeenCalledWith('Failed to save sections')
+      })
+      expect(toast.success).not.toHaveBeenCalled()
+    })
+
+    it('blocks the click and surfaces personal validation error if tax_id is invalid (no mutations fire)', async () => {
+      const invalidProfile = { ...mockProfileData, tax_id: '123' }
+      vi.mocked(useClientsModule.useClientProfile).mockReturnValue({
+        data: invalidProfile,
+        isLoading: false,
+        isError: false,
+        error: null,
+      } as unknown as ReturnType<typeof useClientsModule.useClientProfile>)
+
+      render(<EditClientModal {...defaultProps} />, { wrapper: createWrapper() })
+
+      fireEvent.click(screen.getByTestId('edit-client-save-all'))
+
+      await waitFor(() => {
+        expect(screen.getByText('Failed to update client')).toBeInTheDocument()
+      })
+      expect(mockUpdateClientAsync).not.toHaveBeenCalled()
+      expect(mockUpdateEmploymentAsync).not.toHaveBeenCalled()
+      expect(mockUpdatePassportAsync).not.toHaveBeenCalled()
     })
   })
 
