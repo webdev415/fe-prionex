@@ -768,7 +768,9 @@
         "type": {
           "client": "Client Dialogue",
           "thirdParty": "Third Party Dialogue"
-        }
+        },
+        "chooseTemplate": "Choose a specific template",
+        "hideTemplatePicker": "Hide template list"
       },
       "dialogue": {
         "chips": {
@@ -786,7 +788,11 @@
           "title": "New assessment",
           "operator": "Operator",
           "select": "Select an operator…",
-          "continue": "Continue"
+          "continue": "Continue",
+          "pickOperatorHint": "Select an operator to see their recent calls.",
+          "searchOperator": "Search operator by name…",
+          "noMatches": "No operators match",
+          "change": "Change"
         },
         "avgByType": {
           "title": "Average score by dialogue type",
@@ -5932,7 +5938,9 @@
         "type": {
           "client": "Client Dialogue",
           "thirdParty": "Third Party Dialogue"
-        }
+        },
+        "chooseTemplate": "Choose a specific template",
+        "hideTemplatePicker": "Hide template list"
       },
       "dialogue": {
         "chips": {
@@ -5950,7 +5958,11 @@
           "title": "New assessment",
           "operator": "Operator",
           "select": "Select an operator…",
-          "continue": "Continue"
+          "continue": "Continue",
+          "pickOperatorHint": "Select an operator to see their recent calls.",
+          "searchOperator": "Search operator by name…",
+          "noMatches": "No operators match",
+          "change": "Change"
         },
         "avgByType": {
           "title": "Average score by dialogue type",

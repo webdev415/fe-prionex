@@ -109,7 +109,7 @@ export function DialogueEvaluationTab() {
         ) : (
           <div />
         )}
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center justify-end gap-2">
           <div className="inline-flex rounded-md border border-[#EBECE8] p-0.5">
             {(['list', 'averages'] as const).map((v) => (
               <button
@@ -126,7 +126,7 @@ export function DialogueEvaluationTab() {
               </button>
             ))}
           </div>
-          <NewAssessmentButton operators={operators} />
+          <NewAssessmentButton />
           <EmployeeMultiSelect
             value={selectedEmployeeIds}
             onChange={setSelectedEmployeeIds}

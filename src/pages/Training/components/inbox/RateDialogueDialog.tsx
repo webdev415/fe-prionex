@@ -1,4 +1,4 @@
-﻿import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Modal, ModalContent, ModalHeader } from '@/components/ui/Modal'
 import { useCallMonitoring } from '@/features/training'
@@ -8,21 +8,21 @@ import { useAuthStore } from '@/stores/authStore'
 import { CallReviewLayout } from '../CallReviewLayout'
 
 /**
- * Recent-calls picker invoked by Quick-Action "Rate dialogue" + the
- * OperatorDetailPanel "Listen to the call" button.
+ * New-assessment / Rate-dialogue picker (KAN-504).
  *
- * Resolves operator_id -> asterisk_extension via the cached operator list,
- * fetches the operator's last 10 calls (last_30d window), and opens a
- * CallReviewLayout when the trainer picks one.
+ * A single modal: pick the operator (dropdown) and then one of that
+ * operator's recent calls (last_30d, last 10). Picking a recorded call
+ * opens a CallReviewLayout with the ScorecardPanel.
  *
- * If the operator has no recorded asterisk_extension (e.g. an admin user
- * who never received a phone provisioning), the dialog shows an empty
- * state — there are no calls to rate.
+ * ``operatorId`` is an optional *initial* selection — when the modal is
+ * opened from a context that already knows the operator (e.g. Quick Action
+ * → Rate dialogue), the dropdown is pre-selected to it but stays
+ * changeable. When omitted, the trainer picks the operator first.
  */
 export interface RateDialogueDialogProps {
   open: boolean
   onClose: () => void
-  operatorId: number | undefined
+  operatorId?: number
 }
 
 function formatTime(value: string): { date: string; time: string } {
@@ -49,7 +49,29 @@ export function RateDialogueDialog({ open, onClose, operatorId }: RateDialogueDi
   const activeProjectId = useAuthStore((s) => s.user?.active_project_id)
   const { data: operators = [] } = useOperators(activeProjectId ? Number(activeProjectId) : null)
 
-  const operator = operatorId ? operators.find((o) => o.id === operatorId) : undefined
+  const [selectedOperatorId, setSelectedOperatorId] = useState<number | null>(operatorId ?? null)
+  const [selectedCall, setSelectedCall] = useState<CallMonitoringItem | null>(null)
+  const [operatorQuery, setOperatorQuery] = useState('')
+
+  // Reset selection each time the modal opens (render-time adjustment, no
+  // effect): honour the caller-provided operator as the initial pick.
+  const [wasOpen, setWasOpen] = useState(open)
+  if (open !== wasOpen) {
+    setWasOpen(open)
+    setSelectedOperatorId(open ? (operatorId ?? null) : null)
+    setSelectedCall(null)
+    setOperatorQuery('')
+  }
+
+  const filteredOperators = useMemo(() => {
+    const q = operatorQuery.trim().toLowerCase()
+    if (!q) return operators
+    return operators.filter((o) => (o.full_name ?? `#${o.id}`).toLowerCase().includes(q))
+  }, [operators, operatorQuery])
+
+  const operator = selectedOperatorId
+    ? operators.find((o) => o.id === selectedOperatorId)
+    : undefined
   const extension = operator?.asterisk_extension ?? null
 
   const { data: callsData, isLoading } = useCallMonitoring(
@@ -63,7 +85,6 @@ export function RateDialogueDialog({ open, onClose, operatorId }: RateDialogueDi
   )
 
   const calls = callsData?.calls ?? []
-  const [selectedCall, setSelectedCall] = useState<CallMonitoringItem | null>(null)
 
   const handlePickCall = (call: CallMonitoringItem) => {
     if (!call.has_recording) return
@@ -77,17 +98,20 @@ export function RateDialogueDialog({ open, onClose, operatorId }: RateDialogueDi
     onClose()
   }
 
-  const renderEmptyState = () => {
-    if (!operatorId) {
+  const renderCallList = () => {
+    if (!selectedOperatorId) {
       return (
-        <p className="px-4 py-8 text-center text-sm text-gray-500">
-          {t('pages.training.inbox.rateDialogue.noOperator', 'Select an operator first.')}
+        <p className="px-1 py-8 text-center text-sm text-gray-500">
+          {t(
+            'pages.training.dialogue.newAssessmentPicker.pickOperatorHint',
+            'Select an operator to see their recent calls.'
+          )}
         </p>
       )
     }
     if (!extension) {
       return (
-        <p className="px-4 py-8 text-center text-sm text-gray-500">
+        <p className="px-1 py-8 text-center text-sm text-gray-500">
           {t(
             'pages.training.inbox.rateDialogue.noExtension',
             'This operator has no telephony extension and no calls to rate.'
@@ -97,79 +121,143 @@ export function RateDialogueDialog({ open, onClose, operatorId }: RateDialogueDi
     }
     if (isLoading) {
       return (
-        <p className="px-4 py-8 text-center text-sm text-gray-500">
+        <p className="px-1 py-8 text-center text-sm text-gray-500">
           {t('pages.training.inbox.detail.loading', 'Loading…')}
         </p>
       )
     }
     if (calls.length === 0) {
       return (
-        <p className="px-4 py-8 text-center text-sm text-gray-500">
+        <p className="px-1 py-8 text-center text-sm text-gray-500">
           {t('pages.training.inbox.rateDialogue.noCalls', 'No recent calls for this operator.')}
         </p>
       )
     }
-    return null
+    return (
+      <ul className="divide-y divide-gray-100">
+        {calls.map((call) => {
+          const start = formatTime(call.initiated_at)
+          const disabled = !call.has_recording
+          return (
+            <li key={call.call_id}>
+              <button
+                type="button"
+                onClick={() => handlePickCall(call)}
+                disabled={disabled}
+                className={[
+                  'flex w-full items-center justify-between gap-4 px-2 py-3 text-left text-sm transition-colors',
+                  disabled ? 'cursor-not-allowed opacity-50' : 'hover:bg-primary-50',
+                ].join(' ')}
+              >
+                <div className="flex flex-col">
+                  <span className="text-dark-500 font-medium">
+                    {start.date} · {start.time}
+                  </span>
+                  <span className="text-xs text-gray-500">
+                    {call.customer_number} · {formatDuration(call.talk_duration)}
+                  </span>
+                </div>
+                <span className="text-xs text-gray-500">
+                  {call.outcome ??
+                    (call.has_recording
+                      ? t('pages.training.inbox.rateDialogue.hasRecording', 'Recording available')
+                      : t('pages.training.inbox.rateDialogue.noRecording', 'No recording'))}
+                </span>
+              </button>
+            </li>
+          )
+        })}
+      </ul>
+    )
   }
-
-  const emptyState = renderEmptyState()
 
   return (
     <>
       <Modal open={open && !selectedCall} onClose={closeAll} maxWidth="lg">
-        <ModalHeader title={t('pages.training.inbox.rateDialogue.title', 'Pick a call to rate')} />
+        <ModalHeader
+          title={t('pages.training.dialogue.newAssessmentPicker.title', 'New assessment')}
+        />
         <ModalContent>
-          {emptyState ?? (
-            <ul className="divide-y divide-gray-100">
-              {calls.map((call) => {
-                const start = formatTime(call.initiated_at)
-                const disabled = !call.has_recording
-                return (
-                  <li key={call.call_id}>
-                    <button
-                      type="button"
-                      onClick={() => handlePickCall(call)}
-                      disabled={disabled}
-                      className={[
-                        'flex w-full items-center justify-between gap-4 px-4 py-3 text-left text-sm transition-colors',
-                        disabled ? 'cursor-not-allowed opacity-50' : 'hover:bg-primary-50',
-                      ].join(' ')}
-                    >
-                      <div className="flex flex-col">
-                        <span className="text-dark-500 font-medium">
-                          {start.date} · {start.time}
-                        </span>
-                        <span className="text-xs text-gray-500">
-                          {call.customer_number} · {formatDuration(call.talk_duration)}
-                        </span>
-                      </div>
-                      <span className="text-xs text-gray-500">
-                        {call.outcome ??
-                          (call.has_recording
-                            ? t(
-                                'pages.training.inbox.rateDialogue.hasRecording',
-                                'Recording available'
-                              )
-                            : t('pages.training.inbox.rateDialogue.noRecording', 'No recording'))}
-                      </span>
-                    </button>
-                  </li>
-                )
-              })}
-            </ul>
-          )}
+          <div className="flex flex-col gap-3">
+            <label className="text-sm font-medium text-gray-700">
+              {t('pages.training.dialogue.newAssessmentPicker.operator', 'Operator')}
+            </label>
+
+            {selectedOperatorId == null ? (
+              <div className="flex flex-col gap-1.5">
+                <input
+                  type="text"
+                  value={operatorQuery}
+                  onChange={(e) => setOperatorQuery(e.target.value)}
+                  placeholder={t(
+                    'pages.training.dialogue.newAssessmentPicker.searchOperator',
+                    'Search operator by name…'
+                  )}
+                  className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                />
+                <div className="max-h-60 overflow-y-auto rounded-lg border border-gray-100">
+                  {filteredOperators.length === 0 ? (
+                    <p className="px-3 py-4 text-center text-xs text-gray-500">
+                      {t(
+                        'pages.training.dialogue.newAssessmentPicker.noMatches',
+                        'No operators match'
+                      )}
+                    </p>
+                  ) : (
+                    <ul className="divide-y divide-gray-100">
+                      {filteredOperators.map((op) => (
+                        <li key={op.id}>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedOperatorId(op.id)
+                              setSelectedCall(null)
+                            }}
+                            className="hover:bg-primary-50 block w-full px-3 py-2 text-left text-sm text-gray-700"
+                          >
+                            {op.full_name ?? `#${op.id}`}
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center justify-between gap-2 rounded-lg bg-gray-50 px-3 py-2">
+                <span className="text-dark-500 truncate text-sm font-medium">
+                  {operator?.full_name ?? `#${selectedOperatorId}`}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedOperatorId(null)
+                    setOperatorQuery('')
+                    setSelectedCall(null)
+                  }}
+                  className="text-primary-600 flex-shrink-0 text-xs hover:underline"
+                >
+                  {t('pages.training.dialogue.newAssessmentPicker.change', 'Change')}
+                </button>
+              </div>
+            )}
+
+            {selectedOperatorId != null ? (
+              <div className="border-t border-gray-100 pt-1">{renderCallList()}</div>
+            ) : null}
+          </div>
         </ModalContent>
       </Modal>
 
-      {selectedCall && operatorId ? (
+      {selectedCall && selectedOperatorId ? (
         <CallReviewLayout
           open={true}
           onClose={closeReview}
           callId={selectedCall.call_id}
-          operatorId={operatorId}
+          operatorId={selectedOperatorId}
           callData={{
             type: selectedCall.direction ?? 'outbound',
-            clientName: operator?.full_name ?? `#${operatorId}`,
+            clientName: operator?.full_name ?? `#${selectedOperatorId}`,
             date: formatTime(selectedCall.initiated_at).date,
             time: formatTime(selectedCall.initiated_at).time,
             operator: operator?.full_name ?? '',

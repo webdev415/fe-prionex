@@ -51,6 +51,9 @@ export function ScorecardPanel({
   // outstanding draft on this call. No effects, no cascading renders.
   const [manuallySelectedId, setManuallySelectedId] = useState<number | null>(null)
   const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(null)
+  // The Client/Third-Party buttons already pick the template, so the raw
+  // template dropdown is collapsed behind a disclosure (legacy/advanced).
+  const [showTemplateOverride, setShowTemplateOverride] = useState(false)
 
   const autoDraftId = historyQuery.data?.find((h) => h.status === 'draft')?.id ?? null
   const activeScorecardId = pinnedScorecardId ?? manuallySelectedId ?? autoDraftId ?? null
@@ -187,24 +190,32 @@ export function ScorecardPanel({
           })}
         </div>
 
-        <label className="text-sm font-medium text-gray-700">
-          {t('pages.training.scorecard.template', 'Template')}
-        </label>
-        <select
-          className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
-          value={selectedTemplateId ?? ''}
-          onChange={(e) => setSelectedTemplateId(e.target.value ? Number(e.target.value) : null)}
-          disabled={templatesQuery.isLoading}
+        <button
+          type="button"
+          onClick={() => setShowTemplateOverride((v) => !v)}
+          className="self-start text-xs text-gray-500 underline-offset-2 hover:text-gray-700 hover:underline"
         >
-          <option value="">
-            {t('pages.training.scorecard.selectTemplate', 'Select a template…')}
-          </option>
-          {templatesQuery.data?.map((tpl) => (
-            <option key={tpl.id} value={tpl.id}>
-              {tpl.name}
+          {showTemplateOverride
+            ? t('pages.training.scorecard.hideTemplatePicker', 'Hide template list')
+            : t('pages.training.scorecard.chooseTemplate', 'Choose a specific template')}
+        </button>
+        {showTemplateOverride ? (
+          <select
+            className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+            value={selectedTemplateId ?? ''}
+            onChange={(e) => setSelectedTemplateId(e.target.value ? Number(e.target.value) : null)}
+            disabled={templatesQuery.isLoading}
+          >
+            <option value="">
+              {t('pages.training.scorecard.selectTemplate', 'Select a template…')}
             </option>
-          ))}
-        </select>
+            {templatesQuery.data?.map((tpl) => (
+              <option key={tpl.id} value={tpl.id}>
+                {tpl.name}
+              </option>
+            ))}
+          </select>
+        ) : null}
 
         <Button
           variant="primary"
@@ -249,7 +260,7 @@ export function ScorecardPanel({
       <div className="bg-primary-50 text-primary-700 rounded-lg p-3 text-sm">
         {t('pages.training.scorecard.computedScore', 'Score')}:{' '}
         <span className="text-lg font-semibold">
-          {livePreview != null ? livePreview.toFixed(2) : '—'}
+          {livePreview != null ? `${Math.round(livePreview * 20)} / 100` : '—'}
         </span>
       </div>
 
@@ -366,7 +377,12 @@ function CriterionRow({ criterion, entry, disabled, onChange }: CriterionRowProp
   return (
     <div className="rounded-md bg-gray-50 px-3 py-2">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <span className="text-sm text-gray-700">{criterion.name}</span>
+        <span className="text-sm text-gray-700">
+          {criterion.name}
+          {criterion.weight > 0 ? (
+            <span className="ml-1.5 text-xs text-gray-400">· {criterion.weight} pts</span>
+          ) : null}
+        </span>
         {criterion.scale === 'binary' ? (
           <BinaryInput
             value={(entry?.value as boolean | null) ?? null}
@@ -408,18 +424,22 @@ function BinaryInput({
         type="button"
         disabled={disabled}
         onClick={() => onChange(value === true ? null : true)}
+        aria-label="Yes"
+        aria-pressed={value === true}
         className={`rounded-full border px-3 py-1 text-xs font-medium ${
           value === true
             ? 'bg-primary-500 border-primary-500 text-white'
             : 'border-gray-200 bg-white text-gray-700'
         }`}
       >
-        âœ“
+        ✓
       </button>
       <button
         type="button"
         disabled={disabled}
         onClick={() => onChange(value === false ? null : false)}
+        aria-label="No"
+        aria-pressed={value === false}
         className={`rounded-full border px-3 py-1 text-xs font-medium ${
           value === false
             ? 'border-red-500 bg-red-500 text-white'
