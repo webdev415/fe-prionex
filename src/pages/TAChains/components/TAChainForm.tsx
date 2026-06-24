@@ -28,6 +28,7 @@ import { useDepartments } from '@/features/departments/hooks/useDepartments'
 import { useAuthStore } from '@/stores/authStore'
 import { getErrorMessage } from '@/lib/errors'
 import { ChainStepsEditor } from './ChainStepsEditor'
+import { taChainStepsToInput } from './taChainFormHelpers'
 
 interface TAChainFormProps {
   formId: string
@@ -66,15 +67,7 @@ export function TAChainForm({ formId, initial, onSuccess }: TAChainFormProps) {
   const [chainType, setChainType] = useState<ChainType>(initial?.chain_type ?? 'manual')
   const [departmentIds, setDepartmentIds] = useState<number[]>(initial?.department_ids ?? [])
   const [isSystemHidden, setIsSystemHidden] = useState<boolean>(initial?.is_system_hidden ?? false)
-  const [steps, setSteps] = useState<TAChainStepIn[]>(
-    initial?.steps?.map((s) => ({
-      target_action_id: s.target_action_id,
-      is_required: s.is_required,
-      delay_minutes: s.delay_minutes,
-      not_in_the_past: s.not_in_the_past,
-      contact_source: s.contact_source,
-    })) ?? []
-  )
+  const [steps, setSteps] = useState<TAChainStepIn[]>(() => taChainStepsToInput(initial?.steps))
 
   const [deptOpen, setDeptOpen] = useState(false)
   const [deptSearch, setDeptSearch] = useState('')

@@ -9,19 +9,22 @@
 
 export const PERMISSIONS = {
   /**
-   * Clients Category (9 permissions)
+   * Clients Category (12 permissions)
    * Controls access to client data and management
    */
   CLIENTS: {
     VIEW: 'view_clients',
     VIEW_FULL_CLIENT_DATA: 'view_full_client_data',
     EDIT: 'edit_clients',
+    REASSIGN_RESPONSIBLE: 'reassign_client_responsible',
     ASSIGN_TAGS: 'assign_client_tags',
     EDIT_DEBT: 'edit_client_debt',
     CLOSE_DEBT: 'close_client_debt',
     VERIFY_PAYMENT: 'verify_payment',
     DELETE: 'delete_clients',
     CREATE_INTERACTIONS: 'create_interactions',
+    EDIT_INTERACTIONS: 'edit_interactions',
+    DELETE_INTERACTIONS: 'delete_interactions',
     CREATE_TASKS: 'create_tasks',
     VIEW_TASKS: 'view_tasks',
   },
@@ -190,13 +193,13 @@ export const PERMISSIONS = {
   },
 
   /**
-   * Action Analysis Category (16 permissions)
-   * Controls access to the Action Analysis page and its drill-downs.
-   * KAN-409 added the four operator-analytics sub-permissions; KAN-410
-   * adds the eight quality-scoring sub-permissions (Scorecard, Markers,
-   * Feedback, Score Dynamics).
+   * Training Category (16 permissions)
+   * Controls access to the Training page (formerly Action Analysis) and
+   * its drill-downs. String values keep the `view_action_analysis` /
+   * `view_*` prefixes because they are persisted in the backend `roles`
+   * table — renaming them would require a server-side migration.
    */
-  ACTION_ANALYSIS: {
+  TRAINING: {
     VIEW: 'view_action_analysis',
     VIEW_CLICK_TRACKING: 'view_click_tracking',
     VIEW_SCREEN_TIME: 'view_screen_time',
@@ -219,6 +222,25 @@ export const PERMISSIONS = {
     MANAGE_COACHING_ASSIGNMENTS: 'manage_coaching_assignments',
     CREATE_ONE_ON_ONE: 'create_one_on_one',
     SELECT_INBOX_SCOPE: 'select_inbox_scope',
+    // KAN-414 — Team tab (department / group rollup)
+    VIEW_TEAM: 'view_team',
+    // KAN-411 — Operator training (correction tasks / leaderboard / flags / library)
+    MANAGE_CORRECTION_TASKS: 'manage_correction_tasks',
+    VIEW_LEADERBOARD: 'view_leaderboard',
+    MANAGE_BADGES: 'manage_badges',
+    VIEW_AUTO_FLAGS: 'view_auto_flags',
+    MANAGE_CALL_LIBRARY: 'manage_call_library',
+    // KAN-749 — Trainings & Sessions surfaces (KAN-615 epic children)
+    VIEW_COURSES: 'view_courses',
+    MANAGE_COURSES: 'manage_courses',
+    VIEW_TRAININGS: 'view_trainings',
+    MANAGE_TRAININGS: 'manage_trainings',
+    VIEW_DRILLS: 'view_drills',
+    MANAGE_DRILLS: 'manage_drills',
+    VIEW_TESTS: 'view_tests',
+    MANAGE_TESTS: 'manage_tests',
+    VIEW_MATERIALS: 'view_materials',
+    MANAGE_MATERIALS: 'manage_materials',
   },
 
   /**
@@ -320,13 +342,16 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   // Clients
   view_clients: 'View client data and information',
   view_full_client_data: 'View unmasked client PII (name, phone, TIN) in dashboards',
-  edit_clients: 'Edit client information (except debt amounts and tags)',
+  edit_clients: 'Edit client information (except reassignment, debt amounts and tags)',
+  reassign_client_responsible: 'Change the responsible operator or searcher on a client',
   assign_client_tags: 'Assign and remove tags on client profiles',
   edit_client_debt: 'Edit debt amounts and DPD (Days Past Due)',
   close_client_debt: 'Close/finalize a client debt (irreversible)',
   verify_payment: 'Verify and cancel client payments',
   delete_clients: 'Delete client records (soft delete)',
   create_interactions: 'Create client interactions (add notes)',
+  edit_interactions: 'Edit existing TA interactions on the client profile',
+  delete_interactions: 'Delete existing TA interactions on the client profile',
   create_tasks: 'Create and manage tasks for clients',
   view_tasks: 'View tasks for clients',
 
@@ -423,6 +448,29 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   manage_coaching_assignments: 'Take charge of an operator and transition Kanban workflow state',
   create_one_on_one: 'Schedule a 1-on-1 session with an operator',
   select_inbox_scope: 'Show the My / Group / Department / All scope selector on the Inbox tab',
+  // KAN-414 — Team tab
+  view_team: 'View the Team tab — department / team rollup with per-operator composite scores',
+  // KAN-411 — Operator training
+  manage_correction_tasks:
+    'Create / confirm / return correction tasks linked to calls (KAN-411 Feature 3.1)',
+  view_leaderboard:
+    'View the operator leaderboard with composite-score ranking + badges (KAN-411 Feature 3.2)',
+  manage_badges: 'Manually award badges to operators (KAN-411 Feature 3.2)',
+  view_auto_flags: 'Review the auto-flag inbox of suspicious calls (KAN-411 Feature 3.3)',
+  manage_call_library:
+    'Curate the training call library and assign learning plans (KAN-411 Feature 3.4)',
+
+  // Trainings & Sessions (KAN-749 — KAN-615 epic children)
+  view_courses: 'Browse the course catalogue and enrolled-course progress (KAN-750)',
+  manage_courses: 'Create / publish / archive courses and assign enrollments (KAN-750)',
+  view_trainings: 'Browse scheduled group training sessions (KAN-752)',
+  manage_trainings: 'Schedule / cancel group training sessions (KAN-752)',
+  view_drills: 'Browse drill exercises and attempts (KAN-751)',
+  manage_drills: 'Create drills and review / score attempts (KAN-751)',
+  view_tests: 'Browse the Tests surface (reserved)',
+  manage_tests: 'Manage the Tests surface (reserved)',
+  view_materials: 'Browse and download the materials library (KAN-616)',
+  manage_materials: 'Upload / edit / archive materials (KAN-616)',
 
   // Document Generation
   view_document_journal: 'View the journal of all generated and uploaded documents',

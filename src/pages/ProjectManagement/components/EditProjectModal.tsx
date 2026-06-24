@@ -18,6 +18,7 @@ import { Label } from '@/components/ui/Label'
 import { RadioGroup, RadioItem } from '@/components/ui/Radio'
 import { useUpdateProject } from '@/features/projects/hooks/useProjectMutations'
 import type { ApiProjectDetail, UpdateProjectInput } from '@/features/projects/types'
+import { formatPickerDateAsYMD } from '@/lib/dateUtils'
 import { Icons } from '@/lib/icons'
 
 interface EditProjectModalProps {
@@ -237,7 +238,7 @@ function EditProjectForm({ project, onClose, onSuccess }: EditProjectFormProps) 
                   id="start_date"
                   value={formData.start_date}
                   onChange={(args) => {
-                    const dateStr = args.value ? args.value.toISOString().split('T')[0] : ''
+                    const dateStr = args.value ? formatPickerDateAsYMD(args.value) : ''
                     handleChange('start_date', dateStr)
                   }}
                   disabled={updateMutation.isPending}
@@ -250,7 +251,7 @@ function EditProjectForm({ project, onClose, onSuccess }: EditProjectFormProps) 
                   id="end_date"
                   value={formData.end_date}
                   onChange={(args) => {
-                    const dateStr = args.value ? args.value.toISOString().split('T')[0] : ''
+                    const dateStr = args.value ? formatPickerDateAsYMD(args.value) : ''
                     handleChange('end_date', dateStr)
                   }}
                   disabled={updateMutation.isPending || noEndDate}

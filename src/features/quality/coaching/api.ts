@@ -10,6 +10,10 @@ import type {
   QueueResponse,
   ScheduleOneOnOnePayload,
   TakeChargePayload,
+  TeamEventsFilters,
+  TeamEventsResponse,
+  TeamRosterFilters,
+  TeamRosterResponse,
   TransitionAssignmentPayload,
 } from './types'
 
@@ -92,6 +96,37 @@ export async function transitionAssignment(
 
 export async function takeChargeOfOperator(payload: TakeChargePayload): Promise<AssignmentSummary> {
   const response = await api.post<AssignmentSummary>(`${BASE}/assignments/take-charge`, payload)
+  return response.data
+}
+
+function buildTeamEventsParams(filters: TeamEventsFilters): URLSearchParams {
+  const params = new URLSearchParams()
+  filters.user_ids?.forEach((id) => params.append('user_ids', String(id)))
+  if (filters.hours != null) params.set('hours', String(filters.hours))
+  if (filters.limit != null) params.set('limit', String(filters.limit))
+  return params
+}
+
+export async function getTeamEvents(filters: TeamEventsFilters = {}): Promise<TeamEventsResponse> {
+  const response = await api.get<TeamEventsResponse>(`${BASE}/team-events`, {
+    params: buildTeamEventsParams(filters),
+  })
+  return response.data
+}
+
+function buildTeamRosterParams(filters: TeamRosterFilters): URLSearchParams {
+  const params = new URLSearchParams()
+  if (filters.department_id != null) {
+    params.set('department_id', String(filters.department_id))
+  }
+  filters.user_ids?.forEach((id) => params.append('user_ids', String(id)))
+  return params
+}
+
+export async function getTeamRoster(filters: TeamRosterFilters = {}): Promise<TeamRosterResponse> {
+  const response = await api.get<TeamRosterResponse>(`${BASE}/team-roster`, {
+    params: buildTeamRosterParams(filters),
+  })
   return response.data
 }
 

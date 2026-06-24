@@ -16,6 +16,7 @@ const ANALYTICS_BASE = '/api/v1/analytics'
 function buildRangeParams(filters: AnalyticsRangeFilters): URLSearchParams {
   const params = new URLSearchParams()
   filters.operator_ids?.forEach((id) => params.append('operator_ids', String(id)))
+  filters.department_ids?.forEach((id) => params.append('department_ids', String(id)))
   if (filters.period) params.set('period', filters.period)
   if (filters.from_date) params.set('from_date', filters.from_date)
   if (filters.to_date) params.set('to_date', filters.to_date)

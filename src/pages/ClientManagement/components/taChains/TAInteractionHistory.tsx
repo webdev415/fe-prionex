@@ -6,6 +6,7 @@
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { DataTable, type Column } from '@/components/ui/DataTable'
+import { extractPhones } from './taFieldMapping'
 import { Input } from '@/components/ui/Input'
 import {
   Select,
@@ -30,8 +31,8 @@ import type { TAInteraction } from '@/features/taInteractions/api/types'
 import { TableSkeleton } from '@/components/ui/TableSkeleton'
 import { formatDate, formatDateTime, formatMoneyKopeckTight } from '@/lib/formatters'
 import { Icons } from '@/lib/icons'
-import { PermissionGuard } from '@/components/auth'
 import { PERMISSIONS } from '@/constants/permissions'
+import { useHasPermission } from '@/hooks'
 import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { Pagination } from '@/components/ui/Pagination'
@@ -117,6 +118,9 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
   }
   const { t } = useTranslation('common')
   const togglePinMut = useTogglePinTAInteraction()
+  // Pattern X: hide buttons entirely when the user lacks the permission.
+  const canEditInteractions = useHasPermission(PERMISSIONS.CLIENTS.EDIT_INTERACTIONS)
+  const canDeleteInteractions = useHasPermission(PERMISSIONS.CLIENTS.DELETE_INTERACTIONS)
   const handleTogglePin = async (id: number) => {
     try {
       await togglePinMut.mutateAsync(id)
@@ -234,40 +238,12 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
       render: (row) => {
         if (!row.step_data) return <span className="text-xs text-gray-700">-</span>
         const chain = chains.find((c) => c.id === row.chain_id)
-        const stepsOrdered = chain?.steps
-          ? [...chain.steps].sort((a, b) => a.step_order - b.step_order)
-          : []
-        const sd = row.step_data as Record<string, string>
-        const phones = new Set<string>()
-        const isPhoneShaped = (val: string): boolean => {
-          // 10–15 digits after stripping non-digit chars. Debt ids are
-          // <=7 digits in this project, but a credit-typed step can hold
-          // **multiple** comma-separated ids (e.g. "604948,609498"). The
-          // previous version naively stripped the comma too and ended up
-          // with a 12-digit string, which fell inside the phone window
-          // and leaked debt ids into the Phone column. Reject any value
-          // containing a comma up front — a phone number never has one.
-          if (val.includes(',')) return false
-          const digits = val.replace(/\D/g, '')
-          return digits.length >= 10 && digits.length <= 15
-        }
-        // 1. Happy path: render whatever the current chain marks as
-        //    contact-typed. Validate shape so a retyped step (e.g.
-        //    contact → credit) doesn't pump a debt id into this cell.
-        for (const step of stepsOrdered) {
-          if (step.target_action_field_type !== 'contact') continue
-          const val = sd[String(step.step_order)] ?? sd[String(step.target_action_id)]
-          if (val && isPhoneShaped(val)) phones.add(val)
-        }
-        // 2. Drift recovery: if the chain was retyped so the original
-        //    contact step is no longer contact (was the user-reported
-        //    case), the phone still lives in step_data — pull it back
-        //    by scanning all values. We add only phone-shaped strings,
-        //    so dropdown labels and small numeric ids never appear.
-        for (const val of Object.values(sd)) {
-          if (typeof val === 'string' && isPhoneShaped(val)) phones.add(val)
-        }
-        const uniquePhones = Array.from(phones)
+        const stepsOrdered = chain?.steps ?? []
+        // extractPhones shape-checks every value (rejecting dates, datetimes,
+        // debt-id lists and dropdown labels), so a date like
+        // "2026-05-15T10:30:00" can no longer leak into the Phone column.
+        // See taFieldMapping.ts (Bug 1).
+        const uniquePhones = extractPhones(row.step_data as Record<string, unknown>, stepsOrdered)
         return (
           <span className="text-xs text-gray-700">
             {uniquePhones.length > 0 ? uniquePhones.join(', ') : '-'}
@@ -346,11 +322,6 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
         let consumedPromiseDate = false
         let consumedPromiseAmount = false
         let consumedCredit = false
-        // Track credit-typed step values we've already rendered so a
-        // chain with two redundant credit steps doesn't print the same
-        // ``#100, #200`` list twice. Other field types are *not* deduped
-        // — e.g. two identical dropdown picks are intentional history.
-        const seenCreditValues = new Set<string>()
 
         if (row.step_data && Object.keys(row.step_data).length > 0) {
           const chain = chains.find((c) => c.id === row.chain_id)
@@ -406,22 +377,11 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
               if (ta?.field_type === 'credit' && !formattedValue) {
                 formattedValue = val
               }
-              // Suppress repeat credit selections across the whole
-              // chain (not just adjacent ones). Chains designed with
-              // two credit-typed steps — one inside each dropdown
-              // branch (e.g. "Домовленість" + "Можлива оплата") —
-              // used to render the same ``#100, #200`` list twice with
-              // only the dropdown label between them. The second copy
-              // is never new information; collapse it so the Result
-              // column matches what the operator actually decided.
-              // Limited to credit-typed steps; other types (amounts,
-              // dropdowns, dates) can legitimately repeat.
-              if (ta?.field_type === 'credit' && formattedValue !== '') {
-                if (seenCreditValues.has(formattedValue)) {
-                  continue
-                }
-                seenCreditValues.add(formattedValue)
-              }
+              // Render every saved step faithfully — including a credit
+              // that repeats across steps. Collapsing repeats used to hide
+              // that multiple steps ran, making a multi-step chain look like
+              // a single step (KAN-744). The Result column is the full
+              // workflow trail, so each step the operator completed is shown.
               entries.push({ value: formattedValue, followUps })
             }
           } else {
@@ -498,20 +458,24 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
           seen.add(numId)
           creditIds.push(display)
         }
-        if (row.credit_id) addCredit(row.credit_id)
+        // The credit(s) chosen in the chain's steps are the source of truth:
+        // show every one (multi-select is valid). Scan every step_data value —
+        // not just credit-typed steps — so a debt id saved when the step was
+        // credit but later retyped (chain drift) still shows up here. addCredit
+        // / safeCreditDisplay only accept real debts of this client, so
+        // non-credit values (phones, dropdown labels, dates) never leak in.
         if (row.step_data) {
-          // Scan every step_data value — not just credit-typed steps —
-          // so a debt id saved when the step was credit but later
-          // retyped (chain drift) still shows up here. addCredit /
-          // safeCreditDisplay only accept real debts of this client,
-          // so non-credit values (phones, dropdown labels, dates)
-          // never leak in.
           const sd = row.step_data as Record<string, string>
           for (const v of Object.values(sd)) {
             if (typeof v !== 'string') continue
             for (const id of v.split(',')) addCredit(id.trim())
           }
         }
+        // Legacy top-level credit_id is a single-value fallback used ONLY when
+        // no step carried a credit. Merging it in unconditionally surfaced a
+        // stale credit after the step credit was changed (e.g. the old number
+        // showing next to the new one, "#162040, #43820").
+        if (creditIds.length === 0 && row.credit_id) addCredit(row.credit_id)
         return (
           <span className="text-xs text-gray-700">
             {creditIds.length > 0 ? creditIds.join(', ') : '-'}
@@ -557,7 +521,7 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
           >
             <Icons.Pin size={14} strokeWidth={1.5} />
           </button>
-          <PermissionGuard permission={PERMISSIONS.SYSTEM.MANAGE_SETTINGS}>
+          {canEditInteractions && (
             <button
               type="button"
               onClick={() => setEditingId(row.id)}
@@ -567,6 +531,8 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
             >
               <Icons.PencilEdit size={14} strokeWidth={1.5} />
             </button>
+          )}
+          {canDeleteInteractions && (
             <button
               type="button"
               onClick={() => setDeletingId(row.id)}
@@ -576,7 +542,7 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
             >
               <Icons.Delete size={14} strokeWidth={1.5} />
             </button>
-          </PermissionGuard>
+          )}
         </div>
       ),
     },

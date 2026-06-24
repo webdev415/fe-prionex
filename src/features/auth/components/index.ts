@@ -1,6 +1,7 @@
 export { LoginCard } from './LoginCard'
 export { AccountLockedCard } from './AccountLockedCard'
 export { AlreadyLoggedInCard } from './AlreadyLoggedInCard'
+export { IpNotAllowedCard } from './IpNotAllowedCard'
 export { TwoFactorCodeCard } from './TwoFactorCodeCard'
 export { ProjectSwitcher } from './ProjectSwitcher'
 export { ImpersonationBanner } from './ImpersonationBanner'

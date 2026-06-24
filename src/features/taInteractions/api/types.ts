@@ -1,3 +1,5 @@
+import type { TagDefinition } from '@/features/tags/types'
+
 export interface TAInteraction {
   id: number
   client_id: number
@@ -111,6 +113,8 @@ export interface ChainInstance {
   last_step_completed_at: string | null
   delay_seconds_left: number
   step_data: Record<string, ChainInstanceStepSnapshot> | null
+  /** Authoritative tag list after chain completion (same shape as GET /clients/:id/tags). */
+  client_tags?: TagDefinition[] | null
 }
 
 export interface ChainInstanceCreate {
