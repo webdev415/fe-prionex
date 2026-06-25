@@ -116,13 +116,19 @@ export function Step2FileUpload({
             .map((h) => h.trim().replace(/\*+$/, '').trim().toLowerCase())
             .filter((h) => h.length > 0)
 
-          // Required columns (matching backend CSVParserService exactly)
+          // Required columns (matching backend validation). The mobile phone
+          // is required per-row by the backend (contact_type_id=1); flagging a
+          // missing header here fails fast instead of letting every row fail
+          // server-side. seller_company_legacy is intentionally NOT here — the
+          // backend defaults it, so it is optional.
           const requiredColumns = [
             'clients_first_name',
             'clients_last_name',
             'clients_tax_id',
+            'client_contacts_client_mobile_phone_contact_value',
             'debts_1_contract_number',
             'debts_1_remaining_debt_amount',
+            'debts_1_seller_company_legacy',
           ]
 
           // Check for required columns (strip * from headers to support required markers)
@@ -265,8 +271,8 @@ export function Step2FileUpload({
       'client_addresses_actual_street',
       'client_addresses_actual_building',
       'client_addresses_actual_apartment',
-      // contacts (common types)
-      'client_contacts_client_mobile_phone_contact_value',
+      // contacts (common types) — mobile phone is required (contact_type_id=1)
+      'client_contacts_client_mobile_phone_contact_value*',
       'client_contacts_client_mobile_phone_comment',
       'client_contacts_client_home_phone_contact_value',
       'client_contacts_client_home_phone_comment',
@@ -284,7 +290,7 @@ export function Step2FileUpload({
       'debts_1_fines_amount',
       'debts_1_credit_term_days',
       'debts_1_credit_issued_date',
-      'debts_1_seller_company_legacy',
+      'debts_1_seller_company_legacy*',
       'debts_1_portfolio_name',
     ]
 
