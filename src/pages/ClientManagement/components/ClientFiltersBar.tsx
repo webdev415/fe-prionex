@@ -19,7 +19,6 @@ import {
 import { Icons } from '@/lib/icons'
 import { PortfolioDropdown } from './PortfolioDropdown'
 import { TagsDropdown } from './TagsDropdown'
-import { LastInteractionResultDropdown } from './LastInteractionResultDropdown'
 import {
   NO_INTERACTIONS_ID,
   NO_RESPONSIBLE_ID,
@@ -128,7 +127,6 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
   const { t } = useTranslation('common')
   const [portfolioDropdownOpen, setPortfolioDropdownOpen] = useState(false)
   const [tagsDropdownOpen, setTagsDropdownOpen] = useState(false)
-  const [lastInteractionResultDropdownOpen, setLastInteractionResultDropdownOpen] = useState(false)
 
   // Fetch sellers from API (replaces mock portfolio data)
   const { data: sellersResponse } = useSellers({
@@ -140,20 +138,10 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
   const projectId = 1 // TODO: Get from auth context
   const { data: tagsData } = useTags(projectId)
 
-  // "Last Interaction Result" filter — Path 2: backed by TA chains
-  // (every ta_interactions row has a chain_id, so this works today
-  // without admin-configured dropdown values). The filter answers
-  // "which chain did this client most recently interact with?"
+  // TA chains feed the Chain + Step picker below.
   const { data: chainsData } = useTAChains({ include_inactive: false })
-  const sortedInteractionResults = useMemo(() => {
-    const items = chainsData?.items ?? []
-    return items
-      .filter((c) => c.chain_type === 'manual')
-      .map((c) => ({ id: c.id, value: c.name }))
-      .sort((a, b) => a.value.localeCompare(b.value))
-  }, [chainsData])
 
-  // Chain + Step picker — same chain dataset as above but ALL chain types
+  // Chain + Step picker — ALL chain types
   // are eligible (operators may want to filter on automatic chains too).
   // The picked chain's embedded ``steps`` drive the Step dropdown.
   const allChains = useMemo(
@@ -248,13 +236,6 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
     onFilterChange({
       ...filters,
       tagIds: tagIds,
-    })
-  }
-
-  const handleLastInteractionResultChange = (ids: number[]) => {
-    onFilterChange({
-      ...filters,
-      lastInteractionResultIds: ids,
     })
   }
 
@@ -734,66 +715,6 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                     />
                   </div>
                 )}
-              </div>
-            </div>
-            <div className="hidden sm:flex sm:min-w-[220px] sm:flex-1" />
-          </div>
-
-          {/* Last Interaction Result Filter Row */}
-          <div className="flex w-full flex-col gap-4 self-stretch lg:flex-row lg:items-center lg:gap-10">
-            <div className="flex w-full flex-col gap-2 sm:min-w-[220px] sm:flex-1 sm:flex-row sm:items-center sm:gap-3">
-              <label className="text-dark-500 w-full text-xs leading-[150%] font-medium tracking-[-0.24px] whitespace-nowrap sm:w-auto sm:shrink-0 sm:text-sm sm:tracking-[-0.28px]">
-                {t('pages.clients.filters.lastInteractionResult', 'Last Interaction Result')}
-              </label>
-              <div className="flex w-full flex-1 items-center gap-2">
-                <LastInteractionResultDropdown
-                  options={sortedInteractionResults}
-                  selectedIds={filters.lastInteractionResultIds || []}
-                  onSelectionChange={handleLastInteractionResultChange}
-                  onClear={() => handleLastInteractionResultChange([])}
-                  onOpenChange={setLastInteractionResultDropdownOpen}
-                  trigger={
-                    <button
-                      type="button"
-                      className="flex w-full items-center justify-between gap-2 rounded-md border border-gray-200 bg-white px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 sm:w-auto sm:min-w-[260px]"
-                    >
-                      <span className="truncate">
-                        {(() => {
-                          const selected = filters.lastInteractionResultIds || []
-                          if (selected.length === 0) {
-                            return t(
-                              'pages.clients.filters.lastInteractionResultPlaceholder',
-                              'Select chains...'
-                            )
-                          }
-                          if (selected.length <= 2) {
-                            return sortedInteractionResults
-                              .filter((o) => selected.includes(o.id))
-                              .map((o) => o.value)
-                              .join(', ')
-                          }
-                          return t('pages.clients.filters.lastInteractionResultSelectedCount', {
-                            defaultValue: '{{count}} selected',
-                            count: selected.length,
-                          })
-                        })()}
-                      </span>
-                      {lastInteractionResultDropdownOpen ? (
-                        <Icons.ArrowUp
-                          size={16}
-                          className="text-secondary-800 shrink-0"
-                          strokeWidth={2}
-                        />
-                      ) : (
-                        <Icons.ArrowDown
-                          size={16}
-                          className="text-secondary-800 shrink-0"
-                          strokeWidth={2}
-                        />
-                      )}
-                    </button>
-                  }
-                />
               </div>
             </div>
             <div className="hidden sm:flex sm:min-w-[220px] sm:flex-1" />

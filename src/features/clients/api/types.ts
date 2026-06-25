@@ -318,11 +318,6 @@ export interface GetClientsParams {
   interaction_date_from?: string // YYYY-MM-DD format
   interaction_date_to?: string // YYYY-MM-DD format
 
-  // Filter: Last-interaction-result (multi-select). Comma-separated
-  // interaction_result IDs. Narrows clients to those whose most recent
-  // interaction has one of these result ids.
-  last_interaction_result_ids?: string
-
   // Filter: TA Chain + Steps — narrows to clients with at least one
   // ta_interaction in this chain, optionally restricted to interactions
   // that carry data for one of the picked steps. ``step_ids`` is keyed
