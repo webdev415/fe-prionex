@@ -758,6 +758,8 @@
         "perCallComment": "Overall comment",
         "saveDraft": "Save draft",
         "markCompleted": "Mark completed",
+        "clear": "Clear",
+        "edit": "Edit",
         "sendToOperator": "Send to operator",
         "status": {
           "draft": "Draft",
@@ -782,6 +784,22 @@
           "average": "Average",
           "high": "High"
         },
+        "ratings": {
+          "notDone": "Not done",
+          "poor": "Poor",
+          "weak": "Weak",
+          "normal": "Normal",
+          "good": "Good",
+          "excellent": "Excellent"
+        },
+        "list": {
+          "dateTime": "Date / Time",
+          "employee": "Employee",
+          "category": "Category",
+          "rating": "Rating",
+          "comment": "Comment",
+          "actions": "Actions"
+        },
         "view": {
           "list": "Scorecards",
           "averages": "Averages"
@@ -795,7 +813,9 @@
           "pickOperatorHint": "Select an operator to see their recent calls.",
           "searchOperator": "Search operator by name…",
           "noMatches": "No operators match",
-          "change": "Change"
+          "change": "Change",
+          "add": "Add",
+          "added": "Assessment added to the list"
         },
         "avgByType": {
           "title": "Average score by dialogue type",
@@ -5931,6 +5951,8 @@
         "perCallComment": "Overall comment",
         "saveDraft": "Save draft",
         "markCompleted": "Mark completed",
+        "clear": "Clear",
+        "edit": "Edit",
         "sendToOperator": "Send to operator",
         "status": {
           "draft": "Draft",
@@ -5955,6 +5977,22 @@
           "average": "Average",
           "high": "High"
         },
+        "ratings": {
+          "notDone": "Not done",
+          "poor": "Poor",
+          "weak": "Weak",
+          "normal": "Normal",
+          "good": "Good",
+          "excellent": "Excellent"
+        },
+        "list": {
+          "dateTime": "Date / Time",
+          "employee": "Employee",
+          "category": "Category",
+          "rating": "Rating",
+          "comment": "Comment",
+          "actions": "Actions"
+        },
         "view": {
           "list": "Scorecards",
           "averages": "Averages"
@@ -5968,7 +6006,9 @@
           "pickOperatorHint": "Select an operator to see their recent calls.",
           "searchOperator": "Search operator by name…",
           "noMatches": "No operators match",
-          "change": "Change"
+          "change": "Change",
+          "add": "Add",
+          "added": "Assessment added to the list"
         },
         "avgByType": {
           "title": "Average score by dialogue type",

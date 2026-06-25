@@ -1,23 +1,26 @@
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Modal, ModalContent, ModalHeader } from '@/components/ui/Modal'
+import { toast } from 'sonner'
+import { Modal, ModalContent, ModalFooter, ModalHeader } from '@/components/ui/Modal'
+import { Button } from '@/components/ui/Button'
 import { useCallMonitoring } from '@/features/training'
 import type { CallMonitoringItem } from '@/features/training'
+import { useCreateScorecard, useTemplates } from '@/features/quality'
 import { useOperators } from '@/features/users/hooks'
 import { useAuthStore } from '@/stores/authStore'
-import { CallReviewLayout } from '../CallReviewLayout'
 
 /**
- * New-assessment / Rate-dialogue picker (KAN-504).
+ * New-assessment picker (KAN-504 / Scorecard Review Panel redesign).
  *
- * A single modal: pick the operator (dropdown) and then one of that
- * operator's recent calls (last_30d, last 10). Picking a recorded call
- * opens a CallReviewLayout with the ScorecardPanel.
+ * A single modal: pick the operator (searchable) and one of that operator's
+ * recent recorded calls (last_30d, last 10), then **Add** — which creates a
+ * draft scorecard (default Client type, changeable later in the review panel)
+ * that appears in the Dialogue Evaluation list with no score yet. The trainer
+ * then selects that row to review the call in the inline CallReviewPanel.
  *
- * ``operatorId`` is an optional *initial* selection — when the modal is
- * opened from a context that already knows the operator (e.g. Quick Action
- * → Rate dialogue), the dropdown is pre-selected to it but stays
- * changeable. When omitted, the trainer picks the operator first.
+ * ``operatorId`` is an optional *initial* selection — when opened from a
+ * context that already knows the operator (e.g. Quick Action → Rate
+ * dialogue), the operator is pre-selected but stays changeable.
  */
 export interface RateDialogueDialogProps {
   open: boolean
@@ -86,16 +89,34 @@ export function RateDialogueDialog({ open, onClose, operatorId }: RateDialogueDi
 
   const calls = callsData?.calls ?? []
 
+  // "Add" creates a draft scorecard with the default Client type (changeable
+  // later in the review panel); it then shows in the Dialogue list with "—".
+  const { data: templates = [] } = useTemplates(false)
+  const clientTemplateId = templates.find((tpl) => tpl.scorecard_type === 'client')?.id ?? null
+  const createMutation = useCreateScorecard()
+
   const handlePickCall = (call: CallMonitoringItem) => {
     if (!call.has_recording) return
-    setSelectedCall(call)
+    setSelectedCall((prev) => (prev?.call_id === call.call_id ? null : call))
   }
-
-  const closeReview = () => setSelectedCall(null)
 
   const closeAll = () => {
     setSelectedCall(null)
     onClose()
+  }
+
+  const handleAdd = async () => {
+    if (!selectedCall || selectedOperatorId == null || clientTemplateId == null) return
+    await createMutation.mutateAsync({
+      call_id: selectedCall.call_id,
+      operator_id: selectedOperatorId,
+      template_id: clientTemplateId,
+      status: 'draft',
+    })
+    toast.success(
+      t('pages.training.dialogue.newAssessmentPicker.added', 'Assessment added to the list')
+    )
+    closeAll()
   }
 
   const renderCallList = () => {
@@ -145,8 +166,12 @@ export function RateDialogueDialog({ open, onClose, operatorId }: RateDialogueDi
                 onClick={() => handlePickCall(call)}
                 disabled={disabled}
                 className={[
-                  'flex w-full items-center justify-between gap-4 px-2 py-3 text-left text-sm transition-colors',
-                  disabled ? 'cursor-not-allowed opacity-50' : 'hover:bg-primary-50',
+                  'flex w-full items-center justify-between gap-4 rounded-md px-2 py-3 text-left text-sm transition-colors',
+                  disabled
+                    ? 'cursor-not-allowed opacity-50'
+                    : selectedCall?.call_id === call.call_id
+                      ? 'bg-primary-50 ring-primary-500 ring-1'
+                      : 'hover:bg-primary-50',
                 ].join(' ')}
               >
                 <div className="flex flex-col">
@@ -173,7 +198,7 @@ export function RateDialogueDialog({ open, onClose, operatorId }: RateDialogueDi
 
   return (
     <>
-      <Modal open={open && !selectedCall} onClose={closeAll} maxWidth="lg">
+      <Modal open={open} onClose={closeAll} maxWidth="lg">
         <ModalHeader
           title={t('pages.training.dialogue.newAssessmentPicker.title', 'New assessment')}
         />
@@ -247,29 +272,21 @@ export function RateDialogueDialog({ open, onClose, operatorId }: RateDialogueDi
             ) : null}
           </div>
         </ModalContent>
+        <ModalFooter>
+          <Button variant="cancel" size="sm" onClick={closeAll} className="rounded-full">
+            {t('actions.cancel', 'Cancel')}
+          </Button>
+          <Button
+            variant="primary"
+            size="md"
+            onClick={handleAdd}
+            disabled={!selectedCall || clientTemplateId == null || createMutation.isPending}
+            className="rounded-full"
+          >
+            {t('pages.training.dialogue.newAssessmentPicker.add', 'Add')}
+          </Button>
+        </ModalFooter>
       </Modal>
-
-      {selectedCall && selectedOperatorId ? (
-        <CallReviewLayout
-          open={true}
-          onClose={closeReview}
-          callId={selectedCall.call_id}
-          operatorId={selectedOperatorId}
-          callData={{
-            type: selectedCall.direction ?? 'outbound',
-            clientName: operator?.full_name ?? `#${selectedOperatorId}`,
-            date: formatTime(selectedCall.initiated_at).date,
-            time: formatTime(selectedCall.initiated_at).time,
-            operator: operator?.full_name ?? '',
-            duration: formatDuration(selectedCall.talk_duration),
-            phone: selectedCall.customer_number,
-            call_id: selectedCall.call_id,
-            clientId: selectedCall.client_id,
-            direction: selectedCall.direction,
-            telephony_type: selectedCall.telephony_type,
-          }}
-        />
-      ) : null}
     </>
   )
 }

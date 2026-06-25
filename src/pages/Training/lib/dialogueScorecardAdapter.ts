@@ -40,6 +40,8 @@ export interface DialogueTriggerFlags {
 export interface DialogueScorecardRow {
   id: number
   dateLabel: string
+  /** HH:MM of the scorecard's created_at, for the Date / Time column. */
+  timeLabel: string
   operatorName: string
   operatorInitials: string
   avatarColor: string
@@ -54,6 +56,8 @@ export interface DialogueScorecardRow {
   triggerFlags?: DialogueTriggerFlags
   scoreDelta?: number
   exampleLabel?: string
+  /** The scorecard's overall comment, for the Comment column. */
+  comment?: string
   audioDuration?: string
   criteria: DialogueScorecardCriterion[]
 }
@@ -87,6 +91,15 @@ function formatDayMonth(iso: string): string {
   const dd = String(d.getDate()).padStart(2, '0')
   const mm = String(d.getMonth() + 1).padStart(2, '0')
   return `${dd}.${mm}`
+}
+
+/** ISO timestamp → `HH:MM`. */
+function formatHourMinute(iso: string): string {
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return ''
+  const hh = String(d.getHours()).padStart(2, '0')
+  const mm = String(d.getMinutes()).padStart(2, '0')
+  return `${hh}:${mm}`
 }
 
 /**
@@ -162,6 +175,7 @@ export function buildDialogueRow(
   return {
     id: scorecard.id,
     dateLabel: formatDayMonth(scorecard.created_at),
+    timeLabel: formatHourMinute(scorecard.created_at),
     operatorName,
     operatorInitials: initialsFor(operatorName),
     avatarColor: avatarColorFor(scorecard.operator_id),
@@ -169,6 +183,7 @@ export function buildDialogueRow(
     hasScore,
     score: score100 != null ? Math.round(score100) : 0,
     scoreOutOf: 100,
+    comment: scorecard.overall_comment ?? undefined,
     // No source on the scorecards endpoint — rendered as `—` / hidden.
     duration: '—',
     trigger: '—',

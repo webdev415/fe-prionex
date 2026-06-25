@@ -1,5 +1,4 @@
-﻿import { type ReactElement } from 'react'
-import { useTranslation } from 'react-i18next'
+﻿import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
 import type { DialogueScorecardRow } from '../../lib/dialogueScorecardAdapter'
 import {
@@ -28,22 +27,6 @@ function scoreBandTones(score: number): { ring: string; text: string } {
   if (score >= 60) return { ring: 'stroke-[#EAB308]', text: 'text-[#A16207]' }
   return { ring: 'stroke-[#EF4444]', text: 'text-[#B91C1C]' }
 }
-
-/** Per-trigger glyph + tint — matches the small icon set in the Figma row. */
-type TriggerFlagKey = keyof NonNullable<DialogueScorecardRow['triggerFlags']>
-
-const TRIGGER_ICONS: {
-  key: TriggerFlagKey
-  icon: (props: { size?: number; className?: string }) => ReactElement
-  tone: string
-  bg: string
-}[] = [
-  { key: 'promise', icon: Icons.TransactionHistory, tone: 'text-[#15803D]', bg: 'bg-[#ECFDF5]' },
-  { key: 'refusal', icon: Icons.Close, tone: 'text-[#B91C1C]', bg: 'bg-[#FEF2F2]' },
-  { key: 'missedCall', icon: Icons.CallEnd, tone: 'text-[#C2410C]', bg: 'bg-[#FFF7ED]' },
-  { key: 'willPass', icon: Icons.UserCheck01, tone: 'text-[#6D28D9]', bg: 'bg-[#F5F3FF]' },
-  { key: 'flagged', icon: Icons.Warning, tone: 'text-[#B91C1C]', bg: 'bg-[#FEF2F2]' },
-]
 
 interface ScoreRingProps {
   score: number
@@ -95,24 +78,20 @@ export function ScorecardListView({ rows, selectedId, onSelect }: ScorecardListV
     <AnalyticsMockTable>
       <thead className={ANALYTICS_TABLE_HEAD}>
         <tr>
-          <th className={ANALYTICS_TABLE_TH}>{t('pages.training.dialogue.list.date', 'Date')}</th>
           <th className={ANALYTICS_TABLE_TH}>
-            {t('pages.training.dialogue.list.operator', 'Operator')}
+            {t('pages.training.dialogue.list.dateTime', 'Date / Time')}
+          </th>
+          <th className={ANALYTICS_TABLE_TH}>
+            {t('pages.training.dialogue.list.employee', 'Employee')}
           </th>
           <th className={ANALYTICS_TABLE_TH}>
             {t('pages.training.dialogue.list.category', 'Category')}
           </th>
-          <th className={ANALYTICS_TABLE_TH}>
-            {t('pages.training.dialogue.list.duration', 'Duration')}
-          </th>
-          <th className={ANALYTICS_TABLE_TH}>
-            {t('pages.training.dialogue.list.trigger', 'Trigger')}
-          </th>
           <th className={`${ANALYTICS_TABLE_TH} text-right`}>
-            {t('pages.training.dialogue.list.score', 'Score')}
+            {t('pages.training.dialogue.list.rating', 'Rating')}
           </th>
           <th className={ANALYTICS_TABLE_TH}>
-            {t('pages.training.dialogue.list.example', 'Example')}
+            {t('pages.training.dialogue.list.comment', 'Comment')}
           </th>
           <th className={`${ANALYTICS_TABLE_TH} text-right`}>
             {t('pages.training.dialogue.list.actions', 'Actions')}
@@ -128,7 +107,12 @@ export function ScorecardListView({ rows, selectedId, onSelect }: ScorecardListV
               onClick={() => onSelect(row.id)}
               className={`${ANALYTICS_TABLE_ROW} cursor-pointer ${isActive ? 'bg-[#F7FFE5]' : ''}`}
             >
-              <td className={ANALYTICS_TABLE_TD}>{row.dateLabel}</td>
+              <td className={ANALYTICS_TABLE_TD}>
+                <div className="flex flex-col leading-tight">
+                  <span className="text-xs font-medium text-[#05040D]">{row.dateLabel}</span>
+                  <span className="text-[10px] text-[#6B7280]">{row.timeLabel}</span>
+                </div>
+              </td>
               <td className={ANALYTICS_TABLE_TD}>
                 <div className="flex items-center gap-2">
                   <div
@@ -147,26 +131,6 @@ export function ScorecardListView({ rows, selectedId, onSelect }: ScorecardListV
                   {row.category}
                 </span>
               </td>
-              <td className={ANALYTICS_TABLE_TD}>{row.duration}</td>
-              <td className={ANALYTICS_TABLE_TD}>
-                <div className="flex items-center gap-1">
-                  {TRIGGER_ICONS.filter((tr) => row.triggerFlags?.[tr.key]).map((tr) => {
-                    const TrIcon = tr.icon
-                    return (
-                      <span
-                        key={tr.key}
-                        className={`inline-flex h-5 w-5 items-center justify-center rounded-full ${tr.bg}`}
-                        title={tr.key}
-                      >
-                        <TrIcon size={10} className={tr.tone} />
-                      </span>
-                    )
-                  })}
-                  {!Object.values(row.triggerFlags ?? {}).some(Boolean) ? (
-                    <span className="text-[11px] text-[#6B7280]">{row.trigger}</span>
-                  ) : null}
-                </div>
-              </td>
               <td className={`${ANALYTICS_TABLE_TD} text-right`}>
                 <div className="flex items-center justify-end gap-2">
                   {row.scoreDelta != null ? (
@@ -182,8 +146,8 @@ export function ScorecardListView({ rows, selectedId, onSelect }: ScorecardListV
                   <ScoreRing score={row.score} outOf={row.scoreOutOf} />
                 </div>
               </td>
-              <td className={`${ANALYTICS_TABLE_TD} max-w-[120px] truncate text-[#4B5563]`}>
-                {row.exampleLabel ?? '—'}
+              <td className={`${ANALYTICS_TABLE_TD} max-w-[160px] truncate text-[#4B5563]`}>
+                {row.comment ?? '—'}
               </td>
               <td className={`${ANALYTICS_TABLE_TD} text-right`}>
                 <div className="flex justify-end gap-1">

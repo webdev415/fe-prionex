@@ -16,6 +16,9 @@ import { DialogueEvaluationTab } from '../DialogueEvaluationTab'
 vi.mock('@/features/quality', () => ({ useScorecards: vi.fn() }))
 vi.mock('@/features/users/hooks', () => ({ useOperators: vi.fn() }))
 vi.mock('../../../lib/scope', () => ({ useScopedUserIds: vi.fn() }))
+// The interactive review panel pulls in the player + query-backed scorecard
+// editor; stub it so this list-focused test needs no QueryClientProvider.
+vi.mock('../CallReviewPanel', () => ({ CallReviewPanel: () => null }))
 vi.mock('@/stores/authStore', () => ({
   useAuthStore: (selector: (s: unknown) => unknown) => selector({ user: { active_project_id: 3 } }),
 }))

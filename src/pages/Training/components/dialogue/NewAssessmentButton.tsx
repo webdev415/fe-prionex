@@ -4,11 +4,11 @@ import { Icons } from '@/lib/icons'
 import { RateDialogueDialog } from '../inbox/RateDialogueDialog'
 
 /**
- * "New assessment" entry point (KAN-504). Opens the unified RateDialogueDialog
- * where the trainer picks the operator and one of their recent calls in the
- * same modal → CallReviewLayout → ScorecardPanel (with the Client / Third
- * Party type selector). The dialog is mounted only while open so its
- * call-monitoring query never runs until needed.
+ * "New assessment" entry point (KAN-504 / Scorecard Review Panel redesign).
+ * Opens the RateDialogueDialog where the trainer picks the operator and one
+ * of their recent calls, then Add — which creates a draft scorecard that
+ * appears in the Dialogue list for review in the inline CallReviewPanel. The
+ * dialog is mounted only while open so its query never runs until needed.
  */
 export function NewAssessmentButton() {
   const { t } = useTranslation('common')

@@ -117,8 +117,25 @@ export function ScorecardPanel({
     [templatesQuery.data]
   )
 
+  // Edit-lock (KAN-504 decision 1.4): a draft opens editable; Save draft /
+  // Mark completed locks it to read-only; Edit re-opens a draft. Completed
+  // and sent scorecards are locked permanently (no Edit).
+  const [locked, setLocked] = useState(false)
   const status = activeScorecard?.status ?? 'draft'
-  const canEdit = status === 'draft'
+  const canEdit = status === 'draft' && !locked
+
+  const handleSaveDraft = async () => {
+    await draft.flush()
+    setLocked(true)
+  }
+
+  const handleClear = () => {
+    if (!activeScorecard) return
+    draft.reset({
+      scores: activeScorecard.scores,
+      overall_comment: activeScorecard.overall_comment ?? '',
+    })
+  }
 
   const handleStartNew = async () => {
     if (!selectedTemplateId) return
@@ -328,10 +345,15 @@ export function ScorecardPanel({
       <footer className="flex flex-wrap gap-2">
         {canEdit ? (
           <>
+            {draft.isDirty ? (
+              <Button variant="cancel" size="md" onClick={handleClear} className="rounded-full">
+                {t('pages.training.scorecard.clear', 'Clear')}
+              </Button>
+            ) : null}
             <Button
               variant="secondary"
               size="md"
-              onClick={() => draft.flush()}
+              onClick={handleSaveDraft}
               disabled={!draft.isDirty || draft.isSaving}
               className="rounded-full"
             >
@@ -347,6 +369,17 @@ export function ScorecardPanel({
               {t('pages.training.scorecard.markCompleted', 'Mark completed')}
             </Button>
           </>
+        ) : null}
+
+        {status === 'draft' && locked ? (
+          <Button
+            variant="primary"
+            size="md"
+            onClick={() => setLocked(false)}
+            className="rounded-full"
+          >
+            {t('pages.training.scorecard.edit', 'Edit')}
+          </Button>
         ) : null}
 
         {status === 'completed' ? (
@@ -412,29 +445,32 @@ interface CriterionRowProps {
 }
 
 function CriterionRow({ criterion, entry, disabled, onChange }: CriterionRowProps) {
+  const isBinary = criterion.scale === 'binary'
   return (
     <div className="rounded-md bg-gray-50 px-3 py-2">
-      <div className="flex flex-wrap items-center justify-between gap-2">
+      <div className="mb-2 flex items-center justify-between gap-2">
         <span className="text-sm text-gray-700">
           {criterion.name}
           {criterion.weight > 0 ? (
             <span className="ml-1.5 text-xs text-gray-400">· {criterion.weight} pts</span>
           ) : null}
         </span>
-        {criterion.scale === 'binary' ? (
+        {isBinary ? (
           <BinaryInput
             value={(entry?.value as boolean | null) ?? null}
             disabled={disabled}
             onChange={(v) => onChange(criterion.key, v)}
           />
-        ) : (
-          <ScaleInput
-            value={(entry?.value as number | null) ?? null}
-            disabled={disabled}
-            onChange={(v) => onChange(criterion.key, v)}
-          />
-        )}
+        ) : null}
       </div>
+      {!isBinary ? (
+        <Level6Input
+          value={(entry?.value as number | null) ?? null}
+          weight={Number(criterion.weight) || 0}
+          disabled={disabled}
+          onChange={(v) => onChange(criterion.key, v)}
+        />
+      ) : null}
       <input
         type="text"
         placeholder="Comment (optional)"
@@ -490,32 +526,86 @@ function BinaryInput({
   )
 }
 
-function ScaleInput({
+// KAN-504 redesign: the 0-5 scale is presented as 6 labeled levels (the 4
+// from the design + Poor/Good). Values map straight onto the existing 0-5
+// axis, so scoring is unchanged. Per-value points = round(value × weight / 5)
+// (the criterion's contribution to the /100 score; templates sum to 100).
+const LEVEL_6: { value: number; labelKey: string; fallback: string; bar: string }[] = [
+  {
+    value: 0,
+    labelKey: 'pages.training.dialogue.ratings.notDone',
+    fallback: 'Not done',
+    bar: 'bg-red-500/50',
+  },
+  {
+    value: 1,
+    labelKey: 'pages.training.dialogue.ratings.poor',
+    fallback: 'Poor',
+    bar: 'bg-red-400/40',
+  },
+  {
+    value: 2,
+    labelKey: 'pages.training.dialogue.ratings.weak',
+    fallback: 'Weak',
+    bar: 'bg-amber-400/50',
+  },
+  {
+    value: 3,
+    labelKey: 'pages.training.dialogue.ratings.normal',
+    fallback: 'Normal',
+    bar: 'bg-blue-500/50',
+  },
+  {
+    value: 4,
+    labelKey: 'pages.training.dialogue.ratings.good',
+    fallback: 'Good',
+    bar: 'bg-emerald-400/40',
+  },
+  {
+    value: 5,
+    labelKey: 'pages.training.dialogue.ratings.excellent',
+    fallback: 'Excellent',
+    bar: 'bg-emerald-500/50',
+  },
+]
+
+function Level6Input({
   value,
+  weight,
   disabled,
   onChange,
 }: {
   value: number | null
+  weight: number
   disabled: boolean
   onChange: (next: number | null) => void
 }) {
+  const { t } = useTranslation('common')
   return (
-    <div className="flex gap-1">
-      {[0, 1, 2, 3, 4, 5].map((n) => (
-        <button
-          key={n}
-          type="button"
-          disabled={disabled}
-          onClick={() => onChange(value === n ? null : n)}
-          className={`h-7 w-7 rounded-full border text-xs font-medium ${
-            value === n
-              ? 'bg-primary-500 border-primary-500 text-white'
-              : 'border-gray-200 bg-white text-gray-700'
-          }`}
-        >
-          {n}
-        </button>
-      ))}
+    <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-6">
+      {LEVEL_6.map((lvl) => {
+        const selected = value === lvl.value
+        const points = Math.round((lvl.value * weight) / 5)
+        return (
+          <button
+            key={lvl.value}
+            type="button"
+            disabled={disabled}
+            onClick={() => onChange(selected ? null : lvl.value)}
+            aria-label={t(lvl.labelKey, lvl.fallback)}
+            aria-pressed={selected}
+            className={`flex min-h-[58px] flex-col rounded-md border px-1.5 py-1.5 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
+              selected ? 'border-primary-500 bg-primary-50' : 'border-gray-200 bg-white'
+            }`}
+          >
+            <span className={`mb-1 h-1.5 w-full rounded-full ${lvl.bar}`} />
+            <span className="text-[10px] leading-tight font-medium text-gray-700">
+              {t(lvl.labelKey, lvl.fallback)}
+            </span>
+            {weight > 0 ? <span className="text-[9px] text-gray-400">+{points}</span> : null}
+          </button>
+        )
+      })}
     </div>
   )
 }

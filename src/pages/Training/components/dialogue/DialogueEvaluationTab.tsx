@@ -8,7 +8,7 @@ import { useScopedUserIds } from '../../lib/scope'
 import { TrainingSegmentedStrip } from '../chrome/TrainingSegmentedStrip'
 import { EmployeeMultiSelect } from './EmployeeMultiSelect'
 import { ScorecardListView } from './ScorecardListView'
-import { ScorecardDetailPanel } from './ScorecardDetailPanel'
+import { CallReviewPanel } from './CallReviewPanel'
 import { AvgScoreByTypeView } from './AvgScoreByTypeView'
 import { NewAssessmentButton } from './NewAssessmentButton'
 
@@ -92,10 +92,15 @@ export function DialogueEvaluationTab() {
       ? selectedRowId
       : (filteredRows[0]?.id ?? null)
 
-  const selectedRow = useMemo(
-    () => rows.find((r) => r.id === effectiveSelectedId),
-    [rows, effectiveSelectedId]
+  // The interactive review panel needs the raw scorecard (call_id, operator_id).
+  const selectedScorecard = useMemo(
+    () => data?.data?.find((s) => s.id === effectiveSelectedId),
+    [data?.data, effectiveSelectedId]
   )
+  const selectedOperatorName = useMemo(() => {
+    if (!selectedScorecard) return undefined
+    return operators.find((o) => o.id === selectedScorecard.operator_id)?.full_name ?? undefined
+  }, [selectedScorecard, operators])
 
   return (
     <div className="flex flex-col gap-4">
@@ -138,7 +143,7 @@ export function DialogueEvaluationTab() {
       {view === 'averages' ? (
         <AvgScoreByTypeView operatorIds={filters.operator_id} />
       ) : (
-        <div className="grid grid-cols-1 gap-3 xl:grid-cols-[1fr_400px]">
+        <div className="grid grid-cols-1 gap-3 xl:grid-cols-[1fr_520px]">
           {scoped.isEmptyResolution ? (
             <div className="rounded-xl bg-white/50 p-12 text-center text-sm text-gray-500 shadow-sm">
               {t(
@@ -165,7 +170,7 @@ export function DialogueEvaluationTab() {
               onSelect={setSelectedRowId}
             />
           )}
-          <ScorecardDetailPanel row={selectedRow} />
+          <CallReviewPanel scorecard={selectedScorecard} operatorName={selectedOperatorName} />
         </div>
       )}
     </div>
