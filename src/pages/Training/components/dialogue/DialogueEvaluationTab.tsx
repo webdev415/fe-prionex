@@ -23,6 +23,9 @@ export function DialogueEvaluationTab() {
   const [view, setView] = useState<DialogueView>('list')
   const [selectedRowId, setSelectedRowId] = useState<number | null>(null)
   const [selectedEmployeeIds, setSelectedEmployeeIds] = useState<number[]>([])
+  // Unsaved-changes guard: the review panel reports its dirty state so we can
+  // warn before switching rows (which would discard the edit).
+  const [reviewDirty, setReviewDirty] = useState(false)
 
   const activeProjectId = useAuthStore((s) => s.user?.active_project_id)
   const { data: operators = [] } = useOperators(activeProjectId ? Number(activeProjectId) : null)
@@ -102,6 +105,23 @@ export function DialogueEvaluationTab() {
     return operators.find((o) => o.id === selectedScorecard.operator_id)?.full_name ?? undefined
   }, [selectedScorecard, operators])
 
+  // Guard against discarding unsaved edits when switching rows.
+  const handleSelectRow = (id: number) => {
+    if (
+      reviewDirty &&
+      id !== effectiveSelectedId &&
+      !window.confirm(
+        t(
+          'pages.training.scorecard.unsavedConfirm',
+          'You have unsaved changes that will be lost. Close anyway?'
+        )
+      )
+    ) {
+      return
+    }
+    setSelectedRowId(id)
+  }
+
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -167,10 +187,14 @@ export function DialogueEvaluationTab() {
             <ScorecardListView
               rows={filteredRows}
               selectedId={effectiveSelectedId}
-              onSelect={setSelectedRowId}
+              onSelect={handleSelectRow}
             />
           )}
-          <CallReviewPanel scorecard={selectedScorecard} operatorName={selectedOperatorName} />
+          <CallReviewPanel
+            scorecard={selectedScorecard}
+            operatorName={selectedOperatorName}
+            onDirtyChange={setReviewDirty}
+          />
         </div>
       )}
     </div>

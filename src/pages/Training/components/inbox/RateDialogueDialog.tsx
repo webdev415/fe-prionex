@@ -272,7 +272,15 @@ export function RateDialogueDialog({ open, onClose, operatorId }: RateDialogueDi
             ) : null}
           </div>
         </ModalContent>
-        <ModalFooter>
+        <ModalFooter className="flex-col items-stretch gap-2 sm:flex-row sm:items-center">
+          {selectedCall && clientTemplateId == null ? (
+            <span className="text-xs text-red-500 sm:mr-auto">
+              {t(
+                'pages.training.dialogue.newAssessmentPicker.noTemplate',
+                'No scorecard template found for this project.'
+              )}
+            </span>
+          ) : null}
           <Button variant="cancel" size="sm" onClick={closeAll} className="rounded-full">
             {t('actions.cancel', 'Cancel')}
           </Button>

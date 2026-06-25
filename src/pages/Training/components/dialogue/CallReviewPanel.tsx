@@ -27,9 +27,11 @@ export interface CallReviewPanelProps {
   scorecard?: Scorecard
   /** Resolved operator display name for the header. */
   operatorName?: string
+  /** Emits the editor's unsaved-changes state so the tab can guard row switches. */
+  onDirtyChange?: (dirty: boolean) => void
 }
 
-export function CallReviewPanel({ scorecard, operatorName }: CallReviewPanelProps) {
+export function CallReviewPanel({ scorecard, operatorName, onDirtyChange }: CallReviewPanelProps) {
   const { t } = useTranslation('common')
   const playerRef = useRef<CallPlayerHandle>(null)
   const [assignOpen, setAssignOpen] = useState(false)
@@ -106,6 +108,7 @@ export function CallReviewPanel({ scorecard, operatorName }: CallReviewPanelProp
           callId={callId}
           operatorId={operatorId}
           scorecardId={scorecard.id}
+          onDirtyChange={onDirtyChange}
         />
       </div>
 

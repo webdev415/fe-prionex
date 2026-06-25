@@ -76,8 +76,8 @@ describe('deriveCategory', () => {
     expect(deriveCategory(100)).toBe('High')
   })
 
-  it('treats a null score as High', () => {
-    expect(deriveCategory(null)).toBe('High')
+  it('treats a null (unscored) score as Unscored', () => {
+    expect(deriveCategory(null)).toBe('Unscored')
   })
 })
 
@@ -94,11 +94,6 @@ describe('buildDialogueRow', () => {
     expect(row.score).toBe(82) // 4.1 × 20
     expect(row.scoreOutOf).toBe(100)
     expect(row.category).toBe('High')
-    // No backend source — rendered as `—` / hidden.
-    expect(row.duration).toBe('—')
-    expect(row.trigger).toBe('—')
-    expect(row.triggerFlags).toBeUndefined()
-    expect(row.scoreDelta).toBeUndefined()
   })
 
   it('falls back to a #id label when the operator is unknown', () => {
@@ -106,11 +101,11 @@ describe('buildDialogueRow', () => {
     expect(row.operatorName).toBe('#999')
   })
 
-  it('marks hasScore=false and score=0 when weighted_score is null', () => {
+  it('marks hasScore=false, score=0, category Unscored when weighted_score is null', () => {
     const row = buildDialogueRow(makeScorecard({ weighted_score: null }), new Map())
     expect(row.hasScore).toBe(false)
     expect(row.score).toBe(0)
-    expect(row.category).toBe('High')
+    expect(row.category).toBe('Unscored')
   })
 
   it('scales the 0-5 weighted_score ×20 and rounds to /100', () => {

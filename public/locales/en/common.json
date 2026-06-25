@@ -775,7 +775,9 @@
         "hideTemplatePicker": "Hide template list",
         "changeType": "← Change scorecard type",
         "unsaved": "Unsaved changes",
-        "unsavedConfirm": "You have unsaved changes that will be lost. Close anyway?"
+        "unsavedConfirm": "You have unsaved changes that will be lost. Close anyway?",
+        "scoredCount": "{{scored}}/{{total}} scored",
+        "completeIncomplete": "Score every criterion before completing."
       },
       "dialogue": {
         "chips": {
@@ -815,7 +817,8 @@
           "noMatches": "No operators match",
           "change": "Change",
           "add": "Add",
-          "added": "Assessment added to the list"
+          "added": "Assessment added to the list",
+          "noTemplate": "No scorecard template found for this project."
         },
         "avgByType": {
           "title": "Average score by dialogue type",
@@ -5968,7 +5971,9 @@
         "hideTemplatePicker": "Hide template list",
         "changeType": "← Change scorecard type",
         "unsaved": "Unsaved changes",
-        "unsavedConfirm": "You have unsaved changes that will be lost. Close anyway?"
+        "unsavedConfirm": "You have unsaved changes that will be lost. Close anyway?",
+        "scoredCount": "{{scored}}/{{total}} scored",
+        "completeIncomplete": "Score every criterion before completing."
       },
       "dialogue": {
         "chips": {
@@ -6008,7 +6013,8 @@
           "noMatches": "No operators match",
           "change": "Change",
           "add": "Add",
-          "added": "Assessment added to the list"
+          "added": "Assessment added to the list",
+          "noTemplate": "No scorecard template found for this project."
         },
         "avgByType": {
           "title": "Average score by dialogue type",

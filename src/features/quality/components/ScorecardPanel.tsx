@@ -12,6 +12,7 @@
  */
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/Button'
 import { Icons } from '@/lib/icons'
 import { useScorecardDraft } from '../hooks/useScorecardDraft'
@@ -77,6 +78,19 @@ export function ScorecardPanel({
     return picked?.sections ?? []
   }, [activeScorecard, templatesQuery.data, selectedTemplateId])
 
+  // Sum of scored (weight>0) criteria weights — the denominator for the
+  // per-value point hints, so they stay correct even if a template's weights
+  // don't sum to 100.
+  const totalWeight = useMemo(
+    () =>
+      sections.reduce(
+        (sum, s) =>
+          sum + s.criteria.reduce((a, c) => a + (Number(c.weight) > 0 ? Number(c.weight) : 0), 0),
+        0
+      ),
+    [sections]
+  )
+
   const draftState = useMemo(() => {
     if (!activeScorecard) return null
     return {
@@ -106,6 +120,23 @@ export function ScorecardPanel({
     () => computeWeightedScorePreview(sections, draft.scores),
     [sections, draft.scores]
   )
+
+  // Completeness: every weight>0 criterion must be scored before completing
+  // (the backend enforces the same — this just keeps the button honest).
+  const { requiredCount, scoredCount } = useMemo(() => {
+    let req = 0
+    let scored = 0
+    for (const section of sections) {
+      for (const c of section.criteria) {
+        if (Number(c.weight) > 0) {
+          req += 1
+          if (draft.scores[c.key]?.value != null) scored += 1
+        }
+      }
+    }
+    return { requiredCount: req, scoredCount: scored }
+  }, [sections, draft.scores])
+  const isComplete = requiredCount > 0 && scoredCount === requiredCount
 
   // KAN-504: the two typed templates, surfaced as an explicit Client /
   // Third Party selector in the picker. Selecting a type loads its template.
@@ -151,11 +182,17 @@ export function ScorecardPanel({
 
   const handleMarkCompleted = async () => {
     if (!activeScorecardId) return
-    await draft.flush()
-    await updateMutation.mutateAsync({
-      scorecardId: activeScorecardId,
-      payload: { status: 'completed' },
-    })
+    try {
+      await draft.flush()
+      await updateMutation.mutateAsync({
+        scorecardId: activeScorecardId,
+        payload: { status: 'completed' },
+      })
+    } catch {
+      toast.error(
+        t('pages.training.scorecard.completeIncomplete', 'Score every criterion before completing.')
+      )
+    }
   }
 
   const handleSend = async () => {
@@ -312,11 +349,21 @@ export function ScorecardPanel({
             {livePreview != null ? `${Math.round(livePreview * 20)} / 100` : '—'}
           </span>
         </span>
-        {canEdit && draft.isDirty ? (
-          <span className="flex-shrink-0 text-xs font-medium text-amber-600">
-            ● {t('pages.training.scorecard.unsaved', 'Unsaved changes')}
-          </span>
-        ) : null}
+        <span className="flex flex-shrink-0 items-center gap-2 text-xs font-medium">
+          {canEdit ? (
+            <span className={isComplete ? 'text-primary-600' : 'text-gray-500'}>
+              {t('pages.training.scorecard.scoredCount', '{{scored}}/{{total}} scored', {
+                scored: scoredCount,
+                total: requiredCount,
+              })}
+            </span>
+          ) : null}
+          {canEdit && draft.isDirty ? (
+            <span className="text-amber-600">
+              ● {t('pages.training.scorecard.unsaved', 'Unsaved changes')}
+            </span>
+          ) : null}
+        </span>
       </div>
 
       <div className="flex-1 overflow-y-auto">
@@ -326,6 +373,7 @@ export function ScorecardPanel({
             section={section}
             scores={draft.scores}
             disabled={!canEdit}
+            totalWeight={totalWeight}
             onChange={draft.setScore}
           />
         ))}
@@ -363,7 +411,12 @@ export function ScorecardPanel({
               variant="primary"
               size="md"
               onClick={handleMarkCompleted}
-              disabled={updateMutation.isPending}
+              disabled={updateMutation.isPending || !isComplete}
+              title={
+                isComplete
+                  ? undefined
+                  : t('pages.training.scorecard.completeIncomplete', 'Score every criterion first')
+              }
               className="rounded-full"
             >
               {t('pages.training.scorecard.markCompleted', 'Mark completed')}
@@ -402,10 +455,11 @@ interface SectionEditorProps {
   section: Section
   scores: Record<string, { value: number | boolean | null; comment?: string | null }>
   disabled: boolean
+  totalWeight: number
   onChange: (criterionKey: string, value: number | boolean | null, comment?: string | null) => void
 }
 
-function SectionEditor({ section, scores, disabled, onChange }: SectionEditorProps) {
+function SectionEditor({ section, scores, disabled, totalWeight, onChange }: SectionEditorProps) {
   const [collapsed, setCollapsed] = useState(false)
   return (
     <section className="mt-3 rounded-lg border border-gray-100">
@@ -428,6 +482,7 @@ function SectionEditor({ section, scores, disabled, onChange }: SectionEditorPro
               criterion={criterion}
               entry={scores[criterion.key]}
               disabled={disabled}
+              totalWeight={totalWeight}
               onChange={onChange}
             />
           ))}
@@ -441,10 +496,11 @@ interface CriterionRowProps {
   criterion: Criterion
   entry?: { value: number | boolean | null; comment?: string | null }
   disabled: boolean
+  totalWeight: number
   onChange: (criterionKey: string, value: number | boolean | null, comment?: string | null) => void
 }
 
-function CriterionRow({ criterion, entry, disabled, onChange }: CriterionRowProps) {
+function CriterionRow({ criterion, entry, disabled, totalWeight, onChange }: CriterionRowProps) {
   const isBinary = criterion.scale === 'binary'
   return (
     <div className="rounded-md bg-gray-50 px-3 py-2">
@@ -467,6 +523,7 @@ function CriterionRow({ criterion, entry, disabled, onChange }: CriterionRowProp
         <Level6Input
           value={(entry?.value as number | null) ?? null}
           weight={Number(criterion.weight) || 0}
+          totalWeight={totalWeight}
           disabled={disabled}
           onChange={(v) => onChange(criterion.key, v)}
         />
@@ -572,11 +629,13 @@ const LEVEL_6: { value: number; labelKey: string; fallback: string; bar: string 
 function Level6Input({
   value,
   weight,
+  totalWeight,
   disabled,
   onChange,
 }: {
   value: number | null
   weight: number
+  totalWeight: number
   disabled: boolean
   onChange: (next: number | null) => void
 }) {
@@ -585,7 +644,10 @@ function Level6Input({
     <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-6">
       {LEVEL_6.map((lvl) => {
         const selected = value === lvl.value
-        const points = Math.round((lvl.value * weight) / 5)
+        // Contribution to the /100 score = (value/5) × (weight / totalWeight) ×
+        // 100 = value×weight×20 / totalWeight. Equals value×weight/5 when the
+        // template's weights sum to 100.
+        const points = totalWeight > 0 ? Math.round((lvl.value * weight * 20) / totalWeight) : 0
         return (
           <button
             key={lvl.value}

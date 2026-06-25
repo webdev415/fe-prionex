@@ -168,8 +168,7 @@ export function NotificationBell() {
   // Per-tab filtered slices (one query, filtered locally — same pattern
   // the previous flat-list rendering used). Task tabs split on starred.
   const isTaskType = (n: NotificationItem) =>
-    n.type === NotificationType.TASK_OVERDUE ||
-    n.type === NotificationType.CORRECTION_TASK_OVERDUE
+    n.type === NotificationType.TASK_OVERDUE || n.type === NotificationType.CORRECTION_TASK_OVERDUE
   const tasksTabItems = notifications.filter((n) => isTaskType(n) && !n.starred)
   const starredTabItems = notifications.filter((n) => isTaskType(n) && n.starred)
   const paymentsTabItems = notifications.filter((n) => n.type === NotificationType.PAYMENT_PENDING)

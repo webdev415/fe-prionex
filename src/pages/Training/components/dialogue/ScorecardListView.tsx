@@ -19,6 +19,7 @@ const CATEGORY_TONE: Record<DialogueScorecardRow['category'], string> = {
   High: 'bg-[#ECFDF5] text-[#15803D]',
   Average: 'bg-[#FFFBEB] text-[#D97706]',
   Low: 'bg-[#FEF2F2] text-[#B91C1C]',
+  Unscored: 'bg-gray-100 text-gray-500',
 }
 
 /** Figma score-ring tones — stroke + text both tinted by the band. */
@@ -31,13 +32,17 @@ function scoreBandTones(score: number): { ring: string; text: string } {
 interface ScoreRingProps {
   score: number
   outOf: number
+  hasScore: boolean
 }
 
-function ScoreRing({ score, outOf }: ScoreRingProps) {
+function ScoreRing({ score, outOf, hasScore }: ScoreRingProps) {
   const radius = 18
   const circumference = 2 * Math.PI * radius
-  const offset = circumference - (score / outOf) * circumference
-  const tones = scoreBandTones(score)
+  // Unscored drafts: empty grey ring with a "—", not a misleading 0.
+  const offset = hasScore ? circumference - (score / outOf) * circumference : circumference
+  const tones = hasScore
+    ? scoreBandTones(score)
+    : { ring: 'stroke-[#EDEDED]', text: 'text-gray-400' }
   return (
     <div className="relative h-11 w-11 flex-shrink-0">
       <svg viewBox="0 0 44 44" className="h-11 w-11 -rotate-90">
@@ -64,7 +69,7 @@ function ScoreRing({ score, outOf }: ScoreRingProps) {
       <span
         className={`absolute inset-0 flex items-center justify-center text-[11px] font-semibold ${tones.text}`}
       >
-        {score}
+        {hasScore ? score : '—'}
       </span>
     </div>
   )
@@ -105,6 +110,15 @@ export function ScorecardListView({ rows, selectedId, onSelect }: ScorecardListV
             <tr
               key={row.id}
               onClick={() => onSelect(row.id)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  onSelect(row.id)
+                }
+              }}
+              role="button"
+              tabIndex={0}
+              aria-current={isActive || undefined}
               className={`${ANALYTICS_TABLE_ROW} cursor-pointer ${isActive ? 'bg-[#F7FFE5]' : ''}`}
             >
               <td className={ANALYTICS_TABLE_TD}>
@@ -133,17 +147,7 @@ export function ScorecardListView({ rows, selectedId, onSelect }: ScorecardListV
               </td>
               <td className={`${ANALYTICS_TABLE_TD} text-right`}>
                 <div className="flex items-center justify-end gap-2">
-                  {row.scoreDelta != null ? (
-                    <span
-                      className={`text-[10px] font-semibold ${
-                        row.scoreDelta >= 0 ? 'text-[#15803D]' : 'text-[#B91C1C]'
-                      }`}
-                    >
-                      {row.scoreDelta >= 0 ? '+' : ''}
-                      {row.scoreDelta}
-                    </span>
-                  ) : null}
-                  <ScoreRing score={row.score} outOf={row.scoreOutOf} />
+                  <ScoreRing score={row.score} outOf={row.scoreOutOf} hasScore={row.hasScore} />
                 </div>
               </td>
               <td className={`${ANALYTICS_TABLE_TD} max-w-[160px] truncate text-[#4B5563]`}>

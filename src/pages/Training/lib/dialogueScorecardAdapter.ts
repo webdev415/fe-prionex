@@ -16,7 +16,9 @@
 import type { OperatorUser } from '@/features/users/api/usersApi'
 import type { Scorecard } from '@/features/quality'
 
-export type DialogueScorecardCategory = 'Low' | 'Average' | 'High'
+// 'Unscored' = a draft with no weighted_score yet (rendered as a `—` ring and
+// excluded from the Low/Average/High bands).
+export type DialogueScorecardCategory = 'Low' | 'Average' | 'High' | 'Unscored'
 
 export type DialogueCriterionRating = 'not_done' | 'weak' | 'normal' | 'excellent'
 
@@ -27,14 +29,6 @@ export interface DialogueScorecardCriterion {
   score: number
   maxScore: number
   rating: DialogueCriterionRating
-}
-
-export interface DialogueTriggerFlags {
-  promise?: boolean
-  refusal?: boolean
-  missedCall?: boolean
-  willPass?: boolean
-  flagged?: boolean
 }
 
 export interface DialogueScorecardRow {
@@ -51,14 +45,8 @@ export interface DialogueScorecardRow {
   hasScore: boolean
   score: number
   scoreOutOf: number
-  duration: string
-  trigger: string
-  triggerFlags?: DialogueTriggerFlags
-  scoreDelta?: number
-  exampleLabel?: string
   /** The scorecard's overall comment, for the Comment column. */
   comment?: string
-  audioDuration?: string
   criteria: DialogueScorecardCriterion[]
 }
 
@@ -107,7 +95,7 @@ function formatHourMinute(iso: string): string {
  * `category` field exists (Low < 60 · Average 60–79 · High ≥ 80 / no score).
  */
 export function deriveCategory(score100: number | null): DialogueScorecardCategory {
-  if (score100 == null) return 'High'
+  if (score100 == null) return 'Unscored'
   if (score100 < 60) return 'Low'
   if (score100 < 80) return 'Average'
   return 'High'
@@ -184,13 +172,6 @@ export function buildDialogueRow(
     score: score100 != null ? Math.round(score100) : 0,
     scoreOutOf: 100,
     comment: scorecard.overall_comment ?? undefined,
-    // No source on the scorecards endpoint — rendered as `—` / hidden.
-    duration: '—',
-    trigger: '—',
-    triggerFlags: undefined,
-    scoreDelta: undefined,
-    exampleLabel: undefined,
-    audioDuration: undefined,
     criteria: buildCriteria(scorecard),
   }
 }
