@@ -900,6 +900,10 @@ export function ClientManagementPage() {
       params.assignment_date_to = filters.assignmentDateTo
     }
 
+    if (user?.timezone) {
+      params.tz = user.timezone
+    }
+
     // FILTER 15b: TA Chain + Step + per-step values. Steps only ship
     // when a chain is selected — BE silently drops orphan steps but no
     // point sending them. Step selection is keyed by
@@ -944,6 +948,7 @@ export function ClientManagementPage() {
     selectedPriorities,
     searchQuery,
     searchType,
+    user?.timezone,
     allEmployeeOptionIds,
     allInteractionOptionIds,
   ])
