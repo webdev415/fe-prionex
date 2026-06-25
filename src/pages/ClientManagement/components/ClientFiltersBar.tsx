@@ -221,13 +221,8 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
     [operators, searcherIds]
   )
 
-  // Date-only filters: pass the picked day straight through (no
-  // timezone math). The previous implementation ran the Date through
-  // ``getDateStringInTimezone(date, userTimezone)``; a browser-vs-profile
-  // timezone mismatch then shifted the calendar day by ±1 (you click
-  // May 27, the API receives May 26 or May 28). The picker returns a
-  // Date at local-midnight for the chosen day, so reading the local
-  // year/month/day parts gives exactly what the user clicked.
+  // BE owns timezone interpretation (via the ``tz`` query param); the FE
+  // sends the picker's clicked day unchanged so URL == click.
   const handleFilterDateChange = (field: FilterDateField, date: Date | null) => {
     onFilterChange({
       ...filters,

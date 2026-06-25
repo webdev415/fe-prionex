@@ -307,6 +307,7 @@ export interface GetClientsParams {
   // Filter: Assignment Date (date of latest assignment record for current employee)
   assignment_date_from?: string // YYYY-MM-DD format
   assignment_date_to?: string // YYYY-MM-DD format
+  tz?: string
 
   // Filter: Status
   status?: string // Comma-separated statuses (e.g., "active,new")

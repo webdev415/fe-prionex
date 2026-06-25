@@ -781,6 +781,10 @@ export function ClientManagementPage() {
       params.assignment_date_to = filters.assignmentDateTo
     }
 
+    if (user?.timezone) {
+      params.tz = user.timezone
+    }
+
     // FILTER 16: Search (from global header search)
     if (searchQuery.trim()) {
       params.q = searchQuery.trim()
@@ -797,6 +801,7 @@ export function ClientManagementPage() {
     selectedPriorities,
     searchQuery,
     searchType,
+    user?.timezone,
   ])
 
   /** Filters + sort for bulk messaging when "select all" is used (no pagination). */
