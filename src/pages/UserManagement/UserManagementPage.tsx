@@ -20,6 +20,7 @@ import { EditUserModal } from './components/EditUserModal'
 import ChangeStatusModal from './components/ChangeStatusModal'
 import { ResetPasswordConfirmModal } from './components/ResetPasswordConfirmModal'
 import { AdminToggleTwoFactorModal } from './components/AdminToggleTwoFactorModal'
+import { GoogleAuthenticatorStatusIcon } from './components/GoogleAuthenticatorStatusIcon'
 import { UserSearchBar } from './components/UserSearchBar'
 import { UserFiltersBar } from './components/UserFiltersBar'
 import type { ApiUser, UserSearchField, UserSortOrder } from '@/features/users/types'
@@ -38,6 +39,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/DropdownMenu'
+import { TooltipProvider } from '@/components/ui/Tooltip'
 
 import {
   ALL_FILTER_VALUE,
@@ -469,7 +471,12 @@ export function UserManagementPage() {
       align: 'center',
       sortable: true,
       sortKey: 'status',
-      render: (user) => <StatusBadge status={getStatusType(user.status)} />,
+      render: (user) => (
+        <div className="flex items-center justify-center gap-1.5">
+          <StatusBadge status={getStatusType(user.status)} />
+          <GoogleAuthenticatorStatusIcon enabled={user.two_factor_enabled} />
+        </div>
+      ),
     },
     {
       key: 'actions',
@@ -653,143 +660,151 @@ export function UserManagementPage() {
   ]
 
   return (
-    <div>
-      {/* Page Header */}
-      <div className="mb-4 flex items-center justify-between gap-2 sm:gap-3">
-        <div className="flex items-center gap-2 sm:gap-3">
-          <h1 className="text-dark-500 text-xl font-light sm:text-2xl">{t('pages.users.title')}</h1>
-          <span className="text-sm font-light text-gray-500 sm:text-base">{totalUsers}</span>
-        </div>
-
-        <PermissionGuard permission={PERMISSIONS.USERS.CREATE}>
-          {/* Desktop: Full button with text, Mobile: Icon-only button */}
-          <div className="hidden sm:block">
-            <DoubleButton
-              size="md"
-              icon={<Icons.Add size={20} strokeWidth={2} />}
-              iconPosition="left"
-              onClick={() => setShowCreateModal(true)}
-            >
-              {t('pages.users.addNewUser')}
-            </DoubleButton>
+    <TooltipProvider delayDuration={200}>
+      <div>
+        {/* Page Header */}
+        <div className="mb-4 flex items-center justify-between gap-2 sm:gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <h1 className="text-dark-500 text-xl font-light sm:text-2xl">
+              {t('pages.users.title')}
+            </h1>
+            <span className="text-sm font-light text-gray-500 sm:text-base">{totalUsers}</span>
           </div>
-          {/* Mobile: Icon-only button */}
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="bg-primary-300 text-dark-500 hover:bg-primary-500 flex h-10 w-10 items-center justify-center rounded-full transition-colors focus:outline-none sm:hidden"
-            aria-label={t('pages.users.addNewUser')}
-          >
-            <Icons.Add size={20} strokeWidth={2} />
-          </button>
-        </PermissionGuard>
-      </div>
 
-      {/* Search Bar */}
-      <div className="mb-6 flex w-full items-center gap-4">
-        <div className="flex items-center gap-3">
-          <UserSearchBar
-            value={searchQuery}
-            searchField={searchField}
-            onValueChange={handleSearchQueryChange}
-            onSearchFieldChange={handleSearchFieldChange}
-            onSearch={handleSearch}
-            onClear={handleClearSearch}
-            isLoading={isLoading}
-          />
+          <PermissionGuard permission={PERMISSIONS.USERS.CREATE}>
+            {/* Desktop: Full button with text, Mobile: Icon-only button */}
+            <div className="hidden sm:block">
+              <DoubleButton
+                size="md"
+                icon={<Icons.Add size={20} strokeWidth={2} />}
+                iconPosition="left"
+                onClick={() => setShowCreateModal(true)}
+              >
+                {t('pages.users.addNewUser')}
+              </DoubleButton>
+            </div>
+            {/* Mobile: Icon-only button */}
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="bg-primary-300 text-dark-500 hover:bg-primary-500 flex h-10 w-10 items-center justify-center rounded-full transition-colors focus:outline-none sm:hidden"
+              aria-label={t('pages.users.addNewUser')}
+            >
+              <Icons.Add size={20} strokeWidth={2} />
+            </button>
+          </PermissionGuard>
         </div>
+
+        {/* Search Bar */}
+        <div className="mb-6 flex w-full items-center gap-4">
+          <div className="flex items-center gap-3">
+            <UserSearchBar
+              value={searchQuery}
+              searchField={searchField}
+              onValueChange={handleSearchQueryChange}
+              onSearchFieldChange={handleSearchFieldChange}
+              onSearch={handleSearch}
+              onClear={handleClearSearch}
+              isLoading={isLoading}
+            />
+          </div>
+        </div>
+
+        {/* Filter panel */}
+        <UserFiltersBar
+          filters={filterState}
+          onFilterChange={handleFilterChange}
+          onReset={handleResetFilters}
+        />
+
+        {/* Loading State */}
+        {isLoading && <TableSkeleton columns={columns.length} rows={pageSize} />}
+
+        {/* Error State */}
+        {isError && (
+          <ErrorState
+            error={error}
+            onRetry={() => window.location.reload()}
+            title={t('pages.users.errorLoading')}
+          />
+        )}
+
+        {/* User Table */}
+        {!isLoading && !isError && (
+          <DataTable
+            columns={columns}
+            data={users}
+            emptyMessage={t('pages.users.noUsersFound')}
+            sortConfig={sortConfig}
+            onSort={handleSort}
+          />
+        )}
+
+        {/* Pagination */}
+        {!isLoading && !isError && (
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            pageSize={pageSize}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={(newSize) => {
+              setPageSize(newSize)
+              setCurrentPage(1) // Reset to first page when changing page size
+            }}
+          />
+        )}
+
+        {/* Modals */}
+        {showCreateModal && (
+          <CreateUserModal
+            open={showCreateModal}
+            onClose={() => setShowCreateModal(false)}
+            onSuccess={handleCreateSuccess}
+          />
+        )}
+
+        {viewUserId && (
+          <UserDetailModal
+            open={viewUserId !== null}
+            userId={viewUserId}
+            onClose={handleCloseView}
+          />
+        )}
+
+        {editUserId && (
+          <EditUserModal
+            open={editUserId !== null}
+            userId={editUserId}
+            onClose={handleCloseEdit}
+            onSuccess={handleEditSuccess}
+          />
+        )}
+
+        {changeStatusUser && (
+          <ChangeStatusModal
+            open={changeStatusUser !== null}
+            user={changeStatusUser}
+            newStatus={newStatus}
+            onClose={() => setChangeStatusUser(null)}
+          />
+        )}
+
+        {resetPasswordUser && (
+          <ResetPasswordConfirmModal
+            open={resetPasswordUser !== null}
+            user={resetPasswordUser}
+            onClose={() => setResetPasswordUser(null)}
+          />
+        )}
+
+        {toggleTwoFactorUser && (
+          <AdminToggleTwoFactorModal
+            open={toggleTwoFactorUser !== null}
+            user={toggleTwoFactorUser}
+            onClose={() => setToggleTwoFactorUser(null)}
+          />
+        )}
       </div>
-
-      {/* Filter panel */}
-      <UserFiltersBar
-        filters={filterState}
-        onFilterChange={handleFilterChange}
-        onReset={handleResetFilters}
-      />
-
-      {/* Loading State */}
-      {isLoading && <TableSkeleton columns={columns.length} rows={pageSize} />}
-
-      {/* Error State */}
-      {isError && (
-        <ErrorState
-          error={error}
-          onRetry={() => window.location.reload()}
-          title={t('pages.users.errorLoading')}
-        />
-      )}
-
-      {/* User Table */}
-      {!isLoading && !isError && (
-        <DataTable
-          columns={columns}
-          data={users}
-          emptyMessage={t('pages.users.noUsersFound')}
-          sortConfig={sortConfig}
-          onSort={handleSort}
-        />
-      )}
-
-      {/* Pagination */}
-      {!isLoading && !isError && (
-        <Pagination
-          currentPage={currentPage}
-          totalPages={totalPages}
-          pageSize={pageSize}
-          onPageChange={setCurrentPage}
-          onPageSizeChange={(newSize) => {
-            setPageSize(newSize)
-            setCurrentPage(1) // Reset to first page when changing page size
-          }}
-        />
-      )}
-
-      {/* Modals */}
-      {showCreateModal && (
-        <CreateUserModal
-          open={showCreateModal}
-          onClose={() => setShowCreateModal(false)}
-          onSuccess={handleCreateSuccess}
-        />
-      )}
-
-      {viewUserId && (
-        <UserDetailModal open={viewUserId !== null} userId={viewUserId} onClose={handleCloseView} />
-      )}
-
-      {editUserId && (
-        <EditUserModal
-          open={editUserId !== null}
-          userId={editUserId}
-          onClose={handleCloseEdit}
-          onSuccess={handleEditSuccess}
-        />
-      )}
-
-      {changeStatusUser && (
-        <ChangeStatusModal
-          open={changeStatusUser !== null}
-          user={changeStatusUser}
-          newStatus={newStatus}
-          onClose={() => setChangeStatusUser(null)}
-        />
-      )}
-
-      {resetPasswordUser && (
-        <ResetPasswordConfirmModal
-          open={resetPasswordUser !== null}
-          user={resetPasswordUser}
-          onClose={() => setResetPasswordUser(null)}
-        />
-      )}
-
-      {toggleTwoFactorUser && (
-        <AdminToggleTwoFactorModal
-          open={toggleTwoFactorUser !== null}
-          user={toggleTwoFactorUser}
-          onClose={() => setToggleTwoFactorUser(null)}
-        />
-      )}
-    </div>
+    </TooltipProvider>
   )
 }
 

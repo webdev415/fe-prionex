@@ -963,6 +963,10 @@
         "inactive": "Неактивный",
         "suspended": "Приостановлен"
       },
+      "twoFactorIndicator": {
+        "enabled": "Google Authenticator включён",
+        "disabled": "Google Authenticator не включён"
+      },
       "activeProject": "Активный проект",
       "noAssignment": "Нет назначения",
       "unknownProject": "Неизвестный проект",

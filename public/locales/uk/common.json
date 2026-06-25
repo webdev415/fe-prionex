@@ -1019,6 +1019,10 @@
         "inactive": "Неактивний",
         "suspended": "Призупинений"
       },
+      "twoFactorIndicator": {
+        "enabled": "Google Authenticator увімкнено",
+        "disabled": "Google Authenticator не увімкнено"
+      },
       "activeProject": "Активний проєкт",
       "noAssignment": "Немає призначення",
       "unknownProject": "Невідомий проєкт",

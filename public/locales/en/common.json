@@ -1014,6 +1014,10 @@
         "inactive": "Inactive",
         "suspended": "Suspended"
       },
+      "twoFactorIndicator": {
+        "enabled": "Google Authenticator enabled",
+        "disabled": "Google Authenticator not enabled"
+      },
       "activeProject": "Active Project",
       "noAssignment": "No assignment",
       "unknownProject": "Unknown Project",
