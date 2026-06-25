@@ -775,7 +775,10 @@
           "thirdParty": "Діалог з третьою особою"
         },
         "chooseTemplate": "Обрати конкретний шаблон",
-        "hideTemplatePicker": "Сховати список шаблонів"
+        "hideTemplatePicker": "Сховати список шаблонів",
+        "changeType": "← Змінити тип скоркарти",
+        "unsaved": "Незбережені зміни",
+        "unsavedConfirm": "Є незбережені зміни, їх буде втрачено. Все одно закрити?"
       },
       "dialogue": {
         "chips": {
@@ -5958,7 +5961,10 @@
           "thirdParty": "Діалог з третьою особою"
         },
         "chooseTemplate": "Обрати конкретний шаблон",
-        "hideTemplatePicker": "Сховати список шаблонів"
+        "hideTemplatePicker": "Сховати список шаблонів",
+        "changeType": "← Змінити тип скоркарти",
+        "unsaved": "Незбережені зміни",
+        "unsavedConfirm": "Є незбережені зміни, їх буде втрачено. Все одно закрити?"
       },
       "dialogue": {
         "chips": {

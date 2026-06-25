@@ -105,7 +105,12 @@ export function useUpdateScorecard() {
     }) => updateScorecard(scorecardId, payload),
     onSuccess: (updated) => {
       queryClient.setQueryData(scorecardKeys.detail(updated.id), updated)
-      queryClient.invalidateQueries({ queryKey: scorecardKeys.all })
+      // A draft score edit doesn't change any list/history/aggregation view
+      // (a draft shows no score), so skip the broad invalidation + refetch
+      // cascade. Only completed/sent transitions affect those views.
+      if (updated.status !== 'draft') {
+        queryClient.invalidateQueries({ queryKey: scorecardKeys.all })
+      }
     },
   })
 }

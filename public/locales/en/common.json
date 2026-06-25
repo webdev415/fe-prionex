@@ -770,7 +770,10 @@
           "thirdParty": "Third Party Dialogue"
         },
         "chooseTemplate": "Choose a specific template",
-        "hideTemplatePicker": "Hide template list"
+        "hideTemplatePicker": "Hide template list",
+        "changeType": "← Change scorecard type",
+        "unsaved": "Unsaved changes",
+        "unsavedConfirm": "You have unsaved changes that will be lost. Close anyway?"
       },
       "dialogue": {
         "chips": {
@@ -5940,7 +5943,10 @@
           "thirdParty": "Third Party Dialogue"
         },
         "chooseTemplate": "Choose a specific template",
-        "hideTemplatePicker": "Hide template list"
+        "hideTemplatePicker": "Hide template list",
+        "changeType": "← Change scorecard type",
+        "unsaved": "Unsaved changes",
+        "unsavedConfirm": "You have unsaved changes that will be lost. Close anyway?"
       },
       "dialogue": {
         "chips": {

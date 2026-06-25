@@ -302,7 +302,7 @@ export const CallRecordingModal = forwardRef<CallRecordingModalHandle, CallRecor
     const progressPercentage = duration > 0 ? (currentTime / duration) * 100 : 0
 
     return (
-      <Modal open={open} onClose={onClose} maxWidth="xl" className="p-4 sm:p-6">
+      <Modal open={open} onClose={onClose} maxWidth="xl" className="overflow-y-auto p-4 sm:p-6">
         {/* Hidden audio element for playback (blob URL from authenticated fetch) */}
         {audioObjectUrl && (
           <audio
@@ -539,9 +539,12 @@ export const CallRecordingModal = forwardRef<CallRecordingModalHandle, CallRecor
           {belowControls}
 
           {/* KAN-410 — side panel (scorecard) shipped by the trainer flow.
-            Rendered as a stacked block on narrow viewports; consumers may
-            apply lg-screen layout from outside via a wrapper component. */}
-          {scorecardPanel}
+            Bounded scroll area so the long evaluation form doesn't overflow
+            the modal — the audio player + marker/feedback controls above stay
+            visible while the criteria list scrolls within. */}
+          {scorecardPanel ? (
+            <div className="max-h-[50vh] min-h-[180px] overflow-y-auto">{scorecardPanel}</div>
+          ) : null}
 
           {/* Footer Buttons */}
           <ModalFooter className="flex-col gap-2 sm:flex-row sm:gap-3">

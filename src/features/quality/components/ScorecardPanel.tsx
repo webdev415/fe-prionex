@@ -10,7 +10,7 @@
  * flow only); operator-side call sites that open the modal don't pass a
  * `scorecardPanel` prop and get the legacy single-panel layout unchanged.
  */
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/Button'
 import { Icons } from '@/lib/icons'
@@ -33,6 +33,8 @@ interface ScorecardPanelProps {
   scorecardId?: number | null
   /** Callback after the trainer presses "Send to operator". */
   onSent?: (scorecardId: number) => void
+  /** Emits the unsaved-changes state so the parent can warn on close. */
+  onDirtyChange?: (dirty: boolean) => void
 }
 
 export function ScorecardPanel({
@@ -40,6 +42,7 @@ export function ScorecardPanel({
   operatorId,
   scorecardId: pinnedScorecardId,
   onSent,
+  onDirtyChange,
 }: ScorecardPanelProps) {
   const { t } = useTranslation('common')
   const templatesQuery = useTemplates(false)
@@ -54,6 +57,8 @@ export function ScorecardPanel({
   // The Client/Third-Party buttons already pick the template, so the raw
   // template dropdown is collapsed behind a disclosure (legacy/advanced).
   const [showTemplateOverride, setShowTemplateOverride] = useState(false)
+  // Lets the trainer return to the type picker from a draft (KAN-504 UX).
+  const [forcePicker, setForcePicker] = useState(false)
 
   const autoDraftId = historyQuery.data?.find((h) => h.status === 'draft')?.id ?? null
   const activeScorecardId = pinnedScorecardId ?? manuallySelectedId ?? autoDraftId ?? null
@@ -83,8 +88,19 @@ export function ScorecardPanel({
   const draft = useScorecardDraft({
     scorecardId: activeScorecardId,
     initial: draftState,
-    enabled: activeScorecard?.status === 'draft',
+    // KAN-504 UX: no per-change autosave. Selecting a criterion value only
+    // updates local state — persistence happens on explicit "Save draft" /
+    // "Mark completed". This stops the PUT + refetch cascade that fired on
+    // every selection. Closing with unsaved changes warns instead of saving
+    // silently, so we opt out of the on-unmount flush.
+    enabled: false,
+    flushOnUnmount: false,
   })
+
+  // Surface the unsaved-changes state so the modal can warn before closing.
+  useEffect(() => {
+    onDirtyChange?.(draft.isDirty)
+  }, [draft.isDirty, onDirtyChange])
 
   const livePreview = useMemo(
     () => computeWeightedScorePreview(sections, draft.scores),
@@ -113,6 +129,7 @@ export function ScorecardPanel({
       status: 'draft',
     })
     setManuallySelectedId(created.id)
+    setForcePicker(false)
   }
 
   const handleMarkCompleted = async () => {
@@ -132,8 +149,8 @@ export function ScorecardPanel({
 
   // ---- Render branches ----
 
-  // No scorecard yet → show template picker
-  if (!activeScorecardId) {
+  // No scorecard yet (or the trainer chose to switch type) → show the picker.
+  if (!activeScorecardId || forcePicker) {
     return (
       <aside className="flex h-full flex-col gap-3 rounded-xl bg-white p-4 shadow-sm">
         <h2 className="text-dark-500 text-lg font-medium">
@@ -257,11 +274,32 @@ export function ScorecardPanel({
         </span>
       </header>
 
-      <div className="bg-primary-50 text-primary-700 rounded-lg p-3 text-sm">
-        {t('pages.training.scorecard.computedScore', 'Score')}:{' '}
-        <span className="text-lg font-semibold">
-          {livePreview != null ? `${Math.round(livePreview * 20)} / 100` : '—'}
+      {canEdit ? (
+        <button
+          type="button"
+          onClick={() => {
+            setForcePicker(true)
+            setSelectedTemplateId(null)
+            setShowTemplateOverride(false)
+          }}
+          className="self-start text-xs text-gray-500 underline-offset-2 hover:text-gray-700 hover:underline"
+        >
+          {t('pages.training.scorecard.changeType', '← Change scorecard type')}
+        </button>
+      ) : null}
+
+      <div className="bg-primary-50 text-primary-700 flex items-center justify-between gap-2 rounded-lg p-3 text-sm">
+        <span>
+          {t('pages.training.scorecard.computedScore', 'Score')}:{' '}
+          <span className="text-lg font-semibold">
+            {livePreview != null ? `${Math.round(livePreview * 20)} / 100` : '—'}
+          </span>
         </span>
+        {canEdit && draft.isDirty ? (
+          <span className="flex-shrink-0 text-xs font-medium text-amber-600">
+            ● {t('pages.training.scorecard.unsaved', 'Unsaved changes')}
+          </span>
+        ) : null}
       </div>
 
       <div className="flex-1 overflow-y-auto">
@@ -294,7 +332,7 @@ export function ScorecardPanel({
               variant="secondary"
               size="md"
               onClick={() => draft.flush()}
-              disabled={draft.isSaving}
+              disabled={!draft.isDirty || draft.isSaving}
               className="rounded-full"
             >
               {t('pages.training.scorecard.saveDraft', 'Save draft')}

@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   CallRecordingModal,
   type CallRecordingModalHandle,
@@ -51,10 +52,30 @@ export function CallReviewLayout({
   callData,
   durationMs: explicitDurationMs,
 }: CallReviewLayoutProps) {
+  const { t } = useTranslation('common')
   const modalRef = useRef<CallRecordingModalHandle>(null)
   const [scorecardSent, setScorecardSent] = useState(false)
+  const [scorecardDirty, setScorecardDirty] = useState(false)
 
   const durationMs = explicitDurationMs ?? parseDurationMs(callData?.duration)
+
+  // Warn before closing when the scorecard has unsaved changes (explicit-save
+  // flow — closing discards them). Covers every close path (X, Close button,
+  // Escape, outside-click) since they all funnel through this onClose.
+  const handleClose = () => {
+    if (
+      scorecardDirty &&
+      !window.confirm(
+        t(
+          'pages.training.scorecard.unsavedConfirm',
+          'You have unsaved changes that will be lost. Close anyway?'
+        )
+      )
+    ) {
+      return
+    }
+    onClose()
+  }
 
   const markersQuery = useMarkersForCall(callId, open)
   const markers = markersQuery.data ?? []
@@ -68,6 +89,7 @@ export function CallReviewLayout({
         callId={callId}
         operatorId={operatorId}
         onSent={() => setScorecardSent(true)}
+        onDirtyChange={setScorecardDirty}
       />
     ),
     [callId, operatorId]
@@ -96,7 +118,7 @@ export function CallReviewLayout({
     <CallRecordingModal
       ref={modalRef}
       open={open}
-      onClose={onClose}
+      onClose={handleClose}
       callData={callData}
       scorecardPanel={scorecardPanel}
       markerOverlay={markerOverlay}
