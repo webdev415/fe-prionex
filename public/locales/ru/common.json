@@ -1,7 +1,15 @@
-{
+﻿{
   "app": {
     "name": "CRM Prionex",
     "description": "Система управления взаимоотношениями с клиентами"
+  },
+  "auth": {
+    "sessionRestore": {
+      "title": "Восстановить предыдущую сессию?",
+      "body": "У вас есть {{count}} открытых вкладок из предыдущей сессии. Продолжить?",
+      "restoreButton": "Восстановить сессию",
+      "startFreshButton": "Начать заново"
+    }
   },
   "navigation": {
     "home": "Главная",
@@ -14,6 +22,7 @@
     "importClients": "Импорт клиентов",
     "projects": "Проекты",
     "users": "Пользователи",
+    "ipWhitelist": "Белый список IP",
     "sellers": "Продавцы",
     "roles": "Роли",
     "departments": "Отделы",
@@ -31,6 +40,7 @@
     "bulkOperatorAssignment": "Массовое назначение операторов",
     "bulkPaymentVerification": "Массовая верификация платежей",
     "bulkTagAssignment": "Массовое назначение тегов",
+    "bulkSaleNotesImport": "Массовый импорт комментариев",
     "auditLogs": "Журнал аудита",
     "reports": "Отчеты",
     "scoringConfiguration": "Конфигурация оценки",
@@ -40,6 +50,7 @@
     "messagingIntegrations": "Интеграции сообщений",
     "messagingDrafts": "Черновики сообщений",
     "contactTypes": "Типы контактов",
+    "training": "Обучение",
     "actionAnalysis": "Анализ действий"
   },
   "search": {
@@ -53,6 +64,8 @@
     "searching": "Поиск...",
     "noResults": "Клиенты по запросу «{{query}}» не найдены.",
     "phoneMinDigits": "Введите минимум {{count}} цифр для поиска по телефону.",
+    "clientContactIndicator": "Контакт клиента",
+    "recommenderContactIndicator": "Контакт поручителя",
     "debt": "Долг",
     "phone": "Телефон",
     "viewAllResults": "Показать все результаты"
@@ -242,6 +255,10 @@
       "responseMode": "Режим ответа",
       "responseShort": "Кратко",
       "responseDetailed": "Подробно",
+      "mode": "Режим мышления",
+      "modeFast": "⚡ Быстрый",
+      "modeThinking": "🧠 Думающий",
+      "modeTooltip": "Медленнее, но глубже анализирует",
       "outputFormat": "Формат ответа",
       "outputText": "Текст",
       "outputTableFirst": "Сначала таблица",
@@ -261,6 +278,7 @@
       "done": "Готово",
       "settingsUpdated": "Настройки ассистента обновлены",
       "assistantTyping": "Ассистент печатает...",
+      "assistantThinking": "Ассистент думает...",
       "inputHint": "Enter — отправить, Shift+Enter — новая строка",
       "quickPromptClientData": "Покажи детали клиента.",
       "quickPromptDebt": "Проанализируй долг для выбранного клиента и периода.",
@@ -285,9 +303,62 @@
       "mockTableColValue": "Значение",
       "mockTableRowClients": "Клиенты",
       "mockTableRowDebt": "Долг в зоне риска",
-      "mockTableRowOverdue": "Доля просрочки"
+      "mockTableRowOverdue": "Доля просрочки",
+      "betaBadge": "БЕТА — реальный бэкенд",
+      "apiError": "Ассистент сейчас недоступен. Попробуйте ещё раз.",
+      "thinkingUnavailable": "Думающий режим сейчас недоступен, используйте быстрый.",
+      "feedbackUseful": "Полезно",
+      "feedbackNotUseful": "Не полезно",
+      "feedbackClear": "Понятно",
+      "feedbackUnclear": "Непонятно",
+      "historyTitle": "Чаты",
+      "historyNewChat": "Новый чат",
+      "historySearchPlaceholder": "Поиск чатов",
+      "historyToday": "Сегодня",
+      "historyYesterday": "Вчера",
+      "historyEarlier": "Ранее",
+      "historyEmpty": "Чатов пока нет — задайте первый вопрос.",
+      "historyNoResults": "Ничего не найдено",
+      "historyConversationTitle": "Чат #{{id}}",
+      "historyLoadError": "Не удалось загрузить чаты.",
+      "historyRetry": "Повторить",
+      "historyCollapseAria": "Свернуть историю чатов",
+      "historyExpandAria": "Развернуть историю чатов",
+      "historyOpenAria": "Открыть историю чатов",
+      "historyCloseAria": "Закрыть историю чатов",
+      "historyPinned": "Закреплённые",
+      "historyPin": "Закрепить",
+      "historyUnpin": "Открепить",
+      "historyRename": "Переименовать",
+      "historyRenamePlaceholder": "Название чата",
+      "historyRenameTooLong": "Не более {{max}} символов",
+      "historyMenuAria": "Действия с чатом",
+      "historyArchive": "Архив",
+      "historyArchiveAction": "В архив",
+      "historyUnarchiveAction": "Вернуть из архива",
+      "historyArchiveEmpty": "Архив пуст.",
+      "historyBackToChats": "Назад к чатам",
+      "historyUpdateError": "Не удалось обновить чат.",
+      "voiceFallback": "Серверное распознавание недоступно — переключились на распознавание браузера.",
+      "voiceFinalizing": "Обработка речи…",
+      "voiceHoldHint": "Нажмите для диктовки, удерживайте для голосового сообщения",
+      "voiceMessageRecording": "Запись голосового сообщения…",
+      "voiceMessageCancel": "Отменить запись",
+      "voiceMessageSend": "Отправить голосовое сообщение",
+      "voiceMessageTooLarge": "Голосовое сообщение слишком большое (лимит 10MB).",
+      "voiceMessageBubbleLabel": "Голосовое сообщение",
+      "attachImageUnsupported": "Можно прикрепить только изображения PNG, JPEG или WebP.",
+      "attachImageTooLarge": "Изображение превышает лимит 5MB.",
+      "attachImageTooMany": "До 3 изображений в одном сообщении.",
+      "attachImageRemove": "Удалить изображение",
+      "attachImageButton": "Прикрепить изображение",
+      "attachedImageAlt": "Прикреплённое изображение",
+      "attachmentNeedsText": "Добавьте текст, чтобы отправить изображение.",
+      "ttsListen": "Прослушать ответ",
+      "ttsStop": "Остановить воспроизведение",
+      "ttsError": "Не удалось воспроизвести ответ."
     },
-    "actionAnalysis": {
+    "training": {
       "title": "Анализ действий",
       "subtitle": "Мониторинг звонков и история взаимодействий для команды тренеров.",
       "tabs": {
@@ -495,7 +566,6 @@
         "chain": "Цепочка",
         "notes": "Заметки",
         "createdDate": "Дата создания",
-        "clientId": "ID клиента",
         "author": "Автор",
         "assignee": "Исполнитель",
         "priority": "Приоритет",
@@ -649,6 +719,58 @@
           "draft": "Черновик",
           "completed": "Завершена",
           "sent": "Отправлена"
+        },
+        "scorecardType": "Тип скоркарты",
+        "type": {
+          "client": "Диалог с клиентом",
+          "thirdParty": "Диалог с третьим лицом"
+        }
+      },
+      "dialogue": {
+        "chips": {
+          "all": "Все звонки",
+          "low": "Низкий",
+          "average": "Средний",
+          "high": "Высокий"
+        },
+        "view": {
+          "list": "Скоркарты",
+          "averages": "Средние"
+        },
+        "newAssessment": "Новая оценка",
+        "newAssessmentPicker": {
+          "title": "Новая оценка",
+          "operator": "Оператор",
+          "select": "Выберите оператора…",
+          "continue": "Продолжить"
+        },
+        "avgByType": {
+          "title": "Средний балл по типу диалога",
+          "subtitle": "Средний балл скоркарт по клиентам и третьим лицам за выбранный период.",
+          "groupBy": "Группировать по",
+          "period": "Период",
+          "error": "Не удалось загрузить агрегацию",
+          "empty": "Нет оценённых звонков за этот период.",
+          "group": {
+            "operator": "Оператор",
+            "team": "Команда",
+            "all": "Все"
+          },
+          "periods": {
+            "today": "Сегодня",
+            "yesterday": "Вчера",
+            "last_7d": "Последние 7 дней",
+            "last_30d": "Последние 30 дней"
+          },
+          "col": {
+            "operator": "Оператор",
+            "team": "Команда",
+            "scope": "Область",
+            "client": "Ср. клиент",
+            "thirdParty": "Ср. третье лицо",
+            "calls": "Звонков",
+            "trend": "Динамика"
+          }
         }
       },
       "scorecardsEmpty": "Нет скоркарт в текущей области.",
@@ -898,6 +1020,40 @@
           "fastResultPct": "% быстрых",
           "distribution": "Распределение"
         }
+      },
+      "promises": {
+        "kpi": {
+          "total": "Сумма обещаний",
+          "paid": "Оплачено",
+          "overdue": "Просрочено",
+          "pending": "Ожидается",
+          "promisesUnit": "обещаний"
+        },
+        "overdueBanner": "Просроченные обещания",
+        "overdueBannerHint": "{{count}} обещаний не оплачено вовремя. Пожалуйста, как можно скорее организуйте повторный звонок.",
+        "priority": {
+          "all": "Все приоритеты",
+          "critical": "Критический",
+          "average": "Средний",
+          "low": "Низкий"
+        },
+        "cols": {
+          "date": "Дата / Время",
+          "operator": "Оператор",
+          "client": "Клиент",
+          "agreement": "Договор",
+          "amount": "Сумма",
+          "paymentTerm": "Срок оплаты",
+          "status": "Статус"
+        },
+        "status": {
+          "pending": "Ожидается",
+          "paid": "Оплачено",
+          "overdue": "Просрочено"
+        },
+        "loading": "Загрузка…",
+        "loadFailed": "Не удалось загрузить. Попробуйте снова.",
+        "empty": "Нет обещаний или звонков по фильтрам."
       }
     },
     "users": {
@@ -1092,6 +1248,39 @@
         "busy": "Занят",
         "onCall": "На звонке"
       }
+    },
+    "ipWhitelist": {
+      "title": "Белый список IP",
+      "helper": "Глобальный список разрешённых IP для входа. Когда проверка включена, принимаются только входы с этих IPv4-адресов.",
+      "gateTitle": "Проверка IP при входе",
+      "gateDescriptionEnabled": "Включено — каждый вход проверяется по списку ниже.",
+      "gateDescriptionDisabled": "Отключено — вход разрешён с любого IP. Список ниже сохраняется, но не применяется.",
+      "gateToggleAria": "Переключить проверку IP",
+      "gateToastEnabled": "Проверка IP включена.",
+      "gateToastDisabled": "Проверка IP отключена.",
+      "gateToastError": "Не удалось обновить настройку проверки IP.",
+      "ipLabel": "IPv4-адрес",
+      "labelHeading": "Метка",
+      "labelPlaceholder": "Офис Киев (необязательно)",
+      "addButton": "Добавить IP",
+      "colIp": "IP-адрес",
+      "colLabel": "Метка",
+      "colUpdated": "Последнее обновление",
+      "colActions": "Действия",
+      "loading": "Загрузка…",
+      "errorLoading": "Не удалось загрузить список.",
+      "emptyState": "Список пуст. Добавьте IP выше.",
+      "toastAdded": "IP добавлен в список.",
+      "toastUpdated": "Запись обновлена.",
+      "toastDeleted": "IP удалён из списка.",
+      "errorAdd": "Не удалось добавить IP.",
+      "errorUpdate": "Не удалось обновить запись.",
+      "errorDelete": "Не удалось удалить запись.",
+      "confirmDelete": "Удалить {{ip}} из списка?",
+      "editAria": "Редактировать {{ip}}",
+      "deleteAria": "Удалить {{ip}}",
+      "saveAria": "Сохранить изменения",
+      "cancelAria": "Отменить"
     },
     "projects": {
       "title": "Управление проектами",
@@ -1470,8 +1659,11 @@
           "simple": "Простой",
           "vendor": "Выгрузка продавца",
           "operatorAssignment": "Назначение операторов",
+          "paymentImport": "Импорт платежей",
+          "writeoffImport": "Импорт списаний",
           "tagAssignment": "Назначение тегов",
-          "tagRemoval": "Удаление тегов"
+          "tagRemoval": "Удаление тегов",
+          "saleNotes": "Заметки о продаже"
         },
         "uploadedBy": "Загружено:",
         "view": "Просмотр",
@@ -1671,7 +1863,10 @@
             "tags": "Теги",
             "status": "Статус",
             "note": "Примечание",
-            "unknownTagTitle": "Тег не найден в этом проекте"
+            "protectedTagNote": "Защищённый тег: {{names}}",
+            "requirePermissionNote": "Требуется разрешение! Защищённый тег: {{names}}",
+            "unknownTagTitle": "Тег не найден в этом проекте",
+            "blockedProtectedTagTitle": "У вас нет прав на удаление этого защищённого тега"
           },
           "statuses": {
             "ready": "Готово",
@@ -1972,6 +2167,7 @@
           "income": "Справка о доходах",
           "outcome": "Выписка",
           "signature": "ЭЦП",
+          "military": "Военный",
           "other": "Другое"
         },
         "department": "Отдел",
@@ -2061,6 +2257,8 @@
         "writeOff": "Списание",
         "reversal": "Сторно",
         "closeLoan": "Закрыть займ",
+        "reopenLoan": "Восстановить займ",
+        "confirmReopenLoan": "Вы уверены, что хотите восстановить этот кредит?",
         "sendToUBCI": "Отправить в UBCI",
         "rrCalculator": "RR Калькулятор",
         "rrDetail": "Детали соглашения о реструктуризации",
@@ -2453,7 +2651,8 @@
           "payloadTagHint": "Тег требует ЦД и/или сумму — откроется отдельная форма",
           "saveTags": "Сохранить теги",
           "tagsUpdated": "Теги обновлены для {{name}}",
-          "updateFailed": "Не удалось обновить теги"
+          "updateFailed": "Не удалось обновить теги",
+          "protectedRemoveBlocked": "Защищённые теги могут снимать только уполномоченные роли"
         },
         "deleteClient": {
           "title": "Удалить клиента",
@@ -3086,7 +3285,10 @@
         "delayMinutes": "Задержка (мин)",
         "required": "Обязательно",
         "notInPast": "Дата не может быть в прошлом",
-        "showClosedCredits": "Показывать закрытые кредиты"
+        "showClosedCredits": "Показывать закрытые кредиты",
+        "contactSource": "Источник контакта",
+        "contactSourceClient": "Контакты клиента",
+        "contactSourceRecommender": "Контакты поручителя"
       },
       "modals": {
         "create": {
@@ -3217,6 +3419,7 @@
         "income": "Справка о доходах",
         "outcome": "Выписка / выдержка",
         "signature": "Цифровая подпись",
+        "military": "Военный",
         "other": "Другое"
       },
       "actions": {
@@ -3620,6 +3823,7 @@
         "callsMade": "Сделано звонков",
         "contactRate": "Контактность",
         "smsSent": "Отправлено SMS",
+        "messagesSent": "Отправлено сообщений",
         "paymentsCollected": "Собрано платежей",
         "vs": "по сравнению с",
         "yesterday": "вчера",
@@ -3648,6 +3852,7 @@
         "contactRate": "Контактность",
         "avgDuration": "Средняя длительность",
         "sms": "SMS",
+        "messages": "Сообщения",
         "payments": "Платежи",
         "total": "Всего"
       },
@@ -3691,6 +3896,26 @@
         "pending": "В ожидании",
         "deliveryRate": "Процент доставки",
         "byOperator": "По операторам"
+      },
+      "messagesModal": {
+        "title": "Отправлено сообщений",
+        "noData": "Данные недоступны",
+        "totalSent": "Всего отправлено",
+        "totalCost": "Общая стоимость",
+        "deliveryStats": "Статистика доставки",
+        "delivered": "Доставлено",
+        "failed": "Не доставлено",
+        "pending": "В ожидании",
+        "deliveryRate": "Процент доставки",
+        "byChannel": "По каналу",
+        "topDrafts": "Топ черновиков",
+        "byOperator": "По операторам",
+        "messages": "сообщений",
+        "channels": {
+          "sms": "SMS",
+          "viber": "Viber",
+          "email": "Email"
+        }
       },
       "paymentsModal": {
         "title": "Собранные платежи",
@@ -3921,6 +4146,10 @@
       "fieldDefaultLine": "Линия звонка по умолчанию",
       "fieldSpam": "Разрешить спам",
       "fieldPrimary": "Показывать как основной телефон",
+      "fieldContactSource": "Источник контакта",
+      "fieldContactSourceHint": "Категоризирует тип контакта. Используется для визуальных индикаторов в поиске и фильтрации контактов в условиях цепочки целевых действий.",
+      "client": "Клиент",
+      "recommender": "Поручитель",
       "fieldSort": "Порядок сортировки",
       "white": "Белая",
       "gray": "Серая",
@@ -3940,6 +4169,7 @@
         "sortOrder": "Порядок",
         "name": "Название",
         "defaultLine": "Линия звонка",
+        "contactSource": "Источник контакта",
         "spamAllowed": "Спам",
         "primary": "Основной телефон",
         "showInClientDetail": "Показывать на карточке клиента",
@@ -4294,6 +4524,12 @@
           "phone_number": "Номер телефона",
           "segments": "Сегменты SMS",
           "gateway_provider": "Шлюз провайдера",
+          "campaign_id": "ID кампании",
+          "recipient_id": "ID получателя",
+          "service": "Провайдер messaging",
+          "destination": "Адресат",
+          "external_message_id": "Внешний ID сообщения",
+          "draft_id": "ID черновика",
           "agent_extension": "Внутренний номер оператора",
           "interaction_id": "ID взаимодействия",
           "payment_confirmation_date": "Дата подтверждения платежа"
@@ -4320,6 +4556,7 @@
           "interaction.created": "Создано взаимодействие",
           "payment.verified": "Платёж подтверждён",
           "sms.sent": "SMS отправлено",
+          "message.sent": "Сообщение отправлено",
           "call.outcome.updated": "Результат звонка обновлён",
           "scoring.completed": "Скоринг завершён",
           "client.imported": "Клиент импортирован",
@@ -4495,6 +4732,670 @@
       "message": "У вас нет разрешения на доступ к этой странице. Обратитесь к администратору, если считаете, что это ошибка.",
       "goBack": "Назад",
       "goHome": "На главную"
+    },
+    "actionAnalysis": {
+      "title": "Анализ действий",
+      "subtitle": "Мониторинг звонков и история взаимодействий для команды тренеров.",
+      "tabs": {
+        "calls": "Звонки",
+        "interactions": "История взаимодействий"
+      },
+      "filters": {
+        "operator": "Оператор",
+        "allOperators": "Все операторы",
+        "employee": "Сотрудник",
+        "allEmployees": "Все сотрудники",
+        "period": "Период",
+        "status": "Статус",
+        "allStatuses": "Все статусы",
+        "markerType": "Тип маркера",
+        "allMarkerTypes": "Все типы",
+        "feedbackType": "Тип отзыва",
+        "allFeedbackTypes": "Все типы",
+        "granularity": "Гранулярность",
+        "selectOperator": "Выберите оператора…",
+        "minDuration": "Мин. длительность (с)",
+        "maxDuration": "Макс. длительность (с)",
+        "contactType": "Тип контакта",
+        "allContactTypes": "Все",
+        "result": "Результат",
+        "allResults": "Все",
+        "promiseMin": "Обещание от",
+        "promiseMax": "Обещание до",
+        "department": "Отдел",
+        "allDepartments": "Все отделы",
+        "employees": "Сотрудники",
+        "employeesCount": "Выбрано: {{count}}",
+        "phone": "Телефон",
+        "phonePlaceholder": "напр. 0631234567",
+        "searchEmployees": "Поиск по имени…",
+        "noOperatorsMatch": "Нет совпадений",
+        "clearEmployees": "Сбросить",
+        "applyEmployees": "Применить",
+        "dateFrom": "С",
+        "dateTo": "По",
+        "selectDate": "Выберите дату",
+        "selectStartDate": "Выберите начальную дату",
+        "selectEndDate": "Выберите конечную дату",
+        "dateRange": "Период",
+        "quickRanges": "Быстро",
+        "minDurationPlaceholder": "напр. 30",
+        "maxDurationPlaceholder": "напр. 600",
+        "promiseMinPlaceholder": "0.00",
+        "promiseMaxPlaceholder": "напр. 1000",
+        "searchEmployeesPlaceholder": "Поиск",
+        "applyFilters": "Применить фильтры",
+        "clearAll": "Сбросить",
+        "periods": {
+          "today": "Сегодня",
+          "yesterday": "Вчера",
+          "last_7d": "Последние 7 дней",
+          "last_30d": "Последние 30 дней",
+          "last7d": "Последние 7 дней",
+          "last30d": "Последние 30 дней",
+          "custom": "Произвольный"
+        },
+        "selectCustomRange": "Выберите произвольный период, чтобы загрузить данные.",
+        "telephonyType": "Тип телефонии",
+        "telephonyTypes": {
+          "all": "Все",
+          "white": "Белая",
+          "grey": "Серая",
+          "unknown": "Неизвестно"
+        },
+        "channel": "Канал",
+        "allChannels": "Все",
+        "internalDateType": "Внутренняя дата",
+        "internalDateTypeNone": "Выкл.",
+        "internalDateFrom": "Внутренняя дата от",
+        "internalDateTo": "Внутренняя дата до",
+        "internalDateTypes": {
+          "promiseToPay": "Обещание оплаты",
+          "nextAction": "Перезвонить / следующее действие",
+          "followUp": "Уточнение",
+          "any": "Любая из перечисленных"
+        },
+        "chain": "Цепочка",
+        "allChains": "Все цепочки",
+        "chainStep": "Шаг",
+        "allChainSteps": "Все шаги",
+        "stepValue": "Значение шага",
+        "stepValueFrom": "Значение шага от",
+        "stepValueTo": "Значение шага до",
+        "stepValueMin": "Значение шага мин",
+        "stepValueMax": "Значение шага макс",
+        "stepValuePlaceholder": "Поиск…",
+        "allStepValues": "Все значения",
+        "stepValuesHeading": "Фильтры значений шагов",
+        "stepValueUnsupported": "Для этого шага нет фильтра по значению.",
+        "selectedStepsCount": "Выбрано: {{count}}",
+        "notesSearch": "Поиск по заметкам",
+        "notesSearchPlaceholder": "Поиск в заметках…",
+        "sortBy": "Сортировка",
+        "sortOptions": {
+          "created_at_desc": "Создана (сначала новые)",
+          "created_at_asc": "Создана (сначала старые)",
+          "due_date_asc": "Срок (ближайшие)",
+          "due_date_desc": "Срок (позднейшие)"
+        },
+        "assignee": "Исполнитель",
+        "author": "Автор",
+        "dueRangeHeading": "Срок (дата / время)",
+        "dueDateFrom": "Срок: дата от",
+        "dueDateTo": "Срок: дата до",
+        "dueTimeFrom": "Срок: время от",
+        "dueTimeTo": "Срок: время до",
+        "topic": "Тема",
+        "allTopics": "Все темы",
+        "group": "Группа",
+        "groupComingSoon": "Скоро",
+        "priority": "Приоритет",
+        "priorities": {
+          "all": "Все",
+          "low": "Низкий",
+          "normal": "Обычный",
+          "high": "Высокий",
+          "urgent": "Срочный",
+          "critical": "Критический"
+        },
+        "statuses": {
+          "all": "Все",
+          "answered": "Отвечен",
+          "notAnswered": "Не отвечен",
+          "pending": "В ожидании",
+          "in_progress": "В работе",
+          "completed": "Завершено",
+          "cancelled": "Отменено",
+          "extended": "Продлено",
+          "rejected": "Отклонено",
+          "incoming_line_result": "Итог входящей линии"
+        },
+        "confirmedAtRangeHeading": "Подтверждён",
+        "confirmedAtFrom": "С",
+        "confirmedAtTo": "По",
+        "paymentDateRangeHeading": "Дата платежа",
+        "paymentDateFrom": "С",
+        "paymentDateTo": "По",
+        "selectedCount": "Выбрано: {{count}}",
+        "paymentMethod": "Способ оплаты",
+        "paymentMethods": {
+          "all": "Все способы",
+          "bank_transfer": "Банковский перевод",
+          "online_gateway": "Онлайн (ссылка)",
+          "cash": "Наличные",
+          "card": "Карта",
+          "other": "Другое"
+        },
+        "paymentStatuses": {
+          "all": "Все",
+          "pending": "В ожидании",
+          "verified": "Подтверждён",
+          "cancelled": "Отклонён"
+        },
+        "paymentType": "Тип платежа",
+        "paymentTypes": {
+          "all": "Все типы",
+          "payment_by_rr": "Платёж по РР",
+          "partial_payment": "Частичный платёж",
+          "full_payment": "Полный платёж"
+        },
+        "paymentCommentSearch": "Комментарий к оплате",
+        "paymentCommentSearchPlaceholder": "Поиск в комментариях…",
+        "amountMin": "Сумма от",
+        "amountMax": "Сумма до",
+        "amountMinPlaceholder": "0.00",
+        "amountMaxPlaceholder": "напр. 1000.00",
+        "paymentSortOptions": {
+          "recorded_at_desc": "Создан (новые)",
+          "recorded_at_asc": "Создан (старые)",
+          "verified_at_desc": "Подтверждён (новые)",
+          "verified_at_asc": "Подтверждён (старые)",
+          "amount_desc": "Сумма (по убыванию)",
+          "amount_asc": "Сумма (по возрастанию)",
+          "payment_date_desc": "Дата платежа (новые)",
+          "payment_date_asc": "Дата платежа (старые)"
+        }
+      },
+      "columns": {
+        "dateTime": "Дата / Время",
+        "duration": "Длительность",
+        "status": "Статус",
+        "callType": "Тип звонка",
+        "telephonyType": "Тип телефонии",
+        "phone": "Телефон",
+        "agent": "Сотрудник",
+        "client": "Клиент",
+        "clientId": "ID клиента",
+        "promiseDate": "Дата обещания",
+        "recording": "Запись",
+        "viewDetail": "Подробнее",
+        "employee": "Сотрудник",
+        "contactType": "Тип контакта",
+        "result": "Результат",
+        "promiseAmount": "Сумма обещания",
+        "createdBy": "Кем создано",
+        "responsibleAtCreation": "Ответственный на момент создания",
+        "currentResponsible": "Текущий ответственный",
+        "internalDate": "Дата (обещание / перезвон)",
+        "channel": "Канал",
+        "chain": "Цепочка",
+        "notes": "Заметки",
+        "createdDate": "Дата создания",
+        "author": "Автор",
+        "assignee": "Исполнитель",
+        "priority": "Приоритет",
+        "topic": "Тема",
+        "dueDate": "Срок (дата)",
+        "dueTime": "Срок (время)",
+        "loanNumber": "Номер займа",
+        "loanSaleDate": "Дата продажи займа",
+        "paymentType": "Тип платежа",
+        "paymentComment": "Комментарий к оплате",
+        "operator": "Оператор",
+        "createdAt": "Создан",
+        "confirmedAt": "Подтверждён",
+        "amount": "Сумма",
+        "paymentMethod": "Способ оплаты",
+        "date": "Дата",
+        "template": "Шаблон",
+        "weightedScore": "Балл",
+        "markerType": "Тип",
+        "timestamp": "Время",
+        "comment": "Комментарий",
+        "feedbackType": "Тип",
+        "preview": "Текст"
+      },
+      "callType": {
+        "incoming": "Входящий",
+        "outgoing": "Исходящий"
+      },
+      "telephonyType": {
+        "white": "Белая",
+        "grey": "Серая",
+        "unknown": "—"
+      },
+      "callDetail": {
+        "title": "Детали звонка",
+        "fields": {
+          "dateTime": "Дата / Время",
+          "status": "Статус",
+          "callType": "Тип звонка",
+          "employee": "Сотрудник",
+          "phone": "Телефон",
+          "duration": "Длительность",
+          "client": "Клиент",
+          "callId": "ID звонка"
+        }
+      },
+      "summary": {
+        "total": "всего",
+        "outgoing": "исходящих",
+        "answered": "отвечено",
+        "totalInteractions": "взаимодействий"
+      },
+      "actions": {
+        "exportExcel": "Экспорт в Excel",
+        "exporting": "Экспорт…",
+        "playRecording": "Воспроизвести запись",
+        "viewDetail": "Подробнее"
+      },
+      "empty": "Нет звонков, соответствующих фильтрам",
+      "interactionsEmpty": "Нет взаимодействий, соответствующих фильтрам",
+      "taHistoryEmpty": "Нет ТА-взаимодействий, соответствующих фильтрам",
+      "taskHistoryEmpty": "Нет задач, соответствующих фильтрам",
+      "taskHistorySummary": {
+        "total": "задач"
+      },
+      "taskHistoryAnalytics": {
+        "title": "Задачи по срокам",
+        "subtitle": "Общее число задач со сроком в выбранном диапазоне.",
+        "totalLabel": "задач со сроком",
+        "empty": "Нет задач со сроком в выбранном диапазоне.",
+        "emptyMonth": "Нет задач со сроком в этом месяце.",
+        "today": "Сегодня",
+        "prevMonth": "Предыдущий месяц",
+        "nextMonth": "Следующий месяц",
+        "weekdayShort": {
+          "mon": "Пн",
+          "tue": "Вт",
+          "wed": "Ср",
+          "thu": "Чт",
+          "fri": "Пт",
+          "sat": "Сб",
+          "sun": "Вс"
+        }
+      },
+      "errors": {
+        "loadFailed": "Не удалось загрузить звонки",
+        "loadInteractionsFailed": "Не удалось загрузить взаимодействия",
+        "loadTimelineFailed": "Не удалось загрузить таймлайн.",
+        "invalidCallId": "Неверный ID звонка. Вставьте полный UUID (36 символов).",
+        "loadScreenTimeFailed": "Не удалось загрузить данные экранного времени.",
+        "loadHeatmapFailed": "Не удалось загрузить тепловую карту.",
+        "loadScriptAnalyticsFailed": "Не удалось загрузить аналитику скриптов.",
+        "loadTaHistoryFailed": "Не удалось загрузить историю ТА",
+        "loadTaskHistoryFailed": "Не удалось загрузить историю задач",
+        "loadPaymentHistoryFailed": "Не удалось загрузить историю платежей",
+        "loadScorecardsFailed": "Не удалось загрузить скоркарты",
+        "loadScorecardFailed": "Не удалось загрузить скоркарту",
+        "loadMarkersFailed": "Не удалось загрузить маркеры",
+        "loadFeedbackFailed": "Не удалось загрузить отзывы",
+        "loadDynamicsFailed": "Не удалось загрузить динамику оценок",
+        "noOperators": "Нет операторов в текущей области.",
+        "noScoresPermission": "У вас нет прав на просмотр данных по оценке качества.",
+        "emptyScopeResolution": "Выбранная область не содержит операторов.",
+        "departmentNoOperators": "В этом отделе нет операторов в текущем проекте.",
+        "exportFailed": "Не удалось экспортировать",
+        "callNotFound": "Звонок не найден"
+      },
+      "calls": {
+        "placeholder": "Вкладка «Звонки» — скоро будет доступна"
+      },
+      "interactions": {
+        "placeholder": "Вкладка «История взаимодействий» — скоро будет доступна"
+      },
+      "topTabs": {
+        "inbox": "Входящие",
+        "calls": "Звонки",
+        "scores": "Оценки",
+        "training": "Обучение",
+        "settings": "Настройки"
+      },
+      "topTabsComingSoon": "Этот раздел будет доступен в одном из следующих релизов.",
+      "subTabs": {
+        "list": "Список звонков",
+        "interactions": "История взаимодействий",
+        "taHistory": "История ТА",
+        "taskHistory": "История задач",
+        "paymentHistory": "История платежей",
+        "timeline": "Таймлайн",
+        "screenTime": "Экранное время",
+        "heatmap": "Тепловая карта",
+        "scriptAnalytics": "Аналитика скриптов"
+      },
+      "scoresSubTabs": {
+        "scorecards": "Скоркарты",
+        "markers": "Маркеры",
+        "feedback": "Обратная связь",
+        "dynamics": "Динамика оценок"
+      },
+      "scorecard": {
+        "title": "Оценка качества",
+        "template": "Шаблон",
+        "selectTemplate": "Выберите шаблон…",
+        "startEvaluation": "Начать оценку",
+        "history": "Предыдущие скоркарты по этому звонку",
+        "computedScore": "Балл",
+        "perCallComment": "Общий комментарий",
+        "saveDraft": "Сохранить черновик",
+        "markCompleted": "Отметить завершённой",
+        "sendToOperator": "Отправить оператору",
+        "status": {
+          "draft": "Черновик",
+          "completed": "Завершена",
+          "sent": "Отправлена"
+        },
+        "scorecardType": "Тип скоркарты",
+        "type": {
+          "client": "Диалог с клиентом",
+          "thirdParty": "Диалог с третьим лицом"
+        }
+      },
+      "dialogue": {
+        "chips": {
+          "all": "Все звонки",
+          "low": "Низкий",
+          "average": "Средний",
+          "high": "Высокий"
+        },
+        "view": {
+          "list": "Скоркарты",
+          "averages": "Средние"
+        },
+        "newAssessment": "Новая оценка",
+        "newAssessmentPicker": {
+          "title": "Новая оценка",
+          "operator": "Оператор",
+          "select": "Выберите оператора…",
+          "continue": "Продолжить"
+        },
+        "avgByType": {
+          "title": "Средний балл по типу диалога",
+          "subtitle": "Средний балл скоркарт по клиентам и третьим лицам за выбранный период.",
+          "groupBy": "Группировать по",
+          "period": "Период",
+          "error": "Не удалось загрузить агрегацию",
+          "empty": "Нет оценённых звонков за этот период.",
+          "group": {
+            "operator": "Оператор",
+            "team": "Команда",
+            "all": "Все"
+          },
+          "periods": {
+            "today": "Сегодня",
+            "yesterday": "Вчера",
+            "last_7d": "Последние 7 дней",
+            "last_30d": "Последние 30 дней"
+          },
+          "col": {
+            "operator": "Оператор",
+            "team": "Команда",
+            "scope": "Область",
+            "client": "Ср. клиент",
+            "thirdParty": "Ср. третье лицо",
+            "calls": "Звонков",
+            "trend": "Динамика"
+          }
+        }
+      },
+      "scorecardsEmpty": "Нет скоркарт в текущей области.",
+      "scorecardsTotalSuffix": "скоркарт",
+      "markers": {
+        "addMarker": "Добавить маркер",
+        "type": "Тип",
+        "comment": "Комментарий",
+        "commentPlaceholder": "Комментарий (необязательно)",
+        "save": "Сохранить",
+        "types": {
+          "error": "Ошибка",
+          "good_moment": "Хороший момент",
+          "script_violation": "Нарушение скрипта",
+          "stop_word": "Стоп-слово",
+          "unmotivated_pause": "Немотивированная пауза",
+          "note": "Заметка"
+        },
+        "status": {
+          "draft": "Черновик",
+          "sent": "Отправлен"
+        }
+      },
+      "markersEmpty": "Нет маркеров в текущей области.",
+      "markersTotalSuffix": "маркеров",
+      "feedback": {
+        "leave": "Оставить отзыв",
+        "typeLabel": "Тип",
+        "text": "Текст отзыва",
+        "send": "Отправить",
+        "includeTimestamp": "Включить текущую позицию воспроизведения",
+        "reply": "Ответить",
+        "replyPlaceholder": "Напишите ответ…",
+        "markRead": "Отметить прочитанным",
+        "markComplete": "Отметить выполненным",
+        "threadEmpty": "Ответов пока нет.",
+        "types": {
+          "praise": "Похвала",
+          "note": "Заметка",
+          "correction_task": "Задание на исправление"
+        },
+        "status": {
+          "unread": "Не прочитано",
+          "read": "Прочитано",
+          "completed": "Выполнено"
+        },
+        "role": {
+          "trainer": "Тренер",
+          "operator": "Оператор"
+        }
+      },
+      "feedbackEmpty": "Нет отзывов в текущей области.",
+      "feedbackTotalSuffix": "записей",
+      "dynamics": {
+        "empty": "Нет завершённых скоркарт в этом диапазоне.",
+        "selectOperatorHint": "Выберите оператора, чтобы увидеть динамику оценок.",
+        "operator": "Оператор",
+        "teamAvg": "Среднее по команде",
+        "periodAvg": "Среднее за период",
+        "periodMin": "Мин.",
+        "periodMax": "Макс.",
+        "scorecardCount": "Скоркарты",
+        "granularity": {
+          "day": "По дням",
+          "week": "По неделям",
+          "month": "По месяцам"
+        }
+      },
+      "scope": {
+        "label": "Область просмотра",
+        "my": "Мои действия",
+        "group": "Действия группы",
+        "department": "Действия отдела",
+        "all": "Все действия",
+        "groupComingSoon": "Скоро"
+      },
+      "workspaceBanner": {
+        "label": "Рабочее место тренера",
+        "assignedTo": "Вы назначены в {{department}}"
+      },
+      "inbox": {
+        "searchPlaceholder": "Имя оператора или номер телефона",
+        "headerKpis": {
+          "inProgress": "В работе",
+          "averageScore": "Средний балл",
+          "teamPlan": "План команды",
+          "tasksToday": "Задачи сегодня",
+          "oneOnOneToday": "1-на-1 сегодня"
+        },
+        "viewModes": {
+          "label": "Режим отображения",
+          "inbox": "Входящие",
+          "kanban": "Канбан",
+          "grid": "Сетка",
+          "comingSoon": "Скоро",
+          "comingSoonShort": "скоро"
+        },
+        "kanbanColumns": {
+          "wait": "Ожидание",
+          "in_progress": "В работе",
+          "awaiting_training": "Ожидает обучения",
+          "scheduled": "Запланировано",
+          "closed": "Закрыто"
+        },
+        "list": {
+          "loading": "Загрузка очереди…",
+          "empty": "Нет операторов в текущей области.",
+          "emptyScope": "Нет операторов в текущей области.",
+          "triggerCount": "{{count}} триггеров"
+        },
+        "detail": {
+          "selectOperator": "Выберите оператора, чтобы увидеть детали.",
+          "loading": "Загрузка…",
+          "loadFailed": "Не удалось загрузить детали оператора.",
+          "redFlagsHeadline": "{{count}} красных флагов",
+          "redFlagsSubtitle": "Нужно внимание тренера — накопились триггеры.",
+          "riskyTag": "Риск",
+          "whyInQueue": "Почему попал в очередь",
+          "noTriggers": "В выбранном периоде нет активных триггеров.",
+          "latestRatings": "Последние оценки диалогов",
+          "noScorecards": "За выбранный период нет оценок.",
+          "kpis": {
+            "scriptAdherence": "Скрипт",
+            "scorecardAvg": "Оценка",
+            "conversion": "Конверсия",
+            "tasksOnTime": "Задачи вовремя"
+          },
+          "trainerActions": {
+            "listen": "Прослушать звонок",
+            "assignTask": "Назначить задачу",
+            "planOneOnOne": "Запланировать 1-на-1",
+            "takeCharge": "Взять в работу"
+          }
+        },
+        "quickActions": {
+          "button": "Быстрое действие",
+          "comingSoon": "Скоро",
+          "assignTask": "Назначить задачу",
+          "assignTaskHint": "Оператор · тема · дедлайн",
+          "scheduleOneOnOne": "Запланировать 1-на-1",
+          "scheduleOneOnOneHint": "Оператор · дата · время",
+          "assignCourse": "Назначить курс / дрилл",
+          "assignCourseHint": "Оператор · материал",
+          "rateDialogue": "Оценить диалог",
+          "rateDialogueHint": "Открыть оценочный лист"
+        },
+        "triggers": {
+          "low_script_adherence": "Низкое следование скрипту",
+          "low_scorecard_average": "Низкий средний балл",
+          "low_conversion_rate": "Низкая конверсия",
+          "overdue_correction_tasks": "Просроченные корректирующие задачи",
+          "active_auto_flags": "Активные авто-флаги"
+        },
+        "rateDialogue": {
+          "title": "Выберите звонок для оценки",
+          "noOperator": "Сначала выберите оператора.",
+          "noExtension": "У этого оператора нет внутреннего номера и нет звонков для оценки.",
+          "noCalls": "Нет недавних звонков для этого оператора.",
+          "hasRecording": "Запись доступна",
+          "noRecording": "Без записи"
+        },
+        "kanban": {
+          "transitionSuccess": "Перемещено в «{{state}}»",
+          "transitionFailed": "Не удалось переместить карточку."
+        },
+        "pendingFeature": {
+          "dependsOn": "Это действие станет доступно после релиза {{issue}}.",
+          "assignTask": {
+            "title": "Назначить корректирующую задачу",
+            "description": "Назначает оператору задачу с дедлайном и контролем выполнения."
+          },
+          "assignMaterial": {
+            "title": "Назначить курс или дрилл",
+            "description": "Отправляет учебный материал оператору и отслеживает прогресс."
+          }
+        },
+        "scheduleOneOnOne": {
+          "title": "Запланировать 1-на-1",
+          "operator": "Оператор",
+          "scheduledAt": "Дата и время",
+          "duration": "Длительность (минут)",
+          "notes": "Заметки (необязательно)",
+          "notesPlaceholder": "Что вы хотите обсудить на встрече?",
+          "submit": "Запланировать встречу",
+          "submitting": "Планируем…",
+          "success": "1-на-1 запланирована. Оператор уведомлён.",
+          "errors": {
+            "noOperator": "Сначала выберите оператора.",
+            "noDate": "Выберите дату и время.",
+            "generic": "Не удалось запланировать встречу."
+          }
+        }
+      },
+      "paymentHistoryEmpty": "Нет платежей, соответствующих фильтрам",
+      "paymentHistorySummary": {
+        "totalPayments": "платежей",
+        "totalAmount": "всего",
+        "verified": "подтверждено",
+        "pending": "в ожидании"
+      },
+      "timeline": {
+        "callId": "ID звонка",
+        "load": "Загрузить",
+        "callIdPlaceholder": "Вставьте UUID звонка, чтобы загрузить таймлайн",
+        "empty": "Введите ID звонка выше, чтобы посмотреть действия оператора.",
+        "noEvents": "По этому звонку нет записанных событий.",
+        "columns": {
+          "offset": "Смещение",
+          "event": "Событие",
+          "page": "Страница",
+          "timestamp": "Время"
+        }
+      },
+      "screenTime": {
+        "empty": "Нет данных экранного времени по выбранным фильтрам.",
+        "columns": {
+          "operator": "Оператор",
+          "cardOpen": "Сред. звонок→карта",
+          "formSubmit": "Сред. отправка формы",
+          "idle": "Простой",
+          "afterCall": "Пост-обработка",
+          "deviation": "Δ к команде"
+        }
+      },
+      "heatmap": {
+        "operator": "Оператор",
+        "empty": "Нет данных тепловой карты по выбранным фильтрам.",
+        "filters": {
+          "state": "Фильтр состояния"
+        },
+        "states": {
+          "all": "Все состояния",
+          "active_call": "Активный звонок",
+          "post_call": "После звонка",
+          "waiting": "Ожидание",
+          "idle": "Простой",
+          "break": "Перерыв"
+        }
+      },
+      "scriptAnalytics": {
+        "empty": "Нет данных по выбранным фильтрам.",
+        "teamDistribution": "Распределение команды",
+        "flagsHeading": "Авто-флаги",
+        "columns": {
+          "operator": "Оператор",
+          "totalInteractions": "Взаимодействия",
+          "fastResultPct": "% быстрых",
+          "distribution": "Распределение"
+        }
+      }
     }
   },
   "contactTypes": {

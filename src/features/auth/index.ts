@@ -2,6 +2,7 @@ export {
   LoginCard,
   AccountLockedCard,
   AlreadyLoggedInCard,
+  IpNotAllowedCard,
   TwoFactorCodeCard,
   ProjectSwitcher,
   ImpersonationBanner,

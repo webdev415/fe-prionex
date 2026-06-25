@@ -2,6 +2,7 @@ import { useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { useAuthStore } from '@/stores/authStore'
+import { buildLoginUrlWithReturn } from '@/features/auth/utils/safeReturnUrl'
 import type { LoginRequest } from '@/types/api'
 
 export function useAuth() {
@@ -40,9 +41,16 @@ export function useAuth() {
     const currentUser = useAuthStore.getState().user
     if (currentUser?.mustChangePassword) {
       navigate('/change-password')
-    } else {
-      navigate('/dashboard')
+      return
     }
+    // For the normal case, GuestRoute (wrapping /login) handles the
+    // redirect once it observes isAuthenticated=true. It reads
+    // ?returnUrl=... from the URL and routes there. We deliberately do
+    // NOT navigate here: GuestRoute renders synchronously during the
+    // same React commit, so a navigate() call here would race against
+    // (and typically override) GuestRoute's decision — but by then
+    // GuestRoute has already stripped ?returnUrl from the URL, so we'd
+    // fall back to /dashboard and lose the returnUrl entirely.
   }, [navigate])
 
   const login = useCallback(
@@ -63,9 +71,10 @@ export function useAuth() {
   )
 
   const logout = useCallback(async () => {
+    const loginUrl = buildLoginUrlWithReturn()
     await storeLogout()
     queryClient.clear()
-    navigate('/login')
+    navigate(loginUrl)
   }, [storeLogout, queryClient, navigate])
 
   const forceLogin = useCallback(async () => {
