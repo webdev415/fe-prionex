@@ -1,4 +1,4 @@
-/**
+﻿/**
  * ScorecardPanel — side panel rendered next to the CallRecordingModal (KAN-410, Feature 2.1).
  *
  * Renders the active scorecard template with collapsible sections, per-criterion
@@ -88,6 +88,16 @@ export function ScorecardPanel({
     [sections, draft.scores]
   )
 
+  // KAN-504: the two typed templates, surfaced as an explicit Client /
+  // Third Party selector in the picker. Selecting a type loads its template.
+  const typedTemplates = useMemo(
+    () => ({
+      client: templatesQuery.data?.find((tpl) => tpl.scorecard_type === 'client') ?? null,
+      third_party: templatesQuery.data?.find((tpl) => tpl.scorecard_type === 'third_party') ?? null,
+    }),
+    [templatesQuery.data]
+  )
+
   const status = activeScorecard?.status ?? 'draft'
   const canEdit = status === 'draft'
 
@@ -124,13 +134,13 @@ export function ScorecardPanel({
     return (
       <aside className="flex h-full flex-col gap-3 rounded-xl bg-white p-4 shadow-sm">
         <h2 className="text-dark-500 text-lg font-medium">
-          {t('pages.actionAnalysis.scorecard.title', 'Quality evaluation')}
+          {t('pages.training.scorecard.title', 'Quality evaluation')}
         </h2>
 
         {historyQuery.data && historyQuery.data.length > 0 ? (
           <div className="rounded-lg bg-gray-50 p-3 text-sm text-gray-700">
             <div className="mb-2 font-medium">
-              {t('pages.actionAnalysis.scorecard.history', 'Previous scorecards on this call')}
+              {t('pages.training.scorecard.history', 'Previous scorecards on this call')}
             </div>
             <ul className="space-y-1">
               {historyQuery.data.map((row) => (
@@ -141,7 +151,7 @@ export function ScorecardPanel({
                     className="text-primary-600 hover:underline"
                   >
                     {new Date(row.created_at).toLocaleString()} —{' '}
-                    {t(`pages.actionAnalysis.scorecard.status.${row.status}`, row.status)}
+                    {t(`pages.training.scorecard.status.${row.status}`, row.status)}
                     {row.weighted_score != null ? ` (${row.weighted_score})` : ''}
                   </button>
                 </li>
@@ -151,7 +161,34 @@ export function ScorecardPanel({
         ) : null}
 
         <label className="text-sm font-medium text-gray-700">
-          {t('pages.actionAnalysis.scorecard.template', 'Template')}
+          {t('pages.training.scorecard.scorecardType', 'Scorecard type')}
+        </label>
+        <div className="flex gap-2">
+          {(['client', 'third_party'] as const).map((type) => {
+            const tpl = typedTemplates[type]
+            const selected = tpl != null && selectedTemplateId === tpl.id
+            return (
+              <button
+                key={type}
+                type="button"
+                disabled={!tpl}
+                onClick={() => tpl && setSelectedTemplateId(tpl.id)}
+                className={`flex-1 rounded-lg border px-3 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+                  selected
+                    ? 'border-primary-500 bg-primary-500 text-white'
+                    : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                {type === 'client'
+                  ? t('pages.training.scorecard.type.client', 'Client Dialogue')
+                  : t('pages.training.scorecard.type.thirdParty', 'Third Party Dialogue')}
+              </button>
+            )
+          })}
+        </div>
+
+        <label className="text-sm font-medium text-gray-700">
+          {t('pages.training.scorecard.template', 'Template')}
         </label>
         <select
           className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
@@ -160,7 +197,7 @@ export function ScorecardPanel({
           disabled={templatesQuery.isLoading}
         >
           <option value="">
-            {t('pages.actionAnalysis.scorecard.selectTemplate', 'Select a template…')}
+            {t('pages.training.scorecard.selectTemplate', 'Select a template…')}
           </option>
           {templatesQuery.data?.map((tpl) => (
             <option key={tpl.id} value={tpl.id}>
@@ -176,7 +213,7 @@ export function ScorecardPanel({
           disabled={!selectedTemplateId || createMutation.isPending}
           className="rounded-full"
         >
-          {t('pages.actionAnalysis.scorecard.startEvaluation', 'Start evaluation')}
+          {t('pages.training.scorecard.startEvaluation', 'Start evaluation')}
         </Button>
       </aside>
     )
@@ -193,7 +230,7 @@ export function ScorecardPanel({
   if (!activeScorecard) {
     return (
       <aside className="rounded-xl bg-white p-4 text-sm text-red-600 shadow-sm">
-        {t('pages.actionAnalysis.errors.loadScorecardFailed', 'Failed to load scorecard')}
+        {t('pages.training.errors.loadScorecardFailed', 'Failed to load scorecard')}
       </aside>
     )
   }
@@ -205,12 +242,12 @@ export function ScorecardPanel({
           {activeScorecard.template_snapshot.name}
         </h2>
         <span className="rounded-full bg-gray-100 px-2 py-1 text-xs font-medium text-gray-700">
-          {t(`pages.actionAnalysis.scorecard.status.${status}`, status)}
+          {t(`pages.training.scorecard.status.${status}`, status)}
         </span>
       </header>
 
       <div className="bg-primary-50 text-primary-700 rounded-lg p-3 text-sm">
-        {t('pages.actionAnalysis.scorecard.computedScore', 'Score')}:{' '}
+        {t('pages.training.scorecard.computedScore', 'Score')}:{' '}
         <span className="text-lg font-semibold">
           {livePreview != null ? livePreview.toFixed(2) : '—'}
         </span>
@@ -228,7 +265,7 @@ export function ScorecardPanel({
         ))}
 
         <label className="mt-3 block text-sm font-medium text-gray-700">
-          {t('pages.actionAnalysis.scorecard.perCallComment', 'Overall comment')}
+          {t('pages.training.scorecard.perCallComment', 'Overall comment')}
         </label>
         <textarea
           className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
@@ -249,7 +286,7 @@ export function ScorecardPanel({
               disabled={draft.isSaving}
               className="rounded-full"
             >
-              {t('pages.actionAnalysis.scorecard.saveDraft', 'Save draft')}
+              {t('pages.training.scorecard.saveDraft', 'Save draft')}
             </Button>
             <Button
               variant="primary"
@@ -258,7 +295,7 @@ export function ScorecardPanel({
               disabled={updateMutation.isPending}
               className="rounded-full"
             >
-              {t('pages.actionAnalysis.scorecard.markCompleted', 'Mark completed')}
+              {t('pages.training.scorecard.markCompleted', 'Mark completed')}
             </Button>
           </>
         ) : null}
@@ -271,7 +308,7 @@ export function ScorecardPanel({
             disabled={sendMutation.isPending}
             className="rounded-full"
           >
-            {t('pages.actionAnalysis.scorecard.sendToOperator', 'Send to operator')}
+            {t('pages.training.scorecard.sendToOperator', 'Send to operator')}
           </Button>
         ) : null}
       </footer>
@@ -377,7 +414,7 @@ function BinaryInput({
             : 'border-gray-200 bg-white text-gray-700'
         }`}
       >
-        ✓
+        âœ“
       </button>
       <button
         type="button"

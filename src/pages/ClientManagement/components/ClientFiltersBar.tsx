@@ -19,15 +19,19 @@ import {
 import { Icons } from '@/lib/icons'
 import { PortfolioDropdown } from './PortfolioDropdown'
 import { TagsDropdown } from './TagsDropdown'
+import {
+  NO_INTERACTIONS_ID,
+  NO_RESPONSIBLE_ID,
+  OperatorMultiSelectDropdown,
+} from './OperatorMultiSelectDropdown'
 import { useSellers } from '@/features/sellers/hooks/useSellers'
-import { useOperators } from '@/features/users/hooks/useUsers'
-import { useClientAssigneeIds } from '@/features/clients/hooks/useClients'
 import { useTags } from '@/features/tags/hooks/useTags'
 import { useTAChains } from '@/features/taChains'
 import { useTargetActions } from '@/features/targetActions/hooks/useTargetActions'
 import type { TargetAction } from '@/features/targetActions/api/types'
 import { ClientStepFilterDropdown } from './ClientStepFilterDropdown'
 import { ClientStepValueRow, type StepValueEntry } from './ClientStepValueRow'
+import { useOperatorFilterOptions } from '../hooks/useOperatorFilterOptions'
 import { useAuthStore } from '@/stores/authStore'
 import { formatPickerDateAsYMD } from '@/lib/dateUtils'
 import type { ClientFilters } from '../ClientManagementPage'
@@ -39,12 +43,14 @@ function DebouncedNumberInput({
   placeholder,
   className,
   formatWithCommas = false,
+  onClear,
 }: {
   value: number | undefined
   onChange: (value: number | undefined) => void
   placeholder?: string
   className?: string
   formatWithCommas?: boolean
+  onClear?: () => void
 }) {
   const [localValue, setLocalValue] = useState(value?.toString() || '')
   const [isFocused, setIsFocused] = useState(false)
@@ -77,6 +83,17 @@ function DebouncedNumberInput({
       ? new Intl.NumberFormat('uk-UA').format(Number(localValue.replace(/,/g, '')))
       : localValue
 
+  // × is opt-in (onClear) and only meaningful when there is a value to clear.
+  // Clearing resets local state immediately and routes through the existing
+  // onClear handler (which calls the field's normal change handler with empty).
+  const handleClear =
+    onClear && displayValue
+      ? () => {
+          setLocalValue('')
+          onClear()
+        }
+      : undefined
+
   return (
     <Input
       type="text"
@@ -86,6 +103,7 @@ function DebouncedNumberInput({
       onBlur={handleBlur}
       placeholder={placeholder}
       className={className}
+      onClear={handleClear}
     />
   )
 }
@@ -186,70 +204,20 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
     }))
   }, [sellersResponse])
 
-  // Operators (active + inactive, non-deleted) for the three operator dropdowns,
-  // plus the per-role assignee id sets that gate which *inactive* operators
-  // appear. Rule (all three): all active operators are shown; an inactive
-  // operator is shown only if it has ≥1 client in the relevant role — employee
-  // for Responsible Employee, searcher for Responsible Searcher, either role
-  // for Interaction Created By.
+  // Operators for the three operator dropdowns. Derivation lives in the shared
+  // useOperatorFilterOptions hook so ClientManagementPage's "all operators
+  // selected → omit filter" detection uses the exact same option set this UI
+  // renders (no drift). Rule (all three): all active operators are shown; an
+  // inactive operator is shown only if it has ≥1 client in the relevant role —
+  // employee for Responsible Employee, searcher for Responsible Searcher, either
+  // role for Interaction Created By.
   const activeProjectId = useAuthStore((s) => s.user?.active_project_id)
-  const { data: operators } = useOperators(activeProjectId ? Number(activeProjectId) : null, {
-    includeInactive: true,
-  })
-  const { data: assigneeIds } = useClientAssigneeIds(!!activeProjectId)
-
-  const { employeeIds, searcherIds, anyAssignedIds } = useMemo(() => {
-    const emp = new Set<number>(assigneeIds?.employee_ids ?? [])
-    const sea = new Set<number>(assigneeIds?.searcher_ids ?? [])
-    return {
-      employeeIds: emp,
-      searcherIds: sea,
-      anyAssignedIds: new Set<number>([...emp, ...sea]),
-    }
-  }, [assigneeIds])
-
-  // active → always shown; inactive → only if present in the gate set.
-  const interactionUserOptions = useMemo(
-    () =>
-      (operators ?? [])
-        .filter((u) => u.status === 'active' || anyAssignedIds.has(u.id))
-        .map((u) => ({
-          id: u.id.toString(),
-          name: u.full_name,
-          isInactive: u.status !== 'active',
-        })),
-    [operators, anyAssignedIds]
-  )
-  const employeeOptions = useMemo(
-    () =>
-      (operators ?? [])
-        .filter((u) => u.status === 'active' || employeeIds.has(u.id))
-        .map((u) => ({
-          id: u.id.toString(),
-          name: u.full_name,
-          isInactive: u.status !== 'active',
-        })),
-    [operators, employeeIds]
-  )
-  const searcherOptions = useMemo(
-    () =>
-      (operators ?? [])
-        .filter((u) => u.status === 'active' || searcherIds.has(u.id))
-        .map((u) => ({
-          id: u.id.toString(),
-          name: u.full_name,
-          isInactive: u.status !== 'active',
-        })),
-    [operators, searcherIds]
+  const { employeeOptions, interactionUserOptions, searcherOptions } = useOperatorFilterOptions(
+    activeProjectId ? Number(activeProjectId) : null
   )
 
-  // Date-only filters: pass the picked day straight through (no
-  // timezone math). The previous implementation ran the Date through
-  // ``getDateStringInTimezone(date, userTimezone)``; a browser-vs-profile
-  // timezone mismatch then shifted the calendar day by ±1 (you click
-  // May 27, the API receives May 26 or May 28). The picker returns a
-  // Date at local-midnight for the chosen day, so reading the local
-  // year/month/day parts gives exactly what the user clicked.
+  // BE owns timezone interpretation (via the ``tz`` query param); the FE
+  // sends the picker's clicked day unchanged so URL == click.
   const handleFilterDateChange = (field: FilterDateField, date: Date | null) => {
     onFilterChange({
       ...filters,
@@ -304,6 +272,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                       debtRangeFrom: value,
                     })
                   }
+                  onClear={() => onFilterChange({ ...filters, debtRangeFrom: undefined })}
                   placeholder={t('pages.clients.filters.min')}
                   className="flex flex-1 flex-col items-start gap-2"
                   formatWithCommas={true}
@@ -319,6 +288,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                       debtRangeTo: value,
                     })
                   }
+                  onClear={() => onFilterChange({ ...filters, debtRangeTo: undefined })}
                   placeholder={t('pages.clients.filters.max')}
                   className="flex flex-1 flex-col items-start gap-2"
                   formatWithCommas={true}
@@ -339,6 +309,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                       dpdRangeFrom: value,
                     })
                   }
+                  onClear={() => onFilterChange({ ...filters, dpdRangeFrom: undefined })}
                   placeholder={t('pages.clients.filters.min')}
                   className="flex flex-1 flex-col items-start gap-2"
                 />
@@ -353,6 +324,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                       dpdRangeTo: value,
                     })
                   }
+                  onClear={() => onFilterChange({ ...filters, dpdRangeTo: undefined })}
                   placeholder={t('pages.clients.filters.max')}
                   className="flex flex-1 flex-col items-start gap-2"
                 />
@@ -363,9 +335,9 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
             </div>
           </div>
 
-          {/* Second Row: Amount of debt range & Date of sale */}
+          {/* Second Row: Principal Amount range & Date of sale */}
           <div className="flex w-full flex-col gap-4 self-stretch lg:flex-row lg:items-center lg:gap-10">
-            {/* Individual Debt Amount (total_debt_min/max) */}
+            {/* Principal Amount (principal_min/max on open loans) — KAN-572. */}
             <div className="flex w-full flex-col gap-2 sm:flex-1 sm:flex-row sm:items-center sm:gap-3">
               <label className="text-dark-500 w-full text-xs leading-[150%] font-medium tracking-[-0.24px] sm:w-[100px] sm:text-sm sm:tracking-[-0.28px]">
                 {t('pages.clients.filters.amountOfDebtRange')}
@@ -375,13 +347,14 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                   ₴
                 </span>
                 <DebouncedNumberInput
-                  value={filters.totalDebtRangeFrom}
+                  value={filters.principalRangeFrom}
                   onChange={(value) =>
                     onFilterChange({
                       ...filters,
-                      totalDebtRangeFrom: value,
+                      principalRangeFrom: value,
                     })
                   }
+                  onClear={() => onFilterChange({ ...filters, principalRangeFrom: undefined })}
                   placeholder={t('pages.clients.filters.min')}
                   className="flex flex-1 flex-col items-start gap-2"
                   formatWithCommas={true}
@@ -390,13 +363,14 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                   -
                 </span>
                 <DebouncedNumberInput
-                  value={filters.totalDebtRangeTo}
+                  value={filters.principalRangeTo}
                   onChange={(value) =>
                     onFilterChange({
                       ...filters,
-                      totalDebtRangeTo: value,
+                      principalRangeTo: value,
                     })
                   }
+                  onClear={() => onFilterChange({ ...filters, principalRangeTo: undefined })}
                   placeholder={t('pages.clients.filters.max')}
                   className="flex flex-1 flex-col items-start gap-2"
                   formatWithCommas={true}
@@ -413,8 +387,10 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                 <DateSelect
                   value={filters.dateOfSaleFrom || null}
                   onChange={({ value }) => handleFilterDateChange('dateOfSaleFrom', value)}
+                  onClear={() => onFilterChange({ ...filters, dateOfSaleFrom: undefined })}
                   placeholder={t('pages.clients.filters.min')}
-                  format="yyyy-MM-dd"
+                  allowManualInput
+                  format="dd.MM.yyyy"
                   className="flex flex-1 flex-col gap-2"
                 />
                 <span className="text-sm leading-[155%] font-medium tracking-[-0.28px] text-gray-700 sm:text-base sm:tracking-[-0.32px]">
@@ -423,8 +399,10 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                 <DateSelect
                   value={filters.dateOfSaleTo || null}
                   onChange={({ value }) => handleFilterDateChange('dateOfSaleTo', value)}
+                  onClear={() => onFilterChange({ ...filters, dateOfSaleTo: undefined })}
                   placeholder={t('pages.clients.filters.max')}
-                  format="yyyy-MM-dd"
+                  allowManualInput
+                  format="dd.MM.yyyy"
                   className="flex flex-1 flex-col gap-2"
                 />
               </div>
@@ -441,8 +419,10 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                 <DateSelect
                   value={filters.assignmentDateFrom || null}
                   onChange={({ value }) => handleFilterDateChange('assignmentDateFrom', value)}
+                  onClear={() => onFilterChange({ ...filters, assignmentDateFrom: undefined })}
                   placeholder={t('pages.clients.filters.min')}
-                  format="yyyy-MM-dd"
+                  allowManualInput
+                  format="dd.MM.yyyy"
                   className="flex flex-1 flex-col gap-2"
                 />
                 <span className="text-sm leading-[155%] font-medium tracking-[-0.28px] text-gray-700 sm:text-base sm:tracking-[-0.32px]">
@@ -451,8 +431,10 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                 <DateSelect
                   value={filters.assignmentDateTo || null}
                   onChange={({ value }) => handleFilterDateChange('assignmentDateTo', value)}
+                  onClear={() => onFilterChange({ ...filters, assignmentDateTo: undefined })}
                   placeholder={t('pages.clients.filters.max')}
-                  format="yyyy-MM-dd"
+                  allowManualInput
+                  format="dd.MM.yyyy"
                   className="flex flex-1 flex-col gap-2"
                 />
               </div>
@@ -473,8 +455,10 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                 <DateSelect
                   value={filters.taDateFrom || null}
                   onChange={({ value }) => handleFilterDateChange('taDateFrom', value)}
+                  onClear={() => onFilterChange({ ...filters, taDateFrom: undefined })}
                   placeholder={t('pages.clients.filters.min')}
-                  format="yyyy-MM-dd"
+                  allowManualInput
+                  format="dd.MM.yyyy"
                   className="flex flex-1 flex-col gap-2"
                 />
                 <span className="text-sm leading-[155%] font-medium tracking-[-0.28px] text-gray-700 sm:text-base sm:tracking-[-0.32px]">
@@ -483,8 +467,10 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                 <DateSelect
                   value={filters.taDateTo || null}
                   onChange={({ value }) => handleFilterDateChange('taDateTo', value)}
+                  onClear={() => onFilterChange({ ...filters, taDateTo: undefined })}
                   placeholder={t('pages.clients.filters.max')}
-                  format="yyyy-MM-dd"
+                  allowManualInput
+                  format="dd.MM.yyyy"
                   className="flex flex-1 flex-col gap-2"
                 />
               </div>
@@ -504,8 +490,10 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                 <DateSelect
                   value={filters.interactionDateFrom || null}
                   onChange={({ value }) => handleFilterDateChange('interactionDateFrom', value)}
+                  onClear={() => onFilterChange({ ...filters, interactionDateFrom: undefined })}
                   placeholder={t('pages.clients.filters.min')}
-                  format="yyyy-MM-dd"
+                  allowManualInput
+                  format="dd.MM.yyyy"
                   className="flex flex-1 flex-col gap-2"
                 />
                 <span className="text-sm leading-[155%] font-medium tracking-[-0.28px] text-gray-700 sm:text-base sm:tracking-[-0.32px]">
@@ -514,8 +502,10 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                 <DateSelect
                   value={filters.interactionDateTo || null}
                   onChange={({ value }) => handleFilterDateChange('interactionDateTo', value)}
+                  onClear={() => onFilterChange({ ...filters, interactionDateTo: undefined })}
                   placeholder={t('pages.clients.filters.max')}
-                  format="yyyy-MM-dd"
+                  allowManualInput
+                  format="dd.MM.yyyy"
                   className="flex flex-1 flex-col gap-2"
                 />
               </div>
@@ -525,43 +515,70 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                 {t('pages.clients.filters.interactionCreatedBy', 'Interaction Created By')}
               </label>
               <div className="flex w-full flex-1 flex-col items-start gap-2">
-                <Select
-                  value={filters.interactionUserId || undefined}
-                  onValueChange={(value) =>
+                <OperatorMultiSelectDropdown
+                  options={interactionUserOptions}
+                  selectedIds={filters.interactionUserIds ?? []}
+                  onSelectionChange={(ids) =>
                     onFilterChange({
                       ...filters,
-                      interactionUserId: value === 'none' ? undefined : value,
+                      interactionUserIds: ids,
                     })
                   }
-                >
-                  <SelectTrigger>
-                    <SelectValue
-                      placeholder={t('pages.clients.filters.selectOperator', 'Select operator')}
-                    />
-                  </SelectTrigger>
-                  <SelectContent searchable>
-                    <SelectItem value="none">
-                      {t('pages.clients.filters.selectOperator', 'Select operator')}
-                    </SelectItem>
-                    {interactionUserOptions.length === 0 ? (
-                      <div className="px-2 py-6 text-center text-sm text-gray-500">
-                        {t('pages.clients.filters.noUsersAvailable')}
+                  onClear={() => onFilterChange({ ...filters, interactionUserIds: [] })}
+                  searchPlaceholder={t('pages.clients.filters.selectOperator', 'Select operator')}
+                  emptyText={t('pages.clients.filters.noUsersAvailable')}
+                  selectAllLabel={t('pages.clients.filters.selectAllOperators', 'All operators')}
+                  specialOption={{
+                    id: NO_INTERACTIONS_ID,
+                    label: t('pages.clients.filters.noInteractions', 'No Interactions'),
+                  }}
+                  testId="interaction-user-multiselect-trigger"
+                  trigger={
+                    <button
+                      type="button"
+                      className="text-dark-500 flex h-[45px] w-full cursor-pointer items-center justify-between gap-2 rounded-lg border border-gray-400 bg-white px-3 py-2 text-left text-sm font-light whitespace-nowrap shadow-none focus:ring-0 focus:outline-none"
+                    >
+                      <span className="truncate">
+                        {(() => {
+                          const selected = filters.interactionUserIds ?? []
+                          // Split the "No Interactions" sentinel out so it
+                          // never counts as a real operator selection.
+                          const hasNoInteractions = selected.includes(NO_INTERACTIONS_ID)
+                          const realSelected = selected.filter((id) => id !== NO_INTERACTIONS_ID)
+                          const allCount = interactionUserOptions.length
+                          // "All operators" when nothing or every operator is
+                          // selected — both mean "no narrowing". Not when the
+                          // special option is active.
+                          if (
+                            !hasNoInteractions &&
+                            (realSelected.length === 0 ||
+                              (allCount > 0 && realSelected.length === allCount))
+                          ) {
+                            return t('pages.clients.filters.selectAllOperators', 'All operators')
+                          }
+                          const labels = [
+                            ...(hasNoInteractions
+                              ? [t('pages.clients.filters.noInteractions', 'No Interactions')]
+                              : []),
+                            ...interactionUserOptions
+                              .filter((o) => realSelected.includes(o.id))
+                              .map((o) => o.name),
+                          ]
+                          if (labels.length <= 2) {
+                            return labels.join(', ')
+                          }
+                          return t('pages.clients.filters.selectedCount', {
+                            defaultValue: '{{count}} selected',
+                            count: labels.length,
+                          })
+                        })()}
+                      </span>
+                      <div className="shrink-0 opacity-50">
+                        <Icons.ArrowDown size={16} className="text-current" />
                       </div>
-                    ) : (
-                      interactionUserOptions.map((user) => (
-                        <SelectItem key={user.id} value={user.id}>
-                          {user.isInactive ? (
-                            <span className="text-gray-400">
-                              {user.name} {t('pages.clients.filters.inactiveSuffix', '(blocked)')}
-                            </span>
-                          ) : (
-                            user.name
-                          )}
-                        </SelectItem>
-                      ))
-                    )}
-                  </SelectContent>
-                </Select>
+                    </button>
+                  }
+                />
               </div>
             </div>
           </div>
@@ -604,6 +621,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                       portfolios={portfolioOptions}
                       selectedSellerIds={selectedSellerIds}
                       onSelectionChange={handlePortfolioChange}
+                      onClear={() => handlePortfolioChange([])}
                       onOpenChange={setPortfolioDropdownOpen}
                       trigger={
                         <button
@@ -671,6 +689,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                       tags={tags}
                       selectedTagIds={selectedTagIds}
                       onSelectionChange={handleTagsChange}
+                      onClear={() => handleTagsChange([])}
                       onOpenChange={setTagsDropdownOpen}
                       trigger={
                         <button
@@ -785,47 +804,73 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
 
           {/* Fifth Row: Responsible employee & Responsible searcher */}
           <div className="flex w-full flex-col gap-4 self-stretch lg:flex-row lg:items-start lg:gap-10">
-            {/* Responsible employee */}
+            {/* Responsible employee (multi-select OR, KAN-572) */}
             <div className="flex w-full flex-col gap-2 sm:min-w-[220px] sm:flex-1 sm:flex-row sm:items-center sm:gap-3">
               <label className="text-dark-500 w-full text-xs leading-[150%] font-medium tracking-[-0.24px] sm:w-auto sm:text-sm sm:tracking-[-0.28px]">
                 {t('pages.clients.filters.responsibleEmployee')}
               </label>
               <div className="flex w-full flex-1 flex-col items-start gap-2">
-                <Select
-                  value={filters.responsibleEmployee || undefined}
-                  onValueChange={(value) =>
+                <OperatorMultiSelectDropdown
+                  options={employeeOptions}
+                  selectedIds={filters.responsibleEmployeeIds ?? []}
+                  onSelectionChange={(ids) =>
                     onFilterChange({
                       ...filters,
-                      responsibleEmployee: value === 'none' ? undefined : value,
+                      responsibleEmployeeIds: ids,
                     })
                   }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder={t('pages.clients.filters.selectEmployee')} />
-                  </SelectTrigger>
-                  <SelectContent searchable>
-                    <SelectItem value="none">
-                      {t('pages.clients.filters.selectEmployee')}
-                    </SelectItem>
-                    {employeeOptions.length === 0 ? (
-                      <div className="px-2 py-6 text-center text-sm text-gray-500">
-                        {t('pages.clients.filters.noUsersAvailable')}
+                  onClear={() => onFilterChange({ ...filters, responsibleEmployeeIds: [] })}
+                  searchPlaceholder={t('pages.clients.filters.selectEmployee')}
+                  emptyText={t('pages.clients.filters.noUsersAvailable')}
+                  selectAllLabel={t('pages.clients.filters.selectAllEmployees', 'All employees')}
+                  specialOption={{
+                    id: NO_RESPONSIBLE_ID,
+                    label: t('pages.clients.filters.noResponsible', 'No Responsible'),
+                  }}
+                  testId="responsible-employee-multiselect-trigger"
+                  trigger={
+                    <button
+                      type="button"
+                      className="text-dark-500 flex h-[45px] w-full cursor-pointer items-center justify-between gap-2 rounded-lg border border-gray-400 bg-white px-3 py-2 text-left text-sm font-light whitespace-nowrap shadow-none focus:ring-0 focus:outline-none"
+                    >
+                      <span className="truncate">
+                        {(() => {
+                          const selected = filters.responsibleEmployeeIds ?? []
+                          // Split the "No Responsible" sentinel out so it never
+                          // counts as a real employee selection.
+                          const hasNoResponsible = selected.includes(NO_RESPONSIBLE_ID)
+                          const realSelected = selected.filter((id) => id !== NO_RESPONSIBLE_ID)
+                          const allCount = employeeOptions.length
+                          if (
+                            !hasNoResponsible &&
+                            (realSelected.length === 0 ||
+                              (allCount > 0 && realSelected.length === allCount))
+                          ) {
+                            return t('pages.clients.filters.selectAllEmployees', 'All employees')
+                          }
+                          const labels = [
+                            ...(hasNoResponsible
+                              ? [t('pages.clients.filters.noResponsible', 'No Responsible')]
+                              : []),
+                            ...employeeOptions
+                              .filter((o) => realSelected.includes(o.id))
+                              .map((o) => o.name),
+                          ]
+                          if (labels.length <= 2) {
+                            return labels.join(', ')
+                          }
+                          return t('pages.clients.filters.selectedCount', {
+                            defaultValue: '{{count}} selected',
+                            count: labels.length,
+                          })
+                        })()}
+                      </span>
+                      <div className="shrink-0 opacity-50">
+                        <Icons.ArrowDown size={16} className="text-current" />
                       </div>
-                    ) : (
-                      employeeOptions.map((user) => (
-                        <SelectItem key={user.id} value={user.id}>
-                          {user.isInactive ? (
-                            <span className="text-gray-400">
-                              {user.name} {t('pages.clients.filters.inactiveSuffix', '(blocked)')}
-                            </span>
-                          ) : (
-                            user.name
-                          )}
-                        </SelectItem>
-                      ))
-                    )}
-                  </SelectContent>
-                </Select>
+                    </button>
+                  }
+                />
               </div>
             </div>
 
@@ -843,6 +888,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                       responsibleSearcher: value === 'none' ? undefined : value,
                     })
                   }
+                  onClear={() => onFilterChange({ ...filters, responsibleSearcher: undefined })}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder={t('pages.clients.filters.selectSearcher')} />

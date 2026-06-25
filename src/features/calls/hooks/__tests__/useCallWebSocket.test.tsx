@@ -9,6 +9,7 @@ import { renderHook, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { useCallWebSocket } from '../useCallWebSocket'
+import { getAccessToken } from '@/lib/api'
 import type { CallStateEvent } from '../../types'
 
 // Mock socket.io-client
@@ -27,6 +28,11 @@ vi.mock('socket.io-client', () => ({
 
 vi.mock('sonner')
 
+// The hook requires a JWT to open the authenticated Socket.IO handshake.
+vi.mock('@/lib/api', () => ({
+  getAccessToken: vi.fn(() => 'test-jwt-token'),
+}))
+
 function createWrapper() {
   const queryClient = new QueryClient({
     defaultOptions: {
@@ -43,6 +49,7 @@ function createWrapper() {
 describe('useCallWebSocket', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.mocked(getAccessToken).mockReturnValue('test-jwt-token')
   })
 
   afterEach(() => {
@@ -56,7 +63,8 @@ describe('useCallWebSocket', () => {
 
     expect(mockSocket.on).toHaveBeenCalledWith('connect', expect.any(Function))
     expect(mockSocket.on).toHaveBeenCalledWith('disconnect', expect.any(Function))
-    expect(mockSocket.on).toHaveBeenCalledWith('call.state.changed', expect.any(Function))
+    // call-service emits "call.state_changed" (underscore) — must match exactly.
+    expect(mockSocket.on).toHaveBeenCalledWith('call.state_changed', expect.any(Function))
   })
 
   it('should not connect when agent extension is null', () => {
@@ -137,7 +145,7 @@ describe('useCallWebSocket', () => {
 
     // Simulate call state changed event
     const stateChangeHandler = mockSocket.on.mock.calls.find(
-      (call) => call[0] === 'call.state.changed'
+      (call) => call[0] === 'call.state_changed'
     )?.[1]
     stateChangeHandler?.(mockEvent)
 
@@ -306,7 +314,7 @@ describe('useCallWebSocket', () => {
     renderHook(() => useCallWebSocket(agentExtension), { wrapper })
 
     const stateChangeHandler = mockSocket.on.mock.calls.find(
-      (call) => call[0] === 'call.state.changed'
+      (call) => call[0] === 'call.state_changed'
     )?.[1]
 
     // Simulate multiple events

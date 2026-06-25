@@ -1,4 +1,4 @@
-import { type ReactNode, useState, useMemo, useCallback, useRef, useEffect } from 'react'
+﻿import { type ReactNode, useState, useMemo, useCallback, useRef, useEffect } from 'react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/features/auth'
@@ -313,94 +313,96 @@ function MobileHeaderMenu({ onLogoutClick }: { onLogoutClick?: () => void }) {
   }
 
   return (
-    <DropdownMenu modal={false} open={isOpen} onOpenChange={setIsOpen}>
-      <DropdownMenuTrigger asChild>
-        <button
-          type="button"
-          className="bg-secondary-800 flex h-10 w-10 cursor-pointer items-center justify-center rounded-md text-white transition-colors hover:opacity-90 focus:outline-none lg:hidden"
-          aria-label="Menu"
-        >
-          <Icons.User02 size={20} strokeWidth={1.5} className="text-primary-500" />
-        </button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56 bg-white">
-        {/* User Profile */}
-        <DropdownMenuItem disabled className="text-dark-500 text-sm">
-          <Icons.User02 size={16} className="mr-2" />
-          <span className="truncate">{displayName}</span>
-        </DropdownMenuItem>
+    <>
+      <DropdownMenu modal={false} open={isOpen} onOpenChange={setIsOpen}>
+        <DropdownMenuTrigger asChild>
+          <button
+            type="button"
+            className="bg-secondary-800 flex h-10 w-10 cursor-pointer items-center justify-center rounded-md text-white transition-colors hover:opacity-90 focus:outline-none lg:hidden"
+            aria-label="Menu"
+          >
+            <Icons.User02 size={20} strokeWidth={1.5} className="text-primary-500" />
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-56 bg-white">
+          {/* User Profile */}
+          <DropdownMenuItem disabled className="text-dark-500 text-sm">
+            <Icons.User02 size={16} className="mr-2" />
+            <span className="truncate">{displayName}</span>
+          </DropdownMenuItem>
 
-        {/* Minimized Call Bubble (if call is minimized) */}
-        {minimizedCall && (
-          <>
-            <DropdownMenuSeparator />
-            <TooltipProvider>
-              <Tooltip delayDuration={200}>
-                <TooltipTrigger asChild>
-                  <DropdownMenuItem
-                    onClick={handleRestoreCall}
-                    className={cn(
-                      'bg-secondary-800 relative flex cursor-pointer items-center rounded-md px-3 py-2 text-sm transition-all duration-200',
-                      'hover:bg-secondary-800 hover:scale-101 hover:opacity-90',
-                      'focus:bg-secondary-800 focus:text-white',
-                      'data-[highlighted]:bg-secondary-800 data-[highlighted]:text-white',
-                      isActiveCall ? 'animate-pulse' : 'animate-[pulse_3s_ease-in-out_infinite]'
-                    )}
-                  >
-                    <Icons.HeadsetConnected
-                      size={16}
+          {/* Minimized Call Bubble (if call is minimized) */}
+          {minimizedCall && (
+            <>
+              <DropdownMenuSeparator />
+              <TooltipProvider>
+                <Tooltip delayDuration={200}>
+                  <TooltipTrigger asChild>
+                    <DropdownMenuItem
+                      onClick={handleRestoreCall}
                       className={cn(
-                        'mr-2 text-white transition-transform duration-300',
-                        isActiveCall ? 'animate-pulse' : ''
+                        'bg-secondary-800 relative flex cursor-pointer items-center rounded-md px-3 py-2 text-sm transition-all duration-200',
+                        'hover:bg-secondary-800 hover:scale-101 hover:opacity-90',
+                        'focus:bg-secondary-800 focus:text-white',
+                        'data-[highlighted]:bg-secondary-800 data-[highlighted]:text-white',
+                        isActiveCall ? 'animate-pulse' : 'animate-[pulse_3s_ease-in-out_infinite]'
                       )}
-                      strokeWidth={1.5}
-                    />
-                    <span className="flex-1 truncate text-white">
-                      {minimizedCall.type === 'call-dialog'
-                        ? t('pages.clients.modals.callDialog.callClient')
-                        : t('pages.clients.modals.callRecording.title')}
-                    </span>
-                    {/* Active call indicator dot */}
-                    {isActiveCall && (
-                      <>
-                        <span className="bg-success-500 border-secondary-800 absolute -top-0.5 -right-0.5 h-2.5 w-2.5 animate-ping rounded-full border-2" />
-                        <span className="bg-success-500 border-secondary-800 absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2" />
-                      </>
-                    )}
-                  </DropdownMenuItem>
-                </TooltipTrigger>
-                <TooltipContent
-                  side="right"
-                  sideOffset={8}
-                  className="max-w-sm border border-gray-700 bg-gray-900 p-4 shadow-xl"
-                >
-                  {getTooltipContent()}
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </>
-        )}
+                    >
+                      <Icons.HeadsetConnected
+                        size={16}
+                        className={cn(
+                          'mr-2 text-white transition-transform duration-300',
+                          isActiveCall ? 'animate-pulse' : ''
+                        )}
+                        strokeWidth={1.5}
+                      />
+                      <span className="flex-1 truncate text-white">
+                        {minimizedCall.type === 'call-dialog'
+                          ? t('pages.clients.modals.callDialog.callClient')
+                          : t('pages.clients.modals.callRecording.title')}
+                      </span>
+                      {/* Active call indicator dot */}
+                      {isActiveCall && (
+                        <>
+                          <span className="bg-success-500 border-secondary-800 absolute -top-0.5 -right-0.5 h-2.5 w-2.5 animate-ping rounded-full border-2" />
+                          <span className="bg-success-500 border-secondary-800 absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2" />
+                        </>
+                      )}
+                    </DropdownMenuItem>
+                  </TooltipTrigger>
+                  <TooltipContent
+                    side="right"
+                    sideOffset={8}
+                    className="max-w-sm border border-gray-700 bg-gray-900 p-4 shadow-xl"
+                  >
+                    {getTooltipContent()}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </>
+          )}
 
-        {/* Settings */}
-        <DropdownMenuItem
-          onClick={() => {
-            setIsOpen(false)
-            navigate('/dashboard/profile')
-          }}
-          className="text-dark-500 text-sm"
-        >
-          <Icons.SlidersHorizontal size={16} className="mr-2" />
-          <span>{t('navigation.profile')}</span>
-        </DropdownMenuItem>
+          {/* Settings */}
+          <DropdownMenuItem
+            onClick={() => {
+              setIsOpen(false)
+              navigate('/dashboard/profile')
+            }}
+            className="text-dark-500 text-sm"
+          >
+            <Icons.SlidersHorizontal size={16} className="mr-2" />
+            <span>{t('navigation.profile')}</span>
+          </DropdownMenuItem>
 
-        {/* Logout */}
-        <DropdownMenuItem onClick={onLogoutClick} className="text-dark-500 text-sm">
-          <Icons.Logout size={16} className="mr-2" />
-          <span>{t('actions.logout')}</span>
-        </DropdownMenuItem>
-      </DropdownMenuContent>
+          {/* Logout */}
+          <DropdownMenuItem onClick={onLogoutClick} className="text-dark-500 text-sm">
+            <Icons.Logout size={16} className="mr-2" />
+            <span>{t('actions.logout')}</span>
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
 
-      {/* Restore call modals */}
+      {/* Restore call modals outside the dropdown root so Radix portals do not nest incorrectly */}
       {isRestored && minimizedCall?.type === 'call-dialog' && (
         <CallDialogModal
           open={isRestored}
@@ -430,7 +432,7 @@ function MobileHeaderMenu({ onLogoutClick }: { onLogoutClick?: () => void }) {
           callData={minimizedCall.callData}
         />
       )}
-    </DropdownMenu>
+    </>
   )
 }
 
@@ -593,6 +595,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           email: item.email_primary ?? '',
           priority: mapPriorityLevel(item.priority_level),
           score: item.priority_score,
+          contactSource: item.contact_source ?? null,
         }))
 
         setSearchResults(results)
@@ -708,6 +711,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             icon: 'file-import',
             requiredPermission: PERMISSIONS.WRITEOFFS.BULK,
           },
+          {
+            path: '/dashboard/import/bulk-sale-notes-import',
+            label: t('navigation.bulkSaleNotesImport', 'Bulk Sales Note Import'),
+            icon: 'activity-01',
+            requiredPermission: PERMISSIONS.SALE_NOTES.MANAGE,
+          },
         ],
       },
       {
@@ -729,9 +738,15 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         requiredPermission: PERMISSIONS.MESSAGING.VIEW_CAMPAIGN_ANALYTICS,
       },
       {
+        path: '/dashboard/training',
+        icon: 'analytics-01',
+        label: t('navigation.training', 'Training'),
+        requiredPermission: PERMISSIONS.TRAINING.VIEW,
+      },
+      {
         path: '/dashboard/action-analysis',
         icon: 'analytics-01',
-        label: t('navigation.actionAnalysis'),
+        label: t('navigation.actionAnalysis', 'Action Analysis'),
         requiredPermission: PERMISSIONS.ACTION_ANALYSIS.VIEW,
       },
       {
@@ -849,6 +864,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               PERMISSIONS.DOCUMENT_GENERATION.DELETE_TEMPLATES,
             ],
             mode: 'any' as const,
+          },
+          {
+            path: '/dashboard/system-settings/ip-whitelist',
+            label: t('navigation.ipWhitelist', 'IP Whitelist'),
+            icon: 'sliders-horizontal',
+            requiredPermission: PERMISSIONS.USERS.EDIT,
           },
           {
             path: '/dashboard/system-settings/rr-notifications',

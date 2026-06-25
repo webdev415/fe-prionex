@@ -100,6 +100,18 @@ export function useSMSStatistics(params: UseCommunicationStatisticsParams) {
 }
 
 /**
+ * Hook for getting only messaging statistics (parallel to useSMSStatistics)
+ */
+export function useMessagingStatistics(params: UseCommunicationStatisticsParams) {
+  const query = useCommunicationStatistics(params)
+
+  return {
+    ...query,
+    data: query.data?.messagingStatistics,
+  }
+}
+
+/**
  * Hook for getting daily communication trends
  */
 export function useCommunicationTrends(params: UseCommunicationStatisticsParams) {

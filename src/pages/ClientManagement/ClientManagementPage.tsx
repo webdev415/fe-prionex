@@ -18,7 +18,7 @@ import { TooltipProvider } from '@/components/ui/Tooltip'
 import { ClientFiltersBar } from './components/ClientFiltersBar'
 import { AssignClientModal } from './components/AssignClientModal'
 import { BulkAssignClientModal } from './components/BulkAssignClientModal'
-import { formatDate } from '@/lib/formatters'
+import { formatDate, formatDateTime } from '@/lib/formatters'
 import { TagSelectorModal } from './components/TagSelectorModal'
 import { BulkTagModal } from './components/BulkTagModal'
 import { BulkSendMessageModal } from './components/BulkSendMessageModal'
@@ -44,6 +44,8 @@ import { mapScoreToPriority } from '@/features/clients/api/configApi'
 import type { Client as APIClient } from '@/features/clients/api/types'
 import type { PriorityThresholds } from '@/features/clients/api/configApi'
 import { useURLState } from '@/hooks/useURLState'
+import { useOperatorFilterOptions, coversAllOptions } from './hooks/useOperatorFilterOptions'
+import { NO_INTERACTIONS_ID, NO_RESPONSIBLE_ID } from './components/OperatorMultiSelectDropdown'
 import type { StepValueEntry } from './components/ClientStepValueRow'
 import type { Priority } from './types'
 import { PermissionGuard } from '@/components/auth'
@@ -76,6 +78,9 @@ interface DisplayClient {
   searcherName: string
   assignmentDate: string
   lastInteractionResult: string
+  // Raw ISO timestamp of the latest TA (or '' when none). Formatted with the
+  // user's timezone in the column render, so it's stored unformatted here.
+  lastTaDate: string
 }
 
 // Default thresholds (fallback if API not available)
@@ -131,6 +136,7 @@ const mapAPIClientToDisplay = (
       : '-',
     assignmentDate: client.assignment_date ? formatDate(client.assignment_date) : '-',
     lastInteractionResult: client.last_interaction_result_name || '—',
+    lastTaDate: client.last_ta_date || '',
   }
 }
 
@@ -141,13 +147,11 @@ export interface ClientFilters {
   amountOfDebtRangeFrom?: number // Total debt min (UI label)
   amountOfDebtRangeTo?: number // Total debt max (UI label)
 
-  // Principal Amount Filter (NEW - maps to principal_min/max)
+  // Principal Amount Filter — maps to principal_min/max on the BE.
+  // Filters clients with at least one open (active) loan whose
+  // principal_amount falls in the range (KAN-572).
   principalRangeFrom?: number
   principalRangeTo?: number
-
-  // Total Debt Filter (NEW - maps to total_debt_min/max)
-  totalDebtRangeFrom?: number
-  totalDebtRangeTo?: number
 
   // Days Past Due Filter
   dpdRangeFrom?: number
@@ -168,8 +172,9 @@ export interface ClientFilters {
   assignmentDateFrom?: string
   assignmentDateTo?: string
 
-  // Interaction Created By — operator who created the latest TA
-  interactionUserId?: string
+  // Interaction Created By — operators who created the latest TA
+  // (multi-select OR, KAN-572). Empty/undefined means no filter.
+  interactionUserIds?: number[]
 
   // Interaction Logged Date — created_at of the latest TA, regardless
   // of whether the TA carries any date values
@@ -179,8 +184,9 @@ export interface ClientFilters {
   // Portfolio/Sellers Filter (now stores IDs only)
   portfolio?: number[]
 
-  // Assignment Filters
-  responsibleEmployee?: string
+  // Assignment Filters — Responsible Employee is multi-select OR
+  // (KAN-572). Empty/undefined means no filter.
+  responsibleEmployeeIds?: number[]
   responsibleSearcher?: string
   unassignedOnly?: boolean
 
@@ -265,6 +271,10 @@ export function ClientManagementPage() {
     'employee',
     ''
   )
+  const [responsibleEmployeeIdsFilter, setResponsibleEmployeeIdsFilter] = useURLState<number[]>(
+    'employeeIds',
+    []
+  )
   const [responsibleSearcherFilter, setResponsibleSearcherFilter] = useURLState<string>(
     'searcher',
     ''
@@ -279,11 +289,6 @@ export function ClientManagementPage() {
     0
   )
   const [principalRangeToFilter, setPrincipalRangeToFilter] = useURLState<number>('principalMax', 0)
-  const [totalDebtRangeFromFilter, setTotalDebtRangeFromFilter] = useURLState<number>(
-    'totalDebtMin',
-    0
-  )
-  const [totalDebtRangeToFilter, setTotalDebtRangeToFilter] = useURLState<number>('totalDebtMax', 0)
   const [dpdRangeFromFilter, setDpdRangeFromFilter] = useURLState<number>('dpdMin', 0)
   const [dpdRangeToFilter, setDpdRangeToFilter] = useURLState<number>('dpdMax', 0)
   // URL query keys for the unified Target Action Date range. CamelCase
@@ -291,9 +296,9 @@ export function ClientManagementPage() {
   // ta_date_from/to is only used at the API boundary.
   const [taDateFromFilter, setTaDateFromFilter] = useURLState<string>('taDateFrom', '')
   const [taDateToFilter, setTaDateToFilter] = useURLState<string>('taDateTo', '')
-  const [interactionUserIdFilter, setInteractionUserIdFilter] = useURLState<string>(
-    'interactionUserId',
-    ''
+  const [interactionUserIdsFilter, setInteractionUserIdsFilter] = useURLState<number[]>(
+    'interactionUserIds',
+    []
   )
   const [interactionDateFromFilter, setInteractionDateFromFilter] = useURLState<string>(
     'interactionDateFrom',
@@ -332,6 +337,7 @@ export function ClientManagementPage() {
       portfolio: portfolioFilter,
       tagIds: tagIdsFilter,
       responsibleEmployee: responsibleEmployeeFilter || undefined,
+      responsibleEmployeeIds: responsibleEmployeeIdsFilter,
       responsibleSearcher: responsibleSearcherFilter || undefined,
       unassignedOnly: unassignedOnlyFilter,
       dateOfSaleFrom: dateOfSaleFromFilter || undefined,
@@ -340,13 +346,11 @@ export function ClientManagementPage() {
       debtRangeTo: debtRangeToFilter || undefined,
       principalRangeFrom: principalRangeFromFilter || undefined,
       principalRangeTo: principalRangeToFilter || undefined,
-      totalDebtRangeFrom: totalDebtRangeFromFilter || undefined,
-      totalDebtRangeTo: totalDebtRangeToFilter || undefined,
       dpdRangeFrom: dpdRangeFromFilter || undefined,
       dpdRangeTo: dpdRangeToFilter || undefined,
       taDateFrom: taDateFromFilter || undefined,
       taDateTo: taDateToFilter || undefined,
-      interactionUserId: interactionUserIdFilter || undefined,
+      interactionUserIds: interactionUserIdsFilter,
       interactionDateFrom: interactionDateFromFilter || undefined,
       interactionDateTo: interactionDateToFilter || undefined,
       assignmentDateFrom: assignmentDateFromFilter || undefined,
@@ -359,6 +363,7 @@ export function ClientManagementPage() {
       portfolioFilter,
       tagIdsFilter,
       responsibleEmployeeFilter,
+      responsibleEmployeeIdsFilter,
       responsibleSearcherFilter,
       unassignedOnlyFilter,
       dateOfSaleFromFilter,
@@ -367,13 +372,11 @@ export function ClientManagementPage() {
       debtRangeToFilter,
       principalRangeFromFilter,
       principalRangeToFilter,
-      totalDebtRangeFromFilter,
-      totalDebtRangeToFilter,
       dpdRangeFromFilter,
       dpdRangeToFilter,
       taDateFromFilter,
       taDateToFilter,
-      interactionUserIdFilter,
+      interactionUserIdsFilter,
       interactionDateFromFilter,
       interactionDateToFilter,
       assignmentDateFromFilter,
@@ -409,6 +412,45 @@ export function ClientManagementPage() {
   // User-specific storage key to prevent filter leakage between users
   const STORAGE_KEY = user?.id ? `client-filters-state-${user.id}` : null
 
+  // Legacy URL fold (KAN-572): saved bookmarks with `?employee=<id>` or
+  // `?interactionUserId=<id>` (singular scalar) are migrated to the new
+  // `?employeeIds=<id>` / `?interactionUserIds=<id>` (comma-separated
+  // multi-select) on first mount. One-shot; the new keys win when both
+  // are present. The hook setters write the URL via react-router's
+  // setSearchParams; we also strip the legacy keys from the URL once
+  // we've consumed them so they don't keep round-tripping.
+  const hasFoldedLegacyURL = useRef(false)
+  useEffect(() => {
+    if (hasFoldedLegacyURL.current) return
+    hasFoldedLegacyURL.current = true
+    const params = new URLSearchParams(window.location.search)
+    const legacyEmployee = params.get('employee')
+    const legacyInteractionUser = params.get('interactionUserId')
+    if (!legacyEmployee && !legacyInteractionUser) return
+
+    if (legacyEmployee && !params.has('employeeIds')) {
+      const n = Number(legacyEmployee)
+      if (Number.isFinite(n)) {
+        setResponsibleEmployeeIdsFilter([n])
+      }
+    }
+    if (legacyInteractionUser && !params.has('interactionUserIds')) {
+      const n = Number(legacyInteractionUser)
+      if (Number.isFinite(n)) {
+        setInteractionUserIdsFilter([n])
+      }
+    }
+    // Strip the legacy keys from the URL so they don't shadow the new
+    // ones on subsequent renders.
+    params.delete('employee')
+    params.delete('interactionUserId')
+    const newSearch = params.toString()
+    const newUrl =
+      window.location.pathname + (newSearch ? `?${newSearch}` : '') + window.location.hash
+    window.history.replaceState(window.history.state, '', newUrl)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   // Save filters to localStorage whenever they change (for persistence when sidebar navigation clears URL)
   useEffect(() => {
     const filterState = {
@@ -419,7 +461,7 @@ export function ClientManagementPage() {
       sortOrder,
       portfolioFilter,
       tagIdsFilter,
-      responsibleEmployeeFilter,
+      responsibleEmployeeIdsFilter,
       responsibleSearcherFilter,
       unassignedOnlyFilter,
       dateOfSaleFromFilter,
@@ -428,13 +470,11 @@ export function ClientManagementPage() {
       debtRangeToFilter,
       principalRangeFromFilter,
       principalRangeToFilter,
-      totalDebtRangeFromFilter,
-      totalDebtRangeToFilter,
       dpdRangeFromFilter,
       dpdRangeToFilter,
       taDateFromFilter,
       taDateToFilter,
-      interactionUserIdFilter,
+      interactionUserIdsFilter,
       interactionDateFromFilter,
       interactionDateToFilter,
       assignmentDateFromFilter,
@@ -450,7 +490,7 @@ export function ClientManagementPage() {
     const hasActiveFilters =
       selectedPriorities.length > 0 ||
       searchQuery !== '' ||
-      responsibleEmployeeFilter !== '' ||
+      responsibleEmployeeIdsFilter.length > 0 ||
       responsibleSearcherFilter !== '' ||
       portfolioFilter.length > 0 ||
       tagIdsFilter.length > 0 ||
@@ -459,7 +499,7 @@ export function ClientManagementPage() {
       dateOfSaleToFilter !== '' ||
       taDateFromFilter !== '' ||
       taDateToFilter !== '' ||
-      interactionUserIdFilter !== '' ||
+      interactionUserIdsFilter.length > 0 ||
       interactionDateFromFilter !== '' ||
       interactionDateToFilter !== '' ||
       assignmentDateFromFilter !== '' ||
@@ -468,8 +508,6 @@ export function ClientManagementPage() {
       debtRangeToFilter > 0 ||
       principalRangeFromFilter > 0 ||
       principalRangeToFilter > 0 ||
-      totalDebtRangeFromFilter > 0 ||
-      totalDebtRangeToFilter > 0 ||
       dpdRangeFromFilter > 0 ||
       dpdRangeToFilter > 0 ||
       chainIdFilter > 0 ||
@@ -493,6 +531,7 @@ export function ClientManagementPage() {
     portfolioFilter,
     tagIdsFilter,
     responsibleEmployeeFilter,
+    responsibleEmployeeIdsFilter,
     responsibleSearcherFilter,
     unassignedOnlyFilter,
     dateOfSaleFromFilter,
@@ -501,13 +540,11 @@ export function ClientManagementPage() {
     debtRangeToFilter,
     principalRangeFromFilter,
     principalRangeToFilter,
-    totalDebtRangeFromFilter,
-    totalDebtRangeToFilter,
     dpdRangeFromFilter,
     dpdRangeToFilter,
     taDateFromFilter,
     taDateToFilter,
-    interactionUserIdFilter,
+    interactionUserIdsFilter,
     interactionDateFromFilter,
     interactionDateToFilter,
     assignmentDateFromFilter,
@@ -527,7 +564,7 @@ export function ClientManagementPage() {
     const hasURLFilters =
       selectedPriorities.length > 0 ||
       searchQuery !== '' ||
-      responsibleEmployeeFilter !== '' ||
+      responsibleEmployeeIdsFilter.length > 0 ||
       portfolioFilter.length > 0 ||
       tagIdsFilter.length > 0 ||
       unassignedOnlyFilter ||
@@ -535,13 +572,17 @@ export function ClientManagementPage() {
       dateOfSaleToFilter !== '' ||
       taDateFromFilter !== '' ||
       taDateToFilter !== '' ||
-      interactionUserIdFilter !== '' ||
+      interactionUserIdsFilter.length > 0 ||
       interactionDateFromFilter !== '' ||
       interactionDateToFilter !== '' ||
       assignmentDateFromFilter !== '' ||
       assignmentDateToFilter !== '' ||
       debtRangeFromFilter > 0 ||
       principalRangeFromFilter > 0
+
+    // Default-filter helper: "assigned to me" via the multi-select.
+    const userIdNum = Number(user.id)
+    const defaultEmployeeIds = Number.isFinite(userIdNum) ? [userIdNum] : []
 
     if (!hasURLFilters && STORAGE_KEY) {
       // Try to restore from localStorage first
@@ -554,8 +595,22 @@ export function ClientManagementPage() {
             if (parsed.selectedPriorities) setSelectedPriorities(parsed.selectedPriorities)
             if (parsed.portfolioFilter) setPortfolioFilter(parsed.portfolioFilter)
             if (parsed.tagIdsFilter) setTagIdsFilter(parsed.tagIdsFilter)
-            if (parsed.responsibleEmployeeFilter)
-              setResponsibleEmployeeFilter(parsed.responsibleEmployeeFilter)
+            // Migrate legacy scalar `responsibleEmployeeFilter` to the new
+            // `responsibleEmployeeIdsFilter` array (KAN-572). Saved states
+            // from before the multi-select migration carry the scalar key.
+            if (
+              Array.isArray(parsed.responsibleEmployeeIdsFilter) &&
+              parsed.responsibleEmployeeIdsFilter.length > 0
+            ) {
+              setResponsibleEmployeeIdsFilter(
+                parsed.responsibleEmployeeIdsFilter.map(Number).filter(Number.isFinite)
+              )
+            } else if (parsed.responsibleEmployeeFilter) {
+              const legacy = Number(parsed.responsibleEmployeeFilter)
+              if (Number.isFinite(legacy)) {
+                setResponsibleEmployeeIdsFilter([legacy])
+              }
+            }
             if (parsed.responsibleSearcherFilter)
               setResponsibleSearcherFilter(parsed.responsibleSearcherFilter)
             if (parsed.unassignedOnlyFilter) setUnassignedOnlyFilter(parsed.unassignedOnlyFilter)
@@ -567,10 +622,6 @@ export function ClientManagementPage() {
               setPrincipalRangeFromFilter(parsed.principalRangeFromFilter)
             if (parsed.principalRangeToFilter)
               setPrincipalRangeToFilter(parsed.principalRangeToFilter)
-            if (parsed.totalDebtRangeFromFilter)
-              setTotalDebtRangeFromFilter(parsed.totalDebtRangeFromFilter)
-            if (parsed.totalDebtRangeToFilter)
-              setTotalDebtRangeToFilter(parsed.totalDebtRangeToFilter)
             if (parsed.dpdRangeFromFilter) setDpdRangeFromFilter(parsed.dpdRangeFromFilter)
             if (parsed.dpdRangeToFilter) setDpdRangeToFilter(parsed.dpdRangeToFilter)
             // Migrate legacy localStorage entries (promiseDate*/callbackDate*)
@@ -594,8 +645,20 @@ export function ClientManagementPage() {
             if (legacyDateTos.length) {
               setTaDateToFilter(legacyDateTos.reduce((a, b) => (a > b ? a : b)))
             }
-            if (parsed.interactionUserIdFilter)
-              setInteractionUserIdFilter(parsed.interactionUserIdFilter)
+            // Same migration shape for the interaction-user filter.
+            if (
+              Array.isArray(parsed.interactionUserIdsFilter) &&
+              parsed.interactionUserIdsFilter.length > 0
+            ) {
+              setInteractionUserIdsFilter(
+                parsed.interactionUserIdsFilter.map(Number).filter(Number.isFinite)
+              )
+            } else if (parsed.interactionUserIdFilter) {
+              const legacy = Number(parsed.interactionUserIdFilter)
+              if (Number.isFinite(legacy)) {
+                setInteractionUserIdsFilter([legacy])
+              }
+            }
             if (parsed.interactionDateFromFilter)
               setInteractionDateFromFilter(parsed.interactionDateFromFilter)
             if (parsed.interactionDateToFilter)
@@ -616,12 +679,12 @@ export function ClientManagementPage() {
           }, 0)
         } else {
           // No saved state, apply default "assigned to me" filter
-          setResponsibleEmployeeFilter(user.id)
+          setResponsibleEmployeeIdsFilter(defaultEmployeeIds)
         }
       } catch (e) {
         console.error('Failed to restore filters from localStorage:', e)
         // Fallback to default filter
-        setResponsibleEmployeeFilter(user.id)
+        setResponsibleEmployeeIdsFilter(defaultEmployeeIds)
       }
     }
 
@@ -652,6 +715,23 @@ export function ClientManagementPage() {
   // NO need to debounce filters - useURLState already does this with 300ms debounce
   // const filters = useDebounce(filters, 500)
 
+  // Operator option sets (same derivation the filter dropdowns render). Used to
+  // detect the "all operators selected" case and OMIT the responsible_employee_ids
+  // / interaction_user_ids filter: sending every id is a no-op constraint that
+  // defeats the priority index and turns the dashboard query into a full-scan +
+  // sort — the heavy query behind the morning-login OOM/502s. Shares the
+  // react-query cache with ClientFiltersBar, so no extra fetch.
+  const {
+    employeeOptions,
+    interactionUserOptions,
+    isReady: operatorOptionsReady,
+  } = useOperatorFilterOptions(user?.active_project_id ? Number(user.active_project_id) : null)
+  const allEmployeeOptionIds = useMemo(() => employeeOptions.map((o) => o.id), [employeeOptions])
+  const allInteractionOptionIds = useMemo(
+    () => interactionUserOptions.map((o) => o.id),
+    [interactionUserOptions]
+  )
+
   // Toggle handler for priority card clicks
   const handlePriorityToggle = (priority: Priority) => {
     setSelectedPriorities((prev) => {
@@ -678,6 +758,7 @@ export function ClientManagementPage() {
       debt: 'total_debt',
       assignmentDate: 'assignment_date',
       lastInteractionResult: 'last_interaction_result',
+      lastOutgoingTADate: 'last_ta_date',
     }
 
     const params: Record<string, unknown> = {
@@ -702,9 +783,20 @@ export function ClientManagementPage() {
       params.sale_date_to = filters.dateOfSaleTo
     }
 
-    // FILTER 3: Assignment - Employee
-    if (filters.responsibleEmployee) {
-      params.responsible_employee_id = parseInt(filters.responsibleEmployee)
+    // FILTER 3: Assignment - Employee (multi-select OR, KAN-572).
+    // Sent as a comma-separated string matching the BE schema. When every
+    // operator is selected ("All employees", no "No Responsible" sentinel) the
+    // filter is a no-op — omit it so the BE takes the fast priority-index path
+    // instead of a 200-id IN-list full scan (the morning OOM/502 trigger). This
+    // also matches the dropdown label, which already shows "All employees" for
+    // both the empty and all-selected states.
+    if (filters.responsibleEmployeeIds && filters.responsibleEmployeeIds.length > 0) {
+      const selected = filters.responsibleEmployeeIds
+      const hasNoResponsible = selected.includes(NO_RESPONSIBLE_ID)
+      const realIds = selected.filter((id) => id !== NO_RESPONSIBLE_ID)
+      if (!(!hasNoResponsible && coversAllOptions(realIds, allEmployeeOptionIds))) {
+        params.responsible_employee_ids = selected.join(',')
+      }
     }
 
     // FILTER 4: Assignment - Searcher
@@ -723,14 +815,6 @@ export function ClientManagementPage() {
     }
     if (filters.principalRangeTo !== undefined) {
       params.principal_max = filters.principalRangeTo
-    }
-
-    // FILTER 7: Total Debt Amount
-    if (filters.totalDebtRangeFrom !== undefined) {
-      params.total_debt_min = filters.totalDebtRangeFrom
-    }
-    if (filters.totalDebtRangeTo !== undefined) {
-      params.total_debt_max = filters.totalDebtRangeTo
     }
 
     // FILTER 8: Days Past Due
@@ -772,11 +856,16 @@ export function ClientManagementPage() {
       params.ta_date_to = filters.taDateTo
     }
 
-    // FILTER 13: Interaction Created By
-    if (filters.interactionUserId) {
-      const parsed = parseInt(filters.interactionUserId, 10)
-      if (!isNaN(parsed)) {
-        params.interaction_user_id = parsed
+    // FILTER 13: Interaction Created By (multi-select OR, KAN-572).
+    // Sent as a comma-separated string matching the BE schema. Same "all
+    // operators selected → omit the no-op filter" optimization as Filter 3
+    // (the "No Interactions" sentinel widens results, so it blocks the omit).
+    if (filters.interactionUserIds && filters.interactionUserIds.length > 0) {
+      const selected = filters.interactionUserIds
+      const hasNoInteractions = selected.includes(NO_INTERACTIONS_ID)
+      const realIds = selected.filter((id) => id !== NO_INTERACTIONS_ID)
+      if (!(!hasNoInteractions && coversAllOptions(realIds, allInteractionOptionIds))) {
+        params.interaction_user_ids = selected.join(',')
       }
     }
 
@@ -794,6 +883,10 @@ export function ClientManagementPage() {
     }
     if (filters.assignmentDateTo) {
       params.assignment_date_to = filters.assignmentDateTo
+    }
+
+    if (user?.timezone) {
+      params.tz = user.timezone
     }
 
     // FILTER 15b: TA Chain + Step + per-step values. Steps only ship
@@ -840,6 +933,9 @@ export function ClientManagementPage() {
     selectedPriorities,
     searchQuery,
     searchType,
+    user?.timezone,
+    allEmployeeOptionIds,
+    allInteractionOptionIds,
   ])
 
   /** Filters + sort for bulk messaging when "select all" is used (no pagination). */
@@ -850,8 +946,23 @@ export function ClientManagementPage() {
     return rest
   }, [apiParams])
 
-  // Fetch clients from API
-  const { data: clientsResponse, isLoading, isFetching, isError, error } = useClients(apiParams)
+  // Fetch clients from API. When an operator multi-select filter is active we
+  // defer the first fetch until the operator option sets have loaded — otherwise
+  // an "all operators" selection would fire the heavy 200-id query against an
+  // empty option set and then refetch the light (omitted-filter) query once the
+  // options arrive. With no operator filter active there's nothing to wait for.
+  const operatorFilterActive =
+    (filters.responsibleEmployeeIds?.length ?? 0) > 0 ||
+    (filters.interactionUserIds?.length ?? 0) > 0
+  const {
+    data: clientsResponse,
+    isLoading,
+    isFetching,
+    isError,
+    error,
+  } = useClients(apiParams, {
+    enabled: !operatorFilterActive || operatorOptionsReady,
+  })
 
   // Extract paginated data from response
   const apiClients = useMemo(() => clientsResponse?.items || [], [clientsResponse?.items])
@@ -905,18 +1016,17 @@ export function ClientManagementPage() {
   const appliedFiltersCount = useMemo(() => {
     let count = 0
     if (filters.debtRangeFrom || filters.debtRangeTo) count++
-    // Note: amountOfDebtRange is same as debtRange (both filter on total_debt)
-    // Not counting amountOfDebtRange separately to avoid double-counting
+    if (filters.principalRangeFrom || filters.principalRangeTo) count++
     // DPD Range not yet implemented (days past due not calculated)
     // if (filters.dpdRangeFrom || filters.dpdRangeTo) count++
     if (filters.dateOfSaleFrom || filters.dateOfSaleTo) count++
     if (filters.taDateFrom || filters.taDateTo) count++
-    if (filters.interactionUserId) count++
+    if (filters.interactionUserIds && filters.interactionUserIds.length > 0) count++
     if (filters.interactionDateFrom || filters.interactionDateTo) count++
     if (filters.assignmentDateFrom || filters.assignmentDateTo) count++
     if (filters.portfolio && filters.portfolio.length > 0) count++
     if (filters.tagIds && filters.tagIds.length > 0) count++
-    if (filters.responsibleEmployee) count++
+    if (filters.responsibleEmployeeIds && filters.responsibleEmployeeIds.length > 0) count++
     if (filters.responsibleSearcher) count++
     if (filters.unassignedOnly) count++
     if (filters.chainId) count++
@@ -1204,8 +1314,11 @@ export function ClientManagementPage() {
     if (JSON.stringify(newFilters.tagIds) !== JSON.stringify(tagIdsFilter)) {
       setTagIdsFilter(newFilters.tagIds || [])
     }
-    if (newFilters.responsibleEmployee !== responsibleEmployeeFilter) {
-      setResponsibleEmployeeFilter(newFilters.responsibleEmployee || '')
+    if (
+      JSON.stringify(newFilters.responsibleEmployeeIds) !==
+      JSON.stringify(responsibleEmployeeIdsFilter)
+    ) {
+      setResponsibleEmployeeIdsFilter(newFilters.responsibleEmployeeIds || [])
     }
     if (newFilters.responsibleSearcher !== responsibleSearcherFilter) {
       setResponsibleSearcherFilter(newFilters.responsibleSearcher || '')
@@ -1231,12 +1344,6 @@ export function ClientManagementPage() {
     if (newFilters.principalRangeTo !== principalRangeToFilter) {
       setPrincipalRangeToFilter(newFilters.principalRangeTo || 0)
     }
-    if (newFilters.totalDebtRangeFrom !== totalDebtRangeFromFilter) {
-      setTotalDebtRangeFromFilter(newFilters.totalDebtRangeFrom || 0)
-    }
-    if (newFilters.totalDebtRangeTo !== totalDebtRangeToFilter) {
-      setTotalDebtRangeToFilter(newFilters.totalDebtRangeTo || 0)
-    }
     if (newFilters.dpdRangeFrom !== dpdRangeFromFilter) {
       setDpdRangeFromFilter(newFilters.dpdRangeFrom || 0)
     }
@@ -1249,8 +1356,10 @@ export function ClientManagementPage() {
     if (newFilters.taDateTo !== taDateToFilter) {
       setTaDateToFilter(newFilters.taDateTo || '')
     }
-    if (newFilters.interactionUserId !== interactionUserIdFilter) {
-      setInteractionUserIdFilter(newFilters.interactionUserId || '')
+    if (
+      JSON.stringify(newFilters.interactionUserIds) !== JSON.stringify(interactionUserIdsFilter)
+    ) {
+      setInteractionUserIdsFilter(newFilters.interactionUserIds || [])
     }
     if (newFilters.interactionDateFrom !== interactionDateFromFilter) {
       setInteractionDateFromFilter(newFilters.interactionDateFrom || '')
@@ -1304,6 +1413,7 @@ export function ClientManagementPage() {
     setPortfolioFilter([])
     setTagIdsFilter([])
     setResponsibleEmployeeFilter('')
+    setResponsibleEmployeeIdsFilter([])
     setResponsibleSearcherFilter('')
     setUnassignedOnlyFilter(false)
     setDateOfSaleFromFilter('')
@@ -1312,13 +1422,11 @@ export function ClientManagementPage() {
     setDebtRangeToFilter(0)
     setPrincipalRangeFromFilter(0)
     setPrincipalRangeToFilter(0)
-    setTotalDebtRangeFromFilter(0)
-    setTotalDebtRangeToFilter(0)
     setDpdRangeFromFilter(0)
     setDpdRangeToFilter(0)
     setTaDateFromFilter('')
     setTaDateToFilter('')
-    setInteractionUserIdFilter('')
+    setInteractionUserIdsFilter([])
     setInteractionDateFromFilter('')
     setInteractionDateToFilter('')
     setAssignmentDateFromFilter('')
@@ -1524,17 +1632,17 @@ export function ClientManagementPage() {
           >
             {/* Desktop: Individual buttons */}
             <div className="hidden items-center gap-4 lg:flex">
-              <PermissionGuard permission={PERMISSIONS.CLIENTS.EDIT}>
-                <LinkButton
-                  variant="regular-black"
-                  size="xs"
-                  onClick={() => handleAssign(client.id)}
-                  leftIcon={<Icons.PencilEdit size={16} color="#05040D" strokeWidth={1.5} />}
-                  disabled={isBulkActionActive}
-                >
-                  {t('pages.clients.assign')}
-                </LinkButton>
-              </PermissionGuard>
+              {/* Reassign trigger is always visible; warn-on-click happens on the
+                  modal's Submit (PERMISSIONS.CLIENTS.REASSIGN_RESPONSIBLE). */}
+              <LinkButton
+                variant="regular-black"
+                size="xs"
+                onClick={() => handleAssign(client.id)}
+                leftIcon={<Icons.PencilEdit size={16} color="#05040D" strokeWidth={1.5} />}
+                disabled={isBulkActionActive}
+              >
+                {t('pages.clients.assign')}
+              </LinkButton>
               <PermissionGuard permission={PERMISSIONS.CLIENTS.EDIT}>
                 <LinkButton
                   variant="regular-black"
@@ -1567,16 +1675,16 @@ export function ClientManagementPage() {
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="bg-white">
-                  <PermissionGuard permission={PERMISSIONS.CLIENTS.EDIT}>
-                    <DropdownMenuItem
-                      onClick={() => handleAssign(client.id)}
-                      className="text-dark-500 flex cursor-pointer items-center gap-2 text-sm"
-                      disabled={isBulkActionActive}
-                    >
-                      <Icons.PencilEdit size={16} strokeWidth={1.5} />
-                      <span>{t('pages.clients.assign')}</span>
-                    </DropdownMenuItem>
-                  </PermissionGuard>
+                  {/* Reassign trigger is always visible; warn-on-click happens on the
+                      modal's Submit (PERMISSIONS.CLIENTS.REASSIGN_RESPONSIBLE). */}
+                  <DropdownMenuItem
+                    onClick={() => handleAssign(client.id)}
+                    className="text-dark-500 flex cursor-pointer items-center gap-2 text-sm"
+                    disabled={isBulkActionActive}
+                  >
+                    <Icons.PencilEdit size={16} strokeWidth={1.5} />
+                    <span>{t('pages.clients.assign')}</span>
+                  </DropdownMenuItem>
                   <PermissionGuard permission={PERMISSIONS.CLIENTS.EDIT}>
                     <DropdownMenuItem
                       onClick={() => handleManageTags(client.id, client.fullName)}
@@ -1595,10 +1703,30 @@ export function ClientManagementPage() {
         )
       },
     },
+    {
+      key: 'lastOutgoingTADate',
+      header: t('pages.clients.tableHeaders.lastOutgoingTADate', 'Last outgoing TA date'),
+      align: 'left',
+      sortable: true,
+      sortKey: 'lastOutgoingTADate',
+      render: (client) =>
+        client.lastTaDate ? formatDateTime(client.lastTaDate, user?.timezone) : '—',
+    },
   ]
 
-  // Show initial loading state (only when no data exists yet)
-  if (isLoading && apiClients.length === 0) {
+  // Columns hidden from the dashboard table per product spec. They remain
+  // defined above (data + render intact) and are only filtered out at render
+  // time, so re-enabling one is a one-line change here. The bulk-selection
+  // checkbox is rendered by DataTable itself and is intentionally kept.
+  const HIDDEN_COLUMN_KEYS = new Set(['creditor', 'actions'])
+  const visibleColumns = columns.filter((c) => !HIDDEN_COLUMN_KEYS.has(c.key))
+
+  // Show initial loading state (only when no data exists yet). The clients query
+  // is intentionally disabled while operator options load (see useClients
+  // `enabled` above); a disabled query reports isLoading=false, so cover that
+  // gating window here too or the empty state would flash before the fetch runs.
+  const awaitingOperatorOptions = operatorFilterActive && !operatorOptionsReady
+  if ((isLoading || awaitingOperatorOptions) && apiClients.length === 0) {
     return <ClientManagementPageSkeleton />
   }
 
@@ -1686,7 +1814,7 @@ export function ClientManagementPage() {
         ) : (
           <div className="mx-0 w-full overflow-x-auto px-0">
             <DataTable
-              columns={columns}
+              columns={visibleColumns}
               data={filteredClients}
               sortConfig={sortConfig}
               onSort={handleSort}
@@ -1726,17 +1854,17 @@ export function ClientManagementPage() {
                     align="end"
                     className="w-56 rounded-lg border border-gray-200 bg-white p-1 shadow-lg"
                   >
-                    <PermissionGuard permission={PERMISSIONS.CLIENTS.EDIT}>
-                      <DropdownMenuItem
-                        onClick={handleBulkAssign}
-                        className="flex cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 transition-colors hover:bg-gray-50 focus:bg-gray-50"
-                      >
-                        <Icons.UserCheck01 size={18} className="text-dark-500" strokeWidth={1.5} />
-                        <span className="text-dark-500 text-sm font-medium">
-                          {t('pages.clients.bulkActions.assignEmployee', 'Assign Employee')}
-                        </span>
-                      </DropdownMenuItem>
-                    </PermissionGuard>
+                    {/* Bulk-assign trigger is always visible; warn-on-click happens on the
+                        modal's Submit (PERMISSIONS.CLIENTS.REASSIGN_RESPONSIBLE). */}
+                    <DropdownMenuItem
+                      onClick={handleBulkAssign}
+                      className="flex cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 transition-colors hover:bg-gray-50 focus:bg-gray-50"
+                    >
+                      <Icons.UserCheck01 size={18} className="text-dark-500" strokeWidth={1.5} />
+                      <span className="text-dark-500 text-sm font-medium">
+                        {t('pages.clients.bulkActions.assignEmployee', 'Assign Employee')}
+                      </span>
+                    </DropdownMenuItem>
                     <PermissionGuard permission={PERMISSIONS.CLIENTS.ASSIGN_TAGS}>
                       <DropdownMenuItem
                         onClick={handleBulkAddTags}

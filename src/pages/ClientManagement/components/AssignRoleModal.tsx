@@ -16,6 +16,9 @@ import { Label } from '@/components/ui/Label'
 import { Icons } from '@/lib/icons'
 import { useOperators } from '@/features/users/hooks/useUsers'
 import { useAuthStore } from '@/stores/authStore'
+import { useGuardedAction, useHasPermission } from '@/hooks'
+import { PERMISSIONS } from '@/constants/permissions'
+import { toast } from 'sonner'
 
 export type AssignRoleMode = 'employee' | 'searcher'
 
@@ -67,6 +70,14 @@ export function AssignRoleModal({
   const [userId, setUserId] = useState<string>('')
   const [reason, setReason] = useState<string>('')
 
+  // Pattern Y per-field reassign rule (KAN-562):
+  //   - If this role (employee or searcher per `mode`) is currently NULL,
+  //     setting it is initial assignment → `edit_clients`.
+  //   - If currently set to someone, changing it is re-assignment →
+  //     `reassign_client_responsible`.
+  const hasReassignPerm = useHasPermission(PERMISSIONS.CLIENTS.REASSIGN_RESPONSIBLE)
+  const guardBaseAssign = useGuardedAction(PERMISSIONS.CLIENTS.EDIT, 'errors:permissions.required')
+
   // Pre-select the currently assigned user when the modal opens.
   // requestAnimationFrame defers setState out of the effect body to avoid
   // the react-hooks/set-state-in-effect lint rule.
@@ -83,14 +94,27 @@ export function AssignRoleModal({
     if (!userId) return
     if (!reason) return
 
-    onAssign({
-      userId,
-      reason,
-    })
+    // Single-field check: this modal only touches the one role determined by
+    // `mode`. Reassignment when currentUserId is non-null AND the form picks
+    // a different user. Initial assignment when currentUserId is null.
+    const newUserNum = userId ? Number(userId) : null
+    const requiresReassign = currentUserId != null && newUserNum !== currentUserId
 
-    setUserId('')
-    setReason('')
-    onClose()
+    if (requiresReassign && !hasReassignPerm) {
+      toast.warning(t('errors:permissions.reassignClient'))
+      return
+    }
+
+    guardBaseAssign(() => {
+      onAssign({
+        userId,
+        reason,
+      })
+
+      setUserId('')
+      setReason('')
+      onClose()
+    })
   }
 
   const handleCancel = () => {

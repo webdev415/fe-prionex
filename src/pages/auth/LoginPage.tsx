@@ -3,6 +3,7 @@ import {
   LoginCard,
   AccountLockedCard,
   AlreadyLoggedInCard,
+  IpNotAllowedCard,
   TwoFactorCodeCard,
   useAuth,
 } from '@/features/auth'
@@ -34,6 +35,9 @@ export default function LoginPage() {
             isLoading={isLoading}
           />
         )
+
+      case 'IP_NOT_ALLOWED':
+        return <IpNotAllowedCard onBackToLogin={clearError} />
 
       case 'TWO_FACTOR_REQUIRED':
         return (

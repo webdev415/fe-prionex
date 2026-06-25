@@ -38,9 +38,9 @@ function mapFiltersToAPIParams(
     params.sale_date_to = filters.dateOfSaleTo
   }
 
-  // FILTER 3: Assignment - Employee
-  if (filters.responsibleEmployee) {
-    params.responsible_employee_id = parseInt(filters.responsibleEmployee)
+  // FILTER 3: Assignment - Employee (multi-select OR, KAN-572)
+  if (filters.responsibleEmployeeIds && filters.responsibleEmployeeIds.length > 0) {
+    params.responsible_employee_ids = filters.responsibleEmployeeIds.join(',')
   }
 
   // FILTER 4: Assignment - Searcher
@@ -53,20 +53,12 @@ function mapFiltersToAPIParams(
     params.unassigned_only = true
   }
 
-  // FILTER 6: Principal Amount
+  // FILTER 6: Principal Amount (open loans only)
   if (filters.principalRangeFrom !== undefined) {
     params.principal_min = filters.principalRangeFrom
   }
   if (filters.principalRangeTo !== undefined) {
     params.principal_max = filters.principalRangeTo
-  }
-
-  // FILTER 7: Total Debt Amount
-  if (filters.totalDebtRangeFrom !== undefined) {
-    params.total_debt_min = filters.totalDebtRangeFrom
-  }
-  if (filters.totalDebtRangeTo !== undefined) {
-    params.total_debt_max = filters.totalDebtRangeTo
   }
 
   // FILTER 8: Days Past Due
@@ -92,12 +84,9 @@ function mapFiltersToAPIParams(
     params.ta_date_to = filters.taDateTo
   }
 
-  // FILTER: Interaction Created By (operator)
-  if (filters.interactionUserId) {
-    const parsed = parseInt(filters.interactionUserId, 10)
-    if (!isNaN(parsed)) {
-      params.interaction_user_id = parsed
-    }
+  // FILTER: Interaction Created By (multi-select OR, KAN-572)
+  if (filters.interactionUserIds && filters.interactionUserIds.length > 0) {
+    params.interaction_user_ids = filters.interactionUserIds.join(',')
   }
 
   // FILTER: Interaction Logged Date (applies to promise/callback subqueries)
@@ -210,26 +199,77 @@ describe('Client Management Filter Integration', () => {
     })
   })
 
-  describe('FILTER 3: Assignment - Employee', () => {
-    it('should map responsibleEmployee to responsible_employee_id', () => {
+  describe('FILTER 3: Assignment - Employee (multi-select, KAN-572)', () => {
+    it('should map responsibleEmployeeIds to responsible_employee_ids (comma-separated)', () => {
       const filters: ClientFilters = {
-        responsibleEmployee: '42',
+        responsibleEmployeeIds: [42],
       }
 
       const params = mapFiltersToAPIParams(filters)
 
-      expect(params.responsible_employee_id).toBe(42)
+      expect(params.responsible_employee_ids).toBe('42')
     })
 
-    it('should convert string ID to number', () => {
+    it('should join multiple IDs with commas (OR semantics)', () => {
       const filters: ClientFilters = {
-        responsibleEmployee: '999',
+        responsibleEmployeeIds: [101, 102, 103],
       }
 
       const params = mapFiltersToAPIParams(filters)
 
-      expect(typeof params.responsible_employee_id).toBe('number')
-      expect(params.responsible_employee_id).toBe(999)
+      expect(params.responsible_employee_ids).toBe('101,102,103')
+    })
+
+    it('should not set responsible_employee_ids when the array is empty', () => {
+      const filters: ClientFilters = {
+        responsibleEmployeeIds: [],
+      }
+
+      const params = mapFiltersToAPIParams(filters)
+
+      expect(params.responsible_employee_ids).toBeUndefined()
+    })
+
+    it('should pass the "No Responsible" sentinel (-1) through (KAN-607)', () => {
+      const filters: ClientFilters = {
+        responsibleEmployeeIds: [-1],
+      }
+
+      const params = mapFiltersToAPIParams(filters)
+
+      expect(params.responsible_employee_ids).toBe('-1')
+    })
+
+    it('should OR the sentinel with real ids (KAN-607)', () => {
+      const filters: ClientFilters = {
+        responsibleEmployeeIds: [-1, 101],
+      }
+
+      const params = mapFiltersToAPIParams(filters)
+
+      expect(params.responsible_employee_ids).toBe('-1,101')
+    })
+  })
+
+  describe('FILTER 13: Interaction Created By "No Interactions" (KAN-607)', () => {
+    it('should pass the "No Interactions" sentinel (-1) through', () => {
+      const filters: ClientFilters = {
+        interactionUserIds: [-1],
+      }
+
+      const params = mapFiltersToAPIParams(filters)
+
+      expect(params.interaction_user_ids).toBe('-1')
+    })
+
+    it('should OR the sentinel with real ids', () => {
+      const filters: ClientFilters = {
+        interactionUserIds: [-1, 55],
+      }
+
+      const params = mapFiltersToAPIParams(filters)
+
+      expect(params.interaction_user_ids).toBe('-1,55')
     })
   })
 
@@ -301,28 +341,6 @@ describe('Client Management Filter Integration', () => {
     })
   })
 
-  describe('FILTER 7: Total Debt Amount', () => {
-    it('should map totalDebtRangeFrom to total_debt_min', () => {
-      const filters: ClientFilters = {
-        totalDebtRangeFrom: 20000,
-      }
-
-      const params = mapFiltersToAPIParams(filters)
-
-      expect(params.total_debt_min).toBe(20000)
-    })
-
-    it('should map totalDebtRangeTo to total_debt_max', () => {
-      const filters: ClientFilters = {
-        totalDebtRangeTo: 100000,
-      }
-
-      const params = mapFiltersToAPIParams(filters)
-
-      expect(params.total_debt_max).toBe(100000)
-    })
-  })
-
   describe('FILTER 8: Days Past Due', () => {
     it('should map dpdRangeFrom to dpd_min', () => {
       const filters: ClientFilters = {
@@ -358,20 +376,19 @@ describe('Client Management Filter Integration', () => {
   })
 
   describe('Combined Filters', () => {
-    it('should map all 8 filters simultaneously', () => {
+    it('should map all filters simultaneously (multi-select shape, KAN-572)', () => {
       const filters: ClientFilters = {
         portfolio: [1, 2],
         dateOfSaleFrom: '2024-01-01',
         dateOfSaleTo: '2024-12-31',
-        responsibleEmployee: '10',
+        responsibleEmployeeIds: [10, 11],
         responsibleSearcher: '20',
         unassignedOnly: false, // Should not be included
         principalRangeFrom: 5000,
         principalRangeTo: 25000,
-        totalDebtRangeFrom: 10000,
-        totalDebtRangeTo: 50000,
         dpdRangeFrom: 10,
         dpdRangeTo: 60,
+        interactionUserIds: [7, 9],
       }
 
       const params = mapFiltersToAPIParams(filters)
@@ -380,15 +397,14 @@ describe('Client Management Filter Integration', () => {
       expect(params.seller_ids).toBe('1,2')
       expect(params.sale_date_from).toBe('2024-01-01')
       expect(params.sale_date_to).toBe('2024-12-31')
-      expect(params.responsible_employee_id).toBe(10)
+      expect(params.responsible_employee_ids).toBe('10,11')
       expect(params.responsible_searcher_id).toBe(20)
       expect(params.unassigned_only).toBeUndefined() // false should not be set
       expect(params.principal_min).toBe(5000)
       expect(params.principal_max).toBe(25000)
-      expect(params.total_debt_min).toBe(10000)
-      expect(params.total_debt_max).toBe(50000)
       expect(params.dpd_min).toBe(10)
       expect(params.dpd_max).toBe(60)
+      expect(params.interaction_user_ids).toBe('7,9')
     })
 
     it('should include pagination and sorting in params', () => {
@@ -420,16 +436,15 @@ describe('Client Management Filter Integration', () => {
       // No filters should be set
       expect(params.seller_ids).toBeUndefined()
       expect(params.sale_date_from).toBeUndefined()
-      expect(params.responsible_employee_id).toBeUndefined()
+      expect(params.responsible_employee_ids).toBeUndefined()
       expect(params.principal_min).toBeUndefined()
-      expect(params.total_debt_min).toBeUndefined()
       expect(params.dpd_min).toBeUndefined()
+      expect(params.interaction_user_ids).toBeUndefined()
     })
 
     it('should handle zero values in number filters', () => {
       const filters: ClientFilters = {
         principalRangeFrom: 0,
-        totalDebtRangeFrom: 0,
         dpdRangeFrom: 0,
       }
 
@@ -437,14 +452,13 @@ describe('Client Management Filter Integration', () => {
 
       // Zero should be included (not treated as falsy)
       expect(params.principal_min).toBe(0)
-      expect(params.total_debt_min).toBe(0)
       expect(params.dpd_min).toBe(0)
     })
 
     it('should handle undefined number values correctly', () => {
       const filters: ClientFilters = {
         principalRangeFrom: undefined,
-        totalDebtRangeTo: undefined,
+        principalRangeTo: undefined,
       }
 
       const params = mapFiltersToAPIParams(filters)
@@ -454,36 +468,35 @@ describe('Client Management Filter Integration', () => {
     })
   })
 
-  describe('Interaction Created By (Operator) Filter', () => {
-    it('should map interactionUserId to interaction_user_id as number', () => {
+  describe('Interaction Created By (multi-select, KAN-572)', () => {
+    it('should map interactionUserIds to interaction_user_ids (comma-separated)', () => {
       const filters: ClientFilters = {
-        interactionUserId: '7',
+        interactionUserIds: [7],
       }
 
       const params = mapFiltersToAPIParams(filters)
 
-      expect(params.interaction_user_id).toBe(7)
-      expect(typeof params.interaction_user_id).toBe('number')
+      expect(params.interaction_user_ids).toBe('7')
     })
 
-    it('should not set interaction_user_id for invalid string', () => {
+    it('should join multiple IDs with commas (OR semantics)', () => {
       const filters: ClientFilters = {
-        interactionUserId: 'abc',
+        interactionUserIds: [7, 12, 33],
       }
 
       const params = mapFiltersToAPIParams(filters)
 
-      expect(params.interaction_user_id).toBeUndefined()
+      expect(params.interaction_user_ids).toBe('7,12,33')
     })
 
-    it('should not set interaction_user_id when empty string', () => {
+    it('should not set interaction_user_ids when the array is empty', () => {
       const filters: ClientFilters = {
-        interactionUserId: '',
+        interactionUserIds: [],
       }
 
       const params = mapFiltersToAPIParams(filters)
 
-      expect(params.interaction_user_id).toBeUndefined()
+      expect(params.interaction_user_ids).toBeUndefined()
     })
   })
 
@@ -517,7 +530,7 @@ describe('Client Management Filter Integration', () => {
       const filters: ClientFilters = {
         taDateFrom: '2026-04-01',
         taDateTo: '2026-05-31',
-        interactionUserId: '12',
+        interactionUserIds: [12],
         interactionDateFrom: '2026-03-15',
         interactionDateTo: '2026-05-01',
       }
@@ -526,7 +539,7 @@ describe('Client Management Filter Integration', () => {
 
       expect(params.ta_date_from).toBe('2026-04-01')
       expect(params.ta_date_to).toBe('2026-05-31')
-      expect(params.interaction_user_id).toBe(12)
+      expect(params.interaction_user_ids).toBe('12')
       expect(params.interaction_date_from).toBe('2026-03-15')
       expect(params.interaction_date_to).toBe('2026-05-01')
     })
@@ -536,7 +549,7 @@ describe('Client Management Filter Integration', () => {
 
       const params = mapFiltersToAPIParams(filters)
 
-      expect(params.interaction_user_id).toBeUndefined()
+      expect(params.interaction_user_ids).toBeUndefined()
       expect(params.interaction_date_from).toBeUndefined()
       expect(params.interaction_date_to).toBeUndefined()
     })
@@ -576,13 +589,13 @@ describe('Client Management Filter Integration', () => {
 
     it('should combine assignment date with existing filters', () => {
       const filters: ClientFilters = {
-        responsibleEmployee: '42',
+        responsibleEmployeeIds: [42],
         assignmentDateFrom: '2026-01-01',
         assignmentDateTo: '2026-01-31',
       }
 
       const params = mapFiltersToAPIParams(filters)
-      expect(params.responsible_employee_id).toBe(42)
+      expect(params.responsible_employee_ids).toBe('42')
       expect(params.assignment_date_from).toBe('2026-01-01')
       expect(params.assignment_date_to).toBe('2026-01-31')
     })

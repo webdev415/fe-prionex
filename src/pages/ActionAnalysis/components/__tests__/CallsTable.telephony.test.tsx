@@ -49,20 +49,20 @@ function renderTable(rows: CallMonitoringItem[]) {
 describe('CallsTable — telephony column', () => {
   it('renders the White badge for white calls', () => {
     renderTable([makeCall({ call_id: 'c-white', telephony_type: 'white' })])
-    expect(screen.getByText('pages.actionAnalysis.telephonyType.white')).toBeInTheDocument()
+    expect(screen.getByText('pages.training.telephonyType.white')).toBeInTheDocument()
   })
 
   it('renders the Grey badge for grey calls', () => {
     renderTable([makeCall({ call_id: 'c-grey', telephony_type: 'grey' })])
-    expect(screen.getByText('pages.actionAnalysis.telephonyType.grey')).toBeInTheDocument()
+    expect(screen.getByText('pages.training.telephonyType.grey')).toBeInTheDocument()
   })
 
   it('renders an em-dash for unknown calls', () => {
     renderTable([makeCall({ call_id: 'c-unknown', telephony_type: 'unknown' })])
     // The unknown branch renders a plain em-dash, not a badge key.
     expect(screen.getByText('—')).toBeInTheDocument()
-    expect(screen.queryByText('pages.actionAnalysis.telephonyType.white')).not.toBeInTheDocument()
-    expect(screen.queryByText('pages.actionAnalysis.telephonyType.grey')).not.toBeInTheDocument()
+    expect(screen.queryByText('pages.training.telephonyType.white')).not.toBeInTheDocument()
+    expect(screen.queryByText('pages.training.telephonyType.grey')).not.toBeInTheDocument()
   })
 
   it('renders all three variants when present in the same table', () => {
@@ -71,8 +71,8 @@ describe('CallsTable — telephony column', () => {
       makeCall({ call_id: 'c-grey', telephony_type: 'grey' }),
       makeCall({ call_id: 'c-unknown', telephony_type: 'unknown' }),
     ])
-    expect(screen.getByText('pages.actionAnalysis.telephonyType.white')).toBeInTheDocument()
-    expect(screen.getByText('pages.actionAnalysis.telephonyType.grey')).toBeInTheDocument()
+    expect(screen.getByText('pages.training.telephonyType.white')).toBeInTheDocument()
+    expect(screen.getByText('pages.training.telephonyType.grey')).toBeInTheDocument()
     expect(screen.getByText('—')).toBeInTheDocument()
   })
 
@@ -92,8 +92,8 @@ describe('CallsTable — telephony column', () => {
         telephony_type: 'grey',
       }),
     ])
-    expect(screen.queryByText('pages.actionAnalysis.telephonyType.white')).not.toBeInTheDocument()
-    expect(screen.queryByText('pages.actionAnalysis.telephonyType.grey')).not.toBeInTheDocument()
+    expect(screen.queryByText('pages.training.telephonyType.white')).not.toBeInTheDocument()
+    expect(screen.queryByText('pages.training.telephonyType.grey')).not.toBeInTheDocument()
     // Two inbound rows → two em-dashes.
     expect(screen.getAllByText('—')).toHaveLength(2)
   })

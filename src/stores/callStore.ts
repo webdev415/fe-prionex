@@ -54,6 +54,14 @@ const getStoredCallState = (): MinimizedCallInfo | null => {
     const stored = localStorage.getItem(STORAGE_KEY)
     if (!stored) return null
     const parsed = JSON.parse(stored) as MinimizedCallInfo
+    if (
+      typeof parsed.clientName !== 'string' ||
+      typeof parsed.phoneNumber !== 'string' ||
+      typeof parsed.timestamp !== 'number'
+    ) {
+      localStorage.removeItem(STORAGE_KEY)
+      return null
+    }
     // Check if stored data is too old (e.g., more than 24 hours)
     const maxAge = 24 * 60 * 60 * 1000 // 24 hours
     if (Date.now() - parsed.timestamp > maxAge) {

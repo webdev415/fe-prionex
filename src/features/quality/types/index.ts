@@ -16,6 +16,8 @@ export interface Section {
   criteria: Criterion[]
 }
 
+export type ScorecardType = 'client' | 'third_party'
+
 export interface ScorecardTemplate {
   id: number
   project_id: number
@@ -23,6 +25,9 @@ export interface ScorecardTemplate {
   description: string | null
   call_type: 'inbound' | 'outbound' | null
   department_id: number | null
+  // KAN-504: 'client' | 'third_party' for the two typed templates; null for
+  // the legacy "Default Scorecard".
+  scorecard_type: ScorecardType | null
   sections: Section[]
   is_archived: boolean
   created_by: number
@@ -55,6 +60,8 @@ export interface Scorecard {
     description: string | null
     call_type: string | null
     department_id: number | null
+    // KAN-504: frozen scorecard type (optional — legacy snapshots predate it).
+    scorecard_type?: ScorecardType | null
     sections: Section[]
   }
   scores: ScoresPayload
@@ -100,6 +107,36 @@ export interface ScorecardUpdatePayload {
   scores?: ScoresPayload
   overall_comment?: string | null
   status?: ScorecardStatus
+}
+
+// ---- Score aggregation by period (KAN-504) ----
+
+export type AggregateGroupBy = 'operator' | 'team' | 'all'
+
+export interface AggregateRow {
+  // operator_id (group_by=operator), team/group id (group_by=team), or null
+  // (group_by=all).
+  entity_id: number | null
+  entity_name: string
+  avg_client: number | null
+  avg_third_party: number | null
+  calls_scored: number
+  trend_vs_prior: number | null
+}
+
+export interface AggregateResponse {
+  group_by: AggregateGroupBy
+  period_from: string
+  period_to: string
+  rows: AggregateRow[]
+}
+
+export interface AggregateFilters {
+  period?: string
+  from_date?: string
+  to_date?: string
+  group_by?: AggregateGroupBy
+  operator_id?: number[]
 }
 
 export interface Pagination {

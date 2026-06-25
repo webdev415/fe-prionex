@@ -13,6 +13,7 @@ export async function getNotifications(params: {
   page_size?: number
   type?: string
   read?: boolean
+  starred?: boolean
 }): Promise<NotificationListResponse> {
   const response = await api.get<NotificationListResponse>(BASE_URL, { params })
   return response.data
@@ -33,6 +34,14 @@ export async function markAllAsRead(): Promise<void> {
 
 export async function dismissNotification(notificationId: string): Promise<void> {
   await api.delete(`${BASE_URL}/${notificationId}`)
+}
+
+export async function starNotification(notificationId: string): Promise<void> {
+  await api.patch(`${BASE_URL}/${notificationId}/star`)
+}
+
+export async function unstarNotification(notificationId: string): Promise<void> {
+  await api.patch(`${BASE_URL}/${notificationId}/unstar`)
 }
 
 export async function getPreferences(): Promise<NotificationPreferences> {
