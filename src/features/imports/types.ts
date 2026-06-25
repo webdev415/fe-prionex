@@ -14,6 +14,7 @@ export type ImportType =
   | 'operator_assignment'
   | 'payment_import'
   | 'tag_assignment'
+  | 'sale_notes'
 
 // Mode for tag_assignment imports
 export type TagAssignmentMode = 'assign' | 'remove'
@@ -174,12 +175,20 @@ export interface UploadImportRequest {
   zip_file?: File // For vendor dump (ZIP with documents)
   seller_id: number
   project_code: string
-  purchase_date: string
+  // For simple flow, derived from the factoring agreement's
+  // contract_purchase_date. Optional because legacy/programmatic callers
+  // may not always supply it and BE accepts it as Optional too.
+  purchase_date?: string
   comment?: string
   import_type: ImportType
   // Vendor flow only — vendor_schemas.code discriminator. Required when
   // import_type === 'vendor', ignored otherwise.
   schema_code?: string
+  // Factoring agreement (simple flow only). Exactly one of these must
+  // be set when the operator has reached step 2 — the wizard's Step 1
+  // enforces that. The backend rejects with 400 if both are set.
+  factoring_agreement_id?: number
+  new_factoring_agreement_json?: string
 }
 
 // Vendor schema (from GET /api/v1/import/vendor-schemas)

@@ -202,6 +202,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       } else if (errorCode === 'ALREADY_LOGGED_IN') {
         detectedErrorState = 'ALREADY_LOGGED_IN'
         pendingCreds = credentials // Store credentials for force login
+      } else if (errorCode === 'IP_NOT_ALLOWED') {
+        detectedErrorState = 'IP_NOT_ALLOWED'
       }
 
       set({

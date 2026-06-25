@@ -290,6 +290,9 @@ export function ImportHistoryFiltersBar({
                         <SelectItem value="payment_import">
                           {t('pages.imports.history.importTypes.paymentImport', 'Payment Import')}
                         </SelectItem>
+                        <SelectItem value="sale_notes">
+                          {t('pages.imports.history.importTypes.saleNotes', 'Sale Notes')}
+                        </SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -418,6 +421,9 @@ export function ImportHistoryFiltersBar({
                     </SelectItem>
                     <SelectItem value="payment_import">
                       {t('pages.imports.history.importTypes.paymentImport', 'Payment Import')}
+                    </SelectItem>
+                    <SelectItem value="sale_notes">
+                      {t('pages.imports.history.importTypes.saleNotes', 'Sale Notes')}
                     </SelectItem>
                   </SelectContent>
                 </Select>

@@ -48,6 +48,7 @@ const SELLER_TYPE_VALUES: SellerType[] = [
 interface SellerFormData {
   seller_name: string
   seller_type: SellerType | ''
+  legal_name: string
   contact_person: string
   contact_email: string
   contact_phone: string
@@ -69,6 +70,7 @@ export function EditSellerModal({
   const [formData, setFormData] = useState<SellerFormData>({
     seller_name: '',
     seller_type: '',
+    legal_name: '',
     contact_person: '',
     contact_email: '',
     contact_phone: '',
@@ -86,6 +88,7 @@ export function EditSellerModal({
         setFormData({
           seller_name: seller.seller_name || '',
           seller_type: seller.seller_type || '',
+          legal_name: seller.legal_name || '',
           contact_person: seller.contact_person || '',
           contact_email: seller.contact_email || '',
           contact_phone: seller.contact_phone || '',
@@ -130,6 +133,7 @@ export function EditSellerModal({
       if (formData.seller_type) updateData.seller_type = formData.seller_type as SellerType
 
       // Optional fields - include even if empty to allow clearing
+      updateData.legal_name = formData.legal_name || undefined
       updateData.contact_person = formData.contact_person || undefined
       updateData.contact_email = formData.contact_email || undefined
       updateData.contact_phone = formData.contact_phone || undefined
@@ -219,6 +223,16 @@ export function EditSellerModal({
                 </Select>
                 {errors.seller_type && <p className="text-xs text-red-500">{errors.seller_type}</p>}
               </div>
+            </div>
+            <div className="grid grid-cols-1 gap-4">
+              <Input
+                id="legal_name"
+                label={t('pages.sellers.modals.edit.legalName')}
+                value={formData.legal_name}
+                onChange={(e) => handleChange('legal_name', e.target.value)}
+                placeholder={t('pages.sellers.modals.edit.placeholders.legalName')}
+                disabled={updateSellerMutation.isPending}
+              />
             </div>
             <div className="grid grid-cols-1 gap-4">
               <Input

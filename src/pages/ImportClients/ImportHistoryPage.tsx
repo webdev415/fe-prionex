@@ -150,6 +150,10 @@ function ImportTypeBadge({
       label: t('pages.imports.history.importTypes.writeoffImport', 'Write-off Import'),
       className: 'bg-orange-600 text-white',
     },
+    sale_notes: {
+      label: t('pages.imports.history.importTypes.saleNotes', 'Sale Notes'),
+      className: 'bg-cyan-600 text-white',
+    },
   }
 
   if (importType === 'tag_assignment') {
@@ -593,6 +597,9 @@ export function ImportHistoryPage() {
         return
       case 'writeoff_import':
         navigate('/dashboard/import/bulk-writeoff-import')
+        return
+      case 'sale_notes':
+        navigate('/dashboard/import/bulk-sale-notes-import')
         return
       default:
         navigate('/dashboard/import/clients')

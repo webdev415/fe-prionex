@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Record Payment Modal
  *
  * Modal for recording a new payment for a client.
@@ -538,7 +538,7 @@ export function RecordPaymentModal({
                   <SelectContent>
                     {availablePaymentTypes.map((v) => (
                       <SelectItem key={v} value={v}>
-                        {t(`pages.actionAnalysis.filters.paymentTypes.${v}`, v)}
+                        {t(`pages.training.filters.paymentTypes.${v}`, v)}
                       </SelectItem>
                     ))}
                   </SelectContent>

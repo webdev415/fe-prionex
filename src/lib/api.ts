@@ -1,4 +1,5 @@
 import axios, { type AxiosError, type InternalAxiosRequestConfig } from 'axios'
+import { buildLoginUrlWithReturn } from '@/features/auth/utils/safeReturnUrl'
 
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL !== undefined
@@ -129,7 +130,7 @@ if (isBrowser && typeof window.addEventListener === 'function') {
       // the in-memory copy + fire callbacks + redirect.
       accessToken = null
       onAuthCleared?.()
-      window.location.href = '/login'
+      window.location.href = buildLoginUrlWithReturn()
     } else if (event.newValue !== accessToken) {
       // Token was set/changed in another tab (login) — sync in-memory
       accessToken = event.newValue
