@@ -383,17 +383,31 @@ export function useClientPaymentsSection(clientId: number, enabled = true) {
  * Get client call/SMS history. Calls existing call and SMS service endpoints in parallel.
  * Maps backend responses to UI-expected shape for backward compatibility.
  */
-export function useClientCallSmsHistory(clientId: number, enabled = true) {
+export function useClientCallSmsHistory(clientId: number, enabled = true, showAllCalls = false) {
   return useQuery({
-    queryKey: clientKeys.callSmsHistory(clientId),
+    queryKey: [...clientKeys.callSmsHistory(clientId), { showAllCalls }],
     queryFn: async () => {
-      const [callsData, smsData] = await Promise.all([
+      const callsParams: { limit: number; from_date?: string } = { limit: 200 }
+      if (!showAllCalls) {
+        const sevenDaysAgo = new Date()
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+        callsParams.from_date = sevenDaysAgo.toISOString().split('T')[0]
+      }
+
+      const unfilteredCallsPromise = showAllCalls
+        ? Promise.resolve(null)
+        : callSmsApi
+            .getClientCalls(clientId, { limit: 1 })
+            .catch(() => ({ calls: [] as never[], total: 0 }))
+
+      const [callsData, smsData, unfilteredCalls] = await Promise.all([
         callSmsApi
-          .getClientCalls(clientId, { limit: 10 })
+          .getClientCalls(clientId, callsParams)
           .catch(() => ({ calls: [] as never[], total: 0 })),
         callSmsApi
           .getClientSms(clientId, { limit: 10 })
           .catch(() => ({ messages: [] as never[], total: 0 })),
+        unfilteredCallsPromise,
       ])
 
       // Map calls to UI shape
@@ -463,7 +477,14 @@ export function useClientCallSmsHistory(clientId: number, enabled = true) {
         return dateB.getTime() - dateA.getTime()
       })
 
-      return { calls: mappedCalls, sms: mappedSms, all }
+      return {
+        calls: mappedCalls,
+        sms: mappedSms,
+        all,
+        callsTotal: showAllCalls
+          ? (callsData.total ?? mappedCalls.length)
+          : (unfilteredCalls?.total ?? mappedCalls.length),
+      }
     },
     enabled: enabled && clientId > 0,
     staleTime: 30000,
