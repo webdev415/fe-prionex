@@ -993,6 +993,7 @@
       "actions": {
         "view": "View",
         "edit": "Edit",
+        "unlock": "Unlock",
         "impersonate": "Impersonate",
         "impersonating": "Impersonating...",
         "status": "Status",

@@ -20,6 +20,7 @@ import { EditUserModal } from './components/EditUserModal'
 import ChangeStatusModal from './components/ChangeStatusModal'
 import { ResetPasswordConfirmModal } from './components/ResetPasswordConfirmModal'
 import { AdminToggleTwoFactorModal } from './components/AdminToggleTwoFactorModal'
+import { UnlockAccountModal } from './components/UnlockAccountModal'
 import { UserSearchBar } from './components/UserSearchBar'
 import { UserFiltersBar } from './components/UserFiltersBar'
 import type { ApiUser, UserSearchField, UserSortOrder } from '@/features/users/types'
@@ -51,6 +52,9 @@ import {
 
 const DEFAULT_PAGE_SIZE = 10
 const DEFAULT_SEARCH_FIELD: UserSearchField = 'full_name'
+
+const isUserLocked = (u: ApiUser): boolean =>
+  !!u.locked_until && new Date(u.locked_until) > new Date()
 
 export function UserManagementPage() {
   const { t } = useTranslation('common')
@@ -136,6 +140,7 @@ export function UserManagementPage() {
   const [openDropdownUserId, setOpenDropdownUserId] = useState<number | null>(null)
   const [resetPasswordUser, setResetPasswordUser] = useState<ApiUser | null>(null)
   const [toggleTwoFactorUser, setToggleTwoFactorUser] = useState<ApiUser | null>(null)
+  const [unlockUser, setUnlockUser] = useState<ApiUser | null>(null)
   const [searchParams, setSearchParams] = useSearchParams()
 
   // Deep-link: open a user's detail when arrived with ?user_id=<id> (e.g. from
@@ -544,6 +549,18 @@ export function UserManagementPage() {
                 </LinkButton>
               )}
             </PermissionGuard>
+
+            <PermissionGuard permission={PERMISSIONS.USERS.EDIT}>
+              <LinkButton
+                variant="regular-black"
+                size="xs"
+                onClick={() => setUnlockUser(user)}
+                disabled={!isUserLocked(user)}
+                leftIcon={<Icons.Unlock size={16} color="#05040D" strokeWidth={1.5} />}
+              >
+                {t('pages.users.actions.unlock')}
+              </LinkButton>
+            </PermissionGuard>
           </div>
 
           {/* Mobile/Tablet: Dropdown button group */}
@@ -627,6 +644,19 @@ export function UserManagementPage() {
                       </span>
                     </DropdownMenuItem>
                   )}
+                </PermissionGuard>
+                <PermissionGuard permission={PERMISSIONS.USERS.EDIT}>
+                  <DropdownMenuItem
+                    onClick={() => {
+                      setOpenDropdownUserId(null)
+                      setUnlockUser(user)
+                    }}
+                    disabled={!isUserLocked(user)}
+                    className="text-dark-500 flex cursor-pointer items-center gap-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <Icons.Unlock size={16} strokeWidth={1.5} />
+                    <span>{t('pages.users.actions.unlock')}</span>
+                  </DropdownMenuItem>
                 </PermissionGuard>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -787,6 +817,14 @@ export function UserManagementPage() {
           open={toggleTwoFactorUser !== null}
           user={toggleTwoFactorUser}
           onClose={() => setToggleTwoFactorUser(null)}
+        />
+      )}
+
+      {unlockUser && (
+        <UnlockAccountModal
+          open={unlockUser !== null}
+          user={unlockUser}
+          onClose={() => setUnlockUser(null)}
         />
       )}
     </div>
