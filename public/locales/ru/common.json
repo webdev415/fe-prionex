@@ -2148,7 +2148,12 @@
         "deleteAddress": "Удалить адрес",
         "editContact": "Редактировать контакт",
         "deleteContact": "Удалить контакт",
-        "workPhone": "Рабочий телефон"
+        "workPhone": "Рабочий телефон",
+        "saveAll": "Сохранить все разделы",
+        "savingAll": "Сохраняем всё…",
+        "saveAllSuccess": "Все разделы сохранены",
+        "saveAllPartial": "Некоторые разделы не сохранились — см. ошибки ниже",
+        "saveAllError": "Не удалось сохранить разделы"
       },
       "detail": {
         "clientNotFound": "Клиент не найден",
