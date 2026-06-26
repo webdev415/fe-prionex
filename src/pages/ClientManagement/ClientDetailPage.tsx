@@ -118,7 +118,7 @@ import { PERMISSIONS } from '@/constants/permissions'
 import { searchClientsByPhoneExact } from '@/api/clientSearchApi'
 import { ChainExecutor, TAInteractionHistory } from './components/taChains'
 import { formatUkrainePhoneForDisplay } from '@/lib/phone'
-import { isAdminRole, isHiddenVisibility } from '@/features/tags/utils/visibility'
+import { isAdminRole } from '@/features/tags/utils/visibility'
 import {
   ALL_MESSAGING_SEND_PERMISSIONS,
   buildOperatorNamesMap,
@@ -508,8 +508,10 @@ export function ClientDetailPage() {
   const canCompleteRR = useHasPermission(PERMISSIONS.RESTRUCTURING.COMPLETE)
   const updateTaskMutation = useUpdateTask(clientId)
   const deleteTaskMutation = useDeleteTask(clientId)
-  // Fetch client tags from API (real)
-  const { data: clientTags } = useClientTags(clientId)
+  // Fetch client tags from API (real) — async; does not block profile render
+  const { data: clientTags, isLoading: isClientTagsLoading } = useClientTags(clientId, {
+    includeHidden: showHiddenTags,
+  })
   const [traceModal, setTraceModal] = useState<{
     open: boolean
     tagCode?: string
@@ -709,9 +711,7 @@ export function ClientDetailPage() {
         text: c.content,
         author: c.created_by_name ?? `User #${c.created_by}`,
       })),
-      tags: (profile.tags || []).filter(
-        (tag) => showHiddenTags || !isHiddenVisibility((tag as { visibility?: string }).visibility)
-      ),
+      tags: clientTags ?? [],
       // Loans mapped from DebtDetail to UI shape
       loans: (loans ?? []).map((d) => ({
         id: d.id,
@@ -920,7 +920,7 @@ export function ClientDetailPage() {
     documents,
     activities,
     responsibleEmployeeDepartment,
-    showHiddenTags,
+    clientTags,
     t,
     userTimezone,
   ])
@@ -2277,7 +2277,9 @@ export function ClientDetailPage() {
               <div className="flex flex-col gap-2 self-stretch">
                 <div className="flex items-center justify-between gap-2 self-stretch">
                   <div className="flex flex-1 flex-wrap items-center gap-2">
-                    {clientTags && clientTags.length > 0 ? (
+                    {isClientTagsLoading ? (
+                      <span className="inline-block h-5 w-24 animate-pulse rounded-full bg-gray-200" />
+                    ) : clientTags && clientTags.length > 0 ? (
                       <>
                         {clientTags.slice(0, 3).map((tag) => (
                           <button
