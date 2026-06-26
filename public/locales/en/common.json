@@ -43,7 +43,8 @@
     "messagingIntegrations": "Messaging Integrations",
     "messagingDrafts": "Message Drafts",
     "campaignAnalytics": "Campaign Analytics",
-    "contactTypes": "Contact Types"
+    "contactTypes": "Contact Types",
+    "repaymentConfiguration": "Repayment Configuration"
   },
   "search": {
     "placeholder": "Search",
@@ -4805,6 +4806,56 @@
           "reason": "Reason",
           "changes": "Changes"
         }
+      }
+    },
+    "repaymentConfiguration": {
+      "title": "Repayment & Write-off Configuration",
+      "description": "Configure how payments are distributed across debt components and manage write-off rules.",
+      "lastUpdated": "Last updated",
+      "by": "by",
+      "readOnly": "You have view-only access to this configuration.",
+      "saveSuccess": "Configuration saved successfully",
+      "saveError": "Failed to save configuration",
+      "conflictError": "Configuration was changed by another user. Reloading latest version.",
+      "cancel": "Cancel",
+      "save": "Save Changes",
+      "saving": "Saving...",
+      "repaymentOrder": {
+        "title": "Repayment Order",
+        "description": "Drag to reorder how payments are distributed across debt components. Each component is fully consumed before moving to the next.",
+        "component_principal": "Principal",
+        "component_interest": "Interest",
+        "component_commission": "Commission",
+        "component_penalties": "Penalties",
+        "component_fines": "Fines"
+      },
+      "writeoffRules": {
+        "title": "Write-off Rules",
+        "description": "Enable or disable the creation of new write-off entries per component. Applies to manual operator write-offs only.",
+        "enabled": "Enabled",
+        "disabled": "Disabled",
+        "vendorNote": "Note: applies to manual write-offs only. Vendor import write-offs are unaffected."
+      },
+      "algorithm": {
+        "title": "Allocation Algorithm",
+        "legacy_proportional": "Legacy Proportional",
+        "strict_order": "Strict Order",
+        "legacyDescription": "Payments use the legacy proportional algorithm. Activate Strict Order to apply the configured sequence to future snapshots.",
+        "strictDescription": "Payments are distributed in the configured order above. Each component is fully consumed before the next.",
+        "activateButton": "Activate Strict Order",
+        "deactivateButton": "Revert to Legacy",
+        "activateConfirmTitle": "Activate Strict Order?",
+        "activateConfirmMessage": "This will change how future payments are allocated. All payments snapshotted after this change will use the order configured above. Previously snapshotted payments are unaffected. This action requires product and finance sign-off.",
+        "activateConfirmButton": "Activate",
+        "deactivateConfirmTitle": "Revert to Legacy Proportional?",
+        "deactivateConfirmMessage": "Future payment snapshots will use the legacy proportional algorithm. Already-snapshotted payments are unaffected.",
+        "deactivateConfirmButton": "Revert",
+        "preconditionError": "Strict Order cannot be activated: snapshotting must be globally enabled and all existing payments must be backfilled."
+      },
+      "history": {
+        "title": "Recent Changes",
+        "version": "Version",
+        "viewHistory": "View History"
       }
     },
     "auditLogs": {

@@ -158,6 +158,11 @@ const BulkWriteoffImportPage = lazy(() =>
     default: m.BulkWriteoffImportPage,
   }))
 )
+const RepaymentConfigurationPage = lazy(() =>
+  import('@/pages/RepaymentConfiguration/RepaymentConfigurationPage').then((m) => ({
+    default: m.RepaymentConfigurationPage,
+  }))
+)
 
 const withSuspense = (element: React.ReactElement) => (
   <Suspense fallback={<AppLoadingFallback />}>{element}</Suspense>
@@ -349,6 +354,14 @@ export const router = createBrowserRouter([
         element: (
           <PermissionRoute requiredPermission={PERMISSIONS.CONTACT_TYPES.VIEW}>
             {withSuspense(<ContactTypesPage />)}
+          </PermissionRoute>
+        ),
+      },
+      {
+        path: 'system-settings/repayment-configuration',
+        element: (
+          <PermissionRoute requiredPermission={PERMISSIONS.REPAYMENT_CONFIG.VIEW}>
+            {withSuspense(<RepaymentConfigurationPage />)}
           </PermissionRoute>
         ),
       },
