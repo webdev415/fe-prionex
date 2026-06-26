@@ -776,6 +776,7 @@
         "changeType": "← Change scorecard type",
         "unsaved": "Unsaved changes",
         "unsavedConfirm": "You have unsaved changes that will be lost. Close anyway?",
+        "discardConfirm": "Discard changes",
         "scoredCount": "{{scored}}/{{total}} scored",
         "completeIncomplete": "Score every criterion before completing.",
         "notScored": "not scored"
@@ -802,6 +803,7 @@
           "rating": "Rating",
           "comment": "Comment",
           "actions": "Actions",
+          "deleteTitle": "Delete draft",
           "delete": "Delete draft",
           "deleteConfirm": "Delete this draft assessment?",
           "deleted": "Assessment deleted",
@@ -5977,6 +5979,7 @@
         "changeType": "← Change scorecard type",
         "unsaved": "Unsaved changes",
         "unsavedConfirm": "You have unsaved changes that will be lost. Close anyway?",
+        "discardConfirm": "Discard changes",
         "scoredCount": "{{scored}}/{{total}} scored",
         "completeIncomplete": "Score every criterion before completing.",
         "notScored": "not scored"
@@ -6003,6 +6006,7 @@
           "rating": "Rating",
           "comment": "Comment",
           "actions": "Actions",
+          "deleteTitle": "Delete draft",
           "delete": "Delete draft",
           "deleteConfirm": "Delete this draft assessment?",
           "deleted": "Assessment deleted",

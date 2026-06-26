@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { useScorecards, useDeleteScorecard } from '@/features/quality'
+import { useConfirm } from '@/components/ui/useConfirm'
 import { useOperators } from '@/features/users/hooks'
 import { useAuthStore } from '@/stores/authStore'
 import { buildDialogueRows } from '../../lib/dialogueScorecardAdapter'
@@ -106,32 +107,34 @@ export function DialogueEvaluationTab() {
     return operators.find((o) => o.id === selectedScorecard.operator_id)?.full_name ?? undefined
   }, [selectedScorecard, operators])
 
+  const { confirm, confirmDialog } = useConfirm()
+
   // Guard against discarding unsaved edits when switching rows.
-  const handleSelectRow = (id: number) => {
-    if (
-      reviewDirty &&
-      id !== effectiveSelectedId &&
-      !window.confirm(
-        t(
+  const handleSelectRow = async (id: number) => {
+    if (reviewDirty && id !== effectiveSelectedId) {
+      const ok = await confirm({
+        title: t('pages.training.scorecard.unsaved', 'Unsaved changes'),
+        message: t(
           'pages.training.scorecard.unsavedConfirm',
           'You have unsaved changes that will be lost. Close anyway?'
-        )
-      )
-    ) {
-      return
+        ),
+        confirmLabel: t('pages.training.scorecard.discardConfirm', 'Discard changes'),
+        tone: 'danger',
+      })
+      if (!ok) return
     }
     setSelectedRowId(id)
   }
 
   const deleteMutation = useDeleteScorecard()
-  const handleDeleteRow = (id: number) => {
-    if (
-      !window.confirm(
-        t('pages.training.dialogue.list.deleteConfirm', 'Delete this draft assessment?')
-      )
-    ) {
-      return
-    }
+  const handleDeleteRow = async (id: number) => {
+    const ok = await confirm({
+      title: t('pages.training.dialogue.list.deleteTitle', 'Delete draft'),
+      message: t('pages.training.dialogue.list.deleteConfirm', 'Delete this draft assessment?'),
+      confirmLabel: t('pages.training.dialogue.list.delete', 'Delete draft'),
+      tone: 'danger',
+    })
+    if (!ok) return
     deleteMutation.mutate(id, {
       onSuccess: () => {
         toast.success(t('pages.training.dialogue.list.deleted', 'Assessment deleted'))
@@ -144,6 +147,7 @@ export function DialogueEvaluationTab() {
 
   return (
     <div className="flex flex-col gap-4">
+      {confirmDialog}
       <div className="flex flex-wrap items-center justify-between gap-3">
         {view === 'list' ? (
           <TrainingSegmentedStrip
