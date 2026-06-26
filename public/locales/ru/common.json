@@ -281,6 +281,7 @@
       "assistantThinking": "Ассистент думает...",
       "reasoningTitle": "Ход рассуждения",
       "reasoningStreaming": "Анализирую…",
+      "reasoningAnalyzing": "Анализирую запрос…",
       "inputHint": "Enter — отправить, Shift+Enter — новая строка",
       "quickPromptClientData": "Покажи детали клиента.",
       "quickPromptDebt": "Проанализируй долг для выбранного клиента и периода.",

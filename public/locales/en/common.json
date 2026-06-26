@@ -334,6 +334,7 @@
       "assistantThinking": "Assistant is thinking...",
       "reasoningTitle": "Reasoning",
       "reasoningStreaming": "Analyzing…",
+      "reasoningAnalyzing": "Analyzing the request…",
       "inputHint": "Press Enter to send, Shift+Enter for a new line",
       "quickPromptClientData": "Show client details.",
       "quickPromptDebt": "Analyze debt for selected client and period.",

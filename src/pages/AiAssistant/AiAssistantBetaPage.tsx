@@ -106,6 +106,13 @@ type ChatMessage = {
   toolSteps?: ToolStep[]
   /** True while reasoning/tool events are still streaming for this turn. */
   isStreamingReasoning?: boolean
+  /**
+   * Thinking-mode only: open the "Ход рассуждения" window immediately on submit
+   * with a spinner + placeholder, before the first reasoning delta. Real deltas
+   * then flow into the same window (no remount / layout jump). Cleared once the
+   * turn settles.
+   */
+  thinkingPlaceholder?: boolean
 }
 
 function joinDictation(prev: string, text: string): string {
@@ -203,6 +210,13 @@ const REASONING_STICKY_THRESHOLD = 32
 type ReasoningStreamProps = {
   text: string
   streaming: boolean
+  /**
+   * Shown (spinner + label) inside the very same scroll box while `text` is
+   * still empty — thinking mode opens this window on submit, before the first
+   * reasoning delta. Keeping one element means deltas flow in seamlessly (no
+   * remount, no layout jump).
+   */
+  placeholder?: string
 }
 
 /**
@@ -211,8 +225,11 @@ type ReasoningStreamProps = {
  * each new delta scrolls the box to the bottom (thoughts "run" past) — but only
  * while the user sits at the bottom, so a manual scroll-up to re-read is never
  * yanked back down.
+ *
+ * Before the first delta (thinking mode) the box shows a spinner + placeholder
+ * in place of the markdown; the box itself is the same node throughout the turn.
  */
-function ReasoningStream({ text, streaming }: ReasoningStreamProps) {
+function ReasoningStream({ text, streaming, placeholder }: ReasoningStreamProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
   // Sticky while the user is parked at the bottom; a scroll-up un-sticks it and
   // returning to the bottom re-sticks it.
@@ -234,6 +251,9 @@ function ReasoningStream({ text, streaming }: ReasoningStreamProps) {
     node.scrollTop = node.scrollHeight
   }, [text, streaming])
 
+  // Placeholder phase: window is open but no reasoning has streamed yet.
+  const showPlaceholder = text.length === 0 && Boolean(placeholder)
+
   return (
     <div
       ref={scrollRef}
@@ -241,10 +261,26 @@ function ReasoningStream({ text, streaming }: ReasoningStreamProps) {
       data-testid="assistant-reasoning-scroll"
       className={cn(
         MARKDOWN_BODY_CLASS,
-        'ai-chat-input-scrollbar max-h-[200px] overflow-y-auto overscroll-y-contain text-[12px] leading-relaxed text-gray-600'
+        'ai-chat-input-scrollbar max-h-[200px] overflow-y-auto overscroll-y-contain text-[12px] leading-relaxed text-gray-600',
+        // Hold a stable window height while only the placeholder shows, so the
+        // first deltas don't visibly grow the box from a single line.
+        showPlaceholder && 'min-h-[48px]'
       )}
     >
-      <ReactMarkdown remarkPlugins={[remarkGfm]}>{text}</ReactMarkdown>
+      {showPlaceholder ? (
+        <span
+          className="flex items-center gap-2 text-[12px] text-gray-500"
+          data-testid="reasoning-placeholder"
+        >
+          <span
+            className="h-3 w-3 shrink-0 animate-spin rounded-full border border-gray-400 border-t-transparent"
+            aria-hidden
+          />
+          {placeholder}
+        </span>
+      ) : (
+        <ReactMarkdown remarkPlugins={[remarkGfm]}>{text}</ReactMarkdown>
+      )}
     </div>
   )
 }
@@ -1104,10 +1140,17 @@ export function AiAssistantBetaPage() {
           ? t('pages.aiAssistant.assistantThinking')
           : t('pages.aiAssistant.assistantTyping'),
         isLoading: true,
-        loadingLabel: isThinking ? t('pages.aiAssistant.assistantThinking') : undefined,
+        // Thinking mode shows the "Ход рассуждения" window straight away (see
+        // thinkingPlaceholder), so the generic "думаю…" label stands down; fast
+        // mode keeps the light typing indicator.
+        loadingLabel: undefined,
         // Arms the live "Ход рассуждения" view: the panel auto-expands while the
         // turn streams reasoning/tool events, then collapses once it settles.
         isStreamingReasoning: true,
+        // Thinking mode: open the reasoning window immediately (spinner +
+        // placeholder) before any reasoning delta. Fast mode shows the light
+        // typing dots and only reveals the panel if reasoning actually streams.
+        thinkingPlaceholder: isThinking,
       })
       window.setTimeout(() => scrollToConversationBottom('smooth'), 0)
 
@@ -1211,6 +1254,9 @@ export function AiAssistantBetaPage() {
           isLoading: false,
           // Turn finished — collapse the reasoning panel (still re-expandable).
           isStreamingReasoning: false,
+          // Drop the streaming placeholder; if no reasoning ever arrived the
+          // window simply disappears (no empty box left behind).
+          thinkingPlaceholder: false,
           serverMessageId: result.message_id > 0 ? result.message_id : undefined,
         })
       } catch (error) {
@@ -1240,6 +1286,7 @@ export function AiAssistantBetaPage() {
           isLoading: false,
           isError: true,
           isStreamingReasoning: false,
+          thinkingPlaceholder: false,
           sources: undefined,
           followups: undefined,
           reasoning: undefined,
@@ -1614,13 +1661,24 @@ export function AiAssistantBetaPage() {
    * Collapsible "Ход рассуждения" panel (Gemini-style "Thinking"): a header with
    * a spinner while the turn streams, the tool-step list, and the accumulated
    * reasoning text. Default-collapsed once settled, re-expandable any time.
+   *
+   * In thinking mode the window opens on submit with a spinner + placeholder
+   * (thinkingPlaceholder) — before any reasoning delta — and the deltas then
+   * stream into the very same window.
    */
   const renderReasoningPanel = (item: ChatMessage) => {
     const hasReasoning = Boolean(item.reasoning && item.reasoning.trim())
     const hasSteps = Boolean(item.toolSteps && item.toolSteps.length > 0)
-    if (!hasReasoning && !hasSteps) return null
-
     const streaming = Boolean(item.isStreamingReasoning)
+    // Thinking mode pre-opens the window before the first delta; once anything
+    // real streams (reasoning/steps) the placeholder no longer drives it.
+    const placeholderActive = Boolean(item.thinkingPlaceholder) && streaming
+    if (!hasReasoning && !hasSteps && !placeholderActive) return null
+
+    // The reasoning scroll box is shown whenever there's real reasoning OR the
+    // placeholder window is open — keeping one element so deltas flow in
+    // seamlessly (no remount / layout jump).
+    const showReasoningBox = hasReasoning || placeholderActive
     const open = isReasoningOpen(item)
     const panelId = `reasoning-${item.id}`
 
@@ -1662,9 +1720,13 @@ export function AiAssistantBetaPage() {
                 {item.toolSteps!.map((step) => renderToolStep(step))}
               </ul>
             )}
-            {hasReasoning && (
+            {showReasoningBox && (
               <div className={cn(hasSteps && 'border-light-200/80 border-t pt-2')}>
-                <ReasoningStream text={item.reasoning!} streaming={streaming} />
+                <ReasoningStream
+                  text={item.reasoning ?? ''}
+                  streaming={streaming}
+                  placeholder={t('pages.aiAssistant.reasoningAnalyzing')}
+                />
               </div>
             )}
           </div>
@@ -1844,9 +1906,12 @@ export function AiAssistantBetaPage() {
                       {item.role === 'assistant' && !item.isError && renderReasoningPanel(item)}
                       {item.isLoading ? (
                         // Generic typing dots only until something concrete is
-                        // streaming — once reasoning/tool events arrive the panel
-                        // above is the live indicator, so the dots stand down.
-                        item.reasoning || (item.toolSteps && item.toolSteps.length > 0) ? null : (
+                        // streaming — once reasoning/tool events arrive (or the
+                        // thinking window is pre-opened) the panel above is the
+                        // live indicator, so the dots stand down.
+                        item.reasoning ||
+                        item.thinkingPlaceholder ||
+                        (item.toolSteps && item.toolSteps.length > 0) ? null : (
                           <span className="inline-flex items-center gap-1.5 py-1">
                             <span className="bg-secondary-500 h-1.5 w-1.5 animate-bounce rounded-full [animation-delay:-0.2s]" />
                             <span className="bg-secondary-500 h-1.5 w-1.5 animate-bounce rounded-full [animation-delay:-0.1s]" />

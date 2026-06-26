@@ -339,6 +339,7 @@
       "assistantThinking": "Асистент думає...",
       "reasoningTitle": "Хід міркування",
       "reasoningStreaming": "Аналізую…",
+      "reasoningAnalyzing": "Аналізую запит…",
       "inputHint": "Enter — надіслати, Shift+Enter — новий рядок",
       "quickPromptClientData": "Покажи деталі клієнта.",
       "quickPromptDebt": "Проаналізуй борг для вибраного клієнта і періоду.",
