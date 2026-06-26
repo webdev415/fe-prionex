@@ -767,7 +767,7 @@ function RRPaymentNotificationItem({
           </span>
         )}
       </div>
-      {n.body && <p className="w-full min-w-0 truncate text-xs text-black">{n.body}</p>}
+      {n.body && <p className="line-clamp-3 w-full min-w-0 text-xs text-black">{n.body}</p>}
       <div className="flex items-center gap-1 text-black">
         <Icons.Clock01 size={11} strokeWidth={1.5} />
         <span className="text-[11px]">
