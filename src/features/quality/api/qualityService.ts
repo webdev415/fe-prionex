@@ -100,6 +100,10 @@ export async function sendScorecard(scorecardId: number): Promise<Scorecard> {
   return response.data
 }
 
+export async function deleteScorecard(scorecardId: number): Promise<void> {
+  await api.delete(`/api/v1/quality/scorecards/${scorecardId}`)
+}
+
 export async function exportScorecards(filters: ScorecardListFilters): Promise<Blob> {
   const response = await api.get<Blob>('/api/v1/quality/scorecards/export', {
     params: buildScorecardListParams(filters),
@@ -298,6 +302,7 @@ export const qualityService = {
   createScorecard,
   updateScorecard,
   sendScorecard,
+  deleteScorecard,
   exportScorecards,
   listMarkersForCall,
   createMarker,

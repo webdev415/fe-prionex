@@ -765,6 +765,8 @@
         "perCallComment": "Overall comment",
         "saveDraft": "Save draft",
         "markCompleted": "Mark completed",
+        "clear": "Clear",
+        "edit": "Edit",
         "sendToOperator": "Send to operator",
         "status": {
           "draft": "Draft",
@@ -775,7 +777,16 @@
         "type": {
           "client": "Client Dialogue",
           "thirdParty": "Third Party Dialogue"
-        }
+        },
+        "chooseTemplate": "Choose a specific template",
+        "hideTemplatePicker": "Hide template list",
+        "changeType": "← Change scorecard type",
+        "unsaved": "Unsaved changes",
+        "unsavedConfirm": "You have unsaved changes that will be lost. Close anyway?",
+        "discardConfirm": "Discard changes",
+        "scoredCount": "{{scored}}/{{total}} scored",
+        "completeIncomplete": "Score every criterion before completing.",
+        "notScored": "not scored"
       },
       "dialogue": {
         "chips": {
@@ -783,6 +794,27 @@
           "low": "Low",
           "average": "Average",
           "high": "High"
+        },
+        "ratings": {
+          "notDone": "Not done",
+          "poor": "Poor",
+          "weak": "Weak",
+          "normal": "Normal",
+          "good": "Good",
+          "excellent": "Excellent"
+        },
+        "list": {
+          "dateTime": "Date / Time",
+          "employee": "Employee",
+          "category": "Category",
+          "rating": "Rating",
+          "comment": "Comment",
+          "actions": "Actions",
+          "deleteTitle": "Delete draft",
+          "delete": "Delete draft",
+          "deleteConfirm": "Delete this draft assessment?",
+          "deleted": "Assessment deleted",
+          "deleteFailed": "Could not delete assessment"
         },
         "view": {
           "list": "Scorecards",
@@ -793,7 +825,14 @@
           "title": "New assessment",
           "operator": "Operator",
           "select": "Select an operator…",
-          "continue": "Continue"
+          "continue": "Continue",
+          "pickOperatorHint": "Select an operator to see their recent calls.",
+          "searchOperator": "Search operator by name…",
+          "noMatches": "No operators match",
+          "change": "Change",
+          "add": "Add",
+          "added": "Assessment added to the list",
+          "noTemplate": "No scorecard template found for this project."
         },
         "avgByType": {
           "title": "Average score by dialogue type",
@@ -5934,6 +5973,8 @@
         "perCallComment": "Overall comment",
         "saveDraft": "Save draft",
         "markCompleted": "Mark completed",
+        "clear": "Clear",
+        "edit": "Edit",
         "sendToOperator": "Send to operator",
         "status": {
           "draft": "Draft",
@@ -5944,7 +5985,16 @@
         "type": {
           "client": "Client Dialogue",
           "thirdParty": "Third Party Dialogue"
-        }
+        },
+        "chooseTemplate": "Choose a specific template",
+        "hideTemplatePicker": "Hide template list",
+        "changeType": "← Change scorecard type",
+        "unsaved": "Unsaved changes",
+        "unsavedConfirm": "You have unsaved changes that will be lost. Close anyway?",
+        "discardConfirm": "Discard changes",
+        "scoredCount": "{{scored}}/{{total}} scored",
+        "completeIncomplete": "Score every criterion before completing.",
+        "notScored": "not scored"
       },
       "dialogue": {
         "chips": {
@@ -5952,6 +6002,27 @@
           "low": "Low",
           "average": "Average",
           "high": "High"
+        },
+        "ratings": {
+          "notDone": "Not done",
+          "poor": "Poor",
+          "weak": "Weak",
+          "normal": "Normal",
+          "good": "Good",
+          "excellent": "Excellent"
+        },
+        "list": {
+          "dateTime": "Date / Time",
+          "employee": "Employee",
+          "category": "Category",
+          "rating": "Rating",
+          "comment": "Comment",
+          "actions": "Actions",
+          "deleteTitle": "Delete draft",
+          "delete": "Delete draft",
+          "deleteConfirm": "Delete this draft assessment?",
+          "deleted": "Assessment deleted",
+          "deleteFailed": "Could not delete assessment"
         },
         "view": {
           "list": "Scorecards",
@@ -5962,7 +6033,14 @@
           "title": "New assessment",
           "operator": "Operator",
           "select": "Select an operator…",
-          "continue": "Continue"
+          "continue": "Continue",
+          "pickOperatorHint": "Select an operator to see their recent calls.",
+          "searchOperator": "Search operator by name…",
+          "noMatches": "No operators match",
+          "change": "Change",
+          "add": "Add",
+          "added": "Assessment added to the list",
+          "noTemplate": "No scorecard template found for this project."
         },
         "avgByType": {
           "title": "Average score by dialogue type",

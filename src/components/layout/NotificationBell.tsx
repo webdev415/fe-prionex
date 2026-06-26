@@ -166,12 +166,10 @@ export function NotificationBell() {
 
   // Per-tab filtered slices (one query, filtered locally — same pattern
   // the previous flat-list rendering used). Task tabs split on starred.
-  const tasksTabItems = notifications.filter(
-    (n) => n.type === NotificationType.TASK_OVERDUE && !n.starred
-  )
-  const starredTabItems = notifications.filter(
-    (n) => n.type === NotificationType.TASK_OVERDUE && n.starred
-  )
+  const isTaskType = (n: NotificationItem) =>
+    n.type === NotificationType.TASK_OVERDUE || n.type === NotificationType.CORRECTION_TASK_OVERDUE
+  const tasksTabItems = notifications.filter((n) => isTaskType(n) && !n.starred)
+  const starredTabItems = notifications.filter((n) => isTaskType(n) && n.starred)
   const paymentsTabItems = notifications.filter((n) => n.type === NotificationType.PAYMENT_PENDING)
   const callsTabItems = notifications.filter(
     (n) =>
@@ -535,25 +533,34 @@ function TaskNotificationItem({
   const { t } = useTranslation('common')
   const meta = n.metadata
   const taskId = meta.task_id as number | undefined
+  // Correction-task notifications (Dialogue Evaluation Assign task) are
+  // call-centric: no client_id/debt_id/priority — render the notification
+  // title and stay clickable so the unread state can be cleared.
+  const isCorrection = n.type === NotificationType.CORRECTION_TASK_OVERDUE
+  const hasClient = meta.client_name != null || meta.client_id != null
   const cardClassName =
     'flex min-w-0 flex-1 flex-col gap-1.5 px-4 py-3 text-left disabled:cursor-default'
   const body = (
     <>
       <div className="flex flex-wrap items-center gap-1.5 pr-5">
         {!n.read && <span className="h-2 w-2 shrink-0 rounded-full bg-blue-500" />}
-        <p className="line-clamp-1 text-xs font-semibold text-black">
-          {meta.client_name ?? t('notificationBell.clientNumber', { id: meta.client_id })}
-          {meta.client_id && (
-            <span className="ml-1 font-normal text-black">
-              ({t('notificationBell.idLabel', { id: meta.client_id })})
-            </span>
-          )}
-          {meta.debt_id && (
-            <span className="ml-1 font-normal text-black">
-              / {t('notificationBell.debtLabel', { id: meta.debt_id })}
-            </span>
-          )}
-        </p>
+        {hasClient ? (
+          <p className="line-clamp-1 text-xs font-semibold text-black">
+            {meta.client_name ?? t('notificationBell.clientNumber', { id: meta.client_id })}
+            {meta.client_id && (
+              <span className="ml-1 font-normal text-black">
+                ({t('notificationBell.idLabel', { id: meta.client_id })})
+              </span>
+            )}
+            {meta.debt_id && (
+              <span className="ml-1 font-normal text-black">
+                / {t('notificationBell.debtLabel', { id: meta.debt_id })}
+              </span>
+            )}
+          </p>
+        ) : (
+          <p className="line-clamp-1 text-xs font-semibold text-black">{n.title}</p>
+        )}
         {meta.priority && (
           <span
             className={cn(
@@ -613,6 +620,15 @@ function TaskNotificationItem({
         >
           {body}
         </Link>
+      ) : isCorrection ? (
+        // No client to navigate to — clickable only to clear the unread dot.
+        <button
+          type="button"
+          onClick={(e) => onNotificationClick(e, n.id, n.read)}
+          className={cardClassName}
+        >
+          {body}
+        </button>
       ) : (
         <div className={`${cardClassName} cursor-default opacity-60`}>{body}</div>
       )}

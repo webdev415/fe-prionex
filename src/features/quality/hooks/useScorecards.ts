@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   createScorecard,
   exportScorecards,
+  deleteScorecard,
   getScorecard,
   getScorecardAggregate,
   getScorecardHistoryForCall,
@@ -105,7 +106,12 @@ export function useUpdateScorecard() {
     }) => updateScorecard(scorecardId, payload),
     onSuccess: (updated) => {
       queryClient.setQueryData(scorecardKeys.detail(updated.id), updated)
-      queryClient.invalidateQueries({ queryKey: scorecardKeys.all })
+      // A draft score edit doesn't change any list/history/aggregation view
+      // (a draft shows no score), so skip the broad invalidation + refetch
+      // cascade. Only completed/sent transitions affect those views.
+      if (updated.status !== 'draft') {
+        queryClient.invalidateQueries({ queryKey: scorecardKeys.all })
+      }
     },
   })
 }
@@ -116,6 +122,16 @@ export function useSendScorecard() {
     mutationFn: (scorecardId: number) => sendScorecard(scorecardId),
     onSuccess: (sent) => {
       queryClient.setQueryData(scorecardKeys.detail(sent.id), sent)
+      queryClient.invalidateQueries({ queryKey: scorecardKeys.all })
+    },
+  })
+}
+
+export function useDeleteScorecard() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (scorecardId: number) => deleteScorecard(scorecardId),
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: scorecardKeys.all })
     },
   })

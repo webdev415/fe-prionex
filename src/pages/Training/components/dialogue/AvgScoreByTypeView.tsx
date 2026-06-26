@@ -77,36 +77,38 @@ export function AvgScoreByTypeView({ operatorIds }: { operatorIds?: number[] }) 
           {t('pages.training.dialogue.avgByType.empty', 'No scored calls in this period.')}
         </div>
       ) : (
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-[#EBECE8] text-left text-xs font-medium text-[#6B7280]">
-              <th className="py-2 pr-3">
-                {groupBy === 'team'
-                  ? t('pages.training.dialogue.avgByType.col.team', 'Team')
-                  : groupBy === 'all'
-                    ? t('pages.training.dialogue.avgByType.col.scope', 'Scope')
-                    : t('pages.training.dialogue.avgByType.col.operator', 'Operator')}
-              </th>
-              <th className="px-3 py-2 text-right">
-                {t('pages.training.dialogue.avgByType.col.client', 'Avg Client')}
-              </th>
-              <th className="px-3 py-2 text-right">
-                {t('pages.training.dialogue.avgByType.col.thirdParty', 'Avg Third Party')}
-              </th>
-              <th className="px-3 py-2 text-right">
-                {t('pages.training.dialogue.avgByType.col.calls', '# Calls')}
-              </th>
-              <th className="py-2 pl-3 text-right">
-                {t('pages.training.dialogue.avgByType.col.trend', 'Trend')}
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row) => (
-              <AggregateTableRow key={`${row.entity_id ?? 'all'}-${row.entity_name}`} row={row} />
-            ))}
-          </tbody>
-        </table>
+        <div className="-mx-2 overflow-x-auto">
+          <table className="w-full min-w-[520px] text-sm">
+            <thead>
+              <tr className="border-b border-[#EBECE8] text-left text-xs font-medium text-[#6B7280]">
+                <th className="py-2 pr-3">
+                  {groupBy === 'team'
+                    ? t('pages.training.dialogue.avgByType.col.team', 'Team')
+                    : groupBy === 'all'
+                      ? t('pages.training.dialogue.avgByType.col.scope', 'Scope')
+                      : t('pages.training.dialogue.avgByType.col.operator', 'Operator')}
+                </th>
+                <th className="px-3 py-2 text-right">
+                  {t('pages.training.dialogue.avgByType.col.client', 'Avg Client')}
+                </th>
+                <th className="px-3 py-2 text-right">
+                  {t('pages.training.dialogue.avgByType.col.thirdParty', 'Avg Third Party')}
+                </th>
+                <th className="px-3 py-2 text-right">
+                  {t('pages.training.dialogue.avgByType.col.calls', '# Calls')}
+                </th>
+                <th className="py-2 pl-3 text-right">
+                  {t('pages.training.dialogue.avgByType.col.trend', 'Trend')}
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row) => (
+                <AggregateTableRow key={`${row.entity_id ?? 'all'}-${row.entity_name}`} row={row} />
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   )

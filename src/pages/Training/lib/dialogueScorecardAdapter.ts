@@ -14,9 +14,11 @@
  * the components — see KAN-737-Plan §Discrepancy 3.
  */
 import type { OperatorUser } from '@/features/users/api/usersApi'
-import type { Scorecard } from '@/features/quality'
+import type { Scorecard, ScorecardStatus } from '@/features/quality'
 
-export type DialogueScorecardCategory = 'Low' | 'Average' | 'High'
+// 'Unscored' = a draft with no weighted_score yet (rendered as a `—` ring and
+// excluded from the Low/Average/High bands).
+export type DialogueScorecardCategory = 'Low' | 'Average' | 'High' | 'Unscored'
 
 export type DialogueCriterionRating = 'not_done' | 'weak' | 'normal' | 'excellent'
 
@@ -29,32 +31,24 @@ export interface DialogueScorecardCriterion {
   rating: DialogueCriterionRating
 }
 
-export interface DialogueTriggerFlags {
-  promise?: boolean
-  refusal?: boolean
-  missedCall?: boolean
-  willPass?: boolean
-  flagged?: boolean
-}
-
 export interface DialogueScorecardRow {
   id: number
   dateLabel: string
+  /** HH:MM of the scorecard's created_at, for the Date / Time column. */
+  timeLabel: string
   operatorName: string
   operatorInitials: string
   avatarColor: string
   category: DialogueScorecardCategory
+  /** Lifecycle status — only `draft` rows are deletable. */
+  status: ScorecardStatus
   /** True when the backend returned a numeric `weighted_score`. When false the
    *  views render a `—` ring instead of `score`. */
   hasScore: boolean
   score: number
   scoreOutOf: number
-  duration: string
-  trigger: string
-  triggerFlags?: DialogueTriggerFlags
-  scoreDelta?: number
-  exampleLabel?: string
-  audioDuration?: string
+  /** The scorecard's overall comment, for the Comment column. */
+  comment?: string
   criteria: DialogueScorecardCriterion[]
 }
 
@@ -89,12 +83,21 @@ function formatDayMonth(iso: string): string {
   return `${dd}.${mm}`
 }
 
+/** ISO timestamp → `HH:MM`. */
+function formatHourMinute(iso: string): string {
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return ''
+  const hh = String(d.getHours()).padStart(2, '0')
+  const mm = String(d.getMinutes()).padStart(2, '0')
+  return `${hh}:${mm}`
+}
+
 /**
  * Derive the Low / Average / High band from the 0-100 score. No backend
  * `category` field exists (Low < 60 · Average 60–79 · High ≥ 80 / no score).
  */
 export function deriveCategory(score100: number | null): DialogueScorecardCategory {
-  if (score100 == null) return 'High'
+  if (score100 == null) return 'Unscored'
   if (score100 < 60) return 'Low'
   if (score100 < 80) return 'Average'
   return 'High'
@@ -162,20 +165,16 @@ export function buildDialogueRow(
   return {
     id: scorecard.id,
     dateLabel: formatDayMonth(scorecard.created_at),
+    timeLabel: formatHourMinute(scorecard.created_at),
     operatorName,
     operatorInitials: initialsFor(operatorName),
     avatarColor: avatarColorFor(scorecard.operator_id),
     category: deriveCategory(score100),
+    status: scorecard.status,
     hasScore,
     score: score100 != null ? Math.round(score100) : 0,
     scoreOutOf: 100,
-    // No source on the scorecards endpoint — rendered as `—` / hidden.
-    duration: '—',
-    trigger: '—',
-    triggerFlags: undefined,
-    scoreDelta: undefined,
-    exampleLabel: undefined,
-    audioDuration: undefined,
+    comment: scorecard.overall_comment ?? undefined,
     criteria: buildCriteria(scorecard),
   }
 }

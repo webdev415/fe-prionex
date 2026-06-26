@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useScorecards } from '@/features/quality'
+import { toast } from 'sonner'
+import { useScorecards, useDeleteScorecard } from '@/features/quality'
+import { useConfirm } from '@/components/ui/useConfirm'
 import { useOperators } from '@/features/users/hooks'
 import { useAuthStore } from '@/stores/authStore'
 import { buildDialogueRows } from '../../lib/dialogueScorecardAdapter'
@@ -8,7 +10,7 @@ import { useScopedUserIds } from '../../lib/scope'
 import { TrainingSegmentedStrip } from '../chrome/TrainingSegmentedStrip'
 import { EmployeeMultiSelect } from './EmployeeMultiSelect'
 import { ScorecardListView } from './ScorecardListView'
-import { ScorecardDetailPanel } from './ScorecardDetailPanel'
+import { CallReviewPanel } from './CallReviewPanel'
 import { AvgScoreByTypeView } from './AvgScoreByTypeView'
 import { NewAssessmentButton } from './NewAssessmentButton'
 
@@ -23,6 +25,9 @@ export function DialogueEvaluationTab() {
   const [view, setView] = useState<DialogueView>('list')
   const [selectedRowId, setSelectedRowId] = useState<number | null>(null)
   const [selectedEmployeeIds, setSelectedEmployeeIds] = useState<number[]>([])
+  // Unsaved-changes guard: the review panel reports its dirty state so we can
+  // warn before switching rows (which would discard the edit).
+  const [reviewDirty, setReviewDirty] = useState(false)
 
   const activeProjectId = useAuthStore((s) => s.user?.active_project_id)
   const { data: operators = [] } = useOperators(activeProjectId ? Number(activeProjectId) : null)
@@ -92,13 +97,57 @@ export function DialogueEvaluationTab() {
       ? selectedRowId
       : (filteredRows[0]?.id ?? null)
 
-  const selectedRow = useMemo(
-    () => rows.find((r) => r.id === effectiveSelectedId),
-    [rows, effectiveSelectedId]
+  // The interactive review panel needs the raw scorecard (call_id, operator_id).
+  const selectedScorecard = useMemo(
+    () => data?.data?.find((s) => s.id === effectiveSelectedId),
+    [data?.data, effectiveSelectedId]
   )
+  const selectedOperatorName = useMemo(() => {
+    if (!selectedScorecard) return undefined
+    return operators.find((o) => o.id === selectedScorecard.operator_id)?.full_name ?? undefined
+  }, [selectedScorecard, operators])
+
+  const { confirm, confirmDialog } = useConfirm()
+
+  // Guard against discarding unsaved edits when switching rows.
+  const handleSelectRow = async (id: number) => {
+    if (reviewDirty && id !== effectiveSelectedId) {
+      const ok = await confirm({
+        title: t('pages.training.scorecard.unsaved', 'Unsaved changes'),
+        message: t(
+          'pages.training.scorecard.unsavedConfirm',
+          'You have unsaved changes that will be lost. Close anyway?'
+        ),
+        confirmLabel: t('pages.training.scorecard.discardConfirm', 'Discard changes'),
+        tone: 'danger',
+      })
+      if (!ok) return
+    }
+    setSelectedRowId(id)
+  }
+
+  const deleteMutation = useDeleteScorecard()
+  const handleDeleteRow = async (id: number) => {
+    const ok = await confirm({
+      title: t('pages.training.dialogue.list.deleteTitle', 'Delete draft'),
+      message: t('pages.training.dialogue.list.deleteConfirm', 'Delete this draft assessment?'),
+      confirmLabel: t('pages.training.dialogue.list.delete', 'Delete draft'),
+      tone: 'danger',
+    })
+    if (!ok) return
+    deleteMutation.mutate(id, {
+      onSuccess: () => {
+        toast.success(t('pages.training.dialogue.list.deleted', 'Assessment deleted'))
+        if (selectedRowId === id) setSelectedRowId(null)
+      },
+      onError: () =>
+        toast.error(t('pages.training.dialogue.list.deleteFailed', 'Could not delete assessment')),
+    })
+  }
 
   return (
     <div className="flex flex-col gap-4">
+      {confirmDialog}
       <div className="flex flex-wrap items-center justify-between gap-3">
         {view === 'list' ? (
           <TrainingSegmentedStrip
@@ -109,7 +158,7 @@ export function DialogueEvaluationTab() {
         ) : (
           <div />
         )}
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center justify-end gap-2">
           <div className="inline-flex rounded-md border border-[#EBECE8] p-0.5">
             {(['list', 'averages'] as const).map((v) => (
               <button
@@ -126,7 +175,7 @@ export function DialogueEvaluationTab() {
               </button>
             ))}
           </div>
-          <NewAssessmentButton operators={operators} />
+          <NewAssessmentButton />
           <EmployeeMultiSelect
             value={selectedEmployeeIds}
             onChange={setSelectedEmployeeIds}
@@ -138,7 +187,7 @@ export function DialogueEvaluationTab() {
       {view === 'averages' ? (
         <AvgScoreByTypeView operatorIds={filters.operator_id} />
       ) : (
-        <div className="grid grid-cols-1 gap-3 xl:grid-cols-[1fr_400px]">
+        <div className="grid grid-cols-1 gap-3 xl:grid-cols-[1fr_520px]">
           {scoped.isEmptyResolution ? (
             <div className="rounded-xl bg-white/50 p-12 text-center text-sm text-gray-500 shadow-sm">
               {t(
@@ -162,10 +211,15 @@ export function DialogueEvaluationTab() {
             <ScorecardListView
               rows={filteredRows}
               selectedId={effectiveSelectedId}
-              onSelect={setSelectedRowId}
+              onSelect={handleSelectRow}
+              onDelete={handleDeleteRow}
             />
           )}
-          <ScorecardDetailPanel row={selectedRow} />
+          <CallReviewPanel
+            scorecard={selectedScorecard}
+            operatorName={selectedOperatorName}
+            onDirtyChange={setReviewDirty}
+          />
         </div>
       )}
     </div>
