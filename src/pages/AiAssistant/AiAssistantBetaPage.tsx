@@ -1,8 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
-import ReactMarkdown from 'react-markdown'
-import remarkGfm from 'remark-gfm'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 import { useSidebarStore } from '@/stores/sidebarStore'
@@ -49,6 +47,7 @@ import {
 import { isAxiosError } from 'axios'
 import { ConversationSidebar } from './ConversationSidebar'
 import { getDockDesktopBoxClasses } from './dockGeometry'
+import { MarkdownMessage } from './MarkdownMessage'
 
 const QUICK_ACTION_KEYS = ['quickClientData', 'quickDebt', 'quickReport', 'quickEmployee'] as const
 type QuickActionKey = (typeof QUICK_ACTION_KEYS)[number]
@@ -157,8 +156,8 @@ const MARKDOWN_BODY_CLASS = [
   '[&_table]:my-2 [&_table]:block [&_table]:w-fit [&_table]:max-w-full [&_table]:border-collapse [&_table]:overflow-x-auto [&_table]:text-xs sm:[&_table]:text-sm',
   '[&_th]:bg-light-50 [&_th]:border [&_th]:border-gray-200 [&_th]:px-2 [&_th]:py-1 [&_th]:text-left [&_th]:font-medium',
   '[&_td]:border [&_td]:border-gray-200 [&_td]:px-2 [&_td]:py-1',
-  '[&_code]:bg-light-100 [&_code]:rounded [&_code]:px-1 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-[0.85em]',
-  '[&_pre]:bg-light-100 [&_pre]:my-2 [&_pre]:overflow-x-auto [&_pre]:rounded-lg [&_pre]:p-3 [&_pre_code]:bg-transparent [&_pre_code]:p-0',
+  // Code styling (inline + fenced blocks) is owned by MarkdownMessage's custom
+  // code renderer (syntax highlight + copy + horizontal scroll).
   '[&_a]:text-primary-600 [&_a]:underline',
   '[&_blockquote]:my-2 [&_blockquote]:border-l-2 [&_blockquote]:border-gray-200 [&_blockquote]:pl-3 [&_blockquote]:text-gray-600',
   '[&_hr]:my-3 [&_hr]:border-gray-200',
@@ -279,7 +278,7 @@ function ReasoningStream({ text, streaming, placeholder }: ReasoningStreamProps)
           {placeholder}
         </span>
       ) : (
-        <ReactMarkdown remarkPlugins={[remarkGfm]}>{text}</ReactMarkdown>
+        <MarkdownMessage>{text}</MarkdownMessage>
       )}
     </div>
   )
@@ -680,7 +679,10 @@ export function AiAssistantBetaPage() {
 
   useEffect(() => {
     const updateDockHeight = () => {
-      const next = Math.ceil((dockRef.current?.getBoundingClientRect().height ?? 0) + 12)
+      // Reserve the dock's height plus a safety gap so the last bubble / the
+      // streaming reasoning window always clears the composer (never slips
+      // under the fixed input dock).
+      const next = Math.ceil((dockRef.current?.getBoundingClientRect().height ?? 0) + 24)
       if (next <= 0) return
       setDockHeight((prev) => (Math.abs(prev - next) > 1 ? next : prev))
     }
@@ -1856,100 +1858,118 @@ export function AiAssistantBetaPage() {
         >
           <div className="mx-auto w-full max-w-5xl 2xl:max-w-6xl">
             <div className="mx-auto w-full max-w-4xl space-y-3 sm:space-y-4 2xl:max-w-5xl">
-              {chatMessages.map((item) => (
-                <div
-                  key={item.id}
-                  className={cn('flex', item.role === 'user' ? 'justify-end' : 'justify-start')}
-                >
+              {chatMessages.map((item) => {
+                // Reasoning fills the answer-bubble width track (symmetric with
+                // the answer), so a bubble carrying reasoning/tool-steps/the
+                // thinking placeholder stretches to its max width instead of
+                // shrinking to the short header (w-fit) — the reasoning box then
+                // uses the full available width rather than looking narrow.
+                const hasReasoningSurface =
+                  item.role === 'assistant' &&
+                  !item.isError &&
+                  (Boolean(item.reasoning && item.reasoning.trim()) ||
+                    Boolean(item.toolSteps && item.toolSteps.length > 0) ||
+                    Boolean(item.thinkingPlaceholder))
+                return (
                   <div
-                    className={cn(
-                      'flex w-fit max-w-[min(100%,22rem)] flex-col sm:max-w-[min(100%,85%)] md:max-w-2xl lg:max-w-3xl',
-                      item.role === 'user' ? 'items-end' : 'items-start'
-                    )}
+                    key={item.id}
+                    className={cn('flex', item.role === 'user' ? 'justify-end' : 'justify-start')}
                   >
                     <div
                       className={cn(
-                        'w-fit max-w-full rounded-2xl px-3.5 py-2.5 text-sm shadow-sm sm:px-4 sm:py-3',
-                        item.role === 'user'
-                          ? 'bg-secondary-800 text-white'
-                          : 'text-dark-500 border border-gray-100 bg-white',
-                        (item.role === 'user' || item.isLoading || item.isError) &&
-                          'whitespace-pre-wrap',
-                        item.isError && 'border-error-200 bg-error-50/60 text-error-700'
+                        'flex max-w-[min(100%,22rem)] flex-col sm:max-w-[min(100%,85%)] md:max-w-2xl lg:max-w-3xl',
+                        hasReasoningSurface ? 'w-full' : 'w-fit',
+                        item.role === 'user' ? 'items-end' : 'items-start'
                       )}
                     >
-                      {item.attachments && item.attachments.length > 0 && (
-                        <div className={cn('flex flex-col gap-2', item.content && 'mb-2')}>
-                          {item.attachments.map((attachment, index) =>
-                            attachment.type === 'image' ? (
-                              <img
-                                key={index}
-                                src={attachment.url}
-                                alt={t('pages.aiAssistant.attachedImageAlt')}
-                                className="max-h-48 max-w-full rounded-lg object-contain"
-                              />
-                            ) : (
-                              // eslint-disable-next-line jsx-a11y/media-has-caption -- voice note, no transcript available client-side
-                              <audio
-                                key={index}
-                                controls
-                                src={attachment.url}
-                                aria-label={t('pages.aiAssistant.voiceMessageBubbleLabel')}
-                                className="h-10 max-w-full"
-                              />
-                            )
-                          )}
-                        </div>
-                      )}
-                      {/* Live "Ход рассуждения": shown above the answer both
-                          while the turn streams and (collapsed) afterwards. */}
-                      {item.role === 'assistant' && !item.isError && renderReasoningPanel(item)}
-                      {item.isLoading ? (
-                        // Generic typing dots only until something concrete is
-                        // streaming — once reasoning/tool events arrive (or the
-                        // thinking window is pre-opened) the panel above is the
-                        // live indicator, so the dots stand down.
-                        item.reasoning ||
-                        item.thinkingPlaceholder ||
-                        (item.toolSteps && item.toolSteps.length > 0) ? null : (
-                          <span className="inline-flex items-center gap-1.5 py-1">
-                            <span className="bg-secondary-500 h-1.5 w-1.5 animate-bounce rounded-full [animation-delay:-0.2s]" />
-                            <span className="bg-secondary-500 h-1.5 w-1.5 animate-bounce rounded-full [animation-delay:-0.1s]" />
-                            <span className="bg-secondary-500 h-1.5 w-1.5 animate-bounce rounded-full" />
-                            {item.loadingLabel && (
-                              <span className="ml-1.5 text-xs font-light text-gray-500">
-                                {item.loadingLabel}
-                              </span>
+                      <div
+                        className={cn(
+                          'max-w-full rounded-2xl px-3.5 py-2.5 text-sm shadow-sm sm:px-4 sm:py-3',
+                          hasReasoningSurface ? 'w-full' : 'w-fit',
+                          item.role === 'user'
+                            ? 'bg-secondary-800 text-white'
+                            : 'text-dark-500 border border-gray-100 bg-white',
+                          (item.role === 'user' || item.isLoading || item.isError) &&
+                            'whitespace-pre-wrap',
+                          item.isError && 'border-error-200 bg-error-50/60 text-error-700'
+                        )}
+                      >
+                        {item.attachments && item.attachments.length > 0 && (
+                          <div className={cn('flex flex-col gap-2', item.content && 'mb-2')}>
+                            {item.attachments.map((attachment, index) =>
+                              attachment.type === 'image' ? (
+                                <img
+                                  key={index}
+                                  src={attachment.url}
+                                  alt={t('pages.aiAssistant.attachedImageAlt')}
+                                  className="max-h-48 max-w-full rounded-lg object-contain"
+                                />
+                              ) : (
+                                // eslint-disable-next-line jsx-a11y/media-has-caption -- voice note, no transcript available client-side
+                                <audio
+                                  key={index}
+                                  controls
+                                  src={attachment.url}
+                                  aria-label={t('pages.aiAssistant.voiceMessageBubbleLabel')}
+                                  className="h-10 max-w-full"
+                                />
+                              )
                             )}
-                          </span>
-                        )
-                      ) : item.role === 'assistant' && !item.isError ? (
-                        <div className={MARKDOWN_BODY_CLASS}>
-                          <ReactMarkdown remarkPlugins={[remarkGfm]}>{item.content}</ReactMarkdown>
-                        </div>
-                      ) : (
-                        item.content
-                      )}
+                          </div>
+                        )}
+                        {/* Live "Ход рассуждения": shown above the answer both
+                          while the turn streams and (collapsed) afterwards. */}
+                        {item.role === 'assistant' && !item.isError && renderReasoningPanel(item)}
+                        {item.isLoading ? (
+                          // Generic typing dots only until something concrete is
+                          // streaming — once reasoning/tool events arrive (or the
+                          // thinking window is pre-opened) the panel above is the
+                          // live indicator, so the dots stand down.
+                          item.reasoning ||
+                          item.thinkingPlaceholder ||
+                          (item.toolSteps && item.toolSteps.length > 0) ? null : (
+                            <span className="inline-flex items-center gap-1.5 py-1">
+                              <span className="bg-secondary-500 h-1.5 w-1.5 animate-bounce rounded-full [animation-delay:-0.2s]" />
+                              <span className="bg-secondary-500 h-1.5 w-1.5 animate-bounce rounded-full [animation-delay:-0.1s]" />
+                              <span className="bg-secondary-500 h-1.5 w-1.5 animate-bounce rounded-full" />
+                              {item.loadingLabel && (
+                                <span className="ml-1.5 text-xs font-light text-gray-500">
+                                  {item.loadingLabel}
+                                </span>
+                              )}
+                            </span>
+                          )
+                        ) : item.role === 'assistant' && !item.isError ? (
+                          <MarkdownMessage className={MARKDOWN_BODY_CLASS}>
+                            {item.content}
+                          </MarkdownMessage>
+                        ) : (
+                          item.content
+                        )}
+                        {item.role === 'assistant' &&
+                          !item.isError &&
+                          item.sources &&
+                          (item.sources.tables.length > 0 || item.sources.tools.length > 0) &&
+                          renderSources(item.sources)}
+                      </div>
                       {item.role === 'assistant' &&
+                        !item.isLoading &&
                         !item.isError &&
-                        item.sources &&
-                        (item.sources.tables.length > 0 || item.sources.tools.length > 0) &&
-                        renderSources(item.sources)}
+                        renderAssistantActions(item)}
+                      {item.role === 'assistant' &&
+                        !item.isLoading &&
+                        !item.isError &&
+                        item.followups &&
+                        item.followups.length > 0 &&
+                        renderFollowups(item.followups)}
                     </div>
-                    {item.role === 'assistant' &&
-                      !item.isLoading &&
-                      !item.isError &&
-                      renderAssistantActions(item)}
-                    {item.role === 'assistant' &&
-                      !item.isLoading &&
-                      !item.isError &&
-                      item.followups &&
-                      item.followups.length > 0 &&
-                      renderFollowups(item.followups)}
                   </div>
-                </div>
-              ))}
-              <div ref={chatBottomRef} />
+                )
+              })}
+              {/* Bottom anchor + a small spacer so the last bubble / streaming
+                  reasoning keeps a visible gap above the fixed composer even
+                  before the measured dock height settles. */}
+              <div ref={chatBottomRef} className="h-2" />
             </div>
           </div>
         </div>

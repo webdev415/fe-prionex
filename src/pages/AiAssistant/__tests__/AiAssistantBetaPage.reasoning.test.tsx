@@ -121,6 +121,44 @@ describe('AiAssistantBetaPage reasoning UX (Grok-style thinking window)', () => 
     await screen.findByText('Финал')
   })
 
+  it('renders the reasoning bubble at full answer width (not shrunk to the narrow header)', async () => {
+    let resolveTurn: (r: AssistantChatResponse) => void = () => {}
+    mockedSendChatMessage.mockImplementation(
+      (_payload, callbacks?: SendChatMessageCallbacks): Promise<AssistantChatResponse> => {
+        callbacks?.onReasoning?.('Рассуждаю широко.')
+        return new Promise<AssistantChatResponse>((resolve) => {
+          resolveTurn = resolve
+        })
+      }
+    )
+
+    renderPage()
+    send('думай широко')
+
+    const panel = await screen.findByTestId('assistant-reasoning')
+    // The reasoning panel itself spans the bubble…
+    expect(panel.className).toMatch(/w-full/)
+    // …the bubble that carries it stretches to full width (w-full) instead of
+    // shrinking to the short header (w-fit), so the box uses all the available
+    // width and is symmetric with the answer.
+    const bubble = panel.closest('.rounded-2xl') as HTMLElement
+    expect(bubble).not.toBeNull()
+    expect(bubble.className).toMatch(/w-full/)
+    // The width track (max-w) lives on the column wrapper that bounds the bubble.
+    const column = bubble.parentElement as HTMLElement
+    expect(column.className).toMatch(/lg:max-w-3xl/)
+    expect(column.className).toMatch(/w-full/)
+
+    resolveTurn({
+      conversation_id: 1,
+      message_id: 5,
+      response: 'Финал',
+      coverage_flag: null,
+      tool_calls: [],
+    })
+    await screen.findByText('Финал')
+  })
+
   it('auto-scrolls the reasoning box to the bottom on each new delta while streaming', async () => {
     let onReasoning: ((d: string) => void) | undefined
     let resolveTurn: (r: AssistantChatResponse) => void = () => {}

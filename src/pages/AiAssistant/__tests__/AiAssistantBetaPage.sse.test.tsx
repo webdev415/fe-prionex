@@ -84,6 +84,31 @@ describe('AiAssistantBetaPage SSE streaming render', () => {
     expect(await screen.findByText('У вас 378K клиентов')).toBeInTheDocument()
   })
 
+  it('renders a fenced ```sql block in the answer as a highlighted code plate', async () => {
+    mockedSendChatMessage.mockImplementation(
+      async (_payload, callbacks?: SendChatMessageCallbacks): Promise<AssistantChatResponse> => {
+        const answer = 'Вот запрос:\n\n```sql\nSELECT count(*) FROM clients;\n```'
+        callbacks?.onText?.(answer)
+        return {
+          conversation_id: 1,
+          message_id: 5,
+          response: answer,
+          coverage_flag: null,
+          tool_calls: [],
+        }
+      }
+    )
+
+    renderPage()
+    send('покажи sql')
+
+    const block = await screen.findByTestId('markdown-code-block')
+    expect(block).toHaveAttribute('data-language', 'sql')
+    // The SQL is tokenised into a <code> element by the highlighter.
+    expect(block.querySelector('code')).not.toBeNull()
+    expect(block).toHaveTextContent('SELECT count(*) FROM clients;')
+  })
+
   it('renders the sources block (tables + tools) streamed after the answer', async () => {
     mockedSendChatMessage.mockImplementation(
       async (_payload, callbacks?: SendChatMessageCallbacks): Promise<AssistantChatResponse> => {

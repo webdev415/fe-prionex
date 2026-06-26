@@ -24,6 +24,7 @@ import {
   InformationCircleIcon,
   CheckmarkCircle02Icon,
   Cancel01Icon,
+  Copy01Icon,
   Alert02Icon,
   Add01Icon,
   Edit01Icon,
@@ -244,6 +245,7 @@ export const Icons = {
   // Checkmark (using CheckmarkCircle02Icon)
   Checkmark: (props: Omit<IconProps, 'icon'>) => <Icon icon={CheckmarkCircle02Icon} {...props} />,
   Cancel01: (props: Omit<IconProps, 'icon'>) => <Icon icon={Cancel01Icon} {...props} />,
+  Copy: (props: Omit<IconProps, 'icon'>) => <Icon icon={Copy01Icon} {...props} />,
 
   // Auth
   Lock: (props: Omit<IconProps, 'icon'>) => <Icon icon={LockIcon} {...props} />,
@@ -390,6 +392,7 @@ export {
   InformationCircleIcon,
   CheckmarkCircle02Icon,
   Cancel01Icon,
+  Copy01Icon,
   Alert02Icon,
   Add01Icon,
   Edit01Icon,
