@@ -277,6 +277,8 @@ export function RepaymentConfigurationPage() {
         if (
           detail.includes('precondition') ||
           detail.includes('activation') ||
+          detail.includes('cannot activate') ||
+          detail.includes('readiness') ||
           detail.includes('backfill') ||
           detail.includes('snapshot') ||
           detail.includes('unsnapshotted')
@@ -342,12 +344,6 @@ export function RepaymentConfigurationPage() {
             <span className="font-medium">{data.updated_by_username}</span>
           </p>
         </div>
-
-        {historyData && historyData.total > 0 && (
-          <Button variant="outline" size="sm" onClick={() => {}}>
-            {t('pages.repaymentConfiguration.history.viewHistory', 'View History')}
-          </Button>
-        )}
       </div>
 
       {!canEdit && (
