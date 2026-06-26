@@ -406,7 +406,11 @@
       "attachmentNeedsText": "Add a text message to send the image.",
       "ttsListen": "Listen to the reply",
       "ttsStop": "Stop playback",
-      "ttsError": "Could not play the reply."
+      "ttsError": "Could not play the reply.",
+      "sourcesTitle": "Source of the numbers",
+      "followupsTitle": "Suggested follow-ups",
+      "sourcesTables": "Tables:",
+      "sourcesTools": "Tools:"
     },
     "training": {
       "title": "Action Analysis",

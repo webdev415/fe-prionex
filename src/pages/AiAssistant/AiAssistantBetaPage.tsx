@@ -19,10 +19,12 @@ import {
   useSendAssistantMessage,
   useSendFeedback,
 } from '@/features/aiAssistant/hooks'
-import type {
-  AssistantFeedbackComprehension,
-  AssistantFeedbackRating,
+import {
+  AssistantChatStreamError,
+  type AssistantFeedbackComprehension,
+  type AssistantFeedbackRating,
 } from '@/features/aiAssistant/api'
+import type { AssistantSources } from '@/features/aiAssistant/sse'
 import {
   blobToBase64,
   extractImageFiles,
@@ -78,6 +80,10 @@ type ChatMessage = {
   isError?: boolean
   serverMessageId?: number
   attachments?: LocalAttachment[]
+  /** "Source of the numbers" block (tables + tools) streamed after the answer. */
+  sources?: AssistantSources
+  /** Suggested follow-up questions rendered as clickable chips. */
+  followups?: string[]
 }
 
 function joinDictation(prev: string, text: string): string {
@@ -1024,17 +1030,46 @@ export function AiAssistantBetaPage() {
       window.setTimeout(() => scrollToConversationBottom('smooth'), 0)
 
       const requestToken = ++responseTokenRef.current
+      // Patch the in-flight assistant bubble, ignoring late events from a
+      // superseded request (new message / reset bumped the token).
+      const patchLoadingMessage = (patch: Partial<ChatMessage>) => {
+        if (requestToken !== responseTokenRef.current) return
+        setChatMessages((current) =>
+          current.map((item) => (item.id === loadingId ? { ...item, ...patch } : item))
+        )
+      }
+      // First text delta flips the typing dots into the streamed answer; later
+      // deltas append to it as the answer grows.
+      let streamedText = ''
+      let receivedDelta = false
       try {
         const result = await sendChat({
-          message: prompt,
-          conversation_id: assistantSettings.rememberConversationContext
-            ? (conversationId ?? undefined)
-            : undefined,
-          mode: assistantSettings.mode,
-          response_mode: assistantSettings.responseMode,
-          output_format: assistantSettings.outputFormat,
-          attachments:
-            attachmentList.length > 0 ? toChatAttachmentPayload(attachmentList) : undefined,
+          payload: {
+            message: prompt,
+            conversation_id: assistantSettings.rememberConversationContext
+              ? (conversationId ?? undefined)
+              : undefined,
+            mode: assistantSettings.mode,
+            response_mode: assistantSettings.responseMode,
+            output_format: assistantSettings.outputFormat,
+            attachments:
+              attachmentList.length > 0 ? toChatAttachmentPayload(attachmentList) : undefined,
+          },
+          callbacks: {
+            onText: (delta) => {
+              streamedText += delta
+              receivedDelta = true
+              patchLoadingMessage({ content: streamedText, isLoading: false })
+            },
+            onSources: (sources) => {
+              if (sources.tables.length > 0 || sources.tools.length > 0) {
+                patchLoadingMessage({ sources })
+              }
+            },
+            onFollowups: (questions) => {
+              if (questions.length > 0) patchLoadingMessage({ followups: questions })
+            },
+          },
         })
         if (requestToken !== responseTokenRef.current) {
           return
@@ -1043,27 +1078,30 @@ export function AiAssistantBetaPage() {
         if (userId != null && assistantSettings.rememberConversationContext) {
           setActiveConversation(userId, result.conversation_id)
         }
-        setChatMessages((current) =>
-          current.map((item) =>
-            item.id === loadingId
-              ? {
-                  ...item,
-                  content: result.response,
-                  isLoading: false,
-                  serverMessageId: result.message_id,
-                }
-              : item
-          )
-        )
+        // Reconcile with the final assembled answer (covers the no-delta case
+        // and any difference between streamed and final text). The SSE contract
+        // returns no per-message id (message_id === 0); the feedback row then
+        // stays hidden until the conversation is hydrated with real ids.
+        patchLoadingMessage({
+          content: receivedDelta ? streamedText : result.response,
+          isLoading: false,
+          serverMessageId: result.message_id > 0 ? result.message_id : undefined,
+        })
       } catch (error) {
         if (requestToken !== responseTokenRef.current) {
           return
         }
-        // 503 = the thinking model is temporarily unavailable. Fall back to the
-        // always-available fast mode and tell the user, rather than the generic
-        // error (ASSISTANT_MODES.md).
-        const isThinkingUnavailable =
-          isThinking && isAxiosError(error) && error.response?.status === 503
+        // 503 = the thinking model is temporarily unavailable. It can surface as
+        // an HTTP status or as an in-band `event: error` frame (now wrapped in
+        // AssistantChatStreamError) — handle both. Fall back to the
+        // always-available fast mode and tell the user (ASSISTANT_MODES.md).
+        const status =
+          error instanceof AssistantChatStreamError
+            ? error.status
+            : isAxiosError(error)
+              ? error.response?.status
+              : undefined
+        const isThinkingUnavailable = isThinking && status === 503
         const errorMessage = isThinkingUnavailable
           ? t('pages.aiAssistant.thinkingUnavailable')
           : t('pages.aiAssistant.apiError')
@@ -1071,18 +1109,13 @@ export function AiAssistantBetaPage() {
           setAssistantSettings((s) => ({ ...s, mode: 'fast' }))
         }
         toast.error(errorMessage)
-        setChatMessages((current) =>
-          current.map((item) =>
-            item.id === loadingId
-              ? {
-                  ...item,
-                  content: errorMessage,
-                  isLoading: false,
-                  isError: true,
-                }
-              : item
-          )
-        )
+        patchLoadingMessage({
+          content: errorMessage,
+          isLoading: false,
+          isError: true,
+          sources: undefined,
+          followups: undefined,
+        })
       } finally {
         if (requestToken === responseTokenRef.current) {
           setIsAssistantResponding(false)
@@ -1406,6 +1439,60 @@ export function AiAssistantBetaPage() {
     </div>
   )
 
+  /** One labelled row of source chips (tables or tools). */
+  const renderSourceRow = (label: string, items: string[]) =>
+    items.length > 0 ? (
+      <div className="flex flex-wrap items-baseline gap-x-1.5 gap-y-1">
+        <span className="text-[11px] font-medium text-gray-500">{label}</span>
+        {items.map((item, index) => (
+          <span
+            key={index}
+            className="text-dark-500 bg-light-100 inline-flex max-w-full items-center rounded px-1.5 py-0.5 font-mono text-[10px] leading-snug"
+          >
+            <span className="truncate">{item}</span>
+          </span>
+        ))}
+      </div>
+    ) : null
+
+  /** Compact "source of the numbers" block (tables + tools) under an answer. */
+  const renderSources = (sources: AssistantSources) => (
+    <div
+      data-testid="assistant-sources"
+      className="border-light-200 bg-light-50/60 mt-2 w-full max-w-full space-y-1 rounded-xl border px-3 py-2"
+    >
+      <div className="text-dark-500 flex items-center gap-1.5 text-[11px] font-semibold tracking-tight">
+        <Icons.Info size={13} strokeWidth={1.5} className="text-gray-500" />
+        {t('pages.aiAssistant.sourcesTitle')}
+      </div>
+      {renderSourceRow(t('pages.aiAssistant.sourcesTables'), sources.tables)}
+      {renderSourceRow(t('pages.aiAssistant.sourcesTools'), sources.tools)}
+    </div>
+  )
+
+  /** Clickable follow-up suggestion chips; a click sends the chip text. */
+  const renderFollowups = (followups: string[]) => (
+    <div
+      data-testid="assistant-followups"
+      className="mt-2 flex flex-wrap gap-1.5"
+      role="group"
+      aria-label={t('pages.aiAssistant.followupsTitle')}
+    >
+      {followups.map((followup, index) => (
+        <button
+          key={index}
+          type="button"
+          disabled={isAssistantResponding}
+          onClick={() => void submitPrompt(followup)}
+          className="border-primary-200 bg-primary-50/50 text-primary-700 hover:border-primary-300 hover:bg-primary-50 inline-flex max-w-full cursor-pointer items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] leading-snug font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          <Icons.Search size={12} strokeWidth={1.5} className="shrink-0" />
+          <span className="truncate">{followup}</span>
+        </button>
+      ))}
+    </div>
+  )
+
   const activeSidebarConversationId = conversationId ?? storedConversationId
   const isVoiceActive =
     voiceStatus === 'listening' || dictationStatus !== 'idle' || recorderStatus === 'recording'
@@ -1536,11 +1623,22 @@ export function AiAssistantBetaPage() {
                       ) : (
                         item.content
                       )}
+                      {item.role === 'assistant' &&
+                        !item.isError &&
+                        item.sources &&
+                        (item.sources.tables.length > 0 || item.sources.tools.length > 0) &&
+                        renderSources(item.sources)}
                     </div>
                     {item.role === 'assistant' &&
                       !item.isLoading &&
                       !item.isError &&
                       renderAssistantActions(item)}
+                    {item.role === 'assistant' &&
+                      !item.isLoading &&
+                      !item.isError &&
+                      item.followups &&
+                      item.followups.length > 0 &&
+                      renderFollowups(item.followups)}
                   </div>
                 </div>
               ))}

@@ -78,7 +78,11 @@ describe('AiAssistantBetaPage response mode + attachment trigger', () => {
     fireEvent.keyDown(getTextarea(), { key: 'Enter' })
 
     await waitFor(() => expect(mockedSendChatMessage).toHaveBeenCalledTimes(1))
-    expect(mockedSendChatMessage).toHaveBeenCalledWith(expect.objectContaining({ mode: 'fast' }))
+    // The payload is arg 0; arg 1 carries the SSE stream callbacks.
+    expect(mockedSendChatMessage).toHaveBeenCalledWith(
+      expect.objectContaining({ mode: 'fast' }),
+      expect.anything()
+    )
   })
 
   it('sends the selected thinking mode in the chat payload', async () => {
@@ -91,7 +95,8 @@ describe('AiAssistantBetaPage response mode + attachment trigger', () => {
 
     await waitFor(() => expect(mockedSendChatMessage).toHaveBeenCalledTimes(1))
     expect(mockedSendChatMessage).toHaveBeenCalledWith(
-      expect.objectContaining({ mode: 'thinking' })
+      expect.objectContaining({ mode: 'thinking' }),
+      expect.anything()
     )
   })
 
@@ -122,7 +127,8 @@ describe('AiAssistantBetaPage response mode + attachment trigger', () => {
     fireEvent.keyDown(getTextarea(), { key: 'Enter' })
     await waitFor(() => expect(mockedSendChatMessage).toHaveBeenCalledTimes(2))
     expect(mockedSendChatMessage).toHaveBeenLastCalledWith(
-      expect.objectContaining({ message: 'ещё раз', mode: 'fast' })
+      expect.objectContaining({ message: 'ещё раз', mode: 'fast' }),
+      expect.anything()
     )
   })
 
@@ -141,7 +147,8 @@ describe('AiAssistantBetaPage response mode + attachment trigger', () => {
       expect.objectContaining({
         message: 'что на скрине?',
         attachments: [{ type: 'image', mime: 'image/png', data_b64: btoa('png-bytes') }],
-      })
+      }),
+      expect.anything()
     )
   })
 })

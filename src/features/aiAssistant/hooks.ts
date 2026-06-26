@@ -10,6 +10,7 @@ import {
   type AssistantConversationsFilters,
   type AssistantConversationSummary,
   type AssistantFeedbackRequest,
+  type SendChatMessageCallbacks,
 } from './api'
 
 export const aiAssistantKeys = {
@@ -21,10 +22,22 @@ export const aiAssistantKeys = {
   conversation: (id: number) => [...aiAssistantKeys.all, 'conversation', id] as const,
 }
 
+/**
+ * Variables for {@link useSendAssistantMessage}: the request plus optional
+ * stream callbacks. Callbacks ride alongside the payload so the SSE deltas
+ * (text/sources/followups/error) reach the component while React Query still
+ * owns the request lifecycle and cache invalidation.
+ */
+export interface SendAssistantMessageVariables {
+  payload: AssistantChatRequest
+  callbacks?: SendChatMessageCallbacks
+}
+
 export function useSendAssistantMessage() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (payload: AssistantChatRequest) => sendChatMessage(payload),
+    mutationFn: ({ payload, callbacks }: SendAssistantMessageVariables) =>
+      sendChatMessage(payload, callbacks),
     onSuccess: () => {
       // A new message creates/updates a conversation — refresh conversation lists.
       queryClient.invalidateQueries({ queryKey: aiAssistantKeys.all })

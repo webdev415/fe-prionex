@@ -162,7 +162,8 @@ describe('AiAssistantBetaPage attachments', () => {
       expect.objectContaining({
         message: 'что на скрине?',
         attachments: [{ type: 'image', mime: 'image/png', data_b64: btoa('png-bytes') }],
-      })
+      }),
+      expect.anything()
     )
     // The composer chips are consumed; the bubble shows the thumbnail.
     expect(screen.queryByTestId('pending-attachments')).not.toBeInTheDocument()
@@ -206,7 +207,8 @@ describe('AiAssistantBetaPage attachments', () => {
       expect.objectContaining({
         message: '',
         attachments: [{ type: 'audio', mime: 'audio/webm', data_b64: btoa('opus-bytes') }],
-      })
+      }),
+      expect.anything()
     )
     // The feed shows an audio player bubble for the sent voice message.
     expect(document.querySelector('audio')).not.toBeNull()

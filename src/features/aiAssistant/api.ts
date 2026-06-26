@@ -1,5 +1,14 @@
-import { api } from '@/lib/api'
+import { api, API_BASE_URL, getAccessToken } from '@/lib/api'
 import type { ChatAttachmentPayload } from './attachments'
+import {
+  consumeSseStream,
+  type AssistantSources,
+  type AssistantToolEnd,
+  type AssistantToolStart,
+  type SseDonePayload,
+  type SseErrorPayload,
+  type SseSessionPayload,
+} from './sse'
 
 const BASE = '/api/v1/ai-assistant'
 
@@ -89,11 +98,149 @@ export interface AssistantFeedbackRequest {
   comment?: string
 }
 
+/**
+ * Streaming callbacks for {@link sendChatMessage}. Every field is optional so
+ * callers subscribe only to the events they render. `onText` deltas arrive in
+ * order and must be accumulated to form the full answer.
+ */
+export interface SendChatMessageCallbacks {
+  onSession?: (payload: SseSessionPayload) => void
+  onText?: (delta: string) => void
+  onSources?: (sources: AssistantSources) => void
+  /** Follow-up questions (the `questions[]` array of the followups frame). */
+  onFollowups?: (questions: string[]) => void
+  onToolStart?: (tool: AssistantToolStart) => void
+  onToolEnd?: (tool: AssistantToolEnd) => void
+  onError?: (error: SseErrorPayload) => void
+  onDone?: (payload: SseDonePayload) => void
+}
+
+/**
+ * Error thrown when the chat stream terminates with an in-band `event: error`
+ * frame. `status` mirrors an HTTP status when the gateway tunnels one (e.g. a
+ * 503 from the thinking model), so the UI can apply the same fallback it would
+ * for an HTTP 503.
+ */
+export class AssistantChatStreamError extends Error {
+  readonly status?: number
+  readonly code?: string
+
+  constructor(payload: SseErrorPayload) {
+    super(payload.message ?? 'Assistant stream error')
+    this.name = 'AssistantChatStreamError'
+    this.status = payload.status
+    this.code = payload.code
+  }
+}
+
+/**
+ * Send a chat message and stream the SSE answer.
+ *
+ * Transport is `fetch` + `ReadableStream` (native `EventSource` cannot POST a
+ * JSON body with an Authorization header). The request body still carries
+ * `message` / `mode` / `attachments` / `conversation_id` as before. Text deltas
+ * are pushed through `callbacks.onText`; the returned promise resolves with the
+ * assembled {@link AssistantChatResponse} once the `done` frame arrives, so
+ * existing non-streaming call sites keep working unchanged.
+ *
+ * @throws {AssistantChatStreamError} when the stream ends with `event: error`.
+ */
 export async function sendChatMessage(
-  payload: AssistantChatRequest
+  payload: AssistantChatRequest,
+  callbacks: SendChatMessageCallbacks = {}
 ): Promise<AssistantChatResponse> {
-  const response = await api.post<AssistantChatResponse>(`${BASE}/chat`, payload)
-  return response.data
+  const token = getAccessToken()
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    Accept: 'text/event-stream',
+  }
+  if (token) headers.Authorization = `Bearer ${token}`
+
+  const response = await fetch(`${API_BASE_URL}${BASE}/chat`, {
+    method: 'POST',
+    headers,
+    credentials: 'include',
+    body: JSON.stringify(payload),
+  })
+
+  // HTTP-level failure (e.g. 503 before the stream starts, 422 image-only).
+  if (!response.ok) {
+    let message: string | undefined
+    try {
+      const body = await response.json()
+      message = body?.detail ?? body?.message
+    } catch {
+      /* non-JSON error body — fall back to status text */
+    }
+    throw new AssistantChatStreamError({ status: response.status, message })
+  }
+
+  if (!response.body) {
+    throw new AssistantChatStreamError({ message: 'Empty assistant response stream' })
+  }
+
+  let accumulatedText = ''
+  // The contract identifies the dialog by `session_id`; it is the same value
+  // the request sends as `conversation_id`, so it maps onto the existing
+  // `AssistantChatResponse.conversation_id` field (ASSISTANT_MODES.md §4).
+  let conversationId = payload.conversation_id ?? 0
+  const toolCalls: AssistantToolCall[] = []
+  let streamError: SseErrorPayload | null = null
+
+  const applySessionId = (value: number | string | undefined) => {
+    if (typeof value === 'number') {
+      conversationId = value
+    } else if (typeof value === 'string' && value.trim() && Number.isFinite(Number(value))) {
+      conversationId = Number(value)
+    }
+  }
+
+  const outcome = await consumeSseStream(response.body, {
+    onSession: (session) => {
+      applySessionId(session.session_id)
+      callbacks.onSession?.(session)
+    },
+    onText: (delta) => {
+      accumulatedText += delta
+      callbacks.onText?.(delta)
+    },
+    onSources: (sources) => callbacks.onSources?.(sources),
+    onFollowups: (questions) => callbacks.onFollowups?.(questions),
+    onToolStart: (tool) => {
+      // Pre-record the call as pending; a matching tool_end flips `success`.
+      toolCalls.push({ tool_name: tool.name, success: false })
+      callbacks.onToolStart?.(tool)
+    },
+    onToolEnd: (tool) => {
+      // Settle the most recent still-pending call (no name in tool_end).
+      const pending = [...toolCalls].reverse().find((call) => !call.success)
+      if (pending) pending.success = tool.ok
+      callbacks.onToolEnd?.(tool)
+    },
+    onError: (error) => {
+      streamError = error
+      callbacks.onError?.(error)
+    },
+    onDone: (done) => {
+      applySessionId(done.session_id)
+      callbacks.onDone?.(done)
+    },
+  })
+
+  if (outcome === 'error' && streamError) {
+    throw new AssistantChatStreamError(streamError)
+  }
+
+  return {
+    conversation_id: conversationId,
+    // The streamed `done` frame carries no per-message id (ASSISTANT_MODES.md
+    // §4 — only session_id + usage). 0 signals "unknown"; the real id is
+    // learned on conversation hydration, which is what gates the feedback UI.
+    message_id: 0,
+    response: accumulatedText,
+    coverage_flag: null,
+    tool_calls: toolCalls,
+  }
 }
 
 export async function getConversations(
