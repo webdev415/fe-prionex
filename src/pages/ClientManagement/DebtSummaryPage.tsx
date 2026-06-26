@@ -8,6 +8,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   convertUTCToUserTimezone,
+  formatClientFullName,
   formatIsoDate,
   formatMoneyUAHTwoDecimals,
 } from '@/lib/formatters'
@@ -246,9 +247,7 @@ export function DebtSummaryPage() {
   const client = useMemo(() => {
     if (!apiClient) return null
 
-    const fullName = [apiClient.first_name, apiClient.middle_name, apiClient.last_name]
-      .filter(Boolean)
-      .join(' ')
+    const fullName = formatClientFullName(apiClient)
 
     return {
       id: apiClient.id,
@@ -1567,9 +1566,7 @@ export function DebtSummaryPage() {
             // Prepare client data if available
             const clientData = apiClient
               ? {
-                  fullName: [apiClient.first_name, apiClient.middle_name, apiClient.last_name]
-                    .filter(Boolean)
-                    .join(' '),
+                  fullName: formatClientFullName(apiClient),
                   phone: apiClient.phone_primary || 'N/A',
                   contract:
                     (apiClient.debts &&

@@ -11,7 +11,12 @@ import { toast } from 'sonner'
 import { Icons } from '@/lib/icons'
 import { DocumentsAccordion } from './components/DocumentsAccordion'
 import { DocumentUploadModal } from './components/DocumentUploadModal'
-import { formatDate, formatDateTime, formatMoneyUAHTwoDecimals } from '@/lib/formatters'
+import {
+  formatClientFullName,
+  formatDate,
+  formatDateTime,
+  formatMoneyUAHTwoDecimals,
+} from '@/lib/formatters'
 import { Button } from '@/components/ui/Button'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { TableSkeleton } from '@/components/ui/TableSkeleton'
@@ -517,6 +522,16 @@ export function ClientDetailPage() {
     )
   }
 
+  const handleCopyName = async () => {
+    if (!client?.fullName) return
+    try {
+      await navigator.clipboard.writeText(client.fullName)
+      toast.success(t('pages.clients.detail.nameCopied', 'Name copied'), { duration: 2500 })
+    } catch {
+      toast.error(t('pages.clients.detail.copyFailed', 'Copy failed'), { duration: 2500 })
+    }
+  }
+
   // Record Payment (Payments tab "+") — shares the exact same flow as the
   // Debt Summary "Record Payment" button via useRecordPaymentFlow.
   const [isRecordPaymentModalOpen, setIsRecordPaymentModalOpen] = useState(false)
@@ -573,7 +588,7 @@ export function ClientDetailPage() {
     return {
       ...profile,
       // Header fields
-      fullName: profile.full_name,
+      fullName: formatClientFullName(profile),
       score: profile.priority_score ?? 0,
       priority: profile.priority_level
         ? profile.priority_level.charAt(0).toUpperCase() + profile.priority_level.slice(1)
@@ -936,10 +951,7 @@ export function ClientDetailPage() {
       >()
 
       linkedClients.forEach((linkedClient) => {
-        const fullName = [linkedClient.first_name, linkedClient.middle_name, linkedClient.last_name]
-          .filter(Boolean)
-          .join(' ')
-          .trim()
+        const fullName = formatClientFullName(linkedClient)
 
         dedupedByClientId.set(linkedClient.id, {
           id: linkedClient.id,
@@ -2118,9 +2130,21 @@ export function ClientDetailPage() {
               >
                 <Icons.ArrowLeft02 size={24} className="text-secondary-800" strokeWidth={1.5} />
               </button>
-              <h1 className="text-dark-500 truncate text-xl leading-[150%] font-light md:text-2xl">
-                {client.fullName}
-              </h1>
+              <div className="flex min-w-0 items-center gap-2">
+                <h1 className="text-dark-500 truncate text-xl leading-[150%] font-light md:text-2xl">
+                  {client.fullName}
+                </h1>
+                <button
+                  type="button"
+                  onClick={handleCopyName}
+                  disabled={!client.fullName}
+                  aria-label={t('pages.clients.detail.copyName', 'Copy name')}
+                  title={t('pages.clients.detail.copyName', 'Copy name')}
+                  className="text-dark-500 hover:text-secondary-800 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded transition-colors disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <Icons.Copy size={18} strokeWidth={1.5} />
+                </button>
+              </div>
             </div>
             <div className="flex flex-row items-center gap-2">
               <span className="text-dark-500 flex items-center rounded-[16px] bg-white/10 px-3 py-0 text-sm">

@@ -6,6 +6,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { useAuthStore } from '@/stores/authStore'
+import { formatClientFullName } from '@/lib/formatters'
 import {
   recordPayment,
   verifyPayment,
@@ -303,9 +304,7 @@ export function useGenerateReceipt() {
             }
 
             // Update finalClientData with fetched data (merge with provided clientData if any)
-            const fullName = [client.first_name, client.middle_name, client.last_name]
-              .filter(Boolean)
-              .join(' ')
+            const fullName = formatClientFullName(client)
 
             // Get contract number from debt (preferred) or use provided one if it's not 'N/A'
             const contractFromDebt =
@@ -325,9 +324,7 @@ export function useGenerateReceipt() {
             }
           } else if (!finalClientData) {
             // If no debts but no clientData provided, still create basic clientData
-            const fullName = [client.first_name, client.middle_name, client.last_name]
-              .filter(Boolean)
-              .join(' ')
+            const fullName = formatClientFullName(client)
 
             finalClientData = {
               fullName: fullName || `Client #${client.id}`,

@@ -427,3 +427,15 @@ export function convertUTCToUserTimezone(utcDateTimeStr: string, timezone?: stri
     return '—'
   }
 }
+
+/**
+ * Compose a client's display name in Ukrainian convention: Last First Middle.
+ * Middle name is skipped if empty/null — no trailing space or extra separator.
+ */
+export function formatClientFullName(client: {
+  first_name?: string | null
+  middle_name?: string | null
+  last_name?: string | null
+}): string {
+  return [client.last_name, client.first_name, client.middle_name].filter(Boolean).join(' ')
+}

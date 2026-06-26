@@ -12,6 +12,7 @@ import { SearchableSelect } from '@/components/ui/SearchableSelect'
 import { RadioGroup, RadioItem } from '@/components/ui/Radio'
 import { Label } from '@/components/ui/Label'
 import { Icons } from '@/lib/icons'
+import { formatClientFullName } from '@/lib/formatters'
 import { useClient } from '@/features/clients/hooks/useClients'
 import { usePriorityThresholds } from '@/features/clients/hooks/useConfig'
 import { mapScoreToPriority } from '@/features/clients/api/configApi'
@@ -108,9 +109,7 @@ export function AssignClientModal({ open, clientId, onClose, onAssign }: AssignC
     return null
   }
 
-  const fullName = client
-    ? [client.first_name, client.middle_name, client.last_name].filter(Boolean).join(' ')
-    : ''
+  const fullName = client ? formatClientFullName(client) : ''
   const email = client?.email || '-'
   const phone = client?.phone_primary || '-'
   const priority =
