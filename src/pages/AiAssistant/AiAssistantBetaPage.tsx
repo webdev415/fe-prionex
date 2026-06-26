@@ -197,6 +197,58 @@ function resolveSpeechLang(language?: string): string {
   return 'en-US'
 }
 
+/** Distance from the bottom (px) under which the reasoning stream is "stuck". */
+const REASONING_STICKY_THRESHOLD = 32
+
+type ReasoningStreamProps = {
+  text: string
+  streaming: boolean
+}
+
+/**
+ * Grok-style thinking window: the streamed reasoning lives in its own
+ * fixed-height scroll box so it never stretches the chat. While the turn streams
+ * each new delta scrolls the box to the bottom (thoughts "run" past) — but only
+ * while the user sits at the bottom, so a manual scroll-up to re-read is never
+ * yanked back down.
+ */
+function ReasoningStream({ text, streaming }: ReasoningStreamProps) {
+  const scrollRef = useRef<HTMLDivElement>(null)
+  // Sticky while the user is parked at the bottom; a scroll-up un-sticks it and
+  // returning to the bottom re-sticks it.
+  const stickToBottomRef = useRef(true)
+
+  const handleScroll = useCallback(() => {
+    const node = scrollRef.current
+    if (!node) return
+    const distanceFromBottom = node.scrollHeight - node.scrollTop - node.clientHeight
+    stickToBottomRef.current = distanceFromBottom <= REASONING_STICKY_THRESHOLD
+  }, [])
+
+  // Run the thoughts: each new reasoning delta pins the box to the latest line
+  // while streaming, unless the user scrolled up to read.
+  useEffect(() => {
+    if (!streaming) return
+    const node = scrollRef.current
+    if (!node || !stickToBottomRef.current) return
+    node.scrollTop = node.scrollHeight
+  }, [text, streaming])
+
+  return (
+    <div
+      ref={scrollRef}
+      onScroll={handleScroll}
+      data-testid="assistant-reasoning-scroll"
+      className={cn(
+        MARKDOWN_BODY_CLASS,
+        'ai-chat-input-scrollbar max-h-[200px] overflow-y-auto overscroll-y-contain text-[12px] leading-relaxed text-gray-600'
+      )}
+    >
+      <ReactMarkdown remarkPlugins={[remarkGfm]}>{text}</ReactMarkdown>
+    </div>
+  )
+}
+
 function AssistFilterDropdown({
   ariaLabel,
   value,
@@ -1611,14 +1663,8 @@ export function AiAssistantBetaPage() {
               </ul>
             )}
             {hasReasoning && (
-              <div
-                className={cn(
-                  MARKDOWN_BODY_CLASS,
-                  'border-light-200/80 border-t pt-2 text-[12px] leading-relaxed text-gray-600',
-                  hasSteps ? '' : 'border-t-0 pt-0'
-                )}
-              >
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>{item.reasoning!}</ReactMarkdown>
+              <div className={cn(hasSteps && 'border-light-200/80 border-t pt-2')}>
+                <ReasoningStream text={item.reasoning!} streaming={streaming} />
               </div>
             )}
           </div>
