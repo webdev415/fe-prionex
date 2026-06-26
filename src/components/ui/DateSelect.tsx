@@ -97,6 +97,12 @@ export interface DateSelectProps {
    */
   defaultTime?: string
   /**
+   * Skip the ``defaultTime`` auto-fill when the picked day is today
+   * (browser-local). For forms where today + the default would land in
+   * the past. Omit to keep the default firing on today too.
+   */
+  defaultTimeSkipsToday?: boolean
+  /**
    * Called whenever the typed value's validity changes. ``true`` means the
    * field currently holds incomplete/invalid text that should block saving.
    * Only fires in manual-input mode.
@@ -153,6 +159,7 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
       filterTime,
       allowManualInput = false,
       defaultTime,
+      defaultTimeSkipsToday,
       onValidityChange,
       invalidText,
     },
@@ -225,6 +232,7 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
             defaultTime,
             hasExistingValue: !!parseDate(value),
             fromDayClick,
+            skipIfToday: defaultTimeSkipsToday,
           })
         : null
       if (allowManualInput) {
