@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   createScorecard,
   exportScorecards,
+  deleteScorecard,
   getScorecard,
   getScorecardAggregate,
   getScorecardHistoryForCall,
@@ -121,6 +122,16 @@ export function useSendScorecard() {
     mutationFn: (scorecardId: number) => sendScorecard(scorecardId),
     onSuccess: (sent) => {
       queryClient.setQueryData(scorecardKeys.detail(sent.id), sent)
+      queryClient.invalidateQueries({ queryKey: scorecardKeys.all })
+    },
+  })
+}
+
+export function useDeleteScorecard() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (scorecardId: number) => deleteScorecard(scorecardId),
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: scorecardKeys.all })
     },
   })

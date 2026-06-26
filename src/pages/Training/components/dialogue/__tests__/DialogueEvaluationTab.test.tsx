@@ -13,7 +13,10 @@ import { useOperators } from '@/features/users/hooks'
 import { useScopedUserIds } from '../../../lib/scope'
 import { DialogueEvaluationTab } from '../DialogueEvaluationTab'
 
-vi.mock('@/features/quality', () => ({ useScorecards: vi.fn() }))
+vi.mock('@/features/quality', () => ({
+  useScorecards: vi.fn(),
+  useDeleteScorecard: () => ({ mutate: vi.fn() }),
+}))
 vi.mock('@/features/users/hooks', () => ({ useOperators: vi.fn() }))
 vi.mock('../../../lib/scope', () => ({ useScopedUserIds: vi.fn() }))
 // The interactive review panel pulls in the player + query-backed scorecard

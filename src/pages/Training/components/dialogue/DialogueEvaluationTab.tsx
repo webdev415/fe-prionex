@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useScorecards } from '@/features/quality'
+import { toast } from 'sonner'
+import { useScorecards, useDeleteScorecard } from '@/features/quality'
 import { useOperators } from '@/features/users/hooks'
 import { useAuthStore } from '@/stores/authStore'
 import { buildDialogueRows } from '../../lib/dialogueScorecardAdapter'
@@ -122,6 +123,25 @@ export function DialogueEvaluationTab() {
     setSelectedRowId(id)
   }
 
+  const deleteMutation = useDeleteScorecard()
+  const handleDeleteRow = (id: number) => {
+    if (
+      !window.confirm(
+        t('pages.training.dialogue.list.deleteConfirm', 'Delete this draft assessment?')
+      )
+    ) {
+      return
+    }
+    deleteMutation.mutate(id, {
+      onSuccess: () => {
+        toast.success(t('pages.training.dialogue.list.deleted', 'Assessment deleted'))
+        if (selectedRowId === id) setSelectedRowId(null)
+      },
+      onError: () =>
+        toast.error(t('pages.training.dialogue.list.deleteFailed', 'Could not delete assessment')),
+    })
+  }
+
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -188,6 +208,7 @@ export function DialogueEvaluationTab() {
               rows={filteredRows}
               selectedId={effectiveSelectedId}
               onSelect={handleSelectRow}
+              onDelete={handleDeleteRow}
             />
           )}
           <CallReviewPanel

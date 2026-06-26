@@ -10,6 +10,7 @@ export {
   createScorecard,
   updateScorecard,
   sendScorecard,
+  deleteScorecard,
   exportScorecards,
   listMarkersForCall,
   createMarker,
@@ -40,6 +41,7 @@ export {
   useCreateScorecard,
   useUpdateScorecard,
   useSendScorecard,
+  useDeleteScorecard,
   useExportScorecards,
   scorecardKeys,
 } from './hooks/useScorecards'

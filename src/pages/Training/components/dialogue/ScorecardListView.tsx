@@ -13,6 +13,8 @@ export interface ScorecardListViewProps {
   rows: DialogueScorecardRow[]
   selectedId: number | null
   onSelect: (id: number) => void
+  /** Delete a draft scorecard (only drafts are deletable). */
+  onDelete?: (id: number) => void
 }
 
 const CATEGORY_TONE: Record<DialogueScorecardRow['category'], string> = {
@@ -76,7 +78,12 @@ function ScoreRing({ score, outOf, hasScore }: ScoreRingProps) {
 }
 
 /** Figma left pane — table with #F7F7F7 header, lime selected tint, score + action icons. */
-export function ScorecardListView({ rows, selectedId, onSelect }: ScorecardListViewProps) {
+export function ScorecardListView({
+  rows,
+  selectedId,
+  onSelect,
+  onDelete,
+}: ScorecardListViewProps) {
   const { t } = useTranslation('common')
 
   return (
@@ -155,12 +162,22 @@ export function ScorecardListView({ rows, selectedId, onSelect }: ScorecardListV
               </td>
               <td className={`${ANALYTICS_TABLE_TD} text-right`}>
                 <div className="flex justify-end gap-1">
-                  <span className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-[#204E4D]/20 text-[#204E4D]">
-                    <Icons.Mic02 size={12} />
-                  </span>
-                  <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-[#F0FDF4] text-[#204E4D]">
-                    <Icons.View size={12} />
-                  </span>
+                  {row.status === 'draft' && onDelete ? (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onDelete(row.id)
+                      }}
+                      aria-label={t('pages.training.dialogue.list.delete', 'Delete draft')}
+                      title={t('pages.training.dialogue.list.delete', 'Delete draft')}
+                      className="inline-flex h-7 w-7 items-center justify-center rounded-full text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600"
+                    >
+                      <Icons.Delete size={14} />
+                    </button>
+                  ) : (
+                    <span className="text-xs text-gray-300">—</span>
+                  )}
                 </div>
               </td>
             </tr>

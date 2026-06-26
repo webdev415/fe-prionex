@@ -801,7 +801,11 @@
           "category": "Category",
           "rating": "Rating",
           "comment": "Comment",
-          "actions": "Actions"
+          "actions": "Actions",
+          "delete": "Delete draft",
+          "deleteConfirm": "Delete this draft assessment?",
+          "deleted": "Assessment deleted",
+          "deleteFailed": "Could not delete assessment"
         },
         "view": {
           "list": "Scorecards",
@@ -5998,7 +6002,11 @@
           "category": "Category",
           "rating": "Rating",
           "comment": "Comment",
-          "actions": "Actions"
+          "actions": "Actions",
+          "delete": "Delete draft",
+          "deleteConfirm": "Delete this draft assessment?",
+          "deleted": "Assessment deleted",
+          "deleteFailed": "Could not delete assessment"
         },
         "view": {
           "list": "Scorecards",

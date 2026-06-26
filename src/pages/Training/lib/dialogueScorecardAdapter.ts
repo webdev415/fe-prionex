@@ -14,7 +14,7 @@
  * the components — see KAN-737-Plan §Discrepancy 3.
  */
 import type { OperatorUser } from '@/features/users/api/usersApi'
-import type { Scorecard } from '@/features/quality'
+import type { Scorecard, ScorecardStatus } from '@/features/quality'
 
 // 'Unscored' = a draft with no weighted_score yet (rendered as a `—` ring and
 // excluded from the Low/Average/High bands).
@@ -40,6 +40,8 @@ export interface DialogueScorecardRow {
   operatorInitials: string
   avatarColor: string
   category: DialogueScorecardCategory
+  /** Lifecycle status — only `draft` rows are deletable. */
+  status: ScorecardStatus
   /** True when the backend returned a numeric `weighted_score`. When false the
    *  views render a `—` ring instead of `score`. */
   hasScore: boolean
@@ -168,6 +170,7 @@ export function buildDialogueRow(
     operatorInitials: initialsFor(operatorName),
     avatarColor: avatarColorFor(scorecard.operator_id),
     category: deriveCategory(score100),
+    status: scorecard.status,
     hasScore,
     score: score100 != null ? Math.round(score100) : 0,
     scoreOutOf: 100,
