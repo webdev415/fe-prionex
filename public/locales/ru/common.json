@@ -3366,6 +3366,12 @@
         "chainBuilder": "Конструктор цепочек"
       }
     },
+    "chainBuilder": {
+      "debtStatus": {
+        "active": "Активный",
+        "closed": "Закрытый"
+      }
+    },
     "targetActions": {
       "title": "Целевые действия",
       "createButton": "Создать ЦД",

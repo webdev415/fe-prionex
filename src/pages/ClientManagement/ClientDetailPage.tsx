@@ -54,6 +54,7 @@ import {
 } from './components/MessagingHistorySkeleton'
 import { CallLogCard } from './components/CallLogCard'
 import { cn } from '@/lib/utils'
+import { decideChainAutoOpen } from '@/lib/taChainAutoOpen'
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/Tooltip'
 // import {
 //   DropdownMenu,
@@ -94,6 +95,7 @@ import {
   useDeleteContact,
   useContactTypes,
 } from '@/features/clients/hooks/useClients'
+import { useClientChainInstances } from '@/features/taInteractions/hooks/useTAInteractions'
 import {
   contactTypeLabel,
   pickDefaultActiveContactTypeId,
@@ -334,6 +336,52 @@ export function ClientDetailPage() {
   // Client detail: one profile + section endpoints
   const clientId = id ? Number(id) : 0
   const isValidClientId = clientId > 0 && !isNaN(clientId)
+
+  // Auto-open the chain modal ONLY for the operator who just changed a debt's
+  // status on this client — closing a loan (→ closed) or reopening it
+  // (→ active). Either may fire a "Debt status" trigger that launches a chain
+  // (system-started → started_by === null) asynchronously. Other operators
+  // viewing the same client must NOT get the pop-up, so auto-open is gated on
+  // *this* browser having performed the change (``chainAutoOpenArmed``) — never
+  // on merely observing the instance, which every viewer's poll would see.
+  //
+  // While armed we poll fast (1.5s) so the chain — created asynchronously by the
+  // chain event consumer after the change — shows in ~1.5-3s; when not armed we
+  // don't poll at all (no pop-up for passive viewers, no idle load). We open
+  // only an instance that did NOT exist when the change was made, so a stale
+  // unrelated chain can't pop up.
+  const [chainAutoOpenArmed, setChainAutoOpenArmed] = useState(false)
+  const preCloseInstanceIdsRef = useRef<Set<number>>(new Set())
+  const { data: clientChainInstances } = useClientChainInstances(
+    isValidClientId ? clientId : null,
+    { refetchInterval: chainAutoOpenArmed ? 1500 : undefined }
+  )
+  useEffect(() => {
+    // Retry-until-shown: open the modal but stay armed until it's actually
+    // showing, so a click in the wait window can't make us disarm without ever
+    // opening. See decideChainAutoOpen() for the full rationale + unit tests.
+    const { open, disarm } = decideChainAutoOpen({
+      armed: chainAutoOpenArmed,
+      instances: clientChainInstances,
+      seenIds: preCloseInstanceIdsRef.current,
+      isExecutorOpen: isChainExecutorOpen,
+    })
+    if (open) {
+      setChainExecutorContactSource(null)
+      setChainExecutorPrefilledPhone(null)
+      setIsChainExecutorOpen(true)
+    } else if (disarm) {
+      setChainAutoOpenArmed(false)
+    }
+  }, [chainAutoOpenArmed, clientChainInstances, isChainExecutorOpen])
+
+  // Safety: never let the armed/fast-poll window run forever (e.g. a close that
+  // matched no trigger). Disarm after 15s if nothing new turned up.
+  useEffect(() => {
+    if (!chainAutoOpenArmed) return
+    const t = setTimeout(() => setChainAutoOpenArmed(false), 15_000)
+    return () => clearTimeout(t)
+  }, [chainAutoOpenArmed])
 
   const {
     data: profile,
@@ -5502,11 +5550,26 @@ export function ClientDetailPage() {
                   )
                   return
                 }
-                closeDebt({
-                  clientId,
-                  debtId: closeLoanConfirm,
-                  closureDate: formatDateAsISO(closeLoanClosureDate),
-                })
+                closeDebt(
+                  {
+                    clientId,
+                    debtId: closeLoanConfirm,
+                    closureDate: formatDateAsISO(closeLoanClosureDate),
+                  },
+                  {
+                    onSuccess: () => {
+                      // A close may fire a "Debt status" trigger that launches a
+                      // chain asynchronously. Snapshot the chains that already
+                      // exist so we only auto-open the NEW one this close
+                      // launches, then arm fast-poll + auto-open — for THIS
+                      // operator only (other viewers never arm, so no pop-up).
+                      preCloseInstanceIdsRef.current = new Set(
+                        (clientChainInstances ?? []).map((inst) => inst.id)
+                      )
+                      setChainAutoOpenArmed(true)
+                    },
+                  }
+                )
                 setCloseLoanConfirm(null)
                 setCloseLoanDateError(null)
               }}
@@ -5559,7 +5622,19 @@ export function ClientDetailPage() {
                 if (reopenLoanConfirm === null) return
                 reopenDebt(
                   { clientId, debtId: reopenLoanConfirm },
-                  { onSettled: () => setReopenLoanConfirm(null) }
+                  {
+                    onSuccess: () => {
+                      // Reopen sets the debt back to 'active', which may fire a
+                      // "Debt status = active" trigger. Arm auto-open exactly
+                      // like Close does (snapshot existing chains so only the
+                      // NEW one pops) — for THIS operator only.
+                      preCloseInstanceIdsRef.current = new Set(
+                        (clientChainInstances ?? []).map((inst) => inst.id)
+                      )
+                      setChainAutoOpenArmed(true)
+                    },
+                    onSettled: () => setReopenLoanConfirm(null),
+                  }
                 )
               }}
               disabled={isReopeningDebt}
