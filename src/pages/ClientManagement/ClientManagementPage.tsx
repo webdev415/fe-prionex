@@ -193,11 +193,6 @@ export interface ClientFilters {
   // Tags Filter
   tagIds?: number[]
 
-  // Last Interaction Result Filter — multi-select of interaction_result
-  // IDs. The dropdown options come from the live /interaction-results
-  // config so admin-managed result changes show up without a deploy.
-  lastInteractionResultIds?: number[]
-
   // Chain filter — TA Chain ID. Narrows to clients with at least one
   // ta_interaction in this chain. Pairs with ``chainStepIds`` (steps in
   // that chain) and ``stepValues`` (per-step value bounds).
@@ -272,9 +267,9 @@ export function ClientManagementPage() {
   // URL state for filters
   const [portfolioFilter, setPortfolioFilter] = useURLState<number[]>('sellers', [])
   const [tagIdsFilter, setTagIdsFilter] = useURLState<number[]>('tags', [])
-  const [lastInteractionResultIdsFilter, setLastInteractionResultIdsFilter] = useURLState<number[]>(
-    'lastInteractionResults',
-    []
+  const [responsibleEmployeeFilter, setResponsibleEmployeeFilter] = useURLState<string>(
+    'employee',
+    ''
   )
   const [responsibleEmployeeIdsFilter, setResponsibleEmployeeIdsFilter] = useURLState<number[]>(
     'employeeIds',
@@ -341,7 +336,7 @@ export function ClientManagementPage() {
     () => ({
       portfolio: portfolioFilter,
       tagIds: tagIdsFilter,
-      lastInteractionResultIds: lastInteractionResultIdsFilter,
+      responsibleEmployee: responsibleEmployeeFilter || undefined,
       responsibleEmployeeIds: responsibleEmployeeIdsFilter,
       responsibleSearcher: responsibleSearcherFilter || undefined,
       unassignedOnly: unassignedOnlyFilter,
@@ -367,7 +362,7 @@ export function ClientManagementPage() {
     [
       portfolioFilter,
       tagIdsFilter,
-      lastInteractionResultIdsFilter,
+      responsibleEmployeeFilter,
       responsibleEmployeeIdsFilter,
       responsibleSearcherFilter,
       unassignedOnlyFilter,
@@ -499,7 +494,6 @@ export function ClientManagementPage() {
       responsibleSearcherFilter !== '' ||
       portfolioFilter.length > 0 ||
       tagIdsFilter.length > 0 ||
-      lastInteractionResultIdsFilter.length > 0 ||
       unassignedOnlyFilter ||
       dateOfSaleFromFilter !== '' ||
       dateOfSaleToFilter !== '' ||
@@ -536,7 +530,7 @@ export function ClientManagementPage() {
     sortOrder,
     portfolioFilter,
     tagIdsFilter,
-    lastInteractionResultIdsFilter,
+    responsibleEmployeeFilter,
     responsibleEmployeeIdsFilter,
     responsibleSearcherFilter,
     unassignedOnlyFilter,
@@ -573,7 +567,6 @@ export function ClientManagementPage() {
       responsibleEmployeeIdsFilter.length > 0 ||
       portfolioFilter.length > 0 ||
       tagIdsFilter.length > 0 ||
-      lastInteractionResultIdsFilter.length > 0 ||
       unassignedOnlyFilter ||
       dateOfSaleFromFilter !== '' ||
       dateOfSaleToFilter !== '' ||
@@ -845,14 +838,6 @@ export function ClientManagementPage() {
       params.tag_ids = filters.tagIds.join(',')
     }
 
-    // FILTER 9b: Last Interaction Result (multi-select). Sent as
-    // comma-separated ids matching the BE schema. Empty/undefined
-    // means "no filter" — BE returns all clients regardless of last
-    // result.
-    if (filters.lastInteractionResultIds && filters.lastInteractionResultIds.length > 0) {
-      params.last_interaction_result_ids = filters.lastInteractionResultIds.join(',')
-    }
-
     // FILTER 10: Priority
     if (selectedPriorities.length > 0) {
       // Map priority labels to lowercase for API
@@ -900,6 +885,10 @@ export function ClientManagementPage() {
       params.assignment_date_to = filters.assignmentDateTo
     }
 
+    if (user?.timezone) {
+      params.tz = user.timezone
+    }
+
     // FILTER 15b: TA Chain + Step + per-step values. Steps only ship
     // when a chain is selected — BE silently drops orphan steps but no
     // point sending them. Step selection is keyed by
@@ -944,6 +933,7 @@ export function ClientManagementPage() {
     selectedPriorities,
     searchQuery,
     searchType,
+    user?.timezone,
     allEmployeeOptionIds,
     allInteractionOptionIds,
   ])
@@ -1036,7 +1026,6 @@ export function ClientManagementPage() {
     if (filters.assignmentDateFrom || filters.assignmentDateTo) count++
     if (filters.portfolio && filters.portfolio.length > 0) count++
     if (filters.tagIds && filters.tagIds.length > 0) count++
-    if (filters.lastInteractionResultIds && filters.lastInteractionResultIds.length > 0) count++
     if (filters.responsibleEmployeeIds && filters.responsibleEmployeeIds.length > 0) count++
     if (filters.responsibleSearcher) count++
     if (filters.unassignedOnly) count++
@@ -1317,16 +1306,6 @@ export function ClientManagementPage() {
       return
     }
 
-    if (newFilters._action === 'toggleLastInteractionResult') {
-      const resultId = newFilters._value as number
-      const checked = newFilters._checked as boolean
-      setLastInteractionResultIdsFilter((prev) =>
-        checked ? [...prev, resultId] : prev.filter((id) => id !== resultId)
-      )
-      setCurrentPage(1)
-      return
-    }
-
     // Handle regular filter updates (non-toggle actions)
     // Only update if value has actually changed (use JSON.stringify for deep comparison)
     if (JSON.stringify(newFilters.portfolio) !== JSON.stringify(portfolioFilter)) {
@@ -1334,12 +1313,6 @@ export function ClientManagementPage() {
     }
     if (JSON.stringify(newFilters.tagIds) !== JSON.stringify(tagIdsFilter)) {
       setTagIdsFilter(newFilters.tagIds || [])
-    }
-    if (
-      JSON.stringify(newFilters.lastInteractionResultIds) !==
-      JSON.stringify(lastInteractionResultIdsFilter)
-    ) {
-      setLastInteractionResultIdsFilter(newFilters.lastInteractionResultIds || [])
     }
     if (
       JSON.stringify(newFilters.responsibleEmployeeIds) !==
@@ -1439,7 +1412,7 @@ export function ClientManagementPage() {
     setSelectedPriorities([])
     setPortfolioFilter([])
     setTagIdsFilter([])
-    setLastInteractionResultIdsFilter([])
+    setResponsibleEmployeeFilter('')
     setResponsibleEmployeeIdsFilter([])
     setResponsibleSearcherFilter('')
     setUnassignedOnlyFilter(false)

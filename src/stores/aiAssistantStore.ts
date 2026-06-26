@@ -14,9 +14,15 @@
 
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import type { AssistantOutputFormat, AssistantResponseMode } from '@/features/aiAssistant/api'
+import type {
+  AssistantMode,
+  AssistantOutputFormat,
+  AssistantResponseMode,
+} from '@/features/aiAssistant/api'
 
 export interface AssistantSettings {
+  /** Reasoning depth sent with every chat request: fast (default) | thinking. */
+  mode: AssistantMode
   responseMode: AssistantResponseMode
   outputFormat: AssistantOutputFormat
   voiceInputEnabled: boolean
@@ -28,6 +34,7 @@ export interface AssistantSettings {
 }
 
 export const DEFAULT_ASSISTANT_SETTINGS: AssistantSettings = {
+  mode: 'fast',
   responseMode: 'short',
   outputFormat: 'mixed',
   voiceInputEnabled: true,

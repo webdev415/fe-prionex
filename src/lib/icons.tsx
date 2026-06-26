@@ -142,6 +142,7 @@ import {
   CallIncoming04Icon,
   AiBrain03Icon,
   Mic02Icon,
+  Attachment01Icon,
   Tag01Icon,
   LockComputerIcon,
   BubbleChatEditIcon,
@@ -360,6 +361,7 @@ export const Icons = {
   CallIncoming04: (props: Omit<IconProps, 'icon'>) => <Icon icon={CallIncoming04Icon} {...props} />,
   AiBrain03: (props: Omit<IconProps, 'icon'>) => <Icon icon={AiBrain03Icon} {...props} />,
   Mic02: (props: Omit<IconProps, 'icon'>) => <Icon icon={Mic02Icon} {...props} />,
+  Attachment01: (props: Omit<IconProps, 'icon'>) => <Icon icon={Attachment01Icon} {...props} />,
   LockComputer: (props: Omit<IconProps, 'icon'>) => <Icon icon={LockComputerIcon} {...props} />,
   BubbleChatEdit: (props: Omit<IconProps, 'icon'>) => <Icon icon={BubbleChatEditIcon} {...props} />,
   MessageSecure01: (props: Omit<IconProps, 'icon'>) => (
