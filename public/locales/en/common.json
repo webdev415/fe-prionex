@@ -777,7 +777,8 @@
         "unsaved": "Unsaved changes",
         "unsavedConfirm": "You have unsaved changes that will be lost. Close anyway?",
         "scoredCount": "{{scored}}/{{total}} scored",
-        "completeIncomplete": "Score every criterion before completing."
+        "completeIncomplete": "Score every criterion before completing.",
+        "notScored": "not scored"
       },
       "dialogue": {
         "chips": {
@@ -5973,7 +5974,8 @@
         "unsaved": "Unsaved changes",
         "unsavedConfirm": "You have unsaved changes that will be lost. Close anyway?",
         "scoredCount": "{{scored}}/{{total}} scored",
-        "completeIncomplete": "Score every criterion before completing."
+        "completeIncomplete": "Score every criterion before completing.",
+        "notScored": "not scored"
       },
       "dialogue": {
         "chips": {

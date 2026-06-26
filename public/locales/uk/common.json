@@ -782,7 +782,8 @@
         "unsaved": "Незбережені зміни",
         "unsavedConfirm": "Є незбережені зміни, їх буде втрачено. Все одно закрити?",
         "scoredCount": "{{scored}}/{{total}} оцінено",
-        "completeIncomplete": "Оцініть усі критерії перед завершенням."
+        "completeIncomplete": "Оцініть усі критерії перед завершенням.",
+        "notScored": "не оцінено"
       },
       "dialogue": {
         "chips": {
@@ -5991,7 +5992,8 @@
         "unsaved": "Незбережені зміни",
         "unsavedConfirm": "Є незбережені зміни, їх буде втрачено. Все одно закрити?",
         "scoredCount": "{{scored}}/{{total}} оцінено",
-        "completeIncomplete": "Оцініть усі критерії перед завершенням."
+        "completeIncomplete": "Оцініть усі критерії перед завершенням.",
+        "notScored": "не оцінено"
       },
       "dialogue": {
         "chips": {

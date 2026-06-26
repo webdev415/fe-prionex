@@ -351,7 +351,7 @@ export function ScorecardPanel({
         </span>
         <span className="flex flex-shrink-0 items-center gap-2 text-xs font-medium">
           {canEdit ? (
-            <span className={isComplete ? 'text-primary-600' : 'text-gray-500'}>
+            <span className={isComplete ? 'text-primary-600' : 'text-amber-600'}>
               {t('pages.training.scorecard.scoredCount', '{{scored}}/{{total}} scored', {
                 scored: scoredCount,
                 total: requiredCount,
@@ -501,14 +501,27 @@ interface CriterionRowProps {
 }
 
 function CriterionRow({ criterion, entry, disabled, totalWeight, onChange }: CriterionRowProps) {
+  const { t } = useTranslation('common')
   const isBinary = criterion.scale === 'binary'
+  // A weighted criterion still needing a value blocks "Mark completed" —
+  // highlight it so the trainer can find the gaps.
+  const needsScore = !disabled && Number(criterion.weight) > 0 && entry?.value == null
   return (
-    <div className="rounded-md bg-gray-50 px-3 py-2">
+    <div
+      className={`rounded-md px-3 py-2 ${
+        needsScore ? 'bg-amber-50 ring-1 ring-amber-200' : 'bg-gray-50'
+      }`}
+    >
       <div className="mb-2 flex items-center justify-between gap-2">
         <span className="text-sm text-gray-700">
           {criterion.name}
           {criterion.weight > 0 ? (
             <span className="ml-1.5 text-xs text-gray-400">· {criterion.weight} pts</span>
+          ) : null}
+          {needsScore ? (
+            <span className="ml-1.5 text-xs font-medium text-amber-600">
+              · {t('pages.training.scorecard.notScored', 'not scored')}
+            </span>
           ) : null}
         </span>
         {isBinary ? (
