@@ -760,14 +760,16 @@ function RRPaymentNotificationItem({
     <>
       <div className="flex flex-wrap items-center gap-1.5 pr-5">
         {!n.read && <span className="h-2 w-2 shrink-0 rounded-full bg-blue-500" />}
-        <p className="line-clamp-1 text-xs font-semibold text-black">{n.title}</p>
+        <p className="line-clamp-1 text-xs font-semibold text-black">
+          {t('notificationBell.rrPayment.title', { defaultValue: n.title })}
+        </p>
         {meta.amount && (
           <span className="rounded bg-blue-100 px-1.5 py-0.5 text-[10px] font-medium text-blue-600">
             ₴ {meta.amount}
           </span>
         )}
       </div>
-      {n.body && <p className="w-full min-w-0 truncate text-xs text-black">{n.body}</p>}
+      {n.body && <p className="line-clamp-3 w-full min-w-0 text-xs text-black">{n.body}</p>}
       <div className="flex items-center gap-1 text-black">
         <Icons.Clock01 size={11} strokeWidth={1.5} />
         <span className="text-[11px]">
