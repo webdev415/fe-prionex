@@ -119,6 +119,27 @@ describe('dispatchSseEvent routing', () => {
     expect(onFollowups).toHaveBeenCalledWith(['Показать за месяц', 'Сравнить с прошлым'])
   })
 
+  it('routes a reasoning frame to onReasoning (ASSISTANT_MODES.md §4)', () => {
+    const onReasoning = vi.fn()
+    const onText = vi.fn()
+    dispatchSseEvent(
+      { event: 'reasoning', data: JSON.stringify({ delta: 'Let me check ' }) },
+      { onReasoning, onText }
+    )
+    dispatchSseEvent(
+      { event: 'reasoning', data: JSON.stringify({ delta: 'the payments table' }) },
+      { onReasoning, onText }
+    )
+    expect(onReasoning).toHaveBeenNthCalledWith(1, 'Let me check ')
+    expect(onReasoning).toHaveBeenNthCalledWith(2, 'the payments table')
+    // A reasoning delta must never leak into the answer text.
+    expect(onText).not.toHaveBeenCalled()
+  })
+
+  it('does NOT treat reasoning as a terminator', () => {
+    expect(dispatchSseEvent({ event: 'reasoning', data: '{"delta":"x"}' }, {})).toBeUndefined()
+  })
+
   it('routes a tool_start frame', () => {
     const onToolStart = vi.fn()
     dispatchSseEvent(
@@ -182,17 +203,20 @@ describe('dispatchSseEvent routing', () => {
   it('ignores unknown / future event types without throwing (forward-compat)', () => {
     const callbacks: SseStreamCallbacks = {
       onText: vi.fn(),
+      onReasoning: vi.fn(),
       onError: vi.fn(),
       onSources: vi.fn(),
       onFollowups: vi.fn(),
       onToolStart: vi.fn(),
       onToolEnd: vi.fn(),
     }
-    // The exact future names called out in the contract + a wildcard.
-    for (const event of ['reasoning', 'todo', 'subagent_start', 'subagent_done', 'mystery']) {
+    // Future names still in the forward-compat ignore + a wildcard. `reasoning`
+    // is now an explicit case, so it is asserted separately above.
+    for (const event of ['todo', 'subagent_start', 'subagent_done', 'mystery']) {
       expect(() => dispatchSseEvent({ event, data: '{"x":1}' }, callbacks)).not.toThrow()
     }
     expect(callbacks.onText).not.toHaveBeenCalled()
+    expect(callbacks.onReasoning).not.toHaveBeenCalled()
     expect(callbacks.onError).not.toHaveBeenCalled()
     expect(callbacks.onSources).not.toHaveBeenCalled()
     expect(callbacks.onFollowups).not.toHaveBeenCalled()

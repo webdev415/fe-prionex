@@ -334,6 +334,8 @@
       "settingsUpdated": "Налаштування асистента оновлено",
       "assistantTyping": "Асистент друкує...",
       "assistantThinking": "Асистент думає...",
+      "reasoningTitle": "Хід міркування",
+      "reasoningStreaming": "Аналізую…",
       "inputHint": "Enter — надіслати, Shift+Enter — новий рядок",
       "quickPromptClientData": "Покажи деталі клієнта.",
       "quickPromptDebt": "Проаналізуй борг для вибраного клієнта і періоду.",

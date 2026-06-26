@@ -14,9 +14,13 @@
  * routes one frame to the right callback.
  *
  * Forward-compatibility is a hard requirement: the backend may add new event
- * types (reasoning / todo / subagent_*). Unknown `event:` names MUST be ignored
- * silently rather than throwing, so the frontend keeps working against a newer
- * backend.
+ * types (todo / subagent_*). Unknown `event:` names MUST be ignored silently
+ * rather than throwing, so the frontend keeps working against a newer backend.
+ *
+ * `reasoning {delta}` (the agent's streamed "thoughts", up to hundreds per turn)
+ * is an explicit case routed to `onReasoning` — it powers the "Ход рассуждения"
+ * panel. `todo` / `subagent_*` remain in the forward-compat ignore until the UI
+ * grows to render them.
  */
 
 /** One decoded SSE frame. `event` defaults to "message" per the SSE spec. */
@@ -108,6 +112,12 @@ export interface SseStreamCallbacks {
   onSession?: (payload: SseSessionPayload) => void
   /** A text delta — accumulate to build the streamed answer. */
   onText?: (delta: string) => void
+  /**
+   * A "reasoning" delta — the agent's streamed thoughts (ASSISTANT_MODES.md §4,
+   * `reasoning {delta}`). Accumulate like {@link onText}; hundreds may arrive
+   * per turn. Feeds the collapsible "Ход рассуждения" panel.
+   */
+  onReasoning?: (delta: string) => void
   /** "Source of the numbers" block (tables + tools). */
   onSources?: (sources: AssistantSources) => void
   /** Suggested follow-up questions (clickable chips). */
@@ -262,6 +272,13 @@ export function dispatchSseEvent(
       if (delta) callbacks.onText?.(delta)
       return undefined
     }
+    case 'reasoning': {
+      // Same `{delta}` shape as `text`; routed to its own callback so the UI
+      // can stream it into the reasoning panel instead of the answer bubble.
+      const delta = extractTextDelta(frame)
+      if (delta) callbacks.onReasoning?.(delta)
+      return undefined
+    }
     case 'sources':
       callbacks.onSources?.(normalizeSources(parseFrameData(frame)))
       return undefined
@@ -289,7 +306,7 @@ export function dispatchSseEvent(
       callbacks.onDone?.(parseFrameData<SseDonePayload>(frame) ?? {})
       return 'done'
     default:
-      // Unknown / future event (reasoning, todo, subagent_*) — ignore.
+      // Unknown / future event (todo, subagent_*) — ignore (forward-compat).
       return undefined
   }
 }

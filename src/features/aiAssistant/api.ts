@@ -106,6 +106,8 @@ export interface AssistantFeedbackRequest {
 export interface SendChatMessageCallbacks {
   onSession?: (payload: SseSessionPayload) => void
   onText?: (delta: string) => void
+  /** Reasoning deltas ("Ход рассуждения"); forwarded, never part of the answer. */
+  onReasoning?: (delta: string) => void
   onSources?: (sources: AssistantSources) => void
   /** Follow-up questions (the `questions[]` array of the followups frame). */
   onFollowups?: (questions: string[]) => void
@@ -204,6 +206,9 @@ export async function sendChatMessage(
       accumulatedText += delta
       callbacks.onText?.(delta)
     },
+    // Reasoning is the agent's thinking, not the answer — forward it without
+    // touching `accumulatedText` so the resolved `response` stays clean.
+    onReasoning: (delta) => callbacks.onReasoning?.(delta),
     onSources: (sources) => callbacks.onSources?.(sources),
     onFollowups: (questions) => callbacks.onFollowups?.(questions),
     onToolStart: (tool) => {

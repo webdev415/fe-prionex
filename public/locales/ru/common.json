@@ -279,6 +279,8 @@
       "settingsUpdated": "Настройки ассистента обновлены",
       "assistantTyping": "Ассистент печатает...",
       "assistantThinking": "Ассистент думает...",
+      "reasoningTitle": "Ход рассуждения",
+      "reasoningStreaming": "Анализирую…",
       "inputHint": "Enter — отправить, Shift+Enter — новая строка",
       "quickPromptClientData": "Покажи детали клиента.",
       "quickPromptDebt": "Проанализируй долг для выбранного клиента и периода.",

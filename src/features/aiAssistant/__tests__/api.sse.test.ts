@@ -110,6 +110,31 @@ describe('sendChatMessage SSE transport', () => {
     expect(onFollowups).toHaveBeenCalledWith(['Ещё?'])
   })
 
+  it('forwards reasoning deltas through onReasoning without polluting the answer', async () => {
+    const onReasoning = vi.fn()
+    const onText = vi.fn()
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn()
+        .mockResolvedValue(
+          sseResponse([
+            'event: reasoning\ndata: {"delta":"Думаю: "}\n\n',
+            'event: reasoning\ndata: {"delta":"считаю клиентов"}\n\n',
+            'event: text\ndata: {"delta":"378K"}\n\n',
+            'event: done\ndata: {}\n\n',
+          ])
+        )
+    )
+
+    const result = await sendChatMessage(baseRequest, { onReasoning, onText })
+
+    expect(onReasoning.mock.calls.map((c) => c[0]).join('')).toBe('Думаю: считаю клиентов')
+    // The reasoning stream is the agent's thinking, not the visible answer.
+    expect(result.response).toBe('378K')
+    expect(onText).toHaveBeenCalledTimes(1)
+  })
+
   it('records tool_start / tool_end into the assembled tool_calls', async () => {
     const onToolStart = vi.fn()
     const onToolEnd = vi.fn()

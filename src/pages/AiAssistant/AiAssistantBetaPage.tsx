@@ -70,6 +70,22 @@ type LocalAttachment = {
   url: string
 }
 
+/** Lifecycle of one tool invocation shown inside the reasoning panel. */
+type ToolStepStatus = 'running' | 'ok' | 'error'
+
+/**
+ * One row in the reasoning panel's tool-step list. `tool_start` appends a
+ * `running` step; the next still-running step is settled to `ok`/`error` by the
+ * matching `tool_end` (the contract's `tool_end` carries no name).
+ */
+type ToolStep = {
+  id: string
+  name: string
+  label?: string
+  status: ToolStepStatus
+  resultPreview?: string
+}
+
 type ChatMessage = {
   id: string
   role: ChatRole
@@ -84,6 +100,12 @@ type ChatMessage = {
   sources?: AssistantSources
   /** Suggested follow-up questions rendered as clickable chips. */
   followups?: string[]
+  /** Accumulated `reasoning` deltas — the agent's streamed thoughts. */
+  reasoning?: string
+  /** Tool invocations surfaced during the turn (in start order). */
+  toolSteps?: ToolStep[]
+  /** True while reasoning/tool events are still streaming for this turn. */
+  isStreamingReasoning?: boolean
 }
 
 function joinDictation(prev: string, text: string): string {
@@ -232,6 +254,10 @@ export function AiAssistantBetaPage() {
   const [isAssistantResponding, setIsAssistantResponding] = useState(false)
   const [conversationId, setConversationId] = useState<number | null>(null)
   const [feedbackByMessage, setFeedbackByMessage] = useState<Record<number, MessageFeedback>>({})
+  // Explicit user toggles for the "Ход рассуждения" panel, keyed by message id.
+  // Unset → the panel follows the stream (open while streaming, collapsed once
+  // the turn finishes); a value here is the user's deliberate override.
+  const [reasoningOpenByMessage, setReasoningOpenByMessage] = useState<Record<string, boolean>>({})
   const [clientScope, setClientScope] = useState('all')
   const [period, setPeriod] = useState('all')
   const [assistantSettings, setAssistantSettings] = useState<AssistantSettings>(
@@ -697,6 +723,7 @@ export function AiAssistantBetaPage() {
     setChatMessages((current) => (current.length > 0 ? [] : current))
     setConversationId(null)
     setFeedbackByMessage({})
+    setReasoningOpenByMessage((current) => (Object.keys(current).length > 0 ? {} : current))
     setIsAssistantResponding(false)
   }, [stopVoiceRecognition, cancelDictation, cancelVoiceMessage, stopTts, clearPendingImages])
 
@@ -1026,6 +1053,9 @@ export function AiAssistantBetaPage() {
           : t('pages.aiAssistant.assistantTyping'),
         isLoading: true,
         loadingLabel: isThinking ? t('pages.aiAssistant.assistantThinking') : undefined,
+        // Arms the live "Ход рассуждения" view: the panel auto-expands while the
+        // turn streams reasoning/tool events, then collapses once it settles.
+        isStreamingReasoning: true,
       })
       window.setTimeout(() => scrollToConversationBottom('smooth'), 0)
 
@@ -1042,6 +1072,10 @@ export function AiAssistantBetaPage() {
       // deltas append to it as the answer grows.
       let streamedText = ''
       let receivedDelta = false
+      // Reasoning / tool events drive the "Ход рассуждения" panel. They are
+      // accumulated locally and pushed into the in-flight bubble on each event.
+      let streamedReasoning = ''
+      let toolSteps: ToolStep[] = []
       try {
         const result = await sendChat({
           payload: {
@@ -1060,6 +1094,44 @@ export function AiAssistantBetaPage() {
               streamedText += delta
               receivedDelta = true
               patchLoadingMessage({ content: streamedText, isLoading: false })
+            },
+            onReasoning: (delta) => {
+              streamedReasoning += delta
+              // Keep `isLoading` until the first answer delta: reasoning streams
+              // into the panel while the answer bubble still shows the live ход.
+              patchLoadingMessage({ reasoning: streamedReasoning })
+            },
+            onToolStart: (tool) => {
+              toolSteps = [
+                ...toolSteps,
+                {
+                  id: `${loadingId}-tool-${toolSteps.length}`,
+                  name: tool.name,
+                  label: tool.label,
+                  status: 'running',
+                },
+              ]
+              patchLoadingMessage({ toolSteps })
+            },
+            onToolEnd: (tool) => {
+              // tool_end has no name — settle the most recent still-running step.
+              let settled = false
+              toolSteps = toolSteps
+                .slice()
+                .reverse()
+                .map((step) => {
+                  if (!settled && step.status === 'running') {
+                    settled = true
+                    return {
+                      ...step,
+                      status: (tool.ok ? 'ok' : 'error') as ToolStepStatus,
+                      resultPreview: tool.result_preview ?? tool.summary,
+                    }
+                  }
+                  return step
+                })
+                .reverse()
+              patchLoadingMessage({ toolSteps })
             },
             onSources: (sources) => {
               if (sources.tables.length > 0 || sources.tools.length > 0) {
@@ -1085,6 +1157,8 @@ export function AiAssistantBetaPage() {
         patchLoadingMessage({
           content: receivedDelta ? streamedText : result.response,
           isLoading: false,
+          // Turn finished — collapse the reasoning panel (still re-expandable).
+          isStreamingReasoning: false,
           serverMessageId: result.message_id > 0 ? result.message_id : undefined,
         })
       } catch (error) {
@@ -1113,8 +1187,11 @@ export function AiAssistantBetaPage() {
           content: errorMessage,
           isLoading: false,
           isError: true,
+          isStreamingReasoning: false,
           sources: undefined,
           followups: undefined,
+          reasoning: undefined,
+          toolSteps: undefined,
         })
       } finally {
         if (requestToken === responseTokenRef.current) {
@@ -1338,6 +1415,21 @@ export function AiAssistantBetaPage() {
     [feedbackByMessage, mutateFeedback, t]
   )
 
+  // Resolve whether a message's reasoning panel is open: an explicit user
+  // toggle wins; otherwise the panel mirrors the live stream (open while
+  // streaming, collapsed once the turn has settled).
+  const isReasoningOpen = useCallback(
+    (item: ChatMessage) => reasoningOpenByMessage[item.id] ?? Boolean(item.isStreamingReasoning),
+    [reasoningOpenByMessage]
+  )
+
+  const toggleReasoning = useCallback((item: ChatMessage) => {
+    setReasoningOpenByMessage((current) => {
+      const open = current[item.id] ?? Boolean(item.isStreamingReasoning)
+      return { ...current, [item.id]: !open }
+    })
+  }, [])
+
   const feedbackButtonClass = (isChosen: boolean, isGroupLocked: boolean) =>
     cn(
       'inline-flex min-h-7 items-center gap-1 rounded-full border px-2 py-1 text-[11px] font-medium transition-colors',
@@ -1438,6 +1530,102 @@ export function AiAssistantBetaPage() {
       )}
     </div>
   )
+
+  /** One tool-step row inside the reasoning panel (spinner → ✓ / ✗). */
+  const renderToolStep = (step: ToolStep) => (
+    <li key={step.id} className="flex items-start gap-1.5 text-[11px] leading-snug">
+      <span className="mt-0.5 flex h-3.5 w-3.5 shrink-0 items-center justify-center">
+        {step.status === 'running' ? (
+          <span
+            className="h-3 w-3 animate-spin rounded-full border border-gray-400 border-t-transparent"
+            aria-hidden
+          />
+        ) : step.status === 'ok' ? (
+          <Icons.Checkmark size={14} strokeWidth={1.5} className="text-success-600" />
+        ) : (
+          <Icons.CancelCircle size={14} strokeWidth={1.5} className="text-error-600" />
+        )}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="text-dark-500 font-medium">
+          {step.label || step.name}
+          {step.status === 'running' && '…'}
+        </span>
+        {step.status !== 'running' && step.resultPreview && (
+          <span className="ml-1 break-words text-gray-500">— {step.resultPreview}</span>
+        )}
+      </span>
+    </li>
+  )
+
+  /**
+   * Collapsible "Ход рассуждения" panel (Gemini-style "Thinking"): a header with
+   * a spinner while the turn streams, the tool-step list, and the accumulated
+   * reasoning text. Default-collapsed once settled, re-expandable any time.
+   */
+  const renderReasoningPanel = (item: ChatMessage) => {
+    const hasReasoning = Boolean(item.reasoning && item.reasoning.trim())
+    const hasSteps = Boolean(item.toolSteps && item.toolSteps.length > 0)
+    if (!hasReasoning && !hasSteps) return null
+
+    const streaming = Boolean(item.isStreamingReasoning)
+    const open = isReasoningOpen(item)
+    const panelId = `reasoning-${item.id}`
+
+    return (
+      <div
+        data-testid="assistant-reasoning"
+        className="border-light-200 bg-light-50/50 mb-2 w-full max-w-full overflow-hidden rounded-xl border"
+      >
+        <button
+          type="button"
+          aria-expanded={open}
+          aria-controls={panelId}
+          onClick={() => toggleReasoning(item)}
+          className="hover:bg-light-100/60 flex w-full cursor-pointer items-center gap-1.5 px-3 py-1.5 text-left transition-colors"
+        >
+          <Icons.AiBrain03 size={14} strokeWidth={1.5} className="text-primary-500 shrink-0" />
+          <span className="text-dark-500 flex-1 text-[11px] font-semibold tracking-tight">
+            {streaming
+              ? t('pages.aiAssistant.reasoningStreaming')
+              : t('pages.aiAssistant.reasoningTitle')}
+          </span>
+          {streaming && (
+            <span
+              className="h-3 w-3 animate-spin rounded-full border border-gray-400 border-t-transparent"
+              aria-hidden
+              data-testid="reasoning-spinner"
+            />
+          )}
+          {open ? (
+            <Icons.ArrowUp size={14} strokeWidth={1.5} className="shrink-0 text-gray-400" />
+          ) : (
+            <Icons.ArrowDown size={14} strokeWidth={1.5} className="shrink-0 text-gray-400" />
+          )}
+        </button>
+        {open && (
+          <div id={panelId} className="space-y-2 px-3 pb-2.5">
+            {hasSteps && (
+              <ul className="space-y-1" data-testid="assistant-tool-steps">
+                {item.toolSteps!.map((step) => renderToolStep(step))}
+              </ul>
+            )}
+            {hasReasoning && (
+              <div
+                className={cn(
+                  MARKDOWN_BODY_CLASS,
+                  'border-light-200/80 border-t pt-2 text-[12px] leading-relaxed text-gray-600',
+                  hasSteps ? '' : 'border-t-0 pt-0'
+                )}
+              >
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>{item.reasoning!}</ReactMarkdown>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    )
+  }
 
   /** One labelled row of source chips (tables or tools). */
   const renderSourceRow = (label: string, items: string[]) =>
@@ -1605,17 +1793,25 @@ export function AiAssistantBetaPage() {
                           )}
                         </div>
                       )}
+                      {/* Live "Ход рассуждения": shown above the answer both
+                          while the turn streams and (collapsed) afterwards. */}
+                      {item.role === 'assistant' && !item.isError && renderReasoningPanel(item)}
                       {item.isLoading ? (
-                        <span className="inline-flex items-center gap-1.5 py-1">
-                          <span className="bg-secondary-500 h-1.5 w-1.5 animate-bounce rounded-full [animation-delay:-0.2s]" />
-                          <span className="bg-secondary-500 h-1.5 w-1.5 animate-bounce rounded-full [animation-delay:-0.1s]" />
-                          <span className="bg-secondary-500 h-1.5 w-1.5 animate-bounce rounded-full" />
-                          {item.loadingLabel && (
-                            <span className="ml-1.5 text-xs font-light text-gray-500">
-                              {item.loadingLabel}
-                            </span>
-                          )}
-                        </span>
+                        // Generic typing dots only until something concrete is
+                        // streaming — once reasoning/tool events arrive the panel
+                        // above is the live indicator, so the dots stand down.
+                        item.reasoning || (item.toolSteps && item.toolSteps.length > 0) ? null : (
+                          <span className="inline-flex items-center gap-1.5 py-1">
+                            <span className="bg-secondary-500 h-1.5 w-1.5 animate-bounce rounded-full [animation-delay:-0.2s]" />
+                            <span className="bg-secondary-500 h-1.5 w-1.5 animate-bounce rounded-full [animation-delay:-0.1s]" />
+                            <span className="bg-secondary-500 h-1.5 w-1.5 animate-bounce rounded-full" />
+                            {item.loadingLabel && (
+                              <span className="ml-1.5 text-xs font-light text-gray-500">
+                                {item.loadingLabel}
+                              </span>
+                            )}
+                          </span>
+                        )
                       ) : item.role === 'assistant' && !item.isError ? (
                         <div className={MARKDOWN_BODY_CLASS}>
                           <ReactMarkdown remarkPlugins={[remarkGfm]}>{item.content}</ReactMarkdown>

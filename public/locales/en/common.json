@@ -329,6 +329,8 @@
       "settingsUpdated": "Assistant settings updated",
       "assistantTyping": "Assistant is typing...",
       "assistantThinking": "Assistant is thinking...",
+      "reasoningTitle": "Reasoning",
+      "reasoningStreaming": "Analyzing…",
       "inputHint": "Press Enter to send, Shift+Enter for a new line",
       "quickPromptClientData": "Show client details.",
       "quickPromptDebt": "Analyze debt for selected client and period.",
