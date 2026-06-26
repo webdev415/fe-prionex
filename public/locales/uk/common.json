@@ -3812,7 +3812,7 @@
         "selectSourceChain": "Оберіть вихідний ланцюжок...",
         "selectBlockingChain": "Оберіть ланцюжок-блок...",
         "resultCode": "Код результату",
-        "debtStatus": "Статус (напр. прострочка)",
+        "debtStatus": "Виберіть статус...",
         "daysCooldown": "Днів (напр. 30)",
         "selectSmsTemplate": "Оберіть SMS-шаблон...",
         "selectMessagingService": "Оберіть провайдера messaging...",
@@ -3895,6 +3895,10 @@
         "phoneUnknown": "телефон: крок #{{id}}",
         "generic": "{{key}}: {{value}}",
         "stepRef": "Крок {{order}} — {{name}}"
+      },
+      "debtStatus": {
+        "active": "Активний",
+        "closed": "Закритий"
       }
     },
     "quickPicks": {

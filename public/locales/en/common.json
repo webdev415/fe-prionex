@@ -3552,7 +3552,7 @@
         "selectSourceChain": "Select source chain...",
         "selectBlockingChain": "Select blocking chain...",
         "resultCode": "Result code",
-        "debtStatus": "Status (e.g. overdue)",
+        "debtStatus": "Select status...",
         "daysCooldown": "Days (e.g. 30)",
         "selectSmsTemplate": "Select SMS template...",
         "selectMessagingService": "Select messaging provider...",
@@ -3635,6 +3635,10 @@
         "phoneUnknown": "phone: step #{{id}}",
         "generic": "{{key}}: {{value}}",
         "stepRef": "Step {{order}} — {{name}}"
+      },
+      "debtStatus": {
+        "active": "Active",
+        "closed": "Closed"
       }
     },
     "quickPicks": {

@@ -111,12 +111,19 @@ export function useClientPinnedChainIds(clientId: number | null) {
   })
 }
 
-export function useClientChainInstances(clientId: number | null) {
+export function useClientChainInstances(
+  clientId: number | null,
+  options?: { refetchInterval?: number }
+) {
   return useQuery({
     queryKey: [...INST_KEY, 'client', clientId],
     queryFn: () => getChainInstances({ client_id: clientId! }),
     enabled: clientId !== null && clientId > 0,
     staleTime: 10_000,
+    // Optional polling so a trigger-launched chain (created asynchronously by
+    // the chain event consumer after, e.g., a debt close) is picked up shortly
+    // after it fires. Callers that don't pass this poll nothing (default).
+    refetchInterval: options?.refetchInterval,
   })
 }
 

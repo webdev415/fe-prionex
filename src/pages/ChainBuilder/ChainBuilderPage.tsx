@@ -79,6 +79,19 @@ const TRIGGER_TYPES = [
   'chain_completed',
   'role_action',
 ]
+
+// Debt statuses offered for the "Debt status" trigger. The dropdown (vs free
+// text) guarantees the stored value matches the backend exactly — no "close"
+// vs "closed" typos. The trigger fires when a debt's ``status`` becomes the
+// chosen value (event ``debt.status_changed``).
+//
+// A debt's ``status`` is only ever ``active`` or ``closed`` in the data — there
+// is no stored ``overdue``/``paid``/``partially_paid``/``written_off``. Those
+// were removed so an admin can't configure a trigger that can never fire.
+const DEBT_STATUS_OPTIONS: Array<{ value: string; fallback: string }> = [
+  { value: 'active', fallback: 'Active' },
+  { value: 'closed', fallback: 'Closed' },
+]
 const BLOCKER_TYPES = [
   'already_launched',
   'launched_within',
@@ -686,12 +699,23 @@ export function ChainBuilderPage() {
                         />
                       )}
                       {newTriggerType === 'debt_status' && (
-                        <input
-                          className="h-8 rounded-md border border-gray-200 px-2 text-xs"
-                          placeholder={t('pages.chainBuilder.placeholders.debtStatus')}
+                        <Select
                           value={newTriggerConfig.status ?? ''}
-                          onChange={(e) => setNewTriggerConfig({ status: e.target.value })}
-                        />
+                          onValueChange={(v) => setNewTriggerConfig({ status: v })}
+                        >
+                          <SelectTrigger className="h-8 text-xs">
+                            <SelectValue
+                              placeholder={t('pages.chainBuilder.placeholders.debtStatus')}
+                            />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {DEBT_STATUS_OPTIONS.map((opt) => (
+                              <SelectItem key={opt.value} value={opt.value}>
+                                {t(`pages.chainBuilder.debtStatus.${opt.value}`, opt.fallback)}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       )}
                       <button
                         type="button"
@@ -715,7 +739,8 @@ export function ChainBuilderPage() {
                             toast.error(getErrorMessage(e))
                           }
                         }}
-                        className="flex h-8 items-center justify-center rounded-md border border-gray-200 bg-gray-50 text-xs text-gray-600 hover:bg-gray-100"
+                        disabled={newTriggerType === 'debt_status' && !newTriggerConfig.status}
+                        className="flex h-8 items-center justify-center rounded-md border border-gray-200 bg-gray-50 text-xs text-gray-600 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         {t('pages.chainBuilder.addTrigger')}
                       </button>

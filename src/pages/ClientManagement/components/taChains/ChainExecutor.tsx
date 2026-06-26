@@ -42,7 +42,12 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/DropdownMenu'
 import { Icons } from '@/lib/icons'
-import { usePinTAChain, useTAChains, useUnpinTAChain } from '@/features/taChains/hooks/useTAChains'
+import {
+  usePinTAChain,
+  useTAChain,
+  useTAChains,
+  useUnpinTAChain,
+} from '@/features/taChains/hooks/useTAChains'
 import { useTargetActions } from '@/features/targetActions/hooks/useTargetActions'
 import type { TargetAction, TADropdownValueOut } from '@/features/targetActions/api/types'
 import { useTags } from '@/features/tags/hooks/useTags'
@@ -358,11 +363,21 @@ export function ChainExecutor({
     }
   }
 
+  // The active instance's chain may be missing from `chainsData` — that list
+  // is filtered by department and only used to populate the manual-chain
+  // picker. An auto-launched (trigger-fired) chain can be automatic and/or
+  // outside the operator's department, so we also fetch it directly by id.
+  // Without this fallback the wizard renders "Pick a chain above to continue"
+  // and the operator can't complete an auto-started chain (KAN-396 / debt_status).
+  const { data: activeChainById } = useTAChain(activeInstance?.chain_id ?? null)
   const activeChain = useMemo(() => {
-    if (activeInstance)
-      return (chainsData?.items ?? []).find((c) => c.id === activeInstance.chain_id) ?? null
-    return null
-  }, [activeInstance, chainsData])
+    if (!activeInstance) return null
+    return (
+      (chainsData?.items ?? []).find((c) => c.id === activeInstance.chain_id) ??
+      activeChainById ??
+      null
+    )
+  }, [activeInstance, chainsData, activeChainById])
 
   // Steps
   const steps = useMemo<TAChainStep[]>(() => activeChain?.steps ?? [], [activeChain])
