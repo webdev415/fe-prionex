@@ -44,7 +44,6 @@ export interface AssistantSettings {
   useSelectedClientAutomatically: boolean
   useSelectedPeriodAutomatically: boolean
   rememberConversationContext: boolean
-  showQuickSuggestionsAfterResponse: boolean
   autoScrollToLatestAnswer: boolean
 }
 
@@ -59,7 +58,6 @@ export const DEFAULT_ASSISTANT_SETTINGS: AssistantSettings = {
   useSelectedClientAutomatically: true,
   useSelectedPeriodAutomatically: true,
   rememberConversationContext: true,
-  showQuickSuggestionsAfterResponse: true,
   autoScrollToLatestAnswer: true,
 }
 

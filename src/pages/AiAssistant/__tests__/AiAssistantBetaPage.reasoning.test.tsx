@@ -237,6 +237,65 @@ describe('AiAssistantBetaPage reasoning UX (Grok-style thinking window)', () => 
     await screen.findByText('Финал')
   })
 
+  it('renders reasoning as light readable prose, not a dark code plate (even with a ``` fence)', async () => {
+    let resolveTurn: (r: AssistantChatResponse) => void = () => {}
+    // The brain's reasoning deltas often carry markdown / a stray ``` fence.
+    // That must NOT turn the whole thinking window into the dark oneDark
+    // terminal plate — reasoning stays soft light text.
+    mockedSendChatMessage.mockImplementation(
+      (_payload, callbacks?: SendChatMessageCallbacks): Promise<AssistantChatResponse> => {
+        callbacks?.onReasoning?.('Сначала посмотрю клиентов:\n```sql\nSELECT * FROM clients;\n```')
+        return new Promise<AssistantChatResponse>((resolve) => {
+          resolveTurn = resolve
+        })
+      }
+    )
+
+    renderPage()
+    send('подумай с кодом')
+
+    const scrollBox = await screen.findByTestId('assistant-reasoning-scroll')
+    // Reasoning is plain prose: the raw thought text is shown verbatim…
+    const prose = within(scrollBox).getByTestId('assistant-reasoning-text')
+    expect(prose.className).toMatch(/whitespace-pre-wrap/)
+    expect(prose).toHaveTextContent('SELECT * FROM clients;')
+    // …and crucially NO dark syntax-highlighted code plate (oneDark) is mounted
+    // inside the reasoning window.
+    expect(within(scrollBox).queryByTestId('markdown-code-block')).not.toBeInTheDocument()
+
+    resolveTurn({
+      conversation_id: 1,
+      message_id: 5,
+      response: 'Финал',
+      coverage_flag: null,
+      tool_calls: [],
+    })
+    await screen.findByText('Финал')
+  })
+
+  it('still highlights a ```sql fence in the ANSWER bubble (reasoning fix does not touch the answer)', async () => {
+    mockedSendChatMessage.mockImplementation(
+      async (_payload, callbacks?: SendChatMessageCallbacks): Promise<AssistantChatResponse> => {
+        callbacks?.onText?.('Вот запрос:\n```sql\nSELECT 1;\n```')
+        return {
+          conversation_id: 1,
+          message_id: 5,
+          response: 'Вот запрос:\n```sql\nSELECT 1;\n```',
+          coverage_flag: null,
+          tool_calls: [],
+        }
+      }
+    )
+
+    renderPage()
+    send('покажи sql')
+
+    // The answer keeps the dark highlighted code plate from #661.
+    const block = await screen.findByTestId('markdown-code-block')
+    expect(block).toHaveAttribute('data-language', 'sql')
+    expect(block).toHaveTextContent('SELECT 1;')
+  })
+
   it('collapses the panel into a thin header once the turn is done (no leftover wall of text)', async () => {
     mockedSendChatMessage.mockImplementation(
       async (_payload, callbacks?: SendChatMessageCallbacks): Promise<AssistantChatResponse> => {

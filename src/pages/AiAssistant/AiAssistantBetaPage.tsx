@@ -278,7 +278,6 @@ function ReasoningStream({ text, streaming, placeholder }: ReasoningStreamProps)
       onScroll={handleScroll}
       data-testid="assistant-reasoning-scroll"
       className={cn(
-        MARKDOWN_BODY_CLASS,
         'ai-chat-input-scrollbar max-h-[200px] overflow-y-auto overscroll-y-contain text-[12px] leading-relaxed text-gray-600',
         // Hold a stable window height while only the placeholder shows, so the
         // first deltas don't visibly grow the box from a single line.
@@ -297,7 +296,17 @@ function ReasoningStream({ text, streaming, placeholder }: ReasoningStreamProps)
           {placeholder}
         </span>
       ) : (
-        <MarkdownMessage>{text}</MarkdownMessage>
+        // Reasoning is a stream of consciousness, not a document: render it as
+        // soft, light, readable prose (like Claude/Gemini "thinking"), never
+        // through MarkdownMessage. Passing it through the shared markdown
+        // surface let its CodeRenderer turn any multi-line text — or a stray
+        // ``` fence in the brain's deltas — into a dark oneDark terminal plate,
+        // making the whole thinking window black. Plain whitespace-pre-wrap
+        // keeps line breaks and stays in the light bubble. Syntax-highlighted
+        // code plates remain exclusive to the answer bubble.
+        <div data-testid="assistant-reasoning-text" className="break-words whitespace-pre-wrap">
+          {text}
+        </div>
       )}
     </div>
   )
