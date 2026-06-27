@@ -20,12 +20,27 @@ import type {
   AssistantResponseMode,
 } from '@/features/aiAssistant/api'
 
+/** Auto-stop silence timeout for voice dictation (seconds). */
+export type AssistantVoiceSilenceTimeout = 1.5 | 2 | 3
+/** Hard cap on a single voice recording (seconds). */
+export type AssistantVoiceMaxDuration = 30 | 60 | 120
+
 export interface AssistantSettings {
   /** Reasoning depth sent with every chat request: fast (default) | thinking. */
   mode: AssistantMode
   responseMode: AssistantResponseMode
   outputFormat: AssistantOutputFormat
   voiceInputEnabled: boolean
+  /**
+   * Deep-research flag — when on, the chat request carries `deep_research: true`
+   * so the brain runs a thorough multi-agent analysis (the gateway ignores the
+   * field until it ships support). Toggled from the composer "+" hub.
+   */
+  deepResearch: boolean
+  /** Voice auto-stop: how long a silence ends the recording (VAD). */
+  voiceSilenceTimeoutSec: AssistantVoiceSilenceTimeout
+  /** Voice hard stop: max recording length before the timer cuts it off. */
+  voiceMaxDurationSec: AssistantVoiceMaxDuration
   useSelectedClientAutomatically: boolean
   useSelectedPeriodAutomatically: boolean
   rememberConversationContext: boolean
@@ -38,6 +53,9 @@ export const DEFAULT_ASSISTANT_SETTINGS: AssistantSettings = {
   responseMode: 'short',
   outputFormat: 'mixed',
   voiceInputEnabled: true,
+  deepResearch: false,
+  voiceSilenceTimeoutSec: 2,
+  voiceMaxDurationSec: 120,
   useSelectedClientAutomatically: true,
   useSelectedPeriodAutomatically: true,
   rememberConversationContext: true,
@@ -100,7 +118,10 @@ export const useAiAssistantStore = create<AiAssistantState>()(
       settingsFor: (userId) => {
         const state = get()
         if (userId == null || state.userId !== userId) return null
-        return state.settings
+        if (state.settings == null) return null
+        // Merge over defaults so settings persisted before a new field shipped
+        // (e.g. deepResearch / voice timings) still resolve to a complete shape.
+        return { ...DEFAULT_ASSISTANT_SETTINGS, ...state.settings }
       },
     }),
     {

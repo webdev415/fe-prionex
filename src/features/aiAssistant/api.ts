@@ -29,6 +29,12 @@ export interface AssistantChatRequest {
   mode: AssistantMode
   response_mode: AssistantResponseMode
   output_format: AssistantOutputFormat
+  /**
+   * Deep-research flag: when true the brain runs a thorough multi-agent
+   * analysis. Sent only when enabled; the gateway ignores the field until it
+   * ships support, so it is safe to send today (forward-compatible).
+   */
+  deep_research?: boolean
   /** Images (screenshot paste) and/or one voice note; ≤3 total (PR #633/#638). */
   attachments?: ChatAttachmentPayload[]
 }

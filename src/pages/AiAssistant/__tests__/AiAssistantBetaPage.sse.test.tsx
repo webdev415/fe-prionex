@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 import { AiAssistantBetaPage } from '../AiAssistantBetaPage'
@@ -336,8 +336,13 @@ describe('AiAssistantBetaPage SSE streaming render', () => {
     )
 
     renderPage()
-    fireEvent.click(screen.getByRole('button', { name: 'pages.aiAssistant.settings' }))
-    fireEvent.click(screen.getByRole('button', { name: 'pages.aiAssistant.modeThinking' }))
+    // Mode now lives in the composer dropdown (not the settings popover).
+    fireEvent.click(screen.getByTestId('assistant-mode-trigger'))
+    fireEvent.click(
+      within(screen.getByTestId('assistant-mode-menu')).getByText(
+        'pages.aiAssistant.modeThinkingShort'
+      )
+    )
 
     send('глубокий вопрос')
     await waitFor(() =>

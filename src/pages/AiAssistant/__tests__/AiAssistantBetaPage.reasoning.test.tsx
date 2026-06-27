@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 import { AiAssistantBetaPage } from '../AiAssistantBetaPage'
@@ -45,8 +45,11 @@ function send(text: string) {
 }
 
 function enableThinkingMode() {
-  fireEvent.click(screen.getByRole('button', { name: 'pages.aiAssistant.settings' }))
-  fireEvent.click(screen.getByRole('button', { name: 'pages.aiAssistant.modeThinking' }))
+  // Reasoning mode now lives in a dedicated dropdown to the right of the
+  // composer (no longer inside the settings popover).
+  fireEvent.click(screen.getByTestId('assistant-mode-trigger'))
+  const menu = screen.getByTestId('assistant-mode-menu')
+  fireEvent.click(within(menu).getByText('pages.aiAssistant.modeThinkingShort'))
 }
 
 /**

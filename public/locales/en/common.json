@@ -420,7 +420,21 @@
       "sourcesTitle": "Source of the numbers",
       "followupsTitle": "Suggested follow-ups",
       "sourcesTables": "Tables:",
-      "sourcesTools": "Tools:"
+      "sourcesTools": "Tools:",
+      "composerHub": "Add",
+      "hubAttach": "Attach file or photo",
+      "hubCrmActions": "CRM actions",
+      "hubDeepResearch": "Deep research",
+      "hubDeepResearchHint": "Thorough multi-agent analysis",
+      "hubContext": "Context",
+      "modeFastShort": "Fast",
+      "modeThinkingShort": "Thinking",
+      "modeFastHint": "Answers instantly",
+      "modeThinkingHint": "Analyzes more thoroughly, but slower",
+      "modeChangeHint": "Set next to the input",
+      "voiceSilenceTimeout": "Silence timeout (auto-stop)",
+      "voiceMaxDuration": "Max recording length",
+      "voiceSeconds": "{{count}}s"
     },
     "training": {
       "title": "Action Analysis",

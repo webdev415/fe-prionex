@@ -367,7 +367,21 @@
       "sourcesTitle": "Источник цифр",
       "followupsTitle": "Уточняющие вопросы",
       "sourcesTables": "Таблицы:",
-      "sourcesTools": "Инструменты:"
+      "sourcesTools": "Инструменты:",
+      "composerHub": "Добавить",
+      "hubAttach": "Прикрепить файл или фото",
+      "hubCrmActions": "CRM-действия",
+      "hubDeepResearch": "Глубокий анализ",
+      "hubDeepResearchHint": "Тщательный разбор с агентами",
+      "hubContext": "Контекст",
+      "modeFastShort": "Быстрый",
+      "modeThinkingShort": "Думающий",
+      "modeFastHint": "Отвечает мгновенно",
+      "modeThinkingHint": "Анализирует тщательнее, но дольше",
+      "modeChangeHint": "Меняется справа от поля",
+      "voiceSilenceTimeout": "Тайм-аут тишины (авто-стоп)",
+      "voiceMaxDuration": "Макс. длина записи",
+      "voiceSeconds": "{{count}} сек"
     },
     "training": {
       "title": "Анализ действий",

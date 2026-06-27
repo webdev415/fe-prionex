@@ -8,8 +8,11 @@ import { Textarea } from '@/components/ui/Textarea'
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch'
 import {
   DropdownMenu,
+  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/DropdownMenu'
 import {
@@ -43,7 +46,10 @@ import {
   DEFAULT_ASSISTANT_SETTINGS,
   useAiAssistantStore,
   type AssistantSettings,
+  type AssistantVoiceMaxDuration,
+  type AssistantVoiceSilenceTimeout,
 } from '@/stores/aiAssistantStore'
+import type { AssistantMode } from '@/features/aiAssistant/api'
 import { isAxiosError } from 'axios'
 import { ConversationSidebar } from './ConversationSidebar'
 import { getDockDesktopBoxClasses } from './dockGeometry'
@@ -51,6 +57,19 @@ import { MarkdownMessage } from './MarkdownMessage'
 
 const QUICK_ACTION_KEYS = ['quickClientData', 'quickDebt', 'quickReport', 'quickEmployee'] as const
 type QuickActionKey = (typeof QUICK_ACTION_KEYS)[number]
+
+/** Icon per CRM quick-action, shown in the composer "+" hub. */
+const QUICK_ACTION_ICONS: Record<QuickActionKey, (typeof Icons)[keyof typeof Icons]> = {
+  quickClientData: Icons.UserSearch01,
+  quickDebt: Icons.Money04,
+  quickReport: Icons.Chart01,
+  quickEmployee: Icons.UserCheck01,
+}
+
+/** Silence-timeout choices (seconds) offered in voice settings. */
+const VOICE_SILENCE_OPTIONS: AssistantVoiceSilenceTimeout[] = [1.5, 2, 3]
+/** Max-recording-length choices (seconds) offered in voice settings. */
+const VOICE_MAX_DURATION_OPTIONS: AssistantVoiceMaxDuration[] = [30, 60, 120]
 
 type AssistDropdownProps = {
   ariaLabel: string
@@ -326,6 +345,257 @@ function AssistFilterDropdown({
   )
 }
 
+type ModeDropdownProps = {
+  value: AssistantMode
+  onChange: (mode: AssistantMode) => void
+}
+
+const MODE_OPTIONS: {
+  mode: AssistantMode
+  Icon: (typeof Icons)[keyof typeof Icons]
+  iconClass: string
+  labelKey: string
+  hintKey: string
+}[] = [
+  {
+    mode: 'fast',
+    Icon: Icons.Flash,
+    iconClass: 'text-amber-500',
+    labelKey: 'pages.aiAssistant.modeFastShort',
+    hintKey: 'pages.aiAssistant.modeFastHint',
+  },
+  {
+    mode: 'thinking',
+    Icon: Icons.AiBrain03,
+    iconClass: 'text-primary-500',
+    labelKey: 'pages.aiAssistant.modeThinkingShort',
+    hintKey: 'pages.aiAssistant.modeThinkingHint',
+  },
+]
+
+/**
+ * Compact reasoning-mode picker shown to the right of the composer (Claude
+ * "Effort" / ChatGPT model-tier style): the trigger shows the current mode, the
+ * menu lists fast/thinking with a one-line hint each. This dropdown is the
+ * single source of truth for `mode`; the settings popover no longer sets it.
+ *
+ * Implemented as a small controlled popover (not Radix) so it opens on a plain
+ * click and renders inline — matching the settings popover in this component.
+ */
+function ModeDropdown({ value, onChange }: ModeDropdownProps) {
+  const { t } = useTranslation('common')
+  const [open, setOpen] = useState(false)
+  const rootRef = useRef<HTMLDivElement>(null)
+  const isThinking = value === 'thinking'
+  const ActiveIcon = isThinking ? Icons.AiBrain03 : Icons.Flash
+
+  useEffect(() => {
+    if (!open) return
+    const onPointerDown = (event: MouseEvent) => {
+      if (!rootRef.current?.contains(event.target as Node)) setOpen(false)
+    }
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setOpen(false)
+    }
+    document.addEventListener('mousedown', onPointerDown)
+    document.addEventListener('keydown', onKeyDown)
+    return () => {
+      document.removeEventListener('mousedown', onPointerDown)
+      document.removeEventListener('keydown', onKeyDown)
+    }
+  }, [open])
+
+  return (
+    <div ref={rootRef} className="relative shrink-0">
+      <button
+        type="button"
+        aria-label={t('pages.aiAssistant.mode')}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        data-testid="assistant-mode-trigger"
+        onClick={() => setOpen((prev) => !prev)}
+        className="text-dark-500 hover:border-primary-300 hover:text-primary-600 inline-flex h-9 min-h-9 w-full shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-full border border-gray-300 bg-white px-3 text-xs font-light shadow-none transition-colors sm:h-8 sm:min-h-0 sm:w-auto"
+      >
+        <ActiveIcon
+          size={15}
+          strokeWidth={1.5}
+          className={isThinking ? 'text-primary-500' : 'text-amber-500'}
+        />
+        <span className="min-w-0 truncate">
+          {isThinking
+            ? t('pages.aiAssistant.modeThinkingShort')
+            : t('pages.aiAssistant.modeFastShort')}
+        </span>
+        <Icons.ArrowDown size={13} strokeWidth={1.5} className="shrink-0 text-gray-400" />
+      </button>
+      {open && (
+        <div
+          role="menu"
+          data-testid="assistant-mode-menu"
+          className="border-light-200 absolute right-0 bottom-full z-30 mb-2 w-64 overflow-hidden rounded-xl border bg-white p-1 shadow-lg ring-1 ring-black/[0.04]"
+        >
+          {MODE_OPTIONS.map(({ mode, Icon, iconClass, labelKey, hintKey }) => (
+            <button
+              key={mode}
+              type="button"
+              role="menuitemradio"
+              aria-checked={value === mode}
+              onClick={() => {
+                onChange(mode)
+                setOpen(false)
+              }}
+              className="hover:bg-light-100/70 flex w-full items-start gap-2.5 rounded-lg px-2.5 py-2 text-left transition-colors"
+            >
+              <Icon size={16} strokeWidth={1.5} className={cn('mt-0.5 shrink-0', iconClass)} />
+              <span className="min-w-0 flex-1">
+                <span className="text-dark-500 flex items-center gap-1.5 text-sm font-medium">
+                  {t(labelKey)}
+                  {value === mode && (
+                    <Icons.Checkmark
+                      size={14}
+                      strokeWidth={2}
+                      className="text-primary-500 shrink-0"
+                    />
+                  )}
+                </span>
+                <span className="mt-0.5 block text-[11px] leading-snug font-light text-gray-500">
+                  {t(hintKey)}
+                </span>
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+type ComposerHubMenuProps = {
+  onAttach: () => void
+  onQuickAction: (key: QuickActionKey) => void
+  quickActionDisabled: boolean
+  deepResearch: boolean
+  onToggleDeepResearch: () => void
+  clientScope: string
+  clientOptions: { value: string; label: string }[]
+  onClientScopeChange: (value: string) => void
+}
+
+/**
+ * Left-side "+" hub for the composer (Claude / ChatGPT "+" menu): attach a
+ * file, run a CRM quick-action, toggle deep research, or set the client/portfolio
+ * context — all in one popover so the input row stays clean.
+ */
+function ComposerHubMenu({
+  onAttach,
+  onQuickAction,
+  quickActionDisabled,
+  deepResearch,
+  onToggleDeepResearch,
+  clientScope,
+  clientOptions,
+  onClientScopeChange,
+}: ComposerHubMenuProps) {
+  const { t } = useTranslation('common')
+  const activeClientLabel =
+    clientOptions.find((o) => o.value === clientScope)?.label ?? clientOptions[0]?.label ?? ''
+
+  return (
+    <DropdownMenu modal={false}>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          aria-label={t('pages.aiAssistant.composerHub')}
+          title={t('pages.aiAssistant.composerHub')}
+          data-testid="composer-hub-trigger"
+          className="text-dark-500 hover:border-primary-300 hover:text-primary-600 flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full border border-gray-300 bg-white text-gray-500 transition-colors sm:h-7 sm:w-7"
+        >
+          <Icons.Add size={18} strokeWidth={1.5} />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent
+        align="start"
+        side="top"
+        className="w-72 bg-white"
+        data-testid="composer-hub-menu"
+      >
+        <DropdownMenuItem
+          className="text-dark-500 flex items-center gap-2.5 px-2.5 py-2 text-sm"
+          onSelect={onAttach}
+          data-testid="hub-attach"
+        >
+          <Icons.Attachment01 size={16} strokeWidth={1.5} className="shrink-0 text-gray-500" />
+          {t('pages.aiAssistant.hubAttach')}
+        </DropdownMenuItem>
+
+        <DropdownMenuCheckboxItem
+          checked={deepResearch}
+          // Keep the menu open after toggling so the choice stays visible.
+          onSelect={(event) => {
+            event.preventDefault()
+            onToggleDeepResearch()
+          }}
+          className="text-dark-500 py-2 pr-2 pl-8 text-sm"
+          data-testid="hub-deep-research"
+        >
+          <span className="flex items-center gap-2.5">
+            <Icons.Sparkles size={16} strokeWidth={1.5} className="text-primary-500 shrink-0" />
+            <span className="min-w-0">
+              <span className="block">{t('pages.aiAssistant.hubDeepResearch')}</span>
+              <span className="block text-[11px] leading-snug font-light text-gray-500">
+                {t('pages.aiAssistant.hubDeepResearchHint')}
+              </span>
+            </span>
+          </span>
+        </DropdownMenuCheckboxItem>
+
+        <DropdownMenuSeparator />
+        <DropdownMenuLabel className="flex items-center gap-1.5 text-[11px] font-medium tracking-tight text-gray-500">
+          <Icons.FileSearch size={13} strokeWidth={1.5} className="shrink-0 text-gray-400" />
+          {t('pages.aiAssistant.hubCrmActions')}
+        </DropdownMenuLabel>
+        {QUICK_ACTION_KEYS.map((key) => {
+          const ActionIcon = QUICK_ACTION_ICONS[key]
+          return (
+            <DropdownMenuItem
+              key={key}
+              className="text-dark-500 flex items-center gap-2.5 px-2.5 py-2 text-sm"
+              disabled={quickActionDisabled}
+              onSelect={() => onQuickAction(key)}
+              data-testid={`hub-action-${key}`}
+            >
+              <ActionIcon size={16} strokeWidth={1.5} className="shrink-0 text-gray-500" />
+              {t(`pages.aiAssistant.${key}`)}
+            </DropdownMenuItem>
+          )
+        })}
+
+        <DropdownMenuSeparator />
+        <DropdownMenuLabel className="flex items-center gap-1.5 text-[11px] font-medium tracking-tight text-gray-500">
+          <Icons.UserMultiple size={13} strokeWidth={1.5} className="shrink-0 text-gray-400" />
+          {t('pages.aiAssistant.hubContext')}
+          <span className="text-dark-500 ml-auto max-w-[7rem] truncate font-light">
+            {activeClientLabel}
+          </span>
+        </DropdownMenuLabel>
+        {clientOptions.map((o) => (
+          <DropdownMenuItem
+            key={o.value}
+            className="text-dark-500 flex items-center justify-between gap-2 px-2.5 py-2 text-sm"
+            onSelect={() => onClientScopeChange(o.value)}
+            data-testid={`hub-context-${o.value}`}
+          >
+            <span className="min-w-0 truncate">{o.label}</span>
+            {o.value === clientScope && (
+              <Icons.Checkmark size={14} strokeWidth={2} className="text-primary-500 shrink-0" />
+            )}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+}
+
 export function AiAssistantBetaPage() {
   const { t, i18n } = useTranslation('common')
   const isOpenSideBar = useSidebarStore((state) => state.isOpenSideBar)
@@ -527,6 +797,8 @@ export function AiAssistantBetaPage() {
     cancel: cancelDictation,
   } = useServerDictation({
     language: resolveDictationLanguage(i18n.language),
+    silenceTimeoutSec: assistantSettings.voiceSilenceTimeoutSec,
+    maxDurationSec: assistantSettings.voiceMaxDurationSec,
     onDraft: (text) => setDictationDraft(text),
     onFinal: (text) => {
       setDictationDraft('')
@@ -574,6 +846,7 @@ export function AiAssistantBetaPage() {
   // `sendVoiceMessageRef` breaks the declaration cycle with submitPrompt.
   const sendVoiceMessageRef = useRef<(result: VoiceMessageResult) => void>(() => {})
   const voiceRecorder = useVoiceMessageRecorder({
+    maxDurationSec: assistantSettings.voiceMaxDurationSec,
     onComplete: (result) => sendVoiceMessageRef.current(result),
     onError: (reason) =>
       toast.error(
@@ -875,42 +1148,23 @@ export function AiAssistantBetaPage() {
             </button>
           </div>
 
-          <p
-            className="mt-2.5 mb-1.5 text-[11px] font-medium text-gray-500"
-            title={t('pages.aiAssistant.modeTooltip')}
-          >
-            {t('pages.aiAssistant.mode')}
-          </p>
-          <div
-            className="bg-light-100/80 flex w-full rounded-lg p-0.5"
-            role="group"
-            aria-label={t('pages.aiAssistant.mode')}
-          >
-            <button
-              type="button"
-              onClick={() => applySettings((s) => ({ ...s, mode: 'fast' }))}
-              className={cn(
-                'min-h-8 flex-1 rounded-md px-2 py-1.5 text-[11px] font-medium transition-all',
-                assistantSettings.mode === 'fast'
-                  ? 'text-dark-500 bg-white shadow-sm ring-1 ring-gray-200/80'
-                  : 'hover:text-dark-500 text-gray-600'
-              )}
-            >
-              {t('pages.aiAssistant.modeFast')}
-            </button>
-            <button
-              type="button"
-              title={t('pages.aiAssistant.modeTooltip')}
-              onClick={() => applySettings((s) => ({ ...s, mode: 'thinking' }))}
-              className={cn(
-                'min-h-8 flex-1 rounded-md px-2 py-1.5 text-[11px] font-medium transition-all',
-                assistantSettings.mode === 'thinking'
-                  ? 'text-dark-500 bg-white shadow-sm ring-1 ring-gray-200/80'
-                  : 'hover:text-dark-500 text-gray-600'
-              )}
-            >
-              {t('pages.aiAssistant.modeThinking')}
-            </button>
+          {/* Reasoning mode now lives in the dropdown next to the composer
+              (single source of truth); the settings panel only points to it. */}
+          <div className="bg-light-50/60 mt-2.5 flex items-center gap-2 rounded-lg border border-gray-200/70 px-2.5 py-2">
+            {assistantSettings.mode === 'thinking' ? (
+              <Icons.AiBrain03 size={14} strokeWidth={1.5} className="text-primary-500 shrink-0" />
+            ) : (
+              <Icons.Flash size={14} strokeWidth={1.5} className="shrink-0 text-amber-500" />
+            )}
+            <span className="text-dark-500 min-w-0 flex-1 text-[11px] leading-snug font-light">
+              {t('pages.aiAssistant.mode')}:{' '}
+              {assistantSettings.mode === 'thinking'
+                ? t('pages.aiAssistant.modeThinkingShort')
+                : t('pages.aiAssistant.modeFastShort')}
+            </span>
+            <span className="shrink-0 text-[11px] font-light text-gray-400">
+              {t('pages.aiAssistant.modeChangeHint')}
+            </span>
           </div>
 
           <p className="mt-2.5 mb-1.5 text-[11px] font-medium text-gray-500">
@@ -958,6 +1212,60 @@ export function AiAssistantBetaPage() {
               ariaLabel={t('pages.aiAssistant.voiceInput')}
             />
           </div>
+
+          {assistantSettings.voiceInputEnabled && (
+            <div data-testid="voice-listening-settings">
+              <p className="mt-2.5 mb-1.5 text-[11px] font-medium text-gray-500">
+                {t('pages.aiAssistant.voiceSilenceTimeout')}
+              </p>
+              <div
+                className="bg-light-100/80 grid w-full grid-cols-3 gap-0.5 rounded-lg p-0.5"
+                role="group"
+                aria-label={t('pages.aiAssistant.voiceSilenceTimeout')}
+              >
+                {VOICE_SILENCE_OPTIONS.map((sec) => (
+                  <button
+                    key={sec}
+                    type="button"
+                    onClick={() => applySettings((s) => ({ ...s, voiceSilenceTimeoutSec: sec }))}
+                    className={cn(
+                      'min-h-8 rounded-md px-1 py-1.5 text-center text-[11px] font-medium transition-all',
+                      assistantSettings.voiceSilenceTimeoutSec === sec
+                        ? 'text-dark-500 bg-white shadow-sm ring-1 ring-gray-200/80'
+                        : 'hover:text-dark-500 text-gray-600'
+                    )}
+                  >
+                    {t('pages.aiAssistant.voiceSeconds', { count: sec })}
+                  </button>
+                ))}
+              </div>
+
+              <p className="mt-2.5 mb-1.5 text-[11px] font-medium text-gray-500">
+                {t('pages.aiAssistant.voiceMaxDuration')}
+              </p>
+              <div
+                className="bg-light-100/80 grid w-full grid-cols-3 gap-0.5 rounded-lg p-0.5"
+                role="group"
+                aria-label={t('pages.aiAssistant.voiceMaxDuration')}
+              >
+                {VOICE_MAX_DURATION_OPTIONS.map((sec) => (
+                  <button
+                    key={sec}
+                    type="button"
+                    onClick={() => applySettings((s) => ({ ...s, voiceMaxDurationSec: sec }))}
+                    className={cn(
+                      'min-h-8 rounded-md px-1 py-1.5 text-center text-[11px] font-medium transition-all',
+                      assistantSettings.voiceMaxDurationSec === sec
+                        ? 'text-dark-500 bg-white shadow-sm ring-1 ring-gray-200/80'
+                        : 'hover:text-dark-500 text-gray-600'
+                    )}
+                  >
+                    {t('pages.aiAssistant.voiceSeconds', { count: sec })}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </section>
 
         <section className="px-4 py-2.5">
@@ -1010,18 +1318,6 @@ export function AiAssistantBetaPage() {
           </h3>
           <ul className="space-y-0">
             <li className="flex items-center justify-between gap-3 py-1.5 first:pt-0">
-              <span className="text-dark-500 min-w-0 flex-1 text-xs leading-snug font-light">
-                {t('pages.aiAssistant.showQuickSuggestionsAfterResponse')}
-              </span>
-              <ToggleSwitch
-                checked={assistantSettings.showQuickSuggestionsAfterResponse}
-                onChange={(checked) =>
-                  applySettings((s) => ({ ...s, showQuickSuggestionsAfterResponse: checked }))
-                }
-                ariaLabel={t('pages.aiAssistant.showQuickSuggestionsAfterResponse')}
-              />
-            </li>
-            <li className="flex items-center justify-between gap-3 border-t border-gray-100 py-1.5">
               <span className="text-dark-500 min-w-0 flex-1 text-xs leading-snug font-light">
                 {t('pages.aiAssistant.autoScrollToLatestAnswer')}
               </span>
@@ -1183,6 +1479,9 @@ export function AiAssistantBetaPage() {
             mode: assistantSettings.mode,
             response_mode: assistantSettings.responseMode,
             output_format: assistantSettings.outputFormat,
+            // Send the deep-research flag only when on (forward-compatible: the
+            // gateway ignores it until it ships support).
+            deep_research: assistantSettings.deepResearch ? true : undefined,
             attachments:
               attachmentList.length > 0 ? toChatAttachmentPayload(attachmentList) : undefined,
           },
@@ -1303,6 +1602,7 @@ export function AiAssistantBetaPage() {
     },
     [
       appendChatMessage,
+      assistantSettings.deepResearch,
       assistantSettings.mode,
       assistantSettings.outputFormat,
       assistantSettings.rememberConversationContext,
@@ -2119,7 +2419,8 @@ export function AiAssistantBetaPage() {
                   {t('pages.aiAssistant.voiceMessageRecording')}
                 </span>
                 <span className="shrink-0 font-mono text-[11px] text-gray-600 tabular-nums">
-                  {formatRecordingTime(recorderElapsedSec)} / 2:00
+                  {formatRecordingTime(recorderElapsedSec)} /{' '}
+                  {formatRecordingTime(assistantSettings.voiceMaxDurationSec)}
                 </span>
                 <button
                   type="button"
@@ -2142,17 +2443,42 @@ export function AiAssistantBetaPage() {
 
             <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-3">
               <div className="flex shrink-0 items-center gap-2">
+                {/* Composer "+" hub: attach / CRM actions / deep research /
+                    context — Claude / ChatGPT "+" pattern. */}
+                <ComposerHubMenu
+                  onAttach={() => imageInputRef.current?.click()}
+                  onQuickAction={(key) => void submitPrompt(quickActionPrompts[key])}
+                  quickActionDisabled={isAssistantResponding}
+                  deepResearch={assistantSettings.deepResearch}
+                  onToggleDeepResearch={() =>
+                    applySettings((s) => ({ ...s, deepResearch: !s.deepResearch }))
+                  }
+                  clientScope={clientScope}
+                  clientOptions={clientOptions}
+                  onClientScopeChange={setClientScope}
+                />
+                <input
+                  ref={imageInputRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  multiple
+                  className="hidden"
+                  data-testid="attach-image-input"
+                  onChange={handleImageInputChange}
+                />
+
                 <div className="relative shrink-0">
                   <button
                     ref={settingsTriggerRef}
                     type="button"
                     onClick={() => setIsSettingsOpen((open) => !open)}
+                    aria-expanded={isSettingsOpen}
                     className="text-dark-500 hover:text-primary-600 flex min-h-9 cursor-pointer items-center gap-2 text-sm font-light transition-colors"
                   >
-                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-gray-300 bg-white text-gray-500 sm:h-6 sm:w-6">
-                      <Icons.Add size={16} strokeWidth={1.5} />
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-gray-300 bg-white text-gray-500 sm:h-7 sm:w-7">
+                      <Icons.Settings size={16} strokeWidth={1.5} />
                     </span>
-                    {t('pages.aiAssistant.settings')}
+                    <span className="hidden sm:inline">{t('pages.aiAssistant.settings')}</span>
                   </button>
                   {!isMobileOrTablet && isSettingsOpen && (
                     <div
@@ -2163,42 +2489,31 @@ export function AiAssistantBetaPage() {
                     </div>
                   )}
                 </div>
-
-                <button
-                  type="button"
-                  aria-label={t('pages.aiAssistant.attachImageButton')}
-                  title={t('pages.aiAssistant.attachImageButton')}
-                  onClick={() => imageInputRef.current?.click()}
-                  className="text-dark-500 hover:text-primary-600 flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-full border border-gray-300 bg-white text-gray-500 transition-colors sm:h-6 sm:w-6"
-                >
-                  <Icons.Attachment01 size={16} strokeWidth={1.5} />
-                </button>
-                <input
-                  ref={imageInputRef}
-                  type="file"
-                  accept="image/png,image/jpeg,image/webp"
-                  multiple
-                  className="hidden"
-                  data-testid="attach-image-input"
-                  onChange={handleImageInputChange}
-                />
               </div>
 
-              <div className="grid w-full min-w-0 grid-cols-[1fr_1fr_auto] items-center gap-2 sm:flex sm:w-auto sm:flex-wrap sm:justify-end">
+              <div className="flex w-full min-w-0 flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
                 <AssistFilterDropdown
                   ariaLabel={t('pages.aiAssistant.client')}
                   value={clientScope}
                   onChange={setClientScope}
                   options={clientOptions}
-                  triggerClassName="w-full min-w-0 sm:w-32"
+                  triggerClassName="min-w-0 flex-1 rounded-full border border-gray-300 sm:w-32 sm:flex-none"
                 />
                 <AssistFilterDropdown
                   ariaLabel={t('pages.aiAssistant.period')}
                   value={period}
                   onChange={setPeriod}
                   options={periodOptions}
-                  triggerClassName="w-full min-w-0 sm:w-32"
+                  triggerClassName="min-w-0 flex-1 rounded-full border border-gray-300 sm:w-32 sm:flex-none"
                 />
+
+                {/* Reasoning-mode picker (source of truth for `mode`). */}
+                <div className="min-w-0 flex-1 sm:flex-none">
+                  <ModeDropdown
+                    value={assistantSettings.mode}
+                    onChange={(mode) => applySettings((s) => ({ ...s, mode }))}
+                  />
+                </div>
 
                 <button
                   type="button"
@@ -2251,30 +2566,6 @@ export function AiAssistantBetaPage() {
               {t('pages.aiAssistant.inputHint')}
             </p>
           </div>
-
-          {/* In an active chat on mobile/tablet the stacked quick actions eat
-              most of the viewport inside the fixed dock — hide them there. */}
-          {assistantSettings.showQuickSuggestionsAfterResponse &&
-            (!hasConversation || !isMobileOrTablet) && (
-              <div className="mt-4 flex w-full min-w-0 flex-col gap-2 sm:mt-6 sm:flex-row sm:flex-wrap sm:justify-center sm:gap-3 lg:gap-4">
-                {QUICK_ACTION_KEYS.map((key) => (
-                  <button
-                    key={key}
-                    type="button"
-                    disabled={isAssistantResponding}
-                    className={cn(
-                      'text-secondary-800 w-full cursor-pointer rounded-full border border-white bg-white/70 px-4 py-2.5 text-center text-sm leading-[150%] font-light tracking-[-0.02em] sm:w-auto sm:px-5 sm:py-3 sm:text-base sm:leading-[155%] sm:tracking-[-0.32px]',
-                      'hover:border-primary-300 hover:bg-primary-50/40 transition-colors disabled:cursor-not-allowed disabled:opacity-60'
-                    )}
-                    onClick={() => {
-                      void submitPrompt(quickActionPrompts[key])
-                    }}
-                  >
-                    {t(`pages.aiAssistant.${key}`)}
-                  </button>
-                ))}
-              </div>
-            )}
         </div>
       </div>
 

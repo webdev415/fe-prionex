@@ -425,7 +425,21 @@
       "sourcesTitle": "Джерело цифр",
       "followupsTitle": "Уточнювальні запитання",
       "sourcesTables": "Таблиці:",
-      "sourcesTools": "Інструменти:"
+      "sourcesTools": "Інструменти:",
+      "composerHub": "Додати",
+      "hubAttach": "Прикріпити файл або фото",
+      "hubCrmActions": "CRM-дії",
+      "hubDeepResearch": "Глибокий аналіз",
+      "hubDeepResearchHint": "Ретельний розбір з агентами",
+      "hubContext": "Контекст",
+      "modeFastShort": "Швидкий",
+      "modeThinkingShort": "Думаючий",
+      "modeFastHint": "Відповідає миттєво",
+      "modeThinkingHint": "Аналізує ретельніше, але довше",
+      "modeChangeHint": "Змінюється праворуч від поля",
+      "voiceSilenceTimeout": "Тайм-аут тиші (авто-стоп)",
+      "voiceMaxDuration": "Макс. довжина запису",
+      "voiceSeconds": "{{count}} с"
     },
     "training": {
       "title": "Аналіз дій",

@@ -64,10 +64,9 @@ function renderPage() {
   return render(<AiAssistantBetaPage />, { wrapper })
 }
 
-// Quick-action buttons render with the pages.aiAssistant.* translation keys
-// (the global i18n mock returns raw keys).
-const QUICK_ACTION_TEXT = 'pages.aiAssistant.quickClientData'
-
+// CRM quick-actions moved into the composer "+" hub; the hub trigger is always
+// available in the dock (mobile + desktop, empty + active conversation). The
+// old stacked bottom quick-action row no longer exists.
 describe('AiAssistantBetaPage mobile layout', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -78,23 +77,25 @@ describe('AiAssistantBetaPage mobile layout', () => {
     setViewportWidth(390)
   })
 
-  it('hides quick actions on mobile while a conversation is active', async () => {
+  it('keeps the composer "+" hub reachable on mobile while a conversation is active', async () => {
     useAiAssistantStore.getState().setActiveConversation('7', 42)
     mockedGetConversation.mockResolvedValue(CONVERSATION_DETAIL)
 
     renderPage()
 
     expect(await screen.findByText('Вопрос')).toBeInTheDocument()
-    expect(screen.queryByText(QUICK_ACTION_TEXT)).not.toBeInTheDocument()
+    expect(screen.getByTestId('composer-hub-trigger')).toBeInTheDocument()
+    // The old stacked bottom quick-action row is gone (actions live in the hub).
+    expect(screen.queryByText('pages.aiAssistant.quickClientData')).not.toBeInTheDocument()
   })
 
-  it('keeps quick actions on mobile while the chat is empty', () => {
+  it('shows the composer "+" hub on mobile while the chat is empty', () => {
     renderPage()
 
-    expect(screen.getByText(QUICK_ACTION_TEXT)).toBeInTheDocument()
+    expect(screen.getByTestId('composer-hub-trigger')).toBeInTheDocument()
   })
 
-  it('keeps quick actions in an active conversation on desktop', async () => {
+  it('shows the composer "+" hub in an active conversation on desktop', async () => {
     setViewportWidth(1280)
     useAiAssistantStore.getState().setActiveConversation('7', 42)
     mockedGetConversation.mockResolvedValue(CONVERSATION_DETAIL)
@@ -102,6 +103,6 @@ describe('AiAssistantBetaPage mobile layout', () => {
     renderPage()
 
     expect(await screen.findByText('Вопрос')).toBeInTheDocument()
-    expect(screen.getByText(QUICK_ACTION_TEXT)).toBeInTheDocument()
+    expect(screen.getByTestId('composer-hub-trigger')).toBeInTheDocument()
   })
 })
