@@ -1,7 +1,8 @@
 import { create } from 'zustand'
 import { authApi } from '@/features/auth/api/authApi'
-import { setAccessToken, getAccessToken } from '@/lib/api'
+import { getAccessToken, registerOnAuthCleared, setAccessToken } from '@/lib/api'
 import { applyPersistedLanguageFromServer } from '@/lib/i18n'
+import { cancelSessionHeartbeat, scheduleSessionHeartbeat } from '@/lib/sessionHeartbeat'
 import type { User, LoginRequest, AuthErrorState } from '@/types/api'
 import {
   buildUserFromJwtToken,
@@ -131,6 +132,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       }
 
       setAccessToken(token)
+      scheduleSessionHeartbeat()
 
       // Try to fetch full user details with permissions
       // If this fails (e.g., user has no project/role assigned), fall back to login response data
@@ -200,6 +202,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       } else if (errorCode === 'ALREADY_LOGGED_IN') {
         detectedErrorState = 'ALREADY_LOGGED_IN'
         pendingCreds = credentials // Store credentials for force login
+      } else if (errorCode === 'IP_NOT_ALLOWED') {
+        detectedErrorState = 'IP_NOT_ALLOWED'
       }
 
       set({
@@ -221,6 +225,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       await authApi.logout()
     } finally {
       setAccessToken(null)
+      cancelSessionHeartbeat()
 
       // Clear impersonation localStorage
       localStorage.removeItem('impersonation_original_admin')
@@ -273,6 +278,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       }
 
       setAccessToken(token)
+      scheduleSessionHeartbeat()
 
       // Try to fetch full user details with permissions
       // If this fails (e.g., user has no project/role assigned), fall back to login response data
@@ -344,6 +350,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       }
 
       setAccessToken(token)
+      scheduleSessionHeartbeat()
 
       // Mirrors the `login()` success path: prefer /users/me for full
       // profile + permissions, fall back to login response if it fails.
@@ -570,6 +577,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             localStorage.removeItem('impersonated_user_profile')
 
             setAccessToken(null)
+            cancelSessionHeartbeat()
             set({
               user: null,
               isAuthenticated: false,
@@ -584,6 +592,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       } else {
         // Token invalid or session expired - clear auth state
         setAccessToken(null)
+        cancelSessionHeartbeat()
         set({
           user: null,
           isAuthenticated: false,
@@ -597,6 +606,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } catch {
       // API call failed (401, network error, etc.) - clear auth state
       setAccessToken(null)
+      cancelSessionHeartbeat()
       set({
         user: null,
         isAuthenticated: false,
@@ -819,5 +829,19 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 }))
+
+// KAN-760: when api.ts (401 interceptor / cross-tab storage event /
+// sessionHeartbeat) tears down the session, also wipe the zustand auth
+// state so React components don't keep rendering as authenticated until
+// the navigation completes.
+registerOnAuthCleared(() => {
+  useAuthStore.setState({
+    user: null,
+    isAuthenticated: false,
+    isImpersonating: false,
+    impersonatedUser: null,
+    originalAdminUser: null,
+  })
+})
 
 export default useAuthStore

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * LeaveFeedbackButton — trainer-side "leave feedback" affordance (KAN-410, Feature 2.3).
  *
  * Opens a popup with type / text / optional timestamp fields. Timestamp is
@@ -67,13 +67,13 @@ export function LeaveFeedbackButton({
         leftIcon={<Icons.Bell size={14} className="text-dark-500" />}
         className="h-[40px] rounded-md text-xs sm:h-[45px] sm:text-sm"
       >
-        {t('pages.actionAnalysis.feedback.leave', 'Leave feedback')}
+        {t('pages.training.feedback.leave', 'Leave feedback')}
       </Button>
 
       {open ? (
         <div className="absolute right-0 z-20 mt-1 w-80 rounded-lg border border-gray-200 bg-white p-3 shadow-lg">
           <label className="text-xs font-medium text-gray-700">
-            {t('pages.actionAnalysis.feedback.typeLabel', 'Type')}
+            {t('pages.training.feedback.typeLabel', 'Type')}
           </label>
           <select
             value={feedbackType}
@@ -82,13 +82,13 @@ export function LeaveFeedbackButton({
           >
             {FEEDBACK_TYPES.map((ft) => (
               <option key={ft} value={ft}>
-                {t(`pages.actionAnalysis.feedback.types.${ft}`, ft.replace(/_/g, ' '))}
+                {t(`pages.training.feedback.types.${ft}`, ft.replace(/_/g, ' '))}
               </option>
             ))}
           </select>
 
           <label className="text-xs font-medium text-gray-700">
-            {t('pages.actionAnalysis.feedback.text', 'Feedback text')}
+            {t('pages.training.feedback.text', 'Feedback text')}
           </label>
           <textarea
             rows={3}
@@ -104,10 +104,7 @@ export function LeaveFeedbackButton({
                 checked={includeTimestamp}
                 onChange={(e) => setIncludeTimestamp(e.target.checked)}
               />
-              {t(
-                'pages.actionAnalysis.feedback.includeTimestamp',
-                'Include current playback position'
-              )}
+              {t('pages.training.feedback.includeTimestamp', 'Include current playback position')}
             </label>
           ) : null}
 
@@ -127,7 +124,7 @@ export function LeaveFeedbackButton({
               disabled={createMutation.isPending || !text.trim()}
               className="rounded-md"
             >
-              {t('pages.actionAnalysis.feedback.send', 'Send')}
+              {t('pages.training.feedback.send', 'Send')}
             </Button>
           </div>
         </div>

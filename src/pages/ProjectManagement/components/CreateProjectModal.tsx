@@ -17,6 +17,7 @@ import { Checkbox } from '@/components/ui/Checkbox'
 import { Label } from '@/components/ui/Label'
 import { useCreateProject } from '@/features/projects/hooks/useProjectMutations'
 import type { CreateProjectInput } from '@/features/projects/types'
+import { formatPickerDateAsYMD } from '@/lib/dateUtils'
 import { Icons } from '@/lib/icons'
 
 interface CreateProjectModalProps {
@@ -204,7 +205,7 @@ export function CreateProjectModal({ open, onClose, onSuccess }: CreateProjectMo
                   id="start_date"
                   value={formData.start_date}
                   onChange={(args) => {
-                    const dateStr = args.value ? args.value.toISOString().split('T')[0] : ''
+                    const dateStr = args.value ? formatPickerDateAsYMD(args.value) : ''
                     handleChange('start_date', dateStr)
                   }}
                   disabled={createMutation.isPending}
@@ -217,7 +218,7 @@ export function CreateProjectModal({ open, onClose, onSuccess }: CreateProjectMo
                   id="end_date"
                   value={formData.end_date}
                   onChange={(args) => {
-                    const dateStr = args.value ? args.value.toISOString().split('T')[0] : ''
+                    const dateStr = args.value ? formatPickerDateAsYMD(args.value) : ''
                     handleChange('end_date', dateStr)
                   }}
                   disabled={createMutation.isPending || noEndDate}

@@ -8,7 +8,10 @@ import { Icons } from '@/lib/icons'
 import { Button } from '@/components/ui/Button'
 
 interface Props {
-  importType: Extract<ImportType, 'tag_assignment' | 'operator_assignment' | 'payment_import'>
+  importType: Extract<
+    ImportType,
+    'tag_assignment' | 'operator_assignment' | 'payment_import' | 'sale_notes'
+  >
   label: string
   onViewHistory: () => void
   hidden?: boolean

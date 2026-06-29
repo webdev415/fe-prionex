@@ -131,3 +131,70 @@ describe('parseManualDateTime', () => {
     expect(parseManualDateTime('')).toBeNull()
   })
 })
+
+describe('applyDefaultTimeToDate — KAN-770 skipIfToday extension', () => {
+  const hm = (d: Date) => `${d.getHours()}:${d.getMinutes()}`
+
+  const tomorrowAtMidnight = (): Date => {
+    const d = new Date()
+    d.setDate(d.getDate() + 1)
+    d.setHours(0, 0, 0, 0)
+    return d
+  }
+
+  const todayAtSpecificTime = (h: number, m: number): Date => {
+    const d = new Date()
+    d.setHours(h, m, 0, 0)
+    return d
+  }
+
+  it('applies default when picking a future date and skipIfToday=true', () => {
+    const tomorrow = tomorrowAtMidnight()
+    const out = applyDefaultTimeToDate(tomorrow, {
+      defaultTime: '09:00',
+      hasExistingValue: false,
+      fromDayClick: true,
+      skipIfToday: true,
+    })
+    expect(hm(out)).toBe('9:0')
+  })
+
+  it('does NOT apply default when picking today and skipIfToday=true', () => {
+    const today = todayAtSpecificTime(15, 30)
+    const out = applyDefaultTimeToDate(today, {
+      defaultTime: '09:00',
+      hasExistingValue: false,
+      fromDayClick: true,
+      skipIfToday: true,
+    })
+    // KAN-770: today's pick must keep the user-chosen time, never auto-fill.
+    expect(hm(out)).toBe('15:30')
+  })
+
+  it('DOES apply default when picking today and skipIfToday=false (KAN-578 baseline)', () => {
+    // Regression guard: existing KAN-578 callers (ChainExecutor / EditTAInteractionModal)
+    // must keep auto-filling 09:00 on today's pick — they never pass skipIfToday.
+    const today = todayAtSpecificTime(15, 30)
+    const out = applyDefaultTimeToDate(today, {
+      defaultTime: '09:00',
+      hasExistingValue: false,
+      fromDayClick: true,
+      skipIfToday: false,
+    })
+    expect(hm(out)).toBe('9:0')
+  })
+
+  it('preserves existing time on subsequent picks regardless of skipIfToday', () => {
+    // AC #2: once a value exists, day changes never reset the time —
+    // identical to KAN-578 behavior, skipIfToday has no effect here.
+    const tomorrow = tomorrowAtMidnight()
+    tomorrow.setHours(14, 30, 0, 0)
+    const out = applyDefaultTimeToDate(tomorrow, {
+      defaultTime: '09:00',
+      hasExistingValue: true,
+      fromDayClick: true,
+      skipIfToday: true,
+    })
+    expect(hm(out)).toBe('14:30')
+  })
+})

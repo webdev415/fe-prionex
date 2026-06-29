@@ -81,6 +81,12 @@ export async function uploadImport(request: UploadImportRequest): Promise<Upload
   if (request.import_type === 'vendor' && request.schema_code) {
     formData.append('schema_code', request.schema_code)
   }
+  if (request.factoring_agreement_id) {
+    formData.append('factoring_agreement_id', request.factoring_agreement_id.toString())
+  }
+  if (request.new_factoring_agreement_json) {
+    formData.append('new_factoring_agreement_json', request.new_factoring_agreement_json)
+  }
 
   // Get current token to ensure it's available
   const token = getAccessToken()

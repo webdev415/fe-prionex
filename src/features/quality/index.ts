@@ -6,9 +6,11 @@ export {
   listMyScorecards,
   getScorecard,
   getScorecardHistoryForCall,
+  getScorecardAggregate,
   createScorecard,
   updateScorecard,
   sendScorecard,
+  deleteScorecard,
   exportScorecards,
   listMarkersForCall,
   createMarker,
@@ -35,9 +37,11 @@ export {
   useMyScorecards,
   useScorecard,
   useScorecardHistoryForCall,
+  useScorecardAggregate,
   useCreateScorecard,
   useUpdateScorecard,
   useSendScorecard,
+  useDeleteScorecard,
   useExportScorecards,
   scorecardKeys,
 } from './hooks/useScorecards'
@@ -77,6 +81,10 @@ export { FeedbackThreadView } from './components/FeedbackThreadView'
 export { ScoreDynamicsChart } from './components/ScoreDynamicsChart'
 
 export type {
+  AggregateFilters,
+  AggregateGroupBy,
+  AggregateResponse,
+  AggregateRow,
   Criterion,
   CriterionScale,
   PageResponse,
@@ -87,6 +95,7 @@ export type {
   ScorecardListFilters,
   ScorecardStatus,
   ScorecardTemplate,
+  ScorecardType,
   ScorecardUpdatePayload,
   ScoreEntry,
   ScoresPayload,

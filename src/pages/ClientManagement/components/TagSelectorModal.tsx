@@ -3,7 +3,7 @@
  *
  * Modal for managing client tags with multi-select checkboxes.
  * Pre-selects existing tags and allows adding/removing tags.
- * Optimized with React.memo, useCallback, and debounced search.
+ * Protected tags: any user can assign; only permitted roles can uncheck/remove.
  */
 
 import { useState, useEffect, useCallback, useMemo, memo } from 'react'
@@ -27,14 +27,9 @@ import { useHasPermission } from '@/hooks'
 import { PERMISSIONS } from '@/constants/permissions'
 import { useTranslation } from 'react-i18next'
 import { PromiseAssignDialog } from './PromiseAssignDialog'
-
-interface TagWithPayloadFlag {
-  id: number
-  name: string
-  color: string
-  description?: string
-  requires_payload?: boolean
-}
+import { useAuthStore } from '@/stores/authStore'
+import { canRemoveProtectedTag } from '@/features/tags/utils/protected'
+import type { TagDefinition } from '@/features/tags/types'
 
 interface TagSelectorModalProps {
   clientId: number
@@ -53,6 +48,7 @@ export const TagSelectorModal = memo(function TagSelectorModal({
 }: TagSelectorModalProps) {
   const { t } = useTranslation('common')
   const queryClient = useQueryClient()
+  const roleName = useAuthStore((state) => state.user?.active_role_name)
   const canAssignTags = useHasPermission(PERMISSIONS.CLIENTS.ASSIGN_TAGS)
   const { data: allTags, isLoading: tagsLoading } = useTags(projectId)
   const { data: clientTags, isLoading: clientTagsLoading } = useClientTags(clientId)
@@ -62,59 +58,75 @@ export const TagSelectorModal = memo(function TagSelectorModal({
   const [selectedTagIds, setSelectedTagIds] = useState<Set<number>>(new Set())
   const [searchQuery, setSearchQuery] = useState('')
   const [isSaving, setIsSaving] = useState(false)
-  // Pending payload-required tag the operator wants to assign — opens
-  // PromiseAssignDialog where they enter ЦД (date/time) and amount.
   const [pendingPayloadTag, setPendingPayloadTag] = useState<{
     id: number
     name: string
   } | null>(null)
 
-  // Debounce search query for better performance
   const debouncedSearchQuery = useDebounce(searchQuery, 300)
 
-  // Pre-select existing tags when clientTags are loaded
   useEffect(() => {
     if (clientTags) {
       setSelectedTagIds(new Set(clientTags.map((t) => t.id)))
     }
   }, [clientTags])
 
-  // Memoize filtered tags to avoid recalculating on every render.
-  // Also drop tags with expiry_type='target_action_date' — these are
-  // assigned only via chain effects (the expires_at comes from a TA
-  // date field); the backend rejects manual assignments for them.
+  // Merge catalog + assigned tags so protected tags already on the client stay visible
+  // even when department scope hides them from the catalog list. Client tags override
+  // catalog entries so can_remove_protected reflects GET /clients/:id/tags.
+  const catalogTags = useMemo(() => {
+    const byId = new Map<number, TagDefinition>()
+    for (const tag of allTags ?? []) {
+      byId.set(tag.id, tag)
+    }
+    for (const tag of clientTags ?? []) {
+      byId.set(tag.id, tag)
+    }
+    return [...byId.values()]
+  }, [allTags, clientTags])
+
   const filteredTags = useMemo(() => {
-    const matched = (allTags ?? []).filter(
+    const matched = catalogTags.filter(
       (tag) =>
         tag.name.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) &&
         (tag.expiry_type ?? 'permanent') !== 'target_action_date'
     )
     return sortTagsWithSelectedFirst(matched, selectedTagIds)
-  }, [allTags, debouncedSearchQuery, selectedTagIds])
+  }, [catalogTags, debouncedSearchQuery, selectedTagIds])
 
-  // Memoize handleToggleTag to prevent re-creating function on every render.
-  // Tags with `requires_payload=true` (e.g. promise_to_pay) cannot be added
-  // through the bulk save path — they need a dedicated form for ЦД + amount.
-  // Clicking on such a tag opens PromiseAssignDialog instead.
-  const handleToggleTag = useCallback((tag: TagWithPayloadFlag) => {
-    setSelectedTagIds((prev) => {
-      const isSelected = prev.has(tag.id)
-      // Adding a payload-required tag → divert to dedicated dialog
-      if (!isSelected && tag.requires_payload) {
-        setPendingPayloadTag({ id: tag.id, name: tag.name })
-        return prev
+  const isTagRemovalLocked = useCallback(
+    (tag: TagDefinition, isSelected: boolean) => {
+      if (!isSelected || !tag.is_protected) {
+        return false
       }
-      const next = new Set(prev)
-      if (next.has(tag.id)) {
-        next.delete(tag.id)
-      } else {
-        next.add(tag.id)
-      }
-      return next
-    })
-  }, [])
+      return !canRemoveProtectedTag(tag, roleName)
+    },
+    [roleName]
+  )
 
-  // Memoize handleSave to prevent re-creating function on every render
+  const handleToggleTag = useCallback(
+    (tag: TagDefinition) => {
+      setSelectedTagIds((prev) => {
+        const isSelected = prev.has(tag.id)
+        if (isSelected && isTagRemovalLocked(tag, true)) {
+          return prev
+        }
+        if (!isSelected && tag.requires_payload) {
+          setPendingPayloadTag({ id: tag.id, name: tag.name })
+          return prev
+        }
+        const next = new Set(prev)
+        if (next.has(tag.id)) {
+          next.delete(tag.id)
+        } else {
+          next.add(tag.id)
+        }
+        return next
+      })
+    },
+    [isTagRemovalLocked]
+  )
+
   const handleSave = useCallback(async () => {
     if (!canAssignTags) {
       return
@@ -126,17 +138,33 @@ export const TagSelectorModal = memo(function TagSelectorModal({
     const toAdd = [...selectedTagIds].filter((id) => !currentTagIds.has(id))
     const toRemove = [...currentTagIds].filter((id) => !selectedTagIds.has(id))
 
+    const tagById = new Map(catalogTags.map((t) => [t.id, t]))
+    const allowedToRemove = toRemove.filter((tagId) => {
+      const tag = tagById.get(tagId)
+      if (!tag) {
+        return true
+      }
+      return canRemoveProtectedTag(tag, roleName)
+    })
+
+    if (allowedToRemove.length < toRemove.length) {
+      toast.error(
+        t(
+          'pages.clients.modals.tagSelector.protectedRemoveBlocked',
+          'Protected tags can only be removed by authorized roles'
+        )
+      )
+    }
+
     try {
-      // Optimistic update
       queryClient.setQueriesData(
         { queryKey: ['clients', clientId, 'tags'] },
-        () => allTags?.filter((t) => selectedTagIds.has(t.id)) || []
+        () => catalogTags.filter((t) => selectedTagIds.has(t.id)) || []
       )
 
-      // Execute API calls
       await Promise.all([
         ...toAdd.map((tagId) => assignMutation.mutateAsync({ clientId, tagId })),
-        ...toRemove.map((tagId) => removeMutation.mutateAsync({ clientId, tagId })),
+        ...allowedToRemove.map((tagId) => removeMutation.mutateAsync({ clientId, tagId })),
       ])
 
       toast.success(t('pages.clients.modals.tagSelector.tagsUpdated', { name: clientName }))
@@ -152,12 +180,13 @@ export const TagSelectorModal = memo(function TagSelectorModal({
     selectedTagIds,
     queryClient,
     clientId,
-    allTags,
+    catalogTags,
     assignMutation,
     removeMutation,
     clientName,
     onClose,
     canAssignTags,
+    roleName,
     t,
   ])
 
@@ -208,26 +237,34 @@ export const TagSelectorModal = memo(function TagSelectorModal({
             <div className="mb-3 text-xs text-gray-600 sm:mb-4 sm:text-sm">
               {t('pages.clients.modals.tagSelector.selectedCount', {
                 selected: selectedTagIds.size,
-                total: allTags?.length || 0,
+                total: catalogTags.length,
               })}
             </div>
 
             <div className="max-h-64 space-y-2 overflow-y-auto sm:max-h-96">
-              {filteredTags && filteredTags.length > 0 ? (
+              {filteredTags.length > 0 ? (
                 filteredTags.map((tag) => {
-                  const payloadTag = tag as unknown as TagWithPayloadFlag
-                  const isPayloadTag = !!payloadTag.requires_payload
+                  const isSelected = selectedTagIds.has(tag.id)
+                  const isPayloadTag = !!tag.requires_payload
+                  const removalLocked = isTagRemovalLocked(tag, isSelected)
+                  const checkboxDisabled = !canAssignTags || removalLocked
+
                   return (
                     <label
                       key={tag.id}
-                      className="flex cursor-pointer items-center gap-2 rounded p-2 sm:gap-3"
+                      className={`flex items-center gap-2 rounded p-2 sm:gap-3 ${removalLocked ? 'cursor-not-allowed opacity-80' : 'cursor-pointer'}`}
                     >
                       <Checkbox
-                        checked={selectedTagIds.has(tag.id)}
-                        onCheckedChange={() => handleToggleTag(payloadTag)}
-                        disabled={!canAssignTags}
+                        checked={isSelected}
+                        onCheckedChange={() => handleToggleTag(tag)}
+                        disabled={checkboxDisabled}
                       />
-                      <TagBadge name={tag.name} color={tag.color} size="sm" />
+                      <TagBadge
+                        name={tag.name}
+                        color={tag.color}
+                        size="sm"
+                        isProtected={tag.is_protected}
+                      />
                       {isPayloadTag && (
                         <span
                           className="rounded bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-700"
@@ -236,7 +273,12 @@ export const TagSelectorModal = memo(function TagSelectorModal({
                           {t('pages.clients.modals.tagSelector.payloadTagBadge')}
                         </span>
                       )}
-                      {tag.description && (
+                      {removalLocked && (
+                        <span className="text-xs text-amber-600">
+                          {t('pages.tags.protectedWarning', 'Removal requires manager approval')}
+                        </span>
+                      )}
+                      {tag.description && !removalLocked && (
                         <span className="hidden text-xs text-gray-500 sm:inline">
                           {tag.description}
                         </span>
