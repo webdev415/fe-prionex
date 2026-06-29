@@ -12,6 +12,7 @@ import {
   buildDialogueRow,
   buildDialogueRows,
   deriveCategory,
+  type CallContactInfo,
 } from '../dialogueScorecardAdapter'
 
 function makeScorecard(overrides: Partial<Scorecard> = {}): Scorecard {
@@ -112,6 +113,44 @@ describe('buildDialogueRow', () => {
     const row = buildDialogueRow(makeScorecard({ weighted_score: 3.68 }), new Map())
     expect(row.score).toBe(74) // 3.68 × 20 = 73.6 → 74
     expect(row.category).toBe('Average')
+  })
+
+  it('leaves contact/client fields null when no call lookup is provided', () => {
+    const row = buildDialogueRow(makeScorecard(), new Map())
+    expect(row.contactedPhone).toBeNull()
+    expect(row.clientId).toBeNull()
+    expect(row.clientName).toBeNull()
+  })
+
+  it('maps contacted phone + linked client name from the lookups', () => {
+    const callLookup = new Map<string, CallContactInfo>([
+      ['call-1', { customer_number: '0638446901', client_id: 42 }],
+    ])
+    const clientNames = new Map<number, string>([[42, 'Ivanov Ivan']])
+    const row = buildDialogueRow(makeScorecard(), new Map(), callLookup, clientNames)
+    expect(row.contactedPhone).toBe('0638446901')
+    expect(row.clientId).toBe(42)
+    expect(row.clientName).toBe('Ivanov Ivan')
+  })
+
+  it('keeps the phone but nulls client when the call has no client_id', () => {
+    const callLookup = new Map<string, CallContactInfo>([
+      ['call-1', { customer_number: '0638446902', client_id: null }],
+    ])
+    const row = buildDialogueRow(makeScorecard(), new Map(), callLookup, new Map())
+    expect(row.contactedPhone).toBe('0638446902')
+    expect(row.clientId).toBeNull()
+    expect(row.clientName).toBeNull()
+  })
+
+  it('links the client by id even before its name resolves', () => {
+    const callLookup = new Map<string, CallContactInfo>([
+      ['call-1', { customer_number: '0638446903', client_id: 42 }],
+    ])
+    // Name map empty → clientId present so the table can still render a link.
+    const row = buildDialogueRow(makeScorecard(), new Map(), callLookup, new Map())
+    expect(row.clientId).toBe(42)
+    expect(row.clientName).toBeNull()
   })
 })
 
