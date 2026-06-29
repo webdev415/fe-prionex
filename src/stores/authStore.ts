@@ -1,7 +1,8 @@
 import { create } from 'zustand'
 import { authApi } from '@/features/auth/api/authApi'
-import { setAccessToken, getAccessToken } from '@/lib/api'
+import { getAccessToken, registerOnAuthCleared, setAccessToken } from '@/lib/api'
 import { applyPersistedLanguageFromServer } from '@/lib/i18n'
+import { cancelSessionHeartbeat, scheduleSessionHeartbeat } from '@/lib/sessionHeartbeat'
 import type { User, LoginRequest, AuthErrorState } from '@/types/api'
 import {
   buildUserFromJwtToken,
@@ -131,6 +132,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       }
 
       setAccessToken(token)
+      scheduleSessionHeartbeat()
 
       // Try to fetch full user details with permissions
       // If this fails (e.g., user has no project/role assigned), fall back to login response data
@@ -200,6 +202,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       } else if (errorCode === 'ALREADY_LOGGED_IN') {
         detectedErrorState = 'ALREADY_LOGGED_IN'
         pendingCreds = credentials // Store credentials for force login
+      } else if (errorCode === 'IP_NOT_ALLOWED') {
+        detectedErrorState = 'IP_NOT_ALLOWED'
       }
 
       set({
@@ -221,9 +225,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       await authApi.logout()
     } finally {
       setAccessToken(null)
+      cancelSessionHeartbeat()
 
       // Clear impersonation localStorage
       localStorage.removeItem('impersonation_original_admin')
+      localStorage.removeItem('impersonated_user_profile')
 
       set({
         user: null,
@@ -272,6 +278,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       }
 
       setAccessToken(token)
+      scheduleSessionHeartbeat()
 
       // Try to fetch full user details with permissions
       // If this fails (e.g., user has no project/role assigned), fall back to login response data
@@ -343,6 +350,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       }
 
       setAccessToken(token)
+      scheduleSessionHeartbeat()
 
       // Mirrors the `login()` success path: prefer /users/me for full
       // profile + permissions, fall back to login response if it fails.
@@ -471,7 +479,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           applyPersistedLanguageFromServer(backendUser.language)
 
           if (isImpersonating) {
-            // In impersonation mode - restore original admin from localStorage
+            // In impersonation mode - restore original admin + target profile from localStorage
             let originalAdmin: User | null = null
             try {
               const storedAdmin = localStorage.getItem('impersonation_original_admin')
@@ -481,12 +489,21 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             } catch {
               // Failed to parse stored admin, will be null
             }
+            let cachedImpersonated: User | null = null
+            try {
+              const stored = localStorage.getItem('impersonated_user_profile')
+              if (stored) {
+                cachedImpersonated = JSON.parse(stored) as User
+              }
+            } catch {
+              // Falls back to /me-derived user below
+            }
 
             set({
-              user, // This is the impersonated user
+              user, // app permission gates read this; /me returns target role/perms
               isAuthenticated: true,
               isImpersonating: true,
-              impersonatedUser: user,
+              impersonatedUser: cachedImpersonated || user,
               originalAdminUser: originalAdmin, // Restored from localStorage
               isLoading: false,
               hasCheckedAuth: true,
@@ -512,7 +529,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             }
 
             if (isImpersonating) {
-              // In impersonation mode - restore original admin from localStorage
+              // In impersonation mode - restore original admin + target profile from localStorage
               let originalAdmin: User | null = null
               try {
                 const storedAdmin = localStorage.getItem('impersonation_original_admin')
@@ -522,12 +539,21 @@ export const useAuthStore = create<AuthState>((set, get) => ({
               } catch {
                 // Failed to parse stored admin, will be null
               }
+              let cachedImpersonated: User | null = null
+              try {
+                const stored = localStorage.getItem('impersonated_user_profile')
+                if (stored) {
+                  cachedImpersonated = JSON.parse(stored) as User
+                }
+              } catch {
+                // Falls back to /me-derived user below
+              }
 
               set({
-                user, // This is the impersonated user (from token)
+                user, // app permission gates read this; token has target role/perms
                 isAuthenticated: true,
                 isImpersonating: true,
-                impersonatedUser: user,
+                impersonatedUser: cachedImpersonated || user,
                 originalAdminUser: originalAdmin,
                 isLoading: false,
                 hasCheckedAuth: true,
@@ -548,8 +574,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             // Cannot extract user info from token - clear all state
             console.error('Failed to extract user info from JWT token')
             localStorage.removeItem('impersonation_original_admin')
+            localStorage.removeItem('impersonated_user_profile')
 
             setAccessToken(null)
+            cancelSessionHeartbeat()
             set({
               user: null,
               isAuthenticated: false,
@@ -564,6 +592,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       } else {
         // Token invalid or session expired - clear auth state
         setAccessToken(null)
+        cancelSessionHeartbeat()
         set({
           user: null,
           isAuthenticated: false,
@@ -577,6 +606,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } catch {
       // API call failed (401, network error, etc.) - clear auth state
       setAccessToken(null)
+      cancelSessionHeartbeat()
       set({
         user: null,
         isAuthenticated: false,
@@ -657,45 +687,57 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         localStorage.setItem('impersonation_original_admin', JSON.stringify(originalAdmin))
       }
 
-      // Load full profile via /me so project list, agent fields, and names are complete
-      let impersonatedUserMapped: User
+      // Build target user profile from the impersonate API response (the user we're VIEWING AS).
+      // The backend's /me endpoint returns the impersonator's identity (user_id in the JWT is
+      // the admin's id), so we cannot rely on /me for first_name / last_name of the target.
+      // The impersonate endpoint already returns the target's full name fields.
+      const targetUserProfile: User = {
+        id: String(impersonated_user.id),
+        username: impersonated_user.username,
+        email: impersonated_user.email,
+        firstName: impersonated_user.first_name,
+        lastName: impersonated_user.last_name,
+        fullName:
+          [impersonated_user.first_name, impersonated_user.last_name]
+            .filter(Boolean)
+            .join(' ')
+            .trim() || undefined,
+        projects: [
+          {
+            id: String(active_project.project_id),
+            name: active_project.project_name,
+            roles: [{ id: String(active_project.role_id), name: active_project.role_name }],
+          },
+        ],
+        active_project_id: String(active_project.project_id),
+        active_role_id: String(active_project.role_id),
+        active_role_name: active_project.role_name,
+        active_department_id: null,
+        permissions: permissions || [],
+        is_agent: false,
+        agent_status: 'offline',
+      }
+
+      // Cache the target's profile so the banner survives a page refresh
+      // (the JWT carries impersonated_username but not first/last name).
+      localStorage.setItem('impersonated_user_profile', JSON.stringify(targetUserProfile))
+
+      // Use /me to drive the in-app `user` slot — it returns the impersonator's identity
+      // but with the target's active_role / permissions, which is what app permission
+      // gates read. Fall back to the target profile if /me fails.
+      let userForApp: User
       try {
         const meResponse = await authApi.me()
-        impersonatedUserMapped = mapBackendUserToUser(meResponse.data)
+        userForApp = mapBackendUserToUser(meResponse.data)
       } catch {
-        impersonatedUserMapped = {
-          id: String(impersonated_user.id),
-          username: impersonated_user.username,
-          email: impersonated_user.email,
-          firstName: impersonated_user.first_name,
-          lastName: impersonated_user.last_name,
-          fullName:
-            [impersonated_user.first_name, impersonated_user.last_name]
-              .filter(Boolean)
-              .join(' ')
-              .trim() || undefined,
-          projects: [
-            {
-              id: String(active_project.project_id),
-              name: active_project.project_name,
-              roles: [{ id: String(active_project.role_id), name: active_project.role_name }],
-            },
-          ],
-          active_project_id: String(active_project.project_id),
-          active_role_id: String(active_project.role_id),
-          active_role_name: active_project.role_name,
-          active_department_id: null,
-          permissions: permissions || [],
-          is_agent: false,
-          agent_status: 'offline',
-        }
+        userForApp = targetUserProfile
       }
 
       set({
         isImpersonating: true,
-        impersonatedUser: impersonatedUserMapped,
+        impersonatedUser: targetUserProfile,
         originalAdminUser: originalAdmin,
-        user: impersonatedUserMapped,
+        user: userForApp,
         isLoading: false,
       })
     } catch (error: unknown) {
@@ -759,6 +801,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
       // Clear stored admin from localStorage
       localStorage.removeItem('impersonation_original_admin')
+      localStorage.removeItem('impersonated_user_profile')
 
       set({
         isImpersonating: false,
@@ -786,5 +829,19 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 }))
+
+// KAN-760: when api.ts (401 interceptor / cross-tab storage event /
+// sessionHeartbeat) tears down the session, also wipe the zustand auth
+// state so React components don't keep rendering as authenticated until
+// the navigation completes.
+registerOnAuthCleared(() => {
+  useAuthStore.setState({
+    user: null,
+    isAuthenticated: false,
+    isImpersonating: false,
+    impersonatedUser: null,
+    originalAdminUser: null,
+  })
+})
 
 export default useAuthStore

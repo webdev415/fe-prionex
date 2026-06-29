@@ -229,6 +229,48 @@ describe('Client Management Filter Integration', () => {
 
       expect(params.responsible_employee_ids).toBeUndefined()
     })
+
+    it('should pass the "No Responsible" sentinel (-1) through (KAN-607)', () => {
+      const filters: ClientFilters = {
+        responsibleEmployeeIds: [-1],
+      }
+
+      const params = mapFiltersToAPIParams(filters)
+
+      expect(params.responsible_employee_ids).toBe('-1')
+    })
+
+    it('should OR the sentinel with real ids (KAN-607)', () => {
+      const filters: ClientFilters = {
+        responsibleEmployeeIds: [-1, 101],
+      }
+
+      const params = mapFiltersToAPIParams(filters)
+
+      expect(params.responsible_employee_ids).toBe('-1,101')
+    })
+  })
+
+  describe('FILTER 13: Interaction Created By "No Interactions" (KAN-607)', () => {
+    it('should pass the "No Interactions" sentinel (-1) through', () => {
+      const filters: ClientFilters = {
+        interactionUserIds: [-1],
+      }
+
+      const params = mapFiltersToAPIParams(filters)
+
+      expect(params.interaction_user_ids).toBe('-1')
+    })
+
+    it('should OR the sentinel with real ids', () => {
+      const filters: ClientFilters = {
+        interactionUserIds: [-1, 55],
+      }
+
+      const params = mapFiltersToAPIParams(filters)
+
+      expect(params.interaction_user_ids).toBe('-1,55')
+    })
   })
 
   describe('FILTER 4: Assignment - Searcher', () => {

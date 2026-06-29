@@ -296,8 +296,8 @@ export interface PaymentMonitoringItem {
   purchase_date: string | null // YYYY-MM-DD
   payment_type: PaymentType | null
   payment_comment: string | null
-  recorded_by_user_id: number | null
-  recorded_by_full_name: string | null
+  assigned_user_id: number | null
+  assigned_user_full_name: string | null
   recorded_at: string | null
   verified_at: string | null
   amount: string

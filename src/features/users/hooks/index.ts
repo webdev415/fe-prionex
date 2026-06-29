@@ -15,3 +15,8 @@ export { useUnlockAccount } from './useUnlockAccount'
 export { useAdminUnlockAccount } from './useAdminUnlockAccount'
 export { useAdminDisableTwoFactor, useAdminReenableTwoFactor } from './useAdminToggleTwoFactor'
 export { useUserDepartment } from './useUserDepartment'
+export {
+  useIpWhitelistSettings,
+  useUpdateIpWhitelistSettings,
+  ipWhitelistSettingsKey,
+} from './useIpWhitelistSettings'

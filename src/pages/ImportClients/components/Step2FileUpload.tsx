@@ -12,6 +12,7 @@ import { DoubleButton } from '@/components/ui/DoubleButton'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 import { useUploadImport } from '@/features/imports'
+import { useSellerFactoringAgreements } from '@/features/sellers'
 import type { Step1Data } from './Step1LoanSource'
 import { getErrorMessage } from '@/lib/errors'
 
@@ -47,6 +48,19 @@ export function Step2FileUpload({
 
   // Import mutations
   const uploadImportMutation = useUploadImport()
+
+  // Look up factoring agreements for the selected seller. The picked
+  // (or just-created) agreement's contract_purchase_date becomes the
+  // batch's debts.purchase_date — there is no longer a separate
+  // top-level Purchase date input in step 1.
+  const sellerIdNumber = step1Data.sellerId ? parseInt(step1Data.sellerId, 10) : null
+  // Same as Step1 — wizard needs the full agreement list, not a page,
+  // and we skip include_count since debt_count is never displayed here.
+  const { data: factoringAgreementsPage } = useSellerFactoringAgreements(sellerIdNumber, {
+    limit: 1000,
+    include_count: false,
+  })
+  const factoringAgreements = factoringAgreementsPage?.items ?? []
 
   // Reset mutation state when import is no longer in progress (allows new imports)
   useEffect(() => {
@@ -102,13 +116,19 @@ export function Step2FileUpload({
             .map((h) => h.trim().replace(/\*+$/, '').trim().toLowerCase())
             .filter((h) => h.length > 0)
 
-          // Required columns (matching backend CSVParserService exactly)
+          // Required columns (matching backend validation). The mobile phone
+          // is required per-row by the backend (contact_type_id=1); flagging a
+          // missing header here fails fast instead of letting every row fail
+          // server-side. seller_company_legacy is intentionally NOT here — the
+          // backend defaults it, so it is optional.
           const requiredColumns = [
             'clients_first_name',
             'clients_last_name',
             'clients_tax_id',
+            'client_contacts_client_mobile_phone_contact_value',
             'debts_1_contract_number',
             'debts_1_remaining_debt_amount',
+            'debts_1_seller_company_legacy',
           ]
 
           // Check for required columns (strip * from headers to support required markers)
@@ -251,8 +271,8 @@ export function Step2FileUpload({
       'client_addresses_actual_street',
       'client_addresses_actual_building',
       'client_addresses_actual_apartment',
-      // contacts (common types)
-      'client_contacts_client_mobile_phone_contact_value',
+      // contacts (common types) — mobile phone is required (contact_type_id=1)
+      'client_contacts_client_mobile_phone_contact_value*',
       'client_contacts_client_mobile_phone_comment',
       'client_contacts_client_home_phone_contact_value',
       'client_contacts_client_home_phone_comment',
@@ -270,7 +290,7 @@ export function Step2FileUpload({
       'debts_1_fines_amount',
       'debts_1_credit_term_days',
       'debts_1_credit_issued_date',
-      'debts_1_seller_company_legacy',
+      'debts_1_seller_company_legacy*',
       'debts_1_portfolio_name',
     ]
 
@@ -288,9 +308,48 @@ export function Step2FileUpload({
   }
 
   const handleStartImport = async () => {
-    if (!data.csvFile || !step1Data.sellerId || !step1Data.projectCode || !step1Data.purchaseDate) {
+    if (!data.csvFile || !step1Data.sellerId || !step1Data.projectCode) {
       setImportError(t('pages.imports.step2.simple.fillAllFields'))
       return
+    }
+
+    // Build factoring agreement payload — exactly one of the two fields
+    // is set, controlled by Step 1's mode toggle.
+    let factoringAgreementId: number | undefined
+    let newFactoringAgreementJson: string | undefined
+    // Derive the batch's purchase date from the agreement. Create-new
+    // takes the operator-entered value; pick-existing inherits the
+    // picked agreement's contract_purchase_date. Either way the wire
+    // format is a plain YYYY-MM-DD string, which the BE stamps onto
+    // every debt's debts.purchase_date.
+    let effectivePurchaseDate: string | undefined
+    if (step1Data.factoringAgreementMode === 'existing') {
+      factoringAgreementId = step1Data.factoringAgreementId
+        ? parseInt(step1Data.factoringAgreementId, 10)
+        : undefined
+      const pickedAgreement = factoringAgreements.find(
+        (fa) => fa.id.toString() === step1Data.factoringAgreementId
+      )
+      effectivePurchaseDate = pickedAgreement?.contract_purchase_date || undefined
+    } else {
+      const newFa = step1Data.newFactoringAgreement
+      const payload: Record<string, string> = {
+        agreement_number: newFa.agreement_number.trim(),
+      }
+      if (newFa.previous_lender.trim()) {
+        payload.previous_lender = newFa.previous_lender.trim()
+      }
+      if (newFa.contract_purchase_date) {
+        // The wizard stores contract_purchase_date as a UTC datetime ISO
+        // string (consistent with the legacy top-level Purchase date
+        // picker's format) but client-service's Pydantic schema expects
+        // a plain YYYY-MM-DD date. Truncate the time portion here.
+        payload.contract_purchase_date = newFa.contract_purchase_date.split('T')[0]
+      }
+      newFactoringAgreementJson = JSON.stringify(payload)
+      // effectivePurchaseDate keeps the UTC ISO format — batch_processor
+      // already strips the time before stamping debts.purchase_date.
+      effectivePurchaseDate = newFa.contract_purchase_date || undefined
     }
 
     try {
@@ -298,9 +357,11 @@ export function Step2FileUpload({
         file: data.csvFile,
         seller_id: parseInt(step1Data.sellerId, 10),
         project_code: step1Data.projectCode,
-        purchase_date: step1Data.purchaseDate,
+        purchase_date: effectivePurchaseDate,
         comment: step1Data.comment || undefined,
         import_type: 'simple',
+        factoring_agreement_id: factoringAgreementId,
+        new_factoring_agreement_json: newFactoringAgreementJson,
       })
 
       // Clear errors on success

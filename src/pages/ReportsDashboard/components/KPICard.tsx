@@ -15,12 +15,14 @@ export interface KPICardProps {
   value: string
   change: number
   changeType: 'increase' | 'decrease'
-  icon: 'phone' | 'chart' | 'mail' | 'payments'
+  icon: 'phone' | 'chart' | 'mail' | 'message' | 'payments'
   isPercentage?: boolean
   percentage?: number
   onViewDetails?: () => void
   className?: string
   period?: Period
+  /** When true, hides period-over-period trend (e.g. messaging has no dashboard KPI yet). */
+  hideTrend?: boolean
 }
 
 export function KPICard({
@@ -34,6 +36,7 @@ export function KPICard({
   onViewDetails,
   className,
   period = 'today',
+  hideTrend = false,
 }: KPICardProps) {
   const { t } = useTranslation('common')
   const isIncrease = changeType === 'increase'
@@ -60,6 +63,8 @@ export function KPICard({
         return <Icons.Chart01 size={24} className="text-primary-500" strokeWidth={1.5} />
       case 'mail':
         return <Icons.MailSend01 size={24} className="text-primary-500" strokeWidth={1.5} />
+      case 'message':
+        return <Icons.MessageMultiple01 size={24} className="text-primary-500" strokeWidth={1.5} />
       case 'payments':
         return <Icons.MoneyReceive01 size={24} className="text-primary-500" strokeWidth={1.5} />
       default:
@@ -126,18 +131,20 @@ export function KPICard({
           </span>
         )}
 
-        <div className="flex items-center justify-center gap-2">
-          {isIncrease ? (
-            <Icons.ArrowUp02 size={20} className="text-success-500" />
-          ) : (
-            <Icons.ArrowDown02 size={20} className="text-error-500" />
-          )}
-          <span className="text-dark-500 text-sm leading-[150%] tracking-[-0.28px]">
-            <span className="font-medium">{change}% </span>
-            <span className="font-light">{t('pages.reports.kpi.vs')} </span>
-            <span className="font-medium">{getComparisonText()}</span>
-          </span>
-        </div>
+        {!hideTrend && (
+          <div className="flex items-center justify-center gap-2">
+            {isIncrease ? (
+              <Icons.ArrowUp02 size={20} className="text-success-500" />
+            ) : (
+              <Icons.ArrowDown02 size={20} className="text-error-500" />
+            )}
+            <span className="text-dark-500 text-sm leading-[150%] tracking-[-0.28px]">
+              <span className="font-medium">{change}% </span>
+              <span className="font-light">{t('pages.reports.kpi.vs')} </span>
+              <span className="font-medium">{getComparisonText()}</span>
+            </span>
+          </div>
+        )}
         {/* View Details Link */}
         {onViewDetails && (
           <LinkButton

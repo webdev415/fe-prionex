@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import { io, Socket } from 'socket.io-client'
 import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
+import { getAccessToken } from '@/lib/api'
 import type { CallStateEvent, ConnectionStatus } from '../types'
 import {
   getClientIdFromCallEventData,
@@ -23,6 +24,16 @@ export function useCallWebSocket(agentExtension: string | null) {
     usingPollingFallback: false,
     serviceUnavailable: false,
   })
+
+  // Mirror the latest status into a ref so the socket effect can read it
+  // (inside the 'connect' handler) WITHOUT listing status fields in its deps.
+  // Previously `connectionStatus.reconnecting` / `usingPollingFallback` were in
+  // the effect deps, so every reconnect attempt changed them, re-ran the effect,
+  // and tore down + recreated the socket — a self-sustaining reconnect loop.
+  const statusRef = useRef(connectionStatus)
+  useEffect(() => {
+    statusRef.current = connectionStatus
+  }, [connectionStatus])
 
   const enablePollingFallback = useCallback(() => {
     setConnectionStatus((prev) => ({
@@ -52,10 +63,17 @@ export function useCallWebSocket(agentExtension: string | null) {
       return
     }
 
+    // The call-service Socket.IO handshake requires a JWT; without one the
+    // server refuses the connection. Pass it via the auth payload (not the
+    // query string) to keep the token out of URLs/access logs.
+    const token = getAccessToken()
+    if (!token) return
+
     // Connect to WebSocket
     const socket: Socket = io(WS_URL, {
       transports: ['websocket'],
       query: { agent_extension: agentExtension },
+      auth: { token },
     })
 
     socketRef.current = socket
@@ -75,14 +93,19 @@ export function useCallWebSocket(agentExtension: string | null) {
       socket.emit('join', { agent_extension: agentExtension })
 
       // Show success notification if reconnected after failure
-      if (connectionStatus.reconnecting || connectionStatus.usingPollingFallback) {
+      if (statusRef.current.reconnecting || statusRef.current.usingPollingFallback) {
         toast.success('Connected to call service')
         disablePollingFallback()
       }
     })
 
-    // Listen for call state updates
-    socket.on('call.state.changed', (event: CallStateEvent) => {
+    // Listen for call state updates.
+    // NOTE: the call-service socket.io server emits "call.state_changed"
+    // (underscore) — see services/call/app/services/event_listener.py.
+    // Listening on the dotted "call.state.changed" silently dropped every
+    // call-completion event, so the call modal/minimized bubble never cleared
+    // and isCallActive() stayed true — blocking the next call until reload.
+    socket.on('call.state_changed', (event: CallStateEvent) => {
       // Invalidate call details query to trigger refetch
       queryClient.invalidateQueries({
         queryKey: ['callDetails', event.call_id],
@@ -156,14 +179,7 @@ export function useCallWebSocket(agentExtension: string | null) {
       socket.disconnect()
       socketRef.current = null
     }
-  }, [
-    agentExtension,
-    queryClient,
-    connectionStatus.reconnecting,
-    connectionStatus.usingPollingFallback,
-    disablePollingFallback,
-    enablePollingFallback,
-  ])
+  }, [agentExtension, queryClient, disablePollingFallback, enablePollingFallback])
 
   return connectionStatus
 }

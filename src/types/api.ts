@@ -263,6 +263,7 @@ export type AuthErrorState =
   | 'SESSION_EXPIRED'
   | 'TOO_MANY_ATTEMPTS'
   | 'TWO_FACTOR_REQUIRED'
+  | 'IP_NOT_ALLOWED'
 
 export interface AuthErrorResponse extends ApiError {
   state: AuthErrorState

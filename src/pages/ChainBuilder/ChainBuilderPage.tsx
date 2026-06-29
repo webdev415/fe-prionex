@@ -51,6 +51,16 @@ import { useTags } from '@/features/tags/hooks/useTags'
 import { useTargetActions } from '@/features/targetActions/hooks/useTargetActions'
 import type { TargetAction } from '@/features/targetActions/api/types'
 import { useSMSTemplates } from '@/features/sms'
+import {
+  useMessagingDrafts,
+  useMessagingIntegrations,
+} from '@/features/messaging/hooks/useMessaging'
+import {
+  MESSAGING_CHANNELS,
+  getMessagingServiceLabel,
+  isMessagingIntegrationUsable,
+  type MessagingChannel,
+} from '@/features/messaging/api/types'
 import { useAuthStore } from '@/stores/authStore'
 import { getErrorMessage } from '@/lib/errors'
 
@@ -69,6 +79,19 @@ const TRIGGER_TYPES = [
   'chain_completed',
   'role_action',
 ]
+
+// Debt statuses offered for the "Debt status" trigger. The dropdown (vs free
+// text) guarantees the stored value matches the backend exactly — no "close"
+// vs "closed" typos. The trigger fires when a debt's ``status`` becomes the
+// chosen value (event ``debt.status_changed``).
+//
+// A debt's ``status`` is only ever ``active`` or ``closed`` in the data — there
+// is no stored ``overdue``/``paid``/``partially_paid``/``written_off``. Those
+// were removed so an admin can't configure a trigger that can never fire.
+const DEBT_STATUS_OPTIONS: Array<{ value: string; fallback: string }> = [
+  { value: 'active', fallback: 'Active' },
+  { value: 'closed', fallback: 'Closed' },
+]
 const BLOCKER_TYPES = [
   'already_launched',
   'launched_within',
@@ -76,7 +99,14 @@ const BLOCKER_TYPES = [
   'tag_present',
   'in_cooldown',
 ]
-const EFFECT_TYPES = ['add_tag', 'remove_tag', 'create_task', 'send_sms', 'add_to_spam']
+const EFFECT_TYPES = [
+  'add_tag',
+  'remove_tag',
+  'create_task',
+  'send_sms',
+  'send_message',
+  'add_to_spam',
+]
 
 function ChainBuilderMainSkeleton() {
   return (
@@ -149,6 +179,16 @@ export function ChainBuilderPage() {
     () => smsTemplatesData?.templates ?? [],
     [smsTemplatesData?.templates]
   )
+  const [messageChannel, setMessageChannel] = useState<MessagingChannel>('sms')
+  const { data: messagingDrafts = [] } = useMessagingDrafts(messageChannel)
+  const { data: messagingIntegrations = [] } = useMessagingIntegrations(!!projectId)
+  const usableMessagingServices = useMemo(
+    () =>
+      messagingIntegrations.filter((integration) =>
+        isMessagingIntegrationUsable(integration, messageChannel)
+      ),
+    [messagingIntegrations, messageChannel]
+  )
   const { data: taskSubjects = [] } = useTaskSubjects()
   const { data: operators = [] } = useOperators(projectId ?? null)
   const taskSubjectOptions = useMemo(
@@ -193,6 +233,27 @@ export function ChainBuilderPage() {
         } else if (key === 'sms_template_id') {
           const tpl = smsTemplates.find((tplItem) => tplItem.id === Number(value))
           parts.push(t('pages.chainBuilder.config.template', { label: tpl?.name ?? `#${value}` }))
+        } else if (key === 'draft_id') {
+          const draft = messagingDrafts.find((d) => d.id === Number(value))
+          parts.push(
+            t('pages.chainBuilder.config.messagingDraft', {
+              label: draft?.name ?? `#${value}`,
+            })
+          )
+        } else if (key === 'channel') {
+          parts.push(
+            t('pages.chainBuilder.config.channel', {
+              label: t(`pages.messaging.channels.${String(value)}`, {
+                defaultValue: String(value),
+              }),
+            })
+          )
+        } else if (key === 'service') {
+          parts.push(
+            t('pages.chainBuilder.config.messagingService', {
+              label: getMessagingServiceLabel(String(value)),
+            })
+          )
         } else if (key === 'source_chain_id' || key === 'blocking_chain_id') {
           const ch = chains.find((cItem) => cItem.id === Number(value))
           parts.push(t('pages.chainBuilder.config.chain', { label: ch?.name ?? `#${value}` }))
@@ -229,13 +290,26 @@ export function ChainBuilderPage() {
               ? t('pages.chainBuilder.config.phone', { step: stepRef(step) })
               : t('pages.chainBuilder.config.phoneUnknown', { id: String(value) })
           )
+        } else if (key === 'email_ref') {
+          const step = (chain?.steps ?? []).find((s) => s.id === Number(value))
+          parts.push(
+            step
+              ? t('pages.chainBuilder.config.email', {
+                  step: stepRef(step),
+                  defaultValue: `Email: ${stepRef(step)}`,
+                })
+              : t('pages.chainBuilder.config.emailUnknown', {
+                  id: String(value),
+                  defaultValue: `Email step #${String(value)}`,
+                })
+          )
         } else {
           parts.push(t('pages.chainBuilder.config.generic', { key, value: String(value) }))
         }
       }
       return parts.join(' · ')
     },
-    [tags, smsTemplates, chains, subjectNameById, operatorNameById, chain, t]
+    [tags, smsTemplates, messagingDrafts, chains, subjectNameById, operatorNameById, chain, t]
   )
 
   const typeLabel = useCallback(
@@ -380,10 +454,25 @@ export function ChainBuilderPage() {
     [selectedChainId, qc]
   )
 
-  const onNodeClick = useCallback((_: unknown, node: Node) => {
-    const stepId = parseInt(node.id.replace('step-', ''), 10)
-    setSelectedStepId(stepId)
+  // Clear the per-step editor form (effect conditions/config, branch
+  // target/conditions). Used whenever the selected step or chain changes so
+  // one step's in-progress selections can't leak onto another step — audit
+  // fe-07 (stale conditions/branch target silently written to the wrong step).
+  const resetStepForm = useCallback(() => {
+    setNewEffectConditions(new Set())
+    setNewBranchConditions(new Set())
+    setNewBranchTo('')
+    setNewEffectConfig({})
   }, [])
+
+  const onNodeClick = useCallback(
+    (_: unknown, node: Node) => {
+      const stepId = parseInt(node.id.replace('step-', ''), 10)
+      if (stepId !== selectedStepId) resetStepForm()
+      setSelectedStepId(stepId)
+    },
+    [selectedStepId, resetStepForm]
+  )
 
   const stepEffects = builderData?.effects.filter((e) => e.step_id === selectedStepId) ?? []
   const stepBranches = builderData?.branches.filter((b) => b.from_step_id === selectedStepId) ?? []
@@ -417,6 +506,14 @@ export function ChainBuilderPage() {
     () => steps.filter((s) => s.target_action_field_type === 'contact'),
     [steps]
   )
+  const phoneContactSteps = useMemo(
+    () => contactSteps.filter((s) => (s.contact_medium ?? 'phone') !== 'email'),
+    [contactSteps]
+  )
+  const emailContactSteps = useMemo(
+    () => contactSteps.filter((s) => s.contact_medium === 'email'),
+    [contactSteps]
+  )
   const dateSteps = useMemo(
     () => steps.filter((s) => s.target_action_field_type === 'date'),
     [steps]
@@ -433,6 +530,7 @@ export function ChainBuilderPage() {
           onValueChange={(v) => {
             setSelectedChainId(parseInt(v, 10))
             setSelectedStepId(null)
+            resetStepForm()
           }}
         >
           <SelectTrigger>
@@ -601,12 +699,23 @@ export function ChainBuilderPage() {
                         />
                       )}
                       {newTriggerType === 'debt_status' && (
-                        <input
-                          className="h-8 rounded-md border border-gray-200 px-2 text-xs"
-                          placeholder={t('pages.chainBuilder.placeholders.debtStatus')}
+                        <Select
                           value={newTriggerConfig.status ?? ''}
-                          onChange={(e) => setNewTriggerConfig({ status: e.target.value })}
-                        />
+                          onValueChange={(v) => setNewTriggerConfig({ status: v })}
+                        >
+                          <SelectTrigger className="h-8 text-xs">
+                            <SelectValue
+                              placeholder={t('pages.chainBuilder.placeholders.debtStatus')}
+                            />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {DEBT_STATUS_OPTIONS.map((opt) => (
+                              <SelectItem key={opt.value} value={opt.value}>
+                                {t(`pages.chainBuilder.debtStatus.${opt.value}`, opt.fallback)}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       )}
                       <button
                         type="button"
@@ -630,7 +739,8 @@ export function ChainBuilderPage() {
                             toast.error(getErrorMessage(e))
                           }
                         }}
-                        className="flex h-8 items-center justify-center rounded-md border border-gray-200 bg-gray-50 text-xs text-gray-600 hover:bg-gray-100"
+                        disabled={newTriggerType === 'debt_status' && !newTriggerConfig.status}
+                        className="flex h-8 items-center justify-center rounded-md border border-gray-200 bg-gray-50 text-xs text-gray-600 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         {t('pages.chainBuilder.addTrigger')}
                       </button>
@@ -861,6 +971,14 @@ export function ChainBuilderPage() {
                               onValueChange={(v) => {
                                 setNewEffectType(v)
                                 setNewEffectConfig({})
+                                if (v === 'send_message') {
+                                  setMessageChannel('sms')
+                                  setNewEffectConfig(
+                                    phoneContactSteps.length === 1
+                                      ? { phone_ref: String(phoneContactSteps[0].id) }
+                                      : {}
+                                  )
+                                }
                               }}
                             >
                               <SelectTrigger className="h-8 text-xs">
@@ -976,6 +1094,168 @@ export function ChainBuilderPage() {
                                   ))}
                                 </SelectContent>
                               </Select>
+                            )}
+                            {newEffectType === 'send_message' && (
+                              <>
+                                <select
+                                  className="h-8 rounded-md border border-gray-200 px-2 text-xs text-gray-800"
+                                  value={messageChannel}
+                                  onChange={(e) => {
+                                    const ch = e.target.value as MessagingChannel
+                                    setMessageChannel(ch)
+                                    const next: Record<string, string> = {
+                                      channel: ch,
+                                      service: '',
+                                      draft_id: '',
+                                    }
+                                    if (ch === 'sms' || ch === 'viber') {
+                                      if (phoneContactSteps.length === 1) {
+                                        next.phone_ref = String(phoneContactSteps[0].id)
+                                      }
+                                    } else if (ch === 'email' && emailContactSteps.length === 1) {
+                                      next.email_ref = String(emailContactSteps[0].id)
+                                    }
+                                    setNewEffectConfig(next)
+                                  }}
+                                >
+                                  {MESSAGING_CHANNELS.map((ch) => (
+                                    <option key={ch} value={ch}>
+                                      {t(`pages.messaging.channels.${ch}`, {
+                                        defaultValue: ch,
+                                      })}
+                                    </option>
+                                  ))}
+                                </select>
+                                {usableMessagingServices.length === 0 ? (
+                                  <div className="rounded-md border border-amber-200 bg-amber-50 px-2 py-1.5 text-[11px] text-amber-700">
+                                    {t('pages.chainBuilder.sendMessageNoIntegration')}
+                                  </div>
+                                ) : (
+                                  <select
+                                    className="h-8 rounded-md border border-gray-200 px-2 text-xs text-gray-800"
+                                    value={newEffectConfig.service ?? ''}
+                                    onChange={(e) =>
+                                      setNewEffectConfig({
+                                        ...newEffectConfig,
+                                        channel: messageChannel,
+                                        service: e.target.value,
+                                        draft_id: '',
+                                      })
+                                    }
+                                  >
+                                    <option value="">
+                                      {t('pages.chainBuilder.placeholders.selectMessagingService')}
+                                    </option>
+                                    {usableMessagingServices.map((integration) => (
+                                      <option key={integration.service} value={integration.service}>
+                                        {getMessagingServiceLabel(integration.service)}
+                                      </option>
+                                    ))}
+                                  </select>
+                                )}
+                                <Select
+                                  value={newEffectConfig.draft_id ?? ''}
+                                  onValueChange={(v) =>
+                                    setNewEffectConfig({
+                                      ...newEffectConfig,
+                                      channel: messageChannel,
+                                      draft_id: v,
+                                    })
+                                  }
+                                  disabled={!newEffectConfig.service}
+                                >
+                                  <SelectTrigger className="h-8 text-xs">
+                                    <SelectValue
+                                      placeholder={t(
+                                        'pages.chainBuilder.placeholders.selectMessagingDraft'
+                                      )}
+                                    />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {messagingDrafts.map((draft) => (
+                                      <SelectItem key={draft.id} value={String(draft.id)}>
+                                        {draft.name}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                                {(messageChannel === 'sms' || messageChannel === 'viber') &&
+                                  (phoneContactSteps.length === 0 ? (
+                                    <div className="rounded-md border border-amber-200 bg-amber-50 px-2 py-1.5 text-[11px] text-amber-700">
+                                      {t('pages.chainBuilder.addToSpamNoContactSteps')}
+                                    </div>
+                                  ) : (
+                                    <select
+                                      className="h-8 rounded-md border border-gray-200 px-2 text-xs text-gray-800"
+                                      value={newEffectConfig.phone_ref ?? ''}
+                                      onChange={(e) => {
+                                        const next: Record<string, string> = {
+                                          ...newEffectConfig,
+                                          phone_ref: e.target.value,
+                                        }
+                                        delete next.email_ref
+                                        setNewEffectConfig(next)
+                                      }}
+                                    >
+                                      <option value="">
+                                        {t('pages.chainBuilder.placeholders.phoneSourceRequired')}
+                                      </option>
+                                      {phoneContactSteps.map((s) => (
+                                        <option key={s.id} value={String(s.id)}>
+                                          {t('pages.chainBuilder.config.stepRef', {
+                                            order: s.step_order,
+                                            name:
+                                              s.target_action_name ??
+                                              t('pages.chainBuilder.taFallback', {
+                                                id: s.target_action_id,
+                                              }),
+                                          })}
+                                        </option>
+                                      ))}
+                                    </select>
+                                  ))}
+                                {messageChannel === 'email' &&
+                                  (emailContactSteps.length === 0 ? (
+                                    <p className="text-[11px] text-gray-500">
+                                      {t(
+                                        'pages.chainBuilder.sendMessageEmailRefOptional',
+                                        'Optional: add an email contact step to pick the address from chain data. Otherwise the client primary email is used.'
+                                      )}
+                                    </p>
+                                  ) : (
+                                    <select
+                                      className="h-8 rounded-md border border-gray-200 px-2 text-xs text-gray-800"
+                                      value={newEffectConfig.email_ref ?? ''}
+                                      onChange={(e) => {
+                                        const next: Record<string, string> = {
+                                          ...newEffectConfig,
+                                          email_ref: e.target.value,
+                                        }
+                                        delete next.phone_ref
+                                        setNewEffectConfig(next)
+                                      }}
+                                    >
+                                      <option value="">
+                                        {t(
+                                          'pages.chainBuilder.placeholders.emailSourceOptional',
+                                          'Primary email (default)'
+                                        )}
+                                      </option>
+                                      {emailContactSteps.map((s) => (
+                                        <option key={s.id} value={String(s.id)}>
+                                          {t('pages.chainBuilder.config.stepRef', {
+                                            order: s.step_order,
+                                            name:
+                                              s.target_action_name ??
+                                              t('pages.chainBuilder.taFallback', {
+                                                id: s.target_action_id,
+                                              }),
+                                          })}
+                                        </option>
+                                      ))}
+                                    </select>
+                                  ))}
+                              </>
                             )}
                             {newEffectType === 'create_task' && (
                               <>
@@ -1117,7 +1397,7 @@ export function ChainBuilderPage() {
                               </>
                             )}
                             {newEffectType === 'add_to_spam' &&
-                              (contactSteps.length === 0 ? (
+                              (phoneContactSteps.length === 0 ? (
                                 <div className="rounded-md border border-amber-200 bg-amber-50 px-2 py-1.5 text-[11px] text-amber-700">
                                   {t('pages.chainBuilder.addToSpamNoContactSteps')}
                                 </div>
@@ -1135,7 +1415,7 @@ export function ChainBuilderPage() {
                                   <option value="">
                                     {t('pages.chainBuilder.placeholders.phoneSourceRequired')}
                                   </option>
-                                  {contactSteps.map((s) => (
+                                  {phoneContactSteps.map((s) => (
                                     <option key={s.id} value={String(s.id)}>
                                       {t('pages.chainBuilder.config.stepRef', {
                                         order: s.step_order,
@@ -1217,8 +1497,14 @@ export function ChainBuilderPage() {
                                   !ec.ta_date_step_order) ||
                                 (newEffectType === 'remove_tag' && !ec.tag_id) ||
                                 (newEffectType === 'send_sms' && !ec.sms_template_id) ||
+                                (newEffectType === 'send_message' &&
+                                  (!ec.service ||
+                                    !ec.draft_id ||
+                                    usableMessagingServices.length === 0 ||
+                                    ((messageChannel === 'sms' || messageChannel === 'viber') &&
+                                      (phoneContactSteps.length === 0 || !ec.phone_ref)))) ||
                                 (newEffectType === 'add_to_spam' &&
-                                  (contactSteps.length === 0 || !ec.phone_ref)) ||
+                                  (phoneContactSteps.length === 0 || !ec.phone_ref)) ||
                                 (newEffectType === 'create_task' &&
                                   (!ec.subject_id ||
                                     !ec.assignee_mode ||
@@ -1247,15 +1533,39 @@ export function ChainBuilderPage() {
                                       if (ec.due_date_ref) cfg.due_date_ref = ec.due_date_ref
                                     } else if (newEffectType === 'add_to_spam') {
                                       cfg.phone_ref = parseInt(ec.phone_ref!, 10)
+                                    } else if (newEffectType === 'send_message') {
+                                      cfg.channel = messageChannel
+                                      cfg.service = ec.service
+                                      cfg.draft_id = parseInt(ec.draft_id!, 10)
+                                      if (
+                                        (messageChannel === 'sms' || messageChannel === 'viber') &&
+                                        ec.phone_ref
+                                      ) {
+                                        cfg.phone_ref = parseInt(ec.phone_ref, 10)
+                                      }
+                                      if (messageChannel === 'email' && ec.email_ref) {
+                                        cfg.email_ref = parseInt(ec.email_ref, 10)
+                                      }
                                     }
+                                    // Only send conditions that belong to THIS
+                                    // step's dropdown values — guards against
+                                    // stale picks carried over from a
+                                    // previously-selected step (audit fe-07,
+                                    // defense-in-depth behind the form reset).
+                                    const validDvIds = new Set(
+                                      stepDropdownValues.map((dv) => dv.id)
+                                    )
+                                    const effectConditionIds = Array.from(
+                                      newEffectConditions
+                                    ).filter((id) => validDvIds.has(id))
                                     try {
                                       await createEffect.mutateAsync({
                                         step_id: selectedStep.id,
                                         effect_type: newEffectType,
                                         config: cfg,
                                         condition_dropdown_value_ids:
-                                          newEffectConditions.size > 0
-                                            ? Array.from(newEffectConditions)
+                                          effectConditionIds.length > 0
+                                            ? effectConditionIds
                                             : undefined,
                                       })
                                       toast.success(t('pages.chainBuilder.toasts.effectAdded'))

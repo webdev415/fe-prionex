@@ -13,10 +13,22 @@ export interface ClientAssigneeIdsResponse {
   searcher_ids: number[]
 }
 
+/**
+ * Minimal factoring-agreement projection embedded in a debt response.
+ */
+export interface DebtFactoringAgreement {
+  id: number
+  agreement_number: string
+  previous_lender?: string | null
+  contract_purchase_date?: string | null
+}
+
 export interface DebtDetail {
   id: number
   seller_id?: number
   seller_company: string
+  /** Full legal name of the seller (primary creditor). */
+  seller_legal_name?: string | null
   contract_number: string
   original_debt_amount: string
   remaining_debt_amount: string
@@ -41,6 +53,7 @@ export interface DebtDetail {
   credit_issued_date?: string | null
   credit_term_days?: number | null
   credit_closed_date?: string | null
+  credit_reopened_date?: string | null
   portfolio_name?: string | null
   // Enriched fields from loans refactor
   principal_paid?: string | null
@@ -56,6 +69,12 @@ export interface DebtDetail {
   // UBKI outbound submission state (credit bureau)
   sent_to_credit_bureau?: boolean
   credit_bureau_sent_date?: string | null
+
+  // Linked factoring agreement (if any). Surfaces the legal_name +
+  // previous_lender + agreement purchase date to the client-detail
+  // Info expansion without an extra round-trip.
+  factoring_agreement_id?: number | null
+  factoring_agreement?: DebtFactoringAgreement | null
 }
 
 export interface RestructuringAgreementSummary {
@@ -151,6 +170,11 @@ export interface Client {
   // logged yet. The table renders "—" in that case.
   last_interaction_result_id?: number | null
   last_interaction_result_name?: string | null
+
+  // Timestamp of the most recent (non-archived) TA interaction, performed by
+  // an employee of any role. ``null`` when no TA has been logged yet — the
+  // table renders "—". ISO datetime string.
+  last_ta_date?: string | null
 
   // Assignment (Sprint 2 - Phase A)
   responsible_employee_id?: number | null
@@ -303,14 +327,27 @@ export interface GetClientsParams {
   interaction_date_from?: string // YYYY-MM-DD format
   interaction_date_to?: string // YYYY-MM-DD format
 
-  // Filter: Last-interaction-result (multi-select). Comma-separated
-  // interaction_result IDs. Narrows clients to those whose most recent
-  // interaction has one of these result ids.
-  last_interaction_result_ids?: string
+  // Filter: TA Chain + Steps — narrows to clients with at least one
+  // ta_interaction in this chain, optionally restricted to interactions
+  // that carry data for one of the picked steps. ``step_ids`` is keyed
+  // by ``ta_chain_steps.id`` (not target_action_id) so a chain with two
+  // steps that share the same target_action stays independently
+  // filterable. Ignored without ``chain_id``.
+  chain_id?: number
+  step_ids?: string // Comma-separated ta_chain_steps.id values
+
+  // Filter: Per-step value bounds. Format: ``<step_id>:<value>`` items
+  // comma-separated (step_id = ta_chain_steps.id). The BE coerces by the
+  // step's field_type (numeric/date for min/max, exact/ILIKE for eq) and
+  // drops entries whose step_id isn't in ``step_ids``.
+  step_value_eq?: string
+  step_value_min?: string
+  step_value_max?: string
 
   // Filter: Assignment Date (date of latest assignment record for current employee)
   assignment_date_from?: string // YYYY-MM-DD format
   assignment_date_to?: string // YYYY-MM-DD format
+  tz?: string
 
   // Filter: Status
   status?: string // Comma-separated statuses (e.g., "active,new")
@@ -558,6 +595,8 @@ export interface ContactResponse {
   updated_at?: string | null
 }
 
+export type ContactSource = 'client' | 'recommender'
+
 export interface ContactTypeOption {
   id: number
   code: string
@@ -569,6 +608,7 @@ export interface ContactTypeOption {
   show_as_primary_phone: boolean
   show_in_client_detail: boolean
   is_hidden: boolean
+  contact_source: ContactSource
 }
 
 export interface ContactTypeCreatePayload {
@@ -577,6 +617,7 @@ export interface ContactTypeCreatePayload {
   spam_allowed: boolean
   show_as_primary_phone: boolean
   sort_order: number
+  contact_source?: ContactSource
 }
 
 export interface ContactTypePatchPayload {
@@ -587,6 +628,7 @@ export interface ContactTypePatchPayload {
   show_in_client_detail?: boolean
   sort_order?: number
   is_hidden?: boolean
+  contact_source?: ContactSource
 }
 
 export interface WriteoffsResponse {
@@ -653,9 +695,11 @@ export interface PaymentResponse {
   notes?: string | null
   internal_notes?: string | null
   recorded_by_user_id: number
-  recorded_by_username?: string | null
+  recorded_by_full_name?: string | null
   verified_by_user_id?: number | null
-  verified_by_username?: string | null
+  verified_by_full_name?: string | null
+  assigned_user_id?: number | null
+  assigned_user_full_name?: string | null
   debt_contract_number?: string | null
   seller_name?: string | null
   is_deleted: boolean
@@ -700,6 +744,12 @@ export interface TaskResponse {
   internal_notes?: string | null
   client_name?: string | null
   is_dismissed?: boolean
+  // KAN-411 Feature 3.1 — correction-task fields. `task_type` is non-null
+  // for coaching tasks; the bell card renders operator-lifecycle buttons
+  // (in_progress / completed) when these fields are populated.
+  task_type?: string | null
+  call_id?: string | null
+  call_timestamp_seconds?: number | null
 }
 
 export interface TaskCommentResponse {

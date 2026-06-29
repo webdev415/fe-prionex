@@ -10,6 +10,7 @@ export function isHiddenVisibility(visibility?: string | null): boolean {
   return !!visibility && HIDDEN_VISIBILITY_VALUES.has(visibility.toLowerCase())
 }
 
+/** Hides system/hidden visibility tags for non-admins. Protected tags stay visible for all roles. */
 export function filterTagsForRole<T extends Pick<TagDefinition, 'visibility'>>(
   tags: T[],
   roleName?: string | null,

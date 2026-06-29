@@ -50,6 +50,8 @@ export interface TimelineResponse {
 
 export interface AnalyticsRangeFilters {
   operator_ids?: number[]
+  /** Server-side department narrowing (KAN-617). Empty/undefined = all departments. */
+  department_ids?: number[]
   period?: AnalyticsPeriod
   from_date?: string
   to_date?: string

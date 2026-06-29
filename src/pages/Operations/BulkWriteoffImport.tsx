@@ -26,6 +26,7 @@ import type {
   BulkWriteoffResponse,
   BulkWriteoffRow,
 } from '@/features/writeoffs/api/bulkUploadTypes'
+import { detectDelimiter } from './bulkWriteoffCsv'
 
 const CSV_TEMPLATE_HEADER = 'loan_id,cancellation_date,principal,interest,fine,penalty,commission'
 const CSV_TEMPLATE_EXAMPLE = '1234,28.07.2026,500.00,250.00,0,0,0'
@@ -67,7 +68,8 @@ async function parseCsvForDisplay(file: File): Promise<Map<number, ParsedCsvRow>
   const lines = text.replace(/^\uFEFF/, '').split(/\r?\n/)
   if (lines.length === 0) return new Map()
 
-  const header = (lines[0] ?? '').split(',').map((c) =>
+  const delimiter = detectDelimiter(lines[0] ?? '')
+  const header = (lines[0] ?? '').split(delimiter).map((c) =>
     c
       .trim()
       .toLowerCase()
@@ -90,7 +92,7 @@ async function parseCsvForDisplay(file: File): Promise<Map<number, ParsedCsvRow>
   for (let i = 1; i < lines.length; i++) {
     const raw = lines[i]
     if (raw == null || raw.trim() === '') continue
-    const cells = raw.split(',').map((c) => c.trim())
+    const cells = raw.split(delimiter).map((c) => c.trim())
     const components = COMPONENT_KEYS.reduce(
       (acc, k) => {
         acc[k] = colIdx[k] >= 0 ? (cells[colIdx[k]] ?? '') : ''

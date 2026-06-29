@@ -359,7 +359,8 @@ export function InteractionFiltersBar({
               }
               placeholder={t('pages.actionAnalysis.filters.selectStartDate', 'Select start date')}
               max={parsedInternalTo ?? undefined}
-              format="yyyy-MM-dd"
+              allowManualInput
+              format="dd.MM.yyyy"
               className="h-[45px] rounded-lg border-gray-400"
               disabled={!internalDateRangeActive}
             />
@@ -374,7 +375,8 @@ export function InteractionFiltersBar({
               onChange={({ value }) => update({ internal_date_to: formatYmd(value) ?? undefined })}
               placeholder={t('pages.actionAnalysis.filters.selectEndDate', 'Select end date')}
               min={parsedInternalFrom ?? undefined}
-              format="yyyy-MM-dd"
+              allowManualInput
+              format="dd.MM.yyyy"
               className="h-[45px] rounded-lg border-gray-400"
               disabled={!internalDateRangeActive}
             />
