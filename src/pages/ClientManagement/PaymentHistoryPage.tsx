@@ -7,7 +7,7 @@
 import { useState, useEffect, useMemo, useRef, useCallback, useTransition } from 'react'
 import { useTranslation } from 'react-i18next'
 import { intlLocaleForUiLanguage } from '@/lib/i18n'
-import { convertUTCToUserTimezone, formatIsoDate } from '@/lib/formatters'
+import { convertUTCToUserTimezone, formatClientFullName, formatIsoDate } from '@/lib/formatters'
 import { getDateStringInTimezone } from '@/lib/dateUtils'
 import { useAuthStore } from '@/stores/authStore'
 import { useParams, useNavigate } from 'react-router-dom'
@@ -329,9 +329,7 @@ export function PaymentHistoryPage() {
   const client = useMemo(() => {
     if (!apiClient) return null
 
-    const fullName = [apiClient.first_name, apiClient.middle_name, apiClient.last_name]
-      .filter(Boolean)
-      .join(' ')
+    const fullName = formatClientFullName(apiClient)
 
     return {
       id: apiClient.id,
@@ -368,9 +366,7 @@ export function PaymentHistoryPage() {
   const paymentHistory = useMemo(() => {
     if (!paymentHistoryData || !apiClient) return null
 
-    const fullName = [apiClient.first_name, apiClient.middle_name, apiClient.last_name]
-      .filter(Boolean)
-      .join(' ')
+    const fullName = formatClientFullName(apiClient)
 
     const frontendPayments = paymentHistoryData.payments.map(convertBackendPayment)
 

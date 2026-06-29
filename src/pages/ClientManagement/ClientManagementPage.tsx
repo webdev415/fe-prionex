@@ -18,7 +18,7 @@ import { TooltipProvider } from '@/components/ui/Tooltip'
 import { ClientFiltersBar } from './components/ClientFiltersBar'
 import { AssignClientModal } from './components/AssignClientModal'
 import { BulkAssignClientModal } from './components/BulkAssignClientModal'
-import { formatDate, formatDateTime } from '@/lib/formatters'
+import { formatClientFullName, formatDate, formatDateTime } from '@/lib/formatters'
 import { TagSelectorModal } from './components/TagSelectorModal'
 import { BulkTagModal } from './components/BulkTagModal'
 import { BulkSendMessageModal } from './components/BulkSendMessageModal'
@@ -100,9 +100,7 @@ const mapAPIClientToDisplay = (
   /** When set (operator + catalog loaded): only show tags present in tag-service catalog (hidden tags are omitted there). */
   operatorAllowedTags: { names: Set<string>; codes: Set<string> } | null
 ): DisplayClient => {
-  const fullName = [client.first_name, client.middle_name, client.last_name]
-    .filter(Boolean)
-    .join(' ')
+  const fullName = formatClientFullName(client)
 
   return {
     id: client.id,

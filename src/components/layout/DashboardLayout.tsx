@@ -19,6 +19,7 @@ import type { Permission } from '@/constants/permissions'
 import { SearchResults, type SearchResult } from '@/components/ui/SearchResults'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { cn } from '@/lib/utils'
+import { formatClientFullName } from '@/lib/formatters'
 import { Icons } from '@/lib/icons'
 import { useCallStore } from '@/stores/callStore'
 import { CallDialogModal } from '@/pages/ClientManagement/components/CallDialogModal'
@@ -589,7 +590,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         // Transform backend response to frontend SearchResult format
         const results: SearchResult[] = response.items.map((item) => ({
           id: item.id,
-          name: item.full_name,
+          name: formatClientFullName(item),
           debt: item.total_debt,
           phone: (item.phones ?? []).join(', '),
           email: item.email_primary ?? '',

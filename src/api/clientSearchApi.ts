@@ -25,6 +25,9 @@ export type ContactSource = 'client' | 'recommender'
 export interface EnhancedSearchResult {
   id: number
   full_name: string
+  first_name: string
+  middle_name?: string | null
+  last_name: string
   phones: string[]
   email_primary: string | null
   tax_id: string
