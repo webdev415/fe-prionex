@@ -11,6 +11,7 @@ import type {
   SellerDetailResponse,
   CreateSellerInput,
   UpdateSellerInput,
+  FactoringAgreementPage,
 } from '../types'
 
 /**
@@ -65,10 +66,31 @@ export async function deleteSeller(
   return response.data
 }
 
+/**
+ * List factoring agreements for a seller — paginated.
+ *
+ * Defaults: skip=0, limit=10, include_count=true (matches the seller
+ * card). The import wizard passes limit=1000 + include_count=false to
+ * grab the full list quickly for its "Pick existing" dropdown (which
+ * doesn't display debt_count anyway, so the COUNT subquery would be
+ * wasted work — 2+ seconds for high-debt sellers like Егроши Ком).
+ */
+export async function listFactoringAgreements(
+  sellerId: number,
+  params: { skip?: number; limit?: number; include_count?: boolean } = {}
+): Promise<FactoringAgreementPage> {
+  const response = await api.get<FactoringAgreementPage>(
+    `/api/v1/sellers/${sellerId}/factoring-agreements`,
+    { params }
+  )
+  return response.data
+}
+
 export const sellersApi = {
   getSellers,
   getSeller,
   createSeller,
   updateSeller,
   deleteSeller,
+  listFactoringAgreements,
 }

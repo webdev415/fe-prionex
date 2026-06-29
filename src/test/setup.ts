@@ -306,6 +306,11 @@ vi.mock('react-i18next', () => ({
         'components.pagination.goToPage': 'Go to page {{page}}',
         'components.pagination.page': 'Page',
         'components.pagination.of': 'of',
+        // AI assistant markdown surface (code blocks + foldable tables)
+        'pages.aiAssistant.codeCopy': 'Copy',
+        'pages.aiAssistant.codeCopied': 'Copied',
+        'pages.aiAssistant.showAllRows': 'Show all ({{count}})',
+        'pages.aiAssistant.collapseRows': 'Collapse',
       }
       const template = translations[key] || key
       if (options && typeof template === 'string' && template.includes('{{')) {

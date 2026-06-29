@@ -41,6 +41,10 @@ const PRIORITIES = [
   { value: 'low', labelKey: 'pages.clients.tasks.priority.low', fallback: 'Low' },
 ]
 
+// Auto-fill on first future-date pick; skipped for today so the result
+// can't land in the past.
+const DUE_DATE_DEFAULT_TIME = '09:00'
+
 // Module-level so react-datepicker sees a stable filterTime identity
 // across renders. Recomputes "now" itself, so the lack of a per-render
 // closure doesn't make it stale.
@@ -249,6 +253,8 @@ export function AddTaskModal({ open, clientId, onClose }: AddTaskModalProps) {
             timeIntervals={15}
             min={minDate}
             filterTime={filterFromNow}
+            defaultTime={DUE_DATE_DEFAULT_TIME}
+            defaultTimeSkipsToday
             error={dueDateError ?? undefined}
           />
 

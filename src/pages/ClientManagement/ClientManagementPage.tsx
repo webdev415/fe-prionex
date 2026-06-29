@@ -44,6 +44,9 @@ import { mapScoreToPriority } from '@/features/clients/api/configApi'
 import type { Client as APIClient } from '@/features/clients/api/types'
 import type { PriorityThresholds } from '@/features/clients/api/configApi'
 import { useURLState } from '@/hooks/useURLState'
+import { useOperatorFilterOptions, coversAllOptions } from './hooks/useOperatorFilterOptions'
+import { NO_INTERACTIONS_ID, NO_RESPONSIBLE_ID } from './components/OperatorMultiSelectDropdown'
+import type { StepValueEntry } from './components/ClientStepValueRow'
 import type { Priority } from './types'
 import { PermissionGuard } from '@/components/auth'
 import { PERMISSIONS } from '@/constants/permissions'
@@ -190,13 +193,57 @@ export interface ClientFilters {
   // Tags Filter
   tagIds?: number[]
 
-  // Last Interaction Result Filter — multi-select of interaction_result
-  // IDs. The dropdown options come from the live /interaction-results
-  // config so admin-managed result changes show up without a deploy.
-  lastInteractionResultIds?: number[]
+  // Chain filter — TA Chain ID. Narrows to clients with at least one
+  // ta_interaction in this chain. Pairs with ``chainStepIds`` (steps in
+  // that chain) and ``stepValues`` (per-step value bounds).
+  chainId?: number
+
+  // Step filter — multi-select chain step IDs (``ta_chain_steps.id``)
+  // within the selected chain. Keyed per-step (not per-target_action)
+  // so a chain with two steps that share the same TA — e.g.
+  // Contact → Credit → Credit — toggles each independently. Ignored
+  // unless ``chainId`` is set.
+  chainStepIds?: number[]
+
+  // Step value bounds keyed by chain step ID. ``eq`` for dropdown /
+  // text / credit / contact; ``min`` + ``max`` for date / amount. Empty
+  // entries are dropped so the URL stays clean.
+  stepValues?: Record<number, StepValueEntry>
 
   // Priority Filter
   priorities?: Priority[]
+}
+
+/**
+ * Encode a per-step value map as a compact URL-safe JSON string.
+ *
+ * ``useURLState`` only serializes primitives + arrays, so the nested
+ * ``Record<step_id, StepValueEntry>`` shape round-trips through a single
+ * string URL param. Empty → ``''`` so the param disappears from the URL.
+ */
+function encodeStepValues(values: Record<number, StepValueEntry>): string {
+  if (!values || Object.keys(values).length === 0) return ''
+  return JSON.stringify(values)
+}
+
+function decodeStepValues(raw: string): Record<number, StepValueEntry> {
+  if (!raw) return {}
+  try {
+    const parsed = JSON.parse(raw) as Record<string, StepValueEntry>
+    const out: Record<number, StepValueEntry> = {}
+    for (const [k, v] of Object.entries(parsed)) {
+      const id = Number(k)
+      if (!Number.isFinite(id)) continue
+      const clean: StepValueEntry = {}
+      if (v?.eq) clean.eq = v.eq
+      if (v?.min) clean.min = v.min
+      if (v?.max) clean.max = v.max
+      if (clean.eq || clean.min || clean.max) out[id] = clean
+    }
+    return out
+  } catch {
+    return {}
+  }
 }
 
 export function ClientManagementPage() {
@@ -220,9 +267,9 @@ export function ClientManagementPage() {
   // URL state for filters
   const [portfolioFilter, setPortfolioFilter] = useURLState<number[]>('sellers', [])
   const [tagIdsFilter, setTagIdsFilter] = useURLState<number[]>('tags', [])
-  const [lastInteractionResultIdsFilter, setLastInteractionResultIdsFilter] = useURLState<number[]>(
-    'lastInteractionResults',
-    []
+  const [responsibleEmployeeFilter, setResponsibleEmployeeFilter] = useURLState<string>(
+    'employee',
+    ''
   )
   const [responsibleEmployeeIdsFilter, setResponsibleEmployeeIdsFilter] = useURLState<number[]>(
     'employeeIds',
@@ -269,13 +316,27 @@ export function ClientManagementPage() {
     'assignmentDateTo',
     ''
   )
+  // Chain + Step filter URL state. ``chainIdFilter === 0`` is the "no
+  // chain picked" sentinel (matches the placeholder option). When the
+  // chain changes we wipe ``chainSteps`` and ``stepValues`` because both
+  // belong to the previously-selected chain.
+  const [chainIdFilter, setChainIdFilter] = useURLState<number>('chainId', 0)
+  const [chainStepIdsFilter, setChainStepIdsFilter] = useURLState<number[]>('chainSteps', [])
+  // Step-value sub-filters are a nested object (step_id → {eq,min,max}).
+  // useURLState can't serialize objects directly, so we round-trip it
+  // through a single JSON-encoded string URL param.
+  const [stepValuesRawFilter, setStepValuesRawFilter] = useURLState<string>('stepValues', '')
+  const stepValuesFilter = useMemo(
+    () => decodeStepValues(stepValuesRawFilter),
+    [stepValuesRawFilter]
+  )
 
   // Compute filters object from URL state
   const filters: ClientFilters = useMemo(
     () => ({
       portfolio: portfolioFilter,
       tagIds: tagIdsFilter,
-      lastInteractionResultIds: lastInteractionResultIdsFilter,
+      responsibleEmployee: responsibleEmployeeFilter || undefined,
       responsibleEmployeeIds: responsibleEmployeeIdsFilter,
       responsibleSearcher: responsibleSearcherFilter || undefined,
       unassignedOnly: unassignedOnlyFilter,
@@ -294,11 +355,14 @@ export function ClientManagementPage() {
       interactionDateTo: interactionDateToFilter || undefined,
       assignmentDateFrom: assignmentDateFromFilter || undefined,
       assignmentDateTo: assignmentDateToFilter || undefined,
+      chainId: chainIdFilter || undefined,
+      chainStepIds: chainStepIdsFilter,
+      stepValues: stepValuesFilter,
     }),
     [
       portfolioFilter,
       tagIdsFilter,
-      lastInteractionResultIdsFilter,
+      responsibleEmployeeFilter,
       responsibleEmployeeIdsFilter,
       responsibleSearcherFilter,
       unassignedOnlyFilter,
@@ -317,6 +381,9 @@ export function ClientManagementPage() {
       interactionDateToFilter,
       assignmentDateFromFilter,
       assignmentDateToFilter,
+      chainIdFilter,
+      chainStepIdsFilter,
+      stepValuesFilter,
     ]
   )
 
@@ -412,6 +479,9 @@ export function ClientManagementPage() {
       interactionDateToFilter,
       assignmentDateFromFilter,
       assignmentDateToFilter,
+      chainIdFilter,
+      chainStepIdsFilter,
+      stepValuesRawFilter,
       searchQuery,
       searchType,
     }
@@ -424,7 +494,6 @@ export function ClientManagementPage() {
       responsibleSearcherFilter !== '' ||
       portfolioFilter.length > 0 ||
       tagIdsFilter.length > 0 ||
-      lastInteractionResultIdsFilter.length > 0 ||
       unassignedOnlyFilter ||
       dateOfSaleFromFilter !== '' ||
       dateOfSaleToFilter !== '' ||
@@ -440,7 +509,10 @@ export function ClientManagementPage() {
       principalRangeFromFilter > 0 ||
       principalRangeToFilter > 0 ||
       dpdRangeFromFilter > 0 ||
-      dpdRangeToFilter > 0
+      dpdRangeToFilter > 0 ||
+      chainIdFilter > 0 ||
+      chainStepIdsFilter.length > 0 ||
+      stepValuesRawFilter !== ''
 
     if (hasActiveFilters && STORAGE_KEY) {
       try {
@@ -458,7 +530,7 @@ export function ClientManagementPage() {
     sortOrder,
     portfolioFilter,
     tagIdsFilter,
-    lastInteractionResultIdsFilter,
+    responsibleEmployeeFilter,
     responsibleEmployeeIdsFilter,
     responsibleSearcherFilter,
     unassignedOnlyFilter,
@@ -477,6 +549,9 @@ export function ClientManagementPage() {
     interactionDateToFilter,
     assignmentDateFromFilter,
     assignmentDateToFilter,
+    chainIdFilter,
+    chainStepIdsFilter,
+    stepValuesRawFilter,
     searchQuery,
     searchType,
   ])
@@ -492,7 +567,6 @@ export function ClientManagementPage() {
       responsibleEmployeeIdsFilter.length > 0 ||
       portfolioFilter.length > 0 ||
       tagIdsFilter.length > 0 ||
-      lastInteractionResultIdsFilter.length > 0 ||
       unassignedOnlyFilter ||
       dateOfSaleFromFilter !== '' ||
       dateOfSaleToFilter !== '' ||
@@ -593,6 +667,10 @@ export function ClientManagementPage() {
               setAssignmentDateFromFilter(parsed.assignmentDateFromFilter)
             if (parsed.assignmentDateToFilter)
               setAssignmentDateToFilter(parsed.assignmentDateToFilter)
+            if (parsed.chainIdFilter) setChainIdFilter(parsed.chainIdFilter)
+            if (Array.isArray(parsed.chainStepIdsFilter))
+              setChainStepIdsFilter(parsed.chainStepIdsFilter)
+            if (parsed.stepValuesRawFilter) setStepValuesRawFilter(parsed.stepValuesRawFilter)
             if (parsed.currentPage) setCurrentPage(parsed.currentPage)
             if (parsed.rowsPerPage) setRowsPerPage(parsed.rowsPerPage)
             if (parsed.sortBy) setSortBy(parsed.sortBy)
@@ -636,6 +714,23 @@ export function ClientManagementPage() {
 
   // NO need to debounce filters - useURLState already does this with 300ms debounce
   // const filters = useDebounce(filters, 500)
+
+  // Operator option sets (same derivation the filter dropdowns render). Used to
+  // detect the "all operators selected" case and OMIT the responsible_employee_ids
+  // / interaction_user_ids filter: sending every id is a no-op constraint that
+  // defeats the priority index and turns the dashboard query into a full-scan +
+  // sort — the heavy query behind the morning-login OOM/502s. Shares the
+  // react-query cache with ClientFiltersBar, so no extra fetch.
+  const {
+    employeeOptions,
+    interactionUserOptions,
+    isReady: operatorOptionsReady,
+  } = useOperatorFilterOptions(user?.active_project_id ? Number(user.active_project_id) : null)
+  const allEmployeeOptionIds = useMemo(() => employeeOptions.map((o) => o.id), [employeeOptions])
+  const allInteractionOptionIds = useMemo(
+    () => interactionUserOptions.map((o) => o.id),
+    [interactionUserOptions]
+  )
 
   // Toggle handler for priority card clicks
   const handlePriorityToggle = (priority: Priority) => {
@@ -689,9 +784,19 @@ export function ClientManagementPage() {
     }
 
     // FILTER 3: Assignment - Employee (multi-select OR, KAN-572).
-    // Sent as a comma-separated string matching the BE schema.
+    // Sent as a comma-separated string matching the BE schema. When every
+    // operator is selected ("All employees", no "No Responsible" sentinel) the
+    // filter is a no-op — omit it so the BE takes the fast priority-index path
+    // instead of a 200-id IN-list full scan (the morning OOM/502 trigger). This
+    // also matches the dropdown label, which already shows "All employees" for
+    // both the empty and all-selected states.
     if (filters.responsibleEmployeeIds && filters.responsibleEmployeeIds.length > 0) {
-      params.responsible_employee_ids = filters.responsibleEmployeeIds.join(',')
+      const selected = filters.responsibleEmployeeIds
+      const hasNoResponsible = selected.includes(NO_RESPONSIBLE_ID)
+      const realIds = selected.filter((id) => id !== NO_RESPONSIBLE_ID)
+      if (!(!hasNoResponsible && coversAllOptions(realIds, allEmployeeOptionIds))) {
+        params.responsible_employee_ids = selected.join(',')
+      }
     }
 
     // FILTER 4: Assignment - Searcher
@@ -733,14 +838,6 @@ export function ClientManagementPage() {
       params.tag_ids = filters.tagIds.join(',')
     }
 
-    // FILTER 9b: Last Interaction Result (multi-select). Sent as
-    // comma-separated ids matching the BE schema. Empty/undefined
-    // means "no filter" — BE returns all clients regardless of last
-    // result.
-    if (filters.lastInteractionResultIds && filters.lastInteractionResultIds.length > 0) {
-      params.last_interaction_result_ids = filters.lastInteractionResultIds.join(',')
-    }
-
     // FILTER 10: Priority
     if (selectedPriorities.length > 0) {
       // Map priority labels to lowercase for API
@@ -760,9 +857,16 @@ export function ClientManagementPage() {
     }
 
     // FILTER 13: Interaction Created By (multi-select OR, KAN-572).
-    // Sent as a comma-separated string matching the BE schema.
+    // Sent as a comma-separated string matching the BE schema. Same "all
+    // operators selected → omit the no-op filter" optimization as Filter 3
+    // (the "No Interactions" sentinel widens results, so it blocks the omit).
     if (filters.interactionUserIds && filters.interactionUserIds.length > 0) {
-      params.interaction_user_ids = filters.interactionUserIds.join(',')
+      const selected = filters.interactionUserIds
+      const hasNoInteractions = selected.includes(NO_INTERACTIONS_ID)
+      const realIds = selected.filter((id) => id !== NO_INTERACTIONS_ID)
+      if (!(!hasNoInteractions && coversAllOptions(realIds, allInteractionOptionIds))) {
+        params.interaction_user_ids = selected.join(',')
+      }
     }
 
     // FILTER 14: Interaction Logged Date (applies to promise/callback subqueries)
@@ -781,6 +885,38 @@ export function ClientManagementPage() {
       params.assignment_date_to = filters.assignmentDateTo
     }
 
+    if (user?.timezone) {
+      params.tz = user.timezone
+    }
+
+    // FILTER 15b: TA Chain + Step + per-step values. Steps only ship
+    // when a chain is selected — BE silently drops orphan steps but no
+    // point sending them. Step selection is keyed by
+    // ``ta_chain_steps.id`` (not target_action_id) so duplicate-TA chains
+    // stay independently filterable.
+    if (filters.chainId) {
+      params.chain_id = filters.chainId
+      if (filters.chainStepIds && filters.chainStepIds.length > 0) {
+        params.step_ids = filters.chainStepIds.join(',')
+      }
+      // Per-step value sub-filters. Format ``<step_id>:<value>``,
+      // comma-separated.
+      const eqList: string[] = []
+      const minList: string[] = []
+      const maxList: string[] = []
+      const sv = filters.stepValues ?? {}
+      for (const id of filters.chainStepIds ?? []) {
+        const entry = sv[id]
+        if (!entry) continue
+        if (entry.eq) eqList.push(`${id}:${entry.eq}`)
+        if (entry.min) minList.push(`${id}:${entry.min}`)
+        if (entry.max) maxList.push(`${id}:${entry.max}`)
+      }
+      if (eqList.length) params.step_value_eq = eqList.join(',')
+      if (minList.length) params.step_value_min = minList.join(',')
+      if (maxList.length) params.step_value_max = maxList.join(',')
+    }
+
     // FILTER 16: Search (from global header search)
     if (searchQuery.trim()) {
       params.q = searchQuery.trim()
@@ -797,6 +933,9 @@ export function ClientManagementPage() {
     selectedPriorities,
     searchQuery,
     searchType,
+    user?.timezone,
+    allEmployeeOptionIds,
+    allInteractionOptionIds,
   ])
 
   /** Filters + sort for bulk messaging when "select all" is used (no pagination). */
@@ -807,8 +946,23 @@ export function ClientManagementPage() {
     return rest
   }, [apiParams])
 
-  // Fetch clients from API
-  const { data: clientsResponse, isLoading, isFetching, isError, error } = useClients(apiParams)
+  // Fetch clients from API. When an operator multi-select filter is active we
+  // defer the first fetch until the operator option sets have loaded — otherwise
+  // an "all operators" selection would fire the heavy 200-id query against an
+  // empty option set and then refetch the light (omitted-filter) query once the
+  // options arrive. With no operator filter active there's nothing to wait for.
+  const operatorFilterActive =
+    (filters.responsibleEmployeeIds?.length ?? 0) > 0 ||
+    (filters.interactionUserIds?.length ?? 0) > 0
+  const {
+    data: clientsResponse,
+    isLoading,
+    isFetching,
+    isError,
+    error,
+  } = useClients(apiParams, {
+    enabled: !operatorFilterActive || operatorOptionsReady,
+  })
 
   // Extract paginated data from response
   const apiClients = useMemo(() => clientsResponse?.items || [], [clientsResponse?.items])
@@ -872,10 +1026,12 @@ export function ClientManagementPage() {
     if (filters.assignmentDateFrom || filters.assignmentDateTo) count++
     if (filters.portfolio && filters.portfolio.length > 0) count++
     if (filters.tagIds && filters.tagIds.length > 0) count++
-    if (filters.lastInteractionResultIds && filters.lastInteractionResultIds.length > 0) count++
     if (filters.responsibleEmployeeIds && filters.responsibleEmployeeIds.length > 0) count++
     if (filters.responsibleSearcher) count++
     if (filters.unassignedOnly) count++
+    if (filters.chainId) count++
+    if (filters.chainStepIds && filters.chainStepIds.length > 0) count++
+    if (filters.stepValues && Object.keys(filters.stepValues).length > 0) count++
     if (selectedPriorities.length > 0) count++
     return count
   }, [filters, selectedPriorities])
@@ -1150,16 +1306,6 @@ export function ClientManagementPage() {
       return
     }
 
-    if (newFilters._action === 'toggleLastInteractionResult') {
-      const resultId = newFilters._value as number
-      const checked = newFilters._checked as boolean
-      setLastInteractionResultIdsFilter((prev) =>
-        checked ? [...prev, resultId] : prev.filter((id) => id !== resultId)
-      )
-      setCurrentPage(1)
-      return
-    }
-
     // Handle regular filter updates (non-toggle actions)
     // Only update if value has actually changed (use JSON.stringify for deep comparison)
     if (JSON.stringify(newFilters.portfolio) !== JSON.stringify(portfolioFilter)) {
@@ -1167,12 +1313,6 @@ export function ClientManagementPage() {
     }
     if (JSON.stringify(newFilters.tagIds) !== JSON.stringify(tagIdsFilter)) {
       setTagIdsFilter(newFilters.tagIds || [])
-    }
-    if (
-      JSON.stringify(newFilters.lastInteractionResultIds) !==
-      JSON.stringify(lastInteractionResultIdsFilter)
-    ) {
-      setLastInteractionResultIdsFilter(newFilters.lastInteractionResultIds || [])
     }
     if (
       JSON.stringify(newFilters.responsibleEmployeeIds) !==
@@ -1233,6 +1373,35 @@ export function ClientManagementPage() {
     if (newFilters.assignmentDateTo !== assignmentDateToFilter) {
       setAssignmentDateToFilter(newFilters.assignmentDateTo || '')
     }
+    // Chain change resets the step picks and their per-step values —
+    // both belong to the previously-selected chain and their IDs would
+    // be orphans on the BE otherwise.
+    if (newFilters.chainId !== chainIdFilter) {
+      setChainIdFilter(newFilters.chainId || 0)
+      setChainStepIdsFilter([])
+      setStepValuesRawFilter('')
+    } else {
+      const nextStepIds = newFilters.chainStepIds ?? []
+      const stepsChanged = JSON.stringify(nextStepIds) !== JSON.stringify(chainStepIdsFilter)
+      if (stepsChanged) {
+        setChainStepIdsFilter(nextStepIds)
+        // Drop value entries for steps that were just deselected so the
+        // BE doesn't keep filtering on inputs the operator can't see.
+        const picked = new Set(nextStepIds)
+        const filtered: Record<number, StepValueEntry> = {}
+        for (const [k, v] of Object.entries(stepValuesFilter)) {
+          const id = Number(k)
+          if (picked.has(id)) filtered[id] = v
+        }
+        setStepValuesRawFilter(encodeStepValues(filtered))
+      }
+      if (newFilters.stepValues !== undefined) {
+        const encoded = encodeStepValues(newFilters.stepValues)
+        if (encoded !== stepValuesRawFilter) {
+          setStepValuesRawFilter(encoded)
+        }
+      }
+    }
 
     // Reset to page 1 when filters change
     setCurrentPage(1)
@@ -1243,7 +1412,7 @@ export function ClientManagementPage() {
     setSelectedPriorities([])
     setPortfolioFilter([])
     setTagIdsFilter([])
-    setLastInteractionResultIdsFilter([])
+    setResponsibleEmployeeFilter('')
     setResponsibleEmployeeIdsFilter([])
     setResponsibleSearcherFilter('')
     setUnassignedOnlyFilter(false)
@@ -1262,6 +1431,9 @@ export function ClientManagementPage() {
     setInteractionDateToFilter('')
     setAssignmentDateFromFilter('')
     setAssignmentDateToFilter('')
+    setChainIdFilter(0)
+    setChainStepIdsFilter([])
+    setStepValuesRawFilter('')
 
     // Reset to first page
     setCurrentPage(1)
@@ -1460,17 +1632,17 @@ export function ClientManagementPage() {
           >
             {/* Desktop: Individual buttons */}
             <div className="hidden items-center gap-4 lg:flex">
-              <PermissionGuard permission={PERMISSIONS.CLIENTS.EDIT}>
-                <LinkButton
-                  variant="regular-black"
-                  size="xs"
-                  onClick={() => handleAssign(client.id)}
-                  leftIcon={<Icons.PencilEdit size={16} color="#05040D" strokeWidth={1.5} />}
-                  disabled={isBulkActionActive}
-                >
-                  {t('pages.clients.assign')}
-                </LinkButton>
-              </PermissionGuard>
+              {/* Reassign trigger is always visible; warn-on-click happens on the
+                  modal's Submit (PERMISSIONS.CLIENTS.REASSIGN_RESPONSIBLE). */}
+              <LinkButton
+                variant="regular-black"
+                size="xs"
+                onClick={() => handleAssign(client.id)}
+                leftIcon={<Icons.PencilEdit size={16} color="#05040D" strokeWidth={1.5} />}
+                disabled={isBulkActionActive}
+              >
+                {t('pages.clients.assign')}
+              </LinkButton>
               <PermissionGuard permission={PERMISSIONS.CLIENTS.EDIT}>
                 <LinkButton
                   variant="regular-black"
@@ -1503,16 +1675,16 @@ export function ClientManagementPage() {
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="bg-white">
-                  <PermissionGuard permission={PERMISSIONS.CLIENTS.EDIT}>
-                    <DropdownMenuItem
-                      onClick={() => handleAssign(client.id)}
-                      className="text-dark-500 flex cursor-pointer items-center gap-2 text-sm"
-                      disabled={isBulkActionActive}
-                    >
-                      <Icons.PencilEdit size={16} strokeWidth={1.5} />
-                      <span>{t('pages.clients.assign')}</span>
-                    </DropdownMenuItem>
-                  </PermissionGuard>
+                  {/* Reassign trigger is always visible; warn-on-click happens on the
+                      modal's Submit (PERMISSIONS.CLIENTS.REASSIGN_RESPONSIBLE). */}
+                  <DropdownMenuItem
+                    onClick={() => handleAssign(client.id)}
+                    className="text-dark-500 flex cursor-pointer items-center gap-2 text-sm"
+                    disabled={isBulkActionActive}
+                  >
+                    <Icons.PencilEdit size={16} strokeWidth={1.5} />
+                    <span>{t('pages.clients.assign')}</span>
+                  </DropdownMenuItem>
                   <PermissionGuard permission={PERMISSIONS.CLIENTS.EDIT}>
                     <DropdownMenuItem
                       onClick={() => handleManageTags(client.id, client.fullName)}
@@ -1549,8 +1721,12 @@ export function ClientManagementPage() {
   const HIDDEN_COLUMN_KEYS = new Set(['creditor', 'actions'])
   const visibleColumns = columns.filter((c) => !HIDDEN_COLUMN_KEYS.has(c.key))
 
-  // Show initial loading state (only when no data exists yet)
-  if (isLoading && apiClients.length === 0) {
+  // Show initial loading state (only when no data exists yet). The clients query
+  // is intentionally disabled while operator options load (see useClients
+  // `enabled` above); a disabled query reports isLoading=false, so cover that
+  // gating window here too or the empty state would flash before the fetch runs.
+  const awaitingOperatorOptions = operatorFilterActive && !operatorOptionsReady
+  if ((isLoading || awaitingOperatorOptions) && apiClients.length === 0) {
     return <ClientManagementPageSkeleton />
   }
 
@@ -1678,17 +1854,17 @@ export function ClientManagementPage() {
                     align="end"
                     className="w-56 rounded-lg border border-gray-200 bg-white p-1 shadow-lg"
                   >
-                    <PermissionGuard permission={PERMISSIONS.CLIENTS.EDIT}>
-                      <DropdownMenuItem
-                        onClick={handleBulkAssign}
-                        className="flex cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 transition-colors hover:bg-gray-50 focus:bg-gray-50"
-                      >
-                        <Icons.UserCheck01 size={18} className="text-dark-500" strokeWidth={1.5} />
-                        <span className="text-dark-500 text-sm font-medium">
-                          {t('pages.clients.bulkActions.assignEmployee', 'Assign Employee')}
-                        </span>
-                      </DropdownMenuItem>
-                    </PermissionGuard>
+                    {/* Bulk-assign trigger is always visible; warn-on-click happens on the
+                        modal's Submit (PERMISSIONS.CLIENTS.REASSIGN_RESPONSIBLE). */}
+                    <DropdownMenuItem
+                      onClick={handleBulkAssign}
+                      className="flex cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 transition-colors hover:bg-gray-50 focus:bg-gray-50"
+                    >
+                      <Icons.UserCheck01 size={18} className="text-dark-500" strokeWidth={1.5} />
+                      <span className="text-dark-500 text-sm font-medium">
+                        {t('pages.clients.bulkActions.assignEmployee', 'Assign Employee')}
+                      </span>
+                    </DropdownMenuItem>
                     <PermissionGuard permission={PERMISSIONS.CLIENTS.ASSIGN_TAGS}>
                       <DropdownMenuItem
                         onClick={handleBulkAddTags}

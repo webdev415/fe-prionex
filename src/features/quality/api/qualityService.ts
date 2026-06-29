@@ -1,5 +1,7 @@
 import { api } from '@/lib/api'
 import type {
+  AggregateFilters,
+  AggregateResponse,
   AlertsResponse,
   CallMarker,
   DynamicsFilters,
@@ -98,11 +100,28 @@ export async function sendScorecard(scorecardId: number): Promise<Scorecard> {
   return response.data
 }
 
+export async function deleteScorecard(scorecardId: number): Promise<void> {
+  await api.delete(`/api/v1/quality/scorecards/${scorecardId}`)
+}
+
 export async function exportScorecards(filters: ScorecardListFilters): Promise<Blob> {
   const response = await api.get<Blob>('/api/v1/quality/scorecards/export', {
     params: buildScorecardListParams(filters),
     responseType: 'blob',
     timeout: 120_000,
+  })
+  return response.data
+}
+
+export async function getScorecardAggregate(filters: AggregateFilters): Promise<AggregateResponse> {
+  const params = new URLSearchParams()
+  if (filters.period) params.set('period', filters.period)
+  if (filters.from_date) params.set('from_date', filters.from_date)
+  if (filters.to_date) params.set('to_date', filters.to_date)
+  if (filters.group_by) params.set('group_by', filters.group_by)
+  filters.operator_id?.forEach((id) => params.append('operator_id', String(id)))
+  const response = await api.get<AggregateResponse>('/api/v1/quality/scorecards/aggregate', {
+    params,
   })
   return response.data
 }
@@ -279,9 +298,11 @@ export const qualityService = {
   listMyScorecards,
   getScorecard,
   getScorecardHistoryForCall,
+  getScorecardAggregate,
   createScorecard,
   updateScorecard,
   sendScorecard,
+  deleteScorecard,
   exportScorecards,
   listMarkersForCall,
   createMarker,

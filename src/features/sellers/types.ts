@@ -33,11 +33,52 @@ export interface Seller {
   tax_id?: string
   notes?: string
 
+  /**
+   * Full legal entity name of the primary creditor.
+   * E.g., 'ТОВ "ФК "Є ГРОШІ"'. `seller_name` remains the operator-facing label.
+   */
+  legal_name?: string | null
+
   // Audit fields
   created_at: string
   updated_at: string
   created_by?: number
   updated_by?: number
+}
+
+/**
+ * Factoring agreement — the contract under which the project purchased
+ * a batch of debts.
+ * Returned by GET /api/v1/sellers/{seller_id}/factoring-agreements.
+ */
+export interface FactoringAgreement {
+  id: number
+  seller_id: number
+  agreement_number: string
+  /**
+   * Free-text name of the entity that actually sold the debts to the
+   * project. May equal the seller's legal_name in the ~6% direct-sale case,
+   * or be an intermediate reseller in the ~94% chain-sale case.
+   */
+  previous_lender?: string | null
+  contract_purchase_date?: string | null
+  created_at: string
+  /** Count of debts (in the caller's project) linked to this agreement. */
+  debt_count: number
+}
+
+/**
+ * Paginated envelope returned by
+ * GET /api/v1/sellers/{seller_id}/factoring-agreements.
+ *
+ * Mirrors the shape used by SellerListResponse / ImportJobsPage —
+ * { items, total, page, page_size }.
+ */
+export interface FactoringAgreementPage {
+  items: FactoringAgreement[]
+  total: number
+  page: number
+  page_size: number
 }
 
 /**
@@ -127,6 +168,8 @@ export interface UpdateSellerInput {
   tax_id?: string
   notes?: string
   is_active?: boolean
+  /** Full legal entity name of the primary creditor. */
+  legal_name?: string | null
 }
 
 /**
