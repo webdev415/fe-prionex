@@ -1,0 +1,209 @@
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
+import { getErrorMessage } from '@/lib/errors'
+import { legalApi } from '../api/legalApi'
+import type {
+  LegalLawyerCreate,
+  LegalLawyerUpdate,
+  LegalLetterTypeCreate,
+  LegalLetterTypePrioritiesUpdate,
+  LegalLetterTypeUpdate,
+  LegalThreadReplyRequest,
+  LegalTrainingExampleCreate,
+  LegalTrainingExampleUpdate,
+} from '../api/types'
+import { legalWorkplaceKeys } from './useLegalInbox'
+
+export function useCreateLegalLetterType() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (payload: LegalLetterTypeCreate) => legalApi.createLetterType(payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: legalWorkplaceKeys.letterTypes() })
+    },
+    onError: (error) => toast.error(getErrorMessage(error)),
+  })
+}
+
+export function useUpdateLegalLetterType() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({
+      letterTypeId,
+      payload,
+    }: {
+      letterTypeId: string
+      payload: LegalLetterTypeUpdate
+    }) => legalApi.updateLetterType(letterTypeId, payload),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: legalWorkplaceKeys.letterTypes() })
+      queryClient.invalidateQueries({
+        queryKey: legalWorkplaceKeys.letterType(variables.letterTypeId),
+      })
+    },
+    onError: (error) => toast.error(getErrorMessage(error)),
+  })
+}
+
+export function useArchiveLegalLetterType() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (letterTypeId: string) => legalApi.archiveLetterType(letterTypeId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: legalWorkplaceKeys.letterTypes() })
+    },
+    onError: (error) => toast.error(getErrorMessage(error)),
+  })
+}
+
+export function useReplaceLegalLetterTypePriorities() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({
+      letterTypeId,
+      payload,
+    }: {
+      letterTypeId: string
+      payload: LegalLetterTypePrioritiesUpdate
+    }) => legalApi.replaceLetterTypePriorities(letterTypeId, payload),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: legalWorkplaceKeys.letterTypes() })
+      queryClient.invalidateQueries({
+        queryKey: legalWorkplaceKeys.letterType(variables.letterTypeId),
+      })
+    },
+    onError: (error) => toast.error(getErrorMessage(error)),
+  })
+}
+
+export function useCreateLegalTrainingExample() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({
+      letterTypeId,
+      payload,
+    }: {
+      letterTypeId: string
+      payload: LegalTrainingExampleCreate
+    }) => legalApi.createTrainingExample(letterTypeId, payload),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: legalWorkplaceKeys.trainingExamples(variables.letterTypeId),
+      })
+      queryClient.invalidateQueries({
+        queryKey: legalWorkplaceKeys.letterType(variables.letterTypeId),
+      })
+      queryClient.invalidateQueries({ queryKey: legalWorkplaceKeys.letterTypes() })
+    },
+    onError: (error) => toast.error(getErrorMessage(error)),
+  })
+}
+
+export function useUpdateLegalTrainingExample() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({
+      letterTypeId,
+      exampleId,
+      payload,
+    }: {
+      letterTypeId: string
+      exampleId: string
+      payload: LegalTrainingExampleUpdate
+    }) => legalApi.updateTrainingExample(letterTypeId, exampleId, payload),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: legalWorkplaceKeys.trainingExamples(variables.letterTypeId),
+      })
+      queryClient.invalidateQueries({
+        queryKey: legalWorkplaceKeys.letterType(variables.letterTypeId),
+      })
+      queryClient.invalidateQueries({ queryKey: legalWorkplaceKeys.letterTypes() })
+    },
+    onError: (error) => toast.error(getErrorMessage(error)),
+  })
+}
+
+export function useDeleteLegalTrainingExample() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ letterTypeId, exampleId }: { letterTypeId: string; exampleId: string }) =>
+      legalApi.deleteTrainingExample(letterTypeId, exampleId),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: legalWorkplaceKeys.trainingExamples(variables.letterTypeId),
+      })
+      queryClient.invalidateQueries({
+        queryKey: legalWorkplaceKeys.letterType(variables.letterTypeId),
+      })
+      queryClient.invalidateQueries({ queryKey: legalWorkplaceKeys.letterTypes() })
+    },
+    onError: (error) => toast.error(getErrorMessage(error)),
+  })
+}
+
+export function useCreateLegalLawyer() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (payload: LegalLawyerCreate) => legalApi.createLawyer(payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: legalWorkplaceKeys.lawyers() })
+    },
+    onError: (error) => toast.error(getErrorMessage(error)),
+  })
+}
+
+export function useUpdateLegalLawyer() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ lawyerId, payload }: { lawyerId: string; payload: LegalLawyerUpdate }) =>
+      legalApi.updateLawyer(lawyerId, payload),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: legalWorkplaceKeys.lawyers() })
+      queryClient.invalidateQueries({
+        queryKey: legalWorkplaceKeys.lawyer(variables.lawyerId),
+      })
+    },
+    onError: (error) => toast.error(getErrorMessage(error)),
+  })
+}
+
+export function useArchiveLegalLawyer() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (lawyerId: string) => legalApi.archiveLawyer(lawyerId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: legalWorkplaceKeys.lawyers() })
+    },
+    onError: (error) => toast.error(getErrorMessage(error)),
+  })
+}
+
+export function useReplyToLegalThread() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ threadId, payload }: { threadId: string; payload: LegalThreadReplyRequest }) =>
+      legalApi.replyToThread(threadId, payload),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: legalWorkplaceKeys.inbox() })
+      queryClient.invalidateQueries({
+        queryKey: legalWorkplaceKeys.thread(data.thread_id),
+      })
+      queryClient.invalidateQueries({
+        queryKey: legalWorkplaceKeys.message(data.message_id),
+      })
+    },
+    onError: (error) => toast.error(getErrorMessage(error)),
+  })
+}
