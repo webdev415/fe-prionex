@@ -626,6 +626,8 @@ export function ClientDetailPage() {
       spamAllowed: boolean
       created_at?: string | null
       added_by_user_name?: string | null
+      updated_at?: string | null
+      updated_by_user_name?: string | null
     }> = []
     if (profile.additional_phones && profile.additional_phones.length > 0) {
       profile.additional_phones
@@ -640,6 +642,8 @@ export function ClientDetailPage() {
             spamAllowed: p.spam_allowed !== false,
             created_at: p.created_at,
             added_by_user_name: p.added_by_user_name,
+            updated_at: p.updated_at,
+            updated_by_user_name: p.updated_by_user_name,
           })
         )
     } else if (isValidPhone(profile.phone_primary)) {
@@ -723,6 +727,8 @@ export function ClientDetailPage() {
           comment: r.comment ?? '',
           created_at: r.created_at,
           added_by_user_name: r.added_by_user_name,
+          updated_at: r.updated_at,
+          updated_by_user_name: r.updated_by_user_name,
           defaultCallLine: r.default_call_line ?? 'white',
           spamAllowed: r.spam_allowed !== false,
         })
@@ -742,6 +748,8 @@ export function ClientDetailPage() {
             comment: '',
             created_at: p.created_at,
             added_by_user_name: p.added_by_user_name,
+            updated_at: p.updated_at,
+            updated_by_user_name: p.updated_by_user_name,
             defaultCallLine: p.default_call_line ?? 'white',
             spamAllowed: p.spam_allowed !== false,
           }))
@@ -2500,6 +2508,20 @@ export function ClientDetailPage() {
                                 {formatDate(phone.created_at ?? undefined)}
                               </div>
                             )}
+                            {phone.updated_by_user_name && (
+                              <>
+                                <div>
+                                  {t('pages.clients.detail.updatedBy')}:{' '}
+                                  {phone.updated_by_user_name}
+                                </div>
+                                {phone.updated_at && (
+                                  <div>
+                                    {t('pages.clients.detail.updatedDate')}:{' '}
+                                    {formatDate(phone.updated_at ?? undefined)}
+                                  </div>
+                                )}
+                              </>
+                            )}
                             {!phone.added_by_user_name && !phone.created_at && <div>-</div>}
                           </TooltipContent>
                         </Tooltip>
@@ -3511,6 +3533,20 @@ export function ClientDetailPage() {
                                           {t('pages.clients.detail.addedDate')}:{' '}
                                           {formatDate(contact.created_at ?? undefined)}
                                         </div>
+                                      )}
+                                      {contact.updated_by_user_name && (
+                                        <>
+                                          <div>
+                                            {t('pages.clients.detail.updatedBy')}:{' '}
+                                            {contact.updated_by_user_name}
+                                          </div>
+                                          {contact.updated_at && (
+                                            <div>
+                                              {t('pages.clients.detail.updatedDate')}:{' '}
+                                              {formatDate(contact.updated_at ?? undefined)}
+                                            </div>
+                                          )}
+                                        </>
                                       )}
                                       {!contact.added_by_user_name && !contact.created_at && (
                                         <div>-</div>

@@ -3086,6 +3086,8 @@
         "contactType": "Contact type",
         "addedBy": "Added by",
         "addedDate": "Date",
+        "updatedBy": "Updated by",
+        "updatedDate": "Date",
         "phoneType": "Type",
         "linkedContact": "Linked contact",
         "comment": "Comment",
