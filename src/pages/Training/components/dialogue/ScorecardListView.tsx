@@ -1,4 +1,5 @@
 ﻿import { useTranslation } from 'react-i18next'
+import { Link } from 'react-router-dom'
 import { Icons } from '@/lib/icons'
 import type { DialogueScorecardRow } from '../../lib/dialogueScorecardAdapter'
 import {
@@ -8,6 +9,9 @@ import {
   ANALYTICS_TABLE_TH,
 } from '../analytics/analyticsTableStyles'
 import { AnalyticsMockTable } from '../analytics/AnalyticsMockTable'
+
+/** Client detail route — matches the link pattern used by NotificationBell. */
+const clientHref = (clientId: number) => `/dashboard/clients/${clientId}`
 
 export interface ScorecardListViewProps {
   rows: DialogueScorecardRow[]
@@ -97,6 +101,10 @@ export function ScorecardListView({
             {t('pages.training.dialogue.list.employee', 'Employee')}
           </th>
           <th className={ANALYTICS_TABLE_TH}>
+            {t('pages.training.dialogue.list.client', 'Client')}
+          </th>
+          <th className={ANALYTICS_TABLE_TH}>{t('pages.training.dialogue.list.phone', 'Phone')}</th>
+          <th className={ANALYTICS_TABLE_TH}>
             {t('pages.training.dialogue.list.category', 'Category')}
           </th>
           <th className={`${ANALYTICS_TABLE_TH} text-right`}>
@@ -144,6 +152,22 @@ export function ScorecardListView({
                   </div>
                   <span className="text-xs font-medium text-[#05040D]">{row.operatorName}</span>
                 </div>
+              </td>
+              <td className={ANALYTICS_TABLE_TD}>
+                {row.clientId != null ? (
+                  <Link
+                    to={clientHref(row.clientId)}
+                    onClick={(e) => e.stopPropagation()}
+                    className="text-xs font-medium text-[#204E4D] hover:underline"
+                  >
+                    {row.clientName ?? `#${row.clientId}`}
+                  </Link>
+                ) : (
+                  <span className="text-xs text-gray-300">—</span>
+                )}
+              </td>
+              <td className={`${ANALYTICS_TABLE_TD} whitespace-nowrap text-[#4B5563] tabular-nums`}>
+                {row.contactedPhone ?? '—'}
               </td>
               <td className={ANALYTICS_TABLE_TD}>
                 <span

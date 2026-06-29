@@ -18,6 +18,10 @@ vi.mock('@/features/quality', () => ({
   useDeleteScorecard: () => ({ mutate: vi.fn() }),
 }))
 vi.mock('@/features/users/hooks', () => ({ useOperators: vi.fn() }))
+// Contact/client enrichment hooks — stubbed so the list test stays free of a
+// QueryClientProvider; rows render with null phone/client.
+vi.mock('@/features/calls/hooks/useCall', () => ({ useCallsBatch: () => ({ data: [] }) }))
+vi.mock('@/features/clients/hooks/useClients', () => ({ useClientNames: () => new Map() }))
 vi.mock('../../../lib/scope', () => ({ useScopedUserIds: vi.fn() }))
 // The interactive review panel pulls in the player + query-backed scorecard
 // editor; stub it so this list-focused test needs no QueryClientProvider.

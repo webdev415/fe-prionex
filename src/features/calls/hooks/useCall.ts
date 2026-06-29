@@ -44,6 +44,21 @@ export function useCallDetail(callId: string | null) {
   })
 }
 
+/**
+ * Resolve a set of call_ids to their contacted number + client in one request.
+ * Used by the Dialogue Evaluation table. The query key is the sorted unique id
+ * set so identical pages share a cache entry and re-orders don't refetch.
+ */
+export function useCallsBatch(callIds: string[]) {
+  const uniqueSorted = Array.from(new Set(callIds)).sort()
+  return useQuery({
+    queryKey: ['callsBatch', uniqueSorted],
+    queryFn: () => callService.getCallsBatch(uniqueSorted),
+    enabled: uniqueSorted.length > 0,
+    staleTime: 5 * 60_000,
+  })
+}
+
 export function useCallHistory(clientId: number | null, filters?: CallHistoryFilters) {
   return useQuery({
     queryKey: ['callHistory', clientId, filters],
