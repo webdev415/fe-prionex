@@ -27,6 +27,10 @@ import { useTemplates } from '../hooks/useTemplates'
 import { computeWeightedScorePreview } from '../lib/scoringPreview'
 import type { Criterion, Section } from '../types'
 
+// KAN-503: the shared "Script stages" section renders as a reached/not-reached
+// checklist (funnel data, not quality score) with monotonic auto-marking.
+const SCRIPT_STAGES_SECTION_KEY = 'script_stages'
+
 interface ScorecardPanelProps {
   callId: string
   operatorId: number
@@ -461,6 +465,7 @@ interface SectionEditorProps {
 
 function SectionEditor({ section, scores, disabled, totalWeight, onChange }: SectionEditorProps) {
   const [collapsed, setCollapsed] = useState(false)
+  const isStages = section.key === SCRIPT_STAGES_SECTION_KEY
   return (
     <section className="mt-3 rounded-lg border border-gray-100">
       <button
@@ -475,20 +480,117 @@ function SectionEditor({ section, scores, disabled, totalWeight, onChange }: Sec
         />
       </button>
       {!collapsed ? (
-        <div className="space-y-3 px-3 py-3">
-          {section.criteria.map((criterion) => (
-            <CriterionRow
-              key={criterion.key}
-              criterion={criterion}
-              entry={scores[criterion.key]}
-              disabled={disabled}
-              totalWeight={totalWeight}
-              onChange={onChange}
-            />
-          ))}
-        </div>
+        isStages ? (
+          <StageChecklist
+            section={section}
+            scores={scores}
+            disabled={disabled}
+            onChange={onChange}
+          />
+        ) : (
+          <div className="space-y-3 px-3 py-3">
+            {section.criteria.map((criterion) => (
+              <CriterionRow
+                key={criterion.key}
+                criterion={criterion}
+                entry={scores[criterion.key]}
+                disabled={disabled}
+                totalWeight={totalWeight}
+                onChange={onChange}
+              />
+            ))}
+          </div>
+        )
       ) : null}
     </section>
+  )
+}
+
+interface StageChecklistProps {
+  section: Section
+  scores: Record<string, { value: number | boolean | null; comment?: string | null }>
+  disabled: boolean
+  onChange: (criterionKey: string, value: number | boolean | null, comment?: string | null) => void
+}
+
+/**
+ * Script-stage checklist (KAN-503). Each stage is a reached / not-reached
+ * pair with monotonic auto-marking that mirrors real call flow: marking a
+ * stage reached marks every earlier stage reached; marking one not-reached
+ * marks every later stage not-reached. This keeps the funnel data clean (no
+ * non-monotonic records that would otherwise need compute-time closure).
+ */
+function StageChecklist({ section, scores, disabled, onChange }: StageChecklistProps) {
+  const { t } = useTranslation('common')
+  const criteria = section.criteria
+
+  const mark = (index: number, reached: boolean) => {
+    if (reached) {
+      // Reaching stage N implies stages 1..N were reached.
+      for (let i = 0; i <= index; i += 1) {
+        if (scores[criteria[i].key]?.value !== true) onChange(criteria[i].key, true)
+      }
+    } else {
+      // Not reaching stage N implies stages N..end were not reached.
+      for (let i = index; i < criteria.length; i += 1) {
+        if (scores[criteria[i].key]?.value !== false) onChange(criteria[i].key, false)
+      }
+    }
+  }
+
+  return (
+    <div className="space-y-1.5 px-3 py-3">
+      <p className="mb-1 text-xs text-gray-500">
+        {t(
+          'pages.training.scorecard.stages.hint',
+          'Mark which script stages the call reached. Earlier/later stages adjust automatically.'
+        )}
+      </p>
+      {criteria.map((criterion, index) => {
+        const value = (scores[criterion.key]?.value as boolean | null | undefined) ?? null
+        return (
+          <div
+            key={criterion.key}
+            className="flex items-center justify-between gap-2 rounded-md bg-gray-50 px-3 py-2"
+          >
+            <span className="flex items-center gap-2 text-sm text-gray-700">
+              <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-gray-200 text-[10px] font-semibold text-gray-600">
+                {index + 1}
+              </span>
+              {criterion.name}
+            </span>
+            <div className="flex gap-1">
+              <button
+                type="button"
+                disabled={disabled}
+                onClick={() => mark(index, true)}
+                aria-pressed={value === true}
+                className={`rounded-full border px-2.5 py-1 text-xs font-medium disabled:cursor-not-allowed disabled:opacity-60 ${
+                  value === true
+                    ? 'border-emerald-500 bg-emerald-500 text-white'
+                    : 'border-gray-200 bg-white text-gray-700'
+                }`}
+              >
+                {t('pages.training.scorecard.stages.reached', 'Reached')}
+              </button>
+              <button
+                type="button"
+                disabled={disabled}
+                onClick={() => mark(index, false)}
+                aria-pressed={value === false}
+                className={`rounded-full border px-2.5 py-1 text-xs font-medium disabled:cursor-not-allowed disabled:opacity-60 ${
+                  value === false
+                    ? 'border-red-500 bg-red-500 text-white'
+                    : 'border-gray-200 bg-white text-gray-700'
+                }`}
+              >
+                {t('pages.training.scorecard.stages.notReached', 'Not reached')}
+              </button>
+            </div>
+          </div>
+        )
+      })}
+    </div>
   )
 }
 

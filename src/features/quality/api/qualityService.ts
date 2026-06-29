@@ -20,6 +20,8 @@ import type {
   ScorecardListFilters,
   ScorecardTemplate,
   ScorecardUpdatePayload,
+  StageFunnelFilters,
+  StageFunnelResponse,
 } from '../types'
 
 function buildScorecardListParams(filters: ScorecardListFilters): URLSearchParams {
@@ -121,6 +123,19 @@ export async function getScorecardAggregate(filters: AggregateFilters): Promise<
   if (filters.group_by) params.set('group_by', filters.group_by)
   filters.operator_id?.forEach((id) => params.append('operator_id', String(id)))
   const response = await api.get<AggregateResponse>('/api/v1/quality/scorecards/aggregate', {
+    params,
+  })
+  return response.data
+}
+
+export async function getStageFunnel(filters: StageFunnelFilters): Promise<StageFunnelResponse> {
+  const params = new URLSearchParams()
+  if (filters.period) params.set('period', filters.period)
+  if (filters.from_date) params.set('from_date', filters.from_date)
+  if (filters.to_date) params.set('to_date', filters.to_date)
+  filters.operator_ids?.forEach((id) => params.append('operator_id', String(id)))
+  filters.department_ids?.forEach((id) => params.append('department_ids', String(id)))
+  const response = await api.get<StageFunnelResponse>('/api/v1/quality/scorecards/stage-funnel', {
     params,
   })
   return response.data
@@ -299,6 +314,7 @@ export const qualityService = {
   getScorecard,
   getScorecardHistoryForCall,
   getScorecardAggregate,
+  getStageFunnel,
   createScorecard,
   updateScorecard,
   sendScorecard,

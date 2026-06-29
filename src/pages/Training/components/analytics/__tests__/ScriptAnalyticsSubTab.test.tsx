@@ -1,122 +1,184 @@
 /**
- * Render coverage for ScriptAnalyticsSubTab (KAN-731 Block 4).
+ * Render coverage for ScriptAnalyticsSubTab (KAN-503 — Script Stage Funnel).
  *
- * Focus: the auto-flag rule → severity/label mapping, the keyword-based
- * distribution bucketing across multilingual `result_name` keys, and the
- * flags-per-operator count.
+ * Focus: the funnel renders one bar per stage with the evaluated-call count,
+ * the pain-points panel surfaces critical/warning entries, and the empty
+ * state shows when no calls have been scored against the stages section.
  */
 
 import { describe, expect, it, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
+import type { StageFunnelResponse } from '@/features/quality'
 
 vi.mock('@/stores/authStore', () => ({
-  useAuthStore: (
-    selector: (state: { user: { active_project_id: number; full_name: string } }) => unknown
-  ) => selector({ user: { active_project_id: 1, full_name: 'Trainer Tina' } }),
+  useAuthStore: (selector: (state: { user: { active_project_id: number } }) => unknown) =>
+    selector({ user: { active_project_id: 1 } }),
 }))
 
 const operatorsMock = vi.hoisted(() => ({
   data: [
-    { id: 1, full_name: 'Olena Kovalenko', department_name: 'Hard Collection' },
-    { id: 2, full_name: 'Bohdan Melnyk', department_name: 'Soft Collection' },
+    { id: 1, full_name: 'Olena Kovalenko' },
+    { id: 2, full_name: 'Bohdan Melnyk' },
   ],
 }))
 vi.mock('@/features/users/hooks', () => ({
   useOperators: () => operatorsMock,
 }))
 
-// Distribution uses multilingual keys to exercise the bucketing — "Promise to
-// Pay" (en, promises), "Відмова" (uk, refusals), "Missed call" (en, missed),
-// "Will pass info" (en, willPass).
-const scriptMock = vi.hoisted(() => ({
-  data: {
-    period_from: '2026-06-11T00:00:00Z',
-    period_to: '2026-06-11T23:59:59Z',
-    team_distribution: {},
-    operators: [
-      {
-        operator_id: 1,
-        distribution: {
-          'Promise to Pay': 4,
-          Відмова: 1,
-          'Missed call': 2,
-          'Will pass info': 3,
-        },
-        contact_type_split: {},
-        no_result_pct: 0,
-        fast_result_pct: 0,
-        total_interactions: 10,
-      },
-    ],
-    flags: [
-      {
-        operator_id: 1,
-        rule: 'no_answer_streak',
-        value: 6,
-        threshold: 5,
-        triggered_at: '2026-06-11T08:30:00Z',
-        detail: 'Six consecutive missed calls',
-      },
-      {
-        operator_id: 1,
-        rule: 'fast_result',
-        value: 7,
-        threshold: 10,
-        triggered_at: '2026-06-11T09:15:00Z',
-        detail: null,
-      },
-    ],
-  },
-  isLoading: false,
-  isError: false,
-}))
-vi.mock('@/features/operatorAnalytics/hooks/useScriptAnalytics', () => ({
-  useScriptAnalytics: () => scriptMock,
+const funnelMock = vi.hoisted(
+  () =>
+    ({
+      data: undefined as StageFunnelResponse | undefined,
+      isLoading: false,
+      isError: false,
+    }) as { data: StageFunnelResponse | undefined; isLoading: boolean; isError: boolean }
+)
+vi.mock('@/features/quality', () => ({
+  useStageFunnel: () => funnelMock,
 }))
 
 import { ScriptAnalyticsSubTab } from '../ScriptAnalyticsSubTab'
 
-describe('ScriptAnalyticsSubTab', () => {
-  it('renders one alert row per BE flag', () => {
+function buildFunnel(overrides: Partial<StageFunnelResponse> = {}): StageFunnelResponse {
+  return {
+    period_from: '2026-06-22T00:00:00Z',
+    period_to: '2026-06-29T00:00:00Z',
+    evaluated_calls: 100,
+    stages: [
+      {
+        key: 'stage_greeting',
+        label_en: 'Greeting',
+        label_uk: 'Привітання',
+        order: 1,
+        expected: 100,
+        actual: 98,
+        drop_pct: 2,
+        band: 'green',
+      },
+      {
+        key: 'stage_need_identification',
+        label_en: 'Need Identification',
+        label_uk: '',
+        order: 2,
+        expected: 98,
+        actual: 60,
+        drop_pct: 38.8,
+        band: 'red',
+      },
+      {
+        key: 'stage_solution_presentation',
+        label_en: 'Solution Presentation',
+        label_uk: '',
+        order: 3,
+        expected: 60,
+        actual: 50,
+        drop_pct: 16.7,
+        band: 'yellow',
+      },
+      {
+        key: 'stage_objection_handling',
+        label_en: 'Objection Handling',
+        label_uk: '',
+        order: 4,
+        expected: 50,
+        actual: 48,
+        drop_pct: 4,
+        band: 'green',
+      },
+      {
+        key: 'stage_closing',
+        label_en: 'Closing',
+        label_uk: '',
+        order: 5,
+        expected: 48,
+        actual: 47,
+        drop_pct: 2.1,
+        band: 'green',
+      },
+      {
+        key: 'stage_farewell',
+        label_en: 'Farewell',
+        label_uk: '',
+        order: 6,
+        expected: 47,
+        actual: 47,
+        drop_pct: 0,
+        band: 'green',
+      },
+    ],
+    pain_points: {
+      critical: [
+        {
+          stage: 'stage_need_identification',
+          label_en: 'Need Identification',
+          label_uk: '',
+          drop_pct: 38.8,
+          band: 'red',
+          operators_below: 4,
+          recommendation: 'High drop-off at Need Identification.',
+        },
+      ],
+      warning: [
+        {
+          stage: 'stage_solution_presentation',
+          label_en: 'Solution Presentation',
+          label_uk: '',
+          drop_pct: 16.7,
+          band: 'yellow',
+          operators_below: null,
+          recommendation: 'Elevated drop-off at Solution Presentation.',
+        },
+      ],
+      stable: [],
+    },
+    ...overrides,
+  }
+}
+
+// The test i18n mock returns the key for `t(key, fallback)` and ignores
+// interpolation options, so assertions target data-derived text (stage
+// labels, drop badges, recommendations) — not translated chrome.
+describe('ScriptAnalyticsSubTab (Script Stage Funnel)', () => {
+  it('renders a bar for each of the six stages', () => {
+    funnelMock.data = buildFunnel()
     render(<ScriptAnalyticsSubTab />)
-    // "2" appears in the card count badge AND in the "2 flag" pill — we
-    // care that at least one is there; the description below uniquely
-    // identifies the alert row.
-    expect(screen.getAllByText('2').length).toBeGreaterThanOrEqual(1)
-    expect(screen.getByText('Six consecutive missed calls')).toBeInTheDocument()
+    expect(screen.getByText('Greeting')).toBeInTheDocument()
+    expect(screen.getAllByText('Need Identification').length).toBeGreaterThanOrEqual(1)
+    expect(screen.getByText('Farewell')).toBeInTheDocument()
   })
 
-  it('maps no_answer_streak to the critical severity label key', () => {
+  it('shows the server-computed drop badge per stage', () => {
+    funnelMock.data = buildFunnel()
     render(<ScriptAnalyticsSubTab />)
-    expect(
-      screen.getByText('pages.training.script.alerts.rules.noAnswerStreak')
-    ).toBeInTheDocument()
+    // Need-id drop appears on its funnel bar (and again in the pain badge).
+    expect(screen.getAllByText('▼ 38.8%').length).toBeGreaterThanOrEqual(1)
+    // Greeting actual count from the data.
+    expect(screen.getByText('98')).toBeInTheDocument()
   })
 
-  it('maps fast_result to the warn severity label key', () => {
+  it('shows the critical pain point recommendation', () => {
+    funnelMock.data = buildFunnel()
     render(<ScriptAnalyticsSubTab />)
-    expect(screen.getByText('pages.training.script.alerts.rules.fastResult')).toBeInTheDocument()
+    expect(screen.getByText('High drop-off at Need Identification.')).toBeInTheDocument()
   })
 
-  it('buckets multilingual result_name keys into the four fixed UI columns', () => {
+  it('renders the empty state (no funnel bars) when no calls were scored', () => {
+    funnelMock.data = buildFunnel({
+      evaluated_calls: 0,
+      stages: buildFunnel().stages.map((s) => ({
+        ...s,
+        expected: 0,
+        actual: 0,
+        drop_pct: 0,
+        band: 'green',
+      })),
+      pain_points: { critical: [], warning: [], stable: [] },
+    })
     render(<ScriptAnalyticsSubTab />)
-    // Olena's name appears in both the alert row and the distribution row.
-    expect(screen.getAllByText('Olena Kovalenko').length).toBeGreaterThanOrEqual(1)
-    // The distribution row totals: total=10, promises=4 (40%), refusals=1
-    // (10%), missed=2 (20%), willPass=3 (30%).
-    expect(screen.getByText('40%')).toBeInTheDocument()
-    expect(screen.getByText('10%')).toBeInTheDocument()
-    expect(screen.getByText('20%')).toBeInTheDocument()
-    expect(screen.getByText('30%')).toBeInTheDocument()
+    // Funnel + pain points are replaced by the empty-state card.
+    expect(screen.queryByText('Greeting')).not.toBeInTheDocument()
+    expect(screen.queryByText('High drop-off at Need Identification.')).not.toBeInTheDocument()
+    // Empty-state title renders (key in the test i18n mock).
+    expect(screen.getByText('pages.training.funnel.empty.title')).toBeInTheDocument()
   })
-
-  it('shows the per-operator flags count next to the distribution row', () => {
-    render(<ScriptAnalyticsSubTab />)
-    // "2 flag" pill in the Flags column (both flags are on operator 1).
-    expect(screen.getByText('2 flag')).toBeInTheDocument()
-  })
-
-  // The coach footer JSX was removed from the component during review; the
-  // trainerName lookup is still wired in for the next iteration. No test
-  // covers that footer until it's re-rendered.
 })
