@@ -831,6 +831,8 @@
         "list": {
           "dateTime": "Date / Time",
           "employee": "Employee",
+          "client": "Client",
+          "phone": "Phone",
           "category": "Category",
           "rating": "Rating",
           "comment": "Comment",
@@ -6047,6 +6049,8 @@
         "list": {
           "dateTime": "Date / Time",
           "employee": "Employee",
+          "client": "Client",
+          "phone": "Phone",
           "category": "Category",
           "rating": "Rating",
           "comment": "Comment",
