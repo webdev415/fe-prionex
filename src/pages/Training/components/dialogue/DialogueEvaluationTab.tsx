@@ -4,8 +4,11 @@ import { toast } from 'sonner'
 import { useScorecards, useDeleteScorecard } from '@/features/quality'
 import { useConfirm } from '@/components/ui/useConfirm'
 import { useOperators } from '@/features/users/hooks'
+import { useCallsBatch } from '@/features/calls/hooks/useCall'
+import { useClientNames } from '@/features/clients/hooks/useClients'
 import { useAuthStore } from '@/stores/authStore'
 import { buildDialogueRows } from '../../lib/dialogueScorecardAdapter'
+import type { CallContactInfo } from '../../lib/dialogueScorecardAdapter'
 import { useScopedUserIds } from '../../lib/scope'
 import { TrainingSegmentedStrip } from '../chrome/TrainingSegmentedStrip'
 import { EmployeeMultiSelect } from './EmployeeMultiSelect'
@@ -44,9 +47,33 @@ export function DialogueEvaluationTab() {
 
   const { data, isLoading, isError } = useScorecards(filters, !scoped.isEmptyResolution)
 
+  // Scorecards carry only call_id; resolve the contacted number + client for
+  // every row in one batched call-service request (vs. N per-row fetches).
+  const callIds = useMemo(() => (data?.data ?? []).map((s) => s.call_id), [data?.data])
+  const { data: callBatch } = useCallsBatch(callIds)
+
+  const callLookup = useMemo(() => {
+    const map = new Map<string, CallContactInfo>()
+    for (const c of callBatch ?? []) {
+      map.set(c.call_id, { customer_number: c.customer_number, client_id: c.client_id })
+    }
+    return map
+  }, [callBatch])
+
+  // Resolve the unique, non-null client ids to display names (cached per id,
+  // shared with client detail pages).
+  const clientIds = useMemo(
+    () =>
+      Array.from(
+        new Set((callBatch ?? []).map((c) => c.client_id).filter((id): id is number => id != null))
+      ),
+    [callBatch]
+  )
+  const clientNames = useClientNames(clientIds)
+
   const rows = useMemo(
-    () => buildDialogueRows(data?.data ?? [], operators),
-    [data?.data, operators]
+    () => buildDialogueRows(data?.data ?? [], operators, callLookup, clientNames),
+    [data?.data, operators, callLookup, clientNames]
   )
 
   const categoryCounts = useMemo(

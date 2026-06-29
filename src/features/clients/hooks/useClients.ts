@@ -4,7 +4,7 @@
  */
 
 import { useEffect } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import type { AxiosError } from 'axios'
 import { clientApi } from '../api/clientApi'
@@ -113,6 +113,38 @@ export function useClient(clientId: number, enabled = true) {
     enabled: enabled && !!clientId,
     staleTime: 30000,
   })
+}
+
+/**
+ * Resolve a set of client ids to display names, returning a Map<id, name>.
+ *
+ * Each id is fetched via the same `clientKeys.detail(id)` cache used by client
+ * detail pages, so names that are already loaded resolve instantly. Ids are
+ * de-duplicated by the caller's set; pass only the unique ids you need.
+ */
+export function useClientNames(clientIds: number[]): Map<number, string> {
+  const uniqueIds = Array.from(new Set(clientIds))
+  const results = useQueries({
+    queries: uniqueIds.map((id) => ({
+      queryKey: clientKeys.detail(id),
+      queryFn: () => clientApi.getClientById(id),
+      enabled: !!id,
+      staleTime: 5 * 60_000,
+    })),
+  })
+
+  const names = new Map<number, string>()
+  uniqueIds.forEach((id, i) => {
+    const data = results[i]?.data
+    if (data) {
+      const full = [data.last_name, data.first_name, data.middle_name]
+        .filter(Boolean)
+        .join(' ')
+        .trim()
+      if (full) names.set(id, full)
+    }
+  })
+  return names
 }
 
 /**
