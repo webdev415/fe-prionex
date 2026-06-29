@@ -41,8 +41,9 @@ export function useCreateMarker() {
     mutationFn: ({ callId, payload }: { callId: string; payload: MarkerCreatePayload }) =>
       createMarker(callId, payload),
     onSuccess: (created) => {
+      // Scope to this call's markers — a new marker doesn't change other
+      // calls' lists, so don't refetch every mounted markers query.
       queryClient.invalidateQueries({ queryKey: markerKeys.forCall(created.call_id) })
-      queryClient.invalidateQueries({ queryKey: markerKeys.all })
     },
   })
 }

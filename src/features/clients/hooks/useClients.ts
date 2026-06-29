@@ -63,7 +63,7 @@ export const clientKeys = {
  * Get list of clients for user's active project
  * Auto-refetches every 60 seconds
  */
-export function useClients(params: GetClientsParams = {}) {
+export function useClients(params: GetClientsParams = {}, options: { enabled?: boolean } = {}) {
   return useQuery({
     queryKey: clientKeys.list(params),
     queryFn: () => clientApi.getClients(params),
@@ -71,7 +71,20 @@ export function useClients(params: GetClientsParams = {}) {
     placeholderData: (previousData) => previousData,
     staleTime: 2 * 60_000,
     refetchInterval: 5 * 60_000,
-    enabled: true,
+    // Callers may defer the first fetch until derived params are settled (e.g.
+    // until the operator option sets load, so an "all operators" selection is
+    // omitted instead of firing the heavy 200-id query then refetching).
+    enabled: options.enabled ?? true,
+    // The list query is the heaviest call on the dashboard. When it fails with a
+    // server error (e.g. a 502 from an OOM-killed worker during the morning login
+    // burst), retrying immediately just fires another expensive query into an
+    // already-starved backend and compounds the pressure. Only retry once for
+    // genuine network blips; never retry on a 4xx/5xx response.
+    retry: (failureCount, error) => {
+      const status = (error as AxiosError)?.response?.status
+      if (status && status >= 400) return false
+      return failureCount < 1
+    },
   })
 }
 
@@ -370,17 +383,31 @@ export function useClientPaymentsSection(clientId: number, enabled = true) {
  * Get client call/SMS history. Calls existing call and SMS service endpoints in parallel.
  * Maps backend responses to UI-expected shape for backward compatibility.
  */
-export function useClientCallSmsHistory(clientId: number, enabled = true) {
+export function useClientCallSmsHistory(clientId: number, enabled = true, showAllCalls = false) {
   return useQuery({
-    queryKey: clientKeys.callSmsHistory(clientId),
+    queryKey: [...clientKeys.callSmsHistory(clientId), { showAllCalls }],
     queryFn: async () => {
-      const [callsData, smsData] = await Promise.all([
+      const callsParams: { limit: number; from_date?: string } = { limit: 200 }
+      if (!showAllCalls) {
+        const sevenDaysAgo = new Date()
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+        callsParams.from_date = sevenDaysAgo.toISOString().split('T')[0]
+      }
+
+      const unfilteredCallsPromise = showAllCalls
+        ? Promise.resolve(null)
+        : callSmsApi
+            .getClientCalls(clientId, { limit: 1 })
+            .catch(() => ({ calls: [] as never[], total: 0 }))
+
+      const [callsData, smsData, unfilteredCalls] = await Promise.all([
         callSmsApi
-          .getClientCalls(clientId, { limit: 10 })
+          .getClientCalls(clientId, callsParams)
           .catch(() => ({ calls: [] as never[], total: 0 })),
         callSmsApi
           .getClientSms(clientId, { limit: 10 })
           .catch(() => ({ messages: [] as never[], total: 0 })),
+        unfilteredCallsPromise,
       ])
 
       // Map calls to UI shape
@@ -450,7 +477,14 @@ export function useClientCallSmsHistory(clientId: number, enabled = true) {
         return dateB.getTime() - dateA.getTime()
       })
 
-      return { calls: mappedCalls, sms: mappedSms, all }
+      return {
+        calls: mappedCalls,
+        sms: mappedSms,
+        all,
+        callsTotal: showAllCalls
+          ? (callsData.total ?? mappedCalls.length)
+          : (unfilteredCalls?.total ?? mappedCalls.length),
+      }
     },
     enabled: enabled && clientId > 0,
     staleTime: 30000,
@@ -467,7 +501,7 @@ export function useClientTasks(clientId: number, enabled = true) {
     queryFn: () => taskApi.getClientTasks(clientId),
     enabled: enabled && clientId > 0,
     staleTime: 30000,
-    refetchInterval: 30_000,
+    refetchInterval: 60_000, // KAN-610: 30s→60s; hook is also tab-gated now
     refetchOnMount: false,
     select: (data) => data.tasks ?? [],
   })
@@ -731,6 +765,32 @@ export function useCloseDebt() {
     },
     onError: (error: AxiosError<{ detail?: string }>) => {
       const message = error?.response?.data?.detail || 'Failed to close loan'
+      toast.error(message)
+    },
+  })
+}
+
+/**
+ * Reopen a closed debt (set status back to 'active'). Linked RRs in a
+ * terminal state are cascaded to Cancelled by the backend.
+ */
+export function useReopenDebt() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ clientId, debtId }: { clientId: number; debtId: number }) =>
+      clientApi.reopenDebt(clientId, debtId),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: clientKeys.loans(variables.clientId), exact: true })
+      queryClient.invalidateQueries({
+        queryKey: clientKeys.detail(variables.clientId),
+        exact: true,
+      })
+      queryClient.invalidateQueries({ queryKey: clientKeys.lists() })
+      toast.success('Loan reopened successfully')
+    },
+    onError: (error: AxiosError<{ detail?: string }>) => {
+      const message = error?.response?.data?.detail || 'Failed to reopen loan'
       toast.error(message)
     },
   })

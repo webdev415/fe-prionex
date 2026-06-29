@@ -9,6 +9,9 @@ import { intlLocaleForUiLanguage } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 import { Icons } from '@/lib/icons'
 import { PriorityBadge } from '@/pages/ClientManagement/components/PriorityBadge'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/Tooltip'
+
+export type SearchResultContactSource = 'client' | 'recommender'
 
 export interface SearchResult {
   id: number
@@ -18,6 +21,7 @@ export interface SearchResult {
   email: string
   priority: 'Critical' | 'High' | 'Medium' | 'Low'
   score: number
+  contactSource?: SearchResultContactSource | null
 }
 
 interface SearchResultsProps {
@@ -137,9 +141,36 @@ export function SearchResults({
           >
             <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
               <div className="min-w-0 flex-1">
-                <h4 className="text-dark-500 mb-1.5 truncate text-sm font-medium sm:mb-2">
-                  {result.name}
-                </h4>
+                <div className="mb-1.5 flex min-w-0 items-center gap-1.5 sm:mb-2">
+                  <h4 className="text-dark-500 truncate text-sm font-medium">{result.name}</h4>
+                  {result.contactSource && (
+                    <TooltipProvider>
+                      <Tooltip delayDuration={200}>
+                        <TooltipTrigger asChild>
+                          <span
+                            className="text-dark-400 inline-flex shrink-0"
+                            aria-label={
+                              result.contactSource === 'client'
+                                ? t('search.clientContactIndicator', 'Client contact')
+                                : t('search.recommenderContactIndicator', 'Recommender contact')
+                            }
+                          >
+                            {result.contactSource === 'client' ? (
+                              <Icons.User size={16} strokeWidth={2} />
+                            ) : (
+                              <Icons.Contact size={16} strokeWidth={2} />
+                            )}
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent side="top">
+                          {result.contactSource === 'client'
+                            ? t('search.clientContactIndicator', 'Client contact')
+                            : t('search.recommenderContactIndicator', 'Recommender contact')}
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  )}
+                </div>
                 <div className="space-y-0.5 text-xs text-gray-600 sm:space-y-1">
                   <div className="truncate">
                     {t('search.debt')}: {formatCurrency(result.debt)} ₴

@@ -2,6 +2,10 @@ export const NotificationType = {
   INCOMING_CALL: 'incoming_call',
   CALLBACK_REQUESTED: 'callback_requested',
   TASK_OVERDUE: 'task_overdue',
+  // Trainer-facing: an assigned correction task (KAN-411 / Dialogue
+  // Evaluation Assign task) is overdue. Call-centric metadata (call_id,
+  // task_id, operator_id, trainer_id) rather than client-centric.
+  CORRECTION_TASK_OVERDUE: 'correction_task_overdue',
   PAYMENT_PENDING: 'payment_pending',
   TAG_ASSIGNED: 'tag_assigned',
   TAG_REMOVED: 'tag_removed',

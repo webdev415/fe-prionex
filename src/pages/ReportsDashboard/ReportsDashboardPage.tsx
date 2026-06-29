@@ -16,6 +16,7 @@ import {
   CallsMadeDetailModal,
   ContactRateDetailModal,
   SMSSentDetailModal,
+  MessagesSentDetailModal,
 } from './components'
 import { Button } from '@/components/ui/Button'
 import { Icons } from '@/lib/icons'
@@ -29,6 +30,7 @@ import {
   useCallsMadeModal,
   useContactRateModal,
   useSMSSentModal,
+  useMessagesSentModal,
   type Period,
 } from '@/features/report'
 import { PermissionGuard } from '@/components/auth'
@@ -67,6 +69,7 @@ export function ReportsDashboardPage() {
   const [showCallsModal, setShowCallsModal] = useState(false)
   const [showContactRateModal, setShowContactRateModal] = useState(false)
   const [showSMSModal, setShowSMSModal] = useState(false)
+  const [showMessagesModal, setShowMessagesModal] = useState(false)
   const [showPaymentsModal, setShowPaymentsModal] = useState(false)
 
   // Filter states - lifted up to trigger API refetch
@@ -156,6 +159,13 @@ export function ReportsDashboardPage() {
     projectId,
     period: selectedPeriod,
     enabled: showSMSModal,
+    userTimezone,
+  })
+
+  const messagesModalQuery = useMessagesSentModal({
+    projectId,
+    period: selectedPeriod,
+    enabled: showMessagesModal,
     userTimezone,
   })
 
@@ -331,6 +341,15 @@ export function ReportsDashboardPage() {
             onViewDetails={() => setShowSMSModal(true)}
           />
           <KPICard
+            title={t('pages.reports.kpi.messagesSent')}
+            value={dashboardData.kpis.messagesSent.toString()}
+            change={dashboardData.kpis.messagesTrend.change}
+            changeType={dashboardData.kpis.messagesTrend.changeType}
+            icon="message"
+            period={selectedPeriod}
+            onViewDetails={() => setShowMessagesModal(true)}
+          />
+          <KPICard
             title={t('pages.reports.kpi.paymentsCollected')}
             value={dashboardData.kpis.paymentsCollected.toString()}
             change={dashboardData.kpis.paymentsTrend.change}
@@ -391,6 +410,18 @@ export function ReportsDashboardPage() {
           data={smsModalQuery.data}
           isLoading={smsModalQuery.isLoading}
           error={smsModalQuery.error as Error | null}
+        />
+      )}
+
+      {/* Messages Sent Detail Modal (messaging-service) */}
+      {showMessagesModal && (
+        <MessagesSentDetailModal
+          open={showMessagesModal}
+          onClose={() => setShowMessagesModal(false)}
+          period={selectedPeriod}
+          data={messagesModalQuery.data}
+          isLoading={messagesModalQuery.isLoading}
+          error={messagesModalQuery.error as Error | null}
         />
       )}
 

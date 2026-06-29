@@ -130,9 +130,10 @@ export function useClientTags(clientId: number, options?: { includeHidden?: bool
     staleTime: 0, // Always refetch on invalidation (auto-tagging is async)
     // Cron-driven and cross-session tag changes (другой оператор / scheduled
     // правило) не триггерят локальный invalidate — без polling они не появятся
-    // до F5. 30s — компромисс: операторы видят свежие теги без слишком частого
-    // дёргания client-service.
-    refetchInterval: 30_000,
+    // до F5. KAN-610: 60s — компромисс между свежестью тегов и нагрузкой на
+    // client-service (на 100 операторов 30s давал ~200 фоновых запросов/мин
+    // только по тегам). Мгновенные обновления после мутаций покрывает invalidate.
+    refetchInterval: 60_000,
     refetchIntervalInBackground: false,
   })
 }

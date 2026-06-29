@@ -13,7 +13,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import type { TFunction } from 'i18next'
 import { useTranslation } from 'react-i18next'
-import { useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
 import { Icons } from '@/lib/icons'
 import { useAuthStore } from '@/stores/authStore'
@@ -108,7 +108,6 @@ function EmptyState({ label }: { t: TFunction; label: string }) {
 
 export function NotificationBell() {
   const { t } = useTranslation('common')
-  const navigate = useNavigate()
   const userTimezone = useAuthStore((state) => state.user?.timezone)
 
   const { data: notificationsData } = useNotifications({ page: 1, page_size: 50 })
@@ -167,12 +166,10 @@ export function NotificationBell() {
 
   // Per-tab filtered slices (one query, filtered locally — same pattern
   // the previous flat-list rendering used). Task tabs split on starred.
-  const tasksTabItems = notifications.filter(
-    (n) => n.type === NotificationType.TASK_OVERDUE && !n.starred
-  )
-  const starredTabItems = notifications.filter(
-    (n) => n.type === NotificationType.TASK_OVERDUE && n.starred
-  )
+  const isTaskType = (n: NotificationItem) =>
+    n.type === NotificationType.TASK_OVERDUE || n.type === NotificationType.CORRECTION_TASK_OVERDUE
+  const tasksTabItems = notifications.filter((n) => isTaskType(n) && !n.starred)
+  const starredTabItems = notifications.filter((n) => isTaskType(n) && n.starred)
   const paymentsTabItems = notifications.filter((n) => n.type === NotificationType.PAYMENT_PENDING)
   const callsTabItems = notifications.filter(
     (n) =>
@@ -185,16 +182,16 @@ export function NotificationBell() {
   const unstarMutation = useUnstarNotification()
   const updateTaskMutation = useUpdateTaskFromBell()
 
-  const handleNavigate = (
+  const handleNotificationClick = (
+    e: React.MouseEvent,
     notificationId: string,
-    clientId: number | undefined,
     isRead: boolean
   ) => {
+    if (e.button === 2) return
     if (!isRead) {
       markAsReadMutation.mutate(notificationId)
     }
-    if (clientId) {
-      navigate(`/dashboard/clients/${clientId}`)
+    if (e.button === 0 && !e.ctrlKey && !e.metaKey && !e.shiftKey) {
       setIsOpen(false)
     }
   }
@@ -361,7 +358,7 @@ export function NotificationBell() {
                   <TaskNotificationItem
                     key={n.id}
                     notification={n}
-                    onNavigate={handleNavigate}
+                    onNotificationClick={handleNotificationClick}
                     onCancelTask={handleCancelTask}
                     onCompleteTask={handleCompleteTask}
                     onStar={handleStar}
@@ -379,7 +376,7 @@ export function NotificationBell() {
                   <TaskNotificationItem
                     key={n.id}
                     notification={n}
-                    onNavigate={handleNavigate}
+                    onNotificationClick={handleNotificationClick}
                     onCancelTask={handleCancelTask}
                     onCompleteTask={handleCompleteTask}
                     onStar={handleStar}
@@ -401,7 +398,7 @@ export function NotificationBell() {
                     key={n.id}
                     notification={n}
                     userTimezone={userTimezone}
-                    onNavigate={handleNavigate}
+                    onNotificationClick={handleNotificationClick}
                   />
                 ))
               ))}
@@ -414,7 +411,7 @@ export function NotificationBell() {
                   <CallNotificationItem
                     key={n.id}
                     notification={n}
-                    onNavigate={handleNavigate}
+                    onNotificationClick={handleNotificationClick}
                     onDismiss={handleDismiss}
                   />
                 ))
@@ -431,7 +428,7 @@ export function NotificationBell() {
                   <RRPaymentNotificationItem
                     key={n.id}
                     notification={n}
-                    onNavigate={handleNavigate}
+                    onNotificationClick={handleNotificationClick}
                     onDismiss={handleDismiss}
                   />
                 ))
@@ -445,58 +442,71 @@ export function NotificationBell() {
 
 // ─── Shared types for sub-components ─────────────────────────────
 
-type NavigateFn = (notificationId: string, clientId: number | undefined, isRead: boolean) => void
+type NotificationClickFn = (e: React.MouseEvent, notificationId: string, isRead: boolean) => void
 type DismissFn = (e: React.MouseEvent, id: string) => void
+
+const clientHref = (clientId: number) => `/dashboard/clients/${clientId}`
 
 // ─── Payment notification item (no dismiss — auto-dismissed on verify/cancel) ──
 
 function PaymentNotificationItem({
   notification: n,
   userTimezone,
-  onNavigate,
+  onNotificationClick,
 }: {
   notification: NotificationItem
   userTimezone?: string
-  onNavigate: NavigateFn
+  onNotificationClick: NotificationClickFn
 }) {
   const { t, i18n } = useTranslation('common')
   const meta = n.metadata
   const daysPending = Number(meta.days_pending) || 0
+  const cardClassName =
+    'flex min-w-0 flex-1 flex-col gap-1.5 px-4 py-3 text-left disabled:cursor-default'
+  const body = (
+    <>
+      <div className="flex flex-wrap items-center gap-1.5">
+        {!n.read && <span className="h-2 w-2 shrink-0 rounded-full bg-blue-500" />}
+        <p className="line-clamp-1 text-xs font-semibold text-black">
+          {meta.client_name ?? t('notificationBell.clientNumber', { id: meta.client_id })}
+          <span className="ml-1 font-normal text-black">
+            ({t('notificationBell.idLabel', { id: meta.client_id })})
+          </span>
+          <span className="ml-1 font-normal text-black">/ {meta.payment_number}</span>
+        </p>
+        <span className="rounded bg-yellow-100 px-1.5 py-0.5 text-[10px] font-medium text-yellow-600">
+          {t('notificationBell.payment.pending')}
+        </span>
+        <span className="rounded bg-red-100 px-1.5 py-0.5 text-[10px] font-medium text-red-600">
+          {t('notificationBell.payment.daysPending', { count: daysPending })}
+        </span>
+      </div>
+      <p className="w-full min-w-0 truncate text-xs text-black">
+        ₴ {Number(meta.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+        <span className="ml-2">{translatePaymentMethod(meta.payment_method, t)}</span>
+      </p>
+      <div className="flex items-center gap-1 text-black">
+        <Icons.Clock01 size={11} strokeWidth={1.5} />
+        <span className="text-[11px]">
+          {meta.recorded_at ? formatDateTime(meta.recorded_at, userTimezone, i18n.language) : '—'}
+        </span>
+      </div>
+    </>
+  )
   return (
     <div className="group relative flex border-b border-gray-100 transition-colors last:border-b-0 hover:bg-gray-50">
-      <button
-        type="button"
-        disabled={!meta.client_id}
-        onClick={() => onNavigate(n.id, meta.client_id, n.read)}
-        className="flex min-w-0 flex-1 flex-col gap-1.5 px-4 py-3 text-left disabled:cursor-default"
-      >
-        <div className="flex flex-wrap items-center gap-1.5">
-          {!n.read && <span className="h-2 w-2 shrink-0 rounded-full bg-blue-500" />}
-          <p className="line-clamp-1 text-xs font-semibold text-black">
-            {meta.client_name ?? t('notificationBell.clientNumber', { id: meta.client_id })}
-            <span className="ml-1 font-normal text-black">
-              ({t('notificationBell.idLabel', { id: meta.client_id })})
-            </span>
-            <span className="ml-1 font-normal text-black">/ {meta.payment_number}</span>
-          </p>
-          <span className="rounded bg-yellow-100 px-1.5 py-0.5 text-[10px] font-medium text-yellow-600">
-            {t('notificationBell.payment.pending')}
-          </span>
-          <span className="rounded bg-red-100 px-1.5 py-0.5 text-[10px] font-medium text-red-600">
-            {t('notificationBell.payment.daysPending', { count: daysPending })}
-          </span>
-        </div>
-        <p className="w-full min-w-0 truncate text-xs text-black">
-          ₴ {Number(meta.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-          <span className="ml-2">{translatePaymentMethod(meta.payment_method, t)}</span>
-        </p>
-        <div className="flex items-center gap-1 text-black">
-          <Icons.Clock01 size={11} strokeWidth={1.5} />
-          <span className="text-[11px]">
-            {meta.recorded_at ? formatDateTime(meta.recorded_at, userTimezone, i18n.language) : '—'}
-          </span>
-        </div>
-      </button>
+      {meta.client_id ? (
+        <Link
+          to={clientHref(meta.client_id)}
+          onClick={(e) => onNotificationClick(e, n.id, n.read)}
+          onAuxClick={(e) => onNotificationClick(e, n.id, n.read)}
+          className={cardClassName}
+        >
+          {body}
+        </Link>
+      ) : (
+        <div className={`${cardClassName} cursor-default opacity-60`}>{body}</div>
+      )}
     </div>
   )
 }
@@ -505,7 +515,7 @@ function PaymentNotificationItem({
 
 function TaskNotificationItem({
   notification: n,
-  onNavigate,
+  onNotificationClick,
   onCancelTask,
   onCompleteTask,
   onStar,
@@ -513,7 +523,7 @@ function TaskNotificationItem({
   userTimezone,
 }: {
   notification: NotificationItem
-  onNavigate: NavigateFn
+  onNotificationClick: NotificationClickFn
   onCancelTask: (e: React.MouseEvent, taskId: number) => void
   onCompleteTask: (e: React.MouseEvent, taskId: number) => void
   onStar: (e: React.MouseEvent, notificationId: string) => void
@@ -523,16 +533,18 @@ function TaskNotificationItem({
   const { t } = useTranslation('common')
   const meta = n.metadata
   const taskId = meta.task_id as number | undefined
-  return (
-    <div className="group relative flex border-b border-gray-100 transition-colors last:border-b-0 hover:bg-gray-50">
-      <button
-        type="button"
-        disabled={!meta.client_id}
-        onClick={() => onNavigate(n.id, meta.client_id, n.read)}
-        className="flex min-w-0 flex-1 flex-col gap-1.5 px-4 py-3 text-left disabled:cursor-default"
-      >
-        <div className="flex flex-wrap items-center gap-1.5 pr-5">
-          {!n.read && <span className="h-2 w-2 shrink-0 rounded-full bg-blue-500" />}
+  // Correction-task notifications (Dialogue Evaluation Assign task) are
+  // call-centric: no client_id/debt_id/priority — render the notification
+  // title and stay clickable so the unread state can be cleared.
+  const isCorrection = n.type === NotificationType.CORRECTION_TASK_OVERDUE
+  const hasClient = meta.client_name != null || meta.client_id != null
+  const cardClassName =
+    'flex min-w-0 flex-1 flex-col gap-1.5 px-4 py-3 text-left disabled:cursor-default'
+  const body = (
+    <>
+      <div className="flex flex-wrap items-center gap-1.5 pr-5">
+        {!n.read && <span className="h-2 w-2 shrink-0 rounded-full bg-blue-500" />}
+        {hasClient ? (
           <p className="line-clamp-1 text-xs font-semibold text-black">
             {meta.client_name ?? t('notificationBell.clientNumber', { id: meta.client_id })}
             {meta.client_id && (
@@ -546,53 +558,80 @@ function TaskNotificationItem({
               </span>
             )}
           </p>
-          {meta.priority && (
-            <span
-              className={cn(
-                'rounded px-1.5 py-0.5 text-[10px] font-medium capitalize',
-                meta.priority === 'high' && 'bg-red-100 text-red-600',
-                meta.priority === 'normal' && 'bg-blue-100 text-blue-600',
-                meta.priority === 'low' && 'bg-gray-100 text-gray-500'
-              )}
-            >
-              {t(`notificationBell.taskPriority.${meta.priority}`, {
-                defaultValue: meta.priority,
-              })}
-            </span>
-          )}
-          {meta.status && (
-            <span
-              className={cn(
-                'rounded px-1.5 py-0.5 text-[10px] font-medium capitalize',
-                meta.status === 'pending' && 'bg-yellow-100 text-yellow-600',
-                meta.status === 'in_progress' && 'bg-blue-100 text-blue-600',
-                meta.status === 'completed' && 'bg-green-100 text-green-600',
-                meta.status === 'extended' && 'bg-purple-100 text-purple-600',
-                meta.status === 'rejected' && 'bg-red-100 text-red-600',
-                meta.status === 'incoming_line_result' && 'bg-orange-100 text-orange-600'
-              )}
-            >
-              {t(`notificationBell.taskStatus.${meta.status}`, {
-                defaultValue: meta.status?.replace(/_/g, ' ') ?? '',
-              })}
-            </span>
-          )}
-          {meta.subject_name && !meta.status && (
-            <span className="rounded bg-blue-100 px-1.5 py-0.5 text-[10px] font-medium text-blue-600">
-              {meta.subject_name}
-            </span>
-          )}
-        </div>
-        {(meta.description || n.body) && (
-          <p className="w-full min-w-0 truncate text-xs text-black">{meta.description || n.body}</p>
+        ) : (
+          <p className="line-clamp-1 text-xs font-semibold text-black">{n.title}</p>
         )}
-        <div className="flex items-center gap-1 text-black">
-          <Icons.Clock01 size={11} strokeWidth={1.5} />
-          <span className="text-[11px]">
-            {meta.due_date ? formatTaskDueDateForDisplay(meta.due_date, userTimezone) : '—'}
+        {meta.priority && (
+          <span
+            className={cn(
+              'rounded px-1.5 py-0.5 text-[10px] font-medium capitalize',
+              meta.priority === 'high' && 'bg-red-100 text-red-600',
+              meta.priority === 'normal' && 'bg-blue-100 text-blue-600',
+              meta.priority === 'low' && 'bg-gray-100 text-gray-500'
+            )}
+          >
+            {t(`notificationBell.taskPriority.${meta.priority}`, {
+              defaultValue: meta.priority,
+            })}
           </span>
-        </div>
-      </button>
+        )}
+        {meta.status && (
+          <span
+            className={cn(
+              'rounded px-1.5 py-0.5 text-[10px] font-medium capitalize',
+              meta.status === 'pending' && 'bg-yellow-100 text-yellow-600',
+              meta.status === 'in_progress' && 'bg-blue-100 text-blue-600',
+              meta.status === 'completed' && 'bg-green-100 text-green-600',
+              meta.status === 'extended' && 'bg-purple-100 text-purple-600',
+              meta.status === 'rejected' && 'bg-red-100 text-red-600',
+              meta.status === 'incoming_line_result' && 'bg-orange-100 text-orange-600'
+            )}
+          >
+            {t(`notificationBell.taskStatus.${meta.status}`, {
+              defaultValue: meta.status?.replace(/_/g, ' ') ?? '',
+            })}
+          </span>
+        )}
+        {meta.subject_name && !meta.status && (
+          <span className="rounded bg-blue-100 px-1.5 py-0.5 text-[10px] font-medium text-blue-600">
+            {meta.subject_name}
+          </span>
+        )}
+      </div>
+      {(meta.description || n.body) && (
+        <p className="w-full min-w-0 truncate text-xs text-black">{meta.description || n.body}</p>
+      )}
+      <div className="flex items-center gap-1 text-black">
+        <Icons.Clock01 size={11} strokeWidth={1.5} />
+        <span className="text-[11px]">
+          {meta.due_date ? formatTaskDueDateForDisplay(meta.due_date, userTimezone) : '—'}
+        </span>
+      </div>
+    </>
+  )
+  return (
+    <div className="group relative flex border-b border-gray-100 transition-colors last:border-b-0 hover:bg-gray-50">
+      {meta.client_id ? (
+        <Link
+          to={clientHref(meta.client_id)}
+          onClick={(e) => onNotificationClick(e, n.id, n.read)}
+          onAuxClick={(e) => onNotificationClick(e, n.id, n.read)}
+          className={cardClassName}
+        >
+          {body}
+        </Link>
+      ) : isCorrection ? (
+        // No client to navigate to — clickable only to clear the unread dot.
+        <button
+          type="button"
+          onClick={(e) => onNotificationClick(e, n.id, n.read)}
+          className={cardClassName}
+        >
+          {body}
+        </button>
+      ) : (
+        <div className={`${cardClassName} cursor-default opacity-60`}>{body}</div>
+      )}
       {/* Action cluster — visible on hover. Complete + Star/Unstar +
           Cancel. Star toggles to Unstar in the Starred tab (driven by
           n.starred). The X icon (Cancel01) is repurposed from
@@ -650,33 +689,44 @@ function TaskNotificationItem({
 
 function CallNotificationItem({
   notification: n,
-  onNavigate,
+  onNotificationClick,
   onDismiss,
 }: {
   notification: NotificationItem
-  onNavigate: NavigateFn
+  onNotificationClick: NotificationClickFn
   onDismiss: DismissFn
 }) {
   const { t } = useTranslation('common')
   const meta = n.metadata
+  const cardClassName =
+    'flex min-w-0 flex-1 flex-col gap-1.5 px-4 py-3 text-left disabled:cursor-default'
+  const body = (
+    <>
+      <div className="flex items-center gap-2">
+        {!n.read && <span className="h-2 w-2 shrink-0 rounded-full bg-blue-500" />}
+        <Icons.Phone size={14} strokeWidth={1.5} className="text-green-500" />
+        <p className="text-xs font-semibold text-black">{n.title}</p>
+      </div>
+      <p className="text-xs text-black">{n.body}</p>
+      <span className="text-[11px] text-gray-400">
+        {n.created_at ? formatRelativeTime(n.created_at, t) : ''}
+      </span>
+    </>
+  )
   return (
     <div className="group relative flex border-b border-gray-100 transition-colors last:border-b-0 hover:bg-gray-50">
-      <button
-        type="button"
-        disabled={!meta.client_id}
-        onClick={() => onNavigate(n.id, meta.client_id, n.read)}
-        className="flex min-w-0 flex-1 flex-col gap-1.5 px-4 py-3 text-left disabled:cursor-default"
-      >
-        <div className="flex items-center gap-2">
-          {!n.read && <span className="h-2 w-2 shrink-0 rounded-full bg-blue-500" />}
-          <Icons.Phone size={14} strokeWidth={1.5} className="text-green-500" />
-          <p className="text-xs font-semibold text-black">{n.title}</p>
-        </div>
-        <p className="text-xs text-black">{n.body}</p>
-        <span className="text-[11px] text-gray-400">
-          {n.created_at ? formatRelativeTime(n.created_at, t) : ''}
-        </span>
-      </button>
+      {meta.client_id ? (
+        <Link
+          to={clientHref(meta.client_id)}
+          onClick={(e) => onNotificationClick(e, n.id, n.read)}
+          onAuxClick={(e) => onNotificationClick(e, n.id, n.read)}
+          className={cardClassName}
+        >
+          {body}
+        </Link>
+      ) : (
+        <div className={`${cardClassName} cursor-default opacity-60`}>{body}</div>
+      )}
       <button
         type="button"
         aria-label={t('notificationBell.dismissAria')}
@@ -695,50 +745,63 @@ function CallNotificationItem({
 
 function RRPaymentNotificationItem({
   notification: n,
-  onNavigate,
+  onNotificationClick,
   onDismiss,
 }: {
   notification: NotificationItem
-  onNavigate: NavigateFn
+  onNotificationClick: NotificationClickFn
   onDismiss: DismissFn
 }) {
   const { t } = useTranslation('common')
   const meta = n.metadata
-  return (
-    <div className="group relative flex border-b border-gray-100 transition-colors last:border-b-0 hover:bg-gray-50">
-      <button
-        type="button"
-        disabled={!meta.client_id}
-        onClick={() => onNavigate(n.id, meta.client_id, n.read)}
-        className="flex min-w-0 flex-1 flex-col gap-1.5 px-4 py-3 text-left disabled:cursor-default"
-      >
-        <div className="flex flex-wrap items-center gap-1.5 pr-5">
-          {!n.read && <span className="h-2 w-2 shrink-0 rounded-full bg-blue-500" />}
-          <p className="line-clamp-1 text-xs font-semibold text-black">{n.title}</p>
-          {meta.amount && (
-            <span className="rounded bg-blue-100 px-1.5 py-0.5 text-[10px] font-medium text-blue-600">
-              ₴ {meta.amount}
+  const cardClassName =
+    'flex min-w-0 flex-1 flex-col gap-1.5 px-4 py-3 text-left disabled:cursor-default'
+  const body = (
+    <>
+      <div className="flex flex-wrap items-center gap-1.5 pr-5">
+        {!n.read && <span className="h-2 w-2 shrink-0 rounded-full bg-blue-500" />}
+        <p className="line-clamp-1 text-xs font-semibold text-black">
+          {t('notificationBell.rrPayment.title', { defaultValue: n.title })}
+        </p>
+        {meta.amount && (
+          <span className="rounded bg-blue-100 px-1.5 py-0.5 text-[10px] font-medium text-blue-600">
+            ₴ {meta.amount}
+          </span>
+        )}
+      </div>
+      {n.body && <p className="line-clamp-3 w-full min-w-0 text-xs text-black">{n.body}</p>}
+      <div className="flex items-center gap-1 text-black">
+        <Icons.Clock01 size={11} strokeWidth={1.5} />
+        <span className="text-[11px]">
+          {meta.due_date ?? '—'}
+          {typeof meta.days_left === 'number' && (
+            <span className="ml-1 text-gray-500">
+              (
+              {t('notificationBell.daysLeft', {
+                count: meta.days_left,
+                defaultValue: 'in {{count}} days',
+              })}
+              )
             </span>
           )}
-        </div>
-        {n.body && <p className="w-full min-w-0 truncate text-xs text-black">{n.body}</p>}
-        <div className="flex items-center gap-1 text-black">
-          <Icons.Clock01 size={11} strokeWidth={1.5} />
-          <span className="text-[11px]">
-            {meta.due_date ?? '—'}
-            {typeof meta.days_left === 'number' && (
-              <span className="ml-1 text-gray-500">
-                (
-                {t('notificationBell.daysLeft', {
-                  count: meta.days_left,
-                  defaultValue: 'in {{count}} days',
-                })}
-                )
-              </span>
-            )}
-          </span>
-        </div>
-      </button>
+        </span>
+      </div>
+    </>
+  )
+  return (
+    <div className="group relative flex border-b border-gray-100 transition-colors last:border-b-0 hover:bg-gray-50">
+      {meta.client_id ? (
+        <Link
+          to={clientHref(meta.client_id)}
+          onClick={(e) => onNotificationClick(e, n.id, n.read)}
+          onAuxClick={(e) => onNotificationClick(e, n.id, n.read)}
+          className={cardClassName}
+        >
+          {body}
+        </Link>
+      ) : (
+        <div className={`${cardClassName} cursor-default opacity-60`}>{body}</div>
+      )}
       <button
         type="button"
         aria-label={t('notificationBell.dismissAria')}

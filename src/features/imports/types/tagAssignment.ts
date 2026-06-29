@@ -13,6 +13,16 @@ export interface TagPreviewRow {
   client_name: string | null
   tag_names: string[]
   unknown_tag_names: string[]
+  /**
+   * REMOVE-mode partitioning of protected tags.
+   * ``protected_allowed_names``: protected tags the uploader CAN remove
+   * (their role is in the tag's protected_removal_roles).
+   * ``protected_blocked_names``: protected tags the uploader CANNOT
+   * remove. Both empty in ASSIGN mode and when no protected tags are in
+   * the row.
+   */
+  protected_allowed_names: string[]
+  protected_blocked_names: string[]
   status: TagRowStatus
   error: string | null
   severity: string | null

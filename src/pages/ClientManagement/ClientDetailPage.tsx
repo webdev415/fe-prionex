@@ -11,6 +11,8 @@ import { toast } from 'sonner'
 import { Icons } from '@/lib/icons'
 import { DocumentsAccordion } from './components/DocumentsAccordion'
 import { DocumentUploadModal } from './components/DocumentUploadModal'
+import { LoanFactoringInfo } from './components/LoanFactoringInfo'
+import { SaleNotesSection } from './components/SaleNotesSection'
 import {
   formatClientFullName,
   formatDate,
@@ -57,6 +59,7 @@ import {
 } from './components/MessagingHistorySkeleton'
 import { CallLogCard } from './components/CallLogCard'
 import { cn } from '@/lib/utils'
+import { decideChainAutoOpen } from '@/lib/taChainAutoOpen'
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/Tooltip'
 // import {
 //   DropdownMenu,
@@ -82,6 +85,7 @@ import {
   useRestructuringAgreementDetail,
   useCreateRestructuringAgreement,
   useCloseDebt,
+  useReopenDebt,
   useUpdateDebtClosureDate,
   useCompleteRestructuringAgreement,
   useTransitionRRStatus,
@@ -96,6 +100,7 @@ import {
   useDeleteContact,
   useContactTypes,
 } from '@/features/clients/hooks/useClients'
+import { useClientChainInstances } from '@/features/taInteractions/hooks/useTAInteractions'
 import {
   contactTypeLabel,
   pickDefaultActiveContactTypeId,
@@ -120,14 +125,14 @@ import { PERMISSIONS } from '@/constants/permissions'
 import { searchClientsByPhoneExact } from '@/api/clientSearchApi'
 import { ChainExecutor, TAInteractionHistory } from './components/taChains'
 import { formatUkrainePhoneForDisplay } from '@/lib/phone'
-import { isAdminRole, isHiddenVisibility } from '@/features/tags/utils/visibility'
+import { isAdminRole } from '@/features/tags/utils/visibility'
 import {
   ALL_MESSAGING_SEND_PERMISSIONS,
   buildOperatorNamesMap,
   countMessagingHistoryByOutcome,
-  destinationOwnerLabelKey,
   downloadBlob,
   formatLauncherName,
+  formatMessagingHistoryDestination,
   messagingApi,
   messagingStatusForCallLogCard,
   useMessagingClientHistory,
@@ -243,6 +248,8 @@ export function ClientDetailPage() {
   })
   const [connectRrError, setConnectRrError] = useState<string | null>(null)
   const [closeLoanConfirm, setCloseLoanConfirm] = useState<number | null>(null) // debtId to close
+  // Reopen-loan confirmation modal: holds the debt_id to reopen, or null when closed.
+  const [reopenLoanConfirm, setReopenLoanConfirm] = useState<number | null>(null)
   // Local state for the closure-date picker inside the close-loan modal.
   // Defaults to today; max = today (future dates rejected).
   const [closeLoanClosureDate, setCloseLoanClosureDate] = useState<Date | null>(null)
@@ -251,6 +258,16 @@ export function ClientDetailPage() {
   const [editClosureDateDebtId, setEditClosureDateDebtId] = useState<number | null>(null)
   const [editClosureDateValue, setEditClosureDateValue] = useState<Date | null>(null)
   const [editClosureDateError, setEditClosureDateError] = useState<string | null>(null)
+  // Row IDs whose factoring-agreement info panel is currently expanded.
+  // Multi-row expand is allowed — Set lets parent track an arbitrary subset.
+  const [expandedDebtIds, setExpandedDebtIds] = useState<Set<number>>(new Set())
+  const toggleDebtExpand = (id: number) =>
+    setExpandedDebtIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
   const [completeRrConfirm, setCompleteRrConfirm] = useState<number | null>(null) // raId to complete
   // Disconnect modal: holds the raId to disconnect + the operator's reason.
   // null when closed; reason starts empty and is required by the backend.
@@ -271,6 +288,22 @@ export function ClientDetailPage() {
   const [activeCommentTab, setActiveCommentTab] = useState<
     'ta-chains' | 'comments' | 'primary' | 'searcher' | 'dial-history'
   >('ta-chains')
+  // KAN-610: declared here (early) so the right-card data hooks below can be
+  // gated by the active tab — opening a client card no longer fires ~20 parallel
+  // requests; hidden-tab data is fetched lazily on first tab click.
+  const [activeRightCardTab, setActiveRightCardTab] = useState<
+    | 'loans'
+    | 'payments'
+    | 'recommenders'
+    | 'operators'
+    | 'call-sms-history'
+    | 'tasks'
+    | 'documents'
+    | 'ta-chains'
+  >('loans')
+  const [activeCallSmsTab, setActiveCallSmsTab] = useState<'all' | 'calls' | 'sms' | 'messaging'>(
+    'all'
+  )
   const [isChainExecutorOpen, setIsChainExecutorOpen] = useState(false)
   // Context for the chain executor when opened from a phone row. null/null
   // means "general entry point" (header Log Interaction button) — no chain
@@ -284,24 +317,6 @@ export function ClientDetailPage() {
     null
   )
   const chainExecutorMinimizeRef = useRef<(() => void) | null>(null)
-
-  // Classify a contact_type_id into the chain-picker bucket the backend
-  // uses (see /api/v1/clients/{id}/phones?source=...). Client bucket =
-  // the debtor's own phones (mobile/home/work + registration variants).
-  // Recommender bucket = guarantor + third-party phones. Any other type
-  // id (or null) falls back to 'recommender' since this helper is only
-  // called from the recommenders tab where non-classified phones live.
-  // The two id sets MUST stay in sync with
-  // services/client/app/routers/clients.py:CONTACT_SOURCE_TYPE_IDS.
-  const classifyContactSource = (
-    contactTypeId: number | null | undefined
-  ): 'client' | 'recommender' => {
-    const CLIENT_PHONE_TYPE_IDS = new Set([1, 2, 3, 19, 29])
-    if (contactTypeId != null && CLIENT_PHONE_TYPE_IDS.has(contactTypeId)) {
-      return 'client'
-    }
-    return 'recommender'
-  }
 
   // Call origination hook (provides user, call state, handlers)
   const userTimezone = useAuthStore((state) => state.user?.timezone)
@@ -326,6 +341,52 @@ export function ClientDetailPage() {
   // Client detail: one profile + section endpoints
   const clientId = id ? Number(id) : 0
   const isValidClientId = clientId > 0 && !isNaN(clientId)
+
+  // Auto-open the chain modal ONLY for the operator who just changed a debt's
+  // status on this client — closing a loan (→ closed) or reopening it
+  // (→ active). Either may fire a "Debt status" trigger that launches a chain
+  // (system-started → started_by === null) asynchronously. Other operators
+  // viewing the same client must NOT get the pop-up, so auto-open is gated on
+  // *this* browser having performed the change (``chainAutoOpenArmed``) — never
+  // on merely observing the instance, which every viewer's poll would see.
+  //
+  // While armed we poll fast (1.5s) so the chain — created asynchronously by the
+  // chain event consumer after the change — shows in ~1.5-3s; when not armed we
+  // don't poll at all (no pop-up for passive viewers, no idle load). We open
+  // only an instance that did NOT exist when the change was made, so a stale
+  // unrelated chain can't pop up.
+  const [chainAutoOpenArmed, setChainAutoOpenArmed] = useState(false)
+  const preCloseInstanceIdsRef = useRef<Set<number>>(new Set())
+  const { data: clientChainInstances } = useClientChainInstances(
+    isValidClientId ? clientId : null,
+    { refetchInterval: chainAutoOpenArmed ? 1500 : undefined }
+  )
+  useEffect(() => {
+    // Retry-until-shown: open the modal but stay armed until it's actually
+    // showing, so a click in the wait window can't make us disarm without ever
+    // opening. See decideChainAutoOpen() for the full rationale + unit tests.
+    const { open, disarm } = decideChainAutoOpen({
+      armed: chainAutoOpenArmed,
+      instances: clientChainInstances,
+      seenIds: preCloseInstanceIdsRef.current,
+      isExecutorOpen: isChainExecutorOpen,
+    })
+    if (open) {
+      setChainExecutorContactSource(null)
+      setChainExecutorPrefilledPhone(null)
+      setIsChainExecutorOpen(true)
+    } else if (disarm) {
+      setChainAutoOpenArmed(false)
+    }
+  }, [chainAutoOpenArmed, clientChainInstances, isChainExecutorOpen])
+
+  // Safety: never let the armed/fast-poll window run forever (e.g. a close that
+  // matched no trigger). Disarm after 15s if nothing new turned up.
+  useEffect(() => {
+    if (!chainAutoOpenArmed) return
+    const t = setTimeout(() => setChainAutoOpenArmed(false), 15_000)
+    return () => clearTimeout(t)
+  }, [chainAutoOpenArmed])
 
   const {
     data: profile,
@@ -364,6 +425,7 @@ export function ClientDetailPage() {
   )
   const { mutate: createRr, isPending: isCreatingRr } = useCreateRestructuringAgreement()
   const { mutate: closeDebt, isPending: isClosingDebt } = useCloseDebt()
+  const { mutate: reopenDebt, isPending: isReopeningDebt } = useReopenDebt()
   const { mutate: updateClosureDate, isPending: isUpdatingClosureDate } = useUpdateDebtClosureDate()
   const { mutate: completeRa, isPending: isCompletingRa } = useCompleteRestructuringAgreement()
   const { mutate: transitionRr, isPending: isTransitioningRr } = useTransitionRRStatus()
@@ -371,11 +433,18 @@ export function ClientDetailPage() {
   const { mutate: recordOverpayment, isPending: isRecordingOverpayment } = useRecordRROverpayment()
   const { data: paymentsSection, isLoading: isPaymentsLoading } = useClientPaymentsSection(
     clientId,
-    isValidClientId
+    isValidClientId && activeRightCardTab === 'payments'
   )
+  const [showAllCalls, setShowAllCalls] = useState(false)
+  // Reset the expansion when the user switches sub-tabs so they re-enter
+  // the default 7-day view rather than landing on a stale expanded list.
+  useEffect(() => {
+    setShowAllCalls(false)
+  }, [activeCallSmsTab])
   const { data: callSmsHistory, isLoading: isCallSmsLoading } = useClientCallSmsHistory(
     clientId,
-    isValidClientId
+    isValidClientId && activeRightCardTab === 'call-sms-history',
+    showAllCalls
   )
   const canAccessMessagingHistory = useHasAnyPermission([
     ...ALL_MESSAGING_SEND_PERMISSIONS,
@@ -385,7 +454,7 @@ export function ClientDetailPage() {
     useMessagingClientHistory(
       clientId,
       { limit: 100, offset: 0 },
-      isValidClientId && canAccessMessagingHistory
+      isValidClientId && canAccessMessagingHistory && activeRightCardTab === 'call-sms-history'
     )
   const activeProjectId = useAuthStore((s) => s.user?.active_project_id)
   const { data: messagingOperators = [] } = useOperators(
@@ -398,23 +467,28 @@ export function ClientDetailPage() {
   const canViewTasks = useHasPermission(PERMISSIONS.CLIENTS.VIEW_TASKS)
   const { data: tasks = [], isLoading: isTasksLoading } = useClientTasks(
     clientId,
-    isValidClientId && canViewTasks
+    isValidClientId && canViewTasks && activeRightCardTab === 'tasks'
   )
   const { data: operatorsSection, isLoading: isOperatorsLoading } = useClientOperatorsSection(
     clientId,
-    isValidClientId
+    isValidClientId && activeRightCardTab === 'operators'
   )
   const { data: documents = [], isLoading: isDocumentsLoading } = useClientDocuments(
     clientId,
-    isValidClientId
+    isValidClientId && activeRightCardTab === 'documents'
   )
+  // KAN-610: client interactions power only the comments/primary/searcher
+  // comment-tabs (default comment-tab is 'ta-chains'), so fetch lazily.
   const { data: activities = [], isLoading: isActivitiesLoading } = useClientActivities(
     clientId,
-    isValidClientId
+    isValidClientId &&
+      (activeCommentTab === 'comments' ||
+        activeCommentTab === 'primary' ||
+        activeCommentTab === 'searcher')
   )
   const { data: dialHistory = [], isLoading: isDialHistoryLoading } = useClientDialHistory(
     clientId,
-    isValidClientId
+    isValidClientId && activeCommentTab === 'dial-history'
   )
   const { mutate: addSpamCall } = useAddSpamCallHistory(clientId)
   const { mutate: createContact, isPending: isCreatingContact } = useCreateContact()
@@ -426,6 +500,15 @@ export function ClientDetailPage() {
     contactTypes.forEach((ct) => m.set(ct.id, ct))
     return m
   }, [contactTypes])
+
+  const classifyContactSource = (
+    contactTypeId: number | null | undefined
+  ): 'client' | 'recommender' => {
+    if (contactTypeId == null) {
+      return 'recommender'
+    }
+    return contactTypesById.get(contactTypeId)?.contact_source ?? 'recommender'
+  }
 
   const defaultNewContactTypeId = useMemo(
     () => pickDefaultActiveContactTypeId(contactTypes),
@@ -478,8 +561,10 @@ export function ClientDetailPage() {
   const canCompleteRR = useHasPermission(PERMISSIONS.RESTRUCTURING.COMPLETE)
   const updateTaskMutation = useUpdateTask(clientId)
   const deleteTaskMutation = useDeleteTask(clientId)
-  // Fetch client tags from API (real)
-  const { data: clientTags } = useClientTags(clientId)
+  // Fetch client tags from API (real) — async; does not block profile render
+  const { data: clientTags, isLoading: isClientTagsLoading } = useClientTags(clientId, {
+    includeHidden: showHiddenTags,
+  })
   const [traceModal, setTraceModal] = useState<{
     open: boolean
     tagCode?: string
@@ -689,16 +774,24 @@ export function ClientDetailPage() {
         text: c.content,
         author: c.created_by_name ?? `User #${c.created_by}`,
       })),
-      tags: (profile.tags || []).filter(
-        (tag) => showHiddenTags || !isHiddenVisibility((tag as { visibility?: string }).visibility)
-      ),
+      tags: clientTags ?? [],
       // Loans mapped from DebtDetail to UI shape
       loans: (loans ?? []).map((d) => ({
         id: d.id,
         loanNumber: d.contract_number,
         issueDate: formatDate(d.credit_issued_date ?? undefined),
         counterparty: d.seller_company,
-        saleDate: formatDate(d.purchase_date ?? undefined),
+        // If the per-debt purchase_date is empty, fall back to
+        // the linked factoring agreement's contract_purchase_date.
+        saleDate: formatDate(
+          d.purchase_date ?? d.factoring_agreement?.contract_purchase_date ?? undefined
+        ),
+        // Factoring chain surfaced via the row-expansion "Info" button.
+        sellerLegalName: d.seller_legal_name ?? null,
+        factoringAgreementPreviousLender: d.factoring_agreement?.previous_lender ?? null,
+        factoringAgreementPurchaseDate: d.factoring_agreement?.contract_purchase_date
+          ? formatDate(d.factoring_agreement.contract_purchase_date)
+          : null,
         principalAmount: Number(d.principal_amount ?? 0),
         principalDebt: d.principal_debt != null ? Number(d.principal_debt) : null,
         remainingDebtAmount: Number(d.remaining_debt_amount ?? 0),
@@ -706,6 +799,7 @@ export function ClientDetailPage() {
         // Closure date — surfaced for closed debts so the user can see it and,
         // with the close_client_debt permission, edit it after closure.
         creditClosedDate: d.credit_closed_date ?? null,
+        creditReopenedDate: d.credit_reopened_date ?? null,
         // Legacy TABLE460.f53 — eligible-for-return amount carried over from
         // the sale. Surfaced as its own column only when at least one loan row
         // has it and it diverges from remainingDebtAmount (see loanColumns).
@@ -791,7 +885,7 @@ export function ClientDetailPage() {
         writeOffMethod: w.writeoff_type ?? '-',
         employee: w.submitted_by_name ?? '-',
       })),
-      callSmsHistory: callSmsHistory ?? { all: [], calls: [], sms: [] },
+      callSmsHistory: callSmsHistory ?? { all: [], calls: [], sms: [], callsTotal: 0 },
       // Tasks mapped from TaskResponse to UI shape
       tasks: (tasks ?? []).map((t) => ({
         id: t.id,
@@ -889,7 +983,7 @@ export function ClientDetailPage() {
     documents,
     activities,
     responsibleEmployeeDepartment,
-    showHiddenTags,
+    clientTags,
     t,
     userTimezone,
   ])
@@ -1047,24 +1141,14 @@ export function ClientDetailPage() {
   const [activeClientCardTab, setActiveClientCardTab] = useState<'personal' | 'passport' | 'work'>(
     'personal'
   )
-  const [activeRightCardTab, setActiveRightCardTab] = useState<
-    | 'loans'
-    | 'payments'
-    | 'recommenders'
-    | 'operators'
-    | 'call-sms-history'
-    | 'tasks'
-    | 'documents'
-    | 'ta-chains'
-  >('loans')
+  // KAN-610: activeRightCardTab moved up (near activeCommentTab) so the data
+  // hooks can gate on it for lazy loading.
   const [isUploadDocModalOpen, setIsUploadDocModalOpen] = useState(false)
   const [activePaymentTab, setActivePaymentTab] = useState<
     'payments' | 'writes-off' | 'primary-creditor'
   >('payments')
   const [activeOperatorTab, setActiveOperatorTab] = useState<'operators' | 'searchers'>('operators')
-  const [activeCallSmsTab, setActiveCallSmsTab] = useState<'all' | 'calls' | 'sms' | 'messaging'>(
-    'all'
-  )
+  // KAN-610: activeCallSmsTab moved up (near activeCommentTab) for lazy gating.
   const [selectedMessageData, setSelectedMessageData] = useState<{
     campaignName: string
     campaignCode: string
@@ -1439,47 +1523,74 @@ export function ClientDetailPage() {
       header: t('pages.clients.detail.tableHeaders.actions'),
       align: 'center',
       render: (loan) => {
+        // "Info" button — always visible, opens expansion below.
+        const infoButton = (
+          <button
+            onClick={() => toggleDebtExpand(loan.id)}
+            className="p-1 text-gray-500 hover:text-gray-700"
+            title={t('pages.clients.detail.loanInfo', 'Agreement info')}
+            aria-label={t('pages.clients.detail.loanInfo', 'Agreement info')}
+          >
+            <Icons.Info size={18} />
+          </button>
+        )
         if (loan.status === 'active') {
           return (
-            <PermissionGuard permission={PERMISSIONS.CLIENTS.CLOSE_DEBT}>
-              <button
-                onClick={() => {
-                  setCloseLoanConfirm(loan.id)
-                  setCloseLoanClosureDate(getTodayAtMidnight())
-                  setCloseLoanDateError(null)
-                }}
-                disabled={isClosingDebt}
-                className="p-1 text-green-600 hover:text-green-800 disabled:opacity-50"
-                title={t('pages.clients.detail.closeLoan')}
-              >
-                <Icons.Success size={18} />
-              </button>
-            </PermissionGuard>
+            <div className="flex items-center justify-center gap-2">
+              {infoButton}
+              <PermissionGuard permission={PERMISSIONS.CLIENTS.CLOSE_DEBT}>
+                <button
+                  onClick={() => {
+                    setCloseLoanConfirm(loan.id)
+                    setCloseLoanClosureDate(getTodayAtMidnight())
+                    setCloseLoanDateError(null)
+                  }}
+                  disabled={isClosingDebt}
+                  className="p-1 text-green-600 hover:text-green-800 disabled:opacity-50"
+                  title={t('pages.clients.detail.closeLoan')}
+                >
+                  <Icons.Success size={18} />
+                </button>
+              </PermissionGuard>
+            </div>
           )
         }
         if (loan.status === 'closed') {
           return (
-            <PermissionGuard permission={PERMISSIONS.CLIENTS.CLOSE_DEBT}>
-              <button
-                onClick={() => {
-                  setEditClosureDateDebtId(loan.id)
-                  setEditClosureDateValue(
-                    loan.creditClosedDate
-                      ? parseISODateAtMidnight(loan.creditClosedDate)
-                      : getTodayAtMidnight()
-                  )
-                  setEditClosureDateError(null)
-                }}
-                disabled={isUpdatingClosureDate}
-                className="p-1 text-blue-600 hover:text-blue-800 disabled:opacity-50"
-                title={t('pages.clients.detail.editClosureDate', 'Edit closure date')}
-              >
-                <Icons.Edit size={18} />
-              </button>
-            </PermissionGuard>
+            <div className="flex items-center justify-center gap-2">
+              {infoButton}
+              <PermissionGuard permission={PERMISSIONS.CLIENTS.CLOSE_DEBT}>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => {
+                      setEditClosureDateDebtId(loan.id)
+                      setEditClosureDateValue(
+                        loan.creditClosedDate
+                          ? parseISODateAtMidnight(loan.creditClosedDate)
+                          : getTodayAtMidnight()
+                      )
+                      setEditClosureDateError(null)
+                    }}
+                    disabled={isUpdatingClosureDate}
+                    className="p-1 text-blue-600 hover:text-blue-800 disabled:opacity-50"
+                    title={t('pages.clients.detail.editClosureDate', 'Edit closure date')}
+                  >
+                    <Icons.Edit size={18} />
+                  </button>
+                  <button
+                    onClick={() => setReopenLoanConfirm(loan.id)}
+                    disabled={isReopeningDebt}
+                    className="p-1 text-amber-600 hover:text-amber-800 disabled:opacity-50"
+                    title={t('pages.clients.detail.reopenLoan', 'Reopen loan')}
+                  >
+                    <Icons.Reload size={18} />
+                  </button>
+                </div>
+              </PermissionGuard>
+            </div>
           )
         }
-        return null
+        return infoButton
       },
     },
   ]
@@ -2238,7 +2349,9 @@ export function ClientDetailPage() {
               <div className="flex flex-col gap-2 self-stretch">
                 <div className="flex items-center justify-between gap-2 self-stretch">
                   <div className="flex flex-1 flex-wrap items-center gap-2">
-                    {clientTags && clientTags.length > 0 ? (
+                    {isClientTagsLoading ? (
+                      <span className="inline-block h-5 w-24 animate-pulse rounded-full bg-gray-200" />
+                    ) : clientTags && clientTags.length > 0 ? (
                       <>
                         {clientTags.slice(0, 3).map((tag) => (
                           <button
@@ -2323,16 +2436,16 @@ export function ClientDetailPage() {
                         {client.responsibleEmployee}
                       </p>
                     )}
-                    <PermissionGuard permission={PERMISSIONS.CLIENTS.EDIT}>
-                      <button
-                        onClick={() => setAssignRoleModalMode('employee')}
-                        className="shrink-0 text-gray-400 transition-colors hover:text-gray-700"
-                        title="Assign employee"
-                        type="button"
-                      >
-                        <Icons.PencilEdit02 size={14} strokeWidth={1.5} />
-                      </button>
-                    </PermissionGuard>
+                    {/* Reassign trigger is always visible; warn-on-click happens on
+                        the modal's Submit (PERMISSIONS.CLIENTS.REASSIGN_RESPONSIBLE). */}
+                    <button
+                      onClick={() => setAssignRoleModalMode('employee')}
+                      className="shrink-0 text-gray-400 transition-colors hover:text-gray-700"
+                      title="Assign employee"
+                      type="button"
+                    >
+                      <Icons.PencilEdit02 size={14} strokeWidth={1.5} />
+                    </button>
                   </div>
                 </div>
                 <div className="flex min-h-8 items-center self-stretch p-0">
@@ -2345,16 +2458,16 @@ export function ClientDetailPage() {
                         {client.responsibleResearcher}
                       </p>
                     )}
-                    <PermissionGuard permission={PERMISSIONS.CLIENTS.EDIT}>
-                      <button
-                        onClick={() => setAssignRoleModalMode('searcher')}
-                        className="shrink-0 text-gray-400 transition-colors hover:text-gray-700"
-                        title="Assign searcher"
-                        type="button"
-                      >
-                        <Icons.PencilEdit02 size={14} strokeWidth={1.5} />
-                      </button>
-                    </PermissionGuard>
+                    {/* Reassign trigger is always visible; warn-on-click happens on
+                        the modal's Submit (PERMISSIONS.CLIENTS.REASSIGN_RESPONSIBLE). */}
+                    <button
+                      onClick={() => setAssignRoleModalMode('searcher')}
+                      className="shrink-0 text-gray-400 transition-colors hover:text-gray-700"
+                      title="Assign searcher"
+                      type="button"
+                    >
+                      <Icons.PencilEdit02 size={14} strokeWidth={1.5} />
+                    </button>
                   </div>
                 </div>
               </div>
@@ -3182,6 +3295,14 @@ export function ClientDetailPage() {
                             return true
                           })}
                           className="w-full"
+                          expandedIds={expandedDebtIds}
+                          renderExpanded={(loan) => (
+                            <LoanFactoringInfo
+                              legalName={loan.sellerLegalName}
+                              previousLender={loan.factoringAgreementPreviousLender}
+                              purchaseDate={loan.factoringAgreementPurchaseDate}
+                            />
+                          )}
                         />
                       )}
                     </div>
@@ -3979,6 +4100,11 @@ export function ClientDetailPage() {
                                             timeZone: userTimezone || undefined,
                                           }
                                         )
+                                        const destDisplay = formatMessagingHistoryDestination(msg, {
+                                          t,
+                                          language: i18n.language,
+                                          contactTypesById,
+                                        })
                                         return (
                                           <CallLogCard
                                             key={`messaging-${msg.recipient_id}`}
@@ -3998,22 +4124,11 @@ export function ClientDetailPage() {
                                               ) || undefined
                                             }
                                             phone={
-                                              msg.channel === 'sms' || msg.channel === 'viber'
-                                                ? msg.destination || '-'
+                                              destDisplay.destination !== '-'
+                                                ? destDisplay.destination
                                                 : undefined
                                             }
-                                            destinationOwnerLabel={
-                                              msg.channel === 'sms' && msg.destination_owner
-                                                ? (() => {
-                                                    const key = destinationOwnerLabelKey(
-                                                      msg.destination_owner
-                                                    )
-                                                    return key
-                                                      ? t(key, msg.destination_owner)
-                                                      : undefined
-                                                  })()
-                                                : undefined
-                                            }
+                                            destinationOwnerLabel={destDisplay.ownerSuffix}
                                             sent_at={msg.sent_at ?? undefined}
                                             delivered_at={msg.delivered_at ?? undefined}
                                             icon={
@@ -4033,17 +4148,8 @@ export function ClientDetailPage() {
                                                   msg.initiated_by,
                                                   messagingLauncherNames
                                                 ),
-                                                destination: msg.destination || '-',
-                                                destinationOwner: msg.destination_owner
-                                                  ? (() => {
-                                                      const key = destinationOwnerLabelKey(
-                                                        msg.destination_owner
-                                                      )
-                                                      return key
-                                                        ? t(key, msg.destination_owner)
-                                                        : msg.destination_owner
-                                                    })()
-                                                  : undefined,
+                                                destination: destDisplay.destination,
+                                                destinationOwner: destDisplay.ownerSuffix,
                                                 status: msg.status,
                                                 body: msg.body || '',
                                                 subject: msg.subject ?? undefined,
@@ -4061,6 +4167,24 @@ export function ClientDetailPage() {
                                   </div>
                                 ))
                             })()}
+                            {(showAllCalls ||
+                              client.callSmsHistory.callsTotal >
+                                client.callSmsHistory.calls.length) &&
+                              client.callSmsHistory.callsTotal > 0 && (
+                                <button
+                                  type="button"
+                                  onClick={() => setShowAllCalls((v) => !v)}
+                                  className="text-secondary-800 hover:bg-secondary-800/10 self-center rounded-md px-4 py-2 text-sm font-medium transition-colors"
+                                >
+                                  {showAllCalls
+                                    ? t('pages.clients.detail.showLess', 'Show Less')
+                                    : t(
+                                        'pages.clients.detail.viewAllCalls',
+                                        'View All ({{count}})',
+                                        { count: client.callSmsHistory.callsTotal }
+                                      )}
+                                </button>
+                              )}
                           </div>
                         )}
                         {activeCallSmsTab === 'calls' && (
@@ -4223,6 +4347,34 @@ export function ClientDetailPage() {
                                   ))
                               })()}
                             </div>
+                            {!showAllCalls &&
+                              client.callSmsHistory.calls.length === 0 &&
+                              client.callSmsHistory.callsTotal > 0 && (
+                                <p className="self-center text-sm text-gray-600">
+                                  {t(
+                                    'pages.clients.detail.noCallsLast7Days',
+                                    'No call records in the last 7 days — click View All to see older records.'
+                                  )}
+                                </p>
+                              )}
+                            {(showAllCalls ||
+                              client.callSmsHistory.callsTotal >
+                                client.callSmsHistory.calls.length) &&
+                              client.callSmsHistory.callsTotal > 0 && (
+                                <button
+                                  type="button"
+                                  onClick={() => setShowAllCalls((v) => !v)}
+                                  className="text-secondary-800 hover:bg-secondary-800/10 self-center rounded-md px-4 py-2 text-sm font-medium transition-colors"
+                                >
+                                  {showAllCalls
+                                    ? t('pages.clients.detail.showLess', 'Show Less')
+                                    : t(
+                                        'pages.clients.detail.viewAllCalls',
+                                        'View All ({{count}})',
+                                        { count: client.callSmsHistory.callsTotal }
+                                      )}
+                                </button>
+                              )}
                           </div>
                         )}
                         {activeCallSmsTab === 'sms' && (
@@ -4427,6 +4579,14 @@ export function ClientDetailPage() {
                                                 timeZone: userTimezone || undefined,
                                               }
                                             )
+                                            const destDisplay = formatMessagingHistoryDestination(
+                                              item,
+                                              {
+                                                t,
+                                                language: i18n.language,
+                                                contactTypesById,
+                                              }
+                                            )
                                             return (
                                               <CallLogCard
                                                 key={item.recipient_id}
@@ -4446,22 +4606,11 @@ export function ClientDetailPage() {
                                                   ) || undefined
                                                 }
                                                 phone={
-                                                  item.channel === 'sms' || item.channel === 'viber'
-                                                    ? item.destination || '-'
+                                                  destDisplay.destination !== '-'
+                                                    ? destDisplay.destination
                                                     : undefined
                                                 }
-                                                destinationOwnerLabel={
-                                                  item.channel === 'sms' && item.destination_owner
-                                                    ? (() => {
-                                                        const key = destinationOwnerLabelKey(
-                                                          item.destination_owner
-                                                        )
-                                                        return key
-                                                          ? t(key, item.destination_owner)
-                                                          : undefined
-                                                      })()
-                                                    : undefined
-                                                }
+                                                destinationOwnerLabel={destDisplay.ownerSuffix}
                                                 sent_at={item.sent_at ?? undefined}
                                                 delivered_at={item.delivered_at ?? undefined}
                                                 icon={
@@ -4481,17 +4630,8 @@ export function ClientDetailPage() {
                                                       item.initiated_by,
                                                       messagingLauncherNames
                                                     ),
-                                                    destination: item.destination || '-',
-                                                    destinationOwner: item.destination_owner
-                                                      ? (() => {
-                                                          const key = destinationOwnerLabelKey(
-                                                            item.destination_owner
-                                                          )
-                                                          return key
-                                                            ? t(key, item.destination_owner)
-                                                            : item.destination_owner
-                                                        })()
-                                                      : undefined,
+                                                    destination: destDisplay.destination,
+                                                    destinationOwner: destDisplay.ownerSuffix,
                                                     status: item.status,
                                                     body: item.body || '-',
                                                     subject: item.subject || undefined,
@@ -4727,28 +4867,7 @@ export function ClientDetailPage() {
               </div>
             ))}
 
-          {effectiveCommentTab === 'primary' &&
-            (isProfileLoading ? (
-              <TableSkeleton columns={1} rows={3} className="w-full" />
-            ) : !profile?.sale_notes?.trim() ? (
-              <div className="flex flex-col items-center gap-4 self-stretch py-16 md:gap-6">
-                <div className="flex flex-col items-center justify-center gap-4 self-stretch sm:flex-row md:gap-6">
-                  <Icons.FileRemove size={48} className="text-gray-500" strokeWidth={0.5} />
-                  <p className="text-dark-500 text-center text-xl leading-tight font-light tracking-[-0.48px] md:text-2xl">
-                    {t('pages.clients.detail.noPrimaryCreditorComments')}
-                  </p>
-                </div>
-                <p className="text-dark-500 text-center text-sm leading-[155%] font-medium tracking-[-0.32px] md:text-base">
-                  {t('pages.clients.detail.primaryCreditorCommentsDescription')}
-                </p>
-              </div>
-            ) : (
-              <div className="w-full p-4">
-                <p className="text-dark-500 text-sm leading-relaxed break-words whitespace-pre-wrap">
-                  {profile.sale_notes}
-                </p>
-              </div>
-            ))}
+          {effectiveCommentTab === 'primary' && <SaleNotesSection clientId={clientId} />}
 
           {effectiveCommentTab === 'searcher' &&
             (isActivitiesLoading ? (
@@ -5457,11 +5576,26 @@ export function ClientDetailPage() {
                   )
                   return
                 }
-                closeDebt({
-                  clientId,
-                  debtId: closeLoanConfirm,
-                  closureDate: formatDateAsISO(closeLoanClosureDate),
-                })
+                closeDebt(
+                  {
+                    clientId,
+                    debtId: closeLoanConfirm,
+                    closureDate: formatDateAsISO(closeLoanClosureDate),
+                  },
+                  {
+                    onSuccess: () => {
+                      // A close may fire a "Debt status" trigger that launches a
+                      // chain asynchronously. Snapshot the chains that already
+                      // exist so we only auto-open the NEW one this close
+                      // launches, then arm fast-poll + auto-open — for THIS
+                      // operator only (other viewers never arm, so no pop-up).
+                      preCloseInstanceIdsRef.current = new Set(
+                        (clientChainInstances ?? []).map((inst) => inst.id)
+                      )
+                      setChainAutoOpenArmed(true)
+                    },
+                  }
+                )
                 setCloseLoanConfirm(null)
                 setCloseLoanDateError(null)
               }}
@@ -5471,6 +5605,68 @@ export function ClientDetailPage() {
               {isClosingDebt
                 ? t('actions.saving', 'Saving...')
                 : t('pages.clients.detail.closeLoan')}
+            </Button>
+          </ModalFooter>
+        </Modal>
+
+        {/* Reopen Loan Modal — confirmation only, no date picker. */}
+        <Modal
+          open={reopenLoanConfirm !== null}
+          onClose={() => setReopenLoanConfirm(null)}
+          maxWidth="md"
+        >
+          <ModalHeader
+            icon={
+              <div className="bg-primary-400 flex h-8 w-8 items-center justify-center rounded-full">
+                <Icons.Reload size={20} className="text-dark-500" strokeWidth={2} />
+              </div>
+            }
+            title={t('pages.clients.detail.reopenLoan', 'Reopen loan')}
+          />
+          <ModalContent>
+            <p className="text-dark-500 mb-4 text-base font-light">
+              {t(
+                'pages.clients.detail.confirmReopenLoan',
+                'Are you sure you want to reopen this credit?'
+              )}
+            </p>
+          </ModalContent>
+          <ModalFooter>
+            <Button
+              type="button"
+              variant="cancel"
+              onClick={() => setReopenLoanConfirm(null)}
+              disabled={isReopeningDebt}
+              className="h-[45px] flex-1 text-sm"
+            >
+              {t('actions.cancel')}
+            </Button>
+            <Button
+              type="button"
+              variant="primary"
+              onClick={() => {
+                if (reopenLoanConfirm === null) return
+                reopenDebt(
+                  { clientId, debtId: reopenLoanConfirm },
+                  {
+                    onSuccess: () => {
+                      // Reopen sets the debt back to 'active', which may fire a
+                      // "Debt status = active" trigger. Arm auto-open exactly
+                      // like Close does (snapshot existing chains so only the
+                      // NEW one pops) — for THIS operator only.
+                      preCloseInstanceIdsRef.current = new Set(
+                        (clientChainInstances ?? []).map((inst) => inst.id)
+                      )
+                      setChainAutoOpenArmed(true)
+                    },
+                    onSettled: () => setReopenLoanConfirm(null),
+                  }
+                )
+              }}
+              disabled={isReopeningDebt}
+              className="h-[45px] flex-1 text-sm"
+            >
+              {isReopeningDebt ? t('actions.saving', 'Saving...') : t('actions.confirm', 'Confirm')}
             </Button>
           </ModalFooter>
         </Modal>

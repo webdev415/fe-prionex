@@ -6,6 +6,7 @@
  */
 
 import { useState, useCallback, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useURLState, useAutoPersistedState } from '@/hooks'
 import { Icons } from '@/lib/icons'
@@ -98,6 +99,12 @@ export function SellerManagementPage() {
     setCurrentPage(1) // Reset to first page on search
   }, [setCurrentPage])
 
+  const navigate = useNavigate()
+
+  const handleViewAgreements = (seller: Seller) => {
+    navigate(`/dashboard/sellers/${seller.id}`)
+  }
+
   const handleEdit = (seller: Seller) => {
     setEditSellerId(seller.id)
   }
@@ -152,6 +159,13 @@ export function SellerManagementPage() {
       render: (seller) => <span className="font-medium">{seller.seller_name}</span>,
     },
     {
+      key: 'legal_name',
+      header: t('pages.sellers.tableHeaders.legalName'),
+      render: (seller) => (
+        <span className="font-light text-gray-700">{seller.legal_name || '—'}</span>
+      ),
+    },
+    {
       key: 'seller_type',
       header: t('pages.sellers.tableHeaders.sellerType'),
       render: (seller) => (
@@ -196,6 +210,16 @@ export function SellerManagementPage() {
         <div className="flex items-center justify-center gap-2 sm:gap-4">
           {/* Desktop: Individual buttons */}
           <div className="hidden items-center gap-4 lg:flex">
+            <PermissionGuard permission={PERMISSIONS.SELLERS.VIEW}>
+              <LinkButton
+                variant="regular-black"
+                size="xs"
+                onClick={() => handleViewAgreements(seller)}
+                leftIcon={<Icons.View size={16} color="#05040D" strokeWidth={1.5} />}
+              >
+                {t('pages.sellers.actions.viewAgreements')}
+              </LinkButton>
+            </PermissionGuard>
             <PermissionGuard permission={PERMISSIONS.SELLERS.EDIT}>
               <LinkButton
                 variant="regular-black"
@@ -235,6 +259,15 @@ export function SellerManagementPage() {
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="bg-white">
+                <PermissionGuard permission={PERMISSIONS.SELLERS.VIEW}>
+                  <DropdownMenuItem
+                    onClick={() => handleViewAgreements(seller)}
+                    className="text-dark-500 flex cursor-pointer items-center gap-2 text-sm"
+                  >
+                    <Icons.View size={16} strokeWidth={1.5} />
+                    <span>{t('pages.sellers.actions.viewAgreements')}</span>
+                  </DropdownMenuItem>
+                </PermissionGuard>
                 <PermissionGuard permission={PERMISSIONS.SELLERS.EDIT}>
                   <DropdownMenuItem
                     onClick={() => handleEdit(seller)}
