@@ -139,6 +139,55 @@ export interface AggregateFilters {
   operator_id?: number[]
 }
 
+// ---- Script Stage Funnel (KAN-503) ----
+
+export type FunnelBand = 'green' | 'yellow' | 'red'
+
+export interface StageDto {
+  key: string
+  label_en: string
+  label_uk: string
+  order: number
+  expected: number
+  actual: number
+  drop_pct: number
+  band: FunnelBand
+}
+
+export interface PainPointDto {
+  stage: string
+  label_en: string
+  label_uk: string
+  drop_pct: number
+  band: FunnelBand
+  // Critical only — operators whose personal drop exceeds the red threshold.
+  operators_below: number | null
+  recommendation: string
+}
+
+export interface PainPoints {
+  critical: PainPointDto[]
+  warning: PainPointDto[]
+  stable: PainPointDto[]
+}
+
+export interface StageFunnelResponse {
+  period_from: string
+  period_to: string
+  // Denominator — scored calls counted into the funnel (surfaced in the UI).
+  evaluated_calls: number
+  stages: StageDto[]
+  pain_points: PainPoints
+}
+
+export interface StageFunnelFilters {
+  period?: string
+  from_date?: string
+  to_date?: string
+  operator_ids?: number[]
+  department_ids?: number[]
+}
+
 export interface Pagination {
   page: number
   page_size: number
