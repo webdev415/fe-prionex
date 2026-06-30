@@ -42,7 +42,9 @@ export interface Payment {
   payment_comment?: string | null
   seller_name?: string
   status: PaymentStatus
-  payment_date: string // ISO date string
+  // KAN-782: legacy bulk-upload rows can have a NULL payment_date (backend returns
+  // JSON null). Callers must render it as "—"/blank, never assume a string.
+  payment_date: string | null // ISO date string, or null for legacy dateless rows
   recorded_at: string | null // ISO datetime string — nullable for auto-created verified rows
   verified_at?: string // ISO datetime string
   completed_at?: string // ISO datetime string
@@ -236,7 +238,7 @@ export interface PendingPaymentItem {
   client_name?: string | null
   amount: string
   payment_method: PaymentMethod
-  payment_date: string
+  payment_date: string | null // KAN-782: read schema tolerates legacy NULL dates
   recorded_at: string
   days_pending: number
   /** User who recorded the payment (operator / fixation). */
