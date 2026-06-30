@@ -404,10 +404,12 @@ export function DebtSummaryPage() {
         // Resolve the display date for each payment (same logic as table row mapping)
         const withDate = verifiedBackendPayments.map((p) => ({
           p,
+          // KAN-782: payment_date can be null on legacy rows; verified rows always
+          // carry verified_at/recorded_at, so '' is only a type-safety terminal.
           displayDate:
             p.status === 'verified' && p.verified_at
               ? p.verified_at
-              : p.recorded_at || p.payment_date,
+              : p.recorded_at || p.payment_date || '',
         }))
         // Sort by displayDate descending (most recent first)
         withDate.sort((a, b) => b.displayDate.localeCompare(a.displayDate))
@@ -1507,7 +1509,8 @@ export function DebtSummaryPage() {
               if (!bp) return selectedPayment.date
               return bp.status === 'verified' && bp.verified_at
                 ? bp.verified_at
-                : (bp.recorded_at ?? bp.payment_date)
+                : // KAN-782: payment_date can be null on legacy rows → "—"
+                  (bp.recorded_at ?? bp.payment_date ?? '—')
             })(),
             method: normalizePaymentMethod(selectedPayment.method),
             reference:

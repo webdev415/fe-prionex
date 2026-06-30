@@ -1824,7 +1824,8 @@ export function PaymentHistoryPage() {
             paymentDate: paymentDetails
               ? paymentDetails.status === 'verified' && paymentDetails.verified_at
                 ? paymentDetails.verified_at
-                : (paymentDetails.recorded_at ?? paymentDetails.payment_date)
+                : // KAN-782: payment_date can be null on legacy rows → "—"
+                  (paymentDetails.recorded_at ?? paymentDetails.payment_date ?? '—')
               : selectedPayment.date,
             method: (() => {
               const rawMethod = paymentDetails
