@@ -2418,6 +2418,8 @@
         "contactType": "Тип контакту",
         "addedBy": "Додав",
         "addedDate": "Дата",
+        "updatedBy": "Оновив",
+        "updatedDate": "Дата",
         "phoneType": "Тип",
         "linkedContact": "Пов'язаний контакт",
         "comment": "Коментар",

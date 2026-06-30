@@ -456,6 +456,8 @@ export interface ClientProfileResponse {
     comment?: string | null
     created_at?: string | null
     added_by_user_name?: string | null
+    updated_at?: string | null
+    updated_by_user_name?: string | null
     default_call_line?: string | null
     spam_allowed?: boolean | null
   }>
@@ -484,6 +486,8 @@ export interface ClientProfileResponse {
     label?: string | null
     created_at?: string | null
     added_by_user_name?: string | null
+    updated_at?: string | null
+    updated_by_user_name?: string | null
     default_call_line: string
     spam_allowed: boolean
   }>

@@ -2268,6 +2268,8 @@
         "contactType": "Тип контакта",
         "addedBy": "Добавил",
         "addedDate": "Дата",
+        "updatedBy": "Обновил",
+        "updatedDate": "Дата",
         "phoneType": "Тип",
         "linkedContact": "Связанный контакт",
         "comment": "Комментарий",
