@@ -1,5 +1,5 @@
 /**
- * StageChecklist independent-toggle coverage (KAN-503 bug fix).
+ * StageChecklist independent-toggle coverage.
  *
  * Regression guard: marking one stage must NOT change any other stage.
  * Previously a monotonic auto-mark flipped every earlier/later stage, so a

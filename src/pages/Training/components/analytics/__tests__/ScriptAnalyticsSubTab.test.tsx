@@ -1,5 +1,5 @@
 /**
- * Render coverage for ScriptAnalyticsSubTab (KAN-503 — Script Stage Funnel).
+ * Render coverage for ScriptAnalyticsSubTab (Script Stage Funnel).
  *
  * Focus: the funnel renders one bar per stage with the evaluated-call count,
  * the pain-points panel surfaces critical/warning entries, and the empty

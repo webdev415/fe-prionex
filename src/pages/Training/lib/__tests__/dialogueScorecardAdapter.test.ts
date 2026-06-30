@@ -188,7 +188,7 @@ describe('buildCriteria', () => {
     expect(missing.score).toBe(0)
   })
 
-  it('excludes the KAN-503 script_stages section from the quality breakdown', () => {
+  it('excludes the script_stages section from the quality breakdown', () => {
     const sc = makeScorecard({
       template_snapshot: {
         id: 2,

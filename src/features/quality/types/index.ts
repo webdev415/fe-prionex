@@ -139,7 +139,7 @@ export interface AggregateFilters {
   operator_id?: number[]
 }
 
-// ---- Script Stage Funnel (KAN-503) ----
+// ---- Script Stage Funnel ----
 
 export type FunnelBand = 'green' | 'yellow' | 'red'
 
