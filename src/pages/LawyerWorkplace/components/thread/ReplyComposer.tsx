@@ -1,5 +1,3 @@
-import { useState } from 'react'
-import { Attachment01Icon } from '@hugeicons/core-free-icons'
 import { useTranslation } from 'react-i18next'
 import { Textarea } from '@/components/ui/Textarea'
 import { Button } from '@/components/ui/Button'
@@ -10,17 +8,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/DropdownMenu'
-import { Icon, Icons } from '@/lib/icons'
+import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
-
-const MOCK_MAILBOXES = [
-  'legal@prionex.ua',
-  'court@prionex.ua',
-  'nbu@prionex.ua',
-  'accounting@prionex.ua',
-]
-
-type EdoType = 'outgoing' | 'nbu' | 'none'
+import type { EdoType, LegalMailbox } from '@/features/lawyerWorkplace/api/types'
 
 const EDO_OPTIONS: { id: EdoType; labelKey: string; fallback: string; badge?: string }[] = [
   {
@@ -43,50 +33,73 @@ const EDO_OPTIONS: { id: EdoType; labelKey: string; fallback: string; badge?: st
 ]
 
 export interface ReplyComposerProps {
-  fromMailbox: string
+  mailboxes: LegalMailbox[]
+  selectedMailboxId: string | null
+  onMailboxChange: (mailboxId: string) => void
   toMailbox: string
   value: string
   onChange: (value: string) => void
+  edoType: EdoType
+  onEdoTypeChange: (edoType: EdoType) => void
+  onSend: () => void
+  isSending?: boolean
+  sendDisabled?: boolean
 }
 
-export function ReplyComposer({ fromMailbox, toMailbox, value, onChange }: ReplyComposerProps) {
+export function ReplyComposer({
+  mailboxes,
+  selectedMailboxId,
+  onMailboxChange,
+  toMailbox,
+  value,
+  onChange,
+  edoType,
+  onEdoTypeChange,
+  onSend,
+  isSending = false,
+  sendDisabled = false,
+}: ReplyComposerProps) {
   const { t } = useTranslation('common')
-  const [selectedMailbox, setSelectedMailbox] = useState(fromMailbox)
-  const [edoType, setEdoType] = useState<EdoType>('none')
 
-  const selectedEdo = EDO_OPTIONS.find((o) => o.id === edoType) ?? EDO_OPTIONS[2]!
+  const selectedMailbox =
+    mailboxes.find((mailbox) => mailbox.id === selectedMailboxId) ?? mailboxes[0] ?? null
+  const selectedEdo = EDO_OPTIONS.find((option) => option.id === edoType) ?? EDO_OPTIONS[2]!
+
+  const handleSend = () => {
+    if (sendDisabled || isSending || !value.trim()) return
+    onSend()
+  }
 
   return (
     <div className="flex shrink-0 flex-col gap-2 bg-[linear-gradient(180deg,#F2F3F0_0%,#FFF_100%)] px-3 py-2.5 sm:px-5 sm:py-3">
-      {/* From / To row */}
       <div className="flex items-center justify-between gap-2 py-0.5 sm:gap-3 sm:py-2">
         <div className="flex min-w-0 flex-1 flex-col gap-1 sm:flex-row sm:flex-wrap sm:items-center sm:gap-2">
           <span className="text-light-700 shrink-0 text-[10px] sm:text-[11px]">
             {t('pages.lawyerWorkplace.reply.replyFrom', 'Reply from')}
           </span>
           <div className="flex min-w-0 items-center gap-1 sm:gap-2">
-            {/* Interactive mailbox selector */}
             <DropdownMenu modal={false}>
               <DropdownMenuTrigger asChild>
                 <button
                   type="button"
-                  className="bg-light-100 text-secondary-900 flex max-w-[42vw] items-center gap-1 truncate rounded-full border border-gray-200 px-2 py-0.5 text-[10px] font-normal transition-colors hover:bg-gray-100 sm:max-w-none sm:text-[10.5px]"
+                  disabled={mailboxes.length === 0}
+                  className="bg-light-100 text-secondary-900 flex max-w-[42vw] items-center gap-1 truncate rounded-full border border-gray-200 px-2 py-0.5 text-[10px] font-normal transition-colors hover:bg-gray-100 disabled:opacity-50 sm:max-w-none sm:text-[10.5px]"
                 >
-                  <span className="truncate">{selectedMailbox}</span>
+                  <span className="truncate">{selectedMailbox?.email ?? '—'}</span>
                   <Icons.ArrowDown size={10} strokeWidth={2} className="shrink-0 text-gray-400" />
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="min-w-[200px] p-1.5">
-                {MOCK_MAILBOXES.map((mb) => (
+                {mailboxes.map((mailbox) => (
                   <DropdownMenuItem
-                    key={mb}
+                    key={mailbox.id}
                     className={cn(
                       'cursor-pointer rounded-md px-2.5 py-1.5 text-[12px] focus:bg-gray-50',
-                      mb === selectedMailbox && 'bg-gray-50 font-medium'
+                      mailbox.id === selectedMailboxId && 'bg-gray-50 font-medium'
                     )}
-                    onClick={() => setSelectedMailbox(mb)}
+                    onClick={() => onMailboxChange(mailbox.id)}
                   >
-                    {mb}
+                    {mailbox.email}
                   </DropdownMenuItem>
                 ))}
               </DropdownMenuContent>
@@ -101,7 +114,6 @@ export function ReplyComposer({ fromMailbox, toMailbox, value, onChange }: Reply
           </div>
         </div>
 
-        {/* EDO type selector */}
         <DropdownMenu modal={false}>
           <DropdownMenuTrigger asChild>
             <button
@@ -127,22 +139,22 @@ export function ReplyComposer({ fromMailbox, toMailbox, value, onChange }: Reply
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="min-w-[190px] p-1.5">
-            {EDO_OPTIONS.map((opt) => (
+            {EDO_OPTIONS.map((option) => (
               <DropdownMenuItem
-                key={opt.id}
+                key={option.id}
                 className={cn(
                   'cursor-pointer rounded-md px-2.5 py-1.5 text-[12px] focus:bg-gray-50',
-                  opt.id === edoType && 'bg-gray-50 font-medium'
+                  option.id === edoType && 'bg-gray-50 font-medium'
                 )}
-                onClick={() => setEdoType(opt.id)}
+                onClick={() => onEdoTypeChange(option.id)}
               >
                 <span className="flex items-center gap-2">
-                  {opt.badge && (
+                  {option.badge && (
                     <span className="text-secondary-800 bg-secondary-50 rounded px-1 text-[10px] font-bold">
-                      {opt.badge}
+                      {option.badge}
                     </span>
                   )}
-                  {t(opt.labelKey, opt.fallback)}
+                  {t(option.labelKey, option.fallback)}
                 </span>
               </DropdownMenuItem>
             ))}
@@ -150,11 +162,10 @@ export function ReplyComposer({ fromMailbox, toMailbox, value, onChange }: Reply
         </DropdownMenu>
       </div>
 
-      {/* Textarea + send */}
       <div className="flex flex-row items-end rounded-lg border border-gray-200 bg-white p-2.5 sm:p-3">
         <Textarea
           value={value}
-          onChange={(e) => onChange(e.target.value)}
+          onChange={(event) => onChange(event.target.value)}
           rows={4}
           className="text-dark-500 min-h-[96px] w-full resize-none overflow-y-scroll rounded border-none bg-transparent p-0 text-[13px] shadow-none outline-none [scrollbar-width:none] focus:ring-0 focus:ring-offset-0 sm:min-h-[110px] [&::-webkit-scrollbar]:hidden"
           placeholder={t('pages.lawyerWorkplace.reply.placeholder', 'Write your reply...')}
@@ -163,13 +174,14 @@ export function ReplyComposer({ fromMailbox, toMailbox, value, onChange }: Reply
           type="button"
           aria-label={t('pages.lawyerWorkplace.reply.send', 'Send')}
           size="icon-sm"
-          className="bg-primary-300 text-dark-500 hover:bg-primary-500 active:bg-primary-600 shrink-0 rounded-full"
+          disabled={sendDisabled || isSending || !value.trim()}
+          onClick={handleSend}
+          className="bg-primary-300 text-dark-500 hover:bg-primary-500 active:bg-primary-600 shrink-0 rounded-full disabled:opacity-50"
         >
           <Icons.Sent02 size={20} strokeWidth={1.5} />
         </Button>
       </div>
 
-      {/* Toolbar buttons */}
       <div className="flex items-center gap-0.5 overflow-x-auto px-0.5 [scrollbar-width:none] sm:justify-between sm:overflow-visible sm:px-1 [&::-webkit-scrollbar]:hidden">
         <LinkButton
           type="button"
@@ -200,46 +212,13 @@ export function ReplyComposer({ fromMailbox, toMailbox, value, onChange }: Reply
           variant="regular-gray"
           size="xs"
           className="shrink-0 px-2 sm:px-2"
-          aria-label={t('pages.lawyerWorkplace.reply.attach', 'Attach')}
-          leftIcon={<Icon icon={Attachment01Icon} size={13} strokeWidth={1.5} />}
+          aria-label={t('pages.lawyerWorkplace.reply.template', 'Template')}
+          leftIcon={<Icons.Files02Icon size={13} strokeWidth={1.5} />}
         >
           <span className="hidden sm:inline">
-            {t('pages.lawyerWorkplace.reply.attach', 'Attach')}
+            {t('pages.lawyerWorkplace.reply.template', 'Template')}
           </span>
         </LinkButton>
-
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <LinkButton
-              type="button"
-              variant="regular-gray"
-              size="xs"
-              className="shrink-0 bg-transparent px-2 sm:px-2"
-              aria-label={t('pages.lawyerWorkplace.reply.template', 'Template')}
-              leftIcon={<Icons.Files02Icon size={13} strokeWidth={1.5} />}
-              rightIcon={
-                <span className="hidden sm:inline-flex">
-                  <Icons.ArrowDown size={11} strokeWidth={2} />
-                </span>
-              }
-            >
-              <span className="hidden sm:inline">
-                {t('pages.lawyerWorkplace.reply.template', 'Template')}
-              </span>
-            </LinkButton>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="min-w-[160px]">
-            <DropdownMenuItem>
-              {t('pages.lawyerWorkplace.reply.templates.complaintResponse', 'Complaint response')}
-            </DropdownMenuItem>
-            <DropdownMenuItem>
-              {t('pages.lawyerWorkplace.reply.templates.nbuAcknowledgement', 'NBU acknowledgement')}
-            </DropdownMenuItem>
-            <DropdownMenuItem>
-              {t('pages.lawyerWorkplace.reply.templates.extensionRequest', 'Extension request')}
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
       </div>
     </div>
   )

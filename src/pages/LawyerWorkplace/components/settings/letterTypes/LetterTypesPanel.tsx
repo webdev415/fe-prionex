@@ -96,8 +96,17 @@ export function LetterTypesPanel({
     }
   }
 
-  if (!selectedType) {
-    return null
+  if (letterTypes.length === 0) {
+    return (
+      <div className="min-w-0 px-4 pb-6 sm:px-5 lg:px-7">
+        <LetterTypeList
+          letterTypes={letterTypes}
+          selectedId={selectedId}
+          onSelect={handleSelect}
+          onAddType={onAddType}
+        />
+      </div>
+    )
   }
 
   const showList = !isCompact || mobilePane === 'list'

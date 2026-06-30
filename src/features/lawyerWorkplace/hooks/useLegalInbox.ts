@@ -26,6 +26,7 @@ export const legalWorkplaceKeys = {
   lawyers: (includeInactive?: boolean) =>
     [...legalWorkplaceKeys.settings(), 'lawyers', { includeInactive }] as const,
   lawyer: (lawyerId: string) => [...legalWorkplaceKeys.settings(), 'lawyer', lawyerId] as const,
+  mailboxes: () => [...legalWorkplaceKeys.all, 'mailboxes'] as const,
   trainingExamples: (letterTypeId: string) =>
     [...legalWorkplaceKeys.settings(), 'training-examples', letterTypeId] as const,
 } as const
@@ -99,6 +100,15 @@ export function useLegalLawyer(lawyerId: string | null, options?: { enabled?: bo
     queryKey: legalWorkplaceKeys.lawyer(lawyerId ?? ''),
     queryFn: () => legalApi.getLawyer(lawyerId!),
     enabled: options?.enabled !== false && Boolean(lawyerId),
+    staleTime: 60_000,
+  })
+}
+
+export function useLegalMailboxes(options?: { enabled?: boolean }) {
+  return useQuery({
+    queryKey: legalWorkplaceKeys.mailboxes(),
+    queryFn: () => legalApi.listMailboxes(),
+    enabled: options?.enabled !== false,
     staleTime: 60_000,
   })
 }

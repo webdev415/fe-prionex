@@ -203,6 +203,12 @@ export function useReplyToLegalThread() {
       queryClient.invalidateQueries({
         queryKey: legalWorkplaceKeys.message(data.message_id),
       })
+      queryClient.invalidateQueries({ queryKey: legalWorkplaceKeys.messages() })
+      if (data.legal_document_number) {
+        toast.success(`EDO registered: ${data.legal_document_number}`)
+      } else {
+        toast.success('Reply sent')
+      }
     },
     onError: (error) => toast.error(getErrorMessage(error)),
   })

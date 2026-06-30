@@ -39,6 +39,18 @@ export interface LegalInboxResponse {
   unprocessed_count: number
 }
 
+export interface LegalMailbox {
+  id: string
+  email: string
+  display_name: string
+  status: string
+  is_default_outgoing: boolean
+}
+
+export interface LegalMailboxListResponse {
+  items: LegalMailbox[]
+}
+
 export interface LegalInboxParams {
   page?: number
   page_size?: number

@@ -509,6 +509,14 @@ export const MOCK_LETTERS: LetterListItem[] = [
 
 // ─── Thread details ───────────────────────────────────────────────────────────
 
+const EMPTY_REPLY_CONTEXT = {
+  threadId: '',
+  mailboxId: null,
+  inReplyToMessageId: '',
+  clientId: null,
+  assignedUserId: null,
+} as const
+
 export const MOCK_LETTER_DETAILS: Record<string, LetterDetail> = {
   'letter-1': {
     ...MOCK_LETTERS[0]!,
@@ -529,6 +537,7 @@ export const MOCK_LETTER_DETAILS: Record<string, LetterDetail> = {
     },
     replyDraft:
       'Dear Mr. Petrenko,\n\nThank you for your follow-up. We have reviewed contract CR-2024-00518 and confirm that the payment dated 03/18/2026 arrived in our transit account on the same day; however, due to a processing delay it was credited to your account with a delay.',
+    replyContext: { ...EMPTY_REPLY_CONTEXT, inReplyToMessageId: 'msg-1-2', threadId: 'thread-1' },
     thread: [
       {
         id: 'msg-1-1',
@@ -593,6 +602,7 @@ export const MOCK_LETTER_DETAILS: Record<string, LetterDetail> = {
       totalParameters: 4,
     },
     replyDraft: '',
+    replyContext: { ...EMPTY_REPLY_CONTEXT, inReplyToMessageId: 'msg-2-1', threadId: 'thread-2' },
     thread: [
       {
         id: 'msg-2-1',
@@ -644,6 +654,7 @@ export function getLetterDetail(letterId: string): LetterDetail | null {
       totalParameters: 4,
     },
     replyDraft: '',
+    replyContext: { ...EMPTY_REPLY_CONTEXT, inReplyToMessageId: 'msg-2-1', threadId: 'thread-2' },
     thread: [
       {
         id: `${letterId}-msg-1`,

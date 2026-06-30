@@ -1,10 +1,15 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/Button'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
-import { downloadLegalAttachment } from '@/features/lawyerWorkplace'
+import {
+  downloadLegalAttachment,
+  useLegalMailboxes,
+  useReplyToLegalThread,
+  type EdoType,
+} from '@/features/lawyerWorkplace'
 import { getErrorMessage } from '@/lib/errors'
 import { formatDateSeparator, formatLetterTime } from '../../utils/formatters'
 import type { LetterDetail, ThreadAttachment } from '../../types'
@@ -163,6 +168,7 @@ export interface EmailThreadPanelProps {
   isError?: boolean
   replyDraft: string
   onReplyDraftChange: (value: string) => void
+  onReplySent?: () => void
   onBack?: () => void
   onOpenParameters?: () => void
 }
@@ -173,10 +179,91 @@ export function EmailThreadPanel({
   isError = false,
   replyDraft,
   onReplyDraftChange,
+  onReplySent,
   onBack,
   onOpenParameters,
 }: EmailThreadPanelProps) {
   const { t, i18n } = useTranslation('common')
+  const { data: mailboxesData } = useLegalMailboxes({ enabled: Boolean(letter) })
+  const replyMutation = useReplyToLegalThread()
+  const letterId = letter?.id ?? ''
+  const [mailboxOverride, setMailboxOverride] = useState<{
+    letterId: string
+    mailboxId: string | null
+  } | null>(null)
+  const [edoOverride, setEdoOverride] = useState<{
+    letterId: string
+    edoType: EdoType
+  } | null>(null)
+
+  const mailboxes = useMemo(() => mailboxesData?.items ?? [], [mailboxesData?.items])
+
+  const defaultMailboxId = useMemo(() => {
+    if (!letter) return null
+    if (letter.replyContext.mailboxId) return letter.replyContext.mailboxId
+    const defaultOutgoing = mailboxes.find((mailbox) => mailbox.is_default_outgoing)
+    return defaultOutgoing?.id ?? mailboxes[0]?.id ?? null
+  }, [letter, mailboxes])
+
+  const selectedMailboxId =
+    mailboxOverride?.letterId === letterId ? mailboxOverride.mailboxId : defaultMailboxId
+  const edoType = edoOverride?.letterId === letterId ? edoOverride.edoType : 'none'
+
+  const handleMailboxChange = (mailboxId: string) => {
+    setMailboxOverride({ letterId, mailboxId })
+  }
+
+  const handleEdoTypeChange = (nextEdoType: EdoType) => {
+    setEdoOverride({ letterId, edoType: nextEdoType })
+  }
+
+  const handleSendReply = async () => {
+    if (!letter || !selectedMailboxId) {
+      toast.error(t('pages.lawyerWorkplace.reply.noMailbox', 'Select a mailbox to send from'))
+      return
+    }
+
+    const body = replyDraft.trim()
+    if (!body) return
+
+    const { replyContext } = letter
+    const clientId =
+      replyContext.clientId ??
+      (letter.parameters.clientId ? Number(letter.parameters.clientId) : null)
+    const assignedUserId = replyContext.assignedUserId
+
+    if (edoType !== 'none' && (clientId == null || assignedUserId == null)) {
+      toast.error(
+        t(
+          'pages.lawyerWorkplace.reply.edoRequiresClientLawyer',
+          'Select client and lawyer in parameters before registering EDO'
+        )
+      )
+      return
+    }
+
+    replyMutation.mutate(
+      {
+        threadId: replyContext.threadId,
+        payload: {
+          mailbox_id: selectedMailboxId,
+          in_reply_to_message_id: replyContext.inReplyToMessageId,
+          to_addresses: [letter.senderEmail],
+          subject: letter.subject.startsWith('RE:') ? letter.subject : `RE: ${letter.subject}`,
+          body_text: body,
+          edo_type: edoType,
+          client_id: edoType !== 'none' ? clientId : null,
+          assigned_to_user_id: edoType !== 'none' ? assignedUserId : null,
+        },
+      },
+      {
+        onSuccess: () => {
+          onReplyDraftChange('')
+          onReplySent?.()
+        },
+      }
+    )
+  }
 
   if (!letter) {
     return (
@@ -311,10 +398,17 @@ export function EmailThreadPanel({
       </div>
 
       <ReplyComposer
-        fromMailbox={letter.recipientEmail}
+        mailboxes={mailboxes}
+        selectedMailboxId={selectedMailboxId}
+        onMailboxChange={handleMailboxChange}
         toMailbox={letter.senderEmail}
         value={replyDraft}
         onChange={onReplyDraftChange}
+        edoType={edoType}
+        onEdoTypeChange={handleEdoTypeChange}
+        onSend={handleSendReply}
+        isSending={replyMutation.isPending}
+        sendDisabled={!letter.replyContext.threadId}
       />
     </div>
   )

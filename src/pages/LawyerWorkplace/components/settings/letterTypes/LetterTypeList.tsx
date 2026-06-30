@@ -37,6 +37,14 @@ export function LetterTypeList({
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto">
+        {letterTypes.length === 0 ? (
+          <p className="text-light-600 px-4 py-10 text-center text-sm">
+            {t(
+              'pages.lawyerWorkplace.settings.letterTypes.empty',
+              'No letter types yet. Add the first type to configure classification.'
+            )}
+          </p>
+        ) : null}
         {letterTypes.map((letterType) => {
           const isSelected = letterType.id === selectedId
           return (

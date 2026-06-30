@@ -70,4 +70,13 @@ export interface LetterDetail extends LetterListItem {
   thread: ThreadMessage[]
   parameters: LetterParameters
   replyDraft: string
+  replyContext: LetterReplyContext
+}
+
+export interface LetterReplyContext {
+  threadId: string
+  mailboxId: string | null
+  inReplyToMessageId: string
+  clientId: number | null
+  assignedUserId: number | null
 }

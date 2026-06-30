@@ -6,6 +6,7 @@ import type {
   LegalLawyerCreate,
   LegalLawyerListResponse,
   LegalLawyerUpdate,
+  LegalMailboxListResponse,
   LegalLetterConfirmRequest,
   LegalLetterConfirmResponse,
   LegalLetterType,
@@ -29,6 +30,12 @@ export const legalApi = {
   listInbox(params: LegalInboxParams = {}) {
     return api
       .get<LegalInboxResponse>(`${BASE_URL}/inbox`, { params })
+      .then((response) => response.data)
+  },
+
+  listMailboxes() {
+    return api
+      .get<LegalMailboxListResponse>(`${BASE_URL}/mailboxes`)
       .then((response) => response.data)
   },
 

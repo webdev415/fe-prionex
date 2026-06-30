@@ -94,9 +94,12 @@ export function LegalSettingsTab() {
       }))
   }, [lawyersQuery.data?.items, usersQuery.data?.users])
 
-  const settingsLoading =
+  const letterTypesLoading = letterTypesQuery.isLoading
+  const lawyersTabLoading =
     letterTypesQuery.isLoading || lawyersQuery.isLoading || usersQuery.isLoading
   const settingsError = letterTypesQuery.isError || lawyersQuery.isError
+
+  const isLoading = activeSubTab === 'lawyers' ? lawyersTabLoading : letterTypesLoading
 
   const handleAddLetterType = async (input: { nameFallback: string; colorId: string }) => {
     try {
@@ -124,7 +127,7 @@ export function LegalSettingsTab() {
     <div className={cn('min-w-0', isCompact ? 'pb-8' : 'pb-6')}>
       <SettingsToolbar activeSubTab={activeSubTab} onSubTabChange={setActiveSubTab} />
 
-      {settingsLoading && (activeSubTab === 'letterTypes' || activeSubTab === 'lawyers') ? (
+      {isLoading && (activeSubTab === 'letterTypes' || activeSubTab === 'lawyers') ? (
         <p className="text-light-600 px-4 py-10 text-center text-sm sm:px-5 lg:px-7">
           {t('pages.lawyerWorkplace.settings.loading', 'Loading settings…')}
         </p>
@@ -134,7 +137,7 @@ export function LegalSettingsTab() {
         </p>
       ) : null}
 
-      {activeSubTab === 'letterTypes' && !settingsLoading && !settingsError && (
+      {activeSubTab === 'letterTypes' && !isLoading && !settingsError && (
         <LetterTypesPanel
           letterTypes={letterTypes}
           selectedId={activeSelectedLetterTypeId}
@@ -145,7 +148,7 @@ export function LegalSettingsTab() {
         />
       )}
 
-      {activeSubTab === 'lawyers' && !settingsLoading && !settingsError && (
+      {activeSubTab === 'lawyers' && !isLoading && !settingsError && (
         <LawyersPanel
           lawyers={lawyers}
           letterTypes={letterTypes}

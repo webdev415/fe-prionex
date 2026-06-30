@@ -3,6 +3,7 @@ import type {
   LetterListItem,
   LetterParameters,
   LetterProcessingStatus,
+  LetterReplyContext,
   ThreadAttachment,
   ThreadMessage,
 } from '@/pages/LawyerWorkplace/types'
@@ -204,6 +205,21 @@ export function mapThreadMessageToUi(
   }
 }
 
+function buildReplyContext(
+  message: LegalMessageDetail,
+  thread: LegalThreadDetail | undefined
+): LetterReplyContext {
+  const threadMessages = thread?.messages ?? []
+  const lastMessageId = threadMessages.at(-1)?.id ?? message.id
+  return {
+    threadId: message.thread_id,
+    mailboxId: message.mailbox_id,
+    inReplyToMessageId: lastMessageId,
+    clientId: message.suggested_client_id,
+    assignedUserId: message.suggested_lawyer_user_id,
+  }
+}
+
 export function mapMessageAttachments(
   attachments: LegalAttachmentItem[] | undefined
 ): ThreadAttachment[] {
@@ -294,6 +310,7 @@ export function mapMessageToLetterDetail(
     thread: threadMessages,
     parameters: buildLetterParameters(message, context),
     replyDraft,
+    replyContext: buildReplyContext(message, thread),
   }
 }
 
@@ -318,6 +335,13 @@ export function mapListItemToPreviewDetail(summary: LetterListItem, replyDraft =
       totalParameters: 4,
     },
     replyDraft,
+    replyContext: {
+      threadId: '',
+      mailboxId: null,
+      inReplyToMessageId: summary.id,
+      clientId: summary.clientId ? Number(summary.clientId) || null : null,
+      assignedUserId: null,
+    },
     thread: [
       {
         id: `${summary.id}-preview`,
