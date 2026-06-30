@@ -23,7 +23,7 @@ const TASK_PRIORITY_TO_KANBAN: Record<string, KanbanTaskPriority> = {
   low: 'low',
 }
 
-const KANBAN_PRIORITY_TO_TASK: Record<KanbanTaskPriority, string> = {
+export const KANBAN_PRIORITY_TO_TASK: Record<KanbanTaskPriority, string> = {
   highest: 'urgent',
   high: 'high',
   medium: 'normal',

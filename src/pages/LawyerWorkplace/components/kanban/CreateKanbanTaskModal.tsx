@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/Button'
 import { DateSelect } from '@/components/ui/DateSelect'
@@ -11,15 +11,15 @@ import {
 import { Label } from '@/components/ui/Label'
 import { Modal, ModalContent, ModalFooter, ModalHeader } from '@/components/ui/Modal'
 import { Textarea } from '@/components/ui/Textarea'
+import { KANBAN_PRIORITY_TO_TASK } from '@/features/lawyerWorkplace/api/kanbanMappers'
+import { useCreateLegalKanbanTask } from '@/features/lawyerWorkplace/hooks/useLegalMutations'
+import {
+  useLegalLawyers,
+  useLegalLetterTypes,
+} from '@/features/lawyerWorkplace/hooks/useLegalInbox'
 import { Icons } from '@/lib/icons'
 import type { KanbanTaskType } from '../../kanban/kanbanData'
-import {
-  CREATE_TASK_LAWYER_OPTIONS,
-  CREATE_TASK_PRIORITIES,
-  CREATE_TASK_TYPES,
-  type CreateTaskLawyerId,
-  type KanbanTaskPriority,
-} from './constants'
+import { CREATE_TASK_PRIORITIES, type KanbanTaskPriority } from './constants'
 import { KanbanTypeBadge } from './KanbanTypeBadge'
 import { KanbanPriorityOption } from './KanbanPriorityOption'
 
@@ -27,6 +27,14 @@ interface CreateKanbanTaskModalProps {
   open: boolean
   onClose: () => void
 }
+
+const KNOWN_KANBAN_TYPES = new Set<KanbanTaskType>([
+  'complaint',
+  'nbu_inquiry',
+  'court_claim',
+  'attorney_request',
+  'inquiry',
+])
 
 function getTomorrowDate(): Date {
   const date = new Date()
@@ -41,23 +49,38 @@ function getTodayStart(): Date {
   return date
 }
 
+function deadlineToIso(date: Date): string {
+  const next = new Date(date)
+  next.setHours(12, 0, 0, 0)
+  return next.toISOString()
+}
+
+function renderLetterTypeOption(letterTypeId: string, name: string) {
+  if (KNOWN_KANBAN_TYPES.has(letterTypeId as KanbanTaskType)) {
+    return <KanbanTypeBadge type={letterTypeId as KanbanTaskType} />
+  }
+  return <span className="text-dark-500 text-[13px]">{name}</span>
+}
+
 interface FormSelectProps {
   label: string
   value: ReactNode
   onSelect: (key: string) => void
   items: { key: string; content: ReactNode }[]
   leftIcon?: ReactNode
+  disabled?: boolean
 }
 
-function FormSelect({ label, value, onSelect, items, leftIcon }: FormSelectProps) {
+function FormSelect({ label, value, onSelect, items, leftIcon, disabled }: FormSelectProps) {
   return (
     <div className="flex w-full flex-col items-start gap-2">
       <Label className="text-dark-500 text-[12px] font-normal">{label}</Label>
       <DropdownMenu modal={false}>
-        <DropdownMenuTrigger asChild>
+        <DropdownMenuTrigger asChild disabled={disabled}>
           <button
             type="button"
-            className="text-dark-500 focus:border-primary-500 flex h-9 w-full items-center justify-between rounded-[8px] border border-gray-200 bg-white px-3 py-2 text-[14px] font-light outline-none"
+            disabled={disabled}
+            className="text-dark-500 focus:border-primary-500 flex h-9 w-full items-center justify-between rounded-[8px] border border-gray-200 bg-white px-3 py-2 text-[14px] font-light outline-none disabled:cursor-not-allowed disabled:opacity-60"
           >
             <span className="flex min-w-0 flex-1 items-center gap-2 truncate text-left">
               {leftIcon}
@@ -87,9 +110,20 @@ function FormSelect({ label, value, onSelect, items, leftIcon }: FormSelectProps
 
 export function CreateKanbanTaskModal({ open, onClose }: CreateKanbanTaskModalProps) {
   const { t } = useTranslation('common')
+  const createTask = useCreateLegalKanbanTask()
+  const { data: lawyersData, isLoading: lawyersLoading } = useLegalLawyers({ enabled: open })
+  const { data: letterTypesData, isLoading: letterTypesLoading } = useLegalLetterTypes({
+    enabled: open,
+  })
 
-  const [lawyer, setLawyer] = useState<CreateTaskLawyerId>(CREATE_TASK_LAWYER_OPTIONS[0]!.id)
-  const [taskType, setTaskType] = useState<KanbanTaskType>('complaint')
+  const lawyers = useMemo(() => lawyersData?.items ?? [], [lawyersData?.items])
+  const letterTypes = useMemo(
+    () => (letterTypesData?.items ?? []).filter((item) => item.is_active),
+    [letterTypesData?.items]
+  )
+
+  const [lawyerUserId, setLawyerUserId] = useState<number | null>(null)
+  const [letterTypeId, setLetterTypeId] = useState<string | null>(null)
   const [deadline, setDeadline] = useState<Date | null>(getTomorrowDate())
   const [priority, setPriority] = useState<KanbanTaskPriority>('high')
   const [description, setDescription] = useState('')
@@ -99,23 +133,46 @@ export function CreateKanbanTaskModal({ open, onClose }: CreateKanbanTaskModalPr
     'Letter in Russian — needs translation'
   )
 
-  const selectedLawyer = CREATE_TASK_LAWYER_OPTIONS.find((item) => item.id === lawyer)
+  const selectedLawyer = lawyers.find((item) => item.user_id === lawyerUserId)
+  const selectedLetterType = letterTypes.find((item) => item.id === letterTypeId)
+  const selectedPriority = CREATE_TASK_PRIORITIES.find((item) => item.id === priority)
+
+  const optionsLoading = lawyersLoading || letterTypesLoading
+  const canSubmit =
+    !optionsLoading &&
+    !createTask.isPending &&
+    lawyerUserId != null &&
+    letterTypeId != null &&
+    deadline != null
 
   useEffect(() => {
     if (!open) return
     requestAnimationFrame(() => {
-      setLawyer(CREATE_TASK_LAWYER_OPTIONS[0]!.id)
-      setTaskType('complaint')
+      setLawyerUserId(lawyers[0]?.user_id ?? null)
+      setLetterTypeId(letterTypes[0]?.id ?? null)
       setDeadline(getTomorrowDate())
       setPriority('high')
       setDescription(defaultDescription)
     })
-  }, [defaultDescription, open])
-
-  const selectedPriority = CREATE_TASK_PRIORITIES.find((item) => item.id === priority)
+  }, [defaultDescription, letterTypes, lawyers, open])
 
   const handleCreate = () => {
-    onClose()
+    if (!canSubmit || lawyerUserId == null || letterTypeId == null || deadline == null) {
+      return
+    }
+
+    createTask.mutate(
+      {
+        letter_type_id: letterTypeId,
+        assigned_to_user_id: lawyerUserId,
+        due_date: deadlineToIso(deadline),
+        priority: KANBAN_PRIORITY_TO_TASK[priority] ?? 'normal',
+        description: description.trim() || null,
+      },
+      {
+        onSuccess: () => onClose(),
+      }
+    )
   }
 
   return (
@@ -133,25 +190,30 @@ export function CreateKanbanTaskModal({ open, onClose }: CreateKanbanTaskModalPr
         <div className="flex flex-col gap-4">
           <FormSelect
             label={t('pages.lawyerWorkplace.kanban.createTask.lawyer', 'Lawyer')}
+            disabled={optionsLoading || lawyers.length === 0}
             value={
-              selectedLawyer
-                ? t(selectedLawyer.key, selectedLawyer.fallback)
-                : t(CREATE_TASK_LAWYER_OPTIONS[0]!.key, CREATE_TASK_LAWYER_OPTIONS[0]!.fallback)
+              selectedLawyer?.display_name ??
+              t('pages.lawyerWorkplace.kanban.createTask.selectLawyer', 'Select lawyer')
             }
-            onSelect={(key) => setLawyer(key as CreateTaskLawyerId)}
-            items={CREATE_TASK_LAWYER_OPTIONS.map((option) => ({
-              key: option.id,
-              content: t(option.key, option.fallback),
+            onSelect={(key) => setLawyerUserId(Number(key))}
+            items={lawyers.map((lawyer) => ({
+              key: String(lawyer.user_id),
+              content: lawyer.display_name,
             }))}
           />
 
           <FormSelect
             label={t('pages.lawyerWorkplace.kanban.createTask.type', 'Type')}
-            value={<KanbanTypeBadge type={taskType} />}
-            onSelect={(key) => setTaskType(key as KanbanTaskType)}
-            items={CREATE_TASK_TYPES.map((type) => ({
-              key: type,
-              content: <KanbanTypeBadge type={type} />,
+            disabled={optionsLoading || letterTypes.length === 0}
+            value={
+              selectedLetterType
+                ? renderLetterTypeOption(selectedLetterType.id, selectedLetterType.name)
+                : t('pages.lawyerWorkplace.kanban.createTask.selectType', 'Select type')
+            }
+            onSelect={(key) => setLetterTypeId(key)}
+            items={letterTypes.map((letterType) => ({
+              key: letterType.id,
+              content: renderLetterTypeOption(letterType.id, letterType.name),
             }))}
           />
 
@@ -211,8 +273,16 @@ export function CreateKanbanTaskModal({ open, onClose }: CreateKanbanTaskModalPr
         <Button type="button" variant="cancel" onClick={onClose} className="flex-1">
           {t('actions.cancel', 'Cancel')}
         </Button>
-        <Button type="button" variant="primary" onClick={handleCreate} className="flex-1">
-          {t('pages.lawyerWorkplace.kanban.createTask.submit', 'Create')}
+        <Button
+          type="button"
+          variant="primary"
+          onClick={handleCreate}
+          disabled={!canSubmit}
+          className="flex-1"
+        >
+          {createTask.isPending
+            ? t('pages.lawyerWorkplace.kanban.createTask.creating', 'Creating…')
+            : t('pages.lawyerWorkplace.kanban.createTask.submit', 'Create')}
         </Button>
       </ModalFooter>
     </Modal>

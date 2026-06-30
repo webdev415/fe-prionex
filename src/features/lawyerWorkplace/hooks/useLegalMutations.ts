@@ -264,6 +264,21 @@ export function useUpdateLegalKanbanTask() {
   })
 }
 
+export function useCreateLegalKanbanTask() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (payload: Parameters<typeof legalApi.createKanbanTask>[0]) =>
+      legalApi.createKanbanTask(payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: legalWorkplaceKeys.kanban() })
+      queryClient.invalidateQueries({ queryKey: ['tasks', 'my-tasks'] })
+      toast.success('Task created')
+    },
+    onError: (error) => toast.error(getErrorMessage(error)),
+  })
+}
+
 function invalidateLegalDocuments(queryClient: ReturnType<typeof useQueryClient>) {
   queryClient.invalidateQueries({ queryKey: legalWorkplaceKeys.documents() })
 }

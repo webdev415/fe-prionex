@@ -194,6 +194,20 @@ export interface LegalKanbanResponse {
   total: number
 }
 
+export interface LegalKanbanTaskCreateRequest {
+  letter_type_id: string
+  client_id?: number | null
+  due_date: string
+  assigned_to_user_id: number
+  priority?: string
+  description?: string | null
+}
+
+export interface LegalKanbanTaskCreateResponse {
+  task_id: number
+  message_id: string | null
+}
+
 export interface LegalTrainingExample {
   id: string
   letter_type_id: string
