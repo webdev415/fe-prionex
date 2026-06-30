@@ -2,7 +2,7 @@
  * Types for Operator Assignment CSV Import feature.
  */
 
-export type OARowStatus = 'ready' | 'no_change' | 'error' | 'warning'
+export type OARowStatus = 'ready' | 'no_change' | 'error' | 'warning' | 'would_skip'
 
 export interface OAPreviewRow {
   row_number: number
@@ -15,12 +15,14 @@ export interface OAPreviewRow {
   status: OARowStatus
   error: string | null
   severity: string | null
+  note: string | null
 }
 
 export interface OAPreviewSummary {
   ready: number
   no_change: number
   invalid: number
+  would_skip: number
   unique_operators: number
 }
 

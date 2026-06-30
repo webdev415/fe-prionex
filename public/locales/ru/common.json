@@ -1846,6 +1846,7 @@
           "errors": "Ошибки ({{count}})",
           "readyToAssign": "Готово к назначению",
           "noChange": "Без изменений",
+          "wouldSkip": "Будет пропущено",
           "invalid": "Недействительно",
           "uniqueOperators": "Уникальные операторы",
           "columns": {
