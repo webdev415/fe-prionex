@@ -139,7 +139,7 @@ export interface AggregateFilters {
   operator_id?: number[]
 }
 
-// ---- Script Stage Funnel (KAN-503) ----
+// ---- Script Stage Funnel ----
 
 export type FunnelBand = 'green' | 'yellow' | 'red'
 
@@ -180,10 +180,15 @@ export interface StageFunnelResponse {
   pain_points: PainPoints
 }
 
+// Which date the funnel window applies to: 'evaluation' (when the call was
+// scored, default) or 'call' (when the call was made).
+export type FunnelDateType = 'evaluation' | 'call'
+
 export interface StageFunnelFilters {
   period?: string
   from_date?: string
   to_date?: string
+  date_type?: FunnelDateType
   operator_ids?: number[]
   department_ids?: number[]
 }

@@ -124,6 +124,7 @@ export type {
   ScoreDynamicsAlert,
   AlertsResponse,
   FunnelBand,
+  FunnelDateType,
   StageDto,
   PainPointDto,
   PainPoints,

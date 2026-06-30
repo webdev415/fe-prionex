@@ -2,12 +2,6 @@ import { useTranslation } from 'react-i18next'
 import type { StageFunnelResponse } from '@/features/quality'
 import { StageBar } from './StageBar'
 
-/**
- * The 6-stage Script Stage Funnel card (KAN-503). Surfaces ``evaluated_calls``
- * prominently — it is the funnel denominator (scored calls only), not total
- * call volume.
- */
-
 interface Props {
   data: StageFunnelResponse
 }

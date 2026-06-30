@@ -1,15 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import type { FunnelBand, StageDto } from '@/features/quality'
 
-/**
- * One stage row of the Script Stage Funnel (KAN-503).
- *
- * Renders a grey "expected" track sized to the stage's expected count
- * (relative to the top of the funnel, so the funnel visibly tapers) with a
- * coloured "actual" overlay on top. The drop badge is coloured by the
- * server-computed band — the FE never re-derives the band thresholds.
- */
-
 const BAND_FILL: Record<FunnelBand, string> = {
   green: '#22C55E',
   yellow: '#F59E0B',
@@ -59,7 +50,6 @@ export function StageBar({ stage, maxExpected }: Props) {
         </span>
       </div>
 
-      {/* Grey expected track + coloured actual overlay */}
       <div className="relative h-6 w-full overflow-hidden rounded-md bg-[#F3F4F6]">
         <div
           className="absolute inset-y-0 left-0 rounded-md bg-[#E5E7EB]"
