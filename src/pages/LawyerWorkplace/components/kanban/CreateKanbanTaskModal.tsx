@@ -10,7 +10,9 @@ import {
 } from '@/components/ui/DropdownMenu'
 import { Label } from '@/components/ui/Label'
 import { Modal, ModalContent, ModalFooter, ModalHeader } from '@/components/ui/Modal'
+import { SearchableSelect } from '@/components/ui/SearchableSelect'
 import { Textarea } from '@/components/ui/Textarea'
+import { useClients } from '@/features/clients/hooks/useClients'
 import { KANBAN_PRIORITY_TO_TASK } from '@/features/lawyerWorkplace/api/kanbanMappers'
 import { useCreateLegalKanbanTask } from '@/features/lawyerWorkplace/hooks/useLegalMutations'
 import {
@@ -53,6 +55,17 @@ function deadlineToIso(date: Date): string {
   const next = new Date(date)
   next.setHours(12, 0, 0, 0)
   return next.toISOString()
+}
+
+function formatClientOption(client: {
+  id: number
+  first_name: string
+  last_name: string
+  legacy_id?: string | null
+}): { id: string; name: string } {
+  const code = client.legacy_id?.trim() || `CL-${String(client.id).padStart(5, '0')}`
+  const name = [client.first_name, client.last_name].filter(Boolean).join(' ')
+  return { id: String(client.id), name: name ? `${code} · ${name}` : code }
 }
 
 function renderLetterTypeOption(letterTypeId: string, name: string) {
@@ -115,15 +128,24 @@ export function CreateKanbanTaskModal({ open, onClose }: CreateKanbanTaskModalPr
   const { data: letterTypesData, isLoading: letterTypesLoading } = useLegalLetterTypes({
     enabled: open,
   })
+  const { data: clientsData, isLoading: clientsLoading } = useClients(
+    { limit: 200 },
+    { enabled: open }
+  )
 
   const lawyers = useMemo(() => lawyersData?.items ?? [], [lawyersData?.items])
   const letterTypes = useMemo(
     () => (letterTypesData?.items ?? []).filter((item) => item.is_active),
     [letterTypesData?.items]
   )
+  const clientOptions = useMemo(
+    () => (clientsData?.items ?? []).map(formatClientOption),
+    [clientsData?.items]
+  )
 
   const [lawyerUserId, setLawyerUserId] = useState<number | null>(null)
   const [letterTypeId, setLetterTypeId] = useState<string | null>(null)
+  const [clientId, setClientId] = useState('')
   const [deadline, setDeadline] = useState<Date | null>(getTomorrowDate())
   const [priority, setPriority] = useState<KanbanTaskPriority>('high')
   const [description, setDescription] = useState('')
@@ -137,7 +159,7 @@ export function CreateKanbanTaskModal({ open, onClose }: CreateKanbanTaskModalPr
   const selectedLetterType = letterTypes.find((item) => item.id === letterTypeId)
   const selectedPriority = CREATE_TASK_PRIORITIES.find((item) => item.id === priority)
 
-  const optionsLoading = lawyersLoading || letterTypesLoading
+  const optionsLoading = lawyersLoading || letterTypesLoading || clientsLoading
   const canSubmit =
     !optionsLoading &&
     !createTask.isPending &&
@@ -150,6 +172,7 @@ export function CreateKanbanTaskModal({ open, onClose }: CreateKanbanTaskModalPr
     requestAnimationFrame(() => {
       setLawyerUserId(lawyers[0]?.user_id ?? null)
       setLetterTypeId(letterTypes[0]?.id ?? null)
+      setClientId('')
       setDeadline(getTomorrowDate())
       setPriority('high')
       setDescription(defaultDescription)
@@ -161,9 +184,14 @@ export function CreateKanbanTaskModal({ open, onClose }: CreateKanbanTaskModalPr
       return
     }
 
+    const clientIdNumber = Number(clientId)
+    const resolvedClientId =
+      clientId && Number.isFinite(clientIdNumber) && clientIdNumber > 0 ? clientIdNumber : undefined
+
     createTask.mutate(
       {
         letter_type_id: letterTypeId,
+        client_id: resolvedClientId,
         assigned_to_user_id: lawyerUserId,
         due_date: deadlineToIso(deadline),
         priority: KANBAN_PRIORITY_TO_TASK[priority] ?? 'normal',
@@ -216,6 +244,41 @@ export function CreateKanbanTaskModal({ open, onClose }: CreateKanbanTaskModalPr
               content: renderLetterTypeOption(letterType.id, letterType.name),
             }))}
           />
+
+          <div className="flex w-full flex-col items-start gap-2">
+            <div className="flex w-full items-center justify-between gap-2">
+              <Label className="text-dark-500 text-[12px] font-normal">
+                {t('pages.lawyerWorkplace.kanban.createTask.client', 'Client')}
+                <span className="text-light-600 ml-1 font-light">
+                  ({t('pages.lawyerWorkplace.kanban.createTask.clientOptional', 'optional')})
+                </span>
+              </Label>
+              {clientId ? (
+                <button
+                  type="button"
+                  onClick={() => setClientId('')}
+                  className="text-light-600 hover:text-dark-500 text-[11px] font-light"
+                >
+                  {t('pages.lawyerWorkplace.kanban.createTask.clearClient', 'Clear')}
+                </button>
+              ) : null}
+            </div>
+            <SearchableSelect
+              options={clientOptions}
+              value={clientId}
+              onValueChange={setClientId}
+              disabled={optionsLoading}
+              placeholder={t(
+                'pages.lawyerWorkplace.kanban.createTask.selectClient',
+                'Search client...'
+              )}
+              searchPlaceholder={t(
+                'pages.lawyerWorkplace.kanban.createTask.searchClient',
+                'Search by name or contract...'
+              )}
+              className="[&_button]:h-9 [&_button]:rounded-[8px] [&_button]:text-[14px]"
+            />
+          </div>
 
           <div className="flex w-full flex-col items-start gap-2">
             <Label className="text-dark-500 text-[12px] font-normal">
