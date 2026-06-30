@@ -2,6 +2,7 @@ import { useState, type DragEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import DatePicker from 'react-datepicker'
 import 'react-datepicker/dist/react-datepicker.css'
+import type { LegalKanbanTaskPatch, LegalLawyer } from '@/features/lawyerWorkplace'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,7 +23,6 @@ import {
   CREATE_TASK_TYPES,
   KANBAN_ASSIGNEE_OPTIONS,
   KANBAN_COLUMN_MOVE_OPTIONS,
-  type KanbanTaskPriority,
 } from './constants'
 import { KanbanAssigneeChip } from './KanbanAssigneeChip'
 import { KanbanClientChip } from './KanbanClientChip'
@@ -60,37 +60,62 @@ const CLIENT_OPTIONS = [
 
 interface KanbanCardProps {
   task: KanbanTask
+  lawyers: LegalLawyer[]
   isDragging?: boolean
   onCardClick?: (letterId: string) => void
   onMoveTask?: (taskId: string, columnId: KanbanColumnId) => void
+  onTaskUpdate?: (taskId: string, patch: LegalKanbanTaskPatch) => void
   onDragStart?: (event: DragEvent, task: KanbanTask) => void
   onDragEnd?: () => void
 }
 
+function extractAssigneeName(displayName: string): string {
+  const parts = displayName.trim().split(/\s+/)
+  return parts[parts.length - 1] ?? displayName
+}
+
 export function KanbanCard({
   task,
+  lawyers,
   isDragging = false,
   onCardClick,
   onMoveTask,
+  onTaskUpdate,
   onDragStart,
   onDragEnd,
 }: KanbanCardProps) {
   const { t } = useTranslation('common')
   const isOverdue = task.columnId === 'overdue'
   const isCompleted = task.columnId === 'completed'
-  const [assigneeInitials, setAssigneeInitials] = useState(task.assigneeInitials)
-  const [assigneeName, setAssigneeName] = useState(task.assigneeName)
   const [taskType, setTaskType] = useState<KanbanTaskType>(task.type)
-  const [priority, setPriority] = useState<KanbanTaskPriority>(task.priority)
-  const [deadline, setDeadline] = useState<Date | null>(parseDeadline(task.deadline))
   const [clientCode, setClientCode] = useState<string | null>(task.clientCode ?? null)
   const [clientName, setClientName] = useState<string | null>(task.clientName ?? null)
+
+  const deadline = parseDeadline(task.deadline)
+  const priority = task.priority
+  const assigneeInitials = task.assigneeInitials
+  const assigneeName = task.assigneeName
+
+  const assigneeOptions =
+    lawyers.length > 0
+      ? lawyers.map((lawyer) => ({
+          userId: lawyer.user_id,
+          initials: lawyer.initials,
+          name: extractAssigneeName(lawyer.display_name),
+          label: lawyer.display_name,
+        }))
+      : ASSIGNEE_OPTIONS.map((option) => ({
+          userId: null as number | null,
+          initials: option.initials,
+          name: option.assigneeName,
+          label: t(option.nameKey, option.fallback),
+        }))
 
   const priorityConfig = CREATE_TASK_PRIORITIES.find((item) => item.id === priority)
 
   const getAssigneeLabel = (initials: string, fallbackName: string) => {
-    const option = ASSIGNEE_OPTIONS.find((item) => item.initials === initials)
-    return option ? t(option.nameKey, option.fallback) : fallbackName
+    const option = assigneeOptions.find((item) => item.initials === initials)
+    return option?.label ?? fallbackName
   }
 
   const isClickable = task.letterId && !isCompleted
@@ -361,7 +386,7 @@ export function KanbanCard({
                         )}
                         onClick={(e) => {
                           e.stopPropagation()
-                          setPriority(opt.id)
+                          onTaskUpdate?.(task.id, { priority: opt.id })
                         }}
                       >
                         <KanbanPriorityOption priority={opt.id} />
@@ -383,17 +408,18 @@ export function KanbanCard({
                     </span>
                   </DropdownMenuSubTrigger>
                   <DropdownMenuSubContent className="min-w-[170px] p-1.5">
-                    {ASSIGNEE_OPTIONS.map((opt) => (
+                    {assigneeOptions.map((opt) => (
                       <DropdownMenuItem
-                        key={opt.initials}
+                        key={`${opt.initials}-${opt.userId ?? opt.name}`}
                         className={cn(
                           'cursor-pointer rounded-md px-2 py-1.5 text-[12px] focus:bg-gray-50',
                           opt.initials === assigneeInitials && 'bg-gray-50'
                         )}
                         onClick={(e) => {
                           e.stopPropagation()
-                          setAssigneeInitials(opt.initials)
-                          setAssigneeName(opt.assigneeName)
+                          if (opt.userId != null) {
+                            onTaskUpdate?.(task.id, { assigneeUserId: opt.userId })
+                          }
                         }}
                       >
                         <span className="flex items-center gap-2">
@@ -405,7 +431,7 @@ export function KanbanCard({
                           >
                             {opt.initials}
                           </span>
-                          <span className="text-dark-500">{t(opt.nameKey, opt.fallback)}</span>
+                          <span className="text-dark-500">{opt.label}</span>
                           {opt.initials === assigneeInitials && (
                             <Icons.Checkmark
                               size={12}
@@ -434,7 +460,9 @@ export function KanbanCard({
                     <DatePicker
                       inline
                       selected={deadline}
-                      onChange={(date: Date | null) => setDeadline(date)}
+                      onChange={(date: Date | null) => {
+                        onTaskUpdate?.(task.id, { deadline: date ? date.toISOString() : null })
+                      }}
                       calendarStartDay={1}
                       showYearDropdown
                       scrollableYearDropdown

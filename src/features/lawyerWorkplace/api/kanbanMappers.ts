@@ -17,9 +17,117 @@ const KNOWN_TYPES = new Set<KanbanTaskType>([
 
 const TASK_PRIORITY_TO_KANBAN: Record<string, KanbanTaskPriority> = {
   urgent: 'highest',
+  critical: 'highest',
   high: 'high',
   normal: 'medium',
   low: 'low',
+}
+
+const KANBAN_PRIORITY_TO_TASK: Record<KanbanTaskPriority, string> = {
+  highest: 'urgent',
+  high: 'high',
+  medium: 'normal',
+  low: 'low',
+  lowest: 'low',
+}
+
+export type LegalKanbanTaskPatch = {
+  columnId?: KanbanColumnId
+  priority?: KanbanTaskPriority
+  assigneeUserId?: number | null
+  deadline?: string | null
+}
+
+export function mapKanbanColumnToTaskStatus(columnId: KanbanColumnId): string {
+  switch (columnId) {
+    case 'completed':
+      return 'completed'
+    case 'in_progress':
+    case 'overdue':
+      return 'in_progress'
+    default:
+      return 'pending'
+  }
+}
+
+function overdueDueDateIso(): string {
+  const date = new Date()
+  date.setDate(date.getDate() - 1)
+  date.setHours(12, 0, 0, 0)
+  return date.toISOString()
+}
+
+export function mapKanbanPatchToTaskUpdate(
+  patch: LegalKanbanTaskPatch,
+  task: KanbanTask
+): Record<string, unknown> {
+  const payload: Record<string, unknown> = {}
+
+  if (patch.priority) {
+    payload.priority = KANBAN_PRIORITY_TO_TASK[patch.priority] ?? 'normal'
+  }
+
+  if (patch.assigneeUserId !== undefined) {
+    payload.assigned_to_user_id = patch.assigneeUserId
+  }
+
+  if (patch.deadline !== undefined) {
+    payload.due_date = patch.deadline
+  }
+
+  if (patch.columnId) {
+    payload.status = mapKanbanColumnToTaskStatus(patch.columnId)
+    if (patch.columnId === 'overdue' && patch.deadline === undefined) {
+      const currentDue = task.deadline ? new Date(task.deadline) : null
+      if (!currentDue || currentDue.getTime() > Date.now()) {
+        payload.due_date = overdueDueDateIso()
+      }
+    }
+  }
+
+  return payload
+}
+
+export function applyKanbanTaskPatch(
+  task: KanbanTask,
+  patch: LegalKanbanTaskPatch,
+  lawyers: LegalLawyer[] = []
+): KanbanTask {
+  let next: KanbanTask = { ...task }
+
+  if (patch.columnId) {
+    const now = new Date().toISOString()
+    next = {
+      ...next,
+      columnId: patch.columnId,
+      closedAt: patch.columnId === 'completed' ? (task.closedAt ?? now) : null,
+    }
+    if (patch.columnId === 'overdue' && patch.deadline === undefined) {
+      const currentDue = task.deadline ? new Date(task.deadline) : null
+      if (!currentDue || currentDue.getTime() > Date.now()) {
+        next.deadline = overdueDueDateIso()
+      }
+    }
+  }
+
+  if (patch.priority) {
+    next.priority = patch.priority
+  }
+
+  if (patch.assigneeUserId !== undefined) {
+    next.assigneeUserId = patch.assigneeUserId
+    const lawyer = lawyers.find((item) => item.user_id === patch.assigneeUserId)
+    if (lawyer) {
+      next.assigneeInitials = lawyer.initials
+      next.assigneeName = extractAssigneeName(lawyer.display_name)
+    }
+  }
+
+  if (patch.deadline !== undefined) {
+    next.deadline = patch.deadline
+  }
+
+  return next
 }
 
 function formatClientCode(clientId: number | null | undefined): string | null {

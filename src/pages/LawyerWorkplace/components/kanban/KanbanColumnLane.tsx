@@ -1,15 +1,17 @@
 import { type DragEvent } from 'react'
-import { useTranslation } from 'react-i18next'
+import type { LegalKanbanTaskPatch, LegalLawyer } from '@/features/lawyerWorkplace'
 import { cn } from '@/lib/utils'
 import type { KanbanColumnDef, KanbanColumnId, KanbanTask } from '../../kanban/kanbanData'
 import { KanbanCard } from './KanbanCard'
 
 interface KanbanColumnLaneProps {
   column: KanbanColumnDef
+  lawyers: LegalLawyer[]
   draggingTaskId: string | null
   isDropTarget: boolean
   onCardClick?: (letterId: string) => void
   onMoveTask: (taskId: string, columnId: KanbanColumnId) => void
+  onTaskUpdate: (taskId: string, patch: LegalKanbanTaskPatch) => void
   onDragStart: (event: DragEvent, task: KanbanTask) => void
   onDragEnd: () => void
   onDragOver: (event: DragEvent) => void
@@ -19,25 +21,25 @@ interface KanbanColumnLaneProps {
 
 export function KanbanColumnLane({
   column,
+  lawyers,
   draggingTaskId,
   isDropTarget,
   onCardClick,
   onMoveTask,
+  onTaskUpdate,
   onDragStart,
   onDragEnd,
   onDragOver,
   onDragLeave,
   onDrop,
 }: KanbanColumnLaneProps) {
-  const { t } = useTranslation('common')
-
   return (
     <div
       onDragOver={onDragOver}
       onDragLeave={onDragLeave}
       onDrop={onDrop}
       className={cn(
-        'flex h-full flex-col rounded-b-lg bg-gray-50/70 p-2 pb-4 transition-colors',
+        'flex min-h-0 flex-1 flex-col rounded-b-lg bg-gray-50/70 p-2 pb-4 transition-colors',
         isDropTarget && 'bg-primary-50/40 ring-primary-400 ring-2 ring-inset'
       )}
     >
@@ -46,20 +48,17 @@ export function KanbanColumnLane({
           <KanbanCard
             key={task.id}
             task={task}
+            lawyers={lawyers}
             isDragging={draggingTaskId === task.id}
             onCardClick={onCardClick}
             onMoveTask={onMoveTask}
+            onTaskUpdate={onTaskUpdate}
             onDragStart={onDragStart}
             onDragEnd={onDragEnd}
           />
         ))}
-        {column.tasks.length === 0 && (
-          <p className="py-8 text-center text-[12px] text-gray-400">
-            {t('pages.lawyerWorkplace.kanban.emptyColumn', 'No tasks')}
-          </p>
-        )}
       </div>
-      <div className="min-h-24 flex-1" aria-hidden="true" />
+      <div className="flex-1" aria-hidden="true" />
     </div>
   )
 }

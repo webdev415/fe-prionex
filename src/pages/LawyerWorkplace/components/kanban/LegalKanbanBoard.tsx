@@ -1,12 +1,19 @@
 import { useCallback, useMemo, useRef, useState, type DragEvent } from 'react'
 import { useTranslation } from 'react-i18next'
-import { matchesDeadlineFilter, useLegalKanban, useLegalLawyers } from '@/features/lawyerWorkplace'
+import {
+  applyKanbanTaskPatch,
+  mapKanbanPatchToTaskUpdate,
+  matchesDeadlineFilter,
+  useLegalKanban,
+  useLegalLawyers,
+  useUpdateLegalKanbanTask,
+  type LegalKanbanTaskPatch,
+} from '@/features/lawyerWorkplace'
 import { cn } from '@/lib/utils'
 import { useLawyerWorkplaceLayout } from '../../context/lawyerWorkplaceLayout'
 import {
   buildKanbanColumns,
   KANBAN_DRAG_MIME,
-  moveKanbanTask,
   type KanbanColumnId,
   type KanbanDragPayload,
   type KanbanTask,
@@ -56,6 +63,7 @@ export function LegalKanbanBoard() {
     assignedToUserId:
       assignedToUserId != null && Number.isFinite(assignedToUserId) ? assignedToUserId : undefined,
   })
+  const updateTaskMutation = useUpdateLegalKanbanTask()
 
   const lawyerFilterOptions = useMemo<LawyerFilterOption[]>(() => {
     const dynamicOptions =
@@ -102,14 +110,46 @@ export function LegalKanbanBoard() {
     [baseTasks]
   )
 
+  const lawyers = useMemo(() => lawyersData?.items ?? [], [lawyersData?.items])
+
+  const persistTaskPatch = useCallback(
+    (taskId: string, patch: LegalKanbanTaskPatch) => {
+      const source = localOverrides ?? apiTasks
+      const task = source.find((item) => item.id === taskId)
+      if (!task) return
+
+      setLocalOverrides(
+        source.map((item) =>
+          item.id === taskId ? applyKanbanTaskPatch(item, patch, lawyers) : item
+        )
+      )
+
+      const payload = mapKanbanPatchToTaskUpdate(patch, task)
+      if (Object.keys(payload).length === 0) return
+
+      updateTaskMutation.mutate(
+        { taskId: task.taskId, payload },
+        {
+          onSuccess: () => setLocalOverrides(null),
+          onError: () => setLocalOverrides(null),
+        }
+      )
+    },
+    [apiTasks, lawyers, localOverrides, updateTaskMutation]
+  )
+
   const handleMoveTask = useCallback(
     (taskId: string, toColumnId: KanbanColumnId) => {
-      setLocalOverrides((prev) => {
-        const source = prev ?? apiTasks
-        return moveKanbanTask(source, taskId, toColumnId)
-      })
+      persistTaskPatch(taskId, { columnId: toColumnId })
     },
-    [apiTasks]
+    [persistTaskPatch]
+  )
+
+  const handleTaskUpdate = useCallback(
+    (taskId: string, patch: LegalKanbanTaskPatch) => {
+      persistTaskPatch(taskId, patch)
+    },
+    [persistTaskPatch]
   )
 
   const handleDragStart = useCallback((event: DragEvent, task: KanbanTask) => {
@@ -167,7 +207,7 @@ export function LegalKanbanBoard() {
   )
 
   return (
-    <div className="flex h-full min-h-0 w-full min-w-0 flex-col">
+    <div className="flex h-full min-h-0 w-full min-w-0 flex-1 flex-col">
       <KanbanBoardToolbar
         totalActive={totalActive}
         deadlineFilter={deadlineFilter}
@@ -210,7 +250,7 @@ export function LegalKanbanBoard() {
 
       <div
         className={cn(
-          'lawyer-workplace-scroll min-h-0 flex-1 overflow-y-auto',
+          'lawyer-workplace-scroll flex min-h-0 flex-1 flex-col overflow-y-auto',
           (isLoading || isError) && 'hidden',
           isKanbanGrid
             ? showWorkspaceBanner
@@ -225,7 +265,7 @@ export function LegalKanbanBoard() {
           id={KANBAN_SCROLL_CONTAINER_ID}
           ref={scrollContainerRef}
           className={cn(
-            'overscroll-x-contain',
+            'flex min-h-full flex-1 flex-col overscroll-x-contain',
             isKanbanGrid
               ? 'overflow-x-visible'
               : cn(
@@ -236,17 +276,17 @@ export function LegalKanbanBoard() {
         >
           <div
             className={cn(
-              'pb-6',
+              'flex min-h-full flex-1 pb-6',
               isKanbanGrid
-                ? 'grid w-full grid-cols-4 gap-3 px-4 sm:px-5 lg:px-7'
-                : 'flex w-max snap-x snap-mandatory gap-3 lg:gap-4'
+                ? 'grid w-full grid-cols-4 grid-rows-1 gap-3 px-4 sm:px-5 lg:px-7'
+                : 'flex min-h-full w-max snap-x snap-mandatory items-stretch gap-3 lg:gap-4'
             )}
           >
             {filteredColumns.map((col) => (
               <div
                 key={col.id}
                 className={cn(
-                  'flex flex-col',
+                  'flex h-full min-h-0 flex-col',
                   isKanbanGrid
                     ? 'min-w-0 shrink'
                     : cn('shrink-0 snap-start', KANBAN_SCROLL_COLUMN_WIDTH_CLASS)
@@ -257,6 +297,7 @@ export function LegalKanbanBoard() {
                 </div>
                 <KanbanColumnLane
                   column={col}
+                  lawyers={lawyers}
                   draggingTaskId={draggingTaskId}
                   isDropTarget={dragOverColumn === col.id}
                   onCardClick={setThreadLetterId}
@@ -266,6 +307,7 @@ export function LegalKanbanBoard() {
                   onDragLeave={() => handleDragLeave(col.id)}
                   onDrop={(event) => handleDrop(event, col.id)}
                   onMoveTask={handleMoveTask}
+                  onTaskUpdate={handleTaskUpdate}
                 />
               </div>
             ))}

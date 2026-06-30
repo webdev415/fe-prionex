@@ -125,7 +125,9 @@ function LawyerWorkplacePageContent() {
       />
       <div
         className={cn(
-          activeTab !== 'documents' && activeTab !== 'settings' && 'min-h-0 flex-1 overflow-hidden'
+          activeTab !== 'documents' &&
+            activeTab !== 'settings' &&
+            'flex min-h-0 flex-1 flex-col overflow-hidden'
         )}
       >
         {activeTab === 'inbox' && (
@@ -208,7 +210,7 @@ function LawyerWorkplacePageContent() {
         )}
 
         {activeTab === 'kanban' && (
-          <div className="relative flex h-full min-h-0 flex-col">
+          <div className="relative flex min-h-0 flex-1 flex-col">
             <LegalKanbanBoard />
             <LawyerWorkspaceBanner />
           </div>

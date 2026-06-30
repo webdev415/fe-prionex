@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
+import { taskApi } from '@/features/clients/api/taskApi'
 import { getErrorMessage } from '@/lib/errors'
 import { legalApi } from '../api/legalApi'
 import type {
@@ -198,6 +199,7 @@ export function useReplyToLegalThread() {
       legalApi.replyToThread(threadId, payload),
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: legalWorkplaceKeys.inbox() })
+      queryClient.invalidateQueries({ queryKey: legalWorkplaceKeys.kanban() })
       queryClient.invalidateQueries({
         queryKey: legalWorkplaceKeys.thread(data.thread_id),
       })
@@ -222,6 +224,7 @@ export function useSendOutgoingLetter() {
     mutationFn: (payload: LegalOutgoingLetterRequest) => legalApi.sendOutgoingLetter(payload),
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: legalWorkplaceKeys.inbox() })
+      queryClient.invalidateQueries({ queryKey: legalWorkplaceKeys.kanban() })
       queryClient.invalidateQueries({
         queryKey: legalWorkplaceKeys.thread(data.thread_id),
       })
@@ -234,6 +237,20 @@ export function useSendOutgoingLetter() {
       } else {
         toast.success('Letter sent')
       }
+    },
+    onError: (error) => toast.error(getErrorMessage(error)),
+  })
+}
+
+export function useUpdateLegalKanbanTask() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ taskId, payload }: { taskId: number; payload: Record<string, unknown> }) =>
+      taskApi.updateTask(taskId, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: legalWorkplaceKeys.kanban() })
+      queryClient.invalidateQueries({ queryKey: ['tasks', 'my-tasks'] })
     },
     onError: (error) => toast.error(getErrorMessage(error)),
   })

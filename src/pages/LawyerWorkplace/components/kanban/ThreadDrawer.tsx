@@ -1,9 +1,8 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useLegalLetterDetail } from '@/features/lawyerWorkplace'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
-import { getLetterDetail } from '../../mockData'
-import type { LetterDetail } from '../../types'
 import { EmailThreadPanel } from '../thread/EmailThreadPanel'
 
 interface ThreadDrawerProps {
@@ -11,23 +10,27 @@ interface ThreadDrawerProps {
   onClose: () => void
 }
 
-function ThreadDrawerContent({ letter }: { letter: LetterDetail }) {
-  const [replyDraft, setReplyDraft] = useState(letter.replyDraft ?? '')
+function ThreadDrawerContent({ letterId }: { letterId: string }) {
+  const [replyDraft, setReplyDraft] = useState('')
+  const { letter, isLoading, isError } = useLegalLetterDetail(letterId, { replyDraft })
 
   return (
-    <EmailThreadPanel letter={letter} replyDraft={replyDraft} onReplyDraftChange={setReplyDraft} />
+    <EmailThreadPanel
+      letter={letter}
+      isLoading={isLoading}
+      isError={isError}
+      replyDraft={replyDraft}
+      onReplyDraftChange={setReplyDraft}
+    />
   )
 }
 
 export function ThreadDrawer({ letterId, onClose }: ThreadDrawerProps) {
   const { t } = useTranslation('common')
-  const letter = useMemo(() => (letterId ? getLetterDetail(letterId) : null), [letterId])
-
   const isOpen = letterId !== null
 
   return (
     <>
-      {/* Backdrop */}
       {isOpen && (
         <button
           type="button"
@@ -37,7 +40,6 @@ export function ThreadDrawer({ letterId, onClose }: ThreadDrawerProps) {
         />
       )}
 
-      {/* Drawer panel */}
       <div
         className={cn(
           'fixed inset-y-0 right-0 z-50 flex w-full flex-col bg-white shadow-2xl transition-transform duration-200 ease-out sm:w-[min(640px,92vw)]',
@@ -45,7 +47,6 @@ export function ThreadDrawer({ letterId, onClose }: ThreadDrawerProps) {
         )}
         aria-hidden={!isOpen}
       >
-        {/* Drawer header */}
         <div className="flex shrink-0 items-center justify-between border-b border-gray-100 bg-white px-4 py-3">
           <span className="text-dark-500 text-[13px] font-medium">
             {t('pages.lawyerWorkplace.kanban.emailThread', 'Email thread')}
@@ -60,20 +61,8 @@ export function ThreadDrawer({ letterId, onClose }: ThreadDrawerProps) {
           </button>
         </div>
 
-        {/* Thread content */}
         <div className="min-h-0 flex-1 overflow-hidden">
-          {isOpen && letter ? (
-            <ThreadDrawerContent key={letter.id} letter={letter} />
-          ) : isOpen && !letter ? (
-            <div className="flex h-full items-center justify-center">
-              <p className="text-sm text-gray-400">
-                {t(
-                  'pages.lawyerWorkplace.thread.selectLetter',
-                  'Select a letter to view the thread'
-                )}
-              </p>
-            </div>
-          ) : null}
+          {isOpen && letterId ? <ThreadDrawerContent key={letterId} letterId={letterId} /> : null}
         </div>
       </div>
     </>
