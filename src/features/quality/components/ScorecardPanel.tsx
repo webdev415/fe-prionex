@@ -27,8 +27,6 @@ import { useTemplates } from '../hooks/useTemplates'
 import { computeWeightedScorePreview } from '../lib/scoringPreview'
 import type { Criterion, Section } from '../types'
 
-// KAN-503: the shared "Script stages" section renders as a reached/not-reached
-// checklist (funnel data, not quality score) with monotonic auto-marking.
 const SCRIPT_STAGES_SECTION_KEY = 'script_stages'
 
 interface ScorecardPanelProps {
@@ -53,21 +51,12 @@ export function ScorecardPanel({
   const templatesQuery = useTemplates(false)
   const historyQuery = useScorecardHistoryForCall(callId)
 
-  // `manuallySelectedId` is what the user clicks (template start, history row).
-  // The effective active id is derived during render from three sources in
-  // priority order: the pinned prop, an explicit user click, then the first
-  // outstanding draft on this call. No effects, no cascading renders.
   const [manuallySelectedId, setManuallySelectedId] = useState<number | null>(null)
   const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(null)
-  // The Client/Third-Party buttons already pick the template, so the raw
-  // template dropdown is collapsed behind a disclosure (legacy/advanced).
   const [showTemplateOverride, setShowTemplateOverride] = useState(false)
-  // Lets the trainer return to the type picker from a draft (KAN-504 UX).
   const [forcePicker, setForcePicker] = useState(false)
-
   const autoDraftId = historyQuery.data?.find((h) => h.status === 'draft')?.id ?? null
   const activeScorecardId = pinnedScorecardId ?? manuallySelectedId ?? autoDraftId ?? null
-
   const activeQuery = useScorecard(activeScorecardId, activeScorecardId != null)
   const createMutation = useCreateScorecard()
   const updateMutation = useUpdateScorecard()
@@ -82,9 +71,6 @@ export function ScorecardPanel({
     return picked?.sections ?? []
   }, [activeScorecard, templatesQuery.data, selectedTemplateId])
 
-  // Sum of scored (weight>0) criteria weights — the denominator for the
-  // per-value point hints, so they stay correct even if a template's weights
-  // don't sum to 100.
   const totalWeight = useMemo(
     () =>
       sections.reduce(
@@ -106,16 +92,10 @@ export function ScorecardPanel({
   const draft = useScorecardDraft({
     scorecardId: activeScorecardId,
     initial: draftState,
-    // KAN-504 UX: no per-change autosave. Selecting a criterion value only
-    // updates local state — persistence happens on explicit "Save draft" /
-    // "Mark completed". This stops the PUT + refetch cascade that fired on
-    // every selection. Closing with unsaved changes warns instead of saving
-    // silently, so we opt out of the on-unmount flush.
     enabled: false,
     flushOnUnmount: false,
   })
 
-  // Surface the unsaved-changes state so the modal can warn before closing.
   useEffect(() => {
     onDirtyChange?.(draft.isDirty)
   }, [draft.isDirty, onDirtyChange])
@@ -125,8 +105,6 @@ export function ScorecardPanel({
     [sections, draft.scores]
   )
 
-  // Completeness: every weight>0 criterion must be scored before completing
-  // (the backend enforces the same — this just keeps the button honest).
   const { requiredCount, scoredCount } = useMemo(() => {
     let req = 0
     let scored = 0
@@ -141,9 +119,6 @@ export function ScorecardPanel({
     return { requiredCount: req, scoredCount: scored }
   }, [sections, draft.scores])
   const isComplete = requiredCount > 0 && scoredCount === requiredCount
-
-  // KAN-504: the two typed templates, surfaced as an explicit Client /
-  // Third Party selector in the picker. Selecting a type loads its template.
   const typedTemplates = useMemo(
     () => ({
       client: templatesQuery.data?.find((tpl) => tpl.scorecard_type === 'client') ?? null,
@@ -152,9 +127,6 @@ export function ScorecardPanel({
     [templatesQuery.data]
   )
 
-  // Edit-lock (KAN-504 decision 1.4): a draft opens editable; Save draft /
-  // Mark completed locks it to read-only; Edit re-opens a draft. Completed
-  // and sent scorecards are locked permanently (no Edit).
   const [locked, setLocked] = useState(false)
   const status = activeScorecard?.status ?? 'draft'
   const canEdit = status === 'draft' && !locked
@@ -206,8 +178,6 @@ export function ScorecardPanel({
   }
 
   // ---- Render branches ----
-
-  // No scorecard yet (or the trainer chose to switch type) → show the picker.
   if (!activeScorecardId || forcePicker) {
     return (
       <aside className="flex h-full flex-col gap-3 rounded-xl bg-white p-4 shadow-sm">
@@ -513,29 +483,14 @@ interface StageChecklistProps {
   onChange: (criterionKey: string, value: number | boolean | null, comment?: string | null) => void
 }
 
-/**
- * Script-stage checklist (KAN-503). Each stage is a reached / not-reached
- * pair with monotonic auto-marking that mirrors real call flow: marking a
- * stage reached marks every earlier stage reached; marking one not-reached
- * marks every later stage not-reached. This keeps the funnel data clean (no
- * non-monotonic records that would otherwise need compute-time closure).
- */
-function StageChecklist({ section, scores, disabled, onChange }: StageChecklistProps) {
+export function StageChecklist({ section, scores, disabled, onChange }: StageChecklistProps) {
   const { t } = useTranslation('common')
   const criteria = section.criteria
 
   const mark = (index: number, reached: boolean) => {
-    if (reached) {
-      // Reaching stage N implies stages 1..N were reached.
-      for (let i = 0; i <= index; i += 1) {
-        if (scores[criteria[i].key]?.value !== true) onChange(criteria[i].key, true)
-      }
-    } else {
-      // Not reaching stage N implies stages N..end were not reached.
-      for (let i = index; i < criteria.length; i += 1) {
-        if (scores[criteria[i].key]?.value !== false) onChange(criteria[i].key, false)
-      }
-    }
+    const current = scores[criteria[index].key]?.value
+    const next = reached ? (current === true ? null : true) : current === false ? null : false
+    onChange(criteria[index].key, next)
   }
 
   return (
@@ -543,7 +498,7 @@ function StageChecklist({ section, scores, disabled, onChange }: StageChecklistP
       <p className="mb-1 text-xs text-gray-500">
         {t(
           'pages.training.scorecard.stages.hint',
-          'Mark which script stages the call reached. Earlier/later stages adjust automatically.'
+          'Mark which script stages the call reached. Each stage is independent.'
         )}
       </p>
       {criteria.map((criterion, index) => {
@@ -605,8 +560,6 @@ interface CriterionRowProps {
 function CriterionRow({ criterion, entry, disabled, totalWeight, onChange }: CriterionRowProps) {
   const { t } = useTranslation('common')
   const isBinary = criterion.scale === 'binary'
-  // A weighted criterion still needing a value blocks "Mark completed" —
-  // highlight it so the trainer can find the gaps.
   const needsScore = !disabled && Number(criterion.weight) > 0 && entry?.value == null
   return (
     <div
@@ -698,10 +651,6 @@ function BinaryInput({
   )
 }
 
-// KAN-504 redesign: the 0-5 scale is presented as 6 labeled levels (the 4
-// from the design + Poor/Good). Values map straight onto the existing 0-5
-// axis, so scoring is unchanged. Per-value points = round(value × weight / 5)
-// (the criterion's contribution to the /100 score; templates sum to 100).
 const LEVEL_6: { value: number; labelKey: string; fallback: string; bar: string }[] = [
   {
     value: 0,
@@ -759,9 +708,6 @@ function Level6Input({
     <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-6">
       {LEVEL_6.map((lvl) => {
         const selected = value === lvl.value
-        // Contribution to the /100 score = (value/5) × (weight / totalWeight) ×
-        // 100 = value×weight×20 / totalWeight. Equals value×weight/5 when the
-        // template's weights sum to 100.
         const points = totalWeight > 0 ? Math.round((lvl.value * weight * 20) / totalWeight) : 0
         return (
           <button

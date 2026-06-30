@@ -2,12 +2,6 @@ import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
 import type { PainPointDto, PainPoints } from '@/features/quality'
 
-/**
- * Pain Points panel (KAN-503) — funnel-derived, NOT from the old auto-flag
- * engines. Three columns: Critical (red bands, with "operators below
- * threshold"), Warning (yellow bands), Stable (green bands).
- */
-
 type Severity = 'critical' | 'warning' | 'stable'
 
 const SEVERITY_STYLE: Record<Severity, { card: string; chip: string; dot: string }> = {

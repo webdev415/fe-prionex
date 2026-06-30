@@ -133,6 +133,7 @@ export async function getStageFunnel(filters: StageFunnelFilters): Promise<Stage
   if (filters.period) params.set('period', filters.period)
   if (filters.from_date) params.set('from_date', filters.from_date)
   if (filters.to_date) params.set('to_date', filters.to_date)
+  if (filters.date_type) params.set('date_type', filters.date_type)
   filters.operator_ids?.forEach((id) => params.append('operator_id', String(id)))
   filters.department_ids?.forEach((id) => params.append('department_ids', String(id)))
   const response = await api.get<StageFunnelResponse>('/api/v1/quality/scorecards/stage-funnel', {

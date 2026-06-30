@@ -4,19 +4,9 @@ import { Icons } from '@/lib/icons'
 import { useAuthStore } from '@/stores/authStore'
 import { useOperators } from '@/features/users/hooks'
 import { useStageFunnel } from '@/features/quality'
-import type { StageFunnelFilters } from '@/features/quality'
+import type { FunnelDateType, StageFunnelFilters } from '@/features/quality'
 import { StageFunnel } from './funnel/StageFunnel'
 import { PainPointsPanel } from './funnel/PainPointsPanel'
-
-/**
- * Script Analytics sub-tab (KAN-503 — Script Stage Funnel).
- *
- * Replaces the prior auto-flag list + result-distribution table with a
- * 6-stage call-script drop-off funnel and a funnel-derived Pain Points panel,
- * fed by quality-service `/scorecards/stage-funnel`. The funnel is built only
- * from trainer-scored calls (a sample), so the evaluated-call count is shown
- * prominently and an explicit empty state covers the "not scored yet" case.
- */
 
 type FunnelPeriod = 'today' | 'yesterday' | '7d' | '30d'
 
@@ -37,6 +27,7 @@ const PERIOD_TO_BACKEND: Record<FunnelPeriod, string> = {
 export function ScriptAnalyticsSubTab() {
   const { t } = useTranslation('common')
   const [period, setPeriod] = useState<FunnelPeriod>('7d')
+  const [dateType, setDateType] = useState<FunnelDateType>('evaluation')
   const [operatorFilter, setOperatorFilter] = useState<'all' | string>('all')
 
   const activeProjectId = useAuthStore((s) => s.user?.active_project_id)
@@ -47,9 +38,10 @@ export function ScriptAnalyticsSubTab() {
     const operatorId = operatorFilter !== 'all' ? Number(operatorFilter) : undefined
     return {
       period: PERIOD_TO_BACKEND[period],
+      date_type: dateType,
       operator_ids: operatorId != null && Number.isFinite(operatorId) ? [operatorId] : undefined,
     }
-  }, [period, operatorFilter])
+  }, [period, dateType, operatorFilter])
 
   const funnelQuery = useStageFunnel(filters, projectIdNum != null)
   const data = funnelQuery.data
@@ -57,7 +49,6 @@ export function ScriptAnalyticsSubTab() {
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Filter strip — period chips + operator dropdown */}
       <div className="flex flex-wrap items-center gap-4 rounded-lg border border-[#EBECE8] bg-white px-4 py-3 shadow-[0px_1px_2px_rgba(0,0,0,0.04)]">
         <span className="text-xs font-medium tracking-[-0.02em] text-[#05040D]">
           {t('pages.training.period.label', 'Period')}:
@@ -87,7 +78,29 @@ export function ScriptAnalyticsSubTab() {
           })}
         </div>
 
-        <div className="relative ml-auto min-w-[180px] flex-1 sm:flex-none">
+        <div className="ml-auto flex items-center gap-2">
+          <span className="text-xs font-medium text-[#05040D]">
+            {t('pages.training.funnel.dateType.label', 'Date type')}:
+          </span>
+          <div className="relative min-w-[150px]">
+            <select
+              value={dateType}
+              onChange={(e) => setDateType(e.target.value as FunnelDateType)}
+              className="h-9 w-full appearance-none rounded-lg border border-[#EBECE8] bg-white px-3 pr-8 text-xs text-[#05040D] focus:outline-none"
+            >
+              <option value="evaluation">
+                {t('pages.training.funnel.dateType.evaluation', 'Evaluation date')}
+              </option>
+              <option value="call">{t('pages.training.funnel.dateType.call', 'Call date')}</option>
+            </select>
+            <Icons.ArrowDown
+              size={12}
+              className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-[#676767]"
+            />
+          </div>
+        </div>
+
+        <div className="relative min-w-[180px] flex-1 sm:flex-none">
           <select
             value={operatorFilter}
             onChange={(e) => setOperatorFilter(e.target.value)}
