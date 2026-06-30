@@ -112,7 +112,17 @@ function LawyerWorkplacePageContent() {
           'h-[calc(100vh-60px)] overflow-hidden'
       )}
     >
-      <NewOutgoingLetterModal open={newLetterOpen} onClose={() => setNewLetterOpen(false)} />
+      <NewOutgoingLetterModal
+        open={newLetterOpen}
+        onClose={() => setNewLetterOpen(false)}
+        onSent={(messageId) => {
+          setSelectedLetterId(messageId)
+          setReplyDraft('')
+          if (isCompact) {
+            setInboxPane('thread')
+          }
+        }}
+      />
       <div
         className={cn(
           activeTab !== 'documents' && activeTab !== 'settings' && 'min-h-0 flex-1 overflow-hidden'

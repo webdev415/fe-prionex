@@ -151,6 +151,27 @@ export interface LegalThreadReplyResponse {
   legal_document_number: string | null
 }
 
+export interface LegalOutgoingLetterRequest {
+  mailbox_id: string
+  to_addresses: string[]
+  cc_addresses?: string[]
+  subject: string
+  body_text?: string | null
+  body_html?: string | null
+  edo_type?: EdoType
+  client_id?: number | null
+  assigned_to_user_id?: number | null
+  contract_number?: string | null
+}
+
+export interface LegalOutgoingLetterResponse {
+  message_id: string
+  thread_id: string
+  internet_message_id: string
+  legal_document_id: string | null
+  legal_document_number: string | null
+}
+
 export interface LegalTrainingExample {
   id: string
   letter_type_id: string

@@ -8,6 +8,7 @@ import type {
   LegalLetterTypeCreate,
   LegalLetterTypePrioritiesUpdate,
   LegalLetterTypeUpdate,
+  LegalOutgoingLetterRequest,
   LegalThreadReplyRequest,
   LegalTrainingExampleCreate,
   LegalTrainingExampleUpdate,
@@ -208,6 +209,30 @@ export function useReplyToLegalThread() {
         toast.success(`EDO registered: ${data.legal_document_number}`)
       } else {
         toast.success('Reply sent')
+      }
+    },
+    onError: (error) => toast.error(getErrorMessage(error)),
+  })
+}
+
+export function useSendOutgoingLetter() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (payload: LegalOutgoingLetterRequest) => legalApi.sendOutgoingLetter(payload),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: legalWorkplaceKeys.inbox() })
+      queryClient.invalidateQueries({
+        queryKey: legalWorkplaceKeys.thread(data.thread_id),
+      })
+      queryClient.invalidateQueries({
+        queryKey: legalWorkplaceKeys.message(data.message_id),
+      })
+      queryClient.invalidateQueries({ queryKey: legalWorkplaceKeys.messages() })
+      if (data.legal_document_number) {
+        toast.success(`EDO registered: ${data.legal_document_number}`)
+      } else {
+        toast.success('Letter sent')
       }
     },
     onError: (error) => toast.error(getErrorMessage(error)),

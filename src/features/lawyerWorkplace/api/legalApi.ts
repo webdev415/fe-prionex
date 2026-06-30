@@ -15,6 +15,8 @@ import type {
   LegalLetterTypePrioritiesUpdate,
   LegalLetterTypeUpdate,
   LegalMessageDetail,
+  LegalOutgoingLetterRequest,
+  LegalOutgoingLetterResponse,
   LegalThreadDetail,
   LegalThreadReplyRequest,
   LegalThreadReplyResponse,
@@ -60,6 +62,12 @@ export const legalApi = {
   replyToThread(threadId: string, payload: LegalThreadReplyRequest) {
     return api
       .post<LegalThreadReplyResponse>(`${BASE_URL}/threads/${threadId}/reply`, payload)
+      .then((response) => response.data)
+  },
+
+  sendOutgoingLetter(payload: LegalOutgoingLetterRequest) {
+    return api
+      .post<LegalOutgoingLetterResponse>(`${BASE_URL}/outgoing`, payload)
       .then((response) => response.data)
   },
 

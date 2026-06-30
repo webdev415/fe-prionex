@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Attachment01Icon } from '@hugeicons/core-free-icons'
 import { useTranslation } from 'react-i18next'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/Button'
 import {
   DropdownMenu,
@@ -12,36 +13,17 @@ import { Label } from '@/components/ui/Label'
 import { Modal, ModalContent, ModalFooter, ModalHeader } from '@/components/ui/Modal'
 import { SearchableSelect } from '@/components/ui/SearchableSelect'
 import { Textarea } from '@/components/ui/Textarea'
+import { useClients } from '@/features/clients/hooks/useClients'
+import { useClientEmails } from '@/features/clients/hooks/useClientEmails'
+import {
+  useLegalMailboxes,
+  useSendOutgoingLetter,
+  type EdoType,
+  type LegalMailbox,
+} from '@/features/lawyerWorkplace'
+import { useAuthStore } from '@/stores/authStore'
 import { Icon, Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
-
-// ─── Mock data ────────────────────────────────────────────────────────────────
-
-const MOCK_MAILBOXES = [
-  'legal@prionex.ua',
-  'court@prionex.ua',
-  'nbu@prionex.ua',
-  'accounting@prionex.ua',
-]
-
-/** Each client has an id, display name, and their known contact email(s). */
-interface ClientOption {
-  id: string
-  name: string
-  emails: string[]
-}
-
-const CLIENT_OPTIONS: ClientOption[] = [
-  { id: 'cl-08114', name: 'CL-08114 · I. Petrenko', emails: ['petrenko.iv@gmail.com'] },
-  { id: 'cl-12409', name: 'CL-12409 · O. Kovalenko', emails: ['o.kovalenko@ukr.net'] },
-  { id: 'cl-06441', name: 'CL-06441 · P. Melnyk', emails: ['p.melnyk@gmail.com'] },
-  { id: 'cl-09908', name: 'CL-09908 · V. Khomenko', emails: ['v.khomenko@meta.ua'] },
-  { id: 'cl-03305', name: 'CL-03305 · M. Bondarenko', emails: ['m.bondarenko@ukr.net'] },
-  { id: 'cl-07750', name: 'CL-07750 · L. Savchenko', emails: ['l.savchenko@meta.ua'] },
-  { id: 'cl-04412', name: 'CL-04412 · T. Romaniuk', emails: ['romaniuk.t@i.ua'] },
-]
-
-type EdoType = 'outgoing' | 'nbu' | 'none'
 
 const EDO_OPTIONS: { id: EdoType; labelKey: string; fallback: string; badge?: string }[] = [
   {
@@ -77,66 +59,130 @@ const TEMPLATES = [
   },
 ]
 
-// ─── Recipient mode ───────────────────────────────────────────────────────────
-
 type RecipientMode = 'client' | 'institution'
 
-interface NewOutgoingLetterModalProps {
-  open: boolean
-  onClose: () => void
+function formatClientOption(client: {
+  id: number
+  first_name: string
+  last_name: string
+  legacy_id?: string | null
+}): { id: string; name: string } {
+  const code = client.legacy_id?.trim() || `CL-${String(client.id).padStart(5, '0')}`
+  const name = [client.first_name, client.last_name].filter(Boolean).join(' ')
+  return { id: String(client.id), name: name ? `${code} · ${name}` : code }
 }
 
-export function NewOutgoingLetterModal({ open, onClose }: NewOutgoingLetterModalProps) {
+function resolveDefaultMailbox(mailboxes: LegalMailbox[]): LegalMailbox | null {
+  return mailboxes.find((mailbox) => mailbox.is_default_outgoing) ?? mailboxes[0] ?? null
+}
+
+interface NewOutgoingLetterFormProps {
+  onClose: () => void
+  onSent?: (messageId: string) => void
+}
+
+function NewOutgoingLetterForm({ onClose, onSent }: NewOutgoingLetterFormProps) {
   const { t } = useTranslation('common')
+  const currentUserId = Number(useAuthStore((state) => state.user?.id))
+  const { data: mailboxesData } = useLegalMailboxes()
+  const { data: clientsData } = useClients({ limit: 200 })
+  const sendMutation = useSendOutgoingLetter()
 
-  const [fromMailbox, setFromMailbox] = useState(MOCK_MAILBOXES[0]!)
+  const mailboxes = useMemo(() => mailboxesData?.items ?? [], [mailboxesData?.items])
+  const defaultMailbox = useMemo(() => resolveDefaultMailbox(mailboxes), [mailboxes])
+
+  const [mailboxOverrideId, setMailboxOverrideId] = useState<string | null>(null)
   const [recipientMode, setRecipientMode] = useState<RecipientMode>('client')
-
-  // Client mode
   const [clientId, setClientId] = useState('')
-  const [toEmail, setToEmail] = useState('')
-
-  // Institution mode
+  const [emailOverride, setEmailOverride] = useState<{ clientId: string; email: string } | null>(
+    null
+  )
   const [institutionEmail, setInstitutionEmail] = useState('')
-
   const [subject, setSubject] = useState('')
   const [body, setBody] = useState('')
   const [edoType, setEdoType] = useState<EdoType>('none')
 
-  // Reset on open
-  useEffect(() => {
-    if (!open) return
-    requestAnimationFrame(() => {
-      setFromMailbox(MOCK_MAILBOXES[0]!)
-      setRecipientMode('client')
-      setClientId('')
-      setToEmail('')
-      setInstitutionEmail('')
-      setSubject('')
-      setBody('')
-      setEdoType('none')
-    })
-  }, [open])
+  const clientIdNumber = Number(clientId)
+  const { data: clientEmailsData } = useClientEmails(
+    Number.isFinite(clientIdNumber) && clientIdNumber > 0 ? clientIdNumber : null,
+    recipientMode === 'client' ? 'client' : null
+  )
 
-  const selectedClient = CLIENT_OPTIONS.find((c) => c.id === clientId) ?? null
+  const clientOptions = useMemo(
+    () => (clientsData?.items ?? []).map(formatClientOption),
+    [clientsData?.items]
+  )
 
-  // When client changes → auto-select first email, reset if cleared
+  const clientEmails = useMemo(
+    () => (clientEmailsData ?? []).map((item) => item.contact_value).filter(Boolean),
+    [clientEmailsData]
+  )
+
+  const selectedMailboxId = mailboxOverrideId ?? defaultMailbox?.id ?? null
+  const selectedMailbox =
+    mailboxes.find((mailbox) => mailbox.id === selectedMailboxId) ?? defaultMailbox
+  const toEmail =
+    emailOverride?.clientId === clientId ? emailOverride.email : (clientEmails[0] ?? '')
+
   const handleClientChange = (id: string) => {
     setClientId(id)
-    const client = CLIENT_OPTIONS.find((c) => c.id === id)
-    setToEmail(client?.emails[0] ?? '')
+    setEmailOverride(null)
   }
 
   const effectiveToEmail = recipientMode === 'client' ? toEmail : institutionEmail
+  const edoAvailable = recipientMode === 'client' && clientId !== ''
+  const effectiveEdoType = edoAvailable ? edoType : 'none'
 
   const canSend =
+    Boolean(selectedMailbox?.id) &&
     effectiveToEmail.trim() !== '' &&
     subject.trim() !== '' &&
     body.trim() !== '' &&
-    (recipientMode === 'institution' || clientId !== '')
+    (recipientMode === 'institution' || clientId !== '') &&
+    !sendMutation.isPending
+
+  const handleSend = () => {
+    if (!canSend || !selectedMailbox) return
+
+    const clientIdForPayload =
+      recipientMode === 'client' && Number.isFinite(clientIdNumber) && clientIdNumber > 0
+        ? clientIdNumber
+        : null
+
+    if (
+      effectiveEdoType !== 'none' &&
+      (clientIdForPayload == null || !Number.isFinite(currentUserId) || currentUserId <= 0)
+    ) {
+      toast.error(
+        t(
+          'pages.lawyerWorkplace.newLetter.edoRequiresClient',
+          'Select a CRM client before registering EDO'
+        )
+      )
+      return
+    }
+
+    sendMutation.mutate(
+      {
+        mailbox_id: selectedMailbox.id,
+        to_addresses: [effectiveToEmail.trim()],
+        subject: subject.trim(),
+        body_text: body.trim(),
+        edo_type: effectiveEdoType,
+        client_id: clientIdForPayload,
+        assigned_to_user_id: effectiveEdoType !== 'none' ? currentUserId : null,
+      },
+      {
+        onSuccess: (data) => {
+          onSent?.(data.message_id)
+          onClose()
+        },
+      }
+    )
+  }
 
   return (
-    <Modal open={open} onClose={onClose} maxWidth="lg">
+    <>
       <ModalHeader
         icon={
           <div className="bg-primary-300 flex h-8 w-8 items-center justify-center rounded-full">
@@ -148,7 +194,6 @@ export function NewOutgoingLetterModal({ open, onClose }: NewOutgoingLetterModal
 
       <ModalContent>
         <div className="flex flex-col gap-4">
-          {/* From mailbox */}
           <div className="flex w-full flex-col gap-2">
             <Label className="text-dark-500 text-[12px] font-normal">
               {t('pages.lawyerWorkplace.newLetter.from', 'From')}
@@ -157,9 +202,10 @@ export function NewOutgoingLetterModal({ open, onClose }: NewOutgoingLetterModal
               <DropdownMenuTrigger asChild>
                 <button
                   type="button"
-                  className="text-dark-500 flex h-9 w-full items-center justify-between rounded-[8px] border border-gray-200 bg-white px-3 text-[13px] font-light outline-none"
+                  disabled={mailboxes.length === 0}
+                  className="text-dark-500 flex h-9 w-full items-center justify-between rounded-[8px] border border-gray-200 bg-white px-3 text-[13px] font-light outline-none disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  <span>{fromMailbox}</span>
+                  <span>{selectedMailbox?.email ?? t('common.loading', 'Loading...')}</span>
                   <Icons.ArrowDown size={14} strokeWidth={1.5} className="shrink-0 text-gray-400" />
                 </button>
               </DropdownMenuTrigger>
@@ -167,23 +213,22 @@ export function NewOutgoingLetterModal({ open, onClose }: NewOutgoingLetterModal
                 align="start"
                 className="w-[var(--radix-dropdown-menu-trigger-width)] p-1.5"
               >
-                {MOCK_MAILBOXES.map((mb) => (
+                {mailboxes.map((mailbox) => (
                   <DropdownMenuItem
-                    key={mb}
+                    key={mailbox.id}
                     className={cn(
                       'cursor-pointer rounded-md px-2.5 py-1.5 text-[13px]',
-                      mb === fromMailbox && 'bg-gray-50 font-medium'
+                      mailbox.id === selectedMailbox?.id && 'bg-gray-50 font-medium'
                     )}
-                    onClick={() => setFromMailbox(mb)}
+                    onClick={() => setMailboxOverrideId(mailbox.id)}
                   >
-                    {mb}
+                    {mailbox.email}
                   </DropdownMenuItem>
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
 
-          {/* Recipient type toggle */}
           <div className="flex w-full flex-col gap-2">
             <Label className="text-dark-500 text-[12px] font-normal">
               {t('pages.lawyerWorkplace.newLetter.recipientType', 'Recipient')}
@@ -209,8 +254,9 @@ export function NewOutgoingLetterModal({ open, onClose }: NewOutgoingLetterModal
                   onClick={() => {
                     setRecipientMode(opt.id)
                     setClientId('')
-                    setToEmail('')
+                    setEmailOverride(null)
                     setInstitutionEmail('')
+                    setEdoType('none')
                   }}
                   className={cn(
                     'rounded-[6px] px-3 py-1.5 text-[12px] font-medium transition-colors',
@@ -225,17 +271,15 @@ export function NewOutgoingLetterModal({ open, onClose }: NewOutgoingLetterModal
             </div>
           </div>
 
-          {/* ── CLIENT MODE ── */}
           {recipientMode === 'client' && (
             <>
-              {/* Client selector */}
               <div className="flex w-full flex-col gap-2">
                 <Label className="text-dark-500 text-[12px] font-normal">
                   {t('pages.lawyerWorkplace.newLetter.client', 'Client')}
                   <span className="text-error-500 ml-1">*</span>
                 </Label>
                 <SearchableSelect
-                  options={CLIENT_OPTIONS}
+                  options={clientOptions}
                   value={clientId}
                   onValueChange={handleClientChange}
                   placeholder={t(
@@ -245,14 +289,13 @@ export function NewOutgoingLetterModal({ open, onClose }: NewOutgoingLetterModal
                 />
               </div>
 
-              {/* To: email dropdown — only shown once a client is selected */}
-              {selectedClient && (
+              {clientId && (
                 <div className="flex w-full flex-col gap-2">
                   <Label className="text-dark-500 text-[12px] font-normal">
                     {t('pages.lawyerWorkplace.newLetter.to', 'To')}
                     <span className="text-error-500 ml-1">*</span>
                   </Label>
-                  {selectedClient.emails.length > 1 ? (
+                  {clientEmails.length > 1 ? (
                     <DropdownMenu modal={false}>
                       <DropdownMenuTrigger asChild>
                         <button
@@ -274,14 +317,14 @@ export function NewOutgoingLetterModal({ open, onClose }: NewOutgoingLetterModal
                         align="start"
                         className="w-[var(--radix-dropdown-menu-trigger-width)] p-1.5"
                       >
-                        {selectedClient.emails.map((email) => (
+                        {clientEmails.map((email) => (
                           <DropdownMenuItem
                             key={email}
                             className={cn(
                               'cursor-pointer rounded-md px-2.5 py-1.5 text-[13px]',
                               email === toEmail && 'bg-gray-50 font-medium'
                             )}
-                            onClick={() => setToEmail(email)}
+                            onClick={() => setEmailOverride({ clientId, email })}
                           >
                             {email}
                           </DropdownMenuItem>
@@ -290,7 +333,8 @@ export function NewOutgoingLetterModal({ open, onClose }: NewOutgoingLetterModal
                     </DropdownMenu>
                   ) : (
                     <div className="text-dark-500 flex h-9 w-full items-center rounded-[8px] border border-gray-100 bg-gray-50 px-3 text-[13px] font-light">
-                      {toEmail}
+                      {toEmail ||
+                        t('pages.lawyerWorkplace.newLetter.noClientEmail', 'No email on file')}
                     </div>
                   )}
                 </div>
@@ -298,7 +342,6 @@ export function NewOutgoingLetterModal({ open, onClose }: NewOutgoingLetterModal
             </>
           )}
 
-          {/* ── INSTITUTION MODE ── */}
           {recipientMode === 'institution' && (
             <div className="flex w-full flex-col gap-2">
               <Label className="text-dark-500 text-[12px] font-normal">
@@ -318,7 +361,6 @@ export function NewOutgoingLetterModal({ open, onClose }: NewOutgoingLetterModal
             </div>
           )}
 
-          {/* Subject */}
           <div className="flex w-full flex-col gap-2">
             <Label className="text-dark-500 text-[12px] font-normal">
               {t('pages.lawyerWorkplace.newLetter.subject', 'Subject')}
@@ -336,7 +378,6 @@ export function NewOutgoingLetterModal({ open, onClose }: NewOutgoingLetterModal
             />
           </div>
 
-          {/* Message */}
           <div className="flex w-full flex-col gap-2">
             <div className="flex items-center justify-between">
               <Label className="text-dark-500 text-[12px] font-normal">
@@ -383,35 +424,39 @@ export function NewOutgoingLetterModal({ open, onClose }: NewOutgoingLetterModal
             />
           </div>
 
-          {/* EDO type */}
           <div className="flex w-full flex-col gap-2">
             <Label className="text-dark-500 text-[12px] font-normal">
               {t('pages.lawyerWorkplace.newLetter.edoType', 'EDO document type')}
             </Label>
             <div className="flex flex-wrap gap-2">
-              {EDO_OPTIONS.map((opt) => (
-                <button
-                  key={opt.id}
-                  type="button"
-                  onClick={() => setEdoType(opt.id)}
-                  className={cn(
-                    'rounded-full border px-3 py-1.5 text-[12px] font-medium transition-colors',
-                    edoType === opt.id
-                      ? 'border-secondary-400 bg-secondary-50 text-secondary-800'
-                      : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50'
-                  )}
-                >
-                  {opt.badge && <span className="mr-1.5 font-bold">{opt.badge}</span>}
-                  {t(opt.labelKey, opt.fallback)}
-                </button>
-              ))}
+              {EDO_OPTIONS.map((opt) => {
+                const disabled = opt.id !== 'none' && !edoAvailable
+                return (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    disabled={disabled}
+                    onClick={() => setEdoType(opt.id)}
+                    className={cn(
+                      'rounded-full border px-3 py-1.5 text-[12px] font-medium transition-colors',
+                      effectiveEdoType === opt.id
+                        ? 'border-secondary-400 bg-secondary-50 text-secondary-800'
+                        : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50',
+                      disabled && 'cursor-not-allowed opacity-50'
+                    )}
+                  >
+                    {opt.badge && <span className="mr-1.5 font-bold">{opt.badge}</span>}
+                    {t(opt.labelKey, opt.fallback)}
+                  </button>
+                )
+              })}
             </div>
           </div>
 
-          {/* Attachment */}
           <button
             type="button"
-            className="text-light-600 flex items-center gap-1.5 text-[12px] hover:text-gray-700"
+            disabled
+            className="text-light-600 flex cursor-not-allowed items-center gap-1.5 text-[12px] opacity-60"
           >
             <Icon icon={Attachment01Icon} size={14} strokeWidth={1.5} />
             {t('pages.lawyerWorkplace.reply.attach', 'Attach')}
@@ -426,14 +471,30 @@ export function NewOutgoingLetterModal({ open, onClose }: NewOutgoingLetterModal
         <Button
           type="button"
           variant="primary"
-          onClick={onClose}
+          onClick={handleSend}
           disabled={!canSend}
           className="flex-1"
         >
           <Icons.Sent02 size={16} strokeWidth={1.5} />
-          {t('pages.lawyerWorkplace.newLetter.send', 'Send')}
+          {sendMutation.isPending
+            ? t('pages.lawyerWorkplace.newLetter.sending', 'Sending...')
+            : t('pages.lawyerWorkplace.newLetter.send', 'Send')}
         </Button>
       </ModalFooter>
+    </>
+  )
+}
+
+interface NewOutgoingLetterModalProps {
+  open: boolean
+  onClose: () => void
+  onSent?: (messageId: string) => void
+}
+
+export function NewOutgoingLetterModal({ open, onClose, onSent }: NewOutgoingLetterModalProps) {
+  return (
+    <Modal open={open} onClose={onClose} maxWidth="lg">
+      {open ? <NewOutgoingLetterForm onClose={onClose} onSent={onSent} /> : null}
     </Modal>
   )
 }
