@@ -164,18 +164,37 @@ export function useMappedLegalInbox(options: {
   }, [folderItems, lookupContext, options.activeFilter])
 
   const unprocessedCount = useMemo(() => {
-    const source = options.activeFolder === 'inbox' ? folderItems : (counterQuery.data?.items ?? [])
-    const inboxItems =
-      options.activeFolder === 'inbox' ? source : filterInboxByFolder(source, 'inbox')
+    if (options.activeFolder === 'inbox' && inboxQuery.data) {
+      return inboxQuery.data.unprocessed_count
+    }
+    const source = counterQuery.data?.items ?? []
+    const inboxItems = filterInboxByFolder(source, 'inbox')
     return inboxItems.filter((item) => item.needs_manual_review).length
-  }, [counterQuery.data?.items, folderItems, options.activeFolder])
+  }, [counterQuery.data?.items, inboxQuery.data, options.activeFolder])
+
+  const connectedMailboxes = inboxQuery.data?.connected_mailboxes ?? 0
 
   return {
     letters,
     unprocessedCount,
+    connectedMailboxes,
     totalInFolder: folderItems.length,
-    isLoading: inboxQuery.isLoading || letterTypesQuery.isLoading,
-    isError: inboxQuery.isError || letterTypesQuery.isError,
+    isLoading: inboxQuery.isLoading,
+    isError: inboxQuery.isError,
     refetch: inboxQuery.refetch,
+  }
+}
+
+export function useLegalInboxSummary(options?: { enabled?: boolean }) {
+  const inboxQuery = useLegalInbox(
+    { page: 1, page_size: 1 },
+    { enabled: options?.enabled !== false }
+  )
+
+  return {
+    unprocessedCount: inboxQuery.data?.unprocessed_count ?? 0,
+    connectedMailboxes: inboxQuery.data?.connected_mailboxes ?? 0,
+    isLoading: inboxQuery.isLoading,
+    isError: inboxQuery.isError,
   }
 }

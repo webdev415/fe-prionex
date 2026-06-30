@@ -35,9 +35,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { searchClients, mapPriorityLevel, type SearchType } from '@/api/clientSearchApi'
 import { RouteChangeTracker, TrackingProvider } from '@/features/operatorAnalytics'
 import { LawyerWorkplaceHeaderNav } from '@/pages/LawyerWorkplace/components/LawyerWorkplaceHeaderNav'
-import { MOCK_LETTERS } from '@/pages/LawyerWorkplace/mockData'
-
-const LAWYER_WORKPLACE_UNPROCESSED = MOCK_LETTERS.filter((l) => l.isUnprocessed).length
+import { useLegalInboxSummary } from '@/features/lawyerWorkplace'
 
 // Minimum digit count required to fire a phone-type search. Mirrors the
 // backend guard at services/client/app/routers/search.py (PHONE_MIN_DIGITS).
@@ -669,6 +667,19 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
   const user = useAuthStore((state) => state.user)
 
+  const canViewLegalWorkplace = useMemo(
+    () =>
+      Boolean(
+        user?.permissions?.includes(PERMISSIONS.LEGAL_WORKPLACE.VIEW) ||
+        user?.permissions?.includes(PERMISSIONS.SYSTEM.MANAGE_SETTINGS)
+      ),
+    [user?.permissions]
+  )
+
+  const { unprocessedCount: legalUnprocessedCount } = useLegalInboxSummary({
+    enabled: canViewLegalWorkplace,
+  })
+
   // useMemo prevents unnecessary re-filtering on every render
   // Only recalculates when user permissions change
   const navItemsResult = useMemo(() => {
@@ -747,7 +758,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         label: t('navigation.lawyerWorkplace', 'Lawyer Workplace'),
         requiredPermissions: [PERMISSIONS.LEGAL_WORKPLACE.VIEW, PERMISSIONS.SYSTEM.MANAGE_SETTINGS],
         mode: 'any' as const,
-        badge: LAWYER_WORKPLACE_UNPROCESSED > 0 ? LAWYER_WORKPLACE_UNPROCESSED : undefined,
+        badge: legalUnprocessedCount > 0 ? legalUnprocessedCount : undefined,
       },
       {
         path: '/dashboard/team-management',
@@ -924,7 +935,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     return { navItems: regularItems, bottomNavItems: bottomItems }
     // i18n.language is needed to recalculate navigation items when language changes
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.permissions, t, i18n.language])
+  }, [user?.permissions, t, i18n.language, legalUnprocessedCount])
 
   const { navItems, bottomNavItems } = navItemsResult
   const { toggleSidebar } = useSidebarStore()

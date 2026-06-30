@@ -55,6 +55,7 @@ function LawyerWorkplacePageContent() {
   const {
     letters: filteredLetters,
     unprocessedCount,
+    connectedMailboxes,
     isLoading: inboxLoading,
     isError: inboxError,
   } = useMappedLegalInbox({
@@ -225,8 +226,8 @@ function LawyerWorkplacePageContent() {
             <span className="hidden text-gray-300 sm:inline">|</span>
             <span className="min-w-0 truncate">
               {t('pages.lawyerWorkplace.footer.mailboxesCount', {
-                count: 6,
-                defaultValue: '6 mailboxes connected',
+                count: connectedMailboxes,
+                defaultValue: '{{count}} mailboxes connected',
               })}
             </span>
           </div>

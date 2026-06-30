@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router-dom'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
+import { useLegalInboxSummary } from '@/features/lawyerWorkplace'
 import type { LawyerWorkplaceTab } from '../types'
 
 interface TabConfig {
@@ -16,30 +17,24 @@ interface TabConfig {
 
 const WORKPLACE_TABS: LawyerWorkplaceTab[] = ['inbox', 'kanban', 'documents', 'settings']
 
-const TABS: TabConfig[] = [
+const TAB_BASE: Omit<TabConfig, 'badge' | 'badgeVariant'>[] = [
   {
     id: 'inbox',
     labelKey: 'pages.lawyerWorkplace.tabs.inbox',
     fallback: 'Inbox',
     icon: (props) => <Icons.InboxIcon {...props} />,
-    badge: 3,
-    badgeVariant: 'new',
   },
   {
     id: 'kanban',
     labelKey: 'pages.lawyerWorkplace.tabs.kanban',
     fallback: 'Kanban',
     icon: (props) => <Icons.Users {...props} />,
-    badge: 18,
-    badgeVariant: 'count',
   },
   {
     id: 'documents',
     labelKey: 'pages.lawyerWorkplace.tabs.documents',
     fallback: 'Documents',
     icon: (props) => <Icons.Files02Icon {...props} />,
-    badge: 412,
-    badgeVariant: 'count',
   },
   {
     id: 'settings',
@@ -60,6 +55,18 @@ function isWorkplaceTab(value: string | null): value is LawyerWorkplaceTab {
 export function LawyerWorkplaceHeaderNav() {
   const { t } = useTranslation('common')
   const [searchParams, setSearchParams] = useSearchParams()
+  const { unprocessedCount } = useLegalInboxSummary()
+
+  const tabs: TabConfig[] = useMemo(
+    () =>
+      TAB_BASE.map((tab) => {
+        if (tab.id === 'inbox' && unprocessedCount > 0) {
+          return { ...tab, badge: unprocessedCount, badgeVariant: 'new' as const }
+        }
+        return tab
+      }),
+    [unprocessedCount]
+  )
 
   const rawTab = searchParams.get('tab')
   const activeTab: LawyerWorkplaceTab = isWorkplaceTab(rawTab) ? rawTab : 'inbox'
@@ -106,7 +113,7 @@ export function LawyerWorkplaceHeaderNav() {
         aria-label={t('pages.lawyerWorkplace.navAria', 'Lawyer Workplace navigation')}
         className="flex h-full min-w-0 flex-1 items-stretch overflow-x-auto overflow-y-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
-        {TABS.map((tab) => {
+        {tabs.map((tab) => {
           const isActive = activeTab === tab.id
           const Icon = tab.icon
           const label = t(tab.labelKey, tab.fallback)

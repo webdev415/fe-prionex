@@ -35,6 +35,8 @@ export interface LegalInboxResponse {
   total: number
   page: number
   page_size: number
+  connected_mailboxes: number
+  unprocessed_count: number
 }
 
 export interface LegalInboxParams {
