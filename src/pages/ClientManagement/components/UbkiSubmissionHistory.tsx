@@ -45,13 +45,46 @@ export function UbkiSubmissionHistory({ clientId, loans }: UbkiSubmissionHistory
   const loanNumberById = new Map(loans.map((l) => [l.id, l.loanNumber]))
   const entries = (logs ?? []).filter((entry) => loanNumberById.has(entry.debt_id))
 
+  // Map raw error codes to short, human-friendly labels (operator-facing).
+  const friendlyCode = (code: string): string => {
+    const map: Record<string, string> = {
+      build_error: t('pages.clients.detail.ubki.errors.invalidData', 'Invalid data'),
+      auth_error: t('pages.clients.detail.ubki.errors.auth', 'Login failed'),
+      ubki_error: t('pages.clients.detail.ubki.errors.rejected', 'Rejected by UBKI'),
+      ubki_er: t('pages.clients.detail.ubki.errors.rejected', 'Rejected by UBKI'),
+      ubki_sy: t('pages.clients.detail.ubki.errors.ubkiSystem', 'UBKI system error'),
+      env_mismatch: t('pages.clients.detail.ubki.errors.env', 'Wrong environment'),
+      opted_out: t('pages.clients.detail.ubki.errors.optedOut', 'Client opted out'),
+      not_found: t('pages.clients.detail.ubki.errors.notFound', 'Loan not found'),
+      ubki_service_unreachable: t(
+        'pages.clients.detail.ubki.errors.unreachable',
+        'UBKI service unavailable'
+      ),
+    }
+    if (map[code]) return map[code]
+    if (code.startsWith('http_'))
+      return t('pages.clients.detail.ubki.errors.connection', 'Connection error')
+    return code
+  }
+
+  // Full raw text — shown on hover (title attr) for those who need the detail.
+  const rawResult = (entry: UbkiLogEntry): string => {
+    if (entry.status === 'success') return entry.ubki_request_id ?? '-'
+    return [entry.error_code ?? '', entry.error_message ?? ''].filter(Boolean).join(': ') || '-'
+  }
+
+  // Short, friendly text shown in the cell.
   const renderResult = (entry: UbkiLogEntry) => {
     if (entry.status === 'success') {
-      return entry.ubki_request_id ?? '-'
+      return entry.ubki_request_id
+        ? t('pages.clients.detail.ubki.sentRef', 'Sent · ref {{ref}}', {
+            ref: entry.ubki_request_id,
+          })
+        : t('pages.clients.detail.ubki.sentOk', 'Sent')
     }
-    const code = entry.error_code ?? ''
-    const message = entry.error_message ?? ''
-    if (code && message) return `${code}: ${message}`
+    const code = friendlyCode(entry.error_code ?? '')
+    const message = (entry.error_message ?? '').trim()
+    if (code && message) return `${code} — ${message}`
     return code || message || '-'
   }
 
@@ -130,7 +163,7 @@ export function UbkiSubmissionHistory({ clientId, loans }: UbkiSubmissionHistory
                     </td>
                     <td
                       className="truncate px-3 py-2 text-sm text-[#6B7280]"
-                      title={renderResult(entry)}
+                      title={rawResult(entry)}
                     >
                       {renderResult(entry)}
                     </td>

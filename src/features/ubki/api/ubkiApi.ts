@@ -4,6 +4,7 @@
  */
 
 import api from '@/lib/api'
+import i18n from '@/lib/i18n'
 import type {
   UbkiBulkOptOutRequest,
   UbkiBulkOptOutResponse,
@@ -17,11 +18,19 @@ import type {
 
 const BASE_URL = '/api/v1/ubki'
 
+/** Current profile language (uk/ru/en) → passed as `lang` so UBKI returns its
+ *  messages in the user's language (maps to reqlng/дов.23 server-side). */
+function currentLang(): string {
+  return (i18n.language || 'uk').split('-')[0]
+}
+
 /**
  * Manually submit a single credit/debt to UBKI.
  */
 export async function submitDebtToUbki(debtId: number): Promise<UbkiSubmitResult> {
-  const response = await api.post<UbkiSubmitResult>(`${BASE_URL}/debts/${debtId}/submit`)
+  const response = await api.post<UbkiSubmitResult>(`${BASE_URL}/debts/${debtId}/submit`, null, {
+    params: { lang: currentLang() },
+  })
   return response.data
 }
 
@@ -41,7 +50,9 @@ export async function bulkOptOutUbki(data: UbkiBulkOptOutRequest): Promise<UbkiB
 export async function bulkSubmitToUbki(
   data: UbkiBulkSubmitRequest
 ): Promise<UbkiBulkQueuedResponse> {
-  const response = await api.post<UbkiBulkQueuedResponse>(`${BASE_URL}/submit/bulk`, data)
+  const response = await api.post<UbkiBulkQueuedResponse>(`${BASE_URL}/submit/bulk`, data, {
+    params: { lang: currentLang() },
+  })
   return response.data
 }
 
@@ -54,7 +65,9 @@ export async function bulkSubmitToUbki(
 export async function bulkSubmitByClients(
   data: UbkiBulkSubmitByClientsRequest
 ): Promise<UbkiBulkQueuedResponse> {
-  const response = await api.post<UbkiBulkQueuedResponse>(`${BASE_URL}/submit/by-clients`, data)
+  const response = await api.post<UbkiBulkQueuedResponse>(`${BASE_URL}/submit/by-clients`, data, {
+    params: { lang: currentLang() },
+  })
   return response.data
 }
 

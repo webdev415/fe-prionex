@@ -3307,6 +3307,19 @@
             "optOutSuccess": "{{count}} client(s) opted out of UBKI",
             "optInSuccess": "{{count}} client(s) re-enabled for UBKI",
             "bulkQueued": "Queued {{count}} credit(s) for UBKI — results will appear in the submission history."
+          },
+          "sentRef": "Sent · ref {{ref}}",
+          "sentOk": "Sent",
+          "errors": {
+            "invalidData": "Invalid data",
+            "auth": "Login failed",
+            "rejected": "Rejected by UBKI",
+            "ubkiSystem": "UBKI system error",
+            "env": "Wrong environment",
+            "optedOut": "Client opted out",
+            "notFound": "Loan not found",
+            "unreachable": "UBKI service unavailable",
+            "connection": "Connection error"
           }
         }
       },
