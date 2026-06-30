@@ -7,12 +7,14 @@ import { DoubleButton } from '@/components/ui/DoubleButton'
 
 interface LetterTypeDetailFooterProps {
   isDirty: boolean
+  isSaving?: boolean
   onDiscard: () => void
   onSave: () => void
 }
 
 export function LetterTypeDetailFooter({
   isDirty,
+  isSaving = false,
   onDiscard,
   onSave,
 }: LetterTypeDetailFooterProps) {
@@ -30,7 +32,7 @@ export function LetterTypeDetailFooter({
         variant="cancel"
         size="md"
         onClick={onDiscard}
-        disabled={!isDirty}
+        disabled={!isDirty || isSaving}
         className={cn('h-11 rounded-full', isCompact ? 'w-full' : 'min-w-[170px]')}
       >
         {t('pages.lawyerWorkplace.settings.discardChanges', 'Discard changes')}
@@ -38,12 +40,14 @@ export function LetterTypeDetailFooter({
       <DoubleButton
         size="md"
         onClick={onSave}
-        disabled={!isDirty}
+        disabled={!isDirty || isSaving}
         icon={<Icons.Tick02 size={20} strokeWidth={2} />}
         iconPosition="left"
         className={cn('h-11 rounded-full text-white', isCompact ? 'w-full' : 'min-w-[170px]')}
       >
-        {t('pages.lawyerWorkplace.settings.saveChanges', 'Save Changes')}
+        {isSaving
+          ? t('pages.lawyerWorkplace.settings.saving', 'Saving…')
+          : t('pages.lawyerWorkplace.settings.saveChanges', 'Save Changes')}
       </DoubleButton>
     </div>
   )

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
@@ -10,37 +10,49 @@ import { LetterTypeList } from './LetterTypeList'
 
 interface LetterTypesPanelProps {
   letterTypes: LetterTypeConfig[]
-  onLetterTypesChange: (letterTypes: LetterTypeConfig[]) => void
   selectedId: string
   onSelectedIdChange: (id: string) => void
   onAddType: () => void
+  onSaveLetterType: (draft: LetterTypeConfig, original: LetterTypeConfig) => Promise<void>
+  isSaving?: boolean
 }
 
 interface LetterTypeDetailEditorProps {
   selectedType: LetterTypeConfig
-  letterTypes: LetterTypeConfig[]
-  onLetterTypesChange: (letterTypes: LetterTypeConfig[]) => void
+  onSaveLetterType: (draft: LetterTypeConfig, original: LetterTypeConfig) => Promise<void>
+  isSaving?: boolean
   onBack?: () => void
 }
 
 function LetterTypeDetailEditor({
   selectedType,
-  letterTypes,
-  onLetterTypesChange,
+  onSaveLetterType,
+  isSaving = false,
   onBack,
 }: LetterTypeDetailEditorProps) {
   const { t } = useTranslation('common')
   const [draft, setDraft] = useState(() => cloneLetterType(selectedType))
+  const [isPersisting, setIsPersisting] = useState(false)
+
+  useEffect(() => {
+    setDraft(cloneLetterType(selectedType))
+  }, [selectedType])
 
   const isDirty = useMemo(
     () => JSON.stringify(selectedType) !== JSON.stringify(draft),
     [draft, selectedType]
   )
 
-  const handleSave = () => {
-    if (!isDirty) return
-    onLetterTypesChange(letterTypes.map((type) => (type.id === draft.id ? draft : type)))
-    toast.success(t('pages.lawyerWorkplace.settings.saveSuccess', 'Changes saved'))
+  const handleSave = async () => {
+    if (!isDirty || isPersisting || isSaving) return
+    setIsPersisting(true)
+    try {
+      await onSaveLetterType(draft, selectedType)
+    } catch {
+      toast.error(t('pages.lawyerWorkplace.settings.saveError', 'Could not save changes'))
+    } finally {
+      setIsPersisting(false)
+    }
   }
 
   const handleDiscard = () => {
@@ -54,6 +66,7 @@ function LetterTypeDetailEditor({
       onDraftChange={setDraft}
       onDiscard={handleDiscard}
       onSave={handleSave}
+      isSaving={isPersisting || isSaving}
       onBack={onBack}
     />
   )
@@ -61,10 +74,11 @@ function LetterTypeDetailEditor({
 
 export function LetterTypesPanel({
   letterTypes,
-  onLetterTypesChange,
   selectedId,
   onSelectedIdChange,
   onAddType,
+  onSaveLetterType,
+  isSaving = false,
 }: LetterTypesPanelProps) {
   const { isCompact } = useLawyerWorkplaceLayout()
   const [mobilePane, setMobilePane] = useState<'list' | 'detail'>('list')
@@ -113,8 +127,8 @@ export function LetterTypesPanel({
         <LetterTypeDetailEditor
           key={selectedId}
           selectedType={selectedType}
-          letterTypes={letterTypes}
-          onLetterTypesChange={onLetterTypesChange}
+          onSaveLetterType={onSaveLetterType}
+          isSaving={isSaving}
           onBack={isCompact ? () => setMobilePane('list') : undefined}
         />
       ) : null}

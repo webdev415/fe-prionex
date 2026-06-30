@@ -3,7 +3,6 @@ import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import type { LetterTypeConfig } from '../../../settings/types'
 import type { SettingsLawyer } from '../../../settings/types'
-import { mapLawyerOptionToSettingsLawyer } from '../../../settings/utils/lawyerHelpers'
 import { AddLawyerModal } from './AddLawyerModal'
 import { AutoAssignmentCard } from './AutoAssignmentCard'
 import { LawyersTable } from './LawyersTable'
@@ -11,24 +10,41 @@ import { LawyersTable } from './LawyersTable'
 interface LawyersPanelProps {
   lawyers: SettingsLawyer[]
   letterTypes: LetterTypeConfig[]
-  onLawyersChange: (lawyers: SettingsLawyer[]) => void
+  availableUsers: { id: number; name: string }[]
+  onAddLawyer: (input: {
+    userId: number
+    displayName: string
+    letterTypeIds: string[]
+  }) => Promise<void>
+  onUpdateLawyerMaxInFlight: (lawyerId: string, maxInFlight: number) => Promise<void>
+  isSaving?: boolean
   onAddLetterType: (onCreated?: (typeId: string) => void) => void
 }
 
 export function LawyersPanel({
   lawyers,
   letterTypes,
-  onLawyersChange,
+  availableUsers,
+  onAddLawyer,
+  onUpdateLawyerMaxInFlight,
+  isSaving = false,
   onAddLetterType,
 }: LawyersPanelProps) {
   const { t } = useTranslation('common')
   const [addLawyerOpen, setAddLawyerOpen] = useState(false)
 
-  const handleAddLawyer = (input: { lawyerOptionId: string; letterTypeIds: string[] }) => {
-    const newLawyer = mapLawyerOptionToSettingsLawyer(input.lawyerOptionId, input.letterTypeIds)
-    if (!newLawyer) return
-    onLawyersChange([...lawyers, newLawyer])
-    toast.success(t('pages.lawyerWorkplace.settings.modals.addLawyer.success', 'Lawyer added'))
+  const handleAddLawyer = async (input: {
+    userId: number
+    displayName: string
+    letterTypeIds: string[]
+  }) => {
+    try {
+      await onAddLawyer(input)
+    } catch {
+      toast.error(
+        t('pages.lawyerWorkplace.settings.modals.addLawyer.error', 'Could not add lawyer')
+      )
+    }
   }
 
   return (
@@ -38,7 +54,8 @@ export function LawyersPanel({
         <LawyersTable
           lawyers={lawyers}
           letterTypes={letterTypes}
-          onLawyersChange={onLawyersChange}
+          onUpdateLawyerMaxInFlight={onUpdateLawyerMaxInFlight}
+          isSaving={isSaving}
           onAddLawyer={() => setAddLawyerOpen(true)}
         />
       </div>
@@ -47,8 +64,9 @@ export function LawyersPanel({
         open={addLawyerOpen}
         onClose={() => setAddLawyerOpen(false)}
         letterTypes={letterTypes}
-        existingLawyerIds={lawyers.map((lawyer) => lawyer.id)}
+        availableUsers={availableUsers}
         onAdd={handleAddLawyer}
+        isSubmitting={isSaving}
         onAddLetterType={onAddLetterType}
       />
     </>

@@ -12,6 +12,7 @@ interface LetterTypeDetailPanelProps {
   onDraftChange: (draft: LetterTypeConfig) => void
   onDiscard: () => void
   onSave: () => void
+  isSaving?: boolean
   onBack?: () => void
 }
 
@@ -21,6 +22,7 @@ export function LetterTypeDetailPanel({
   onDraftChange,
   onDiscard,
   onSave,
+  isSaving = false,
   onBack,
 }: LetterTypeDetailPanelProps) {
   return (
@@ -38,7 +40,12 @@ export function LetterTypeDetailPanel({
         <LetterTypeKeywordHintsSection draft={draft} onDraftChange={onDraftChange} />
       </div>
 
-      <LetterTypeDetailFooter isDirty={isDirty} onDiscard={onDiscard} onSave={onSave} />
+      <LetterTypeDetailFooter
+        isDirty={isDirty}
+        isSaving={isSaving}
+        onDiscard={onDiscard}
+        onSave={onSave}
+      />
     </div>
   )
 }

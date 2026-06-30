@@ -17,14 +17,16 @@ const PAGE_SIZE_OPTIONS = [5, 10, 20, 50]
 interface LawyersTableProps {
   lawyers: SettingsLawyer[]
   letterTypes: LetterTypeConfig[]
-  onLawyersChange: (lawyers: SettingsLawyer[]) => void
+  onUpdateLawyerMaxInFlight: (lawyerId: string, maxInFlight: number) => Promise<void>
+  isSaving?: boolean
   onAddLawyer: () => void
 }
 
 export function LawyersTable({
   lawyers,
   letterTypes,
-  onLawyersChange,
+  onUpdateLawyerMaxInFlight,
+  isSaving = false,
   onAddLawyer,
 }: LawyersTableProps) {
   const { t } = useTranslation('common')
@@ -42,14 +44,18 @@ export function LawyersTable({
     return lawyers.slice(start, start + pageSize)
   }, [lawyers, currentPage, pageSize])
 
-  const updateMaxInFlight = (lawyerId: string, delta: number) => {
-    onLawyersChange(
-      lawyers.map((lawyer) =>
-        lawyer.id === lawyerId
-          ? { ...lawyer, maxInFlight: Math.max(1, lawyer.maxInFlight + delta) }
-          : lawyer
+  const updateMaxInFlight = async (lawyerId: string, delta: number) => {
+    const lawyer = lawyers.find((item) => item.id === lawyerId)
+    if (!lawyer || isSaving) return
+    const nextValue = Math.max(1, lawyer.maxInFlight + delta)
+    if (nextValue === lawyer.maxInFlight) return
+    try {
+      await onUpdateLawyerMaxInFlight(lawyerId, nextValue)
+    } catch {
+      toast.error(
+        t('pages.lawyerWorkplace.settings.lawyers.updateError', 'Could not update lawyer workload')
       )
-    )
+    }
   }
 
   return (
@@ -190,7 +196,8 @@ export function LawyersTable({
                       <button
                         type="button"
                         onClick={() => updateMaxInFlight(lawyer.id, -1)}
-                        className="text-light-600 hover:text-dark-500 flex h-8 w-8 items-center justify-center"
+                        disabled={isSaving}
+                        className="text-light-600 hover:text-dark-500 flex h-8 w-8 items-center justify-center disabled:opacity-50"
                         aria-label={t('actions.decrease', 'Decrease')}
                       >
                         <Icons.Remove02 size={14} strokeWidth={1} />
@@ -201,7 +208,8 @@ export function LawyersTable({
                       <button
                         type="button"
                         onClick={() => updateMaxInFlight(lawyer.id, 1)}
-                        className="text-light-600 hover:text-dark-500 flex h-8 w-8 items-center justify-center"
+                        disabled={isSaving}
+                        className="text-light-600 hover:text-dark-500 flex h-8 w-8 items-center justify-center disabled:opacity-50"
                         aria-label={t('actions.increase', 'Increase')}
                       >
                         <Icons.Add size={14} strokeWidth={1} />

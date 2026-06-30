@@ -12,10 +12,16 @@ import { LetterTypeBadge } from '../LetterTypeBadge'
 interface AddLetterTypeModalProps {
   open: boolean
   onClose: () => void
-  onAdd: (input: Pick<LetterTypeConfig, 'nameFallback' | 'colorId'>) => void
+  onAdd: (input: Pick<LetterTypeConfig, 'nameFallback' | 'colorId'>) => Promise<void>
+  isSubmitting?: boolean
 }
 
-export function AddLetterTypeModal({ open, onClose, onAdd }: AddLetterTypeModalProps) {
+export function AddLetterTypeModal({
+  open,
+  onClose,
+  onAdd,
+  isSubmitting = false,
+}: AddLetterTypeModalProps) {
   const { t } = useTranslation('common')
   const [name, setName] = useState('')
   const [colorId, setColorId] = useState(LETTER_TYPE_COLOR_OPTIONS[0]?.id ?? 'teal')
@@ -31,11 +37,11 @@ export function AddLetterTypeModal({ open, onClose, onAdd }: AddLetterTypeModalP
   const previewName =
     name.trim() ||
     t('pages.lawyerWorkplace.settings.letterTypes.previewFallback', 'Customer complaint')
-  const canSubmit = name.trim().length > 0
+  const canSubmit = name.trim().length > 0 && !isSubmitting
 
-  const handleAdd = () => {
+  const handleAdd = async () => {
     if (!canSubmit) return
-    onAdd({ nameFallback: name.trim(), colorId })
+    await onAdd({ nameFallback: name.trim(), colorId })
     onClose()
   }
 
@@ -109,7 +115,13 @@ export function AddLetterTypeModal({ open, onClose, onAdd }: AddLetterTypeModalP
         </div>
       </ModalContent>
       <ModalFooter className="gap-2 px-1 sm:gap-3">
-        <Button variant="cancel" size="md" onClick={onClose} className="flex-1">
+        <Button
+          variant="cancel"
+          size="md"
+          onClick={onClose}
+          className="flex-1"
+          disabled={isSubmitting}
+        >
           {t('actions.cancel', 'Cancel')}
         </Button>
         <Button
@@ -119,7 +131,9 @@ export function AddLetterTypeModal({ open, onClose, onAdd }: AddLetterTypeModalP
           disabled={!canSubmit}
           className={cn('flex-1', !canSubmit && 'opacity-60')}
         >
-          {t('pages.lawyerWorkplace.settings.modals.addType.submit', 'Add')}
+          {isSubmitting
+            ? t('pages.lawyerWorkplace.settings.modals.addType.submitting', 'Adding…')
+            : t('pages.lawyerWorkplace.settings.modals.addType.submit', 'Add')}
         </Button>
       </ModalFooter>
     </Modal>

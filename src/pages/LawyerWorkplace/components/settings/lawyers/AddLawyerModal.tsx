@@ -12,15 +12,15 @@ import { Modal, ModalContent, ModalFooter, ModalHeader } from '@/components/ui/M
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 import type { LetterTypeConfig } from '../../../settings/types'
-import { ADD_LAWYER_OPTIONS } from '../constants'
 import { LetterTypeBadge } from '../LetterTypeBadge'
 
 interface AddLawyerModalProps {
   open: boolean
   onClose: () => void
   letterTypes: LetterTypeConfig[]
-  existingLawyerIds: string[]
-  onAdd: (input: { lawyerOptionId: string; letterTypeIds: string[] }) => void
+  availableUsers: { id: number; name: string }[]
+  onAdd: (input: { userId: number; displayName: string; letterTypeIds: string[] }) => Promise<void>
+  isSubmitting?: boolean
   onAddLetterType: (onCreated?: (typeId: string) => void) => void
 }
 
@@ -28,26 +28,25 @@ export function AddLawyerModal({
   open,
   onClose,
   letterTypes,
-  existingLawyerIds,
+  availableUsers,
   onAdd,
+  isSubmitting = false,
   onAddLetterType,
 }: AddLawyerModalProps) {
   const { t } = useTranslation('common')
-  const [lawyerOptionId, setLawyerOptionId] = useState('')
+  const [userId, setUserId] = useState<number | null>(null)
   const [selectedTypeIds, setSelectedTypeIds] = useState<string[]>([])
   const [typesOpen, setTypesOpen] = useState(false)
 
-  const availableLawyers = useMemo(
-    () => ADD_LAWYER_OPTIONS.filter((option) => !existingLawyerIds.includes(option.id)),
-    [existingLawyerIds]
+  const selectedUser = useMemo(
+    () => availableUsers.find((user) => user.id === userId) ?? null,
+    [availableUsers, userId]
   )
-
-  const selectedLawyer = ADD_LAWYER_OPTIONS.find((option) => option.id === lawyerOptionId)
 
   useEffect(() => {
     if (!open) return
     requestAnimationFrame(() => {
-      setLawyerOptionId('')
+      setUserId(null)
       setSelectedTypeIds([])
       setTypesOpen(false)
     })
@@ -63,12 +62,16 @@ export function AddLawyerModal({
     setSelectedTypeIds((prev) => prev.filter((id) => id !== typeId))
   }
 
-  const canSubmit = Boolean(lawyerOptionId && selectedTypeIds.length > 0)
-  const hasAvailableLawyers = availableLawyers.length > 0
+  const canSubmit = Boolean(userId && selectedTypeIds.length > 0 && !isSubmitting)
+  const hasAvailableUsers = availableUsers.length > 0
 
-  const handleAdd = () => {
-    if (!canSubmit) return
-    onAdd({ lawyerOptionId, letterTypeIds: selectedTypeIds })
+  const handleAdd = async () => {
+    if (!canSubmit || !userId || !selectedUser) return
+    await onAdd({
+      userId,
+      displayName: selectedUser.name,
+      letterTypeIds: selectedTypeIds,
+    })
     onClose()
   }
 
@@ -88,18 +91,18 @@ export function AddLawyerModal({
             {t('pages.lawyerWorkplace.settings.lawyer', 'Lawyer')}
           </Label>
           <DropdownMenu>
-            <DropdownMenuTrigger asChild disabled={!hasAvailableLawyers}>
+            <DropdownMenuTrigger asChild disabled={!hasAvailableUsers || isSubmitting}>
               <button
                 type="button"
-                disabled={!hasAvailableLawyers}
+                disabled={!hasAvailableUsers || isSubmitting}
                 className={cn(
                   'text-dark-500 flex h-11 w-full items-center justify-between rounded-xl border border-gray-200 bg-white px-4 text-[14px] font-light',
-                  !hasAvailableLawyers && 'cursor-not-allowed opacity-60'
+                  (!hasAvailableUsers || isSubmitting) && 'cursor-not-allowed opacity-60'
                 )}
               >
-                <span className={cn(!selectedLawyer && 'text-gray-400')}>
-                  {selectedLawyer
-                    ? t(selectedLawyer.nameKey, selectedLawyer.nameFallback)
+                <span className={cn(!selectedUser && 'text-gray-400')}>
+                  {selectedUser
+                    ? selectedUser.name
                     : t(
                         'pages.lawyerWorkplace.settings.modals.addLawyer.selectLawyer',
                         'Select a Lawyer'
@@ -110,20 +113,20 @@ export function AddLawyerModal({
             </DropdownMenuTrigger>
             <DropdownMenuContent
               align="start"
-              className="w-[var(--radix-dropdown-menu-trigger-width)]"
+              className="max-h-60 w-[var(--radix-dropdown-menu-trigger-width)] overflow-y-auto"
             >
-              {availableLawyers.map((option) => (
+              {availableUsers.map((user) => (
                 <DropdownMenuItem
-                  key={option.id}
+                  key={user.id}
                   className="cursor-pointer"
-                  onClick={() => setLawyerOptionId(option.id)}
+                  onClick={() => setUserId(user.id)}
                 >
-                  {t(option.nameKey, option.nameFallback)}
+                  {user.name}
                 </DropdownMenuItem>
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
-          {!hasAvailableLawyers ? (
+          {!hasAvailableUsers ? (
             <p className="text-light-600 text-[12px]">
               {t('pages.lawyerWorkplace.settings.modals.addLawyer.noLawyers', 'All lawyers added')}
             </p>
@@ -138,10 +141,11 @@ export function AddLawyerModal({
             )}
           </Label>
           <DropdownMenu open={typesOpen} onOpenChange={setTypesOpen}>
-            <DropdownMenuTrigger asChild>
+            <DropdownMenuTrigger asChild disabled={isSubmitting}>
               <button
                 type="button"
-                className="text-dark-500 flex h-11 w-full items-center justify-between rounded-xl border border-gray-200 bg-white px-4 text-[14px] font-light"
+                disabled={isSubmitting}
+                className="text-dark-500 flex h-11 w-full items-center justify-between rounded-xl border border-gray-200 bg-white px-4 text-[14px] font-light disabled:opacity-60"
               >
                 <span className={cn(selectedTypeIds.length === 0 && 'text-gray-400')}>
                   {selectedTypeIds.length > 0
@@ -221,7 +225,13 @@ export function AddLawyerModal({
         </div>
       </ModalContent>
       <ModalFooter className="gap-2 px-1 sm:gap-3">
-        <Button variant="cancel" size="md" onClick={onClose} className="flex-1">
+        <Button
+          variant="cancel"
+          size="md"
+          onClick={onClose}
+          className="flex-1"
+          disabled={isSubmitting}
+        >
           {t('actions.cancel', 'Cancel')}
         </Button>
         <Button
@@ -231,7 +241,9 @@ export function AddLawyerModal({
           disabled={!canSubmit}
           className={cn('flex-1', !canSubmit && 'opacity-60')}
         >
-          {t('pages.lawyerWorkplace.settings.modals.addLawyer.submit', 'Add')}
+          {isSubmitting
+            ? t('pages.lawyerWorkplace.settings.modals.addLawyer.submitting', 'Adding…')
+            : t('pages.lawyerWorkplace.settings.modals.addLawyer.submit', 'Add')}
         </Button>
       </ModalFooter>
     </Modal>
