@@ -11,7 +11,6 @@ import {
   mapSyncSettingsToUi,
   useLegalLawyers,
   useLegalLetterTypes,
-  useLegalMailboxSettingsActions,
   useLegalSettingsActions,
   useLegalSettingsDocumentPresets,
   useLegalSettingsMailboxes,
@@ -20,6 +19,7 @@ import {
   useLegalTemplateSettingsActions,
   useCanManageLegalWorkplaceSettings,
 } from '@/features/lawyerWorkplace'
+import { useLegalMailboxSettingsActions } from '@/features/lawyerWorkplace/hooks/useLegalMailboxSettingsActions'
 import { useOperators } from '@/features/users/hooks/useUsers'
 import { useAuthStore } from '@/stores/authStore'
 import { useLawyerWorkplaceLayout } from '../../context/lawyerWorkplaceLayout'
