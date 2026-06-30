@@ -1,5 +1,5 @@
 import { type DragEvent } from 'react'
-import type { LegalKanbanTaskPatch, LegalLawyer } from '@/features/lawyerWorkplace'
+import type { LegalKanbanTaskPatch, LegalLawyer, LegalLetterType } from '@/features/lawyerWorkplace'
 import { cn } from '@/lib/utils'
 import type { KanbanColumnDef, KanbanColumnId, KanbanTask } from '../../kanban/kanbanData'
 import { KanbanCard } from './KanbanCard'
@@ -7,6 +7,8 @@ import { KanbanCard } from './KanbanCard'
 interface KanbanColumnLaneProps {
   column: KanbanColumnDef
   lawyers: LegalLawyer[]
+  letterTypes: LegalLetterType[]
+  clientOptions: { id: string; name: string; clientId: number }[]
   draggingTaskId: string | null
   isDropTarget: boolean
   onCardClick?: (letterId: string) => void
@@ -22,6 +24,8 @@ interface KanbanColumnLaneProps {
 export function KanbanColumnLane({
   column,
   lawyers,
+  letterTypes,
+  clientOptions,
   draggingTaskId,
   isDropTarget,
   onCardClick,
@@ -49,6 +53,8 @@ export function KanbanColumnLane({
             key={task.id}
             task={task}
             lawyers={lawyers}
+            letterTypes={letterTypes}
+            clientOptions={clientOptions}
             isDragging={draggingTaskId === task.id}
             onCardClick={onCardClick}
             onMoveTask={onMoveTask}

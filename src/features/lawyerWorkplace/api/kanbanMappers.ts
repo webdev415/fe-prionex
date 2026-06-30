@@ -36,6 +36,9 @@ export type LegalKanbanTaskPatch = {
   priority?: KanbanTaskPriority
   assigneeUserId?: number | null
   deadline?: string | null
+  letterTypeId?: string
+  clientId?: number | null
+  clientName?: string | null
 }
 
 export function mapKanbanColumnToTaskStatus(columnId: KanbanColumnId): string {
@@ -125,6 +128,15 @@ export function applyKanbanTaskPatch(
 
   if (patch.deadline !== undefined) {
     next.deadline = patch.deadline
+  }
+
+  if (patch.letterTypeId) {
+    next.type = resolveTaskType(patch.letterTypeId)
+  }
+
+  if (patch.clientId !== undefined) {
+    next.clientCode = formatClientCode(patch.clientId)
+    next.clientName = patch.clientName ?? null
   }
 
   return next

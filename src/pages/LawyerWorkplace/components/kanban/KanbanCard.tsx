@@ -1,8 +1,8 @@
-import { useState, type DragEvent } from 'react'
+import { type DragEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import DatePicker from 'react-datepicker'
 import 'react-datepicker/dist/react-datepicker.css'
-import type { LegalKanbanTaskPatch, LegalLawyer } from '@/features/lawyerWorkplace'
+import type { LegalKanbanTaskPatch, LegalLawyer, LegalLetterType } from '@/features/lawyerWorkplace'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,7 +20,6 @@ import { formatKanbanMonthDay } from '../../utils/formatters'
 import {
   ASSIGNEE_COLOURS,
   CREATE_TASK_PRIORITIES,
-  CREATE_TASK_TYPES,
   KANBAN_ASSIGNEE_OPTIONS,
   KANBAN_COLUMN_MOVE_OPTIONS,
 } from './constants'
@@ -46,21 +45,26 @@ function fmtMonthDay(d: Date): string {
 const ASSIGNEE_OPTIONS = KANBAN_ASSIGNEE_OPTIONS
 const COLUMN_MOVE_OPTIONS = KANBAN_COLUMN_MOVE_OPTIONS
 
-const CLIENT_OPTIONS = [
-  { code: 'CL-08114', name: 'I. Petrenko' },
-  { code: 'CL-12409', name: 'O. Kovalenko' },
-  { code: 'CL-06441', name: 'P. Melnyk' },
-  { code: 'CL-09908', name: 'V. Khomenko' },
-  { code: 'CL-03305', name: 'M. Bondarenko' },
-  { code: 'CL-07750', name: 'L. Savchenko' },
-  { code: 'CL-04412', name: 'T. Romaniuk' },
-  { code: 'CL-05588', name: 'H. Tkachenko' },
-  { code: 'CL-02211', name: 'O. Vasylenko' },
-]
+const KNOWN_KANBAN_TYPES = new Set<KanbanTaskType>([
+  'complaint',
+  'nbu_inquiry',
+  'court_claim',
+  'attorney_request',
+  'inquiry',
+])
+
+function renderLetterTypeOption(letterTypeId: string, name: string) {
+  if (KNOWN_KANBAN_TYPES.has(letterTypeId as KanbanTaskType)) {
+    return <KanbanTypeBadge type={letterTypeId as KanbanTaskType} />
+  }
+  return <span className="text-dark-500 text-[12px]">{name}</span>
+}
 
 interface KanbanCardProps {
   task: KanbanTask
   lawyers: LegalLawyer[]
+  letterTypes: LegalLetterType[]
+  clientOptions: { id: string; name: string; clientId: number }[]
   isDragging?: boolean
   onCardClick?: (letterId: string) => void
   onMoveTask?: (taskId: string, columnId: KanbanColumnId) => void
@@ -77,6 +81,8 @@ function extractAssigneeName(displayName: string): string {
 export function KanbanCard({
   task,
   lawyers,
+  letterTypes,
+  clientOptions,
   isDragging = false,
   onCardClick,
   onMoveTask,
@@ -87,9 +93,9 @@ export function KanbanCard({
   const { t } = useTranslation('common')
   const isOverdue = task.columnId === 'overdue'
   const isCompleted = task.columnId === 'completed'
-  const [taskType, setTaskType] = useState<KanbanTaskType>(task.type)
-  const [clientCode, setClientCode] = useState<string | null>(task.clientCode ?? null)
-  const [clientName, setClientName] = useState<string | null>(task.clientName ?? null)
+  const taskType = task.type
+  const clientCode = task.clientCode ?? null
+  const clientName = task.clientName ?? null
 
   const deadline = parseDeadline(task.deadline)
   const priority = task.priority
@@ -314,33 +320,54 @@ export function KanbanCard({
                       {t('pages.lawyerWorkplace.kanban.setClient', 'Set client')}
                     </span>
                   </DropdownMenuSubTrigger>
-                  <DropdownMenuSubContent className="min-w-[190px] p-1.5">
-                    {CLIENT_OPTIONS.map((opt) => (
+                  <DropdownMenuSubContent className="max-h-60 min-w-[190px] overflow-y-auto p-1.5">
+                    {clientOptions.map((opt) => {
+                      const code =
+                        opt.name.split(' · ')[0]?.trim() ||
+                        `CL-${String(opt.clientId).padStart(5, '0')}`
+                      const displayName = opt.name.includes(' · ')
+                        ? opt.name.split(' · ').slice(1).join(' · ')
+                        : opt.name
+                      return (
+                        <DropdownMenuItem
+                          key={opt.id}
+                          className={cn(
+                            'cursor-pointer rounded-md px-2 py-1.5 text-[12px] focus:bg-gray-50',
+                            clientCode === code && 'bg-gray-50'
+                          )}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            onTaskUpdate?.(task.id, {
+                              clientId: opt.clientId,
+                              clientName: displayName,
+                            })
+                          }}
+                        >
+                          <span className="flex items-center gap-2">
+                            <KanbanClientChip code={code} />
+                            <span className="text-dark-500">{displayName}</span>
+                            {clientCode === code && (
+                              <Icons.Checkmark
+                                size={12}
+                                className="text-primary-600 ml-auto"
+                                strokeWidth={2}
+                              />
+                            )}
+                          </span>
+                        </DropdownMenuItem>
+                      )
+                    })}
+                    {clientCode ? (
                       <DropdownMenuItem
-                        key={opt.code}
-                        className={cn(
-                          'cursor-pointer rounded-md px-2 py-1.5 text-[12px] focus:bg-gray-50',
-                          opt.code === clientCode && 'bg-gray-50'
-                        )}
+                        className="cursor-pointer rounded-md px-2 py-1.5 text-[12px] text-gray-500 focus:bg-gray-50"
                         onClick={(e) => {
                           e.stopPropagation()
-                          setClientCode(opt.code)
-                          setClientName(opt.name)
+                          onTaskUpdate?.(task.id, { clientId: null, clientName: null })
                         }}
                       >
-                        <span className="flex items-center gap-2">
-                          <KanbanClientChip code={opt.code} />
-                          <span className="text-dark-500">{opt.name}</span>
-                          {opt.code === clientCode && (
-                            <Icons.Checkmark
-                              size={12}
-                              className="text-primary-600 ml-auto"
-                              strokeWidth={2}
-                            />
-                          )}
-                        </span>
+                        {t('pages.lawyerWorkplace.kanban.clearClient', 'Clear client')}
                       </DropdownMenuItem>
-                    ))}
+                    ) : null}
                   </DropdownMenuSubContent>
                 </DropdownMenuSub>
 
@@ -352,17 +379,17 @@ export function KanbanCard({
                       {t('pages.lawyerWorkplace.kanban.changeType', 'Change type')}
                     </span>
                   </DropdownMenuSubTrigger>
-                  <DropdownMenuSubContent className="p-1.5">
-                    {CREATE_TASK_TYPES.map((type) => (
+                  <DropdownMenuSubContent className="max-h-60 min-w-[190px] overflow-y-auto p-1.5">
+                    {letterTypes.map((letterType) => (
                       <DropdownMenuItem
-                        key={type}
+                        key={letterType.id}
                         className="cursor-pointer rounded-md px-2 py-1.5 focus:bg-gray-50"
                         onClick={(e) => {
                           e.stopPropagation()
-                          setTaskType(type)
+                          onTaskUpdate?.(task.id, { letterTypeId: letterType.id })
                         }}
                       >
-                        <KanbanTypeBadge type={type} />
+                        {renderLetterTypeOption(letterType.id, letterType.name)}
                       </DropdownMenuItem>
                     ))}
                   </DropdownMenuSubContent>

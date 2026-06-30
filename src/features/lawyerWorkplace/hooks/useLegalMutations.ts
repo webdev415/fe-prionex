@@ -264,6 +264,24 @@ export function useUpdateLegalKanbanTask() {
   })
 }
 
+export function usePatchLegalKanbanTaskMetadata() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({
+      taskId,
+      payload,
+    }: {
+      taskId: number
+      payload: { letter_type_id?: string; client_id?: number | null }
+    }) => legalApi.patchKanbanTask(taskId, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: legalWorkplaceKeys.kanban() })
+    },
+    onError: (error) => toast.error(getErrorMessage(error)),
+  })
+}
+
 export function useCreateLegalKanbanTask() {
   const queryClient = useQueryClient()
 
