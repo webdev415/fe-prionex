@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router-dom'
+import { useCanAccessLegalKanban } from '@/features/lawyerWorkplace/hooks/useLegalPermissions'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 import { useLegalInboxSummary } from '@/features/lawyerWorkplace'
@@ -56,16 +57,17 @@ export function LawyerWorkplaceHeaderNav() {
   const { t } = useTranslation('common')
   const [searchParams, setSearchParams] = useSearchParams()
   const { unprocessedCount } = useLegalInboxSummary()
+  const canAccessKanban = useCanAccessLegalKanban()
 
   const tabs: TabConfig[] = useMemo(
     () =>
-      TAB_BASE.map((tab) => {
+      TAB_BASE.filter((tab) => tab.id !== 'kanban' || canAccessKanban).map((tab) => {
         if (tab.id === 'inbox' && unprocessedCount > 0) {
           return { ...tab, badge: unprocessedCount, badgeVariant: 'new' as const }
         }
         return tab
       }),
-    [unprocessedCount]
+    [canAccessKanban, unprocessedCount]
   )
 
   const rawTab = searchParams.get('tab')

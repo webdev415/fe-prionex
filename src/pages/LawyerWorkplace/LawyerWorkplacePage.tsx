@@ -5,11 +5,12 @@
  * incoming list | email thread | letter parameters panel.
  */
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 import { useLegalLetterDetail, useMappedLegalInbox } from '@/features/lawyerWorkplace'
+import { useCanAccessLegalKanban } from '@/features/lawyerWorkplace/hooks/useLegalPermissions'
 import { IncomingListPanel } from './components/inbox/IncomingListPanel'
 import { EmailThreadPanel } from './components/thread/EmailThreadPanel'
 import { LetterParametersPanel } from './components/parameters/LetterParametersPanel'
@@ -41,9 +42,18 @@ export function LawyerWorkplacePage() {
 function LawyerWorkplacePageContent() {
   const { t } = useTranslation('common')
   const { ref: layoutRef, isCompact, isWide } = useLawyerWorkplaceLayout()
-  const [searchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const canAccessKanban = useCanAccessLegalKanban()
   const rawTab = searchParams.get('tab')
   const activeTab: LawyerWorkplaceTab = isWorkplaceTab(rawTab) ? rawTab : 'inbox'
+
+  useEffect(() => {
+    if (activeTab === 'kanban' && !canAccessKanban) {
+      const next = new URLSearchParams(searchParams)
+      next.set('tab', 'inbox')
+      setSearchParams(next, { replace: true })
+    }
+  }, [activeTab, canAccessKanban, searchParams, setSearchParams])
 
   const [activeFolder, setActiveFolder] = useState<IncomingFolder>('inbox')
   const [activeFilter, setActiveFilter] = useState<IncomingMailboxFilter>('all')
@@ -209,7 +219,7 @@ function LawyerWorkplacePageContent() {
           </div>
         )}
 
-        {activeTab === 'kanban' && (
+        {activeTab === 'kanban' && canAccessKanban && (
           <div className="relative flex min-h-0 flex-1 flex-col">
             <LegalKanbanBoard />
             <LawyerWorkspaceBanner />
