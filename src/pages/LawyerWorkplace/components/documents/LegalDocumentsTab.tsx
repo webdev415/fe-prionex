@@ -1,19 +1,18 @@
-import { useMemo, useState, type ComponentProps } from 'react'
+import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
+import {
+  useGenerateLegalDocument,
+  useLegalDocumentFilterCounts,
+  useLegalDocuments,
+  useLegalDocumentStats,
+  useUploadIncomingLegalDocument,
+} from '@/features/lawyerWorkplace'
+import { useDebounce } from '@/hooks/useDebounce'
 import { cn } from '@/lib/utils'
 import { useLawyerWorkplaceLayout } from '../../context/lawyerWorkplaceLayout'
-import {
-  computeDocumentFilterCounts,
-  computeDocumentStats,
-  createGeneratedDocument,
-  createIncomingDocument,
-  matchesDocumentTypeFilter,
-} from '../../documents/documentHelpers'
-import { MOCK_LEGAL_DOCUMENTS } from '../../documents/documentsData'
-import type { LegalDocumentRow, LegalDocumentTypeFilter } from '../../documents/types'
+import type { LegalDocumentTypeFilter, LegalDocumentRow } from '../../documents/types'
 import { AddIncomingDocumentModal } from './AddIncomingDocumentModal'
-import { documentMatchesSearch } from './constants'
 import { DocumentDetailDrawer } from './DocumentDetailDrawer'
 import { DocumentsStatsBar } from './DocumentsStatsBar'
 import { DocumentsToolbar } from './DocumentsToolbar'
@@ -22,10 +21,18 @@ import { GenerateDocumentModal } from './GenerateDocumentModal'
 
 const DEFAULT_PAGE_SIZE = 20
 
+const EMPTY_FILTER_COUNTS: Record<LegalDocumentTypeFilter, number> = {
+  all: 0,
+  incoming: 0,
+  outgoing: 0,
+  nbu_response: 0,
+  uploaded: 0,
+  generated: 0,
+}
+
 export function LegalDocumentsTab() {
   const { t } = useTranslation('common')
   const { isCompact, showWorkspaceBanner } = useLawyerWorkplaceLayout()
-  const [documents, setDocuments] = useState<LegalDocumentRow[]>(() => [...MOCK_LEGAL_DOCUMENTS])
   const [typeFilter, setTypeFilter] = useState<LegalDocumentTypeFilter>('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [page, setPage] = useState(1)
@@ -34,26 +41,26 @@ export function LegalDocumentsTab() {
   const [addIncomingOpen, setAddIncomingOpen] = useState(false)
   const [selectedDocument, setSelectedDocument] = useState<LegalDocumentRow | null>(null)
 
-  const stats = useMemo(() => computeDocumentStats(documents), [documents])
-  const filterCounts = useMemo(() => computeDocumentFilterCounts(documents), [documents])
+  const debouncedSearch = useDebounce(searchQuery, 300)
 
-  const filteredDocuments = useMemo(() => {
-    return documents
-      .filter((doc) => {
-        if (!matchesDocumentTypeFilter(typeFilter, doc)) return false
-        return documentMatchesSearch(doc, searchQuery, t)
-      })
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-  }, [documents, typeFilter, searchQuery, t])
+  const listParams = useMemo(
+    () => ({
+      page,
+      page_size: pageSize,
+      type_filter: typeFilter,
+      search: debouncedSearch.trim() || undefined,
+    }),
+    [debouncedSearch, page, pageSize, typeFilter]
+  )
 
-  const totalItems = filteredDocuments.length
-  const totalPages = totalItems > 0 ? Math.ceil(totalItems / pageSize) : 0
+  const { documents, total, isLoading, isError, refetch } = useLegalDocuments(listParams)
+  const { data: stats } = useLegalDocumentStats()
+  const { data: filterCounts = EMPTY_FILTER_COUNTS } = useLegalDocumentFilterCounts()
+  const uploadMutation = useUploadIncomingLegalDocument()
+  const generateMutation = useGenerateLegalDocument()
+
+  const totalPages = total > 0 ? Math.ceil(total / pageSize) : 0
   const currentPage = totalPages > 0 ? Math.min(page, totalPages) : 1
-
-  const paginatedDocuments = useMemo(() => {
-    const start = (currentPage - 1) * pageSize
-    return filteredDocuments.slice(start, start + pageSize)
-  }, [filteredDocuments, currentPage, pageSize])
 
   const handleTypeFilterChange = (filter: LegalDocumentTypeFilter) => {
     setTypeFilter(filter)
@@ -70,41 +77,59 @@ export function LegalDocumentsTab() {
     setPage(1)
   }
 
-  const handleGenerateSubmit: ComponentProps<typeof GenerateDocumentModal>['onSubmit'] = (
-    input
-  ) => {
-    const newDocument = createGeneratedDocument(documents, {
-      type: input.type,
-      nameKey: input.template.key,
-      nameFallback: input.template.fallback,
-      clientId: input.clientId,
-      assigneeId: input.assigneeId,
-    })
-
-    setDocuments((prev) => [newDocument, ...prev])
-    setPage(1)
-    toast.success(
-      t('pages.lawyerWorkplace.documents.modals.generate.success', 'Document generated'),
-      { description: newDocument.number }
-    )
+  const handleGenerateSubmit = async (input: {
+    documentType: 'outgoing' | 'nbu_response'
+    title: string
+    clientId: number
+    assignedToUserId: number
+    contractNumber?: string | null
+  }) => {
+    try {
+      const result = await generateMutation.mutateAsync({
+        document_type: input.documentType,
+        title: input.title,
+        client_id: input.clientId,
+        assigned_to_user_id: input.assignedToUserId,
+        contract_number: input.contractNumber,
+      })
+      setPage(1)
+      toast.success(
+        t('pages.lawyerWorkplace.documents.modals.generate.success', 'Document generated'),
+        { description: result.number }
+      )
+    } catch {
+      // mutation toast handles errors
+    }
   }
 
-  const handleIncomingSubmit: ComponentProps<typeof AddIncomingDocumentModal>['onSubmit'] = (
-    input
-  ) => {
-    const newDocument = createIncomingDocument(documents, {
-      nameFallback: input.nameFallback,
-      clientId: input.clientId,
-      assigneeId: input.assigneeId,
-      relatedLetterNumber: input.relatedLetterNumber,
-    })
-
-    setDocuments((prev) => [newDocument, ...prev])
-    setPage(1)
-    toast.success(
-      t('pages.lawyerWorkplace.documents.modals.incoming.success', 'Incoming document registered'),
-      { description: newDocument.number }
-    )
+  const handleIncomingSubmit = async (input: {
+    title: string
+    clientId: number
+    assignedToUserId: number
+    relatedLetterNumber?: string
+    file: File
+    contractNumber?: string | null
+  }) => {
+    try {
+      const result = await uploadMutation.mutateAsync({
+        file: input.file,
+        title: input.title,
+        client_id: input.clientId,
+        assigned_to_user_id: input.assignedToUserId,
+        contract_number: input.contractNumber,
+        related_letter_number: input.relatedLetterNumber,
+      })
+      setPage(1)
+      toast.success(
+        t(
+          'pages.lawyerWorkplace.documents.modals.incoming.success',
+          'Incoming document registered'
+        ),
+        { description: result.number }
+      )
+    } catch {
+      // mutation toast handles errors
+    }
   }
 
   return (
@@ -116,7 +141,19 @@ export function LegalDocumentsTab() {
           isCompact && !showWorkspaceBanner && 'pb-8'
         )}
       >
-        <DocumentsStatsBar stats={stats} />
+        <DocumentsStatsBar
+          stats={
+            stats ?? {
+              incomingCount: 0,
+              incomingYearTotal: new Date().getFullYear(),
+              outgoingCount: 0,
+              outgoingYearTotal: new Date().getFullYear(),
+              nbuCount: 0,
+              nbuYearTotal: new Date().getFullYear(),
+              generatedPercent: 0,
+            }
+          }
+        />
         <DocumentsToolbar
           typeFilter={typeFilter}
           onTypeFilterChange={handleTypeFilterChange}
@@ -126,26 +163,52 @@ export function LegalDocumentsTab() {
           onGenerateDocument={() => setGenerateOpen(true)}
           onAddIncoming={() => setAddIncomingOpen(true)}
         />
-        <DocumentsTable
-          documents={paginatedDocuments}
-          currentPage={currentPage}
-          totalPages={totalPages}
-          pageSize={pageSize}
-          onPageChange={setPage}
-          onPageSizeChange={handlePageSizeChange}
-          onDocumentClick={setSelectedDocument}
-        />
+
+        {isLoading && (
+          <p className="text-light-600 px-4 py-10 text-center text-sm sm:px-5 lg:px-7">
+            {t('pages.lawyerWorkplace.documents.loading', 'Loading documents…')}
+          </p>
+        )}
+
+        {isError && !isLoading && (
+          <div className="px-4 py-10 text-center sm:px-5 lg:px-7">
+            <p className="text-error-600 text-sm">
+              {t('pages.lawyerWorkplace.documents.loadError', 'Could not load documents')}
+            </p>
+            <button
+              type="button"
+              onClick={() => refetch()}
+              className="text-secondary-800 mt-2 text-sm font-medium underline"
+            >
+              {t('actions.retry', 'Retry')}
+            </button>
+          </div>
+        )}
+
+        {!isLoading && !isError && (
+          <DocumentsTable
+            documents={documents}
+            currentPage={currentPage}
+            totalPages={totalPages}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={handlePageSizeChange}
+            onDocumentClick={setSelectedDocument}
+          />
+        )}
       </div>
 
       <GenerateDocumentModal
         open={generateOpen}
         onClose={() => setGenerateOpen(false)}
         onSubmit={handleGenerateSubmit}
+        isSubmitting={generateMutation.isPending}
       />
       <AddIncomingDocumentModal
         open={addIncomingOpen}
         onClose={() => setAddIncomingOpen(false)}
         onSubmit={handleIncomingSubmit}
+        isSubmitting={uploadMutation.isPending}
       />
       <DocumentDetailDrawer document={selectedDocument} onClose={() => setSelectedDocument(null)} />
     </>

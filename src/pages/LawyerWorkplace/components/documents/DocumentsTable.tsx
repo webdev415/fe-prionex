@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils'
 import { useLawyerWorkplaceLayout } from '../../context/lawyerWorkplaceLayout'
 import { formatDocumentDateLines } from '../../utils/formatters'
 import type { LegalDocumentRow } from '../../documents/types'
-import { getDocumentAssigneeLabel, getDocumentDisplayName } from './constants'
+import { getDocumentDisplayName } from './constants'
 import { DocumentTypeBadge } from './DocumentTypeBadge'
 
 interface DocumentsTableProps {
@@ -78,9 +78,7 @@ export function DocumentsTable({
         key: 'assignee',
         header: t('pages.lawyerWorkplace.documents.columns.assignee', 'Assignee'),
         render: (row) => (
-          <span className="text-dark-500 text-[13px]">
-            {getDocumentAssigneeLabel(row.assigneeId, t)}
-          </span>
+          <span className="text-dark-500 text-[13px]">{row.assigneeName || '—'}</span>
         ),
       },
       {

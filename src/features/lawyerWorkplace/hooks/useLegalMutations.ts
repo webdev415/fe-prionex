@@ -9,6 +9,7 @@ import type {
   LegalLetterTypeCreate,
   LegalLetterTypePrioritiesUpdate,
   LegalLetterTypeUpdate,
+  LegalGenerateDocumentRequest,
   LegalOutgoingLetterRequest,
   LegalThreadReplyRequest,
   LegalTrainingExampleCreate,
@@ -252,6 +253,37 @@ export function useUpdateLegalKanbanTask() {
       queryClient.invalidateQueries({ queryKey: legalWorkplaceKeys.kanban() })
       queryClient.invalidateQueries({ queryKey: ['tasks', 'my-tasks'] })
     },
+    onError: (error) => toast.error(getErrorMessage(error)),
+  })
+}
+
+function invalidateLegalDocuments(queryClient: ReturnType<typeof useQueryClient>) {
+  queryClient.invalidateQueries({ queryKey: legalWorkplaceKeys.documents() })
+}
+
+export function useUploadIncomingLegalDocument() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (payload: {
+      file: File
+      title: string
+      client_id: number
+      assigned_to_user_id?: number
+      contract_number?: string | null
+      related_letter_number?: string | null
+    }) => legalApi.uploadIncomingDocument(payload),
+    onSuccess: () => invalidateLegalDocuments(queryClient),
+    onError: (error) => toast.error(getErrorMessage(error)),
+  })
+}
+
+export function useGenerateLegalDocument() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (payload: LegalGenerateDocumentRequest) => legalApi.generateDocument(payload),
+    onSuccess: () => invalidateLegalDocuments(queryClient),
     onError: (error) => toast.error(getErrorMessage(error)),
   })
 }

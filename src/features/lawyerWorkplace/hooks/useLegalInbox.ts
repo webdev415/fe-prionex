@@ -7,7 +7,7 @@ import {
   filterInboxByMailboxTab,
   mapInboxItemToLetterListItem,
 } from '../api/mappers'
-import type { LegalInboxItem, LegalInboxParams } from '../api/types'
+import type { LegalInboxItem, LegalInboxParams, LegalDocumentListParams } from '../api/types'
 
 export const legalWorkplaceKeys = {
   all: ['lawyer-workplace'] as const,
@@ -29,6 +29,11 @@ export const legalWorkplaceKeys = {
   mailboxes: () => [...legalWorkplaceKeys.all, 'mailboxes'] as const,
   kanban: (assignedToUserId?: number) =>
     [...legalWorkplaceKeys.all, 'kanban', { assignedToUserId }] as const,
+  documents: () => [...legalWorkplaceKeys.all, 'documents'] as const,
+  documentsList: (params: LegalDocumentListParams) =>
+    [...legalWorkplaceKeys.documents(), 'list', params] as const,
+  documentStats: (year?: number) => [...legalWorkplaceKeys.documents(), 'stats', { year }] as const,
+  documentFilterCounts: () => [...legalWorkplaceKeys.documents(), 'filter-counts'] as const,
   trainingExamples: (letterTypeId: string) =>
     [...legalWorkplaceKeys.settings(), 'training-examples', letterTypeId] as const,
 } as const

@@ -10,17 +10,11 @@ import {
 import { Label } from '@/components/ui/Label'
 import { Modal, ModalContent, ModalFooter, ModalHeader } from '@/components/ui/Modal'
 import { SearchableSelect } from '@/components/ui/SearchableSelect'
+import { useClients } from '@/features/clients/hooks/useClients'
+import { useLegalLawyers } from '@/features/lawyerWorkplace'
+import { useAuthStore } from '@/stores/authStore'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
-import { LEGAL_DOCUMENT_CLIENTS } from '../../documents/documentHelpers'
-import type { LegalDocumentAssigneeId } from '../../documents/types'
-import { DOCUMENT_ASSIGNEE_OPTIONS } from './constants'
-
-const LAWYER_ASSIGNEE_OPTIONS = DOCUMENT_ASSIGNEE_OPTIONS.filter(
-  (option) => option.id !== 'system' && option.id !== 'emailService'
-)
-
-const DEFAULT_ASSIGNEE_ID: LegalDocumentAssigneeId = 'kostenko'
 
 function stripFileExtension(filename: string): string {
   const lastDot = filename.lastIndexOf('.')
@@ -28,46 +22,62 @@ function stripFileExtension(filename: string): string {
   return filename.slice(0, lastDot)
 }
 
+function formatClientOption(client: {
+  id: number
+  first_name: string
+  last_name: string
+  legacy_id?: string | null
+}): { id: string; name: string } {
+  const code = client.legacy_id?.trim() || `CL-${String(client.id).padStart(5, '0')}`
+  const name = [client.first_name, client.last_name].filter(Boolean).join(' ')
+  return { id: String(client.id), name: name ? `${code} · ${name}` : code }
+}
+
 interface AddIncomingDocumentModalProps {
   open: boolean
   onClose: () => void
+  isSubmitting?: boolean
   onSubmit: (input: {
-    nameFallback: string
-    clientId: string
-    assigneeId: LegalDocumentAssigneeId
+    title: string
+    clientId: number
+    assignedToUserId: number
     relatedLetterNumber?: string
-    fileName: string
-  }) => void
+    file: File
+    contractNumber?: string | null
+  }) => void | Promise<void>
 }
 
 export function AddIncomingDocumentModal({
   open,
   onClose,
+  isSubmitting = false,
   onSubmit,
 }: AddIncomingDocumentModalProps) {
   const { t } = useTranslation('common')
+  const currentUserId = Number(useAuthStore((state) => state.user?.id))
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const { data: clientsData } = useClients({ limit: 200 }, { enabled: open })
+  const { data: lawyersData } = useLegalLawyers({ enabled: open })
 
   const [file, setFile] = useState<File | null>(null)
   const [documentName, setDocumentName] = useState('')
   const [clientId, setClientId] = useState('')
-  const [assigneeId, setAssigneeId] = useState<LegalDocumentAssigneeId>(DEFAULT_ASSIGNEE_ID)
+  const [assigneeUserId, setAssigneeUserId] = useState<number | null>(null)
   const [relatedLetterNumber, setRelatedLetterNumber] = useState('')
   const [dragOver, setDragOver] = useState(false)
-  const [submitting, setSubmitting] = useState(false)
 
+  const lawyers = useMemo(() => lawyersData?.items ?? [], [lawyersData?.items])
   const clientOptions = useMemo(
-    () =>
-      LEGAL_DOCUMENT_CLIENTS.map((client) => ({
-        id: client.id,
-        name: `${client.name} · ${client.contractId}`,
-      })),
-    []
+    () => (clientsData?.items ?? []).map(formatClientOption),
+    [clientsData?.items]
+  )
+  const clientsById = useMemo(
+    () => new Map((clientsData?.items ?? []).map((client) => [String(client.id), client])),
+    [clientsData?.items]
   )
 
-  const selectedAssignee =
-    LAWYER_ASSIGNEE_OPTIONS.find((option) => option.id === assigneeId) ??
-    LAWYER_ASSIGNEE_OPTIONS[0]!
+  const selectedLawyer =
+    lawyers.find((lawyer) => lawyer.user_id === assigneeUserId) ?? lawyers[0] ?? null
 
   useEffect(() => {
     if (!open) return
@@ -75,12 +85,13 @@ export function AddIncomingDocumentModal({
       setFile(null)
       setDocumentName('')
       setClientId('')
-      setAssigneeId(DEFAULT_ASSIGNEE_ID)
       setRelatedLetterNumber('')
       setDragOver(false)
-      setSubmitting(false)
+      const defaultLawyer =
+        lawyers.find((lawyer) => lawyer.user_id === currentUserId) ?? lawyers[0] ?? null
+      setAssigneeUserId(defaultLawyer?.user_id ?? null)
     })
-  }, [open])
+  }, [currentUserId, lawyers, open])
 
   const handleFileSelect = (selectedFile: File | null) => {
     if (!selectedFile) return
@@ -88,19 +99,21 @@ export function AddIncomingDocumentModal({
     setDocumentName((current) => current || stripFileExtension(selectedFile.name))
   }
 
-  const canSubmit = Boolean(file && documentName.trim() && clientId)
+  const canSubmit = Boolean(
+    file && documentName.trim() && clientId && assigneeUserId != null && lawyers.length > 0
+  )
 
-  const handleSubmit = () => {
-    if (!canSubmit || !file) return
-    setSubmitting(true)
-    onSubmit({
-      nameFallback: documentName.trim(),
-      clientId,
-      assigneeId,
+  const handleSubmit = async () => {
+    if (!canSubmit || !file || assigneeUserId == null) return
+    const client = clientsById.get(clientId)
+    await onSubmit({
+      title: documentName.trim(),
+      clientId: Number.parseInt(clientId, 10),
+      assignedToUserId: assigneeUserId,
       relatedLetterNumber: relatedLetterNumber.trim() || undefined,
-      fileName: file.name,
+      file,
+      contractNumber: client?.legacy_id?.trim() || null,
     })
-    setSubmitting(false)
     onClose()
   }
 
@@ -232,7 +245,7 @@ export function AddIncomingDocumentModal({
                 type="button"
                 className="text-dark-500 flex h-10 w-full items-center justify-between rounded-[8px] border border-gray-200 bg-white px-3 text-[13px] font-light"
               >
-                <span>{t(selectedAssignee.key, selectedAssignee.fallback)}</span>
+                <span>{selectedLawyer?.display_name ?? '—'}</span>
                 <Icons.ArrowDown size={16} strokeWidth={1.5} className="text-light-500" />
               </button>
             </DropdownMenuTrigger>
@@ -240,13 +253,13 @@ export function AddIncomingDocumentModal({
               align="start"
               className="w-[var(--radix-dropdown-menu-trigger-width)]"
             >
-              {LAWYER_ASSIGNEE_OPTIONS.map((option) => (
+              {lawyers.map((lawyer) => (
                 <DropdownMenuItem
-                  key={option.id}
-                  onClick={() => setAssigneeId(option.id)}
+                  key={lawyer.id}
+                  onClick={() => setAssigneeUserId(lawyer.user_id)}
                   className="cursor-pointer"
                 >
-                  {t(option.key, option.fallback)}
+                  {lawyer.display_name}
                 </DropdownMenuItem>
               ))}
             </DropdownMenuContent>
@@ -259,7 +272,7 @@ export function AddIncomingDocumentModal({
           size="md"
           className="w-full"
           onClick={onClose}
-          disabled={submitting}
+          disabled={isSubmitting}
         >
           {t('actions.cancel', 'Cancel')}
         </Button>
@@ -267,7 +280,7 @@ export function AddIncomingDocumentModal({
           variant="primary"
           size="md"
           leftIcon={<Icons.AddCircle size={18} strokeWidth={1.5} />}
-          disabled={!canSubmit || submitting}
+          disabled={!canSubmit || isSubmitting}
           onClick={handleSubmit}
           className={cn('w-full', !canSubmit && 'opacity-60')}
         >

@@ -15,6 +15,11 @@ import type {
   LegalLetterTypeListResponse,
   LegalLetterTypePrioritiesUpdate,
   LegalLetterTypeUpdate,
+  LegalDocumentListParams,
+  LegalDocumentListResponse,
+  LegalDocumentResponse,
+  LegalDocumentStatsResponse,
+  LegalGenerateDocumentRequest,
   LegalMessageDetail,
   LegalOutgoingLetterRequest,
   LegalOutgoingLetterResponse,
@@ -28,6 +33,7 @@ import type {
 
 const BASE_URL = '/api/v1/legal'
 const SETTINGS_URL = `${BASE_URL}/settings`
+const DOCUMENTS_URL = `${BASE_URL}/documents`
 
 export const legalApi = {
   listInbox(params: LegalInboxParams = {}) {
@@ -76,6 +82,58 @@ export const legalApi = {
     return api
       .get<LegalKanbanResponse>(`${BASE_URL}/kanban`, { params })
       .then((response) => response.data)
+  },
+
+  listDocuments(params: LegalDocumentListParams = {}) {
+    return api
+      .get<LegalDocumentListResponse>(DOCUMENTS_URL, { params })
+      .then((response) => response.data)
+  },
+
+  getDocumentStats(params?: { year?: number }) {
+    return api
+      .get<LegalDocumentStatsResponse>(`${DOCUMENTS_URL}/stats`, { params })
+      .then((response) => response.data)
+  },
+
+  uploadIncomingDocument(payload: {
+    file: File
+    title: string
+    client_id: number
+    assigned_to_user_id?: number
+    contract_number?: string | null
+    related_letter_number?: string | null
+  }) {
+    const formData = new FormData()
+    formData.append('file', payload.file)
+    formData.append('title', payload.title)
+    formData.append('client_id', String(payload.client_id))
+    if (payload.assigned_to_user_id != null) {
+      formData.append('assigned_to_user_id', String(payload.assigned_to_user_id))
+    }
+    if (payload.contract_number) {
+      formData.append('contract_number', payload.contract_number)
+    }
+    if (payload.related_letter_number) {
+      formData.append('related_letter_number', payload.related_letter_number)
+    }
+    return api
+      .post<LegalDocumentResponse>(`${DOCUMENTS_URL}/incoming`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+      .then((response) => response.data)
+  },
+
+  generateDocument(payload: LegalGenerateDocumentRequest) {
+    return api
+      .post<LegalDocumentResponse>(`${DOCUMENTS_URL}/generate`, payload)
+      .then((response) => response.data)
+  },
+
+  downloadDocument(documentId: string) {
+    return api.get<Blob>(`${DOCUMENTS_URL}/${documentId}/download`, {
+      responseType: 'blob',
+    })
   },
 
   downloadAttachment(messageId: string, attachmentId: string) {
@@ -180,3 +238,4 @@ export const legalApi = {
 }
 
 export { downloadLegalAttachment } from './downloadAttachment'
+export { downloadLegalDocument } from './downloadLegalDocument'

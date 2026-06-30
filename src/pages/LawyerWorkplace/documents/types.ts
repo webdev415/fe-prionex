@@ -27,11 +27,14 @@ export interface LegalDocumentRow {
   nameKey: string
   nameFallback: string
   type: LegalDocumentType
+  clientId: number | null
   clientName: string
   contractId: string
   action: LegalDocumentAction
-  assigneeId: LegalDocumentAssigneeId
+  assigneeUserId: number | null
+  assigneeName: string
   createdAt: string
+  filename: string | null
 }
 
 export interface LegalDocumentStats {

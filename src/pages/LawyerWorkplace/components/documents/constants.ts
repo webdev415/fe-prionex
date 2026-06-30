@@ -364,6 +364,6 @@ export function documentMatchesSearch(doc: LegalDocumentRow, query: string, t: T
     getDocumentDisplayName(doc, t).toLowerCase().includes(q) ||
     doc.clientName.toLowerCase().includes(q) ||
     doc.contractId.toLowerCase().includes(q) ||
-    getDocumentAssigneeLabel(doc.assigneeId, t).toLowerCase().includes(q)
+    doc.assigneeName.toLowerCase().includes(q)
   )
 }

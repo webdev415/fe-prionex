@@ -1,5 +1,6 @@
 import {
   getDocumentNameForType,
+  DOCUMENT_ASSIGNEE_BY_ID,
   DOCUMENT_ASSIGNEE_OPTIONS,
 } from '../components/documents/constants'
 import type {
@@ -48,16 +49,26 @@ const CLIENTS: { name: string; contractId: string }[] = [
 ]
 
 function buildDocumentRow(
-  partial: Omit<LegalDocumentRow, 'nameKey' | 'nameFallback'> & {
+  partial: Omit<
+    LegalDocumentRow,
+    'nameKey' | 'nameFallback' | 'clientId' | 'assigneeUserId' | 'assigneeName' | 'filename'
+  > & {
     nameIndex: number
+    assigneeId: LegalDocumentAssigneeId
+    clientId?: number | null
   }
 ): LegalDocumentRow {
-  const { nameIndex, ...rest } = partial
+  const { nameIndex, assigneeId, clientId = null, ...rest } = partial
   const name = getDocumentNameForType(rest.type, nameIndex)
+  const assignee = DOCUMENT_ASSIGNEE_BY_ID[assigneeId]
   return {
     ...rest,
+    clientId,
     nameKey: name.key,
     nameFallback: name.fallback,
+    assigneeUserId: null,
+    assigneeName: assignee?.fallback ?? assigneeId,
+    filename: null,
   }
 }
 
@@ -257,11 +268,16 @@ function generateMockLegalDocuments(totalCount: number): LegalDocumentRow[] {
       nameKey: name.key,
       nameFallback: name.fallback,
       type,
+      clientId: null,
       clientName: client.name,
       contractId: client.contractId,
       action,
-      assigneeId: assigneeFor(type, action, i),
+      assigneeUserId: null,
+      assigneeName:
+        DOCUMENT_ASSIGNEE_BY_ID[assigneeFor(type, action, i)]?.fallback ??
+        assigneeFor(type, action, i),
       createdAt: createdAtFor(i),
+      filename: null,
     })
   }
 

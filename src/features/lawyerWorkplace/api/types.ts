@@ -304,3 +304,63 @@ export interface LegalLawyerUpdate {
   letter_type_ids?: string[]
   is_active?: boolean
 }
+
+export type LegalDocumentTypeFilter =
+  | 'all'
+  | 'incoming'
+  | 'outgoing'
+  | 'nbu_response'
+  | 'uploaded'
+  | 'generated'
+
+export interface LegalDocumentListItem {
+  id: string
+  number: string
+  title: string
+  document_type: string
+  action: string
+  client_id: number | null
+  contract_number: string | null
+  assigned_to_user_id: number | null
+  created_by_user_id: number
+  related_letter_number: string | null
+  source_message_id: string | null
+  filename: string | null
+  created_at: string
+}
+
+export interface LegalDocumentListResponse {
+  items: LegalDocumentListItem[]
+  total: number
+  page: number
+  page_size: number
+}
+
+export interface LegalDocumentStatsResponse {
+  incoming_count: number
+  incoming_year_total: number
+  outgoing_count: number
+  outgoing_year_total: number
+  nbu_count: number
+  nbu_year_total: number
+  generated_percent: number
+}
+
+export interface LegalDocumentListParams {
+  page?: number
+  page_size?: number
+  type_filter?: LegalDocumentTypeFilter
+  search?: string
+  assigned_to_user_id?: number
+}
+
+export interface LegalGenerateDocumentRequest {
+  document_type: 'outgoing' | 'nbu_response'
+  title: string
+  client_id: number
+  assigned_to_user_id: number
+  contract_number?: string | null
+  related_letter_number?: string | null
+}
+
+export type LegalDocumentResponse = LegalDocumentListItem

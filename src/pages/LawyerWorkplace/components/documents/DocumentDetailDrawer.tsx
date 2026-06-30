@@ -1,15 +1,13 @@
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/Button'
+import { downloadLegalDocument } from '@/features/lawyerWorkplace'
 import { Icons } from '@/lib/icons'
+import { getErrorMessage } from '@/lib/errors'
 import { cn } from '@/lib/utils'
 import { formatDocumentDateLines } from '../../utils/formatters'
 import type { LegalDocumentRow } from '../../documents/types'
-import {
-  DOCUMENT_TYPE_I18N_KEYS,
-  getDocumentAssigneeLabel,
-  getDocumentDisplayName,
-} from './constants'
+import { DOCUMENT_TYPE_I18N_KEYS, getDocumentDisplayName } from './constants'
 import { DocumentDetailField } from './DocumentDetailField'
 import { DocumentTypeBadge } from './DocumentTypeBadge'
 
@@ -22,14 +20,19 @@ export function DocumentDetailDrawer({ document, onClose }: DocumentDetailDrawer
   const { t, i18n } = useTranslation('common')
   const isOpen = document !== null
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
     if (!document) return
-    toast.success(
-      t('pages.lawyerWorkplace.documents.modals.detail.downloadStarted', 'Download started'),
-      {
-        description: getDocumentDisplayName(document, t),
-      }
-    )
+    try {
+      await downloadLegalDocument(document.id, document.filename ?? `${document.number}.bin`)
+      toast.success(
+        t('pages.lawyerWorkplace.documents.modals.detail.downloadStarted', 'Download started'),
+        {
+          description: getDocumentDisplayName(document, t),
+        }
+      )
+    } catch (error) {
+      toast.error(getErrorMessage(error))
+    }
   }
 
   return (
@@ -102,7 +105,7 @@ export function DocumentDetailDrawer({ document, onClose }: DocumentDetailDrawer
               <DocumentDetailField
                 label={t('pages.lawyerWorkplace.documents.columns.assignee', 'Assignee')}
               >
-                {getDocumentAssigneeLabel(document.assigneeId, t)}
+                {document.assigneeName || '—'}
               </DocumentDetailField>
 
               <DocumentDetailField

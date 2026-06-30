@@ -10,16 +10,12 @@ import {
 import { Label } from '@/components/ui/Label'
 import { Modal, ModalContent, ModalFooter, ModalHeader } from '@/components/ui/Modal'
 import { SearchableSelect } from '@/components/ui/SearchableSelect'
+import { useClients } from '@/features/clients/hooks/useClients'
+import { useLegalLawyers } from '@/features/lawyerWorkplace'
+import { useAuthStore } from '@/stores/authStore'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
-import { LEGAL_DOCUMENT_CLIENTS } from '../../documents/documentHelpers'
-import type { LegalDocumentAssigneeId } from '../../documents/types'
-import {
-  DOCUMENT_ASSIGNEE_OPTIONS,
-  NBU_DOCUMENT_NAMES,
-  OUTGOING_DOCUMENT_NAMES,
-  type DocumentI18nOption,
-} from './constants'
+import { NBU_DOCUMENT_NAMES, OUTGOING_DOCUMENT_NAMES, type DocumentI18nOption } from './constants'
 
 type GenerateDocumentType = 'outgoing' | 'nbu_response'
 
@@ -43,51 +39,72 @@ const GENERATE_TYPE_OPTIONS: {
   },
 ]
 
-const LAWYER_ASSIGNEE_OPTIONS = DOCUMENT_ASSIGNEE_OPTIONS.filter(
-  (option) => option.id !== 'system' && option.id !== 'emailService'
-)
-
-const DEFAULT_ASSIGNEE_ID: LegalDocumentAssigneeId = 'kostenko'
+function formatClientOption(client: {
+  id: number
+  first_name: string
+  last_name: string
+  legacy_id?: string | null
+}): { id: string; name: string; contractNumber: string | null } {
+  const code = client.legacy_id?.trim() || `CL-${String(client.id).padStart(5, '0')}`
+  const name = [client.first_name, client.last_name].filter(Boolean).join(' ')
+  return {
+    id: String(client.id),
+    name: name ? `${code} · ${name}` : code,
+    contractNumber: client.legacy_id?.trim() || null,
+  }
+}
 
 interface GenerateDocumentModalProps {
   open: boolean
   onClose: () => void
+  isSubmitting?: boolean
   onSubmit: (input: {
-    type: GenerateDocumentType
-    template: DocumentI18nOption
-    clientId: string
-    assigneeId: LegalDocumentAssigneeId
-  }) => void
+    documentType: GenerateDocumentType
+    title: string
+    clientId: number
+    assignedToUserId: number
+    contractNumber?: string | null
+  }) => void | Promise<void>
 }
 
-export function GenerateDocumentModal({ open, onClose, onSubmit }: GenerateDocumentModalProps) {
+export function GenerateDocumentModal({
+  open,
+  onClose,
+  isSubmitting = false,
+  onSubmit,
+}: GenerateDocumentModalProps) {
   const { t } = useTranslation('common')
+  const currentUserId = Number(useAuthStore((state) => state.user?.id))
+  const { data: clientsData } = useClients({ limit: 200 }, { enabled: open })
+  const { data: lawyersData } = useLegalLawyers({ enabled: open })
+
   const [documentType, setDocumentType] = useState<GenerateDocumentType>('outgoing')
   const [templateKey, setTemplateKey] = useState('')
   const [clientId, setClientId] = useState('')
-  const [assigneeId, setAssigneeId] = useState<LegalDocumentAssigneeId>(DEFAULT_ASSIGNEE_ID)
-  const [submitting, setSubmitting] = useState(false)
+  const [assigneeUserId, setAssigneeUserId] = useState<number | null>(null)
 
   const templates = useMemo(
     () => (documentType === 'outgoing' ? OUTGOING_DOCUMENT_NAMES : NBU_DOCUMENT_NAMES),
     [documentType]
   )
 
+  const lawyers = useMemo(() => lawyersData?.items ?? [], [lawyersData?.items])
+
+  const clientOptions = useMemo(
+    () => (clientsData?.items ?? []).map(formatClientOption),
+    [clientsData?.items]
+  )
+
+  const clientsById = useMemo(
+    () => new Map((clientsData?.items ?? []).map((client) => [String(client.id), client])),
+    [clientsData?.items]
+  )
+
   const selectedTemplate = templates.find((template) => template.key === templateKey) ?? null
   const selectedTypeOption =
     GENERATE_TYPE_OPTIONS.find((option) => option.id === documentType) ?? GENERATE_TYPE_OPTIONS[0]!
-  const selectedAssignee =
-    LAWYER_ASSIGNEE_OPTIONS.find((option) => option.id === assigneeId) ??
-    LAWYER_ASSIGNEE_OPTIONS[0]!
-
-  const clientOptions = useMemo(
-    () =>
-      LEGAL_DOCUMENT_CLIENTS.map((client) => ({
-        id: client.id,
-        name: `${client.name} · ${client.contractId}`,
-      })),
-    []
-  )
+  const selectedLawyer =
+    lawyers.find((lawyer) => lawyer.user_id === assigneeUserId) ?? lawyers[0] ?? null
 
   useEffect(() => {
     if (!open) return
@@ -95,10 +112,11 @@ export function GenerateDocumentModal({ open, onClose, onSubmit }: GenerateDocum
       setDocumentType('outgoing')
       setTemplateKey(OUTGOING_DOCUMENT_NAMES[0]?.key ?? '')
       setClientId('')
-      setAssigneeId(DEFAULT_ASSIGNEE_ID)
-      setSubmitting(false)
+      const defaultLawyer =
+        lawyers.find((lawyer) => lawyer.user_id === currentUserId) ?? lawyers[0] ?? null
+      setAssigneeUserId(defaultLawyer?.user_id ?? null)
     })
-  }, [open])
+  }, [currentUserId, lawyers, open])
 
   const handleDocumentTypeChange = (type: GenerateDocumentType) => {
     setDocumentType(type)
@@ -106,18 +124,20 @@ export function GenerateDocumentModal({ open, onClose, onSubmit }: GenerateDocum
     setTemplateKey(names[0]?.key ?? '')
   }
 
-  const canSubmit = Boolean(clientId && selectedTemplate)
+  const canSubmit = Boolean(
+    clientId && selectedTemplate && assigneeUserId != null && lawyers.length > 0
+  )
 
-  const handleSubmit = () => {
-    if (!canSubmit || !selectedTemplate) return
-    setSubmitting(true)
-    onSubmit({
-      type: documentType,
-      template: selectedTemplate,
-      clientId,
-      assigneeId,
+  const handleSubmit = async () => {
+    if (!canSubmit || !selectedTemplate || assigneeUserId == null) return
+    const client = clientsById.get(clientId)
+    await onSubmit({
+      documentType,
+      title: t(selectedTemplate.key, selectedTemplate.fallback),
+      clientId: Number.parseInt(clientId, 10),
+      assignedToUserId: assigneeUserId,
+      contractNumber: client?.legacy_id?.trim() || null,
     })
-    setSubmitting(false)
     onClose()
   }
 
@@ -193,7 +213,7 @@ export function GenerateDocumentModal({ open, onClose, onSubmit }: GenerateDocum
               align="start"
               className="max-h-[240px] w-[var(--radix-dropdown-menu-trigger-width)] overflow-y-auto"
             >
-              {templates.map((template) => (
+              {templates.map((template: DocumentI18nOption) => (
                 <DropdownMenuItem
                   key={template.key}
                   onClick={() => setTemplateKey(template.key)}
@@ -211,7 +231,7 @@ export function GenerateDocumentModal({ open, onClose, onSubmit }: GenerateDocum
             {t('pages.lawyerWorkplace.documents.modals.generate.client', 'Client · Contract')}
           </Label>
           <SearchableSelect
-            options={clientOptions}
+            options={clientOptions.map((client) => ({ id: client.id, name: client.name }))}
             value={clientId}
             onValueChange={setClientId}
             placeholder={t(
@@ -231,7 +251,7 @@ export function GenerateDocumentModal({ open, onClose, onSubmit }: GenerateDocum
                 type="button"
                 className="text-dark-500 flex h-10 w-full items-center justify-between rounded-[8px] border border-gray-200 bg-white px-3 text-[13px] font-light"
               >
-                <span>{t(selectedAssignee.key, selectedAssignee.fallback)}</span>
+                <span>{selectedLawyer?.display_name ?? '—'}</span>
                 <Icons.ArrowDown size={16} strokeWidth={1.5} className="text-light-500" />
               </button>
             </DropdownMenuTrigger>
@@ -239,13 +259,13 @@ export function GenerateDocumentModal({ open, onClose, onSubmit }: GenerateDocum
               align="start"
               className="w-[var(--radix-dropdown-menu-trigger-width)]"
             >
-              {LAWYER_ASSIGNEE_OPTIONS.map((option) => (
+              {lawyers.map((lawyer) => (
                 <DropdownMenuItem
-                  key={option.id}
-                  onClick={() => setAssigneeId(option.id)}
+                  key={lawyer.id}
+                  onClick={() => setAssigneeUserId(lawyer.user_id)}
                   className="cursor-pointer"
                 >
-                  {t(option.key, option.fallback)}
+                  {lawyer.display_name}
                 </DropdownMenuItem>
               ))}
             </DropdownMenuContent>
@@ -258,7 +278,7 @@ export function GenerateDocumentModal({ open, onClose, onSubmit }: GenerateDocum
           size="md"
           className="w-full"
           onClick={onClose}
-          disabled={submitting}
+          disabled={isSubmitting}
         >
           {t('actions.cancel', 'Cancel')}
         </Button>
@@ -266,7 +286,7 @@ export function GenerateDocumentModal({ open, onClose, onSubmit }: GenerateDocum
           variant="secondary"
           size="md"
           leftIcon={<Icons.ArtificialIntelligence08 size={18} strokeWidth={1.5} />}
-          disabled={!canSubmit || submitting}
+          disabled={!canSubmit || isSubmitting}
           onClick={handleSubmit}
           className={cn('w-full', !canSubmit && 'opacity-60')}
         >

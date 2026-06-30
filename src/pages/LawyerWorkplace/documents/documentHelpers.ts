@@ -121,11 +121,14 @@ export function createGeneratedDocument(
     nameKey: input.nameKey,
     nameFallback: input.nameFallback,
     type: input.type,
+    clientId: Number.parseInt(input.clientId, 10) || null,
     clientName: client.name,
     contractId: client.contractId,
     action: 'generated',
-    assigneeId: input.assigneeId,
+    assigneeUserId: null,
+    assigneeName: input.assigneeId,
     createdAt: new Date().toISOString(),
+    filename: null,
   }
 }
 
@@ -157,10 +160,13 @@ export function createIncomingDocument(
     nameKey: `custom:${id}`,
     nameFallback,
     type: 'incoming',
+    clientId: Number.parseInt(input.clientId, 10) || null,
     clientName: client.name,
     contractId: client.contractId,
     action: 'uploaded',
-    assigneeId: input.assigneeId,
+    assigneeUserId: null,
+    assigneeName: input.assigneeId,
     createdAt: new Date().toISOString(),
+    filename: null,
   }
 }
