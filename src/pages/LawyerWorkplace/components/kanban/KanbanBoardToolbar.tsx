@@ -6,10 +6,10 @@ import { cn } from '@/lib/utils'
 import { useLawyerWorkplaceLayout } from '../../context/lawyerWorkplaceLayout'
 import {
   DEADLINE_FILTERS,
-  LAWYER_FILTER_OPTIONS,
   TYPE_FILTER_OPTIONS,
   type DeadlineFilter,
   type LawyerFilterId,
+  type LawyerFilterOption,
   type TypeFilterId,
 } from './constants'
 import { KanbanFilterDropdown } from './KanbanFilterDropdown'
@@ -20,6 +20,7 @@ interface KanbanBoardToolbarProps {
   onDeadlineFilterChange: (filter: DeadlineFilter) => void
   lawyerFilter: LawyerFilterId
   onLawyerFilterChange: (value: LawyerFilterId) => void
+  lawyerFilterOptions: LawyerFilterOption[]
   typeFilter: TypeFilterId
   onTypeFilterChange: (value: TypeFilterId) => void
   onNewTask: () => void
@@ -31,6 +32,7 @@ export function KanbanBoardToolbar({
   onDeadlineFilterChange,
   lawyerFilter,
   onLawyerFilterChange,
+  lawyerFilterOptions,
   typeFilter,
   onTypeFilterChange,
   onNewTask,
@@ -145,7 +147,7 @@ export function KanbanBoardToolbar({
         >
           <KanbanFilterDropdown
             value={lawyerFilter}
-            options={LAWYER_FILTER_OPTIONS}
+            options={lawyerFilterOptions}
             onChange={onLawyerFilterChange}
             className={cn('w-full', !isCompact && 'w-[200px]', isWide && 'w-[230px]')}
           />

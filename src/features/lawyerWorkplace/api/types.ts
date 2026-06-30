@@ -172,6 +172,28 @@ export interface LegalOutgoingLetterResponse {
   legal_document_number: string | null
 }
 
+export interface LegalKanbanTaskItem {
+  task_id: number
+  message_id: string | null
+  letter_type_id: string | null
+  title: string
+  client_id: number | null
+  client_name: string | null
+  priority: string
+  status: string
+  due_date: string | null
+  is_overdue: boolean
+  assigned_to_user_id: number | null
+  assigned_to_username: string | null
+  completed_at: string | null
+  updated_at: string | null
+}
+
+export interface LegalKanbanResponse {
+  items: LegalKanbanTaskItem[]
+  total: number
+}
+
 export interface LegalTrainingExample {
   id: string
   letter_type_id: string

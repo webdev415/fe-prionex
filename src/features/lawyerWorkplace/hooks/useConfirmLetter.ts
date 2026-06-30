@@ -22,6 +22,7 @@ export function useConfirmLetter() {
         queryKey: legalWorkplaceKeys.message(data.message_id),
       })
       queryClient.invalidateQueries({ queryKey: legalWorkplaceKeys.messages() })
+      queryClient.invalidateQueries({ queryKey: legalWorkplaceKeys.kanban() })
     },
     onError: (error) => toast.error(getErrorMessage(error)),
   })

@@ -27,6 +27,8 @@ export const legalWorkplaceKeys = {
     [...legalWorkplaceKeys.settings(), 'lawyers', { includeInactive }] as const,
   lawyer: (lawyerId: string) => [...legalWorkplaceKeys.settings(), 'lawyer', lawyerId] as const,
   mailboxes: () => [...legalWorkplaceKeys.all, 'mailboxes'] as const,
+  kanban: (assignedToUserId?: number) =>
+    [...legalWorkplaceKeys.all, 'kanban', { assignedToUserId }] as const,
   trainingExamples: (letterTypeId: string) =>
     [...legalWorkplaceKeys.settings(), 'training-examples', letterTypeId] as const,
 } as const

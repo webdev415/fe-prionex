@@ -2,6 +2,7 @@ import api from '@/lib/api'
 import type {
   LegalInboxParams,
   LegalInboxResponse,
+  LegalKanbanResponse,
   LegalLawyer,
   LegalLawyerCreate,
   LegalLawyerListResponse,
@@ -68,6 +69,12 @@ export const legalApi = {
   sendOutgoingLetter(payload: LegalOutgoingLetterRequest) {
     return api
       .post<LegalOutgoingLetterResponse>(`${BASE_URL}/outgoing`, payload)
+      .then((response) => response.data)
+  },
+
+  listKanban(params?: { assigned_to_user_id?: number }) {
+    return api
+      .get<LegalKanbanResponse>(`${BASE_URL}/kanban`, { params })
       .then((response) => response.data)
   },
 
@@ -171,3 +178,5 @@ export const legalApi = {
     return api.delete(`${SETTINGS_URL}/lawyers/${lawyerId}`)
   },
 }
+
+export { downloadLegalAttachment } from './downloadAttachment'

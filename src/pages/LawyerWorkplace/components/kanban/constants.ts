@@ -4,7 +4,7 @@ export type { KanbanTaskPriority }
 
 export type DeadlineFilter = 'this_week' | 'this_month'
 
-export type LawyerFilterId = 'all' | 'doroshenko' | 'kostenko' | 'melnychenko'
+export type LawyerFilterId = 'all' | string
 
 export type TypeFilterId =
   | 'all'
@@ -21,6 +21,7 @@ export interface KanbanFilterOption<T extends string = string> {
 }
 
 export interface LawyerFilterOption extends KanbanFilterOption<LawyerFilterId> {
+  assigneeUserId?: number
   assigneeName?: string
 }
 
@@ -92,21 +93,29 @@ export const TYPE_FILTER_OPTIONS: TypeFilterOption[] = [
   },
 ]
 
-/** Build filtered columns from base columns applying lawyer + type filters */
+/** Build filtered columns from base columns applying lawyer + type + deadline filters */
 export function applyKanbanFilters(
   columns: KanbanColumnDef[],
   lawyerFilter: LawyerFilterId,
-  typeFilter: TypeFilterId
+  typeFilter: TypeFilterId,
+  lawyerOptions: LawyerFilterOption[],
+  deadlineFilter: DeadlineFilter,
+  matchesDeadline: (task: KanbanColumnDef['tasks'][number], filter: DeadlineFilter) => boolean
 ): KanbanColumnDef[] {
-  const lawyerOption = LAWYER_FILTER_OPTIONS.find((option) => option.id === lawyerFilter)
+  const lawyerOption = lawyerOptions.find((option) => option.id === lawyerFilter)
   const typeOption = TYPE_FILTER_OPTIONS.find((option) => option.id === typeFilter)
 
   return columns.map((col) => ({
     ...col,
     tasks: col.tasks.filter((task) => {
-      const lawyerMatch = lawyerFilter === 'all' || task.assigneeName === lawyerOption?.assigneeName
+      const lawyerMatch =
+        lawyerFilter === 'all' ||
+        (lawyerOption?.assigneeUserId != null
+          ? task.assigneeUserId === lawyerOption.assigneeUserId
+          : task.assigneeName === lawyerOption?.assigneeName)
       const typeMatch = typeFilter === 'all' || task.type === typeOption?.taskType
-      return lawyerMatch && typeMatch
+      const deadlineMatch = matchesDeadline(task, deadlineFilter)
+      return lawyerMatch && typeMatch && deadlineMatch
     }),
   }))
 }

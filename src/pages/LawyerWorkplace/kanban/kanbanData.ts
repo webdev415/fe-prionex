@@ -15,6 +15,7 @@ export type KanbanTaskPriority = 'highest' | 'high' | 'medium' | 'low' | 'lowest
 
 export interface KanbanTask {
   id: string
+  taskId: number
   type: KanbanTaskType
   title: string
   clientCode: string | null
@@ -28,8 +29,9 @@ export interface KanbanTask {
   assigneeInitials: string
   /** Display name after initials, e.g. "Doroshenko" */
   assigneeName: string
+  assigneeUserId: number | null
   columnId: KanbanColumnId
-  /** ID of the source letter in mockData (links card → email thread) */
+  /** Source email message id (links card → thread drawer) */
   letterId: string | null
 }
 
@@ -55,7 +57,17 @@ function rel(offsetDays: number): string {
 
 // ─── Mock tasks ───────────────────────────────────────────────────────────────
 
-export const MOCK_KANBAN_TASKS: KanbanTask[] = [
+type MockKanbanTaskSeed = Omit<KanbanTask, 'taskId' | 'assigneeUserId'>
+
+function hydrateMockKanbanTasks(tasks: MockKanbanTaskSeed[]): KanbanTask[] {
+  return tasks.map((task, index) => ({
+    ...task,
+    taskId: Number.parseInt(task.id.replace(/^TASK-/, ''), 10) || index + 1,
+    assigneeUserId: null,
+  }))
+}
+
+const MOCK_KANBAN_TASKS_SEED: MockKanbanTaskSeed[] = [
   // ── NOT DEFINED ─────────────────────────────────────────────────────────────
   {
     id: 'TASK-2784',
@@ -330,6 +342,8 @@ export const MOCK_KANBAN_TASKS: KanbanTask[] = [
     letterId: null,
   },
 ]
+
+export const MOCK_KANBAN_TASKS = hydrateMockKanbanTasks(MOCK_KANBAN_TASKS_SEED)
 
 // ─── Column definitions ───────────────────────────────────────────────────────
 

@@ -1,10 +1,11 @@
 import { useCallback, useMemo, useRef, useState, type DragEvent } from 'react'
+import { useTranslation } from 'react-i18next'
+import { matchesDeadlineFilter, useLegalKanban, useLegalLawyers } from '@/features/lawyerWorkplace'
 import { cn } from '@/lib/utils'
 import { useLawyerWorkplaceLayout } from '../../context/lawyerWorkplaceLayout'
 import {
   buildKanbanColumns,
   KANBAN_DRAG_MIME,
-  MOCK_KANBAN_TASKS,
   moveKanbanTask,
   type KanbanColumnId,
   type KanbanDragPayload,
@@ -13,8 +14,10 @@ import {
 import {
   applyKanbanFilters,
   KANBAN_SCROLL_COLUMN_WIDTH_CLASS,
+  LAWYER_FILTER_OPTIONS,
   type DeadlineFilter,
   type LawyerFilterId,
+  type LawyerFilterOption,
   type TypeFilterId,
 } from './constants'
 import {
@@ -28,9 +31,10 @@ import { CreateKanbanTaskModal } from './CreateKanbanTaskModal'
 import { ThreadDrawer } from './ThreadDrawer'
 
 export function LegalKanbanBoard() {
+  const { t } = useTranslation('common')
   const { isKanbanGrid, showWorkspaceBanner } = useLawyerWorkplaceLayout()
   const scrollContainerRef = useRef<HTMLDivElement>(null)
-  const [tasks, setTasks] = useState<KanbanTask[]>(() => [...MOCK_KANBAN_TASKS])
+  const { data: lawyersData } = useLegalLawyers()
   const [deadlineFilter, setDeadlineFilter] = useState<DeadlineFilter>('this_week')
   const [lawyerFilter, setLawyerFilter] = useState<LawyerFilterId>('all')
   const [typeFilter, setTypeFilter] = useState<TypeFilterId>('all')
@@ -38,22 +42,75 @@ export function LegalKanbanBoard() {
   const [threadLetterId, setThreadLetterId] = useState<string | null>(null)
   const [dragOverColumn, setDragOverColumn] = useState<KanbanColumnId | null>(null)
   const [draggingTaskId, setDraggingTaskId] = useState<string | null>(null)
+  const [localOverrides, setLocalOverrides] = useState<KanbanTask[] | null>(null)
 
-  const columns = useMemo(() => buildKanbanColumns(tasks), [tasks])
+  const assignedToUserId =
+    lawyerFilter === 'all' ? undefined : Number.parseInt(lawyerFilter, 10) || undefined
+
+  const {
+    tasks: apiTasks,
+    isLoading,
+    isError,
+    refetch,
+  } = useLegalKanban({
+    assignedToUserId:
+      assignedToUserId != null && Number.isFinite(assignedToUserId) ? assignedToUserId : undefined,
+  })
+
+  const lawyerFilterOptions = useMemo<LawyerFilterOption[]>(() => {
+    const dynamicOptions =
+      lawyersData?.items.map((lawyer) => ({
+        id: String(lawyer.user_id),
+        key: lawyer.display_name,
+        fallback: lawyer.display_name,
+        assigneeUserId: lawyer.user_id,
+      })) ?? []
+
+    if (dynamicOptions.length > 0) {
+      return [
+        {
+          id: 'all',
+          key: 'pages.lawyerWorkplace.kanban.filters.allLawyers',
+          fallback: 'All Lawyers',
+        },
+        ...dynamicOptions,
+      ]
+    }
+
+    return [...LAWYER_FILTER_OPTIONS]
+  }, [lawyersData?.items])
+
+  const baseTasks = localOverrides ?? apiTasks
+
+  const columns = useMemo(() => buildKanbanColumns(baseTasks), [baseTasks])
 
   const filteredColumns = useMemo(
-    () => applyKanbanFilters(columns, lawyerFilter, typeFilter),
-    [columns, lawyerFilter, typeFilter]
+    () =>
+      applyKanbanFilters(
+        columns,
+        lawyerFilter,
+        typeFilter,
+        lawyerFilterOptions,
+        deadlineFilter,
+        matchesDeadlineFilter
+      ),
+    [columns, lawyerFilter, typeFilter, lawyerFilterOptions, deadlineFilter]
   )
 
   const totalActive = useMemo(
-    () => tasks.filter((task) => task.columnId !== 'completed').length,
-    [tasks]
+    () => baseTasks.filter((task) => task.columnId !== 'completed').length,
+    [baseTasks]
   )
 
-  const handleMoveTask = useCallback((taskId: string, toColumnId: KanbanColumnId) => {
-    setTasks((prev) => moveKanbanTask(prev, taskId, toColumnId))
-  }, [])
+  const handleMoveTask = useCallback(
+    (taskId: string, toColumnId: KanbanColumnId) => {
+      setLocalOverrides((prev) => {
+        const source = prev ?? apiTasks
+        return moveKanbanTask(source, taskId, toColumnId)
+      })
+    },
+    [apiTasks]
+  )
 
   const handleDragStart = useCallback((event: DragEvent, task: KanbanTask) => {
     if (task.columnId === 'completed') {
@@ -84,7 +141,7 @@ export function LegalKanbanBoard() {
   }, [])
 
   const handleDragLeave = useCallback((columnId: KanbanColumnId) => {
-    setDragOverColumn((prev) => (prev === columnId ? null : prev))
+    setDragOverColumn((prev) => (prev === columnId ? null : columnId))
   }, [])
 
   const handleDrop = useCallback(
@@ -116,7 +173,11 @@ export function LegalKanbanBoard() {
         deadlineFilter={deadlineFilter}
         onDeadlineFilterChange={setDeadlineFilter}
         lawyerFilter={lawyerFilter}
-        onLawyerFilterChange={setLawyerFilter}
+        onLawyerFilterChange={(value) => {
+          setLawyerFilter(value)
+          setLocalOverrides(null)
+        }}
+        lawyerFilterOptions={lawyerFilterOptions}
         typeFilter={typeFilter}
         onTypeFilterChange={setTypeFilter}
         onNewTask={() => setCreateTaskOpen(true)}
@@ -126,9 +187,31 @@ export function LegalKanbanBoard() {
 
       <ThreadDrawer letterId={threadLetterId} onClose={() => setThreadLetterId(null)} />
 
+      {isLoading && (
+        <p className="text-light-600 px-4 py-6 text-center text-sm sm:px-5 lg:px-7">
+          {t('pages.lawyerWorkplace.kanban.loading', 'Loading kanban tasks…')}
+        </p>
+      )}
+
+      {isError && !isLoading && (
+        <div className="px-4 py-6 text-center sm:px-5 lg:px-7">
+          <p className="text-error-600 text-sm">
+            {t('pages.lawyerWorkplace.kanban.loadError', 'Could not load kanban tasks')}
+          </p>
+          <button
+            type="button"
+            onClick={() => refetch()}
+            className="text-secondary-800 mt-2 text-sm font-medium underline"
+          >
+            {t('actions.retry', 'Retry')}
+          </button>
+        </div>
+      )}
+
       <div
         className={cn(
           'lawyer-workplace-scroll min-h-0 flex-1 overflow-y-auto',
+          (isLoading || isError) && 'hidden',
           isKanbanGrid
             ? showWorkspaceBanner
               ? 'pb-24'
@@ -155,7 +238,7 @@ export function LegalKanbanBoard() {
             className={cn(
               'pb-6',
               isKanbanGrid
-                ? 'grid w-full grid-cols-4 gap-3 px-4 sm:px-5 lg:gap-4 lg:px-7'
+                ? 'grid w-full grid-cols-4 gap-3 px-4 sm:px-5 lg:px-7'
                 : 'flex w-max snap-x snap-mandatory gap-3 lg:gap-4'
             )}
           >
@@ -190,7 +273,7 @@ export function LegalKanbanBoard() {
         </div>
       </div>
 
-      {!isKanbanGrid && (
+      {!isKanbanGrid && !isLoading && !isError && (
         <KanbanBoardScrollNavigator
           scrollContainerRef={scrollContainerRef}
           columns={filteredColumns}
