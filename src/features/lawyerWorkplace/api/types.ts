@@ -438,3 +438,59 @@ export interface LegalPollMailboxResult {
 export interface LegalPollAllMailboxesResponse {
   results: LegalPollMailboxResult[]
 }
+
+export interface LegalReplyTemplate {
+  id: string
+  name: string
+  body: string
+  letter_type_ids: string[]
+  is_active: boolean
+}
+
+export interface LegalReplyTemplateListResponse {
+  items: LegalReplyTemplate[]
+  total: number
+}
+
+export interface LegalReplyTemplateCreate {
+  name: string
+  body: string
+  letter_type_ids?: string[]
+  is_active?: boolean
+}
+
+export interface LegalReplyTemplateUpdate {
+  name?: string
+  body?: string
+  letter_type_ids?: string[]
+  is_active?: boolean
+}
+
+export type LegalDocumentPresetType = 'outgoing' | 'nbu_response'
+
+export interface LegalDocumentPreset {
+  id: string
+  name: string
+  document_type: LegalDocumentPresetType
+  default_assignee_lawyer_id: string | null
+  is_active: boolean
+}
+
+export interface LegalDocumentPresetListResponse {
+  items: LegalDocumentPreset[]
+  total: number
+}
+
+export interface LegalDocumentPresetCreate {
+  name: string
+  document_type: LegalDocumentPresetType
+  default_assignee_lawyer_id?: string | null
+  is_active?: boolean
+}
+
+export interface LegalDocumentPresetUpdate {
+  name?: string
+  document_type?: LegalDocumentPresetType
+  default_assignee_lawyer_id?: string | null
+  is_active?: boolean
+}

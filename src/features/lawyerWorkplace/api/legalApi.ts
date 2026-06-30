@@ -31,9 +31,17 @@ import type {
   LegalTrainingExampleUpdate,
   LegalDepartmentSyncSettings,
   LegalDepartmentSyncSettingsUpdate,
+  LegalDocumentPreset,
+  LegalDocumentPresetCreate,
+  LegalDocumentPresetListResponse,
+  LegalDocumentPresetUpdate,
   LegalMailboxCreate,
   LegalMailboxUpdate,
   LegalPollAllMailboxesResponse,
+  LegalReplyTemplate,
+  LegalReplyTemplateCreate,
+  LegalReplyTemplateListResponse,
+  LegalReplyTemplateUpdate,
   LegalSettingsMailbox,
   LegalSettingsMailboxListResponse,
 } from './types'
@@ -276,6 +284,48 @@ export const legalApi = {
   pollAllSettingsMailboxes() {
     return api
       .post<LegalPollAllMailboxesResponse>(`${SETTINGS_URL}/mailboxes/poll-all`)
+      .then((response) => response.data)
+  },
+
+  listSettingsReplyTemplates(params?: { include_inactive?: boolean }) {
+    return api
+      .get<LegalReplyTemplateListResponse>(`${SETTINGS_URL}/reply-templates`, { params })
+      .then((response) => response.data)
+  },
+
+  createSettingsReplyTemplate(payload: LegalReplyTemplateCreate) {
+    return api
+      .post<LegalReplyTemplate>(`${SETTINGS_URL}/reply-templates`, payload)
+      .then((response) => response.data)
+  },
+
+  updateSettingsReplyTemplate(templateId: string, payload: LegalReplyTemplateUpdate) {
+    return api
+      .patch<LegalReplyTemplate>(`${SETTINGS_URL}/reply-templates/${templateId}`, payload)
+      .then((response) => response.data)
+  },
+
+  listComposerReplyTemplates(params?: { letter_type_id?: string }) {
+    return api
+      .get<LegalReplyTemplateListResponse>(`${BASE_URL}/reply-templates`, { params })
+      .then((response) => response.data)
+  },
+
+  listSettingsDocumentPresets(params?: { include_inactive?: boolean }) {
+    return api
+      .get<LegalDocumentPresetListResponse>(`${SETTINGS_URL}/document-presets`, { params })
+      .then((response) => response.data)
+  },
+
+  createSettingsDocumentPreset(payload: LegalDocumentPresetCreate) {
+    return api
+      .post<LegalDocumentPreset>(`${SETTINGS_URL}/document-presets`, payload)
+      .then((response) => response.data)
+  },
+
+  updateSettingsDocumentPreset(presetId: string, payload: LegalDocumentPresetUpdate) {
+    return api
+      .patch<LegalDocumentPreset>(`${SETTINGS_URL}/document-presets/${presetId}`, payload)
       .then((response) => response.data)
   },
 }

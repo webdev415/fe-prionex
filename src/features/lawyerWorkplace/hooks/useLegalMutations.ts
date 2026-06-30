@@ -13,7 +13,11 @@ import type {
   LegalMailboxCreate,
   LegalMailboxUpdate,
   LegalDepartmentSyncSettingsUpdate,
+  LegalDocumentPresetCreate,
+  LegalDocumentPresetUpdate,
   LegalOutgoingLetterRequest,
+  LegalReplyTemplateCreate,
+  LegalReplyTemplateUpdate,
   LegalThreadReplyRequest,
   LegalTrainingExampleCreate,
   LegalTrainingExampleUpdate,
@@ -342,6 +346,65 @@ export function usePollAllLegalMailboxes() {
       queryClient.invalidateQueries({ queryKey: legalWorkplaceKeys.settingsMailboxes() })
       queryClient.invalidateQueries({ queryKey: legalWorkplaceKeys.syncSettings() })
       queryClient.invalidateQueries({ queryKey: legalWorkplaceKeys.inbox() })
+    },
+    onError: (error) => toast.error(getErrorMessage(error)),
+  })
+}
+
+export function useCreateLegalReplyTemplate() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (payload: LegalReplyTemplateCreate) =>
+      legalApi.createSettingsReplyTemplate(payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: legalWorkplaceKeys.replyTemplates() })
+      queryClient.invalidateQueries({ queryKey: legalWorkplaceKeys.composerReplyTemplates() })
+    },
+    onError: (error) => toast.error(getErrorMessage(error)),
+  })
+}
+
+export function useUpdateLegalReplyTemplate() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({
+      templateId,
+      payload,
+    }: {
+      templateId: string
+      payload: LegalReplyTemplateUpdate
+    }) => legalApi.updateSettingsReplyTemplate(templateId, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: legalWorkplaceKeys.replyTemplates() })
+      queryClient.invalidateQueries({ queryKey: legalWorkplaceKeys.composerReplyTemplates() })
+    },
+    onError: (error) => toast.error(getErrorMessage(error)),
+  })
+}
+
+export function useCreateLegalDocumentPreset() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (payload: LegalDocumentPresetCreate) =>
+      legalApi.createSettingsDocumentPreset(payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: legalWorkplaceKeys.documentPresets() })
+    },
+    onError: (error) => toast.error(getErrorMessage(error)),
+  })
+}
+
+export function useUpdateLegalDocumentPreset() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ presetId, payload }: { presetId: string; payload: LegalDocumentPresetUpdate }) =>
+      legalApi.updateSettingsDocumentPreset(presetId, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: legalWorkplaceKeys.documentPresets() })
     },
     onError: (error) => toast.error(getErrorMessage(error)),
   })

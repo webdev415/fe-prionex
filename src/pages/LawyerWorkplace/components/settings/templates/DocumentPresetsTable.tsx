@@ -4,20 +4,16 @@ import { Button } from '@/components/ui/Button'
 import { Pagination } from '@/components/ui/Pagination'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
-import { DOCUMENT_ASSIGNEE_OPTIONS } from '../../documents/constants'
+import type { SettingsDocumentPreset, SettingsLawyer } from '../../../settings/types'
 import { useLawyerWorkplaceLayout } from '../../../context/lawyerWorkplaceLayout'
-import type { SettingsDocumentPreset } from '../../../settings/types'
 import { DOCUMENT_PRESET_TYPE_OPTIONS } from '../constants'
 
 const DEFAULT_PAGE_SIZE = 5
 const PAGE_SIZE_OPTIONS = [5, 10, 20]
 
-const LAWYER_ASSIGNEES = DOCUMENT_ASSIGNEE_OPTIONS.filter(
-  (option) => option.id !== 'system' && option.id !== 'emailService'
-)
-
 interface DocumentPresetsTableProps {
   presets: SettingsDocumentPreset[]
+  lawyerAssignees: SettingsLawyer[]
   onEdit: (preset: SettingsDocumentPreset) => void
   onToggleActive: (presetId: string) => void
   onAdd: () => void
@@ -25,6 +21,7 @@ interface DocumentPresetsTableProps {
 
 export function DocumentPresetsTable({
   presets,
+  lawyerAssignees,
   onEdit,
   onToggleActive,
   onAdd,
@@ -35,8 +32,8 @@ export function DocumentPresetsTable({
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE)
 
   const assigneeById = useMemo(
-    () => Object.fromEntries(LAWYER_ASSIGNEES.map((option) => [option.id, option])),
-    []
+    () => Object.fromEntries(lawyerAssignees.map((lawyer) => [lawyer.id, lawyer])),
+    [lawyerAssignees]
   )
 
   const totalPages = presets.length > 0 ? Math.ceil(presets.length / pageSize) : 0
@@ -129,7 +126,7 @@ export function DocumentPresetsTable({
                   <td className="px-4 py-4">
                     <span className="text-dark-500 text-[13px]">
                       {assignee
-                        ? t(assignee.key, assignee.fallback)
+                        ? t(assignee.nameKey, assignee.nameFallback)
                         : t('pages.lawyerWorkplace.settings.templates.noAssignee', '—')}
                     </span>
                   </td>

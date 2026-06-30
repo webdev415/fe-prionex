@@ -11,13 +11,12 @@ import { Label } from '@/components/ui/Label'
 import { Modal, ModalContent, ModalFooter, ModalHeader } from '@/components/ui/Modal'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
-import { DOCUMENT_ASSIGNEE_OPTIONS } from '../../documents/constants'
-import type { DocumentPresetType, SettingsDocumentPreset } from '../../../settings/types'
+import type {
+  DocumentPresetType,
+  SettingsDocumentPreset,
+  SettingsLawyer,
+} from '../../../settings/types'
 import { DOCUMENT_PRESET_TYPE_OPTIONS } from '../constants'
-
-const LAWYER_ASSIGNEES = DOCUMENT_ASSIGNEE_OPTIONS.filter(
-  (option) => option.id !== 'system' && option.id !== 'emailService'
-)
 
 export interface DocumentPresetFormValues {
   name: string
@@ -29,19 +28,22 @@ export interface DocumentPresetFormValues {
 interface DocumentPresetModalProps {
   open: boolean
   preset: SettingsDocumentPreset | null
+  lawyerAssignees: SettingsLawyer[]
   onClose: () => void
-  onSave: (values: DocumentPresetFormValues) => void
+  onSave: (values: DocumentPresetFormValues) => void | Promise<void>
+  isSubmitting?: boolean
 }
 
 function getInitialValues(
   preset: SettingsDocumentPreset | null,
+  lawyerAssignees: SettingsLawyer[],
   t: (key: string, fallback: string) => string
 ): DocumentPresetFormValues {
   if (!preset) {
     return {
       name: '',
       documentType: 'outgoing',
-      defaultAssigneeId: LAWYER_ASSIGNEES[0]?.id ?? null,
+      defaultAssigneeId: lawyerAssignees[0]?.id ?? null,
       isActive: true,
     }
   }
@@ -53,7 +55,14 @@ function getInitialValues(
   }
 }
 
-export function DocumentPresetModal({ open, preset, onClose, onSave }: DocumentPresetModalProps) {
+export function DocumentPresetModal({
+  open,
+  preset,
+  lawyerAssignees,
+  onClose,
+  onSave,
+  isSubmitting = false,
+}: DocumentPresetModalProps) {
   const { t } = useTranslation('common')
   const isEditing = preset !== null
 
@@ -65,18 +74,18 @@ export function DocumentPresetModal({ open, preset, onClose, onSave }: DocumentP
   useEffect(() => {
     if (!open) return
     requestAnimationFrame(() => {
-      const initial = getInitialValues(preset, t)
+      const initial = getInitialValues(preset, lawyerAssignees, t)
       setName(initial.name)
       setDocumentType(initial.documentType)
       setDefaultAssigneeId(initial.defaultAssigneeId)
       setIsActive(initial.isActive)
     })
-  }, [open, preset, t])
+  }, [open, preset, t, lawyerAssignees])
 
   const selectedType =
     DOCUMENT_PRESET_TYPE_OPTIONS.find((option) => option.id === documentType) ??
     DOCUMENT_PRESET_TYPE_OPTIONS[0]!
-  const selectedAssignee = LAWYER_ASSIGNEES.find((option) => option.id === defaultAssigneeId)
+  const selectedAssignee = lawyerAssignees.find((lawyer) => lawyer.id === defaultAssigneeId)
 
   const canSave = name.trim().length > 0
 
@@ -155,7 +164,7 @@ export function DocumentPresetModal({ open, preset, onClose, onSave }: DocumentP
               >
                 <span className={cn(!selectedAssignee && 'text-gray-400')}>
                   {selectedAssignee
-                    ? t(selectedAssignee.key, selectedAssignee.fallback)
+                    ? t(selectedAssignee.nameKey, selectedAssignee.nameFallback)
                     : t('pages.lawyerWorkplace.settings.templates.noAssignee', '—')}
                 </span>
                 <Icons.ArrowDown size={16} strokeWidth={1.5} className="text-light-500" />
@@ -171,13 +180,13 @@ export function DocumentPresetModal({ open, preset, onClose, onSave }: DocumentP
               >
                 {t('pages.lawyerWorkplace.settings.templates.noAssignee', '—')}
               </DropdownMenuItem>
-              {LAWYER_ASSIGNEES.map((option) => (
+              {lawyerAssignees.map((lawyer) => (
                 <DropdownMenuItem
-                  key={option.id}
+                  key={lawyer.id}
                   className="cursor-pointer"
-                  onClick={() => setDefaultAssigneeId(option.id)}
+                  onClick={() => setDefaultAssigneeId(lawyer.id)}
                 >
-                  {t(option.key, option.fallback)}
+                  {t(lawyer.nameKey, lawyer.nameFallback)}
                 </DropdownMenuItem>
               ))}
             </DropdownMenuContent>
@@ -205,9 +214,9 @@ export function DocumentPresetModal({ open, preset, onClose, onSave }: DocumentP
         </Button>
         <Button
           variant="primary"
-          disabled={!canSave}
+          disabled={!canSave || isSubmitting}
           onClick={() =>
-            onSave({
+            void onSave({
               name: name.trim(),
               documentType,
               defaultAssigneeId,

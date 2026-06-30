@@ -5,7 +5,9 @@ import { Button } from '@/components/ui/Button'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 import {
+  applyReplyTemplatePlaceholders,
   downloadLegalAttachment,
+  useLegalComposerReplyTemplates,
   useLegalMailboxes,
   useReplyToLegalThread,
   type EdoType,
@@ -185,6 +187,9 @@ export function EmailThreadPanel({
 }: EmailThreadPanelProps) {
   const { t, i18n } = useTranslation('common')
   const { data: mailboxesData } = useLegalMailboxes({ enabled: Boolean(letter) })
+  const { data: replyTemplatesData } = useLegalComposerReplyTemplates(letter?.letterType, {
+    enabled: Boolean(letter),
+  })
   const replyMutation = useReplyToLegalThread()
   const letterId = letter?.id ?? ''
   const [mailboxOverride, setMailboxOverride] = useState<{
@@ -197,6 +202,25 @@ export function EmailThreadPanel({
   } | null>(null)
 
   const mailboxes = useMemo(() => mailboxesData?.items ?? [], [mailboxesData?.items])
+  const replyTemplates = useMemo(
+    () =>
+      (replyTemplatesData?.items ?? []).map((template) => ({
+        id: template.id,
+        name: template.name,
+        body: template.body,
+      })),
+    [replyTemplatesData?.items]
+  )
+
+  const handleApplyTemplate = (body: string) => {
+    if (!letter) return
+    onReplyDraftChange(
+      applyReplyTemplatePlaceholders(body, {
+        clientName: letter.clientName,
+        referenceId: letter.referenceId,
+      })
+    )
+  }
 
   const defaultMailboxId = useMemo(() => {
     if (!letter) return null
@@ -407,6 +431,8 @@ export function EmailThreadPanel({
         edoType={edoType}
         onEdoTypeChange={handleEdoTypeChange}
         onSend={handleSendReply}
+        replyTemplates={replyTemplates}
+        onApplyTemplate={handleApplyTemplate}
         isSending={replyMutation.isPending}
         sendDisabled={!letter.replyContext.threadId}
       />

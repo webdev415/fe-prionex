@@ -27,7 +27,8 @@ interface ReplyTemplateModalProps {
   template: SettingsReplyTemplate | null
   letterTypes: LetterTypeConfig[]
   onClose: () => void
-  onSave: (values: ReplyTemplateFormValues) => void
+  onSave: (values: ReplyTemplateFormValues) => void | Promise<void>
+  isSubmitting?: boolean
 }
 
 function getInitialValues(
@@ -51,6 +52,7 @@ export function ReplyTemplateModal({
   letterTypes,
   onClose,
   onSave,
+  isSubmitting = false,
 }: ReplyTemplateModalProps) {
   const { t } = useTranslation('common')
   const isEditing = template !== null
@@ -201,9 +203,9 @@ export function ReplyTemplateModal({
         </Button>
         <Button
           variant="primary"
-          disabled={!canSave}
+          disabled={!canSave || isSubmitting}
           onClick={() =>
-            onSave({
+            void onSave({
               name: name.trim(),
               body: body.trim(),
               letterTypeIds,

@@ -29,6 +29,12 @@ export const legalWorkplaceKeys = {
   mailboxes: () => [...legalWorkplaceKeys.all, 'mailboxes'] as const,
   settingsMailboxes: () => [...legalWorkplaceKeys.settings(), 'mailboxes'] as const,
   syncSettings: () => [...legalWorkplaceKeys.settings(), 'sync'] as const,
+  replyTemplates: (includeInactive?: boolean) =>
+    [...legalWorkplaceKeys.settings(), 'reply-templates', { includeInactive }] as const,
+  composerReplyTemplates: (letterTypeId?: string | null) =>
+    [...legalWorkplaceKeys.all, 'reply-templates', { letterTypeId }] as const,
+  documentPresets: (includeInactive?: boolean) =>
+    [...legalWorkplaceKeys.settings(), 'document-presets', { includeInactive }] as const,
   kanban: (assignedToUserId?: number) =>
     [...legalWorkplaceKeys.all, 'kanban', { assignedToUserId }] as const,
   documents: () => [...legalWorkplaceKeys.all, 'documents'] as const,
@@ -135,6 +141,47 @@ export function useLegalSyncSettings(options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: legalWorkplaceKeys.syncSettings(),
     queryFn: () => legalApi.getSyncSettings(),
+    enabled: options?.enabled !== false,
+    staleTime: 30_000,
+  })
+}
+
+export function useLegalSettingsReplyTemplates(options?: {
+  enabled?: boolean
+  includeInactive?: boolean
+}) {
+  const includeInactive = options?.includeInactive ?? true
+  return useQuery({
+    queryKey: legalWorkplaceKeys.replyTemplates(includeInactive),
+    queryFn: () => legalApi.listSettingsReplyTemplates({ include_inactive: includeInactive }),
+    enabled: options?.enabled !== false,
+    staleTime: 30_000,
+  })
+}
+
+export function useLegalComposerReplyTemplates(
+  letterTypeId: string | null | undefined,
+  options?: { enabled?: boolean }
+) {
+  return useQuery({
+    queryKey: legalWorkplaceKeys.composerReplyTemplates(letterTypeId),
+    queryFn: () =>
+      legalApi.listComposerReplyTemplates({
+        letter_type_id: letterTypeId ?? undefined,
+      }),
+    enabled: options?.enabled !== false,
+    staleTime: 60_000,
+  })
+}
+
+export function useLegalSettingsDocumentPresets(options?: {
+  enabled?: boolean
+  includeInactive?: boolean
+}) {
+  const includeInactive = options?.includeInactive ?? true
+  return useQuery({
+    queryKey: legalWorkplaceKeys.documentPresets(includeInactive),
+    queryFn: () => legalApi.listSettingsDocumentPresets({ include_inactive: includeInactive }),
     enabled: options?.enabled !== false,
     staleTime: 30_000,
   })

@@ -32,6 +32,12 @@ const EDO_OPTIONS: { id: EdoType; labelKey: string; fallback: string; badge?: st
   },
 ]
 
+export interface ReplyComposerTemplate {
+  id: string
+  name: string
+  body: string
+}
+
 export interface ReplyComposerProps {
   mailboxes: LegalMailbox[]
   selectedMailboxId: string | null
@@ -42,6 +48,8 @@ export interface ReplyComposerProps {
   edoType: EdoType
   onEdoTypeChange: (edoType: EdoType) => void
   onSend: () => void
+  replyTemplates?: ReplyComposerTemplate[]
+  onApplyTemplate?: (body: string) => void
   isSending?: boolean
   sendDisabled?: boolean
 }
@@ -56,6 +64,8 @@ export function ReplyComposer({
   edoType,
   onEdoTypeChange,
   onSend,
+  replyTemplates = [],
+  onApplyTemplate,
   isSending = false,
   sendDisabled = false,
 }: ReplyComposerProps) {
@@ -207,18 +217,43 @@ export function ReplyComposer({
             {t('pages.lawyerWorkplace.reply.saveDraft', 'Save draft')}
           </span>
         </LinkButton>
-        <LinkButton
-          type="button"
-          variant="regular-gray"
-          size="xs"
-          className="shrink-0 px-2 sm:px-2"
-          aria-label={t('pages.lawyerWorkplace.reply.template', 'Template')}
-          leftIcon={<Icons.Files02Icon size={13} strokeWidth={1.5} />}
-        >
-          <span className="hidden sm:inline">
-            {t('pages.lawyerWorkplace.reply.template', 'Template')}
-          </span>
-        </LinkButton>
+        <DropdownMenu modal={false}>
+          <DropdownMenuTrigger asChild>
+            <LinkButton
+              type="button"
+              variant="regular-gray"
+              size="xs"
+              className="shrink-0 px-2 sm:px-2"
+              aria-label={t('pages.lawyerWorkplace.reply.template', 'Template')}
+              leftIcon={<Icons.Files02Icon size={13} strokeWidth={1.5} />}
+              disabled={replyTemplates.length === 0}
+            >
+              <span className="hidden sm:inline">
+                {t('pages.lawyerWorkplace.reply.template', 'Template')}
+              </span>
+            </LinkButton>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent
+            align="start"
+            className="max-h-60 min-w-[220px] overflow-y-auto p-1.5"
+          >
+            {replyTemplates.length === 0 ? (
+              <DropdownMenuItem disabled className="text-light-600 text-[12px]">
+                {t('pages.lawyerWorkplace.reply.noTemplates', 'No templates available')}
+              </DropdownMenuItem>
+            ) : (
+              replyTemplates.map((template) => (
+                <DropdownMenuItem
+                  key={template.id}
+                  className="cursor-pointer text-[12px]"
+                  onClick={() => onApplyTemplate?.(template.body)}
+                >
+                  {template.name}
+                </DropdownMenuItem>
+              ))
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </div>
   )
