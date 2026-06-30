@@ -8,7 +8,12 @@ import { getErrorMessage } from '@/lib/errors'
 import i18n from '@/lib/i18n'
 import { clientKeys } from '@/features/clients/hooks/useClients'
 import { ubkiApi } from '../api/ubkiApi'
-import type { UbkiBulkOptOutRequest, UbkiBulkSubmitRequest, UbkiLogsParams } from '../api/types'
+import type {
+  UbkiBulkOptOutRequest,
+  UbkiBulkSubmitByClientsRequest,
+  UbkiBulkSubmitRequest,
+  UbkiLogsParams,
+} from '../api/types'
 
 const ubkiToast = (
   key: string,
@@ -105,20 +110,45 @@ export function useBulkSubmitToUbki() {
       queryClient.invalidateQueries({ queryKey: clientKeys.details() })
       queryClient.invalidateQueries({ queryKey: ubkiKeys.all })
 
-      const summary = ubkiToast(
-        'pages.clients.detail.ubki.toasts.bulkSubmitSummary',
-        '{{success}} sent, {{skipped}} skipped, {{error}} failed',
-        {
-          success: result.success_count,
-          skipped: result.skipped_count,
-          error: result.error_count,
-        }
+      // Submission now runs as a background job (HTTP 202). Results land async
+      // in the submission history; show a "queued" toast instead of counts.
+      toast.success(
+        ubkiToast(
+          'pages.clients.detail.ubki.toasts.bulkQueued',
+          'Queued {{count}} credit(s) for UBKI — results will appear in the submission history.',
+          { count: result.queued_count }
+        )
       )
-      if (result.error_count > 0) {
-        toast.warning(summary)
-      } else {
-        toast.success(summary)
-      }
+    },
+    onError: (error) => toast.error(getErrorMessage(error)),
+  })
+}
+
+/**
+ * Bulk submit to UBKI by clients (filter-driven bulk submission). The backend
+ * expands each client to ALL their loans and submits them (opted-out clients
+ * auto-skipped server-side). Mirrors {@link useBulkSubmitToUbki} but also
+ * invalidates the client list since per-client submission state may change.
+ */
+export function useBulkSubmitByClients() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (data: UbkiBulkSubmitByClientsRequest) => ubkiApi.bulkSubmitByClients(data),
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: clientKeys.lists() })
+      queryClient.invalidateQueries({ queryKey: clientKeys.details() })
+      queryClient.invalidateQueries({ queryKey: ubkiKeys.all })
+
+      // Submission now runs as a background job (HTTP 202). Results land async
+      // in the submission history; show a "queued" toast instead of counts.
+      toast.success(
+        ubkiToast(
+          'pages.clients.detail.ubki.toasts.bulkQueued',
+          'Queued {{count}} credit(s) for UBKI — results will appear in the submission history.',
+          { count: result.queued_count }
+        )
+      )
     },
     onError: (error) => toast.error(getErrorMessage(error)),
   })
@@ -126,11 +156,20 @@ export function useBulkSubmitToUbki() {
 
 /**
  * Submission history log, optionally scoped to one debt.
+ *
+ * `refetchInterval` (ms) lets callers poll while the panel is open, so rows
+ * produced by a background bulk job appear without a manual refresh. Pass
+ * `false` (the default) to disable polling.
  */
-export function useUbkiLogs(params: UbkiLogsParams = {}, enabled = true) {
+export function useUbkiLogs(
+  params: UbkiLogsParams = {},
+  enabled = true,
+  refetchInterval: number | false = false
+) {
   return useQuery({
     queryKey: ubkiKeys.logs(params),
     queryFn: () => ubkiApi.getUbkiLogs(params),
     enabled,
+    refetchInterval: enabled ? refetchInterval : false,
   })
 }

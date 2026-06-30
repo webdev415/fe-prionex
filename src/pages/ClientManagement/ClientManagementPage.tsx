@@ -51,7 +51,7 @@ import type { Priority } from './types'
 import { PermissionGuard } from '@/components/auth'
 import { PERMISSIONS } from '@/constants/permissions'
 import { ALL_MESSAGING_LAUNCH_PERMISSIONS } from '@/features/messaging'
-import { useBulkOptOutUbki } from '@/features/ubki'
+import { useBulkOptOutUbki, useBulkSubmitByClients } from '@/features/ubki'
 import { useTags } from '@/features/tags/hooks/useTags'
 import { isAdminRole, isHiddenVisibility } from '@/features/tags/utils/visibility'
 import { toast } from 'sonner'
@@ -1008,6 +1008,7 @@ export function ClientManagementPage() {
   const assignClientMutation = useAssignClient()
   const bulkAssignClientsMutation = useBulkAssignClients()
   const bulkOptOutUbkiMutation = useBulkOptOutUbki()
+  const bulkSubmitByClientsMutation = useBulkSubmitByClients()
 
   // Map API clients to display format
   const displayClients = useMemo(() => {
@@ -1134,6 +1135,32 @@ export function ClientManagementPage() {
     }
     bulkOptOutUbkiMutation.mutate(
       { client_ids: clientIds, do_not_send: doNotSend },
+      {
+        onSuccess: () => {
+          setSelectedClients(new Set())
+          setAllClientsSelected(false)
+          setExcludedClients(new Set())
+        },
+      }
+    )
+  }
+
+  // Bulk "Send to UBKI": submit all loans for the currently-selected clients.
+  // Server-side expansion handles per-client loans and auto-skips opted-out
+  // clients, so we only need to pass client_ids (mirrors handleBulkUbkiOptOut).
+  const handleBulkUbkiSubmit = () => {
+    const clientIds = resolveSelectedClientIds()
+    if (clientIds.length === 0) {
+      toast.error(
+        t(
+          'pages.clients.bulkActions.selectClientsFirst',
+          'Select at least one client before starting a bulk action'
+        )
+      )
+      return
+    }
+    bulkSubmitByClientsMutation.mutate(
+      { client_ids: clientIds },
       {
         onSuccess: () => {
           setSelectedClients(new Set())
@@ -1960,6 +1987,18 @@ export function ClientManagementPage() {
                         />
                         <span className="text-dark-500 text-sm font-medium">
                           {t('pages.clients.bulkActions.sendMessage', 'Send Message')}
+                        </span>
+                      </DropdownMenuItem>
+                    </PermissionGuard>
+                    <PermissionGuard permission={PERMISSIONS.UBKI.SUBMIT}>
+                      <DropdownMenuItem
+                        onClick={handleBulkUbkiSubmit}
+                        disabled={totalSelectedCount === 0 || bulkSubmitByClientsMutation.isPending}
+                        className="flex cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 transition-colors hover:bg-gray-50 focus:bg-gray-50"
+                      >
+                        <Icons.MailSend01 size={18} className="text-dark-500" strokeWidth={1.5} />
+                        <span className="text-dark-500 text-sm font-medium">
+                          {t('pages.clients.bulkActions.submitUbki', 'Send to UBKI')}
                         </span>
                       </DropdownMenuItem>
                     </PermissionGuard>

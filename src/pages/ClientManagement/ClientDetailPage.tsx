@@ -12,6 +12,7 @@ import { Icons } from '@/lib/icons'
 import { DocumentsAccordion } from './components/DocumentsAccordion'
 import { DocumentUploadModal } from './components/DocumentUploadModal'
 import { LoanFactoringInfo } from './components/LoanFactoringInfo'
+import { UbkiSubmissionHistory } from './components/UbkiSubmissionHistory'
 import { SaleNotesSection } from './components/SaleNotesSection'
 import { formatDate, formatDateTime, formatMoneyUAHTwoDecimals } from '@/lib/formatters'
 import { Button } from '@/components/ui/Button'
@@ -118,6 +119,7 @@ import { backendToFrontendPaymentMethod } from '@/features/payments/utils'
 import { useUserDepartment } from '@/features/users'
 import { PermissionGuard } from '@/components/auth'
 import { useHasAnyPermission, useHasPermission } from '@/hooks/usePermissions'
+import { useSubmitDebtToUbki, useBulkSubmitToUbki, ubkiKeys } from '@/features/ubki'
 import { PERMISSIONS } from '@/constants/permissions'
 import { searchClientsByPhoneExact } from '@/api/clientSearchApi'
 import { ChainExecutor, TAInteractionHistory } from './components/taChains'
@@ -429,6 +431,9 @@ export function ClientDetailPage() {
   const ubkiQueryClient = useQueryClient()
   const { mutate: updateClientMutate, isPending: isUpdatingUbkiOptOut } = useUpdateClient()
   // Client opt-out flag (backend exposes it on the client detail response).
+  const canSubmitToUbki = useHasPermission(PERMISSIONS.UBKI.SUBMIT)
+  const { mutate: submitDebtToUbki, isPending: isSubmittingToUbki } = useSubmitDebtToUbki()
+  const { mutate: bulkSubmitToUbki, isPending: isBulkSubmittingToUbki } = useBulkSubmitToUbki()
   const doNotSendToUbki = clientDetail?.do_not_send_to_ubki ?? false
   const handleToggleUbkiOptOut = (checked: boolean) => {
     updateClientMutate(
@@ -570,6 +575,30 @@ export function ClientDetailPage() {
     () => (loans ?? []).some((d) => d.status === 'active'),
     [loans]
   )
+  // Debt ids of the client's already-loaded loans, used for the
+  // "Send all loans to UBKI" bulk action and the submission-history filter.
+  const ubkiLoanIds = useMemo(() => (loans ?? []).map((d) => d.id), [loans])
+  // debt id + human loan number (contract_number) for the history panel display.
+  const ubkiLoans = useMemo(
+    () =>
+      (loans ?? []).map((d) => ({
+        id: d.id,
+        loanNumber: d.contract_number ?? String(d.id),
+      })),
+    [loans]
+  )
+  const handleBulkSubmitToUbki = () => {
+    if (ubkiLoanIds.length === 0) return
+    bulkSubmitToUbki(
+      { debt_ids: ubkiLoanIds },
+      {
+        onSuccess: () => {
+          ubkiQueryClient.invalidateQueries({ queryKey: clientKeys.loans(clientId) })
+          ubkiQueryClient.invalidateQueries({ queryKey: ubkiKeys.all })
+        },
+      }
+    )
+  }
   // Per-transition RR permissions. Buttons in the RR actions column
   // disable themselves (with a tooltip) when the operator's role lacks
   // the corresponding gate. Auto transitions (driven by the lazy
@@ -1556,6 +1585,42 @@ export function ClientDetailPage() {
             <Icons.Info size={18} />
           </button>
         )
+
+        // Tooltip used when the UBKI send button is disabled because the
+        // client is opted out.
+        const ubkiSendTitle = doNotSendToUbki
+          ? t(
+              'pages.clients.detail.ubki.optedOutTooltip',
+              'Client is opted out of UBKI; submission is disabled.'
+            )
+          : loan.sentToCreditBureau && loan.creditBureauSentDate
+            ? t('pages.clients.detail.ubki.sentOn', 'Sent on {{date}}', {
+                date: formatDate(loan.creditBureauSentDate),
+              })
+            : t('pages.clients.detail.ubki.send', 'Send to UBKI')
+
+        // UBKI send button — shown for any loan when the operator can submit.
+        const ubkiButton = canSubmitToUbki ? (
+          <button
+            onClick={() => submitDebtToUbki({ debtId: loan.id, clientId })}
+            disabled={doNotSendToUbki || isSubmittingToUbki}
+            className={cn(
+              'p-1 disabled:opacity-50',
+              loan.sentToCreditBureau
+                ? 'text-secondary-800 hover:text-secondary-900'
+                : 'text-gray-500 hover:text-gray-700',
+              doNotSendToUbki ? 'cursor-not-allowed' : ''
+            )}
+            title={ubkiSendTitle}
+          >
+            {loan.sentToCreditBureau ? (
+              <Icons.Checkmark size={18} strokeWidth={1.5} />
+            ) : (
+              <Icons.MailSend01 size={18} strokeWidth={1.5} />
+            )}
+          </button>
+        ) : null
+
         if (loan.status === 'active') {
           return (
             <div className="flex items-center justify-center gap-2">
@@ -1574,6 +1639,7 @@ export function ClientDetailPage() {
                   <Icons.Success size={18} />
                 </button>
               </PermissionGuard>
+              {ubkiButton}
             </div>
           )
         }
@@ -1609,10 +1675,16 @@ export function ClientDetailPage() {
                   </button>
                 </div>
               </PermissionGuard>
+              {ubkiButton}
             </div>
           )
         }
-        return infoButton
+        return (
+          <div className="flex items-center justify-center gap-2">
+            {infoButton}
+            {ubkiButton}
+          </div>
+        )
       },
     },
   ]
@@ -3420,6 +3492,39 @@ export function ClientDetailPage() {
                           {t('pages.clients.detail.writeOff')}
                         </Button>
                       )}
+                      {/* Bulk "Send all loans to UBKI" — gated by the same
+                          submit_to_ubki permission as the per-loan send button. */}
+                      {canSubmitToUbki && (
+                        <Button
+                          variant="secondary"
+                          leftIcon={<Icons.MailSend01 size={20} />}
+                          className="rounded text-xs md:text-sm"
+                          size="sm"
+                          onClick={handleBulkSubmitToUbki}
+                          disabled={
+                            doNotSendToUbki || ubkiLoanIds.length === 0 || isBulkSubmittingToUbki
+                          }
+                          title={
+                            doNotSendToUbki
+                              ? t(
+                                  'pages.clients.detail.ubki.optedOutTooltip',
+                                  'Client is opted out of UBKI; submission is disabled.'
+                                )
+                              : ubkiLoanIds.length === 0
+                                ? t(
+                                    'pages.clients.detail.ubki.noLoansTooltip',
+                                    'This client has no loans to submit.'
+                                  )
+                                : t('pages.clients.detail.ubki.sendAll', 'Send all loans to UBKI')
+                          }
+                        >
+                          {t('pages.clients.detail.ubki.sendAll', 'Send all loans to UBKI')}
+                        </Button>
+                      )}
+                    </div>
+                    {/* UBKI submission history — scoped to this client's loans. */}
+                    <div className="px-3 pb-4 md:px-6">
+                      <UbkiSubmissionHistory clientId={clientId} loans={ubkiLoans} />
                     </div>
                   </div>
                 )}

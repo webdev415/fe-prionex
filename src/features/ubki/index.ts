@@ -5,5 +5,6 @@ export {
   useSubmitDebtToUbki,
   useBulkOptOutUbki,
   useBulkSubmitToUbki,
+  useBulkSubmitByClients,
   useUbkiLogs,
 } from './hooks/useUbki'

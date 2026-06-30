@@ -3286,6 +3286,19 @@
           "sentOn": "Sent on {{date}}",
           "optedOut": "Opted out",
           "optedOutTooltip": "Client is opted out of UBKI; submission is disabled.",
+          "sendAll": "Send all loans to UBKI",
+          "noLoansTooltip": "This client has no loans to submit.",
+          "history": {
+            "title": "UBKI submission history",
+            "empty": "No UBKI submissions yet.",
+            "headers": {
+              "date": "Date",
+              "loan": "Loan",
+              "mode": "Mode",
+              "status": "Status",
+              "result": "Result"
+            }
+          },
           "selectFirst": "Select at least one item first",
           "toasts": {
             "submitSuccess": "Submitted to UBKI",
@@ -3293,7 +3306,7 @@
             "submitError": "Submission to UBKI failed",
             "optOutSuccess": "{{count}} client(s) opted out of UBKI",
             "optInSuccess": "{{count}} client(s) re-enabled for UBKI",
-            "bulkSubmitSummary": "{{success}} sent, {{skipped}} skipped, {{error}} failed"
+            "bulkQueued": "Queued {{count}} credit(s) for UBKI — results will appear in the submission history."
           }
         }
       },

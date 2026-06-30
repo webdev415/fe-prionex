@@ -35,13 +35,30 @@ export interface UbkiBulkSubmitRequest {
   debt_ids: number[]
 }
 
-/** Response of POST /api/v1/ubki/submit/bulk */
-export interface UbkiBulkSubmitResponse {
-  submitted_count: number
-  success_count: number
-  error_count: number
-  skipped_count: number
-  results: UbkiSubmitResult[]
+/**
+ * Request body for POST /api/v1/ubki/submit/by-clients.
+ *
+ * The backend expands each client to ALL their loans and submits them
+ * (opted-out clients are auto-skipped server-side). `client_ids` is capped
+ * at 2000 by the backend. Optional `statuses` narrows which loan statuses
+ * are submitted.
+ */
+export interface UbkiBulkSubmitByClientsRequest {
+  client_ids: number[]
+  statuses?: string[]
+}
+
+/**
+ * Response of POST /api/v1/ubki/submit/bulk and /api/v1/ubki/submit/by-clients.
+ *
+ * These endpoints now enqueue a BACKGROUND JOB and return HTTP 202 immediately.
+ * The actual per-loan results appear asynchronously in the submission log
+ * (GET /api/v1/ubki/logs?batch_id=<batch_id>) as the worker processes them.
+ */
+export interface UbkiBulkQueuedResponse {
+  status: string
+  batch_id: string
+  queued_count: number
 }
 
 /** One row of GET /api/v1/ubki/logs */
@@ -55,10 +72,14 @@ export interface UbkiLogEntry {
   error_code?: string | null
   error_message?: string | null
   triggered_by?: number | null
+  /** Set on rows produced by a background bulk job; groups a single batch. */
+  batch_id?: string | null
   created_at: string
 }
 
 export interface UbkiLogsParams {
   debt_id?: number
+  /** Scope the log to a single background bulk job's rows. */
+  batch_id?: string
   limit?: number
 }
