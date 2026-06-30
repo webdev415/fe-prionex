@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/Button'
 import { DateSelect } from '@/components/ui/DateSelect'
 import {
@@ -10,6 +11,8 @@ import {
 } from '@/components/ui/DropdownMenu'
 import { Label } from '@/components/ui/Label'
 import { SearchableSelect } from '@/components/ui/SearchableSelect'
+import { useClients } from '@/features/clients/hooks/useClients'
+import { useConfirmLetter, useLegalLawyers, useLegalLetterTypes } from '@/features/lawyerWorkplace'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 import { formatDueDate } from '../../utils/formatters'
@@ -23,22 +26,6 @@ const TYPE_COLOURS: Record<string, string> = {
   court_claim: 'bg-warning-100 text-warning-700',
   attorney_request: 'bg-[#EDE9FE] text-[#6D28D9]',
   inquiry: 'bg-success-100 text-success-700',
-}
-
-const TYPE_KEYS = [
-  'complaint',
-  'nbu_inquiry',
-  'court_claim',
-  'attorney_request',
-  'inquiry',
-] as const
-
-const TYPE_I18N: Record<(typeof TYPE_KEYS)[number], string> = {
-  complaint: 'pages.lawyerWorkplace.parameters.types.complaint',
-  nbu_inquiry: 'pages.lawyerWorkplace.parameters.types.nbuInquiry',
-  court_claim: 'pages.lawyerWorkplace.parameters.types.courtClaim',
-  attorney_request: 'pages.lawyerWorkplace.parameters.types.attorneyRequest',
-  inquiry: 'pages.lawyerWorkplace.parameters.types.inquiry',
 }
 
 function TypeBadge({ type, label }: { type: string; label: string }) {
@@ -56,51 +43,38 @@ function TypeBadge({ type, label }: { type: string; label: string }) {
   )
 }
 
-// ─── Mock data ────────────────────────────────────────────────────────────────
+function resolveLetterTypeId(
+  letterTypes: { id: string; slug: string }[],
+  value: string | null | undefined
+): string {
+  if (!value) return ''
+  const byId = letterTypes.find((item) => item.id === value)
+  if (byId) return byId.id
+  const bySlug = letterTypes.find((item) => item.slug === value)
+  return bySlug?.id ?? value
+}
 
-const CLIENT_OPTIONS_SEARCHABLE = [
-  { id: 'not_identified', name: 'Not identified' },
-  { id: 'cl-08114', name: 'CL-08114 · I. Petrenko' },
-  { id: 'cl-12409', name: 'CL-12409 · O. Kovalenko' },
-  { id: 'cl-06441', name: 'CL-06441 · P. Melnyk' },
-  { id: 'cl-09908', name: 'CL-09908 · V. Khomenko' },
-  { id: 'cl-03305', name: 'CL-03305 · M. Bondarenko' },
-  { id: 'cl-07750', name: 'CL-07750 · L. Savchenko' },
-  { id: 'cl-04412', name: 'CL-04412 · T. Romaniuk' },
-  { id: 'cl-05588', name: 'CL-05588 · H. Tkachenko' },
-  { id: 'cl-02211', name: 'CL-02211 · O. Vasylenko' },
-]
+function resolveLawyerUserId(
+  lawyers: { id: string; user_id: number }[],
+  lawyerValue: string | null | undefined
+): number | null {
+  if (!lawyerValue) return null
+  const byRecord = lawyers.find((item) => item.id === lawyerValue)
+  if (byRecord) return byRecord.user_id
+  const asNumber = Number(lawyerValue)
+  return Number.isFinite(asNumber) && asNumber > 0 ? asNumber : null
+}
 
-const LAWYER_OPTIONS = [
-  { value: 'auto', labelKey: 'pages.lawyerWorkplace.parameters.auto', display: 'Auto' },
-  {
-    value: 'lawyer-1',
-    labelKey: 'pages.lawyerWorkplace.parameters.lawyers.lawyer1',
-    display: 'V. Doroshenko (3)',
-  },
-  {
-    value: 'lawyer-2',
-    labelKey: 'pages.lawyerWorkplace.parameters.lawyers.lawyer2',
-    display: 'M. Ivanenko (1)',
-  },
-  {
-    value: 'lawyer-3',
-    labelKey: 'pages.lawyerWorkplace.parameters.lawyers.lawyer3',
-    display: 'D. Kovalchuk (2)',
-  },
-  {
-    value: 'lawyer-4',
-    labelKey: 'pages.lawyerWorkplace.parameters.lawyers.lawyer4',
-    display: 'O. Hrytsenko (4)',
-  },
-] as const
-
-const CONTRACT_OPTIONS = [
-  { value: 'cr-2024-00518', label: 'CR-2024-00518' },
-  { value: 'cr-12409', label: 'CR-12409' },
-  { value: 'cr-09908', label: 'CR-09908' },
-  { value: 'cr-03305', label: 'CR-03305' },
-] as const
+function formatClientOption(client: {
+  id: number
+  first_name: string
+  last_name: string
+  legacy_id?: string | null
+}): { id: string; name: string } {
+  const code = client.legacy_id?.trim() || `CL-${String(client.id).padStart(5, '0')}`
+  const name = [client.first_name, client.last_name].filter(Boolean).join(' ')
+  return { id: String(client.id), name: name ? `${code} · ${name}` : code }
+}
 
 // ─── Shared sub-components ────────────────────────────────────────────────────
 
@@ -206,50 +180,123 @@ export interface LetterParametersPanelProps {
   onConfirm?: (letterId: string) => void
 }
 
-export function LetterParametersPanel({ letter, onClose, onConfirm }: LetterParametersPanelProps) {
+function LetterParametersPanelContent({
+  letter,
+  onClose,
+  onConfirm,
+}: {
+  letter: LetterDetail
+  onClose?: () => void
+  onConfirm?: (letterId: string) => void
+}) {
   const { t, i18n } = useTranslation('common')
+  const confirmMutation = useConfirmLetter()
+  const { data: letterTypesData } = useLegalLetterTypes()
+  const { data: lawyersData } = useLegalLawyers()
+  const { data: clientsData } = useClients({ limit: 200 })
 
-  // Editable state (Mode A)
-  const [selectedType, setSelectedType] = useState<string>('')
-  const [selectedClientId, setSelectedClientId] = useState<string>('')
-  const [selectedLawyerId, setSelectedLawyerId] = useState<string>('auto')
-  const [selectedDueDate, setSelectedDueDate] = useState<Date | null>(null)
-  const [confirmed, setConfirmed] = useState(false)
+  const letterTypes = useMemo(() => letterTypesData?.items ?? [], [letterTypesData?.items])
+  const lawyers = useMemo(() => lawyersData?.items ?? [], [lawyersData?.items])
 
-  if (!letter) {
-    return (
-      <div className="flex h-full w-full shrink-0 items-center justify-center border-l border-gray-200 bg-white">
-        <p className="px-4 text-center text-sm text-gray-400">
-          {t('pages.lawyerWorkplace.parameters.selectLetter', 'Select a letter to view parameters')}
-        </p>
-      </div>
-    )
-  }
+  const [typeOverride, setTypeOverride] = useState<string | null>(null)
+  const [clientOverride, setClientOverride] = useState<string | null>(null)
+  const [lawyerOverride, setLawyerOverride] = useState<string | null>(null)
+  const [dueDateOverride, setDueDateOverride] = useState<Date | null>(null)
 
   const { parameters: p, status } = letter
 
-  const getTypeLabel = (type: string) =>
-    TYPE_I18N[type as (typeof TYPE_KEYS)[number]]
-      ? t(TYPE_I18N[type as (typeof TYPE_KEYS)[number]])
-      : type
+  const defaultTypeId = useMemo(
+    () => resolveLetterTypeId(letterTypes, p.letterType),
+    [letterTypes, p.letterType]
+  )
+  const defaultClientId = p.clientId && p.clientId !== 'not_identified' ? p.clientId : ''
+  const defaultLawyerUserId = useMemo(() => {
+    const resolved = resolveLawyerUserId(lawyers, p.lawyerId)
+    return resolved != null ? String(resolved) : ''
+  }, [lawyers, p.lawyerId])
+  const defaultDueDate = p.dueDate ? new Date(p.dueDate) : null
 
-  // ── Mode C: auto-processed — caller hides the panel, so nothing to render ──
+  const effectiveTypeId = typeOverride ?? defaultTypeId
+  const effectiveClientId = clientOverride ?? defaultClientId
+  const effectiveLawyerUserId = lawyerOverride ?? defaultLawyerUserId
+  const effectiveDueDate = dueDateOverride ?? defaultDueDate
 
-  // ── Mode B: read-only (sent_to_kanban / on_board / auto_processed) ──────────
+  const clientOptions = useMemo(() => {
+    const options = (clientsData?.items ?? []).map(formatClientOption)
+    if (
+      effectiveClientId &&
+      !options.some((option) => option.id === effectiveClientId) &&
+      p.clientLabel
+    ) {
+      options.unshift({ id: effectiveClientId, name: p.clientLabel })
+    }
+    return options
+  }, [clientsData?.items, effectiveClientId, p.clientLabel])
+
+  const lawyerOptions = useMemo(
+    () =>
+      lawyers.map((lawyer) => ({
+        userId: String(lawyer.user_id),
+        display: `${lawyer.display_name} (${lawyer.current_active})`,
+      })),
+    [lawyers]
+  )
+
+  const getTypeLabel = (typeId: string) =>
+    letterTypes.find((item) => item.id === typeId)?.name ??
+    letterTypes.find((item) => item.slug === typeId)?.name ??
+    typeId
+
+  const getTypeSlug = (typeId: string) =>
+    letterTypes.find((item) => item.id === typeId)?.slug ?? typeId
+
   const isReadOnly =
     status === 'sent_to_kanban' || status === 'on_board' || status === 'auto_processed'
 
-  const typeLabel = p.letterType ? getTypeLabel(p.letterType) : null
+  const typeLabel = p.letterType
+    ? getTypeLabel(resolveLetterTypeId(letterTypes, p.letterType))
+    : null
   const lawyerDisplay =
-    LAWYER_OPTIONS.find((o) => o.value === (selectedLawyerId || p.lawyerId))?.display ??
+    lawyerOptions.find((option) => option.userId === effectiveLawyerUserId)?.display ??
     p.lawyerLabel ??
-    'Auto'
+    '—'
+
+  const clientIdNumber = Number(effectiveClientId)
+  const lawyerUserIdNumber = Number(effectiveLawyerUserId)
 
   const canConfirm =
-    (selectedType || p.letterType) &&
-    (selectedClientId || p.clientId) &&
-    (selectedDueDate || p.dueDate) &&
-    !confirmed
+    Boolean(effectiveTypeId) &&
+    Number.isFinite(clientIdNumber) &&
+    clientIdNumber > 0 &&
+    effectiveDueDate instanceof Date &&
+    !Number.isNaN(effectiveDueDate.getTime()) &&
+    Number.isFinite(lawyerUserIdNumber) &&
+    lawyerUserIdNumber > 0 &&
+    !isReadOnly &&
+    !confirmMutation.isPending
+
+  const handleConfirm = () => {
+    if (!canConfirm || !effectiveDueDate) return
+    confirmMutation.mutate(
+      {
+        messageId: letter.id,
+        payload: {
+          letter_type_id: effectiveTypeId,
+          client_id: clientIdNumber,
+          due_date: effectiveDueDate.toISOString(),
+          assigned_to_user_id: lawyerUserIdNumber,
+        },
+      },
+      {
+        onSuccess: () => {
+          toast.success(
+            t('pages.lawyerWorkplace.parameters.confirmSuccess', 'Task created on kanban board')
+          )
+          onConfirm?.(letter.id)
+        },
+      }
+    )
+  }
 
   const mockActivityLog: ActivityLogEntry[] = [
     {
@@ -266,7 +313,7 @@ export function LetterParametersPanel({ letter, onClose, onConfirm }: LetterPara
           },
         ]
       : []),
-    ...(isReadOnly || confirmed
+    ...(isReadOnly
       ? [
           {
             timestamp: new Date().toISOString(),
@@ -277,7 +324,7 @@ export function LetterParametersPanel({ letter, onClose, onConfirm }: LetterPara
       : []),
   ]
 
-  if (isReadOnly && !confirmed) {
+  if (isReadOnly) {
     // ── MODE B: Read-only view ─────────────────────────────────────────────────
     return (
       <div className="flex h-full w-full shrink-0 flex-col border-l border-gray-100 bg-white">
@@ -315,7 +362,7 @@ export function LetterParametersPanel({ letter, onClose, onConfirm }: LetterPara
 
           {typeLabel && p.letterType && (
             <ReadonlyField label={t('pages.lawyerWorkplace.parameters.type', 'Type')}>
-              <TypeBadge type={p.letterType} label={typeLabel} />
+              <TypeBadge type={getTypeSlug(p.letterType)} label={typeLabel} />
             </ReadonlyField>
           )}
 
@@ -403,42 +450,40 @@ export function LetterParametersPanel({ letter, onClose, onConfirm }: LetterPara
           label={t('pages.lawyerWorkplace.parameters.type', 'Type')}
           placeholder={t('pages.lawyerWorkplace.parameters.selectType', 'Select type')}
           value={
-            selectedType || p.letterType ? (
+            effectiveTypeId ? (
               <TypeBadge
-                type={selectedType || p.letterType}
-                label={getTypeLabel(selectedType || p.letterType)}
+                type={getTypeSlug(effectiveTypeId)}
+                label={getTypeLabel(effectiveTypeId)}
               />
             ) : null
           }
-          onSelect={setSelectedType}
-          items={TYPE_KEYS.map((type) => {
-            const label = getTypeLabel(type)
-            return { key: type, content: <TypeBadge type={type} label={label} /> }
-          })}
+          onSelect={setTypeOverride}
+          items={letterTypes.map((letterType) => ({
+            key: letterType.id,
+            content: <TypeBadge type={letterType.slug} label={letterType.name} />,
+          }))}
         />
 
-        {/* Client — searchable */}
         <div className="flex w-full flex-col gap-2">
           <Label className="text-dark-500 text-[12px] font-normal">
             {t('pages.lawyerWorkplace.parameters.client', 'Client')}
           </Label>
           <SearchableSelect
-            options={CLIENT_OPTIONS_SEARCHABLE}
-            value={selectedClientId || p.clientId || ''}
-            onValueChange={setSelectedClientId}
+            options={clientOptions}
+            value={effectiveClientId}
+            onValueChange={setClientOverride}
             placeholder={t('pages.lawyerWorkplace.parameters.notIdentified', 'Not identified')}
           />
         </div>
 
-        {/* Due date — DateSelect */}
         <div className="flex w-full flex-col gap-2">
           <Label className="text-dark-500 text-[12px] font-normal">
             {t('pages.lawyerWorkplace.parameters.dueDate', 'Due date')}
           </Label>
           <DateSelect
             id="params-due-date"
-            value={selectedDueDate ?? (p.dueDate ? new Date(p.dueDate) : null)}
-            onChange={({ value }) => setSelectedDueDate(value)}
+            value={effectiveDueDate}
+            onChange={({ value }) => setDueDateOverride(value)}
             placeholder={t('pages.lawyerWorkplace.parameters.selectDueDate', 'Select date')}
             format="dd/MM/yyyy"
             min={new Date()}
@@ -446,25 +491,21 @@ export function LetterParametersPanel({ letter, onClose, onConfirm }: LetterPara
           />
         </div>
 
-        {/* Lawyer */}
         <ParameterDropdown
           label={t('pages.lawyerWorkplace.parameters.lawyer', 'Lawyer')}
           value={lawyerDisplay}
-          onSelect={setSelectedLawyerId}
-          items={LAWYER_OPTIONS.map((opt) => ({
-            key: opt.value,
-            content: <span className="text-dark-500 text-[13px] font-light">{opt.display}</span>,
+          onSelect={setLawyerOverride}
+          items={lawyerOptions.map((option) => ({
+            key: option.userId,
+            content: <span className="text-dark-500 text-[13px] font-light">{option.display}</span>,
           }))}
         />
 
-        {/* Contract */}
-        <ParameterDropdown
-          label={t('pages.lawyerWorkplace.parameters.contract', 'Contract')}
-          value={
-            CONTRACT_OPTIONS.find((o) => o.value === p.contractId)?.label ?? p.contractLabel ?? null
-          }
-          items={CONTRACT_OPTIONS.map((opt) => ({ key: opt.value, content: opt.label }))}
-        />
+        {p.contractLabel && (
+          <ReadonlyField label={t('pages.lawyerWorkplace.parameters.contract', 'Contract')}>
+            {p.contractLabel}
+          </ReadonlyField>
+        )}
       </div>
 
       <div className="bg-light-50 flex w-full flex-col items-center justify-center gap-2 border-t border-gray-200 px-[18px] py-[16px]">
@@ -486,18 +527,39 @@ export function LetterParametersPanel({ letter, onClose, onConfirm }: LetterPara
           size="md"
           className="w-full px-10 py-7"
           disabled={!canConfirm}
-          onClick={() => {
-            if (!canConfirm) return
-            setConfirmed(true)
-            onConfirm?.(letter.id)
-          }}
+          onClick={handleConfirm}
         >
           <Icons.AddCircle size={24} strokeWidth={1.5} />
           <span className="text-[14px] font-medium">
-            {t('pages.lawyerWorkplace.parameters.confirmAndCreate', 'Confirm & create task')}
+            {confirmMutation.isPending
+              ? t('pages.lawyerWorkplace.parameters.confirming', 'Confirming…')
+              : t('pages.lawyerWorkplace.parameters.confirmAndCreate', 'Confirm & create task')}
           </span>
         </Button>
       </div>
     </div>
+  )
+}
+
+export function LetterParametersPanel({ letter, onClose, onConfirm }: LetterParametersPanelProps) {
+  const { t } = useTranslation('common')
+
+  if (!letter) {
+    return (
+      <div className="flex h-full w-full shrink-0 items-center justify-center border-l border-gray-200 bg-white">
+        <p className="px-4 text-center text-sm text-gray-400">
+          {t('pages.lawyerWorkplace.parameters.selectLetter', 'Select a letter to view parameters')}
+        </p>
+      </div>
+    )
+  }
+
+  return (
+    <LetterParametersPanelContent
+      key={letter.id}
+      letter={letter}
+      onClose={onClose}
+      onConfirm={onConfirm}
+    />
   )
 }
