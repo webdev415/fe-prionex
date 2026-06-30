@@ -1,7 +1,11 @@
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/Button'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
+import { downloadLegalAttachment } from '@/features/lawyerWorkplace'
+import { getErrorMessage } from '@/lib/errors'
 import { formatDateSeparator, formatLetterTime } from '../../utils/formatters'
 import type { LetterDetail, ThreadAttachment } from '../../types'
 import { ReplyComposer } from './ReplyComposer'
@@ -29,9 +33,28 @@ function DateSeparator({ label }: { label: string }) {
   )
 }
 
-function AttachmentPill({ attachment }: { attachment: ThreadAttachment }) {
+function AttachmentPill({
+  attachment,
+  messageId,
+}: {
+  attachment: ThreadAttachment
+  messageId: string
+}) {
   const { t } = useTranslation('common')
+  const [downloading, setDownloading] = useState(false)
   const isPdf = attachment.mimeType === 'application/pdf'
+
+  const handleDownload = async () => {
+    setDownloading(true)
+    try {
+      await downloadLegalAttachment(messageId, attachment.id, attachment.filename)
+    } catch (error) {
+      toast.error(getErrorMessage(error))
+    } finally {
+      setDownloading(false)
+    }
+  }
+
   return (
     <div className="flex h-[56px] min-w-0 items-center gap-2.5 rounded-[12px] border border-gray-100 bg-white px-2.5 py-2 shadow-sm sm:min-w-[220px]">
       <span className="text-secondary-800 flex shrink-0 items-center justify-center rounded rounded-[12px] bg-gray-50 px-2 py-3 text-[12px] font-medium tracking-wide uppercase">
@@ -45,7 +68,9 @@ function AttachmentPill({ attachment }: { attachment: ThreadAttachment }) {
       </div>
       <button
         type="button"
-        className="text-light-700 hover:text-secondary-700 shrink-0 cursor-pointer transition-colors"
+        disabled={downloading}
+        onClick={handleDownload}
+        className="text-light-700 hover:text-secondary-700 shrink-0 cursor-pointer transition-colors disabled:opacity-50"
         aria-label={t('pages.lawyerWorkplace.thread.download', 'Download')}
       >
         <Icons.CloudDownload size={18} strokeWidth={2} />
@@ -54,7 +79,13 @@ function AttachmentPill({ attachment }: { attachment: ThreadAttachment }) {
   )
 }
 
-function MessageCard({ message }: { message: LetterDetail['thread'][number] }) {
+function MessageCard({
+  message,
+  messageId,
+}: {
+  message: LetterDetail['thread'][number]
+  messageId: string
+}) {
   const { t, i18n } = useTranslation('common')
   const isIncoming = message.direction === 'incoming'
   const hasBody = message.body.trim().length > 0
@@ -118,7 +149,7 @@ function MessageCard({ message }: { message: LetterDetail['thread'][number] }) {
           )}
         >
           {message.attachments!.map((att) => (
-            <AttachmentPill key={att.id} attachment={att} />
+            <AttachmentPill key={att.id} attachment={att} messageId={messageId} />
           ))}
         </div>
       )}
@@ -128,6 +159,8 @@ function MessageCard({ message }: { message: LetterDetail['thread'][number] }) {
 
 export interface EmailThreadPanelProps {
   letter: LetterDetail | null
+  isLoading?: boolean
+  isError?: boolean
   replyDraft: string
   onReplyDraftChange: (value: string) => void
   onBack?: () => void
@@ -136,6 +169,8 @@ export interface EmailThreadPanelProps {
 
 export function EmailThreadPanel({
   letter,
+  isLoading = false,
+  isError = false,
   replyDraft,
   onReplyDraftChange,
   onBack,
@@ -147,7 +182,14 @@ export function EmailThreadPanel({
     return (
       <div className="flex h-full min-h-0 flex-1 items-center justify-center bg-gray-50/50">
         <p className="text-sm text-gray-400">
-          {t('pages.lawyerWorkplace.thread.selectLetter', 'Select a letter to view the thread')}
+          {isError
+            ? t('pages.lawyerWorkplace.thread.loadError', 'Could not load thread')
+            : isLoading
+              ? t('pages.lawyerWorkplace.thread.loading', 'Loading thread…')
+              : t(
+                  'pages.lawyerWorkplace.thread.selectLetter',
+                  'Select a letter to view the thread'
+                )}
         </p>
       </div>
     )
@@ -246,6 +288,11 @@ export function EmailThreadPanel({
       </div>
 
       <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-3 py-4 sm:px-5">
+        {isLoading && (
+          <p className="text-center text-xs text-gray-400">
+            {t('pages.lawyerWorkplace.thread.loading', 'Loading thread…')}
+          </p>
+        )}
         {letter.thread.map((message, index) => {
           const showDateSep =
             index === 0 ||
@@ -257,7 +304,7 @@ export function EmailThreadPanel({
               {showDateSep && (
                 <DateSeparator label={formatDateSeparator(message.sentAt, i18n.language)} />
               )}
-              <MessageCard message={message} />
+              <MessageCard message={message} messageId={message.id} />
             </div>
           )
         })}

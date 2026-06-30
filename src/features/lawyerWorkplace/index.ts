@@ -1,4 +1,5 @@
 export * from './api/types'
 export * from './api/legalApi'
 export * from './api/mappers'
+export * from './api/downloadAttachment'
 export * from './hooks'

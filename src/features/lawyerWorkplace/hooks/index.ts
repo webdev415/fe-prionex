@@ -1,3 +1,4 @@
 export * from './useLegalInbox'
+export * from './useLegalLetterDetail'
 export * from './useConfirmLetter'
 export * from './useLegalMutations'

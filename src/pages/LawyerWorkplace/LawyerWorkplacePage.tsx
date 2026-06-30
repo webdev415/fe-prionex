@@ -9,7 +9,7 @@ import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router-dom'
 import { cn } from '@/lib/utils'
-import { useMappedLegalInbox } from '@/features/lawyerWorkplace'
+import { useLegalLetterDetail, useMappedLegalInbox } from '@/features/lawyerWorkplace'
 import { IncomingListPanel } from './components/inbox/IncomingListPanel'
 import { EmailThreadPanel } from './components/thread/EmailThreadPanel'
 import { LetterParametersPanel } from './components/parameters/LetterParametersPanel'
@@ -20,14 +20,7 @@ import { LegalSettingsTab } from './components/settings/LegalSettingsTab'
 import { NewOutgoingLetterModal } from './components/thread/NewOutgoingLetterModal'
 import { LawyerWorkplaceLayoutProvider } from './context/LawyerWorkplaceLayoutProvider'
 import { useLawyerWorkplaceLayout } from './context/lawyerWorkplaceLayout'
-import { getLetterDetail } from './mockData'
-import type {
-  IncomingFolder,
-  IncomingMailboxFilter,
-  LawyerWorkplaceTab,
-  LetterDetail,
-  LetterListItem,
-} from './types'
+import type { IncomingFolder, IncomingMailboxFilter, LawyerWorkplaceTab } from './types'
 
 const WORKPLACE_TABS: LawyerWorkplaceTab[] = ['inbox', 'kanban', 'documents', 'settings']
 
@@ -35,53 +28,6 @@ type InboxPane = 'list' | 'thread' | 'parameters'
 
 function isWorkplaceTab(value: string | null): value is LawyerWorkplaceTab {
   return value !== null && (WORKPLACE_TABS as string[]).includes(value)
-}
-
-function letterDetailFromListItem(summary: LetterListItem): LetterDetail {
-  return {
-    ...summary,
-    recipientEmail: summary.mailbox,
-    parameters: {
-      letterType: summary.letterType ?? '',
-      clientId: summary.clientId ?? '',
-      clientLabel: summary.clientCode
-        ? `${summary.clientCode}${summary.clientName ? ` · ${summary.clientName}` : ''}`.trim()
-        : '',
-      contractId: '',
-      contractLabel: '',
-      dueDate: '',
-      dueDateHint: '',
-      lawyerId: '',
-      lawyerLabel: '',
-      autoConfidence: 0,
-      confirmedCount: 0,
-      totalParameters: 4,
-    },
-    replyDraft: '',
-    thread: [
-      {
-        id: `${summary.id}-preview`,
-        direction: 'incoming',
-        senderName: summary.senderName,
-        senderEmail: summary.senderEmail,
-        toMailbox: summary.mailbox,
-        sentAt: summary.receivedAt,
-        body: summary.subject,
-      },
-    ],
-  }
-}
-
-function resolveSelectedLetter(
-  selectedLetterId: string | null,
-  filteredLetters: LetterListItem[]
-): LetterDetail | null {
-  if (!selectedLetterId) return null
-  const fromMock = getLetterDetail(selectedLetterId)
-  if (fromMock) return fromMock
-  const summary = filteredLetters.find((letter) => letter.id === selectedLetterId)
-  if (!summary) return null
-  return letterDetailFromListItem(summary)
 }
 
 export function LawyerWorkplacePage() {
@@ -125,15 +71,25 @@ function LawyerWorkplacePageContent() {
     return filteredLetters[0]?.id ?? null
   }, [filteredLetters, inboxLoading, selectedLetterId])
 
-  const selectedLetter = useMemo(
-    () => resolveSelectedLetter(activeLetterId, filteredLetters),
+  const listFallback = useMemo(
+    () => filteredLetters.find((letter) => letter.id === activeLetterId) ?? null,
     [activeLetterId, filteredLetters]
   )
 
+  const {
+    letter: selectedLetter,
+    isLoading: detailLoading,
+    isError: detailError,
+  } = useLegalLetterDetail(activeLetterId, {
+    enabled: activeTab === 'inbox',
+    includeQuarantined: activeFolder === 'quarantine',
+    replyDraft,
+    listFallback,
+  })
+
   const handleSelectLetter = (letterId: string) => {
     setSelectedLetterId(letterId)
-    const detail = resolveSelectedLetter(letterId, filteredLetters)
-    setReplyDraft(detail?.replyDraft ?? '')
+    setReplyDraft('')
     if (isCompact) {
       setInboxPane('thread')
     }
@@ -193,6 +149,8 @@ function LawyerWorkplacePageContent() {
             >
               <EmailThreadPanel
                 letter={selectedLetter}
+                isLoading={detailLoading}
+                isError={detailError}
                 replyDraft={replyDraft}
                 onReplyDraftChange={setReplyDraft}
                 onBack={isCompact ? () => setInboxPane('list') : undefined}

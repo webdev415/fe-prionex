@@ -188,7 +188,7 @@ export function mapInboxItemToLetterListItem(
 
 export function mapThreadMessageToUi(
   item: LegalThreadMessageItem,
-  context?: LegalLookupContext
+  options?: { toMailbox?: string }
 ): ThreadMessage {
   const { name, email } = parseEmailAddress(item.from_address)
   const direction = item.direction === 'outgoing' ? 'outgoing' : 'incoming'
@@ -198,7 +198,7 @@ export function mapThreadMessageToUi(
     direction,
     senderName: name,
     senderEmail: email,
-    toMailbox: context?.mailboxLabelById?.values().next().value,
+    toMailbox: options?.toMailbox,
     sentAt: messageTimestamp(item),
     body: messageBody(item),
   }
@@ -271,10 +271,14 @@ export function mapMessageToLetterDetail(
     context
   )
 
+  const recipientEmail = message.to_addresses[0] ?? ''
+
   const threadMessages = (thread?.messages ?? [])
     .filter((item) => !item.is_quarantined)
     .map((item) => {
-      const mapped = mapThreadMessageToUi(item, context)
+      const toMailbox =
+        item.direction !== 'outgoing' && item.id === message.id ? recipientEmail : undefined
+      const mapped = mapThreadMessageToUi(item, { toMailbox })
       if (item.id === message.id) {
         return {
           ...mapped,
@@ -284,14 +288,63 @@ export function mapMessageToLetterDetail(
       return mapped
     })
 
-  const recipientEmail = message.to_addresses[0] ?? ''
-
   return {
     ...listItem,
     recipientEmail,
     thread: threadMessages,
     parameters: buildLetterParameters(message, context),
     replyDraft,
+  }
+}
+
+export function mapListItemToPreviewDetail(summary: LetterListItem, replyDraft = ''): LetterDetail {
+  return {
+    ...summary,
+    recipientEmail: summary.mailbox,
+    parameters: {
+      letterType: summary.letterType ?? '',
+      clientId: summary.clientId ?? '',
+      clientLabel: summary.clientCode
+        ? `${summary.clientCode}${summary.clientName ? ` · ${summary.clientName}` : ''}`.trim()
+        : '',
+      contractId: '',
+      contractLabel: '',
+      dueDate: '',
+      dueDateHint: '',
+      lawyerId: '',
+      lawyerLabel: '',
+      autoConfidence: 0,
+      confirmedCount: 0,
+      totalParameters: 4,
+    },
+    replyDraft,
+    thread: [
+      {
+        id: `${summary.id}-preview`,
+        direction: 'incoming',
+        senderName: summary.senderName,
+        senderEmail: summary.senderEmail,
+        toMailbox: summary.mailbox,
+        sentAt: summary.receivedAt,
+        body: summary.subject,
+      },
+    ],
+  }
+}
+
+export function clientLookupFromClient(client: {
+  id: number
+  first_name: string
+  last_name: string
+  legacy_id?: string | null
+}): LegalClientLookup {
+  const code = client.legacy_id?.trim() || `CL-${String(client.id).padStart(5, '0')}`
+  const name = [client.first_name, client.last_name].filter(Boolean).join(' ')
+  return {
+    id: client.id,
+    code,
+    name,
+    label: name ? `${code} · ${name}` : code,
   }
 }
 
