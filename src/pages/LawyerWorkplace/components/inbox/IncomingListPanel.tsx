@@ -81,6 +81,8 @@ export interface IncomingListPanelProps {
   activeFolder: IncomingFolder
   activeFilter: IncomingMailboxFilter
   unprocessedCount: number
+  isLoading?: boolean
+  isError?: boolean
   onFolderChange: (folder: IncomingFolder) => void
   onFilterChange: (filter: IncomingMailboxFilter) => void
   onSelectLetter: (letterId: string) => void
@@ -93,6 +95,8 @@ export function IncomingListPanel({
   activeFolder,
   activeFilter,
   unprocessedCount,
+  isLoading = false,
+  isError = false,
   onFolderChange,
   onFilterChange,
   onSelectLetter,
@@ -285,7 +289,7 @@ export function IncomingListPanel({
                   ? inProgressCount
                   : f.id === 'done'
                     ? doneCount
-                    : 6
+                    : letters.length
             return (
               <button
                 key={f.id}
@@ -314,7 +318,15 @@ export function IncomingListPanel({
           ref={listRef}
           className="h-full overflow-y-auto bg-white [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         >
-          {searchFiltered.length === 0 ? (
+          {isLoading ? (
+            <p className="px-4 py-10 text-center text-sm text-gray-400">
+              {t('pages.lawyerWorkplace.incoming.loading', 'Loading letters…')}
+            </p>
+          ) : isError ? (
+            <p className="px-4 py-10 text-center text-sm text-red-500">
+              {t('pages.lawyerWorkplace.incoming.loadError', 'Could not load inbox')}
+            </p>
+          ) : searchFiltered.length === 0 ? (
             <p className="px-4 py-10 text-center text-sm text-gray-400">
               {t('pages.lawyerWorkplace.incoming.empty', 'No letters in this folder')}
             </p>

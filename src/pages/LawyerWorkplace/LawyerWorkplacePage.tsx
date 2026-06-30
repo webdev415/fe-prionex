@@ -9,6 +9,7 @@ import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router-dom'
 import { cn } from '@/lib/utils'
+import { useMappedLegalInbox } from '@/features/lawyerWorkplace'
 import { IncomingListPanel } from './components/inbox/IncomingListPanel'
 import { EmailThreadPanel } from './components/thread/EmailThreadPanel'
 import { LetterParametersPanel } from './components/parameters/LetterParametersPanel'
@@ -19,8 +20,14 @@ import { LegalSettingsTab } from './components/settings/LegalSettingsTab'
 import { NewOutgoingLetterModal } from './components/thread/NewOutgoingLetterModal'
 import { LawyerWorkplaceLayoutProvider } from './context/LawyerWorkplaceLayoutProvider'
 import { useLawyerWorkplaceLayout } from './context/lawyerWorkplaceLayout'
-import { getLetterDetail, MOCK_LETTERS } from './mockData'
-import type { IncomingFolder, IncomingMailboxFilter, LawyerWorkplaceTab } from './types'
+import { getLetterDetail } from './mockData'
+import type {
+  IncomingFolder,
+  IncomingMailboxFilter,
+  LawyerWorkplaceTab,
+  LetterDetail,
+  LetterListItem,
+} from './types'
 
 const WORKPLACE_TABS: LawyerWorkplaceTab[] = ['inbox', 'kanban', 'documents', 'settings']
 
@@ -28,6 +35,53 @@ type InboxPane = 'list' | 'thread' | 'parameters'
 
 function isWorkplaceTab(value: string | null): value is LawyerWorkplaceTab {
   return value !== null && (WORKPLACE_TABS as string[]).includes(value)
+}
+
+function letterDetailFromListItem(summary: LetterListItem): LetterDetail {
+  return {
+    ...summary,
+    recipientEmail: summary.mailbox,
+    parameters: {
+      letterType: summary.letterType ?? '',
+      clientId: summary.clientId ?? '',
+      clientLabel: summary.clientCode
+        ? `${summary.clientCode}${summary.clientName ? ` · ${summary.clientName}` : ''}`.trim()
+        : '',
+      contractId: '',
+      contractLabel: '',
+      dueDate: '',
+      dueDateHint: '',
+      lawyerId: '',
+      lawyerLabel: '',
+      autoConfidence: 0,
+      confirmedCount: 0,
+      totalParameters: 4,
+    },
+    replyDraft: '',
+    thread: [
+      {
+        id: `${summary.id}-preview`,
+        direction: 'incoming',
+        senderName: summary.senderName,
+        senderEmail: summary.senderEmail,
+        toMailbox: summary.mailbox,
+        sentAt: summary.receivedAt,
+        body: summary.subject,
+      },
+    ],
+  }
+}
+
+function resolveSelectedLetter(
+  selectedLetterId: string | null,
+  filteredLetters: LetterListItem[]
+): LetterDetail | null {
+  if (!selectedLetterId) return null
+  const fromMock = getLetterDetail(selectedLetterId)
+  if (fromMock) return fromMock
+  const summary = filteredLetters.find((letter) => letter.id === selectedLetterId)
+  if (!summary) return null
+  return letterDetailFromListItem(summary)
 }
 
 export function LawyerWorkplacePage() {
@@ -47,51 +101,45 @@ function LawyerWorkplacePageContent() {
 
   const [activeFolder, setActiveFolder] = useState<IncomingFolder>('inbox')
   const [activeFilter, setActiveFilter] = useState<IncomingMailboxFilter>('all')
-  const [selectedLetterId, setSelectedLetterId] = useState<string | null>(
-    MOCK_LETTERS[0]?.id ?? null
-  )
+  const [selectedLetterId, setSelectedLetterId] = useState<string | null>(null)
   const [inboxPane, setInboxPane] = useState<InboxPane>('list')
   const [replyDraft, setReplyDraft] = useState('')
-  const [confirmedLetterIds, setConfirmedLetterIds] = useState<Set<string>>(new Set())
   const [newLetterOpen, setNewLetterOpen] = useState(false)
 
-  const selectedLetter = useMemo(
-    () => (selectedLetterId ? getLetterDetail(selectedLetterId) : null),
-    [selectedLetterId]
-  )
+  const {
+    letters: filteredLetters,
+    unprocessedCount,
+    isLoading: inboxLoading,
+    isError: inboxError,
+  } = useMappedLegalInbox({
+    activeFolder,
+    activeFilter,
+    enabled: activeTab === 'inbox',
+  })
 
-  const filteredLetters = useMemo(() => {
-    let items = [...MOCK_LETTERS]
-    if (activeFilter === 'new') {
-      items = items.filter((l) => l.status === 'new')
-    } else if (activeFilter === 'in_progress') {
-      items = items.filter((l) => l.status === 'in_progress')
-    } else if (activeFilter === 'done') {
-      items = items.filter(
-        (l) =>
-          l.status === 'sent_to_kanban' || l.status === 'on_board' || l.status === 'auto_processed'
-      )
+  const activeLetterId = useMemo(() => {
+    if (inboxLoading || filteredLetters.length === 0) return null
+    if (selectedLetterId && filteredLetters.some((letter) => letter.id === selectedLetterId)) {
+      return selectedLetterId
     }
-    return items.sort((a, b) => new Date(b.receivedAt).getTime() - new Date(a.receivedAt).getTime())
-  }, [activeFilter])
+    return filteredLetters[0]?.id ?? null
+  }, [filteredLetters, inboxLoading, selectedLetterId])
 
-  const unprocessedCount = useMemo(
-    () => MOCK_LETTERS.filter((l) => l.isUnprocessed && !confirmedLetterIds.has(l.id)).length,
-    [confirmedLetterIds]
+  const selectedLetter = useMemo(
+    () => resolveSelectedLetter(activeLetterId, filteredLetters),
+    [activeLetterId, filteredLetters]
   )
 
   const handleSelectLetter = (letterId: string) => {
     setSelectedLetterId(letterId)
-    const detail = getLetterDetail(letterId)
+    const detail = resolveSelectedLetter(letterId, filteredLetters)
     setReplyDraft(detail?.replyDraft ?? '')
     if (isCompact) {
       setInboxPane('thread')
     }
   }
 
-  const handleConfirmLetter = (letterId: string) => {
-    setConfirmedLetterIds((prev) => new Set([...prev, letterId]))
-  }
+  const handleConfirmLetter = (_letterId: string) => {}
 
   const closeParameters = () => setInboxPane('thread')
 
@@ -124,10 +172,12 @@ function LawyerWorkplacePageContent() {
             >
               <IncomingListPanel
                 letters={filteredLetters}
-                selectedLetterId={selectedLetterId}
+                selectedLetterId={activeLetterId}
                 activeFolder={activeFolder}
                 activeFilter={activeFilter}
                 unprocessedCount={unprocessedCount}
+                isLoading={inboxLoading}
+                isError={inboxError}
                 onFolderChange={setActiveFolder}
                 onFilterChange={setActiveFilter}
                 onSelectLetter={handleSelectLetter}

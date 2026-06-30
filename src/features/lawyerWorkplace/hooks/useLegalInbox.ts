@@ -1,6 +1,13 @@
+import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import type { IncomingFolder, IncomingMailboxFilter } from '@/pages/LawyerWorkplace/types'
 import { legalApi } from '../api/legalApi'
-import type { LegalInboxParams } from '../api/types'
+import {
+  buildLegalLookupContext,
+  filterInboxByMailboxTab,
+  mapInboxItemToLetterListItem,
+} from '../api/mappers'
+import type { LegalInboxItem, LegalInboxParams } from '../api/types'
 
 export const legalWorkplaceKeys = {
   all: ['lawyer-workplace'] as const,
@@ -106,4 +113,69 @@ export function useLegalTrainingExamples(
     enabled: options?.enabled !== false && Boolean(letterTypeId),
     staleTime: 60_000,
   })
+}
+
+function filterInboxByFolder(items: LegalInboxItem[], folder: IncomingFolder): LegalInboxItem[] {
+  if (folder === 'quarantine') {
+    return items.filter((item) => item.is_quarantined)
+  }
+  if (folder === 'sent') {
+    return items.filter((item) => item.direction === 'outgoing')
+  }
+  return items.filter((item) => !item.is_quarantined && item.direction === 'incoming')
+}
+
+export function useMappedLegalInbox(options: {
+  activeFolder: IncomingFolder
+  activeFilter: IncomingMailboxFilter
+  enabled?: boolean
+}) {
+  const enabled = options.enabled !== false
+  const includeQuarantined = options.activeFolder === 'quarantine'
+
+  const inboxQuery = useLegalInbox(
+    { page: 1, page_size: 200, include_quarantined: includeQuarantined },
+    { enabled }
+  )
+
+  const counterQuery = useLegalInbox(
+    { page: 1, page_size: 200, include_quarantined: false },
+    { enabled: enabled && options.activeFolder !== 'inbox' }
+  )
+
+  const letterTypesQuery = useLegalLetterTypes({ enabled })
+
+  const lookupContext = useMemo(
+    () => buildLegalLookupContext(letterTypesQuery.data?.items, undefined),
+    [letterTypesQuery.data?.items]
+  )
+
+  const folderItems = useMemo(() => {
+    if (!inboxQuery.data) return []
+    return filterInboxByFolder(inboxQuery.data.items, options.activeFolder)
+  }, [inboxQuery.data, options.activeFolder])
+
+  const letters = useMemo(() => {
+    const mapped = folderItems.map((item) => mapInboxItemToLetterListItem(item, lookupContext))
+    const filtered = filterInboxByMailboxTab(mapped, options.activeFilter)
+    return filtered.sort(
+      (a, b) => new Date(b.receivedAt).getTime() - new Date(a.receivedAt).getTime()
+    )
+  }, [folderItems, lookupContext, options.activeFilter])
+
+  const unprocessedCount = useMemo(() => {
+    const source = options.activeFolder === 'inbox' ? folderItems : (counterQuery.data?.items ?? [])
+    const inboxItems =
+      options.activeFolder === 'inbox' ? source : filterInboxByFolder(source, 'inbox')
+    return inboxItems.filter((item) => item.needs_manual_review).length
+  }, [counterQuery.data?.items, folderItems, options.activeFolder])
+
+  return {
+    letters,
+    unprocessedCount,
+    totalInFolder: folderItems.length,
+    isLoading: inboxQuery.isLoading || letterTypesQuery.isLoading,
+    isError: inboxQuery.isError || letterTypesQuery.isError,
+    refetch: inboxQuery.refetch,
+  }
 }
