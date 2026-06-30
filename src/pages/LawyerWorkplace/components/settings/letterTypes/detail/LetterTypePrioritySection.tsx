@@ -1,8 +1,8 @@
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
+import { useLegalLawyers } from '@/features/lawyerWorkplace/hooks/useLegalInbox'
 import { useLawyerWorkplaceLayout } from '../../../../context/lawyerWorkplaceLayout'
-import { PRIORITY_LAWYER_META } from '../../../../settings/settingsData'
 import type { LetterTypeConfig, LetterTypePriorityAssignment } from '../../../../settings/types'
 import { updateLetterTypePriority } from '../../../../settings/utils/letterTypeHelpers'
 import { LawyerRoleBadge } from './LawyerRoleBadge'
@@ -20,16 +20,22 @@ export function LetterTypePrioritySection({
 }: LetterTypePrioritySectionProps) {
   const { t } = useTranslation('common')
   const { isCompact } = useLawyerWorkplaceLayout()
+  const { data: lawyersData, isLoading } = useLegalLawyers()
+
+  const lawyers = useMemo(
+    () => (lawyersData?.items ?? []).filter((lawyer) => lawyer.is_active),
+    [lawyersData?.items]
+  )
 
   const priorityRows = useMemo(
     () =>
-      PRIORITY_LAWYER_META.map((lawyer) => {
+      lawyers.map((lawyer) => {
         const assignment =
           draft.priorities.find((item) => item.lawyerId === lawyer.id) ??
           ({ lawyerId: lawyer.id, stars: 0, role: 'off' } as LetterTypePriorityAssignment)
         return { lawyer, assignment }
       }),
-    [draft.priorities]
+    [draft.priorities, lawyers]
   )
 
   return (
@@ -44,6 +50,18 @@ export function LetterTypePrioritySection({
           '★ = how strongly this lawyer should be preferred for this type'
         )}
       />
+
+      {isLoading && (
+        <p className="text-light-600 text-[13px]">
+          {t('pages.lawyerWorkplace.settings.loadingLawyers', 'Loading lawyers…')}
+        </p>
+      )}
+
+      {!isLoading && priorityRows.length === 0 && (
+        <p className="text-light-600 text-[13px]">
+          {t('pages.lawyerWorkplace.settings.noLawyers', 'No active lawyers configured')}
+        </p>
+      )}
 
       <div className="space-y-2">
         {priorityRows.map(({ lawyer, assignment }) => (
@@ -62,19 +80,20 @@ export function LetterTypePrioritySection({
               </div>
               <div className="min-w-0">
                 <p className="text-dark-500 truncate text-[13px] font-semibold">
-                  {t(lawyer.nameKey, lawyer.nameFallback)}
+                  {lawyer.display_name}
                 </p>
                 <p className="text-light-600 truncate text-[11px]">
-                  {t(lawyer.roleKey, lawyer.roleFallback)}
+                  {lawyer.role_title ??
+                    t('pages.lawyerWorkplace.settings.lawyers.noRole', 'Legal team')}
                 </p>
               </div>
             </div>
 
             <p className={cn('text-light-600 text-[12px]', !isCompact && 'lg:text-center')}>
               {t('pages.lawyerWorkplace.settings.letterTypes.activeLoad', {
-                current: lawyer.activeCount,
-                max: lawyer.maxActive,
-                defaultValue: `${lawyer.activeCount} / ${lawyer.maxActive} active`,
+                current: lawyer.current_active,
+                max: lawyer.max_in_flight,
+                defaultValue: `${lawyer.current_active} / ${lawyer.max_in_flight} active`,
               })}
             </p>
 
