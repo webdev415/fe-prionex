@@ -10,7 +10,9 @@ export interface ContractVerifiedSummary {
 
 type PaymentForContractRollup = {
   debt_contract_number?: string | null
-  payment_date: string
+  // KAN-782: legacy rows can have a null payment_date. isSystemPayment already
+  // null-guards it (a dateless payment is treated as a system payment).
+  payment_date: string | null
   amount: string | number
 }
 
