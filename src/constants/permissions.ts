@@ -301,6 +301,15 @@ export const PERMISSIONS = {
   },
 
   /**
+   * Contact Tags (per-phone categorical metadata)
+   */
+  CONTACT_TAGS: {
+    MANAGE: 'manage_contact_tag_categories',
+    ASSIGN: 'assign_contact_tags',
+    ASSIGN_PROTECTED: 'assign_protected_contact_tags',
+  },
+
+  /**
    * Restructuring Category (5 permissions)
    * Per-transition gates for manual RR status changes. Each button in
    * the RR actions column checks its specific permission. Automated
@@ -367,6 +376,7 @@ export const PERMISSION_CATEGORIES = {
   ACTION_ANALYSIS: 'Action Analysis',
   DOCUMENT_GENERATION: 'Document Generation',
   CONTACT_TYPES: 'Contact Types',
+  CONTACT_TAGS: 'Contact Tags',
   RESTRUCTURING: 'Restructuring',
 } as const
 
@@ -519,6 +529,13 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   view_contact_types: 'View Contact Types directory in Settings',
   create_contact_types: 'Create new contact types (requires view permission)',
   edit_contact_types: 'Edit contact types and hide or restore them (requires view permission)',
+
+  // Contact Tags (per-phone categorical metadata)
+  manage_contact_tag_categories:
+    'Manage contact tag categories and values in Settings (create, edit, hide)',
+  assign_contact_tags: 'Assign and remove contact tags on client phone numbers',
+  assign_protected_contact_tags:
+    'Assign and remove protected contact tags (requires elevated permission)',
 
   // Restructuring — per-transition gates on the RR action buttons
   rr_transition_connected_to_violated:

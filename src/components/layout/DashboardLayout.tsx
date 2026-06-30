@@ -831,6 +831,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             requiredPermission: PERMISSIONS.CONTACT_TYPES.VIEW,
           },
           {
+            path: '/dashboard/system-settings/contact-tags',
+            label: t('navigation.contactTags', 'Contact Tags'),
+            icon: 'tag-01',
+            requiredPermission: PERMISSIONS.CONTACT_TAGS.MANAGE,
+          },
+          {
             path: '/dashboard/system-settings/scoring-configuration',
             label: t('navigation.scoringConfiguration'),
             icon: 'chart-01',

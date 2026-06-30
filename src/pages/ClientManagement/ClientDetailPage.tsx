@@ -46,6 +46,8 @@ import type { Priority } from './types'
 import { TagBadge } from '@/components/ui/TagBadge'
 import { ClientTagTraceModal } from '@/pages/Tags/components/ClientTagTraceModal'
 import { CallDialogModal, type CallType, type CallStatus } from './components/CallDialogModal'
+import { ContactTagSelectorModal } from './components/ContactTagSelectorModal'
+import { ContactTagHistoryModal } from './components/ContactTagHistoryModal'
 import { ClientWriteoffsTable } from './components/ClientWriteoffsTable'
 import { WriteoffCreateModal } from './components/WriteoffCreateModal'
 import { CallRecordingModal } from './components/CallRecordingModal'
@@ -515,7 +517,11 @@ export function ClientDetailPage() {
     [contactTypes]
   )
 
-  const openOutboundCall = (rawPhone: string | null | undefined, contactTypeId?: number | null) => {
+  const openOutboundCall = (
+    rawPhone: string | null | undefined,
+    contactTypeId?: number | null,
+    spamAllowedOverride?: boolean
+  ) => {
     const phone = (rawPhone ?? '').trim()
     if (!phone) return
     if (isCallActive()) {
@@ -528,7 +534,8 @@ export function ClientDetailPage() {
     const meta = contactTypeId != null ? contactTypesById.get(contactTypeId) : undefined
     const initialCallType: CallType =
       meta?.default_call_line === 'gray' ? 'gray-line' : 'white-line'
-    const spamOptionEnabled = meta?.spam_allowed !== false
+    const spamOptionEnabled =
+      spamAllowedOverride !== undefined ? spamAllowedOverride : meta?.spam_allowed !== false
     setCallModalPreferences({ phone, initialCallType, spamOptionEnabled })
     setOpenCallModal('call-dialog')
     setIsCallModalOpen(true)
@@ -633,6 +640,7 @@ export function ClientDetailPage() {
     // Build phones array from additional_phones (ordered by directory sort_order on backend)
     const isValidPhone = (p: string | null | undefined): p is string => !!p && !/^0+$/.test(p)
     const phones: Array<{
+      contactId: number
       number: string
       type: string
       contactTypeId: number
@@ -641,12 +649,15 @@ export function ClientDetailPage() {
       spamAllowed: boolean
       created_at?: string | null
       added_by_user_name?: string | null
+      contactTags: NonNullable<(typeof profile.additional_phones)[number]['contact_tags']>
+      blocking: NonNullable<(typeof profile.additional_phones)[number]['blocking']>
     }> = []
     if (profile.additional_phones && profile.additional_phones.length > 0) {
       profile.additional_phones
         .filter((p) => isValidPhone(p.number))
         .forEach((p) =>
           phones.push({
+            contactId: p.contact_id,
             number: p.number,
             type: p.type,
             contactTypeId: p.contact_type_id,
@@ -655,18 +666,26 @@ export function ClientDetailPage() {
             spamAllowed: p.spam_allowed !== false,
             created_at: p.created_at,
             added_by_user_name: p.added_by_user_name,
+            contactTags: p.contact_tags ?? [],
+            blocking: p.blocking ?? {
+              blocks_calls: false,
+              blocks_sms: false,
+              blocks_spam: false,
+              reasons: [],
+            },
           })
         )
     } else if (isValidPhone(profile.phone_primary)) {
-      // Legacy profile: primary phone string only (no contact rows in strip yet).
-      // Treat as client mobile (type id 1) so call/spam UI has consistent defaults.
       phones.push({
+        contactId: 0,
         number: profile.phone_primary,
         type: 'mobile',
         contactTypeId: 1,
         contactTypeCode: null,
         defaultCallLine: 'white',
         spamAllowed: true,
+        contactTags: [],
+        blocking: { blocks_calls: false, blocks_sms: false, blocks_spam: false, reasons: [] },
       })
     }
 
@@ -1124,6 +1143,14 @@ export function ClientDetailPage() {
   const [isSendMessageModalOpen, setIsSendMessageModalOpen] = useState(false)
   const [selectedPhoneForMessage, setSelectedPhoneForMessage] = useState<string>('')
   const [selectedPhoneForSMS, setSelectedPhoneForSMS] = useState<string>('')
+  const [contactTagModal, setContactTagModal] = useState<{
+    contactId: number
+    phone: string
+  } | null>(null)
+  const [contactTagHistoryModal, setContactTagHistoryModal] = useState<{
+    contactId: number
+    phone: string
+  } | null>(null)
   const [callModalPreferences, setCallModalPreferences] = useState<{
     phone: string
     initialCallType: CallType
@@ -2479,102 +2506,187 @@ export function ClientDetailPage() {
                 </div>
                 <div className="flex w-full flex-1 flex-col items-start justify-center gap-2">
                   {client.phones.map((phone, index) => (
-                    <div key={index} className="flex items-center gap-2 self-stretch md:gap-3">
-                      <div className="flex flex-1 items-center justify-end gap-1.5">
-                        <div className="flex min-w-0 flex-col items-end gap-1">
-                          <span className="text-dark-500 truncate text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                            {phone.number}
-                          </span>
-                          {renderLinkedContactBadges(phone.number, 'end')}
-                        </div>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <button
-                              type="button"
-                              className="flex h-[20px] w-[20px] shrink-0 items-center justify-center text-gray-400 hover:text-gray-600"
+                    <div key={index} className="flex flex-col gap-1 self-stretch">
+                      <div className="flex items-center gap-2 md:gap-3">
+                        <div className="flex flex-1 items-center justify-end gap-1.5">
+                          <div className="flex min-w-0 flex-col items-end gap-1">
+                            <span
+                              className={cn(
+                                'text-dark-500 truncate text-right text-xs leading-[140%] font-medium tracking-[-0.24px]',
+                                phone.blocking.blocks_calls && 'line-through opacity-70'
+                              )}
                             >
-                              <Icons.Info size={14} strokeWidth={1.5} />
+                              {phone.number}
+                            </span>
+                            {phone.contactTags.length > 0 && (
+                              <div className="flex max-w-full flex-wrap justify-end gap-1">
+                                {phone.contactTags.map((tag) => (
+                                  <button
+                                    key={tag.value_id}
+                                    type="button"
+                                    className="rounded-full px-1.5 py-0.5 text-[10px] text-white"
+                                    style={{ backgroundColor: tag.color || '#64748b' }}
+                                    title={tag.category_name}
+                                    onClick={() =>
+                                      phone.contactId > 0 &&
+                                      setContactTagModal({
+                                        contactId: phone.contactId,
+                                        phone: phone.number,
+                                      })
+                                    }
+                                  >
+                                    {tag.name}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                            {renderLinkedContactBadges(phone.number, 'end')}
+                          </div>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button
+                                type="button"
+                                className="flex h-[20px] w-[20px] shrink-0 items-center justify-center text-gray-400 hover:text-gray-600"
+                              >
+                                <Icons.Info size={14} strokeWidth={1.5} />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent side="top" className="text-xs">
+                              {phone.type && (
+                                <div>
+                                  {t('pages.clients.detail.phoneType')}:{' '}
+                                  {phone.contactTypeCode
+                                    ? t(`contactTypes.${phone.contactTypeCode}`, {
+                                        defaultValue: phone.type,
+                                      })
+                                    : phone.type === 'mobile'
+                                      ? t('pages.clients.editModal.phoneMobile')
+                                      : phone.type === 'home'
+                                        ? t('pages.clients.editModal.phoneHome')
+                                        : phone.type === 'register'
+                                          ? t('pages.clients.editModal.phoneRegister')
+                                          : phone.type}
+                                </div>
+                              )}
+                              {phone.blocking.reasons.map((reason) => (
+                                <div key={reason}>{reason}</div>
+                              ))}
+                              {phone.added_by_user_name && (
+                                <div>
+                                  {t('pages.clients.detail.addedBy')}: {phone.added_by_user_name}
+                                </div>
+                              )}
+                              {phone.created_at && (
+                                <div>
+                                  {t('pages.clients.detail.addedDate')}:{' '}
+                                  {formatDate(phone.created_at ?? undefined)}
+                                </div>
+                              )}
+                              {!phone.added_by_user_name &&
+                                !phone.created_at &&
+                                phone.blocking.reasons.length === 0 && <div>-</div>}
+                            </TooltipContent>
+                          </Tooltip>
+                        </div>
+                        <div className="flex shrink-0 items-center gap-1 md:gap-2">
+                          <PermissionGuard permission={PERMISSIONS.COMMUNICATION.MAKE_CALLS}>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <button
+                                  disabled={
+                                    !user?.is_agent ||
+                                    !user?.asterisk_extension ||
+                                    phone.blocking.blocks_calls
+                                  }
+                                  onClick={() => {
+                                    openOutboundCall(
+                                      phone.number,
+                                      phone.contactTypeId,
+                                      phone.spamAllowed && !phone.blocking.blocks_spam
+                                    )
+                                  }}
+                                  className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-40 md:h-[20px] md:w-[20px]"
+                                >
+                                  {phone.blocking.blocks_calls ? (
+                                    <Icons.Lock size={16} className="flex-shrink-0" />
+                                  ) : (
+                                    <Icons.Headset size={16} className="flex-shrink-0" />
+                                  )}
+                                </button>
+                              </TooltipTrigger>
+                              {phone.blocking.blocks_calls && (
+                                <TooltipContent>
+                                  {phone.blocking.reasons.join('; ') ||
+                                    t('pages.contactTags.callsBlocked', 'Calls blocked')}
+                                </TooltipContent>
+                              )}
+                            </Tooltip>
+                          </PermissionGuard>
+                          <PermissionGuard permission={PERMISSIONS.COMMUNICATION.SEND_SMS}>
+                            <button
+                              disabled={phone.blocking.blocks_sms}
+                              onClick={() => {
+                                setSelectedPhoneForSMS(phone.number)
+                                setIsSendSMSModalOpen(true)
+                              }}
+                              className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-40 md:h-[20px] md:w-[20px]"
+                            >
+                              <Icons.ChatFeedback01 size={16} className="flex-shrink-0" />
                             </button>
-                          </TooltipTrigger>
-                          <TooltipContent side="top" className="text-xs">
-                            {phone.type && (
-                              <div>
-                                {t('pages.clients.detail.phoneType')}:{' '}
-                                {phone.contactTypeCode
-                                  ? t(`contactTypes.${phone.contactTypeCode}`, {
-                                      defaultValue: phone.type,
-                                    })
-                                  : phone.type === 'mobile'
-                                    ? t('pages.clients.editModal.phoneMobile')
-                                    : phone.type === 'home'
-                                      ? t('pages.clients.editModal.phoneHome')
-                                      : phone.type === 'register'
-                                        ? t('pages.clients.editModal.phoneRegister')
-                                        : phone.type}
-                              </div>
-                            )}
-                            {phone.added_by_user_name && (
-                              <div>
-                                {t('pages.clients.detail.addedBy')}: {phone.added_by_user_name}
-                              </div>
-                            )}
-                            {phone.created_at && (
-                              <div>
-                                {t('pages.clients.detail.addedDate')}:{' '}
-                                {formatDate(phone.created_at ?? undefined)}
-                              </div>
-                            )}
-                            {!phone.added_by_user_name && !phone.created_at && <div>-</div>}
-                          </TooltipContent>
-                        </Tooltip>
-                      </div>
-                      <div className="flex shrink-0 items-center gap-1 md:gap-2">
-                        <PermissionGuard permission={PERMISSIONS.COMMUNICATION.MAKE_CALLS}>
-                          <button
-                            disabled={!user?.is_agent || !user?.asterisk_extension}
-                            onClick={() => {
-                              openOutboundCall(phone.number, phone.contactTypeId)
-                            }}
-                            className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-40 md:h-[20px] md:w-[20px]"
-                          >
-                            <Icons.Headset size={16} className="flex-shrink-0" />
-                          </button>
-                        </PermissionGuard>
-                        <PermissionGuard permission={PERMISSIONS.COMMUNICATION.SEND_SMS}>
-                          <button
-                            onClick={() => {
-                              setSelectedPhoneForSMS(phone.number)
-                              setIsSendSMSModalOpen(true)
-                            }}
-                            className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 md:h-[20px] md:w-[20px]"
-                          >
-                            <Icons.ChatFeedback01 size={16} className="flex-shrink-0" />
-                          </button>
-                        </PermissionGuard>
-                        <PermissionGuard permissions={ALL_MESSAGING_SEND_PERMISSIONS} mode="any">
-                          <button
-                            onClick={() => {
-                              setSelectedPhoneForMessage(phone.number)
-                              setIsSendMessageModalOpen(true)
-                            }}
-                            className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 md:h-[20px] md:w-[20px]"
-                            title={t('pages.clients.detail.sendMessage', 'Send message')}
-                          >
-                            <Icons.Message01 size={16} className="flex-shrink-0" />
-                          </button>
-                        </PermissionGuard>
-                        <PermissionGuard permission={PERMISSIONS.CLIENTS.CREATE_INTERACTIONS}>
-                          <button
-                            onClick={() => {
-                              setChainExecutorContactSource('client')
-                              setChainExecutorPrefilledPhone(phone.number)
-                              setIsChainExecutorOpen(true)
-                            }}
-                            className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 md:h-[20px] md:w-[20px]"
-                          >
-                            <Icons.PencilEdit size={16} className="flex-shrink-0" />
-                          </button>
-                        </PermissionGuard>
+                          </PermissionGuard>
+                          <PermissionGuard permissions={ALL_MESSAGING_SEND_PERMISSIONS} mode="any">
+                            <button
+                              onClick={() => {
+                                setSelectedPhoneForMessage(phone.number)
+                                setIsSendMessageModalOpen(true)
+                              }}
+                              className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 md:h-[20px] md:w-[20px]"
+                              title={t('pages.clients.detail.sendMessage', 'Send message')}
+                            >
+                              <Icons.Message01 size={16} className="flex-shrink-0" />
+                            </button>
+                          </PermissionGuard>
+                          <PermissionGuard permission={PERMISSIONS.CLIENTS.CREATE_INTERACTIONS}>
+                            <button
+                              onClick={() => {
+                                setChainExecutorContactSource('client')
+                                setChainExecutorPrefilledPhone(phone.number)
+                                setIsChainExecutorOpen(true)
+                              }}
+                              className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 md:h-[20px] md:w-[20px]"
+                            >
+                              <Icons.PencilEdit size={16} className="flex-shrink-0" />
+                            </button>
+                          </PermissionGuard>
+                          {phone.contactId > 0 && (
+                            <>
+                              <button
+                                type="button"
+                                className="text-primary-500 text-xs hover:underline"
+                                onClick={() =>
+                                  setContactTagModal({
+                                    contactId: phone.contactId,
+                                    phone: phone.number,
+                                  })
+                                }
+                              >
+                                {t('pages.contactTags.tags', 'Tags')}
+                              </button>
+                              <button
+                                type="button"
+                                className="text-xs text-gray-500 hover:underline"
+                                onClick={() =>
+                                  setContactTagHistoryModal({
+                                    contactId: phone.contactId,
+                                    phone: phone.number,
+                                  })
+                                }
+                              >
+                                {t('pages.contactTags.tagHistory', 'Tag history')}
+                              </button>
+                            </>
+                          )}
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -5006,6 +5118,26 @@ export function ClientDetailPage() {
           onRetry={handleClearCallError}
           onSpamCall={(phone) => addSpamCall(phone)}
         />
+
+        {contactTagModal && (
+          <ContactTagSelectorModal
+            open
+            onClose={() => setContactTagModal(null)}
+            clientId={client.id}
+            contactId={contactTagModal.contactId}
+            phoneNumber={contactTagModal.phone}
+          />
+        )}
+
+        {contactTagHistoryModal && (
+          <ContactTagHistoryModal
+            open
+            onClose={() => setContactTagHistoryModal(null)}
+            clientId={client.id}
+            contactId={contactTagHistoryModal.contactId}
+            phoneNumber={contactTagHistoryModal.phone}
+          />
+        )}
 
         {/* Call Recording Modal */}
         {selectedCallData && (
