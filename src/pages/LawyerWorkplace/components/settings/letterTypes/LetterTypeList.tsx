@@ -10,6 +10,7 @@ interface LetterTypeListProps {
   selectedId: string
   onSelect: (id: string) => void
   onAddType: () => void
+  readOnly?: boolean
 }
 
 export function LetterTypeList({
@@ -17,6 +18,7 @@ export function LetterTypeList({
   selectedId,
   onSelect,
   onAddType,
+  readOnly = false,
 }: LetterTypeListProps) {
   const { t } = useTranslation('common')
 
@@ -26,14 +28,16 @@ export function LetterTypeList({
         <h2 className="text-dark-500 text-[13px] font-medium">
           {t('pages.lawyerWorkplace.settings.letterTypes.listTitle', 'Letter types')}
         </h2>
-        <button
-          type="button"
-          onClick={onAddType}
-          className="bg-primary-300 text-dark-500 hover:bg-primary-400 inline-flex items-center gap-1 rounded px-3 py-1.5 text-[11px] font-medium transition-colors"
-        >
-          <Icons.Add size={14} strokeWidth={2} />
-          {t('pages.lawyerWorkplace.settings.addType', 'Add type')}
-        </button>
+        {!readOnly && (
+          <button
+            type="button"
+            onClick={onAddType}
+            className="bg-primary-300 text-dark-500 hover:bg-primary-400 inline-flex items-center gap-1 rounded px-3 py-1.5 text-[11px] font-medium transition-colors"
+          >
+            <Icons.Add size={14} strokeWidth={2} />
+            {t('pages.lawyerWorkplace.settings.addType', 'Add type')}
+          </button>
+        )}
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto">

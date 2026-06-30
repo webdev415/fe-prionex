@@ -19,6 +19,7 @@ interface MailboxesTableProps {
   onAddMailbox: () => void
   onTestSync: () => Promise<void>
   isPolling?: boolean
+  readOnly?: boolean
 }
 
 export function MailboxesTable({
@@ -29,6 +30,7 @@ export function MailboxesTable({
   onAddMailbox,
   onTestSync,
   isPolling = false,
+  readOnly = false,
 }: MailboxesTableProps) {
   const { t } = useTranslation('common')
   const { isCompact } = useLawyerWorkplaceLayout()
@@ -78,27 +80,31 @@ export function MailboxesTable({
           </p>
         </div>
         <div className={cn('flex shrink-0 items-center gap-2', isCompact && 'w-full')}>
-          <Button
-            variant="outline"
-            size="sm"
-            leftIcon={<Icons.Reload size={16} strokeWidth={1.5} />}
-            className={cn('h-9 rounded-md', isCompact && 'flex-1')}
-            disabled={isPolling}
-            onClick={() => void onTestSync()}
-          >
-            {isPolling
-              ? t('pages.lawyerWorkplace.settings.mailboxes.testSyncRunning', 'Syncing…')
-              : t('pages.lawyerWorkplace.settings.mailboxes.testSync', 'Test sync')}
-          </Button>
-          <Button
-            variant="primary"
-            size="sm"
-            leftIcon={<Icons.AddCircle size={18} strokeWidth={1.5} />}
-            onClick={onAddMailbox}
-            className={cn('h-9 rounded-md', isCompact && 'flex-1')}
-          >
-            {t('pages.lawyerWorkplace.settings.mailboxes.addMailbox', 'Add mailbox')}
-          </Button>
+          {!readOnly && (
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                leftIcon={<Icons.Reload size={16} strokeWidth={1.5} />}
+                className={cn('h-9 rounded-md', isCompact && 'flex-1')}
+                disabled={isPolling}
+                onClick={() => void onTestSync()}
+              >
+                {isPolling
+                  ? t('pages.lawyerWorkplace.settings.mailboxes.testSyncRunning', 'Syncing…')
+                  : t('pages.lawyerWorkplace.settings.mailboxes.testSync', 'Test sync')}
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                leftIcon={<Icons.AddCircle size={18} strokeWidth={1.5} />}
+                onClick={onAddMailbox}
+                className={cn('h-9 rounded-md', isCompact && 'flex-1')}
+              >
+                {t('pages.lawyerWorkplace.settings.mailboxes.addMailbox', 'Add mailbox')}
+              </Button>
+            </>
+          )}
         </div>
       </div>
 
@@ -194,32 +200,36 @@ export function MailboxesTable({
                     </span>
                   </td>
                   <td className="px-4 py-4">
-                    <div className="flex items-center gap-1">
-                      <button
-                        type="button"
-                        onClick={() => onEdit(mailbox)}
-                        className="text-light-600 hover:text-dark-500 flex h-8 w-8 items-center justify-center rounded-full hover:bg-gray-100"
-                        aria-label={t('actions.edit', 'Edit')}
-                      >
-                        <Icons.PencilEdit02 size={15} strokeWidth={1.5} />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => onToggleStatus(mailbox)}
-                        className="text-light-600 hover:text-dark-500 flex h-8 w-8 items-center justify-center rounded-full hover:bg-gray-100"
-                        aria-label={
-                          mailbox.status === 'disabled'
-                            ? t('actions.enable', 'Enable')
-                            : t('actions.disable', 'Disable')
-                        }
-                      >
-                        {mailbox.status === 'disabled' ? (
-                          <Icons.Tick02 size={15} strokeWidth={1.5} />
-                        ) : (
-                          <Icons.Cancel01 size={15} strokeWidth={1.5} />
-                        )}
-                      </button>
-                    </div>
+                    {!readOnly ? (
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => onEdit(mailbox)}
+                          className="text-light-600 hover:text-dark-500 flex h-8 w-8 items-center justify-center rounded-full hover:bg-gray-100"
+                          aria-label={t('actions.edit', 'Edit')}
+                        >
+                          <Icons.PencilEdit02 size={15} strokeWidth={1.5} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => onToggleStatus(mailbox)}
+                          className="text-light-600 hover:text-dark-500 flex h-8 w-8 items-center justify-center rounded-full hover:bg-gray-100"
+                          aria-label={
+                            mailbox.status === 'disabled'
+                              ? t('actions.enable', 'Enable')
+                              : t('actions.disable', 'Disable')
+                          }
+                        >
+                          {mailbox.status === 'disabled' ? (
+                            <Icons.Tick02 size={15} strokeWidth={1.5} />
+                          ) : (
+                            <Icons.Cancel01 size={15} strokeWidth={1.5} />
+                          )}
+                        </button>
+                      </div>
+                    ) : (
+                      <span className="text-light-500 text-[12px]">—</span>
+                    )}
                   </td>
                 </tr>
               )

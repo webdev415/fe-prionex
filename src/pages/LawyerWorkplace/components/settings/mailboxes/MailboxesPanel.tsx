@@ -23,6 +23,7 @@ interface MailboxesPanelProps {
   isSavingMailbox: boolean
   isSavingSync: boolean
   isPolling: boolean
+  readOnly?: boolean
 }
 
 export function MailboxesPanel({
@@ -36,6 +37,7 @@ export function MailboxesPanel({
   isSavingMailbox,
   isSavingSync,
   isPolling,
+  readOnly = false,
 }: MailboxesPanelProps) {
   const [modalOpen, setModalOpen] = useState(false)
   const [editingMailbox, setEditingMailbox] = useState<SettingsMailbox | null>(null)
@@ -79,6 +81,7 @@ export function MailboxesPanel({
           syncSettings={syncSettings}
           onSyncIntervalChange={onSyncIntervalChange}
           isSaving={isSavingSync}
+          readOnly={readOnly}
         />
         <MailboxesTable
           mailboxes={mailboxes}
@@ -88,6 +91,7 @@ export function MailboxesPanel({
           onAddMailbox={openAdd}
           onTestSync={onTestSync}
           isPolling={isPolling}
+          readOnly={readOnly}
         />
       </div>
 

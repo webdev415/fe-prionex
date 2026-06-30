@@ -28,6 +28,7 @@ interface TemplatesPanelProps {
   onToggleDocumentPresetActive: (preset: SettingsDocumentPreset) => Promise<void>
   isSavingReplyTemplate: boolean
   isSavingDocumentPreset: boolean
+  readOnly?: boolean
 }
 
 export function TemplatesPanel({
@@ -41,6 +42,7 @@ export function TemplatesPanel({
   onToggleDocumentPresetActive,
   isSavingReplyTemplate,
   isSavingDocumentPreset,
+  readOnly = false,
 }: TemplatesPanelProps) {
   const [replyModalOpen, setReplyModalOpen] = useState(false)
   const [presetModalOpen, setPresetModalOpen] = useState(false)
@@ -99,6 +101,7 @@ export function TemplatesPanel({
             if (template) void onToggleReplyTemplateActive(template)
           }}
           onAdd={openAddReply}
+          readOnly={readOnly}
         />
         <DocumentPresetsTable
           presets={documentPresets}
@@ -109,6 +112,7 @@ export function TemplatesPanel({
             if (preset) void onToggleDocumentPresetActive(preset)
           }}
           onAdd={openAddPreset}
+          readOnly={readOnly}
         />
       </div>
 

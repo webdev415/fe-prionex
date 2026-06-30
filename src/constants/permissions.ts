@@ -252,6 +252,7 @@ export const PERMISSIONS = {
   LEGAL_WORKPLACE: {
     VIEW: 'view_legal_workplace',
     VIEW_KANBAN: 'view_legal_kanban',
+    MANAGE: 'manage_legal_workplace',
   },
 
   /**
@@ -469,6 +470,8 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   // Lawyer Workplace
   view_legal_workplace: 'Access the Lawyer Workplace inbox and letter processing',
   view_legal_kanban: 'Access the Lawyer Workplace legal tasks kanban board',
+  manage_legal_workplace:
+    'Configure Lawyer Workplace settings (letter types, lawyers, mailboxes, templates)',
 
   // Contact Types (CRM Settings)
   view_contact_types: 'View Contact Types directory in Settings',

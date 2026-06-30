@@ -352,15 +352,6 @@ export function EmailThreadPanel({
               {letter.subject}
             </h3>
           </div>
-          <Button
-            type="button"
-            variant="outline"
-            size="xs"
-            aria-label={t('pages.lawyerWorkplace.thread.archive', 'Archive')}
-            title={t('pages.lawyerWorkplace.thread.archive', 'Archive')}
-            className="shrink-0 rounded-md text-[12px] sm:hidden"
-            leftIcon={<Icons.Download05 size={16} strokeWidth={1.5} />}
-          />
         </div>
 
         <div className="flex min-w-0 items-center justify-between gap-2 sm:gap-3">
@@ -386,15 +377,6 @@ export function EmailThreadPanel({
               </span>
             )}
           </p>
-          <Button
-            type="button"
-            variant="outline"
-            size="xs"
-            className="hidden rounded-md text-[12px] sm:inline-flex"
-            leftIcon={<Icons.Download05 size={16} strokeWidth={1.5} />}
-          >
-            {t('pages.lawyerWorkplace.thread.archive', 'Archive')}
-          </Button>
         </div>
       </div>
 

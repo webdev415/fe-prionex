@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils'
 import { useLawyerWorkplaceLayout } from '../../../context/lawyerWorkplaceLayout'
 import type { LetterTypeConfig } from '../../../settings/types'
 import type { SettingsLawyer } from '../../../settings/types'
-import { getWorkloadLabel } from '../../../settings/utils/lawyerHelpers'
+import { getWorkloadLabel, exportLawyersToCsv } from '../../../settings/utils/lawyerHelpers'
 import { LetterTypeBadge } from '../LetterTypeBadge'
 
 const DEFAULT_PAGE_SIZE = 10
@@ -20,6 +20,7 @@ interface LawyersTableProps {
   onUpdateLawyerMaxInFlight: (lawyerId: string, maxInFlight: number) => Promise<void>
   isSaving?: boolean
   onAddLawyer: () => void
+  readOnly?: boolean
 }
 
 export function LawyersTable({
@@ -28,6 +29,7 @@ export function LawyersTable({
   onUpdateLawyerMaxInFlight,
   isSaving = false,
   onAddLawyer,
+  readOnly = false,
 }: LawyersTableProps) {
   const { t } = useTranslation('common')
   const { isCompact } = useLawyerWorkplaceLayout()
@@ -45,6 +47,7 @@ export function LawyersTable({
   }, [lawyers, currentPage, pageSize])
 
   const updateMaxInFlight = async (lawyerId: string, delta: number) => {
+    if (readOnly) return
     const lawyer = lawyers.find((item) => item.id === lawyerId)
     if (!lawyer || isSaving) return
     const nextValue = Math.max(1, lawyer.maxInFlight + delta)
@@ -86,23 +89,29 @@ export function LawyersTable({
             size="sm"
             leftIcon={<Icons.FileDownload size={16} strokeWidth={1.5} />}
             className={cn('h-9 rounded-md', isCompact && 'flex-1')}
-            onClick={() =>
-              toast.info(
-                t('pages.lawyerWorkplace.settings.lawyers.exportSoon', 'Export coming soon')
-              )
-            }
+            onClick={() => {
+              if (lawyers.length === 0) {
+                toast.info(
+                  t('pages.lawyerWorkplace.settings.lawyers.exportEmpty', 'No lawyers to export')
+                )
+                return
+              }
+              exportLawyersToCsv(lawyers, letterTypes, t)
+            }}
           >
             {t('pages.lawyerWorkplace.settings.lawyers.export', 'Export')}
           </Button>
-          <Button
-            variant="primary"
-            size="sm"
-            leftIcon={<Icons.AddCircle size={18} strokeWidth={1.5} />}
-            onClick={onAddLawyer}
-            className={cn('h-9 rounded-md', isCompact && 'flex-1')}
-          >
-            {t('pages.lawyerWorkplace.settings.lawyers.addLawyer', 'Add lawyer')}
-          </Button>
+          {!readOnly && (
+            <Button
+              variant="primary"
+              size="sm"
+              leftIcon={<Icons.AddCircle size={18} strokeWidth={1.5} />}
+              onClick={onAddLawyer}
+              className={cn('h-9 rounded-md', isCompact && 'flex-1')}
+            >
+              {t('pages.lawyerWorkplace.settings.lawyers.addLawyer', 'Add lawyer')}
+            </Button>
+          )}
         </div>
       </div>
 
@@ -192,29 +201,35 @@ export function LawyersTable({
                     </div>
                   </td>
                   <td className="px-4 py-4">
-                    <div className="bg-light-100 inline-flex items-center rounded-full px-1">
-                      <button
-                        type="button"
-                        onClick={() => updateMaxInFlight(lawyer.id, -1)}
-                        disabled={isSaving}
-                        className="text-light-600 hover:text-dark-500 flex h-8 w-8 items-center justify-center disabled:opacity-50"
-                        aria-label={t('actions.decrease', 'Decrease')}
-                      >
-                        <Icons.Remove02 size={14} strokeWidth={1} />
-                      </button>
-                      <span className="text-dark-500 min-w-[32px] px-1 text-center text-[13px] font-semibold">
+                    {readOnly ? (
+                      <span className="text-dark-500 text-[13px] font-semibold">
                         {lawyer.maxInFlight}
                       </span>
-                      <button
-                        type="button"
-                        onClick={() => updateMaxInFlight(lawyer.id, 1)}
-                        disabled={isSaving}
-                        className="text-light-600 hover:text-dark-500 flex h-8 w-8 items-center justify-center disabled:opacity-50"
-                        aria-label={t('actions.increase', 'Increase')}
-                      >
-                        <Icons.Add size={14} strokeWidth={1} />
-                      </button>
-                    </div>
+                    ) : (
+                      <div className="bg-light-100 inline-flex items-center rounded-full px-1">
+                        <button
+                          type="button"
+                          onClick={() => updateMaxInFlight(lawyer.id, -1)}
+                          disabled={isSaving}
+                          className="text-light-600 hover:text-dark-500 flex h-8 w-8 items-center justify-center disabled:opacity-50"
+                          aria-label={t('actions.decrease', 'Decrease')}
+                        >
+                          <Icons.Remove02 size={14} strokeWidth={1} />
+                        </button>
+                        <span className="text-dark-500 min-w-[32px] px-1 text-center text-[13px] font-semibold">
+                          {lawyer.maxInFlight}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => updateMaxInFlight(lawyer.id, 1)}
+                          disabled={isSaving}
+                          className="text-light-600 hover:text-dark-500 flex h-8 w-8 items-center justify-center disabled:opacity-50"
+                          aria-label={t('actions.increase', 'Increase')}
+                        >
+                          <Icons.Add size={14} strokeWidth={1} />
+                        </button>
+                      </div>
+                    )}
                   </td>
                   <td className="px-4 py-4">
                     <span

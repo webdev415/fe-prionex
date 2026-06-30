@@ -15,6 +15,7 @@ interface LetterTypesPanelProps {
   onAddType: () => void
   onSaveLetterType: (draft: LetterTypeConfig, original: LetterTypeConfig) => Promise<void>
   isSaving?: boolean
+  readOnly?: boolean
 }
 
 interface LetterTypeDetailEditorProps {
@@ -22,6 +23,7 @@ interface LetterTypeDetailEditorProps {
   onSaveLetterType: (draft: LetterTypeConfig, original: LetterTypeConfig) => Promise<void>
   isSaving?: boolean
   onBack?: () => void
+  readOnly?: boolean
 }
 
 function LetterTypeDetailEditor({
@@ -29,6 +31,7 @@ function LetterTypeDetailEditor({
   onSaveLetterType,
   isSaving = false,
   onBack,
+  readOnly = false,
 }: LetterTypeDetailEditorProps) {
   const { t } = useTranslation('common')
   const [draft, setDraft] = useState(() => cloneLetterType(selectedType))
@@ -68,6 +71,7 @@ function LetterTypeDetailEditor({
       onSave={handleSave}
       isSaving={isPersisting || isSaving}
       onBack={onBack}
+      readOnly={readOnly}
     />
   )
 }
@@ -79,6 +83,7 @@ export function LetterTypesPanel({
   onAddType,
   onSaveLetterType,
   isSaving = false,
+  readOnly = false,
 }: LetterTypesPanelProps) {
   const { isCompact } = useLawyerWorkplaceLayout()
   const [mobilePane, setMobilePane] = useState<'list' | 'detail'>('list')
@@ -104,6 +109,7 @@ export function LetterTypesPanel({
           selectedId={selectedId}
           onSelect={handleSelect}
           onAddType={onAddType}
+          readOnly={readOnly}
         />
       </div>
     )
@@ -128,6 +134,7 @@ export function LetterTypesPanel({
             selectedId={selectedId}
             onSelect={handleSelect}
             onAddType={onAddType}
+            readOnly={readOnly}
           />
         </div>
       ) : null}
@@ -139,6 +146,7 @@ export function LetterTypesPanel({
           onSaveLetterType={onSaveLetterType}
           isSaving={isSaving}
           onBack={isCompact ? () => setMobilePane('list') : undefined}
+          readOnly={readOnly}
         />
       ) : null}
     </div>

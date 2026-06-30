@@ -18,6 +18,7 @@ import {
   useLegalSettingsReplyTemplates,
   useLegalSyncSettings,
   useLegalTemplateSettingsActions,
+  useCanManageLegalWorkplaceSettings,
 } from '@/features/lawyerWorkplace'
 import { useOperators } from '@/features/users/hooks/useUsers'
 import { useAuthStore } from '@/stores/authStore'
@@ -33,6 +34,8 @@ import { SettingsToolbar } from './SettingsToolbar'
 export function LegalSettingsTab() {
   const { t } = useTranslation('common')
   const { isCompact } = useLawyerWorkplaceLayout()
+  const canManageSettings = useCanManageLegalWorkplaceSettings()
+  const readOnly = !canManageSettings
   const [activeSubTab, setActiveSubTab] = useState<SettingsSubTab>('letterTypes')
   const [addTypeOpen, setAddTypeOpen] = useState(false)
   const [selectedLetterTypeId, setSelectedLetterTypeId] = useState('')
@@ -184,6 +187,7 @@ export function LegalSettingsTab() {
   }
 
   const openAddLetterType = (onCreated?: (typeId: string) => void) => {
+    if (readOnly) return
     pendingLawyerTypeSelectRef.current = onCreated ?? null
     setAddTypeOpen(true)
   }
@@ -196,6 +200,15 @@ export function LegalSettingsTab() {
   return (
     <div className={cn('min-w-0', isCompact ? 'pb-8' : 'pb-6')}>
       <SettingsToolbar activeSubTab={activeSubTab} onSubTabChange={setActiveSubTab} />
+
+      {readOnly && (
+        <p className="text-light-600 mx-4 mb-2 rounded-lg border border-gray-100 bg-white px-4 py-2.5 text-[12px] sm:mx-5 lg:mx-7">
+          {t(
+            'pages.lawyerWorkplace.settings.readOnlyNotice',
+            'View only — you do not have permission to change department settings.'
+          )}
+        </p>
+      )}
 
       {isLoading &&
       (activeSubTab === 'letterTypes' ||
@@ -223,6 +236,7 @@ export function LegalSettingsTab() {
           onAddType={() => openAddLetterType()}
           onSaveLetterType={saveLetterType}
           isSaving={isSavingLetterType}
+          readOnly={readOnly}
         />
       )}
 
@@ -235,6 +249,7 @@ export function LegalSettingsTab() {
           onUpdateLawyerMaxInFlight={updateLawyerMaxInFlight}
           isSaving={isSavingLawyer}
           onAddLetterType={openAddLetterType}
+          readOnly={readOnly}
         />
       )}
 
@@ -250,6 +265,7 @@ export function LegalSettingsTab() {
           isSavingMailbox={isSavingMailbox}
           isSavingSync={isSavingSync}
           isPolling={isPolling}
+          readOnly={readOnly}
         />
       )}
 
@@ -265,6 +281,7 @@ export function LegalSettingsTab() {
           onToggleDocumentPresetActive={toggleDocumentPresetActive}
           isSavingReplyTemplate={isSavingReplyTemplate}
           isSavingDocumentPreset={isSavingDocumentPreset}
+          readOnly={readOnly}
         />
       )}
 

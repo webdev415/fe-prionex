@@ -8,3 +8,11 @@ export function useCanAccessLegalKanban(): boolean {
     PERMISSIONS.SYSTEM.MANAGE_SETTINGS,
   ])
 }
+
+/** Matches backend ``require_legal_workplace_manage`` (manage_legal_workplace | manage_settings). */
+export function useCanManageLegalWorkplaceSettings(): boolean {
+  return useHasAnyPermission([
+    PERMISSIONS.LEGAL_WORKPLACE.MANAGE,
+    PERMISSIONS.SYSTEM.MANAGE_SETTINGS,
+  ])
+}

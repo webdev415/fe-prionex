@@ -9,6 +9,7 @@ interface SyncSettingsCardProps {
   syncSettings: DepartmentSyncSettings
   onSyncIntervalChange: (interval: SyncInterval) => Promise<void>
   isSaving?: boolean
+  readOnly?: boolean
 }
 
 function formatLastSynced(iso: string, t: TFunction<'common'>): string {
@@ -34,6 +35,7 @@ export function SyncSettingsCard({
   syncSettings,
   onSyncIntervalChange,
   isSaving = false,
+  readOnly = false,
 }: SyncSettingsCardProps) {
   const { t } = useTranslation('common')
   const { isCompact, isWide } = useLawyerWorkplaceLayout()
@@ -85,7 +87,7 @@ export function SyncSettingsCard({
             <button
               key={option.id}
               type="button"
-              disabled={isSaving}
+              disabled={isSaving || readOnly}
               onClick={() => handleIntervalChange(option.id)}
               className={cn(
                 'cursor-pointer rounded-md px-3 py-2.5 text-center text-[12px] transition-colors',

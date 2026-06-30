@@ -17,6 +17,7 @@ interface ReplyTemplatesTableProps {
   onEdit: (template: SettingsReplyTemplate) => void
   onToggleActive: (templateId: string) => void
   onAdd: () => void
+  readOnly?: boolean
 }
 
 export function ReplyTemplatesTable({
@@ -25,6 +26,7 @@ export function ReplyTemplatesTable({
   onEdit,
   onToggleActive,
   onAdd,
+  readOnly = false,
 }: ReplyTemplatesTableProps) {
   const { t } = useTranslation('common')
   const { isCompact } = useLawyerWorkplaceLayout()
@@ -59,15 +61,17 @@ export function ReplyTemplatesTable({
             )}
           </p>
         </div>
-        <Button
-          variant="primary"
-          size="sm"
-          leftIcon={<Icons.AddCircle size={18} strokeWidth={1.5} />}
-          onClick={onAdd}
-          className={cn('h-9 shrink-0 rounded-md', isCompact && 'w-full')}
-        >
-          {t('pages.lawyerWorkplace.settings.templates.addReply', 'Add template')}
-        </Button>
+        {!readOnly && (
+          <Button
+            variant="primary"
+            size="sm"
+            leftIcon={<Icons.AddCircle size={18} strokeWidth={1.5} />}
+            onClick={onAdd}
+            className={cn('h-9 shrink-0 rounded-md', isCompact && 'w-full')}
+          >
+            {t('pages.lawyerWorkplace.settings.templates.addReply', 'Add template')}
+          </Button>
+        )}
       </div>
 
       <div className="data-table-scroll w-full overflow-x-auto overflow-y-hidden pb-2">
@@ -139,32 +143,36 @@ export function ReplyTemplatesTable({
                   </span>
                 </td>
                 <td className="px-4 py-4">
-                  <div className="flex items-center gap-1">
-                    <button
-                      type="button"
-                      onClick={() => onEdit(template)}
-                      className="text-light-600 hover:text-dark-500 flex h-8 w-8 items-center justify-center rounded-full hover:bg-gray-100"
-                      aria-label={t('actions.edit', 'Edit')}
-                    >
-                      <Icons.PencilEdit02 size={15} strokeWidth={1.5} />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => onToggleActive(template.id)}
-                      className="text-light-600 hover:text-dark-500 flex h-8 w-8 items-center justify-center rounded-full hover:bg-gray-100"
-                      aria-label={
-                        template.isActive
-                          ? t('actions.disable', 'Disable')
-                          : t('actions.enable', 'Enable')
-                      }
-                    >
-                      {template.isActive ? (
-                        <Icons.Cancel01 size={15} strokeWidth={1.5} />
-                      ) : (
-                        <Icons.Tick02 size={15} strokeWidth={1.5} />
-                      )}
-                    </button>
-                  </div>
+                  {!readOnly ? (
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => onEdit(template)}
+                        className="text-light-600 hover:text-dark-500 flex h-8 w-8 items-center justify-center rounded-full hover:bg-gray-100"
+                        aria-label={t('actions.edit', 'Edit')}
+                      >
+                        <Icons.PencilEdit02 size={15} strokeWidth={1.5} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onToggleActive(template.id)}
+                        className="text-light-600 hover:text-dark-500 flex h-8 w-8 items-center justify-center rounded-full hover:bg-gray-100"
+                        aria-label={
+                          template.isActive
+                            ? t('actions.disable', 'Disable')
+                            : t('actions.enable', 'Enable')
+                        }
+                      >
+                        {template.isActive ? (
+                          <Icons.Cancel01 size={15} strokeWidth={1.5} />
+                        ) : (
+                          <Icons.Tick02 size={15} strokeWidth={1.5} />
+                        )}
+                      </button>
+                    </div>
+                  ) : (
+                    <span className="text-light-500 text-[12px]">—</span>
+                  )}
                 </td>
               </tr>
             ))}
