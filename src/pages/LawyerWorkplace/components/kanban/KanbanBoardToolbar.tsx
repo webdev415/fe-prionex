@@ -24,6 +24,7 @@ interface KanbanBoardToolbarProps {
   typeFilter: TypeFilterId
   onTypeFilterChange: (value: TypeFilterId) => void
   onNewTask: () => void
+  onExportCsv: () => void
 }
 
 export function KanbanBoardToolbar({
@@ -36,6 +37,7 @@ export function KanbanBoardToolbar({
   typeFilter,
   onTypeFilterChange,
   onNewTask,
+  onExportCsv,
 }: KanbanBoardToolbarProps) {
   const { t } = useTranslation('common')
   const { isCompact, isWide } = useLawyerWorkplaceLayout()
@@ -94,10 +96,12 @@ export function KanbanBoardToolbar({
 
           {isWide && (
             <Button
+              type="button"
               variant="primary"
               size="md"
               leftIcon={<Icons.FileImport size={16} className="text-dark-500" />}
               className="h-[45px] rounded-full text-xs"
+              onClick={onExportCsv}
             >
               {t('pages.lawyerWorkplace.kanban.exportCsv', 'Export CSV')}
             </Button>

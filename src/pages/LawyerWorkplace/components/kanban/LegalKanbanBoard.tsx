@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useRef, useState, type DragEvent } from 'react'
 import { useTranslation } from 'react-i18next'
+import { toast } from 'sonner'
 import {
   applyKanbanTaskPatch,
   mapKanbanPatchToTaskUpdate,
@@ -21,6 +22,7 @@ import {
   type KanbanDragPayload,
   type KanbanTask,
 } from '../../kanban/kanbanData'
+import { exportKanbanTasksToCsv } from '../../kanban/kanbanExport'
 import {
   applyKanbanFilters,
   KANBAN_SCROLL_COLUMN_WIDTH_CLASS,
@@ -268,6 +270,15 @@ export function LegalKanbanBoard() {
     [handleMoveTask]
   )
 
+  const handleExportCsv = useCallback(() => {
+    const exported = exportKanbanTasksToCsv(filteredColumns, t)
+    if (exported === 0) {
+      toast.info(
+        t('pages.lawyerWorkplace.kanban.exportEmpty', 'No tasks match the current filters')
+      )
+    }
+  }, [filteredColumns, t])
+
   return (
     <div className="flex h-full min-h-0 w-full min-w-0 flex-1 flex-col">
       <KanbanBoardToolbar
@@ -283,6 +294,7 @@ export function LegalKanbanBoard() {
         typeFilter={typeFilter}
         onTypeFilterChange={setTypeFilter}
         onNewTask={() => setCreateTaskOpen(true)}
+        onExportCsv={handleExportCsv}
       />
 
       <CreateKanbanTaskModal open={createTaskOpen} onClose={() => setCreateTaskOpen(false)} />
