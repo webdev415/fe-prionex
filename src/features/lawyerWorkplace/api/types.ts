@@ -364,3 +364,77 @@ export interface LegalGenerateDocumentRequest {
 }
 
 export type LegalDocumentResponse = LegalDocumentListItem
+
+export type LegalMailboxStatus = 'connected' | 'error' | 'disabled'
+export type LegalSyncInterval = '15m' | '30m' | '1h' | '4h' | 'daily'
+export type LegalRoutingMatchType = 'sender_domain' | 'subject_keyword' | 'default'
+
+export interface LegalMailboxRoutingRule {
+  id: string
+  match_type: LegalRoutingMatchType
+  value: string
+  letter_type_id: string
+}
+
+export interface LegalSettingsMailbox {
+  id: string
+  email: string
+  display_name: string
+  status: LegalMailboxStatus
+  letter_count: number
+  default_letter_type_id: string | null
+  is_default_outgoing: boolean
+  routing_rules: LegalMailboxRoutingRule[]
+}
+
+export interface LegalSettingsMailboxListResponse {
+  items: LegalSettingsMailbox[]
+  total: number
+}
+
+export interface LegalMailboxRoutingRuleInput {
+  id?: string
+  match_type: LegalRoutingMatchType
+  value: string
+  letter_type_id: string
+}
+
+export interface LegalMailboxCreate {
+  email: string
+  display_name: string
+  default_letter_type_id?: string | null
+  is_default_outgoing?: boolean
+  routing_rules?: LegalMailboxRoutingRuleInput[]
+}
+
+export interface LegalMailboxUpdate {
+  email?: string
+  display_name?: string
+  status?: 'connected' | 'disabled'
+  default_letter_type_id?: string | null
+  is_default_outgoing?: boolean
+  routing_rules?: LegalMailboxRoutingRuleInput[]
+}
+
+export interface LegalDepartmentSyncSettings {
+  sync_interval: LegalSyncInterval
+  last_synced_at: string | null
+}
+
+export interface LegalDepartmentSyncSettingsUpdate {
+  sync_interval: LegalSyncInterval
+}
+
+export interface LegalPollMailboxResult {
+  mailbox_id: string
+  ingested: number
+  skipped: number
+  failed: number
+  fetched: number
+  status: string
+  error: string | null
+}
+
+export interface LegalPollAllMailboxesResponse {
+  results: LegalPollMailboxResult[]
+}

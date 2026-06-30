@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { toast } from 'sonner'
 import { Button } from '@/components/ui/Button'
 import { Pagination } from '@/components/ui/Pagination'
 import { Icons } from '@/lib/icons'
@@ -16,8 +15,10 @@ interface MailboxesTableProps {
   mailboxes: SettingsMailbox[]
   letterTypes: LetterTypeConfig[]
   onEdit: (mailbox: SettingsMailbox) => void
-  onToggleStatus: (mailboxId: string) => void
+  onToggleStatus: (mailbox: SettingsMailbox) => void
   onAddMailbox: () => void
+  onTestSync: () => Promise<void>
+  isPolling?: boolean
 }
 
 export function MailboxesTable({
@@ -26,6 +27,8 @@ export function MailboxesTable({
   onEdit,
   onToggleStatus,
   onAddMailbox,
+  onTestSync,
+  isPolling = false,
 }: MailboxesTableProps) {
   const { t } = useTranslation('common')
   const { isCompact } = useLawyerWorkplaceLayout()
@@ -80,13 +83,12 @@ export function MailboxesTable({
             size="sm"
             leftIcon={<Icons.Reload size={16} strokeWidth={1.5} />}
             className={cn('h-9 rounded-md', isCompact && 'flex-1')}
-            onClick={() =>
-              toast.info(
-                t('pages.lawyerWorkplace.settings.mailboxes.testSyncSoon', 'Sync test coming soon')
-              )
-            }
+            disabled={isPolling}
+            onClick={() => void onTestSync()}
           >
-            {t('pages.lawyerWorkplace.settings.mailboxes.testSync', 'Test sync')}
+            {isPolling
+              ? t('pages.lawyerWorkplace.settings.mailboxes.testSyncRunning', 'Syncing…')
+              : t('pages.lawyerWorkplace.settings.mailboxes.testSync', 'Test sync')}
           </Button>
           <Button
             variant="primary"
@@ -203,7 +205,7 @@ export function MailboxesTable({
                       </button>
                       <button
                         type="button"
-                        onClick={() => onToggleStatus(mailbox.id)}
+                        onClick={() => onToggleStatus(mailbox)}
                         className="text-light-600 hover:text-dark-500 flex h-8 w-8 items-center justify-center rounded-full hover:bg-gray-100"
                         aria-label={
                           mailbox.status === 'disabled'

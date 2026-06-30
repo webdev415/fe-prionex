@@ -27,6 +27,8 @@ export const legalWorkplaceKeys = {
     [...legalWorkplaceKeys.settings(), 'lawyers', { includeInactive }] as const,
   lawyer: (lawyerId: string) => [...legalWorkplaceKeys.settings(), 'lawyer', lawyerId] as const,
   mailboxes: () => [...legalWorkplaceKeys.all, 'mailboxes'] as const,
+  settingsMailboxes: () => [...legalWorkplaceKeys.settings(), 'mailboxes'] as const,
+  syncSettings: () => [...legalWorkplaceKeys.settings(), 'sync'] as const,
   kanban: (assignedToUserId?: number) =>
     [...legalWorkplaceKeys.all, 'kanban', { assignedToUserId }] as const,
   documents: () => [...legalWorkplaceKeys.all, 'documents'] as const,
@@ -117,6 +119,24 @@ export function useLegalMailboxes(options?: { enabled?: boolean }) {
     queryFn: () => legalApi.listMailboxes(),
     enabled: options?.enabled !== false,
     staleTime: 60_000,
+  })
+}
+
+export function useLegalSettingsMailboxes(options?: { enabled?: boolean }) {
+  return useQuery({
+    queryKey: legalWorkplaceKeys.settingsMailboxes(),
+    queryFn: () => legalApi.listSettingsMailboxes(),
+    enabled: options?.enabled !== false,
+    staleTime: 30_000,
+  })
+}
+
+export function useLegalSyncSettings(options?: { enabled?: boolean }) {
+  return useQuery({
+    queryKey: legalWorkplaceKeys.syncSettings(),
+    queryFn: () => legalApi.getSyncSettings(),
+    enabled: options?.enabled !== false,
+    staleTime: 30_000,
   })
 }
 

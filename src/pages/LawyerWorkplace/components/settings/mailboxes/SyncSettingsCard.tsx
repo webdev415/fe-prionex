@@ -7,10 +7,14 @@ import { SYNC_INTERVAL_OPTIONS } from '../constants'
 
 interface SyncSettingsCardProps {
   syncSettings: DepartmentSyncSettings
-  onSyncSettingsChange: (settings: DepartmentSyncSettings) => void
+  onSyncIntervalChange: (interval: SyncInterval) => Promise<void>
+  isSaving?: boolean
 }
 
 function formatLastSynced(iso: string, t: TFunction<'common'>): string {
+  if (!iso) {
+    return t('pages.lawyerWorkplace.settings.mailboxes.sync.neverSynced', 'Never')
+  }
   const diffMs = Date.now() - new Date(iso).getTime()
   const minutes = Math.max(1, Math.round(diffMs / 60000))
   if (minutes < 60) {
@@ -26,12 +30,16 @@ function formatLastSynced(iso: string, t: TFunction<'common'>): string {
   })
 }
 
-export function SyncSettingsCard({ syncSettings, onSyncSettingsChange }: SyncSettingsCardProps) {
+export function SyncSettingsCard({
+  syncSettings,
+  onSyncIntervalChange,
+  isSaving = false,
+}: SyncSettingsCardProps) {
   const { t } = useTranslation('common')
   const { isCompact, isWide } = useLawyerWorkplaceLayout()
 
   const handleIntervalChange = (interval: SyncInterval) => {
-    onSyncSettingsChange({ ...syncSettings, interval })
+    void onSyncIntervalChange(interval)
   }
 
   return (
@@ -77,6 +85,7 @@ export function SyncSettingsCard({ syncSettings, onSyncSettingsChange }: SyncSet
             <button
               key={option.id}
               type="button"
+              disabled={isSaving}
               onClick={() => handleIntervalChange(option.id)}
               className={cn(
                 'cursor-pointer rounded-md px-3 py-2.5 text-center text-[12px] transition-colors',

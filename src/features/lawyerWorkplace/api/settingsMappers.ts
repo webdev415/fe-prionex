@@ -1,11 +1,22 @@
+import type { MailboxFormValues } from '@/pages/LawyerWorkplace/components/settings/mailboxes/MailboxModal'
 import type {
+  DepartmentSyncSettings,
   LawyerPriorityRole,
   LetterTypeConfig,
+  MailboxRoutingRule,
   SettingsLawyer,
+  SettingsMailbox,
   TrainingExample,
 } from '@/pages/LawyerWorkplace/settings/types'
 import { legalApi } from './legalApi'
-import type { LegalLawyer, LegalLetterType, LegalTrainingExample } from './types'
+import type {
+  LegalDepartmentSyncSettings,
+  LegalLawyer,
+  LegalLetterType,
+  LegalMailboxRoutingRuleInput,
+  LegalSettingsMailbox,
+  LegalTrainingExample,
+} from './types'
 
 function mapTrainingExample(example: LegalTrainingExample): TrainingExample {
   return {
@@ -132,5 +143,66 @@ export async function syncLetterTypeDraft(draft: LetterTypeConfig, original: Let
     ) {
       await legalApi.updateTrainingExample(draft.id, example.id, payload)
     }
+  }
+}
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+
+function isUuid(value: string): boolean {
+  return UUID_RE.test(value)
+}
+
+function mapRoutingRuleToInput(rule: MailboxRoutingRule): LegalMailboxRoutingRuleInput {
+  return {
+    ...(isUuid(rule.id) ? { id: rule.id } : {}),
+    match_type: rule.matchType,
+    value: rule.value,
+    letter_type_id: rule.letterTypeId,
+  }
+}
+
+export function mapLegalSettingsMailboxToSettings(mailbox: LegalSettingsMailbox): SettingsMailbox {
+  return {
+    id: mailbox.id,
+    email: mailbox.email,
+    displayNameKey: `api:mailbox:name:${mailbox.id}`,
+    displayNameFallback: mailbox.display_name,
+    status: mailbox.status,
+    letterCount: mailbox.letter_count,
+    defaultLetterTypeId: mailbox.default_letter_type_id,
+    isDefaultOutgoing: mailbox.is_default_outgoing,
+    routingRules: mailbox.routing_rules.map((rule) => ({
+      id: rule.id,
+      matchType: rule.match_type,
+      value: rule.value,
+      letterTypeId: rule.letter_type_id,
+    })),
+  }
+}
+
+export function mapSyncSettingsToUi(settings: LegalDepartmentSyncSettings): DepartmentSyncSettings {
+  return {
+    interval: settings.sync_interval,
+    lastSyncedAt: settings.last_synced_at ?? '',
+  }
+}
+
+export function mapMailboxFormToCreate(values: MailboxFormValues) {
+  return {
+    email: values.email.trim().toLowerCase(),
+    display_name: values.displayName.trim(),
+    default_letter_type_id: values.defaultLetterTypeId,
+    is_default_outgoing: values.isDefaultOutgoing,
+    routing_rules: values.routingRules.map(mapRoutingRuleToInput),
+  }
+}
+
+export function mapMailboxFormToUpdate(values: MailboxFormValues) {
+  return {
+    email: values.email.trim().toLowerCase(),
+    display_name: values.displayName.trim(),
+    default_letter_type_id: values.defaultLetterTypeId,
+    is_default_outgoing: values.isDefaultOutgoing,
+    routing_rules: values.routingRules.map(mapRoutingRuleToInput),
   }
 }

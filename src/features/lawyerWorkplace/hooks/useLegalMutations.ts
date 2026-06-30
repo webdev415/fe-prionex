@@ -10,6 +10,9 @@ import type {
   LegalLetterTypePrioritiesUpdate,
   LegalLetterTypeUpdate,
   LegalGenerateDocumentRequest,
+  LegalMailboxCreate,
+  LegalMailboxUpdate,
+  LegalDepartmentSyncSettingsUpdate,
   LegalOutgoingLetterRequest,
   LegalThreadReplyRequest,
   LegalTrainingExampleCreate,
@@ -284,6 +287,62 @@ export function useGenerateLegalDocument() {
   return useMutation({
     mutationFn: (payload: LegalGenerateDocumentRequest) => legalApi.generateDocument(payload),
     onSuccess: () => invalidateLegalDocuments(queryClient),
+    onError: (error) => toast.error(getErrorMessage(error)),
+  })
+}
+
+export function useCreateLegalSettingsMailbox() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (payload: LegalMailboxCreate) => legalApi.createSettingsMailbox(payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: legalWorkplaceKeys.settingsMailboxes() })
+      queryClient.invalidateQueries({ queryKey: legalWorkplaceKeys.mailboxes() })
+      queryClient.invalidateQueries({ queryKey: legalWorkplaceKeys.inbox() })
+    },
+    onError: (error) => toast.error(getErrorMessage(error)),
+  })
+}
+
+export function useUpdateLegalSettingsMailbox() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ mailboxId, payload }: { mailboxId: string; payload: LegalMailboxUpdate }) =>
+      legalApi.updateSettingsMailbox(mailboxId, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: legalWorkplaceKeys.settingsMailboxes() })
+      queryClient.invalidateQueries({ queryKey: legalWorkplaceKeys.mailboxes() })
+      queryClient.invalidateQueries({ queryKey: legalWorkplaceKeys.inbox() })
+    },
+    onError: (error) => toast.error(getErrorMessage(error)),
+  })
+}
+
+export function useUpdateLegalSyncSettings() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (payload: LegalDepartmentSyncSettingsUpdate) =>
+      legalApi.updateSyncSettings(payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: legalWorkplaceKeys.syncSettings() })
+    },
+    onError: (error) => toast.error(getErrorMessage(error)),
+  })
+}
+
+export function usePollAllLegalMailboxes() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: () => legalApi.pollAllSettingsMailboxes(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: legalWorkplaceKeys.settingsMailboxes() })
+      queryClient.invalidateQueries({ queryKey: legalWorkplaceKeys.syncSettings() })
+      queryClient.invalidateQueries({ queryKey: legalWorkplaceKeys.inbox() })
+    },
     onError: (error) => toast.error(getErrorMessage(error)),
   })
 }

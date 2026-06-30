@@ -30,7 +30,8 @@ interface MailboxModalProps {
   letterTypes: LetterTypeConfig[]
   existingEmails: string[]
   onClose: () => void
-  onSave: (values: MailboxFormValues) => void
+  onSave: (values: MailboxFormValues) => void | Promise<void>
+  isSubmitting?: boolean
 }
 
 function getInitialValues(
@@ -63,6 +64,7 @@ export function MailboxModal({
   existingEmails,
   onClose,
   onSave,
+  isSubmitting = false,
 }: MailboxModalProps) {
   const { t } = useTranslation('common')
   const isEditing = mailbox !== null
@@ -122,8 +124,8 @@ export function MailboxModal({
   }
 
   const handleSave = () => {
-    if (!canSave) return
-    onSave({
+    if (!canSave || isSubmitting) return
+    void onSave({
       email: email.trim(),
       displayName: displayName.trim(),
       defaultLetterTypeId,
@@ -383,7 +385,7 @@ export function MailboxModal({
         </Button>
         <Button
           variant="primary"
-          disabled={!canSave}
+          disabled={!canSave || isSubmitting}
           onClick={handleSave}
           className="h-10 w-full rounded-md"
         >

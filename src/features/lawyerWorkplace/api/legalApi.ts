@@ -29,6 +29,13 @@ import type {
   LegalTrainingExample,
   LegalTrainingExampleCreate,
   LegalTrainingExampleUpdate,
+  LegalDepartmentSyncSettings,
+  LegalDepartmentSyncSettingsUpdate,
+  LegalMailboxCreate,
+  LegalMailboxUpdate,
+  LegalPollAllMailboxesResponse,
+  LegalSettingsMailbox,
+  LegalSettingsMailboxListResponse,
 } from './types'
 
 const BASE_URL = '/api/v1/legal'
@@ -234,6 +241,42 @@ export const legalApi = {
 
   archiveLawyer(lawyerId: string) {
     return api.delete(`${SETTINGS_URL}/lawyers/${lawyerId}`)
+  },
+
+  getSyncSettings() {
+    return api
+      .get<LegalDepartmentSyncSettings>(`${SETTINGS_URL}/sync`)
+      .then((response) => response.data)
+  },
+
+  updateSyncSettings(payload: LegalDepartmentSyncSettingsUpdate) {
+    return api
+      .patch<LegalDepartmentSyncSettings>(`${SETTINGS_URL}/sync`, payload)
+      .then((response) => response.data)
+  },
+
+  listSettingsMailboxes() {
+    return api
+      .get<LegalSettingsMailboxListResponse>(`${SETTINGS_URL}/mailboxes`)
+      .then((response) => response.data)
+  },
+
+  createSettingsMailbox(payload: LegalMailboxCreate) {
+    return api
+      .post<LegalSettingsMailbox>(`${SETTINGS_URL}/mailboxes`, payload)
+      .then((response) => response.data)
+  },
+
+  updateSettingsMailbox(mailboxId: string, payload: LegalMailboxUpdate) {
+    return api
+      .patch<LegalSettingsMailbox>(`${SETTINGS_URL}/mailboxes/${mailboxId}`, payload)
+      .then((response) => response.data)
+  },
+
+  pollAllSettingsMailboxes() {
+    return api
+      .post<LegalPollAllMailboxesResponse>(`${SETTINGS_URL}/mailboxes/poll-all`)
+      .then((response) => response.data)
   },
 }
 
