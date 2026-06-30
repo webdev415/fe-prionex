@@ -982,11 +982,6 @@ export function ClientDetailPage() {
     [client?.activities]
   )
 
-  const effectiveCommentTab =
-    activeCommentTab === 'comments' && !isActivitiesLoading && displayedActivities.length === 0
-      ? 'ta-chains'
-      : activeCommentTab
-
   const normalizePhoneForLookup = (value: string) => stripPhoneFormat(value)
 
   const phoneLookupValues = useMemo(() => {
@@ -4674,31 +4669,29 @@ export function ClientDetailPage() {
                 onClick={() => setActiveCommentTab('ta-chains')}
                 className={cn(
                   'text-dark-500 flex items-center justify-center gap-2 rounded-md px-4 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px]',
-                  effectiveCommentTab === 'ta-chains'
+                  activeCommentTab === 'ta-chains'
                     ? 'bg-secondary-800 text-white'
                     : 'hover:bg-primary-200/10 hover:text-secondary-800'
                 )}
               >
                 {t('pages.clients.detail.tabs.taChains')}
               </button>
-              {!isActivitiesLoading && displayedActivities.length > 0 && (
-                <button
-                  onClick={() => setActiveCommentTab('comments')}
-                  className={cn(
-                    'text-dark-500 flex items-center justify-center gap-2 rounded-md px-4 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px]',
-                    effectiveCommentTab === 'comments'
-                      ? 'bg-secondary-800 text-white'
-                      : 'hover:bg-primary-200/10 hover:text-secondary-800'
-                  )}
-                >
-                  {t('pages.clients.detail.comments')}
-                </button>
-              )}
+              <button
+                onClick={() => setActiveCommentTab('comments')}
+                className={cn(
+                  'text-dark-500 flex items-center justify-center gap-2 rounded-md px-4 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px]',
+                  activeCommentTab === 'comments'
+                    ? 'bg-secondary-800 text-white'
+                    : 'hover:bg-primary-200/10 hover:text-secondary-800'
+                )}
+              >
+                {t('pages.clients.detail.comments')}
+              </button>
               <button
                 onClick={() => setActiveCommentTab('primary')}
                 className={cn(
                   'text-dark-500 flex items-center justify-center gap-2 rounded-md px-4 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px]',
-                  effectiveCommentTab === 'primary'
+                  activeCommentTab === 'primary'
                     ? 'bg-secondary-800 text-white'
                     : 'hover:bg-primary-200/10 hover:text-secondary-800'
                 )}
@@ -4709,7 +4702,7 @@ export function ClientDetailPage() {
                 onClick={() => setActiveCommentTab('searcher')}
                 className={cn(
                   'text-dark-500 flex items-center justify-center gap-2 rounded-md px-4 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px]',
-                  effectiveCommentTab === 'searcher'
+                  activeCommentTab === 'searcher'
                     ? 'bg-secondary-800 text-white'
                     : 'hover:bg-primary-200/10 hover:text-secondary-800'
                 )}
@@ -4720,7 +4713,7 @@ export function ClientDetailPage() {
                 onClick={() => setActiveCommentTab('dial-history')}
                 className={cn(
                   'text-dark-500 flex items-center justify-center gap-2 rounded-md px-4 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px]',
-                  effectiveCommentTab === 'dial-history'
+                  activeCommentTab === 'dial-history'
                     ? 'bg-secondary-800 text-white'
                     : 'hover:bg-primary-200/10 hover:text-secondary-800'
                 )}
@@ -4740,7 +4733,7 @@ export function ClientDetailPage() {
           </div>
 
           {/* Content based on active tab */}
-          {effectiveCommentTab === 'ta-chains' && (
+          {activeCommentTab === 'ta-chains' && (
             <div className="flex w-full flex-col gap-4">
               <TAInteractionHistory clientId={clientId} debts={loans} />
             </div>
@@ -4801,7 +4794,7 @@ export function ClientDetailPage() {
             </ModalContent>
           </Modal>
 
-          {effectiveCommentTab === 'comments' &&
+          {activeCommentTab === 'comments' &&
             (isActivitiesLoading ? (
               <TableSkeleton columns={12} rows={3} className="w-full" />
             ) : displayedActivities.length === 0 ? (
@@ -4843,9 +4836,9 @@ export function ClientDetailPage() {
               </div>
             ))}
 
-          {effectiveCommentTab === 'primary' && <SaleNotesSection clientId={clientId} />}
+          {activeCommentTab === 'primary' && <SaleNotesSection clientId={clientId} />}
 
-          {effectiveCommentTab === 'searcher' &&
+          {activeCommentTab === 'searcher' &&
             (isActivitiesLoading ? (
               <TableSkeleton columns={6} rows={3} className="w-full" />
             ) : displayedSearcherActivities.length === 0 ? (
@@ -4868,7 +4861,7 @@ export function ClientDetailPage() {
               </div>
             ))}
 
-          {effectiveCommentTab === 'dial-history' &&
+          {activeCommentTab === 'dial-history' &&
             (isDialHistoryLoading ? (
               <TableSkeleton columns={2} rows={3} className="w-full" />
             ) : dialHistory.length === 0 ? (
