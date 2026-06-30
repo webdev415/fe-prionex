@@ -124,7 +124,7 @@ function DraggableOrderList({ order, labels, disabled, onChange }: DraggableOrde
           onDrop={(e) => !disabled && handleDrop(e, idx)}
           onDragEnd={handleDragEnd}
           className={cn(
-            'flex items-center gap-3 rounded-lg border bg-white px-4 py-3 transition-colors',
+            'flex items-center gap-3 rounded-lg border border-gray-200 bg-white px-4 py-3 transition-colors',
             !disabled && 'cursor-grab active:cursor-grabbing',
             dragIndex === idx && 'opacity-40',
             dropIndex === idx && dragIndex !== idx && 'border-primary-500 bg-primary-50',
@@ -132,19 +132,17 @@ function DraggableOrderList({ order, labels, disabled, onChange }: DraggableOrde
           )}
         >
           {/* Position number */}
-          <span className="text-muted-foreground w-5 text-center text-sm font-semibold">
-            {idx + 1}
-          </span>
+          <span className="w-5 text-center text-sm font-semibold text-gray-500">{idx + 1}</span>
 
           {/* Drag handle */}
           {!disabled && (
-            <span className="text-muted-foreground flex-shrink-0">
+            <span className="flex-shrink-0 text-gray-500">
               <Icons.Sorting01Icon size={18} />
             </span>
           )}
 
           {/* Component label */}
-          <span className="flex-1 font-medium">{labels[component]}</span>
+          <span className="text-dark-500 flex-1 text-sm font-medium">{labels[component]}</span>
 
           {/* Up/Down buttons for keyboard accessibility */}
           {!disabled && (
@@ -329,16 +327,16 @@ export function RepaymentConfigurationPage() {
       {/* ── Header ── */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-bold">
+          <h1 className="text-dark-500 text-xl font-light sm:text-2xl">
             {t('pages.repaymentConfiguration.title', 'Repayment & Write-off Configuration')}
           </h1>
-          <p className="text-muted-foreground mt-1 text-sm">
+          <p className="text-dark-400 mt-1 text-sm font-light">
             {t(
               'pages.repaymentConfiguration.description',
               'Configure how payments are distributed across debt components and manage write-off rules.'
             )}
           </p>
-          <p className="text-muted-foreground mt-2 text-xs">
+          <p className="mt-2 text-xs text-gray-500">
             {t('pages.repaymentConfiguration.lastUpdated', 'Last updated')}{' '}
             {formatDate(data.updated_at)} {t('pages.repaymentConfiguration.by', 'by')}{' '}
             <span className="font-medium">{data.updated_by_username}</span>
@@ -356,12 +354,12 @@ export function RepaymentConfigurationPage() {
       )}
 
       {/* ── Repayment Order ── */}
-      <section className="space-y-4 rounded-xl border bg-gray-50 p-6">
+      <section className="space-y-4 rounded-xl border border-gray-200 bg-white/50 p-6">
         <div>
-          <h2 className="text-lg font-semibold">
+          <h2 className="text-dark-500 text-base font-medium sm:text-lg">
             {t('pages.repaymentConfiguration.repaymentOrder.title', 'Repayment Order')}
           </h2>
-          <p className="text-muted-foreground mt-1 text-sm">
+          <p className="text-dark-400 mt-1 text-sm font-light">
             {t(
               'pages.repaymentConfiguration.repaymentOrder.description',
               'Drag to reorder how payments are distributed across debt components. Each component is fully consumed before moving to the next.'
@@ -378,12 +376,12 @@ export function RepaymentConfigurationPage() {
       </section>
 
       {/* ── Write-off Rules ── */}
-      <section className="space-y-4 rounded-xl border bg-gray-50 p-6">
+      <section className="space-y-4 rounded-xl border border-gray-200 bg-white/50 p-6">
         <div>
-          <h2 className="text-lg font-semibold">
+          <h2 className="text-dark-500 text-base font-medium sm:text-lg">
             {t('pages.repaymentConfiguration.writeoffRules.title', 'Write-off Rules')}
           </h2>
-          <p className="text-muted-foreground mt-1 text-sm">
+          <p className="text-dark-400 mt-1 text-sm font-light">
             {t(
               'pages.repaymentConfiguration.writeoffRules.description',
               'Enable or disable the creation of new write-off entries per component. Applies to manual operator write-offs only.'
@@ -395,14 +393,16 @@ export function RepaymentConfigurationPage() {
           {COMPONENTS.map((component) => (
             <div
               key={component}
-              className="flex items-center justify-between rounded-lg border bg-white px-4 py-3"
+              className="flex items-center justify-between rounded-lg border border-gray-200 bg-white px-4 py-3"
             >
-              <span className="font-medium">{componentLabels[component]}</span>
+              <span className="text-dark-500 text-sm font-medium">
+                {componentLabels[component]}
+              </span>
               <div className="flex items-center gap-3">
                 <span
                   className={cn(
-                    'text-sm',
-                    localWriteoff[component] ? 'text-green-600' : 'text-gray-400'
+                    'text-sm font-medium',
+                    localWriteoff[component] ? 'text-success-600' : 'text-gray-400'
                   )}
                 >
                   {localWriteoff[component]
@@ -420,7 +420,7 @@ export function RepaymentConfigurationPage() {
           ))}
         </div>
 
-        <p className="text-muted-foreground text-xs">
+        <p className="text-xs text-gray-500">
           {t(
             'pages.repaymentConfiguration.writeoffRules.vendorNote',
             'Note: applies to manual write-offs only. Vendor import write-offs are unaffected.'
@@ -429,16 +429,16 @@ export function RepaymentConfigurationPage() {
       </section>
 
       {/* ── Allocation Algorithm ── */}
-      <section className="space-y-4 rounded-xl border bg-gray-50 p-6">
+      <section className="space-y-4 rounded-xl border border-gray-200 bg-white/50 p-6">
         <div>
-          <h2 className="text-lg font-semibold">
+          <h2 className="text-dark-500 text-base font-medium sm:text-lg">
             {t('pages.repaymentConfiguration.algorithm.title', 'Allocation Algorithm')}
           </h2>
         </div>
 
-        <div className="flex items-center gap-4 rounded-lg border bg-white px-4 py-3">
+        <div className="flex items-center gap-4 rounded-lg border border-gray-200 bg-white px-4 py-3">
           <div className="flex-1">
-            <p className="font-medium">
+            <p className="text-dark-500 text-sm font-medium">
               {localAlgorithm === 'legacy_proportional'
                 ? t(
                     'pages.repaymentConfiguration.algorithm.legacy_proportional',
@@ -446,7 +446,7 @@ export function RepaymentConfigurationPage() {
                   )
                 : t('pages.repaymentConfiguration.algorithm.strict_order', 'Strict Order')}
             </p>
-            <p className="text-muted-foreground mt-0.5 text-sm">
+            <p className="text-dark-400 mt-0.5 text-sm font-light">
               {localAlgorithm === 'legacy_proportional'
                 ? t(
                     'pages.repaymentConfiguration.algorithm.legacyDescription',
@@ -462,14 +462,24 @@ export function RepaymentConfigurationPage() {
           {canEdit && (
             <div>
               {localAlgorithm === 'legacy_proportional' ? (
-                <Button variant="outline" size="sm" onClick={() => setShowActivateModal(true)}>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="rounded-md"
+                  onClick={() => setShowActivateModal(true)}
+                >
                   {t(
                     'pages.repaymentConfiguration.algorithm.activateButton',
                     'Activate Strict Order'
                   )}
                 </Button>
               ) : (
-                <Button variant="outline" size="sm" onClick={() => setShowDeactivateModal(true)}>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="rounded-md"
+                  onClick={() => setShowDeactivateModal(true)}
+                >
                   {t('pages.repaymentConfiguration.algorithm.deactivateButton', 'Revert to Legacy')}
                 </Button>
               )}
@@ -480,22 +490,22 @@ export function RepaymentConfigurationPage() {
 
       {/* ── Config Change History (last 5) ── */}
       {historyData && historyData.items.length > 0 && (
-        <section className="space-y-3 rounded-xl border bg-gray-50 p-6">
-          <h2 className="text-lg font-semibold">
+        <section className="space-y-3 rounded-xl border border-gray-200 bg-white/50 p-6">
+          <h2 className="text-dark-500 text-base font-medium sm:text-lg">
             {t('pages.repaymentConfiguration.history.title', 'Recent Changes')}
           </h2>
           <div className="space-y-2">
             {historyData.items.map((entry) => (
               <div
                 key={entry.id}
-                className="flex items-center justify-between rounded-lg border bg-white px-4 py-2 text-sm"
+                className="flex items-center justify-between rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm"
               >
-                <span className="text-muted-foreground">
+                <span className="text-gray-500">
                   {t('pages.repaymentConfiguration.history.version', 'Version')}{' '}
                   {entry.config_version}
                 </span>
-                <span className="font-medium">{entry.changed_by_username}</span>
-                <span className="text-muted-foreground">{formatDate(entry.created_at)}</span>
+                <span className="text-dark-500 font-medium">{entry.changed_by_username}</span>
+                <span className="text-gray-500">{formatDate(entry.created_at)}</span>
               </div>
             ))}
           </div>
@@ -504,15 +514,18 @@ export function RepaymentConfigurationPage() {
 
       {/* ── Save / Cancel ── */}
       {canEdit && (
-        <div className="flex items-center justify-end gap-3 border-t pt-4">
+        <div className="flex items-center justify-end gap-3 border-t border-gray-200 pt-4">
           <Button
-            variant="outline"
+            variant="cancel"
+            className="rounded-md"
             onClick={handleCancel}
             disabled={!isDirty || updateMutation.isPending}
           >
             {t('pages.repaymentConfiguration.cancel', 'Cancel')}
           </Button>
           <Button
+            variant="primary"
+            className="rounded-md"
             onClick={handleSave}
             disabled={!isDirty || updateMutation.isPending}
             isLoading={updateMutation.isPending}
@@ -542,10 +555,11 @@ export function RepaymentConfigurationPage() {
           </p>
         </ModalContent>
         <ModalFooter>
-          <Button variant="outline" onClick={() => setShowActivateModal(false)}>
+          <Button variant="cancel" onClick={() => setShowActivateModal(false)}>
             {t('actions.cancel', 'Cancel')}
           </Button>
           <Button
+            variant="primary"
             onClick={() => {
               setLocalAlgorithm('strict_order')
               setShowActivateModal(false)
@@ -574,10 +588,11 @@ export function RepaymentConfigurationPage() {
           </p>
         </ModalContent>
         <ModalFooter>
-          <Button variant="outline" onClick={() => setShowDeactivateModal(false)}>
+          <Button variant="cancel" onClick={() => setShowDeactivateModal(false)}>
             {t('actions.cancel', 'Cancel')}
           </Button>
           <Button
+            variant="primary"
             onClick={() => {
               setLocalAlgorithm('legacy_proportional')
               setShowDeactivateModal(false)
