@@ -251,6 +251,9 @@ export interface GetClientsParams {
   skip?: number
   limit?: number
 
+  // Full-text search (min 2 chars): matches phone, name, or TIN
+  q?: string
+
   // Sorting
   sort_by_priority?: boolean // Legacy parameter
   sort_by?:

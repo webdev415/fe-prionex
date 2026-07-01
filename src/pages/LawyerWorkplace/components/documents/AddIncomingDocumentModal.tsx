@@ -13,6 +13,7 @@ import { SearchableSelect } from '@/components/ui/SearchableSelect'
 import { useClients } from '@/features/clients/hooks/useClients'
 import { useLegalLawyers } from '@/features/lawyerWorkplace'
 import { useAuthStore } from '@/stores/authStore'
+import { useDebounce } from '@/hooks/useDebounce'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 
@@ -56,23 +57,26 @@ export function AddIncomingDocumentModal({
   const { t } = useTranslation('common')
   const currentUserId = Number(useAuthStore((state) => state.user?.id))
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const { data: clientsData } = useClients({ limit: 200 }, { enabled: open })
   const { data: lawyersData } = useLegalLawyers({ enabled: open })
 
   const [file, setFile] = useState<File | null>(null)
   const [documentName, setDocumentName] = useState('')
   const [clientId, setClientId] = useState('')
+  const [clientSearch, setClientSearch] = useState('')
+  const [selectedClientLegacyId, setSelectedClientLegacyId] = useState<string | null>(null)
   const [assigneeUserId, setAssigneeUserId] = useState<number | null>(null)
   const [relatedLetterNumber, setRelatedLetterNumber] = useState('')
   const [dragOver, setDragOver] = useState(false)
 
+  const debouncedClientSearch = useDebounce(clientSearch, 300)
+  const { data: clientsData, isFetching: clientsLoading } = useClients(
+    { q: debouncedClientSearch, limit: 20 },
+    { enabled: open && debouncedClientSearch.length >= 2 }
+  )
+
   const lawyers = useMemo(() => lawyersData?.items ?? [], [lawyersData?.items])
   const clientOptions = useMemo(
     () => (clientsData?.items ?? []).map(formatClientOption),
-    [clientsData?.items]
-  )
-  const clientsById = useMemo(
-    () => new Map((clientsData?.items ?? []).map((client) => [String(client.id), client])),
     [clientsData?.items]
   )
 
@@ -85,6 +89,8 @@ export function AddIncomingDocumentModal({
       setFile(null)
       setDocumentName('')
       setClientId('')
+      setClientSearch('')
+      setSelectedClientLegacyId(null)
       setRelatedLetterNumber('')
       setDragOver(false)
       const defaultLawyer =
@@ -105,14 +111,13 @@ export function AddIncomingDocumentModal({
 
   const handleSubmit = async () => {
     if (!canSubmit || !file || assigneeUserId == null) return
-    const client = clientsById.get(clientId)
     await onSubmit({
       title: documentName.trim(),
       clientId: Number.parseInt(clientId, 10),
       assignedToUserId: assigneeUserId,
       relatedLetterNumber: relatedLetterNumber.trim() || undefined,
       file,
-      contractNumber: client?.legacy_id?.trim() || null,
+      contractNumber: selectedClientLegacyId,
     })
     onClose()
   }
@@ -208,7 +213,18 @@ export function AddIncomingDocumentModal({
           <SearchableSelect
             options={clientOptions}
             value={clientId}
-            onValueChange={setClientId}
+            onValueChange={(val) => {
+              setClientId(val)
+              const found = clientsData?.items.find((c) => String(c.id) === val)
+              setSelectedClientLegacyId(found?.legacy_id?.trim() || null)
+              setClientSearch('')
+            }}
+            onSearchChange={setClientSearch}
+            isLoading={clientsLoading}
+            emptySearchHint={t(
+              'pages.lawyerWorkplace.documents.modals.incoming.clientSearchHint',
+              'Type 2+ characters to search…'
+            )}
             placeholder={t(
               'pages.lawyerWorkplace.documents.modals.incoming.selectClient',
               'Select client'

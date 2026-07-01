@@ -294,9 +294,19 @@ export const legalApi = {
   },
 
   pollAllSettingsMailboxes() {
+    // Each mailbox IMAP connect has a 15-second timeout; give the full request
+    // 60 seconds so even several mailboxes can complete without a client timeout.
     return api
-      .post<LegalPollAllMailboxesResponse>(`${SETTINGS_URL}/mailboxes/poll-all`)
+      .post<LegalPollAllMailboxesResponse>(`${SETTINGS_URL}/mailboxes/poll-all`, undefined, {
+        timeout: 60000,
+      })
       .then((response) => response.data)
+  },
+
+  startGmailOAuth(mailboxId: string) {
+    return api
+      .get<{ url: string }>(`${SETTINGS_URL}/mailboxes/${mailboxId}/oauth/gmail/start`)
+      .then((response) => response.data.url)
   },
 
   listSettingsReplyTemplates(params?: { include_inactive?: boolean }) {

@@ -19,6 +19,7 @@ import {
   useLegalLawyers,
   useLegalLetterTypes,
 } from '@/features/lawyerWorkplace/hooks/useLegalInbox'
+import { useDebounce } from '@/hooks/useDebounce'
 import { Icons } from '@/lib/icons'
 import type { KanbanTaskType } from '../../kanban/kanbanData'
 import { CREATE_TASK_PRIORITIES, type KanbanTaskPriority } from './constants'
@@ -128,9 +129,19 @@ export function CreateKanbanTaskModal({ open, onClose }: CreateKanbanTaskModalPr
   const { data: letterTypesData, isLoading: letterTypesLoading } = useLegalLetterTypes({
     enabled: open,
   })
-  const { data: clientsData, isLoading: clientsLoading } = useClients(
-    { limit: 200 },
-    { enabled: open }
+
+  const [lawyerUserId, setLawyerUserId] = useState<number | null>(null)
+  const [letterTypeId, setLetterTypeId] = useState<string | null>(null)
+  const [clientId, setClientId] = useState('')
+  const [clientSearch, setClientSearch] = useState('')
+  const [deadline, setDeadline] = useState<Date | null>(getTomorrowDate())
+  const [priority, setPriority] = useState<KanbanTaskPriority>('high')
+  const [description, setDescription] = useState('')
+
+  const debouncedClientSearch = useDebounce(clientSearch, 300)
+  const { data: clientsData, isFetching: clientsLoading } = useClients(
+    { q: debouncedClientSearch, limit: 20 },
+    { enabled: open && debouncedClientSearch.length >= 2 }
   )
 
   const lawyers = useMemo(() => lawyersData?.items ?? [], [lawyersData?.items])
@@ -143,13 +154,6 @@ export function CreateKanbanTaskModal({ open, onClose }: CreateKanbanTaskModalPr
     [clientsData?.items]
   )
 
-  const [lawyerUserId, setLawyerUserId] = useState<number | null>(null)
-  const [letterTypeId, setLetterTypeId] = useState<string | null>(null)
-  const [clientId, setClientId] = useState('')
-  const [deadline, setDeadline] = useState<Date | null>(getTomorrowDate())
-  const [priority, setPriority] = useState<KanbanTaskPriority>('high')
-  const [description, setDescription] = useState('')
-
   const defaultDescription = t(
     'pages.lawyerWorkplace.kanban.createTask.defaultDescription',
     'Letter in Russian — needs translation'
@@ -159,7 +163,7 @@ export function CreateKanbanTaskModal({ open, onClose }: CreateKanbanTaskModalPr
   const selectedLetterType = letterTypes.find((item) => item.id === letterTypeId)
   const selectedPriority = CREATE_TASK_PRIORITIES.find((item) => item.id === priority)
 
-  const optionsLoading = lawyersLoading || letterTypesLoading || clientsLoading
+  const optionsLoading = lawyersLoading || letterTypesLoading
   const canSubmit =
     !optionsLoading &&
     !createTask.isPending &&
@@ -173,6 +177,7 @@ export function CreateKanbanTaskModal({ open, onClose }: CreateKanbanTaskModalPr
       setLawyerUserId(lawyers[0]?.user_id ?? null)
       setLetterTypeId(letterTypes[0]?.id ?? null)
       setClientId('')
+      setClientSearch('')
       setDeadline(getTomorrowDate())
       setPriority('high')
       setDescription(defaultDescription)
@@ -266,7 +271,16 @@ export function CreateKanbanTaskModal({ open, onClose }: CreateKanbanTaskModalPr
             <SearchableSelect
               options={clientOptions}
               value={clientId}
-              onValueChange={setClientId}
+              onValueChange={(val) => {
+                setClientId(val)
+                setClientSearch('')
+              }}
+              onSearchChange={setClientSearch}
+              isLoading={clientsLoading}
+              emptySearchHint={t(
+                'pages.lawyerWorkplace.kanban.createTask.clientSearchHint',
+                'Type 2+ characters to search…'
+              )}
               disabled={optionsLoading}
               placeholder={t(
                 'pages.lawyerWorkplace.kanban.createTask.selectClient',

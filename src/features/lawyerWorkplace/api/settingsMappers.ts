@@ -174,9 +174,11 @@ export function mapLegalSettingsMailboxToSettings(mailbox: LegalSettingsMailbox)
     displayNameKey: `api:mailbox:name:${mailbox.id}`,
     displayNameFallback: mailbox.display_name,
     status: mailbox.status,
+    provider: mailbox.provider,
     letterCount: mailbox.letter_count,
     defaultLetterTypeId: mailbox.default_letter_type_id,
     isDefaultOutgoing: mailbox.is_default_outgoing,
+    hasCredentials: mailbox.has_credentials,
     routingRules: mailbox.routing_rules.map((rule) => ({
       id: rule.id,
       matchType: rule.match_type,
@@ -194,23 +196,66 @@ export function mapSyncSettingsToUi(settings: LegalDepartmentSyncSettings): Depa
 }
 
 export function mapMailboxFormToCreate(values: MailboxFormValues) {
-  return {
+  const base = {
     email: values.email.trim().toLowerCase(),
     display_name: values.displayName.trim(),
+    provider: values.provider,
     default_letter_type_id: values.defaultLetterTypeId,
     is_default_outgoing: values.isDefaultOutgoing,
     routing_rules: values.routingRules.map(mapRoutingRuleToInput),
+    sync_from_today: values.syncFromToday,
   }
+
+  if (values.provider === 'gmail_oauth2') {
+    return base
+  }
+
+  if (values.provider === 'custom') {
+    return {
+      ...base,
+      password: values.password,
+      imap_host: values.imapHost,
+      imap_port: values.imapPort,
+      imap_use_ssl: values.imapUseSsl,
+      smtp_host: values.smtpHost,
+      smtp_port: values.smtpPort,
+      smtp_use_tls: values.smtpUseTls,
+    }
+  }
+
+  return { ...base, password: values.password }
 }
 
 export function mapMailboxFormToUpdate(values: MailboxFormValues) {
-  return {
+  const base = {
     email: values.email.trim().toLowerCase(),
     display_name: values.displayName.trim(),
+    provider: values.provider,
     default_letter_type_id: values.defaultLetterTypeId,
     is_default_outgoing: values.isDefaultOutgoing,
     routing_rules: values.routingRules.map(mapRoutingRuleToInput),
   }
+
+  if (values.provider === 'gmail_oauth2') {
+    return base
+  }
+
+  const passwordPayload = values.password.trim() ? { password: values.password.trim() } : {}
+
+  if (values.provider === 'custom') {
+    return {
+      ...base,
+      ...passwordPayload,
+      imap_host: values.imapHost,
+      imap_port: values.imapPort,
+      imap_use_ssl: values.imapUseSsl,
+      smtp_host: values.smtpHost,
+      smtp_port: values.smtpPort,
+      smtp_use_tls: values.smtpUseTls,
+    }
+  }
+
+  return { ...base, ...passwordPayload }
 }
 
 export function mapLegalReplyTemplateToSettings(

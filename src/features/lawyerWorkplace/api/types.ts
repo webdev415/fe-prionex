@@ -37,6 +37,10 @@ export interface LegalInboxResponse {
   page_size: number
   connected_mailboxes: number
   unprocessed_count: number
+  count_all: number
+  count_new: number
+  count_in_progress: number
+  count_done: number
 }
 
 export interface LegalMailbox {
@@ -55,8 +59,10 @@ export interface LegalInboxParams {
   page?: number
   page_size?: number
   processing_status?: string
+  direction?: string
   mailbox_id?: string
   include_quarantined?: boolean
+  q?: string
 }
 
 export interface LegalAttachmentItem {
@@ -395,9 +401,11 @@ export interface LegalSettingsMailbox {
   email: string
   display_name: string
   status: LegalMailboxStatus
+  provider: LegalMailboxProvider
   letter_count: number
   default_letter_type_id: string | null
   is_default_outgoing: boolean
+  has_credentials: boolean
   routing_rules: LegalMailboxRoutingRule[]
 }
 
@@ -413,9 +421,25 @@ export interface LegalMailboxRoutingRuleInput {
   letter_type_id: string
 }
 
+export type LegalMailboxProvider =
+  | 'gmail_oauth2'
+  | 'ukrnet'
+  | 'iua'
+  | 'google_workspace'
+  | 'microsoft365'
+  | 'custom'
+
 export interface LegalMailboxCreate {
   email: string
   display_name: string
+  provider: LegalMailboxProvider
+  password?: string | null
+  imap_host?: string | null
+  imap_port?: number | null
+  imap_use_ssl?: boolean | null
+  smtp_host?: string | null
+  smtp_port?: number | null
+  smtp_use_tls?: boolean | null
   default_letter_type_id?: string | null
   is_default_outgoing?: boolean
   routing_rules?: LegalMailboxRoutingRuleInput[]
@@ -425,6 +449,14 @@ export interface LegalMailboxUpdate {
   email?: string
   display_name?: string
   status?: 'connected' | 'disabled'
+  provider?: LegalMailboxProvider
+  password?: string | null
+  imap_host?: string | null
+  imap_port?: number | null
+  imap_use_ssl?: boolean | null
+  smtp_host?: string | null
+  smtp_port?: number | null
+  smtp_use_tls?: boolean | null
   default_letter_type_id?: string | null
   is_default_outgoing?: boolean
   routing_rules?: LegalMailboxRoutingRuleInput[]

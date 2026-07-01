@@ -60,19 +60,6 @@ function NumBadge({ count, active }: { count: number; active: boolean }) {
   )
 }
 
-function SectionHeader({ label, count }: { label: string; count: number }) {
-  return (
-    <div className="sticky top-0 z-10 flex items-center gap-2 bg-gray-50 px-4 py-1.5">
-      <span className="text-light-600 text-[10.5px] font-semibold tracking-wider uppercase">
-        {label}
-      </span>
-      <span className="bg-light-100 text-light-600 rounded-full px-2 py-0.5 text-[10px]">
-        {count}
-      </span>
-    </div>
-  )
-}
-
 // ─── Panel ────────────────────────────────────────────────────────────────────
 
 export interface IncomingListPanelProps {
@@ -83,8 +70,21 @@ export interface IncomingListPanelProps {
   unprocessedCount: number
   isLoading?: boolean
   isError?: boolean
+  // Pagination
+  page: number
+  totalPages: number
+  total: number
+  // Filter counts (from API)
+  countAll: number
+  countNew: number
+  countInProgress: number
+  countDone: number
+  // Committed search (already sent to backend)
+  committedSearch: string
   onFolderChange: (folder: IncomingFolder) => void
   onFilterChange: (filter: IncomingMailboxFilter) => void
+  onPageChange: (page: number) => void
+  onSearchCommit: (query: string) => void
   onSelectLetter: (letterId: string) => void
   onNewLetter: () => void
 }
@@ -97,41 +97,55 @@ export function IncomingListPanel({
   unprocessedCount,
   isLoading = false,
   isError = false,
+  page,
+  totalPages,
+  total,
+  countAll,
+  countNew,
+  countInProgress,
+  countDone,
+  committedSearch,
   onFolderChange,
   onFilterChange,
+  onPageChange,
+  onSearchCommit,
   onSelectLetter,
   onNewLetter,
 }: IncomingListPanelProps) {
   const { t } = useTranslation('common')
-  const [searchQuery, setSearchQuery] = useState('')
 
-  const newCount = letters.filter((l) => l.status === 'new').length
-  const inProgressCount = letters.filter((l) => l.status === 'in_progress').length
-  const doneCount = letters.filter(
-    (l) => l.status === 'sent_to_kanban' || l.status === 'on_board' || l.status === 'auto_processed'
-  ).length
+  // Local draft of search — committed only on button click or Enter
+  const [searchDraft, setSearchDraft] = useState(committedSearch)
 
-  // Apply search filter
-  const q = searchQuery.toLowerCase().trim()
-  const searchFiltered = q
-    ? letters.filter(
-        (l) =>
-          l.senderName.toLowerCase().includes(q) ||
-          l.senderEmail.toLowerCase().includes(q) ||
-          l.subject.toLowerCase().includes(q)
-      )
-    : letters
+  // Keep draft in sync if parent resets committedSearch externally (e.g. folder change)
+  useEffect(() => {
+    setSearchDraft(committedSearch)
+  }, [committedSearch])
 
-  // Build grouped sections (only for 'all' filter)
-  const unprocessedGroup = searchFiltered.filter((l) => l.isUnprocessed)
-  const inProgressGroup = searchFiltered.filter(
-    (l) => !l.isUnprocessed && (l.status === 'in_progress' || l.status === 'new')
-  )
-  const sentGroup = searchFiltered.filter(
-    (l) =>
-      !l.isUnprocessed &&
-      (l.status === 'sent_to_kanban' || l.status === 'on_board' || l.status === 'auto_processed')
-  )
+  const handleSearchSubmit = () => {
+    onSearchCommit(searchDraft)
+  }
+
+  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') handleSearchSubmit()
+    if (e.key === 'Escape') {
+      setSearchDraft('')
+      onSearchCommit('')
+    }
+  }
+
+  const handleClearSearch = () => {
+    setSearchDraft('')
+    onSearchCommit('')
+  }
+
+  // Count for each filter tab
+  const filterCount = (id: IncomingMailboxFilter) => {
+    if (id === 'new') return countNew
+    if (id === 'in_progress') return countInProgress
+    if (id === 'done') return countDone
+    return countAll
+  }
 
   // ── Scroll arrows ──────────────────────────────────────────────────────────
   const listRef = useRef<HTMLDivElement>(null)
@@ -157,7 +171,7 @@ export function IncomingListPanel({
       el.removeEventListener('scroll', syncScroll)
       ro.disconnect()
     }
-  }, [syncScroll, letters, searchQuery])
+  }, [syncScroll, letters])
 
   const rafRef = useRef<number | null>(null)
   const scrollBy = useCallback((delta: number) => {
@@ -186,15 +200,16 @@ export function IncomingListPanel({
     rafRef.current = requestAnimationFrame(step)
   }, [])
 
-  const renderList = (items: LetterListItem[]) =>
-    items.map((letter) => (
-      <LetterListItemRow
-        key={letter.id}
-        letter={letter}
-        isSelected={selectedLetterId === letter.id}
-        onSelect={onSelectLetter}
-      />
-    ))
+  // Scroll list to top when page changes
+  useEffect(() => {
+    const el = listRef.current
+    if (el) el.scrollTop = 0
+  }, [page])
+
+  // ── Pagination helpers ─────────────────────────────────────────────────────
+  const PAGE_SIZE = 50
+  const pageStart = total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1
+  const pageEnd = Math.min(page * PAGE_SIZE, total)
 
   return (
     <div className="flex h-full flex-col border-r border-gray-200 bg-white">
@@ -210,9 +225,9 @@ export function IncomingListPanel({
             </h2>
             <CountPill>
               {t('pages.lawyerWorkplace.incoming.count', {
-                total: letters.length,
+                total: countAll,
                 unprocessed: String(unprocessedCount).padStart(2, '0'),
-                defaultValue: `${letters.length} / ${String(unprocessedCount).padStart(2, '0')}`,
+                defaultValue: `${countAll} / ${String(unprocessedCount).padStart(2, '0')}`,
               })}
             </CountPill>
           </div>
@@ -250,27 +265,31 @@ export function IncomingListPanel({
           })}
         </div>
 
-        {/* Search bar */}
+        {/* Search bar — submitted on icon click or Enter */}
         <div className="relative mb-3">
-          <Icons.Search
-            size={14}
-            strokeWidth={1.5}
-            className="text-light-500 pointer-events-none absolute top-1/2 left-3 -translate-y-1/2"
-          />
+          <button
+            type="button"
+            onClick={handleSearchSubmit}
+            className="text-light-500 hover:text-primary-500 absolute top-1/2 left-2 -translate-y-1/2 transition-colors"
+            aria-label={t('actions.search', 'Search')}
+          >
+            <Icons.Search size={14} strokeWidth={1.5} />
+          </button>
           <input
             type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            value={searchDraft}
+            onChange={(e) => setSearchDraft(e.target.value)}
+            onKeyDown={handleSearchKeyDown}
             placeholder={t(
               'pages.lawyerWorkplace.incoming.searchPlaceholder',
               'Sender, subject...'
             )}
             className="text-dark-500 focus:border-primary-400 h-8 w-full rounded-lg border border-gray-200 bg-white py-1.5 pr-3 pl-8 text-[12px] outline-none placeholder:text-gray-400"
           />
-          {searchQuery && (
+          {searchDraft && (
             <button
               type="button"
-              onClick={() => setSearchQuery('')}
+              onClick={handleClearSearch}
               className="text-light-500 hover:text-dark-500 absolute top-1/2 right-2 -translate-y-1/2"
             >
               <Icons.Cancel01 size={12} strokeWidth={1.5} />
@@ -278,35 +297,58 @@ export function IncomingListPanel({
           )}
         </div>
 
-        {/* Status filter pills */}
-        <div className="flex flex-wrap items-center gap-2">
-          {FILTERS.map((f) => {
-            const isActive = activeFilter === f.id
-            const count =
-              f.id === 'new'
-                ? newCount
-                : f.id === 'in_progress'
-                  ? inProgressCount
-                  : f.id === 'done'
-                    ? doneCount
-                    : letters.length
-            return (
-              <button
-                key={f.id}
-                type="button"
-                onClick={() => onFilterChange(f.id)}
-                className={cn(
-                  'flex cursor-pointer items-center gap-2 rounded-full px-3 py-1.5 text-[11px] transition-colors sm:px-4 sm:py-2 sm:text-[12px]',
-                  isActive
-                    ? 'bg-secondary-800 text-white'
-                    : 'text-dark-500 bg-white hover:bg-gray-50'
-                )}
-              >
-                {t(f.labelKey, f.fallback)}
-                <NumBadge count={count} active={isActive} />
-              </button>
-            )
-          })}
+        {/* Status filter pills + pagination in same row */}
+        <div className="flex flex-col items-start justify-between gap-1">
+          {/* Simple pagination: ← 1–50 of 207 → */}
+          {total > 0 && (
+            <div className="flex w-full items-end justify-end">
+              <div className="flex shrink-0 items-center gap-0.5">
+                <button
+                  type="button"
+                  disabled={page <= 1}
+                  onClick={() => onPageChange(page - 1)}
+                  className="text-light-500 hover:text-dark-500 flex h-6 w-6 items-center justify-center rounded disabled:opacity-30"
+                  aria-label={t('pagination.prev', 'Previous page')}
+                >
+                  <Icons.ArrowLeft size={12} strokeWidth={2} />
+                </button>
+                <span className="text-light-600 text-[10px] whitespace-nowrap">
+                  {pageStart}–{pageEnd} / {total}
+                </span>
+                <button
+                  type="button"
+                  disabled={page >= totalPages}
+                  onClick={() => onPageChange(page + 1)}
+                  className="text-light-500 hover:text-dark-500 flex h-6 w-6 items-center justify-center rounded disabled:opacity-30"
+                  aria-label={t('pagination.next', 'Next page')}
+                >
+                  <Icons.ArrowRight size={12} strokeWidth={2} />
+                </button>
+              </div>
+            </div>
+          )}
+          <div className="flex min-w-0 flex-wrap items-center gap-4">
+            {FILTERS.map((f) => {
+              const isActive = activeFilter === f.id
+              const count = filterCount(f.id)
+              return (
+                <button
+                  key={f.id}
+                  type="button"
+                  onClick={() => onFilterChange(f.id)}
+                  className={cn(
+                    'flex cursor-pointer items-center gap-1.5 rounded-full px-2.5 py-1.5 text-[11px] transition-colors',
+                    isActive
+                      ? 'bg-secondary-800 text-white'
+                      : 'text-dark-500 bg-white hover:bg-gray-50'
+                  )}
+                >
+                  {t(f.labelKey, f.fallback)}
+                  <NumBadge count={count} active={isActive} />
+                </button>
+              )
+            })}
+          </div>
         </div>
       </div>
 
@@ -326,47 +368,19 @@ export function IncomingListPanel({
             <p className="px-4 py-10 text-center text-sm text-red-500">
               {t('pages.lawyerWorkplace.incoming.loadError', 'Could not load inbox')}
             </p>
-          ) : searchFiltered.length === 0 ? (
+          ) : letters.length === 0 ? (
             <p className="px-4 py-10 text-center text-sm text-gray-400">
               {t('pages.lawyerWorkplace.incoming.empty', 'No letters in this folder')}
             </p>
-          ) : activeFilter === 'all' && !searchQuery ? (
-            // Grouped view
-            <>
-              {unprocessedGroup.length > 0 && (
-                <>
-                  <SectionHeader
-                    label={t('pages.lawyerWorkplace.incoming.sectionUnprocessed', 'Unprocessed')}
-                    count={unprocessedGroup.length}
-                  />
-                  {renderList(unprocessedGroup)}
-                </>
-              )}
-              {inProgressGroup.length > 0 && (
-                <>
-                  <SectionHeader
-                    label={t('pages.lawyerWorkplace.incoming.sectionInProgress', 'In progress')}
-                    count={inProgressGroup.length}
-                  />
-                  {renderList(inProgressGroup)}
-                </>
-              )}
-              {sentGroup.length > 0 && (
-                <>
-                  <SectionHeader
-                    label={t(
-                      'pages.lawyerWorkplace.incoming.sectionSentToKanban',
-                      'Sent to kanban'
-                    )}
-                    count={sentGroup.length}
-                  />
-                  {renderList(sentGroup)}
-                </>
-              )}
-            </>
           ) : (
-            // Flat view (filtered or searched)
-            renderList(searchFiltered)
+            letters.map((letter) => (
+              <LetterListItemRow
+                key={letter.id}
+                letter={letter}
+                isSelected={selectedLetterId === letter.id}
+                onSelect={onSelectLetter}
+              />
+            ))
           )}
         </div>
 

@@ -13,6 +13,7 @@ import { Label } from '@/components/ui/Label'
 import { SearchableSelect } from '@/components/ui/SearchableSelect'
 import { useClients } from '@/features/clients/hooks/useClients'
 import { useConfirmLetter, useLegalLawyers, useLegalLetterTypes } from '@/features/lawyerWorkplace'
+import { useDebounce } from '@/hooks/useDebounce'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 import { formatDueDate } from '../../utils/formatters'
@@ -193,13 +194,13 @@ function LetterParametersPanelContent({
   const confirmMutation = useConfirmLetter()
   const { data: letterTypesData } = useLegalLetterTypes()
   const { data: lawyersData } = useLegalLawyers()
-  const { data: clientsData } = useClients({ limit: 200 })
 
   const letterTypes = useMemo(() => letterTypesData?.items ?? [], [letterTypesData?.items])
   const lawyers = useMemo(() => lawyersData?.items ?? [], [lawyersData?.items])
 
   const [typeOverride, setTypeOverride] = useState<string | null>(null)
   const [clientOverride, setClientOverride] = useState<string | null>(null)
+  const [clientSearch, setClientSearch] = useState('')
   const [lawyerOverride, setLawyerOverride] = useState<string | null>(null)
   const [dueDateOverride, setDueDateOverride] = useState<Date | null>(null)
 
@@ -221,17 +222,33 @@ function LetterParametersPanelContent({
   const effectiveLawyerUserId = lawyerOverride ?? defaultLawyerUserId
   const effectiveDueDate = dueDateOverride ?? defaultDueDate
 
+  const debouncedClientSearch = useDebounce(clientSearch, 300)
+  const { data: clientsData, isFetching: clientsLoading } = useClients(
+    { q: debouncedClientSearch, limit: 20 },
+    { enabled: debouncedClientSearch.length >= 2 }
+  )
+
   const clientOptions = useMemo(() => {
-    const options = (clientsData?.items ?? []).map(formatClientOption)
+    const searchResults = (clientsData?.items ?? []).map(formatClientOption)
+
+    if (debouncedClientSearch.length < 2) {
+      // No active search: show only the pre-existing client so SearchableSelect can display its name
+      if (effectiveClientId && p.clientLabel) {
+        return [{ id: effectiveClientId, name: p.clientLabel }]
+      }
+      return []
+    }
+
+    // Active search: prepend current client if not in results
     if (
       effectiveClientId &&
-      !options.some((option) => option.id === effectiveClientId) &&
+      !searchResults.some((o) => o.id === effectiveClientId) &&
       p.clientLabel
     ) {
-      options.unshift({ id: effectiveClientId, name: p.clientLabel })
+      return [{ id: effectiveClientId, name: p.clientLabel }, ...searchResults]
     }
-    return options
-  }, [clientsData?.items, effectiveClientId, p.clientLabel])
+    return searchResults
+  }, [clientsData?.items, debouncedClientSearch, effectiveClientId, p.clientLabel])
 
   const lawyerOptions = useMemo(
     () =>
@@ -471,7 +488,16 @@ function LetterParametersPanelContent({
           <SearchableSelect
             options={clientOptions}
             value={effectiveClientId}
-            onValueChange={setClientOverride}
+            onValueChange={(val) => {
+              setClientOverride(val)
+              setClientSearch('')
+            }}
+            onSearchChange={setClientSearch}
+            isLoading={clientsLoading}
+            emptySearchHint={t(
+              'pages.lawyerWorkplace.parameters.clientSearchHint',
+              'Type 2+ characters to search…'
+            )}
             placeholder={t('pages.lawyerWorkplace.parameters.notIdentified', 'Not identified')}
           />
         </div>

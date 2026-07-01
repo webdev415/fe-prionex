@@ -15,6 +15,7 @@ import { SearchableSelect } from '@/components/ui/SearchableSelect'
 import { Textarea } from '@/components/ui/Textarea'
 import { useClients } from '@/features/clients/hooks/useClients'
 import { useClientEmails } from '@/features/clients/hooks/useClientEmails'
+import { useDebounce } from '@/hooks/useDebounce'
 import {
   useLegalMailboxes,
   useSendOutgoingLetter,
@@ -85,7 +86,6 @@ function NewOutgoingLetterForm({ onClose, onSent }: NewOutgoingLetterFormProps) 
   const { t } = useTranslation('common')
   const currentUserId = Number(useAuthStore((state) => state.user?.id))
   const { data: mailboxesData } = useLegalMailboxes()
-  const { data: clientsData } = useClients({ limit: 200 })
   const sendMutation = useSendOutgoingLetter()
 
   const mailboxes = useMemo(() => mailboxesData?.items ?? [], [mailboxesData?.items])
@@ -94,6 +94,7 @@ function NewOutgoingLetterForm({ onClose, onSent }: NewOutgoingLetterFormProps) 
   const [mailboxOverrideId, setMailboxOverrideId] = useState<string | null>(null)
   const [recipientMode, setRecipientMode] = useState<RecipientMode>('client')
   const [clientId, setClientId] = useState('')
+  const [clientSearch, setClientSearch] = useState('')
   const [emailOverride, setEmailOverride] = useState<{ clientId: string; email: string } | null>(
     null
   )
@@ -101,6 +102,12 @@ function NewOutgoingLetterForm({ onClose, onSent }: NewOutgoingLetterFormProps) 
   const [subject, setSubject] = useState('')
   const [body, setBody] = useState('')
   const [edoType, setEdoType] = useState<EdoType>('none')
+
+  const debouncedClientSearch = useDebounce(clientSearch, 300)
+  const { data: clientsData, isFetching: clientsLoading } = useClients(
+    { q: debouncedClientSearch, limit: 20 },
+    { enabled: recipientMode === 'client' && debouncedClientSearch.length >= 2 }
+  )
 
   const clientIdNumber = Number(clientId)
   const { data: clientEmailsData } = useClientEmails(
@@ -126,6 +133,7 @@ function NewOutgoingLetterForm({ onClose, onSent }: NewOutgoingLetterFormProps) 
 
   const handleClientChange = (id: string) => {
     setClientId(id)
+    setClientSearch('')
     setEmailOverride(null)
   }
 
@@ -282,6 +290,12 @@ function NewOutgoingLetterForm({ onClose, onSent }: NewOutgoingLetterFormProps) 
                   options={clientOptions}
                   value={clientId}
                   onValueChange={handleClientChange}
+                  onSearchChange={setClientSearch}
+                  isLoading={clientsLoading}
+                  emptySearchHint={t(
+                    'pages.lawyerWorkplace.newLetter.clientSearchHint',
+                    'Type 2+ characters to search…'
+                  )}
                   placeholder={t(
                     'pages.lawyerWorkplace.newLetter.selectClient',
                     'Search client...'

@@ -2,12 +2,8 @@ import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import type { IncomingFolder, IncomingMailboxFilter } from '@/pages/LawyerWorkplace/types'
 import { legalApi } from '../api/legalApi'
-import {
-  buildLegalLookupContext,
-  filterInboxByMailboxTab,
-  mapInboxItemToLetterListItem,
-} from '../api/mappers'
-import type { LegalInboxItem, LegalInboxParams, LegalDocumentListParams } from '../api/types'
+import { buildLegalLookupContext, mapInboxItemToLetterListItem } from '../api/mappers'
+import type { LegalInboxParams, LegalDocumentListParams } from '../api/types'
 
 export const legalWorkplaceKeys = {
   all: ['lawyer-workplace'] as const,
@@ -199,34 +195,49 @@ export function useLegalTrainingExamples(
   })
 }
 
-function filterInboxByFolder(items: LegalInboxItem[], folder: IncomingFolder): LegalInboxItem[] {
-  if (folder === 'quarantine') {
-    return items.filter((item) => item.is_quarantined)
-  }
-  if (folder === 'sent') {
-    return items.filter((item) => item.direction === 'outgoing')
-  }
-  return items.filter((item) => !item.is_quarantined && item.direction === 'incoming')
+// ── Folder → API params mapping ───────────────────────────────────────────────
+
+function folderToApiParams(folder: IncomingFolder): {
+  include_quarantined: boolean
+  direction?: string
+} {
+  if (folder === 'quarantine') return { include_quarantined: true }
+  if (folder === 'sent') return { include_quarantined: false, direction: 'outgoing' }
+  return { include_quarantined: false, direction: 'incoming' }
 }
+
+// "done" tab maps to a special backend value covering all completed statuses
+function filterToProcessingStatus(filter: IncomingMailboxFilter): string | undefined {
+  if (filter === 'all') return undefined
+  if (filter === 'done') return 'done'
+  return filter // 'new' | 'in_progress'
+}
+
+// ── Paginated server-side inbox hook ─────────────────────────────────────────
+
+const PAGE_SIZE = 50
 
 export function useMappedLegalInbox(options: {
   activeFolder: IncomingFolder
   activeFilter: IncomingMailboxFilter
+  page: number
+  searchQuery: string // committed search (only sent on explicit submit)
   enabled?: boolean
 }) {
   const enabled = options.enabled !== false
-  const includeQuarantined = options.activeFolder === 'quarantine'
 
-  const inboxQuery = useLegalInbox(
-    { page: 1, page_size: 200, include_quarantined: includeQuarantined },
-    { enabled }
-  )
+  const folderParams = folderToApiParams(options.activeFolder)
+  const processingStatus = filterToProcessingStatus(options.activeFilter)
 
-  const counterQuery = useLegalInbox(
-    { page: 1, page_size: 200, include_quarantined: false },
-    { enabled: enabled && options.activeFolder !== 'inbox' }
-  )
+  const apiParams: LegalInboxParams = {
+    page: options.page,
+    page_size: PAGE_SIZE,
+    ...folderParams,
+    ...(processingStatus ? { processing_status: processingStatus } : {}),
+    ...(options.searchQuery.trim() ? { q: options.searchQuery.trim() } : {}),
+  }
 
+  const inboxQuery = useLegalInbox(apiParams, { enabled })
   const letterTypesQuery = useLegalLetterTypes({ enabled })
 
   const lookupContext = useMemo(
@@ -234,35 +245,26 @@ export function useMappedLegalInbox(options: {
     [letterTypesQuery.data?.items]
   )
 
-  const folderItems = useMemo(() => {
-    if (!inboxQuery.data) return []
-    return filterInboxByFolder(inboxQuery.data.items, options.activeFolder)
-  }, [inboxQuery.data, options.activeFolder])
-
   const letters = useMemo(() => {
-    const mapped = folderItems.map((item) => mapInboxItemToLetterListItem(item, lookupContext))
-    const filtered = filterInboxByMailboxTab(mapped, options.activeFilter)
-    return filtered.sort(
-      (a, b) => new Date(b.receivedAt).getTime() - new Date(a.receivedAt).getTime()
-    )
-  }, [folderItems, lookupContext, options.activeFilter])
+    if (!inboxQuery.data) return []
+    // Backend returns messages sorted by received_at desc across all mailboxes
+    return inboxQuery.data.items.map((item) => mapInboxItemToLetterListItem(item, lookupContext))
+  }, [inboxQuery.data, lookupContext])
 
-  const unprocessedCount = useMemo(() => {
-    if (options.activeFolder === 'inbox' && inboxQuery.data) {
-      return inboxQuery.data.unprocessed_count
-    }
-    const source = counterQuery.data?.items ?? []
-    const inboxItems = filterInboxByFolder(source, 'inbox')
-    return inboxItems.filter((item) => item.needs_manual_review).length
-  }, [counterQuery.data?.items, inboxQuery.data, options.activeFolder])
-
-  const connectedMailboxes = inboxQuery.data?.connected_mailboxes ?? 0
+  const data = inboxQuery.data
+  const total = data?.total ?? 0
+  const totalPages = total > 0 ? Math.ceil(total / PAGE_SIZE) : 1
 
   return {
     letters,
-    unprocessedCount,
-    connectedMailboxes,
-    totalInFolder: folderItems.length,
+    unprocessedCount: data?.unprocessed_count ?? 0,
+    connectedMailboxes: data?.connected_mailboxes ?? 0,
+    total,
+    totalPages,
+    countAll: data?.count_all ?? 0,
+    countNew: data?.count_new ?? 0,
+    countInProgress: data?.count_in_progress ?? 0,
+    countDone: data?.count_done ?? 0,
     isLoading: inboxQuery.isLoading,
     isError: inboxQuery.isError,
     refetch: inboxQuery.refetch,

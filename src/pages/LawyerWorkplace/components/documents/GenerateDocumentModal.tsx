@@ -13,6 +13,7 @@ import { SearchableSelect } from '@/components/ui/SearchableSelect'
 import { useClients } from '@/features/clients/hooks/useClients'
 import { useLegalLawyers } from '@/features/lawyerWorkplace'
 import { useAuthStore } from '@/stores/authStore'
+import { useDebounce } from '@/hooks/useDebounce'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 import { NBU_DOCUMENT_NAMES, OUTGOING_DOCUMENT_NAMES, type DocumentI18nOption } from './constants'
@@ -75,13 +76,20 @@ export function GenerateDocumentModal({
 }: GenerateDocumentModalProps) {
   const { t } = useTranslation('common')
   const currentUserId = Number(useAuthStore((state) => state.user?.id))
-  const { data: clientsData } = useClients({ limit: 200 }, { enabled: open })
   const { data: lawyersData } = useLegalLawyers({ enabled: open })
 
   const [documentType, setDocumentType] = useState<GenerateDocumentType>('outgoing')
   const [templateKey, setTemplateKey] = useState('')
   const [clientId, setClientId] = useState('')
+  const [clientSearch, setClientSearch] = useState('')
+  const [selectedClientLegacyId, setSelectedClientLegacyId] = useState<string | null>(null)
   const [assigneeUserId, setAssigneeUserId] = useState<number | null>(null)
+
+  const debouncedClientSearch = useDebounce(clientSearch, 300)
+  const { data: clientsData, isFetching: clientsLoading } = useClients(
+    { q: debouncedClientSearch, limit: 20 },
+    { enabled: open && debouncedClientSearch.length >= 2 }
+  )
 
   const templates = useMemo(
     () => (documentType === 'outgoing' ? OUTGOING_DOCUMENT_NAMES : NBU_DOCUMENT_NAMES),
@@ -92,11 +100,6 @@ export function GenerateDocumentModal({
 
   const clientOptions = useMemo(
     () => (clientsData?.items ?? []).map(formatClientOption),
-    [clientsData?.items]
-  )
-
-  const clientsById = useMemo(
-    () => new Map((clientsData?.items ?? []).map((client) => [String(client.id), client])),
     [clientsData?.items]
   )
 
@@ -112,6 +115,8 @@ export function GenerateDocumentModal({
       setDocumentType('outgoing')
       setTemplateKey(OUTGOING_DOCUMENT_NAMES[0]?.key ?? '')
       setClientId('')
+      setClientSearch('')
+      setSelectedClientLegacyId(null)
       const defaultLawyer =
         lawyers.find((lawyer) => lawyer.user_id === currentUserId) ?? lawyers[0] ?? null
       setAssigneeUserId(defaultLawyer?.user_id ?? null)
@@ -130,13 +135,12 @@ export function GenerateDocumentModal({
 
   const handleSubmit = async () => {
     if (!canSubmit || !selectedTemplate || assigneeUserId == null) return
-    const client = clientsById.get(clientId)
     await onSubmit({
       documentType,
       title: t(selectedTemplate.key, selectedTemplate.fallback),
       clientId: Number.parseInt(clientId, 10),
       assignedToUserId: assigneeUserId,
-      contractNumber: client?.legacy_id?.trim() || null,
+      contractNumber: selectedClientLegacyId,
     })
     onClose()
   }
@@ -233,7 +237,18 @@ export function GenerateDocumentModal({
           <SearchableSelect
             options={clientOptions.map((client) => ({ id: client.id, name: client.name }))}
             value={clientId}
-            onValueChange={setClientId}
+            onValueChange={(val) => {
+              setClientId(val)
+              const found = clientsData?.items.find((c) => String(c.id) === val)
+              setSelectedClientLegacyId(found?.legacy_id?.trim() || null)
+              setClientSearch('')
+            }}
+            onSearchChange={setClientSearch}
+            isLoading={clientsLoading}
+            emptySearchHint={t(
+              'pages.lawyerWorkplace.documents.modals.generate.clientSearchHint',
+              'Type 2+ characters to search…'
+            )}
             placeholder={t(
               'pages.lawyerWorkplace.documents.modals.generate.selectClient',
               'Select client'

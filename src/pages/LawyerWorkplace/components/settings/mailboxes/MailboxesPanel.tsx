@@ -20,6 +20,7 @@ interface MailboxesPanelProps {
   onToggleStatus: (mailbox: SettingsMailbox) => Promise<void>
   onSyncIntervalChange: (interval: DepartmentSyncSettings['interval']) => Promise<void>
   onTestSync: () => Promise<void>
+  onConnectGmail?: (mailbox: SettingsMailbox) => void
   isSavingMailbox: boolean
   isSavingSync: boolean
   isPolling: boolean
@@ -34,6 +35,7 @@ export function MailboxesPanel({
   onToggleStatus,
   onSyncIntervalChange,
   onTestSync,
+  onConnectGmail,
   isSavingMailbox,
   isSavingSync,
   isPolling,
@@ -90,6 +92,7 @@ export function MailboxesPanel({
           onToggleStatus={handleToggleStatus}
           onAddMailbox={openAdd}
           onTestSync={onTestSync}
+          onConnectGmail={onConnectGmail}
           isPolling={isPolling}
           readOnly={readOnly}
         />

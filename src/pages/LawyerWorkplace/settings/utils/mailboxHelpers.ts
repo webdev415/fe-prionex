@@ -28,9 +28,11 @@ export function createMailboxFromForm(input: {
     displayNameKey: `custom-mailbox:${id}`,
     displayNameFallback: input.displayName.trim(),
     status: 'connected',
+    provider: 'custom',
     letterCount: 0,
     defaultLetterTypeId: input.defaultLetterTypeId,
     isDefaultOutgoing: input.isDefaultOutgoing,
+    hasCredentials: false,
     routingRules: input.defaultLetterTypeId
       ? [
           {

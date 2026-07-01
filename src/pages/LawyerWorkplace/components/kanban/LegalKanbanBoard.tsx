@@ -12,7 +12,6 @@ import {
   useUpdateLegalKanbanTask,
   type LegalKanbanTaskPatch,
 } from '@/features/lawyerWorkplace'
-import { useClients } from '@/features/clients/hooks/useClients'
 import { cn } from '@/lib/utils'
 import { useLawyerWorkplaceLayout } from '../../context/lawyerWorkplaceLayout'
 import {
@@ -42,28 +41,12 @@ import { KanbanColumnLane } from './KanbanColumnLane'
 import { CreateKanbanTaskModal } from './CreateKanbanTaskModal'
 import { ThreadDrawer } from './ThreadDrawer'
 
-function formatClientOption(client: {
-  id: number
-  first_name: string
-  last_name: string
-  legacy_id?: string | null
-}): { id: string; name: string; clientId: number } {
-  const code = client.legacy_id?.trim() || `CL-${String(client.id).padStart(5, '0')}`
-  const name = [client.first_name, client.last_name].filter(Boolean).join(' ')
-  return {
-    id: String(client.id),
-    clientId: client.id,
-    name: name ? `${code} · ${name}` : code,
-  }
-}
-
 export function LegalKanbanBoard() {
   const { t } = useTranslation('common')
   const { isKanbanGrid, showWorkspaceBanner } = useLawyerWorkplaceLayout()
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const { data: lawyersData } = useLegalLawyers()
   const { data: letterTypesData } = useLegalLetterTypes()
-  const { data: clientsData } = useClients({ limit: 200 })
   const [deadlineFilter, setDeadlineFilter] = useState<DeadlineFilter>('this_week')
   const [lawyerFilter, setLawyerFilter] = useState<LawyerFilterId>('all')
   const [typeFilter, setTypeFilter] = useState<TypeFilterId>('all')
@@ -138,11 +121,6 @@ export function LegalKanbanBoard() {
   const letterTypes = useMemo(
     () => (letterTypesData?.items ?? []).filter((item) => item.is_active),
     [letterTypesData?.items]
-  )
-
-  const clientOptions = useMemo(
-    () => (clientsData?.items ?? []).map(formatClientOption),
-    [clientsData?.items]
   )
 
   const persistTaskPatch = useCallback(
@@ -373,7 +351,6 @@ export function LegalKanbanBoard() {
                   column={col}
                   lawyers={lawyers}
                   letterTypes={letterTypes}
-                  clientOptions={clientOptions}
                   draggingTaskId={draggingTaskId}
                   isDropTarget={dragOverColumn === col.id}
                   onCardClick={setThreadLetterId}

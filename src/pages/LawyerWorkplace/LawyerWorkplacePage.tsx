@@ -7,9 +7,12 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useQueryClient } from '@tanstack/react-query'
 import { useSearchParams } from 'react-router-dom'
+import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { useLegalLetterDetail, useMappedLegalInbox } from '@/features/lawyerWorkplace'
+import { legalWorkplaceKeys } from '@/features/lawyerWorkplace/hooks/useLegalInbox'
 import { useCanAccessLegalKanban } from '@/features/lawyerWorkplace/hooks/useLegalPermissions'
 import { IncomingListPanel } from './components/inbox/IncomingListPanel'
 import { EmailThreadPanel } from './components/thread/EmailThreadPanel'
@@ -44,6 +47,7 @@ function LawyerWorkplacePageContent() {
   const { ref: layoutRef, isCompact, isWide } = useLawyerWorkplaceLayout()
   const [searchParams, setSearchParams] = useSearchParams()
   const canAccessKanban = useCanAccessLegalKanban()
+  const queryClient = useQueryClient()
   const rawTab = searchParams.get('tab')
   const activeTab: LawyerWorkplaceTab = isWorkplaceTab(rawTab) ? rawTab : 'inbox'
 
@@ -55,22 +59,81 @@ function LawyerWorkplacePageContent() {
     }
   }, [activeTab, canAccessKanban, searchParams, setSearchParams])
 
+  // Handle Gmail OAuth2 callback redirect back to this page
+  useEffect(() => {
+    const oauthResult = searchParams.get('oauth')
+    if (!oauthResult) return
+
+    const next = new URLSearchParams(searchParams)
+    next.delete('oauth')
+    next.delete('mailbox_id')
+    next.delete('error')
+    setSearchParams(next, { replace: true })
+
+    if (oauthResult === 'success') {
+      toast.success(
+        t(
+          'pages.lawyerWorkplace.settings.mailboxes.gmailOAuthSuccess',
+          'Gmail connected successfully!'
+        )
+      )
+      void queryClient.invalidateQueries({ queryKey: legalWorkplaceKeys.settingsMailboxes() })
+      void queryClient.invalidateQueries({ queryKey: legalWorkplaceKeys.mailboxes() })
+    } else if (oauthResult === 'error') {
+      const errorCode = searchParams.get('error') ?? 'unknown'
+      toast.error(
+        t('pages.lawyerWorkplace.settings.mailboxes.gmailOAuthFailed', {
+          error: errorCode,
+          defaultValue: `Gmail authorisation failed (${errorCode}). Please try again.`,
+        })
+      )
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   const [activeFolder, setActiveFolder] = useState<IncomingFolder>('inbox')
   const [activeFilter, setActiveFilter] = useState<IncomingMailboxFilter>('all')
+  const [inboxPage, setInboxPage] = useState(1)
+  const [committedSearch, setCommittedSearch] = useState('')
   const [selectedLetterId, setSelectedLetterId] = useState<string | null>(null)
   const [inboxPane, setInboxPane] = useState<InboxPane>('list')
   const [replyDraft, setReplyDraft] = useState('')
   const [newLetterOpen, setNewLetterOpen] = useState(false)
 
+  const handleFolderChange = (folder: IncomingFolder) => {
+    setActiveFolder(folder)
+    setActiveFilter('all')
+    setInboxPage(1)
+    setCommittedSearch('')
+  }
+
+  const handleFilterChange = (filter: IncomingMailboxFilter) => {
+    setActiveFilter(filter)
+    setInboxPage(1)
+  }
+
+  const handleSearchCommit = (query: string) => {
+    setCommittedSearch(query)
+    setInboxPage(1)
+  }
+
   const {
     letters: filteredLetters,
     unprocessedCount,
     connectedMailboxes,
+    total: inboxTotal,
+    totalPages: inboxTotalPages,
+    countAll,
+    countNew,
+    countInProgress,
+    countDone,
     isLoading: inboxLoading,
     isError: inboxError,
   } = useMappedLegalInbox({
     activeFolder,
     activeFilter,
+    page: inboxPage,
+    searchQuery: committedSearch,
     enabled: activeTab === 'inbox',
   })
 
@@ -157,8 +220,18 @@ function LawyerWorkplacePageContent() {
                 unprocessedCount={unprocessedCount}
                 isLoading={inboxLoading}
                 isError={inboxError}
-                onFolderChange={setActiveFolder}
-                onFilterChange={setActiveFilter}
+                page={inboxPage}
+                totalPages={inboxTotalPages}
+                total={inboxTotal}
+                countAll={countAll}
+                countNew={countNew}
+                countInProgress={countInProgress}
+                countDone={countDone}
+                committedSearch={committedSearch}
+                onFolderChange={handleFolderChange}
+                onFilterChange={handleFilterChange}
+                onPageChange={setInboxPage}
+                onSearchCommit={handleSearchCommit}
                 onSelectLetter={handleSelectLetter}
                 onNewLetter={() => setNewLetterOpen(true)}
               />

@@ -70,16 +70,26 @@ export interface MailboxRoutingRule {
   letterTypeId: string
 }
 
+export type MailboxProvider =
+  | 'gmail_oauth2'
+  | 'ukrnet'
+  | 'iua'
+  | 'google_workspace'
+  | 'microsoft365'
+  | 'custom'
+
 export interface SettingsMailbox {
   id: string
   email: string
   displayNameKey: string
   displayNameFallback: string
   status: MailboxStatus
+  provider: MailboxProvider
   letterCount: number
   defaultLetterTypeId: string | null
   routingRules: MailboxRoutingRule[]
   isDefaultOutgoing: boolean
+  hasCredentials: boolean
 }
 
 export interface DepartmentSyncSettings {

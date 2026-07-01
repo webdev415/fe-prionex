@@ -83,6 +83,7 @@ export function LegalSettingsTab() {
     toggleMailboxStatus,
     changeSyncInterval,
     testSync,
+    connectGmail,
     isSavingMailbox,
     isPolling,
     isSavingSync,
@@ -262,6 +263,7 @@ export function LegalSettingsTab() {
           onToggleStatus={toggleMailboxStatus}
           onSyncIntervalChange={changeSyncInterval}
           onTestSync={testSync}
+          onConnectGmail={connectGmail}
           isSavingMailbox={isSavingMailbox}
           isSavingSync={isSavingSync}
           isPolling={isPolling}

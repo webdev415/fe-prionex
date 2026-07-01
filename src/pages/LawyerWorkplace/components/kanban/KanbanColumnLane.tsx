@@ -8,7 +8,6 @@ interface KanbanColumnLaneProps {
   column: KanbanColumnDef
   lawyers: LegalLawyer[]
   letterTypes: LegalLetterType[]
-  clientOptions: { id: string; name: string; clientId: number }[]
   draggingTaskId: string | null
   isDropTarget: boolean
   onCardClick?: (letterId: string) => void
@@ -25,7 +24,6 @@ export function KanbanColumnLane({
   column,
   lawyers,
   letterTypes,
-  clientOptions,
   draggingTaskId,
   isDropTarget,
   onCardClick,
@@ -54,7 +52,6 @@ export function KanbanColumnLane({
             task={task}
             lawyers={lawyers}
             letterTypes={letterTypes}
-            clientOptions={clientOptions}
             isDragging={draggingTaskId === task.id}
             onCardClick={onCardClick}
             onMoveTask={onMoveTask}
