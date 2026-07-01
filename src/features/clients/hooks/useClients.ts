@@ -4,7 +4,7 @@
  */
 
 import { useEffect } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import type { AxiosError } from 'axios'
 import { clientApi } from '../api/clientApi'
@@ -63,7 +63,7 @@ export const clientKeys = {
  * Get list of clients for user's active project
  * Auto-refetches every 60 seconds
  */
-export function useClients(params: GetClientsParams = {}) {
+export function useClients(params: GetClientsParams = {}, options: { enabled?: boolean } = {}) {
   return useQuery({
     queryKey: clientKeys.list(params),
     queryFn: () => clientApi.getClients(params),
@@ -71,7 +71,20 @@ export function useClients(params: GetClientsParams = {}) {
     placeholderData: (previousData) => previousData,
     staleTime: 2 * 60_000,
     refetchInterval: 5 * 60_000,
-    enabled: true,
+    // Callers may defer the first fetch until derived params are settled (e.g.
+    // until the operator option sets load, so an "all operators" selection is
+    // omitted instead of firing the heavy 200-id query then refetching).
+    enabled: options.enabled ?? true,
+    // The list query is the heaviest call on the dashboard. When it fails with a
+    // server error (e.g. a 502 from an OOM-killed worker during the morning login
+    // burst), retrying immediately just fires another expensive query into an
+    // already-starved backend and compounds the pressure. Only retry once for
+    // genuine network blips; never retry on a 4xx/5xx response.
+    retry: (failureCount, error) => {
+      const status = (error as AxiosError)?.response?.status
+      if (status && status >= 400) return false
+      return failureCount < 1
+    },
   })
 }
 
@@ -100,6 +113,38 @@ export function useClient(clientId: number, enabled = true) {
     enabled: enabled && !!clientId,
     staleTime: 30000,
   })
+}
+
+/**
+ * Resolve a set of client ids to display names, returning a Map<id, name>.
+ *
+ * Each id is fetched via the same `clientKeys.detail(id)` cache used by client
+ * detail pages, so names that are already loaded resolve instantly. Ids are
+ * de-duplicated by the caller's set; pass only the unique ids you need.
+ */
+export function useClientNames(clientIds: number[]): Map<number, string> {
+  const uniqueIds = Array.from(new Set(clientIds))
+  const results = useQueries({
+    queries: uniqueIds.map((id) => ({
+      queryKey: clientKeys.detail(id),
+      queryFn: () => clientApi.getClientById(id),
+      enabled: !!id,
+      staleTime: 5 * 60_000,
+    })),
+  })
+
+  const names = new Map<number, string>()
+  uniqueIds.forEach((id, i) => {
+    const data = results[i]?.data
+    if (data) {
+      const full = [data.last_name, data.first_name, data.middle_name]
+        .filter(Boolean)
+        .join(' ')
+        .trim()
+      if (full) names.set(id, full)
+    }
+  })
+  return names
 }
 
 /**
@@ -237,6 +282,15 @@ export function useAssignClient() {
         exact: true,
       })
       queryClient.invalidateQueries({ queryKey: clientKeys.lists() })
+      // The client-detail page reads responsible_employee_name /
+      // responsible_searcher_name from the profile query, not the detail
+      // query — so the displayed name only refreshes if we invalidate
+      // that cache too. Same convention every other mutation in this
+      // file uses (see useCreateAddress, useUpdateContact, etc.).
+      queryClient.invalidateQueries({
+        queryKey: clientKeys.profile(variables.clientId),
+        exact: true,
+      })
       // The `contact.responsible_changed` event is published after this
       // request returns and the tag-service applies any matching auto-tag
       // rules asynchronously (RabbitMQ → Celery). Refetch the client's
@@ -361,17 +415,31 @@ export function useClientPaymentsSection(clientId: number, enabled = true) {
  * Get client call/SMS history. Calls existing call and SMS service endpoints in parallel.
  * Maps backend responses to UI-expected shape for backward compatibility.
  */
-export function useClientCallSmsHistory(clientId: number, enabled = true) {
+export function useClientCallSmsHistory(clientId: number, enabled = true, showAllCalls = false) {
   return useQuery({
-    queryKey: clientKeys.callSmsHistory(clientId),
+    queryKey: [...clientKeys.callSmsHistory(clientId), { showAllCalls }],
     queryFn: async () => {
-      const [callsData, smsData] = await Promise.all([
+      const callsParams: { limit: number; from_date?: string } = { limit: 200 }
+      if (!showAllCalls) {
+        const sevenDaysAgo = new Date()
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+        callsParams.from_date = sevenDaysAgo.toISOString().split('T')[0]
+      }
+
+      const unfilteredCallsPromise = showAllCalls
+        ? Promise.resolve(null)
+        : callSmsApi
+            .getClientCalls(clientId, { limit: 1 })
+            .catch(() => ({ calls: [] as never[], total: 0 }))
+
+      const [callsData, smsData, unfilteredCalls] = await Promise.all([
         callSmsApi
-          .getClientCalls(clientId, { limit: 10 })
+          .getClientCalls(clientId, callsParams)
           .catch(() => ({ calls: [] as never[], total: 0 })),
         callSmsApi
           .getClientSms(clientId, { limit: 10 })
           .catch(() => ({ messages: [] as never[], total: 0 })),
+        unfilteredCallsPromise,
       ])
 
       // Map calls to UI shape
@@ -441,7 +509,14 @@ export function useClientCallSmsHistory(clientId: number, enabled = true) {
         return dateB.getTime() - dateA.getTime()
       })
 
-      return { calls: mappedCalls, sms: mappedSms, all }
+      return {
+        calls: mappedCalls,
+        sms: mappedSms,
+        all,
+        callsTotal: showAllCalls
+          ? (callsData.total ?? mappedCalls.length)
+          : (unfilteredCalls?.total ?? mappedCalls.length),
+      }
     },
     enabled: enabled && clientId > 0,
     staleTime: 30000,
@@ -458,7 +533,7 @@ export function useClientTasks(clientId: number, enabled = true) {
     queryFn: () => taskApi.getClientTasks(clientId),
     enabled: enabled && clientId > 0,
     staleTime: 30000,
-    refetchInterval: 30_000,
+    refetchInterval: 60_000, // KAN-610: 30s→60s; hook is also tab-gated now
     refetchOnMount: false,
     select: (data) => data.tasks ?? [],
   })
@@ -728,6 +803,32 @@ export function useCloseDebt() {
 }
 
 /**
+ * Reopen a closed debt (set status back to 'active'). Linked RRs in a
+ * terminal state are cascaded to Cancelled by the backend.
+ */
+export function useReopenDebt() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ clientId, debtId }: { clientId: number; debtId: number }) =>
+      clientApi.reopenDebt(clientId, debtId),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: clientKeys.loans(variables.clientId), exact: true })
+      queryClient.invalidateQueries({
+        queryKey: clientKeys.detail(variables.clientId),
+        exact: true,
+      })
+      queryClient.invalidateQueries({ queryKey: clientKeys.lists() })
+      toast.success('Loan reopened successfully')
+    },
+    onError: (error: AxiosError<{ detail?: string }>) => {
+      const message = error?.response?.data?.detail || 'Failed to reopen loan'
+      toast.error(message)
+    },
+  })
+}
+
+/**
  * Edit the closure date on an already-closed debt.
  */
 export function useUpdateDebtClosureDate() {
@@ -940,8 +1041,21 @@ export function useCreateTask() {
       queryClient.invalidateQueries({ queryKey: ['tasks', 'my-tasks'] })
       toast.success('Task created successfully')
     },
-    onError: (error: AxiosError<{ detail?: string }>) => {
-      const message = error?.response?.data?.detail || 'Failed to create task'
+    onError: (
+      error: AxiosError<{
+        detail?: string | Array<{ msg: string; loc?: string[] }>
+      }> & { __handled?: boolean }
+    ) => {
+      // Inline-handled errors (e.g. due_date 422 surfaced under the
+      // date input by AddTaskModal) set __handled so we skip the toast.
+      if (error.__handled) return
+      const detail = error?.response?.data?.detail
+      let message = 'Failed to create task'
+      if (typeof detail === 'string') {
+        message = detail
+      } else if (Array.isArray(detail) && detail.length > 0) {
+        message = detail[0].msg.replace(/^Value error,\s*/, '')
+      }
       toast.error(message)
     },
   })

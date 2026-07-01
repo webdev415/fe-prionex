@@ -1,4 +1,4 @@
-import { type ReactNode, useState, useMemo, useCallback, useRef, useEffect } from 'react'
+﻿import { type ReactNode, useState, useMemo, useCallback, useRef, useEffect } from 'react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/features/auth'
@@ -19,6 +19,7 @@ import type { Permission } from '@/constants/permissions'
 import { SearchResults, type SearchResult } from '@/components/ui/SearchResults'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { cn } from '@/lib/utils'
+import { formatClientFullName } from '@/lib/formatters'
 import { Icons } from '@/lib/icons'
 import { useCallStore } from '@/stores/callStore'
 import { CallDialogModal } from '@/pages/ClientManagement/components/CallDialogModal'
@@ -589,12 +590,13 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         // Transform backend response to frontend SearchResult format
         const results: SearchResult[] = response.items.map((item) => ({
           id: item.id,
-          name: item.full_name,
+          name: formatClientFullName(item),
           debt: item.total_debt,
           phone: (item.phones ?? []).join(', '),
           email: item.email_primary ?? '',
           priority: mapPriorityLevel(item.priority_level),
           score: item.priority_score,
+          contactSource: item.contact_source ?? null,
         }))
 
         setSearchResults(results)
@@ -710,6 +712,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             icon: 'file-import',
             requiredPermission: PERMISSIONS.WRITEOFFS.BULK,
           },
+          {
+            path: '/dashboard/import/bulk-sale-notes-import',
+            label: t('navigation.bulkSaleNotesImport', 'Bulk Sales Note Import'),
+            icon: 'activity-01',
+            requiredPermission: PERMISSIONS.SALE_NOTES.MANAGE,
+          },
         ],
       },
       {
@@ -731,9 +739,15 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         requiredPermission: PERMISSIONS.MESSAGING.VIEW_CAMPAIGN_ANALYTICS,
       },
       {
+        path: '/dashboard/training',
+        icon: 'analytics-01',
+        label: t('navigation.training', 'Training'),
+        requiredPermission: PERMISSIONS.TRAINING.VIEW,
+      },
+      {
         path: '/dashboard/action-analysis',
         icon: 'analytics-01',
-        label: t('navigation.actionAnalysis'),
+        label: t('navigation.actionAnalysis', 'Action Analysis'),
         requiredPermission: PERMISSIONS.ACTION_ANALYSIS.VIEW,
       },
       {
@@ -861,6 +875,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               PERMISSIONS.DOCUMENT_GENERATION.DELETE_TEMPLATES,
             ],
             mode: 'any' as const,
+          },
+          {
+            path: '/dashboard/system-settings/ip-whitelist',
+            label: t('navigation.ipWhitelist', 'IP Whitelist'),
+            icon: 'sliders-horizontal',
+            requiredPermission: PERMISSIONS.USERS.EDIT,
           },
           {
             path: '/dashboard/system-settings/rr-notifications',

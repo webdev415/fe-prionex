@@ -9,6 +9,7 @@ import { renderHook, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { useCallWebSocket } from '../useCallWebSocket'
+import { getAccessToken } from '@/lib/api'
 import type { CallStateEvent } from '../../types'
 
 // Mock socket.io-client
@@ -27,6 +28,11 @@ vi.mock('socket.io-client', () => ({
 
 vi.mock('sonner')
 
+// The hook requires a JWT to open the authenticated Socket.IO handshake.
+vi.mock('@/lib/api', () => ({
+  getAccessToken: vi.fn(() => 'test-jwt-token'),
+}))
+
 function createWrapper() {
   const queryClient = new QueryClient({
     defaultOptions: {
@@ -43,6 +49,7 @@ function createWrapper() {
 describe('useCallWebSocket', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.mocked(getAccessToken).mockReturnValue('test-jwt-token')
   })
 
   afterEach(() => {

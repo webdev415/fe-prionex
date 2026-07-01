@@ -111,8 +111,17 @@ function EditForm({ profile, clientId }: EditFormProps) {
   const { mutate: createAddress, isPending: isCreatingAddress } = useCreateAddress()
   const { mutate: updateAddress, isPending: isUpdatingAddress } = useUpdateAddress()
   const { mutate: deleteAddress } = useDeleteAddress()
-  const { mutate: updateEmployment, isPending: isSavingWork } = useUpdateEmployment()
-  const { mutate: updatePassport, isPending: isSavingPassport } = useUpdatePassport()
+  const {
+    mutate: updateEmployment,
+    mutateAsync: updateEmploymentAsync,
+    isPending: isSavingWork,
+  } = useUpdateEmployment()
+  const {
+    mutate: updatePassport,
+    mutateAsync: updatePassportAsync,
+    isPending: isSavingPassport,
+  } = useUpdatePassport()
+  const [isSavingAll, setIsSavingAll] = useState(false)
   const canEditAll = useHasPermission(PERMISSIONS.CLIENTS.EDIT)
 
   // Personal info — initialized from profile (component remounts via key when profile changes)
@@ -285,6 +294,102 @@ function EditForm({ profile, clientId }: EditFormProps) {
     )
   }
 
+  /**
+   * Fire Personal + Passport + Work saves in parallel via Promise.allSettled.
+   *
+   * Same per-section validation as the individual save buttons. Personal info
+   * is the only section with synchronous validation (first/last/tax_id
+   * required); if it fails, we surface the error and abort BEFORE firing any
+   * mutation — same UX as the per-section Save Personal button.
+   *
+   * Partial-failure handling: each section's error message is rendered in its
+   * own block, and the toast indicates how many sections succeeded.
+   */
+  const handleSaveAll = async () => {
+    if (!canEditAll) return
+
+    setPersonalError(null)
+    setPassportError(null)
+    setWorkError(null)
+
+    const fn = firstName.trim()
+    const ln = lastName.trim()
+    const tid = taxId.trim()
+    if (!fn || !ln || !/^\d{10}$/.test(tid)) {
+      setPersonalError(t('pages.clients.editModal.saveError'))
+      return
+    }
+
+    const personalData: UpdateClientRequest = {
+      first_name: fn,
+      last_name: ln,
+      middle_name: middleName.trim() ? middleName.trim() : undefined,
+      email: email.trim() ? email.trim() : undefined,
+      date_of_birth: dateOfBirth || undefined,
+      marital_status: maritalStatus || undefined,
+      family_members_count: familyMembers.trim() !== '' ? Number(familyMembers) : undefined,
+      income_level: incomeLevel.trim() ? incomeLevel.trim() : undefined,
+      tax_id: tid,
+    }
+
+    setIsSavingAll(true)
+    const results = await Promise.allSettled([
+      updateClientAsync({ id: clientId, data: personalData }),
+      updateEmploymentAsync({
+        clientId,
+        data: {
+          company_name: companyName || undefined,
+          position: position || undefined,
+          employment_type: employmentType || undefined,
+          work_experience_months: workExperience ? Number(workExperience) : undefined,
+          manager_full_name: managerFullName || undefined,
+          work_phone: workPhone || undefined,
+        },
+      }),
+      updatePassportAsync({
+        clientId,
+        data: {
+          document_type: documentType || undefined,
+          series: passportSeries || undefined,
+          number: passportNumber || undefined,
+          issued_by: issuedBy || undefined,
+          issued_date: issuedDate || undefined,
+          expires_date: expiresDate || undefined,
+          gender: gender || undefined,
+        },
+      }),
+    ])
+    setIsSavingAll(false)
+
+    const [personalRes, workRes, passportRes] = results
+    if (personalRes.status === 'rejected') {
+      setPersonalError(
+        extractErrorMessage(personalRes.reason, t('pages.clients.editModal.saveError'))
+      )
+    }
+    if (workRes.status === 'rejected') {
+      setWorkError(extractErrorMessage(workRes.reason, t('pages.clients.editModal.saveError')))
+    }
+    if (passportRes.status === 'rejected') {
+      setPassportError(
+        extractErrorMessage(passportRes.reason, t('pages.clients.editModal.saveError'))
+      )
+    }
+
+    const failed = results.filter((r) => r.status === 'rejected').length
+    if (failed === 0) {
+      toast.success(t('pages.clients.editModal.saveAllSuccess'))
+    } else if (failed === results.length) {
+      toast.error(t('pages.clients.editModal.saveAllError'))
+    } else {
+      toast.error(t('pages.clients.editModal.saveAllPartial'))
+    }
+
+    if (results.some((r) => r.status === 'fulfilled')) {
+      invalidateClientCaches()
+    }
+  }
+
   const handleCreateAddress = () => {
     setAddressError(null)
     createAddress(
@@ -365,8 +470,29 @@ function EditForm({ profile, clientId }: EditFormProps) {
     )
   }
 
+  const isAnySectionSaving = isSavingAll || isSavingPersonal || isSavingWork || isSavingPassport
+
   return (
     <div className="flex flex-col gap-6">
+      {/* Save All — fires Personal + Passport + Work in parallel. Faster than
+          clicking each section's individual Save button sequentially when the
+          operator has edited multiple sections at once. */}
+      {canEditAll && (
+        <div className="flex justify-end">
+          <Button
+            variant="primary"
+            onClick={handleSaveAll}
+            disabled={isAnySectionSaving}
+            data-testid="edit-client-save-all"
+            className="rounded-md"
+          >
+            {isSavingAll
+              ? t('pages.clients.editModal.savingAll')
+              : t('pages.clients.editModal.saveAll')}
+          </Button>
+        </div>
+      )}
+
       {/* Section 1: Personal Information */}
       <div className="flex flex-col items-start gap-2 self-stretch">
         <span className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">

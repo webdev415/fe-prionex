@@ -31,8 +31,8 @@ export function UnlockAccountModal({ open, user, onClose }: UnlockAccountModalPr
   const failedAttempts = user.failed_login_attempts
   const lockedUntil = user.locked_until ? new Date(user.locked_until) : null
 
-  // Backend lockout duration is 18 minutes; derive lockedAt from auto-unlock time
-  const LOCKOUT_MINUTES = 18
+  // Backend lockout duration is 30 minutes; derive lockedAt from auto-unlock time
+  const LOCKOUT_MINUTES = 30
   const autoUnlockAt = lockedUntil
   const lockedAt =
     autoUnlockAt !== null ? new Date(autoUnlockAt.getTime() - LOCKOUT_MINUTES * 60 * 1000) : null

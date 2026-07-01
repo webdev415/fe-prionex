@@ -20,9 +20,14 @@ export type PriorityLevel = 'critical' | 'high' | 'medium' | 'low'
 /**
  * Enhanced search result from backend
  */
+export type ContactSource = 'client' | 'recommender'
+
 export interface EnhancedSearchResult {
   id: number
   full_name: string
+  first_name: string
+  middle_name?: string | null
+  last_name: string
   phones: string[]
   email_primary: string | null
   tax_id: string
@@ -32,6 +37,7 @@ export interface EnhancedSearchResult {
   total_debt: string
   debt_count: number
   primary_creditor: string | null
+  contact_source?: ContactSource | null
 }
 
 /**

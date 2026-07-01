@@ -42,7 +42,9 @@ export interface Payment {
   payment_comment?: string | null
   seller_name?: string
   status: PaymentStatus
-  payment_date: string // ISO date string
+  // KAN-782: legacy bulk-upload rows can have a NULL payment_date (backend returns
+  // JSON null). Callers must render it as "—"/blank, never assume a string.
+  payment_date: string | null // ISO date string, or null for legacy dateless rows
   recorded_at: string | null // ISO datetime string — nullable for auto-created verified rows
   verified_at?: string // ISO datetime string
   completed_at?: string // ISO datetime string
@@ -68,9 +70,12 @@ export interface Payment {
   debt_id?: number
   // Recorded by
   recorded_by_user_id: number | null
-  recorded_by_username?: string
+  recorded_by_full_name?: string | null
   verified_by_user_id?: number
-  verified_by_username?: string
+  verified_by_full_name?: string | null
+  // Assigned operator — responsible user for this payment's collection
+  assigned_user_id?: number | null
+  assigned_user_full_name?: string | null
   // Reversal info
   reversed_at?: string
   reversed_by_user_id?: number
@@ -151,8 +156,8 @@ export interface EditPaymentRequest {
   bank_transaction_id?: string
 }
 
-export interface ReassignPaymentEmployeeRequest {
-  recorded_by_user_id: number
+export interface ReassignAssignedUserRequest {
+  assigned_user_id: number
 }
 
 export interface PaymentListParams {
@@ -182,6 +187,9 @@ export interface ClientPaymentHistoryParams {
   to_date?: string // ISO date string
   date_field?: 'payment_date' | 'recorded_at'
   tz?: string // IANA timezone for date boundaries when date_field=recorded_at
+  // When true, exclude pre-acquisition (primary-creditor) payments so the list
+  // and total_amount_paid show to-us payments only, matching the debt summary.
+  exclude_pre_acquisition?: boolean
 }
 
 export interface ClientPaymentHistoryResponse {
@@ -230,7 +238,7 @@ export interface PendingPaymentItem {
   client_name?: string | null
   amount: string
   payment_method: PaymentMethod
-  payment_date: string
+  payment_date: string | null // KAN-782: read schema tolerates legacy NULL dates
   recorded_at: string
   days_pending: number
   /** User who recorded the payment (operator / fixation). */

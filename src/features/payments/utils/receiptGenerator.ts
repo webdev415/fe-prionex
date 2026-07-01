@@ -74,18 +74,23 @@ export function convertPaymentToReceiptData(
     paymentId: payment.payment_number,
     // CHANGED — NEVER fall back to new Date() for dateIssued. Priority:
     //   receipt_generated_at -> payment_confirmation_date -> recorded_at -> verified_at -> payment_date
-    // payment_date is always present (NOT NULL in the model).
+    // KAN-782: payment_date can be NULL on legacy rows; the timestamp fallbacks
+    // above cover those (all legacy null-date rows carry recorded_at). Terminal
+    // '—' guards the impossible all-null case and keeps the type a string.
     dateIssued:
       payment.receipt_generated_at ||
       payment.payment_confirmation_date ||
       payment.recorded_at ||
       payment.verified_at ||
-      payment.payment_date,
+      payment.payment_date ||
+      '—',
     clientName: clientData?.fullName || `Client #${payment.client_id}`,
     clientId: payment.client_id.toString(),
     phone: clientData?.phone || 'N/A',
     contract: clientData?.contract || 'N/A',
-    paymentDate: payment.payment_date,
+    // KAN-782: the labeled "Payment Date" shows "—" for legacy null-date rows
+    // rather than substituting a different timestamp.
+    paymentDate: payment.payment_date ?? '—',
     paymentMethod,
     transactionRef,
     paymentAmount: Number(payment.amount) || 0,
@@ -94,18 +99,20 @@ export function convertPaymentToReceiptData(
     outstandingBalanceBefore: Number(payment.debt_before) || 0,
     paymentApplied,
     remainingBalance: Number(payment.debt_after) || 0,
-    // CHANGED — branch on recorded_by_user_id presence. For auto-created rows
-    // fall back to the verified-by user with an "(import)" suffix.
+    // Receipts render the currently-assigned operator as "Last_name First_name"
+    // (per User.full_name). For rows with no assignee (typically auto-imported
+    // and never assigned), fall back to the verified-by user with an "(import)"
+    // suffix.
     receivedBy:
-      payment.recorded_by_username ??
-      (payment.recorded_by_user_id !== null && payment.recorded_by_user_id !== undefined
-        ? `User #${payment.recorded_by_user_id}`
-        : payment.verified_by_username
-          ? `${payment.verified_by_username} (import)`
+      payment.assigned_user_full_name ??
+      (payment.assigned_user_id !== null && payment.assigned_user_id !== undefined
+        ? `User #${payment.assigned_user_id}`
+        : payment.verified_by_full_name
+          ? `${payment.verified_by_full_name} (import)`
           : payment.verified_by_user_id !== null && payment.verified_by_user_id !== undefined
             ? `User #${payment.verified_by_user_id} (import)`
             : '—'),
-    verifiedBy: payment.verified_by_username,
+    verifiedBy: payment.verified_by_full_name ?? undefined,
     verifiedOn: payment.verified_at,
     companyName: companyData?.name || '-',
     companyAddress: companyData?.address || '-',

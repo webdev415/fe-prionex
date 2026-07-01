@@ -15,6 +15,7 @@
 
 import { useState, useMemo, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
+import type { AxiosError } from 'axios'
 import { Modal, ModalHeader, ModalContent, ModalFooter } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { Label } from '@/components/ui/Label'
@@ -39,6 +40,31 @@ const PRIORITIES = [
   { value: 'normal', labelKey: 'pages.clients.tasks.priority.normal', fallback: 'Normal' },
   { value: 'low', labelKey: 'pages.clients.tasks.priority.low', fallback: 'Low' },
 ]
+
+// Auto-fill on first future-date pick; skipped for today so the result
+// can't land in the past.
+const DUE_DATE_DEFAULT_TIME = '09:00'
+
+// Module-level so react-datepicker sees a stable filterTime identity
+// across renders. Recomputes "now" itself, so the lack of a per-render
+// closure doesn't make it stale.
+//   • Future days: every slot allowed
+//   • Today: only slots whose absolute instant is >= now are allowed
+//
+// We compare absolute instants via getTime() (KAN-608). The picker
+// renders slots in browser local time, so for every operator the
+// disabled boundary aligns with their own wall clock NOW — which IS
+// the same absolute moment Europe/Kyiv is at. The BE validator
+// compares the same absolute moment against ZoneInfo('Europe/Kyiv'),
+// so FE and BE agree on past/future regardless of browser timezone.
+const filterFromNow = (time: Date): boolean => {
+  const now = new Date()
+  const isSameDay =
+    time.getFullYear() === now.getFullYear() &&
+    time.getMonth() === now.getMonth() &&
+    time.getDate() === now.getDate()
+  return isSameDay ? time.getTime() >= now.getTime() : true
+}
 
 export function AddTaskModal({ open, clientId, onClose }: AddTaskModalProps) {
   const { t } = useTranslation('common')
@@ -67,6 +93,12 @@ export function AddTaskModal({ open, clientId, onClose }: AddTaskModalProps) {
   const [dueDate, setDueDate] = useState('')
   const [assignedUserId, setAssignedUserId] = useState('')
   const [comment, setComment] = useState('')
+  const [dueDateError, setDueDateError] = useState<string | null>(null)
+
+  // Picker day floor — computed once at mount. The BE validator is the
+  // source of truth, so a stale floor on a long-open modal at worst
+  // produces a 422 that lands here as an inline error (KAN-608).
+  const minDate = useMemo(() => new Date(), [])
 
   // Reset form when modal opens
   useEffect(() => {
@@ -78,6 +110,7 @@ export function AddTaskModal({ open, clientId, onClose }: AddTaskModalProps) {
         setDueDate('')
         setAssignedUserId('')
         setComment('')
+        setDueDateError(null)
       })
     }
   }, [open])
@@ -86,6 +119,26 @@ export function AddTaskModal({ open, clientId, onClose }: AddTaskModalProps) {
 
   const handleSubmit = () => {
     if (!canSubmit) return
+    setDueDateError(null)
+
+    // FE pre-validation — same rule as the BE Pydantic validator. Comparing
+    // absolute instants (getTime()) handles all browser timezones correctly:
+    // a slot is "past" iff its absolute moment is <= current absolute moment.
+    // This avoids a needless HTTP round-trip (and the 422 console noise) for
+    // the common case. The BE validator remains the source of truth for
+    // security/integrity (FE bypass via DevTools, mobile clients, etc.).
+    if (dueDate) {
+      const pickedMs = new Date(dueDate).getTime()
+      if (!Number.isNaN(pickedMs) && pickedMs <= Date.now()) {
+        setDueDateError(
+          t(
+            'pages.clients.tasks.dueDateMustBeFuture',
+            'Due date must be in the future (Europe/Kyiv local time)'
+          )
+        )
+        return
+      }
+    }
 
     createTask.mutate(
       {
@@ -99,8 +152,20 @@ export function AddTaskModal({ open, clientId, onClose }: AddTaskModalProps) {
         comment: comment.trim() || undefined,
       },
       {
-        onSuccess: () => {
-          onClose()
+        onSuccess: () => onClose(),
+        onError: (error: AxiosError) => {
+          const detail = (error?.response?.data as { detail?: unknown })?.detail
+          if (Array.isArray(detail)) {
+            for (const err of detail as Array<{ msg: string; loc?: string[] }>) {
+              if (err.loc?.[1] === 'due_date') {
+                setDueDateError(err.msg.replace(/^Value error,\s*/, ''))
+                // Mark handled so the hook-level toast skips this one.
+                ;(error as unknown as { __handled?: boolean }).__handled = true
+                return
+              }
+            }
+          }
+          // Other errors fall through → hook-level toast catches them.
         },
       }
     )
@@ -177,12 +242,20 @@ export function AddTaskModal({ open, clientId, onClose }: AddTaskModalProps) {
             label={t('pages.clients.tasks.dueDate', 'Due Date')}
             id="task-due-date"
             value={dueDate || null}
-            onChange={({ value }) => setDueDate(value ? getDateTimeStringInTimezone(value) : '')}
+            onChange={({ value }) => {
+              setDueDate(value ? getDateTimeStringInTimezone(value) : '')
+              setDueDateError(null)
+            }}
             placeholder={t('pages.clients.tasks.selectDueDate', 'Select due date')}
             format="dd/MM/yyyy HH:mm"
             showTimeSelect
             timeFormat="HH:mm"
             timeIntervals={15}
+            min={minDate}
+            filterTime={filterFromNow}
+            defaultTime={DUE_DATE_DEFAULT_TIME}
+            defaultTimeSkipsToday
+            error={dueDateError ?? undefined}
           />
 
           {/* Assigned To */}

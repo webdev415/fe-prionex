@@ -3,6 +3,7 @@ import type {
   OriginateCallRequest,
   OriginateCallResponse,
   CallDetail,
+  CallBatchItem,
   CallHistoryFilters,
   CallHistoryResponse,
   UpdateCallOutcomeRequest,
@@ -24,6 +25,19 @@ class CallService {
 
   async getCallDetails(callId: string): Promise<CallDetail> {
     const response = await api.get(`${API_BASE_URL}/api/v1/calls/${callId}`)
+    return response.data
+  }
+
+  /**
+   * Resolve many calls at once to their contacted number + client.
+   * Powers the Dialogue Evaluation table (one request per page vs. N per-row
+   * fetches). Unknown call_ids are omitted from the response.
+   */
+  async getCallsBatch(callIds: string[]): Promise<CallBatchItem[]> {
+    if (callIds.length === 0) return []
+    const response = await api.post(`${API_BASE_URL}/api/v1/calls/batch`, {
+      call_ids: callIds,
+    })
     return response.data
   }
 

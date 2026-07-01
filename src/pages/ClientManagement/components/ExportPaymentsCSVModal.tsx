@@ -231,6 +231,8 @@ export function ExportPaymentsCSVModal({
                     value={startDate}
                     onChange={({ value }) => setStartDate(value)}
                     placeholder={t('pages.clients.modals.exportPaymentsCSV.startDate')}
+                    allowManualInput
+                    format="dd.MM.yyyy"
                     className="flex-1"
                   />
                   <span className="text-xs leading-[155%] font-medium tracking-[-0.32px] text-gray-700 sm:text-base">
@@ -240,6 +242,8 @@ export function ExportPaymentsCSVModal({
                     value={endDate}
                     onChange={({ value }) => setEndDate(value)}
                     placeholder={t('pages.clients.modals.exportPaymentsCSV.endDate')}
+                    allowManualInput
+                    format="dd.MM.yyyy"
                     className="flex-1"
                   />
                 </div>

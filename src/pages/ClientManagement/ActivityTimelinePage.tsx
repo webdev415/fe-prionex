@@ -29,7 +29,7 @@ import { CallDialogModal, type CallType, type CallStatus } from './components/Ca
 import { DoubleButton } from '@/components/ui/DoubleButton'
 import { TableSkeleton } from '@/components/ui/TableSkeleton'
 import { ActivityTimelinePageSkeleton } from './components/ActivityTimelinePageSkeleton'
-import { formatDate, formatDateTime } from '@/lib/formatters'
+import { formatClientFullName, formatDate, formatDateTime } from '@/lib/formatters'
 import { getDateStringInTimezone } from '@/lib/dateUtils'
 import { useCallStore } from '@/stores/callStore'
 import {
@@ -75,7 +75,7 @@ export function ActivityTimelinePage() {
           : []
     return {
       id: profile.id,
-      fullName: profile.full_name,
+      fullName: formatClientFullName(profile),
       priorityScore: profile.priority_score ?? 0,
       priorityLevel: profile.priority_level ?? 'Low',
       phones,
@@ -228,8 +228,6 @@ export function ActivityTimelinePage() {
       _raw: a,
     }))
   }, [activitiesResponse, loans, t])
-
-  const dateInputFormat = i18n.language?.startsWith('en') ? 'MM/dd/yyyy' : 'dd/MM/yyyy'
 
   const numberFormatLocale = intlLocaleForUiLanguage(i18n.language)
 
@@ -493,7 +491,8 @@ export function ActivityTimelinePage() {
                 }}
                 max={dateTo ?? undefined}
                 placeholder={t('pages.clients.filters.min')}
-                format={dateInputFormat}
+                allowManualInput
+                format="dd.MM.yyyy"
                 className="flex flex-1 flex-col gap-2"
               />
               <span className="text-sm leading-[155%] font-medium tracking-[-0.28px] text-gray-700 sm:text-base sm:tracking-[-0.32px]">
@@ -507,7 +506,8 @@ export function ActivityTimelinePage() {
                 }}
                 min={dateFrom ?? undefined}
                 placeholder={t('pages.clients.filters.max')}
-                format={dateInputFormat}
+                allowManualInput
+                format="dd.MM.yyyy"
                 className="flex flex-1 flex-col gap-2"
               />
             </div>
@@ -529,7 +529,8 @@ export function ActivityTimelinePage() {
                 }}
                 max={promiseDateTo ?? undefined}
                 placeholder={t('pages.clients.filters.min')}
-                format={dateInputFormat}
+                allowManualInput
+                format="dd.MM.yyyy"
                 className="flex flex-1 flex-col gap-2"
               />
               <span className="text-sm leading-[155%] font-medium tracking-[-0.28px] text-gray-700 sm:text-base sm:tracking-[-0.32px]">
@@ -543,7 +544,8 @@ export function ActivityTimelinePage() {
                 }}
                 min={promiseDateFrom ?? undefined}
                 placeholder={t('pages.clients.filters.max')}
-                format={dateInputFormat}
+                allowManualInput
+                format="dd.MM.yyyy"
                 className="flex flex-1 flex-col gap-2"
               />
             </div>
@@ -561,7 +563,8 @@ export function ActivityTimelinePage() {
                 }}
                 max={callbackDateTo ?? undefined}
                 placeholder={t('pages.clients.filters.min')}
-                format={dateInputFormat}
+                allowManualInput
+                format="dd.MM.yyyy"
                 className="flex flex-1 flex-col gap-2"
               />
               <span className="text-sm leading-[155%] font-medium tracking-[-0.28px] text-gray-700 sm:text-base sm:tracking-[-0.32px]">
@@ -575,7 +578,8 @@ export function ActivityTimelinePage() {
                 }}
                 min={callbackDateFrom ?? undefined}
                 placeholder={t('pages.clients.filters.max')}
-                format={dateInputFormat}
+                allowManualInput
+                format="dd.MM.yyyy"
                 className="flex flex-1 flex-col gap-2"
               />
             </div>

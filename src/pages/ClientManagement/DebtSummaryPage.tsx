@@ -8,6 +8,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   convertUTCToUserTimezone,
+  formatClientFullName,
   formatIsoDate,
   formatMoneyUAHTwoDecimals,
 } from '@/lib/formatters'
@@ -34,7 +35,7 @@ import {
   useVerifyPayment,
   useCancelPayment,
   useGenerateReceipt,
-  useReassignPaymentEmployee,
+  useReassignPaymentAssignedUser,
   buildPurchaseDateMap,
   buildVerifiedPaymentsByContract,
 } from '@/features/payments'
@@ -175,7 +176,7 @@ export function DebtSummaryPage() {
   const { mutate: cancelPaymentMutation } = useCancelPayment()
   const { mutate: generateReceiptMutation } = useGenerateReceipt()
   const { mutate: reassignEmployeeMutation, isPending: isReassigning } =
-    useReassignPaymentEmployee()
+    useReassignPaymentAssignedUser()
   const [isReassignModalOpen, setIsReassignModalOpen] = useState(false)
 
   // Call functionality state
@@ -239,20 +240,14 @@ export function DebtSummaryPage() {
       ? paymentHistoryData.payments.find((p) => p.id === selectedPayment.id)
       : null
 
-  const createdByUserId = selectedPaymentData?.recorded_by_user_id ?? null
-  const verifiedByUserId = selectedPaymentData?.verified_by_user_id ?? null
   const cancelledByUserId = selectedPaymentData?.reversed_by_user_id ?? null
 
-  const { data: createdByUser } = useUser(createdByUserId)
-  const { data: verifiedByUser } = useUser(verifiedByUserId)
   const { data: cancelledByUser } = useUser(cancelledByUserId)
 
   const client = useMemo(() => {
     if (!apiClient) return null
 
-    const fullName = [apiClient.first_name, apiClient.middle_name, apiClient.last_name]
-      .filter(Boolean)
-      .join(' ')
+    const fullName = formatClientFullName(apiClient)
 
     return {
       id: apiClient.id,
@@ -408,10 +403,12 @@ export function DebtSummaryPage() {
         // Resolve the display date for each payment (same logic as table row mapping)
         const withDate = verifiedBackendPayments.map((p) => ({
           p,
+          // KAN-782: payment_date can be null on legacy rows; verified rows always
+          // carry verified_at/recorded_at, so '' is only a type-safety terminal.
           displayDate:
             p.status === 'verified' && p.verified_at
               ? p.verified_at
-              : p.recorded_at || p.payment_date,
+              : p.recorded_at || p.payment_date || '',
         }))
         // Sort by displayDate descending (most recent first)
         withDate.sort((a, b) => b.displayDate.localeCompare(a.displayDate))
@@ -1511,7 +1508,8 @@ export function DebtSummaryPage() {
               if (!bp) return selectedPayment.date
               return bp.status === 'verified' && bp.verified_at
                 ? bp.verified_at
-                : (bp.recorded_at ?? bp.payment_date)
+                : // KAN-782: payment_date can be null on legacy rows → "—"
+                  (bp.recorded_at ?? bp.payment_date ?? '—')
             })(),
             method: normalizePaymentMethod(selectedPayment.method),
             reference:
@@ -1534,9 +1532,9 @@ export function DebtSummaryPage() {
                 paymentHistoryData?.payments.find((p) => p.id === selectedPayment.id)?.debt_after
               ) || Math.max(0, debtSummary.totalDebt - selectedPayment.amount),
             // Audit trail — resolved via useUser hooks
-            createdBy: createdByUser?.username || 'Unknown',
+            createdBy: selectedPaymentData?.assigned_user_full_name || 'Unknown',
             createdAt: selectedPaymentData?.recorded_at || 'Unknown',
-            verifiedBy: verifiedByUser?.username || undefined,
+            verifiedBy: selectedPaymentData?.verified_by_full_name || undefined,
             verifiedAt: selectedPaymentData?.verified_at || undefined,
             cancelledBy:
               cancelledByUser?.username ||
@@ -1571,9 +1569,7 @@ export function DebtSummaryPage() {
             // Prepare client data if available
             const clientData = apiClient
               ? {
-                  fullName: [apiClient.first_name, apiClient.middle_name, apiClient.last_name]
-                    .filter(Boolean)
-                    .join(' '),
+                  fullName: formatClientFullName(apiClient),
                   phone: apiClient.phone_primary || 'N/A',
                   contract:
                     (apiClient.debts &&
@@ -1604,14 +1600,14 @@ export function DebtSummaryPage() {
         <ReassignPaymentEmployeeModal
           open={isReassignModalOpen}
           onClose={() => setIsReassignModalOpen(false)}
-          currentEmployeeName={createdByUser?.username || 'Unknown'}
-          currentUserId={selectedPaymentData.recorded_by_user_id ?? null}
+          currentEmployeeName={selectedPaymentData.assigned_user_full_name || 'Unknown'}
+          currentUserId={selectedPaymentData.assigned_user_id ?? null}
           isSubmitting={isReassigning}
           onConfirm={(newUserId) => {
             reassignEmployeeMutation(
               {
                 paymentId: selectedPaymentData.id,
-                request: { recorded_by_user_id: newUserId },
+                request: { assigned_user_id: newUserId },
               },
               { onSuccess: () => setIsReassignModalOpen(false) }
             )

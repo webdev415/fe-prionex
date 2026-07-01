@@ -24,6 +24,7 @@ import {
   InformationCircleIcon,
   CheckmarkCircle02Icon,
   Cancel01Icon,
+  Copy01Icon,
   Alert02Icon,
   Add01Icon,
   Edit01Icon,
@@ -37,6 +38,10 @@ import {
   ArrowDown01Icon,
   ArrowUp01Icon,
   PinIcon,
+  PinOffIcon,
+  Archive02Icon,
+  Unarchive03Icon,
+  MoreVerticalIcon,
   StarIcon,
   EyeIcon,
   ViewIcon,
@@ -137,13 +142,19 @@ import {
   CallOutgoing04Icon,
   CallIncoming04Icon,
   AiBrain03Icon,
+  FlashIcon,
+  SparklesIcon,
+  FileSearchIcon,
   Mic02Icon,
+  Attachment01Icon,
   Tag01Icon,
   LockComputerIcon,
   BubbleChatEditIcon,
   MessageSecure01Icon,
   MessageMultiple01Icon,
   Message01Icon,
+  ThumbsUpIcon,
+  ThumbsDownIcon,
 } from '@hugeicons/core-free-icons'
 /**
  * Icon component props
@@ -198,6 +209,8 @@ export const Icons = {
   Filter: (props: Omit<IconProps, 'icon'>) => <Icon icon={FilterIcon} {...props} />,
   Eye: (props: Omit<IconProps, 'icon'>) => <Icon icon={EyeIcon} {...props} />,
   View: (props: Omit<IconProps, 'icon'>) => <Icon icon={ViewIcon} {...props} />,
+  ThumbsUp: (props: Omit<IconProps, 'icon'>) => <Icon icon={ThumbsUpIcon} {...props} />,
+  ThumbsDown: (props: Omit<IconProps, 'icon'>) => <Icon icon={ThumbsDownIcon} {...props} />,
 
   // Status
   Info: (props: Omit<IconProps, 'icon'>) => <Icon icon={InformationCircleIcon} {...props} />,
@@ -218,6 +231,10 @@ export const Icons = {
   ArrowDown: (props: Omit<IconProps, 'icon'>) => <Icon icon={ArrowDown01Icon} {...props} />,
   ArrowUp: (props: Omit<IconProps, 'icon'>) => <Icon icon={ArrowUp01Icon} {...props} />,
   Pin: (props: Omit<IconProps, 'icon'>) => <Icon icon={PinIcon} {...props} />,
+  PinOff: (props: Omit<IconProps, 'icon'>) => <Icon icon={PinOffIcon} {...props} />,
+  Archive: (props: Omit<IconProps, 'icon'>) => <Icon icon={Archive02Icon} {...props} />,
+  Unarchive: (props: Omit<IconProps, 'icon'>) => <Icon icon={Unarchive03Icon} {...props} />,
+  MoreVertical: (props: Omit<IconProps, 'icon'>) => <Icon icon={MoreVerticalIcon} {...props} />,
   // Star — outlined (unstarred state).
   Star: (props: Omit<IconProps, 'icon'>) => <Icon icon={StarIcon} {...props} />,
   // StarFilled — same StarIcon path, but the path is filled with
@@ -231,6 +248,7 @@ export const Icons = {
   // Checkmark (using CheckmarkCircle02Icon)
   Checkmark: (props: Omit<IconProps, 'icon'>) => <Icon icon={CheckmarkCircle02Icon} {...props} />,
   Cancel01: (props: Omit<IconProps, 'icon'>) => <Icon icon={Cancel01Icon} {...props} />,
+  Copy: (props: Omit<IconProps, 'icon'>) => <Icon icon={Copy01Icon} {...props} />,
 
   // Auth
   Lock: (props: Omit<IconProps, 'icon'>) => <Icon icon={LockIcon} {...props} />,
@@ -347,7 +365,11 @@ export const Icons = {
   CallOutgoing04: (props: Omit<IconProps, 'icon'>) => <Icon icon={CallOutgoing04Icon} {...props} />,
   CallIncoming04: (props: Omit<IconProps, 'icon'>) => <Icon icon={CallIncoming04Icon} {...props} />,
   AiBrain03: (props: Omit<IconProps, 'icon'>) => <Icon icon={AiBrain03Icon} {...props} />,
+  Flash: (props: Omit<IconProps, 'icon'>) => <Icon icon={FlashIcon} {...props} />,
+  Sparkles: (props: Omit<IconProps, 'icon'>) => <Icon icon={SparklesIcon} {...props} />,
+  FileSearch: (props: Omit<IconProps, 'icon'>) => <Icon icon={FileSearchIcon} {...props} />,
   Mic02: (props: Omit<IconProps, 'icon'>) => <Icon icon={Mic02Icon} {...props} />,
+  Attachment01: (props: Omit<IconProps, 'icon'>) => <Icon icon={Attachment01Icon} {...props} />,
   LockComputer: (props: Omit<IconProps, 'icon'>) => <Icon icon={LockComputerIcon} {...props} />,
   BubbleChatEdit: (props: Omit<IconProps, 'icon'>) => <Icon icon={BubbleChatEditIcon} {...props} />,
   MessageSecure01: (props: Omit<IconProps, 'icon'>) => (
@@ -376,6 +398,7 @@ export {
   InformationCircleIcon,
   CheckmarkCircle02Icon,
   Cancel01Icon,
+  Copy01Icon,
   Alert02Icon,
   Add01Icon,
   Edit01Icon,
@@ -389,6 +412,10 @@ export {
   ArrowDown01Icon,
   ArrowUp01Icon,
   PinIcon,
+  PinOffIcon,
+  Archive02Icon,
+  Unarchive03Icon,
+  MoreVerticalIcon,
   StarIcon,
   EyeIcon,
   ViewIcon,
@@ -485,6 +512,9 @@ export {
   CallOutgoing04Icon,
   CallIncoming04Icon,
   AiBrain03Icon,
+  FlashIcon,
+  SparklesIcon,
+  FileSearchIcon,
   Mic02Icon,
   LockComputerIcon,
   BubbleChatEditIcon,

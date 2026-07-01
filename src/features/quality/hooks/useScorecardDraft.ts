@@ -15,6 +15,12 @@ interface UseScorecardDraftArgs {
   enabled?: boolean
   /** Debounce window in ms; defaults to 2000 (the plan's spec). */
   debounceMs?: number
+  /**
+   * When false, the hook does NOT flush on unmount. Used by the explicit-save
+   * flow (KAN-504), where closing with unsaved changes warns the trainer
+   * instead of silently persisting.
+   */
+  flushOnUnmount?: boolean
 }
 
 const EMPTY_DRAFT: DraftState = { scores: {}, overall_comment: '' }
@@ -36,6 +42,7 @@ export function useScorecardDraft({
   initial,
   enabled = true,
   debounceMs = 2000,
+  flushOnUnmount = true,
 }: UseScorecardDraftArgs) {
   const [state, setState] = useState<DraftState>(initial ?? EMPTY_DRAFT)
   // Render-time adjustment (React docs pattern) — replaces the
@@ -88,12 +95,13 @@ export function useScorecardDraft({
     }
   }, [state, enabled, scorecardId, debounceMs, dirty, flush])
 
-  // Flush on unmount so closing the modal doesn't drop the last edit.
+  // Flush on unmount so closing the modal doesn't drop the last edit —
+  // unless the caller opts out (explicit-save flow warns instead).
   useEffect(() => {
     return () => {
-      if (dirtyRef.current) void flush()
+      if (flushOnUnmount && dirtyRef.current) void flush()
     }
-  }, [flush])
+  }, [flush, flushOnUnmount])
 
   const setScore = useCallback(
     (criterionKey: string, value: number | boolean | null, comment?: string | null) => {
@@ -126,6 +134,7 @@ export function useScorecardDraft({
     setOverallComment,
     reset,
     flush,
+    isDirty: dirty,
     isSaving: updateMutation.isPending,
     saveError: updateMutation.error,
   }

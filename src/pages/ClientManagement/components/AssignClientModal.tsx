@@ -12,12 +12,16 @@ import { SearchableSelect } from '@/components/ui/SearchableSelect'
 import { RadioGroup, RadioItem } from '@/components/ui/Radio'
 import { Label } from '@/components/ui/Label'
 import { Icons } from '@/lib/icons'
+import { formatClientFullName } from '@/lib/formatters'
 import { useClient } from '@/features/clients/hooks/useClients'
 import { usePriorityThresholds } from '@/features/clients/hooks/useConfig'
 import { mapScoreToPriority } from '@/features/clients/api/configApi'
 import { PriorityBadge } from './PriorityBadge'
 import { useOperators } from '@/features/users/hooks/useUsers'
 import { useAuthStore } from '@/stores/authStore'
+import { useGuardedAction, useHasPermission } from '@/hooks'
+import { PERMISSIONS } from '@/constants/permissions'
+import { toast } from 'sonner'
 
 // Format currency for Ukrainian Hryvnia
 const formatUAH = (amount: number) => {
@@ -67,6 +71,16 @@ export function AssignClientModal({ open, clientId, onClose, onAssign }: AssignC
   const [searcherId, setSearcherId] = useState<string>('')
   const [reason, setReason] = useState<string>('')
 
+  // Pattern Y per-field reassign rule (KAN-562):
+  //   - Setting a previously-NULL employee/searcher → initial assignment →
+  //     needs `edit_clients`.
+  //   - Changing an already-set employee/searcher → re-assignment →
+  //     needs `reassign_client_responsible`.
+  // Employee and searcher fields are evaluated independently — only the
+  // field(s) actually being changed-from-non-null require the reassign perm.
+  const hasReassignPerm = useHasPermission(PERMISSIONS.CLIENTS.REASSIGN_RESPONSIBLE)
+  const guardBaseAssign = useGuardedAction(PERMISSIONS.CLIENTS.EDIT, 'errors:permissions.required')
+
   // Populate current assignments when modal opens
   useEffect(() => {
     if (open && client) {
@@ -83,17 +97,38 @@ export function AssignClientModal({ open, clientId, onClose, onAssign }: AssignC
       return // Validation: at least one must be selected
     }
 
-    onAssign({
-      employeeId: employeeId || undefined,
-      searcherId: searcherId || undefined,
-      reason,
-    })
+    // Per-field reassign check: a field counts as a reassignment when its
+    // *current* value is non-null AND the form value differs. Setting a
+    // currently-NULL field is initial assignment regardless of the other
+    // field's state.
+    const newEmpNum = employeeId ? Number(employeeId) : null
+    const newSchNum = searcherId ? Number(searcherId) : null
+    const empBeingReassigned =
+      client?.responsible_employee_id != null && newEmpNum !== client.responsible_employee_id
+    const schBeingReassigned =
+      client?.responsible_searcher_id != null && newSchNum !== client.responsible_searcher_id
+    const requiresReassign = empBeingReassigned || schBeingReassigned
 
-    // Reset form
-    setEmployeeId('')
-    setSearcherId('')
-    setReason('')
-    onClose()
+    if (requiresReassign && !hasReassignPerm) {
+      toast.warning(t('errors:permissions.reassignClient'))
+      return
+    }
+
+    // Initial assignment path — edit_clients is enough. The guard still warns
+    // if the user lacks even edit_clients (rare; they wouldn't be on this UI).
+    guardBaseAssign(() => {
+      onAssign({
+        employeeId: employeeId || undefined,
+        searcherId: searcherId || undefined,
+        reason,
+      })
+
+      // Reset form
+      setEmployeeId('')
+      setSearcherId('')
+      setReason('')
+      onClose()
+    })
   }
 
   const handleCancel = () => {
@@ -108,9 +143,7 @@ export function AssignClientModal({ open, clientId, onClose, onAssign }: AssignC
     return null
   }
 
-  const fullName = client
-    ? [client.first_name, client.middle_name, client.last_name].filter(Boolean).join(' ')
-    : ''
+  const fullName = client ? formatClientFullName(client) : ''
   const email = client?.email || '-'
   const phone = client?.phone_primary || '-'
   const priority =

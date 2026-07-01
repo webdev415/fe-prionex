@@ -11,6 +11,13 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Modal, ModalContent, ModalFooter, ModalHeader } from '@/components/ui/Modal'
 import { RadioGroup, RadioItem } from '@/components/ui/Radio'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/Select'
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch'
 import { PermissionGuard } from '@/components/auth'
 import { PERMISSIONS } from '@/constants/permissions'
@@ -19,7 +26,7 @@ import {
   useCreateContactType,
   usePatchContactType,
 } from '@/features/clients/hooks/useClients'
-import type { ContactTypeOption } from '@/features/clients/api/types'
+import type { ContactSource, ContactTypeOption } from '@/features/clients/api/types'
 
 type StatusFilter = 'all' | 'active' | 'hidden'
 
@@ -37,7 +44,13 @@ export function ContactTypesPage() {
   const [defaultLine, setDefaultLine] = useState<'white' | 'gray'>('white')
   const [spamAllowed, setSpamAllowed] = useState(false)
   const [primaryPhone, setPrimaryPhone] = useState(false)
+  const [contactSource, setContactSource] = useState<ContactSource>('client')
   const [formError, setFormError] = useState<string | null>(null)
+
+  const contactSourceLabel = (source: ContactSource) =>
+    source === 'recommender'
+      ? t('pages.contactTypes.recommender', 'Recommender')
+      : t('pages.contactTypes.client', 'Client')
 
   const openCreate = () => {
     setFormError(null)
@@ -47,6 +60,7 @@ export function ContactTypesPage() {
     setDefaultLine('white')
     setSpamAllowed(false)
     setPrimaryPhone(false)
+    setContactSource('client')
     setFormOpen(true)
   }
 
@@ -57,6 +71,7 @@ export function ContactTypesPage() {
     setDefaultLine(row.default_call_line === 'gray' ? 'gray' : 'white')
     setSpamAllowed(row.spam_allowed)
     setPrimaryPhone(row.show_as_primary_phone)
+    setContactSource(row.contact_source ?? 'client')
     setFormOpen(true)
   }
 
@@ -79,6 +94,7 @@ export function ContactTypesPage() {
             default_call_line: defaultLine,
             spam_allowed: spamAllowed,
             show_as_primary_phone: primaryPhone,
+            contact_source: contactSource,
           },
         },
         {
@@ -97,6 +113,7 @@ export function ContactTypesPage() {
           default_call_line: defaultLine,
           spam_allowed: spamAllowed,
           show_as_primary_phone: primaryPhone,
+          contact_source: contactSource,
         },
         {
           onSuccess: () => {
@@ -162,6 +179,11 @@ export function ContactTypesPage() {
             : t('pages.contactTypes.white', 'White')}
         </span>
       ),
+    },
+    {
+      key: 'contact_source',
+      header: t('pages.contactTypes.columns.contactSource', 'Contact Source'),
+      render: (r) => <span>{contactSourceLabel(r.contact_source ?? 'client')}</span>,
     },
     {
       key: 'spam_allowed',
@@ -311,6 +333,29 @@ export function ContactTypesPage() {
               {t('pages.contactTypes.fieldPrimary', 'Show as Primary Phone')}
             </span>
             <ToggleSwitch checked={primaryPhone} onChange={setPrimaryPhone} />
+          </div>
+          <div>
+            <p className="text-dark-500 mb-2 text-sm">
+              {t('pages.contactTypes.fieldContactSource', 'Contact Source')}
+            </p>
+            <p className="text-dark-400 mb-2 text-xs">
+              {t(
+                'pages.contactTypes.fieldContactSourceHint',
+                'Categories the contact type. Used for visual indicators in search and for contact filtering in Target Action chain conditions.'
+              )}
+            </p>
+            <Select
+              value={contactSource}
+              onValueChange={(v) => setContactSource(v as ContactSource)}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="client">{contactSourceLabel('client')}</SelectItem>
+                <SelectItem value="recommender">{contactSourceLabel('recommender')}</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <Input
             label={t('pages.contactTypes.fieldSort', 'Sort Order')}
