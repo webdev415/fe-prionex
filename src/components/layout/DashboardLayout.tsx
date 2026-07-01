@@ -815,7 +815,11 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         path: '/dashboard/system-settings',
         icon: 'setting-07',
         label: t('navigation.systemSettings', 'System Settings'),
-        requiredPermissions: [PERMISSIONS.SYSTEM.MANAGE_SETTINGS, PERMISSIONS.CONTACT_TYPES.VIEW],
+        requiredPermissions: [
+          PERMISSIONS.SYSTEM.MANAGE_SETTINGS,
+          PERMISSIONS.CONTACT_TYPES.VIEW,
+          PERMISSIONS.REPAYMENT_CONFIG.VIEW,
+        ],
         mode: 'any' as const,
         subItems: [
           {
@@ -835,6 +839,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             label: t('navigation.scoringConfiguration'),
             icon: 'chart-01',
             requiredPermission: PERMISSIONS.SCORING_CONFIG.VIEW,
+          },
+          {
+            path: '/dashboard/system-settings/repayment-configuration',
+            label: t('navigation.repaymentConfiguration'),
+            icon: 'chart-01',
+            requiredPermission: PERMISSIONS.REPAYMENT_CONFIG.VIEW,
           },
           {
             path: '/dashboard/system-settings/sms-templates',
