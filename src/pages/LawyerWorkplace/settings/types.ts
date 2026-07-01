@@ -106,14 +106,3 @@ export interface SettingsReplyTemplate {
   letterTypeIds: string[]
   isActive: boolean
 }
-
-export type DocumentPresetType = 'outgoing' | 'nbu_response'
-
-export interface SettingsDocumentPreset {
-  id: string
-  nameKey: string
-  nameFallback: string
-  documentType: DocumentPresetType
-  defaultAssigneeId: string | null
-  isActive: boolean
-}

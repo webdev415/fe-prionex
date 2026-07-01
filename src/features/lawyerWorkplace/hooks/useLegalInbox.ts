@@ -27,10 +27,10 @@ export const legalWorkplaceKeys = {
   syncSettings: () => [...legalWorkplaceKeys.settings(), 'sync'] as const,
   replyTemplates: (includeInactive?: boolean) =>
     [...legalWorkplaceKeys.settings(), 'reply-templates', { includeInactive }] as const,
+  replyTemplatesRoot: () => [...legalWorkplaceKeys.settings(), 'reply-templates'] as const,
   composerReplyTemplates: (letterTypeId?: string | null) =>
     [...legalWorkplaceKeys.all, 'reply-templates', { letterTypeId }] as const,
-  documentPresets: (includeInactive?: boolean) =>
-    [...legalWorkplaceKeys.settings(), 'document-presets', { includeInactive }] as const,
+  composerReplyTemplatesRoot: () => [...legalWorkplaceKeys.all, 'reply-templates'] as const,
   kanban: (assignedToUserId?: number) =>
     [...legalWorkplaceKeys.all, 'kanban', { assignedToUserId }] as const,
   documents: () => [...legalWorkplaceKeys.all, 'documents'] as const,
@@ -167,19 +167,6 @@ export function useLegalComposerReplyTemplates(
       }),
     enabled: options?.enabled !== false,
     staleTime: 60_000,
-  })
-}
-
-export function useLegalSettingsDocumentPresets(options?: {
-  enabled?: boolean
-  includeInactive?: boolean
-}) {
-  const includeInactive = options?.includeInactive ?? true
-  return useQuery({
-    queryKey: legalWorkplaceKeys.documentPresets(includeInactive),
-    queryFn: () => legalApi.listSettingsDocumentPresets({ include_inactive: includeInactive }),
-    enabled: options?.enabled !== false,
-    staleTime: 30_000,
   })
 }
 

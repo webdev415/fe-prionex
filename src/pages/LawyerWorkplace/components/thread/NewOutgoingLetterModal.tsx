@@ -17,7 +17,7 @@ import { useClients } from '@/features/clients/hooks/useClients'
 import { useClientEmails } from '@/features/clients/hooks/useClientEmails'
 import { useDebounce } from '@/hooks/useDebounce'
 import {
-  applyReplyTemplatePlaceholders,
+  applyLetterTemplatePlaceholders,
   useLegalComposerReplyTemplates,
   useLegalMailboxes,
   useSendOutgoingLetter,
@@ -71,7 +71,7 @@ interface NewOutgoingLetterFormProps {
 }
 
 function NewOutgoingLetterForm({ onClose, onSent }: NewOutgoingLetterFormProps) {
-  const { t } = useTranslation('common')
+  const { t, i18n } = useTranslation('common')
   const currentUserId = Number(useAuthStore((state) => state.user?.id))
   const { data: mailboxesData } = useLegalMailboxes()
   const { data: replyTemplatesData } = useLegalComposerReplyTemplates(null)
@@ -97,6 +97,10 @@ function NewOutgoingLetterForm({ onClose, onSent }: NewOutgoingLetterFormProps) 
   const [subject, setSubject] = useState('')
   const [body, setBody] = useState('')
   const [edoType, setEdoType] = useState<EdoType>('none')
+  const [selectedClientTemplateContext, setSelectedClientTemplateContext] = useState<{
+    clientName: string | null
+    contract: string | null
+  }>({ clientName: null, contract: null })
 
   const debouncedClientSearch = useDebounce(clientSearch, 300)
   const { data: clientsData, isFetching: clientsLoading } = useClients(
@@ -130,6 +134,28 @@ function NewOutgoingLetterForm({ onClose, onSent }: NewOutgoingLetterFormProps) 
     setClientId(id)
     setClientSearch('')
     setEmailOverride(null)
+
+    const client = clientsData?.items.find((item) => String(item.id) === id)
+    if (!client) {
+      setSelectedClientTemplateContext({ clientName: null, contract: null })
+      return
+    }
+
+    const contract = client.legacy_id?.trim() || `CL-${String(client.id).padStart(5, '0')}`
+    const clientName = [client.first_name, client.last_name].filter(Boolean).join(' ') || null
+    setSelectedClientTemplateContext({ clientName, contract })
+  }
+
+  const applyTemplateToBody = (templateBody: string) => {
+    const filled = applyLetterTemplatePlaceholders(
+      templateBody,
+      {
+        clientName: selectedClientTemplateContext.clientName,
+        contract: selectedClientTemplateContext.contract,
+      },
+      { language: i18n.language }
+    )
+    setBody((prev) => (prev.trim() ? `${prev.trim()}\n\n${filled}` : filled))
   }
 
   const effectiveToEmail = recipientMode === 'client' ? toEmail : institutionEmail
@@ -416,12 +442,7 @@ function NewOutgoingLetterForm({ onClose, onSent }: NewOutgoingLetterFormProps) 
                       <DropdownMenuItem
                         key={template.id}
                         className="cursor-pointer rounded-md px-2.5 py-1.5 text-[12px]"
-                        onClick={() =>
-                          setBody((prev) => {
-                            const filled = applyReplyTemplatePlaceholders(template.body, {})
-                            return prev.trim() ? `${prev.trim()}\n\n${filled}` : filled
-                          })
-                        }
+                        onClick={() => applyTemplateToBody(template.body)}
                       >
                         {template.name}
                       </DropdownMenuItem>

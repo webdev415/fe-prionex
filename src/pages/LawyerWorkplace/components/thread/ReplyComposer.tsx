@@ -131,7 +131,7 @@ export function ReplyComposer({
       toast.info(
         t(
           'pages.lawyerWorkplace.reply.noTemplatesHint',
-          'Create reply templates in Settings → Templates'
+          'Create letter templates in Settings → Templates'
         )
       )
     }

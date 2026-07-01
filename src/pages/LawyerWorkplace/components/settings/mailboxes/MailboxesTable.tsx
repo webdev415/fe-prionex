@@ -59,6 +59,8 @@ export function MailboxesTable({
     }
   }
 
+  const isEmpty = mailboxes.length === 0
+
   return (
     <div className="min-w-0 overflow-hidden rounded-xl border border-gray-100 bg-white">
       <div
@@ -89,7 +91,7 @@ export function MailboxesTable({
                 size="sm"
                 leftIcon={<Icons.Reload size={16} strokeWidth={1.5} />}
                 className={cn('h-9 rounded-md', isCompact && 'flex-1')}
-                disabled={isPolling}
+                disabled={isPolling || isEmpty}
                 onClick={() => void onTestSync()}
               >
                 {isPolling
@@ -110,177 +112,212 @@ export function MailboxesTable({
         </div>
       </div>
 
-      <div className="data-table-scroll w-full overflow-x-auto overflow-y-hidden pb-2">
-        <table className="w-full min-w-[820px] text-left text-[13px]">
-          <thead>
-            <tr className="border-b border-gray-100">
-              <th
-                className={cn(
-                  'text-light-600 py-3 text-[11px] font-medium',
-                  isCompact ? 'px-4' : 'px-5'
-                )}
-              >
-                {t('pages.lawyerWorkplace.settings.mailboxes.columns.mailbox', 'Mailbox')}
-              </th>
-              <th className="text-light-600 px-4 py-3 text-[11px] font-medium">
-                {t('pages.lawyerWorkplace.settings.status', 'Status')}
-              </th>
-              <th className="text-light-600 px-4 py-3 text-[11px] font-medium">
-                {t('pages.lawyerWorkplace.settings.mailboxes.columns.letters', 'Letters')}
-              </th>
-              <th className="text-light-600 px-4 py-3 text-[11px] font-medium">
-                {t('pages.lawyerWorkplace.settings.mailboxes.columns.defaultType', 'Default type')}
-              </th>
-              <th className="text-light-600 px-4 py-3 text-[11px] font-medium">
-                {t('pages.lawyerWorkplace.settings.mailboxes.columns.routing', 'Routing')}
-              </th>
-              <th className="text-light-600 px-4 py-3 text-[11px] font-medium">
-                {t('pages.lawyerWorkplace.settings.mailboxes.columns.actions', 'Actions')}
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {paginatedMailboxes.map((mailbox, idx) => {
-              const defaultType = mailbox.defaultLetterTypeId
-                ? letterTypeById[mailbox.defaultLetterTypeId]
-                : null
+      {isEmpty ? (
+        <div className="flex flex-col items-center justify-center px-6 py-14 text-center">
+          <div className="bg-light-100 mb-4 flex h-12 w-12 items-center justify-center rounded-full">
+            <Icons.Mail size={22} strokeWidth={1.5} className="text-light-500" />
+          </div>
+          <p className="text-dark-500 text-[14px] font-medium">
+            {t('pages.lawyerWorkplace.settings.mailboxes.empty.title', 'No mailboxes connected')}
+          </p>
+          <p className="text-light-600 mt-1 max-w-sm text-[12px] leading-relaxed">
+            {t(
+              'pages.lawyerWorkplace.settings.mailboxes.empty.description',
+              'Add a mailbox to start syncing incoming legal correspondence.'
+            )}
+          </p>
+          {!readOnly ? (
+            <Button
+              variant="primary"
+              size="sm"
+              leftIcon={<Icons.AddCircle size={18} strokeWidth={1.5} />}
+              onClick={onAddMailbox}
+              className="mt-5 h-9 rounded-md"
+            >
+              {t('pages.lawyerWorkplace.settings.mailboxes.addMailbox', 'Add mailbox')}
+            </Button>
+          ) : null}
+        </div>
+      ) : (
+        <>
+          <div className="data-table-scroll w-full overflow-x-auto overflow-y-hidden pb-2">
+            <table className="w-full min-w-[820px] text-left text-[13px]">
+              <thead>
+                <tr className="border-b border-gray-100">
+                  <th
+                    className={cn(
+                      'text-light-600 py-3 text-[11px] font-medium',
+                      isCompact ? 'px-4' : 'px-5'
+                    )}
+                  >
+                    {t('pages.lawyerWorkplace.settings.mailboxes.columns.mailbox', 'Mailbox')}
+                  </th>
+                  <th className="text-light-600 px-4 py-3 text-[11px] font-medium">
+                    {t('pages.lawyerWorkplace.settings.status', 'Status')}
+                  </th>
+                  <th className="text-light-600 px-4 py-3 text-[11px] font-medium">
+                    {t('pages.lawyerWorkplace.settings.mailboxes.columns.letters', 'Letters')}
+                  </th>
+                  <th className="text-light-600 px-4 py-3 text-[11px] font-medium">
+                    {t(
+                      'pages.lawyerWorkplace.settings.mailboxes.columns.defaultType',
+                      'Default type'
+                    )}
+                  </th>
+                  <th className="text-light-600 px-4 py-3 text-[11px] font-medium">
+                    {t('pages.lawyerWorkplace.settings.mailboxes.columns.routing', 'Routing')}
+                  </th>
+                  <th className="text-light-600 px-4 py-3 text-[11px] font-medium">
+                    {t('pages.lawyerWorkplace.settings.mailboxes.columns.actions', 'Actions')}
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {paginatedMailboxes.map((mailbox, idx) => {
+                  const defaultType = mailbox.defaultLetterTypeId
+                    ? letterTypeById[mailbox.defaultLetterTypeId]
+                    : null
 
-              return (
-                <tr
-                  key={mailbox.id}
-                  className={cn(idx < paginatedMailboxes.length - 1 && 'border-b border-gray-100')}
-                >
-                  <td className={cn('py-4', isCompact ? 'px-4' : 'px-5')}>
-                    <div className="min-w-[180px]">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <p className="text-dark-500 text-[13px] font-semibold">
-                          {t(mailbox.displayNameKey, mailbox.displayNameFallback)}
-                        </p>
-                        {mailbox.isDefaultOutgoing ? (
-                          <span className="bg-secondary-100 text-secondary-800 rounded-full px-2 py-0.5 text-[10px] font-medium">
-                            {t(
-                              'pages.lawyerWorkplace.settings.mailboxes.defaultOutgoing',
-                              'Default'
-                            )}
-                          </span>
-                        ) : null}
-                        {!mailbox.hasCredentials ? (
-                          <span
-                            className="bg-warning-100 text-warning-700 flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium"
-                            title={t(
-                              'pages.lawyerWorkplace.settings.mailboxes.noCredentials',
-                              'No credentials configured — sync and sending will fail'
-                            )}
-                          >
-                            <Icons.Warning size={10} strokeWidth={2} />
-                            {t(
-                              'pages.lawyerWorkplace.settings.mailboxes.noCredentialsShort',
-                              'No credentials'
-                            )}
-                          </span>
-                        ) : null}
-                        {!mailbox.hasCredentials &&
-                        mailbox.provider === 'gmail_oauth2' &&
-                        !readOnly &&
-                        onConnectGmail ? (
-                          <button
-                            type="button"
-                            onClick={() => onConnectGmail(mailbox)}
-                            className="bg-primary-50 text-primary-700 hover:bg-primary-100 flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium transition-colors"
-                          >
-                            <Icons.Mail size={10} strokeWidth={2} />
-                            {t(
-                              'pages.lawyerWorkplace.settings.mailboxes.connectGmail',
-                              'Connect Gmail'
-                            )}
-                          </button>
-                        ) : null}
-                      </div>
-                      <p className="text-light-600 truncate text-[11px]">{mailbox.email}</p>
-                    </div>
-                  </td>
-                  <td className="px-4 py-4">
-                    <span
+                  return (
+                    <tr
+                      key={mailbox.id}
                       className={cn(
-                        'inline-flex rounded-full px-2.5 py-1 text-[11px] font-medium whitespace-nowrap capitalize',
-                        getStatusClass(mailbox.status)
+                        idx < paginatedMailboxes.length - 1 && 'border-b border-gray-100'
                       )}
                     >
-                      {t(
-                        `pages.lawyerWorkplace.settings.mailboxes.status.${mailbox.status}`,
-                        mailbox.status
-                      )}
-                    </span>
-                  </td>
-                  <td className="px-4 py-4">
-                    <span className="text-dark-500 font-semibold">{mailbox.letterCount}</span>
-                  </td>
-                  <td className="px-4 py-4">
-                    {defaultType ? (
-                      <LetterTypeBadge letterType={defaultType} t={t} size="sm" />
-                    ) : (
-                      <span className="text-light-600 text-[12px]">
-                        {t('pages.lawyerWorkplace.settings.mailboxes.autoRoute', 'Auto-route')}
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-4 py-4">
-                    <span className="text-dark-500 text-[12px] font-medium">
-                      {t('pages.lawyerWorkplace.settings.mailboxes.rulesCount', {
-                        count: mailbox.routingRules.length,
-                        defaultValue: `${mailbox.routingRules.length} rules`,
-                      })}
-                    </span>
-                  </td>
-                  <td className="px-4 py-4">
-                    {!readOnly ? (
-                      <div className="flex items-center gap-1">
-                        <button
-                          type="button"
-                          onClick={() => onEdit(mailbox)}
-                          className="text-light-600 hover:text-dark-500 flex h-8 w-8 items-center justify-center rounded-full hover:bg-gray-100"
-                          aria-label={t('actions.edit', 'Edit')}
-                        >
-                          <Icons.PencilEdit02 size={15} strokeWidth={1.5} />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => onToggleStatus(mailbox)}
-                          className="text-light-600 hover:text-dark-500 flex h-8 w-8 items-center justify-center rounded-full hover:bg-gray-100"
-                          aria-label={
-                            mailbox.status === 'disabled'
-                              ? t('actions.enable', 'Enable')
-                              : t('actions.disable', 'Disable')
-                          }
-                        >
-                          {mailbox.status === 'disabled' ? (
-                            <Icons.Tick02 size={15} strokeWidth={1.5} />
-                          ) : (
-                            <Icons.Cancel01 size={15} strokeWidth={1.5} />
+                      <td className={cn('py-4', isCompact ? 'px-4' : 'px-5')}>
+                        <div className="min-w-[180px]">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className="text-dark-500 text-[13px] font-semibold">
+                              {t(mailbox.displayNameKey, mailbox.displayNameFallback)}
+                            </p>
+                            {mailbox.isDefaultOutgoing ? (
+                              <span className="bg-secondary-100 text-secondary-800 rounded-full px-2 py-0.5 text-[10px] font-medium">
+                                {t(
+                                  'pages.lawyerWorkplace.settings.mailboxes.defaultOutgoing',
+                                  'Default'
+                                )}
+                              </span>
+                            ) : null}
+                            {!mailbox.hasCredentials ? (
+                              <span
+                                className="bg-warning-100 text-warning-700 flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium"
+                                title={t(
+                                  'pages.lawyerWorkplace.settings.mailboxes.noCredentials',
+                                  'No credentials configured — sync and sending will fail'
+                                )}
+                              >
+                                <Icons.Warning size={10} strokeWidth={2} />
+                                {t(
+                                  'pages.lawyerWorkplace.settings.mailboxes.noCredentialsShort',
+                                  'No credentials'
+                                )}
+                              </span>
+                            ) : null}
+                            {!mailbox.hasCredentials &&
+                            mailbox.provider === 'gmail_oauth2' &&
+                            !readOnly &&
+                            onConnectGmail ? (
+                              <button
+                                type="button"
+                                onClick={() => onConnectGmail(mailbox)}
+                                className="bg-primary-50 text-primary-700 hover:bg-primary-100 flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium transition-colors"
+                              >
+                                <Icons.Mail size={10} strokeWidth={2} />
+                                {t(
+                                  'pages.lawyerWorkplace.settings.mailboxes.connectGmail',
+                                  'Connect Gmail'
+                                )}
+                              </button>
+                            ) : null}
+                          </div>
+                          <p className="text-light-600 truncate text-[11px]">{mailbox.email}</p>
+                        </div>
+                      </td>
+                      <td className="px-4 py-4">
+                        <span
+                          className={cn(
+                            'inline-flex rounded-full px-2.5 py-1 text-[11px] font-medium whitespace-nowrap capitalize',
+                            getStatusClass(mailbox.status)
                           )}
-                        </button>
-                      </div>
-                    ) : (
-                      <span className="text-light-500 text-[12px]">—</span>
-                    )}
-                  </td>
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
-      </div>
+                        >
+                          {t(
+                            `pages.lawyerWorkplace.settings.mailboxes.status.${mailbox.status}`,
+                            mailbox.status
+                          )}
+                        </span>
+                      </td>
+                      <td className="px-4 py-4">
+                        <span className="text-dark-500 font-semibold">{mailbox.letterCount}</span>
+                      </td>
+                      <td className="px-4 py-4">
+                        {defaultType ? (
+                          <LetterTypeBadge letterType={defaultType} t={t} size="sm" />
+                        ) : (
+                          <span className="text-light-600 text-[12px]">
+                            {t('pages.lawyerWorkplace.settings.mailboxes.autoRoute', 'Auto-route')}
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-4 py-4">
+                        <span className="text-dark-500 text-[12px] font-medium">
+                          {t('pages.lawyerWorkplace.settings.mailboxes.rulesCount', {
+                            count: mailbox.routingRules.length,
+                            defaultValue: `${mailbox.routingRules.length} rules`,
+                          })}
+                        </span>
+                      </td>
+                      <td className="px-4 py-4">
+                        {!readOnly ? (
+                          <div className="flex items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => onEdit(mailbox)}
+                              className="text-light-600 hover:text-dark-500 flex h-8 w-8 items-center justify-center rounded-full hover:bg-gray-100"
+                              aria-label={t('actions.edit', 'Edit')}
+                            >
+                              <Icons.PencilEdit02 size={15} strokeWidth={1.5} />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => onToggleStatus(mailbox)}
+                              className="text-light-600 hover:text-dark-500 flex h-8 w-8 items-center justify-center rounded-full hover:bg-gray-100"
+                              aria-label={
+                                mailbox.status === 'disabled'
+                                  ? t('actions.enable', 'Enable')
+                                  : t('actions.disable', 'Disable')
+                              }
+                            >
+                              {mailbox.status === 'disabled' ? (
+                                <Icons.Tick02 size={15} strokeWidth={1.5} />
+                              ) : (
+                                <Icons.Cancel01 size={15} strokeWidth={1.5} />
+                              )}
+                            </button>
+                          </div>
+                        ) : (
+                          <span className="text-light-500 text-[12px]">—</span>
+                        )}
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
 
-      {totalPages > 0 && (
-        <Pagination
-          currentPage={currentPage}
-          totalPages={totalPages}
-          pageSize={pageSize}
-          pageSizeOptions={PAGE_SIZE_OPTIONS}
-          onPageChange={setPage}
-          onPageSizeChange={setPageSize}
-          className={cn('border-t border-gray-100 px-4 sm:px-5 lg:px-6', isCompact && 'py-3')}
-        />
+          {totalPages > 0 && (
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              pageSize={pageSize}
+              pageSizeOptions={PAGE_SIZE_OPTIONS}
+              onPageChange={setPage}
+              onPageSizeChange={setPageSize}
+              className={cn('border-t border-gray-100 px-4 sm:px-5 lg:px-6', isCompact && 'py-3')}
+            />
+          )}
+        </>
       )}
     </div>
   )

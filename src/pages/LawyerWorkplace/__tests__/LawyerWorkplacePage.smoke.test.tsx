@@ -170,7 +170,6 @@ vi.mock('@/features/lawyerWorkplace/api/legalApi', () => ({
     listSettingsMailboxes: vi.fn(() => Promise.resolve(emptyList)),
     getSyncSettings: vi.fn(() => Promise.resolve({ sync_interval: '1h', last_synced_at: null })),
     listReplyTemplates: vi.fn(() => Promise.resolve(emptyList)),
-    listDocumentPresets: vi.fn(() => Promise.resolve(emptyList)),
     getReplyDraft: vi.fn(() =>
       Promise.resolve({
         exists: false,

@@ -251,6 +251,7 @@ export function buildLetterParameters(
 
   const confirmedCount = countConfirmedParameters(message)
   const totalParameters = 4
+  const contractLabel = client.clientCode?.trim() ?? ''
 
   return {
     letterType: letterType?.slug ?? letterTypeId,
@@ -259,8 +260,8 @@ export function buildLetterParameters(
       client.clientCode && client.clientName
         ? `${client.clientCode} · ${client.clientName}`
         : (client.clientCode ?? ''),
-    contractId: '',
-    contractLabel: '',
+    contractId: contractLabel,
+    contractLabel,
     dueDate: computeDueDateIso(message.received_at, letterType?.sla_days),
     dueDateHint: '',
     lawyerId:
@@ -337,8 +338,8 @@ export function mapListItemToPreviewDetail(summary: LetterListItem, replyDraft =
       clientLabel: summary.clientCode
         ? `${summary.clientCode}${summary.clientName ? ` · ${summary.clientName}` : ''}`.trim()
         : '',
-      contractId: '',
-      contractLabel: '',
+      contractId: summary.clientCode ?? '',
+      contractLabel: summary.clientCode ?? '',
       dueDate: '',
       dueDateHint: '',
       lawyerId: '',

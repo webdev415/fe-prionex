@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/Button'
 import {
@@ -10,16 +10,16 @@ import {
 import { Label } from '@/components/ui/Label'
 import { Modal, ModalContent, ModalFooter, ModalHeader } from '@/components/ui/Modal'
 import { Textarea } from '@/components/ui/Textarea'
+import { insertMessagingVariableAtCursor } from '@/features/messaging/utils/messagingTemplateVariables'
 import { Icons } from '@/lib/icons'
-import { cn } from '@/lib/utils'
 import type { LetterTypeConfig, SettingsReplyTemplate } from '../../../settings/types'
 import { LetterTypeBadge } from '../LetterTypeBadge'
+import { LegalLetterVariablesPalette } from './LegalLetterVariablesPalette'
 
 export interface ReplyTemplateFormValues {
   name: string
   body: string
   letterTypeIds: string[]
-  isActive: boolean
 }
 
 interface ReplyTemplateModalProps {
@@ -36,13 +36,12 @@ function getInitialValues(
   t: (key: string, fallback: string) => string
 ): ReplyTemplateFormValues {
   if (!template) {
-    return { name: '', body: '', letterTypeIds: [], isActive: true }
+    return { name: '', body: '', letterTypeIds: [] }
   }
   return {
     name: t(template.nameKey, template.nameFallback),
     body: t(template.bodyKey, template.bodyFallback),
     letterTypeIds: [...template.letterTypeIds],
-    isActive: template.isActive,
   }
 }
 
@@ -56,11 +55,11 @@ export function ReplyTemplateModal({
 }: ReplyTemplateModalProps) {
   const { t } = useTranslation('common')
   const isEditing = template !== null
+  const bodyRef = useRef<HTMLTextAreaElement>(null)
 
   const [name, setName] = useState('')
   const [body, setBody] = useState('')
   const [letterTypeIds, setLetterTypeIds] = useState<string[]>([])
-  const [isActive, setIsActive] = useState(true)
   const [typesOpen, setTypesOpen] = useState(false)
 
   useEffect(() => {
@@ -70,7 +69,6 @@ export function ReplyTemplateModal({
       setName(initial.name)
       setBody(initial.body)
       setLetterTypeIds(initial.letterTypeIds)
-      setIsActive(initial.isActive)
       setTypesOpen(false)
     })
   }, [open, template, t])
@@ -79,6 +77,20 @@ export function ReplyTemplateModal({
     setLetterTypeIds((previous) =>
       previous.includes(typeId) ? previous.filter((id) => id !== typeId) : [...previous, typeId]
     )
+  }
+
+  const insertVariableAtCursor = (variableName: string) => {
+    insertMessagingVariableAtCursor({
+      variableName,
+      subject: '',
+      body,
+      setSubject: () => {},
+      setBody,
+      showSubject: false,
+      subjectRef: { current: null },
+      bodyRef,
+      lastFocusedRef: { current: 'body' },
+    })
   }
 
   const canSave = name.trim().length > 0 && body.trim().length > 0
@@ -93,8 +105,8 @@ export function ReplyTemplateModal({
         }
         title={
           isEditing
-            ? t('pages.lawyerWorkplace.settings.templates.editReplyTitle', 'Edit reply template')
-            : t('pages.lawyerWorkplace.settings.templates.addReplyTitle', 'Add reply template')
+            ? t('pages.lawyerWorkplace.settings.templates.editReplyTitle', 'Edit letter template')
+            : t('pages.lawyerWorkplace.settings.templates.addReplyTitle', 'Add letter template')
         }
       />
       <ModalContent className="flex flex-col gap-5 px-1">
@@ -165,37 +177,19 @@ export function ReplyTemplateModal({
             {t('pages.lawyerWorkplace.settings.templates.fields.body', 'Template body')}
           </Label>
           <Textarea
+            ref={bodyRef}
             value={body}
             onChange={(e) => setBody(e.target.value)}
             rows={8}
             placeholder={t(
               'pages.lawyerWorkplace.settings.templates.fields.bodyPlaceholder',
-              'Write the reply template text...'
+              'Write the letter template text...'
             )}
             className="text-dark-500 min-h-[160px] resize-y rounded-md border-gray-200 text-[13px]"
           />
-          <p className="text-light-600 text-[11px]">
-            {t(
-              'pages.lawyerWorkplace.settings.templates.fields.bodyHint',
-              'Placeholders like {{clientName}} and {{referenceId}} are supported.'
-            )}
-          </p>
         </div>
 
-        <label className="flex cursor-pointer items-center gap-2">
-          <input
-            type="checkbox"
-            checked={isActive}
-            onChange={(e) => setIsActive(e.target.checked)}
-            className="accent-secondary-800 h-4 w-4 rounded border-gray-300"
-          />
-          <span className={cn('text-dark-500 text-[13px]')}>
-            {t(
-              'pages.lawyerWorkplace.settings.templates.fields.active',
-              'Active in reply composer'
-            )}
-          </span>
-        </label>
+        <LegalLetterVariablesPalette onInsert={insertVariableAtCursor} disabled={isSubmitting} />
       </ModalContent>
       <ModalFooter>
         <Button variant="cancel" onClick={onClose} className="h-10 w-full rounded-md">
@@ -209,7 +203,6 @@ export function ReplyTemplateModal({
               name: name.trim(),
               body: body.trim(),
               letterTypeIds,
-              isActive,
             })
           }
           className="h-10 w-full rounded-md"

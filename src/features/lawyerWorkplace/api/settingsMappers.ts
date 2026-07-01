@@ -1,12 +1,10 @@
 import type { MailboxFormValues } from '@/pages/LawyerWorkplace/components/settings/mailboxes/MailboxModal'
-import type { DocumentPresetFormValues } from '@/pages/LawyerWorkplace/components/settings/templates/DocumentPresetModal'
 import type { ReplyTemplateFormValues } from '@/pages/LawyerWorkplace/components/settings/templates/ReplyTemplateModal'
 import type {
   DepartmentSyncSettings,
   LawyerPriorityRole,
   LetterTypeConfig,
   MailboxRoutingRule,
-  SettingsDocumentPreset,
   SettingsLawyer,
   SettingsMailbox,
   SettingsReplyTemplate,
@@ -15,7 +13,6 @@ import type {
 import { legalApi } from './legalApi'
 import type {
   LegalDepartmentSyncSettings,
-  LegalDocumentPreset,
   LegalLawyer,
   LegalLetterType,
   LegalMailboxRoutingRuleInput,
@@ -272,25 +269,12 @@ export function mapLegalReplyTemplateToSettings(
   }
 }
 
-export function mapLegalDocumentPresetToSettings(
-  preset: LegalDocumentPreset
-): SettingsDocumentPreset {
-  return {
-    id: preset.id,
-    nameKey: `api:document-preset:name:${preset.id}`,
-    nameFallback: preset.name,
-    documentType: preset.document_type,
-    defaultAssigneeId: preset.default_assignee_lawyer_id,
-    isActive: preset.is_active,
-  }
-}
-
 export function mapReplyTemplateFormToCreate(values: ReplyTemplateFormValues) {
   return {
     name: values.name.trim(),
     body: values.body,
     letter_type_ids: values.letterTypeIds,
-    is_active: values.isActive,
+    is_active: true,
   }
 }
 
@@ -299,39 +283,11 @@ export function mapReplyTemplateFormToUpdate(values: ReplyTemplateFormValues) {
     name: values.name.trim(),
     body: values.body,
     letter_type_ids: values.letterTypeIds,
-    is_active: values.isActive,
+    is_active: true,
   }
 }
 
-export function mapDocumentPresetFormToCreate(values: DocumentPresetFormValues) {
-  return {
-    name: values.name.trim(),
-    document_type: values.documentType,
-    default_assignee_lawyer_id: values.defaultAssigneeId,
-    is_active: values.isActive,
-  }
-}
-
-export function mapDocumentPresetFormToUpdate(values: DocumentPresetFormValues) {
-  return {
-    name: values.name.trim(),
-    document_type: values.documentType,
-    default_assignee_lawyer_id: values.defaultAssigneeId,
-    is_active: values.isActive,
-  }
-}
-
-export function applyReplyTemplatePlaceholders(
-  body: string,
-  context: {
-    clientName?: string | null
-    referenceId?: string | null
-    date?: string
-  }
-): string {
-  const today = context.date ?? new Date().toISOString().slice(0, 10)
-  return body
-    .replaceAll('{{clientName}}', context.clientName?.trim() || 'Client')
-    .replaceAll('{{referenceId}}', context.referenceId?.trim() || '—')
-    .replaceAll('{{date}}', today)
-}
+export {
+  applyLetterTemplatePlaceholders,
+  applyReplyTemplatePlaceholders,
+} from '../utils/letterTemplateVariables'

@@ -544,32 +544,3 @@ export interface LegalReplyTemplateUpdate {
   letter_type_ids?: string[]
   is_active?: boolean
 }
-
-export type LegalDocumentPresetType = 'outgoing' | 'nbu_response'
-
-export interface LegalDocumentPreset {
-  id: string
-  name: string
-  document_type: LegalDocumentPresetType
-  default_assignee_lawyer_id: string | null
-  is_active: boolean
-}
-
-export interface LegalDocumentPresetListResponse {
-  items: LegalDocumentPreset[]
-  total: number
-}
-
-export interface LegalDocumentPresetCreate {
-  name: string
-  document_type: LegalDocumentPresetType
-  default_assignee_lawyer_id?: string | null
-  is_active?: boolean
-}
-
-export interface LegalDocumentPresetUpdate {
-  name?: string
-  document_type?: LegalDocumentPresetType
-  default_assignee_lawyer_id?: string | null
-  is_active?: boolean
-}

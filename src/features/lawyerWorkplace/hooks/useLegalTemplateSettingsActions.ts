@@ -1,22 +1,12 @@
 import { useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
-import type { DocumentPresetFormValues } from '@/pages/LawyerWorkplace/components/settings/templates/DocumentPresetModal'
 import type { ReplyTemplateFormValues } from '@/pages/LawyerWorkplace/components/settings/templates/ReplyTemplateModal'
-import type {
-  SettingsDocumentPreset,
-  SettingsReplyTemplate,
-} from '@/pages/LawyerWorkplace/settings/types'
+import type { SettingsReplyTemplate } from '@/pages/LawyerWorkplace/settings/types'
+import { mapReplyTemplateFormToCreate, mapReplyTemplateFormToUpdate } from '../api/settingsMappers'
 import {
-  mapDocumentPresetFormToCreate,
-  mapDocumentPresetFormToUpdate,
-  mapReplyTemplateFormToCreate,
-  mapReplyTemplateFormToUpdate,
-} from '../api/settingsMappers'
-import {
-  useCreateLegalDocumentPreset,
   useCreateLegalReplyTemplate,
-  useUpdateLegalDocumentPreset,
+  useDeleteLegalReplyTemplate,
   useUpdateLegalReplyTemplate,
 } from './useLegalMutations'
 
@@ -24,8 +14,7 @@ export function useLegalTemplateSettingsActions() {
   const { t } = useTranslation('common')
   const createReplyTemplate = useCreateLegalReplyTemplate()
   const updateReplyTemplate = useUpdateLegalReplyTemplate()
-  const createDocumentPreset = useCreateLegalDocumentPreset()
-  const updateDocumentPreset = useUpdateLegalDocumentPreset()
+  const deleteReplyTemplate = useDeleteLegalReplyTemplate()
 
   const saveReplyTemplate = useCallback(
     async (values: ReplyTemplateFormValues, editingTemplate: SettingsReplyTemplate | null) => {
@@ -35,69 +24,36 @@ export function useLegalTemplateSettingsActions() {
           payload: mapReplyTemplateFormToUpdate(values),
         })
         toast.success(
-          t('pages.lawyerWorkplace.settings.templates.replyUpdateSuccess', 'Reply template updated')
+          t(
+            'pages.lawyerWorkplace.settings.templates.replyUpdateSuccess',
+            'Letter template updated'
+          )
         )
         return
       }
 
       await createReplyTemplate.mutateAsync(mapReplyTemplateFormToCreate(values))
       toast.success(
-        t('pages.lawyerWorkplace.settings.templates.replyAddSuccess', 'Reply template added')
+        t('pages.lawyerWorkplace.settings.templates.replyAddSuccess', 'Letter template added')
       )
     },
     [createReplyTemplate, t, updateReplyTemplate]
   )
 
-  const toggleReplyTemplateActive = useCallback(
+  const deleteReplyTemplateAction = useCallback(
     async (template: SettingsReplyTemplate) => {
-      await updateReplyTemplate.mutateAsync({
-        templateId: template.id,
-        payload: { is_active: !template.isActive },
-      })
-    },
-    [updateReplyTemplate]
-  )
-
-  const saveDocumentPreset = useCallback(
-    async (values: DocumentPresetFormValues, editingPreset: SettingsDocumentPreset | null) => {
-      if (editingPreset) {
-        await updateDocumentPreset.mutateAsync({
-          presetId: editingPreset.id,
-          payload: mapDocumentPresetFormToUpdate(values),
-        })
-        toast.success(
-          t(
-            'pages.lawyerWorkplace.settings.templates.presetUpdateSuccess',
-            'Document preset updated'
-          )
-        )
-        return
-      }
-
-      await createDocumentPreset.mutateAsync(mapDocumentPresetFormToCreate(values))
+      await deleteReplyTemplate.mutateAsync(template.id)
       toast.success(
-        t('pages.lawyerWorkplace.settings.templates.presetAddSuccess', 'Document preset added')
+        t('pages.lawyerWorkplace.settings.templates.replyDeleteSuccess', 'Letter template deleted')
       )
     },
-    [createDocumentPreset, t, updateDocumentPreset]
-  )
-
-  const toggleDocumentPresetActive = useCallback(
-    async (preset: SettingsDocumentPreset) => {
-      await updateDocumentPreset.mutateAsync({
-        presetId: preset.id,
-        payload: { is_active: !preset.isActive },
-      })
-    },
-    [updateDocumentPreset]
+    [deleteReplyTemplate, t]
   )
 
   return {
     saveReplyTemplate,
-    toggleReplyTemplateActive,
-    saveDocumentPreset,
-    toggleDocumentPresetActive,
+    deleteReplyTemplate: deleteReplyTemplateAction,
     isSavingReplyTemplate: createReplyTemplate.isPending || updateReplyTemplate.isPending,
-    isSavingDocumentPreset: createDocumentPreset.isPending || updateDocumentPreset.isPending,
+    isDeletingReplyTemplate: deleteReplyTemplate.isPending,
   }
 }

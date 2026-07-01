@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/Button'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 import {
-  applyReplyTemplatePlaceholders,
+  applyLetterTemplatePlaceholders,
   downloadLegalAttachment,
   useLegalComposerReplyTemplates,
   useLegalMailboxes,
@@ -224,10 +224,16 @@ export function EmailThreadPanel({
 
   const handleApplyTemplate = (body: string) => {
     if (!letter) return
-    const filled = applyReplyTemplatePlaceholders(body, {
-      clientName: letter.clientName,
-      referenceId: letter.referenceId,
-    })
+    const filled = applyLetterTemplatePlaceholders(
+      body,
+      {
+        clientName: letter.clientName,
+        referenceId: letter.referenceId,
+        contract: letter.parameters.contractLabel,
+        dueDate: letter.parameters.dueDate,
+      },
+      { language: i18n.language }
+    )
     onReplyDraftChange(replyDraft.trim() ? `${replyDraft.trim()}\n\n${filled}` : filled)
   }
 

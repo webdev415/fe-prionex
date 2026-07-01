@@ -475,17 +475,12 @@
         "attach": "Attach",
         "attaching": "Attaching…",
         "template": "Template",
-        "noTemplatesHint": "Create reply templates in Settings → Templates",
+        "noTemplatesHint": "Create letter templates in Settings → Templates",
         "send": "Send",
         "edoLabel": "EDO",
         "edoOutgoing": "Outgoing (ВИХ)",
         "edoNbu": "NBU reply (НБУ)",
-        "edoNone": "Do not register",
-        "templates": {
-          "complaintResponse": "Complaint response",
-          "nbuAcknowledgement": "NBU acknowledgement",
-          "extensionRequest": "Extension request"
-        }
+        "edoNone": "Do not register"
       },
       "newLetter": {
         "title": "New Outgoing Letter",
@@ -749,10 +744,11 @@
           "generate": {
             "title": "Generate document",
             "documentType": "Document type",
-            "template": "Template",
-            "selectTemplate": "Select template",
+            "documentName": "Document name",
+            "documentNamePlaceholder": "Enter document name",
             "client": "Client · Contract",
             "selectClient": "Select client",
+            "clientSearchHint": "Type 2+ characters to search…",
             "assignee": "Assignee",
             "submit": "Generate & register",
             "success": "Document generated",
@@ -951,6 +947,7 @@
         "mailboxes": {
           "title": "Mailboxes",
           "description": "Configure connected legal mailboxes, sync intervals, and routing rules.",
+          "loading": "Loading mailboxes…",
           "tableTitle": "Connected mailboxes · {{count}}",
           "tableDesc": "Manage addresses, routing rules, and default outgoing mailbox",
           "addMailbox": "Add mailbox",
@@ -958,12 +955,28 @@
           "editTitle": "Edit mailbox",
           "addSuccess": "Mailbox added",
           "updateSuccess": "Mailbox updated",
+          "disabledHidden": "Mailbox disabled. Its messages are hidden from the inbox.",
           "testSync": "Test sync",
+          "testSyncRunning": "Syncing…",
           "testSyncSoon": "Sync test coming soon",
+          "testSyncPartial": "Sync finished with {{errors}} error(s). {{ingested}} new message(s).",
+          "testSyncSuccess": "Sync complete. {{ingested}} new message(s) ingested.",
+          "testSyncSuccessEmpty": "Sync complete. No new messages.",
           "defaultOutgoing": "Default",
           "autoRoute": "Auto-route",
           "duplicateEmail": "This mailbox is already connected",
+          "noCredentials": "No credentials configured — sync and sending will fail",
+          "noCredentialsShort": "No credentials",
+          "connectGmail": "Connect Gmail",
+          "gmailOAuthSuccess": "Gmail connected successfully!",
+          "gmailOAuthFailed": "Gmail authorisation failed ({{error}}). Please try again.",
+          "gmailOAuthError": "Failed to start Gmail authorisation. Try again.",
           "rulesCount": "{{count}} rules",
+          "rulesCount_one": "{{count}} rule",
+          "empty": {
+            "title": "No mailboxes connected",
+            "description": "Add a mailbox to start syncing incoming legal correspondence."
+          },
           "columns": {
             "mailbox": "Mailbox",
             "letters": "Letters",
@@ -980,8 +993,28 @@
             "email": "Email address",
             "displayName": "Display name",
             "displayNamePlaceholder": "Legal department",
+            "provider": "Mail provider",
+            "password": "App password",
+            "passwordPlaceholder": "Enter app password",
+            "passwordEditPlaceholder": "Leave blank to keep current password",
+            "passwordHint": "Use an app-specific password from your mail provider, not your login password.",
             "defaultType": "Default letter type",
-            "defaultOutgoing": "Use as default outgoing mailbox in reply composer"
+            "defaultOutgoing": "Use as default outgoing mailbox in reply composer",
+            "syncFromToday": "Sync from today only",
+            "syncFromTodayHint": "Recommended for mailboxes with many existing emails. Only messages arriving after this point will be imported."
+          },
+          "oauth2": {
+            "title": "Gmail requires OAuth2 authorisation",
+            "hint": "Save the mailbox, then click the \"Connect Gmail\" button in the table to authorise access via Google. No password is stored."
+          },
+          "serverSettings": {
+            "title": "Server settings",
+            "imapHost": "IMAP host",
+            "imapPort": "Port",
+            "imapSsl": "Use SSL",
+            "smtpHost": "SMTP host",
+            "smtpPort": "Port",
+            "smtpTls": "Use TLS"
           },
           "items": {
             "legal": "Legal department",
@@ -995,6 +1028,7 @@
             "title": "Email sync",
             "description": "How often the email service pulls new messages from connected mailboxes.",
             "lastSynced": "Last synced",
+            "neverSynced": "Never",
             "lastSyncedMinutes": "{{count}} min ago",
             "lastSyncedHours": "{{count}} h ago",
             "intervals": {
@@ -1020,25 +1054,44 @@
         },
         "templates": {
           "title": "Templates",
-          "description": "Manage outgoing letter templates and document generation presets.",
-          "replyTitle": "Reply templates",
-          "replyDesc": "Used in the thread reply composer template menu",
+          "description": "Manage outgoing letter templates for the thread and new letter composer.",
+          "replyTitle": "Letter templates",
+          "replyDesc": "Used in the thread and new letter composer template menus",
           "documentTitle": "Document presets",
           "documentDesc": "Used when generating outgoing and NBU documents",
           "addReply": "Add template",
           "addPreset": "Add preset",
-          "addReplyTitle": "Add reply template",
-          "editReplyTitle": "Edit reply template",
+          "addReplyTitle": "Add letter template",
+          "editReplyTitle": "Edit letter template",
           "addPresetTitle": "Add document preset",
           "editPresetTitle": "Edit document preset",
-          "replyAddSuccess": "Reply template added",
-          "replyUpdateSuccess": "Reply template updated",
+          "replyAddSuccess": "Letter template added",
+          "replyUpdateSuccess": "Letter template updated",
+          "replyDeleteSuccess": "Letter template deleted",
+          "deleteReplyTitle": "Delete letter template",
+          "deleteReplyConfirm": "Are you sure you want to delete this letter template?",
+          "deleteReplyWarning": "This action cannot be undone.",
+          "availableVariables": "Available variables",
+          "variablesHint": "Click a variable to insert it at the cursor in the template body.",
           "presetAddSuccess": "Document preset added",
           "presetUpdateSuccess": "Document preset updated",
+          "presetDeleteSuccess": "Document preset deleted",
+          "deletePresetTitle": "Delete document preset",
+          "deletePresetConfirm": "Are you sure you want to delete this document preset?",
+          "deletePresetWarning": "This action cannot be undone.",
+          "loading": "Loading templates…",
           "allTypes": "All types",
           "active": "Active",
           "inactive": "Inactive",
           "noAssignee": "—",
+          "emptyReply": {
+            "title": "No letter templates yet",
+            "description": "Add templates with reusable letter text and variables for the thread and new letter composer."
+          },
+          "emptyPresets": {
+            "title": "No document presets yet",
+            "description": "Add presets to configure document names and default assignees for the generate document flow."
+          },
           "columns": {
             "name": "Name",
             "preview": "Preview",
@@ -1051,19 +1104,22 @@
           },
           "fields": {
             "name": "Template name",
+            "presetName": "Preset name",
             "letterTypes": "Letter types",
             "body": "Template body",
-            "bodyPlaceholder": "Write the reply template text...",
-            "bodyHint": "Placeholders like {{clientName}} and {{referenceId}} are supported.",
-            "active": "Active in reply composer",
+            "bodyPlaceholder": "Write the letter template text...",
+            "bodyHint": "Use the variable palette below to insert placeholders.",
+            "active": "Active in letter composer",
             "documentType": "Document type",
             "assignee": "Default assignee",
             "presetActive": "Active in document generation"
           },
-          "replyBodies": {
-            "complaintResponse": "Dear {{clientName}},\n\nThank you for your complaint dated {{date}}. We have registered your request under reference {{referenceId}} and will provide a substantive response within the SLA period.\n\nSincerely,\nLegal Department",
-            "nbuAcknowledgement": "Dear Sir/Madam,\n\nWe acknowledge receipt of your NBU inquiry. The matter has been assigned to our regulatory compliance team for review and formal response.\n\nRegards,\nNBU Response Desk",
-            "extensionRequest": "Dear {{clientName}},\n\nWe are reviewing your request for an extension of the response deadline. We will confirm the revised timeline shortly.\n\nBest regards,\nLegal Department"
+          "variables": {
+            "clientName": "Client name",
+            "date": "Today's date",
+            "dueDate": "Response due date",
+            "requestNo": "Request reference number",
+            "contract": "Contract"
           }
         },
         "modals": {

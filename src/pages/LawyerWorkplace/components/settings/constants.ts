@@ -82,21 +82,6 @@ export const ROUTING_MATCH_OPTIONS: {
   },
 ]
 
-export const DOCUMENT_PRESET_TYPE_OPTIONS = [
-  {
-    id: 'outgoing' as const,
-    labelKey: 'pages.lawyerWorkplace.settings.templates.documentTypes.outgoing',
-    fallback: 'Outgoing (ВИХ)',
-    badge: 'ВИХ',
-  },
-  {
-    id: 'nbu_response' as const,
-    labelKey: 'pages.lawyerWorkplace.settings.templates.documentTypes.nbu',
-    fallback: 'NBU reply (НБУ)',
-    badge: 'НБУ',
-  },
-]
-
 export const LETTER_TYPE_COLOR_OPTIONS: LetterTypeColorOption[] = [
   {
     id: 'teal',

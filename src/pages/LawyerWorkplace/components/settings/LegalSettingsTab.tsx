@@ -3,7 +3,6 @@ import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
 import {
-  mapLegalDocumentPresetToSettings,
   mapLegalLawyerToSettings,
   mapLegalLetterTypeToConfig,
   mapLegalReplyTemplateToSettings,
@@ -12,7 +11,6 @@ import {
   useLegalLawyers,
   useLegalLetterTypes,
   useLegalSettingsActions,
-  useLegalSettingsDocumentPresets,
   useLegalSettingsMailboxes,
   useLegalSettingsReplyTemplates,
   useLegalSyncSettings,
@@ -28,7 +26,9 @@ import { AddLetterTypeModal } from './letterTypes/AddLetterTypeModal'
 import { LetterTypesPanel } from './letterTypes/LetterTypesPanel'
 import { LawyersPanel } from './lawyers/LawyersPanel'
 import { MailboxesPanel } from './mailboxes/MailboxesPanel'
+import { MailboxesTabSkeleton } from './mailboxes/MailboxesTabSkeleton'
 import { TemplatesPanel } from './templates/TemplatesPanel'
+import { TemplatesTabSkeleton } from './templates/TemplatesTabSkeleton'
 import { SettingsToolbar } from './SettingsToolbar'
 
 export function LegalSettingsTab() {
@@ -65,11 +65,6 @@ export function LegalSettingsTab() {
   const mailboxesQuery = useLegalSettingsMailboxes({ enabled: mailboxesEnabled })
   const syncQuery = useLegalSyncSettings({ enabled: mailboxesEnabled })
   const replyTemplatesQuery = useLegalSettingsReplyTemplates({ enabled: templatesTabEnabled })
-  const documentPresetsQuery = useLegalSettingsDocumentPresets({ enabled: templatesTabEnabled })
-  const templateLawyersQuery = useLegalLawyers({
-    includeInactive: false,
-    enabled: templatesTabEnabled,
-  })
   const {
     addLetterType,
     saveLetterType,
@@ -88,14 +83,8 @@ export function LegalSettingsTab() {
     isPolling,
     isSavingSync,
   } = useLegalMailboxSettingsActions()
-  const {
-    saveReplyTemplate,
-    toggleReplyTemplateActive,
-    saveDocumentPreset,
-    toggleDocumentPresetActive,
-    isSavingReplyTemplate,
-    isSavingDocumentPreset,
-  } = useLegalTemplateSettingsActions()
+  const { saveReplyTemplate, deleteReplyTemplate, isSavingReplyTemplate, isDeletingReplyTemplate } =
+    useLegalTemplateSettingsActions()
 
   const letterTypes = useMemo(
     () => (letterTypesQuery.data?.items ?? []).map(mapLegalLetterTypeToConfig),
@@ -116,14 +105,6 @@ export function LegalSettingsTab() {
   const replyTemplates = useMemo(
     () => (replyTemplatesQuery.data?.items ?? []).map(mapLegalReplyTemplateToSettings),
     [replyTemplatesQuery.data?.items]
-  )
-  const documentPresets = useMemo(
-    () => (documentPresetsQuery.data?.items ?? []).map(mapLegalDocumentPresetToSettings),
-    [documentPresetsQuery.data?.items]
-  )
-  const templateLawyers = useMemo(
-    () => (templateLawyersQuery.data?.items ?? []).map(mapLegalLawyerToSettings),
-    [templateLawyersQuery.data?.items]
   )
 
   const activeSelectedLetterTypeId = useMemo(() => {
@@ -150,21 +131,13 @@ export function LegalSettingsTab() {
   const lawyersTabLoading = letterTypesQuery.isLoading || lawyersQuery.isLoading
   const mailboxesTabLoading =
     letterTypesQuery.isLoading || mailboxesQuery.isLoading || syncQuery.isLoading
-  const templatesTabLoading =
-    letterTypesQuery.isLoading ||
-    replyTemplatesQuery.isLoading ||
-    documentPresetsQuery.isLoading ||
-    templateLawyersQuery.isLoading
+  const templatesTabLoading = letterTypesQuery.isLoading || replyTemplatesQuery.isLoading
   const settingsError =
     (activeSubTab === 'letterTypes' && letterTypesQuery.isError) ||
     (lawyersTabEnabled && (letterTypesQuery.isError || lawyersQuery.isError)) ||
     (mailboxesEnabled &&
       (letterTypesQuery.isError || mailboxesQuery.isError || syncQuery.isError)) ||
-    (templatesTabEnabled &&
-      (letterTypesQuery.isError ||
-        replyTemplatesQuery.isError ||
-        documentPresetsQuery.isError ||
-        templateLawyersQuery.isError))
+    (templatesTabEnabled && (letterTypesQuery.isError || replyTemplatesQuery.isError))
 
   const isLoading =
     activeSubTab === 'lawyers'
@@ -211,11 +184,14 @@ export function LegalSettingsTab() {
         </p>
       )}
 
+      {isLoading && activeSubTab === 'mailboxes' ? <MailboxesTabSkeleton /> : null}
+
+      {isLoading && activeSubTab === 'templates' ? <TemplatesTabSkeleton /> : null}
+
       {isLoading &&
-      (activeSubTab === 'letterTypes' ||
-        activeSubTab === 'lawyers' ||
-        activeSubTab === 'mailboxes' ||
-        activeSubTab === 'templates') ? (
+      activeSubTab !== 'mailboxes' &&
+      activeSubTab !== 'templates' &&
+      (activeSubTab === 'letterTypes' || activeSubTab === 'lawyers') ? (
         <p className="text-light-600 px-4 py-10 text-center text-sm sm:px-5 lg:px-7">
           {t('pages.lawyerWorkplace.settings.loading', 'Loading settings…')}
         </p>
@@ -274,15 +250,11 @@ export function LegalSettingsTab() {
       {activeSubTab === 'templates' && !isLoading && !settingsError && (
         <TemplatesPanel
           replyTemplates={replyTemplates}
-          documentPresets={documentPresets}
           letterTypes={letterTypes}
-          lawyerAssignees={templateLawyers}
           onSaveReplyTemplate={saveReplyTemplate}
-          onToggleReplyTemplateActive={toggleReplyTemplateActive}
-          onSaveDocumentPreset={saveDocumentPreset}
-          onToggleDocumentPresetActive={toggleDocumentPresetActive}
+          onDeleteReplyTemplate={deleteReplyTemplate}
           isSavingReplyTemplate={isSavingReplyTemplate}
-          isSavingDocumentPreset={isSavingDocumentPreset}
+          isDeletingReplyTemplate={isDeletingReplyTemplate}
           readOnly={readOnly}
         />
       )}

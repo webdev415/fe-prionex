@@ -33,10 +33,6 @@ import type {
   LegalTrainingExampleUpdate,
   LegalDepartmentSyncSettings,
   LegalDepartmentSyncSettingsUpdate,
-  LegalDocumentPreset,
-  LegalDocumentPresetCreate,
-  LegalDocumentPresetListResponse,
-  LegalDocumentPresetUpdate,
   LegalMailboxCreate,
   LegalMailboxUpdate,
   LegalPollAllMailboxesResponse,
@@ -331,6 +327,10 @@ export const legalApi = {
       .then((response) => response.data)
   },
 
+  deleteSettingsReplyTemplate(templateId: string) {
+    return api.delete(`${SETTINGS_URL}/reply-templates/${templateId}`)
+  },
+
   listComposerReplyTemplates(params?: { letter_type_id?: string }) {
     return api
       .get<LegalReplyTemplateListResponse>(`${BASE_URL}/reply-templates`, { params })
@@ -400,24 +400,6 @@ export const legalApi = {
     return api.delete(`${BASE_URL}/outgoing/staging-attachments/${attachmentId}`, {
       params: { staging_session_id: stagingSessionId },
     })
-  },
-
-  listSettingsDocumentPresets(params?: { include_inactive?: boolean }) {
-    return api
-      .get<LegalDocumentPresetListResponse>(`${SETTINGS_URL}/document-presets`, { params })
-      .then((response) => response.data)
-  },
-
-  createSettingsDocumentPreset(payload: LegalDocumentPresetCreate) {
-    return api
-      .post<LegalDocumentPreset>(`${SETTINGS_URL}/document-presets`, payload)
-      .then((response) => response.data)
-  },
-
-  updateSettingsDocumentPreset(presetId: string, payload: LegalDocumentPresetUpdate) {
-    return api
-      .patch<LegalDocumentPreset>(`${SETTINGS_URL}/document-presets/${presetId}`, payload)
-      .then((response) => response.data)
   },
 }
 

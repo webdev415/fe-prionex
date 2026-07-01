@@ -81,13 +81,15 @@ export function useLegalMailboxSettingsActions() {
     }
 
     toast.success(
-      t('pages.lawyerWorkplace.settings.mailboxes.testSyncSuccess', {
-        ingested,
-        defaultValue:
-          ingested > 0
-            ? `Sync complete. ${ingested} new message(s) ingested.`
-            : 'Sync complete. No new messages.',
-      })
+      ingested > 0
+        ? t('pages.lawyerWorkplace.settings.mailboxes.testSyncSuccess', {
+            ingested,
+            defaultValue: `Sync complete. ${ingested} new message(s) ingested.`,
+          })
+        : t(
+            'pages.lawyerWorkplace.settings.mailboxes.testSyncSuccessEmpty',
+            'Sync complete. No new messages.'
+          )
     )
   }, [pollAllMailboxes, t])
 

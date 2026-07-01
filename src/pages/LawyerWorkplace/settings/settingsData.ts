@@ -1,10 +1,8 @@
 import type {
   DepartmentSyncSettings,
   LetterTypeConfig,
-  SettingsDocumentPreset,
   SettingsLawyer,
   SettingsMailbox,
-  SettingsReplyTemplate,
   TrainingExample,
 } from './types'
 
@@ -492,97 +490,5 @@ export const INITIAL_SETTINGS_MAILBOXES: SettingsMailbox[] = [
     routingRules: [
       { id: 'rule-coll-1', matchType: 'default', value: '', letterTypeId: 'complaint' },
     ],
-  },
-]
-
-export const INITIAL_REPLY_TEMPLATES: SettingsReplyTemplate[] = [
-  {
-    id: 'rt-complaint',
-    nameKey: 'pages.lawyerWorkplace.reply.templates.complaintResponse',
-    nameFallback: 'Complaint response',
-    bodyKey: 'pages.lawyerWorkplace.settings.templates.replyBodies.complaintResponse',
-    bodyFallback:
-      'Dear {{clientName}},\n\nThank you for your complaint dated {{date}}. We have registered your request under reference {{referenceId}} and will provide a substantive response within the SLA period.\n\nSincerely,\nLegal Department',
-    letterTypeIds: ['complaint'],
-    isActive: true,
-  },
-  {
-    id: 'rt-nbu',
-    nameKey: 'pages.lawyerWorkplace.reply.templates.nbuAcknowledgement',
-    nameFallback: 'NBU acknowledgement',
-    bodyKey: 'pages.lawyerWorkplace.settings.templates.replyBodies.nbuAcknowledgement',
-    bodyFallback:
-      'Dear Sir/Madam,\n\nWe acknowledge receipt of your NBU inquiry. The matter has been assigned to our regulatory compliance team for review and formal response.\n\nRegards,\nNBU Response Desk',
-    letterTypeIds: ['nbu_inquiry'],
-    isActive: true,
-  },
-  {
-    id: 'rt-extension',
-    nameKey: 'pages.lawyerWorkplace.reply.templates.extensionRequest',
-    nameFallback: 'Extension request',
-    bodyKey: 'pages.lawyerWorkplace.settings.templates.replyBodies.extensionRequest',
-    bodyFallback:
-      'Dear {{clientName}},\n\nWe are reviewing your request for an extension of the response deadline. We will confirm the revised timeline shortly.\n\nBest regards,\nLegal Department',
-    letterTypeIds: ['inquiry', 'attorney_request'],
-    isActive: true,
-  },
-]
-
-export const INITIAL_DOCUMENT_PRESETS: SettingsDocumentPreset[] = [
-  {
-    id: 'dp-out-1',
-    nameKey: 'pages.lawyerWorkplace.documents.mockNames.outgoing.autoReply',
-    nameFallback: 'Auto-reply - IN-2026-142',
-    documentType: 'outgoing',
-    defaultAssigneeId: 'kostenko',
-    isActive: true,
-  },
-  {
-    id: 'dp-out-2',
-    nameKey: 'pages.lawyerWorkplace.documents.mockNames.outgoing.settlementAgreement',
-    nameFallback: 'Pre-trial settlement agreement',
-    documentType: 'outgoing',
-    defaultAssigneeId: 'doroshenko',
-    isActive: true,
-  },
-  {
-    id: 'dp-out-3',
-    nameKey: 'pages.lawyerWorkplace.documents.mockNames.outgoing.demandLetter',
-    nameFallback: 'Demand letter - overdue payment',
-    documentType: 'outgoing',
-    defaultAssigneeId: 'melnychenko',
-    isActive: true,
-  },
-  {
-    id: 'dp-out-4',
-    nameKey: 'pages.lawyerWorkplace.documents.mockNames.outgoing.attorneyRequestResponse',
-    nameFallback: 'Response to attorney request',
-    documentType: 'outgoing',
-    defaultAssigneeId: 'doroshenko',
-    isActive: true,
-  },
-  {
-    id: 'dp-nbu-1',
-    nameKey: 'pages.lawyerWorkplace.documents.mockNames.nbu.creditHistoryResponse',
-    nameFallback: 'NBU inquiry response - credit history request',
-    documentType: 'nbu_response',
-    defaultAssigneeId: 'kostenko',
-    isActive: true,
-  },
-  {
-    id: 'dp-nbu-2',
-    nameKey: 'pages.lawyerWorkplace.documents.mockNames.nbu.complianceReportQ1',
-    nameFallback: 'NBU compliance report - Q1 2026',
-    documentType: 'nbu_response',
-    defaultAssigneeId: 'kostenko',
-    isActive: true,
-  },
-  {
-    id: 'dp-nbu-3',
-    nameKey: 'pages.lawyerWorkplace.documents.mockNames.nbu.auditResponse',
-    nameFallback: 'Response to NBU audit request',
-    documentType: 'nbu_response',
-    defaultAssigneeId: 'kostenko',
-    isActive: false,
   },
 ]

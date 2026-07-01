@@ -16,7 +16,6 @@ import { useAuthStore } from '@/stores/authStore'
 import { useDebounce } from '@/hooks/useDebounce'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
-import { NBU_DOCUMENT_NAMES, OUTGOING_DOCUMENT_NAMES, type DocumentI18nOption } from './constants'
 
 type GenerateDocumentType = 'outgoing' | 'nbu_response'
 
@@ -79,7 +78,7 @@ export function GenerateDocumentModal({
   const { data: lawyersData } = useLegalLawyers({ enabled: open })
 
   const [documentType, setDocumentType] = useState<GenerateDocumentType>('outgoing')
-  const [templateKey, setTemplateKey] = useState('')
+  const [documentName, setDocumentName] = useState('')
   const [clientId, setClientId] = useState('')
   const [clientSearch, setClientSearch] = useState('')
   const [selectedClientLegacyId, setSelectedClientLegacyId] = useState<string | null>(null)
@@ -91,11 +90,6 @@ export function GenerateDocumentModal({
     { enabled: open && debouncedClientSearch.length >= 2 }
   )
 
-  const templates = useMemo(
-    () => (documentType === 'outgoing' ? OUTGOING_DOCUMENT_NAMES : NBU_DOCUMENT_NAMES),
-    [documentType]
-  )
-
   const lawyers = useMemo(() => lawyersData?.items ?? [], [lawyersData?.items])
 
   const clientOptions = useMemo(
@@ -103,7 +97,6 @@ export function GenerateDocumentModal({
     [clientsData?.items]
   )
 
-  const selectedTemplate = templates.find((template) => template.key === templateKey) ?? null
   const selectedTypeOption =
     GENERATE_TYPE_OPTIONS.find((option) => option.id === documentType) ?? GENERATE_TYPE_OPTIONS[0]!
   const selectedLawyer =
@@ -113,7 +106,7 @@ export function GenerateDocumentModal({
     if (!open) return
     requestAnimationFrame(() => {
       setDocumentType('outgoing')
-      setTemplateKey(OUTGOING_DOCUMENT_NAMES[0]?.key ?? '')
+      setDocumentName('')
       setClientId('')
       setClientSearch('')
       setSelectedClientLegacyId(null)
@@ -123,21 +116,15 @@ export function GenerateDocumentModal({
     })
   }, [currentUserId, lawyers, open])
 
-  const handleDocumentTypeChange = (type: GenerateDocumentType) => {
-    setDocumentType(type)
-    const names = type === 'outgoing' ? OUTGOING_DOCUMENT_NAMES : NBU_DOCUMENT_NAMES
-    setTemplateKey(names[0]?.key ?? '')
-  }
-
   const canSubmit = Boolean(
-    clientId && selectedTemplate && assigneeUserId != null && lawyers.length > 0
+    documentName.trim() && clientId && assigneeUserId != null && lawyers.length > 0
   )
 
   const handleSubmit = async () => {
-    if (!canSubmit || !selectedTemplate || assigneeUserId == null) return
+    if (!canSubmit || assigneeUserId == null) return
     await onSubmit({
       documentType,
-      title: t(selectedTemplate.key, selectedTemplate.fallback),
+      title: documentName.trim(),
       clientId: Number.parseInt(clientId, 10),
       assignedToUserId: assigneeUserId,
       contractNumber: selectedClientLegacyId,
@@ -177,7 +164,7 @@ export function GenerateDocumentModal({
               {GENERATE_TYPE_OPTIONS.map((option) => (
                 <DropdownMenuItem
                   key={option.id}
-                  onClick={() => handleDocumentTypeChange(option.id)}
+                  onClick={() => setDocumentType(option.id)}
                   className="cursor-pointer"
                 >
                   <span className="flex items-center gap-2">
@@ -194,40 +181,18 @@ export function GenerateDocumentModal({
 
         <div className="flex flex-col gap-2">
           <Label className="text-dark-500 text-[12px] font-normal">
-            {t('pages.lawyerWorkplace.documents.modals.generate.template', 'Template')}
+            {t('pages.lawyerWorkplace.documents.modals.generate.documentName', 'Document name')}
           </Label>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button
-                type="button"
-                className="text-dark-500 flex h-10 w-full items-center justify-between rounded-[8px] border border-gray-200 bg-white px-3 text-left text-[13px] font-light"
-              >
-                <span className="truncate">
-                  {selectedTemplate
-                    ? t(selectedTemplate.key, selectedTemplate.fallback)
-                    : t(
-                        'pages.lawyerWorkplace.documents.modals.generate.selectTemplate',
-                        'Select template'
-                      )}
-                </span>
-                <Icons.ArrowDown size={16} strokeWidth={1.5} className="text-light-500 shrink-0" />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent
-              align="start"
-              className="max-h-[240px] w-[var(--radix-dropdown-menu-trigger-width)] overflow-y-auto"
-            >
-              {templates.map((template: DocumentI18nOption) => (
-                <DropdownMenuItem
-                  key={template.key}
-                  onClick={() => setTemplateKey(template.key)}
-                  className="cursor-pointer"
-                >
-                  {t(template.key, template.fallback)}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <input
+            type="text"
+            value={documentName}
+            onChange={(e) => setDocumentName(e.target.value)}
+            placeholder={t(
+              'pages.lawyerWorkplace.documents.modals.generate.documentNamePlaceholder',
+              'Enter document name'
+            )}
+            className="text-dark-500 focus:border-primary-400 h-10 w-full rounded-[8px] border border-gray-200 bg-white px-3 text-[13px] font-light outline-none"
+          />
         </div>
 
         <div className="flex flex-col gap-2">
