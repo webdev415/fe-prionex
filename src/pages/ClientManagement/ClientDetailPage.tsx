@@ -2658,36 +2658,36 @@ export function ClientDetailPage() {
                               <Icons.PencilEdit size={16} className="flex-shrink-0" />
                             </button>
                           </PermissionGuard>
-                          {phone.contactId > 0 && (
-                            <>
-                              <button
-                                type="button"
-                                className="text-primary-500 text-xs hover:underline"
-                                onClick={() =>
-                                  setContactTagModal({
-                                    contactId: phone.contactId,
-                                    phone: phone.number,
-                                  })
-                                }
-                              >
-                                {t('pages.contactTags.tags', 'Tags')}
-                              </button>
-                              <button
-                                type="button"
-                                className="text-xs text-gray-500 hover:underline"
-                                onClick={() =>
-                                  setContactTagHistoryModal({
-                                    contactId: phone.contactId,
-                                    phone: phone.number,
-                                  })
-                                }
-                              >
-                                {t('pages.contactTags.tagHistory', 'Tag history')}
-                              </button>
-                            </>
-                          )}
                         </div>
                       </div>
+                      {phone.contactId > 0 && (
+                        <div className="flex justify-end gap-3 pt-0.5">
+                          <button
+                            type="button"
+                            className="text-primary-500 text-xs hover:underline"
+                            onClick={() =>
+                              setContactTagModal({
+                                contactId: phone.contactId,
+                                phone: phone.number,
+                              })
+                            }
+                          >
+                            {t('pages.contactTags.tags', 'Tags')}
+                          </button>
+                          <button
+                            type="button"
+                            className="text-xs text-gray-500 hover:underline"
+                            onClick={() =>
+                              setContactTagHistoryModal({
+                                contactId: phone.contactId,
+                                phone: phone.number,
+                              })
+                            }
+                          >
+                            {t('pages.contactTags.tagHistory', 'Tag history')}
+                          </button>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>

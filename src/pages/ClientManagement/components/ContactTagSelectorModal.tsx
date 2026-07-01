@@ -17,6 +17,18 @@ interface ContactTagSelectorModalProps {
   phoneNumber: string
 }
 
+function TagValueBadge({ name, color }: { name: string; color?: string | null }) {
+  const bg = color || '#64748b'
+  return (
+    <span
+      className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium text-white"
+      style={{ backgroundColor: bg }}
+    >
+      {name}
+    </span>
+  )
+}
+
 export function ContactTagSelectorModal({
   open,
   onClose,
@@ -77,21 +89,34 @@ export function ContactTagSelectorModal({
   }
 
   return (
-    <Modal open={open} onClose={handleClose}>
+    <Modal open={open} onClose={handleClose} maxWidth="lg">
       <ModalHeader
         title={`${t('pages.contactTags.manageTags', 'Contact tags')} — ${phoneNumber}`}
       />
       <ModalContent className="max-h-[60vh] overflow-y-auto">
         {isLoading ? (
           <p>{t('common.loading', 'Loading...')}</p>
+        ) : categories.length === 0 ? (
+          <p className="text-sm text-gray-500">
+            {t('pages.contactTags.noCategories', 'No tag categories available')}
+          </p>
         ) : (
           <div className="flex flex-col gap-4">
             {categories.map((category) => (
               <div key={category.category_id} className="rounded border p-3">
-                <div className="mb-2 flex items-center justify-between">
-                  <span className="text-sm font-medium">{category.category_name}</span>
+                <div className="mb-3 flex items-center justify-between gap-2">
+                  <div>
+                    <span className="text-sm font-medium">{category.category_name}</span>
+                    <p className="text-dark-400 text-xs">
+                      {category.selection_type === 'multi'
+                        ? t('pages.contactTags.multiSelectHint', 'Select one or more values')
+                        : t('pages.contactTags.singleSelectHint', 'Select one value')}
+                      {category.is_system &&
+                        ` · ${t('pages.contactTags.systemCategory', 'System category')}`}
+                    </p>
+                  </div>
                   {!category.can_edit && (
-                    <span className="text-xs text-gray-500">
+                    <span className="shrink-0 rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-600">
                       {t('pages.contactTags.readOnly', 'Read only')}
                     </span>
                   )}
@@ -103,21 +128,40 @@ export function ContactTagSelectorModal({
                       category.can_edit && setSingle(category.category_id, Number(v))
                     }
                     disabled={!category.can_edit}
+                    className="flex flex-col gap-2"
                   >
                     {category.values.map((v) => (
-                      <RadioItem key={v.id} value={String(v.id)}>
-                        <span
-                          className="mr-2 inline-block h-2 w-2 rounded-full"
-                          style={{ backgroundColor: v.color || '#94a3b8' }}
+                      <label
+                        key={v.id}
+                        className={`flex items-center gap-2 rounded p-1.5 ${
+                          category.can_edit ? 'cursor-pointer hover:bg-gray-50' : 'cursor-default'
+                        }`}
+                      >
+                        <RadioItem
+                          value={String(v.id)}
+                          id={`ct-tag-${category.category_id}-${v.id}`}
                         />
-                        {v.name}
-                      </RadioItem>
+                        <TagValueBadge name={v.name} color={v.color} />
+                        {v.blocks_calls && (
+                          <span
+                            className="text-xs text-red-500"
+                            title={t('pages.contactTags.blocksCalls', 'Blocks calls')}
+                          >
+                            📵
+                          </span>
+                        )}
+                      </label>
                     ))}
                   </RadioGroup>
                 ) : (
                   <div className="flex flex-col gap-1">
                     {category.values.map((v) => (
-                      <label key={v.id} className="flex cursor-pointer items-center gap-2">
+                      <label
+                        key={v.id}
+                        className={`flex items-center gap-2 rounded p-1.5 ${
+                          category.can_edit ? 'cursor-pointer hover:bg-gray-50' : 'cursor-default'
+                        }`}
+                      >
                         <Checkbox
                           checked={(draft[category.category_id] ?? []).includes(v.id)}
                           disabled={!category.can_edit}
@@ -125,11 +169,15 @@ export function ContactTagSelectorModal({
                             category.can_edit && toggleMulti(category.category_id, v.id)
                           }
                         />
-                        <span
-                          className="mr-2 inline-block h-2 w-2 rounded-full"
-                          style={{ backgroundColor: v.color || '#94a3b8' }}
-                        />
-                        {v.name}
+                        <TagValueBadge name={v.name} color={v.color} />
+                        {v.blocks_calls && (
+                          <span
+                            className="text-xs text-red-500"
+                            title={t('pages.contactTags.blocksCalls', 'Blocks calls')}
+                          >
+                            📵
+                          </span>
+                        )}
                       </label>
                     ))}
                   </div>
@@ -137,7 +185,7 @@ export function ContactTagSelectorModal({
                 {category.can_edit && (
                   <Button
                     size="sm"
-                    className="mt-2"
+                    className="mt-3"
                     disabled={setTags.isPending}
                     onClick={() => saveCategory(category)}
                   >

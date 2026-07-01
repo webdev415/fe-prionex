@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from '@/components/ui/Select'
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch'
+import { ColorPickerField } from '@/components/forms'
 import { PermissionGuard } from '@/components/auth'
 import { PERMISSIONS } from '@/constants/permissions'
 import {
@@ -324,7 +325,7 @@ export function ContactTagsPage() {
         ) : null
       )}
 
-      <Modal open={categoryModalOpen} onClose={() => setCategoryModalOpen(false)}>
+      <Modal open={categoryModalOpen} onClose={() => setCategoryModalOpen(false)} maxWidth="lg">
         <ModalHeader
           title={
             editingCategory
@@ -332,22 +333,40 @@ export function ContactTagsPage() {
               : t('pages.contactTags.createCategory', 'New category')
           }
         />
-        <ModalContent className="flex flex-col gap-3">
-          <Input value={catName} onChange={(e) => setCatName(e.target.value)} placeholder="Name" />
+        <ModalContent className="flex flex-col gap-4">
           <Input
+            label={t('pages.contactTags.fieldName', 'Name')}
+            value={catName}
+            onChange={(e) => setCatName(e.target.value)}
+            required
+          />
+          <Input
+            label={t('pages.contactTags.sortOrder', 'Sort order')}
             value={catSortOrder}
             onChange={(e) => setCatSortOrder(e.target.value)}
-            placeholder="Sort order"
+            type="number"
           />
           {!editingCategory?.is_system && (
             <>
-              <RadioGroup
-                value={catSelectionType}
-                onValueChange={(v) => setCatSelectionType(v as 'single' | 'multi')}
-              >
-                <RadioItem value="single">{t('pages.contactTags.single', 'Single')}</RadioItem>
-                <RadioItem value="multi">{t('pages.contactTags.multi', 'Multi')}</RadioItem>
-              </RadioGroup>
+              <div>
+                <p className="text-dark-500 mb-2 text-sm">
+                  {t('pages.contactTags.selectionType', 'Selection type')}
+                </p>
+                <RadioGroup
+                  value={catSelectionType}
+                  onValueChange={(v) => setCatSelectionType(v as 'single' | 'multi')}
+                  className="flex flex-col gap-2 sm:flex-row"
+                >
+                  <label className="flex cursor-pointer items-center gap-2">
+                    <RadioItem value="single" id="ct-single" />
+                    <span>{t('pages.contactTags.single', 'Single')}</span>
+                  </label>
+                  <label className="flex cursor-pointer items-center gap-2">
+                    <RadioItem value="multi" id="ct-multi" />
+                    <span>{t('pages.contactTags.multi', 'Multi')}</span>
+                  </label>
+                </RadioGroup>
+              </div>
               <div className="flex items-center justify-between gap-4">
                 <span className="text-dark-500 text-sm">
                   {t('pages.contactTags.protected', 'Protected')}
@@ -366,7 +385,7 @@ export function ContactTagsPage() {
         </ModalFooter>
       </Modal>
 
-      <Modal open={valueModalOpen} onClose={() => setValueModalOpen(false)}>
+      <Modal open={valueModalOpen} onClose={() => setValueModalOpen(false)} maxWidth="lg">
         <ModalHeader
           title={
             editingValue?.value
@@ -374,17 +393,25 @@ export function ContactTagsPage() {
               : t('pages.contactTags.addValue', 'Add value')
           }
         />
-        <ModalContent className="flex flex-col gap-3">
-          <Input value={valName} onChange={(e) => setValName(e.target.value)} placeholder="Name" />
+        <ModalContent className="flex flex-col gap-4">
           <Input
+            label={t('pages.contactTags.fieldName', 'Name')}
+            value={valName}
+            onChange={(e) => setValName(e.target.value)}
+            required
+          />
+          <ColorPickerField
             value={valColor}
-            onChange={(e) => setValColor(e.target.value)}
-            placeholder="#color"
+            onChange={setValColor}
+            label={t('pages.contactTags.fieldColor', 'Color')}
+            showPreview
+            previewText={valName.trim() || t('pages.contactTags.valuePreview', 'Tag value')}
           />
           <Input
+            label={t('pages.contactTags.sortOrder', 'Sort order')}
             value={valSortOrder}
             onChange={(e) => setValSortOrder(e.target.value)}
-            placeholder="Sort order"
+            type="number"
           />
           <div className="flex items-center justify-between gap-4">
             <span className="text-dark-500 text-sm">
