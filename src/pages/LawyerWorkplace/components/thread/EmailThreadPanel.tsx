@@ -13,9 +13,11 @@ import {
   type EdoType,
 } from '@/features/lawyerWorkplace'
 import { getErrorMessage } from '@/lib/errors'
+import { getFilenameExtensionLabel } from '@/features/lawyerWorkplace/utils/attachmentExtension'
 import { formatDateSeparator, formatLetterTime } from '../../utils/formatters'
 import type { LetterDetail, ThreadAttachment } from '../../types'
 import { ReplyComposer } from './ReplyComposer'
+import { EmailMessageBody } from './EmailMessageBody'
 
 function formatReferenceId(referenceId: string): string {
   return referenceId.replace(/-/g, ' · ')
@@ -49,7 +51,7 @@ function AttachmentPill({
 }) {
   const { t } = useTranslation('common')
   const [downloading, setDownloading] = useState(false)
-  const isPdf = attachment.mimeType === 'application/pdf'
+  const extensionLabel = getFilenameExtensionLabel(attachment.filename)
 
   const handleDownload = async () => {
     setDownloading(true)
@@ -64,10 +66,18 @@ function AttachmentPill({
 
   return (
     <div className="flex h-[56px] min-w-0 items-center gap-2.5 rounded-[12px] border border-gray-100 bg-white px-2.5 py-2 shadow-sm sm:min-w-[220px]">
-      <span className="text-secondary-800 flex shrink-0 items-center justify-center rounded rounded-[12px] bg-gray-50 px-2 py-3 text-[12px] font-medium tracking-wide uppercase">
-        {isPdf
-          ? t('pages.lawyerWorkplace.thread.attachmentPdf', 'PDF')
-          : t('pages.lawyerWorkplace.thread.attachmentDoc', 'DOC')}
+      <span
+        className="text-secondary-800 flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] bg-gray-50 text-center font-medium tracking-wide uppercase"
+        title={extensionLabel}
+      >
+        <span
+          className={cn(
+            'max-w-full truncate px-0.5 leading-none',
+            extensionLabel.length > 3 ? 'text-[9px]' : 'text-[11px]'
+          )}
+        >
+          {extensionLabel}
+        </span>
       </span>
       <div className="min-w-0 flex-1">
         <p className="text-dark-500 truncate text-[11px] font-medium">{attachment.filename}</p>
@@ -142,9 +152,7 @@ function MessageCard({
 
       {hasBody && (
         <div className="border-t border-gray-200 px-4 py-3">
-          <p className="text-dark-500 overflow-wrap-anywhere text-[13px] leading-relaxed break-words whitespace-pre-wrap">
-            {message.body}
-          </p>
+          <EmailMessageBody body={message.body} bodyFormat={message.bodyFormat} />
         </div>
       )}
 

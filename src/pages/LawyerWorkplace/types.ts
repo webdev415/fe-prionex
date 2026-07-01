@@ -35,6 +35,8 @@ export interface ThreadAttachment {
   mimeType: string
 }
 
+export type ThreadMessageBodyFormat = 'text' | 'html'
+
 export interface ThreadMessage {
   id: string
   direction: 'incoming' | 'outgoing'
@@ -47,6 +49,7 @@ export interface ThreadMessage {
   sentAt: string
   dateGroupLabel?: string
   body: string
+  bodyFormat: ThreadMessageBodyFormat
   attachments?: ThreadAttachment[]
 }
 

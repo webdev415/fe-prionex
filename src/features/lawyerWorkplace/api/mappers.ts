@@ -6,7 +6,9 @@ import type {
   LetterReplyContext,
   ThreadAttachment,
   ThreadMessage,
+  ThreadMessageBodyFormat,
 } from '@/pages/LawyerWorkplace/types'
+import { looksLikeHtml } from '../utils/emailHtml'
 import type {
   LegalAttachmentItem,
   LegalInboxItem,
@@ -67,19 +69,25 @@ export function formatAttachmentSize(bytes: number | null | undefined): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
-function stripHtml(html: string): string {
-  return html
-    .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<\/p>/gi, '\n')
-    .replace(/<[^>]+>/g, '')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim()
-}
+export function mapMessageContent(item: { body_text: string | null; body_html: string | null }): {
+  body: string
+  bodyFormat: ThreadMessageBodyFormat
+} {
+  const text = item.body_text?.trim() ?? ''
+  const html = item.body_html?.trim() ?? ''
 
-function messageBody(item: { body_text: string | null; body_html: string | null }): string {
-  if (item.body_text?.trim()) return item.body_text
-  if (item.body_html?.trim()) return stripHtml(item.body_html)
-  return ''
+  // Prefer sanitized HTML from the backend when available.
+  if (html) {
+    return { body: html, bodyFormat: 'html' }
+  }
+  // Some senders put HTML markup in the text/plain part.
+  if (text && looksLikeHtml(text)) {
+    return { body: text, bodyFormat: 'html' }
+  }
+  if (text) {
+    return { body: text, bodyFormat: 'text' }
+  }
+  return { body: '', bodyFormat: 'text' }
 }
 
 function messageTimestamp(item: {
@@ -201,7 +209,7 @@ export function mapThreadMessageToUi(
     senderEmail: email,
     toMailbox: options?.toMailbox,
     sentAt: messageTimestamp(item),
-    body: messageBody(item),
+    ...mapMessageContent(item),
   }
 }
 
@@ -350,7 +358,8 @@ export function mapListItemToPreviewDetail(summary: LetterListItem, replyDraft =
         senderEmail: summary.senderEmail,
         toMailbox: summary.mailbox,
         sentAt: summary.receivedAt,
-        body: summary.subject,
+        body: '',
+        bodyFormat: 'text',
       },
     ],
   }
