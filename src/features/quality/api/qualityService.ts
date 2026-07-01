@@ -250,11 +250,6 @@ export async function markFeedbackRead(feedbackId: number): Promise<Feedback> {
   return response.data
 }
 
-export async function markFeedbackCompleted(feedbackId: number): Promise<Feedback> {
-  const response = await api.post<Feedback>(`/api/v1/quality/feedback/${feedbackId}/complete`)
-  return response.data
-}
-
 export async function exportFeedback(filters: FeedbackListFilters): Promise<Blob> {
   const response = await api.get<Blob>('/api/v1/quality/feedback/export', {
     params: buildFeedbackListParams(filters),
@@ -333,7 +328,6 @@ export const qualityService = {
   createFeedback,
   replyToFeedback,
   markFeedbackRead,
-  markFeedbackCompleted,
   exportFeedback,
   getOperatorDynamics,
   exportOperatorDynamics,

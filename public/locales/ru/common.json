@@ -869,6 +869,13 @@
         "replyPlaceholder": "Напишите ответ…",
         "markRead": "Отметить прочитанным",
         "markComplete": "Отметить выполненным",
+        "markDone": "Отметить выполненным",
+        "confirm": "Подтвердить",
+        "return": "Вернуть",
+        "returnReason": "Причина возврата",
+        "returnConfirm": "Вернуть на доработку",
+        "deadline": "Срок",
+        "overdue": "Просрочено",
         "threadEmpty": "Ответов пока нет.",
         "types": {
           "praise": "Похвала",
@@ -879,6 +886,12 @@
           "unread": "Не прочитано",
           "read": "Прочитано",
           "completed": "Выполнено"
+        },
+        "lifecycle": {
+          "open": "Открыто",
+          "done": "Выполнено",
+          "confirmed": "Подтверждено",
+          "returned": "Возвращено"
         },
         "role": {
           "trainer": "Тренер",
@@ -5306,6 +5319,13 @@
         "replyPlaceholder": "Напишите ответ…",
         "markRead": "Отметить прочитанным",
         "markComplete": "Отметить выполненным",
+        "markDone": "Отметить выполненным",
+        "confirm": "Подтвердить",
+        "return": "Вернуть",
+        "returnReason": "Причина возврата",
+        "returnConfirm": "Вернуть на доработку",
+        "deadline": "Срок",
+        "overdue": "Просрочено",
         "threadEmpty": "Ответов пока нет.",
         "types": {
           "praise": "Похвала",
@@ -5316,6 +5336,12 @@
           "unread": "Не прочитано",
           "read": "Прочитано",
           "completed": "Выполнено"
+        },
+        "lifecycle": {
+          "open": "Открыто",
+          "done": "Выполнено",
+          "confirmed": "Подтверждено",
+          "returned": "Возвращено"
         },
         "role": {
           "trainer": "Тренер",

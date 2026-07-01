@@ -31,7 +31,10 @@ export function LeaveFeedbackButton({
   const [feedbackType, setFeedbackType] = useState<FeedbackType>('note')
   const [text, setText] = useState('')
   const [includeTimestamp, setIncludeTimestamp] = useState(false)
+  const [deadline, setDeadline] = useState('')
   const createMutation = useCreateFeedback()
+
+  const isCorrectionTask = feedbackType === 'correction_task'
 
   const handleOpen = () => {
     if (!open) {
@@ -45,15 +48,18 @@ export function LeaveFeedbackButton({
   const handleSubmit = async () => {
     if (!text.trim()) return
     const timestamp = includeTimestamp && getCurrentTimeMs ? getCurrentTimeMs() : null
+    const deadlineIso = isCorrectionTask && deadline ? new Date(deadline).toISOString() : null
     await createMutation.mutateAsync({
       call_id: callId,
       operator_id: operatorId,
       feedback_type: feedbackType,
       text: text.trim(),
       timestamp_ms: timestamp,
+      deadline: deadlineIso,
     })
     setText('')
     setFeedbackType('note')
+    setDeadline('')
     setOpen(false)
     onCreated?.()
   }
@@ -106,6 +112,20 @@ export function LeaveFeedbackButton({
               />
               {t('pages.training.feedback.includeTimestamp', 'Include current playback position')}
             </label>
+          ) : null}
+
+          {isCorrectionTask ? (
+            <>
+              <label className="text-xs font-medium text-gray-700">
+                {t('pages.training.feedback.deadline', 'Deadline')}
+              </label>
+              <input
+                type="datetime-local"
+                value={deadline}
+                onChange={(e) => setDeadline(e.target.value)}
+                className="mt-1 mb-2 w-full rounded-md border border-gray-200 px-2 py-1 text-sm"
+              />
+            </>
           ) : null}
 
           <div className="flex justify-end gap-2">

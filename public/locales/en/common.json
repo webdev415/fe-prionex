@@ -923,6 +923,13 @@
         "replyPlaceholder": "Write a reply…",
         "markRead": "Mark read",
         "markComplete": "Mark completed",
+        "markDone": "Mark done",
+        "confirm": "Confirm",
+        "return": "Return",
+        "returnReason": "Reason for revision",
+        "returnConfirm": "Return for revision",
+        "deadline": "Deadline",
+        "overdue": "Overdue",
         "threadEmpty": "No replies yet.",
         "types": {
           "praise": "Praise",
@@ -933,6 +940,12 @@
           "unread": "Unread",
           "read": "Read",
           "completed": "Completed"
+        },
+        "lifecycle": {
+          "open": "Open",
+          "done": "Done",
+          "confirmed": "Confirmed",
+          "returned": "Returned"
         },
         "role": {
           "trainer": "Trainer",
@@ -6147,6 +6160,13 @@
         "replyPlaceholder": "Write a reply…",
         "markRead": "Mark read",
         "markComplete": "Mark completed",
+        "markDone": "Mark done",
+        "confirm": "Confirm",
+        "return": "Return",
+        "returnReason": "Reason for revision",
+        "returnConfirm": "Return for revision",
+        "deadline": "Deadline",
+        "overdue": "Overdue",
         "threadEmpty": "No replies yet.",
         "types": {
           "praise": "Praise",
@@ -6157,6 +6177,12 @@
           "unread": "Unread",
           "read": "Read",
           "completed": "Completed"
+        },
+        "lifecycle": {
+          "open": "Open",
+          "done": "Done",
+          "confirmed": "Confirmed",
+          "returned": "Returned"
         },
         "role": {
           "trainer": "Trainer",
