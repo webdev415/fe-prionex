@@ -102,6 +102,7 @@ export interface LegalThreadMessageItem {
   id: string
   direction: string
   from_address: string
+  to_addresses?: string[]
   subject: string | null
   body_text: string | null
   body_html: string | null
@@ -109,6 +110,7 @@ export interface LegalThreadMessageItem {
   sent_at: string | null
   processing_status: string
   is_quarantined: boolean
+  attachments?: LegalAttachmentItem[]
 }
 
 export interface LegalThreadDetail {
@@ -147,6 +149,8 @@ export interface LegalThreadReplyRequest {
   client_id?: number | null
   assigned_to_user_id?: number | null
   contract_number?: string | null
+  attachment_ids?: string[]
+  draft_message_id?: string | null
 }
 
 export interface LegalThreadReplyResponse {
@@ -168,6 +172,35 @@ export interface LegalOutgoingLetterRequest {
   client_id?: number | null
   assigned_to_user_id?: number | null
   contract_number?: string | null
+  attachment_ids?: string[]
+  staging_session_id?: string | null
+}
+
+export interface LegalReplyDraft {
+  exists: boolean
+  message_id: string
+  mailbox_id: string | null
+  body_text: string
+  edo_type: EdoType
+  updated_at: string
+}
+
+export interface LegalReplyDraftUpsert {
+  body_text: string
+  mailbox_id?: string | null
+  edo_type?: EdoType
+}
+
+export interface LegalStagedAttachment {
+  id: string
+  filename: string
+  content_type: string | null
+  size_bytes: number | null
+}
+
+export interface LegalStagedAttachmentListResponse {
+  items: LegalStagedAttachment[]
+  total: number
 }
 
 export interface LegalOutgoingLetterResponse {

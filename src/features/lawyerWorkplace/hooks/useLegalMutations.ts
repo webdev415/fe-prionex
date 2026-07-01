@@ -208,9 +208,7 @@ export function useReplyToLegalThread() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: legalWorkplaceKeys.inbox() })
       queryClient.invalidateQueries({ queryKey: legalWorkplaceKeys.kanban() })
-      queryClient.invalidateQueries({
-        queryKey: legalWorkplaceKeys.thread(data.thread_id),
-      })
+      queryClient.invalidateQueries({ queryKey: legalWorkplaceKeys.threads() })
       queryClient.invalidateQueries({
         queryKey: legalWorkplaceKeys.message(data.message_id),
       })
@@ -233,9 +231,7 @@ export function useSendOutgoingLetter() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: legalWorkplaceKeys.inbox() })
       queryClient.invalidateQueries({ queryKey: legalWorkplaceKeys.kanban() })
-      queryClient.invalidateQueries({
-        queryKey: legalWorkplaceKeys.thread(data.thread_id),
-      })
+      queryClient.invalidateQueries({ queryKey: legalWorkplaceKeys.threads() })
       queryClient.invalidateQueries({
         queryKey: legalWorkplaceKeys.message(data.message_id),
       })

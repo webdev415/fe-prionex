@@ -71,6 +71,8 @@ const threadDetail = vi.hoisted(() => ({
       sent_at: null,
       processing_status: 'in_progress',
       is_quarantined: false,
+      to_addresses: [] as string[],
+      attachments: [] as [],
     },
   ],
 }))
@@ -169,6 +171,31 @@ vi.mock('@/features/lawyerWorkplace/api/legalApi', () => ({
     getSyncSettings: vi.fn(() => Promise.resolve({ sync_interval: '1h', last_synced_at: null })),
     listReplyTemplates: vi.fn(() => Promise.resolve(emptyList)),
     listDocumentPresets: vi.fn(() => Promise.resolve(emptyList)),
+    getReplyDraft: vi.fn(() =>
+      Promise.resolve({
+        exists: false,
+        message_id: 'msg-1',
+        mailbox_id: null,
+        body_text: '',
+        edo_type: 'none',
+        updated_at: '',
+      })
+    ),
+    saveReplyDraft: vi.fn((messageId: string) =>
+      Promise.resolve({
+        exists: true,
+        message_id: messageId,
+        mailbox_id: null,
+        body_text: '',
+        edo_type: 'none',
+        updated_at: '',
+      })
+    ),
+    deleteReplyDraft: vi.fn(() => Promise.resolve()),
+    listReplyStagedAttachments: vi.fn(() => Promise.resolve({ items: [], total: 0 })),
+    uploadReplyStagedAttachment: vi.fn(),
+    deleteReplyStagedAttachment: vi.fn(() => Promise.resolve()),
+    listComposerReplyTemplates: vi.fn(() => Promise.resolve(emptyList)),
   },
 }))
 

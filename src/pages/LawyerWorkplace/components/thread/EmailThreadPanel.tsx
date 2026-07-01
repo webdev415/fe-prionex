@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/Button'
@@ -9,7 +9,9 @@ import {
   downloadLegalAttachment,
   useLegalComposerReplyTemplates,
   useLegalMailboxes,
+  useReplyComposerState,
   useReplyToLegalThread,
+  loadReplyDraftForMessage,
   type EdoType,
 } from '@/features/lawyerWorkplace'
 import { getErrorMessage } from '@/lib/errors'
@@ -222,12 +224,11 @@ export function EmailThreadPanel({
 
   const handleApplyTemplate = (body: string) => {
     if (!letter) return
-    onReplyDraftChange(
-      applyReplyTemplatePlaceholders(body, {
-        clientName: letter.clientName,
-        referenceId: letter.referenceId,
-      })
-    )
+    const filled = applyReplyTemplatePlaceholders(body, {
+      clientName: letter.clientName,
+      referenceId: letter.referenceId,
+    })
+    onReplyDraftChange(replyDraft.trim() ? `${replyDraft.trim()}\n\n${filled}` : filled)
   }
 
   const defaultMailboxId = useMemo(() => {
@@ -240,6 +241,45 @@ export function EmailThreadPanel({
   const selectedMailboxId =
     mailboxOverride?.letterId === letterId ? mailboxOverride.mailboxId : defaultMailboxId
   const edoType = edoOverride?.letterId === letterId ? edoOverride.edoType : 'none'
+
+  const {
+    stagedAttachments,
+    isSavingDraft,
+    isUploadingAttachment,
+    saveDraft,
+    uploadAttachment,
+    removeAttachment,
+    clearComposerState,
+  } = useReplyComposerState({
+    messageId: letterId || null,
+    selectedMailboxId,
+    edoType,
+    body: replyDraft,
+    enabled: Boolean(letter),
+  })
+
+  const loadedDraftForLetterRef = useRef<string | null>(null)
+
+  useEffect(() => {
+    if (!letterId || !letter) return
+    if (loadedDraftForLetterRef.current === letterId) return
+    loadedDraftForLetterRef.current = letterId
+
+    void (async () => {
+      const saved = await loadReplyDraftForMessage(letterId)
+      if (saved) {
+        onReplyDraftChange(saved.body)
+        if (saved.mailboxId) {
+          setMailboxOverride({ letterId, mailboxId: saved.mailboxId })
+        }
+        if (saved.edoType !== 'none') {
+          setEdoOverride({ letterId, edoType: saved.edoType })
+        }
+      } else {
+        onReplyDraftChange('')
+      }
+    })()
+  }, [letter, letterId, onReplyDraftChange])
 
   const handleMailboxChange = (mailboxId: string) => {
     setMailboxOverride({ letterId, mailboxId })
@@ -286,11 +326,15 @@ export function EmailThreadPanel({
           edo_type: edoType,
           client_id: edoType !== 'none' ? clientId : null,
           assigned_to_user_id: edoType !== 'none' ? assignedUserId : null,
+          attachment_ids: stagedAttachments.map((item) => item.id),
+          draft_message_id: letter.id,
         },
       },
       {
         onSuccess: () => {
           onReplyDraftChange('')
+          clearComposerState()
+          loadedDraftForLetterRef.current = null
           onReplySent?.()
         },
       }
@@ -423,6 +467,18 @@ export function EmailThreadPanel({
         onSend={handleSendReply}
         replyTemplates={replyTemplates}
         onApplyTemplate={handleApplyTemplate}
+        stagedAttachments={stagedAttachments}
+        onSaveDraft={saveDraft}
+        onAttachFiles={(files) => {
+          void Array.from(files).forEach((file) => {
+            void uploadAttachment(file)
+          })
+        }}
+        onRemoveAttachment={(attachmentId) => {
+          void removeAttachment(attachmentId)
+        }}
+        isSavingDraft={isSavingDraft}
+        isUploadingAttachment={isUploadingAttachment}
         isSending={replyMutation.isPending}
         sendDisabled={!letter.replyContext.threadId}
       />

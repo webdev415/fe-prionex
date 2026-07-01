@@ -44,6 +44,10 @@ import type {
   LegalReplyTemplateCreate,
   LegalReplyTemplateListResponse,
   LegalReplyTemplateUpdate,
+  LegalReplyDraft,
+  LegalReplyDraftUpsert,
+  LegalStagedAttachment,
+  LegalStagedAttachmentListResponse,
   LegalSettingsMailbox,
   LegalSettingsMailboxListResponse,
 } from './types'
@@ -331,6 +335,71 @@ export const legalApi = {
     return api
       .get<LegalReplyTemplateListResponse>(`${BASE_URL}/reply-templates`, { params })
       .then((response) => response.data)
+  },
+
+  getReplyDraft(messageId: string) {
+    return api
+      .get<LegalReplyDraft>(`${BASE_URL}/messages/${messageId}/reply-draft`)
+      .then((response) => response.data)
+  },
+
+  saveReplyDraft(messageId: string, payload: LegalReplyDraftUpsert) {
+    return api
+      .put<LegalReplyDraft>(`${BASE_URL}/messages/${messageId}/reply-draft`, payload)
+      .then((response) => response.data)
+  },
+
+  deleteReplyDraft(messageId: string) {
+    return api.delete(`${BASE_URL}/messages/${messageId}/reply-draft`)
+  },
+
+  listReplyStagedAttachments(messageId: string) {
+    return api
+      .get<LegalStagedAttachmentListResponse>(`${BASE_URL}/messages/${messageId}/reply-attachments`)
+      .then((response) => response.data)
+  },
+
+  uploadReplyStagedAttachment(messageId: string, mailboxId: string, file: File) {
+    const formData = new FormData()
+    formData.append('mailbox_id', mailboxId)
+    formData.append('file', file)
+    return api
+      .post<LegalStagedAttachment>(
+        `${BASE_URL}/messages/${messageId}/reply-attachments`,
+        formData,
+        { headers: { 'Content-Type': 'multipart/form-data' } }
+      )
+      .then((response) => response.data)
+  },
+
+  deleteReplyStagedAttachment(messageId: string, attachmentId: string) {
+    return api.delete(`${BASE_URL}/messages/${messageId}/reply-attachments/${attachmentId}`)
+  },
+
+  listOutgoingStagedAttachments(stagingSessionId: string) {
+    return api
+      .get<LegalStagedAttachmentListResponse>(`${BASE_URL}/outgoing/staging-attachments`, {
+        params: { staging_session_id: stagingSessionId },
+      })
+      .then((response) => response.data)
+  },
+
+  uploadOutgoingStagedAttachment(stagingSessionId: string, mailboxId: string, file: File) {
+    const formData = new FormData()
+    formData.append('staging_session_id', stagingSessionId)
+    formData.append('mailbox_id', mailboxId)
+    formData.append('file', file)
+    return api
+      .post<LegalStagedAttachment>(`${BASE_URL}/outgoing/staging-attachments`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+      .then((response) => response.data)
+  },
+
+  deleteOutgoingStagedAttachment(stagingSessionId: string, attachmentId: string) {
+    return api.delete(`${BASE_URL}/outgoing/staging-attachments/${attachmentId}`, {
+      params: { staging_session_id: stagingSessionId },
+    })
   },
 
   listSettingsDocumentPresets(params?: { include_inactive?: boolean }) {

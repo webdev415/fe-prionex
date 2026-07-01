@@ -90,12 +90,16 @@ export function mapMessageContent(item: { body_text: string | null; body_html: s
   return { body: '', bodyFormat: 'text' }
 }
 
+function isOutgoingDirection(direction: string): boolean {
+  return direction === 'outgoing' || direction === 'outbound'
+}
+
 function messageTimestamp(item: {
   direction: string
   received_at: string | null
   sent_at: string | null
 }): string {
-  if (item.direction === 'outgoing') {
+  if (isOutgoingDirection(item.direction)) {
     return item.sent_at ?? item.received_at ?? new Date().toISOString()
   }
   return item.received_at ?? item.sent_at ?? new Date().toISOString()
@@ -200,7 +204,7 @@ export function mapThreadMessageToUi(
   options?: { toMailbox?: string }
 ): ThreadMessage {
   const { name, email } = parseEmailAddress(item.from_address)
-  const direction = item.direction === 'outgoing' ? 'outgoing' : 'incoming'
+  const direction = isOutgoingDirection(item.direction) ? 'outgoing' : 'incoming'
 
   return {
     id: item.id,
@@ -301,15 +305,16 @@ export function mapMessageToLetterDetail(
     .filter((item) => !item.is_quarantined)
     .map((item) => {
       const toMailbox =
-        item.direction !== 'outgoing' && item.id === message.id ? recipientEmail : undefined
-      const mapped = mapThreadMessageToUi(item, { toMailbox })
-      if (item.id === message.id) {
-        return {
-          ...mapped,
-          attachments: mapMessageAttachments(message.attachments),
-        }
+        item.to_addresses?.[0]?.trim() ||
+        (!isOutgoingDirection(item.direction) && item.id === message.id
+          ? recipientEmail
+          : undefined)
+      const attachmentSource =
+        item.attachments ?? (item.id === message.id ? message.attachments : undefined)
+      return {
+        ...mapThreadMessageToUi(item, { toMailbox }),
+        attachments: mapMessageAttachments(attachmentSource),
       }
-      return mapped
     })
 
   return {

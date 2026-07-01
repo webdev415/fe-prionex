@@ -163,7 +163,6 @@ function LawyerWorkplacePageContent() {
 
   const handleSelectLetter = (letterId: string) => {
     setSelectedLetterId(letterId)
-    setReplyDraft('')
     if (isCompact) {
       setInboxPane('thread')
     }

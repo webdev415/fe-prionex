@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react'
-import { Attachment01Icon } from '@hugeicons/core-free-icons'
+import { useMemo, useRef, useState } from 'react'
+import { Link01Icon } from '@hugeicons/core-free-icons'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/Button'
@@ -17,13 +17,19 @@ import { useClients } from '@/features/clients/hooks/useClients'
 import { useClientEmails } from '@/features/clients/hooks/useClientEmails'
 import { useDebounce } from '@/hooks/useDebounce'
 import {
+  applyReplyTemplatePlaceholders,
+  useLegalComposerReplyTemplates,
   useLegalMailboxes,
   useSendOutgoingLetter,
   type EdoType,
   type LegalMailbox,
+  type LegalStagedAttachment,
 } from '@/features/lawyerWorkplace'
+import { legalApi } from '@/features/lawyerWorkplace/api/legalApi'
+import { formatAttachmentSize } from '@/features/lawyerWorkplace/api/mappers'
 import { useAuthStore } from '@/stores/authStore'
 import { Icon, Icons } from '@/lib/icons'
+import { getErrorMessage } from '@/lib/errors'
 import { cn } from '@/lib/utils'
 
 const EDO_OPTIONS: { id: EdoType; labelKey: string; fallback: string; badge?: string }[] = [
@@ -40,24 +46,6 @@ const EDO_OPTIONS: { id: EdoType; labelKey: string; fallback: string; badge?: st
     badge: 'НБУ',
   },
   { id: 'none', labelKey: 'pages.lawyerWorkplace.reply.edoNone', fallback: 'Do not register' },
-]
-
-const TEMPLATES = [
-  {
-    id: 'complaint',
-    labelKey: 'pages.lawyerWorkplace.reply.templates.complaintResponse',
-    fallback: 'Complaint response',
-  },
-  {
-    id: 'nbu_ack',
-    labelKey: 'pages.lawyerWorkplace.reply.templates.nbuAcknowledgement',
-    fallback: 'NBU acknowledgement',
-  },
-  {
-    id: 'extension',
-    labelKey: 'pages.lawyerWorkplace.reply.templates.extensionRequest',
-    fallback: 'Extension request',
-  },
 ]
 
 type RecipientMode = 'client' | 'institution'
@@ -86,9 +74,16 @@ function NewOutgoingLetterForm({ onClose, onSent }: NewOutgoingLetterFormProps) 
   const { t } = useTranslation('common')
   const currentUserId = Number(useAuthStore((state) => state.user?.id))
   const { data: mailboxesData } = useLegalMailboxes()
+  const { data: replyTemplatesData } = useLegalComposerReplyTemplates(null)
   const sendMutation = useSendOutgoingLetter()
 
+  const [stagingSessionId] = useState(() => crypto.randomUUID())
+  const [stagedAttachments, setStagedAttachments] = useState<LegalStagedAttachment[]>([])
+  const [isUploadingAttachment, setIsUploadingAttachment] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
   const mailboxes = useMemo(() => mailboxesData?.items ?? [], [mailboxesData?.items])
+  const replyTemplates = useMemo(() => replyTemplatesData?.items ?? [], [replyTemplatesData?.items])
   const defaultMailbox = useMemo(() => resolveDefaultMailbox(mailboxes), [mailboxes])
 
   const [mailboxOverrideId, setMailboxOverrideId] = useState<string | null>(null)
@@ -179,6 +174,8 @@ function NewOutgoingLetterForm({ onClose, onSent }: NewOutgoingLetterFormProps) 
         edo_type: effectiveEdoType,
         client_id: clientIdForPayload,
         assigned_to_user_id: effectiveEdoType !== 'none' ? currentUserId : null,
+        attachment_ids: stagedAttachments.map((item) => item.id),
+        staging_session_id: stagingSessionId,
       },
       {
         onSuccess: (data) => {
@@ -410,19 +407,26 @@ function NewOutgoingLetterForm({ onClose, onSent }: NewOutgoingLetterFormProps) 
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="min-w-[170px] p-1.5">
-                  {TEMPLATES.map((tmpl) => (
-                    <DropdownMenuItem
-                      key={tmpl.id}
-                      className="cursor-pointer rounded-md px-2.5 py-1.5 text-[12px]"
-                      onClick={() =>
-                        setBody(
-                          (prev) => (prev ? `${prev}\n\n` : '') + t(tmpl.labelKey, tmpl.fallback)
-                        )
-                      }
-                    >
-                      {t(tmpl.labelKey, tmpl.fallback)}
+                  {replyTemplates.length === 0 ? (
+                    <DropdownMenuItem disabled className="text-[12px]">
+                      {t('pages.lawyerWorkplace.reply.noTemplates', 'No templates available')}
                     </DropdownMenuItem>
-                  ))}
+                  ) : (
+                    replyTemplates.map((template) => (
+                      <DropdownMenuItem
+                        key={template.id}
+                        className="cursor-pointer rounded-md px-2.5 py-1.5 text-[12px]"
+                        onClick={() =>
+                          setBody((prev) => {
+                            const filled = applyReplyTemplatePlaceholders(template.body, {})
+                            return prev.trim() ? `${prev.trim()}\n\n${filled}` : filled
+                          })
+                        }
+                      >
+                        {template.name}
+                      </DropdownMenuItem>
+                    ))
+                  )}
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
@@ -467,13 +471,77 @@ function NewOutgoingLetterForm({ onClose, onSent }: NewOutgoingLetterFormProps) 
             </div>
           </div>
 
+          {stagedAttachments.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {stagedAttachments.map((attachment) => (
+                <span
+                  key={attachment.id}
+                  className="border-light-200 text-dark-500 inline-flex max-w-[200px] items-center gap-1 rounded-full border bg-white px-2 py-0.5 text-[10px]"
+                >
+                  <span className="truncate">{attachment.filename}</span>
+                  <span className="text-light-600 shrink-0">
+                    {formatAttachmentSize(attachment.size_bytes)}
+                  </span>
+                  <button
+                    type="button"
+                    className="text-light-600 hover:text-dark-500"
+                    onClick={() => {
+                      void legalApi
+                        .deleteOutgoingStagedAttachment(stagingSessionId, attachment.id)
+                        .then(() =>
+                          setStagedAttachments((current) =>
+                            current.filter((item) => item.id !== attachment.id)
+                          )
+                        )
+                        .catch((error) => toast.error(getErrorMessage(error)))
+                    }}
+                  >
+                    <Icons.Close size={10} strokeWidth={2} />
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            className="hidden"
+            onChange={(event) => {
+              const files = event.target.files
+              if (!files?.length || !selectedMailbox?.id) return
+              void (async () => {
+                setIsUploadingAttachment(true)
+                try {
+                  for (const file of Array.from(files)) {
+                    const uploaded = await legalApi.uploadOutgoingStagedAttachment(
+                      stagingSessionId,
+                      selectedMailbox.id,
+                      file
+                    )
+                    setStagedAttachments((current) => [...current, uploaded])
+                  }
+                } catch (error) {
+                  toast.error(getErrorMessage(error))
+                } finally {
+                  setIsUploadingAttachment(false)
+                  event.target.value = ''
+                }
+              })()
+            }}
+          />
+
           <button
             type="button"
-            disabled
-            className="text-light-600 flex cursor-not-allowed items-center gap-1.5 text-[12px] opacity-60"
+            disabled={!selectedMailbox?.id || isUploadingAttachment}
+            onClick={() => fileInputRef.current?.click()}
+            className="text-light-600 hover:text-dark-500 flex items-center gap-1.5 text-[12px] disabled:cursor-not-allowed disabled:opacity-60"
           >
-            <Icon icon={Attachment01Icon} size={14} strokeWidth={1.5} />
-            {t('pages.lawyerWorkplace.reply.attach', 'Attach')}
+            <Icon icon={Link01Icon} size={14} strokeWidth={1.5} />
+            {isUploadingAttachment
+              ? t('pages.lawyerWorkplace.reply.attaching', 'Attaching…')
+              : t('pages.lawyerWorkplace.reply.attach', 'Attach')}
           </button>
         </div>
       </ModalContent>
