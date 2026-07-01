@@ -344,7 +344,7 @@ function LetterParametersPanelContent({
   if (isReadOnly) {
     // ── MODE B: Read-only view ─────────────────────────────────────────────────
     return (
-      <div className="flex h-full w-full shrink-0 flex-col border-l border-gray-100 bg-white">
+      <div className="flex h-full w-full min-w-0 shrink-0 flex-col overflow-hidden border-l border-gray-100 bg-white">
         <div className="flex w-full flex-col items-start gap-4 overflow-y-auto px-[18px] py-[16px]">
           <div className="flex w-full items-center justify-between gap-2">
             <span className="text-dark-500 text-[14px] font-medium">
@@ -434,7 +434,7 @@ function LetterParametersPanelContent({
 
   // ── MODE A: Editable ─────────────────────────────────────────────────────────
   return (
-    <div className="flex h-full w-full shrink-0 flex-col justify-between overflow-y-auto border-l border-gray-100 bg-white">
+    <div className="flex h-full w-full min-w-0 shrink-0 flex-col justify-between overflow-x-hidden overflow-y-auto border-l border-gray-100 bg-white">
       <div className="flex w-full flex-col items-start gap-4 px-[18px] py-[16px]">
         <div className="flex w-full items-center justify-between gap-2 self-stretch">
           <span className="text-dark-500 text-[14px] font-medium">
@@ -572,7 +572,7 @@ export function LetterParametersPanel({ letter, onClose, onConfirm }: LetterPara
 
   if (!letter) {
     return (
-      <div className="flex h-full w-full shrink-0 items-center justify-center border-l border-gray-200 bg-white">
+      <div className="flex h-full w-full min-w-0 shrink-0 items-center justify-center overflow-hidden border-l border-gray-200 bg-white">
         <p className="px-4 text-center text-sm text-gray-400">
           {t('pages.lawyerWorkplace.parameters.selectLetter', 'Select a letter to view parameters')}
         </p>

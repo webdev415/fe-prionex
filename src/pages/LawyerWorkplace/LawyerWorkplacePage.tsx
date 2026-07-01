@@ -204,11 +204,20 @@ function LawyerWorkplacePageContent() {
         )}
       >
         {activeTab === 'inbox' && (
-          <div className="relative flex h-full overflow-hidden">
+          <div
+            className={cn(
+              'relative h-full min-w-0 overflow-hidden',
+              isWide
+                ? showParametersPanel
+                  ? 'grid grid-cols-[minmax(0,28%)_minmax(0,1fr)_minmax(0,22%)]'
+                  : 'grid grid-cols-[minmax(0,28%)_minmax(0,1fr)]'
+                : 'flex min-w-0'
+            )}
+          >
             <div
               className={cn(
-                'h-full shrink-0',
-                isCompact ? 'w-full' : isWide ? 'w-[28%]' : 'w-[38%]',
+                'h-full min-w-0 overflow-hidden',
+                isCompact ? 'w-full' : !isWide && 'w-[38%] shrink-0',
                 inboxPane !== 'list' && isCompact && 'hidden'
               )}
             >
@@ -239,7 +248,7 @@ function LawyerWorkplacePageContent() {
 
             <div
               className={cn(
-                'min-h-0 flex-1 flex-col',
+                'flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden',
                 inboxPane === 'thread' || !isCompact ? 'flex' : 'hidden'
               )}
             >
@@ -257,7 +266,7 @@ function LawyerWorkplacePageContent() {
             </div>
 
             {isWide && showParametersPanel && (
-              <div className="h-full w-[22%] shrink-0">
+              <div className="h-full min-w-0 overflow-hidden">
                 <LetterParametersPanel letter={selectedLetter} onConfirm={handleConfirmLetter} />
               </div>
             )}

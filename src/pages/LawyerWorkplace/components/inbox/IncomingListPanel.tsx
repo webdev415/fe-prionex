@@ -212,7 +212,7 @@ export function IncomingListPanel({
   const pageEnd = Math.min(page * PAGE_SIZE, total)
 
   return (
-    <div className="flex h-full flex-col border-r border-gray-200 bg-white">
+    <div className="flex h-full min-w-0 flex-col overflow-hidden border-r border-gray-200 bg-white">
       {/* ── Header ─────────────────────────────────────────────────────────── */}
       <div
         className="shrink-0 px-4 pt-4 pb-3"

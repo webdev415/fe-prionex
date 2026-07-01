@@ -964,7 +964,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         {/* Main Content Area with left margin for sidebar - no margin on mobile */}
         <div
           className={cn(
-            'transition-all duration-300',
+            'min-w-0 transition-all duration-300',
             'lg:ml-18', // Desktop: always has margin for collapsed sidebar
             isOpenSideBar && 'lg:ml-60' // Desktop: expanded sidebar
           )}
@@ -1054,7 +1054,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           </header>
 
           {/* Scrollable Page Content with top padding for fixed header */}
-          <main className="min-h-screen overflow-y-auto px-4 pt-[80px] pb-4 sm:px-6 sm:pb-6 lg:px-[28px] lg:pb-[20px]">
+          <main
+            className={cn(
+              'min-h-screen overflow-y-auto px-4 pt-[80px] pb-4 sm:px-6 sm:pb-6 lg:px-[28px] lg:pb-[20px]',
+              isLawyerWorkplaceRoute && 'overflow-x-hidden'
+            )}
+          >
             {children}
           </main>
         </div>

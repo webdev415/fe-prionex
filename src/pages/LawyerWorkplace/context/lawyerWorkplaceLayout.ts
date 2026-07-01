@@ -1,7 +1,7 @@
 import {
   createContext,
   useContext,
-  useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -41,7 +41,7 @@ export function useLawyerWorkplaceLayoutMeasure(): LawyerWorkplaceLayout {
   const ref = useRef<HTMLDivElement>(null)
   const [contentWidth, setContentWidth] = useState(0)
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const el = ref.current
     if (!el) return
 

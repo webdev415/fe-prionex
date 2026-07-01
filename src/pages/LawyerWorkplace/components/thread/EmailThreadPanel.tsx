@@ -142,7 +142,7 @@ function MessageCard({
 
       {hasBody && (
         <div className="border-t border-gray-200 px-4 py-3">
-          <p className="text-dark-500 text-[13px] leading-relaxed whitespace-pre-wrap">
+          <p className="text-dark-500 overflow-wrap-anywhere text-[13px] leading-relaxed break-words whitespace-pre-wrap">
             {message.body}
           </p>
         </div>
@@ -291,7 +291,7 @@ export function EmailThreadPanel({
 
   if (!letter) {
     return (
-      <div className="flex h-full min-h-0 flex-1 items-center justify-center bg-gray-50/50">
+      <div className="flex h-full min-h-0 min-w-0 flex-1 items-center justify-center overflow-hidden bg-gray-50/50">
         <p className="text-sm text-gray-400">
           {isError
             ? t('pages.lawyerWorkplace.thread.loadError', 'Could not load thread')
@@ -311,7 +311,7 @@ export function EmailThreadPanel({
   const showCompactNav = Boolean(onBack || onOpenParameters)
 
   return (
-    <div className="flex h-full min-h-0 flex-1 flex-col bg-gray-50/20">
+    <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-gray-50/20">
       {showCompactNav && (
         <div className="flex shrink-0 items-center justify-between border-b border-gray-100 bg-white px-3 py-2">
           {onBack ? (
@@ -380,7 +380,7 @@ export function EmailThreadPanel({
         </div>
       </div>
 
-      <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-3 py-4 sm:px-5">
+      <div className="min-h-0 min-w-0 flex-1 space-y-4 overflow-x-hidden overflow-y-auto px-3 py-4 sm:px-5">
         {isLoading && (
           <p className="text-center text-xs text-gray-400">
             {t('pages.lawyerWorkplace.thread.loading', 'Loading thread…')}
