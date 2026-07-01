@@ -223,7 +223,8 @@
     "cancel": "Cancel",
     "edit": "Edit",
     "close": "Close",
-    "optional": "optional"
+    "optional": "optional",
+    "refresh": "Refresh"
   },
   "logout": {
     "confirmTitle": "Confirm Logout",
@@ -3297,7 +3298,10 @@
               "mode": "Mode",
               "status": "Status",
               "result": "Result"
-            }
+            },
+            "clickToExpand": "Click to see full details",
+            "reqId": "UBKI reference",
+            "pageInfo": "Page {{page}} of {{total}}"
           },
           "selectFirst": "Select at least one item first",
           "toasts": {

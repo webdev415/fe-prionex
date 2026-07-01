@@ -8,7 +8,7 @@
  * loans by `debt_id`.
  */
 
-import { useState } from 'react'
+import { Fragment, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
 import { Icons } from '@/lib/icons'
@@ -29,9 +29,14 @@ const STATUS_COLORS: Record<UbkiLogEntry['status'], string> = {
   error: 'text-red-600',
 }
 
+const PAGE_SIZE = 10
+
 export function UbkiSubmissionHistory({ clientId, loans }: UbkiSubmissionHistoryProps) {
   const { t } = useTranslation('common')
   const [isOpen, setIsOpen] = useState(false)
+  // Row whose full detail is expanded (click a row to toggle).
+  const [expandedId, setExpandedId] = useState<number | null>(null)
+  const [page, setPage] = useState(0)
 
   // The history is rendered regardless of clientId but only fetched when the
   // client is valid. `clientId` is part of the props purely so callers pass an
@@ -44,6 +49,11 @@ export function UbkiSubmissionHistory({ clientId, loans }: UbkiSubmissionHistory
   // debt_id; operators recognise the loan number, so display that.
   const loanNumberById = new Map(loans.map((l) => [l.id, l.loanNumber]))
   const entries = (logs ?? []).filter((entry) => loanNumberById.has(entry.debt_id))
+
+  // Client-side pagination (all rows are already fetched).
+  const totalPages = Math.max(1, Math.ceil(entries.length / PAGE_SIZE))
+  const currentPage = Math.min(page, totalPages - 1)
+  const pageEntries = entries.slice(currentPage * PAGE_SIZE, currentPage * PAGE_SIZE + PAGE_SIZE)
 
   // Map raw error codes to short, human-friendly labels (operator-facing).
   const friendlyCode = (code: string): string => {
@@ -144,33 +154,98 @@ export function UbkiSubmissionHistory({ clientId, loans }: UbkiSubmissionHistory
                 </tr>
               </thead>
               <tbody>
-                {entries.map((entry) => (
-                  <tr
-                    key={entry.id}
-                    className="border-b border-[#EBECE8] last:border-b-0 hover:bg-[#F9FAF8]"
-                  >
-                    <td className="px-3 py-2 text-sm text-[#6B7280]">
-                      {formatDateTime(entry.created_at)}
-                    </td>
-                    <td className="px-3 py-2 text-sm text-[#05040D]">
-                      {loanNumberById.get(entry.debt_id) ?? entry.debt_id}
-                    </td>
-                    <td className="px-3 py-2 text-sm text-[#6B7280]">{entry.mode}</td>
-                    <td className="px-3 py-2">
-                      <span className={cn('text-sm font-medium', STATUS_COLORS[entry.status])}>
-                        {entry.status}
-                      </span>
-                    </td>
-                    <td
-                      className="truncate px-3 py-2 text-sm text-[#6B7280]"
-                      title={rawResult(entry)}
-                    >
-                      {renderResult(entry)}
-                    </td>
-                  </tr>
-                ))}
+                {pageEntries.map((entry) => {
+                  const isExpanded = expandedId === entry.id
+                  return (
+                    <Fragment key={entry.id}>
+                      <tr
+                        onClick={() =>
+                          setExpandedId((prev) => (prev === entry.id ? null : entry.id))
+                        }
+                        className="cursor-pointer border-b border-[#EBECE8] last:border-b-0 hover:bg-[#F9FAF8]"
+                        title={t(
+                          'pages.clients.detail.ubki.history.clickToExpand',
+                          'Click to see full details'
+                        )}
+                      >
+                        <td className="px-3 py-2 text-sm text-[#6B7280]">
+                          {formatDateTime(entry.created_at)}
+                        </td>
+                        <td className="px-3 py-2 text-sm text-[#05040D]">
+                          {loanNumberById.get(entry.debt_id) ?? entry.debt_id}
+                        </td>
+                        <td className="px-3 py-2 text-sm text-[#6B7280]">{entry.mode}</td>
+                        <td className="px-3 py-2">
+                          <span className={cn('text-sm font-medium', STATUS_COLORS[entry.status])}>
+                            {entry.status}
+                          </span>
+                        </td>
+                        <td className="px-3 py-2 text-sm text-[#6B7280]">
+                          <div className="flex items-center gap-1">
+                            <Icons.ArrowRight
+                              size={12}
+                              strokeWidth={2}
+                              className={cn(
+                                'shrink-0 transition-transform',
+                                isExpanded ? 'rotate-90' : ''
+                              )}
+                            />
+                            <span className="truncate">{renderResult(entry)}</span>
+                          </div>
+                        </td>
+                      </tr>
+                      {isExpanded && (
+                        <tr className="border-b border-[#EBECE8] bg-[#F9FAF8]">
+                          <td colSpan={5} className="px-9 py-3">
+                            <div className="space-y-1 text-sm text-[#374151]">
+                              {entry.ubki_request_id && (
+                                <div>
+                                  <span className="text-[#6B7280]">
+                                    {t('pages.clients.detail.ubki.history.reqId', 'UBKI reference')}
+                                    :{' '}
+                                  </span>
+                                  {entry.ubki_request_id}
+                                </div>
+                              )}
+                              <div className="break-words whitespace-pre-wrap">
+                                {rawResult(entry)}
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </Fragment>
+                  )
+                })}
               </tbody>
             </table>
+          )}
+
+          {entries.length > PAGE_SIZE && (
+            <div className="flex items-center justify-between border-t border-[#EBECE8] px-4 py-2 text-sm text-[#6B7280]">
+              <span>
+                {t('pages.clients.detail.ubki.history.pageInfo', 'Page {{page}} of {{total}}', {
+                  page: currentPage + 1,
+                  total: totalPages,
+                })}
+              </span>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setPage((p) => Math.max(0, p - 1))}
+                  disabled={currentPage === 0}
+                  className="rounded-md border border-[#EBECE8] px-3 py-1 hover:bg-[#F9FAF8] disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  {t('common.previous', 'Previous')}
+                </button>
+                <button
+                  onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+                  disabled={currentPage >= totalPages - 1}
+                  className="rounded-md border border-[#EBECE8] px-3 py-1 hover:bg-[#F9FAF8] disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  {t('common.next', 'Next')}
+                </button>
+              </div>
+            </div>
           )}
         </div>
       )}
