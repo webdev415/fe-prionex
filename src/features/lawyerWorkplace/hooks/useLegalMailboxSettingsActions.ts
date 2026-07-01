@@ -45,8 +45,16 @@ export function useLegalMailboxSettingsActions() {
         mailboxId: mailbox.id,
         payload: { status: nextStatus },
       })
+      if (nextStatus === 'disabled') {
+        toast.info(
+          t(
+            'pages.lawyerWorkplace.settings.mailboxes.disabledHidden',
+            'Mailbox disabled. Its messages are hidden from the inbox.'
+          )
+        )
+      }
     },
-    [updateMailbox]
+    [updateMailbox, t]
   )
 
   const changeSyncInterval = useCallback(
