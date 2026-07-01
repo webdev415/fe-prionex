@@ -1976,6 +1976,7 @@
           "errors": "Errors ({{count}})",
           "readyToAssign": "Ready to assign",
           "noChange": "No change",
+          "wouldSkip": "Will be skipped",
           "invalid": "Invalid",
           "uniqueOperators": "Unique operators",
           "columns": {

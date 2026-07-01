@@ -1981,6 +1981,7 @@
           "errors": "Помилки ({{count}})",
           "readyToAssign": "Готово до призначення",
           "noChange": "Без змін",
+          "wouldSkip": "Буде пропущено",
           "invalid": "Недійсний",
           "uniqueOperators": "Унікальні оператори",
           "columns": {
