@@ -93,16 +93,6 @@ const PROVIDER_PRESETS: ProviderPreset[] = [
     smtpUseTls: true,
   },
   {
-    id: 'gmail_oauth2',
-    label: 'Gmail (OAuth2)',
-    imapHost: 'imap.gmail.com',
-    imapPort: 993,
-    imapUseSsl: true,
-    smtpHost: 'smtp.gmail.com',
-    smtpPort: 587,
-    smtpUseTls: true,
-  },
-  {
     id: 'custom',
     label: 'Custom / Self-hosted',
     imapHost: '',
@@ -117,7 +107,7 @@ const PROVIDER_PRESETS: ProviderPreset[] = [
 // Maps known email domains to their provider preset id.
 // Order matters — more specific entries first.
 const DOMAIN_PROVIDER_MAP: Array<{ domains: string[]; provider: MailboxProvider }> = [
-  { domains: ['gmail.com', 'googlemail.com'], provider: 'gmail_oauth2' },
+  { domains: ['gmail.com', 'googlemail.com'], provider: 'google_workspace' },
   { domains: ['ukr.net'], provider: 'ukrnet' },
   {
     domains: ['i.ua', 'meta.ua', 'ua.fm', 'email.ua', 'inbox.ua', 'bigmir.net', 'yandex.ua'],
@@ -129,18 +119,35 @@ const DOMAIN_PROVIDER_MAP: Array<{ domains: string[]; provider: MailboxProvider 
   },
 ]
 
-function detectProviderFromEmail(emailValue: string): MailboxProvider | null {
+function extractEmailDomain(emailValue: string): string | null {
   const atIdx = emailValue.indexOf('@')
   if (atIdx === -1) return null
   const domain = emailValue
     .slice(atIdx + 1)
     .toLowerCase()
     .trim()
+  return domain || null
+}
+
+function detectProviderFromEmail(emailValue: string): MailboxProvider | null {
+  const domain = extractEmailDomain(emailValue)
   if (!domain) return null
   for (const entry of DOMAIN_PROVIDER_MAP) {
     if (entry.domains.includes(domain)) return entry.provider
   }
   return null
+}
+
+function getAcceptableProviderIds(emailValue: string): MailboxProvider[] {
+  const domain = extractEmailDomain(emailValue)
+  if (!domain) {
+    return PROVIDER_PRESETS.map((preset) => preset.id)
+  }
+  const detected = detectProviderFromEmail(emailValue)
+  if (detected) {
+    return [detected, 'custom']
+  }
+  return ['custom']
 }
 
 const DEFAULT_EMPTY: MailboxFormValues = {
@@ -232,17 +239,22 @@ export function MailboxModal({
     if (!open) return
     requestAnimationFrame(() => {
       const initial = getInitialValues(mailbox)
+      const acceptable = getAcceptableProviderIds(initial.email)
+      const initialProvider = acceptable.includes(initial.provider)
+        ? initial.provider
+        : (detectProviderFromEmail(initial.email) ?? 'custom')
+      const preset = PROVIDER_PRESETS.find((p) => p.id === initialProvider)
       setEmail(initial.email)
       setDisplayName(initial.displayName)
-      setProvider(initial.provider)
+      setProvider(initialProvider)
       setPassword('')
       setShowPassword(false)
-      setImapHost(initial.imapHost)
-      setImapPort(initial.imapPort)
-      setImapUseSsl(initial.imapUseSsl)
-      setSmtpHost(initial.smtpHost)
-      setSmtpPort(initial.smtpPort)
-      setSmtpUseTls(initial.smtpUseTls)
+      setImapHost(preset?.imapHost ?? initial.imapHost)
+      setImapPort(preset?.imapPort ?? initial.imapPort)
+      setImapUseSsl(preset?.imapUseSsl ?? initial.imapUseSsl)
+      setSmtpHost(preset?.smtpHost ?? initial.smtpHost)
+      setSmtpPort(preset?.smtpPort ?? initial.smtpPort)
+      setSmtpUseTls(preset?.smtpUseTls ?? initial.smtpUseTls)
       setDefaultLetterTypeId(initial.defaultLetterTypeId)
       setIsDefaultOutgoing(initial.isDefaultOutgoing)
       setRoutingRules(initial.routingRules)
@@ -266,13 +278,26 @@ export function MailboxModal({
     }
   }
 
+  const acceptableProviderIds = useMemo(() => getAcceptableProviderIds(email), [email])
+
+  const availableProviderPresets = useMemo(
+    () => PROVIDER_PRESETS.filter((preset) => acceptableProviderIds.includes(preset.id)),
+    [acceptableProviderIds]
+  )
+
   const handleEmailChange = (value: string) => {
     setEmail(value)
-    // Only auto-detect when adding a new mailbox (don't change provider on edit)
-    if (isEditing) return
-    const detected = detectProviderFromEmail(value)
-    if (detected && detected !== provider) {
-      handleProviderChange(detected)
+    const acceptable = getAcceptableProviderIds(value)
+    if (!acceptable.includes(provider)) {
+      const detected = detectProviderFromEmail(value)
+      handleProviderChange(detected ?? 'custom')
+      return
+    }
+    if (!isEditing) {
+      const detected = detectProviderFromEmail(value)
+      if (detected && detected !== provider) {
+        handleProviderChange(detected)
+      }
     }
   }
 
@@ -285,20 +310,12 @@ export function MailboxModal({
     )
   }, [email, existingEmails, mailbox?.email])
 
-  const isGmailOAuth = provider === 'gmail_oauth2'
   const isCustom = provider === 'custom'
 
-  // Password is required when:
-  //   • Adding a new mailbox (non-OAuth2)
-  //   • Editing a mailbox that currently has NO credentials (must set one now)
-  // Password is optional when editing a mailbox that already HAS credentials
-  // (blank = keep existing password).
+  // Password is required when adding, or when editing a mailbox without credentials.
+  // Optional when editing a mailbox that already has credentials (blank = keep existing).
   const hasExistingCredentials = isEditing && (mailbox?.hasCredentials ?? false)
-  const passwordValid = isGmailOAuth
-    ? true
-    : hasExistingCredentials
-      ? true
-      : password.trim().length > 0
+  const passwordValid = hasExistingCredentials ? true : password.trim().length > 0
 
   const customHostsValid = !isCustom || (imapHost.trim().length > 0 && smtpHost.trim().length > 0)
 
@@ -418,7 +435,7 @@ export function MailboxModal({
               align="start"
               className="min-w-[var(--radix-dropdown-menu-trigger-width)] p-1.5"
             >
-              {PROVIDER_PRESETS.map((preset) => (
+              {availableProviderPresets.map((preset) => (
                 <DropdownMenuItem
                   key={preset.id}
                   className="cursor-pointer"
@@ -431,66 +448,45 @@ export function MailboxModal({
           </DropdownMenu>
         </div>
 
-        {/* Gmail OAuth2 notice */}
-        {isGmailOAuth ? (
-          <div className="rounded-md border border-blue-100 bg-blue-50 px-4 py-3">
-            <p className="text-[13px] font-medium text-blue-800">
-              {t(
-                'pages.lawyerWorkplace.settings.mailboxes.oauth2.title',
-                'Gmail requires OAuth2 authorisation'
-              )}
-            </p>
-            <p className="mt-0.5 text-[11.5px] text-blue-600">
-              {t(
-                'pages.lawyerWorkplace.settings.mailboxes.oauth2.hint',
-                'Save the mailbox, then click the "Connect Gmail" button in the table to authorise access via Google. No password is stored.'
-              )}
-            </p>
+        <div className="flex flex-col gap-2">
+          <Label className="text-dark-500 text-[13px] font-medium">
+            {t('pages.lawyerWorkplace.settings.mailboxes.fields.password', 'App password')}
+          </Label>
+          <div className="relative">
+            <input
+              type={showPassword ? 'text' : 'password'}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder={
+                hasExistingCredentials
+                  ? t(
+                      'pages.lawyerWorkplace.settings.mailboxes.fields.passwordEditPlaceholder',
+                      'Leave blank to keep current password'
+                    )
+                  : t(
+                      'pages.lawyerWorkplace.settings.mailboxes.fields.passwordPlaceholder',
+                      'Enter app password'
+                    )
+              }
+              className="text-dark-500 focus:border-primary-400 h-11 w-full rounded-md border border-gray-200 bg-white px-4 pr-12 text-[14px] outline-none"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword((v) => !v)}
+              className="text-light-500 hover:text-dark-500 absolute top-0 right-0 flex h-11 w-11 items-center justify-center"
+              tabIndex={-1}
+              aria-label={showPassword ? 'Hide password' : 'Show password'}
+            >
+              <Icons.View size={16} strokeWidth={showPassword ? 1.5 : 2.5} />
+            </button>
           </div>
-        ) : null}
-
-        {/* App password (non-OAuth2 providers) */}
-        {!isGmailOAuth ? (
-          <div className="flex flex-col gap-2">
-            <Label className="text-dark-500 text-[13px] font-medium">
-              {t('pages.lawyerWorkplace.settings.mailboxes.fields.password', 'App password')}
-            </Label>
-            <div className="relative">
-              <input
-                type={showPassword ? 'text' : 'password'}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder={
-                  hasExistingCredentials
-                    ? t(
-                        'pages.lawyerWorkplace.settings.mailboxes.fields.passwordEditPlaceholder',
-                        'Leave blank to keep current password'
-                      )
-                    : t(
-                        'pages.lawyerWorkplace.settings.mailboxes.fields.passwordPlaceholder',
-                        'Enter app password'
-                      )
-                }
-                className="text-dark-500 focus:border-primary-400 h-11 w-full rounded-md border border-gray-200 bg-white px-4 pr-12 text-[14px] outline-none"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword((v) => !v)}
-                className="text-light-500 hover:text-dark-500 absolute top-0 right-0 flex h-11 w-11 items-center justify-center"
-                tabIndex={-1}
-                aria-label={showPassword ? 'Hide password' : 'Show password'}
-              >
-                <Icons.View size={16} strokeWidth={showPassword ? 1.5 : 2.5} />
-              </button>
-            </div>
-            <p className="text-light-500 text-[11px]">
-              {t(
-                'pages.lawyerWorkplace.settings.mailboxes.fields.passwordHint',
-                'Use an app-specific password generated in your mail account security settings, not your main login password.'
-              )}
-            </p>
-          </div>
-        ) : null}
+          <p className="text-light-500 text-[11px]">
+            {t(
+              'pages.lawyerWorkplace.settings.mailboxes.fields.passwordHint',
+              'Use an app-specific password generated in your mail account security settings, not your main login password.'
+            )}
+          </p>
+        </div>
 
         {/* Custom provider server settings */}
         {isCustom ? (

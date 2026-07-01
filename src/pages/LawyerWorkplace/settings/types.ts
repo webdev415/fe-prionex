@@ -70,13 +70,7 @@ export interface MailboxRoutingRule {
   letterTypeId: string
 }
 
-export type MailboxProvider =
-  | 'gmail_oauth2'
-  | 'ukrnet'
-  | 'iua'
-  | 'google_workspace'
-  | 'microsoft365'
-  | 'custom'
+export type MailboxProvider = 'ukrnet' | 'iua' | 'google_workspace' | 'microsoft365' | 'custom'
 
 export interface SettingsMailbox {
   id: string

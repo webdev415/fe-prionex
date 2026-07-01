@@ -18,7 +18,6 @@ interface MailboxesTableProps {
   onToggleStatus: (mailbox: SettingsMailbox) => void
   onAddMailbox: () => void
   onTestSync: () => Promise<void>
-  onConnectGmail?: (mailbox: SettingsMailbox) => void
   isPolling?: boolean
   readOnly?: boolean
 }
@@ -30,7 +29,6 @@ export function MailboxesTable({
   onToggleStatus,
   onAddMailbox,
   onTestSync,
-  onConnectGmail,
   isPolling = false,
   readOnly = false,
 }: MailboxesTableProps) {
@@ -213,22 +211,6 @@ export function MailboxesTable({
                                   'No credentials'
                                 )}
                               </span>
-                            ) : null}
-                            {!mailbox.hasCredentials &&
-                            mailbox.provider === 'gmail_oauth2' &&
-                            !readOnly &&
-                            onConnectGmail ? (
-                              <button
-                                type="button"
-                                onClick={() => onConnectGmail(mailbox)}
-                                className="bg-primary-50 text-primary-700 hover:bg-primary-100 flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium transition-colors"
-                              >
-                                <Icons.Mail size={10} strokeWidth={2} />
-                                {t(
-                                  'pages.lawyerWorkplace.settings.mailboxes.connectGmail',
-                                  'Connect Gmail'
-                                )}
-                              </button>
                             ) : null}
                           </div>
                           <p className="text-light-600 truncate text-[11px]">{mailbox.email}</p>

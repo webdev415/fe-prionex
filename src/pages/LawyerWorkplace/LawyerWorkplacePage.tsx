@@ -7,12 +7,9 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useQueryClient } from '@tanstack/react-query'
 import { useSearchParams } from 'react-router-dom'
-import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { useLegalLetterDetail, useMappedLegalInbox } from '@/features/lawyerWorkplace'
-import { legalWorkplaceKeys } from '@/features/lawyerWorkplace/hooks/useLegalInbox'
 import { useCanAccessLegalKanban } from '@/features/lawyerWorkplace/hooks/useLegalPermissions'
 import { IncomingListPanel } from './components/inbox/IncomingListPanel'
 import { EmailThreadPanel } from './components/thread/EmailThreadPanel'
@@ -47,7 +44,6 @@ function LawyerWorkplacePageContent() {
   const { ref: layoutRef, isCompact, isWide } = useLawyerWorkplaceLayout()
   const [searchParams, setSearchParams] = useSearchParams()
   const canAccessKanban = useCanAccessLegalKanban()
-  const queryClient = useQueryClient()
   const rawTab = searchParams.get('tab')
   const activeTab: LawyerWorkplaceTab = isWorkplaceTab(rawTab) ? rawTab : 'inbox'
 
@@ -58,38 +54,6 @@ function LawyerWorkplacePageContent() {
       setSearchParams(next, { replace: true })
     }
   }, [activeTab, canAccessKanban, searchParams, setSearchParams])
-
-  // Handle Gmail OAuth2 callback redirect back to this page
-  useEffect(() => {
-    const oauthResult = searchParams.get('oauth')
-    if (!oauthResult) return
-
-    const next = new URLSearchParams(searchParams)
-    next.delete('oauth')
-    next.delete('mailbox_id')
-    next.delete('error')
-    setSearchParams(next, { replace: true })
-
-    if (oauthResult === 'success') {
-      toast.success(
-        t(
-          'pages.lawyerWorkplace.settings.mailboxes.gmailOAuthSuccess',
-          'Gmail connected successfully!'
-        )
-      )
-      void queryClient.invalidateQueries({ queryKey: legalWorkplaceKeys.settingsMailboxes() })
-      void queryClient.invalidateQueries({ queryKey: legalWorkplaceKeys.mailboxes() })
-    } else if (oauthResult === 'error') {
-      const errorCode = searchParams.get('error') ?? 'unknown'
-      toast.error(
-        t('pages.lawyerWorkplace.settings.mailboxes.gmailOAuthFailed', {
-          error: errorCode,
-          defaultValue: `Gmail authorisation failed (${errorCode}). Please try again.`,
-        })
-      )
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
 
   const [activeFolder, setActiveFolder] = useState<IncomingFolder>('inbox')
   const [activeFilter, setActiveFilter] = useState<IncomingMailboxFilter>('all')

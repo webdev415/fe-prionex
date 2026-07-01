@@ -171,7 +171,7 @@ export function mapLegalSettingsMailboxToSettings(mailbox: LegalSettingsMailbox)
     displayNameKey: `api:mailbox:name:${mailbox.id}`,
     displayNameFallback: mailbox.display_name,
     status: mailbox.status,
-    provider: mailbox.provider,
+    provider: mailbox.provider === 'gmail_oauth2' ? 'google_workspace' : mailbox.provider,
     letterCount: mailbox.letter_count,
     defaultLetterTypeId: mailbox.default_letter_type_id,
     isDefaultOutgoing: mailbox.is_default_outgoing,
@@ -203,10 +203,6 @@ export function mapMailboxFormToCreate(values: MailboxFormValues) {
     sync_from_today: values.syncFromToday,
   }
 
-  if (values.provider === 'gmail_oauth2') {
-    return base
-  }
-
   if (values.provider === 'custom') {
     return {
       ...base,
@@ -231,10 +227,6 @@ export function mapMailboxFormToUpdate(values: MailboxFormValues) {
     default_letter_type_id: values.defaultLetterTypeId,
     is_default_outgoing: values.isDefaultOutgoing,
     routing_rules: values.routingRules.map(mapRoutingRuleToInput),
-  }
-
-  if (values.provider === 'gmail_oauth2') {
-    return base
   }
 
   const passwordPayload = values.password.trim() ? { password: values.password.trim() } : {}

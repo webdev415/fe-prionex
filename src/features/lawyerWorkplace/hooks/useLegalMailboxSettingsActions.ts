@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import type { MailboxFormValues } from '@/pages/LawyerWorkplace/components/settings/mailboxes/MailboxModal'
 import type { SettingsMailbox, SyncInterval } from '@/pages/LawyerWorkplace/settings/types'
-import { legalApi } from '../api/legalApi'
 import { mapMailboxFormToCreate, mapMailboxFormToUpdate } from '../api/settingsMappers'
 import {
   useCreateLegalSettingsMailbox,
@@ -93,29 +92,11 @@ export function useLegalMailboxSettingsActions() {
     )
   }, [pollAllMailboxes, t])
 
-  const connectGmail = useCallback(
-    async (mailbox: SettingsMailbox) => {
-      try {
-        const url = await legalApi.startGmailOAuth(mailbox.id)
-        window.location.href = url
-      } catch {
-        toast.error(
-          t(
-            'pages.lawyerWorkplace.settings.mailboxes.gmailOAuthError',
-            'Failed to start Gmail authorisation. Try again.'
-          )
-        )
-      }
-    },
-    [t]
-  )
-
   return {
     saveMailbox,
     toggleMailboxStatus,
     changeSyncInterval,
     testSync,
-    connectGmail,
     isSavingMailbox: createMailbox.isPending || updateMailbox.isPending,
     isPolling: pollAllMailboxes.isPending,
     isSavingSync: updateSyncSettings.isPending,

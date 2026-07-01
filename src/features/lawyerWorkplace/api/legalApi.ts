@@ -303,12 +303,6 @@ export const legalApi = {
       .then((response) => response.data)
   },
 
-  startGmailOAuth(mailboxId: string) {
-    return api
-      .get<{ url: string }>(`${SETTINGS_URL}/mailboxes/${mailboxId}/oauth/gmail/start`)
-      .then((response) => response.data.url)
-  },
-
   listSettingsReplyTemplates(params?: { include_inactive?: boolean }) {
     return api
       .get<LegalReplyTemplateListResponse>(`${SETTINGS_URL}/reply-templates`, { params })

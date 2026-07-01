@@ -434,7 +434,7 @@ export interface LegalSettingsMailbox {
   email: string
   display_name: string
   status: LegalMailboxStatus
-  provider: LegalMailboxProvider
+  provider: LegalMailboxProviderLegacy
   letter_count: number
   default_letter_type_id: string | null
   is_default_outgoing: boolean
@@ -454,13 +454,10 @@ export interface LegalMailboxRoutingRuleInput {
   letter_type_id: string
 }
 
-export type LegalMailboxProvider =
-  | 'gmail_oauth2'
-  | 'ukrnet'
-  | 'iua'
-  | 'google_workspace'
-  | 'microsoft365'
-  | 'custom'
+export type LegalMailboxProvider = 'ukrnet' | 'iua' | 'google_workspace' | 'microsoft365' | 'custom'
+
+/** Legacy provider value still returned for existing mailboxes. */
+export type LegalMailboxProviderLegacy = LegalMailboxProvider | 'gmail_oauth2'
 
 export interface LegalMailboxCreate {
   email: string
