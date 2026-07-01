@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/Button'
 import { Icons } from '@/lib/icons'
 import { useCreateFeedback } from '../hooks/useFeedback'
 import { FEEDBACK_TYPES, type FeedbackType } from '../types'
+import { defaultDeadline } from '../lib/deadline'
 
 interface LeaveFeedbackButtonProps {
   callId: string
@@ -47,6 +48,7 @@ export function LeaveFeedbackButton({
 
   const handleSubmit = async () => {
     if (!text.trim()) return
+    if (isCorrectionTask && !deadline) return
     const timestamp = includeTimestamp && getCurrentTimeMs ? getCurrentTimeMs() : null
     const deadlineIso = isCorrectionTask && deadline ? new Date(deadline).toISOString() : null
     await createMutation.mutateAsync({
@@ -83,7 +85,11 @@ export function LeaveFeedbackButton({
           </label>
           <select
             value={feedbackType}
-            onChange={(e) => setFeedbackType(e.target.value as FeedbackType)}
+            onChange={(e) => {
+              const next = e.target.value as FeedbackType
+              setFeedbackType(next)
+              if (next === 'correction_task' && !deadline) setDeadline(defaultDeadline())
+            }}
             className="mt-1 mb-2 w-full rounded-md border border-gray-200 px-2 py-1.5 text-sm"
           >
             {FEEDBACK_TYPES.map((ft) => (
@@ -121,6 +127,7 @@ export function LeaveFeedbackButton({
               </label>
               <input
                 type="datetime-local"
+                required
                 value={deadline}
                 onChange={(e) => setDeadline(e.target.value)}
                 className="mt-1 mb-2 w-full rounded-md border border-gray-200 px-2 py-1 text-sm"
@@ -141,7 +148,7 @@ export function LeaveFeedbackButton({
               variant="primary"
               size="sm"
               onClick={handleSubmit}
-              disabled={createMutation.isPending || !text.trim()}
+              disabled={createMutation.isPending || !text.trim() || (isCorrectionTask && !deadline)}
               className="rounded-md"
             >
               {t('pages.training.feedback.send', 'Send')}
