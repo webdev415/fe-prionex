@@ -226,7 +226,8 @@
     "cancel": "Cancel",
     "edit": "Edit",
     "close": "Close",
-    "optional": "optional"
+    "optional": "optional",
+    "refresh": "Refresh"
   },
   "logout": {
     "confirmTitle": "Confirm Logout",
@@ -2183,7 +2184,11 @@
         "assignEmployee": "Assign Employee",
         "addTags": "Add Tags",
         "removeTags": "Remove Tags",
-        "sendMessage": "Send message"
+        "sendMessage": "Send message",
+        "optOutUbki": "Do not send to UBKI",
+        "optInUbki": "Re-enable UBKI sending",
+        "submitUbki": "Send to UBKI",
+        "selectClientsFirst": "Select at least one client before starting a bulk action"
       },
       "manageTags": "Manage Tags",
       "errorLoading": "Failed to load clients",
@@ -2204,6 +2209,7 @@
         "searcher": "Searcher",
         "assignmentDate": "Assignment Date",
         "actions": "Actions",
+        "ubki": "UBKI",
         "lastOutgoingTADate": "Last outgoing TA date"
       },
       "priorities": {
@@ -3301,6 +3307,53 @@
           "callSms": "Call / SMS",
           "taChains": "TA Chains",
           "searcherComments": "Searcher Comments"
+        },
+        "ubki": {
+          "doNotSendLabel": "Do not send data to UBKI",
+          "doNotSendHint": "When enabled, this client is excluded from all UBKI submissions.",
+          "send": "Send to UBKI",
+          "sent": "Sent to UBKI",
+          "sentOn": "Sent on {{date}}",
+          "optedOut": "Opted out",
+          "optedOutTooltip": "Client is opted out of UBKI; submission is disabled.",
+          "sendAll": "Send all loans to UBKI",
+          "noLoansTooltip": "This client has no loans to submit.",
+          "history": {
+            "title": "UBKI submission history",
+            "empty": "No UBKI submissions yet.",
+            "headers": {
+              "date": "Date",
+              "loan": "Loan",
+              "mode": "Mode",
+              "status": "Status",
+              "result": "Result"
+            },
+            "clickToExpand": "Click to see full details",
+            "reqId": "UBKI reference",
+            "pageInfo": "Page {{page}} of {{total}}"
+          },
+          "selectFirst": "Select at least one item first",
+          "toasts": {
+            "submitSuccess": "Submitted to UBKI",
+            "submitSkipped": "Submission skipped",
+            "submitError": "Submission to UBKI failed",
+            "optOutSuccess": "{{count}} client(s) opted out of UBKI",
+            "optInSuccess": "{{count}} client(s) re-enabled for UBKI",
+            "bulkQueued": "Queued {{count}} credit(s) for UBKI — results will appear in the submission history."
+          },
+          "sentRef": "Sent · ref {{ref}}",
+          "sentOk": "Sent",
+          "errors": {
+            "invalidData": "Invalid data",
+            "auth": "Login failed",
+            "rejected": "Rejected by UBKI",
+            "ubkiSystem": "UBKI system error",
+            "env": "Wrong environment",
+            "optedOut": "Client opted out",
+            "notFound": "Loan not found",
+            "unreachable": "UBKI service unavailable",
+            "connection": "Connection error"
+          }
         }
       },
       "debtSummary": {
