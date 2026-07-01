@@ -25,7 +25,6 @@ export {
   createFeedback,
   replyToFeedback,
   markFeedbackRead,
-  markFeedbackCompleted,
   exportFeedback,
   getOperatorDynamics,
   exportOperatorDynamics,
@@ -63,7 +62,6 @@ export {
   useCreateFeedback,
   useReplyToFeedback,
   useMarkFeedbackRead,
-  useMarkFeedbackCompleted,
   useExportFeedback,
   feedbackKeys,
 } from './hooks/useFeedback'

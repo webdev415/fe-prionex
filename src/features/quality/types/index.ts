@@ -304,6 +304,7 @@ export interface Feedback {
   text: string
   timestamp_ms: number | null
   status: FeedbackStatus
+  deadline: string | null
   created_at: string
   read_at: string | null
   completed_at: string | null
@@ -316,6 +317,7 @@ export interface FeedbackCreatePayload {
   feedback_type: FeedbackType
   text: string
   timestamp_ms?: number | null
+  deadline?: string | null
 }
 
 export interface FeedbackListFilters {
