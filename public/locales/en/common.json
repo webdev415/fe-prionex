@@ -1625,6 +1625,12 @@
         "errors": {
           "failedToCreate": "Failed to create role. Please try again."
         }
+      },
+      "accessLevel": {
+        "my": "Only mine",
+        "group": "My group",
+        "department": "My department",
+        "all": "Entire project"
       }
     },
     "departments": {

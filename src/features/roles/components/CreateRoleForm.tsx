@@ -18,6 +18,7 @@ import { Textarea } from '@/components/ui/Textarea'
 import { Label } from '@/components/ui/Label'
 import { Alert } from '@/components/ui/Alert'
 import { Checkbox } from '@/components/ui/Checkbox'
+import { ACCESS_LEVEL_OPTIONS, DEFAULT_ACCESS_LEVEL, isTabAccessPermission } from '../accessLevels'
 
 interface CreateRoleFormProps {
   projectId: number
@@ -43,6 +44,8 @@ export function CreateRoleForm({ projectId, onSuccess, onCancel: _onCancel }: Cr
     is_active: true,
   })
   const [selectedPermissions, setSelectedPermissions] = useState<number[]>([])
+  // KAN-757: per-tab access level keyed by permission_id.
+  const [accessLevels, setAccessLevels] = useState<Record<number, string>>({})
 
   // Group permissions by category
   const permissions = useMemo(
@@ -86,7 +89,19 @@ export function CreateRoleForm({ projectId, onSuccess, onCancel: _onCancel }: Cr
     setValue('permission_ids', newSelected, { shouldValidate: true })
   }
 
+  const handleAccessLevelChange = (permissionId: number, level: string) => {
+    setAccessLevels((prev) => ({ ...prev, [permissionId]: level }))
+  }
+
   const onSubmit = (data: CreateRoleFormData) => {
+    const selectedSet = new Set(selectedPermissions)
+    const access_levels: Record<number, string> = {}
+    for (const [permId, level] of Object.entries(accessLevels)) {
+      if (selectedSet.has(Number(permId))) {
+        access_levels[Number(permId)] = level
+      }
+    }
+
     createMutation.mutate(
       {
         project_id: projectId,
@@ -94,6 +109,7 @@ export function CreateRoleForm({ projectId, onSuccess, onCancel: _onCancel }: Cr
         description: data.description || undefined,
         department_id: data.department_id,
         permission_ids: selectedPermissions,
+        access_levels,
       },
       {
         onSuccess: () => {
@@ -195,26 +211,46 @@ export function CreateRoleForm({ projectId, onSuccess, onCancel: _onCancel }: Cr
                       </span>
                     </div>
                     <div className="space-y-2">
-                      {categoryPerms.map((perm) => (
-                        <label
-                          key={perm.id}
-                          className="flex cursor-pointer items-center gap-3 rounded p-2 transition-colors hover:bg-gray-50"
-                        >
-                          <Checkbox
-                            checked={selectedPermissions.includes(perm.id)}
-                            onCheckedChange={() => handlePermissionToggle(perm.id)}
-                            aria-label={perm.name}
-                          />
-                          <div className="flex-1">
-                            <span className="text-sm font-light text-gray-950">{perm.name}</span>
-                            {perm.description && (
-                              <span className="ml-2 text-sm font-light text-gray-500">
-                                {perm.description}
-                              </span>
+                      {categoryPerms.map((perm) => {
+                        const isSelected = selectedPermissions.includes(perm.id)
+                        const isTabPerm = isTabAccessPermission(perm.name)
+                        return (
+                          <label
+                            key={perm.id}
+                            className="flex cursor-pointer items-center gap-3 rounded p-2 transition-colors hover:bg-gray-50"
+                          >
+                            <Checkbox
+                              checked={isSelected}
+                              onCheckedChange={() => handlePermissionToggle(perm.id)}
+                              aria-label={perm.name}
+                            />
+                            <div className="flex-1">
+                              <span className="text-sm font-light text-gray-950">{perm.name}</span>
+                              {perm.description && (
+                                <span className="ml-2 text-sm font-light text-gray-500">
+                                  {perm.description}
+                                </span>
+                              )}
+                            </div>
+                            {isTabPerm && (
+                              <select
+                                aria-label={`${perm.name} access level`}
+                                value={accessLevels[perm.id] ?? DEFAULT_ACCESS_LEVEL}
+                                disabled={!isSelected || createMutation.isPending}
+                                onClick={(e) => e.stopPropagation()}
+                                onChange={(e) => handleAccessLevelChange(perm.id, e.target.value)}
+                                className="text-dark-500 h-[34px] rounded-lg border border-gray-400 bg-white px-2 text-sm font-light focus:ring-0 focus:outline-none disabled:opacity-50"
+                              >
+                                {ACCESS_LEVEL_OPTIONS.map((opt) => (
+                                  <option key={opt.value} value={opt.value}>
+                                    {t(opt.labelKey, opt.fallback)}
+                                  </option>
+                                ))}
+                              </select>
                             )}
-                          </div>
-                        </label>
-                      ))}
+                          </label>
+                        )
+                      })}
                     </div>
                   </div>
                 )
