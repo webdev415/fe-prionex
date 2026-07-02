@@ -336,14 +336,16 @@ function AssignDrillDialog({ drill, onClose }: { drill: DrillCardData; onClose: 
   const toggle = (id: number) =>
     setSelected((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]))
 
+  const canAssign = selected.length > 0 && deadline !== ''
+
   const submit = () => {
-    if (selected.length === 0) return
+    if (!canAssign) return
     assign.mutate(
       {
         drillId: drill.id,
         payload: {
           operator_ids: selected,
-          deadline: deadline ? new Date(deadline).toISOString() : null,
+          deadline: new Date(deadline).toISOString(),
           note: note.trim() || null,
         },
       },
@@ -391,12 +393,13 @@ function AssignDrillDialog({ drill, onClose }: { drill: DrillCardData; onClose: 
         </div>
         <label className="flex flex-col gap-1">
           <span className="text-xs font-medium text-[#05040D]">
-            {t('pages.training.drills.deadline', 'Deadline')}
+            {t('pages.training.drills.deadline', 'Deadline')} *
           </span>
           <input
             type="datetime-local"
             value={deadline}
             onChange={(e) => setDeadline(e.target.value)}
+            required
             className={field}
           />
         </label>
@@ -417,7 +420,7 @@ function AssignDrillDialog({ drill, onClose }: { drill: DrillCardData; onClose: 
         <button
           type="button"
           onClick={submit}
-          disabled={selected.length === 0 || assign.isPending}
+          disabled={!canAssign || assign.isPending}
           className="rounded-md bg-[#204E4D] px-3 py-2 text-xs font-medium text-white hover:bg-[#1a3f3e] disabled:opacity-50"
         >
           {t('pages.training.drills.assignCta', 'Assign')} ({selected.length})
@@ -619,6 +622,13 @@ function DrillDetailsDialog({
   const { t } = useTranslation('common')
   const { data: stats } = useDrillStats(drill.id)
   const { data: attempts = [], isLoading } = useDrillAttempts(drill.id)
+  const activeProjectId = useAuthStore((s) => s.user?.active_project_id)
+  const projectIdNum = activeProjectId ? Number(activeProjectId) : null
+  const { data: operators = [] } = useOperators(projectIdNum)
+  const operatorNames = useMemo(
+    () => new Map(operators.map((op) => [op.id, op.full_name])),
+    [operators]
+  )
   const transition = useTransitionAttempt()
   const [returnFor, setReturnFor] = useState<number | null>(null)
   const [returnComment, setReturnComment] = useState('')
@@ -679,7 +689,8 @@ function DrillDetailsDialog({
             <div key={a.id} className="rounded-lg border border-[#EBECE8] px-3 py-2 text-xs">
               <div className="flex items-center justify-between gap-2">
                 <span className="font-medium text-[#05040D]">
-                  {t('pages.training.drills.operator', 'Operator')} #{a.operator_id}
+                  {operatorNames.get(a.operator_id) ??
+                    `${t('pages.training.drills.operator', 'Operator')} #${a.operator_id}`}
                 </span>
                 <div className="flex items-center gap-1.5">
                   {a.is_overdue ? (
