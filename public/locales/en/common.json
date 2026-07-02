@@ -5313,7 +5313,7 @@
       "saving": "Saving...",
       "repaymentOrder": {
         "title": "Repayment Order",
-        "description": "Drag to reorder how payments are distributed across debt components. Each component is fully consumed before moving to the next.",
+        "description": "Drag to set the order payments fill debt components (each fully before the next). This applies only under Strict Order — Legacy Proportional ignores it and uses a fixed order.",
         "component_principal": "Principal",
         "component_interest": "Interest",
         "component_commission": "Commission",
@@ -5341,12 +5341,11 @@
         "deactivateConfirmTitle": "Revert to Legacy Proportional?",
         "deactivateConfirmMessage": "Future payment snapshots will use the legacy proportional algorithm. Already-snapshotted payments are unaffected.",
         "deactivateConfirmButton": "Revert",
-        "preconditionError": "Strict Order cannot be activated: snapshotting must be globally enabled and all existing payments must be backfilled."
+        "preconditionError": "Strict Order cannot be activated until payment-allocation snapshotting is enabled. Existing payments do not need to be backfilled."
       },
       "history": {
         "title": "Recent Changes",
-        "version": "Version",
-        "viewHistory": "View History"
+        "version": "Version"
       }
     },
     "auditLogs": {

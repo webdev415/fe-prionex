@@ -284,7 +284,7 @@ export function RepaymentConfigurationPage() {
           toast.error(
             t(
               'pages.repaymentConfiguration.algorithm.preconditionError',
-              'Strict Order cannot be activated: snapshotting must be globally enabled and all existing payments must be backfilled.'
+              'Strict Order cannot be activated until payment-allocation snapshotting is enabled. Existing payments do not need to be backfilled.'
             )
           )
           // Revert local algorithm if the error is an activation guard
@@ -362,7 +362,7 @@ export function RepaymentConfigurationPage() {
           <p className="text-dark-400 mt-1 text-sm font-light">
             {t(
               'pages.repaymentConfiguration.repaymentOrder.description',
-              'Drag to reorder how payments are distributed across debt components. Each component is fully consumed before moving to the next.'
+              'Drag to set the order payments fill debt components (each fully before the next). This applies only under Strict Order — Legacy Proportional ignores it and uses a fixed order.'
             )}
           </p>
         </div>
