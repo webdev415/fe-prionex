@@ -470,6 +470,27 @@ export interface ClientProfileResponse {
     updated_by_user_name?: string | null
     default_call_line?: string | null
     spam_allowed?: boolean | null
+    contact_tags?: Array<{
+      value_id: number
+      category_id: number
+      category_name: string
+      category_code: string
+      selection_type: 'single' | 'multi'
+      is_protected: boolean
+      is_system: boolean
+      name: string
+      color?: string | null
+      blocks_calls: boolean
+      blocks_sms: boolean
+      blocks_spam: boolean
+      can_edit: boolean
+    }>
+    blocking?: {
+      blocks_calls: boolean
+      blocks_sms: boolean
+      blocks_spam: boolean
+      reasons: string[]
+    }
   }>
   addresses: Array<{
     id: number
@@ -500,6 +521,27 @@ export interface ClientProfileResponse {
     updated_by_user_name?: string | null
     default_call_line: string
     spam_allowed: boolean
+    contact_tags?: Array<{
+      value_id: number
+      category_id: number
+      category_name: string
+      category_code: string
+      selection_type: 'single' | 'multi'
+      is_protected: boolean
+      is_system: boolean
+      name: string
+      color?: string | null
+      blocks_calls: boolean
+      blocks_sms: boolean
+      blocks_spam: boolean
+      can_edit: boolean
+    }>
+    blocking?: {
+      blocks_calls: boolean
+      blocks_sms: boolean
+      blocks_spam: boolean
+      reasons: string[]
+    }
   }>
   comments: Array<{
     id: number
