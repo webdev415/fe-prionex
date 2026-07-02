@@ -62,6 +62,8 @@ export function LawyersTable({
     return lawyers.slice(start, start + pageSize)
   }, [lawyers, currentPage, pageSize])
 
+  const isEmpty = lawyers.length === 0
+
   const updateMaxInFlight = async (lawyerId: string, delta: number) => {
     if (readOnly) return
     const lawyer = lawyers.find((item) => item.id === lawyerId)
@@ -105,8 +107,9 @@ export function LawyersTable({
             size="sm"
             leftIcon={<Icons.FileDownload size={16} strokeWidth={1.5} />}
             className={cn('h-9 rounded-md', isCompact && 'flex-1')}
+            disabled={isEmpty}
             onClick={() => {
-              if (lawyers.length === 0) {
+              if (isEmpty) {
                 toast.info(
                   t('pages.lawyerWorkplace.settings.lawyers.exportEmpty', 'No lawyers to export')
                 )
@@ -131,170 +134,189 @@ export function LawyersTable({
         </div>
       </div>
 
-      <div className="data-table-scroll w-full overflow-x-auto overflow-y-hidden pb-2">
-        <table className="w-full min-w-[760px] text-left text-[13px]">
-          <thead>
-            <tr className="border-b border-gray-100">
-              <th
-                className={cn(
-                  'text-light-600 py-3 text-[11px] font-medium',
-                  isCompact ? 'px-4' : 'px-5'
-                )}
-              >
-                {t('pages.lawyerWorkplace.settings.lawyer', 'Lawyer')}
-              </th>
-              <th className="text-light-600 px-4 py-3 text-[11px] font-medium">
-                {t('pages.lawyerWorkplace.settings.lawyers.letterTypesColumn', 'Letter types')}
-              </th>
-              <th className="text-light-600 px-4 py-3 text-[11px] font-medium">
-                {t('pages.lawyerWorkplace.settings.lawyers.currentWorkload', 'Current workload')}
-              </th>
-              <th className="text-light-600 px-4 py-3 text-[11px] font-medium">
-                {t('pages.lawyerWorkplace.settings.lawyers.maxInFlight', 'Max in flight')}
-              </th>
-              <th className="text-light-600 px-4 py-3 text-[11px] font-medium">
-                {t('pages.lawyerWorkplace.settings.status', 'Status')}
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {paginatedLawyers.length === 0 ? (
-              <tr>
-                <td colSpan={5} className="px-5 py-12 text-center">
-                  <p className="text-dark-500 text-[13px] font-medium">
-                    {t('pages.lawyerWorkplace.settings.lawyers.empty.title', 'No lawyers yet')}
-                  </p>
-                  <p className="text-light-600 mt-1 text-[12px]">
-                    {t(
-                      'pages.lawyerWorkplace.settings.lawyers.empty.description',
-                      'Add lawyers to configure workload limits and letter type specializations.'
+      {isEmpty ? (
+        <div className="flex flex-col items-center justify-center px-6 py-14 text-center">
+          <div className="bg-light-100 mb-4 flex h-12 w-12 items-center justify-center rounded-full">
+            <Icons.UserMultiple02 size={22} strokeWidth={1.5} className="text-light-500" />
+          </div>
+          <p className="text-dark-500 text-[14px] font-medium">
+            {t('pages.lawyerWorkplace.settings.lawyers.empty.title', 'No lawyers yet')}
+          </p>
+          <p className="text-light-600 mt-1 max-w-sm text-[12px] leading-relaxed">
+            {t(
+              'pages.lawyerWorkplace.settings.lawyers.empty.description',
+              'Add lawyers to configure workload limits and letter type specializations.'
+            )}
+          </p>
+          {!readOnly ? (
+            <Button
+              variant="primary"
+              size="sm"
+              leftIcon={<Icons.AddCircle size={18} strokeWidth={1.5} />}
+              onClick={onAddLawyer}
+              className="mt-5 h-9 rounded-md"
+            >
+              {t('pages.lawyerWorkplace.settings.lawyers.addLawyer', 'Add lawyer')}
+            </Button>
+          ) : null}
+        </div>
+      ) : (
+        <>
+          <div className="data-table-scroll w-full overflow-x-auto overflow-y-hidden pb-2">
+            <table className="w-full min-w-[760px] text-left text-[13px]">
+              <thead>
+                <tr className="border-b border-gray-100">
+                  <th
+                    className={cn(
+                      'text-light-600 py-3 text-[11px] font-medium',
+                      isCompact ? 'px-4' : 'px-5'
                     )}
-                  </p>
-                </td>
-              </tr>
-            ) : (
-              paginatedLawyers.map((lawyer, idx) => {
-                const progress =
-                  lawyer.maxInFlight > 0 ? (lawyer.currentActive / lawyer.maxInFlight) * 100 : 0
-
-                return (
-                  <tr
-                    key={lawyer.id}
-                    className={cn(idx < paginatedLawyers.length - 1 && 'border-b border-gray-100')}
                   >
-                    <td className={cn('py-4', isCompact ? 'px-4' : 'px-5')}>
-                      <div className="flex items-center gap-3">
-                        <div className="bg-secondary-100 text-secondary-800 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold">
-                          {lawyer.initials}
+                    {t('pages.lawyerWorkplace.settings.lawyer', 'Lawyer')}
+                  </th>
+                  <th className="text-light-600 px-4 py-3 text-[11px] font-medium">
+                    {t('pages.lawyerWorkplace.settings.lawyers.letterTypesColumn', 'Letter types')}
+                  </th>
+                  <th className="text-light-600 px-4 py-3 text-[11px] font-medium">
+                    {t(
+                      'pages.lawyerWorkplace.settings.lawyers.currentWorkload',
+                      'Current workload'
+                    )}
+                  </th>
+                  <th className="text-light-600 px-4 py-3 text-[11px] font-medium">
+                    {t('pages.lawyerWorkplace.settings.lawyers.maxInFlight', 'Max in flight')}
+                  </th>
+                  <th className="text-light-600 px-4 py-3 text-[11px] font-medium">
+                    {t('pages.lawyerWorkplace.settings.status', 'Status')}
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {paginatedLawyers.map((lawyer, idx) => {
+                  const progress =
+                    lawyer.maxInFlight > 0 ? (lawyer.currentActive / lawyer.maxInFlight) * 100 : 0
+
+                  return (
+                    <tr
+                      key={lawyer.id}
+                      className={cn(
+                        idx < paginatedLawyers.length - 1 && 'border-b border-gray-100'
+                      )}
+                    >
+                      <td className={cn('py-4', isCompact ? 'px-4' : 'px-5')}>
+                        <div className="flex items-center gap-3">
+                          <div className="bg-secondary-100 text-secondary-800 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold">
+                            {lawyer.initials}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-dark-500 truncate text-[13px] font-semibold">
+                              {t(lawyer.nameKey, lawyer.nameFallback)}
+                            </p>
+                            <p className="text-light-600 truncate text-[11px]">
+                              {t(lawyer.roleKey, lawyer.roleFallback)}
+                            </p>
+                          </div>
                         </div>
-                        <div className="min-w-0">
-                          <p className="text-dark-500 truncate text-[13px] font-semibold">
-                            {t(lawyer.nameKey, lawyer.nameFallback)}
+                      </td>
+                      <td className="px-4 py-4">
+                        <LawyerLetterTypesCell
+                          lawyer={lawyer}
+                          letterTypes={letterTypes}
+                          readOnly={readOnly}
+                          saving={isSaving && savingLawyerId === lawyer.id}
+                          onUpdateLetterTypes={updateLetterTypes}
+                        />
+                      </td>
+                      <td className="px-4 py-4">
+                        <div className="min-w-[132px]">
+                          <p className="flex flex-row items-center justify-between text-[13px] leading-none">
+                            <span className="text-dark-500 font-semibold">
+                              {lawyer.currentActive}
+                            </span>
+                            <span className="text-light-500 font-normal">
+                              {' '}
+                              {t('pages.lawyerWorkplace.settings.lawyers.ofActiveSuffix', {
+                                max: lawyer.maxInFlight,
+                                defaultValue: `of ${lawyer.maxInFlight}`,
+                              })}
+                            </span>
                           </p>
-                          <p className="text-light-600 truncate text-[11px]">
-                            {t(lawyer.roleKey, lawyer.roleFallback)}
+                          <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-gray-100">
+                            <div
+                              className="bg-secondary-500 h-full rounded-full transition-all"
+                              style={{ width: `${Math.min(progress, 100)}%` }}
+                            />
+                          </div>
+                          <p className="text-light-600 mt-1.5 text-[11px]">
+                            {getWorkloadLabel(lawyer.currentActive, lawyer.maxInFlight, t)}
                           </p>
                         </div>
-                      </div>
-                    </td>
-                    <td className="px-4 py-4">
-                      <LawyerLetterTypesCell
-                        lawyer={lawyer}
-                        letterTypes={letterTypes}
-                        readOnly={readOnly}
-                        saving={isSaving && savingLawyerId === lawyer.id}
-                        onUpdateLetterTypes={updateLetterTypes}
-                      />
-                    </td>
-                    <td className="px-4 py-4">
-                      <div className="min-w-[132px]">
-                        <p className="flex flex-row items-center justify-between text-[13px] leading-none">
-                          <span className="text-dark-500 font-semibold">
-                            {lawyer.currentActive}
-                          </span>
-                          <span className="text-light-500 font-normal">
-                            {' '}
-                            {t('pages.lawyerWorkplace.settings.lawyers.ofActiveSuffix', {
-                              max: lawyer.maxInFlight,
-                              defaultValue: `of ${lawyer.maxInFlight}`,
-                            })}
-                          </span>
-                        </p>
-                        <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-gray-100">
-                          <div
-                            className="bg-secondary-500 h-full rounded-full transition-all"
-                            style={{ width: `${Math.min(progress, 100)}%` }}
-                          />
-                        </div>
-                        <p className="text-light-600 mt-1.5 text-[11px]">
-                          {getWorkloadLabel(lawyer.currentActive, lawyer.maxInFlight, t)}
-                        </p>
-                      </div>
-                    </td>
-                    <td className="px-4 py-4">
-                      {readOnly ? (
-                        <span className="text-dark-500 text-[13px] font-semibold">
-                          {lawyer.maxInFlight}
-                        </span>
-                      ) : (
-                        <div className="bg-light-100 inline-flex items-center rounded-full px-1">
-                          <button
-                            type="button"
-                            onClick={() => updateMaxInFlight(lawyer.id, -1)}
-                            disabled={isSaving}
-                            className="text-light-600 hover:text-dark-500 flex h-8 w-8 items-center justify-center disabled:opacity-50"
-                            aria-label={t('actions.decrease', 'Decrease')}
-                          >
-                            <Icons.Remove02 size={14} strokeWidth={1} />
-                          </button>
-                          <span className="text-dark-500 min-w-[32px] px-1 text-center text-[13px] font-semibold">
+                      </td>
+                      <td className="px-4 py-4">
+                        {readOnly ? (
+                          <span className="text-dark-500 text-[13px] font-semibold">
                             {lawyer.maxInFlight}
                           </span>
-                          <button
-                            type="button"
-                            onClick={() => updateMaxInFlight(lawyer.id, 1)}
-                            disabled={isSaving}
-                            className="text-light-600 hover:text-dark-500 flex h-8 w-8 items-center justify-center disabled:opacity-50"
-                            aria-label={t('actions.increase', 'Increase')}
-                          >
-                            <Icons.Add size={14} strokeWidth={1} />
-                          </button>
-                        </div>
-                      )}
-                    </td>
-                    <td className="px-4 py-4">
-                      <span
-                        className={cn(
-                          'inline-flex rounded-full px-2.5 py-1 text-[11px] font-medium whitespace-nowrap',
-                          lawyer.status === 'online'
-                            ? 'bg-success-100 text-success-700'
-                            : 'bg-warning-100 text-warning-700'
+                        ) : (
+                          <div className="bg-light-100 inline-flex items-center rounded-full px-1">
+                            <button
+                              type="button"
+                              onClick={() => updateMaxInFlight(lawyer.id, -1)}
+                              disabled={isSaving}
+                              className="text-light-600 hover:text-dark-500 flex h-8 w-8 items-center justify-center disabled:opacity-50"
+                              aria-label={t('actions.decrease', 'Decrease')}
+                            >
+                              <Icons.Remove02 size={14} strokeWidth={1} />
+                            </button>
+                            <span className="text-dark-500 min-w-[32px] px-1 text-center text-[13px] font-semibold">
+                              {lawyer.maxInFlight}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => updateMaxInFlight(lawyer.id, 1)}
+                              disabled={isSaving}
+                              className="text-light-600 hover:text-dark-500 flex h-8 w-8 items-center justify-center disabled:opacity-50"
+                              aria-label={t('actions.increase', 'Increase')}
+                            >
+                              <Icons.Add size={14} strokeWidth={1} />
+                            </button>
+                          </div>
                         )}
-                      >
-                        {t(
-                          `pages.lawyerWorkplace.settings.lawyers.status.${lawyer.status}`,
-                          lawyer.status
-                        )}
-                      </span>
-                    </td>
-                  </tr>
-                )
-              })
-            )}
-          </tbody>
-        </table>
-      </div>
+                      </td>
+                      <td className="px-4 py-4">
+                        <span
+                          className={cn(
+                            'inline-flex rounded-full px-2.5 py-1 text-[11px] font-medium whitespace-nowrap',
+                            lawyer.status === 'online'
+                              ? 'bg-success-100 text-success-700'
+                              : 'bg-warning-100 text-warning-700'
+                          )}
+                        >
+                          {t(
+                            `pages.lawyerWorkplace.settings.lawyers.status.${lawyer.status}`,
+                            lawyer.status
+                          )}
+                        </span>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
 
-      {totalPages > 0 && (
-        <Pagination
-          currentPage={currentPage}
-          totalPages={totalPages}
-          pageSize={pageSize}
-          pageSizeOptions={PAGE_SIZE_OPTIONS}
-          onPageChange={setPage}
-          onPageSizeChange={setPageSize}
-          className={cn('border-t border-gray-100 px-4 sm:px-5 lg:px-6', isCompact && 'py-3')}
-        />
+          {totalPages > 0 && (
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              pageSize={pageSize}
+              pageSizeOptions={PAGE_SIZE_OPTIONS}
+              onPageChange={setPage}
+              onPageSizeChange={setPageSize}
+              className={cn('border-t border-gray-100 px-4 sm:px-5 lg:px-6', isCompact && 'py-3')}
+            />
+          )}
+        </>
       )}
     </div>
   )

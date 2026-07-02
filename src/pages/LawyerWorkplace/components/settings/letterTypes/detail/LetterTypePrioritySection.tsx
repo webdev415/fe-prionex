@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 import { useLegalLawyers } from '@/features/lawyerWorkplace/hooks/useLegalInbox'
 import { useLawyerWorkplaceLayout } from '../../../../context/lawyerWorkplaceLayout'
@@ -87,11 +88,25 @@ export function LetterTypePrioritySection({
         </>
       ) : null}
 
-      {!isLoading && priorityRows.length === 0 && (
-        <p className="text-light-600 text-[13px]">
-          {t('pages.lawyerWorkplace.settings.noLawyers', 'No active lawyers configured')}
-        </p>
-      )}
+      {!isLoading && priorityRows.length === 0 ? (
+        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-gray-200 bg-white px-4 py-8 text-center">
+          <div className="bg-light-100 mb-3 flex h-10 w-10 items-center justify-center rounded-full">
+            <Icons.UserMultiple02 size={18} strokeWidth={1.5} className="text-light-500" />
+          </div>
+          <p className="text-dark-500 text-[13px] font-medium">
+            {t(
+              'pages.lawyerWorkplace.settings.letterTypes.priorityEmpty.title',
+              'No lawyers to assign'
+            )}
+          </p>
+          <p className="text-light-600 mt-1 max-w-sm text-[12px] leading-relaxed">
+            {t(
+              'pages.lawyerWorkplace.settings.letterTypes.priorityEmpty.description',
+              'Add lawyers in the Lawyers tab, then set star ratings and roles for this letter type.'
+            )}
+          </p>
+        </div>
+      ) : null}
 
       {!isLoading ? (
         <div className="space-y-2">

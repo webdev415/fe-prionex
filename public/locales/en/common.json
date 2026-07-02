@@ -737,7 +737,10 @@
           "deleteTypeSuccess": "Letter type deleted",
           "listMeta": "SLA {{sla}} b.d. • {{examples}} examples",
           "previewFallback": "Letter type name",
-          "empty": "No letter types yet. Add the first type to configure classification.",
+          "empty": {
+            "title": "No letter types yet",
+            "description": "Add the first type to configure classification, SLA, and lawyer priorities."
+          },
           "basicInfo": "Basic info",
           "displayName": "Display name",
           "responseSla": "Response SLA",
@@ -745,6 +748,10 @@
           "description": "Description",
           "priorityAssignment": "Priority assignment",
           "priorityHint": "★ = how strongly this lawyer should be preferred for this type",
+          "priorityEmpty": {
+            "title": "No lawyers to assign",
+            "description": "Add lawyers in the Lawyers tab, then set star ratings and roles for this letter type."
+          },
           "activeLoad": "{{current}} / {{max}} active",
           "trainingExamples": "Training examples",
           "examplesMeta": "{{count}} saved examples for manual reference",
