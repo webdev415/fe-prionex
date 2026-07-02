@@ -418,7 +418,7 @@ export const router = createBrowserRouter([
           <PermissionRoute requiredPermission={PERMISSIONS.CONTACT_TAGS.MANAGE}>
             {withSuspense(<ContactTagsPage />)}
           </PermissionRoute>
-          ),
+        ),
       },
       {
         path: 'system-settings/repayment-configuration',
