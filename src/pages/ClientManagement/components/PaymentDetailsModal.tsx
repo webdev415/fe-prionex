@@ -139,7 +139,7 @@ export function PaymentDetailsModal({
 
   return (
     <>
-      <Modal open={open} onClose={onClose} maxWidth="2xl">
+      <Modal open={open} onClose={onClose} maxWidth="3xl">
         <ModalHeader
           icon={
             <div className="bg-primary-300 flex items-center justify-center rounded-full p-2.5">

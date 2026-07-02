@@ -62,6 +62,16 @@ export interface DebtDetail {
   total_paid_amount?: string | null
   total_to_return?: string | null
 
+  // KAN-246 — per-component write-off enablement from the repayment-rule
+  // config. The Write-off modal hides components whose flag is false.
+  // Keyed by the frontend accrual names (penalty/fine). Absent → treat as
+  // enabled (fail-open), matching the backend default.
+  principal_writeoff_enabled?: boolean
+  interest_writeoff_enabled?: boolean
+  penalty_writeoff_enabled?: boolean
+  fine_writeoff_enabled?: boolean
+  commission_writeoff_enabled?: boolean
+
   // Legacy TABLE460.f53 — total amount eligible for return after sale.
   // Surfaced on the loans table only when it differs from remaining_debt_amount.
   legacy_f53?: string | null

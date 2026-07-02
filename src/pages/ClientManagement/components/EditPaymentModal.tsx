@@ -196,7 +196,7 @@ export function EditPaymentModal({ open, onClose, payment, onSave }: EditPayment
   }
 
   return (
-    <Modal open={open} onClose={handleClose} maxWidth="2xl">
+    <Modal open={open} onClose={handleClose} maxWidth="3xl">
       <ModalHeader
         icon={
           <div className="bg-primary-300 flex items-center justify-center rounded-full p-2.5">
