@@ -24,7 +24,7 @@ const mockPreview: OAPreviewResponse = {
   filename: 'march-redistribution.csv',
   status: 'validated',
   total_records: 10,
-  summary: { ready: 7, no_change: 1, invalid: 2, unique_operators: 3 },
+  summary: { ready: 7, no_change: 1, invalid: 2, would_skip: 0, unique_operators: 3 },
   preview_rows: [
     {
       row_number: 1,
@@ -37,6 +37,7 @@ const mockPreview: OAPreviewResponse = {
       status: 'ready',
       error: null,
       severity: null,
+      note: null,
     },
     {
       row_number: 2,
@@ -49,6 +50,7 @@ const mockPreview: OAPreviewResponse = {
       status: 'no_change',
       error: null,
       severity: null,
+      note: null,
     },
   ],
   errors: [
@@ -63,6 +65,7 @@ const mockPreview: OAPreviewResponse = {
       status: 'error',
       error: 'Client not found',
       severity: 'error',
+      note: null,
     },
   ],
 }
@@ -150,7 +153,7 @@ describe('OperatorAssignmentPreview', () => {
   it('should disable confirm button when ready count is 0', () => {
     const emptyPreview = {
       ...mockPreview,
-      summary: { ready: 0, no_change: 0, invalid: 10, unique_operators: 0 },
+      summary: { ready: 0, no_change: 0, invalid: 10, would_skip: 0, unique_operators: 0 },
     }
     render(<OperatorAssignmentPreview {...defaultProps} preview={emptyPreview} />, {
       wrapper: createWrapper(),

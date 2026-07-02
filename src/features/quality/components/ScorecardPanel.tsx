@@ -27,6 +27,8 @@ import { useTemplates } from '../hooks/useTemplates'
 import { computeWeightedScorePreview } from '../lib/scoringPreview'
 import type { Criterion, Section } from '../types'
 
+const SCRIPT_STAGES_SECTION_KEY = 'script_stages'
+
 interface ScorecardPanelProps {
   callId: string
   operatorId: number
@@ -49,21 +51,12 @@ export function ScorecardPanel({
   const templatesQuery = useTemplates(false)
   const historyQuery = useScorecardHistoryForCall(callId)
 
-  // `manuallySelectedId` is what the user clicks (template start, history row).
-  // The effective active id is derived during render from three sources in
-  // priority order: the pinned prop, an explicit user click, then the first
-  // outstanding draft on this call. No effects, no cascading renders.
   const [manuallySelectedId, setManuallySelectedId] = useState<number | null>(null)
   const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(null)
-  // The Client/Third-Party buttons already pick the template, so the raw
-  // template dropdown is collapsed behind a disclosure (legacy/advanced).
   const [showTemplateOverride, setShowTemplateOverride] = useState(false)
-  // Lets the trainer return to the type picker from a draft (KAN-504 UX).
   const [forcePicker, setForcePicker] = useState(false)
-
   const autoDraftId = historyQuery.data?.find((h) => h.status === 'draft')?.id ?? null
   const activeScorecardId = pinnedScorecardId ?? manuallySelectedId ?? autoDraftId ?? null
-
   const activeQuery = useScorecard(activeScorecardId, activeScorecardId != null)
   const createMutation = useCreateScorecard()
   const updateMutation = useUpdateScorecard()
@@ -78,9 +71,6 @@ export function ScorecardPanel({
     return picked?.sections ?? []
   }, [activeScorecard, templatesQuery.data, selectedTemplateId])
 
-  // Sum of scored (weight>0) criteria weights — the denominator for the
-  // per-value point hints, so they stay correct even if a template's weights
-  // don't sum to 100.
   const totalWeight = useMemo(
     () =>
       sections.reduce(
@@ -102,16 +92,10 @@ export function ScorecardPanel({
   const draft = useScorecardDraft({
     scorecardId: activeScorecardId,
     initial: draftState,
-    // KAN-504 UX: no per-change autosave. Selecting a criterion value only
-    // updates local state — persistence happens on explicit "Save draft" /
-    // "Mark completed". This stops the PUT + refetch cascade that fired on
-    // every selection. Closing with unsaved changes warns instead of saving
-    // silently, so we opt out of the on-unmount flush.
     enabled: false,
     flushOnUnmount: false,
   })
 
-  // Surface the unsaved-changes state so the modal can warn before closing.
   useEffect(() => {
     onDirtyChange?.(draft.isDirty)
   }, [draft.isDirty, onDirtyChange])
@@ -121,8 +105,6 @@ export function ScorecardPanel({
     [sections, draft.scores]
   )
 
-  // Completeness: every weight>0 criterion must be scored before completing
-  // (the backend enforces the same — this just keeps the button honest).
   const { requiredCount, scoredCount } = useMemo(() => {
     let req = 0
     let scored = 0
@@ -137,9 +119,6 @@ export function ScorecardPanel({
     return { requiredCount: req, scoredCount: scored }
   }, [sections, draft.scores])
   const isComplete = requiredCount > 0 && scoredCount === requiredCount
-
-  // KAN-504: the two typed templates, surfaced as an explicit Client /
-  // Third Party selector in the picker. Selecting a type loads its template.
   const typedTemplates = useMemo(
     () => ({
       client: templatesQuery.data?.find((tpl) => tpl.scorecard_type === 'client') ?? null,
@@ -148,9 +127,6 @@ export function ScorecardPanel({
     [templatesQuery.data]
   )
 
-  // Edit-lock (KAN-504 decision 1.4): a draft opens editable; Save draft /
-  // Mark completed locks it to read-only; Edit re-opens a draft. Completed
-  // and sent scorecards are locked permanently (no Edit).
   const [locked, setLocked] = useState(false)
   const status = activeScorecard?.status ?? 'draft'
   const canEdit = status === 'draft' && !locked
@@ -202,8 +178,6 @@ export function ScorecardPanel({
   }
 
   // ---- Render branches ----
-
-  // No scorecard yet (or the trainer chose to switch type) → show the picker.
   if (!activeScorecardId || forcePicker) {
     return (
       <aside className="flex h-full flex-col gap-3 rounded-xl bg-white p-4 shadow-sm">
@@ -461,6 +435,7 @@ interface SectionEditorProps {
 
 function SectionEditor({ section, scores, disabled, totalWeight, onChange }: SectionEditorProps) {
   const [collapsed, setCollapsed] = useState(false)
+  const isStages = section.key === SCRIPT_STAGES_SECTION_KEY
   return (
     <section className="mt-3 rounded-lg border border-gray-100">
       <button
@@ -475,20 +450,102 @@ function SectionEditor({ section, scores, disabled, totalWeight, onChange }: Sec
         />
       </button>
       {!collapsed ? (
-        <div className="space-y-3 px-3 py-3">
-          {section.criteria.map((criterion) => (
-            <CriterionRow
-              key={criterion.key}
-              criterion={criterion}
-              entry={scores[criterion.key]}
-              disabled={disabled}
-              totalWeight={totalWeight}
-              onChange={onChange}
-            />
-          ))}
-        </div>
+        isStages ? (
+          <StageChecklist
+            section={section}
+            scores={scores}
+            disabled={disabled}
+            onChange={onChange}
+          />
+        ) : (
+          <div className="space-y-3 px-3 py-3">
+            {section.criteria.map((criterion) => (
+              <CriterionRow
+                key={criterion.key}
+                criterion={criterion}
+                entry={scores[criterion.key]}
+                disabled={disabled}
+                totalWeight={totalWeight}
+                onChange={onChange}
+              />
+            ))}
+          </div>
+        )
       ) : null}
     </section>
+  )
+}
+
+interface StageChecklistProps {
+  section: Section
+  scores: Record<string, { value: number | boolean | null; comment?: string | null }>
+  disabled: boolean
+  onChange: (criterionKey: string, value: number | boolean | null, comment?: string | null) => void
+}
+
+export function StageChecklist({ section, scores, disabled, onChange }: StageChecklistProps) {
+  const { t } = useTranslation('common')
+  const criteria = section.criteria
+
+  const mark = (index: number, reached: boolean) => {
+    const current = scores[criteria[index].key]?.value
+    const next = reached ? (current === true ? null : true) : current === false ? null : false
+    onChange(criteria[index].key, next)
+  }
+
+  return (
+    <div className="space-y-1.5 px-3 py-3">
+      <p className="mb-1 text-xs text-gray-500">
+        {t(
+          'pages.training.scorecard.stages.hint',
+          'Mark which script stages the call reached. Each stage is independent.'
+        )}
+      </p>
+      {criteria.map((criterion, index) => {
+        const value = (scores[criterion.key]?.value as boolean | null | undefined) ?? null
+        return (
+          <div
+            key={criterion.key}
+            className="flex items-center justify-between gap-2 rounded-md bg-gray-50 px-3 py-2"
+          >
+            <span className="flex items-center gap-2 text-sm text-gray-700">
+              <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-gray-200 text-[10px] font-semibold text-gray-600">
+                {index + 1}
+              </span>
+              {criterion.name}
+            </span>
+            <div className="flex gap-1">
+              <button
+                type="button"
+                disabled={disabled}
+                onClick={() => mark(index, true)}
+                aria-pressed={value === true}
+                className={`rounded-full border px-2.5 py-1 text-xs font-medium disabled:cursor-not-allowed disabled:opacity-60 ${
+                  value === true
+                    ? 'border-emerald-500 bg-emerald-500 text-white'
+                    : 'border-gray-200 bg-white text-gray-700'
+                }`}
+              >
+                {t('pages.training.scorecard.stages.reached', 'Reached')}
+              </button>
+              <button
+                type="button"
+                disabled={disabled}
+                onClick={() => mark(index, false)}
+                aria-pressed={value === false}
+                className={`rounded-full border px-2.5 py-1 text-xs font-medium disabled:cursor-not-allowed disabled:opacity-60 ${
+                  value === false
+                    ? 'border-red-500 bg-red-500 text-white'
+                    : 'border-gray-200 bg-white text-gray-700'
+                }`}
+              >
+                {t('pages.training.scorecard.stages.notReached', 'Not reached')}
+              </button>
+            </div>
+          </div>
+        )
+      })}
+    </div>
   )
 }
 
@@ -503,8 +560,6 @@ interface CriterionRowProps {
 function CriterionRow({ criterion, entry, disabled, totalWeight, onChange }: CriterionRowProps) {
   const { t } = useTranslation('common')
   const isBinary = criterion.scale === 'binary'
-  // A weighted criterion still needing a value blocks "Mark completed" —
-  // highlight it so the trainer can find the gaps.
   const needsScore = !disabled && Number(criterion.weight) > 0 && entry?.value == null
   return (
     <div
@@ -596,10 +651,6 @@ function BinaryInput({
   )
 }
 
-// KAN-504 redesign: the 0-5 scale is presented as 6 labeled levels (the 4
-// from the design + Poor/Good). Values map straight onto the existing 0-5
-// axis, so scoring is unchanged. Per-value points = round(value × weight / 5)
-// (the criterion's contribution to the /100 score; templates sum to 100).
 const LEVEL_6: { value: number; labelKey: string; fallback: string; bar: string }[] = [
   {
     value: 0,
@@ -657,9 +708,6 @@ function Level6Input({
     <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-6">
       {LEVEL_6.map((lvl) => {
         const selected = value === lvl.value
-        // Contribution to the /100 score = (value/5) × (weight / totalWeight) ×
-        // 100 = value×weight×20 / totalWeight. Equals value×weight/5 when the
-        // template's weights sum to 100.
         const points = totalWeight > 0 ? Math.round((lvl.value * weight * 20) / totalWeight) : 0
         return (
           <button

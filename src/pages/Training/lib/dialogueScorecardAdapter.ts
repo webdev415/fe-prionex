@@ -130,7 +130,7 @@ function ratingForValue(value: number | boolean | null, scale: string): Dialogue
 }
 
 /**
- * The KAN-503 "Script stages" section is funnel-tracking data (binary,
+ * The "Script stages" section is funnel-tracking data (binary,
  * weight 0), not a quality criterion. It is captured in the scoring editor
  * (ScorecardPanel) but excluded from the read-only quality breakdown so it
  * doesn't distort the criteria count or show "Weight 0 pts" cards.

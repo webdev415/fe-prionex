@@ -3,16 +3,25 @@ import {
   archiveDrill,
   assignDrill,
   createDrill,
+  getDrillStats,
+  listDrillAttempts,
   listDrills,
-  scoreAttempt,
-  submitAttempt,
+  transitionAttempt,
   updateDrill,
 } from '../api/drillsService'
-import type { DrillCreatePayload, DrillListFilters, DrillUpdatePayload } from '../types/drills'
+import type {
+  AssignDrillPayload,
+  AttemptTransitionPayload,
+  DrillCreatePayload,
+  DrillListFilters,
+  DrillUpdatePayload,
+} from '../types/drills'
 
 export const drillsKeys = {
   all: ['training', 'drills'] as const,
   list: (filters: DrillListFilters) => [...drillsKeys.all, 'list', filters] as const,
+  attempts: (drillId: number) => [...drillsKeys.all, 'attempts', drillId] as const,
+  stats: (drillId: number) => [...drillsKeys.all, 'stats', drillId] as const,
 }
 
 export function useDrills(filters: DrillListFilters = {}, enabled = true) {
@@ -21,6 +30,24 @@ export function useDrills(filters: DrillListFilters = {}, enabled = true) {
     queryFn: () => listDrills(filters),
     enabled,
     staleTime: 30_000,
+  })
+}
+
+export function useDrillAttempts(drillId: number | null) {
+  return useQuery({
+    queryKey: drillsKeys.attempts(drillId ?? 0),
+    queryFn: () => listDrillAttempts(drillId as number),
+    enabled: drillId != null,
+    staleTime: 15_000,
+  })
+}
+
+export function useDrillStats(drillId: number | null) {
+  return useQuery({
+    queryKey: drillsKeys.stats(drillId ?? 0),
+    queryFn: () => getDrillStats(drillId as number),
+    enabled: drillId != null,
+    staleTime: 15_000,
   })
 }
 
@@ -49,34 +76,25 @@ export function useArchiveDrill() {
   })
 }
 
-export function useSubmitAttempt() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: ({
-      drillId,
-      payload,
-    }: {
-      drillId: number
-      payload?: Record<string, unknown> | null
-    }) => submitAttempt(drillId, payload),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: drillsKeys.all }),
-  })
-}
-
-export function useScoreAttempt() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: ({ attemptId, score }: { attemptId: number; score: number }) =>
-      scoreAttempt(attemptId, score),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: drillsKeys.all }),
-  })
-}
-
 export function useAssignDrill() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: ({ drillId, operatorIds }: { drillId: number; operatorIds: number[] }) =>
-      assignDrill(drillId, operatorIds),
+    mutationFn: ({ drillId, payload }: { drillId: number; payload: AssignDrillPayload }) =>
+      assignDrill(drillId, payload),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: drillsKeys.all }),
+  })
+}
+
+export function useTransitionAttempt() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({
+      attemptId,
+      payload,
+    }: {
+      attemptId: number
+      payload: AttemptTransitionPayload
+    }) => transitionAttempt(attemptId, payload),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: drillsKeys.all }),
   })
 }

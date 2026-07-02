@@ -6,12 +6,13 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { useQueries } from '@tanstack/react-query'
+import { useQueries, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Icons } from '@/lib/icons'
 import { DocumentsAccordion } from './components/DocumentsAccordion'
 import { DocumentUploadModal } from './components/DocumentUploadModal'
 import { LoanFactoringInfo } from './components/LoanFactoringInfo'
+import { UbkiSubmissionHistory } from './components/UbkiSubmissionHistory'
 import { SaleNotesSection } from './components/SaleNotesSection'
 import {
   formatClientFullName,
@@ -60,6 +61,8 @@ import {
   MessagingTabSkeleton,
 } from './components/MessagingHistorySkeleton'
 import { CallLogCard } from './components/CallLogCard'
+import { ToggleSwitch } from '@/components/ui/ToggleSwitch'
+import { useUpdateClient, clientKeys } from '@/features/clients/hooks/useClients'
 import { cn } from '@/lib/utils'
 import { decideChainAutoOpen } from '@/lib/taChainAutoOpen'
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/Tooltip'
@@ -123,6 +126,7 @@ import { backendToFrontendPaymentMethod } from '@/features/payments/utils'
 import { useUserDepartment } from '@/features/users'
 import { PermissionGuard } from '@/components/auth'
 import { useHasAnyPermission, useHasPermission } from '@/hooks/usePermissions'
+import { useSubmitDebtToUbki, useBulkSubmitToUbki, ubkiKeys } from '@/features/ubki'
 import { PERMISSIONS } from '@/constants/permissions'
 import { searchClientsByPhoneExact } from '@/api/clientSearchApi'
 import { ChainExecutor, TAInteractionHistory } from './components/taChains'
@@ -429,6 +433,38 @@ export function ClientDetailPage() {
   const { mutate: closeDebt, isPending: isClosingDebt } = useCloseDebt()
   const { mutate: reopenDebt, isPending: isReopeningDebt } = useReopenDebt()
   const { mutate: updateClosureDate, isPending: isUpdatingClosureDate } = useUpdateDebtClosureDate()
+
+  // --- UBKI (credit bureau) outbound submission ---
+  const ubkiQueryClient = useQueryClient()
+  const { mutate: updateClientMutate, isPending: isUpdatingUbkiOptOut } = useUpdateClient()
+  // Client opt-out flag (backend exposes it on the client detail response).
+  const canSubmitToUbki = useHasPermission(PERMISSIONS.UBKI.SUBMIT)
+  const { mutate: submitDebtToUbki, isPending: isSubmittingToUbki } = useSubmitDebtToUbki()
+  const { mutate: bulkSubmitToUbki, isPending: isBulkSubmittingToUbki } = useBulkSubmitToUbki()
+  const doNotSendToUbki = clientDetail?.do_not_send_to_ubki ?? false
+  const handleToggleUbkiOptOut = (checked: boolean) => {
+    updateClientMutate(
+      { id: clientId, data: { do_not_send_to_ubki: checked } },
+      {
+        onSuccess: () => {
+          // Refresh the full client record so the toggle reflects persisted state.
+          ubkiQueryClient.invalidateQueries({ queryKey: clientKeys.detail(clientId), exact: true })
+          toast.success(
+            t(
+              'pages.clients.detail.ubki.toasts.optOutSuccess',
+              checked ? 'Client opted out of UBKI' : 'Client re-enabled for UBKI',
+              { count: 1 }
+            )
+          )
+        },
+        onError: () => {
+          toast.error(
+            t('pages.clients.detail.ubki.toasts.submitError', 'Failed to update UBKI opt-out')
+          )
+        },
+      }
+    )
+  }
   const { mutate: completeRa, isPending: isCompletingRa } = useCompleteRestructuringAgreement()
   const { mutate: transitionRr, isPending: isTransitioningRr } = useTransitionRRStatus()
   const { mutate: disconnectRr, isPending: isDisconnectingRr } = useDisconnectRR()
@@ -551,6 +587,30 @@ export function ClientDetailPage() {
     () => (loans ?? []).some((d) => d.status === 'active'),
     [loans]
   )
+  // Debt ids of the client's already-loaded loans, used for the
+  // "Send all loans to UBKI" bulk action and the submission-history filter.
+  const ubkiLoanIds = useMemo(() => (loans ?? []).map((d) => d.id), [loans])
+  // debt id + human loan number (contract_number) for the history panel display.
+  const ubkiLoans = useMemo(
+    () =>
+      (loans ?? []).map((d) => ({
+        id: d.id,
+        loanNumber: d.contract_number ?? String(d.id),
+      })),
+    [loans]
+  )
+  const handleBulkSubmitToUbki = () => {
+    if (ubkiLoanIds.length === 0) return
+    bulkSubmitToUbki(
+      { debt_ids: ubkiLoanIds },
+      {
+        onSuccess: () => {
+          ubkiQueryClient.invalidateQueries({ queryKey: clientKeys.loans(clientId) })
+          ubkiQueryClient.invalidateQueries({ queryKey: ubkiKeys.all })
+        },
+      }
+    )
+  }
   // Per-transition RR permissions. Buttons in the RR actions column
   // disable themselves (with a tooltip) when the operator's role lacks
   // the corresponding gate. Auto transitions (driven by the lazy
@@ -651,6 +711,8 @@ export function ClientDetailPage() {
       added_by_user_name?: string | null
       contactTags: NonNullable<(typeof profile.additional_phones)[number]['contact_tags']>
       blocking: NonNullable<(typeof profile.additional_phones)[number]['blocking']>
+      updated_at?: string | null
+      updated_by_user_name?: string | null
     }> = []
     if (profile.additional_phones && profile.additional_phones.length > 0) {
       profile.additional_phones
@@ -673,6 +735,8 @@ export function ClientDetailPage() {
               blocks_spam: false,
               reasons: [],
             },
+            updated_at: p.updated_at,
+            updated_by_user_name: p.updated_by_user_name,
           })
         )
     } else if (isValidPhone(profile.phone_primary)) {
@@ -757,6 +821,8 @@ export function ClientDetailPage() {
           comment: r.comment ?? '',
           created_at: r.created_at,
           added_by_user_name: r.added_by_user_name,
+          updated_at: r.updated_at,
+          updated_by_user_name: r.updated_by_user_name,
           defaultCallLine: r.default_call_line ?? 'white',
           spamAllowed: r.spam_allowed !== false,
         })
@@ -776,6 +842,8 @@ export function ClientDetailPage() {
             comment: '',
             created_at: p.created_at,
             added_by_user_name: p.added_by_user_name,
+            updated_at: p.updated_at,
+            updated_by_user_name: p.updated_by_user_name,
             defaultCallLine: p.default_call_line ?? 'white',
             spamAllowed: p.spam_allowed !== false,
           }))
@@ -824,6 +892,9 @@ export function ClientDetailPage() {
         // has it and it diverges from remainingDebtAmount (see loanColumns).
         eligibleForReturn: d.legacy_f53 != null ? Number(d.legacy_f53) : null,
         status: d.status,
+        // UBKI outbound submission state (credit bureau)
+        sentToCreditBureau: d.sent_to_credit_bureau ?? false,
+        creditBureauSentDate: d.credit_bureau_sent_date ?? null,
       })),
       // Payments mapped from PaymentResponse to UI shape
       // Split into system payments (payment_date >= purchase_date) and
@@ -1015,11 +1086,6 @@ export function ClientDetailPage() {
     () => (client?.activities ?? []).filter((a) => a._raw?.type_code === 'SEARCHING'),
     [client?.activities]
   )
-
-  const effectiveCommentTab =
-    activeCommentTab === 'comments' && !isActivitiesLoading && displayedActivities.length === 0
-      ? 'ta-chains'
-      : activeCommentTab
 
   const normalizePhoneForLookup = (value: string) => stripPhoneFormat(value)
 
@@ -1561,6 +1627,42 @@ export function ClientDetailPage() {
             <Icons.Info size={18} />
           </button>
         )
+
+        // Tooltip used when the UBKI send button is disabled because the
+        // client is opted out.
+        const ubkiSendTitle = doNotSendToUbki
+          ? t(
+              'pages.clients.detail.ubki.optedOutTooltip',
+              'Client is opted out of UBKI; submission is disabled.'
+            )
+          : loan.sentToCreditBureau && loan.creditBureauSentDate
+            ? t('pages.clients.detail.ubki.sentOn', 'Sent on {{date}}', {
+                date: formatDate(loan.creditBureauSentDate),
+              })
+            : t('pages.clients.detail.ubki.send', 'Send to UBKI')
+
+        // UBKI send button — shown for any loan when the operator can submit.
+        const ubkiButton = canSubmitToUbki ? (
+          <button
+            onClick={() => submitDebtToUbki({ debtId: loan.id, clientId })}
+            disabled={doNotSendToUbki || isSubmittingToUbki}
+            className={cn(
+              'p-1 disabled:opacity-50',
+              loan.sentToCreditBureau
+                ? 'text-secondary-800 hover:text-secondary-900'
+                : 'text-gray-500 hover:text-gray-700',
+              doNotSendToUbki ? 'cursor-not-allowed' : ''
+            )}
+            title={ubkiSendTitle}
+          >
+            {loan.sentToCreditBureau ? (
+              <Icons.Checkmark size={18} strokeWidth={1.5} />
+            ) : (
+              <Icons.MailSend01 size={18} strokeWidth={1.5} />
+            )}
+          </button>
+        ) : null
+
         if (loan.status === 'active') {
           return (
             <div className="flex items-center justify-center gap-2">
@@ -1579,6 +1681,7 @@ export function ClientDetailPage() {
                   <Icons.Success size={18} />
                 </button>
               </PermissionGuard>
+              {ubkiButton}
             </div>
           )
         }
@@ -1614,10 +1717,16 @@ export function ClientDetailPage() {
                   </button>
                 </div>
               </PermissionGuard>
+              {ubkiButton}
             </div>
           )
         }
-        return infoButton
+        return (
+          <div className="flex items-center justify-center gap-2">
+            {infoButton}
+            {ubkiButton}
+          </div>
+        )
       },
     },
   ]
@@ -2497,6 +2606,29 @@ export function ClientDetailPage() {
                     </button>
                   </div>
                 </div>
+                {/* UBKI opt-out toggle — persisted via PUT /clients/{id} */}
+                <div className="flex min-h-8 items-center self-stretch p-0">
+                  <label
+                    className="flex-1 text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700"
+                    title={t(
+                      'pages.clients.detail.ubki.doNotSendHint',
+                      'When enabled, this client is excluded from all UBKI submissions.'
+                    )}
+                  >
+                    {t('pages.clients.detail.ubki.doNotSendLabel', 'Do not send data to UBKI')}
+                  </label>
+                  <div className="ml-2 flex items-center justify-end">
+                    <ToggleSwitch
+                      checked={doNotSendToUbki}
+                      onChange={handleToggleUbkiOptOut}
+                      disabled={!canEditClient || isUpdatingUbkiOptOut}
+                      ariaLabel={t(
+                        'pages.clients.detail.ubki.doNotSendLabel',
+                        'Do not send data to UBKI'
+                      )}
+                    />
+                  </div>
+                </div>
               </div>
               <div className="flex flex-row items-center justify-between gap-2 self-stretch p-0">
                 <div className="flex flex-1 shrink-0 items-center gap-2.5">
@@ -2659,6 +2791,52 @@ export function ClientDetailPage() {
                             </button>
                           </PermissionGuard>
                         </div>
+                          </TooltipTrigger>
+                          <TooltipContent side="top" className="text-xs">
+                            {phone.type && (
+                              <div>
+                                {t('pages.clients.detail.phoneType')}:{' '}
+                                {phone.contactTypeCode
+                                  ? t(`contactTypes.${phone.contactTypeCode}`, {
+                                      defaultValue: phone.type,
+                                    })
+                                  : phone.type === 'mobile'
+                                    ? t('pages.clients.editModal.phoneMobile')
+                                    : phone.type === 'home'
+                                      ? t('pages.clients.editModal.phoneHome')
+                                      : phone.type === 'register'
+                                        ? t('pages.clients.editModal.phoneRegister')
+                                        : phone.type}
+                              </div>
+                            )}
+                            {phone.added_by_user_name && (
+                              <div>
+                                {t('pages.clients.detail.addedBy')}: {phone.added_by_user_name}
+                              </div>
+                            )}
+                            {phone.created_at && (
+                              <div>
+                                {t('pages.clients.detail.addedDate')}:{' '}
+                                {formatDate(phone.created_at ?? undefined)}
+                              </div>
+                            )}
+                            {phone.updated_by_user_name && (
+                              <>
+                                <div>
+                                  {t('pages.clients.detail.updatedBy')}:{' '}
+                                  {phone.updated_by_user_name}
+                                </div>
+                                {phone.updated_at && (
+                                  <div>
+                                    {t('pages.clients.detail.updatedDate')}:{' '}
+                                    {formatDate(phone.updated_at ?? undefined)}
+                                  </div>
+                                )}
+                              </>
+                            )}
+                            {!phone.added_by_user_name && !phone.created_at && <div>-</div>}
+                          </TooltipContent>
+                        </Tooltip>
                       </div>
                       {phone.contactId > 0 && (
                         <div className="flex justify-end gap-3 pt-0.5">
@@ -3499,6 +3677,39 @@ export function ClientDetailPage() {
                           {t('pages.clients.detail.writeOff')}
                         </Button>
                       )}
+                      {/* Bulk "Send all loans to UBKI" — gated by the same
+                          submit_to_ubki permission as the per-loan send button. */}
+                      {canSubmitToUbki && (
+                        <Button
+                          variant="secondary"
+                          leftIcon={<Icons.MailSend01 size={20} />}
+                          className="rounded text-xs md:text-sm"
+                          size="sm"
+                          onClick={handleBulkSubmitToUbki}
+                          disabled={
+                            doNotSendToUbki || ubkiLoanIds.length === 0 || isBulkSubmittingToUbki
+                          }
+                          title={
+                            doNotSendToUbki
+                              ? t(
+                                  'pages.clients.detail.ubki.optedOutTooltip',
+                                  'Client is opted out of UBKI; submission is disabled.'
+                                )
+                              : ubkiLoanIds.length === 0
+                                ? t(
+                                    'pages.clients.detail.ubki.noLoansTooltip',
+                                    'This client has no loans to submit.'
+                                  )
+                                : t('pages.clients.detail.ubki.sendAll', 'Send all loans to UBKI')
+                          }
+                        >
+                          {t('pages.clients.detail.ubki.sendAll', 'Send all loans to UBKI')}
+                        </Button>
+                      )}
+                    </div>
+                    {/* UBKI submission history — scoped to this client's loans. */}
+                    <div className="px-3 pb-4 md:px-6">
+                      <UbkiSubmissionHistory clientId={clientId} loans={ubkiLoans} />
                     </div>
                   </div>
                 )}
@@ -3647,6 +3858,20 @@ export function ClientDetailPage() {
                                           {t('pages.clients.detail.addedDate')}:{' '}
                                           {formatDate(contact.created_at ?? undefined)}
                                         </div>
+                                      )}
+                                      {contact.updated_by_user_name && (
+                                        <>
+                                          <div>
+                                            {t('pages.clients.detail.updatedBy')}:{' '}
+                                            {contact.updated_by_user_name}
+                                          </div>
+                                          {contact.updated_at && (
+                                            <div>
+                                              {t('pages.clients.detail.updatedDate')}:{' '}
+                                              {formatDate(contact.updated_at ?? undefined)}
+                                            </div>
+                                          )}
+                                        </>
                                       )}
                                       {!contact.added_by_user_name && !contact.created_at && (
                                         <div>-</div>
@@ -4810,31 +5035,29 @@ export function ClientDetailPage() {
                 onClick={() => setActiveCommentTab('ta-chains')}
                 className={cn(
                   'text-dark-500 flex items-center justify-center gap-2 rounded-md px-4 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px]',
-                  effectiveCommentTab === 'ta-chains'
+                  activeCommentTab === 'ta-chains'
                     ? 'bg-secondary-800 text-white'
                     : 'hover:bg-primary-200/10 hover:text-secondary-800'
                 )}
               >
                 {t('pages.clients.detail.tabs.taChains')}
               </button>
-              {!isActivitiesLoading && displayedActivities.length > 0 && (
-                <button
-                  onClick={() => setActiveCommentTab('comments')}
-                  className={cn(
-                    'text-dark-500 flex items-center justify-center gap-2 rounded-md px-4 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px]',
-                    effectiveCommentTab === 'comments'
-                      ? 'bg-secondary-800 text-white'
-                      : 'hover:bg-primary-200/10 hover:text-secondary-800'
-                  )}
-                >
-                  {t('pages.clients.detail.comments')}
-                </button>
-              )}
+              <button
+                onClick={() => setActiveCommentTab('comments')}
+                className={cn(
+                  'text-dark-500 flex items-center justify-center gap-2 rounded-md px-4 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px]',
+                  activeCommentTab === 'comments'
+                    ? 'bg-secondary-800 text-white'
+                    : 'hover:bg-primary-200/10 hover:text-secondary-800'
+                )}
+              >
+                {t('pages.clients.detail.comments')}
+              </button>
               <button
                 onClick={() => setActiveCommentTab('primary')}
                 className={cn(
                   'text-dark-500 flex items-center justify-center gap-2 rounded-md px-4 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px]',
-                  effectiveCommentTab === 'primary'
+                  activeCommentTab === 'primary'
                     ? 'bg-secondary-800 text-white'
                     : 'hover:bg-primary-200/10 hover:text-secondary-800'
                 )}
@@ -4845,7 +5068,7 @@ export function ClientDetailPage() {
                 onClick={() => setActiveCommentTab('searcher')}
                 className={cn(
                   'text-dark-500 flex items-center justify-center gap-2 rounded-md px-4 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px]',
-                  effectiveCommentTab === 'searcher'
+                  activeCommentTab === 'searcher'
                     ? 'bg-secondary-800 text-white'
                     : 'hover:bg-primary-200/10 hover:text-secondary-800'
                 )}
@@ -4856,7 +5079,7 @@ export function ClientDetailPage() {
                 onClick={() => setActiveCommentTab('dial-history')}
                 className={cn(
                   'text-dark-500 flex items-center justify-center gap-2 rounded-md px-4 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px]',
-                  effectiveCommentTab === 'dial-history'
+                  activeCommentTab === 'dial-history'
                     ? 'bg-secondary-800 text-white'
                     : 'hover:bg-primary-200/10 hover:text-secondary-800'
                 )}
@@ -4876,7 +5099,7 @@ export function ClientDetailPage() {
           </div>
 
           {/* Content based on active tab */}
-          {effectiveCommentTab === 'ta-chains' && (
+          {activeCommentTab === 'ta-chains' && (
             <div className="flex w-full flex-col gap-4">
               <TAInteractionHistory clientId={clientId} debts={loans} />
             </div>
@@ -4937,7 +5160,7 @@ export function ClientDetailPage() {
             </ModalContent>
           </Modal>
 
-          {effectiveCommentTab === 'comments' &&
+          {activeCommentTab === 'comments' &&
             (isActivitiesLoading ? (
               <TableSkeleton columns={12} rows={3} className="w-full" />
             ) : displayedActivities.length === 0 ? (
@@ -4979,9 +5202,9 @@ export function ClientDetailPage() {
               </div>
             ))}
 
-          {effectiveCommentTab === 'primary' && <SaleNotesSection clientId={clientId} />}
+          {activeCommentTab === 'primary' && <SaleNotesSection clientId={clientId} />}
 
-          {effectiveCommentTab === 'searcher' &&
+          {activeCommentTab === 'searcher' &&
             (isActivitiesLoading ? (
               <TableSkeleton columns={6} rows={3} className="w-full" />
             ) : displayedSearcherActivities.length === 0 ? (
@@ -5004,7 +5227,7 @@ export function ClientDetailPage() {
               </div>
             ))}
 
-          {effectiveCommentTab === 'dial-history' &&
+          {activeCommentTab === 'dial-history' &&
             (isDialHistoryLoading ? (
               <TableSkeleton columns={2} rows={3} className="w-full" />
             ) : dialHistory.length === 0 ? (

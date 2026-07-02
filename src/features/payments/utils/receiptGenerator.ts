@@ -74,18 +74,23 @@ export function convertPaymentToReceiptData(
     paymentId: payment.payment_number,
     // CHANGED — NEVER fall back to new Date() for dateIssued. Priority:
     //   receipt_generated_at -> payment_confirmation_date -> recorded_at -> verified_at -> payment_date
-    // payment_date is always present (NOT NULL in the model).
+    // KAN-782: payment_date can be NULL on legacy rows; the timestamp fallbacks
+    // above cover those (all legacy null-date rows carry recorded_at). Terminal
+    // '—' guards the impossible all-null case and keeps the type a string.
     dateIssued:
       payment.receipt_generated_at ||
       payment.payment_confirmation_date ||
       payment.recorded_at ||
       payment.verified_at ||
-      payment.payment_date,
+      payment.payment_date ||
+      '—',
     clientName: clientData?.fullName || `Client #${payment.client_id}`,
     clientId: payment.client_id.toString(),
     phone: clientData?.phone || 'N/A',
     contract: clientData?.contract || 'N/A',
-    paymentDate: payment.payment_date,
+    // KAN-782: the labeled "Payment Date" shows "—" for legacy null-date rows
+    // rather than substituting a different timestamp.
+    paymentDate: payment.payment_date ?? '—',
     paymentMethod,
     transactionRef,
     paymentAmount: Number(payment.amount) || 0,

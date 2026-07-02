@@ -60,7 +60,7 @@ describe('useOperatorAssignmentUpload', () => {
       filename: 'test.csv',
       status: 'validated',
       total_records: 5,
-      summary: { ready: 5, no_change: 0, invalid: 0, unique_operators: 2 },
+      summary: { ready: 5, no_change: 0, invalid: 0, would_skip: 0, unique_operators: 2 },
       preview_rows: [],
       errors: [],
     }

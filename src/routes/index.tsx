@@ -178,6 +178,11 @@ const BulkWriteoffImportPage = lazy(() =>
     default: m.BulkWriteoffImportPage,
   }))
 )
+const RepaymentConfigurationPage = lazy(() =>
+  import('@/pages/RepaymentConfiguration/RepaymentConfigurationPage').then((m) => ({
+    default: m.RepaymentConfigurationPage,
+  }))
+)
 const BulkSaleNotesImportPage = lazy(() =>
   import('@/pages/Operations').then((m) => ({
     default: m.BulkSaleNotesImportPage,
@@ -412,6 +417,14 @@ export const router = createBrowserRouter([
         element: (
           <PermissionRoute requiredPermission={PERMISSIONS.CONTACT_TAGS.MANAGE}>
             {withSuspense(<ContactTagsPage />)}
+          </PermissionRoute>
+          ),
+      },
+      {
+        path: 'system-settings/repayment-configuration',
+        element: (
+          <PermissionRoute requiredPermission={PERMISSIONS.REPAYMENT_CONFIG.VIEW}>
+            {withSuspense(<RepaymentConfigurationPage />)}
           </PermissionRoute>
         ),
       },

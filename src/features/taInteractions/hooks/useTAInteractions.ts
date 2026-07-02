@@ -28,13 +28,23 @@ const INST_KEY = ['chain-instances'] as const
 
 export function useClientTAInteractions(
   clientId: number | null,
-  params?: Omit<TAInteractionListParams, 'client_id'>
+  params?: Omit<TAInteractionListParams, 'client_id'>,
+  options?: { refetchInterval?: number }
 ) {
   return useQuery({
     queryKey: [...INT_KEY, 'client', clientId, params],
     queryFn: () => getTAInteractions({ client_id: clientId!, ...params }),
     enabled: clientId !== null && clientId > 0,
     staleTime: 10_000,
+    // Interactions can also be created by the background chain-event consumer
+    // (an automatic Credit+Date chain auto-completing on a debt close), which
+    // the UI never hears about — so the list would otherwise stay empty until a
+    // manual page reload. Refetch when the tab regains focus, and when a caller
+    // opts in, poll on an interval, so those async rows show up on their own.
+    // refetchInterval pauses while the tab is unfocused (default), so idle
+    // background tabs don't poll.
+    refetchOnWindowFocus: true,
+    refetchInterval: options?.refetchInterval,
   })
 }
 

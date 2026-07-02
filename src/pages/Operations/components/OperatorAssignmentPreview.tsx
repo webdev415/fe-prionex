@@ -40,6 +40,11 @@ function StatusBadge({ status }: { status: OARowStatus }) {
       color: 'text-warning-500',
       labelKey: 'pages.imports.operatorAssignment.preview.statuses.warning',
     },
+    would_skip: {
+      icon: Icons.Warning,
+      color: 'text-warning-500',
+      labelKey: 'pages.imports.operatorAssignment.preview.statuses.warning',
+    },
     error: {
       icon: Icons.Error,
       color: 'text-error-500',
@@ -47,7 +52,10 @@ function StatusBadge({ status }: { status: OARowStatus }) {
     },
   }
 
-  const cfg = statusConfig[status]
+  // Fallback to error styling for any unknown status. Defends against
+  // future BE additions to the OARowStatus union — prevents an undefined
+  // lookup from crashing the whole preview page.
+  const cfg = statusConfig[status] ?? statusConfig.error
   const StatusIcon = cfg.icon
   return (
     <span className={`inline-flex items-center gap-1 text-xs font-medium ${cfg.color}`}>
@@ -119,7 +127,14 @@ function usePreviewColumns(): Column<OAPreviewRowWithId>[] {
         key: 'error',
         header: t(`${p}.note`),
         render: (row: OAPreviewRowWithId) => (
-          <span className="text-xs text-gray-600">{row.error || ''}</span>
+          <div className="flex flex-col gap-1">
+            {row.error ? <span className="text-xs text-gray-600">{row.error}</span> : null}
+            {row.note ? (
+              <span className="text-warning-700 bg-warning-50 border-warning-200 inline-flex w-fit items-center rounded-md border px-1.5 py-0.5 text-[10px] font-medium">
+                {row.note}
+              </span>
+            ) : null}
+          </div>
         ),
       },
     ],
@@ -162,7 +177,7 @@ export function OperatorAssignmentPreview({ preview, onConfirm, onCancel, isExec
       </div>
 
       {/* Summary cards */}
-      <div className="grid grid-cols-4 gap-3">
+      <div className="grid grid-cols-5 gap-3">
         <SummaryCard
           label={t('pages.imports.operatorAssignment.preview.readyToAssign')}
           value={summary.ready}
@@ -172,6 +187,11 @@ export function OperatorAssignmentPreview({ preview, onConfirm, onCancel, isExec
           label={t('pages.imports.operatorAssignment.preview.noChange')}
           value={summary.no_change}
           color="bg-gray-50 border-gray-200 text-dark-500"
+        />
+        <SummaryCard
+          label={t('pages.imports.operatorAssignment.preview.wouldSkip')}
+          value={summary.would_skip ?? 0}
+          color="bg-warning-50 border-warning-200 text-warning-700"
         />
         <SummaryCard
           label={t('pages.imports.operatorAssignment.preview.invalid')}

@@ -193,6 +193,16 @@ export const PERMISSIONS = {
   },
 
   /**
+   * Repayment Config Category (2 permissions, KAN-246)
+   * Controls access to the global repayment order and write-off rule settings.
+   * Seeded by auth migration 039. Admin + Supervisor only.
+   */
+  REPAYMENT_CONFIG: {
+    VIEW: 'view_repayment_config',
+    EDIT: 'edit_repayment_config',
+  },
+
+  /**
    * TA Chains Category (1 permission)
    * Hard-delete a TA Chain (refused if the chain has any recorded history).
    * Note: create / edit / activate-deactivate continue to gate on manage_settings.
@@ -323,6 +333,16 @@ export const PERMISSIONS = {
     DISCONNECT: 'rr_disconnect',
     COMPLETE: 'rr_complete',
   },
+
+  /**
+   * UBKI Category (1 permission)
+   * Gates manual and bulk outbound submission of credit data to the
+   * UBKI credit bureau. The per-client opt-out toggle is gated by
+   * edit_clients (it is a client-record edit), not this permission.
+   */
+  UBKI: {
+    SUBMIT: 'submit_to_ubki',
+  },
 } as const
 
 /**
@@ -372,12 +392,14 @@ export const PERMISSION_CATEGORIES = {
   TAGS: 'Tags',
   SELLERS: 'Sellers',
   SCORING_CONFIG: 'Scoring Configuration',
+  REPAYMENT_CONFIG: 'Repayment Configuration',
   TA_CHAINS: 'TA Chains',
   ACTION_ANALYSIS: 'Action Analysis',
   DOCUMENT_GENERATION: 'Document Generation',
   CONTACT_TYPES: 'Contact Types',
   CONTACT_TAGS: 'Contact Tags',
   RESTRUCTURING: 'Restructuring',
+  UBKI: 'UBKI',
 } as const
 
 /**
@@ -465,6 +487,10 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   edit_scoring_config: 'Update scoring weights and priority thresholds',
   manage_seller_scoring_config: 'Manage seller-specific scoring configurations',
   view_scoring_config_history: 'View scoring configuration change history',
+
+  // Repayment Configuration (KAN-246)
+  view_repayment_config: 'View global repayment order and write-off rule configuration',
+  edit_repayment_config: 'Edit global repayment order, write-off rules, and allocation algorithm',
 
   // TA Chains
   delete_ta_chains: 'Delete TA Chains (refused if the chain has any recorded history)',
@@ -554,4 +580,7 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   cancel_writeoffs: 'Cancel an active write-off entry',
   bulk_writeoff_operations:
     'Upload a bulk write-off CSV — gates the bulk-import page (required alongside create_writeoffs)',
+
+  // UBKI — outbound credit-bureau submission
+  submit_to_ubki: 'Manually submit client credit data to the UBKI credit bureau (single and bulk)',
 }

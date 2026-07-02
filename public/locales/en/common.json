@@ -54,6 +54,7 @@
     "messagingDrafts": "Message Drafts",
     "campaignAnalytics": "Campaign Analytics",
     "contactTypes": "Contact Types",
+    "repaymentConfiguration": "Repayment Configuration",
     "actionAnalysis": "Action Analysis"
   },
   "search": {
@@ -226,7 +227,8 @@
     "cancel": "Cancel",
     "edit": "Edit",
     "close": "Close",
-    "optional": "optional"
+    "optional": "optional",
+    "refresh": "Refresh"
   },
   "logout": {
     "confirmTitle": "Confirm Logout",
@@ -923,6 +925,13 @@
         "replyPlaceholder": "Write a reply…",
         "markRead": "Mark read",
         "markComplete": "Mark completed",
+        "markDone": "Mark done",
+        "confirm": "Confirm",
+        "return": "Return",
+        "returnReason": "Reason for revision",
+        "returnConfirm": "Return for revision",
+        "deadline": "Deadline",
+        "overdue": "Overdue",
         "threadEmpty": "No replies yet.",
         "types": {
           "praise": "Praise",
@@ -933,6 +942,12 @@
           "unread": "Unread",
           "read": "Read",
           "completed": "Completed"
+        },
+        "lifecycle": {
+          "open": "Open",
+          "done": "Done",
+          "confirmed": "Confirmed",
+          "returned": "Returned"
         },
         "role": {
           "trainer": "Trainer",
@@ -1215,6 +1230,7 @@
       "actions": {
         "view": "View",
         "edit": "Edit",
+        "unlock": "Unlock",
         "impersonate": "Impersonate",
         "impersonating": "Impersonating...",
         "status": "Status",
@@ -1974,6 +1990,7 @@
           "errors": "Errors ({{count}})",
           "readyToAssign": "Ready to assign",
           "noChange": "No change",
+          "wouldSkip": "Will be skipped",
           "invalid": "Invalid",
           "uniqueOperators": "Unique operators",
           "columns": {
@@ -2182,7 +2199,11 @@
         "assignEmployee": "Assign Employee",
         "addTags": "Add Tags",
         "removeTags": "Remove Tags",
-        "sendMessage": "Send message"
+        "sendMessage": "Send message",
+        "optOutUbki": "Do not send to UBKI",
+        "optInUbki": "Re-enable UBKI sending",
+        "submitUbki": "Send to UBKI",
+        "selectClientsFirst": "Select at least one client before starting a bulk action"
       },
       "manageTags": "Manage Tags",
       "errorLoading": "Failed to load clients",
@@ -2203,6 +2224,7 @@
         "searcher": "Searcher",
         "assignmentDate": "Assignment Date",
         "actions": "Actions",
+        "ubki": "UBKI",
         "lastOutgoingTADate": "Last outgoing TA date"
       },
       "priorities": {
@@ -3086,6 +3108,8 @@
         "contactType": "Contact type",
         "addedBy": "Added by",
         "addedDate": "Date",
+        "updatedBy": "Updated by",
+        "updatedDate": "Date",
         "phoneType": "Type",
         "linkedContact": "Linked contact",
         "comment": "Comment",
@@ -3298,6 +3322,53 @@
           "callSms": "Call / SMS",
           "taChains": "TA Chains",
           "searcherComments": "Searcher Comments"
+        },
+        "ubki": {
+          "doNotSendLabel": "Do not send data to UBKI",
+          "doNotSendHint": "When enabled, this client is excluded from all UBKI submissions.",
+          "send": "Send to UBKI",
+          "sent": "Sent to UBKI",
+          "sentOn": "Sent on {{date}}",
+          "optedOut": "Opted out",
+          "optedOutTooltip": "Client is opted out of UBKI; submission is disabled.",
+          "sendAll": "Send all loans to UBKI",
+          "noLoansTooltip": "This client has no loans to submit.",
+          "history": {
+            "title": "UBKI submission history",
+            "empty": "No UBKI submissions yet.",
+            "headers": {
+              "date": "Date",
+              "loan": "Loan",
+              "mode": "Mode",
+              "status": "Status",
+              "result": "Result"
+            },
+            "clickToExpand": "Click to see full details",
+            "reqId": "UBKI reference",
+            "pageInfo": "Page {{page}} of {{total}}"
+          },
+          "selectFirst": "Select at least one item first",
+          "toasts": {
+            "submitSuccess": "Submitted to UBKI",
+            "submitSkipped": "Submission skipped",
+            "submitError": "Submission to UBKI failed",
+            "optOutSuccess": "{{count}} client(s) opted out of UBKI",
+            "optInSuccess": "{{count}} client(s) re-enabled for UBKI",
+            "bulkQueued": "Queued {{count}} credit(s) for UBKI — results will appear in the submission history."
+          },
+          "sentRef": "Sent · ref {{ref}}",
+          "sentOk": "Sent",
+          "errors": {
+            "invalidData": "Invalid data",
+            "auth": "Login failed",
+            "rejected": "Rejected by UBKI",
+            "ubkiSystem": "UBKI system error",
+            "env": "Wrong environment",
+            "optedOut": "Client opted out",
+            "notFound": "Loan not found",
+            "unreachable": "UBKI service unavailable",
+            "connection": "Connection error"
+          }
         }
       },
       "debtSummary": {
@@ -5228,6 +5299,55 @@
         }
       }
     },
+    "repaymentConfiguration": {
+      "title": "Repayment & Write-off Configuration",
+      "description": "Configure how payments are distributed across debt components and manage write-off rules.",
+      "lastUpdated": "Last updated",
+      "by": "by",
+      "readOnly": "You have view-only access to this configuration.",
+      "saveSuccess": "Configuration saved successfully",
+      "saveError": "Failed to save configuration",
+      "conflictError": "Configuration was changed by another user. Reloading latest version.",
+      "cancel": "Cancel",
+      "save": "Save Changes",
+      "saving": "Saving...",
+      "repaymentOrder": {
+        "title": "Repayment Order",
+        "description": "Drag to set the order payments fill debt components (each fully before the next). This applies only under Strict Order — Legacy Proportional ignores it and uses a fixed order.",
+        "component_principal": "Principal",
+        "component_interest": "Interest",
+        "component_commission": "Commission",
+        "component_penalties": "Penalties",
+        "component_fines": "Fines"
+      },
+      "writeoffRules": {
+        "title": "Write-off Rules",
+        "description": "Enable or disable the creation of new write-off entries per component. Applies to manual operator write-offs only.",
+        "enabled": "Enabled",
+        "disabled": "Disabled",
+        "vendorNote": "Note: applies to manual write-offs only. Vendor import write-offs are unaffected."
+      },
+      "algorithm": {
+        "title": "Allocation Algorithm",
+        "legacy_proportional": "Legacy Proportional",
+        "strict_order": "Strict Order",
+        "legacyDescription": "Payments use the legacy proportional algorithm. Activate Strict Order to apply the configured sequence to future snapshots.",
+        "strictDescription": "Payments are distributed in the configured order above. Each component is fully consumed before the next.",
+        "activateButton": "Activate Strict Order",
+        "deactivateButton": "Revert to Legacy",
+        "activateConfirmTitle": "Activate Strict Order?",
+        "activateConfirmMessage": "This will change how future payments are allocated. All payments snapshotted after this change will use the order configured above. Previously snapshotted payments are unaffected. This action requires product and finance sign-off.",
+        "activateConfirmButton": "Activate",
+        "deactivateConfirmTitle": "Revert to Legacy Proportional?",
+        "deactivateConfirmMessage": "Future payment snapshots will use the legacy proportional algorithm. Already-snapshotted payments are unaffected.",
+        "deactivateConfirmButton": "Revert",
+        "preconditionError": "Strict Order cannot be activated until payment-allocation snapshotting is enabled. Existing payments do not need to be backfilled."
+      },
+      "history": {
+        "title": "Recent Changes",
+        "version": "Version"
+      }
+    },
     "auditLogs": {
       "title": "Audit Logs",
       "exportCsv": "Export CSV",
@@ -6144,6 +6264,13 @@
         "replyPlaceholder": "Write a reply…",
         "markRead": "Mark read",
         "markComplete": "Mark completed",
+        "markDone": "Mark done",
+        "confirm": "Confirm",
+        "return": "Return",
+        "returnReason": "Reason for revision",
+        "returnConfirm": "Return for revision",
+        "deadline": "Deadline",
+        "overdue": "Overdue",
         "threadEmpty": "No replies yet.",
         "types": {
           "praise": "Praise",
@@ -6154,6 +6281,12 @@
           "unread": "Unread",
           "read": "Read",
           "completed": "Completed"
+        },
+        "lifecycle": {
+          "open": "Open",
+          "done": "Done",
+          "confirmed": "Confirmed",
+          "returned": "Returned"
         },
         "role": {
           "trainer": "Trainer",
