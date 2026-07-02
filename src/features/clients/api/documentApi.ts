@@ -1,11 +1,19 @@
 import { api } from '@/lib/api'
 
+/** Embedded type reference on every document row — see BE DocumentTypeRef. */
+export interface DocumentTypeRef {
+  id: number
+  name: string
+  color: string
+}
+
 export interface ClientDocument {
   id: number
   client_id: number
   debt_id: number | null
   original_filename: string
-  document_type: string
+  document_type_id: number | null
+  document_type_ref: DocumentTypeRef | null
   mime_type: string
   file_size: number
   source: string | null
@@ -20,12 +28,12 @@ export const documentApi = {
   upload: (
     clientId: number,
     file: File,
-    documentType: string,
+    documentTypeId: number,
     debtId?: number | null
   ): Promise<ClientDocument> => {
     const formData = new FormData()
     formData.append('file', file)
-    formData.append('document_type', documentType)
+    formData.append('document_type_id', String(documentTypeId))
     if (debtId != null) {
       formData.append('debt_id', String(debtId))
     }

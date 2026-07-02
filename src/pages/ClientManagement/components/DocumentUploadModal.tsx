@@ -20,9 +20,11 @@ import {
 } from '@/components/ui/Select'
 import { documentApi } from '@/features/clients/api/documentApi'
 import { clientKeys } from '@/features/clients/hooks/useClients'
+import { useDocumentTypes } from '@/features/documentTypes'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 import { PermissionGuard } from '@/components/auth/PermissionGuard'
+import { DocumentTypePill } from '@/components/DocumentTypePill'
 import { PERMISSIONS } from '@/constants/permissions'
 
 interface Loan {
@@ -38,24 +40,18 @@ interface DocumentUploadModalProps {
   loans: Loan[]
 }
 
-const DOC_TYPE_VALUES = [
-  'passport',
-  'inn',
-  'contract',
-  'income',
-  'outcome',
-  'signature',
-  'military',
-  'other',
-] as const
-
 export function DocumentUploadModal({ open, onClose, clientId, loans }: DocumentUploadModalProps) {
   const { t } = useTranslation('common')
   const queryClient = useQueryClient()
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  // Hidden types are excluded from the dropdown: they can't be selected
+  // for new uploads. The accordion pulls hidden ones separately so
+  // existing documents still resolve their label.
+  const { data: types } = useDocumentTypes({ includeHidden: false })
+
   const [file, setFile] = useState<File | null>(null)
-  const [docType, setDocType] = useState('other')
+  const [docTypeId, setDocTypeId] = useState<number | null>(null)
   const [debtId, setDebtId] = useState<number | null>(null)
   const [uploading, setUploading] = useState(false)
   const [dragOver, setDragOver] = useState(false)
@@ -73,15 +69,15 @@ export function DocumentUploadModal({ open, onClose, clientId, loans }: Document
   }
 
   const handleUpload = async () => {
-    if (!file) return
+    if (!file || docTypeId == null) return
     setUploading(true)
     try {
-      await documentApi.upload(clientId, file, docType, debtId)
+      await documentApi.upload(clientId, file, docTypeId, debtId)
       queryClient.invalidateQueries({ queryKey: clientKeys.documents(clientId) })
       toast.success(t('status.success'))
       // Reset and close
       setFile(null)
-      setDocType('other')
+      setDocTypeId(null)
       setDebtId(null)
       onClose()
     } catch {
@@ -93,7 +89,7 @@ export function DocumentUploadModal({ open, onClose, clientId, loans }: Document
 
   const handleClose = () => {
     setFile(null)
-    setDocType('other')
+    setDocTypeId(null)
     setDebtId(null)
     onClose()
   }
@@ -190,14 +186,26 @@ export function DocumentUploadModal({ open, onClose, clientId, loans }: Document
             <label className="text-secondary-700 mb-1 block text-sm font-medium">
               {t('pages.clients.detail.documentType')}
             </label>
-            <Select value={docType} onValueChange={(value) => setDocType(value)}>
+            <Select
+              value={docTypeId == null ? '' : String(docTypeId)}
+              onValueChange={(value) => setDocTypeId(value ? Number(value) : null)}
+            >
               <SelectTrigger className="w-full">
-                <SelectValue />
+                <SelectValue
+                  placeholder={t('pages.clients.detail.documentTypePlaceholder', 'Select a type')}
+                >
+                  {(() => {
+                    const selected = (types ?? []).find((t) => t.id === docTypeId)
+                    return selected ? (
+                      <DocumentTypePill name={selected.name} hex={selected.color} />
+                    ) : null
+                  })()}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
-                {DOC_TYPE_VALUES.map((value) => (
-                  <SelectItem key={value} value={value}>
-                    {t(`pages.clients.detail.documentTypes.${value}`)}
+                {(types ?? []).map((type) => (
+                  <SelectItem key={type.id} value={String(type.id)}>
+                    <DocumentTypePill name={type.name} hex={type.color} />
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -240,7 +248,7 @@ export function DocumentUploadModal({ open, onClose, clientId, loans }: Document
         </Button>
         <Button
           onClick={handleUpload}
-          disabled={!file || uploading}
+          disabled={!file || docTypeId == null || uploading}
           className="h-10 flex-1 text-xs sm:h-[45px] sm:text-sm"
         >
           {uploading ? t('status.loading') : t('pages.clients.detail.documentUploadAction')}

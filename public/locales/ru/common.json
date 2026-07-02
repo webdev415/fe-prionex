@@ -2232,16 +2232,7 @@
         "dropFileOrClick": "Перетащите файл или нажмите для выбора",
         "loan": "Кредит",
         "documentsUnlinked": "Без привязки",
-        "documentTypes": {
-          "passport": "Паспорт",
-          "inn": "ИНН",
-          "contract": "Договор",
-          "income": "Справка о доходах",
-          "outcome": "Выписка",
-          "signature": "ЭЦП",
-          "military": "Военный",
-          "other": "Другое"
-        },
+        "documentTypePlaceholder": "Выберите тип",
         "department": "Отдел",
         "phones": "Телефоны",
         "tin": "ИНН",
@@ -3488,17 +3479,38 @@
       "title": "Генерация документов",
       "tabs": {
         "journal": "Журнал документов",
-        "templates": "Шаблоны документов"
+        "templates": "Шаблоны документов",
+        "types": "Типы документов"
       },
-      "documentTypes": {
-        "passport": "Паспорт",
-        "inn": "ИНН",
-        "contract": "Договор",
-        "income": "Справка о доходах",
-        "outcome": "Выписка / выдержка",
-        "signature": "Цифровая подпись",
-        "military": "Военный",
-        "other": "Другое"
+      "types": {
+        "title": "Типы документов",
+        "newButton": "Новый тип",
+        "createTitle": "Новый тип документа",
+        "editTitle": "Редактировать тип документа",
+        "confirmDelete": "Удалить этот тип документа? Действие нельзя отменить.",
+        "deleteBlockedMessage": "Этот тип используется в {{count}} документах. Скройте его вместо удаления.",
+        "uniqueNameError": "Тип документа с таким названием уже существует.",
+        "loadError": "Не удалось загрузить типы документов.",
+        "hiddenLabel": "скрыт",
+        "columns": {
+          "color": "Цвет",
+          "name": "Название",
+          "usage": "Документы",
+          "actions": "Действия"
+        },
+        "fields": {
+          "name": "Название",
+          "namePlaceholder": "напр. Страхование",
+          "color": "Цвет",
+          "previewText": "Тип документа"
+        },
+        "toast": {
+          "created": "Тип документа создан",
+          "updated": "Тип документа обновлён",
+          "deleted": "Тип документа удалён",
+          "hidden": "Тип скрыт",
+          "shown": "Тип показан"
+        }
       },
       "actions": {
         "uploaded": "Загружено",

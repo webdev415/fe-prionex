@@ -258,6 +258,15 @@ const AUDIT_LINK_RULES: LinkRule[] = [
     to: () => '/dashboard/system-settings/document-generation',
     permission: PERMISSIONS.DOCUMENT_GENERATION.VIEW_JOURNAL,
   },
+  // Document types → the Document Generation page (Types tab lives there,
+  // admin-only via manage_settings — matches the FE tab visibility gate).
+  // The tab state isn't URL-bound (useState only), so we can't deep-link
+  // to the Types tab specifically — landing on the page is enough.
+  {
+    match: (l) => !!l.action_raw?.startsWith('document_type.'),
+    to: () => '/dashboard/system-settings/document-generation',
+    permission: PERMISSIONS.SYSTEM.MANAGE_SETTINGS,
+  },
   // SMS templates → the SMS Templates page. Same generic "template"
   // resource_type, so gate on the action too.
   {
