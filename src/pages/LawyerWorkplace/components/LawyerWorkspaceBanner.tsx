@@ -7,8 +7,6 @@ import { useSidebarStore } from '@/stores/sidebarStore'
 import { useAuthStore } from '@/stores/authStore'
 import { useLawyerWorkplaceLayout } from '../context/lawyerWorkplaceLayout'
 
-const MOCK_DEPARTMENT = 'Department A · Hard Collection'
-
 const TOGGLE_SIZE_CLASS = 'h-10 w-10'
 
 interface LawyerWorkspaceBannerProps {
@@ -30,7 +28,7 @@ export function LawyerWorkspaceBanner({ className }: LawyerWorkspaceBannerProps)
 
   const regionCode = i18n.language?.startsWith('uk') ? 'UA' : 'EN'
   const workspaceTitle = t('pages.lawyerWorkplace.workspaceBanner.title', "Lawyers's Workspace")
-  const departmentName = user?.active_department_name ?? MOCK_DEPARTMENT
+  const departmentName = user?.active_department_name
 
   if (!showWorkspaceBanner) {
     return null
@@ -68,10 +66,15 @@ export function LawyerWorkspaceBanner({ className }: LawyerWorkspaceBannerProps)
                 </span>
               </div>
               <p className="text-dark-500 hidden shrink-0 text-[14px] leading-none xl:block">
-                {t('pages.lawyerWorkplace.workspaceBanner.assignedToDepartment', {
-                  department: departmentName,
-                  defaultValue: `You are assigned to the department '${departmentName}'.`,
-                })}
+                {departmentName
+                  ? t('pages.lawyerWorkplace.workspaceBanner.assignedToDepartment', {
+                      department: departmentName,
+                      defaultValue: `You are assigned to the department '${departmentName}'.`,
+                    })
+                  : t(
+                      'pages.lawyerWorkplace.workspaceBanner.noDepartment',
+                      'No department assigned.'
+                    )}
               </p>
 
               <div className="hidden shrink-0 items-center gap-2 xl:flex">

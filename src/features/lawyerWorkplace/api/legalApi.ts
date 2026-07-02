@@ -12,6 +12,9 @@ import type {
   LegalMailboxListResponse,
   LegalLetterConfirmRequest,
   LegalLetterConfirmResponse,
+  LegalMessageSuggestionsPatchRequest,
+  LegalMessageSuggestionsPatchResponse,
+  LegalLawyerSuggestion,
   LegalLetterType,
   LegalLetterTypeCreate,
   LegalLetterTypeListResponse,
@@ -90,6 +93,23 @@ export const legalApi = {
   confirmLetter(messageId: string, payload: LegalLetterConfirmRequest) {
     return api
       .post<LegalLetterConfirmResponse>(`${BASE_URL}/letters/${messageId}/confirm`, payload)
+      .then((response) => response.data)
+  },
+
+  patchMessageSuggestions(messageId: string, payload: LegalMessageSuggestionsPatchRequest) {
+    return api
+      .patch<LegalMessageSuggestionsPatchResponse>(
+        `${BASE_URL}/messages/${messageId}/suggestions`,
+        payload
+      )
+      .then((response) => response.data)
+  },
+
+  suggestLawyerForLetterType(letterTypeId: string) {
+    return api
+      .get<LegalLawyerSuggestion>(`${SETTINGS_URL}/suggest-lawyer`, {
+        params: { letter_type_id: letterTypeId },
+      })
       .then((response) => response.data)
   },
 

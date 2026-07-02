@@ -22,7 +22,11 @@ export function LawyerStarRating({ value, onChange }: LawyerStarRatingProps) {
           type="button"
           onClick={() => onChange(star === value ? star - 1 : star)}
           className="cursor-pointer p-0.5"
-          aria-label={`${star}`}
+          aria-label={t('pages.lawyerWorkplace.settings.letterTypes.starN', {
+            n: star,
+            total: 4,
+            defaultValue: `Star ${star} of 4`,
+          })}
         >
           <Icons.StarFilled
             size={15}

@@ -1,14 +1,3 @@
-export type LegalDocumentAssigneeId =
-  | 'system'
-  | 'emailService'
-  | 'nevmerzhytska'
-  | 'kostenko'
-  | 'doroshenko'
-  | 'melnychenko'
-  | 'demchuk'
-  | 'ivanenko'
-  | 'bondarenko'
-
 export type LegalDocumentType = 'incoming' | 'outgoing' | 'nbu_response'
 
 export type LegalDocumentAction = 'generated' | 'uploaded'

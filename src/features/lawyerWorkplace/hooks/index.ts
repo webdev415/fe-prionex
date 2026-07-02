@@ -1,6 +1,7 @@
 export * from './useLegalInbox'
 export * from './useLegalLetterDetail'
 export * from './useConfirmLetter'
+export * from './usePatchMessageSuggestions'
 export * from './useLegalMutations'
 export * from './useLegalKanban'
 export * from './useLegalDocuments'

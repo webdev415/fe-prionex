@@ -40,10 +40,15 @@ export function useLegalSettingsActions() {
   const saveLetterType = useCallback(
     async (draft: LetterTypeConfig, original: LetterTypeConfig) => {
       await syncLetterTypeDraft(draft, original)
-      await queryClient.invalidateQueries({ queryKey: legalWorkplaceKeys.letterTypes() })
+      await queryClient.invalidateQueries({
+        queryKey: [...legalWorkplaceKeys.settings(), 'letter-types'],
+      })
       await queryClient.invalidateQueries({
         queryKey: legalWorkplaceKeys.letterType(draft.id),
       })
+      await queryClient.invalidateQueries({ queryKey: legalWorkplaceKeys.lawyersRoot() })
+      await queryClient.invalidateQueries({ queryKey: legalWorkplaceKeys.inbox() })
+      await queryClient.invalidateQueries({ queryKey: legalWorkplaceKeys.messages() })
       toast.success(t('pages.lawyerWorkplace.settings.saveSuccess', 'Changes saved'))
     },
     [queryClient, t]

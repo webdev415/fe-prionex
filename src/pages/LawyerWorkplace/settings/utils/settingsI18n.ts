@@ -16,6 +16,6 @@ export function getSourcePrefix(t: TFunction): string {
   return t('pages.lawyerWorkplace.settings.letterTypes.exampleSourcePrefix', 'from')
 }
 
-export function getKeywordHintLabel(keyword: string, t: TFunction): string {
-  return t(`pages.lawyerWorkplace.settings.letterTypes.keywordHintItems.${keyword}`, keyword)
+export function getKeywordHintLabel(keyword: string, _t: TFunction): string {
+  return keyword
 }

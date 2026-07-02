@@ -19,12 +19,7 @@ import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 import type { KanbanColumnId, KanbanTask, KanbanTaskType } from '../../kanban/kanbanData'
 import { formatKanbanMonthDay } from '../../utils/formatters'
-import {
-  ASSIGNEE_COLOURS,
-  CREATE_TASK_PRIORITIES,
-  KANBAN_ASSIGNEE_OPTIONS,
-  KANBAN_COLUMN_MOVE_OPTIONS,
-} from './constants'
+import { ASSIGNEE_COLOURS, CREATE_TASK_PRIORITIES, KANBAN_COLUMN_MOVE_OPTIONS } from './constants'
 import { KanbanAssigneeChip } from './KanbanAssigneeChip'
 import { KanbanClientChip } from './KanbanClientChip'
 import { KanbanPriorityIcon, KanbanPriorityOption } from './KanbanPriorityOption'
@@ -44,7 +39,6 @@ function fmtMonthDay(d: Date): string {
   return `${mm}/${dd}`
 }
 
-const ASSIGNEE_OPTIONS = KANBAN_ASSIGNEE_OPTIONS
 const COLUMN_MOVE_OPTIONS = KANBAN_COLUMN_MOVE_OPTIONS
 
 const KNOWN_KANBAN_TYPES = new Set<KanbanTaskType>([
@@ -116,20 +110,12 @@ export function KanbanCard({
   const assigneeInitials = task.assigneeInitials
   const assigneeName = task.assigneeName
 
-  const assigneeOptions =
-    lawyers.length > 0
-      ? lawyers.map((lawyer) => ({
-          userId: lawyer.user_id,
-          initials: lawyer.initials,
-          name: extractAssigneeName(lawyer.display_name),
-          label: lawyer.display_name,
-        }))
-      : ASSIGNEE_OPTIONS.map((option) => ({
-          userId: null as number | null,
-          initials: option.initials,
-          name: option.assigneeName,
-          label: t(option.nameKey, option.fallback),
-        }))
+  const assigneeOptions = lawyers.map((lawyer) => ({
+    userId: lawyer.user_id,
+    initials: lawyer.initials,
+    name: extractAssigneeName(lawyer.display_name),
+    label: lawyer.display_name,
+  }))
 
   const priorityConfig = CREATE_TASK_PRIORITIES.find((item) => item.id === priority)
 

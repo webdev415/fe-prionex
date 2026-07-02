@@ -51,6 +51,9 @@ export function LetterTypeList({
         ) : null}
         {letterTypes.map((letterType) => {
           const isSelected = letterType.id === selectedId
+          const savedExampleCount = letterType.examples.filter(
+            (example) => !example.isPlaceholder
+          ).length
           return (
             <button
               key={letterType.id}
@@ -71,8 +74,8 @@ export function LetterTypeList({
                 <p className="text-light-600 truncate text-[11px]">
                   {t('pages.lawyerWorkplace.settings.letterTypes.listMeta', {
                     sla: letterType.slaDays,
-                    examples: letterType.examples.length,
-                    defaultValue: `SLA ${letterType.slaDays} b.d. • ${letterType.examples.length} examples`,
+                    examples: savedExampleCount,
+                    defaultValue: `SLA ${letterType.slaDays} b.d. • ${savedExampleCount} examples`,
                   })}
                 </p>
               </div>

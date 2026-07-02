@@ -24,8 +24,8 @@ import {
 import { exportKanbanTasksToCsv } from '../../kanban/kanbanExport'
 import {
   applyKanbanFilters,
+  ALL_LAWYERS_FILTER,
   KANBAN_SCROLL_COLUMN_WIDTH_CLASS,
-  LAWYER_FILTER_OPTIONS,
   type DeadlineFilter,
   type LawyerFilterId,
   type LawyerFilterOption,
@@ -80,18 +80,7 @@ export function LegalKanbanBoard() {
         assigneeUserId: lawyer.user_id,
       })) ?? []
 
-    if (dynamicOptions.length > 0) {
-      return [
-        {
-          id: 'all',
-          key: 'pages.lawyerWorkplace.kanban.filters.allLawyers',
-          fallback: 'All Lawyers',
-        },
-        ...dynamicOptions,
-      ]
-    }
-
-    return [...LAWYER_FILTER_OPTIONS]
+    return [ALL_LAWYERS_FILTER, ...dynamicOptions]
   }, [lawyersData?.items])
 
   const baseTasks = localOverrides ?? apiTasks

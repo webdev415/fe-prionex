@@ -45,27 +45,6 @@ export function upsertTrainingExample(
   }
 }
 
-export function createLetterTypeFromInput(
-  input: Pick<LetterTypeConfig, 'nameFallback' | 'colorId'>
-): LetterTypeConfig {
-  const id = `type-${Date.now()}`
-
-  return {
-    id,
-    slug: input.nameFallback.toLowerCase().replace(/\s+/g, '_').slice(0, 24),
-    nameKey: `custom:${id}`,
-    nameFallback: input.nameFallback,
-    colorId: input.colorId,
-    slaDays: 14,
-    descriptionKey: `custom-desc:${id}`,
-    descriptionFallback: '',
-    letterCount: 0,
-    examples: [],
-    priorities: [],
-    keywordHints: [],
-  }
-}
-
 export function createTrainingExampleFromForm(
   existingId: string | undefined,
   values: { title: string; body: string; source: string },
@@ -81,5 +60,6 @@ export function createTrainingExampleFromForm(
     bodyFallback: values.body.trim(),
     sourceKey: `custom:source:${id}`,
     sourceFallback: formatSourceWithPrefix(values.source, sourcePrefix),
+    isPlaceholder: false,
   }
 }

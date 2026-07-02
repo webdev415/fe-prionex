@@ -36,7 +36,7 @@ export function AddLetterTypeModal({
 
   const previewName =
     name.trim() ||
-    t('pages.lawyerWorkplace.settings.letterTypes.previewFallback', 'Customer complaint')
+    t('pages.lawyerWorkplace.settings.letterTypes.previewFallback', 'Letter type name')
   const canSubmit = name.trim().length > 0 && !isSubmitting
 
   const handleAdd = async () => {
@@ -66,7 +66,7 @@ export function AddLetterTypeModal({
             onChange={(e) => setName(e.target.value)}
             placeholder={t(
               'pages.lawyerWorkplace.settings.modals.addType.placeholder',
-              'ex. Customer complaint'
+              'e.g. Payment dispute'
             )}
             className="text-dark-500 focus:border-primary-400 h-11 w-full rounded-xl border border-gray-200 bg-white px-4 text-[14px] outline-none placeholder:text-gray-400"
           />
@@ -83,7 +83,10 @@ export function AddLetterTypeModal({
                 <button
                   key={option.id}
                   type="button"
-                  aria-label={option.id}
+                  aria-label={t(
+                    `pages.lawyerWorkplace.settings.letterTypes.colors.${option.id}`,
+                    option.id
+                  )}
                   onClick={() => setColorId(option.id)}
                   className={cn(
                     'flex h-8 w-8 items-center justify-center rounded-full transition-all',

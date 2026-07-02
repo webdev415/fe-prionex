@@ -24,6 +24,7 @@ import { useLawyerWorkplaceLayout } from '../../context/lawyerWorkplaceLayout'
 import type { SettingsSubTab } from '../../settings/types'
 import { AddLetterTypeModal } from './letterTypes/AddLetterTypeModal'
 import { LetterTypesPanel } from './letterTypes/LetterTypesPanel'
+import { LetterTypesTabSkeleton } from './letterTypes/LetterTypesTabSkeleton'
 import { LawyersPanel } from './lawyers/LawyersPanel'
 import { LawyersTabSkeleton } from './lawyers/LawyersTabSkeleton'
 import { MailboxesPanel } from './mailboxes/MailboxesPanel'
@@ -201,15 +202,13 @@ export function LegalSettingsTab() {
 
       {isLoading && activeSubTab === 'lawyers' ? <LawyersTabSkeleton /> : null}
 
-      {isLoading && activeSubTab === 'letterTypes' ? (
-        <p className="text-light-600 px-4 py-10 text-center text-sm sm:px-5 lg:px-7">
-          {t('pages.lawyerWorkplace.settings.loading', 'Loading settings…')}
-        </p>
-      ) : settingsError &&
-        (activeSubTab === 'letterTypes' ||
-          activeSubTab === 'lawyers' ||
-          activeSubTab === 'mailboxes' ||
-          activeSubTab === 'templates') ? (
+      {isLoading && activeSubTab === 'letterTypes' ? <LetterTypesTabSkeleton /> : null}
+
+      {settingsError &&
+      (activeSubTab === 'letterTypes' ||
+        activeSubTab === 'lawyers' ||
+        activeSubTab === 'mailboxes' ||
+        activeSubTab === 'templates') ? (
         <p className="px-4 py-10 text-center text-sm text-red-500 sm:px-5 lg:px-7">
           {t('pages.lawyerWorkplace.settings.loadError', 'Could not load settings')}
         </p>

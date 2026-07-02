@@ -209,36 +209,3 @@ export const PRIORITY_ROLE_OPTIONS: {
     inactiveClass: 'border-gray-200 bg-white text-gray-500 hover:bg-gray-50',
   },
 ]
-
-export const ADD_LAWYER_OPTIONS = [
-  {
-    id: 'vd',
-    nameKey: 'pages.lawyerWorkplace.settings.lawyers.people.doroshenko',
-    nameFallback: 'Volodymyr Doroshenko',
-  },
-  {
-    id: 'lk',
-    nameKey: 'pages.lawyerWorkplace.settings.lawyers.people.kostenko',
-    nameFallback: 'Larysa Kostenko',
-  },
-  {
-    id: 'sm',
-    nameKey: 'pages.lawyerWorkplace.settings.lawyers.people.melnychenko',
-    nameFallback: 'Serhii Melnychenko',
-  },
-  {
-    id: 'ak',
-    nameKey: 'pages.lawyerWorkplace.settings.lawyers.people.kovalchuk',
-    nameFallback: 'Anna Kovalchuk',
-  },
-  {
-    id: 'oh',
-    nameKey: 'pages.lawyerWorkplace.settings.lawyers.people.hrytsenko',
-    nameFallback: 'Olena Hrytsenko',
-  },
-  {
-    id: 'pb',
-    nameKey: 'pages.lawyerWorkplace.settings.lawyers.people.bondarenko',
-    nameFallback: 'Pavlo Bondarenko',
-  },
-]

@@ -163,11 +163,15 @@ function computeDueDateIso(receivedAt: string | null, slaDays: number | undefine
   return due.toISOString().slice(0, 10)
 }
 
-function countConfirmedParameters(message: LegalMessageDetail): number {
+function countConfirmedParameters(
+  message: LegalMessageDetail,
+  dueDateIso: string | null | undefined
+): number {
   let count = 0
   if (message.suggested_letter_type_id) count += 1
   if (message.suggested_client_id != null) count += 1
   if (message.suggested_lawyer_user_id != null) count += 1
+  if (dueDateIso) count += 1
   return count
 }
 
@@ -249,7 +253,8 @@ export function buildLetterParameters(
     ? context?.lawyersByUserId?.get(message.suggested_lawyer_user_id)
     : undefined
 
-  const confirmedCount = countConfirmedParameters(message)
+  const dueDate = computeDueDateIso(message.received_at, letterType?.sla_days)
+  const confirmedCount = countConfirmedParameters(message, dueDate)
   const totalParameters = 4
   const contractLabel = client.clientCode?.trim() ?? ''
 
@@ -262,13 +267,13 @@ export function buildLetterParameters(
         : (client.clientCode ?? ''),
     contractId: contractLabel,
     contractLabel,
-    dueDate: computeDueDateIso(message.received_at, letterType?.sla_days),
+    dueDate,
     dueDateHint: '',
     lawyerId:
       lawyer?.id ??
       (message.suggested_lawyer_user_id != null ? String(message.suggested_lawyer_user_id) : ''),
     lawyerLabel: lawyer?.display_name ?? '',
-    autoConfidence: message.auto_process_eligible ? 90 : 0,
+    autoConfidence: 0,
     confirmedCount,
     totalParameters,
   }

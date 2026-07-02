@@ -137,6 +137,24 @@ export interface LegalLetterConfirmResponse {
   confirmed_due_date: string
 }
 
+export interface LegalMessageSuggestionsPatchRequest {
+  letter_type_id: string
+}
+
+export interface LegalMessageSuggestionsPatchResponse {
+  suggested_letter_type_id: string
+  suggested_lawyer_user_id: number | null
+  sla_days: number
+  auto_process_eligible: boolean
+  needs_manual_review: boolean
+}
+
+export interface LegalLawyerSuggestion {
+  lawyer_user_id: number | null
+  lawyer_id: string | null
+  source: string | null
+}
+
 export interface LegalThreadReplyRequest {
   mailbox_id: string
   in_reply_to_message_id: string

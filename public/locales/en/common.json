@@ -1,4 +1,4 @@
-﻿{
+{
   "app": {
     "name": "CRM Prionex",
     "description": "Customer Relationship Management System"
@@ -584,12 +584,7 @@
           "thisWeek": "Due this week",
           "thisMonth": "Due this month",
           "allLawyers": "All Lawyers",
-          "allTypes": "All Types",
-          "lawyers": {
-            "doroshenko": "Doroshenko",
-            "kostenko": "Kostenko",
-            "melnychenko": "Melnychenko"
-          }
+          "allTypes": "All Types"
         },
         "columns": {
           "notDefined": "NOT DEFINED",
@@ -600,12 +595,6 @@
         "types": {
           "unclassified": "unclassified",
           "typePending": "type pending"
-        },
-        "assignees": {
-          "doroshenko": "Doroshenko",
-          "kostenko": "Kostenko",
-          "melnychenko": "Melnychenko",
-          "manager": "manager"
         },
         "createTask": {
           "title": "Create a Task",
@@ -618,12 +607,6 @@
           "defaultDescription": "Letter in Russian — needs translation",
           "selectDeadline": "Select deadline",
           "submit": "Create",
-          "lawyers": {
-            "demchuk": "Yulia Demchuk",
-            "doroshenko": "V. Doroshenko",
-            "kostenko": "L. Kostenko",
-            "melnychenko": "S. Melnychenko"
-          },
           "priorities": {
             "highest": "Highest",
             "high": "High",
@@ -679,75 +662,6 @@
           "today": "today",
           "yesterday": "yesterday"
         },
-        "assignees": {
-          "system": "System",
-          "emailService": "Email Service",
-          "nevmerzhytska": "O. Nevmerzhytska",
-          "kostenko": "L. Kostenko",
-          "doroshenko": "V. Doroshenko",
-          "melnychenko": "S. Melnychenko",
-          "demchuk": "Y. Demchuk",
-          "ivanenko": "M. Ivanenko",
-          "bondarenko": "A. Bondarenko"
-        },
-        "mockNames": {
-          "incoming": {
-            "courtDecision": "Copy of the decision of the District Administrative Court",
-            "criminalCertificate": "Criminal proceedings termination certificate",
-            "powerOfAttorney": "Power of attorney from the client",
-            "notarizedPassport": "Notarized copy of passport",
-            "clientComplaint": "Client complaint regarding debt collection",
-            "courtSummons": "Court summons - civil case",
-            "bankruptcyRuling": "Bankruptcy court ruling excerpt",
-            "identityVerification": "Identity verification document",
-            "medicalCertificate": "Medical certificate for deferment request",
-            "propertyOwnership": "Property ownership certificate",
-            "marriageCertificate": "Marriage certificate copy",
-            "incomeDeclaration": "Income declaration from client",
-            "executorLetter": "Executor letter from notary office",
-            "appealSubmission": "Appeal submission from debtor",
-            "counterclaim": "Counterclaim from opposing counsel",
-            "evidenceReceipts": "Evidence package - payment receipts",
-            "debtAcknowledgment": "Signed acknowledgment of debt",
-            "waiverLimitations": "Waiver of statute of limitations",
-            "idCardScan": "Client ID card scan",
-            "addressConfirmation": "Registration address confirmation"
-          },
-          "outgoing": {
-            "autoReply": "Auto-reply - IN-2026-142",
-            "settlementAgreement": "Pre-trial settlement agreement",
-            "demandLetter": "Demand letter - overdue payment",
-            "clientInquiryResponse": "Response to client inquiry",
-            "paymentSchedule": "Payment schedule proposal",
-            "defaultNotice": "Formal notice of default",
-            "restructuringOffer": "Debt restructuring offer",
-            "installmentReminder": "Reminder letter - installment due",
-            "acknowledgmentReceived": "Acknowledgment of received documents",
-            "rejectionSettlement": "Rejection of settlement terms",
-            "finalDemand": "Final demand before legal action",
-            "paymentPlanConsent": "Consent to payment plan",
-            "accountTransferNotice": "Notification of account transfer",
-            "attorneyRequestResponse": "Response to attorney request",
-            "contractClarification": "Clarification letter - contract terms",
-            "breachWarning": "Written warning - breach of agreement",
-            "partialPaymentConfirmation": "Confirmation of partial payment",
-            "courtHearingNotice": "Notice of upcoming court hearing",
-            "counterclaimReply": "Reply to counterclaim",
-            "settlementClosure": "Settlement closure letter"
-          },
-          "nbu": {
-            "creditHistoryResponse": "NBU inquiry response - credit history request",
-            "complianceReportQ1": "NBU compliance report - Q1 2026",
-            "creditBureauDisclosure": "Credit bureau data disclosure",
-            "regulatoryFiling": "NBU regulatory filing - collection activity",
-            "auditResponse": "Response to NBU audit request",
-            "form5Pr": "NBU form 5-PR submission",
-            "creditRegisterUpdate": "Credit register update confirmation",
-            "borrowerVerification": "NBU inquiry - borrower verification",
-            "annualReturn": "Annual NBU statistical return",
-            "licensingInquiry": "NBU response - licensing inquiry"
-          }
-        },
         "modals": {
           "generate": {
             "title": "Generate document",
@@ -796,6 +710,10 @@
         "discardChanges": "Discard changes",
         "saveChanges": "Save Changes",
         "saveSuccess": "Changes saved",
+        "saveError": "Could not save changes",
+        "saving": "Saving…",
+        "loadingLawyers": "Loading lawyers…",
+        "noLawyers": "No active lawyers configured",
         "loading": "Loading settings…",
         "loadError": "Could not load settings",
         "readOnlyNotice": "View only — you do not have permission to change department settings.",
@@ -808,9 +726,11 @@
           "templates": "Templates"
         },
         "letterTypes": {
+          "loading": "Loading letter types…",
           "listTitle": "Letter types",
           "listMeta": "SLA {{sla}} b.d. • {{examples}} examples",
-          "previewFallback": "Customer complaint",
+          "previewFallback": "Letter type name",
+          "empty": "No letter types yet. Add the first type to configure classification.",
           "basicInfo": "Basic info",
           "displayName": "Display name",
           "responseSla": "Response SLA",
@@ -820,84 +740,41 @@
           "priorityHint": "★ = how strongly this lawyer should be preferred for this type",
           "activeLoad": "{{current}} / {{max}} active",
           "trainingExamples": "Training examples",
-          "examplesMeta": "{{count}} examples - feeds the vector database",
+          "examplesMeta": "{{count}} saved examples for manual reference",
           "addTrainingExample": "+ Add training example (paste a real letter)",
-          "newTrainingExample": "New training example",
-          "clickToEditExample": "Click to edit this example with real letter content from your archive...",
-          "fromNewSender": "from New sender",
           "exampleSourcePrefix": "from",
           "editTrainingExample": "Edit training example",
           "addTrainingExampleTitle": "Add training example",
           "exampleTitle": "Title",
-          "exampleTitlePlaceholder": "e.g. Late-payment interest complaint",
+          "exampleTitlePlaceholder": "e.g. Payment dispute letter",
           "exampleBody": "Letter content (paste from archive)",
           "exampleBodyPlaceholder": "Paste the full letter text here...",
           "exampleSource": "Sender",
-          "exampleSourcePlaceholder": "I. Petrenko",
+          "exampleSourcePlaceholder": "Sender name",
           "keywordHints": "Keyword hints",
           "keywordHintsHint": "optional - used as fallback when AI confidence < 70%",
           "keywordPlaceholder": "Type a keyword and press Enter..",
-          "keywordHintItems": {
-            "complaint": "complaint",
-            "protest": "protest",
-            "wrongful": "wrongful",
-            "unacceptable": "unacceptable",
-            "demand": "demand",
-            "consumerProtection": "consumer protection"
-          },
           "starRating": "Star rating",
+          "starN": "Star {{n}} of {{total}}",
+          "colors": {
+            "teal": "Teal",
+            "cyan": "Cyan",
+            "blue": "Blue",
+            "indigo": "Indigo",
+            "purple": "Purple",
+            "violet": "Violet",
+            "magenta": "Magenta",
+            "pink": "Pink",
+            "red": "Red",
+            "orangeRed": "Orange red",
+            "orange": "Orange",
+            "green": "Green"
+          },
           "roles": {
             "primary": "PRIMARY",
             "backup": "BACKUP",
             "secondary": "SECONDARY",
             "off": "OFF"
-          },
-          "items": {
-            "customerComplaint": "Customer complaint",
-            "nbuInquiry": "NBU inquiry",
-            "courtClaim": "Court claim",
-            "attorneyRequest": "Attorney request",
-            "generalInquiry": "General inquiry"
-          },
-          "descriptions": {
-            "customerComplaint": "Direct customer complaints about service, charges, or payment processing.",
-            "nbuInquiry": "Regulatory inquiries from the National Bank of Ukraine requiring formal compliance responses.",
-            "courtClaim": "Court filings, summons, and legal claims requiring timely procedural responses.",
-            "attorneyRequest": "Requests from external attorneys for documentation, settlement terms, or case status.",
-            "generalInquiry": "General incoming requests that do not fit other categories. Routed by content analysis."
-          },
-          "examples": {
-            "latePaymentTitle": "Late-payment interest complaint",
-            "latePaymentBody": "I am writing to file a formal complaint regarding the interest charges applied to my account CR-2024-00518. The accrued penalties appear to exceed the contractual rate stated in my loan agreement.",
-            "collectionHarassmentTitle": "Collection harassment claim",
-            "collectionHarassmentBody": "Multiple daily calls have been made to my personal number despite my request to communicate only in writing. I ask that you provide a written callback schedule.",
-            "incorrectBalanceTitle": "Incorrect balance dispute",
-            "incorrectBalanceBody": "I am attaching bank statements showing partial payments that were not credited to my account. Please review and correct the outstanding balance.",
-            "serviceQualityTitle": "Service quality complaint",
-            "serviceQualityBody": "During my last call your operator used inappropriate language and refused to provide their name. I request a written apology and confirmation of corrective action.",
-            "earlyRepaymentTitle": "Early repayment penalty dispute",
-            "earlyRepaymentBody": "I believe the early repayment penalty applied to my loan is not supported by the original contract. Please provide the clause reference or remove the charge.",
-            "thirdPartyTitle": "Third-party contact complaint",
-            "thirdPartyBody": "Your collector contacted my employer without my consent, which I believe violates applicable collection regulations. Please confirm this will not happen again.",
-            "creditReportTitle": "Credit bureau reporting error",
-            "creditReportBody": "My credit report still shows an outdated default status despite the settlement completed last year. Please update the bureau records accordingly.",
-            "fromPetrenko": "from I. Petrenko",
-            "fromMelnyk": "from S. Melnyk",
-            "fromBohdanenko": "from O. Bohdanenko",
-            "fromNalivaiko": "from A. Nalivaiko",
-            "fromKovalenko": "from N. Kovalenko",
-            "fromShevchenko": "from M. Shevchenko",
-            "fromKravchenko": "from T. Kravchenko",
-            "fromSystem": "from NBU portal",
-            "fromCourt": "from District Court",
-            "fromAttorney": "from opposing counsel",
-            "nbuCreditHistory": "NBU credit history disclosure request — quarterly compliance filing",
-            "nbuAudit": "NBU audit follow-up — collection activity documentation request",
-            "nbuForm5": "Form 5-PR submission — borrower verification data",
-            "courtSummons": "District court summons — civil debt recovery case #4521/2026",
-            "counterclaim": "Counterclaim filing — debtor alleges unlawful collection practices",
-            "attorneyDocs": "Document request — full contract history and payment ledger",
-            "paymentPlan": "Payment plan inquiry — client requests restructuring options"
           }
         },
         "lawyers": {
@@ -947,26 +824,6 @@
           "empty": {
             "title": "No lawyers yet",
             "description": "Add lawyers to configure workload limits and letter type specializations."
-          },
-          "people": {
-            "doroshenko": "Volodymyr Doroshenko",
-            "kostenko": "Larysa Kostenko",
-            "melnychenko": "Serhii Melnychenko",
-            "kovalchuk": "Anna Kovalchuk",
-            "hrytsenko": "Olena Hrytsenko",
-            "bondarenko": "Pavlo Bondarenko"
-          },
-          "roles": {
-            "doroshenko": "Senior · complaints lead",
-            "kostenko": "NBU · regulatory specialist",
-            "kostenkoShort": "NBU specialist",
-            "melnychenko": "Court · litigation",
-            "melnychenkoShort": "Court litigation",
-            "kovalchuk": "Junior · general inquiries",
-            "kovalchukShort": "General inquiries",
-            "hrytsenko": "Regulatory · compliance associate",
-            "bondarenko": "Documentation · correspondence",
-            "default": "Legal department"
           }
         },
         "mailboxes": {
@@ -1151,10 +1008,11 @@
           "addType": {
             "title": "Add type",
             "letterTypes": "Letter types",
-            "placeholder": "ex. Customer complaint",
+            "placeholder": "e.g. Payment dispute",
             "color": "Color",
             "preview": "Preview",
             "submit": "Add",
+            "submitting": "Adding…",
             "success": "Letter type added"
           },
           "addLawyer": {
@@ -1183,6 +1041,7 @@
         "lawBadge": "Law",
         "title": "Lawyers's Workspace",
         "assignedToDepartment": "You are assigned to the department '{{department}}'.",
+        "noDepartment": "No department assigned.",
         "operatorsInOperation": "operators in operation",
         "openWorkspaceMenu": "Open workspace menu",
         "collapse": "Minimize workspace banner",

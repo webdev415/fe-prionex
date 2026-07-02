@@ -29,31 +29,11 @@ export interface TypeFilterOption extends KanbanFilterOption<TypeFilterId> {
   taskType?: KanbanTaskType
 }
 
-export const LAWYER_FILTER_OPTIONS: LawyerFilterOption[] = [
-  {
-    id: 'all',
-    key: 'pages.lawyerWorkplace.kanban.filters.allLawyers',
-    fallback: 'All Lawyers',
-  },
-  {
-    id: 'doroshenko',
-    key: 'pages.lawyerWorkplace.kanban.filters.lawyers.doroshenko',
-    fallback: 'Doroshenko',
-    assigneeName: 'Doroshenko',
-  },
-  {
-    id: 'kostenko',
-    key: 'pages.lawyerWorkplace.kanban.filters.lawyers.kostenko',
-    fallback: 'Kostenko',
-    assigneeName: 'Kostenko',
-  },
-  {
-    id: 'melnychenko',
-    key: 'pages.lawyerWorkplace.kanban.filters.lawyers.melnychenko',
-    fallback: 'Melnychenko',
-    assigneeName: 'Melnychenko',
-  },
-]
+export const ALL_LAWYERS_FILTER: LawyerFilterOption = {
+  id: 'all',
+  key: 'pages.lawyerWorkplace.kanban.filters.allLawyers',
+  fallback: 'All Lawyers',
+}
 
 export const TYPE_FILTER_OPTIONS: TypeFilterOption[] = [
   {
@@ -187,31 +167,6 @@ export const DEADLINE_FILTERS: {
   },
 ]
 
-export const CREATE_TASK_LAWYER_OPTIONS = [
-  {
-    id: 'demchuk',
-    key: 'pages.lawyerWorkplace.kanban.createTask.lawyers.demchuk',
-    fallback: 'Yulia Demchuk',
-  },
-  {
-    id: 'doroshenko',
-    key: 'pages.lawyerWorkplace.kanban.createTask.lawyers.doroshenko',
-    fallback: 'V. Doroshenko',
-  },
-  {
-    id: 'kostenko',
-    key: 'pages.lawyerWorkplace.kanban.createTask.lawyers.kostenko',
-    fallback: 'L. Kostenko',
-  },
-  {
-    id: 'melnychenko',
-    key: 'pages.lawyerWorkplace.kanban.createTask.lawyers.melnychenko',
-    fallback: 'S. Melnychenko',
-  },
-] as const
-
-export type CreateTaskLawyerId = (typeof CREATE_TASK_LAWYER_OPTIONS)[number]['id']
-
 export const CREATE_TASK_TYPES: Exclude<KanbanTaskType, 'unclassified' | 'type_pending'>[] = [
   'complaint',
   'nbu_inquiry',
@@ -257,33 +212,6 @@ export const CREATE_TASK_PRIORITIES: {
     textClass: 'text-information-600',
   },
 ]
-
-export const KANBAN_ASSIGNEE_OPTIONS = [
-  {
-    initials: 'VD',
-    nameKey: 'pages.lawyerWorkplace.kanban.assignees.doroshenko',
-    fallback: 'Doroshenko',
-    assigneeName: 'Doroshenko',
-  },
-  {
-    initials: 'LK',
-    nameKey: 'pages.lawyerWorkplace.kanban.assignees.kostenko',
-    fallback: 'Kostenko',
-    assigneeName: 'Kostenko',
-  },
-  {
-    initials: 'SM',
-    nameKey: 'pages.lawyerWorkplace.kanban.assignees.melnychenko',
-    fallback: 'Melnychenko',
-    assigneeName: 'Melnychenko',
-  },
-  {
-    initials: 'ON',
-    nameKey: 'pages.lawyerWorkplace.kanban.assignees.manager',
-    fallback: 'manager',
-    assigneeName: 'manager',
-  },
-] as const
 
 export const KANBAN_COLUMN_MOVE_OPTIONS = [
   {

@@ -43,16 +43,23 @@ export function TrainingExampleRow({ example, onClick, onRemove }: TrainingExamp
 
   if (onClick) {
     return (
-      <button
-        type="button"
+      <div
+        role="button"
+        tabIndex={0}
         onClick={onClick}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault()
+            onClick()
+          }
+        }}
         className={cn(
           'flex w-full cursor-pointer items-start gap-4 rounded-xl border border-gray-100 bg-white px-4 py-3 text-left',
           'hover:border-secondary-200 focus-visible:ring-primary-400 hover:bg-[#FAFAF8] focus-visible:ring-2 focus-visible:outline-none'
         )}
       >
         {content}
-      </button>
+      </div>
     )
   }
 

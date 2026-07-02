@@ -34,23 +34,28 @@ function LetterTypeDetailEditor({
   readOnly = false,
 }: LetterTypeDetailEditorProps) {
   const { t } = useTranslation('common')
+  const [baseline, setBaseline] = useState(() => cloneLetterType(selectedType))
   const [draft, setDraft] = useState(() => cloneLetterType(selectedType))
   const [isPersisting, setIsPersisting] = useState(false)
 
   useEffect(() => {
-    setDraft(cloneLetterType(selectedType))
+    const next = cloneLetterType(selectedType)
+    setBaseline(next)
+    setDraft(next)
   }, [selectedType])
 
   const isDirty = useMemo(
-    () => JSON.stringify(selectedType) !== JSON.stringify(draft),
-    [draft, selectedType]
+    () => JSON.stringify(baseline) !== JSON.stringify(draft),
+    [baseline, draft]
   )
 
   const handleSave = async () => {
     if (!isDirty || isPersisting || isSaving) return
     setIsPersisting(true)
     try {
-      await onSaveLetterType(draft, selectedType)
+      await onSaveLetterType(draft, baseline)
+      // Baseline/draft sync from refetched selectedType in useEffect — do not setBaseline(draft)
+      // here; draft in this closure still has local example ids/keys and would mark the form dirty again.
     } catch {
       toast.error(t('pages.lawyerWorkplace.settings.saveError', 'Could not save changes'))
     } finally {
@@ -59,7 +64,7 @@ function LetterTypeDetailEditor({
   }
 
   const handleDiscard = () => {
-    setDraft(cloneLetterType(selectedType))
+    setDraft(cloneLetterType(baseline))
   }
 
   return (

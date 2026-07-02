@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/Button'
@@ -12,7 +12,13 @@ import {
 import { Label } from '@/components/ui/Label'
 import { SearchableSelect } from '@/components/ui/SearchableSelect'
 import { useClients } from '@/features/clients/hooks/useClients'
-import { useConfirmLetter, useLegalLawyers, useLegalLetterTypes } from '@/features/lawyerWorkplace'
+import {
+  useConfirmLetter,
+  useLegalLawyers,
+  useLegalLetterTypes,
+  usePatchMessageSuggestions,
+} from '@/features/lawyerWorkplace'
+import type { LegalMessageSuggestionsPatchResponse } from '@/features/lawyerWorkplace/api/types'
 import { useDebounce } from '@/hooks/useDebounce'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
@@ -75,6 +81,37 @@ function formatClientOption(client: {
   const code = client.legacy_id?.trim() || `CL-${String(client.id).padStart(5, '0')}`
   const name = [client.first_name, client.last_name].filter(Boolean).join(' ')
   return { id: String(client.id), name: name ? `${code} · ${name}` : code }
+}
+
+function computeDueDateFromReceived(receivedAt: string, slaDays: number): Date {
+  const base = new Date(receivedAt)
+  const due = new Date(base)
+  due.setDate(due.getDate() + (slaDays > 0 ? slaDays : 14))
+  return due
+}
+
+function buildPrioritySignature(
+  letterTypes: { id: string; priorities: { lawyer_id: string; stars: number; role: string }[] }[],
+  typeId: string
+): string {
+  const letterType = letterTypes.find((item) => item.id === typeId)
+  if (!letterType) return ''
+  return [...letterType.priorities]
+    .map((item) => `${item.lawyer_id}:${item.stars}:${item.role}`)
+    .sort()
+    .join('|')
+}
+
+function applySuggestionResult(
+  result: LegalMessageSuggestionsPatchResponse,
+  receivedAt: string,
+  setLawyerOverride: (value: string | null) => void,
+  setDueDateOverride: (value: Date | null) => void
+) {
+  setLawyerOverride(
+    result.suggested_lawyer_user_id != null ? String(result.suggested_lawyer_user_id) : ''
+  )
+  setDueDateOverride(computeDueDateFromReceived(receivedAt, result.sla_days))
 }
 
 // ─── Shared sub-components ────────────────────────────────────────────────────
@@ -192,6 +229,7 @@ function LetterParametersPanelContent({
 }) {
   const { t, i18n } = useTranslation('common')
   const confirmMutation = useConfirmLetter()
+  const patchSuggestionsMutation = usePatchMessageSuggestions()
   const { data: letterTypesData } = useLegalLetterTypes()
   const { data: lawyersData } = useLegalLawyers()
 
@@ -203,8 +241,13 @@ function LetterParametersPanelContent({
   const [clientSearch, setClientSearch] = useState('')
   const [lawyerOverride, setLawyerOverride] = useState<string | null>(null)
   const [dueDateOverride, setDueDateOverride] = useState<Date | null>(null)
+  const [lawyerManuallyOverridden, setLawyerManuallyOverridden] = useState(false)
+  const lastPrioritySignatureRef = useRef<string | null>(null)
 
   const { parameters: p, status } = letter
+
+  const isReadOnly =
+    status === 'sent_to_kanban' || status === 'on_board' || status === 'auto_processed'
 
   const defaultTypeId = useMemo(
     () => resolveLetterTypeId(letterTypes, p.letterType),
@@ -218,6 +261,52 @@ function LetterParametersPanelContent({
   const defaultDueDate = p.dueDate ? new Date(p.dueDate) : null
 
   const effectiveTypeId = typeOverride ?? defaultTypeId
+
+  const applyTypeSuggestion = useCallback(
+    async (typeId: string) => {
+      const result = await patchSuggestionsMutation.mutateAsync({
+        messageId: letter.id,
+        payload: { letter_type_id: typeId },
+      })
+      applySuggestionResult(result, letter.receivedAt, setLawyerOverride, setDueDateOverride)
+      return result
+    },
+    [letter.id, letter.receivedAt, patchSuggestionsMutation]
+  )
+
+  useEffect(() => {
+    if (isReadOnly || !effectiveTypeId || lawyerManuallyOverridden) {
+      return
+    }
+
+    const signature = buildPrioritySignature(letterTypes, effectiveTypeId)
+    const shouldSync =
+      lastPrioritySignatureRef.current === null || lastPrioritySignatureRef.current !== signature
+
+    if (!shouldSync) {
+      return
+    }
+
+    lastPrioritySignatureRef.current = signature
+    void applyTypeSuggestion(effectiveTypeId).catch(() => {
+      lastPrioritySignatureRef.current = null
+    })
+  }, [applyTypeSuggestion, effectiveTypeId, isReadOnly, lawyerManuallyOverridden, letterTypes])
+
+  const handleTypeSelect = (typeId: string) => {
+    setLawyerManuallyOverridden(false)
+    lastPrioritySignatureRef.current = null
+    setTypeOverride(typeId)
+    void applyTypeSuggestion(typeId).catch(() => {
+      setTypeOverride(defaultTypeId || null)
+    })
+  }
+
+  const handleLawyerSelect = (userId: string) => {
+    setLawyerOverride(userId)
+    setLawyerManuallyOverridden(true)
+  }
+
   const effectiveClientId = clientOverride ?? defaultClientId
   const effectiveLawyerUserId = lawyerOverride ?? defaultLawyerUserId
   const effectiveDueDate = dueDateOverride ?? defaultDueDate
@@ -267,8 +356,14 @@ function LetterParametersPanelContent({
   const getTypeSlug = (typeId: string) =>
     letterTypes.find((item) => item.id === typeId)?.slug ?? typeId
 
-  const isReadOnly =
-    status === 'sent_to_kanban' || status === 'on_board' || status === 'auto_processed'
+  const effectiveConfirmedCount = useMemo(() => {
+    let count = 0
+    if (effectiveTypeId) count += 1
+    if (effectiveClientId && Number(effectiveClientId) > 0) count += 1
+    if (effectiveLawyerUserId && Number(effectiveLawyerUserId) > 0) count += 1
+    if (effectiveDueDate instanceof Date && !Number.isNaN(effectiveDueDate.getTime())) count += 1
+    return count
+  }, [effectiveClientId, effectiveDueDate, effectiveLawyerUserId, effectiveTypeId])
 
   const typeLabel = p.letterType
     ? getTypeLabel(resolveLetterTypeId(letterTypes, p.letterType))
@@ -315,18 +410,18 @@ function LetterParametersPanelContent({
     )
   }
 
-  const mockActivityLog: ActivityLogEntry[] = [
+  const activityLog: ActivityLogEntry[] = [
     {
       timestamp: letter.receivedAt,
       eventKey: 'pages.lawyerWorkplace.activityLog.letterReceived',
       fallback: 'Letter received',
     },
-    ...(p.autoConfidence > 0
+    ...(p.letterType
       ? [
           {
             timestamp: letter.receivedAt,
             eventKey: 'pages.lawyerWorkplace.activityLog.classified',
-            fallback: `Auto-classified (${p.autoConfidence}% confidence)`,
+            fallback: 'Letter type suggested',
           },
         ]
       : []),
@@ -354,14 +449,6 @@ function LetterParametersPanelContent({
               {status === 'auto_processed' && (
                 <span className="bg-success-100 text-success-700 rounded-full px-[9px] py-[2px] text-[9.5px] font-medium">
                   {t('pages.lawyerWorkplace.parameters.autoProcessed', 'AUTO')}
-                </span>
-              )}
-              {p.autoConfidence > 0 && (
-                <span className="bg-primary-300 text-secondary-800 rounded-full px-[9px] py-[2px] text-[9.5px] font-normal">
-                  {t('pages.lawyerWorkplace.parameters.autoBadge', {
-                    percent: p.autoConfidence,
-                    defaultValue: `AUTO · ${p.autoConfidence}%`,
-                  })}
                 </span>
               )}
               {onClose && (
@@ -425,7 +512,7 @@ function LetterParametersPanelContent({
             <span className="text-light-600 text-[11px] font-medium tracking-wider uppercase">
               {t('pages.lawyerWorkplace.activityLog.title', 'Activity')}
             </span>
-            <ActivityLog entries={mockActivityLog} />
+            <ActivityLog entries={activityLog} />
           </div>
         </div>
       </div>
@@ -441,14 +528,6 @@ function LetterParametersPanelContent({
             {t('pages.lawyerWorkplace.parameters.title', 'Letter parameters')}
           </span>
           <div className="flex shrink-0 items-center gap-2">
-            {p.autoConfidence > 0 && (
-              <span className="bg-primary-300 text-secondary-800 rounded-full px-[9px] py-[2px] text-[9.5px] font-normal">
-                {t('pages.lawyerWorkplace.parameters.autoBadge', {
-                  percent: p.autoConfidence,
-                  defaultValue: `AUTO · ${p.autoConfidence}%`,
-                })}
-              </span>
-            )}
             {onClose && (
               <button
                 type="button"
@@ -474,7 +553,7 @@ function LetterParametersPanelContent({
               />
             ) : null
           }
-          onSelect={setTypeOverride}
+          onSelect={handleTypeSelect}
           items={letterTypes.map((letterType) => ({
             key: letterType.id,
             content: <TypeBadge type={letterType.slug} label={letterType.name} />,
@@ -520,7 +599,7 @@ function LetterParametersPanelContent({
         <ParameterDropdown
           label={t('pages.lawyerWorkplace.parameters.lawyer', 'Lawyer')}
           value={lawyerDisplay}
-          onSelect={setLawyerOverride}
+          onSelect={handleLawyerSelect}
           items={lawyerOptions.map((option) => ({
             key: option.userId,
             content: <span className="text-dark-500 text-[13px] font-light">{option.display}</span>,
@@ -541,9 +620,9 @@ function LetterParametersPanelContent({
           </span>
           <span className="text-secondary-900 text-[12px] font-normal">
             {t('pages.lawyerWorkplace.parameters.parametersCount', {
-              confirmed: p.confirmedCount,
+              confirmed: effectiveConfirmedCount,
               total: p.totalParameters,
-              defaultValue: `${p.confirmedCount}/${p.totalParameters} parameters`,
+              defaultValue: `${effectiveConfirmedCount}/${p.totalParameters} parameters`,
             })}
           </span>
         </div>
@@ -552,7 +631,7 @@ function LetterParametersPanelContent({
           variant="primary"
           size="md"
           className="w-full px-10 py-7"
-          disabled={!canConfirm}
+          disabled={!canConfirm || patchSuggestionsMutation.isPending}
           onClick={handleConfirm}
         >
           <Icons.AddCircle size={24} strokeWidth={1.5} />
