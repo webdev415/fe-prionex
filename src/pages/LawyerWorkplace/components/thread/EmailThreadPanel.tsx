@@ -348,18 +348,58 @@ export function EmailThreadPanel({
   }
 
   if (!letter) {
+    const title = isError
+      ? t('pages.lawyerWorkplace.thread.loadError.title', 'Could not load thread')
+      : isLoading
+        ? t('pages.lawyerWorkplace.thread.loading', 'Loading thread…')
+        : t('pages.lawyerWorkplace.thread.empty.title', 'Select a letter to view the thread')
+
+    const description = isError
+      ? t(
+          'pages.lawyerWorkplace.thread.loadError.description',
+          'Select another letter or try again in a moment.'
+        )
+      : isLoading
+        ? null
+        : t(
+            'pages.lawyerWorkplace.thread.empty.description',
+            'Choose a letter from the list to read the full conversation and reply.'
+          )
+
     return (
-      <div className="flex h-full min-h-0 min-w-0 flex-1 items-center justify-center overflow-hidden bg-gray-50/50">
-        <p className="text-sm text-gray-400">
-          {isError
-            ? t('pages.lawyerWorkplace.thread.loadError', 'Could not load thread')
-            : isLoading
-              ? t('pages.lawyerWorkplace.thread.loading', 'Loading thread…')
-              : t(
-                  'pages.lawyerWorkplace.thread.selectLetter',
-                  'Select a letter to view the thread'
-                )}
-        </p>
+      <div
+        className="flex h-full min-h-0 min-w-0 flex-1 items-center justify-center overflow-hidden bg-gray-50/50"
+        role={isLoading ? 'status' : isError ? 'alert' : 'status'}
+        aria-busy={isLoading || undefined}
+      >
+        {isLoading ? (
+          <div className="flex w-full max-w-md flex-col gap-3 px-6">
+            <span className="sr-only">{title}</span>
+            <div className="h-4 w-40 animate-pulse rounded bg-gray-200" />
+            <div className="h-3 w-full animate-pulse rounded bg-gray-200" />
+            <div className="mt-4 h-24 w-full animate-pulse rounded-xl bg-gray-200" />
+            <div className="h-24 w-full animate-pulse rounded-xl bg-gray-200" />
+          </div>
+        ) : (
+          <div className="flex max-w-sm flex-col items-center px-6 text-center">
+            <div
+              className={cn(
+                'mb-4 flex h-12 w-12 items-center justify-center rounded-full',
+                isError ? 'bg-error-50' : 'bg-light-100'
+              )}
+            >
+              {isError ? (
+                <Icons.Warning size={22} strokeWidth={1.5} className="text-error-500" />
+              ) : (
+                <Icons.Mail size={22} strokeWidth={1.5} className="text-light-500" />
+              )}
+            </div>
+            <p className="text-dark-500 text-[14px] font-medium">{title}</p>
+            {description ? (
+              <p className="text-light-600 mt-1 text-[12px] leading-relaxed">{description}</p>
+            ) : null}
+          </div>
+        )}
       </div>
     )
   }

@@ -410,13 +410,6 @@
         "updateSuccess": "Availability updated",
         "updateError": "Could not update availability"
       },
-      "incoming": {
-        "title": "Incoming",
-        "empty": "No letters in this folder",
-        "count": "{{total}} / {{unprocessed}}",
-        "scrollUp": "Scroll up",
-        "scrollDown": "Scroll down"
-      },
       "folders": {
         "inbox": "Inbox",
         "quarantine": "Quarantine",
@@ -430,7 +423,6 @@
       },
       "incoming": {
         "title": "Incoming",
-        "empty": "No letters in this folder",
         "count": "{{total}} / {{unprocessed}}",
         "scrollUp": "Scroll up",
         "scrollDown": "Scroll down",
@@ -438,7 +430,37 @@
         "sectionUnprocessed": "Unprocessed",
         "sectionInProgress": "In progress",
         "sectionSentToKanban": "Sent to kanban",
-        "newLetter": "New letter"
+        "newLetter": "New letter",
+        "loading": "Loading letters…",
+        "loadError": {
+          "title": "Could not load inbox",
+          "description": "Check your connection and try again."
+        },
+        "empty": {
+          "folders": {
+            "inbox": {
+              "title": "Inbox is empty",
+              "description": "Synced letters from your mailboxes will show up here. You can also compose a new outgoing letter."
+            },
+            "quarantine": {
+              "title": "No quarantined letters",
+              "description": "Letters held for review before processing appear in this folder."
+            },
+            "sent": {
+              "title": "No sent letters",
+              "description": "Outgoing letters and replies sent from the workplace appear here."
+            }
+          },
+          "search": {
+            "title": "No matching letters",
+            "description": "Try a different search term or clear the search to see all letters.",
+            "clearSearch": "Clear search"
+          },
+          "filter": {
+            "title": "No letters in this view",
+            "description": "Nothing matches the «{{filter}}» filter. Try another status or show all mailboxes."
+          }
+        }
       },
       "letterItem": {
         "unclassified": "Unclassified",
@@ -456,6 +478,15 @@
       },
       "thread": {
         "selectLetter": "Select a letter to view the thread",
+        "loading": "Loading thread…",
+        "loadError": {
+          "title": "Could not load thread",
+          "description": "Select another letter or try again in a moment."
+        },
+        "empty": {
+          "title": "Select a letter to view the thread",
+          "description": "Choose a letter from the list to read the full conversation and reply."
+        },
         "backToList": "Back to list",
         "parameters": "Parameters",
         "archive": "Archive",

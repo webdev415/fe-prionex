@@ -227,7 +227,7 @@ describe('LawyerWorkplacePage smoke', () => {
 
     expect(await screen.findByText('Incoming')).toBeInTheDocument()
     expect(await screen.findByText('1 / 01', {}, { timeout: 3000 })).toBeInTheDocument()
-    expect(screen.queryByText('No letters in this folder')).not.toBeInTheDocument()
+    expect(screen.queryByText('Inbox is empty')).not.toBeInTheDocument()
   })
 
   it('renders kanban tab when user has view_legal_kanban', async () => {

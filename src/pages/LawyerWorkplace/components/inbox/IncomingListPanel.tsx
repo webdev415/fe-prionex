@@ -1,5 +1,6 @@
 import { useRef, useState, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
+import type { TFunction } from 'i18next'
 import { cn } from '@/lib/utils'
 import { Icons } from '@/lib/icons'
 import { Button } from '@/components/ui/Button'
@@ -58,6 +59,115 @@ function NumBadge({ count, active }: { count: number; active: boolean }) {
       {count}
     </span>
   )
+}
+
+function IncomingListSkeleton() {
+  const { t } = useTranslation('common')
+
+  return (
+    <div className="px-3 py-2" role="status" aria-busy="true">
+      <span className="sr-only">
+        {t('pages.lawyerWorkplace.incoming.loading', 'Loading letters…')}
+      </span>
+      {Array.from({ length: 5 }, (_, index) => (
+        <div
+          key={index}
+          className="mx-0 my-2 animate-pulse rounded-[12px] border border-gray-100 p-3.5"
+        >
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <div className="h-3.5 w-32 rounded bg-gray-200" />
+            <div className="h-3 w-12 rounded bg-gray-200" />
+          </div>
+          <div className="mb-2 flex items-start justify-between gap-2">
+            <div className="h-3 w-full max-w-[220px] rounded bg-gray-200" />
+            <div className="h-5 w-16 rounded-full bg-gray-200" />
+          </div>
+          <div className="mb-2 h-3.5 w-full max-w-[280px] rounded bg-gray-200" />
+          <div className="flex gap-1.5">
+            <div className="h-5 w-20 rounded-full bg-gray-200" />
+            <div className="h-5 w-14 rounded-full bg-gray-200" />
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+interface IncomingEmptyStateConfig {
+  icon: React.ReactElement
+  title: string
+  description: string
+  showNewLetter: boolean
+  showClearSearch: boolean
+}
+
+function getIncomingEmptyState(
+  activeFolder: IncomingFolder,
+  activeFilter: IncomingMailboxFilter,
+  committedSearch: string,
+  t: TFunction
+): IncomingEmptyStateConfig {
+  if (committedSearch.trim()) {
+    return {
+      icon: <Icons.Search size={22} strokeWidth={1.5} className="text-light-500" />,
+      title: t('pages.lawyerWorkplace.incoming.empty.search.title', 'No matching letters'),
+      description: t(
+        'pages.lawyerWorkplace.incoming.empty.search.description',
+        'Try a different search term or clear the search to see all letters.'
+      ),
+      showNewLetter: false,
+      showClearSearch: true,
+    }
+  }
+
+  if (activeFilter !== 'all') {
+    const filterMeta = FILTERS.find((filter) => filter.id === activeFilter)
+    const filterLabel = filterMeta
+      ? t(filterMeta.labelKey, filterMeta.fallback)
+      : t('pages.lawyerWorkplace.filters.allMailboxes', 'All mailboxes')
+
+    return {
+      icon: <Icons.Filter size={22} strokeWidth={1.5} className="text-light-500" />,
+      title: t('pages.lawyerWorkplace.incoming.empty.filter.title', 'No letters in this view'),
+      description: t('pages.lawyerWorkplace.incoming.empty.filter.description', {
+        filter: filterLabel,
+        defaultValue: `Nothing matches the «${filterLabel}» filter. Try another status or show all mailboxes.`,
+      }),
+      showNewLetter: false,
+      showClearSearch: false,
+    }
+  }
+
+  const folderIcon =
+    activeFolder === 'inbox' ? (
+      <Icons.InboxIcon size={22} strokeWidth={1.5} className="text-light-500" />
+    ) : activeFolder === 'quarantine' ? (
+      <Icons.KanbanIcon size={22} strokeWidth={1.5} className="text-light-500" />
+    ) : (
+      <Icons.MailSend01 size={22} strokeWidth={1.5} className="text-light-500" />
+    )
+
+  return {
+    icon: folderIcon,
+    title: t(`pages.lawyerWorkplace.incoming.empty.folders.${activeFolder}.title`, {
+      defaultValue:
+        activeFolder === 'inbox'
+          ? 'Inbox is empty'
+          : activeFolder === 'quarantine'
+            ? 'No quarantined letters'
+            : 'No sent letters',
+    }),
+    description: t(`pages.lawyerWorkplace.incoming.empty.folders.${activeFolder}.description`, {
+      defaultValue:
+        activeFolder === 'inbox'
+          ? 'Synced letters from your mailboxes will show up here. You can also compose a new outgoing letter.'
+          : activeFolder === 'quarantine'
+            ? 'Letters held for review before processing appear in this folder.'
+            : 'Outgoing letters and replies sent from the workplace appear here.',
+    }),
+    showNewLetter: activeFolder === 'inbox',
+    showClearSearch: false,
+  }
 }
 
 // ─── Panel ────────────────────────────────────────────────────────────────────
@@ -210,6 +320,10 @@ export function IncomingListPanel({
   const PAGE_SIZE = 50
   const pageStart = total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1
   const pageEnd = Math.min(page * PAGE_SIZE, total)
+  const emptyState =
+    !isLoading && !isError && letters.length === 0
+      ? getIncomingEmptyState(activeFolder, activeFilter, committedSearch, t)
+      : null
 
   return (
     <div className="flex h-full min-w-0 flex-col overflow-hidden border-r border-gray-200 bg-white">
@@ -361,17 +475,61 @@ export function IncomingListPanel({
           className="h-full overflow-y-auto bg-white [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         >
           {isLoading ? (
-            <p className="px-4 py-10 text-center text-sm text-gray-400">
-              {t('pages.lawyerWorkplace.incoming.loading', 'Loading letters…')}
-            </p>
+            <IncomingListSkeleton />
           ) : isError ? (
-            <p className="px-4 py-10 text-center text-sm text-red-500">
-              {t('pages.lawyerWorkplace.incoming.loadError', 'Could not load inbox')}
-            </p>
-          ) : letters.length === 0 ? (
-            <p className="px-4 py-10 text-center text-sm text-gray-400">
-              {t('pages.lawyerWorkplace.incoming.empty', 'No letters in this folder')}
-            </p>
+            <div
+              className="flex flex-col items-center justify-center px-6 py-14 text-center"
+              role="alert"
+            >
+              <div className="bg-error-50 mb-4 flex h-12 w-12 items-center justify-center rounded-full">
+                <Icons.Warning size={22} strokeWidth={1.5} className="text-error-500" />
+              </div>
+              <p className="text-dark-500 text-[14px] font-medium">
+                {t('pages.lawyerWorkplace.incoming.loadError.title', 'Could not load inbox')}
+              </p>
+              <p className="text-light-600 mt-1 max-w-sm text-[12px] leading-relaxed">
+                {t(
+                  'pages.lawyerWorkplace.incoming.loadError.description',
+                  'Check your connection and try again.'
+                )}
+              </p>
+            </div>
+          ) : emptyState ? (
+            <div
+              className="flex flex-col items-center justify-center px-6 py-14 text-center"
+              role="status"
+            >
+              <div className="bg-light-100 mb-4 flex h-12 w-12 items-center justify-center rounded-full">
+                {emptyState.icon}
+              </div>
+              <p className="text-dark-500 text-[14px] font-medium">{emptyState.title}</p>
+              <p className="text-light-600 mt-1 max-w-sm text-[12px] leading-relaxed">
+                {emptyState.description}
+              </p>
+              {emptyState.showClearSearch ? (
+                <Button
+                  type="button"
+                  variant="cancel"
+                  size="sm"
+                  onClick={handleClearSearch}
+                  className="mt-5 h-9 rounded-md"
+                >
+                  {t('pages.lawyerWorkplace.incoming.empty.search.clearSearch', 'Clear search')}
+                </Button>
+              ) : null}
+              {emptyState.showNewLetter ? (
+                <Button
+                  type="button"
+                  variant="primary"
+                  size="sm"
+                  leftIcon={<Icons.AddCircle size={18} strokeWidth={1.5} />}
+                  onClick={onNewLetter}
+                  className="mt-5 h-9 rounded-md"
+                >
+                  {t('pages.lawyerWorkplace.incoming.newLetter', 'New letter')}
+                </Button>
+              ) : null}
+            </div>
           ) : (
             letters.map((letter) => (
               <LetterListItemRow
