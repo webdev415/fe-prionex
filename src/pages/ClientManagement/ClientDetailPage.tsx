@@ -2714,8 +2714,24 @@ export function ClientDetailPage() {
                                   {formatDate(phone.created_at ?? undefined)}
                                 </div>
                               )}
-                              {!phone.added_by_user_name &&
+                              {phone.updated_by_user_name && (
+                                <>
+                                  <div>
+                                    {t('pages.clients.detail.updatedBy')}:{' '}
+                                    {phone.updated_by_user_name}
+                                  </div>
+                                  {phone.updated_at && (
+                                    <div>
+                                      {t('pages.clients.detail.updatedDate')}:{' '}
+                                      {formatDate(phone.updated_at ?? undefined)}
+                                    </div>
+                                  )}
+                                </>
+                              )}
+                              {!phone.type &&
+                                !phone.added_by_user_name &&
                                 !phone.created_at &&
+                                !phone.updated_by_user_name &&
                                 phone.blocking.reasons.length === 0 && <div>-</div>}
                             </TooltipContent>
                           </Tooltip>
@@ -2791,52 +2807,6 @@ export function ClientDetailPage() {
                             </button>
                           </PermissionGuard>
                         </div>
-                          </TooltipTrigger>
-                          <TooltipContent side="top" className="text-xs">
-                            {phone.type && (
-                              <div>
-                                {t('pages.clients.detail.phoneType')}:{' '}
-                                {phone.contactTypeCode
-                                  ? t(`contactTypes.${phone.contactTypeCode}`, {
-                                      defaultValue: phone.type,
-                                    })
-                                  : phone.type === 'mobile'
-                                    ? t('pages.clients.editModal.phoneMobile')
-                                    : phone.type === 'home'
-                                      ? t('pages.clients.editModal.phoneHome')
-                                      : phone.type === 'register'
-                                        ? t('pages.clients.editModal.phoneRegister')
-                                        : phone.type}
-                              </div>
-                            )}
-                            {phone.added_by_user_name && (
-                              <div>
-                                {t('pages.clients.detail.addedBy')}: {phone.added_by_user_name}
-                              </div>
-                            )}
-                            {phone.created_at && (
-                              <div>
-                                {t('pages.clients.detail.addedDate')}:{' '}
-                                {formatDate(phone.created_at ?? undefined)}
-                              </div>
-                            )}
-                            {phone.updated_by_user_name && (
-                              <>
-                                <div>
-                                  {t('pages.clients.detail.updatedBy')}:{' '}
-                                  {phone.updated_by_user_name}
-                                </div>
-                                {phone.updated_at && (
-                                  <div>
-                                    {t('pages.clients.detail.updatedDate')}:{' '}
-                                    {formatDate(phone.updated_at ?? undefined)}
-                                  </div>
-                                )}
-                              </>
-                            )}
-                            {!phone.added_by_user_name && !phone.created_at && <div>-</div>}
-                          </TooltipContent>
-                        </Tooltip>
                       </div>
                       {phone.contactId > 0 && (
                         <div className="flex justify-end gap-3 pt-0.5">
