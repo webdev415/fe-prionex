@@ -200,14 +200,21 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
     return m
   }, [operators])
 
-  const { data, isLoading } = useClientTAInteractions(clientId, {
-    chain_id: appliedFilters.chainFilter ? parseInt(appliedFilters.chainFilter, 10) : undefined,
-    notes_search: appliedFilters.notesSearch || undefined,
-    date_from: toIsoOrUndefined(appliedFilters.dateFrom, false),
-    date_to: toIsoOrUndefined(appliedFilters.dateTo, true),
-    skip: (page - 1) * pageSize,
-    limit: pageSize,
-  })
+  const { data, isLoading } = useClientTAInteractions(
+    clientId,
+    {
+      chain_id: appliedFilters.chainFilter ? parseInt(appliedFilters.chainFilter, 10) : undefined,
+      notes_search: appliedFilters.notesSearch || undefined,
+      date_from: toIsoOrUndefined(appliedFilters.dateFrom, false),
+      date_to: toIsoOrUndefined(appliedFilters.dateTo, true),
+      skip: (page - 1) * pageSize,
+      limit: pageSize,
+    },
+    // Poll so interactions created by the background consumer (auto-completed
+    // automatic chains) appear without a manual reload. Pauses when the tab is
+    // unfocused.
+    { refetchInterval: 8_000 }
+  )
 
   const items = data?.items ?? []
   const totalCount = data?.total_count ?? 0
