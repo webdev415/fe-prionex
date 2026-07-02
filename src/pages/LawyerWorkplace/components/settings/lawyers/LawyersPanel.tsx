@@ -17,7 +17,9 @@ interface LawyersPanelProps {
     letterTypeIds: string[]
   }) => Promise<void>
   onUpdateLawyerMaxInFlight: (lawyerId: string, maxInFlight: number) => Promise<void>
+  onUpdateLawyerLetterTypes: (lawyerId: string, letterTypeIds: string[]) => Promise<void>
   isSaving?: boolean
+  savingLawyerId?: string | null
   onAddLetterType: (onCreated?: (typeId: string) => void) => void
   readOnly?: boolean
 }
@@ -28,7 +30,9 @@ export function LawyersPanel({
   availableUsers,
   onAddLawyer,
   onUpdateLawyerMaxInFlight,
+  onUpdateLawyerLetterTypes,
   isSaving = false,
+  savingLawyerId = null,
   onAddLetterType,
   readOnly = false,
 }: LawyersPanelProps) {
@@ -57,7 +61,9 @@ export function LawyersPanel({
           lawyers={lawyers}
           letterTypes={letterTypes}
           onUpdateLawyerMaxInFlight={onUpdateLawyerMaxInFlight}
+          onUpdateLawyerLetterTypes={onUpdateLawyerLetterTypes}
           isSaving={isSaving}
+          savingLawyerId={savingLawyerId}
           onAddLawyer={() => setAddLawyerOpen(true)}
           readOnly={readOnly}
         />

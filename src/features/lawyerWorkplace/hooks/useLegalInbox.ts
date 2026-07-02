@@ -21,6 +21,7 @@ export const legalWorkplaceKeys = {
     [...legalWorkplaceKeys.settings(), 'letter-type', letterTypeId] as const,
   lawyers: (includeInactive?: boolean) =>
     [...legalWorkplaceKeys.settings(), 'lawyers', { includeInactive }] as const,
+  lawyersRoot: () => [...legalWorkplaceKeys.settings(), 'lawyers'] as const,
   lawyer: (lawyerId: string) => [...legalWorkplaceKeys.settings(), 'lawyer', lawyerId] as const,
   mailboxes: () => [...legalWorkplaceKeys.all, 'mailboxes'] as const,
   settingsMailboxes: () => [...legalWorkplaceKeys.settings(), 'mailboxes'] as const,
@@ -31,6 +32,7 @@ export const legalWorkplaceKeys = {
   composerReplyTemplates: (letterTypeId?: string | null) =>
     [...legalWorkplaceKeys.all, 'reply-templates', { letterTypeId }] as const,
   composerReplyTemplatesRoot: () => [...legalWorkplaceKeys.all, 'reply-templates'] as const,
+  lawyerMe: () => [...legalWorkplaceKeys.all, 'lawyer-me'] as const,
   kanban: (assignedToUserId?: number) =>
     [...legalWorkplaceKeys.all, 'kanban', { assignedToUserId }] as const,
   documents: () => [...legalWorkplaceKeys.all, 'documents'] as const,

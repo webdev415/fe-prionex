@@ -5,6 +5,7 @@ import { useCanAccessLegalKanban } from '@/features/lawyerWorkplace/hooks/useLeg
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 import { useLegalInboxSummary } from '@/features/lawyerWorkplace'
+import { LawyerAvailabilityToggle } from './LawyerAvailabilityToggle'
 import type { LawyerWorkplaceTab } from '../types'
 
 interface TabConfig {
@@ -175,6 +176,8 @@ export function LawyerWorkplaceHeaderNav() {
           )
         })}
       </nav>
+
+      <LawyerAvailabilityToggle />
 
       {/* Left fade + scroll arrow (mobile / compact header) */}
       <div

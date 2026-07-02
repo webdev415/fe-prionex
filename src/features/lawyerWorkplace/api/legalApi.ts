@@ -65,6 +65,16 @@ export const legalApi = {
       .then((response) => response.data)
   },
 
+  getMyLawyerProfile() {
+    return api.get<LegalLawyer>(`${BASE_URL}/lawyers/me`).then((response) => response.data)
+  },
+
+  updateMyLawyerStatus(status: LegalLawyer['status']) {
+    return api
+      .patch<LegalLawyer>(`${BASE_URL}/lawyers/me/status`, { status })
+      .then((response) => response.data)
+  },
+
   getMessage(messageId: string) {
     return api
       .get<LegalMessageDetail>(`${BASE_URL}/messages/${messageId}`)

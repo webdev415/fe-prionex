@@ -78,7 +78,10 @@
     "close": "Close",
     "logout": "Logout",
     "loggingOut": "Logging out...",
-    "deleting": "Deleting…"
+    "deleting": "Deleting…",
+    "remove": "Remove",
+    "decrease": "Decrease",
+    "increase": "Increase"
   },
   "components": {
     "pagination": {
@@ -401,6 +404,11 @@
         "documents": "Documents",
         "settings": "Settings",
         "newCount": "{{count}} new"
+      },
+      "availability": {
+        "label": "Your availability",
+        "updateSuccess": "Availability updated",
+        "updateError": "Could not update availability"
       },
       "incoming": {
         "title": "Incoming",
@@ -788,6 +796,9 @@
         "discardChanges": "Discard changes",
         "saveChanges": "Save Changes",
         "saveSuccess": "Changes saved",
+        "loading": "Loading settings…",
+        "loadError": "Could not load settings",
+        "readOnlyNotice": "View only — you do not have permission to change department settings.",
         "lawyer": "Lawyer",
         "status": "Status",
         "subTabs": {
@@ -904,11 +915,17 @@
             "fallbackTitleAfter": "round-robin",
             "fallbackDesc": "If every specialist hit their cap, the next available lawyer (any specialization) gets the task."
           },
-          "departmentTitle": "Legal department · {{count}} lawyers",
+          "departmentTitle_one": "Legal department · {{count}} lawyer",
+          "departmentTitle_other": "Legal department · {{count}} lawyers",
           "departmentDesc": "Adjust max workload and specializations per person",
+          "loading": "Loading lawyers…",
           "export": "Export",
+          "exportEmpty": "No lawyers to export",
           "exportSoon": "Export coming soon",
           "addLawyer": "Add lawyer",
+          "updateError": "Could not update lawyer workload",
+          "removed": "Lawyer removed",
+          "noRole": "Legal team",
           "letterTypesColumn": "Letter types",
           "currentWorkload": "Current workload",
           "maxInFlight": "Max in flight",
@@ -922,6 +939,14 @@
           "status": {
             "online": "online",
             "away": "away"
+          },
+          "removeLetterType": "Remove letter type",
+          "addLetterType": "Add letter type",
+          "noMoreLetterTypes": "All letter types assigned",
+          "letterTypesUpdateError": "Could not update letter types",
+          "empty": {
+            "title": "No lawyers yet",
+            "description": "Add lawyers to configure workload limits and letter type specializations."
           },
           "people": {
             "doroshenko": "Volodymyr Doroshenko",
@@ -1141,7 +1166,9 @@
             "typesSelected": "{{count}} selected",
             "addNewType": "Add new type",
             "submit": "Add",
-            "success": "Lawyer added"
+            "submitting": "Adding…",
+            "success": "Lawyer added",
+            "error": "Could not add lawyer"
           }
         }
       },

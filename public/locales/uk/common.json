@@ -78,7 +78,10 @@
     "close": "Закрити",
     "logout": "Вийти",
     "loggingOut": "Вихід...",
-    "deleting": "Видалення…"
+    "deleting": "Видалення…",
+    "remove": "Видалити",
+    "decrease": "Зменшити",
+    "increase": "Збільшити"
   },
   "components": {
     "pagination": {
@@ -406,6 +409,11 @@
         "documents": "Документи",
         "settings": "Налаштування",
         "newCount": "{{count}} нових"
+      },
+      "availability": {
+        "label": "Ваша доступність",
+        "updateSuccess": "Доступність оновлено",
+        "updateError": "Не вдалося оновити доступність"
       },
       "incoming": {
         "title": "Вхідні",
@@ -748,6 +756,9 @@
         "discardChanges": "Скасувати зміни",
         "saveChanges": "Зберегти зміни",
         "saveSuccess": "Зміни збережено",
+        "loading": "Завантаження налаштувань…",
+        "loadError": "Не вдалося завантажити налаштування",
+        "readOnlyNotice": "Лише перегляд — у вас немає дозволу змінювати налаштування відділу.",
         "lawyer": "Юрист",
         "status": "Статус",
         "subTabs": {
@@ -864,11 +875,19 @@
             "fallbackTitleAfter": "round-robin",
             "fallbackDesc": "Якщо кожен спеціаліст досяг ліміту, задачу отримує наступний доступний юрист (будь-яка спеціалізація)."
           },
-          "departmentTitle": "Юридичний відділ · {{count}} юристів",
+          "departmentTitle_one": "Юридичний відділ · {{count}} юрист",
+          "departmentTitle_few": "Юридичний відділ · {{count}} юристи",
+          "departmentTitle_many": "Юридичний відділ · {{count}} юристів",
+          "departmentTitle_other": "Юридичний відділ · {{count}} юристів",
           "departmentDesc": "Налаштуйте максимальне навантаження та спеціалізації для кожного",
+          "loading": "Завантаження юристів…",
           "export": "Експорт",
+          "exportEmpty": "Немає юристів для експорту",
           "exportSoon": "Експорт незабаром",
           "addLawyer": "Додати юриста",
+          "updateError": "Не вдалося оновити навантаження юриста",
+          "removed": "Юриста видалено",
+          "noRole": "Юридична команда",
           "letterTypesColumn": "Типи листів",
           "currentWorkload": "Поточне навантаження",
           "maxInFlight": "Макс. одночасно",
@@ -882,6 +901,14 @@
           "status": {
             "online": "в мережі",
             "away": "відсутній"
+          },
+          "removeLetterType": "Видалити тип листа",
+          "addLetterType": "Додати тип листа",
+          "noMoreLetterTypes": "Усі типи листів уже призначено",
+          "letterTypesUpdateError": "Не вдалося оновити типи листів",
+          "empty": {
+            "title": "Юристів ще немає",
+            "description": "Додайте юристів, щоб налаштувати ліміти навантаження та спеціалізації за типами листів."
           },
           "people": {
             "doroshenko": "Volodymyr Doroshenko",
@@ -1101,7 +1128,9 @@
             "typesSelected": "Обрано: {{count}}",
             "addNewType": "Додати новий тип",
             "submit": "Додати",
-            "success": "Юриста додано"
+            "submitting": "Додавання…",
+            "success": "Юриста додано",
+            "error": "Не вдалося додати юриста"
           }
         }
       },

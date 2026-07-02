@@ -25,6 +25,7 @@ import type { SettingsSubTab } from '../../settings/types'
 import { AddLetterTypeModal } from './letterTypes/AddLetterTypeModal'
 import { LetterTypesPanel } from './letterTypes/LetterTypesPanel'
 import { LawyersPanel } from './lawyers/LawyersPanel'
+import { LawyersTabSkeleton } from './lawyers/LawyersTabSkeleton'
 import { MailboxesPanel } from './mailboxes/MailboxesPanel'
 import { MailboxesTabSkeleton } from './mailboxes/MailboxesTabSkeleton'
 import { TemplatesPanel } from './templates/TemplatesPanel'
@@ -39,6 +40,7 @@ export function LegalSettingsTab() {
   const [activeSubTab, setActiveSubTab] = useState<SettingsSubTab>('letterTypes')
   const [addTypeOpen, setAddTypeOpen] = useState(false)
   const [selectedLetterTypeId, setSelectedLetterTypeId] = useState('')
+  const [savingLawyerId, setSavingLawyerId] = useState<string | null>(null)
   const pendingLawyerTypeSelectRef = useRef<((typeId: string) => void) | null>(null)
 
   const lawyersTabEnabled = activeSubTab === 'lawyers'
@@ -70,6 +72,7 @@ export function LegalSettingsTab() {
     saveLetterType,
     addLawyer,
     updateLawyerMaxInFlight,
+    updateLawyerLetterTypes,
     isSavingLetterType,
     isSavingLawyer,
   } = useLegalSettingsActions()
@@ -147,6 +150,15 @@ export function LegalSettingsTab() {
           ? templatesTabLoading
           : letterTypesLoading
 
+  const handleUpdateLawyerLetterTypes = async (lawyerId: string, letterTypeIds: string[]) => {
+    setSavingLawyerId(lawyerId)
+    try {
+      await updateLawyerLetterTypes(lawyerId, letterTypeIds)
+    } finally {
+      setSavingLawyerId(null)
+    }
+  }
+
   const handleAddLetterType = async (input: { nameFallback: string; colorId: string }) => {
     try {
       const newTypeId = await addLetterType(input)
@@ -187,10 +199,9 @@ export function LegalSettingsTab() {
 
       {isLoading && activeSubTab === 'templates' ? <TemplatesTabSkeleton /> : null}
 
-      {isLoading &&
-      activeSubTab !== 'mailboxes' &&
-      activeSubTab !== 'templates' &&
-      (activeSubTab === 'letterTypes' || activeSubTab === 'lawyers') ? (
+      {isLoading && activeSubTab === 'lawyers' ? <LawyersTabSkeleton /> : null}
+
+      {isLoading && activeSubTab === 'letterTypes' ? (
         <p className="text-light-600 px-4 py-10 text-center text-sm sm:px-5 lg:px-7">
           {t('pages.lawyerWorkplace.settings.loading', 'Loading settings…')}
         </p>
@@ -223,7 +234,9 @@ export function LegalSettingsTab() {
           availableUsers={availableUsers}
           onAddLawyer={addLawyer}
           onUpdateLawyerMaxInFlight={updateLawyerMaxInFlight}
+          onUpdateLawyerLetterTypes={handleUpdateLawyerLetterTypes}
           isSaving={isSavingLawyer}
+          savingLawyerId={savingLawyerId}
           onAddLetterType={openAddLetterType}
           readOnly={readOnly}
         />

@@ -5,6 +5,7 @@ import { getErrorMessage } from '@/lib/errors'
 import { legalApi } from '../api/legalApi'
 import type {
   LegalLawyerCreate,
+  LegalLawyerListResponse,
   LegalLawyerUpdate,
   LegalLetterTypeCreate,
   LegalLetterTypePrioritiesUpdate,
@@ -163,7 +164,7 @@ export function useCreateLegalLawyer() {
   return useMutation({
     mutationFn: (payload: LegalLawyerCreate) => legalApi.createLawyer(payload),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: legalWorkplaceKeys.lawyers() })
+      queryClient.invalidateQueries({ queryKey: legalWorkplaceKeys.lawyersRoot() })
     },
     onError: (error) => toast.error(getErrorMessage(error)),
   })
@@ -175,8 +176,20 @@ export function useUpdateLegalLawyer() {
   return useMutation({
     mutationFn: ({ lawyerId, payload }: { lawyerId: string; payload: LegalLawyerUpdate }) =>
       legalApi.updateLawyer(lawyerId, payload),
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: legalWorkplaceKeys.lawyers() })
+    onSuccess: (data, variables) => {
+      queryClient.setQueriesData<LegalLawyerListResponse>(
+        { queryKey: legalWorkplaceKeys.lawyersRoot() },
+        (current) => {
+          if (!current?.items) return current
+          return {
+            ...current,
+            items: current.items.map((lawyer) =>
+              lawyer.id === variables.lawyerId ? data : lawyer
+            ),
+          }
+        }
+      )
+      queryClient.invalidateQueries({ queryKey: legalWorkplaceKeys.lawyersRoot() })
       queryClient.invalidateQueries({
         queryKey: legalWorkplaceKeys.lawyer(variables.lawyerId),
       })
@@ -191,7 +204,7 @@ export function useArchiveLegalLawyer() {
   return useMutation({
     mutationFn: (lawyerId: string) => legalApi.archiveLawyer(lawyerId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: legalWorkplaceKeys.lawyers() })
+      queryClient.invalidateQueries({ queryKey: legalWorkplaceKeys.lawyersRoot() })
     },
     onError: (error) => toast.error(getErrorMessage(error)),
   })

@@ -76,6 +76,16 @@ export function useLegalSettingsActions() {
     [updateLawyer]
   )
 
+  const updateLawyerLetterTypes = useCallback(
+    async (lawyerId: string, letterTypeIds: string[]) => {
+      await updateLawyer.mutateAsync({
+        lawyerId,
+        payload: { letter_type_ids: letterTypeIds },
+      })
+    },
+    [updateLawyer]
+  )
+
   const removeLawyer = useCallback(
     async (lawyerId: string) => {
       await archiveLawyer.mutateAsync(lawyerId)
@@ -89,6 +99,7 @@ export function useLegalSettingsActions() {
     saveLetterType,
     addLawyer,
     updateLawyerMaxInFlight,
+    updateLawyerLetterTypes,
     removeLawyer,
     isSavingLetterType: createLetterType.isPending,
     isSavingLawyer: createLawyer.isPending || updateLawyer.isPending,
