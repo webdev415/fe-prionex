@@ -212,10 +212,10 @@ export function CallsTab() {
   }
 
   const operatorLookup = useMemo(() => {
-    const byExt: Record<string, string> = {}
+    const byExt: Record<string, (typeof operators)[number]> = {}
     for (const op of operators) {
       if (op.asterisk_extension) {
-        byExt[op.asterisk_extension] = op.full_name
+        byExt[op.asterisk_extension] = op
       }
     }
     return byExt
@@ -253,7 +253,8 @@ export function CallsTab() {
       clientName: detailForModal.client_id ? `#${detailForModal.client_id}` : '',
       date: detailForModal.initiated_at,
       time,
-      operator: operatorLookup[detailForModal.agent_extension] ?? detailForModal.agent_extension,
+      operator:
+        operatorLookup[detailForModal.agent_extension]?.full_name ?? detailForModal.agent_extension,
       duration: formatDuration(detailForModal.talk_duration),
       phone: detailForModal.customer_number,
       call_id: detailForModal.call_id,
@@ -298,7 +299,7 @@ export function CallsTab() {
           {callsQueryEnabled && isPending ? (
             <TableSkeleton columns={7} rows={pageSize} className="w-full" />
           ) : (
-            <CallsTable data={calls} onOpenCall={handleOpenCall} />
+            <CallsTable data={calls} onOpenCall={handleOpenCall} operatorLookup={operatorLookup} />
           )}
           {total > pageSize && (
             <Pagination

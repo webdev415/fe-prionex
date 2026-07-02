@@ -13,6 +13,7 @@ import { MemoryRouter } from 'react-router-dom'
 
 import { CallsTable } from '../CallsTable'
 import type { CallMonitoringItem } from '@/features/actionAnalysis'
+import type { OperatorUser } from '@/features/users'
 
 function makeCall(overrides: Partial<CallMonitoringItem>): CallMonitoringItem {
   return {
@@ -96,5 +97,48 @@ describe('CallsTable — telephony column', () => {
     expect(screen.queryByText('pages.training.telephonyType.grey')).not.toBeInTheDocument()
     // Two inbound rows → two em-dashes.
     expect(screen.getAllByText('—')).toHaveLength(2)
+  })
+})
+
+describe('CallsTable — employee column', () => {
+  function makeOperator(overrides: Partial<OperatorUser>): OperatorUser {
+    return {
+      id: 1,
+      username: 'iivanov',
+      full_name: 'Ivan Ivanov',
+      first_name: 'Ivan',
+      middle_name: null,
+      last_name: 'Ivanov',
+      email: 'iivanov@example.com',
+      status: 'active',
+      asterisk_extension: '1023',
+      ...overrides,
+    }
+  }
+
+  it('renders "Last First (SIP)" when the operator is resolvable', () => {
+    render(
+      <MemoryRouter>
+        <CallsTable
+          data={[makeCall({ agent_extension: '1023' })]}
+          onOpenCall={vi.fn()}
+          operatorLookup={{ '1023': makeOperator({}) }}
+        />
+      </MemoryRouter>
+    )
+    expect(screen.getByText('Ivanov Ivan (1023)')).toBeInTheDocument()
+  })
+
+  it('falls back to "— (SIP)" when the extension is not in the lookup', () => {
+    render(
+      <MemoryRouter>
+        <CallsTable
+          data={[makeCall({ agent_extension: '9999' })]}
+          onOpenCall={vi.fn()}
+          operatorLookup={{}}
+        />
+      </MemoryRouter>
+    )
+    expect(screen.getByText('— (9999)')).toBeInTheDocument()
   })
 })
