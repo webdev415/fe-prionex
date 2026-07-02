@@ -728,6 +728,13 @@
         "letterTypes": {
           "loading": "Loading letter types…",
           "listTitle": "Letter types",
+          "deleteType": "Delete letter type",
+          "deleteTypeTitle": "Delete letter type",
+          "deleteTypeConfirm": "Are you sure you want to delete this letter type?",
+          "deleteTypeWarning": "It will be removed from active lists. Historical letters keep their classification.",
+          "deleteTypeLetterCountWarning": "This type is linked to {{count}} letters.",
+          "deleteTypeLastWarning": "At least one letter type must remain.",
+          "deleteTypeSuccess": "Letter type deleted",
           "listMeta": "SLA {{sla}} b.d. • {{examples}} examples",
           "previewFallback": "Letter type name",
           "empty": "No letter types yet. Add the first type to configure classification.",

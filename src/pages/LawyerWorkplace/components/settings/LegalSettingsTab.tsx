@@ -71,10 +71,12 @@ export function LegalSettingsTab() {
   const {
     addLetterType,
     saveLetterType,
+    deleteLetterType,
     addLawyer,
     updateLawyerMaxInFlight,
     updateLawyerLetterTypes,
     isSavingLetterType,
+    isDeletingLetterType,
     isSavingLawyer,
   } = useLegalSettingsActions()
   const {
@@ -110,13 +112,21 @@ export function LegalSettingsTab() {
     [replyTemplatesQuery.data?.items]
   )
 
+  const activeLetterTypes = useMemo(
+    () => letterTypes.filter((type) => type.isActive),
+    [letterTypes]
+  )
+
   const activeSelectedLetterTypeId = useMemo(() => {
-    if (letterTypes.length === 0) return ''
-    if (selectedLetterTypeId && letterTypes.some((type) => type.id === selectedLetterTypeId)) {
+    if (activeLetterTypes.length === 0) return ''
+    if (
+      selectedLetterTypeId &&
+      activeLetterTypes.some((type) => type.id === selectedLetterTypeId)
+    ) {
       return selectedLetterTypeId
     }
-    return letterTypes[0]?.id ?? ''
-  }, [letterTypes, selectedLetterTypeId])
+    return activeLetterTypes[0]?.id ?? ''
+  }, [activeLetterTypes, selectedLetterTypeId])
 
   const availableUsers = useMemo(() => {
     const existingLawyerIds = new Set(
@@ -216,12 +226,14 @@ export function LegalSettingsTab() {
 
       {activeSubTab === 'letterTypes' && !isLoading && !settingsError && (
         <LetterTypesPanel
-          letterTypes={letterTypes}
+          letterTypes={activeLetterTypes}
           selectedId={activeSelectedLetterTypeId}
           onSelectedIdChange={setSelectedLetterTypeId}
           onAddType={() => openAddLetterType()}
           onSaveLetterType={saveLetterType}
+          onDeleteLetterType={deleteLetterType}
           isSaving={isSavingLetterType}
+          isDeleting={isDeletingLetterType}
           readOnly={readOnly}
         />
       )}

@@ -7,6 +7,7 @@ import { initialsFromName, slugifyLegalId, syncLetterTypeDraft } from '../api/se
 import { legalWorkplaceKeys } from './useLegalInbox'
 import {
   useArchiveLegalLawyer,
+  useArchiveLegalLetterType,
   useCreateLegalLawyer,
   useCreateLegalLetterType,
   useUpdateLegalLawyer,
@@ -16,6 +17,7 @@ export function useLegalSettingsActions() {
   const { t } = useTranslation('common')
   const queryClient = useQueryClient()
   const createLetterType = useCreateLegalLetterType()
+  const archiveLetterType = useArchiveLegalLetterType()
   const createLawyer = useCreateLegalLawyer()
   const updateLawyer = useUpdateLegalLawyer()
   const archiveLawyer = useArchiveLegalLawyer()
@@ -52,6 +54,22 @@ export function useLegalSettingsActions() {
       toast.success(t('pages.lawyerWorkplace.settings.saveSuccess', 'Changes saved'))
     },
     [queryClient, t]
+  )
+
+  const deleteLetterType = useCallback(
+    async (letterTypeId: string) => {
+      await archiveLetterType.mutateAsync(letterTypeId)
+      await queryClient.invalidateQueries({
+        queryKey: [...legalWorkplaceKeys.settings(), 'letter-types'],
+      })
+      await queryClient.invalidateQueries({ queryKey: legalWorkplaceKeys.lawyersRoot() })
+      await queryClient.invalidateQueries({ queryKey: legalWorkplaceKeys.inbox() })
+      await queryClient.invalidateQueries({ queryKey: legalWorkplaceKeys.messages() })
+      toast.success(
+        t('pages.lawyerWorkplace.settings.letterTypes.deleteTypeSuccess', 'Letter type deleted')
+      )
+    },
+    [archiveLetterType, queryClient, t]
   )
 
   const addLawyer = useCallback(
@@ -102,11 +120,13 @@ export function useLegalSettingsActions() {
   return {
     addLetterType,
     saveLetterType,
+    deleteLetterType,
     addLawyer,
     updateLawyerMaxInFlight,
     updateLawyerLetterTypes,
     removeLawyer,
     isSavingLetterType: createLetterType.isPending,
+    isDeletingLetterType: archiveLetterType.isPending,
     isSavingLawyer: createLawyer.isPending || updateLawyer.isPending,
   }
 }

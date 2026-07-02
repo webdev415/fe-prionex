@@ -52,6 +52,7 @@ export function mapLegalLetterTypeToConfig(item: LegalLetterType): LetterTypeCon
       role: priority.role as LawyerPriorityRole,
     })),
     keywordHints: [...item.keyword_hints],
+    isActive: item.is_active,
   }
 }
 

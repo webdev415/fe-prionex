@@ -688,6 +688,13 @@
         "letterTypes": {
           "loading": "Завантаження типів листів…",
           "listTitle": "Типи листів",
+          "deleteType": "Видалити тип листа",
+          "deleteTypeTitle": "Видалити тип листа",
+          "deleteTypeConfirm": "Ви впевнені, що хочете видалити цей тип листа?",
+          "deleteTypeWarning": "Його буде прибрано з активних списків. Історичні листи збережуть свою класифікацію.",
+          "deleteTypeLetterCountWarning": "Цей тип пов’язаний із {{count}} листами.",
+          "deleteTypeLastWarning": "Має залишитися щонайменше один тип листа.",
+          "deleteTypeSuccess": "Тип листа видалено",
           "listMeta": "SLA {{sla}} р.д. • {{examples}} прикладів",
           "previewFallback": "Назва типу листа",
           "empty": "Типів листів ще немає. Додайте перший тип для налаштування класифікації.",

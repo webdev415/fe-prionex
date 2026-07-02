@@ -14,6 +14,9 @@ interface LetterTypeDetailPanelProps {
   onSave: () => void
   isSaving?: boolean
   onBack?: () => void
+  onDelete?: () => void
+  canDelete?: boolean
+  isDeleting?: boolean
   readOnly?: boolean
 }
 
@@ -25,11 +28,20 @@ export function LetterTypeDetailPanel({
   onSave,
   isSaving = false,
   onBack,
+  onDelete,
+  canDelete = true,
+  isDeleting = false,
   readOnly = false,
 }: LetterTypeDetailPanelProps) {
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col rounded-[12px] bg-white/50">
-      <LetterTypeDetailHeader draft={draft} onBack={onBack} />
+      <LetterTypeDetailHeader
+        draft={draft}
+        onBack={onBack}
+        onDelete={readOnly ? undefined : onDelete}
+        canDelete={canDelete}
+        isDeleting={isDeleting}
+      />
 
       <fieldset disabled={readOnly} className="min-h-0 flex-1 border-0 p-0 disabled:opacity-90">
         <div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-4 py-5 sm:space-y-8 sm:px-5 sm:py-6 lg:px-6">

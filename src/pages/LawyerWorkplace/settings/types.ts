@@ -42,6 +42,7 @@ export interface LetterTypeConfig {
   examples: TrainingExample[]
   priorities: LetterTypePriorityAssignment[]
   keywordHints: string[]
+  isActive: boolean
 }
 
 export interface SettingsLawyer {
