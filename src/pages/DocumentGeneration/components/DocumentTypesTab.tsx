@@ -94,6 +94,7 @@ export function DocumentTypesTab() {
       {
         key: 'color',
         header: t('pages.documentGeneration.types.columns.color', 'Color'),
+        align: 'center',
         className: 'w-16 text-base',
         render: (row) => (
           <span
@@ -106,6 +107,7 @@ export function DocumentTypesTab() {
       {
         key: 'name',
         header: t('pages.documentGeneration.types.columns.name', 'Name'),
+        align: 'center',
         className: 'text-base',
         render: (row) => (
           <span
@@ -123,15 +125,17 @@ export function DocumentTypesTab() {
       {
         key: 'doc_count',
         header: t('pages.documentGeneration.types.columns.usage', 'Documents'),
-        className: 'w-32 text-right text-base',
+        align: 'center',
+        className: 'w-32 text-base',
         render: (row) => <span className="text-base text-gray-600">{row.doc_count}</span>,
       },
       {
         key: 'actions',
         header: t('pages.documentGeneration.types.columns.actions', 'Actions'),
-        className: 'w-40 text-right text-base',
+        align: 'center',
+        className: 'w-40 text-base',
         render: (row) => (
-          <div className="flex items-center justify-end gap-1">
+          <div className="flex items-center justify-center gap-1">
             <Button
               variant="ghost"
               size="sm"
