@@ -7047,7 +7047,8 @@
         "group": "Group actions",
         "department": "Department actions",
         "all": "All actions",
-        "groupComingSoon": "Coming soon"
+        "groupComingSoon": "Coming soon",
+        "aboveCeiling": "Not permitted by your role"
       },
       "workspaceBanner": {
         "label": "Coach's Workspace",

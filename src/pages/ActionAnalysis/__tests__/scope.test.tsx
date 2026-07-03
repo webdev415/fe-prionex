@@ -5,7 +5,11 @@ import { useAuthStore } from '@/stores/authStore'
 import { useScopedUserIds, readScope, writeScope } from '../lib/scope'
 import type { OperatorUser } from '@/features/users/api/usersApi'
 
-function makeOp(id: number, departmentId: number | null): OperatorUser {
+function makeOp(
+  id: number,
+  departmentId: number | null,
+  groupId: number | null = null
+): OperatorUser {
   return {
     id,
     username: `u${id}`,
@@ -18,6 +22,8 @@ function makeOp(id: number, departmentId: number | null): OperatorUser {
     asterisk_extension: `10${id}`,
     department_id: departmentId,
     department_name: departmentId != null ? `Dept ${departmentId}` : null,
+    group_id: groupId,
+    group_name: groupId != null ? `Group ${groupId}` : null,
   }
 }
 
@@ -28,17 +34,23 @@ function withRoute(initialUrl: string) {
   return Wrapper
 }
 
-function setUser(id: number, departmentId: number | null) {
+function setUser(id: number, departmentId: number | null, groupId: number | null = null) {
   // Minimal subset; only the fields useScopedUserIds reads matter.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  useAuthStore.setState({ user: { id: String(id), active_department_id: departmentId } as any })
+  useAuthStore.setState({
+    user: {
+      id: String(id),
+      active_department_id: departmentId,
+      active_group_id: groupId,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any,
+  })
 }
 
 const OPS: OperatorUser[] = [
-  makeOp(10, 1), // dept 1
-  makeOp(20, 1), // dept 1
-  makeOp(30, 2), // dept 2
-  makeOp(40, null),
+  makeOp(10, 1, 5), // dept 1, group 5
+  makeOp(20, 1, 5), // dept 1, group 5
+  makeOp(30, 2, 6), // dept 2, group 6
+  makeOp(40, null, null),
 ]
 
 describe('readScope / writeScope', () => {
@@ -80,13 +92,24 @@ describe('useScopedUserIds', () => {
     expect(result.current.isEmptyResolution).toBe(false)
   })
 
-  it('scope=group treats as no-op (undefined ids) with both pickers locked', () => {
+  it("scope=group resolves to operators in the user's group", () => {
+    setUser(10, 1, 5)
     const { result } = renderHook(() => useScopedUserIds(OPS), {
       wrapper: withRoute('/?scope=group'),
     })
-    expect(result.current.userIds).toBeUndefined()
-    expect(result.current.employeePickerDisabled).toBe(true)
+    expect(result.current.scope).toBe('group')
+    expect(result.current.userIds).toEqual([10, 20])
     expect(result.current.departmentPickerDisabled).toBe(true)
+    expect(result.current.isEmptyResolution).toBe(false)
+  })
+
+  it('scope=group with no group → empty resolution', () => {
+    setUser(10, 1, null)
+    const { result } = renderHook(() => useScopedUserIds(OPS), {
+      wrapper: withRoute('/?scope=group'),
+    })
+    expect(result.current.userIds).toEqual([])
+    expect(result.current.isEmptyResolution).toBe(true)
   })
 
   it("scope=department resolves to operators in the user's department", () => {
