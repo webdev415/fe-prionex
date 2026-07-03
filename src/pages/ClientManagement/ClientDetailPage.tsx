@@ -260,6 +260,8 @@ export function ClientDetailPage() {
   // Defaults to today; max = today (future dates rejected).
   const [closeLoanClosureDate, setCloseLoanClosureDate] = useState<Date | null>(null)
   const [closeLoanDateError, setCloseLoanDateError] = useState<string | null>(null)
+  // KAN-784 AC5: optional operator reason logged to interaction history.
+  const [closeLoanReason, setCloseLoanReason] = useState<string>('')
   // Inline-edit modal for closure date on already-closed debts.
   const [editClosureDateDebtId, setEditClosureDateDebtId] = useState<number | null>(null)
   const [editClosureDateValue, setEditClosureDateValue] = useState<Date | null>(null)
@@ -883,6 +885,9 @@ export function ClientDetailPage() {
         principalDebt: d.principal_debt != null ? Number(d.principal_debt) : null,
         remainingDebtAmount: Number(d.remaining_debt_amount ?? 0),
         totalToReturn: Number(d.total_to_return ?? 0),
+        // KAN-784 AC2: fully-returned loan that fell short of the principal
+        // guard — auto-close was blocked, so it needs operator-driven closure.
+        needsManualClosureReview: d.needs_manual_closure_review ?? false,
         // Closure date — surfaced for closed debts so the user can see it and,
         // with the close_client_debt permission, edit it after closure.
         creditClosedDate: d.credit_closed_date ?? null,
@@ -1609,7 +1614,23 @@ export function ClientDetailPage() {
       key: 'totalToReturn',
       header: t('pages.clients.detail.tableHeaders.totalToReturn'),
       align: 'right',
-      render: (loan) => formatMoneyUAHTwoDecimals(loan.totalToReturn),
+      render: (loan) => (
+        <div className="flex flex-col items-end gap-1">
+          <span>{formatMoneyUAHTwoDecimals(loan.totalToReturn)}</span>
+          {loan.needsManualClosureReview && (
+            <span
+              className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800"
+              title={t(
+                'pages.clients.detail.needsManualClosureReviewTooltip',
+                'Fully repaid, but payments to us fell short of the principal. Auto-close is blocked — review and close manually.'
+              )}
+            >
+              <Icons.Warning size={12} strokeWidth={2} />
+              {t('pages.clients.detail.needsManualClosureReview', 'Needs manual closure review')}
+            </span>
+          )}
+        </div>
+      ),
     },
     {
       key: 'actions',
@@ -1673,6 +1694,7 @@ export function ClientDetailPage() {
                     setCloseLoanConfirm(loan.id)
                     setCloseLoanClosureDate(getTodayAtMidnight())
                     setCloseLoanDateError(null)
+                    setCloseLoanReason('')
                   }}
                   disabled={isClosingDebt}
                   className="p-1 text-green-600 hover:text-green-800 disabled:opacity-50"
@@ -5866,6 +5888,22 @@ export function ClientDetailPage() {
                 <span className="text-sm text-red-600">{closeLoanDateError}</span>
               )}
             </div>
+            <div className="mt-4 flex flex-col items-start gap-2 self-stretch">
+              <Label className="text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                {t('pages.clients.detail.closureReason', 'Reason (optional)')}
+              </Label>
+              <textarea
+                value={closeLoanReason}
+                onChange={(e) => setCloseLoanReason(e.target.value)}
+                maxLength={1000}
+                rows={3}
+                placeholder={t(
+                  'pages.clients.detail.closureReasonPlaceholder',
+                  'Add a note explaining why this loan is being closed'
+                )}
+                className="border-gray-200 focus:border-primary-400 w-full resize-y rounded-md border px-3 py-2 text-sm outline-none"
+              />
+            </div>
           </ModalContent>
           <ModalFooter>
             <Button
@@ -5906,6 +5944,7 @@ export function ClientDetailPage() {
                     clientId,
                     debtId: closeLoanConfirm,
                     closureDate: formatDateAsISO(closeLoanClosureDate),
+                    reason: closeLoanReason.trim() || undefined,
                   },
                   {
                     onSuccess: () => {

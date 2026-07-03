@@ -62,6 +62,11 @@ export interface DebtDetail {
   total_paid_amount?: string | null
   total_to_return?: string | null
 
+  // KAN-784 AC2: true when the loan is fully returned (total_to_return <= 0)
+  // but verified payments-to-us fell short of the principal, so auto-close was
+  // blocked and an operator must close it manually. Computed read-time.
+  needs_manual_closure_review?: boolean
+
   // KAN-246 — per-component write-off enablement from the repayment-rule
   // config. The Write-off modal hides components whose flag is false.
   // Keyed by the frontend accrual names (penalty/fine). Absent → treat as

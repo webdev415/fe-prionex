@@ -347,7 +347,8 @@ export async function createRestructuringAgreement(
 export async function closeDebt(
   clientId: number,
   debtId: number,
-  closureDate?: string
+  closureDate?: string,
+  reason?: string
 ): Promise<{ id: number; status: string; credit_closed_date: string | null }> {
   const response = await api.patch<{
     id: number
@@ -355,6 +356,7 @@ export async function closeDebt(
     credit_closed_date: string | null
   }>(`${BASE_URL}/${clientId}/debts/${debtId}/close`, {
     closure_date: closureDate ?? null,
+    reason: reason ?? null,
   })
   return response.data
 }
