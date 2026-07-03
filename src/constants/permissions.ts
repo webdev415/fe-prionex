@@ -45,6 +45,15 @@ export const PERMISSIONS = {
   },
 
   /**
+   * Sale Notes Category (1 permission)
+   * Controls bulk upload + delete of primary creditor comments.
+   * Seeded by auth migration 039.
+   */
+  SALE_NOTES: {
+    MANAGE: 'manage_primary_creditor_comments',
+  },
+
+  /**
    * Communication Category (3 permissions)
    * Controls access to calling and messaging features
    */
@@ -184,12 +193,48 @@ export const PERMISSIONS = {
   },
 
   /**
+   * Repayment Config Category (2 permissions, KAN-246)
+   * Controls access to the global repayment order and write-off rule settings.
+   * Seeded by auth migration 039. Admin + Supervisor only.
+   */
+  REPAYMENT_CONFIG: {
+    VIEW: 'view_repayment_config',
+    EDIT: 'edit_repayment_config',
+  },
+
+  /**
    * TA Chains Category (1 permission)
    * Hard-delete a TA Chain (refused if the chain has any recorded history).
    * Note: create / edit / activate-deactivate continue to gate on manage_settings.
    */
   TA_CHAINS: {
     DELETE: 'delete_ta_chains',
+  },
+
+  /**
+   * Compatibility alias for the restored standalone Action Analysis page.
+   * The page was relocated into TRAINING in development; the client asked to
+   * keep the original page alongside it. These share the same backend
+   * permission strings as TRAINING — this alias lets the restored page keep
+   * its original `PERMISSIONS.ACTION_ANALYSIS.*` references unchanged.
+   */
+  ACTION_ANALYSIS: {
+    VIEW: 'view_action_analysis',
+    VIEW_CLICK_TRACKING: 'view_click_tracking',
+    VIEW_SCREEN_TIME: 'view_screen_time',
+    VIEW_ACTIVITY_HEATMAP: 'view_activity_heatmap',
+    VIEW_SCRIPT_ANALYTICS: 'view_script_analytics',
+    VIEW_TA_HISTORY: 'view_ta_history',
+    VIEW_TASK_HISTORY: 'view_task_history',
+    VIEW_PAYMENT_HISTORY: 'view_payment_history',
+    CREATE_SCORECARD: 'create_scorecard',
+    VIEW_SCORECARD: 'view_scorecard',
+    VIEW_MARKERS: 'view_markers',
+    VIEW_FEEDBACK: 'view_feedback',
+    VIEW_SCORE_DYNAMICS: 'view_score_dynamics',
+    VIEW_INBOX: 'view_inbox',
+    CREATE_ONE_ON_ONE: 'create_one_on_one',
+    SELECT_INBOX_SCOPE: 'select_inbox_scope',
   },
 
   /**
@@ -230,6 +275,17 @@ export const PERMISSIONS = {
     MANAGE_BADGES: 'manage_badges',
     VIEW_AUTO_FLAGS: 'view_auto_flags',
     MANAGE_CALL_LIBRARY: 'manage_call_library',
+    // KAN-749 — Trainings & Sessions surfaces (KAN-615 epic children)
+    VIEW_COURSES: 'view_courses',
+    MANAGE_COURSES: 'manage_courses',
+    VIEW_TRAININGS: 'view_trainings',
+    MANAGE_TRAININGS: 'manage_trainings',
+    VIEW_DRILLS: 'view_drills',
+    MANAGE_DRILLS: 'manage_drills',
+    VIEW_TESTS: 'view_tests',
+    MANAGE_TESTS: 'manage_tests',
+    VIEW_MATERIALS: 'view_materials',
+    MANAGE_MATERIALS: 'manage_materials',
   },
 
   /**
@@ -265,6 +321,15 @@ export const PERMISSIONS = {
   },
 
   /**
+   * Contact Tags (per-phone categorical metadata)
+   */
+  CONTACT_TAGS: {
+    MANAGE: 'manage_contact_tag_categories',
+    ASSIGN: 'assign_contact_tags',
+    ASSIGN_PROTECTED: 'assign_protected_contact_tags',
+  },
+
+  /**
    * Restructuring Category (5 permissions)
    * Per-transition gates for manual RR status changes. Each button in
    * the RR actions column checks its specific permission. Automated
@@ -277,6 +342,16 @@ export const PERMISSIONS = {
     TRANSITION_CANCELLED_TO_CONNECTED: 'rr_transition_cancelled_to_connected',
     DISCONNECT: 'rr_disconnect',
     COMPLETE: 'rr_complete',
+  },
+
+  /**
+   * UBKI Category (1 permission)
+   * Gates manual and bulk outbound submission of credit data to the
+   * UBKI credit bureau. The per-client opt-out toggle is gated by
+   * edit_clients (it is a client-record edit), not this permission.
+   */
+  UBKI: {
+    SUBMIT: 'submit_to_ubki',
   },
 } as const
 
@@ -327,12 +402,15 @@ export const PERMISSION_CATEGORIES = {
   TAGS: 'Tags',
   SELLERS: 'Sellers',
   SCORING_CONFIG: 'Scoring Configuration',
+  REPAYMENT_CONFIG: 'Repayment Configuration',
   TA_CHAINS: 'TA Chains',
   ACTION_ANALYSIS: 'Action Analysis',
   DOCUMENT_GENERATION: 'Document Generation',
   LEGAL_WORKPLACE: 'Lawyer Workplace',
   CONTACT_TYPES: 'Contact Types',
+  CONTACT_TAGS: 'Contact Tags',
   RESTRUCTURING: 'Restructuring',
+  UBKI: 'UBKI',
 } as const
 
 /**
@@ -383,6 +461,7 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   import_payments: 'Import payments from bank CSV files in bulk',
   export_clients: 'Export client and system data',
   manage_client_priority: 'Manually change client contact priority',
+  manage_primary_creditor_comments: 'Upload bulk sale notes and delete individual sale notes',
 
   // Users
   view_users: 'View user accounts',
@@ -419,6 +498,10 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   edit_scoring_config: 'Update scoring weights and priority thresholds',
   manage_seller_scoring_config: 'Manage seller-specific scoring configurations',
   view_scoring_config_history: 'View scoring configuration change history',
+
+  // Repayment Configuration (KAN-246)
+  view_repayment_config: 'View global repayment order and write-off rule configuration',
+  edit_repayment_config: 'Edit global repayment order, write-off rules, and allocation algorithm',
 
   // TA Chains
   delete_ta_chains: 'Delete TA Chains (refused if the chain has any recorded history)',
@@ -460,6 +543,18 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   manage_call_library:
     'Curate the training call library and assign learning plans (KAN-411 Feature 3.4)',
 
+  // Trainings & Sessions (KAN-749 — KAN-615 epic children)
+  view_courses: 'Browse the course catalogue and enrolled-course progress (KAN-750)',
+  manage_courses: 'Create / publish / archive courses and assign enrollments (KAN-750)',
+  view_trainings: 'Browse scheduled group training sessions (KAN-752)',
+  manage_trainings: 'Schedule / cancel group training sessions (KAN-752)',
+  view_drills: 'Browse drill exercises and attempts (KAN-751)',
+  manage_drills: 'Create drills and review / score attempts (KAN-751)',
+  view_tests: 'Browse the Tests surface (reserved)',
+  manage_tests: 'Manage the Tests surface (reserved)',
+  view_materials: 'Browse and download the materials library (KAN-616)',
+  manage_materials: 'Upload / edit / archive materials (KAN-616)',
+
   // Document Generation
   view_document_journal: 'View the journal of all generated and uploaded documents',
   view_document_templates: 'View the list of document templates',
@@ -478,6 +573,13 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   create_contact_types: 'Create new contact types (requires view permission)',
   edit_contact_types: 'Edit contact types and hide or restore them (requires view permission)',
 
+  // Contact Tags (per-phone categorical metadata)
+  manage_contact_tag_categories:
+    'Manage contact tag categories and values in Settings (create, edit, hide)',
+  assign_contact_tags: 'Assign and remove contact tags on client phone numbers',
+  assign_protected_contact_tags:
+    'Assign and remove protected contact tags (requires elevated permission)',
+
   // Restructuring — per-transition gates on the RR action buttons
   rr_transition_connected_to_violated:
     'Manually flip a Connected restructuring agreement to Violated (Mark Violated button)',
@@ -495,4 +597,7 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   cancel_writeoffs: 'Cancel an active write-off entry',
   bulk_writeoff_operations:
     'Upload a bulk write-off CSV — gates the bulk-import page (required alongside create_writeoffs)',
+
+  // UBKI — outbound credit-bureau submission
+  submit_to_ubki: 'Manually submit client credit data to the UBKI credit bureau (single and bulk)',
 }

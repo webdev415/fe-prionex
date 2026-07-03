@@ -4,7 +4,7 @@
  */
 
 import { useEffect } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import type { AxiosError } from 'axios'
 import { clientApi } from '../api/clientApi'
@@ -113,6 +113,38 @@ export function useClient(clientId: number, enabled = true) {
     enabled: enabled && !!clientId,
     staleTime: 30000,
   })
+}
+
+/**
+ * Resolve a set of client ids to display names, returning a Map<id, name>.
+ *
+ * Each id is fetched via the same `clientKeys.detail(id)` cache used by client
+ * detail pages, so names that are already loaded resolve instantly. Ids are
+ * de-duplicated by the caller's set; pass only the unique ids you need.
+ */
+export function useClientNames(clientIds: number[]): Map<number, string> {
+  const uniqueIds = Array.from(new Set(clientIds))
+  const results = useQueries({
+    queries: uniqueIds.map((id) => ({
+      queryKey: clientKeys.detail(id),
+      queryFn: () => clientApi.getClientById(id),
+      enabled: !!id,
+      staleTime: 5 * 60_000,
+    })),
+  })
+
+  const names = new Map<number, string>()
+  uniqueIds.forEach((id, i) => {
+    const data = results[i]?.data
+    if (data) {
+      const full = [data.last_name, data.first_name, data.middle_name]
+        .filter(Boolean)
+        .join(' ')
+        .trim()
+      if (full) names.set(id, full)
+    }
+  })
+  return names
 }
 
 /**
@@ -383,17 +415,31 @@ export function useClientPaymentsSection(clientId: number, enabled = true) {
  * Get client call/SMS history. Calls existing call and SMS service endpoints in parallel.
  * Maps backend responses to UI-expected shape for backward compatibility.
  */
-export function useClientCallSmsHistory(clientId: number, enabled = true) {
+export function useClientCallSmsHistory(clientId: number, enabled = true, showAllCalls = false) {
   return useQuery({
-    queryKey: clientKeys.callSmsHistory(clientId),
+    queryKey: [...clientKeys.callSmsHistory(clientId), { showAllCalls }],
     queryFn: async () => {
-      const [callsData, smsData] = await Promise.all([
+      const callsParams: { limit: number; from_date?: string } = { limit: 200 }
+      if (!showAllCalls) {
+        const sevenDaysAgo = new Date()
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+        callsParams.from_date = sevenDaysAgo.toISOString().split('T')[0]
+      }
+
+      const unfilteredCallsPromise = showAllCalls
+        ? Promise.resolve(null)
+        : callSmsApi
+            .getClientCalls(clientId, { limit: 1 })
+            .catch(() => ({ calls: [] as never[], total: 0 }))
+
+      const [callsData, smsData, unfilteredCalls] = await Promise.all([
         callSmsApi
-          .getClientCalls(clientId, { limit: 10 })
+          .getClientCalls(clientId, callsParams)
           .catch(() => ({ calls: [] as never[], total: 0 })),
         callSmsApi
           .getClientSms(clientId, { limit: 10 })
           .catch(() => ({ messages: [] as never[], total: 0 })),
+        unfilteredCallsPromise,
       ])
 
       // Map calls to UI shape
@@ -463,7 +509,14 @@ export function useClientCallSmsHistory(clientId: number, enabled = true) {
         return dateB.getTime() - dateA.getTime()
       })
 
-      return { calls: mappedCalls, sms: mappedSms, all }
+      return {
+        calls: mappedCalls,
+        sms: mappedSms,
+        all,
+        callsTotal: showAllCalls
+          ? (callsData.total ?? mappedCalls.length)
+          : (unfilteredCalls?.total ?? mappedCalls.length),
+      }
     },
     enabled: enabled && clientId > 0,
     staleTime: 30000,

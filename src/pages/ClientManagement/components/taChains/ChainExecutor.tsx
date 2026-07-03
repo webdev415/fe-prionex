@@ -42,7 +42,12 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/DropdownMenu'
 import { Icons } from '@/lib/icons'
-import { usePinTAChain, useTAChains, useUnpinTAChain } from '@/features/taChains/hooks/useTAChains'
+import {
+  usePinTAChain,
+  useTAChain,
+  useTAChains,
+  useUnpinTAChain,
+} from '@/features/taChains/hooks/useTAChains'
 import { useTargetActions } from '@/features/targetActions/hooks/useTargetActions'
 import type { TargetAction, TADropdownValueOut } from '@/features/targetActions/api/types'
 import { useTags } from '@/features/tags/hooks/useTags'
@@ -358,11 +363,21 @@ export function ChainExecutor({
     }
   }
 
+  // The active instance's chain may be missing from `chainsData` — that list
+  // is filtered by department and only used to populate the manual-chain
+  // picker. An auto-launched (trigger-fired) chain can be automatic and/or
+  // outside the operator's department, so we also fetch it directly by id.
+  // Without this fallback the wizard renders "Pick a chain above to continue"
+  // and the operator can't complete an auto-started chain (KAN-396 / debt_status).
+  const { data: activeChainById } = useTAChain(activeInstance?.chain_id ?? null)
   const activeChain = useMemo(() => {
-    if (activeInstance)
-      return (chainsData?.items ?? []).find((c) => c.id === activeInstance.chain_id) ?? null
-    return null
-  }, [activeInstance, chainsData])
+    if (!activeInstance) return null
+    return (
+      (chainsData?.items ?? []).find((c) => c.id === activeInstance.chain_id) ??
+      activeChainById ??
+      null
+    )
+  }, [activeInstance, chainsData, activeChainById])
 
   // Steps
   const steps = useMemo<TAChainStep[]>(() => activeChain?.steps ?? [], [activeChain])
@@ -393,7 +408,29 @@ export function ChainExecutor({
     return debts.filter((d) => (d.status ?? '').toLowerCase() !== 'closed')
   }, [debts, currentStep?.show_closed_credits])
 
-  const isLastStep = (activeInstance?.current_step_order ?? 1) >= steps.length
+  // Steps auto-filled by a debt-status auto-start (Credit/Date) carry an
+  // ``autofilled`` marker in step_data. The operator never stops on them — the
+  // server skips them on advance — so they must not count toward "is this the
+  // last step". Otherwise a trailing auto-filled Date step would hide the
+  // Finalize button on the operator's real last (manual) step.
+  const autofilledOrders = useMemo<Set<number>>(() => {
+    const sd = activeInstance?.step_data ?? {}
+    const out = new Set<number>()
+    for (const [k, v] of Object.entries(sd)) {
+      if (v && typeof v === 'object' && (v as { autofilled?: boolean }).autofilled) {
+        const n = parseInt(k, 10)
+        if (!Number.isNaN(n)) out.add(n)
+      }
+    }
+    return out
+  }, [activeInstance?.step_data])
+
+  // Last step for the operator = no MANUAL step remains after the current one.
+  // Auto-filled Credit/Date steps beyond the current pointer don't count.
+  const currentStepOrderVal = activeInstance?.current_step_order ?? 1
+  const isLastStep = !steps.some(
+    (s) => s.step_order > currentStepOrderVal && !autofilledOrders.has(s.step_order)
+  )
 
   const chainForBuilder =
     activeChain?.id ?? (selectedChainId ? parseInt(selectedChainId, 10) : null)

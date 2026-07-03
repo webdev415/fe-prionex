@@ -139,6 +139,169 @@ export interface InteractionMonitoringResponse {
   page_size: number
 }
 
+// --- Promises and Callbacks sub-tab (KAN-733) ---
+
+export type PromiseCallbackSortBy = 'date' | 'amount'
+
+export type PromiseCallbackStatus = 'paid' | 'overdue' | 'pending'
+
+export interface PromiseCallbackFilters {
+  user_ids?: number[]
+  // KAN-731 Phase B server-side team-scope resolvers (intersected by the BE).
+  department_id?: number
+  group_id?: number
+  period?: CallMonitoringPeriod
+  from_datetime?: string
+  to_datetime?: string
+  sort_by?: PromiseCallbackSortBy
+  sort_dir?: InteractionMonitoringSortDir
+  page?: number
+  page_size?: number
+}
+
+export interface PromiseCallbackItem extends InteractionMonitoringItem {
+  promise_fulfilled: boolean | null
+  // Effective due date for the "Термін оплати" column: the promise date when
+  // present, else `follow_up_date` for callback-only rows.
+  payment_term_date: string | null
+  status: PromiseCallbackStatus
+}
+
+export interface PromiseCallbackSummaryCards {
+  total_promises_amount: string
+  paid_amount: string
+  overdue_count: number
+  pending_amount: string
+}
+
+export interface PromisesAndCallbacksResponse {
+  summary_cards: PromiseCallbackSummaryCards
+  items: PromiseCallbackItem[]
+  total: number
+  page: number
+  page_size: number
+}
+
+// --- Leaks sub-tab (KAN-735) ---
+
+export type LeakSortBy = 'date' | 'amount'
+
+// Request-only filter ('all' shows both classes); the item itself is one of
+// the two concrete states below.
+export type LeakFollowUpStatusFilter = 'all' | 'not_followed_up' | 'followed_up'
+export type LeakFollowUpStatus = 'followed_up' | 'not_followed_up'
+
+export interface LeakFilters {
+  user_ids?: number[]
+  // KAN-731 Phase B server-side team-scope resolvers (intersected by the BE).
+  department_id?: number
+  group_id?: number
+  period?: CallMonitoringPeriod
+  from_datetime?: string
+  to_datetime?: string
+  // Window (days, from the promise due date) within which a later call counts
+  // as a follow-up. KAN-735 Block 3 — default 5 until the settings ticket ships.
+  lookback_days?: number
+  follow_up_status?: LeakFollowUpStatusFilter
+  sort_by?: LeakSortBy
+  sort_dir?: InteractionMonitoringSortDir
+  page?: number
+  page_size?: number
+}
+
+export interface LeakItem {
+  id: number
+  // When the operator logged the overdue promise (the "escalation").
+  escalation_date: string
+  operator_id: number | null
+  operator_name: string | null
+  client_id: number
+  client_full_name: string | null
+  agreement_id: number | null
+  contract_number: string | null
+  promise_amount: string | null
+  promise_date: string | null
+  follow_up_status: LeakFollowUpStatus
+  // Earliest later call with the same client inside the lookback window; null
+  // ⇒ "No call".
+  last_call_after_escalation_at: string | null
+}
+
+export interface LeakKpis {
+  total_escalations: number
+  not_followed_up: number
+  followed_up: number
+}
+
+export interface LeaksResponse {
+  kpis: LeakKpis
+  items: LeakItem[]
+  total: number
+  page: number
+  page_size: number
+}
+
+// --- Third Parties sub-tab (KAN-736) ---
+
+export type ThirdPartySortBy = 'date' | 'duration'
+
+// Mock-vocabulary result chips ('all' is request-only). KAN-736 §3.
+export type ThirdPartyResultChip = 'promise' | 'refusal' | 'missed_call' | 'will_pass_on'
+export type ThirdPartyResultFilter = 'all' | ThirdPartyResultChip
+// Server-derived; the FE collapses this onto two visual states (Yes / Did not return).
+export type ThirdPartyReturnedStatus = 'yes' | 'will_pass' | 'did_not_pass'
+
+export interface ThirdPartyFilters {
+  user_ids?: number[]
+  department_id?: number
+  group_id?: number
+  period?: CallMonitoringPeriod
+  from_datetime?: string
+  to_datetime?: string
+  result_filter?: ThirdPartyResultFilter
+  // Window (hours, from the third-party call) for "returned to client". Default 24.
+  returned_window_hours?: number
+  sort_by?: ThirdPartySortBy
+  sort_dir?: InteractionMonitoringSortDir
+  page?: number
+  page_size?: number
+}
+
+export interface ThirdPartyItem {
+  id: number
+  datetime: string
+  operator_id: number | null
+  operator_name: string | null
+  primary_client_id: number
+  primary_client_full_name: string | null
+  contacted_phone: string | null
+  contact_relationship: string | null
+  duration_seconds: number | null
+  result_code: string | null
+  result_chip: ThirdPartyResultChip | null
+  returned_to_client: ThirdPartyReturnedStatus | null
+  returned_at: string | null
+  // UUID for inline recording playback; null in v1 (KAN-736 §4, deferred).
+  call_id: string | null
+}
+
+export interface ThirdPartyKpis {
+  total_calls: number
+  returned_to_client: number
+  did_not_return: number
+  positive_count: number
+  refusal_count: number
+  will_pass_count: number
+}
+
+export interface ThirdPartyResponse {
+  kpis: ThirdPartyKpis
+  items: ThirdPartyItem[]
+  total: number
+  page: number
+  page_size: number
+}
+
 export type TaskPriority = 'low' | 'normal' | 'high' | 'urgent' | 'critical'
 
 export type TaskStatus =
@@ -359,4 +522,59 @@ export interface PaymentMonitoringResponse {
   total: number
   page: number
   limit: number
+}
+
+// ---------------------------------------------------------------------------
+// Successful Closures — Action Analysis sub-tab (KAN-734)
+// Trainer-facing list of VERIFIED payments. summary_cards + closure_leader come
+// from payment-service; the Funnel + conversion % are composed on the FE from
+// the interaction-monitoring + promises endpoints (those counts live in
+// client-service).
+// ---------------------------------------------------------------------------
+
+export type ClosureSortBy = 'date' | 'amount'
+
+export interface ClosureFilters {
+  period?: CallMonitoringPeriod
+  from_datetime?: string
+  to_datetime?: string
+  /** Operator scope — verified payments where assigned_user_id is in this list. */
+  user_ids?: number[]
+  sort_by?: ClosureSortBy
+  sort_dir?: InteractionMonitoringSortDir
+  page?: number
+  page_size?: number
+}
+
+export interface ClosureItem {
+  payment_date: string // YYYY-MM-DD — "Дата/Час"
+  operator_id: number | null
+  operator_name: string | null // "Оператор"
+  client_id: number
+  client_name: string | null // "Клієнт"
+  debt_id: number | null
+  contract_number: string | null // "Угода"
+  amount: string // "Сума"
+  payment_confirmation_date: string | null // "Дата підтвердження"
+  status: string // "Статус" — constant 'verified' for v1
+}
+
+export interface ClosureSummaryCards {
+  successful_closures_count: number
+  total_amount: string
+}
+
+export interface ClosureLeader {
+  operator_id: number
+  operator_name: string | null
+  closures_count: number
+}
+
+export interface ClosuresResponse {
+  summary_cards: ClosureSummaryCards
+  closure_leader: ClosureLeader | null
+  items: ClosureItem[]
+  total: number
+  page: number
+  page_size: number
 }

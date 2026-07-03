@@ -62,9 +62,23 @@ export interface DebtDetail {
   total_paid_amount?: string | null
   total_to_return?: string | null
 
+  // KAN-246 — per-component write-off enablement from the repayment-rule
+  // config. The Write-off modal hides components whose flag is false.
+  // Keyed by the frontend accrual names (penalty/fine). Absent → treat as
+  // enabled (fail-open), matching the backend default.
+  principal_writeoff_enabled?: boolean
+  interest_writeoff_enabled?: boolean
+  penalty_writeoff_enabled?: boolean
+  fine_writeoff_enabled?: boolean
+  commission_writeoff_enabled?: boolean
+
   // Legacy TABLE460.f53 — total amount eligible for return after sale.
   // Surfaced on the loans table only when it differs from remaining_debt_amount.
   legacy_f53?: string | null
+
+  // UBKI outbound submission state (credit bureau)
+  sent_to_credit_bureau?: boolean
+  credit_bureau_sent_date?: string | null
 
   // Linked factoring agreement (if any). Surfaces the legal_name +
   // previous_lender + agreement purchase date to the client-detail
@@ -187,6 +201,10 @@ export interface Client {
     description?: string | null
     visibility?: string | null
   }>
+
+  // UBKI outbound submission opt-out (credit bureau).
+  // When true, this client's data is never sent to UBKI (manual or scheduled).
+  do_not_send_to_ubki?: boolean
 }
 
 export interface ClientDetail extends Client {
@@ -224,6 +242,7 @@ export interface UpdateClientRequest {
   family_members_count?: number | null
   income_level?: string | null
   tax_id?: string
+  do_not_send_to_ubki?: boolean
 }
 
 export interface UpdateEmploymentRequest {
@@ -321,11 +340,6 @@ export interface GetClientsParams {
   interaction_date_from?: string // YYYY-MM-DD format
   interaction_date_to?: string // YYYY-MM-DD format
 
-  // Filter: Last-interaction-result (multi-select). Comma-separated
-  // interaction_result IDs. Narrows clients to those whose most recent
-  // interaction has one of these result ids.
-  last_interaction_result_ids?: string
-
   // Filter: TA Chain + Steps — narrows to clients with at least one
   // ta_interaction in this chain, optionally restricted to interactions
   // that carry data for one of the picked steps. ``step_ids`` is keyed
@@ -346,6 +360,7 @@ export interface GetClientsParams {
   // Filter: Assignment Date (date of latest assignment record for current employee)
   assignment_date_from?: string // YYYY-MM-DD format
   assignment_date_to?: string // YYYY-MM-DD format
+  tz?: string
 
   // Filter: Status
   status?: string // Comma-separated statuses (e.g., "active,new")
@@ -430,6 +445,7 @@ export interface ClientProfileResponse {
   is_fraudster: boolean
   is_military: boolean
   has_nbu_complaint: boolean
+  do_not_send_to_ubki?: boolean
   sale_notes?: string | null
   responsible_employee_id?: number | null
   responsible_employee_name?: string | null
@@ -463,8 +479,31 @@ export interface ClientProfileResponse {
     comment?: string | null
     created_at?: string | null
     added_by_user_name?: string | null
+    updated_at?: string | null
+    updated_by_user_name?: string | null
     default_call_line?: string | null
     spam_allowed?: boolean | null
+    contact_tags?: Array<{
+      value_id: number
+      category_id: number
+      category_name: string
+      category_code: string
+      selection_type: 'single' | 'multi'
+      is_protected: boolean
+      is_system: boolean
+      name: string
+      color?: string | null
+      blocks_calls: boolean
+      blocks_sms: boolean
+      blocks_spam: boolean
+      can_edit: boolean
+    }>
+    blocking?: {
+      blocks_calls: boolean
+      blocks_sms: boolean
+      blocks_spam: boolean
+      reasons: string[]
+    }
   }>
   addresses: Array<{
     id: number
@@ -491,8 +530,31 @@ export interface ClientProfileResponse {
     label?: string | null
     created_at?: string | null
     added_by_user_name?: string | null
+    updated_at?: string | null
+    updated_by_user_name?: string | null
     default_call_line: string
     spam_allowed: boolean
+    contact_tags?: Array<{
+      value_id: number
+      category_id: number
+      category_name: string
+      category_code: string
+      selection_type: 'single' | 'multi'
+      is_protected: boolean
+      is_system: boolean
+      name: string
+      color?: string | null
+      blocks_calls: boolean
+      blocks_sms: boolean
+      blocks_spam: boolean
+      can_edit: boolean
+    }>
+    blocking?: {
+      blocks_calls: boolean
+      blocks_sms: boolean
+      blocks_spam: boolean
+      reasons: string[]
+    }
   }>
   comments: Array<{
     id: number
@@ -692,9 +754,9 @@ export interface PaymentResponse {
   notes?: string | null
   internal_notes?: string | null
   recorded_by_user_id: number
-  recorded_by_username?: string | null
+  recorded_by_full_name?: string | null
   verified_by_user_id?: number | null
-  verified_by_username?: string | null
+  verified_by_full_name?: string | null
   assigned_user_id?: number | null
   assigned_user_full_name?: string | null
   debt_contract_number?: string | null

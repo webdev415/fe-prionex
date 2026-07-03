@@ -212,23 +212,16 @@ function countConfirmedParameters(
 }
 
 function resolveInboxSenderTitle(
-  item: Pick<
-    LegalInboxItem,
-    'from_address' | 'suggested_client_id' | 'suggested_client_source' | 'suggested_client_name'
-  >,
+  item: Pick<LegalInboxItem, 'from_address' | 'suggested_client_id' | 'suggested_client_name'>,
   context?: LegalLookupContext
 ): { senderName: string; senderEmail: string } {
   const { email } = parseEmailAddress(item.from_address)
   const senderEmail = email.trim() || item.from_address.trim()
 
-  const matchedBySenderEmail =
-    item.suggested_client_source === 'sender_email' && item.suggested_client_id != null
-
-  if (matchedBySenderEmail) {
-    const clientId = item.suggested_client_id
+  if (item.suggested_client_id != null) {
     const clientName =
       item.suggested_client_name?.trim() ||
-      (clientId != null ? context?.clientsById?.get(clientId)?.name : undefined) ||
+      context?.clientsById?.get(item.suggested_client_id)?.name ||
       null
     if (clientName) {
       return { senderName: clientName, senderEmail }
@@ -256,7 +249,7 @@ export function mapInboxItemToLetterListItem(
     subject: item.subject?.trim() || '(no subject)',
     mailbox: resolveMailboxLabel(
       item.mailbox_id,
-      context?.mailboxLabelById?.get(item.mailbox_id ?? '')
+      item.mailbox_email ?? context?.mailboxLabelById?.get(item.mailbox_id ?? '')
     ),
     letterType: letterType.slug,
     letterTypeLabel: letterType.label,
@@ -458,9 +451,8 @@ export function mapMessageToLetterDetail(
       const attachmentSource =
         item.attachments ?? (item.id === message.id ? message.attachments : undefined)
       const mapped = mapThreadMessageToUi(item, { toMailbox })
-      // Mirror the inbox list: if this message's sender email resolves to a
-      // known client (the letter's sender, matched by sender_email), show the
-      // client name; otherwise keep the email address.
+      // Mirror the inbox list: when the thread message is the same incoming sender,
+      // reuse the resolved client display name from the list item mapper.
       const senderName =
         mapped.direction === 'incoming' &&
         mapped.senderEmail.trim().toLowerCase() === listItem.senderEmail.trim().toLowerCase()
@@ -569,7 +561,8 @@ export function filterInboxByMailboxTab(
 export function buildLegalLookupContext(
   letterTypes: LegalLetterType[] | undefined,
   lawyers: LegalLawyer[] | undefined,
-  clients?: LegalClientLookup[]
+  clients?: LegalClientLookup[],
+  mailboxes?: Array<{ id: string; email: string }>
 ): LegalLookupContext {
   const letterTypesById = new Map<string, LegalLetterType>()
   for (const letterType of letterTypes ?? []) {
@@ -588,5 +581,12 @@ export function buildLegalLookupContext(
     clientsById.set(client.id, client)
   }
 
-  return { letterTypesById, lawyersByUserId, lawyersById, clientsById }
+  const mailboxLabelById = new Map<string, string>()
+  for (const mailbox of mailboxes ?? []) {
+    if (mailbox.email?.trim()) {
+      mailboxLabelById.set(mailbox.id, mailbox.email.trim())
+    }
+  }
+
+  return { letterTypesById, lawyersByUserId, lawyersById, clientsById, mailboxLabelById }
 }

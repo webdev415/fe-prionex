@@ -7,7 +7,7 @@
 import { useState, useEffect, useMemo, useRef, useCallback, useTransition } from 'react'
 import { useTranslation } from 'react-i18next'
 import { intlLocaleForUiLanguage } from '@/lib/i18n'
-import { convertUTCToUserTimezone, formatIsoDate } from '@/lib/formatters'
+import { convertUTCToUserTimezone, formatClientFullName, formatIsoDate } from '@/lib/formatters'
 import { getDateStringInTimezone } from '@/lib/dateUtils'
 import { useAuthStore } from '@/stores/authStore'
 import { useParams, useNavigate } from 'react-router-dom'
@@ -52,7 +52,7 @@ import {
   useVerifyPayment,
   useCancelPayment,
   useEditPayment,
-  useReassignPaymentEmployee,
+  useReassignPaymentAssignedUser,
   useExportPaymentsCSV,
   usePayment,
   useGenerateReceipt,
@@ -329,9 +329,7 @@ export function PaymentHistoryPage() {
   const client = useMemo(() => {
     if (!apiClient) return null
 
-    const fullName = [apiClient.first_name, apiClient.middle_name, apiClient.last_name]
-      .filter(Boolean)
-      .join(' ')
+    const fullName = formatClientFullName(apiClient)
 
     return {
       id: apiClient.id,
@@ -368,9 +366,7 @@ export function PaymentHistoryPage() {
   const paymentHistory = useMemo(() => {
     if (!paymentHistoryData || !apiClient) return null
 
-    const fullName = [apiClient.first_name, apiClient.middle_name, apiClient.last_name]
-      .filter(Boolean)
-      .join(' ')
+    const fullName = formatClientFullName(apiClient)
 
     const frontendPayments = paymentHistoryData.payments.map(convertBackendPayment)
 
@@ -444,7 +440,7 @@ export function PaymentHistoryPage() {
   const { mutate: exportPaymentsMutation } = useExportPaymentsCSV()
   const { mutate: generateReceiptMutation } = useGenerateReceipt()
   const { mutate: reassignEmployeeMutation, isPending: isReassigning } =
-    useReassignPaymentEmployee()
+    useReassignPaymentAssignedUser()
 
   const canReassignEmployee = useHasPermission(PERMISSIONS.CLIENTS.VERIFY_PAYMENT)
   const [isReassignModalOpen, setIsReassignModalOpen] = useState(false)
@@ -1824,7 +1820,8 @@ export function PaymentHistoryPage() {
             paymentDate: paymentDetails
               ? paymentDetails.status === 'verified' && paymentDetails.verified_at
                 ? paymentDetails.verified_at
-                : (paymentDetails.recorded_at ?? paymentDetails.payment_date)
+                : // KAN-782: payment_date can be null on legacy rows → "—"
+                  (paymentDetails.recorded_at ?? paymentDetails.payment_date ?? '—')
               : selectedPayment.date,
             method: (() => {
               const rawMethod = paymentDetails
@@ -1857,9 +1854,9 @@ export function PaymentHistoryPage() {
               : Math.max(0, paymentHistory.totalDebt - selectedPayment.amount),
             // Audit trail from backend, fallback to 'Unknown'
             // Format dates consistently with payment date (MM/DD/YYYY)
-            createdBy: paymentDetails?.recorded_by_username || 'Unknown',
+            createdBy: paymentDetails?.assigned_user_full_name || 'Unknown',
             createdAt: paymentDetails?.recorded_at || 'Unknown',
-            verifiedBy: paymentDetails?.verified_by_username,
+            verifiedBy: paymentDetails?.verified_by_full_name || undefined,
             verifiedAt: paymentDetails?.verified_at || undefined,
             cancelledBy:
               cancelledByUser?.username ||
@@ -1909,12 +1906,12 @@ export function PaymentHistoryPage() {
         <ReassignPaymentEmployeeModal
           open={isReassignModalOpen}
           onClose={() => setIsReassignModalOpen(false)}
-          currentEmployeeName={paymentDetails?.recorded_by_username || 'Unknown'}
-          currentUserId={paymentDetails?.recorded_by_user_id ?? null}
+          currentEmployeeName={paymentDetails?.assigned_user_full_name || 'Unknown'}
+          currentUserId={paymentDetails?.assigned_user_id ?? null}
           isSubmitting={isReassigning}
           onConfirm={(newUserId) => {
             reassignEmployeeMutation(
-              { paymentId: backendPayment.id, request: { recorded_by_user_id: newUserId } },
+              { paymentId: backendPayment.id, request: { assigned_user_id: newUserId } },
               { onSuccess: () => setIsReassignModalOpen(false) }
             )
           }}

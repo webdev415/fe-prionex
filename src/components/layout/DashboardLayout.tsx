@@ -19,6 +19,7 @@ import type { Permission } from '@/constants/permissions'
 import { SearchResults, type SearchResult } from '@/components/ui/SearchResults'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { cn } from '@/lib/utils'
+import { formatClientFullName } from '@/lib/formatters'
 import { Icons } from '@/lib/icons'
 import { useCallStore } from '@/stores/callStore'
 import { CallDialogModal } from '@/pages/ClientManagement/components/CallDialogModal'
@@ -591,7 +592,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         // Transform backend response to frontend SearchResult format
         const results: SearchResult[] = response.items.map((item) => ({
           id: item.id,
-          name: item.full_name,
+          name: formatClientFullName(item),
           debt: item.total_debt,
           phone: (item.phones ?? []).join(', '),
           email: item.email_primary ?? '',
@@ -726,6 +727,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             icon: 'file-import',
             requiredPermission: PERMISSIONS.WRITEOFFS.BULK,
           },
+          {
+            path: '/dashboard/import/bulk-sale-notes-import',
+            label: t('navigation.bulkSaleNotesImport', 'Bulk Sales Note Import'),
+            icon: 'activity-01',
+            requiredPermission: PERMISSIONS.SALE_NOTES.MANAGE,
+          },
         ],
       },
       {
@@ -759,6 +766,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         requiredPermissions: [PERMISSIONS.LEGAL_WORKPLACE.VIEW, PERMISSIONS.SYSTEM.MANAGE_SETTINGS],
         mode: 'any' as const,
         badge: legalUnprocessedCount > 0 ? legalUnprocessedCount : undefined,
+      },
+      {
+        path: '/dashboard/action-analysis',
+        icon: 'analytics-01',
+        label: t('navigation.actionAnalysis'),
+        requiredPermission: PERMISSIONS.ACTION_ANALYSIS.VIEW,
       },
       {
         path: '/dashboard/team-management',
@@ -825,7 +838,11 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         path: '/dashboard/system-settings',
         icon: 'setting-07',
         label: t('navigation.systemSettings', 'System Settings'),
-        requiredPermissions: [PERMISSIONS.SYSTEM.MANAGE_SETTINGS, PERMISSIONS.CONTACT_TYPES.VIEW],
+        requiredPermissions: [
+          PERMISSIONS.SYSTEM.MANAGE_SETTINGS,
+          PERMISSIONS.CONTACT_TYPES.VIEW,
+          PERMISSIONS.REPAYMENT_CONFIG.VIEW,
+        ],
         mode: 'any' as const,
         subItems: [
           {
@@ -841,10 +858,22 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             requiredPermission: PERMISSIONS.CONTACT_TYPES.VIEW,
           },
           {
+            path: '/dashboard/system-settings/contact-tags',
+            label: t('navigation.contactTags', 'Contact Tags'),
+            icon: 'tag-01',
+            requiredPermission: PERMISSIONS.CONTACT_TAGS.MANAGE,
+          },
+          {
             path: '/dashboard/system-settings/scoring-configuration',
             label: t('navigation.scoringConfiguration'),
             icon: 'chart-01',
             requiredPermission: PERMISSIONS.SCORING_CONFIG.VIEW,
+          },
+          {
+            path: '/dashboard/system-settings/repayment-configuration',
+            label: t('navigation.repaymentConfiguration'),
+            icon: 'chart-01',
+            requiredPermission: PERMISSIONS.REPAYMENT_CONFIG.VIEW,
           },
           {
             path: '/dashboard/system-settings/sms-templates',
@@ -875,6 +904,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               PERMISSIONS.DOCUMENT_GENERATION.DELETE_TEMPLATES,
             ],
             mode: 'any' as const,
+          },
+          {
+            path: '/dashboard/system-settings/ip-whitelist',
+            label: t('navigation.ipWhitelist', 'IP Whitelist'),
+            icon: 'sliders-horizontal',
+            requiredPermission: PERMISSIONS.USERS.EDIT,
           },
           {
             path: '/dashboard/system-settings/rr-notifications',

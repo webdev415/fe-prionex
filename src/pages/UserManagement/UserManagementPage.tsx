@@ -5,7 +5,7 @@
  * Integrated with real API using React Query.
  */
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
@@ -20,10 +20,13 @@ import { EditUserModal } from './components/EditUserModal'
 import ChangeStatusModal from './components/ChangeStatusModal'
 import { ResetPasswordConfirmModal } from './components/ResetPasswordConfirmModal'
 import { AdminToggleTwoFactorModal } from './components/AdminToggleTwoFactorModal'
+import { UnlockAccountModal } from './components/UnlockAccountModal'
+import { GoogleAuthenticatorStatusIcon } from './components/GoogleAuthenticatorStatusIcon'
 import { UserSearchBar } from './components/UserSearchBar'
-import type { ApiUser, UserSearchField } from '@/features/users/types'
+import { UserFiltersBar } from './components/UserFiltersBar'
+import type { ApiUser, UserSearchField, UserSortOrder } from '@/features/users/types'
 import { Icons } from '@/lib/icons'
-import { DataTable, type Column } from '@/components/ui/DataTable'
+import { DataTable, type Column, type SortConfig } from '@/components/ui/DataTable'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch'
 import { Pagination } from '@/components/ui/Pagination'
@@ -37,9 +40,23 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/DropdownMenu'
+import { TooltipProvider } from '@/components/ui/Tooltip'
+
+import {
+  ALL_FILTER_VALUE,
+  DEFAULT_USER_FILTERS,
+  DEFAULT_USER_SORT_BY,
+  DEFAULT_USER_SORT_ORDER,
+  DEFAULT_USER_STATUS_FILTER,
+  statusFilterToApiStatus,
+  type UserFilterState,
+} from './lib/userFilterDefaults'
 
 const DEFAULT_PAGE_SIZE = 10
 const DEFAULT_SEARCH_FIELD: UserSearchField = 'full_name'
+
+const isUserLocked = (u: ApiUser): boolean =>
+  !!u.locked_until && new Date(u.locked_until) > new Date()
 
 export function UserManagementPage() {
   const { t } = useTranslation('common')
@@ -56,20 +73,63 @@ export function UserManagementPage() {
     { debounce: 0 }
   )
 
+  // URL state for filters and sort
+  const [roleFilter, setRoleFilter] = useURLState<number>('role', ALL_FILTER_VALUE, {
+    debounce: 0,
+  })
+  const [projectFilter, setProjectFilter] = useURLState<number>('project', ALL_FILTER_VALUE, {
+    debounce: 0,
+  })
+  const [departmentFilter, setDepartmentFilter] = useURLState<number>(
+    'department',
+    ALL_FILTER_VALUE,
+    { debounce: 0 }
+  )
+  const [groupFilter, setGroupFilter] = useURLState<number>('group', ALL_FILTER_VALUE, {
+    debounce: 0,
+  })
+  const [statusFilter, setStatusFilter] = useURLState<UserFilterState['statusFilter']>(
+    'status',
+    DEFAULT_USER_STATUS_FILTER,
+    { debounce: 0 }
+  )
+  const [sortBy, setSortBy] = useURLState<string>('sort_by', DEFAULT_USER_SORT_BY, {
+    debounce: 0,
+  })
+  const [sortOrder, setSortOrder] = useURLState<UserSortOrder>(
+    'sort_order',
+    DEFAULT_USER_SORT_ORDER,
+    { debounce: 0 }
+  )
+
   // Add persistence for state
-  useAutoPersistedState(
+  const { clear: clearPersistedState } = useAutoPersistedState(
     'user-management-state',
     {
       currentPage,
       pageSize,
       searchQuery,
       searchField,
+      roleFilter,
+      projectFilter,
+      departmentFilter,
+      groupFilter,
+      statusFilter,
+      sortBy,
+      sortOrder,
     },
     {
       currentPage: setCurrentPage,
       pageSize: setPageSize,
       searchQuery: setSearchQuery,
       searchField: setSearchField,
+      roleFilter: setRoleFilter,
+      projectFilter: setProjectFilter,
+      departmentFilter: setDepartmentFilter,
+      groupFilter: setGroupFilter,
+      statusFilter: setStatusFilter,
+      sortBy: setSortBy,
+      sortOrder: setSortOrder,
     }
   )
 
@@ -82,6 +142,7 @@ export function UserManagementPage() {
   const [openDropdownUserId, setOpenDropdownUserId] = useState<number | null>(null)
   const [resetPasswordUser, setResetPasswordUser] = useState<ApiUser | null>(null)
   const [toggleTwoFactorUser, setToggleTwoFactorUser] = useState<ApiUser | null>(null)
+  const [unlockUser, setUnlockUser] = useState<ApiUser | null>(null)
   const [searchParams, setSearchParams] = useSearchParams()
 
   // Deep-link: open a user's detail when arrived with ?user_id=<id> (e.g. from
@@ -114,13 +175,37 @@ export function UserManagementPage() {
     return () => window.removeEventListener('resize', handleResize)
   }, [openDropdownUserId])
 
-  // Fetch users with pagination and search
-  const { data, isLoading, isError, error } = useUsers({
-    page: currentPage,
-    page_size: pageSize,
-    search: searchQuery.trim() || undefined,
-    search_field: searchQuery.trim() ? searchField : undefined,
-  })
+  // Fetch users with pagination, search, filters, and sort
+  const userListParams = useMemo(
+    () => ({
+      page: currentPage,
+      page_size: pageSize,
+      search: searchQuery.trim() || undefined,
+      search_field: searchQuery.trim() ? searchField : undefined,
+      status: statusFilterToApiStatus(statusFilter),
+      role_id: roleFilter > 0 ? roleFilter : undefined,
+      project_id: projectFilter > 0 ? projectFilter : undefined,
+      department_id: departmentFilter > 0 ? departmentFilter : undefined,
+      group_id: groupFilter > 0 ? groupFilter : undefined,
+      sort_by: sortBy as UserFilterState['sortBy'],
+      sort_order: sortOrder,
+    }),
+    [
+      currentPage,
+      pageSize,
+      searchQuery,
+      searchField,
+      statusFilter,
+      roleFilter,
+      projectFilter,
+      departmentFilter,
+      groupFilter,
+      sortBy,
+      sortOrder,
+    ]
+  )
+
+  const { data, isLoading, isError, error } = useUsers(userListParams)
 
   const users = data?.users || []
   const totalUsers = data?.pagination.total_count || 0
@@ -220,6 +305,81 @@ export function UserManagementPage() {
     [setSearchQuery, setCurrentPage]
   )
 
+  const filterState = useMemo<UserFilterState>(
+    () => ({
+      roleId: roleFilter,
+      projectId: projectFilter,
+      departmentId: departmentFilter,
+      groupId: groupFilter,
+      statusFilter,
+      sortBy: sortBy as UserFilterState['sortBy'],
+      sortOrder,
+    }),
+    [roleFilter, projectFilter, departmentFilter, groupFilter, statusFilter, sortBy, sortOrder]
+  )
+
+  const sortConfig = useMemo<SortConfig>(
+    () => ({
+      key: sortBy,
+      order: sortOrder,
+    }),
+    [sortBy, sortOrder]
+  )
+
+  const handleFilterChange = useCallback(
+    (next: Partial<UserFilterState>) => {
+      if (next.roleId !== undefined) setRoleFilter(next.roleId)
+      if (next.projectId !== undefined) setProjectFilter(next.projectId)
+      if (next.departmentId !== undefined) setDepartmentFilter(next.departmentId)
+      if (next.groupId !== undefined) setGroupFilter(next.groupId)
+      if (next.statusFilter !== undefined) setStatusFilter(next.statusFilter)
+      if (next.sortBy !== undefined) setSortBy(next.sortBy)
+      if (next.sortOrder !== undefined) setSortOrder(next.sortOrder)
+      setCurrentPage(1)
+    },
+    [
+      setRoleFilter,
+      setProjectFilter,
+      setDepartmentFilter,
+      setGroupFilter,
+      setStatusFilter,
+      setSortBy,
+      setSortOrder,
+      setCurrentPage,
+    ]
+  )
+
+  const handleResetFilters = useCallback(() => {
+    setRoleFilter(DEFAULT_USER_FILTERS.roleId)
+    setProjectFilter(DEFAULT_USER_FILTERS.projectId)
+    setDepartmentFilter(DEFAULT_USER_FILTERS.departmentId)
+    setGroupFilter(DEFAULT_USER_FILTERS.groupId)
+    setStatusFilter(DEFAULT_USER_FILTERS.statusFilter)
+    setSortBy(DEFAULT_USER_FILTERS.sortBy)
+    setSortOrder(DEFAULT_USER_FILTERS.sortOrder)
+    setCurrentPage(1)
+    clearPersistedState()
+  }, [
+    setRoleFilter,
+    setProjectFilter,
+    setDepartmentFilter,
+    setGroupFilter,
+    setStatusFilter,
+    setSortBy,
+    setSortOrder,
+    setCurrentPage,
+    clearPersistedState,
+  ])
+
+  const handleSort = useCallback(
+    (key: string, order: UserSortOrder) => {
+      setSortBy(key)
+      setSortOrder(order)
+      setCurrentPage(1)
+    },
+    [setSortBy, setSortOrder, setCurrentPage]
+  )
+
   // Check if user is active (for toggle state)
   const isActive = (user: ApiUser) => {
     return user.status === 'active'
@@ -230,26 +390,36 @@ export function UserManagementPage() {
     {
       key: 'id',
       header: t('pages.users.tableHeaders.userId'),
+      sortable: true,
+      sortKey: 'id',
       render: (user) => <span className="text-gray-700">{user.id}</span>,
     },
     {
       key: 'username',
       header: t('pages.users.tableHeaders.username'),
+      sortable: true,
+      sortKey: 'username',
       render: (user) => <span className="font-medium">{user.username}</span>,
     },
     {
       key: 'fullName',
       header: t('pages.users.tableHeaders.fullName'),
+      sortable: true,
+      sortKey: 'full_name',
       render: (user) => <span>{user.full_name || '-'}</span>,
     },
     {
       key: 'email',
       header: t('pages.users.tableHeaders.email'),
+      sortable: true,
+      sortKey: 'email',
       render: (user) => <span className="text-gray-700">{user.email || '-'}</span>,
     },
     {
       key: 'projectRole',
       header: t('pages.users.tableHeaders.projectRole'),
+      sortable: true,
+      sortKey: 'project_role',
       render: (user) => {
         // Display project name with role: "Project Name (Role)"
         if (user.projects && user.projects.length > 0) {
@@ -304,7 +474,14 @@ export function UserManagementPage() {
       key: 'status',
       header: t('pages.users.tableHeaders.status'),
       align: 'center',
-      render: (user) => <StatusBadge status={getStatusType(user.status)} />,
+      sortable: true,
+      sortKey: 'status',
+      render: (user) => (
+        <div className="flex items-center justify-center gap-1.5">
+          <StatusBadge status={getStatusType(user.status)} />
+          <GoogleAuthenticatorStatusIcon enabled={user.two_factor_enabled} />
+        </div>
+      ),
     },
     {
       key: 'actions',
@@ -378,6 +555,18 @@ export function UserManagementPage() {
                     : t('pages.users.actions.impersonate')}
                 </LinkButton>
               )}
+            </PermissionGuard>
+
+            <PermissionGuard permission={PERMISSIONS.USERS.EDIT}>
+              <LinkButton
+                variant="regular-black"
+                size="xs"
+                onClick={() => setUnlockUser(user)}
+                disabled={!isUserLocked(user)}
+                leftIcon={<Icons.Unlock size={16} color="#05040D" strokeWidth={1.5} />}
+              >
+                {t('pages.users.actions.unlock')}
+              </LinkButton>
             </PermissionGuard>
           </div>
 
@@ -463,6 +652,19 @@ export function UserManagementPage() {
                     </DropdownMenuItem>
                   )}
                 </PermissionGuard>
+                <PermissionGuard permission={PERMISSIONS.USERS.EDIT}>
+                  <DropdownMenuItem
+                    onClick={() => {
+                      setOpenDropdownUserId(null)
+                      setUnlockUser(user)
+                    }}
+                    disabled={!isUserLocked(user)}
+                    className="text-dark-500 flex cursor-pointer items-center gap-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <Icons.Unlock size={16} strokeWidth={1.5} />
+                    <span>{t('pages.users.actions.unlock')}</span>
+                  </DropdownMenuItem>
+                </PermissionGuard>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -488,130 +690,159 @@ export function UserManagementPage() {
   ]
 
   return (
-    <div>
-      {/* Page Header */}
-      <div className="mb-4 flex items-center justify-between gap-2 sm:gap-3">
-        <div className="flex items-center gap-2 sm:gap-3">
-          <h1 className="text-dark-500 text-xl font-light sm:text-2xl">{t('pages.users.title')}</h1>
-          <span className="text-sm font-light text-gray-500 sm:text-base">{totalUsers}</span>
-        </div>
-
-        <PermissionGuard permission={PERMISSIONS.USERS.CREATE}>
-          {/* Desktop: Full button with text, Mobile: Icon-only button */}
-          <div className="hidden sm:block">
-            <DoubleButton
-              size="md"
-              icon={<Icons.Add size={20} strokeWidth={2} />}
-              iconPosition="left"
-              onClick={() => setShowCreateModal(true)}
-            >
-              {t('pages.users.addNewUser')}
-            </DoubleButton>
+    <TooltipProvider delayDuration={200}>
+      <div>
+        {/* Page Header */}
+        <div className="mb-4 flex items-center justify-between gap-2 sm:gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <h1 className="text-dark-500 text-xl font-light sm:text-2xl">
+              {t('pages.users.title')}
+            </h1>
+            <span className="text-sm font-light text-gray-500 sm:text-base">{totalUsers}</span>
           </div>
-          {/* Mobile: Icon-only button */}
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="bg-primary-300 text-dark-500 hover:bg-primary-500 flex h-10 w-10 items-center justify-center rounded-full transition-colors focus:outline-none sm:hidden"
-            aria-label={t('pages.users.addNewUser')}
-          >
-            <Icons.Add size={20} strokeWidth={2} />
-          </button>
-        </PermissionGuard>
-      </div>
 
-      {/* Search Bar */}
-      <div className="mb-6 flex w-full items-center gap-4">
-        <div className="flex items-center gap-3">
-          <UserSearchBar
-            value={searchQuery}
-            searchField={searchField}
-            onValueChange={handleSearchQueryChange}
-            onSearchFieldChange={handleSearchFieldChange}
-            onSearch={handleSearch}
-            onClear={handleClearSearch}
-            isLoading={isLoading}
-          />
+          <PermissionGuard permission={PERMISSIONS.USERS.CREATE}>
+            {/* Desktop: Full button with text, Mobile: Icon-only button */}
+            <div className="hidden sm:block">
+              <DoubleButton
+                size="md"
+                icon={<Icons.Add size={20} strokeWidth={2} />}
+                iconPosition="left"
+                onClick={() => setShowCreateModal(true)}
+              >
+                {t('pages.users.addNewUser')}
+              </DoubleButton>
+            </div>
+            {/* Mobile: Icon-only button */}
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="bg-primary-300 text-dark-500 hover:bg-primary-500 flex h-10 w-10 items-center justify-center rounded-full transition-colors focus:outline-none sm:hidden"
+              aria-label={t('pages.users.addNewUser')}
+            >
+              <Icons.Add size={20} strokeWidth={2} />
+            </button>
+          </PermissionGuard>
         </div>
+
+        {/* Search Bar */}
+        <div className="mb-6 flex w-full items-center gap-4">
+          <div className="flex items-center gap-3">
+            <UserSearchBar
+              value={searchQuery}
+              searchField={searchField}
+              onValueChange={handleSearchQueryChange}
+              onSearchFieldChange={handleSearchFieldChange}
+              onSearch={handleSearch}
+              onClear={handleClearSearch}
+              isLoading={isLoading}
+            />
+          </div>
+        </div>
+
+        {/* Filter panel */}
+        <UserFiltersBar
+          filters={filterState}
+          onFilterChange={handleFilterChange}
+          onReset={handleResetFilters}
+        />
+
+        {/* Loading State */}
+        {isLoading && <TableSkeleton columns={columns.length} rows={pageSize} />}
+
+        {/* Error State */}
+        {isError && (
+          <ErrorState
+            error={error}
+            onRetry={() => window.location.reload()}
+            title={t('pages.users.errorLoading')}
+          />
+        )}
+
+        {/* User Table */}
+        {!isLoading && !isError && (
+          <DataTable
+            columns={columns}
+            data={users}
+            emptyMessage={t('pages.users.noUsersFound')}
+            sortConfig={sortConfig}
+            onSort={handleSort}
+          />
+        )}
+
+        {/* Pagination */}
+        {!isLoading && !isError && (
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            pageSize={pageSize}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={(newSize) => {
+              setPageSize(newSize)
+              setCurrentPage(1) // Reset to first page when changing page size
+            }}
+          />
+        )}
+
+        {/* Modals */}
+        {showCreateModal && (
+          <CreateUserModal
+            open={showCreateModal}
+            onClose={() => setShowCreateModal(false)}
+            onSuccess={handleCreateSuccess}
+          />
+        )}
+
+        {viewUserId && (
+          <UserDetailModal
+            open={viewUserId !== null}
+            userId={viewUserId}
+            onClose={handleCloseView}
+          />
+        )}
+
+        {editUserId && (
+          <EditUserModal
+            open={editUserId !== null}
+            userId={editUserId}
+            onClose={handleCloseEdit}
+            onSuccess={handleEditSuccess}
+          />
+        )}
+
+        {changeStatusUser && (
+          <ChangeStatusModal
+            open={changeStatusUser !== null}
+            user={changeStatusUser}
+            newStatus={newStatus}
+            onClose={() => setChangeStatusUser(null)}
+          />
+        )}
+
+        {resetPasswordUser && (
+          <ResetPasswordConfirmModal
+            open={resetPasswordUser !== null}
+            user={resetPasswordUser}
+            onClose={() => setResetPasswordUser(null)}
+          />
+        )}
+
+        {toggleTwoFactorUser && (
+          <AdminToggleTwoFactorModal
+            open={toggleTwoFactorUser !== null}
+            user={toggleTwoFactorUser}
+            onClose={() => setToggleTwoFactorUser(null)}
+          />
+        )}
+
+        {unlockUser && (
+          <UnlockAccountModal
+            open={unlockUser !== null}
+            user={unlockUser}
+            onClose={() => setUnlockUser(null)}
+          />
+        )}
       </div>
-
-      {/* Loading State */}
-      {isLoading && <TableSkeleton columns={columns.length} rows={pageSize} />}
-
-      {/* Error State */}
-      {isError && (
-        <ErrorState
-          error={error}
-          onRetry={() => window.location.reload()}
-          title={t('pages.users.errorLoading')}
-        />
-      )}
-
-      {/* User Table */}
-      {!isLoading && !isError && (
-        <DataTable columns={columns} data={users} emptyMessage={t('pages.users.noUsersFound')} />
-      )}
-
-      {/* Pagination */}
-      {!isLoading && !isError && (
-        <Pagination
-          currentPage={currentPage}
-          totalPages={totalPages}
-          pageSize={pageSize}
-          onPageChange={setCurrentPage}
-          onPageSizeChange={(newSize) => {
-            setPageSize(newSize)
-            setCurrentPage(1) // Reset to first page when changing page size
-          }}
-        />
-      )}
-
-      {/* Modals */}
-      {showCreateModal && (
-        <CreateUserModal
-          open={showCreateModal}
-          onClose={() => setShowCreateModal(false)}
-          onSuccess={handleCreateSuccess}
-        />
-      )}
-
-      {viewUserId && (
-        <UserDetailModal open={viewUserId !== null} userId={viewUserId} onClose={handleCloseView} />
-      )}
-
-      {editUserId && (
-        <EditUserModal
-          open={editUserId !== null}
-          userId={editUserId}
-          onClose={handleCloseEdit}
-          onSuccess={handleEditSuccess}
-        />
-      )}
-
-      {changeStatusUser && (
-        <ChangeStatusModal
-          open={changeStatusUser !== null}
-          user={changeStatusUser}
-          newStatus={newStatus}
-          onClose={() => setChangeStatusUser(null)}
-        />
-      )}
-
-      {resetPasswordUser && (
-        <ResetPasswordConfirmModal
-          open={resetPasswordUser !== null}
-          user={resetPasswordUser}
-          onClose={() => setResetPasswordUser(null)}
-        />
-      )}
-
-      {toggleTwoFactorUser && (
-        <AdminToggleTwoFactorModal
-          open={toggleTwoFactorUser !== null}
-          user={toggleTwoFactorUser}
-          onClose={() => setToggleTwoFactorUser(null)}
-        />
-      )}
-    </div>
+    </TooltipProvider>
   )
 }
 

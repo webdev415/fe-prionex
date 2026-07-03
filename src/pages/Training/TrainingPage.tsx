@@ -26,8 +26,8 @@ import { ScopeSelector } from './components/ScopeSelector'
 import { TrainerHeaderStrip } from './components/chrome/TrainerHeaderStrip'
 import { QuickActionOverlay } from './components/chrome/QuickActionOverlay'
 import { CoachWorkspaceBanner } from './components/chrome/CoachWorkspaceBanner'
-import { PendingFeatureDialog } from './components/inbox/PendingFeatureDialog'
 import { CreateCorrectionTaskDialog } from './components/inbox/CreateCorrectionTaskDialog'
+import { AssignTrainingDialog } from './components/inbox/AssignTrainingDialog'
 import { ScheduleOneOnOneDialog } from './components/inbox/ScheduleOneOnOneDialog'
 import { RateDialogueDialog } from './components/inbox/RateDialogueDialog'
 import { InboxTab } from './components/inbox/InboxTab'
@@ -180,16 +180,31 @@ export function TrainingPage() {
   // Read-shims: rewrite legacy ?tab=... to the new grammar. Runs once on
   // mount per URL change.
   useEffect(() => {
+    // Sub-level shim (KAN-734): the legacy `payment-history` sub-tab is now
+    // `successful-closures` under action-analysis. Covers both legacy forms —
+    // `?tab=action-analysis&sub=payment-history` and the older
+    // `?tab=calls&sub=payment-history`.
+    const isLegacyPaymentHistory = rawSub === 'payment-history'
+
     if (rawTab && LEGACY_TAB_SHIMS[rawTab]) {
       const shim = LEGACY_TAB_SHIMS[rawTab]
       const next = new URLSearchParams(searchParams)
       next.set('tab', shim.tab)
-      if (shim.sub) {
+      if (isLegacyPaymentHistory) {
+        next.set('sub', 'successful-closures')
+      } else if (shim.sub) {
         next.set('sub', shim.sub)
       }
       setSearchParams(next, { replace: true })
+      return
     }
-  }, [rawTab, searchParams, setSearchParams])
+
+    if (isLegacyPaymentHistory && rawTab === 'action-analysis') {
+      const next = new URLSearchParams(searchParams)
+      next.set('sub', 'successful-closures')
+      setSearchParams(next, { replace: true })
+    }
+  }, [rawTab, rawSub, searchParams, setSearchParams])
 
   const activeTopTab: TrainingTopTabId = isTopTab(rawTab) ? rawTab : 'inbox'
 
@@ -308,7 +323,10 @@ export function TrainingPage() {
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    // Bottom padding clears the page-wide fixed Coach's Workspace banner
+    // (`fixed bottom-4` below), so bottom-anchored content — e.g. the Action
+    // Analysis pagers — isn't hidden behind it.
+    <div className="flex flex-col gap-4 pb-28">
       {/* Header strip — shared across every top-tab */}
       <TrainerHeaderStrip filters={headerKpisFilters} enabled={canViewInbox} />
 
@@ -355,14 +373,10 @@ export function TrainingPage() {
         onClose={() => setQuickActionDialog(null)}
         operatorId={inboxOperatorId}
       />
-      <PendingFeatureDialog
+      <AssignTrainingDialog
         open={quickActionDialog === 'material'}
         onClose={() => setQuickActionDialog(null)}
-        titleKey="pages.training.inbox.quickActions.assignCourse"
-        titleFallback="Assign course / drill"
-        descriptionKey="pages.training.inbox.pendingFeature.assignCourseDescription"
-        descriptionFallback="Assign training material or a drill exercise to an operator."
-        dependsOnIssue="KAN-416"
+        operatorId={inboxOperatorId}
       />
       <ScheduleOneOnOneDialog
         open={quickActionDialog === 'oneOnOne'}
@@ -381,13 +395,10 @@ export function TrainingPage() {
           onOpenRateDialogue={() => setQuickActionDialog('rate')}
           onOpenScheduleOneOnOne={() => setQuickActionDialog('oneOnOne')}
           onOpenAssignTask={() => setQuickActionDialog('assign')}
+          onOpenAssignMaterial={() => setQuickActionDialog('material')}
         />
       ) : activeTopTab === 'team' ? (
-        <TeamTab
-          onOpenRateDialogue={() => setQuickActionDialog('rate')}
-          onOpenScheduleOneOnOne={() => setQuickActionDialog('oneOnOne')}
-          onOpenAssignTask={() => setQuickActionDialog('assign')}
-        />
+        <TeamTab />
       ) : activeTopTab === 'action-analysis' ? (
         <ActionAnalysisInnerTab />
       ) : activeTopTab === 'dialogue-evaluation' ? (

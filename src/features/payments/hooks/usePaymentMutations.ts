@@ -6,12 +6,13 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { useAuthStore } from '@/stores/authStore'
+import { formatClientFullName } from '@/lib/formatters'
 import {
   recordPayment,
   verifyPayment,
   cancelPayment,
   editPayment,
-  reassignPaymentEmployee,
+  reassignPaymentAssignedUser,
   getPayment,
   exportPaymentsCSV,
 } from '../api/paymentApi'
@@ -20,7 +21,7 @@ import type {
   VerifyPaymentRequest,
   CancelPaymentRequest,
   EditPaymentRequest,
-  ReassignPaymentEmployeeRequest,
+  ReassignAssignedUserRequest,
   Payment,
   PaymentListParams,
 } from '../api/types'
@@ -198,9 +199,9 @@ export function useEditPayment() {
 }
 
 /**
- * Reassign the recorded-by employee on a verified payment.
+ * Reassign the assigned operator on a verified payment.
  */
-export function useReassignPaymentEmployee() {
+export function useReassignPaymentAssignedUser() {
   const queryClient = useQueryClient()
 
   return useMutation({
@@ -209,8 +210,8 @@ export function useReassignPaymentEmployee() {
       request,
     }: {
       paymentId: number
-      request: ReassignPaymentEmployeeRequest
-    }) => reassignPaymentEmployee(paymentId, request),
+      request: ReassignAssignedUserRequest
+    }) => reassignPaymentAssignedUser(paymentId, request),
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['payment', data.payment_number] })
       queryClient.invalidateQueries({ queryKey: ['payments'] })
@@ -218,10 +219,10 @@ export function useReassignPaymentEmployee() {
       queryClient.invalidateQueries({ queryKey: ['client-all-verified-payments'] })
       queryClient.invalidateQueries({ queryKey: ['payment-stats'] })
 
-      toast.success('Employee reassigned successfully')
+      toast.success('Assigned user reassigned successfully')
     },
     onError: (error: unknown) => {
-      toast.error(extractErrorMessage(error, 'Failed to reassign employee'))
+      toast.error(extractErrorMessage(error, 'Failed to reassign assigned user'))
     },
   })
 }
@@ -303,9 +304,7 @@ export function useGenerateReceipt() {
             }
 
             // Update finalClientData with fetched data (merge with provided clientData if any)
-            const fullName = [client.first_name, client.middle_name, client.last_name]
-              .filter(Boolean)
-              .join(' ')
+            const fullName = formatClientFullName(client)
 
             // Get contract number from debt (preferred) or use provided one if it's not 'N/A'
             const contractFromDebt =
@@ -325,9 +324,7 @@ export function useGenerateReceipt() {
             }
           } else if (!finalClientData) {
             // If no debts but no clientData provided, still create basic clientData
-            const fullName = [client.first_name, client.middle_name, client.last_name]
-              .filter(Boolean)
-              .join(' ')
+            const fullName = formatClientFullName(client)
 
             finalClientData = {
               fullName: fullName || `Client #${client.id}`,

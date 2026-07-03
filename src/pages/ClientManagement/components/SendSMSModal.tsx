@@ -45,11 +45,11 @@ export interface SendSMSModalProps {
 const formatClientNameInitials = (fullName: string): string => {
   const parts = fullName.trim().split(/\s+/)
   if (parts.length === 3) {
-    const [firstName, middleName, lastName] = parts
+    const [lastName, firstName, middleName] = parts
     return `${lastName} ${firstName[0].toUpperCase()}. ${middleName[0].toUpperCase()}.`
   }
   if (parts.length === 2) {
-    const [firstName, lastName] = parts
+    const [lastName, firstName] = parts
     return `${lastName} ${firstName[0].toUpperCase()}.`
   }
   return fullName

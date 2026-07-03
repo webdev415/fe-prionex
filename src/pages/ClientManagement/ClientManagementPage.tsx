@@ -18,7 +18,7 @@ import { TooltipProvider } from '@/components/ui/Tooltip'
 import { ClientFiltersBar } from './components/ClientFiltersBar'
 import { AssignClientModal } from './components/AssignClientModal'
 import { BulkAssignClientModal } from './components/BulkAssignClientModal'
-import { formatDate, formatDateTime } from '@/lib/formatters'
+import { formatClientFullName, formatDate, formatDateTime } from '@/lib/formatters'
 import { TagSelectorModal } from './components/TagSelectorModal'
 import { BulkTagModal } from './components/BulkTagModal'
 import { BulkSendMessageModal } from './components/BulkSendMessageModal'
@@ -51,6 +51,7 @@ import type { Priority } from './types'
 import { PermissionGuard } from '@/components/auth'
 import { PERMISSIONS } from '@/constants/permissions'
 import { ALL_MESSAGING_LAUNCH_PERMISSIONS } from '@/features/messaging'
+import { useBulkOptOutUbki, useBulkSubmitByClients } from '@/features/ubki'
 import { useTags } from '@/features/tags/hooks/useTags'
 import { isAdminRole, isHiddenVisibility } from '@/features/tags/utils/visibility'
 import { toast } from 'sonner'
@@ -78,6 +79,7 @@ interface DisplayClient {
   searcherName: string
   assignmentDate: string
   lastInteractionResult: string
+  doNotSendToUbki: boolean
   // Raw ISO timestamp of the latest TA (or '' when none). Formatted with the
   // user's timezone in the column render, so it's stored unformatted here.
   lastTaDate: string
@@ -100,9 +102,7 @@ const mapAPIClientToDisplay = (
   /** When set (operator + catalog loaded): only show tags present in tag-service catalog (hidden tags are omitted there). */
   operatorAllowedTags: { names: Set<string>; codes: Set<string> } | null
 ): DisplayClient => {
-  const fullName = [client.first_name, client.middle_name, client.last_name]
-    .filter(Boolean)
-    .join(' ')
+  const fullName = formatClientFullName(client)
 
   return {
     id: client.id,
@@ -136,6 +136,7 @@ const mapAPIClientToDisplay = (
       : '-',
     assignmentDate: client.assignment_date ? formatDate(client.assignment_date) : '-',
     lastInteractionResult: client.last_interaction_result_name || '—',
+    doNotSendToUbki: client.do_not_send_to_ubki ?? false,
     lastTaDate: client.last_ta_date || '',
   }
 }
@@ -192,11 +193,6 @@ export interface ClientFilters {
 
   // Tags Filter
   tagIds?: number[]
-
-  // Last Interaction Result Filter — multi-select of interaction_result
-  // IDs. The dropdown options come from the live /interaction-results
-  // config so admin-managed result changes show up without a deploy.
-  lastInteractionResultIds?: number[]
 
   // Chain filter — TA Chain ID. Narrows to clients with at least one
   // ta_interaction in this chain. Pairs with ``chainStepIds`` (steps in
@@ -272,9 +268,9 @@ export function ClientManagementPage() {
   // URL state for filters
   const [portfolioFilter, setPortfolioFilter] = useURLState<number[]>('sellers', [])
   const [tagIdsFilter, setTagIdsFilter] = useURLState<number[]>('tags', [])
-  const [lastInteractionResultIdsFilter, setLastInteractionResultIdsFilter] = useURLState<number[]>(
-    'lastInteractionResults',
-    []
+  const [responsibleEmployeeFilter, setResponsibleEmployeeFilter] = useURLState<string>(
+    'employee',
+    ''
   )
   const [responsibleEmployeeIdsFilter, setResponsibleEmployeeIdsFilter] = useURLState<number[]>(
     'employeeIds',
@@ -341,7 +337,7 @@ export function ClientManagementPage() {
     () => ({
       portfolio: portfolioFilter,
       tagIds: tagIdsFilter,
-      lastInteractionResultIds: lastInteractionResultIdsFilter,
+      responsibleEmployee: responsibleEmployeeFilter || undefined,
       responsibleEmployeeIds: responsibleEmployeeIdsFilter,
       responsibleSearcher: responsibleSearcherFilter || undefined,
       unassignedOnly: unassignedOnlyFilter,
@@ -367,7 +363,7 @@ export function ClientManagementPage() {
     [
       portfolioFilter,
       tagIdsFilter,
-      lastInteractionResultIdsFilter,
+      responsibleEmployeeFilter,
       responsibleEmployeeIdsFilter,
       responsibleSearcherFilter,
       unassignedOnlyFilter,
@@ -499,7 +495,6 @@ export function ClientManagementPage() {
       responsibleSearcherFilter !== '' ||
       portfolioFilter.length > 0 ||
       tagIdsFilter.length > 0 ||
-      lastInteractionResultIdsFilter.length > 0 ||
       unassignedOnlyFilter ||
       dateOfSaleFromFilter !== '' ||
       dateOfSaleToFilter !== '' ||
@@ -536,7 +531,7 @@ export function ClientManagementPage() {
     sortOrder,
     portfolioFilter,
     tagIdsFilter,
-    lastInteractionResultIdsFilter,
+    responsibleEmployeeFilter,
     responsibleEmployeeIdsFilter,
     responsibleSearcherFilter,
     unassignedOnlyFilter,
@@ -573,7 +568,6 @@ export function ClientManagementPage() {
       responsibleEmployeeIdsFilter.length > 0 ||
       portfolioFilter.length > 0 ||
       tagIdsFilter.length > 0 ||
-      lastInteractionResultIdsFilter.length > 0 ||
       unassignedOnlyFilter ||
       dateOfSaleFromFilter !== '' ||
       dateOfSaleToFilter !== '' ||
@@ -845,14 +839,6 @@ export function ClientManagementPage() {
       params.tag_ids = filters.tagIds.join(',')
     }
 
-    // FILTER 9b: Last Interaction Result (multi-select). Sent as
-    // comma-separated ids matching the BE schema. Empty/undefined
-    // means "no filter" — BE returns all clients regardless of last
-    // result.
-    if (filters.lastInteractionResultIds && filters.lastInteractionResultIds.length > 0) {
-      params.last_interaction_result_ids = filters.lastInteractionResultIds.join(',')
-    }
-
     // FILTER 10: Priority
     if (selectedPriorities.length > 0) {
       // Map priority labels to lowercase for API
@@ -900,6 +886,10 @@ export function ClientManagementPage() {
       params.assignment_date_to = filters.assignmentDateTo
     }
 
+    if (user?.timezone) {
+      params.tz = user.timezone
+    }
+
     // FILTER 15b: TA Chain + Step + per-step values. Steps only ship
     // when a chain is selected — BE silently drops orphan steps but no
     // point sending them. Step selection is keyed by
@@ -944,6 +934,7 @@ export function ClientManagementPage() {
     selectedPriorities,
     searchQuery,
     searchType,
+    user?.timezone,
     allEmployeeOptionIds,
     allInteractionOptionIds,
   ])
@@ -1014,6 +1005,8 @@ export function ClientManagementPage() {
   // Assignment mutations
   const assignClientMutation = useAssignClient()
   const bulkAssignClientsMutation = useBulkAssignClients()
+  const bulkOptOutUbkiMutation = useBulkOptOutUbki()
+  const bulkSubmitByClientsMutation = useBulkSubmitByClients()
 
   // Map API clients to display format
   const displayClients = useMemo(() => {
@@ -1036,7 +1029,6 @@ export function ClientManagementPage() {
     if (filters.assignmentDateFrom || filters.assignmentDateTo) count++
     if (filters.portfolio && filters.portfolio.length > 0) count++
     if (filters.tagIds && filters.tagIds.length > 0) count++
-    if (filters.lastInteractionResultIds && filters.lastInteractionResultIds.length > 0) count++
     if (filters.responsibleEmployeeIds && filters.responsibleEmployeeIds.length > 0) count++
     if (filters.responsibleSearcher) count++
     if (filters.unassignedOnly) count++
@@ -1115,6 +1107,66 @@ export function ClientManagementPage() {
     }
 
     setShowBulkSendMessageModal(true)
+  }
+
+  // Resolve the currently-selected client IDs (respecting select-all-across-pages
+  // minus the explicitly excluded rows). Mirrors handleBulkAssignSubmit.
+  const resolveSelectedClientIds = (): number[] => {
+    if (allClientsSelected) {
+      return apiClients
+        .filter((client) => !excludedClients.has(client.id))
+        .map((client) => client.id)
+    }
+    return Array.from(selectedClients).map(Number)
+  }
+
+  const handleBulkUbkiOptOut = (doNotSend: boolean) => {
+    const clientIds = resolveSelectedClientIds()
+    if (clientIds.length === 0) {
+      toast.error(
+        t(
+          'pages.clients.bulkActions.selectClientsFirst',
+          'Select at least one client before starting a bulk action'
+        )
+      )
+      return
+    }
+    bulkOptOutUbkiMutation.mutate(
+      { client_ids: clientIds, do_not_send: doNotSend },
+      {
+        onSuccess: () => {
+          setSelectedClients(new Set())
+          setAllClientsSelected(false)
+          setExcludedClients(new Set())
+        },
+      }
+    )
+  }
+
+  // Bulk "Send to UBKI": submit all loans for the currently-selected clients.
+  // Server-side expansion handles per-client loans and auto-skips opted-out
+  // clients, so we only need to pass client_ids (mirrors handleBulkUbkiOptOut).
+  const handleBulkUbkiSubmit = () => {
+    const clientIds = resolveSelectedClientIds()
+    if (clientIds.length === 0) {
+      toast.error(
+        t(
+          'pages.clients.bulkActions.selectClientsFirst',
+          'Select at least one client before starting a bulk action'
+        )
+      )
+      return
+    }
+    bulkSubmitByClientsMutation.mutate(
+      { client_ids: clientIds },
+      {
+        onSuccess: () => {
+          setSelectedClients(new Set())
+          setAllClientsSelected(false)
+          setExcludedClients(new Set())
+        },
+      }
+    )
   }
 
   const handleBulkAssignSubmit = (assignmentData: {
@@ -1317,16 +1369,6 @@ export function ClientManagementPage() {
       return
     }
 
-    if (newFilters._action === 'toggleLastInteractionResult') {
-      const resultId = newFilters._value as number
-      const checked = newFilters._checked as boolean
-      setLastInteractionResultIdsFilter((prev) =>
-        checked ? [...prev, resultId] : prev.filter((id) => id !== resultId)
-      )
-      setCurrentPage(1)
-      return
-    }
-
     // Handle regular filter updates (non-toggle actions)
     // Only update if value has actually changed (use JSON.stringify for deep comparison)
     if (JSON.stringify(newFilters.portfolio) !== JSON.stringify(portfolioFilter)) {
@@ -1334,12 +1376,6 @@ export function ClientManagementPage() {
     }
     if (JSON.stringify(newFilters.tagIds) !== JSON.stringify(tagIdsFilter)) {
       setTagIdsFilter(newFilters.tagIds || [])
-    }
-    if (
-      JSON.stringify(newFilters.lastInteractionResultIds) !==
-      JSON.stringify(lastInteractionResultIdsFilter)
-    ) {
-      setLastInteractionResultIdsFilter(newFilters.lastInteractionResultIds || [])
     }
     if (
       JSON.stringify(newFilters.responsibleEmployeeIds) !==
@@ -1439,7 +1475,7 @@ export function ClientManagementPage() {
     setSelectedPriorities([])
     setPortfolioFilter([])
     setTagIdsFilter([])
-    setLastInteractionResultIdsFilter([])
+    setResponsibleEmployeeFilter('')
     setResponsibleEmployeeIdsFilter([])
     setResponsibleSearcherFilter('')
     setUnassignedOnlyFilter(false)
@@ -1644,6 +1680,25 @@ export function ClientManagementPage() {
       sortable: true,
       sortKey: 'lastInteractionResult',
       render: (client) => client.lastInteractionResult,
+    },
+    {
+      key: 'ubki',
+      header: t('pages.clients.tableHeaders.ubki', 'UBKI'),
+      align: 'center',
+      render: (client) =>
+        client.doNotSendToUbki ? (
+          <span
+            className="inline-flex items-center rounded-full bg-red-50 px-2 py-0.5 text-xs font-medium text-red-700"
+            title={t(
+              'pages.clients.detail.ubki.optedOutTooltip',
+              'Client is opted out of UBKI; submission is disabled.'
+            )}
+          >
+            {t('pages.clients.detail.ubki.optedOut', 'Opted out')}
+          </span>
+        ) : (
+          <span className="text-xs text-gray-400">-</span>
+        ),
     },
     {
       key: 'actions',
@@ -1930,6 +1985,40 @@ export function ClientManagementPage() {
                         />
                         <span className="text-dark-500 text-sm font-medium">
                           {t('pages.clients.bulkActions.sendMessage', 'Send Message')}
+                        </span>
+                      </DropdownMenuItem>
+                    </PermissionGuard>
+                    <PermissionGuard permission={PERMISSIONS.UBKI.SUBMIT}>
+                      <DropdownMenuItem
+                        onClick={handleBulkUbkiSubmit}
+                        disabled={totalSelectedCount === 0 || bulkSubmitByClientsMutation.isPending}
+                        className="flex cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 transition-colors hover:bg-gray-50 focus:bg-gray-50"
+                      >
+                        <Icons.MailSend01 size={18} className="text-dark-500" strokeWidth={1.5} />
+                        <span className="text-dark-500 text-sm font-medium">
+                          {t('pages.clients.bulkActions.submitUbki', 'Send to UBKI')}
+                        </span>
+                      </DropdownMenuItem>
+                    </PermissionGuard>
+                    <PermissionGuard permission={PERMISSIONS.CLIENTS.EDIT}>
+                      <DropdownMenuItem
+                        onClick={() => handleBulkUbkiOptOut(true)}
+                        className="flex cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 transition-colors hover:bg-gray-50 focus:bg-gray-50"
+                      >
+                        <Icons.Cancel01 size={18} className="text-dark-500" strokeWidth={1.5} />
+                        <span className="text-dark-500 text-sm font-medium">
+                          {t('pages.clients.bulkActions.optOutUbki', 'Do not send to UBKI')}
+                        </span>
+                      </DropdownMenuItem>
+                    </PermissionGuard>
+                    <PermissionGuard permission={PERMISSIONS.CLIENTS.EDIT}>
+                      <DropdownMenuItem
+                        onClick={() => handleBulkUbkiOptOut(false)}
+                        className="flex cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 transition-colors hover:bg-gray-50 focus:bg-gray-50"
+                      >
+                        <Icons.Reload size={18} className="text-dark-500" strokeWidth={1.5} />
+                        <span className="text-dark-500 text-sm font-medium">
+                          {t('pages.clients.bulkActions.optInUbki', 'Re-enable UBKI sending')}
                         </span>
                       </DropdownMenuItem>
                     </PermissionGuard>

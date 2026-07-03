@@ -17,7 +17,14 @@ vi.mock('@/lib/api', () => ({
   default: mockApi,
 }))
 
-import { getInteractionMonitoring, getWeeklyBucket } from '../actionAnalysisService'
+import {
+  getInteractionMonitoring,
+  getLeaks,
+  getPromisesAndCallbacks,
+  getSuccessfulClosures,
+  getThirdParty,
+  getWeeklyBucket,
+} from '../actionAnalysisService'
 
 describe('getInteractionMonitoring — param builder', () => {
   beforeEach(() => {
@@ -95,6 +102,66 @@ describe('getInteractionMonitoring — param builder', () => {
   })
 })
 
+describe('getPromisesAndCallbacks — param builder (KAN-733)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockApi.get.mockResolvedValue({
+      data: {
+        summary_cards: {
+          total_promises_amount: '0',
+          paid_amount: '0',
+          overdue_count: 0,
+          pending_amount: '0',
+        },
+        items: [],
+        total: 0,
+        page: 1,
+        page_size: 50,
+      },
+    })
+  })
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  function getParams(): URLSearchParams {
+    const [, config] = mockApi.get.mock.calls[0]
+    return config.params as URLSearchParams
+  }
+
+  it('hits the promises-and-callbacks endpoint and omits optional params by default', async () => {
+    await getPromisesAndCallbacks({})
+    expect(mockApi.get).toHaveBeenCalledWith(
+      '/api/v1/interactions/promises-and-callbacks',
+      expect.any(Object)
+    )
+    expect(getParams().toString()).toBe('')
+  })
+
+  it('repeats user_ids and forwards scope params', async () => {
+    await getPromisesAndCallbacks({ user_ids: [10, 20], department_id: 7 })
+    const params = getParams()
+    expect(params.getAll('user_ids')).toEqual(['10', '20'])
+    expect(params.get('department_id')).toBe('7')
+  })
+
+  it('forwards period + sort + pagination', async () => {
+    await getPromisesAndCallbacks({
+      period: 'today',
+      sort_by: 'amount',
+      sort_dir: 'asc',
+      page: 2,
+      page_size: 25,
+    })
+    const params = getParams()
+    expect(params.get('period')).toBe('today')
+    expect(params.get('sort_by')).toBe('amount')
+    expect(params.get('sort_dir')).toBe('asc')
+    expect(params.get('page')).toBe('2')
+    expect(params.get('page_size')).toBe('25')
+  })
+})
+
 describe('getWeeklyBucket — param builder (KAN-732)', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -144,5 +211,181 @@ describe('getWeeklyBucket — param builder (KAN-732)', () => {
   it('omits include_no_due_date when false', async () => {
     await getWeeklyBucket({ include_no_due_date: false })
     expect(getParams().get('include_no_due_date')).toBeNull()
+  })
+})
+
+describe('getSuccessfulClosures — param builder (KAN-734)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockApi.get.mockResolvedValue({
+      data: {
+        summary_cards: { successful_closures_count: 0, total_amount: '0' },
+        closure_leader: null,
+        items: [],
+        total: 0,
+        page: 1,
+        page_size: 50,
+      },
+    })
+  })
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  function getParams(): URLSearchParams {
+    const [, config] = mockApi.get.mock.calls[0]
+    return config.params as URLSearchParams
+  }
+
+  it('hits /api/v1/payments/closures and omits optional params by default', async () => {
+    await getSuccessfulClosures({})
+    expect(mockApi.get).toHaveBeenCalledWith('/api/v1/payments/closures', expect.any(Object))
+    expect(getParams().toString()).toBe('')
+  })
+
+  it('repeats user_ids as multiple params, matching FastAPI Query(List[int])', async () => {
+    await getSuccessfulClosures({ user_ids: [10, 20, 30] })
+    expect(getParams().getAll('user_ids')).toEqual(['10', '20', '30'])
+  })
+
+  it('forwards period + sort + pagination untouched', async () => {
+    await getSuccessfulClosures({
+      period: 'today',
+      sort_by: 'amount',
+      sort_dir: 'asc',
+      page: 2,
+      page_size: 25,
+    })
+    const params = getParams()
+    expect(params.get('period')).toBe('today')
+    expect(params.get('sort_by')).toBe('amount')
+    expect(params.get('sort_dir')).toBe('asc')
+    expect(params.get('page')).toBe('2')
+    expect(params.get('page_size')).toBe('25')
+  })
+})
+
+describe('getLeaks — param builder (KAN-735)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockApi.get.mockResolvedValue({
+      data: {
+        kpis: { total_escalations: 0, not_followed_up: 0, followed_up: 0 },
+        items: [],
+        total: 0,
+        page: 1,
+        page_size: 50,
+      },
+    })
+  })
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  function getParams(): URLSearchParams {
+    const [, config] = mockApi.get.mock.calls[0]
+    return config.params as URLSearchParams
+  }
+
+  it('hits /api/v1/interactions/leaks and omits optional params by default', async () => {
+    await getLeaks({})
+    expect(mockApi.get).toHaveBeenCalledWith('/api/v1/interactions/leaks', expect.any(Object))
+    expect(getParams().toString()).toBe('')
+  })
+
+  it('repeats user_ids and forwards scope params', async () => {
+    await getLeaks({ user_ids: [10, 20], group_id: 4 })
+    const params = getParams()
+    expect(params.getAll('user_ids')).toEqual(['10', '20'])
+    expect(params.get('group_id')).toBe('4')
+  })
+
+  it('forwards lookback_days + follow_up_status (KAN-735 Block 1/3)', async () => {
+    await getLeaks({ lookback_days: 7, follow_up_status: 'not_followed_up' })
+    const params = getParams()
+    expect(params.get('lookback_days')).toBe('7')
+    expect(params.get('follow_up_status')).toBe('not_followed_up')
+  })
+
+  it('forwards period + sort + pagination untouched', async () => {
+    await getLeaks({
+      period: 'last_7d',
+      sort_by: 'amount',
+      sort_dir: 'asc',
+      page: 3,
+      page_size: 20,
+    })
+    const params = getParams()
+    expect(params.get('period')).toBe('last_7d')
+    expect(params.get('sort_by')).toBe('amount')
+    expect(params.get('sort_dir')).toBe('asc')
+    expect(params.get('page')).toBe('3')
+    expect(params.get('page_size')).toBe('20')
+  })
+})
+
+describe('getThirdParty — param builder (KAN-736)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockApi.get.mockResolvedValue({
+      data: {
+        kpis: {
+          total_calls: 0,
+          returned_to_client: 0,
+          did_not_return: 0,
+          positive_count: 0,
+          refusal_count: 0,
+          will_pass_count: 0,
+        },
+        items: [],
+        total: 0,
+        page: 1,
+        page_size: 50,
+      },
+    })
+  })
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  function getParams(): URLSearchParams {
+    const [, config] = mockApi.get.mock.calls[0]
+    return config.params as URLSearchParams
+  }
+
+  it('hits /api/v1/interactions/third-party and omits optional params by default', async () => {
+    await getThirdParty({})
+    expect(mockApi.get).toHaveBeenCalledWith('/api/v1/interactions/third-party', expect.any(Object))
+    expect(getParams().toString()).toBe('')
+  })
+
+  it('repeats user_ids and forwards scope params', async () => {
+    await getThirdParty({ user_ids: [10, 20], department_id: 7 })
+    const params = getParams()
+    expect(params.getAll('user_ids')).toEqual(['10', '20'])
+    expect(params.get('department_id')).toBe('7')
+  })
+
+  it('forwards result_filter + returned_window_hours (KAN-736 §3/§5)', async () => {
+    await getThirdParty({ result_filter: 'refusal', returned_window_hours: 48 })
+    const params = getParams()
+    expect(params.get('result_filter')).toBe('refusal')
+    expect(params.get('returned_window_hours')).toBe('48')
+  })
+
+  it('forwards period + sort + pagination untouched', async () => {
+    await getThirdParty({
+      period: 'today',
+      sort_by: 'duration',
+      sort_dir: 'asc',
+      page: 2,
+      page_size: 25,
+    })
+    const params = getParams()
+    expect(params.get('period')).toBe('today')
+    expect(params.get('sort_by')).toBe('duration')
+    expect(params.get('sort_dir')).toBe('asc')
+    expect(params.get('page')).toBe('2')
+    expect(params.get('page_size')).toBe('25')
   })
 })

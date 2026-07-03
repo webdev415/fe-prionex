@@ -1,7 +1,17 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
-import { MOCK_LEAKS, MOCK_LEAKS_KPIS, type MockLeakRow } from '../../mocks/trainerWorkplaceMocks'
+import { Pagination } from '@/components/ui/Pagination'
+import { useAuthStore } from '@/stores/authStore'
+import { useLeaks } from '@/features/training/hooks/useLeaks'
+import { useExportLeaks } from '@/features/training/hooks/useExportLeaks'
+import type {
+  CallMonitoringPeriod,
+  LeakFilters,
+  LeakFollowUpStatusFilter,
+  LeakItem,
+} from '@/features/training/types'
 import { AnalyticsMockTable } from './AnalyticsMockTable'
 import { AnalyticsKpiTile } from './AnalyticsKpiTile'
 import {
@@ -12,50 +22,159 @@ import {
 } from './analyticsTableStyles'
 
 /**
- * Leaks sub-tab (KAN-415). Mirrors the Figma frame:
- *   1) Blue "escalation rule" info banner (dismissible)
+ * Leaks sub-tab (KAN-735). Layout / UI styling mirror the Figma frame verbatim
+ * (the mock is the source of truth):
+ *   1) Blue "escalation rule" info banner (dismissible) — this copy IS the
+ *      escalation definition the BE implements (overdue, unfulfilled promise).
  *   2) 3 horizontal icon-tile KPIs (Total / Not followed up / Followed up)
- *   3) Red banner with title + secondary line
- *   4) Status chip strip (All / Not followed up / Followed up) attached to
- *      the leaks table card
- *   5) Table — operator avatar with presence dot, blue client #, deal code,
- *      Follow-up pill (× red / check green), red "No call" or timestamped
- *      callback
+ *   3) Red banner with title + secondary line (shown when not-followed-up > 0)
+ *   4) Status chip strip (All / Not followed up / Followed up) attached to the
+ *      leaks table card
+ *   5) Table — operator avatar, blue client link, deal code, Follow-up pill,
+ *      red "No call" or timestamped callback
+ *
+ * Data is wired to /api/v1/interactions/leaks: the KPIs come from the BE
+ * `kpis`, rows from `items`, and the per-row `follow_up_status` is derived
+ * server-side from whether a later call to the same client landed inside the
+ * lookback window. Added on top of the mock frame (in the existing idiom): a
+ * period selector, a lookback-days control, server-side pagination, row-click
+ * navigation, and an Excel export — all required by the ticket.
  */
 
-type LeakStatusFilter = 'all' | 'not' | 'done'
+type LeakStatusFilter = LeakFollowUpStatusFilter
 
-const PRESENCE_DOT: Record<NonNullable<MockLeakRow['operatorPresence']>, string> = {
-  online: 'bg-[#22C55E]',
-  busy: 'bg-[#F59E0B]',
-  offline: 'bg-[#A1A1A1]',
+type PeriodOption = 'today' | 'yesterday' | '7d' | '30d'
+
+const PERIODS: { id: PeriodOption; key: string; fallback: string }[] = [
+  { id: 'today', key: 'pages.training.period.today', fallback: 'Today' },
+  { id: 'yesterday', key: 'pages.training.period.yesterday', fallback: 'Yesterday' },
+  { id: '7d', key: 'pages.training.period.7days', fallback: '7 days' },
+  { id: '30d', key: 'pages.training.period.30days', fallback: '30 days' },
+]
+
+// Maps the radio UI value to the BE `CallMonitoringPeriod` vocabulary.
+const PERIOD_TO_BACKEND: Record<PeriodOption, CallMonitoringPeriod> = {
+  today: 'today',
+  yesterday: 'yesterday',
+  '7d': 'last_7d',
+  '30d': 'last_30d',
+}
+
+// KAN-735 Block 3 — hardcoded default until the project-level settings ticket.
+const DEFAULT_LOOKBACK_DAYS = 5
+const LOOKBACK_MIN = 1
+const LOOKBACK_MAX = 90
+
+const AVATAR_PALETTE = [
+  '#E0F2EC',
+  '#FEF3C7',
+  '#FEE4E2',
+  '#E0E7FF',
+  '#FCE7F3',
+  '#DBEAFE',
+  '#FFEDD5',
+  '#D1FAE5',
+]
+
+function avatarColorFor(operatorId: number | null): string {
+  if (operatorId == null) return '#EDEDED'
+  return AVATAR_PALETTE[Math.abs(operatorId) % AVATAR_PALETTE.length]
+}
+
+function deriveInitials(fullName: string): string {
+  const parts = fullName.trim().split(/\s+/).filter(Boolean)
+  if (parts.length === 0) return ''
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
+  return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase()
+}
+
+function formatShortDate(iso: string | null): string {
+  if (!iso) return '—'
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return iso
+  const dd = String(d.getDate()).padStart(2, '0')
+  const mm = String(d.getMonth() + 1).padStart(2, '0')
+  return `${dd}.${mm}`
+}
+
+function formatShortDateTime(iso: string | null): string | null {
+  if (!iso) return null
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return iso
+  const dd = String(d.getDate()).padStart(2, '0')
+  const mm = String(d.getMonth() + 1).padStart(2, '0')
+  const hh = String(d.getHours()).padStart(2, '0')
+  const mn = String(d.getMinutes()).padStart(2, '0')
+  return `${dd}.${mm} ${hh}:${mn}`
+}
+
+function formatAmount(raw: string | null | undefined): string {
+  if (raw == null) return '—'
+  const n = Number(raw)
+  if (!Number.isFinite(n)) return String(raw)
+  return n.toLocaleString()
 }
 
 export function LeaksSubTab() {
   const { t } = useTranslation('common')
   const [statusFilter, setStatusFilter] = useState<LeakStatusFilter>('all')
+  const [period, setPeriod] = useState<PeriodOption>('7d')
+  const [lookbackDays, setLookbackDays] = useState(DEFAULT_LOOKBACK_DAYS)
   const [infoDismissed, setInfoDismissed] = useState(false)
-  const k = MOCK_LEAKS_KPIS
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(50)
 
-  const totalCount = MOCK_LEAKS.length
-  const notFollowedCount = MOCK_LEAKS.filter((r) => !r.followedUp).length
-  const followedCount = MOCK_LEAKS.filter((r) => r.followedUp).length
+  const activeProjectId = useAuthStore((s) => s.user?.active_project_id)
+  const projectIdNum = activeProjectId ? Number(activeProjectId) : null
 
-  const rows = MOCK_LEAKS.filter((row) => {
-    if (statusFilter === 'not') return !row.followedUp
-    if (statusFilter === 'done') return row.followedUp
-    return true
-  })
+  // Any filter change invalidates the current page offset — reset to page 1.
+  const changePeriod = (p: PeriodOption) => {
+    setPeriod(p)
+    setPage(1)
+  }
+  const changeStatus = (s: LeakStatusFilter) => {
+    setStatusFilter(s)
+    setPage(1)
+  }
+  const changeLookback = (next: number) => {
+    setLookbackDays(Math.min(LOOKBACK_MAX, Math.max(LOOKBACK_MIN, next)))
+    setPage(1)
+  }
+
+  const filters = useMemo<LeakFilters>(
+    () => ({
+      period: PERIOD_TO_BACKEND[period],
+      lookback_days: lookbackDays,
+      follow_up_status: statusFilter,
+      sort_by: 'date',
+      sort_dir: 'desc',
+      page,
+      page_size: pageSize,
+    }),
+    [period, lookbackDays, statusFilter, page, pageSize]
+  )
+
+  const query = useLeaks(filters, projectIdNum != null)
+  const exportMutation = useExportLeaks()
+
+  const kpis = query.data?.kpis
+  const rows = query.data?.items ?? []
+  const total = query.data?.total ?? 0
+  const totalPages = Math.max(1, Math.ceil(total / pageSize))
+
+  const totalCount = kpis?.total_escalations ?? 0
+  const notFollowedCount = kpis?.not_followed_up ?? 0
+  const followedCount = kpis?.followed_up ?? 0
 
   const STATUS_CHIPS: { id: LeakStatusFilter; label: string; count: number }[] = [
     { id: 'all', label: t('pages.training.leaks.chips.all', 'All'), count: totalCount },
     {
-      id: 'not',
+      id: 'not_followed_up',
       label: t('pages.training.leaks.chips.notFollowedUp', 'Not followed up'),
       count: notFollowedCount,
     },
     {
-      id: 'done',
+      id: 'followed_up',
       label: t('pages.training.leaks.chips.followedUp', 'Followed up'),
       count: followedCount,
     },
@@ -90,40 +209,124 @@ export function LeaksSubTab() {
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <AnalyticsKpiTile
           label={t('pages.training.leaks.kpi.totalEscalations', 'Total escalations')}
-          value={k.totalEscalations}
+          value={totalCount}
           icon={<Icons.Warning size={18} />}
           iconBg="bg-[#FEFCE8]"
           iconTone="text-[#CA8A04]"
         />
         <AnalyticsKpiTile
           label={t('pages.training.leaks.kpi.notFollowedUp', 'Not followed up')}
-          value={k.notFollowedUp}
+          value={notFollowedCount}
           icon={<Icons.Close size={18} />}
           iconBg="bg-[#FEF2F2]"
           iconTone="text-[#EF4444]"
         />
         <AnalyticsKpiTile
           label={t('pages.training.leaks.kpi.followedUp', 'Followed up')}
-          value={k.followedUp}
+          value={followedCount}
           icon={<Icons.Success size={18} />}
           iconBg="bg-[#ECFDF5]"
           iconTone="text-[#22C55E]"
         />
       </div>
 
-      {/* Red banner — title + secondary line */}
-      <div className="flex items-start gap-2.5 rounded-xl border border-[#FECACA] bg-[#FEF2F2] px-4 py-3">
-        <Icons.Warning size={16} className="mt-0.5 flex-shrink-0 text-[#EF4444]" />
-        <div className="flex flex-col gap-0.5">
-          <span className="text-xs font-semibold text-[#EF4444]">
-            {t('pages.training.leaks.escalationBanner', '4 escalations without follow-up')}
+      {/* Red banner — title + secondary line (when there are unprocessed leaks) */}
+      {notFollowedCount > 0 ? (
+        <div className="flex items-start gap-2.5 rounded-xl border border-[#FECACA] bg-[#FEF2F2] px-4 py-3">
+          <Icons.Warning size={16} className="mt-0.5 flex-shrink-0 text-[#EF4444]" />
+          <div className="flex flex-col gap-0.5">
+            <span className="text-xs font-semibold text-[#EF4444]">
+              {t('pages.training.leaks.escalationBanner', {
+                count: notFollowedCount,
+                defaultValue: '{{count}} escalations without follow-up',
+              })}
+            </span>
+            <span className="text-[11px] text-[#676767]">
+              {t(
+                'pages.training.leaks.escalationBannerHint',
+                'Operators did not call after the escalation. Trainer or senior department intervention is needed.'
+              )}
+            </span>
+          </div>
+        </div>
+      ) : null}
+
+      {/* Filter strip — period radios on the left, lookback + export on the right */}
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[#EBECE8] bg-white px-4 py-3 shadow-[0px_1px_2px_rgba(0,0,0,0.04)]">
+        <div className="flex flex-wrap items-center gap-4">
+          <span className="text-xs font-medium tracking-[-0.02em] text-[#05040D]">
+            {t('pages.training.period.label', 'Period')}:
           </span>
-          <span className="text-[11px] text-[#676767]">
-            {t(
-              'pages.training.leaks.escalationBannerHint',
-              'Operators did not call after the escalation. Trainer or senior department intervention is needed.'
-            )}
-          </span>
+          {PERIODS.map((p) => {
+            const isActive = p.id === period
+            return (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => changePeriod(p.id)}
+                className="flex items-center gap-1.5 text-xs font-medium text-[#05040D]"
+              >
+                <span
+                  className={`flex h-3.5 w-3.5 flex-shrink-0 items-center justify-center rounded-full border ${
+                    isActive ? 'border-[#22C55E] bg-white' : 'border-[#DFDFDF] bg-white'
+                  }`}
+                >
+                  {isActive ? <span className="block h-2 w-2 rounded-full bg-[#22C55E]" /> : null}
+                </span>
+                <span className={isActive ? 'text-[#05040D]' : 'text-[#676767]'}>
+                  {t(p.key, p.fallback)}
+                </span>
+              </button>
+            )
+          })}
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Lookback-days control */}
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs font-medium text-[#676767]">
+              {t('pages.training.leaks.lookback', 'Follow-up window')}:
+            </span>
+            <div className="flex items-center gap-1 rounded-full border border-[#EBECE8] bg-white px-1 py-0.5">
+              <button
+                type="button"
+                onClick={() => changeLookback(lookbackDays - 1)}
+                disabled={lookbackDays <= LOOKBACK_MIN}
+                className="flex h-5 w-5 items-center justify-center rounded-full text-[#545454] hover:bg-[#F7F7F7] disabled:opacity-40"
+                aria-label={t('pages.training.leaks.lookbackDecrease', 'Decrease window')}
+              >
+                −
+              </button>
+              <span className="min-w-[2.5rem] text-center text-xs font-semibold text-[#05040D]">
+                {t('pages.training.leaks.lookbackValue', {
+                  count: lookbackDays,
+                  defaultValue: '{{count}} d',
+                })}
+              </span>
+              <button
+                type="button"
+                onClick={() => changeLookback(lookbackDays + 1)}
+                disabled={lookbackDays >= LOOKBACK_MAX}
+                className="flex h-5 w-5 items-center justify-center rounded-full text-[#545454] hover:bg-[#F7F7F7] disabled:opacity-40"
+                aria-label={t('pages.training.leaks.lookbackIncrease', 'Increase window')}
+              >
+                +
+              </button>
+            </div>
+          </div>
+
+          {/* Excel export */}
+          <button
+            type="button"
+            onClick={() => exportMutation.mutate(filters)}
+            disabled={exportMutation.isPending || total === 0}
+            className="flex items-center gap-1.5 rounded-full border border-[#EBECE8] bg-white px-3 py-1.5 text-xs font-medium text-[#05040D] hover:bg-[#F7F7F7] disabled:opacity-50"
+          >
+            <Icons.Download size={14} />
+            {exportMutation.isPending
+              ? t('pages.training.leaks.exporting', 'Exporting…')
+              : t('pages.training.leaks.export', 'Export')}
+          </button>
         </div>
       </div>
 
@@ -136,7 +339,7 @@ export function LeaksSubTab() {
               <button
                 key={chip.id}
                 type="button"
-                onClick={() => setStatusFilter(chip.id)}
+                onClick={() => changeStatus(chip.id)}
                 className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
                   isActive ? 'bg-[#204E4D] text-white' : 'text-[#545454] hover:bg-[#F7F7F7]'
                 }`}
@@ -181,17 +384,51 @@ export function LeaksSubTab() {
             </tr>
           </thead>
           <tbody>
-            {rows.map((row) => (
-              <LeakRow
-                key={row.id}
-                row={row}
-                followedLabel={t('pages.training.leaks.followUp.followed', 'Followed up')}
-                notFollowedLabel={t('pages.training.leaks.followUp.notFollowed', 'Not followed up')}
-              />
-            ))}
+            {query.isLoading ? (
+              <tr>
+                <td colSpan={7} className="px-4 py-6 text-center text-[11px] text-[#9CA3AF]">
+                  {t('pages.training.leaks.loading', 'Loading…')}
+                </td>
+              </tr>
+            ) : query.isError ? (
+              <tr>
+                <td colSpan={7} className="px-4 py-6 text-center text-[11px] text-[#EF4444]">
+                  {t('pages.training.leaks.loadFailed', 'Failed to load. Please retry.')}
+                </td>
+              </tr>
+            ) : rows.length === 0 ? (
+              <tr>
+                <td colSpan={7} className="px-4 py-6 text-center text-[11px] text-[#9CA3AF]">
+                  {t('pages.training.leaks.empty', 'No escalations match the filters.')}
+                </td>
+              </tr>
+            ) : (
+              rows.map((row) => (
+                <LeakRow
+                  key={row.id}
+                  row={row}
+                  followedLabel={t('pages.training.leaks.followUp.followed', 'Followed up')}
+                  notFollowedLabel={t(
+                    'pages.training.leaks.followUp.notFollowed',
+                    'Not followed up'
+                  )}
+                  noCallLabel={t('pages.training.leaks.noCall', 'No call')}
+                />
+              ))
+            )}
           </tbody>
         </AnalyticsMockTable>
       </div>
+
+      {total > pageSize ? (
+        <Pagination
+          currentPage={page}
+          totalPages={totalPages}
+          pageSize={pageSize}
+          onPageChange={setPage}
+          onPageSizeChange={setPageSize}
+        />
+      ) : null}
     </div>
   )
 }
@@ -200,42 +437,48 @@ function LeakRow({
   row,
   followedLabel,
   notFollowedLabel,
+  noCallLabel,
 }: {
-  row: MockLeakRow
+  row: LeakItem
   followedLabel: string
   notFollowedLabel: string
+  noCallLabel: string
 }) {
-  const isFollowed = row.followedUp
-  const isNoCall = row.callAfterEscalationLabel.toLowerCase().includes('no call')
+  const navigate = useNavigate()
+  const isFollowed = row.follow_up_status === 'followed_up'
+  const operatorName = row.operator_name ?? (row.operator_id ? `#${row.operator_id}` : '—')
+  const initials = row.operator_name ? deriveInitials(row.operator_name) : ''
+  const callAfter = formatShortDateTime(row.last_call_after_escalation_at)
   return (
     <tr className={ANALYTICS_TABLE_ROW}>
       <td className={ANALYTICS_TABLE_TD}>
         <div className="flex items-center gap-2">
-          {row.operatorInitials ? (
-            <span className="relative flex-shrink-0">
-              <span
-                className="flex h-7 w-7 items-center justify-center rounded-full text-[10px] font-semibold text-[#05040D]"
-                style={{ backgroundColor: row.operatorAvatarColor ?? '#EDEDED' }}
-              >
-                {row.operatorInitials}
-              </span>
-              {row.operatorPresence ? (
-                <span
-                  className={`absolute right-0 bottom-0 h-2 w-2 rounded-full border border-white ${PRESENCE_DOT[row.operatorPresence]}`}
-                  aria-hidden
-                />
-              ) : null}
+          {initials ? (
+            <span
+              className="flex h-7 w-7 items-center justify-center rounded-full text-[10px] font-semibold text-[#05040D]"
+              style={{ backgroundColor: avatarColorFor(row.operator_id) }}
+            >
+              {initials}
             </span>
           ) : null}
-          <span className="text-xs font-medium text-[#05040D]">{row.operator}</span>
+          <span className="text-xs font-medium text-[#05040D]">{operatorName}</span>
         </div>
       </td>
-      <td className={`${ANALYTICS_TABLE_TD} text-[#3B82F6]`}>{row.client}</td>
-      <td className={ANALYTICS_TABLE_TD}>{row.agreement}</td>
-      <td className={`${ANALYTICS_TABLE_TD} font-semibold text-[#05040D]`}>
-        {row.promiseAmount.toLocaleString()} ₴
+      <td className={`${ANALYTICS_TABLE_TD} text-[#3B82F6]`}>
+        <button
+          type="button"
+          title={row.client_full_name ?? undefined}
+          onClick={() => navigate(`/dashboard/clients/${row.client_id}`)}
+          className="hover:underline"
+        >
+          #{row.client_id}
+        </button>
       </td>
-      <td className={ANALYTICS_TABLE_TD}>{row.promiseDateLabel}</td>
+      <td className={ANALYTICS_TABLE_TD}>{row.contract_number ?? '—'}</td>
+      <td className={`${ANALYTICS_TABLE_TD} font-semibold text-[#05040D]`}>
+        {row.promise_amount != null ? `${formatAmount(row.promise_amount)} ₴` : '—'}
+      </td>
+      <td className={ANALYTICS_TABLE_TD}>{formatShortDate(row.promise_date)}</td>
       <td className={ANALYTICS_TABLE_TD}>
         {isFollowed ? (
           <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-medium text-emerald-700">
@@ -250,9 +493,9 @@ function LeakRow({
         )}
       </td>
       <td
-        className={`${ANALYTICS_TABLE_TD} ${isNoCall ? 'font-medium text-[#EF4444]' : 'text-[#05040D]'}`}
+        className={`${ANALYTICS_TABLE_TD} ${callAfter ? 'text-[#05040D]' : 'font-medium text-[#EF4444]'}`}
       >
-        {row.callAfterEscalationLabel}
+        {callAfter ?? noCallLabel}
       </td>
     </tr>
   )

@@ -97,6 +97,12 @@ export interface DateSelectProps {
    */
   defaultTime?: string
   /**
+   * Skip the ``defaultTime`` auto-fill when the picked day is today
+   * (browser-local). For forms where today + the default would land in
+   * the past. Omit to keep the default firing on today too.
+   */
+  defaultTimeSkipsToday?: boolean
+  /**
    * Called whenever the typed value's validity changes. ``true`` means the
    * field currently holds incomplete/invalid text that should block saving.
    * Only fires in manual-input mode.
@@ -153,6 +159,7 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
       filterTime,
       allowManualInput = false,
       defaultTime,
+      defaultTimeSkipsToday,
       onValidityChange,
       invalidText,
     },
@@ -225,6 +232,7 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
             defaultTime,
             hasExistingValue: !!parseDate(value),
             fromDayClick,
+            skipIfToday: defaultTimeSkipsToday,
           })
         : null
       if (allowManualInput) {
@@ -234,6 +242,9 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
       }
       onChange?.({ value: next })
     }
+
+    // × only renders when opt-in onClear is provided AND a date is set.
+    const showClear = !!onClear && parseDate(value) !== null
 
     // Typed input: mask, then commit only when complete + valid. Datetime
     // manual entry always includes the time (the mask requires HH:MM), so the
@@ -270,6 +281,7 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
 
     const inputClassName = cn(
       'h-[45px] w-full rounded-md border bg-white pr-4 pl-10 text-sm font-light text-[#05040D] transition-all outline-none placeholder:text-gray-500',
+      showClear && 'pr-10',
       hasError
         ? 'border-red-500 focus:border-red-500'
         : 'border-gray-300 focus:border-[var(--color-primary-500)]',
@@ -282,8 +294,6 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
           ? 'DD.MM.YYYY'
           : 'DD.MM.YYYY HH:MM'
         : placeholder
-    // × only renders when opt-in onClear is provided AND a date is set.
-    const showClear = !!onClear && parseDate(value) !== null
 
     return (
       <div className={`w-full ${className || ''}`}>

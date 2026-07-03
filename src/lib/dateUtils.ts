@@ -121,21 +121,34 @@ export function maskDateTimeInput(raw: string): string {
 }
 
 /**
- * Decide the value to commit when a calendar selection is made, applying a
- * default time-of-day only when the user set the DATE first (KAN-578 case
- * split). The default seeds the time **only** when all hold:
- *   • a ``defaultTime`` is configured (e.g. "09:00"),
- *   • there is no committed value yet (first selection),
- *   • the selection came from a calendar **day** click (``fromDayClick``).
- * A time-first pick (``fromDayClick === false``) keeps the user's chosen time,
- * and any later selection (``hasExistingValue``) leaves the time untouched.
+ * Seed the default time-of-day on the FIRST calendar day-click of a field.
+ * Applies ``defaultTime`` only when no value exists yet AND the selection
+ * came from a day-click; later picks and time-list clicks leave the time
+ * untouched. ``skipIfToday`` additionally suppresses the default when the
+ * picked day is today (browser-local) — used by forms where today + the
+ * default would land in the past.
  */
+function _isTodayBrowserLocal(date: Date): boolean {
+  const now = new Date()
+  return (
+    date.getFullYear() === now.getFullYear() &&
+    date.getMonth() === now.getMonth() &&
+    date.getDate() === now.getDate()
+  )
+}
+
 export function applyDefaultTimeToDate(
   date: Date,
-  opts: { defaultTime?: string; hasExistingValue: boolean; fromDayClick: boolean }
+  opts: {
+    defaultTime?: string
+    hasExistingValue: boolean
+    fromDayClick: boolean
+    skipIfToday?: boolean
+  }
 ): Date {
-  const { defaultTime, hasExistingValue, fromDayClick } = opts
+  const { defaultTime, hasExistingValue, fromDayClick, skipIfToday } = opts
   if (!defaultTime || hasExistingValue || !fromDayClick) return date
+  if (skipIfToday && _isTodayBrowserLocal(date)) return date
   const [h, m] = defaultTime.split(':').map(Number)
   const next = new Date(date)
   next.setHours(h || 0, m || 0, 0, 0)

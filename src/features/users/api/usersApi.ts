@@ -8,13 +8,15 @@
 import api from '@/lib/api'
 import type {
   ApiUser,
-  UserListParams,
-  UserListResponse,
-  UserDetailResponse,
   CreateUserInput,
-  UpdateUserInput,
+  IpWhitelistSettings,
   ResetPasswordResponse,
   UnlockAccountResponse,
+  UpdateIpWhitelistSettingsInput,
+  UpdateUserInput,
+  UserDetailResponse,
+  UserListParams,
+  UserListResponse,
 } from '../types'
 
 /**
@@ -143,6 +145,27 @@ export async function adminReenableTwoFactor(
 }
 
 /**
+ * Read the global IP-whitelist enforcement flag.
+ *
+ * When `enabled` is false the per-user whitelist is dormant; logins
+ * succeed regardless of source IP.
+ */
+export async function getIpWhitelistSettings(): Promise<IpWhitelistSettings> {
+  const response = await api.get<IpWhitelistSettings>('/api/v1/admin/settings/ip-whitelist')
+  return response.data
+}
+
+/**
+ * Toggle the global IP-whitelist enforcement flag.
+ */
+export async function updateIpWhitelistSettings(
+  input: UpdateIpWhitelistSettingsInput
+): Promise<IpWhitelistSettings> {
+  const response = await api.put<IpWhitelistSettings>('/api/v1/admin/settings/ip-whitelist', input)
+  return response.data
+}
+
+/**
  * Exported API object for easier importing
  */
 
@@ -215,4 +238,6 @@ export const usersApi = {
   adminReenableTwoFactor,
   getOperators,
   getUserDepartment,
+  getIpWhitelistSettings,
+  updateIpWhitelistSettings,
 }

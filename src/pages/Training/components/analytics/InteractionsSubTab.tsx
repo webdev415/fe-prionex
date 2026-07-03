@@ -1,6 +1,8 @@
 import { memo, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
+import { Pagination } from '@/components/ui/Pagination'
 import { useAuthStore } from '@/stores/authStore'
 import { useOperators } from '@/features/users/hooks'
 import { useInteractionMonitoring } from '@/features/training/hooks/useInteractionMonitoring'
@@ -125,6 +127,23 @@ export function InteractionsSubTab() {
   const [period, setPeriod] = useState<InteractionPeriod>('today')
   const [operatorFilter, setOperatorFilter] = useState<'all' | string>('all')
   const [statusFilter, setStatusFilter] = useState<'all' | string>('all')
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(50)
+
+  // A filter change invalidates the current page offset — these setters reset
+  // back to page 1 alongside the filter update.
+  const changePeriod = (p: InteractionPeriod) => {
+    setPeriod(p)
+    setPage(1)
+  }
+  const changeOperator = (value: string) => {
+    setOperatorFilter(value)
+    setPage(1)
+  }
+  const changeStatus = (value: string) => {
+    setStatusFilter(value)
+    setPage(1)
+  }
 
   const activeProjectId = useAuthStore((s) => s.user?.active_project_id)
   const projectIdNum = activeProjectId ? Number(activeProjectId) : null
@@ -146,20 +165,23 @@ export function InteractionsSubTab() {
       result_ids: resultId != null && Number.isFinite(resultId) ? [resultId] : undefined,
       sort_by: 'date',
       sort_dir: 'desc',
-      page: 1,
-      page_size: 50,
+      page,
+      page_size: pageSize,
     }
-  }, [period, operatorFilter, statusFilter, operatorIdByLabel])
+  }, [period, operatorFilter, statusFilter, operatorIdByLabel, page, pageSize])
 
   const interactionsQuery = useInteractionMonitoring(filters, projectIdNum != null)
 
   const items = interactionsQuery.data?.items ?? []
+  const total = interactionsQuery.data?.total ?? 0
+  const totalPages = Math.max(1, Math.ceil(total / pageSize))
   const isDefault = period === 'today' && operatorFilter === 'all' && statusFilter === 'all'
 
   const handleReset = () => {
     setPeriod('today')
     setOperatorFilter('all')
     setStatusFilter('all')
+    setPage(1)
   }
 
   return (
@@ -185,7 +207,7 @@ export function InteractionsSubTab() {
               <button
                 key={p.id}
                 type="button"
-                onClick={() => setPeriod(p.id)}
+                onClick={() => changePeriod(p.id)}
                 className="flex items-center gap-1.5 text-xs font-medium text-[#05040D]"
               >
                 <span
@@ -207,7 +229,7 @@ export function InteractionsSubTab() {
         <div className="relative ml-2 min-w-[180px] flex-1 sm:flex-none">
           <select
             value={operatorFilter}
-            onChange={(e) => setOperatorFilter(e.target.value)}
+            onChange={(e) => changeOperator(e.target.value)}
             className="h-9 w-full appearance-none rounded-lg border border-[#EBECE8] bg-white px-3 pr-8 text-xs text-[#05040D] focus:outline-none"
           >
             <option value="all">
@@ -229,7 +251,7 @@ export function InteractionsSubTab() {
         <div className="relative min-w-[160px] flex-1 sm:flex-none">
           <select
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
+            onChange={(e) => changeStatus(e.target.value)}
             className="h-9 w-full appearance-none rounded-lg border border-[#EBECE8] bg-white px-3 pr-8 text-xs text-[#05040D] focus:outline-none"
           >
             <option value="all">
@@ -316,6 +338,16 @@ export function InteractionsSubTab() {
           )}
         </tbody>
       </AnalyticsMockTable>
+
+      {total > pageSize ? (
+        <Pagination
+          currentPage={page}
+          totalPages={totalPages}
+          pageSize={pageSize}
+          onPageChange={setPage}
+          onPageSizeChange={setPageSize}
+        />
+      ) : null}
     </div>
   )
 }
@@ -325,6 +357,7 @@ export function InteractionsSubTab() {
 const InteractionRow = memo(InteractionRowImpl, (prev, next) => prev.row === next.row)
 
 function InteractionRowImpl({ row }: { row: InteractionMonitoringItem }) {
+  const navigate = useNavigate()
   const operatorName = row.user_name ?? (row.user_id ? `#${row.user_id}` : '—')
   const initials =
     operatorName === '—'
@@ -359,8 +392,15 @@ function InteractionRowImpl({ row }: { row: InteractionMonitoringItem }) {
         )}
       </td>
       <td className={ANALYTICS_TABLE_TD}>—</td>
-      <td className={`${ANALYTICS_TABLE_TD} text-[#3B82F6]`}>
-        {row.client_full_name ?? `#${row.client_id}`}
+      <td className={ANALYTICS_TABLE_TD}>
+        <button
+          type="button"
+          title={row.client_full_name ?? undefined}
+          onClick={() => navigate(`/dashboard/clients/${row.client_id}`)}
+          className="text-[#3B82F6] hover:underline"
+        >
+          #{row.client_id}
+        </button>
       </td>
       <td className={ANALYTICS_TABLE_TD}>{row.contract_number ?? '—'}</td>
       <td className={`${ANALYTICS_TABLE_TD} text-right font-medium`}>

@@ -8,6 +8,8 @@
     "fines": "Fines",
     "original": "Original Amount",
     "allocated": "Allocated",
+    "paid": "Paid",
+    "written_off": "Written-off",
     "remaining": "Remaining",
     "total": "Total",
     "no_debt": "No associated debt",

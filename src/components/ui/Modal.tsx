@@ -16,7 +16,7 @@ export interface ModalProps {
   onClose: () => void
   children: ReactNode
   className?: string
-  maxWidth?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | 'full'
+  maxWidth?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | 'full'
   showCloseButton?: boolean
   preventOutsideClose?: boolean
   /**
@@ -101,6 +101,7 @@ export function Modal({
               maxWidth === 'lg' && 'max-w-md sm:max-w-lg md:max-w-xl',
               maxWidth === 'xl' && 'max-w-md sm:max-w-lg md:max-w-xl lg:max-w-2xl',
               maxWidth === '2xl' && 'max-w-[95%] sm:max-w-lg md:max-w-xl lg:max-w-2xl',
+              maxWidth === '3xl' && 'max-w-[95%] sm:max-w-xl md:max-w-3xl lg:max-w-4xl',
               maxWidth === 'full' && 'max-w-[95%] sm:max-w-full',
               className
             )}
@@ -138,6 +139,7 @@ export function Modal({
                 maxWidth === 'lg' && 'max-w-md sm:max-w-lg md:max-w-xl',
                 maxWidth === 'xl' && 'max-w-md sm:max-w-lg md:max-w-xl lg:max-w-2xl',
                 maxWidth === '2xl' && 'max-w-[95%] sm:max-w-lg md:max-w-xl lg:max-w-2xl',
+                maxWidth === '3xl' && 'max-w-[95%] sm:max-w-xl md:max-w-3xl lg:max-w-4xl',
                 maxWidth === 'full' && 'max-w-[95%] sm:max-w-full',
                 className
               )}

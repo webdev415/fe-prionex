@@ -31,6 +31,7 @@ export interface InboxTabProps {
   onOpenRateDialogue?: () => void
   onOpenScheduleOneOnOne?: () => void
   onOpenAssignTask?: () => void
+  onOpenAssignMaterial?: () => void
 }
 
 type ViewMode = 'inbox' | 'kanban' | 'grid'
@@ -64,6 +65,7 @@ export function InboxTab({
   onOpenRateDialogue,
   onOpenScheduleOneOnOne,
   onOpenAssignTask,
+  onOpenAssignMaterial,
 }: InboxTabProps = {}) {
   const { t } = useTranslation('common')
   const [searchParams, setSearchParams] = useSearchParams()
@@ -344,18 +346,20 @@ export function InboxTab({
           onListenRealtime={() =>
             toast.info(t('pages.training.inbox.quickActions.comingSoon', 'Coming soon'))
           }
-          onListen={
+          onListen={() =>
+            toast.info(t('pages.training.inbox.quickActions.comingSoon', 'Coming soon'))
+          }
+          onRate={
             onOpenRateDialogue ??
             (() => toast.info(t('pages.training.inbox.quickActions.comingSoon', 'Coming soon')))
           }
-          onRate={() =>
-            toast.info(t('pages.training.inbox.quickActions.comingSoon', 'Coming soon'))
+          onAssignCourse={
+            onOpenAssignMaterial ??
+            (() => toast.info(t('pages.training.inbox.quickActions.comingSoon', 'Coming soon')))
           }
-          onAssignCourse={() =>
-            toast.info(t('pages.training.inbox.quickActions.comingSoon', 'Coming soon'))
-          }
-          onAssignDrill={() =>
-            toast.info(t('pages.training.inbox.quickActions.comingSoon', 'Coming soon'))
+          onAssignDrill={
+            onOpenAssignMaterial ??
+            (() => toast.info(t('pages.training.inbox.quickActions.comingSoon', 'Coming soon')))
           }
           onPlanOneOnOne={
             onOpenScheduleOneOnOne ??

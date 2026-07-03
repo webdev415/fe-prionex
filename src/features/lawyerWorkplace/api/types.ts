@@ -18,6 +18,7 @@ export interface LegalInboxItem {
   id: string
   thread_id: string
   mailbox_id: string | null
+  mailbox_email?: string | null
   subject: string | null
   from_address: string
   processing_status: string

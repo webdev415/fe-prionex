@@ -1,3 +1,4 @@
+import axios from 'axios'
 import { api } from '@/lib/api'
 import type {
   CorrectionStats,
@@ -42,6 +43,19 @@ export async function transitionCorrectionTask(
 ): Promise<CorrectionTask> {
   const response = await api.patch<CorrectionTask>(`${BASE}/${taskId}/transition`, payload)
   return response.data
+}
+
+/** Resolve the correction task linked to a feedback row; null if none yet (KAN-762). */
+export async function getCorrectionTaskByFeedback(
+  feedbackId: number
+): Promise<CorrectionTask | null> {
+  try {
+    const response = await api.get<CorrectionTask>(`${BASE}/by-feedback/${feedbackId}`)
+    return response.data
+  } catch (err) {
+    if (axios.isAxiosError(err) && err.response?.status === 404) return null
+    throw err
+  }
 }
 
 export interface GetStatsFilters {

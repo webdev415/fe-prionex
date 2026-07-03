@@ -20,19 +20,31 @@ import type {
   TAInteractionListParams,
   TAInteractionUpdate,
 } from '../api/types'
+import type { TagDefinition } from '@/features/tags/types'
+import { clientKeys } from '@/features/clients/hooks/useClients'
 
 const INT_KEY = ['ta-interactions'] as const
 const INST_KEY = ['chain-instances'] as const
 
 export function useClientTAInteractions(
   clientId: number | null,
-  params?: Omit<TAInteractionListParams, 'client_id'>
+  params?: Omit<TAInteractionListParams, 'client_id'>,
+  options?: { refetchInterval?: number }
 ) {
   return useQuery({
     queryKey: [...INT_KEY, 'client', clientId, params],
     queryFn: () => getTAInteractions({ client_id: clientId!, ...params }),
     enabled: clientId !== null && clientId > 0,
     staleTime: 10_000,
+    // Interactions can also be created by the background chain-event consumer
+    // (an automatic Credit+Date chain auto-completing on a debt close), which
+    // the UI never hears about — so the list would otherwise stay empty until a
+    // manual page reload. Refetch when the tab regains focus, and when a caller
+    // opts in, poll on an interval, so those async rows show up on their own.
+    // refetchInterval pauses while the tab is unfocused (default), so idle
+    // background tabs don't poll.
+    refetchOnWindowFocus: true,
+    refetchInterval: options?.refetchInterval,
   })
 }
 
@@ -109,12 +121,19 @@ export function useClientPinnedChainIds(clientId: number | null) {
   })
 }
 
-export function useClientChainInstances(clientId: number | null) {
+export function useClientChainInstances(
+  clientId: number | null,
+  options?: { refetchInterval?: number }
+) {
   return useQuery({
     queryKey: [...INST_KEY, 'client', clientId],
     queryFn: () => getChainInstances({ client_id: clientId! }),
     enabled: clientId !== null && clientId > 0,
     staleTime: 10_000,
+    // Optional polling so a trigger-launched chain (created asynchronously by
+    // the chain event consumer after, e.g., a debt close) is picked up shortly
+    // after it fires. Callers that don't pass this poll nothing (default).
+    refetchInterval: options?.refetchInterval,
   })
 }
 
@@ -130,7 +149,20 @@ export function useCompleteChainInstance() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (id: number) => completeChainInstance(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: INST_KEY }),
+    onSuccess: (updated) => {
+      qc.invalidateQueries({ queryKey: INST_KEY })
+      if (updated.status === 'completed') {
+        if (updated.client_tags != null) {
+          qc.setQueriesData<TagDefinition[]>(
+            { queryKey: ['clients', updated.client_id, 'tags'] },
+            () => updated.client_tags ?? []
+          )
+        } else {
+          qc.invalidateQueries({ queryKey: ['clients', updated.client_id, 'tags'] })
+        }
+        qc.invalidateQueries({ queryKey: clientKeys.lists() })
+      }
+    },
   })
 }
 
@@ -200,10 +232,20 @@ export function useAdvanceChainInstance() {
         // can mutate tags, dial-history (spam list), and tasks. Refresh those
         // explicitly. The TA history list refresh is also needed because the
         // final interaction was just recorded.
-        qc.invalidateQueries({ queryKey: ['clients', updated.client_id, 'tags'] })
+        if (updated.client_tags != null) {
+          // Server ran tag effects synchronously and returned the authoritative
+          // tag list — apply directly so the profile updates without reload.
+          qc.setQueriesData<TagDefinition[]>(
+            { queryKey: ['clients', updated.client_id, 'tags'] },
+            () => updated.client_tags ?? []
+          )
+        } else {
+          qc.invalidateQueries({ queryKey: ['clients', updated.client_id, 'tags'] })
+        }
         qc.invalidateQueries({ queryKey: ['clients', updated.client_id, 'dialHistory'] })
         qc.invalidateQueries({ queryKey: ['clients', updated.client_id, 'tasks'] })
         qc.invalidateQueries({ queryKey: [...INT_KEY, 'client', updated.client_id] })
+        qc.invalidateQueries({ queryKey: clientKeys.lists() })
       }
     },
   })

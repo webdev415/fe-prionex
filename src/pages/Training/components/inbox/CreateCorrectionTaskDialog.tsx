@@ -29,6 +29,8 @@ export interface CreateCorrectionTaskDialogProps {
   open: boolean
   onClose: () => void
   operatorId: number | undefined
+  /** Preselect this call (e.g. opened from the review panel's Assign task). */
+  callId?: string
 }
 
 const TASK_TYPES: { id: CorrectionTaskType; key: string; fallback: string }[] = [
@@ -77,6 +79,7 @@ export function CreateCorrectionTaskDialog({
   open,
   onClose,
   operatorId,
+  callId: initialCallId,
 }: CreateCorrectionTaskDialogProps) {
   const { t } = useTranslation('common')
   const activeProjectId = useAuthStore((s) => s.user?.active_project_id)
@@ -113,7 +116,7 @@ export function CreateCorrectionTaskDialog({
     setTrackedOpen(open)
     setTrackedOperator(operatorId)
     if (open) {
-      setCallId('')
+      setCallId(initialCallId ?? '')
       setTaskType('listen_reflect')
       setTitle('')
       setDescription('')

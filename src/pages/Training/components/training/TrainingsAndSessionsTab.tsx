@@ -5,7 +5,6 @@ import { TRAININGS_AND_SESSIONS_SUB_TABS, type TrainingsAndSessionsSubTabId } fr
 import { TrainingSegmentedStrip } from '../chrome/TrainingSegmentedStrip'
 import { CallLibraryTab } from './CallLibraryTab'
 import { CoursesCatalogTab } from './CoursesCatalogTab'
-import { AssignmentsGridTab } from './AssignmentsGridTab'
 import { MaterialsLibraryTab } from './MaterialsLibraryTab'
 import { GroupTrainingsTab } from './GroupTrainingsTab'
 import { DrillsTab } from './DrillsTab'
@@ -17,15 +16,11 @@ const SUB_TAB_LABELS: Record<TrainingsAndSessionsSubTabId, { key: string; fallba
   courses: { key: 'pages.training.training.subTabs.courses', fallback: 'Courses' },
   'group-trainings': {
     key: 'pages.training.training.subTabs.groupTrainings',
-    fallback: 'Group trainings',
+    fallback: 'Group Training Sessions',
   },
-  drills: { key: 'pages.training.training.subTabs.drills', fallback: 'Drills' },
-  calendar: { key: 'pages.training.training.subTabs.calendar', fallback: 'Calendar' },
+  drills: { key: 'pages.training.training.subTabs.drills', fallback: 'Drill Exercises' },
+  calendar: { key: 'pages.training.training.subTabs.calendar', fallback: '1-on-1 Sessions' },
   tests: { key: 'pages.training.training.subTabs.tests', fallback: 'Tests' },
-  assignments: {
-    key: 'pages.training.training.subTabs.assignments',
-    fallback: 'Assignments',
-  },
   materials: { key: 'pages.training.training.subTabs.materials', fallback: 'Materials' },
   'call-library': {
     key: 'pages.training.training.subTabs.callLibrary',
@@ -77,7 +72,6 @@ export function TrainingsAndSessionsTab() {
       {activeSubTab === 'drills' && <DrillsTab />}
       {activeSubTab === 'calendar' && <OneOnOneCalendarTab />}
       {activeSubTab === 'tests' && <TestsTab />}
-      {activeSubTab === 'assignments' && <AssignmentsGridTab />}
       {activeSubTab === 'materials' && <MaterialsLibraryTab />}
       {activeSubTab === 'call-library' && <CallLibraryTab />}
     </div>

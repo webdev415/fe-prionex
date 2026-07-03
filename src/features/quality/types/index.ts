@@ -16,6 +16,8 @@ export interface Section {
   criteria: Criterion[]
 }
 
+export type ScorecardType = 'client' | 'third_party'
+
 export interface ScorecardTemplate {
   id: number
   project_id: number
@@ -23,6 +25,9 @@ export interface ScorecardTemplate {
   description: string | null
   call_type: 'inbound' | 'outbound' | null
   department_id: number | null
+  // KAN-504: 'client' | 'third_party' for the two typed templates; null for
+  // the legacy "Default Scorecard".
+  scorecard_type: ScorecardType | null
   sections: Section[]
   is_archived: boolean
   created_by: number
@@ -55,6 +60,8 @@ export interface Scorecard {
     description: string | null
     call_type: string | null
     department_id: number | null
+    // KAN-504: frozen scorecard type (optional — legacy snapshots predate it).
+    scorecard_type?: ScorecardType | null
     sections: Section[]
   }
   scores: ScoresPayload
@@ -100,6 +107,90 @@ export interface ScorecardUpdatePayload {
   scores?: ScoresPayload
   overall_comment?: string | null
   status?: ScorecardStatus
+}
+
+// ---- Score aggregation by period (KAN-504) ----
+
+export type AggregateGroupBy = 'operator' | 'team' | 'all'
+
+export interface AggregateRow {
+  // operator_id (group_by=operator), team/group id (group_by=team), or null
+  // (group_by=all).
+  entity_id: number | null
+  entity_name: string
+  avg_client: number | null
+  avg_third_party: number | null
+  calls_scored: number
+  trend_vs_prior: number | null
+}
+
+export interface AggregateResponse {
+  group_by: AggregateGroupBy
+  period_from: string
+  period_to: string
+  rows: AggregateRow[]
+}
+
+export interface AggregateFilters {
+  period?: string
+  from_date?: string
+  to_date?: string
+  group_by?: AggregateGroupBy
+  operator_id?: number[]
+}
+
+// ---- Script Stage Funnel ----
+
+export type FunnelBand = 'green' | 'yellow' | 'red'
+
+export interface StageDto {
+  key: string
+  label_en: string
+  label_uk: string
+  order: number
+  expected: number
+  actual: number
+  drop_pct: number
+  band: FunnelBand
+}
+
+export interface PainPointDto {
+  stage: string
+  label_en: string
+  label_uk: string
+  drop_pct: number
+  band: FunnelBand
+  // Critical only — operators whose personal drop exceeds the red threshold.
+  operators_below: number | null
+  recommendation: string
+}
+
+export interface PainPoints {
+  critical: PainPointDto[]
+  warning: PainPointDto[]
+  stable: PainPointDto[]
+}
+
+export interface StageFunnelResponse {
+  period_from: string
+  period_to: string
+  // Denominator — scored calls counted into the funnel (surfaced in the UI).
+  evaluated_calls: number
+  stages: StageDto[]
+  pain_points: PainPoints
+}
+
+// Which date the funnel window applies to: 'evaluation' (when the call was
+// scored, default) or 'call' (when the call was made).
+export type FunnelDateType = 'evaluation' | 'call'
+
+export interface StageFunnelFilters {
+  period?: string
+  from_date?: string
+  to_date?: string
+  date_type?: FunnelDateType
+  operator_ids?: number[]
+  department_ids?: number[]
 }
 
 export interface Pagination {
@@ -213,6 +304,7 @@ export interface Feedback {
   text: string
   timestamp_ms: number | null
   status: FeedbackStatus
+  deadline: string | null
   created_at: string
   read_at: string | null
   completed_at: string | null
@@ -225,6 +317,7 @@ export interface FeedbackCreatePayload {
   feedback_type: FeedbackType
   text: string
   timestamp_ms?: number | null
+  deadline?: string | null
 }
 
 export interface FeedbackListFilters {

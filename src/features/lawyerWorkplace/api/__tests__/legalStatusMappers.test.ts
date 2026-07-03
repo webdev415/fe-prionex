@@ -3,9 +3,49 @@ import {
   buildLetterActivityLog,
   buildLetterParameters,
   isLetterParametersReadOnly,
+  mapInboxItemToLetterListItem,
   mapProcessingStatusToDisplay,
 } from '../mappers'
-import type { LegalMessageDetail, LegalLetterType } from '../types'
+import type { LegalInboxItem, LegalMessageDetail, LegalLetterType } from '../types'
+
+describe('mapInboxItemToLetterListItem', () => {
+  const baseItem: LegalInboxItem = {
+    id: 'msg-1',
+    thread_id: 'thread-1',
+    mailbox_id: 'mb-uuid',
+    subject: 'Hi CRM-Prionex',
+    from_address: 'sargsyantigran835@gmail.com',
+    processing_status: 'in_progress',
+    direction: 'incoming',
+    received_at: '2026-06-24T09:00:00Z',
+    is_quarantined: false,
+    needs_manual_review: false,
+    suggested_letter_type_id: 'attorney_request',
+    suggested_client_id: 1,
+    suggested_lawyer_user_id: 10,
+    auto_process_eligible: false,
+  }
+
+  it('shows client name in the card title when client is matched', () => {
+    const item = mapInboxItemToLetterListItem({
+      ...baseItem,
+      suggested_client_source: 'contract_number',
+      suggested_client_name: 'Client-111 Беззуб',
+    })
+
+    expect(item.senderName).toBe('Client-111 Беззуб')
+    expect(item.senderEmail).toBe('sargsyantigran835@gmail.com')
+  })
+
+  it('uses mailbox email instead of mailbox id', () => {
+    const item = mapInboxItemToLetterListItem({
+      ...baseItem,
+      mailbox_email: 'liokaivenn@gmail.com',
+    })
+
+    expect(item.mailbox).toBe('liokaivenn@gmail.com')
+  })
+})
 
 describe('buildLetterParameters', () => {
   it('uses debt contract number instead of client code', () => {

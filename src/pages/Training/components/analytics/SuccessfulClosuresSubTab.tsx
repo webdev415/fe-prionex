@@ -1,12 +1,14 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
-import {
-  MOCK_CLOSURES,
-  MOCK_CLOSURES_FUNNEL,
-  MOCK_CLOSURES_KPIS,
-  type MockClosureRow,
-} from '../../mocks/trainerWorkplaceMocks'
+import { Pagination } from '@/components/ui/Pagination'
+import { useAuthStore } from '@/stores/authStore'
+import { useOperators } from '@/features/users/hooks'
+import { useSuccessfulClosures } from '@/features/training/hooks/useSuccessfulClosures'
+import { useInteractionMonitoring } from '@/features/training/hooks/useInteractionMonitoring'
+import { usePromisesAndCallbacks } from '@/features/training/hooks/usePromisesAndCallbacks'
+import type { CallMonitoringPeriod, ClosureFilters, ClosureItem } from '@/features/training/types'
 import { AnalyticsMockTable } from './AnalyticsMockTable'
 import { AnalyticsKpiTile } from './AnalyticsKpiTile'
 import {
@@ -17,13 +19,19 @@ import {
 } from './analyticsTableStyles'
 
 /**
- * Successful Closures sub-tab (KAN-415). Mirrors the Figma frame:
+ * Successful Closures sub-tab (KAN-734). Trainer-facing list of VERIFIED
+ * payments scoped to the trainer's team. The Figma layout is preserved:
  *   1) 4 horizontal icon-tile KPIs
- *   2) Funnel card — 3 horizontal stage cells with unit-bar visualization
- *   3) Filter strip — period radios + All operators dropdown + All statuses
- *      dropdown + Reset
- *   4) Closures table — date+time, operator avatar+name, blue client link,
- *      deal code, payment amount (bold), Paid pill with check icon
+ *   2) Funnel card — Interactions → Promises → Payments
+ *   3) Filter strip — period radios + operator dropdown + status + Reset
+ *   4) Closures table — date, operator, client (id link), deal, amount,
+ *      confirmation date, status pill
+ *
+ * Data sources:
+ *   - cards (count / total amount) + closure leader  ← /api/v1/payments/closures
+ *   - funnel + conversion % are composed from the interaction-monitoring and
+ *     promises endpoints (those counts live in client-service), since closures
+ *     itself only knows the verified-payments side of the funnel.
  */
 
 type PeriodOption = 'today' | 'yesterday' | '7d' | '30d'
@@ -35,8 +43,50 @@ const PERIODS: { id: PeriodOption; key: string; fallback: string }[] = [
   { id: '30d', key: 'pages.training.period.30days', fallback: '30 days' },
 ]
 
-const ALL_OPERATORS = Array.from(new Set(MOCK_CLOSURES.map((row) => row.operator))).sort()
-const ALL_STATUSES = Array.from(new Set(MOCK_CLOSURES.map((row) => row.statusInCrm)))
+// Maps the radio UI value to the BE period vocabulary.
+const PERIOD_TO_BACKEND: Record<PeriodOption, CallMonitoringPeriod> = {
+  today: 'today',
+  yesterday: 'yesterday',
+  '7d': 'last_7d',
+  '30d': 'last_30d',
+}
+
+const AVATAR_PALETTE = [
+  '#E0F2EC',
+  '#FEF3C7',
+  '#FEE4E2',
+  '#E0E7FF',
+  '#FCE7F3',
+  '#DBEAFE',
+  '#FFEDD5',
+  '#D1FAE5',
+]
+
+function deriveInitials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean)
+  if (parts.length === 0) return '?'
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
+  return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase()
+}
+
+function avatarColorFor(operatorId: number | null): string {
+  if (operatorId == null) return '#EDEDED'
+  return AVATAR_PALETTE[Math.abs(operatorId) % AVATAR_PALETTE.length]
+}
+
+/** YYYY-MM-DD → DD/MM/YYYY (payment_date / confirmation_date are plain dates). */
+function formatDate(iso: string | null): string {
+  if (!iso) return '—'
+  const [y, m, d] = iso.split('-')
+  if (!y || !m || !d) return iso
+  return `${d}/${m}/${y}`
+}
+
+function formatAmount(raw: string): string {
+  const n = Number(raw)
+  if (!Number.isFinite(n)) return raw
+  return `${n.toLocaleString()} ₴`
+}
 
 /** Inline trophy SVG — no trophy glyph in the Icons module. */
 function TrophyIcon({ size = 18, className = '' }: { size?: number; className?: string }) {
@@ -74,16 +124,127 @@ function TrophyIcon({ size = 18, className = '' }: { size?: number; className?: 
 
 export function SuccessfulClosuresSubTab() {
   const { t } = useTranslation('common')
+  const navigate = useNavigate()
   const [period, setPeriod] = useState<PeriodOption>('today')
-  const [operatorFilter, setOperatorFilter] = useState<string>('all')
-  const [statusFilter, setStatusFilter] = useState<string>('all')
-  const k = MOCK_CLOSURES_KPIS
+  const [operatorFilter, setOperatorFilter] = useState<'all' | string>('all')
+  const [statusFilter, setStatusFilter] = useState<'all' | string>('all')
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(50)
 
-  const filteredRows = MOCK_CLOSURES.filter((row) => {
-    if (operatorFilter !== 'all' && row.operator !== operatorFilter) return false
-    if (statusFilter !== 'all' && row.statusInCrm !== statusFilter) return false
-    return true
-  })
+  // Server-side filters (period/operator) invalidate the page offset, so their
+  // setters reset to page 1. The status filter is client-side over the current
+  // page, so it intentionally leaves the page unchanged.
+  const changePeriod = (p: PeriodOption) => {
+    setPeriod(p)
+    setPage(1)
+  }
+  const changeOperator = (value: string) => {
+    setOperatorFilter(value)
+    setPage(1)
+  }
+
+  const activeProjectId = useAuthStore((s) => s.user?.active_project_id)
+  const projectIdNum = activeProjectId ? Number(activeProjectId) : null
+  const { data: operators = [] } = useOperators(projectIdNum)
+
+  const operatorIdByLabel = useMemo(() => {
+    const m = new Map<string, number>()
+    operators.forEach((op) => m.set(op.full_name, op.id))
+    return m
+  }, [operators])
+
+  // The closures endpoint (payment-service) doesn't enrich operator_name, so we
+  // resolve it from the project operator list by id — matching how the other
+  // sub-tabs surface the operator name + avatar instead of a bare #id.
+  const operatorNameById = useMemo(() => {
+    const m = new Map<number, string>()
+    operators.forEach((op) => m.set(op.id, op.full_name))
+    return m
+  }, [operators])
+
+  const userIds = useMemo<number[] | undefined>(() => {
+    if (operatorFilter === 'all') return undefined
+    const id = operatorIdByLabel.get(operatorFilter)
+    return id != null ? [id] : undefined
+  }, [operatorFilter, operatorIdByLabel])
+
+  const backendPeriod = PERIOD_TO_BACKEND[period]
+
+  const closureFilters = useMemo<ClosureFilters>(
+    () => ({
+      period: backendPeriod,
+      user_ids: userIds,
+      sort_by: 'date',
+      sort_dir: 'desc',
+      page,
+      page_size: pageSize,
+    }),
+    [backendPeriod, userIds, page, pageSize]
+  )
+
+  const enabled = projectIdNum != null
+  const closuresQuery = useSuccessfulClosures(closureFilters, enabled)
+  // Funnel context — only the totals are needed, so request a single row.
+  const interactionsQuery = useInteractionMonitoring(
+    {
+      period: backendPeriod,
+      user_ids: userIds,
+      sort_by: 'date',
+      sort_dir: 'desc',
+      page: 1,
+      page_size: 1,
+    },
+    enabled
+  )
+  const promisesQuery = usePromisesAndCallbacks(
+    {
+      period: backendPeriod,
+      user_ids: userIds,
+      sort_by: 'date',
+      sort_dir: 'desc',
+      page: 1,
+      page_size: 1,
+    },
+    enabled
+  )
+
+  const cards = closuresQuery.data?.summary_cards
+  const leader = closuresQuery.data?.closure_leader ?? null
+  const closuresCount = cards?.successful_closures_count ?? 0
+  const interactionsTotal = interactionsQuery.data?.total ?? 0
+  const promisesTotal = promisesQuery.data?.total ?? 0
+  const conversionPct = promisesTotal > 0 ? Math.round((closuresCount / promisesTotal) * 100) : 0
+
+  const funnelStages = useMemo(() => {
+    const pct = (n: number) =>
+      interactionsTotal > 0 ? Math.round((n / interactionsTotal) * 100) : 0
+    return [
+      {
+        label: t('pages.training.closures.funnel.interactions', 'Interactions'),
+        actual: interactionsTotal,
+        pct: pct(interactionsTotal),
+      },
+      {
+        label: t('pages.training.closures.funnel.promises', 'Promises'),
+        actual: promisesTotal,
+        pct: pct(promisesTotal),
+      },
+      {
+        label: t('pages.training.closures.funnel.payments', 'Payments'),
+        actual: closuresCount,
+        pct: pct(closuresCount),
+      },
+    ]
+  }, [interactionsTotal, promisesTotal, closuresCount, t])
+
+  const rows = useMemo(() => closuresQuery.data?.items ?? [], [closuresQuery.data])
+  const total = closuresQuery.data?.total ?? 0
+  const totalPages = Math.max(1, Math.ceil(total / pageSize))
+  const statusOptions = useMemo(() => Array.from(new Set(rows.map((r) => r.status))), [rows])
+  const filteredRows = useMemo(
+    () => (statusFilter === 'all' ? rows : rows.filter((r) => r.status === statusFilter)),
+    [rows, statusFilter]
+  )
 
   const isDefault = period === 'today' && operatorFilter === 'all' && statusFilter === 'all'
 
@@ -91,6 +252,7 @@ export function SuccessfulClosuresSubTab() {
     setPeriod('today')
     setOperatorFilter('all')
     setStatusFilter('all')
+    setPage(1)
   }
 
   return (
@@ -99,21 +261,21 @@ export function SuccessfulClosuresSubTab() {
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <AnalyticsKpiTile
           label={t('pages.training.closures.kpi.closures', 'Successful Closures')}
-          value={String(k.successfulClosures)}
+          value={String(closuresCount)}
           icon={<Icons.Success size={18} />}
           iconBg="bg-[#F7F7F7]"
           iconTone="text-[#22C55E]"
         />
         <AnalyticsKpiTile
           label={t('pages.training.closures.kpi.totalAmount', 'Total Amount')}
-          value={`${k.totalAmount.amount.toLocaleString()} ${k.totalAmount.currency}`}
+          value={formatAmount(cards?.total_amount ?? '0')}
           icon={<span className="text-lg leading-none font-semibold">Σ</span>}
           iconBg="bg-[#F7F7F7]"
           iconTone="text-[#05040D]"
         />
         <AnalyticsKpiTile
           label={t('pages.training.closures.kpi.conversion', 'Conversion promise→payment')}
-          value={`${k.conversionPromisePaymentPct}%`}
+          value={`${conversionPct}%`}
           valueTone="text-[#8B5CF6]"
           icon={<Icons.ChartRing size={18} />}
           iconBg="bg-[#F5F3FF]"
@@ -121,8 +283,14 @@ export function SuccessfulClosuresSubTab() {
         />
         <AnalyticsKpiTile
           label={t('pages.training.closures.kpi.leader', 'Closure Leader')}
-          value={k.closureLeader}
-          subValue={k.closureLeaderSubValue}
+          value={leader?.operator_name ?? (leader ? `#${leader.operator_id}` : '—')}
+          subValue={
+            leader
+              ? t('pages.training.closures.kpi.leaderSub', '{{count}} closures', {
+                  count: leader.closures_count,
+                })
+              : undefined
+          }
           valueTone="text-[#05040D]"
           icon={<TrophyIcon size={18} />}
           iconBg="bg-[#FEFCE8]"
@@ -140,11 +308,11 @@ export function SuccessfulClosuresSubTab() {
             )}
           </h3>
           <span className="text-[11px] text-[#676767]">
-            {t('pages.training.closures.funnel.period', 'Today · all operators')}
+            {t(PERIODS.find((p) => p.id === period)?.key ?? '', period)}
           </span>
         </div>
         <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-          {MOCK_CLOSURES_FUNNEL.map((stage) => {
+          {funnelStages.map((stage) => {
             const filledSegments = Math.round((stage.pct / 100) * 10)
             return (
               <div
@@ -192,7 +360,7 @@ export function SuccessfulClosuresSubTab() {
               <button
                 key={p.id}
                 type="button"
-                onClick={() => setPeriod(p.id)}
+                onClick={() => changePeriod(p.id)}
                 className="flex items-center gap-1.5 text-xs font-medium text-[#05040D]"
               >
                 <span
@@ -213,15 +381,15 @@ export function SuccessfulClosuresSubTab() {
         <div className="relative ml-2 min-w-[180px] flex-1 sm:flex-none">
           <select
             value={operatorFilter}
-            onChange={(e) => setOperatorFilter(e.target.value)}
+            onChange={(e) => changeOperator(e.target.value)}
             className="h-9 w-full appearance-none rounded-lg border border-[#EBECE8] bg-white px-3 pr-8 text-xs text-[#05040D] focus:outline-none"
           >
             <option value="all">
               {t('pages.training.closures.filters.allOperators', 'All operators')}
             </option>
-            {ALL_OPERATORS.map((name) => (
-              <option key={name} value={name}>
-                {name}
+            {operators.map((op) => (
+              <option key={op.id} value={op.full_name}>
+                {op.full_name}
               </option>
             ))}
           </select>
@@ -240,7 +408,7 @@ export function SuccessfulClosuresSubTab() {
             <option value="all">
               {t('pages.training.closures.filters.allStatuses', 'All statuses')}
             </option>
-            {ALL_STATUSES.map((s) => (
+            {statusOptions.map((s) => (
               <option key={s} value={s}>
                 {s}
               </option>
@@ -282,46 +450,107 @@ export function SuccessfulClosuresSubTab() {
               {t('pages.training.closures.cols.amount', 'Payment Amount')}
             </th>
             <th className={ANALYTICS_TABLE_TH}>
+              {t('pages.training.closures.cols.confirmationDate', 'Confirmation Date')}
+            </th>
+            <th className={ANALYTICS_TABLE_TH}>
               {t('pages.training.closures.cols.status', 'Status in CRM')}
             </th>
           </tr>
         </thead>
         <tbody>
-          {filteredRows.map((row) => (
-            <ClosureRow key={row.id} row={row} />
-          ))}
+          {closuresQuery.isLoading ? (
+            <tr>
+              <td colSpan={7} className="px-4 py-6 text-center text-[11px] text-[#9CA3AF]">
+                {t('pages.training.closures.loading', 'Loading…')}
+              </td>
+            </tr>
+          ) : closuresQuery.isError ? (
+            <tr>
+              <td colSpan={7} className="px-4 py-6 text-center text-[11px] text-[#EF4444]">
+                {t('pages.training.closures.loadFailed', 'Failed to load closures. Please retry.')}
+              </td>
+            </tr>
+          ) : filteredRows.length === 0 ? (
+            <tr>
+              <td colSpan={7} className="px-4 py-6 text-center text-[11px] text-[#9CA3AF]">
+                {t('pages.training.closures.empty', 'No closures match the filters.')}
+              </td>
+            </tr>
+          ) : (
+            filteredRows.map((row, i) => (
+              <ClosureRow
+                key={`${row.client_id}-${row.payment_date}-${i}`}
+                row={row}
+                operatorName={
+                  row.operator_name ??
+                  (row.operator_id != null ? (operatorNameById.get(row.operator_id) ?? null) : null)
+                }
+                onOpenClient={() => navigate(`/dashboard/clients/${row.client_id}`)}
+              />
+            ))
+          )}
         </tbody>
       </AnalyticsMockTable>
+
+      {statusFilter === 'all' && total > pageSize ? (
+        <Pagination
+          currentPage={page}
+          totalPages={totalPages}
+          pageSize={pageSize}
+          onPageChange={setPage}
+          onPageSizeChange={setPageSize}
+        />
+      ) : null}
     </div>
   )
 }
 
-function ClosureRow({ row }: { row: MockClosureRow }) {
+function ClosureRow({
+  row,
+  operatorName,
+  onOpenClient,
+}: {
+  row: ClosureItem
+  operatorName: string | null
+  onOpenClient: () => void
+}) {
+  const displayName = operatorName ?? (row.operator_id ? `#${row.operator_id}` : '—')
+  const initials = operatorName ? deriveInitials(operatorName) : ''
   return (
     <tr className={ANALYTICS_TABLE_ROW}>
-      <td className={ANALYTICS_TABLE_TD}>{row.closureDateLabel}</td>
+      <td className={ANALYTICS_TABLE_TD}>{formatDate(row.payment_date)}</td>
       <td className={ANALYTICS_TABLE_TD}>
         <div className="flex items-center gap-2">
-          {row.operatorInitials ? (
+          {initials ? (
             <span
               className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-[10px] font-semibold text-[#05040D]"
-              style={{ backgroundColor: row.operatorAvatarColor ?? '#EDEDED' }}
+              style={{ backgroundColor: avatarColorFor(row.operator_id) }}
             >
-              {row.operatorInitials}
+              {initials}
             </span>
           ) : null}
-          <span className="text-xs font-medium text-[#05040D]">{row.operator}</span>
+          <span className="text-xs font-medium text-[#05040D]">{displayName}</span>
         </div>
       </td>
-      <td className={`${ANALYTICS_TABLE_TD} text-[#3B82F6]`}>{row.client}</td>
-      <td className={ANALYTICS_TABLE_TD}>{row.deal}</td>
-      <td className={`${ANALYTICS_TABLE_TD} font-semibold text-[#05040D]`}>
-        {row.paymentAmount.toLocaleString()} ₴
+      <td className={ANALYTICS_TABLE_TD}>
+        <button
+          type="button"
+          title={row.client_name ?? undefined}
+          onClick={onOpenClient}
+          className="text-[#3B82F6] hover:underline"
+        >
+          #{row.client_id}
+        </button>
       </td>
+      <td className={ANALYTICS_TABLE_TD}>{row.contract_number ?? '—'}</td>
+      <td className={`${ANALYTICS_TABLE_TD} font-semibold text-[#05040D]`}>
+        {formatAmount(row.amount)}
+      </td>
+      <td className={ANALYTICS_TABLE_TD}>{formatDate(row.payment_confirmation_date)}</td>
       <td className={ANALYTICS_TABLE_TD}>
         <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-medium text-emerald-700">
           <Icons.Success size={10} />
-          {row.statusInCrm}
+          {row.status}
         </span>
       </td>
     </tr>

@@ -6,9 +6,12 @@ export {
   listMyScorecards,
   getScorecard,
   getScorecardHistoryForCall,
+  getScorecardAggregate,
+  getStageFunnel,
   createScorecard,
   updateScorecard,
   sendScorecard,
+  deleteScorecard,
   exportScorecards,
   listMarkersForCall,
   createMarker,
@@ -22,7 +25,6 @@ export {
   createFeedback,
   replyToFeedback,
   markFeedbackRead,
-  markFeedbackCompleted,
   exportFeedback,
   getOperatorDynamics,
   exportOperatorDynamics,
@@ -35,9 +37,11 @@ export {
   useMyScorecards,
   useScorecard,
   useScorecardHistoryForCall,
+  useScorecardAggregate,
   useCreateScorecard,
   useUpdateScorecard,
   useSendScorecard,
+  useDeleteScorecard,
   useExportScorecards,
   scorecardKeys,
 } from './hooks/useScorecards'
@@ -58,7 +62,6 @@ export {
   useCreateFeedback,
   useReplyToFeedback,
   useMarkFeedbackRead,
-  useMarkFeedbackCompleted,
   useExportFeedback,
   feedbackKeys,
 } from './hooks/useFeedback'
@@ -68,6 +71,7 @@ export {
   useExportOperatorDynamics,
   dynamicsKeys,
 } from './hooks/useDynamics'
+export { useStageFunnel, stageFunnelKeys } from './hooks/useStageFunnel'
 
 export { ScorecardPanel } from './components/ScorecardPanel'
 export { MarkerOverlay } from './components/MarkerOverlay'
@@ -77,6 +81,10 @@ export { FeedbackThreadView } from './components/FeedbackThreadView'
 export { ScoreDynamicsChart } from './components/ScoreDynamicsChart'
 
 export type {
+  AggregateFilters,
+  AggregateGroupBy,
+  AggregateResponse,
+  AggregateRow,
   Criterion,
   CriterionScale,
   PageResponse,
@@ -87,6 +95,7 @@ export type {
   ScorecardListFilters,
   ScorecardStatus,
   ScorecardTemplate,
+  ScorecardType,
   ScorecardUpdatePayload,
   ScoreEntry,
   ScoresPayload,
@@ -112,6 +121,13 @@ export type {
   DynamicsAlertType,
   ScoreDynamicsAlert,
   AlertsResponse,
+  FunnelBand,
+  FunnelDateType,
+  StageDto,
+  PainPointDto,
+  PainPoints,
+  StageFunnelResponse,
+  StageFunnelFilters,
 } from './types'
 
 export { MARKER_TYPES, MARKER_COLORS, FEEDBACK_TYPES } from './types'

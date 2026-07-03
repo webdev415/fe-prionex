@@ -60,6 +60,13 @@ export interface CallDetail {
   telephony_type?: string | null
 }
 
+/** Lean per-call projection returned by POST /api/v1/calls/batch. */
+export interface CallBatchItem {
+  call_id: string
+  customer_number: string
+  client_id: number | null
+}
+
 export interface CallHistoryFilters {
   outcome?: CallOutcome
   from_date?: string

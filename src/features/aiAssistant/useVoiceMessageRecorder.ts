@@ -17,10 +17,15 @@ export interface VoiceMessageResult {
 }
 
 export interface UseVoiceMessageRecorderOptions {
-  /** Recording finished (stop button / 120s cap) — send the message. */
+  /** Recording finished (stop button / max-duration cap) — send the message. */
   onComplete: (result: VoiceMessageResult) => void
   /** Mic unavailable / recorder failure / size cap exceeded. */
   onError: (reason: 'mic' | 'tooLarge') => void
+  /**
+   * Hard cap on recording length (seconds). Defaults to
+   * {@link MAX_VOICE_MESSAGE_SECONDS}; the composer passes the user's setting.
+   */
+  maxDurationSec?: number
 }
 
 export interface UseVoiceMessageRecorder {
@@ -150,10 +155,11 @@ export function useVoiceMessageRecorder(
     recorder.start(1000)
     setStatus('recording')
     setElapsedSec(0)
+    const capSec = optionsRef.current.maxDurationSec ?? MAX_VOICE_MESSAGE_SECONDS
     tickerRef.current = window.setInterval(() => {
       const elapsed = Math.floor((Date.now() - startedAtRef.current) / 1000)
       setElapsedSec(elapsed)
-      if (elapsed >= MAX_VOICE_MESSAGE_SECONDS) {
+      if (elapsed >= capSec) {
         finishRecorder(false)
       }
     }, 1000)

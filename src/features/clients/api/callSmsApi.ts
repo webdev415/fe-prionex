@@ -16,6 +16,8 @@ export async function getClientCalls(
     status?: string
     date_from?: string
     date_to?: string
+    from_date?: string
+    to_date?: string
     skip?: number
     limit?: number
   } = {}

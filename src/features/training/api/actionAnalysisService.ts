@@ -4,6 +4,12 @@ import type {
   CallMonitoringResponse,
   InteractionMonitoringFilters,
   InteractionMonitoringResponse,
+  LeakFilters,
+  LeaksResponse,
+  PromiseCallbackFilters,
+  PromisesAndCallbacksResponse,
+  ThirdPartyFilters,
+  ThirdPartyResponse,
 } from '../types'
 
 function buildCallParams(filters: CallMonitoringFilters): URLSearchParams {
@@ -87,6 +93,111 @@ export async function exportInteractionMonitoring(
   const params = buildInteractionParams(filters)
   const response = await api.get<Blob>('/api/v1/interactions/export', {
     params,
+    responseType: 'blob',
+    timeout: 120_000,
+  })
+  return response.data
+}
+
+function buildPromiseCallbackParams(filters: PromiseCallbackFilters): URLSearchParams {
+  // Repeated `?key=val` for list params — FastAPI's
+  // `Optional[List[int]] = Query(None)` rejects Axios's default `[]` suffix.
+  const params = new URLSearchParams()
+  filters.user_ids?.forEach((id) => params.append('user_ids', String(id)))
+  if (filters.department_id != null) params.set('department_id', String(filters.department_id))
+  if (filters.group_id != null) params.set('group_id', String(filters.group_id))
+  if (filters.period) params.set('period', filters.period)
+  if (filters.from_datetime) params.set('from_datetime', filters.from_datetime)
+  if (filters.to_datetime) params.set('to_datetime', filters.to_datetime)
+  if (filters.sort_by) params.set('sort_by', filters.sort_by)
+  if (filters.sort_dir) params.set('sort_dir', filters.sort_dir)
+  if (filters.page != null) params.set('page', String(filters.page))
+  if (filters.page_size != null) params.set('page_size', String(filters.page_size))
+  return params
+}
+
+export async function getPromisesAndCallbacks(
+  filters: PromiseCallbackFilters
+): Promise<PromisesAndCallbacksResponse> {
+  const response = await api.get<PromisesAndCallbacksResponse>(
+    '/api/v1/interactions/promises-and-callbacks',
+    { params: buildPromiseCallbackParams(filters) }
+  )
+  return response.data
+}
+
+export async function exportPromisesAndCallbacks(filters: PromiseCallbackFilters): Promise<Blob> {
+  const response = await api.get<Blob>('/api/v1/interactions/promises-and-callbacks/export', {
+    params: buildPromiseCallbackParams(filters),
+    responseType: 'blob',
+    timeout: 120_000,
+  })
+  return response.data
+}
+
+function buildLeakParams(filters: LeakFilters): URLSearchParams {
+  // Repeated `?key=val` for list params — FastAPI's `Query(None)` rejects
+  // Axios's default `[]` suffix.
+  const params = new URLSearchParams()
+  filters.user_ids?.forEach((id) => params.append('user_ids', String(id)))
+  if (filters.department_id != null) params.set('department_id', String(filters.department_id))
+  if (filters.group_id != null) params.set('group_id', String(filters.group_id))
+  if (filters.period) params.set('period', filters.period)
+  if (filters.from_datetime) params.set('from_datetime', filters.from_datetime)
+  if (filters.to_datetime) params.set('to_datetime', filters.to_datetime)
+  if (filters.lookback_days != null) params.set('lookback_days', String(filters.lookback_days))
+  if (filters.follow_up_status) params.set('follow_up_status', filters.follow_up_status)
+  if (filters.sort_by) params.set('sort_by', filters.sort_by)
+  if (filters.sort_dir) params.set('sort_dir', filters.sort_dir)
+  if (filters.page != null) params.set('page', String(filters.page))
+  if (filters.page_size != null) params.set('page_size', String(filters.page_size))
+  return params
+}
+
+export async function getLeaks(filters: LeakFilters): Promise<LeaksResponse> {
+  const response = await api.get<LeaksResponse>('/api/v1/interactions/leaks', {
+    params: buildLeakParams(filters),
+  })
+  return response.data
+}
+
+export async function exportLeaks(filters: LeakFilters): Promise<Blob> {
+  const response = await api.get<Blob>('/api/v1/interactions/leaks/export', {
+    params: buildLeakParams(filters),
+    responseType: 'blob',
+    timeout: 120_000,
+  })
+  return response.data
+}
+
+function buildThirdPartyParams(filters: ThirdPartyFilters): URLSearchParams {
+  const params = new URLSearchParams()
+  filters.user_ids?.forEach((id) => params.append('user_ids', String(id)))
+  if (filters.department_id != null) params.set('department_id', String(filters.department_id))
+  if (filters.group_id != null) params.set('group_id', String(filters.group_id))
+  if (filters.period) params.set('period', filters.period)
+  if (filters.from_datetime) params.set('from_datetime', filters.from_datetime)
+  if (filters.to_datetime) params.set('to_datetime', filters.to_datetime)
+  if (filters.result_filter) params.set('result_filter', filters.result_filter)
+  if (filters.returned_window_hours != null)
+    params.set('returned_window_hours', String(filters.returned_window_hours))
+  if (filters.sort_by) params.set('sort_by', filters.sort_by)
+  if (filters.sort_dir) params.set('sort_dir', filters.sort_dir)
+  if (filters.page != null) params.set('page', String(filters.page))
+  if (filters.page_size != null) params.set('page_size', String(filters.page_size))
+  return params
+}
+
+export async function getThirdParty(filters: ThirdPartyFilters): Promise<ThirdPartyResponse> {
+  const response = await api.get<ThirdPartyResponse>('/api/v1/interactions/third-party', {
+    params: buildThirdPartyParams(filters),
+  })
+  return response.data
+}
+
+export async function exportThirdParty(filters: ThirdPartyFilters): Promise<Blob> {
+  const response = await api.get<Blob>('/api/v1/interactions/third-party/export', {
+    params: buildThirdPartyParams(filters),
     responseType: 'blob',
     timeout: 120_000,
   })
@@ -270,11 +381,50 @@ export async function getPaymentMonitoring(
   return response.data
 }
 
+import type { ClosureFilters, ClosuresResponse } from '../types'
+
+function buildClosureParams(filters: ClosureFilters): URLSearchParams {
+  // Repeated `?key=val` for list-shaped filters — FastAPI's
+  // `Optional[List[int]] = Query(None)` rejects Axios's default `[]` suffix.
+  const params = new URLSearchParams()
+  if (filters.period) params.set('period', filters.period)
+  if (filters.from_datetime) params.set('from_datetime', filters.from_datetime)
+  if (filters.to_datetime) params.set('to_datetime', filters.to_datetime)
+  filters.user_ids?.forEach((id) => params.append('user_ids', String(id)))
+  if (filters.sort_by) params.set('sort_by', filters.sort_by)
+  if (filters.sort_dir) params.set('sort_dir', filters.sort_dir)
+  if (filters.page != null) params.set('page', String(filters.page))
+  if (filters.page_size != null) params.set('page_size', String(filters.page_size))
+  return params
+}
+
+export async function getSuccessfulClosures(filters: ClosureFilters): Promise<ClosuresResponse> {
+  const response = await api.get<ClosuresResponse>('/api/v1/payments/closures', {
+    params: buildClosureParams(filters),
+  })
+  return response.data
+}
+
+export async function exportSuccessfulClosures(filters: ClosureFilters): Promise<Blob> {
+  const response = await api.get<Blob>('/api/v1/payments/closures/export', {
+    params: buildClosureParams(filters),
+    responseType: 'blob',
+    timeout: 120_000,
+  })
+  return response.data
+}
+
 export const actionAnalysisService = {
   getCallMonitoring,
   exportCallMonitoring,
   getInteractionMonitoring,
   exportInteractionMonitoring,
+  getPromisesAndCallbacks,
+  exportPromisesAndCallbacks,
+  getLeaks,
+  exportLeaks,
+  getThirdParty,
+  exportThirdParty,
   listInteractionChannels,
   getTaHistory,
   exportTaHistory,
@@ -283,4 +433,6 @@ export const actionAnalysisService = {
   listTaskSubjects,
   getWeeklyBucket,
   getPaymentMonitoring,
+  getSuccessfulClosures,
+  exportSuccessfulClosures,
 }

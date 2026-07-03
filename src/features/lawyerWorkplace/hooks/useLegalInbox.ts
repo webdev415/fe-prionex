@@ -235,10 +235,17 @@ export function useMappedLegalInbox(options: {
 
   const inboxQuery = useLegalInbox(apiParams, { enabled })
   const letterTypesQuery = useLegalLetterTypes({ enabled })
+  const mailboxesQuery = useLegalMailboxes({ enabled })
 
   const lookupContext = useMemo(
-    () => buildLegalLookupContext(letterTypesQuery.data?.items, undefined),
-    [letterTypesQuery.data?.items]
+    () =>
+      buildLegalLookupContext(
+        letterTypesQuery.data?.items,
+        undefined,
+        undefined,
+        mailboxesQuery.data?.items
+      ),
+    [letterTypesQuery.data?.items, mailboxesQuery.data?.items]
   )
 
   const letters = useMemo(() => {
