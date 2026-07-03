@@ -5345,7 +5345,8 @@
         "group": "Действия группы",
         "department": "Действия отдела",
         "all": "Все действия",
-        "groupComingSoon": "Скоро"
+        "groupComingSoon": "Скоро",
+        "aboveCeiling": "Недоступно для вашей роли"
       },
       "workspaceBanner": {
         "label": "Рабочее место тренера",

@@ -6204,7 +6204,8 @@
         "group": "Дії групи",
         "department": "Дії відділу",
         "all": "Усі дії",
-        "groupComingSoon": "Незабаром"
+        "groupComingSoon": "Незабаром",
+        "aboveCeiling": "Недоступно для вашої ролі"
       },
       "workspaceBanner": {
         "label": "Робоче місце тренера",

@@ -1,7 +1,10 @@
+import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router-dom'
 import {
   ACTION_ANALYSIS_SCOPES,
+  clampScopeToCeiling,
+  isScopeWithinCeiling,
   readScope,
   writeScope,
   type ActionAnalysisScope,
@@ -17,20 +20,40 @@ const SCOPE_LABEL_KEY: Record<ActionAnalysisScope, { key: string; fallback: stri
   all: { key: 'pages.actionAnalysis.scope.all', fallback: 'All actions' },
 }
 
+interface ScopeSelectorProps {
+  /**
+   * The active tab's role access ceiling (KAN-757). Scopes broader than this
+   * are disabled, and a URL scope exceeding it is auto-clamped. Defaults to
+   * `all` (no restriction) when the role has no configured level for the tab.
+   */
+  ceiling?: ActionAnalysisScope
+}
+
 /**
- * Page-level scope selector (KAN-506). Lives on ActionAnalysisPage just
- * below the sub-tab strip. Renders four segmented pills; clicking writes
- * `?scope=…` and lets every Calls sub-tab pick up the new value via
- * `useScopedUserIds`. The "Group" pill is disabled until the Group entity
- * ships (see KAN-506 §1.4).
+ * Page-level scope selector (KAN-506 / KAN-757). Lives on ActionAnalysisPage
+ * just below the sub-tab strip. Renders four segmented pills; clicking writes
+ * `?scope=…` and every Calls sub-tab picks up the new value via
+ * `useScopedUserIds`. Pills broader than the active tab's role `ceiling` are
+ * disabled and the URL scope is clamped into range.
  */
-export function ScopeSelector() {
+export function ScopeSelector({ ceiling = 'all' }: ScopeSelectorProps) {
   const { t } = useTranslation('common')
   const [searchParams, setSearchParams] = useSearchParams()
   const active = readScope(searchParams)
 
+  // Keep the URL scope within the active tab's ceiling (e.g. after switching to
+  // a more-restricted tab). The backend clamps regardless; this keeps the UI
+  // honest and the highlighted pill valid.
+  useEffect(() => {
+    const clamped = clampScopeToCeiling(active, ceiling)
+    if (clamped !== active) {
+      setSearchParams(writeScope(searchParams, clamped), { replace: true })
+    }
+  }, [active, ceiling, searchParams, setSearchParams])
+
   const handleClick = (next: ActionAnalysisScope) => {
     if (next === active) return
+    if (!isScopeWithinCeiling(next, ceiling)) return
     setSearchParams(writeScope(searchParams, next), { replace: true })
   }
 
@@ -46,7 +69,7 @@ export function ScopeSelector() {
       >
         {ACTION_ANALYSIS_SCOPES.map((scope) => {
           const isActive = scope === active
-          const disabled = scope === 'group'
+          const disabled = !isScopeWithinCeiling(scope, ceiling)
           const { key, fallback } = SCOPE_LABEL_KEY[scope]
           const label = t(key, fallback)
           return (
@@ -59,7 +82,7 @@ export function ScopeSelector() {
               onClick={() => handleClick(scope)}
               title={
                 disabled
-                  ? t('pages.actionAnalysis.scope.groupComingSoon', 'Coming soon')
+                  ? t('pages.actionAnalysis.scope.aboveCeiling', 'Not permitted by your role')
                   : undefined
               }
               className={[
@@ -73,11 +96,6 @@ export function ScopeSelector() {
                 .join(' ')}
             >
               {label}
-              {disabled ? (
-                <span className="ml-1 text-[10px] text-gray-500">
-                  ({t('pages.actionAnalysis.scope.groupComingSoon', 'Coming soon')})
-                </span>
-              ) : null}
             </button>
           )
         })}
