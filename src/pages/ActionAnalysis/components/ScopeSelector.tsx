@@ -22,7 +22,7 @@ const SCOPE_LABEL_KEY: Record<ActionAnalysisScope, { key: string; fallback: stri
 
 interface ScopeSelectorProps {
   /**
-   * The active tab's role access ceiling (KAN-757). Scopes broader than this
+   * The active tab's role access ceiling. Scopes broader than this
    * are disabled, and a URL scope exceeding it is auto-clamped. Defaults to
    * `all` (no restriction) when the role has no configured level for the tab.
    */
@@ -30,7 +30,7 @@ interface ScopeSelectorProps {
 }
 
 /**
- * Page-level scope selector (KAN-506 / KAN-757). Lives on ActionAnalysisPage
+ * Page-level scope selector. Lives on ActionAnalysisPage
  * just below the sub-tab strip. Renders four segmented pills; clicking writes
  * `?scope=…` and every Calls sub-tab picks up the new value via
  * `useScopedUserIds`. Pills broader than the active tab's role `ceiling` are
