@@ -1,8 +1,5 @@
 /**
  * Lawyer Workplace (KAN-486)
- *
- * Initial UI shell matching the Figma inbox layout:
- * incoming list | email thread | letter parameters panel.
  */
 
 import { useEffect, useMemo, useState } from 'react'
@@ -93,6 +90,7 @@ function LawyerWorkplacePageContent() {
     countDone,
     isLoading: inboxLoading,
     isError: inboxError,
+    refetch: refetchInbox,
   } = useMappedLegalInbox({
     activeFolder,
     activeFilter,
@@ -132,11 +130,13 @@ function LawyerWorkplacePageContent() {
     }
   }
 
-  const handleConfirmLetter = (_letterId: string) => {}
-
   const closeParameters = () => setInboxPane('thread')
 
-  const showParametersPanel = selectedLetter !== null && selectedLetter.status !== 'auto_processed'
+  const handleConfirmLetter = (_letterId: string) => {
+    closeParameters()
+  }
+
+  const showParametersPanel = selectedLetter !== null
 
   return (
     <div
@@ -192,6 +192,7 @@ function LawyerWorkplacePageContent() {
                 unprocessedCount={unprocessedCount}
                 isLoading={inboxLoading}
                 isError={inboxError}
+                onRetry={() => void refetchInbox()}
                 page={inboxPage}
                 totalPages={inboxTotalPages}
                 total={inboxTotal}
@@ -298,9 +299,6 @@ function LawyerWorkplacePageContent() {
               })}
             </span>
           </div>
-          <span className="text-light-700 hidden shrink-0 text-[11px] sm:inline">
-            {t('pages.lawyerWorkplace.version', 'v0.7.18')}
-          </span>
         </div>
       )}
     </div>

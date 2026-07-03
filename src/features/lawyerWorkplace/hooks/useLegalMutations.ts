@@ -261,10 +261,22 @@ export function useUpdateLegalKanbanTask() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: ({ taskId, payload }: { taskId: number; payload: Record<string, unknown> }) =>
-      taskApi.updateTask(taskId, payload),
+    mutationFn: async ({
+      taskId,
+      payload,
+    }: {
+      taskId: number
+      payload: Record<string, unknown>
+    }) => {
+      await taskApi.updateTask(taskId, payload)
+      const status = typeof payload.status === 'string' ? payload.status : undefined
+      if (status) {
+        await legalApi.syncKanbanTaskStatus(taskId, { status })
+      }
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: legalWorkplaceKeys.kanban() })
+      queryClient.invalidateQueries({ queryKey: legalWorkplaceKeys.inbox() })
       queryClient.invalidateQueries({ queryKey: ['tasks', 'my-tasks'] })
     },
     onError: (error) => toast.error(getErrorMessage(error)),

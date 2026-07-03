@@ -32,14 +32,12 @@ function resolveClientName(clientId: number | null, lookup: LegalDocumentLookup)
 }
 
 function resolveContractId(
-  clientId: number | null,
+  _clientId: number | null,
   contractNumber: string | null,
-  lookup: LegalDocumentLookup
+  _lookup: LegalDocumentLookup
 ): string {
   if (contractNumber?.trim()) return contractNumber.trim()
-  if (clientId == null) return '—'
-  const client = lookup.clientsById.get(clientId)
-  return client?.legacy_id?.trim() || `CL-${String(clientId).padStart(5, '0')}`
+  return '—'
 }
 
 function resolveAssigneeName(userId: number | null, lookup: LegalDocumentLookup): string {
@@ -66,10 +64,12 @@ export function mapLegalDocumentItem(
     assigneeName: resolveAssigneeName(item.assigned_to_user_id, lookup),
     createdAt: item.created_at,
     filename: item.filename,
+    sourceMessageId: item.source_message_id ?? null,
   }
 }
 
 export function mapLegalDocumentStats(stats: LegalDocumentStatsResponse): LegalDocumentStats {
+  const filterCounts = stats.filter_counts ?? {}
   return {
     incomingCount: stats.incoming_count,
     incomingYearTotal: stats.incoming_year_total,
@@ -78,6 +78,14 @@ export function mapLegalDocumentStats(stats: LegalDocumentStatsResponse): LegalD
     nbuCount: stats.nbu_count,
     nbuYearTotal: stats.nbu_year_total,
     generatedPercent: stats.generated_percent,
+    filterCounts: {
+      all: filterCounts.all ?? 0,
+      incoming: filterCounts.incoming ?? 0,
+      outgoing: filterCounts.outgoing ?? 0,
+      nbu_response: filterCounts.nbu_response ?? 0,
+      uploaded: filterCounts.uploaded ?? 0,
+      generated: filterCounts.generated ?? 0,
+    },
   }
 }
 

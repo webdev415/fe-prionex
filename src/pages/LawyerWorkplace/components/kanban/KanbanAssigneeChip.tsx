@@ -1,18 +1,23 @@
 import { cn } from '@/lib/utils'
-import { ASSIGNEE_COLOURS } from './constants'
+import { getAssigneeColour } from './constants'
 
 interface KanbanAssigneeChipProps {
   initials: string
   name: string
+  assigneeUserId?: number | null
 }
 
-export function KanbanAssigneeChip({ initials, name }: KanbanAssigneeChipProps) {
+export function KanbanAssigneeChip({
+  initials,
+  name,
+  assigneeUserId = null,
+}: KanbanAssigneeChipProps) {
   return (
     <div className="flex shrink-0 items-center gap-1">
       <span
         className={cn(
           'flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full text-[9px] font-bold',
-          ASSIGNEE_COLOURS[initials] ?? 'bg-gray-100 text-gray-500'
+          getAssigneeColour(assigneeUserId, initials)
         )}
       >
         {initials}

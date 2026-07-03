@@ -123,11 +123,50 @@ export const TYPE_DOT_COLOURS: Record<KanbanTaskType, string> = {
   inquiry: 'bg-success-600',
 }
 
-export const ASSIGNEE_COLOURS: Record<string, string> = {
-  VD: 'bg-secondary-100 text-secondary-800',
-  LK: 'bg-[#EDE9FE] text-[#6D28D9]',
-  SM: 'bg-blue-100 text-blue-700',
-  ON: 'bg-gray-200 text-gray-500',
+const ASSIGNEE_PALETTE = [
+  'bg-secondary-100 text-secondary-800',
+  'bg-[#EDE9FE] text-[#6D28D9]',
+  'bg-blue-100 text-blue-700',
+  'bg-success-100 text-success-700',
+  'bg-warning-100 text-warning-700',
+  'bg-gray-100 text-gray-600',
+] as const
+
+const KNOWN_KANBAN_TYPE_IDS = new Set<string>([
+  'complaint',
+  'nbu_inquiry',
+  'court_claim',
+  'attorney_request',
+  'inquiry',
+])
+
+export function getAssigneeColour(userId: number | null, initials: string): string {
+  const seed =
+    userId ?? initials.split('').reduce((total, character) => total + character.charCodeAt(0), 0)
+  const index = Math.abs(Number(seed)) % ASSIGNEE_PALETTE.length
+  return ASSIGNEE_PALETTE[index] ?? 'bg-gray-100 text-gray-500'
+}
+
+export function buildTypeFilterOptions(
+  letterTypes: { id: string; name: string }[]
+): TypeFilterOption[] {
+  const dynamicOptions = letterTypes
+    .filter((letterType) => KNOWN_KANBAN_TYPE_IDS.has(letterType.id))
+    .map((letterType) => ({
+      id: letterType.id as TypeFilterId,
+      key: TYPE_I18N_KEYS[letterType.id as KanbanTaskType] ?? letterType.name,
+      fallback: letterType.name,
+      taskType: letterType.id as KanbanTaskType,
+    }))
+
+  return [
+    {
+      id: 'all',
+      key: 'pages.lawyerWorkplace.kanban.filters.allTypes',
+      fallback: 'All Types',
+    },
+    ...dynamicOptions,
+  ]
 }
 
 export const TYPE_I18N_KEYS: Record<KanbanTaskType, string> = {

@@ -24,6 +24,7 @@ export interface LegalDocumentRow {
   assigneeName: string
   createdAt: string
   filename: string | null
+  sourceMessageId: string | null
 }
 
 export interface LegalDocumentStats {
@@ -34,4 +35,5 @@ export interface LegalDocumentStats {
   nbuCount: number
   nbuYearTotal: number
   generatedPercent: number
+  filterCounts: Record<LegalDocumentTypeFilter, number>
 }

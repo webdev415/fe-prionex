@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useRef, useState, type DragEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
+import { Button } from '@/components/ui/Button'
 import {
   applyKanbanTaskPatch,
   mapKanbanPatchToTaskUpdate,
@@ -12,6 +13,7 @@ import {
   useUpdateLegalKanbanTask,
   type LegalKanbanTaskPatch,
 } from '@/features/lawyerWorkplace'
+import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 import { useLawyerWorkplaceLayout } from '../../context/lawyerWorkplaceLayout'
 import {
@@ -25,7 +27,9 @@ import { exportKanbanTasksToCsv } from '../../kanban/kanbanExport'
 import {
   applyKanbanFilters,
   ALL_LAWYERS_FILTER,
+  buildTypeFilterOptions,
   KANBAN_SCROLL_COLUMN_WIDTH_CLASS,
+  TYPE_FILTER_OPTIONS,
   type DeadlineFilter,
   type LawyerFilterId,
   type LawyerFilterOption,
@@ -39,13 +43,14 @@ import { KanbanBoardToolbar } from './KanbanBoardToolbar'
 import { KanbanColumnHeader } from './KanbanColumnHeader'
 import { KanbanColumnLane } from './KanbanColumnLane'
 import { CreateKanbanTaskModal } from './CreateKanbanTaskModal'
+import { KanbanTabSkeleton } from './KanbanTabSkeleton'
 import { ThreadDrawer } from './ThreadDrawer'
 
 export function LegalKanbanBoard() {
   const { t } = useTranslation('common')
   const { isKanbanGrid, showWorkspaceBanner } = useLawyerWorkplaceLayout()
   const scrollContainerRef = useRef<HTMLDivElement>(null)
-  const { data: lawyersData } = useLegalLawyers()
+  const { data: lawyersData } = useLegalLawyers({ scopedToActiveProject: true })
   const { data: letterTypesData } = useLegalLetterTypes()
   const [deadlineFilter, setDeadlineFilter] = useState<DeadlineFilter>('this_week')
   const [lawyerFilter, setLawyerFilter] = useState<LawyerFilterId>('all')
@@ -111,6 +116,34 @@ export function LegalKanbanBoard() {
     () => (letterTypesData?.items ?? []).filter((item) => item.is_active),
     [letterTypesData?.items]
   )
+
+  const typeFilterOptions = useMemo(
+    () =>
+      letterTypes.length > 0
+        ? buildTypeFilterOptions(
+            letterTypes.map((letterType) => ({
+              id: letterType.id,
+              name: letterType.name,
+            }))
+          )
+        : TYPE_FILTER_OPTIONS,
+    [letterTypes]
+  )
+
+  const filteredTaskCount = useMemo(
+    () => filteredColumns.reduce((total, column) => total + column.tasks.length, 0),
+    [filteredColumns]
+  )
+
+  const hasActiveFilters =
+    lawyerFilter !== 'all' || typeFilter !== 'all' || deadlineFilter !== 'this_week'
+
+  const clearFilters = () => {
+    setLawyerFilter('all')
+    setTypeFilter('all')
+    setDeadlineFilter('this_week')
+    setLocalOverrides(null)
+  }
 
   const persistTaskPatch = useCallback(
     (taskId: string, patch: LegalKanbanTaskPatch) => {
@@ -258,6 +291,7 @@ export function LegalKanbanBoard() {
           setLocalOverrides(null)
         }}
         lawyerFilterOptions={lawyerFilterOptions}
+        typeFilterOptions={typeFilterOptions}
         typeFilter={typeFilter}
         onTypeFilterChange={setTypeFilter}
         onNewTask={() => setCreateTaskOpen(true)}
@@ -268,31 +302,89 @@ export function LegalKanbanBoard() {
 
       <ThreadDrawer letterId={threadLetterId} onClose={() => setThreadLetterId(null)} />
 
-      {isLoading && (
-        <p className="text-light-600 px-4 py-6 text-center text-sm sm:px-5 lg:px-7">
-          {t('pages.lawyerWorkplace.kanban.loading', 'Loading kanban tasks…')}
-        </p>
-      )}
+      {isLoading ? <KanbanTabSkeleton /> : null}
 
-      {isError && !isLoading && (
-        <div className="px-4 py-6 text-center sm:px-5 lg:px-7">
-          <p className="text-error-600 text-sm">
-            {t('pages.lawyerWorkplace.kanban.loadError', 'Could not load kanban tasks')}
+      {isError && !isLoading ? (
+        <div
+          className="flex flex-col items-center justify-center px-6 py-14 text-center sm:px-5 lg:px-7"
+          role="alert"
+        >
+          <div className="bg-error-50 mb-4 flex h-12 w-12 items-center justify-center rounded-full">
+            <Icons.Warning size={22} strokeWidth={1.5} className="text-error-500" />
+          </div>
+          <p className="text-dark-500 text-[14px] font-medium">
+            {t('pages.lawyerWorkplace.kanban.loadError.title', 'Could not load kanban tasks')}
           </p>
-          <button
+          <p className="text-light-600 mt-1 max-w-sm text-[12px] leading-relaxed">
+            {t(
+              'pages.lawyerWorkplace.kanban.loadError.description',
+              'Check your connection and try again.'
+            )}
+          </p>
+          <Button
             type="button"
+            variant="cancel"
+            size="sm"
             onClick={() => refetch()}
-            className="text-secondary-800 mt-2 text-sm font-medium underline"
+            className="mt-5 h-9 rounded-md"
           >
             {t('actions.retry', 'Retry')}
-          </button>
+          </Button>
         </div>
-      )}
+      ) : null}
+
+      {!isLoading && !isError && apiTasks.length === 0 ? (
+        <div className="flex flex-col items-center justify-center px-6 py-14 text-center sm:px-5 lg:px-7">
+          <div className="bg-light-100 mb-4 flex h-12 w-12 items-center justify-center rounded-full">
+            <Icons.KanbanIcon size={22} strokeWidth={1.5} className="text-light-500" />
+          </div>
+          <p className="text-dark-500 text-[14px] font-medium">
+            {t('pages.lawyerWorkplace.kanban.empty.title', 'No tasks on the board yet')}
+          </p>
+          <p className="text-light-600 mt-1 max-w-sm text-[12px] leading-relaxed">
+            {t(
+              'pages.lawyerWorkplace.kanban.empty.description',
+              'Confirm letters from the inbox or create a task manually to start tracking legal work.'
+            )}
+          </p>
+        </div>
+      ) : null}
+
+      {!isLoading && !isError && apiTasks.length > 0 && filteredTaskCount === 0 ? (
+        <div
+          className="flex flex-col items-center justify-center px-6 py-14 text-center sm:px-5 lg:px-7"
+          role="status"
+        >
+          <div className="bg-light-100 mb-4 flex h-12 w-12 items-center justify-center rounded-full">
+            <Icons.Filter size={22} strokeWidth={1.5} className="text-light-500" />
+          </div>
+          <p className="text-dark-500 text-[14px] font-medium">
+            {t('pages.lawyerWorkplace.kanban.emptyFilter.title', 'No tasks match these filters')}
+          </p>
+          <p className="text-light-600 mt-1 max-w-sm text-[12px] leading-relaxed">
+            {t(
+              'pages.lawyerWorkplace.kanban.emptyFilter.description',
+              'Try another lawyer, type, or deadline range.'
+            )}
+          </p>
+          {hasActiveFilters ? (
+            <Button
+              type="button"
+              variant="cancel"
+              size="sm"
+              onClick={clearFilters}
+              className="mt-5 h-9 rounded-md"
+            >
+              {t('pages.lawyerWorkplace.kanban.emptyFilter.clearFilters', 'Clear filters')}
+            </Button>
+          ) : null}
+        </div>
+      ) : null}
 
       <div
         className={cn(
           'lawyer-workplace-scroll flex min-h-0 flex-1 flex-col overflow-y-auto',
-          (isLoading || isError) && 'hidden',
+          (isLoading || isError || apiTasks.length === 0 || filteredTaskCount === 0) && 'hidden',
           isKanbanGrid
             ? showWorkspaceBanner
               ? 'pb-24'
@@ -357,7 +449,7 @@ export function LegalKanbanBoard() {
         </div>
       </div>
 
-      {!isKanbanGrid && !isLoading && !isError && (
+      {!isKanbanGrid && !isLoading && !isError && apiTasks.length > 0 && filteredTaskCount > 0 && (
         <KanbanBoardScrollNavigator
           scrollContainerRef={scrollContainerRef}
           columns={filteredColumns}

@@ -1,5 +1,4 @@
 import { useTranslation } from 'react-i18next'
-import { Button } from '@/components/ui/Button'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 import type { LetterTypeConfig } from '../../../settings/types'
@@ -61,17 +60,6 @@ export function LetterTypeList({
               'Add the first type to configure classification, SLA, and lawyer priorities.'
             )}
           </p>
-          {!readOnly ? (
-            <Button
-              variant="primary"
-              size="sm"
-              leftIcon={<Icons.AddCircle size={18} strokeWidth={1.5} />}
-              onClick={onAddType}
-              className="mt-5 h-9 rounded-md"
-            >
-              {t('pages.lawyerWorkplace.settings.addType', 'Add type')}
-            </Button>
-          ) : null}
         </div>
       ) : (
         <div className="min-h-0 flex-1 overflow-y-auto">

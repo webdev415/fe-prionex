@@ -4,12 +4,9 @@ export type IncomingMailboxFilter = 'all' | 'new' | 'in_progress' | 'done'
 
 export type IncomingFolder = 'inbox' | 'quarantine' | 'sent'
 
-export type LetterProcessingStatus =
-  | 'new'
-  | 'in_progress'
-  | 'on_board'
-  | 'sent_to_kanban'
-  | 'auto_processed'
+export type LetterDisplayStatus = 'new' | 'in_progress' | 'auto_processed' | 'done'
+
+export type LetterProcessingStatus = LetterDisplayStatus | 'on_board' | 'sent_to_kanban'
 
 export interface LetterListItem {
   id: string
@@ -24,7 +21,7 @@ export interface LetterListItem {
   clientId: string | null
   clientName: string | null
   clientCode: string | null
-  status: LetterProcessingStatus
+  status: LetterDisplayStatus
   isUnprocessed: boolean
 }
 
@@ -57,6 +54,8 @@ export interface LetterParameters {
   letterType: string
   clientId: string
   clientLabel: string
+  clientLockedByEmail: boolean
+  clientProjectId: number | null
   contractId: string
   contractLabel: string
   dueDate: string

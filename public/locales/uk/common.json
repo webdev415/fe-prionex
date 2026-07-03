@@ -428,7 +428,7 @@
       },
       "incoming": {
         "title": "Вхідні",
-        "count": "{{total}} / {{unprocessed}}",
+        "count": "{{unprocessed}} / {{total}}",
         "scrollUp": "Прокрутити вгору",
         "scrollDown": "Прокрутити вниз",
         "searchPlaceholder": "Відправник, тема...",
@@ -475,7 +475,8 @@
           "inProgress": "В РОБОТІ",
           "onBoard": "НА ДОШЦІ",
           "sentToKanban": "КАНБАН",
-          "autoProcessed": "АВТО"
+          "autoProcessed": "АВТО",
+          "done": "ГОТОВО"
         }
       },
       "dates": {
@@ -539,30 +540,26 @@
         "auto": "Авто",
         "managerConfirmation": "Підтвердження менеджера",
         "parametersCount": "{{confirmed}}/{{total}} параметрів",
-        "confirmAndCreate": "Підтвердити та створити задачу",
-        "clients": {
-          "cl08114": "CL-08114 · I. Petrenko",
-          "cl12409": "CL-12409 · O. Kovalenko",
-          "cl06441": "CL-06441 · P. Melnyk",
-          "cl09908": "CL-09908 · V. Khomenko",
-          "cl03305": "CL-03305 · M. Bondarenko",
-          "cl07750": "CL-07750 · L. Savchenko",
-          "cl04412": "CL-04412 · T. Romaniuk",
-          "cl05588": "CL-05588 · H. Tkachenko",
-          "cl02211": "CL-02211 · O. Vasylenko"
-        },
-        "lawyers": {
-          "lawyer1": "Volodymyr Doroshenko (3)",
-          "lawyer2": "Maria Ivanenko (1)",
-          "lawyer3": "D. Kovalchuk (2)",
-          "lawyer4": "O. Hrytsenko (4)"
-        }
+        "confirmAndCreate": "Підтвердити та створити задачу"
       },
       "kanban": {
         "title": "Канбан юридичних задач",
-        "comingSoon": "Канбан-дошка для юридичного відділу — незабаром у KAN-526.",
         "department": "Юридичний відділ",
         "activeCount": "{{count}} активних",
+        "loading": "Завантаження задач канбану…",
+        "loadError": {
+          "title": "Не вдалося завантажити задачі канбану",
+          "description": "Перевірте з’єднання та спробуйте ще раз."
+        },
+        "empty": {
+          "title": "На дошці ще немає задач",
+          "description": "Підтвердіть листи з вхідних або створіть задачу вручну, щоб почати відстеження роботи."
+        },
+        "emptyFilter": {
+          "title": "Немає задач за цими фільтрами",
+          "description": "Спробуйте іншого юриста, тип або діапазон дедлайну.",
+          "clearFilters": "Очистити фільтри"
+        },
         "exportCsv": "Експорт CSV",
         "newTask": "Нова задача",
         "newTaskShort": "Нова",
@@ -608,7 +605,6 @@
           "priority": "Пріоритет",
           "description": "Опис",
           "descriptionPlaceholder": "Введіть опис задачі...",
-          "defaultDescription": "Лист російською — потрібен переклад",
           "selectDeadline": "Оберіть дедлайн",
           "submit": "Створити",
           "priorities": {
@@ -623,11 +619,27 @@
       "documents": {
         "title": "Документи",
         "department": "Юридичний відділ",
-        "comingSoon": "Інтеграція журналу документів — незабаром.",
         "generateDocument": "Згенерувати документ",
         "addIncoming": "Додати вхідний",
         "searchPlaceholder": "Пошук за назвою, клієнтом, № документа...",
-        "empty": "Документів не знайдено",
+        "loading": "Завантаження документів…",
+        "loadError": {
+          "title": "Не вдалося завантажити документи",
+          "description": "Перевірте з’єднання та спробуйте ще раз."
+        },
+        "empty": {
+          "title": "Документів ще немає",
+          "description": "Зареєструйте вхідний документ або згенеруйте вихідний лист, щоб почати журнал юридичних документів.",
+          "search": {
+            "title": "Документів не знайдено",
+            "description": "Спробуйте інший запит або очистіть пошук, щоб побачити всі документи.",
+            "clearSearch": "Очистити пошук"
+          },
+          "filter": {
+            "title": "У цьому перегляді немає документів",
+            "description": "Нічого не відповідає фільтру «{{filter}}». Спробуйте інший тип або покажіть усі документи."
+          }
+        },
         "stats": {
           "incoming": "IN · вхідні",
           "outgoing": "OUT · вихідні",
@@ -1050,13 +1062,12 @@
           }
         }
       },
-      "version": "v0.7.18",
       "workspaceBanner": {
         "lawBadge": "Law",
         "title": "Робоче місце юристів",
-        "assignedToDepartment": "Ви закріплені за відділом «{{department}}».",
-        "noDepartment": "Відділ не призначено.",
-        "operatorsInOperation": "операторів у роботі",
+        "activeProject": "Активний проєкт: {{project}}.",
+        "noActiveProject": "Активний проєкт не обрано.",
+        "lawyersInProject": "юристів у цьому проєкті",
         "openWorkspaceMenu": "Відкрити меню робочого місця",
         "collapse": "Згорнути банер робочого місця",
         "expand": "Розгорнути банер робочого місця"

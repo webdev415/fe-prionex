@@ -1,7 +1,9 @@
 import { useMemo, useRef, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { Link01Icon } from '@hugeicons/core-free-icons'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
+import { searchClients, type SearchType } from '@/api/clientSearchApi'
 import { Button } from '@/components/ui/Button'
 import {
   DropdownMenu,
@@ -13,7 +15,6 @@ import { Label } from '@/components/ui/Label'
 import { Modal, ModalContent, ModalFooter, ModalHeader } from '@/components/ui/Modal'
 import { SearchableSelect } from '@/components/ui/SearchableSelect'
 import { Textarea } from '@/components/ui/Textarea'
-import { useClients } from '@/features/clients/hooks/useClients'
 import { useClientEmails } from '@/features/clients/hooks/useClientEmails'
 import { useDebounce } from '@/hooks/useDebounce'
 import {
@@ -50,19 +51,32 @@ const EDO_OPTIONS: { id: EdoType; labelKey: string; fallback: string; badge?: st
 
 type RecipientMode = 'client' | 'institution'
 
-function formatClientOption(client: {
-  id: number
-  first_name: string
-  last_name: string
-  legacy_id?: string | null
-}): { id: string; name: string } {
-  const code = client.legacy_id?.trim() || `CL-${String(client.id).padStart(5, '0')}`
-  const name = [client.first_name, client.last_name].filter(Boolean).join(' ')
+// Client search-by types — mirror the dashboard header search bar so the
+// outgoing-letter client lookup behaves the same (project-scoped by the
+// active project the user selected in their profile).
+const CLIENT_SEARCH_TYPES: { value: SearchType; labelKey: string; fallback: string }[] = [
+  { value: 'phone', labelKey: 'search.phoneNumber', fallback: 'Phone number' },
+  { value: 'name', labelKey: 'search.fullName', fallback: 'Full name' },
+  { value: 'email', labelKey: 'search.email', fallback: 'Email' },
+  { value: 'tin', labelKey: 'search.tin', fallback: 'TIN' },
+  { value: 'contract_number', labelKey: 'search.contractNumber', fallback: 'Contract number' },
+]
+
+function clientCode(id: number): string {
+  return `CL-${String(id).padStart(5, '0')}`
+}
+
+function formatClientOption(client: { id: number; full_name: string }): {
+  id: string
+  name: string
+} {
+  const code = clientCode(client.id)
+  const name = client.full_name?.trim()
   return { id: String(client.id), name: name ? `${code} · ${name}` : code }
 }
 
 function resolveDefaultMailbox(mailboxes: LegalMailbox[]): LegalMailbox | null {
-  return mailboxes.find((mailbox) => mailbox.is_default_outgoing) ?? mailboxes[0] ?? null
+  return mailboxes[0] ?? null
 }
 
 interface NewOutgoingLetterFormProps {
@@ -90,6 +104,7 @@ function NewOutgoingLetterForm({ onClose, onSent }: NewOutgoingLetterFormProps) 
   const [recipientMode, setRecipientMode] = useState<RecipientMode>('client')
   const [clientId, setClientId] = useState('')
   const [clientSearch, setClientSearch] = useState('')
+  const [searchType, setSearchType] = useState<SearchType>('phone')
   const [emailOverride, setEmailOverride] = useState<{ clientId: string; email: string } | null>(
     null
   )
@@ -103,10 +118,14 @@ function NewOutgoingLetterForm({ onClose, onSent }: NewOutgoingLetterFormProps) 
   }>({ clientName: null, contract: null })
 
   const debouncedClientSearch = useDebounce(clientSearch, 300)
-  const { data: clientsData, isFetching: clientsLoading } = useClients(
-    { q: debouncedClientSearch, limit: 20 },
-    { enabled: recipientMode === 'client' && debouncedClientSearch.length >= 2 }
-  )
+  // Project-scoped client search (active project from the JWT), with a
+  // selectable search-by field — same API the dashboard header search uses.
+  const { data: clientsData, isFetching: clientsLoading } = useQuery({
+    queryKey: ['legal', 'outgoing-client-search', searchType, debouncedClientSearch],
+    queryFn: () => searchClients({ q: debouncedClientSearch, search_type: searchType, limit: 20 }),
+    enabled: recipientMode === 'client' && debouncedClientSearch.length >= 2,
+    staleTime: 30_000,
+  })
 
   const clientIdNumber = Number(clientId)
   const { data: clientEmailsData } = useClientEmails(
@@ -118,6 +137,11 @@ function NewOutgoingLetterForm({ onClose, onSent }: NewOutgoingLetterFormProps) 
     () => (clientsData?.items ?? []).map(formatClientOption),
     [clientsData?.items]
   )
+
+  const activeSearchType = CLIENT_SEARCH_TYPES.find((opt) => opt.value === searchType)
+  const searchTypeLabel = activeSearchType
+    ? t(activeSearchType.labelKey, activeSearchType.fallback)
+    : ''
 
   const clientEmails = useMemo(
     () => (clientEmailsData ?? []).map((item) => item.contact_value).filter(Boolean),
@@ -141,8 +165,8 @@ function NewOutgoingLetterForm({ onClose, onSent }: NewOutgoingLetterFormProps) 
       return
     }
 
-    const contract = client.legacy_id?.trim() || `CL-${String(client.id).padStart(5, '0')}`
-    const clientName = [client.first_name, client.last_name].filter(Boolean).join(' ') || null
+    const contract = clientCode(client.id)
+    const clientName = client.full_name?.trim() || null
     setSelectedClientTemplateContext({ clientName, contract })
   }
 
@@ -305,10 +329,38 @@ function NewOutgoingLetterForm({ onClose, onSent }: NewOutgoingLetterFormProps) 
           {recipientMode === 'client' && (
             <>
               <div className="flex w-full flex-col gap-2">
-                <Label className="text-dark-500 text-[12px] font-normal">
-                  {t('pages.lawyerWorkplace.newLetter.client', 'Client')}
-                  <span className="text-error-500 ml-1">*</span>
-                </Label>
+                <div className="flex items-center justify-between gap-2">
+                  <Label className="text-dark-500 text-[12px] font-normal">
+                    {t('pages.lawyerWorkplace.newLetter.client', 'Client')}
+                    <span className="text-error-500 ml-1">*</span>
+                  </Label>
+                  <DropdownMenu modal={false}>
+                    <DropdownMenuTrigger asChild>
+                      <button
+                        type="button"
+                        className="text-dark-500 flex h-7 shrink-0 items-center gap-1 rounded-md border border-gray-200 bg-white px-2 text-[12px] font-light outline-none"
+                      >
+                        <Icons.Search size={12} strokeWidth={1.5} className="text-gray-400" />
+                        {searchTypeLabel}
+                        <Icons.ArrowDown size={13} strokeWidth={1.5} className="text-gray-400" />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="min-w-[160px]">
+                      {CLIENT_SEARCH_TYPES.map((opt) => (
+                        <DropdownMenuItem
+                          key={opt.value}
+                          className="cursor-pointer text-[13px]"
+                          onClick={() => {
+                            setSearchType(opt.value)
+                            setClientSearch('')
+                          }}
+                        >
+                          {t(opt.labelKey, opt.fallback)}
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
                 <SearchableSelect
                   options={clientOptions}
                   value={clientId}

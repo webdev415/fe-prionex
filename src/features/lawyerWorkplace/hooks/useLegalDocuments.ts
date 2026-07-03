@@ -12,21 +12,22 @@ import type { LegalDocumentListParams } from '../api/types'
 import { legalWorkplaceKeys } from './useLegalInbox'
 import { useLegalLawyers } from './useLegalInbox'
 
-const FILTER_TYPES: LegalDocumentTypeFilter[] = [
-  'all',
-  'incoming',
-  'outgoing',
-  'nbu_response',
-  'uploaded',
-  'generated',
-]
+const EMPTY_FILTER_COUNTS: Record<LegalDocumentTypeFilter, number> = {
+  all: 0,
+  incoming: 0,
+  outgoing: 0,
+  nbu_response: 0,
+  uploaded: 0,
+  generated: 0,
+}
 
 export function useLegalDocuments(
   params: LegalDocumentListParams,
   options?: { enabled?: boolean }
 ) {
-  const { data: clientsData } = useClients({ limit: 500 }, { enabled: options?.enabled !== false })
-  const { data: lawyersData } = useLegalLawyers({ enabled: options?.enabled !== false })
+  const enabled = options?.enabled !== false
+  const { data: clientsData } = useClients({ limit: 500 }, { enabled })
+  const { data: lawyersData } = useLegalLawyers({ enabled, scopedToActiveProject: true })
 
   const lookup = useMemo(
     () => buildLegalDocumentLookup(clientsData?.items ?? [], lawyersData?.items ?? []),
@@ -36,7 +37,7 @@ export function useLegalDocuments(
   const query = useQuery({
     queryKey: legalWorkplaceKeys.documentsList(params),
     queryFn: () => legalApi.listDocuments(params),
-    enabled: options?.enabled !== false,
+    enabled,
     staleTime: 15_000,
   })
 
@@ -65,23 +66,10 @@ export function useLegalDocumentStats(options?: { enabled?: boolean; year?: numb
 }
 
 export function useLegalDocumentFilterCounts(options?: { enabled?: boolean }) {
-  return useQuery({
-    queryKey: legalWorkplaceKeys.documentFilterCounts(),
-    queryFn: async () => {
-      const results = await Promise.all(
-        FILTER_TYPES.map((typeFilter) =>
-          legalApi.listDocuments({ page: 1, page_size: 1, type_filter: typeFilter })
-        )
-      )
-      return FILTER_TYPES.reduce(
-        (counts, typeFilter, index) => {
-          counts[typeFilter] = results[index]?.total ?? 0
-          return counts
-        },
-        {} as Record<LegalDocumentTypeFilter, number>
-      )
-    },
-    enabled: options?.enabled !== false,
-    staleTime: 30_000,
-  })
+  const statsQuery = useLegalDocumentStats({ enabled: options?.enabled !== false })
+
+  return {
+    ...statsQuery,
+    data: statsQuery.data?.filterCounts ?? EMPTY_FILTER_COUNTS,
+  }
 }

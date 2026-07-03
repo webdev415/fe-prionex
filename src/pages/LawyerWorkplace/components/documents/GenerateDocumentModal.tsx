@@ -75,7 +75,7 @@ export function GenerateDocumentModal({
 }: GenerateDocumentModalProps) {
   const { t } = useTranslation('common')
   const currentUserId = Number(useAuthStore((state) => state.user?.id))
-  const { data: lawyersData } = useLegalLawyers({ enabled: open })
+  const { data: lawyersData } = useLegalLawyers({ enabled: open, scopedToActiveProject: true })
 
   const [documentType, setDocumentType] = useState<GenerateDocumentType>('outgoing')
   const [documentName, setDocumentName] = useState('')

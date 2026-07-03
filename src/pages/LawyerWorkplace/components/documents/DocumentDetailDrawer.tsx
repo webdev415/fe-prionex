@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/Button'
-import { downloadLegalDocument } from '@/features/lawyerWorkplace'
+import { downloadLegalDocument, exportLegalDocumentPdf } from '@/features/lawyerWorkplace'
 import { Icons } from '@/lib/icons'
 import { getErrorMessage } from '@/lib/errors'
 import { cn } from '@/lib/utils'
@@ -20,12 +20,54 @@ export function DocumentDetailDrawer({ document, onClose }: DocumentDetailDrawer
   const { t, i18n } = useTranslation('common')
   const isOpen = document !== null
 
+  // "generated" reply-EDO docs (ВИХ / НБУ) have no stored file — export a PDF
+  // rendered from the sent letter instead of hitting the (404) download route.
+  const isGenerated = document?.action === 'generated'
+
   const handleDownload = async () => {
     if (!document) return
     try {
       await downloadLegalDocument(document.id, document.filename ?? `${document.number}.bin`)
       toast.success(
         t('pages.lawyerWorkplace.documents.modals.detail.downloadStarted', 'Download started'),
+        {
+          description: getDocumentDisplayName(document, t),
+        }
+      )
+    } catch (error) {
+      toast.error(getErrorMessage(error))
+    }
+  }
+
+  const handleExport = async () => {
+    if (!document) return
+    try {
+      const { dateLine, timeLine } = formatDocumentDateLines(document.createdAt, t, i18n.language)
+      await exportLegalDocumentPdf({
+        number: document.number,
+        fallbackSubject: getDocumentDisplayName(document, t),
+        sourceMessageId: document.sourceMessageId,
+        meta: [
+          {
+            label: t('pages.lawyerWorkplace.documents.columns.type', 'Type'),
+            value: t(DOCUMENT_TYPE_I18N_KEYS[document.type], document.type),
+          },
+          {
+            label: t('pages.lawyerWorkplace.documents.columns.clientContract', 'Client - Contract'),
+            value: [document.clientName, document.contractId].filter(Boolean).join(' · '),
+          },
+          {
+            label: t('pages.lawyerWorkplace.documents.columns.assignee', 'Assignee'),
+            value: document.assigneeName || '',
+          },
+          {
+            label: t('pages.lawyerWorkplace.documents.columns.date', 'Date'),
+            value: [dateLine, timeLine].filter(Boolean).join(' '),
+          },
+        ],
+      })
+      toast.success(
+        t('pages.lawyerWorkplace.documents.modals.detail.exportStarted', 'Export started'),
         {
           description: getDocumentDisplayName(document, t),
         }
@@ -128,15 +170,27 @@ export function DocumentDetailDrawer({ document, onClose }: DocumentDetailDrawer
             </div>
 
             <div className="mt-8 flex flex-col gap-2 sm:flex-row">
-              <Button
-                variant="secondary"
-                size="md"
-                className="flex-1"
-                leftIcon={<Icons.Download size={18} strokeWidth={1.5} />}
-                onClick={handleDownload}
-              >
-                {t('pages.lawyerWorkplace.documents.modals.detail.download', 'Download')}
-              </Button>
+              {isGenerated ? (
+                <Button
+                  variant="secondary"
+                  size="md"
+                  className="flex-1"
+                  leftIcon={<Icons.Download size={18} strokeWidth={1.5} />}
+                  onClick={handleExport}
+                >
+                  {t('pages.lawyerWorkplace.documents.modals.detail.export', 'Export')}
+                </Button>
+              ) : (
+                <Button
+                  variant="secondary"
+                  size="md"
+                  className="flex-1"
+                  leftIcon={<Icons.Download size={18} strokeWidth={1.5} />}
+                  onClick={handleDownload}
+                >
+                  {t('pages.lawyerWorkplace.documents.modals.detail.download', 'Download')}
+                </Button>
+              )}
               <Button variant="outline" size="md" className="flex-1" onClick={onClose}>
                 {t('actions.close', 'Close')}
               </Button>

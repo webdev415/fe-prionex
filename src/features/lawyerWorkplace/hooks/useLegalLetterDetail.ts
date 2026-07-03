@@ -38,12 +38,21 @@ export function useLegalLetterDetail(
   const lawyersQuery = useLegalLawyers({ enabled })
 
   const clientId = messageQuery.data?.suggested_client_id ?? null
-  const clientQuery = useClient(clientId ?? 0, enabled && clientId != null)
+  const needsClientFetch = clientId != null && !messageQuery.data?.suggested_client_name?.trim()
+  const clientQuery = useClient(clientId ?? 0, enabled && needsClientFetch)
 
   const lookupContext = useMemo(() => {
-    const clients = clientQuery.data ? [clientLookupFromClient(clientQuery.data)] : undefined
+    let clients: ReturnType<typeof clientLookupFromClient>[] | undefined
+    if (messageQuery.data?.suggested_client_id && messageQuery.data.suggested_client_name?.trim()) {
+      const id = messageQuery.data.suggested_client_id
+      const name = messageQuery.data.suggested_client_name.trim()
+      const code = `CL-${id}`
+      clients = [{ id, code, name, label: `${code} · ${name}` }]
+    } else if (clientQuery.data) {
+      clients = [clientLookupFromClient(clientQuery.data)]
+    }
     return buildLegalLookupContext(letterTypesQuery.data?.items, lawyersQuery.data?.items, clients)
-  }, [clientQuery.data, letterTypesQuery.data?.items, lawyersQuery.data?.items])
+  }, [clientQuery.data, letterTypesQuery.data?.items, lawyersQuery.data?.items, messageQuery.data])
 
   const letter = useMemo((): LetterDetail | null => {
     if (messageQuery.data) {
@@ -73,7 +82,7 @@ export function useLegalLetterDetail(
     threadQuery.isLoading ||
     letterTypesQuery.isLoading ||
     lawyersQuery.isLoading ||
-    (clientId != null && clientQuery.isLoading)
+    (clientId != null && needsClientFetch && clientQuery.isLoading)
 
   return {
     letter,

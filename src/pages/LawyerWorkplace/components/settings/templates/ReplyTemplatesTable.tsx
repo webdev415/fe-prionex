@@ -92,17 +92,6 @@ export function ReplyTemplatesTable({
               'Add templates with reusable letter text and variables for the thread and new letter composer.'
             )}
           </p>
-          {!readOnly ? (
-            <Button
-              variant="primary"
-              size="sm"
-              leftIcon={<Icons.AddCircle size={18} strokeWidth={1.5} />}
-              onClick={onAdd}
-              className="mt-5 h-9 rounded-md"
-            >
-              {t('pages.lawyerWorkplace.settings.templates.addReply', 'Add template')}
-            </Button>
-          ) : null}
         </div>
       ) : (
         <>

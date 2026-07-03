@@ -97,8 +97,6 @@ interface IncomingEmptyStateConfig {
   icon: React.ReactElement
   title: string
   description: string
-  showNewLetter: boolean
-  showClearSearch: boolean
 }
 
 function getIncomingEmptyState(
@@ -115,8 +113,6 @@ function getIncomingEmptyState(
         'pages.lawyerWorkplace.incoming.empty.search.description',
         'Try a different search term or clear the search to see all letters.'
       ),
-      showNewLetter: false,
-      showClearSearch: true,
     }
   }
 
@@ -133,8 +129,6 @@ function getIncomingEmptyState(
         filter: filterLabel,
         defaultValue: `Nothing matches the «${filterLabel}» filter. Try another status or show all mailboxes.`,
       }),
-      showNewLetter: false,
-      showClearSearch: false,
     }
   }
 
@@ -165,8 +159,6 @@ function getIncomingEmptyState(
             ? 'Letters held for review before processing appear in this folder.'
             : 'Outgoing letters and replies sent from the workplace appear here.',
     }),
-    showNewLetter: activeFolder === 'inbox',
-    showClearSearch: false,
   }
 }
 
@@ -180,6 +172,7 @@ export interface IncomingListPanelProps {
   unprocessedCount: number
   isLoading?: boolean
   isError?: boolean
+  onRetry?: () => void
   // Pagination
   page: number
   totalPages: number
@@ -207,6 +200,7 @@ export function IncomingListPanel({
   unprocessedCount,
   isLoading = false,
   isError = false,
+  onRetry,
   page,
   totalPages,
   total,
@@ -339,9 +333,9 @@ export function IncomingListPanel({
             </h2>
             <CountPill>
               {t('pages.lawyerWorkplace.incoming.count', {
-                total: countAll,
                 unprocessed: String(unprocessedCount).padStart(2, '0'),
-                defaultValue: `${countAll} / ${String(unprocessedCount).padStart(2, '0')}`,
+                total: countAll,
+                defaultValue: `${String(unprocessedCount).padStart(2, '0')} / ${countAll}`,
               })}
             </CountPill>
           </div>
@@ -493,6 +487,17 @@ export function IncomingListPanel({
                   'Check your connection and try again.'
                 )}
               </p>
+              {onRetry ? (
+                <Button
+                  type="button"
+                  variant="cancel"
+                  size="sm"
+                  onClick={onRetry}
+                  className="mt-5 h-9 rounded-md"
+                >
+                  {t('actions.retry', 'Retry')}
+                </Button>
+              ) : null}
             </div>
           ) : emptyState ? (
             <div
@@ -506,29 +511,6 @@ export function IncomingListPanel({
               <p className="text-light-600 mt-1 max-w-sm text-[12px] leading-relaxed">
                 {emptyState.description}
               </p>
-              {emptyState.showClearSearch ? (
-                <Button
-                  type="button"
-                  variant="cancel"
-                  size="sm"
-                  onClick={handleClearSearch}
-                  className="mt-5 h-9 rounded-md"
-                >
-                  {t('pages.lawyerWorkplace.incoming.empty.search.clearSearch', 'Clear search')}
-                </Button>
-              ) : null}
-              {emptyState.showNewLetter ? (
-                <Button
-                  type="button"
-                  variant="primary"
-                  size="sm"
-                  leftIcon={<Icons.AddCircle size={18} strokeWidth={1.5} />}
-                  onClick={onNewLetter}
-                  className="mt-5 h-9 rounded-md"
-                >
-                  {t('pages.lawyerWorkplace.incoming.newLetter', 'New letter')}
-                </Button>
-              ) : null}
             </div>
           ) : (
             letters.map((letter) => (

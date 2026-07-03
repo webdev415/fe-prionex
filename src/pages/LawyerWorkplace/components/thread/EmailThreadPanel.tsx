@@ -239,9 +239,7 @@ export function EmailThreadPanel({
 
   const defaultMailboxId = useMemo(() => {
     if (!letter) return null
-    if (letter.replyContext.mailboxId) return letter.replyContext.mailboxId
-    const defaultOutgoing = mailboxes.find((mailbox) => mailbox.is_default_outgoing)
-    return defaultOutgoing?.id ?? mailboxes[0]?.id ?? null
+    return letter.replyContext.mailboxId ?? mailboxes[0]?.id ?? null
   }, [letter, mailboxes])
 
   const selectedMailboxId =
@@ -332,6 +330,8 @@ export function EmailThreadPanel({
           edo_type: edoType,
           client_id: edoType !== 'none' ? clientId : null,
           assigned_to_user_id: edoType !== 'none' ? assignedUserId : null,
+          contract_number:
+            edoType !== 'none' ? letter.parameters.contractLabel.trim() || null : null,
           attachment_ids: stagedAttachments.map((item) => item.id),
           draft_message_id: letter.id,
         },

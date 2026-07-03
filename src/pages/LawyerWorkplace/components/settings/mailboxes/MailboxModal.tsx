@@ -10,7 +10,6 @@ import {
 import { Label } from '@/components/ui/Label'
 import { Modal, ModalContent, ModalFooter, ModalHeader } from '@/components/ui/Modal'
 import { Icons } from '@/lib/icons'
-import { cn } from '@/lib/utils'
 import type {
   LetterTypeConfig,
   MailboxProvider,
@@ -33,7 +32,6 @@ export interface MailboxFormValues {
   smtpPort: number
   smtpUseTls: boolean
   defaultLetterTypeId: string | null
-  isDefaultOutgoing: boolean
   routingRules: MailboxRoutingRule[]
   /** Only meaningful on create. When true, the backend will set last_imap_uid
    *  to the current max so only future emails are ingested. */
@@ -162,7 +160,6 @@ const DEFAULT_EMPTY: MailboxFormValues = {
   smtpPort: 587,
   smtpUseTls: true,
   defaultLetterTypeId: null,
-  isDefaultOutgoing: false,
   routingRules: [],
   syncFromToday: true,
 }
@@ -187,7 +184,6 @@ function getInitialValues(mailbox: SettingsMailbox | null): MailboxFormValues {
     smtpPort: preset?.smtpPort ?? 587,
     smtpUseTls: preset?.smtpUseTls ?? true,
     defaultLetterTypeId: mailbox.defaultLetterTypeId,
-    isDefaultOutgoing: mailbox.isDefaultOutgoing,
     routingRules: mailbox.routingRules.map((rule) => ({ ...rule })),
     syncFromToday: false, // no-op on edit, only relevant for create
   }
@@ -226,8 +222,6 @@ export function MailboxModal({
   const [smtpHost, setSmtpHost] = useState('')
   const [smtpPort, setSmtpPort] = useState(587)
   const [smtpUseTls, setSmtpUseTls] = useState(true)
-  const [defaultLetterTypeId, setDefaultLetterTypeId] = useState<string | null>(null)
-  const [isDefaultOutgoing, setIsDefaultOutgoing] = useState(false)
   const [routingRules, setRoutingRules] = useState<MailboxRoutingRule[]>([])
   const [syncFromToday, setSyncFromToday] = useState(true)
   const [newMatchType, setNewMatchType] =
@@ -255,8 +249,6 @@ export function MailboxModal({
       setSmtpHost(preset?.smtpHost ?? initial.smtpHost)
       setSmtpPort(preset?.smtpPort ?? initial.smtpPort)
       setSmtpUseTls(preset?.smtpUseTls ?? initial.smtpUseTls)
-      setDefaultLetterTypeId(initial.defaultLetterTypeId)
-      setIsDefaultOutgoing(initial.isDefaultOutgoing)
       setRoutingRules(initial.routingRules)
       setSyncFromToday(initial.syncFromToday)
       setNewMatchType('subject_keyword')
@@ -352,14 +344,12 @@ export function MailboxModal({
       smtpHost,
       smtpPort,
       smtpUseTls,
-      defaultLetterTypeId,
-      isDefaultOutgoing,
+      defaultLetterTypeId: null,
       routingRules,
       syncFromToday,
     })
   }
 
-  const selectedDefaultType = letterTypes.find((type) => type.id === defaultLetterTypeId)
   const selectedProviderLabel = PROVIDER_PRESETS.find((p) => p.id === provider)?.label ?? provider
 
   return (
@@ -591,69 +581,6 @@ export function MailboxModal({
             </label>
           </div>
         ) : null}
-
-        {/* Default letter type */}
-        <div className="flex flex-col gap-2">
-          <Label className="text-dark-500 text-[13px] font-medium">
-            {t(
-              'pages.lawyerWorkplace.settings.mailboxes.fields.defaultType',
-              'Default letter type'
-            )}
-          </Label>
-          <DropdownMenu modal={false}>
-            <DropdownMenuTrigger asChild>
-              <button
-                type="button"
-                className="text-dark-500 flex h-11 w-full items-center justify-between rounded-md border border-gray-200 bg-white px-4 text-[14px]"
-              >
-                <span className={cn(!selectedDefaultType && 'text-gray-400')}>
-                  {selectedDefaultType ? (
-                    <LetterTypeBadge letterType={selectedDefaultType} t={t} size="sm" />
-                  ) : (
-                    t('pages.lawyerWorkplace.settings.mailboxes.autoRoute', 'Auto-route')
-                  )}
-                </span>
-                <Icons.ArrowDown size={16} strokeWidth={1.5} className="text-light-500" />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent
-              align="start"
-              className="max-h-60 min-w-[var(--radix-dropdown-menu-trigger-width)] overflow-y-auto p-1.5"
-            >
-              <DropdownMenuItem
-                className="cursor-pointer"
-                onClick={() => setDefaultLetterTypeId(null)}
-              >
-                {t('pages.lawyerWorkplace.settings.mailboxes.autoRoute', 'Auto-route')}
-              </DropdownMenuItem>
-              {letterTypes.map((type) => (
-                <DropdownMenuItem
-                  key={type.id}
-                  className="cursor-pointer"
-                  onClick={() => setDefaultLetterTypeId(type.id)}
-                >
-                  <LetterTypeBadge letterType={type} t={t} size="sm" />
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-
-        {/* Default outgoing */}
-        <label className="flex cursor-pointer items-center gap-2">
-          <input
-            type="checkbox"
-            checked={isDefaultOutgoing}
-            onChange={(e) => setIsDefaultOutgoing(e.target.checked)}
-            className="accent-secondary-800 h-4 w-4 rounded border-gray-300"
-          />
-          <span className="text-dark-500 text-[13px]">
-            {t(
-              'pages.lawyerWorkplace.settings.mailboxes.fields.defaultOutgoing',
-              'Use as default outgoing mailbox in reply composer'
-            )}
-          </span>
-        </label>
 
         {/* Sync from today — only shown when adding a new mailbox */}
         {!isEditing ? (

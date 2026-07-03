@@ -5,7 +5,10 @@ import { mapLegalKanbanItems } from '../api/kanbanMappers'
 import { legalWorkplaceKeys, useLegalLawyers } from './useLegalInbox'
 
 export function useLegalKanban(options?: { enabled?: boolean; assignedToUserId?: number }) {
-  const { data: lawyersData } = useLegalLawyers({ enabled: options?.enabled !== false })
+  const { data: lawyersData } = useLegalLawyers({
+    enabled: options?.enabled !== false,
+    scopedToActiveProject: true,
+  })
   const lawyers = useMemo(() => lawyersData?.items ?? [], [lawyersData?.items])
 
   const query = useQuery({

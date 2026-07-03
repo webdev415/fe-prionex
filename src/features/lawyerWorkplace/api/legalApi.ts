@@ -34,6 +34,10 @@ import type {
   LegalTrainingExample,
   LegalTrainingExampleCreate,
   LegalTrainingExampleUpdate,
+  LegalClientContractListResponse,
+  LegalClientSearchResponse,
+  LegalContractPatchRequest,
+  LegalContractPatchResponse,
   LegalDepartmentSyncSettings,
   LegalDepartmentSyncSettingsUpdate,
   LegalMailboxCreate,
@@ -105,6 +109,12 @@ export const legalApi = {
       .then((response) => response.data)
   },
 
+  patchMessageContract(messageId: string, payload: LegalContractPatchRequest) {
+    return api
+      .patch<LegalContractPatchResponse>(`${BASE_URL}/messages/${messageId}/contract`, payload)
+      .then((response) => response.data)
+  },
+
   suggestLawyerForLetterType(letterTypeId: string) {
     return api
       .get<LegalLawyerSuggestion>(`${SETTINGS_URL}/suggest-lawyer`, {
@@ -139,6 +149,10 @@ export const legalApi = {
 
   patchKanbanTask(taskId: number, payload: { letter_type_id?: string; client_id?: number | null }) {
     return api.patch(`${BASE_URL}/kanban/tasks/${taskId}`, payload)
+  },
+
+  syncKanbanTaskStatus(taskId: number, payload: { status?: string }) {
+    return api.post(`${BASE_URL}/kanban/tasks/${taskId}/sync-status`, payload)
   },
 
   listDocuments(params: LegalDocumentListParams = {}) {
@@ -265,7 +279,7 @@ export const legalApi = {
     return api.delete(`${SETTINGS_URL}/letter-types/${letterTypeId}/examples/${exampleId}`)
   },
 
-  listLawyers(params?: { include_inactive?: boolean }) {
+  listLawyers(params?: { include_inactive?: boolean; project_id?: number }) {
     return api
       .get<LegalLawyerListResponse>(`${SETTINGS_URL}/lawyers`, { params })
       .then((response) => response.data)
@@ -425,7 +439,22 @@ export const legalApi = {
       params: { staging_session_id: stagingSessionId },
     })
   },
+
+  searchClients(q: string, limit = 20) {
+    return api
+      .get<LegalClientSearchResponse>(`${BASE_URL}/clients/search`, {
+        params: { q, limit },
+      })
+      .then((response) => response.data)
+  },
+
+  listClientContracts(clientId: number) {
+    return api
+      .get<LegalClientContractListResponse>(`${BASE_URL}/clients/${clientId}/contracts`)
+      .then((response) => response.data)
+  },
 }
 
 export { downloadLegalAttachment } from './downloadAttachment'
 export { downloadLegalDocument } from './downloadLegalDocument'
+export { exportLegalDocumentPdf, type LegalDocumentExportInput } from './exportLegalDocument'

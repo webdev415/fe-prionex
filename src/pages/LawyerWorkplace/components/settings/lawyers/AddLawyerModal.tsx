@@ -9,6 +9,7 @@ import {
 } from '@/components/ui/DropdownMenu'
 import { Label } from '@/components/ui/Label'
 import { Modal, ModalContent, ModalFooter, ModalHeader } from '@/components/ui/Modal'
+import { SearchableSelect } from '@/components/ui/SearchableSelect'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 import type { LetterTypeConfig } from '../../../settings/types'
@@ -90,42 +91,20 @@ export function AddLawyerModal({
           <Label className="text-dark-500 text-[13px] font-medium">
             {t('pages.lawyerWorkplace.settings.lawyer', 'Lawyer')}
           </Label>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild disabled={!hasAvailableUsers || isSubmitting}>
-              <button
-                type="button"
-                disabled={!hasAvailableUsers || isSubmitting}
-                className={cn(
-                  'text-dark-500 flex h-11 w-full items-center justify-between rounded-xl border border-gray-200 bg-white px-4 text-[14px] font-light',
-                  (!hasAvailableUsers || isSubmitting) && 'cursor-not-allowed opacity-60'
-                )}
-              >
-                <span className={cn(!selectedUser && 'text-gray-400')}>
-                  {selectedUser
-                    ? selectedUser.name
-                    : t(
-                        'pages.lawyerWorkplace.settings.modals.addLawyer.selectLawyer',
-                        'Select a Lawyer'
-                      )}
-                </span>
-                <Icons.ArrowDown size={16} strokeWidth={1.5} className="text-light-500" />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent
-              align="start"
-              className="max-h-60 w-[var(--radix-dropdown-menu-trigger-width)] overflow-y-auto"
-            >
-              {availableUsers.map((user) => (
-                <DropdownMenuItem
-                  key={user.id}
-                  className="cursor-pointer"
-                  onClick={() => setUserId(user.id)}
-                >
-                  {user.name}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <SearchableSelect
+            options={availableUsers.map((user) => ({ id: String(user.id), name: user.name }))}
+            value={userId != null ? String(userId) : ''}
+            onValueChange={(next) => setUserId(next ? Number(next) : null)}
+            placeholder={t(
+              'pages.lawyerWorkplace.settings.modals.addLawyer.selectLawyer',
+              'Select a Lawyer'
+            )}
+            searchPlaceholder={t(
+              'pages.lawyerWorkplace.settings.modals.addLawyer.searchLawyer',
+              'Search lawyers…'
+            )}
+            disabled={!hasAvailableUsers || isSubmitting}
+          />
           {!hasAvailableUsers ? (
             <p className="text-light-600 text-[12px]">
               {t('pages.lawyerWorkplace.settings.modals.addLawyer.noLawyers', 'All lawyers added')}

@@ -103,7 +103,7 @@ export function DocumentsTable({
       <DataTable
         columns={columns}
         data={documents}
-        emptyMessage={t('pages.lawyerWorkplace.documents.empty', 'No documents found')}
+        emptyMessage={t('pages.lawyerWorkplace.documents.empty.title', 'No documents yet')}
         tableClassName="whitespace-normal"
         className={cn(isCompact && 'rounded-lg')}
         onRowClick={onDocumentClick}

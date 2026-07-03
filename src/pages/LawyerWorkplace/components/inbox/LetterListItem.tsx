@@ -4,7 +4,10 @@ import { cn } from '@/lib/utils'
 import { formatLetterTime } from '../../utils/formatters'
 import type { LetterListItem as LetterListItemType } from '../../types'
 
-const STATUS_KEYS: Record<LetterListItemType['status'], { labelKey: string; className: string }> = {
+const STATUS_KEYS: Record<
+  'new' | 'in_progress' | 'auto_processed' | 'done',
+  { labelKey: string; className: string }
+> = {
   new: {
     labelKey: 'pages.lawyerWorkplace.letterItem.status.new',
     className: 'bg-error-100 text-error-700',
@@ -13,17 +16,13 @@ const STATUS_KEYS: Record<LetterListItemType['status'], { labelKey: string; clas
     labelKey: 'pages.lawyerWorkplace.letterItem.status.inProgress',
     className: 'bg-secondary-100 text-secondary-800',
   },
-  on_board: {
-    labelKey: 'pages.lawyerWorkplace.letterItem.status.onBoard',
-    className: 'bg-warning-100 text-warning-700',
-  },
-  sent_to_kanban: {
-    labelKey: 'pages.lawyerWorkplace.letterItem.status.sentToKanban',
-    className: 'bg-blue-100 text-blue-500',
-  },
   auto_processed: {
     labelKey: 'pages.lawyerWorkplace.letterItem.status.autoProcessed',
     className: 'bg-success-100 text-success-700',
+  },
+  done: {
+    labelKey: 'pages.lawyerWorkplace.letterItem.status.done',
+    className: 'bg-blue-100 text-blue-500',
   },
 }
 
@@ -43,12 +42,14 @@ export interface LetterListItemProps {
 
 export function LetterListItem({ letter, isSelected, onSelect }: LetterListItemProps) {
   const { t, i18n } = useTranslation('common')
-  const status = STATUS_KEYS[letter.status]
+  const displayStatus = letter.status
+  const status = STATUS_KEYS[displayStatus]
   const typeColour = letter.letterType
     ? (TYPE_COLOUR[letter.letterType] ?? 'bg-gray-100 text-gray-600')
     : null
 
-  const isAutoProcessed = letter.status === 'auto_processed'
+  const isAutoProcessed = displayStatus === 'auto_processed'
+  const isDone = displayStatus === 'done'
 
   return (
     <button
@@ -62,7 +63,9 @@ export function LetterListItem({ letter, isSelected, onSelect }: LetterListItemP
             ? 'border-l-warning-400 border-l-2 border-white bg-orange-50/60 hover:bg-orange-100/40'
             : isAutoProcessed
               ? 'border-success-100 bg-success-50/30 hover:bg-success-50/60'
-              : 'border-white bg-white hover:bg-gray-50/40'
+              : isDone
+                ? 'border-gray-200 bg-gray-50/80 hover:bg-gray-50'
+                : 'border-white bg-white hover:bg-gray-50/40'
       )}
     >
       <div className="mb-1.5 flex items-baseline justify-between gap-2">
@@ -122,7 +125,6 @@ export function LetterListItem({ letter, isSelected, onSelect }: LetterListItemP
           </span>
         )}
 
-        {/* Auto-processed: green dot indicator */}
         {isAutoProcessed && (
           <span
             className="bg-success-500 ml-1 inline-block h-1.5 w-1.5 rounded-full"
@@ -130,10 +132,14 @@ export function LetterListItem({ letter, isSelected, onSelect }: LetterListItemP
           />
         )}
 
-        {letter.clientCode && letter.clientName ? (
+        {letter.clientCode ? (
           <div className="flex items-center gap-1">
-            <span className="text-dark-500 text-[11px]">{letter.clientName}</span>
-            <span className="text-light-700 text-[11px]"> · </span>
+            {letter.clientName ? (
+              <>
+                <span className="text-dark-500 text-[11px]">{letter.clientName}</span>
+                <span className="text-light-700 text-[11px]"> · </span>
+              </>
+            ) : null}
             <span className="text-light-700 text-[11px]">{letter.clientCode}</span>
           </div>
         ) : (

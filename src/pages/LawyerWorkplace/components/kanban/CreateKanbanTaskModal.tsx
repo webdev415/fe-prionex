@@ -125,7 +125,10 @@ function FormSelect({ label, value, onSelect, items, leftIcon, disabled }: FormS
 export function CreateKanbanTaskModal({ open, onClose }: CreateKanbanTaskModalProps) {
   const { t } = useTranslation('common')
   const createTask = useCreateLegalKanbanTask()
-  const { data: lawyersData, isLoading: lawyersLoading } = useLegalLawyers({ enabled: open })
+  const { data: lawyersData, isLoading: lawyersLoading } = useLegalLawyers({
+    enabled: open,
+    scopedToActiveProject: true,
+  })
   const { data: letterTypesData, isLoading: letterTypesLoading } = useLegalLetterTypes({
     enabled: open,
   })
@@ -154,10 +157,18 @@ export function CreateKanbanTaskModal({ open, onClose }: CreateKanbanTaskModalPr
     [clientsData?.items]
   )
 
-  const defaultDescription = t(
-    'pages.lawyerWorkplace.kanban.createTask.defaultDescription',
-    'Letter in Russian — needs translation'
-  )
+  useEffect(() => {
+    if (!open) return
+    requestAnimationFrame(() => {
+      setLawyerUserId(lawyers[0]?.user_id ?? null)
+      setLetterTypeId(letterTypes[0]?.id ?? null)
+      setClientId('')
+      setClientSearch('')
+      setDeadline(getTomorrowDate())
+      setPriority('high')
+      setDescription('')
+    })
+  }, [letterTypes, lawyers, open])
 
   const selectedLawyer = lawyers.find((item) => item.user_id === lawyerUserId)
   const selectedLetterType = letterTypes.find((item) => item.id === letterTypeId)
@@ -169,20 +180,8 @@ export function CreateKanbanTaskModal({ open, onClose }: CreateKanbanTaskModalPr
     !createTask.isPending &&
     lawyerUserId != null &&
     letterTypeId != null &&
-    deadline != null
-
-  useEffect(() => {
-    if (!open) return
-    requestAnimationFrame(() => {
-      setLawyerUserId(lawyers[0]?.user_id ?? null)
-      setLetterTypeId(letterTypes[0]?.id ?? null)
-      setClientId('')
-      setClientSearch('')
-      setDeadline(getTomorrowDate())
-      setPriority('high')
-      setDescription(defaultDescription)
-    })
-  }, [defaultDescription, letterTypes, lawyers, open])
+    deadline != null &&
+    description.trim().length > 0
 
   const handleCreate = () => {
     if (!canSubmit || lawyerUserId == null || letterTypeId == null || deadline == null) {

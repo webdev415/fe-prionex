@@ -148,17 +148,6 @@ export function LawyersTable({
               'Add lawyers to configure workload limits and letter type specializations.'
             )}
           </p>
-          {!readOnly ? (
-            <Button
-              variant="primary"
-              size="sm"
-              leftIcon={<Icons.AddCircle size={18} strokeWidth={1.5} />}
-              onClick={onAddLawyer}
-              className="mt-5 h-9 rounded-md"
-            >
-              {t('pages.lawyerWorkplace.settings.lawyers.addLawyer', 'Add lawyer')}
-            </Button>
-          ) : null}
         </div>
       ) : (
         <>

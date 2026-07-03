@@ -423,7 +423,7 @@
       },
       "incoming": {
         "title": "Incoming",
-        "count": "{{total}} / {{unprocessed}}",
+        "count": "{{unprocessed}} / {{total}}",
         "scrollUp": "Scroll up",
         "scrollDown": "Scroll down",
         "searchPlaceholder": "Sender, subject...",
@@ -470,7 +470,8 @@
           "inProgress": "IN PROGRESS",
           "onBoard": "ON BOARD",
           "sentToKanban": "KANBAN",
-          "autoProcessed": "AUTO"
+          "autoProcessed": "AUTO",
+          "done": "DONE"
         }
       },
       "dates": {
@@ -566,30 +567,26 @@
         "auto": "Auto",
         "managerConfirmation": "Manager confirmation",
         "parametersCount": "{{confirmed}}/{{total}} parameters",
-        "confirmAndCreate": "Confirm & create task",
-        "clients": {
-          "cl08114": "CL-08114 · I. Petrenko",
-          "cl12409": "CL-12409 · O. Kovalenko",
-          "cl06441": "CL-06441 · P. Melnyk",
-          "cl09908": "CL-09908 · V. Khomenko",
-          "cl03305": "CL-03305 · M. Bondarenko",
-          "cl07750": "CL-07750 · L. Savchenko",
-          "cl04412": "CL-04412 · T. Romaniuk",
-          "cl05588": "CL-05588 · H. Tkachenko",
-          "cl02211": "CL-02211 · O. Vasylenko"
-        },
-        "lawyers": {
-          "lawyer1": "Volodymyr Doroshenko (3)",
-          "lawyer2": "Maria Ivanenko (1)",
-          "lawyer3": "D. Kovalchuk (2)",
-          "lawyer4": "O. Hrytsenko (4)"
-        }
+        "confirmAndCreate": "Confirm & create task"
       },
       "kanban": {
         "title": "Legal tasks kanban",
-        "comingSoon": "Kanban board for legal department tasks — coming in KAN-526.",
         "department": "Legal department",
         "activeCount": "{{count}} active",
+        "loading": "Loading kanban tasks…",
+        "loadError": {
+          "title": "Could not load kanban tasks",
+          "description": "Check your connection and try again."
+        },
+        "empty": {
+          "title": "No tasks on the board yet",
+          "description": "Confirm letters from the inbox or create a task manually to start tracking legal work."
+        },
+        "emptyFilter": {
+          "title": "No tasks match these filters",
+          "description": "Try another lawyer, type, or deadline range.",
+          "clearFilters": "Clear filters"
+        },
         "exportCsv": "Export CSV",
         "newTask": "New Task",
         "newTaskShort": "New",
@@ -635,7 +632,6 @@
           "priority": "Priority",
           "description": "Description",
           "descriptionPlaceholder": "Enter task description...",
-          "defaultDescription": "Letter in Russian — needs translation",
           "selectDeadline": "Select deadline",
           "submit": "Create",
           "priorities": {
@@ -650,11 +646,27 @@
       "documents": {
         "title": "Documents",
         "department": "Legal department",
-        "comingSoon": "Document journal integration — coming soon.",
         "generateDocument": "Generate document",
         "addIncoming": "Add incoming",
         "searchPlaceholder": "Search by name, client, document #...",
-        "empty": "No documents found",
+        "loading": "Loading documents…",
+        "loadError": {
+          "title": "Could not load documents",
+          "description": "Check your connection and try again."
+        },
+        "empty": {
+          "title": "No documents yet",
+          "description": "Register an incoming document or generate an outgoing letter to start the legal document journal.",
+          "search": {
+            "title": "No matching documents",
+            "description": "Try a different search term or clear the search to see all documents.",
+            "clearSearch": "Clear search"
+          },
+          "filter": {
+            "title": "No documents in this view",
+            "description": "Nothing matches the «{{filter}}» filter. Try another type or show all documents."
+          }
+        },
         "stats": {
           "incoming": "IN · incoming",
           "outgoing": "OUT · outgoing",
@@ -1081,13 +1093,12 @@
         "classified": "Auto-classified",
         "taskCreated": "Task created on kanban board"
       },
-      "version": "v0.7.18",
       "workspaceBanner": {
         "lawBadge": "Law",
         "title": "Lawyers's Workspace",
-        "assignedToDepartment": "You are assigned to the department '{{department}}'.",
-        "noDepartment": "No department assigned.",
-        "operatorsInOperation": "operators in operation",
+        "activeProject": "Active project: {{project}}.",
+        "noActiveProject": "No active project selected.",
+        "lawyersInProject": "lawyers in this project",
         "openWorkspaceMenu": "Open workspace menu",
         "collapse": "Minimize workspace banner",
         "expand": "Expand workspace banner"

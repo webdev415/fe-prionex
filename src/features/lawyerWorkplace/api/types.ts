@@ -1,9 +1,10 @@
 export type LegalProcessingStatus =
   | 'new'
   | 'in_progress'
+  | 'auto_processed'
+  | 'done'
   | 'on_board'
   | 'sent_to_kanban'
-  | 'auto_processed'
 
 export type LegalMessageDirection = 'incoming' | 'outgoing'
 
@@ -26,7 +27,11 @@ export interface LegalInboxItem {
   needs_manual_review: boolean
   suggested_letter_type_id: string | null
   suggested_client_id: number | null
+  suggested_client_source?: string | null
+  suggested_client_name?: string | null
+  suggested_client_project_id?: number | null
   suggested_lawyer_user_id: number | null
+  suggested_contract_number?: string | null
   auto_process_eligible: boolean
 }
 
@@ -93,7 +98,12 @@ export interface LegalMessageDetail {
   needs_manual_review: boolean
   suggested_letter_type_id: string | null
   suggested_client_id: number | null
+  suggested_client_source?: string | null
+  suggested_client_name?: string | null
+  suggested_client_project_id?: number | null
   suggested_lawyer_user_id: number | null
+  suggested_contract_number?: string | null
+  confirmed_contract_number?: string | null
   auto_process_eligible: boolean
   attachments: LegalAttachmentItem[]
 }
@@ -125,6 +135,7 @@ export interface LegalLetterConfirmRequest {
   client_id: number
   due_date: string
   assigned_to_user_id: number
+  contract_number?: string | null
 }
 
 export interface LegalLetterConfirmResponse {
@@ -135,18 +146,29 @@ export interface LegalLetterConfirmResponse {
   confirmed_client_id: number
   confirmed_lawyer_user_id: number
   confirmed_due_date: string
+  confirmed_contract_number?: string | null
 }
 
 export interface LegalMessageSuggestionsPatchRequest {
   letter_type_id: string
+  client_id?: number | null
 }
 
 export interface LegalMessageSuggestionsPatchResponse {
   suggested_letter_type_id: string
   suggested_lawyer_user_id: number | null
+  suggested_contract_number?: string | null
   sla_days: number
   auto_process_eligible: boolean
   needs_manual_review: boolean
+}
+
+export interface LegalContractPatchRequest {
+  contract_number?: string | null
+}
+
+export interface LegalContractPatchResponse {
+  suggested_contract_number: string | null
 }
 
 export interface LegalLawyerSuggestion {
@@ -415,6 +437,7 @@ export interface LegalDocumentStatsResponse {
   nbu_count: number
   nbu_year_total: number
   generated_percent: number
+  filter_counts: Record<string, number>
 }
 
 export interface LegalDocumentListParams {
@@ -558,4 +581,28 @@ export interface LegalReplyTemplateUpdate {
   body?: string
   letter_type_ids?: string[]
   is_active?: boolean
+}
+
+export interface LegalClientSearchItem {
+  id: number
+  first_name: string
+  last_name: string
+  project_id: number
+}
+
+export interface LegalClientSearchResponse {
+  items: LegalClientSearchItem[]
+}
+
+export interface LegalClientContractItem {
+  debt_id: number
+  contract_number: string | null
+  status: string | null
+  remaining_debt_amount: string | null
+  seller_name: string | null
+  purchase_date: string | null
+}
+
+export interface LegalClientContractListResponse {
+  items: LegalClientContractItem[]
 }

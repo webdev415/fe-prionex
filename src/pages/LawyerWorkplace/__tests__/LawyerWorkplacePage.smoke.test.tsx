@@ -226,7 +226,7 @@ describe('LawyerWorkplacePage smoke', () => {
     renderWorkplace('/?tab=inbox')
 
     expect(await screen.findByText('Incoming')).toBeInTheDocument()
-    expect(await screen.findByText('1 / 01', {}, { timeout: 3000 })).toBeInTheDocument()
+    expect(await screen.findByText('01 / 1', {}, { timeout: 3000 })).toBeInTheDocument()
     expect(screen.queryByText('Inbox is empty')).not.toBeInTheDocument()
   })
 

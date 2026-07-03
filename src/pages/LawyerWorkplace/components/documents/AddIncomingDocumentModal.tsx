@@ -57,7 +57,7 @@ export function AddIncomingDocumentModal({
   const { t } = useTranslation('common')
   const currentUserId = Number(useAuthStore((state) => state.user?.id))
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const { data: lawyersData } = useLegalLawyers({ enabled: open })
+  const { data: lawyersData } = useLegalLawyers({ enabled: open, scopedToActiveProject: true })
 
   const [file, setFile] = useState<File | null>(null)
   const [documentName, setDocumentName] = useState('')

@@ -19,7 +19,7 @@ import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 import type { KanbanColumnId, KanbanTask, KanbanTaskType } from '../../kanban/kanbanData'
 import { formatKanbanMonthDay } from '../../utils/formatters'
-import { ASSIGNEE_COLOURS, CREATE_TASK_PRIORITIES, KANBAN_COLUMN_MOVE_OPTIONS } from './constants'
+import { getAssigneeColour, CREATE_TASK_PRIORITIES, KANBAN_COLUMN_MOVE_OPTIONS } from './constants'
 import { KanbanAssigneeChip } from './KanbanAssigneeChip'
 import { KanbanClientChip } from './KanbanClientChip'
 import { KanbanPriorityIcon, KanbanPriorityOption } from './KanbanPriorityOption'
@@ -517,7 +517,7 @@ export function KanbanCard({
                           <span
                             className={cn(
                               'flex h-5 w-5 items-center justify-center rounded-full text-[9px] font-bold',
-                              ASSIGNEE_COLOURS[opt.initials] ?? 'bg-gray-100 text-gray-500'
+                              getAssigneeColour(opt.userId, opt.initials)
                             )}
                           >
                             {opt.initials}
@@ -585,6 +585,7 @@ export function KanbanCard({
           <KanbanAssigneeChip
             initials={assigneeInitials}
             name={getAssigneeLabel(assigneeInitials, assigneeName)}
+            assigneeUserId={task.assigneeUserId}
           />
         </div>
       </div>

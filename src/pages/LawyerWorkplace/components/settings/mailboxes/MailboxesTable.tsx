@@ -6,7 +6,6 @@ import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 import { useLawyerWorkplaceLayout } from '../../../context/lawyerWorkplaceLayout'
 import type { LetterTypeConfig, SettingsMailbox } from '../../../settings/types'
-import { LetterTypeBadge } from '../LetterTypeBadge'
 
 const DEFAULT_PAGE_SIZE = 10
 const PAGE_SIZE_OPTIONS = [5, 10, 20]
@@ -24,7 +23,7 @@ interface MailboxesTableProps {
 
 export function MailboxesTable({
   mailboxes,
-  letterTypes,
+  letterTypes: _letterTypes,
   onEdit,
   onToggleStatus,
   onAddMailbox,
@@ -37,7 +36,6 @@ export function MailboxesTable({
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE)
 
-  const letterTypeById = Object.fromEntries(letterTypes.map((type) => [type.id, type]))
   const totalPages = mailboxes.length > 0 ? Math.ceil(mailboxes.length / pageSize) : 0
   const currentPage = totalPages > 0 ? Math.min(page, totalPages) : 1
 
@@ -77,7 +75,7 @@ export function MailboxesTable({
           <p className="text-light-600 mt-0.5 text-[11.5px]">
             {t(
               'pages.lawyerWorkplace.settings.mailboxes.tableDesc',
-              'Manage addresses, routing rules, and default outgoing mailbox'
+              'Manage addresses and routing rules'
             )}
           </p>
         </div>
@@ -124,17 +122,6 @@ export function MailboxesTable({
               'Add a mailbox to start syncing incoming legal correspondence.'
             )}
           </p>
-          {!readOnly ? (
-            <Button
-              variant="primary"
-              size="sm"
-              leftIcon={<Icons.AddCircle size={18} strokeWidth={1.5} />}
-              onClick={onAddMailbox}
-              className="mt-5 h-9 rounded-md"
-            >
-              {t('pages.lawyerWorkplace.settings.mailboxes.addMailbox', 'Add mailbox')}
-            </Button>
-          ) : null}
         </div>
       ) : (
         <>
@@ -157,12 +144,6 @@ export function MailboxesTable({
                     {t('pages.lawyerWorkplace.settings.mailboxes.columns.letters', 'Letters')}
                   </th>
                   <th className="text-light-600 px-4 py-3 text-[11px] font-medium">
-                    {t(
-                      'pages.lawyerWorkplace.settings.mailboxes.columns.defaultType',
-                      'Default type'
-                    )}
-                  </th>
-                  <th className="text-light-600 px-4 py-3 text-[11px] font-medium">
                     {t('pages.lawyerWorkplace.settings.mailboxes.columns.routing', 'Routing')}
                   </th>
                   <th className="text-light-600 px-4 py-3 text-[11px] font-medium">
@@ -172,10 +153,6 @@ export function MailboxesTable({
               </thead>
               <tbody>
                 {paginatedMailboxes.map((mailbox, idx) => {
-                  const defaultType = mailbox.defaultLetterTypeId
-                    ? letterTypeById[mailbox.defaultLetterTypeId]
-                    : null
-
                   return (
                     <tr
                       key={mailbox.id}
@@ -189,14 +166,6 @@ export function MailboxesTable({
                             <p className="text-dark-500 text-[13px] font-semibold">
                               {t(mailbox.displayNameKey, mailbox.displayNameFallback)}
                             </p>
-                            {mailbox.isDefaultOutgoing ? (
-                              <span className="bg-secondary-100 text-secondary-800 rounded-full px-2 py-0.5 text-[10px] font-medium">
-                                {t(
-                                  'pages.lawyerWorkplace.settings.mailboxes.defaultOutgoing',
-                                  'Default'
-                                )}
-                              </span>
-                            ) : null}
                             {!mailbox.hasCredentials ? (
                               <span
                                 className="bg-warning-100 text-warning-700 flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium"
@@ -231,15 +200,6 @@ export function MailboxesTable({
                       </td>
                       <td className="px-4 py-4">
                         <span className="text-dark-500 font-semibold">{mailbox.letterCount}</span>
-                      </td>
-                      <td className="px-4 py-4">
-                        {defaultType ? (
-                          <LetterTypeBadge letterType={defaultType} t={t} size="sm" />
-                        ) : (
-                          <span className="text-light-600 text-[12px]">
-                            {t('pages.lawyerWorkplace.settings.mailboxes.autoRoute', 'Auto-route')}
-                          </span>
-                        )}
                       </td>
                       <td className="px-4 py-4">
                         <span className="text-dark-500 text-[12px] font-medium">

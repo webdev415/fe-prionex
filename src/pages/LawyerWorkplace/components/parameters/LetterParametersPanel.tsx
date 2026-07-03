@@ -11,13 +11,19 @@ import {
 } from '@/components/ui/DropdownMenu'
 import { Label } from '@/components/ui/Label'
 import { SearchableSelect } from '@/components/ui/SearchableSelect'
-import { useClients } from '@/features/clients/hooks/useClients'
 import {
   useConfirmLetter,
+  useLegalClientContracts,
+  useLegalClientSearch,
   useLegalLawyers,
   useLegalLetterTypes,
+  usePatchMessageContract,
   usePatchMessageSuggestions,
 } from '@/features/lawyerWorkplace'
+import {
+  clientLookupFromLegalSearchItem,
+  isLetterParametersReadOnly,
+} from '@/features/lawyerWorkplace/api/mappers'
 import type { LegalMessageSuggestionsPatchResponse } from '@/features/lawyerWorkplace/api/types'
 import { useDebounce } from '@/hooks/useDebounce'
 import { Icons } from '@/lib/icons'
@@ -72,22 +78,32 @@ function resolveLawyerUserId(
   return Number.isFinite(asNumber) && asNumber > 0 ? asNumber : null
 }
 
-function formatClientOption(client: {
-  id: number
-  first_name: string
-  last_name: string
-  legacy_id?: string | null
-}): { id: string; name: string } {
-  const code = client.legacy_id?.trim() || `CL-${String(client.id).padStart(5, '0')}`
-  const name = [client.first_name, client.last_name].filter(Boolean).join(' ')
-  return { id: String(client.id), name: name ? `${code} · ${name}` : code }
+function formatClientOption(client: { id: number; first_name: string; last_name: string }): {
+  id: string
+  name: string
+} {
+  const lookup = clientLookupFromLegalSearchItem(client)
+  return { id: String(client.id), name: lookup.label }
 }
 
 function computeDueDateFromReceived(receivedAt: string, slaDays: number): Date {
   const base = new Date(receivedAt)
   const due = new Date(base)
   due.setDate(due.getDate() + (slaDays > 0 ? slaDays : 14))
+  due.setHours(0, 0, 0, 0)
   return due
+}
+
+function startOfToday(): Date {
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  return today
+}
+
+function isBeforeStartOfDay(date: Date): boolean {
+  const normalized = new Date(date)
+  normalized.setHours(0, 0, 0, 0)
+  return normalized < startOfToday()
 }
 
 function buildPrioritySignature(
@@ -106,12 +122,14 @@ function applySuggestionResult(
   result: LegalMessageSuggestionsPatchResponse,
   receivedAt: string,
   setLawyerOverride: (value: string | null) => void,
-  setDueDateOverride: (value: Date | null) => void
+  setDueDateOverride: (value: Date | null) => void,
+  onDueDateAutoApplied?: () => void
 ) {
   setLawyerOverride(
     result.suggested_lawyer_user_id != null ? String(result.suggested_lawyer_user_id) : ''
   )
   setDueDateOverride(computeDueDateFromReceived(receivedAt, result.sla_days))
+  onDueDateAutoApplied?.()
 }
 
 // ─── Shared sub-components ────────────────────────────────────────────────────
@@ -230,37 +248,119 @@ function LetterParametersPanelContent({
   const { t, i18n } = useTranslation('common')
   const confirmMutation = useConfirmLetter()
   const patchSuggestionsMutation = usePatchMessageSuggestions()
+  const patchContractMutation = usePatchMessageContract()
   const { data: letterTypesData } = useLegalLetterTypes()
-  const { data: lawyersData } = useLegalLawyers()
-
-  const letterTypes = useMemo(() => letterTypesData?.items ?? [], [letterTypesData?.items])
-  const lawyers = useMemo(() => lawyersData?.items ?? [], [lawyersData?.items])
 
   const [typeOverride, setTypeOverride] = useState<string | null>(null)
   const [clientOverride, setClientOverride] = useState<string | null>(null)
+  const [clientProjectOverride, setClientProjectOverride] = useState<number | null>(null)
   const [clientSearch, setClientSearch] = useState('')
   const [lawyerOverride, setLawyerOverride] = useState<string | null>(null)
+  const [contractOverride, setContractOverride] = useState<string | null>(null)
   const [dueDateOverride, setDueDateOverride] = useState<Date | null>(null)
+  const [dueDateManuallyOverridden, setDueDateManuallyOverridden] = useState(false)
   const [lawyerManuallyOverridden, setLawyerManuallyOverridden] = useState(false)
   const lastPrioritySignatureRef = useRef<string | null>(null)
 
   const { parameters: p, status } = letter
 
-  const isReadOnly =
-    status === 'sent_to_kanban' || status === 'on_board' || status === 'auto_processed'
-
   const defaultTypeId = useMemo(
-    () => resolveLetterTypeId(letterTypes, p.letterType),
-    [letterTypes, p.letterType]
+    () => resolveLetterTypeId(letterTypesData?.items ?? [], p.letterType),
+    [letterTypesData?.items, p.letterType]
   )
   const defaultClientId = p.clientId && p.clientId !== 'not_identified' ? p.clientId : ''
+  const defaultDueDate = p.dueDate ? new Date(p.dueDate) : null
+  const minDueDate = useMemo(() => startOfToday(), [])
+  const applyDueDateFromLetterType = useCallback(
+    (typeId: string) => {
+      const letterType = letterTypesData?.items?.find((item) => item.id === typeId)
+      if (!letterType) return
+      setDueDateOverride(computeDueDateFromReceived(letter.receivedAt, letterType.sla_days))
+      setDueDateManuallyOverridden(false)
+    },
+    [letter.receivedAt, letterTypesData?.items]
+  )
+  const effectiveTypeId = typeOverride ?? defaultTypeId
+  const effectiveClientId = clientOverride ?? defaultClientId
+
+  const debouncedClientSearch = useDebounce(clientSearch, 300)
+  const { data: clientsData, isFetching: clientsLoading } = useLegalClientSearch(
+    debouncedClientSearch,
+    { enabled: !p.clientLockedByEmail && debouncedClientSearch.length >= 2 }
+  )
+
+  const resolvedClientProjectId = useMemo(() => {
+    if (clientProjectOverride != null && clientProjectOverride > 0) {
+      return clientProjectOverride
+    }
+    if (p.clientProjectId != null && p.clientProjectId > 0) {
+      return p.clientProjectId
+    }
+    const parsedClientId = Number(effectiveClientId)
+    if (!Number.isFinite(parsedClientId) || parsedClientId <= 0) {
+      return null
+    }
+    const selectedClient = (clientsData?.items ?? []).find((item) => item.id === parsedClientId)
+    return selectedClient?.project_id ?? null
+  }, [clientProjectOverride, p.clientProjectId, effectiveClientId, clientsData?.items])
+
+  const { data: lawyersData } = useLegalLawyers(
+    resolvedClientProjectId != null && resolvedClientProjectId > 0
+      ? { projectId: resolvedClientProjectId }
+      : {}
+  )
+
+  const letterTypes = useMemo(() => letterTypesData?.items ?? [], [letterTypesData?.items])
+  const lawyers = useMemo(() => lawyersData?.items ?? [], [lawyersData?.items])
+
+  const contractsClientId = useMemo(() => {
+    const parsed = Number(effectiveClientId)
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : null
+  }, [effectiveClientId])
+  const { data: contractsData, isFetching: contractsLoading } =
+    useLegalClientContracts(contractsClientId)
+  const contracts = useMemo(() => contractsData?.items ?? [], [contractsData?.items])
+  const storedContract = p.contractLabel?.trim() ?? ''
+  // Auto-select when the client has exactly one contract; otherwise the lawyer picks.
+  const effectiveContract =
+    contractOverride ??
+    (storedContract || (contracts.length === 1 ? (contracts[0].contract_number ?? '') : ''))
+
+  const contractRequired = contracts.length > 1
+  const contractIsValid = !contractRequired || Boolean(effectiveContract.trim())
+
+  const isReadOnly = isLetterParametersReadOnly(letter)
+
+  useEffect(() => {
+    if (isReadOnly || contractsLoading || contractsClientId == null) return
+    if (contracts.length !== 1) return
+    const autoContract = contracts[0]?.contract_number?.trim()
+    if (!autoContract || autoContract === storedContract) return
+    if (contractOverride != null) return
+
+    void patchContractMutation
+      .mutateAsync({
+        messageId: letter.id,
+        payload: { contract_number: autoContract },
+      })
+      .catch(() => {
+        // Local selection still works if persistence fails.
+      })
+  }, [
+    contractOverride,
+    contracts,
+    contractsClientId,
+    contractsLoading,
+    isReadOnly,
+    letter.id,
+    patchContractMutation,
+    storedContract,
+  ])
+
   const defaultLawyerUserId = useMemo(() => {
     const resolved = resolveLawyerUserId(lawyers, p.lawyerId)
     return resolved != null ? String(resolved) : ''
   }, [lawyers, p.lawyerId])
-  const defaultDueDate = p.dueDate ? new Date(p.dueDate) : null
-
-  const effectiveTypeId = typeOverride ?? defaultTypeId
 
   const applyTypeSuggestion = useCallback(
     async (typeId: string) => {
@@ -268,7 +368,9 @@ function LetterParametersPanelContent({
         messageId: letter.id,
         payload: { letter_type_id: typeId },
       })
-      applySuggestionResult(result, letter.receivedAt, setLawyerOverride, setDueDateOverride)
+      applySuggestionResult(result, letter.receivedAt, setLawyerOverride, setDueDateOverride, () =>
+        setDueDateManuallyOverridden(false)
+      )
       return result
     },
     [letter.id, letter.receivedAt, patchSuggestionsMutation]
@@ -295,11 +397,24 @@ function LetterParametersPanelContent({
 
   const handleTypeSelect = (typeId: string) => {
     setLawyerManuallyOverridden(false)
-    lastPrioritySignatureRef.current = null
+    // Pre-seed the signature to the type we're about to sync so the auto-sync
+    // effect sees no change and does NOT fire a second, redundant suggestions
+    // PATCH for the same type.
+    lastPrioritySignatureRef.current = buildPrioritySignature(letterTypes, typeId)
     setTypeOverride(typeId)
+    applyDueDateFromLetterType(typeId)
     void applyTypeSuggestion(typeId).catch(() => {
+      lastPrioritySignatureRef.current = null
       setTypeOverride(defaultTypeId || null)
     })
+  }
+
+  const handleDueDateChange = (value: Date | null) => {
+    if (value && isBeforeStartOfDay(value)) {
+      return
+    }
+    setDueDateOverride(value)
+    setDueDateManuallyOverridden(true)
   }
 
   const handleLawyerSelect = (userId: string) => {
@@ -307,15 +422,66 @@ function LetterParametersPanelContent({
     setLawyerManuallyOverridden(true)
   }
 
-  const effectiveClientId = clientOverride ?? defaultClientId
+  const handleContractSelect = (contractNumber: string) => {
+    setContractOverride(contractNumber)
+    void patchContractMutation
+      .mutateAsync({
+        messageId: letter.id,
+        payload: { contract_number: contractNumber },
+      })
+      .catch(() => {
+        // Keep local selection visible even if persistence fails.
+      })
+  }
+
+  const handleClientSelect = (clientId: string) => {
+    if (p.clientLockedByEmail) {
+      return
+    }
+
+    setClientOverride(clientId)
+    setClientSearch('')
+    setLawyerManuallyOverridden(false)
+    setContractOverride(null)
+
+    if (!effectiveTypeId || isReadOnly) {
+      return
+    }
+
+    const parsedClientId = Number(clientId)
+    if (!Number.isFinite(parsedClientId) || parsedClientId <= 0) {
+      return
+    }
+
+    const selectedClient = (clientsData?.items ?? []).find((item) => String(item.id) === clientId)
+    if (selectedClient?.project_id) {
+      setClientProjectOverride(selectedClient.project_id)
+    }
+
+    void patchSuggestionsMutation
+      .mutateAsync({
+        messageId: letter.id,
+        payload: {
+          letter_type_id: effectiveTypeId,
+          client_id: parsedClientId,
+        },
+      })
+      .then((result) => {
+        applySuggestionResult(
+          result,
+          letter.receivedAt,
+          setLawyerOverride,
+          setDueDateOverride,
+          () => setDueDateManuallyOverridden(false)
+        )
+      })
+      .catch(() => {
+        // Keep local selection; user can still pick lawyer manually.
+      })
+  }
+
   const effectiveLawyerUserId = lawyerOverride ?? defaultLawyerUserId
   const effectiveDueDate = dueDateOverride ?? defaultDueDate
-
-  const debouncedClientSearch = useDebounce(clientSearch, 300)
-  const { data: clientsData, isFetching: clientsLoading } = useClients(
-    { q: debouncedClientSearch, limit: 20 },
-    { enabled: debouncedClientSearch.length >= 2 }
-  )
 
   const clientOptions = useMemo(() => {
     const searchResults = (clientsData?.items ?? []).map(formatClientOption)
@@ -361,9 +527,19 @@ function LetterParametersPanelContent({
     if (effectiveTypeId) count += 1
     if (effectiveClientId && Number(effectiveClientId) > 0) count += 1
     if (effectiveLawyerUserId && Number(effectiveLawyerUserId) > 0) count += 1
-    if (effectiveDueDate instanceof Date && !Number.isNaN(effectiveDueDate.getTime())) count += 1
+    const dueDateOk =
+      effectiveDueDate instanceof Date &&
+      !Number.isNaN(effectiveDueDate.getTime()) &&
+      (!dueDateManuallyOverridden || !isBeforeStartOfDay(effectiveDueDate))
+    if (dueDateOk) count += 1
     return count
-  }, [effectiveClientId, effectiveDueDate, effectiveLawyerUserId, effectiveTypeId])
+  }, [
+    dueDateManuallyOverridden,
+    effectiveClientId,
+    effectiveDueDate,
+    effectiveLawyerUserId,
+    effectiveTypeId,
+  ])
 
   const typeLabel = p.letterType
     ? getTypeLabel(resolveLetterTypeId(letterTypes, p.letterType))
@@ -376,14 +552,19 @@ function LetterParametersPanelContent({
   const clientIdNumber = Number(effectiveClientId)
   const lawyerUserIdNumber = Number(effectiveLawyerUserId)
 
+  const dueDateIsValid =
+    effectiveDueDate instanceof Date &&
+    !Number.isNaN(effectiveDueDate.getTime()) &&
+    (!dueDateManuallyOverridden || !isBeforeStartOfDay(effectiveDueDate))
+
   const canConfirm =
     Boolean(effectiveTypeId) &&
     Number.isFinite(clientIdNumber) &&
     clientIdNumber > 0 &&
-    effectiveDueDate instanceof Date &&
-    !Number.isNaN(effectiveDueDate.getTime()) &&
+    dueDateIsValid &&
     Number.isFinite(lawyerUserIdNumber) &&
     lawyerUserIdNumber > 0 &&
+    contractIsValid &&
     !isReadOnly &&
     !confirmMutation.isPending
 
@@ -397,6 +578,7 @@ function LetterParametersPanelContent({
           client_id: clientIdNumber,
           due_date: effectiveDueDate.toISOString(),
           assigned_to_user_id: lawyerUserIdNumber,
+          contract_number: effectiveContract.trim() || null,
         },
       },
       {
@@ -425,15 +607,6 @@ function LetterParametersPanelContent({
           },
         ]
       : []),
-    ...(isReadOnly
-      ? [
-          {
-            timestamp: new Date().toISOString(),
-            eventKey: 'pages.lawyerWorkplace.activityLog.taskCreated',
-            fallback: 'Task created on kanban board',
-          },
-        ]
-      : []),
   ]
 
   if (isReadOnly) {
@@ -449,6 +622,11 @@ function LetterParametersPanelContent({
               {status === 'auto_processed' && (
                 <span className="bg-success-100 text-success-700 rounded-full px-[9px] py-[2px] text-[9.5px] font-medium">
                   {t('pages.lawyerWorkplace.parameters.autoProcessed', 'AUTO')}
+                </span>
+              )}
+              {status === 'done' && (
+                <span className="rounded-full bg-blue-100 px-[9px] py-[2px] text-[9.5px] font-medium text-blue-500">
+                  {t('pages.lawyerWorkplace.letterItem.status.done', 'DONE')}
                 </span>
               )}
               {onClose && (
@@ -564,21 +742,25 @@ function LetterParametersPanelContent({
           <Label className="text-dark-500 text-[12px] font-normal">
             {t('pages.lawyerWorkplace.parameters.client', 'Client')}
           </Label>
-          <SearchableSelect
-            options={clientOptions}
-            value={effectiveClientId}
-            onValueChange={(val) => {
-              setClientOverride(val)
-              setClientSearch('')
-            }}
-            onSearchChange={setClientSearch}
-            isLoading={clientsLoading}
-            emptySearchHint={t(
-              'pages.lawyerWorkplace.parameters.clientSearchHint',
-              'Type 2+ characters to search…'
-            )}
-            placeholder={t('pages.lawyerWorkplace.parameters.notIdentified', 'Not identified')}
-          />
+          {p.clientLockedByEmail ? (
+            <div className="text-dark-500 flex h-9 w-full items-center rounded-[8px] border border-gray-200 bg-gray-50 px-3 py-2 text-[13px] font-light">
+              {p.clientLabel ||
+                t('pages.lawyerWorkplace.parameters.notIdentified', 'Not identified')}
+            </div>
+          ) : (
+            <SearchableSelect
+              options={clientOptions}
+              value={effectiveClientId}
+              onValueChange={handleClientSelect}
+              onSearchChange={setClientSearch}
+              isLoading={clientsLoading}
+              emptySearchHint={t(
+                'pages.lawyerWorkplace.parameters.clientSearchHint',
+                'Type 2+ characters to search…'
+              )}
+              placeholder={t('pages.lawyerWorkplace.parameters.notIdentified', 'Not identified')}
+            />
+          )}
         </div>
 
         <div className="flex w-full flex-col gap-2">
@@ -588,10 +770,10 @@ function LetterParametersPanelContent({
           <DateSelect
             id="params-due-date"
             value={effectiveDueDate}
-            onChange={({ value }) => setDueDateOverride(value)}
+            onChange={({ value }) => handleDueDateChange(value)}
             placeholder={t('pages.lawyerWorkplace.parameters.selectDueDate', 'Select date')}
             format="dd/MM/yyyy"
-            min={new Date()}
+            min={minDueDate}
             className="h-9 rounded-[8px] border-gray-200 text-[14px] font-light"
           />
         </div>
@@ -606,10 +788,41 @@ function LetterParametersPanelContent({
           }))}
         />
 
-        {p.contractLabel && (
-          <ReadonlyField label={t('pages.lawyerWorkplace.parameters.contract', 'Contract')}>
-            {p.contractLabel}
-          </ReadonlyField>
+        {/* Contract — real debts fetched from the selected client */}
+        {contractsClientId != null && (
+          <ParameterDropdown
+            label={t('pages.lawyerWorkplace.parameters.contract', 'Contract')}
+            placeholder={
+              contractsLoading
+                ? t('pages.lawyerWorkplace.parameters.contractLoading', 'Loading contracts…')
+                : contracts.length === 0
+                  ? t('pages.lawyerWorkplace.parameters.noContracts', 'No contracts')
+                  : t('pages.lawyerWorkplace.parameters.selectContract', 'Select contract')
+            }
+            value={
+              effectiveContract ? (
+                <span className="text-dark-500 text-[13px] font-light">{effectiveContract}</span>
+              ) : null
+            }
+            onSelect={handleContractSelect}
+            items={contracts.map((contract) => {
+              const key = contract.contract_number ?? `debt-${contract.debt_id}`
+              const primary = contract.contract_number ?? `#${contract.debt_id}`
+              return {
+                key,
+                content: (
+                  <span className="flex w-full items-center justify-between gap-2">
+                    <span className="text-dark-500 truncate text-[13px]">{primary}</span>
+                    {contract.status && (
+                      <span className="text-light-500 shrink-0 text-[11px] capitalize">
+                        {contract.status}
+                      </span>
+                    )}
+                  </span>
+                ),
+              }
+            })}
+          />
         )}
       </div>
 
@@ -631,7 +844,7 @@ function LetterParametersPanelContent({
           variant="primary"
           size="md"
           className="w-full px-10 py-7"
-          disabled={!canConfirm || patchSuggestionsMutation.isPending}
+          disabled={!canConfirm}
           onClick={handleConfirm}
         >
           <Icons.AddCircle size={24} strokeWidth={1.5} />

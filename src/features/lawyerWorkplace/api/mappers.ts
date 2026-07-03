@@ -1,5 +1,6 @@
 import type {
   LetterDetail,
+  LetterDisplayStatus,
   LetterListItem,
   LetterParameters,
   LetterProcessingStatus,
@@ -34,16 +35,42 @@ export interface LegalLookupContext {
   mailboxLabelById?: Map<string, string>
 }
 
-const DONE_STATUSES: LetterProcessingStatus[] = ['sent_to_kanban', 'on_board', 'auto_processed']
-
 export function isLegalProcessingStatus(value: string): value is LetterProcessingStatus {
   return (
     value === 'new' ||
     value === 'in_progress' ||
+    value === 'auto_processed' ||
+    value === 'done' ||
     value === 'on_board' ||
-    value === 'sent_to_kanban' ||
-    value === 'auto_processed'
+    value === 'sent_to_kanban'
   )
+}
+
+export function mapProcessingStatusToDisplay(
+  value: string,
+  needsManualReview = false
+): LetterDisplayStatus {
+  if (value === 'done') return 'done'
+  if (value === 'auto_processed') {
+    return needsManualReview ? 'in_progress' : 'auto_processed'
+  }
+  if (value === 'in_progress' || value === 'sent_to_kanban' || value === 'on_board') {
+    return 'in_progress'
+  }
+  return 'new'
+}
+
+export function isLetterParametersReadOnly(letter: {
+  status: LetterDisplayStatus
+  isUnprocessed: boolean
+}): boolean {
+  if (letter.isUnprocessed) {
+    return false
+  }
+  if (letter.status === 'new') {
+    return false
+  }
+  return true
 }
 
 export function parseEmailAddress(from: string): { name: string; email: string } {
@@ -127,23 +154,32 @@ function resolveLetterType(
 
 function resolveClient(
   clientId: number | null | undefined,
-  context?: LegalLookupContext
+  context?: LegalLookupContext,
+  clientNameOverride?: string | null
 ): Pick<LetterListItem, 'clientId' | 'clientName' | 'clientCode'> {
   if (clientId == null) {
     return { clientId: null, clientName: null, clientCode: null }
+  }
+  const code = `CL-${clientId}`
+  if (clientNameOverride?.trim()) {
+    return {
+      clientId: String(clientId),
+      clientName: clientNameOverride.trim(),
+      clientCode: code,
+    }
   }
   const client = context?.clientsById?.get(clientId)
   if (!client) {
     return {
       clientId: String(clientId),
       clientName: null,
-      clientCode: `CL-${clientId}`,
+      clientCode: code,
     }
   }
   return {
     clientId: String(clientId),
     clientName: client.name,
-    clientCode: client.code,
+    clientCode: code,
   }
 }
 
@@ -175,20 +211,47 @@ function countConfirmedParameters(
   return count
 }
 
+function resolveInboxSenderTitle(
+  item: Pick<
+    LegalInboxItem,
+    'from_address' | 'suggested_client_id' | 'suggested_client_source' | 'suggested_client_name'
+  >,
+  context?: LegalLookupContext
+): { senderName: string; senderEmail: string } {
+  const { email } = parseEmailAddress(item.from_address)
+  const senderEmail = email.trim() || item.from_address.trim()
+
+  const matchedBySenderEmail =
+    item.suggested_client_source === 'sender_email' && item.suggested_client_id != null
+
+  if (matchedBySenderEmail) {
+    const clientId = item.suggested_client_id
+    const clientName =
+      item.suggested_client_name?.trim() ||
+      (clientId != null ? context?.clientsById?.get(clientId)?.name : undefined) ||
+      null
+    if (clientName) {
+      return { senderName: clientName, senderEmail }
+    }
+  }
+
+  return { senderName: senderEmail, senderEmail }
+}
+
 export function mapInboxItemToLetterListItem(
   item: LegalInboxItem,
   context?: LegalLookupContext
 ): LetterListItem {
-  const { name, email } = parseEmailAddress(item.from_address)
+  const { senderName, senderEmail } = resolveInboxSenderTitle(item, context)
   const letterType = resolveLetterType(item.suggested_letter_type_id, context)
-  const client = resolveClient(item.suggested_client_id, context)
-  const status = isLegalProcessingStatus(item.processing_status) ? item.processing_status : 'new'
+  const client = resolveClient(item.suggested_client_id, context, item.suggested_client_name)
+  const status = mapProcessingStatusToDisplay(item.processing_status, item.needs_manual_review)
 
   return {
     id: item.id,
     referenceId: item.id.slice(0, 8).toUpperCase(),
-    senderName: name,
-    senderEmail: email,
+    senderName,
+    senderEmail,
     receivedAt: item.received_at ?? new Date().toISOString(),
     subject: item.subject?.trim() || '(no subject)',
     mailbox: resolveMailboxLabel(
@@ -207,14 +270,18 @@ export function mapThreadMessageToUi(
   item: LegalThreadMessageItem,
   options?: { toMailbox?: string }
 ): ThreadMessage {
-  const { name, email } = parseEmailAddress(item.from_address)
+  const { email } = parseEmailAddress(item.from_address)
+  const senderEmail = email.trim() || item.from_address.trim()
   const direction = isOutgoingDirection(item.direction) ? 'outgoing' : 'incoming'
 
   return {
     id: item.id,
     direction,
-    senderName: name,
-    senderEmail: email,
+    // Default to the sender's email address. A client name is layered on by
+    // the caller when the sender resolves to a known client — see
+    // mapMessageToLetterDetail.
+    senderName: senderEmail,
+    senderEmail,
     toMailbox: options?.toMailbox,
     sentAt: messageTimestamp(item),
     ...mapMessageContent(item),
@@ -248,7 +315,7 @@ export function buildLetterParameters(
 ): LetterParameters {
   const letterTypeId = message.suggested_letter_type_id ?? ''
   const letterType = letterTypeId ? context?.letterTypesById?.get(letterTypeId) : undefined
-  const client = resolveClient(message.suggested_client_id, context)
+  const client = resolveClient(message.suggested_client_id, context, message.suggested_client_name)
   const lawyer = message.suggested_lawyer_user_id
     ? context?.lawyersByUserId?.get(message.suggested_lawyer_user_id)
     : undefined
@@ -256,7 +323,8 @@ export function buildLetterParameters(
   const dueDate = computeDueDateIso(message.received_at, letterType?.sla_days)
   const confirmedCount = countConfirmedParameters(message, dueDate)
   const totalParameters = 4
-  const contractLabel = client.clientCode?.trim() ?? ''
+  const contractLabel =
+    message.confirmed_contract_number?.trim() || message.suggested_contract_number?.trim() || ''
 
   return {
     letterType: letterType?.slug ?? letterTypeId,
@@ -265,6 +333,8 @@ export function buildLetterParameters(
       client.clientCode && client.clientName
         ? `${client.clientCode} · ${client.clientName}`
         : (client.clientCode ?? ''),
+    clientLockedByEmail: message.suggested_client_source === 'sender_email',
+    clientProjectId: message.suggested_client_project_id ?? null,
     contractId: contractLabel,
     contractLabel,
     dueDate,
@@ -299,6 +369,9 @@ export function mapMessageToLetterDetail(
       needs_manual_review: message.needs_manual_review,
       suggested_letter_type_id: message.suggested_letter_type_id,
       suggested_client_id: message.suggested_client_id,
+      suggested_client_source: message.suggested_client_source,
+      suggested_client_name: message.suggested_client_name,
+      suggested_client_project_id: message.suggested_client_project_id,
       suggested_lawyer_user_id: message.suggested_lawyer_user_id,
       auto_process_eligible: message.auto_process_eligible,
     },
@@ -317,8 +390,18 @@ export function mapMessageToLetterDetail(
           : undefined)
       const attachmentSource =
         item.attachments ?? (item.id === message.id ? message.attachments : undefined)
+      const mapped = mapThreadMessageToUi(item, { toMailbox })
+      // Mirror the inbox list: if this message's sender email resolves to a
+      // known client (the letter's sender, matched by sender_email), show the
+      // client name; otherwise keep the email address.
+      const senderName =
+        mapped.direction === 'incoming' &&
+        mapped.senderEmail.trim().toLowerCase() === listItem.senderEmail.trim().toLowerCase()
+          ? listItem.senderName
+          : mapped.senderName
       return {
-        ...mapThreadMessageToUi(item, { toMailbox }),
+        ...mapped,
+        senderName,
         attachments: mapMessageAttachments(attachmentSource),
       }
     })
@@ -343,8 +426,10 @@ export function mapListItemToPreviewDetail(summary: LetterListItem, replyDraft =
       clientLabel: summary.clientCode
         ? `${summary.clientCode}${summary.clientName ? ` · ${summary.clientName}` : ''}`.trim()
         : '',
-      contractId: summary.clientCode ?? '',
-      contractLabel: summary.clientCode ?? '',
+      clientLockedByEmail: false,
+      clientProjectId: null,
+      contractId: '',
+      contractLabel: '',
       dueDate: '',
       dueDateHint: '',
       lawyerId: '',
@@ -380,9 +465,8 @@ export function clientLookupFromClient(client: {
   id: number
   first_name: string
   last_name: string
-  legacy_id?: string | null
 }): LegalClientLookup {
-  const code = client.legacy_id?.trim() || `CL-${String(client.id).padStart(5, '0')}`
+  const code = `CL-${client.id}`
   const name = [client.first_name, client.last_name].filter(Boolean).join(' ')
   return {
     id: client.id,
@@ -392,6 +476,14 @@ export function clientLookupFromClient(client: {
   }
 }
 
+export function clientLookupFromLegalSearchItem(client: {
+  id: number
+  first_name: string
+  last_name: string
+}): LegalClientLookup {
+  return clientLookupFromClient(client)
+}
+
 export function filterInboxByMailboxTab(
   items: LetterListItem[],
   filter: 'all' | 'new' | 'in_progress' | 'done'
@@ -399,7 +491,7 @@ export function filterInboxByMailboxTab(
   if (filter === 'all') return items
   if (filter === 'new') return items.filter((item) => item.status === 'new')
   if (filter === 'in_progress') return items.filter((item) => item.status === 'in_progress')
-  return items.filter((item) => DONE_STATUSES.includes(item.status))
+  return items.filter((item) => item.status === 'done')
 }
 
 export function buildLegalLookupContext(

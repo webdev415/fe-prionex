@@ -18,8 +18,18 @@ export function LawyerWorkspaceBanner({ className }: LawyerWorkspaceBannerProps)
   const user = useAuthStore((s) => s.user)
   const isOpenSideBar = useSidebarStore((state) => state.isOpenSideBar)
   const { showWorkspaceBanner } = useLawyerWorkplaceLayout()
-  const { data: lawyersData } = useLegalLawyers()
+  const { data: lawyersData } = useLegalLawyers({ scopedToActiveProject: true })
   const [isExpanded, setIsExpanded] = useState(true)
+
+  const activeProjectName = useMemo(() => {
+    if (!user?.active_project_id || !user.projects?.length) {
+      return null
+    }
+    return (
+      user.projects.find((project) => String(project.id) === String(user.active_project_id))
+        ?.name ?? null
+    )
+  }, [user])
 
   const activeLawyerCount = useMemo(
     () => (lawyersData?.items ?? []).filter((lawyer) => lawyer.is_active).length,
@@ -28,7 +38,6 @@ export function LawyerWorkspaceBanner({ className }: LawyerWorkspaceBannerProps)
 
   const regionCode = i18n.language?.startsWith('uk') ? 'UA' : 'EN'
   const workspaceTitle = t('pages.lawyerWorkplace.workspaceBanner.title', "Lawyers's Workspace")
-  const departmentName = user?.active_department_name
 
   if (!showWorkspaceBanner) {
     return null
@@ -66,14 +75,14 @@ export function LawyerWorkspaceBanner({ className }: LawyerWorkspaceBannerProps)
                 </span>
               </div>
               <p className="text-dark-500 hidden shrink-0 text-[14px] leading-none xl:block">
-                {departmentName
-                  ? t('pages.lawyerWorkplace.workspaceBanner.assignedToDepartment', {
-                      department: departmentName,
-                      defaultValue: `You are assigned to the department '${departmentName}'.`,
+                {activeProjectName
+                  ? t('pages.lawyerWorkplace.workspaceBanner.activeProject', {
+                      project: activeProjectName,
+                      defaultValue: `Active project: ${activeProjectName}.`,
                     })
                   : t(
-                      'pages.lawyerWorkplace.workspaceBanner.noDepartment',
-                      'No department assigned.'
+                      'pages.lawyerWorkplace.workspaceBanner.noActiveProject',
+                      'No active project selected.'
                     )}
               </p>
 
@@ -83,8 +92,8 @@ export function LawyerWorkspaceBanner({ className }: LawyerWorkspaceBannerProps)
                 </span>
                 <span className="text-dark-500 truncate text-[14px]">
                   {t(
-                    'pages.lawyerWorkplace.workspaceBanner.operatorsInOperation',
-                    'operators in operation'
+                    'pages.lawyerWorkplace.workspaceBanner.lawyersInProject',
+                    'lawyers in this project'
                   )}
                 </span>
               </div>

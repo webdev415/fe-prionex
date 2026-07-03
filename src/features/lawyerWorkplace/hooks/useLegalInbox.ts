@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { useAuthStore } from '@/stores/authStore'
 import type { IncomingFolder, IncomingMailboxFilter } from '@/pages/LawyerWorkplace/types'
 import { legalApi } from '../api/legalApi'
 import { buildLegalLookupContext, mapInboxItemToLetterListItem } from '../api/mappers'
@@ -19,8 +20,8 @@ export const legalWorkplaceKeys = {
     [...legalWorkplaceKeys.settings(), 'letter-types', { includeInactive }] as const,
   letterType: (letterTypeId: string) =>
     [...legalWorkplaceKeys.settings(), 'letter-type', letterTypeId] as const,
-  lawyers: (includeInactive?: boolean) =>
-    [...legalWorkplaceKeys.settings(), 'lawyers', { includeInactive }] as const,
+  lawyers: (includeInactive?: boolean, projectId?: number) =>
+    [...legalWorkplaceKeys.settings(), 'lawyers', { includeInactive, projectId }] as const,
   lawyersRoot: () => [...legalWorkplaceKeys.settings(), 'lawyers'] as const,
   lawyer: (lawyerId: string) => [...legalWorkplaceKeys.settings(), 'lawyer', lawyerId] as const,
   mailboxes: () => [...legalWorkplaceKeys.all, 'mailboxes'] as const,
@@ -98,11 +99,27 @@ export function useLegalLetterType(letterTypeId: string | null, options?: { enab
   })
 }
 
-export function useLegalLawyers(options?: { enabled?: boolean; includeInactive?: boolean }) {
+export function useLegalLawyers(options?: {
+  enabled?: boolean
+  includeInactive?: boolean
+  projectId?: number | string | null
+  scopedToActiveProject?: boolean
+}) {
   const includeInactive = options?.includeInactive ?? false
+  const activeProjectId = useAuthStore((state) => state.user?.active_project_id)
+  const resolvedProjectId = options?.scopedToActiveProject
+    ? (options?.projectId ?? activeProjectId)
+    : options?.projectId
+  const projectId =
+    resolvedProjectId != null && resolvedProjectId !== '' ? Number(resolvedProjectId) : undefined
+
   return useQuery({
-    queryKey: legalWorkplaceKeys.lawyers(includeInactive),
-    queryFn: () => legalApi.listLawyers({ include_inactive: includeInactive }),
+    queryKey: legalWorkplaceKeys.lawyers(includeInactive, projectId),
+    queryFn: () =>
+      legalApi.listLawyers({
+        include_inactive: includeInactive,
+        ...(projectId != null && Number.isFinite(projectId) ? { project_id: projectId } : {}),
+      }),
     enabled: options?.enabled !== false,
     staleTime: 60_000,
   })

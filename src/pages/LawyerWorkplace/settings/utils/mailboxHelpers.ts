@@ -30,19 +30,10 @@ export function createMailboxFromForm(input: {
     status: 'connected',
     provider: 'custom',
     letterCount: 0,
-    defaultLetterTypeId: input.defaultLetterTypeId,
+    defaultLetterTypeId: null,
     isDefaultOutgoing: input.isDefaultOutgoing,
     hasCredentials: false,
-    routingRules: input.defaultLetterTypeId
-      ? [
-          {
-            id: `rule-${nextRuleId++}`,
-            matchType: 'default',
-            value: '',
-            letterTypeId: input.defaultLetterTypeId,
-          },
-        ]
-      : [],
+    routingRules: [],
   }
 }
 

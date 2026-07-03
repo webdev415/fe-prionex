@@ -198,8 +198,8 @@ export function mapMailboxFormToCreate(values: MailboxFormValues) {
     email: values.email.trim().toLowerCase(),
     display_name: values.displayName.trim(),
     provider: values.provider,
-    default_letter_type_id: values.defaultLetterTypeId,
-    is_default_outgoing: values.isDefaultOutgoing,
+    default_letter_type_id: null,
+    is_default_outgoing: false,
     routing_rules: values.routingRules.map(mapRoutingRuleToInput),
     sync_from_today: values.syncFromToday,
   }
@@ -225,8 +225,8 @@ export function mapMailboxFormToUpdate(values: MailboxFormValues) {
     email: values.email.trim().toLowerCase(),
     display_name: values.displayName.trim(),
     provider: values.provider,
-    default_letter_type_id: values.defaultLetterTypeId,
-    is_default_outgoing: values.isDefaultOutgoing,
+    default_letter_type_id: null,
+    is_default_outgoing: false,
     routing_rules: values.routingRules.map(mapRoutingRuleToInput),
   }
 
