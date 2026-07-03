@@ -153,6 +153,19 @@ import {
   MessageSecure01Icon,
   MessageMultiple01Icon,
   Message01Icon,
+  WorkIcon as Work01Icon,
+  InboxIcon,
+  Files02Icon,
+  KanbanIcon,
+  Archive03Icon,
+  Download05Icon,
+  Sent02Icon,
+  AddCircleIcon,
+  MenuCollapseIcon,
+  ArrowDownDoubleIcon,
+  ArrowUpDoubleIcon,
+  EqualSignIcon,
+  ArtificialIntelligence08Icon,
   ThumbsUpIcon,
   ThumbsDownIcon,
 } from '@hugeicons/core-free-icons'
@@ -379,6 +392,23 @@ export const Icons = {
     <Icon icon={MessageMultiple01Icon} {...props} />
   ),
   Message01: (props: Omit<IconProps, 'icon'>) => <Icon icon={Message01Icon} {...props} />,
+  WorkIcon: (props: Omit<IconProps, 'icon'>) => <Icon icon={Work01Icon} {...props} />,
+  InboxIcon: (props: Omit<IconProps, 'icon'>) => <Icon icon={InboxIcon} {...props} />,
+  Files02Icon: (props: Omit<IconProps, 'icon'>) => <Icon icon={Files02Icon} {...props} />,
+  KanbanIcon: (props: Omit<IconProps, 'icon'>) => <Icon icon={KanbanIcon} {...props} />,
+  Archive03: (props: Omit<IconProps, 'icon'>) => <Icon icon={Archive03Icon} {...props} />,
+  Download05: (props: Omit<IconProps, 'icon'>) => <Icon icon={Download05Icon} {...props} />,
+  Sent02: (props: Omit<IconProps, 'icon'>) => <Icon icon={Sent02Icon} {...props} />,
+  AddCircle: (props: Omit<IconProps, 'icon'>) => <Icon icon={AddCircleIcon} {...props} />,
+  MenuCollapse: (props: Omit<IconProps, 'icon'>) => <Icon icon={MenuCollapseIcon} {...props} />,
+  ArrowDownDouble: (props: Omit<IconProps, 'icon'>) => (
+    <Icon icon={ArrowDownDoubleIcon} {...props} />
+  ),
+  ArrowUpDouble: (props: Omit<IconProps, 'icon'>) => <Icon icon={ArrowUpDoubleIcon} {...props} />,
+  EqualSign: (props: Omit<IconProps, 'icon'>) => <Icon icon={EqualSignIcon} {...props} />,
+  ArtificialIntelligence08: (props: Omit<IconProps, 'icon'>) => (
+    <Icon icon={ArtificialIntelligence08Icon} {...props} />
+  ),
 }
 
 /**
@@ -521,6 +551,19 @@ export {
   MessageSecure01Icon,
   MessageMultiple01Icon,
   Message01Icon,
+  Work01Icon,
+  InboxIcon,
+  Files02Icon,
+  KanbanIcon,
+  Archive03Icon,
+  Download05Icon,
+  Sent02Icon,
+  AddCircleIcon,
+  MenuCollapseIcon,
+  ArrowDownDoubleIcon,
+  ArrowUpDoubleIcon,
+  EqualSignIcon,
+  ArtificialIntelligence08Icon,
 }
 
 /**

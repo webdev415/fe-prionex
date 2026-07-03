@@ -302,6 +302,16 @@ export const PERMISSIONS = {
   },
 
   /**
+   * Lawyer Workplace (KAN-486)
+   * Inbox is head+; kanban is all legal department staff.
+   */
+  LEGAL_WORKPLACE: {
+    VIEW: 'view_legal_workplace',
+    VIEW_KANBAN: 'view_legal_kanban',
+    MANAGE: 'manage_legal_workplace',
+  },
+
+  /**
    * Contact Types (CRM Settings directory for phone contact labels)
    */
   CONTACT_TYPES: {
@@ -396,6 +406,7 @@ export const PERMISSION_CATEGORIES = {
   TA_CHAINS: 'TA Chains',
   ACTION_ANALYSIS: 'Action Analysis',
   DOCUMENT_GENERATION: 'Document Generation',
+  LEGAL_WORKPLACE: 'Lawyer Workplace',
   CONTACT_TYPES: 'Contact Types',
   CONTACT_TAGS: 'Contact Tags',
   RESTRUCTURING: 'Restructuring',
@@ -550,6 +561,12 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   create_edit_document_templates: 'Create and edit document templates',
   delete_document_templates: 'Delete document templates',
   generate_document: 'Generate a document on the client card',
+
+  // Lawyer Workplace
+  view_legal_workplace: 'Access the Lawyer Workplace inbox and letter processing',
+  view_legal_kanban: 'Access the Lawyer Workplace legal tasks kanban board',
+  manage_legal_workplace:
+    'Configure Lawyer Workplace settings (letter types, lawyers, mailboxes, templates)',
 
   // Contact Types (CRM Settings)
   view_contact_types: 'View Contact Types directory in Settings',

@@ -1,4 +1,4 @@
-﻿{
+{
   "app": {
     "name": "CRM Prionex",
     "description": "Система управління взаємовідносинами з клієнтами"
@@ -54,6 +54,7 @@
     "messagingDrafts": "Чернетки повідомлень",
     "campaignAnalytics": "Аналітика кампаній",
     "contactTypes": "Типи контактів",
+    "lawyerWorkplace": "Робоче місце юриста",
     "repaymentConfiguration": "Конфігурація погашення",
     "actionAnalysis": "Аналіз дій"
   },
@@ -89,7 +90,10 @@
     "close": "Закрити",
     "logout": "Вийти",
     "loggingOut": "Вихід...",
-    "deleting": "Видалення…"
+    "deleting": "Видалення…",
+    "remove": "Видалити",
+    "decrease": "Зменшити",
+    "increase": "Збільшити"
   },
   "components": {
     "pagination": {
@@ -439,6 +443,689 @@
       "voiceSilenceTimeout": "Тайм-аут тиші (авто-стоп)",
       "voiceMaxDuration": "Макс. довжина запису",
       "voiceSeconds": "{{count}} с"
+    },
+    "lawyerWorkplace": {
+      "navAria": "Навігація робочого місця юриста",
+      "navScrollLeft": "Прокрутити вкладки вліво",
+      "navScrollRight": "Прокрутити вкладки вправо",
+      "tabs": {
+        "inbox": "Вхідні",
+        "kanban": "Канбан",
+        "documents": "Документи",
+        "settings": "Налаштування",
+        "newCount": "{{count}} нових"
+      },
+      "availability": {
+        "label": "Ваша доступність",
+        "updateSuccess": "Доступність оновлено",
+        "updateError": "Не вдалося оновити доступність"
+      },
+      "folders": {
+        "inbox": "Вхідні",
+        "quarantine": "Карантин",
+        "sent": "Надіслані"
+      },
+      "filters": {
+        "allMailboxes": "Усі скриньки",
+        "new": "Нові",
+        "inProgress": "В роботі",
+        "done": "Оброблені"
+      },
+      "incoming": {
+        "title": "Вхідні",
+        "count": "{{unprocessed}} / {{total}}",
+        "scrollUp": "Прокрутити вгору",
+        "scrollDown": "Прокрутити вниз",
+        "searchPlaceholder": "Відправник, тема...",
+        "sectionUnprocessed": "Необроблені",
+        "sectionInProgress": "В роботі",
+        "sectionSentToKanban": "На канбан",
+        "newLetter": "Новий лист",
+        "loading": "Завантаження листів…",
+        "loadError": {
+          "title": "Не вдалося завантажити вхідні",
+          "description": "Перевірте з’єднання та спробуйте ще раз."
+        },
+        "empty": {
+          "folders": {
+            "inbox": {
+              "title": "Вхідні порожні",
+              "description": "Тут з’являться листи з підключених скриньок. Також можна створити новий вихідний лист."
+            },
+            "quarantine": {
+              "title": "Немає листів у карантині",
+              "description": "Тут відображаються листи, які утримуються для перевірки перед обробкою."
+            },
+            "sent": {
+              "title": "Немає надісланих листів",
+              "description": "Тут відображаються вихідні листи та відповіді, надіслані з робочого місця."
+            }
+          },
+          "search": {
+            "title": "Листів не знайдено",
+            "description": "Спробуйте інший запит або очистіть пошук, щоб побачити всі листи.",
+            "clearSearch": "Очистити пошук"
+          },
+          "filter": {
+            "title": "У цьому перегляді немає листів",
+            "description": "Нічого не відповідає фільтру «{{filter}}». Спробуйте інший статус або покажіть усі скриньки."
+          }
+        }
+      },
+      "letterItem": {
+        "unclassified": "Без класифікації",
+        "unidentified": "неідентифіковано",
+        "status": {
+          "new": "НОВИЙ",
+          "inProgress": "В РОБОТІ",
+          "onBoard": "НА ДОШЦІ",
+          "sentToKanban": "КАНБАН",
+          "autoProcessed": "АВТО",
+          "done": "ГОТОВО"
+        }
+      },
+      "dates": {
+        "yesterdayTime": "Вчора · {{time}}"
+      },
+      "thread": {
+        "selectLetter": "Оберіть лист, щоб переглянути ланцюжок",
+        "loading": "Завантаження ланцюжка…",
+        "loadError": {
+          "title": "Не вдалося завантажити ланцюжок",
+          "description": "Оберіть інший лист або спробуйте ще раз через хвилину."
+        },
+        "empty": {
+          "title": "Оберіть лист, щоб переглянути ланцюжок",
+          "description": "Оберіть лист у списку, щоб прочитати повну переписку та відповісти."
+        },
+        "backToList": "Назад до списку",
+        "parameters": "Параметри",
+        "archive": "Архівувати",
+        "received": "ОТРИМАНО",
+        "sent": "НАДІСЛАНО",
+        "download": "Завантажити",
+        "toMailbox": "кому {{mailbox}}",
+        "viaLabel": "через {{label}}",
+        "messagesInThread": "{{count}} повідомлень у ланцюжку",
+        "attachmentPdf": "PDF",
+        "attachmentDoc": "DOC",
+        "closeThread": "Закрити ланцюжок"
+      },
+      "reply": {
+        "replyFrom": "Відповідь з",
+        "markNbuResponse": "Позначити як відповідь НБУ",
+        "markNbuShort": "НБУ",
+        "placeholder": "Напишіть відповідь...",
+        "reassign": "Передати",
+        "saveDraft": "Зберегти чернетку",
+        "attach": "Додати файл",
+        "template": "Шаблон",
+        "send": "Надіслати",
+        "noTemplatesHint": "Створіть шаблони листів у Налаштування → Шаблони"
+      },
+      "parameters": {
+        "title": "Параметри листа",
+        "selectLetter": "Оберіть лист, щоб переглянути параметри",
+        "close": "Закрити параметри",
+        "autoBadge": "АВТО · {{percent}}%",
+        "type": "Тип",
+        "selectType": "Оберіть тип",
+        "types": {
+          "complaint": "Скарга",
+          "nbuInquiry": "Запит НБУ",
+          "courtClaim": "Судовий позов",
+          "attorneyRequest": "Запит адвоката",
+          "inquiry": "Запит"
+        },
+        "client": "Клієнт",
+        "contract": "Договір",
+        "dueDate": "Термін",
+        "lawyer": "Юрист",
+        "notIdentified": "Не ідентифіковано",
+        "auto": "Авто",
+        "managerConfirmation": "Підтвердження менеджера",
+        "parametersCount": "{{confirmed}}/{{total}} параметрів",
+        "confirmAndCreate": "Підтвердити та створити задачу"
+      },
+      "kanban": {
+        "title": "Канбан юридичних задач",
+        "department": "Юридичний відділ",
+        "activeCount": "{{count}} активних",
+        "loading": "Завантаження задач канбану…",
+        "loadError": {
+          "title": "Не вдалося завантажити задачі канбану",
+          "description": "Перевірте з’єднання та спробуйте ще раз."
+        },
+        "empty": {
+          "title": "На дошці ще немає задач",
+          "description": "Підтвердіть листи з вхідних або створіть задачу вручну, щоб почати відстеження роботи."
+        },
+        "emptyFilter": {
+          "title": "Немає задач за цими фільтрами",
+          "description": "Спробуйте іншого юриста, тип або діапазон дедлайну.",
+          "clearFilters": "Очистити фільтри"
+        },
+        "exportCsv": "Експорт CSV",
+        "newTask": "Нова задача",
+        "newTaskShort": "Нова",
+        "overdueBadge": "Прострочено",
+        "noDeadline": "без терміну",
+        "dueLabel": "термін:",
+        "byLabel": "до",
+        "closedLabel": "закрито",
+        "today": "сьогодні",
+        "emailThread": "Листування",
+        "changeAssignee": "Змінити виконавця",
+        "emptyColumn": "Немає задач",
+        "dragTask": "Перетягнути задачу",
+        "moreOptions": "Додаткові дії",
+        "moveTo": "Перемістити в",
+        "setClient": "Призначити клієнта",
+        "changeType": "Змінити тип",
+        "changePriority": "Змінити пріоритет",
+        "setDeadline": "Встановити дедлайн",
+        "copyKey": "Копіювати ключ задачі",
+        "scrollNavigator": "Прокрутити колонки канбану",
+        "filters": {
+          "thisWeek": "Цього тижня",
+          "thisMonth": "Цього місяця",
+          "allLawyers": "Всі юристи",
+          "allTypes": "Всі типи"
+        },
+        "columns": {
+          "notDefined": "НЕ ВИЗНАЧЕНО",
+          "inProgress": "В РОБОТІ",
+          "overdue": "ПРОСТРОЧЕНО",
+          "completed": "ВИКОНАНО"
+        },
+        "types": {
+          "unclassified": "некласифіковано",
+          "typePending": "тип не визначено"
+        },
+        "createTask": {
+          "title": "Створити задачу",
+          "lawyer": "Юрист",
+          "type": "Тип",
+          "deadline": "Дедлайн",
+          "priority": "Пріоритет",
+          "description": "Опис",
+          "descriptionPlaceholder": "Введіть опис задачі...",
+          "selectDeadline": "Оберіть дедлайн",
+          "submit": "Створити",
+          "priorities": {
+            "highest": "Найвищий",
+            "high": "Високий",
+            "medium": "Середній",
+            "low": "Низький",
+            "lowest": "Найнижчий"
+          }
+        }
+      },
+      "documents": {
+        "title": "Документи",
+        "department": "Юридичний відділ",
+        "generateDocument": "Згенерувати документ",
+        "addIncoming": "Додати вхідний",
+        "searchPlaceholder": "Пошук за назвою, клієнтом, № документа...",
+        "loading": "Завантаження документів…",
+        "loadError": {
+          "title": "Не вдалося завантажити документи",
+          "description": "Перевірте з’єднання та спробуйте ще раз."
+        },
+        "empty": {
+          "title": "Документів ще немає",
+          "description": "Зареєструйте вхідний документ або згенеруйте вихідний лист, щоб почати журнал юридичних документів.",
+          "search": {
+            "title": "Документів не знайдено",
+            "description": "Спробуйте інший запит або очистіть пошук, щоб побачити всі документи.",
+            "clearSearch": "Очистити пошук"
+          },
+          "filter": {
+            "title": "У цьому перегляді немає документів",
+            "description": "Нічого не відповідає фільтру «{{filter}}». Спробуйте інший тип або покажіть усі документи."
+          }
+        },
+        "stats": {
+          "incoming": "IN · вхідні",
+          "outgoing": "OUT · вихідні",
+          "nbu": "НБУ · відповіді",
+          "generated": "Згенеровано",
+          "countOfYear": "{{count}} / {{year}}",
+          "generatedPercent": "{{percent}}%"
+        },
+        "filters": {
+          "allTypes": "Усі типи",
+          "incoming": "IN",
+          "outgoing": "OUT",
+          "nbu": "НБУ",
+          "uploaded": "Завантажено",
+          "generated": "Згенеровано"
+        },
+        "types": {
+          "incoming": "Вхідний",
+          "outgoing": "Вихідний",
+          "nbuResponse": "Відповідь НБУ"
+        },
+        "actions": {
+          "generated": "згенеровано",
+          "uploaded": "завантажено"
+        },
+        "columns": {
+          "number": "Номер",
+          "documentName": "Назва документа",
+          "type": "Тип",
+          "clientContract": "Клієнт - Договір",
+          "action": "Дія",
+          "assignee": "Виконавець",
+          "date": "Дата"
+        },
+        "dates": {
+          "today": "сьогодні",
+          "yesterday": "вчора"
+        },
+        "modals": {
+          "generate": {
+            "title": "Згенерувати документ",
+            "documentType": "Тип документа",
+            "documentName": "Назва документа",
+            "documentNamePlaceholder": "Введіть назву документа",
+            "client": "Клієнт",
+            "contract": "Договір",
+            "selectClientFirst": "Спочатку оберіть клієнта",
+            "selectClient": "Оберіть клієнта",
+            "clientSearchHint": "Введіть 2+ символи для пошуку…",
+            "assignee": "Виконавець",
+            "submit": "Згенерувати та зареєструвати",
+            "success": "Документ згенеровано",
+            "types": {
+              "outgoing": "Вихідний (ВИХ)",
+              "nbu": "Відповідь НБУ (НБУ)"
+            }
+          },
+          "incoming": {
+            "title": "Додати вхідний документ",
+            "file": "Файл",
+            "changeFile": "Натисніть, щоб замінити",
+            "dropHint": "Перетягніть або натисніть для завантаження PDF, DOC або зображення",
+            "documentName": "Назва документа",
+            "documentNamePlaceholder": "Введіть назву документа",
+            "client": "Клієнт",
+            "contract": "Договір",
+            "selectClientFirst": "Спочатку оберіть клієнта",
+            "selectClient": "Оберіть клієнта",
+            "relatedLetter": "Пов’язаний лист (необов’язково)",
+            "relatedLetterPlaceholder": "напр. IN-2026-142",
+            "assignee": "Виконавець",
+            "submit": "Зареєструвати вхідний",
+            "success": "Вхідний документ зареєстровано"
+          },
+          "detail": {
+            "title": "Деталі документа",
+            "close": "Закрити документ",
+            "download": "Завантажити",
+            "downloadStarted": "Завантаження розпочато"
+          }
+        }
+      },
+      "settings": {
+        "title": "Налаштування",
+        "departmentConfig": "Конфігурація юридичного відділу",
+        "comingSoon": "Довідник типів листів і налаштування скриньок — незабаром.",
+        "addType": "Додати тип",
+        "discardChanges": "Скасувати зміни",
+        "saveChanges": "Зберегти зміни",
+        "saveSuccess": "Зміни збережено",
+        "saveError": "Не вдалося зберегти зміни",
+        "saving": "Збереження…",
+        "loadingLawyers": "Завантаження юристів…",
+        "noLawyers": "Немає активних юристів",
+        "loading": "Завантаження налаштувань…",
+        "loadError": "Не вдалося завантажити налаштування",
+        "readOnlyNotice": "Лише перегляд — у вас немає дозволу змінювати налаштування відділу.",
+        "lawyer": "Юрист",
+        "status": "Статус",
+        "subTabs": {
+          "letterTypes": "Типи листів",
+          "lawyers": "Юристи",
+          "mailboxes": "Скриньки",
+          "templates": "Шаблони"
+        },
+        "letterTypes": {
+          "loading": "Завантаження типів листів…",
+          "listTitle": "Типи листів",
+          "deleteType": "Видалити тип листа",
+          "deleteTypeTitle": "Видалити тип листа",
+          "deleteTypeConfirm": "Ви впевнені, що хочете видалити цей тип листа?",
+          "deleteTypeWarning": "Його буде прибрано з активних списків. Історичні листи збережуть свою класифікацію.",
+          "deleteTypeLetterCountWarning": "Цей тип пов’язаний із {{count}} листами.",
+          "deleteTypeLastWarning": "Має залишитися щонайменше один тип листа.",
+          "deleteTypeSuccess": "Тип листа видалено",
+          "listMeta": "SLA {{sla}} р.д. • {{examples}} прикладів",
+          "previewFallback": "Назва типу листа",
+          "empty": {
+            "title": "Типів листів ще немає",
+            "description": "Додайте перший тип для налаштування класифікації, SLA та пріоритетів юристів."
+          },
+          "basicInfo": "Базова інформація",
+          "displayName": "Відображувана назва",
+          "responseSla": "SLA відповіді",
+          "businessDays": "робочих днів",
+          "description": "Опис",
+          "priorityAssignment": "Призначення пріоритету",
+          "priorityHint": "★ = наскільки цей юрист має бути пріоритетним для цього типу",
+          "priorityEmpty": {
+            "title": "Немає юристів для призначення",
+            "description": "Додайте юристів на вкладці «Юристи», потім налаштуйте зірки та ролі для цього типу листа."
+          },
+          "activeLoad": "{{current}} / {{max}} активних",
+          "trainingExamples": "Навчальні приклади",
+          "examplesMeta": "{{count}} збережених прикладів для довідки",
+          "addTrainingExample": "+ Додати навчальний приклад (вставте справжній лист)",
+          "exampleSourcePrefix": "від",
+          "editTrainingExample": "Редагувати навчальний приклад",
+          "addTrainingExampleTitle": "Додати навчальний приклад",
+          "exampleTitle": "Назва",
+          "exampleTitlePlaceholder": "напр. Лист про спір щодо платежу",
+          "exampleBody": "Текст листа (вставте з архіву)",
+          "exampleBodyPlaceholder": "Вставте повний текст листа тут...",
+          "exampleSource": "Відправник",
+          "exampleSourcePlaceholder": "Ім'я відправника",
+          "keywordHints": "Підказки ключових слів",
+          "keywordHintsHint": "необов’язково - використовується, коли впевненість AI < 70%",
+          "keywordPlaceholder": "Введіть ключове слово та натисніть Enter..",
+          "starRating": "Рейтинг зірок",
+          "starN": "Зірка {{n}} з {{total}}",
+          "colors": {
+            "teal": "Бірюзовий",
+            "cyan": "Блакитний",
+            "blue": "Синій",
+            "indigo": "Індиго",
+            "purple": "Фіолетовий",
+            "violet": "Фіолетовий",
+            "magenta": "Пурпурний",
+            "pink": "Рожевий",
+            "red": "Червоний",
+            "orangeRed": "Червоно-помаранчевий",
+            "orange": "Помаранчевий",
+            "green": "Зелений"
+          },
+          "roles": {
+            "primary": "ОСНОВНИЙ",
+            "backup": "РЕЗЕРВ",
+            "secondary": "ДРУГОРЯДНИЙ",
+            "off": "ВИМК"
+          }
+        },
+        "lawyers": {
+          "autoAssignmentTitle": "Алгоритм призначення",
+          "autoAssignmentDesc": "Коли новий лист класифіковано, система обирає відповідального юриста за допомогою <strong>двох пріоритетних сигналів</strong>. Якщо будь-який юрист досягає свого <strong>максимального ліміту активних справ</strong>, його виключають з підбору за спеціалізацією, а навантаження рівномірно розподіляється між рештою команди через round-robin.",
+          "steps": {
+            "step1Badge": "КРОК 1",
+            "step1Title": "Відповідність спеціалізації",
+            "step1Desc": "Юристи, чия спеціалізація включає цей тип листа (★ рейтинг у профілі)",
+            "step2Badge": "КРОК 2",
+            "step2Title": "Найменше навантаження",
+            "step2Desc": "Серед спеціалістів нижче ліміту призначити того, у кого найменше активних задач.",
+            "fallbackBadge": "FALLBACK",
+            "fallbackTitleBefore": "Усі спеціалісти зайняті",
+            "fallbackTitleAfter": "round-robin",
+            "fallbackDesc": "Якщо кожен спеціаліст досяг ліміту, задачу отримує наступний доступний юрист (будь-яка спеціалізація)."
+          },
+          "departmentTitle_one": "Юридичний відділ · {{count}} юрист",
+          "departmentTitle_few": "Юридичний відділ · {{count}} юристи",
+          "departmentTitle_many": "Юридичний відділ · {{count}} юристів",
+          "departmentTitle_other": "Юридичний відділ · {{count}} юристів",
+          "departmentDesc": "Налаштуйте максимальне навантаження та спеціалізації для кожного",
+          "loading": "Завантаження юристів…",
+          "export": "Експорт",
+          "exportEmpty": "Немає юристів для експорту",
+          "exportSoon": "Експорт незабаром",
+          "addLawyer": "Додати юриста",
+          "updateError": "Не вдалося оновити навантаження юриста",
+          "removed": "Юриста видалено",
+          "noRole": "Юридична команда",
+          "letterTypesColumn": "Типи листів",
+          "currentWorkload": "Поточне навантаження",
+          "maxInFlight": "Макс. одночасно",
+          "ofActive": "{{current}} з {{max}}",
+          "ofActiveSuffix": "з {{max}}",
+          "workload": {
+            "high": "Майже на межі",
+            "healthy": "Здорове навантаження",
+            "plenty": "Багато резерву"
+          },
+          "status": {
+            "online": "в мережі",
+            "away": "відсутній"
+          },
+          "removeLetterType": "Видалити тип листа",
+          "addLetterType": "Додати тип листа",
+          "noMoreLetterTypes": "Усі типи листів уже призначено",
+          "letterTypesUpdateError": "Не вдалося оновити типи листів",
+          "empty": {
+            "title": "Юристів ще немає",
+            "description": "Додайте юристів, щоб налаштувати ліміти навантаження та спеціалізації за типами листів."
+          }
+        },
+        "mailboxes": {
+          "title": "Скриньки",
+          "description": "Налаштуйте підключені юридичні скриньки, інтервали синхронізації та правила маршрутизації.",
+          "loading": "Завантаження скриньок…",
+          "tableTitle": "Підключені скриньки · {{count}}",
+          "tableDesc": "Керуйте адресами, правилами маршрутизації та скринькою за замовчуванням для відповідей",
+          "addMailbox": "Додати скриньку",
+          "addTitle": "Додати скриньку",
+          "editTitle": "Редагувати скриньку",
+          "addSuccess": "Скриньку додано",
+          "updateSuccess": "Скриньку оновлено",
+          "disabledHidden": "Скриньку вимкнено. Її повідомлення приховано з вхідних.",
+          "testSync": "Тест синхронізації",
+          "testSyncRunning": "Синхронізація…",
+          "testSyncSoon": "Тест синхронізації незабаром",
+          "testSyncPartial": "Синхронізацію завершено з {{errors}} помилкою(ами). {{ingested}} нових повідомлень.",
+          "testSyncSuccess": "Синхронізацію завершено. Імпортовано {{ingested}} нових повідомлень.",
+          "testSyncSuccessEmpty": "Синхронізацію завершено. Нових повідомлень немає.",
+          "defaultOutgoing": "За замовч.",
+          "autoRoute": "Автомаршрут",
+          "duplicateEmail": "Ця скринька вже підключена",
+          "noCredentials": "Облікові дані не налаштовано — синхронізація та відправка не працюватимуть",
+          "noCredentialsShort": "Немає облікових даних",
+          "connectGmail": "Підключити Gmail",
+          "gmailOAuthSuccess": "Gmail успішно підключено!",
+          "gmailOAuthFailed": "Авторизацію Gmail не вдалося виконати ({{error}}). Спробуйте ще раз.",
+          "gmailOAuthError": "Не вдалося розпочати авторизацію Gmail. Спробуйте ще раз.",
+          "rulesCount": "{{count}} правил",
+          "rulesCount_one": "{{count}} правило",
+          "empty": {
+            "title": "Немає підключених скриньок",
+            "description": "Додайте скриньку, щоб почати синхронізацію вхідної юридичної кореспонденції."
+          },
+          "columns": {
+            "mailbox": "Скринька",
+            "letters": "Листи",
+            "defaultType": "Тип за замовч.",
+            "routing": "Маршрутизація",
+            "actions": "Дії"
+          },
+          "status": {
+            "connected": "підключено",
+            "error": "помилка",
+            "disabled": "вимкнено"
+          },
+          "fields": {
+            "email": "Email-адреса",
+            "displayName": "Відображувана назва",
+            "displayNamePlaceholder": "Юридичний відділ",
+            "provider": "Поштовий провайдер",
+            "password": "Пароль додатку",
+            "passwordPlaceholder": "Введіть пароль додатку",
+            "passwordEditPlaceholder": "Залиште порожнім, щоб зберегти поточний пароль",
+            "passwordHint": "Використовуйте пароль додатку від поштового провайдера, а не пароль входу.",
+            "defaultType": "Тип листа за замовчуванням",
+            "defaultOutgoing": "Використовувати як скриньку за замовчуванням у композері відповідей",
+            "syncFromToday": "Синхронізувати лише з сьогодні",
+            "syncFromTodayHint": "Рекомендовано для скриньок із великою кількістю існуючих листів. Імпортуються лише повідомлення, що надійшли після цієї дати."
+          },
+          "oauth2": {
+            "title": "Gmail потребує OAuth2-авторизації",
+            "hint": "Збережіть скриньку, потім натисніть «Підключити Gmail» у таблиці, щоб авторизувати доступ через Google. Пароль не зберігається."
+          },
+          "serverSettings": {
+            "title": "Налаштування сервера",
+            "imapHost": "IMAP-хост",
+            "imapPort": "Порт",
+            "imapSsl": "Використовувати SSL",
+            "smtpHost": "SMTP-хост",
+            "smtpPort": "Порт",
+            "smtpTls": "Використовувати TLS"
+          },
+          "items": {
+            "legal": "Юридичний відділ",
+            "court": "Судова кореспонденція",
+            "nbu": "Регуляторика НБУ",
+            "accounting": "Бухгалтерія",
+            "compliance": "Комплаєнс",
+            "collections": "Стягнення"
+          },
+          "sync": {
+            "title": "Синхронізація email",
+            "description": "Як часто email-сервіс отримує нові повідомлення з підключених скриньок.",
+            "lastSynced": "Остання синхронізація",
+            "neverSynced": "Ніколи",
+            "lastSyncedMinutes": "{{count}} хв тому",
+            "lastSyncedHours": "{{count}} год тому",
+            "intervals": {
+              "15m": "Кожні 15 хвилин",
+              "30m": "Кожні 30 хвилин",
+              "1h": "Щогодини",
+              "4h": "Кожні 4 години",
+              "daily": "Щодня"
+            }
+          },
+          "routing": {
+            "title": "Правила маршрутизації",
+            "hint": "Призначайте типи листів за відправником або темою",
+            "matchType": "Умова",
+            "value": "Значення",
+            "letterType": "Тип листа",
+            "selectType": "Оберіть тип",
+            "addRule": "Додати правило",
+            "matchDefault": "За замовчуванням",
+            "matchSenderDomain": "Домен відправника",
+            "matchSubjectKeyword": "Ключове слово в темі"
+          }
+        },
+        "templates": {
+          "title": "Шаблони",
+          "description": "Керуйте шаблонами вихідних листів для ланцюжка листування та нового листа.",
+          "replyTitle": "Шаблони листів",
+          "replyDesc": "Використовуються в меню шаблонів композера листів і нових вихідних листів",
+          "documentTitle": "Пресети документів",
+          "documentDesc": "Використовуються при генерації вихідних документів і відповідей НБУ",
+          "addReply": "Додати шаблон",
+          "addPreset": "Додати пресет",
+          "addReplyTitle": "Додати шаблон листа",
+          "editReplyTitle": "Редагувати шаблон листа",
+          "addPresetTitle": "Додати пресет документа",
+          "editPresetTitle": "Редагувати пресет документа",
+          "replyAddSuccess": "Шаблон листа додано",
+          "replyUpdateSuccess": "Шаблон листа оновлено",
+          "replyDeleteSuccess": "Шаблон листа видалено",
+          "deleteReplyTitle": "Видалити шаблон листа",
+          "deleteReplyConfirm": "Ви впевнені, що хочете видалити цей шаблон листа?",
+          "deleteReplyWarning": "Цю дію не можна скасувати.",
+          "availableVariables": "Доступні змінні",
+          "variablesHint": "Натисніть змінну, щоб вставити її в позицію курсора в тексті шаблону.",
+          "presetAddSuccess": "Пресет документа додано",
+          "presetUpdateSuccess": "Пресет документа оновлено",
+          "presetDeleteSuccess": "Пресет документа видалено",
+          "deletePresetTitle": "Видалити пресет документа",
+          "deletePresetConfirm": "Ви впевнені, що хочете видалити цей пресет документа?",
+          "deletePresetWarning": "Цю дію не можна скасувати.",
+          "loading": "Завантаження шаблонів…",
+          "allTypes": "Усі типи",
+          "active": "Активний",
+          "inactive": "Неактивний",
+          "noAssignee": "—",
+          "emptyReply": {
+            "title": "Ще немає шаблонів листів",
+            "description": "Додайте шаблони з текстом листа та змінними для ланцюжка листування та нового листа."
+          },
+          "emptyPresets": {
+            "title": "Ще немає пресетів документів",
+            "description": "Додайте пресети з назвами документів та виконавцями за замовчуванням для генерації документів."
+          },
+          "columns": {
+            "name": "Назва",
+            "preview": "Перегляд",
+            "type": "Тип",
+            "assignee": "Виконавець за замовч."
+          },
+          "documentTypes": {
+            "outgoing": "Вихідний (ВИХ)",
+            "nbu": "Відповідь НБУ (НБУ)"
+          },
+          "fields": {
+            "name": "Назва шаблону",
+            "presetName": "Назва пресету",
+            "letterTypes": "Типи листів",
+            "body": "Текст шаблону",
+            "bodyPlaceholder": "Напишіть текст шаблону листа...",
+            "bodyHint": "Використовуйте палітру змінних нижче, щоб вставити плейсхолдери.",
+            "active": "Активний у композері листів",
+            "documentType": "Тип документа",
+            "assignee": "Виконавець за замовчуванням",
+            "presetActive": "Активний при генерації документів"
+          },
+          "variables": {
+            "clientName": "Ім'я клієнта",
+            "date": "Сьогоднішня дата",
+            "dueDate": "Строк відповіді",
+            "requestNo": "Номер звернення",
+            "contract": "Договір"
+          }
+        },
+        "modals": {
+          "addType": {
+            "title": "Додати тип",
+            "letterTypes": "Типи листів",
+            "placeholder": "напр. Спір щодо платежу",
+            "color": "Колір",
+            "preview": "Попередній перегляд",
+            "submit": "Додати",
+            "submitting": "Додавання…",
+            "success": "Тип листа додано"
+          },
+          "addLawyer": {
+            "title": "Додати юриста",
+            "selectLawyer": "Оберіть юриста",
+            "noLawyers": "Усі юристи вже додані",
+            "responsibleTypes": "Відповідальні типи листів",
+            "selectTypes": "Оберіть типи листів",
+            "typesSelected": "Обрано: {{count}}",
+            "addNewType": "Додати новий тип",
+            "submit": "Додати",
+            "submitting": "Додавання…",
+            "success": "Юриста додано",
+            "error": "Не вдалося додати юриста"
+          }
+        }
+      },
+      "workspaceBanner": {
+        "lawBadge": "Law",
+        "title": "Робоче місце юристів",
+        "activeProject": "Активний проєкт: {{project}}.",
+        "noActiveProject": "Активний проєкт не обрано.",
+        "lawyersInProject": "юристів у цьому проєкті",
+        "openWorkspaceMenu": "Відкрити меню робочого місця",
+        "collapse": "Згорнути банер робочого місця",
+        "expand": "Розгорнути банер робочого місця"
+      },
+      "footer": {
+        "syncHint": "Email Service · {{interval}}",
+        "mailboxes": "6 скриньок підключено",
+        "mailboxesCount": "{{count}} скриньок підключено"
+      }
     },
     "training": {
       "title": "Аналіз дій",

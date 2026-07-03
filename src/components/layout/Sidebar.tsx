@@ -51,6 +51,8 @@ export interface SidebarItem {
   label: string
   disabled?: boolean
   subItems?: SidebarSubItem[]
+  /** Numeric badge shown on the icon (e.g. unprocessed letters count) */
+  badge?: number
 }
 
 export interface SidebarAction {
@@ -101,6 +103,7 @@ const iconMap: Record<
   'message-multiple-01': (props) => <Icons.MessageMultiple01 {...props} />,
   'message-secure-01': (props) => <Icons.MessageSecure01 {...props} />,
   'bubble-chat-edit': (props) => <Icons.BubbleChatEdit {...props} />,
+  work: (props) => <Icons.WorkIcon {...props} />,
 }
 
 /**
@@ -476,11 +479,18 @@ export function Sidebar({ items = [], bottomItems = [], actions = [], className 
                   }
                 }}
               >
-                <IconComponent
-                  size={20}
-                  className={cn('shrink-0', isActive ? 'text-primary-300' : 'text-gray-700')}
-                  strokeWidth={1.5}
-                />
+                <span className="relative shrink-0">
+                  <IconComponent
+                    size={20}
+                    className={cn(isActive ? 'text-primary-300' : 'text-gray-700')}
+                    strokeWidth={1.5}
+                  />
+                  {!!item.badge && item.badge > 0 && (
+                    <span className="bg-error-500 absolute -top-1 -right-1 flex h-[14px] min-w-[14px] items-center justify-center rounded-full px-0.5 text-[8px] leading-none font-bold text-white">
+                      {item.badge > 99 ? '99+' : item.badge}
+                    </span>
+                  )}
+                </span>
                 <span
                   className={cn(
                     'ml-3 truncate text-sm font-medium',

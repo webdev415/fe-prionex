@@ -111,6 +111,11 @@ const TrainingPage = lazy(() =>
     default: m.TrainingPage,
   }))
 )
+const LawyerWorkplacePage = lazy(() =>
+  import('@/pages/LawyerWorkplace').then((m) => ({
+    default: m.LawyerWorkplacePage,
+  }))
+)
 const ActionAnalysisPage = lazy(() =>
   import('@/pages/ActionAnalysis').then((m) => ({
     default: m.ActionAnalysisPage,
@@ -361,6 +366,20 @@ export const router = createBrowserRouter([
         element: (
           <PermissionRoute requiredPermission={PERMISSIONS.ACTION_ANALYSIS.VIEW}>
             {withSuspense(<ActionAnalysisPage />)}
+          </PermissionRoute>
+        ),
+      },
+      {
+        path: 'lawyer-workplace',
+        element: (
+          <PermissionRoute
+            requiredPermissions={[
+              PERMISSIONS.LEGAL_WORKPLACE.VIEW,
+              PERMISSIONS.SYSTEM.MANAGE_SETTINGS,
+            ]}
+            mode="any"
+          >
+            {withSuspense(<LawyerWorkplacePage />)}
           </PermissionRoute>
         ),
       },

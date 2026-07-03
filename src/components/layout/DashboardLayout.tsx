@@ -35,6 +35,8 @@ import {
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/Tooltip'
 import { searchClients, mapPriorityLevel, type SearchType } from '@/api/clientSearchApi'
 import { RouteChangeTracker, TrackingProvider } from '@/features/operatorAnalytics'
+import { LawyerWorkplaceHeaderNav } from '@/pages/LawyerWorkplace/components/LawyerWorkplaceHeaderNav'
+import { useLegalInboxSummary } from '@/features/lawyerWorkplace'
 
 // Minimum digit count required to fire a phone-type search. Mirrors the
 // backend guard at services/client/app/routers/search.py (PHONE_MIN_DIGITS).
@@ -666,6 +668,19 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
   const user = useAuthStore((state) => state.user)
 
+  const canViewLegalWorkplace = useMemo(
+    () =>
+      Boolean(
+        user?.permissions?.includes(PERMISSIONS.LEGAL_WORKPLACE.VIEW) ||
+        user?.permissions?.includes(PERMISSIONS.SYSTEM.MANAGE_SETTINGS)
+      ),
+    [user?.permissions]
+  )
+
+  const { unprocessedCount: legalUnprocessedCount } = useLegalInboxSummary({
+    enabled: canViewLegalWorkplace,
+  })
+
   // useMemo prevents unnecessary re-filtering on every render
   // Only recalculates when user permissions change
   const navItemsResult = useMemo(() => {
@@ -745,9 +760,17 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         requiredPermission: PERMISSIONS.TRAINING.VIEW,
       },
       {
+        path: '/dashboard/lawyer-workplace',
+        icon: 'work',
+        label: t('navigation.lawyerWorkplace', 'Lawyer Workplace'),
+        requiredPermissions: [PERMISSIONS.LEGAL_WORKPLACE.VIEW, PERMISSIONS.SYSTEM.MANAGE_SETTINGS],
+        mode: 'any' as const,
+        badge: legalUnprocessedCount > 0 ? legalUnprocessedCount : undefined,
+      },
+      {
         path: '/dashboard/action-analysis',
         icon: 'analytics-01',
-        label: t('navigation.actionAnalysis', 'Action Analysis'),
+        label: t('navigation.actionAnalysis'),
         requiredPermission: PERMISSIONS.ACTION_ANALYSIS.VIEW,
       },
       {
@@ -947,7 +970,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     return { navItems: regularItems, bottomNavItems: bottomItems }
     // i18n.language is needed to recalculate navigation items when language changes
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.permissions, t, i18n.language])
+  }, [user?.permissions, t, i18n.language, legalUnprocessedCount])
 
   const { navItems, bottomNavItems } = navItemsResult
   const { toggleSidebar } = useSidebarStore()
@@ -955,6 +978,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const isAiAssistantRoute =
     location.pathname === '/dashboard/ai-assistant' ||
     location.pathname === '/dashboard/ai-assistant/'
+
+  const isLawyerWorkplaceRoute =
+    location.pathname === '/dashboard/lawyer-workplace' ||
+    location.pathname.startsWith('/dashboard/lawyer-workplace/')
 
   return (
     <TrackingProvider>
@@ -972,7 +999,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         {/* Main Content Area with left margin for sidebar - no margin on mobile */}
         <div
           className={cn(
-            'transition-all duration-300',
+            'min-w-0 transition-all duration-300',
             'lg:ml-18', // Desktop: always has margin for collapsed sidebar
             isOpenSideBar && 'lg:ml-60' // Desktop: expanded sidebar
           )}
@@ -980,17 +1007,28 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           {/* Fixed Header */}
           <header
             className={cn(
-              'bg-light-50 fixed top-0 right-0 z-20 flex h-[60px] items-center justify-between border-l border-white/10 px-3 shadow-sm transition-all duration-300 sm:px-4 lg:px-6',
+              'bg-light-50 fixed top-0 right-0 z-20 flex h-[60px] justify-between border-l border-white/10 px-3 shadow-sm transition-all duration-300 sm:px-4 lg:px-6',
+              isLawyerWorkplaceRoute ? 'items-stretch overflow-hidden' : 'items-center',
               'left-0 lg:left-18', // Mobile: full width, Desktop: margin for collapsed sidebar
               isOpenSideBar && 'lg:left-60' // Desktop: expanded sidebar
             )}
           >
-            {/* Left side: Menu button (mobile) + Search Bar */}
-            <div className="relative flex items-center gap-2 lg:gap-3">
+            {/* Left side: Menu button (mobile) + Search Bar or Lawyer Workplace nav */}
+            <div
+              className={cn(
+                'relative flex gap-2 lg:gap-3',
+                isLawyerWorkplaceRoute
+                  ? 'min-w-0 flex-1 items-stretch self-stretch overflow-hidden'
+                  : 'items-center'
+              )}
+            >
               {/* Mobile menu button */}
               <button
                 onClick={toggleSidebar}
-                className="focus:ring-primary-500 group flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-gray-200 bg-white shadow-sm transition-all duration-200 hover:border-gray-300 hover:bg-gray-50 hover:shadow-md focus:ring-2 focus:ring-offset-2 focus:outline-none active:bg-gray-100 active:shadow-sm disabled:cursor-not-allowed disabled:opacity-50 lg:hidden"
+                className={cn(
+                  'focus:ring-primary-500 group flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-gray-200 bg-white shadow-sm transition-all duration-200 hover:border-gray-300 hover:bg-gray-50 hover:shadow-md focus:ring-2 focus:ring-offset-2 focus:outline-none active:bg-gray-100 active:shadow-sm disabled:cursor-not-allowed disabled:opacity-50 lg:hidden',
+                  isLawyerWorkplaceRoute && 'self-center'
+                )}
                 aria-label="Toggle menu"
               >
                 <Icons.Menu11
@@ -1000,36 +1038,39 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                 />
               </button>
 
-              {/* Search Bar with Results */}
-              <div className="relative flex items-center gap-2" ref={searchContainerRef}>
-                <SearchBar
-                  placeholder={t('search.placeholder')}
-                  searchOptions={searchOptions}
-                  defaultSearchType="phone"
-                  onSearch={handleSearch}
-                  onSearchChange={handleSearchChange}
-                  isLoading={isSearching}
-                  value={localSearchQuery}
-                  searchTypeValue={localSearchType}
-                />
-                {showSearchDropdown && (
-                  <SearchResults
-                    query={localSearchQuery}
-                    searchType={localSearchType}
-                    results={searchResults}
+              {isLawyerWorkplaceRoute ? (
+                <LawyerWorkplaceHeaderNav />
+              ) : (
+                <div className="relative flex items-center gap-2" ref={searchContainerRef}>
+                  <SearchBar
+                    placeholder={t('search.placeholder')}
+                    searchOptions={searchOptions}
+                    defaultSearchType="phone"
+                    onSearch={handleSearch}
+                    onSearchChange={handleSearchChange}
                     isLoading={isSearching}
-                    error={searchError}
-                    hint={searchHint}
-                    onViewAll={handleViewAllResults}
-                    onResultClick={handleResultClick}
+                    value={localSearchQuery}
+                    searchTypeValue={localSearchType}
                   />
-                )}
-              </div>
+                  {showSearchDropdown && (
+                    <SearchResults
+                      query={localSearchQuery}
+                      searchType={localSearchType}
+                      results={searchResults}
+                      isLoading={isSearching}
+                      error={searchError}
+                      hint={searchHint}
+                      onViewAll={handleViewAllResults}
+                      onResultClick={handleResultClick}
+                    />
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Right side: Desktop - individual buttons, Mobile - grouped dropdown */}
             {/* Desktop: Project Selector, Language Switcher and User Profile */}
-            <div className="hidden items-center gap-3 lg:flex">
+            <div className="hidden shrink-0 items-center gap-3 self-center lg:flex">
               <MinimizedCallBubble />
               <MinimizedChainExecutorBubble />
               <NotificationBell />
@@ -1038,7 +1079,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             </div>
 
             {/* Mobile: Notification bell + dropdown menu */}
-            <div className="flex items-center gap-2 lg:hidden">
+            <div className="flex shrink-0 items-center gap-1.5 self-center sm:gap-2 lg:hidden">
               <MinimizedCallBubble />
               <MinimizedChainExecutorBubble />
               <NotificationBell />
@@ -1048,7 +1089,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           </header>
 
           {/* Scrollable Page Content with top padding for fixed header */}
-          <main className="min-h-screen overflow-y-auto px-4 pt-[80px] pb-4 sm:px-6 sm:pb-6 lg:px-[28px] lg:pb-[20px]">
+          <main
+            className={cn(
+              'min-h-screen overflow-y-auto px-4 pt-[80px] pb-4 sm:px-6 sm:pb-6 lg:px-[28px] lg:pb-[20px]',
+              isLawyerWorkplaceRoute && 'overflow-x-hidden'
+            )}
+          >
             {children}
           </main>
         </div>
