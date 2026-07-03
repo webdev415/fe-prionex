@@ -684,7 +684,9 @@
             "documentType": "Тип документа",
             "documentName": "Назва документа",
             "documentNamePlaceholder": "Введіть назву документа",
-            "client": "Клієнт · Договір",
+            "client": "Клієнт",
+            "contract": "Договір",
+            "selectClientFirst": "Спочатку оберіть клієнта",
             "selectClient": "Оберіть клієнта",
             "clientSearchHint": "Введіть 2+ символи для пошуку…",
             "assignee": "Виконавець",
@@ -702,7 +704,9 @@
             "dropHint": "Перетягніть або натисніть для завантаження PDF, DOC або зображення",
             "documentName": "Назва документа",
             "documentNamePlaceholder": "Введіть назву документа",
-            "client": "Клієнт · Договір",
+            "client": "Клієнт",
+            "contract": "Договір",
+            "selectClientFirst": "Спочатку оберіть клієнта",
             "selectClient": "Оберіть клієнта",
             "relatedLetter": "Пов’язаний лист (необов’язково)",
             "relatedLetterPlaceholder": "напр. IN-2026-142",
@@ -1073,7 +1077,7 @@
         "expand": "Розгорнути банер робочого місця"
       },
       "footer": {
-        "syncHint": "Email Service · синхронізація щогодини",
+        "syncHint": "Email Service · {{interval}}",
         "mailboxes": "6 скриньок підключено",
         "mailboxesCount": "{{count}} скриньок підключено"
       }

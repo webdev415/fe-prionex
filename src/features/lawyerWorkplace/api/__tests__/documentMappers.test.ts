@@ -2,8 +2,23 @@ import { describe, expect, it } from 'vitest'
 import { mapLegalDocumentItem } from '../documentMappers'
 import type { LegalDocumentListItem } from '../types'
 
+const clientLookup = {
+  clientsById: new Map([
+    [
+      111,
+      {
+        id: 111,
+        first_name: 'Ivan',
+        last_name: 'Bezzub',
+        legacy_id: '1971389989240',
+      } as never,
+    ],
+  ]),
+  lawyersByUserId: new Map(),
+}
+
 describe('mapLegalDocumentItem contract display', () => {
-  it('shows stored contract_number and does not fall back to legacy_id', () => {
+  it('shows stored contract_number and formats client as CL-code · name', () => {
     const row = mapLegalDocumentItem(
       {
         id: 'doc-1',
@@ -18,22 +33,10 @@ describe('mapLegalDocumentItem contract display', () => {
         filename: 'reply.eml',
         source_message_id: null,
       } as LegalDocumentListItem,
-      {
-        clientsById: new Map([
-          [
-            111,
-            {
-              id: 111,
-              first_name: 'Client-111',
-              last_name: 'Bezzub',
-              legacy_id: '1971389989240',
-            } as never,
-          ],
-        ]),
-        lawyersByUserId: new Map(),
-      }
+      clientLookup
     )
 
+    expect(row.clientName).toBe('CL-00111 · Ivan Bezzub')
     expect(row.contractId).toBe('27427')
   })
 
@@ -52,20 +55,7 @@ describe('mapLegalDocumentItem contract display', () => {
         filename: 'reply.eml',
         source_message_id: null,
       } as LegalDocumentListItem,
-      {
-        clientsById: new Map([
-          [
-            111,
-            {
-              id: 111,
-              first_name: 'Client-111',
-              last_name: 'Bezzub',
-              legacy_id: '1971389989240',
-            } as never,
-          ],
-        ]),
-        lawyersByUserId: new Map(),
-      }
+      clientLookup
     )
 
     expect(row.contractId).toBe('—')

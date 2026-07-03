@@ -168,7 +168,9 @@ vi.mock('@/features/lawyerWorkplace/api/legalApi', () => ({
       })
     ),
     listSettingsMailboxes: vi.fn(() => Promise.resolve(emptyList)),
-    getSyncSettings: vi.fn(() => Promise.resolve({ sync_interval: '1h', last_synced_at: null })),
+    getSyncSettings: vi.fn(() =>
+      Promise.resolve({ sync_interval: '15m', last_synced_at: '2026-07-03T04:00:00Z' })
+    ),
     listReplyTemplates: vi.fn(() => Promise.resolve(emptyList)),
     getReplyDraft: vi.fn(() =>
       Promise.resolve({
@@ -228,6 +230,7 @@ describe('LawyerWorkplacePage smoke', () => {
     expect(await screen.findByText('Incoming')).toBeInTheDocument()
     expect(await screen.findByText('01 / 1', {}, { timeout: 3000 })).toBeInTheDocument()
     expect(screen.queryByText('Inbox is empty')).not.toBeInTheDocument()
+    expect(await screen.findByText(/Every 15 minutes/)).toBeInTheDocument()
   })
 
   it('renders kanban tab when user has view_legal_kanban', async () => {

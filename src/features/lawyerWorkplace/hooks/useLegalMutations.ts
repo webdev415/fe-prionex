@@ -23,6 +23,10 @@ import type {
 } from '../api/types'
 import { legalWorkplaceKeys } from './useLegalInbox'
 
+function invalidateLegalDocuments(queryClient: ReturnType<typeof useQueryClient>) {
+  queryClient.invalidateQueries({ queryKey: legalWorkplaceKeys.documents() })
+}
+
 export function useCreateLegalLetterType() {
   const queryClient = useQueryClient()
 
@@ -224,6 +228,9 @@ export function useReplyToLegalThread() {
         queryKey: legalWorkplaceKeys.message(data.message_id),
       })
       queryClient.invalidateQueries({ queryKey: legalWorkplaceKeys.messages() })
+      if (data.legal_document_id || data.legal_document_number) {
+        invalidateLegalDocuments(queryClient)
+      }
       if (data.legal_document_number) {
         toast.success(`EDO registered: ${data.legal_document_number}`)
       } else {
@@ -247,6 +254,9 @@ export function useSendOutgoingLetter() {
         queryKey: legalWorkplaceKeys.message(data.message_id),
       })
       queryClient.invalidateQueries({ queryKey: legalWorkplaceKeys.messages() })
+      if (data.legal_document_id || data.legal_document_number) {
+        invalidateLegalDocuments(queryClient)
+      }
       if (data.legal_document_number) {
         toast.success(`EDO registered: ${data.legal_document_number}`)
       } else {
@@ -296,6 +306,8 @@ export function usePatchLegalKanbanTaskMetadata() {
     }) => legalApi.patchKanbanTask(taskId, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: legalWorkplaceKeys.kanban() })
+      queryClient.invalidateQueries({ queryKey: legalWorkplaceKeys.inbox() })
+      queryClient.invalidateQueries({ queryKey: legalWorkplaceKeys.messages() })
     },
     onError: (error) => toast.error(getErrorMessage(error)),
   })
@@ -309,15 +321,13 @@ export function useCreateLegalKanbanTask() {
       legalApi.createKanbanTask(payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: legalWorkplaceKeys.kanban() })
+      queryClient.invalidateQueries({ queryKey: legalWorkplaceKeys.inbox() })
+      queryClient.invalidateQueries({ queryKey: legalWorkplaceKeys.threads() })
       queryClient.invalidateQueries({ queryKey: ['tasks', 'my-tasks'] })
       toast.success('Task created')
     },
     onError: (error) => toast.error(getErrorMessage(error)),
   })
-}
-
-function invalidateLegalDocuments(queryClient: ReturnType<typeof useQueryClient>) {
-  queryClient.invalidateQueries({ queryKey: legalWorkplaceKeys.documents() })
 }
 
 export function useUploadIncomingLegalDocument() {

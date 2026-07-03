@@ -9,11 +9,9 @@ import {
 } from '@/components/ui/DropdownMenu'
 import { Label } from '@/components/ui/Label'
 import { Modal, ModalContent, ModalFooter, ModalHeader } from '@/components/ui/Modal'
-import { SearchableSelect } from '@/components/ui/SearchableSelect'
-import { useClients } from '@/features/clients/hooks/useClients'
-import { useLegalLawyers } from '@/features/lawyerWorkplace'
+import { DocumentClientContractFields } from './DocumentClientContractFields'
+import { useLegalLawyers, useDocumentClientContract } from '@/features/lawyerWorkplace'
 import { useAuthStore } from '@/stores/authStore'
-import { useDebounce } from '@/hooks/useDebounce'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 
@@ -21,17 +19,6 @@ function stripFileExtension(filename: string): string {
   const lastDot = filename.lastIndexOf('.')
   if (lastDot <= 0) return filename
   return filename.slice(0, lastDot)
-}
-
-function formatClientOption(client: {
-  id: number
-  first_name: string
-  last_name: string
-  legacy_id?: string | null
-}): { id: string; name: string } {
-  const code = client.legacy_id?.trim() || `CL-${String(client.id).padStart(5, '0')}`
-  const name = [client.first_name, client.last_name].filter(Boolean).join(' ')
-  return { id: String(client.id), name: name ? `${code} · ${name}` : code }
 }
 
 interface AddIncomingDocumentModalProps {
@@ -62,23 +49,21 @@ export function AddIncomingDocumentModal({
   const [file, setFile] = useState<File | null>(null)
   const [documentName, setDocumentName] = useState('')
   const [clientId, setClientId] = useState('')
-  const [clientSearch, setClientSearch] = useState('')
-  const [selectedClientLegacyId, setSelectedClientLegacyId] = useState<string | null>(null)
   const [assigneeUserId, setAssigneeUserId] = useState<number | null>(null)
   const [relatedLetterNumber, setRelatedLetterNumber] = useState('')
   const [dragOver, setDragOver] = useState(false)
 
-  const debouncedClientSearch = useDebounce(clientSearch, 300)
-  const { data: clientsData, isFetching: clientsLoading } = useClients(
-    { q: debouncedClientSearch, limit: 20 },
-    { enabled: open && debouncedClientSearch.length >= 2 }
-  )
+  const {
+    contracts,
+    contractsLoading,
+    contractNumber,
+    setContractNumber,
+    requiresSelection,
+    hasValidContract,
+    resetContract,
+  } = useDocumentClientContract(clientId, open)
 
   const lawyers = useMemo(() => lawyersData?.items ?? [], [lawyersData?.items])
-  const clientOptions = useMemo(
-    () => (clientsData?.items ?? []).map(formatClientOption),
-    [clientsData?.items]
-  )
 
   const selectedLawyer =
     lawyers.find((lawyer) => lawyer.user_id === assigneeUserId) ?? lawyers[0] ?? null
@@ -89,15 +74,14 @@ export function AddIncomingDocumentModal({
       setFile(null)
       setDocumentName('')
       setClientId('')
-      setClientSearch('')
-      setSelectedClientLegacyId(null)
+      resetContract()
       setRelatedLetterNumber('')
       setDragOver(false)
       const defaultLawyer =
         lawyers.find((lawyer) => lawyer.user_id === currentUserId) ?? lawyers[0] ?? null
       setAssigneeUserId(defaultLawyer?.user_id ?? null)
     })
-  }, [currentUserId, lawyers, open])
+  }, [currentUserId, lawyers, open, resetContract])
 
   const handleFileSelect = (selectedFile: File | null) => {
     if (!selectedFile) return
@@ -106,7 +90,12 @@ export function AddIncomingDocumentModal({
   }
 
   const canSubmit = Boolean(
-    file && documentName.trim() && clientId && assigneeUserId != null && lawyers.length > 0
+    file &&
+    documentName.trim() &&
+    clientId &&
+    assigneeUserId != null &&
+    lawyers.length > 0 &&
+    hasValidContract
   )
 
   const handleSubmit = async () => {
@@ -117,7 +106,7 @@ export function AddIncomingDocumentModal({
       assignedToUserId: assigneeUserId,
       relatedLetterNumber: relatedLetterNumber.trim() || undefined,
       file,
-      contractNumber: selectedClientLegacyId,
+      contractNumber: contractNumber.trim() || null,
     })
     onClose()
   }
@@ -206,31 +195,17 @@ export function AddIncomingDocumentModal({
           />
         </div>
 
-        <div className="flex flex-col gap-2">
-          <Label className="text-dark-500 text-[12px] font-normal">
-            {t('pages.lawyerWorkplace.documents.modals.incoming.client', 'Client · Contract')}
-          </Label>
-          <SearchableSelect
-            options={clientOptions}
-            value={clientId}
-            onValueChange={(val) => {
-              setClientId(val)
-              const found = clientsData?.items.find((c) => String(c.id) === val)
-              setSelectedClientLegacyId(found?.legacy_id?.trim() || null)
-              setClientSearch('')
-            }}
-            onSearchChange={setClientSearch}
-            isLoading={clientsLoading}
-            emptySearchHint={t(
-              'pages.lawyerWorkplace.documents.modals.incoming.clientSearchHint',
-              'Type 2+ characters to search…'
-            )}
-            placeholder={t(
-              'pages.lawyerWorkplace.documents.modals.incoming.selectClient',
-              'Select client'
-            )}
-          />
-        </div>
+        <DocumentClientContractFields
+          scope="incoming"
+          enabled={open}
+          clientId={clientId}
+          onClientIdChange={setClientId}
+          contracts={contracts}
+          contractsLoading={contractsLoading}
+          contractNumber={contractNumber}
+          onContractNumberChange={setContractNumber}
+          requiresSelection={requiresSelection}
+        />
 
         <div className="flex flex-col gap-2">
           <Label className="text-dark-500 text-[12px] font-normal">

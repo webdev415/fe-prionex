@@ -1,3 +1,4 @@
+import type { TFunction } from 'i18next'
 import type {
   LetterTypeColorOption,
   LawyerPriorityRole,
@@ -59,6 +60,16 @@ export const SYNC_INTERVAL_OPTIONS: {
     fallback: 'Daily',
   },
 ]
+
+export function getSyncIntervalLabel(
+  interval: SyncInterval | undefined,
+  t: TFunction<'common'>
+): string {
+  const option =
+    SYNC_INTERVAL_OPTIONS.find((item) => item.id === interval) ??
+    SYNC_INTERVAL_OPTIONS.find((item) => item.id === '1h')
+  return t(option!.labelKey, option!.fallback)
+}
 
 export const ROUTING_MATCH_OPTIONS: {
   id: RoutingMatchType

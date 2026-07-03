@@ -67,6 +67,7 @@ export interface LegalInboxParams {
   direction?: string
   mailbox_id?: string
   include_quarantined?: boolean
+  quarantine_only?: boolean
   q?: string
 }
 
@@ -104,7 +105,10 @@ export interface LegalMessageDetail {
   suggested_lawyer_user_id: number | null
   suggested_contract_number?: string | null
   confirmed_contract_number?: string | null
+  confirmed_letter_type_id?: string | null
   auto_process_eligible: boolean
+  legal_task_id?: number | null
+  updated_at?: string | null
   attachments: LegalAttachmentItem[]
 }
 

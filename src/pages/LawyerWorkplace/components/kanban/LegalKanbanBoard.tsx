@@ -1,5 +1,14 @@
-import { useCallback, useMemo, useRef, useState, type DragEvent } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type DragEvent,
+} from 'react'
 import { useTranslation } from 'react-i18next'
+import { useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/Button'
 import {
@@ -46,13 +55,23 @@ import { CreateKanbanTaskModal } from './CreateKanbanTaskModal'
 import { KanbanTabSkeleton } from './KanbanTabSkeleton'
 import { ThreadDrawer } from './ThreadDrawer'
 
+function parseTaskIdFromSearch(params: URLSearchParams): number | null {
+  const raw = params.get('taskId')
+  if (!raw) return null
+  const id = Number.parseInt(raw, 10)
+  return Number.isFinite(id) ? id : null
+}
+
 export function LegalKanbanBoard() {
   const { t } = useTranslation('common')
   const { isKanbanGrid, showWorkspaceBanner } = useLawyerWorkplaceLayout()
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const { data: lawyersData } = useLegalLawyers({ scopedToActiveProject: true })
   const { data: letterTypesData } = useLegalLetterTypes()
-  const [deadlineFilter, setDeadlineFilter] = useState<DeadlineFilter>('this_week')
+  const [searchParams, setSearchParams] = useSearchParams()
+  const [deadlineFilter, setDeadlineFilter] = useState<DeadlineFilter>(() =>
+    parseTaskIdFromSearch(searchParams) != null ? 'this_month' : 'this_week'
+  )
   const [lawyerFilter, setLawyerFilter] = useState<LawyerFilterId>('all')
   const [typeFilter, setTypeFilter] = useState<TypeFilterId>('all')
   const [createTaskOpen, setCreateTaskOpen] = useState(false)
@@ -60,6 +79,21 @@ export function LegalKanbanBoard() {
   const [dragOverColumn, setDragOverColumn] = useState<KanbanColumnId | null>(null)
   const [draggingTaskId, setDraggingTaskId] = useState<string | null>(null)
   const [localOverrides, setLocalOverrides] = useState<KanbanTask[] | null>(null)
+  const [focusTaskId, setFocusTaskId] = useState<number | null>(() =>
+    parseTaskIdFromSearch(searchParams)
+  )
+
+  useLayoutEffect(() => {
+    setSearchParams(
+      (current) => {
+        if (!current.has('taskId')) return current
+        const next = new URLSearchParams(current)
+        next.delete('taskId')
+        return next
+      },
+      { replace: true }
+    )
+  }, [setSearchParams])
 
   const assignedToUserId =
     lawyerFilter === 'all' ? undefined : Number.parseInt(lawyerFilter, 10) || undefined
@@ -104,6 +138,53 @@ export function LegalKanbanBoard() {
       ),
     [columns, lawyerFilter, typeFilter, lawyerFilterOptions, deadlineFilter]
   )
+
+  const displayColumns = useMemo(() => {
+    if (focusTaskId == null) return filteredColumns
+
+    const focusTask = baseTasks.find((task) => task.taskId === focusTaskId)
+    if (!focusTask) return filteredColumns
+
+    const isVisible = filteredColumns.some((col) =>
+      col.tasks.some((task) => task.taskId === focusTaskId)
+    )
+    if (isVisible) return filteredColumns
+
+    return filteredColumns.map((col) =>
+      col.id === focusTask.columnId
+        ? {
+            ...col,
+            tasks: col.tasks.some((task) => task.taskId === focusTaskId)
+              ? col.tasks
+              : [...col.tasks, focusTask],
+          }
+        : col
+    )
+  }, [baseTasks, filteredColumns, focusTaskId])
+
+  useEffect(() => {
+    if (focusTaskId == null || isLoading) return
+
+    const exists = baseTasks.some((task) => task.taskId === focusTaskId)
+    if (!exists) {
+      const timer = window.setTimeout(() => {
+        setFocusTaskId(null)
+        toast.error(
+          t('pages.lawyerWorkplace.kanban.taskNotFound', 'Kanban task could not be found')
+        )
+      }, 0)
+      return () => window.clearTimeout(timer)
+    }
+
+    const timer = window.setTimeout(() => {
+      document
+        .querySelector(`[data-kanban-task-id="${focusTaskId}"]`)
+        ?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      setFocusTaskId(null)
+    }, 150)
+
+    return () => window.clearTimeout(timer)
+  }, [focusTaskId, isLoading, baseTasks, displayColumns, t])
 
   const totalActive = useMemo(
     () => baseTasks.filter((task) => task.columnId !== 'completed').length,
@@ -415,7 +496,7 @@ export function LegalKanbanBoard() {
                 : 'flex min-h-full w-max snap-x snap-mandatory items-stretch gap-3 lg:gap-4'
             )}
           >
-            {filteredColumns.map((col) => (
+            {displayColumns.map((col) => (
               <div
                 key={col.id}
                 className={cn(
@@ -452,7 +533,7 @@ export function LegalKanbanBoard() {
       {!isKanbanGrid && !isLoading && !isError && apiTasks.length > 0 && filteredTaskCount > 0 && (
         <KanbanBoardScrollNavigator
           scrollContainerRef={scrollContainerRef}
-          columns={filteredColumns}
+          columns={displayColumns}
         />
       )}
     </div>

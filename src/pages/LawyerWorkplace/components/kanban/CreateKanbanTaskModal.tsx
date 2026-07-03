@@ -12,19 +12,16 @@ import { Label } from '@/components/ui/Label'
 import { Modal, ModalContent, ModalFooter, ModalHeader } from '@/components/ui/Modal'
 import { SearchableSelect } from '@/components/ui/SearchableSelect'
 import { Textarea } from '@/components/ui/Textarea'
-import { useClients } from '@/features/clients/hooks/useClients'
-import { KANBAN_PRIORITY_TO_TASK } from '@/features/lawyerWorkplace/api/kanbanMappers'
 import { useCreateLegalKanbanTask } from '@/features/lawyerWorkplace/hooks/useLegalMutations'
 import {
   useLegalLawyers,
   useLegalLetterTypes,
 } from '@/features/lawyerWorkplace/hooks/useLegalInbox'
+import { useLegalClientSearch } from '@/features/lawyerWorkplace/hooks/useLegalClientSearch'
 import { useDebounce } from '@/hooks/useDebounce'
 import { Icons } from '@/lib/icons'
 import type { KanbanTaskType } from '../../kanban/kanbanData'
-import { CREATE_TASK_PRIORITIES, type KanbanTaskPriority } from './constants'
 import { KanbanTypeBadge } from './KanbanTypeBadge'
-import { KanbanPriorityOption } from './KanbanPriorityOption'
 
 interface CreateKanbanTaskModalProps {
   open: boolean
@@ -56,17 +53,6 @@ function deadlineToIso(date: Date): string {
   const next = new Date(date)
   next.setHours(12, 0, 0, 0)
   return next.toISOString()
-}
-
-function formatClientOption(client: {
-  id: number
-  first_name: string
-  last_name: string
-  legacy_id?: string | null
-}): { id: string; name: string } {
-  const code = client.legacy_id?.trim() || `CL-${String(client.id).padStart(5, '0')}`
-  const name = [client.first_name, client.last_name].filter(Boolean).join(' ')
-  return { id: String(client.id), name: name ? `${code} · ${name}` : code }
 }
 
 function renderLetterTypeOption(letterTypeId: string, name: string) {
@@ -138,12 +124,11 @@ export function CreateKanbanTaskModal({ open, onClose }: CreateKanbanTaskModalPr
   const [clientId, setClientId] = useState('')
   const [clientSearch, setClientSearch] = useState('')
   const [deadline, setDeadline] = useState<Date | null>(getTomorrowDate())
-  const [priority, setPriority] = useState<KanbanTaskPriority>('high')
   const [description, setDescription] = useState('')
 
   const debouncedClientSearch = useDebounce(clientSearch, 300)
-  const { data: clientsData, isFetching: clientsLoading } = useClients(
-    { q: debouncedClientSearch, limit: 20 },
+  const { data: clientsData, isFetching: clientsLoading } = useLegalClientSearch(
+    debouncedClientSearch,
     { enabled: open && debouncedClientSearch.length >= 2 }
   )
 
@@ -153,7 +138,12 @@ export function CreateKanbanTaskModal({ open, onClose }: CreateKanbanTaskModalPr
     [letterTypesData?.items]
   )
   const clientOptions = useMemo(
-    () => (clientsData?.items ?? []).map(formatClientOption),
+    () =>
+      (clientsData?.items ?? []).map((client) => {
+        const code = `CL-${String(client.id).padStart(5, '0')}`
+        const name = [client.first_name, client.last_name].filter(Boolean).join(' ')
+        return { id: String(client.id), name: name ? `${code} · ${name}` : code }
+      }),
     [clientsData?.items]
   )
 
@@ -165,14 +155,12 @@ export function CreateKanbanTaskModal({ open, onClose }: CreateKanbanTaskModalPr
       setClientId('')
       setClientSearch('')
       setDeadline(getTomorrowDate())
-      setPriority('high')
       setDescription('')
     })
   }, [letterTypes, lawyers, open])
 
   const selectedLawyer = lawyers.find((item) => item.user_id === lawyerUserId)
   const selectedLetterType = letterTypes.find((item) => item.id === letterTypeId)
-  const selectedPriority = CREATE_TASK_PRIORITIES.find((item) => item.id === priority)
 
   const optionsLoading = lawyersLoading || letterTypesLoading
   const canSubmit =
@@ -180,8 +168,7 @@ export function CreateKanbanTaskModal({ open, onClose }: CreateKanbanTaskModalPr
     !createTask.isPending &&
     lawyerUserId != null &&
     letterTypeId != null &&
-    deadline != null &&
-    description.trim().length > 0
+    deadline != null
 
   const handleCreate = () => {
     if (!canSubmit || lawyerUserId == null || letterTypeId == null || deadline == null) {
@@ -198,7 +185,6 @@ export function CreateKanbanTaskModal({ open, onClose }: CreateKanbanTaskModalPr
         client_id: resolvedClientId,
         assigned_to_user_id: lawyerUserId,
         due_date: deadlineToIso(deadline),
-        priority: KANBAN_PRIORITY_TO_TASK[priority] ?? 'normal',
         description: description.trim() || null,
       },
       {
@@ -311,25 +297,12 @@ export function CreateKanbanTaskModal({ open, onClose }: CreateKanbanTaskModalPr
             />
           </div>
 
-          <FormSelect
-            label={t('pages.lawyerWorkplace.kanban.createTask.priority', 'Priority')}
-            value={
-              selectedPriority ? (
-                <KanbanPriorityOption priority={selectedPriority.id} />
-              ) : (
-                <KanbanPriorityOption priority="high" />
-              )
-            }
-            onSelect={(key) => setPriority(key as KanbanTaskPriority)}
-            items={CREATE_TASK_PRIORITIES.map((item) => ({
-              key: item.id,
-              content: <KanbanPriorityOption priority={item.id} />,
-            }))}
-          />
-
           <div className="flex w-full flex-col items-start gap-2">
             <Label className="text-dark-500 text-[12px] font-normal">
               {t('pages.lawyerWorkplace.kanban.createTask.description', 'Description')}
+              <span className="text-light-600 ml-1 font-light">
+                ({t('pages.lawyerWorkplace.kanban.createTask.descriptionOptional', 'optional')})
+              </span>
             </Label>
             <Textarea
               value={description}

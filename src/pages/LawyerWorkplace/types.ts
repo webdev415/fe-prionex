@@ -73,6 +73,11 @@ export interface LetterDetail extends LetterListItem {
   parameters: LetterParameters
   replyDraft: string
   replyContext: LetterReplyContext
+  legalTaskId?: number | null
+  confirmedLetterTypeId?: string | null
+  suggestedLetterTypeId?: string | null
+  processingStatus?: string
+  updatedAt?: string | null
 }
 
 export interface LetterReplyContext {

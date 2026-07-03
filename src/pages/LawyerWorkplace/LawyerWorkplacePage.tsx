@@ -2,11 +2,17 @@
  * Lawyer Workplace (KAN-486)
  */
 
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router-dom'
+import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
-import { useLegalLetterDetail, useMappedLegalInbox } from '@/features/lawyerWorkplace'
+import {
+  useLegalLetterDetail,
+  useMappedLegalInbox,
+  useLegalSyncSettings,
+} from '@/features/lawyerWorkplace'
+import { mapSyncSettingsToUi } from '@/features/lawyerWorkplace/api/settingsMappers'
 import { useCanAccessLegalKanban } from '@/features/lawyerWorkplace/hooks/useLegalPermissions'
 import { IncomingListPanel } from './components/inbox/IncomingListPanel'
 import { EmailThreadPanel } from './components/thread/EmailThreadPanel'
@@ -18,6 +24,7 @@ import { LegalSettingsTab } from './components/settings/LegalSettingsTab'
 import { NewOutgoingLetterModal } from './components/thread/NewOutgoingLetterModal'
 import { LawyerWorkplaceLayoutProvider } from './context/LawyerWorkplaceLayoutProvider'
 import { useLawyerWorkplaceLayout } from './context/lawyerWorkplaceLayout'
+import { getSyncIntervalLabel } from './components/settings/constants'
 import type { IncomingFolder, IncomingMailboxFilter, LawyerWorkplaceTab } from './types'
 
 const WORKPLACE_TABS: LawyerWorkplaceTab[] = ['inbox', 'kanban', 'documents', 'settings']
@@ -99,6 +106,15 @@ function LawyerWorkplacePageContent() {
     enabled: activeTab === 'inbox',
   })
 
+  const { data: syncSettingsData } = useLegalSyncSettings({ enabled: activeTab === 'inbox' })
+
+  const syncIntervalLabel = useMemo(() => {
+    if (!syncSettingsData) {
+      return getSyncIntervalLabel('1h', t)
+    }
+    return getSyncIntervalLabel(mapSyncSettingsToUi(syncSettingsData).interval, t)
+  }, [syncSettingsData, t])
+
   const activeLetterId = useMemo(() => {
     if (inboxLoading || filteredLetters.length === 0) return null
     if (selectedLetterId && filteredLetters.some((letter) => letter.id === selectedLetterId)) {
@@ -135,6 +151,25 @@ function LawyerWorkplacePageContent() {
   const handleConfirmLetter = (_letterId: string) => {
     closeParameters()
   }
+
+  const handleViewKanbanTask = useCallback(
+    (taskId: number) => {
+      if (!canAccessKanban) {
+        toast.error(
+          t(
+            'pages.lawyerWorkplace.parameters.kanbanAccessDenied',
+            'You do not have access to the kanban board'
+          )
+        )
+        return
+      }
+      const next = new URLSearchParams(searchParams)
+      next.set('tab', 'kanban')
+      next.set('taskId', String(taskId))
+      setSearchParams(next)
+    },
+    [canAccessKanban, searchParams, setSearchParams, t]
+  )
 
   const showParametersPanel = selectedLetter !== null
 
@@ -231,7 +266,11 @@ function LawyerWorkplacePageContent() {
 
             {isWide && showParametersPanel && (
               <div className="h-full min-w-0 overflow-hidden">
-                <LetterParametersPanel letter={selectedLetter} onConfirm={handleConfirmLetter} />
+                <LetterParametersPanel
+                  letter={selectedLetter}
+                  onConfirm={handleConfirmLetter}
+                  onViewKanbanTask={handleViewKanbanTask}
+                />
               </div>
             )}
 
@@ -241,6 +280,7 @@ function LawyerWorkplacePageContent() {
                   letter={selectedLetter}
                   onClose={closeParameters}
                   onConfirm={handleConfirmLetter}
+                  onViewKanbanTask={handleViewKanbanTask}
                 />
               </div>
             )}
@@ -258,6 +298,7 @@ function LawyerWorkplacePageContent() {
                     letter={selectedLetter}
                     onClose={closeParameters}
                     onConfirm={handleConfirmLetter}
+                    onViewKanbanTask={handleViewKanbanTask}
                   />
                 </div>
               </>
@@ -290,7 +331,12 @@ function LawyerWorkplacePageContent() {
         <div className="flex shrink-0 flex-col gap-1 border-t border-gray-100 bg-white px-3 py-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3 sm:px-5">
           <div className="text-light-700 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] sm:text-[11px]">
             <span className="bg-success-700 h-2 w-2 shrink-0 rounded-full" aria-hidden="true" />
-            <span>{t('pages.lawyerWorkplace.footer.syncHint', 'Email Service · sync hourly')}</span>
+            <span>
+              {t('pages.lawyerWorkplace.footer.syncHint', {
+                interval: syncIntervalLabel,
+                defaultValue: `Email Service · ${syncIntervalLabel}`,
+              })}
+            </span>
             <span className="hidden text-gray-300 sm:inline">|</span>
             <span className="min-w-0 truncate">
               {t('pages.lawyerWorkplace.footer.mailboxesCount', {

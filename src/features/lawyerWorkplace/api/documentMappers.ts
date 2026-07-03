@@ -27,8 +27,9 @@ function resolveClientName(clientId: number | null, lookup: LegalDocumentLookup)
   if (clientId == null) return '—'
   const client = lookup.clientsById.get(clientId)
   if (!client) return `Client #${clientId}`
-  const name = [client.first_name, client.last_name].filter(Boolean).join(' ')
-  return name || `Client #${clientId}`
+  const code = `CL-${String(client.id).padStart(5, '0')}`
+  const name = [client.first_name, client.middle_name, client.last_name].filter(Boolean).join(' ')
+  return name ? `${code} · ${name}` : code
 }
 
 function resolveContractId(

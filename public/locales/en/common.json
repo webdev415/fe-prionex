@@ -711,7 +711,9 @@
             "documentType": "Document type",
             "documentName": "Document name",
             "documentNamePlaceholder": "Enter document name",
-            "client": "Client · Contract",
+            "client": "Client",
+            "contract": "Contract",
+            "selectClientFirst": "Select a client to load contracts",
             "selectClient": "Select client",
             "clientSearchHint": "Type 2+ characters to search…",
             "assignee": "Assignee",
@@ -729,7 +731,9 @@
             "dropHint": "Drag & drop or click to upload PDF, DOC, or image",
             "documentName": "Document name",
             "documentNamePlaceholder": "Enter document name",
-            "client": "Client · Contract",
+            "client": "Client",
+            "contract": "Contract",
+            "selectClientFirst": "Select a client to load contracts",
             "selectClient": "Select client",
             "relatedLetter": "Related inbox letter (optional)",
             "relatedLetterPlaceholder": "e.g. IN-2026-142",
@@ -1091,6 +1095,8 @@
         "title": "Activity",
         "letterReceived": "Letter received",
         "classified": "Auto-classified",
+        "typeSuggested": "Type suggested",
+        "parametersConfirmed": "Parameters confirmed",
         "taskCreated": "Task created on kanban board"
       },
       "workspaceBanner": {
@@ -1104,7 +1110,7 @@
         "expand": "Expand workspace banner"
       },
       "footer": {
-        "syncHint": "Email Service · sync hourly",
+        "syncHint": "Email Service · {{interval}}",
         "mailboxes": "6 mailboxes connected",
         "mailboxesCount": "{{count}} mailboxes connected"
       }

@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useAuthStore } from '@/stores/authStore'
 import type { IncomingFolder, IncomingMailboxFilter } from '@/pages/LawyerWorkplace/types'
 import { legalApi } from '../api/legalApi'
+import { folderToInboxApiParams } from '../inboxFolderParams'
 import { buildLegalLookupContext, mapInboxItemToLetterListItem } from '../api/mappers'
 import type { LegalInboxParams, LegalDocumentListParams } from '../api/types'
 
@@ -201,17 +202,6 @@ export function useLegalTrainingExamples(
   })
 }
 
-// ── Folder → API params mapping ───────────────────────────────────────────────
-
-function folderToApiParams(folder: IncomingFolder): {
-  include_quarantined: boolean
-  direction?: string
-} {
-  if (folder === 'quarantine') return { include_quarantined: true }
-  if (folder === 'sent') return { include_quarantined: false, direction: 'outgoing' }
-  return { include_quarantined: false, direction: 'incoming' }
-}
-
 // "done" tab maps to a special backend value covering all completed statuses
 function filterToProcessingStatus(filter: IncomingMailboxFilter): string | undefined {
   if (filter === 'all') return undefined
@@ -232,7 +222,7 @@ export function useMappedLegalInbox(options: {
 }) {
   const enabled = options.enabled !== false
 
-  const folderParams = folderToApiParams(options.activeFolder)
+  const folderParams = folderToInboxApiParams(options.activeFolder)
   const processingStatus = filterToProcessingStatus(options.activeFilter)
 
   const apiParams: LegalInboxParams = {

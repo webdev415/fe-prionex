@@ -21,6 +21,7 @@ import {
   usePatchMessageSuggestions,
 } from '@/features/lawyerWorkplace'
 import {
+  buildLetterActivityLog,
   clientLookupFromLegalSearchItem,
   isLetterParametersReadOnly,
 } from '@/features/lawyerWorkplace/api/mappers'
@@ -234,16 +235,19 @@ export interface LetterParametersPanelProps {
   letter: LetterDetail | null
   onClose?: () => void
   onConfirm?: (letterId: string) => void
+  onViewKanbanTask?: (taskId: number) => void
 }
 
 function LetterParametersPanelContent({
   letter,
   onClose,
   onConfirm,
+  onViewKanbanTask,
 }: {
   letter: LetterDetail
   onClose?: () => void
   onConfirm?: (letterId: string) => void
+  onViewKanbanTask?: (taskId: number) => void
 }) {
   const { t, i18n } = useTranslation('common')
   const confirmMutation = useConfirmLetter()
@@ -592,22 +596,26 @@ function LetterParametersPanelContent({
     )
   }
 
-  const activityLog: ActivityLogEntry[] = [
-    {
-      timestamp: letter.receivedAt,
-      eventKey: 'pages.lawyerWorkplace.activityLog.letterReceived',
-      fallback: 'Letter received',
-    },
-    ...(p.letterType
-      ? [
-          {
-            timestamp: letter.receivedAt,
-            eventKey: 'pages.lawyerWorkplace.activityLog.classified',
-            fallback: 'Letter type suggested',
-          },
-        ]
-      : []),
-  ]
+  const activityLog = useMemo(
+    () =>
+      buildLetterActivityLog({
+        receivedAt: letter.receivedAt,
+        updatedAt: letter.updatedAt,
+        processingStatus: letter.processingStatus ?? status,
+        suggestedLetterTypeId: letter.suggestedLetterTypeId,
+        confirmedLetterTypeId: letter.confirmedLetterTypeId,
+        legalTaskId: letter.legalTaskId,
+      }),
+    [
+      letter.confirmedLetterTypeId,
+      letter.legalTaskId,
+      letter.processingStatus,
+      letter.receivedAt,
+      letter.suggestedLetterTypeId,
+      letter.updatedAt,
+      status,
+    ]
+  )
 
   if (isReadOnly) {
     // ── MODE B: Read-only view ─────────────────────────────────────────────────
@@ -666,24 +674,27 @@ function LetterParametersPanelContent({
           </ReadonlyField>
 
           {/* Link to kanban task */}
-          <div className="border-primary-200 bg-primary-50 flex w-full items-center justify-between rounded-lg border px-3 py-2.5">
-            <div className="flex items-center gap-2">
-              <Icons.CheckmarkSquare03
-                size={16}
-                strokeWidth={1.5}
-                className="text-primary-600 shrink-0"
-              />
-              <span className="text-primary-900 text-[12px] font-medium">
-                {t('pages.lawyerWorkplace.parameters.taskOnBoard', 'Task created on kanban')}
-              </span>
+          {letter.legalTaskId != null && (
+            <div className="border-primary-200 bg-primary-50 flex w-full items-center justify-between rounded-lg border px-3 py-2.5">
+              <div className="flex items-center gap-2">
+                <Icons.CheckmarkSquare03
+                  size={16}
+                  strokeWidth={1.5}
+                  className="text-primary-600 shrink-0"
+                />
+                <span className="text-primary-900 text-[12px] font-medium">
+                  {t('pages.lawyerWorkplace.parameters.taskOnBoard', 'Task created on kanban')}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => onViewKanbanTask?.(letter.legalTaskId!)}
+                className="text-primary-700 text-[11px] font-medium hover:underline"
+              >
+                {t('pages.lawyerWorkplace.parameters.viewTask', 'View →')}
+              </button>
             </div>
-            <button
-              type="button"
-              className="text-primary-700 text-[11px] font-medium hover:underline"
-            >
-              {t('pages.lawyerWorkplace.parameters.viewTask', 'View →')}
-            </button>
-          </div>
+          )}
 
           {/* Activity log */}
           <div className="flex w-full flex-col gap-2">
@@ -859,7 +870,12 @@ function LetterParametersPanelContent({
   )
 }
 
-export function LetterParametersPanel({ letter, onClose, onConfirm }: LetterParametersPanelProps) {
+export function LetterParametersPanel({
+  letter,
+  onClose,
+  onConfirm,
+  onViewKanbanTask,
+}: LetterParametersPanelProps) {
   const { t } = useTranslation('common')
 
   if (!letter) {
@@ -878,6 +894,7 @@ export function LetterParametersPanel({ letter, onClose, onConfirm }: LetterPara
       letter={letter}
       onClose={onClose}
       onConfirm={onConfirm}
+      onViewKanbanTask={onViewKanbanTask}
     />
   )
 }

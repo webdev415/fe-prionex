@@ -9,11 +9,9 @@ import {
 } from '@/components/ui/DropdownMenu'
 import { Label } from '@/components/ui/Label'
 import { Modal, ModalContent, ModalFooter, ModalHeader } from '@/components/ui/Modal'
-import { SearchableSelect } from '@/components/ui/SearchableSelect'
-import { useClients } from '@/features/clients/hooks/useClients'
-import { useLegalLawyers } from '@/features/lawyerWorkplace'
+import { DocumentClientContractFields } from './DocumentClientContractFields'
+import { useLegalLawyers, useDocumentClientContract } from '@/features/lawyerWorkplace'
 import { useAuthStore } from '@/stores/authStore'
-import { useDebounce } from '@/hooks/useDebounce'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 
@@ -38,21 +36,6 @@ const GENERATE_TYPE_OPTIONS: {
     badge: 'НБУ',
   },
 ]
-
-function formatClientOption(client: {
-  id: number
-  first_name: string
-  last_name: string
-  legacy_id?: string | null
-}): { id: string; name: string; contractNumber: string | null } {
-  const code = client.legacy_id?.trim() || `CL-${String(client.id).padStart(5, '0')}`
-  const name = [client.first_name, client.last_name].filter(Boolean).join(' ')
-  return {
-    id: String(client.id),
-    name: name ? `${code} · ${name}` : code,
-    contractNumber: client.legacy_id?.trim() || null,
-  }
-}
 
 interface GenerateDocumentModalProps {
   open: boolean
@@ -80,22 +63,19 @@ export function GenerateDocumentModal({
   const [documentType, setDocumentType] = useState<GenerateDocumentType>('outgoing')
   const [documentName, setDocumentName] = useState('')
   const [clientId, setClientId] = useState('')
-  const [clientSearch, setClientSearch] = useState('')
-  const [selectedClientLegacyId, setSelectedClientLegacyId] = useState<string | null>(null)
   const [assigneeUserId, setAssigneeUserId] = useState<number | null>(null)
 
-  const debouncedClientSearch = useDebounce(clientSearch, 300)
-  const { data: clientsData, isFetching: clientsLoading } = useClients(
-    { q: debouncedClientSearch, limit: 20 },
-    { enabled: open && debouncedClientSearch.length >= 2 }
-  )
+  const {
+    contracts,
+    contractsLoading,
+    contractNumber,
+    setContractNumber,
+    requiresSelection,
+    hasValidContract,
+    resetContract,
+  } = useDocumentClientContract(clientId, open)
 
   const lawyers = useMemo(() => lawyersData?.items ?? [], [lawyersData?.items])
-
-  const clientOptions = useMemo(
-    () => (clientsData?.items ?? []).map(formatClientOption),
-    [clientsData?.items]
-  )
 
   const selectedTypeOption =
     GENERATE_TYPE_OPTIONS.find((option) => option.id === documentType) ?? GENERATE_TYPE_OPTIONS[0]!
@@ -108,16 +88,19 @@ export function GenerateDocumentModal({
       setDocumentType('outgoing')
       setDocumentName('')
       setClientId('')
-      setClientSearch('')
-      setSelectedClientLegacyId(null)
+      resetContract()
       const defaultLawyer =
         lawyers.find((lawyer) => lawyer.user_id === currentUserId) ?? lawyers[0] ?? null
       setAssigneeUserId(defaultLawyer?.user_id ?? null)
     })
-  }, [currentUserId, lawyers, open])
+  }, [currentUserId, lawyers, open, resetContract])
 
   const canSubmit = Boolean(
-    documentName.trim() && clientId && assigneeUserId != null && lawyers.length > 0
+    documentName.trim() &&
+    clientId &&
+    assigneeUserId != null &&
+    lawyers.length > 0 &&
+    hasValidContract
   )
 
   const handleSubmit = async () => {
@@ -127,7 +110,7 @@ export function GenerateDocumentModal({
       title: documentName.trim(),
       clientId: Number.parseInt(clientId, 10),
       assignedToUserId: assigneeUserId,
-      contractNumber: selectedClientLegacyId,
+      contractNumber: contractNumber.trim() || null,
     })
     onClose()
   }
@@ -195,31 +178,17 @@ export function GenerateDocumentModal({
           />
         </div>
 
-        <div className="flex flex-col gap-2">
-          <Label className="text-dark-500 text-[12px] font-normal">
-            {t('pages.lawyerWorkplace.documents.modals.generate.client', 'Client · Contract')}
-          </Label>
-          <SearchableSelect
-            options={clientOptions.map((client) => ({ id: client.id, name: client.name }))}
-            value={clientId}
-            onValueChange={(val) => {
-              setClientId(val)
-              const found = clientsData?.items.find((c) => String(c.id) === val)
-              setSelectedClientLegacyId(found?.legacy_id?.trim() || null)
-              setClientSearch('')
-            }}
-            onSearchChange={setClientSearch}
-            isLoading={clientsLoading}
-            emptySearchHint={t(
-              'pages.lawyerWorkplace.documents.modals.generate.clientSearchHint',
-              'Type 2+ characters to search…'
-            )}
-            placeholder={t(
-              'pages.lawyerWorkplace.documents.modals.generate.selectClient',
-              'Select client'
-            )}
-          />
-        </div>
+        <DocumentClientContractFields
+          scope="generate"
+          enabled={open}
+          clientId={clientId}
+          onClientIdChange={setClientId}
+          contracts={contracts}
+          contractsLoading={contractsLoading}
+          contractNumber={contractNumber}
+          onContractNumberChange={setContractNumber}
+          requiresSelection={requiresSelection}
+        />
 
         <div className="flex flex-col gap-2">
           <Label className="text-dark-500 text-[12px] font-normal">
