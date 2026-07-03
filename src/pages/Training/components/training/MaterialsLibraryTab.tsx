@@ -1,24 +1,32 @@
-﻿import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { toast } from 'sonner'
 import { Icons } from '@/lib/icons'
-import { MOCK_MATERIALS, type MaterialType } from '../../mocks/trainerWorkplaceMocks'
-import { PendingFeatureDialog } from '../inbox/PendingFeatureDialog'
+import { useHasPermission } from '@/hooks'
+import { downloadMaterial } from '@/features/training/api/materialsService'
+import {
+  useArchiveMaterial,
+  useMaterialCategories,
+  useMaterials,
+} from '@/features/training/hooks/useMaterials'
+import {
+  MATERIAL_TYPES,
+  type Material,
+  type MaterialType,
+} from '@/features/training/types/materials'
 import { TrainingFilterChips, TrainingPrimaryButton, TrainingSearchBar } from './TrainingToolbar'
+import { MaterialUploadDialog } from './MaterialUploadDialog'
+import { MaterialEditDialog } from './MaterialEditDialog'
 
 const TYPE_BADGE: Record<MaterialType, { label: string; tone: string; iconBg: string }> = {
   pdf: { label: 'PDF', tone: 'text-[#B91C1C]', iconBg: 'bg-[#FEF2F2]' },
   docx: { label: 'DOCX', tone: 'text-[#2563EB]', iconBg: 'bg-[#EFF6FF]' },
   video: { label: 'VIDEO', tone: 'text-[#7C3AED]', iconBg: 'bg-[#F5F3FF]' },
   audio: { label: 'AUDIO', tone: 'text-[#D97706]', iconBg: 'bg-[#FFFBEB]' },
+  other: { label: 'FILE', tone: 'text-[#4B5563]', iconBg: 'bg-[#F3F4F6]' },
 }
 
-const TYPE_FILTERS = [
-  { id: 'all', label: 'All types' },
-  { id: 'pdf', label: 'PDF' },
-  { id: 'docx', label: 'DOCX' },
-  { id: 'video', label: 'VIDEO' },
-  { id: 'audio', label: 'AUDIO' },
-]
+const PAGE_SIZE = 48
 
 function formatSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`
@@ -27,30 +35,127 @@ function formatSize(bytes: number): string {
   return `${(bytes / 1024 / 1024 / 1024).toFixed(1)} GB`
 }
 
+function formatUpdated(iso: string): string {
+  const then = new Date(iso).getTime()
+  if (Number.isNaN(then)) return ''
+  const days = Math.floor((Date.now() - then) / 86_400_000)
+  if (days <= 0) return 'today'
+  if (days === 1) return 'yesterday'
+  if (days < 7) return `${days}d ago`
+  if (days < 30) return `${Math.floor(days / 7)}w ago`
+  return new Date(iso).toLocaleDateString()
+}
+
+function triggerBlobDownload(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  URL.revokeObjectURL(url)
+}
+
 export function MaterialsLibraryTab() {
   const { t } = useTranslation('common')
+  const canView = useHasPermission('view_materials')
+  const canManage = useHasPermission('manage_materials')
+
   const [typeFilter, setTypeFilter] = useState<MaterialType | 'all'>('all')
   const [query, setQuery] = useState('')
   const [uploadOpen, setUploadOpen] = useState(false)
+  const [editTarget, setEditTarget] = useState<Material | null>(null)
+  const [downloadingId, setDownloadingId] = useState<number | null>(null)
 
-  const filtered = MOCK_MATERIALS.filter((m) => {
-    const matchesType = typeFilter === 'all' || m.type === typeFilter
-    const matchesQuery = !query || m.name.toLowerCase().includes(query.toLowerCase())
-    return matchesType && matchesQuery
-  })
+  const listFilters = useMemo(
+    () => ({
+      type: typeFilter === 'all' ? undefined : typeFilter,
+      q: query || undefined,
+      limit: PAGE_SIZE,
+      offset: 0,
+    }),
+    [typeFilter, query]
+  )
+
+  const { data, isLoading, isError } = useMaterials(listFilters, canView)
+  const { data: categories } = useMaterialCategories(canView)
+  const archive = useArchiveMaterial()
+
+  const materials = data?.data ?? []
+  const total = data?.total ?? 0
+
+  const categoryName = useMemo(() => {
+    const map = new Map<number, string>()
+    ;(categories ?? []).forEach((c) => map.set(c.id, c.name))
+    return map
+  }, [categories])
+
+  const typeFilters = useMemo(
+    () => [
+      { id: 'all', label: t('pages.training.training.materials.filters.all', 'All types') },
+      ...MATERIAL_TYPES.map((tp) => ({ id: tp, label: TYPE_BADGE[tp].label })),
+    ],
+    [t]
+  )
+
+  const handleDownload = async (m: Material) => {
+    setDownloadingId(m.id)
+    try {
+      const blob = await downloadMaterial(m.id)
+      triggerBlobDownload(blob, m.original_filename)
+    } catch {
+      toast.error(
+        t('pages.training.training.materials.errors.download', 'Could not download the file.')
+      )
+    } finally {
+      setDownloadingId(null)
+    }
+  }
+
+  const handleArchive = (m: Material) => {
+    if (
+      window.confirm(
+        t('pages.training.training.materials.confirmArchive', 'Archive this material?')
+      )
+    ) {
+      archive.mutate(m.id, {
+        onError: () =>
+          toast.error(
+            t('pages.training.training.materials.errors.archive', 'Could not archive the material.')
+          ),
+      })
+    }
+  }
+
+  if (!canView) {
+    return (
+      <div className="rounded-xl border border-dashed border-[#EBECE8] bg-white p-8 text-center text-xs text-[#6B7280]">
+        {t(
+          'pages.training.training.materials.noAccess',
+          'You do not have access to the materials library.'
+        )}
+      </div>
+    )
+  }
 
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-base font-semibold text-[#05040D]">
-          {t('pages.training.training.materials.title', 'Materials library')}
-        </h2>
-        <TrainingPrimaryButton
-          onClick={() => setUploadOpen(true)}
-          leftIcon={<Icons.CloudDownload size={14} className="text-white" />}
-        >
-          {t('pages.training.training.materials.upload', 'Upload material')}
-        </TrainingPrimaryButton>
+        <div className="flex items-baseline gap-2">
+          <h2 className="text-base font-semibold text-[#05040D]">
+            {t('pages.training.training.materials.title', 'Materials library')}
+          </h2>
+          <span className="text-xs text-[#6B7280]">{total}</span>
+        </div>
+        {canManage && (
+          <TrainingPrimaryButton
+            onClick={() => setUploadOpen(true)}
+            leftIcon={<Icons.FileImport size={14} className="text-white" />}
+          >
+            {t('pages.training.training.materials.upload', 'Upload material')}
+          </TrainingPrimaryButton>
+        )}
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
@@ -60,62 +165,108 @@ export function MaterialsLibraryTab() {
           placeholder={t('pages.training.training.materials.searchPlaceholder', 'Search...')}
         />
         <TrainingFilterChips
-          items={TYPE_FILTERS}
+          items={typeFilters}
           activeId={typeFilter}
           onChange={(id) => setTypeFilter(id as MaterialType | 'all')}
         />
       </div>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {filtered.map((m) => {
-          const badge = TYPE_BADGE[m.type]
-          return (
-            <div
-              key={m.id}
-              className="flex items-center gap-3 rounded-xl border border-[#EBECE8] bg-white p-4 shadow-[0px_1px_2px_rgba(0,0,0,0.04)]"
-            >
-              <div
-                className={`flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl ${badge.iconBg}`}
-              >
-                <Icons.File size={20} className={badge.tone} />
-              </div>
-              <div className="flex min-w-0 flex-1 flex-col">
-                <span className="truncate text-sm font-medium text-[#05040D]">{m.name}</span>
-                <div className="mt-0.5 flex flex-wrap items-center gap-2 text-[10px] text-[#6B7280]">
-                  <span
-                    className={`rounded-full px-1.5 py-0.5 text-[9px] font-medium ${badge.iconBg} ${badge.tone}`}
-                  >
-                    {badge.label}
-                  </span>
-                  <span>{formatSize(m.sizeBytes)}</span>
-                  <span>·</span>
-                  <span>{m.updatedLabel}</span>
-                </div>
-                <span className="text-[10px] text-[#9CA3AF]">
-                  {t('pages.training.training.materials.uploadedBy', 'by')} {m.uploadedBy}
-                </span>
-              </div>
-              <button
-                type="button"
-                className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-[#F0FDF4] text-[#204E4D] hover:bg-[#BBFB5B]/40"
-                aria-label="download"
-              >
-                <Icons.Download size={16} />
-              </button>
-            </div>
-          )
-        })}
-      </div>
+      {isLoading && (
+        <div className="rounded-xl border border-[#EBECE8] bg-white p-8 text-center text-xs text-[#6B7280]">
+          {t('pages.training.training.materials.loading', 'Loading materials...')}
+        </div>
+      )}
 
-      <PendingFeatureDialog
-        open={uploadOpen}
-        onClose={() => setUploadOpen(false)}
-        titleKey="pages.training.training.materials.upload"
-        titleFallback="Upload material"
-        descriptionKey="pages.training.training.pending.uploadMaterial"
-        descriptionFallback="Upload PDF, DOCX, video, or audio files to the shared materials library."
-        dependsOnIssue="KAN-499"
-      />
+      {isError && (
+        <div className="rounded-xl border border-[#FEE2E2] bg-[#FEF2F2] p-4 text-xs text-[#B91C1C]">
+          {t(
+            'pages.training.training.materials.loadError',
+            'Failed to load materials. Try refreshing.'
+          )}
+        </div>
+      )}
+
+      {!isLoading && !isError && materials.length === 0 && (
+        <div className="rounded-xl border border-dashed border-[#EBECE8] bg-white p-8 text-center text-xs text-[#6B7280]">
+          {t(
+            'pages.training.training.materials.empty',
+            'No materials yet. Upload a PDF, document, video, or audio file.'
+          )}
+        </div>
+      )}
+
+      {materials.length > 0 && (
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {materials.map((m) => {
+            const badge = TYPE_BADGE[m.type]
+            return (
+              <div
+                key={m.id}
+                className="flex items-center gap-3 rounded-xl border border-[#EBECE8] bg-white p-4 shadow-[0px_1px_2px_rgba(0,0,0,0.04)]"
+              >
+                <div
+                  className={`flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl ${badge.iconBg}`}
+                >
+                  <Icons.File size={20} className={badge.tone} />
+                </div>
+                <div className="flex min-w-0 flex-1 flex-col">
+                  <span className="truncate text-sm font-medium text-[#05040D]">{m.title}</span>
+                  <div className="mt-0.5 flex flex-wrap items-center gap-2 text-[10px] text-[#6B7280]">
+                    <span
+                      className={`rounded-full px-1.5 py-0.5 text-[9px] font-medium ${badge.iconBg} ${badge.tone}`}
+                    >
+                      {badge.label}
+                    </span>
+                    <span>{formatSize(m.size_bytes)}</span>
+                    <span>·</span>
+                    <span>{formatUpdated(m.updated_at)}</span>
+                    {m.category_id != null && categoryName.has(m.category_id) && (
+                      <>
+                        <span>·</span>
+                        <span>{categoryName.get(m.category_id)}</span>
+                      </>
+                    )}
+                  </div>
+                </div>
+                <div className="flex flex-shrink-0 items-center gap-1">
+                  {canManage && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => setEditTarget(m)}
+                        className="flex h-9 w-9 items-center justify-center rounded-full text-[#6B7280] hover:bg-[#F7F7F7]"
+                        aria-label={t('actions.edit', 'Edit')}
+                      >
+                        <Icons.Edit size={16} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleArchive(m)}
+                        className="flex h-9 w-9 items-center justify-center rounded-full text-[#6B7280] hover:bg-[#F7F7F7] hover:text-[#B91C1C]"
+                        aria-label={t('pages.training.training.materials.archive', 'Archive')}
+                      >
+                        <Icons.Delete size={16} />
+                      </button>
+                    </>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => handleDownload(m)}
+                    disabled={downloadingId === m.id}
+                    className="flex h-9 w-9 items-center justify-center rounded-full bg-[#F0FDF4] text-[#204E4D] hover:bg-[#BBFB5B]/40 disabled:opacity-50"
+                    aria-label={t('actions.download', 'Download')}
+                  >
+                    <Icons.Download size={16} />
+                  </button>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      <MaterialUploadDialog open={uploadOpen} onClose={() => setUploadOpen(false)} />
+      <MaterialEditDialog material={editTarget} onClose={() => setEditTarget(null)} />
     </div>
   )
 }
