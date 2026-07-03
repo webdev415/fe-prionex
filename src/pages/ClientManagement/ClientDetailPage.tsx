@@ -5901,7 +5901,7 @@ export function ClientDetailPage() {
                   'pages.clients.detail.closureReasonPlaceholder',
                   'Add a note explaining why this loan is being closed'
                 )}
-                className="border-gray-200 focus:border-primary-400 w-full resize-y rounded-md border px-3 py-2 text-sm outline-none"
+                className="focus:border-primary-400 w-full resize-y rounded-md border border-gray-200 px-3 py-2 text-sm outline-none"
               />
             </div>
           </ModalContent>
