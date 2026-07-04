@@ -275,6 +275,8 @@ export const PERMISSIONS = {
     MANAGE_BADGES: 'manage_badges',
     VIEW_AUTO_FLAGS: 'view_auto_flags',
     MANAGE_CALL_LIBRARY: 'manage_call_library',
+    // Call QA (Ф1) — AI transcripts of call recordings (nightly brain run)
+    VIEW_TRANSCRIPTS: 'view_transcripts',
     // KAN-749 — Trainings & Sessions surfaces (KAN-615 epic children)
     VIEW_COURSES: 'view_courses',
     MANAGE_COURSES: 'manage_courses',
@@ -554,6 +556,8 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   manage_tests: 'Manage the Tests surface (reserved)',
   view_materials: 'Browse and download the materials library (KAN-616)',
   manage_materials: 'Upload / edit / archive materials (KAN-616)',
+  // Call QA (Ф1)
+  view_transcripts: 'View AI call transcripts (client card & Training; nightly Call QA run)',
 
   // Document Generation
   view_document_journal: 'View the journal of all generated and uploaded documents',

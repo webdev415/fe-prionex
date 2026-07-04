@@ -1584,6 +1584,34 @@
           }
         }
       },
+      "transcript": {
+        "title": "Транскрипт розмови",
+        "notReady": "Транскрипт ще не готовий — з'явиться після нічної обробки",
+        "error": "Не вдалося завантажити транскрипт",
+        "noAccess": "Немає доступу до транскриптів",
+        "seekTo": "Перейти до моменту в записі",
+        "redFlags": "Прапорці",
+        "fraudSuspicion": "Fraud-підозра",
+        "moodOperator": "Настрій оператора",
+        "promiseTitle": "Обіцянка оплати",
+        "recommendations": "Рекомендації",
+        "roles": {
+          "operator": "Оператор",
+          "client": "Клієнт",
+          "other": "Інше"
+        }
+      },
+      "scenes": {
+        "greeting": "Привітання",
+        "identification": "Ідентифікація",
+        "debt_discussion": "Обговорення боргу",
+        "objection_handling": "Робота із запереченнями",
+        "negotiation": "Домовленість",
+        "promise": "Обіцянка оплати",
+        "escalation": "Ескалація",
+        "closing": "Завершення",
+        "other": "Інше"
+      },
       "scorecardsEmpty": "Немає скоркарт у поточній області.",
       "scorecardsTotalSuffix": "скоркарт",
       "markers": {
