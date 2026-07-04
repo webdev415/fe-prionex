@@ -397,3 +397,100 @@ export interface AlertsResponse {
   alerts: ScoreDynamicsAlert[]
   total: number
 }
+
+// ---------------------------------------------------------------------------
+// Call QA transcripts (Ф1 — CALL_QA_PIPELINE_SPEC §5.5 / CALL_QA_INTEGRATION §3.1)
+//
+// TOLERANT READER contract: the brain evolves additively — unknown fields must
+// be ignored, and `scenes[].key` / utterance `flags[].type` / review enums are
+// OPEN sets (render a fallback label for unknown values, never crash).
+// ---------------------------------------------------------------------------
+
+/** Utterance flag — the brain may send bare strings or `{type}` objects. */
+export type TranscriptUtteranceFlag = string | { type?: string; [key: string]: unknown }
+
+export interface TranscriptUtterance {
+  i: number
+  /** start / end, seconds (float) */
+  t0: number
+  t1: number
+  /** 'operator' | 'client' | 'other' — open enum, treat unknown as 'other'. */
+  role?: string
+  text: string
+  lang?: string
+  conf?: number
+  flags?: TranscriptUtteranceFlag[]
+}
+
+export interface TranscriptScene {
+  /** greeting | identification | … — OPEN enum (§5.4), unknown keys allowed. */
+  key: string
+  from_utt: number
+  to_utt: number
+}
+
+export interface CallTranscript {
+  language?: string | null
+  duration_s?: number | null
+  summary?: string | null
+  utterances: TranscriptUtterance[]
+  scenes?: TranscriptScene[] | null
+  metrics?: Record<string, unknown> | null
+  agent_extension?: string | null
+  client_id?: number | null
+  direction?: string | null
+  answered_at?: string | null
+}
+
+export interface ReviewRedFlag {
+  type?: string
+  severity?: string
+  utt?: number
+  quote?: string
+  explanation?: string
+}
+
+export interface ReviewPromise {
+  amount?: number | null
+  currency?: string | null
+  date?: string | null
+  confidence?: number | null
+  quote?: string | null
+}
+
+/** Проход 2 (Ф2) — null during Ф1; every field optional (tolerant reader). */
+export interface CallAiReview {
+  model?: string | null
+  prompt_version?: string | null
+  rubric_version?: string | null
+  scores?: Record<
+    string,
+    { value?: number | boolean | null; quote?: string | null; comment?: string | null }
+  >
+  weighted_score?: number | null
+  red_flags?: ReviewRedFlag[]
+  fraud?: Array<{ type?: string; confidence?: number; explanation?: string }>
+  mood?: {
+    operator?: Record<string, unknown>
+    client?: Record<string, unknown>
+  } | null
+  extracted?: { promise?: ReviewPromise | null; [key: string]: unknown } | null
+  summary?: string | null
+  recommendations?: string[] | null
+}
+
+export interface CallTranscriptDto {
+  transcript: CallTranscript
+  review: CallAiReview | null
+}
+
+/**
+ * Normalised query result: the endpoint answers
+ *   200 {transcript, review}  → ready
+ *   202 {status}              → processing (pending / failed) — not ready yet
+ *   404                       → the brain has not seen this call — not ready
+ *   403                       → viewer lacks `view_transcripts`
+ */
+export type TranscriptQueryResult =
+  | { state: 'ready'; transcript: CallTranscript; review: CallAiReview | null }
+  | { state: 'not_ready'; status?: string }

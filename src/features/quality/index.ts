@@ -72,6 +72,9 @@ export {
   dynamicsKeys,
 } from './hooks/useDynamics'
 export { useStageFunnel, stageFunnelKeys } from './hooks/useStageFunnel'
+// Call QA (Ф1) — AI transcripts
+export { getCallTranscript, transcriptKeys } from './api/transcriptService'
+export { useCallTranscript } from './hooks/useCallTranscript'
 
 export { ScorecardPanel } from './components/ScorecardPanel'
 export { MarkerOverlay } from './components/MarkerOverlay'
@@ -79,6 +82,7 @@ export { AddMarkerButton } from './components/AddMarkerButton'
 export { LeaveFeedbackButton } from './components/LeaveFeedbackButton'
 export { FeedbackThreadView } from './components/FeedbackThreadView'
 export { ScoreDynamicsChart } from './components/ScoreDynamicsChart'
+export { CallTranscriptPanel } from './components/CallTranscriptPanel'
 
 export type {
   AggregateFilters,
@@ -128,6 +132,15 @@ export type {
   PainPoints,
   StageFunnelResponse,
   StageFunnelFilters,
+  CallTranscript,
+  CallTranscriptDto,
+  CallAiReview,
+  TranscriptUtterance,
+  TranscriptUtteranceFlag,
+  TranscriptScene,
+  TranscriptQueryResult,
+  ReviewRedFlag,
+  ReviewPromise,
 } from './types'
 
 export { MARKER_TYPES, MARKER_COLORS, FEEDBACK_TYPES } from './types'

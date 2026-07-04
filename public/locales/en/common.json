@@ -1617,6 +1617,34 @@
           }
         }
       },
+      "transcript": {
+        "title": "Call transcript",
+        "notReady": "Transcript is not ready yet — it appears after the nightly processing",
+        "error": "Failed to load the transcript",
+        "noAccess": "No access to transcripts",
+        "seekTo": "Jump to this moment in the recording",
+        "redFlags": "Flags",
+        "fraudSuspicion": "Fraud suspicion",
+        "moodOperator": "Operator mood",
+        "promiseTitle": "Payment promise",
+        "recommendations": "Recommendations",
+        "roles": {
+          "operator": "Operator",
+          "client": "Client",
+          "other": "Other"
+        }
+      },
+      "scenes": {
+        "greeting": "Greeting",
+        "identification": "Identification",
+        "debt_discussion": "Debt discussion",
+        "objection_handling": "Objection handling",
+        "negotiation": "Negotiation",
+        "promise": "Payment promise",
+        "escalation": "Escalation",
+        "closing": "Closing",
+        "other": "Other"
+      },
       "scorecardsEmpty": "No scorecards in scope.",
       "scorecardsTotalSuffix": "scorecards",
       "markers": {

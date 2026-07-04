@@ -51,7 +51,8 @@ import { ContactTagSelectorModal } from './components/ContactTagSelectorModal'
 import { ContactTagHistoryModal } from './components/ContactTagHistoryModal'
 import { ClientWriteoffsTable } from './components/ClientWriteoffsTable'
 import { WriteoffCreateModal } from './components/WriteoffCreateModal'
-import { CallRecordingModal } from './components/CallRecordingModal'
+import { CallRecordingModal, type CallRecordingModalHandle } from './components/CallRecordingModal'
+import { CallTranscriptPanel } from '@/features/quality/components/CallTranscriptPanel'
 import { ViewSMSModal } from './components/ViewSMSModal'
 import { SendSMSModal } from './components/SendSMSModal'
 import { ViewMessageModal } from './components/ViewMessageModal'
@@ -1177,6 +1178,8 @@ export function ClientDetailPage() {
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false)
   // isCallModalOpen, currentCallId managed by useCallOrigination hook
   const [isCallRecordingModalOpen, setIsCallRecordingModalOpen] = useState(false)
+  // Call QA (Ф1) — modal handle so transcript timecodes can seek the player.
+  const callRecordingModalRef = useRef<CallRecordingModalHandle>(null)
   const [isTagModalOpen, setIsTagModalOpen] = useState(false)
   // const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
@@ -5357,6 +5360,7 @@ export function ClientDetailPage() {
         {/* Call Recording Modal */}
         {selectedCallData && (
           <CallRecordingModal
+            ref={callRecordingModalRef}
             open={isCallRecordingModalOpen}
             onClose={() => {
               setOpenCallModal(null)
@@ -5364,6 +5368,15 @@ export function ClientDetailPage() {
               setSelectedCallData(null)
             }}
             callData={selectedCallData}
+            transcriptPanel={
+              selectedCallData.call_id ? (
+                <CallTranscriptPanel
+                  callId={selectedCallData.call_id}
+                  active={isCallRecordingModalOpen}
+                  onSeek={(ms) => callRecordingModalRef.current?.seekTo(ms)}
+                />
+              ) : undefined
+            }
           />
         )}
 
