@@ -6100,7 +6100,7 @@
         "deactivateConfirmTitle": "Revert to Legacy Proportional?",
         "deactivateConfirmMessage": "Future payment snapshots will use the legacy proportional algorithm. Already-snapshotted payments are unaffected.",
         "deactivateConfirmButton": "Revert",
-        "preconditionError": "Strict Order cannot be activated until payment-allocation snapshotting is enabled. Existing payments do not need to be backfilled."
+        "preconditionError": "Strict Order requires payment-allocation snapshotting to be enabled."
       },
       "history": {
         "title": "Recent Changes",
