@@ -3725,7 +3725,7 @@
         "createTitle": "New document type",
         "editTitle": "Edit document type",
         "confirmDelete": "Delete this document type? This cannot be undone.",
-        "deleteBlockedMessage": "This type is used by {{count}} documents. Hide it instead of deleting.",
+        "deleteBlockedMessage": "This type is used by {{formattedCount}} documents. Hide it instead of deleting.",
         "uniqueNameError": "A document type with this name already exists.",
         "loadError": "Failed to load document types.",
         "hiddenLabel": "hidden",
@@ -3737,7 +3737,7 @@
         },
         "fields": {
           "name": "Name",
-          "namePlaceholder": "e.g. Insurance",
+          "namePlaceholder": "e.g. Passport",
           "color": "Color",
           "previewText": "Document type"
         },

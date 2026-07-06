@@ -19,6 +19,7 @@ import { toast } from 'sonner'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { TableSkeleton } from '@/components/ui/TableSkeleton'
 import { Button } from '@/components/ui/Button'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/Tooltip'
 import { Icons } from '@/lib/icons'
 import {
   useDocumentTypes,
@@ -127,7 +128,9 @@ export function DocumentTypesTab() {
         header: t('pages.documentGeneration.types.columns.usage', 'Documents'),
         align: 'center',
         className: 'w-32 text-base',
-        render: (row) => <span className="text-base text-gray-600">{row.doc_count}</span>,
+        render: (row) => (
+          <span className="text-base text-gray-600">{row.doc_count.toLocaleString()}</span>
+        ),
       },
       {
         key: 'actions',
@@ -159,24 +162,47 @@ export function DocumentTypesTab() {
             >
               <Icons.Eye size={16} strokeWidth={2} />
             </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => handleDelete(row)}
-              disabled={row.doc_count > 0 || deleteMutation.isPending}
-              title={
-                row.doc_count > 0
-                  ? t(
+            {row.doc_count > 0 ? (
+              <TooltipProvider>
+                <Tooltip delayDuration={200}>
+                  <TooltipTrigger asChild>
+                    {/* span wrapper: Radix Tooltip needs a hoverable
+                        trigger, but disabled buttons have
+                        pointer-events: none from the Button component,
+                        so wrap the disabled button in a span that stays
+                        interactive. */}
+                    <span className="inline-block">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        disabled
+                        className="text-red-600 hover:bg-red-50 disabled:opacity-40"
+                      >
+                        <Icons.Delete size={16} strokeWidth={2} />
+                      </Button>
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {t(
                       'pages.documentGeneration.types.deleteBlockedMessage',
-                      'This type is used by {{count}} documents. Hide it instead of deleting.',
-                      { count: row.doc_count }
-                    )
-                  : t('actions.delete', 'Delete')
-              }
-              className="text-red-600 hover:bg-red-50"
-            >
-              <Icons.Delete size={16} strokeWidth={2} />
-            </Button>
+                      'This type is used by {{formattedCount}} documents. Hide it instead of deleting.',
+                      { formattedCount: row.doc_count.toLocaleString() }
+                    )}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            ) : (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => handleDelete(row)}
+                disabled={deleteMutation.isPending}
+                title={t('actions.delete', 'Delete')}
+                className="text-red-600 hover:bg-red-50 disabled:opacity-40"
+              >
+                <Icons.Delete size={16} strokeWidth={2} />
+              </Button>
+            )}
           </div>
         ),
       },

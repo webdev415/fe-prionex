@@ -138,7 +138,7 @@ export function DocumentTypeFormModal({
               id="dt-name"
               placeholder={t(
                 'pages.documentGeneration.types.fields.namePlaceholder',
-                'e.g. Insurance'
+                'e.g. Passport'
               )}
               {...register('name')}
             />

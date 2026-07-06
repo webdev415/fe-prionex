@@ -173,11 +173,9 @@ describe('DocumentTypesTab', () => {
     await waitFor(() => expect(screen.getByText('passport')).toBeInTheDocument())
 
     await user.click(screen.getByRole('button', { name: /new type/i }))
-    await waitFor(() =>
-      expect(screen.getByPlaceholderText(/e\.g\. Insurance/i)).toBeInTheDocument()
-    )
+    await waitFor(() => expect(screen.getByPlaceholderText(/e\.g\. Passport/i)).toBeInTheDocument())
 
-    await user.type(screen.getByPlaceholderText(/e\.g\. Insurance/i), 'Insurance')
+    await user.type(screen.getByPlaceholderText(/e\.g\. Passport/i), 'Insurance')
 
     // The create button lives in the modal footer.
     const createBtn = screen.getByRole('button', { name: /^Create$/i })
@@ -193,11 +191,16 @@ describe('DocumentTypesTab', () => {
     renderTab()
     await waitFor(() => expect(screen.getByText('passport')).toBeInTheDocument())
 
-    // passport (doc_count=3) row → find its delete button. Buttons share
-    // the same rendered icon, so we find via the row.
+    // passport (doc_count=3) row → the delete button is wrapped in a
+    // Radix Tooltip when disabled. Query for the only disabled button
+    // in the row (Edit and Hide are never disabled → the disabled one
+    // must be Delete). The title attribute is intentionally absent on
+    // the disabled Delete button because the tooltip carries the
+    // "Hide it instead of deleting" message.
     const passportRow = screen.getByText('passport').closest('tr')!
-    const deleteBtn = passportRow.querySelector('button[title="Delete"], button[title*="Hide it"]')!
-    expect(deleteBtn).toBeDisabled()
+    const disabledBtn = passportRow.querySelector('button:disabled')
+    expect(disabledBtn).not.toBeNull()
+    expect(disabledBtn).toBeDisabled()
 
     // inn (doc_count=0) row → enabled + can be deleted.
     const innRow = screen.getByText('inn').closest('tr')!
