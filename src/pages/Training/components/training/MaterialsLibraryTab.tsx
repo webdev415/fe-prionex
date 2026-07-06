@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { Icons } from '@/lib/icons'
+import { useConfirm } from '@/components/ui/useConfirm'
 import { useHasPermission } from '@/hooks'
 import { downloadMaterial } from '@/features/training/api/materialsService'
 import {
@@ -61,6 +62,7 @@ export function MaterialsLibraryTab() {
   const { t } = useTranslation('common')
   const canView = useHasPermission('view_materials')
   const canManage = useHasPermission('manage_materials')
+  const { confirm, confirmDialog } = useConfirm()
 
   const [typeFilter, setTypeFilter] = useState<MaterialType | 'all'>('all')
   const [query, setQuery] = useState('')
@@ -113,19 +115,24 @@ export function MaterialsLibraryTab() {
     }
   }
 
-  const handleArchive = (m: Material) => {
-    if (
-      window.confirm(
-        t('pages.training.training.materials.confirmArchive', 'Archive this material?')
-      )
-    ) {
-      archive.mutate(m.id, {
-        onError: () =>
-          toast.error(
-            t('pages.training.training.materials.errors.archive', 'Could not archive the material.')
-          ),
-      })
-    }
+  const handleArchive = async (m: Material) => {
+    const ok = await confirm({
+      title: t('pages.training.training.materials.confirmArchiveTitle', 'Archive material'),
+      message: t(
+        'pages.training.training.materials.confirmArchive',
+        'Archive "{{title}}"? It will be hidden from the library, but existing links keep working.',
+        { title: m.title }
+      ),
+      confirmLabel: t('pages.training.training.materials.archive', 'Archive'),
+      tone: 'danger',
+    })
+    if (!ok) return
+    archive.mutate(m.id, {
+      onError: () =>
+        toast.error(
+          t('pages.training.training.materials.errors.archive', 'Could not archive the material.')
+        ),
+    })
   }
 
   if (!canView) {
@@ -267,6 +274,7 @@ export function MaterialsLibraryTab() {
 
       <MaterialUploadDialog open={uploadOpen} onClose={() => setUploadOpen(false)} />
       <MaterialEditDialog material={editTarget} onClose={() => setEditTarget(null)} />
+      {confirmDialog}
     </div>
   )
 }
