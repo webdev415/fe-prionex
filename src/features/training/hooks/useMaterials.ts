@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   archiveMaterial,
+  createMaterialCategory,
   listMaterialCategories,
   listMaterials,
   updateMaterial,
@@ -33,6 +34,16 @@ export function useMaterialCategories(enabled = true) {
     queryFn: () => listMaterialCategories(),
     enabled,
     staleTime: 5 * 60_000,
+  })
+}
+
+export function useCreateMaterialCategory() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (name: string) => createMaterialCategory(name),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: materialsKeys.categories() })
+    },
   })
 }
 

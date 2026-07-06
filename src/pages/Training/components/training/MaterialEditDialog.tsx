@@ -4,8 +4,9 @@ import { toast } from 'sonner'
 import { Modal, ModalContent, ModalFooter, ModalHeader } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
-import { useMaterialCategories, useUpdateMaterial } from '@/features/training/hooks/useMaterials'
+import { useUpdateMaterial } from '@/features/training/hooks/useMaterials'
 import type { Material } from '@/features/training/types/materials'
+import { MaterialCategorySelect } from './MaterialCategorySelect'
 
 /** Metadata-only edit for a material (KAN-499) — the stored file is never replaced. */
 export interface MaterialEditDialogProps {
@@ -29,7 +30,6 @@ export function MaterialEditDialog({ material, onClose }: MaterialEditDialogProp
     setTagsInput((material.tags ?? []).join(', '))
   }
 
-  const { data: categories } = useMaterialCategories(material != null)
   const mutation = useUpdateMaterial()
 
   const handleSubmit = async () => {
@@ -87,21 +87,12 @@ export function MaterialEditDialog({ material, onClose }: MaterialEditDialogProp
             <label htmlFor="material-edit-category" className="text-xs font-medium text-gray-600">
               {t('pages.training.training.materials.category', 'Category')}
             </label>
-            <select
+            <MaterialCategorySelect
               id="material-edit-category"
               value={categoryId}
-              onChange={(e) => setCategoryId(e.target.value === '' ? '' : Number(e.target.value))}
-              className="rounded-md border border-gray-200 px-3 py-2 text-sm focus:outline-none"
-            >
-              <option value="">
-                {t('pages.training.training.materials.noCategory', 'No category')}
-              </option>
-              {(categories ?? []).map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
+              onChange={setCategoryId}
+              enabled={material != null}
+            />
           </div>
 
           <div className="flex flex-col gap-1">

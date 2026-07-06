@@ -5,7 +5,8 @@ import { Modal, ModalContent, ModalFooter, ModalHeader } from '@/components/ui/M
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Icons } from '@/lib/icons'
-import { useMaterialCategories, useUploadMaterial } from '@/features/training/hooks/useMaterials'
+import { useUploadMaterial } from '@/features/training/hooks/useMaterials'
+import { MaterialCategorySelect } from './MaterialCategorySelect'
 
 /**
  * Trainer-side upload for the Materials Library (KAN-499). Streams a single
@@ -48,7 +49,6 @@ export function MaterialUploadDialog({ open, onClose }: MaterialUploadDialogProp
     }
   }
 
-  const { data: categories } = useMaterialCategories(open)
   const mutation = useUploadMaterial()
 
   const handleSubmit = async () => {
@@ -131,21 +131,12 @@ export function MaterialUploadDialog({ open, onClose }: MaterialUploadDialogProp
             <label htmlFor="material-category" className="text-xs font-medium text-gray-600">
               {t('pages.training.training.materials.category', 'Category')}
             </label>
-            <select
+            <MaterialCategorySelect
               id="material-category"
               value={categoryId}
-              onChange={(e) => setCategoryId(e.target.value === '' ? '' : Number(e.target.value))}
-              className="rounded-md border border-gray-200 px-3 py-2 text-sm focus:outline-none"
-            >
-              <option value="">
-                {t('pages.training.training.materials.noCategory', 'No category')}
-              </option>
-              {(categories ?? []).map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
+              onChange={setCategoryId}
+              enabled={open}
+            />
           </div>
 
           <div className="flex flex-col gap-1">

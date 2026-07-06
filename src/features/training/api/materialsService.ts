@@ -68,3 +68,8 @@ export async function listMaterialCategories(): Promise<MaterialCategory[]> {
   const response = await api.get<MaterialCategory[]>(CATEGORIES_BASE)
   return response.data
 }
+
+export async function createMaterialCategory(name: string): Promise<MaterialCategory> {
+  const response = await api.post<MaterialCategory>(CATEGORIES_BASE, { name })
+  return response.data
+}
