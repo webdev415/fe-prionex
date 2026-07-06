@@ -20,6 +20,7 @@ import { DataTable, type Column } from '@/components/ui/DataTable'
 import { TableSkeleton } from '@/components/ui/TableSkeleton'
 import { Button } from '@/components/ui/Button'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/Tooltip'
+import { useConfirm } from '@/components/ui/useConfirm'
 import { Icons } from '@/lib/icons'
 import {
   useDocumentTypes,
@@ -36,6 +37,7 @@ export function DocumentTypesTab() {
   const { data, isLoading, isError } = useDocumentTypes({ includeHidden: true })
   const deleteMutation = useDeleteDocumentType()
   const visibilityMutation = useUpdateDocumentTypeVisibility()
+  const { confirm, confirmDialog } = useConfirm()
 
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState<DocumentType | null>(null)
@@ -75,13 +77,17 @@ export function DocumentTypesTab() {
 
   const handleDelete = async (row: DocumentType) => {
     if (row.doc_count > 0) return
-    const confirmed = window.confirm(
-      t(
-        'pages.documentGeneration.types.confirmDelete',
-        'Delete this document type? This cannot be undone.'
-      )
-    )
-    if (!confirmed) return
+    const ok = await confirm({
+      title: t('pages.documentGeneration.types.confirmDeleteTitle', "Delete '{{name}}'?", {
+        name: row.name,
+      }),
+      message: t('pages.documentGeneration.types.confirmDelete', 'This action cannot be undone.'),
+      confirmLabel: t('actions.delete', 'Delete'),
+      cancelLabel: t('actions.cancel', 'Cancel'),
+      tone: 'danger',
+      icon: <Icons.Delete size={24} className="text-error-600" strokeWidth={2} />,
+    })
+    if (!ok) return
     try {
       await deleteMutation.mutateAsync(row.id)
       toast.success(t('pages.documentGeneration.types.toast.deleted', 'Document type deleted'))
@@ -213,6 +219,7 @@ export function DocumentTypesTab() {
 
   return (
     <div className="flex max-w-4xl flex-col gap-4">
+      {confirmDialog}
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-medium text-gray-800">
           {t('pages.documentGeneration.types.title', 'Document Types')}
