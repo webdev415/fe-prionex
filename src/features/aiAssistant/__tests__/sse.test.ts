@@ -119,6 +119,55 @@ describe('dispatchSseEvent routing', () => {
     expect(onFollowups).toHaveBeenCalledWith(['Показать за месяц', 'Сравнить с прошлым'])
   })
 
+  it('parses a citations frame from {items:[...]} (fact footnotes)', () => {
+    const onCitations = vi.fn()
+    dispatchSseEvent(
+      {
+        event: 'citations',
+        data: JSON.stringify({
+          items: [
+            { id: 1, kind: 'sql', ref: 'debts:remaining_debt_amount' },
+            { id: 2, kind: 'tool', ref: 'get_payments' },
+          ],
+        }),
+      },
+      { onCitations }
+    )
+    expect(onCitations).toHaveBeenCalledWith([
+      { id: 1, kind: 'sql', ref: 'debts:remaining_debt_amount' },
+      { id: 2, kind: 'tool', ref: 'get_payments' },
+    ])
+  })
+
+  it('tolerates a bare citations array and drops items without a finite id', () => {
+    const onCitations = vi.fn()
+    dispatchSseEvent(
+      {
+        event: 'citations',
+        data: JSON.stringify([
+          { id: 3, kind: 'sql', ref: 'clients:status' },
+          { kind: 'sql', ref: 'no-id' },
+          { id: 'x', kind: 'sql', ref: 'bad-id' },
+        ]),
+      },
+      { onCitations }
+    )
+    expect(onCitations).toHaveBeenCalledWith([{ id: 3, kind: 'sql', ref: 'clients:status' }])
+  })
+
+  it('does NOT treat citations as a terminator', () => {
+    expect(dispatchSseEvent({ event: 'citations', data: '{"items":[]}' }, {})).toBeUndefined()
+  })
+
+  it('defaults missing kind / ref of a citation to empty strings', () => {
+    const onCitations = vi.fn()
+    dispatchSseEvent(
+      { event: 'citations', data: JSON.stringify({ items: [{ id: 4 }] }) },
+      { onCitations }
+    )
+    expect(onCitations).toHaveBeenCalledWith([{ id: 4, kind: '', ref: '' }])
+  })
+
   it('routes a reasoning frame to onReasoning (ASSISTANT_MODES.md §4)', () => {
     const onReasoning = vi.fn()
     const onText = vi.fn()

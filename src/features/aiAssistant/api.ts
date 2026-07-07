@@ -2,6 +2,7 @@ import { api, API_BASE_URL, getAccessToken } from '@/lib/api'
 import type { ChatAttachmentPayload } from './attachments'
 import {
   consumeSseStream,
+  type AssistantCitation,
   type AssistantSources,
   type AssistantToolEnd,
   type AssistantToolStart,
@@ -50,6 +51,8 @@ export interface AssistantChatResponse {
   response: string
   coverage_flag: string | null
   tool_calls: AssistantToolCall[]
+  /** Per-fact citations streamed in the `citations` frame (empty if none). */
+  citations?: AssistantCitation[]
 }
 
 export interface AssistantConversationSummary {
@@ -115,6 +118,8 @@ export interface SendChatMessageCallbacks {
   /** Reasoning deltas ("Ход рассуждения"); forwarded, never part of the answer. */
   onReasoning?: (delta: string) => void
   onSources?: (sources: AssistantSources) => void
+  /** Per-fact citations (`citations` frame) — labels for `[[N]]` footnotes. */
+  onCitations?: (citations: AssistantCitation[]) => void
   /** Follow-up questions (the `questions[]` array of the followups frame). */
   onFollowups?: (questions: string[]) => void
   onToolStart?: (tool: AssistantToolStart) => void
@@ -193,6 +198,7 @@ export async function sendChatMessage(
   // `AssistantChatResponse.conversation_id` field (ASSISTANT_MODES.md §4).
   let conversationId = payload.conversation_id ?? 0
   const toolCalls: AssistantToolCall[] = []
+  let citations: AssistantCitation[] = []
   let streamError: SseErrorPayload | null = null
 
   const applySessionId = (value: number | string | undefined) => {
@@ -216,6 +222,10 @@ export async function sendChatMessage(
     // touching `accumulatedText` so the resolved `response` stays clean.
     onReasoning: (delta) => callbacks.onReasoning?.(delta),
     onSources: (sources) => callbacks.onSources?.(sources),
+    onCitations: (items) => {
+      citations = items
+      callbacks.onCitations?.(items)
+    },
     onFollowups: (questions) => callbacks.onFollowups?.(questions),
     onToolStart: (tool) => {
       // Pre-record the call as pending; a matching tool_end flips `success`.
@@ -251,6 +261,7 @@ export async function sendChatMessage(
     response: accumulatedText,
     coverage_flag: null,
     tool_calls: toolCalls,
+    citations,
   }
 }
 

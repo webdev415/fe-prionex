@@ -120,6 +120,12 @@ export interface SseStreamCallbacks {
   onReasoning?: (delta: string) => void
   /** "Source of the numbers" block (tables + tools). */
   onSources?: (sources: AssistantSources) => void
+  /**
+   * Per-fact citations (`event: citations`, arrives after `followups`, before
+   * `sources`/`done`). Maps a fact-footnote number `[[N]]` to its source ref so
+   * the UI can label the sup and (Слой 2) expand the matching source.
+   */
+  onCitations?: (citations: AssistantCitation[]) => void
   /** Suggested follow-up questions (clickable chips). */
   onFollowups?: (questions: string[]) => void
   /** A tool started executing (optional "running <label>" indicator). */
@@ -145,6 +151,17 @@ export interface SseSessionPayload {
 export interface AssistantSources {
   tables: string[]
   tools: string[]
+}
+
+/**
+ * Один источник факт-сноски (`event: citations`). `id` — номер сноски `[[N]]`
+ * в тексте ответа; `kind` — тип источника (`sql` / `tool` / …); `ref` —
+ * человекочитаемая ссылка на данные (напр. `debts:remaining_debt_amount`).
+ */
+export interface AssistantCitation {
+  id: number
+  kind: string
+  ref: string
 }
 
 /** `tool_start {name, label, args_preview}` (ASSISTANT_MODES.md §4). */
@@ -223,6 +240,32 @@ function normalizeSources(payload: unknown): AssistantSources {
 }
 
 /**
+ * Normalise a `citations` payload into a list of {@link AssistantCitation}.
+ * Tolerates either the documented `{items:[...]}` envelope or a bare array;
+ * items without a finite `id` are dropped, missing `kind`/`ref` default to "".
+ */
+function normalizeCitations(payload: unknown): AssistantCitation[] {
+  const list = Array.isArray(payload)
+    ? payload
+    : Array.isArray((payload as Record<string, unknown> | null)?.items)
+      ? ((payload as Record<string, unknown>).items as unknown[])
+      : []
+  const out: AssistantCitation[] = []
+  for (const raw of list) {
+    if (!raw || typeof raw !== 'object') continue
+    const obj = raw as Record<string, unknown>
+    const id = Number(obj.id)
+    if (!Number.isFinite(id)) continue
+    out.push({
+      id,
+      kind: typeof obj.kind === 'string' ? obj.kind : '',
+      ref: typeof obj.ref === 'string' ? obj.ref : '',
+    })
+  }
+  return out
+}
+
+/**
  * Normalise a `followups` payload into a list of question strings
  * (ASSISTANT_MODES.md §4 — `followups {questions:[]}`). Tolerates a bare array.
  */
@@ -281,6 +324,9 @@ export function dispatchSseEvent(
     }
     case 'sources':
       callbacks.onSources?.(normalizeSources(parseFrameData(frame)))
+      return undefined
+    case 'citations':
+      callbacks.onCitations?.(normalizeCitations(parseFrameData(frame)))
       return undefined
     case 'followups':
       callbacks.onFollowups?.(normalizeFollowups(parseFrameData(frame)))
