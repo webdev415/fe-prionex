@@ -20,6 +20,7 @@ import {
   usePatchMessageContract,
   usePatchMessageSuggestions,
 } from '@/features/lawyerWorkplace'
+import { legalDueDateToIso } from '@/features/lawyerWorkplace/utils/legalDueDate'
 import {
   buildLetterActivityLog,
   clientLookupFromLegalSearchItem,
@@ -580,7 +581,7 @@ function LetterParametersPanelContent({
         payload: {
           letter_type_id: effectiveTypeId,
           client_id: clientIdNumber,
-          due_date: effectiveDueDate.toISOString(),
+          due_date: legalDueDateToIso(effectiveDueDate),
           assigned_to_user_id: lawyerUserIdNumber,
           contract_number: effectiveContract.trim() || null,
         },
