@@ -66,10 +66,23 @@ export function AddIncomingDocumentModal({
   const lawyers = useMemo(() => lawyersData?.items ?? [], [lawyersData?.items])
 
   const selectedLawyer =
-    lawyers.find((lawyer) => lawyer.user_id === assigneeUserId) ?? lawyers[0] ?? null
+    lawyers.find((lawyer) => lawyer.user_id === assigneeUserId) ??
+    lawyers.find((lawyer) => lawyer.user_id === currentUserId) ??
+    lawyers[0] ??
+    null
+
+  const effectiveAssigneeUserId = assigneeUserId ?? selectedLawyer?.user_id ?? null
+
+  const wasOpenRef = useRef(false)
 
   useEffect(() => {
-    if (!open) return
+    if (!open) {
+      wasOpenRef.current = false
+      return
+    }
+    if (wasOpenRef.current) return
+    wasOpenRef.current = true
+
     requestAnimationFrame(() => {
       setFile(null)
       setDocumentName('')
@@ -77,11 +90,9 @@ export function AddIncomingDocumentModal({
       resetContract()
       setRelatedLetterNumber('')
       setDragOver(false)
-      const defaultLawyer =
-        lawyers.find((lawyer) => lawyer.user_id === currentUserId) ?? lawyers[0] ?? null
-      setAssigneeUserId(defaultLawyer?.user_id ?? null)
+      setAssigneeUserId(null)
     })
-  }, [currentUserId, lawyers, open, resetContract])
+  }, [open, resetContract])
 
   const handleFileSelect = (selectedFile: File | null) => {
     if (!selectedFile) return
@@ -93,17 +104,17 @@ export function AddIncomingDocumentModal({
     file &&
     documentName.trim() &&
     clientId &&
-    assigneeUserId != null &&
+    effectiveAssigneeUserId != null &&
     lawyers.length > 0 &&
     hasValidContract
   )
 
   const handleSubmit = async () => {
-    if (!canSubmit || !file || assigneeUserId == null) return
+    if (!canSubmit || !file || effectiveAssigneeUserId == null) return
     await onSubmit({
       title: documentName.trim(),
       clientId: Number.parseInt(clientId, 10),
-      assignedToUserId: assigneeUserId,
+      assignedToUserId: effectiveAssigneeUserId,
       relatedLetterNumber: relatedLetterNumber.trim() || undefined,
       file,
       contractNumber: contractNumber.trim() || null,
