@@ -3833,16 +3833,7 @@
         "dropFileOrClick": "Drag a file here or click to select",
         "loan": "Loan",
         "documentsUnlinked": "Not linked to a loan",
-        "documentTypes": {
-          "passport": "Passport",
-          "inn": "Tax ID",
-          "contract": "Contract",
-          "income": "Income statement",
-          "outcome": "Extract / statement",
-          "signature": "Digital signature",
-          "military": "Military",
-          "other": "Other"
-        },
+        "documentTypePlaceholder": "Select a type",
         "department": "Department",
         "phones": "Phones",
         "tin": "TIN",
@@ -4595,17 +4586,38 @@
       "title": "Document Generation",
       "tabs": {
         "journal": "Document Journal",
-        "templates": "Document Templates"
+        "templates": "Document Templates",
+        "types": "Document Types"
       },
-      "documentTypes": {
-        "passport": "Passport",
-        "inn": "Tax ID",
-        "contract": "Contract",
-        "income": "Income statement",
-        "outcome": "Extract / statement",
-        "signature": "Digital signature",
-        "military": "Military",
-        "other": "Other"
+      "types": {
+        "title": "Document Types",
+        "newButton": "New type",
+        "createTitle": "New document type",
+        "editTitle": "Edit document type",
+        "confirmDelete": "Delete this document type? This cannot be undone.",
+        "deleteBlockedMessage": "This type is used by {{formattedCount}} documents. Hide it instead of deleting.",
+        "uniqueNameError": "A document type with this name already exists.",
+        "loadError": "Failed to load document types.",
+        "hiddenLabel": "hidden",
+        "columns": {
+          "color": "Color",
+          "name": "Name",
+          "usage": "Documents",
+          "actions": "Actions"
+        },
+        "fields": {
+          "name": "Name",
+          "namePlaceholder": "e.g. Passport",
+          "color": "Color",
+          "previewText": "Document type"
+        },
+        "toast": {
+          "created": "Document type created",
+          "updated": "Document type updated",
+          "deleted": "Document type deleted",
+          "hidden": "Type hidden",
+          "shown": "Type shown"
+        }
       },
       "actions": {
         "uploaded": "Uploaded",

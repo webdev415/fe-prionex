@@ -3126,16 +3126,7 @@
         "dropFileOrClick": "Перетягніть файл або натисніть для вибору",
         "loan": "Кредит",
         "documentsUnlinked": "Без прив'язки",
-        "documentTypes": {
-          "passport": "Паспорт",
-          "inn": "ІПН",
-          "contract": "Договір",
-          "income": "Довідка про доходи",
-          "outcome": "Витяг",
-          "signature": "ЕЦП",
-          "military": "Військовий",
-          "other": "Інше"
-        },
+        "documentTypePlaceholder": "Оберіть тип",
         "department": "Відділ",
         "phones": "Телефони",
         "tin": "ІПН",
@@ -4817,17 +4808,38 @@
       "title": "Генерація документів",
       "tabs": {
         "journal": "Журнал документів",
-        "templates": "Шаблони документів"
+        "templates": "Шаблони документів",
+        "types": "Типи документів"
       },
-      "documentTypes": {
-        "passport": "Паспорт",
-        "inn": "ІНН",
-        "contract": "Договір",
-        "income": "Довідка про доходи",
-        "outcome": "Витяг / виписка",
-        "signature": "Цифровий підпис",
-        "military": "Військовий",
-        "other": "Інше"
+      "types": {
+        "title": "Типи документів",
+        "newButton": "Новий тип",
+        "createTitle": "Новий тип документа",
+        "editTitle": "Редагувати тип документа",
+        "confirmDelete": "Видалити цей тип документа? Дію не можна скасувати.",
+        "deleteBlockedMessage": "Цей тип використовує {{formattedCount}} документ(ів). Приховайте його замість видалення.",
+        "uniqueNameError": "Тип документа з такою назвою вже існує.",
+        "loadError": "Не вдалося завантажити типи документів.",
+        "hiddenLabel": "прихований",
+        "columns": {
+          "color": "Колір",
+          "name": "Назва",
+          "usage": "Документи",
+          "actions": "Дії"
+        },
+        "fields": {
+          "name": "Назва",
+          "namePlaceholder": "напр. Паспорт",
+          "color": "Колір",
+          "previewText": "Тип документа"
+        },
+        "toast": {
+          "created": "Тип документа створено",
+          "updated": "Тип документа оновлено",
+          "deleted": "Тип документа видалено",
+          "hidden": "Тип приховано",
+          "shown": "Тип показано"
+        }
       },
       "actions": {
         "uploaded": "Завантажено",
