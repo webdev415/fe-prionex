@@ -3,10 +3,16 @@ import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import type { MailboxFormValues } from '@/pages/LawyerWorkplace/components/settings/mailboxes/MailboxModal'
 import type { SettingsMailbox, SyncInterval } from '@/pages/LawyerWorkplace/settings/types'
-import { mapMailboxFormToCreate, mapMailboxFormToUpdate } from '../api/settingsMappers'
+import {
+  mapMailboxFormToConnectionTest,
+  mapMailboxFormToCreate,
+  mapMailboxFormToUpdate,
+} from '../api/settingsMappers'
+import { mapMailboxConnectionError } from '@/pages/LawyerWorkplace/settings/utils/mailboxConnectionErrors'
 import {
   useCreateLegalSettingsMailbox,
   usePollAllLegalMailboxes,
+  useTestLegalSettingsMailboxConnection,
   useUpdateLegalSettingsMailbox,
   useUpdateLegalSyncSettings,
 } from './useLegalMutations'
@@ -15,6 +21,7 @@ export function useLegalMailboxSettingsActions() {
   const { t } = useTranslation('common')
   const createMailbox = useCreateLegalSettingsMailbox()
   const updateMailbox = useUpdateLegalSettingsMailbox()
+  const testMailboxConnectionMutation = useTestLegalSettingsMailboxConnection()
   const updateSyncSettings = useUpdateLegalSyncSettings()
   const pollAllMailboxes = usePollAllLegalMailboxes()
 
@@ -92,12 +99,30 @@ export function useLegalMailboxSettingsActions() {
     )
   }, [pollAllMailboxes, t])
 
+  const testMailboxConnection = useCallback(
+    async (values: MailboxFormValues) => {
+      try {
+        await testMailboxConnectionMutation.mutateAsync(mapMailboxFormToConnectionTest(values))
+      } catch (error) {
+        const message = mapMailboxConnectionError(error, values.provider, t)
+        toast.error(message)
+        throw new Error(message)
+      }
+      toast.success(
+        t('pages.lawyerWorkplace.settings.mailboxes.testConnectionSuccess', 'Connection successful')
+      )
+    },
+    [t, testMailboxConnectionMutation]
+  )
+
   return {
     saveMailbox,
+    testMailboxConnection,
     toggleMailboxStatus,
     changeSyncInterval,
     testSync,
     isSavingMailbox: createMailbox.isPending || updateMailbox.isPending,
+    isTestingConnection: testMailboxConnectionMutation.isPending,
     isPolling: pollAllMailboxes.isPending,
     isSavingSync: updateSyncSettings.isPending,
   }

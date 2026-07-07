@@ -951,6 +951,18 @@
           "testSyncPartial": "Sync finished with {{errors}} error(s). {{ingested}} new message(s).",
           "testSyncSuccess": "Sync complete. {{ingested}} new message(s) ingested.",
           "testSyncSuccessEmpty": "Sync complete. No new messages.",
+          "testConnection": "Test connection",
+          "testConnectionRunning": "Testing…",
+          "testConnectionSuccess": "Connection successful",
+          "connectionErrors": {
+            "authFailed": "Could not sign in. Check the email address and app password.",
+            "authFailedGoogle": "Could not sign in. Check the email address and use a Google app password — not your regular Google password.",
+            "authFailedMicrosoft": "Could not sign in. Check the email address and app password or account permissions.",
+            "connectionFailed": "Could not reach the mail server. Check the host, port, and network.",
+            "timeout": "Connection timed out. Check the server host, port, and firewall settings.",
+            "generic": "Connection test failed: {{message}}",
+            "unknown": "Connection test failed. Please try again."
+          },
           "defaultOutgoing": "Default",
           "autoRoute": "Auto-route",
           "duplicateEmail": "This mailbox is already connected",

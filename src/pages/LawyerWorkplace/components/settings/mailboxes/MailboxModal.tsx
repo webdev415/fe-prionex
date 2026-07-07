@@ -145,7 +145,9 @@ function getAcceptableProviderIds(emailValue: string): MailboxProvider[] {
   if (detected) {
     return [detected, 'custom']
   }
-  return ['custom']
+  // Unknown domains might still run on Google/Microsoft hosted infra.
+  // Allow explicit provider choice instead of forcing custom server settings.
+  return PROVIDER_PRESETS.map((preset) => preset.id)
 }
 
 const DEFAULT_EMPTY: MailboxFormValues = {
@@ -196,6 +198,9 @@ interface MailboxModalProps {
   existingEmails: string[]
   onClose: () => void
   onSave: (values: MailboxFormValues) => void | Promise<void>
+  onTestConnection: (values: MailboxFormValues) => void | Promise<void>
+  requireConnectionTest?: boolean
+  isTestingConnection?: boolean
   isSubmitting?: boolean
 }
 
@@ -206,6 +211,9 @@ export function MailboxModal({
   existingEmails,
   onClose,
   onSave,
+  onTestConnection,
+  requireConnectionTest = false,
+  isTestingConnection = false,
   isSubmitting = false,
 }: MailboxModalProps) {
   const { t } = useTranslation('common')
@@ -228,6 +236,13 @@ export function MailboxModal({
     useState<MailboxRoutingRule['matchType']>('subject_keyword')
   const [newMatchValue, setNewMatchValue] = useState('')
   const [newRuleTypeId, setNewRuleTypeId] = useState('')
+  const [connectionTestPassed, setConnectionTestPassed] = useState(false)
+  const [connectionError, setConnectionError] = useState<string | null>(null)
+
+  const resetConnectionTest = () => {
+    setConnectionTestPassed(false)
+    setConnectionError(null)
+  }
 
   useEffect(() => {
     if (!open) return
@@ -254,11 +269,14 @@ export function MailboxModal({
       setNewMatchType('subject_keyword')
       setNewMatchValue('')
       setNewRuleTypeId(letterTypes[0]?.id ?? '')
+      setConnectionTestPassed(false)
+      setConnectionError(null)
     })
   }, [open, mailbox, letterTypes])
 
   const handleProviderChange = (next: MailboxProvider) => {
     setProvider(next)
+    resetConnectionTest()
     const preset = PROVIDER_PRESETS.find((p) => p.id === next)
     if (preset) {
       setImapHost(preset.imapHost)
@@ -279,6 +297,7 @@ export function MailboxModal({
 
   const handleEmailChange = (value: string) => {
     setEmail(value)
+    resetConnectionTest()
     const acceptable = getAcceptableProviderIds(value)
     if (!acceptable.includes(provider)) {
       const detected = detectProviderFromEmail(value)
@@ -318,6 +337,7 @@ export function MailboxModal({
     /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) &&
     passwordValid &&
     customHostsValid
+  const canTestConnection = canSave
 
   const handleAddRule = () => {
     if (!newRuleTypeId) return
@@ -333,6 +353,7 @@ export function MailboxModal({
 
   const handleSave = () => {
     if (!canSave || isSubmitting) return
+    if (requireConnectionTest && !connectionTestPassed) return
     void onSave({
       email: email.trim(),
       displayName: displayName.trim(),
@@ -348,6 +369,33 @@ export function MailboxModal({
       routingRules,
       syncFromToday,
     })
+  }
+
+  const handleTestConnection = async () => {
+    if (!canTestConnection || isTestingConnection || isSubmitting) return
+    setConnectionError(null)
+    try {
+      await onTestConnection({
+        email: email.trim(),
+        displayName: displayName.trim(),
+        provider,
+        password,
+        imapHost,
+        imapPort,
+        imapUseSsl,
+        smtpHost,
+        smtpPort,
+        smtpUseTls,
+        defaultLetterTypeId: null,
+        routingRules,
+        syncFromToday,
+      })
+      setConnectionTestPassed(true)
+      setConnectionError(null)
+    } catch (error) {
+      setConnectionTestPassed(false)
+      setConnectionError(error instanceof Error ? error.message : null)
+    }
   }
 
   const selectedProviderLabel = PROVIDER_PRESETS.find((p) => p.id === provider)?.label ?? provider
@@ -446,7 +494,10 @@ export function MailboxModal({
             <input
               type={showPassword ? 'text' : 'password'}
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => {
+                setPassword(e.target.value)
+                resetConnectionTest()
+              }}
               placeholder={
                 hasExistingCredentials
                   ? t(
@@ -476,6 +527,11 @@ export function MailboxModal({
               'Use an app-specific password generated in your mail account security settings, not your main login password.'
             )}
           </p>
+          {connectionError ? (
+            <p className="text-error-600 text-[12px]" role="alert">
+              {connectionError}
+            </p>
+          ) : null}
         </div>
 
         {/* Custom provider server settings */}
@@ -500,7 +556,10 @@ export function MailboxModal({
                 <input
                   type="text"
                   value={imapHost}
-                  onChange={(e) => setImapHost(e.target.value)}
+                  onChange={(e) => {
+                    setImapHost(e.target.value)
+                    resetConnectionTest()
+                  }}
                   placeholder="imap.mail.prionex.ua"
                   className="text-dark-500 focus:border-primary-400 h-10 rounded-md border border-gray-200 bg-white px-3 text-[13px] outline-none"
                 />
@@ -514,7 +573,10 @@ export function MailboxModal({
                   value={imapPort}
                   min={1}
                   max={65535}
-                  onChange={(e) => setImapPort(Number(e.target.value))}
+                  onChange={(e) => {
+                    setImapPort(Number(e.target.value))
+                    resetConnectionTest()
+                  }}
                   className="text-dark-500 focus:border-primary-400 h-10 rounded-md border border-gray-200 bg-white px-3 text-[13px] outline-none"
                 />
               </div>
@@ -523,7 +585,10 @@ export function MailboxModal({
               <input
                 type="checkbox"
                 checked={imapUseSsl}
-                onChange={(e) => setImapUseSsl(e.target.checked)}
+                onChange={(e) => {
+                  setImapUseSsl(e.target.checked)
+                  resetConnectionTest()
+                }}
                 className="accent-secondary-800 h-4 w-4 rounded border-gray-300"
               />
               <span className="text-dark-500 text-[12px]">
@@ -546,7 +611,10 @@ export function MailboxModal({
                 <input
                   type="text"
                   value={smtpHost}
-                  onChange={(e) => setSmtpHost(e.target.value)}
+                  onChange={(e) => {
+                    setSmtpHost(e.target.value)
+                    resetConnectionTest()
+                  }}
                   placeholder="smtp.mail.prionex.ua"
                   className="text-dark-500 focus:border-primary-400 h-10 rounded-md border border-gray-200 bg-white px-3 text-[13px] outline-none"
                 />
@@ -560,7 +628,10 @@ export function MailboxModal({
                   value={smtpPort}
                   min={1}
                   max={65535}
-                  onChange={(e) => setSmtpPort(Number(e.target.value))}
+                  onChange={(e) => {
+                    setSmtpPort(Number(e.target.value))
+                    resetConnectionTest()
+                  }}
                   className="text-dark-500 focus:border-primary-400 h-10 rounded-md border border-gray-200 bg-white px-3 text-[13px] outline-none"
                 />
               </div>
@@ -569,7 +640,10 @@ export function MailboxModal({
               <input
                 type="checkbox"
                 checked={smtpUseTls}
-                onChange={(e) => setSmtpUseTls(e.target.checked)}
+                onChange={(e) => {
+                  setSmtpUseTls(e.target.checked)
+                  resetConnectionTest()
+                }}
                 className="accent-secondary-800 h-4 w-4 rounded border-gray-300"
               />
               <span className="text-dark-500 text-[12px]">
@@ -743,8 +817,18 @@ export function MailboxModal({
           {t('actions.cancel', 'Cancel')}
         </Button>
         <Button
+          variant="outline"
+          disabled={!canTestConnection || isTestingConnection || isSubmitting}
+          onClick={() => void handleTestConnection()}
+          className="h-10 w-full rounded-md"
+        >
+          {isTestingConnection
+            ? t('pages.lawyerWorkplace.settings.mailboxes.testConnectionRunning', 'Testing…')
+            : t('pages.lawyerWorkplace.settings.mailboxes.testConnection', 'Test connection')}
+        </Button>
+        <Button
           variant="primary"
-          disabled={!canSave || isSubmitting}
+          disabled={!canSave || isSubmitting || (requireConnectionTest && !connectionTestPassed)}
           onClick={handleSave}
           className="h-10 w-full rounded-md"
         >

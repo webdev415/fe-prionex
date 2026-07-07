@@ -1014,7 +1014,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           <header
             className={cn(
               'bg-light-50 fixed top-0 right-0 z-20 flex h-[60px] justify-between border-l border-white/10 px-3 shadow-sm transition-all duration-300 sm:px-4 lg:px-6',
-              isLawyerWorkplaceRoute ? 'items-stretch overflow-hidden' : 'items-center',
+              isLawyerWorkplaceRoute ? 'items-stretch' : 'items-center',
               'left-0 lg:left-18', // Mobile: full width, Desktop: margin for collapsed sidebar
               isOpenSideBar && 'lg:left-60' // Desktop: expanded sidebar
             )}

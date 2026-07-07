@@ -521,6 +521,22 @@ export interface LegalMailboxCreate {
   routing_rules?: LegalMailboxRoutingRuleInput[]
 }
 
+export interface LegalMailboxConnectionTest {
+  email: string
+  provider: LegalMailboxProvider
+  password: string
+  imap_host?: string | null
+  imap_port?: number | null
+  imap_use_ssl?: boolean | null
+  smtp_host?: string | null
+  smtp_port?: number | null
+  smtp_use_tls?: boolean | null
+}
+
+export interface LegalMailboxConnectionTestResponse {
+  ok: boolean
+}
+
 export interface LegalMailboxUpdate {
   email?: string
   display_name?: string
