@@ -13,6 +13,7 @@ import { Modal, ModalContent, ModalFooter, ModalHeader } from '@/components/ui/M
 import { SearchableSelect } from '@/components/ui/SearchableSelect'
 import { Textarea } from '@/components/ui/Textarea'
 import { useCreateLegalKanbanTask } from '@/features/lawyerWorkplace/hooks/useLegalMutations'
+import { legalDueDateToIso } from '@/features/lawyerWorkplace/utils/legalDueDate'
 import {
   useLegalLawyers,
   useLegalLetterTypes,
@@ -47,12 +48,6 @@ function getTodayStart(): Date {
   const date = new Date()
   date.setHours(0, 0, 0, 0)
   return date
-}
-
-function deadlineToIso(date: Date): string {
-  const next = new Date(date)
-  next.setHours(12, 0, 0, 0)
-  return next.toISOString()
 }
 
 function renderLetterTypeOption(letterTypeId: string, name: string) {
@@ -184,7 +179,7 @@ export function CreateKanbanTaskModal({ open, onClose }: CreateKanbanTaskModalPr
         letter_type_id: letterTypeId,
         client_id: resolvedClientId,
         assigned_to_user_id: lawyerUserId,
-        due_date: deadlineToIso(deadline),
+        due_date: legalDueDateToIso(deadline),
         description: description.trim() || null,
       },
       {

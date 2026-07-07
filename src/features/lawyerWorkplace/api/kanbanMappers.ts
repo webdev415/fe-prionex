@@ -5,6 +5,7 @@ import type {
   KanbanTaskType,
 } from '@/pages/LawyerWorkplace/kanban/kanbanData'
 import type { DeadlineFilter } from '@/pages/LawyerWorkplace/components/kanban/constants'
+import { legalOverdueDueDateIso } from '../utils/legalDueDate'
 import type { LegalKanbanTaskItem, LegalLawyer } from './types'
 
 const KNOWN_TYPES = new Set<KanbanTaskType>([
@@ -54,10 +55,7 @@ export function mapKanbanColumnToTaskStatus(columnId: KanbanColumnId): string {
 }
 
 function overdueDueDateIso(): string {
-  const date = new Date()
-  date.setDate(date.getDate() - 1)
-  date.setHours(12, 0, 0, 0)
-  return date.toISOString()
+  return legalOverdueDueDateIso()
 }
 
 export function mapKanbanPatchToTaskUpdate(

@@ -16,25 +16,15 @@ import {
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 import type { KanbanColumnId, KanbanTask, KanbanTaskType } from '../../kanban/kanbanData'
-import { formatKanbanMonthDay } from '../../utils/formatters'
+import {
+  formatLegalDueMonthDay,
+  legalDueDateToIso,
+  parseLegalDueDate,
+} from '@/features/lawyerWorkplace/utils/legalDueDate'
 import { getAssigneeColour, KANBAN_COLUMN_MOVE_OPTIONS } from './constants'
 import { KanbanAssigneeChip } from './KanbanAssigneeChip'
 import { KanbanClientChip } from './KanbanClientChip'
 import { KanbanTypeBadge } from './KanbanTypeBadge'
-
-function parseDeadline(iso: string | undefined | null): Date | null {
-  if (!iso) return null
-  const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})/)
-  if (m) return new Date(+m[1], +m[2] - 1, +m[3], 0, 0, 0, 0)
-  const d = new Date(iso)
-  return isNaN(d.getTime()) ? null : d
-}
-
-function fmtMonthDay(d: Date): string {
-  const mm = String(d.getMonth() + 1).padStart(2, '0')
-  const dd = String(d.getDate()).padStart(2, '0')
-  return `${mm}/${dd}`
-}
 
 const COLUMN_MOVE_OPTIONS = KANBAN_COLUMN_MOVE_OPTIONS
 
@@ -88,7 +78,7 @@ export function KanbanCard({
   const clientCode = task.clientCode ?? null
   const clientName = task.clientName?.trim() || null
 
-  const deadline = parseDeadline(task.deadline)
+  const deadline = parseLegalDueDate(task.deadline)
   const assigneeInitials = task.assigneeInitials
   const assigneeName = task.assigneeName
 
@@ -205,7 +195,7 @@ export function KanbanCard({
           task.closedAt ? (
             <span className="text-light-500 text-[11px]">
               {t('pages.lawyerWorkplace.kanban.closedLabel', 'closed')}{' '}
-              {formatKanbanMonthDay(task.closedAt)}
+              {formatLegalDueMonthDay(task.closedAt)}
             </span>
           ) : null
         ) : (
@@ -215,12 +205,14 @@ export function KanbanCard({
               isOverdue ? (
                 <span className="text-error-600 flex items-center gap-1 text-[11px] font-medium">
                   <Icons.Calendar size={11} strokeWidth={1.5} className="shrink-0" />
-                  {t('pages.lawyerWorkplace.kanban.dueLabel', 'due:')} {fmtMonthDay(deadline)}
+                  {t('pages.lawyerWorkplace.kanban.dueLabel', 'due:')}{' '}
+                  {formatLegalDueMonthDay(task.deadline)}
                 </span>
               ) : (
                 <span className="text-light-600 flex items-center gap-1 text-[11px]">
                   <Icons.Calendar size={11} strokeWidth={1.5} className="shrink-0" />
-                  {t('pages.lawyerWorkplace.kanban.byLabel', 'by')} {fmtMonthDay(deadline)}
+                  {t('pages.lawyerWorkplace.kanban.byLabel', 'by')}{' '}
+                  {formatLegalDueMonthDay(task.deadline)}
                 </span>
               )
             ) : (
@@ -376,7 +368,9 @@ export function KanbanCard({
                       inline
                       selected={deadline}
                       onChange={(date: Date | null) => {
-                        onTaskUpdate?.(task.id, { deadline: date ? date.toISOString() : null })
+                        onTaskUpdate?.(task.id, {
+                          deadline: date ? legalDueDateToIso(date) : null,
+                        })
                       }}
                       calendarStartDay={1}
                       showYearDropdown
