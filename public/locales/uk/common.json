@@ -1612,6 +1612,25 @@
           "operator": "Оператор",
           "client": "Клієнт",
           "other": "Інше"
+        },
+        "v7": {
+          "keyMoments": "Ключові моменти",
+          "overlap": "одночасно",
+          "pause": "тиша {{seconds}} с",
+          "turns_one": "{{count}} репліка",
+          "turns_few": "{{count}} репліки",
+          "turns_many": "{{count}} реплік",
+          "turns_other": "{{count}} репліки",
+          "silence": "Тиша {{total}}с",
+          "silenceMax": "Тиша {{total}}с (макс {{max}}с)",
+          "overlapTotal": "Перебивання {{total}}с",
+          "operatorShare": "Оператор {{share}}%",
+          "clientShare": "{{share}}% Клієнт",
+          "duration": "Тривалість",
+          "direction": {
+            "inbound": "Вхідний",
+            "outbound": "Вихідний"
+          }
         }
       },
       "scenes": {

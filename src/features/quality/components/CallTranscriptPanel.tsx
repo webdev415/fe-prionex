@@ -1,10 +1,15 @@
 /**
- * CallTranscriptPanel — AI transcript of one call, scene-grouped (Ф1).
+ * CallTranscriptPanel — AI transcript of one call (Ф1 scenes / v7 turns).
  *
  * One shared component for both flows (client card modal now; Training →
  * Оцінка діалогів joins in Ф2). Renders the nightly-brain transcript:
  * summary header, collapsible scene sections, chat-layout utterances with
  * seek-to-timestamp buttons wired to the existing CallPlayer handle.
+ *
+ * v7 (FORMAT_SPEC): transcripts whose turns carry `dur` (or that ship
+ * `metrics.stats`) render through TranscriptV7View — stats header, key
+ * moments, two-sided feed with pauses/overlaps/inline reactions/QA tags.
+ * Ф1-format transcripts keep the legacy scene renderer below unchanged.
  *
  * Ф1 reality: `review` is null (Проход 2 ships in Ф2) — every review-derived
  * pill/footer renders only when the data is present, so the panel degrades
@@ -20,6 +25,8 @@ import { useHasPermission } from '@/hooks'
 import { PERMISSIONS } from '@/constants/permissions'
 import { Icons } from '@/lib/icons'
 import { useCallTranscript } from '../hooks/useCallTranscript'
+import { isV7Transcript } from '../lib/transcriptV7'
+import { TranscriptV7View } from './TranscriptV7View'
 import type {
   CallAiReview,
   TranscriptScene,
@@ -237,9 +244,12 @@ export function CallTranscriptPanel({
   )
   const [collapsed, setCollapsed] = useState<Record<number, boolean>>({})
 
+  // v7 turns render through TranscriptV7View; scene grouping is Ф1-only.
+  const v7 = useMemo(() => isV7Transcript(transcript), [transcript])
   const groups = useMemo(
-    () => (transcript ? groupUtterances(transcript.utterances ?? [], transcript.scenes) : []),
-    [transcript]
+    () =>
+      transcript && !v7 ? groupUtterances(transcript.utterances ?? [], transcript.scenes) : [],
+    [transcript, v7]
   )
 
   if (!callId) return null
@@ -318,65 +328,69 @@ export function CallTranscriptPanel({
         ) : null}
       </div>
 
-      {/* Scene sections */}
-      <div className="flex flex-col gap-2">
-        {groups.map((group, index) => {
-          const sceneKey = group.sceneKey
-          const isPromise = sceneKey === 'promise'
-          const isCollapsed = collapsed[index] === true
-          const label =
-            sceneKey == null
-              ? t('pages.training.scenes.other')
-              : KNOWN_SCENES.has(sceneKey)
-                ? t(`pages.training.scenes.${sceneKey}`)
-                : sceneKey // open enum — unknown keys render as-is
+      {/* Dialogue: v7 detailed feed, or Ф1 scene sections */}
+      {v7 ? (
+        <TranscriptV7View transcript={transcript} onSeek={onSeek} />
+      ) : (
+        <div className="flex flex-col gap-2">
+          {groups.map((group, index) => {
+            const sceneKey = group.sceneKey
+            const isPromise = sceneKey === 'promise'
+            const isCollapsed = collapsed[index] === true
+            const label =
+              sceneKey == null
+                ? t('pages.training.scenes.other')
+                : KNOWN_SCENES.has(sceneKey)
+                  ? t(`pages.training.scenes.${sceneKey}`)
+                  : sceneKey // open enum — unknown keys render as-is
 
-          const body = (
-            <div className="flex flex-col gap-1.5 px-3 pb-3">
-              {group.utterances.map((utt) => (
-                <UtteranceRow key={utt.i} utt={utt} onSeek={onSeek} />
-              ))}
-            </div>
-          )
-
-          // No scenes at all → flat dialogue without section chrome.
-          if (sceneKey == null && (transcript.scenes ?? []).length === 0) {
-            return (
-              <div key={index} className="flex flex-col gap-1.5">
+            const body = (
+              <div className="flex flex-col gap-1.5 px-3 pb-3">
                 {group.utterances.map((utt) => (
                   <UtteranceRow key={utt.i} utt={utt} onSeek={onSeek} />
                 ))}
               </div>
             )
-          }
 
-          return (
-            <section
-              key={index}
-              data-testid={`transcript-scene-${index}`}
-              className={`rounded-lg border ${
-                isPromise ? 'border-[#BBFB5B] bg-[#BBFB5B]/10' : 'border-gray-200 bg-white'
-              }`}
-            >
-              <button
-                type="button"
-                className="flex w-full items-center justify-between px-3 py-2 text-left"
-                onClick={() => setCollapsed((prev) => ({ ...prev, [index]: !isCollapsed }))}
-                aria-expanded={!isCollapsed}
+            // No scenes at all → flat dialogue without section chrome.
+            if (sceneKey == null && (transcript.scenes ?? []).length === 0) {
+              return (
+                <div key={index} className="flex flex-col gap-1.5">
+                  {group.utterances.map((utt) => (
+                    <UtteranceRow key={utt.i} utt={utt} onSeek={onSeek} />
+                  ))}
+                </div>
+              )
+            }
+
+            return (
+              <section
+                key={index}
+                data-testid={`transcript-scene-${index}`}
+                className={`rounded-lg border ${
+                  isPromise ? 'border-[#BBFB5B] bg-[#BBFB5B]/10' : 'border-gray-200 bg-white'
+                }`}
               >
-                <span className="text-dark-500 text-xs font-semibold tracking-wide uppercase">
-                  {label}
-                </span>
-                <Icons.ArrowDown
-                  size={14}
-                  className={`text-gray-400 transition-transform ${isCollapsed ? '' : 'rotate-180'}`}
-                />
-              </button>
-              {isCollapsed ? null : body}
-            </section>
-          )
-        })}
-      </div>
+                <button
+                  type="button"
+                  className="flex w-full items-center justify-between px-3 py-2 text-left"
+                  onClick={() => setCollapsed((prev) => ({ ...prev, [index]: !isCollapsed }))}
+                  aria-expanded={!isCollapsed}
+                >
+                  <span className="text-dark-500 text-xs font-semibold tracking-wide uppercase">
+                    {label}
+                  </span>
+                  <Icons.ArrowDown
+                    size={14}
+                    className={`text-gray-400 transition-transform ${isCollapsed ? '' : 'rotate-180'}`}
+                  />
+                </button>
+                {isCollapsed ? null : body}
+              </section>
+            )
+          })}
+        </div>
+      )}
 
       {/* Footer: promise + recommendations (review-only, Ф2 data) */}
       {review?.extracted?.promise &&

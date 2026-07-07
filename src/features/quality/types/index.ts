@@ -409,8 +409,21 @@ export interface AlertsResponse {
 /** Utterance flag — the brain may send bare strings or `{type}` objects. */
 export type TranscriptUtteranceFlag = string | { type?: string; [key: string]: unknown }
 
+/**
+ * v7 inline reaction (`bc`) — a short interjection of the OTHER side inside
+ * this turn. The brain sends `{t, role, text}` objects; older exports used
+ * `[t, role, text]` tuples — the reader accepts both.
+ */
+export type TranscriptBackchannel =
+  | { t?: number; role?: string; text?: string; [key: string]: unknown }
+  | [number, string, string]
+
+/** v7 QA tag `[kind, label]` — kind is an OPEN set (good|warn|crit|info|…). */
+export type TranscriptQaTag = Array<string | undefined | null>
+
 export interface TranscriptUtterance {
-  i: number
+  /** Utterance index — present in the Ф1 format, absent in v7 turns. */
+  i?: number
   /** start / end, seconds (float) */
   t0: number
   t1: number
@@ -420,6 +433,27 @@ export interface TranscriptUtterance {
   lang?: string
   conf?: number
   flags?: TranscriptUtteranceFlag[]
+  /** v7: turn duration, seconds. Its presence is the v7 format marker. */
+  dur?: number
+  /** v7: the other side's short reactions inside this turn. */
+  bc?: TranscriptBackchannel[]
+  /** v7: silence (both channels) before this turn, seconds. */
+  pause_before?: number
+  /** v7: QA tag `[kind, label]`. */
+  tag?: TranscriptQaTag
+}
+
+/** v7 call-level stats (`metrics.stats`) — every field optional (tolerant). */
+export interface TranscriptStats {
+  op_talk_s?: number
+  cl_talk_s?: number
+  silence_total_s?: number
+  max_silence_s?: number
+  overlap_total_s?: number
+  n_turns?: number
+  /** Operator's share of talk time, percent 0..100. */
+  op_share?: number
+  [key: string]: unknown
 }
 
 export interface TranscriptScene {
@@ -435,7 +469,8 @@ export interface CallTranscript {
   summary?: string | null
   utterances: TranscriptUtterance[]
   scenes?: TranscriptScene[] | null
-  metrics?: Record<string, unknown> | null
+  /** v7 puts call-level stats under `metrics.stats` (second v7 marker). */
+  metrics?: { stats?: TranscriptStats | null; [key: string]: unknown } | null
   agent_extension?: string | null
   client_id?: number | null
   direction?: string | null

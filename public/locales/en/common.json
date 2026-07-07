@@ -1645,6 +1645,23 @@
           "operator": "Operator",
           "client": "Client",
           "other": "Other"
+        },
+        "v7": {
+          "keyMoments": "Key moments",
+          "overlap": "overlapping",
+          "pause": "silence {{seconds}} s",
+          "turns_one": "{{count}} turn",
+          "turns_other": "{{count}} turns",
+          "silence": "Silence {{total}}s",
+          "silenceMax": "Silence {{total}}s (max {{max}}s)",
+          "overlapTotal": "Overlap {{total}}s",
+          "operatorShare": "Operator {{share}}%",
+          "clientShare": "{{share}}% Client",
+          "duration": "Duration",
+          "direction": {
+            "inbound": "Inbound",
+            "outbound": "Outbound"
+          }
         }
       },
       "scenes": {
