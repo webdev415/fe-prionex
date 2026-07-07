@@ -86,6 +86,11 @@ const RRNotificationsPage = lazy(() =>
     default: m.RRNotificationsPage,
   }))
 )
+const RRPeriodicityPage = lazy(() =>
+  import('@/pages/RRPeriodicity').then((m) => ({
+    default: m.RRPeriodicityPage,
+  }))
+)
 const TAManagementPage = lazy(() =>
   import('@/pages/TAManagement').then((m) => ({
     default: m.TAManagementPage,
@@ -476,6 +481,14 @@ export const router = createBrowserRouter([
         element: (
           <PermissionRoute requiredPermission={PERMISSIONS.SYSTEM.MANAGE_SETTINGS}>
             {withSuspense(<RRNotificationsPage />)}
+          </PermissionRoute>
+        ),
+      },
+      {
+        path: 'system-settings/rr-periodicity',
+        element: (
+          <PermissionRoute requiredPermission={PERMISSIONS.SYSTEM.MANAGE_SETTINGS}>
+            {withSuspense(<RRPeriodicityPage />)}
           </PermissionRoute>
         ),
       },

@@ -111,6 +111,13 @@ import {
   contactTypeLabel,
   pickDefaultActiveContactTypeId,
 } from '@/features/clients/utils/contactTypeLabel'
+import { useRRPeriodicitySettings } from '@/features/clients/hooks/useRRPeriodicitySettings'
+import {
+  generateSchedule,
+  PERIODICITY_EVERY_N_DAYS,
+  PERIODICITY_MONTHLY_NTH_DAY,
+  type PeriodicityType,
+} from '@/features/clients/utils/rrSchedule'
 import type { RestructuringPaymentEntry } from '@/features/clients/api/types'
 import type { OverpaymentResponse, RRStatusHistoryEntry } from '@/features/clients/api/clientApi'
 import { useUpdateInteraction } from '@/features/clients/hooks/useNoteInteraction'
@@ -248,12 +255,53 @@ export function ClientDetailPage() {
     connectionDate: null as Date | null,
     totalAmount: '',
     numPayments: 1,
+    // KAN-785 Part 1 — Payment Periodicity. '' = manual entry (no auto-fill).
+    frequency: '' as '' | PeriodicityType,
+    intervalDays: '' as string, // for every_n_days
+    dayOfMonth: '' as string, // for monthly_nth_day: '1'..'30' or 'last'
+    // 0-based indexes of schedule rows whose date was clamped to month-end.
+    clampedRows: [] as number[],
     payments: [{ date: null as Date | null, amount: '' }] as Array<{
       date: Date | null
       amount: string
     }>,
   })
   const [connectRrError, setConnectRrError] = useState<string | null>(null)
+
+  // KAN-785 Part 1 — enabled periodicity options for the Payment Frequency
+  // dropdown. Fetched only while the connect-RR modal is open.
+  const { data: rrPeriodicitySettings } = useRRPeriodicitySettings(isConnectRrOpen)
+  const rrEnabledPeriodicities = rrPeriodicitySettings?.enabled_types ?? []
+  // Hard cap on RR installments — the backend stores a fixed 12 payment slots
+  // (payment_date_1..12 / payment_amount_1..12) and silently drops anything
+  // beyond that, so the form must never let the operator exceed it.
+  const MAX_RR_PAYMENTS = 12
+
+  // Pure recompute of the schedule (dates + even-split amounts) from the
+  // current generation inputs. Row 0's date is the anchor; row 0 amount and
+  // rows 1..n-1 are regenerated. Returns the form unchanged in manual mode
+  // (no frequency). Callers pass the already-updated form so this stays pure
+  // and safe inside a setState updater.
+  const withGeneratedSchedule = (form: typeof connectRrForm): typeof connectRrForm => {
+    if (!form.frequency) return form
+    const firstDate = form.payments[0]?.date ?? null
+    const dayOfMonth =
+      form.dayOfMonth === 'last' ? 'last' : parseInt(form.dayOfMonth, 10) || undefined
+    const { rows, clampedIndexes } = generateSchedule({
+      firstDate,
+      numPayments: form.numPayments,
+      frequency: form.frequency,
+      intervalDays: parseInt(form.intervalDays, 10) || 0,
+      dayOfMonth,
+      totalAmount: parseFloat(form.totalAmount) || 0,
+    })
+    return {
+      ...form,
+      payments: rows.map((r) => ({ date: r.date, amount: r.amount })),
+      clampedRows: clampedIndexes,
+    }
+  }
+
   const [closeLoanConfirm, setCloseLoanConfirm] = useState<number | null>(null) // debtId to close
   // Reopen-loan confirmation modal: holds the debt_id to reopen, or null when closed.
   const [reopenLoanConfirm, setReopenLoanConfirm] = useState<number | null>(null)
@@ -3652,6 +3700,10 @@ export function ClientDetailPage() {
                             connectionDate: null,
                             totalAmount: '',
                             numPayments: 1,
+                            frequency: '',
+                            intervalDays: '',
+                            dayOfMonth: '',
+                            clampedRows: [],
                             payments: [{ date: null, amount: '' }],
                           })
                           setConnectRrError(null)
@@ -6469,29 +6521,168 @@ export function ClientDetailPage() {
                   step={0.01}
                   value={connectRrForm.totalAmount}
                   onChange={(e) =>
-                    setConnectRrForm((prev) => ({ ...prev, totalAmount: e.target.value }))
+                    setConnectRrForm((prev) =>
+                      withGeneratedSchedule({ ...prev, totalAmount: e.target.value })
+                    )
                   }
                   placeholder="0.00"
                 />
               </div>
               {/* Number of Payments */}
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
-                <Input
-                  label={`${t('pages.clients.detail.rrNumPayments')} *`}
-                  type="number"
-                  min={1}
-                  max={12}
-                  value={connectRrForm.numPayments}
-                  onChange={(e) => {
-                    const num = Math.max(1, Math.min(12, Number(e.target.value) || 1))
-                    setConnectRrForm((prev) => {
-                      const payments = [...prev.payments]
-                      while (payments.length < num) payments.push({ date: null, amount: '' })
-                      return { ...prev, numPayments: num, payments: payments.slice(0, num) }
-                    })
-                  }}
-                />
+                <div>
+                  <Input
+                    label={`${t('pages.clients.detail.rrNumPayments')} *`}
+                    type="number"
+                    min={1}
+                    max={MAX_RR_PAYMENTS}
+                    value={connectRrForm.numPayments}
+                    onChange={(e) => {
+                      const num = Math.max(
+                        1,
+                        Math.min(MAX_RR_PAYMENTS, Number(e.target.value) || 1)
+                      )
+                      setConnectRrForm((prev) => {
+                        const payments = [...prev.payments]
+                        while (payments.length < num) payments.push({ date: null, amount: '' })
+                        const next = { ...prev, numPayments: num, payments: payments.slice(0, num) }
+                        // Regenerate when a frequency is active; otherwise keep the
+                        // manual rows just resized above.
+                        return withGeneratedSchedule(next)
+                      })
+                    }}
+                  />
+                  <p className="text-dark-300 mt-1 text-xs">
+                    {t('pages.clients.detail.rrNumPaymentsHint', {
+                      max: MAX_RR_PAYMENTS,
+                      defaultValue: 'Up to {{max}} payments.',
+                    })}
+                  </p>
+                </div>
               </div>
+              {/* Payment Frequency (KAN-785 Part 1) — options come from Settings */}
+              {rrEnabledPeriodicities.length > 0 && (
+                <div className="flex flex-col gap-2">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
+                    <div>
+                      <label className="text-dark-500 mb-1 block text-sm font-medium">
+                        {t('pages.clients.detail.rrFrequency', 'Payment Frequency')}
+                      </label>
+                      <Select
+                        value={connectRrForm.frequency || 'manual'}
+                        onValueChange={(val) =>
+                          setConnectRrForm((prev) =>
+                            withGeneratedSchedule({
+                              ...prev,
+                              frequency: val === 'manual' ? '' : (val as PeriodicityType),
+                            })
+                          )
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="manual">
+                            {t('pages.clients.detail.rrFrequencyManual', 'Manual (no auto-fill)')}
+                          </SelectItem>
+                          {rrEnabledPeriodicities.map((type) => (
+                            <SelectItem key={type} value={type}>
+                              {t(
+                                `pages.clients.detail.rrFrequencyOptions.${type}`,
+                                type === PERIODICITY_EVERY_N_DAYS
+                                  ? 'Every N days'
+                                  : type === PERIODICITY_MONTHLY_NTH_DAY
+                                    ? 'Every Nth of month'
+                                    : 'Monthly (same day)'
+                              )}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {connectRrForm.frequency === PERIODICITY_EVERY_N_DAYS && (
+                      <Input
+                        label={t('pages.clients.detail.rrIntervalDays', 'Interval (days)')}
+                        type="number"
+                        min={1}
+                        value={connectRrForm.intervalDays}
+                        onChange={(e) =>
+                          setConnectRrForm((prev) =>
+                            withGeneratedSchedule({ ...prev, intervalDays: e.target.value })
+                          )
+                        }
+                        placeholder="14"
+                      />
+                    )}
+
+                    {connectRrForm.frequency === PERIODICITY_MONTHLY_NTH_DAY && (
+                      <div>
+                        <label className="text-dark-500 mb-1 block text-sm font-medium">
+                          {t('pages.clients.detail.rrDayOfMonth', 'Day of month')}
+                        </label>
+                        <Select
+                          value={connectRrForm.dayOfMonth || ''}
+                          onValueChange={(val) =>
+                            setConnectRrForm((prev) =>
+                              withGeneratedSchedule({ ...prev, dayOfMonth: val })
+                            )
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue
+                              placeholder={t(
+                                'pages.clients.detail.rrDayOfMonthPlaceholder',
+                                'Select day'
+                              )}
+                            />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {Array.from({ length: 30 }, (_, i) => String(i + 1)).map((day) => (
+                              <SelectItem key={day} value={day}>
+                                {day}
+                              </SelectItem>
+                            ))}
+                            <SelectItem value="last">
+                              {t('pages.clients.detail.rrDayOfMonthLast', 'Last day')}
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+
+                    {/* Anchor that drives the whole schedule (mirrors Payment 1). */}
+                    {connectRrForm.frequency && (
+                      <DateSelect
+                        label={`${t('pages.clients.detail.rrFirstPaymentDate', 'First Payment Date')} *`}
+                        value={connectRrForm.payments[0]?.date ?? null}
+                        onChange={({ value }) =>
+                          setConnectRrForm((prev) => {
+                            const payments = [...prev.payments]
+                            payments[0] = { ...payments[0], date: value }
+                            return withGeneratedSchedule({ ...prev, payments })
+                          })
+                        }
+                        format="dd-MM-yyyy"
+                        placeholder={t(
+                          'pages.clients.detail.rrFirstPaymentDate',
+                          'First Payment Date'
+                        )}
+                        className="rounded-lg border-gray-400"
+                      />
+                    )}
+                  </div>
+                  {connectRrForm.frequency && (
+                    <p className="text-dark-300 text-xs">
+                      {t(
+                        'pages.clients.detail.rrPeriodicityHint',
+                        'The schedule below is auto-filled from the first payment date, number of payments and frequency. You can still edit any row.'
+                      )}
+                    </p>
+                  )}
+                </div>
+              )}
               {/* Payment Schedule */}
               <div className="pt-2">
                 <h3 className="text-dark-500 mb-2 text-sm font-medium sm:text-base">
@@ -6507,7 +6698,11 @@ export function ClientDetailPage() {
                           setConnectRrForm((prev) => {
                             const payments = [...prev.payments]
                             payments[idx] = { ...payments[idx], date: value }
-                            return { ...prev, payments }
+                            const next = { ...prev, payments }
+                            // Editing the first payment date re-anchors the whole
+                            // auto-filled schedule; editing a later row is a manual
+                            // override that stands alone and does not cascade (AC4).
+                            return idx === 0 ? withGeneratedSchedule(next) : next
                           })
                         }}
                         format="dd-MM-yyyy"
@@ -6532,6 +6727,15 @@ export function ClientDetailPage() {
                     </div>
                   ))}
                 </div>
+                {connectRrForm.clampedRows.length > 0 && (
+                  <div className="mt-2 rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-700">
+                    {t('pages.clients.detail.rrClampNotice', {
+                      rows: connectRrForm.clampedRows.map((i) => i + 1).join(', '),
+                      defaultValue:
+                        'Payment {{rows}}: the selected day does not exist in that month, so the date was set to the last day of the month. You can still edit it manually.',
+                    })}
+                  </div>
+                )}
               </div>
             </div>
             {connectRrError && (
