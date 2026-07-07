@@ -13,6 +13,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import type { AssistantCitation } from '@/features/aiAssistant/sse'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 import { clampReasoningPanelWidth, REASONING_PANEL_RESIZE_STEP } from './reasoningPanelConfig'
@@ -267,6 +268,180 @@ export function ReasoningInlineChip({
   )
 }
 
+/** Кружковый глиф источника ①..⑳ — совпадает с факт-сносками в ответе. */
+const CIRCLED_ONE = 0x2460
+function citationGlyph(n: number): string {
+  if (Number.isInteger(n) && n >= 1 && n <= 20) {
+    return String.fromCodePoint(CIRCLED_ONE + (n - 1))
+  }
+  return String(n)
+}
+
+/** Плоское строковое представление ячейки результата (null → «—»). */
+function formatCitationCell(value: unknown): string {
+  if (value == null) return '—'
+  if (typeof value === 'object') {
+    try {
+      return JSON.stringify(value)
+    } catch {
+      return String(value)
+    }
+  }
+  return String(value)
+}
+
+/** Компактная таблица-превью результата SQL (заголовки + первые строки). */
+function CitationTable({ columns, rows }: { columns: string[]; rows: unknown[][] }) {
+  return (
+    <div className="ai-chat-input-scrollbar border-light-200 overflow-x-auto rounded-lg border">
+      <table className="w-full border-collapse text-[11px] [font-variant-numeric:tabular-nums]">
+        {columns.length > 0 && (
+          <thead>
+            <tr className="bg-light-100">
+              {columns.map((col, index) => (
+                <th
+                  key={index}
+                  className="border-light-200 text-dark-500 border-b px-2 py-1 text-left font-semibold whitespace-nowrap"
+                >
+                  {col}
+                </th>
+              ))}
+            </tr>
+          </thead>
+        )}
+        <tbody>
+          {rows.map((row, rowIndex) => (
+            <tr key={rowIndex} className="even:bg-light-50/50 odd:bg-white">
+              {row.map((cell, cellIndex) => (
+                <td
+                  key={cellIndex}
+                  className="border-light-100 border-b px-2 py-1 whitespace-nowrap text-gray-600"
+                >
+                  {formatCitationCell(cell)}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
+/**
+ * Один источник факт-сноски в панели «Активность»: шапка (глиф ①..⑳ + `ref` +
+ * тип) и детали по `kind` — SQL (`query` + таблица `columns`/`rows`) или расчёт
+ * (`code` + `result`). Если деталей нет — остаётся только шапка с `ref`
+ * (мягкая деградация). Активный источник (`focused`) подсвечен акцент-рамкой.
+ */
+function CitationSource({ citation, focused }: { citation: AssistantCitation; focused: boolean }) {
+  const { t } = useTranslation('common')
+  const hasTable = Boolean(citation.columns?.length) || Boolean(citation.rows?.length)
+  const hasSql = Boolean(citation.query) || hasTable
+  const hasCalc = Boolean(citation.code) || Boolean(citation.result)
+
+  return (
+    <div
+      data-testid="citation-source"
+      data-citation-id={citation.id}
+      className={cn(
+        'rounded-xl border px-3 py-2.5 transition-colors',
+        focused
+          ? 'border-primary-400 bg-primary-50/50 ring-primary-300/70 ring-1'
+          : 'border-light-200 bg-light-50/50'
+      )}
+    >
+      <div className="flex items-center gap-2">
+        <span
+          className={cn(
+            'flex h-5 min-w-5 items-center justify-center rounded-md px-1 text-[12px] font-semibold [font-variant-numeric:tabular-nums]',
+            focused ? 'bg-primary-100 text-primary-700' : 'bg-light-100 text-dark-500'
+          )}
+        >
+          {citationGlyph(citation.id)}
+        </span>
+        <span className="text-dark-500 min-w-0 flex-1 truncate font-mono text-[12px] font-medium">
+          {citation.ref || citation.kind || t('pages.aiAssistant.citationSourceFallback')}
+        </span>
+        {citation.kind && (
+          <span className="bg-light-100 shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-medium tracking-wide text-gray-500 uppercase">
+            {citation.kind}
+          </span>
+        )}
+      </div>
+
+      {hasSql && (
+        <div className="mt-2 space-y-2" data-testid="citation-sql">
+          {citation.query && (
+            <pre className="ai-chat-input-scrollbar bg-light-100 text-dark-500 overflow-x-auto rounded-lg px-2.5 py-2 font-mono text-[11px] leading-relaxed whitespace-pre">
+              {citation.query}
+            </pre>
+          )}
+          {hasTable && (
+            <CitationTable columns={citation.columns ?? []} rows={citation.rows ?? []} />
+          )}
+        </div>
+      )}
+
+      {hasCalc && (
+        <div className="mt-2 space-y-2" data-testid="citation-code">
+          {citation.code && (
+            <pre className="ai-chat-input-scrollbar bg-light-100 text-dark-500 overflow-x-auto rounded-lg px-2.5 py-2 font-mono text-[11px] leading-relaxed whitespace-pre">
+              {citation.code}
+            </pre>
+          )}
+          {citation.result && (
+            <div className="border-primary-200 bg-primary-50/60 text-dark-500 rounded-lg border px-2.5 py-1.5 text-[12px]">
+              <span className="text-primary-600 mr-1.5 text-[10px] font-semibold tracking-wide uppercase">
+                {t('pages.aiAssistant.citationResultLabel')}
+              </span>
+              <span className="font-mono [font-variant-numeric:tabular-nums]">
+                {citation.result}
+              </span>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+/**
+ * Список источников с авто-фокусом: когда `focusedCitationId` меняется (клик по
+ * факт-сноске ①②③), скроллит соответствующий источник в зону видимости. DOM-узел
+ * ищется свежим внутри эффекта (по `data-citation-id`), а не через сохранённый
+ * ref — устойчиво к перемонтированию списка.
+ */
+function CitationSources({
+  citations,
+  focusedCitationId,
+}: {
+  citations: AssistantCitation[]
+  focusedCitationId: number | null
+}) {
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (focusedCitationId == null) return
+    const node = containerRef.current?.querySelector<HTMLElement>(
+      `[data-citation-id="${focusedCitationId}"]`
+    )
+    node?.scrollIntoView({ block: 'nearest' })
+  }, [focusedCitationId, citations])
+
+  return (
+    <div ref={containerRef} className="space-y-2" data-testid="assistant-citations">
+      {citations.map((citation) => (
+        <CitationSource
+          key={citation.id}
+          citation={citation}
+          focused={citation.id === focusedCitationId}
+        />
+      ))}
+    </div>
+  )
+}
+
 type ReasoningActivityPanelProps = {
   open: boolean
   streaming: boolean
@@ -274,6 +449,10 @@ type ReasoningActivityPanelProps = {
   placeholderActive: boolean
   reasoning: string
   toolSteps: ToolStep[]
+  /** Источники факт-сносок текущего сообщения (Слой 2) — секция «Источники». */
+  citations: AssistantCitation[]
+  /** Номер источника для подсветки/скролла (клик по сноске ①②③); null — нет. */
+  focusedCitationId: number | null
   /** Localised elapsed label for the header (e.g. "12 с"), or null. */
   elapsedLabel: string | null
   isMobileOrTablet: boolean
@@ -298,6 +477,8 @@ export function ReasoningActivityPanel({
   placeholderActive,
   reasoning,
   toolSteps,
+  citations,
+  focusedCitationId,
   elapsedLabel,
   isMobileOrTablet,
   width,
@@ -372,6 +553,7 @@ export function ReasoningActivityPanel({
 
   const hasSteps = toolSteps.length > 0
   const showReasoningBox = reasoning.trim().length > 0 || placeholderActive
+  const hasCitations = citations.length > 0
 
   return (
     <>
@@ -470,6 +652,18 @@ export function ReasoningActivityPanel({
                   streaming={streaming}
                   placeholder={t('pages.aiAssistant.reasoningAnalyzing')}
                 />
+              </section>
+            )}
+            {hasCitations && (
+              <section
+                className={cn(
+                  (hasSteps || showReasoningBox) && 'border-light-200/80 mt-1 border-t pt-2'
+                )}
+              >
+                <p className="py-2 text-[10.5px] font-semibold tracking-[0.1em] text-gray-400 uppercase">
+                  {t('pages.aiAssistant.activitySourcesSection')}
+                </p>
+                <CitationSources citations={citations} focusedCitationId={focusedCitationId} />
               </section>
             )}
           </div>

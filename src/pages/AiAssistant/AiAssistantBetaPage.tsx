@@ -183,6 +183,17 @@ function messageHasReasoning(item: ChatMessage): boolean {
 }
 
 /**
+ * Есть ли у сообщения ЧТО показать в панели «Активность» — рассуждение/шаги
+ * (см. {@link messageHasReasoning}) ИЛИ источники факт-сносок (Слой 2). Шире, чем
+ * `messageHasReasoning`: клик по сноске `[[N]]` в fast-ходе без рассуждения тоже
+ * должен открывать панель (там будут только «Источники»). Гейтит выбор активного
+ * сообщения панели, но НЕ бабл-чип «Ход рассуждения» (тот остаётся по reasoning).
+ */
+function messageHasActivity(item: ChatMessage): boolean {
+  return messageHasReasoning(item) || Boolean(item.citations && item.citations.length > 0)
+}
+
+/**
  * Привести SSE-цитаты (`{id, kind, ref}`) к форме, которую понимает
  * {@link MarkdownMessage} (`{id, kind, label}`): `label` — человекочитаемая
  * подпись для тайтла/тултипа сноски (берём `ref`, иначе `kind`). Возвращает
@@ -194,6 +205,11 @@ function mapCitations(citations?: AssistantCitation[]): MarkdownCitation[] | und
     id: citation.id,
     kind: citation.kind,
     label: citation.ref.trim() || citation.kind || undefined,
+    query: citation.query,
+    columns: citation.columns,
+    rows: citation.rows,
+    code: citation.code,
+    result: citation.result,
   }))
 }
 
@@ -578,6 +594,13 @@ export function AiAssistantBetaPage() {
   // Unset → the panel follows the stream (open while streaming, collapsed once
   // the turn finishes); a value here is the user's deliberate override.
   const [reasoningOpenByMessage, setReasoningOpenByMessage] = useState<Record<string, boolean>>({})
+  // Источник (номер сноски) для подсветки/скролла в панели «Активность» + id
+  // сообщения, которому он принадлежит — чтобы фокус применялся только к своему
+  // ходу (клик по факту `[[N]]`; см. openReasoningForFact / focusedCitationId).
+  const [focusedCitation, setFocusedCitation] = useState<{
+    messageId: string
+    citationId: number
+  } | null>(null)
   const [clientScope, setClientScope] = useState('all')
   const [period, setPeriod] = useState('all')
   const [assistantSettings, setAssistantSettings] = useState<AssistantSettings>(
@@ -1050,6 +1073,7 @@ export function AiAssistantBetaPage() {
     setConversationId(null)
     setFeedbackByMessage({})
     setReasoningOpenByMessage((current) => (Object.keys(current).length > 0 ? {} : current))
+    setFocusedCitation(null)
     setIsAssistantResponding(false)
   }, [stopVoiceRecognition, cancelDictation, cancelVoiceMessage, stopTts, clearPendingImages])
 
@@ -1812,12 +1836,17 @@ export function AiAssistantBetaPage() {
 
   const closeReasoning = useCallback((item: ChatMessage) => {
     setReasoningOpenByMessage((current) => ({ ...current, [item.id]: false }))
+    // Закрыли ход — снимаем фокус на его источнике (чтобы повторное открытие
+    // через чип не подсвечивало старый источник).
+    setFocusedCitation((current) => (current?.messageId === item.id ? null : current))
   }, [])
 
-  // Клик по факт-сноске `[[N]]` открывает панель «Активность» этого сообщения.
+  // Клик по факт-сноске `[[N]]` открывает панель «Активность» этого сообщения и
+  // разворачивает КОНКРЕТНЫЙ источник n: фокус ведёт к авто-скроллу + подсветке
+  // источника в секции «Источники» (см. ReasoningActivityPanel / focusedCitationId).
   const openReasoningForFact = useCallback(
-    (item: ChatMessage) => {
-      // TODO(Слой 2): развернуть КОНКРЕТНЫЙ источник n внутри панели.
+    (item: ChatMessage, n: number) => {
+      setFocusedCitation({ messageId: item.id, citationId: n })
       openReasoning(item)
     },
     [openReasoning]
@@ -1835,13 +1864,22 @@ export function AiAssistantBetaPage() {
     for (let i = chatMessages.length - 1; i >= 0; i -= 1) {
       const item = chatMessages[i]
       if (item.role !== 'assistant' || item.isError) continue
-      if (!messageHasReasoning(item)) continue
+      if (!messageHasActivity(item)) continue
       if (isReasoningOpen(item)) return item
     }
     return null
   }, [chatMessages, isReasoningOpen])
 
   const isReasoningPanelOpen = activeReasoningMessage != null
+  // Номер источника для подсветки в панели — только если фокус принадлежит
+  // активному сообщению (иначе клик по факту в одном ходе подсветил бы источник
+  // с тем же номером в другом открытом ходе).
+  const focusedCitationId =
+    focusedCitation != null &&
+    activeReasoningMessage != null &&
+    focusedCitation.messageId === activeReasoningMessage.id
+      ? focusedCitation.citationId
+      : null
   // Live width during a drag (parent-owned so the composer/ribbon shift in
   // lockstep); the committed value is persisted in the store.
   const storedReasoningPanelWidth = useAiAssistantStore((state) => state.reasoningPanelWidth)
@@ -2181,7 +2219,7 @@ export function AiAssistantBetaPage() {
                           <MarkdownMessage
                             className={MARKDOWN_BODY_CLASS}
                             citations={mapCitations(item.citations)}
-                            onFactClick={() => openReasoningForFact(item)}
+                            onFactClick={(n) => openReasoningForFact(item, n)}
                           >
                             {item.content}
                           </MarkdownMessage>
@@ -2571,6 +2609,8 @@ export function AiAssistantBetaPage() {
         )}
         reasoning={activeReasoningMessage?.reasoning ?? ''}
         toolSteps={activeReasoningMessage?.toolSteps ?? []}
+        citations={activeReasoningMessage?.citations ?? []}
+        focusedCitationId={focusedCitationId}
         elapsedLabel={
           activeReasoningElapsed != null ? formatReasoningDuration(activeReasoningElapsed) : null
         }

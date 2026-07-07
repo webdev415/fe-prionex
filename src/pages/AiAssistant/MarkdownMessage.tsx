@@ -224,8 +224,22 @@ function TableRenderer({ children, ...props }: ComponentPropsWithoutRef<'table'>
   )
 }
 
-/** Метаданные источника для факт-сноски (тайтл/тултип); приходят со страницы. */
-export type MarkdownCitation = { id: number; kind: string; label?: string }
+/**
+ * Метаданные источника для факт-сноски (тайтл/тултип); приходят со страницы.
+ * Опциональные `query`/`columns`/`rows`/`code`/`result` (Слой 2) сама сноска не
+ * рендерит — их разворачивает панель «Активность»; поля протянуты сюда, чтобы
+ * тип источника оставался единым по всему фронту.
+ */
+export type MarkdownCitation = {
+  id: number
+  kind: string
+  label?: string
+  query?: string
+  columns?: string[]
+  rows?: unknown[][]
+  code?: string
+  result?: string
+}
 
 // Кружковые цифры ①..⑳ (U+2460..). Дальше 20 — обычные цифры (редкий кейс).
 const CIRCLED_ONE = 0x2460

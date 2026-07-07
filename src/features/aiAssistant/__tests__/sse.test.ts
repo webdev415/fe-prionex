@@ -168,6 +168,90 @@ describe('dispatchSseEvent routing', () => {
     expect(onCitations).toHaveBeenCalledWith([{ id: 4, kind: '', ref: '' }])
   })
 
+  it('carries the optional source details (query/columns/rows/code/result) — Слой 2', () => {
+    const onCitations = vi.fn()
+    dispatchSseEvent(
+      {
+        event: 'citations',
+        data: JSON.stringify({
+          items: [
+            {
+              id: 1,
+              kind: 'sql',
+              ref: 'debts:remaining_debt_amount',
+              query: 'SELECT remaining_debt_amount FROM debts WHERE client_id = 42',
+              columns: ['client_id', 'remaining_debt_amount'],
+              rows: [
+                [42, 48750],
+                [43, 0],
+              ],
+            },
+            {
+              id: 2,
+              kind: 'calc',
+              ref: 'sum(payments)',
+              code: 'total = sum(p.amount for p in payments)',
+              result: '129 400 ₴',
+            },
+          ],
+        }),
+      },
+      { onCitations }
+    )
+    expect(onCitations).toHaveBeenCalledWith([
+      {
+        id: 1,
+        kind: 'sql',
+        ref: 'debts:remaining_debt_amount',
+        query: 'SELECT remaining_debt_amount FROM debts WHERE client_id = 42',
+        columns: ['client_id', 'remaining_debt_amount'],
+        rows: [
+          [42, 48750],
+          [43, 0],
+        ],
+      },
+      {
+        id: 2,
+        kind: 'calc',
+        ref: 'sum(payments)',
+        code: 'total = sum(p.amount for p in payments)',
+        result: '129 400 ₴',
+      },
+    ])
+  })
+
+  it('tolerates malformed detail fields and drops non-array rows', () => {
+    const onCitations = vi.fn()
+    dispatchSseEvent(
+      {
+        event: 'citations',
+        data: JSON.stringify({
+          items: [
+            {
+              id: 7,
+              kind: 'sql',
+              ref: 'clients:status',
+              // query as a number → ignored (only strings kept)
+              query: 123,
+              columns: ['status', 42],
+              rows: [['active', 3], 'oops', null, [null]],
+            },
+          ],
+        }),
+      },
+      { onCitations }
+    )
+    expect(onCitations).toHaveBeenCalledWith([
+      {
+        id: 7,
+        kind: 'sql',
+        ref: 'clients:status',
+        columns: ['status', '42'],
+        rows: [['active', 3], [null]],
+      },
+    ])
+  })
+
   it('routes a reasoning frame to onReasoning (ASSISTANT_MODES.md §4)', () => {
     const onReasoning = vi.fn()
     const onText = vi.fn()
