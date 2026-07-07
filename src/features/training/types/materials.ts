@@ -16,6 +16,11 @@ export const MATERIAL_TYPES: readonly Exclude<MaterialType, 'other'>[] = [
   'audio',
 ]
 
+/** Types that can be previewed inline in the browser (PDF, video). */
+export function isPreviewable(type: MaterialType): boolean {
+  return type === 'pdf' || type === 'video'
+}
+
 export interface Material {
   id: number
   project_id: number
@@ -66,5 +71,13 @@ export interface MaterialCategory {
   project_id: number
   name: string
   slug: string
+  created_at: string
+}
+
+export interface MaterialCallAttachment {
+  id: number
+  material_id: number
+  call_id: string
+  attached_by_user_id: number
   created_at: string
 }
