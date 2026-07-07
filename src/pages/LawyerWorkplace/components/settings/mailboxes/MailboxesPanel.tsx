@@ -17,10 +17,12 @@ interface MailboxesPanelProps {
     values: MailboxFormValues,
     editingMailbox: SettingsMailbox | null
   ) => Promise<void>
+  onTestConnection: (values: MailboxFormValues) => Promise<void>
   onToggleStatus: (mailbox: SettingsMailbox) => Promise<void>
   onSyncIntervalChange: (interval: DepartmentSyncSettings['interval']) => Promise<void>
   onTestSync: () => Promise<void>
   isSavingMailbox: boolean
+  isTestingConnection: boolean
   isSavingSync: boolean
   isPolling: boolean
   readOnly?: boolean
@@ -31,10 +33,12 @@ export function MailboxesPanel({
   syncSettings,
   letterTypes,
   onSaveMailbox,
+  onTestConnection,
   onToggleStatus,
   onSyncIntervalChange,
   onTestSync,
   isSavingMailbox,
+  isTestingConnection,
   isSavingSync,
   isPolling,
   readOnly = false,
@@ -102,6 +106,9 @@ export function MailboxesPanel({
         existingEmails={mailboxes.map((item) => item.email)}
         onClose={closeModal}
         onSave={handleSave}
+        onTestConnection={onTestConnection}
+        requireConnectionTest={!editingMailbox}
+        isTestingConnection={isTestingConnection}
         isSubmitting={isSavingMailbox}
       />
     </>

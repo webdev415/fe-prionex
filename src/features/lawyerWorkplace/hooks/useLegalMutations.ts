@@ -12,6 +12,7 @@ import type {
   LegalLetterTypeUpdate,
   LegalGenerateDocumentRequest,
   LegalMailboxCreate,
+  LegalMailboxConnectionTest,
   LegalMailboxUpdate,
   LegalDepartmentSyncSettingsUpdate,
   LegalOutgoingLetterRequest,
@@ -383,6 +384,13 @@ export function useUpdateLegalSettingsMailbox() {
       queryClient.invalidateQueries({ queryKey: legalWorkplaceKeys.inbox() })
     },
     onError: (error) => toast.error(getErrorMessage(error)),
+  })
+}
+
+export function useTestLegalSettingsMailboxConnection() {
+  return useMutation({
+    mutationFn: (payload: LegalMailboxConnectionTest) =>
+      legalApi.testSettingsMailboxConnection(payload),
   })
 }
 
