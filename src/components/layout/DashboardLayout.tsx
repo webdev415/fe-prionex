@@ -917,6 +917,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             icon: 'mail',
             requiredPermission: PERMISSIONS.SYSTEM.MANAGE_SETTINGS,
           },
+          {
+            path: '/dashboard/system-settings/rr-periodicity',
+            label: t('navigation.rrPeriodicity', 'RR Payment Periodicity'),
+            icon: 'calendar-01',
+            requiredPermission: PERMISSIONS.SYSTEM.MANAGE_SETTINGS,
+          },
         ],
       },
     ]

@@ -96,6 +96,7 @@ const iconMap: Record<
   mail: (props) => <Icons.Mail {...props} />,
   'file-01': (props) => <Icons.File {...props} />,
   'chart-01': (props) => <Icons.Chart01 {...props} />,
+  'calendar-01': (props) => <Icons.Calendar {...props} />,
   'mail-send-01': (props) => <Icons.MailSend01 {...props} />,
   'sliders-horizontal': (props) => <Icons.SlidersHorizontal {...props} />,
   'user-multiple-02': (props) => <Icons.UserMultiple02 {...props} />,
@@ -116,7 +117,11 @@ export function Sidebar({ items = [], bottomItems = [], actions = [], className 
   const asideRef = useRef<HTMLElement | null>(null)
   const navRef = useRef<HTMLElement | null>(null)
   const anchorRefs = useRef<Array<HTMLDivElement | null>>([])
-  const [submenuPosition, setSubmenuPosition] = useState<{ top: number; left: number } | null>(null)
+  const [submenuPosition, setSubmenuPosition] = useState<{
+    top?: number
+    bottom?: number
+    left: number
+  } | null>(null)
 
   // Determine if sidebar should be visible (either opened or hover-opened)
   const isSidebarVisible = isOpenSideBar || isHoverOpen
@@ -179,25 +184,27 @@ export function Sidebar({ items = [], bottomItems = [], actions = [], className 
         left = Math.max(gutter, rect.left - menuWidth - gutter)
       }
 
-      // Vertical positioning - check if submenu would overflow bottom
-      let top = rect.top
+      // Vertical positioning.
       const spaceBelow = window.innerHeight - rect.top
-      const spaceAbove = rect.bottom
 
-      // If not enough space below and more space above, align to bottom
-      if (spaceBelow < submenuHeight && spaceAbove > spaceBelow) {
-        // Bottom align - submenu grows upward from the bottom of the nav item
-        top = Math.max(gutter, rect.bottom - submenuHeight)
+      // When the submenu would overflow below the viewport (typical for the
+      // Settings button near the sidebar bottom), anchor its BOTTOM edge to the
+      // nav item's bottom and let it grow upward. Anchoring by `bottom` — rather
+      // than a top derived from an *estimated* height — keeps the alignment
+      // exact no matter how many items the submenu has, so it is never clipped.
+      if (spaceBelow < submenuHeight) {
+        setSubmenuPosition({
+          bottom: Math.max(gutter, window.innerHeight - rect.bottom),
+          left,
+        })
       } else {
-        // Top align (default) - submenu grows downward from the top of the nav item
-        top = Math.max(gutter, rect.top)
-        // Ensure it doesn't overflow the bottom
+        // Top align (default) - submenu grows downward from the nav item's top.
+        let top = Math.max(gutter, rect.top)
         if (top + submenuHeight > window.innerHeight - gutter) {
           top = Math.max(gutter, window.innerHeight - submenuHeight - gutter)
         }
+        setSubmenuPosition({ top, left })
       }
-
-      setSubmenuPosition({ top, left })
     },
     [items, bottomItems]
   )
@@ -726,7 +733,15 @@ export function Sidebar({ items = [], bottomItems = [], actions = [], className 
         createPortal(
           <div
             className="submenu-container fixed z-[9999] min-w-[220px] rounded-xl border border-gray-200 bg-white p-2 shadow-lg"
-            style={{ top: submenuPosition.top, left: submenuPosition.left }}
+            style={{
+              top: submenuPosition.top,
+              bottom: submenuPosition.bottom,
+              left: submenuPosition.left,
+              // Never exceed the viewport; scroll internally if the menu is
+              // taller than the space available above the anchor.
+              maxHeight: 'calc(100vh - 16px)',
+              overflowY: 'auto',
+            }}
             onMouseEnter={() => {
               // Keep sidebar expanded while hovering submenu (hover-open mode)
               if (!isOpenSideBar) {

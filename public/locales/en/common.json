@@ -29,6 +29,7 @@
     "teamManagement": "Team Management",
     "smsTemplates": "SMS Templates",
     "rrNotifications": "RR Notifications",
+    "rrPeriodicity": "RR Payment Periodicity",
     "targetActions": "Target Actions",
     "taChains": "TA Chains",
     "taDictionary": "Dictionary",
@@ -3953,6 +3954,21 @@
         "rrMonthlyPayment": "Monthly Payment",
         "rrResponsibleEmployee": "Responsible Employee",
         "rrPaymentSchedule": "Payment Schedule",
+        "rrNumPaymentsHint": "Up to {{max}} payments.",
+        "rrFrequency": "Payment Frequency",
+        "rrFirstPaymentDate": "First Payment Date",
+        "rrPeriodicityHint": "The schedule below is auto-filled from the first payment date, number of payments and frequency. You can still edit any row.",
+        "rrFrequencyManual": "Manual (no auto-fill)",
+        "rrFrequencyOptions": {
+          "every_n_days": "Every N days",
+          "monthly_same_day": "Monthly (same day)",
+          "monthly_nth_day": "Every Nth of month"
+        },
+        "rrIntervalDays": "Interval (days)",
+        "rrDayOfMonth": "Day of month",
+        "rrDayOfMonthPlaceholder": "Select day",
+        "rrDayOfMonthLast": "Last day",
+        "rrClampNotice": "Payment {{rows}}: the selected day does not exist in that month, so the date was set to the last day of the month. You can still edit it manually.",
         "rrPaymentDate": "Date",
         "rrPaymentAmount": "Amount",
         "rrConnectionDate": "Connection Date",
@@ -4527,6 +4543,27 @@
       "toasts": {
         "added": "Template added",
         "removed": "Template removed"
+      }
+    },
+    "rrPeriodicity": {
+      "title": "RR Payment Periodicity",
+      "description": "Choose which payment-frequency options operators can use to auto-fill the schedule when creating a Restructuring Agreement.",
+      "saved": "Payment periodicity options saved",
+      "savedDescription": "Operators will see the updated frequency options next time they create a Restructuring Agreement.",
+      "allDisabledHint": "With every option off, operators enter each payment date manually.",
+      "types": {
+        "everyNDays": {
+          "label": "Every N days",
+          "hint": "Operator sets an interval (e.g. every 14 days)."
+        },
+        "monthlySameDay": {
+          "label": "Monthly (same day)",
+          "hint": "Same day of month as the first payment date."
+        },
+        "monthlyNthDay": {
+          "label": "Every Nth of month",
+          "hint": "Operator picks a day of month (1–30 or last day)."
+        }
       }
     },
     "rrNotifications": {
