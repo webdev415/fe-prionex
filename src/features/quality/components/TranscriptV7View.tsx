@@ -5,17 +5,26 @@
  * silence chips, overlap badges, QA tag badges and the other side's inline
  * reactions woven into the bubble text at their proportional time position.
  *
+ * Phase 2 adds the optional 12B AUDIO LAYER on top (conclusion_spec §A):
+ * per-turn emotion markers + polarity bubble border, the client emotion
+ * dynamics strip (smoothed on the FE, raw values in tooltips, peak dots),
+ * start→end dynamics chips, «⚠ тон vs слова» divergence badges, and numeric
+ * operator/client emotion scores in the stats header. Everything is driven
+ * by data presence — without the layer the panel renders exactly as before.
+ *
  * Light theme only — matches the rest of the quality feature (the CRM has no
  * theme toggle; sporadic `dark:` variants elsewhere are not wired here).
  *
  * TOLERANT READER: tag kinds are an open set (unknown → grey), `bc` accepts
  * object and tuple encodings, missing stats hide their chips — never crash.
+ * The audio layer is a 12B model's read of the sound, not ground truth: M/L
+ * reliability renders dimmed with an «за аудіо, орієнтовно» note.
  */
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { format } from 'date-fns'
 import { DATETIME_DISPLAY_FORMAT } from '@/lib/dateUtils'
-import type { CallTranscript, TranscriptStats } from '../types'
+import type { CallTranscript, EmotionDynamics, TranscriptStats } from '../types'
 import {
   buildV7Rows,
   extractKeyMoments,
@@ -26,6 +35,23 @@ import {
   type QaTagKind,
   type V7Row,
 } from '../lib/transcriptV7'
+import {
+  buildDynamicsSegments,
+  deriveAudioMarkers,
+  directionalTrendGlyph,
+  divergencesByUtt,
+  dynamicsScaleMax,
+  formatScore,
+  getEmotionDynamics,
+  isApproximateReliability,
+  markerOpacity,
+  normalizePolarity,
+  normalizeTrend,
+  speakerStateOf,
+  type AudioPolarity,
+  type NormalizedDivergence,
+  type TrendKind,
+} from '../lib/transcriptAudio'
 
 export interface TranscriptV7ViewProps {
   transcript: CallTranscript
@@ -63,6 +89,38 @@ const TAG_TONES: Record<QaTagKind, string> = {
   info: 'bg-[#5b6472]/10 text-[#5b6472]',
 }
 
+// Emotion polarity palette (audio_layer.html reference).
+const POLARITY_HEX: Record<AudioPolarity, string> = {
+  neg: '#d1495b',
+  pos: '#3aa66b',
+  neutral: '#8792a6',
+}
+
+// Left bubble border by polarity; neutral keeps the bubble untouched.
+const POLARITY_BORDER: Record<AudioPolarity, string> = {
+  neg: 'border-l-[3px] border-l-[#d1495b]',
+  pos: 'border-l-[3px] border-l-[#3aa66b]',
+  neutral: '',
+}
+
+const TREND_ARROWS: Record<TrendKind, { glyph: string; tone: string }> = {
+  improved: { glyph: '↑', tone: 'text-[#3aa66b]' },
+  degraded: { glyph: '↓', tone: 'text-[#d1495b]' },
+  stable: { glyph: '→', tone: 'text-gray-500' },
+  other: { glyph: '', tone: 'text-gray-500' },
+}
+
+function TrendArrow({ trend, testId }: { trend: string | undefined; testId?: string }) {
+  const normalized = normalizeTrend(trend)
+  if (!normalized) return null
+  const arrow = TREND_ARROWS[normalized.kind]
+  return (
+    <span data-testid={testId} className={`font-bold ${arrow.tone}`}>
+      {arrow.glyph || normalized.raw}
+    </span>
+  )
+}
+
 function roleKeyOf(role: string | undefined): keyof typeof ROLE_STYLES {
   return role === 'operator' || role === 'client' ? role : 'other'
 }
@@ -81,9 +139,11 @@ function QaTagBadge({ kind, label, testId }: { kind: QaTagKind; label: string; t
 function V7StatsHeader({
   transcript,
   stats,
+  dynamics,
 }: {
   transcript: CallTranscript
   stats: TranscriptStats | null
+  dynamics: EmotionDynamics | null
 }) {
   const { t } = useTranslation('common')
 
@@ -112,8 +172,45 @@ function V7StatsHeader({
   const overlapTotal = typeof stats?.overlap_total_s === 'number' ? stats.overlap_total_s : null
   const nTurns = typeof stats?.n_turns === 'number' ? stats.n_turns : null
 
+  // Audio-layer numeric scores (phase 2) — chip renders per available part.
+  const opScores = dynamics?.operator?.scores ?? null
+  const toneBaseline =
+    typeof dynamics?.operator?.tone_baseline === 'string' ? dynamics.operator.tone_baseline : null
+  const irritation = typeof opScores?.irritation_avg === 'number' ? opScores.irritation_avg : null
+  const empathy = typeof opScores?.empathy_avg === 'number' ? opScores.empathy_avg : null
+  const operatorScoreParts = [
+    toneBaseline ? `${t('pages.training.transcript.v7.audio.tone')} ${toneBaseline}` : null,
+    irritation != null
+      ? `${t('pages.training.transcript.v7.audio.irritation')} ${formatScore(irritation)}/5`
+      : null,
+    empathy != null
+      ? `${t('pages.training.transcript.v7.audio.empathy')} ${formatScore(empathy)}/5`
+      : null,
+  ].filter((part): part is string => part != null)
+
+  const clScores = dynamics?.client?.scores ?? null
+  const startArousal = typeof clScores?.start_arousal === 'number' ? clScores.start_arousal : null
+  const peakArousal = typeof clScores?.peak_arousal === 'number' ? clScores.peak_arousal : null
+  const peakT = typeof clScores?.peak_t === 'number' ? clScores.peak_t : null
+  const finalArousal = typeof clScores?.final_arousal === 'number' ? clScores.final_arousal : null
+  const clientScoreParts = [
+    startArousal != null ? formatScore(startArousal) : null,
+    peakArousal != null
+      ? `${t('pages.training.transcript.v7.audio.peak')} ${formatScore(peakArousal)}${
+          peakT != null ? ` (${formatClock(peakT)})` : ''
+        }`
+      : null,
+    finalArousal != null ? formatScore(finalArousal) : null,
+  ].filter((part): part is string => part != null)
+  const clientTrend = typeof clScores?.trend === 'string' ? clScores.trend : undefined
+
   const hasMeta = answeredLabel || durationLabel || transcript.agent_extension || directionLabel
-  const hasChips = silenceTotal != null || overlapTotal != null || nTurns != null
+  const hasChips =
+    silenceTotal != null ||
+    overlapTotal != null ||
+    nTurns != null ||
+    operatorScoreParts.length > 0 ||
+    clientScoreParts.length > 0
   if (!hasMeta && share == null && !hasChips) return null
 
   return (
@@ -206,21 +303,182 @@ function V7StatsHeader({
               {t('pages.training.transcript.v7.turns', { count: nTurns })}
             </span>
           ) : null}
+          {operatorScoreParts.length > 0 ? (
+            <span
+              data-testid="transcript-v7-chip-operator-audio"
+              className="inline-flex items-center gap-1.5 rounded-full border border-[#c8d8fb] bg-[#eaf0fe]/60 px-2.5 py-0.5 text-[11px] font-medium text-gray-600 tabular-nums"
+              title={t('pages.training.transcript.v7.audio.approx')}
+            >
+              <span className="font-semibold text-[#2555d6]">
+                {t('pages.training.transcript.roles.operator')}
+              </span>
+              {operatorScoreParts.join(' · ')}
+            </span>
+          ) : null}
+          {clientScoreParts.length > 0 ? (
+            <span
+              data-testid="transcript-v7-chip-client-audio"
+              className="inline-flex items-center gap-1.5 rounded-full border border-[#eed6b6] bg-[#fbf1e4]/60 px-2.5 py-0.5 text-[11px] font-medium text-gray-600 tabular-nums"
+              title={t('pages.training.transcript.v7.audio.approx')}
+            >
+              <span className="font-semibold text-[#a8631a]">
+                {t('pages.training.transcript.roles.client')}
+              </span>
+              {clientScoreParts.join(' → ')}
+              {clientTrend ? (
+                <span data-testid="transcript-v7-client-trend">
+                  {t('pages.training.transcript.v7.audio.trend')}{' '}
+                  {directionalTrendGlyph(clientTrend)}
+                </span>
+              ) : null}
+            </span>
+          ) : null}
         </div>
       ) : null}
     </div>
   )
 }
 
-function V7KeyMoments({
-  moments,
+/**
+ * Client emotion dynamics (phase 2): start→end chips with the trend arrow and
+ * a clickable strip over the RAW 12B path — bar heights use the FE-smoothed
+ * arousal (moving average over 3 windows), tooltips show raw + smoothed, and
+ * raw-arousal peaks keep a visible dot so smoothing never hides a shout.
+ */
+function V7AudioDynamics({
+  dynamics,
+  durationS,
   onSeek,
 }: {
-  moments: KeyMoment[]
+  dynamics: EmotionDynamics | null
+  durationS?: number | null
   onSeek?: (ms: number) => void
 }) {
   const { t } = useTranslation('common')
-  if (moments.length === 0) return null
+  const client = dynamics?.client ?? null
+  const segments = useMemo(
+    () => buildDynamicsSegments(client?.path, durationS),
+    [client, durationS]
+  )
+
+  const startEmotion = typeof client?.start?.emotion === 'string' ? client.start.emotion : null
+  const endEmotion = typeof client?.end?.emotion === 'string' ? client.end.emotion : null
+  const trend = normalizeTrend(client?.trend)
+
+  if (segments.length === 0 && !startEmotion && !endEmotion && !trend) return null
+
+  const scaleMax = dynamicsScaleMax(segments)
+  const totalSpan = segments.length
+    ? Math.max(segments[segments.length - 1].tEnd - segments[0].t, 1)
+    : 1
+
+  return (
+    <div
+      data-testid="transcript-v7-audio-dynamics"
+      className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-left"
+    >
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+        <span className="text-[11px] font-semibold tracking-wide text-gray-400 uppercase">
+          {t('pages.training.transcript.v7.audio.dynamicsTitle')}
+        </span>
+        {startEmotion || endEmotion || trend ? (
+          <span
+            data-testid="transcript-v7-audio-startend"
+            className="inline-flex items-center gap-1.5 text-[11px] font-medium text-gray-600"
+          >
+            {startEmotion ? (
+              <>
+                <span className="text-gray-400">
+                  {t('pages.training.transcript.v7.audio.start')}:
+                </span>{' '}
+                {startEmotion}
+              </>
+            ) : null}
+            {startEmotion && endEmotion ? <span className="text-gray-400">→</span> : null}
+            {endEmotion ? (
+              <>
+                <span className="text-gray-400">
+                  {t('pages.training.transcript.v7.audio.end')}:
+                </span>{' '}
+                {endEmotion}
+              </>
+            ) : null}
+            {trend ? <TrendArrow trend={trend.raw} testId="transcript-v7-audio-trend" /> : null}
+          </span>
+        ) : null}
+      </div>
+
+      {segments.length > 0 ? (
+        <div
+          data-testid="transcript-v7-audio-strip"
+          className="mt-2 flex h-10 items-end gap-px overflow-hidden rounded border-b border-gray-200"
+          title={t('pages.training.transcript.v7.audio.approx')}
+        >
+          {segments.map((segment) => (
+            <button
+              key={segment.index}
+              type="button"
+              data-testid={`transcript-v7-audio-seg-${segment.index}`}
+              className="relative flex h-full min-w-[6px] items-end hover:opacity-80"
+              style={{ flexGrow: Math.max(segment.tEnd - segment.t, 1) / totalSpan }}
+              onClick={() => onSeek?.(Math.round(segment.t * 1000))}
+              title={t('pages.training.transcript.v7.audio.windowTooltip', {
+                from: formatClock(segment.t),
+                to: formatClock(segment.tEnd),
+                raw: formatScore(segment.rawArousal),
+                smooth: segment.smoothArousal.toFixed(1),
+              })}
+            >
+              {segment.isPeak ? (
+                <span
+                  data-testid={`transcript-v7-audio-peak-${segment.index}`}
+                  className="absolute top-0 left-1/2 h-1.5 w-1.5 -translate-x-1/2 rounded-full bg-[#d1495b]"
+                />
+              ) : null}
+              <span
+                className="w-full rounded-t-sm"
+                style={{
+                  // Keep even calm windows visible (8% floor).
+                  height: `${Math.max(8, (segment.smoothArousal / scaleMax) * 100)}%`,
+                  backgroundColor: POLARITY_HEX[segment.polarity],
+                }}
+              />
+            </button>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
+/** Divergence pinned to a rendered turn (t0 resolved via the utt index). */
+interface DivergenceMoment extends NormalizedDivergence {
+  t0: number
+}
+
+function V7KeyMoments({
+  moments,
+  divergences,
+  onSeek,
+}: {
+  moments: KeyMoment[]
+  divergences: DivergenceMoment[]
+  onSeek?: (ms: number) => void
+}) {
+  const { t } = useTranslation('common')
+  const entries = useMemo(
+    () =>
+      [
+        ...moments.map((moment) => ({ kind: 'tag' as const, t0: moment.t0, moment })),
+        ...divergences.map((divergence) => ({
+          kind: 'divergence' as const,
+          t0: divergence.t0,
+          divergence,
+        })),
+      ].sort((a, b) => a.t0 - b.t0),
+    [moments, divergences]
+  )
+  if (entries.length === 0) return null
   return (
     <div
       data-testid="transcript-v7-keymoments"
@@ -230,20 +488,41 @@ function V7KeyMoments({
         {t('pages.training.transcript.v7.keyMoments')}
       </div>
       <ul className="flex flex-col gap-0.5">
-        {moments.map((moment) => (
-          <li key={moment.index}>
+        {entries.map((entry) => (
+          <li
+            key={entry.kind === 'tag' ? `tag-${entry.moment.index}` : `div-${entry.divergence.utt}`}
+          >
             <button
               type="button"
-              data-testid={`transcript-v7-moment-${moment.index}`}
+              data-testid={
+                entry.kind === 'tag'
+                  ? `transcript-v7-moment-${entry.moment.index}`
+                  : `transcript-v7-moment-div-${entry.divergence.utt}`
+              }
               className="flex w-full items-baseline gap-2 rounded px-1 py-0.5 text-left text-sm hover:bg-gray-50"
-              onClick={() => onSeek?.(Math.round(moment.t0 * 1000))}
+              onClick={() => onSeek?.(Math.round(entry.t0 * 1000))}
               title={t('pages.training.transcript.seekTo')}
             >
               <span className="font-mono text-[11px] text-gray-400 tabular-nums">
-                {formatClock(moment.t0)}
+                {formatClock(entry.t0)}
               </span>
-              <QaTagBadge kind={moment.tag.kind} label={moment.tag.label} />
-              <span className="min-w-0 truncate text-gray-700">«{moment.quote}»</span>
+              {entry.kind === 'tag' ? (
+                <>
+                  <QaTagBadge kind={entry.moment.tag.kind} label={entry.moment.tag.label} />
+                  <span className="min-w-0 truncate text-gray-700">«{entry.moment.quote}»</span>
+                </>
+              ) : (
+                <>
+                  <QaTagBadge
+                    kind="warn"
+                    label={`⚠ ${t('pages.training.transcript.v7.audio.toneVsWords')}`}
+                  />
+                  <span className="min-w-0 truncate text-gray-700">
+                    {t('pages.training.transcript.v7.audio.said')}: {entry.divergence.textReads} ·{' '}
+                    {t('pages.training.transcript.v7.audio.sounded')}: {entry.divergence.audioReads}
+                  </span>
+                </>
+              )}
             </button>
           </li>
         ))}
@@ -252,10 +531,25 @@ function V7KeyMoments({
   )
 }
 
-function V7TurnRow({ row, onSeek }: { row: V7Row; onSeek?: (ms: number) => void }) {
+function V7TurnRow({
+  row,
+  divergence,
+  onSeek,
+}: {
+  row: V7Row
+  divergence?: NormalizedDivergence
+  onSeek?: (ms: number) => void
+}) {
   const { t } = useTranslation('common')
   const roleKey = roleKeyOf(row.turn.role)
   const styles = ROLE_STYLES[roleKey]
+
+  // Phase-2 audio layer for this turn (optional): markers + polarity border.
+  const audioState = speakerStateOf(row.turn)
+  const markers = useMemo(() => deriveAudioMarkers(audioState), [audioState])
+  const approximate = isApproximateReliability(audioState?.reliability)
+  const approxNote = t('pages.training.transcript.v7.audio.approx')
+  const polarityBorder = audioState ? POLARITY_BORDER[normalizePolarity(audioState.polarity)] : ''
 
   return (
     <div
@@ -290,9 +584,54 @@ function V7TurnRow({ row, onSeek }: { row: V7Row; onSeek?: (ms: number) => void 
             testId={`transcript-v7-tag-${row.index}`}
           />
         ) : null}
+        {markers.length > 0 ? (
+          <span
+            data-testid={`transcript-v7-audio-markers-${row.index}`}
+            className="inline-flex items-center gap-1"
+            // Marker opacity = 12B confidence; M/L reliability dims further.
+            style={{
+              opacity:
+                Math.round(markerOpacity(audioState?.confidence) * (approximate ? 75 : 100)) / 100,
+            }}
+          >
+            {markers.map((marker, j) => (
+              <span
+                key={j}
+                data-testid={`transcript-v7-audio-marker-${row.index}-${j}`}
+                className={
+                  marker.icon
+                    ? 'text-[12px] leading-none'
+                    : 'rounded bg-[#5b6472]/10 px-1.5 py-px text-[10px] font-medium text-[#5b6472]'
+                }
+                title={`${
+                  marker.icon
+                    ? t(`pages.training.transcript.v7.audio.markers.${marker.kind}`)
+                    : marker.label
+                }${marker.icon && marker.label ? ` · ${marker.label}` : ''}${
+                  approximate ? ` · ${approxNote}` : ''
+                }`}
+              >
+                {marker.icon ?? marker.label}
+              </span>
+            ))}
+          </span>
+        ) : null}
+        {divergence ? (
+          <span
+            data-testid={`transcript-v7-divergence-${row.index}`}
+            className="rounded bg-[#c78a12]/10 px-1.5 py-px text-[10px] font-bold whitespace-nowrap text-[#c78a12]"
+            title={`${t('pages.training.transcript.v7.audio.said')}: ${divergence.textReads} · ${t(
+              'pages.training.transcript.v7.audio.sounded'
+            )}: ${divergence.audioReads}${
+              isApproximateReliability(divergence.reliability) ? ` · ${approxNote}` : ''
+            }`}
+          >
+            ⚠ {t('pages.training.transcript.v7.audio.toneVsWords')}
+          </span>
+        ) : null}
       </div>
       <div
-        className={`text-dark-500 rounded-xl border px-3 py-2 text-sm leading-relaxed ${styles.bubble}`}
+        className={`text-dark-500 rounded-xl border px-3 py-2 text-sm leading-relaxed ${styles.bubble} ${polarityBorder}`}
       >
         {row.segments.map((segment, i) => {
           if (segment.kind === 'text') {
@@ -324,10 +663,23 @@ export function TranscriptV7View({ transcript, onSeek }: TranscriptV7ViewProps) 
   const moments = useMemo(() => extractKeyMoments(rows), [rows])
   const stats = getV7Stats(transcript)
 
+  // Phase-2 audio layer (all optional): dynamics + «тон vs слова» lookups.
+  // Primary home is metrics.emotion_dynamics; top-level is the fallback.
+  const dynamics = getEmotionDynamics(transcript)
+  const divergenceMap = useMemo(() => divergencesByUtt(dynamics), [dynamics])
+  const divergenceMoments = useMemo(
+    () =>
+      [...divergenceMap.values()]
+        .filter((d) => rows[d.utt] != null) // utt must point at a rendered turn
+        .map((d) => ({ ...d, t0: rows[d.utt].t0 })),
+    [divergenceMap, rows]
+  )
+
   return (
     <div className="flex flex-col gap-2">
-      <V7StatsHeader transcript={transcript} stats={stats} />
-      <V7KeyMoments moments={moments} onSeek={onSeek} />
+      <V7StatsHeader transcript={transcript} stats={stats} dynamics={dynamics} />
+      <V7AudioDynamics dynamics={dynamics} durationS={transcript.duration_s} onSeek={onSeek} />
+      <V7KeyMoments moments={moments} divergences={divergenceMoments} onSeek={onSeek} />
       <div data-testid="transcript-v7-feed" className="flex flex-col gap-2">
         {rows.map((row) => (
           <div key={row.index} className="contents">
@@ -342,7 +694,7 @@ export function TranscriptV7View({ transcript, onSeek }: TranscriptV7ViewProps) 
                 })}
               </div>
             ) : null}
-            <V7TurnRow row={row} onSeek={onSeek} />
+            <V7TurnRow row={row} divergence={divergenceMap.get(row.index)} onSeek={onSeek} />
           </div>
         ))}
       </div>

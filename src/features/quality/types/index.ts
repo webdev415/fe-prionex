@@ -441,6 +441,8 @@ export interface TranscriptUtterance {
   pause_before?: number
   /** v7: QA tag `[kind, label]`. */
   tag?: TranscriptQaTag
+  /** Phase 2: 12B audio read of this turn (optional layer). */
+  audio?: UtteranceAudio | null
 }
 
 /** v7 call-level stats (`metrics.stats`) — every field optional (tolerant). */
@@ -463,18 +465,135 @@ export interface TranscriptScene {
   to_utt: number
 }
 
+// ---- Audio layer (phase 2, conclusion_spec §A) — every block optional. ----
+// 12B listens to the recording in ~10s windows and retells tone/emotions as
+// TEXT with an H/M/L reliability mark; nothing here is ASR ground truth.
+
+/** Per-utterance audio read of the speaker (12B). All fields optional. */
+export interface AudioSpeakerState {
+  /** 'neg' | 'neutral' | 'pos' — open set, unknown → neutral. */
+  polarity?: string
+  emotion?: string
+  /** Emotional intensity 0..3 (utterance scale). */
+  arousal?: number
+  /** 'перебивання' | 'крик' | 'плач' | 'довга пауза' | … — OPEN set. */
+  events?: string[]
+  /** 0..1 — drives marker opacity. */
+  confidence?: number
+  /** 'H' | 'M' | 'L' — M/L render dimmed with an «approximate» note. */
+  reliability?: string
+  acoustic?: string
+  [key: string]: unknown
+}
+
+export interface UtteranceAudio {
+  window_ids?: number[]
+  speaker_state?: AudioSpeakerState | null
+  [key: string]: unknown
+}
+
+/** Raw 12B timeline window (kept for tooltips/debug; UI works off dynamics). */
+export interface AudioWindow {
+  id?: number
+  t0?: number
+  t1?: number
+  no_speech?: boolean
+  speakers?: Record<
+    string,
+    {
+      polarity?: string
+      tone?: string
+      emotion?: string
+      arousal?: number
+      confidence?: number
+      [key: string]: unknown
+    }
+  > | null
+  events?: string[]
+  reliability?: Record<string, string> | null
+  [key: string]: unknown
+}
+
+export interface EmotionPathPoint {
+  t?: number
+  polarity?: string
+  arousal?: number
+  [key: string]: unknown
+}
+
+export interface EmotionDynamicsClient {
+  start?: { polarity?: string; emotion?: string; win?: number } | null
+  end?: { polarity?: string; emotion?: string; win?: number } | null
+  /** 'improved' | 'degraded' | 'stable' — open set. */
+  trend?: string
+  peak_stress?: { t?: number; win?: number; arousal?: number } | null
+  /** RAW window points — smoothing happens on the FE (CEO decision). */
+  path?: EmotionPathPoint[] | null
+  scores?: {
+    start_arousal?: number
+    peak_arousal?: number
+    peak_t?: number
+    final_arousal?: number
+    trend?: string
+    [key: string]: unknown
+  } | null
+  [key: string]: unknown
+}
+
+export interface EmotionDynamicsOperator {
+  tone_baseline?: string
+  tone_peaks?: Array<{ t?: number; tone?: string; arousal?: number }> | null
+  trend?: string
+  /** 0–5 scales. */
+  scores?: { irritation_avg?: number; empathy_avg?: number; [key: string]: unknown } | null
+  [key: string]: unknown
+}
+
+/** Turn where the words read one way but the audio sounds another (⚠). */
+export interface DivergenceCandidate {
+  /** Utterance index (position in `utterances`). */
+  utt?: number
+  text_reads?: string
+  audio_reads?: string
+  reliability?: string
+  [key: string]: unknown
+}
+
+export interface EmotionDynamics {
+  client?: EmotionDynamicsClient | null
+  operator?: EmotionDynamicsOperator | null
+  divergence_candidates?: DivergenceCandidate[] | null
+  [key: string]: unknown
+}
+
 export interface CallTranscript {
   language?: string | null
   duration_s?: number | null
   summary?: string | null
   utterances: TranscriptUtterance[]
   scenes?: TranscriptScene[] | null
-  /** v7 puts call-level stats under `metrics.stats` (second v7 marker). */
-  metrics?: { stats?: TranscriptStats | null; [key: string]: unknown } | null
+  /**
+   * v7 puts call-level stats under `metrics.stats` (second v7 marker).
+   * `metrics` is also the PRIMARY home of the audio layer — metrics travels
+   * brain→CRM verbatim, so the layer needs no api-prionex changes.
+   */
+  metrics?: {
+    stats?: TranscriptStats | null
+    audio_engine?: string | null
+    audio_layer_version?: string | null
+    audio_windows?: AudioWindow[] | null
+    emotion_dynamics?: EmotionDynamics | null
+    [key: string]: unknown
+  } | null
   agent_extension?: string | null
   client_id?: number | null
   direction?: string | null
   answered_at?: string | null
+  /** FALLBACK location of the audio layer; the primary home is `metrics.*`. */
+  audio_engine?: string | null
+  audio_layer_version?: string | null
+  audio_windows?: AudioWindow[] | null
+  emotion_dynamics?: EmotionDynamics | null
 }
 
 export interface ReviewRedFlag {

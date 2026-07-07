@@ -378,3 +378,242 @@ describe('CallTranscriptPanel — v7 format', () => {
     expect(screen.queryByTestId('transcript-v7-tag-0')).not.toBeInTheDocument()
   })
 })
+
+// ---- Phase 2: 12B audio layer on top of v7 (conclusion_spec §A) ----
+
+const AUDIO_DYNAMICS: NonNullable<CallTranscript['emotion_dynamics']> = {
+  client: {
+    start: { polarity: 'neutral', emotion: 'розгубленість', win: 0 },
+    end: { polarity: 'pos', emotion: 'полегшення', win: 13 },
+    trend: 'improved',
+    peak_stress: { t: 10, win: 1, arousal: 3 },
+    path: [
+      { t: 0, polarity: 'neutral', arousal: 1 },
+      { t: 10, polarity: 'neg', arousal: 3 },
+      { t: 20, polarity: 'pos', arousal: 1 },
+    ],
+    scores: {
+      start_arousal: 1.9,
+      peak_arousal: 4,
+      peak_t: 258,
+      final_arousal: 1.2,
+      trend: 'down',
+    },
+  },
+  operator: {
+    tone_baseline: 'діловий',
+    tone_peaks: [{ t: 227.8, tone: 'тиснучий', arousal: 2 }],
+    trend: 'stable_pressured',
+    scores: { irritation_avg: 2.3, empathy_avg: 0.8 },
+  },
+  divergence_candidates: [
+    { utt: 2, text_reads: 'згода', audio_reads: 'покірно, під тиском', reliability: 'M' },
+    { utt: 99, text_reads: 'поза межами', audio_reads: 'ігнорується' },
+  ],
+}
+
+const AUDIO_TRANSCRIPT: CallTranscript = {
+  ...V7_TRANSCRIPT,
+  utterances: V7_TRANSCRIPT.utterances.map((utt, i) => {
+    if (i === 0) {
+      // Client turn: neg polarity, high arousal, known event, M reliability.
+      return {
+        ...utt,
+        audio: {
+          window_ids: [0],
+          speaker_state: {
+            polarity: 'neg',
+            emotion: 'роздратування',
+            arousal: 3,
+            events: ['перебивання'],
+            confidence: 0.68,
+            reliability: 'M',
+            acoustic: 'швидкий темп, підвищена гучність',
+          },
+        },
+      }
+    }
+    if (i === 1) {
+      // Operator turn: pos polarity, calm, unknown event → text chip, H firm.
+      return {
+        ...utt,
+        audio: {
+          speaker_state: {
+            polarity: 'pos',
+            emotion: 'спокій',
+            arousal: 0,
+            events: ['дивний шум'],
+            confidence: 0.9,
+            reliability: 'H',
+          },
+        },
+      }
+    }
+    return utt // turns 2..3 carry no audio layer
+  }),
+  // PRIMARY home of the audio layer — metrics.* (travels brain→CRM verbatim).
+  metrics: {
+    ...V7_TRANSCRIPT.metrics,
+    audio_engine: 'gemma-4-12b-audio',
+    audio_layer_version: '1.0',
+    emotion_dynamics: AUDIO_DYNAMICS,
+  },
+}
+
+describe('CallTranscriptPanel — v7 audio layer (phase 2)', () => {
+  it('renders emotion markers on turns: 🔊/⚡ derived, ✂️ from events, unknown as text', () => {
+    setHook({ transcript: AUDIO_TRANSCRIPT })
+    render(<CallTranscriptPanel callId="c1" />)
+
+    // Turn 0: arousal 3 → 🔊, emotion «роздратування» → ⚡, event → ✂️.
+    const markers0 = screen.getByTestId('transcript-v7-audio-markers-0')
+    expect(markers0).toHaveTextContent('🔊')
+    expect(markers0).toHaveTextContent('⚡')
+    expect(markers0).toHaveTextContent('✂️')
+    // M reliability dims markers: confidence 0.68 × 0.75.
+    expect(markers0).toHaveStyle({ opacity: '0.51' })
+    expect(screen.getByTestId('transcript-v7-audio-marker-0-0')).toHaveAttribute(
+      'title',
+      expect.stringContaining('pages.training.transcript.v7.audio.approx')
+    )
+
+    // Turn 1: calm (arousal 0) → only the unknown event as a text chip.
+    const markers1 = screen.getByTestId('transcript-v7-audio-markers-1')
+    expect(markers1).toHaveTextContent('дивний шум')
+    expect(markers1).not.toHaveTextContent('🔊')
+    expect(markers1).toHaveStyle({ opacity: '0.9' }) // H reliability → no extra dim
+
+    // Turns without the layer render no marker containers.
+    expect(screen.queryByTestId('transcript-v7-audio-markers-2')).not.toBeInTheDocument()
+  })
+
+  it('paints the bubble left border by polarity (neg red / pos green / none without audio)', () => {
+    setHook({ transcript: AUDIO_TRANSCRIPT })
+    render(<CallTranscriptPanel callId="c1" />)
+
+    const negBubble = screen.getByText('Слухаю.').closest('div')
+    expect(negBubble?.className).toContain('border-l-[#d1495b]')
+    const posBubble = screen.getByText(/w1 w2 w3 w4 w5/).closest('div')
+    expect(posBubble?.className).toContain('border-l-[#3aa66b]')
+    const plainBubble = screen.getByText('Перебиваю відповідь.').closest('div')
+    expect(plainBubble?.className).not.toContain('border-l-[#d1495b]')
+    expect(plainBubble?.className).not.toContain('border-l-[#3aa66b]')
+  })
+
+  it('renders the client dynamics strip: smoothed bars, raw+smoothed tooltip, peak dot, seek', () => {
+    const onSeek = vi.fn()
+    setHook({ transcript: AUDIO_TRANSCRIPT })
+    render(<CallTranscriptPanel callId="c1" onSeek={onSeek} />)
+
+    expect(screen.getByTestId('transcript-v7-audio-dynamics')).toBeInTheDocument()
+    const strip = screen.getByTestId('transcript-v7-audio-strip')
+    expect(strip.querySelectorAll('button')).toHaveLength(3)
+
+    // Peak dot only on the raw arousal-3 window (smoothing must not hide it).
+    expect(screen.getByTestId('transcript-v7-audio-peak-1')).toBeInTheDocument()
+    expect(screen.queryByTestId('transcript-v7-audio-peak-0')).not.toBeInTheDocument()
+
+    // Tooltip carries raw + smoothed values via the i18n params.
+    expect(screen.getByTestId('transcript-v7-audio-seg-1')).toHaveAttribute(
+      'title',
+      expect.stringContaining('pages.training.transcript.v7.audio.windowTooltip')
+    )
+
+    fireEvent.click(screen.getByTestId('transcript-v7-audio-seg-1'))
+    expect(onSeek).toHaveBeenCalledWith(10000)
+  })
+
+  it('reads the audio layer from the top-level fallback when metrics has none', () => {
+    setHook({
+      transcript: {
+        ...AUDIO_TRANSCRIPT,
+        metrics: V7_TRANSCRIPT.metrics, // no audio keys in the primary home
+        emotion_dynamics: AUDIO_DYNAMICS,
+      },
+    })
+    render(<CallTranscriptPanel callId="c1" />)
+
+    expect(screen.getByTestId('transcript-v7-audio-dynamics')).toBeInTheDocument()
+  })
+
+  it('shows start → end dynamics chips with the semantic trend arrow', () => {
+    setHook({ transcript: AUDIO_TRANSCRIPT })
+    render(<CallTranscriptPanel callId="c1" />)
+
+    const chips = screen.getByTestId('transcript-v7-audio-startend')
+    expect(chips).toHaveTextContent('розгубленість')
+    expect(chips).toHaveTextContent('полегшення')
+    const trend = screen.getByTestId('transcript-v7-audio-trend')
+    expect(trend).toHaveTextContent('↑') // improved
+    expect(trend.className).toContain('text-[#3aa66b]')
+  })
+
+  it('marks «тон vs слова» turns with ⚠ and lists them among key moments', () => {
+    const onSeek = vi.fn()
+    setHook({ transcript: AUDIO_TRANSCRIPT })
+    render(<CallTranscriptPanel callId="c1" onSeek={onSeek} />)
+
+    const badge = screen.getByTestId('transcript-v7-divergence-2')
+    expect(badge).toHaveTextContent('⚠')
+    expect(badge.title).toContain('згода')
+    expect(badge.title).toContain('покірно, під тиском')
+
+    const digestRow = screen.getByTestId('transcript-v7-moment-div-2')
+    expect(digestRow).toHaveTextContent('згода')
+    fireEvent.click(digestRow)
+    expect(onSeek).toHaveBeenCalledWith(19500) // turn 2 starts at 19.5s
+
+    // utt=99 points past the feed → no digest row, nothing crashes.
+    expect(screen.queryByTestId('transcript-v7-moment-div-99')).not.toBeInTheDocument()
+  })
+
+  it('adds numeric operator/client emotion scores to the stats header', () => {
+    setHook({ transcript: AUDIO_TRANSCRIPT })
+    render(<CallTranscriptPanel callId="c1" />)
+
+    const operator = screen.getByTestId('transcript-v7-chip-operator-audio')
+    expect(operator).toHaveTextContent('діловий')
+    expect(operator).toHaveTextContent('2.3/5')
+    expect(operator).toHaveTextContent('0.8/5')
+
+    const client = screen.getByTestId('transcript-v7-chip-client-audio')
+    expect(client).toHaveTextContent('1.9')
+    expect(client).toHaveTextContent('4 (4:18)') // peak with m:ss timecode
+    expect(client).toHaveTextContent('1.2')
+    expect(screen.getByTestId('transcript-v7-client-trend')).toHaveTextContent('↓')
+  })
+
+  it('renders nothing audio-related without the layer (regression)', () => {
+    setHook({ transcript: V7_TRANSCRIPT })
+    render(<CallTranscriptPanel callId="c1" />)
+
+    expect(screen.queryByTestId('transcript-v7-audio-dynamics')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('transcript-v7-audio-strip')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('transcript-v7-chip-operator-audio')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('transcript-v7-chip-client-audio')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('transcript-v7-audio-markers-0')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('transcript-v7-divergence-2')).not.toBeInTheDocument()
+  })
+
+  it('tolerates a malformed audio layer without crashing or rendering it', () => {
+    const broken = {
+      ...V7_TRANSCRIPT,
+      audio_engine: 'gemma-4-12b-audio',
+      utterances: V7_TRANSCRIPT.utterances.map((utt, i) =>
+        i === 0 ? ({ ...utt, audio: 'nope' } as unknown as TranscriptUtterance) : utt
+      ),
+      emotion_dynamics: {
+        client: { path: 'garbage', scores: 'none' },
+        operator: 'broken',
+        divergence_candidates: [{ utt: 'x' }, 42, null],
+      } as unknown as CallTranscript['emotion_dynamics'],
+    }
+    setHook({ transcript: broken })
+    render(<CallTranscriptPanel callId="c1" />)
+
+    expect(screen.getByTestId('transcript-v7-feed')).toBeInTheDocument()
+    expect(screen.queryByTestId('transcript-v7-audio-dynamics')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('transcript-v7-audio-markers-0')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('transcript-v7-chip-operator-audio')).not.toBeInTheDocument()
+  })
+})

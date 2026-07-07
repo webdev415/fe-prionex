@@ -1630,6 +1630,28 @@
           "direction": {
             "inbound": "Вхідний",
             "outbound": "Вихідний"
+          },
+          "audio": {
+            "approx": "за аудіо, орієнтовно",
+            "tone": "тон",
+            "irritation": "роздратування",
+            "empathy": "емпатія",
+            "peak": "пік",
+            "trend": "тренд",
+            "dynamicsTitle": "Динаміка емоцій клієнта (за аудіо)",
+            "start": "початок",
+            "end": "кінець",
+            "windowTooltip": "вікно {{from}}–{{to}}: {{raw}} (сире), {{smooth}} (згладжено)",
+            "toneVsWords": "тон vs слова",
+            "said": "текст",
+            "sounded": "звучить",
+            "markers": {
+              "raisedVoice": "підвищений голос / накал",
+              "pressure": "тиск / роздратування",
+              "crying": "плач",
+              "interruption": "перебивання",
+              "longPause": "довга пауза"
+            }
           }
         }
       },

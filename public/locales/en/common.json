@@ -1661,6 +1661,28 @@
           "direction": {
             "inbound": "Inbound",
             "outbound": "Outbound"
+          },
+          "audio": {
+            "approx": "by audio, approximate",
+            "tone": "tone",
+            "irritation": "irritation",
+            "empathy": "empathy",
+            "peak": "peak",
+            "trend": "trend",
+            "dynamicsTitle": "Client emotion dynamics (by audio)",
+            "start": "start",
+            "end": "end",
+            "windowTooltip": "window {{from}}–{{to}}: {{raw}} (raw), {{smooth}} (smoothed)",
+            "toneVsWords": "tone vs words",
+            "said": "text",
+            "sounded": "sounds",
+            "markers": {
+              "raisedVoice": "raised voice / intensity",
+              "pressure": "pressure / irritation",
+              "crying": "crying",
+              "interruption": "interruption",
+              "longPause": "long pause"
+            }
           }
         }
       },
