@@ -1695,6 +1695,26 @@
               "raisedVoice": "raised voice",
               "crying": "crying"
             }
+          },
+          "conclusion": {
+            "title": "AI conclusion",
+            "whyTitle": "Why this score",
+            "calc": "rubric {{rubric}} → adjustment {{adjustment}} → {{score}}",
+            "strengths": "Strengths",
+            "weaknesses": "Weaknesses",
+            "keyFindings": "Key findings",
+            "said": "said",
+            "sounded": "sounded",
+            "priority": {
+              "high": "high",
+              "normal": "normal"
+            },
+            "confidence": "confidence {{value}}",
+            "limitedBy": "limitations: {{list}}",
+            "limitations": {
+              "no_audio_layer": "no audio layer",
+              "fallback_26b": "fallback model"
+            }
           }
         }
       },

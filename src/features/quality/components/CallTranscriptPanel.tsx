@@ -15,6 +15,10 @@
  * pill/footer renders only when the data is present, so the panel degrades
  * to summary + dialogue.
  *
+ * Step B: `review.conclusion` (the 31B «Заключення AI») renders as a
+ * collapsible block under the dialogue via TranscriptConclusion — absent on
+ * older reviews, strictly optional.
+ *
  * TOLERANT READER (CALL_QA_INTEGRATION.md §3.1): `scenes[].key`, utterance
  * `flags[].type` and review enums are OPEN sets — unknown values get a
  * fallback label and must never crash the panel.
@@ -27,6 +31,7 @@ import { Icons } from '@/lib/icons'
 import { useCallTranscript } from '../hooks/useCallTranscript'
 import { isV7Transcript } from '../lib/transcriptV7'
 import { TranscriptV7View } from './TranscriptV7View'
+import { TranscriptConclusion } from './TranscriptConclusion'
 import type {
   CallAiReview,
   TranscriptScene,
@@ -391,6 +396,14 @@ export function CallTranscriptPanel({
           })}
         </div>
       )}
+
+      {/* 31B conclusion (step B): «звідки такий бал» — renders only when
+          review.conclusion carries something; older reviews show nothing. */}
+      <TranscriptConclusion
+        review={review}
+        utterances={transcript.utterances ?? []}
+        onSeek={onSeek}
+      />
 
       {/* Footer: promise + recommendations (review-only, Ф2 data) */}
       {review?.extracted?.promise &&

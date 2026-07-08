@@ -627,6 +627,89 @@ export interface ReviewPromise {
   quote?: string | null
 }
 
+// ---- 31B conclusion (step B) — «звідки такий бал» for the call card. ----
+// Ships inside `review.conclusion`; older reviews have none. Every field is
+// optional and every enum is OPEN — the block renders per available part.
+
+export interface ConclusionOverall {
+  /** 'green' | 'yellow' | 'red' — open set, unknown → neutral grey. */
+  grade?: string
+  /** 0..100, same scale as `weighted_score`. */
+  score?: number
+  one_liner?: string
+  [key: string]: unknown
+}
+
+export interface ConclusionOperatorAssessment {
+  score?: number
+  /** Rubric score before the 31B adjustment. */
+  rubric_score_input?: number
+  adjustment?: number
+  adjustment_reason?: string
+  strengths?: string[]
+  weaknesses?: string[]
+  justification?: string
+  [key: string]: unknown
+}
+
+export interface ConclusionClientDynamics {
+  emotional_path?: string
+  start?: string
+  end?: string
+  trend?: string
+  driver?: string
+  peak_stress?: string
+  [key: string]: unknown
+}
+
+export interface ConclusionDivergence {
+  who?: string
+  /** Utterance index (position in `utterances`). */
+  utt?: number
+  said?: string
+  sounded?: string
+  reliability?: string
+  interpretation?: string
+  [key: string]: unknown
+}
+
+export interface ConclusionToneVsWords {
+  consistent?: boolean
+  divergences?: ConclusionDivergence[] | null
+  note?: string
+  [key: string]: unknown
+}
+
+export interface ConclusionRecommendation {
+  text?: string
+  /** Anchor like `utt 12` — rendered clickable when it points at a turn. */
+  evidence?: string
+  /** 'high' | 'normal' — open set. */
+  priority?: string
+  [key: string]: unknown
+}
+
+export interface ConclusionConfidence {
+  overall?: number
+  /** 'no_audio_layer' | 'fallback_26b' | … — open set. */
+  limited_by?: string[] | null
+  [key: string]: unknown
+}
+
+export interface ReviewConclusion {
+  call_summary?: string
+  overall?: ConclusionOverall | null
+  operator_assessment?: ConclusionOperatorAssessment | null
+  client_dynamics?: ConclusionClientDynamics | null
+  tone_vs_words?: ConclusionToneVsWords | null
+  key_findings?: string[] | null
+  recommendations?: Array<ConclusionRecommendation | string> | null
+  confidence?: ConclusionConfidence | null
+  model?: string
+  conclusion_prompt_version?: string
+  [key: string]: unknown
+}
+
 /** Проход 2 (Ф2) — null during Ф1; every field optional (tolerant reader). */
 export interface CallAiReview {
   model?: string | null
@@ -646,6 +729,8 @@ export interface CallAiReview {
   extracted?: { promise?: ReviewPromise | null; [key: string]: unknown } | null
   summary?: string | null
   recommendations?: string[] | null
+  /** 31B conclusion (step B) — absent/null on older reviews. */
+  conclusion?: ReviewConclusion | null
 }
 
 export interface CallTranscriptDto {

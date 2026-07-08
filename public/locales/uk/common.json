@@ -1666,6 +1666,26 @@
               "raisedVoice": "підвищений голос",
               "crying": "плач"
             }
+          },
+          "conclusion": {
+            "title": "Заключення AI",
+            "whyTitle": "Чому такий бал",
+            "calc": "рубрика {{rubric}} → корекція {{adjustment}} → {{score}}",
+            "strengths": "Сильні сторони",
+            "weaknesses": "Слабкі сторони",
+            "keyFindings": "Ключові висновки",
+            "said": "сказано",
+            "sounded": "звучало",
+            "priority": {
+              "high": "високий",
+              "normal": "звичайний"
+            },
+            "confidence": "впевненість {{value}}",
+            "limitedBy": "обмеження: {{list}}",
+            "limitations": {
+              "no_audio_layer": "без аудіо-шару",
+              "fallback_26b": "резервна модель"
+            }
           }
         }
       },

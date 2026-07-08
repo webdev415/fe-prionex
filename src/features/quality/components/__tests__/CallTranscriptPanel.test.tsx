@@ -7,7 +7,12 @@
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen } from '@testing-library/react'
-import type { CallAiReview, CallTranscript, TranscriptUtterance } from '../../types'
+import type {
+  CallAiReview,
+  CallTranscript,
+  ReviewConclusion,
+  TranscriptUtterance,
+} from '../../types'
 import { useCallTranscript } from '../../hooks/useCallTranscript'
 import { useHasPermission } from '@/hooks'
 import { CallTranscriptPanel } from '../CallTranscriptPanel'
@@ -735,5 +740,190 @@ describe('CallTranscriptPanel — v7 audio layer (phase 2, business style)', () 
     expect(screen.queryByTestId('transcript-v7-audio-dynamics')).not.toBeInTheDocument()
     expect(screen.queryByTestId('transcript-v7-audio-state-0-raisedVoice')).not.toBeInTheDocument()
     expect(screen.queryByTestId('transcript-v7-chip-operator-audio')).not.toBeInTheDocument()
+  })
+})
+
+// ---- Step B: 31B conclusion block («Заключення AI») under the dialogue ----
+
+const CONCLUSION: ReviewConclusion = {
+  call_summary: 'Розмова про борг.',
+  overall: { grade: 'yellow', score: 35.0, one_liner: 'Тиск без ідентифікації.' },
+  operator_assessment: {
+    score: 35,
+    rubric_score_input: 40,
+    adjustment: -5,
+    adjustment_reason: 'тон жорсткіший за слова',
+    strengths: ['чітка вимога суми'],
+    weaknesses: ['без привітання', 'погроза виїздом'],
+    justification: 'Оператор не ідентифікував боржника.',
+  },
+  client_dynamics: { trend: 'improved' },
+  tone_vs_words: {
+    consistent: false,
+    divergences: [
+      {
+        who: 'client',
+        utt: 2,
+        said: 'згода',
+        sounded: 'покірно, під тиском',
+        reliability: 'M',
+        interpretation: 'згода не добровільна',
+      },
+    ],
+  },
+  // utt 3 resolves to a rendered turn; utt 99 points past the feed.
+  key_findings: ['Погроза виїздом (utt 3)', 'Поза лентою (utt 99)'],
+  recommendations: [
+    { text: 'Пройти модуль ідентифікації', evidence: 'utt 1', priority: 'high' },
+    { text: 'Стежити за тоном', priority: 'normal' },
+  ],
+  confidence: { overall: 0.95, limited_by: ['no_audio_layer'] },
+  model: 'gemma-31b',
+  conclusion_prompt_version: '1.0',
+}
+
+describe('CallTranscriptPanel — 31B conclusion block (step B)', () => {
+  it('renders the full conclusion: grade, calc line, columns, findings, tone, recommendations, meta', () => {
+    setHook({ transcript: V7_TRANSCRIPT, review: { conclusion: CONCLUSION } })
+    const { container } = render(<CallTranscriptPanel callId="c1" />)
+
+    const block = screen.getByTestId('transcript-conclusion')
+    expect(block).toHaveTextContent('pages.training.transcript.v7.conclusion.title')
+
+    // Header: yellow grade badge with the score, one-liner in the body.
+    const grade = screen.getByTestId('transcript-conclusion-grade')
+    expect(grade).toHaveTextContent('35/100')
+    expect(grade.className).toContain('bg-yellow-100')
+    expect(screen.getByTestId('transcript-conclusion-oneliner')).toHaveTextContent(
+      'Тиск без ідентифікації.'
+    )
+
+    // «Чому такий бал»: calc line with the adjustment reason + justification.
+    const calc = screen.getByTestId('transcript-conclusion-calc')
+    expect(calc).toHaveTextContent('pages.training.transcript.v7.conclusion.calc')
+    expect(calc).toHaveTextContent('тон жорсткіший за слова')
+    expect(screen.getByTestId('transcript-conclusion-justification')).toHaveTextContent(
+      'Оператор не ідентифікував боржника.'
+    )
+
+    // Strengths / weaknesses columns.
+    expect(screen.getByTestId('transcript-conclusion-strengths')).toHaveTextContent(
+      'чітка вимога суми'
+    )
+    const weaknesses = screen.getByTestId('transcript-conclusion-weaknesses')
+    expect(weaknesses).toHaveTextContent('без привітання')
+    expect(weaknesses).toHaveTextContent('погроза виїздом')
+
+    // Key findings + tone ≠ words subsection.
+    expect(screen.getByTestId('transcript-conclusion-findings')).toHaveTextContent(
+      'Погроза виїздом'
+    )
+    const tone = screen.getByTestId('transcript-conclusion-tone')
+    expect(tone).toHaveTextContent('«згода»')
+    expect(tone).toHaveTextContent('«покірно, під тиском»')
+    expect(tone).toHaveTextContent('згода не добровільна')
+
+    // Recommendations with priority labels and evidence.
+    const recommendations = screen.getByTestId('transcript-conclusion-recommendations')
+    expect(recommendations).toHaveTextContent(
+      'pages.training.transcript.v7.conclusion.priority.high'
+    )
+    expect(recommendations).toHaveTextContent('Пройти модуль ідентифікації')
+    expect(recommendations).toHaveTextContent('Стежити за тоном')
+
+    // Muted meta line + limitations note.
+    const meta = screen.getByTestId('transcript-conclusion-meta')
+    expect(meta).toHaveTextContent('gemma-31b')
+    expect(meta).toHaveTextContent('v1.0')
+    expect(screen.getByTestId('transcript-conclusion-limitations')).toHaveTextContent(
+      'pages.training.transcript.v7.conclusion.limitedBy'
+    )
+
+    // Business style: no emoji anywhere.
+    expect(container.textContent).not.toMatch(/🔊|⚡|✂|😢|⏸|⤭|⚠/u)
+  })
+
+  it('seeks the player from utt references in findings, evidence and divergences', () => {
+    const onSeek = vi.fn()
+    setHook({ transcript: V7_TRANSCRIPT, review: { conclusion: CONCLUSION } })
+    render(<CallTranscriptPanel callId="c1" onSeek={onSeek} />)
+
+    // Finding «utt 3» → turn 3 starts at 26s.
+    fireEvent.click(screen.getByTestId('transcript-conclusion-utt-3'))
+    expect(onSeek).toHaveBeenCalledWith(26000)
+
+    // Recommendation evidence «utt 1» → turn 1 starts at 10s.
+    fireEvent.click(screen.getByTestId('transcript-conclusion-utt-1'))
+    expect(onSeek).toHaveBeenCalledWith(10000)
+
+    // Divergence anchor «utt 2» → turn 2 starts at 19.5s.
+    fireEvent.click(screen.getByTestId('transcript-conclusion-utt-2'))
+    expect(onSeek).toHaveBeenCalledWith(19500)
+  })
+
+  it('keeps out-of-range utt references as plain text', () => {
+    setHook({ transcript: V7_TRANSCRIPT, review: { conclusion: CONCLUSION } })
+    render(<CallTranscriptPanel callId="c1" />)
+
+    expect(screen.queryByTestId('transcript-conclusion-utt-99')).not.toBeInTheDocument()
+    expect(screen.getByTestId('transcript-conclusion-findings')).toHaveTextContent('utt 99')
+  })
+
+  it('renders partial conclusions per available part', () => {
+    setHook({
+      transcript: V7_TRANSCRIPT,
+      review: { conclusion: { overall: { grade: 'red' } } },
+    })
+    render(<CallTranscriptPanel callId="c1" />)
+
+    const grade = screen.getByTestId('transcript-conclusion-grade')
+    expect(grade).toHaveTextContent('red') // no score → raw grade word
+    expect(grade.className).toContain('bg-red-100')
+    expect(screen.queryByTestId('transcript-conclusion-calc')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('transcript-conclusion-strengths')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('transcript-conclusion-tone')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('transcript-conclusion-meta')).not.toBeInTheDocument()
+  })
+
+  it('collapses and expands the block on header click', () => {
+    setHook({ transcript: V7_TRANSCRIPT, review: { conclusion: CONCLUSION } })
+    render(<CallTranscriptPanel callId="c1" />)
+
+    expect(screen.getByTestId('transcript-conclusion-oneliner')).toBeInTheDocument()
+    fireEvent.click(screen.getByTestId('transcript-conclusion-toggle'))
+    expect(screen.queryByTestId('transcript-conclusion-oneliner')).not.toBeInTheDocument()
+    // The grade badge stays visible in the collapsed header.
+    expect(screen.getByTestId('transcript-conclusion-grade')).toBeInTheDocument()
+    fireEvent.click(screen.getByTestId('transcript-conclusion-toggle'))
+    expect(screen.getByTestId('transcript-conclusion-oneliner')).toBeInTheDocument()
+  })
+
+  it('renders the block for legacy Ф1 transcripts too', () => {
+    setHook({ transcript: TRANSCRIPT, review: { conclusion: CONCLUSION } })
+    render(<CallTranscriptPanel callId="c1" />)
+
+    expect(screen.getByTestId('transcript-scene-0')).toBeInTheDocument()
+    expect(screen.getByTestId('transcript-conclusion')).toBeInTheDocument()
+  })
+
+  it('renders no block without a conclusion (older reviews / Ф1) — regression', () => {
+    setHook({ transcript: V7_TRANSCRIPT, review: REVIEW })
+    render(<CallTranscriptPanel callId="c1" />)
+    expect(screen.queryByTestId('transcript-conclusion')).not.toBeInTheDocument()
+
+    setHook({ transcript: V7_TRANSCRIPT, review: null })
+    render(<CallTranscriptPanel callId="c1" />)
+    expect(screen.queryByTestId('transcript-conclusion')).not.toBeInTheDocument()
+  })
+
+  it('tolerates a malformed conclusion without crashing or rendering it', () => {
+    setHook({
+      transcript: V7_TRANSCRIPT,
+      review: { conclusion: 'broken' } as unknown as CallAiReview,
+    })
+    render(<CallTranscriptPanel callId="c1" />)
+
+    expect(screen.getByTestId('transcript-v7-feed')).toBeInTheDocument()
+    expect(screen.queryByTestId('transcript-conclusion')).not.toBeInTheDocument()
   })
 })
