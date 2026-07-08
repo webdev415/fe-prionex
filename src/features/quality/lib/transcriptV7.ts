@@ -132,11 +132,27 @@ export type BubbleSegment =
   | { kind: 'hes'; t: number; gap: number; ordinal: number }
 
 /**
+ * A word that reads as part of a spoken number — digits plus the punctuation a
+ * number carries («71,», «250.», «2:47», «(45)»). Requires at least one digit,
+ * so bare punctuation between words is never mistaken for a number. Drives the
+ * dictation guard: a pause inside a number the client is writing down is pace,
+ * not hesitation, and a reaction chip must not split the digits.
+ */
+export function isNumericToken(word: string): boolean {
+  return /\d/.test(word) && /^[\d.,:;()%-]+$/.test(word)
+}
+
+/**
  * Weave the other side's reactions AND the speaker's own hesitation pauses
  * into the turn text at a WORD index proportional to their time inside the
  * turn (FORMAT_SPEC rule 6) — the main phrase is never split mid-word, both
  * streams sort into one timeline, reactions read as inline chips and
  * hesitations as inline remarks.
+ *
+ * DICTATION GUARD: an insertion that lands BETWEEN two numeric tokens is inside
+ * a spoken number sequence (the client is writing it down). A hesitation there
+ * is suppressed (natural pace, not a stumble); a reaction is slid to the end of
+ * the run so the digits stay whole and the reaction reads after them.
  */
 export function buildBubbleSegments(turn: {
   t0?: number
@@ -171,7 +187,23 @@ export function buildBubbleSegments(turn: {
   let cursor = 0
   for (const entry of inline) {
     const proportional = Math.round(((entry.t - t0) / span) * words.length)
-    const at = Math.max(cursor, Math.min(words.length, Math.max(0, proportional)))
+    // Natural insertion index (independent of the cursor) — so a reaction that
+    // already slid past a run cannot un-suppress a later hesitation behind it.
+    const rawAt = Math.min(words.length, Math.max(0, proportional))
+    const insideNumberRun =
+      rawAt > 0 &&
+      rawAt < words.length &&
+      isNumericToken(words[rawAt - 1]) &&
+      isNumericToken(words[rawAt])
+
+    let at = Math.max(cursor, rawAt)
+    if (insideNumberRun) {
+      if (entry.segment.kind === 'hes') continue // dictation pace — drop the remark
+      let runEnd = rawAt
+      while (runEnd < words.length && isNumericToken(words[runEnd])) runEnd++
+      at = Math.max(cursor, runEnd)
+    }
+
     if (at > cursor) {
       segments.push({ kind: 'text', text: words.slice(cursor, at).join(' ') })
       cursor = at
@@ -182,6 +214,29 @@ export function buildBubbleSegments(turn: {
     segments.push({ kind: 'text', text: words.slice(cursor).join(' ') })
   }
   return segments
+}
+
+/**
+ * Per-role tally of hesitation remarks SUPPRESSED by the dictation guard
+ * (`total normalized hes − hes actually woven in`). The header uses it to keep
+ * its «запинки N» counters in step with what the feed shows — a pause dropped
+ * as dictation pace must not still be counted.
+ */
+export function countSuppressedHesitations(utterances: TranscriptUtterance[] | null | undefined): {
+  operator: number
+  client: number
+  other: number
+} {
+  const counts = { operator: 0, client: 0, other: 0 }
+  const list = Array.isArray(utterances) ? utterances : []
+  for (const turn of list) {
+    const total = normalizeHesitations(turn.hes).length
+    if (total === 0) continue
+    const shown = buildBubbleSegments(turn).filter((segment) => segment.kind === 'hes').length
+    const role = turn.role === 'operator' || turn.role === 'client' ? turn.role : 'other'
+    counts[role] += total - shown
+  }
+  return counts
 }
 
 /** One renderable feed row: turn + everything derived from its neighbours. */

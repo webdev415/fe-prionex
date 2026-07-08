@@ -306,6 +306,17 @@ export function CallTranscriptPanel({
     )
   }
 
+  // Promise footer: only a real amount (a finite number > 0) is worth showing.
+  // A 0 / null / malformed amount renders date + quote alone, never «0 UAH».
+  const promise = review?.extracted?.promise ?? null
+  const promiseAmount =
+    promise &&
+    typeof promise.amount === 'number' &&
+    Number.isFinite(promise.amount) &&
+    promise.amount > 0
+      ? promise.amount
+      : null
+
   return (
     <div
       data-testid="transcript-panel"
@@ -405,9 +416,11 @@ export function CallTranscriptPanel({
         onSeek={onSeek}
       />
 
-      {/* Footer: promise + recommendations (review-only, Ф2 data) */}
-      {review?.extracted?.promise &&
-      (review.extracted.promise.amount != null || review.extracted.promise.date) ? (
+      {/* Footer: promise + recommendations (review-only, Ф2 data).
+          Amount renders only when it's a real positive number — 0/null means
+          «сума не прозвучала» (CEO 08.07: «0 UAH» в обіцянці показывать нельзя;
+          мозг с prompt 1.1 шлёт null, но старые ревью несут 0). */}
+      {promise && (promiseAmount != null || promise.date) ? (
         <div
           data-testid="transcript-promise"
           className="rounded-lg border border-[#BBFB5B] bg-[#BBFB5B]/15 p-3 text-sm"
@@ -416,16 +429,12 @@ export function CallTranscriptPanel({
             {t('pages.training.transcript.promiseTitle')}
           </div>
           <div className="text-gray-700">
-            {review.extracted.promise.amount != null
-              ? `${review.extracted.promise.amount} ${review.extracted.promise.currency ?? ''}`.trim()
-              : null}
-            {review.extracted.promise.amount != null && review.extracted.promise.date
-              ? ' — '
-              : null}
-            {review.extracted.promise.date ?? null}
+            {promiseAmount != null ? `${promiseAmount} ${promise.currency ?? ''}`.trim() : null}
+            {promiseAmount != null && promise.date ? ' — ' : null}
+            {promise.date ?? null}
           </div>
-          {review.extracted.promise.quote ? (
-            <div className="mt-1 text-xs text-gray-500">«{review.extracted.promise.quote}»</div>
+          {promise.quote ? (
+            <div className="mt-1 text-xs text-gray-500">«{promise.quote}»</div>
           ) : null}
         </div>
       ) : null}

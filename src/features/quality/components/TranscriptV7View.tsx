@@ -34,6 +34,7 @@ import { DATETIME_DISPLAY_FORMAT } from '@/lib/dateUtils'
 import type { CallTranscript, EmotionDynamics, TranscriptStats } from '../types'
 import {
   buildV7Rows,
+  countSuppressedHesitations,
   extractKeyMoments,
   formatClock,
   formatSeconds1,
@@ -181,13 +182,19 @@ function V7StatsHeader({
   const nTurns = typeof stats?.n_turns === 'number' ? stats.n_turns : null
 
   // Hesitation counters (deterministic, from word timecodes) — text only.
+  // Discount the pauses suppressed as dictation pace so the number the header
+  // shows matches the remarks actually woven into the feed.
+  const suppressedHes = useMemo(
+    () => countSuppressedHesitations(transcript.utterances),
+    [transcript]
+  )
   const opHes =
     typeof stats?.op_hes === 'number' && Number.isFinite(stats.op_hes) && stats.op_hes >= 0
-      ? stats.op_hes
+      ? Math.max(0, stats.op_hes - suppressedHes.operator)
       : null
   const clHes =
     typeof stats?.cl_hes === 'number' && Number.isFinite(stats.cl_hes) && stats.cl_hes >= 0
-      ? stats.cl_hes
+      ? Math.max(0, stats.cl_hes - suppressedHes.client)
       : null
 
   // Audio-layer numeric scores (phase 2) — chip renders per available part.

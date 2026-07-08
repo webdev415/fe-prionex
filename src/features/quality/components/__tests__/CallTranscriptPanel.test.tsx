@@ -189,6 +189,23 @@ describe('CallTranscriptPanel', () => {
     expect(screen.getByTestId('transcript-recommendations')).toHaveTextContent('Порада перша.')
   })
 
+  it('hides the zero promise amount: 0/null means «сума не прозвучала» (CEO 08.07)', () => {
+    const review = {
+      ...REVIEW,
+      extracted: {
+        promise: { amount: 0, currency: 'UAH', date: '2026-08-27', quote: 'до 27 числа включно' },
+      },
+    } as unknown as typeof REVIEW
+    setHook({ transcript: TRANSCRIPT, review })
+    render(<CallTranscriptPanel callId="c1" />)
+
+    const promise = screen.getByTestId('transcript-promise')
+    expect(promise).toHaveTextContent('2026-08-27')
+    expect(promise).toHaveTextContent('до 27 числа включно')
+    expect(promise.textContent).not.toContain('0 UAH')
+    expect(promise.textContent ?? '').not.toMatch(/(^|[^\d.,:])0([^\d.,:]|$)/)
+  })
+
   it('renders a flat dialogue when the transcript has no scenes', () => {
     setHook({ transcript: { ...TRANSCRIPT, scenes: [] } })
     render(<CallTranscriptPanel callId="c1" />)
@@ -369,6 +386,38 @@ describe('CallTranscriptPanel — v7 format', () => {
     expect(remarkAt).toBeGreaterThan(content.indexOf('w2'))
     expect(content.indexOf('w3')).toBeGreaterThan(remarkAt)
     expect(content.indexOf('Ага.')).toBeGreaterThan(content.indexOf('w5'))
+  })
+
+  it('keeps a dictated number whole: drops the pause, slides the reaction after it', () => {
+    // «Диктую 45 71 39 дякую» with a pause between «45»/«71» and a reaction
+    // between «71»/«39» — dictation pace, so the pause is suppressed and the
+    // reaction slides past the whole number instead of splitting the digits.
+    const dictation: CallTranscript = {
+      ...V7_TRANSCRIPT,
+      utterances: V7_TRANSCRIPT.utterances.map((utt, i) =>
+        i === 1
+          ? {
+              ...utt,
+              text: 'Диктую 45 71 39 дякую',
+              hes: [{ t: 14, gap: 1.4 }],
+              bc: [{ t: 16, role: 'client', text: 'записую' }],
+            }
+          : utt
+      ),
+    }
+    setHook({ transcript: dictation })
+    render(<CallTranscriptPanel callId="c1" />)
+
+    // Pause between digits is suppressed — no inline remark on this turn.
+    expect(screen.queryByTestId('transcript-v7-hes-1-0')).not.toBeInTheDocument()
+
+    // Reaction is kept, slid to after the whole number.
+    expect(screen.getByTestId('transcript-v7-bc-1-0')).toHaveTextContent('записую')
+
+    const content = screen.getByTestId('transcript-v7-turn-1').textContent ?? ''
+    expect(content).toContain('45 71 39') // digits stay contiguous
+    expect(content).not.toContain('pages.training.transcript.v7.inlinePause')
+    expect(content.indexOf('записую')).toBeGreaterThan(content.indexOf('39'))
   })
 
   it('annotates the silence chip with ambient sounds from overlapping windows', () => {

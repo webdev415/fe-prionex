@@ -9,10 +9,12 @@ import type { CallTranscript, TranscriptUtterance } from '../../types'
 import {
   buildBubbleSegments,
   buildV7Rows,
+  countSuppressedHesitations,
   extractKeyMoments,
   formatClock,
   formatSeconds1,
   getV7Stats,
+  isNumericToken,
   isV7Transcript,
   normalizeBackchannels,
   normalizeHesitations,
@@ -280,6 +282,78 @@ describe('buildBubbleSegments', () => {
       { kind: 'text', text: 'b' },
     ])
   })
+
+  // ---- Dictation guard: keep spoken number sequences intact ----
+
+  it('suppresses a hesitation dictated between two numeric tokens', () => {
+    // «45 71 (пауза) 39» — the pause between digits is dictation pace: dropped,
+    // the number stays one unbroken text run.
+    const segments = buildBubbleSegments({
+      t0: 0,
+      t1: 10,
+      text: 'Записуйте 45 71 39 сума 250',
+      hes: [{ t: 5, gap: 1.4 }],
+    })
+    expect(segments).toEqual([{ kind: 'text', text: 'Записуйте 45 71 39 сума 250' }])
+    expect(segments.some((segment) => segment.kind === 'hes')).toBe(false)
+  })
+
+  it('slides a reaction inside a numeric run to the end of the run', () => {
+    // The chip must not split «45 71 39» — it reads after the whole number.
+    const segments = buildBubbleSegments({
+      t0: 0,
+      t1: 10,
+      text: 'Записуйте 45 71 39 сума 250',
+      bc: [{ t: 5, role: 'client', text: 'ага' }],
+    })
+    expect(segments).toEqual([
+      { kind: 'text', text: 'Записуйте 45 71 39' },
+      { kind: 'bc', bc: { t: 5, role: 'client', text: 'ага' }, ordinal: 0 },
+      { kind: 'text', text: 'сума 250' },
+    ])
+  })
+
+  it('keeps a hesitation at a run boundary (only one side numeric)', () => {
+    // rawAt lands between «39» (numeric) and «сума» (word) → shown, not dropped.
+    const segments = buildBubbleSegments({
+      t0: 0,
+      t1: 10,
+      text: 'Записуйте 45 71 39 сума 250',
+      hes: [{ t: 6.7, gap: 0.8 }],
+    })
+    expect(segments).toEqual([
+      { kind: 'text', text: 'Записуйте 45 71 39' },
+      { kind: 'hes', t: 6.7, gap: 0.8, ordinal: 0 },
+      { kind: 'text', text: 'сума 250' },
+    ])
+  })
+
+  it('places a reaction after an all-numeric turn (whole text is a number)', () => {
+    const segments = buildBubbleSegments({
+      t0: 0,
+      t1: 10,
+      text: '45 71 39',
+      bc: [{ t: 5, role: 'client', text: 'ок' }],
+    })
+    expect(segments).toEqual([
+      { kind: 'text', text: '45 71 39' },
+      { kind: 'bc', bc: { t: 5, role: 'client', text: 'ок' }, ordinal: 0 },
+    ])
+  })
+
+  it('leaves hesitations in ordinary prose untouched (regression)', () => {
+    const segments = buildBubbleSegments({
+      t0: 0,
+      t1: 10,
+      text: 'Ваш борг 500 гривень сьогодні',
+      hes: [{ t: 2, gap: 1 }],
+    })
+    expect(segments).toEqual([
+      { kind: 'text', text: 'Ваш' },
+      { kind: 'hes', t: 2, gap: 1, ordinal: 0 },
+      { kind: 'text', text: 'борг 500 гривень сьогодні' },
+    ])
+  })
 })
 
 describe('buildV7Rows', () => {
@@ -366,5 +440,43 @@ describe('formatting', () => {
     expect(formatSeconds1(42.53)).toBe('42.5')
     expect(formatSeconds1(10)).toBe('10.0')
     expect(formatSeconds1(Number.NaN)).toBe('0.0')
+  })
+})
+
+describe('isNumericToken', () => {
+  it('accepts digit words, including trailing punctuation and colons', () => {
+    expect(isNumericToken('45')).toBe(true)
+    expect(isNumericToken('71,')).toBe(true)
+    expect(isNumericToken('250.')).toBe(true)
+    expect(isNumericToken('2:47')).toBe(true)
+    expect(isNumericToken('(45)')).toBe(true)
+  })
+
+  it('rejects words with no digit or with letters', () => {
+    expect(isNumericToken('сума')).toBe(false)
+    expect(isNumericToken('2:47зараз4')).toBe(false) // mangled ASR token — not a number
+    expect(isNumericToken(',')).toBe(false)
+    expect(isNumericToken('')).toBe(false)
+    expect(isNumericToken('w1')).toBe(false)
+  })
+})
+
+describe('countSuppressedHesitations', () => {
+  it('tallies dictation pauses dropped from the feed, per role', () => {
+    const counts = countSuppressedHesitations([
+      // operator dictates — the pause between «45» and «71» is suppressed
+      { t0: 0, t1: 10, role: 'operator', text: 'Диктую 45 71 далі', hes: [{ t: 5, gap: 1.4 }] },
+      // client hesitates in ordinary speech — kept, not counted as suppressed
+      { t0: 0, t1: 10, role: 'client', text: 'Я подумаю трохи', hes: [{ t: 5, gap: 1 }] },
+    ])
+    expect(counts).toEqual({ operator: 1, client: 0, other: 0 })
+  })
+
+  it('returns zeros without hesitations or utterances', () => {
+    expect(countSuppressedHesitations([])).toEqual({ operator: 0, client: 0, other: 0 })
+    expect(countSuppressedHesitations(undefined)).toEqual({ operator: 0, client: 0, other: 0 })
+    expect(countSuppressedHesitations([{ t0: 0, t1: 1, role: 'operator', text: '45 71' }])).toEqual(
+      { operator: 0, client: 0, other: 0 }
+    )
   })
 })
