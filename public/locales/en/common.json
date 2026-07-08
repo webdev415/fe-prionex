@@ -877,7 +877,7 @@
           "exampleSource": "Sender",
           "exampleSourcePlaceholder": "Sender name",
           "keywordHints": "Keyword hints",
-          "keywordHintsHint": "used to auto-suggest letter type when the sender email matches a CRM client",
+          "keywordHintsHint": "used to auto-suggest letter type from subject and body for unclassified messages",
           "keywordPlaceholder": "Type a keyword and press Enter..",
           "starRating": "Star rating",
           "starN": "Star {{n}} of {{total}}",
