@@ -133,6 +133,41 @@ describe('buildLetterParameters', () => {
     expect(parameters.letterType).toBe('attorney_request')
   })
 
+  it('leaves due date empty when letter type is unclassified', () => {
+    const message = {
+      suggested_letter_type_id: null,
+      confirmed_letter_type_id: null,
+      received_at: '2026-05-21T09:00:00Z',
+    } as LegalMessageDetail
+
+    const parameters = buildLetterParameters(message)
+    expect(parameters.dueDate).toBe('')
+    expect(parameters.confirmedCount).toBe(0)
+  })
+
+  it('computes due date from letter type SLA when type is known', () => {
+    const message = {
+      suggested_letter_type_id: 'complaint',
+      received_at: '2026-05-21T09:00:00Z',
+    } as LegalMessageDetail
+
+    const parameters = buildLetterParameters(message, {
+      letterTypesById: new Map<string, LegalLetterType>([
+        [
+          'complaint',
+          {
+            id: 'complaint',
+            slug: 'complaint',
+            name: 'Complaint',
+            sla_days: 14,
+          } as LegalLetterType,
+        ],
+      ]),
+    })
+
+    expect(parameters.dueDate).toBe('2026-06-04')
+  })
+
   it('maps lawyer id from merged suggested_lawyer_user_id for EDO reply context', () => {
     const message = {
       id: 'msg-1',
