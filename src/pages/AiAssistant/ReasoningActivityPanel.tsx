@@ -18,6 +18,7 @@ import type { AssistantCitation } from '@/features/aiAssistant/sse'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 import { clampReasoningPanelWidth, REASONING_PANEL_RESIZE_STEP } from './reasoningPanelConfig'
+import { stripDataEnvelope } from './stripDataEnvelope'
 
 /** Lifecycle of one tool invocation shown in the activity panel. */
 export type ToolStepStatus = 'running' | 'ok' | 'error'
@@ -124,6 +125,9 @@ export function ReasoningStream({ text, streaming, placeholder }: ReasoningStrea
 
 /** One tool-step row (spinner → ✓ / ✗ + label + result preview). */
 export function ToolStepRow({ step }: { step: ToolStep }) {
+  // Превью — только для отображения: снимаем служебный конверт данных
+  // (`<данные-из-БД …>` / `<инструкция …>`), оператору нужно само содержимое.
+  const preview = step.resultPreview ? stripDataEnvelope(step.resultPreview) : ''
   return (
     <li className="flex items-start gap-2 text-[12px] leading-snug">
       <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center">
@@ -143,8 +147,8 @@ export function ToolStepRow({ step }: { step: ToolStep }) {
           {step.label || step.name}
           {step.status === 'running' && '…'}
         </span>
-        {step.status !== 'running' && step.resultPreview && (
-          <span className="ml-1 break-words text-gray-500">— {step.resultPreview}</span>
+        {step.status !== 'running' && preview && (
+          <span className="ml-1 break-words text-gray-500">— {preview}</span>
         )}
       </span>
     </li>
