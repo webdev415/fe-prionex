@@ -20,7 +20,7 @@ export function LetterTypeKeywordHintsSection({
         title={t('pages.lawyerWorkplace.settings.letterTypes.keywordHints', 'Keyword hints')}
         hint={t(
           'pages.lawyerWorkplace.settings.letterTypes.keywordHintsHint',
-          'optional - used as fallback when AI confidence < 70%'
+          'used to auto-suggest letter type when the sender email matches a CRM client'
         )}
       />
 

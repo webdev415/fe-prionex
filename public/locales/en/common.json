@@ -877,7 +877,7 @@
           "exampleSource": "Sender",
           "exampleSourcePlaceholder": "Sender name",
           "keywordHints": "Keyword hints",
-          "keywordHintsHint": "optional - used as fallback when AI confidence < 70%",
+          "keywordHintsHint": "used to auto-suggest letter type when the sender email matches a CRM client",
           "keywordPlaceholder": "Type a keyword and press Enter..",
           "starRating": "Star rating",
           "starN": "Star {{n}} of {{total}}",

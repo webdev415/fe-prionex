@@ -881,7 +881,7 @@
           "exampleSource": "Відправник",
           "exampleSourcePlaceholder": "Ім'я відправника",
           "keywordHints": "Підказки ключових слів",
-          "keywordHintsHint": "необов’язково - використовується, коли впевненість AI < 70%",
+          "keywordHintsHint": "використовується для автовказання типу листа, коли email відправника є в базі клієнтів CRM",
           "keywordPlaceholder": "Введіть ключове слово та натисніть Enter..",
           "starRating": "Рейтинг зірок",
           "starN": "Зірка {{n}} з {{total}}",
