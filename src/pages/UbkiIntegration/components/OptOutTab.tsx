@@ -112,33 +112,34 @@ export function OptOutTab() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-dark-500 flex items-center gap-2 text-sm font-semibold">
-          Opt-out clients
-          <span className="rounded-full bg-gray-100 px-1.5 py-0.5 text-xs text-gray-600">
-            {MOCK_OPTOUT.length}
-          </span>
-        </h2>
-        <div className="flex gap-2">
-          {/* TODO(ubki-backend): CSV import endpoint */}
-          <Button variant="secondary" size="sm" leftIcon={<MdOutlineFileUpload size={14} />}>
-            Import from CSV
-          </Button>
-          {/* TODO(ubki-backend): add → POST /opt-out/bulk */}
-          <Button variant="primary" size="sm" leftIcon={<MdAdd size={14} />}>
-            Add to opt-out
-          </Button>
-        </div>
-      </div>
-
       <div className="rounded-2xl border border-gray-200 bg-white p-5">
+        {/* Card header — title + actions, inside the card (matches design). */}
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-dark-500 flex items-center gap-2 text-sm font-semibold">
+            Opt-out clients
+            <span className="rounded-full bg-gray-100 px-1.5 py-0.5 text-xs text-gray-600">
+              {MOCK_OPTOUT.length}
+            </span>
+          </h2>
+          <div className="flex gap-2">
+            {/* TODO(ubki-backend): CSV import endpoint */}
+            <Button variant="secondary" size="sm" leftIcon={<MdOutlineFileUpload size={14} />}>
+              Import from CSV
+            </Button>
+            {/* TODO(ubki-backend): add → POST /opt-out/bulk */}
+            <Button variant="primary" size="sm" leftIcon={<MdAdd size={14} />}>
+              Add to opt-out
+            </Button>
+          </div>
+        </div>
+
         <div className="mb-4 flex flex-wrap items-center gap-2">
           <span className="text-dark-500 text-xs font-medium">Selected: {selected.size}</span>
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search by client / TIN / contract…"
-            className="focus:border-primary-500 h-[45px] min-w-[220px] flex-1 rounded-lg border border-gray-400 bg-white px-3 text-xs text-gray-700 focus:outline-none"
+            className="focus:border-primary-500 h-[45px] min-w-[220px] flex-1 rounded-full border border-gray-400 bg-white px-4 text-xs text-gray-700 focus:outline-none"
           />
           <div className="w-44">
             <MultiCheckboxDropdown

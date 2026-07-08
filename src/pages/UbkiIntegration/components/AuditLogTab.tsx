@@ -1,13 +1,25 @@
 import { useMemo, useState } from 'react'
-import { MdOutlineFileDownload, MdRefresh } from 'react-icons/md'
+import { MdOutlineFileDownload, MdSync, MdInfoOutline } from 'react-icons/md'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { Button } from '@/components/ui/Button'
 import { Pagination } from '@/components/ui/Pagination'
+import { DateSelect } from '@/components/ui/DateSelect'
 import {
   MultiCheckboxDropdown,
   type MultiCheckboxOption,
 } from '@/pages/Training/components/MultiCheckboxDropdown'
 import { MOCK_AUDIT, type AuditEntry, type AuditStatus } from '../mockData'
+
+/** Compact day key (YYYYMMDD) for inclusive from/to comparison. */
+const dayNum = (d: Date) => d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate()
+
+/** Mock rows store the date as "DD.MM.YYYY\nHH:MM" — parse the day part. */
+function parseRowDate(dateTime: string): Date | null {
+  const first = dateTime.split('\n')[0].trim()
+  const m = first.match(/^(\d{2})\.(\d{2})\.(\d{4})$/)
+  if (!m) return null
+  return new Date(+m[3], +m[2] - 1, +m[1])
+}
 
 const STATUS_STYLES: Record<AuditStatus, string> = {
   success: 'bg-success-50 text-success-700',
@@ -39,6 +51,8 @@ export function AuditLogTab() {
   const [search, setSearch] = useState('')
   const [eventTypes, setEventTypes] = useState<string[]>([])
   const [actors, setActors] = useState<string[]>([])
+  const [dateFrom, setDateFrom] = useState<Date | null>(null)
+  const [dateTo, setDateTo] = useState<Date | null>(null)
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
 
@@ -63,6 +77,11 @@ export function AuditLogTab() {
     return MOCK_AUDIT.filter((r) => {
       if (eventTypes.length && !eventTypes.includes(eventCategory(r.event))) return false
       if (actors.length && !actors.includes(r.performedBy)) return false
+      if (dateFrom || dateTo) {
+        const rd = parseRowDate(r.dateTime)
+        if (dateFrom && rd && dayNum(rd) < dayNum(dateFrom)) return false
+        if (dateTo && rd && dayNum(rd) > dayNum(dateTo)) return false
+      }
       if (
         q &&
         !r.event.toLowerCase().includes(q) &&
@@ -72,12 +91,14 @@ export function AuditLogTab() {
         return false
       return true
     })
-  }, [search, eventTypes, actors])
+  }, [search, eventTypes, actors, dateFrom, dateTo])
 
   const resetFilters = () => {
     setSearch('')
     setEventTypes([])
     setActors([])
+    setDateFrom(null)
+    setDateTo(null)
     setPage(1)
   }
 
@@ -119,20 +140,24 @@ export function AuditLogTab() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h2 className="text-dark-500 text-sm font-semibold">Audit log</h2>
-          <p className="text-xs text-gray-500">
-            All configuration changes and admin actions for UBKI integration.
-          </p>
-        </div>
-        {/* TODO(ubki-backend): export audit CSV */}
-        <Button variant="secondary" size="sm" leftIcon={<MdOutlineFileDownload size={14} />}>
-          Export
-        </Button>
-      </div>
-
       <div className="rounded-2xl border border-gray-200 bg-white p-5">
+        {/* Card header — title + subtitle + Export, inside the card (matches design). */}
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="text-dark-500 flex items-center gap-1.5 text-sm font-semibold">
+              Audit log
+              <MdInfoOutline size={15} className="text-gray-400" />
+            </h2>
+            <p className="text-xs text-gray-500">
+              All configuration changes and admin actions for UBKI integration.
+            </p>
+          </div>
+          {/* TODO(ubki-backend): export audit CSV */}
+          <Button variant="secondary" size="sm" leftIcon={<MdOutlineFileDownload size={14} />}>
+            Export
+          </Button>
+        </div>
+
         <div className="mb-4 flex flex-wrap items-center gap-2">
           <div className="w-48">
             <MultiCheckboxDropdown
@@ -156,15 +181,32 @@ export function AuditLogTab() {
               allLabel="All actors"
             />
           </div>
-          <input
-            type="date"
-            className="h-[45px] rounded-lg border border-gray-400 bg-white px-3 text-xs text-gray-600"
-          />
+          <div className="w-40">
+            <DateSelect
+              value={dateFrom}
+              onChange={({ value }) => {
+                setDateFrom(value)
+                setPage(1)
+              }}
+              onClear={() => setDateFrom(null)}
+              format="dd / MM / yyyy"
+              placeholder="dd / mm / yyyy"
+            />
+          </div>
           <span className="text-gray-400">—</span>
-          <input
-            type="date"
-            className="h-[45px] rounded-lg border border-gray-400 bg-white px-3 text-xs text-gray-600"
-          />
+          <div className="w-40">
+            <DateSelect
+              value={dateTo}
+              onChange={({ value }) => {
+                setDateTo(value)
+                setPage(1)
+              }}
+              onClear={() => setDateTo(null)}
+              min={dateFrom ?? undefined}
+              format="dd / MM / yyyy"
+              placeholder="dd / mm / yyyy"
+            />
+          </div>
           <input
             value={search}
             onChange={(e) => {
@@ -172,12 +214,13 @@ export function AuditLogTab() {
               setPage(1)
             }}
             placeholder="Search by client / TIN / contract…"
-            className="focus:border-primary-500 h-[45px] min-w-[200px] flex-1 rounded-lg border border-gray-400 bg-white px-3 text-xs text-gray-700 focus:outline-none"
+            className="focus:border-primary-500 h-[45px] min-w-[200px] flex-1 rounded-full border border-gray-400 bg-white px-4 text-xs text-gray-700 focus:outline-none"
           />
           <Button
-            variant="outline"
+            variant="transparent-black"
             size="sm"
-            leftIcon={<MdRefresh size={14} />}
+            className="rounded-full text-gray-600"
+            leftIcon={<MdSync size={15} />}
             onClick={resetFilters}
           >
             Reset

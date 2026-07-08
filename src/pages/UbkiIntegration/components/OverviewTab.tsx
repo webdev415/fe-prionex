@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import {
   MdEdit,
   MdOutlineWifiTethering,
-  MdRefresh,
+  MdSync,
   MdOutlineDescription,
   MdNorthEast,
 } from 'react-icons/md'
@@ -444,12 +444,13 @@ export function OverviewTab() {
               setPage(1)
             }}
             placeholder="Search by client / TIN / contract…"
-            className="focus:border-primary-500 h-[45px] min-w-[200px] flex-[1.5] rounded-lg border border-gray-400 bg-white px-3 text-xs text-gray-700 focus:outline-none"
+            className="focus:border-primary-500 h-[45px] min-w-[200px] flex-[1.5] rounded-full border border-gray-400 bg-white px-4 text-xs text-gray-700 focus:outline-none"
           />
           <Button
-            variant="outline"
+            variant="transparent-black"
             size="sm"
-            leftIcon={<MdRefresh size={14} />}
+            className="rounded-full text-gray-600"
+            leftIcon={<MdSync size={15} />}
             onClick={() => {
               setSearch('')
               setTypeF([])
