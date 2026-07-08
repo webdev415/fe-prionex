@@ -598,6 +598,11 @@
         "body": "Message",
         "bodyPlaceholder": "Write your message...",
         "edoType": "EDO document type",
+        "edoRequiresClient": "Select a CRM client before registering EDO",
+        "edoRequiresClientHint": "Select a CRM client above to register this letter in EDO.",
+        "edoHintInstitution": "Link a CRM client below to register this institution letter in EDO.",
+        "edoClientForInstitution": "CRM client (for EDO registration)",
+        "clientSearchHint": "Type 2+ characters to search…",
         "send": "Send"
       },
       "parameters": {
