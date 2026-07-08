@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   getConversation,
   getConversations,
+  markCitationStep,
   sendChatMessage,
   sendFeedback,
   updateConversation,
@@ -10,6 +11,7 @@ import {
   type AssistantConversationsFilters,
   type AssistantConversationSummary,
   type AssistantFeedbackRequest,
+  type AssistantMarkCitationRequest,
   type SendChatMessageCallbacks,
 } from './api'
 
@@ -115,5 +117,16 @@ export function useUpdateAssistantConversation() {
 export function useSendFeedback() {
   return useMutation({
     mutationFn: (payload: AssistantFeedbackRequest) => sendFeedback(payload),
+  })
+}
+
+/**
+ * Пометить источник факт-сноски верно/неверно (Слой 5) — по образцу
+ * {@link useSendFeedback}: fire-and-forget мутация. Оптимистичную подсветку и
+ * откат при ошибке держит вызывающий компонент.
+ */
+export function useMarkCitation() {
+  return useMutation({
+    mutationFn: (payload: AssistantMarkCitationRequest) => markCitationStep(payload),
   })
 }

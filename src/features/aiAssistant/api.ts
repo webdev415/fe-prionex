@@ -78,6 +78,19 @@ export interface AssistantConversationMessage {
   latency_ms: number | null
   tokens: number | null
   created_at: string
+  /**
+   * Слой 5: раздумья ассистентского сообщения (те же `reasoning`-дельты, что в
+   * стриме, но уже склеенные сервером) — чтобы панель «Активность» гидратировалась
+   * после F5 / переключения диалога, а не жила только в текущем ходе. Есть только
+   * у `role === 'assistant'`; старый бэкенд поле не шлёт (панель мягко деградирует).
+   */
+  reasoning?: string
+  /**
+   * Слой 5: источники факт-сносок `[[N]]` этого сообщения (та же форма, что во
+   * фрейме `citations` стрима). Даёт кликабельные сноски и секцию «Источники» в
+   * панели для загруженного из истории диалога. Опционально — как {@link reasoning}.
+   */
+  citations?: AssistantCitation[]
 }
 
 export interface AssistantConversationDetail extends AssistantConversationSummary {
@@ -296,4 +309,32 @@ export async function getConversation(id: number): Promise<AssistantConversation
 
 export async function sendFeedback(payload: AssistantFeedbackRequest): Promise<void> {
   await api.post(`${BASE}/feedback`, payload)
+}
+
+/** Вердикт пометки источника факт-сноски оператором (Слой 5). */
+export type AssistantCitationVerdict = 'ok' | 'wrong'
+
+/**
+ * Тело `POST /messages/{message_id}/step-mark` — оператор помечает источник
+ * факт-сноски как верный/неверный. `message_id` — серверный id ассистентского
+ * сообщения (доступен после гидратации диалога); `citation_id` совпадает с
+ * `AssistantCitation.id` (номер `[[N]]`).
+ */
+export interface AssistantMarkCitationRequest {
+  message_id: number
+  citation_id: number
+  verdict: AssistantCitationVerdict
+}
+
+/**
+ * Пометить источник факт-сноски (`POST /messages/{message_id}/step-mark`).
+ * Образец — {@link sendFeedback}: fire-and-forget POST, оптимистичную подсветку
+ * держит вызывающий (см. `useMarkCitation`).
+ */
+export async function markCitationStep({
+  message_id,
+  citation_id,
+  verdict,
+}: AssistantMarkCitationRequest): Promise<void> {
+  await api.post(`${BASE}/messages/${message_id}/step-mark`, { citation_id, verdict })
 }

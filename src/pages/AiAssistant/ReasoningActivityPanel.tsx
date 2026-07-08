@@ -13,6 +13,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import type { AssistantCitationVerdict } from '@/features/aiAssistant/api'
 import type { AssistantCitation } from '@/features/aiAssistant/sse'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
@@ -328,13 +329,80 @@ function CitationTable({ columns, rows }: { columns: string[]; rows: unknown[][]
   )
 }
 
+/** Базовый класс компактной кнопки-пометки источника (верно/неверно). */
+const CITATION_MARK_BASE =
+  'inline-flex min-h-6 shrink-0 cursor-pointer items-center gap-1 rounded-md border px-2 py-0.5 text-[11px] font-medium transition-colors'
+
+/**
+ * Одна кнопка-пометка источника (✓ верно / ✕ неверно). Подсвечивается
+ * семантическим токеном (success/error) когда выбрана; повторный клик по
+ * выбранному вердикту снимает пометку (см. `onMarkCitation` на странице).
+ */
+function CitationMarkButton({
+  verdict,
+  active,
+  label,
+  testId,
+  onClick,
+}: {
+  verdict: AssistantCitationVerdict
+  active: boolean
+  label: string
+  testId: string
+  onClick: () => void
+}) {
+  const isOk = verdict === 'ok'
+  return (
+    <button
+      type="button"
+      data-testid={testId}
+      aria-label={label}
+      aria-pressed={active}
+      onClick={onClick}
+      className={cn(
+        CITATION_MARK_BASE,
+        active
+          ? isOk
+            ? 'border-success-300 bg-success-50 text-success-700'
+            : 'border-error-300 bg-error-50 text-error-700'
+          : isOk
+            ? 'border-light-200 hover:border-success-300 hover:text-success-600 bg-white text-gray-500'
+            : 'border-light-200 hover:border-error-300 hover:text-error-600 bg-white text-gray-500'
+      )}
+    >
+      {isOk ? (
+        <Icons.Checkmark size={13} strokeWidth={2} />
+      ) : (
+        <Icons.Cancel01 size={13} strokeWidth={2} />
+      )}
+      {label}
+    </button>
+  )
+}
+
 /**
  * Один источник факт-сноски в панели «Активность»: шапка (глиф ①..⑳ + `ref` +
  * тип) и детали по `kind` — SQL (`query` + таблица `columns`/`rows`) или расчёт
  * (`code` + `result`). Если деталей нет — остаётся только шапка с `ref`
  * (мягкая деградация). Активный источник (`focused`) подсвечен акцент-рамкой.
+ *
+ * Слой 5: когда доступен серверный `message_id` (`markingEnabled` — сообщение
+ * гидратировано из истории), под источником показываются кнопки «верно/неверно»;
+ * `verdict` — уже выбранная оператором пометка (оптимистичная).
  */
-function CitationSource({ citation, focused }: { citation: AssistantCitation; focused: boolean }) {
+function CitationSource({
+  citation,
+  focused,
+  markingEnabled,
+  verdict,
+  onMark,
+}: {
+  citation: AssistantCitation
+  focused: boolean
+  markingEnabled: boolean
+  verdict?: AssistantCitationVerdict
+  onMark: (verdict: AssistantCitationVerdict) => void
+}) {
   const { t } = useTranslation('common')
   const hasTable = Boolean(citation.columns?.length) || Boolean(citation.rows?.length)
   const hasSql = Boolean(citation.query) || hasTable
@@ -402,6 +470,31 @@ function CitationSource({ citation, focused }: { citation: AssistantCitation; fo
           )}
         </div>
       )}
+
+      {markingEnabled && (
+        <div
+          data-testid="citation-marks"
+          className="border-light-200/70 mt-2.5 flex items-center gap-1.5 border-t pt-2"
+        >
+          <span className="mr-auto text-[10px] font-medium tracking-wide text-gray-400 uppercase">
+            {t('pages.aiAssistant.citationMarkPrompt')}
+          </span>
+          <CitationMarkButton
+            verdict="ok"
+            active={verdict === 'ok'}
+            label={t('pages.aiAssistant.citationMarkOk')}
+            testId="citation-mark-ok"
+            onClick={() => onMark('ok')}
+          />
+          <CitationMarkButton
+            verdict="wrong"
+            active={verdict === 'wrong'}
+            label={t('pages.aiAssistant.citationMarkWrong')}
+            testId="citation-mark-wrong"
+            onClick={() => onMark('wrong')}
+          />
+        </div>
+      )}
     </div>
   )
 }
@@ -415,9 +508,17 @@ function CitationSource({ citation, focused }: { citation: AssistantCitation; fo
 function CitationSources({
   citations,
   focusedCitationId,
+  markingEnabled,
+  citationMarks,
+  onMarkCitation,
 }: {
   citations: AssistantCitation[]
   focusedCitationId: number | null
+  /** Показывать ли кнопки «верно/неверно» (есть серверный `message_id`). */
+  markingEnabled: boolean
+  /** Текущие пометки источников этого сообщения (номер сноски → вердикт). */
+  citationMarks: Record<number, AssistantCitationVerdict>
+  onMarkCitation: (citationId: number, verdict: AssistantCitationVerdict) => void
 }) {
   const containerRef = useRef<HTMLDivElement>(null)
 
@@ -436,6 +537,9 @@ function CitationSources({
           key={citation.id}
           citation={citation}
           focused={citation.id === focusedCitationId}
+          markingEnabled={markingEnabled}
+          verdict={citationMarks[citation.id]}
+          onMark={(verdict) => onMarkCitation(citation.id, verdict)}
         />
       ))}
     </div>
@@ -453,6 +557,15 @@ type ReasoningActivityPanelProps = {
   citations: AssistantCitation[]
   /** Номер источника для подсветки/скролла (клик по сноске ①②③); null — нет. */
   focusedCitationId: number | null
+  /**
+   * Слой 5: показывать ли кнопки «верно/неверно» у источников — только когда у
+   * активного сообщения есть серверный `message_id` (после гидратации диалога).
+   */
+  citationMarkingEnabled: boolean
+  /** Пометки источников активного сообщения (номер сноски → вердикт). */
+  citationMarks: Record<number, AssistantCitationVerdict>
+  /** Клик по «верно/неверно» источника — оптимистичный POST на странице. */
+  onMarkCitation: (citationId: number, verdict: AssistantCitationVerdict) => void
   /** Localised elapsed label for the header (e.g. "12 с"), or null. */
   elapsedLabel: string | null
   isMobileOrTablet: boolean
@@ -479,6 +592,9 @@ export function ReasoningActivityPanel({
   toolSteps,
   citations,
   focusedCitationId,
+  citationMarkingEnabled,
+  citationMarks,
+  onMarkCitation,
   elapsedLabel,
   isMobileOrTablet,
   width,
@@ -663,7 +779,13 @@ export function ReasoningActivityPanel({
                 <p className="py-2 text-[10.5px] font-semibold tracking-[0.1em] text-gray-400 uppercase">
                   {t('pages.aiAssistant.activitySourcesSection')}
                 </p>
-                <CitationSources citations={citations} focusedCitationId={focusedCitationId} />
+                <CitationSources
+                  citations={citations}
+                  focusedCitationId={focusedCitationId}
+                  markingEnabled={citationMarkingEnabled}
+                  citationMarks={citationMarks}
+                  onMarkCitation={onMarkCitation}
+                />
               </section>
             )}
           </div>

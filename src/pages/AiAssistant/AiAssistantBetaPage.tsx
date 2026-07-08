@@ -17,11 +17,13 @@ import {
 } from '@/components/ui/DropdownMenu'
 import {
   useAssistantConversation,
+  useMarkCitation,
   useSendAssistantMessage,
   useSendFeedback,
 } from '@/features/aiAssistant/hooks'
 import {
   AssistantChatStreamError,
+  type AssistantCitationVerdict,
   type AssistantFeedbackComprehension,
   type AssistantFeedbackRating,
 } from '@/features/aiAssistant/api'
@@ -214,6 +216,9 @@ function mapCitations(citations?: AssistantCitation[]): MarkdownCitation[] | und
 }
 
 const LONG_PRESS_MS = 500
+
+/** Стабильная пустая карта пометок — чтобы не минтить новый объект на рендер. */
+const EMPTY_CITATION_MARKS: Record<number, AssistantCitationVerdict> = {}
 
 type MessageFeedback = {
   rating?: AssistantFeedbackRating
@@ -590,6 +595,13 @@ export function AiAssistantBetaPage() {
   const [isAssistantResponding, setIsAssistantResponding] = useState(false)
   const [conversationId, setConversationId] = useState<number | null>(null)
   const [feedbackByMessage, setFeedbackByMessage] = useState<Record<number, MessageFeedback>>({})
+  // Пометки источников «верно/неверно» (Слой 5), keyed by серверный message_id →
+  // (номер сноски → вердикт). Оптимистичны: применяются сразу, откатываются при
+  // ошибке POST. Живут в рамках монтирования (после F5 приходят с бэкенда — TODO
+  // отдельного слоя, контракт гидратации пометок пока не оговорён).
+  const [citationMarksByMessage, setCitationMarksByMessage] = useState<
+    Record<number, Record<number, AssistantCitationVerdict>>
+  >({})
   // Explicit user toggles for the "Ход рассуждения" panel, keyed by message id.
   // Unset → the panel follows the stream (open while streaming, collapsed once
   // the turn finishes); a value here is the user's deliberate override.
@@ -638,6 +650,7 @@ export function AiAssistantBetaPage() {
 
   const { mutateAsync: sendChat } = useSendAssistantMessage()
   const { mutate: mutateFeedback } = useSendFeedback()
+  const { mutate: mutateMarkCitation } = useMarkCitation()
 
   // Re-hydrate the dialog persisted for this user: history lives on the
   // backend, the store only keeps the conversation pointer. Hydration is
@@ -989,12 +1002,22 @@ export function AiAssistantBetaPage() {
     if (!detail || !shouldHydrateConversation) return
     setConversationId(detail.id)
     setChatMessages(
-      detail.messages.map((item) => ({
-        id: `server-${item.id}`,
-        role: item.role,
-        content: item.content,
-        serverMessageId: item.role === 'assistant' ? item.id : undefined,
-      }))
+      detail.messages.map((item) => {
+        const isAssistant = item.role === 'assistant'
+        return {
+          id: `server-${item.id}`,
+          role: item.role,
+          content: item.content,
+          serverMessageId: isAssistant ? item.id : undefined,
+          // Слой 5: гидратируем раздумья и источники серверного сообщения, чтобы
+          // панель «Активность» и факт-сноски `[[N]]` работали в загруженном из
+          // истории диалоге (после F5 / переключения), а не только в текущем
+          // стриме. Поля опциональны — старый бэкенд их не шлёт, тогда сообщение
+          // ведёт себя как прежде (без чипа/источников).
+          reasoning: isAssistant ? item.reasoning : undefined,
+          citations: isAssistant ? item.citations : undefined,
+        }
+      })
     )
     setIsExplicitSelection(false)
     window.setTimeout(() => scrollToConversationBottom('auto'), 0)
@@ -1072,6 +1095,7 @@ export function AiAssistantBetaPage() {
     setChatMessages((current) => (current.length > 0 ? [] : current))
     setConversationId(null)
     setFeedbackByMessage({})
+    setCitationMarksByMessage((current) => (Object.keys(current).length > 0 ? {} : current))
     setReasoningOpenByMessage((current) => (Object.keys(current).length > 0 ? {} : current))
     setFocusedCitation(null)
     setIsAssistantResponding(false)
@@ -1812,6 +1836,42 @@ export function AiAssistantBetaPage() {
     [feedbackByMessage, mutateFeedback, t]
   )
 
+  // Пометка источника факт-сноски «верно/неверно» (Слой 5). Оптимистично
+  // подсвечиваем выбор; повторный клик по тому же вердикту снимает пометку
+  // (чисто UI — контракт step-mark выражает только ok/wrong, «снятие» не шлём),
+  // клик по другому вердикту — меняет и шлёт POST. Откат при ошибке POST.
+  const handleMarkCitation = useCallback(
+    (serverMessageId: number, citationId: number, verdict: AssistantCitationVerdict) => {
+      const previousVerdict = citationMarksByMessage[serverMessageId]?.[citationId]
+      const nextVerdict = previousVerdict === verdict ? undefined : verdict
+
+      const applyVerdict = (value: AssistantCitationVerdict | undefined) => {
+        setCitationMarksByMessage((current) => {
+          const forMessage = { ...(current[serverMessageId] ?? {}) }
+          if (value == null) delete forMessage[citationId]
+          else forMessage[citationId] = value
+          return { ...current, [serverMessageId]: forMessage }
+        })
+      }
+
+      applyVerdict(nextVerdict)
+
+      // Снятие пометки контракт не выражает (только ok/wrong) — держим локально.
+      if (nextVerdict == null) return
+
+      mutateMarkCitation(
+        { message_id: serverMessageId, citation_id: citationId, verdict: nextVerdict },
+        {
+          onError: () => {
+            toast.error(t('pages.aiAssistant.apiError'))
+            applyVerdict(previousVerdict)
+          },
+        }
+      )
+    },
+    [citationMarksByMessage, mutateMarkCitation, t]
+  )
+
   // Resolve whether a message's reasoning panel is open: an explicit user
   // toggle wins; otherwise the panel mirrors the live stream (open while
   // streaming, collapsed once the turn has settled).
@@ -1887,6 +1947,22 @@ export function AiAssistantBetaPage() {
   const [reasoningPanelWidth, setReasoningPanelWidth] = useState(storedReasoningPanelWidth)
   const activeReasoningElapsed =
     activeReasoningMessage != null ? reasoningElapsedMs(activeReasoningMessage, reasoningNow) : null
+
+  // Слой 5: пометки «верно/неверно» доступны только когда у активного сообщения
+  // есть серверный message_id (после гидратации диалога). Пометки берём по нему из
+  // стейта; клик прокидывает id внутрь handleMarkCitation.
+  const activeServerMessageId = activeReasoningMessage?.serverMessageId ?? null
+  const activeCitationMarks =
+    activeServerMessageId != null
+      ? (citationMarksByMessage[activeServerMessageId] ?? EMPTY_CITATION_MARKS)
+      : EMPTY_CITATION_MARKS
+  const handleActiveMarkCitation = useCallback(
+    (citationId: number, verdict: AssistantCitationVerdict) => {
+      if (activeServerMessageId == null) return
+      handleMarkCitation(activeServerMessageId, citationId, verdict)
+    },
+    [activeServerMessageId, handleMarkCitation]
+  )
 
   const feedbackButtonClass = (isChosen: boolean, isGroupLocked: boolean) =>
     cn(
@@ -2611,6 +2687,9 @@ export function AiAssistantBetaPage() {
         toolSteps={activeReasoningMessage?.toolSteps ?? []}
         citations={activeReasoningMessage?.citations ?? []}
         focusedCitationId={focusedCitationId}
+        citationMarkingEnabled={activeServerMessageId != null}
+        citationMarks={activeCitationMarks}
+        onMarkCitation={handleActiveMarkCitation}
         elapsedLabel={
           activeReasoningElapsed != null ? formatReasoningDuration(activeReasoningElapsed) : null
         }
