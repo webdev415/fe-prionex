@@ -4,6 +4,7 @@ import {
   buildLetterParameters,
   isLetterParametersReadOnly,
   mapInboxItemToLetterListItem,
+  mapMessageToLetterDetail,
   mapProcessingStatusToDisplay,
 } from '../mappers'
 import type { LegalInboxItem, LegalMessageDetail, LegalLetterType } from '../types'
@@ -44,6 +45,23 @@ describe('mapInboxItemToLetterListItem', () => {
     })
 
     expect(item.mailbox).toBe('liokaivenn@gmail.com')
+    expect(item.routeFromEmail).toBe('sargsyantigran835@gmail.com')
+    expect(item.routeToEmail).toBe('liokaivenn@gmail.com')
+  })
+
+  it('shows mailbox to recipient route for outbound sent rows', () => {
+    const item = mapInboxItemToLetterListItem({
+      ...baseItem,
+      direction: 'outbound',
+      processing_status: 'sent',
+      from_address: 'client@example.com',
+      to_addresses: ['client@example.com'],
+      mailbox_email: 'legal@company.com',
+    })
+
+    expect(item.direction).toBe('outgoing')
+    expect(item.routeFromEmail).toBe('legal@company.com')
+    expect(item.routeToEmail).toBe('client@example.com')
   })
 })
 
@@ -114,6 +132,73 @@ describe('buildLetterParameters', () => {
 
     expect(parameters.letterType).toBe('attorney_request')
   })
+
+  it('maps lawyer id from merged suggested_lawyer_user_id for EDO reply context', () => {
+    const message = {
+      id: 'msg-1',
+      thread_id: 'thread-1',
+      mailbox_id: 'mb-1',
+      internet_message_id: '<msg@example>',
+      subject: 'Test',
+      from_address: 'sender@example.com',
+      to_addresses: ['legal@company.com'],
+      cc_addresses: [],
+      body_text: 'Hello',
+      body_html: null,
+      processing_status: 'in_progress',
+      direction: 'incoming',
+      received_at: '2026-06-24T09:00:00Z',
+      sent_at: null,
+      is_quarantined: false,
+      quarantine_reason: null,
+      needs_manual_review: false,
+      suggested_letter_type_id: 'complaint',
+      suggested_client_id: 100,
+      suggested_lawyer_user_id: 42,
+      auto_process_eligible: false,
+      legal_task_id: 501,
+      attachments: [],
+    } as LegalMessageDetail
+
+    const detail = mapMessageToLetterDetail(message, undefined)
+    expect(detail.replyContext.clientId).toBe(100)
+    expect(detail.replyContext.assignedUserId).toBe(42)
+    expect(detail.parameters.lawyerId).toBe('42')
+  })
+
+  it('uses mailbox to recipient route in thread header for outbound messages', () => {
+    const message = {
+      id: 'msg-out-1',
+      thread_id: 'thread-1',
+      mailbox_id: 'mb-1',
+      internet_message_id: '<out@example>',
+      subject: 'RE: Test',
+      from_address: 'client@example.com',
+      to_addresses: ['client@example.com'],
+      cc_addresses: [],
+      body_text: 'Response',
+      body_html: null,
+      processing_status: 'sent',
+      direction: 'outbound',
+      received_at: '2026-06-24T10:00:00Z',
+      sent_at: '2026-06-24T10:00:00Z',
+      is_quarantined: false,
+      quarantine_reason: null,
+      needs_manual_review: false,
+      suggested_letter_type_id: 'complaint',
+      suggested_client_id: 100,
+      suggested_lawyer_user_id: 42,
+      auto_process_eligible: false,
+      legal_task_id: null,
+      attachments: [],
+    } as LegalMessageDetail
+
+    const detail = mapMessageToLetterDetail(message, undefined, {
+      mailboxLabelById: new Map([['mb-1', 'legal@company.com']]),
+    })
+    expect(detail.routeFromEmail).toBe('legal@company.com')
+    expect(detail.routeToEmail).toBe('client@example.com')
+  })
 })
 
 describe('buildLetterActivityLog', () => {
@@ -173,6 +258,10 @@ describe('mapProcessingStatusToDisplay', () => {
   it('maps full auto_processed without manual review to auto badge', () => {
     expect(mapProcessingStatusToDisplay('auto_processed', false)).toBe('auto_processed')
   })
+
+  it('maps sent outbound processing status to done badge', () => {
+    expect(mapProcessingStatusToDisplay('sent')).toBe('done')
+  })
 })
 
 describe('isLetterParametersReadOnly', () => {
@@ -190,6 +279,16 @@ describe('isLetterParametersReadOnly', () => {
       isLetterParametersReadOnly({
         status: 'auto_processed',
         isUnprocessed: false,
+      })
+    ).toBe(true)
+  })
+
+  it('locks outbound sent letters', () => {
+    expect(
+      isLetterParametersReadOnly({
+        status: 'new',
+        isUnprocessed: true,
+        direction: 'outbound',
       })
     ).toBe(true)
   })

@@ -16,9 +16,6 @@ import type {
   MailboxRoutingRule,
   SettingsMailbox,
 } from '../../../settings/types'
-import { createRoutingRule } from '../../../settings/utils/mailboxHelpers'
-import { ROUTING_MATCH_OPTIONS } from '../constants'
-import { LetterTypeBadge } from '../LetterTypeBadge'
 
 export interface MailboxFormValues {
   email: string
@@ -207,7 +204,7 @@ interface MailboxModalProps {
 export function MailboxModal({
   open,
   mailbox,
-  letterTypes,
+  letterTypes: _letterTypes,
   existingEmails,
   onClose,
   onSave,
@@ -230,12 +227,7 @@ export function MailboxModal({
   const [smtpHost, setSmtpHost] = useState('')
   const [smtpPort, setSmtpPort] = useState(587)
   const [smtpUseTls, setSmtpUseTls] = useState(true)
-  const [routingRules, setRoutingRules] = useState<MailboxRoutingRule[]>([])
   const [syncFromToday, setSyncFromToday] = useState(true)
-  const [newMatchType, setNewMatchType] =
-    useState<MailboxRoutingRule['matchType']>('subject_keyword')
-  const [newMatchValue, setNewMatchValue] = useState('')
-  const [newRuleTypeId, setNewRuleTypeId] = useState('')
   const [connectionTestPassed, setConnectionTestPassed] = useState(false)
   const [connectionError, setConnectionError] = useState<string | null>(null)
 
@@ -264,15 +256,11 @@ export function MailboxModal({
       setSmtpHost(preset?.smtpHost ?? initial.smtpHost)
       setSmtpPort(preset?.smtpPort ?? initial.smtpPort)
       setSmtpUseTls(preset?.smtpUseTls ?? initial.smtpUseTls)
-      setRoutingRules(initial.routingRules)
       setSyncFromToday(initial.syncFromToday)
-      setNewMatchType('subject_keyword')
-      setNewMatchValue('')
-      setNewRuleTypeId(letterTypes[0]?.id ?? '')
       setConnectionTestPassed(false)
       setConnectionError(null)
     })
-  }, [open, mailbox, letterTypes])
+  }, [open, mailbox])
 
   const handleProviderChange = (next: MailboxProvider) => {
     setProvider(next)
@@ -339,18 +327,6 @@ export function MailboxModal({
     customHostsValid
   const canTestConnection = canSave
 
-  const handleAddRule = () => {
-    if (!newRuleTypeId) return
-    if (newMatchType !== 'default' && !newMatchValue.trim()) return
-    const rule = createRoutingRule(newRuleTypeId, newMatchType, newMatchValue)
-    setRoutingRules((previous) => [...previous, rule])
-    setNewMatchValue('')
-  }
-
-  const handleRemoveRule = (ruleId: string) => {
-    setRoutingRules((previous) => previous.filter((rule) => rule.id !== ruleId))
-  }
-
   const handleSave = () => {
     if (!canSave || isSubmitting) return
     if (requireConnectionTest && !connectionTestPassed) return
@@ -366,7 +342,8 @@ export function MailboxModal({
       smtpPort,
       smtpUseTls,
       defaultLetterTypeId: null,
-      routingRules,
+      // Letter type auto-assignment uses letter-type keyword hints, not mailbox routing.
+      routingRules: [],
       syncFromToday,
     })
   }
@@ -387,7 +364,7 @@ export function MailboxModal({
         smtpPort,
         smtpUseTls,
         defaultLetterTypeId: null,
-        routingRules,
+        routingRules: [],
         syncFromToday,
       })
       setConnectionTestPassed(true)
@@ -681,136 +658,6 @@ export function MailboxModal({
             </p>
           </div>
         ) : null}
-
-        {/* Routing rules */}
-        <div className="space-y-3">
-          <div>
-            <h3 className="text-dark-500 text-[13px] font-semibold">
-              {t('pages.lawyerWorkplace.settings.mailboxes.routing.title', 'Routing rules')}
-            </h3>
-            <p className="text-light-600 mt-0.5 text-[11px]">
-              {t(
-                'pages.lawyerWorkplace.settings.mailboxes.routing.hint',
-                'Map incoming messages to letter types by sender or subject'
-              )}
-            </p>
-          </div>
-
-          <div className="space-y-2">
-            {routingRules.map((rule) => {
-              const letterType = letterTypes.find((type) => type.id === rule.letterTypeId)
-              const matchLabel = ROUTING_MATCH_OPTIONS.find((item) => item.id === rule.matchType)
-              return (
-                <div
-                  key={rule.id}
-                  className="flex flex-wrap items-center gap-2 rounded-md bg-white px-3 py-1.5"
-                >
-                  <span className="text-light-600 text-[11px] font-medium">
-                    {matchLabel ? t(matchLabel.labelKey, matchLabel.fallback) : rule.matchType}
-                  </span>
-                  {rule.matchType !== 'default' ? (
-                    <span className="text-dark-500 text-[12px]">"{rule.value}"</span>
-                  ) : null}
-                  <Icons.ArrowRight02 size={12} className="text-light-400" strokeWidth={1.5} />
-                  {letterType ? <LetterTypeBadge letterType={letterType} t={t} size="sm" /> : null}
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveRule(rule.id)}
-                    className="text-light-500 hover:text-dark-500 ml-auto"
-                    aria-label={t('actions.remove', 'Remove')}
-                  >
-                    <Icons.Cancel01 size={14} strokeWidth={1.5} />
-                  </button>
-                </div>
-              )
-            })}
-          </div>
-
-          <div className="flex flex-col gap-2 rounded-md border border-dashed border-gray-200 p-3 sm:flex-row sm:flex-wrap sm:items-end">
-            <div className="min-w-[140px] flex-1 space-y-1">
-              <Label className="text-light-600 text-[11px]">
-                {t('pages.lawyerWorkplace.settings.mailboxes.routing.matchType', 'Match')}
-              </Label>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button
-                    type="button"
-                    className="text-dark-500 flex h-10 w-full items-center justify-between rounded-md border border-gray-200 bg-white px-3 text-[12px]"
-                  >
-                    {t(
-                      ROUTING_MATCH_OPTIONS.find((item) => item.id === newMatchType)?.labelKey ??
-                        '',
-                      ROUTING_MATCH_OPTIONS.find((item) => item.id === newMatchType)?.fallback ??
-                        newMatchType
-                    )}
-                    <Icons.ArrowDown size={14} strokeWidth={1.5} />
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start">
-                  {ROUTING_MATCH_OPTIONS.map((option) => (
-                    <DropdownMenuItem
-                      key={option.id}
-                      className="cursor-pointer"
-                      onClick={() => setNewMatchType(option.id)}
-                    >
-                      {t(option.labelKey, option.fallback)}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-            {newMatchType !== 'default' ? (
-              <div className="min-w-[140px] flex-1 space-y-1">
-                <Label className="text-light-600 text-[11px]">
-                  {t('pages.lawyerWorkplace.settings.mailboxes.routing.value', 'Value')}
-                </Label>
-                <input
-                  type="text"
-                  value={newMatchValue}
-                  onChange={(e) => setNewMatchValue(e.target.value)}
-                  placeholder={newMatchType === 'sender_domain' ? 'court.gov.ua' : 'complaint'}
-                  className="text-dark-500 h-10 w-full rounded-md border border-gray-200 bg-white px-3 text-[12px] outline-none"
-                />
-              </div>
-            ) : null}
-            <div className="min-w-[140px] flex-1 space-y-1">
-              <Label className="text-light-600 text-[11px]">
-                {t('pages.lawyerWorkplace.settings.mailboxes.routing.letterType', 'Letter type')}
-              </Label>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button
-                    type="button"
-                    className="text-dark-500 flex h-10 w-full items-center justify-between rounded-md border border-gray-200 bg-white px-3 text-[12px]"
-                  >
-                    <span className="truncate">
-                      {letterTypes.find((type) => type.id === newRuleTypeId)?.nameFallback ??
-                        t(
-                          'pages.lawyerWorkplace.settings.mailboxes.routing.selectType',
-                          'Select type'
-                        )}
-                    </span>
-                    <Icons.ArrowDown size={14} strokeWidth={1.5} />
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="max-h-48 overflow-y-auto">
-                  {letterTypes.map((type) => (
-                    <DropdownMenuItem
-                      key={type.id}
-                      className="cursor-pointer"
-                      onClick={() => setNewRuleTypeId(type.id)}
-                    >
-                      <LetterTypeBadge letterType={type} t={t} size="sm" />
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-            <Button variant="outline" size="sm" className="h-10 rounded-md" onClick={handleAddRule}>
-              {t('pages.lawyerWorkplace.settings.mailboxes.routing.addRule', 'Add rule')}
-            </Button>
-          </div>
-        </div>
       </ModalContent>
       <ModalFooter>
         <Button variant="cancel" onClick={onClose} className="h-10 w-full rounded-md">

@@ -598,6 +598,11 @@
         "body": "Message",
         "bodyPlaceholder": "Write your message...",
         "edoType": "EDO document type",
+        "edoRequiresClient": "Select a CRM client before registering EDO",
+        "edoRequiresClientHint": "Select a CRM client above to register this letter in EDO.",
+        "edoHintInstitution": "Link a CRM client below to register this institution letter in EDO.",
+        "edoClientForInstitution": "CRM client (for EDO registration)",
+        "clientSearchHint": "Type 2+ characters to search…",
         "send": "Send"
       },
       "parameters": {
@@ -872,7 +877,7 @@
           "exampleSource": "Sender",
           "exampleSourcePlaceholder": "Sender name",
           "keywordHints": "Keyword hints",
-          "keywordHintsHint": "optional - used as fallback when AI confidence < 70%",
+          "keywordHintsHint": "used to auto-suggest letter type when the sender email matches a CRM client",
           "keywordPlaceholder": "Type a keyword and press Enter..",
           "starRating": "Star rating",
           "starN": "Star {{n}} of {{total}}",

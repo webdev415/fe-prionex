@@ -21,6 +21,7 @@ export interface LegalInboxItem {
   mailbox_email?: string | null
   subject: string | null
   from_address: string
+  to_addresses?: string[]
   processing_status: string
   direction: string
   received_at: string | null

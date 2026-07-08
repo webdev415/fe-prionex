@@ -144,9 +144,6 @@ export function MailboxesTable({
                     {t('pages.lawyerWorkplace.settings.mailboxes.columns.letters', 'Letters')}
                   </th>
                   <th className="text-light-600 px-4 py-3 text-[11px] font-medium">
-                    {t('pages.lawyerWorkplace.settings.mailboxes.columns.routing', 'Routing')}
-                  </th>
-                  <th className="text-light-600 px-4 py-3 text-[11px] font-medium">
                     {t('pages.lawyerWorkplace.settings.mailboxes.columns.actions', 'Actions')}
                   </th>
                 </tr>
@@ -200,14 +197,6 @@ export function MailboxesTable({
                       </td>
                       <td className="px-4 py-4">
                         <span className="text-dark-500 font-semibold">{mailbox.letterCount}</span>
-                      </td>
-                      <td className="px-4 py-4">
-                        <span className="text-dark-500 text-[12px] font-medium">
-                          {t('pages.lawyerWorkplace.settings.mailboxes.rulesCount', {
-                            count: mailbox.routingRules.length,
-                            defaultValue: `${mailbox.routingRules.length} rules`,
-                          })}
-                        </span>
                       </td>
                       <td className="px-4 py-4">
                         {!readOnly ? (
