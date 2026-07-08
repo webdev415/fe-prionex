@@ -554,6 +554,13 @@ function LetterParametersPanelContent({
     p.lawyerLabel ??
     '—'
 
+  const readonlyLawyerDisplay =
+    lawyerOptions.find((option) => option.userId === p.lawyerId)?.display ??
+    p.lawyerLabel ??
+    (letter.legalTaskId != null
+      ? t('pages.lawyerWorkplace.parameters.lawyerAssigned', 'Assigned on kanban')
+      : t('pages.lawyerWorkplace.parameters.auto', 'Auto'))
+
   const clientIdNumber = Number(effectiveClientId)
   const lawyerUserIdNumber = Number(effectiveLawyerUserId)
 
@@ -671,7 +678,7 @@ function LetterParametersPanelContent({
           )}
 
           <ReadonlyField label={t('pages.lawyerWorkplace.parameters.lawyer', 'Lawyer')}>
-            {p.lawyerLabel || 'Auto'}
+            {readonlyLawyerDisplay}
           </ReadonlyField>
 
           {/* Link to kanban task */}

@@ -4,6 +4,7 @@ import {
   buildLetterParameters,
   isLetterParametersReadOnly,
   mapInboxItemToLetterListItem,
+  mapMessageToLetterDetail,
   mapProcessingStatusToDisplay,
 } from '../mappers'
 import type { LegalInboxItem, LegalMessageDetail, LegalLetterType } from '../types'
@@ -113,6 +114,39 @@ describe('buildLetterParameters', () => {
     })
 
     expect(parameters.letterType).toBe('attorney_request')
+  })
+
+  it('maps lawyer id from merged suggested_lawyer_user_id for EDO reply context', () => {
+    const message = {
+      id: 'msg-1',
+      thread_id: 'thread-1',
+      mailbox_id: 'mb-1',
+      internet_message_id: '<msg@example>',
+      subject: 'Test',
+      from_address: 'sender@example.com',
+      to_addresses: ['legal@company.com'],
+      cc_addresses: [],
+      body_text: 'Hello',
+      body_html: null,
+      processing_status: 'in_progress',
+      direction: 'incoming',
+      received_at: '2026-06-24T09:00:00Z',
+      sent_at: null,
+      is_quarantined: false,
+      quarantine_reason: null,
+      needs_manual_review: false,
+      suggested_letter_type_id: 'complaint',
+      suggested_client_id: 100,
+      suggested_lawyer_user_id: 42,
+      auto_process_eligible: false,
+      legal_task_id: 501,
+      attachments: [],
+    } as LegalMessageDetail
+
+    const detail = mapMessageToLetterDetail(message, undefined)
+    expect(detail.replyContext.clientId).toBe(100)
+    expect(detail.replyContext.assignedUserId).toBe(42)
+    expect(detail.parameters.lawyerId).toBe('42')
   })
 })
 

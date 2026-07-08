@@ -306,7 +306,9 @@ export function EmailThreadPanel({
     const clientId =
       replyContext.clientId ??
       (letter.parameters.clientId ? Number(letter.parameters.clientId) : null)
-    const assignedUserId = replyContext.assignedUserId
+    const assignedUserId =
+      replyContext.assignedUserId ??
+      (letter.parameters.lawyerId ? Number(letter.parameters.lawyerId) : null)
 
     if (edoType !== 'none' && (clientId == null || assignedUserId == null)) {
       toast.error(
