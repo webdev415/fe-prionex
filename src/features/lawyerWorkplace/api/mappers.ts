@@ -237,9 +237,14 @@ function resolveMailboxLabel(
 }
 
 function computeDueDateIso(receivedAt: string | null, slaDays: number | undefined): string {
+  // Only compute when a letter type SLA is known — never invent a default
+  // due date for unclassified messages.
+  if (slaDays == null || !Number.isFinite(slaDays) || slaDays <= 0) {
+    return ''
+  }
   const base = receivedAt ? new Date(receivedAt) : new Date()
   const due = new Date(base)
-  due.setDate(due.getDate() + (slaDays ?? 14))
+  due.setDate(due.getDate() + slaDays)
   return due.toISOString().slice(0, 10)
 }
 
@@ -364,7 +369,7 @@ export function buildLetterParameters(
     ? context?.lawyersByUserId?.get(message.suggested_lawyer_user_id)
     : undefined
 
-  const dueDate = computeDueDateIso(message.received_at, letterType?.sla_days)
+  const dueDate = letterType ? computeDueDateIso(message.received_at, letterType.sla_days) : ''
   const confirmedCount = countConfirmedParameters(message, dueDate)
   const totalParameters = 4
   const contractLabel =
