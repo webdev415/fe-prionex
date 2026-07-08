@@ -344,6 +344,51 @@ describe('CallTranscriptPanel — v7 format', () => {
     expect(onSeek).toHaveBeenCalledWith(10000)
   })
 
+  it('weaves hesitation pauses into the bubble text at their time position', () => {
+    const withHes: CallTranscript = {
+      ...V7_TRANSCRIPT,
+      utterances: V7_TRANSCRIPT.utterances.map((utt, i) =>
+        i === 1 ? { ...utt, hes: [{ t: 12, gap: 1.2 }] } : utt
+      ),
+    }
+    setHook({ transcript: withHes })
+    render(<CallTranscriptPanel callId="c1" />)
+
+    const remark = screen.getByTestId('transcript-v7-hes-1-0')
+    expect(remark).toHaveTextContent('pages.training.transcript.v7.inlinePause')
+
+    // t=12 → 20% into the 10..20 turn → after word 2 of 10; the bc reaction
+    // at t=15 still lands after word 5 — both streams share one timeline.
+    const content = screen.getByTestId('transcript-v7-turn-1').textContent ?? ''
+    const remarkAt = content.indexOf('pages.training.transcript.v7.inlinePause')
+    expect(remarkAt).toBeGreaterThan(content.indexOf('w2'))
+    expect(content.indexOf('w3')).toBeGreaterThan(remarkAt)
+    expect(content.indexOf('Ага.')).toBeGreaterThan(content.indexOf('w5'))
+  })
+
+  it('annotates the silence chip with ambient sounds from overlapping windows', () => {
+    const withWindows: CallTranscript = {
+      ...V7_TRANSCRIPT,
+      metrics: {
+        ...V7_TRANSCRIPT.metrics,
+        // The pause before turn 1 is 8.4..10s — window 0 overlaps it.
+        audio_windows: [
+          { id: 0, t0: 0, t1: 10, events: ['музика', 'розтягнуті звуки (а-а)'] },
+          { id: 1, t0: 10, t1: 20, events: ['сирена'] },
+        ],
+      },
+    }
+    setHook({ transcript: withWindows })
+    render(<CallTranscriptPanel callId="c1" />)
+
+    const pause = screen.getByTestId('transcript-v7-pause-1')
+    expect(pause).toHaveTextContent('музика')
+    // Speech-manner events never annotate a pause; window 1 starts at the
+    // turn start and does not overlap the gap.
+    expect(pause.textContent).not.toContain('розтягнуті')
+    expect(pause.textContent).not.toContain('сирена')
+  })
+
   it('detects v7 by metrics.stats alone and accepts tuple reactions', () => {
     setHook({
       transcript: {
@@ -460,31 +505,69 @@ const AUDIO_TRANSCRIPT: CallTranscript = {
   },
 }
 
-describe('CallTranscriptPanel — v7 audio layer (phase 2)', () => {
-  it('renders emotion markers on turns: 🔊/⚡ derived, ✂️ from events, unknown as text', () => {
+describe('CallTranscriptPanel — v7 audio layer (phase 2, business style)', () => {
+  it('renders only significant-state text badges: raised voice, no event chips', () => {
     setHook({ transcript: AUDIO_TRANSCRIPT })
     render(<CallTranscriptPanel callId="c1" />)
 
-    // Turn 0: arousal 3 → 🔊, emotion «роздратування» → ⚡, event → ✂️.
-    const markers0 = screen.getByTestId('transcript-v7-audio-markers-0')
-    expect(markers0).toHaveTextContent('🔊')
-    expect(markers0).toHaveTextContent('⚡')
-    expect(markers0).toHaveTextContent('✂️')
-    // M reliability dims markers: confidence 0.68 × 0.75.
-    expect(markers0).toHaveStyle({ opacity: '0.51' })
-    expect(screen.getByTestId('transcript-v7-audio-marker-0-0')).toHaveAttribute(
-      'title',
-      expect.stringContaining('pages.training.transcript.v7.audio.approx')
-    )
+    // Turn 0: arousal 3 → thin «підвищений голос» badge; the «перебивання»
+    // event stays in the payload without UI. M reliability → approx tooltip.
+    const raised = screen.getByTestId('transcript-v7-audio-state-0-raisedVoice')
+    expect(raised).toHaveTextContent('pages.training.transcript.v7.audio.states.raisedVoice')
+    expect(raised).toHaveAttribute('title', 'pages.training.transcript.v7.audio.approx')
+    expect(screen.queryByTestId('transcript-v7-audio-state-0-crying')).not.toBeInTheDocument()
 
-    // Turn 1: calm (arousal 0) → only the unknown event as a text chip.
-    const markers1 = screen.getByTestId('transcript-v7-audio-markers-1')
-    expect(markers1).toHaveTextContent('дивний шум')
-    expect(markers1).not.toHaveTextContent('🔊')
-    expect(markers1).toHaveStyle({ opacity: '0.9' }) // H reliability → no extra dim
+    // Turn 1: calm (arousal 0) → no badges; its unknown event «дивний шум»
+    // must not surface anywhere (the event chip row is gone).
+    expect(screen.queryByTestId('transcript-v7-audio-state-1-raisedVoice')).not.toBeInTheDocument()
+    expect(screen.queryByText('дивний шум')).not.toBeInTheDocument()
 
-    // Turns without the layer render no marker containers.
-    expect(screen.queryByTestId('transcript-v7-audio-markers-2')).not.toBeInTheDocument()
+    // Turns without the layer render no badges either.
+    expect(screen.queryByTestId('transcript-v7-audio-state-2-raisedVoice')).not.toBeInTheDocument()
+  })
+
+  it('renders the «плач» badge from a crying event, without the approx tooltip on H', () => {
+    const crying: CallTranscript = {
+      ...V7_TRANSCRIPT,
+      utterances: V7_TRANSCRIPT.utterances.map((utt, i) =>
+        i === 0
+          ? {
+              ...utt,
+              audio: {
+                speaker_state: {
+                  polarity: 'neg',
+                  emotion: 'відчай',
+                  arousal: 1,
+                  events: ['плач'],
+                  reliability: 'H',
+                },
+              },
+            }
+          : utt
+      ),
+    }
+    setHook({ transcript: crying })
+    render(<CallTranscriptPanel callId="c1" />)
+
+    const badge = screen.getByTestId('transcript-v7-audio-state-0-crying')
+    expect(badge).toHaveTextContent('pages.training.transcript.v7.audio.states.crying')
+    expect(badge).not.toHaveAttribute('title')
+    expect(screen.queryByTestId('transcript-v7-audio-state-0-raisedVoice')).not.toBeInTheDocument()
+  })
+
+  it('renders no emoji anywhere in the business-style panel', () => {
+    const withEverything: CallTranscript = {
+      ...AUDIO_TRANSCRIPT,
+      metrics: {
+        ...AUDIO_TRANSCRIPT.metrics,
+        stats: { ...V7_TRANSCRIPT.metrics?.stats, op_hes: 3, cl_hes: 5 },
+        audio_windows: [{ id: 0, t0: 0, t1: 10, events: ['музика'] }],
+      },
+    }
+    setHook({ transcript: withEverything })
+    const { container } = render(<CallTranscriptPanel callId="c1" />)
+    // Base code points — «✂» also matches the «✂️» emoji presentation.
+    expect(container.textContent).not.toMatch(/🔊|⚡|✂|😢|⏸|⤭|⚠/u)
   })
 
   it('paints the bubble left border by polarity (neg red / pos green / none without audio)', () => {
@@ -548,13 +631,14 @@ describe('CallTranscriptPanel — v7 audio layer (phase 2)', () => {
     expect(trend.className).toContain('text-[#3aa66b]')
   })
 
-  it('marks «тон vs слова» turns with ⚠ and lists them among key moments', () => {
+  it('marks «тон ≠ слова» turns with a text badge and lists them among key moments', () => {
     const onSeek = vi.fn()
     setHook({ transcript: AUDIO_TRANSCRIPT })
     render(<CallTranscriptPanel callId="c1" onSeek={onSeek} />)
 
     const badge = screen.getByTestId('transcript-v7-divergence-2')
-    expect(badge).toHaveTextContent('⚠')
+    expect(badge).toHaveTextContent('pages.training.transcript.v7.audio.toneVsWords')
+    expect(badge.textContent).not.toContain('⚠')
     expect(badge.title).toContain('згода')
     expect(badge.title).toContain('покірно, під тиском')
 
@@ -583,6 +667,41 @@ describe('CallTranscriptPanel — v7 audio layer (phase 2)', () => {
     expect(screen.getByTestId('transcript-v7-client-trend')).toHaveTextContent('↓')
   })
 
+  it('adds hesitation counters to the operator and client chips', () => {
+    const withHesStats: CallTranscript = {
+      ...AUDIO_TRANSCRIPT,
+      metrics: {
+        ...AUDIO_TRANSCRIPT.metrics,
+        stats: { ...V7_TRANSCRIPT.metrics?.stats, op_hes: 3, cl_hes: 5 },
+      },
+    }
+    setHook({ transcript: withHesStats })
+    render(<CallTranscriptPanel callId="c1" />)
+
+    expect(screen.getByTestId('transcript-v7-chip-operator-audio')).toHaveTextContent(
+      'pages.training.transcript.v7.hesitations'
+    )
+    expect(screen.getByTestId('transcript-v7-client-hes')).toHaveTextContent(
+      'pages.training.transcript.v7.hesitations'
+    )
+  })
+
+  it('renders hesitation counters without the 12B layer (deterministic stats)', () => {
+    setHook({
+      transcript: {
+        ...V7_TRANSCRIPT,
+        metrics: { stats: { ...V7_TRANSCRIPT.metrics?.stats, op_hes: 2, cl_hes: 0 } },
+      },
+    })
+    render(<CallTranscriptPanel callId="c1" />)
+
+    const operator = screen.getByTestId('transcript-v7-chip-operator-audio')
+    expect(operator).toHaveTextContent('pages.training.transcript.v7.hesitations')
+    // Counters are deterministic — no «by audio, approximate» tooltip.
+    expect(operator).not.toHaveAttribute('title')
+    expect(screen.getByTestId('transcript-v7-client-hes')).toBeInTheDocument()
+  })
+
   it('renders nothing audio-related without the layer (regression)', () => {
     setHook({ transcript: V7_TRANSCRIPT })
     render(<CallTranscriptPanel callId="c1" />)
@@ -591,7 +710,8 @@ describe('CallTranscriptPanel — v7 audio layer (phase 2)', () => {
     expect(screen.queryByTestId('transcript-v7-audio-strip')).not.toBeInTheDocument()
     expect(screen.queryByTestId('transcript-v7-chip-operator-audio')).not.toBeInTheDocument()
     expect(screen.queryByTestId('transcript-v7-chip-client-audio')).not.toBeInTheDocument()
-    expect(screen.queryByTestId('transcript-v7-audio-markers-0')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('transcript-v7-audio-state-0-raisedVoice')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('transcript-v7-hes-1-0')).not.toBeInTheDocument()
     expect(screen.queryByTestId('transcript-v7-divergence-2')).not.toBeInTheDocument()
   })
 
@@ -613,7 +733,7 @@ describe('CallTranscriptPanel — v7 audio layer (phase 2)', () => {
 
     expect(screen.getByTestId('transcript-v7-feed')).toBeInTheDocument()
     expect(screen.queryByTestId('transcript-v7-audio-dynamics')).not.toBeInTheDocument()
-    expect(screen.queryByTestId('transcript-v7-audio-markers-0')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('transcript-v7-audio-state-0-raisedVoice')).not.toBeInTheDocument()
     expect(screen.queryByTestId('transcript-v7-chip-operator-audio')).not.toBeInTheDocument()
   })
 })

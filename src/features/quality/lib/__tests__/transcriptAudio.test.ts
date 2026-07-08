@@ -1,24 +1,27 @@
 /**
- * transcriptAudio helper tests — marker derivation from the 12B speaker
- * state, FE smoothing of the raw emotion path (MA-3, peaks preserved),
- * divergence normalisation and score/trend formatting. Pure functions.
+ * transcriptAudio helper tests — significant-state derivation from the 12B
+ * speaker state (business style: only raised voice / crying surface), FE
+ * smoothing of the raw emotion path (MA-3, peaks preserved), divergence
+ * normalisation, ambient annotation of silence gaps and score/trend
+ * formatting. Pure functions.
  */
 import { describe, expect, it } from 'vitest'
-import type { CallTranscript, EmotionDynamics } from '../../types'
+import type { AudioWindow, CallTranscript, EmotionDynamics } from '../../types'
 import {
   buildDynamicsSegments,
-  classifyAudioEvent,
-  deriveAudioMarkers,
+  deriveSignificantStates,
   directionalTrendGlyph,
   divergencesByUtt,
   dynamicsScaleMax,
   formatScore,
+  getAudioWindows,
   getEmotionDynamics,
   isApproximateReliability,
-  markerOpacity,
+  isEnvironmentEvent,
   normalizeDivergences,
   normalizePolarity,
   normalizeTrend,
+  pauseEnvironmentLabels,
   speakerStateOf,
 } from '../transcriptAudio'
 
@@ -61,54 +64,39 @@ describe('normalizePolarity', () => {
   })
 })
 
-describe('classifyAudioEvent', () => {
-  it('maps known ukrainian event stems to marker kinds', () => {
-    expect(classifyAudioEvent('перебивання')).toBe('interruption')
-    expect(classifyAudioEvent('крик')).toBe('raisedVoice')
-    expect(classifyAudioEvent('підвищення голосу')).toBe('raisedVoice')
-    expect(classifyAudioEvent('плач')).toBe('crying')
-    expect(classifyAudioEvent('довга пауза')).toBe('longPause')
-    expect(classifyAudioEvent('тиск')).toBe('pressure')
-    expect(classifyAudioEvent('дивний шум')).toBe('other')
-  })
-})
-
-describe('deriveAudioMarkers', () => {
-  it('derives 🔊 from arousal ≥ 2 and ⚡ from a pressure-flavoured emotion', () => {
-    const markers = deriveAudioMarkers({ arousal: 2, emotion: 'тиснучий' })
-    expect(markers.map((m) => m.kind)).toEqual(['raisedVoice', 'pressure'])
-    expect(markers[0].icon).toBe('🔊')
-    expect(markers[1].icon).toBe('⚡')
+describe('deriveSignificantStates', () => {
+  it('derives «підвищений голос» from arousal ≥ 2 and «плач» from events', () => {
+    expect(deriveSignificantStates({ arousal: 2 })).toEqual(['raisedVoice'])
+    expect(deriveSignificantStates({ arousal: 3, events: ['плач'] })).toEqual([
+      'raisedVoice',
+      'crying',
+    ])
+    expect(deriveSignificantStates({ arousal: 0, events: ['схлипування'] })).toEqual(['crying'])
   })
 
-  it('keeps unknown events as text-only markers and dedupes by kind', () => {
-    const markers = deriveAudioMarkers({
-      arousal: 3,
-      events: ['крик', 'перебивання', 'дивний шум'],
-    })
-    // arousal → raisedVoice; event «крик» dedupes into it.
-    expect(markers.map((m) => m.kind)).toEqual(['raisedVoice', 'interruption', 'other'])
-    expect(markers[2]).toEqual({ kind: 'other', icon: null, label: 'дивний шум' })
+  it('hears crying in the emotion wording too', () => {
+    expect(deriveSignificantStates({ arousal: 1, emotion: 'плаче, ридання' })).toEqual(['crying'])
+  })
+
+  it('keeps every other 12B event out of the UI (business style)', () => {
+    expect(
+      deriveSignificantStates({
+        arousal: 1,
+        events: ['розтягнуті звуки (а-а)', 'невпевнена мова', 'перебивання', 'дивний шум'],
+      })
+    ).toEqual([])
   })
 
   it('is calm on low arousal, missing fields and garbage', () => {
-    expect(deriveAudioMarkers({ arousal: 1, emotion: 'спокій' })).toEqual([])
-    expect(deriveAudioMarkers({})).toEqual([])
-    expect(deriveAudioMarkers(null)).toEqual([])
-    expect(deriveAudioMarkers(undefined)).toEqual([])
-    expect(deriveAudioMarkers({ events: [null, 42, ''] as unknown as string[] })).toEqual([])
+    expect(deriveSignificantStates({ arousal: 1, emotion: 'спокій' })).toEqual([])
+    expect(deriveSignificantStates({})).toEqual([])
+    expect(deriveSignificantStates(null)).toEqual([])
+    expect(deriveSignificantStates(undefined)).toEqual([])
+    expect(deriveSignificantStates({ events: [null, 42, ''] as unknown as string[] })).toEqual([])
   })
 })
 
-describe('markerOpacity / isApproximateReliability', () => {
-  it('uses confidence with a visibility floor', () => {
-    expect(markerOpacity(0.68)).toBe(0.68)
-    expect(markerOpacity(0.1)).toBe(0.35)
-    expect(markerOpacity(1.5)).toBe(1)
-    expect(markerOpacity(undefined)).toBe(1)
-    expect(markerOpacity(Number.NaN)).toBe(1)
-  })
-
+describe('isApproximateReliability', () => {
   it('marks M/L reliability as approximate, H/unknown as firm', () => {
     expect(isApproximateReliability('M')).toBe(true)
     expect(isApproximateReliability('L')).toBe(true)
@@ -173,6 +161,88 @@ describe('dynamicsScaleMax', () => {
     expect(dynamicsScaleMax([])).toBe(3)
     const segments = buildDynamicsSegments([{ t: 0, arousal: 5 }], 10)
     expect(dynamicsScaleMax(segments)).toBe(5)
+  })
+})
+
+describe('getAudioWindows', () => {
+  const windows: AudioWindow[] = [{ id: 0, t0: 0, t1: 10, events: ['музика'] }]
+
+  it('prefers metrics.audio_windows over the top-level fallback', () => {
+    const other: AudioWindow[] = [{ id: 9, t0: 90, t1: 100 }]
+    expect(
+      getAudioWindows({
+        utterances: [],
+        metrics: { audio_windows: windows },
+        audio_windows: other,
+      })
+    ).toEqual(windows)
+  })
+
+  it('falls back to the top level and drops non-object entries', () => {
+    expect(getAudioWindows({ utterances: [], audio_windows: windows })).toEqual(windows)
+    expect(
+      getAudioWindows({
+        utterances: [],
+        metrics: { audio_windows: 'nope' },
+        audio_windows: [null, 42, ...windows] as unknown as AudioWindow[],
+      } as unknown as CallTranscript)
+    ).toEqual(windows)
+    expect(getAudioWindows({ utterances: [] })).toEqual([])
+    expect(getAudioWindows(null)).toEqual([])
+  })
+})
+
+describe('pauseEnvironmentLabels', () => {
+  const windows: AudioWindow[] = [
+    { id: 0, t0: 0, t1: 10, events: ['музика', 'розтягнуті звуки (а-а)'] },
+    { id: 1, t0: 10, t1: 20, events: ['фоновий шум', 'перебивання'] },
+    { id: 2, t0: 20, t1: 30, events: ['сирена'] },
+  ]
+
+  it('collects whitelist ambient events from overlapping windows only', () => {
+    // Gap 8..12 overlaps windows 0 and 1 but not 2.
+    expect(pauseEnvironmentLabels(windows, 8, 12)).toEqual(['музика', 'фоновий шум'])
+    expect(pauseEnvironmentLabels(windows, 25, 28)).toEqual(['сирена'])
+    expect(pauseEnvironmentLabels(windows, 40, 50)).toEqual([])
+  })
+
+  it('never lets speech-manner events annotate a pause', () => {
+    const manners: AudioWindow[] = [
+      {
+        t0: 0,
+        t1: 10,
+        events: ['розтягнуті звуки (а-а)', 'невпевнена мова', 'перебивання', 'крик', 'плач'],
+      },
+    ]
+    expect(pauseEnvironmentLabels(manners, 0, 10)).toEqual([])
+  })
+
+  it('dedupes case-insensitively and keeps the original wording', () => {
+    const dupes: AudioWindow[] = [
+      { t0: 0, t1: 5, events: ['Музика'] },
+      { t0: 5, t1: 10, events: ['музика', 'дитина на фоні', 'кашель'] },
+    ]
+    expect(pauseEnvironmentLabels(dupes, 0, 10)).toEqual(['Музика', 'дитина на фоні', 'кашель'])
+  })
+
+  it('survives malformed windows and degenerate intervals', () => {
+    const hostile = [
+      { events: ['музика'] }, // no timestamps
+      { t0: 'x', t1: 5, events: ['музика'] },
+      { t0: 0, t1: 10, events: 'nope' },
+      { t0: 0, t1: 10, events: [null, 42, ''] },
+    ] as unknown as AudioWindow[]
+    expect(pauseEnvironmentLabels(hostile, 0, 10)).toEqual([])
+    expect(pauseEnvironmentLabels(windows, 12, 8)).toEqual([]) // inverted
+    expect(pauseEnvironmentLabels(windows, Number.NaN, 10)).toEqual([])
+  })
+
+  it('isEnvironmentEvent matches the ambient whitelist stems only', () => {
+    expect(isEnvironmentEvent('музика')).toBe(true)
+    expect(isEnvironmentEvent('шум')).toBe(true)
+    expect(isEnvironmentEvent('дитина на фоні')).toBe(true)
+    expect(isEnvironmentEvent('невпевнена мова')).toBe(false)
+    expect(isEnvironmentEvent('крик')).toBe(false)
   })
 })
 

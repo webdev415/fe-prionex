@@ -1671,6 +1671,8 @@
           "operatorShare": "Operator {{share}}%",
           "clientShare": "{{share}}% Client",
           "duration": "Duration",
+          "hesitations": "hesitations {{value}}",
+          "inlinePause": "(pause {{seconds}} s)",
           "direction": {
             "inbound": "Inbound",
             "outbound": "Outbound"
@@ -1686,15 +1688,12 @@
             "start": "start",
             "end": "end",
             "windowTooltip": "window {{from}}–{{to}}: {{raw}} (raw), {{smooth}} (smoothed)",
-            "toneVsWords": "tone vs words",
+            "toneVsWords": "tone ≠ words",
             "said": "text",
             "sounded": "sounds",
-            "markers": {
-              "raisedVoice": "raised voice / intensity",
-              "pressure": "pressure / irritation",
-              "crying": "crying",
-              "interruption": "interruption",
-              "longPause": "long pause"
+            "states": {
+              "raisedVoice": "raised voice",
+              "crying": "crying"
             }
           }
         }

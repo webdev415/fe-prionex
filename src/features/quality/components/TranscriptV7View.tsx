@@ -5,20 +5,27 @@
  * silence chips, overlap badges, QA tag badges and the other side's inline
  * reactions woven into the bubble text at their proportional time position.
  *
- * Phase 2 adds the optional 12B AUDIO LAYER on top (conclusion_spec §A):
- * per-turn emotion markers + polarity bubble border, the client emotion
- * dynamics strip (smoothed on the FE, raw values in tooltips, peak dots),
- * start→end dynamics chips, «⚠ тон vs слова» divergence badges, and numeric
- * operator/client emotion scores in the stats header. Everything is driven
- * by data presence — without the layer the panel renders exactly as before.
+ * Phase 2 adds the optional 12B AUDIO LAYER on top (conclusion_spec §A),
+ * BUSINESS STYLE per the CEO pass of 2026-07: strictly no emoji anywhere.
+ * Per turn only two significant states earn a thin text badge next to the
+ * timecode («підвищений голос», «плач») — the rest of the 12B event stream
+ * (drawn-out sounds, hesitant speech, interruptions…) stays in the payload
+ * without UI. Polarity bubble borders, the client dynamics strip (smoothed
+ * on the FE, raw values in tooltips, peak dots), start→end chips,
+ * «тон ≠ слова» text badges and numeric operator/client scores (now with
+ * hesitation counters) stay. Deterministic in-turn hesitations (`hes`) render
+ * INSIDE the bubble text as grey italic remarks at their time position, and
+ * silence chips get ambient-sound annotations («тиша 16.7 с · музика») from
+ * the overlapping 10s windows. Everything is driven by data presence —
+ * without the layer the panel renders exactly as before.
  *
  * Light theme only — matches the rest of the quality feature (the CRM has no
  * theme toggle; sporadic `dark:` variants elsewhere are not wired here).
  *
- * TOLERANT READER: tag kinds are an open set (unknown → grey), `bc` accepts
- * object and tuple encodings, missing stats hide their chips — never crash.
- * The audio layer is a 12B model's read of the sound, not ground truth: M/L
- * reliability renders dimmed with an «за аудіо, орієнтовно» note.
+ * TOLERANT READER: tag kinds are an open set (unknown → grey), `bc`/`hes`
+ * accept object and tuple encodings, missing stats hide their chips — never
+ * crash. The audio layer is a 12B model's read of the sound, not ground
+ * truth: M/L reliability carries an «за аудіо, орієнтовно» tooltip note.
  */
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -37,16 +44,17 @@ import {
 } from '../lib/transcriptV7'
 import {
   buildDynamicsSegments,
-  deriveAudioMarkers,
+  deriveSignificantStates,
   directionalTrendGlyph,
   divergencesByUtt,
   dynamicsScaleMax,
   formatScore,
+  getAudioWindows,
   getEmotionDynamics,
   isApproximateReliability,
-  markerOpacity,
   normalizePolarity,
   normalizeTrend,
+  pauseEnvironmentLabels,
   speakerStateOf,
   type AudioPolarity,
   type NormalizedDivergence,
@@ -172,13 +180,23 @@ function V7StatsHeader({
   const overlapTotal = typeof stats?.overlap_total_s === 'number' ? stats.overlap_total_s : null
   const nTurns = typeof stats?.n_turns === 'number' ? stats.n_turns : null
 
+  // Hesitation counters (deterministic, from word timecodes) — text only.
+  const opHes =
+    typeof stats?.op_hes === 'number' && Number.isFinite(stats.op_hes) && stats.op_hes >= 0
+      ? stats.op_hes
+      : null
+  const clHes =
+    typeof stats?.cl_hes === 'number' && Number.isFinite(stats.cl_hes) && stats.cl_hes >= 0
+      ? stats.cl_hes
+      : null
+
   // Audio-layer numeric scores (phase 2) — chip renders per available part.
   const opScores = dynamics?.operator?.scores ?? null
   const toneBaseline =
     typeof dynamics?.operator?.tone_baseline === 'string' ? dynamics.operator.tone_baseline : null
   const irritation = typeof opScores?.irritation_avg === 'number' ? opScores.irritation_avg : null
   const empathy = typeof opScores?.empathy_avg === 'number' ? opScores.empathy_avg : null
-  const operatorScoreParts = [
+  const operatorAudioParts = [
     toneBaseline ? `${t('pages.training.transcript.v7.audio.tone')} ${toneBaseline}` : null,
     irritation != null
       ? `${t('pages.training.transcript.v7.audio.irritation')} ${formatScore(irritation)}/5`
@@ -186,6 +204,10 @@ function V7StatsHeader({
     empathy != null
       ? `${t('pages.training.transcript.v7.audio.empathy')} ${formatScore(empathy)}/5`
       : null,
+  ].filter((part): part is string => part != null)
+  const operatorScoreParts = [
+    ...operatorAudioParts,
+    opHes != null ? t('pages.training.transcript.v7.hesitations', { value: opHes }) : null,
   ].filter((part): part is string => part != null)
 
   const clScores = dynamics?.client?.scores ?? null
@@ -210,7 +232,8 @@ function V7StatsHeader({
     overlapTotal != null ||
     nTurns != null ||
     operatorScoreParts.length > 0 ||
-    clientScoreParts.length > 0
+    clientScoreParts.length > 0 ||
+    clHes != null
   if (!hasMeta && share == null && !hasChips) return null
 
   return (
@@ -307,7 +330,13 @@ function V7StatsHeader({
             <span
               data-testid="transcript-v7-chip-operator-audio"
               className="inline-flex items-center gap-1.5 rounded-full border border-[#c8d8fb] bg-[#eaf0fe]/60 px-2.5 py-0.5 text-[11px] font-medium text-gray-600 tabular-nums"
-              title={t('pages.training.transcript.v7.audio.approx')}
+              // Hesitation counters are deterministic — the «by audio» note
+              // only applies when 12B-derived parts are present.
+              title={
+                operatorAudioParts.length > 0
+                  ? t('pages.training.transcript.v7.audio.approx')
+                  : undefined
+              }
             >
               <span className="font-semibold text-[#2555d6]">
                 {t('pages.training.transcript.roles.operator')}
@@ -315,20 +344,29 @@ function V7StatsHeader({
               {operatorScoreParts.join(' · ')}
             </span>
           ) : null}
-          {clientScoreParts.length > 0 ? (
+          {clientScoreParts.length > 0 || clHes != null ? (
             <span
               data-testid="transcript-v7-chip-client-audio"
               className="inline-flex items-center gap-1.5 rounded-full border border-[#eed6b6] bg-[#fbf1e4]/60 px-2.5 py-0.5 text-[11px] font-medium text-gray-600 tabular-nums"
-              title={t('pages.training.transcript.v7.audio.approx')}
+              title={
+                clientScoreParts.length > 0 || clientTrend
+                  ? t('pages.training.transcript.v7.audio.approx')
+                  : undefined
+              }
             >
               <span className="font-semibold text-[#a8631a]">
                 {t('pages.training.transcript.roles.client')}
               </span>
-              {clientScoreParts.join(' → ')}
+              {clientScoreParts.length > 0 ? clientScoreParts.join(' → ') : null}
               {clientTrend ? (
                 <span data-testid="transcript-v7-client-trend">
                   {t('pages.training.transcript.v7.audio.trend')}{' '}
                   {directionalTrendGlyph(clientTrend)}
+                </span>
+              ) : null}
+              {clHes != null ? (
+                <span data-testid="transcript-v7-client-hes">
+                  {t('pages.training.transcript.v7.hesitations', { value: clHes })}
                 </span>
               ) : null}
             </span>
@@ -515,7 +553,7 @@ function V7KeyMoments({
                 <>
                   <QaTagBadge
                     kind="warn"
-                    label={`⚠ ${t('pages.training.transcript.v7.audio.toneVsWords')}`}
+                    label={t('pages.training.transcript.v7.audio.toneVsWords')}
                   />
                   <span className="min-w-0 truncate text-gray-700">
                     {t('pages.training.transcript.v7.audio.said')}: {entry.divergence.textReads} ·{' '}
@@ -544,9 +582,10 @@ function V7TurnRow({
   const roleKey = roleKeyOf(row.turn.role)
   const styles = ROLE_STYLES[roleKey]
 
-  // Phase-2 audio layer for this turn (optional): markers + polarity border.
+  // Phase-2 audio layer for this turn (optional): significant-state text
+  // badges + polarity border. No event chips, no icons (business style).
   const audioState = speakerStateOf(row.turn)
-  const markers = useMemo(() => deriveAudioMarkers(audioState), [audioState])
+  const significantStates = useMemo(() => deriveSignificantStates(audioState), [audioState])
   const approximate = isApproximateReliability(audioState?.reliability)
   const approxNote = t('pages.training.transcript.v7.audio.approx')
   const polarityBorder = audioState ? POLARITY_BORDER[normalizePolarity(audioState.polarity)] : ''
@@ -574,7 +613,7 @@ function V7TurnRow({
             data-testid={`transcript-v7-overlap-${row.index}`}
             className="rounded bg-[#c8492f]/10 px-1.5 py-px text-[10px] font-bold whitespace-nowrap text-[#c8492f]"
           >
-            ⤭ {t('pages.training.transcript.v7.overlap')}
+            {t('pages.training.transcript.v7.overlap')}
           </span>
         ) : null}
         {row.tag ? (
@@ -584,38 +623,16 @@ function V7TurnRow({
             testId={`transcript-v7-tag-${row.index}`}
           />
         ) : null}
-        {markers.length > 0 ? (
+        {significantStates.map((state) => (
           <span
-            data-testid={`transcript-v7-audio-markers-${row.index}`}
-            className="inline-flex items-center gap-1"
-            // Marker opacity = 12B confidence; M/L reliability dims further.
-            style={{
-              opacity:
-                Math.round(markerOpacity(audioState?.confidence) * (approximate ? 75 : 100)) / 100,
-            }}
+            key={state}
+            data-testid={`transcript-v7-audio-state-${row.index}-${state}`}
+            className="text-[10px] font-medium whitespace-nowrap text-gray-400"
+            title={approximate ? approxNote : undefined}
           >
-            {markers.map((marker, j) => (
-              <span
-                key={j}
-                data-testid={`transcript-v7-audio-marker-${row.index}-${j}`}
-                className={
-                  marker.icon
-                    ? 'text-[12px] leading-none'
-                    : 'rounded bg-[#5b6472]/10 px-1.5 py-px text-[10px] font-medium text-[#5b6472]'
-                }
-                title={`${
-                  marker.icon
-                    ? t(`pages.training.transcript.v7.audio.markers.${marker.kind}`)
-                    : marker.label
-                }${marker.icon && marker.label ? ` · ${marker.label}` : ''}${
-                  approximate ? ` · ${approxNote}` : ''
-                }`}
-              >
-                {marker.icon ?? marker.label}
-              </span>
-            ))}
+            {t(`pages.training.transcript.v7.audio.states.${state}`)}
           </span>
-        ) : null}
+        ))}
         {divergence ? (
           <span
             data-testid={`transcript-v7-divergence-${row.index}`}
@@ -626,7 +643,7 @@ function V7TurnRow({
               isApproximateReliability(divergence.reliability) ? ` · ${approxNote}` : ''
             }`}
           >
-            ⚠ {t('pages.training.transcript.v7.audio.toneVsWords')}
+            {t('pages.training.transcript.v7.audio.toneVsWords')}
           </span>
         ) : null}
       </div>
@@ -636,6 +653,20 @@ function V7TurnRow({
         {row.segments.map((segment, i) => {
           if (segment.kind === 'text') {
             return <span key={i}>{segment.text} </span>
+          }
+          if (segment.kind === 'hes') {
+            // Speaker's own pause — a grey italic remark, never breaks the phrase.
+            return (
+              <span
+                key={i}
+                data-testid={`transcript-v7-hes-${row.index}-${segment.ordinal}`}
+                className="mr-1 text-xs whitespace-nowrap text-gray-400 italic"
+              >
+                {t('pages.training.transcript.v7.inlinePause', {
+                  seconds: formatSeconds1(segment.gap),
+                })}
+              </span>
+            )
           }
           return (
             <span
@@ -663,9 +694,11 @@ export function TranscriptV7View({ transcript, onSeek }: TranscriptV7ViewProps) 
   const moments = useMemo(() => extractKeyMoments(rows), [rows])
   const stats = getV7Stats(transcript)
 
-  // Phase-2 audio layer (all optional): dynamics + «тон vs слова» lookups.
-  // Primary home is metrics.emotion_dynamics; top-level is the fallback.
+  // Phase-2 audio layer (all optional): dynamics + «тон ≠ слова» lookups +
+  // 10s windows for ambient annotation of silence chips.
+  // Primary home is metrics.*; top-level is the fallback.
   const dynamics = getEmotionDynamics(transcript)
+  const audioWindows = useMemo(() => getAudioWindows(transcript), [transcript])
   const divergenceMap = useMemo(() => divergencesByUtt(dynamics), [dynamics])
   const divergenceMoments = useMemo(
     () =>
@@ -681,22 +714,30 @@ export function TranscriptV7View({ transcript, onSeek }: TranscriptV7ViewProps) 
       <V7AudioDynamics dynamics={dynamics} durationS={transcript.duration_s} onSeek={onSeek} />
       <V7KeyMoments moments={moments} divergences={divergenceMoments} onSeek={onSeek} />
       <div data-testid="transcript-v7-feed" className="flex flex-col gap-2">
-        {rows.map((row) => (
-          <div key={row.index} className="contents">
-            {row.pauseBefore != null ? (
-              <div
-                data-testid={`transcript-v7-pause-${row.index}`}
-                className="self-center rounded-full border border-dashed border-[#c78a12]/45 bg-[#c78a12]/10 px-3 py-0.5 text-[11px] font-semibold text-[#c78a12] tabular-nums"
-              >
-                ⏸{' '}
-                {t('pages.training.transcript.v7.pause', {
-                  seconds: formatSeconds1(row.pauseBefore),
-                })}
-              </div>
-            ) : null}
-            <V7TurnRow row={row} divergence={divergenceMap.get(row.index)} onSeek={onSeek} />
-          </div>
-        ))}
+        {rows.map((row) => {
+          // pause_before IS the silence interval before the turn — annotate
+          // it with ambient sounds from the 12B windows it overlaps.
+          const pauseEnvironment =
+            row.pauseBefore != null
+              ? pauseEnvironmentLabels(audioWindows, row.t0 - row.pauseBefore, row.t0)
+              : []
+          return (
+            <div key={row.index} className="contents">
+              {row.pauseBefore != null ? (
+                <div
+                  data-testid={`transcript-v7-pause-${row.index}`}
+                  className="self-center rounded-full border border-dashed border-[#c78a12]/45 bg-[#c78a12]/10 px-3 py-0.5 text-[11px] font-semibold text-[#c78a12] tabular-nums"
+                >
+                  {t('pages.training.transcript.v7.pause', {
+                    seconds: formatSeconds1(row.pauseBefore),
+                  })}
+                  {pauseEnvironment.length > 0 ? ` · ${pauseEnvironment.join(' · ')}` : ''}
+                </div>
+              ) : null}
+              <V7TurnRow row={row} divergence={divergenceMap.get(row.index)} onSeek={onSeek} />
+            </div>
+          )
+        })}
       </div>
     </div>
   )

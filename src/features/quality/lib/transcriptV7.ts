@@ -2,7 +2,7 @@
  * Pure helpers for the v7 transcript format (FORMAT_SPEC, approved by CEO).
  *
  * v7 replaces the Ф1 scene-grouped utterances with self-describing "turns":
- * `{t0, t1, dur, role, text, bc[], pause_before?, tag?}` plus call-level
+ * `{t0, t1, dur, role, text, bc[], pause_before?, tag?, hes?}` plus call-level
  * `metrics.stats`. Detection is structural — `dur` on the first utterance or
  * `metrics.stats` — so Ф1 transcripts keep the legacy renderer untouched.
  *
@@ -68,6 +68,42 @@ export function normalizeBackchannels(bc: unknown): BackchannelItem[] {
   return items.sort((a, b) => a.t - b.t)
 }
 
+/** Normalised in-turn hesitation pause of the speaker. */
+export interface HesitationItem {
+  t: number
+  /** Pause length, seconds. */
+  gap: number
+}
+
+/**
+ * Accept both `hes` encodings — `{t, gap}` objects (current brain) and
+ * `[t, gap]` tuples — drop malformed entries (non-finite times, gaps ≤ 0),
+ * return sorted by time.
+ */
+export function normalizeHesitations(hes: unknown): HesitationItem[] {
+  if (!Array.isArray(hes)) return []
+  const items: HesitationItem[] = []
+  for (const entry of hes) {
+    let t: unknown
+    let gap: unknown
+    if (Array.isArray(entry)) {
+      ;[t, gap] = entry
+    } else if (entry && typeof entry === 'object') {
+      ;({ t, gap } = entry as { t?: unknown; gap?: unknown })
+    }
+    if (
+      typeof t === 'number' &&
+      Number.isFinite(t) &&
+      typeof gap === 'number' &&
+      Number.isFinite(gap) &&
+      gap > 0
+    ) {
+      items.push({ t, gap })
+    }
+  }
+  return items.sort((a, b) => a.t - b.t)
+}
+
 export type QaTagKind = 'good' | 'warn' | 'crit' | 'info'
 
 export interface QaTag {
@@ -92,38 +128,56 @@ export type BubbleSegment =
   | { kind: 'text'; text: string }
   /** `ordinal` — 0-based index of the reaction within its turn (stable testids). */
   | { kind: 'bc'; bc: BackchannelItem; ordinal: number }
+  /** In-turn hesitation pause, rendered as a grey italic remark in the text. */
+  | { kind: 'hes'; t: number; gap: number; ordinal: number }
 
 /**
- * Weave the other side's reactions into the turn text at a WORD index
- * proportional to their time inside the turn (FORMAT_SPEC rule 6) — the main
- * phrase is never split mid-word, reactions read as inline chips.
+ * Weave the other side's reactions AND the speaker's own hesitation pauses
+ * into the turn text at a WORD index proportional to their time inside the
+ * turn (FORMAT_SPEC rule 6) — the main phrase is never split mid-word, both
+ * streams sort into one timeline, reactions read as inline chips and
+ * hesitations as inline remarks.
  */
 export function buildBubbleSegments(turn: {
   t0?: number
   t1?: number
   text?: string
   bc?: unknown
+  hes?: unknown
 }): BubbleSegment[] {
   const text = typeof turn.text === 'string' ? turn.text : ''
   const reactions = normalizeBackchannels(turn.bc)
-  if (reactions.length === 0) return text ? [{ kind: 'text', text }] : []
+  const hesitations = normalizeHesitations(turn.hes)
+  if (reactions.length === 0 && hesitations.length === 0) {
+    return text ? [{ kind: 'text', text }] : []
+  }
 
   const t0 = typeof turn.t0 === 'number' && Number.isFinite(turn.t0) ? turn.t0 : 0
   const t1 = typeof turn.t1 === 'number' && Number.isFinite(turn.t1) ? turn.t1 : t0
   const span = Math.max(t1 - t0, 0.1)
   const words = text ? text.split(' ') : []
 
+  // One inline timeline: both lists are pre-sorted, the merge sort is stable,
+  // so same-time entries keep reactions before hesitations.
+  const inline: Array<{ t: number; segment: Exclude<BubbleSegment, { kind: 'text' }> }> = [
+    ...reactions.map((bc, ordinal) => ({ t: bc.t, segment: { kind: 'bc' as const, bc, ordinal } })),
+    ...hesitations.map((hes, ordinal) => ({
+      t: hes.t,
+      segment: { kind: 'hes' as const, t: hes.t, gap: hes.gap, ordinal },
+    })),
+  ].sort((a, b) => a.t - b.t)
+
   const segments: BubbleSegment[] = []
   let cursor = 0
-  reactions.forEach((bc, ordinal) => {
-    const proportional = Math.round(((bc.t - t0) / span) * words.length)
+  for (const entry of inline) {
+    const proportional = Math.round(((entry.t - t0) / span) * words.length)
     const at = Math.max(cursor, Math.min(words.length, Math.max(0, proportional)))
     if (at > cursor) {
       segments.push({ kind: 'text', text: words.slice(cursor, at).join(' ') })
       cursor = at
     }
-    segments.push({ kind: 'bc', bc, ordinal })
-  })
+    segments.push(entry.segment)
+  }
   if (cursor < words.length) {
     segments.push({ kind: 'text', text: words.slice(cursor).join(' ') })
   }

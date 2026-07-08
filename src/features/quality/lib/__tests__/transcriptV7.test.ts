@@ -1,7 +1,8 @@
 /**
  * transcriptV7 helper tests — format detection, tolerant normalisation of
- * `bc`/`tag`, proportional word-index weaving, overlap/pause derivation.
- * Pure functions, no i18n/DOM — values are asserted directly.
+ * `bc`/`tag`/`hes`, proportional word-index weaving (reactions + hesitations
+ * share one timeline), overlap/pause derivation. Pure functions, no i18n/DOM
+ * — values are asserted directly.
  */
 import { describe, expect, it } from 'vitest'
 import type { CallTranscript, TranscriptUtterance } from '../../types'
@@ -14,6 +15,7 @@ import {
   getV7Stats,
   isV7Transcript,
   normalizeBackchannels,
+  normalizeHesitations,
   normalizeQaTag,
 } from '../transcriptV7'
 
@@ -125,6 +127,42 @@ describe('normalizeQaTag', () => {
   })
 })
 
+describe('normalizeHesitations', () => {
+  it('accepts {t, gap} objects and sorts by time', () => {
+    expect(
+      normalizeHesitations([
+        { t: 12.5, gap: 1.2 },
+        { t: 3.1, gap: 0.8 },
+      ])
+    ).toEqual([
+      { t: 3.1, gap: 0.8 },
+      { t: 12.5, gap: 1.2 },
+    ])
+  })
+
+  it('accepts [t, gap] tuples', () => {
+    expect(normalizeHesitations([[7.4, 2.1]])).toEqual([{ t: 7.4, gap: 2.1 }])
+  })
+
+  it('drops malformed entries: non-finite times, gaps ≤ 0, garbage', () => {
+    expect(
+      normalizeHesitations([
+        null,
+        42,
+        {},
+        { t: 'x', gap: 1 },
+        { t: 1 },
+        { t: 1, gap: 0 },
+        { t: 1, gap: -2 },
+        { t: Number.NaN, gap: 1 },
+        { t: 2, gap: 1.5 },
+      ])
+    ).toEqual([{ t: 2, gap: 1.5 }])
+    expect(normalizeHesitations(undefined)).toEqual([])
+    expect(normalizeHesitations('nope')).toEqual([])
+  })
+})
+
 describe('buildBubbleSegments', () => {
   const words10 = 'w1 w2 w3 w4 w5 w6 w7 w8 w9 w10'
 
@@ -196,6 +234,51 @@ describe('buildBubbleSegments', () => {
     })
     const chips = segments.filter((s) => s.kind === 'bc')
     expect(chips.map((s) => (s.kind === 'bc' ? s.bc.text : ''))).toEqual(['перший', 'другий'])
+  })
+
+  it('inserts a hesitation at the word index proportional to its time', () => {
+    const segments = buildBubbleSegments({
+      t0: 0,
+      t1: 10,
+      text: words10,
+      hes: [{ t: 2, gap: 1.2 }],
+    })
+    expect(segments).toEqual([
+      { kind: 'text', text: 'w1 w2' },
+      { kind: 'hes', t: 2, gap: 1.2, ordinal: 0 },
+      { kind: 'text', text: 'w3 w4 w5 w6 w7 w8 w9 w10' },
+    ])
+  })
+
+  it('sorts reactions and hesitations into one timeline', () => {
+    const segments = buildBubbleSegments({
+      t0: 0,
+      t1: 10,
+      text: words10,
+      bc: [{ t: 5, role: 'client', text: 'Ага.' }],
+      hes: [
+        { t: 8, gap: 0.9 },
+        { t: 2, gap: 1.2 },
+      ],
+    })
+    expect(segments).toEqual([
+      { kind: 'text', text: 'w1 w2' },
+      { kind: 'hes', t: 2, gap: 1.2, ordinal: 0 },
+      { kind: 'text', text: 'w3 w4 w5' },
+      { kind: 'bc', bc: { t: 5, role: 'client', text: 'Ага.' }, ordinal: 0 },
+      { kind: 'text', text: 'w6 w7 w8' },
+      { kind: 'hes', t: 8, gap: 0.9, ordinal: 1 },
+      { kind: 'text', text: 'w9 w10' },
+    ])
+  })
+
+  it('renders a hesitation-only turn without reactions', () => {
+    const segments = buildBubbleSegments({ t0: 0, t1: 10, text: 'a b', hes: [[5, 2.5]] })
+    expect(segments).toEqual([
+      { kind: 'text', text: 'a' },
+      { kind: 'hes', t: 5, gap: 2.5, ordinal: 0 },
+      { kind: 'text', text: 'b' },
+    ])
   })
 })
 

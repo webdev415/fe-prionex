@@ -421,6 +421,16 @@ export type TranscriptBackchannel =
 /** v7 QA tag `[kind, label]` — kind is an OPEN set (good|warn|crit|info|…). */
 export type TranscriptQaTag = Array<string | undefined | null>
 
+/**
+ * v7 in-turn hesitation — a deterministic pause of the SPEAKER inside their
+ * own turn (derived from word timecodes): `t` — where it happened (seconds),
+ * `gap` — its length (seconds). `{t, gap}` objects are current; `[t, gap]`
+ * tuples are tolerated like `bc`.
+ */
+export type TranscriptHesitation =
+  | { t?: number; gap?: number; [key: string]: unknown }
+  | [number, number]
+
 export interface TranscriptUtterance {
   /** Utterance index — present in the Ф1 format, absent in v7 turns. */
   i?: number
@@ -441,6 +451,8 @@ export interface TranscriptUtterance {
   pause_before?: number
   /** v7: QA tag `[kind, label]`. */
   tag?: TranscriptQaTag
+  /** v7: hesitation pauses of the speaker inside this turn. */
+  hes?: TranscriptHesitation[]
   /** Phase 2: 12B audio read of this turn (optional layer). */
   audio?: UtteranceAudio | null
 }
@@ -455,6 +467,9 @@ export interface TranscriptStats {
   n_turns?: number
   /** Operator's share of talk time, percent 0..100. */
   op_share?: number
+  /** Hesitation counts per side (deterministic, from word timecodes). */
+  op_hes?: number
+  cl_hes?: number
   [key: string]: unknown
 }
 
@@ -549,7 +564,7 @@ export interface EmotionDynamicsOperator {
   [key: string]: unknown
 }
 
-/** Turn where the words read one way but the audio sounds another (⚠). */
+/** Turn where the words read one way but the audio sounds another. */
 export interface DivergenceCandidate {
   /** Utterance index (position in `utterances`). */
   utt?: number

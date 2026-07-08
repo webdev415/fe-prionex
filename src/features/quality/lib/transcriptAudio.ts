@@ -1,9 +1,12 @@
 /**
  * Pure helpers for the phase-2 audio layer (conclusion_spec §A + CEO
- * decisions in phase2_decisions.md): per-turn marker derivation, polarity
+ * decisions in phase2_decisions.md, business-style pass 2026-07): per-turn
+ * significant-state derivation (only «підвищений голос» / «плач» surface in
+ * the UI — the rest of the 12B event stream stays in the payload), polarity
  * normalisation, FE-side smoothing of the client emotion path (moving
- * average over 3 windows — the brain ships the RAW path), and divergence
- * («тон vs слова») lookups.
+ * average over 3 windows — the brain ships the RAW path), divergence
+ * («тон ≠ слова») lookups, and ambient-sound annotation of silence chips
+ * from the 10s audio windows.
  *
  * TOLERANT READER: the whole layer is optional and comes from a 12B model
  * retelling audio as text — every helper accepts partial/hostile shapes and
@@ -11,6 +14,7 @@
  */
 import type {
   AudioSpeakerState,
+  AudioWindow,
   CallTranscript,
   DivergenceCandidate,
   EmotionDynamics,
@@ -46,90 +50,48 @@ export function getEmotionDynamics(
  * smoothing them away — CEO decision: «пики НЕ сглаживать в ноль»). */
 export const PEAK_AROUSAL = 3
 
-/** Utterance-level marker threshold: arousal ≥ 2 → 🔊 (spec §A). */
+/** Utterance-level threshold: arousal ≥ 2 → «підвищений голос» (spec §A). */
 export const RAISED_VOICE_AROUSAL = 2
 
 /** FE smoothing window (centered moving average), CEO decision. */
 export const SMOOTH_WINDOW = 3
 
-export type AudioMarkerKind =
-  | 'raisedVoice'
-  | 'pressure'
-  | 'crying'
-  | 'interruption'
-  | 'longPause'
-  | 'other'
-
-export const AUDIO_MARKER_ICONS: Record<Exclude<AudioMarkerKind, 'other'>, string> = {
-  raisedVoice: '🔊',
-  pressure: '⚡',
-  crying: '😢',
-  interruption: '✂️',
-  longPause: '⏸',
-}
-
-export interface AudioMarker {
-  kind: AudioMarkerKind
-  /** null for `other` — unknown events render as plain text chips. */
-  icon: string | null
-  /** Original event wording (kept for tooltips); '' for derived markers. */
-  label: string
-}
+/**
+ * The only per-turn states significant enough for the meta line (CEO
+ * business-style decision): raised voice and crying. Everything else the
+ * 12B hears per turn (drawn-out sounds, hesitant speech, interruptions,
+ * unknown events) stays in the payload without UI.
+ */
+export type SignificantTurnState = 'raisedVoice' | 'crying'
 
 // Substring anchors over the ukrainian event/emotion wording (open set —
 // the 12B phrases freely, so we match stems rather than exact strings).
-const RAISED_VOICE_ANCHORS = ['крик', 'підвищ', 'голос']
-const PRESSURE_ANCHORS = ['тиск', 'тисн', 'роздрат', 'агрес', 'звинувач', 'напад']
 const CRYING_ANCHORS = ['плач', 'схлип', 'ридан']
-const INTERRUPTION_ANCHORS = ['перебив']
-const PAUSE_ANCHORS = ['пауза', 'мовчан']
-
-export function classifyAudioEvent(event: string): AudioMarkerKind {
-  const needle = event.toLowerCase()
-  if (INTERRUPTION_ANCHORS.some((a) => needle.includes(a))) return 'interruption'
-  if (CRYING_ANCHORS.some((a) => needle.includes(a))) return 'crying'
-  if (RAISED_VOICE_ANCHORS.some((a) => needle.includes(a))) return 'raisedVoice'
-  if (PRESSURE_ANCHORS.some((a) => needle.includes(a))) return 'pressure'
-  if (PAUSE_ANCHORS.some((a) => needle.includes(a))) return 'longPause'
-  return 'other'
-}
 
 /**
- * Markers for one turn: 🔊 from arousal ≥ 2, ⚡ from a pressure-flavoured
- * emotion, plus one marker per event (known kinds get icons, unknown events
- * stay as text). Deduplicated by kind (by label for `other`).
+ * Significant states for one turn: «підвищений голос» from arousal ≥ 2,
+ * «плач» from a crying-flavoured event or emotion. Rendered as thin text
+ * badges next to the timecode — never as icons, never as an event chip row.
  */
-export function deriveAudioMarkers(state: AudioSpeakerState | null | undefined): AudioMarker[] {
+export function deriveSignificantStates(
+  state: AudioSpeakerState | null | undefined
+): SignificantTurnState[] {
   if (!state || typeof state !== 'object') return []
-  const markers: AudioMarker[] = []
-  const seen = new Set<string>()
-  const push = (kind: AudioMarkerKind, label = '') => {
-    const key = kind === 'other' ? `other:${label}` : kind
-    if (seen.has(key)) return
-    seen.add(key)
-    markers.push({ kind, icon: kind === 'other' ? null : AUDIO_MARKER_ICONS[kind], label })
-  }
-
+  const states: SignificantTurnState[] = []
   if (typeof state.arousal === 'number' && state.arousal >= RAISED_VOICE_AROUSAL) {
-    push('raisedVoice')
+    states.push('raisedVoice')
   }
-  if (typeof state.emotion === 'string') {
-    const emotion = state.emotion.toLowerCase()
-    if (PRESSURE_ANCHORS.some((a) => emotion.includes(a))) push('pressure')
-  }
-  if (Array.isArray(state.events)) {
-    for (const event of state.events) {
-      if (typeof event !== 'string' || !event) continue
-      push(classifyAudioEvent(event), event)
-    }
-  }
-  return markers
-}
-
-/** Marker opacity = 12B confidence, floored so markers never vanish. */
-export function markerOpacity(confidence: unknown): number {
-  if (typeof confidence !== 'number' || !Number.isFinite(confidence)) return 1
-  return Math.min(1, Math.max(0.35, confidence))
+  const wordings = [
+    typeof state.emotion === 'string' ? state.emotion : '',
+    ...(Array.isArray(state.events) ? state.events : []),
+  ]
+  const crying = wordings.some((wording) => {
+    if (typeof wording !== 'string' || !wording) return false
+    const needle = wording.toLowerCase()
+    return CRYING_ANCHORS.some((anchor) => needle.includes(anchor))
+  })
+  if (crying) states.push('crying')
+  return states
 }
 
 /** M/L reliability → dimmed + «за аудіо, орієнтовно» note (H/unknown → firm). */
@@ -236,7 +198,64 @@ export function directionalTrendGlyph(trend: unknown): string | null {
   return trend
 }
 
-// ---- Divergences («тон vs слова») ----
+// ---- Ambient-sound annotation of silence chips ----
+
+/**
+ * 10s audio windows selector — same dual-home pattern as the dynamics:
+ * `metrics.audio_windows` is primary, top-level is the tolerant fallback.
+ * Non-object entries are dropped.
+ */
+export function getAudioWindows(transcript: CallTranscript | null | undefined): AudioWindow[] {
+  const candidates = [transcript?.metrics?.audio_windows, transcript?.audio_windows]
+  for (const candidate of candidates) {
+    if (!Array.isArray(candidate)) continue
+    const windows = candidate.filter(
+      (w): w is AudioWindow => !!w && typeof w === 'object' && !Array.isArray(w)
+    )
+    if (windows.length > 0) return windows
+  }
+  return []
+}
+
+// Environment whitelist (CEO decision): only ambient sounds annotate a
+// silence chip — музика / (фоновий) шум / дитина на фоні / сирена / кашель.
+// Speech-manner events (розтягнуті звуки, невпевнена мова, перебивання,
+// крик, плач) must never leak in; the anchors are chosen not to match them.
+const PAUSE_ENV_ANCHORS = ['музик', 'шум', 'дитин', 'сирен', 'кашель', 'кашл']
+
+export function isEnvironmentEvent(event: string): boolean {
+  const needle = event.toLowerCase()
+  return PAUSE_ENV_ANCHORS.some((anchor) => needle.includes(anchor))
+}
+
+/**
+ * Ambient events from windows overlapping the [from, to] silence interval —
+ * whitelist-filtered, deduped case-insensitively, original 12B wording kept
+ * for display (`тиша 16.7 с · музика`).
+ */
+export function pauseEnvironmentLabels(windows: AudioWindow[], from: number, to: number): string[] {
+  if (!Number.isFinite(from) || !Number.isFinite(to) || !(to > from)) return []
+  const labels: string[] = []
+  const seen = new Set<string>()
+  for (const window of windows) {
+    const t0 = window.t0
+    const t1 = window.t1
+    if (typeof t0 !== 'number' || !Number.isFinite(t0)) continue
+    if (typeof t1 !== 'number' || !Number.isFinite(t1)) continue
+    if (t1 <= from || t0 >= to) continue // no overlap with the silence gap
+    if (!Array.isArray(window.events)) continue
+    for (const event of window.events) {
+      if (typeof event !== 'string' || !event || !isEnvironmentEvent(event)) continue
+      const key = event.toLowerCase()
+      if (seen.has(key)) continue
+      seen.add(key)
+      labels.push(event)
+    }
+  }
+  return labels
+}
+
+// ---- Divergences («тон ≠ слова») ----
 
 export interface NormalizedDivergence {
   utt: number

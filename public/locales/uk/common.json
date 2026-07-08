@@ -1642,6 +1642,8 @@
           "operatorShare": "Оператор {{share}}%",
           "clientShare": "{{share}}% Клієнт",
           "duration": "Тривалість",
+          "hesitations": "запинки {{value}}",
+          "inlinePause": "(пауза {{seconds}} с)",
           "direction": {
             "inbound": "Вхідний",
             "outbound": "Вихідний"
@@ -1657,15 +1659,12 @@
             "start": "початок",
             "end": "кінець",
             "windowTooltip": "вікно {{from}}–{{to}}: {{raw}} (сире), {{smooth}} (згладжено)",
-            "toneVsWords": "тон vs слова",
+            "toneVsWords": "тон ≠ слова",
             "said": "текст",
             "sounded": "звучить",
-            "markers": {
-              "raisedVoice": "підвищений голос / накал",
-              "pressure": "тиск / роздратування",
-              "crying": "плач",
-              "interruption": "перебивання",
-              "longPause": "довга пауза"
+            "states": {
+              "raisedVoice": "підвищений голос",
+              "crying": "плач"
             }
           }
         }
