@@ -10,7 +10,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { DocumentType } from '@/features/documentTypes'
@@ -124,9 +124,6 @@ vi.mock('sonner', () => ({
   toast: { success: vi.fn(), error: vi.fn(), info: vi.fn() },
 }))
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-let confirmSpy: any
-
 import { DocumentTypesTab } from '../DocumentTypesTab'
 
 function renderTab() {
@@ -147,7 +144,6 @@ describe('DocumentTypesTab', () => {
   beforeEach(() => {
     resetStore()
     vi.clearAllMocks()
-    confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true)
   })
 
   it('renders the list of types (including hidden) from the API', async () => {
@@ -208,7 +204,13 @@ describe('DocumentTypesTab', () => {
     expect(innDeleteBtn).not.toBeDisabled()
 
     await user.click(innDeleteBtn)
-    expect(confirmSpy).toHaveBeenCalled()
+
+    // Confirmation modal opens. Query the Radix Dialog and click its Delete
+    // button — the row-level Delete button doesn't submit the deletion by
+    // itself anymore (it just opens the confirm dialog).
+    const dialog = await screen.findByRole('dialog')
+    const confirmBtn = within(dialog).getByRole('button', { name: /^Delete$/ })
+    await user.click(confirmBtn)
 
     await waitFor(() => {
       expect(screen.queryByText('inn')).not.toBeInTheDocument()

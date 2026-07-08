@@ -12,7 +12,7 @@
  *   return (<>{confirmDialog}{rest}</>)
  */
 
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useRef, useState, type ReactNode } from 'react'
 import { ConfirmDialog, type ConfirmTone } from './ConfirmDialog'
 
 export interface ConfirmOptions {
@@ -21,6 +21,8 @@ export interface ConfirmOptions {
   confirmLabel?: string
   cancelLabel?: string
   tone?: ConfirmTone
+  /** Optional custom icon; falls back to the tone-derived default. */
+  icon?: ReactNode
 }
 
 interface ConfirmState extends ConfirmOptions {
@@ -54,6 +56,7 @@ export function useConfirm() {
       confirmLabel={state.confirmLabel}
       cancelLabel={state.cancelLabel}
       tone={state.tone}
+      icon={state.icon}
       onConfirm={() => settle(true)}
       onCancel={() => settle(false)}
     />
