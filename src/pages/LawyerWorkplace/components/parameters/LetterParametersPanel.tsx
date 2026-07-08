@@ -396,7 +396,8 @@ function LetterParametersPanelContent({
 
     lastPrioritySignatureRef.current = signature
     void applyTypeSuggestion(effectiveTypeId).catch(() => {
-      lastPrioritySignatureRef.current = null
+      // Keep the signature so permanent failures (e.g. outbound rows) do not retry in a loop.
+      lastPrioritySignatureRef.current = signature
     })
   }, [applyTypeSuggestion, effectiveTypeId, isReadOnly, lawyerManuallyOverridden, letterTypes])
 

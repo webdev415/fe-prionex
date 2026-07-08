@@ -456,16 +456,14 @@ export function EmailThreadPanel({
 
         <div className="flex min-w-0 items-center justify-between gap-2 sm:gap-3">
           <p className="min-w-0 flex-1 text-[10.5px] sm:truncate sm:text-[11.5px]">
-            <span className="text-dark-500 break-all sm:break-normal">{letter.senderEmail}</span>
+            <span className="text-dark-500 break-all sm:break-normal">{letter.routeFromEmail}</span>
             <span
               className="text-light-700 inline-flex items-center px-0.5 py-0.5 align-middle"
               aria-hidden="true"
             >
               <Icons.ArrowRight02 size={10} strokeWidth={1.5} />
             </span>
-            <span className="text-light-700 break-all sm:break-normal">
-              {letter.recipientEmail}
-            </span>
+            <span className="text-light-700 break-all sm:break-normal">{letter.routeToEmail}</span>
             {threadCount > 1 && (
               <span className="text-light-700 block sm:inline">
                 {' '}
