@@ -109,6 +109,9 @@ function NewOutgoingLetterForm({ onClose, onSent }: NewOutgoingLetterFormProps) 
     null
   )
   const [institutionEmail, setInstitutionEmail] = useState('')
+  const [institutionEdoClientId, setInstitutionEdoClientId] = useState('')
+  const [institutionEdoClientSearch, setInstitutionEdoClientSearch] = useState('')
+  const [institutionEdoSearchType, setInstitutionEdoSearchType] = useState<SearchType>('phone')
   const [subject, setSubject] = useState('')
   const [body, setBody] = useState('')
   const [edoType, setEdoType] = useState<EdoType>('none')
@@ -118,12 +121,33 @@ function NewOutgoingLetterForm({ onClose, onSent }: NewOutgoingLetterFormProps) 
   }>({ clientName: null, contract: null })
 
   const debouncedClientSearch = useDebounce(clientSearch, 300)
+  const debouncedInstitutionEdoClientSearch = useDebounce(institutionEdoClientSearch, 300)
   // Project-scoped client search (active project from the JWT), with a
   // selectable search-by field — same API the dashboard header search uses.
   const { data: clientsData, isFetching: clientsLoading } = useQuery({
     queryKey: ['legal', 'outgoing-client-search', searchType, debouncedClientSearch],
     queryFn: () => searchClients({ q: debouncedClientSearch, search_type: searchType, limit: 20 }),
     enabled: recipientMode === 'client' && debouncedClientSearch.length >= 2,
+    staleTime: 30_000,
+  })
+
+  const { data: institutionEdoClientsData, isFetching: institutionEdoClientsLoading } = useQuery({
+    queryKey: [
+      'legal',
+      'outgoing-institution-edo-client-search',
+      institutionEdoSearchType,
+      debouncedInstitutionEdoClientSearch,
+    ],
+    queryFn: () =>
+      searchClients({
+        q: debouncedInstitutionEdoClientSearch,
+        search_type: institutionEdoSearchType,
+        limit: 20,
+      }),
+    enabled:
+      recipientMode === 'institution' &&
+      edoType !== 'none' &&
+      debouncedInstitutionEdoClientSearch.length >= 2,
     staleTime: 30_000,
   })
 
@@ -137,6 +161,18 @@ function NewOutgoingLetterForm({ onClose, onSent }: NewOutgoingLetterFormProps) 
     () => (clientsData?.items ?? []).map(formatClientOption),
     [clientsData?.items]
   )
+
+  const institutionEdoClientOptions = useMemo(
+    () => (institutionEdoClientsData?.items ?? []).map(formatClientOption),
+    [institutionEdoClientsData?.items]
+  )
+
+  const activeInstitutionEdoSearchType = CLIENT_SEARCH_TYPES.find(
+    (opt) => opt.value === institutionEdoSearchType
+  )
+  const institutionEdoSearchTypeLabel = activeInstitutionEdoSearchType
+    ? t(activeInstitutionEdoSearchType.labelKey, activeInstitutionEdoSearchType.fallback)
+    : ''
 
   const activeSearchType = CLIENT_SEARCH_TYPES.find((opt) => opt.value === searchType)
   const searchTypeLabel = activeSearchType
@@ -183,8 +219,14 @@ function NewOutgoingLetterForm({ onClose, onSent }: NewOutgoingLetterFormProps) 
   }
 
   const effectiveToEmail = recipientMode === 'client' ? toEmail : institutionEmail
-  const edoAvailable = recipientMode === 'client' && clientId !== ''
-  const effectiveEdoType = edoAvailable ? edoType : 'none'
+  const edoClientIdForRegistration = recipientMode === 'client' ? clientId : institutionEdoClientId
+  const edoClientIdNumber = Number(edoClientIdForRegistration)
+  const edoRegistrationReady =
+    edoType === 'none' ||
+    (Number.isFinite(edoClientIdNumber) &&
+      edoClientIdNumber > 0 &&
+      Number.isFinite(currentUserId) &&
+      currentUserId > 0)
 
   const canSend =
     Boolean(selectedMailbox?.id) &&
@@ -192,18 +234,21 @@ function NewOutgoingLetterForm({ onClose, onSent }: NewOutgoingLetterFormProps) 
     subject.trim() !== '' &&
     body.trim() !== '' &&
     (recipientMode === 'institution' || clientId !== '') &&
+    edoRegistrationReady &&
     !sendMutation.isPending
 
   const handleSend = () => {
     if (!canSend || !selectedMailbox) return
 
     const clientIdForPayload =
-      recipientMode === 'client' && Number.isFinite(clientIdNumber) && clientIdNumber > 0
-        ? clientIdNumber
-        : null
+      edoType !== 'none' && Number.isFinite(edoClientIdNumber) && edoClientIdNumber > 0
+        ? edoClientIdNumber
+        : recipientMode === 'client' && Number.isFinite(clientIdNumber) && clientIdNumber > 0
+          ? clientIdNumber
+          : null
 
     if (
-      effectiveEdoType !== 'none' &&
+      edoType !== 'none' &&
       (clientIdForPayload == null || !Number.isFinite(currentUserId) || currentUserId <= 0)
     ) {
       toast.error(
@@ -221,9 +266,9 @@ function NewOutgoingLetterForm({ onClose, onSent }: NewOutgoingLetterFormProps) 
         to_addresses: [effectiveToEmail.trim()],
         subject: subject.trim(),
         body_text: body.trim(),
-        edo_type: effectiveEdoType,
+        edo_type: edoType,
         client_id: clientIdForPayload,
-        assigned_to_user_id: effectiveEdoType !== 'none' ? currentUserId : null,
+        assigned_to_user_id: edoType !== 'none' ? currentUserId : null,
         attachment_ids: stagedAttachments.map((item) => item.id),
         staging_session_id: stagingSessionId,
       },
@@ -311,6 +356,8 @@ function NewOutgoingLetterForm({ onClose, onSent }: NewOutgoingLetterFormProps) 
                     setClientId('')
                     setEmailOverride(null)
                     setInstitutionEmail('')
+                    setInstitutionEdoClientId('')
+                    setInstitutionEdoClientSearch('')
                     setEdoType('none')
                   }}
                   className={cn(
@@ -520,29 +567,101 @@ function NewOutgoingLetterForm({ onClose, onSent }: NewOutgoingLetterFormProps) 
               {t('pages.lawyerWorkplace.newLetter.edoType', 'EDO document type')}
             </Label>
             <div className="flex flex-wrap gap-2">
-              {EDO_OPTIONS.map((opt) => {
-                const disabled = opt.id !== 'none' && !edoAvailable
-                return (
-                  <button
-                    key={opt.id}
-                    type="button"
-                    disabled={disabled}
-                    onClick={() => setEdoType(opt.id)}
-                    className={cn(
-                      'rounded-full border px-3 py-1.5 text-[12px] font-medium transition-colors',
-                      effectiveEdoType === opt.id
-                        ? 'border-secondary-400 bg-secondary-50 text-secondary-800'
-                        : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50',
-                      disabled && 'cursor-not-allowed opacity-50'
-                    )}
-                  >
-                    {opt.badge && <span className="mr-1.5 font-bold">{opt.badge}</span>}
-                    {t(opt.labelKey, opt.fallback)}
-                  </button>
-                )
-              })}
+              {EDO_OPTIONS.map((opt) => (
+                <button
+                  key={opt.id}
+                  type="button"
+                  onClick={() => {
+                    setEdoType(opt.id)
+                    if (opt.id === 'none') {
+                      setInstitutionEdoClientId('')
+                      setInstitutionEdoClientSearch('')
+                    }
+                  }}
+                  className={cn(
+                    'rounded-full border px-3 py-1.5 text-[12px] font-medium transition-colors',
+                    edoType === opt.id
+                      ? 'border-secondary-400 bg-secondary-50 text-secondary-800'
+                      : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50'
+                  )}
+                >
+                  {opt.badge && <span className="mr-1.5 font-bold">{opt.badge}</span>}
+                  {t(opt.labelKey, opt.fallback)}
+                </button>
+              ))}
             </div>
+            {recipientMode === 'client' && edoType !== 'none' && !clientId && (
+              <p className="text-light-600 text-[11px]">
+                {t(
+                  'pages.lawyerWorkplace.newLetter.edoRequiresClientHint',
+                  'Select a CRM client above to register this letter in EDO.'
+                )}
+              </p>
+            )}
+            {recipientMode === 'institution' && edoType !== 'none' && (
+              <p className="text-light-600 text-[11px]">
+                {t(
+                  'pages.lawyerWorkplace.newLetter.edoHintInstitution',
+                  'Link a CRM client below to register this institution letter in EDO.'
+                )}
+              </p>
+            )}
           </div>
+
+          {recipientMode === 'institution' && edoType !== 'none' && (
+            <div className="flex w-full flex-col gap-2">
+              <div className="flex items-center justify-between gap-2">
+                <Label className="text-dark-500 text-[12px] font-normal">
+                  {t(
+                    'pages.lawyerWorkplace.newLetter.edoClientForInstitution',
+                    'CRM client (for EDO registration)'
+                  )}
+                  <span className="text-error-500 ml-1">*</span>
+                </Label>
+                <DropdownMenu modal={false}>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      type="button"
+                      className="text-dark-500 flex h-7 shrink-0 items-center gap-1 rounded-md border border-gray-200 bg-white px-2 text-[12px] font-light outline-none"
+                    >
+                      <Icons.Search size={12} strokeWidth={1.5} className="text-gray-400" />
+                      {institutionEdoSearchTypeLabel}
+                      <Icons.ArrowDown size={13} strokeWidth={1.5} className="text-gray-400" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="min-w-[160px]">
+                    {CLIENT_SEARCH_TYPES.map((opt) => (
+                      <DropdownMenuItem
+                        key={opt.value}
+                        className="cursor-pointer text-[13px]"
+                        onClick={() => {
+                          setInstitutionEdoSearchType(opt.value)
+                          setInstitutionEdoClientSearch('')
+                        }}
+                      >
+                        {t(opt.labelKey, opt.fallback)}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+              <SearchableSelect
+                options={institutionEdoClientOptions}
+                value={institutionEdoClientId}
+                onValueChange={(id) => {
+                  setInstitutionEdoClientId(id)
+                  setInstitutionEdoClientSearch('')
+                }}
+                onSearchChange={setInstitutionEdoClientSearch}
+                isLoading={institutionEdoClientsLoading}
+                emptySearchHint={t(
+                  'pages.lawyerWorkplace.newLetter.clientSearchHint',
+                  'Type 2+ characters to search…'
+                )}
+                placeholder={t('pages.lawyerWorkplace.newLetter.selectClient', 'Search client...')}
+              />
+            </div>
+          )}
 
           {stagedAttachments.length > 0 && (
             <div className="flex flex-wrap gap-1.5">

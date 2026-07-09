@@ -12,6 +12,7 @@ import type {
   LegalLetterTypeUpdate,
   LegalGenerateDocumentRequest,
   LegalMailboxCreate,
+  LegalMailboxConnectionTest,
   LegalMailboxUpdate,
   LegalDepartmentSyncSettingsUpdate,
   LegalOutgoingLetterRequest,
@@ -25,6 +26,10 @@ import { legalWorkplaceKeys } from './useLegalInbox'
 
 function invalidateLegalDocuments(queryClient: ReturnType<typeof useQueryClient>) {
   queryClient.invalidateQueries({ queryKey: legalWorkplaceKeys.documents() })
+}
+
+function invalidateLegalWorkload(queryClient: ReturnType<typeof useQueryClient>) {
+  queryClient.invalidateQueries({ queryKey: legalWorkplaceKeys.lawyersRoot() })
 }
 
 export function useCreateLegalLetterType() {
@@ -288,6 +293,7 @@ export function useUpdateLegalKanbanTask() {
       queryClient.invalidateQueries({ queryKey: legalWorkplaceKeys.kanban() })
       queryClient.invalidateQueries({ queryKey: legalWorkplaceKeys.inbox() })
       queryClient.invalidateQueries({ queryKey: ['tasks', 'my-tasks'] })
+      invalidateLegalWorkload(queryClient)
     },
     onError: (error) => toast.error(getErrorMessage(error)),
   })
@@ -324,6 +330,7 @@ export function useCreateLegalKanbanTask() {
       queryClient.invalidateQueries({ queryKey: legalWorkplaceKeys.inbox() })
       queryClient.invalidateQueries({ queryKey: legalWorkplaceKeys.threads() })
       queryClient.invalidateQueries({ queryKey: ['tasks', 'my-tasks'] })
+      invalidateLegalWorkload(queryClient)
       toast.success('Task created')
     },
     onError: (error) => toast.error(getErrorMessage(error)),
@@ -383,6 +390,13 @@ export function useUpdateLegalSettingsMailbox() {
       queryClient.invalidateQueries({ queryKey: legalWorkplaceKeys.inbox() })
     },
     onError: (error) => toast.error(getErrorMessage(error)),
+  })
+}
+
+export function useTestLegalSettingsMailboxConnection() {
+  return useMutation({
+    mutationFn: (payload: LegalMailboxConnectionTest) =>
+      legalApi.testSettingsMailboxConnection(payload),
   })
 }
 

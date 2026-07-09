@@ -23,6 +23,7 @@ export function useConfirmLetter() {
       })
       queryClient.invalidateQueries({ queryKey: legalWorkplaceKeys.messages() })
       queryClient.invalidateQueries({ queryKey: legalWorkplaceKeys.kanban() })
+      queryClient.invalidateQueries({ queryKey: legalWorkplaceKeys.lawyersRoot() })
     },
     onError: (error) => toast.error(getErrorMessage(error)),
   })

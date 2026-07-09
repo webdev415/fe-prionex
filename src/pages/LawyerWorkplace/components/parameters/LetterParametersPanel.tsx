@@ -20,6 +20,7 @@ import {
   usePatchMessageContract,
   usePatchMessageSuggestions,
 } from '@/features/lawyerWorkplace'
+import { legalDueDateToIso } from '@/features/lawyerWorkplace/utils/legalDueDate'
 import {
   buildLetterActivityLog,
   clientLookupFromLegalSearchItem,
@@ -87,10 +88,13 @@ function formatClientOption(client: { id: number; first_name: string; last_name:
   return { id: String(client.id), name: lookup.label }
 }
 
-function computeDueDateFromReceived(receivedAt: string, slaDays: number): Date {
+function computeDueDateFromReceived(receivedAt: string, slaDays: number): Date | null {
+  if (!Number.isFinite(slaDays) || slaDays <= 0) {
+    return null
+  }
   const base = new Date(receivedAt)
   const due = new Date(base)
-  due.setDate(due.getDate() + (slaDays > 0 ? slaDays : 14))
+  due.setDate(due.getDate() + slaDays)
   due.setHours(0, 0, 0, 0)
   return due
 }
@@ -124,13 +128,23 @@ function applySuggestionResult(
   receivedAt: string,
   setLawyerOverride: (value: string | null) => void,
   setDueDateOverride: (value: Date | null) => void,
-  onDueDateAutoApplied?: () => void
+  options?: {
+    dueDateManuallyOverridden?: boolean
+    onDueDateAutoApplied?: () => void
+  }
 ) {
   setLawyerOverride(
     result.suggested_lawyer_user_id != null ? String(result.suggested_lawyer_user_id) : ''
   )
-  setDueDateOverride(computeDueDateFromReceived(receivedAt, result.sla_days))
-  onDueDateAutoApplied?.()
+  // Never overwrite a due date the lawyer already chose.
+  if (options?.dueDateManuallyOverridden) {
+    return
+  }
+  const dueDate = computeDueDateFromReceived(receivedAt, result.sla_days)
+  if (dueDate) {
+    setDueDateOverride(dueDate)
+    options?.onDueDateAutoApplied?.()
+  }
 }
 
 // ─── Shared sub-components ────────────────────────────────────────────────────
@@ -277,12 +291,15 @@ function LetterParametersPanelContent({
   const minDueDate = useMemo(() => startOfToday(), [])
   const applyDueDateFromLetterType = useCallback(
     (typeId: string) => {
+      if (dueDateManuallyOverridden) return
       const letterType = letterTypesData?.items?.find((item) => item.id === typeId)
       if (!letterType) return
-      setDueDateOverride(computeDueDateFromReceived(letter.receivedAt, letterType.sla_days))
+      const dueDate = computeDueDateFromReceived(letter.receivedAt, letterType.sla_days)
+      if (!dueDate) return
+      setDueDateOverride(dueDate)
       setDueDateManuallyOverridden(false)
     },
-    [letter.receivedAt, letterTypesData?.items]
+    [dueDateManuallyOverridden, letter.receivedAt, letterTypesData?.items]
   )
   const effectiveTypeId = typeOverride ?? defaultTypeId
   const effectiveClientId = clientOverride ?? defaultClientId
@@ -372,12 +389,13 @@ function LetterParametersPanelContent({
         messageId: letter.id,
         payload: { letter_type_id: typeId },
       })
-      applySuggestionResult(result, letter.receivedAt, setLawyerOverride, setDueDateOverride, () =>
-        setDueDateManuallyOverridden(false)
-      )
+      applySuggestionResult(result, letter.receivedAt, setLawyerOverride, setDueDateOverride, {
+        dueDateManuallyOverridden,
+        onDueDateAutoApplied: () => setDueDateManuallyOverridden(false),
+      })
       return result
     },
-    [letter.id, letter.receivedAt, patchSuggestionsMutation]
+    [dueDateManuallyOverridden, letter.id, letter.receivedAt, patchSuggestionsMutation]
   )
 
   useEffect(() => {
@@ -395,7 +413,8 @@ function LetterParametersPanelContent({
 
     lastPrioritySignatureRef.current = signature
     void applyTypeSuggestion(effectiveTypeId).catch(() => {
-      lastPrioritySignatureRef.current = null
+      // Keep the signature so permanent failures (e.g. outbound rows) do not retry in a loop.
+      lastPrioritySignatureRef.current = signature
     })
   }, [applyTypeSuggestion, effectiveTypeId, isReadOnly, lawyerManuallyOverridden, letterTypes])
 
@@ -406,7 +425,9 @@ function LetterParametersPanelContent({
     // PATCH for the same type.
     lastPrioritySignatureRef.current = buildPrioritySignature(letterTypes, typeId)
     setTypeOverride(typeId)
-    applyDueDateFromLetterType(typeId)
+    if (!dueDateManuallyOverridden) {
+      applyDueDateFromLetterType(typeId)
+    }
     void applyTypeSuggestion(typeId).catch(() => {
       lastPrioritySignatureRef.current = null
       setTypeOverride(defaultTypeId || null)
@@ -471,13 +492,10 @@ function LetterParametersPanelContent({
         },
       })
       .then((result) => {
-        applySuggestionResult(
-          result,
-          letter.receivedAt,
-          setLawyerOverride,
-          setDueDateOverride,
-          () => setDueDateManuallyOverridden(false)
-        )
+        applySuggestionResult(result, letter.receivedAt, setLawyerOverride, setDueDateOverride, {
+          dueDateManuallyOverridden,
+          onDueDateAutoApplied: () => setDueDateManuallyOverridden(false),
+        })
       })
       .catch(() => {
         // Keep local selection; user can still pick lawyer manually.
@@ -553,6 +571,13 @@ function LetterParametersPanelContent({
     p.lawyerLabel ??
     '—'
 
+  const readonlyLawyerDisplay =
+    lawyerOptions.find((option) => option.userId === p.lawyerId)?.display ??
+    p.lawyerLabel ??
+    (letter.legalTaskId != null
+      ? t('pages.lawyerWorkplace.parameters.lawyerAssigned', 'Assigned on kanban')
+      : t('pages.lawyerWorkplace.parameters.auto', 'Auto'))
+
   const clientIdNumber = Number(effectiveClientId)
   const lawyerUserIdNumber = Number(effectiveLawyerUserId)
 
@@ -580,7 +605,7 @@ function LetterParametersPanelContent({
         payload: {
           letter_type_id: effectiveTypeId,
           client_id: clientIdNumber,
-          due_date: effectiveDueDate.toISOString(),
+          due_date: legalDueDateToIso(effectiveDueDate),
           assigned_to_user_id: lawyerUserIdNumber,
           contract_number: effectiveContract.trim() || null,
         },
@@ -670,7 +695,7 @@ function LetterParametersPanelContent({
           )}
 
           <ReadonlyField label={t('pages.lawyerWorkplace.parameters.lawyer', 'Lawyer')}>
-            {p.lawyerLabel || 'Auto'}
+            {readonlyLawyerDisplay}
           </ReadonlyField>
 
           {/* Link to kanban task */}

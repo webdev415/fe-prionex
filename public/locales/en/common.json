@@ -29,6 +29,7 @@
     "teamManagement": "Team Management",
     "smsTemplates": "SMS Templates",
     "rrNotifications": "RR Notifications",
+    "rrPeriodicity": "RR Payment Periodicity",
     "targetActions": "Target Actions",
     "taChains": "TA Chains",
     "taDictionary": "Dictionary",
@@ -338,6 +339,19 @@
       "reasoningTitle": "Reasoning",
       "reasoningStreaming": "Analyzing…",
       "reasoningAnalyzing": "Analyzing the request…",
+      "reasoningSteps_one": "{{count}} step",
+      "reasoningSteps_other": "{{count}} steps",
+      "activityTitle": "Activity",
+      "activityClose": "Close",
+      "activityResize": "Resize panel",
+      "activityStepsSection": "Orchestrator steps",
+      "activityReasoningSection": "Reasoning",
+      "activitySourcesSection": "Sources",
+      "citationResultLabel": "Result",
+      "citationSourceFallback": "Source",
+      "citationMarkPrompt": "Accurate?",
+      "citationMarkOk": "Correct",
+      "citationMarkWrong": "Wrong",
       "codeCopy": "Copy",
       "codeCopied": "Copied",
       "showAllRows": "Show all ({{count}}) ",
@@ -584,6 +598,11 @@
         "body": "Message",
         "bodyPlaceholder": "Write your message...",
         "edoType": "EDO document type",
+        "edoRequiresClient": "Select a CRM client before registering EDO",
+        "edoRequiresClientHint": "Select a CRM client above to register this letter in EDO.",
+        "edoHintInstitution": "Link a CRM client below to register this institution letter in EDO.",
+        "edoClientForInstitution": "CRM client (for EDO registration)",
+        "clientSearchHint": "Type 2+ characters to search…",
         "send": "Send"
       },
       "parameters": {
@@ -858,7 +877,7 @@
           "exampleSource": "Sender",
           "exampleSourcePlaceholder": "Sender name",
           "keywordHints": "Keyword hints",
-          "keywordHintsHint": "optional - used as fallback when AI confidence < 70%",
+          "keywordHintsHint": "used to auto-suggest letter type from subject and body for unclassified messages",
           "keywordPlaceholder": "Type a keyword and press Enter..",
           "starRating": "Star rating",
           "starN": "Star {{n}} of {{total}}",
@@ -950,6 +969,18 @@
           "testSyncPartial": "Sync finished with {{errors}} error(s). {{ingested}} new message(s).",
           "testSyncSuccess": "Sync complete. {{ingested}} new message(s) ingested.",
           "testSyncSuccessEmpty": "Sync complete. No new messages.",
+          "testConnection": "Test connection",
+          "testConnectionRunning": "Testing…",
+          "testConnectionSuccess": "Connection successful",
+          "connectionErrors": {
+            "authFailed": "Could not sign in. Check the email address and app password.",
+            "authFailedGoogle": "Could not sign in. Check the email address and use a Google app password — not your regular Google password.",
+            "authFailedMicrosoft": "Could not sign in. Check the email address and app password or account permissions.",
+            "connectionFailed": "Could not reach the mail server. Check the host, port, and network.",
+            "timeout": "Connection timed out. Check the server host, port, and firewall settings.",
+            "generic": "Connection test failed: {{message}}",
+            "unknown": "Connection test failed. Please try again."
+          },
           "defaultOutgoing": "Default",
           "autoRoute": "Auto-route",
           "duplicateEmail": "This mailbox is already connected",
@@ -1616,6 +1647,92 @@
             "trend": "Trend"
           }
         }
+      },
+      "transcript": {
+        "title": "Call transcript",
+        "notReady": "Transcript is not ready yet — it appears after the nightly processing",
+        "error": "Failed to load the transcript",
+        "noAccess": "No access to transcripts",
+        "seekTo": "Jump to this moment in the recording",
+        "redFlags": "Flags",
+        "fraudSuspicion": "Fraud suspicion",
+        "moodOperator": "Operator mood",
+        "promiseTitle": "Payment promise",
+        "recommendations": "Recommendations",
+        "roles": {
+          "operator": "Operator",
+          "client": "Client",
+          "other": "Other"
+        },
+        "v7": {
+          "keyMoments": "Key moments",
+          "overlap": "overlapping",
+          "pause": "silence {{seconds}} s",
+          "turns_one": "{{count}} turn",
+          "turns_other": "{{count}} turns",
+          "silence": "Silence {{total}}s",
+          "silenceMax": "Silence {{total}}s (max {{max}}s)",
+          "overlapTotal": "Overlap {{total}}s",
+          "operatorShare": "Operator {{share}}%",
+          "clientShare": "{{share}}% Client",
+          "duration": "Duration",
+          "hesitations": "hesitations {{value}}",
+          "inlinePause": "(pause {{seconds}} s)",
+          "direction": {
+            "inbound": "Inbound",
+            "outbound": "Outbound"
+          },
+          "audio": {
+            "approx": "by audio, approximate",
+            "tone": "tone",
+            "irritation": "irritation",
+            "empathy": "empathy",
+            "peak": "peak",
+            "trend": "trend",
+            "dynamicsTitle": "Client emotion dynamics (by audio)",
+            "start": "start",
+            "end": "end",
+            "windowTooltip": "window {{from}}–{{to}}: {{raw}} (raw), {{smooth}} (smoothed)",
+            "toneVsWords": "tone ≠ words",
+            "said": "text",
+            "sounded": "sounds",
+            "states": {
+              "raisedVoice": "raised voice",
+              "crying": "crying"
+            }
+          },
+          "conclusion": {
+            "title": "AI conclusion",
+            "whyTitle": "Why this score",
+            "calc": "rubric {{rubric}} → adjustment {{adjustment}} → {{score}}",
+            "strengths": "Strengths",
+            "weaknesses": "Weaknesses",
+            "keyFindings": "Key findings",
+            "said": "said",
+            "sounded": "sounded",
+            "priority": {
+              "high": "high",
+              "normal": "normal"
+            },
+            "confidence": "confidence {{value}}",
+            "limitedBy": "limitations: {{list}}",
+            "limitations": {
+              "no_audio_layer": "no audio layer",
+              "fallback_26b": "fallback model"
+            }
+          }
+        }
+      },
+      "scenes": {
+        "greeting": "Greeting",
+        "identification": "Identification",
+        "debt_discussion": "Debt discussion",
+        "objection_handling": "Objection handling",
+        "negotiation": "Negotiation",
+        "promise": "Payment promise",
+        "escalation": "Escalation",
+        "closing": "Closing",
+        "other": "Other"
       },
       "scorecardsEmpty": "No scorecards in scope.",
       "scorecardsTotalSuffix": "scorecards",
@@ -3804,16 +3921,7 @@
         "dropFileOrClick": "Drag a file here or click to select",
         "loan": "Loan",
         "documentsUnlinked": "Not linked to a loan",
-        "documentTypes": {
-          "passport": "Passport",
-          "inn": "Tax ID",
-          "contract": "Contract",
-          "income": "Income statement",
-          "outcome": "Extract / statement",
-          "signature": "Digital signature",
-          "military": "Military",
-          "other": "Other"
-        },
+        "documentTypePlaceholder": "Select a type",
         "department": "Department",
         "phones": "Phones",
         "tin": "TIN",
@@ -3925,6 +4033,21 @@
         "rrMonthlyPayment": "Monthly Payment",
         "rrResponsibleEmployee": "Responsible Employee",
         "rrPaymentSchedule": "Payment Schedule",
+        "rrNumPaymentsHint": "Up to {{max}} payments.",
+        "rrFrequency": "Payment Frequency",
+        "rrFirstPaymentDate": "First Payment Date",
+        "rrPeriodicityHint": "The schedule below is auto-filled from the first payment date, number of payments and frequency. You can still edit any row.",
+        "rrFrequencyManual": "Manual (no auto-fill)",
+        "rrFrequencyOptions": {
+          "every_n_days": "Every N days",
+          "monthly_same_day": "Monthly (same day)",
+          "monthly_nth_day": "Every Nth of month"
+        },
+        "rrIntervalDays": "Interval (days)",
+        "rrDayOfMonth": "Day of month",
+        "rrDayOfMonthPlaceholder": "Select day",
+        "rrDayOfMonthLast": "Last day",
+        "rrClampNotice": "Payment {{rows}}: the selected day does not exist in that month, so the date was set to the last day of the month. You can still edit it manually.",
         "rrPaymentDate": "Date",
         "rrPaymentAmount": "Amount",
         "rrConnectionDate": "Connection Date",
@@ -4501,6 +4624,27 @@
         "removed": "Template removed"
       }
     },
+    "rrPeriodicity": {
+      "title": "RR Payment Periodicity",
+      "description": "Choose which payment-frequency options operators can use to auto-fill the schedule when creating a Restructuring Agreement.",
+      "saved": "Payment periodicity options saved",
+      "savedDescription": "Operators will see the updated frequency options next time they create a Restructuring Agreement.",
+      "allDisabledHint": "With every option off, operators enter each payment date manually.",
+      "types": {
+        "everyNDays": {
+          "label": "Every N days",
+          "hint": "Operator sets an interval (e.g. every 14 days)."
+        },
+        "monthlySameDay": {
+          "label": "Monthly (same day)",
+          "hint": "Same day of month as the first payment date."
+        },
+        "monthlyNthDay": {
+          "label": "Every Nth of month",
+          "hint": "Operator picks a day of month (1–30 or last day)."
+        }
+      }
+    },
     "rrNotifications": {
       "title": "RR Notifications",
       "description": "Configure bell reminders for the responsible operator before each scheduled Restructuring Agreement payment. Sent daily by the system.",
@@ -4530,17 +4674,39 @@
       "title": "Document Generation",
       "tabs": {
         "journal": "Document Journal",
-        "templates": "Document Templates"
+        "templates": "Document Templates",
+        "types": "Document Types"
       },
-      "documentTypes": {
-        "passport": "Passport",
-        "inn": "Tax ID",
-        "contract": "Contract",
-        "income": "Income statement",
-        "outcome": "Extract / statement",
-        "signature": "Digital signature",
-        "military": "Military",
-        "other": "Other"
+      "types": {
+        "title": "Document Types",
+        "newButton": "New type",
+        "createTitle": "New document type",
+        "editTitle": "Edit document type",
+        "confirmDeleteTitle": "Delete '{{name}}'?",
+        "confirmDelete": "This action cannot be undone.",
+        "deleteBlockedMessage": "This type is used by {{formattedCount}} documents. Hide it instead of deleting.",
+        "uniqueNameError": "A document type with this name already exists.",
+        "loadError": "Failed to load document types.",
+        "hiddenLabel": "hidden",
+        "columns": {
+          "color": "Color",
+          "name": "Name",
+          "usage": "Documents",
+          "actions": "Actions"
+        },
+        "fields": {
+          "name": "Name",
+          "namePlaceholder": "e.g. Passport",
+          "color": "Color",
+          "previewText": "Document type"
+        },
+        "toast": {
+          "created": "Document type created",
+          "updated": "Document type updated",
+          "deleted": "Document type deleted",
+          "hidden": "Type hidden",
+          "shown": "Type shown"
+        }
       },
       "actions": {
         "uploaded": "Uploaded",
@@ -6072,7 +6238,7 @@
         "deactivateConfirmTitle": "Revert to Legacy Proportional?",
         "deactivateConfirmMessage": "Future payment snapshots will use the legacy proportional algorithm. Already-snapshotted payments are unaffected.",
         "deactivateConfirmButton": "Revert",
-        "preconditionError": "Strict Order cannot be activated until payment-allocation snapshotting is enabled. Existing payments do not need to be backfilled."
+        "preconditionError": "Strict Order requires payment-allocation snapshotting to be enabled."
       },
       "history": {
         "title": "Recent Changes",

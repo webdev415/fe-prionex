@@ -21,6 +21,7 @@ import { cn } from '@/lib/utils'
 import { useCallStore } from '@/stores/callStore'
 import { useCallDetails, useHangupCall } from '@/features/calls/hooks/useCall'
 import { useCallStateUpdates } from '@/features/calls/hooks/useCallStateUpdates'
+import { useSetLastCallResultFromCall } from '@/features/contactTags/hooks/useContactTags'
 import { useAuth } from '@/features/auth/hooks/useAuth'
 import { formatMoneyUAHTwoDecimals } from '@/lib/formatters'
 import {
@@ -121,6 +122,8 @@ export function CallDialogModal({
 
   // Fetch call details with polling if callId is provided
   const { data: callDetails } = useCallDetails(callId || null)
+  const setLastCallResult = useSetLastCallResultFromCall(clientId ?? null)
+  const lastCallResultSyncedRef = useRef<string | null>(null)
 
   // Listen for real-time call state updates via Socket.IO
   const agentExtension = authUser?.asterisk_extension || null
@@ -233,6 +236,51 @@ export function CallDialogModal({
   // and the active-call layout.
   const displayPhone =
     dialDisplayPhone ?? (manualPhoneEnabled && manualPhoneDigits ? manualPhoneDigits : phoneNumber)
+
+  const syncLastCallResult = (outcome: string, phone: string, syncKey: string) => {
+    if (!clientId || !phone || !outcome) return
+    if (lastCallResultSyncedRef.current === syncKey) return
+    lastCallResultSyncedRef.current = syncKey
+    setLastCallResult.mutate({ phone, outcome })
+  }
+
+  const resolveTelephonyOutcome = (): string | null => {
+    if (callDetails?.outcome) {
+      return callDetails.outcome
+    }
+    if (callDetails?.talk_duration && callDetails.talk_duration > 0) {
+      return 'answered'
+    }
+    if (callDetails?.answered_at) {
+      return 'answered'
+    }
+    if (callState === 'connected' || callState === 'ended') {
+      return elapsedTime > 0 ? 'answered' : 'no_answer'
+    }
+    if (callDetails?.state === 'FAILED') {
+      return 'failed'
+    }
+    return 'no_answer'
+  }
+
+  // Keep Last Call Result contact tag in sync when a call completes.
+  useEffect(() => {
+    if (!open || !clientId || !callDetails) return
+    if (callDetails.state !== 'COMPLETED' && callDetails.state !== 'FAILED') return
+
+    const outcome = resolveTelephonyOutcome()
+    if (!outcome) return
+
+    const phone = callDetails.customer_number || displayPhone
+    const syncKey = `${callDetails.call_id}:${outcome}:${phone}`
+    syncLastCallResult(outcome, phone, syncKey)
+  }, [open, clientId, callDetails, displayPhone, callState, elapsedTime]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!open) {
+      lastCallResultSyncedRef.current = null
+    }
+  }, [open])
 
   const canPlaceCall = !manualPhoneEnabled
     ? String(phoneNumber).trim().length > 0
@@ -470,23 +518,28 @@ export function CallDialogModal({
   const handleHangUp = () => {
     if (hangupMutation.isPending) return
     const status: CallStatus = callState === 'connected' ? 'answered' : 'missed'
+    const telephonyOutcome = status === 'answered' ? 'answered' : 'no_answer'
+    const syncKey = `${callId ?? 'local'}:${telephonyOutcome}:${displayPhone}`
 
     // Send hangup command to Asterisk if we have a call ID
     if (callId) {
       hangupMutation.mutate(callId, {
         onSuccess: () => {
+          syncLastCallResult(telephonyOutcome, displayPhone, syncKey)
           if (onCallEnd) onCallEnd(elapsedTime, status)
           setCallState('ended')
         },
         onError: () => {
           // Hangup failed (AMI unavailable, call already ended, etc.)
           // Force end the call on the frontend regardless
+          syncLastCallResult(telephonyOutcome, displayPhone, syncKey)
           if (onCallEnd) onCallEnd(elapsedTime, status)
           setCallState('ended')
         },
       })
     } else {
       // No callId — just end locally
+      syncLastCallResult(telephonyOutcome, displayPhone, syncKey)
       if (onCallEnd) onCallEnd(elapsedTime, status)
       setCallState('ended')
     }

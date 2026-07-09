@@ -103,6 +103,13 @@ export async function setContactTags(
   return r.data
 }
 
+export async function setLastCallResultFromCall(
+  clientId: number,
+  payload: { phone: string; outcome: string }
+): Promise<void> {
+  await api.post(`/api/v1/clients/${clientId}/contacts/last-call-result`, payload)
+}
+
 export async function getContactTagHistory(
   clientId: number,
   contactId: number,

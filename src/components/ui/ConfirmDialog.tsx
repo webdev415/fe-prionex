@@ -6,6 +6,7 @@
  * imperative flow (`if (!confirm(...)) return`) pair this with `useConfirm`.
  */
 
+import { type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Modal, ModalHeader, ModalContent, ModalFooter } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
@@ -19,8 +20,16 @@ export interface ConfirmDialogProps {
   message?: string
   confirmLabel?: string
   cancelLabel?: string
-  /** `danger` shows an alert icon + red confirm button (destructive actions). */
+  /** `danger` shows a red-tinted circle + red confirm button (destructive actions). */
   tone?: ConfirmTone
+  /**
+   * Override the tone-derived default icon. The default is a warning triangle
+   * for `danger` and an info glyph otherwise; pass an explicit node (e.g.
+   * ``<Icons.Delete />``) when the action calls for a more specific glyph.
+   * Rendered inside a 12×12 rounded background so the icon itself should be
+   * ~size 24 for visual balance.
+   */
+  icon?: ReactNode
   isLoading?: boolean
   onConfirm: () => void
   onCancel: () => void
@@ -33,6 +42,7 @@ export function ConfirmDialog({
   confirmLabel,
   cancelLabel,
   tone = 'default',
+  icon,
   isLoading = false,
   onConfirm,
   onCancel,
@@ -40,20 +50,22 @@ export function ConfirmDialog({
   const { t } = useTranslation('common')
   const isDanger = tone === 'danger'
 
+  const defaultIcon = isDanger ? (
+    <Icons.Warning size={24} className="text-error-600" strokeWidth={2} />
+  ) : (
+    <Icons.Info size={24} className="text-dark-500" strokeWidth={2} />
+  )
+
   return (
     <Modal open={open} onClose={onCancel} maxWidth="md">
       <ModalHeader
         icon={
           <div
-            className={`flex h-8 w-8 items-center justify-center rounded-full ${
+            className={`flex h-12 w-12 items-center justify-center rounded-full ${
               isDanger ? 'bg-error-100' : 'bg-primary-400'
             }`}
           >
-            {isDanger ? (
-              <Icons.Warning size={20} className="text-error-600" strokeWidth={2} />
-            ) : (
-              <Icons.Info size={20} className="text-dark-500" strokeWidth={2} />
-            )}
+            {icon ?? defaultIcon}
           </div>
         }
         title={title}

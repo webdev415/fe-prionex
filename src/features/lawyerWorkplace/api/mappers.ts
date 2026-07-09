@@ -50,7 +50,7 @@ export function mapProcessingStatusToDisplay(
   value: string,
   needsManualReview = false
 ): LetterDisplayStatus {
-  if (value === 'done') return 'done'
+  if (value === 'done' || value === 'sent') return 'done'
   if (value === 'auto_processed') {
     return needsManualReview ? 'in_progress' : 'auto_processed'
   }
@@ -60,10 +60,18 @@ export function mapProcessingStatusToDisplay(
   return 'new'
 }
 
+export function isOutgoingMessageDirection(direction: string): boolean {
+  return direction === 'outgoing' || direction === 'outbound'
+}
+
 export function isLetterParametersReadOnly(letter: {
   status: LetterDisplayStatus
   isUnprocessed: boolean
+  direction?: string
 }): boolean {
+  if (letter.direction && isOutgoingMessageDirection(letter.direction)) {
+    return true
+  }
   if (letter.isUnprocessed) {
     return false
   }
@@ -118,7 +126,43 @@ export function mapMessageContent(item: { body_text: string | null; body_html: s
 }
 
 function isOutgoingDirection(direction: string): boolean {
-  return direction === 'outgoing' || direction === 'outbound'
+  return isOutgoingMessageDirection(direction)
+}
+
+function normalizeEmailAddress(address: string | null | undefined): string {
+  if (!address?.trim()) return ''
+  const { email } = parseEmailAddress(address)
+  return email.trim() || address.trim()
+}
+
+function resolveCorrespondenceRoute(
+  item: {
+    direction: string
+    from_address: string
+    to_addresses?: string[]
+    mailbox_id?: string | null
+    mailbox_email?: string | null
+  },
+  context?: LegalLookupContext
+): { routeFromEmail: string; routeToEmail: string } {
+  const mailboxEmail = resolveMailboxLabel(
+    item.mailbox_id,
+    item.mailbox_email ?? context?.mailboxLabelById?.get(item.mailbox_id ?? '')
+  )
+  const counterpartyFromDisplay = normalizeEmailAddress(item.from_address)
+  const counterpartyTo = normalizeEmailAddress(item.to_addresses?.[0]) || counterpartyFromDisplay
+
+  if (isOutgoingDirection(item.direction)) {
+    return {
+      routeFromEmail: mailboxEmail,
+      routeToEmail: counterpartyTo,
+    }
+  }
+
+  return {
+    routeFromEmail: counterpartyFromDisplay,
+    routeToEmail: mailboxEmail,
+  }
 }
 
 function messageTimestamp(item: {
@@ -193,9 +237,14 @@ function resolveMailboxLabel(
 }
 
 function computeDueDateIso(receivedAt: string | null, slaDays: number | undefined): string {
+  // Only compute when a letter type SLA is known — never invent a default
+  // due date for unclassified messages.
+  if (slaDays == null || !Number.isFinite(slaDays) || slaDays <= 0) {
+    return ''
+  }
   const base = receivedAt ? new Date(receivedAt) : new Date()
   const due = new Date(base)
-  due.setDate(due.getDate() + (slaDays ?? 14))
+  due.setDate(due.getDate() + slaDays)
   return due.toISOString().slice(0, 10)
 }
 
@@ -239,12 +288,19 @@ export function mapInboxItemToLetterListItem(
   const letterType = resolveLetterType(item.suggested_letter_type_id, context)
   const client = resolveClient(item.suggested_client_id, context, item.suggested_client_name)
   const status = mapProcessingStatusToDisplay(item.processing_status, item.needs_manual_review)
+  const { routeFromEmail, routeToEmail } = resolveCorrespondenceRoute(item, context)
+  const direction: LetterListItem['direction'] = isOutgoingDirection(item.direction)
+    ? 'outgoing'
+    : 'incoming'
 
   return {
     id: item.id,
     referenceId: item.id.slice(0, 8).toUpperCase(),
     senderName,
     senderEmail,
+    routeFromEmail,
+    routeToEmail,
+    direction,
     receivedAt: item.received_at ?? new Date().toISOString(),
     subject: item.subject?.trim() || '(no subject)',
     mailbox: resolveMailboxLabel(
@@ -313,7 +369,7 @@ export function buildLetterParameters(
     ? context?.lawyersByUserId?.get(message.suggested_lawyer_user_id)
     : undefined
 
-  const dueDate = computeDueDateIso(message.received_at, letterType?.sla_days)
+  const dueDate = letterType ? computeDueDateIso(message.received_at, letterType.sla_days) : ''
   const confirmedCount = countConfirmedParameters(message, dueDate)
   const totalParameters = 4
   const contractLabel =
@@ -422,6 +478,7 @@ export function mapMessageToLetterDetail(
       mailbox_id: message.mailbox_id,
       subject: message.subject,
       from_address: message.from_address,
+      to_addresses: message.to_addresses,
       processing_status: message.processing_status,
       direction: message.direction,
       received_at: message.received_at,
@@ -438,7 +495,7 @@ export function mapMessageToLetterDetail(
     context
   )
 
-  const recipientEmail = message.to_addresses[0] ?? ''
+  const recipientEmail = listItem.routeToEmail
 
   const threadMessages = (thread?.messages ?? [])
     .filter((item) => !item.is_quarantined)
@@ -483,7 +540,7 @@ export function mapMessageToLetterDetail(
 export function mapListItemToPreviewDetail(summary: LetterListItem, replyDraft = ''): LetterDetail {
   return {
     ...summary,
-    recipientEmail: summary.mailbox,
+    recipientEmail: summary.routeToEmail,
     parameters: {
       letterType: summary.letterType ?? '',
       clientId: summary.clientId ?? '',

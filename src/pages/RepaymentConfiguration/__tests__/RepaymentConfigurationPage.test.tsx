@@ -275,7 +275,7 @@ describe('RepaymentConfigurationPage', () => {
 
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith(
-        expect.stringContaining('Strict Order cannot be activated')
+        expect.stringContaining('Strict Order requires payment-allocation snapshotting')
       )
     })
 

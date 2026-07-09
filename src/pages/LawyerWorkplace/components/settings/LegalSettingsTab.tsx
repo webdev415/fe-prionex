@@ -81,10 +81,12 @@ export function LegalSettingsTab() {
   } = useLegalSettingsActions()
   const {
     saveMailbox,
+    testMailboxConnection,
     toggleMailboxStatus,
     changeSyncInterval,
     testSync,
     isSavingMailbox,
+    isTestingConnection,
     isPolling,
     isSavingSync,
   } = useLegalMailboxSettingsActions()
@@ -259,10 +261,12 @@ export function LegalSettingsTab() {
           syncSettings={syncSettings}
           letterTypes={letterTypes}
           onSaveMailbox={saveMailbox}
+          onTestConnection={testMailboxConnection}
           onToggleStatus={toggleMailboxStatus}
           onSyncIntervalChange={changeSyncInterval}
           onTestSync={testSync}
           isSavingMailbox={isSavingMailbox}
+          isTestingConnection={isTestingConnection}
           isSavingSync={isSavingSync}
           isPolling={isPolling}
           readOnly={readOnly}

@@ -15,6 +15,7 @@ import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { Icons } from '@/lib/icons'
 import { documentApi, type ClientDocument } from '@/features/clients/api/documentApi'
+import { DocumentTypePill } from '@/components/DocumentTypePill'
 import { DocumentPreviewModal } from './DocumentPreviewModal'
 import { clientKeys } from '@/features/clients/hooks/useClients'
 
@@ -28,28 +29,6 @@ interface DocumentsAccordionProps {
   documents: ClientDocument[]
   loans: Loan[]
   clientId: number
-}
-
-const TYPE_LABELS: Record<string, string> = {
-  passport: 'Паспорт',
-  inn: 'ІНН',
-  contract: 'Договір',
-  income: 'Довідка',
-  outcome: 'Витяг',
-  signature: 'ЕЦП',
-  military: 'Військовий',
-  other: 'Інше',
-}
-
-const TYPE_COLORS: Record<string, string> = {
-  passport: 'bg-blue-100 text-blue-700',
-  inn: 'bg-purple-100 text-purple-700',
-  contract: 'bg-green-100 text-green-700',
-  income: 'bg-amber-100 text-amber-700',
-  outcome: 'bg-orange-100 text-orange-700',
-  signature: 'bg-gray-100 text-gray-700',
-  military: 'bg-emerald-100 text-emerald-700',
-  other: 'bg-slate-100 text-slate-600',
 }
 
 function formatFileSize(bytes: number): string {
@@ -124,14 +103,10 @@ export function DocumentsAccordion({ documents, loans, clientId }: DocumentsAcco
         {doc.original_filename}
       </td>
       <td className="px-3 py-2">
-        <span
-          className={cn(
-            'inline-block rounded-full px-2 py-0.5 text-xs font-medium',
-            TYPE_COLORS[doc.document_type] ?? TYPE_COLORS.other
-          )}
-        >
-          {TYPE_LABELS[doc.document_type] ?? doc.document_type}
-        </span>
+        <DocumentTypePill
+          name={doc.document_type_ref?.name ?? '—'}
+          hex={doc.document_type_ref?.color ?? '#64748B'}
+        />
       </td>
       <td className="px-3 py-2 text-sm text-[#6B7280]">{formatDate(doc.created_at)}</td>
       <td className="px-3 py-2 text-sm text-[#6B7280]">{formatFileSize(doc.file_size)}</td>

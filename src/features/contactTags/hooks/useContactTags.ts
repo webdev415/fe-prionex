@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { clientKeys } from '@/features/clients/hooks/useClients'
 import * as contactTagsApi from '../api/contactTagsApi'
 
 export function useContactTagCategories(status: 'all' | 'active' | 'hidden' = 'all') {
@@ -71,9 +72,32 @@ export function useSetContactTags(clientId: number, contactId: number) {
   return useMutation({
     mutationFn: (payload: { category_id: number; value_ids: number[] }) =>
       contactTagsApi.setContactTags(clientId, contactId, payload),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['contact-tags', clientId, contactId] })
-      qc.invalidateQueries({ queryKey: ['client-profile', clientId] })
+    onSuccess: async () => {
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ['contact-tags', clientId, contactId] }),
+        qc.invalidateQueries({ queryKey: ['contact-tag-history', clientId, contactId] }),
+        qc.refetchQueries({ queryKey: clientKeys.profile(clientId) }),
+      ])
+    },
+  })
+}
+
+export function useSetLastCallResultFromCall(clientId: number | null | undefined) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (payload: { phone: string; outcome: string }) => {
+      if (!clientId) {
+        return Promise.resolve()
+      }
+      return contactTagsApi.setLastCallResultFromCall(clientId, payload)
+    },
+    onSuccess: async () => {
+      if (!clientId) return
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ['contact-tags', clientId] }),
+        qc.invalidateQueries({ queryKey: ['contact-tag-history', clientId] }),
+        qc.refetchQueries({ queryKey: clientKeys.profile(clientId) }),
+      ])
     },
   })
 }
@@ -83,5 +107,7 @@ export function useContactTagHistory(clientId: number, contactId: number, enable
     queryKey: ['contact-tag-history', clientId, contactId],
     queryFn: () => contactTagsApi.getContactTagHistory(clientId, contactId),
     enabled: enabled && clientId > 0 && contactId > 0,
+    staleTime: 0,
+    refetchOnMount: 'always',
   })
 }

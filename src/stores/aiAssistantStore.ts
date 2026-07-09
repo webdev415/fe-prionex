@@ -19,6 +19,10 @@ import type {
   AssistantOutputFormat,
   AssistantResponseMode,
 } from '@/features/aiAssistant/api'
+import {
+  clampReasoningPanelWidth,
+  DEFAULT_REASONING_PANEL_WIDTH,
+} from '@/pages/AiAssistant/reasoningPanelConfig'
 
 /** Auto-stop silence timeout for voice dictation (seconds). */
 export type AssistantVoiceSilenceTimeout = 1.5 | 2 | 3
@@ -72,11 +76,17 @@ interface AiAssistantState {
    * intentionally not scoped per user.
    */
   historySidebarCollapsed: boolean
+  /**
+   * Width (px) of the reasoning «Активность» side panel. Pure UI preference,
+   * not scoped per user; clamped into the resizable range on read.
+   */
+  reasoningPanelWidth: number
 
   setActiveConversation: (userId: string, conversationId: number) => void
   clearConversation: () => void
   saveSettings: (userId: string, settings: AssistantSettings) => void
   setHistorySidebarCollapsed: (collapsed: boolean) => void
+  setReasoningPanelWidth: (width: number) => void
   conversationIdFor: (userId: string | null) => number | null
   settingsFor: (userId: string | null) => AssistantSettings | null
 }
@@ -88,6 +98,7 @@ export const useAiAssistantStore = create<AiAssistantState>()(
       conversationId: null,
       settings: null,
       historySidebarCollapsed: false,
+      reasoningPanelWidth: DEFAULT_REASONING_PANEL_WIDTH,
 
       setActiveConversation: (userId, conversationId) =>
         set((state) => ({
@@ -99,6 +110,9 @@ export const useAiAssistantStore = create<AiAssistantState>()(
       clearConversation: () => set({ conversationId: null }),
 
       setHistorySidebarCollapsed: (collapsed) => set({ historySidebarCollapsed: collapsed }),
+
+      setReasoningPanelWidth: (width) =>
+        set({ reasoningPanelWidth: clampReasoningPanelWidth(width) }),
 
       saveSettings: (userId, settings) =>
         set((state) => ({
@@ -129,6 +143,7 @@ export const useAiAssistantStore = create<AiAssistantState>()(
         conversationId: state.conversationId,
         settings: state.settings,
         historySidebarCollapsed: state.historySidebarCollapsed,
+        reasoningPanelWidth: state.reasoningPanelWidth,
       }),
     }
   )

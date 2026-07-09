@@ -51,6 +51,7 @@ function DocumentClientContractFieldsContent({
 
   const [clientSearch, setClientSearch] = useState('')
   const [searchType, setSearchType] = useState<SearchType>('name')
+  const [selectedClientLabel, setSelectedClientLabel] = useState('')
   const debouncedClientSearch = useDebounce(clientSearch, 300)
 
   const { data: clientsData, isFetching: clientsLoading } = useLegalClientSearch(
@@ -58,15 +59,30 @@ function DocumentClientContractFieldsContent({
     { enabled: debouncedClientSearch.length >= 2, searchType }
   )
 
-  const clientOptions = useMemo(
-    () =>
-      (clientsData?.items ?? []).map((client) => {
-        const code = `CL-${String(client.id).padStart(5, '0')}`
-        const name = [client.first_name, client.last_name].filter(Boolean).join(' ')
-        return { id: String(client.id), name: name ? `${code} · ${name}` : code }
-      }),
-    [clientsData?.items]
-  )
+  const clientOptions = useMemo(() => {
+    const searchResults = (clientsData?.items ?? []).map((client) => {
+      const code = `CL-${String(client.id).padStart(5, '0')}`
+      const name = [client.first_name, client.last_name].filter(Boolean).join(' ')
+      return { id: String(client.id), name: name ? `${code} · ${name}` : code }
+    })
+
+    if (debouncedClientSearch.length < 2) {
+      if (clientId && selectedClientLabel) {
+        return [{ id: clientId, name: selectedClientLabel }]
+      }
+      return []
+    }
+
+    if (
+      clientId &&
+      selectedClientLabel &&
+      !searchResults.some((option) => option.id === clientId)
+    ) {
+      return [{ id: clientId, name: selectedClientLabel }, ...searchResults]
+    }
+
+    return searchResults
+  }, [clientId, clientsData?.items, debouncedClientSearch, selectedClientLabel])
 
   const activeSearchType = CLIENT_SEARCH_TYPES.find((opt) => opt.value === searchType)
   const searchTypeLabel = activeSearchType
@@ -111,7 +127,9 @@ function DocumentClientContractFieldsContent({
           options={clientOptions}
           value={clientId}
           onValueChange={(val) => {
+            const option = clientOptions.find((item) => item.id === val)
             onClientIdChange(val)
+            setSelectedClientLabel(option?.name ?? '')
             setClientSearch('')
           }}
           onSearchChange={setClientSearch}

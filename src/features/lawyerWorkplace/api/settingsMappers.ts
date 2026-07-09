@@ -248,6 +248,28 @@ export function mapMailboxFormToUpdate(values: MailboxFormValues) {
   return { ...base, ...passwordPayload }
 }
 
+export function mapMailboxFormToConnectionTest(values: MailboxFormValues) {
+  const base = {
+    email: values.email.trim().toLowerCase(),
+    provider: values.provider,
+    password: values.password.trim(),
+  }
+
+  if (values.provider === 'custom') {
+    return {
+      ...base,
+      imap_host: values.imapHost,
+      imap_port: values.imapPort,
+      imap_use_ssl: values.imapUseSsl,
+      smtp_host: values.smtpHost,
+      smtp_port: values.smtpPort,
+      smtp_use_tls: values.smtpUseTls,
+    }
+  }
+
+  return base
+}
+
 export function mapLegalReplyTemplateToSettings(
   template: LegalReplyTemplate
 ): SettingsReplyTemplate {

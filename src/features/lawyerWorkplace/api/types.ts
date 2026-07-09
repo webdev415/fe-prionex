@@ -21,6 +21,7 @@ export interface LegalInboxItem {
   mailbox_email?: string | null
   subject: string | null
   from_address: string
+  to_addresses?: string[]
   processing_status: string
   direction: string
   received_at: string | null
@@ -519,6 +520,22 @@ export interface LegalMailboxCreate {
   default_letter_type_id?: string | null
   is_default_outgoing?: boolean
   routing_rules?: LegalMailboxRoutingRuleInput[]
+}
+
+export interface LegalMailboxConnectionTest {
+  email: string
+  provider: LegalMailboxProvider
+  password: string
+  imap_host?: string | null
+  imap_port?: number | null
+  imap_use_ssl?: boolean | null
+  smtp_host?: string | null
+  smtp_port?: number | null
+  smtp_use_tls?: boolean | null
+}
+
+export interface LegalMailboxConnectionTestResponse {
+  ok: boolean
 }
 
 export interface LegalMailboxUpdate {

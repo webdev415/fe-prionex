@@ -41,6 +41,8 @@ import type {
   LegalDepartmentSyncSettings,
   LegalDepartmentSyncSettingsUpdate,
   LegalMailboxCreate,
+  LegalMailboxConnectionTest,
+  LegalMailboxConnectionTestResponse,
   LegalMailboxUpdate,
   LegalPollAllMailboxesResponse,
   LegalReplyTemplate,
@@ -334,6 +336,15 @@ export const legalApi = {
   updateSettingsMailbox(mailboxId: string, payload: LegalMailboxUpdate) {
     return api
       .patch<LegalSettingsMailbox>(`${SETTINGS_URL}/mailboxes/${mailboxId}`, payload)
+      .then((response) => response.data)
+  },
+
+  testSettingsMailboxConnection(payload: LegalMailboxConnectionTest) {
+    return api
+      .post<LegalMailboxConnectionTestResponse>(
+        `${SETTINGS_URL}/mailboxes/test-connection`,
+        payload
+      )
       .then((response) => response.data)
   },
 

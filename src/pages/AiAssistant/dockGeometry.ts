@@ -45,3 +45,30 @@ export function getDockDesktopBoxClasses(
       : LEFT_RAIL_COLLAPSED_HISTORY_EXPANDED
   return `${left} ${DOCK_DESKTOP_BOX_BASE}`
 }
+
+/**
+ * `<main>` right padding — the dock's resting right gap (`lg:right-7` = 28px),
+ * kept identical when the reasoning «Активность» panel pushes the dock left.
+ */
+export const DOCK_MAIN_PADDING_PX = 28
+
+/**
+ * Inline `right` (px) for the fixed dock when the reasoning activity panel is
+ * open on desktop. The panel occupies the rightmost `panelWidthPx`, so the
+ * dock's right edge must move left by that width and keep the same 28px gap it
+ * has at rest — geometrically mirroring the `paddingRight` the page root adds to
+ * the message ribbon, so dock and ribbon stay on one column.
+ *
+ * Returns `undefined` when the panel is closed (the `lg:right-7` class then owns
+ * the right edge) or on narrow screens (the panel overlays the content instead
+ * of reserving space). An inline style wins over the Tailwind class, so an
+ * `undefined` result cleanly restores the resting geometry.
+ */
+export function getDockRightOffset(
+  panelOpen: boolean,
+  isMobileOrTablet: boolean,
+  panelWidthPx: number
+): number | undefined {
+  if (!panelOpen || isMobileOrTablet) return undefined
+  return panelWidthPx + DOCK_MAIN_PADDING_PX
+}

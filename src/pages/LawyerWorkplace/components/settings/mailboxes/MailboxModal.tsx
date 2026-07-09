@@ -16,9 +16,6 @@ import type {
   MailboxRoutingRule,
   SettingsMailbox,
 } from '../../../settings/types'
-import { createRoutingRule } from '../../../settings/utils/mailboxHelpers'
-import { ROUTING_MATCH_OPTIONS } from '../constants'
-import { LetterTypeBadge } from '../LetterTypeBadge'
 
 export interface MailboxFormValues {
   email: string
@@ -145,7 +142,9 @@ function getAcceptableProviderIds(emailValue: string): MailboxProvider[] {
   if (detected) {
     return [detected, 'custom']
   }
-  return ['custom']
+  // Unknown domains might still run on Google/Microsoft hosted infra.
+  // Allow explicit provider choice instead of forcing custom server settings.
+  return PROVIDER_PRESETS.map((preset) => preset.id)
 }
 
 const DEFAULT_EMPTY: MailboxFormValues = {
@@ -196,16 +195,22 @@ interface MailboxModalProps {
   existingEmails: string[]
   onClose: () => void
   onSave: (values: MailboxFormValues) => void | Promise<void>
+  onTestConnection: (values: MailboxFormValues) => void | Promise<void>
+  requireConnectionTest?: boolean
+  isTestingConnection?: boolean
   isSubmitting?: boolean
 }
 
 export function MailboxModal({
   open,
   mailbox,
-  letterTypes,
+  letterTypes: _letterTypes,
   existingEmails,
   onClose,
   onSave,
+  onTestConnection,
+  requireConnectionTest = false,
+  isTestingConnection = false,
   isSubmitting = false,
 }: MailboxModalProps) {
   const { t } = useTranslation('common')
@@ -222,12 +227,14 @@ export function MailboxModal({
   const [smtpHost, setSmtpHost] = useState('')
   const [smtpPort, setSmtpPort] = useState(587)
   const [smtpUseTls, setSmtpUseTls] = useState(true)
-  const [routingRules, setRoutingRules] = useState<MailboxRoutingRule[]>([])
   const [syncFromToday, setSyncFromToday] = useState(true)
-  const [newMatchType, setNewMatchType] =
-    useState<MailboxRoutingRule['matchType']>('subject_keyword')
-  const [newMatchValue, setNewMatchValue] = useState('')
-  const [newRuleTypeId, setNewRuleTypeId] = useState('')
+  const [connectionTestPassed, setConnectionTestPassed] = useState(false)
+  const [connectionError, setConnectionError] = useState<string | null>(null)
+
+  const resetConnectionTest = () => {
+    setConnectionTestPassed(false)
+    setConnectionError(null)
+  }
 
   useEffect(() => {
     if (!open) return
@@ -249,16 +256,15 @@ export function MailboxModal({
       setSmtpHost(preset?.smtpHost ?? initial.smtpHost)
       setSmtpPort(preset?.smtpPort ?? initial.smtpPort)
       setSmtpUseTls(preset?.smtpUseTls ?? initial.smtpUseTls)
-      setRoutingRules(initial.routingRules)
       setSyncFromToday(initial.syncFromToday)
-      setNewMatchType('subject_keyword')
-      setNewMatchValue('')
-      setNewRuleTypeId(letterTypes[0]?.id ?? '')
+      setConnectionTestPassed(false)
+      setConnectionError(null)
     })
-  }, [open, mailbox, letterTypes])
+  }, [open, mailbox])
 
   const handleProviderChange = (next: MailboxProvider) => {
     setProvider(next)
+    resetConnectionTest()
     const preset = PROVIDER_PRESETS.find((p) => p.id === next)
     if (preset) {
       setImapHost(preset.imapHost)
@@ -279,6 +285,7 @@ export function MailboxModal({
 
   const handleEmailChange = (value: string) => {
     setEmail(value)
+    resetConnectionTest()
     const acceptable = getAcceptableProviderIds(value)
     if (!acceptable.includes(provider)) {
       const detected = detectProviderFromEmail(value)
@@ -318,21 +325,11 @@ export function MailboxModal({
     /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) &&
     passwordValid &&
     customHostsValid
-
-  const handleAddRule = () => {
-    if (!newRuleTypeId) return
-    if (newMatchType !== 'default' && !newMatchValue.trim()) return
-    const rule = createRoutingRule(newRuleTypeId, newMatchType, newMatchValue)
-    setRoutingRules((previous) => [...previous, rule])
-    setNewMatchValue('')
-  }
-
-  const handleRemoveRule = (ruleId: string) => {
-    setRoutingRules((previous) => previous.filter((rule) => rule.id !== ruleId))
-  }
+  const canTestConnection = canSave
 
   const handleSave = () => {
     if (!canSave || isSubmitting) return
+    if (requireConnectionTest && !connectionTestPassed) return
     void onSave({
       email: email.trim(),
       displayName: displayName.trim(),
@@ -345,9 +342,37 @@ export function MailboxModal({
       smtpPort,
       smtpUseTls,
       defaultLetterTypeId: null,
-      routingRules,
+      // Letter type auto-assignment uses letter-type keyword hints, not mailbox routing.
+      routingRules: [],
       syncFromToday,
     })
+  }
+
+  const handleTestConnection = async () => {
+    if (!canTestConnection || isTestingConnection || isSubmitting) return
+    setConnectionError(null)
+    try {
+      await onTestConnection({
+        email: email.trim(),
+        displayName: displayName.trim(),
+        provider,
+        password,
+        imapHost,
+        imapPort,
+        imapUseSsl,
+        smtpHost,
+        smtpPort,
+        smtpUseTls,
+        defaultLetterTypeId: null,
+        routingRules: [],
+        syncFromToday,
+      })
+      setConnectionTestPassed(true)
+      setConnectionError(null)
+    } catch (error) {
+      setConnectionTestPassed(false)
+      setConnectionError(error instanceof Error ? error.message : null)
+    }
   }
 
   const selectedProviderLabel = PROVIDER_PRESETS.find((p) => p.id === provider)?.label ?? provider
@@ -446,7 +471,10 @@ export function MailboxModal({
             <input
               type={showPassword ? 'text' : 'password'}
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => {
+                setPassword(e.target.value)
+                resetConnectionTest()
+              }}
               placeholder={
                 hasExistingCredentials
                   ? t(
@@ -476,6 +504,11 @@ export function MailboxModal({
               'Use an app-specific password generated in your mail account security settings, not your main login password.'
             )}
           </p>
+          {connectionError ? (
+            <p className="text-error-600 text-[12px]" role="alert">
+              {connectionError}
+            </p>
+          ) : null}
         </div>
 
         {/* Custom provider server settings */}
@@ -500,7 +533,10 @@ export function MailboxModal({
                 <input
                   type="text"
                   value={imapHost}
-                  onChange={(e) => setImapHost(e.target.value)}
+                  onChange={(e) => {
+                    setImapHost(e.target.value)
+                    resetConnectionTest()
+                  }}
                   placeholder="imap.mail.prionex.ua"
                   className="text-dark-500 focus:border-primary-400 h-10 rounded-md border border-gray-200 bg-white px-3 text-[13px] outline-none"
                 />
@@ -514,7 +550,10 @@ export function MailboxModal({
                   value={imapPort}
                   min={1}
                   max={65535}
-                  onChange={(e) => setImapPort(Number(e.target.value))}
+                  onChange={(e) => {
+                    setImapPort(Number(e.target.value))
+                    resetConnectionTest()
+                  }}
                   className="text-dark-500 focus:border-primary-400 h-10 rounded-md border border-gray-200 bg-white px-3 text-[13px] outline-none"
                 />
               </div>
@@ -523,7 +562,10 @@ export function MailboxModal({
               <input
                 type="checkbox"
                 checked={imapUseSsl}
-                onChange={(e) => setImapUseSsl(e.target.checked)}
+                onChange={(e) => {
+                  setImapUseSsl(e.target.checked)
+                  resetConnectionTest()
+                }}
                 className="accent-secondary-800 h-4 w-4 rounded border-gray-300"
               />
               <span className="text-dark-500 text-[12px]">
@@ -546,7 +588,10 @@ export function MailboxModal({
                 <input
                   type="text"
                   value={smtpHost}
-                  onChange={(e) => setSmtpHost(e.target.value)}
+                  onChange={(e) => {
+                    setSmtpHost(e.target.value)
+                    resetConnectionTest()
+                  }}
                   placeholder="smtp.mail.prionex.ua"
                   className="text-dark-500 focus:border-primary-400 h-10 rounded-md border border-gray-200 bg-white px-3 text-[13px] outline-none"
                 />
@@ -560,7 +605,10 @@ export function MailboxModal({
                   value={smtpPort}
                   min={1}
                   max={65535}
-                  onChange={(e) => setSmtpPort(Number(e.target.value))}
+                  onChange={(e) => {
+                    setSmtpPort(Number(e.target.value))
+                    resetConnectionTest()
+                  }}
                   className="text-dark-500 focus:border-primary-400 h-10 rounded-md border border-gray-200 bg-white px-3 text-[13px] outline-none"
                 />
               </div>
@@ -569,7 +617,10 @@ export function MailboxModal({
               <input
                 type="checkbox"
                 checked={smtpUseTls}
-                onChange={(e) => setSmtpUseTls(e.target.checked)}
+                onChange={(e) => {
+                  setSmtpUseTls(e.target.checked)
+                  resetConnectionTest()
+                }}
                 className="accent-secondary-800 h-4 w-4 rounded border-gray-300"
               />
               <span className="text-dark-500 text-[12px]">
@@ -607,144 +658,24 @@ export function MailboxModal({
             </p>
           </div>
         ) : null}
-
-        {/* Routing rules */}
-        <div className="space-y-3">
-          <div>
-            <h3 className="text-dark-500 text-[13px] font-semibold">
-              {t('pages.lawyerWorkplace.settings.mailboxes.routing.title', 'Routing rules')}
-            </h3>
-            <p className="text-light-600 mt-0.5 text-[11px]">
-              {t(
-                'pages.lawyerWorkplace.settings.mailboxes.routing.hint',
-                'Map incoming messages to letter types by sender or subject'
-              )}
-            </p>
-          </div>
-
-          <div className="space-y-2">
-            {routingRules.map((rule) => {
-              const letterType = letterTypes.find((type) => type.id === rule.letterTypeId)
-              const matchLabel = ROUTING_MATCH_OPTIONS.find((item) => item.id === rule.matchType)
-              return (
-                <div
-                  key={rule.id}
-                  className="flex flex-wrap items-center gap-2 rounded-md bg-white px-3 py-1.5"
-                >
-                  <span className="text-light-600 text-[11px] font-medium">
-                    {matchLabel ? t(matchLabel.labelKey, matchLabel.fallback) : rule.matchType}
-                  </span>
-                  {rule.matchType !== 'default' ? (
-                    <span className="text-dark-500 text-[12px]">"{rule.value}"</span>
-                  ) : null}
-                  <Icons.ArrowRight02 size={12} className="text-light-400" strokeWidth={1.5} />
-                  {letterType ? <LetterTypeBadge letterType={letterType} t={t} size="sm" /> : null}
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveRule(rule.id)}
-                    className="text-light-500 hover:text-dark-500 ml-auto"
-                    aria-label={t('actions.remove', 'Remove')}
-                  >
-                    <Icons.Cancel01 size={14} strokeWidth={1.5} />
-                  </button>
-                </div>
-              )
-            })}
-          </div>
-
-          <div className="flex flex-col gap-2 rounded-md border border-dashed border-gray-200 p-3 sm:flex-row sm:flex-wrap sm:items-end">
-            <div className="min-w-[140px] flex-1 space-y-1">
-              <Label className="text-light-600 text-[11px]">
-                {t('pages.lawyerWorkplace.settings.mailboxes.routing.matchType', 'Match')}
-              </Label>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button
-                    type="button"
-                    className="text-dark-500 flex h-10 w-full items-center justify-between rounded-md border border-gray-200 bg-white px-3 text-[12px]"
-                  >
-                    {t(
-                      ROUTING_MATCH_OPTIONS.find((item) => item.id === newMatchType)?.labelKey ??
-                        '',
-                      ROUTING_MATCH_OPTIONS.find((item) => item.id === newMatchType)?.fallback ??
-                        newMatchType
-                    )}
-                    <Icons.ArrowDown size={14} strokeWidth={1.5} />
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start">
-                  {ROUTING_MATCH_OPTIONS.map((option) => (
-                    <DropdownMenuItem
-                      key={option.id}
-                      className="cursor-pointer"
-                      onClick={() => setNewMatchType(option.id)}
-                    >
-                      {t(option.labelKey, option.fallback)}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-            {newMatchType !== 'default' ? (
-              <div className="min-w-[140px] flex-1 space-y-1">
-                <Label className="text-light-600 text-[11px]">
-                  {t('pages.lawyerWorkplace.settings.mailboxes.routing.value', 'Value')}
-                </Label>
-                <input
-                  type="text"
-                  value={newMatchValue}
-                  onChange={(e) => setNewMatchValue(e.target.value)}
-                  placeholder={newMatchType === 'sender_domain' ? 'court.gov.ua' : 'complaint'}
-                  className="text-dark-500 h-10 w-full rounded-md border border-gray-200 bg-white px-3 text-[12px] outline-none"
-                />
-              </div>
-            ) : null}
-            <div className="min-w-[140px] flex-1 space-y-1">
-              <Label className="text-light-600 text-[11px]">
-                {t('pages.lawyerWorkplace.settings.mailboxes.routing.letterType', 'Letter type')}
-              </Label>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button
-                    type="button"
-                    className="text-dark-500 flex h-10 w-full items-center justify-between rounded-md border border-gray-200 bg-white px-3 text-[12px]"
-                  >
-                    <span className="truncate">
-                      {letterTypes.find((type) => type.id === newRuleTypeId)?.nameFallback ??
-                        t(
-                          'pages.lawyerWorkplace.settings.mailboxes.routing.selectType',
-                          'Select type'
-                        )}
-                    </span>
-                    <Icons.ArrowDown size={14} strokeWidth={1.5} />
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="max-h-48 overflow-y-auto">
-                  {letterTypes.map((type) => (
-                    <DropdownMenuItem
-                      key={type.id}
-                      className="cursor-pointer"
-                      onClick={() => setNewRuleTypeId(type.id)}
-                    >
-                      <LetterTypeBadge letterType={type} t={t} size="sm" />
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-            <Button variant="outline" size="sm" className="h-10 rounded-md" onClick={handleAddRule}>
-              {t('pages.lawyerWorkplace.settings.mailboxes.routing.addRule', 'Add rule')}
-            </Button>
-          </div>
-        </div>
       </ModalContent>
       <ModalFooter>
         <Button variant="cancel" onClick={onClose} className="h-10 w-full rounded-md">
           {t('actions.cancel', 'Cancel')}
         </Button>
         <Button
+          variant="outline"
+          disabled={!canTestConnection || isTestingConnection || isSubmitting}
+          onClick={() => void handleTestConnection()}
+          className="h-10 w-full rounded-md"
+        >
+          {isTestingConnection
+            ? t('pages.lawyerWorkplace.settings.mailboxes.testConnectionRunning', 'Testing…')
+            : t('pages.lawyerWorkplace.settings.mailboxes.testConnection', 'Test connection')}
+        </Button>
+        <Button
           variant="primary"
-          disabled={!canSave || isSubmitting}
+          disabled={!canSave || isSubmitting || (requireConnectionTest && !connectionTestPassed)}
           onClick={handleSave}
           className="h-10 w-full rounded-md"
         >

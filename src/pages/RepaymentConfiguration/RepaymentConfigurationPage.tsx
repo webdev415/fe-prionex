@@ -277,14 +277,13 @@ export function RepaymentConfigurationPage() {
           detail.includes('activation') ||
           detail.includes('cannot activate') ||
           detail.includes('readiness') ||
-          detail.includes('backfill') ||
           detail.includes('snapshot') ||
           detail.includes('unsnapshotted')
         ) {
           toast.error(
             t(
               'pages.repaymentConfiguration.algorithm.preconditionError',
-              'Strict Order cannot be activated until payment-allocation snapshotting is enabled. Existing payments do not need to be backfilled.'
+              'Strict Order requires payment-allocation snapshotting to be enabled.'
             )
           )
           // Revert local algorithm if the error is an activation guard

@@ -55,6 +55,12 @@ export interface CallRecordingModalProps {
   markerOverlay?: ReactNode
   /** KAN-410 — content rendered after the control row (Add marker / Feedback). */
   belowControls?: ReactNode
+  /**
+   * Call QA (Ф1) — AI transcript panel rendered below the player controls in
+   * its own bounded-scroll section. A dedicated slot (rather than reusing
+   * `belowControls`) so the trainer flow can combine both independently.
+   */
+  transcriptPanel?: ReactNode
 }
 
 /**
@@ -69,7 +75,16 @@ export interface CallRecordingModalHandle {
 
 export const CallRecordingModal = forwardRef<CallRecordingModalHandle, CallRecordingModalProps>(
   function CallRecordingModal(
-    { open, onClose, callData, onMinimize, scorecardPanel, markerOverlay, belowControls },
+    {
+      open,
+      onClose,
+      callData,
+      onMinimize,
+      scorecardPanel,
+      markerOverlay,
+      belowControls,
+      transcriptPanel,
+    },
     forwardedRef
   ) {
     const { t } = useTranslation('common')
@@ -225,6 +240,12 @@ export const CallRecordingModal = forwardRef<CallRecordingModalHandle, CallRecor
 
           {/* Materials attached to this call. */}
           <CallMaterialsPanel callId={callData.call_id} />
+
+          {/* Call QA (Ф1) — AI transcript, bounded scroll like the scorecard
+            panel so a long dialogue doesn't blow up the modal height. */}
+          {transcriptPanel ? (
+            <div className="max-h-[45vh] overflow-y-auto">{transcriptPanel}</div>
+          ) : null}
 
           {/* Side panel (scorecard); bounded scroll so the long
             evaluation form doesn't overflow the modal. */}

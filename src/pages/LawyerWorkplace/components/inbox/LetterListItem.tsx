@@ -80,7 +80,7 @@ export function LetterListItem({ letter, isSelected, onSelect }: LetterListItemP
       <div className="mb-0.5 flex items-start gap-2">
         <p className="text-light-700 flex min-w-0 flex-1 flex-wrap text-[11.5px] leading-snug">
           <span className="inline-flex items-center whitespace-nowrap">
-            <span>{letter.senderEmail}</span>
+            <span>{letter.routeFromEmail}</span>
             <span
               className="text-light-700 inline-flex items-baseline px-0.5 py-0.5 align-baseline"
               aria-hidden="true"
@@ -88,7 +88,7 @@ export function LetterListItem({ letter, isSelected, onSelect }: LetterListItemP
               <Icons.ArrowRight02 size={10} strokeWidth={1.5} />
             </span>
           </span>
-          <span>{letter.mailbox}</span>
+          <span>{letter.routeToEmail}</span>
         </p>
 
         {status && (
