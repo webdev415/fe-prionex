@@ -5,7 +5,11 @@ import type {
   KanbanTaskType,
 } from '@/pages/LawyerWorkplace/kanban/kanbanData'
 import type { DeadlineFilter } from '@/pages/LawyerWorkplace/components/kanban/constants'
-import { isLegalDueDateOverdue, legalOverdueDueDateIso } from '../utils/legalDueDate'
+import {
+  isLegalDueDateOverdue,
+  legalDefaultDueDateIso,
+  legalOverdueDueDateIso,
+} from '../utils/legalDueDate'
 import type { LegalKanbanTaskItem, LegalLawyer } from './types'
 
 const KNOWN_TYPES = new Set<KanbanTaskType>([
@@ -38,8 +42,30 @@ export type LegalKanbanTaskPatch = {
   assigneeUserId?: number | null
   deadline?: string | null
   letterTypeId?: string
+  clearLetterType?: boolean
   clientId?: number | null
   clientName?: string | null
+}
+
+export function buildKanbanColumnMovePatch(
+  task: KanbanTask,
+  targetColumnId: KanbanColumnId
+): LegalKanbanTaskPatch {
+  const patch: LegalKanbanTaskPatch = { columnId: targetColumnId }
+
+  if (targetColumnId === 'overdue') {
+    if (!task.deadline || !isLegalDueDateOverdue(task.deadline)) {
+      patch.deadline = legalOverdueDueDateIso()
+    }
+  } else if (targetColumnId === 'in_progress') {
+    if (!task.deadline || isLegalDueDateOverdue(task.deadline)) {
+      patch.deadline = legalDefaultDueDateIso()
+    }
+  } else if (targetColumnId === 'not_defined') {
+    patch.clearLetterType = true
+  }
+
+  return patch
 }
 
 export function mapKanbanColumnToTaskStatus(columnId: KanbanColumnId): string {
@@ -71,9 +97,13 @@ export function mapKanbanPatchToTaskUpdate(
   if (patch.columnId) {
     payload.status = mapKanbanColumnToTaskStatus(patch.columnId)
     if (patch.columnId === 'overdue' && patch.deadline === undefined) {
-      const currentDue = task.deadline ? new Date(task.deadline) : null
-      if (!currentDue || currentDue.getTime() > Date.now()) {
+      if (!task.deadline || !isLegalDueDateOverdue(task.deadline)) {
         payload.due_date = overdueDueDateIso()
+      }
+    }
+    if (patch.columnId === 'in_progress' && patch.deadline === undefined) {
+      if (!task.deadline || isLegalDueDateOverdue(task.deadline)) {
+        payload.due_date = legalDefaultDueDateIso()
       }
     }
   }
@@ -121,9 +151,17 @@ export function applyKanbanTaskPatch(
     }
     if (patch.columnId === 'overdue' && patch.deadline === undefined) {
       const currentDue = task.deadline ? new Date(task.deadline) : null
-      if (!currentDue || currentDue.getTime() > Date.now()) {
-        next.deadline = overdueDueDateIso()
+      if (!currentDue || !isLegalDueDateOverdue(task.deadline)) {
+        next.deadline = legalOverdueDueDateIso()
       }
+    }
+    if (patch.columnId === 'in_progress' && patch.deadline === undefined) {
+      if (!task.deadline || isLegalDueDateOverdue(task.deadline)) {
+        next.deadline = legalDefaultDueDateIso()
+      }
+    }
+    if (patch.columnId === 'not_defined' || patch.clearLetterType) {
+      next.type = 'unclassified'
     }
   }
 

@@ -13,6 +13,7 @@ import { toast } from 'sonner'
 import { Button } from '@/components/ui/Button'
 import {
   applyKanbanTaskPatch,
+  buildKanbanColumnMovePatch,
   mapKanbanPatchToMetadataPayload,
   mapKanbanPatchToTaskUpdate,
   matchesDeadlineFilter,
@@ -20,6 +21,7 @@ import {
   useLegalLawyers,
   useLegalLetterTypes,
   usePatchLegalKanbanTaskMetadata,
+  useTransitionLegalKanbanTask,
   useUpdateLegalKanbanTask,
   type LegalKanbanTaskPatch,
 } from '@/features/lawyerWorkplace'
@@ -38,6 +40,7 @@ import {
   applyKanbanFilters,
   ALL_LAWYERS_FILTER,
   buildTypeFilterOptions,
+  KANBAN_COLUMN_MOVE_OPTIONS,
   KANBAN_SCROLL_COLUMN_WIDTH_CLASS,
   TYPE_FILTER_OPTIONS,
   type DeadlineFilter,
@@ -108,6 +111,7 @@ export function LegalKanbanBoard() {
   })
   const updateTaskMutation = useUpdateLegalKanbanTask()
   const patchMetadataMutation = usePatchLegalKanbanTaskMetadata()
+  const transitionMutation = useTransitionLegalKanbanTask()
 
   const lawyerFilterOptions = useMemo<LawyerFilterOption[]>(() => {
     const dynamicOptions =
@@ -283,9 +287,38 @@ export function LegalKanbanBoard() {
 
   const handleMoveTask = useCallback(
     (taskId: string, toColumnId: KanbanColumnId) => {
-      persistTaskPatch(taskId, { columnId: toColumnId })
+      const source = localOverrides ?? apiTasks
+      const task = source.find((item) => item.id === taskId)
+      if (!task || task.columnId === toColumnId) return
+
+      const patch = buildKanbanColumnMovePatch(task, toColumnId)
+      setLocalOverrides(
+        source.map((item) =>
+          item.id === taskId ? applyKanbanTaskPatch(item, patch, lawyers) : item
+        )
+      )
+
+      const columnMeta = KANBAN_COLUMN_MOVE_OPTIONS.find((col) => col.id === toColumnId)
+      const columnLabel = columnMeta ? t(columnMeta.labelKey, columnMeta.id) : toColumnId
+
+      transitionMutation.mutate(
+        { taskId: task.taskId, targetColumn: toColumnId },
+        {
+          onSuccess: () => {
+            setLocalOverrides(null)
+            toast.success(
+              t('pages.lawyerWorkplace.kanban.transitionSuccess', 'Moved to {{state}}', {
+                state: columnLabel,
+              })
+            )
+          },
+          onError: () => {
+            setLocalOverrides(null)
+          },
+        }
+      )
     },
-    [persistTaskPatch]
+    [apiTasks, lawyers, localOverrides, t, transitionMutation]
   )
 
   const handleTaskUpdate = useCallback(

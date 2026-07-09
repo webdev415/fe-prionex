@@ -165,6 +165,13 @@ export const legalApi = {
     return api.post(`${BASE_URL}/kanban/tasks/${taskId}/sync-status`, payload)
   },
 
+  transitionKanbanTask(
+    taskId: number,
+    payload: { target_column: 'not_defined' | 'in_progress' | 'overdue' | 'completed' }
+  ) {
+    return api.post(`${BASE_URL}/kanban/tasks/${taskId}/transition`, payload)
+  },
+
   listDocuments(params: LegalDocumentListParams = {}) {
     return api
       .get<LegalDocumentListResponse>(DOCUMENTS_URL, { params })
