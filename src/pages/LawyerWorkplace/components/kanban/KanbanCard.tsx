@@ -15,38 +15,35 @@ import {
 } from '@/components/ui/DropdownMenu'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
-import type { KanbanColumnId, KanbanTask, KanbanTaskType } from '../../kanban/kanbanData'
+import type { KanbanColumnId, KanbanTask } from '../../kanban/kanbanData'
 import {
   formatLegalDueMonthDay,
   legalDueDateToIso,
   parseLegalDueDate,
 } from '@/features/lawyerWorkplace/utils/legalDueDate'
-import { getAssigneeColour, KANBAN_COLUMN_MOVE_OPTIONS } from './constants'
+import {
+  getAssigneeColour,
+  KANBAN_COLUMN_MOVE_OPTIONS,
+  resolveKanbanTypeBadgeProps,
+} from './constants'
 import { KanbanAssigneeChip } from './KanbanAssigneeChip'
 import { KanbanClientChip } from './KanbanClientChip'
 import { KanbanTypeBadge } from './KanbanTypeBadge'
 
 const COLUMN_MOVE_OPTIONS = KANBAN_COLUMN_MOVE_OPTIONS
 
-const KNOWN_KANBAN_TYPES = new Set<KanbanTaskType>([
-  'complaint',
-  'nbu_inquiry',
-  'court_claim',
-  'attorney_request',
-  'inquiry',
-])
-
-function renderLetterTypeOption(letterTypeId: string, name: string) {
-  if (KNOWN_KANBAN_TYPES.has(letterTypeId as KanbanTaskType)) {
-    return <KanbanTypeBadge type={letterTypeId as KanbanTaskType} />
-  }
-  return <span className="text-dark-500 text-[12px]">{name}</span>
+function renderLetterTypeOption(letterType: LegalLetterType) {
+  const badge = resolveKanbanTypeBadgeProps(letterType.id, [letterType], 'type_pending')
+  return <KanbanTypeBadge type={badge.type} label={badge.label} colorId={badge.colorId} />
 }
 
 interface KanbanCardProps {
   task: KanbanTask
   lawyers: LegalLawyer[]
+  /** All letter types for badge label/color resolution. */
   letterTypes: LegalLetterType[]
+  /** Active letter types shown in the change-type menu. */
+  editableLetterTypes: LegalLetterType[]
   isDragging?: boolean
   onCardClick?: (task: KanbanTask) => void
   onMoveTask?: (taskId: string, columnId: KanbanColumnId) => void
@@ -64,6 +61,7 @@ export function KanbanCard({
   task,
   lawyers,
   letterTypes,
+  editableLetterTypes,
   isDragging = false,
   onCardClick,
   onMoveTask,
@@ -74,7 +72,7 @@ export function KanbanCard({
   const { t } = useTranslation('common')
   const isOverdue = task.columnId === 'overdue'
   const isCompleted = task.columnId === 'completed'
-  const taskType = task.type
+  const typeBadge = resolveKanbanTypeBadgeProps(task.letterTypeId, letterTypes, task.type)
   const clientCode = task.clientCode ?? null
   const clientName = task.clientName?.trim() || null
 
@@ -152,7 +150,11 @@ export function KanbanCard({
             {t('pages.lawyerWorkplace.kanban.overdueBadge', 'Overdue')}
           </span>
         ) : (
-          <KanbanTypeBadge type={taskType} />
+          <KanbanTypeBadge
+            type={typeBadge.type}
+            label={typeBadge.label}
+            colorId={typeBadge.colorId}
+          />
         )}
         <div className="flex shrink-0 items-center gap-1">
           {!isCompleted && (
@@ -177,7 +179,11 @@ export function KanbanCard({
       {/* Overdue: type badge on own row */}
       {isOverdue && (
         <div className="mb-2">
-          <KanbanTypeBadge type={taskType} />
+          <KanbanTypeBadge
+            type={typeBadge.type}
+            label={typeBadge.label}
+            colorId={typeBadge.colorId}
+          />
         </div>
       )}
 
@@ -301,7 +307,7 @@ export function KanbanCard({
                     </span>
                   </DropdownMenuSubTrigger>
                   <DropdownMenuSubContent className="max-h-60 min-w-[190px] overflow-y-auto p-1.5">
-                    {letterTypes.map((letterType) => (
+                    {editableLetterTypes.map((letterType) => (
                       <DropdownMenuItem
                         key={letterType.id}
                         className="cursor-pointer rounded-md px-2 py-1.5 focus:bg-gray-50"
@@ -310,7 +316,7 @@ export function KanbanCard({
                           onTaskUpdate?.(task.id, { letterTypeId: letterType.id })
                         }}
                       >
-                        {renderLetterTypeOption(letterType.id, letterType.name)}
+                        {renderLetterTypeOption(letterType)}
                       </DropdownMenuItem>
                     ))}
                   </DropdownMenuSubContent>

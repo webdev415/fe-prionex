@@ -1,10 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router-dom'
+import {
+  useLegalDocumentStats,
+  useLegalInboxSummary,
+  useLegalKanban,
+} from '@/features/lawyerWorkplace'
 import { useCanAccessLegalKanban } from '@/features/lawyerWorkplace/hooks/useLegalPermissions'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
-import { useLegalInboxSummary } from '@/features/lawyerWorkplace'
 import { LawyerAvailabilityToggle } from './LawyerAvailabilityToggle'
 import type { LawyerWorkplaceTab } from '../types'
 
@@ -59,6 +63,14 @@ export function LawyerWorkplaceHeaderNav() {
   const [searchParams, setSearchParams] = useSearchParams()
   const { unprocessedCount } = useLegalInboxSummary()
   const canAccessKanban = useCanAccessLegalKanban()
+  const { tasks: kanbanTasks } = useLegalKanban({ enabled: canAccessKanban })
+  const { data: documentStats } = useLegalDocumentStats()
+
+  const kanbanActiveCount = useMemo(
+    () => kanbanTasks.filter((task) => task.columnId !== 'completed').length,
+    [kanbanTasks]
+  )
+  const documentsCount = documentStats?.filterCounts.all ?? 0
 
   const tabs: TabConfig[] = useMemo(
     () =>
@@ -66,9 +78,15 @@ export function LawyerWorkplaceHeaderNav() {
         if (tab.id === 'inbox' && unprocessedCount > 0) {
           return { ...tab, badge: unprocessedCount, badgeVariant: 'new' as const }
         }
+        if (tab.id === 'kanban' && kanbanActiveCount > 0) {
+          return { ...tab, badge: kanbanActiveCount, badgeVariant: 'count' as const }
+        }
+        if (tab.id === 'documents' && documentsCount > 0) {
+          return { ...tab, badge: documentsCount, badgeVariant: 'count' as const }
+        }
         return tab
       }),
-    [canAccessKanban, unprocessedCount]
+    [canAccessKanban, documentsCount, kanbanActiveCount, unprocessedCount]
   )
 
   const rawTab = searchParams.get('tab')
@@ -151,7 +169,9 @@ export function LawyerWorkplaceHeaderNav() {
                 <span
                   className={cn(
                     'shrink-0 rounded-full px-1.5 py-0.5 text-[10px] leading-none font-semibold',
-                    tab.badgeVariant === 'new' ? 'bg-red-50 text-red-600' : 'text-dark-500 bg-white'
+                    tab.badgeVariant === 'new'
+                      ? 'bg-red-50 text-red-600'
+                      : 'bg-gray-100 text-gray-600'
                   )}
                 >
                   {tab.badgeVariant === 'new' ? (

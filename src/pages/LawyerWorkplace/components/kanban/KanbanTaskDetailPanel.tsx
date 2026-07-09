@@ -4,25 +4,33 @@ import {
   formatLegalDueMonthDay,
   parseLegalDueDate,
 } from '@/features/lawyerWorkplace/utils/legalDueDate'
+import type { LegalLetterType } from '@/features/lawyerWorkplace'
 import type { KanbanTask } from '../../kanban/kanbanData'
+import { resolveKanbanTypeBadgeProps } from './constants'
 import { KanbanAssigneeChip } from './KanbanAssigneeChip'
 import { KanbanClientChip } from './KanbanClientChip'
 import { KanbanTypeBadge } from './KanbanTypeBadge'
 
 interface KanbanTaskDetailPanelProps {
   task: KanbanTask
+  letterTypes?: LegalLetterType[]
 }
 
-export function KanbanTaskDetailPanel({ task }: KanbanTaskDetailPanelProps) {
+export function KanbanTaskDetailPanel({ task, letterTypes = [] }: KanbanTaskDetailPanelProps) {
   const { t } = useTranslation('common')
   const deadline = parseLegalDueDate(task.deadline)
+  const typeBadge = resolveKanbanTypeBadgeProps(task.letterTypeId, letterTypes, task.type)
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-y-auto bg-gray-50/50 px-5 py-6">
       <div className="mx-auto flex w-full max-w-lg flex-col gap-4">
         <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
           <div className="mb-3 flex items-start justify-between gap-3">
-            <KanbanTypeBadge type={task.type} />
+            <KanbanTypeBadge
+              type={typeBadge.type}
+              label={typeBadge.label}
+              colorId={typeBadge.colorId}
+            />
             <span className="text-light-400 text-[10px] font-medium tracking-wide">{task.id}</span>
           </div>
           <h2 className="text-dark-500 text-[15px] leading-snug font-semibold">{task.title}</h2>

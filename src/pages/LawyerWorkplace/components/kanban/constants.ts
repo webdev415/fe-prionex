@@ -23,6 +23,7 @@ export interface LawyerFilterOption extends KanbanFilterOption<LawyerFilterId> {
 
 export interface TypeFilterOption extends KanbanFilterOption<TypeFilterId> {
   letterTypeId?: string
+  colorId?: string
 }
 
 export const ALL_LAWYERS_FILTER: LawyerFilterOption = {
@@ -149,6 +150,49 @@ export function resolveKanbanBadgeType(letterTypeId: string): KanbanTaskType {
   return isKnownKanbanLetterTypeId(letterTypeId) ? letterTypeId : 'type_pending'
 }
 
+export type KanbanLetterTypeRef = {
+  id: string
+  slug?: string
+  name: string
+  color_id?: string
+}
+
+/** Match a task letter_type_id against settings by id or slug. */
+export function findKanbanLetterType(
+  letterTypes: KanbanLetterTypeRef[],
+  letterTypeId: string | null | undefined
+): KanbanLetterTypeRef | undefined {
+  if (!letterTypeId) return undefined
+  return (
+    letterTypes.find((letterType) => letterType.id === letterTypeId) ??
+    letterTypes.find((letterType) => letterType.slug === letterTypeId)
+  )
+}
+
+export function resolveKanbanTypeBadgeProps(
+  letterTypeId: string | null | undefined,
+  letterTypes: KanbanLetterTypeRef[],
+  fallbackType: KanbanTaskType = 'unclassified'
+): { type: KanbanTaskType; label?: string; colorId?: string } {
+  const letterType = findKanbanLetterType(letterTypes, letterTypeId)
+  if (!letterType) {
+    return { type: fallbackType }
+  }
+
+  const badgeType =
+    (letterType.slug && isKnownKanbanLetterTypeId(letterType.slug) ? letterType.slug : undefined) ??
+    (isKnownKanbanLetterTypeId(letterType.id) ? letterType.id : undefined) ??
+    (fallbackType !== 'unclassified' && fallbackType !== 'type_pending'
+      ? fallbackType
+      : 'type_pending')
+
+  return {
+    type: badgeType,
+    label: letterType.name,
+    colorId: letterType.color_id,
+  }
+}
+
 export function getAssigneeColour(userId: number | null, initials: string): string {
   const seed =
     userId ?? initials.split('').reduce((total, character) => total + character.charCodeAt(0), 0)
@@ -157,7 +201,7 @@ export function getAssigneeColour(userId: number | null, initials: string): stri
 }
 
 export function buildTypeFilterOptions(
-  letterTypes: { id: string; name: string }[]
+  letterTypes: { id: string; name: string; color_id?: string }[]
 ): TypeFilterOption[] {
   const dynamicOptions = letterTypes.map((letterType) => ({
     id: letterType.id,
@@ -165,6 +209,7 @@ export function buildTypeFilterOptions(
     fallback: letterType.name,
     label: letterType.name,
     letterTypeId: letterType.id,
+    colorId: letterType.color_id,
   }))
 
   return [

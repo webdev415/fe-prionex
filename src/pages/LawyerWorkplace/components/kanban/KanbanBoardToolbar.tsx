@@ -57,6 +57,7 @@ export function KanbanBoardToolbar({
         <KanbanTypeBadge
           type={resolveKanbanBadgeType(letterTypeId)}
           label={option.label ?? option.fallback}
+          colorId={option.colorId}
         />
       )
     },
