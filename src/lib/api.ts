@@ -91,6 +91,9 @@ export const getAccessToken = () => {
 // ---------------------------------------------------------------------------
 let onAuthCleared: (() => void) | null = null
 let onAuthenticatedSuccess: (() => void) | null = null
+// One-shot callbacks fired when auth-service is reachable again (a successful
+// /users/* or /auth/* response) — used to dismiss the "reconnecting" toast.
+let onceAuthSuccess: Array<() => void> = []
 
 /** Register a callback fired whenever the session is invalidated (401 / cross-tab logout). */
 export const registerOnAuthCleared = (cb: (() => void) | null) => {
@@ -100,6 +103,11 @@ export const registerOnAuthCleared = (cb: (() => void) | null) => {
 /** Register a callback fired on every successful (non-/auth/validate) response. */
 export const registerOnAuthenticatedSuccess = (cb: (() => void) | null) => {
   onAuthenticatedSuccess = cb
+}
+
+/** Run `cb` once, the next time auth-service responds successfully. */
+export const runOnceOnNextAuthSuccess = (cb: () => void) => {
+  onceAuthSuccess.push(cb)
 }
 
 /**
@@ -172,6 +180,14 @@ function isTransientFailure(error: AxiosError): boolean {
   return Boolean(error.code && TRANSIENT_RETRY_CODES.has(error.code))
 }
 
+/**
+ * A DEFINITIVE auth failure = the server actively rejected the token (HTTP 401).
+ * Everything else (network error, timeout, 5xx, unknown) is transient/unreachable
+ * and must NOT be treated as an invalid session.
+ */
+export const isDefinitiveAuthFailure = (e: unknown): boolean =>
+  axios.isAxiosError(e) && e.response?.status === 401
+
 function shouldRetryTransient(
   error: AxiosError,
   config: RetryableRequestConfig | undefined
@@ -204,6 +220,22 @@ api.interceptors.response.use(
     const url = response.config?.url || ''
     if (!url.includes('/auth/validate') && onAuthenticatedSuccess) {
       onAuthenticatedSuccess()
+    }
+    // Fire one-shot callbacks only when auth-service itself responds. Other
+    // services stay up during an auth-only outage, so "any success" would
+    // wrongly signal recovery; a /users/* or /auth/* success is the real
+    // "auth is back" signal. Clear the queue before running (no re-loop) and
+    // guard each callback so a throwing hook can't fail a real response.
+    if ((url.includes('/users/') || url.includes('/auth/')) && onceAuthSuccess.length) {
+      const queued = onceAuthSuccess
+      onceAuthSuccess = []
+      queued.forEach((cb) => {
+        try {
+          cb()
+        } catch {
+          /* a side-task must never break a real response */
+        }
+      })
     }
     return response
   },
