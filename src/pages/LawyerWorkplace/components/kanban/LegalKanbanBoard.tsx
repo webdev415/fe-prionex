@@ -70,9 +70,7 @@ export function LegalKanbanBoard() {
   const { data: lawyersData } = useLegalLawyers({ scopedToActiveProject: true })
   const { data: letterTypesData } = useLegalLetterTypes()
   const [searchParams, setSearchParams] = useSearchParams()
-  const [deadlineFilter, setDeadlineFilter] = useState<DeadlineFilter>(() =>
-    parseTaskIdFromSearch(searchParams) != null ? 'this_month' : 'this_week'
-  )
+  const [deadlineFilter, setDeadlineFilter] = useState<DeadlineFilter>('all')
   const [lawyerFilter, setLawyerFilter] = useState<LawyerFilterId>('all')
   const [typeFilter, setTypeFilter] = useState<TypeFilterId>('all')
   const [createTaskOpen, setCreateTaskOpen] = useState(false)
@@ -218,12 +216,12 @@ export function LegalKanbanBoard() {
   )
 
   const hasActiveFilters =
-    lawyerFilter !== 'all' || typeFilter !== 'all' || deadlineFilter !== 'this_week'
+    lawyerFilter !== 'all' || typeFilter !== 'all' || deadlineFilter !== 'all'
 
   const clearFilters = () => {
     setLawyerFilter('all')
     setTypeFilter('all')
-    setDeadlineFilter('this_week')
+    setDeadlineFilter('all')
     setLocalOverrides(null)
   }
 

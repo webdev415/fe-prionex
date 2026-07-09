@@ -677,6 +677,7 @@
         "copyKey": "Copy task key",
         "scrollNavigator": "Scroll kanban columns",
         "filters": {
+          "all": "All tasks",
           "thisWeek": "Due this week",
           "thisMonth": "Due this month",
           "allLawyers": "All Lawyers",

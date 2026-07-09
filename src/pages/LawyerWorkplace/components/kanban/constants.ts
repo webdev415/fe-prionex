@@ -2,7 +2,7 @@ import type { KanbanColumnDef, KanbanTaskType, KanbanTaskPriority } from '../../
 
 export type { KanbanTaskPriority }
 
-export type DeadlineFilter = 'this_week' | 'this_month'
+export type DeadlineFilter = 'all' | 'this_week' | 'this_month'
 
 export type LawyerFilterId = 'all' | string
 
@@ -194,6 +194,11 @@ export const DEADLINE_FILTERS: {
   key: string
   fallback: string
 }[] = [
+  {
+    id: 'all',
+    key: 'pages.lawyerWorkplace.kanban.filters.all',
+    fallback: 'All tasks',
+  },
   {
     id: 'this_week',
     key: 'pages.lawyerWorkplace.kanban.filters.thisWeek',

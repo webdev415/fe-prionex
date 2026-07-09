@@ -256,6 +256,9 @@ function endOfMonth(date: Date): Date {
 }
 
 export function matchesDeadlineFilter(task: KanbanTask, filter: DeadlineFilter): boolean {
+  if (filter === 'all') {
+    return true
+  }
   if (task.columnId === 'overdue' || task.columnId === 'completed') {
     return true
   }
