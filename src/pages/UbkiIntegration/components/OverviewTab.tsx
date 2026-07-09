@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import {
   MdEdit,
+  MdCheck,
   MdOutlineWifiTethering,
   MdSync,
   MdOutlineDescription,
@@ -15,18 +16,60 @@ import {
   MultiCheckboxDropdown,
   type MultiCheckboxOption,
 } from '@/pages/Training/components/MultiCheckboxDropdown'
+import { type SubmissionLogRow, type SubmissionStatus, type UbkiEnv } from '../mockData'
 import {
-  MOCK_CONNECTION,
-  MOCK_KPIS,
-  mockDetailFor,
-  type SubmissionLogRow,
-  type SubmissionStatus,
-  type UbkiEnv,
-} from '../mockData'
-import { useUbkiLogs, mapLogItemToRow } from '../api'
+  useUbkiLogs,
+  mapLogItemToRow,
+  useUbkiKpis,
+  useUbkiConnection,
+  useTestUbkiConnection,
+  useUpdateUbkiConnection,
+  type UbkiTestResult,
+  type UbkiConnectionUpdate,
+} from '../api'
 import { SubmissionDrawer } from './SubmissionDrawer'
 
 const PERIODS = ['Today', 'Yesterday', 'Last 7 days', 'Last 30 days', 'Custom range'] as const
+
+/** Map a period label to a from/to ISO range for the KPIs query. */
+function periodRange(period: (typeof PERIODS)[number]): { date_from?: string; date_to?: string } {
+  const now = new Date()
+  const sod = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0)
+  const eod = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59)
+  const back = (n: number) => {
+    const d = new Date(now)
+    d.setDate(now.getDate() - n)
+    return d
+  }
+  switch (period) {
+    case 'Today':
+      return { date_from: sod(now).toISOString(), date_to: now.toISOString() }
+    case 'Yesterday': {
+      const y = back(1)
+      return { date_from: sod(y).toISOString(), date_to: eod(y).toISOString() }
+    }
+    case 'Last 7 days':
+      return { date_from: back(7).toISOString(), date_to: now.toISOString() }
+    case 'Last 30 days':
+    default:
+      // 'Custom range' has no picker yet → treat as last 30 days.
+      return { date_from: back(30).toISOString(), date_to: now.toISOString() }
+  }
+}
+
+const fmtPct = (p: number) => `${p >= 0 ? '+' : ''}${p}%`
+const deltaClass = (p: number) => (p >= 0 ? 'text-success-600' : 'text-error-600')
+
+const EMPTY_KPIS = {
+  total_submissions: 0,
+  total_delta_pct: 0,
+  success: 0,
+  success_delta_pct: 0,
+  failed: 0,
+  failed_error_codes: 0,
+  pending: 0,
+  opt_out: 0,
+}
 
 const STATUS_STYLES: Record<SubmissionStatus, string> = {
   success: 'bg-success-50 text-success-700',
@@ -94,11 +137,48 @@ const MODE_OPTIONS: MultiCheckboxOption<string>[] = [
 ]
 
 export function OverviewTab() {
-  const conn = MOCK_CONNECTION
-  const kpis = MOCK_KPIS
-  const [env, setEnv] = useState<UbkiEnv>(conn.env)
+  // Connection config + live Test-connection (real UBKI auth via the ubki-service).
+  const { data: conn } = useUbkiConnection()
+  const testConn = useTestUbkiConnection()
+  const updateConn = useUpdateUbkiConnection()
+  const [testResult, setTestResult] = useState<UbkiTestResult | null>(null)
   const [editing, setEditing] = useState(false)
-  const [period, setPeriod] = useState<(typeof PERIODS)[number]>('Last 7 days')
+  const [form, setForm] = useState({
+    environment: 'test',
+    endpoint_url: '',
+    login: '',
+    password: '',
+  })
+  const env: UbkiEnv =
+    (editing ? form.environment : conn?.environment) === 'production' ? 'production' : 'test'
+
+  const startEdit = () => {
+    setForm({
+      environment: conn?.environment === 'production' ? 'production' : 'test',
+      endpoint_url: conn?.auth_url ?? '',
+      // Don't seed a masked service login as an editable value.
+      login: conn?.login && !conn.login.includes('•') ? conn.login : '',
+      password: '',
+    })
+    setEditing(true)
+  }
+  const saveEdit = () => {
+    const payload: UbkiConnectionUpdate = {
+      environment: form.environment,
+      endpoint_url: form.endpoint_url,
+      login: form.login,
+    }
+    if (form.password) payload.password = form.password
+    updateConn.mutate(payload, { onSuccess: () => setEditing(false) })
+  }
+
+  const [period, setPeriod] = useState<(typeof PERIODS)[number]>('Last 30 days')
+
+  // KPI cards — real stats for the selected period (memoised range so the query
+  // key is stable per period, not recomputed every render).
+  const kpiRange = useMemo(() => periodRange(period), [period])
+  const { data: kpiData } = useUbkiKpis(kpiRange)
+  const kpis = kpiData ?? EMPTY_KPIS
   const [search, setSearch] = useState('')
   const [typeF, setTypeF] = useState<string[]>([])
   const [statusF, setStatusF] = useState<string[]>([])
@@ -225,18 +305,35 @@ export function OverviewTab() {
       <div className="rounded-2xl border border-gray-200 bg-white p-5">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-dark-500 text-sm font-semibold">Connection Settings</h2>
-          <Button
-            variant="outline"
-            size="sm"
-            leftIcon={<MdEdit size={14} />}
-            onClick={() => setEditing((v) => !v)}
-          >
-            {editing ? 'Done' : 'Edit'}
-          </Button>
+          {editing ? (
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={updateConn.isPending}
+                onClick={() => setEditing(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                leftIcon={<MdCheck size={14} />}
+                disabled={updateConn.isPending}
+                onClick={saveEdit}
+              >
+                {updateConn.isPending ? 'Saving…' : 'Done'}
+              </Button>
+            </div>
+          ) : (
+            <Button variant="outline" size="sm" leftIcon={<MdEdit size={14} />} onClick={startEdit}>
+              Edit
+            </Button>
+          )}
         </div>
 
         <div className="flex flex-wrap items-end gap-4">
-          {/* Connection — segmented radio control (Test / Production) */}
+          {/* Environment — editable radio when in edit mode. */}
           <div className="min-w-[210px]">
             <label className="mb-1 block text-xs font-medium text-gray-500">Connection</label>
             <div className="inline-flex gap-1 rounded-lg border border-gray-200 bg-white p-1">
@@ -247,10 +344,10 @@ export function OverviewTab() {
                     key={e}
                     type="button"
                     disabled={!editing}
-                    onClick={() => setEnv(e)}
+                    onClick={() => setForm((f) => ({ ...f, environment: e }))}
                     className={`inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
-                      active ? 'bg-secondary-800 text-white' : 'text-gray-600 hover:bg-gray-50'
-                    } ${!editing ? 'cursor-default' : ''}`}
+                      active ? 'bg-secondary-800 text-white' : 'text-gray-400'
+                    } ${editing ? 'cursor-pointer' : 'cursor-default'}`}
                   >
                     <span
                       className={`flex h-3.5 w-3.5 items-center justify-center rounded-full border-2 ${
@@ -269,19 +366,25 @@ export function OverviewTab() {
           <div className="min-w-[220px] flex-1">
             <label className="mb-1 block text-xs font-medium text-gray-500">Endpoint URL</label>
             <input
-              disabled={!editing}
-              defaultValue={conn.endpointUrl}
-              className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-xs text-gray-700 disabled:bg-gray-50"
+              readOnly={!editing}
+              value={editing ? form.endpoint_url : (conn?.auth_url ?? '')}
+              onChange={(e) => setForm((f) => ({ ...f, endpoint_url: e.target.value }))}
+              className={`h-10 w-full rounded-lg border border-gray-200 px-3 text-xs text-gray-700 ${
+                editing ? 'focus:border-primary-500 bg-white focus:outline-none' : 'bg-gray-50'
+              }`}
             />
           </div>
 
           <div className="min-w-[160px] flex-1">
             <label className="mb-1 block text-xs font-medium text-gray-500">Login</label>
             <input
-              disabled={!editing}
-              defaultValue={conn.login}
-              placeholder="Enter your login"
-              className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-xs text-gray-700 disabled:bg-gray-50"
+              readOnly={!editing}
+              value={editing ? form.login : (conn?.login ?? '—')}
+              placeholder={editing ? 'Enter your login' : undefined}
+              onChange={(e) => setForm((f) => ({ ...f, login: e.target.value }))}
+              className={`h-10 w-full rounded-lg border border-gray-200 px-3 text-xs text-gray-700 ${
+                editing ? 'focus:border-primary-500 bg-white focus:outline-none' : 'bg-gray-50'
+              }`}
             />
           </div>
 
@@ -289,33 +392,100 @@ export function OverviewTab() {
             <label className="mb-1 block text-xs font-medium text-gray-500">Password</label>
             <input
               type="password"
-              disabled={!editing}
-              defaultValue="password"
-              className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-xs text-gray-700 disabled:bg-gray-50"
+              readOnly={!editing}
+              value={editing ? form.password : '********'}
+              placeholder={editing ? 'Leave blank to keep current' : undefined}
+              onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
+              className={`h-10 w-full rounded-lg border border-gray-200 px-3 text-xs text-gray-700 ${
+                editing ? 'focus:border-primary-500 bg-white focus:outline-none' : 'bg-gray-50'
+              }`}
             />
           </div>
 
-          {/* Test connection — full dark button on the right */}
-          {/* TODO(ubki-backend): POST test-connection endpoint */}
+          {/* Test connection — performs a real UBKI authorization. */}
           <Button
             variant="secondary"
             leftIcon={<MdOutlineWifiTethering size={16} />}
             className="h-10"
+            disabled={testConn.isPending || editing}
+            onClick={() => testConn.mutate(undefined, { onSuccess: setTestResult })}
           >
-            Test connection
+            {testConn.isPending ? 'Testing…' : 'Test connection'}
           </Button>
         </div>
+        {updateConn.isError && (
+          <p className="text-error-600 mt-2 text-xs">Failed to save connection settings.</p>
+        )}
 
-        {/* status strip */}
-        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-500">
-          <span className="text-success-700 inline-flex items-center gap-1.5 font-medium">
-            <span className="bg-success-500 h-1.5 w-1.5 rounded-full" />
-            {conn.connected ? 'Connected' : 'Disconnected'}
-          </span>
-          <span>Session ID: {conn.sessionId}</span>
-          <span>Last checked: {conn.lastChecked}</span>
-          <span>Auth expires in {conn.authExpiresIn}</span>
-        </div>
+        {/* status strip — last test result, else the cached-session config. */}
+        {(() => {
+          const connected = testResult ? testResult.connected : (conn?.connected ?? false)
+          const sessionId = testResult?.session_id ?? conn?.session_id ?? null
+          const expiresAt = testResult?.expires_at ?? conn?.expires_at ?? null
+          return (
+            <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-500">
+              <span
+                className={`inline-flex items-center gap-1.5 font-medium ${
+                  connected
+                    ? 'text-success-700'
+                    : testResult?.error
+                      ? 'text-error-600'
+                      : 'text-gray-500'
+                }`}
+              >
+                <span
+                  className={`h-1.5 w-1.5 rounded-full ${
+                    connected
+                      ? 'bg-success-500'
+                      : testResult?.error
+                        ? 'bg-error-500'
+                        : 'bg-gray-400'
+                  }`}
+                />
+                {connected ? 'Connected' : testResult ? 'Connection failed' : 'Not tested'}
+              </span>
+              {sessionId && (
+                <>
+                  <span className="h-3 w-px bg-gray-300" />
+                  <span>
+                    Session ID: <span className="text-dark-500 font-medium">{sessionId}</span>
+                  </span>
+                </>
+              )}
+              {testResult && (
+                <>
+                  <span className="h-3 w-px bg-gray-300" />
+                  <span>
+                    Last checked: <span className="text-dark-500 font-medium">just now</span>
+                  </span>
+                </>
+              )}
+              {expiresAt && (
+                <>
+                  <span className="h-3 w-px bg-gray-300" />
+                  <span>
+                    Auth expires:{' '}
+                    <span className="text-dark-500 font-medium">
+                      {new Date(expiresAt).toLocaleString()}
+                    </span>
+                  </span>
+                </>
+              )}
+              {testResult?.error && (
+                <>
+                  <span className="h-3 w-px bg-gray-300" />
+                  <span className="text-error-600">{testResult.error}</span>
+                </>
+              )}
+              {!conn?.credentials_configured && (
+                <>
+                  <span className="h-3 w-px bg-gray-300" />
+                  <span className="text-error-600">Credentials not configured</span>
+                </>
+              )}
+            </div>
+          )
+        })()}
       </div>
 
       {/* ── Period selector ─────────────────────────────────────────────── */}
@@ -341,23 +511,23 @@ export function OverviewTab() {
         <KpiCard
           icon={<Icons.File size={18} />}
           label="Total submissions"
-          value={kpis.totalSubmissions.toLocaleString()}
-          trend
-          sub={`+${kpis.totalDeltaPct}% vs prior period`}
-          subClass="text-success-600"
+          value={kpis.total_submissions.toLocaleString()}
+          trend={kpis.total_delta_pct >= 0}
+          sub={`${fmtPct(kpis.total_delta_pct)} vs prior period`}
+          subClass={deltaClass(kpis.total_delta_pct)}
         />
         <KpiCard
           icon={<Icons.Checkmark size={18} />}
           label="Success"
           value={kpis.success.toLocaleString()}
-          sub={`+${kpis.successDeltaPct}%`}
-          subClass="text-success-600"
+          sub={fmtPct(kpis.success_delta_pct)}
+          subClass={deltaClass(kpis.success_delta_pct)}
         />
         <KpiCard
           icon={<Icons.FileRemove size={18} />}
           label="Failed"
           value={String(kpis.failed)}
-          sub={`${kpis.failedErrorCodes} different error codes`}
+          sub={`${kpis.failed_error_codes} different error codes`}
           subClass="text-error-600"
         />
         <KpiCard
@@ -369,7 +539,7 @@ export function OverviewTab() {
         <KpiCard
           icon={<Icons.Cancel01 size={18} />}
           label="Opt-out clients"
-          value={String(kpis.optOut)}
+          value={String(kpis.opt_out)}
           sub="excluded per law"
         />
       </div>
@@ -518,10 +688,7 @@ export function OverviewTab() {
       </div>
 
       {/* ── Row drawer ──────────────────────────────────────────────────── */}
-      <SubmissionDrawer
-        detail={selected ? mockDetailFor(selected) : null}
-        onClose={() => setSelected(null)}
-      />
+      <SubmissionDrawer logId={selected?.id ?? null} onClose={() => setSelected(null)} />
     </div>
   )
 }

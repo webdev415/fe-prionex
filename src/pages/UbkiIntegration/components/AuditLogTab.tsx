@@ -3,32 +3,22 @@ import { MdOutlineFileDownload, MdSync, MdInfoOutline } from 'react-icons/md'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { Button } from '@/components/ui/Button'
 import { Pagination } from '@/components/ui/Pagination'
+import { TableSkeleton } from '@/components/ui/TableSkeleton'
 import { DateSelect } from '@/components/ui/DateSelect'
+import { formatDateTime } from '@/lib/formatters'
 import {
   MultiCheckboxDropdown,
   type MultiCheckboxOption,
 } from '@/pages/Training/components/MultiCheckboxDropdown'
-import { MOCK_AUDIT, type AuditEntry, type AuditStatus } from '../mockData'
+import { useUbkiAudit, exportUbkiAudit, type AuditLogItem } from '../api'
 
-/** Compact day key (YYYYMMDD) for inclusive from/to comparison. */
-const dayNum = (d: Date) => d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate()
-
-/** Mock rows store the date as "DD.MM.YYYY\nHH:MM" — parse the day part. */
-function parseRowDate(dateTime: string): Date | null {
-  const first = dateTime.split('\n')[0].trim()
-  const m = first.match(/^(\d{2})\.(\d{2})\.(\d{4})$/)
-  if (!m) return null
-  return new Date(+m[3], +m[2] - 1, +m[1])
-}
-
-const STATUS_STYLES: Record<AuditStatus, string> = {
+const STATUS_STYLES: Record<string, string> = {
   success: 'bg-success-50 text-success-700',
   failed: 'bg-error-50 text-error-700',
   pending: 'bg-warning-50 text-warning-700',
 }
 
-// Controlled vocabulary of event categories (matches the design). Each audit row
-// is bucketed into one of these for the "event type" filter.
+// Event-type vocabulary (server stores this on each row → used directly).
 const EVENT_TYPE_OPTIONS: MultiCheckboxOption<string>[] = [
   { value: 'Settings changed', label: 'Settings changed' },
   { value: 'Credentials updated', label: 'Credentials updated' },
@@ -37,17 +27,21 @@ const EVENT_TYPE_OPTIONS: MultiCheckboxOption<string>[] = [
   { value: 'Bulk action triggered', label: 'Bulk action triggered' },
 ]
 
-function eventCategory(event: string): string {
-  const e = event.toLowerCase()
-  if (e.includes('credential')) return 'Credentials updated'
-  if (e.includes('opt-out')) return 'Opt-out added/removed'
-  if (e.includes('bulk')) return 'Bulk action triggered'
-  if (e.includes('connection') || e.includes('tested')) return 'Connection tested'
-  return 'Settings changed' // settings / retry policy / everything else
+const dayNum = (d: Date) => d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate()
+
+interface Row {
+  id: number
+  dateTime: string
+  ts: Date | null
+  event: string
+  eventType: string
+  performedBy: string
+  details: string
+  status: string
 }
 
-// TODO(ubki-backend): UBKI-scoped audit endpoint (config changes / admin actions).
 export function AuditLogTab() {
+  const { data, isLoading, isError } = useUbkiAudit()
   const [search, setSearch] = useState('')
   const [eventTypes, setEventTypes] = useState<string[]>([])
   const [actors, setActors] = useState<string[]>([])
@@ -55,32 +49,43 @@ export function AuditLogTab() {
   const [dateTo, setDateTo] = useState<Date | null>(null)
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
+  const [exporting, setExporting] = useState(false)
 
-  // Actors come straight from the data (distinct performers). "System" is shown
-  // as "System (Automatic)" to match the design.
+  const allRows = useMemo<Row[]>(
+    () =>
+      (data ?? []).map((a: AuditLogItem) => ({
+        id: a.id,
+        dateTime: formatDateTime(a.created_at),
+        ts: a.created_at ? new Date(a.created_at) : null,
+        event: a.event,
+        eventType: a.event_type,
+        performedBy:
+          a.performed_by_name ?? (a.performed_by != null ? `User #${a.performed_by}` : 'System'),
+        details: a.details ?? '—',
+        status: a.status,
+      })),
+    [data]
+  )
+
   const actorOptions = useMemo<MultiCheckboxOption<string>[]>(() => {
     const seen = new Set<string>()
     const opts: MultiCheckboxOption<string>[] = []
-    for (const r of MOCK_AUDIT) {
+    for (const r of allRows) {
       if (seen.has(r.performedBy)) continue
       seen.add(r.performedBy)
-      opts.push({
-        value: r.performedBy,
-        label: r.performedBy === 'System' ? 'System (Automatic)' : r.performedBy,
-      })
+      opts.push({ value: r.performedBy, label: r.performedBy })
     }
     return opts
-  }, [])
+  }, [allRows])
 
   const rows = useMemo(() => {
     const q = search.trim().toLowerCase()
-    return MOCK_AUDIT.filter((r) => {
-      if (eventTypes.length && !eventTypes.includes(eventCategory(r.event))) return false
+    return allRows.filter((r) => {
+      if (eventTypes.length && !eventTypes.includes(r.eventType)) return false
       if (actors.length && !actors.includes(r.performedBy)) return false
       if (dateFrom || dateTo) {
-        const rd = parseRowDate(r.dateTime)
-        if (dateFrom && rd && dayNum(rd) < dayNum(dateFrom)) return false
-        if (dateTo && rd && dayNum(rd) > dayNum(dateTo)) return false
+        if (dateFrom && r.ts && dayNum(r.ts) < dayNum(dateFrom)) return false
+        if (dateTo && r.ts && dayNum(r.ts) > dayNum(dateTo)) return false
       }
       if (
         q &&
@@ -91,7 +96,7 @@ export function AuditLogTab() {
         return false
       return true
     })
-  }, [search, eventTypes, actors, dateFrom, dateTo])
+  }, [allRows, search, eventTypes, actors, dateFrom, dateTo])
 
   const resetFilters = () => {
     setSearch('')
@@ -102,7 +107,26 @@ export function AuditLogTab() {
     setPage(1)
   }
 
-  const columns: Column<AuditEntry>[] = [
+  const handleExport = async () => {
+    setExporting(true)
+    try {
+      const blob = await exportUbkiAudit()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'ubki-audit-log.csv'
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch {
+      window.alert('Export failed. Please try again.')
+    } finally {
+      setExporting(false)
+    }
+  }
+
+  const pageRows = rows.slice((page - 1) * pageSize, page * pageSize)
+
+  const columns: Column<Row>[] = [
     {
       key: 'dateTime',
       header: 'Date / time',
@@ -130,7 +154,7 @@ export function AuditLogTab() {
       header: 'Status',
       render: (r) => (
         <span
-          className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium capitalize ${STATUS_STYLES[r.status]}`}
+          className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium capitalize ${STATUS_STYLES[r.status] ?? 'bg-gray-100 text-gray-600'}`}
         >
           {r.status}
         </span>
@@ -141,7 +165,7 @@ export function AuditLogTab() {
   return (
     <div className="flex flex-col gap-4">
       <div className="rounded-2xl border border-gray-200 bg-white p-5">
-        {/* Card header — title + subtitle + Export, inside the card (matches design). */}
+        {/* Card header — title + subtitle + Export, inside the card. */}
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="text-dark-500 flex items-center gap-1.5 text-sm font-semibold">
@@ -152,9 +176,14 @@ export function AuditLogTab() {
               All configuration changes and admin actions for UBKI integration.
             </p>
           </div>
-          {/* TODO(ubki-backend): export audit CSV */}
-          <Button variant="secondary" size="sm" leftIcon={<MdOutlineFileDownload size={14} />}>
-            Export
+          <Button
+            variant="secondary"
+            size="sm"
+            leftIcon={<MdOutlineFileDownload size={14} />}
+            disabled={exporting || !rows.length}
+            onClick={handleExport}
+          >
+            {exporting ? 'Exporting…' : 'Export'}
           </Button>
         </div>
 
@@ -213,7 +242,7 @@ export function AuditLogTab() {
               setSearch(e.target.value)
               setPage(1)
             }}
-            placeholder="Search by client / TIN / contract…"
+            placeholder="Search by event / actor / details…"
             className="focus:border-primary-500 h-[45px] min-w-[200px] flex-1 rounded-full border border-gray-400 bg-white px-4 text-xs text-gray-700 focus:outline-none"
           />
           <Button
@@ -227,19 +256,33 @@ export function AuditLogTab() {
           </Button>
         </div>
 
-        <DataTable columns={columns} data={rows} className="w-full" />
-        <div className="mt-4">
-          <Pagination
-            currentPage={page}
-            totalPages={Math.max(1, Math.ceil(rows.length / pageSize))}
-            pageSize={pageSize}
-            onPageChange={setPage}
-            onPageSizeChange={(s) => {
-              setPageSize(s)
-              setPage(1)
-            }}
-          />
-        </div>
+        {isLoading ? (
+          <TableSkeleton columns={5} rows={5} />
+        ) : isError ? (
+          <div className="text-error-600 py-16 text-center text-sm">
+            Failed to load the audit log.
+          </div>
+        ) : rows.length === 0 ? (
+          <div className="py-16 text-center text-sm text-gray-500">
+            No audit entries yet. Saving settings or changing the opt-out list will appear here.
+          </div>
+        ) : (
+          <>
+            <DataTable columns={columns} data={pageRows} className="w-full" />
+            <div className="mt-4">
+              <Pagination
+                currentPage={page}
+                totalPages={Math.max(1, Math.ceil(rows.length / pageSize))}
+                pageSize={pageSize}
+                onPageChange={setPage}
+                onPageSizeChange={(s) => {
+                  setPageSize(s)
+                  setPage(1)
+                }}
+              />
+            </div>
+          </>
+        )}
       </div>
     </div>
   )

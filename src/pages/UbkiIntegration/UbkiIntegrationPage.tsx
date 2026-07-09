@@ -6,23 +6,18 @@ import {
   MdOutlineHistory,
   MdInfoOutline,
 } from 'react-icons/md'
-import { MOCK_KPIS } from './mockData'
 import { OverviewTab } from './components/OverviewTab'
 import { SettingsTab } from './components/SettingsTab'
 import { OptOutTab } from './components/OptOutTab'
 import { AuditLogTab } from './components/AuditLogTab'
+import { useOptOutClients } from './api'
 
 type TabKey = 'overview' | 'settings' | 'optout' | 'audit'
 
-const TABS: { key: TabKey; label: string; icon: React.ReactNode; badge?: number }[] = [
+const TABS: { key: TabKey; label: string; icon: React.ReactNode }[] = [
   { key: 'overview', label: 'Overview', icon: <MdOutlineDashboard size={16} /> },
   { key: 'settings', label: 'Settings', icon: <MdOutlineSettings size={16} /> },
-  {
-    key: 'optout',
-    label: 'Opt-out clients',
-    icon: <MdOutlinePersonOff size={16} />,
-    badge: MOCK_KPIS.optOut,
-  },
+  { key: 'optout', label: 'Opt-out clients', icon: <MdOutlinePersonOff size={16} /> },
   { key: 'audit', label: 'Audit log', icon: <MdOutlineHistory size={16} /> },
 ]
 
@@ -35,6 +30,9 @@ const TABS: { key: TabKey; label: string; icon: React.ReactNode; badge?: number 
  */
 export function UbkiIntegrationPage() {
   const [tab, setTab] = useState<TabKey>('overview')
+  // Real opt-out count for the tab badge.
+  const { data: optOut } = useOptOutClients()
+  const optOutCount = optOut?.length ?? 0
 
   return (
     <div className="flex flex-col gap-4">
@@ -65,9 +63,9 @@ export function UbkiIntegrationPage() {
             >
               {t.icon}
               {t.label}
-              {t.badge != null && (
+              {t.key === 'optout' && optOutCount > 0 && (
                 <span className="rounded-full bg-gray-100 px-1.5 py-0.5 text-xs font-medium text-gray-600">
-                  {t.badge}
+                  {optOutCount}
                 </span>
               )}
             </button>
