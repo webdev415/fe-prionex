@@ -30,3 +30,21 @@ export function legalOverdueDueDateIso(): string {
   date.setHours(12, 0, 0, 0)
   return date.toISOString()
 }
+
+const KYIV_TIME_ZONE = 'Europe/Kyiv'
+
+function kyivCalendarDateKey(value: Date): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: KYIV_TIME_ZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(value)
+}
+
+/** True when the due calendar day (Europe/Kyiv) is strictly before today (Kyiv). */
+export function isLegalDueDateOverdue(deadlineIso: string | null | undefined): boolean {
+  const due = parseLegalDueDate(deadlineIso)
+  if (!due) return false
+  return kyivCalendarDateKey(new Date()) > kyivCalendarDateKey(due)
+}

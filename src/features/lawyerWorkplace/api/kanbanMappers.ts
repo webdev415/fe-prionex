@@ -5,7 +5,7 @@ import type {
   KanbanTaskType,
 } from '@/pages/LawyerWorkplace/kanban/kanbanData'
 import type { DeadlineFilter } from '@/pages/LawyerWorkplace/components/kanban/constants'
-import { legalOverdueDueDateIso } from '../utils/legalDueDate'
+import { isLegalDueDateOverdue, legalOverdueDueDateIso } from '../utils/legalDueDate'
 import type { LegalKanbanTaskItem, LegalLawyer } from './types'
 
 const KNOWN_TYPES = new Set<KanbanTaskType>([
@@ -205,7 +205,7 @@ function resolveKanbanColumn(item: LegalKanbanTaskItem, taskType: KanbanTaskType
   if (taskType === 'unclassified' || taskType === 'type_pending') {
     return 'not_defined'
   }
-  if (item.is_overdue) {
+  if (item.is_overdue || isLegalDueDateOverdue(item.due_date)) {
     return 'overdue'
   }
   return 'in_progress'
