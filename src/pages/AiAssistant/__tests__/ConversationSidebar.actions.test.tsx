@@ -101,6 +101,17 @@ async function openContextMenu(id: number, expectedItemKey: string) {
   await waitFor(() => expect(screen.getByText(expectedItemKey)).toBeInTheDocument())
 }
 
+/** Click the hover kebab and wait for the dropdown menu. */
+async function openKebabMenu(id: number, expectedItemKey: string) {
+  await screen.findByTestId(`conversation-item-${id}`)
+  const kebab = screen.getByTestId(`conversation-menu-${id}`)
+  // Radix DropdownMenuTrigger listens for pointer events; a bare click is flaky in jsdom.
+  fireEvent.pointerDown(kebab, { pointerId: 1, pointerType: 'mouse', button: 0, bubbles: true })
+  fireEvent.pointerUp(kebab, { pointerId: 1, pointerType: 'mouse', button: 0, bubbles: true })
+  fireEvent.click(kebab)
+  await waitFor(() => expect(screen.getByText(expectedItemKey)).toBeInTheDocument())
+}
+
 describe('ConversationSidebar — item actions', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -113,13 +124,10 @@ describe('ConversationSidebar — item actions', () => {
   })
 
   it('opens the menu from the kebab button', async () => {
-    const user = userEvent.setup()
     renderSidebar()
 
-    await screen.findByTestId('conversation-item-41')
-    await user.click(screen.getByTestId('conversation-menu-41'))
+    await openKebabMenu(41, 'pages.aiAssistant.historyPin')
 
-    expect(await screen.findByText('pages.aiAssistant.historyPin')).toBeInTheDocument()
     expect(screen.getByText('pages.aiAssistant.historyRename')).toBeInTheDocument()
     expect(screen.getByText('pages.aiAssistant.historyArchiveAction')).toBeInTheDocument()
   })

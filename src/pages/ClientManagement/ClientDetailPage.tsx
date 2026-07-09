@@ -876,6 +876,12 @@ export function ClientDetailPage() {
           updated_by_user_name: r.updated_by_user_name,
           defaultCallLine: r.default_call_line ?? 'white',
           spamAllowed: r.spam_allowed !== false,
+          blocking: r.blocking ?? {
+            blocks_calls: false,
+            blocks_sms: false,
+            blocks_spam: false,
+            reasons: [],
+          },
         })
         const fromApi = (profile.recommenders ?? []).map(mapRow)
         const includedIds = new Set(fromApi.map((r) => r.id))
@@ -897,6 +903,12 @@ export function ClientDetailPage() {
             updated_by_user_name: p.updated_by_user_name,
             defaultCallLine: p.default_call_line ?? 'white',
             spamAllowed: p.spam_allowed !== false,
+            blocking: p.blocking ?? {
+              blocks_calls: false,
+              blocks_sms: false,
+              blocks_spam: false,
+              reasons: [],
+            },
           }))
         return [...stripOnly, ...fromApi]
       })(),
@@ -2857,12 +2869,20 @@ export function ClientDetailPage() {
                           </PermissionGuard>
                           <PermissionGuard permissions={ALL_MESSAGING_SEND_PERMISSIONS} mode="any">
                             <button
+                              disabled={phone.blocking.blocks_sms}
                               onClick={() => {
                                 setSelectedPhoneForMessage(phone.number)
                                 setIsSendMessageModalOpen(true)
                               }}
-                              className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 md:h-[20px] md:w-[20px]"
-                              title={t('pages.clients.detail.sendMessage', 'Send message')}
+                              className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-40 md:h-[20px] md:w-[20px]"
+                              title={
+                                phone.blocking.blocks_sms
+                                  ? phone.blocking.reasons
+                                      .filter((r) => r.toLowerCase().includes('sms'))
+                                      .join('; ') ||
+                                    t('pages.contactTags.smsBlocked', 'SMS blocked')
+                                  : t('pages.clients.detail.sendMessage', 'Send message')
+                              }
                             >
                               <Icons.Message01 size={16} className="flex-shrink-0" />
                             </button>
@@ -3954,11 +3974,12 @@ export function ClientDetailPage() {
                                       permission={PERMISSIONS.COMMUNICATION.SEND_SMS}
                                     >
                                       <button
+                                        disabled={contact.blocking?.blocks_sms}
                                         onClick={() => {
                                           setSelectedPhoneForSMS(contact.contactValue)
                                           setIsSendSMSModalOpen(true)
                                         }}
-                                        className="text-primary-500 flex h-[20px] w-[20px] cursor-pointer items-center justify-center hover:opacity-80"
+                                        className="text-primary-500 flex h-[20px] w-[20px] cursor-pointer items-center justify-center hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-40"
                                       >
                                         <Icons.ChatFeedback01 size={16} className="flex-shrink-0" />
                                       </button>
@@ -3968,15 +3989,20 @@ export function ClientDetailPage() {
                                       mode="any"
                                     >
                                       <button
+                                        disabled={contact.blocking?.blocks_sms}
                                         onClick={() => {
                                           setSelectedPhoneForMessage(contact.contactValue)
                                           setIsSendMessageModalOpen(true)
                                         }}
-                                        className="text-primary-500 flex h-[20px] w-[20px] cursor-pointer items-center justify-center hover:opacity-80"
-                                        title={t(
-                                          'pages.clients.detail.sendMessage',
-                                          'Send message'
-                                        )}
+                                        className="text-primary-500 flex h-[20px] w-[20px] cursor-pointer items-center justify-center hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-40"
+                                        title={
+                                          contact.blocking?.blocks_sms
+                                            ? contact.blocking.reasons
+                                                .filter((r) => r.toLowerCase().includes('sms'))
+                                                .join('; ') ||
+                                              t('pages.contactTags.smsBlocked', 'SMS blocked')
+                                            : t('pages.clients.detail.sendMessage', 'Send message')
+                                        }
                                       >
                                         <Icons.Message01 size={16} className="flex-shrink-0" />
                                       </button>
