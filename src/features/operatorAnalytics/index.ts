@@ -7,8 +7,6 @@ export {
   exportScreenTime,
   getHeatmap,
   exportHeatmap,
-  getScriptAnalytics,
-  exportScriptAnalytics,
   operatorAnalyticsService,
 } from './api/operatorAnalyticsService'
 export { TrackingProvider } from './providers/TrackingProvider'
@@ -18,12 +16,10 @@ export { useTrackEvent } from './hooks/useTrackEvent'
 export { useTimeline, timelineKeys } from './hooks/useTimeline'
 export { useScreenTime, screenTimeKeys } from './hooks/useScreenTime'
 export { useHeatmap, heatmapKeys } from './hooks/useHeatmap'
-export { useScriptAnalytics, scriptAnalyticsKeys } from './hooks/useScriptAnalytics'
 export {
   useExportTimeline,
   useExportScreenTime,
   useExportHeatmap,
-  useExportScriptAnalytics,
 } from './hooks/useExportAnalytics'
 export type {
   AnalyticsEventType,
@@ -39,9 +35,6 @@ export type {
   IngestEventsResponse,
   ScreenTimeOperatorDto,
   ScreenTimeResponse,
-  ScriptAnalyticsFlagDto,
-  ScriptAnalyticsOperatorDto,
-  ScriptAnalyticsResponse,
   TimelineEventDto,
   TimelineQuery,
   TimelineResponse,
