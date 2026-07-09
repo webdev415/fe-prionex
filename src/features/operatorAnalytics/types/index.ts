@@ -107,29 +107,3 @@ export interface HeatmapResponse {
 export interface HeatmapFilters extends AnalyticsRangeFilters {
   state_filter?: HeatmapState
 }
-
-export interface ScriptAnalyticsOperatorDto {
-  operator_id: number
-  distribution: Record<string, number>
-  contact_type_split: Record<string, number>
-  no_result_pct: number
-  fast_result_pct: number
-  total_interactions: number
-}
-
-export interface ScriptAnalyticsFlagDto {
-  operator_id: number
-  rule: string
-  value: number
-  threshold: number
-  triggered_at: string
-  detail?: string | null
-}
-
-export interface ScriptAnalyticsResponse {
-  period_from: string
-  period_to: string
-  operators: ScriptAnalyticsOperatorDto[]
-  team_distribution: Record<string, number>
-  flags: ScriptAnalyticsFlagDto[]
-}

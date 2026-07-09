@@ -1,10 +1,5 @@
 import { useMutation } from '@tanstack/react-query'
-import {
-  exportHeatmap,
-  exportScreenTime,
-  exportScriptAnalytics,
-  exportTimeline,
-} from '../api/operatorAnalyticsService'
+import { exportHeatmap, exportScreenTime, exportTimeline } from '../api/operatorAnalyticsService'
 import type { AnalyticsRangeFilters, HeatmapFilters, TimelineQuery } from '../types'
 
 function triggerDownload(blob: Blob, filename: string) {
@@ -45,15 +40,6 @@ export function useExportHeatmap() {
     mutationFn: async (filters: HeatmapFilters) => {
       const blob = await exportHeatmap(filters)
       triggerDownload(blob, `heatmap_${timestampSuffix()}.xlsx`)
-    },
-  })
-}
-
-export function useExportScriptAnalytics() {
-  return useMutation({
-    mutationFn: async (filters: AnalyticsRangeFilters) => {
-      const blob = await exportScriptAnalytics(filters)
-      triggerDownload(blob, `script_analytics_${timestampSuffix()}.xlsx`)
     },
   })
 }

@@ -26,7 +26,6 @@ import { ScreenTimeTab } from './components/ScreenTimeTab'
 import { HeatmapTab } from './components/HeatmapTab'
 import { ScopeSelector } from './components/ScopeSelector'
 // prod-hide START — restore by uncommenting these import lines.
-// import { ScriptAnalyticsTab } from './components/ScriptAnalyticsTab'
 // import { ScoresTab } from './components/scores/ScoresTab'
 // import { InboxTab } from './components/inbox/InboxTab'
 // import { RateDialogueDialog } from './components/inbox/RateDialogueDialog'
@@ -95,11 +94,6 @@ const SUB_TAB_LABEL_KEYS: Record<
     key: 'pages.actionAnalysis.subTabs.heatmap',
     fallback: 'Heatmap',
     permission: PERMISSIONS.ACTION_ANALYSIS.VIEW_ACTIVITY_HEATMAP,
-  },
-  'script-analytics': {
-    key: 'pages.actionAnalysis.subTabs.scriptAnalytics',
-    fallback: 'Script Analytics',
-    permission: PERMISSIONS.ACTION_ANALYSIS.VIEW_SCRIPT_ANALYTICS,
   },
 }
 
@@ -455,9 +449,6 @@ export function ActionAnalysisPage() {
             {activeSubTab === 'timeline' && <TimelineTab />}
             {activeSubTab === 'screen-time' && <ScreenTimeTab />}
             {activeSubTab === 'heatmap' && <HeatmapTab />}
-            {/* prod-hide START — Script Analytics sub-tab not on prod whitelist */}
-            {/* {activeSubTab === 'script-analytics' && <ScriptAnalyticsTab />} */}
-            {/* prod-hide END */}
           </div>
         </>
       ) : (
