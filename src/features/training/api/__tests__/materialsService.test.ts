@@ -1,8 +1,12 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import {
   archiveMaterial,
+  attachMaterialToCall,
+  detachMaterialFromCall,
   downloadMaterial,
   listMaterials,
+  listMaterialsForCall,
+  previewMaterial,
   uploadMaterial,
 } from '../materialsService'
 
@@ -101,6 +105,46 @@ describe('materialsService', () => {
       mockApi.delete.mockResolvedValue({ data: null })
       await archiveMaterial(9)
       expect(mockApi.delete).toHaveBeenCalledWith('/api/v1/quality/materials/9')
+    })
+  })
+
+  describe('previewMaterial', () => {
+    it('requests the file inline as a blob', async () => {
+      const blob = new Blob(['%PDF'])
+      mockApi.get.mockResolvedValue({ data: blob })
+      const result = await previewMaterial(4)
+      expect(mockApi.get).toHaveBeenCalledWith(
+        '/api/v1/quality/materials/4/download',
+        expect.objectContaining({
+          responseType: 'blob',
+          params: { disposition: 'inline' },
+        })
+      )
+      expect(result).toBe(blob)
+    })
+  })
+
+  describe('call attachments', () => {
+    it('attaches a material to a call', async () => {
+      mockApi.post.mockResolvedValue({ data: { id: 1, material_id: 3, call_id: 'abc' } })
+      await attachMaterialToCall(3, 'abc-uuid')
+      expect(mockApi.post).toHaveBeenCalledWith('/api/v1/quality/materials/3/attachments', {
+        call_id: 'abc-uuid',
+      })
+    })
+
+    it('detaches a material from a call', async () => {
+      mockApi.delete.mockResolvedValue({ data: null })
+      await detachMaterialFromCall(3, 'abc-uuid')
+      expect(mockApi.delete).toHaveBeenCalledWith(
+        '/api/v1/quality/materials/3/attachments/abc-uuid'
+      )
+    })
+
+    it('lists materials for a call', async () => {
+      mockApi.get.mockResolvedValue({ data: { data: [], total: 0 } })
+      await listMaterialsForCall('abc-uuid')
+      expect(mockApi.get).toHaveBeenCalledWith('/api/v1/quality/calls/abc-uuid/materials')
     })
   })
 })
