@@ -384,10 +384,13 @@ function LetterParametersPanelContent({
   }, [lawyers, p.lawyerId])
 
   const applyTypeSuggestion = useCallback(
-    async (typeId: string) => {
+    async (typeId: string, options?: { refreshLawyer?: boolean }) => {
       const result = await patchSuggestionsMutation.mutateAsync({
         messageId: letter.id,
-        payload: { letter_type_id: typeId },
+        payload: {
+          letter_type_id: typeId,
+          ...(options?.refreshLawyer ? { refresh_lawyer: true } : {}),
+        },
       })
       applySuggestionResult(result, letter.receivedAt, setLawyerOverride, setDueDateOverride, {
         dueDateManuallyOverridden,
@@ -404,15 +407,20 @@ function LetterParametersPanelContent({
     }
 
     const signature = buildPrioritySignature(letterTypes, effectiveTypeId)
-    const shouldSync =
-      lastPrioritySignatureRef.current === null || lastPrioritySignatureRef.current !== signature
 
-    if (!shouldSync) {
+    // Opening a letter must not re-assign lawyer. Seed the signature on mount and
+    // only PATCH when lawyer priorities for this type change while the panel is open.
+    if (lastPrioritySignatureRef.current === null) {
+      lastPrioritySignatureRef.current = signature
+      return
+    }
+
+    if (lastPrioritySignatureRef.current === signature) {
       return
     }
 
     lastPrioritySignatureRef.current = signature
-    void applyTypeSuggestion(effectiveTypeId).catch(() => {
+    void applyTypeSuggestion(effectiveTypeId, { refreshLawyer: true }).catch(() => {
       // Keep the signature so permanent failures (e.g. outbound rows) do not retry in a loop.
       lastPrioritySignatureRef.current = signature
     })

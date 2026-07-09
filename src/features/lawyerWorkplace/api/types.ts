@@ -158,6 +158,7 @@ export interface LegalLetterConfirmResponse {
 export interface LegalMessageSuggestionsPatchRequest {
   letter_type_id: string
   client_id?: number | null
+  refresh_lawyer?: boolean
 }
 
 export interface LegalMessageSuggestionsPatchResponse {
