@@ -292,6 +292,7 @@ export function useUpdateLegalKanbanTask() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: legalWorkplaceKeys.kanban() })
       queryClient.invalidateQueries({ queryKey: legalWorkplaceKeys.inbox() })
+      queryClient.invalidateQueries({ queryKey: legalWorkplaceKeys.messages() })
       queryClient.invalidateQueries({ queryKey: ['tasks', 'my-tasks'] })
       invalidateLegalWorkload(queryClient)
     },
@@ -308,7 +309,12 @@ export function usePatchLegalKanbanTaskMetadata() {
       payload,
     }: {
       taskId: number
-      payload: { letter_type_id?: string; client_id?: number | null }
+      payload: {
+        letter_type_id?: string
+        client_id?: number | null
+        assigned_to_user_id?: number | null
+        due_date?: string | null
+      }
     }) => legalApi.patchKanbanTask(taskId, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: legalWorkplaceKeys.kanban() })

@@ -68,14 +68,6 @@ export function mapKanbanPatchToTaskUpdate(
     payload.priority = KANBAN_PRIORITY_TO_TASK[patch.priority] ?? 'normal'
   }
 
-  if (patch.assigneeUserId !== undefined) {
-    payload.assigned_to_user_id = patch.assigneeUserId
-  }
-
-  if (patch.deadline !== undefined) {
-    payload.due_date = patch.deadline
-  }
-
   if (patch.columnId) {
     payload.status = mapKanbanColumnToTaskStatus(patch.columnId)
     if (patch.columnId === 'overdue' && patch.deadline === undefined) {
@@ -84,6 +76,30 @@ export function mapKanbanPatchToTaskUpdate(
         payload.due_date = overdueDueDateIso()
       }
     }
+  }
+
+  return payload
+}
+
+export function mapKanbanPatchToMetadataPayload(
+  patch: LegalKanbanTaskPatch
+): Record<string, unknown> {
+  const payload: Record<string, unknown> = {}
+
+  if (patch.letterTypeId) {
+    payload.letter_type_id = patch.letterTypeId
+  }
+
+  if (patch.clientId !== undefined) {
+    payload.client_id = patch.clientId
+  }
+
+  if (patch.assigneeUserId !== undefined) {
+    payload.assigned_to_user_id = patch.assigneeUserId
+  }
+
+  if (patch.deadline !== undefined) {
+    payload.due_date = patch.deadline
   }
 
   return payload

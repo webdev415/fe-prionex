@@ -149,7 +149,15 @@ export const legalApi = {
       .then((response) => response.data)
   },
 
-  patchKanbanTask(taskId: number, payload: { letter_type_id?: string; client_id?: number | null }) {
+  patchKanbanTask(
+    taskId: number,
+    payload: {
+      letter_type_id?: string
+      client_id?: number | null
+      assigned_to_user_id?: number | null
+      due_date?: string | null
+    }
+  ) {
     return api.patch(`${BASE_URL}/kanban/tasks/${taskId}`, payload)
   },
 

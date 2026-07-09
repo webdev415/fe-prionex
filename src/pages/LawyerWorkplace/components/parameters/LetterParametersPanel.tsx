@@ -22,7 +22,6 @@ import {
 } from '@/features/lawyerWorkplace'
 import { legalDueDateToIso, parseLegalDueDate } from '@/features/lawyerWorkplace/utils/legalDueDate'
 import {
-  buildLetterActivityLog,
   clientLookupFromLegalSearchItem,
   isLetterParametersReadOnly,
 } from '@/features/lawyerWorkplace/api/mappers'
@@ -208,43 +207,6 @@ function ParameterDropdown({
           ))}
         </DropdownMenuContent>
       </DropdownMenu>
-    </div>
-  )
-}
-
-// ─── Activity log ─────────────────────────────────────────────────────────────
-
-interface ActivityLogEntry {
-  timestamp: string
-  eventKey: string
-  fallback: string
-}
-
-function ActivityLog({ entries }: { entries: ActivityLogEntry[] }) {
-  const { t, i18n } = useTranslation('common')
-  return (
-    <div className="flex w-full flex-col gap-0">
-      {entries.map((entry, idx) => (
-        <div key={idx} className="flex items-start gap-2.5 py-1.5">
-          <div className="flex flex-col items-center">
-            <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-gray-300" />
-            {idx < entries.length - 1 && <span className="mt-1 h-full w-px flex-1 bg-gray-100" />}
-          </div>
-          <div className="flex min-w-0 flex-col">
-            <span className="text-dark-500 text-[11px] leading-snug">
-              {t(entry.eventKey, entry.fallback)}
-            </span>
-            <span className="text-light-500 text-[10px]">
-              {new Date(entry.timestamp).toLocaleString(i18n.language, {
-                hour: '2-digit',
-                minute: '2-digit',
-                month: 'short',
-                day: 'numeric',
-              })}
-            </span>
-          </div>
-        </div>
-      ))}
     </div>
   )
 }
@@ -681,27 +643,6 @@ function LetterParametersPanelContent({
     )
   }
 
-  const activityLog = useMemo(
-    () =>
-      buildLetterActivityLog({
-        receivedAt: letter.receivedAt,
-        updatedAt: letter.updatedAt,
-        processingStatus: letter.processingStatus ?? status,
-        suggestedLetterTypeId: letter.suggestedLetterTypeId,
-        confirmedLetterTypeId: letter.confirmedLetterTypeId,
-        legalTaskId: letter.legalTaskId,
-      }),
-    [
-      letter.confirmedLetterTypeId,
-      letter.legalTaskId,
-      letter.processingStatus,
-      letter.receivedAt,
-      letter.suggestedLetterTypeId,
-      letter.updatedAt,
-      status,
-    ]
-  )
-
   if (isReadOnly) {
     // ── MODE B: Read-only view ─────────────────────────────────────────────────
     return (
@@ -780,14 +721,6 @@ function LetterParametersPanelContent({
               </button>
             </div>
           )}
-
-          {/* Activity log */}
-          <div className="flex w-full flex-col gap-2">
-            <span className="text-light-600 text-[11px] font-medium tracking-wider uppercase">
-              {t('pages.lawyerWorkplace.activityLog.title', 'Activity')}
-            </span>
-            <ActivityLog entries={activityLog} />
-          </div>
         </div>
       </div>
     )

@@ -13,6 +13,7 @@ import { toast } from 'sonner'
 import { Button } from '@/components/ui/Button'
 import {
   applyKanbanTaskPatch,
+  mapKanbanPatchToMetadataPayload,
   mapKanbanPatchToTaskUpdate,
   matchesDeadlineFilter,
   useLegalKanban,
@@ -238,15 +239,14 @@ export function LegalKanbanBoard() {
         )
       )
 
-      const metadataPayload: { letter_type_id?: string; client_id?: number | null } = {}
-      if (patch.letterTypeId) {
-        metadataPayload.letter_type_id = patch.letterTypeId
-      }
-      if (patch.clientId !== undefined) {
-        metadataPayload.client_id = patch.clientId
+      const metadataPayload = mapKanbanPatchToMetadataPayload(patch)
+      const taskPayload = mapKanbanPatchToTaskUpdate(patch, task)
+
+      if (taskPayload.due_date !== undefined && metadataPayload.due_date === undefined) {
+        metadataPayload.due_date = taskPayload.due_date
+        delete taskPayload.due_date
       }
 
-      const taskPayload = mapKanbanPatchToTaskUpdate(patch, task)
       const metadataKeys = Object.keys(metadataPayload)
       const taskKeys = Object.keys(taskPayload)
 
