@@ -20,21 +20,14 @@ import {
 import { useLegalClientSearch } from '@/features/lawyerWorkplace/hooks/useLegalClientSearch'
 import { useDebounce } from '@/hooks/useDebounce'
 import { Icons } from '@/lib/icons'
-import type { KanbanTaskType } from '../../kanban/kanbanData'
+import type { LegalLetterType } from '@/features/lawyerWorkplace'
+import { resolveKanbanTypeBadgeProps } from './constants'
 import { KanbanTypeBadge } from './KanbanTypeBadge'
 
 interface CreateKanbanTaskModalProps {
   open: boolean
   onClose: () => void
 }
-
-const KNOWN_KANBAN_TYPES = new Set<KanbanTaskType>([
-  'complaint',
-  'nbu_inquiry',
-  'court_claim',
-  'attorney_request',
-  'inquiry',
-])
 
 function getTomorrowDate(): Date {
   const date = new Date()
@@ -49,11 +42,9 @@ function getTodayStart(): Date {
   return date
 }
 
-function renderLetterTypeOption(letterTypeId: string, name: string) {
-  if (KNOWN_KANBAN_TYPES.has(letterTypeId as KanbanTaskType)) {
-    return <KanbanTypeBadge type={letterTypeId as KanbanTaskType} />
-  }
-  return <span className="text-dark-500 text-[13px]">{name}</span>
+function renderLetterTypeOption(letterType: LegalLetterType) {
+  const badge = resolveKanbanTypeBadgeProps(letterType.id, [letterType], 'type_pending')
+  return <KanbanTypeBadge type={badge.type} label={badge.label} colorId={badge.colorId} />
 }
 
 interface FormSelectProps {
@@ -223,13 +214,13 @@ export function CreateKanbanTaskModal({ open, onClose }: CreateKanbanTaskModalPr
             disabled={optionsLoading || letterTypes.length === 0}
             value={
               selectedLetterType
-                ? renderLetterTypeOption(selectedLetterType.id, selectedLetterType.name)
+                ? renderLetterTypeOption(selectedLetterType)
                 : t('pages.lawyerWorkplace.kanban.createTask.selectType', 'Select type')
             }
             onSelect={(key) => setLetterTypeId(key)}
             items={letterTypes.map((letterType) => ({
               key: letterType.id,
-              content: renderLetterTypeOption(letterType.id, letterType.name),
+              content: renderLetterTypeOption(letterType),
             }))}
           />
 

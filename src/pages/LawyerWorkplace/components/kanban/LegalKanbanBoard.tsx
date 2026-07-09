@@ -71,7 +71,7 @@ export function LegalKanbanBoard() {
   const { isKanbanGrid, showWorkspaceBanner } = useLawyerWorkplaceLayout()
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const { data: lawyersData } = useLegalLawyers({ scopedToActiveProject: true })
-  const { data: letterTypesData } = useLegalLetterTypes()
+  const { data: letterTypesData } = useLegalLetterTypes({ includeInactive: true })
   const [searchParams, setSearchParams] = useSearchParams()
   const [deadlineFilter, setDeadlineFilter] = useState<DeadlineFilter>('all')
   const [lawyerFilter, setLawyerFilter] = useState<LawyerFilterId>('all')
@@ -125,22 +125,26 @@ export function LegalKanbanBoard() {
     return [ALL_LAWYERS_FILTER, ...dynamicOptions]
   }, [lawyersData?.items])
 
-  const letterTypes = useMemo(
-    () => (letterTypesData?.items ?? []).filter((item) => item.is_active),
-    [letterTypesData?.items]
+  /** All types (incl. inactive) so card badges keep Settings display names. */
+  const letterTypes = useMemo(() => letterTypesData?.items ?? [], [letterTypesData?.items])
+
+  const activeLetterTypes = useMemo(
+    () => letterTypes.filter((item) => item.is_active),
+    [letterTypes]
   )
 
   const typeFilterOptions = useMemo(
     () =>
-      letterTypes.length > 0
+      activeLetterTypes.length > 0
         ? buildTypeFilterOptions(
-            letterTypes.map((letterType) => ({
+            activeLetterTypes.map((letterType) => ({
               id: letterType.id,
               name: letterType.name,
+              color_id: letterType.color_id,
             }))
           )
         : TYPE_FILTER_OPTIONS,
-    [letterTypes]
+    [activeLetterTypes]
   )
 
   const baseTasks = localOverrides ?? apiTasks
@@ -384,13 +388,13 @@ export function LegalKanbanBoard() {
   )
 
   const handleExportCsv = useCallback(() => {
-    const exported = exportKanbanTasksToCsv(filteredColumns, t)
+    const exported = exportKanbanTasksToCsv(filteredColumns, t, undefined, letterTypes)
     if (exported === 0) {
       toast.info(
         t('pages.lawyerWorkplace.kanban.exportEmpty', 'No tasks match the current filters')
       )
     }
-  }, [filteredColumns, t])
+  }, [filteredColumns, letterTypes, t])
 
   return (
     <div className="flex h-full min-h-0 w-full min-w-0 flex-1 flex-col">
@@ -413,7 +417,11 @@ export function LegalKanbanBoard() {
 
       <CreateKanbanTaskModal open={createTaskOpen} onClose={() => setCreateTaskOpen(false)} />
 
-      <ThreadDrawer target={threadTarget} onClose={() => setThreadTarget(null)} />
+      <ThreadDrawer
+        target={threadTarget}
+        letterTypes={letterTypes}
+        onClose={() => setThreadTarget(null)}
+      />
 
       {isLoading ? <KanbanTabSkeleton /> : null}
 
@@ -511,20 +519,20 @@ export function LegalKanbanBoard() {
           id={KANBAN_SCROLL_CONTAINER_ID}
           ref={scrollContainerRef}
           className={cn(
-            'flex min-h-full flex-1 flex-col overscroll-x-contain',
+            'flex min-h-0 flex-1 flex-col overscroll-x-contain',
             isKanbanGrid
-              ? 'overflow-x-visible'
+              ? 'h-full min-h-full overflow-x-visible'
               : cn(
-                  'overflow-x-auto scroll-smooth px-4 sm:px-5 lg:px-7',
+                  'min-h-full overflow-x-auto scroll-smooth px-4 sm:px-5 lg:px-7',
                   '[scrollbar-width:none] [&::-webkit-scrollbar]:hidden'
                 )
           )}
         >
           <div
             className={cn(
-              'flex min-h-full flex-1 pb-6',
+              'min-h-full flex-1 pb-6',
               isKanbanGrid
-                ? 'grid w-full grid-cols-4 grid-rows-1 gap-3 px-4 sm:px-5 lg:px-7'
+                ? 'grid h-full min-h-full w-full grid-cols-4 grid-rows-[minmax(0,1fr)] items-stretch gap-3 px-4 sm:px-5 lg:px-7'
                 : 'flex min-h-full w-max snap-x snap-mandatory items-stretch gap-3 lg:gap-4'
             )}
           >
@@ -532,19 +540,22 @@ export function LegalKanbanBoard() {
               <div
                 key={col.id}
                 className={cn(
-                  'flex h-full min-h-0 flex-col',
+                  // Avoid h-full: percentage height breaks grid stretch when the
+                  // parent only has min-height, so filled columns shrink-wrap.
+                  'flex min-h-0 flex-col self-stretch',
                   isKanbanGrid
-                    ? 'min-w-0 shrink'
-                    : cn('shrink-0 snap-start', KANBAN_SCROLL_COLUMN_WIDTH_CLASS)
+                    ? 'h-auto min-w-0 shrink'
+                    : cn('h-auto shrink-0 snap-start', KANBAN_SCROLL_COLUMN_WIDTH_CLASS)
                 )}
               >
-                <div className="sticky top-0 z-10">
+                <div className="sticky top-0 z-10 shrink-0">
                   <KanbanColumnHeader column={col} />
                 </div>
                 <KanbanColumnLane
                   column={col}
                   lawyers={lawyers}
                   letterTypes={letterTypes}
+                  editableLetterTypes={activeLetterTypes}
                   draggingTaskId={draggingTaskId}
                   isDropTarget={dragOverColumn === col.id}
                   onCardClick={(task) => setThreadTarget({ letterId: task.letterId, task })}

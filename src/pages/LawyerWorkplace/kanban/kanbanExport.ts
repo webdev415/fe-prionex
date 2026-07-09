@@ -1,7 +1,12 @@
 import type { TFunction } from 'i18next'
 import { downloadBlob } from '@/features/messaging/utils/downloadBlob'
-import { TYPE_I18N_KEYS, TYPE_SHORT_LABELS } from '../components/kanban/constants'
-import type { KanbanColumnDef, KanbanTaskType } from './kanbanData'
+import {
+  findKanbanLetterType,
+  TYPE_I18N_KEYS,
+  TYPE_SHORT_LABELS,
+  type KanbanLetterTypeRef,
+} from '../components/kanban/constants'
+import type { KanbanColumnDef, KanbanTask, KanbanTaskType } from './kanbanData'
 
 function escapeCsvCell(value: string): string {
   if (value.includes(',') || value.includes('"') || value.includes('\n')) {
@@ -17,21 +22,24 @@ function formatIsoDate(iso: string | null): string {
   return date.toISOString().slice(0, 10)
 }
 
-function taskTypeLabel(type: KanbanTaskType, t: TFunction): string {
-  return t(TYPE_I18N_KEYS[type], TYPE_SHORT_LABELS[type])
+function taskTypeLabel(task: KanbanTask, t: TFunction, letterTypes: KanbanLetterTypeRef[]): string {
+  const letterType = findKanbanLetterType(letterTypes, task.letterTypeId)
+  if (letterType?.name) return letterType.name
+  return t(TYPE_I18N_KEYS[task.type as KanbanTaskType], TYPE_SHORT_LABELS[task.type])
 }
 
 /** Export visible kanban columns (after filters) to CSV. */
 export function exportKanbanTasksToCsv(
   columns: KanbanColumnDef[],
   t: TFunction,
-  filename?: string
+  filename?: string,
+  letterTypes: KanbanLetterTypeRef[] = []
 ): number {
   const rows = columns.flatMap((column) =>
     column.tasks.map((task) => ({
       column: t(column.labelKey, column.id),
       task_id: String(task.taskId),
-      type: taskTypeLabel(task.type, t),
+      type: taskTypeLabel(task, t, letterTypes),
       title: task.title,
       client_code: task.clientCode ?? '',
       client_name: task.clientName ?? '',

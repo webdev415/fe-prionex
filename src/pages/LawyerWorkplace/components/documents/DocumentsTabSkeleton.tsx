@@ -24,9 +24,14 @@ function DocumentsStatsSkeleton({ compact }: { compact: boolean }) {
               compact ? 'h-9 w-9' : 'h-10 w-10'
             )}
           />
-          <div className="min-w-0 flex-1 space-y-2">
-            <div className="h-2.5 w-24 animate-pulse rounded bg-gray-200" />
-            <div className="h-5 w-16 animate-pulse rounded bg-gray-200" />
+          <div className="min-w-0 flex-1 space-y-1.5">
+            <div className="h-2.5 w-[72%] max-w-[7.5rem] animate-pulse rounded bg-gray-200" />
+            <div
+              className={cn(
+                'animate-pulse rounded bg-gray-200',
+                compact ? 'h-4 w-16' : 'h-5 w-[4.5rem]'
+              )}
+            />
           </div>
         </div>
       ))}
@@ -132,7 +137,7 @@ export function DocumentsPageSkeleton() {
       <span className="sr-only">{loadingLabel}</span>
       <DocumentsStatsSkeleton compact={isCompact} />
       <DocumentsToolbarSkeleton compact={isCompact} wide={isWide} />
-      <DocumentsTableSkeleton />
+      <DocumentsTableSkeleton rows={6} />
     </div>
   )
 }
