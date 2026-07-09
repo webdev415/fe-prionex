@@ -538,6 +538,7 @@ export function mapMessageToLetterDetail(
     suggestedLetterTypeId: message.suggested_letter_type_id ?? null,
     processingStatus: message.processing_status,
     updatedAt: message.updated_at ?? null,
+    sourceMailboxDisabled: Boolean(message.source_mailbox_disabled),
   }
 }
 

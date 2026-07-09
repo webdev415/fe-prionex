@@ -82,6 +82,7 @@ export interface LetterDetail extends LetterListItem {
   suggestedLetterTypeId?: string | null
   processingStatus?: string
   updatedAt?: string | null
+  sourceMailboxDisabled?: boolean
 }
 
 export interface LetterReplyContext {

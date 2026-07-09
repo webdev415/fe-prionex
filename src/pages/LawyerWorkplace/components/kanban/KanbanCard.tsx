@@ -48,7 +48,7 @@ interface KanbanCardProps {
   lawyers: LegalLawyer[]
   letterTypes: LegalLetterType[]
   isDragging?: boolean
-  onCardClick?: (letterId: string) => void
+  onCardClick?: (task: KanbanTask) => void
   onMoveTask?: (taskId: string, columnId: KanbanColumnId) => void
   onTaskUpdate?: (taskId: string, patch: LegalKanbanTaskPatch) => void
   onDragStart?: (event: DragEvent, task: KanbanTask) => void
@@ -94,11 +94,11 @@ export function KanbanCard({
     return option?.label ?? fallbackName
   }
 
-  const isClickable = task.letterId && !isCompleted
+  const isClickable = !isCompleted
 
   const handleCardClick = () => {
     if (isClickable) {
-      onCardClick?.(task.letterId!)
+      onCardClick?.(task)
     }
   }
 

@@ -111,6 +111,7 @@ export interface LegalMessageDetail {
   confirmed_letter_type_id?: string | null
   auto_process_eligible: boolean
   legal_task_id?: number | null
+  source_mailbox_disabled?: boolean
   updated_at?: string | null
   attachments: LegalAttachmentItem[]
 }

@@ -53,7 +53,7 @@ import { KanbanColumnHeader } from './KanbanColumnHeader'
 import { KanbanColumnLane } from './KanbanColumnLane'
 import { CreateKanbanTaskModal } from './CreateKanbanTaskModal'
 import { KanbanTabSkeleton } from './KanbanTabSkeleton'
-import { ThreadDrawer } from './ThreadDrawer'
+import { ThreadDrawer, type KanbanThreadDrawerTarget } from './ThreadDrawer'
 
 function parseTaskIdFromSearch(params: URLSearchParams): number | null {
   const raw = params.get('taskId')
@@ -75,7 +75,7 @@ export function LegalKanbanBoard() {
   const [lawyerFilter, setLawyerFilter] = useState<LawyerFilterId>('all')
   const [typeFilter, setTypeFilter] = useState<TypeFilterId>('all')
   const [createTaskOpen, setCreateTaskOpen] = useState(false)
-  const [threadLetterId, setThreadLetterId] = useState<string | null>(null)
+  const [threadTarget, setThreadTarget] = useState<KanbanThreadDrawerTarget | null>(null)
   const [dragOverColumn, setDragOverColumn] = useState<KanbanColumnId | null>(null)
   const [draggingTaskId, setDraggingTaskId] = useState<string | null>(null)
   const [localOverrides, setLocalOverrides] = useState<KanbanTask[] | null>(null)
@@ -381,7 +381,7 @@ export function LegalKanbanBoard() {
 
       <CreateKanbanTaskModal open={createTaskOpen} onClose={() => setCreateTaskOpen(false)} />
 
-      <ThreadDrawer letterId={threadLetterId} onClose={() => setThreadLetterId(null)} />
+      <ThreadDrawer target={threadTarget} onClose={() => setThreadTarget(null)} />
 
       {isLoading ? <KanbanTabSkeleton /> : null}
 
@@ -515,7 +515,7 @@ export function LegalKanbanBoard() {
                   letterTypes={letterTypes}
                   draggingTaskId={draggingTaskId}
                   isDropTarget={dragOverColumn === col.id}
-                  onCardClick={setThreadLetterId}
+                  onCardClick={(task) => setThreadTarget({ letterId: task.letterId, task })}
                   onDragStart={handleDragStart}
                   onDragEnd={handleDragEnd}
                   onDragOver={(event) => handleDragOver(event, col.id)}
