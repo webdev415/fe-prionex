@@ -162,6 +162,7 @@ export function applyKanbanTaskPatch(
     }
     if (patch.columnId === 'not_defined' || patch.clearLetterType) {
       next.type = 'unclassified'
+      next.letterTypeId = null
     }
   }
 
@@ -184,6 +185,12 @@ export function applyKanbanTaskPatch(
 
   if (patch.letterTypeId) {
     next.type = resolveTaskType(patch.letterTypeId)
+    next.letterTypeId = patch.letterTypeId
+  }
+
+  if (patch.clearLetterType) {
+    next.type = 'unclassified'
+    next.letterTypeId = null
   }
 
   if (patch.clientId !== undefined) {
@@ -271,6 +278,7 @@ export function mapLegalKanbanItemToTask(
     assigneeUserId: item.assigned_to_user_id ?? null,
     columnId: resolveKanbanColumn(item, taskType),
     letterId: item.message_id,
+    letterTypeId: item.letter_type_id ?? null,
   }
 }
 

@@ -22,6 +22,7 @@ const baseTask: KanbanTask = {
   assigneeUserId: 42,
   columnId: 'in_progress',
   letterId: 'letter-1',
+  letterTypeId: 'complaint',
 }
 
 describe('buildKanbanColumnMovePatch', () => {

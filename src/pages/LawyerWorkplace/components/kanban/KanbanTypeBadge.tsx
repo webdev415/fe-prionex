@@ -5,9 +5,11 @@ import { TYPE_COLOURS, TYPE_DOT_COLOURS, TYPE_I18N_KEYS, TYPE_SHORT_LABELS } fro
 
 interface KanbanTypeBadgeProps {
   type: KanbanTaskType
+  /** Override badge text (e.g. settings display name). */
+  label?: string
 }
 
-export function KanbanTypeBadge({ type }: KanbanTypeBadgeProps) {
+export function KanbanTypeBadge({ type, label }: KanbanTypeBadgeProps) {
   const { t } = useTranslation('common')
 
   return (
@@ -18,7 +20,7 @@ export function KanbanTypeBadge({ type }: KanbanTypeBadgeProps) {
       )}
     >
       <span className={cn('h-1.5 w-1.5 shrink-0 rounded-full', TYPE_DOT_COLOURS[type])} />
-      {t(TYPE_I18N_KEYS[type], TYPE_SHORT_LABELS[type])}
+      {label ?? t(TYPE_I18N_KEYS[type], TYPE_SHORT_LABELS[type])}
     </span>
   )
 }

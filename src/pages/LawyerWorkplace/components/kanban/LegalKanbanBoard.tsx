@@ -125,6 +125,24 @@ export function LegalKanbanBoard() {
     return [ALL_LAWYERS_FILTER, ...dynamicOptions]
   }, [lawyersData?.items])
 
+  const letterTypes = useMemo(
+    () => (letterTypesData?.items ?? []).filter((item) => item.is_active),
+    [letterTypesData?.items]
+  )
+
+  const typeFilterOptions = useMemo(
+    () =>
+      letterTypes.length > 0
+        ? buildTypeFilterOptions(
+            letterTypes.map((letterType) => ({
+              id: letterType.id,
+              name: letterType.name,
+            }))
+          )
+        : TYPE_FILTER_OPTIONS,
+    [letterTypes]
+  )
+
   const baseTasks = localOverrides ?? apiTasks
 
   const columns = useMemo(() => buildKanbanColumns(baseTasks), [baseTasks])
@@ -136,10 +154,11 @@ export function LegalKanbanBoard() {
         lawyerFilter,
         typeFilter,
         lawyerFilterOptions,
+        typeFilterOptions,
         deadlineFilter,
         matchesDeadlineFilter
       ),
-    [columns, lawyerFilter, typeFilter, lawyerFilterOptions, deadlineFilter]
+    [columns, lawyerFilter, typeFilter, lawyerFilterOptions, typeFilterOptions, deadlineFilter]
   )
 
   const displayColumns = useMemo(() => {
@@ -195,24 +214,6 @@ export function LegalKanbanBoard() {
   )
 
   const lawyers = useMemo(() => lawyersData?.items ?? [], [lawyersData?.items])
-
-  const letterTypes = useMemo(
-    () => (letterTypesData?.items ?? []).filter((item) => item.is_active),
-    [letterTypesData?.items]
-  )
-
-  const typeFilterOptions = useMemo(
-    () =>
-      letterTypes.length > 0
-        ? buildTypeFilterOptions(
-            letterTypes.map((letterType) => ({
-              id: letterType.id,
-              name: letterType.name,
-            }))
-          )
-        : TYPE_FILTER_OPTIONS,
-    [letterTypes]
-  )
 
   const filteredTaskCount = useMemo(
     () => filteredColumns.reduce((total, column) => total + column.tasks.length, 0),
