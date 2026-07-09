@@ -614,6 +614,7 @@
         "taskOnBoard": "Task created on kanban",
         "viewTask": "View →",
         "selectDueDate": "Select date",
+        "dueDatePastError": "Due date cannot be before today",
         "type": "Type",
         "selectType": "Select type",
         "types": {

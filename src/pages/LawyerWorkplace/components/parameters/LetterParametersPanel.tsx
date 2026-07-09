@@ -20,7 +20,7 @@ import {
   usePatchMessageContract,
   usePatchMessageSuggestions,
 } from '@/features/lawyerWorkplace'
-import { legalDueDateToIso } from '@/features/lawyerWorkplace/utils/legalDueDate'
+import { legalDueDateToIso, parseLegalDueDate } from '@/features/lawyerWorkplace/utils/legalDueDate'
 import {
   buildLetterActivityLog,
   clientLookupFromLegalSearchItem,
@@ -134,10 +134,16 @@ function applySuggestionResult(
   }
 ) {
   setLawyerOverride(
-    result.suggested_lawyer_user_id != null ? String(result.suggested_lawyer_user_id) : ''
+    result.suggested_lawyer_user_id != null ? String(result.suggested_lawyer_user_id) : null
   )
   // Never overwrite a due date the lawyer already chose.
   if (options?.dueDateManuallyOverridden) {
+    return
+  }
+  const persistedDueDate = parseLegalDueDate(result.suggested_due_date)
+  if (persistedDueDate) {
+    setDueDateOverride(persistedDueDate)
+    options?.onDueDateAutoApplied?.()
     return
   }
   const dueDate = computeDueDateFromReceived(receivedAt, result.sla_days)
@@ -195,7 +201,7 @@ function ParameterDropdown({
             <DropdownMenuItem
               key={item.key}
               className="cursor-pointer rounded-md px-2 py-1.5 text-[13px] focus:bg-gray-50"
-              onClick={() => onSelect?.(item.key)}
+              onSelect={() => onSelect?.(item.key)}
             >
               {item.content}
             </DropdownMenuItem>
@@ -444,15 +450,61 @@ function LetterParametersPanelContent({
 
   const handleDueDateChange = (value: Date | null) => {
     if (value && isBeforeStartOfDay(value)) {
+      toast.error(
+        t('pages.lawyerWorkplace.parameters.dueDatePastError', 'Due date cannot be before today')
+      )
       return
     }
     setDueDateOverride(value)
     setDueDateManuallyOverridden(true)
+    if (!effectiveTypeId || isReadOnly || !value) {
+      return
+    }
+    void patchSuggestionsMutation
+      .mutateAsync({
+        messageId: letter.id,
+        payload: {
+          letter_type_id: effectiveTypeId,
+          due_date: legalDueDateToIso(value),
+        },
+      })
+      .then((result) => {
+        applySuggestionResult(result, letter.receivedAt, setLawyerOverride, setDueDateOverride, {
+          dueDateManuallyOverridden: true,
+        })
+      })
+      .catch(() => {
+        // Keep local selection visible even if persistence fails.
+      })
   }
 
   const handleLawyerSelect = (userId: string) => {
+    const parsedUserId = Number(userId)
+    if (!Number.isFinite(parsedUserId) || parsedUserId <= 0) {
+      return
+    }
     setLawyerOverride(userId)
     setLawyerManuallyOverridden(true)
+    if (!effectiveTypeId || isReadOnly) {
+      return
+    }
+    void patchSuggestionsMutation
+      .mutateAsync({
+        messageId: letter.id,
+        payload: {
+          letter_type_id: effectiveTypeId,
+          suggested_lawyer_user_id: parsedUserId,
+        },
+      })
+      .then((result) => {
+        applySuggestionResult(result, letter.receivedAt, setLawyerOverride, setDueDateOverride, {
+          dueDateManuallyOverridden,
+        })
+      })
+      .catch(() => {
+        setLawyerOverride(defaultLawyerUserId || null)
+        setLawyerManuallyOverridden(false)
+      })
   }
 
   const handleContractSelect = (contractNumber: string) => {

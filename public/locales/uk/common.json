@@ -630,6 +630,8 @@
         "client": "Клієнт",
         "contract": "Договір",
         "dueDate": "Термін",
+        "selectDueDate": "Оберіть дату",
+        "dueDatePastError": "Термін не може бути раніше сьогодні",
         "lawyer": "Юрист",
         "notIdentified": "Не ідентифіковано",
         "auto": "Авто",

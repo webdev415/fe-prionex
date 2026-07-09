@@ -105,6 +105,7 @@ export interface LegalMessageDetail {
   suggested_client_name?: string | null
   suggested_client_project_id?: number | null
   suggested_lawyer_user_id: number | null
+  suggested_due_date?: string | null
   suggested_contract_number?: string | null
   confirmed_contract_number?: string | null
   confirmed_letter_type_id?: string | null
@@ -159,11 +160,14 @@ export interface LegalMessageSuggestionsPatchRequest {
   letter_type_id: string
   client_id?: number | null
   refresh_lawyer?: boolean
+  suggested_lawyer_user_id?: number | null
+  due_date?: string | null
 }
 
 export interface LegalMessageSuggestionsPatchResponse {
   suggested_letter_type_id: string
   suggested_lawyer_user_id: number | null
+  suggested_due_date?: string | null
   suggested_contract_number?: string | null
   sla_days: number
   auto_process_eligible: boolean

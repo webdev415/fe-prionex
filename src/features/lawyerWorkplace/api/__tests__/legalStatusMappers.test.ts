@@ -168,6 +168,30 @@ describe('buildLetterParameters', () => {
     expect(parameters.dueDate).toBe('2026-06-04')
   })
 
+  it('prefers persisted suggested due date over SLA default', () => {
+    const message = {
+      suggested_letter_type_id: 'complaint',
+      suggested_due_date: '2026-07-20T12:00:00.000Z',
+      received_at: '2026-05-21T09:00:00Z',
+    } as LegalMessageDetail
+
+    const parameters = buildLetterParameters(message, {
+      letterTypesById: new Map<string, LegalLetterType>([
+        [
+          'complaint',
+          {
+            id: 'complaint',
+            slug: 'complaint',
+            name: 'Complaint',
+            sla_days: 14,
+          } as LegalLetterType,
+        ],
+      ]),
+    })
+
+    expect(parameters.dueDate).toBe('2026-07-20')
+  })
+
   it('maps lawyer id from merged suggested_lawyer_user_id for EDO reply context', () => {
     const message = {
       id: 'msg-1',

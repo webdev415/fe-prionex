@@ -369,7 +369,11 @@ export function buildLetterParameters(
     ? context?.lawyersByUserId?.get(message.suggested_lawyer_user_id)
     : undefined
 
-  const dueDate = letterType ? computeDueDateIso(message.received_at, letterType.sla_days) : ''
+  const slaDueDate = letterType ? computeDueDateIso(message.received_at, letterType.sla_days) : ''
+  const dueDate =
+    message.suggested_due_date != null && message.suggested_due_date !== ''
+      ? message.suggested_due_date.slice(0, 10)
+      : slaDueDate
   const confirmedCount = countConfirmedParameters(message, dueDate)
   const totalParameters = 4
   const contractLabel =
