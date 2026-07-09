@@ -1,66 +1,141 @@
 import { useTranslation } from 'react-i18next'
+import { TableSkeleton } from '@/components/ui/TableSkeleton'
 import { cn } from '@/lib/utils'
 import { useLawyerWorkplaceLayout } from '../../context/lawyerWorkplaceLayout'
 
-export function DocumentsTabSkeleton() {
+const FILTER_PILL_WIDTHS = ['w-[88px]', 'w-14', 'w-14', 'w-16', 'w-[76px]', 'w-[84px]']
+
+function DocumentsStatsSkeleton({ compact }: { compact: boolean }) {
+  return (
+    <div
+      className={cn(
+        'grid gap-3 px-4 sm:px-5 lg:px-7',
+        compact ? 'grid-cols-1 pt-3' : 'grid-cols-2 pt-4 lg:grid-cols-4 lg:pt-5'
+      )}
+    >
+      {Array.from({ length: 4 }).map((_, index) => (
+        <div
+          key={index}
+          className="flex min-w-0 flex-1 items-center gap-3 rounded-xl border border-white bg-white px-3 py-3 shadow-sm sm:px-4"
+        >
+          <div
+            className={cn(
+              'shrink-0 animate-pulse rounded-lg bg-gray-200',
+              compact ? 'h-9 w-9' : 'h-10 w-10'
+            )}
+          />
+          <div className="min-w-0 flex-1 space-y-2">
+            <div className="h-2.5 w-24 animate-pulse rounded bg-gray-200" />
+            <div className="h-5 w-16 animate-pulse rounded bg-gray-200" />
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function DocumentsToolbarSkeleton({ compact, wide }: { compact: boolean; wide: boolean }) {
+  return (
+    <div className={cn('min-w-0 shrink-0 px-4 sm:px-5 lg:px-7', compact ? 'pt-3' : 'pt-4 lg:pt-5')}>
+      <div className="mb-3 flex items-start justify-between gap-2 sm:mb-4 sm:gap-3">
+        <div
+          className={cn(
+            'flex min-w-0 gap-0.5',
+            compact ? 'flex-col' : 'flex-row items-center gap-3'
+          )}
+        >
+          <div
+            className={cn(
+              'animate-pulse rounded bg-gray-200',
+              compact ? 'h-6 w-32' : 'h-7 w-36 lg:h-8 lg:w-40'
+            )}
+          />
+          <div
+            className={cn('animate-pulse rounded bg-gray-200', compact ? 'h-3 w-28' : 'h-4 w-32')}
+          />
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          <div
+            className={cn(
+              'animate-pulse rounded-md bg-gray-200',
+              compact ? 'h-10 w-10 rounded-full' : wide ? 'h-[45px] w-40' : 'h-10 w-36'
+            )}
+          />
+          <div
+            className={cn(
+              'animate-pulse rounded-md bg-gray-200',
+              compact ? 'h-10 w-10 rounded-full' : wide ? 'h-[45px] w-32' : 'h-10 w-28'
+            )}
+          />
+        </div>
+      </div>
+
+      <div
+        className={cn(
+          'mb-4 flex min-w-0 gap-3',
+          compact ? 'flex-col items-stretch' : 'flex-row items-start'
+        )}
+      >
+        <div className={cn('w-full max-w-full min-w-0', !compact && 'flex-1')}>
+          <div className="flex flex-wrap items-center gap-1.5">
+            {FILTER_PILL_WIDTHS.map((widthClass, index) => (
+              <div
+                key={index}
+                className={cn('h-8 animate-pulse rounded-full bg-gray-200 sm:h-9', widthClass)}
+              />
+            ))}
+          </div>
+        </div>
+        <div
+          className={cn(
+            'shrink-0',
+            compact ? 'w-full' : 'ml-auto w-full max-w-[280px]',
+            !compact && wide && 'max-w-[340px]'
+          )}
+        >
+          <div className="h-9 w-full animate-pulse rounded-full bg-gray-200" />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+interface DocumentsTableSkeletonProps {
+  rows?: number
+}
+
+export function DocumentsTableSkeleton({ rows = 6 }: DocumentsTableSkeletonProps) {
   const { t } = useTranslation('common')
-  const { isCompact } = useLawyerWorkplaceLayout()
   const loadingLabel = t('pages.lawyerWorkplace.documents.loading', 'Loading documents…')
 
   return (
     <div
-      className="min-w-0 px-4 sm:px-5 lg:px-7"
+      className="min-w-0 px-4 pb-6 sm:px-5 lg:px-7"
       role="status"
       aria-busy="true"
       aria-label={loadingLabel}
     >
       <span className="sr-only">{loadingLabel}</span>
-
-      <div
-        className={cn(
-          'grid gap-3 pt-3 lg:pt-5',
-          isCompact ? 'grid-cols-1' : 'grid-cols-2 lg:grid-cols-4'
-        )}
-      >
-        {Array.from({ length: 4 }).map((_, index) => (
-          <div
-            key={index}
-            className="h-20 animate-pulse rounded-xl border border-gray-100 bg-white"
-          />
-        ))}
-      </div>
-
-      <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap gap-2">
-          {Array.from({ length: 6 }).map((_, index) => (
-            <div key={index} className="h-8 w-20 animate-pulse rounded-full bg-gray-200" />
-          ))}
-        </div>
-        <div className="flex gap-2">
-          <div className="h-9 w-36 animate-pulse rounded-md bg-gray-200" />
-          <div className="h-9 w-32 animate-pulse rounded-md bg-gray-200" />
-        </div>
-      </div>
-
-      <div className="mt-4 overflow-hidden rounded-xl border border-gray-100 bg-white">
-        <div className="border-b border-gray-100 px-4 py-3 sm:px-5">
-          <div className="flex gap-4">
-            {Array.from({ length: 7 }).map((_, index) => (
-              <div key={index} className="h-3 flex-1 animate-pulse rounded bg-gray-200" />
-            ))}
-          </div>
-        </div>
-        {Array.from({ length: 6 }).map((_, rowIndex) => (
-          <div
-            key={rowIndex}
-            className="flex items-center gap-4 border-b border-gray-50 px-4 py-4 sm:px-5"
-          >
-            {Array.from({ length: 7 }).map((__, cellIndex) => (
-              <div key={cellIndex} className="h-3 flex-1 animate-pulse rounded bg-gray-200" />
-            ))}
-          </div>
-        ))}
-      </div>
+      <TableSkeleton columns={7} rows={rows} className="w-full" />
     </div>
   )
 }
+
+/** Full-page skeleton for the initial Documents tab load. */
+export function DocumentsPageSkeleton() {
+  const { t } = useTranslation('common')
+  const { isCompact, isWide } = useLawyerWorkplaceLayout()
+  const loadingLabel = t('pages.lawyerWorkplace.documents.loading', 'Loading documents…')
+
+  return (
+    <div className="min-w-0" role="status" aria-busy="true" aria-label={loadingLabel}>
+      <span className="sr-only">{loadingLabel}</span>
+      <DocumentsStatsSkeleton compact={isCompact} />
+      <DocumentsToolbarSkeleton compact={isCompact} wide={isWide} />
+      <DocumentsTableSkeleton />
+    </div>
+  )
+}
+
+/** @deprecated Use DocumentsPageSkeleton */
+export const DocumentsTabSkeleton = DocumentsPageSkeleton
