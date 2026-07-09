@@ -113,13 +113,15 @@ export const PERMISSIONS = {
   },
 
   /**
-   * System Category (3 permissions)
+   * System Category (4 permissions)
    * Controls access to system administration
    */
   SYSTEM: {
     MANAGE_SETTINGS: 'manage_settings',
     VIEW_AUDIT_LOGS: 'view_audit_logs',
     MANAGE_ROLES: 'manage_roles',
+    // Call QA — global «AI call analysis» switch + its settings surface
+    MANAGE_CALL_QA: 'manage_call_qa',
   },
 
   /**
@@ -277,6 +279,10 @@ export const PERMISSIONS = {
     MANAGE_CALL_LIBRARY: 'manage_call_library',
     // Call QA (Ф1) — AI transcripts of call recordings (nightly brain run)
     VIEW_TRANSCRIPTS: 'view_transcripts',
+    // Call QA (Ф2) — AI reviews (scores / red flags / conclusions) and the
+    // blocker dictionary that drives critical-call detection
+    VIEW_AI_REVIEWS: 'view_ai_reviews',
+    MANAGE_BLOCKER_DICTIONARY: 'manage_blocker_dictionary',
     // KAN-749 — Trainings & Sessions surfaces (KAN-615 epic children)
     VIEW_COURSES: 'view_courses',
     MANAGE_COURSES: 'manage_courses',
@@ -476,6 +482,7 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   manage_settings: 'Configure system settings',
   view_audit_logs: 'View system audit logs',
   manage_roles: 'Create and edit roles and permissions',
+  manage_call_qa: 'Toggle the global AI call analysis (Call QA) switch and manage its settings',
 
   // Projects
   manage_projects: 'Create, update, archive and restore projects',
@@ -558,6 +565,9 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   manage_materials: 'Upload / edit / archive materials (KAN-616)',
   // Call QA (Ф1)
   view_transcripts: 'View AI call transcripts (client card & Training; nightly Call QA run)',
+  // Call QA (Ф2)
+  view_ai_reviews: 'View AI call reviews (scores, red flags, conclusions) on Call QA surfaces',
+  manage_blocker_dictionary: 'Manage the Call QA blocker dictionary (critical-call stop-words)',
 
   // Document Generation
   view_document_journal: 'View the journal of all generated and uploaded documents',

@@ -2264,6 +2264,14 @@
       "saveAria": "Save changes",
       "cancelAria": "Cancel"
     },
+    "callQaSettings": {
+      "title": "AI Call Analysis",
+      "description": "Call transcripts and AI reviews on the client card",
+      "toggleAria": "Toggle AI call analysis",
+      "toastEnabled": "AI call analysis enabled.",
+      "toastDisabled": "AI call analysis disabled.",
+      "toastError": "Failed to update AI call analysis settings."
+    },
     "projects": {
       "title": "Project Management",
       "noProjectsFound": "No projects found",

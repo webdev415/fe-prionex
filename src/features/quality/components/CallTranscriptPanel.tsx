@@ -28,6 +28,7 @@ import { useTranslation } from 'react-i18next'
 import { useHasPermission } from '@/hooks'
 import { PERMISSIONS } from '@/constants/permissions'
 import { Icons } from '@/lib/icons'
+import { useCallQaSettings } from '../hooks/useCallQaSettings'
 import { useCallTranscript } from '../hooks/useCallTranscript'
 import { isV7Transcript } from '../lib/transcriptV7'
 import { TranscriptV7View } from './TranscriptV7View'
@@ -243,10 +244,12 @@ export function CallTranscriptPanel({
 }: CallTranscriptPanelProps) {
   const { t } = useTranslation('common')
   const canView = useHasPermission(PERMISSIONS.TRAINING.VIEW_TRANSCRIPTS)
-  const { transcript, review, isLoading, notReady, forbidden, isHardError } = useCallTranscript(
-    callId,
-    active && canView && !!callId
-  )
+  // Global admin switch (fail-closed): until settings confirm Call QA is ON,
+  // the transcript fetch stays disabled and the panel renders nothing.
+  const { data: qaSettings } = useCallQaSettings()
+  const qaEnabled = qaSettings?.transcripts_enabled === true
+  const { transcript, review, isLoading, notReady, forbidden, disabledByAdmin, isHardError } =
+    useCallTranscript(callId, active && canView && qaEnabled && !!callId)
   const [collapsed, setCollapsed] = useState<Record<number, boolean>>({})
 
   // v7 turns render through TranscriptV7View; scene grouping is Ф1-only.
@@ -258,6 +261,12 @@ export function CallTranscriptPanel({
   )
 
   if (!callId) return null
+
+  // Kill-switch OFF, still loading, or failed to load — no panel, no
+  // skeleton, no fetch. The disabledByAdmin arm covers the race where the
+  // cached settings said ON but the transcript endpoint already answers
+  // 403 call_qa_disabled.
+  if (!qaEnabled || disabledByAdmin) return null
 
   // Server enforces RBAC too — this early-out just avoids a guaranteed 403.
   if (!canView || forbidden) {

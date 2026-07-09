@@ -13,15 +13,28 @@ import type {
   ReviewConclusion,
   TranscriptUtterance,
 } from '../../types'
+import { useCallQaSettings } from '../../hooks/useCallQaSettings'
 import { useCallTranscript } from '../../hooks/useCallTranscript'
 import { useHasPermission } from '@/hooks'
 import { CallTranscriptPanel } from '../CallTranscriptPanel'
 
+vi.mock('../../hooks/useCallQaSettings', () => ({ useCallQaSettings: vi.fn() }))
 vi.mock('../../hooks/useCallTranscript', () => ({ useCallTranscript: vi.fn() }))
 vi.mock('@/hooks', () => ({ useHasPermission: vi.fn() }))
 
+const mockUseCallQaSettings = vi.mocked(useCallQaSettings)
 const mockUseCallTranscript = vi.mocked(useCallTranscript)
 const mockUseHasPermission = vi.mocked(useHasPermission)
+
+type QaSettingsResult = ReturnType<typeof useCallQaSettings>
+
+/** undefined = settings still loading / failed — the panel must stay hidden. */
+function setQaSettings(transcriptsEnabled: boolean | undefined) {
+  mockUseCallQaSettings.mockReturnValue({
+    data:
+      transcriptsEnabled === undefined ? undefined : { transcripts_enabled: transcriptsEnabled },
+  } as QaSettingsResult)
+}
 
 const TRANSCRIPT: CallTranscript = {
   language: 'uk',
@@ -72,6 +85,7 @@ function setHook(overrides: Partial<HookResult>) {
     isLoading: false,
     notReady: false,
     forbidden: false,
+    disabledByAdmin: false,
     isHardError: false,
     ...overrides,
   } as HookResult)
@@ -80,6 +94,7 @@ function setHook(overrides: Partial<HookResult>) {
 beforeEach(() => {
   vi.clearAllMocks()
   mockUseHasPermission.mockReturnValue(true)
+  setQaSettings(true)
   setHook({})
 })
 
@@ -211,6 +226,50 @@ describe('CallTranscriptPanel', () => {
     render(<CallTranscriptPanel callId="c1" />)
     expect(screen.getByText('Доброго дня, компанія Тест.')).toBeInTheDocument()
     expect(screen.queryByTestId('transcript-scene-0')).not.toBeInTheDocument()
+  })
+})
+
+// ---- Global Call QA switch (admin kill-switch) gates the whole panel ----
+
+describe('CallTranscriptPanel — global Call QA switch', () => {
+  it('renders nothing and fetches nothing while the switch is OFF', () => {
+    setQaSettings(false)
+    const { container } = render(<CallTranscriptPanel callId="c1" active />)
+
+    expect(container).toBeEmptyDOMElement()
+    // No skeleton, no no-access box — the feature simply does not exist.
+    expect(screen.queryByTestId('transcript-skeleton')).not.toBeInTheDocument()
+    expect(screen.queryByText('pages.training.transcript.noAccess')).not.toBeInTheDocument()
+    // The transcript fetch stays disabled (2nd hook argument).
+    expect(mockUseCallTranscript).toHaveBeenCalledWith('c1', false)
+  })
+
+  it('renders nothing and fetches nothing while the settings are still loading', () => {
+    setQaSettings(undefined)
+    const { container } = render(<CallTranscriptPanel callId="c1" active />)
+
+    expect(container).toBeEmptyDOMElement()
+    expect(mockUseCallTranscript).toHaveBeenCalledWith('c1', false)
+  })
+
+  it('renders nothing when the transcript endpoint answers 403 call_qa_disabled', () => {
+    // Race: cached settings still say ON, but an admin just flipped the
+    // switch — the panel must hide, not show the no-access message.
+    setQaSettings(true)
+    setHook({ disabledByAdmin: true })
+    const { container } = render(<CallTranscriptPanel callId="c1" active />)
+
+    expect(container).toBeEmptyDOMElement()
+    expect(screen.queryByText('pages.training.transcript.noAccess')).not.toBeInTheDocument()
+  })
+
+  it('keeps the fetch enabled and renders as usual while the switch is ON (regression)', () => {
+    setQaSettings(true)
+    setHook({ transcript: TRANSCRIPT })
+    render(<CallTranscriptPanel callId="c1" active />)
+
+    expect(mockUseCallTranscript).toHaveBeenCalledWith('c1', true)
+    expect(screen.getByTestId('transcript-panel')).toBeInTheDocument()
   })
 })
 
