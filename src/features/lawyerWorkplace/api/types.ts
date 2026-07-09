@@ -287,11 +287,10 @@ export interface LegalKanbanResponse {
 
 export interface LegalKanbanTaskCreateRequest {
   letter_type_id: string
-  client_id?: number | null
+  client_id: number
   due_date: string
   assigned_to_user_id: number
   priority?: string
-  description?: string | null
 }
 
 export interface LegalKanbanTaskCreateResponse {
