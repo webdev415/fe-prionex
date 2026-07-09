@@ -113,6 +113,8 @@ export interface RestructuringPaymentEntry {
   received_date?: string | null
   received_amount?: string | null
   status?: 'paid' | 'partially_paid' | 'unpaid' | null
+  // KAN-785 Part 2 — true for the appended overdue-penalty row.
+  is_penalty?: boolean
 }
 
 export interface CreateRestructuringAgreementRequest {
@@ -124,6 +126,14 @@ export interface CreateRestructuringAgreementRequest {
     payment_date?: string | null
     payment_amount?: number | null
   }>
+  // KAN-785 Part 2 — optional operator-set penalty + persisted periodicity so
+  // the backend can date the penalty by this RR's cadence when it fires.
+  penalty_amount?: number | null
+  periodicity?: {
+    frequency?: 'every_n_days' | 'monthly_same_day' | 'monthly_nth_day' | null
+    interval_days?: number | null
+    day_of_month?: string | null
+  } | null
 }
 
 export interface RestructuringAgreementDetail {
@@ -137,6 +147,10 @@ export interface RestructuringAgreementDetail {
   monthly_payment_amount?: string | null
   responsible_user_name?: string | null
   payments: RestructuringPaymentEntry[]
+  // KAN-785 Part 2 — penalty summary (populated once the sweep fires).
+  penalty_amount?: string | null
+  penalty_charge_date?: string | null
+  penalty_triggered_at?: string | null
 }
 
 export interface Client {
