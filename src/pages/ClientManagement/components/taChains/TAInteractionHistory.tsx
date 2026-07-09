@@ -413,7 +413,13 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
               entries.push({ value: formattedValue, followUps })
             }
           } else {
-            for (const [, val] of Object.entries(row.step_data as Record<string, string>)) {
+            // No ordered steps (chain deleted or not loaded yet): fall back to
+            // the interaction's own values. Iterate `resolved`, never raw
+            // step_data — a value may be a rich object
+            // ({value, autofilled, target_action_id, target_action_name}) from
+            // the chain-autofill feature, and rendering one raw throws React
+            // error #31, blanking the whole client profile.
+            for (const val of Object.values(resolved)) {
               if (val) entries.push({ value: val, followUps: [] })
             }
           }

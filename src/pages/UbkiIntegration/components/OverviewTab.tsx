@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   MdEdit,
   MdCheck,
@@ -12,6 +12,8 @@ import { DataTable, type Column } from '@/components/ui/DataTable'
 import { Button } from '@/components/ui/Button'
 import { Pagination } from '@/components/ui/Pagination'
 import { TableSkeleton } from '@/components/ui/TableSkeleton'
+import { DateSelect } from '@/components/ui/DateSelect'
+import { useAuthStore } from '@/stores/authStore'
 import {
   MultiCheckboxDropdown,
   type MultiCheckboxOption,
@@ -19,6 +21,7 @@ import {
 import { type SubmissionLogRow, type SubmissionStatus, type UbkiEnv } from '../mockData'
 import {
   useUbkiLogs,
+  useUbkiLogFacets,
   mapLogItemToRow,
   useUbkiKpis,
   useUbkiConnection,
@@ -121,10 +124,6 @@ function KpiCard({
   )
 }
 
-const TYPE_OPTIONS: MultiCheckboxOption<string>[] = [
-  { value: 'Outbound', label: 'Outbound (KAN-609)' },
-  { value: 'Inbound', label: 'Inbound report (KAN-250)' },
-]
 const STATUS_OPTIONS: MultiCheckboxOption<string>[] = [
   { value: 'success', label: 'Success' },
   { value: 'failed', label: 'Failed' },
@@ -173,14 +172,26 @@ export function OverviewTab() {
   }
 
   const [period, setPeriod] = useState<(typeof PERIODS)[number]>('Last 30 days')
+  const [customFrom, setCustomFrom] = useState<Date | null>(null)
+  const [customTo, setCustomTo] = useState<Date | null>(null)
 
   // KPI cards — real stats for the selected period (memoised range so the query
-  // key is stable per period, not recomputed every render).
-  const kpiRange = useMemo(() => periodRange(period), [period])
+  // key is stable, not recomputed every render). 'Custom range' uses the pickers.
+  const kpiRange = useMemo(() => {
+    if (period === 'Custom range') {
+      const sod = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0)
+      const eod = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59)
+      return {
+        date_from: customFrom ? sod(customFrom).toISOString() : undefined,
+        date_to: customTo ? eod(customTo).toISOString() : undefined,
+      }
+    }
+    return periodRange(period)
+  }, [period, customFrom, customTo])
   const { data: kpiData } = useUbkiKpis(kpiRange)
   const kpis = kpiData ?? EMPTY_KPIS
   const [search, setSearch] = useState('')
-  const [typeF, setTypeF] = useState<string[]>([])
+  const [debouncedSearch, setDebouncedSearch] = useState('')
   const [statusF, setStatusF] = useState<string[]>([])
   const [modeF, setModeF] = useState<string[]>([])
   const [operatorF, setOperatorF] = useState<string[]>([])
@@ -189,52 +200,62 @@ export function OverviewTab() {
   const [pageSize, setPageSize] = useState(10)
   const [selected, setSelected] = useState<SubmissionLogRow | null>(null)
 
-  // Real backend: GET /api/v1/ubki/logs (project-scoped, newest first).
-  const { data: logItems, isLoading, isError } = useUbkiLogs({ limit: 100 })
-  const allRows = useMemo(() => (logItems ?? []).map(mapLogItemToRow), [logItems])
+  // Debounce the search box so typing doesn't fire a request per keystroke.
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setDebouncedSearch(search)
+      setPage(1)
+    }, 350)
+    return () => clearTimeout(t)
+  }, [search])
 
-  // Operator / error-code options come straight from the loaded rows (the backend
-  // /logs response has no fixed vocabulary for these).
-  const operatorOptions = useMemo<MultiCheckboxOption<string>[]>(() => {
-    const seen = new Set<string>()
-    const opts: MultiCheckboxOption<string>[] = []
-    for (const r of allRows) {
-      if (seen.has(r.operator)) continue
-      seen.add(r.operator)
-      opts.push({ value: r.operator, label: r.operator })
-    }
-    return opts
-  }, [allRows])
-  const errorOptions = useMemo<MultiCheckboxOption<string>[]>(() => {
-    const seen = new Set<string>()
-    const opts: MultiCheckboxOption<string>[] = []
-    for (const r of allRows) {
-      if (!r.error || seen.has(r.error)) continue
-      seen.add(r.error)
-      opts.push({ value: r.error, label: r.error })
-    }
-    return opts
-  }, [allRows])
+  // The selected period scopes the log too — reset to page 1 when it changes.
+  // Done during render (tracking the previous range) rather than in an effect,
+  // to avoid a cascading re-render.
+  const [prevRange, setPrevRange] = useState(kpiRange)
+  if (prevRange !== kpiRange) {
+    setPrevRange(kpiRange)
+    setPage(1)
+  }
 
-  const rows = useMemo(() => {
-    const q = search.trim().toLowerCase()
-    return allRows.filter((r) => {
-      if (typeF.length && !typeF.includes(r.type)) return false
-      if (statusF.length && !statusF.includes(r.status)) return false
-      if (modeF.length && !modeF.includes(r.mode)) return false
-      if (operatorF.length && !operatorF.includes(r.operator)) return false
-      if (errorF.length && !(r.error && errorF.includes(r.error))) return false
-      if (
-        q &&
-        !r.clientName.toLowerCase().includes(q) &&
-        !r.clientTin.toLowerCase().includes(q) &&
-        !r.creditContract.toLowerCase().includes(q)
-      ) {
-        return false
-      }
-      return true
-    })
-  }, [search, allRows, typeF, statusF, modeF, operatorF, errorF])
+  // Server-side pagination + filtering: GET /api/v1/ubki/logs returns one page
+  // (items) plus the total matching the filters. The period date range applies
+  // to both the KPIs and the log.
+  const logParams = useMemo(
+    () => ({
+      limit: pageSize,
+      offset: (page - 1) * pageSize,
+      status: statusF,
+      mode: modeF,
+      operator: operatorF,
+      error_code: errorF,
+      search: debouncedSearch.trim() || undefined,
+      date_from: kpiRange.date_from,
+      date_to: kpiRange.date_to,
+    }),
+    [pageSize, page, statusF, modeF, operatorF, errorF, debouncedSearch, kpiRange]
+  )
+  const userTimezone = useAuthStore((s) => s.user?.timezone)
+  const { data: logPage, isLoading, isError } = useUbkiLogs(logParams)
+  const rows = useMemo(
+    () => (logPage?.items ?? []).map((i) => mapLogItemToRow(i, userTimezone)),
+    [logPage, userTimezone]
+  )
+  const total = logPage?.total ?? 0
+  const totalPages = Math.max(1, Math.ceil(total / pageSize))
+  const safePage = Math.min(page, totalPages)
+
+  // Filter dropdown options come from a facets endpoint (whole dataset, not just
+  // the current page).
+  const { data: facets } = useUbkiLogFacets()
+  const operatorOptions = useMemo<MultiCheckboxOption<string>[]>(
+    () => (facets?.operators ?? []).map((o) => ({ value: o.value, label: o.label })),
+    [facets]
+  )
+  const errorOptions = useMemo<MultiCheckboxOption<string>[]>(
+    () => (facets?.error_codes ?? []).map((e) => ({ value: e, label: e })),
+    [facets]
+  )
 
   const columns: Column<SubmissionLogRow>[] = [
     {
@@ -506,6 +527,33 @@ export function OverviewTab() {
         ))}
       </div>
 
+      {/* Custom-range date pickers — only when 'Custom range' is selected. */}
+      {period === 'Custom range' && (
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="w-44">
+            <DateSelect
+              value={customFrom}
+              onChange={({ value }) => setCustomFrom(value)}
+              onClear={() => setCustomFrom(null)}
+              max={customTo ?? undefined}
+              format="dd / MM / yyyy"
+              placeholder="From date"
+            />
+          </div>
+          <span className="text-gray-400">—</span>
+          <div className="w-44">
+            <DateSelect
+              value={customTo}
+              onChange={({ value }) => setCustomTo(value)}
+              onClear={() => setCustomTo(null)}
+              min={customFrom ?? undefined}
+              format="dd / MM / yyyy"
+              placeholder="To date"
+            />
+          </div>
+        </div>
+      )}
+
       {/* ── KPI cards ───────────────────────────────────────────────────── */}
       <div className="flex flex-col gap-3 sm:flex-row">
         <KpiCard
@@ -552,17 +600,6 @@ export function OverviewTab() {
         </div>
 
         <div className="mb-4 flex flex-wrap items-center gap-2">
-          <div className="min-w-[130px] flex-1">
-            <MultiCheckboxDropdown
-              options={TYPE_OPTIONS}
-              selected={typeF}
-              onChange={(v) => {
-                setTypeF(v)
-                setPage(1)
-              }}
-              allLabel="All types"
-            />
-          </div>
           <div className="min-w-[130px] flex-1">
             <MultiCheckboxDropdown
               options={STATUS_OPTIONS}
@@ -623,7 +660,6 @@ export function OverviewTab() {
             leftIcon={<MdSync size={15} />}
             onClick={() => {
               setSearch('')
-              setTypeF([])
               setStatusF([])
               setModeF([])
               setOperatorF([])
@@ -652,7 +688,6 @@ export function OverviewTab() {
               className="mt-1"
               onClick={() => {
                 setSearch('')
-                setTypeF([])
                 setStatusF([])
                 setModeF([])
                 setOperatorF([])
@@ -673,8 +708,8 @@ export function OverviewTab() {
             />
             <div className="mt-4">
               <Pagination
-                currentPage={page}
-                totalPages={Math.max(1, Math.ceil(rows.length / pageSize))}
+                currentPage={safePage}
+                totalPages={totalPages}
                 pageSize={pageSize}
                 onPageChange={setPage}
                 onPageSizeChange={(s) => {

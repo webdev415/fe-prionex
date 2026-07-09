@@ -11,6 +11,7 @@ import {
 } from 'react-icons/md'
 import { Button } from '@/components/ui/Button'
 import { formatDateTime } from '@/lib/formatters'
+import { useAuthStore } from '@/stores/authStore'
 import {
   useUbkiLogDetail,
   useSaveUbkiLogNote,
@@ -133,10 +134,11 @@ function SubmissionDrawerContent({
     })
   }
 
+  const userTimezone = useAuthStore((s) => s.user?.timezone)
   const failed = detail.status === 'error'
   const clientName = detail.client_name ?? `Client #${detail.client_id}`
   const clientTin = detail.client_tin ? `TIN ${detail.client_tin}` : `Debt #${detail.debt_id}`
-  const creditDate = `${detail.contract_number ?? '—'} · ${formatDateTime(detail.created_at)}`
+  const creditDate = `${detail.contract_number ?? '—'} · ${formatDateTime(detail.created_at, userTimezone)}`
   const dirty = note !== saved
 
   return (

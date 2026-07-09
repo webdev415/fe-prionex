@@ -4,6 +4,7 @@ import { DataTable, type Column } from '@/components/ui/DataTable'
 import { Button } from '@/components/ui/Button'
 import { TableSkeleton } from '@/components/ui/TableSkeleton'
 import { formatDateTime } from '@/lib/formatters'
+import { useAuthStore } from '@/stores/authStore'
 import {
   MultiCheckboxDropdown,
   type MultiCheckboxOption,
@@ -57,6 +58,7 @@ export function OptOutTab() {
   const [addNote, setAddNote] = useState('')
 
   const fileRef = useRef<HTMLInputElement>(null)
+  const userTimezone = useAuthStore((s) => s.user?.timezone)
 
   const items = useMemo(() => data ?? [], [data])
 
@@ -69,10 +71,10 @@ export function OptOutTab() {
         tin: c.tax_id ?? '—',
         reason: c.reason,
         setBy: c.set_by != null ? `User #${c.set_by}` : '—',
-        dateAdded: c.set_at ? formatDateTime(c.set_at) : '—',
+        dateAdded: c.set_at ? formatDateTime(c.set_at, userTimezone) : '—',
         note: c.note ?? '—',
       })),
-    [items]
+    [items, userTimezone]
   )
 
   const adminOptions = useMemo<MultiCheckboxOption<string>[]>(() => {

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { MdOutlineFileDownload, MdSync, MdInfoOutline } from 'react-icons/md'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { Button } from '@/components/ui/Button'
@@ -6,11 +6,12 @@ import { Pagination } from '@/components/ui/Pagination'
 import { TableSkeleton } from '@/components/ui/TableSkeleton'
 import { DateSelect } from '@/components/ui/DateSelect'
 import { formatDateTime } from '@/lib/formatters'
+import { useAuthStore } from '@/stores/authStore'
 import {
   MultiCheckboxDropdown,
   type MultiCheckboxOption,
 } from '@/pages/Training/components/MultiCheckboxDropdown'
-import { useUbkiAudit, exportUbkiAudit, type AuditLogItem } from '../api'
+import { useUbkiAudit, useUbkiAuditFacets, exportUbkiAudit, type AuditLogItem } from '../api'
 
 const STATUS_STYLES: Record<string, string> = {
   success: 'bg-success-50 text-success-700',
@@ -27,12 +28,9 @@ const EVENT_TYPE_OPTIONS: MultiCheckboxOption<string>[] = [
   { value: 'Bulk action triggered', label: 'Bulk action triggered' },
 ]
 
-const dayNum = (d: Date) => d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate()
-
 interface Row {
   id: number
   dateTime: string
-  ts: Date | null
   event: string
   eventType: string
   performedBy: string
@@ -41,8 +39,8 @@ interface Row {
 }
 
 export function AuditLogTab() {
-  const { data, isLoading, isError } = useUbkiAudit()
   const [search, setSearch] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
   const [eventTypes, setEventTypes] = useState<string[]>([])
   const [actors, setActors] = useState<string[]>([])
   const [dateFrom, setDateFrom] = useState<Date | null>(null)
@@ -51,12 +49,37 @@ export function AuditLogTab() {
   const [pageSize, setPageSize] = useState(10)
   const [exporting, setExporting] = useState(false)
 
-  const allRows = useMemo<Row[]>(
+  // Debounce the search box so typing doesn't fire a request per keystroke.
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setDebouncedSearch(search)
+      setPage(1)
+    }, 350)
+    return () => clearTimeout(t)
+  }, [search])
+
+  // Server-side pagination + filtering: GET /api/v1/ubki/audit.
+  const auditParams = useMemo(() => {
+    const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0)
+    const endOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59)
+    return {
+      limit: pageSize,
+      offset: (page - 1) * pageSize,
+      event_type: eventTypes,
+      actor: actors,
+      search: debouncedSearch.trim() || undefined,
+      date_from: dateFrom ? startOfDay(dateFrom).toISOString() : undefined,
+      date_to: dateTo ? endOfDay(dateTo).toISOString() : undefined,
+    }
+  }, [pageSize, page, eventTypes, actors, debouncedSearch, dateFrom, dateTo])
+
+  const userTimezone = useAuthStore((s) => s.user?.timezone)
+  const { data, isLoading, isError } = useUbkiAudit(auditParams)
+  const rows = useMemo<Row[]>(
     () =>
-      (data ?? []).map((a: AuditLogItem) => ({
+      (data?.items ?? []).map((a: AuditLogItem) => ({
         id: a.id,
-        dateTime: formatDateTime(a.created_at),
-        ts: a.created_at ? new Date(a.created_at) : null,
+        dateTime: formatDateTime(a.created_at, userTimezone),
         event: a.event,
         eventType: a.event_type,
         performedBy:
@@ -64,39 +87,18 @@ export function AuditLogTab() {
         details: a.details ?? '—',
         status: a.status,
       })),
-    [data]
+    [data, userTimezone]
   )
+  const total = data?.total ?? 0
+  const totalPages = Math.max(1, Math.ceil(total / pageSize))
+  const safePage = Math.min(page, totalPages)
 
-  const actorOptions = useMemo<MultiCheckboxOption<string>[]>(() => {
-    const seen = new Set<string>()
-    const opts: MultiCheckboxOption<string>[] = []
-    for (const r of allRows) {
-      if (seen.has(r.performedBy)) continue
-      seen.add(r.performedBy)
-      opts.push({ value: r.performedBy, label: r.performedBy })
-    }
-    return opts
-  }, [allRows])
-
-  const rows = useMemo(() => {
-    const q = search.trim().toLowerCase()
-    return allRows.filter((r) => {
-      if (eventTypes.length && !eventTypes.includes(r.eventType)) return false
-      if (actors.length && !actors.includes(r.performedBy)) return false
-      if (dateFrom || dateTo) {
-        if (dateFrom && r.ts && dayNum(r.ts) < dayNum(dateFrom)) return false
-        if (dateTo && r.ts && dayNum(r.ts) > dayNum(dateTo)) return false
-      }
-      if (
-        q &&
-        !r.event.toLowerCase().includes(q) &&
-        !r.performedBy.toLowerCase().includes(q) &&
-        !r.details.toLowerCase().includes(q)
-      )
-        return false
-      return true
-    })
-  }, [allRows, search, eventTypes, actors, dateFrom, dateTo])
+  // Actor options from a facets endpoint (whole dataset, not just this page).
+  const { data: facets } = useUbkiAuditFacets()
+  const actorOptions = useMemo<MultiCheckboxOption<string>[]>(
+    () => (facets?.actors ?? []).map((a) => ({ value: a, label: a })),
+    [facets]
+  )
 
   const resetFilters = () => {
     setSearch('')
@@ -110,7 +112,13 @@ export function AuditLogTab() {
   const handleExport = async () => {
     setExporting(true)
     try {
-      const blob = await exportUbkiAudit()
+      const blob = await exportUbkiAudit({
+        event_type: eventTypes,
+        actor: actors,
+        search: debouncedSearch.trim() || undefined,
+        date_from: auditParams.date_from,
+        date_to: auditParams.date_to,
+      })
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
@@ -123,8 +131,6 @@ export function AuditLogTab() {
       setExporting(false)
     }
   }
-
-  const pageRows = rows.slice((page - 1) * pageSize, page * pageSize)
 
   const columns: Column<Row>[] = [
     {
@@ -180,7 +186,7 @@ export function AuditLogTab() {
             variant="secondary"
             size="sm"
             leftIcon={<MdOutlineFileDownload size={14} />}
-            disabled={exporting || !rows.length}
+            disabled={exporting || total === 0}
             onClick={handleExport}
           >
             {exporting ? 'Exporting…' : 'Export'}
@@ -268,11 +274,11 @@ export function AuditLogTab() {
           </div>
         ) : (
           <>
-            <DataTable columns={columns} data={pageRows} className="w-full" />
+            <DataTable columns={columns} data={rows} className="w-full" />
             <div className="mt-4">
               <Pagination
-                currentPage={page}
-                totalPages={Math.max(1, Math.ceil(rows.length / pageSize))}
+                currentPage={safePage}
+                totalPages={totalPages}
                 pageSize={pageSize}
                 onPageChange={setPage}
                 onPageSizeChange={(s) => {

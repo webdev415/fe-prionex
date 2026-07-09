@@ -30,14 +30,59 @@ export interface UbkiLogItem {
 }
 
 export interface UbkiLogsParams {
+  limit?: number
+  offset?: number
+  status?: string[]
+  mode?: string[]
+  error_code?: string[]
+  operator?: string[]
+  search?: string
+  date_from?: string
+  date_to?: string
   debt_id?: number
   batch_id?: string
-  limit?: number
 }
 
-export async function getUbkiLogs(params: UbkiLogsParams = {}): Promise<UbkiLogItem[]> {
-  const r = await api.get<UbkiLogItem[]>('/api/v1/ubki/logs', { params })
+export interface SubmissionLogPage {
+  items: UbkiLogItem[]
+  total: number
+}
+
+export async function getUbkiLogs(params: UbkiLogsParams = {}): Promise<SubmissionLogPage> {
+  // Build the query manually so array filters serialize as repeated keys
+  // (status=a&status=b), which is what FastAPI's list[str] query expects.
+  const qs = new URLSearchParams()
+  if (params.limit != null) qs.set('limit', String(params.limit))
+  if (params.offset != null) qs.set('offset', String(params.offset))
+  params.status?.forEach((v) => qs.append('status', v))
+  params.mode?.forEach((v) => qs.append('mode', v))
+  params.error_code?.forEach((v) => qs.append('error_code', v))
+  params.operator?.forEach((v) => qs.append('operator', v))
+  if (params.search) qs.set('search', params.search)
+  if (params.date_from) qs.set('date_from', params.date_from)
+  if (params.date_to) qs.set('date_to', params.date_to)
+  if (params.debt_id != null) qs.set('debt_id', String(params.debt_id))
+  if (params.batch_id) qs.set('batch_id', params.batch_id)
+  const r = await api.get<SubmissionLogPage>(`/api/v1/ubki/logs?${qs.toString()}`)
   return r.data
+}
+
+export interface LogFacetOperator {
+  value: string
+  label: string
+}
+export interface SubmissionLogFacets {
+  error_codes: string[]
+  operators: LogFacetOperator[]
+}
+
+export async function getUbkiLogFacets(): Promise<SubmissionLogFacets> {
+  const r = await api.get<SubmissionLogFacets>('/api/v1/ubki/logs/facets')
+  return r.data
+}
+
+export function useUbkiLogFacets() {
+  return useQuery({ queryKey: ['ubki-log-facets'], queryFn: getUbkiLogFacets, staleTime: 60_000 })
 }
 
 /** Backend status vocabulary (success | error | skipped) → the table's pill states. */
@@ -48,12 +93,17 @@ function mapStatus(status: string): SubmissionStatus {
 }
 
 /** Map a real log item to the row shape the table + drawer already use. */
-export function mapLogItemToRow(item: UbkiLogItem): SubmissionLogRow {
+export function mapLogItemToRow(item: UbkiLogItem, timezone?: string | null): SubmissionLogRow {
   return {
     id: String(item.id),
-    dateTime: formatDateTime(item.created_at),
+    dateTime: formatDateTime(item.created_at, timezone),
     type: 'Outbound', // submission logs are outbound; backend has no in/out flag
-    mode: item.mode?.toLowerCase() === 'automatic' ? 'Auto' : 'Manual',
+    mode:
+      item.mode?.toLowerCase() === 'automatic'
+        ? 'Auto'
+        : item.mode?.toLowerCase() === 'bulk'
+          ? 'Bulk'
+          : 'Manual',
     clientName: item.client_name ?? `Client #${item.client_id}`,
     clientTin: item.client_tin ? `TIN ${item.client_tin}` : `Debt #${item.debt_id}`,
     creditContract: item.contract_number ?? item.ubki_request_id ?? '—',
@@ -270,18 +320,70 @@ export interface AuditLogItem {
   created_at: string
 }
 
-export async function getUbkiAudit(): Promise<AuditLogItem[]> {
-  const r = await api.get<AuditLogItem[]>('/api/v1/ubki/audit')
+export interface AuditLogPage {
+  items: AuditLogItem[]
+  total: number
+}
+
+export interface UbkiAuditParams {
+  limit?: number
+  offset?: number
+  event_type?: string[]
+  actor?: string[]
+  search?: string
+  date_from?: string
+  date_to?: string
+}
+
+export async function getUbkiAudit(params: UbkiAuditParams = {}): Promise<AuditLogPage> {
+  const qs = new URLSearchParams()
+  if (params.limit != null) qs.set('limit', String(params.limit))
+  if (params.offset != null) qs.set('offset', String(params.offset))
+  params.event_type?.forEach((v) => qs.append('event_type', v))
+  params.actor?.forEach((v) => qs.append('actor', v))
+  if (params.search) qs.set('search', params.search)
+  if (params.date_from) qs.set('date_from', params.date_from)
+  if (params.date_to) qs.set('date_to', params.date_to)
+  const r = await api.get<AuditLogPage>(`/api/v1/ubki/audit?${qs.toString()}`)
   return r.data
 }
 
-export async function exportUbkiAudit(): Promise<Blob> {
-  const r = await api.get('/api/v1/ubki/audit/export', { responseType: 'blob' })
+export interface AuditFacets {
+  actors: string[]
+  event_types: string[]
+}
+
+export async function getUbkiAuditFacets(): Promise<AuditFacets> {
+  const r = await api.get<AuditFacets>('/api/v1/ubki/audit/facets')
+  return r.data
+}
+
+export async function exportUbkiAudit(params: UbkiAuditParams = {}): Promise<Blob> {
+  // Same filters as the list (limit/offset are ignored by the export endpoint).
+  const qs = new URLSearchParams()
+  params.event_type?.forEach((v) => qs.append('event_type', v))
+  params.actor?.forEach((v) => qs.append('actor', v))
+  if (params.search) qs.set('search', params.search)
+  if (params.date_from) qs.set('date_from', params.date_from)
+  if (params.date_to) qs.set('date_to', params.date_to)
+  const r = await api.get(`/api/v1/ubki/audit/export?${qs.toString()}`, { responseType: 'blob' })
   return r.data as Blob
 }
 
-export function useUbkiAudit() {
-  return useQuery({ queryKey: ['ubki-audit'], queryFn: getUbkiAudit, staleTime: 15_000 })
+export function useUbkiAudit(params: UbkiAuditParams = {}) {
+  return useQuery({
+    queryKey: ['ubki-audit', params],
+    queryFn: () => getUbkiAudit(params),
+    staleTime: 15_000,
+  })
+}
+
+export function useUbkiAuditFacets() {
+  return useQuery({
+    queryKey: ['ubki-audit-facets'],
+    queryFn: getUbkiAuditFacets,
+    staleTime: 60_000,
+  })
 }
 
 // ── KPIs (Overview cards) ────────────────────────────────────────────────────

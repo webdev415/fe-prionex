@@ -12,7 +12,7 @@
 export type UbkiEnv = 'test' | 'production'
 export type SubmissionStatus = 'success' | 'failed' | 'pending'
 export type SubmissionType = 'Outbound' | 'Inbound'
-export type SubmissionMode = 'Auto' | 'Manual'
+export type SubmissionMode = 'Auto' | 'Manual' | 'Bulk'
 
 export interface UbkiConnection {
   env: UbkiEnv
