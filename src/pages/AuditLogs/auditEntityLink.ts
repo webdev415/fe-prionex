@@ -134,6 +134,27 @@ const CLIENT_LIST_LINK_ACTIONS = new Set<string>([
   'clients.bulk_tag_removed',
 ])
 
+// Legal Workplace settings mutations → Lawyer Workplace (settings tab).
+const LEGAL_SETTINGS_LINK_ACTIONS = new Set<string>([
+  'legal.settings.letter_type.created',
+  'legal.settings.letter_type.updated',
+  'legal.settings.letter_type.deleted',
+  'legal.settings.letter_type.priorities_updated',
+  'legal.settings.training_example.created',
+  'legal.settings.training_example.updated',
+  'legal.settings.training_example.deleted',
+  'legal.settings.lawyer.created',
+  'legal.settings.lawyer.updated',
+  'legal.settings.lawyer.deleted',
+  'legal.settings.mailbox.created',
+  'legal.settings.mailbox.updated',
+  'legal.settings.mailbox.polled',
+  'legal.settings.template.created',
+  'legal.settings.template.updated',
+  'legal.settings.template.deleted',
+  'legal.settings.sync_updated',
+])
+
 // Resource types whose audit rows store the client id in `record_after`
 // (not `resource_id`, which is the call / interaction / contact / address /
 // passport / employment / document / sms entity). Their Entity links to that
@@ -153,6 +174,11 @@ export const RECORD_AFTER_CLIENT_TYPES = new Set<string>([
   // is mapped to record_after.client_id by audit-service, so the Entity
   // link resolves to the parent client's detail page.
   'client_sale_note',
+  // Legal Workplace — client_id lives in details/record_after, not resource_id.
+  'email_message',
+  'email_thread',
+  'legal_task',
+  'legal_document',
 ])
 
 // Tag-domain entity types → the tabbed Tags page (?tab=). Each resource_type is
@@ -297,6 +323,12 @@ const AUDIT_LINK_RULES: LinkRule[] = [
     match: (l) => l.entity_type === 'import_job',
     to: () => '/dashboard/import/history',
     permission: PERMISSIONS.DATA.IMPORT,
+  },
+  // Legal Workplace settings → Lawyer Workplace settings tab.
+  {
+    match: (l) => !!l.action_raw && LEGAL_SETTINGS_LINK_ACTIONS.has(l.action_raw),
+    to: () => '/dashboard/lawyer-workplace?tab=settings',
+    permission: PERMISSIONS.LEGAL_WORKPLACE.MANAGE,
   },
 ]
 
