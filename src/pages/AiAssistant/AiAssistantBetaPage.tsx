@@ -1873,16 +1873,17 @@ export function AiAssistantBetaPage() {
   )
 
   // Resolve whether a message's reasoning panel is open: an explicit user
-  // toggle wins; otherwise the panel mirrors the live stream (open while
-  // streaming, collapsed once the turn has settled).
+  // Панель раздумий НЕ выезжает автоматически: по умолчанию свёрнута, открывается
+  // ТОЛЬКО явным кликом по плашке «Ход рассуждения» (toggleReasoning) или по факту.
+  // Плашка при стриме показывает live-индикатор, но само окно ждёт нажатия кнопки.
   const isReasoningOpen = useCallback(
-    (item: ChatMessage) => reasoningOpenByMessage[item.id] ?? Boolean(item.isStreamingReasoning),
+    (item: ChatMessage) => reasoningOpenByMessage[item.id] ?? false,
     [reasoningOpenByMessage]
   )
 
   const toggleReasoning = useCallback((item: ChatMessage) => {
     setReasoningOpenByMessage((current) => {
-      const open = current[item.id] ?? Boolean(item.isStreamingReasoning)
+      const open = current[item.id] ?? false
       return { ...current, [item.id]: !open }
     })
   }, [])

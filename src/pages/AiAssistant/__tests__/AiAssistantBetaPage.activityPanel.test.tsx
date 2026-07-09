@@ -49,6 +49,16 @@ function send(text: string) {
   fireEvent.keyDown(getTextarea(), { key: 'Enter' })
 }
 
+/**
+ * Панель раздумий больше НЕ выезжает автоматически — открываем её кликом по
+ * плашке «Ход рассуждения». Узел плашки берём свежим (против flaky при
+ * перерисовке во время стрима), клик — по вложенной кнопке-тоглу.
+ */
+async function openReasoningPanel() {
+  const chip = await screen.findByTestId('assistant-reasoning')
+  fireEvent.click(chip.querySelector('button') as HTMLButtonElement)
+}
+
 /** A settled turn that streamed reasoning + one tool step. */
 function mockReasoningTurn() {
   mockedSendChatMessage.mockImplementation(
@@ -161,6 +171,9 @@ describe('AiAssistantBetaPage — «Активность» side panel (Layer 0)'
 
     renderPage()
     send('думай')
+    // Панель не выезжает сама во время стрима — открываем её кликом по плашке,
+    // чтобы получить доступ к ручке ресайза.
+    await openReasoningPanel()
     await screen.findByTestId('assistant-reasoning-scroll')
 
     const handle = screen.getByRole('button', { name: 'pages.aiAssistant.activityResize' })
