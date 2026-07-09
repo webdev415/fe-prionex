@@ -1,3 +1,4 @@
+import { useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/Button'
 import { DoubleButton } from '@/components/ui/DoubleButton'
@@ -6,6 +7,7 @@ import { cn } from '@/lib/utils'
 import { useLawyerWorkplaceLayout } from '../../context/lawyerWorkplaceLayout'
 import {
   DEADLINE_FILTERS,
+  resolveKanbanBadgeType,
   type DeadlineFilter,
   type LawyerFilterId,
   type LawyerFilterOption,
@@ -13,6 +15,7 @@ import {
   type TypeFilterOption,
 } from './constants'
 import { KanbanFilterDropdown } from './KanbanFilterDropdown'
+import { KanbanTypeBadge } from './KanbanTypeBadge'
 
 interface KanbanBoardToolbarProps {
   totalActive: number
@@ -43,6 +46,22 @@ export function KanbanBoardToolbar({
 }: KanbanBoardToolbarProps) {
   const { t } = useTranslation('common')
   const { isCompact, isWide } = useLawyerWorkplaceLayout()
+
+  const renderTypeFilterOption = useCallback(
+    (option: TypeFilterOption) => {
+      if (option.id === 'all') {
+        return t(option.key, option.fallback)
+      }
+      const letterTypeId = option.letterTypeId ?? option.id
+      return (
+        <KanbanTypeBadge
+          type={resolveKanbanBadgeType(letterTypeId)}
+          label={option.label ?? option.fallback}
+        />
+      )
+    },
+    [t]
+  )
 
   return (
     <div className="sticky top-0 z-10 shrink-0 bg-[#F2F3F0]/95 px-4 pt-4 backdrop-blur-sm sm:px-5 lg:px-7 lg:pt-7">
@@ -155,12 +174,16 @@ export function KanbanBoardToolbar({
             value={lawyerFilter}
             options={lawyerFilterOptions}
             onChange={onLawyerFilterChange}
+            align="end"
             className={cn('w-full', !isCompact && 'w-[200px]', isWide && 'w-[230px]')}
           />
           <KanbanFilterDropdown
             value={typeFilter}
             options={typeFilterOptions}
             onChange={onTypeFilterChange}
+            align="end"
+            renderOption={renderTypeFilterOption}
+            renderValue={renderTypeFilterOption}
             className={cn('w-full', !isCompact && 'w-[200px]', isWide && 'w-[230px]')}
           />
         </div>

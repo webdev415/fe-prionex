@@ -565,7 +565,8 @@
         "messagesInThread": "{{count}} повідомлень у ланцюжку",
         "attachmentPdf": "PDF",
         "attachmentDoc": "DOC",
-        "closeThread": "Закрити ланцюжок"
+        "closeThread": "Закрити ланцюжок",
+        "disabledMailboxNotice": "Початкова поштова скринька для цього листа вимкнена. Оберіть іншу скриньку нижче, щоб надіслати відповідь."
       },
       "reply": {
         "replyFrom": "Відповідь з",
@@ -630,6 +631,8 @@
         "client": "Клієнт",
         "contract": "Договір",
         "dueDate": "Термін",
+        "selectDueDate": "Оберіть дату",
+        "dueDatePastError": "Термін не може бути раніше сьогодні",
         "lawyer": "Юрист",
         "notIdentified": "Не ідентифіковано",
         "auto": "Авто",
@@ -665,6 +668,8 @@
         "closedLabel": "закрито",
         "today": "сьогодні",
         "emailThread": "Листування",
+        "taskDetails": "Деталі задачі",
+        "noEmailThread": "Ця задача не має пов’язаного листування. Деталі вище взяті лише з задачі на канбані.",
         "changeAssignee": "Змінити виконавця",
         "emptyColumn": "Немає задач",
         "dragTask": "Перетягнути задачу",
@@ -677,6 +682,7 @@
         "copyKey": "Копіювати ключ задачі",
         "scrollNavigator": "Прокрутити колонки канбану",
         "filters": {
+          "all": "Усі задачі",
           "thisWeek": "Цього тижня",
           "thisMonth": "Цього місяця",
           "allLawyers": "Всі юристи",

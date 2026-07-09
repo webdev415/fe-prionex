@@ -33,6 +33,8 @@ export interface KanbanTask {
   columnId: KanbanColumnId
   /** Source email message id (links card → thread drawer) */
   letterId: string | null
+  /** Letter type id from settings (for filters and patches) */
+  letterTypeId: string | null
 }
 
 export interface KanbanColumnDef {

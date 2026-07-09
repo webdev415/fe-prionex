@@ -369,7 +369,11 @@ export function buildLetterParameters(
     ? context?.lawyersByUserId?.get(message.suggested_lawyer_user_id)
     : undefined
 
-  const dueDate = letterType ? computeDueDateIso(message.received_at, letterType.sla_days) : ''
+  const slaDueDate = letterType ? computeDueDateIso(message.received_at, letterType.sla_days) : ''
+  const dueDate =
+    message.suggested_due_date != null && message.suggested_due_date !== ''
+      ? message.suggested_due_date.slice(0, 10)
+      : slaDueDate
   const confirmedCount = countConfirmedParameters(message, dueDate)
   const totalParameters = 4
   const contractLabel =
@@ -396,73 +400,6 @@ export function buildLetterParameters(
     confirmedCount,
     totalParameters,
   }
-}
-
-export interface LetterActivityLogEntry {
-  timestamp: string
-  eventKey: string
-  fallback: string
-}
-
-export function buildLetterActivityLog(input: {
-  receivedAt: string
-  updatedAt?: string | null
-  processingStatus: string
-  suggestedLetterTypeId?: string | null
-  confirmedLetterTypeId?: string | null
-  legalTaskId?: number | null
-}): LetterActivityLogEntry[] {
-  const {
-    receivedAt,
-    updatedAt,
-    processingStatus,
-    suggestedLetterTypeId,
-    confirmedLetterTypeId,
-    legalTaskId,
-  } = input
-
-  const entries: LetterActivityLogEntry[] = [
-    {
-      timestamp: receivedAt,
-      eventKey: 'pages.lawyerWorkplace.activityLog.letterReceived',
-      fallback: 'Letter received',
-    },
-  ]
-
-  const confirmTimestamp = updatedAt ?? receivedAt
-  const isAutoProcessed = processingStatus === 'auto_processed'
-  const hasConfirmed = Boolean(confirmedLetterTypeId)
-  const hasSuggestedType = Boolean(suggestedLetterTypeId)
-
-  if (isAutoProcessed && hasSuggestedType) {
-    entries.push({
-      timestamp: receivedAt,
-      eventKey: 'pages.lawyerWorkplace.activityLog.classified',
-      fallback: 'Auto-classified',
-    })
-  } else if (hasConfirmed) {
-    entries.push({
-      timestamp: confirmTimestamp,
-      eventKey: 'pages.lawyerWorkplace.activityLog.parametersConfirmed',
-      fallback: 'Parameters confirmed',
-    })
-  } else if (hasSuggestedType) {
-    entries.push({
-      timestamp: receivedAt,
-      eventKey: 'pages.lawyerWorkplace.activityLog.typeSuggested',
-      fallback: 'Type suggested',
-    })
-  }
-
-  if (legalTaskId != null) {
-    entries.push({
-      timestamp: confirmTimestamp,
-      eventKey: 'pages.lawyerWorkplace.activityLog.taskCreated',
-      fallback: 'Task created on kanban board',
-    })
-  }
-
-  return entries
 }
 
 export function mapMessageToLetterDetail(
@@ -534,6 +471,7 @@ export function mapMessageToLetterDetail(
     suggestedLetterTypeId: message.suggested_letter_type_id ?? null,
     processingStatus: message.processing_status,
     updatedAt: message.updated_at ?? null,
+    sourceMailboxDisabled: Boolean(message.source_mailbox_disabled),
   }
 }
 

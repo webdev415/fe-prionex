@@ -23,10 +23,49 @@ export function formatLegalDueMonthDay(iso: string | null | undefined): string {
   return `${mm}/${dd}`
 }
 
-/** Yesterday at local noon — used when moving a card to the overdue column. */
+const KYIV_TIME_ZONE = 'Europe/Kyiv'
+
+function kyivCalendarParts(reference = new Date()): { year: number; month: number; day: number } {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: KYIV_TIME_ZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(reference)
+
+  const year = Number(parts.find((part) => part.type === 'year')?.value)
+  const month = Number(parts.find((part) => part.type === 'month')?.value)
+  const day = Number(parts.find((part) => part.type === 'day')?.value)
+  return { year, month, day }
+}
+
+function kyivNoonUtcIsoForOffset(offsetDays: number): string {
+  const { year, month, day } = kyivCalendarParts(new Date())
+  return new Date(Date.UTC(year, month - 1, day + offsetDays, 12, 0, 0, 0)).toISOString()
+}
+
+/** Tomorrow (Kyiv calendar day) at UTC noon — moving a card out of overdue. */
+export function legalDefaultDueDateIso(): string {
+  return kyivNoonUtcIsoForOffset(1)
+}
+
+/** Yesterday (Kyiv calendar day) at UTC noon — moving a card to overdue. */
 export function legalOverdueDueDateIso(): string {
-  const date = new Date()
-  date.setDate(date.getDate() - 1)
-  date.setHours(12, 0, 0, 0)
-  return date.toISOString()
+  return kyivNoonUtcIsoForOffset(-1)
+}
+
+function kyivCalendarDateKey(value: Date): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: KYIV_TIME_ZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(value)
+}
+
+/** True when the due calendar day (Europe/Kyiv) is strictly before today (Kyiv). */
+export function isLegalDueDateOverdue(deadlineIso: string | null | undefined): boolean {
+  const due = parseLegalDueDate(deadlineIso)
+  if (!due) return false
+  return kyivCalendarDateKey(new Date()) > kyivCalendarDateKey(due)
 }

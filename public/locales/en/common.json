@@ -560,7 +560,8 @@
         "attachmentDoc": "DOC",
         "newLetter": "New letter",
         "closeThread": "Close thread",
-        "emailThread": "Email thread"
+        "emailThread": "Email thread",
+        "disabledMailboxNotice": "The original mailbox for this letter is disabled. Choose another mailbox below to send a reply."
       },
       "reply": {
         "replyFrom": "Reply from",
@@ -614,6 +615,7 @@
         "taskOnBoard": "Task created on kanban",
         "viewTask": "View →",
         "selectDueDate": "Select date",
+        "dueDatePastError": "Due date cannot be before today",
         "type": "Type",
         "selectType": "Select type",
         "types": {
@@ -661,6 +663,8 @@
         "closedLabel": "closed",
         "today": "today",
         "emailThread": "Email thread",
+        "taskDetails": "Task details",
+        "noEmailThread": "This task has no linked email thread. Details above come from the kanban task only.",
         "changeAssignee": "Change assignee",
         "emptyColumn": "No tasks",
         "dragTask": "Drag task",
@@ -673,6 +677,7 @@
         "copyKey": "Copy task key",
         "scrollNavigator": "Scroll kanban columns",
         "filters": {
+          "all": "All tasks",
           "thisWeek": "Due this week",
           "thisMonth": "Due this month",
           "allLawyers": "All Lawyers",

@@ -149,12 +149,27 @@ export const legalApi = {
       .then((response) => response.data)
   },
 
-  patchKanbanTask(taskId: number, payload: { letter_type_id?: string; client_id?: number | null }) {
+  patchKanbanTask(
+    taskId: number,
+    payload: {
+      letter_type_id?: string
+      client_id?: number | null
+      assigned_to_user_id?: number | null
+      due_date?: string | null
+    }
+  ) {
     return api.patch(`${BASE_URL}/kanban/tasks/${taskId}`, payload)
   },
 
   syncKanbanTaskStatus(taskId: number, payload: { status?: string }) {
     return api.post(`${BASE_URL}/kanban/tasks/${taskId}/sync-status`, payload)
+  },
+
+  transitionKanbanTask(
+    taskId: number,
+    payload: { target_column: 'not_defined' | 'in_progress' | 'overdue' | 'completed' }
+  ) {
+    return api.post(`${BASE_URL}/kanban/tasks/${taskId}/transition`, payload)
   },
 
   listDocuments(params: LegalDocumentListParams = {}) {

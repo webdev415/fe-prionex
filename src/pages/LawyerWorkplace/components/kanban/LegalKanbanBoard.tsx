@@ -13,12 +13,15 @@ import { toast } from 'sonner'
 import { Button } from '@/components/ui/Button'
 import {
   applyKanbanTaskPatch,
+  buildKanbanColumnMovePatch,
+  mapKanbanPatchToMetadataPayload,
   mapKanbanPatchToTaskUpdate,
   matchesDeadlineFilter,
   useLegalKanban,
   useLegalLawyers,
   useLegalLetterTypes,
   usePatchLegalKanbanTaskMetadata,
+  useTransitionLegalKanbanTask,
   useUpdateLegalKanbanTask,
   type LegalKanbanTaskPatch,
 } from '@/features/lawyerWorkplace'
@@ -37,6 +40,7 @@ import {
   applyKanbanFilters,
   ALL_LAWYERS_FILTER,
   buildTypeFilterOptions,
+  KANBAN_COLUMN_MOVE_OPTIONS,
   KANBAN_SCROLL_COLUMN_WIDTH_CLASS,
   TYPE_FILTER_OPTIONS,
   type DeadlineFilter,
@@ -53,7 +57,7 @@ import { KanbanColumnHeader } from './KanbanColumnHeader'
 import { KanbanColumnLane } from './KanbanColumnLane'
 import { CreateKanbanTaskModal } from './CreateKanbanTaskModal'
 import { KanbanTabSkeleton } from './KanbanTabSkeleton'
-import { ThreadDrawer } from './ThreadDrawer'
+import { ThreadDrawer, type KanbanThreadDrawerTarget } from './ThreadDrawer'
 
 function parseTaskIdFromSearch(params: URLSearchParams): number | null {
   const raw = params.get('taskId')
@@ -69,13 +73,11 @@ export function LegalKanbanBoard() {
   const { data: lawyersData } = useLegalLawyers({ scopedToActiveProject: true })
   const { data: letterTypesData } = useLegalLetterTypes()
   const [searchParams, setSearchParams] = useSearchParams()
-  const [deadlineFilter, setDeadlineFilter] = useState<DeadlineFilter>(() =>
-    parseTaskIdFromSearch(searchParams) != null ? 'this_month' : 'this_week'
-  )
+  const [deadlineFilter, setDeadlineFilter] = useState<DeadlineFilter>('all')
   const [lawyerFilter, setLawyerFilter] = useState<LawyerFilterId>('all')
   const [typeFilter, setTypeFilter] = useState<TypeFilterId>('all')
   const [createTaskOpen, setCreateTaskOpen] = useState(false)
-  const [threadLetterId, setThreadLetterId] = useState<string | null>(null)
+  const [threadTarget, setThreadTarget] = useState<KanbanThreadDrawerTarget | null>(null)
   const [dragOverColumn, setDragOverColumn] = useState<KanbanColumnId | null>(null)
   const [draggingTaskId, setDraggingTaskId] = useState<string | null>(null)
   const [localOverrides, setLocalOverrides] = useState<KanbanTask[] | null>(null)
@@ -109,6 +111,7 @@ export function LegalKanbanBoard() {
   })
   const updateTaskMutation = useUpdateLegalKanbanTask()
   const patchMetadataMutation = usePatchLegalKanbanTaskMetadata()
+  const transitionMutation = useTransitionLegalKanbanTask()
 
   const lawyerFilterOptions = useMemo<LawyerFilterOption[]>(() => {
     const dynamicOptions =
@@ -122,6 +125,24 @@ export function LegalKanbanBoard() {
     return [ALL_LAWYERS_FILTER, ...dynamicOptions]
   }, [lawyersData?.items])
 
+  const letterTypes = useMemo(
+    () => (letterTypesData?.items ?? []).filter((item) => item.is_active),
+    [letterTypesData?.items]
+  )
+
+  const typeFilterOptions = useMemo(
+    () =>
+      letterTypes.length > 0
+        ? buildTypeFilterOptions(
+            letterTypes.map((letterType) => ({
+              id: letterType.id,
+              name: letterType.name,
+            }))
+          )
+        : TYPE_FILTER_OPTIONS,
+    [letterTypes]
+  )
+
   const baseTasks = localOverrides ?? apiTasks
 
   const columns = useMemo(() => buildKanbanColumns(baseTasks), [baseTasks])
@@ -133,10 +154,11 @@ export function LegalKanbanBoard() {
         lawyerFilter,
         typeFilter,
         lawyerFilterOptions,
+        typeFilterOptions,
         deadlineFilter,
         matchesDeadlineFilter
       ),
-    [columns, lawyerFilter, typeFilter, lawyerFilterOptions, deadlineFilter]
+    [columns, lawyerFilter, typeFilter, lawyerFilterOptions, typeFilterOptions, deadlineFilter]
   )
 
   const displayColumns = useMemo(() => {
@@ -193,36 +215,18 @@ export function LegalKanbanBoard() {
 
   const lawyers = useMemo(() => lawyersData?.items ?? [], [lawyersData?.items])
 
-  const letterTypes = useMemo(
-    () => (letterTypesData?.items ?? []).filter((item) => item.is_active),
-    [letterTypesData?.items]
-  )
-
-  const typeFilterOptions = useMemo(
-    () =>
-      letterTypes.length > 0
-        ? buildTypeFilterOptions(
-            letterTypes.map((letterType) => ({
-              id: letterType.id,
-              name: letterType.name,
-            }))
-          )
-        : TYPE_FILTER_OPTIONS,
-    [letterTypes]
-  )
-
   const filteredTaskCount = useMemo(
     () => filteredColumns.reduce((total, column) => total + column.tasks.length, 0),
     [filteredColumns]
   )
 
   const hasActiveFilters =
-    lawyerFilter !== 'all' || typeFilter !== 'all' || deadlineFilter !== 'this_week'
+    lawyerFilter !== 'all' || typeFilter !== 'all' || deadlineFilter !== 'all'
 
   const clearFilters = () => {
     setLawyerFilter('all')
     setTypeFilter('all')
-    setDeadlineFilter('this_week')
+    setDeadlineFilter('all')
     setLocalOverrides(null)
   }
 
@@ -238,15 +242,14 @@ export function LegalKanbanBoard() {
         )
       )
 
-      const metadataPayload: { letter_type_id?: string; client_id?: number | null } = {}
-      if (patch.letterTypeId) {
-        metadataPayload.letter_type_id = patch.letterTypeId
-      }
-      if (patch.clientId !== undefined) {
-        metadataPayload.client_id = patch.clientId
+      const metadataPayload = mapKanbanPatchToMetadataPayload(patch)
+      const taskPayload = mapKanbanPatchToTaskUpdate(patch, task)
+
+      if (taskPayload.due_date !== undefined && metadataPayload.due_date === undefined) {
+        metadataPayload.due_date = taskPayload.due_date
+        delete taskPayload.due_date
       }
 
-      const taskPayload = mapKanbanPatchToTaskUpdate(patch, task)
       const metadataKeys = Object.keys(metadataPayload)
       const taskKeys = Object.keys(taskPayload)
 
@@ -285,9 +288,38 @@ export function LegalKanbanBoard() {
 
   const handleMoveTask = useCallback(
     (taskId: string, toColumnId: KanbanColumnId) => {
-      persistTaskPatch(taskId, { columnId: toColumnId })
+      const source = localOverrides ?? apiTasks
+      const task = source.find((item) => item.id === taskId)
+      if (!task || task.columnId === toColumnId) return
+
+      const patch = buildKanbanColumnMovePatch(task, toColumnId)
+      setLocalOverrides(
+        source.map((item) =>
+          item.id === taskId ? applyKanbanTaskPatch(item, patch, lawyers) : item
+        )
+      )
+
+      const columnMeta = KANBAN_COLUMN_MOVE_OPTIONS.find((col) => col.id === toColumnId)
+      const columnLabel = columnMeta ? t(columnMeta.labelKey, columnMeta.id) : toColumnId
+
+      transitionMutation.mutate(
+        { taskId: task.taskId, targetColumn: toColumnId },
+        {
+          onSuccess: () => {
+            setLocalOverrides(null)
+            toast.success(
+              t('pages.lawyerWorkplace.kanban.transitionSuccess', 'Moved to {{state}}', {
+                state: columnLabel,
+              })
+            )
+          },
+          onError: () => {
+            setLocalOverrides(null)
+          },
+        }
+      )
     },
-    [persistTaskPatch]
+    [apiTasks, lawyers, localOverrides, t, transitionMutation]
   )
 
   const handleTaskUpdate = useCallback(
@@ -381,7 +413,7 @@ export function LegalKanbanBoard() {
 
       <CreateKanbanTaskModal open={createTaskOpen} onClose={() => setCreateTaskOpen(false)} />
 
-      <ThreadDrawer letterId={threadLetterId} onClose={() => setThreadLetterId(null)} />
+      <ThreadDrawer target={threadTarget} onClose={() => setThreadTarget(null)} />
 
       {isLoading ? <KanbanTabSkeleton /> : null}
 
@@ -515,7 +547,7 @@ export function LegalKanbanBoard() {
                   letterTypes={letterTypes}
                   draggingTaskId={draggingTaskId}
                   isDropTarget={dragOverColumn === col.id}
-                  onCardClick={setThreadLetterId}
+                  onCardClick={(task) => setThreadTarget({ letterId: task.letterId, task })}
                   onDragStart={handleDragStart}
                   onDragEnd={handleDragEnd}
                   onDragOver={(event) => handleDragOver(event, col.id)}

@@ -18,7 +18,7 @@ import { DOCUMENT_TYPE_FILTERS } from './constants'
 import { AddIncomingDocumentModal } from './AddIncomingDocumentModal'
 import { DocumentDetailDrawer } from './DocumentDetailDrawer'
 import { DocumentsStatsBar } from './DocumentsStatsBar'
-import { DocumentsTabSkeleton } from './DocumentsTabSkeleton'
+import { DocumentsPageSkeleton, DocumentsTableSkeleton } from './DocumentsTabSkeleton'
 import { DocumentsToolbar } from './DocumentsToolbar'
 import { DocumentsTable } from './DocumentsTable'
 import { GenerateDocumentModal } from './GenerateDocumentModal'
@@ -66,7 +66,8 @@ export function LegalDocumentsTab() {
     [debouncedSearch, page, pageSize, typeFilter]
   )
 
-  const { documents, total, isLoading, isError, refetch } = useLegalDocuments(listParams)
+  const { documents, total, isPending, isFetching, isError, refetch } =
+    useLegalDocuments(listParams)
   const { data: stats } = useLegalDocumentStats()
   const { data: filterCounts } = useLegalDocumentFilterCounts()
   const uploadMutation = useUploadIncomingLegalDocument()
@@ -74,6 +75,8 @@ export function LegalDocumentsTab() {
 
   const totalPages = total > 0 ? Math.ceil(total / pageSize) : 0
   const currentPage = totalPages > 0 ? Math.min(page, totalPages) : 1
+  const isInitialLoading = isPending
+  const isTableLoading = isFetching && !isPending
   const hasSearch = debouncedSearch.trim().length > 0
   const hasTypeFilter = typeFilter !== 'all'
 
@@ -194,7 +197,9 @@ export function LegalDocumentsTab() {
           isCompact && !showWorkspaceBanner && 'pb-8'
         )}
       >
-        {!isLoading && !isError ? (
+        {isInitialLoading ? <DocumentsPageSkeleton /> : null}
+
+        {!isInitialLoading && !isError ? (
           <>
             <DocumentsStatsBar stats={stats ?? EMPTY_STATS} />
             <DocumentsToolbar
@@ -209,9 +214,7 @@ export function LegalDocumentsTab() {
           </>
         ) : null}
 
-        {isLoading ? <DocumentsTabSkeleton /> : null}
-
-        {isError && !isLoading ? (
+        {isError && !isInitialLoading ? (
           <div
             className="flex flex-col items-center justify-center px-6 py-14 text-center sm:px-5 lg:px-7"
             role="alert"
@@ -240,7 +243,9 @@ export function LegalDocumentsTab() {
           </div>
         ) : null}
 
-        {!isLoading && !isError && documents.length === 0 ? (
+        {isTableLoading ? <DocumentsTableSkeleton rows={pageSize} /> : null}
+
+        {!isTableLoading && !isError && documents.length === 0 ? (
           <div
             className="mx-4 flex flex-col items-center justify-center rounded-xl border border-gray-100 bg-white px-6 py-14 text-center sm:mx-5 lg:mx-7"
             role="status"
@@ -255,7 +260,7 @@ export function LegalDocumentsTab() {
           </div>
         ) : null}
 
-        {!isLoading && !isError && documents.length > 0 ? (
+        {!isTableLoading && !isError && documents.length > 0 ? (
           <DocumentsTable
             documents={documents}
             currentPage={currentPage}

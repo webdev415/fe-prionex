@@ -48,7 +48,7 @@ interface KanbanCardProps {
   lawyers: LegalLawyer[]
   letterTypes: LegalLetterType[]
   isDragging?: boolean
-  onCardClick?: (letterId: string) => void
+  onCardClick?: (task: KanbanTask) => void
   onMoveTask?: (taskId: string, columnId: KanbanColumnId) => void
   onTaskUpdate?: (taskId: string, patch: LegalKanbanTaskPatch) => void
   onDragStart?: (event: DragEvent, task: KanbanTask) => void
@@ -94,17 +94,35 @@ export function KanbanCard({
     return option?.label ?? fallbackName
   }
 
-  const isClickable = task.letterId && !isCompleted
+  const isClickable = !isCompleted
 
   const handleCardClick = () => {
     if (isClickable) {
-      onCardClick?.(task.letterId!)
+      onCardClick?.(task)
     }
+  }
+
+  const handleCardDragStart = (event: DragEvent) => {
+    if (isCompleted) {
+      event.preventDefault()
+      return
+    }
+    const target = event.target as HTMLElement
+    if (
+      target.closest('button, input, textarea, [role="combobox"], a, [data-radix-collection-item]')
+    ) {
+      event.preventDefault()
+      return
+    }
+    onDragStart?.(event, task)
   }
 
   return (
     <div
       data-kanban-task-id={task.taskId}
+      draggable={!isCompleted}
+      onDragStart={handleCardDragStart}
+      onDragEnd={onDragEnd}
       role={isClickable ? 'button' : undefined}
       tabIndex={isClickable ? 0 : undefined}
       onClick={isClickable ? handleCardClick : undefined}
@@ -121,6 +139,7 @@ export function KanbanCard({
       className={cn(
         'relative rounded-lg bg-white p-3 shadow-[0_1px_2px_0_rgba(5,4,13,0.04)]',
         isClickable ? 'cursor-pointer transition-shadow hover:shadow-md' : 'cursor-default',
+        !isCompleted && 'cursor-grab active:cursor-grabbing',
         isCompleted ? 'opacity-75' : '',
         isDragging && 'opacity-40'
       )}
@@ -137,14 +156,9 @@ export function KanbanCard({
         )}
         <div className="flex shrink-0 items-center gap-1">
           {!isCompleted && (
-            <button
-              type="button"
-              draggable
-              onDragStart={(event) => onDragStart?.(event, task)}
-              onDragEnd={onDragEnd}
-              onClick={(event) => event.stopPropagation()}
-              aria-label={t('pages.lawyerWorkplace.kanban.dragTask', 'Drag task')}
-              className="text-light-400 hover:text-light-600 flex h-8 w-8 cursor-grab items-center justify-center rounded active:cursor-grabbing sm:h-5 sm:w-4"
+            <span
+              aria-hidden="true"
+              className="text-light-400 flex h-8 w-8 items-center justify-center sm:h-5 sm:w-4"
             >
               <svg width="8" height="12" viewBox="0 0 8 12" fill="currentColor" aria-hidden="true">
                 <circle cx="2" cy="2" r="1.2" />
@@ -154,7 +168,7 @@ export function KanbanCard({
                 <circle cx="2" cy="10" r="1.2" />
                 <circle cx="6" cy="10" r="1.2" />
               </svg>
-            </button>
+            </span>
           )}
           <span className="text-light-400 text-[10px] font-medium tracking-wide">{task.id}</span>
         </div>

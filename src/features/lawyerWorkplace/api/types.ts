@@ -105,11 +105,13 @@ export interface LegalMessageDetail {
   suggested_client_name?: string | null
   suggested_client_project_id?: number | null
   suggested_lawyer_user_id: number | null
+  suggested_due_date?: string | null
   suggested_contract_number?: string | null
   confirmed_contract_number?: string | null
   confirmed_letter_type_id?: string | null
   auto_process_eligible: boolean
   legal_task_id?: number | null
+  source_mailbox_disabled?: boolean
   updated_at?: string | null
   attachments: LegalAttachmentItem[]
 }
@@ -159,11 +161,14 @@ export interface LegalMessageSuggestionsPatchRequest {
   letter_type_id: string
   client_id?: number | null
   refresh_lawyer?: boolean
+  suggested_lawyer_user_id?: number | null
+  due_date?: string | null
 }
 
 export interface LegalMessageSuggestionsPatchResponse {
   suggested_letter_type_id: string
   suggested_lawyer_user_id: number | null
+  suggested_due_date?: string | null
   suggested_contract_number?: string | null
   sla_days: number
   auto_process_eligible: boolean
@@ -282,11 +287,10 @@ export interface LegalKanbanResponse {
 
 export interface LegalKanbanTaskCreateRequest {
   letter_type_id: string
-  client_id?: number | null
+  client_id: number
   due_date: string
   assigned_to_user_id: number
   priority?: string
-  description?: string | null
 }
 
 export interface LegalKanbanTaskCreateResponse {

@@ -10,7 +10,7 @@ interface KanbanColumnLaneProps {
   letterTypes: LegalLetterType[]
   draggingTaskId: string | null
   isDropTarget: boolean
-  onCardClick?: (letterId: string) => void
+  onCardClick?: (task: KanbanTask) => void
   onMoveTask: (taskId: string, columnId: KanbanColumnId) => void
   onTaskUpdate: (taskId: string, patch: LegalKanbanTaskPatch) => void
   onDragStart: (event: DragEvent, task: KanbanTask) => void

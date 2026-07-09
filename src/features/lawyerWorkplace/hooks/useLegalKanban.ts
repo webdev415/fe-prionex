@@ -21,6 +21,7 @@ export function useLegalKanban(options?: { enabled?: boolean; assignedToUserId?:
       ),
     enabled: options?.enabled !== false,
     staleTime: 15_000,
+    refetchInterval: 60_000,
     refetchOnWindowFocus: true,
   })
 
