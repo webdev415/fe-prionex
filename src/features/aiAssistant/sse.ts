@@ -281,7 +281,7 @@ function toCitationRows(value: unknown): unknown[][] | undefined {
  * добавляются в объект (чтобы форма `{id,kind,ref}` без деталей оставалась
  * прежней для старого бэкенда).
  */
-function normalizeCitations(payload: unknown): AssistantCitation[] {
+export function normalizeCitations(payload: unknown): AssistantCitation[] {
   const list = Array.isArray(payload)
     ? payload
     : Array.isArray((payload as Record<string, unknown> | null)?.items)

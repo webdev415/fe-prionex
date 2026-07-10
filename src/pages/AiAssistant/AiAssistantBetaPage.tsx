@@ -27,6 +27,7 @@ import {
   type AssistantFeedbackComprehension,
   type AssistantFeedbackRating,
 } from '@/features/aiAssistant/api'
+import { normalizeCitations } from '@/features/aiAssistant/sse'
 import type { AssistantCitation, AssistantSources } from '@/features/aiAssistant/sse'
 import {
   blobToBase64,
@@ -1004,6 +1005,13 @@ export function AiAssistantBetaPage() {
     setChatMessages(
       detail.messages.map((item) => {
         const isAssistant = item.role === 'assistant'
+        // Слой 5: источники приходят сырым конвертом `{items:[...]}` (как и во
+        // фрейме `citations` стрима) — разворачиваем тем же нормализатором, что
+        // и живой стрим, иначе рендер зовёт `.map` на объекте и падает
+        // `.map is not a function` (белый экран при открытии диалога с SQL-
+        // источниками). Пустой результат → undefined, чтобы сообщение без
+        // источников вело себя как прежде (без секции «Источники»).
+        const citations = isAssistant ? normalizeCitations(item.citations) : []
         return {
           id: `server-${item.id}`,
           role: item.role,
@@ -1015,7 +1023,7 @@ export function AiAssistantBetaPage() {
           // стриме. Поля опциональны — старый бэкенд их не шлёт, тогда сообщение
           // ведёт себя как прежде (без чипа/источников).
           reasoning: isAssistant ? item.reasoning : undefined,
-          citations: isAssistant ? item.citations : undefined,
+          citations: citations.length > 0 ? citations : undefined,
         }
       })
     )

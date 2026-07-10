@@ -87,10 +87,16 @@ export interface AssistantConversationMessage {
   reasoning?: string
   /**
    * Слой 5: источники факт-сносок `[[N]]` этого сообщения (та же форма, что во
-   * фрейме `citations` стрима). Даёт кликабельные сноски и секцию «Источники» в
-   * панели для загруженного из истории диалога. Опционально — как {@link reasoning}.
+   * фрейме `citations` стрима — документированный конверт `{items:[...]}`). Даёт
+   * кликабельные сноски и секцию «Источники» в панели для загруженного из истории
+   * диалога. Опционально — как {@link reasoning}.
+   *
+   * Сырой payload бэкенда (конверт `{items:[...]}` или, у старого бэкенда, голый
+   * массив/`null`) — форму приводит клиент через {@link normalizeCitations} при
+   * гидратации, поэтому тип намеренно `unknown`: `AssistantCitation[]` здесь врал
+   * бы про реальный контракт и снова спрятал бы `.map is not a function`.
    */
-  citations?: AssistantCitation[]
+  citations?: unknown
 }
 
 export interface AssistantConversationDetail extends AssistantConversationSummary {
