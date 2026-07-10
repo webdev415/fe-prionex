@@ -43,12 +43,12 @@ export function KanbanColumnLane({
       onDragLeave={onDragLeave}
       onDrop={onDrop}
       className={cn(
-        // Lane fills remaining column height; cards scroll inside so all columns share one bottom edge.
-        'lawyer-workplace-scroll flex min-h-0 flex-1 flex-col overflow-y-auto rounded-b-lg bg-gray-50/70 p-2 pb-4 transition-colors',
+        // No per-column scroll. Height = cards + min 100vh spacer; stretch fills to tallest sibling.
+        'flex min-h-0 flex-1 flex-col rounded-b-lg bg-gray-50/70 p-2 pb-4 transition-colors',
         isDropTarget && 'bg-primary-50/40 ring-primary-400 ring-2 ring-inset'
       )}
     >
-      <div className="flex min-h-full flex-col gap-2">
+      <div className="flex shrink-0 flex-col gap-2">
         {column.tasks.map((task) => (
           <KanbanCard
             key={task.id}
@@ -64,9 +64,13 @@ export function KanbanColumnLane({
             onDragEnd={onDragEnd}
           />
         ))}
-        {/* Keeps empty lanes tall enough for drop targets when there are no cards */}
-        {column.tasks.length === 0 ? <div className="min-h-8 flex-1" aria-hidden="true" /> : null}
       </div>
+      {/*
+        Equal height = tallest column cards + 100vh:
+        - min-h-[100vh] guarantees the +100vh sum on every lane
+        - flex-1 grows shorter lanes to match the tallest sibling via items-stretch
+      */}
+      <div className="min-h-[100vh] flex-1" aria-hidden="true" />
     </div>
   )
 }
