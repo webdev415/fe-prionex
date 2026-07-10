@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   DropdownMenu,
@@ -14,6 +15,18 @@ interface KanbanFilterDropdownProps<T extends string> {
   options: KanbanFilterOption<T>[]
   onChange: (value: T) => void
   className?: string
+  align?: 'start' | 'center' | 'end'
+  collisionPadding?: number
+  renderOption?: (option: KanbanFilterOption<T>) => ReactNode
+  renderValue?: (option: KanbanFilterOption<T>) => ReactNode
+}
+
+function defaultLabel<T extends string>(
+  option: KanbanFilterOption<T>,
+  t: (key: string, fallback: string) => string
+): ReactNode {
+  if (option.label) return option.label
+  return t(option.key, option.fallback)
 }
 
 export function KanbanFilterDropdown<T extends string>({
@@ -21,6 +34,10 @@ export function KanbanFilterDropdown<T extends string>({
   options,
   onChange,
   className,
+  align = 'end',
+  collisionPadding = 12,
+  renderOption,
+  renderValue,
 }: KanbanFilterDropdownProps<T>) {
   const { t } = useTranslation('common')
   const selected = options.find((option) => option.id === value) ?? options[0]!
@@ -35,13 +52,18 @@ export function KanbanFilterDropdown<T extends string>({
             className
           )}
         >
-          <span className="min-w-0 truncate text-left">{t(selected.key, selected.fallback)}</span>
+          <span className="flex min-w-0 flex-1 items-center truncate text-left">
+            {renderValue ? renderValue(selected) : defaultLabel(selected, t)}
+          </span>
           <Icons.ArrowDown size={14} strokeWidth={1.5} className="shrink-0 text-gray-400" />
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent
-        align="start"
-        className="max-h-60 w-[var(--radix-dropdown-menu-trigger-width)] overflow-y-auto p-1"
+        align={align}
+        side="bottom"
+        sideOffset={4}
+        collisionPadding={collisionPadding}
+        className="max-h-60 w-[var(--radix-dropdown-menu-trigger-width)] min-w-[var(--radix-dropdown-menu-trigger-width)] overflow-y-auto p-1"
       >
         {options.map((option) => (
           <DropdownMenuItem
@@ -52,7 +74,7 @@ export function KanbanFilterDropdown<T extends string>({
             )}
             onClick={() => onChange(option.id)}
           >
-            {t(option.key, option.fallback)}
+            {renderOption ? renderOption(option) : defaultLabel(option, t)}
           </DropdownMenuItem>
         ))}
       </DropdownMenuContent>

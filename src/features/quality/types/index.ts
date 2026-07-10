@@ -409,8 +409,31 @@ export interface AlertsResponse {
 /** Utterance flag — the brain may send bare strings or `{type}` objects. */
 export type TranscriptUtteranceFlag = string | { type?: string; [key: string]: unknown }
 
+/**
+ * v7 inline reaction (`bc`) — a short interjection of the OTHER side inside
+ * this turn. The brain sends `{t, role, text}` objects; older exports used
+ * `[t, role, text]` tuples — the reader accepts both.
+ */
+export type TranscriptBackchannel =
+  | { t?: number; role?: string; text?: string; [key: string]: unknown }
+  | [number, string, string]
+
+/** v7 QA tag `[kind, label]` — kind is an OPEN set (good|warn|crit|info|…). */
+export type TranscriptQaTag = Array<string | undefined | null>
+
+/**
+ * v7 in-turn hesitation — a deterministic pause of the SPEAKER inside their
+ * own turn (derived from word timecodes): `t` — where it happened (seconds),
+ * `gap` — its length (seconds). `{t, gap}` objects are current; `[t, gap]`
+ * tuples are tolerated like `bc`.
+ */
+export type TranscriptHesitation =
+  | { t?: number; gap?: number; [key: string]: unknown }
+  | [number, number]
+
 export interface TranscriptUtterance {
-  i: number
+  /** Utterance index — present in the Ф1 format, absent in v7 turns. */
+  i?: number
   /** start / end, seconds (float) */
   t0: number
   t1: number
@@ -420,6 +443,34 @@ export interface TranscriptUtterance {
   lang?: string
   conf?: number
   flags?: TranscriptUtteranceFlag[]
+  /** v7: turn duration, seconds. Its presence is the v7 format marker. */
+  dur?: number
+  /** v7: the other side's short reactions inside this turn. */
+  bc?: TranscriptBackchannel[]
+  /** v7: silence (both channels) before this turn, seconds. */
+  pause_before?: number
+  /** v7: QA tag `[kind, label]`. */
+  tag?: TranscriptQaTag
+  /** v7: hesitation pauses of the speaker inside this turn. */
+  hes?: TranscriptHesitation[]
+  /** Phase 2: 12B audio read of this turn (optional layer). */
+  audio?: UtteranceAudio | null
+}
+
+/** v7 call-level stats (`metrics.stats`) — every field optional (tolerant). */
+export interface TranscriptStats {
+  op_talk_s?: number
+  cl_talk_s?: number
+  silence_total_s?: number
+  max_silence_s?: number
+  overlap_total_s?: number
+  n_turns?: number
+  /** Operator's share of talk time, percent 0..100. */
+  op_share?: number
+  /** Hesitation counts per side (deterministic, from word timecodes). */
+  op_hes?: number
+  cl_hes?: number
+  [key: string]: unknown
 }
 
 export interface TranscriptScene {
@@ -429,17 +480,135 @@ export interface TranscriptScene {
   to_utt: number
 }
 
+// ---- Audio layer (phase 2, conclusion_spec §A) — every block optional. ----
+// 12B listens to the recording in ~10s windows and retells tone/emotions as
+// TEXT with an H/M/L reliability mark; nothing here is ASR ground truth.
+
+/** Per-utterance audio read of the speaker (12B). All fields optional. */
+export interface AudioSpeakerState {
+  /** 'neg' | 'neutral' | 'pos' — open set, unknown → neutral. */
+  polarity?: string
+  emotion?: string
+  /** Emotional intensity 0..3 (utterance scale). */
+  arousal?: number
+  /** 'перебивання' | 'крик' | 'плач' | 'довга пауза' | … — OPEN set. */
+  events?: string[]
+  /** 0..1 — drives marker opacity. */
+  confidence?: number
+  /** 'H' | 'M' | 'L' — M/L render dimmed with an «approximate» note. */
+  reliability?: string
+  acoustic?: string
+  [key: string]: unknown
+}
+
+export interface UtteranceAudio {
+  window_ids?: number[]
+  speaker_state?: AudioSpeakerState | null
+  [key: string]: unknown
+}
+
+/** Raw 12B timeline window (kept for tooltips/debug; UI works off dynamics). */
+export interface AudioWindow {
+  id?: number
+  t0?: number
+  t1?: number
+  no_speech?: boolean
+  speakers?: Record<
+    string,
+    {
+      polarity?: string
+      tone?: string
+      emotion?: string
+      arousal?: number
+      confidence?: number
+      [key: string]: unknown
+    }
+  > | null
+  events?: string[]
+  reliability?: Record<string, string> | null
+  [key: string]: unknown
+}
+
+export interface EmotionPathPoint {
+  t?: number
+  polarity?: string
+  arousal?: number
+  [key: string]: unknown
+}
+
+export interface EmotionDynamicsClient {
+  start?: { polarity?: string; emotion?: string; win?: number } | null
+  end?: { polarity?: string; emotion?: string; win?: number } | null
+  /** 'improved' | 'degraded' | 'stable' — open set. */
+  trend?: string
+  peak_stress?: { t?: number; win?: number; arousal?: number } | null
+  /** RAW window points — smoothing happens on the FE (CEO decision). */
+  path?: EmotionPathPoint[] | null
+  scores?: {
+    start_arousal?: number
+    peak_arousal?: number
+    peak_t?: number
+    final_arousal?: number
+    trend?: string
+    [key: string]: unknown
+  } | null
+  [key: string]: unknown
+}
+
+export interface EmotionDynamicsOperator {
+  tone_baseline?: string
+  tone_peaks?: Array<{ t?: number; tone?: string; arousal?: number }> | null
+  trend?: string
+  /** 0–5 scales. */
+  scores?: { irritation_avg?: number; empathy_avg?: number; [key: string]: unknown } | null
+  [key: string]: unknown
+}
+
+/** Turn where the words read one way but the audio sounds another. */
+export interface DivergenceCandidate {
+  /** Utterance index (position in `utterances`). */
+  utt?: number
+  text_reads?: string
+  audio_reads?: string
+  reliability?: string
+  [key: string]: unknown
+}
+
+export interface EmotionDynamics {
+  client?: EmotionDynamicsClient | null
+  operator?: EmotionDynamicsOperator | null
+  divergence_candidates?: DivergenceCandidate[] | null
+  [key: string]: unknown
+}
+
 export interface CallTranscript {
   language?: string | null
   duration_s?: number | null
   summary?: string | null
   utterances: TranscriptUtterance[]
   scenes?: TranscriptScene[] | null
-  metrics?: Record<string, unknown> | null
+  /**
+   * v7 puts call-level stats under `metrics.stats` (second v7 marker).
+   * `metrics` is also the PRIMARY home of the audio layer — metrics travels
+   * brain→CRM verbatim, so the layer needs no api-prionex changes.
+   */
+  metrics?: {
+    stats?: TranscriptStats | null
+    audio_engine?: string | null
+    audio_layer_version?: string | null
+    audio_windows?: AudioWindow[] | null
+    emotion_dynamics?: EmotionDynamics | null
+    [key: string]: unknown
+  } | null
   agent_extension?: string | null
   client_id?: number | null
   direction?: string | null
   answered_at?: string | null
+  /** FALLBACK location of the audio layer; the primary home is `metrics.*`. */
+  audio_engine?: string | null
+  audio_layer_version?: string | null
+  audio_windows?: AudioWindow[] | null
+  emotion_dynamics?: EmotionDynamics | null
 }
 
 export interface ReviewRedFlag {
@@ -456,6 +625,89 @@ export interface ReviewPromise {
   date?: string | null
   confidence?: number | null
   quote?: string | null
+}
+
+// ---- 31B conclusion (step B) — «звідки такий бал» for the call card. ----
+// Ships inside `review.conclusion`; older reviews have none. Every field is
+// optional and every enum is OPEN — the block renders per available part.
+
+export interface ConclusionOverall {
+  /** 'green' | 'yellow' | 'red' — open set, unknown → neutral grey. */
+  grade?: string
+  /** 0..100, same scale as `weighted_score`. */
+  score?: number
+  one_liner?: string
+  [key: string]: unknown
+}
+
+export interface ConclusionOperatorAssessment {
+  score?: number
+  /** Rubric score before the 31B adjustment. */
+  rubric_score_input?: number
+  adjustment?: number
+  adjustment_reason?: string
+  strengths?: string[]
+  weaknesses?: string[]
+  justification?: string
+  [key: string]: unknown
+}
+
+export interface ConclusionClientDynamics {
+  emotional_path?: string
+  start?: string
+  end?: string
+  trend?: string
+  driver?: string
+  peak_stress?: string
+  [key: string]: unknown
+}
+
+export interface ConclusionDivergence {
+  who?: string
+  /** Utterance index (position in `utterances`). */
+  utt?: number
+  said?: string
+  sounded?: string
+  reliability?: string
+  interpretation?: string
+  [key: string]: unknown
+}
+
+export interface ConclusionToneVsWords {
+  consistent?: boolean
+  divergences?: ConclusionDivergence[] | null
+  note?: string
+  [key: string]: unknown
+}
+
+export interface ConclusionRecommendation {
+  text?: string
+  /** Anchor like `utt 12` — rendered clickable when it points at a turn. */
+  evidence?: string
+  /** 'high' | 'normal' — open set. */
+  priority?: string
+  [key: string]: unknown
+}
+
+export interface ConclusionConfidence {
+  overall?: number
+  /** 'no_audio_layer' | 'fallback_26b' | … — open set. */
+  limited_by?: string[] | null
+  [key: string]: unknown
+}
+
+export interface ReviewConclusion {
+  call_summary?: string
+  overall?: ConclusionOverall | null
+  operator_assessment?: ConclusionOperatorAssessment | null
+  client_dynamics?: ConclusionClientDynamics | null
+  tone_vs_words?: ConclusionToneVsWords | null
+  key_findings?: string[] | null
+  recommendations?: Array<ConclusionRecommendation | string> | null
+  confidence?: ConclusionConfidence | null
+  model?: string
+  conclusion_prompt_version?: string
+  [key: string]: unknown
 }
 
 /** Проход 2 (Ф2) — null during Ф1; every field optional (tolerant reader). */
@@ -477,6 +729,8 @@ export interface CallAiReview {
   extracted?: { promise?: ReviewPromise | null; [key: string]: unknown } | null
   summary?: string | null
   recommendations?: string[] | null
+  /** 31B conclusion (step B) — absent/null on older reviews. */
+  conclusion?: ReviewConclusion | null
 }
 
 export interface CallTranscriptDto {

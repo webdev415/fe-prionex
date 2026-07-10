@@ -16,6 +16,7 @@ import { Button } from '@/components/ui/Button'
 import { TelephonyTypeBadge } from '@/components/ui/TelephonyTypeBadge'
 import { Icons } from '@/lib/icons'
 import { useCallStore } from '@/stores/callStore'
+import { CallMaterialsPanel } from '@/pages/Training/components/training/CallMaterialsPanel'
 import { CallPlayer, type CallPlayerHandle } from './CallPlayer'
 
 export interface CallRecordingModalProps {
@@ -234,8 +235,11 @@ export const CallRecordingModal = forwardRef<CallRecordingModalHandle, CallRecor
             markerOverlay={markerOverlay}
           />
 
-          {/* KAN-410 — extra controls injected by the trainer flow. */}
+          {/* Extra controls injected by the trainer flow. */}
           {belowControls}
+
+          {/* Materials attached to this call. */}
+          <CallMaterialsPanel callId={callData.call_id} />
 
           {/* Call QA (Ф1) — AI transcript, bounded scroll like the scorecard
             panel so a long dialogue doesn't blow up the modal height. */}
@@ -243,7 +247,7 @@ export const CallRecordingModal = forwardRef<CallRecordingModalHandle, CallRecor
             <div className="max-h-[45vh] overflow-y-auto">{transcriptPanel}</div>
           ) : null}
 
-          {/* KAN-410 — side panel (scorecard); bounded scroll so the long
+          {/* Side panel (scorecard); bounded scroll so the long
             evaluation form doesn't overflow the modal. */}
           {scorecardPanel ? (
             <div className="max-h-[50vh] min-h-[180px] overflow-y-auto">{scorecardPanel}</div>

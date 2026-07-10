@@ -10,6 +10,7 @@ import {
 import {
   useLegalLawyers,
   useLegalLetterTypes,
+  useLegalMailboxes,
   useLegalMessage,
   useLegalThread,
 } from './useLegalInbox'
@@ -36,6 +37,7 @@ export function useLegalLetterDetail(
   })
   const letterTypesQuery = useLegalLetterTypes({ enabled })
   const lawyersQuery = useLegalLawyers({ enabled })
+  const mailboxesQuery = useLegalMailboxes({ enabled })
 
   const clientId = messageQuery.data?.suggested_client_id ?? null
   const needsClientFetch = clientId != null && !messageQuery.data?.suggested_client_name?.trim()
@@ -51,8 +53,19 @@ export function useLegalLetterDetail(
     } else if (clientQuery.data) {
       clients = [clientLookupFromClient(clientQuery.data)]
     }
-    return buildLegalLookupContext(letterTypesQuery.data?.items, lawyersQuery.data?.items, clients)
-  }, [clientQuery.data, letterTypesQuery.data?.items, lawyersQuery.data?.items, messageQuery.data])
+    return buildLegalLookupContext(
+      letterTypesQuery.data?.items,
+      lawyersQuery.data?.items,
+      clients,
+      mailboxesQuery.data?.items
+    )
+  }, [
+    clientQuery.data,
+    letterTypesQuery.data?.items,
+    lawyersQuery.data?.items,
+    mailboxesQuery.data?.items,
+    messageQuery.data,
+  ])
 
   const letter = useMemo((): LetterDetail | null => {
     if (messageQuery.data) {
@@ -82,6 +95,7 @@ export function useLegalLetterDetail(
     threadQuery.isLoading ||
     letterTypesQuery.isLoading ||
     lawyersQuery.isLoading ||
+    mailboxesQuery.isLoading ||
     (clientId != null && needsClientFetch && clientQuery.isLoading)
 
   return {

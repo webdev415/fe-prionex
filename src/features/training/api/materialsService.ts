@@ -1,6 +1,7 @@
 import { api } from '@/lib/api'
 import type {
   Material,
+  MaterialCallAttachment,
   MaterialCategory,
   MaterialListFilters,
   MaterialListResponse,
@@ -10,6 +11,7 @@ import type {
 
 const BASE = '/api/v1/quality/materials'
 const CATEGORIES_BASE = '/api/v1/quality/material-categories'
+const QUALITY_BASE = '/api/v1/quality'
 
 function buildListParams(filters: MaterialListFilters): URLSearchParams {
   const params = new URLSearchParams()
@@ -52,6 +54,16 @@ export async function downloadMaterial(id: number): Promise<Blob> {
   return response.data
 }
 
+/** Fetch the file bytes for in-browser preview (inline Content-Disposition). */
+export async function previewMaterial(id: number): Promise<Blob> {
+  const response = await api.get<Blob>(`${BASE}/${id}/download`, {
+    params: { disposition: 'inline' },
+    responseType: 'blob',
+    timeout: 120_000,
+  })
+  return response.data
+}
+
 export async function updateMaterial(
   id: number,
   payload: MaterialUpdatePayload
@@ -71,5 +83,31 @@ export async function listMaterialCategories(): Promise<MaterialCategory[]> {
 
 export async function createMaterialCategory(name: string): Promise<MaterialCategory> {
   const response = await api.post<MaterialCategory>(CATEGORIES_BASE, { name })
+  return response.data
+}
+
+// ── Call attachments ──────────────────────────────────────────────────
+
+export async function attachMaterialToCall(
+  materialId: number,
+  callId: string
+): Promise<MaterialCallAttachment> {
+  const response = await api.post<MaterialCallAttachment>(`${BASE}/${materialId}/attachments`, {
+    call_id: callId,
+  })
+  return response.data
+}
+
+export async function detachMaterialFromCall(materialId: number, callId: string): Promise<void> {
+  await api.delete(`${BASE}/${materialId}/attachments/${callId}`)
+}
+
+export async function listMaterialsForCall(callId: string): Promise<MaterialListResponse> {
+  const response = await api.get<MaterialListResponse>(`${QUALITY_BASE}/calls/${callId}/materials`)
+  return response.data
+}
+
+export async function listCallsForMaterial(materialId: number): Promise<MaterialCallAttachment[]> {
+  const response = await api.get<MaterialCallAttachment[]>(`${BASE}/${materialId}/attachments`)
   return response.data
 }

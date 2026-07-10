@@ -68,7 +68,15 @@ export function ContactTagSelectorModal({
   }
 
   const setSingle = (categoryId: number, valueId: number) => {
-    setLocalEdits((prev) => ({ ...prev, [categoryId]: [valueId] }))
+    setLocalEdits((prev) => {
+      const current = prev[categoryId] ?? baseDraft[categoryId] ?? []
+      const next = current[0] === valueId ? [] : [valueId]
+      return { ...prev, [categoryId]: next }
+    })
+  }
+
+  const clearSingle = (categoryId: number) => {
+    setLocalEdits((prev) => ({ ...prev, [categoryId]: [] }))
   }
 
   const saveCategory = async (category: ContactTagAssignmentCategory) => {
@@ -110,7 +118,10 @@ export function ContactTagSelectorModal({
                     <p className="text-dark-400 text-xs">
                       {category.selection_type === 'multi'
                         ? t('pages.contactTags.multiSelectHint', 'Select one or more values')
-                        : t('pages.contactTags.singleSelectHint', 'Select one value')}
+                        : t(
+                            'pages.contactTags.singleSelectHint',
+                            'Select one value, or clear to remove'
+                          )}
                       {category.is_system &&
                         ` · ${t('pages.contactTags.systemCategory', 'System category')}`}
                     </p>
@@ -122,37 +133,57 @@ export function ContactTagSelectorModal({
                   )}
                 </div>
                 {category.selection_type === 'single' ? (
-                  <RadioGroup
-                    value={String(draft[category.category_id]?.[0] ?? '')}
-                    onValueChange={(v) =>
-                      category.can_edit && setSingle(category.category_id, Number(v))
-                    }
-                    disabled={!category.can_edit}
-                    className="flex flex-col gap-2"
-                  >
-                    {category.values.map((v) => (
-                      <label
-                        key={v.id}
-                        className={`flex items-center gap-2 rounded p-1.5 ${
-                          category.can_edit ? 'cursor-pointer hover:bg-gray-50' : 'cursor-default'
-                        }`}
+                  <>
+                    <RadioGroup
+                      value={String(draft[category.category_id]?.[0] ?? '')}
+                      onValueChange={(v) =>
+                        category.can_edit && setSingle(category.category_id, Number(v))
+                      }
+                      disabled={!category.can_edit}
+                      className="flex flex-col gap-2"
+                    >
+                      {category.values.map((v) => (
+                        <label
+                          key={v.id}
+                          className={`flex items-center gap-2 rounded p-1.5 ${
+                            category.can_edit ? 'cursor-pointer hover:bg-gray-50' : 'cursor-default'
+                          }`}
+                        >
+                          <RadioItem
+                            value={String(v.id)}
+                            id={`ct-tag-${category.category_id}-${v.id}`}
+                            onClick={() => {
+                              if (!category.can_edit) return
+                              const current = draft[category.category_id]?.[0]
+                              if (current === v.id) {
+                                setSingle(category.category_id, v.id)
+                              }
+                            }}
+                          />
+                          <TagValueBadge name={v.name} color={v.color} />
+                          {v.blocks_calls && (
+                            <span
+                              className="text-xs text-red-500"
+                              title={t('pages.contactTags.blocksCalls', 'Blocks calls')}
+                            >
+                              📵
+                            </span>
+                          )}
+                        </label>
+                      ))}
+                    </RadioGroup>
+                    {category.can_edit && (draft[category.category_id]?.length ?? 0) > 0 && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="mt-2"
+                        onClick={() => clearSingle(category.category_id)}
                       >
-                        <RadioItem
-                          value={String(v.id)}
-                          id={`ct-tag-${category.category_id}-${v.id}`}
-                        />
-                        <TagValueBadge name={v.name} color={v.color} />
-                        {v.blocks_calls && (
-                          <span
-                            className="text-xs text-red-500"
-                            title={t('pages.contactTags.blocksCalls', 'Blocks calls')}
-                          >
-                            📵
-                          </span>
-                        )}
-                      </label>
-                    ))}
-                  </RadioGroup>
+                        {t('pages.contactTags.clearSelection', 'Clear selection')}
+                      </Button>
+                    )}
+                  </>
                 ) : (
                   <div className="flex flex-col gap-1">
                     {category.values.map((v) => (

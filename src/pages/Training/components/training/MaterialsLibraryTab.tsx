@@ -12,12 +12,15 @@ import {
 } from '@/features/training/hooks/useMaterials'
 import {
   MATERIAL_TYPES,
+  isPreviewable,
   type Material,
   type MaterialType,
 } from '@/features/training/types/materials'
 import { TrainingFilterChips, TrainingPrimaryButton, TrainingSearchBar } from './TrainingToolbar'
 import { MaterialUploadDialog } from './MaterialUploadDialog'
 import { MaterialEditDialog } from './MaterialEditDialog'
+import { MaterialPreviewModal } from './MaterialPreviewModal'
+import { AttachMaterialToCallDialog } from './AttachMaterialToCallDialog'
 
 const TYPE_BADGE: Record<MaterialType, { label: string; tone: string; iconBg: string }> = {
   pdf: { label: 'PDF', tone: 'text-[#B91C1C]', iconBg: 'bg-[#FEF2F2]' },
@@ -68,6 +71,8 @@ export function MaterialsLibraryTab() {
   const [query, setQuery] = useState('')
   const [uploadOpen, setUploadOpen] = useState(false)
   const [editTarget, setEditTarget] = useState<Material | null>(null)
+  const [previewTarget, setPreviewTarget] = useState<Material | null>(null)
+  const [attachTarget, setAttachTarget] = useState<Material | null>(null)
   const [downloadingId, setDownloadingId] = useState<number | null>(null)
 
   const listFilters = useMemo(
@@ -248,6 +253,17 @@ export function MaterialsLibraryTab() {
                       </button>
                       <button
                         type="button"
+                        onClick={() => setAttachTarget(m)}
+                        className="flex h-9 w-9 items-center justify-center rounded-full text-[#6B7280] hover:bg-[#F7F7F7]"
+                        aria-label={t(
+                          'pages.training.training.materials.attachToCall',
+                          'Attach to a call'
+                        )}
+                      >
+                        <Icons.Attachment01 size={16} />
+                      </button>
+                      <button
+                        type="button"
                         onClick={() => handleArchive(m)}
                         className="flex h-9 w-9 items-center justify-center rounded-full text-[#6B7280] hover:bg-[#F7F7F7] hover:text-[#B91C1C]"
                         aria-label={t('pages.training.training.materials.archive', 'Archive')}
@@ -255,6 +271,16 @@ export function MaterialsLibraryTab() {
                         <Icons.Delete size={16} />
                       </button>
                     </>
+                  )}
+                  {isPreviewable(m.type) && (
+                    <button
+                      type="button"
+                      onClick={() => setPreviewTarget(m)}
+                      className="flex h-9 w-9 items-center justify-center rounded-full text-[#6B7280] hover:bg-[#F7F7F7]"
+                      aria-label={t('pages.training.training.materials.preview', 'Preview')}
+                    >
+                      <Icons.Eye size={16} />
+                    </button>
                   )}
                   <button
                     type="button"
@@ -274,6 +300,8 @@ export function MaterialsLibraryTab() {
 
       <MaterialUploadDialog open={uploadOpen} onClose={() => setUploadOpen(false)} />
       <MaterialEditDialog material={editTarget} onClose={() => setEditTarget(null)} />
+      <MaterialPreviewModal material={previewTarget} onClose={() => setPreviewTarget(null)} />
+      <AttachMaterialToCallDialog material={attachTarget} onClose={() => setAttachTarget(null)} />
       {confirmDialog}
     </div>
   )

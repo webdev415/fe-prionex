@@ -306,7 +306,9 @@ export function EmailThreadPanel({
     const clientId =
       replyContext.clientId ??
       (letter.parameters.clientId ? Number(letter.parameters.clientId) : null)
-    const assignedUserId = replyContext.assignedUserId
+    const assignedUserId =
+      replyContext.assignedUserId ??
+      (letter.parameters.lawyerId ? Number(letter.parameters.lawyerId) : null)
 
     if (edoType !== 'none' && (clientId == null || assignedUserId == null)) {
       toast.error(
@@ -440,6 +442,18 @@ export function EmailThreadPanel({
         </div>
       )}
 
+      {letter.sourceMailboxDisabled ? (
+        <div className="border-warning-200 bg-warning-50 mx-3 mt-3 flex items-start gap-2.5 rounded-xl border px-3 py-2.5 sm:mx-6">
+          <Icons.Info size={16} strokeWidth={1.5} className="text-warning-700 mt-0.5 shrink-0" />
+          <p className="text-warning-900 text-[12px] leading-relaxed">
+            {t(
+              'pages.lawyerWorkplace.thread.disabledMailboxNotice',
+              'The original mailbox for this letter is disabled. Choose another mailbox below to send a reply.'
+            )}
+          </p>
+        </div>
+      ) : null}
+
       <div className="shrink-0 border-b border-gray-200 bg-white px-3 py-2.5 sm:px-6 sm:py-4">
         <div className="mb-1.5 flex min-w-0 items-start gap-2 sm:items-center sm:gap-5">
           <div className="flex min-w-0 flex-1 flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-5">
@@ -454,16 +468,14 @@ export function EmailThreadPanel({
 
         <div className="flex min-w-0 items-center justify-between gap-2 sm:gap-3">
           <p className="min-w-0 flex-1 text-[10.5px] sm:truncate sm:text-[11.5px]">
-            <span className="text-dark-500 break-all sm:break-normal">{letter.senderEmail}</span>
+            <span className="text-dark-500 break-all sm:break-normal">{letter.routeFromEmail}</span>
             <span
               className="text-light-700 inline-flex items-center px-0.5 py-0.5 align-middle"
               aria-hidden="true"
             >
               <Icons.ArrowRight02 size={10} strokeWidth={1.5} />
             </span>
-            <span className="text-light-700 break-all sm:break-normal">
-              {letter.recipientEmail}
-            </span>
+            <span className="text-light-700 break-all sm:break-normal">{letter.routeToEmail}</span>
             {threadCount > 1 && (
               <span className="text-light-700 block sm:inline">
                 {' '}

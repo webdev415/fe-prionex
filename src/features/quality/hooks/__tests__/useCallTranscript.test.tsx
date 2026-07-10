@@ -19,10 +19,10 @@ vi.mock('../../api/transcriptService', async (importOriginal) => {
 
 const mockGetCallTranscript = vi.mocked(getCallTranscript)
 
-function axiosErrorWithStatus(status: number): AxiosError {
+function axiosErrorWithStatus(status: number, detail?: string): AxiosError {
   return new AxiosError('boom', 'ERR_BAD_REQUEST', undefined, undefined, {
     status,
-    data: {},
+    data: detail ? { detail } : {},
     statusText: '',
     headers: {},
     config: {},
@@ -87,6 +87,18 @@ describe('useCallTranscript', () => {
     const { result } = renderHook(() => useCallTranscript('call-4'), { wrapper: createWrapper() })
 
     await waitFor(() => expect(result.current.forbidden).toBe(true))
+    expect(result.current.notReady).toBe(false)
+    expect(result.current.disabledByAdmin).toBe(false)
+    expect(result.current.isHardError).toBe(false)
+    expect(mockGetCallTranscript).toHaveBeenCalledTimes(1)
+  })
+
+  it('maps 403 call_qa_disabled to disabledByAdmin, not forbidden', async () => {
+    mockGetCallTranscript.mockRejectedValue(axiosErrorWithStatus(403, 'call_qa_disabled'))
+    const { result } = renderHook(() => useCallTranscript('call-6'), { wrapper: createWrapper() })
+
+    await waitFor(() => expect(result.current.disabledByAdmin).toBe(true))
+    expect(result.current.forbidden).toBe(false)
     expect(result.current.notReady).toBe(false)
     expect(result.current.isHardError).toBe(false)
     expect(mockGetCallTranscript).toHaveBeenCalledTimes(1)

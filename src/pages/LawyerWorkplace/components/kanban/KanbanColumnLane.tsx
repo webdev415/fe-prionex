@@ -8,9 +8,10 @@ interface KanbanColumnLaneProps {
   column: KanbanColumnDef
   lawyers: LegalLawyer[]
   letterTypes: LegalLetterType[]
+  editableLetterTypes: LegalLetterType[]
   draggingTaskId: string | null
   isDropTarget: boolean
-  onCardClick?: (letterId: string) => void
+  onCardClick?: (task: KanbanTask) => void
   onMoveTask: (taskId: string, columnId: KanbanColumnId) => void
   onTaskUpdate: (taskId: string, patch: LegalKanbanTaskPatch) => void
   onDragStart: (event: DragEvent, task: KanbanTask) => void
@@ -24,6 +25,7 @@ export function KanbanColumnLane({
   column,
   lawyers,
   letterTypes,
+  editableLetterTypes,
   draggingTaskId,
   isDropTarget,
   onCardClick,
@@ -45,13 +47,14 @@ export function KanbanColumnLane({
         isDropTarget && 'bg-primary-50/40 ring-primary-400 ring-2 ring-inset'
       )}
     >
-      <div className="flex flex-col gap-2">
+      <div className="flex shrink-0 flex-col gap-2">
         {column.tasks.map((task) => (
           <KanbanCard
             key={task.id}
             task={task}
             lawyers={lawyers}
             letterTypes={letterTypes}
+            editableLetterTypes={editableLetterTypes}
             isDragging={draggingTaskId === task.id}
             onCardClick={onCardClick}
             onMoveTask={onMoveTask}
@@ -61,7 +64,8 @@ export function KanbanColumnLane({
           />
         ))}
       </div>
-      <div className="flex-1" aria-hidden="true" />
+      {/* Fills remaining column height so empty and filled lanes share one bottom edge */}
+      <div className="min-h-2 flex-1" aria-hidden="true" />
     </div>
   )
 }

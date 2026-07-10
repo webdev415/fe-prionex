@@ -339,6 +339,19 @@
       "reasoningTitle": "Reasoning",
       "reasoningStreaming": "Analyzing…",
       "reasoningAnalyzing": "Analyzing the request…",
+      "reasoningSteps_one": "{{count}} step",
+      "reasoningSteps_other": "{{count}} steps",
+      "activityTitle": "Activity",
+      "activityClose": "Close",
+      "activityResize": "Resize panel",
+      "activityStepsSection": "Orchestrator steps",
+      "activityReasoningSection": "Reasoning",
+      "activitySourcesSection": "Sources",
+      "citationResultLabel": "Result",
+      "citationSourceFallback": "Source",
+      "citationMarkPrompt": "Accurate?",
+      "citationMarkOk": "Correct",
+      "citationMarkWrong": "Wrong",
       "codeCopy": "Copy",
       "codeCopied": "Copied",
       "showAllRows": "Show all ({{count}}) ",
@@ -547,7 +560,8 @@
         "attachmentDoc": "DOC",
         "newLetter": "New letter",
         "closeThread": "Close thread",
-        "emailThread": "Email thread"
+        "emailThread": "Email thread",
+        "disabledMailboxNotice": "The original mailbox for this letter is disabled. Choose another mailbox below to send a reply."
       },
       "reply": {
         "replyFrom": "Reply from",
@@ -585,6 +599,11 @@
         "body": "Message",
         "bodyPlaceholder": "Write your message...",
         "edoType": "EDO document type",
+        "edoRequiresClient": "Select a CRM client before registering EDO",
+        "edoRequiresClientHint": "Select a CRM client above to register this letter in EDO.",
+        "edoHintInstitution": "Link a CRM client below to register this institution letter in EDO.",
+        "edoClientForInstitution": "CRM client (for EDO registration)",
+        "clientSearchHint": "Type 2+ characters to search…",
         "send": "Send"
       },
       "parameters": {
@@ -596,6 +615,7 @@
         "taskOnBoard": "Task created on kanban",
         "viewTask": "View →",
         "selectDueDate": "Select date",
+        "dueDatePastError": "Due date cannot be before today",
         "type": "Type",
         "selectType": "Select type",
         "types": {
@@ -643,6 +663,8 @@
         "closedLabel": "closed",
         "today": "today",
         "emailThread": "Email thread",
+        "taskDetails": "Task details",
+        "noEmailThread": "This task has no linked email thread. Details above come from the kanban task only.",
         "changeAssignee": "Change assignee",
         "emptyColumn": "No tasks",
         "dragTask": "Drag task",
@@ -655,6 +677,7 @@
         "copyKey": "Copy task key",
         "scrollNavigator": "Scroll kanban columns",
         "filters": {
+          "all": "All tasks",
           "thisWeek": "Due this week",
           "thisMonth": "Due this month",
           "allLawyers": "All Lawyers",
@@ -859,7 +882,7 @@
           "exampleSource": "Sender",
           "exampleSourcePlaceholder": "Sender name",
           "keywordHints": "Keyword hints",
-          "keywordHintsHint": "optional - used as fallback when AI confidence < 70%",
+          "keywordHintsHint": "used to auto-suggest letter type from subject and body for unclassified messages",
           "keywordPlaceholder": "Type a keyword and press Enter..",
           "starRating": "Star rating",
           "starN": "Star {{n}} of {{total}}",
@@ -951,6 +974,18 @@
           "testSyncPartial": "Sync finished with {{errors}} error(s). {{ingested}} new message(s).",
           "testSyncSuccess": "Sync complete. {{ingested}} new message(s) ingested.",
           "testSyncSuccessEmpty": "Sync complete. No new messages.",
+          "testConnection": "Test connection",
+          "testConnectionRunning": "Testing…",
+          "testConnectionSuccess": "Connection successful",
+          "connectionErrors": {
+            "authFailed": "Could not sign in. Check the email address and app password.",
+            "authFailedGoogle": "Could not sign in. Check the email address and use a Google app password — not your regular Google password.",
+            "authFailedMicrosoft": "Could not sign in. Check the email address and app password or account permissions.",
+            "connectionFailed": "Could not reach the mail server. Check the host, port, and network.",
+            "timeout": "Connection timed out. Check the server host, port, and firewall settings.",
+            "generic": "Connection test failed: {{message}}",
+            "unknown": "Connection test failed. Please try again."
+          },
           "defaultOutgoing": "Default",
           "autoRoute": "Auto-route",
           "duplicateEmail": "This mailbox is already connected",
@@ -1633,6 +1668,64 @@
           "operator": "Operator",
           "client": "Client",
           "other": "Other"
+        },
+        "v7": {
+          "keyMoments": "Key moments",
+          "overlap": "overlapping",
+          "pause": "silence {{seconds}} s",
+          "turns_one": "{{count}} turn",
+          "turns_other": "{{count}} turns",
+          "silence": "Silence {{total}}s",
+          "silenceMax": "Silence {{total}}s (max {{max}}s)",
+          "overlapTotal": "Overlap {{total}}s",
+          "operatorShare": "Operator {{share}}%",
+          "clientShare": "{{share}}% Client",
+          "duration": "Duration",
+          "hesitations": "hesitations {{value}}",
+          "inlinePause": "(pause {{seconds}} s)",
+          "direction": {
+            "inbound": "Inbound",
+            "outbound": "Outbound"
+          },
+          "audio": {
+            "approx": "by audio, approximate",
+            "tone": "tone",
+            "irritation": "irritation",
+            "empathy": "empathy",
+            "peak": "peak",
+            "trend": "trend",
+            "dynamicsTitle": "Client emotion dynamics (by audio)",
+            "start": "start",
+            "end": "end",
+            "windowTooltip": "window {{from}}–{{to}}: {{raw}} (raw), {{smooth}} (smoothed)",
+            "toneVsWords": "tone ≠ words",
+            "said": "text",
+            "sounded": "sounds",
+            "states": {
+              "raisedVoice": "raised voice",
+              "crying": "crying"
+            }
+          },
+          "conclusion": {
+            "title": "AI conclusion",
+            "whyTitle": "Why this score",
+            "calc": "rubric {{rubric}} → adjustment {{adjustment}} → {{score}}",
+            "strengths": "Strengths",
+            "weaknesses": "Weaknesses",
+            "keyFindings": "Key findings",
+            "said": "said",
+            "sounded": "sounded",
+            "priority": {
+              "high": "high",
+              "normal": "normal"
+            },
+            "confidence": "confidence {{value}}",
+            "limitedBy": "limitations: {{list}}",
+            "limitations": {
+              "no_audio_layer": "no audio layer",
+              "fallback_26b": "fallback model"
+            }
+          }
         }
       },
       "scenes": {
@@ -2175,6 +2268,14 @@
       "deleteAria": "Delete {{ip}}",
       "saveAria": "Save changes",
       "cancelAria": "Cancel"
+    },
+    "callQaSettings": {
+      "title": "AI Call Analysis",
+      "description": "Call transcripts and AI reviews on the client card",
+      "toggleAria": "Toggle AI call analysis",
+      "toastEnabled": "AI call analysis enabled.",
+      "toastDisabled": "AI call analysis disabled.",
+      "toastError": "Failed to update AI call analysis settings."
     },
     "projects": {
       "title": "Project Management",
@@ -3833,16 +3934,7 @@
         "dropFileOrClick": "Drag a file here or click to select",
         "loan": "Loan",
         "documentsUnlinked": "Not linked to a loan",
-        "documentTypes": {
-          "passport": "Passport",
-          "inn": "Tax ID",
-          "contract": "Contract",
-          "income": "Income statement",
-          "outcome": "Extract / statement",
-          "signature": "Digital signature",
-          "military": "Military",
-          "other": "Other"
-        },
+        "documentTypePlaceholder": "Select a type",
         "department": "Department",
         "phones": "Phones",
         "tin": "TIN",
@@ -4601,17 +4693,39 @@
       "title": "Document Generation",
       "tabs": {
         "journal": "Document Journal",
-        "templates": "Document Templates"
+        "templates": "Document Templates",
+        "types": "Document Types"
       },
-      "documentTypes": {
-        "passport": "Passport",
-        "inn": "Tax ID",
-        "contract": "Contract",
-        "income": "Income statement",
-        "outcome": "Extract / statement",
-        "signature": "Digital signature",
-        "military": "Military",
-        "other": "Other"
+      "types": {
+        "title": "Document Types",
+        "newButton": "New type",
+        "createTitle": "New document type",
+        "editTitle": "Edit document type",
+        "confirmDeleteTitle": "Delete '{{name}}'?",
+        "confirmDelete": "This action cannot be undone.",
+        "deleteBlockedMessage": "This type is used by {{formattedCount}} documents. Hide it instead of deleting.",
+        "uniqueNameError": "A document type with this name already exists.",
+        "loadError": "Failed to load document types.",
+        "hiddenLabel": "hidden",
+        "columns": {
+          "color": "Color",
+          "name": "Name",
+          "usage": "Documents",
+          "actions": "Actions"
+        },
+        "fields": {
+          "name": "Name",
+          "namePlaceholder": "e.g. Passport",
+          "color": "Color",
+          "previewText": "Document type"
+        },
+        "toast": {
+          "created": "Document type created",
+          "updated": "Document type updated",
+          "deleted": "Document type deleted",
+          "hidden": "Type hidden",
+          "shown": "Type shown"
+        }
       },
       "actions": {
         "uploaded": "Uploaded",

@@ -18,7 +18,7 @@ import { DOCUMENT_TYPE_FILTERS } from './constants'
 import { AddIncomingDocumentModal } from './AddIncomingDocumentModal'
 import { DocumentDetailDrawer } from './DocumentDetailDrawer'
 import { DocumentsStatsBar } from './DocumentsStatsBar'
-import { DocumentsTabSkeleton } from './DocumentsTabSkeleton'
+import { DocumentsPageSkeleton, DocumentsTableSkeleton } from './DocumentsTabSkeleton'
 import { DocumentsToolbar } from './DocumentsToolbar'
 import { DocumentsTable } from './DocumentsTable'
 import { GenerateDocumentModal } from './GenerateDocumentModal'
@@ -66,7 +66,8 @@ export function LegalDocumentsTab() {
     [debouncedSearch, page, pageSize, typeFilter]
   )
 
-  const { documents, total, isLoading, isError, refetch } = useLegalDocuments(listParams)
+  const { documents, total, isPending, isFetching, isError, refetch } =
+    useLegalDocuments(listParams)
   const { data: stats } = useLegalDocumentStats()
   const { data: filterCounts } = useLegalDocumentFilterCounts()
   const uploadMutation = useUploadIncomingLegalDocument()
@@ -74,6 +75,11 @@ export function LegalDocumentsTab() {
 
   const totalPages = total > 0 ? Math.ceil(total / pageSize) : 0
   const currentPage = totalPages > 0 ? Math.min(page, totalPages) : 1
+  // First visit: full-page skeleton only. Filter/search/page changes: table skeleton only.
+  const isInitialLoading = isPending
+  const isTableLoading = !isPending && isFetching
+  const showEmptyState = !isInitialLoading && !isTableLoading && !isError && documents.length === 0
+  const showTable = !isInitialLoading && !isTableLoading && !isError && documents.length > 0
   const hasSearch = debouncedSearch.trim().length > 0
   const hasTypeFilter = typeFilter !== 'all'
 
@@ -194,78 +200,84 @@ export function LegalDocumentsTab() {
           isCompact && !showWorkspaceBanner && 'pb-8'
         )}
       >
-        {!isLoading && !isError ? (
+        {isInitialLoading ? (
+          <DocumentsPageSkeleton />
+        ) : (
           <>
-            <DocumentsStatsBar stats={stats ?? EMPTY_STATS} />
-            <DocumentsToolbar
-              typeFilter={typeFilter}
-              onTypeFilterChange={handleTypeFilterChange}
-              searchQuery={searchQuery}
-              onSearchQueryChange={handleSearchQueryChange}
-              filterCounts={filterCounts}
-              onGenerateDocument={() => setGenerateOpen(true)}
-              onAddIncoming={() => setAddIncomingOpen(true)}
-            />
+            {!isError ? (
+              <>
+                <DocumentsStatsBar stats={stats ?? EMPTY_STATS} />
+                <DocumentsToolbar
+                  typeFilter={typeFilter}
+                  onTypeFilterChange={handleTypeFilterChange}
+                  searchQuery={searchQuery}
+                  onSearchQueryChange={handleSearchQueryChange}
+                  filterCounts={filterCounts}
+                  onGenerateDocument={() => setGenerateOpen(true)}
+                  onAddIncoming={() => setAddIncomingOpen(true)}
+                />
+              </>
+            ) : null}
+
+            {isError ? (
+              <div
+                className="flex flex-col items-center justify-center px-6 py-14 text-center sm:px-5 lg:px-7"
+                role="alert"
+              >
+                <div className="bg-error-50 mb-4 flex h-12 w-12 items-center justify-center rounded-full">
+                  <Icons.Warning size={22} strokeWidth={1.5} className="text-error-500" />
+                </div>
+                <p className="text-dark-500 text-[14px] font-medium">
+                  {t('pages.lawyerWorkplace.documents.loadError.title', 'Could not load documents')}
+                </p>
+                <p className="text-light-600 mt-1 max-w-sm text-[12px] leading-relaxed">
+                  {t(
+                    'pages.lawyerWorkplace.documents.loadError.description',
+                    'Check your connection and try again.'
+                  )}
+                </p>
+                <Button
+                  type="button"
+                  variant="cancel"
+                  size="sm"
+                  onClick={() => refetch()}
+                  className="mt-5 h-9 rounded-md"
+                >
+                  {t('actions.retry', 'Retry')}
+                </Button>
+              </div>
+            ) : null}
+
+            {isTableLoading ? <DocumentsTableSkeleton rows={Math.min(pageSize, 8)} /> : null}
+
+            {showEmptyState ? (
+              <div
+                className="mx-4 flex flex-col items-center justify-center rounded-xl border border-gray-100 bg-white px-6 py-14 text-center sm:mx-5 lg:mx-7"
+                role="status"
+              >
+                <div className="bg-light-100 mb-4 flex h-12 w-12 items-center justify-center rounded-full">
+                  {emptyState.icon}
+                </div>
+                <p className="text-dark-500 text-[14px] font-medium">{emptyState.title}</p>
+                <p className="text-light-600 mt-1 max-w-sm text-[12px] leading-relaxed">
+                  {emptyState.description}
+                </p>
+              </div>
+            ) : null}
+
+            {showTable ? (
+              <DocumentsTable
+                documents={documents}
+                currentPage={currentPage}
+                totalPages={totalPages}
+                pageSize={pageSize}
+                onPageChange={setPage}
+                onPageSizeChange={handlePageSizeChange}
+                onDocumentClick={setSelectedDocument}
+              />
+            ) : null}
           </>
-        ) : null}
-
-        {isLoading ? <DocumentsTabSkeleton /> : null}
-
-        {isError && !isLoading ? (
-          <div
-            className="flex flex-col items-center justify-center px-6 py-14 text-center sm:px-5 lg:px-7"
-            role="alert"
-          >
-            <div className="bg-error-50 mb-4 flex h-12 w-12 items-center justify-center rounded-full">
-              <Icons.Warning size={22} strokeWidth={1.5} className="text-error-500" />
-            </div>
-            <p className="text-dark-500 text-[14px] font-medium">
-              {t('pages.lawyerWorkplace.documents.loadError.title', 'Could not load documents')}
-            </p>
-            <p className="text-light-600 mt-1 max-w-sm text-[12px] leading-relaxed">
-              {t(
-                'pages.lawyerWorkplace.documents.loadError.description',
-                'Check your connection and try again.'
-              )}
-            </p>
-            <Button
-              type="button"
-              variant="cancel"
-              size="sm"
-              onClick={() => refetch()}
-              className="mt-5 h-9 rounded-md"
-            >
-              {t('actions.retry', 'Retry')}
-            </Button>
-          </div>
-        ) : null}
-
-        {!isLoading && !isError && documents.length === 0 ? (
-          <div
-            className="mx-4 flex flex-col items-center justify-center rounded-xl border border-gray-100 bg-white px-6 py-14 text-center sm:mx-5 lg:mx-7"
-            role="status"
-          >
-            <div className="bg-light-100 mb-4 flex h-12 w-12 items-center justify-center rounded-full">
-              {emptyState.icon}
-            </div>
-            <p className="text-dark-500 text-[14px] font-medium">{emptyState.title}</p>
-            <p className="text-light-600 mt-1 max-w-sm text-[12px] leading-relaxed">
-              {emptyState.description}
-            </p>
-          </div>
-        ) : null}
-
-        {!isLoading && !isError && documents.length > 0 ? (
-          <DocumentsTable
-            documents={documents}
-            currentPage={currentPage}
-            totalPages={totalPages}
-            pageSize={pageSize}
-            onPageChange={setPage}
-            onPageSizeChange={handlePageSizeChange}
-            onDocumentClick={setSelectedDocument}
-          />
-        ) : null}
+        )}
       </div>
 
       <GenerateDocumentModal

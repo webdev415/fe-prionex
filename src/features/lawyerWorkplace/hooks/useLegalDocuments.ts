@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { useClients } from '@/features/clients/hooks/useClients'
 import type { LegalDocumentTypeFilter } from '@/pages/LawyerWorkplace/documents/types'
 import { legalApi } from '../api/legalApi'
@@ -39,6 +39,7 @@ export function useLegalDocuments(
     queryFn: () => legalApi.listDocuments(params),
     enabled,
     staleTime: 15_000,
+    placeholderData: keepPreviousData,
   })
 
   const documents = useMemo(

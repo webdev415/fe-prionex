@@ -37,8 +37,8 @@ export function useDocumentClientContract(clientId: string, enabled: boolean) {
   )
 
   const resetContract = useCallback(() => {
-    setContractSelection({ clientId, contractNumber: '' })
-  }, [clientId])
+    setContractSelection({ clientId: '', contractNumber: '' })
+  }, [])
 
   return {
     contracts,

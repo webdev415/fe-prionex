@@ -13,6 +13,10 @@ export interface LetterListItem {
   referenceId: string
   senderName: string
   senderEmail: string
+  /** External party email for routing display (may differ from senderEmail on Sent rows). */
+  routeFromEmail: string
+  routeToEmail: string
+  direction: 'incoming' | 'outgoing'
   receivedAt: string
   subject: string
   mailbox: string
@@ -78,6 +82,7 @@ export interface LetterDetail extends LetterListItem {
   suggestedLetterTypeId?: string | null
   processingStatus?: string
   updatedAt?: string | null
+  sourceMailboxDisabled?: boolean
 }
 
 export interface LetterReplyContext {

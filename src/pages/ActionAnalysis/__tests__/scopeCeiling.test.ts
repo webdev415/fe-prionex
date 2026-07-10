@@ -42,7 +42,7 @@ describe('resolveTabCeiling', () => {
   })
 
   it('defaults to "all" for an unknown/non-scoped sub-tab', () => {
-    expect(resolveTabCeiling('script-analytics', { view_call_list: 'my' })).toBe('all')
+    expect(resolveTabCeiling('some-unknown-tab', { view_call_list: 'my' })).toBe('all')
   })
 
   it('ignores a malformed level value', () => {

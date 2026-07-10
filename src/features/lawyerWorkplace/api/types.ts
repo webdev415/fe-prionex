@@ -21,6 +21,7 @@ export interface LegalInboxItem {
   mailbox_email?: string | null
   subject: string | null
   from_address: string
+  to_addresses?: string[]
   processing_status: string
   direction: string
   received_at: string | null
@@ -104,11 +105,13 @@ export interface LegalMessageDetail {
   suggested_client_name?: string | null
   suggested_client_project_id?: number | null
   suggested_lawyer_user_id: number | null
+  suggested_due_date?: string | null
   suggested_contract_number?: string | null
   confirmed_contract_number?: string | null
   confirmed_letter_type_id?: string | null
   auto_process_eligible: boolean
   legal_task_id?: number | null
+  source_mailbox_disabled?: boolean
   updated_at?: string | null
   attachments: LegalAttachmentItem[]
 }
@@ -157,11 +160,15 @@ export interface LegalLetterConfirmResponse {
 export interface LegalMessageSuggestionsPatchRequest {
   letter_type_id: string
   client_id?: number | null
+  refresh_lawyer?: boolean
+  suggested_lawyer_user_id?: number | null
+  due_date?: string | null
 }
 
 export interface LegalMessageSuggestionsPatchResponse {
   suggested_letter_type_id: string
   suggested_lawyer_user_id: number | null
+  suggested_due_date?: string | null
   suggested_contract_number?: string | null
   sla_days: number
   auto_process_eligible: boolean
@@ -280,11 +287,10 @@ export interface LegalKanbanResponse {
 
 export interface LegalKanbanTaskCreateRequest {
   letter_type_id: string
-  client_id?: number | null
+  client_id: number
   due_date: string
   assigned_to_user_id: number
   priority?: string
-  description?: string | null
 }
 
 export interface LegalKanbanTaskCreateResponse {
@@ -519,6 +525,22 @@ export interface LegalMailboxCreate {
   default_letter_type_id?: string | null
   is_default_outgoing?: boolean
   routing_rules?: LegalMailboxRoutingRuleInput[]
+}
+
+export interface LegalMailboxConnectionTest {
+  email: string
+  provider: LegalMailboxProvider
+  password: string
+  imap_host?: string | null
+  imap_port?: number | null
+  imap_use_ssl?: boolean | null
+  smtp_host?: string | null
+  smtp_port?: number | null
+  smtp_use_tls?: boolean | null
+}
+
+export interface LegalMailboxConnectionTestResponse {
+  ok: boolean
 }
 
 export interface LegalMailboxUpdate {

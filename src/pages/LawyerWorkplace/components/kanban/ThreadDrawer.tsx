@@ -1,12 +1,20 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useLegalLetterDetail } from '@/features/lawyerWorkplace'
+import { useLegalLetterDetail, type LegalLetterType } from '@/features/lawyerWorkplace'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
+import type { KanbanTask } from '../../kanban/kanbanData'
 import { EmailThreadPanel } from '../thread/EmailThreadPanel'
+import { KanbanTaskDetailPanel } from './KanbanTaskDetailPanel'
+
+export interface KanbanThreadDrawerTarget {
+  letterId: string | null
+  task: KanbanTask
+}
 
 interface ThreadDrawerProps {
-  letterId: string | null
+  target: KanbanThreadDrawerTarget | null
+  letterTypes?: LegalLetterType[]
   onClose: () => void
 }
 
@@ -25,9 +33,11 @@ function ThreadDrawerContent({ letterId }: { letterId: string }) {
   )
 }
 
-export function ThreadDrawer({ letterId, onClose }: ThreadDrawerProps) {
+export function ThreadDrawer({ target, letterTypes = [], onClose }: ThreadDrawerProps) {
   const { t } = useTranslation('common')
-  const isOpen = letterId !== null
+  const isOpen = target !== null
+  const letterId = target?.letterId ?? null
+  const showTaskOnly = isOpen && !letterId && target != null
 
   return (
     <>
@@ -49,7 +59,9 @@ export function ThreadDrawer({ letterId, onClose }: ThreadDrawerProps) {
       >
         <div className="flex shrink-0 items-center justify-between border-b border-gray-100 bg-white px-4 py-3">
           <span className="text-dark-500 text-[13px] font-medium">
-            {t('pages.lawyerWorkplace.kanban.emailThread', 'Email thread')}
+            {showTaskOnly
+              ? t('pages.lawyerWorkplace.kanban.taskDetails', 'Task details')
+              : t('pages.lawyerWorkplace.kanban.emailThread', 'Email thread')}
           </span>
           <button
             type="button"
@@ -63,6 +75,9 @@ export function ThreadDrawer({ letterId, onClose }: ThreadDrawerProps) {
 
         <div className="min-h-0 flex-1 overflow-hidden">
           {isOpen && letterId ? <ThreadDrawerContent key={letterId} letterId={letterId} /> : null}
+          {showTaskOnly ? (
+            <KanbanTaskDetailPanel task={target.task} letterTypes={letterTypes} />
+          ) : null}
         </div>
       </div>
     </>

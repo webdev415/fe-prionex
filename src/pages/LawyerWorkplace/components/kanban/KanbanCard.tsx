@@ -15,50 +15,37 @@ import {
 } from '@/components/ui/DropdownMenu'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
-import type { KanbanColumnId, KanbanTask, KanbanTaskType } from '../../kanban/kanbanData'
-import { formatKanbanMonthDay } from '../../utils/formatters'
-import { getAssigneeColour, KANBAN_COLUMN_MOVE_OPTIONS } from './constants'
+import type { KanbanColumnId, KanbanTask } from '../../kanban/kanbanData'
+import {
+  formatLegalDueMonthDay,
+  legalDueDateToIso,
+  parseLegalDueDate,
+} from '@/features/lawyerWorkplace/utils/legalDueDate'
+import {
+  getAssigneeColour,
+  KANBAN_COLUMN_MOVE_OPTIONS,
+  resolveKanbanTypeBadgeProps,
+} from './constants'
 import { KanbanAssigneeChip } from './KanbanAssigneeChip'
 import { KanbanClientChip } from './KanbanClientChip'
 import { KanbanTypeBadge } from './KanbanTypeBadge'
 
-function parseDeadline(iso: string | undefined | null): Date | null {
-  if (!iso) return null
-  const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})/)
-  if (m) return new Date(+m[1], +m[2] - 1, +m[3], 0, 0, 0, 0)
-  const d = new Date(iso)
-  return isNaN(d.getTime()) ? null : d
-}
-
-function fmtMonthDay(d: Date): string {
-  const mm = String(d.getMonth() + 1).padStart(2, '0')
-  const dd = String(d.getDate()).padStart(2, '0')
-  return `${mm}/${dd}`
-}
-
 const COLUMN_MOVE_OPTIONS = KANBAN_COLUMN_MOVE_OPTIONS
 
-const KNOWN_KANBAN_TYPES = new Set<KanbanTaskType>([
-  'complaint',
-  'nbu_inquiry',
-  'court_claim',
-  'attorney_request',
-  'inquiry',
-])
-
-function renderLetterTypeOption(letterTypeId: string, name: string) {
-  if (KNOWN_KANBAN_TYPES.has(letterTypeId as KanbanTaskType)) {
-    return <KanbanTypeBadge type={letterTypeId as KanbanTaskType} />
-  }
-  return <span className="text-dark-500 text-[12px]">{name}</span>
+function renderLetterTypeOption(letterType: LegalLetterType) {
+  const badge = resolveKanbanTypeBadgeProps(letterType.id, [letterType], 'type_pending')
+  return <KanbanTypeBadge type={badge.type} label={badge.label} colorId={badge.colorId} />
 }
 
 interface KanbanCardProps {
   task: KanbanTask
   lawyers: LegalLawyer[]
+  /** All letter types for badge label/color resolution. */
   letterTypes: LegalLetterType[]
+  /** Active letter types shown in the change-type menu. */
+  editableLetterTypes: LegalLetterType[]
   isDragging?: boolean
-  onCardClick?: (letterId: string) => void
+  onCardClick?: (task: KanbanTask) => void
   onMoveTask?: (taskId: string, columnId: KanbanColumnId) => void
   onTaskUpdate?: (taskId: string, patch: LegalKanbanTaskPatch) => void
   onDragStart?: (event: DragEvent, task: KanbanTask) => void
@@ -74,6 +61,7 @@ export function KanbanCard({
   task,
   lawyers,
   letterTypes,
+  editableLetterTypes,
   isDragging = false,
   onCardClick,
   onMoveTask,
@@ -84,11 +72,11 @@ export function KanbanCard({
   const { t } = useTranslation('common')
   const isOverdue = task.columnId === 'overdue'
   const isCompleted = task.columnId === 'completed'
-  const taskType = task.type
+  const typeBadge = resolveKanbanTypeBadgeProps(task.letterTypeId, letterTypes, task.type)
   const clientCode = task.clientCode ?? null
   const clientName = task.clientName?.trim() || null
 
-  const deadline = parseDeadline(task.deadline)
+  const deadline = parseLegalDueDate(task.deadline)
   const assigneeInitials = task.assigneeInitials
   const assigneeName = task.assigneeName
 
@@ -104,17 +92,35 @@ export function KanbanCard({
     return option?.label ?? fallbackName
   }
 
-  const isClickable = task.letterId && !isCompleted
+  const isClickable = !isCompleted
 
   const handleCardClick = () => {
     if (isClickable) {
-      onCardClick?.(task.letterId!)
+      onCardClick?.(task)
     }
+  }
+
+  const handleCardDragStart = (event: DragEvent) => {
+    if (isCompleted) {
+      event.preventDefault()
+      return
+    }
+    const target = event.target as HTMLElement
+    if (
+      target.closest('button, input, textarea, [role="combobox"], a, [data-radix-collection-item]')
+    ) {
+      event.preventDefault()
+      return
+    }
+    onDragStart?.(event, task)
   }
 
   return (
     <div
       data-kanban-task-id={task.taskId}
+      draggable={!isCompleted}
+      onDragStart={handleCardDragStart}
+      onDragEnd={onDragEnd}
       role={isClickable ? 'button' : undefined}
       tabIndex={isClickable ? 0 : undefined}
       onClick={isClickable ? handleCardClick : undefined}
@@ -131,6 +137,7 @@ export function KanbanCard({
       className={cn(
         'relative rounded-lg bg-white p-3 shadow-[0_1px_2px_0_rgba(5,4,13,0.04)]',
         isClickable ? 'cursor-pointer transition-shadow hover:shadow-md' : 'cursor-default',
+        !isCompleted && 'cursor-grab active:cursor-grabbing',
         isCompleted ? 'opacity-75' : '',
         isDragging && 'opacity-40'
       )}
@@ -143,18 +150,17 @@ export function KanbanCard({
             {t('pages.lawyerWorkplace.kanban.overdueBadge', 'Overdue')}
           </span>
         ) : (
-          <KanbanTypeBadge type={taskType} />
+          <KanbanTypeBadge
+            type={typeBadge.type}
+            label={typeBadge.label}
+            colorId={typeBadge.colorId}
+          />
         )}
         <div className="flex shrink-0 items-center gap-1">
           {!isCompleted && (
-            <button
-              type="button"
-              draggable
-              onDragStart={(event) => onDragStart?.(event, task)}
-              onDragEnd={onDragEnd}
-              onClick={(event) => event.stopPropagation()}
-              aria-label={t('pages.lawyerWorkplace.kanban.dragTask', 'Drag task')}
-              className="text-light-400 hover:text-light-600 flex h-8 w-8 cursor-grab items-center justify-center rounded active:cursor-grabbing sm:h-5 sm:w-4"
+            <span
+              aria-hidden="true"
+              className="text-light-400 flex h-8 w-8 items-center justify-center sm:h-5 sm:w-4"
             >
               <svg width="8" height="12" viewBox="0 0 8 12" fill="currentColor" aria-hidden="true">
                 <circle cx="2" cy="2" r="1.2" />
@@ -164,7 +170,7 @@ export function KanbanCard({
                 <circle cx="2" cy="10" r="1.2" />
                 <circle cx="6" cy="10" r="1.2" />
               </svg>
-            </button>
+            </span>
           )}
           <span className="text-light-400 text-[10px] font-medium tracking-wide">{task.id}</span>
         </div>
@@ -173,7 +179,11 @@ export function KanbanCard({
       {/* Overdue: type badge on own row */}
       {isOverdue && (
         <div className="mb-2">
-          <KanbanTypeBadge type={taskType} />
+          <KanbanTypeBadge
+            type={typeBadge.type}
+            label={typeBadge.label}
+            colorId={typeBadge.colorId}
+          />
         </div>
       )}
 
@@ -205,7 +215,7 @@ export function KanbanCard({
           task.closedAt ? (
             <span className="text-light-500 text-[11px]">
               {t('pages.lawyerWorkplace.kanban.closedLabel', 'closed')}{' '}
-              {formatKanbanMonthDay(task.closedAt)}
+              {formatLegalDueMonthDay(task.closedAt)}
             </span>
           ) : null
         ) : (
@@ -215,12 +225,14 @@ export function KanbanCard({
               isOverdue ? (
                 <span className="text-error-600 flex items-center gap-1 text-[11px] font-medium">
                   <Icons.Calendar size={11} strokeWidth={1.5} className="shrink-0" />
-                  {t('pages.lawyerWorkplace.kanban.dueLabel', 'due:')} {fmtMonthDay(deadline)}
+                  {t('pages.lawyerWorkplace.kanban.dueLabel', 'due:')}{' '}
+                  {formatLegalDueMonthDay(task.deadline)}
                 </span>
               ) : (
                 <span className="text-light-600 flex items-center gap-1 text-[11px]">
                   <Icons.Calendar size={11} strokeWidth={1.5} className="shrink-0" />
-                  {t('pages.lawyerWorkplace.kanban.byLabel', 'by')} {fmtMonthDay(deadline)}
+                  {t('pages.lawyerWorkplace.kanban.byLabel', 'by')}{' '}
+                  {formatLegalDueMonthDay(task.deadline)}
                 </span>
               )
             ) : (
@@ -295,7 +307,7 @@ export function KanbanCard({
                     </span>
                   </DropdownMenuSubTrigger>
                   <DropdownMenuSubContent className="max-h-60 min-w-[190px] overflow-y-auto p-1.5">
-                    {letterTypes.map((letterType) => (
+                    {editableLetterTypes.map((letterType) => (
                       <DropdownMenuItem
                         key={letterType.id}
                         className="cursor-pointer rounded-md px-2 py-1.5 focus:bg-gray-50"
@@ -304,7 +316,7 @@ export function KanbanCard({
                           onTaskUpdate?.(task.id, { letterTypeId: letterType.id })
                         }}
                       >
-                        {renderLetterTypeOption(letterType.id, letterType.name)}
+                        {renderLetterTypeOption(letterType)}
                       </DropdownMenuItem>
                     ))}
                   </DropdownMenuSubContent>
@@ -376,7 +388,9 @@ export function KanbanCard({
                       inline
                       selected={deadline}
                       onChange={(date: Date | null) => {
-                        onTaskUpdate?.(task.id, { deadline: date ? date.toISOString() : null })
+                        onTaskUpdate?.(task.id, {
+                          deadline: date ? legalDueDateToIso(date) : null,
+                        })
                       }}
                       calendarStartDay={1}
                       showYearDropdown

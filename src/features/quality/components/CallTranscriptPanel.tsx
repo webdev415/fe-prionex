@@ -1,14 +1,23 @@
 /**
- * CallTranscriptPanel — AI transcript of one call, scene-grouped (Ф1).
+ * CallTranscriptPanel — AI transcript of one call (Ф1 scenes / v7 turns).
  *
  * One shared component for both flows (client card modal now; Training →
  * Оцінка діалогів joins in Ф2). Renders the nightly-brain transcript:
  * summary header, collapsible scene sections, chat-layout utterances with
  * seek-to-timestamp buttons wired to the existing CallPlayer handle.
  *
+ * v7 (FORMAT_SPEC): transcripts whose turns carry `dur` (or that ship
+ * `metrics.stats`) render through TranscriptV7View — stats header, key
+ * moments, two-sided feed with pauses/overlaps/inline reactions/QA tags.
+ * Ф1-format transcripts keep the legacy scene renderer below unchanged.
+ *
  * Ф1 reality: `review` is null (Проход 2 ships in Ф2) — every review-derived
  * pill/footer renders only when the data is present, so the panel degrades
  * to summary + dialogue.
+ *
+ * Step B: `review.conclusion` (the 31B «Заключення AI») renders as a
+ * collapsible block under the dialogue via TranscriptConclusion — absent on
+ * older reviews, strictly optional.
  *
  * TOLERANT READER (CALL_QA_INTEGRATION.md §3.1): `scenes[].key`, utterance
  * `flags[].type` and review enums are OPEN sets — unknown values get a
@@ -19,7 +28,11 @@ import { useTranslation } from 'react-i18next'
 import { useHasPermission } from '@/hooks'
 import { PERMISSIONS } from '@/constants/permissions'
 import { Icons } from '@/lib/icons'
+import { useCallQaSettings } from '../hooks/useCallQaSettings'
 import { useCallTranscript } from '../hooks/useCallTranscript'
+import { isV7Transcript } from '../lib/transcriptV7'
+import { TranscriptV7View } from './TranscriptV7View'
+import { TranscriptConclusion } from './TranscriptConclusion'
 import type {
   CallAiReview,
   TranscriptScene,
@@ -231,18 +244,29 @@ export function CallTranscriptPanel({
 }: CallTranscriptPanelProps) {
   const { t } = useTranslation('common')
   const canView = useHasPermission(PERMISSIONS.TRAINING.VIEW_TRANSCRIPTS)
-  const { transcript, review, isLoading, notReady, forbidden, isHardError } = useCallTranscript(
-    callId,
-    active && canView && !!callId
-  )
+  // Global admin switch (fail-closed): until settings confirm Call QA is ON,
+  // the transcript fetch stays disabled and the panel renders nothing.
+  const { data: qaSettings } = useCallQaSettings()
+  const qaEnabled = qaSettings?.transcripts_enabled === true
+  const { transcript, review, isLoading, notReady, forbidden, disabledByAdmin, isHardError } =
+    useCallTranscript(callId, active && canView && qaEnabled && !!callId)
   const [collapsed, setCollapsed] = useState<Record<number, boolean>>({})
 
+  // v7 turns render through TranscriptV7View; scene grouping is Ф1-only.
+  const v7 = useMemo(() => isV7Transcript(transcript), [transcript])
   const groups = useMemo(
-    () => (transcript ? groupUtterances(transcript.utterances ?? [], transcript.scenes) : []),
-    [transcript]
+    () =>
+      transcript && !v7 ? groupUtterances(transcript.utterances ?? [], transcript.scenes) : [],
+    [transcript, v7]
   )
 
   if (!callId) return null
+
+  // Kill-switch OFF, still loading, or failed to load — no panel, no
+  // skeleton, no fetch. The disabledByAdmin arm covers the race where the
+  // cached settings said ON but the transcript endpoint already answers
+  // 403 call_qa_disabled.
+  if (!qaEnabled || disabledByAdmin) return null
 
   // Server enforces RBAC too — this early-out just avoids a guaranteed 403.
   if (!canView || forbidden) {
@@ -291,6 +315,17 @@ export function CallTranscriptPanel({
     )
   }
 
+  // Promise footer: only a real amount (a finite number > 0) is worth showing.
+  // A 0 / null / malformed amount renders date + quote alone, never «0 UAH».
+  const promise = review?.extracted?.promise ?? null
+  const promiseAmount =
+    promise &&
+    typeof promise.amount === 'number' &&
+    Number.isFinite(promise.amount) &&
+    promise.amount > 0
+      ? promise.amount
+      : null
+
   return (
     <div
       data-testid="transcript-panel"
@@ -318,69 +353,83 @@ export function CallTranscriptPanel({
         ) : null}
       </div>
 
-      {/* Scene sections */}
-      <div className="flex flex-col gap-2">
-        {groups.map((group, index) => {
-          const sceneKey = group.sceneKey
-          const isPromise = sceneKey === 'promise'
-          const isCollapsed = collapsed[index] === true
-          const label =
-            sceneKey == null
-              ? t('pages.training.scenes.other')
-              : KNOWN_SCENES.has(sceneKey)
-                ? t(`pages.training.scenes.${sceneKey}`)
-                : sceneKey // open enum — unknown keys render as-is
+      {/* Dialogue: v7 detailed feed, or Ф1 scene sections */}
+      {v7 ? (
+        <TranscriptV7View transcript={transcript} onSeek={onSeek} />
+      ) : (
+        <div className="flex flex-col gap-2">
+          {groups.map((group, index) => {
+            const sceneKey = group.sceneKey
+            const isPromise = sceneKey === 'promise'
+            const isCollapsed = collapsed[index] === true
+            const label =
+              sceneKey == null
+                ? t('pages.training.scenes.other')
+                : KNOWN_SCENES.has(sceneKey)
+                  ? t(`pages.training.scenes.${sceneKey}`)
+                  : sceneKey // open enum — unknown keys render as-is
 
-          const body = (
-            <div className="flex flex-col gap-1.5 px-3 pb-3">
-              {group.utterances.map((utt) => (
-                <UtteranceRow key={utt.i} utt={utt} onSeek={onSeek} />
-              ))}
-            </div>
-          )
-
-          // No scenes at all → flat dialogue without section chrome.
-          if (sceneKey == null && (transcript.scenes ?? []).length === 0) {
-            return (
-              <div key={index} className="flex flex-col gap-1.5">
+            const body = (
+              <div className="flex flex-col gap-1.5 px-3 pb-3">
                 {group.utterances.map((utt) => (
                   <UtteranceRow key={utt.i} utt={utt} onSeek={onSeek} />
                 ))}
               </div>
             )
-          }
 
-          return (
-            <section
-              key={index}
-              data-testid={`transcript-scene-${index}`}
-              className={`rounded-lg border ${
-                isPromise ? 'border-[#BBFB5B] bg-[#BBFB5B]/10' : 'border-gray-200 bg-white'
-              }`}
-            >
-              <button
-                type="button"
-                className="flex w-full items-center justify-between px-3 py-2 text-left"
-                onClick={() => setCollapsed((prev) => ({ ...prev, [index]: !isCollapsed }))}
-                aria-expanded={!isCollapsed}
+            // No scenes at all → flat dialogue without section chrome.
+            if (sceneKey == null && (transcript.scenes ?? []).length === 0) {
+              return (
+                <div key={index} className="flex flex-col gap-1.5">
+                  {group.utterances.map((utt) => (
+                    <UtteranceRow key={utt.i} utt={utt} onSeek={onSeek} />
+                  ))}
+                </div>
+              )
+            }
+
+            return (
+              <section
+                key={index}
+                data-testid={`transcript-scene-${index}`}
+                className={`rounded-lg border ${
+                  isPromise ? 'border-[#BBFB5B] bg-[#BBFB5B]/10' : 'border-gray-200 bg-white'
+                }`}
               >
-                <span className="text-dark-500 text-xs font-semibold tracking-wide uppercase">
-                  {label}
-                </span>
-                <Icons.ArrowDown
-                  size={14}
-                  className={`text-gray-400 transition-transform ${isCollapsed ? '' : 'rotate-180'}`}
-                />
-              </button>
-              {isCollapsed ? null : body}
-            </section>
-          )
-        })}
-      </div>
+                <button
+                  type="button"
+                  className="flex w-full items-center justify-between px-3 py-2 text-left"
+                  onClick={() => setCollapsed((prev) => ({ ...prev, [index]: !isCollapsed }))}
+                  aria-expanded={!isCollapsed}
+                >
+                  <span className="text-dark-500 text-xs font-semibold tracking-wide uppercase">
+                    {label}
+                  </span>
+                  <Icons.ArrowDown
+                    size={14}
+                    className={`text-gray-400 transition-transform ${isCollapsed ? '' : 'rotate-180'}`}
+                  />
+                </button>
+                {isCollapsed ? null : body}
+              </section>
+            )
+          })}
+        </div>
+      )}
 
-      {/* Footer: promise + recommendations (review-only, Ф2 data) */}
-      {review?.extracted?.promise &&
-      (review.extracted.promise.amount != null || review.extracted.promise.date) ? (
+      {/* 31B conclusion (step B): «звідки такий бал» — renders only when
+          review.conclusion carries something; older reviews show nothing. */}
+      <TranscriptConclusion
+        review={review}
+        utterances={transcript.utterances ?? []}
+        onSeek={onSeek}
+      />
+
+      {/* Footer: promise + recommendations (review-only, Ф2 data).
+          Amount renders only when it's a real positive number — 0/null means
+          «сума не прозвучала» (CEO 08.07: «0 UAH» в обіцянці показывать нельзя;
+          мозг с prompt 1.1 шлёт null, но старые ревью несут 0). */}
+      {promise && (promiseAmount != null || promise.date) ? (
         <div
           data-testid="transcript-promise"
           className="rounded-lg border border-[#BBFB5B] bg-[#BBFB5B]/15 p-3 text-sm"
@@ -389,16 +438,12 @@ export function CallTranscriptPanel({
             {t('pages.training.transcript.promiseTitle')}
           </div>
           <div className="text-gray-700">
-            {review.extracted.promise.amount != null
-              ? `${review.extracted.promise.amount} ${review.extracted.promise.currency ?? ''}`.trim()
-              : null}
-            {review.extracted.promise.amount != null && review.extracted.promise.date
-              ? ' — '
-              : null}
-            {review.extracted.promise.date ?? null}
+            {promiseAmount != null ? `${promiseAmount} ${promise.currency ?? ''}`.trim() : null}
+            {promiseAmount != null && promise.date ? ' — ' : null}
+            {promise.date ?? null}
           </div>
-          {review.extracted.promise.quote ? (
-            <div className="mt-1 text-xs text-gray-500">«{review.extracted.promise.quote}»</div>
+          {promise.quote ? (
+            <div className="mt-1 text-xs text-gray-500">«{promise.quote}»</div>
           ) : null}
         </div>
       ) : null}

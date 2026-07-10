@@ -11,8 +11,8 @@ import {
 import { Label } from '@/components/ui/Label'
 import { Modal, ModalContent, ModalFooter, ModalHeader } from '@/components/ui/Modal'
 import { SearchableSelect } from '@/components/ui/SearchableSelect'
-import { Textarea } from '@/components/ui/Textarea'
 import { useCreateLegalKanbanTask } from '@/features/lawyerWorkplace/hooks/useLegalMutations'
+import { legalDueDateToIso } from '@/features/lawyerWorkplace/utils/legalDueDate'
 import {
   useLegalLawyers,
   useLegalLetterTypes,
@@ -20,21 +20,14 @@ import {
 import { useLegalClientSearch } from '@/features/lawyerWorkplace/hooks/useLegalClientSearch'
 import { useDebounce } from '@/hooks/useDebounce'
 import { Icons } from '@/lib/icons'
-import type { KanbanTaskType } from '../../kanban/kanbanData'
+import type { LegalLetterType } from '@/features/lawyerWorkplace'
+import { resolveKanbanTypeBadgeProps } from './constants'
 import { KanbanTypeBadge } from './KanbanTypeBadge'
 
 interface CreateKanbanTaskModalProps {
   open: boolean
   onClose: () => void
 }
-
-const KNOWN_KANBAN_TYPES = new Set<KanbanTaskType>([
-  'complaint',
-  'nbu_inquiry',
-  'court_claim',
-  'attorney_request',
-  'inquiry',
-])
 
 function getTomorrowDate(): Date {
   const date = new Date()
@@ -49,17 +42,9 @@ function getTodayStart(): Date {
   return date
 }
 
-function deadlineToIso(date: Date): string {
-  const next = new Date(date)
-  next.setHours(12, 0, 0, 0)
-  return next.toISOString()
-}
-
-function renderLetterTypeOption(letterTypeId: string, name: string) {
-  if (KNOWN_KANBAN_TYPES.has(letterTypeId as KanbanTaskType)) {
-    return <KanbanTypeBadge type={letterTypeId as KanbanTaskType} />
-  }
-  return <span className="text-dark-500 text-[13px]">{name}</span>
+function renderLetterTypeOption(letterType: LegalLetterType) {
+  const badge = resolveKanbanTypeBadgeProps(letterType.id, [letterType], 'type_pending')
+  return <KanbanTypeBadge type={badge.type} label={badge.label} colorId={badge.colorId} />
 }
 
 interface FormSelectProps {
@@ -124,7 +109,6 @@ export function CreateKanbanTaskModal({ open, onClose }: CreateKanbanTaskModalPr
   const [clientId, setClientId] = useState('')
   const [clientSearch, setClientSearch] = useState('')
   const [deadline, setDeadline] = useState<Date | null>(getTomorrowDate())
-  const [description, setDescription] = useState('')
 
   const debouncedClientSearch = useDebounce(clientSearch, 300)
   const { data: clientsData, isFetching: clientsLoading } = useLegalClientSearch(
@@ -155,12 +139,15 @@ export function CreateKanbanTaskModal({ open, onClose }: CreateKanbanTaskModalPr
       setClientId('')
       setClientSearch('')
       setDeadline(getTomorrowDate())
-      setDescription('')
     })
   }, [letterTypes, lawyers, open])
 
   const selectedLawyer = lawyers.find((item) => item.user_id === lawyerUserId)
   const selectedLetterType = letterTypes.find((item) => item.id === letterTypeId)
+
+  const resolvedClientId = Number(clientId)
+  const hasValidClient =
+    clientId.length > 0 && Number.isFinite(resolvedClientId) && resolvedClientId > 0
 
   const optionsLoading = lawyersLoading || letterTypesLoading
   const canSubmit =
@@ -168,24 +155,26 @@ export function CreateKanbanTaskModal({ open, onClose }: CreateKanbanTaskModalPr
     !createTask.isPending &&
     lawyerUserId != null &&
     letterTypeId != null &&
-    deadline != null
+    deadline != null &&
+    hasValidClient
 
   const handleCreate = () => {
-    if (!canSubmit || lawyerUserId == null || letterTypeId == null || deadline == null) {
+    if (
+      !canSubmit ||
+      lawyerUserId == null ||
+      letterTypeId == null ||
+      deadline == null ||
+      !hasValidClient
+    ) {
       return
     }
-
-    const clientIdNumber = Number(clientId)
-    const resolvedClientId =
-      clientId && Number.isFinite(clientIdNumber) && clientIdNumber > 0 ? clientIdNumber : undefined
 
     createTask.mutate(
       {
         letter_type_id: letterTypeId,
         client_id: resolvedClientId,
         assigned_to_user_id: lawyerUserId,
-        due_date: deadlineToIso(deadline),
-        description: description.trim() || null,
+        due_date: legalDueDateToIso(deadline),
       },
       {
         onSuccess: () => onClose(),
@@ -225,13 +214,13 @@ export function CreateKanbanTaskModal({ open, onClose }: CreateKanbanTaskModalPr
             disabled={optionsLoading || letterTypes.length === 0}
             value={
               selectedLetterType
-                ? renderLetterTypeOption(selectedLetterType.id, selectedLetterType.name)
+                ? renderLetterTypeOption(selectedLetterType)
                 : t('pages.lawyerWorkplace.kanban.createTask.selectType', 'Select type')
             }
             onSelect={(key) => setLetterTypeId(key)}
             items={letterTypes.map((letterType) => ({
               key: letterType.id,
-              content: renderLetterTypeOption(letterType.id, letterType.name),
+              content: renderLetterTypeOption(letterType),
             }))}
           />
 
@@ -239,9 +228,6 @@ export function CreateKanbanTaskModal({ open, onClose }: CreateKanbanTaskModalPr
             <div className="flex w-full items-center justify-between gap-2">
               <Label className="text-dark-500 text-[12px] font-normal">
                 {t('pages.lawyerWorkplace.kanban.createTask.client', 'Client')}
-                <span className="text-light-600 ml-1 font-light">
-                  ({t('pages.lawyerWorkplace.kanban.createTask.clientOptional', 'optional')})
-                </span>
               </Label>
               {clientId ? (
                 <button
@@ -294,25 +280,6 @@ export function CreateKanbanTaskModal({ open, onClose }: CreateKanbanTaskModalPr
               format="dd/MM/yyyy"
               min={getTodayStart()}
               className="h-9 rounded-[8px] border-gray-200 text-[14px] font-light"
-            />
-          </div>
-
-          <div className="flex w-full flex-col items-start gap-2">
-            <Label className="text-dark-500 text-[12px] font-normal">
-              {t('pages.lawyerWorkplace.kanban.createTask.description', 'Description')}
-              <span className="text-light-600 ml-1 font-light">
-                ({t('pages.lawyerWorkplace.kanban.createTask.descriptionOptional', 'optional')})
-              </span>
-            </Label>
-            <Textarea
-              value={description}
-              onChange={(event) => setDescription(event.target.value)}
-              placeholder={t(
-                'pages.lawyerWorkplace.kanban.createTask.descriptionPlaceholder',
-                'Enter task description...'
-              )}
-              textareaSize="md"
-              className="text-dark-500 min-h-[88px] w-full text-[14px] font-light"
             />
           </div>
         </div>

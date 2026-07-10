@@ -17,15 +17,17 @@ import {
 } from '@/components/ui/DropdownMenu'
 import {
   useAssistantConversation,
+  useMarkCitation,
   useSendAssistantMessage,
   useSendFeedback,
 } from '@/features/aiAssistant/hooks'
 import {
   AssistantChatStreamError,
+  type AssistantCitationVerdict,
   type AssistantFeedbackComprehension,
   type AssistantFeedbackRating,
 } from '@/features/aiAssistant/api'
-import type { AssistantSources } from '@/features/aiAssistant/sse'
+import type { AssistantCitation, AssistantSources } from '@/features/aiAssistant/sse'
 import {
   blobToBase64,
   extractImageFiles,
@@ -52,8 +54,14 @@ import {
 import type { AssistantMode } from '@/features/aiAssistant/api'
 import { isAxiosError } from 'axios'
 import { ConversationSidebar } from './ConversationSidebar'
-import { getDockDesktopBoxClasses } from './dockGeometry'
-import { MarkdownMessage } from './MarkdownMessage'
+import { getDockDesktopBoxClasses, getDockRightOffset } from './dockGeometry'
+import { MarkdownMessage, type MarkdownCitation } from './MarkdownMessage'
+import {
+  ReasoningActivityPanel,
+  ReasoningInlineChip,
+  type ToolStep,
+  type ToolStepStatus,
+} from './ReasoningActivityPanel'
 
 const QUICK_ACTION_KEYS = ['quickClientData', 'quickDebt', 'quickReport', 'quickEmployee'] as const
 type QuickActionKey = (typeof QUICK_ACTION_KEYS)[number]
@@ -88,22 +96,6 @@ type LocalAttachment = {
   url: string
 }
 
-/** Lifecycle of one tool invocation shown inside the reasoning panel. */
-type ToolStepStatus = 'running' | 'ok' | 'error'
-
-/**
- * One row in the reasoning panel's tool-step list. `tool_start` appends a
- * `running` step; the next still-running step is settled to `ok`/`error` by the
- * matching `tool_end` (the contract's `tool_end` carries no name).
- */
-type ToolStep = {
-  id: string
-  name: string
-  label?: string
-  status: ToolStepStatus
-  resultPreview?: string
-}
-
 type ChatMessage = {
   id: string
   role: ChatRole
@@ -116,6 +108,8 @@ type ChatMessage = {
   attachments?: LocalAttachment[]
   /** "Source of the numbers" block (tables + tools) streamed after the answer. */
   sources?: AssistantSources
+  /** Per-fact citations (`[[N]]` → источник) streamed in the `citations` frame. */
+  citations?: AssistantCitation[]
   /** Suggested follow-up questions rendered as clickable chips. */
   followups?: string[]
   /** Accumulated `reasoning` deltas — the agent's streamed thoughts. */
@@ -131,6 +125,10 @@ type ChatMessage = {
    * turn settles.
    */
   thinkingPlaceholder?: boolean
+  /** Epoch ms when the reasoning turn began — drives the "Xс" chip/panel timer. */
+  reasoningStartedAt?: number
+  /** Frozen reasoning duration (ms) once the turn settles. */
+  reasoningElapsedMs?: number
 }
 
 function joinDictation(prev: string, text: string): string {
@@ -153,7 +151,74 @@ function formatRecordingTime(totalSec: number): string {
   return `${minutes}:${String(seconds).padStart(2, '0')}`
 }
 
+/**
+ * Reasoning elapsed for the chip/panel timer: the frozen duration once settled,
+ * otherwise live from the start marker (updates as the component re-renders on
+ * streamed deltas — no interval needed). Null when the turn has no start marker.
+ */
+function reasoningElapsedMs(item: ChatMessage, now: number): number | null {
+  if (item.reasoningElapsedMs != null) return item.reasoningElapsedMs
+  if (item.reasoningStartedAt != null) return Math.max(0, now - item.reasoningStartedAt)
+  return null
+}
+
+/** "12 с" under a minute, "1:05" beyond — the chip/panel duration label. */
+function formatReasoningDuration(ms: number): string {
+  const totalSec = Math.round(ms / 1000)
+  if (totalSec < 60) return `${totalSec} с`
+  const minutes = Math.floor(totalSec / 60)
+  const seconds = totalSec % 60
+  return `${minutes}:${String(seconds).padStart(2, '0')}`
+}
+
+/**
+ * Whether an assistant message has a reasoning surface to show — real reasoning,
+ * tool-steps, or the thinking-mode pre-open placeholder. Gates both the bubble
+ * chip and the width stretch of the bubble.
+ */
+function messageHasReasoning(item: ChatMessage): boolean {
+  return (
+    Boolean(item.reasoning && item.reasoning.trim()) ||
+    Boolean(item.toolSteps && item.toolSteps.length > 0) ||
+    Boolean(item.thinkingPlaceholder)
+  )
+}
+
+/**
+ * Есть ли у сообщения ЧТО показать в панели «Активность» — рассуждение/шаги
+ * (см. {@link messageHasReasoning}) ИЛИ источники факт-сносок (Слой 2). Шире, чем
+ * `messageHasReasoning`: клик по сноске `[[N]]` в fast-ходе без рассуждения тоже
+ * должен открывать панель (там будут только «Источники»). Гейтит выбор активного
+ * сообщения панели, но НЕ бабл-чип «Ход рассуждения» (тот остаётся по reasoning).
+ */
+function messageHasActivity(item: ChatMessage): boolean {
+  return messageHasReasoning(item) || Boolean(item.citations && item.citations.length > 0)
+}
+
+/**
+ * Привести SSE-цитаты (`{id, kind, ref}`) к форме, которую понимает
+ * {@link MarkdownMessage} (`{id, kind, label}`): `label` — человекочитаемая
+ * подпись для тайтла/тултипа сноски (берём `ref`, иначе `kind`). Возвращает
+ * `undefined`, когда цитат нет, чтобы проп остался опциональным.
+ */
+function mapCitations(citations?: AssistantCitation[]): MarkdownCitation[] | undefined {
+  if (!citations || citations.length === 0) return undefined
+  return citations.map((citation) => ({
+    id: citation.id,
+    kind: citation.kind,
+    label: citation.ref.trim() || citation.kind || undefined,
+    query: citation.query,
+    columns: citation.columns,
+    rows: citation.rows,
+    code: citation.code,
+    result: citation.result,
+  }))
+}
+
 const LONG_PRESS_MS = 500
+
+/** Стабильная пустая карта пометок — чтобы не минтить новый объект на рендер. */
+const EMPTY_CITATION_MARKS: Record<number, AssistantCitationVerdict> = {}
 
 type MessageFeedback = {
   rating?: AssistantFeedbackRating
@@ -220,96 +285,6 @@ function resolveSpeechLang(language?: string): string {
   if (!language) return 'en-US'
   if (language.startsWith('uk')) return 'uk-UA'
   return 'en-US'
-}
-
-/** Distance from the bottom (px) under which the reasoning stream is "stuck". */
-const REASONING_STICKY_THRESHOLD = 32
-
-type ReasoningStreamProps = {
-  text: string
-  streaming: boolean
-  /**
-   * Shown (spinner + label) inside the very same scroll box while `text` is
-   * still empty — thinking mode opens this window on submit, before the first
-   * reasoning delta. Keeping one element means deltas flow in seamlessly (no
-   * remount, no layout jump).
-   */
-  placeholder?: string
-}
-
-/**
- * Grok-style thinking window: the streamed reasoning lives in its own
- * fixed-height scroll box so it never stretches the chat. While the turn streams
- * each new delta scrolls the box to the bottom (thoughts "run" past) — but only
- * while the user sits at the bottom, so a manual scroll-up to re-read is never
- * yanked back down.
- *
- * Before the first delta (thinking mode) the box shows a spinner + placeholder
- * in place of the markdown; the box itself is the same node throughout the turn.
- */
-function ReasoningStream({ text, streaming, placeholder }: ReasoningStreamProps) {
-  const scrollRef = useRef<HTMLDivElement>(null)
-  // Sticky while the user is parked at the bottom; a scroll-up un-sticks it and
-  // returning to the bottom re-sticks it.
-  const stickToBottomRef = useRef(true)
-
-  const handleScroll = useCallback(() => {
-    const node = scrollRef.current
-    if (!node) return
-    const distanceFromBottom = node.scrollHeight - node.scrollTop - node.clientHeight
-    stickToBottomRef.current = distanceFromBottom <= REASONING_STICKY_THRESHOLD
-  }, [])
-
-  // Run the thoughts: each new reasoning delta pins the box to the latest line
-  // while streaming, unless the user scrolled up to read.
-  useEffect(() => {
-    if (!streaming) return
-    const node = scrollRef.current
-    if (!node || !stickToBottomRef.current) return
-    node.scrollTop = node.scrollHeight
-  }, [text, streaming])
-
-  // Placeholder phase: window is open but no reasoning has streamed yet.
-  const showPlaceholder = text.length === 0 && Boolean(placeholder)
-
-  return (
-    <div
-      ref={scrollRef}
-      onScroll={handleScroll}
-      data-testid="assistant-reasoning-scroll"
-      className={cn(
-        'ai-chat-input-scrollbar max-h-[200px] overflow-y-auto overscroll-y-contain text-[12px] leading-relaxed text-gray-600',
-        // Hold a stable window height while only the placeholder shows, so the
-        // first deltas don't visibly grow the box from a single line.
-        showPlaceholder && 'min-h-[48px]'
-      )}
-    >
-      {showPlaceholder ? (
-        <span
-          className="flex items-center gap-2 text-[12px] text-gray-500"
-          data-testid="reasoning-placeholder"
-        >
-          <span
-            className="h-3 w-3 shrink-0 animate-spin rounded-full border border-gray-400 border-t-transparent"
-            aria-hidden
-          />
-          {placeholder}
-        </span>
-      ) : (
-        // Reasoning is a stream of consciousness, not a document: render it as
-        // soft, light, readable prose (like Claude/Gemini "thinking"), never
-        // through MarkdownMessage. Passing it through the shared markdown
-        // surface let its CodeRenderer turn any multi-line text — or a stray
-        // ``` fence in the brain's deltas — into a dark oneDark terminal plate,
-        // making the whole thinking window black. Plain whitespace-pre-wrap
-        // keeps line breaks and stays in the light bubble. Syntax-highlighted
-        // code plates remain exclusive to the answer bubble.
-        <div data-testid="assistant-reasoning-text" className="break-words whitespace-pre-wrap">
-          {text}
-        </div>
-      )}
-    </div>
-  )
 }
 
 function AssistFilterDropdown({
@@ -620,10 +595,24 @@ export function AiAssistantBetaPage() {
   const [isAssistantResponding, setIsAssistantResponding] = useState(false)
   const [conversationId, setConversationId] = useState<number | null>(null)
   const [feedbackByMessage, setFeedbackByMessage] = useState<Record<number, MessageFeedback>>({})
+  // Пометки источников «верно/неверно» (Слой 5), keyed by серверный message_id →
+  // (номер сноски → вердикт). Оптимистичны: применяются сразу, откатываются при
+  // ошибке POST. Живут в рамках монтирования (после F5 приходят с бэкенда — TODO
+  // отдельного слоя, контракт гидратации пометок пока не оговорён).
+  const [citationMarksByMessage, setCitationMarksByMessage] = useState<
+    Record<number, Record<number, AssistantCitationVerdict>>
+  >({})
   // Explicit user toggles for the "Ход рассуждения" panel, keyed by message id.
   // Unset → the panel follows the stream (open while streaming, collapsed once
   // the turn finishes); a value here is the user's deliberate override.
   const [reasoningOpenByMessage, setReasoningOpenByMessage] = useState<Record<string, boolean>>({})
+  // Источник (номер сноски) для подсветки/скролла в панели «Активность» + id
+  // сообщения, которому он принадлежит — чтобы фокус применялся только к своему
+  // ходу (клик по факту `[[N]]`; см. openReasoningForFact / focusedCitationId).
+  const [focusedCitation, setFocusedCitation] = useState<{
+    messageId: string
+    citationId: number
+  } | null>(null)
   const [clientScope, setClientScope] = useState('all')
   const [period, setPeriod] = useState('all')
   const [assistantSettings, setAssistantSettings] = useState<AssistantSettings>(
@@ -661,6 +650,7 @@ export function AiAssistantBetaPage() {
 
   const { mutateAsync: sendChat } = useSendAssistantMessage()
   const { mutate: mutateFeedback } = useSendFeedback()
+  const { mutate: mutateMarkCitation } = useMarkCitation()
 
   // Re-hydrate the dialog persisted for this user: history lives on the
   // backend, the store only keeps the conversation pointer. Hydration is
@@ -1012,12 +1002,22 @@ export function AiAssistantBetaPage() {
     if (!detail || !shouldHydrateConversation) return
     setConversationId(detail.id)
     setChatMessages(
-      detail.messages.map((item) => ({
-        id: `server-${item.id}`,
-        role: item.role,
-        content: item.content,
-        serverMessageId: item.role === 'assistant' ? item.id : undefined,
-      }))
+      detail.messages.map((item) => {
+        const isAssistant = item.role === 'assistant'
+        return {
+          id: `server-${item.id}`,
+          role: item.role,
+          content: item.content,
+          serverMessageId: isAssistant ? item.id : undefined,
+          // Слой 5: гидратируем раздумья и источники серверного сообщения, чтобы
+          // панель «Активность» и факт-сноски `[[N]]` работали в загруженном из
+          // истории диалоге (после F5 / переключения), а не только в текущем
+          // стриме. Поля опциональны — старый бэкенд их не шлёт, тогда сообщение
+          // ведёт себя как прежде (без чипа/источников).
+          reasoning: isAssistant ? item.reasoning : undefined,
+          citations: isAssistant ? item.citations : undefined,
+        }
+      })
     )
     setIsExplicitSelection(false)
     window.setTimeout(() => scrollToConversationBottom('auto'), 0)
@@ -1095,7 +1095,9 @@ export function AiAssistantBetaPage() {
     setChatMessages((current) => (current.length > 0 ? [] : current))
     setConversationId(null)
     setFeedbackByMessage({})
+    setCitationMarksByMessage((current) => (Object.keys(current).length > 0 ? {} : current))
     setReasoningOpenByMessage((current) => (Object.keys(current).length > 0 ? {} : current))
+    setFocusedCitation(null)
     setIsAssistantResponding(false)
   }, [stopVoiceRecognition, cancelDictation, cancelVoiceMessage, stopTts, clearPendingImages])
 
@@ -1441,12 +1443,15 @@ export function AiAssistantBetaPage() {
       setIsAssistantResponding(true)
 
       const isThinking = assistantSettings.mode === 'thinking'
+      const reasoningStartedAt = Date.now()
       const loadingId = appendChatMessage({
         role: 'assistant',
         content: isThinking
           ? t('pages.aiAssistant.assistantThinking')
           : t('pages.aiAssistant.assistantTyping'),
         isLoading: true,
+        // Start marker for the "Xс" reasoning timer (chip + activity panel).
+        reasoningStartedAt,
         // Thinking mode shows the "Ход рассуждения" window straight away (see
         // thinkingPlaceholder), so the generic "думаю…" label stands down; fast
         // mode keeps the light typing indicator.
@@ -1543,6 +1548,9 @@ export function AiAssistantBetaPage() {
                 patchLoadingMessage({ sources })
               }
             },
+            // Цитаты факт-сносок: patchLoadingMessage несёт тот же requestToken-
+            // guard, что и остальные патчи (см. выше), поэтому доп. проверки нет.
+            onCitations: (citations) => patchLoadingMessage({ citations }),
             onFollowups: (questions) => {
               if (questions.length > 0) patchLoadingMessage({ followups: questions })
             },
@@ -1567,6 +1575,8 @@ export function AiAssistantBetaPage() {
           // Drop the streaming placeholder; if no reasoning ever arrived the
           // window simply disappears (no empty box left behind).
           thinkingPlaceholder: false,
+          // Freeze the reasoning timer at its final value.
+          reasoningElapsedMs: Date.now() - reasoningStartedAt,
           serverMessageId: result.message_id > 0 ? result.message_id : undefined,
         })
       } catch (error) {
@@ -1598,6 +1608,7 @@ export function AiAssistantBetaPage() {
           isStreamingReasoning: false,
           thinkingPlaceholder: false,
           sources: undefined,
+          citations: undefined,
           followups: undefined,
           reasoning: undefined,
           toolSteps: undefined,
@@ -1825,20 +1836,134 @@ export function AiAssistantBetaPage() {
     [feedbackByMessage, mutateFeedback, t]
   )
 
+  // Пометка источника факт-сноски «верно/неверно» (Слой 5). Оптимистично
+  // подсвечиваем выбор; повторный клик по тому же вердикту снимает пометку
+  // (чисто UI — контракт step-mark выражает только ok/wrong, «снятие» не шлём),
+  // клик по другому вердикту — меняет и шлёт POST. Откат при ошибке POST.
+  const handleMarkCitation = useCallback(
+    (serverMessageId: number, citationId: number, verdict: AssistantCitationVerdict) => {
+      const previousVerdict = citationMarksByMessage[serverMessageId]?.[citationId]
+      const nextVerdict = previousVerdict === verdict ? undefined : verdict
+
+      const applyVerdict = (value: AssistantCitationVerdict | undefined) => {
+        setCitationMarksByMessage((current) => {
+          const forMessage = { ...(current[serverMessageId] ?? {}) }
+          if (value == null) delete forMessage[citationId]
+          else forMessage[citationId] = value
+          return { ...current, [serverMessageId]: forMessage }
+        })
+      }
+
+      applyVerdict(nextVerdict)
+
+      // Снятие пометки контракт не выражает (только ok/wrong) — держим локально.
+      if (nextVerdict == null) return
+
+      mutateMarkCitation(
+        { message_id: serverMessageId, citation_id: citationId, verdict: nextVerdict },
+        {
+          onError: () => {
+            toast.error(t('pages.aiAssistant.apiError'))
+            applyVerdict(previousVerdict)
+          },
+        }
+      )
+    },
+    [citationMarksByMessage, mutateMarkCitation, t]
+  )
+
   // Resolve whether a message's reasoning panel is open: an explicit user
-  // toggle wins; otherwise the panel mirrors the live stream (open while
-  // streaming, collapsed once the turn has settled).
+  // Панель раздумий НЕ выезжает автоматически: по умолчанию свёрнута, открывается
+  // ТОЛЬКО явным кликом по плашке «Ход рассуждения» (toggleReasoning) или по факту.
+  // Плашка при стриме показывает live-индикатор, но само окно ждёт нажатия кнопки.
   const isReasoningOpen = useCallback(
-    (item: ChatMessage) => reasoningOpenByMessage[item.id] ?? Boolean(item.isStreamingReasoning),
+    (item: ChatMessage) => reasoningOpenByMessage[item.id] ?? false,
     [reasoningOpenByMessage]
   )
 
   const toggleReasoning = useCallback((item: ChatMessage) => {
     setReasoningOpenByMessage((current) => {
-      const open = current[item.id] ?? Boolean(item.isStreamingReasoning)
+      const open = current[item.id] ?? false
       return { ...current, [item.id]: !open }
     })
   }, [])
+
+  // Идемпотентно ОТКРЫТЬ панель для сообщения (в отличие от toggle — никогда не
+  // сворачивает). Используется кликом по факт-сноске: активной становится
+  // последняя открытая ветка (см. activeReasoningMessage).
+  const openReasoning = useCallback((item: ChatMessage) => {
+    setReasoningOpenByMessage((current) => ({ ...current, [item.id]: true }))
+  }, [])
+
+  const closeReasoning = useCallback((item: ChatMessage) => {
+    setReasoningOpenByMessage((current) => ({ ...current, [item.id]: false }))
+    // Закрыли ход — снимаем фокус на его источнике (чтобы повторное открытие
+    // через чип не подсвечивало старый источник).
+    setFocusedCitation((current) => (current?.messageId === item.id ? null : current))
+  }, [])
+
+  // Клик по факт-сноске `[[N]]` открывает панель «Активность» этого сообщения и
+  // разворачивает КОНКРЕТНЫЙ источник n: фокус ведёт к авто-скроллу + подсветке
+  // источника в секции «Источники» (см. ReasoningActivityPanel / focusedCitationId).
+  const openReasoningForFact = useCallback(
+    (item: ChatMessage, n: number) => {
+      setFocusedCitation({ messageId: item.id, citationId: n })
+      openReasoning(item)
+    },
+    [openReasoning]
+  )
+
+  // Single timestamp per render for the "Xс" reasoning timer — recomputed on
+  // every render (streamed deltas re-render), so no interval is needed. The
+  // final value is frozen into `reasoningElapsedMs` when the turn settles.
+  const reasoningNow = Date.now()
+
+  // The one assistant message whose activity panel is open (latest wins): an
+  // explicit toggle or the live stream. Drives the single fixed side panel and
+  // the composer/ribbon offset.
+  const activeReasoningMessage = useMemo(() => {
+    for (let i = chatMessages.length - 1; i >= 0; i -= 1) {
+      const item = chatMessages[i]
+      if (item.role !== 'assistant' || item.isError) continue
+      if (!messageHasActivity(item)) continue
+      if (isReasoningOpen(item)) return item
+    }
+    return null
+  }, [chatMessages, isReasoningOpen])
+
+  const isReasoningPanelOpen = activeReasoningMessage != null
+  // Номер источника для подсветки в панели — только если фокус принадлежит
+  // активному сообщению (иначе клик по факту в одном ходе подсветил бы источник
+  // с тем же номером в другом открытом ходе).
+  const focusedCitationId =
+    focusedCitation != null &&
+    activeReasoningMessage != null &&
+    focusedCitation.messageId === activeReasoningMessage.id
+      ? focusedCitation.citationId
+      : null
+  // Live width during a drag (parent-owned so the composer/ribbon shift in
+  // lockstep); the committed value is persisted in the store.
+  const storedReasoningPanelWidth = useAiAssistantStore((state) => state.reasoningPanelWidth)
+  const setStoredReasoningPanelWidth = useAiAssistantStore((state) => state.setReasoningPanelWidth)
+  const [reasoningPanelWidth, setReasoningPanelWidth] = useState(storedReasoningPanelWidth)
+  const activeReasoningElapsed =
+    activeReasoningMessage != null ? reasoningElapsedMs(activeReasoningMessage, reasoningNow) : null
+
+  // Слой 5: пометки «верно/неверно» доступны только когда у активного сообщения
+  // есть серверный message_id (после гидратации диалога). Пометки берём по нему из
+  // стейта; клик прокидывает id внутрь handleMarkCitation.
+  const activeServerMessageId = activeReasoningMessage?.serverMessageId ?? null
+  const activeCitationMarks =
+    activeServerMessageId != null
+      ? (citationMarksByMessage[activeServerMessageId] ?? EMPTY_CITATION_MARKS)
+      : EMPTY_CITATION_MARKS
+  const handleActiveMarkCitation = useCallback(
+    (citationId: number, verdict: AssistantCitationVerdict) => {
+      if (activeServerMessageId == null) return
+      handleMarkCitation(activeServerMessageId, citationId, verdict)
+    },
+    [activeServerMessageId, handleMarkCitation]
+  )
 
   const feedbackButtonClass = (isChosen: boolean, isGroupLocked: boolean) =>
     cn(
@@ -1941,108 +2066,24 @@ export function AiAssistantBetaPage() {
     </div>
   )
 
-  /** One tool-step row inside the reasoning panel (spinner → ✓ / ✗). */
-  const renderToolStep = (step: ToolStep) => (
-    <li key={step.id} className="flex items-start gap-1.5 text-[11px] leading-snug">
-      <span className="mt-0.5 flex h-3.5 w-3.5 shrink-0 items-center justify-center">
-        {step.status === 'running' ? (
-          <span
-            className="h-3 w-3 animate-spin rounded-full border border-gray-400 border-t-transparent"
-            aria-hidden
-          />
-        ) : step.status === 'ok' ? (
-          <Icons.Checkmark size={14} strokeWidth={1.5} className="text-success-600" />
-        ) : (
-          <Icons.CancelCircle size={14} strokeWidth={1.5} className="text-error-600" />
-        )}
-      </span>
-      <span className="min-w-0 flex-1">
-        <span className="text-dark-500 font-medium">
-          {step.label || step.name}
-          {step.status === 'running' && '…'}
-        </span>
-        {step.status !== 'running' && step.resultPreview && (
-          <span className="ml-1 break-words text-gray-500">— {step.resultPreview}</span>
-        )}
-      </span>
-    </li>
-  )
-
   /**
-   * Collapsible "Ход рассуждения" panel (Gemini-style "Thinking"): a header with
-   * a spinner while the turn streams, the tool-step list, and the accumulated
-   * reasoning text. Default-collapsed once settled, re-expandable any time.
-   *
-   * In thinking mode the window opens on submit with a spinner + placeholder
-   * (thinkingPlaceholder) — before any reasoning delta — and the deltas then
-   * stream into the very same window.
+   * Compact reasoning summary shown in the answer bubble — a toggle that opens
+   * the «Активность» side panel. Only for thinking-style turns that actually
+   * carry reasoning / tool-steps / the pre-open placeholder; fast turns render
+   * nothing (as before). The full ход рассуждения lives in the side panel.
    */
-  const renderReasoningPanel = (item: ChatMessage) => {
-    const hasReasoning = Boolean(item.reasoning && item.reasoning.trim())
-    const hasSteps = Boolean(item.toolSteps && item.toolSteps.length > 0)
-    const streaming = Boolean(item.isStreamingReasoning)
-    // Thinking mode pre-opens the window before the first delta; once anything
-    // real streams (reasoning/steps) the placeholder no longer drives it.
-    const placeholderActive = Boolean(item.thinkingPlaceholder) && streaming
-    if (!hasReasoning && !hasSteps && !placeholderActive) return null
-
-    // The reasoning scroll box is shown whenever there's real reasoning OR the
-    // placeholder window is open — keeping one element so deltas flow in
-    // seamlessly (no remount / layout jump).
-    const showReasoningBox = hasReasoning || placeholderActive
-    const open = isReasoningOpen(item)
-    const panelId = `reasoning-${item.id}`
-
+  const renderReasoningChip = (item: ChatMessage) => {
+    if (!messageHasReasoning(item)) return null
+    const elapsed = reasoningElapsedMs(item, reasoningNow)
     return (
-      <div
-        data-testid="assistant-reasoning"
-        className="border-light-200 bg-light-50/50 mb-2 w-full max-w-full overflow-hidden rounded-xl border"
-      >
-        <button
-          type="button"
-          aria-expanded={open}
-          aria-controls={panelId}
-          onClick={() => toggleReasoning(item)}
-          className="hover:bg-light-100/60 flex w-full cursor-pointer items-center gap-1.5 px-3 py-1.5 text-left transition-colors"
-        >
-          <Icons.AiBrain03 size={14} strokeWidth={1.5} className="text-primary-500 shrink-0" />
-          <span className="text-dark-500 flex-1 text-[11px] font-semibold tracking-tight">
-            {streaming
-              ? t('pages.aiAssistant.reasoningStreaming')
-              : t('pages.aiAssistant.reasoningTitle')}
-          </span>
-          {streaming && (
-            <span
-              className="h-3 w-3 animate-spin rounded-full border border-gray-400 border-t-transparent"
-              aria-hidden
-              data-testid="reasoning-spinner"
-            />
-          )}
-          {open ? (
-            <Icons.ArrowUp size={14} strokeWidth={1.5} className="shrink-0 text-gray-400" />
-          ) : (
-            <Icons.ArrowDown size={14} strokeWidth={1.5} className="shrink-0 text-gray-400" />
-          )}
-        </button>
-        {open && (
-          <div id={panelId} className="space-y-2 px-3 pb-2.5">
-            {hasSteps && (
-              <ul className="space-y-1" data-testid="assistant-tool-steps">
-                {item.toolSteps!.map((step) => renderToolStep(step))}
-              </ul>
-            )}
-            {showReasoningBox && (
-              <div className={cn(hasSteps && 'border-light-200/80 border-t pt-2')}>
-                <ReasoningStream
-                  text={item.reasoning ?? ''}
-                  streaming={streaming}
-                  placeholder={t('pages.aiAssistant.reasoningAnalyzing')}
-                />
-              </div>
-            )}
-          </div>
-        )}
-      </div>
+      <ReasoningInlineChip
+        open={isReasoningOpen(item)}
+        streaming={Boolean(item.isStreamingReasoning)}
+        reasoning={item.reasoning ?? ''}
+        stepCount={item.toolSteps?.length ?? 0}
+        elapsedLabel={elapsed != null ? formatReasoningDuration(elapsed) : null}
+        onToggle={() => toggleReasoning(item)}
+      />
     )
   }
 
@@ -2107,6 +2148,13 @@ export function AiAssistantBetaPage() {
   return (
     <div
       ref={pageRootRef}
+      // Reserve room on the right for the open «Активность» panel (desktop): the
+      // message ribbon is pushed left by the panel width so it never slides
+      // under the panel. The fixed dock mirrors this via getDockRightOffset.
+      style={{
+        paddingRight:
+          !isMobileOrTablet && isReasoningPanelOpen ? `${reasoningPanelWidth}px` : undefined,
+      }}
       className={cn(
         'relative flex min-h-[calc(100vh-5.5rem)] w-full min-w-0 flex-1 flex-col self-stretch overflow-x-hidden supports-[height:100dvh]:min-h-[calc(100dvh-5.5rem)]',
         // Reserve space for the fixed history panel (its width + a 1rem gap).
@@ -2174,11 +2222,7 @@ export function AiAssistantBetaPage() {
                 // shrinking to the short header (w-fit) — the reasoning box then
                 // uses the full available width rather than looking narrow.
                 const hasReasoningSurface =
-                  item.role === 'assistant' &&
-                  !item.isError &&
-                  (Boolean(item.reasoning && item.reasoning.trim()) ||
-                    Boolean(item.toolSteps && item.toolSteps.length > 0) ||
-                    Boolean(item.thinkingPlaceholder))
+                  item.role === 'assistant' && !item.isError && messageHasReasoning(item)
                 return (
                   <div
                     key={item.id}
@@ -2228,7 +2272,7 @@ export function AiAssistantBetaPage() {
                         )}
                         {/* Live "Ход рассуждения": shown above the answer both
                           while the turn streams and (collapsed) afterwards. */}
-                        {item.role === 'assistant' && !item.isError && renderReasoningPanel(item)}
+                        {item.role === 'assistant' && !item.isError && renderReasoningChip(item)}
                         {item.isLoading ? (
                           // Generic typing dots only until something concrete is
                           // streaming — once reasoning/tool events arrive (or the
@@ -2249,7 +2293,11 @@ export function AiAssistantBetaPage() {
                             </span>
                           )
                         ) : item.role === 'assistant' && !item.isError ? (
-                          <MarkdownMessage className={MARKDOWN_BODY_CLASS}>
+                          <MarkdownMessage
+                            className={MARKDOWN_BODY_CLASS}
+                            citations={mapCitations(item.citations)}
+                            onFactClick={(n) => openReasoningForFact(item, n)}
+                          >
                             {item.content}
                           </MarkdownMessage>
                         ) : (
@@ -2298,12 +2346,19 @@ export function AiAssistantBetaPage() {
 
       <div
         ref={dockRef}
+        // When the «Активность» panel is open (desktop), shift the dock's right
+        // edge left by the panel width so the composer never slides under it —
+        // geometrically mirroring the page-root paddingRight above. Inline
+        // `right` overrides the resting `lg:right-7`; undefined restores it.
+        style={{
+          right: getDockRightOffset(isReasoningPanelOpen, isMobileOrTablet, reasoningPanelWidth),
+        }}
         className={cn(
           // Desktop: pin the fixed dock to the exact same box as the chat
           // content area (see dockGeometry.ts), so the input card and the
           // quick actions share one column centre with the message ribbon in
           // every sidebar combination. Mobile keeps the full-width box.
-          'from-light-50 via-light-50/95 pointer-events-none fixed right-0 bottom-0 left-0 z-20 flex w-full min-w-0 shrink-0 flex-col items-center bg-gradient-to-t to-transparent px-3 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] transition-[left] duration-300 sm:px-8 sm:pt-6 md:px-10 lg:px-14 xl:px-20',
+          'from-light-50 via-light-50/95 pointer-events-none fixed right-0 bottom-0 left-0 z-20 flex w-full min-w-0 shrink-0 flex-col items-center bg-gradient-to-t to-transparent px-3 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] transition-[left,right] duration-300 sm:px-8 sm:pt-6 md:px-10 lg:px-14 xl:px-20',
           getDockDesktopBoxClasses(isOpenSideBar, isHistoryCollapsed)
         )}
       >
@@ -2618,6 +2673,35 @@ export function AiAssistantBetaPage() {
           </div>
         </div>
       )}
+
+      {/* «Активность» — the single fixed reasoning panel (right). Shows the ход
+          рассуждения of the currently-open message; toggled by the bubble chip,
+          the header crest, Esc, or (mobile) the backdrop. */}
+      <ReasoningActivityPanel
+        open={isReasoningPanelOpen}
+        streaming={Boolean(activeReasoningMessage?.isStreamingReasoning)}
+        placeholderActive={Boolean(
+          activeReasoningMessage?.thinkingPlaceholder &&
+          activeReasoningMessage?.isStreamingReasoning
+        )}
+        reasoning={activeReasoningMessage?.reasoning ?? ''}
+        toolSteps={activeReasoningMessage?.toolSteps ?? []}
+        citations={activeReasoningMessage?.citations ?? []}
+        focusedCitationId={focusedCitationId}
+        citationMarkingEnabled={activeServerMessageId != null}
+        citationMarks={activeCitationMarks}
+        onMarkCitation={handleActiveMarkCitation}
+        elapsedLabel={
+          activeReasoningElapsed != null ? formatReasoningDuration(activeReasoningElapsed) : null
+        }
+        isMobileOrTablet={isMobileOrTablet}
+        width={reasoningPanelWidth}
+        onClose={() => {
+          if (activeReasoningMessage) closeReasoning(activeReasoningMessage)
+        }}
+        onResize={setReasoningPanelWidth}
+        onResizeEnd={setStoredReasoningPanelWidth}
+      />
     </div>
   )
 }

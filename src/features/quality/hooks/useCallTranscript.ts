@@ -14,6 +14,12 @@ function statusOf(error: unknown): number | undefined {
   return isAxiosError(error) ? error.response?.status : undefined
 }
 
+function detailOf(error: unknown): string | undefined {
+  if (!isAxiosError(error)) return undefined
+  const data = error.response?.data as { detail?: unknown } | undefined
+  return typeof data?.detail === 'string' ? data.detail : undefined
+}
+
 export function useCallTranscript(callId: string | null | undefined, enabled = true) {
   const query = useQuery({
     queryKey: callId
@@ -34,8 +40,14 @@ export function useCallTranscript(callId: string | null | undefined, enabled = t
 
   /** Call not processed yet (404) or still pending/failed on the brain (202). */
   const notReady = errorStatus === 404 || query.data?.state === 'not_ready'
+  /**
+   * Global Call QA switch is OFF (admin kill-switch): the panel hides
+   * entirely instead of complaining. Distinct from RBAC 403 — the settings
+   * cache may still say ON right after an admin flipped the switch.
+   */
+  const disabledByAdmin = errorStatus === 403 && detailOf(query.error) === 'call_qa_disabled'
   /** Server-side RBAC said no (`view_transcripts`). */
-  const forbidden = errorStatus === 403
+  const forbidden = errorStatus === 403 && !disabledByAdmin
 
   return {
     ...query,
@@ -43,7 +55,8 @@ export function useCallTranscript(callId: string | null | undefined, enabled = t
     review: query.data?.state === 'ready' ? (query.data.review ?? null) : null,
     notReady,
     forbidden,
+    disabledByAdmin,
     /** True only for real failures (network / 5xx), not 403/404. */
-    isHardError: query.isError && !notReady && !forbidden,
+    isHardError: query.isError && !notReady && !forbidden && !disabledByAdmin,
   }
 }

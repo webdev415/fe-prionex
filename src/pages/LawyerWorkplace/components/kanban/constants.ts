@@ -2,22 +2,18 @@ import type { KanbanColumnDef, KanbanTaskType, KanbanTaskPriority } from '../../
 
 export type { KanbanTaskPriority }
 
-export type DeadlineFilter = 'this_week' | 'this_month'
+export type DeadlineFilter = 'all' | 'this_week' | 'this_month'
 
 export type LawyerFilterId = 'all' | string
 
-export type TypeFilterId =
-  | 'all'
-  | 'complaint'
-  | 'nbu_inquiry'
-  | 'court_claim'
-  | 'attorney_request'
-  | 'inquiry'
+export type TypeFilterId = 'all' | string
 
 export interface KanbanFilterOption<T extends string = string> {
   id: T
   key: string
   fallback: string
+  /** When set, shown instead of i18n key (e.g. settings display name). */
+  label?: string
 }
 
 export interface LawyerFilterOption extends KanbanFilterOption<LawyerFilterId> {
@@ -26,7 +22,8 @@ export interface LawyerFilterOption extends KanbanFilterOption<LawyerFilterId> {
 }
 
 export interface TypeFilterOption extends KanbanFilterOption<TypeFilterId> {
-  taskType?: KanbanTaskType
+  letterTypeId?: string
+  colorId?: string
 }
 
 export const ALL_LAWYERS_FILTER: LawyerFilterOption = {
@@ -45,31 +42,31 @@ export const TYPE_FILTER_OPTIONS: TypeFilterOption[] = [
     id: 'complaint',
     key: 'pages.lawyerWorkplace.parameters.types.complaint',
     fallback: 'Complaint',
-    taskType: 'complaint',
+    letterTypeId: 'complaint',
   },
   {
     id: 'nbu_inquiry',
     key: 'pages.lawyerWorkplace.parameters.types.nbuInquiry',
     fallback: 'NBU inquiry',
-    taskType: 'nbu_inquiry',
+    letterTypeId: 'nbu_inquiry',
   },
   {
     id: 'court_claim',
     key: 'pages.lawyerWorkplace.parameters.types.courtClaim',
     fallback: 'Court claim',
-    taskType: 'court_claim',
+    letterTypeId: 'court_claim',
   },
   {
     id: 'attorney_request',
     key: 'pages.lawyerWorkplace.parameters.types.attorneyRequest',
     fallback: 'Attorney request',
-    taskType: 'attorney_request',
+    letterTypeId: 'attorney_request',
   },
   {
     id: 'inquiry',
     key: 'pages.lawyerWorkplace.parameters.types.inquiry',
     fallback: 'Inquiry',
-    taskType: 'inquiry',
+    letterTypeId: 'inquiry',
   },
 ]
 
@@ -79,11 +76,12 @@ export function applyKanbanFilters(
   lawyerFilter: LawyerFilterId,
   typeFilter: TypeFilterId,
   lawyerOptions: LawyerFilterOption[],
+  typeOptions: TypeFilterOption[],
   deadlineFilter: DeadlineFilter,
   matchesDeadline: (task: KanbanColumnDef['tasks'][number], filter: DeadlineFilter) => boolean
 ): KanbanColumnDef[] {
   const lawyerOption = lawyerOptions.find((option) => option.id === lawyerFilter)
-  const typeOption = TYPE_FILTER_OPTIONS.find((option) => option.id === typeFilter)
+  const typeOption = typeOptions.find((option) => option.id === typeFilter)
 
   return columns.map((col) => ({
     ...col,
@@ -93,7 +91,11 @@ export function applyKanbanFilters(
         (lawyerOption?.assigneeUserId != null
           ? task.assigneeUserId === lawyerOption.assigneeUserId
           : task.assigneeName === lawyerOption?.assigneeName)
-      const typeMatch = typeFilter === 'all' || task.type === typeOption?.taskType
+      const typeMatch =
+        typeFilter === 'all' ||
+        (typeOption?.letterTypeId != null
+          ? task.letterTypeId === typeOption.letterTypeId
+          : task.letterTypeId === typeFilter)
       const deadlineMatch = matchesDeadline(task, deadlineFilter)
       return lawyerMatch && typeMatch && deadlineMatch
     }),
@@ -140,6 +142,57 @@ const KNOWN_KANBAN_TYPE_IDS = new Set<string>([
   'inquiry',
 ])
 
+export function isKnownKanbanLetterTypeId(letterTypeId: string): letterTypeId is KanbanTaskType {
+  return KNOWN_KANBAN_TYPE_IDS.has(letterTypeId)
+}
+
+export function resolveKanbanBadgeType(letterTypeId: string): KanbanTaskType {
+  return isKnownKanbanLetterTypeId(letterTypeId) ? letterTypeId : 'type_pending'
+}
+
+export type KanbanLetterTypeRef = {
+  id: string
+  slug?: string
+  name: string
+  color_id?: string
+}
+
+/** Match a task letter_type_id against settings by id or slug. */
+export function findKanbanLetterType(
+  letterTypes: KanbanLetterTypeRef[],
+  letterTypeId: string | null | undefined
+): KanbanLetterTypeRef | undefined {
+  if (!letterTypeId) return undefined
+  return (
+    letterTypes.find((letterType) => letterType.id === letterTypeId) ??
+    letterTypes.find((letterType) => letterType.slug === letterTypeId)
+  )
+}
+
+export function resolveKanbanTypeBadgeProps(
+  letterTypeId: string | null | undefined,
+  letterTypes: KanbanLetterTypeRef[],
+  fallbackType: KanbanTaskType = 'unclassified'
+): { type: KanbanTaskType; label?: string; colorId?: string } {
+  const letterType = findKanbanLetterType(letterTypes, letterTypeId)
+  if (!letterType) {
+    return { type: fallbackType }
+  }
+
+  const badgeType =
+    (letterType.slug && isKnownKanbanLetterTypeId(letterType.slug) ? letterType.slug : undefined) ??
+    (isKnownKanbanLetterTypeId(letterType.id) ? letterType.id : undefined) ??
+    (fallbackType !== 'unclassified' && fallbackType !== 'type_pending'
+      ? fallbackType
+      : 'type_pending')
+
+  return {
+    type: badgeType,
+    label: letterType.name,
+    colorId: letterType.color_id,
+  }
+}
+
 export function getAssigneeColour(userId: number | null, initials: string): string {
   const seed =
     userId ?? initials.split('').reduce((total, character) => total + character.charCodeAt(0), 0)
@@ -148,16 +201,16 @@ export function getAssigneeColour(userId: number | null, initials: string): stri
 }
 
 export function buildTypeFilterOptions(
-  letterTypes: { id: string; name: string }[]
+  letterTypes: { id: string; name: string; color_id?: string }[]
 ): TypeFilterOption[] {
-  const dynamicOptions = letterTypes
-    .filter((letterType) => KNOWN_KANBAN_TYPE_IDS.has(letterType.id))
-    .map((letterType) => ({
-      id: letterType.id as TypeFilterId,
-      key: TYPE_I18N_KEYS[letterType.id as KanbanTaskType] ?? letterType.name,
-      fallback: letterType.name,
-      taskType: letterType.id as KanbanTaskType,
-    }))
+  const dynamicOptions = letterTypes.map((letterType) => ({
+    id: letterType.id,
+    key: '',
+    fallback: letterType.name,
+    label: letterType.name,
+    letterTypeId: letterType.id,
+    colorId: letterType.color_id,
+  }))
 
   return [
     {
@@ -194,6 +247,11 @@ export const DEADLINE_FILTERS: {
   key: string
   fallback: string
 }[] = [
+  {
+    id: 'all',
+    key: 'pages.lawyerWorkplace.kanban.filters.all',
+    fallback: 'All tasks',
+  },
   {
     id: 'this_week',
     key: 'pages.lawyerWorkplace.kanban.filters.thisWeek',

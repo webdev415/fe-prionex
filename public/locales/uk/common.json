@@ -344,6 +344,21 @@
       "reasoningTitle": "Хід міркування",
       "reasoningStreaming": "Аналізую…",
       "reasoningAnalyzing": "Аналізую запит…",
+      "reasoningSteps_one": "{{count}} крок",
+      "reasoningSteps_few": "{{count}} кроки",
+      "reasoningSteps_many": "{{count}} кроків",
+      "reasoningSteps_other": "{{count}} кроку",
+      "activityTitle": "Активність",
+      "activityClose": "Закрити",
+      "activityResize": "Змінити ширину панелі",
+      "activityStepsSection": "Кроки оркестратора",
+      "activityReasoningSection": "Хід міркування",
+      "activitySourcesSection": "Джерела",
+      "citationResultLabel": "Результат",
+      "citationSourceFallback": "Джерело",
+      "citationMarkPrompt": "Точність",
+      "citationMarkOk": "Вірно",
+      "citationMarkWrong": "Невірно",
       "codeCopy": "Копіювати",
       "codeCopied": "Скопійовано",
       "showAllRows": "Показати всі ({{count}}) ",
@@ -550,7 +565,8 @@
         "messagesInThread": "{{count}} повідомлень у ланцюжку",
         "attachmentPdf": "PDF",
         "attachmentDoc": "DOC",
-        "closeThread": "Закрити ланцюжок"
+        "closeThread": "Закрити ланцюжок",
+        "disabledMailboxNotice": "Початкова поштова скринька для цього листа вимкнена. Оберіть іншу скриньку нижче, щоб надіслати відповідь."
       },
       "reply": {
         "replyFrom": "Відповідь з",
@@ -559,10 +575,44 @@
         "placeholder": "Напишіть відповідь...",
         "reassign": "Передати",
         "saveDraft": "Зберегти чернетку",
+        "savingDraft": "Збереження…",
+        "draftSaved": "Чернетку збережено",
         "attach": "Додати файл",
+        "attaching": "Додавання…",
         "template": "Шаблон",
+        "noTemplatesHint": "Створіть шаблони листів у Налаштування → Шаблони",
         "send": "Надіслати",
-        "noTemplatesHint": "Створіть шаблони листів у Налаштування → Шаблони"
+        "edoLabel": "ЕДО",
+        "edoOutgoing": "Вихідний (ВИХ)",
+        "edoNbu": "Відповідь НБУ (НБУ)",
+        "edoNone": "Не реєструвати",
+        "edoRequiresClientLawyer": "Оберіть клієнта та юриста в параметрах перед реєстрацією в ЕДО"
+      },
+      "newLetter": {
+        "title": "Новий вихідний лист",
+        "from": "Від",
+        "to": "Кому",
+        "recipientType": "Одержувач",
+        "toClient": "Клієнт CRM",
+        "toInstitution": "Установа / Суд / НБУ",
+        "client": "Клієнт",
+        "selectClient": "Пошук клієнта...",
+        "selectEmail": "Оберіть email...",
+        "institutionPlaceholder": "напр. consumers@bank.gov.ua",
+        "noClient": "Без клієнта (загальний лист)",
+        "noClientEmail": "Email не вказано",
+        "subject": "Тема",
+        "subjectPlaceholder": "Тема листа...",
+        "body": "Повідомлення",
+        "bodyPlaceholder": "Напишіть текст листа...",
+        "edoType": "Тип документа ЕДО",
+        "edoRequiresClient": "Оберіть клієнта CRM перед реєстрацією в ЕДО",
+        "edoRequiresClientHint": "Оберіть клієнта CRM вище, щоб зареєструвати лист в ЕДО.",
+        "edoHintInstitution": "Прив’яжіть клієнта CRM нижче, щоб зареєструвати лист до установи в ЕДО.",
+        "edoClientForInstitution": "Клієнт CRM (для реєстрації в ЕДО)",
+        "clientSearchHint": "Введіть 2+ символи для пошуку…",
+        "sending": "Надсилання…",
+        "send": "Надіслати"
       },
       "parameters": {
         "title": "Параметри листа",
@@ -581,6 +631,8 @@
         "client": "Клієнт",
         "contract": "Договір",
         "dueDate": "Термін",
+        "selectDueDate": "Оберіть дату",
+        "dueDatePastError": "Термін не може бути раніше сьогодні",
         "lawyer": "Юрист",
         "notIdentified": "Не ідентифіковано",
         "auto": "Авто",
@@ -616,6 +668,8 @@
         "closedLabel": "закрито",
         "today": "сьогодні",
         "emailThread": "Листування",
+        "taskDetails": "Деталі задачі",
+        "noEmailThread": "Ця задача не має пов’язаного листування. Деталі вище взяті лише з задачі на канбані.",
         "changeAssignee": "Змінити виконавця",
         "emptyColumn": "Немає задач",
         "dragTask": "Перетягнути задачу",
@@ -628,6 +682,7 @@
         "copyKey": "Копіювати ключ задачі",
         "scrollNavigator": "Прокрутити колонки канбану",
         "filters": {
+          "all": "Усі задачі",
           "thisWeek": "Цього тижня",
           "thisMonth": "Цього місяця",
           "allLawyers": "Всі юристи",
@@ -832,7 +887,7 @@
           "exampleSource": "Відправник",
           "exampleSourcePlaceholder": "Ім'я відправника",
           "keywordHints": "Підказки ключових слів",
-          "keywordHintsHint": "необов’язково - використовується, коли впевненість AI < 70%",
+          "keywordHintsHint": "використовується для автовказання типу листа за темою та текстом для некласифікованих повідомлень",
           "keywordPlaceholder": "Введіть ключове слово та натисніть Enter..",
           "starRating": "Рейтинг зірок",
           "starN": "Зірка {{n}} з {{total}}",
@@ -926,6 +981,18 @@
           "testSyncPartial": "Синхронізацію завершено з {{errors}} помилкою(ами). {{ingested}} нових повідомлень.",
           "testSyncSuccess": "Синхронізацію завершено. Імпортовано {{ingested}} нових повідомлень.",
           "testSyncSuccessEmpty": "Синхронізацію завершено. Нових повідомлень немає.",
+          "testConnection": "Перевірити підключення",
+          "testConnectionRunning": "Перевірка…",
+          "testConnectionSuccess": "Підключення успішне",
+          "connectionErrors": {
+            "authFailed": "Не вдалося увійти. Перевірте email та пароль додатка.",
+            "authFailedGoogle": "Не вдалося увійти. Перевірте email та використайте пароль додатка Google — не звичайний пароль облікового запису.",
+            "authFailedMicrosoft": "Не вдалося увійти. Перевірте email, пароль додатка або дозволи облікового запису.",
+            "connectionFailed": "Не вдалося підключитися до поштового сервера. Перевірте хост, порт і мережу.",
+            "timeout": "Час очікування підключення вичерпано. Перевірте хост, порт і налаштування брандмауера.",
+            "generic": "Перевірка підключення не вдалася: {{message}}",
+            "unknown": "Перевірка підключення не вдалася. Спробуйте ще раз."
+          },
           "defaultOutgoing": "За замовч.",
           "autoRoute": "Автомаршрут",
           "duplicateEmail": "Ця скринька вже підключена",
@@ -1600,6 +1667,66 @@
           "operator": "Оператор",
           "client": "Клієнт",
           "other": "Інше"
+        },
+        "v7": {
+          "keyMoments": "Ключові моменти",
+          "overlap": "одночасно",
+          "pause": "тиша {{seconds}} с",
+          "turns_one": "{{count}} репліка",
+          "turns_few": "{{count}} репліки",
+          "turns_many": "{{count}} реплік",
+          "turns_other": "{{count}} репліки",
+          "silence": "Тиша {{total}}с",
+          "silenceMax": "Тиша {{total}}с (макс {{max}}с)",
+          "overlapTotal": "Перебивання {{total}}с",
+          "operatorShare": "Оператор {{share}}%",
+          "clientShare": "{{share}}% Клієнт",
+          "duration": "Тривалість",
+          "hesitations": "запинки {{value}}",
+          "inlinePause": "(пауза {{seconds}} с)",
+          "direction": {
+            "inbound": "Вхідний",
+            "outbound": "Вихідний"
+          },
+          "audio": {
+            "approx": "за аудіо, орієнтовно",
+            "tone": "тон",
+            "irritation": "роздратування",
+            "empathy": "емпатія",
+            "peak": "пік",
+            "trend": "тренд",
+            "dynamicsTitle": "Динаміка емоцій клієнта (за аудіо)",
+            "start": "початок",
+            "end": "кінець",
+            "windowTooltip": "вікно {{from}}–{{to}}: {{raw}} (сире), {{smooth}} (згладжено)",
+            "toneVsWords": "тон ≠ слова",
+            "said": "текст",
+            "sounded": "звучить",
+            "states": {
+              "raisedVoice": "підвищений голос",
+              "crying": "плач"
+            }
+          },
+          "conclusion": {
+            "title": "Заключення AI",
+            "whyTitle": "Чому такий бал",
+            "calc": "рубрика {{rubric}} → корекція {{adjustment}} → {{score}}",
+            "strengths": "Сильні сторони",
+            "weaknesses": "Слабкі сторони",
+            "keyFindings": "Ключові висновки",
+            "said": "сказано",
+            "sounded": "звучало",
+            "priority": {
+              "high": "високий",
+              "normal": "звичайний"
+            },
+            "confidence": "впевненість {{value}}",
+            "limitedBy": "обмеження: {{list}}",
+            "limitations": {
+              "no_audio_layer": "без аудіо-шару",
+              "fallback_26b": "резервна модель"
+            }
+          }
         }
       },
       "scenes": {
@@ -2142,6 +2269,14 @@
       "deleteAria": "Видалити {{ip}}",
       "saveAria": "Зберегти зміни",
       "cancelAria": "Скасувати"
+    },
+    "callQaSettings": {
+      "title": "AI-аналіз дзвінків",
+      "description": "Транскрипції та AI-оцінки дзвінків у картці клієнта",
+      "toggleAria": "Перемкнути AI-аналіз дзвінків",
+      "toastEnabled": "AI-аналіз дзвінків увімкнено.",
+      "toastDisabled": "AI-аналіз дзвінків вимкнено.",
+      "toastError": "Не вдалося оновити налаштування AI-аналізу дзвінків."
     },
     "projects": {
       "title": "Управління проєктами",
@@ -3126,16 +3261,7 @@
         "dropFileOrClick": "Перетягніть файл або натисніть для вибору",
         "loan": "Кредит",
         "documentsUnlinked": "Без прив'язки",
-        "documentTypes": {
-          "passport": "Паспорт",
-          "inn": "ІПН",
-          "contract": "Договір",
-          "income": "Довідка про доходи",
-          "outcome": "Витяг",
-          "signature": "ЕЦП",
-          "military": "Військовий",
-          "other": "Інше"
-        },
+        "documentTypePlaceholder": "Оберіть тип",
         "department": "Відділ",
         "phones": "Телефони",
         "tin": "ІПН",
@@ -4823,17 +4949,39 @@
       "title": "Генерація документів",
       "tabs": {
         "journal": "Журнал документів",
-        "templates": "Шаблони документів"
+        "templates": "Шаблони документів",
+        "types": "Типи документів"
       },
-      "documentTypes": {
-        "passport": "Паспорт",
-        "inn": "ІНН",
-        "contract": "Договір",
-        "income": "Довідка про доходи",
-        "outcome": "Витяг / виписка",
-        "signature": "Цифровий підпис",
-        "military": "Військовий",
-        "other": "Інше"
+      "types": {
+        "title": "Типи документів",
+        "newButton": "Новий тип",
+        "createTitle": "Новий тип документа",
+        "editTitle": "Редагувати тип документа",
+        "confirmDeleteTitle": "Видалити «{{name}}»?",
+        "confirmDelete": "Дію не можна скасувати.",
+        "deleteBlockedMessage": "Цей тип використовує {{formattedCount}} документ(ів). Приховайте його замість видалення.",
+        "uniqueNameError": "Тип документа з такою назвою вже існує.",
+        "loadError": "Не вдалося завантажити типи документів.",
+        "hiddenLabel": "прихований",
+        "columns": {
+          "color": "Колір",
+          "name": "Назва",
+          "usage": "Документи",
+          "actions": "Дії"
+        },
+        "fields": {
+          "name": "Назва",
+          "namePlaceholder": "напр. Паспорт",
+          "color": "Колір",
+          "previewText": "Тип документа"
+        },
+        "toast": {
+          "created": "Тип документа створено",
+          "updated": "Тип документа оновлено",
+          "deleted": "Тип документа видалено",
+          "hidden": "Тип приховано",
+          "shown": "Тип показано"
+        }
       },
       "actions": {
         "uploaded": "Завантажено",

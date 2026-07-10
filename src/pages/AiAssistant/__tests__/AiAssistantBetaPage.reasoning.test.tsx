@@ -53,6 +53,17 @@ function enableThinkingMode() {
 }
 
 /**
+ * Панель раздумий больше НЕ выезжает автоматически при стриме — она открывается
+ * ТОЛЬКО по клику на плашку «Ход рассуждения». Плашку берём свежим узлом (не
+ * сохранённой ссылкой — против flaky при перерисовке во время стрима), а клик
+ * шлём по её вложенной кнопке-тоглу (onToggle висит на ней, не на обёртке).
+ */
+async function openReasoningPanel() {
+  const chip = await screen.findByTestId('assistant-reasoning')
+  fireEvent.click(chip.querySelector('button') as HTMLButtonElement)
+}
+
+/**
  * Give a scroll node a non-zero scrollable geometry (jsdom has no layout): tall
  * content, short viewport, parked at the bottom by default. `scrollTop` is a
  * writable property so the auto-scroll assignment is observable.
@@ -107,6 +118,9 @@ describe('AiAssistantBetaPage reasoning UX (Grok-style thinking window)', () => 
 
     renderPage()
     send('думай долго')
+
+    // Панель не выезжает сама — открываем её кликом по плашке «Ход рассуждения».
+    await openReasoningPanel()
 
     const scrollBox = await screen.findByTestId('assistant-reasoning-scroll')
     // The reasoning lives in its own bounded scroll window, not an unbounded
@@ -178,6 +192,9 @@ describe('AiAssistantBetaPage reasoning UX (Grok-style thinking window)', () => 
     renderPage()
     send('думай')
 
+    // Панель открывается только по клику на плашку — открываем перед проверкой.
+    await openReasoningPanel()
+
     const scrollBox = await screen.findByTestId('assistant-reasoning-scroll')
     // Parked at the bottom — the stream should be "stuck".
     const geom = stubScrollGeometry(scrollBox, { scrollHeight: 1000, clientHeight: 200 })
@@ -212,6 +229,9 @@ describe('AiAssistantBetaPage reasoning UX (Grok-style thinking window)', () => 
 
     renderPage()
     send('думай')
+
+    // Панель открывается только по клику на плашку — открываем перед проверкой.
+    await openReasoningPanel()
 
     const scrollBox = await screen.findByTestId('assistant-reasoning-scroll')
     // User scrolled up (far from the bottom) → sticky must release.
@@ -253,6 +273,9 @@ describe('AiAssistantBetaPage reasoning UX (Grok-style thinking window)', () => 
 
     renderPage()
     send('подумай с кодом')
+
+    // Панель не выезжает сама — открываем её кликом по плашке перед проверкой.
+    await openReasoningPanel()
 
     const scrollBox = await screen.findByTestId('assistant-reasoning-scroll')
     // Reasoning is plain prose: the raw thought text is shown verbatim…
@@ -347,7 +370,7 @@ describe('AiAssistantBetaPage reasoning window opens instantly (thinking mode)',
     vi.unstubAllGlobals()
   })
 
-  it('opens the reasoning window with a spinner + placeholder on submit, before any reasoning delta', async () => {
+  it('opens the reasoning window on chip click (placeholder phase), before any reasoning delta', async () => {
     // The turn stays in flight and never emits a reasoning delta.
     mockedSendChatMessage.mockImplementation(
       (_payload, _callbacks?: SendChatMessageCallbacks): Promise<AssistantChatResponse> =>
@@ -358,19 +381,29 @@ describe('AiAssistantBetaPage reasoning window opens instantly (thinking mode)',
     enableThinkingMode()
     send('подумай как следует')
 
-    // The fixed-height reasoning window is already mounted (placeholder phase),
-    // even though no reasoning has streamed yet.
+    // На сабмите (thinking) появляется ПЛАШКА с live-спиннером, но само окно
+    // раздумий закрыто — панель больше не выезжает автоматически.
+    const panel = await screen.findByTestId('assistant-reasoning')
+    expect(panel.querySelector('button')).toHaveAttribute('aria-expanded', 'false')
+    expect(screen.getByTestId('reasoning-spinner')).toBeInTheDocument()
+    expect(screen.queryByTestId('assistant-reasoning-scroll')).not.toBeInTheDocument()
+    // Generic "думаю…" typing dots must not also show — the chip is the single
+    // live indicator for thinking mode.
+    expect(screen.queryByText('pages.aiAssistant.assistantThinking')).not.toBeInTheDocument()
+
+    // Клик по плашке открывает окно раздумий в фазе placeholder (спиннер +
+    // подпись), хотя ни одной дельты рассуждения ещё не пришло.
+    await openReasoningPanel()
     const scrollBox = await screen.findByTestId('assistant-reasoning-scroll')
     expect(scrollBox.className).toMatch(/max-h-\[200px\]/)
     const placeholder = await screen.findByTestId('reasoning-placeholder')
     expect(placeholder).toHaveTextContent('pages.aiAssistant.reasoningAnalyzing')
-    // The panel is auto-expanded with the streaming spinner in its header.
-    const panel = screen.getByTestId('assistant-reasoning')
-    expect(panel.querySelector('button')).toHaveAttribute('aria-expanded', 'true')
+    // Теперь панель раскрыта, спиннер по-прежнему в шапке плашки (стрим идёт).
+    expect(screen.getByTestId('assistant-reasoning').querySelector('button')).toHaveAttribute(
+      'aria-expanded',
+      'true'
+    )
     expect(screen.getByTestId('reasoning-spinner')).toBeInTheDocument()
-    // Generic "думаю…" typing dots must not also show — the window is the
-    // single live indicator for thinking mode.
-    expect(screen.queryByText('pages.aiAssistant.assistantThinking')).not.toBeInTheDocument()
   })
 
   it('flows the first reasoning delta into the same window (placeholder gone, no duplicate box)', async () => {
@@ -390,7 +423,8 @@ describe('AiAssistantBetaPage reasoning window opens instantly (thinking mode)',
     enableThinkingMode()
     send('думай молча, потом вслух')
 
-    // Placeholder window first.
+    // Панель открываем кликом по плашке — попадаем в фазу placeholder.
+    await openReasoningPanel()
     const boxBefore = await screen.findByTestId('assistant-reasoning-scroll')
     expect(await screen.findByTestId('reasoning-placeholder')).toBeInTheDocument()
 
