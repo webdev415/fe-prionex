@@ -263,6 +263,8 @@ export function ClientDetailPage() {
     dayOfMonth: '' as string, // for monthly_nth_day: '1'..'30' or 'last'
     // 0-based indexes of schedule rows whose date was clamped to month-end.
     clampedRows: [] as number[],
+    // KAN-785 Part 2 — optional overdue penalty amount (blank = no penalty).
+    penaltyAmount: '' as string,
     payments: [{ date: null as Date | null, amount: '' }] as Array<{
       date: Date | null
       amount: string
@@ -3827,6 +3829,7 @@ export function ClientDetailPage() {
                             intervalDays: '',
                             dayOfMonth: '',
                             clampedRows: [],
+                            penaltyAmount: '',
                             payments: [{ date: null, amount: '' }],
                           })
                           setConnectRrError(null)
@@ -5790,7 +5793,19 @@ export function ClientDetailPage() {
                           {
                             key: 'date',
                             header: t('pages.clients.detail.rrPaymentDate'),
-                            render: (p) => formatDate(p.date ?? undefined),
+                            render: (p) => (
+                              <span className="flex items-center gap-1.5">
+                                {formatDate(p.date ?? undefined)}
+                                {p.is_penalty && (
+                                  <span className="inline-block rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-medium text-red-700">
+                                    {t(
+                                      'pages.clients.detail.rrPenaltyTag',
+                                      'penalty (overdue trigger)'
+                                    )}
+                                  </span>
+                                )}
+                              </span>
+                            ),
                           },
                           {
                             key: 'amount',
@@ -6866,6 +6881,26 @@ export function ClientDetailPage() {
                   </div>
                 )}
               </div>
+              {/* Overdue Penalty (optional) — KAN-785 Part 2 */}
+              <div className="border-t border-gray-100 pt-3">
+                <Input
+                  label={t('pages.clients.detail.rrPenaltyAmount', 'Overdue Penalty (optional)')}
+                  type="number"
+                  min={0}
+                  step={0.01}
+                  value={connectRrForm.penaltyAmount}
+                  onChange={(e) =>
+                    setConnectRrForm((prev) => ({ ...prev, penaltyAmount: e.target.value }))
+                  }
+                  placeholder="0.00"
+                />
+                <p className="text-dark-300 mt-1 text-xs">
+                  {t(
+                    'pages.clients.detail.rrPenaltyHint',
+                    'If any payment goes 3+ days overdue, this amount is charged once as an extra payment at the end of the schedule.'
+                  )}
+                </p>
+              </div>
             </div>
             {connectRrError && (
               <div className="mt-3 rounded-md bg-red-50 px-3 py-2 text-sm text-red-600">
@@ -6949,6 +6984,21 @@ export function ClientDetailPage() {
                         payment_date: formatDate(p.date),
                         payment_amount: parseFloat(p.amount),
                       })),
+                      // KAN-785 Part 2 — optional penalty + persisted periodicity
+                      // (so the backend can date the penalty by this RR's cadence).
+                      penalty_amount:
+                        connectRrForm.penaltyAmount && parseFloat(connectRrForm.penaltyAmount) > 0
+                          ? parseFloat(connectRrForm.penaltyAmount)
+                          : null,
+                      periodicity: connectRrForm.frequency
+                        ? {
+                            frequency: connectRrForm.frequency,
+                            interval_days: connectRrForm.intervalDays
+                              ? parseInt(connectRrForm.intervalDays, 10)
+                              : null,
+                            day_of_month: connectRrForm.dayOfMonth || null,
+                          }
+                        : null,
                     },
                   },
                   {
