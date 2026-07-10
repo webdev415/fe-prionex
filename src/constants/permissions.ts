@@ -45,6 +45,19 @@ export const PERMISSIONS = {
   },
 
   /**
+   * Reversals Category (2 permissions, KAN-334)
+   * Payment reversal (storno) — reallocation of a payment's distribution.
+   * Split rights: VIEW (see the Reversals table) vs CREATE (single + bulk).
+   * Seeded by auth migration 056.
+   */
+  REVERSALS: {
+    VIEW: 'view_reversals',
+    CREATE: 'create_reversal',
+    // Bulk upload reuses CREATE — no separate bulk permission.
+    BULK: 'create_reversal',
+  },
+
+  /**
    * Sale Notes Category (1 permission)
    * Controls bulk upload + delete of primary creditor comments.
    * Seeded by auth migration 039.
@@ -419,6 +432,7 @@ export const PERMISSION_CATEGORIES = {
   CONTACT_TAGS: 'Contact Tags',
   RESTRUCTURING: 'Restructuring',
   UBKI: 'UBKI',
+  REVERSALS: 'Reversals',
 } as const
 
 /**
@@ -614,4 +628,8 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
 
   // UBKI — outbound credit-bureau submission
   submit_to_ubki: 'Manually submit client credit data to the UBKI credit bureau (single and bulk)',
+
+  // Reversals (KAN-334)
+  view_reversals: 'View the payment reversals (storno) table',
+  create_reversal: 'Create a payment reversal (storno) — single and bulk',
 }

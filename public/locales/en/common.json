@@ -4081,6 +4081,47 @@
         "makePayment": "Make Payment",
         "payments": "Payments",
         "writesOff": "Writes-off",
+        "reversal": "Reversal",
+        "reversals": "Reversals",
+        "reversalModal": {
+          "title": "Reversal",
+          "chooseAPayment": "Choose a payment",
+          "chooseAPaymentPlaceholder": "Select a payment…",
+          "noEligiblePayments": "This client has no verified payments available for reversal.",
+          "reversedTag": "reversed",
+          "amountPlaceholder": "Amount to reverse",
+          "comment": "Comment / Reason",
+          "commentPlaceholder": "Optional reason for the reversal",
+          "totalAmount": "Total amount of reversal",
+          "saveSuccess": "Reversal created.",
+          "components": {
+            "principal": "Principal reversal",
+            "interest": "Interest reversal",
+            "fine": "Fine reversal",
+            "penalty": "Penalty reversal",
+            "commission": "Commissions reversal"
+          },
+          "errors": {
+            "amountsSumMismatch": "The total of the new amounts ({{requested}}) must equal the payment amount ({{expected}}).",
+            "alreadyReversed": "This payment has already been reversed.",
+            "paymentNotVerified": "Only verified payments can be reversed.",
+            "paymentNotFound": "Payment not found.",
+            "paymentHasNoCredit": "This payment is not associated with a credit.",
+            "notSnapshotted": "This payment has no allocation snapshot and cannot be reversed."
+          }
+        },
+        "reversalsTable": {
+          "reversalId": "Reversal ID",
+          "originalPaymentId": "Original Payment ID",
+          "creditId": "Credit ID",
+          "clientFullName": "Client Full Name",
+          "operationDate": "Operation Date",
+          "user": "User",
+          "comment": "Comment / Reason",
+          "reversedBadge": "Reversed",
+          "loadError": "Failed to load reversals.",
+          "empty": "No reversals for this client."
+        },
         "writeOffModal": {
           "title": "Write off debt",
           "chooseALoan": "Choose a loan",

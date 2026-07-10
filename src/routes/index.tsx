@@ -188,6 +188,11 @@ const BulkWriteoffImportPage = lazy(() =>
     default: m.BulkWriteoffImportPage,
   }))
 )
+const BulkReversalImportPage = lazy(() =>
+  import('@/pages/Operations').then((m) => ({
+    default: m.BulkReversalImportPage,
+  }))
+)
 const RepaymentConfigurationPage = lazy(() =>
   import('@/pages/RepaymentConfiguration/RepaymentConfigurationPage').then((m) => ({
     default: m.RepaymentConfigurationPage,
@@ -560,6 +565,16 @@ export const router = createBrowserRouter([
           <PermissionRoute requiredPermission={PERMISSIONS.WRITEOFFS.BULK}>
             <Suspense fallback={<AppLoadingFallback />}>
               <BulkWriteoffImportPage />
+            </Suspense>
+          </PermissionRoute>
+        ),
+      },
+      {
+        path: 'import/bulk-reversal-import',
+        element: (
+          <PermissionRoute requiredPermission={PERMISSIONS.REVERSALS.BULK}>
+            <Suspense fallback={<AppLoadingFallback />}>
+              <BulkReversalImportPage />
             </Suspense>
           </PermissionRoute>
         ),

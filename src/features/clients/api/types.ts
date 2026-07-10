@@ -781,6 +781,10 @@ export interface PaymentResponse {
   debt_contract_number?: string | null
   seller_name?: string | null
   is_deleted: boolean
+  // Cross-service debt reference — needed to gate reversal eligibility (KAN-334).
+  debt_id?: number | null
+  // KAN-334 storno marker: set once the payment's distribution is reversed.
+  reallocated_at?: string | null
 }
 
 export interface ClientPaymentHistoryResponse {

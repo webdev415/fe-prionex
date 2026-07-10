@@ -3411,6 +3411,47 @@
         "makePayment": "Зробити платіж",
         "payments": "Платежі",
         "writesOff": "Списання",
+        "reversal": "Сторно",
+        "reversals": "Сторнування",
+        "reversalModal": {
+          "title": "Сторно",
+          "chooseAPayment": "Оберіть платіж",
+          "chooseAPaymentPlaceholder": "Виберіть платіж…",
+          "noEligiblePayments": "У цього клієнта немає підтверджених платежів, доступних для сторнування.",
+          "reversedTag": "сторновано",
+          "amountPlaceholder": "Сума для сторнування",
+          "comment": "Коментар / Причина",
+          "commentPlaceholder": "Необовʼязкова причина сторнування",
+          "totalAmount": "Загальна сума сторнування",
+          "saveSuccess": "Сторно створено.",
+          "components": {
+            "principal": "Сторно тіла",
+            "interest": "Сторно відсотків",
+            "fine": "Сторно штрафу",
+            "penalty": "Сторно пені",
+            "commission": "Сторно комісій"
+          },
+          "errors": {
+            "amountsSumMismatch": "Сума нових значень ({{requested}}) має дорівнювати сумі платежу ({{expected}}).",
+            "alreadyReversed": "Цей платіж вже було сторновано.",
+            "paymentNotVerified": "Сторнувати можна лише підтверджені платежі.",
+            "paymentNotFound": "Платіж не знайдено.",
+            "paymentHasNoCredit": "Цей платіж не повʼязаний із кредитом.",
+            "notSnapshotted": "Для цього платежу немає знімка розподілу, тому його не можна сторнувати."
+          }
+        },
+        "reversalsTable": {
+          "reversalId": "ID сторно",
+          "originalPaymentId": "ID початкового платежу",
+          "creditId": "ID кредиту",
+          "clientFullName": "ПІБ клієнта",
+          "operationDate": "Дата операції",
+          "user": "Користувач",
+          "comment": "Коментар / Причина",
+          "reversedBadge": "Сторновано",
+          "loadError": "Не вдалося завантажити сторнування.",
+          "empty": "Сторнувань для цього клієнта немає."
+        },
         "writeOffModal": {
           "title": "Списати борг",
           "chooseALoan": "Оберіть кредит",

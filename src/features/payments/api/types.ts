@@ -76,10 +76,15 @@ export interface Payment {
   // Assigned operator — responsible user for this payment's collection
   assigned_user_id?: number | null
   assigned_user_full_name?: string | null
-  // Reversal info
+  // Reversal info (payment cancellation)
   reversed_at?: string
   reversed_by_user_id?: number
   reversal_reason?: string
+  // KAN-334 storno (distribution reallocation) marker. Set once when the
+  // payment's distribution has been reversed. Drives the "Reversed" indicator
+  // and disables the Reverse action in the payments table.
+  reallocated_at?: string | null
+  reallocated_by_user_id?: number | null
   // Metadata
   created_at: string
   updated_at?: string

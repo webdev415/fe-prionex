@@ -2414,6 +2414,47 @@
         "makePayment": "Сделать платеж",
         "payments": "Платежи",
         "writesOff": "Списания",
+        "reversal": "Сторно",
+        "reversals": "Сторнирования",
+        "reversalModal": {
+          "title": "Сторно",
+          "chooseAPayment": "Выберите платеж",
+          "chooseAPaymentPlaceholder": "Выберите платеж…",
+          "noEligiblePayments": "У этого клиента нет подтверждённых платежей, доступных для сторнирования.",
+          "reversedTag": "сторнирован",
+          "amountPlaceholder": "Сумма для сторнирования",
+          "comment": "Комментарий / Причина",
+          "commentPlaceholder": "Необязательная причина сторнирования",
+          "totalAmount": "Общая сумма сторнирования",
+          "saveSuccess": "Сторно создано.",
+          "components": {
+            "principal": "Сторно тела",
+            "interest": "Сторно процентов",
+            "fine": "Сторно штрафа",
+            "penalty": "Сторно пени",
+            "commission": "Сторно комиссий"
+          },
+          "errors": {
+            "amountsSumMismatch": "Сумма новых значений ({{requested}}) должна равняться сумме платежа ({{expected}}).",
+            "alreadyReversed": "Этот платеж уже был сторнирован.",
+            "paymentNotVerified": "Сторнировать можно только подтверждённые платежи.",
+            "paymentNotFound": "Платеж не найден.",
+            "paymentHasNoCredit": "Этот платеж не связан с кредитом.",
+            "notSnapshotted": "Для этого платежа нет снимка распределения, поэтому его нельзя сторнировать."
+          }
+        },
+        "reversalsTable": {
+          "reversalId": "ID сторно",
+          "originalPaymentId": "ID исходного платежа",
+          "creditId": "ID кредита",
+          "clientFullName": "ФИО клиента",
+          "operationDate": "Дата операции",
+          "user": "Пользователь",
+          "comment": "Комментарий / Причина",
+          "reversedBadge": "Сторнирован",
+          "loadError": "Не удалось загрузить сторнирования.",
+          "empty": "Сторнирований для этого клиента нет."
+        },
         "paymentToPrimaryCreditor": "Платеж основному кредитору",
         "operators": "Операторы",
         "searchers": "Поисковики",
