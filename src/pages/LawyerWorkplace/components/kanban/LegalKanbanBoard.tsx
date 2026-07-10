@@ -504,7 +504,8 @@ export function LegalKanbanBoard() {
 
       <div
         className={cn(
-          'lawyer-workplace-scroll flex min-h-0 flex-1 flex-col overflow-y-auto',
+          // Lock board body to remaining viewport height; columns scroll internally.
+          'flex min-h-0 flex-1 flex-col overflow-hidden',
           (isLoading || isError || apiTasks.length === 0 || filteredTaskCount === 0) && 'hidden',
           isKanbanGrid
             ? showWorkspaceBanner
@@ -521,34 +522,33 @@ export function LegalKanbanBoard() {
           className={cn(
             'flex min-h-0 flex-1 flex-col overscroll-x-contain',
             isKanbanGrid
-              ? 'h-full min-h-full overflow-x-visible'
+              ? 'h-full overflow-hidden'
               : cn(
-                  'min-h-full overflow-x-auto scroll-smooth px-4 sm:px-5 lg:px-7',
+                  'h-full overflow-x-auto scroll-smooth px-4 sm:px-5 lg:px-7',
                   '[scrollbar-width:none] [&::-webkit-scrollbar]:hidden'
                 )
           )}
         >
           <div
             className={cn(
-              'min-h-full flex-1 pb-6',
+              'h-full min-h-0 flex-1',
               isKanbanGrid
-                ? 'grid h-full min-h-full w-full grid-cols-4 grid-rows-[minmax(0,1fr)] items-stretch gap-3 px-4 sm:px-5 lg:px-7'
-                : 'flex min-h-full w-max snap-x snap-mandatory items-stretch gap-3 lg:gap-4'
+                ? 'grid h-full w-full grid-cols-4 grid-rows-[minmax(0,1fr)] items-stretch gap-3 px-4 sm:px-5 lg:px-7'
+                : 'flex h-full w-max snap-x snap-mandatory items-stretch gap-3 lg:gap-4'
             )}
           >
             {displayColumns.map((col) => (
               <div
                 key={col.id}
                 className={cn(
-                  // Avoid h-full: percentage height breaks grid stretch when the
-                  // parent only has min-height, so filled columns shrink-wrap.
-                  'flex min-h-0 flex-col self-stretch',
+                  // Stretch to the board row height so empty and filled lanes share one bottom edge.
+                  'flex h-full min-h-0 flex-col self-stretch',
                   isKanbanGrid
-                    ? 'h-auto min-w-0 shrink'
-                    : cn('h-auto shrink-0 snap-start', KANBAN_SCROLL_COLUMN_WIDTH_CLASS)
+                    ? 'min-w-0'
+                    : cn('shrink-0 snap-start', KANBAN_SCROLL_COLUMN_WIDTH_CLASS)
                 )}
               >
-                <div className="sticky top-0 z-10 shrink-0">
+                <div className="shrink-0">
                   <KanbanColumnHeader column={col} />
                 </div>
                 <KanbanColumnLane
