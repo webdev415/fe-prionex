@@ -12,6 +12,7 @@ import {
 import { Label } from '@/components/ui/Label'
 import { SearchableSelect } from '@/components/ui/SearchableSelect'
 import {
+  canAssignLawyer,
   useConfirmLetter,
   useLegalClientContracts,
   useLegalClientSearch,
@@ -173,7 +174,7 @@ function ParameterDropdown({
   label: string
   value: React.ReactNode
   placeholder?: string
-  items: { key: string; content: React.ReactNode }[]
+  items: { key: string; content: React.ReactNode; disabled?: boolean }[]
   onSelect?: (key: string) => void
 }) {
   const hasValue = value !== null && value !== undefined && value !== false
@@ -199,8 +200,14 @@ function ParameterDropdown({
           {items.map((item) => (
             <DropdownMenuItem
               key={item.key}
-              className="cursor-pointer rounded-md px-2 py-1.5 text-[13px] focus:bg-gray-50"
-              onSelect={() => onSelect?.(item.key)}
+              disabled={item.disabled}
+              className={cn(
+                'rounded-md px-2 py-1.5 text-[13px] focus:bg-gray-50',
+                item.disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'
+              )}
+              onSelect={() => {
+                if (!item.disabled) onSelect?.(item.key)
+              }}
             >
               {item.content}
             </DropdownMenuItem>
@@ -526,6 +533,10 @@ function LetterParametersPanelContent({
 
   const effectiveLawyerUserId = lawyerOverride ?? defaultLawyerUserId
   const effectiveDueDate = dueDateOverride ?? defaultDueDate
+  const currentLawyerUserId =
+    effectiveLawyerUserId && Number(effectiveLawyerUserId) > 0
+      ? Number(effectiveLawyerUserId)
+      : null
 
   const clientOptions = useMemo(() => {
     const searchResults = (clientsData?.items ?? []).map(formatClientOption)
@@ -551,11 +562,20 @@ function LetterParametersPanelContent({
 
   const lawyerOptions = useMemo(
     () =>
-      lawyers.map((lawyer) => ({
-        userId: String(lawyer.user_id),
-        display: `${lawyer.display_name} (${lawyer.current_active})`,
-      })),
-    [lawyers]
+      lawyers.map((lawyer) => {
+        const assignable = canAssignLawyer(lawyer, currentLawyerUserId)
+        return {
+          userId: String(lawyer.user_id),
+          display: `${lawyer.display_name} (${lawyer.current_active})`,
+          assignable,
+          capacityLabel: t('pages.lawyerWorkplace.lawyers.atCapacity', {
+            current: lawyer.current_active,
+            max: lawyer.max_in_flight,
+            defaultValue: `At capacity (${lawyer.current_active}/${lawyer.max_in_flight})`,
+          }),
+        }
+      }),
+    [currentLawyerUserId, lawyers, t]
   )
 
   const getTypeLabel = (typeId: string) =>
@@ -813,7 +833,15 @@ function LetterParametersPanelContent({
           onSelect={handleLawyerSelect}
           items={lawyerOptions.map((option) => ({
             key: option.userId,
-            content: <span className="text-dark-500 text-[13px] font-light">{option.display}</span>,
+            disabled: !option.assignable,
+            content: (
+              <span className="flex min-w-0 flex-col">
+                <span className="text-dark-500 text-[13px] font-light">{option.display}</span>
+                {!option.assignable ? (
+                  <span className="text-light-500 text-[11px]">{option.capacityLabel}</span>
+                ) : null}
+              </span>
+            ),
           }))}
         />
 
