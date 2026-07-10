@@ -14,7 +14,7 @@ export const LAWYER_LAYOUT_BREAKPOINTS = {
   compact: 1024,
   /** Kanban 4-column grid fits comfortably */
   kanbanGrid: 1000,
-  /** Inbox 3-column layout + workspace banner */
+  /** Inbox 3-column layout + workspace banner; kanban grid + horizontal scroll navigator */
   wide: 1280,
 } as const
 

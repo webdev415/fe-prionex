@@ -316,10 +316,13 @@ export function usePatchLegalKanbanTaskMetadata() {
         due_date?: string | null
       }
     }) => legalApi.patchKanbanTask(taskId, payload),
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: legalWorkplaceKeys.kanban() })
       queryClient.invalidateQueries({ queryKey: legalWorkplaceKeys.inbox() })
       queryClient.invalidateQueries({ queryKey: legalWorkplaceKeys.messages() })
+      if ('assigned_to_user_id' in variables.payload) {
+        invalidateLegalWorkload(queryClient)
+      }
     },
     onError: (error) => toast.error(getErrorMessage(error)),
   })
