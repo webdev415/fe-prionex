@@ -4166,6 +4166,7 @@
         "exportMessagingCsvFailed": "Failed to export messaging history",
         "tabs": {
           "personal": "Personal",
+          "relatedTags": "Related tags",
           "work": "Work",
           "recommenders": "Recommenders",
           "addresses": "Addresses",
@@ -4176,6 +4177,11 @@
           "callSms": "Call / SMS",
           "taChains": "TA Chains",
           "searcherComments": "Searcher Comments"
+        },
+        "relatedTags": {
+          "loading": "Loading related tags...",
+          "empty": "No related tags from linked contacts with shared phone numbers.",
+          "goToClient": "Go to client №{{id}}"
         },
         "ubki": {
           "doNotSendLabel": "Do not send data to UBKI",
@@ -5229,6 +5235,7 @@
         "enableNotifications": "Enable Notifications",
         "notificationTemplate": "Notification Template",
         "isProtected": "Protected Tag",
+        "isRelatedTag": "Related Tag",
         "protectedRoles": "Roles allowed to remove",
         "expiryType": "Expiry Type",
         "loanClosureNote": "Tag will be automatically removed when the client's loan is closed",
@@ -5244,6 +5251,7 @@
           "visibility": "UI = visible to operators, Analytics = reports only, System = hidden.",
           "expiryType": "Permanent = forever. TTL = removed after set time. Loan closure = removed when loan is closed.",
           "protectedTag": "Only selected roles can remove this tag.",
+          "relatedTag": "When enabled, this tag appears on linked clients who share a phone number.",
           "mutexGroup": "Tags in the same group are mutually exclusive. Assigning one removes others."
         },
         "notificationTemplatePlaceholder": "e.g. Tag '{tag_name}' assigned to client {client_id}",
@@ -5272,6 +5280,7 @@
         "targetActionDate": "Target Action Date"
       },
       "protectedWarning": "Removal requires manager approval",
+      "relatedTagHint": "Shown in the Related Tags tab on profiles of clients linked by shared phone numbers.",
       "removalRequests": {
         "title": "Removal Requests",
         "approve": "Approve",

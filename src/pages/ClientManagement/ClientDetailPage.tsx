@@ -138,6 +138,8 @@ import { useSubmitDebtToUbki, useBulkSubmitToUbki, ubkiKeys } from '@/features/u
 import { PERMISSIONS } from '@/constants/permissions'
 import { searchClientsByPhoneExact } from '@/api/clientSearchApi'
 import { ChainExecutor, TAInteractionHistory } from './components/taChains'
+import { RelatedTagsTab } from './components/RelatedTagsTab'
+import type { PhoneMeta } from '@/features/tags/hooks/useLinkedClientsRelatedTags'
 import { formatUkrainePhoneForDisplay } from '@/lib/phone'
 import { isAdminRole } from '@/features/tags/utils/visibility'
 import {
@@ -1211,6 +1213,63 @@ export function ClientDetailPage() {
     return map
   }, [linkedContactQueries, phoneLookupValues])
 
+  const phoneMetaByNormalized = useMemo(() => {
+    const map = new Map<string, PhoneMeta>()
+    if (!client) return map
+
+    const addPhone = (
+      raw: string | null | undefined,
+      meta: Omit<PhoneMeta, 'displayPhone'> & { displayPhone?: string }
+    ) => {
+      if (!raw) return
+      const normalized = normalizePhoneForLookup(raw)
+      if (!normalized) return
+      map.set(normalized, {
+        displayPhone: meta.displayPhone ?? raw,
+        contactTypeId: meta.contactTypeId ?? null,
+        spamAllowed: meta.spamAllowed ?? true,
+        blocking: meta.blocking,
+      })
+    }
+
+    client.phones?.forEach((phone) =>
+      addPhone(phone.number, {
+        contactTypeId: phone.contactTypeId,
+        spamAllowed: phone.spamAllowed,
+        blocking: phone.blocking,
+      })
+    )
+    client.recommenders?.forEach((recommender) => {
+      if (recommender.isPhone || looksLikeUkrainePhone(recommender.contactValue)) {
+        addPhone(recommender.contactValue, {
+          contactTypeId: null,
+          spamAllowed: true,
+          blocking: {
+            blocks_calls: false,
+            blocks_sms: false,
+            blocks_spam: false,
+            reasons: [],
+          },
+        })
+      }
+    })
+    const workPhone = client.work?.workPhone
+    if (workPhone && workPhone !== '-' && looksLikeUkrainePhone(workPhone)) {
+      addPhone(workPhone, {
+        contactTypeId: null,
+        spamAllowed: true,
+        blocking: {
+          blocks_calls: false,
+          blocks_sms: false,
+          blocks_spam: false,
+          reasons: [],
+        },
+      })
+    }
+
+    return map
+  }, [client])
+
   const renderLinkedContactBadges = (rawPhone: string, align: 'end' | 'start' = 'end') => {
     const phoneKey = normalizePhoneForLookup(rawPhone)
     const linkedContacts = linkedContactsByPhone.get(phoneKey) ?? []
@@ -1299,9 +1358,9 @@ export function ClientDetailPage() {
     contact_type_id: 7,
     comment: '',
   })
-  const [activeClientCardTab, setActiveClientCardTab] = useState<'personal' | 'passport' | 'work'>(
-    'personal'
-  )
+  const [activeClientCardTab, setActiveClientCardTab] = useState<
+    'related' | 'personal' | 'passport' | 'work'
+  >('related')
   // KAN-610: activeRightCardTab moved up (near activeCommentTab) so the data
   // hooks can gate on it for lazy loading.
   const [isUploadDocModalOpen, setIsUploadDocModalOpen] = useState(false)
@@ -2976,6 +3035,26 @@ export function ClientDetailPage() {
                 >
                   <button
                     type="button"
+                    data-tab="related"
+                    onClick={() => setActiveClientCardTab('related')}
+                    title={t('pages.clients.detail.tabs.relatedTags', 'Related tags')}
+                    className={cn(
+                      'md:hover:bg-primary-200/10 hover:bg-secondary-800/20 flex shrink-0 cursor-pointer flex-row items-center justify-center self-stretch rounded-md p-2 md:justify-start md:rounded-none md:border-b-0 md:border-l-2 md:p-2.5',
+                      activeClientCardTab === 'related'
+                        ? 'md:border-primary-300 md:bg-primary-200/10 bg-secondary-800/10'
+                        : 'md:border-transparent'
+                    )}
+                  >
+                    <Icons.Link01
+                      size={24}
+                      className={cn(
+                        'shrink-0',
+                        activeClientCardTab === 'related' ? 'text-secondary-800' : 'text-gray-700'
+                      )}
+                    />
+                  </button>
+                  <button
+                    type="button"
                     data-tab="personal"
                     onClick={() => setActiveClientCardTab('personal')}
                     title={t('pages.clients.detail.tabs.personal')}
@@ -3039,6 +3118,30 @@ export function ClientDetailPage() {
 
               {/* Right side content for selected client card tab */}
               <div className="flex w-full min-w-0 flex-col items-center gap-6 self-stretch overflow-hidden px-4 py-4 md:px-0">
+                {activeClientCardTab === 'related' && (
+                  <RelatedTagsTab
+                    clientId={clientId}
+                    linkedContactsByPhone={linkedContactsByPhone}
+                    phoneMetaByNormalized={phoneMetaByNormalized}
+                    includeHiddenTags={showHiddenTags}
+                    onCall={(phone, contactTypeId, spamAllowed) =>
+                      openOutboundCall(phone, contactTypeId, spamAllowed)
+                    }
+                    onSms={(phone) => {
+                      setSelectedPhoneForSMS(phone)
+                      setIsSendSMSModalOpen(true)
+                    }}
+                    onMessage={(phone) => {
+                      setSelectedPhoneForMessage(phone)
+                      setIsSendMessageModalOpen(true)
+                    }}
+                    onInteraction={(phone) => {
+                      setChainExecutorContactSource('client')
+                      setChainExecutorPrefilledPhone(phone)
+                      setIsChainExecutorOpen(true)
+                    }}
+                  />
+                )}
                 {activeClientCardTab === 'personal' && (
                   <>
                     <div className="flex items-center self-stretch p-0">
