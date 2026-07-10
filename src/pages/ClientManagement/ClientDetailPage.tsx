@@ -217,6 +217,12 @@ const formatDateAsISO = (d: Date): string => {
   return `${y}-${m}-${day}`
 }
 
+// DISABLED for the release (client requirement): bulk "Send all loans to UBKI"
+// must stay OFF; only the per-loan manual "Send to UBKI" button stays active.
+// The backend /submit/bulk endpoint is also disabled. Re-enable by flipping
+// this flag to true.
+const ENABLE_BULK_UBKI_SUBMISSION = false
+
 export function ClientDetailPage() {
   const { t, i18n } = useTranslation('common')
   const { isCallActive, setOpenCallModal } = useCallStore()
@@ -3849,8 +3855,10 @@ export function ClientDetailPage() {
                         </Button>
                       )}
                       {/* Bulk "Send all loans to UBKI" — gated by the same
-                          submit_to_ubki permission as the per-loan send button. */}
-                      {canSubmitToUbki && (
+                          submit_to_ubki permission as the per-loan send button.
+                          Disabled for the release via ENABLE_BULK_UBKI_SUBMISSION
+                          (see the flag definition above). */}
+                      {ENABLE_BULK_UBKI_SUBMISSION && canSubmitToUbki && (
                         <Button
                           variant="secondary"
                           leftIcon={<Icons.MailSend01 size={20} />}
