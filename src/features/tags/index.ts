@@ -7,3 +7,4 @@
 export * from './types'
 export * from './api/tagsApi'
 export * from './hooks/useTags'
+export * from './hooks/useLinkedClientsRelatedTags'
