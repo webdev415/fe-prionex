@@ -4066,107 +4066,110 @@ export function ClientDetailPage() {
                               </div>
                             </td>
                             <td className="py-2 pr-3">
-                              {contact.contactValue && contact.id > 0 && (
-                                <div className="flex items-center gap-1 md:gap-2">
-                                  {(contact.isPhone || looksLikePhone(contact.contactValue)) && (
-                                    <>
-                                      <PermissionGuard
-                                        permission={PERMISSIONS.COMMUNICATION.MAKE_CALLS}
-                                      >
-                                        <button
-                                          disabled={!user?.is_agent || !user?.asterisk_extension}
-                                          onClick={() => {
-                                            openOutboundCall(
-                                              contact.contactValue,
-                                              contact.contactTypeId
-                                            )
-                                          }}
-                                          className="text-primary-500 flex h-[20px] w-[20px] cursor-pointer items-center justify-center hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-40"
+                              {contact.contactValue &&
+                                contact.id > 0 &&
+                                (contact.isPhone || looksLikePhone(contact.contactValue)) && (
+                                  <div className="flex items-center gap-1 md:gap-2">
+                                    {(contact.isPhone || looksLikePhone(contact.contactValue)) && (
+                                      <>
+                                        <PermissionGuard
+                                          permission={PERMISSIONS.COMMUNICATION.MAKE_CALLS}
                                         >
-                                          <Icons.Headset size={16} className="flex-shrink-0" />
-                                        </button>
-                                      </PermissionGuard>
-                                      <PermissionGuard
-                                        permission={PERMISSIONS.COMMUNICATION.SEND_SMS}
-                                      >
-                                        <button
-                                          disabled={contact.blocking?.blocks_sms}
-                                          onClick={() => {
-                                            setSelectedPhoneForSMS(contact.contactValue)
-                                            setIsSendSMSModalOpen(true)
-                                          }}
-                                          className="text-primary-500 flex h-[20px] w-[20px] cursor-pointer items-center justify-center hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-40"
+                                          <button
+                                            disabled={!user?.is_agent || !user?.asterisk_extension}
+                                            onClick={() => {
+                                              openOutboundCall(
+                                                contact.contactValue,
+                                                contact.contactTypeId
+                                              )
+                                            }}
+                                            className="text-primary-500 flex h-[20px] w-[20px] cursor-pointer items-center justify-center hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-40"
+                                          >
+                                            <Icons.Headset size={16} className="flex-shrink-0" />
+                                          </button>
+                                        </PermissionGuard>
+                                        <PermissionGuard
+                                          permission={PERMISSIONS.COMMUNICATION.SEND_SMS}
                                         >
-                                          <Icons.ChatFeedback01
-                                            size={16}
-                                            className="flex-shrink-0"
-                                          />
-                                        </button>
-                                      </PermissionGuard>
-                                      <PermissionGuard
-                                        permissions={ALL_MESSAGING_SEND_PERMISSIONS}
-                                        mode="any"
-                                      >
-                                        <button
-                                          disabled={contact.blocking?.blocks_sms}
-                                          onClick={() => {
-                                            setSelectedPhoneForMessage(contact.contactValue)
-                                            setIsSendMessageModalOpen(true)
-                                          }}
-                                          className="text-primary-500 flex h-[20px] w-[20px] cursor-pointer items-center justify-center hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-40"
-                                          title={
-                                            contact.blocking?.blocks_sms
-                                              ? contact.blocking.reasons
-                                                  .filter((r) => r.toLowerCase().includes('sms'))
-                                                  .join('; ') ||
-                                                t('pages.contactTags.smsBlocked', 'SMS blocked')
-                                              : t(
-                                                  'pages.clients.detail.sendMessage',
-                                                  'Send message'
-                                                )
-                                          }
+                                          <button
+                                            disabled={contact.blocking?.blocks_sms}
+                                            onClick={() => {
+                                              setSelectedPhoneForSMS(contact.contactValue)
+                                              setIsSendSMSModalOpen(true)
+                                            }}
+                                            className="text-primary-500 flex h-[20px] w-[20px] cursor-pointer items-center justify-center hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-40"
+                                          >
+                                            <Icons.ChatFeedback01
+                                              size={16}
+                                              className="flex-shrink-0"
+                                            />
+                                          </button>
+                                        </PermissionGuard>
+                                        <PermissionGuard
+                                          permissions={ALL_MESSAGING_SEND_PERMISSIONS}
+                                          mode="any"
                                         >
-                                          <Icons.Message01 size={16} className="flex-shrink-0" />
-                                        </button>
-                                      </PermissionGuard>
-                                      <PermissionGuard
-                                        permission={PERMISSIONS.CLIENTS.CREATE_INTERACTIONS}
-                                      >
-                                        <button
-                                          onClick={() => {
-                                            // Classify by the phone's actual contact_type_id
-                                            // rather than by which tab the row lives in: a
-                                            // "Mobile phone from registers" (type 29) sits
-                                            // in the Recommenders tab but the backend treats
-                                            // it as a client phone.
-                                            setChainExecutorContactSource(
-                                              classifyContactSource(contact.contactTypeId)
-                                            )
-                                            setChainExecutorPrefilledPhone(contact.contactValue)
-                                            setIsChainExecutorOpen(true)
-                                          }}
-                                          className="text-primary-500 flex h-[20px] w-[20px] cursor-pointer items-center justify-center hover:opacity-80"
+                                          <button
+                                            disabled={contact.blocking?.blocks_sms}
+                                            onClick={() => {
+                                              setSelectedPhoneForMessage(contact.contactValue)
+                                              setIsSendMessageModalOpen(true)
+                                            }}
+                                            className="text-primary-500 flex h-[20px] w-[20px] cursor-pointer items-center justify-center hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-40"
+                                            title={
+                                              contact.blocking?.blocks_sms
+                                                ? contact.blocking.reasons
+                                                    .filter((r) => r.toLowerCase().includes('sms'))
+                                                    .join('; ') ||
+                                                  t('pages.contactTags.smsBlocked', 'SMS blocked')
+                                                : t(
+                                                    'pages.clients.detail.sendMessage',
+                                                    'Send message'
+                                                  )
+                                            }
+                                          >
+                                            <Icons.Message01 size={16} className="flex-shrink-0" />
+                                          </button>
+                                        </PermissionGuard>
+                                        <PermissionGuard
+                                          permission={PERMISSIONS.CLIENTS.CREATE_INTERACTIONS}
                                         >
-                                          <Icons.PencilEdit size={16} className="flex-shrink-0" />
-                                        </button>
-                                      </PermissionGuard>
-                                    </>
-                                  )}
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      setContactTagModal({
-                                        contactId: contact.id,
-                                        phone: contact.contactValue,
-                                      })
-                                    }
-                                    className="text-primary-500 flex h-[20px] w-[20px] cursor-pointer items-center justify-center hover:opacity-80"
-                                    title={t('pages.contactTags.tags', 'Tags')}
-                                  >
-                                    <Icons.Tag01 size={16} className="flex-shrink-0" />
-                                  </button>
-                                  {(contact.isPhone || looksLikePhone(contact.contactValue)) &&
-                                    canEditClient && (
+                                          <button
+                                            onClick={() => {
+                                              // Classify by the phone's actual contact_type_id
+                                              // rather than by which tab the row lives in: a
+                                              // "Mobile phone from registers" (type 29) sits
+                                              // in the Recommenders tab but the backend treats
+                                              // it as a client phone.
+                                              setChainExecutorContactSource(
+                                                classifyContactSource(contact.contactTypeId)
+                                              )
+                                              setChainExecutorPrefilledPhone(contact.contactValue)
+                                              setIsChainExecutorOpen(true)
+                                            }}
+                                            className="text-primary-500 flex h-[20px] w-[20px] cursor-pointer items-center justify-center hover:opacity-80"
+                                          >
+                                            <Icons.PencilEdit size={16} className="flex-shrink-0" />
+                                          </button>
+                                        </PermissionGuard>
+                                        {contact.isPhone && (
+                                          <button
+                                            type="button"
+                                            onClick={() =>
+                                              setContactTagModal({
+                                                contactId: contact.id,
+                                                phone: contact.contactValue,
+                                              })
+                                            }
+                                            className="text-primary-500 flex h-[20px] w-[20px] cursor-pointer items-center justify-center hover:opacity-80"
+                                            title={t('pages.contactTags.tags', 'Tags')}
+                                          >
+                                            <Icons.Tag01 size={16} className="flex-shrink-0" />
+                                          </button>
+                                        )}
+                                      </>
+                                    )}
+                                    {canEditClient && (
                                       <>
                                         <button
                                           type="button"
@@ -4192,8 +4195,8 @@ export function ClientDetailPage() {
                                         </button>
                                       </>
                                     )}
-                                </div>
-                              )}
+                                  </div>
+                                )}
                             </td>
                             <td className="py-2 pr-3">
                               <span className="text-dark-500 font-medium tracking-[-0.24px]">
