@@ -2081,7 +2081,12 @@ export function AiAssistantBetaPage() {
    * nothing (as before). The full ход рассуждения lives in the side panel.
    */
   const renderReasoningChip = (item: ChatMessage) => {
-    if (!messageHasReasoning(item)) return null
+    // Показываем чип при ЛЮБОЙ активности (раздумья/шаги ИЛИ источники), а не
+    // только при reasoning: у fast-хода раздумий нет, но источники факт-сносок
+    // есть — без чипа они после гидратации/перезагрузки истории становятся
+    // недоступны (панель нельзя открыть). Чип корректно деградирует на пустом
+    // reasoning + нулевом stepCount (см. ReasoningInlineChip).
+    if (!messageHasActivity(item)) return null
     const elapsed = reasoningElapsedMs(item, reasoningNow)
     return (
       <ReasoningInlineChip
@@ -2230,7 +2235,7 @@ export function AiAssistantBetaPage() {
                 // shrinking to the short header (w-fit) — the reasoning box then
                 // uses the full available width rather than looking narrow.
                 const hasReasoningSurface =
-                  item.role === 'assistant' && !item.isError && messageHasReasoning(item)
+                  item.role === 'assistant' && !item.isError && messageHasActivity(item)
                 return (
                   <div
                     key={item.id}

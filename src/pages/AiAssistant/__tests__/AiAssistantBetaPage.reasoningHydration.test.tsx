@@ -145,6 +145,33 @@ describe('AiAssistantBetaPage — гидратация раздумий/исто
     vi.unstubAllGlobals()
   })
 
+  it('fast-ход БЕЗ reasoning: чип и клик по ① восстанавливают источники после гидратации', async () => {
+    // Быстрый ход (fast) не стримит reasoning — у сообщения только источники.
+    // Раньше messageHasReasoning=false → чип «Ход рассуждения» пропадал, и
+    // provenance (Джерело цифр) после перезагрузки истории был недоступен.
+    const noReasoning = {
+      ...HYDRATED_CONVERSATION,
+      messages: HYDRATED_CONVERSATION.messages.map((m) =>
+        m.role === 'assistant' ? { ...m, reasoning: undefined } : m
+      ),
+    }
+    useAiAssistantStore.getState().setActiveConversation('7', 42)
+    mockedGetConversation.mockResolvedValue(noReasoning)
+
+    renderPage()
+    await screen.findByText(/В проекте/)
+
+    // Чип активности присутствует даже без reasoning (есть источники).
+    expect(await screen.findByTestId('assistant-reasoning')).toBeInTheDocument()
+
+    // Клик по ① открывает панель с источником (SQL-запрос виден).
+    fireEvent.click(getFact(1))
+    await screen.findByTestId('assistant-citations', undefined, { timeout: 5000 })
+    expect(within(getSource(1)).getByTestId('citation-sql')).toHaveTextContent(
+      'SELECT count(*) FROM clients'
+    )
+  })
+
   it('гидратирует диалог: чип раздумий + клик по факту открывает панель с источниками', async () => {
     useAiAssistantStore.getState().setActiveConversation('7', 42)
     mockedGetConversation.mockResolvedValue(HYDRATED_CONVERSATION)
