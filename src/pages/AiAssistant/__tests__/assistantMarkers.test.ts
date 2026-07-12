@@ -6,6 +6,7 @@ import {
   FACT_NUMBER_PROP,
   FACT_REF_TAG,
   hasMarkers,
+  normalizeCircledFootnotes,
   rehypeAssistantMarkers,
   splitMarkers,
 } from '../assistantMarkers'
@@ -96,6 +97,35 @@ describe('hasMarkers', () => {
   })
 })
 
+describe('normalizeCircledFootnotes — глиф ①..⑳ → маркер [[N]]', () => {
+  it('возвращает глиф в [[N]] для номера с источником', () => {
+    expect(normalizeCircledFootnotes('В статусе new 413 442 ①.', new Set([1]))).toBe(
+      'В статусе new 413 442 [[1]].'
+    )
+  })
+
+  it('конвертирует несколько глифов, каждый по своему номеру', () => {
+    expect(normalizeCircledFootnotes('Долг ① и срок ②', new Set([1, 2]))).toBe(
+      'Долг [[1]] и срок [[2]]'
+    )
+  })
+
+  it('глиф без источника остаётся текстом (гейт по citationIds)', () => {
+    // ③ = сноска 3, но источника 3 нет → не трогаем; ① есть → конвертируем.
+    expect(normalizeCircledFootnotes('первый ① третий ③', new Set([1]))).toBe(
+      'первый [[1]] третий ③'
+    )
+  })
+
+  it('пустой набор источников = полный no-op (прежнее поведение)', () => {
+    expect(normalizeCircledFootnotes('текст ① со сноской', new Set())).toBe('текст ① со сноской')
+  })
+
+  it('⑳ = сноска 20 (верхняя граница диапазона)', () => {
+    expect(normalizeCircledFootnotes('край ⑳', new Set([20]))).toBe('край [[20]]')
+  })
+})
+
 /** Собрать минимальное hast-дерево: <p>{children}</p>. */
 function paragraph(...children: Root['children']): Root {
   return {
@@ -161,5 +191,27 @@ describe('rehypeAssistantMarkers — hast-трансформация', () => {
     const pre = tree.children[0] as Element
     const code = pre.children[0] as Element
     expect(code.children).toEqual([{ type: 'text', value: 'value[[1]]' }])
+  })
+
+  it('с citationIds: кружковый глиф ① из вывода модели становится fact-ref', () => {
+    // Модель нарисовала готовый глиф вместо [[1]] — при наличии источника 1
+    // он должен стать кликабельной сноской (регресс: раньше оставался текстом).
+    const transformWithIds = rehypeAssistantMarkers({ citationIds: new Set([1]) })
+    const tree = paragraph({ type: 'text', value: 'В статусе new 413 442 ①' })
+    transformWithIds(tree)
+
+    const p = tree.children[0] as Element
+    expect(p.children).toHaveLength(2)
+    expect(p.children[0]).toEqual({ type: 'text', value: 'В статусе new 413 442 ' })
+    const fact = p.children[1] as Element
+    expect(fact.tagName).toBe(FACT_REF_TAG)
+    expect(fact.properties?.[FACT_NUMBER_PROP]).toBe('1')
+  })
+
+  it('без citationIds кружковый глиф остаётся обычным текстом', () => {
+    const tree = paragraph({ type: 'text', value: 'В статусе new 413 442 ①' })
+    transform(tree)
+    const p = tree.children[0] as Element
+    expect(p.children).toEqual([{ type: 'text', value: 'В статусе new 413 442 ①' }])
   })
 })

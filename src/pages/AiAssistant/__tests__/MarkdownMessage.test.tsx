@@ -166,6 +166,33 @@ describe('MarkdownMessage — факт-сноски [[N]]', () => {
     expect(fact).not.toHaveAttribute('role', 'button')
   })
 
+  it('кружковый глиф ① из вывода модели + citations → кликабельная сноска', () => {
+    // Регресс: модель рисует готовый глиф вместо [[1]] (так лежит и в истории),
+    // при наличии источника 1 он всё равно должен быть кликабельным, а не текстом.
+    const onFactClick = vi.fn()
+    render(
+      <MarkdownMessage
+        onFactClick={onFactClick}
+        citations={[{ id: 1, kind: 'sql', label: 'clients' }]}
+      >
+        {'В статусе new 413 442 ①'}
+      </MarkdownMessage>
+    )
+
+    const fact = screen.getByTestId('markdown-fact')
+    expect(fact).toHaveAttribute('data-fact-n', '1')
+    expect(fact).toHaveAttribute('role', 'button')
+
+    fireEvent.click(fact)
+    expect(onFactClick).toHaveBeenCalledTimes(1)
+    expect(onFactClick).toHaveBeenCalledWith(1)
+  })
+
+  it('кружковый глиф без источника остаётся обычным текстом (не сноска)', () => {
+    render(<MarkdownMessage onFactClick={vi.fn()}>{'В статусе new 413 442 ①'}</MarkdownMessage>)
+    expect(screen.queryByTestId('markdown-fact')).not.toBeInTheDocument()
+  })
+
   it('подставляет метку источника из citations в title сноски', () => {
     render(
       <MarkdownMessage

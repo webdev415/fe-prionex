@@ -77,6 +77,28 @@ export function hasMarkers(text: string): boolean {
   return found
 }
 
+// Кружковые цифры ①..⑳ (U+2460..U+2473) = сноски 1..20 (совпадает с прямым
+// маппингом `circledNumber` в MarkdownMessage). Некоторые модели вместо маркера
+// `[[N]]` «услужливо» рисуют уже готовый глиф — тогда сноска остаётся обычным
+// текстом, потому что трансформер ищет `[[N]]`. Возвращаем глиф в канонический
+// маркер, но ТОЛЬКО для номеров, у которых реально есть источник (`citationIds`):
+// иначе это не сноска, а часть текста (нумерованный список и т.п.) — не трогаем.
+const CIRCLED_FOOTNOTE_ONE = 0x2460 // ①
+const CIRCLED_FOOTNOTE_RE = /[①-⑳]/g
+
+/**
+ * Заменить кружковые глифы-сноски `①..⑳` на канонический маркер `[[N]]`, но
+ * только для номеров из `citationIds` (у которых есть источник). Пустой набор →
+ * строка не меняется (полный no-op — старое поведение). Чистая функция.
+ */
+export function normalizeCircledFootnotes(text: string, citationIds: ReadonlySet<number>): string {
+  if (citationIds.size === 0) return text
+  return text.replace(CIRCLED_FOOTNOTE_RE, (glyph) => {
+    const n = (glyph.codePointAt(0) ?? 0) - CIRCLED_FOOTNOTE_ONE + 1
+    return citationIds.has(n) ? `[[${n}]]` : glyph
+  })
+}
+
 // Внутри код-блоков (` ``` ` и inline `` `code` ``) маркеры не трогаем —
 // иначе сломаем подсветку и потеряем текст маркера.
 const SKIP_TAGS = new Set(['code', 'pre'])
@@ -102,22 +124,28 @@ function segmentToNode(seg: MarkerSegment): ElementContent {
   }
 }
 
-function transformChildren(node: Root | Element): void {
+function transformChildren(node: Root | Element, citationIds: ReadonlySet<number>): void {
   const source = node.children as ElementContent[]
   const result: ElementContent[] = []
   let changed = false
 
   for (const child of source) {
-    if (child.type === 'text' && hasMarkers(child.value)) {
-      for (const seg of splitMarkers(child.value)) {
-        result.push(segmentToNode(seg))
+    if (child.type === 'text') {
+      // Сначала возвращаем кружковые глифы-сноски в маркер `[[N]]` (по источникам),
+      // затем — обычный разбор. Глиф без источника нормализация не трогает, тогда
+      // `hasMarkers` ложно и текстовый узел остаётся как был.
+      const value = normalizeCircledFootnotes(child.value, citationIds)
+      if (hasMarkers(value)) {
+        for (const seg of splitMarkers(value)) {
+          result.push(segmentToNode(seg))
+        }
+        changed = true
+        continue
       }
-      changed = true
-      continue
     }
 
     if (child.type === 'element' && !SKIP_TAGS.has(child.tagName)) {
-      transformChildren(child)
+      transformChildren(child, citationIds)
     }
     result.push(child)
   }
@@ -127,12 +155,27 @@ function transformChildren(node: Root | Element): void {
   }
 }
 
+/** Настройки rehype-плагина сносок. */
+export type AssistantMarkerOptions = {
+  /**
+   * id источников хода: только для этих номеров кружковый глиф `①..⑳` станет
+   * кликабельной сноской `[[N]]`. Не передан/пуст → глифы не трогаем (сноска
+   * работает лишь по явному `[[N]]` от бэкенда — прежнее поведение).
+   */
+  citationIds?: ReadonlySet<number>
+}
+
+const NO_CITATION_IDS: ReadonlySet<number> = new Set()
+
 /**
  * rehype-плагин: обходит дерево и заменяет текстовые вхождения маркеров на
  * кастомные элементы `fact-ref` / `client-ref`. Не заходит в `code`/`pre`.
+ * Кружковые глифы-сноски `①..⑳` из вывода модели приводятся к `[[N]]` для
+ * номеров из `citationIds` (см. {@link normalizeCircledFootnotes}).
  */
-export function rehypeAssistantMarkers() {
+export function rehypeAssistantMarkers(options: AssistantMarkerOptions = {}) {
+  const citationIds = options.citationIds ?? NO_CITATION_IDS
   return function transform(tree: Root): void {
-    transformChildren(tree)
+    transformChildren(tree, citationIds)
   }
 }
