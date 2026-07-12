@@ -14,7 +14,6 @@ export type ActionAnalysisCallsSubTabId =
   | 'timeline'
   | 'screen-time'
   | 'heatmap'
-  | 'script-analytics'
 
 // KAN-410 — Scores top-tab sub-tabs (review / aggregation surfaces; the
 // per-call scorecard fill-in lives on the existing CallRecordingModal,
@@ -42,7 +41,6 @@ export const ACTION_ANALYSIS_CALLS_SUB_TABS: ActionAnalysisCallsSubTabId[] = [
   'timeline',
   'screen-time',
   'heatmap',
-  'script-analytics',
 ]
 
 export const ACTION_ANALYSIS_SCORES_SUB_TABS: ActionAnalysisScoresSubTabId[] = [

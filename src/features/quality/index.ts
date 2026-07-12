@@ -7,6 +7,7 @@ export {
   getScorecard,
   getScorecardHistoryForCall,
   getScorecardAggregate,
+  getStageFunnel,
   createScorecard,
   updateScorecard,
   sendScorecard,
@@ -24,7 +25,6 @@ export {
   createFeedback,
   replyToFeedback,
   markFeedbackRead,
-  markFeedbackCompleted,
   exportFeedback,
   getOperatorDynamics,
   exportOperatorDynamics,
@@ -62,7 +62,6 @@ export {
   useCreateFeedback,
   useReplyToFeedback,
   useMarkFeedbackRead,
-  useMarkFeedbackCompleted,
   useExportFeedback,
   feedbackKeys,
 } from './hooks/useFeedback'
@@ -72,6 +71,18 @@ export {
   useExportOperatorDynamics,
   dynamicsKeys,
 } from './hooks/useDynamics'
+export { useStageFunnel, stageFunnelKeys } from './hooks/useStageFunnel'
+// Call QA (Ф1) — AI transcripts
+export { getCallTranscript, transcriptKeys } from './api/transcriptService'
+export { useCallTranscript } from './hooks/useCallTranscript'
+// Call QA — global «AI call analysis» switch
+export {
+  getCallQaSettings,
+  updateCallQaSettings,
+  callQaSettingsKey,
+} from './api/callQaSettingsService'
+export type { CallQaSettings } from './api/callQaSettingsService'
+export { useCallQaSettings, useUpdateCallQaSettings } from './hooks/useCallQaSettings'
 
 export { ScorecardPanel } from './components/ScorecardPanel'
 export { MarkerOverlay } from './components/MarkerOverlay'
@@ -79,6 +90,8 @@ export { AddMarkerButton } from './components/AddMarkerButton'
 export { LeaveFeedbackButton } from './components/LeaveFeedbackButton'
 export { FeedbackThreadView } from './components/FeedbackThreadView'
 export { ScoreDynamicsChart } from './components/ScoreDynamicsChart'
+export { CallTranscriptPanel } from './components/CallTranscriptPanel'
+export { CallQaSettingsSection } from './components/CallQaSettingsSection'
 
 export type {
   AggregateFilters,
@@ -121,6 +134,22 @@ export type {
   DynamicsAlertType,
   ScoreDynamicsAlert,
   AlertsResponse,
+  FunnelBand,
+  FunnelDateType,
+  StageDto,
+  PainPointDto,
+  PainPoints,
+  StageFunnelResponse,
+  StageFunnelFilters,
+  CallTranscript,
+  CallTranscriptDto,
+  CallAiReview,
+  TranscriptUtterance,
+  TranscriptUtteranceFlag,
+  TranscriptScene,
+  TranscriptQueryResult,
+  ReviewRedFlag,
+  ReviewPromise,
 } from './types'
 
 export { MARKER_TYPES, MARKER_COLORS, FEEDBACK_TYPES } from './types'

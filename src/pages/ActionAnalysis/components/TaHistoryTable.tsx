@@ -20,6 +20,11 @@ interface ResultEntry {
   followUps: string[]
 }
 
+function normalizeStepValue(raw: unknown): string {
+  const v = typeof raw === 'object' && raw !== null ? (raw as { value?: unknown }).value : raw
+  return v != null ? String(v) : ''
+}
+
 function buildResultEntries(
   row: TAInteraction,
   chains: TAChain[],
@@ -56,8 +61,10 @@ function buildResultEntries(
 
     if (stepsOrdered.length > 0) {
       for (const step of stepsOrdered) {
-        const sd = row.step_data as Record<string, string>
-        const val = sd[String(step.step_order)] ?? sd[String(step.target_action_id)]
+        const sd = row.step_data as Record<string, unknown>
+        const val = normalizeStepValue(
+          sd[String(step.step_order)] ?? sd[String(step.target_action_id)]
+        )
         if (!val) continue
         // Phone (contact-type) values render in a dedicated way on the per-client
         // page; here we just include them inline since we have no Phone column.
@@ -88,7 +95,8 @@ function buildResultEntries(
         })
       }
     } else {
-      for (const [, val] of Object.entries(row.step_data as Record<string, string>)) {
+      for (const [, raw] of Object.entries(row.step_data as Record<string, unknown>)) {
+        const val = normalizeStepValue(raw)
         if (val) entries.push({ value: val, followUps: [] })
       }
     }

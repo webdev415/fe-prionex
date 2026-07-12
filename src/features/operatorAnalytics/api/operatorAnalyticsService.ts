@@ -6,7 +6,6 @@ import type {
   IngestEventsRequest,
   IngestEventsResponse,
   ScreenTimeResponse,
-  ScriptAnalyticsResponse,
   TimelineQuery,
   TimelineResponse,
 } from '../types'
@@ -84,24 +83,6 @@ export async function exportHeatmap(filters: HeatmapFilters): Promise<Blob> {
   return response.data
 }
 
-export async function getScriptAnalytics(
-  filters: AnalyticsRangeFilters
-): Promise<ScriptAnalyticsResponse> {
-  const response = await api.get<ScriptAnalyticsResponse>(`${ANALYTICS_BASE}/script-analytics`, {
-    params: buildRangeParams(filters),
-  })
-  return response.data
-}
-
-export async function exportScriptAnalytics(filters: AnalyticsRangeFilters): Promise<Blob> {
-  const response = await api.get<Blob>(`${ANALYTICS_BASE}/script-analytics/export`, {
-    params: buildRangeParams(filters),
-    responseType: 'blob',
-    timeout: 120_000,
-  })
-  return response.data
-}
-
 export const operatorAnalyticsService = {
   ingestEvents,
   buildIngestEventsBody,
@@ -111,6 +92,4 @@ export const operatorAnalyticsService = {
   exportScreenTime,
   getHeatmap,
   exportHeatmap,
-  getScriptAnalytics,
-  exportScriptAnalytics,
 }

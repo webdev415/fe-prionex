@@ -781,11 +781,13 @@ export function useCloseDebt() {
       clientId,
       debtId,
       closureDate,
+      reason,
     }: {
       clientId: number
       debtId: number
       closureDate?: string
-    }) => clientApi.closeDebt(clientId, debtId, closureDate),
+      reason?: string
+    }) => clientApi.closeDebt(clientId, debtId, closureDate, reason),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: clientKeys.loans(variables.clientId), exact: true })
       queryClient.invalidateQueries({

@@ -110,6 +110,29 @@ describe('sendChatMessage SSE transport', () => {
     expect(onFollowups).toHaveBeenCalledWith(['Ещё?'])
   })
 
+  it('forwards citations through onCitations and returns them in the response', async () => {
+    const onCitations = vi.fn()
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        sseResponse([
+          'event: text\ndata: {"delta":"Долг 48 750 ₴[[1]]"}\n\n',
+          `event: citations\ndata: ${JSON.stringify({
+            items: [{ id: 1, kind: 'sql', ref: 'debts:remaining_debt_amount' }],
+          })}\n\n`,
+          'event: done\ndata: {}\n\n',
+        ])
+      )
+    )
+
+    const result = await sendChatMessage(baseRequest, { onCitations })
+
+    expect(onCitations).toHaveBeenCalledWith([
+      { id: 1, kind: 'sql', ref: 'debts:remaining_debt_amount' },
+    ])
+    expect(result.citations).toEqual([{ id: 1, kind: 'sql', ref: 'debts:remaining_debt_amount' }])
+  })
+
   it('forwards reasoning deltas through onReasoning without polluting the answer', async () => {
     const onReasoning = vi.fn()
     const onText = vi.fn()

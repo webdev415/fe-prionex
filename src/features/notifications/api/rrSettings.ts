@@ -5,12 +5,15 @@ export interface RRNotificationSettings {
   enabled: boolean
   days_before: number[]
   template_text: string
+  // KAN-785 Part 2 — optional separate template for the overdue-penalty reminder.
+  penalty_template_text?: string | null
 }
 
 export interface RRNotificationSettingsUpdate {
   enabled: boolean
   days_before: number[]
   template_text: string
+  penalty_template_text?: string | null
 }
 
 const BASE_URL = '/api/v1/rr-notification-settings'

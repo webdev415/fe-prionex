@@ -1,0 +1,65 @@
+import type { LetterTypeConfig, LetterTypePriorityAssignment, TrainingExample } from '../types'
+import { formatSourceWithPrefix } from './settingsI18n'
+
+export function cloneLetterType(type: LetterTypeConfig): LetterTypeConfig {
+  return {
+    ...type,
+    examples: type.examples.map((example) => ({ ...example })),
+    priorities: type.priorities.map((priority) => ({ ...priority })),
+    keywordHints: [...type.keywordHints],
+  }
+}
+
+export function updateLetterTypePriority(
+  draft: LetterTypeConfig,
+  lawyerId: string,
+  patch: Partial<LetterTypePriorityAssignment>
+): LetterTypeConfig {
+  const next = draft.priorities.some((item) => item.lawyerId === lawyerId)
+    ? draft.priorities.map((item) => (item.lawyerId === lawyerId ? { ...item, ...patch } : item))
+    : [...draft.priorities, { lawyerId, stars: 0, role: 'off' as const, ...patch }]
+
+  return { ...draft, priorities: next }
+}
+
+export function removeTrainingExample(
+  draft: LetterTypeConfig,
+  exampleId: string
+): LetterTypeConfig {
+  return {
+    ...draft,
+    examples: draft.examples.filter((example) => example.id !== exampleId),
+  }
+}
+
+export function upsertTrainingExample(
+  draft: LetterTypeConfig,
+  example: TrainingExample
+): LetterTypeConfig {
+  const exists = draft.examples.some((item) => item.id === example.id)
+  return {
+    ...draft,
+    examples: exists
+      ? draft.examples.map((item) => (item.id === example.id ? example : item))
+      : [...draft.examples, example],
+  }
+}
+
+export function createTrainingExampleFromForm(
+  existingId: string | undefined,
+  values: { title: string; body: string; source: string },
+  sourcePrefix: string
+): TrainingExample {
+  const id = existingId ?? `ex-${Date.now()}`
+
+  return {
+    id,
+    titleKey: `custom:title:${id}`,
+    titleFallback: values.title.trim(),
+    bodyKey: `custom:body:${id}`,
+    bodyFallback: values.body.trim(),
+    sourceKey: `custom:source:${id}`,
+    sourceFallback: formatSourceWithPrefix(values.source, sourcePrefix),
+    isPlaceholder: false,
+  }
+}

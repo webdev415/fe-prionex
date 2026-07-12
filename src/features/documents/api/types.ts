@@ -4,20 +4,17 @@
 
 export type DocumentAction = 'uploaded' | 'generated'
 
-export type DocumentType =
-  | 'passport'
-  | 'inn'
-  | 'contract'
-  | 'income'
-  | 'outcome'
-  | 'signature'
-  | 'military'
-  | 'other'
+export interface DocumentTypeRef {
+  id: number
+  name: string
+  color: string
+}
 
 export interface DocumentJournalEntry {
   id: number
   document_name: string
-  document_type: string
+  document_type_id: number | null
+  document_type_ref: DocumentTypeRef | null
   client_id: number
   client_full_name: string
   debt_id: number | null
@@ -38,7 +35,8 @@ export interface DocumentJournalResponse {
 export interface DocumentJournalParams {
   page?: number
   limit?: number
-  document_type?: DocumentType
+  /** FK to document_types. */
+  document_type_id?: number
   action?: DocumentAction
   operator_id?: number
   /** ILIKE on client first/last/middle name. */

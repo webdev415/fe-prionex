@@ -46,6 +46,16 @@ function send(text: string) {
   fireEvent.keyDown(getTextarea(), { key: 'Enter' })
 }
 
+/**
+ * Панель раздумий больше НЕ выезжает автоматически — открываем её кликом по
+ * плашке «Ход рассуждения». Узел плашки берём свежим (против flaky при
+ * перерисовке во время стрима), клик — по вложенной кнопке-тоглу.
+ */
+async function openReasoningPanel() {
+  const chip = await screen.findByTestId('assistant-reasoning')
+  fireEvent.click(chip.querySelector('button') as HTMLButtonElement)
+}
+
 describe('AiAssistantBetaPage SSE streaming render', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -200,7 +210,7 @@ describe('AiAssistantBetaPage SSE streaming render', () => {
     expect(panel).toHaveTextContent('Сначала проверю таблицу платежей.')
   })
 
-  it('shows live reasoning (auto-expanded + spinner) while the turn is streaming', async () => {
+  it('shows the live reasoning chip while streaming; the panel opens on chip click', async () => {
     // Defer resolution so the turn stays "in flight" during the assertion.
     let resolveTurn: (r: AssistantChatResponse) => void = () => {}
     mockedSendChatMessage.mockImplementation(
@@ -215,11 +225,21 @@ describe('AiAssistantBetaPage SSE streaming render', () => {
     renderPage()
     send('думай')
 
-    // While streaming: the panel is open and shows the live reasoning + spinner.
-    const reasoning = await screen.findByText('Думаю вслух…')
-    expect(reasoning).toBeInTheDocument()
-    const panel = screen.getByTestId('assistant-reasoning')
-    expect(panel.querySelector('button')).toHaveAttribute('aria-expanded', 'true')
+    // While streaming: the chip shows the live spinner, but the panel is NOT
+    // auto-expanded (окно раздумий больше не выезжает само).
+    const panel = await screen.findByTestId('assistant-reasoning')
+    expect(panel.querySelector('button')).toHaveAttribute('aria-expanded', 'false')
+    expect(screen.getByTestId('reasoning-spinner')).toBeInTheDocument()
+    expect(screen.queryByTestId('assistant-reasoning-scroll')).not.toBeInTheDocument()
+
+    // Клик по плашке открывает панель — там виден живой ход рассуждения.
+    await openReasoningPanel()
+    expect(await screen.findByText('Думаю вслух…')).toBeInTheDocument()
+    expect(screen.getByTestId('assistant-reasoning').querySelector('button')).toHaveAttribute(
+      'aria-expanded',
+      'true'
+    )
+    // Стрим ещё идёт — спиннер по-прежнему активен.
     expect(screen.getByTestId('reasoning-spinner')).toBeInTheDocument()
 
     // Settle the turn so no act() warning leaks.

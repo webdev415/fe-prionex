@@ -26,7 +26,6 @@ import { ScreenTimeTab } from './components/ScreenTimeTab'
 import { HeatmapTab } from './components/HeatmapTab'
 import { ScopeSelector } from './components/ScopeSelector'
 // prod-hide START — restore by uncommenting these import lines.
-// import { ScriptAnalyticsTab } from './components/ScriptAnalyticsTab'
 // import { ScoresTab } from './components/scores/ScoresTab'
 // import { InboxTab } from './components/inbox/InboxTab'
 // import { RateDialogueDialog } from './components/inbox/RateDialogueDialog'
@@ -43,7 +42,7 @@ import {
   resolveInteractionUsers,
   toInteractionMonitoringQuery,
 } from './lib/interactionsUrlState'
-import { useScopedUserIds } from './lib/scope'
+import { resolveTabCeiling, useScopedUserIds } from './lib/scope'
 
 const TOP_TAB_LABEL_KEYS: Record<ActionAnalysisTopTabId, { key: string; fallback: string }> = {
   inbox: { key: 'pages.actionAnalysis.topTabs.inbox', fallback: 'Inbox' },
@@ -95,11 +94,6 @@ const SUB_TAB_LABEL_KEYS: Record<
     key: 'pages.actionAnalysis.subTabs.heatmap',
     fallback: 'Heatmap',
     permission: PERMISSIONS.ACTION_ANALYSIS.VIEW_ACTIVITY_HEATMAP,
-  },
-  'script-analytics': {
-    key: 'pages.actionAnalysis.subTabs.scriptAnalytics',
-    fallback: 'Script Analytics',
-    permission: PERMISSIONS.ACTION_ANALYSIS.VIEW_SCRIPT_ANALYTICS,
   },
 }
 
@@ -171,10 +165,17 @@ export function ActionAnalysisPage() {
   }, [activeTopTab, activeSubTab, searchParams, setSearchParams])
   // prod-hide END
 
+  // the active tab's role access ceiling bounds the ScopeSelector.
+  const tabAccessLevels = useAuthStore((s) => s.user?.tab_access_levels)
+  const scopeCeiling = useMemo(
+    () => resolveTabCeiling(activeSubTab, tabAccessLevels),
+    [activeSubTab, tabAccessLevels]
+  )
+
   const activeProjectId = useAuthStore((s) => s.user?.active_project_id)
   const { data: operators = [] } = useOperators(activeProjectId ? Number(activeProjectId) : null)
 
-  // Page-level scope (KAN-506): drives user_ids[] for every Calls sub-tab and
+  // Page-level scope: drives user_ids[] for every Calls sub-tab and
   // the header-level export so the exported file matches what's on screen.
   const scoped = useScopedUserIds(operators)
 
@@ -216,7 +217,7 @@ export function ActionAnalysisPage() {
     setSearchParams(next, { replace: true })
   }
 
-  // KAN-413 — visible top tabs filtered by permission. `inbox` only shows
+  // visible top tabs filtered by permission. `inbox` only shows
   // for users with `view_inbox`; existing tabs remain visible to anyone
   // with `view_action_analysis` since their sub-tab gating is unchanged.
   const visibleTopTabs = useMemo(() => {
@@ -437,7 +438,7 @@ export function ActionAnalysisPage() {
             })}
           </div>
 
-          <ScopeSelector />
+          <ScopeSelector ceiling={scopeCeiling} />
 
           <div>
             {activeSubTab === 'list' && <CallsTab />}
@@ -448,9 +449,6 @@ export function ActionAnalysisPage() {
             {activeSubTab === 'timeline' && <TimelineTab />}
             {activeSubTab === 'screen-time' && <ScreenTimeTab />}
             {activeSubTab === 'heatmap' && <HeatmapTab />}
-            {/* prod-hide START — Script Analytics sub-tab not on prod whitelist */}
-            {/* {activeSubTab === 'script-analytics' && <ScriptAnalyticsTab />} */}
-            {/* prod-hide END */}
           </div>
         </>
       ) : (

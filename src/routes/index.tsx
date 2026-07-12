@@ -86,6 +86,11 @@ const RRNotificationsPage = lazy(() =>
     default: m.RRNotificationsPage,
   }))
 )
+const RRPeriodicityPage = lazy(() =>
+  import('@/pages/RRPeriodicity').then((m) => ({
+    default: m.RRPeriodicityPage,
+  }))
+)
 const TAManagementPage = lazy(() =>
   import('@/pages/TAManagement').then((m) => ({
     default: m.TAManagementPage,
@@ -109,6 +114,11 @@ const ReportsDashboardPage = lazy(() =>
 const TrainingPage = lazy(() =>
   import('@/pages/Training').then((m) => ({
     default: m.TrainingPage,
+  }))
+)
+const LawyerWorkplacePage = lazy(() =>
+  import('@/pages/LawyerWorkplace').then((m) => ({
+    default: m.LawyerWorkplacePage,
   }))
 )
 const ActionAnalysisPage = lazy(() =>
@@ -143,6 +153,9 @@ const TagsPage = lazy(() => import('@/pages/Tags/TagsPage').then((m) => ({ defau
 const ContactTypesPage = lazy(() =>
   import('@/pages/ContactTypes/ContactTypesPage').then((m) => ({ default: m.ContactTypesPage }))
 )
+const ContactTagsPage = lazy(() =>
+  import('@/pages/ContactTags/ContactTagsPage').then((m) => ({ default: m.ContactTagsPage }))
+)
 const ProfileSettingsPage = lazy(() =>
   import('@/pages/ProfileSettings/ProfileSettingsPage').then((m) => ({
     default: m.ProfileSettingsPage,
@@ -173,6 +186,11 @@ const BulkTagAssignmentPage = lazy(() =>
 const BulkWriteoffImportPage = lazy(() =>
   import('@/pages/Operations').then((m) => ({
     default: m.BulkWriteoffImportPage,
+  }))
+)
+const RepaymentConfigurationPage = lazy(() =>
+  import('@/pages/RepaymentConfiguration/RepaymentConfigurationPage').then((m) => ({
+    default: m.RepaymentConfigurationPage,
   }))
 )
 const BulkSaleNotesImportPage = lazy(() =>
@@ -357,6 +375,20 @@ export const router = createBrowserRouter([
         ),
       },
       {
+        path: 'lawyer-workplace',
+        element: (
+          <PermissionRoute
+            requiredPermissions={[
+              PERMISSIONS.LEGAL_WORKPLACE.VIEW,
+              PERMISSIONS.SYSTEM.MANAGE_SETTINGS,
+            ]}
+            mode="any"
+          >
+            {withSuspense(<LawyerWorkplacePage />)}
+          </PermissionRoute>
+        ),
+      },
+      {
         path: 'sellers',
         element: (
           <PermissionRoute requiredPermission={PERMISSIONS.SELLERS.VIEW}>
@@ -405,6 +437,22 @@ export const router = createBrowserRouter([
         ),
       },
       {
+        path: 'system-settings/contact-tags',
+        element: (
+          <PermissionRoute requiredPermission={PERMISSIONS.CONTACT_TAGS.MANAGE}>
+            {withSuspense(<ContactTagsPage />)}
+          </PermissionRoute>
+        ),
+      },
+      {
+        path: 'system-settings/repayment-configuration',
+        element: (
+          <PermissionRoute requiredPermission={PERMISSIONS.REPAYMENT_CONFIG.VIEW}>
+            {withSuspense(<RepaymentConfigurationPage />)}
+          </PermissionRoute>
+        ),
+      },
+      {
         path: 'system-settings/scoring-configuration',
         element: (
           <PermissionRoute requiredPermission={PERMISSIONS.SCORING_CONFIG.VIEW}>
@@ -433,6 +481,14 @@ export const router = createBrowserRouter([
         element: (
           <PermissionRoute requiredPermission={PERMISSIONS.SYSTEM.MANAGE_SETTINGS}>
             {withSuspense(<RRNotificationsPage />)}
+          </PermissionRoute>
+        ),
+      },
+      {
+        path: 'system-settings/rr-periodicity',
+        element: (
+          <PermissionRoute requiredPermission={PERMISSIONS.SYSTEM.MANAGE_SETTINGS}>
+            {withSuspense(<RRPeriodicityPage />)}
           </PermissionRoute>
         ),
       },

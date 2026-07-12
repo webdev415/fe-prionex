@@ -1,0 +1,1 @@
+export { LawyerWorkplacePage } from './LawyerWorkplacePage'

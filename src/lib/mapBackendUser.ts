@@ -108,6 +108,10 @@ export function buildUserFromJwtToken(token: string, loginUser?: LoginUserFallba
       payload?.active_department_id != null && payload.active_department_id !== ''
         ? Number(payload.active_department_id)
         : null,
+    active_group_id:
+      payload?.active_group_id != null && payload.active_group_id !== ''
+        ? Number(payload.active_group_id)
+        : null,
     permissions,
     is_agent: false,
     agent_status: 'offline',

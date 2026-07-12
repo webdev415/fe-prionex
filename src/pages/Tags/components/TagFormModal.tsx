@@ -60,6 +60,7 @@ type TagFormData = {
   is_protected?: boolean
   protected_removal_roles?: string[]
   expiry_type?: string
+  is_related_tag?: boolean
 }
 
 /**
@@ -205,6 +206,7 @@ export function TagFormModal({
       is_protected: (tag as TagDefinition)?.is_protected ?? false,
       protected_removal_roles: (tag as TagDefinition)?.protected_removal_roles ?? [],
       expiry_type: (tag as TagDefinition)?.expiry_type ?? 'permanent',
+      is_related_tag: (tag as TagDefinition)?.is_related_tag ?? false,
     },
   })
 
@@ -241,6 +243,7 @@ export function TagFormModal({
         is_protected: tagDef?.is_protected ?? false,
         protected_removal_roles: tagDef?.protected_removal_roles ?? [],
         expiry_type: tagDef?.expiry_type ?? 'permanent',
+        is_related_tag: tagDef?.is_related_tag ?? false,
       })
     }
   }, [open, tag, reset])
@@ -633,6 +636,34 @@ export function TagFormModal({
                   )}
                 </p>
               )}
+            </div>
+
+            {/* Related Tag */}
+            <div className="rounded-lg border border-gray-200 px-4 py-3">
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="is_related_tag"
+                  {...register('is_related_tag')}
+                  className="h-4 w-4 rounded border-gray-300"
+                  disabled={isSystemTag}
+                />
+                <Label htmlFor="is_related_tag">
+                  {t('pages.tags.fields.isRelatedTag', 'Related Tag')}
+                  <FieldTooltip
+                    text={t(
+                      'pages.tags.fields.tooltips.relatedTag',
+                      'When enabled, this tag appears on linked clients who share a phone number'
+                    )}
+                  />
+                </Label>
+              </div>
+              <p className="mt-1 text-xs text-gray-500">
+                {t(
+                  'pages.tags.relatedTagHint',
+                  'Shown in the Related Tags tab on profiles of clients linked by shared phone numbers.'
+                )}
+              </p>
             </div>
 
             {/* Protected Tag */}

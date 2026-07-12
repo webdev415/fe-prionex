@@ -57,42 +57,77 @@ function toIsoOrUndefined(v?: string, endOfDay = false): string | undefined {
 const NOTE_PREVIEW_LENGTH = 50
 
 /**
- * Notes cell with per-row expand/collapse toggle. Short notes render
- * inline with no toggle. Long notes show a truncated preview by default
- * and a button to reveal the full text. State is local to the row so
- * expanding one note does not affect any other row.
+ * Notes cell with a per-row expand/collapse toggle. Short notes render
+ * inline with no toggle. Long notes show a truncated preview by default and
+ * a button to reveal the full text.
+ *
+ * The expanded state is owned by the parent (passed via ``expanded`` /
+ * ``onToggle``) rather than kept local. This lets the Result column react to
+ * it — when any note is expanded the Result column truncates with an ellipsis
+ * to free horizontal space for the (now wider) Notes column. Text uses
+ * ``break-words`` so a long unbroken string wraps instead of overflowing or
+ * collapsing to 2–3 characters per line.
  */
-function NotesCell({ note }: { note: string | null | undefined }) {
+function NotesCell({
+  note,
+  expanded,
+  onToggle,
+}: {
+  note: string | null | undefined
+  expanded: boolean
+  onToggle: () => void
+}) {
   const { t } = useTranslation('common')
-  const [expanded, setExpanded] = useState(false)
   if (!note) {
     return <span className="text-xs text-gray-600">-</span>
   }
   const isLong = note.length > NOTE_PREVIEW_LENGTH
   if (!isLong) {
-    return <span className="text-xs text-gray-600">{note}</span>
+    return (
+      <span className="text-xs break-words [word-break:break-word] whitespace-pre-wrap text-gray-600">
+        {note}
+      </span>
+    )
   }
   const preview = note.slice(0, NOTE_PREVIEW_LENGTH) + '...'
   const label = expanded
     ? t('pages.clientChains.history.hideFullNote')
     : t('pages.clientChains.history.showFullNote')
+  const toggleButton = (
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-expanded={expanded}
+      aria-label={label}
+      title={label}
+      className="shrink-0 cursor-pointer rounded p-0.5 text-black hover:bg-gray-100"
+    >
+      {expanded ? (
+        <Icons.ArrowUp size={16} strokeWidth={2} />
+      ) : (
+        <Icons.ArrowDown size={16} strokeWidth={2} />
+      )}
+    </button>
+  )
+  if (!expanded) {
+    // Collapsed: keep the preview on a SINGLE line clipped with an ellipsis.
+    // ``min-w-0 truncate`` inside a flex row lets it shrink and clip to the
+    // column width instead of wrapping into a 2–3-char-per-line sliver when a
+    // long Result column steals the space.
+    return (
+      <span className="flex max-w-[260px] items-center gap-1 text-xs text-gray-600">
+        <span className="min-w-0 truncate">{preview}</span>
+        {toggleButton}
+      </span>
+    )
+  }
+  // Expanded: reveal the full note, wrapping at word boundaries.
+  // ``break-words`` (overflow-wrap) + ``[word-break:break-word]`` guarantee a
+  // long unbreakable string still breaks instead of wrapping character-by-char.
   return (
-    <span className="inline-flex items-start gap-1 text-xs text-gray-600">
-      <span className="whitespace-pre-wrap">{expanded ? note : preview}</span>
-      <button
-        type="button"
-        onClick={() => setExpanded((v) => !v)}
-        aria-expanded={expanded}
-        aria-label={label}
-        title={label}
-        className="shrink-0 cursor-pointer rounded p-0.5 text-black hover:bg-gray-100"
-      >
-        {expanded ? (
-          <Icons.ArrowUp size={16} strokeWidth={2} />
-        ) : (
-          <Icons.ArrowDown size={16} strokeWidth={2} />
-        )}
-      </button>
+    <span className="flex items-start gap-1 text-xs text-gray-600">
+      <span className="break-words [word-break:break-word] whitespace-pre-wrap">{note}</span>
+      {toggleButton}
     </span>
   )
 }
@@ -101,6 +136,19 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
   const [editingId, setEditingId] = useState<number | null>(null)
   const [deletingId, setDeletingId] = useState<number | null>(null)
   const deleteMut = useDeleteTAInteraction()
+  // Which rows have their Notes expanded. Lifted out of NotesCell so the
+  // Result column can truncate while any note is open (table columns share one
+  // width across rows, so freeing space for Notes means capping Result for the
+  // whole column). Toggling one row never touches another's state.
+  const [expandedNoteIds, setExpandedNoteIds] = useState<Set<number>>(new Set())
+  const toggleNote = (id: number) =>
+    setExpandedNoteIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  const anyNoteExpanded = expandedNoteIds.size > 0
   // Map debt ID → contract number for display. We deliberately only render
   // debts that are present here; values not in the map are treated as
   // not-a-credit (chain layout drift can shove phone numbers / unrelated
@@ -200,14 +248,21 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
     return m
   }, [operators])
 
-  const { data, isLoading } = useClientTAInteractions(clientId, {
-    chain_id: appliedFilters.chainFilter ? parseInt(appliedFilters.chainFilter, 10) : undefined,
-    notes_search: appliedFilters.notesSearch || undefined,
-    date_from: toIsoOrUndefined(appliedFilters.dateFrom, false),
-    date_to: toIsoOrUndefined(appliedFilters.dateTo, true),
-    skip: (page - 1) * pageSize,
-    limit: pageSize,
-  })
+  const { data, isLoading } = useClientTAInteractions(
+    clientId,
+    {
+      chain_id: appliedFilters.chainFilter ? parseInt(appliedFilters.chainFilter, 10) : undefined,
+      notes_search: appliedFilters.notesSearch || undefined,
+      date_from: toIsoOrUndefined(appliedFilters.dateFrom, false),
+      date_to: toIsoOrUndefined(appliedFilters.dateTo, true),
+      skip: (page - 1) * pageSize,
+      limit: pageSize,
+    },
+    // Poll so interactions created by the background consumer (auto-completed
+    // automatic chains) appear without a manual reload. Pauses when the tab is
+    // unfocused.
+    { refetchInterval: 8_000 }
+  )
 
   const items = data?.items ?? []
   const totalCount = data?.total_count ?? 0
@@ -439,15 +494,23 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
           }
         }
 
+        // While any note is expanded, cap the Result column and truncate with
+        // an ellipsis so the freed width goes to the Notes column. Collapsed →
+        // no cap, Result shows in full. max-w is a ceiling (auto table layout),
+        // so short results still render at their natural width.
+        const resultCls = anyNoteExpanded
+          ? 'text-xs text-gray-700 inline-block max-w-[240px] truncate align-middle'
+          : 'text-xs text-gray-700'
+
         if (entries.length === 0) {
           const fallback =
             row.dropdown_value_name ??
             (row.dictionary_path.length > 0 ? row.dictionary_path.join(' > ') : '-')
-          return <span className="text-xs text-gray-700">{fallback}</span>
+          return <span className={resultCls}>{fallback}</span>
         }
 
         return (
-          <span className="text-xs text-gray-700">
+          <span className={resultCls}>
             {entries.map((e, i) => (
               <span key={i}>
                 {e.value}
@@ -514,7 +577,21 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
       key: 'notes',
       header: t('pages.clientChains.history.notes'),
       align: 'left',
-      render: (row) => <NotesCell note={row.notes} />,
+      // Expanded: give the Notes column real room (min-width) and let it wrap
+      // at word boundaries. Collapsed: a modest min-width so the single-line
+      // preview shows a useful chunk instead of a few letters, capped so it
+      // doesn't hog space. Setting a className also drops the table's default
+      // nowrap for this cell so the expanded note can render multi-line.
+      className: anyNoteExpanded
+        ? 'min-w-[320px] max-w-[560px] whitespace-normal break-words align-middle'
+        : 'min-w-[180px] max-w-[300px] align-middle',
+      render: (row) => (
+        <NotesCell
+          note={row.notes}
+          expanded={expandedNoteIds.has(row.id)}
+          onToggle={() => toggleNote(row.id)}
+        />
+      ),
     },
     {
       key: 'recorded_by_name',

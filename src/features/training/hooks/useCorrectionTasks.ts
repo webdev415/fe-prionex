@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   createCorrectionTask,
   getCorrectionStats,
+  getCorrectionTaskByFeedback,
   listCorrectionTasks,
   transitionCorrectionTask,
   type GetStatsFilters,
@@ -16,6 +17,7 @@ export const correctionKeys = {
   all: ['training', 'correction'] as const,
   list: (filters: CorrectionTaskListFilters) => [...correctionKeys.all, 'list', filters] as const,
   stats: (filters: GetStatsFilters) => [...correctionKeys.all, 'stats', filters] as const,
+  byFeedback: (feedbackId: number) => [...correctionKeys.all, 'by-feedback', feedbackId] as const,
 }
 
 export function useCorrectionTasks(filters: CorrectionTaskListFilters = {}, enabled = true) {
@@ -33,6 +35,18 @@ export function useCorrectionStats(filters: GetStatsFilters, enabled = true) {
     queryFn: () => getCorrectionStats(filters),
     enabled,
     staleTime: 60_000,
+  })
+}
+
+export function useCorrectionTaskByFeedback(feedbackId: number | null, enabled = true) {
+  return useQuery({
+    queryKey:
+      feedbackId == null
+        ? [...correctionKeys.all, 'by-feedback', 'pending']
+        : correctionKeys.byFeedback(feedbackId),
+    queryFn: () => getCorrectionTaskByFeedback(feedbackId as number),
+    enabled: enabled && feedbackId != null,
+    staleTime: 10_000,
   })
 }
 

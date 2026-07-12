@@ -30,34 +30,24 @@ import {
   type DocumentJournalEntry,
   type DocumentJournalParams,
   type DocumentAction,
-  type DocumentType,
 } from '@/features/documents'
+import { useDocumentTypes } from '@/features/documentTypes'
 import { useOperators } from '@/features/users/hooks/useUsers'
 import { useAuthStore } from '@/stores/authStore'
 import { useHasPermission, useHasAnyPermission } from '@/hooks'
 import { PERMISSIONS } from '@/constants/permissions'
-import { DocumentTemplatesTab } from './components'
-
-const DOCUMENT_TYPES: DocumentType[] = [
-  'passport',
-  'inn',
-  'contract',
-  'income',
-  'outcome',
-  'signature',
-  'military',
-  'other',
-]
+import { DocumentTypePill } from '@/components/DocumentTypePill'
+import { DocumentTemplatesTab, DocumentTypesTab } from './components'
 
 const ACTIONS: DocumentAction[] = ['uploaded', 'generated']
 
 const DEFAULT_PAGE_SIZE = 20
 const ALL_VALUE = '__all__'
 
-type Tab = 'journal' | 'templates'
+type Tab = 'journal' | 'templates' | 'types'
 
 interface Filters {
-  document_type?: DocumentType
+  document_type_id?: number
   action?: DocumentAction
   operator_id?: string
   client_search?: string
@@ -111,7 +101,10 @@ export function DocumentGenerationPage() {
     PERMISSIONS.DOCUMENT_GENERATION.CREATE_EDIT_TEMPLATES,
     PERMISSIONS.DOCUMENT_GENERATION.DELETE_TEMPLATES,
   ])
-  const [tab, setTab] = useState<Tab>(canViewJournal ? 'journal' : 'templates')
+  const canManageTypes = useHasPermission(PERMISSIONS.SYSTEM.MANAGE_SETTINGS)
+  const [tab, setTab] = useState<Tab>(
+    canViewJournal ? 'journal' : canViewTemplates ? 'templates' : 'types'
+  )
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE)
   const [filters, setFilters] = useState<Filters>({})
@@ -132,9 +125,11 @@ export function DocumentGenerationPage() {
     [operators]
   )
 
+  const { data: allTypes } = useDocumentTypes({ includeHidden: true })
+
   const apiParams = useMemo<DocumentJournalParams>(() => {
     const params: DocumentJournalParams = { page, limit: pageSize }
-    if (filters.document_type) params.document_type = filters.document_type
+    if (filters.document_type_id != null) params.document_type_id = filters.document_type_id
     if (filters.action) params.action = filters.action
     const opId = parseId(filters.operator_id)
     if (opId !== undefined) params.operator_id = opId
@@ -179,9 +174,10 @@ export function DocumentGenerationPage() {
         key: 'document_type',
         header: t('pages.documentGeneration.journal.columns.documentType', 'Document Type'),
         render: (row) => (
-          <span className="text-sm">
-            {t(`pages.documentGeneration.documentTypes.${row.document_type}`, row.document_type)}
-          </span>
+          <DocumentTypePill
+            name={row.document_type_ref?.name ?? '—'}
+            hex={row.document_type_ref?.color ?? '#64748B'}
+          />
         ),
       },
       {
@@ -283,6 +279,20 @@ export function DocumentGenerationPage() {
             {t('pages.documentGeneration.tabs.templates', 'Document Templates')}
           </button>
         )}
+        {canManageTypes && (
+          <button
+            type="button"
+            onClick={() => setTab('types')}
+            className={cn(
+              '-mb-px border-b-2 px-4 py-2 text-sm font-medium transition-colors',
+              tab === 'types'
+                ? 'border-primary-600 text-primary-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
+            )}
+          >
+            {t('pages.documentGeneration.tabs.types', 'Document Types')}
+          </button>
+        )}
       </div>
 
       {tab === 'journal' && canViewJournal ? (
@@ -293,21 +303,41 @@ export function DocumentGenerationPage() {
                 {t('pages.documentGeneration.filters.documentType', 'Document type')}
               </label>
               <Select
-                value={filters.document_type ?? ALL_VALUE}
+                value={
+                  filters.document_type_id == null ? ALL_VALUE : String(filters.document_type_id)
+                }
                 onValueChange={(v) =>
-                  updateFilter('document_type', v === ALL_VALUE ? undefined : (v as DocumentType))
+                  updateFilter('document_type_id', v === ALL_VALUE ? undefined : Number(v))
                 }
               >
                 <SelectTrigger>
-                  <SelectValue />
+                  <SelectValue>
+                    {(() => {
+                      if (filters.document_type_id == null) {
+                        return t('pages.documentGeneration.filters.all', 'All')
+                      }
+                      const selected = (allTypes ?? []).find(
+                        (dt) => dt.id === filters.document_type_id
+                      )
+                      return selected ? (
+                        <DocumentTypePill
+                          name={selected.name}
+                          hex={selected.color}
+                          isHidden={selected.is_hidden}
+                        />
+                      ) : (
+                        t('pages.documentGeneration.filters.all', 'All')
+                      )
+                    })()}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value={ALL_VALUE}>
                     {t('pages.documentGeneration.filters.all', 'All')}
                   </SelectItem>
-                  {DOCUMENT_TYPES.map((dt) => (
-                    <SelectItem key={dt} value={dt}>
-                      {t(`pages.documentGeneration.documentTypes.${dt}`, dt)}
+                  {(allTypes ?? []).map((dt) => (
+                    <SelectItem key={dt.id} value={String(dt.id)}>
+                      <DocumentTypePill name={dt.name} hex={dt.color} isHidden={dt.is_hidden} />
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -456,6 +486,8 @@ export function DocumentGenerationPage() {
         </div>
       ) : tab === 'templates' && canViewTemplates ? (
         <DocumentTemplatesTab />
+      ) : tab === 'types' && canManageTypes ? (
+        <DocumentTypesTab />
       ) : null}
     </div>
   )
