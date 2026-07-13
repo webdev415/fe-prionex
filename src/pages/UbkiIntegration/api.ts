@@ -442,6 +442,17 @@ export async function getUbkiConnection(): Promise<UbkiConnectionInfo> {
   return r.data
 }
 
+export interface UbkiConnectionCredentials {
+  login: string | null
+  password: string | null
+}
+
+// Decrypted login/password to pre-fill the editor (admin-only, fetched on Edit).
+export async function getUbkiConnectionCredentials(): Promise<UbkiConnectionCredentials> {
+  const r = await api.get<UbkiConnectionCredentials>('/api/v1/ubki/connection/credentials')
+  return r.data
+}
+
 export async function testUbkiConnection(): Promise<UbkiTestResult> {
   const r = await api.post<UbkiTestResult>('/api/v1/ubki/test-connection')
   return r.data

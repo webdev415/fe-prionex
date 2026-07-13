@@ -6,6 +6,8 @@ import {
   MdSync,
   MdOutlineDescription,
   MdNorthEast,
+  MdOutlineVisibility,
+  MdOutlineVisibilityOff,
 } from 'react-icons/md'
 import { Icons } from '@/lib/icons'
 import { DataTable, type Column } from '@/components/ui/DataTable'
@@ -27,6 +29,7 @@ import {
   useUbkiConnection,
   useTestUbkiConnection,
   useUpdateUbkiConnection,
+  getUbkiConnectionCredentials,
   type UbkiTestResult,
   type UbkiConnectionUpdate,
 } from '../api'
@@ -135,6 +138,13 @@ const MODE_OPTIONS: MultiCheckboxOption<string>[] = [
   { value: 'Bulk', label: 'Bulk' },
 ]
 
+// Default UBKI auth endpoint per environment. Selecting Test/Production in the
+// connection editor fills the URL from here (unless a custom URL was typed).
+const DEFAULT_AUTH_URL: Record<UbkiEnv, string> = {
+  test: 'https://test.ubki.ua/b2_api_xml/ubki/auth',
+  production: 'https://secure.ubki.ua/b2_api_xml/ubki/auth',
+}
+
 export function OverviewTab() {
   // Connection config + live Test-connection (real UBKI auth via the ubki-service).
   const { data: conn } = useUbkiConnection()
@@ -142,6 +152,7 @@ export function OverviewTab() {
   const updateConn = useUpdateUbkiConnection()
   const [testResult, setTestResult] = useState<UbkiTestResult | null>(null)
   const [editing, setEditing] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
   const [form, setForm] = useState({
     environment: 'test',
     endpoint_url: '',
@@ -151,22 +162,35 @@ export function OverviewTab() {
   const env: UbkiEnv =
     (editing ? form.environment : conn?.environment) === 'production' ? 'production' : 'test'
 
-  const startEdit = () => {
+  const startEdit = async () => {
+    const startEnv: UbkiEnv = conn?.environment === 'production' ? 'production' : 'test'
+    // Pre-fill the real saved login/password so they're visible while editing
+    // (admin-only; fetched on demand, not on page load). Fall back to blank if
+    // the fetch fails or nothing is saved yet.
+    let creds = { login: '', password: '' }
+    try {
+      const c = await getUbkiConnectionCredentials()
+      creds = { login: c.login ?? '', password: c.password ?? '' }
+    } catch {
+      // ignore — leave fields blank
+    }
     setForm({
-      environment: conn?.environment === 'production' ? 'production' : 'test',
-      endpoint_url: conn?.auth_url ?? '',
-      // Don't seed a masked service login as an editable value.
-      login: conn?.login && !conn.login.includes('•') ? conn.login : '',
-      password: '',
+      environment: startEnv,
+      endpoint_url: conn?.auth_url || DEFAULT_AUTH_URL[startEnv],
+      login: creds.login,
+      password: creds.password,
     })
+    setShowPassword(false)
     setEditing(true)
   }
   const saveEdit = () => {
     const payload: UbkiConnectionUpdate = {
       environment: form.environment,
       endpoint_url: form.endpoint_url,
-      login: form.login,
     }
+    // Blank login/password → keep the currently stored value (the backend only
+    // overwrites when a non-empty value is sent). Sending '' would wipe them.
+    if (form.login.trim()) payload.login = form.login.trim()
     if (form.password) payload.password = form.password
     updateConn.mutate(payload, { onSuccess: () => setEditing(false) })
   }
@@ -347,7 +371,12 @@ export function OverviewTab() {
               </Button>
             </div>
           ) : (
-            <Button variant="outline" size="sm" leftIcon={<MdEdit size={14} />} onClick={startEdit}>
+            <Button
+              variant="outline"
+              size="sm"
+              leftIcon={<MdEdit size={14} />}
+              onClick={() => void startEdit()}
+            >
               Edit
             </Button>
           )}
@@ -365,7 +394,20 @@ export function OverviewTab() {
                     key={e}
                     type="button"
                     disabled={!editing}
-                    onClick={() => setForm((f) => ({ ...f, environment: e }))}
+                    onClick={() =>
+                      setForm((f) => {
+                        // Auto-fill the endpoint from the chosen environment,
+                        // unless the user typed a custom (non-default) URL.
+                        const isDefaultUrl =
+                          !f.endpoint_url ||
+                          (Object.values(DEFAULT_AUTH_URL) as string[]).includes(f.endpoint_url)
+                        return {
+                          ...f,
+                          environment: e,
+                          endpoint_url: isDefaultUrl ? DEFAULT_AUTH_URL[e] : f.endpoint_url,
+                        }
+                      })
+                    }
                     className={`inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
                       active ? 'bg-secondary-800 text-white' : 'text-gray-400'
                     } ${editing ? 'cursor-pointer' : 'cursor-default'}`}
@@ -401,7 +443,7 @@ export function OverviewTab() {
             <input
               readOnly={!editing}
               value={editing ? form.login : (conn?.login ?? '—')}
-              placeholder={editing ? 'Enter your login' : undefined}
+              placeholder={editing ? 'Leave blank to keep current' : undefined}
               onChange={(e) => setForm((f) => ({ ...f, login: e.target.value }))}
               className={`h-10 w-full rounded-lg border border-gray-200 px-3 text-xs text-gray-700 ${
                 editing ? 'focus:border-primary-500 bg-white focus:outline-none' : 'bg-gray-50'
@@ -410,17 +452,46 @@ export function OverviewTab() {
           </div>
 
           <div className="min-w-[150px] flex-1">
-            <label className="mb-1 block text-xs font-medium text-gray-500">Password</label>
-            <input
-              type="password"
-              readOnly={!editing}
-              value={editing ? form.password : '********'}
-              placeholder={editing ? 'Leave blank to keep current' : undefined}
-              onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
-              className={`h-10 w-full rounded-lg border border-gray-200 px-3 text-xs text-gray-700 ${
-                editing ? 'focus:border-primary-500 bg-white focus:outline-none' : 'bg-gray-50'
-              }`}
-            />
+            <label className="mb-1 flex items-center gap-1.5 text-xs font-medium text-gray-500">
+              Password
+              {/* Show that a password is stored (the view-mode field is masked). */}
+              {conn?.credentials_configured && (
+                <span className="text-success-700 inline-flex items-center gap-0.5 text-[10px] font-medium">
+                  <MdCheck size={11} />
+                  Saved
+                </span>
+              )}
+            </label>
+            <div className="relative">
+              <input
+                type={editing && showPassword ? 'text' : 'password'}
+                readOnly={!editing}
+                value={editing ? form.password : '********'}
+                placeholder={editing ? 'Leave blank to keep current' : undefined}
+                onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
+                className={`h-10 w-full rounded-lg border border-gray-200 pl-3 text-xs text-gray-700 ${
+                  editing
+                    ? 'focus:border-primary-500 bg-white pr-9 focus:outline-none'
+                    : 'bg-gray-50 pr-3'
+                }`}
+              />
+              {/* Reveal the saved/typed password while editing. */}
+              {editing && (
+                <button
+                  type="button"
+                  tabIndex={-1}
+                  onClick={() => setShowPassword((v) => !v)}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  className="absolute inset-y-0 right-0 flex items-center pr-2.5 text-gray-400 hover:text-gray-600"
+                >
+                  {showPassword ? (
+                    <MdOutlineVisibilityOff size={16} />
+                  ) : (
+                    <MdOutlineVisibility size={16} />
+                  )}
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Test connection — performs a real UBKI authorization. */}
