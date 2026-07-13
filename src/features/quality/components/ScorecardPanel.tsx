@@ -15,6 +15,7 @@ import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/Button'
 import { Icons } from '@/lib/icons'
+import { useAuthStore } from '@/stores/authStore'
 import { useScorecardDraft } from '../hooks/useScorecardDraft'
 import {
   useScorecard,
@@ -129,7 +130,15 @@ export function ScorecardPanel({
 
   const [locked, setLocked] = useState(false)
   const status = activeScorecard?.status ?? 'draft'
-  const canEdit = status === 'draft' && !locked
+  // Only the originating trainer may mutate a scorecard — the backend enforces
+  // this on PUT/DELETE/send with a 403, so gate the edit UI to match instead of
+  // letting the trainer edit and fail on save.
+  const currentUserId = useAuthStore((s) => s.user?.id)
+  const isOriginatingTrainer =
+    activeScorecard != null &&
+    currentUserId != null &&
+    Number(currentUserId) === activeScorecard.trainer_id
+  const canEdit = status === 'draft' && !locked && isOriginatingTrainer
 
   const handleSaveDraft = async () => {
     await draft.flush()
@@ -316,6 +325,18 @@ export function ScorecardPanel({
         </button>
       ) : null}
 
+      {!isOriginatingTrainer && status !== 'sent' ? (
+        <div className="flex items-start gap-2 rounded-lg bg-amber-50 p-3 text-xs text-amber-700">
+          <Icons.Lock size={14} className="mt-0.5 flex-shrink-0" />
+          <span>
+            {t(
+              'pages.training.scorecard.readOnlyNotOwner',
+              'Read-only — only the trainer who created this scorecard can edit it.'
+            )}
+          </span>
+        </div>
+      ) : null}
+
       <div className="bg-primary-50 text-primary-700 flex items-center justify-between gap-2 rounded-lg p-3 text-sm">
         <span>
           {t('pages.training.scorecard.computedScore', 'Score')}:{' '}
@@ -398,7 +419,7 @@ export function ScorecardPanel({
           </>
         ) : null}
 
-        {status === 'draft' && locked ? (
+        {status === 'draft' && locked && isOriginatingTrainer ? (
           <Button
             variant="primary"
             size="md"
@@ -409,7 +430,7 @@ export function ScorecardPanel({
           </Button>
         ) : null}
 
-        {status === 'completed' ? (
+        {status === 'completed' && isOriginatingTrainer ? (
           <Button
             variant="primary"
             size="md"
