@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { toast } from 'sonner'
 import {
   MdClose,
   MdContentCopy,
@@ -124,13 +125,21 @@ function SubmissionDrawerContent({
     resend.mutate(detail.debt_id, {
       onSuccess: (res) => {
         const ok = res.status === 'success'
-        window.alert(
-          ok
-            ? `Resent successfully (request id: ${res.ubki_request_id ?? '—'}).`
-            : `Resend ${res.status}: ${res.error_code ?? ''} ${res.error_message ?? ''}`.trim()
-        )
+        if (ok) {
+          // A resend creates a NEW submission; this row (the old attempt) stays
+          // as history. Close the drawer so the stale error view goes away —
+          // the refreshed list shows the new successful submission.
+          toast.success(
+            `Resent successfully (new submission, request id: ${res.ubki_request_id ?? '—'}).`
+          )
+          onClose()
+        } else {
+          toast.error(
+            `Resend ${res.status}: ${res.error_code ?? ''} ${res.error_message ?? ''}`.trim()
+          )
+        }
       },
-      onError: () => window.alert('Resend failed. Please try again.'),
+      onError: () => toast.error('Resend failed. Please try again.'),
     })
   }
 

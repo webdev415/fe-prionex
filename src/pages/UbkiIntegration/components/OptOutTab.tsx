@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState } from 'react'
+import { toast } from 'sonner'
 import { MdOutlineFileUpload, MdAdd, MdDeleteOutline, MdOutlinePersonOff } from 'react-icons/md'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { Button } from '@/components/ui/Button'
@@ -191,12 +192,12 @@ export function OptOutTab() {
         onSuccess: (res) => {
           const parts = [`Imported ${res.imported_count}`]
           if (res.skipped_count) parts.push(`skipped ${res.skipped_count} (no matching client)`)
-          window.alert(
+          toast.success(
             `${parts.join(', ')}.` +
               (res.not_found.length ? `\nNot found: ${res.not_found.slice(0, 10).join(', ')}` : '')
           )
         },
-        onError: () => window.alert('Import failed. Make sure the file is a CSV of TINs.'),
+        onError: () => toast.error('Import failed. Make sure the file is a CSV of TINs.'),
       }
     )
   }

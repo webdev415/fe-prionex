@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { toast } from 'sonner'
 import { MdOutlineFileDownload, MdSync, MdInfoOutline } from 'react-icons/md'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { Button } from '@/components/ui/Button'
@@ -126,7 +127,7 @@ export function AuditLogTab() {
       a.click()
       URL.revokeObjectURL(url)
     } catch {
-      window.alert('Export failed. Please try again.')
+      toast.error('Export failed. Please try again.')
     } finally {
       setExporting(false)
     }

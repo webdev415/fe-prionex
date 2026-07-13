@@ -187,9 +187,11 @@ export function useResendSubmission() {
   return useMutation({
     mutationFn: resendSubmission,
     onSuccess: () => {
-      // A resend creates a new log row and moves the counters.
+      // A resend creates a NEW log row (the old attempt stays as history) and
+      // moves the counters. Refresh the list, KPIs, and any open detail.
       qc.invalidateQueries({ queryKey: ['ubki-logs'] })
       qc.invalidateQueries({ queryKey: ['ubki-kpis'] })
+      qc.invalidateQueries({ queryKey: ['ubki-log-detail'] })
     },
   })
 }
