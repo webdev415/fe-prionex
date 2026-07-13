@@ -2659,13 +2659,17 @@
           "loading": "Завантаження…",
           "selectExisting": "Виберіть договір",
           "emptyForSeller": "Договорів ще немає — створіть",
+          "reportingDateShort": "звітна",
+          "purchaseDateShort": "купівля",
           "fields": {
             "number": "Номер договору",
             "previousLender": "Хто продав",
             "previousLenderPlaceholderWithFallback": "Якщо залишити порожнім, буде вставлено юридичну назву продавця.",
             "previousLenderPlaceholderGeneric": "Введіть особу, яка продала борг",
             "contractPurchaseDate": "Дата купівлі за договором",
-            "contractPurchaseDatePlaceholder": "Виберіть дату купівлі за договором"
+            "contractPurchaseDatePlaceholder": "Виберіть дату купівлі за договором",
+            "reportingDate": "Звітна дата договору",
+            "reportingDatePlaceholder": "Виберіть звітну дату договору"
           }
         }
       },
