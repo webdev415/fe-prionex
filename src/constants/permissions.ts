@@ -361,6 +361,16 @@ export const PERMISSIONS = {
   UBKI: {
     SUBMIT: 'submit_to_ubki',
   },
+
+  /**
+   * AI Assistant Category (1 permission)
+   * Gates access to the operator AI assistant (chat, history, feedback,
+   * voice/TTS). Enforced server-side by the ai-assistant proxy; this UI gate
+   * hides the entry for users who lack it. Orthogonal to per-user data-scope.
+   */
+  AI_ASSISTANT: {
+    USE: 'use_ai_assistant',
+  },
 } as const
 
 /**
@@ -419,6 +429,7 @@ export const PERMISSION_CATEGORIES = {
   CONTACT_TAGS: 'Contact Tags',
   RESTRUCTURING: 'Restructuring',
   UBKI: 'UBKI',
+  AI_ASSISTANT: 'AI Assistant',
 } as const
 
 /**
@@ -614,4 +625,7 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
 
   // UBKI — outbound credit-bureau submission
   submit_to_ubki: 'Manually submit client credit data to the UBKI credit bureau (single and bulk)',
+
+  // AI Assistant
+  use_ai_assistant: 'Use the operator AI assistant (chat, history, feedback, voice)',
 }

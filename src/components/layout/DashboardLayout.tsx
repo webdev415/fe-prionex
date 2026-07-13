@@ -16,6 +16,7 @@ import { MinimizedChainExecutorBubble } from './MinimizedChainExecutorBubble'
 import { NotificationBell } from './NotificationBell'
 import { PERMISSIONS } from '@/constants/permissions'
 import type { Permission } from '@/constants/permissions'
+import { useHasPermission } from '@/hooks/usePermissions'
 import { SearchResults, type SearchResult } from '@/components/ui/SearchResults'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { cn } from '@/lib/utils'
@@ -53,7 +54,14 @@ function AiAssistantHeaderButton() {
   const navigate = useNavigate()
   const location = useLocation()
   const { t } = useTranslation('common')
+  const canUseAssistant = useHasPermission(PERMISSIONS.AI_ASSISTANT.USE)
   const isActive = location.pathname === '/dashboard/ai-assistant'
+
+  // Entitlement gate: hide the assistant entry for users without use_ai_assistant
+  // (the proxy/route also enforce it; this keeps the UI honest — no dead button).
+  if (!canUseAssistant) {
+    return null
+  }
 
   return (
     <button
