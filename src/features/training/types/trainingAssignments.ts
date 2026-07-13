@@ -1,18 +1,19 @@
-/** Types for the unified Assignments grid. Mirror quality-service. */
+/** Types for the Training Assignments grid (KAN-498). Mirror quality-service. */
 
-export type AssignmentKind = 'course' | 'drill'
-export type AssignmentStatus = 'not_started' | 'in_progress' | 'completed'
+export type AssignmentStatus = 'done' | 'in_progress' | 'overdue'
 
-export interface TrainingAssignmentRow {
-  kind: AssignmentKind
-  ref_id: number
-  title: string
+export interface AssignmentRow {
+  enrollment_id: number
   operator_id: number
-  status: AssignmentStatus
+  course_id: number
+  course_title: string
+  duration_minutes?: number | null
+  lesson_count: number
+  category?: string | null
   progress_pct: number
+  deadline?: string | null
+  status: AssignmentStatus
   assigned_at: string
-  due_at?: string | null
-  overdue: boolean
 }
 
 export interface AssignmentKpis {
@@ -22,11 +23,15 @@ export interface AssignmentKpis {
 }
 
 export interface AssignmentListResponse {
-  rows: TrainingAssignmentRow[]
+  rows: AssignmentRow[]
   kpis: AssignmentKpis
   total: number
 }
 
 export interface AssignmentFilters {
   operator_id?: number
+  status?: AssignmentStatus
+  q?: string
+  limit?: number
+  offset?: number
 }
