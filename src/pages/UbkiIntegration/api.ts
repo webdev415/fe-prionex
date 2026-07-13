@@ -202,6 +202,7 @@ export interface UbkiSettings {
   send_time: string // "HH:MM"
   timezone: string
   frequency: 'daily' | 'weekdays' | 'custom'
+  custom_days: string[] // weekdays for frequency='custom' (mon..sun)
   send_only_changed: boolean
   max_retry_attempts: number
   retry_interval_minutes: number

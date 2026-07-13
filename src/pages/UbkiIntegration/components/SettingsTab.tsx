@@ -107,6 +107,16 @@ function SectionCard({
 const inputCls =
   'h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-xs text-gray-700 focus:border-primary-500 focus:outline-none'
 
+const WEEKDAYS: { key: string; label: string }[] = [
+  { key: 'mon', label: 'Mon' },
+  { key: 'tue', label: 'Tue' },
+  { key: 'wed', label: 'Wed' },
+  { key: 'thu', label: 'Thu' },
+  { key: 'fri', label: 'Fri' },
+  { key: 'sat', label: 'Sat' },
+  { key: 'sun', label: 'Sun' },
+]
+
 export function SettingsTab() {
   const { data, isLoading, isError } = useUbkiSettings()
   const update = useUpdateUbkiSettings()
@@ -187,7 +197,19 @@ export function SettingsTab() {
                 <button
                   key={f}
                   type="button"
-                  onClick={() => set({ frequency: f })}
+                  onClick={() =>
+                    set(
+                      f === 'custom'
+                        ? {
+                            frequency: f,
+                            // Default to weekdays so "Custom" is never empty by accident.
+                            custom_days: form.custom_days.length
+                              ? form.custom_days
+                              : ['mon', 'tue', 'wed', 'thu', 'fri'],
+                          }
+                        : { frequency: f }
+                    )
+                  }
                   className={`flex-1 rounded-lg px-2 py-2 text-xs font-medium capitalize ${
                     form.frequency === f
                       ? 'bg-secondary-800 text-white'
@@ -198,6 +220,33 @@ export function SettingsTab() {
                 </button>
               ))}
             </div>
+            {form.frequency === 'custom' && (
+              <div className="mt-2 flex flex-wrap gap-1">
+                {WEEKDAYS.map((d) => {
+                  const on = form.custom_days.includes(d.key)
+                  return (
+                    <button
+                      key={d.key}
+                      type="button"
+                      onClick={() =>
+                        set({
+                          custom_days: on
+                            ? form.custom_days.filter((x) => x !== d.key)
+                            : [...form.custom_days, d.key],
+                        })
+                      }
+                      className={`rounded-md px-2.5 py-1 text-xs font-medium ${
+                        on
+                          ? 'bg-secondary-800 text-white'
+                          : 'border border-gray-200 bg-white text-gray-600'
+                      }`}
+                    >
+                      {d.label}
+                    </button>
+                  )
+                })}
+              </div>
+            )}
           </Field>
         </div>
         <ToggleRow
