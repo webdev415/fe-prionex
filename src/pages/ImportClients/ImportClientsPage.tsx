@@ -260,6 +260,7 @@ export function ImportClientsPage() {
       agreement_number: '',
       previous_lender: '',
       contract_purchase_date: '',
+      reporting_date: '',
     },
     selectedSellerLegalName: null,
   })
@@ -310,6 +311,8 @@ export function ImportClientsPage() {
     } else {
       if (!step1Data.newFactoringAgreement.agreement_number.trim()) return false
       if (!step1Data.newFactoringAgreement.contract_purchase_date) return false
+      // Reporting Date is required in create-new mode.
+      if (!step1Data.newFactoringAgreement.reporting_date) return false
       // Sellers without legal_name have no BE fallback for previous_lender,
       // so the operator must fill "Who sold" explicitly — otherwise the
       // new agreement would land with previous_lender = NULL.

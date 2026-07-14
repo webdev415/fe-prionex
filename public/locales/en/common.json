@@ -2659,13 +2659,17 @@
           "loading": "Loading…",
           "selectExisting": "Select agreement",
           "emptyForSeller": "No agreements yet — create one",
+          "reportingDateShort": "reporting",
+          "purchaseDateShort": "purchase",
           "fields": {
             "number": "Agreement number",
             "previousLender": "Who sold",
             "previousLenderPlaceholderWithFallback": "If left blank, the seller's legal name will be inserted.",
             "previousLenderPlaceholderGeneric": "Enter the entity that sold the debt",
             "contractPurchaseDate": "Contract purchase date",
-            "contractPurchaseDatePlaceholder": "Select contract purchase date"
+            "contractPurchaseDatePlaceholder": "Select contract purchase date",
+            "reportingDate": "Reporting Date",
+            "reportingDatePlaceholder": "Select reporting date"
           }
         }
       },
