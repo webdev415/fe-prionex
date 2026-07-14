@@ -27,6 +27,13 @@ interface Row extends AssignmentRow {
   id: number
 }
 
+function initialsFor(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean)
+  if (parts.length === 0) return '?'
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
+  return `${parts[0][0]}${parts[1][0]}`.toUpperCase()
+}
+
 function formatDate(iso: string | null | undefined): string {
   if (!iso) return '—'
   const d = new Date(iso)
@@ -105,11 +112,16 @@ export function AssignmentsGridTab() {
           const team = op?.department_name
           const ext = op?.asterisk_extension
           return (
-            <div className="flex flex-col">
-              <span className="text-sm font-medium text-[#05040D]">{name}</span>
-              <span className="text-[10px] text-[#6B7280]">
-                {[team, ext ? `ext. ${ext}` : null].filter(Boolean).join(' · ') || '—'}
+            <div className="flex items-center gap-2">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#E3F6F3] text-[10px] font-semibold text-[#204E4D]">
+                {initialsFor(name.replace(/^#/, ''))}
               </span>
+              <div className="flex flex-col">
+                <span className="text-sm font-medium text-[#05040D]">{name}</span>
+                <span className="text-[10px] text-[#6B7280]">
+                  {[team, ext ? `ext. ${ext}` : null].filter(Boolean).join(' · ') || '—'}
+                </span>
+              </div>
             </div>
           )
         },

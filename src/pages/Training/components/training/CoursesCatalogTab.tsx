@@ -14,7 +14,7 @@ import {
   useUpdateCourse,
 } from '@/features/training/hooks/useCourses'
 import type { CourseCardData, CourseLevel, MaterialType } from '@/features/training/types/courses'
-import { TrainingPrimaryButton } from './TrainingToolbar'
+import { TrainingPrimaryButton, TrainingSearchBar } from './TrainingToolbar'
 
 const CATEGORY_OPTIONS = [
   'Scripts',
@@ -54,9 +54,13 @@ export function CoursesCatalogTab() {
   const [createOpen, setCreateOpen] = useState(false)
   const [assignCourse, setAssignCourse] = useState<CourseCardData | null>(null)
   const [detailsCourse, setDetailsCourse] = useState<CourseCardData | null>(null)
+  const [query, setQuery] = useState('')
+  const [category, setCategory] = useState('')
 
-  // No filter toolbar in the Figma catalog — list all non-archived courses.
-  const filters = useMemo(() => ({}), [])
+  const filters = useMemo(
+    () => ({ q: query || undefined, category: category || undefined }),
+    [query, category]
+  )
   const { data, isLoading, isError } = useCourses(filters)
   const courses = data?.data ?? []
 
@@ -71,9 +75,31 @@ export function CoursesCatalogTab() {
             onClick={() => setCreateOpen(true)}
             leftIcon={<Icons.Add size={14} className="text-white" />}
           >
-            {t('pages.training.training.courses.addCourse', 'Create a Course')}
+            {t('pages.training.training.courses.addCourse', 'Add Course')}
           </TrainingPrimaryButton>
         ) : null}
+      </div>
+
+      <div className="flex flex-wrap items-center gap-3">
+        <TrainingSearchBar
+          value={query}
+          onChange={setQuery}
+          placeholder={t('pages.training.training.courses.searchPlaceholder', 'Search by title…')}
+        />
+        <select
+          value={category}
+          onChange={(e) => setCategory(e.target.value)}
+          className="h-9 rounded-lg border border-[#DFDFDF] bg-white px-3 text-xs text-[#05040D] focus:outline-none"
+        >
+          <option value="">
+            {t('pages.training.training.courses.allCategories', 'All categories')}
+          </option>
+          {CATEGORY_OPTIONS.map((c) => (
+            <option key={c} value={c}>
+              {c}
+            </option>
+          ))}
+        </select>
       </div>
 
       {isLoading ? (
@@ -186,15 +212,17 @@ function CourseCard({
               </span>
             ) : null}
           </div>
-          {course.author_name || course.category ? (
+          <div className="flex items-center gap-2">
             <p className="text-xs text-[#4B5563]">
-              {course.author_name
-                ? `${t('pages.training.training.courses.author', 'Author')}: ${course.author_name}`
-                : ''}
-              {course.author_name && course.category ? ' · ' : ''}
-              {course.category ?? ''}
+              {t('pages.training.training.courses.author', 'Author')}:{' '}
+              {course.author_name ?? '—'}
             </p>
-          ) : null}
+            {course.category ? (
+              <span className="rounded-full bg-[#F3F4F6] px-2 py-0.5 text-[10px] font-medium text-[#374151]">
+                {course.category}
+              </span>
+            ) : null}
+          </div>
         </div>
 
         <div className="flex gap-2">

@@ -14,6 +14,7 @@ const BASE = '/api/v1/quality/courses'
 function buildListParams(filters: CourseListFilters): URLSearchParams {
   const params = new URLSearchParams()
   if (filters.status) params.set('status', filters.status)
+  if (filters.category) params.set('category', filters.category)
   if (filters.q) params.set('q', filters.q)
   if (filters.limit != null) params.set('limit', String(filters.limit))
   if (filters.offset != null) params.set('offset', String(filters.offset))
