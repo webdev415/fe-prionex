@@ -241,6 +241,26 @@ export function useUpdateUbkiSettings() {
   })
 }
 
+/** Trigger the automatic-submission pipeline immediately (Settings → Send now). */
+export async function runAutoSubmitNow(): Promise<{ status: string; task_id: string }> {
+  const r = await api.post<{ status: string; task_id: string }>('/api/v1/ubki/auto-submit/run-now')
+  return r.data
+}
+
+export function useRunAutoSubmitNow() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: runAutoSubmitNow,
+    // Refresh the log/KPIs shortly after so the new attempts show up.
+    onSuccess: () => {
+      setTimeout(() => {
+        qc.invalidateQueries({ queryKey: ['ubki-logs'] })
+        qc.invalidateQueries({ queryKey: ['ubki-kpis'] })
+      }, 1500)
+    },
+  })
+}
+
 // ── Opt-out (list / add / remove / CSV import) ───────────────────────────────
 export interface OptOutClientItem {
   client_id: number
@@ -278,7 +298,10 @@ export async function importOptOut(file: File, reason: string): Promise<OptOutIm
   fd.append('file', file)
   const r = await api.post<OptOutImportResult>(
     `/api/v1/ubki/opt-out/import?reason=${encodeURIComponent(reason)}`,
-    fd
+    fd,
+    // Override the axios instance's default application/json so the browser sets
+    // the multipart boundary — otherwise the backend can't read the file field.
+    { headers: { 'Content-Type': 'multipart/form-data' } }
   )
   return r.data
 }

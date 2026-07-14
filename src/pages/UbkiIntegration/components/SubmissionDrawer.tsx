@@ -12,11 +12,11 @@ import {
 } from 'react-icons/md'
 import { Button } from '@/components/ui/Button'
 import { formatDateTime } from '@/lib/formatters'
-import { useAuthStore } from '@/stores/authStore'
 import {
   useUbkiLogDetail,
   useSaveUbkiLogNote,
   useResendSubmission,
+  useUbkiSettings,
   type UbkiLogDetail,
   type UbkiLogDetailStep,
 } from '../api'
@@ -143,11 +143,13 @@ function SubmissionDrawerContent({
     })
   }
 
-  const userTimezone = useAuthStore((s) => s.user?.timezone)
+  // Match the submission log: timestamps follow the UBKI Settings timezone.
+  const { data: ubkiSettings } = useUbkiSettings()
+  const logTimezone = ubkiSettings?.timezone ?? 'Europe/Kyiv'
   const failed = detail.status === 'error'
   const clientName = detail.client_name ?? `Client #${detail.client_id}`
   const clientTin = detail.client_tin ? `TIN ${detail.client_tin}` : `Debt #${detail.debt_id}`
-  const creditDate = `${detail.contract_number ?? '—'} · ${formatDateTime(detail.created_at, userTimezone)}`
+  const creditDate = `${detail.contract_number ?? '—'} · ${formatDateTime(detail.created_at, logTimezone)}`
   const dirty = note !== saved
 
   return (

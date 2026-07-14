@@ -1,8 +1,22 @@
-import { useState } from 'react'
-import { MdClose, MdCheck } from 'react-icons/md'
+import { useState, useEffect, useRef } from 'react'
+import { MdClose, MdCheck, MdSend } from 'react-icons/md'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/Button'
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch'
-import { useUbkiSettings, useUpdateUbkiSettings, type UbkiSettings } from '../api'
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from '@/components/ui/Select'
+import { timezoneOptions } from '@/features/users/schemas/userSchemas'
+import {
+  useUbkiSettings,
+  useUpdateUbkiSettings,
+  useRunAutoSubmitNow,
+  type UbkiSettings,
+} from '../api'
 
 function Field({
   label,
@@ -44,7 +58,7 @@ function ToggleRow({
           <p className="text-xs text-gray-500">{desc}</p>
         </div>
       </div>
-      {note && <p className="max-w-[220px] text-right text-[11px] text-gray-400">{note}</p>}
+      {note && <p className="text-right text-[11px] whitespace-nowrap text-gray-400">{note}</p>}
     </div>
   )
 }
@@ -53,11 +67,31 @@ function Chips({
   items,
   onRemove,
   onAdd,
+  placeholder,
 }: {
   items: string[]
   onRemove: (i: number) => void
-  onAdd: () => void
+  onAdd: (value: string) => void
+  placeholder?: string
 }) {
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState('')
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (editing) inputRef.current?.focus()
+  }, [editing])
+
+  const commit = () => {
+    const value = draft.trim()
+    if (value && !items.includes(value)) onAdd(value)
+    setDraft('')
+  }
+  const close = () => {
+    setDraft('')
+    setEditing(false)
+  }
+
   return (
     <div className="flex flex-wrap items-center gap-2 rounded-lg border border-gray-200 bg-white px-2 py-1.5">
       {items.map((c, i) => (
@@ -75,13 +109,48 @@ function Chips({
           </button>
         </span>
       ))}
-      <button
-        type="button"
-        onClick={onAdd}
-        className="hover:text-dark-500 text-xs font-medium text-gray-500"
-      >
-        + Add
-      </button>
+      {editing ? (
+        <span className="inline-flex items-center gap-1">
+          <input
+            ref={inputRef}
+            value={draft}
+            placeholder={placeholder}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault()
+                commit()
+              } else if (e.key === 'Escape') {
+                close()
+              }
+            }}
+            onBlur={() => {
+              commit()
+              setEditing(false)
+            }}
+            className="focus:border-primary-500 min-w-[8rem] flex-1 rounded-md border border-gray-200 px-2 py-0.5 text-xs text-gray-700 focus:outline-none"
+          />
+          <button
+            type="button"
+            // Keep the input focused so onBlur doesn't fire before this click,
+            // which would otherwise commit twice / close the field.
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={commit}
+            aria-label="Add"
+            className="bg-primary-600 hover:bg-primary-700 inline-flex h-5 w-5 items-center justify-center rounded-md text-white"
+          >
+            <MdCheck size={12} />
+          </button>
+        </span>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setEditing(true)}
+          className="hover:text-dark-500 text-xs font-medium text-gray-500"
+        >
+          + Add
+        </button>
+      )}
     </div>
   )
 }
@@ -90,15 +159,22 @@ function SectionCard({
   title,
   desc,
   children,
+  action,
 }: {
   title: string
   desc: string
   children: React.ReactNode
+  action?: React.ReactNode
 }) {
   return (
     <div className="rounded-2xl border border-gray-200 bg-white p-5">
-      <h2 className="text-dark-500 text-sm font-semibold">{title}</h2>
-      <p className="mb-4 text-xs text-gray-500">{desc}</p>
+      <div className="mb-4 flex items-start justify-between gap-4">
+        <div>
+          <h2 className="text-dark-500 text-sm font-semibold">{title}</h2>
+          <p className="text-xs text-gray-500">{desc}</p>
+        </div>
+        {action}
+      </div>
       <div className="space-y-4">{children}</div>
     </div>
   )
@@ -120,6 +196,14 @@ const WEEKDAYS: { key: string; label: string }[] = [
 export function SettingsTab() {
   const { data, isLoading, isError } = useUbkiSettings()
   const update = useUpdateUbkiSettings()
+  const runNow = useRunAutoSubmitNow()
+
+  const handleSendNow = () => {
+    runNow.mutate(undefined, {
+      onSuccess: () => toast.success('Submission started — check the Overview log for results.'),
+      onError: () => toast.error('Could not start submission. Please try again.'),
+    })
+  }
 
   // Controlled form. Seeded from the server once; `saved` holds the last
   // persisted snapshot so we can compute dirty-state and support Discard.
@@ -164,6 +248,23 @@ export function SettingsTab() {
       <SectionCard
         title="Automatic Submission"
         desc="Configure when UBKI submissions are sent automatically."
+        action={
+          <Button
+            variant="secondary"
+            size="sm"
+            leftIcon={<MdSend size={14} />}
+            isLoading={runNow.isPending}
+            disabled={!form.auto_submit_enabled || runNow.isPending}
+            onClick={handleSendNow}
+            title={
+              form.auto_submit_enabled
+                ? 'Run the automatic submission now (ignores the schedule)'
+                : 'Enable automatic submission to use Send now'
+            }
+          >
+            Send now
+          </Button>
+        }
       >
         <ToggleRow
           checked={form.auto_submit_enabled}
@@ -182,17 +283,21 @@ export function SettingsTab() {
             />
           </Field>
           <Field label="Time zone">
-            <select
-              className={inputCls}
-              value={form.timezone}
-              onChange={(e) => set({ timezone: e.target.value })}
-            >
-              <option value="Europe/Kyiv">Europe/Kyiv (UTC+3)</option>
-              <option value="UTC">UTC</option>
-            </select>
+            <Select value={form.timezone} onValueChange={(v) => set({ timezone: v })}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {timezoneOptions.map((o) => (
+                  <SelectItem key={o.value} value={o.value}>
+                    {o.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </Field>
           <Field label="Frequency">
-            <div className="flex gap-1">
+            <div className="flex gap-1 rounded-xl border border-gray-200 bg-gray-50 p-1">
               {(['daily', 'weekdays', 'custom'] as const).map((f) => (
                 <button
                   key={f}
@@ -210,10 +315,10 @@ export function SettingsTab() {
                         : { frequency: f }
                     )
                   }
-                  className={`flex-1 rounded-lg px-2 py-2 text-xs font-medium capitalize ${
+                  className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
                     form.frequency === f
-                      ? 'bg-secondary-800 text-white'
-                      : 'border border-gray-200 bg-white text-gray-600'
+                      ? 'bg-secondary-800 text-white shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900'
                   }`}
                 >
                   {f === 'daily' ? 'Every day' : f === 'weekdays' ? 'Weekdays only' : 'Custom days'}
@@ -275,7 +380,7 @@ export function SettingsTab() {
           </Field>
           <Field
             label="Retry interval (minutes)"
-            hint="Default: 15 min. Exponential backoff applied."
+            hint="Default: 15 min. Fixed gap between retries."
           >
             <input
               type="number"
@@ -292,15 +397,15 @@ export function SettingsTab() {
           >
             <Chips
               items={form.skip_retry_error_codes}
+              placeholder="e.g. ERR_500"
               onRemove={(i) =>
                 set({
                   skip_retry_error_codes: form.skip_retry_error_codes.filter((_, idx) => idx !== i),
                 })
               }
-              onAdd={() => {
-                const code = window.prompt('Add error code (e.g. ERR_500)')?.trim()
-                if (code) set({ skip_retry_error_codes: [...form.skip_retry_error_codes, code] })
-              }}
+              onAdd={(code) =>
+                set({ skip_retry_error_codes: [...form.skip_retry_error_codes, code] })
+              }
             />
           </Field>
         </div>
@@ -352,6 +457,7 @@ export function SettingsTab() {
           >
             <Chips
               items={form.notification_recipients}
+              placeholder="email or role"
               onRemove={(i) =>
                 set({
                   notification_recipients: form.notification_recipients.filter(
@@ -359,10 +465,9 @@ export function SettingsTab() {
                   ),
                 })
               }
-              onAdd={() => {
-                const who = window.prompt('Add recipient (email or role)')?.trim()
-                if (who) set({ notification_recipients: [...form.notification_recipients, who] })
-              }}
+              onAdd={(who) =>
+                set({ notification_recipients: [...form.notification_recipients, who] })
+              }
             />
           </Field>
         </div>

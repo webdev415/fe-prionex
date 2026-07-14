@@ -12,6 +12,11 @@ export const NotificationType = {
   TAG_EXPIRED: 'tag_expired',
   TA_CHAIN_CREATED: 'ta_chain_created',
   RR_PAYMENT_DUE: 'rr_payment_due',
+  // UBKI integration alerts (Settings → Notifications): high failure rate,
+  // connection down, and the daily submission summary.
+  UBKI_FAILURE_ALERT: 'ubki_failure_alert',
+  UBKI_CONNECTION_DOWN: 'ubki_connection_down',
+  UBKI_DAILY_SUMMARY: 'ubki_daily_summary',
 } as const
 
 export type NotificationType = (typeof NotificationType)[keyof typeof NotificationType]

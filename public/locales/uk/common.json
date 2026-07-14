@@ -185,14 +185,16 @@
       "starred": "Закріплені",
       "payments": "Очікувані платежі",
       "calls": "Вхідні дзвінки",
-      "rrPayments": "RR платежі"
+      "rrPayments": "RR платежі",
+      "ubki": "UBKI"
     },
     "empty": {
       "tasks": "Немає прострочених завдань",
       "starred": "Немає закріплених завдань",
       "payments": "Немає очікуваних платежів",
       "calls": "Немає вхідних дзвінків",
-      "rrPayments": "Немає платежів RR"
+      "rrPayments": "Немає платежів RR",
+      "ubki": "Немає сповіщень UBKI"
     },
     "taskActions": {
       "completeAria": "Завершити завдання",

@@ -15,7 +15,6 @@ import { Button } from '@/components/ui/Button'
 import { Pagination } from '@/components/ui/Pagination'
 import { TableSkeleton } from '@/components/ui/TableSkeleton'
 import { DateSelect } from '@/components/ui/DateSelect'
-import { useAuthStore } from '@/stores/authStore'
 import {
   MultiCheckboxDropdown,
   type MultiCheckboxOption,
@@ -27,6 +26,7 @@ import {
   mapLogItemToRow,
   useUbkiKpis,
   useUbkiConnection,
+  useUbkiSettings,
   useTestUbkiConnection,
   useUpdateUbkiConnection,
   getUbkiConnectionCredentials,
@@ -259,11 +259,15 @@ export function OverviewTab() {
     }),
     [pageSize, page, statusF, modeF, operatorF, errorF, debouncedSearch, kpiRange]
   )
-  const userTimezone = useAuthStore((s) => s.user?.timezone)
+  // Log timestamps follow the UBKI Settings timezone (the schedule's timezone),
+  // not the viewer's personal profile timezone — so the log always matches when
+  // automatic submissions actually fire. Falls back to the settings default.
+  const { data: ubkiSettings } = useUbkiSettings()
+  const logTimezone = ubkiSettings?.timezone ?? 'Europe/Kyiv'
   const { data: logPage, isLoading, isError } = useUbkiLogs(logParams)
   const rows = useMemo(
-    () => (logPage?.items ?? []).map((i) => mapLogItemToRow(i, userTimezone)),
-    [logPage, userTimezone]
+    () => (logPage?.items ?? []).map((i) => mapLogItemToRow(i, logTimezone)),
+    [logPage, logTimezone]
   )
   const total = logPage?.total ?? 0
   const totalPages = Math.max(1, Math.ceil(total / pageSize))
