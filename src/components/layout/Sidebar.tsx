@@ -13,6 +13,7 @@ import { NavLink, useLocation } from 'react-router-dom'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 import { useSidebarStore } from '@/stores/sidebarStore'
+import { useThemeStore } from '@/stores/themeStore'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 
@@ -112,6 +113,8 @@ const iconMap: Record<
  */
 export function Sidebar({ items = [], bottomItems = [], actions = [], className }: SidebarProps) {
   const location = useLocation()
+  const themeBase = useThemeStore((s) => s.base)
+  const brandLogoSrc = themeBase === 'light-classic' ? '/logo.svg' : '/logo-l.svg'
   const { isOpenSideBar, isHoverOpen, toggleSidebar, setHoverOpen } = useSidebarStore()
   const [openSubmenuIndex, setOpenSubmenuIndex] = useState<number | null>(null)
   const asideRef = useRef<HTMLElement | null>(null)
@@ -275,7 +278,7 @@ export function Sidebar({ items = [], bottomItems = [], actions = [], className 
           'shadow-[0px_1px_3px_0px_rgba(0,0,0,0.1),0px_21px_2px_0px_rgba(0,0,0,0.06)]',
           isSidebarVisible ? 'w-60' : 'w-18',
           'items-start px-4 pl-3',
-          'bg-card',
+          'bg-nav-surface',
           isOpenSideBar ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
           className
         )}
@@ -326,20 +329,20 @@ export function Sidebar({ items = [], bottomItems = [], actions = [], className 
             className={cn(
               'flex h-10 shrink-0 cursor-pointer items-center rounded-lg transition-all duration-200 focus:outline-none',
               isSidebarVisible ? 'px-3' : 'justify-start px-3',
-              'hover:bg-muted'
+              'hover:bg-nav-hover'
             )}
             aria-label="Menu"
           >
-            <Icons.Menu11 size={20} className="shrink-0 text-gray-700" strokeWidth={1.5} />
+            <Icons.Menu11 size={20} className="text-nav-foreground shrink-0" strokeWidth={1.5} />
             {isSidebarVisible && (
               <img
-                src="/logo.svg"
+                src={brandLogoSrc}
                 alt="Prionex"
                 className="ml-3 h-7 w-auto transition-all duration-300"
               />
             )}
           </button>
-          <div className="mx-2 h-px bg-gray-200" />
+          <div className="bg-nav-foreground/15 mx-2 h-px" />
           {items.map((item, index) => {
             const IconComponent = iconMap[item.icon]
 
@@ -374,8 +377,8 @@ export function Sidebar({ items = [], bottomItems = [], actions = [], className 
                     }
                   }}
                 >
-                  <IconComponent size={20} className="shrink-0 text-gray-400" strokeWidth={1.5} />
-                  <span className="ml-3 truncate text-sm text-gray-400">{item.label}</span>
+                  <IconComponent size={20} className="text-nav-muted shrink-0" strokeWidth={1.5} />
+                  <span className="text-nav-muted ml-3 truncate text-sm">{item.label}</span>
                 </div>
               )
             }
@@ -393,7 +396,7 @@ export function Sidebar({ items = [], bottomItems = [], actions = [], className 
                       // Make this feel/behave like other clickable NavLink rows
                       'flex h-10 shrink-0 cursor-pointer items-center rounded-lg transition-all duration-200 select-none',
                       isSidebarVisible ? 'px-3' : 'justify-start px-3',
-                      isActive ? 'bg-secondary-800' : 'hover:bg-muted'
+                      isActive ? 'bg-secondary-800' : 'hover:bg-nav-hover'
                     )}
                     onClick={() => {
                       // If collapsed, expand on click so the submenu can appear
@@ -432,7 +435,10 @@ export function Sidebar({ items = [], bottomItems = [], actions = [], className 
                     >
                       <IconComponent
                         size={20}
-                        className={cn('shrink-0', isActive ? 'text-primary-300' : 'text-gray-700')}
+                        className={cn(
+                          'shrink-0',
+                          isActive ? 'text-primary-300' : 'text-nav-foreground'
+                        )}
                         strokeWidth={1.5}
                       />
                     </div>
@@ -441,7 +447,7 @@ export function Sidebar({ items = [], bottomItems = [], actions = [], className 
                       <div
                         className={cn(
                           'ml-3 min-w-0 flex-1 truncate text-sm font-medium',
-                          isActive ? 'text-white' : 'text-dark-500'
+                          isActive ? 'text-white' : 'text-nav-foreground'
                         )}
                       >
                         {item.label}
@@ -454,7 +460,7 @@ export function Sidebar({ items = [], bottomItems = [], actions = [], className 
                         size={16}
                         className={cn(
                           'ml-auto shrink-0 transition-colors',
-                          isActive ? 'text-white' : 'text-gray-400'
+                          isActive ? 'text-white' : 'text-nav-muted'
                         )}
                         strokeWidth={1.5}
                       />
@@ -472,7 +478,7 @@ export function Sidebar({ items = [], bottomItems = [], actions = [], className 
                 className={cn(
                   'flex h-10 shrink-0 items-center rounded-lg transition-all duration-200 focus:outline-none',
                   isSidebarVisible ? 'px-3' : 'justify-start px-3',
-                  isActive ? 'bg-secondary-800' : 'hover:bg-muted'
+                  isActive ? 'bg-secondary-800' : 'hover:bg-nav-hover'
                 )}
                 aria-label={item.label}
                 onMouseEnter={() => {
@@ -488,7 +494,7 @@ export function Sidebar({ items = [], bottomItems = [], actions = [], className 
                 <span className="relative shrink-0">
                   <IconComponent
                     size={20}
-                    className={cn(isActive ? 'text-primary-300' : 'text-gray-700')}
+                    className={cn(isActive ? 'text-primary-300' : 'text-nav-foreground')}
                     strokeWidth={1.5}
                   />
                   {!!item.badge && item.badge > 0 && (
@@ -500,7 +506,7 @@ export function Sidebar({ items = [], bottomItems = [], actions = [], className 
                 <span
                   className={cn(
                     'ml-3 truncate text-sm font-medium',
-                    isActive ? 'text-white' : 'text-dark-500'
+                    isActive ? 'text-white' : 'text-nav-foreground'
                   )}
                 >
                   {item.label}
@@ -518,7 +524,7 @@ export function Sidebar({ items = [], bottomItems = [], actions = [], className 
           {/* Bottom navigation items (e.g., System Settings) */}
           {bottomItems.length > 0 && (
             <>
-              <div className="mx-2 mt-auto h-px bg-gray-200" />
+              <div className="bg-nav-foreground/15 mx-2 mt-auto h-px" />
               {bottomItems.map((item, index) => {
                 const IconComponent = iconMap[item.icon]
 
@@ -550,10 +556,10 @@ export function Sidebar({ items = [], bottomItems = [], actions = [], className 
                     >
                       <IconComponent
                         size={20}
-                        className="shrink-0 text-gray-400"
+                        className="text-nav-muted shrink-0"
                         strokeWidth={1.5}
                       />
-                      <span className="ml-3 truncate text-sm text-gray-400">{item.label}</span>
+                      <span className="text-nav-muted ml-3 truncate text-sm">{item.label}</span>
                     </div>
                   )
                 }
@@ -573,7 +579,7 @@ export function Sidebar({ items = [], bottomItems = [], actions = [], className 
                         className={cn(
                           'flex h-10 shrink-0 cursor-pointer items-center rounded-lg transition-all duration-200 select-none',
                           isSidebarVisible ? 'px-3' : 'justify-start px-3',
-                          isActive ? 'bg-secondary-800' : 'hover:bg-muted'
+                          isActive ? 'bg-secondary-800' : 'hover:bg-nav-hover'
                         )}
                         onClick={() => {
                           if (!isSidebarVisible && !isOpenSideBar) {
@@ -611,7 +617,7 @@ export function Sidebar({ items = [], bottomItems = [], actions = [], className 
                             size={20}
                             className={cn(
                               'shrink-0',
-                              isActive ? 'text-primary-300' : 'text-gray-700'
+                              isActive ? 'text-primary-300' : 'text-nav-foreground'
                             )}
                             strokeWidth={1.5}
                           />
@@ -620,7 +626,7 @@ export function Sidebar({ items = [], bottomItems = [], actions = [], className 
                           <div
                             className={cn(
                               'ml-3 min-w-0 flex-1 truncate text-sm font-medium',
-                              isActive ? 'text-white' : 'text-dark-500'
+                              isActive ? 'text-white' : 'text-nav-foreground'
                             )}
                           >
                             {item.label}
@@ -631,7 +637,7 @@ export function Sidebar({ items = [], bottomItems = [], actions = [], className 
                             size={16}
                             className={cn(
                               'ml-auto shrink-0 transition-colors',
-                              isActive ? 'text-white' : 'text-gray-400'
+                              isActive ? 'text-white' : 'text-nav-muted'
                             )}
                             strokeWidth={1.5}
                           />
@@ -648,7 +654,7 @@ export function Sidebar({ items = [], bottomItems = [], actions = [], className 
                     className={cn(
                       'flex h-10 shrink-0 items-center rounded-lg transition-all duration-200 focus:outline-none',
                       isSidebarVisible ? 'px-3' : 'justify-start px-3',
-                      isActive ? 'bg-secondary-800' : 'hover:bg-muted'
+                      isActive ? 'bg-secondary-800' : 'hover:bg-nav-hover'
                     )}
                     aria-label={item.label}
                     onMouseEnter={() => {
@@ -659,13 +665,16 @@ export function Sidebar({ items = [], bottomItems = [], actions = [], className 
                   >
                     <IconComponent
                       size={20}
-                      className={cn('shrink-0', isActive ? 'text-primary-300' : 'text-gray-700')}
+                      className={cn(
+                        'shrink-0',
+                        isActive ? 'text-primary-300' : 'text-nav-foreground'
+                      )}
                       strokeWidth={1.5}
                     />
                     <span
                       className={cn(
                         'ml-3 truncate text-sm font-medium',
-                        isActive ? 'text-white' : 'text-dark-500'
+                        isActive ? 'text-white' : 'text-nav-foreground'
                       )}
                     >
                       {item.label}
@@ -700,7 +709,7 @@ export function Sidebar({ items = [], bottomItems = [], actions = [], className 
                   className={cn(
                     'flex h-10 items-center rounded-md transition-all duration-200 focus:outline-none',
                     isSidebarVisible ? 'px-3' : 'justify-start px-3',
-                    isHoverOpen && !isOpenSideBar ? 'hover:bg-card/80' : 'hover:bg-muted'
+                    'hover:bg-nav-hover'
                   )}
                   aria-label={action.label}
                   onMouseEnter={() => {
@@ -713,8 +722,12 @@ export function Sidebar({ items = [], bottomItems = [], actions = [], className 
                     }
                   }}
                 >
-                  <ActionIcon size={20} className="shrink-0 text-gray-700" strokeWidth={1.5} />
-                  <span className="text-dark-500 ml-3 truncate text-sm font-medium">
+                  <ActionIcon
+                    size={20}
+                    className="text-nav-foreground shrink-0"
+                    strokeWidth={1.5}
+                  />
+                  <span className="text-nav-foreground ml-3 truncate text-sm font-medium">
                     {action.label}
                   </span>
                 </button>

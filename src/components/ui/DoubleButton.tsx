@@ -100,7 +100,7 @@ const DoubleButton = forwardRef<HTMLButtonElement, DoubleButtonProps>(
           // DEFAULT: bg-secondary-800 (dark green/teal)
           // HOVER: lighter, more vibrant green (bg-secondary-600)
           // DISABLED: bg-gray-200 (light gray)
-          'bg-secondary-800 hover:bg-primary-300 hover:text-dark-500 active:bg-primary-500 disabled:bg-gray-200 disabled:text-gray-600',
+          'bg-secondary-800 hover:bg-primary-300 hover:text-primary-foreground active:bg-primary-500 disabled:bg-gray-200 disabled:text-gray-600',
           className
         )}
         ref={ref}
@@ -112,9 +112,9 @@ const DoubleButton = forwardRef<HTMLButtonElement, DoubleButtonProps>(
           <div
             className={cn(
               iconContainerVariants({ size, iconPosition: 'left' }),
-              'bg-primary-300 text-dark-500 group-hover:bg-primary-100 group-active:bg-primary-300 group-disabled:text-dark-500 group-disabled:bg-gray-600',
-              '[&_svg]:text-dark-500 group-hover:[&_svg]:text-dark-500 group-disabled:[&_svg]:text-dark-500',
-              '[&_span]:text-dark-500 group-hover:[&_span]:text-dark-500 group-disabled:[&_span]:text-dark-500'
+              'bg-primary-300 text-primary-foreground group-hover:bg-primary-100 group-active:bg-primary-300 group-disabled:text-primary-foreground group-disabled:bg-gray-600',
+              '[&_svg]:text-primary-foreground group-hover:[&_svg]:text-primary-foreground group-disabled:[&_svg]:text-primary-foreground',
+              '[&_span]:text-primary-foreground group-hover:[&_span]:text-primary-foreground group-disabled:[&_span]:text-dark-500'
             )}
           >
             {iconElement}
@@ -136,9 +136,9 @@ const DoubleButton = forwardRef<HTMLButtonElement, DoubleButtonProps>(
           <div
             className={cn(
               iconContainerVariants({ size, iconPosition: 'right' }),
-              'bg-primary-300 text-dark-500 group-hover:bg-primary-100 group-active:bg-primary-300 group-disabled:text-dark-500 group-disabled:bg-gray-600',
-              '[&_svg]:text-dark-500 group-hover:[&_svg]:text-dark-500 group-disabled:[&_svg]:text-dark-500',
-              '[&_span]:text-dark-500 group-hover:[&_span]:text-dark-500 group-disabled:[&_span]:text-dark-500'
+              'bg-primary-300 text-primary-foreground group-hover:bg-primary-100 group-active:bg-primary-300 group-disabled:text-primary-foreground group-disabled:bg-gray-600',
+              '[&_svg]:text-primary-foreground group-hover:[&_svg]:text-primary-foreground group-disabled:[&_svg]:text-primary-foreground',
+              '[&_span]:text-primary-foreground group-hover:[&_span]:text-primary-foreground group-disabled:[&_span]:text-dark-500'
             )}
           >
             {iconElement}

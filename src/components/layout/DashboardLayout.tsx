@@ -24,7 +24,6 @@ import { formatClientFullName } from '@/lib/formatters'
 import { Icons } from '@/lib/icons'
 import { useCallStore } from '@/stores/callStore'
 import { useThemeStore } from '@/stores/themeStore'
-import { isLightBase } from '@/theme/constants'
 import { CallDialogModal } from '@/pages/ClientManagement/components/CallDialogModal'
 import { CallRecordingModal } from '@/pages/ClientManagement/components/CallRecordingModal'
 import { useIncomingCall } from '@/features/calls/hooks/useIncomingCall'
@@ -450,7 +449,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const navigate = useNavigate()
   const location = useLocation()
   const themeBase = useThemeStore((s) => s.base)
-  const showDashboardBgImage = isLightBase(themeBase)
+  const showDashboardBgImage = themeBase === 'light-classic'
   const { logout, isImpersonating, impersonatedUser, exitImpersonation } = useAuth()
   const [showLogoutModal, setShowLogoutModal] = useState(false)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
@@ -1013,7 +1012,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           {/* Fixed Header */}
           <header
             className={cn(
-              'bg-background border-border/40 fixed top-0 right-0 z-20 flex h-[60px] justify-between border-l px-3 shadow-sm transition-all duration-300 sm:px-4 lg:px-6',
+              'bg-elevated border-border/40 fixed top-0 right-0 z-20 flex h-[60px] justify-between border-l px-3 shadow-sm transition-all duration-300 sm:px-4 lg:px-6',
               isLawyerWorkplaceRoute ? 'items-stretch' : 'items-center',
               'left-0 lg:left-18',
               isOpenSideBar && 'lg:left-60'

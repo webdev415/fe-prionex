@@ -5,11 +5,11 @@ import { cn } from '@/lib/utils'
 import { Icons } from '@/lib/icons'
 
 const inputVariants = cva(
-  'flex w-full rounded-lg border bg-input px-4 py-2 text-sm font-light text-foreground placeholder:text-muted-foreground transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-card disabled:cursor-not-allowed disabled:opacity-50',
+  'flex w-full rounded-lg border bg-input px-4 py-2 text-sm font-light text-foreground placeholder:text-muted-foreground placeholder:opacity-100 transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-card disabled:cursor-not-allowed disabled:opacity-50',
   {
     variants: {
       variant: {
-        default: 'border-gray-400 focus:border-primary-500 focus:ring-primary-500',
+        default: 'border-input-border focus:border-primary-500 focus:ring-primary-500',
         error: 'border-error-500 focus:border-error-500 focus:ring-error-500',
         success: 'border-success-500 focus:border-success-500 focus:ring-success-500',
       },

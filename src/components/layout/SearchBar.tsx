@@ -170,7 +170,7 @@ export function SearchBar({
     <div className="relative">
       <div
         className={cn(
-          'border-border bg-card flex h-11 items-center gap-2 rounded-full border sm:gap-3',
+          'bg-search-bar flex h-11 items-center gap-2 rounded-full sm:gap-3',
           // Responsive padding: less on mobile, more on desktop
           'pl-3 sm:pl-4',
           // Responsive width: smaller on mobile, full width on larger screens
@@ -209,12 +209,12 @@ export function SearchBar({
               <DropdownMenuTrigger asChild>
                 <button
                   type="button"
-                  className="text-foreground bg-primary-300 hover:bg-primary-500 active:bg-primary-600 group flex h-9 w-9 min-w-0 cursor-pointer items-center justify-center rounded-full border-0 p-0 shadow-none transition-all duration-200 hover:shadow-md focus:outline-none active:shadow-sm disabled:cursor-not-allowed disabled:opacity-50 data-[state=open]:focus:ring-0 data-[state=open]:focus:ring-offset-0"
+                  className="text-primary-foreground bg-primary-300 hover:bg-primary-500 active:bg-primary-600 group flex h-9 w-9 min-w-0 cursor-pointer items-center justify-center rounded-full border-0 p-0 shadow-none transition-all duration-200 hover:shadow-md focus:outline-none active:shadow-sm disabled:cursor-not-allowed disabled:opacity-50 data-[state=open]:focus:ring-0 data-[state=open]:focus:ring-offset-0"
                   aria-label="Search type"
                 >
                   <Icons.Filter
                     size={18}
-                    className="text-foreground shrink-0 transition-transform duration-200 group-hover:scale-110"
+                    className="text-primary-foreground shrink-0 transition-transform duration-200 group-hover:scale-110"
                     strokeWidth={1.5}
                   />
                 </button>
@@ -297,7 +297,7 @@ export function SearchBar({
           onClick={handleSearch}
           disabled={isLoading}
         >
-          <Icons.Search size={20} className="text-foreground" strokeWidth={1.5} />
+          <Icons.Search size={20} className="text-primary-foreground" strokeWidth={1.5} />
         </button>
       </div>
     </div>

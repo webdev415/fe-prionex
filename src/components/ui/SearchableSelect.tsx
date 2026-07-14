@@ -157,14 +157,16 @@ export function SearchableSelect({
           }
         }}
         className={cn(
-          'focus:border-primary-500 flex h-[45px] w-full items-center justify-between overflow-hidden rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-light shadow-none focus:outline-none',
+          'focus:border-primary-500 text-foreground border-input-border bg-input flex h-[45px] w-full items-center justify-between overflow-hidden rounded-lg border px-3 py-2 text-sm font-light shadow-none focus:outline-none',
           disabled ? 'cursor-default opacity-50' : 'cursor-pointer',
           isOpen && 'border-primary-500'
         )}
       >
         <span
-          className="flex-1 truncate text-left"
-          style={{ color: displayName ? '#1a1a2e' : '#9ca3af' }}
+          className={cn(
+            'flex-1 truncate text-left',
+            displayName ? 'text-foreground' : 'text-muted-foreground'
+          )}
         >
           {displayName || placeholder}
         </span>
@@ -178,9 +180,9 @@ export function SearchableSelect({
 
       {/* Dropdown */}
       {isOpen && (
-        <div className="absolute top-[calc(100%+4px)] right-0 left-0 z-[200] rounded-lg border border-gray-200 bg-white shadow-lg">
+        <div className="border-border bg-card absolute top-[calc(100%+4px)] right-0 left-0 z-[200] rounded-lg border shadow-lg">
           {searchable && (
-            <div className="sticky top-0 z-10 border-b border-gray-100 bg-white p-2">
+            <div className="border-border bg-card sticky top-0 z-10 border-b p-2">
               <div className="relative">
                 <Icons.Search
                   size={14}

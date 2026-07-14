@@ -52,10 +52,10 @@ export function ImpersonationBanner({
         <button
           onClick={onExitImpersonation}
           disabled={isLoading}
-          className="bg-primary-300 text-dark-500 flex h-[41px] w-[189px] items-center justify-center gap-2 rounded-sm border-none text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50"
+          className="bg-primary-300 text-primary-foreground flex h-[41px] w-[189px] items-center justify-center gap-2 rounded-sm border-none text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50"
         >
           {isLoading ? 'Exiting...' : 'Exit Impersonation'}
-          <Icons.LogoutSquare01 size={20} className="text-dark-500" strokeWidth={1.5} />
+          <Icons.LogoutSquare01 size={20} className="text-primary-foreground" strokeWidth={1.5} />
         </button>
       </div>
     </div>

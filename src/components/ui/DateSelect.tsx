@@ -280,11 +280,9 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
     const displayedError = error || manualInlineError
 
     const inputClassName = cn(
-      'h-[45px] w-full rounded-md border bg-white pr-4 pl-10 text-sm font-light text-[#05040D] transition-all outline-none placeholder:text-gray-500',
+      'h-[45px] w-full rounded-md border border-input-border bg-input pr-4 pl-10 text-sm font-light text-foreground transition-all outline-none placeholder:text-muted-foreground',
       showClear && 'pr-10',
-      hasError
-        ? 'border-red-500 focus:border-red-500'
-        : 'border-gray-300 focus:border-[var(--color-primary-500)]',
+      hasError ? 'border-red-500 focus:border-red-500' : 'focus:border-primary-500',
       className
     )
 

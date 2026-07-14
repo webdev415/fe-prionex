@@ -179,6 +179,13 @@
 
   /* Semantic theme tokens (values from src/theme/themes.css via data-theme / data-accent) */
   --color-background: var(--background);
+  --color-elevated: var(--elevated);
+  --color-nav-surface: var(--nav-surface);
+  --color-nav-foreground: var(--nav-foreground);
+  --color-nav-muted: var(--nav-muted);
+  --color-nav-hover: var(--nav-hover);
+  --color-filter-bar: var(--filter-bar);
+  --color-search-bar: var(--search-bar);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
@@ -186,6 +193,7 @@
   --color-muted-foreground: var(--muted-foreground);
   --color-border: var(--border);
   --color-input: var(--input);
+  --color-input-border: var(--input-border);
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-overlay: var(--overlay);

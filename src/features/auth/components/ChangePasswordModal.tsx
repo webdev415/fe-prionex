@@ -69,7 +69,7 @@ export function ChangePasswordModal({
       <div className="border-border flex w-full items-center justify-center border-b p-0 pb-4 sm:pb-4">
         <div className="flex items-center gap-3 sm:gap-4">
           <div className="bg-primary-300 flex h-12 w-12 items-center justify-center rounded-full">
-            <Icons.LockSync01 size={24} className="text-foreground" strokeWidth={2} />
+            <Icons.LockSync01 size={24} className="text-primary-foreground" strokeWidth={2} />
           </div>
           <span className="text-foreground text-3xl leading-[129%] font-light tracking-[-0.6px]">
             {t('pages.profile.resetPassword')}

@@ -24,13 +24,21 @@
 :root[data-theme='light-classic'],
 html[data-theme='light-classic'] {
   --background: #f2f3f0;
+  --elevated: #f2f3f0;
+  --nav-surface: #f7f7f7;
+  --nav-foreground: #05040d;
+  --nav-muted: #676767;
+  --nav-hover: #ebece8;
+  --filter-bar: rgb(255 255 255 / 0.5);
+  --search-bar: #ffffff;
   --foreground: #05040d;
   --card: #ffffff;
   --card-foreground: #05040d;
-  --muted: #ebece8;
+  --muted: #ebece890;
   --muted-foreground: #888888;
   --border: #dfdfdf;
   --input: #ffffff;
+  --input-border: #adadad;
   --sidebar: #204e4d;
   --sidebar-foreground: #ffffff;
   --overlay: rgb(5 4 13 / 0.45);
@@ -43,7 +51,6 @@ html[data-theme='light-classic'] {
   --chart-4: #eab308;
   --chart-5: #ef4444;
 
-  /* Alert.tsx uses info-* (not defined in @theme) — alias to information */
   --color-info-50: var(--color-information-50);
   --color-info-100: var(--color-information-100);
   --color-info-200: var(--color-information-200);
@@ -57,83 +64,38 @@ html[data-theme='light-classic'] {
   --color-info-950: var(--color-information-950);
 }
 
-/* =============================================================================
- * HIGH CONTRAST LIGHT — stronger borders/text (a11y)
- * ============================================================================= */
 html[data-theme='high-contrast-light'] {
-  --background: #ffffff;
-  --foreground: #000000;
-  --card: #ffffff;
-  --card-foreground: #000000;
-  --muted: #f7f7f7;
-  --muted-foreground: #363636;
-  --border: #363636;
-  --input: #ffffff;
-  --sidebar: #000000;
-  --sidebar-foreground: #ffffff;
-  --overlay: rgb(0 0 0 / 0.55);
-  --destructive: #b91c1c;
-  --destructive-foreground: #ffffff;
-
-  --chart-1: #4a8308;
-  --chart-2: #204e4d;
-  --chart-3: #1d4ed8;
-  --chart-4: #a16207;
-  --chart-5: #b91c1c;
-
-  /* text-dark-* → pure black stack */
-  --color-dark-50: #272166;
-  --color-dark-100: #231e5b;
-  --color-dark-200: #1d194d;
-  --color-dark-300: #0c0a20;
-  --color-dark-400: #05040d;
-  --color-dark-500: #000000;
-  --color-dark-600: #000000;
-  --color-dark-700: #000000;
-  --color-dark-800: #000000;
-  --color-dark-900: #000000;
-  --color-dark-950: #000000;
-
-  /* light wash → white */
-  --color-light-50: #ffffff;
-  --color-light-100: #f7f7f7;
-  --color-light-200: #dfdfdf;
-  --color-light-300: #c8c8c8;
-  --color-light-400: #888888;
-  --color-light-500: #545454;
-  --color-light-600: #363636;
-  --color-light-700: #05040d;
-  --color-light-800: #000000;
-  --color-light-900: #000000;
-  --color-light-950: #000000;
-
-  /* stronger gray borders / labels */
-  --color-gray-50: #ffffff;
-  --color-gray-100: #f7f7f7;
-  --color-gray-200: #adadad;
-  --color-gray-300: #888888;
-  --color-gray-400: #676767;
-  --color-gray-500: #545454;
-  --color-gray-600: #363636;
-  --color-gray-700: #05040d;
-  --color-gray-800: #000000;
-  --color-gray-900: #000000;
-  --color-gray-950: #000000;
+  --background: #ededed;
+  --elevated: #ffffff;
+  --nav-surface: #1f4242;
+  --nav-foreground: #ffffff;
+  --nav-muted: rgb(255 255 255 / 0.65);
+  --nav-hover: rgb(255 255 255 / 0.1);
+  --filter-bar: #ededed;
+  --search-bar: #ededed;
 }
 
 /* =============================================================================
  * NEUTRAL DIM — soft dark (Figma). Remaps dark/light/gray used across all pages.
  * ============================================================================= */
 html[data-theme='neutral-dim'] {
-  --background: #121a16;
+  --nav-foreground: #ffffff;
+  --nav-muted: rgb(255 255 255 / 0.65);
+  --nav-hover: rgb(255 255 255 / 0.1);
+  --background: #0d2526;
+  --elevated: #24393a;
+  --nav-surface: #253a3b;
+  --filter-bar: rgb(255 255 255 / 0.1);
+  --search-bar: rgb(255 255 255 / 0.1);
   --foreground: #f2f3f0;
-  --card: #1a2420;
+  --card: #1a3233;
   --card-foreground: #f2f3f0;
-  --muted: #24302a;
+  --muted: #2d453d;
   --muted-foreground: #a1a1a1;
-  --border: #2e3b34;
-  --input: #1a2420;
-  --sidebar: #0d1411;
+  --border: rgb(255 255 255 / 0.1);
+  --input: rgb(255 255 255 / 0.1);
+  --input-border: rgb(255 255 255 / 0.1);
+  --sidebar: #253a3b;
   --sidebar-foreground: #f2f3f0;
   --overlay: rgb(0 0 0 / 0.65);
   --destructive: #f87171;
@@ -145,7 +107,6 @@ html[data-theme='neutral-dim'] {
   --chart-4: #facc15;
   --chart-5: #f87171;
 
-  /* text-dark-500 etc. → light foreground */
   --color-dark-50: #3d4a43;
   --color-dark-100: #2e3b34;
   --color-dark-200: #a1a1a1;
@@ -158,11 +119,10 @@ html[data-theme='neutral-dim'] {
   --color-dark-900: #ffffff;
   --color-dark-950: #ffffff;
 
-  /* bg-light-50 / text-light-* → dark surfaces + muted labels */
-  --color-light-50: #121a16;
-  --color-light-100: #1a2420;
-  --color-light-200: #24302a;
-  --color-light-300: #2e3b34;
+  --color-light-50: #0d2526;
+  --color-light-100: #1a3233;
+  --color-light-200: #2d453d;
+  --color-light-300: #233b38;
   --color-light-400: #3d4a43;
   --color-light-500: #7b7b7b;
   --color-light-600: #a1a1a1;
@@ -171,14 +131,9 @@ html[data-theme='neutral-dim'] {
   --color-light-900: #ededed;
   --color-light-950: #f7f7f7;
 
-  /*
-   * gray-* — inverted for dark UI (borders, muted text, fills).
-   * bg-gray-50/100 ≈ elevated panels; border-gray-200 ≈ subtle dividers;
-   * text-gray-500/600/700 ≈ secondary copy (lightened).
-   */
-  --color-gray-50: #1a2420;
-  --color-gray-100: #24302a;
-  --color-gray-200: #2e3b34;
+  --color-gray-50: #1a3233;
+  --color-gray-100: #2d453d;
+  --color-gray-200: #233b38;
   --color-gray-300: #3d4a43;
   --color-gray-400: #6b756e;
   --color-gray-500: #9aa39c;
@@ -254,15 +209,23 @@ html[data-theme='neutral-dim'] {
  * ULTRA DARK — near-black (Figma)
  * ============================================================================= */
 html[data-theme='ultra-dark'] {
-  --background: #0e1116;
+  --nav-foreground: #ffffff;
+  --nav-muted: rgb(255 255 255 / 0.65);
+  --nav-hover: rgb(255 255 255 / 0.1);
+  --background: #05040d;
+  --elevated: #1d1c24;
+  --nav-surface: #1e1d25;
+  --filter-bar: rgb(255 255 255 / 0.1);
+  --search-bar: rgb(255 255 255 / 0.1);
   --foreground: #f5f5f5;
-  --card: #1b1f24;
+  --card: #1e1d25;
   --card-foreground: #f5f5f5;
-  --muted: #252a31;
+  --muted: #28282f;
   --muted-foreground: #adadad;
-  --border: #2f353d;
-  --input: #161a1f;
-  --sidebar: #080a0d;
+  --border: rgb(255 255 255 / 0.1);
+  --input: rgb(255 255 255 / 0.1);
+  --input-border: rgb(255 255 255 / 0.1);
+  --sidebar: #1e1d25;
   --sidebar-foreground: #f5f5f5;
   --overlay: rgb(0 0 0 / 0.75);
   --destructive: #f87171;
@@ -286,10 +249,10 @@ html[data-theme='ultra-dark'] {
   --color-dark-900: #ffffff;
   --color-dark-950: #ffffff;
 
-  --color-light-50: #0e1116;
-  --color-light-100: #1b1f24;
-  --color-light-200: #252a31;
-  --color-light-300: #2f353d;
+  --color-light-50: #05040d;
+  --color-light-100: #1e1d25;
+  --color-light-200: #28282f;
+  --color-light-300: #2f2e36;
   --color-light-400: #3a414b;
   --color-light-500: #7b7b7b;
   --color-light-600: #adadad;
@@ -298,9 +261,9 @@ html[data-theme='ultra-dark'] {
   --color-light-900: #ededed;
   --color-light-950: #f7f7f7;
 
-  --color-gray-50: #1b1f24;
-  --color-gray-100: #252a31;
-  --color-gray-200: #2f353d;
+  --color-gray-50: #1e1d25;
+  --color-gray-100: #28282f;
+  --color-gray-200: #2f2e36;
   --color-gray-300: #3a414b;
   --color-gray-400: #6b7280;
   --color-gray-500: #9ca3af;
@@ -577,8 +540,6 @@ html[data-accent='teal'] {
 
 html[data-theme='neutral-dim'][data-accent='teal'],
 html[data-theme='ultra-dark'][data-accent='teal'] {
-  --sidebar: #0d2526;
-  --sidebar-foreground: #f2f3f0;
   --primary: #bbfb5b;
   --primary-foreground: #05040d;
   --secondary: #287975;
@@ -915,53 +876,276 @@ html[data-accent='amber'] {
   --sidebar-foreground: #ffffff;
 }
 
-/* Dark bases × accent: deeper sidebar chrome */
-html[data-theme='neutral-dim'][data-accent='cyan'],
-html[data-theme='ultra-dark'][data-accent='cyan'] {
-  --sidebar: #053345;
+html[data-theme='neutral-dim'][data-accent='teal'] {
+  --background: #0d2526;
+  --filter-bar: rgb(255 255 255 / 0.1);
+  --search-bar: rgb(255 255 255 / 0.1);
+  --elevated: #24393a;
+  --card: #1a3233;
+  --muted: #2d453d;
+  --sidebar: #253a3b;
+  --nav-surface: #253a3b;
+  --sidebar-foreground: #f2f3f0;
+  --color-light-50: #0d2526;
+  --color-light-100: #1a3233;
+  --color-light-200: #2d453d;
+  --color-light-300: #233b38;
+  --color-gray-50: #1a3233;
+  --color-gray-100: #2d453d;
+  --color-gray-200: #233b38;
 }
 
-html[data-theme='neutral-dim'][data-accent='blue'],
-html[data-theme='ultra-dark'][data-accent='blue'] {
-  --sidebar: #162456;
+html[data-theme='neutral-dim'][data-accent='cyan'] {
+  --background: #041b28;
+  --filter-bar: rgb(255 255 255 / 0.1);
+  --search-bar: rgb(255 255 255 / 0.1);
+  --elevated: #1c303c;
+  --card: #112936;
+  --muted: #213b48;
+  --sidebar: #1d313d;
+  --nav-surface: #1d313d;
+  --sidebar-foreground: #f2f3f0;
+  --color-light-50: #041b28;
+  --color-light-100: #112936;
+  --color-light-200: #213b48;
+  --color-light-300: #19323f;
+  --color-gray-50: #112936;
+  --color-gray-100: #213b48;
+  --color-gray-200: #19323f;
 }
 
-html[data-theme='neutral-dim'][data-accent='indigo'],
-html[data-theme='ultra-dark'][data-accent='indigo'] {
-  --sidebar: #1e1a4d;
+html[data-theme='neutral-dim'][data-accent='blue'] {
+  --background: #0d1431;
+  --filter-bar: rgb(255 255 255 / 0.1);
+  --search-bar: rgb(255 255 255 / 0.1);
+  --elevated: #242a44;
+  --card: #192241;
+  --muted: #2b344f;
+  --sidebar: #252b45;
+  --nav-surface: #252b45;
+  --sidebar-foreground: #f2f3f0;
+  --color-light-50: #0d1431;
+  --color-light-100: #192241;
+  --color-light-200: #2b344f;
+  --color-light-300: #222b48;
+  --color-gray-50: #192241;
+  --color-gray-100: #2b344f;
+  --color-gray-200: #222b48;
 }
 
-html[data-theme='neutral-dim'][data-accent='violet'],
-html[data-theme='ultra-dark'][data-accent='violet'] {
-  --sidebar: #2f0d68;
+html[data-theme='neutral-dim'][data-accent='indigo'] {
+  --background: #110f2c;
+  --filter-bar: rgb(255 255 255 / 0.1);
+  --search-bar: rgb(255 255 255 / 0.1);
+  --elevated: #272640;
+  --card: #1f1c3c;
+  --muted: #302f4c;
+  --sidebar: #282741;
+  --nav-surface: #282741;
+  --sidebar-foreground: #f2f3f0;
+  --color-light-50: #110f2c;
+  --color-light-100: #1f1c3c;
+  --color-light-200: #302f4c;
+  --color-light-300: #272544;
+  --color-gray-50: #1f1c3c;
+  --color-gray-100: #302f4c;
+  --color-gray-200: #272544;
 }
 
-html[data-theme='neutral-dim'][data-accent='purple'],
-html[data-theme='ultra-dark'][data-accent='purple'] {
-  --sidebar: #3c0366;
+html[data-theme='neutral-dim'][data-accent='violet'] {
+  --background: #19083a;
+  --filter-bar: rgb(255 255 255 / 0.1);
+  --search-bar: rgb(255 255 255 / 0.1);
+  --elevated: #2f1f4c;
+  --card: #28154a;
+  --muted: #382857;
+  --sidebar: #30204d;
+  --nav-surface: #30204d;
+  --sidebar-foreground: #f2f3f0;
+  --color-light-50: #19083a;
+  --color-light-100: #28154a;
+  --color-light-200: #382857;
+  --color-light-300: #301e50;
+  --color-gray-50: #28154a;
+  --color-gray-100: #382857;
+  --color-gray-200: #301e50;
 }
 
-html[data-theme='neutral-dim'][data-accent='fuchsia'],
-html[data-theme='ultra-dark'][data-accent='fuchsia'] {
-  --sidebar: #4b004f;
+html[data-theme='neutral-dim'][data-accent='purple'] {
+  --background: #200339;
+  --filter-bar: rgb(255 255 255 / 0.1);
+  --search-bar: rgb(255 255 255 / 0.1);
+  --elevated: #351b4b;
+  --card: #2e1148;
+  --muted: #3f2456;
+  --sidebar: #361c4c;
+  --nav-surface: #361c4c;
+  --sidebar-foreground: #f2f3f0;
+  --color-light-50: #200339;
+  --color-light-100: #2e1148;
+  --color-light-200: #3f2456;
+  --color-light-300: #361a4f;
+  --color-gray-50: #2e1148;
+  --color-gray-100: #3f2456;
+  --color-gray-200: #361a4f;
 }
 
-html[data-theme='neutral-dim'][data-accent='pink'],
-html[data-theme='ultra-dark'][data-accent='pink'] {
-  --sidebar: #510424;
+html[data-theme='neutral-dim'][data-accent='fuchsia'] {
+  --background: #27022d;
+  --filter-bar: rgb(255 255 255 / 0.1);
+  --search-bar: rgb(255 255 255 / 0.1);
+  --elevated: #3b1a41;
+  --card: #360f3c;
+  --muted: #46234d;
+  --sidebar: #3c1b42;
+  --nav-surface: #3c1b42;
+  --sidebar-foreground: #f2f3f0;
+  --color-light-50: #27022d;
+  --color-light-100: #360f3c;
+  --color-light-200: #46234d;
+  --color-light-300: #3e1944;
+  --color-gray-50: #360f3c;
+  --color-gray-100: #46234d;
+  --color-gray-200: #3e1944;
 }
 
-html[data-theme='neutral-dim'][data-accent='rose'],
-html[data-theme='ultra-dark'][data-accent='rose'] {
-  --sidebar: #4d0218;
+html[data-theme='neutral-dim'][data-accent='pink'] {
+  --background: #2a0418;
+  --filter-bar: rgb(255 255 255 / 0.1);
+  --search-bar: rgb(255 255 255 / 0.1);
+  --elevated: #3e1c2e;
+  --card: #3a1126;
+  --muted: #4a2538;
+  --sidebar: #3f1d2f;
+  --nav-surface: #3f1d2f;
+  --sidebar-foreground: #f2f3f0;
+  --color-light-50: #2a0418;
+  --color-light-100: #3a1126;
+  --color-light-200: #4a2538;
+  --color-light-300: #421b2f;
+  --color-gray-50: #3a1126;
+  --color-gray-100: #4a2538;
+  --color-gray-200: #421b2f;
 }
 
-html[data-theme='neutral-dim'][data-accent='orange'],
-html[data-theme='ultra-dark'][data-accent='orange'] {
-  --sidebar: #441306;
+html[data-theme='neutral-dim'][data-accent='rose'] {
+  --background: #280312;
+  --filter-bar: rgb(255 255 255 / 0.1);
+  --search-bar: rgb(255 255 255 / 0.1);
+  --elevated: #3c1b28;
+  --card: #381020;
+  --muted: #482331;
+  --sidebar: #3d1c29;
+  --nav-surface: #3d1c29;
+  --sidebar-foreground: #f2f3f0;
+  --color-light-50: #280312;
+  --color-light-100: #381020;
+  --color-light-200: #482331;
+  --color-light-300: #401928;
+  --color-gray-50: #381020;
+  --color-gray-100: #482331;
+  --color-gray-200: #401928;
 }
 
-html[data-theme='neutral-dim'][data-accent='amber'],
-html[data-theme='ultra-dark'][data-accent='amber'] {
-  --sidebar: #461901;
+html[data-theme='neutral-dim'][data-accent='orange'] {
+  --background: #240b09;
+  --filter-bar: rgb(255 255 255 / 0.1);
+  --search-bar: rgb(255 255 255 / 0.1);
+  --elevated: #382220;
+  --card: #341816;
+  --muted: #452b26;
+  --sidebar: #392321;
+  --nav-surface: #392321;
+  --sidebar-foreground: #f2f3f0;
+  --color-light-50: #240b09;
+  --color-light-100: #341816;
+  --color-light-200: #452b26;
+  --color-light-300: #3c211e;
+  --color-gray-50: #341816;
+  --color-gray-100: #452b26;
+  --color-gray-200: #3c211e;
+}
+
+html[data-theme='neutral-dim'][data-accent='amber'] {
+  --background: #250e06;
+  --filter-bar: rgb(255 255 255 / 0.1);
+  --search-bar: rgb(255 255 255 / 0.1);
+  --elevated: #39251d;
+  --card: #351c13;
+  --muted: #453020;
+  --sidebar: #3a261e;
+  --nav-surface: #3a261e;
+  --sidebar-foreground: #f2f3f0;
+  --color-light-50: #250e06;
+  --color-light-100: #351c13;
+  --color-light-200: #453020;
+  --color-light-300: #3d2619;
+  --color-gray-50: #351c13;
+  --color-gray-100: #453020;
+  --color-gray-200: #3d2619;
+}
+
+html[data-theme='high-contrast-light'][data-accent='teal'] {
+  --nav-surface: #1f4242;
+}
+
+html[data-theme='high-contrast-light'][data-accent='cyan'] {
+  --nav-surface: #104e64;
+}
+
+html[data-theme='high-contrast-light'][data-accent='blue'] {
+  --nav-surface: #1c398e;
+}
+
+html[data-theme='high-contrast-light'][data-accent='indigo'] {
+  --nav-surface: #312c85;
+}
+
+html[data-theme='high-contrast-light'][data-accent='violet'] {
+  --nav-surface: #4d179a;
+}
+
+html[data-theme='high-contrast-light'][data-accent='purple'] {
+  --nav-surface: #59168b;
+}
+
+html[data-theme='high-contrast-light'][data-accent='fuchsia'] {
+  --nav-surface: #721378;
+}
+
+html[data-theme='high-contrast-light'][data-accent='pink'] {
+  --nav-surface: #861043;
+}
+
+html[data-theme='high-contrast-light'][data-accent='rose'] {
+  --nav-surface: #8b0836;
+}
+
+html[data-theme='high-contrast-light'][data-accent='orange'] {
+  --nav-surface: #7e2a0c;
+}
+
+html[data-theme='high-contrast-light'][data-accent='amber'] {
+  --nav-surface: #7b3306;
+}
+
+html[data-theme='ultra-dark'][data-accent] {
+  --sidebar: #1e1d25;
+  --nav-surface: #1e1d25;
+  --sidebar-foreground: #f5f5f5;
+  --elevated: #1d1c24;
+}
+
+html[data-theme='neutral-dim'] .bg-white\/50,
+html[data-theme='ultra-dark'] .bg-white\/50 {
+  background-color: rgb(255 255 255 / 0.1);
+}
+
+html[data-theme='neutral-dim'] .border-white\/100,
+html[data-theme='ultra-dark'] .border-white\/100 {
+  border-color: rgb(255 255 255 / 0.1);
+}
+
+html[data-theme='high-contrast-light'] .bg-white\/50 {
+  background-color: var(--filter-bar);
 }

@@ -25,18 +25,18 @@ export function TwoFactorSection({ className }: TwoFactorSectionProps) {
   return (
     <div
       className={cn(
-        'border-border flex w-full flex-col gap-4 self-stretch rounded-xl border bg-gray-50 p-5',
+        'border-border bg-muted flex w-full flex-col gap-4 self-stretch rounded-xl border p-5',
         className
       )}
     >
       <div className="flex items-center justify-between gap-3">
         <div className="bg-primary-300 flex h-10 w-10 shrink-0 items-center justify-center rounded-full">
-          <Icons.LockComputer size={20} className="text-foreground" strokeWidth={1.5} />
+          <Icons.LockComputer size={20} className="text-primary-foreground" strokeWidth={1.5} />
         </div>
         <span
           className={cn(
             'flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium',
-            enabled ? 'bg-success-100 text-success-700' : 'bg-border/80 text-muted-foreground'
+            enabled ? 'bg-success-100 text-success-700' : 'bg-gray-100 text-gray-700'
           )}
         >
           <span
