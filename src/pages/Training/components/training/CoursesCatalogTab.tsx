@@ -215,7 +215,7 @@ function CourseCard({
           <div className="flex items-center gap-2">
             <p className="text-xs text-[#4B5563]">
               {t('pages.training.training.courses.author', 'Author')}:{' '}
-              {course.author_name ?? '—'}
+              {course.author_name ?? ' No author'}
             </p>
             {course.category ? (
               <span className="rounded-full bg-[#F3F4F6] px-2 py-0.5 text-[10px] font-medium text-[#374151]">
