@@ -25,25 +25,14 @@ export function TwoFactorSection({ className }: TwoFactorSectionProps) {
   return (
     <div
       className={cn(
-        'border-border flex w-full flex-col gap-4 self-stretch rounded-xl border bg-gray-50 p-4 sm:p-5',
+        'border-border flex w-full flex-col gap-4 self-stretch rounded-xl border bg-gray-50 p-5',
         className
       )}
     >
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex min-w-0 flex-1 items-start gap-3">
-          <div className="bg-primary-300 flex h-10 w-10 shrink-0 items-center justify-center rounded-full">
-            <Icons.LockComputer size={20} className="text-foreground" strokeWidth={1.5} />
-          </div>
-          <div className="flex min-w-0 flex-col gap-1">
-            <span className="text-foreground text-sm leading-tight font-semibold">
-              {t('twoFactor.section.title')}
-            </span>
-            <span className="text-muted-foreground text-xs leading-snug sm:text-sm">
-              {t('twoFactor.section.description')}
-            </span>
-          </div>
+      <div className="flex items-center justify-between gap-3">
+        <div className="bg-primary-300 flex h-10 w-10 shrink-0 items-center justify-center rounded-full">
+          <Icons.LockComputer size={20} className="text-foreground" strokeWidth={1.5} />
         </div>
-
         <span
           className={cn(
             'flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium',
@@ -60,10 +49,18 @@ export function TwoFactorSection({ className }: TwoFactorSectionProps) {
         </span>
       </div>
 
+      <div className="flex flex-col gap-1">
+        <span className="text-foreground text-sm leading-tight font-semibold">
+          {t('twoFactor.section.title')}
+        </span>
+        <span className="text-muted-foreground text-xs leading-snug sm:text-sm">
+          {t('twoFactor.section.description')}
+        </span>
+      </div>
+
       {isLoading ? (
         <div className="flex flex-col gap-2" aria-busy="true" aria-live="polite">
           <span className="sr-only">{t('twoFactor.section.loading')}</span>
-          <div className="bg-border h-4 w-[80%] max-w-xs animate-pulse rounded" />
           <div className="bg-border h-11 w-full animate-pulse rounded-lg" />
         </div>
       ) : enabled ? (
