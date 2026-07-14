@@ -256,6 +256,9 @@ export function Step2VendorDump({
         // but client-service's Pydantic schema expects a plain YYYY-MM-DD.
         payload.contract_purchase_date = newFa.contract_purchase_date.split('T')[0]
       }
+      if (newFa.reporting_date) {
+        payload.reporting_date = newFa.reporting_date.split('T')[0]
+      }
       newFactoringAgreementJson = JSON.stringify(payload)
       effectivePurchaseDate = newFa.contract_purchase_date || undefined
     }
