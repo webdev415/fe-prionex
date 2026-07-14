@@ -134,9 +134,11 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
     limit: 1000,
   })
 
-  // Fetch tags from API
-  const projectId = 1 // TODO: Get from auth context
-  const { data: tagsData } = useTags(projectId)
+  const activeProjectId = useAuthStore((s) => s.user?.active_project_id)
+  const projectIdNum = activeProjectId ? Number(activeProjectId) : undefined
+
+  // Fetch tags for the operator's active project (tag_definitions.id values).
+  const { data: tagsData } = useTags(projectIdNum)
 
   // TA chains feed the Chain + Step picker below.
   const { data: chainsData } = useTAChains({ include_inactive: false })
@@ -211,9 +213,8 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
   // inactive operator is shown only if it has ≥1 client in the relevant role —
   // employee for Responsible Employee, searcher for Responsible Searcher, either
   // role for Interaction Created By.
-  const activeProjectId = useAuthStore((s) => s.user?.active_project_id)
   const { employeeOptions, interactionUserOptions, searcherOptions } = useOperatorFilterOptions(
-    activeProjectId ? Number(activeProjectId) : null
+    projectIdNum ?? null
   )
 
   // BE owns timezone interpretation (via the ``tz`` query param); the FE
