@@ -3,7 +3,6 @@ import { cn } from '@/lib/utils'
 import { useThemeStore } from '@/stores/themeStore'
 import { THEME_ACCENTS, THEME_BASES, type ThemeAccent, type ThemeBase } from '@/theme/constants'
 
-/** Figma accent swatches (Appearance Settings row, left → right). */
 const ACCENT_SWATCH: Record<ThemeAccent, string> = {
   teal: '#204E4D',
   cyan: '#00B8DB',
@@ -18,7 +17,6 @@ const ACCENT_SWATCH: Record<ThemeAccent, string> = {
   amber: '#FD9A00',
 }
 
-/** Theme preview thumbnails from Figma (`design images/*-1.png`). */
 const BASE_PREVIEW_SRC: Record<ThemeBase, string> = {
   'light-classic': '/assets/themes/light-classic.png',
   'neutral-dim': '/assets/themes/neutral-dim.png',
@@ -47,14 +45,10 @@ function ThemePreviewCard({
         'focus-visible:ring-primary-500 focus-visible:rounded-xl focus-visible:ring-2 focus-visible:outline-none'
       )}
     >
-      {/*
-        Figma: dashboard screenshot inside a rounded frame.
-        Selected state uses brand primary (lime) border — matches Light Classic / Neutral Dim / Ultra Dark mocks.
-      */}
       <div
         className={cn(
           'bg-card overflow-hidden rounded-xl border-2 transition-colors',
-          selected ? 'border-primary-300' : 'border-transparent group-hover:border-gray-200'
+          selected ? 'border-primary-300' : 'group-hover:border-border border-transparent'
         )}
       >
         <img
@@ -64,7 +58,7 @@ function ThemePreviewCard({
           className="aspect-[16/10] h-auto w-full object-cover object-top"
         />
       </div>
-      <span className="text-dark-500 text-center text-xs leading-[150%] font-medium tracking-[-0.2px] sm:text-sm">
+      <span className="text-foreground text-center text-xs leading-[150%] font-medium tracking-[-0.2px] sm:text-sm">
         {label}
       </span>
     </button>
@@ -86,11 +80,11 @@ export function AppearanceSettings() {
       <div className="flex max-w-3xl flex-col gap-1.5 self-stretch">
         <h2
           id="appearance-settings-heading"
-          className="text-dark-500 text-base leading-[150%] font-medium tracking-[-0.36px] sm:text-[18px]"
+          className="text-foreground text-base leading-[150%] font-medium tracking-[-0.36px] sm:text-[18px]"
         >
           {t('pages.profile.appearance.title')}
         </h2>
-        <p className="text-sm leading-[155%] font-light tracking-[-0.28px] text-gray-600">
+        <p className="text-muted-foreground text-sm leading-[155%] font-light tracking-[-0.28px]">
           {t('pages.profile.appearance.description')}
         </p>
       </div>
@@ -111,7 +105,6 @@ export function AppearanceSettings() {
         ))}
       </div>
 
-      {/* Figma: accent row sits under the cards with no extra section title */}
       <div
         className="flex w-full flex-wrap items-center justify-center gap-2.5 self-stretch sm:gap-3"
         role="listbox"
@@ -130,12 +123,11 @@ export function AppearanceSettings() {
               title={t(`pages.profile.appearance.accents.${themeAccent}`)}
               className={cn(
                 'h-6 w-6 shrink-0 rounded-full sm:h-7 sm:w-7',
-                'focus-visible:ring-primary-500 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none',
+                'focus-visible:ring-primary-500 focus-visible:ring-offset-card focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none',
                 selected ? '' : 'hover:scale-105'
               )}
               style={{
                 backgroundColor: color,
-                // Figma selected swatch: white gap + outer ring in the swatch color
                 boxShadow: selected ? `0 0 0 2px var(--card, #fff), 0 0 0 4px ${color}` : undefined,
               }}
             />

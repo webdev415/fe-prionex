@@ -125,7 +125,7 @@ export function ProfileSettingsPage() {
   })
 
   if (authLoading) {
-    return <div className="py-12 text-center text-gray-600">{t('status.loading')}</div>
+    return <div className="text-muted-foreground py-12 text-center">{t('status.loading')}</div>
   }
 
   const handleSave = async (e: React.FormEvent) => {
@@ -193,33 +193,32 @@ export function ProfileSettingsPage() {
 
   return (
     <div className="flex flex-col items-start gap-4 self-stretch p-0">
-      <span className="text-dark-500 text-xl leading-[120%] font-light tracking-[-0.48px] sm:text-2xl">
+      <span className="text-foreground text-xl leading-[120%] font-light tracking-[-0.48px] sm:text-2xl">
         {t('pages.profile.title')}
       </span>
 
       <div className="flex flex-col items-start gap-4 self-stretch 2xl:flex-row 2xl:gap-5">
-        {/* Left panel */}
-        <div className="flex w-full flex-col items-center gap-4 self-stretch rounded-xl bg-white/50 px-4 py-6 sm:gap-5 sm:px-6 sm:py-8 2xl:w-[25%] 2xl:py-11">
+        <div className="bg-card border-border flex w-full flex-col items-center gap-4 self-stretch rounded-xl border px-4 py-6 sm:gap-5 sm:px-6 sm:py-8 2xl:w-[25%] 2xl:py-11">
           <div className="flex flex-col items-center gap-4 self-stretch">
-            <div className="bg-secondary-800 relative flex flex-col items-center justify-center gap-[10px] rounded-full border border-white p-3">
+            <div className="bg-secondary border-card relative flex flex-col items-center justify-center gap-[10px] rounded-full border p-3">
               <div className="border-primary-300 absolute flex h-15 w-15 items-center justify-center rounded-full border-2 bg-transparent"></div>
               <Icons.User02 size={40} className="text-primary-500" />
             </div>
-            <div className="text-dark-500 text-lg leading-[132%] font-medium tracking-[-0.4px] sm:text-xl">
+            <div className="text-foreground text-lg leading-[132%] font-medium tracking-[-0.4px] sm:text-xl">
               {user?.username}
             </div>
             <div className="flex flex-col items-center gap-3 self-stretch">
               <ProjectSelector />
-              <span className="text-sm leading-[155%] font-light tracking-[-0.32px] text-gray-700 sm:text-base">
+              <span className="text-muted-foreground text-sm leading-[155%] font-light tracking-[-0.32px] sm:text-base">
                 {t('pages.profile.roleLabel')}{' '}
-                <span className="text-dark-500 font-medium">{user?.active_role_name || ''}</span>
+                <span className="text-foreground font-medium">{user?.active_role_name || ''}</span>
               </span>
               {(user?.active_department_name || user?.active_group_name) && (
-                <span className="text-sm leading-[155%] font-light tracking-[-0.32px] text-gray-700 sm:text-base">
+                <span className="text-muted-foreground text-sm leading-[155%] font-light tracking-[-0.32px] sm:text-base">
                   {user?.active_department_name && (
                     <>
                       {t('pages.profile.departmentLabel')}{' '}
-                      <span className="text-dark-500 font-medium">
+                      <span className="text-foreground font-medium">
                         {user.active_department_name}
                       </span>
                     </>
@@ -228,13 +227,15 @@ export function ProfileSettingsPage() {
                   {user?.active_group_name && (
                     <>
                       {t('pages.profile.groupLabel')}{' '}
-                      <span className="text-dark-500 font-medium">{user.active_group_name}</span>
+                      <span className="text-foreground font-medium">{user.active_group_name}</span>
                     </>
                   )}
                 </span>
               )}
               {user?.asterisk_extension && (
-                <div className="text-xs text-gray-500">Extension: {user.asterisk_extension}</div>
+                <div className="text-muted-foreground text-xs">
+                  Extension: {user.asterisk_extension}
+                </div>
               )}
               {user?.is_agent && user?.agent_status && (
                 <div className="flex items-center gap-2">
@@ -249,7 +250,9 @@ export function ProfileSettingsPage() {
                             : 'bg-gray-400'
                     }`}
                   />
-                  <span className="text-xs text-gray-500 capitalize">{user.agent_status}</span>
+                  <span className="text-muted-foreground text-xs capitalize">
+                    {user.agent_status}
+                  </span>
                 </div>
               )}
             </div>
@@ -278,23 +281,22 @@ export function ProfileSettingsPage() {
             }}
           />
 
-          <div className="mt-6 flex w-full flex-col gap-3 self-stretch border-t border-gray-200 pt-6">
-            <span className="text-dark-500 self-start text-sm font-semibold tracking-[-0.28px]">
+          <div className="border-border mt-6 flex w-full flex-col gap-3 self-stretch border-t pt-6">
+            <span className="text-foreground self-start text-sm font-semibold tracking-[-0.28px]">
               {t('pages.profile.accountSecurity')}
             </span>
             <TwoFactorSection />
           </div>
         </div>
 
-        {/* Right: appearance + form */}
-        <div className="flex w-full flex-1 flex-col items-start gap-6 self-stretch rounded-xl bg-white/50 p-4 sm:gap-8 sm:p-6">
+        <div className="bg-card border-border flex w-full flex-1 flex-col items-start gap-6 self-stretch rounded-xl border p-4 sm:gap-8 sm:p-6">
           <AppearanceSettings />
 
           <form
             onSubmit={handleSave}
-            className="flex w-full flex-col items-center gap-4 self-stretch border-t border-gray-200 pt-6 sm:gap-6"
+            className="border-border flex w-full flex-col items-center gap-4 self-stretch border-t pt-6 sm:gap-6"
           >
-            <span className="text-dark-500 self-stretch text-base leading-[150%] font-medium tracking-[-0.36px] sm:text-[18px]">
+            <span className="text-foreground self-stretch text-base leading-[150%] font-medium tracking-[-0.36px] sm:text-[18px]">
               {t('pages.users.modals.edit.title')}
             </span>
             <div className="flex w-full flex-col items-center gap-6 self-stretch">
@@ -394,7 +396,7 @@ export function ProfileSettingsPage() {
                     <div className="w-full">
                       <label
                         htmlFor="agent-status"
-                        className="text-dark-500 mb-1.5 block text-sm font-light"
+                        className="text-foreground mb-1.5 block text-sm font-light"
                       >
                         {t('pages.users.forms.agentStatus') || 'Agent Status'}
                       </label>

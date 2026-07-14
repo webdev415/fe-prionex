@@ -258,14 +258,14 @@ export function NotificationBell() {
             : t('notificationBell.ariaLabel')
         }
         onClick={() => setIsOpen((prev) => !prev)}
-        className="relative flex h-9 w-9 items-center justify-center rounded-full transition-colors hover:bg-gray-100 focus:outline-none"
+        className="hover:bg-muted relative flex h-9 w-9 items-center justify-center rounded-full transition-colors focus:outline-none"
       >
         <Icons.Bell
           size={20}
           strokeWidth={1.5}
           className={cn(
             'transition-colors',
-            hasNotifications ? 'text-dark-500' : 'text-gray-300',
+            hasNotifications ? 'text-foreground' : 'text-muted-foreground',
             isShaking && 'animate-bell-shake'
           )}
         />
@@ -278,10 +278,9 @@ export function NotificationBell() {
 
       {/* Dropdown */}
       {isOpen && (
-        <div className="absolute right-0 z-50 mt-2 w-80 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xl">
-          {/* Header */}
-          <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
-            <span className="text-dark-500 text-sm font-semibold">
+        <div className="border-border bg-card absolute right-0 z-50 mt-2 w-80 overflow-hidden rounded-xl border shadow-xl">
+          <div className="border-border flex items-center justify-between border-b px-4 py-3">
+            <span className="text-foreground text-sm font-semibold">
               {t('notificationBell.title')}
             </span>
             <div className="flex items-center gap-2">

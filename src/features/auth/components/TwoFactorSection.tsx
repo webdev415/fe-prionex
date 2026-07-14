@@ -9,14 +9,9 @@ import { TwoFactorDisableModal } from './TwoFactorDisableModal'
 import { TwoFactorRegenerateModal } from './TwoFactorRegenerateModal'
 
 interface TwoFactorSectionProps {
-  /** Profile sidebar card (Account Security); bordered panel layout. */
   className?: string
 }
 
-/**
- * Two-Factor Authentication settings block. Used on Profile Settings (left
- * column under “Account Security”). Enable / Disable / Regenerate via modals.
- */
 export function TwoFactorSection({ className }: TwoFactorSectionProps) {
   const { t } = useTranslation('auth')
   const { data: status, isLoading } = useTwoFactorStatus()
@@ -30,20 +25,20 @@ export function TwoFactorSection({ className }: TwoFactorSectionProps) {
   return (
     <div
       className={cn(
-        'flex w-full flex-col gap-4 self-stretch rounded-xl border border-gray-200 bg-gray-50 p-4 sm:p-5',
+        'border-border flex w-full flex-col gap-4 self-stretch rounded-xl border bg-gray-50 p-4 sm:p-5',
         className
       )}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 flex-1 items-start gap-3">
           <div className="bg-primary-300 flex h-10 w-10 shrink-0 items-center justify-center rounded-full">
-            <Icons.LockComputer size={20} className="text-dark-500" strokeWidth={1.5} />
+            <Icons.LockComputer size={20} className="text-foreground" strokeWidth={1.5} />
           </div>
           <div className="flex min-w-0 flex-col gap-1">
-            <span className="text-dark-500 text-sm leading-tight font-semibold">
+            <span className="text-foreground text-sm leading-tight font-semibold">
               {t('twoFactor.section.title')}
             </span>
-            <span className="text-xs leading-snug text-gray-600 sm:text-sm">
+            <span className="text-muted-foreground text-xs leading-snug sm:text-sm">
               {t('twoFactor.section.description')}
             </span>
           </div>
@@ -52,11 +47,14 @@ export function TwoFactorSection({ className }: TwoFactorSectionProps) {
         <span
           className={cn(
             'flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium',
-            enabled ? 'bg-green-100 text-green-700' : 'bg-gray-200/80 text-gray-700'
+            enabled ? 'bg-success-100 text-success-700' : 'bg-border/80 text-muted-foreground'
           )}
         >
           <span
-            className={cn('h-1.5 w-1.5 rounded-full', enabled ? 'bg-green-600' : 'bg-gray-500')}
+            className={cn(
+              'h-1.5 w-1.5 rounded-full',
+              enabled ? 'bg-success-600' : 'bg-muted-foreground'
+            )}
           />
           {enabled ? t('twoFactor.section.statusEnabled') : t('twoFactor.section.statusDisabled')}
         </span>
@@ -65,15 +63,17 @@ export function TwoFactorSection({ className }: TwoFactorSectionProps) {
       {isLoading ? (
         <div className="flex flex-col gap-2" aria-busy="true" aria-live="polite">
           <span className="sr-only">{t('twoFactor.section.loading')}</span>
-          <div className="h-4 w-[80%] max-w-xs animate-pulse rounded bg-gray-200" />
-          <div className="h-11 w-full animate-pulse rounded-lg bg-gray-200" />
+          <div className="bg-border h-4 w-[80%] max-w-xs animate-pulse rounded" />
+          <div className="bg-border h-11 w-full animate-pulse rounded-lg" />
         </div>
       ) : enabled ? (
         <div className="flex flex-col gap-4">
-          <div className="text-xs text-gray-600 sm:text-sm">
+          <div className="text-muted-foreground text-xs sm:text-sm">
             {t('twoFactor.section.backupRemaining', { count: remaining })}
             {remaining <= 2 && (
-              <span className="ml-1 text-amber-600">{t('twoFactor.section.lowBackupWarning')}</span>
+              <span className="text-warning-600 ml-1">
+                {t('twoFactor.section.lowBackupWarning')}
+              </span>
             )}
           </div>
           <div className="flex w-full flex-col gap-2">

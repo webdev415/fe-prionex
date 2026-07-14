@@ -275,8 +275,7 @@ export function Sidebar({ items = [], bottomItems = [], actions = [], className 
           'shadow-[0px_1px_3px_0px_rgba(0,0,0,0.1),0px_21px_2px_0px_rgba(0,0,0,0.06)]',
           isSidebarVisible ? 'w-60' : 'w-18',
           'items-start px-4 pl-3',
-          isHoverOpen && !isOpenSideBar ? 'bg-white' : 'bg-white',
-          // Hide on mobile by default, show when opened. On desktop (lg+), always visible
+          'bg-card',
           isOpenSideBar ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
           className
         )}
@@ -327,7 +326,7 @@ export function Sidebar({ items = [], bottomItems = [], actions = [], className 
             className={cn(
               'flex h-10 shrink-0 cursor-pointer items-center rounded-lg transition-all duration-200 focus:outline-none',
               isSidebarVisible ? 'px-3' : 'justify-start px-3',
-              'hover:bg-gray-50'
+              'hover:bg-muted'
             )}
             aria-label="Menu"
           >
@@ -394,7 +393,7 @@ export function Sidebar({ items = [], bottomItems = [], actions = [], className 
                       // Make this feel/behave like other clickable NavLink rows
                       'flex h-10 shrink-0 cursor-pointer items-center rounded-lg transition-all duration-200 select-none',
                       isSidebarVisible ? 'px-3' : 'justify-start px-3',
-                      isActive ? 'bg-secondary-800' : 'hover:bg-gray-50'
+                      isActive ? 'bg-secondary-800' : 'hover:bg-muted'
                     )}
                     onClick={() => {
                       // If collapsed, expand on click so the submenu can appear
@@ -473,7 +472,7 @@ export function Sidebar({ items = [], bottomItems = [], actions = [], className 
                 className={cn(
                   'flex h-10 shrink-0 items-center rounded-lg transition-all duration-200 focus:outline-none',
                   isSidebarVisible ? 'px-3' : 'justify-start px-3',
-                  isActive ? 'bg-secondary-800' : 'hover:bg-gray-50'
+                  isActive ? 'bg-secondary-800' : 'hover:bg-muted'
                 )}
                 aria-label={item.label}
                 onMouseEnter={() => {
@@ -574,7 +573,7 @@ export function Sidebar({ items = [], bottomItems = [], actions = [], className 
                         className={cn(
                           'flex h-10 shrink-0 cursor-pointer items-center rounded-lg transition-all duration-200 select-none',
                           isSidebarVisible ? 'px-3' : 'justify-start px-3',
-                          isActive ? 'bg-secondary-800' : 'hover:bg-gray-50'
+                          isActive ? 'bg-secondary-800' : 'hover:bg-muted'
                         )}
                         onClick={() => {
                           if (!isSidebarVisible && !isOpenSideBar) {
@@ -649,7 +648,7 @@ export function Sidebar({ items = [], bottomItems = [], actions = [], className 
                     className={cn(
                       'flex h-10 shrink-0 items-center rounded-lg transition-all duration-200 focus:outline-none',
                       isSidebarVisible ? 'px-3' : 'justify-start px-3',
-                      isActive ? 'bg-secondary-800' : 'hover:bg-gray-50'
+                      isActive ? 'bg-secondary-800' : 'hover:bg-muted'
                     )}
                     aria-label={item.label}
                     onMouseEnter={() => {
@@ -701,7 +700,7 @@ export function Sidebar({ items = [], bottomItems = [], actions = [], className 
                   className={cn(
                     'flex h-10 items-center rounded-md transition-all duration-200 focus:outline-none',
                     isSidebarVisible ? 'px-3' : 'justify-start px-3',
-                    isHoverOpen && !isOpenSideBar ? 'hover:bg-white/80' : 'hover:bg-gray-50'
+                    isHoverOpen && !isOpenSideBar ? 'hover:bg-card/80' : 'hover:bg-muted'
                   )}
                   aria-label={action.label}
                   onMouseEnter={() => {
@@ -732,7 +731,7 @@ export function Sidebar({ items = [], bottomItems = [], actions = [], className 
         submenuPosition &&
         createPortal(
           <div
-            className="submenu-container fixed z-[9999] min-w-[220px] rounded-xl border border-gray-200 bg-white p-2 shadow-lg"
+            className="submenu-container border-border bg-card fixed z-[9999] min-w-[220px] rounded-xl border p-2 shadow-lg"
             style={{
               top: submenuPosition.top,
               bottom: submenuPosition.bottom,
@@ -821,7 +820,7 @@ export function Sidebar({ items = [], bottomItems = [], actions = [], className 
                               'flex h-10 items-center rounded-lg px-3 transition-colors duration-200',
                               isChildActive
                                 ? 'bg-secondary-800 text-white'
-                                : 'text-dark-500 hover:bg-gray-50'
+                                : 'text-dark-500 hover:bg-muted'
                             )}
                           >
                             {ChildIconComponent && (
@@ -879,7 +878,7 @@ export function Sidebar({ items = [], bottomItems = [], actions = [], className 
                   }}
                   className={cn(
                     'flex h-10 items-center rounded-lg px-3 transition-colors duration-200',
-                    isSubActive ? 'bg-secondary-800 text-white' : 'text-dark-500 hover:bg-gray-50'
+                    isSubActive ? 'bg-secondary-800 text-white' : 'text-dark-500 hover:bg-muted'
                   )}
                 >
                   {SubIconComponent && (

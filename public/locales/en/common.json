@@ -117,6 +117,10 @@
     "en": "English",
     "uk": "Ukrainian"
   },
+  "theme": {
+    "switchToLight": "Switch to light theme",
+    "switchToDark": "Switch to dark theme"
+  },
   "notificationBell": {
     "title": "Notifications",
     "markAllRead": "Mark all read",

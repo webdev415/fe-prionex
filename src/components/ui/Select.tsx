@@ -51,7 +51,7 @@ const SelectValue = React.forwardRef<
 >(({ className, style, ...props }, ref) => (
   <SelectPrimitive.Value
     ref={ref}
-    className={cn('text-dark-500 text-sm font-light', className)}
+    className={cn('text-foreground text-sm font-light', className)}
     style={style}
     {...props}
   />
@@ -69,7 +69,7 @@ const SelectTrigger = React.forwardRef<
     <SelectPrimitive.Trigger
       ref={ref}
       className={cn(
-        'ring-offset-background data-[placeholder]:text-muted-foreground text-dark-500 flex h-[45px] w-full items-center justify-between rounded-lg border border-gray-400 bg-white px-3 py-2 text-sm font-light whitespace-nowrap shadow-none focus:ring-0 focus:outline-none disabled:opacity-50 [&>span]:line-clamp-1',
+        'ring-offset-background data-[placeholder]:text-muted-foreground text-foreground bg-input flex h-[45px] w-full items-center justify-between rounded-lg border border-gray-400 px-3 py-2 text-sm font-light whitespace-nowrap shadow-none focus:ring-0 focus:outline-none disabled:opacity-50 [&>span]:line-clamp-1',
         props.disabled ? 'cursor-default' : 'cursor-pointer',
         className
       )}
@@ -100,7 +100,7 @@ const SelectTrigger = React.forwardRef<
                 onClear?.()
               }
             }}
-            className="flex items-center text-gray-400 hover:text-gray-600"
+            className="text-muted-foreground hover:text-foreground flex items-center"
           >
             <Icons.Cancel01 size={14} />
           </span>
@@ -177,7 +177,7 @@ const SelectContent = React.forwardRef<
         <SelectPrimitive.Content
           ref={ref}
           className={cn(
-            'text-popover-foreground data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 relative z-[200] min-w-[8rem] origin-[--radix-select-content-transform-origin] rounded-md border border-gray-200 bg-white shadow-md',
+            'text-foreground data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 border-border bg-card relative z-[200] min-w-[8rem] origin-[--radix-select-content-transform-origin] rounded-md border shadow-md',
             position === 'popper' &&
               'data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1',
             className
@@ -190,20 +190,19 @@ const SelectContent = React.forwardRef<
           {...props}
         >
           {searchable && (
-            <div className="flex items-center border-b border-gray-200 px-2 py-1.5">
-              <Icons.Search size={14} className="mr-2 shrink-0 text-gray-400" />
+            <div className="border-border flex items-center border-b px-2 py-1.5">
+              <Icons.Search size={14} className="text-muted-foreground mr-2 shrink-0" />
               <input
-                className="text-dark-500 w-full bg-transparent text-sm font-light outline-none placeholder:text-gray-400"
+                className="text-foreground placeholder:text-muted-foreground w-full bg-transparent text-sm font-light outline-none"
                 placeholder={searchPlaceholder}
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                // Prevent Radix from intercepting key events and navigating items
                 onKeyDown={(e) => e.stopPropagation()}
               />
               {query && (
                 <button
                   onClick={() => setQuery('')}
-                  className="ml-1 shrink-0 text-gray-400 hover:text-gray-600"
+                  className="text-muted-foreground hover:text-foreground ml-1 shrink-0"
                 >
                   <Icons.Cancel01 size={12} />
                 </button>
@@ -261,7 +260,7 @@ const SelectItem = React.forwardRef<
     <SelectPrimitive.Item
       ref={ref}
       className={cn(
-        'text-dark-500 relative flex w-full cursor-default items-center rounded-sm py-1.5 pr-8 pl-2 text-sm font-light outline-none select-none focus:bg-gray-100 data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
+        'text-foreground focus:bg-muted relative flex w-full cursor-default items-center rounded-sm py-1.5 pr-8 pl-2 text-sm font-light outline-none select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
         className
       )}
       style={hidden ? { ...style, display: 'none' } : style}
