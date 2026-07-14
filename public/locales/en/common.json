@@ -5247,6 +5247,8 @@
         "projectNote": "Tags are automatically assigned to your active project",
         "tagName": "Tag Name",
         "code": "Code",
+        "sortOrder": "Sort Order",
+        "sortOrderPlaceholder": "e.g. 1, 10, 100",
         "category": "Category",
         "visibility": "Visibility",
         "ttlSettings": "TTL Settings",
@@ -5276,7 +5278,8 @@
           "expiryType": "Permanent = forever. TTL = removed after set time. Loan closure = removed when loan is closed.",
           "protectedTag": "Only selected roles can remove this tag.",
           "relatedTag": "When enabled, this tag appears on linked clients who share a phone number.",
-          "mutexGroup": "Tags in the same group are mutually exclusive. Assigning one removes others."
+          "mutexGroup": "Tags in the same group are mutually exclusive. Assigning one removes others.",
+          "sortOrder": "Lower number = higher position in tag lists. Default is 100."
         },
         "notificationTemplatePlaceholder": "e.g. Tag '{tag_name}' assigned to client {client_id}",
         "codePlaceholder": "e.g. high_risk",
@@ -5292,7 +5295,9 @@
           "nameRequired": "Name is required",
           "nameMaxLength": "Name must be 50 characters or less",
           "colorFormat": "Please enter a valid color in hex format (#RRGGBB)",
-          "descriptionMaxLength": "Description must be 200 characters or less"
+          "descriptionMaxLength": "Description must be 200 characters or less",
+          "sortOrderRequired": "Sort order is required",
+          "sortOrderPositiveInteger": "Sort order must be a positive integer"
         }
       },
       "expiryTypes": {

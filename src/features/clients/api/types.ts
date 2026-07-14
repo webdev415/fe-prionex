@@ -219,6 +219,7 @@ export interface Client {
     color: string
     description?: string | null
     visibility?: string | null
+    sort_order?: number
   }>
 
   // UBKI outbound submission opt-out (credit bureau).
