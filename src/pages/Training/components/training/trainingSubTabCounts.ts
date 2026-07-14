@@ -8,6 +8,7 @@ import type { TrainingsAndSessionsSubTabId } from '../../types'
  * mock-backed sub-tabs keep their mock lengths until they're wired. */
 export const TRAINING_SUB_TAB_COUNTS: Record<TrainingsAndSessionsSubTabId, number> = {
   courses: 0,
+  assignments: 0,
   'group-trainings': 0,
   drills: 0,
   calendar: 0,
