@@ -22,6 +22,8 @@ import { Button } from '@/components/ui/Button'
 import { DoubleButton } from '@/components/ui/DoubleButton'
 import { normalizeBackendLanguage } from '@/lib/i18n'
 import type { UpdateMyProfileInput } from '@/types/api'
+import { AppearanceSettings } from './AppearanceSettings'
+
 export function ProfileSettingsPage() {
   const { user, isLoading: authLoading } = useAuth()
   const refreshUser = useAuthStore((state) => state.refreshUser)
@@ -284,11 +286,13 @@ export function ProfileSettingsPage() {
           </div>
         </div>
 
-        {/* Right: form */}
-        <div className="flex w-full flex-1 flex-col items-start gap-3 self-stretch rounded-xl bg-white/50 p-4 sm:p-6">
+        {/* Right: appearance + form */}
+        <div className="flex w-full flex-1 flex-col items-start gap-6 self-stretch rounded-xl bg-white/50 p-4 sm:gap-8 sm:p-6">
+          <AppearanceSettings />
+
           <form
             onSubmit={handleSave}
-            className="flex w-full flex-col items-center gap-4 self-stretch sm:gap-6"
+            className="flex w-full flex-col items-center gap-4 self-stretch border-t border-gray-200 pt-6 sm:gap-6"
           >
             <span className="text-dark-500 self-stretch text-base leading-[150%] font-medium tracking-[-0.36px] sm:text-[18px]">
               {t('pages.users.modals.edit.title')}
