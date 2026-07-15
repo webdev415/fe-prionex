@@ -56,6 +56,11 @@ export interface DialogueScorecardRow {
   clientId: number | null
   /** Resolved client display name; null until/if it loads or has no client. */
   clientName: string | null
+  /** Dialing type (white/grey/unknown) denormalized on the scorecard (KAN-827),
+   *  or null on rows not yet backfilled. */
+  callType: string | null
+  /** Call talk duration in seconds (KAN-827), or null when unknown. */
+  callDuration: number | null
   criteria: DialogueScorecardCriterion[]
 }
 
@@ -195,6 +200,8 @@ export function buildDialogueRow(
     contactedPhone: call?.customer_number ?? null,
     clientId,
     clientName: clientId != null ? (clientNames?.get(clientId) ?? null) : null,
+    callType: scorecard.call_telephony_type ?? null,
+    callDuration: scorecard.call_talk_duration ?? null,
     criteria: buildCriteria(scorecard),
   }
 }
