@@ -2,22 +2,28 @@
  * Toaster Component
  *
  * Global toast notification system using Sonner.
- * Provides success, error, warning, and info notifications.
+ * Surfaces follow the active data-theme (light / dark bases).
  */
 
 import { Toaster as SonnerToaster } from 'sonner'
+import { useThemeStore } from '@/stores/themeStore'
+import { isDarkBase } from '@/theme/constants'
 
 export function Toaster() {
+  const base = useThemeStore((s) => s.base)
+  const theme = isDarkBase(base) ? 'dark' : 'light'
+
   return (
     <SonnerToaster
       position="bottom-right"
+      theme={theme}
       richColors
       closeButton
       toastOptions={{
         style: {
-          background: '#FFFFFF',
-          border: '1px solid #E5E7EB',
-          color: '#111827',
+          background: 'var(--card)',
+          border: '1px solid var(--border)',
+          color: 'var(--foreground)',
         },
         className: 'toast',
       }}

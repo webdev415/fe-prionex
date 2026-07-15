@@ -263,7 +263,7 @@ export function Sidebar({ items = [], bottomItems = [], actions = [], className 
       {/* Mobile overlay */}
       {isOpenSideBar && (
         <div
-          className="fixed inset-0 z-[25] bg-black/50 lg:hidden"
+          className="fixed inset-0 z-[25] bg-black/50 xl:hidden"
           onClick={() => toggleSidebar()}
           aria-hidden="true"
         />
@@ -279,7 +279,7 @@ export function Sidebar({ items = [], bottomItems = [], actions = [], className 
           isSidebarVisible ? 'w-60' : 'w-18',
           'items-start px-4 pl-3',
           'bg-nav-surface',
-          isOpenSideBar ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
+          isOpenSideBar ? 'translate-x-0' : '-translate-x-full xl:translate-x-0',
           className
         )}
         onMouseEnter={() => {

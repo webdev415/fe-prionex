@@ -1001,12 +1001,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         {/* Sidebar */}
         <Sidebar items={navItems} bottomItems={bottomNavItems} />
 
-        {/* Main Content Area with left margin for sidebar - no margin on mobile */}
+        {/* Main Content Area with left margin for sidebar - no margin below xl */}
         <div
           className={cn(
             'min-w-0 transition-all duration-300',
-            'lg:ml-18', // Desktop: always has margin for collapsed sidebar
-            isOpenSideBar && 'lg:ml-60' // Desktop: expanded sidebar
+            'xl:ml-18', // Desktop: always has margin for collapsed sidebar
+            isOpenSideBar && 'xl:ml-60' // Desktop: expanded sidebar
           )}
         >
           {/* Fixed Header */}
@@ -1014,8 +1014,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             className={cn(
               'bg-elevated border-border/40 fixed top-0 right-0 z-20 flex h-[60px] justify-between border-l px-3 shadow-sm transition-all duration-300 sm:px-4 lg:px-6',
               isLawyerWorkplaceRoute ? 'items-stretch' : 'items-center',
-              'left-0 lg:left-18',
-              isOpenSideBar && 'lg:left-60'
+              'left-0 xl:left-18',
+              isOpenSideBar && 'xl:left-60'
             )}
           >
             {/* Left side: Menu button (mobile) + Search Bar or Lawyer Workplace nav */}
@@ -1031,7 +1031,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               <button
                 onClick={toggleSidebar}
                 className={cn(
-                  'focus:ring-primary-500 focus:ring-offset-background group border-border bg-card hover:bg-muted active:bg-muted flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-lg border shadow-sm transition-all duration-200 hover:border-gray-300 hover:shadow-md focus:ring-2 focus:ring-offset-2 focus:outline-none active:shadow-sm disabled:cursor-not-allowed disabled:opacity-50 lg:hidden',
+                  'focus:ring-primary-500 focus:ring-offset-background group border-border bg-card hover:bg-muted active:bg-muted flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-lg border shadow-sm transition-all duration-200 hover:border-gray-300 hover:shadow-md focus:ring-2 focus:ring-offset-2 focus:outline-none active:shadow-sm disabled:cursor-not-allowed disabled:opacity-50 xl:hidden',
                   isLawyerWorkplaceRoute && 'self-center'
                 )}
                 aria-label="Toggle menu"

@@ -176,7 +176,7 @@ export function SearchBar({
           // Responsive width: smaller on mobile, full width on larger screens
           'w-[200px] sm:w-[280px] md:w-[360px] lg:w-[448px]',
           // Responsive right padding: adjust for mobile (with filter button) and desktop (with search button)
-          'pr-2 lg:pr-2',
+          'pr-1 lg:pr-1',
           className
         )}
       >

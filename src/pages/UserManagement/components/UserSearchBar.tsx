@@ -92,7 +92,7 @@ export function UserSearchBar({
   }
 
   return (
-    <div className="bg-search-bar flex w-[280px] items-center gap-3 rounded-full pr-2 pl-4 sm:w-[400px] md:w-[500px] lg:w-[600px]">
+    <div className="border-border bg-card flex w-[280px] items-center gap-3 rounded-full border pr-2 pl-4 sm:w-[400px] md:w-[500px] lg:w-[600px]">
       <div className="flex min-w-0 flex-1 items-center gap-2 py-1">
         <input
           type="text"

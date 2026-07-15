@@ -125,7 +125,7 @@ const DoubleButton = forwardRef<HTMLButtonElement, DoubleButtonProps>(
         <span
           className={cn(
             textContainerVariants({ size }),
-            'group-hover:text-dark-500 text-white group-disabled:text-gray-600'
+            'group-hover:text-primary-foreground text-white group-disabled:text-gray-600'
           )}
         >
           {children}

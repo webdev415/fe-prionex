@@ -24,33 +24,14 @@ import { normalizeBackendLanguage } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 import type { UpdateMyProfileInput } from '@/types/api'
 import { useThemeStore } from '@/stores/themeStore'
-import {
-  DEFAULT_THEME_ACCENT,
-  DEFAULT_THEME_BASE,
-  isDarkBase,
-  isThemeAccent,
-  isThemeBase,
-  type ThemeAccent,
-  type ThemeBase,
-} from '@/theme/constants'
+import { isDarkBase } from '@/theme/constants'
 import { AppearanceSettings } from './AppearanceSettings'
-
-function resolveThemeBase(value: string | undefined, fallback: ThemeBase): ThemeBase {
-  return isThemeBase(value) ? value : fallback
-}
-
-function resolveThemeAccent(value: string | undefined, fallback: ThemeAccent): ThemeAccent {
-  return isThemeAccent(value) ? value : fallback
-}
 
 export function ProfileSettingsPage() {
   const { user, isLoading: authLoading } = useAuth()
   const refreshUser = useAuthStore((state) => state.refreshUser)
-  const storeBase = useThemeStore((state) => state.base)
-  const setBase = useThemeStore((state) => state.setBase)
-  const setAccent = useThemeStore((state) => state.setAccent)
-  const setPreference = useThemeStore((state) => state.setPreference)
-  const isDarkTheme = isDarkBase(storeBase)
+  const themeBase = useThemeStore((state) => state.base)
+  const isDarkTheme = isDarkBase(themeBase)
   const { t, i18n } = useTranslation('common')
   const { mutateAsync: updateMyProfileMutateAsync } = useUpdateMyProfile()
   const [isUpdatingLocal, setIsUpdatingLocal] = useState(false)
@@ -63,7 +44,6 @@ export function ProfileSettingsPage() {
     const currentLanguage: 'en' | 'uk' = user?.language
       ? normalizeBackendLanguage(user.language)
       : fromI18n
-    const themeState = useThemeStore.getState()
     return {
       username: user?.username || '',
       email: user?.email || '',
@@ -74,11 +54,6 @@ export function ProfileSettingsPage() {
       language: currentLanguage,
       timezone: user?.timezone || 'Europe/Kyiv',
       agent_status: user?.agent_status || 'offline',
-      theme_base: resolveThemeBase(user?.themeBase, themeState.base || DEFAULT_THEME_BASE),
-      theme_accent: resolveThemeAccent(
-        user?.themeAccent,
-        themeState.accent || DEFAULT_THEME_ACCENT
-      ),
       currentPassword: '',
       newPassword: '',
     }
@@ -94,8 +69,6 @@ export function ProfileSettingsPage() {
     phone: initialForm.phone,
     language: initialForm.language,
     timezone: initialForm.timezone,
-    theme_base: initialForm.theme_base,
-    theme_accent: initialForm.theme_accent,
   }))
 
   // Re-sync form when auth user loads or is refreshed (e.g. after permission refresh / project switch)
@@ -112,8 +85,6 @@ export function ProfileSettingsPage() {
       language: user.language
         ? (normalizeBackendLanguage(user.language) as 'en' | 'uk')
         : prev.language,
-      theme_base: resolveThemeBase(user.themeBase, prev.theme_base),
-      theme_accent: resolveThemeAccent(user.themeAccent, prev.theme_accent),
     }))
   }, [user])
 
@@ -125,9 +96,7 @@ export function ProfileSettingsPage() {
       form.middle_name !== savedProfileSnapshot.middle_name ||
       form.phone !== savedProfileSnapshot.phone ||
       form.language !== savedProfileSnapshot.language ||
-      form.timezone !== savedProfileSnapshot.timezone ||
-      form.theme_base !== savedProfileSnapshot.theme_base ||
-      form.theme_accent !== savedProfileSnapshot.theme_accent
+      form.timezone !== savedProfileSnapshot.timezone
     )
   }, [form, savedProfileSnapshot])
 
@@ -182,10 +151,6 @@ export function ProfileSettingsPage() {
       }
     }
 
-    const appearanceDirty =
-      form.theme_base !== savedProfileSnapshot.theme_base ||
-      form.theme_accent !== savedProfileSnapshot.theme_accent
-
     const updatePayload: UpdateMyProfileInput = {
       email: form.email,
       first_name: form.first_name,
@@ -194,7 +159,6 @@ export function ProfileSettingsPage() {
       phone: form.phone || undefined,
       language: form.language || undefined,
       timezone: form.timezone || undefined,
-      ...(appearanceDirty ? { theme_base: form.theme_base, theme_accent: form.theme_accent } : {}),
       agent_status: user?.is_agent ? form.agent_status : undefined,
     }
 
@@ -210,8 +174,6 @@ export function ProfileSettingsPage() {
         phone: form.phone,
         language: form.language,
         timezone: form.timezone,
-        theme_base: form.theme_base,
-        theme_accent: form.theme_accent,
       })
       setForm((f) => ({ ...f, currentPassword: '', newPassword: '' }))
     } finally {
@@ -220,10 +182,6 @@ export function ProfileSettingsPage() {
   }
 
   const handleCancel = () => {
-    const appearanceDirty =
-      form.theme_base !== savedProfileSnapshot.theme_base ||
-      form.theme_accent !== savedProfileSnapshot.theme_accent
-
     setForm((prev) => ({
       ...prev,
       email: savedProfileSnapshot.email,
@@ -233,27 +191,9 @@ export function ProfileSettingsPage() {
       phone: savedProfileSnapshot.phone,
       language: savedProfileSnapshot.language,
       timezone: savedProfileSnapshot.timezone,
-      theme_base: savedProfileSnapshot.theme_base,
-      theme_accent: savedProfileSnapshot.theme_accent,
       currentPassword: '',
       newPassword: '',
     }))
-    if (appearanceDirty) {
-      setPreference({
-        base: savedProfileSnapshot.theme_base,
-        accent: savedProfileSnapshot.theme_accent,
-      })
-    }
-  }
-
-  const handleAppearanceBaseChange = (base: ThemeBase) => {
-    setForm((prev) => ({ ...prev, theme_base: base }))
-    setBase(base)
-  }
-
-  const handleAppearanceAccentChange = (accent: ThemeAccent) => {
-    setForm((prev) => ({ ...prev, theme_accent: accent }))
-    setAccent(accent)
   }
 
   return (
@@ -369,12 +309,7 @@ export function ProfileSettingsPage() {
         </div>
 
         <div className="bg-card/50 flex w-full flex-1 flex-col items-start gap-6 self-stretch rounded-xl p-4 sm:gap-8 sm:p-6">
-          <AppearanceSettings
-            base={form.theme_base}
-            accent={form.theme_accent}
-            onBaseChange={handleAppearanceBaseChange}
-            onAccentChange={handleAppearanceAccentChange}
-          />
+          <AppearanceSettings />
 
           <form
             onSubmit={handleSave}
