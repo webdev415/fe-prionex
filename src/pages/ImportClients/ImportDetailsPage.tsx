@@ -171,6 +171,17 @@ export function ImportDetailsPage() {
 
   const isVendor = jobDetail?.import_type === 'vendor'
   const isTagAssignment = jobDetail?.import_type === 'tag_assignment'
+  const isDocument = jobDetail?.import_type === 'document'
+
+  // Bulk document imports report per-category counts in error_summary.counts
+  // (files attached / folders matched / skipped / blocked …), not the
+  // client-CSV-shaped total-rows/new-clients counters.
+  const documentCounts =
+    isDocument && jobDetail?.error_summary && typeof jobDetail.error_summary === 'object'
+      ? ((jobDetail.error_summary as Record<string, unknown>).counts as
+          | Record<string, number>
+          | undefined)
+      : undefined
 
   // Convert API data to component format
   const importDetail = jobDetail
@@ -340,8 +351,9 @@ export function ImportDetailsPage() {
 
           {/* Summary Statistics - Grid Layout. Vendor jobs use the
               right-hand VendorPhaseProgress panel instead of these
-              client-CSV-shaped counters, so skip this block. */}
-          {importDetail.status !== 'failed' && !isVendor && (
+              client-CSV-shaped counters, so skip this block. Document imports
+              have their own document-shaped block below. */}
+          {importDetail.status !== 'failed' && !isVendor && !isDocument && (
             <>
               <div className="flex flex-col items-start gap-3 self-stretch">
                 <div className="flex flex-col gap-2 self-stretch sm:flex-row sm:items-center sm:gap-6">
@@ -392,6 +404,63 @@ export function ImportDetailsPage() {
               {/* Processing time - separate from grid */}
               <div className="flex flex-col gap-2 self-stretch sm:flex-row sm:items-center sm:gap-6">
                 <span className="text-dark-500 w-full text-sm leading-[155%] font-light tracking-[-0.32px] sm:w-[120px] sm:text-base">
+                  {t('pages.imports.details.processingTime')}
+                </span>
+                <span className="text-dark-500 flex-1 text-sm leading-[155%] font-medium tracking-[-0.32px] sm:text-base">
+                  {importDetail.processingTime}
+                </span>
+              </div>
+            </>
+          )}
+
+          {/* Document imports: per-category counts from error_summary.counts,
+              not the client-CSV total-rows/new-clients shape. */}
+          {importDetail.status !== 'failed' && isDocument && (
+            <>
+              <div className="flex flex-col items-start gap-3 self-stretch">
+                {[
+                  {
+                    label: t('pages.imports.details.filesAttached', 'Files attached'),
+                    value: documentCounts?.files_attached ?? 0,
+                  },
+                  {
+                    label: t('pages.imports.details.foldersMatched', 'Folders matched'),
+                    value: documentCounts?.matched_folders ?? 0,
+                  },
+                  {
+                    label: t('pages.imports.details.skippedNoMatch', 'Skipped (no match)'),
+                    value: documentCounts?.skipped_no_match ?? 0,
+                  },
+                  {
+                    label: t('pages.imports.details.blockedExecutable', 'Blocked (executable)'),
+                    value: documentCounts?.executables_blocked ?? 0,
+                  },
+                  {
+                    label: t('pages.imports.details.skippedTooLarge', 'Skipped (too large)'),
+                    value: documentCounts?.oversized_skipped ?? 0,
+                  },
+                  {
+                    label: t('pages.imports.details.errors', 'Errors'),
+                    value: documentCounts?.errors ?? 0,
+                  },
+                ].map((row) => (
+                  <div
+                    key={row.label}
+                    className="flex flex-col gap-2 self-stretch sm:flex-row sm:items-center sm:gap-6"
+                  >
+                    <span className="text-dark-500 w-full text-sm leading-[155%] font-light tracking-[-0.32px] sm:w-[160px] sm:text-base">
+                      {row.label}
+                    </span>
+                    <span className="text-dark-500 flex-1 text-sm leading-[155%] font-medium tracking-[-0.32px] sm:text-base">
+                      {row.value.toLocaleString()}
+                    </span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Processing time */}
+              <div className="flex flex-col gap-2 self-stretch sm:flex-row sm:items-center sm:gap-6">
+                <span className="text-dark-500 w-full text-sm leading-[155%] font-light tracking-[-0.32px] sm:w-[160px] sm:text-base">
                   {t('pages.imports.details.processingTime')}
                 </span>
                 <span className="text-dark-500 flex-1 text-sm leading-[155%] font-medium tracking-[-0.32px] sm:text-base">

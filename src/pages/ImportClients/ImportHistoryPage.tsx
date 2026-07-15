@@ -154,6 +154,10 @@ function ImportTypeBadge({
       label: t('pages.imports.history.importTypes.saleNotes', 'Sale Notes'),
       className: 'bg-cyan-600 text-white',
     },
+    document: {
+      label: t('pages.imports.history.importTypes.document', 'Document Import'),
+      className: 'bg-violet-600 text-white',
+    },
   }
 
   if (importType === 'tag_assignment') {
