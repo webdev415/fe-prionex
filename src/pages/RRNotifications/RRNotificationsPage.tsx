@@ -67,6 +67,7 @@ export function RRNotificationsPage() {
     enabled: boolean
     daysBefore: number[]
     templateText: string
+    penaltyTemplateText: string
   }
   const [edits, setEdits] = useState<FormState | null>(null)
   const [dayInput, setDayInput] = useState('')
@@ -74,25 +75,17 @@ export function RRNotificationsPage() {
   const enabled = edits?.enabled ?? settings?.enabled ?? false
   const daysBefore = edits?.daysBefore ?? settings?.days_before ?? [3]
   const templateText = edits?.templateText ?? settings?.template_text ?? ''
+  // KAN-785 Part 2 — separate template for the overdue-penalty reminder.
+  const penaltyTemplateText = edits?.penaltyTemplateText ?? settings?.penalty_template_text ?? ''
 
   const setEnabled = (v: boolean) =>
-    setEdits({
-      enabled: v,
-      daysBefore,
-      templateText,
-    })
+    setEdits({ enabled: v, daysBefore, templateText, penaltyTemplateText })
   const setDaysBefore = (v: number[]) =>
-    setEdits({
-      enabled,
-      daysBefore: v,
-      templateText,
-    })
+    setEdits({ enabled, daysBefore: v, templateText, penaltyTemplateText })
   const setTemplateText = (v: string) =>
-    setEdits({
-      enabled,
-      daysBefore,
-      templateText: v,
-    })
+    setEdits({ enabled, daysBefore, templateText: v, penaltyTemplateText })
+  const setPenaltyTemplateText = (v: string) =>
+    setEdits({ enabled, daysBefore, templateText, penaltyTemplateText: v })
 
   const previewBody = useMemo(() => renderTemplate(templateText, SAMPLE_CTX), [templateText])
 
@@ -149,6 +142,7 @@ export function RRNotificationsPage() {
     settings == null ||
     enabled !== settings.enabled ||
     templateText !== settings.template_text ||
+    penaltyTemplateText !== (settings.penalty_template_text ?? '') ||
     JSON.stringify(daysBefore) !== JSON.stringify(settings.days_before)
 
   const isSaveDisabled =
@@ -160,6 +154,9 @@ export function RRNotificationsPage() {
         enabled,
         days_before: daysBefore,
         template_text: templateText,
+        // Blank penalty template -> null so the cron falls back to the
+        // installment template.
+        penalty_template_text: penaltyTemplateText.trim() || null,
       })
       // Drop local edits so the form reflects the freshly-refetched
       // server state on the next render. Query invalidation in the
@@ -387,6 +384,51 @@ export function RRNotificationsPage() {
               </span>
               <span className="text-gray-700">{previewBody}</span>
             </div>
+          </div>
+
+          {/* Penalty reminder template (KAN-785 Part 2) — optional override */}
+          <div className="flex flex-col gap-2 border-t border-gray-100 pt-5">
+            <Label className="text-sm font-medium text-gray-800">
+              {t('pages.rrNotifications.penaltyTemplate', 'Penalty reminder template')}
+            </Label>
+            <span className="text-xs text-gray-500">
+              {t(
+                'pages.rrNotifications.penaltyTemplateHint',
+                'Used only for the overdue-penalty reminder. Leave blank to reuse the installment template above.'
+              )}
+            </span>
+            <Textarea
+              value={penaltyTemplateText}
+              onChange={(e) => setPenaltyTemplateText(e.target.value)}
+              rows={3}
+              className="text-sm"
+              placeholder={t(
+                'pages.rrNotifications.penaltyTemplatePlaceholder',
+                '{client_name}: penalty {amount} due {due_date}'
+              )}
+            />
+            <div className="flex flex-wrap gap-2">
+              {AVAILABLE_VARS.map((v) => (
+                <button
+                  key={v.name}
+                  type="button"
+                  onClick={() => setPenaltyTemplateText(penaltyTemplateText + `{${v.name}}`)}
+                  className="rounded-full border border-gray-200 bg-white px-2 py-1 font-mono text-[11px] text-gray-700 hover:bg-gray-50"
+                >
+                  {`{${v.name}}`}
+                </button>
+              ))}
+            </div>
+            {penaltyTemplateText.trim() && (
+              <div className="rounded border border-dashed border-gray-200 bg-white px-3 py-2 text-xs">
+                <span className="font-medium text-gray-600">
+                  {t('pages.rrNotifications.preview', 'Preview')}:{' '}
+                </span>
+                <span className="text-gray-700">
+                  {renderTemplate(penaltyTemplateText, SAMPLE_CTX)}
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Save */}

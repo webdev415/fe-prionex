@@ -4,7 +4,6 @@ import {
   exportFeedback,
   getFeedback,
   listFeedback,
-  markFeedbackCompleted,
   markFeedbackRead,
   replyToFeedback,
 } from '../api/qualityService'
@@ -63,17 +62,6 @@ export function useMarkFeedbackRead() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (feedbackId: number) => markFeedbackRead(feedbackId),
-    onSuccess: (updated) => {
-      queryClient.setQueryData(feedbackKeys.detail(updated.id), updated)
-      queryClient.invalidateQueries({ queryKey: feedbackKeys.all })
-    },
-  })
-}
-
-export function useMarkFeedbackCompleted() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: (feedbackId: number) => markFeedbackCompleted(feedbackId),
     onSuccess: (updated) => {
       queryClient.setQueryData(feedbackKeys.detail(updated.id), updated)
       queryClient.invalidateQueries({ queryKey: feedbackKeys.all })

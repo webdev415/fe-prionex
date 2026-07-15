@@ -42,7 +42,9 @@ export interface Payment {
   payment_comment?: string | null
   seller_name?: string
   status: PaymentStatus
-  payment_date: string // ISO date string
+  // KAN-782: legacy bulk-upload rows can have a NULL payment_date (backend returns
+  // JSON null). Callers must render it as "—"/blank, never assume a string.
+  payment_date: string | null // ISO date string, or null for legacy dateless rows
   recorded_at: string | null // ISO datetime string — nullable for auto-created verified rows
   verified_at?: string // ISO datetime string
   completed_at?: string // ISO datetime string
@@ -236,7 +238,7 @@ export interface PendingPaymentItem {
   client_name?: string | null
   amount: string
   payment_method: PaymentMethod
-  payment_date: string
+  payment_date: string | null // KAN-782: read schema tolerates legacy NULL dates
   recorded_at: string
   days_pending: number
   /** User who recorded the payment (operator / fixation). */
@@ -253,6 +255,10 @@ export interface PaymentAllocationItem {
   component_label: string
   original_amount: number
   allocated_amount: number
+  // Total collected toward this component to date (historical paid + all
+  // allocations through this payment). Optional for backward compatibility.
+  paid_amount?: number
+  written_off_amount?: number
   remaining_balance: number
 }
 
@@ -264,6 +270,11 @@ export interface PaymentDebtBreakdownResponse {
   debt_id: number | null
   contract_number: string
   allocation: PaymentAllocationItem[]
+  // Backend-computed totals (Decimal, single source of truth). Optional for
+  // backward compatibility with older backends that omit them.
+  total_original?: number
+  total_paid?: number
+  total_written_off?: number
   total_allocated: number
   /**
    * Per the payment-allocation-snapshot requirement (Phase 4): residue from

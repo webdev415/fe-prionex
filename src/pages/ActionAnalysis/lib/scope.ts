@@ -35,6 +35,61 @@ export function isActionAnalysisScope(v: string | null): v is ActionAnalysisScop
   return v != null && (ACTION_ANALYSIS_SCOPES as readonly string[]).includes(v)
 }
 
+/**
+ * Sub-tab id → the backend permission whose per-role `access_level` is that
+ * tab's scope ceiling (KAN-757). Names must match the backend permission names.
+ */
+export const SUB_TAB_ACCESS_PERMISSION: Record<string, string> = {
+  list: 'view_call_list',
+  interactions: 'view_interaction_history',
+  'ta-history': 'view_ta_history',
+  'task-history': 'view_task_history',
+  'payment-history': 'view_payment_history',
+  timeline: 'view_click_tracking',
+  'screen-time': 'view_screen_time',
+  heatmap: 'view_activity_heatmap',
+}
+
+// Breadth order — a lower rank is a narrower scope. my ⊂ group ⊂ department ⊂ all.
+const SCOPE_RANK: Record<ActionAnalysisScope, number> = {
+  my: 0,
+  group: 1,
+  department: 2,
+  all: 3,
+}
+
+export function isScopeWithinCeiling(
+  scope: ActionAnalysisScope,
+  ceiling: ActionAnalysisScope
+): boolean {
+  return SCOPE_RANK[scope] <= SCOPE_RANK[ceiling]
+}
+
+/**
+ * The role's scope ceiling for a sub-tab, read from the user's JWT
+ * `tab_access_levels`. Tabs with no configured level (or an unknown value)
+ * default to `all` — unrestricted — matching the backend default.
+ */
+export function resolveTabCeiling(
+  subTabId: string,
+  tabAccessLevels: Record<string, string> | undefined
+): ActionAnalysisScope {
+  const permission = SUB_TAB_ACCESS_PERMISSION[subTabId]
+  const level = permission ? tabAccessLevels?.[permission] : undefined
+  return isActionAnalysisScope(level ?? null) ? (level as ActionAnalysisScope) : 'all'
+}
+
+/**
+ * Clamp a requested scope down to what the ceiling allows (e.g. a URL asking
+ * for `all` under a `department` ceiling resolves to `department`).
+ */
+export function clampScopeToCeiling(
+  scope: ActionAnalysisScope,
+  ceiling: ActionAnalysisScope
+): ActionAnalysisScope {
+  return isScopeWithinCeiling(scope, ceiling) ? scope : ceiling
+}
+
 export function readScope(params: URLSearchParams): ActionAnalysisScope {
   const raw = params.get('scope')
   return isActionAnalysisScope(raw) ? raw : LEGACY_URL_DEFAULT_SCOPE
@@ -78,7 +133,9 @@ const SCOPE_LABEL_KEY: Record<ActionAnalysisScope, string> = {
  *
  * Resolution rules (also documented in [Epic/KAN-506-Plan.md](Epic/KAN-506-Plan.md) §3.4):
  *   - `my`         → `[me.id]`; both pickers disabled.
- *   - `group`      → `undefined` (no-op until Groups land); both pickers disabled.
+ *   - `group`      → operators sharing the current user's group; both pickers
+ *                    disabled. If no group or no operators → `userIds=[]` +
+ *                    isEmptyResolution.
  *   - `department` → operators sharing the current user's department; department
  *                    picker disabled (locked), employee picker enabled as a refinement.
  *                    If no department or no operators → `userIds=[]` + isEmptyResolution.
@@ -89,6 +146,7 @@ export function useScopedUserIds(operators: OperatorUser[]): ScopedUserIds {
   const scope = readScope(searchParams)
   const userId = useAuthStore((s) => (s.user?.id ? Number(s.user.id) : null))
   const departmentId = useAuthStore((s) => s.user?.active_department_id ?? null)
+  const groupId = useAuthStore((s) => s.user?.active_group_id ?? null)
 
   return useMemo<ScopedUserIds>(() => {
     if (scope === 'my') {
@@ -102,15 +160,24 @@ export function useScopedUserIds(operators: OperatorUser[]): ScopedUserIds {
       }
     }
     if (scope === 'group') {
-      // Groups are placeholder UI until the entity ships. Treat as no-op so
-      // the user sees data instead of an empty page.
+      if (groupId == null) {
+        return {
+          scope,
+          userIds: [],
+          employeePickerDisabled: true,
+          departmentPickerDisabled: true,
+          disabledLabelKey: SCOPE_LABEL_KEY.group,
+          isEmptyResolution: true,
+        }
+      }
+      const ids = operators.filter((o) => o.group_id === groupId).map((o) => o.id)
       return {
         scope,
-        userIds: undefined,
-        employeePickerDisabled: true,
+        userIds: ids,
+        employeePickerDisabled: false,
         departmentPickerDisabled: true,
         disabledLabelKey: SCOPE_LABEL_KEY.group,
-        isEmptyResolution: false,
+        isEmptyResolution: ids.length === 0,
       }
     }
     if (scope === 'department') {
@@ -143,5 +210,5 @@ export function useScopedUserIds(operators: OperatorUser[]): ScopedUserIds {
       disabledLabelKey: SCOPE_LABEL_KEY.all,
       isEmptyResolution: false,
     }
-  }, [scope, userId, departmentId, operators])
+  }, [scope, userId, departmentId, groupId, operators])
 }

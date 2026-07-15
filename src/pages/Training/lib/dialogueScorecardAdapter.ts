@@ -49,7 +49,20 @@ export interface DialogueScorecardRow {
   scoreOutOf: number
   /** The scorecard's overall comment, for the Comment column. */
   comment?: string
+  /** Phone number contacted on the call (call service), or null if unknown. */
+  contactedPhone: string | null
+  /** Client linked to the call, for the client-link column. Null when the call
+   *  had no resolved client (unknown caller / outbound without a client). */
+  clientId: number | null
+  /** Resolved client display name; null until/if it loads or has no client. */
+  clientName: string | null
   criteria: DialogueScorecardCriterion[]
+}
+
+/** Per-call contact info resolved from the call service (batch endpoint). */
+export interface CallContactInfo {
+  customer_number: string
+  client_id: number | null
 }
 
 const AVATAR_PALETTE = [
@@ -117,7 +130,7 @@ function ratingForValue(value: number | boolean | null, scale: string): Dialogue
 }
 
 /**
- * The KAN-503 "Script stages" section is funnel-tracking data (binary,
+ * The "Script stages" section is funnel-tracking data (binary,
  * weight 0), not a quality criterion. It is captured in the scoring editor
  * (ScorecardPanel) but excluded from the read-only quality breakdown so it
  * doesn't distort the criteria count or show "Weight 0 pts" cards.
@@ -154,7 +167,9 @@ export function buildCriteria(scorecard: Scorecard): DialogueScorecardCriterion[
 
 export function buildDialogueRow(
   scorecard: Scorecard,
-  operatorLookup: Map<number, string>
+  operatorLookup: Map<number, string>,
+  callLookup?: Map<string, CallContactInfo>,
+  clientNames?: Map<number, string>
 ): DialogueScorecardRow {
   const operatorName = operatorLookup.get(scorecard.operator_id) ?? `#${scorecard.operator_id}`
   const hasScore = scorecard.weighted_score != null
@@ -162,6 +177,8 @@ export function buildDialogueRow(
   // land on the 0-100 scale the Figma views + category bands expect (KAN-504
   // §5.4 — the point-weighted templates must render a correct /100 number).
   const score100 = hasScore ? (scorecard.weighted_score as number) * 20 : null
+  const call = callLookup?.get(scorecard.call_id) ?? null
+  const clientId = call?.client_id ?? null
   return {
     id: scorecard.id,
     dateLabel: formatDayMonth(scorecard.created_at),
@@ -175,15 +192,20 @@ export function buildDialogueRow(
     score: score100 != null ? Math.round(score100) : 0,
     scoreOutOf: 100,
     comment: scorecard.overall_comment ?? undefined,
+    contactedPhone: call?.customer_number ?? null,
+    clientId,
+    clientName: clientId != null ? (clientNames?.get(clientId) ?? null) : null,
     criteria: buildCriteria(scorecard),
   }
 }
 
 export function buildDialogueRows(
   scorecards: Scorecard[],
-  operators: OperatorUser[]
+  operators: OperatorUser[],
+  callLookup?: Map<string, CallContactInfo>,
+  clientNames?: Map<number, string>
 ): DialogueScorecardRow[] {
   const lookup = new Map<number, string>()
   operators.forEach((op) => lookup.set(op.id, op.full_name ?? `#${op.id}`))
-  return scorecards.map((sc) => buildDialogueRow(sc, lookup))
+  return scorecards.map((sc) => buildDialogueRow(sc, lookup, callLookup, clientNames))
 }

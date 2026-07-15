@@ -29,7 +29,7 @@ import { CallDialogModal, type CallType, type CallStatus } from './components/Ca
 import { DoubleButton } from '@/components/ui/DoubleButton'
 import { TableSkeleton } from '@/components/ui/TableSkeleton'
 import { ActivityTimelinePageSkeleton } from './components/ActivityTimelinePageSkeleton'
-import { formatDate, formatDateTime } from '@/lib/formatters'
+import { formatClientFullName, formatDate, formatDateTime } from '@/lib/formatters'
 import { getDateStringInTimezone } from '@/lib/dateUtils'
 import { useCallStore } from '@/stores/callStore'
 import {
@@ -75,7 +75,7 @@ export function ActivityTimelinePage() {
           : []
     return {
       id: profile.id,
-      fullName: profile.full_name,
+      fullName: formatClientFullName(profile),
       priorityScore: profile.priority_score ?? 0,
       priorityLevel: profile.priority_level ?? 'Low',
       phones,

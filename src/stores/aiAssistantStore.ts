@@ -19,6 +19,15 @@ import type {
   AssistantOutputFormat,
   AssistantResponseMode,
 } from '@/features/aiAssistant/api'
+import {
+  clampReasoningPanelWidth,
+  DEFAULT_REASONING_PANEL_WIDTH,
+} from '@/pages/AiAssistant/reasoningPanelConfig'
+
+/** Auto-stop silence timeout for voice dictation (seconds). */
+export type AssistantVoiceSilenceTimeout = 1.5 | 2 | 3
+/** Hard cap on a single voice recording (seconds). */
+export type AssistantVoiceMaxDuration = 30 | 60 | 120
 
 export interface AssistantSettings {
   /** Reasoning depth sent with every chat request: fast (default) | thinking. */
@@ -26,10 +35,19 @@ export interface AssistantSettings {
   responseMode: AssistantResponseMode
   outputFormat: AssistantOutputFormat
   voiceInputEnabled: boolean
+  /**
+   * Deep-research flag — when on, the chat request carries `deep_research: true`
+   * so the brain runs a thorough multi-agent analysis (the gateway ignores the
+   * field until it ships support). Toggled from the composer "+" hub.
+   */
+  deepResearch: boolean
+  /** Voice auto-stop: how long a silence ends the recording (VAD). */
+  voiceSilenceTimeoutSec: AssistantVoiceSilenceTimeout
+  /** Voice hard stop: max recording length before the timer cuts it off. */
+  voiceMaxDurationSec: AssistantVoiceMaxDuration
   useSelectedClientAutomatically: boolean
   useSelectedPeriodAutomatically: boolean
   rememberConversationContext: boolean
-  showQuickSuggestionsAfterResponse: boolean
   autoScrollToLatestAnswer: boolean
 }
 
@@ -38,10 +56,12 @@ export const DEFAULT_ASSISTANT_SETTINGS: AssistantSettings = {
   responseMode: 'short',
   outputFormat: 'mixed',
   voiceInputEnabled: true,
+  deepResearch: false,
+  voiceSilenceTimeoutSec: 2,
+  voiceMaxDurationSec: 120,
   useSelectedClientAutomatically: true,
   useSelectedPeriodAutomatically: true,
   rememberConversationContext: true,
-  showQuickSuggestionsAfterResponse: true,
   autoScrollToLatestAnswer: true,
 }
 
@@ -56,11 +76,17 @@ interface AiAssistantState {
    * intentionally not scoped per user.
    */
   historySidebarCollapsed: boolean
+  /**
+   * Width (px) of the reasoning «Активность» side panel. Pure UI preference,
+   * not scoped per user; clamped into the resizable range on read.
+   */
+  reasoningPanelWidth: number
 
   setActiveConversation: (userId: string, conversationId: number) => void
   clearConversation: () => void
   saveSettings: (userId: string, settings: AssistantSettings) => void
   setHistorySidebarCollapsed: (collapsed: boolean) => void
+  setReasoningPanelWidth: (width: number) => void
   conversationIdFor: (userId: string | null) => number | null
   settingsFor: (userId: string | null) => AssistantSettings | null
 }
@@ -72,6 +98,7 @@ export const useAiAssistantStore = create<AiAssistantState>()(
       conversationId: null,
       settings: null,
       historySidebarCollapsed: false,
+      reasoningPanelWidth: DEFAULT_REASONING_PANEL_WIDTH,
 
       setActiveConversation: (userId, conversationId) =>
         set((state) => ({
@@ -83,6 +110,9 @@ export const useAiAssistantStore = create<AiAssistantState>()(
       clearConversation: () => set({ conversationId: null }),
 
       setHistorySidebarCollapsed: (collapsed) => set({ historySidebarCollapsed: collapsed }),
+
+      setReasoningPanelWidth: (width) =>
+        set({ reasoningPanelWidth: clampReasoningPanelWidth(width) }),
 
       saveSettings: (userId, settings) =>
         set((state) => ({
@@ -100,7 +130,10 @@ export const useAiAssistantStore = create<AiAssistantState>()(
       settingsFor: (userId) => {
         const state = get()
         if (userId == null || state.userId !== userId) return null
-        return state.settings
+        if (state.settings == null) return null
+        // Merge over defaults so settings persisted before a new field shipped
+        // (e.g. deepResearch / voice timings) still resolve to a complete shape.
+        return { ...DEFAULT_ASSISTANT_SETTINGS, ...state.settings }
       },
     }),
     {
@@ -110,6 +143,7 @@ export const useAiAssistantStore = create<AiAssistantState>()(
         conversationId: state.conversationId,
         settings: state.settings,
         historySidebarCollapsed: state.historySidebarCollapsed,
+        reasoningPanelWidth: state.reasoningPanelWidth,
       }),
     }
   )

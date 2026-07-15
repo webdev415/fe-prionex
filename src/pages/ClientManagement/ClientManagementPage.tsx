@@ -18,7 +18,7 @@ import { TooltipProvider } from '@/components/ui/Tooltip'
 import { ClientFiltersBar } from './components/ClientFiltersBar'
 import { AssignClientModal } from './components/AssignClientModal'
 import { BulkAssignClientModal } from './components/BulkAssignClientModal'
-import { formatDate, formatDateTime } from '@/lib/formatters'
+import { formatClientFullName, formatDate, formatDateTime } from '@/lib/formatters'
 import { TagSelectorModal } from './components/TagSelectorModal'
 import { BulkTagModal } from './components/BulkTagModal'
 import { BulkSendMessageModal } from './components/BulkSendMessageModal'
@@ -102,9 +102,7 @@ const mapAPIClientToDisplay = (
   /** When set (operator + catalog loaded): only show tags present in tag-service catalog (hidden tags are omitted there). */
   operatorAllowedTags: { names: Set<string>; codes: Set<string> } | null
 ): DisplayClient => {
-  const fullName = [client.first_name, client.middle_name, client.last_name]
-    .filter(Boolean)
-    .join(' ')
+  const fullName = formatClientFullName(client)
 
   return {
     id: client.id,
@@ -248,6 +246,12 @@ function decodeStepValues(raw: string): Record<number, StepValueEntry> {
     return {}
   }
 }
+
+// DISABLED for the release (client requirement): bulk "Send to UBKI" must stay
+// OFF; only per-loan manual submit stays active. The backend
+// /submit/by-clients endpoint is also disabled. Re-enable by flipping this
+// flag to true.
+const ENABLE_BULK_UBKI_SUBMISSION = false
 
 export function ClientManagementPage() {
   const { t } = useTranslation('common')
@@ -1990,18 +1994,24 @@ export function ClientManagementPage() {
                         </span>
                       </DropdownMenuItem>
                     </PermissionGuard>
-                    <PermissionGuard permission={PERMISSIONS.UBKI.SUBMIT}>
-                      <DropdownMenuItem
-                        onClick={handleBulkUbkiSubmit}
-                        disabled={totalSelectedCount === 0 || bulkSubmitByClientsMutation.isPending}
-                        className="flex cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 transition-colors hover:bg-gray-50 focus:bg-gray-50"
-                      >
-                        <Icons.MailSend01 size={18} className="text-dark-500" strokeWidth={1.5} />
-                        <span className="text-dark-500 text-sm font-medium">
-                          {t('pages.clients.bulkActions.submitUbki', 'Send to UBKI')}
-                        </span>
-                      </DropdownMenuItem>
-                    </PermissionGuard>
+                    {/* Bulk "Send to UBKI" disabled for the release via
+                        ENABLE_BULK_UBKI_SUBMISSION (see the flag definition above). */}
+                    {ENABLE_BULK_UBKI_SUBMISSION && (
+                      <PermissionGuard permission={PERMISSIONS.UBKI.SUBMIT}>
+                        <DropdownMenuItem
+                          onClick={handleBulkUbkiSubmit}
+                          disabled={
+                            totalSelectedCount === 0 || bulkSubmitByClientsMutation.isPending
+                          }
+                          className="flex cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 transition-colors hover:bg-gray-50 focus:bg-gray-50"
+                        >
+                          <Icons.MailSend01 size={18} className="text-dark-500" strokeWidth={1.5} />
+                          <span className="text-dark-500 text-sm font-medium">
+                            {t('pages.clients.bulkActions.submitUbki', 'Send to UBKI')}
+                          </span>
+                        </DropdownMenuItem>
+                      </PermissionGuard>
+                    )}
                     <PermissionGuard permission={PERMISSIONS.CLIENTS.EDIT}>
                       <DropdownMenuItem
                         onClick={() => handleBulkUbkiOptOut(true)}

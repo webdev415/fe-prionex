@@ -150,6 +150,8 @@ function PaymentDebtBreakdownInner({ paymentId }: PaymentDebtBreakdownProps) {
               <th className="pb-2 font-medium">{t('breakdown.component')}</th>
               <th className="pb-2 text-right font-medium">{t('breakdown.original')}</th>
               <th className="pb-2 text-right font-medium">{t('breakdown.allocated')}</th>
+              <th className="pb-2 text-right font-medium">{t('breakdown.paid')}</th>
+              <th className="pb-2 text-right font-medium">{t('breakdown.written_off')}</th>
               <th className="pb-2 text-right font-medium">{t('breakdown.remaining')}</th>
             </tr>
           </thead>
@@ -170,6 +172,12 @@ function PaymentDebtBreakdownInner({ paymentId }: PaymentDebtBreakdownProps) {
                   }`}
                 >
                   {formatMoneyUAHTwoDecimals(item.allocated_amount)}
+                </td>
+                <td className="py-2 text-right text-gray-600 dark:text-gray-400">
+                  {formatMoneyUAHTwoDecimals(Number(item.paid_amount ?? 0))}
+                </td>
+                <td className="py-2 text-right text-gray-500 dark:text-gray-400">
+                  {formatMoneyUAHTwoDecimals(Number(item.written_off_amount ?? 0))}
                 </td>
                 <td className="py-2 text-right">
                   {Number(item.remaining_balance) === 0 ? (
@@ -205,15 +213,15 @@ function PaymentDebtBreakdownInner({ paymentId }: PaymentDebtBreakdownProps) {
                   {formatMoneyUAHTwoDecimals(Number(breakdown.unmatched ?? 0))}
                 </td>
                 <td className="py-2 text-right text-amber-700 dark:text-amber-300">—</td>
+                <td className="py-2 text-right text-amber-700 dark:text-amber-300">—</td>
+                <td className="py-2 text-right text-amber-700 dark:text-amber-300">—</td>
               </tr>
             )}
             {/* Total row */}
             <tr className="border-t-2 border-gray-300 font-bold dark:border-gray-600">
               <td className="pt-2 text-gray-900 dark:text-gray-100">{t('breakdown.total')}</td>
               <td className="pt-2 text-right text-gray-900 dark:text-gray-100">
-                {formatMoneyUAHTwoDecimals(
-                  breakdown.allocation.reduce((sum, a) => sum + Number(a.original_amount), 0)
-                )}
+                {formatMoneyUAHTwoDecimals(breakdown.total_original ?? 0)}
               </td>
               <td
                 className={`pt-2 text-right ${
@@ -223,6 +231,12 @@ function PaymentDebtBreakdownInner({ paymentId }: PaymentDebtBreakdownProps) {
                 }`}
               >
                 {formatMoneyUAHTwoDecimals(breakdown.total_allocated)}
+              </td>
+              <td className="pt-2 text-right text-gray-900 dark:text-gray-100">
+                {formatMoneyUAHTwoDecimals(breakdown.total_paid ?? 0)}
+              </td>
+              <td className="pt-2 text-right text-gray-500 dark:text-gray-400">
+                {formatMoneyUAHTwoDecimals(breakdown.total_written_off ?? 0)}
               </td>
               <td className="pt-2 text-right text-gray-900 dark:text-gray-100">
                 {formatMoneyUAHTwoDecimals(breakdown.total_remaining_debt)}

@@ -75,4 +75,23 @@ describe('verifiedPaymentsByContract', () => {
     expect(result.find((r) => r.contractNumber === '24365')?.totalVerified).toBe(10)
     expect(result.find((r) => r.contractNumber === '24365')?.verifiedCount).toBe(1)
   })
+
+  // KAN-782: legacy bulk-upload rows can have a null payment_date.
+  it('treats a null payment_date as a system payment and still aggregates it', () => {
+    const purchaseDateMap = buildPurchaseDateMap(debts)
+    const verified = [
+      {
+        debt_contract_number: '24365',
+        payment_date: null,
+        amount: '50',
+      },
+    ]
+
+    // No date to compare against the purchase date → counted as a system payment.
+    expect(isSystemPayment(verified[0], purchaseDateMap)).toBe(true)
+
+    const result = buildVerifiedPaymentsByContract(debts, verified, purchaseDateMap)
+    expect(result.find((r) => r.contractNumber === '24365')?.totalVerified).toBe(50)
+    expect(result.find((r) => r.contractNumber === '24365')?.verifiedCount).toBe(1)
+  })
 })

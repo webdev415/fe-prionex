@@ -62,6 +62,21 @@ export interface DebtDetail {
   total_paid_amount?: string | null
   total_to_return?: string | null
 
+  // KAN-784 AC2: true when the loan is fully returned (total_to_return <= 0)
+  // but verified payments-to-us fell short of the principal, so auto-close was
+  // blocked and an operator must close it manually. Computed read-time.
+  needs_manual_closure_review?: boolean
+
+  // KAN-246 — per-component write-off enablement from the repayment-rule
+  // config. The Write-off modal hides components whose flag is false.
+  // Keyed by the frontend accrual names (penalty/fine). Absent → treat as
+  // enabled (fail-open), matching the backend default.
+  principal_writeoff_enabled?: boolean
+  interest_writeoff_enabled?: boolean
+  penalty_writeoff_enabled?: boolean
+  fine_writeoff_enabled?: boolean
+  commission_writeoff_enabled?: boolean
+
   // Legacy TABLE460.f53 — total amount eligible for return after sale.
   // Surfaced on the loans table only when it differs from remaining_debt_amount.
   legacy_f53?: string | null
@@ -98,6 +113,8 @@ export interface RestructuringPaymentEntry {
   received_date?: string | null
   received_amount?: string | null
   status?: 'paid' | 'partially_paid' | 'unpaid' | null
+  // KAN-785 Part 2 — true for the appended overdue-penalty row.
+  is_penalty?: boolean
 }
 
 export interface CreateRestructuringAgreementRequest {
@@ -109,6 +126,14 @@ export interface CreateRestructuringAgreementRequest {
     payment_date?: string | null
     payment_amount?: number | null
   }>
+  // KAN-785 Part 2 — optional operator-set penalty + persisted periodicity so
+  // the backend can date the penalty by this RR's cadence when it fires.
+  penalty_amount?: number | null
+  periodicity?: {
+    frequency?: 'every_n_days' | 'monthly_same_day' | 'monthly_nth_day' | null
+    interval_days?: number | null
+    day_of_month?: string | null
+  } | null
 }
 
 export interface RestructuringAgreementDetail {
@@ -122,6 +147,10 @@ export interface RestructuringAgreementDetail {
   monthly_payment_amount?: string | null
   responsible_user_name?: string | null
   payments: RestructuringPaymentEntry[]
+  // KAN-785 Part 2 — penalty summary (populated once the sweep fires).
+  penalty_amount?: string | null
+  penalty_charge_date?: string | null
+  penalty_triggered_at?: string | null
 }
 
 export interface Client {
@@ -259,6 +288,9 @@ export interface GetClientsParams {
   project_id?: number
   skip?: number
   limit?: number
+
+  // Full-text search (min 2 chars): matches phone, name, or TIN
+  q?: string
 
   // Sorting
   sort_by_priority?: boolean // Legacy parameter
@@ -466,8 +498,31 @@ export interface ClientProfileResponse {
     comment?: string | null
     created_at?: string | null
     added_by_user_name?: string | null
+    updated_at?: string | null
+    updated_by_user_name?: string | null
     default_call_line?: string | null
     spam_allowed?: boolean | null
+    contact_tags?: Array<{
+      value_id: number
+      category_id: number
+      category_name: string
+      category_code: string
+      selection_type: 'single' | 'multi'
+      is_protected: boolean
+      is_system: boolean
+      name: string
+      color?: string | null
+      blocks_calls: boolean
+      blocks_sms: boolean
+      blocks_spam: boolean
+      can_edit: boolean
+    }>
+    blocking?: {
+      blocks_calls: boolean
+      blocks_sms: boolean
+      blocks_spam: boolean
+      reasons: string[]
+    }
   }>
   addresses: Array<{
     id: number
@@ -494,8 +549,31 @@ export interface ClientProfileResponse {
     label?: string | null
     created_at?: string | null
     added_by_user_name?: string | null
+    updated_at?: string | null
+    updated_by_user_name?: string | null
     default_call_line: string
     spam_allowed: boolean
+    contact_tags?: Array<{
+      value_id: number
+      category_id: number
+      category_name: string
+      category_code: string
+      selection_type: 'single' | 'multi'
+      is_protected: boolean
+      is_system: boolean
+      name: string
+      color?: string | null
+      blocks_calls: boolean
+      blocks_sms: boolean
+      blocks_spam: boolean
+      can_edit: boolean
+    }>
+    blocking?: {
+      blocks_calls: boolean
+      blocks_sms: boolean
+      blocks_spam: boolean
+      reasons: string[]
+    }
   }>
   comments: Array<{
     id: number

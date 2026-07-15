@@ -113,13 +113,15 @@ export const PERMISSIONS = {
   },
 
   /**
-   * System Category (3 permissions)
+   * System Category (4 permissions)
    * Controls access to system administration
    */
   SYSTEM: {
     MANAGE_SETTINGS: 'manage_settings',
     VIEW_AUDIT_LOGS: 'view_audit_logs',
     MANAGE_ROLES: 'manage_roles',
+    // Call QA — global «AI call analysis» switch + its settings surface
+    MANAGE_CALL_QA: 'manage_call_qa',
   },
 
   /**
@@ -190,6 +192,16 @@ export const PERMISSIONS = {
     EDIT: 'edit_scoring_config',
     MANAGE_SELLER_CONFIG: 'manage_seller_scoring_config',
     VIEW_HISTORY: 'view_scoring_config_history',
+  },
+
+  /**
+   * Repayment Config Category (2 permissions, KAN-246)
+   * Controls access to the global repayment order and write-off rule settings.
+   * Seeded by auth migration 039. Admin + Supervisor only.
+   */
+  REPAYMENT_CONFIG: {
+    VIEW: 'view_repayment_config',
+    EDIT: 'edit_repayment_config',
   },
 
   /**
@@ -265,6 +277,12 @@ export const PERMISSIONS = {
     MANAGE_BADGES: 'manage_badges',
     VIEW_AUTO_FLAGS: 'view_auto_flags',
     MANAGE_CALL_LIBRARY: 'manage_call_library',
+    // Call QA (Ф1) — AI transcripts of call recordings (nightly brain run)
+    VIEW_TRANSCRIPTS: 'view_transcripts',
+    // Call QA (Ф2) — AI reviews (scores / red flags / conclusions) and the
+    // blocker dictionary that drives critical-call detection
+    VIEW_AI_REVIEWS: 'view_ai_reviews',
+    MANAGE_BLOCKER_DICTIONARY: 'manage_blocker_dictionary',
     // KAN-749 — Trainings & Sessions surfaces (KAN-615 epic children)
     VIEW_COURSES: 'view_courses',
     MANAGE_COURSES: 'manage_courses',
@@ -292,12 +310,31 @@ export const PERMISSIONS = {
   },
 
   /**
+   * Lawyer Workplace (KAN-486)
+   * Inbox is head+; kanban is all legal department staff.
+   */
+  LEGAL_WORKPLACE: {
+    VIEW: 'view_legal_workplace',
+    VIEW_KANBAN: 'view_legal_kanban',
+    MANAGE: 'manage_legal_workplace',
+  },
+
+  /**
    * Contact Types (CRM Settings directory for phone contact labels)
    */
   CONTACT_TYPES: {
     VIEW: 'view_contact_types',
     CREATE: 'create_contact_types',
     EDIT: 'edit_contact_types',
+  },
+
+  /**
+   * Contact Tags (per-phone categorical metadata)
+   */
+  CONTACT_TAGS: {
+    MANAGE: 'manage_contact_tag_categories',
+    ASSIGN: 'assign_contact_tags',
+    ASSIGN_PROTECTED: 'assign_protected_contact_tags',
   },
 
   /**
@@ -373,10 +410,13 @@ export const PERMISSION_CATEGORIES = {
   TAGS: 'Tags',
   SELLERS: 'Sellers',
   SCORING_CONFIG: 'Scoring Configuration',
+  REPAYMENT_CONFIG: 'Repayment Configuration',
   TA_CHAINS: 'TA Chains',
   ACTION_ANALYSIS: 'Action Analysis',
   DOCUMENT_GENERATION: 'Document Generation',
+  LEGAL_WORKPLACE: 'Lawyer Workplace',
   CONTACT_TYPES: 'Contact Types',
+  CONTACT_TAGS: 'Contact Tags',
   RESTRUCTURING: 'Restructuring',
   UBKI: 'UBKI',
 } as const
@@ -442,6 +482,7 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   manage_settings: 'Configure system settings',
   view_audit_logs: 'View system audit logs',
   manage_roles: 'Create and edit roles and permissions',
+  manage_call_qa: 'Toggle the global AI call analysis (Call QA) switch and manage its settings',
 
   // Projects
   manage_projects: 'Create, update, archive and restore projects',
@@ -466,6 +507,10 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   edit_scoring_config: 'Update scoring weights and priority thresholds',
   manage_seller_scoring_config: 'Manage seller-specific scoring configurations',
   view_scoring_config_history: 'View scoring configuration change history',
+
+  // Repayment Configuration (KAN-246)
+  view_repayment_config: 'View global repayment order and write-off rule configuration',
+  edit_repayment_config: 'Edit global repayment order, write-off rules, and allocation algorithm',
 
   // TA Chains
   delete_ta_chains: 'Delete TA Chains (refused if the chain has any recorded history)',
@@ -518,6 +563,11 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   manage_tests: 'Manage the Tests surface (reserved)',
   view_materials: 'Browse and download the materials library (KAN-616)',
   manage_materials: 'Upload / edit / archive materials (KAN-616)',
+  // Call QA (Ф1)
+  view_transcripts: 'View AI call transcripts (client card & Training; nightly Call QA run)',
+  // Call QA (Ф2)
+  view_ai_reviews: 'View AI call reviews (scores, red flags, conclusions) on Call QA surfaces',
+  manage_blocker_dictionary: 'Manage the Call QA blocker dictionary (critical-call stop-words)',
 
   // Document Generation
   view_document_journal: 'View the journal of all generated and uploaded documents',
@@ -526,10 +576,23 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   delete_document_templates: 'Delete document templates',
   generate_document: 'Generate a document on the client card',
 
+  // Lawyer Workplace
+  view_legal_workplace: 'Access the Lawyer Workplace inbox and letter processing',
+  view_legal_kanban: 'Access the Lawyer Workplace legal tasks kanban board',
+  manage_legal_workplace:
+    'Configure Lawyer Workplace settings (letter types, lawyers, mailboxes, templates)',
+
   // Contact Types (CRM Settings)
   view_contact_types: 'View Contact Types directory in Settings',
   create_contact_types: 'Create new contact types (requires view permission)',
   edit_contact_types: 'Edit contact types and hide or restore them (requires view permission)',
+
+  // Contact Tags (per-phone categorical metadata)
+  manage_contact_tag_categories:
+    'Manage contact tag categories and values in Settings (create, edit, hide)',
+  assign_contact_tags: 'Assign and remove contact tags on client phone numbers',
+  assign_protected_contact_tags:
+    'Assign and remove protected contact tags (requires elevated permission)',
 
   // Restructuring — per-transition gates on the RR action buttons
   rr_transition_connected_to_violated:

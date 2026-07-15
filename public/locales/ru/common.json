@@ -28,6 +28,7 @@
     "departments": "Отделы",
     "smsTemplates": "SMS Шаблоны",
     "rrNotifications": "Уведомления РР",
+    "rrPeriodicity": "Периодичность платежей РР",
     "targetActions": "Целевые действия",
     "taChains": "Цепочки ЦД",
     "taDictionary": "Словарь",
@@ -259,8 +260,6 @@
       "responseShort": "Кратко",
       "responseDetailed": "Подробно",
       "mode": "Режим мышления",
-      "modeFast": "⚡ Быстрый",
-      "modeThinking": "🧠 Думающий",
       "modeTooltip": "Медленнее, но глубже анализирует",
       "outputFormat": "Формат ответа",
       "outputText": "Текст",
@@ -271,7 +270,6 @@
       "useSelectedPeriodAutomatically": "Автоматически использовать выбранный период",
       "rememberConversationContext": "Помнить предыдущий контекст разговора",
       "suggestedActions": "Предлагаемые действия",
-      "showQuickSuggestionsAfterResponse": "Показывать быстрые подсказки после ответа",
       "autoScrollToLatestAnswer": "Автопрокрутка к последнему ответу",
       "advanced": "Дополнительно",
       "clearConversation": "Очистить разговор",
@@ -282,6 +280,28 @@
       "settingsUpdated": "Настройки ассистента обновлены",
       "assistantTyping": "Ассистент печатает...",
       "assistantThinking": "Ассистент думает...",
+      "reasoningTitle": "Ход рассуждения",
+      "reasoningStreaming": "Анализирую…",
+      "reasoningAnalyzing": "Анализирую запрос…",
+      "reasoningSteps_one": "{{count}} шаг",
+      "reasoningSteps_few": "{{count}} шага",
+      "reasoningSteps_many": "{{count}} шагов",
+      "reasoningSteps_other": "{{count}} шага",
+      "activityTitle": "Активность",
+      "activityClose": "Закрыть",
+      "activityResize": "Изменить ширину панели",
+      "activityStepsSection": "Шаги оркестратора",
+      "activityReasoningSection": "Ход рассуждения",
+      "activitySourcesSection": "Источники",
+      "citationResultLabel": "Результат",
+      "citationSourceFallback": "Источник",
+      "citationMarkPrompt": "Точность",
+      "citationMarkOk": "Верно",
+      "citationMarkWrong": "Неверно",
+      "codeCopy": "Копировать",
+      "codeCopied": "Скопировано",
+      "showAllRows": "Показать все ({{count}}) ",
+      "collapseRows": "Свернуть",
       "inputHint": "Enter — отправить, Shift+Enter — новая строка",
       "quickPromptClientData": "Покажи детали клиента.",
       "quickPromptDebt": "Проанализируй долг для выбранного клиента и периода.",
@@ -363,7 +383,21 @@
       "sourcesTitle": "Источник цифр",
       "followupsTitle": "Уточняющие вопросы",
       "sourcesTables": "Таблицы:",
-      "sourcesTools": "Инструменты:"
+      "sourcesTools": "Инструменты:",
+      "composerHub": "Добавить",
+      "hubAttach": "Прикрепить файл или фото",
+      "hubCrmActions": "CRM-действия",
+      "hubDeepResearch": "Глубокий анализ",
+      "hubDeepResearchHint": "Тщательный разбор с агентами",
+      "hubContext": "Контекст",
+      "modeFastShort": "Быстрый",
+      "modeThinkingShort": "Думающий",
+      "modeFastHint": "Отвечает мгновенно",
+      "modeThinkingHint": "Анализирует тщательнее, но дольше",
+      "modeChangeHint": "Меняется справа от поля",
+      "voiceSilenceTimeout": "Тайм-аут тишины (авто-стоп)",
+      "voiceMaxDuration": "Макс. длина записи",
+      "voiceSeconds": "{{count}} сек"
     },
     "training": {
       "title": "Анализ действий",
@@ -762,6 +796,8 @@
         "list": {
           "dateTime": "Дата / Время",
           "employee": "Сотрудник",
+          "client": "Клиент",
+          "phone": "Телефон",
           "category": "Категория",
           "rating": "Оценка",
           "comment": "Комментарий",
@@ -852,6 +888,13 @@
         "replyPlaceholder": "Напишите ответ…",
         "markRead": "Отметить прочитанным",
         "markComplete": "Отметить выполненным",
+        "markDone": "Отметить выполненным",
+        "confirm": "Подтвердить",
+        "return": "Вернуть",
+        "returnReason": "Причина возврата",
+        "returnConfirm": "Вернуть на доработку",
+        "deadline": "Срок",
+        "overdue": "Просрочено",
         "threadEmpty": "Ответов пока нет.",
         "types": {
           "praise": "Похвала",
@@ -862,6 +905,12 @@
           "unread": "Не прочитано",
           "read": "Прочитано",
           "completed": "Выполнено"
+        },
+        "lifecycle": {
+          "open": "Открыто",
+          "done": "Выполнено",
+          "confirmed": "Подтверждено",
+          "returned": "Возвращено"
         },
         "role": {
           "trainer": "Тренер",
@@ -1144,6 +1193,7 @@
       "actions": {
         "view": "Просмотреть",
         "edit": "Редактировать",
+        "unlock": "Разблокировать",
         "impersonate": "Просмотреть как",
         "impersonating": "Просмотр...",
         "status": "Статус",
@@ -1535,6 +1585,12 @@
         "errors": {
           "failedToCreate": "Не удалось создать роль. Пожалуйста, попробуйте снова."
         }
+      },
+      "accessLevel": {
+        "my": "Только мои",
+        "group": "Моя группа",
+        "department": "Мой отдел",
+        "all": "Весь проект"
       }
     },
     "departments": {
@@ -1829,6 +1885,7 @@
           "errors": "Ошибки ({{count}})",
           "readyToAssign": "Готово к назначению",
           "noChange": "Без изменений",
+          "wouldSkip": "Будет пропущено",
           "invalid": "Недействительно",
           "uniqueOperators": "Уникальные операторы",
           "columns": {
@@ -2220,16 +2277,7 @@
         "dropFileOrClick": "Перетащите файл или нажмите для выбора",
         "loan": "Кредит",
         "documentsUnlinked": "Без привязки",
-        "documentTypes": {
-          "passport": "Паспорт",
-          "inn": "ИНН",
-          "contract": "Договор",
-          "income": "Справка о доходах",
-          "outcome": "Выписка",
-          "signature": "ЭЦП",
-          "military": "Военный",
-          "other": "Другое"
-        },
+        "documentTypePlaceholder": "Выберите тип",
         "department": "Отдел",
         "phones": "Телефоны",
         "tin": "ИНН",
@@ -2255,6 +2303,8 @@
         "contactType": "Тип контакта",
         "addedBy": "Добавил",
         "addedDate": "Дата",
+        "updatedBy": "Обновил",
+        "updatedDate": "Дата",
         "phoneType": "Тип",
         "linkedContact": "Связанный контакт",
         "comment": "Комментарий",
@@ -2331,6 +2381,24 @@
         "rrFirstPaymentDate": "Дата первого взноса",
         "rrFirstPaymentAmount": "Сумма первого взноса",
         "rrPaymentSchedule": "График платежей",
+        "rrPenaltyAmount": "Штраф за просрочку (необязательно)",
+        "rrPenaltyHint": "Если любой платёж просрочен на 3+ дня, эта сумма однократно добавляется как дополнительный платёж в конец графика.",
+        "rrPenaltyTag": "штраф (триггер просрочки)",
+        "rrNumPaymentsHint": "До {{max}} платежей.",
+        "rrFrequency": "Периодичность платежей",
+        "rrFirstPaymentDate": "Дата первого платежа",
+        "rrPeriodicityHint": "График ниже заполняется автоматически на основе даты первого платежа, количества платежей и периодичности. Вы можете отредактировать любую строку.",
+        "rrFrequencyManual": "Вручную (без автозаполнения)",
+        "rrFrequencyOptions": {
+          "every_n_days": "Каждые N дней",
+          "monthly_same_day": "Ежемесячно (тот же день)",
+          "monthly_nth_day": "Каждое N-е число месяца"
+        },
+        "rrIntervalDays": "Интервал (дни)",
+        "rrDayOfMonth": "День месяца",
+        "rrDayOfMonthPlaceholder": "Выберите день",
+        "rrDayOfMonthLast": "Последний день",
+        "rrClampNotice": "Платёж {{rows}}: выбранный день отсутствует в этом месяце, поэтому дата установлена на последний день месяца. Вы можете изменить её вручную.",
         "rrPaymentDate": "Дата",
         "rrPaymentAmount": "Сумма",
         "rrConnectionDate": "Дата подключения",
@@ -2360,6 +2428,9 @@
         "readMore": "Читать далее",
         "recentActivityTimeline": "Последняя хронология активности",
         "viewAll": "Просмотреть все",
+        "copyName": "Копировать имя",
+        "nameCopied": "Имя скопировано",
+        "copyFailed": "Не удалось скопировать",
         "noHistoryYet": "Истории еще нет",
         "startByCallingSendingSMSOrAddingNote": "Начните с звонка, отправки SMS или добавления заметки.",
         "addFirstNote": "Добавить первую заметку",
@@ -2381,6 +2452,7 @@
         "latestCallsAndSms": "Последние звонки и SMS",
         "tabs": {
           "personal": "Личное",
+          "relatedTags": "Связанные теги",
           "work": "Работа",
           "recommenders": "Поручители",
           "addresses": "Адреса",
@@ -2391,6 +2463,11 @@
           "callSms": "Звонок / SMS",
           "taChains": "Цепочки ЦД",
           "searcherComments": "Комментарии поисковика"
+        },
+        "relatedTags": {
+          "loading": "Загрузка связанных тегов...",
+          "empty": "Нет связанных тегов от связанных контактов с общими номерами телефонов.",
+          "goToClient": "Перейти к клиенту №{{id}}"
         },
         "maritalStatuses": {
           "1": "Холост/Не замужем",
@@ -3494,6 +3571,27 @@
         "unhidden": "Целевое действие восстановлено"
       }
     },
+    "rrPeriodicity": {
+      "title": "Периодичность платежей РР",
+      "description": "Выберите, какие варианты периодичности платежей операторы могут использовать для автозаполнения графика при создании Договора реструктуризации.",
+      "saved": "Параметры периодичности платежей сохранены",
+      "savedDescription": "Операторы увидят обновлённые варианты периодичности при следующем создании Договора реструктуризации.",
+      "allDisabledHint": "Если все варианты выключены, операторы вводят каждую дату платежа вручную.",
+      "types": {
+        "everyNDays": {
+          "label": "Каждые N дней",
+          "hint": "Оператор задаёт интервал (например, каждые 14 дней)."
+        },
+        "monthlySameDay": {
+          "label": "Ежемесячно (тот же день)",
+          "hint": "Тот же день месяца, что и дата первого платежа."
+        },
+        "monthlyNthDay": {
+          "label": "Каждое N-е число месяца",
+          "hint": "Оператор выбирает день месяца (1–30 или последний день)."
+        }
+      }
+    },
     "rrNotifications": {
       "title": "Уведомления РР",
       "description": "Настройте напоминания в колокольчике для ответственного оператора перед каждым запланированным платежом по соглашению о реструктуризации. Отправляются системой ежедневно.",
@@ -3506,6 +3604,9 @@
       "template": "Текст уведомления",
       "variablesDetected": "Обнаруженные переменные",
       "availableVariables": "Доступные переменные",
+      "penaltyTemplate": "Шаблон напоминания о штрафе",
+      "penaltyTemplateHint": "Используется только для напоминания о штрафе за просрочку. Оставьте пустым, чтобы использовать шаблон платежа выше.",
+      "penaltyTemplatePlaceholder": "{client_name}: штраф {amount}, срок до {due_date}",
       "clickToInsert": "Нажмите, чтобы вставить",
       "removeVariable": "Удалить одно вхождение",
       "removeHint": "Нажимайте × — за раз удаляется одно вхождение. Для точных правок редактируйте текст напрямую.",
@@ -3523,17 +3624,39 @@
       "title": "Генерация документов",
       "tabs": {
         "journal": "Журнал документов",
-        "templates": "Шаблоны документов"
+        "templates": "Шаблоны документов",
+        "types": "Типы документов"
       },
-      "documentTypes": {
-        "passport": "Паспорт",
-        "inn": "ИНН",
-        "contract": "Договор",
-        "income": "Справка о доходах",
-        "outcome": "Выписка / выдержка",
-        "signature": "Цифровая подпись",
-        "military": "Военный",
-        "other": "Другое"
+      "types": {
+        "title": "Типы документов",
+        "newButton": "Новый тип",
+        "createTitle": "Новый тип документа",
+        "editTitle": "Редактировать тип документа",
+        "confirmDeleteTitle": "Удалить «{{name}}»?",
+        "confirmDelete": "Действие нельзя отменить.",
+        "deleteBlockedMessage": "Этот тип используется в {{formattedCount}} документах. Скройте его вместо удаления.",
+        "uniqueNameError": "Тип документа с таким названием уже существует.",
+        "loadError": "Не удалось загрузить типы документов.",
+        "hiddenLabel": "скрыт",
+        "columns": {
+          "color": "Цвет",
+          "name": "Название",
+          "usage": "Документы",
+          "actions": "Действия"
+        },
+        "fields": {
+          "name": "Название",
+          "namePlaceholder": "напр. Паспорт",
+          "color": "Цвет",
+          "previewText": "Тип документа"
+        },
+        "toast": {
+          "created": "Тип документа создан",
+          "updated": "Тип документа обновлён",
+          "deleted": "Тип документа удалён",
+          "hidden": "Тип скрыт",
+          "shown": "Тип показан"
+        }
       },
       "actions": {
         "uploaded": "Загружено",
@@ -4345,6 +4468,7 @@
         "enableNotifications": "Включить уведомления",
         "notificationTemplate": "Шаблон уведомления",
         "isProtected": "Защищённый тег",
+        "isRelatedTag": "Связанный тег",
         "protectedRoles": "Роли для удаления",
         "expiryType": "Тип истечения",
         "loanClosureNote": "Тег будет автоматически удалён при закрытии кредита клиента",
@@ -4360,6 +4484,7 @@
           "visibility": "UI = видно операторам, Аналитика = только отчёты, Система = скрыт.",
           "expiryType": "Постоянный = навсегда. TTL = удаляется через время. До закрытия = при закрытии займа.",
           "protectedTag": "Только выбранные роли смогут снять этот тег.",
+          "relatedTag": "Если включено, тег отображается у связанных клиентов с общим номером телефона.",
           "mutexGroup": "Теги одной группы взаимоисключающие. Назначение одного снимает другие."
         },
         "notificationTemplatePlaceholder": "Напр.: Тег '{tag_name}' назначен клиенту {client_id}",
@@ -4388,6 +4513,7 @@
         "targetActionDate": "Дата целевого действия"
       },
       "protectedWarning": "Для удаления требуется подтверждение руководителя",
+      "relatedTagHint": "Отображается на вкладке «Связанные теги» в профилях клиентов, связанных общими номерами.",
       "removalRequests": {
         "title": "Запросы на удаление",
         "approve": "Одобрить",
@@ -5243,6 +5369,8 @@
         "list": {
           "dateTime": "Дата / Время",
           "employee": "Сотрудник",
+          "client": "Клиент",
+          "phone": "Телефон",
           "category": "Категория",
           "rating": "Оценка",
           "comment": "Комментарий",
@@ -5333,6 +5461,13 @@
         "replyPlaceholder": "Напишите ответ…",
         "markRead": "Отметить прочитанным",
         "markComplete": "Отметить выполненным",
+        "markDone": "Отметить выполненным",
+        "confirm": "Подтвердить",
+        "return": "Вернуть",
+        "returnReason": "Причина возврата",
+        "returnConfirm": "Вернуть на доработку",
+        "deadline": "Срок",
+        "overdue": "Просрочено",
         "threadEmpty": "Ответов пока нет.",
         "types": {
           "praise": "Похвала",
@@ -5343,6 +5478,12 @@
           "unread": "Не прочитано",
           "read": "Прочитано",
           "completed": "Выполнено"
+        },
+        "lifecycle": {
+          "open": "Открыто",
+          "done": "Выполнено",
+          "confirmed": "Подтверждено",
+          "returned": "Возвращено"
         },
         "role": {
           "trainer": "Тренер",
@@ -5372,7 +5513,8 @@
         "group": "Действия группы",
         "department": "Действия отдела",
         "all": "Все действия",
-        "groupComingSoon": "Скоро"
+        "groupComingSoon": "Скоро",
+        "aboveCeiling": "Недоступно для вашей роли"
       },
       "workspaceBanner": {
         "label": "Рабочее место тренера",

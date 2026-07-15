@@ -659,62 +659,6 @@ export const MOCK_GROUP_TRAININGS: MockGroupTraining[] = [
 ]
 
 // ─────────────────────────────────────────────────────────────
-// Trainings & Sessions — Short Drills (Figma step 3)
-// ─────────────────────────────────────────────────────────────
-
-export interface MockDrill {
-  id: number
-  title: string
-  durationMinutes: number
-  attempts: number
-  topic: string
-  coverGradient: string
-}
-
-export const MOCK_DRILLS: MockDrill[] = [
-  {
-    id: 1,
-    title: '5 objections in 5 minutes',
-    durationMinutes: 5,
-    attempts: 145,
-    topic: 'Objections',
-    coverGradient: 'linear-gradient(135deg, #D1FAE5 0%, #ECFDF5 100%)',
-  },
-  {
-    id: 2,
-    title: 'Topic talk — fast pitch',
-    durationMinutes: 10,
-    attempts: 117,
-    topic: 'Pitch',
-    coverGradient: 'linear-gradient(135deg, #DBEAFE 0%, #EFF6FF 100%)',
-  },
-  {
-    id: 3,
-    title: 'Active listening practice',
-    durationMinutes: 4,
-    attempts: 41,
-    topic: 'Listening',
-    coverGradient: 'linear-gradient(135deg, #FEF3C7 0%, #FFFBEB 100%)',
-  },
-  {
-    id: 4,
-    title: 'Close in 30 seconds',
-    durationMinutes: 1,
-    attempts: 78,
-    topic: 'Closing',
-    coverGradient: 'linear-gradient(135deg, #FCE7F3 0%, #FDF2F8 100%)',
-  },
-  {
-    id: 5,
-    title: 'Topic talk — quick win',
-    durationMinutes: 2,
-    attempts: 20,
-    topic: 'Pitch',
-    coverGradient: 'linear-gradient(135deg, #E0E7FF 0%, #EEF2FF 100%)',
-  },
-]
-
-// ─────────────────────────────────────────────────────────────
 // Trainings & Sessions — 1-on-1 Calendar (Figma step 4)
 // ─────────────────────────────────────────────────────────────
 
@@ -1035,72 +979,6 @@ export const MOCK_ASSIGNMENT_KPIS: MockAssignmentsKpis = {
   completedOfTotal: 24,
   overdue: 3,
 }
-
-// ─────────────────────────────────────────────────────────────
-// Trainings & Sessions — Materials Library (KAN-499)
-// ─────────────────────────────────────────────────────────────
-
-export type MaterialType = 'pdf' | 'docx' | 'video' | 'audio'
-
-export interface MockMaterial {
-  id: number
-  name: string
-  type: MaterialType
-  sizeBytes: number
-  uploadedBy: string
-  updatedLabel: string
-}
-
-export const MOCK_MATERIALS: MockMaterial[] = [
-  {
-    id: 1,
-    name: 'Objection handling — script v3',
-    type: 'pdf',
-    sizeBytes: 2_400_000,
-    uploadedBy: 'Mariia Petrenko',
-    updatedLabel: '2 days ago',
-  },
-  {
-    id: 2,
-    name: 'Successful closure example call',
-    type: 'audio',
-    sizeBytes: 5_800_000,
-    uploadedBy: 'Sergii Tarasov',
-    updatedLabel: '1 week ago',
-  },
-  {
-    id: 3,
-    name: 'Tone of voice — masterclass',
-    type: 'video',
-    sizeBytes: 92_000_000,
-    uploadedBy: 'Olena Lytvynenko',
-    updatedLabel: '3 weeks ago',
-  },
-  {
-    id: 4,
-    name: 'New product brief Q2 2026',
-    type: 'docx',
-    sizeBytes: 540_000,
-    uploadedBy: 'Andrii Shevchuk',
-    updatedLabel: '1 month ago',
-  },
-  {
-    id: 5,
-    name: 'Soft Collection playbook',
-    type: 'pdf',
-    sizeBytes: 4_100_000,
-    uploadedBy: 'Volodymyr Senchuk',
-    updatedLabel: '6 weeks ago',
-  },
-  {
-    id: 6,
-    name: 'Compliance walkthrough',
-    type: 'video',
-    sizeBytes: 124_000_000,
-    uploadedBy: 'Anna Kovalenko',
-    updatedLabel: '2 months ago',
-  },
-]
 
 // ─────────────────────────────────────────────────────────────
 // Dialogue Evaluation (KAN-504)

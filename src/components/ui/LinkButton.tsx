@@ -21,9 +21,13 @@ const linkButtonVariants = cva(
         'regular-red':
           'text-error-500 hover:text-error-700 active:text-error-800 disabled:text-gray-700',
 
-        // Regular Red: error-500 (default), error-700 (hover), gray-700 (disabled)
+        // Regular Black: dark-500 (default), dark-500 (hover), gray-700 (disabled)
         'regular-black':
           'text-dark-500 hover:text-dark-500 active:text-dark-500 disabled:text-gray-700',
+
+        // Regular Gray: gray-800 (default), gray-800 (hover), gray-700 (disabled)
+        'regular-gray':
+          'text-gray-800 hover:text-gray-400 active:text-gray-800 disabled:text-gray-400',
 
         // Medium Primary: primary-700 (default), primary-500 (hover), gray-700 (disabled)
         'medium-primary':

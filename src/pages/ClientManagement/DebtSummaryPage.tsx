@@ -8,6 +8,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   convertUTCToUserTimezone,
+  formatClientFullName,
   formatIsoDate,
   formatMoneyUAHTwoDecimals,
 } from '@/lib/formatters'
@@ -246,9 +247,7 @@ export function DebtSummaryPage() {
   const client = useMemo(() => {
     if (!apiClient) return null
 
-    const fullName = [apiClient.first_name, apiClient.middle_name, apiClient.last_name]
-      .filter(Boolean)
-      .join(' ')
+    const fullName = formatClientFullName(apiClient)
 
     return {
       id: apiClient.id,
@@ -404,10 +403,12 @@ export function DebtSummaryPage() {
         // Resolve the display date for each payment (same logic as table row mapping)
         const withDate = verifiedBackendPayments.map((p) => ({
           p,
+          // KAN-782: payment_date can be null on legacy rows; verified rows always
+          // carry verified_at/recorded_at, so '' is only a type-safety terminal.
           displayDate:
             p.status === 'verified' && p.verified_at
               ? p.verified_at
-              : p.recorded_at || p.payment_date,
+              : p.recorded_at || p.payment_date || '',
         }))
         // Sort by displayDate descending (most recent first)
         withDate.sort((a, b) => b.displayDate.localeCompare(a.displayDate))
@@ -1507,7 +1508,8 @@ export function DebtSummaryPage() {
               if (!bp) return selectedPayment.date
               return bp.status === 'verified' && bp.verified_at
                 ? bp.verified_at
-                : (bp.recorded_at ?? bp.payment_date)
+                : // KAN-782: payment_date can be null on legacy rows → "—"
+                  (bp.recorded_at ?? bp.payment_date ?? '—')
             })(),
             method: normalizePaymentMethod(selectedPayment.method),
             reference:
@@ -1567,9 +1569,7 @@ export function DebtSummaryPage() {
             // Prepare client data if available
             const clientData = apiClient
               ? {
-                  fullName: [apiClient.first_name, apiClient.middle_name, apiClient.last_name]
-                    .filter(Boolean)
-                    .join(' '),
+                  fullName: formatClientFullName(apiClient),
                   phone: apiClient.phone_primary || 'N/A',
                   contract:
                     (apiClient.debts &&

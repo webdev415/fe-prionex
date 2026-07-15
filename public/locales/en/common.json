@@ -1,4 +1,4 @@
-﻿{
+{
   "app": {
     "name": "CRM Prionex",
     "description": "Customer Relationship Management System"
@@ -29,6 +29,7 @@
     "teamManagement": "Team Management",
     "smsTemplates": "SMS Templates",
     "rrNotifications": "RR Notifications",
+    "rrPeriodicity": "RR Payment Periodicity",
     "targetActions": "Target Actions",
     "taChains": "TA Chains",
     "taDictionary": "Dictionary",
@@ -54,6 +55,8 @@
     "messagingDrafts": "Message Drafts",
     "campaignAnalytics": "Campaign Analytics",
     "contactTypes": "Contact Types",
+    "lawyerWorkplace": "Lawyer Workplace",
+    "repaymentConfiguration": "Repayment Configuration",
     "actionAnalysis": "Action Analysis"
   },
   "search": {
@@ -88,7 +91,10 @@
     "close": "Close",
     "logout": "Logout",
     "loggingOut": "Logging out...",
-    "deleting": "Deleting…"
+    "deleting": "Deleting…",
+    "remove": "Remove",
+    "decrease": "Decrease",
+    "increase": "Increase"
   },
   "components": {
     "pagination": {
@@ -175,6 +181,9 @@
       "daysAgo_other": "{{count}}d ago"
     },
     "dismissAria": "Dismiss notification",
+    "rrPayment": {
+      "title": "RR payment reminder"
+    },
     "tabs": {
       "tasks": "Tasks",
       "starred": "Starred",
@@ -309,8 +318,6 @@
       "responseShort": "Short",
       "responseDetailed": "Detailed",
       "mode": "Thinking mode",
-      "modeFast": "⚡ Fast",
-      "modeThinking": "🧠 Thinking",
       "modeTooltip": "Slower, but analyzes more deeply",
       "outputFormat": "Output format",
       "outputText": "Text",
@@ -321,7 +328,6 @@
       "useSelectedPeriodAutomatically": "Use selected period automatically",
       "rememberConversationContext": "Remember previous conversation context",
       "suggestedActions": "Suggested actions",
-      "showQuickSuggestionsAfterResponse": "Show quick suggestions after response",
       "autoScrollToLatestAnswer": "Auto-scroll to latest answer",
       "advanced": "Optional advanced",
       "clearConversation": "Clear conversation",
@@ -332,6 +338,26 @@
       "settingsUpdated": "Assistant settings updated",
       "assistantTyping": "Assistant is typing...",
       "assistantThinking": "Assistant is thinking...",
+      "reasoningTitle": "Reasoning",
+      "reasoningStreaming": "Analyzing…",
+      "reasoningAnalyzing": "Analyzing the request…",
+      "reasoningSteps_one": "{{count}} step",
+      "reasoningSteps_other": "{{count}} steps",
+      "activityTitle": "Activity",
+      "activityClose": "Close",
+      "activityResize": "Resize panel",
+      "activityStepsSection": "Orchestrator steps",
+      "activityReasoningSection": "Reasoning",
+      "activitySourcesSection": "Sources",
+      "citationResultLabel": "Result",
+      "citationSourceFallback": "Source",
+      "citationMarkPrompt": "Accurate?",
+      "citationMarkOk": "Correct",
+      "citationMarkWrong": "Wrong",
+      "codeCopy": "Copy",
+      "codeCopied": "Copied",
+      "showAllRows": "Show all ({{count}}) ",
+      "collapseRows": "Collapse",
       "inputHint": "Press Enter to send, Shift+Enter for a new line",
       "quickPromptClientData": "Show client details.",
       "quickPromptDebt": "Analyze debt for selected client and period.",
@@ -413,7 +439,764 @@
       "sourcesTitle": "Source of the numbers",
       "followupsTitle": "Suggested follow-ups",
       "sourcesTables": "Tables:",
-      "sourcesTools": "Tools:"
+      "sourcesTools": "Tools:",
+      "composerHub": "Add",
+      "hubAttach": "Attach file or photo",
+      "hubCrmActions": "CRM actions",
+      "hubDeepResearch": "Deep research",
+      "hubDeepResearchHint": "Thorough multi-agent analysis",
+      "hubContext": "Context",
+      "modeFastShort": "Fast",
+      "modeThinkingShort": "Thinking",
+      "modeFastHint": "Answers instantly",
+      "modeThinkingHint": "Analyzes more thoroughly, but slower",
+      "modeChangeHint": "Set next to the input",
+      "voiceSilenceTimeout": "Silence timeout (auto-stop)",
+      "voiceMaxDuration": "Max recording length",
+      "voiceSeconds": "{{count}}s"
+    },
+    "lawyerWorkplace": {
+      "navAria": "Lawyer Workplace navigation",
+      "navScrollLeft": "Scroll tabs left",
+      "navScrollRight": "Scroll tabs right",
+      "tabs": {
+        "inbox": "Inbox",
+        "kanban": "Kanban",
+        "documents": "Documents",
+        "settings": "Settings",
+        "newCount": "{{count}} new"
+      },
+      "availability": {
+        "label": "Your availability",
+        "updateSuccess": "Availability updated",
+        "updateError": "Could not update availability"
+      },
+      "folders": {
+        "inbox": "Inbox",
+        "quarantine": "Quarantine",
+        "sent": "Sent"
+      },
+      "filters": {
+        "allMailboxes": "All mailboxes",
+        "new": "New",
+        "inProgress": "In progress",
+        "done": "Done"
+      },
+      "incoming": {
+        "title": "Incoming",
+        "count": "{{unprocessed}} / {{total}}",
+        "scrollUp": "Scroll up",
+        "scrollDown": "Scroll down",
+        "searchPlaceholder": "Sender, subject...",
+        "sectionUnprocessed": "Unprocessed",
+        "sectionInProgress": "In progress",
+        "sectionSentToKanban": "Sent to kanban",
+        "newLetter": "New letter",
+        "loading": "Loading letters…",
+        "loadError": {
+          "title": "Could not load inbox",
+          "description": "Check your connection and try again."
+        },
+        "empty": {
+          "folders": {
+            "inbox": {
+              "title": "Inbox is empty",
+              "description": "Synced letters from your mailboxes will show up here. You can also compose a new outgoing letter."
+            },
+            "quarantine": {
+              "title": "No quarantined letters",
+              "description": "Letters held for review before processing appear in this folder."
+            },
+            "sent": {
+              "title": "No sent letters",
+              "description": "Outgoing letters and replies sent from the workplace appear here."
+            }
+          },
+          "search": {
+            "title": "No matching letters",
+            "description": "Try a different search term or clear the search to see all letters.",
+            "clearSearch": "Clear search"
+          },
+          "filter": {
+            "title": "No letters in this view",
+            "description": "Nothing matches the «{{filter}}» filter. Try another status or show all mailboxes."
+          }
+        }
+      },
+      "letterItem": {
+        "unclassified": "Unclassified",
+        "unidentified": "unidentified",
+        "status": {
+          "new": "NEW",
+          "inProgress": "IN PROGRESS",
+          "onBoard": "ON BOARD",
+          "sentToKanban": "KANBAN",
+          "autoProcessed": "AUTO",
+          "done": "DONE"
+        }
+      },
+      "dates": {
+        "yesterdayTime": "Yesterday · {{time}}"
+      },
+      "thread": {
+        "selectLetter": "Select a letter to view the thread",
+        "loading": "Loading thread…",
+        "loadError": {
+          "title": "Could not load thread",
+          "description": "Select another letter or try again in a moment."
+        },
+        "empty": {
+          "title": "Select a letter to view the thread",
+          "description": "Choose a letter from the list to read the full conversation and reply."
+        },
+        "backToList": "Back to list",
+        "parameters": "Parameters",
+        "archive": "Archive",
+        "received": "RECEIVED",
+        "sent": "SENT",
+        "download": "Download",
+        "toMailbox": "to {{mailbox}}",
+        "viaLabel": "via {{label}}",
+        "messagesInThread": "{{count}} messages in thread",
+        "attachmentPdf": "PDF",
+        "attachmentDoc": "DOC",
+        "newLetter": "New letter",
+        "closeThread": "Close thread",
+        "emailThread": "Email thread",
+        "disabledMailboxNotice": "The original mailbox for this letter is disabled. Choose another mailbox below to send a reply."
+      },
+      "reply": {
+        "replyFrom": "Reply from",
+        "markNbuResponse": "Mark as NBU response",
+        "markNbuShort": "NBU",
+        "placeholder": "Write your reply...",
+        "reassign": "Reassign",
+        "saveDraft": "Save draft",
+        "savingDraft": "Saving…",
+        "draftSaved": "Draft saved",
+        "attach": "Attach",
+        "attaching": "Attaching…",
+        "template": "Template",
+        "noTemplatesHint": "Create letter templates in Settings → Templates",
+        "send": "Send",
+        "edoLabel": "EDO",
+        "edoOutgoing": "Outgoing (ВИХ)",
+        "edoNbu": "NBU reply (НБУ)",
+        "edoNone": "Do not register"
+      },
+      "newLetter": {
+        "title": "New Outgoing Letter",
+        "from": "From",
+        "to": "To",
+        "recipientType": "Recipient",
+        "toClient": "CRM client",
+        "toInstitution": "Institution / Court / NBU",
+        "client": "Client",
+        "selectClient": "Search client...",
+        "selectEmail": "Select email...",
+        "institutionPlaceholder": "e.g. consumers@bank.gov.ua",
+        "noClient": "No client (general letter)",
+        "subject": "Subject",
+        "subjectPlaceholder": "Letter subject...",
+        "body": "Message",
+        "bodyPlaceholder": "Write your message...",
+        "edoType": "EDO document type",
+        "edoRequiresClient": "Select a CRM client before registering EDO",
+        "edoRequiresClientHint": "Select a CRM client above to register this letter in EDO.",
+        "edoHintInstitution": "Link a CRM client below to register this institution letter in EDO.",
+        "edoClientForInstitution": "CRM client (for EDO registration)",
+        "clientSearchHint": "Type 2+ characters to search…",
+        "send": "Send"
+      },
+      "parameters": {
+        "title": "Letter parameters",
+        "selectLetter": "Select a letter to view parameters",
+        "close": "Close parameters",
+        "autoBadge": "AUTO · {{percent}}%",
+        "autoProcessed": "AUTO",
+        "taskOnBoard": "Task created on kanban",
+        "viewTask": "View →",
+        "selectDueDate": "Select date",
+        "dueDatePastError": "Due date cannot be before today",
+        "type": "Type",
+        "selectType": "Select type",
+        "types": {
+          "complaint": "Complaint",
+          "nbuInquiry": "NBU inquiry",
+          "courtClaim": "Court claim",
+          "attorneyRequest": "Attorney request",
+          "inquiry": "Inquiry"
+        },
+        "client": "Client",
+        "contract": "Contract",
+        "dueDate": "Due date",
+        "lawyer": "Lawyer",
+        "notIdentified": "Not identified",
+        "auto": "Auto",
+        "managerConfirmation": "Manager confirmation",
+        "parametersCount": "{{confirmed}}/{{total}} parameters",
+        "confirmAndCreate": "Confirm & create task"
+      },
+      "kanban": {
+        "title": "Legal tasks kanban",
+        "department": "Legal department",
+        "activeCount": "{{count}} active",
+        "loading": "Loading kanban tasks…",
+        "loadError": {
+          "title": "Could not load kanban tasks",
+          "description": "Check your connection and try again."
+        },
+        "empty": {
+          "title": "No tasks on the board yet",
+          "description": "Confirm letters from the inbox or create a task manually to start tracking legal work."
+        },
+        "emptyFilter": {
+          "title": "No tasks match these filters",
+          "description": "Try another lawyer, type, or deadline range.",
+          "clearFilters": "Clear filters"
+        },
+        "exportCsv": "Export CSV",
+        "newTask": "New Task",
+        "newTaskShort": "New",
+        "overdueBadge": "Overdue",
+        "noDeadline": "no deadline set",
+        "dueLabel": "due:",
+        "byLabel": "by",
+        "closedLabel": "closed",
+        "today": "today",
+        "emailThread": "Email thread",
+        "taskDetails": "Task details",
+        "noEmailThread": "This task has no linked email thread. Details above come from the kanban task only.",
+        "changeAssignee": "Change assignee",
+        "emptyColumn": "No tasks",
+        "dragTask": "Drag task",
+        "moreOptions": "More options",
+        "moveTo": "Move to",
+        "setClient": "Set client",
+        "changeType": "Change type",
+        "changePriority": "Change priority",
+        "setDeadline": "Set deadline",
+        "copyKey": "Copy task key",
+        "scrollNavigator": "Scroll kanban columns",
+        "filters": {
+          "all": "All tasks",
+          "thisWeek": "Due this week",
+          "thisMonth": "Due this month",
+          "allLawyers": "All Lawyers",
+          "allTypes": "All Types"
+        },
+        "columns": {
+          "notDefined": "NOT DEFINED",
+          "inProgress": "IN PROGRESS",
+          "overdue": "OVERDUE",
+          "completed": "DONE"
+        },
+        "types": {
+          "unclassified": "unclassified",
+          "typePending": "type pending"
+        },
+        "createTask": {
+          "title": "Create a Task",
+          "lawyer": "Lawyer",
+          "type": "Type",
+          "deadline": "Deadline",
+          "priority": "Priority",
+          "description": "Description",
+          "descriptionPlaceholder": "Enter task description...",
+          "selectDeadline": "Select deadline",
+          "submit": "Create",
+          "priorities": {
+            "highest": "Highest",
+            "high": "High",
+            "medium": "Medium",
+            "low": "Low",
+            "lowest": "Lowest"
+          }
+        }
+      },
+      "documents": {
+        "title": "Documents",
+        "department": "Legal department",
+        "generateDocument": "Generate document",
+        "addIncoming": "Add incoming",
+        "searchPlaceholder": "Search by name, client, document #...",
+        "loading": "Loading documents…",
+        "loadError": {
+          "title": "Could not load documents",
+          "description": "Check your connection and try again."
+        },
+        "empty": {
+          "title": "No documents yet",
+          "description": "Register an incoming document or generate an outgoing letter to start the legal document journal.",
+          "search": {
+            "title": "No matching documents",
+            "description": "Try a different search term or clear the search to see all documents.",
+            "clearSearch": "Clear search"
+          },
+          "filter": {
+            "title": "No documents in this view",
+            "description": "Nothing matches the «{{filter}}» filter. Try another type or show all documents."
+          }
+        },
+        "stats": {
+          "incoming": "IN · incoming",
+          "outgoing": "OUT · outgoing",
+          "nbu": "NBU · responses",
+          "generated": "Generated",
+          "countOfYear": "{{count}} / {{year}}",
+          "generatedPercent": "{{percent}}%"
+        },
+        "filters": {
+          "allTypes": "All types",
+          "incoming": "IN",
+          "outgoing": "OUT",
+          "nbu": "NBU",
+          "uploaded": "Uploaded",
+          "generated": "Generated"
+        },
+        "types": {
+          "incoming": "Incoming",
+          "outgoing": "Outgoing",
+          "nbuResponse": "NBU response"
+        },
+        "actions": {
+          "generated": "generated",
+          "uploaded": "uploaded"
+        },
+        "columns": {
+          "number": "Number",
+          "documentName": "Document name",
+          "type": "Type",
+          "clientContract": "Client - Contract",
+          "action": "Action",
+          "assignee": "Assignee",
+          "date": "Date"
+        },
+        "dates": {
+          "today": "today",
+          "yesterday": "yesterday"
+        },
+        "modals": {
+          "generate": {
+            "title": "Generate document",
+            "documentType": "Document type",
+            "documentName": "Document name",
+            "documentNamePlaceholder": "Enter document name",
+            "client": "Client",
+            "contract": "Contract",
+            "selectClientFirst": "Select a client to load contracts",
+            "selectClient": "Select client",
+            "clientSearchHint": "Type 2+ characters to search…",
+            "assignee": "Assignee",
+            "submit": "Generate & register",
+            "success": "Document generated",
+            "types": {
+              "outgoing": "Outgoing (ВИХ)",
+              "nbu": "NBU reply (НБУ)"
+            }
+          },
+          "incoming": {
+            "title": "Add incoming document",
+            "file": "File",
+            "changeFile": "Click to replace",
+            "dropHint": "Drag & drop or click to upload PDF, DOC, or image",
+            "documentName": "Document name",
+            "documentNamePlaceholder": "Enter document name",
+            "client": "Client",
+            "contract": "Contract",
+            "selectClientFirst": "Select a client to load contracts",
+            "selectClient": "Select client",
+            "relatedLetter": "Related inbox letter (optional)",
+            "relatedLetterPlaceholder": "e.g. IN-2026-142",
+            "assignee": "Assignee",
+            "submit": "Register incoming",
+            "success": "Incoming document registered"
+          },
+          "detail": {
+            "title": "Document details",
+            "close": "Close document",
+            "download": "Download",
+            "downloadStarted": "Download started"
+          }
+        }
+      },
+      "settings": {
+        "title": "Settings",
+        "departmentConfig": "Legal department configuration",
+        "comingSoon": "Letter type directory and mailbox settings — coming soon.",
+        "addType": "Add type",
+        "discardChanges": "Discard changes",
+        "saveChanges": "Save Changes",
+        "saveSuccess": "Changes saved",
+        "saveError": "Could not save changes",
+        "saving": "Saving…",
+        "loadingLawyers": "Loading lawyers…",
+        "noLawyers": "No active lawyers configured",
+        "loading": "Loading settings…",
+        "loadError": "Could not load settings",
+        "readOnlyNotice": "View only — you do not have permission to change department settings.",
+        "lawyer": "Lawyer",
+        "status": "Status",
+        "subTabs": {
+          "letterTypes": "Letter types",
+          "lawyers": "Lawyers",
+          "mailboxes": "Mailboxes",
+          "templates": "Templates"
+        },
+        "letterTypes": {
+          "loading": "Loading letter types…",
+          "listTitle": "Letter types",
+          "deleteType": "Delete letter type",
+          "deleteTypeTitle": "Delete letter type",
+          "deleteTypeConfirm": "Are you sure you want to delete this letter type?",
+          "deleteTypeWarning": "It will be removed from active lists. Historical letters keep their classification.",
+          "deleteTypeLetterCountWarning": "This type is linked to {{count}} letters.",
+          "deleteTypeLastWarning": "At least one letter type must remain.",
+          "deleteTypeSuccess": "Letter type deleted",
+          "listMeta": "SLA {{sla}} b.d. • {{examples}} examples",
+          "previewFallback": "Letter type name",
+          "empty": {
+            "title": "No letter types yet",
+            "description": "Add the first type to configure classification, SLA, and lawyer priorities."
+          },
+          "basicInfo": "Basic info",
+          "displayName": "Display name",
+          "responseSla": "Response SLA",
+          "businessDays": "business days",
+          "description": "Description",
+          "priorityAssignment": "Priority assignment",
+          "priorityHint": "★ = how strongly this lawyer should be preferred for this type",
+          "priorityEmpty": {
+            "title": "No lawyers to assign",
+            "description": "Add lawyers in the Lawyers tab, then set star ratings and roles for this letter type."
+          },
+          "activeLoad": "{{current}} / {{max}} active",
+          "trainingExamples": "Training examples",
+          "examplesMeta": "{{count}} saved examples for manual reference",
+          "addTrainingExample": "+ Add training example (paste a real letter)",
+          "exampleSourcePrefix": "from",
+          "editTrainingExample": "Edit training example",
+          "addTrainingExampleTitle": "Add training example",
+          "exampleTitle": "Title",
+          "exampleTitlePlaceholder": "e.g. Payment dispute letter",
+          "exampleBody": "Letter content (paste from archive)",
+          "exampleBodyPlaceholder": "Paste the full letter text here...",
+          "exampleSource": "Sender",
+          "exampleSourcePlaceholder": "Sender name",
+          "keywordHints": "Keyword hints",
+          "keywordHintsHint": "used to auto-suggest letter type from subject and body for unclassified messages",
+          "keywordPlaceholder": "Type a keyword and press Enter..",
+          "starRating": "Star rating",
+          "starN": "Star {{n}} of {{total}}",
+          "colors": {
+            "teal": "Teal",
+            "cyan": "Cyan",
+            "blue": "Blue",
+            "indigo": "Indigo",
+            "purple": "Purple",
+            "violet": "Violet",
+            "magenta": "Magenta",
+            "pink": "Pink",
+            "red": "Red",
+            "orangeRed": "Orange red",
+            "orange": "Orange",
+            "green": "Green"
+          },
+          "roles": {
+            "primary": "PRIMARY",
+            "backup": "BACKUP",
+            "secondary": "SECONDARY",
+            "off": "OFF"
+          }
+        },
+        "lawyers": {
+          "autoAssignmentTitle": "Assignment algorithm",
+          "autoAssignmentDesc": "When a new letter is classified, the system picks the responsible lawyer using <strong>two prioritized signals</strong>. Once any lawyer reaches their <strong>max-in-flight cap</strong>, they're excluded from specialization matching and the workload spreads evenly across the rest of the team via round-robin.",
+          "steps": {
+            "step1Badge": "STEP 1",
+            "step1Title": "Specialization match",
+            "step1Desc": "Lawyers whose specialization includes this letter type (★ rating in their profile)",
+            "step2Badge": "STEP 2",
+            "step2Title": "Pick lowest load",
+            "step2Desc": "Among specialists under their cap, assign to whoever has fewest active tasks.",
+            "fallbackBadge": "FALLBACK",
+            "fallbackTitleBefore": "All specialists full",
+            "fallbackTitleAfter": "round-robin",
+            "fallbackDesc": "If every specialist hit their cap, the next available lawyer (any specialization) gets the task."
+          },
+          "departmentTitle_one": "Legal department · {{count}} lawyer",
+          "departmentTitle_other": "Legal department · {{count}} lawyers",
+          "departmentDesc": "Adjust max workload and specializations per person",
+          "loading": "Loading lawyers…",
+          "export": "Export",
+          "exportEmpty": "No lawyers to export",
+          "exportSoon": "Export coming soon",
+          "addLawyer": "Add lawyer",
+          "updateError": "Could not update lawyer workload",
+          "removed": "Lawyer removed",
+          "noRole": "Legal team",
+          "letterTypesColumn": "Letter types",
+          "currentWorkload": "Current workload",
+          "maxInFlight": "Max in flight",
+          "ofActive": "{{current}} of {{max}}",
+          "ofActiveSuffix": "of {{max}}",
+          "workload": {
+            "high": "Near capacity",
+            "healthy": "Healthy load",
+            "plenty": "Plenty of capacity"
+          },
+          "status": {
+            "online": "online",
+            "away": "away"
+          },
+          "removeLetterType": "Remove letter type",
+          "addLetterType": "Add letter type",
+          "noMoreLetterTypes": "All letter types assigned",
+          "letterTypesUpdateError": "Could not update letter types",
+          "empty": {
+            "title": "No lawyers yet",
+            "description": "Add lawyers to configure workload limits and letter type specializations."
+          }
+        },
+        "mailboxes": {
+          "title": "Mailboxes",
+          "description": "Configure connected legal mailboxes, sync intervals, and routing rules.",
+          "loading": "Loading mailboxes…",
+          "tableTitle": "Connected mailboxes · {{count}}",
+          "tableDesc": "Manage addresses, routing rules, and default outgoing mailbox",
+          "addMailbox": "Add mailbox",
+          "addTitle": "Add mailbox",
+          "editTitle": "Edit mailbox",
+          "addSuccess": "Mailbox added",
+          "updateSuccess": "Mailbox updated",
+          "disabledHidden": "Mailbox disabled. Its messages are hidden from the inbox.",
+          "testSync": "Test sync",
+          "testSyncRunning": "Syncing…",
+          "testSyncSoon": "Sync test coming soon",
+          "testSyncPartial": "Sync finished with {{errors}} error(s). {{ingested}} new message(s).",
+          "testSyncSuccess": "Sync complete. {{ingested}} new message(s) ingested.",
+          "testSyncSuccessEmpty": "Sync complete. No new messages.",
+          "testConnection": "Test connection",
+          "testConnectionRunning": "Testing…",
+          "testConnectionSuccess": "Connection successful",
+          "connectionErrors": {
+            "authFailed": "Could not sign in. Check the email address and app password.",
+            "authFailedGoogle": "Could not sign in. Check the email address and use a Google app password — not your regular Google password.",
+            "authFailedMicrosoft": "Could not sign in. Check the email address and app password or account permissions.",
+            "connectionFailed": "Could not reach the mail server. Check the host, port, and network.",
+            "timeout": "Connection timed out. Check the server host, port, and firewall settings.",
+            "generic": "Connection test failed: {{message}}",
+            "unknown": "Connection test failed. Please try again."
+          },
+          "defaultOutgoing": "Default",
+          "autoRoute": "Auto-route",
+          "duplicateEmail": "This mailbox is already connected",
+          "noCredentials": "No credentials configured — sync and sending will fail",
+          "noCredentialsShort": "No credentials",
+          "connectGmail": "Connect Gmail",
+          "gmailOAuthSuccess": "Gmail connected successfully!",
+          "gmailOAuthFailed": "Gmail authorisation failed ({{error}}). Please try again.",
+          "gmailOAuthError": "Failed to start Gmail authorisation. Try again.",
+          "rulesCount": "{{count}} rules",
+          "rulesCount_one": "{{count}} rule",
+          "empty": {
+            "title": "No mailboxes connected",
+            "description": "Add a mailbox to start syncing incoming legal correspondence."
+          },
+          "columns": {
+            "mailbox": "Mailbox",
+            "letters": "Letters",
+            "defaultType": "Default type",
+            "routing": "Routing",
+            "actions": "Actions"
+          },
+          "status": {
+            "connected": "connected",
+            "error": "error",
+            "disabled": "disabled"
+          },
+          "fields": {
+            "email": "Email address",
+            "displayName": "Display name",
+            "displayNamePlaceholder": "Legal department",
+            "provider": "Mail provider",
+            "password": "App password",
+            "passwordPlaceholder": "Enter app password",
+            "passwordEditPlaceholder": "Leave blank to keep current password",
+            "passwordHint": "Use an app-specific password from your mail provider, not your login password.",
+            "defaultType": "Default letter type",
+            "defaultOutgoing": "Use as default outgoing mailbox in reply composer",
+            "syncFromToday": "Sync from today only",
+            "syncFromTodayHint": "Recommended for mailboxes with many existing emails. Only messages arriving after this point will be imported."
+          },
+          "oauth2": {
+            "title": "Gmail requires OAuth2 authorisation",
+            "hint": "Save the mailbox, then click the \"Connect Gmail\" button in the table to authorise access via Google. No password is stored."
+          },
+          "serverSettings": {
+            "title": "Server settings",
+            "imapHost": "IMAP host",
+            "imapPort": "Port",
+            "imapSsl": "Use SSL",
+            "smtpHost": "SMTP host",
+            "smtpPort": "Port",
+            "smtpTls": "Use TLS"
+          },
+          "items": {
+            "legal": "Legal department",
+            "court": "Court correspondence",
+            "nbu": "NBU regulatory",
+            "accounting": "Accounting",
+            "compliance": "Compliance",
+            "collections": "Collections"
+          },
+          "sync": {
+            "title": "Email sync",
+            "description": "How often the email service pulls new messages from connected mailboxes.",
+            "lastSynced": "Last synced",
+            "neverSynced": "Never",
+            "lastSyncedMinutes": "{{count}} min ago",
+            "lastSyncedHours": "{{count}} h ago",
+            "intervals": {
+              "15m": "Every 15 minutes",
+              "30m": "Every 30 minutes",
+              "1h": "Every hour",
+              "4h": "Every 4 hours",
+              "daily": "Daily"
+            }
+          },
+          "routing": {
+            "title": "Routing rules",
+            "hint": "Map incoming messages to letter types by sender or subject",
+            "matchType": "Match",
+            "value": "Value",
+            "letterType": "Letter type",
+            "selectType": "Select type",
+            "addRule": "Add rule",
+            "matchDefault": "Default",
+            "matchSenderDomain": "Sender domain",
+            "matchSubjectKeyword": "Subject keyword"
+          }
+        },
+        "templates": {
+          "title": "Templates",
+          "description": "Manage outgoing letter templates for the thread and new letter composer.",
+          "replyTitle": "Letter templates",
+          "replyDesc": "Used in the thread and new letter composer template menus",
+          "documentTitle": "Document presets",
+          "documentDesc": "Used when generating outgoing and NBU documents",
+          "addReply": "Add template",
+          "addPreset": "Add preset",
+          "addReplyTitle": "Add letter template",
+          "editReplyTitle": "Edit letter template",
+          "addPresetTitle": "Add document preset",
+          "editPresetTitle": "Edit document preset",
+          "replyAddSuccess": "Letter template added",
+          "replyUpdateSuccess": "Letter template updated",
+          "replyDeleteSuccess": "Letter template deleted",
+          "deleteReplyTitle": "Delete letter template",
+          "deleteReplyConfirm": "Are you sure you want to delete this letter template?",
+          "deleteReplyWarning": "This action cannot be undone.",
+          "availableVariables": "Available variables",
+          "variablesHint": "Click a variable to insert it at the cursor in the template body.",
+          "presetAddSuccess": "Document preset added",
+          "presetUpdateSuccess": "Document preset updated",
+          "presetDeleteSuccess": "Document preset deleted",
+          "deletePresetTitle": "Delete document preset",
+          "deletePresetConfirm": "Are you sure you want to delete this document preset?",
+          "deletePresetWarning": "This action cannot be undone.",
+          "loading": "Loading templates…",
+          "allTypes": "All types",
+          "active": "Active",
+          "inactive": "Inactive",
+          "noAssignee": "—",
+          "emptyReply": {
+            "title": "No letter templates yet",
+            "description": "Add templates with reusable letter text and variables for the thread and new letter composer."
+          },
+          "emptyPresets": {
+            "title": "No document presets yet",
+            "description": "Add presets to configure document names and default assignees for the generate document flow."
+          },
+          "columns": {
+            "name": "Name",
+            "preview": "Preview",
+            "type": "Type",
+            "assignee": "Default assignee"
+          },
+          "documentTypes": {
+            "outgoing": "Outgoing (ВИХ)",
+            "nbu": "NBU reply (НБУ)"
+          },
+          "fields": {
+            "name": "Template name",
+            "presetName": "Preset name",
+            "letterTypes": "Letter types",
+            "body": "Template body",
+            "bodyPlaceholder": "Write the letter template text...",
+            "bodyHint": "Use the variable palette below to insert placeholders.",
+            "active": "Active in letter composer",
+            "documentType": "Document type",
+            "assignee": "Default assignee",
+            "presetActive": "Active in document generation"
+          },
+          "variables": {
+            "clientName": "Client name",
+            "date": "Today's date",
+            "dueDate": "Response due date",
+            "requestNo": "Request reference number",
+            "contract": "Contract"
+          }
+        },
+        "modals": {
+          "addType": {
+            "title": "Add type",
+            "letterTypes": "Letter types",
+            "placeholder": "e.g. Payment dispute",
+            "color": "Color",
+            "preview": "Preview",
+            "submit": "Add",
+            "submitting": "Adding…",
+            "success": "Letter type added"
+          },
+          "addLawyer": {
+            "title": "Add lawyer",
+            "selectLawyer": "Select a Lawyer",
+            "noLawyers": "All lawyers added",
+            "responsibleTypes": "Responsible letter types",
+            "selectTypes": "Select letter types",
+            "typesSelected": "{{count}} selected",
+            "addNewType": "Add new type",
+            "submit": "Add",
+            "submitting": "Adding…",
+            "success": "Lawyer added",
+            "error": "Could not add lawyer"
+          }
+        }
+      },
+      "activityLog": {
+        "title": "Activity",
+        "letterReceived": "Letter received",
+        "classified": "Auto-classified",
+        "typeSuggested": "Type suggested",
+        "parametersConfirmed": "Parameters confirmed",
+        "taskCreated": "Task created on kanban board"
+      },
+      "workspaceBanner": {
+        "lawBadge": "Law",
+        "title": "Lawyers's Workspace",
+        "activeProject": "Active project: {{project}}.",
+        "noActiveProject": "No active project selected.",
+        "lawyersInProject": "lawyers in this project",
+        "openWorkspaceMenu": "Open workspace menu",
+        "collapse": "Minimize workspace banner",
+        "expand": "Expand workspace banner"
+      },
+      "footer": {
+        "syncHint": "Email Service · {{interval}}",
+        "mailboxes": "6 mailboxes connected",
+        "mailboxesCount": "{{count}} mailboxes connected"
+      }
     },
     "training": {
       "title": "Action Analysis",
@@ -813,6 +1596,8 @@
         "list": {
           "dateTime": "Date / Time",
           "employee": "Employee",
+          "client": "Client",
+          "phone": "Phone",
           "category": "Category",
           "rating": "Rating",
           "comment": "Comment",
@@ -870,6 +1655,92 @@
           }
         }
       },
+      "transcript": {
+        "title": "Call transcript",
+        "notReady": "Transcript is not ready yet — it appears after the nightly processing",
+        "error": "Failed to load the transcript",
+        "noAccess": "No access to transcripts",
+        "seekTo": "Jump to this moment in the recording",
+        "redFlags": "Flags",
+        "fraudSuspicion": "Fraud suspicion",
+        "moodOperator": "Operator mood",
+        "promiseTitle": "Payment promise",
+        "recommendations": "Recommendations",
+        "roles": {
+          "operator": "Operator",
+          "client": "Client",
+          "other": "Other"
+        },
+        "v7": {
+          "keyMoments": "Key moments",
+          "overlap": "overlapping",
+          "pause": "silence {{seconds}} s",
+          "turns_one": "{{count}} turn",
+          "turns_other": "{{count}} turns",
+          "silence": "Silence {{total}}s",
+          "silenceMax": "Silence {{total}}s (max {{max}}s)",
+          "overlapTotal": "Overlap {{total}}s",
+          "operatorShare": "Operator {{share}}%",
+          "clientShare": "{{share}}% Client",
+          "duration": "Duration",
+          "hesitations": "hesitations {{value}}",
+          "inlinePause": "(pause {{seconds}} s)",
+          "direction": {
+            "inbound": "Inbound",
+            "outbound": "Outbound"
+          },
+          "audio": {
+            "approx": "by audio, approximate",
+            "tone": "tone",
+            "irritation": "irritation",
+            "empathy": "empathy",
+            "peak": "peak",
+            "trend": "trend",
+            "dynamicsTitle": "Client emotion dynamics (by audio)",
+            "start": "start",
+            "end": "end",
+            "windowTooltip": "window {{from}}–{{to}}: {{raw}} (raw), {{smooth}} (smoothed)",
+            "toneVsWords": "tone ≠ words",
+            "said": "text",
+            "sounded": "sounds",
+            "states": {
+              "raisedVoice": "raised voice",
+              "crying": "crying"
+            }
+          },
+          "conclusion": {
+            "title": "AI conclusion",
+            "whyTitle": "Why this score",
+            "calc": "rubric {{rubric}} → adjustment {{adjustment}} → {{score}}",
+            "strengths": "Strengths",
+            "weaknesses": "Weaknesses",
+            "keyFindings": "Key findings",
+            "said": "said",
+            "sounded": "sounded",
+            "priority": {
+              "high": "high",
+              "normal": "normal"
+            },
+            "confidence": "confidence {{value}}",
+            "limitedBy": "limitations: {{list}}",
+            "limitations": {
+              "no_audio_layer": "no audio layer",
+              "fallback_26b": "fallback model"
+            }
+          }
+        }
+      },
+      "scenes": {
+        "greeting": "Greeting",
+        "identification": "Identification",
+        "debt_discussion": "Debt discussion",
+        "objection_handling": "Objection handling",
+        "negotiation": "Negotiation",
+        "promise": "Payment promise",
+        "escalation": "Escalation",
+        "closing": "Closing",
+        "other": "Other"
+      },
       "scorecardsEmpty": "No scorecards in scope.",
       "scorecardsTotalSuffix": "scorecards",
       "markers": {
@@ -903,6 +1774,13 @@
         "replyPlaceholder": "Write a reply…",
         "markRead": "Mark read",
         "markComplete": "Mark completed",
+        "markDone": "Mark done",
+        "confirm": "Confirm",
+        "return": "Return",
+        "returnReason": "Reason for revision",
+        "returnConfirm": "Return for revision",
+        "deadline": "Deadline",
+        "overdue": "Overdue",
         "threadEmpty": "No replies yet.",
         "types": {
           "praise": "Praise",
@@ -913,6 +1791,12 @@
           "unread": "Unread",
           "read": "Read",
           "completed": "Completed"
+        },
+        "lifecycle": {
+          "open": "Open",
+          "done": "Done",
+          "confirmed": "Confirmed",
+          "returned": "Returned"
         },
         "role": {
           "trainer": "Trainer",
@@ -1195,6 +2079,7 @@
       "actions": {
         "view": "View",
         "edit": "Edit",
+        "unlock": "Unlock",
         "impersonate": "Impersonate",
         "impersonating": "Impersonating...",
         "status": "Status",
@@ -1385,6 +2270,14 @@
       "deleteAria": "Delete {{ip}}",
       "saveAria": "Save changes",
       "cancelAria": "Cancel"
+    },
+    "callQaSettings": {
+      "title": "AI Call Analysis",
+      "description": "Call transcripts and AI reviews on the client card",
+      "toggleAria": "Toggle AI call analysis",
+      "toastEnabled": "AI call analysis enabled.",
+      "toastDisabled": "AI call analysis disabled.",
+      "toastError": "Failed to update AI call analysis settings."
     },
     "projects": {
       "title": "Project Management",
@@ -1589,6 +2482,12 @@
         "errors": {
           "failedToCreate": "Failed to create role. Please try again."
         }
+      },
+      "accessLevel": {
+        "my": "Only mine",
+        "group": "My group",
+        "department": "My department",
+        "all": "Entire project"
       }
     },
     "departments": {
@@ -1954,6 +2853,7 @@
           "errors": "Errors ({{count}})",
           "readyToAssign": "Ready to assign",
           "noChange": "No change",
+          "wouldSkip": "Will be skipped",
           "invalid": "Invalid",
           "uniqueOperators": "Unique operators",
           "columns": {
@@ -3036,16 +3936,7 @@
         "dropFileOrClick": "Drag a file here or click to select",
         "loan": "Loan",
         "documentsUnlinked": "Not linked to a loan",
-        "documentTypes": {
-          "passport": "Passport",
-          "inn": "Tax ID",
-          "contract": "Contract",
-          "income": "Income statement",
-          "outcome": "Extract / statement",
-          "signature": "Digital signature",
-          "military": "Military",
-          "other": "Other"
-        },
+        "documentTypePlaceholder": "Select a type",
         "department": "Department",
         "phones": "Phones",
         "tin": "TIN",
@@ -3071,6 +3962,8 @@
         "contactType": "Contact type",
         "addedBy": "Added by",
         "addedDate": "Date",
+        "updatedBy": "Updated by",
+        "updatedDate": "Date",
         "phoneType": "Type",
         "linkedContact": "Linked contact",
         "comment": "Comment",
@@ -3155,6 +4048,24 @@
         "rrMonthlyPayment": "Monthly Payment",
         "rrResponsibleEmployee": "Responsible Employee",
         "rrPaymentSchedule": "Payment Schedule",
+        "rrPenaltyAmount": "Overdue Penalty (optional)",
+        "rrPenaltyHint": "If any payment goes 3+ days overdue, this amount is charged once as an extra payment at the end of the schedule.",
+        "rrPenaltyTag": "penalty (overdue trigger)",
+        "rrNumPaymentsHint": "Up to {{max}} payments.",
+        "rrFrequency": "Payment Frequency",
+        "rrFirstPaymentDate": "First Payment Date",
+        "rrPeriodicityHint": "The schedule below is auto-filled from the first payment date, number of payments and frequency. You can still edit any row.",
+        "rrFrequencyManual": "Manual (no auto-fill)",
+        "rrFrequencyOptions": {
+          "every_n_days": "Every N days",
+          "monthly_same_day": "Monthly (same day)",
+          "monthly_nth_day": "Every Nth of month"
+        },
+        "rrIntervalDays": "Interval (days)",
+        "rrDayOfMonth": "Day of month",
+        "rrDayOfMonthPlaceholder": "Select day",
+        "rrDayOfMonthLast": "Last day",
+        "rrClampNotice": "Payment {{rows}}: the selected day does not exist in that month, so the date was set to the last day of the month. You can still edit it manually.",
         "rrPaymentDate": "Date",
         "rrPaymentAmount": "Amount",
         "rrConnectionDate": "Connection Date",
@@ -3243,6 +4154,9 @@
         "readMore": "Read More",
         "recentActivityTimeline": "Recent Activity Timeline",
         "viewAll": "View All",
+        "copyName": "Copy name",
+        "nameCopied": "Name copied",
+        "copyFailed": "Copy failed",
         "noHistoryYet": "No history yet",
         "startByCallingSendingSMSOrAddingNote": "Start by calling, sending SMS, or adding a note.",
         "addFirstNote": "Add first note",
@@ -3270,6 +4184,7 @@
         "exportMessagingCsvFailed": "Failed to export messaging history",
         "tabs": {
           "personal": "Personal",
+          "relatedTags": "Related tags",
           "work": "Work",
           "recommenders": "Recommenders",
           "addresses": "Addresses",
@@ -3280,6 +4195,11 @@
           "callSms": "Call / SMS",
           "taChains": "TA Chains",
           "searcherComments": "Searcher Comments"
+        },
+        "relatedTags": {
+          "loading": "Loading related tags...",
+          "empty": "No related tags from linked contacts with shared phone numbers.",
+          "goToClient": "Go to client №{{id}}"
         },
         "ubki": {
           "doNotSendLabel": "Do not send data to UBKI",
@@ -3728,6 +4648,27 @@
         "removed": "Template removed"
       }
     },
+    "rrPeriodicity": {
+      "title": "RR Payment Periodicity",
+      "description": "Choose which payment-frequency options operators can use to auto-fill the schedule when creating a Restructuring Agreement.",
+      "saved": "Payment periodicity options saved",
+      "savedDescription": "Operators will see the updated frequency options next time they create a Restructuring Agreement.",
+      "allDisabledHint": "With every option off, operators enter each payment date manually.",
+      "types": {
+        "everyNDays": {
+          "label": "Every N days",
+          "hint": "Operator sets an interval (e.g. every 14 days)."
+        },
+        "monthlySameDay": {
+          "label": "Monthly (same day)",
+          "hint": "Same day of month as the first payment date."
+        },
+        "monthlyNthDay": {
+          "label": "Every Nth of month",
+          "hint": "Operator picks a day of month (1–30 or last day)."
+        }
+      }
+    },
     "rrNotifications": {
       "title": "RR Notifications",
       "description": "Configure bell reminders for the responsible operator before each scheduled Restructuring Agreement payment. Sent daily by the system.",
@@ -3740,6 +4681,9 @@
       "template": "Notification text",
       "variablesDetected": "Variables detected",
       "availableVariables": "Available variables",
+      "penaltyTemplate": "Penalty reminder template",
+      "penaltyTemplateHint": "Used only for the overdue-penalty reminder. Leave blank to reuse the installment template above.",
+      "penaltyTemplatePlaceholder": "{client_name}: penalty {amount} due {due_date}",
       "clickToInsert": "Click to insert",
       "removeVariable": "Remove one occurrence",
       "removeHint": "Click × to remove one occurrence at a time. Use the textarea directly for precise edits.",
@@ -3757,17 +4701,39 @@
       "title": "Document Generation",
       "tabs": {
         "journal": "Document Journal",
-        "templates": "Document Templates"
+        "templates": "Document Templates",
+        "types": "Document Types"
       },
-      "documentTypes": {
-        "passport": "Passport",
-        "inn": "Tax ID",
-        "contract": "Contract",
-        "income": "Income statement",
-        "outcome": "Extract / statement",
-        "signature": "Digital signature",
-        "military": "Military",
-        "other": "Other"
+      "types": {
+        "title": "Document Types",
+        "newButton": "New type",
+        "createTitle": "New document type",
+        "editTitle": "Edit document type",
+        "confirmDeleteTitle": "Delete '{{name}}'?",
+        "confirmDelete": "This action cannot be undone.",
+        "deleteBlockedMessage": "This type is used by {{formattedCount}} documents. Hide it instead of deleting.",
+        "uniqueNameError": "A document type with this name already exists.",
+        "loadError": "Failed to load document types.",
+        "hiddenLabel": "hidden",
+        "columns": {
+          "color": "Color",
+          "name": "Name",
+          "usage": "Documents",
+          "actions": "Actions"
+        },
+        "fields": {
+          "name": "Name",
+          "namePlaceholder": "e.g. Passport",
+          "color": "Color",
+          "previewText": "Document type"
+        },
+        "toast": {
+          "created": "Document type created",
+          "updated": "Document type updated",
+          "deleted": "Document type deleted",
+          "hidden": "Type hidden",
+          "shown": "Type shown"
+        }
       },
       "actions": {
         "uploaded": "Uploaded",
@@ -4290,6 +5256,7 @@
         "enableNotifications": "Enable Notifications",
         "notificationTemplate": "Notification Template",
         "isProtected": "Protected Tag",
+        "isRelatedTag": "Related Tag",
         "protectedRoles": "Roles allowed to remove",
         "expiryType": "Expiry Type",
         "loanClosureNote": "Tag will be automatically removed when the client's loan is closed",
@@ -4305,6 +5272,7 @@
           "visibility": "UI = visible to operators, Analytics = reports only, System = hidden.",
           "expiryType": "Permanent = forever. TTL = removed after set time. Loan closure = removed when loan is closed.",
           "protectedTag": "Only selected roles can remove this tag.",
+          "relatedTag": "When enabled, this tag appears on linked clients who share a phone number.",
           "mutexGroup": "Tags in the same group are mutually exclusive. Assigning one removes others."
         },
         "notificationTemplatePlaceholder": "e.g. Tag '{tag_name}' assigned to client {client_id}",
@@ -4333,6 +5301,7 @@
         "targetActionDate": "Target Action Date"
       },
       "protectedWarning": "Removal requires manager approval",
+      "relatedTagHint": "Shown in the Related Tags tab on profiles of clients linked by shared phone numbers.",
       "removalRequests": {
         "title": "Removal Requests",
         "approve": "Approve",
@@ -5257,6 +6226,55 @@
         }
       }
     },
+    "repaymentConfiguration": {
+      "title": "Repayment & Write-off Configuration",
+      "description": "Configure how payments are distributed across debt components and manage write-off rules.",
+      "lastUpdated": "Last updated",
+      "by": "by",
+      "readOnly": "You have view-only access to this configuration.",
+      "saveSuccess": "Configuration saved successfully",
+      "saveError": "Failed to save configuration",
+      "conflictError": "Configuration was changed by another user. Reloading latest version.",
+      "cancel": "Cancel",
+      "save": "Save Changes",
+      "saving": "Saving...",
+      "repaymentOrder": {
+        "title": "Repayment Order",
+        "description": "Drag to set the order payments fill debt components (each fully before the next). This applies only under Strict Order — Legacy Proportional ignores it and uses a fixed order.",
+        "component_principal": "Principal",
+        "component_interest": "Interest",
+        "component_commission": "Commission",
+        "component_penalties": "Penalties",
+        "component_fines": "Fines"
+      },
+      "writeoffRules": {
+        "title": "Write-off Rules",
+        "description": "Enable or disable the creation of new write-off entries per component. Applies to manual operator write-offs only.",
+        "enabled": "Enabled",
+        "disabled": "Disabled",
+        "vendorNote": "Note: applies to manual write-offs only. Vendor import write-offs are unaffected."
+      },
+      "algorithm": {
+        "title": "Allocation Algorithm",
+        "legacy_proportional": "Legacy Proportional",
+        "strict_order": "Strict Order",
+        "legacyDescription": "Payments use the legacy proportional algorithm. Activate Strict Order to apply the configured sequence to future snapshots.",
+        "strictDescription": "Payments are distributed in the configured order above. Each component is fully consumed before the next.",
+        "activateButton": "Activate Strict Order",
+        "deactivateButton": "Revert to Legacy",
+        "activateConfirmTitle": "Activate Strict Order?",
+        "activateConfirmMessage": "This will change how future payments are allocated. All payments snapshotted after this change will use the order configured above. Previously snapshotted payments are unaffected. This action requires product and finance sign-off.",
+        "activateConfirmButton": "Activate",
+        "deactivateConfirmTitle": "Revert to Legacy Proportional?",
+        "deactivateConfirmMessage": "Future payment snapshots will use the legacy proportional algorithm. Already-snapshotted payments are unaffected.",
+        "deactivateConfirmButton": "Revert",
+        "preconditionError": "Strict Order requires payment-allocation snapshotting to be enabled."
+      },
+      "history": {
+        "title": "Recent Changes",
+        "version": "Version"
+      }
+    },
     "auditLogs": {
       "title": "Audit Logs",
       "exportCsv": "Export CSV",
@@ -6081,6 +7099,8 @@
         "list": {
           "dateTime": "Date / Time",
           "employee": "Employee",
+          "client": "Client",
+          "phone": "Phone",
           "category": "Category",
           "rating": "Rating",
           "comment": "Comment",
@@ -6171,6 +7191,13 @@
         "replyPlaceholder": "Write a reply…",
         "markRead": "Mark read",
         "markComplete": "Mark completed",
+        "markDone": "Mark done",
+        "confirm": "Confirm",
+        "return": "Return",
+        "returnReason": "Reason for revision",
+        "returnConfirm": "Return for revision",
+        "deadline": "Deadline",
+        "overdue": "Overdue",
         "threadEmpty": "No replies yet.",
         "types": {
           "praise": "Praise",
@@ -6181,6 +7208,12 @@
           "unread": "Unread",
           "read": "Read",
           "completed": "Completed"
+        },
+        "lifecycle": {
+          "open": "Open",
+          "done": "Done",
+          "confirmed": "Confirmed",
+          "returned": "Returned"
         },
         "role": {
           "trainer": "Trainer",
@@ -6210,7 +7243,8 @@
         "group": "Group actions",
         "department": "Department actions",
         "all": "All actions",
-        "groupComingSoon": "Coming soon"
+        "groupComingSoon": "Coming soon",
+        "aboveCeiling": "Not permitted by your role"
       },
       "workspaceBanner": {
         "label": "Coach's Workspace",

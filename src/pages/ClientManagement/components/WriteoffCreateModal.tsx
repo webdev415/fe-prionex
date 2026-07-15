@@ -146,6 +146,22 @@ export function WriteoffCreateModal({
     [debts, selectedDebtId]
   )
 
+  // KAN-246: only render components enabled in the repayment-rule config.
+  // Flags ride along on the debt payload (operators can't read the config
+  // endpoint directly). Absent flag → treat as enabled (fail-open), matching
+  // the backend default. Empty result means every component is disabled.
+  const enabledAccruals = useMemo<AccrualType[]>(() => {
+    if (!selectedDebt) return [...ACCRUAL_TYPES]
+    const flags: Record<AccrualType, boolean | undefined> = {
+      principal: selectedDebt.principal_writeoff_enabled,
+      interest: selectedDebt.interest_writeoff_enabled,
+      penalty: selectedDebt.penalty_writeoff_enabled,
+      fine: selectedDebt.fine_writeoff_enabled,
+      commission: selectedDebt.commission_writeoff_enabled,
+    }
+    return ACCRUAL_TYPES.filter((t) => flags[t] !== false)
+  }, [selectedDebt])
+
   // ------------------------------------------------------------------
   // Component form state
   // ------------------------------------------------------------------
@@ -192,12 +208,12 @@ export function WriteoffCreateModal({
 
   const totalAmount = useMemo(() => {
     let sum = 0
-    for (const t of ACCRUAL_TYPES) {
+    for (const t of enabledAccruals) {
       const n = parseAmountToDecimal(rows[t].amount)
       if (n !== null && n > 0) sum += n
     }
     return sum
-  }, [rows])
+  }, [rows, enabledAccruals])
 
   const hasAnyPositiveAmount = totalAmount > 0
 
@@ -279,7 +295,7 @@ export function WriteoffCreateModal({
 
   const buildRequest = (): CreateWriteoffRequest | null => {
     const components: CreateWriteoffRequest['components'] = {}
-    for (const accrual of ACCRUAL_TYPES) {
+    for (const accrual of enabledAccruals) {
       const row = rows[accrual]
       const n = parseAmountToDecimal(row.amount)
       if (n === null || n === 0) continue
@@ -363,9 +379,15 @@ export function WriteoffCreateModal({
             )}
           </div>
 
-          {/* Per-component rows */}
+          {/* Per-component rows — only components enabled in the config
+              (KAN-246); disabled ones are hidden entirely. */}
           <div className="flex flex-col gap-4">
-            {ACCRUAL_TYPES.map((accrual) => {
+            {enabledAccruals.length === 0 && (
+              <p className="text-dark-500 rounded border border-gray-200 p-3 text-sm md:p-4">
+                {t('pages.clients.detail.writeOffModal.errors.noComponentsToWriteOff')}
+              </p>
+            )}
+            {enabledAccruals.map((accrual) => {
               const row = rows[accrual]
               const hint = getStaticBalanceHint(accrual)
               // A component with no available balance (zero or null after

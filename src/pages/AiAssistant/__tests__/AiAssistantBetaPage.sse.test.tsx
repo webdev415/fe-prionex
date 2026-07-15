@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 import { AiAssistantBetaPage } from '../AiAssistantBetaPage'
@@ -46,6 +46,16 @@ function send(text: string) {
   fireEvent.keyDown(getTextarea(), { key: 'Enter' })
 }
 
+/**
+ * Панель раздумий больше НЕ выезжает автоматически — открываем её кликом по
+ * плашке «Ход рассуждения». Узел плашки берём свежим (против flaky при
+ * перерисовке во время стрима), клик — по вложенной кнопке-тоглу.
+ */
+async function openReasoningPanel() {
+  const chip = await screen.findByTestId('assistant-reasoning')
+  fireEvent.click(chip.querySelector('button') as HTMLButtonElement)
+}
+
 describe('AiAssistantBetaPage SSE streaming render', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -82,6 +92,31 @@ describe('AiAssistantBetaPage SSE streaming render', () => {
 
     // The streamed answer is composed from the deltas.
     expect(await screen.findByText('У вас 378K клиентов')).toBeInTheDocument()
+  })
+
+  it('renders a fenced ```sql block in the answer as a highlighted code plate', async () => {
+    mockedSendChatMessage.mockImplementation(
+      async (_payload, callbacks?: SendChatMessageCallbacks): Promise<AssistantChatResponse> => {
+        const answer = 'Вот запрос:\n\n```sql\nSELECT count(*) FROM clients;\n```'
+        callbacks?.onText?.(answer)
+        return {
+          conversation_id: 1,
+          message_id: 5,
+          response: answer,
+          coverage_flag: null,
+          tool_calls: [],
+        }
+      }
+    )
+
+    renderPage()
+    send('покажи sql')
+
+    const block = await screen.findByTestId('markdown-code-block')
+    expect(block).toHaveAttribute('data-language', 'sql')
+    // The SQL is tokenised into a <code> element by the highlighter.
+    expect(block.querySelector('code')).not.toBeNull()
+    expect(block).toHaveTextContent('SELECT count(*) FROM clients;')
   })
 
   it('renders the sources block (tables + tools) streamed after the answer', async () => {
@@ -142,6 +177,156 @@ describe('AiAssistantBetaPage SSE streaming render', () => {
     )
   })
 
+  it('accumulates reasoning deltas into a collapsible "Ход рассуждения" panel', async () => {
+    mockedSendChatMessage.mockImplementation(
+      async (_payload, callbacks?: SendChatMessageCallbacks): Promise<AssistantChatResponse> => {
+        callbacks?.onReasoning?.('Сначала проверю ')
+        callbacks?.onReasoning?.('таблицу платежей.')
+        callbacks?.onText?.('Готово')
+        return {
+          conversation_id: 1,
+          message_id: 5,
+          response: 'Готово',
+          coverage_flag: null,
+          tool_calls: [],
+        }
+      }
+    )
+
+    renderPage()
+    send('подумай')
+
+    // The answer renders…
+    expect(await screen.findByText('Готово')).toBeInTheDocument()
+    // …and the reasoning panel exists, collapsed (re-expandable) once settled.
+    const panel = await screen.findByTestId('assistant-reasoning')
+    const toggle = panel.querySelector('button') as HTMLButtonElement
+    expect(toggle).toHaveTextContent('pages.aiAssistant.reasoningTitle')
+    expect(toggle).toHaveAttribute('aria-expanded', 'false')
+
+    // Expanding it reveals the accumulated reasoning text.
+    fireEvent.click(toggle)
+    expect(toggle).toHaveAttribute('aria-expanded', 'true')
+    expect(panel).toHaveTextContent('Сначала проверю таблицу платежей.')
+  })
+
+  it('shows the live reasoning chip while streaming; the panel opens on chip click', async () => {
+    // Defer resolution so the turn stays "in flight" during the assertion.
+    let resolveTurn: (r: AssistantChatResponse) => void = () => {}
+    mockedSendChatMessage.mockImplementation(
+      (_payload, callbacks?: SendChatMessageCallbacks): Promise<AssistantChatResponse> => {
+        callbacks?.onReasoning?.('Думаю вслух…')
+        return new Promise<AssistantChatResponse>((resolve) => {
+          resolveTurn = resolve
+        })
+      }
+    )
+
+    renderPage()
+    send('думай')
+
+    // While streaming: the chip shows the live spinner, but the panel is NOT
+    // auto-expanded (окно раздумий больше не выезжает само).
+    const panel = await screen.findByTestId('assistant-reasoning')
+    expect(panel.querySelector('button')).toHaveAttribute('aria-expanded', 'false')
+    expect(screen.getByTestId('reasoning-spinner')).toBeInTheDocument()
+    expect(screen.queryByTestId('assistant-reasoning-scroll')).not.toBeInTheDocument()
+
+    // Клик по плашке открывает панель — там виден живой ход рассуждения.
+    await openReasoningPanel()
+    expect(await screen.findByText('Думаю вслух…')).toBeInTheDocument()
+    expect(screen.getByTestId('assistant-reasoning').querySelector('button')).toHaveAttribute(
+      'aria-expanded',
+      'true'
+    )
+    // Стрим ещё идёт — спиннер по-прежнему активен.
+    expect(screen.getByTestId('reasoning-spinner')).toBeInTheDocument()
+
+    // Settle the turn so no act() warning leaks.
+    resolveTurn({
+      conversation_id: 1,
+      message_id: 5,
+      response: 'Финал',
+      coverage_flag: null,
+      tool_calls: [],
+    })
+    await screen.findByText('Финал')
+  })
+
+  it('renders tool steps with a success result preview (tool_start → tool_end ok)', async () => {
+    mockedSendChatMessage.mockImplementation(
+      async (_payload, callbacks?: SendChatMessageCallbacks): Promise<AssistantChatResponse> => {
+        callbacks?.onToolStart?.({ name: 'sql_query', label: 'SQL' })
+        callbacks?.onToolEnd?.({ tool_use_id: 't1', ok: true, result_preview: '12 строк' })
+        callbacks?.onText?.('Ответ')
+        return {
+          conversation_id: 1,
+          message_id: 5,
+          response: 'Ответ',
+          coverage_flag: null,
+          tool_calls: [{ tool_name: 'sql_query', success: true }],
+        }
+      }
+    )
+
+    renderPage()
+    send('запусти инструмент')
+
+    const panel = await screen.findByTestId('assistant-reasoning')
+    fireEvent.click(panel.querySelector('button') as HTMLButtonElement)
+    const steps = await screen.findByTestId('assistant-tool-steps')
+    expect(steps).toHaveTextContent('SQL')
+    expect(steps).toHaveTextContent('12 строк')
+  })
+
+  it('marks a failed tool step (tool_end ok=false) without breaking the answer', async () => {
+    mockedSendChatMessage.mockImplementation(
+      async (_payload, callbacks?: SendChatMessageCallbacks): Promise<AssistantChatResponse> => {
+        callbacks?.onToolStart?.({ name: 'sql_query', label: 'SQL' })
+        callbacks?.onToolEnd?.({ tool_use_id: 't1', ok: false, result_preview: 'timeout' })
+        callbacks?.onText?.('Частичный ответ')
+        return {
+          conversation_id: 1,
+          message_id: 5,
+          response: 'Частичный ответ',
+          coverage_flag: null,
+          tool_calls: [{ tool_name: 'sql_query', success: false }],
+        }
+      }
+    )
+
+    renderPage()
+    send('сломайся')
+
+    // The answer still renders even though a tool failed.
+    expect(await screen.findByText('Частичный ответ')).toBeInTheDocument()
+    const panel = await screen.findByTestId('assistant-reasoning')
+    fireEvent.click(panel.querySelector('button') as HTMLButtonElement)
+    expect(screen.getByTestId('assistant-tool-steps')).toHaveTextContent('timeout')
+  })
+
+  it('keeps the generic typing dots when no reasoning/tool events stream (fast mode)', async () => {
+    // A turn with only a text answer must not show the reasoning panel.
+    mockedSendChatMessage.mockImplementation(
+      async (_payload, callbacks?: SendChatMessageCallbacks): Promise<AssistantChatResponse> => {
+        callbacks?.onText?.('Быстрый ответ')
+        return {
+          conversation_id: 1,
+          message_id: 5,
+          response: 'Быстрый ответ',
+          coverage_flag: null,
+          tool_calls: [],
+        }
+      }
+    )
+
+    renderPage()
+    send('быстрый вопрос')
+
+    expect(await screen.findByText('Быстрый ответ')).toBeInTheDocument()
+    expect(screen.queryByTestId('assistant-reasoning')).not.toBeInTheDocument()
+  })
+
   it('shows an error toast and inline error when the stream errors', async () => {
     mockedSendChatMessage.mockRejectedValueOnce(new AssistantChatStreamError({ message: 'boom' }))
 
@@ -171,8 +356,13 @@ describe('AiAssistantBetaPage SSE streaming render', () => {
     )
 
     renderPage()
-    fireEvent.click(screen.getByRole('button', { name: 'pages.aiAssistant.settings' }))
-    fireEvent.click(screen.getByRole('button', { name: 'pages.aiAssistant.modeThinking' }))
+    // Mode now lives in the composer dropdown (not the settings popover).
+    fireEvent.click(screen.getByTestId('assistant-mode-trigger'))
+    fireEvent.click(
+      within(screen.getByTestId('assistant-mode-menu')).getByText(
+        'pages.aiAssistant.modeThinkingShort'
+      )
+    )
 
     send('глубокий вопрос')
     await waitFor(() =>

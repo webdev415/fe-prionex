@@ -59,7 +59,7 @@ export function AssignTrainingDialog({ open, onClose, operatorId }: AssignTraini
         await enroll.mutateAsync({ courseId, operatorIds })
       }
       for (const drillId of drillIds) {
-        await assign.mutateAsync({ drillId, operatorIds })
+        await assign.mutateAsync({ drillId, payload: { operator_ids: operatorIds } })
       }
       onClose()
     } finally {
@@ -127,7 +127,7 @@ export function AssignTrainingDialog({ open, onClose, operatorId }: AssignTraini
                     drillIds.includes(d.id),
                     () => setDrillIds((l) => toggle(l, d.id)),
                     d.title,
-                    [d.difficulty, d.duration_minutes != null ? `${d.duration_minutes} min` : null]
+                    [d.skill_level, d.duration_minutes != null ? `${d.duration_minutes} min` : null]
                       .filter(Boolean)
                       .join(' · ') || t('pages.training.assign.drill', 'Drill')
                   )

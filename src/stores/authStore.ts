@@ -50,20 +50,34 @@ async function resolveAuthUser(
   token: string,
   loginUser?: ReturnType<typeof toLoginUserFallback>
 ): Promise<User> {
+  let user: User
   try {
     const userResponse = await authApi.me()
     applyPersistedLanguageFromServer(userResponse.data.language)
-    return mapBackendUserToUser(userResponse.data)
+    user = mapBackendUserToUser(userResponse.data)
   } catch {
-    let user = buildUserFromJwtToken(token, loginUser)
+    user = buildUserFromJwtToken(token, loginUser)
     try {
       const projectsResponse = await authApi.myProjects()
       user = mergeUserFromProjectsResponse(user, projectsResponse.data)
     } catch {
       // Keep JWT-derived user (permissions, names from login payload)
     }
-    return user
   }
+  // KAN-757: per-tab access ceilings live only on the JWT (not /users/me), so
+  // overlay them here regardless of which profile source won.
+  user.tab_access_levels = extractTabAccessLevels(token)
+  return user
+}
+
+/** Read the `tab_access_levels` claim off the JWT (empty map when absent). */
+function extractTabAccessLevels(token: string): Record<string, string> {
+  const payload = parseJwt(token)
+  const levels = payload?.tab_access_levels
+  if (levels && typeof levels === 'object' && !Array.isArray(levels)) {
+    return levels as Record<string, string>
+  }
+  return {}
 }
 
 // Helper function to parse JWT token

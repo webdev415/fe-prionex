@@ -347,12 +347,15 @@ export function AuditLogsPage() {
     // surface it for the client link. Payment kept separate from
     // RECORD_AFTER_CLIENT_TYPES because it links to a different destination.
     let recordClientId: number | undefined
+    const clientIdSource =
+      (log.record_after as Record<string, unknown> | undefined) ??
+      (log.details as Record<string, unknown> | undefined)
     if (
       log.resource_type &&
       (RECORD_AFTER_CLIENT_TYPES.has(log.resource_type) || log.resource_type === 'payment') &&
-      log.record_after
+      clientIdSource
     ) {
-      const cid = Number((log.record_after as Record<string, unknown>).client_id)
+      const cid = Number(clientIdSource.client_id)
       if (Number.isFinite(cid) && cid > 0) recordClientId = cid
     }
 

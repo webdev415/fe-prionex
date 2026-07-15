@@ -18,9 +18,19 @@ export const DICTATION_TIMESLICE_MS = 300
 /** stop → transcript.final client deadline (the gateway's own is 30s). */
 export const DICTATION_FINAL_TIMEOUT_MS = 20_000
 
+/** RMS level under which a frame counts as silence for the VAD auto-stop. */
+const VAD_SILENCE_RMS = 0.012
+
 export interface UseServerDictationOptions {
   /** Whisper language hint ('ru' | 'uk' | …); empty → auto-detect. */
   language?: string
+  /**
+   * Auto-stop after this many seconds of continuous silence once the user has
+   * started speaking (VAD via a Web Audio analyser). Omit / 0 to disable.
+   */
+  silenceTimeoutSec?: number
+  /** Hard stop: cut the recording off after this many seconds. Omit to disable. */
+  maxDurationSec?: number
   /** Full draft text (replaces the previous draft). */
   onDraft: (text: string) => void
   /** Final ASR transcript — commit into the composer. */
@@ -57,16 +67,44 @@ export function useServerDictation(options: UseServerDictationOptions): UseServe
   const recorderRef = useRef<MediaRecorder | null>(null)
   const streamRef = useRef<MediaStream | null>(null)
   const finalTimerRef = useRef<number | null>(null)
+  const maxTimerRef = useRef<number | null>(null)
+  // VAD analyser plumbing (Web Audio). Torn down with the recorder.
+  const audioCtxRef = useRef<AudioContext | null>(null)
+  const vadRafRef = useRef<number | null>(null)
+  // Set once the user is detected speaking; only then does silence auto-stop.
+  const spokeRef = useRef(false)
+  const silenceStartRef = useRef<number | null>(null)
+  // Late-bound stop so the VAD/timer loops can finalize without a declaration cycle.
+  const stopRef = useRef<() => void>(() => {})
   const optionsRef = useRef(options)
   useEffect(() => {
     optionsRef.current = options
   })
+
+  const teardownVad = useCallback(() => {
+    if (vadRafRef.current != null) {
+      window.cancelAnimationFrame(vadRafRef.current)
+      vadRafRef.current = null
+    }
+    const ctx = audioCtxRef.current
+    audioCtxRef.current = null
+    if (ctx && ctx.state !== 'closed') {
+      void ctx.close().catch(() => {})
+    }
+    spokeRef.current = false
+    silenceStartRef.current = null
+  }, [])
 
   const cleanup = useCallback(() => {
     if (finalTimerRef.current != null) {
       window.clearTimeout(finalTimerRef.current)
       finalTimerRef.current = null
     }
+    if (maxTimerRef.current != null) {
+      window.clearTimeout(maxTimerRef.current)
+      maxTimerRef.current = null
+    }
+    teardownVad()
     const recorder = recorderRef.current
     recorderRef.current = null
     if (recorder && recorder.state !== 'inactive') {
@@ -80,7 +118,7 @@ export function useServerDictation(options: UseServerDictationOptions): UseServe
     streamRef.current = null
     sessionRef.current = null
     setStatus('idle')
-  }, [])
+  }, [teardownVad])
 
   const cancel = useCallback(() => {
     const session = sessionRef.current
@@ -115,6 +153,11 @@ export function useServerDictation(options: UseServerDictationOptions): UseServe
             window.clearTimeout(finalTimerRef.current)
             finalTimerRef.current = null
           }
+          if (maxTimerRef.current != null) {
+            window.clearTimeout(maxTimerRef.current)
+            maxTimerRef.current = null
+          }
+          teardownVad()
           optionsRef.current.onFinal(text)
           // Keep the socket open — `corrected` may still arrive; the session
           // closes itself on corrected/error, the recorder is already done.
@@ -167,11 +210,74 @@ export function useServerDictation(options: UseServerDictationOptions): UseServe
 
     recorder.start(DICTATION_TIMESLICE_MS)
     setStatus('listening')
-  }, [cleanup])
+
+    // Hard cap: cut the recording off after maxDurationSec (timer-based stop).
+    const maxDurationSec = optionsRef.current.maxDurationSec
+    if (maxDurationSec && maxDurationSec > 0) {
+      maxTimerRef.current = window.setTimeout(() => {
+        maxTimerRef.current = null
+        stopRef.current()
+      }, maxDurationSec * 1000)
+    }
+
+    // VAD auto-stop: tap the same stream with an analyser and stop after
+    // silenceTimeoutSec of continuous quiet once speech has been detected.
+    const silenceTimeoutSec = optionsRef.current.silenceTimeoutSec
+    const AudioCtor =
+      typeof window !== 'undefined'
+        ? (window.AudioContext ??
+          (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext)
+        : undefined
+    if (silenceTimeoutSec && silenceTimeoutSec > 0 && AudioCtor) {
+      try {
+        const ctx = new AudioCtor()
+        audioCtxRef.current = ctx
+        const sourceNode = ctx.createMediaStreamSource(stream)
+        const analyser = ctx.createAnalyser()
+        analyser.fftSize = 2048
+        sourceNode.connect(analyser)
+        const buffer = new Float32Array(analyser.fftSize)
+        spokeRef.current = false
+        silenceStartRef.current = null
+
+        const tick = () => {
+          const node = audioCtxRef.current
+          if (!node || recorderRef.current?.state !== 'recording') return
+          analyser.getFloatTimeDomainData(buffer)
+          let sum = 0
+          for (let i = 0; i < buffer.length; i += 1) sum += buffer[i] * buffer[i]
+          const rms = Math.sqrt(sum / buffer.length)
+          const now = Date.now()
+          if (rms >= VAD_SILENCE_RMS) {
+            spokeRef.current = true
+            silenceStartRef.current = null
+          } else if (spokeRef.current) {
+            if (silenceStartRef.current == null) {
+              silenceStartRef.current = now
+            } else if (now - silenceStartRef.current >= silenceTimeoutSec * 1000) {
+              stopRef.current()
+              return
+            }
+          }
+          vadRafRef.current = window.requestAnimationFrame(tick)
+        }
+        vadRafRef.current = window.requestAnimationFrame(tick)
+      } catch {
+        // Web Audio unavailable / blocked — silently fall back to manual stop.
+        teardownVad()
+      }
+    }
+  }, [cleanup, teardownVad])
 
   const stop = useCallback(() => {
     const recorder = recorderRef.current
     if (!recorder || recorder.state === 'inactive') return
+    // VAD / max-timer no longer need to fire — the stop is happening now.
+    teardownVad()
+    if (maxTimerRef.current != null) {
+      window.clearTimeout(maxTimerRef.current)
+      maxTimerRef.current = null
+    }
     setStatus('finalizing')
     try {
       recorder.stop()
@@ -181,7 +287,12 @@ export function useServerDictation(options: UseServerDictationOptions): UseServe
       cleanup()
       optionsRef.current.onError('stream')
     }
-  }, [cleanup])
+  }, [cleanup, teardownVad])
+
+  // Late-bind stop so the VAD / max-duration loops in `start` can finalize.
+  useEffect(() => {
+    stopRef.current = stop
+  }, [stop])
 
   return { status, start, stop, cancel }
 }

@@ -14,9 +14,13 @@
  * routes one frame to the right callback.
  *
  * Forward-compatibility is a hard requirement: the backend may add new event
- * types (reasoning / todo / subagent_*). Unknown `event:` names MUST be ignored
- * silently rather than throwing, so the frontend keeps working against a newer
- * backend.
+ * types (todo / subagent_*). Unknown `event:` names MUST be ignored silently
+ * rather than throwing, so the frontend keeps working against a newer backend.
+ *
+ * `reasoning {delta}` (the agent's streamed "thoughts", up to hundreds per turn)
+ * is an explicit case routed to `onReasoning` — it powers the "Ход рассуждения"
+ * panel. `todo` / `subagent_*` remain in the forward-compat ignore until the UI
+ * grows to render them.
  */
 
 /** One decoded SSE frame. `event` defaults to "message" per the SSE spec. */
@@ -108,8 +112,20 @@ export interface SseStreamCallbacks {
   onSession?: (payload: SseSessionPayload) => void
   /** A text delta — accumulate to build the streamed answer. */
   onText?: (delta: string) => void
+  /**
+   * A "reasoning" delta — the agent's streamed thoughts (ASSISTANT_MODES.md §4,
+   * `reasoning {delta}`). Accumulate like {@link onText}; hundreds may arrive
+   * per turn. Feeds the collapsible "Ход рассуждения" panel.
+   */
+  onReasoning?: (delta: string) => void
   /** "Source of the numbers" block (tables + tools). */
   onSources?: (sources: AssistantSources) => void
+  /**
+   * Per-fact citations (`event: citations`, arrives after `followups`, before
+   * `sources`/`done`). Maps a fact-footnote number `[[N]]` to its source ref so
+   * the UI can label the sup and (Слой 2) expand the matching source.
+   */
+  onCitations?: (citations: AssistantCitation[]) => void
   /** Suggested follow-up questions (clickable chips). */
   onFollowups?: (questions: string[]) => void
   /** A tool started executing (optional "running <label>" indicator). */
@@ -135,6 +151,33 @@ export interface SseSessionPayload {
 export interface AssistantSources {
   tables: string[]
   tools: string[]
+}
+
+/**
+ * Один источник факт-сноски (`event: citations`). `id` — номер сноски `[[N]]`
+ * в тексте ответа; `kind` — тип источника (`sql` / `tool` / `calc` / …); `ref` —
+ * человекочитаемая ссылка на данные (напр. `debts:remaining_debt_amount`).
+ *
+ * Слой 2: бэкенд опционально расширяет источник деталями, чтобы панель
+ * «Активность» показала, ОТКУДА взялась цифра — SQL-запрос с превью строк
+ * (`query` + `columns`/`rows`) или Python-вычисление (`code` + `result`). Поля
+ * необязательны: старый бэкенд их не присылает — панель мягко деградирует до
+ * показа `ref`.
+ */
+export interface AssistantCitation {
+  id: number
+  kind: string
+  ref: string
+  /** SQL-запрос источника (`kind: 'sql'`) — моно-блок в панели «Активность». */
+  query?: string
+  /** Заголовки колонок результата SQL (для компактной таблицы-превью). */
+  columns?: string[]
+  /** Первые ≤10 строк результата SQL (сырые значения ячеек, любой тип). */
+  rows?: unknown[][]
+  /** Python-код источника (`kind: 'calc'`). */
+  code?: string
+  /** Текстовый результат вычисления / запроса (callout под кодом). */
+  result?: string
 }
 
 /** `tool_start {name, label, args_preview}` (ASSISTANT_MODES.md §4). */
@@ -212,6 +255,61 @@ function normalizeSources(payload: unknown): AssistantSources {
   }
 }
 
+/** Coerce a `columns` payload into string headers (keeps order + count). */
+function toCitationColumns(value: unknown): string[] | undefined {
+  if (!Array.isArray(value)) return undefined
+  return value.map((col) => (typeof col === 'string' ? col : String(col ?? '')))
+}
+
+/** Coerce a `rows` payload into a matrix of raw cells (drops non-array rows). */
+function toCitationRows(value: unknown): unknown[][] | undefined {
+  if (!Array.isArray(value)) return undefined
+  const rows: unknown[][] = []
+  for (const row of value) {
+    if (Array.isArray(row)) rows.push(row)
+  }
+  return rows
+}
+
+/**
+ * Normalise a `citations` payload into a list of {@link AssistantCitation}.
+ * Tolerates either the documented `{items:[...]}` envelope or a bare array;
+ * items without a finite `id` are dropped, missing `kind`/`ref` default to "".
+ *
+ * Слой 2: опциональные детали источника (`query`/`columns`/`rows`/`code`/
+ * `result`) переносятся ТОЛЬКО когда присутствуют — отсутствующие поля не
+ * добавляются в объект (чтобы форма `{id,kind,ref}` без деталей оставалась
+ * прежней для старого бэкенда).
+ */
+export function normalizeCitations(payload: unknown): AssistantCitation[] {
+  const list = Array.isArray(payload)
+    ? payload
+    : Array.isArray((payload as Record<string, unknown> | null)?.items)
+      ? ((payload as Record<string, unknown>).items as unknown[])
+      : []
+  const out: AssistantCitation[] = []
+  for (const raw of list) {
+    if (!raw || typeof raw !== 'object') continue
+    const obj = raw as Record<string, unknown>
+    const id = Number(obj.id)
+    if (!Number.isFinite(id)) continue
+    const citation: AssistantCitation = {
+      id,
+      kind: typeof obj.kind === 'string' ? obj.kind : '',
+      ref: typeof obj.ref === 'string' ? obj.ref : '',
+    }
+    if (typeof obj.query === 'string') citation.query = obj.query
+    const columns = toCitationColumns(obj.columns)
+    if (columns) citation.columns = columns
+    const rows = toCitationRows(obj.rows)
+    if (rows) citation.rows = rows
+    if (typeof obj.code === 'string') citation.code = obj.code
+    if (typeof obj.result === 'string') citation.result = obj.result
+    out.push(citation)
+  }
+  return out
+}
+
 /**
  * Normalise a `followups` payload into a list of question strings
  * (ASSISTANT_MODES.md §4 — `followups {questions:[]}`). Tolerates a bare array.
@@ -262,8 +360,18 @@ export function dispatchSseEvent(
       if (delta) callbacks.onText?.(delta)
       return undefined
     }
+    case 'reasoning': {
+      // Same `{delta}` shape as `text`; routed to its own callback so the UI
+      // can stream it into the reasoning panel instead of the answer bubble.
+      const delta = extractTextDelta(frame)
+      if (delta) callbacks.onReasoning?.(delta)
+      return undefined
+    }
     case 'sources':
       callbacks.onSources?.(normalizeSources(parseFrameData(frame)))
+      return undefined
+    case 'citations':
+      callbacks.onCitations?.(normalizeCitations(parseFrameData(frame)))
       return undefined
     case 'followups':
       callbacks.onFollowups?.(normalizeFollowups(parseFrameData(frame)))
@@ -289,7 +397,7 @@ export function dispatchSseEvent(
       callbacks.onDone?.(parseFrameData<SseDonePayload>(frame) ?? {})
       return 'done'
     default:
-      // Unknown / future event (reasoning, todo, subagent_*) — ignore.
+      // Unknown / future event (todo, subagent_*) — ignore (forward-compat).
       return undefined
   }
 }

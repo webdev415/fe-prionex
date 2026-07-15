@@ -13,6 +13,8 @@ export interface Permission {
   name: string
   description?: string
   category: string
+  /** Per-tab access depth (KAN-757); 'all' for non-tab permissions. */
+  access_level?: string
 }
 
 /**
@@ -68,6 +70,8 @@ export interface CreateRoleInput {
   description?: string
   department_id?: number | null
   permission_ids: number[]
+  /** Per-tab access depth keyed by permission_id (KAN-757). */
+  access_levels?: Record<number, string>
 }
 
 /**
@@ -79,6 +83,8 @@ export interface UpdateRoleInput {
   description?: string
   department_id?: number | null
   permission_ids?: number[]
+  /** Per-tab access depth keyed by permission_id (KAN-757). */
+  access_levels?: Record<number, string>
   is_active?: boolean
 }
 

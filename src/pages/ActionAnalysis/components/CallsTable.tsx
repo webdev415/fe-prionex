@@ -12,6 +12,8 @@ import {
   OUTCOME_PALETTE_CLASSES,
 } from '@/lib/callOutcome'
 import type { CallMonitoringItem } from '@/features/actionAnalysis'
+import type { OperatorUser } from '@/features/users'
+import { formatEmployeeName } from '../lib/employeeName'
 
 type Row = CallMonitoringItem & { id: string }
 
@@ -25,9 +27,10 @@ function formatDuration(seconds: number | null | undefined): string {
 interface Props {
   data: CallMonitoringItem[]
   onOpenCall: (call: CallMonitoringItem) => void
+  operatorLookup?: Record<string, OperatorUser>
 }
 
-export function CallsTable({ data, onOpenCall }: Props) {
+export function CallsTable({ data, onOpenCall, operatorLookup }: Props) {
   const { t } = useTranslation('common')
 
   const rows: Row[] = data.map((c) => ({ ...c, id: c.call_id }))
@@ -99,7 +102,11 @@ export function CallsTable({ data, onOpenCall }: Props) {
     {
       key: 'agent',
       header: t('pages.actionAnalysis.columns.agent', 'Employee'),
-      render: (r) => <span className="text-sm text-gray-700">{r.agent_extension}</span>,
+      render: (r) => (
+        <span className="text-sm text-gray-700">
+          {formatEmployeeName(operatorLookup?.[r.agent_extension], r.agent_extension)}
+        </span>
+      ),
     },
     {
       key: 'client',

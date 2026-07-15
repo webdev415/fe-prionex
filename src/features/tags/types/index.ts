@@ -45,6 +45,8 @@ export interface TagDefinition extends Tag {
   /** Set by API for the current user — whether they may uncheck/remove a protected tag */
   can_remove_protected?: boolean
   expiry_type: ExpiryType
+  /** When true, tag surfaces on linked clients' Related Tags tab */
+  is_related_tag?: boolean
   /** Restrict to departments; omit / empty = all departments */
   department_ids?: number[] | null
   updated_at?: string
@@ -75,6 +77,7 @@ export interface TagDefinitionCreate extends TagCreate {
   is_protected?: boolean
   protected_removal_roles?: string[]
   expiry_type?: ExpiryType
+  is_related_tag?: boolean
   department_ids?: number[] | null
 }
 
@@ -100,6 +103,7 @@ export interface TagDefinitionUpdate extends TagUpdate {
   is_protected?: boolean
   protected_removal_roles?: string[]
   expiry_type?: ExpiryType
+  is_related_tag?: boolean
   department_ids?: number[] | null
 }
 

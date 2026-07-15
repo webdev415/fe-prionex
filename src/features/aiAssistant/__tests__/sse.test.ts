@@ -119,6 +119,160 @@ describe('dispatchSseEvent routing', () => {
     expect(onFollowups).toHaveBeenCalledWith(['Показать за месяц', 'Сравнить с прошлым'])
   })
 
+  it('parses a citations frame from {items:[...]} (fact footnotes)', () => {
+    const onCitations = vi.fn()
+    dispatchSseEvent(
+      {
+        event: 'citations',
+        data: JSON.stringify({
+          items: [
+            { id: 1, kind: 'sql', ref: 'debts:remaining_debt_amount' },
+            { id: 2, kind: 'tool', ref: 'get_payments' },
+          ],
+        }),
+      },
+      { onCitations }
+    )
+    expect(onCitations).toHaveBeenCalledWith([
+      { id: 1, kind: 'sql', ref: 'debts:remaining_debt_amount' },
+      { id: 2, kind: 'tool', ref: 'get_payments' },
+    ])
+  })
+
+  it('tolerates a bare citations array and drops items without a finite id', () => {
+    const onCitations = vi.fn()
+    dispatchSseEvent(
+      {
+        event: 'citations',
+        data: JSON.stringify([
+          { id: 3, kind: 'sql', ref: 'clients:status' },
+          { kind: 'sql', ref: 'no-id' },
+          { id: 'x', kind: 'sql', ref: 'bad-id' },
+        ]),
+      },
+      { onCitations }
+    )
+    expect(onCitations).toHaveBeenCalledWith([{ id: 3, kind: 'sql', ref: 'clients:status' }])
+  })
+
+  it('does NOT treat citations as a terminator', () => {
+    expect(dispatchSseEvent({ event: 'citations', data: '{"items":[]}' }, {})).toBeUndefined()
+  })
+
+  it('defaults missing kind / ref of a citation to empty strings', () => {
+    const onCitations = vi.fn()
+    dispatchSseEvent(
+      { event: 'citations', data: JSON.stringify({ items: [{ id: 4 }] }) },
+      { onCitations }
+    )
+    expect(onCitations).toHaveBeenCalledWith([{ id: 4, kind: '', ref: '' }])
+  })
+
+  it('carries the optional source details (query/columns/rows/code/result) — Слой 2', () => {
+    const onCitations = vi.fn()
+    dispatchSseEvent(
+      {
+        event: 'citations',
+        data: JSON.stringify({
+          items: [
+            {
+              id: 1,
+              kind: 'sql',
+              ref: 'debts:remaining_debt_amount',
+              query: 'SELECT remaining_debt_amount FROM debts WHERE client_id = 42',
+              columns: ['client_id', 'remaining_debt_amount'],
+              rows: [
+                [42, 48750],
+                [43, 0],
+              ],
+            },
+            {
+              id: 2,
+              kind: 'calc',
+              ref: 'sum(payments)',
+              code: 'total = sum(p.amount for p in payments)',
+              result: '129 400 ₴',
+            },
+          ],
+        }),
+      },
+      { onCitations }
+    )
+    expect(onCitations).toHaveBeenCalledWith([
+      {
+        id: 1,
+        kind: 'sql',
+        ref: 'debts:remaining_debt_amount',
+        query: 'SELECT remaining_debt_amount FROM debts WHERE client_id = 42',
+        columns: ['client_id', 'remaining_debt_amount'],
+        rows: [
+          [42, 48750],
+          [43, 0],
+        ],
+      },
+      {
+        id: 2,
+        kind: 'calc',
+        ref: 'sum(payments)',
+        code: 'total = sum(p.amount for p in payments)',
+        result: '129 400 ₴',
+      },
+    ])
+  })
+
+  it('tolerates malformed detail fields and drops non-array rows', () => {
+    const onCitations = vi.fn()
+    dispatchSseEvent(
+      {
+        event: 'citations',
+        data: JSON.stringify({
+          items: [
+            {
+              id: 7,
+              kind: 'sql',
+              ref: 'clients:status',
+              // query as a number → ignored (only strings kept)
+              query: 123,
+              columns: ['status', 42],
+              rows: [['active', 3], 'oops', null, [null]],
+            },
+          ],
+        }),
+      },
+      { onCitations }
+    )
+    expect(onCitations).toHaveBeenCalledWith([
+      {
+        id: 7,
+        kind: 'sql',
+        ref: 'clients:status',
+        columns: ['status', '42'],
+        rows: [['active', 3], [null]],
+      },
+    ])
+  })
+
+  it('routes a reasoning frame to onReasoning (ASSISTANT_MODES.md §4)', () => {
+    const onReasoning = vi.fn()
+    const onText = vi.fn()
+    dispatchSseEvent(
+      { event: 'reasoning', data: JSON.stringify({ delta: 'Let me check ' }) },
+      { onReasoning, onText }
+    )
+    dispatchSseEvent(
+      { event: 'reasoning', data: JSON.stringify({ delta: 'the payments table' }) },
+      { onReasoning, onText }
+    )
+    expect(onReasoning).toHaveBeenNthCalledWith(1, 'Let me check ')
+    expect(onReasoning).toHaveBeenNthCalledWith(2, 'the payments table')
+    // A reasoning delta must never leak into the answer text.
+    expect(onText).not.toHaveBeenCalled()
+  })
+
+  it('does NOT treat reasoning as a terminator', () => {
+    expect(dispatchSseEvent({ event: 'reasoning', data: '{"delta":"x"}' }, {})).toBeUndefined()
+  })
+
   it('routes a tool_start frame', () => {
     const onToolStart = vi.fn()
     dispatchSseEvent(
@@ -182,17 +336,20 @@ describe('dispatchSseEvent routing', () => {
   it('ignores unknown / future event types without throwing (forward-compat)', () => {
     const callbacks: SseStreamCallbacks = {
       onText: vi.fn(),
+      onReasoning: vi.fn(),
       onError: vi.fn(),
       onSources: vi.fn(),
       onFollowups: vi.fn(),
       onToolStart: vi.fn(),
       onToolEnd: vi.fn(),
     }
-    // The exact future names called out in the contract + a wildcard.
-    for (const event of ['reasoning', 'todo', 'subagent_start', 'subagent_done', 'mystery']) {
+    // Future names still in the forward-compat ignore + a wildcard. `reasoning`
+    // is now an explicit case, so it is asserted separately above.
+    for (const event of ['todo', 'subagent_start', 'subagent_done', 'mystery']) {
       expect(() => dispatchSseEvent({ event, data: '{"x":1}' }, callbacks)).not.toThrow()
     }
     expect(callbacks.onText).not.toHaveBeenCalled()
+    expect(callbacks.onReasoning).not.toHaveBeenCalled()
     expect(callbacks.onError).not.toHaveBeenCalled()
     expect(callbacks.onSources).not.toHaveBeenCalled()
     expect(callbacks.onFollowups).not.toHaveBeenCalled()

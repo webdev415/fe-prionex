@@ -97,6 +97,12 @@ export interface User {
   active_group_id?: number | null
   active_group_name?: string | null
   permissions?: string[]
+  /**
+   * Per-tab Action Analysis access ceilings from the JWT (KAN-757):
+   * { permission_name: 'my' | 'group' | 'department' | 'all' }. Absent tabs
+   * default to 'all'.
+   */
+  tab_access_levels?: Record<string, string>
   createdAt?: string
   updatedAt?: string
   asterisk_extension?: string

@@ -43,6 +43,8 @@ const SAMPLE_ALLOCATION = [
     component_label: 'Principal',
     original_amount: 1000,
     allocated_amount: 500,
+    paid_amount: 500,
+    written_off_amount: 0,
     remaining_balance: 500,
   },
   {
@@ -83,6 +85,9 @@ function makeBreakdown(overrides: Record<string, unknown> = {}) {
     debt_id: 42,
     contract_number: 'LOAN-TEST',
     allocation: SAMPLE_ALLOCATION,
+    total_original: 1000,
+    total_paid: 500,
+    total_written_off: 0,
     total_allocated: 500,
     unmatched: 0,
     total_remaining_debt: 500,
@@ -109,6 +114,19 @@ describe('PaymentDebtBreakdown — Unmatched/Overpayment row', () => {
 
     renderWithClient(<PaymentDebtBreakdown paymentId="123" />)
     expect(screen.getByText('breakdown.unmatched')).toBeInTheDocument()
+  })
+
+  it('renders the Paid and Written-off column headers', () => {
+    mockUseBreakdown.mockReturnValue({
+      data: makeBreakdown(),
+      isLoading: false,
+      isError: false,
+      refetch: vi.fn(),
+    } as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+
+    renderWithClient(<PaymentDebtBreakdown paymentId="123" />)
+    expect(screen.getByText('breakdown.paid')).toBeInTheDocument()
+    expect(screen.getByText('breakdown.written_off')).toBeInTheDocument()
   })
 
   it('does NOT render the Unmatched row when unmatched is 0', () => {

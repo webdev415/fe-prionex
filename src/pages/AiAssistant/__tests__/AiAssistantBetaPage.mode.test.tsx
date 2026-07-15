@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 import { AxiosError } from 'axios'
@@ -44,8 +44,11 @@ function makeImageFile(name = 'shot.png', type = 'image/png', content = 'png-byt
   return new File([content], name, { type })
 }
 
-function openSettings() {
-  fireEvent.click(screen.getByRole('button', { name: 'pages.aiAssistant.settings' }))
+/** Pick "thinking" from the composer mode dropdown (no longer in settings). */
+function selectThinkingMode() {
+  fireEvent.click(screen.getByTestId('assistant-mode-trigger'))
+  const menu = screen.getByTestId('assistant-mode-menu')
+  fireEvent.click(within(menu).getByText('pages.aiAssistant.modeThinkingShort'))
 }
 
 describe('AiAssistantBetaPage response mode + attachment trigger', () => {
@@ -87,8 +90,7 @@ describe('AiAssistantBetaPage response mode + attachment trigger', () => {
 
   it('sends the selected thinking mode in the chat payload', async () => {
     renderPage()
-    openSettings()
-    fireEvent.click(screen.getByRole('button', { name: 'pages.aiAssistant.modeThinking' }))
+    selectThinkingMode()
 
     fireEvent.change(getTextarea(), { target: { value: 'глубокий вопрос' } })
     fireEvent.keyDown(getTextarea(), { key: 'Enter' })
@@ -112,8 +114,7 @@ describe('AiAssistantBetaPage response mode + attachment trigger', () => {
     mockedSendChatMessage.mockRejectedValueOnce(error)
 
     renderPage()
-    openSettings()
-    fireEvent.click(screen.getByRole('button', { name: 'pages.aiAssistant.modeThinking' }))
+    selectThinkingMode()
 
     fireEvent.change(getTextarea(), { target: { value: 'глубокий вопрос' } })
     fireEvent.keyDown(getTextarea(), { key: 'Enter' })

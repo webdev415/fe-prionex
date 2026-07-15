@@ -1,8 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
-import ReactMarkdown from 'react-markdown'
-import remarkGfm from 'remark-gfm'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 import { useSidebarStore } from '@/stores/sidebarStore'
@@ -10,21 +8,27 @@ import { Textarea } from '@/components/ui/Textarea'
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch'
 import {
   DropdownMenu,
+  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/DropdownMenu'
 import {
   useAssistantConversation,
+  useMarkCitation,
   useSendAssistantMessage,
   useSendFeedback,
 } from '@/features/aiAssistant/hooks'
 import {
   AssistantChatStreamError,
+  type AssistantCitationVerdict,
   type AssistantFeedbackComprehension,
   type AssistantFeedbackRating,
 } from '@/features/aiAssistant/api'
-import type { AssistantSources } from '@/features/aiAssistant/sse'
+import { normalizeCitations } from '@/features/aiAssistant/sse'
+import type { AssistantCitation, AssistantSources } from '@/features/aiAssistant/sse'
 import {
   blobToBase64,
   extractImageFiles,
@@ -45,13 +49,36 @@ import {
   DEFAULT_ASSISTANT_SETTINGS,
   useAiAssistantStore,
   type AssistantSettings,
+  type AssistantVoiceMaxDuration,
+  type AssistantVoiceSilenceTimeout,
 } from '@/stores/aiAssistantStore'
+import type { AssistantMode } from '@/features/aiAssistant/api'
 import { isAxiosError } from 'axios'
 import { ConversationSidebar } from './ConversationSidebar'
-import { getDockDesktopBoxClasses } from './dockGeometry'
+import { getDockDesktopBoxClasses, getDockRightOffset } from './dockGeometry'
+import { MarkdownMessage, type MarkdownCitation } from './MarkdownMessage'
+import {
+  ReasoningActivityPanel,
+  ReasoningInlineChip,
+  type ToolStep,
+  type ToolStepStatus,
+} from './ReasoningActivityPanel'
 
 const QUICK_ACTION_KEYS = ['quickClientData', 'quickDebt', 'quickReport', 'quickEmployee'] as const
 type QuickActionKey = (typeof QUICK_ACTION_KEYS)[number]
+
+/** Icon per CRM quick-action, shown in the composer "+" hub. */
+const QUICK_ACTION_ICONS: Record<QuickActionKey, (typeof Icons)[keyof typeof Icons]> = {
+  quickClientData: Icons.UserSearch01,
+  quickDebt: Icons.Money04,
+  quickReport: Icons.Chart01,
+  quickEmployee: Icons.UserCheck01,
+}
+
+/** Silence-timeout choices (seconds) offered in voice settings. */
+const VOICE_SILENCE_OPTIONS: AssistantVoiceSilenceTimeout[] = [1.5, 2, 3]
+/** Max-recording-length choices (seconds) offered in voice settings. */
+const VOICE_MAX_DURATION_OPTIONS: AssistantVoiceMaxDuration[] = [30, 60, 120]
 
 type AssistDropdownProps = {
   ariaLabel: string
@@ -82,8 +109,27 @@ type ChatMessage = {
   attachments?: LocalAttachment[]
   /** "Source of the numbers" block (tables + tools) streamed after the answer. */
   sources?: AssistantSources
+  /** Per-fact citations (`[[N]]` → источник) streamed in the `citations` frame. */
+  citations?: AssistantCitation[]
   /** Suggested follow-up questions rendered as clickable chips. */
   followups?: string[]
+  /** Accumulated `reasoning` deltas — the agent's streamed thoughts. */
+  reasoning?: string
+  /** Tool invocations surfaced during the turn (in start order). */
+  toolSteps?: ToolStep[]
+  /** True while reasoning/tool events are still streaming for this turn. */
+  isStreamingReasoning?: boolean
+  /**
+   * Thinking-mode only: open the "Ход рассуждения" window immediately on submit
+   * with a spinner + placeholder, before the first reasoning delta. Real deltas
+   * then flow into the same window (no remount / layout jump). Cleared once the
+   * turn settles.
+   */
+  thinkingPlaceholder?: boolean
+  /** Epoch ms when the reasoning turn began — drives the "Xс" chip/panel timer. */
+  reasoningStartedAt?: number
+  /** Frozen reasoning duration (ms) once the turn settles. */
+  reasoningElapsedMs?: number
 }
 
 function joinDictation(prev: string, text: string): string {
@@ -106,7 +152,74 @@ function formatRecordingTime(totalSec: number): string {
   return `${minutes}:${String(seconds).padStart(2, '0')}`
 }
 
+/**
+ * Reasoning elapsed for the chip/panel timer: the frozen duration once settled,
+ * otherwise live from the start marker (updates as the component re-renders on
+ * streamed deltas — no interval needed). Null when the turn has no start marker.
+ */
+function reasoningElapsedMs(item: ChatMessage, now: number): number | null {
+  if (item.reasoningElapsedMs != null) return item.reasoningElapsedMs
+  if (item.reasoningStartedAt != null) return Math.max(0, now - item.reasoningStartedAt)
+  return null
+}
+
+/** "12 с" under a minute, "1:05" beyond — the chip/panel duration label. */
+function formatReasoningDuration(ms: number): string {
+  const totalSec = Math.round(ms / 1000)
+  if (totalSec < 60) return `${totalSec} с`
+  const minutes = Math.floor(totalSec / 60)
+  const seconds = totalSec % 60
+  return `${minutes}:${String(seconds).padStart(2, '0')}`
+}
+
+/**
+ * Whether an assistant message has a reasoning surface to show — real reasoning,
+ * tool-steps, or the thinking-mode pre-open placeholder. Gates both the bubble
+ * chip and the width stretch of the bubble.
+ */
+function messageHasReasoning(item: ChatMessage): boolean {
+  return (
+    Boolean(item.reasoning && item.reasoning.trim()) ||
+    Boolean(item.toolSteps && item.toolSteps.length > 0) ||
+    Boolean(item.thinkingPlaceholder)
+  )
+}
+
+/**
+ * Есть ли у сообщения ЧТО показать в панели «Активность» — рассуждение/шаги
+ * (см. {@link messageHasReasoning}) ИЛИ источники факт-сносок (Слой 2). Шире, чем
+ * `messageHasReasoning`: клик по сноске `[[N]]` в fast-ходе без рассуждения тоже
+ * должен открывать панель (там будут только «Источники»). Гейтит выбор активного
+ * сообщения панели, но НЕ бабл-чип «Ход рассуждения» (тот остаётся по reasoning).
+ */
+function messageHasActivity(item: ChatMessage): boolean {
+  return messageHasReasoning(item) || Boolean(item.citations && item.citations.length > 0)
+}
+
+/**
+ * Привести SSE-цитаты (`{id, kind, ref}`) к форме, которую понимает
+ * {@link MarkdownMessage} (`{id, kind, label}`): `label` — человекочитаемая
+ * подпись для тайтла/тултипа сноски (берём `ref`, иначе `kind`). Возвращает
+ * `undefined`, когда цитат нет, чтобы проп остался опциональным.
+ */
+function mapCitations(citations?: AssistantCitation[]): MarkdownCitation[] | undefined {
+  if (!citations || citations.length === 0) return undefined
+  return citations.map((citation) => ({
+    id: citation.id,
+    kind: citation.kind,
+    label: citation.ref.trim() || citation.kind || undefined,
+    query: citation.query,
+    columns: citation.columns,
+    rows: citation.rows,
+    code: citation.code,
+    result: citation.result,
+  }))
+}
+
 const LONG_PRESS_MS = 500
+
+/** Стабильная пустая карта пометок — чтобы не минтить новый объект на рендер. */
+const EMPTY_CITATION_MARKS: Record<number, AssistantCitationVerdict> = {}
 
 type MessageFeedback = {
   rating?: AssistantFeedbackRating
@@ -128,8 +241,8 @@ const MARKDOWN_BODY_CLASS = [
   '[&_table]:my-2 [&_table]:block [&_table]:w-fit [&_table]:max-w-full [&_table]:border-collapse [&_table]:overflow-x-auto [&_table]:text-xs sm:[&_table]:text-sm',
   '[&_th]:bg-light-50 [&_th]:border [&_th]:border-gray-200 [&_th]:px-2 [&_th]:py-1 [&_th]:text-left [&_th]:font-medium',
   '[&_td]:border [&_td]:border-gray-200 [&_td]:px-2 [&_td]:py-1',
-  '[&_code]:bg-light-100 [&_code]:rounded [&_code]:px-1 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-[0.85em]',
-  '[&_pre]:bg-light-100 [&_pre]:my-2 [&_pre]:overflow-x-auto [&_pre]:rounded-lg [&_pre]:p-3 [&_pre_code]:bg-transparent [&_pre_code]:p-0',
+  // Code styling (inline + fenced blocks) is owned by MarkdownMessage's custom
+  // code renderer (syntax highlight + copy + horizontal scroll).
   '[&_a]:text-primary-600 [&_a]:underline',
   '[&_blockquote]:my-2 [&_blockquote]:border-l-2 [&_blockquote]:border-gray-200 [&_blockquote]:pl-3 [&_blockquote]:text-gray-600',
   '[&_hr]:my-3 [&_hr]:border-gray-200',
@@ -217,6 +330,257 @@ function AssistFilterDropdown({
   )
 }
 
+type ModeDropdownProps = {
+  value: AssistantMode
+  onChange: (mode: AssistantMode) => void
+}
+
+const MODE_OPTIONS: {
+  mode: AssistantMode
+  Icon: (typeof Icons)[keyof typeof Icons]
+  iconClass: string
+  labelKey: string
+  hintKey: string
+}[] = [
+  {
+    mode: 'fast',
+    Icon: Icons.Flash,
+    iconClass: 'text-amber-500',
+    labelKey: 'pages.aiAssistant.modeFastShort',
+    hintKey: 'pages.aiAssistant.modeFastHint',
+  },
+  {
+    mode: 'thinking',
+    Icon: Icons.AiBrain03,
+    iconClass: 'text-primary-500',
+    labelKey: 'pages.aiAssistant.modeThinkingShort',
+    hintKey: 'pages.aiAssistant.modeThinkingHint',
+  },
+]
+
+/**
+ * Compact reasoning-mode picker shown to the right of the composer (Claude
+ * "Effort" / ChatGPT model-tier style): the trigger shows the current mode, the
+ * menu lists fast/thinking with a one-line hint each. This dropdown is the
+ * single source of truth for `mode`; the settings popover no longer sets it.
+ *
+ * Implemented as a small controlled popover (not Radix) so it opens on a plain
+ * click and renders inline — matching the settings popover in this component.
+ */
+function ModeDropdown({ value, onChange }: ModeDropdownProps) {
+  const { t } = useTranslation('common')
+  const [open, setOpen] = useState(false)
+  const rootRef = useRef<HTMLDivElement>(null)
+  const isThinking = value === 'thinking'
+  const ActiveIcon = isThinking ? Icons.AiBrain03 : Icons.Flash
+
+  useEffect(() => {
+    if (!open) return
+    const onPointerDown = (event: MouseEvent) => {
+      if (!rootRef.current?.contains(event.target as Node)) setOpen(false)
+    }
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setOpen(false)
+    }
+    document.addEventListener('mousedown', onPointerDown)
+    document.addEventListener('keydown', onKeyDown)
+    return () => {
+      document.removeEventListener('mousedown', onPointerDown)
+      document.removeEventListener('keydown', onKeyDown)
+    }
+  }, [open])
+
+  return (
+    <div ref={rootRef} className="relative shrink-0">
+      <button
+        type="button"
+        aria-label={t('pages.aiAssistant.mode')}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        data-testid="assistant-mode-trigger"
+        onClick={() => setOpen((prev) => !prev)}
+        className="text-dark-500 hover:border-primary-300 hover:text-primary-600 inline-flex h-9 min-h-9 w-full shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-full border border-gray-300 bg-white px-3 text-xs font-light shadow-none transition-colors sm:h-8 sm:min-h-0 sm:w-auto"
+      >
+        <ActiveIcon
+          size={15}
+          strokeWidth={1.5}
+          className={isThinking ? 'text-primary-500' : 'text-amber-500'}
+        />
+        <span className="min-w-0 truncate">
+          {isThinking
+            ? t('pages.aiAssistant.modeThinkingShort')
+            : t('pages.aiAssistant.modeFastShort')}
+        </span>
+        <Icons.ArrowDown size={13} strokeWidth={1.5} className="shrink-0 text-gray-400" />
+      </button>
+      {open && (
+        <div
+          role="menu"
+          data-testid="assistant-mode-menu"
+          className="border-light-200 absolute right-0 bottom-full z-30 mb-2 w-64 overflow-hidden rounded-xl border bg-white p-1 shadow-lg ring-1 ring-black/[0.04]"
+        >
+          {MODE_OPTIONS.map(({ mode, Icon, iconClass, labelKey, hintKey }) => (
+            <button
+              key={mode}
+              type="button"
+              role="menuitemradio"
+              aria-checked={value === mode}
+              onClick={() => {
+                onChange(mode)
+                setOpen(false)
+              }}
+              className="hover:bg-light-100/70 flex w-full items-start gap-2.5 rounded-lg px-2.5 py-2 text-left transition-colors"
+            >
+              <Icon size={16} strokeWidth={1.5} className={cn('mt-0.5 shrink-0', iconClass)} />
+              <span className="min-w-0 flex-1">
+                <span className="text-dark-500 flex items-center gap-1.5 text-sm font-medium">
+                  {t(labelKey)}
+                  {value === mode && (
+                    <Icons.Checkmark
+                      size={14}
+                      strokeWidth={2}
+                      className="text-primary-500 shrink-0"
+                    />
+                  )}
+                </span>
+                <span className="mt-0.5 block text-[11px] leading-snug font-light text-gray-500">
+                  {t(hintKey)}
+                </span>
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+type ComposerHubMenuProps = {
+  onAttach: () => void
+  onQuickAction: (key: QuickActionKey) => void
+  quickActionDisabled: boolean
+  deepResearch: boolean
+  onToggleDeepResearch: () => void
+  clientScope: string
+  clientOptions: { value: string; label: string }[]
+  onClientScopeChange: (value: string) => void
+}
+
+/**
+ * Left-side "+" hub for the composer (Claude / ChatGPT "+" menu): attach a
+ * file, run a CRM quick-action, toggle deep research, or set the client/portfolio
+ * context — all in one popover so the input row stays clean.
+ */
+function ComposerHubMenu({
+  onAttach,
+  onQuickAction,
+  quickActionDisabled,
+  deepResearch,
+  onToggleDeepResearch,
+  clientScope,
+  clientOptions,
+  onClientScopeChange,
+}: ComposerHubMenuProps) {
+  const { t } = useTranslation('common')
+  const activeClientLabel =
+    clientOptions.find((o) => o.value === clientScope)?.label ?? clientOptions[0]?.label ?? ''
+
+  return (
+    <DropdownMenu modal={false}>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          aria-label={t('pages.aiAssistant.composerHub')}
+          title={t('pages.aiAssistant.composerHub')}
+          data-testid="composer-hub-trigger"
+          className="text-dark-500 hover:border-primary-300 hover:text-primary-600 flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full border border-gray-300 bg-white text-gray-500 transition-colors sm:h-7 sm:w-7"
+        >
+          <Icons.Add size={18} strokeWidth={1.5} />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent
+        align="start"
+        side="top"
+        className="w-72 bg-white"
+        data-testid="composer-hub-menu"
+      >
+        <DropdownMenuItem
+          className="text-dark-500 flex items-center gap-2.5 px-2.5 py-2 text-sm"
+          onSelect={onAttach}
+          data-testid="hub-attach"
+        >
+          <Icons.Attachment01 size={16} strokeWidth={1.5} className="shrink-0 text-gray-500" />
+          {t('pages.aiAssistant.hubAttach')}
+        </DropdownMenuItem>
+
+        <DropdownMenuCheckboxItem
+          checked={deepResearch}
+          // Keep the menu open after toggling so the choice stays visible.
+          onSelect={(event) => {
+            event.preventDefault()
+            onToggleDeepResearch()
+          }}
+          className="text-dark-500 py-2 pr-2 pl-8 text-sm"
+          data-testid="hub-deep-research"
+        >
+          <span className="flex items-center gap-2.5">
+            <Icons.Sparkles size={16} strokeWidth={1.5} className="text-primary-500 shrink-0" />
+            <span className="min-w-0">
+              <span className="block">{t('pages.aiAssistant.hubDeepResearch')}</span>
+              <span className="block text-[11px] leading-snug font-light text-gray-500">
+                {t('pages.aiAssistant.hubDeepResearchHint')}
+              </span>
+            </span>
+          </span>
+        </DropdownMenuCheckboxItem>
+
+        <DropdownMenuSeparator />
+        <DropdownMenuLabel className="flex items-center gap-1.5 text-[11px] font-medium tracking-tight text-gray-500">
+          <Icons.FileSearch size={13} strokeWidth={1.5} className="shrink-0 text-gray-400" />
+          {t('pages.aiAssistant.hubCrmActions')}
+        </DropdownMenuLabel>
+        {QUICK_ACTION_KEYS.map((key) => {
+          const ActionIcon = QUICK_ACTION_ICONS[key]
+          return (
+            <DropdownMenuItem
+              key={key}
+              className="text-dark-500 flex items-center gap-2.5 px-2.5 py-2 text-sm"
+              disabled={quickActionDisabled}
+              onSelect={() => onQuickAction(key)}
+              data-testid={`hub-action-${key}`}
+            >
+              <ActionIcon size={16} strokeWidth={1.5} className="shrink-0 text-gray-500" />
+              {t(`pages.aiAssistant.${key}`)}
+            </DropdownMenuItem>
+          )
+        })}
+
+        <DropdownMenuSeparator />
+        <DropdownMenuLabel className="flex items-center gap-1.5 text-[11px] font-medium tracking-tight text-gray-500">
+          <Icons.UserMultiple size={13} strokeWidth={1.5} className="shrink-0 text-gray-400" />
+          {t('pages.aiAssistant.hubContext')}
+          <span className="text-dark-500 ml-auto max-w-[7rem] truncate font-light">
+            {activeClientLabel}
+          </span>
+        </DropdownMenuLabel>
+        {clientOptions.map((o) => (
+          <DropdownMenuItem
+            key={o.value}
+            className="text-dark-500 flex items-center justify-between gap-2 px-2.5 py-2 text-sm"
+            onSelect={() => onClientScopeChange(o.value)}
+            data-testid={`hub-context-${o.value}`}
+          >
+            <span className="min-w-0 truncate">{o.label}</span>
+            {o.value === clientScope && (
+              <Icons.Checkmark size={14} strokeWidth={2} className="text-primary-500 shrink-0" />
+            )}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+}
+
 export function AiAssistantBetaPage() {
   const { t, i18n } = useTranslation('common')
   const isOpenSideBar = useSidebarStore((state) => state.isOpenSideBar)
@@ -232,6 +596,24 @@ export function AiAssistantBetaPage() {
   const [isAssistantResponding, setIsAssistantResponding] = useState(false)
   const [conversationId, setConversationId] = useState<number | null>(null)
   const [feedbackByMessage, setFeedbackByMessage] = useState<Record<number, MessageFeedback>>({})
+  // Пометки источников «верно/неверно» (Слой 5), keyed by серверный message_id →
+  // (номер сноски → вердикт). Оптимистичны: применяются сразу, откатываются при
+  // ошибке POST. Живут в рамках монтирования (после F5 приходят с бэкенда — TODO
+  // отдельного слоя, контракт гидратации пометок пока не оговорён).
+  const [citationMarksByMessage, setCitationMarksByMessage] = useState<
+    Record<number, Record<number, AssistantCitationVerdict>>
+  >({})
+  // Explicit user toggles for the "Ход рассуждения" panel, keyed by message id.
+  // Unset → the panel follows the stream (open while streaming, collapsed once
+  // the turn finishes); a value here is the user's deliberate override.
+  const [reasoningOpenByMessage, setReasoningOpenByMessage] = useState<Record<string, boolean>>({})
+  // Источник (номер сноски) для подсветки/скролла в панели «Активность» + id
+  // сообщения, которому он принадлежит — чтобы фокус применялся только к своему
+  // ходу (клик по факту `[[N]]`; см. openReasoningForFact / focusedCitationId).
+  const [focusedCitation, setFocusedCitation] = useState<{
+    messageId: string
+    citationId: number
+  } | null>(null)
   const [clientScope, setClientScope] = useState('all')
   const [period, setPeriod] = useState('all')
   const [assistantSettings, setAssistantSettings] = useState<AssistantSettings>(
@@ -269,6 +651,7 @@ export function AiAssistantBetaPage() {
 
   const { mutateAsync: sendChat } = useSendAssistantMessage()
   const { mutate: mutateFeedback } = useSendFeedback()
+  const { mutate: mutateMarkCitation } = useMarkCitation()
 
   // Re-hydrate the dialog persisted for this user: history lives on the
   // backend, the store only keeps the conversation pointer. Hydration is
@@ -414,6 +797,8 @@ export function AiAssistantBetaPage() {
     cancel: cancelDictation,
   } = useServerDictation({
     language: resolveDictationLanguage(i18n.language),
+    silenceTimeoutSec: assistantSettings.voiceSilenceTimeoutSec,
+    maxDurationSec: assistantSettings.voiceMaxDurationSec,
     onDraft: (text) => setDictationDraft(text),
     onFinal: (text) => {
       setDictationDraft('')
@@ -461,6 +846,7 @@ export function AiAssistantBetaPage() {
   // `sendVoiceMessageRef` breaks the declaration cycle with submitPrompt.
   const sendVoiceMessageRef = useRef<(result: VoiceMessageResult) => void>(() => {})
   const voiceRecorder = useVoiceMessageRecorder({
+    maxDurationSec: assistantSettings.voiceMaxDurationSec,
     onComplete: (result) => sendVoiceMessageRef.current(result),
     onError: (reason) =>
       toast.error(
@@ -566,7 +952,10 @@ export function AiAssistantBetaPage() {
 
   useEffect(() => {
     const updateDockHeight = () => {
-      const next = Math.ceil((dockRef.current?.getBoundingClientRect().height ?? 0) + 12)
+      // Reserve the dock's height plus a safety gap so the last bubble / the
+      // streaming reasoning window always clears the composer (never slips
+      // under the fixed input dock).
+      const next = Math.ceil((dockRef.current?.getBoundingClientRect().height ?? 0) + 24)
       if (next <= 0) return
       setDockHeight((prev) => (Math.abs(prev - next) > 1 ? next : prev))
     }
@@ -614,12 +1003,29 @@ export function AiAssistantBetaPage() {
     if (!detail || !shouldHydrateConversation) return
     setConversationId(detail.id)
     setChatMessages(
-      detail.messages.map((item) => ({
-        id: `server-${item.id}`,
-        role: item.role,
-        content: item.content,
-        serverMessageId: item.role === 'assistant' ? item.id : undefined,
-      }))
+      detail.messages.map((item) => {
+        const isAssistant = item.role === 'assistant'
+        // Слой 5: источники приходят сырым конвертом `{items:[...]}` (как и во
+        // фрейме `citations` стрима) — разворачиваем тем же нормализатором, что
+        // и живой стрим, иначе рендер зовёт `.map` на объекте и падает
+        // `.map is not a function` (белый экран при открытии диалога с SQL-
+        // источниками). Пустой результат → undefined, чтобы сообщение без
+        // источников вело себя как прежде (без секции «Источники»).
+        const citations = isAssistant ? normalizeCitations(item.citations) : []
+        return {
+          id: `server-${item.id}`,
+          role: item.role,
+          content: item.content,
+          serverMessageId: isAssistant ? item.id : undefined,
+          // Слой 5: гидратируем раздумья и источники серверного сообщения, чтобы
+          // панель «Активность» и факт-сноски `[[N]]` работали в загруженном из
+          // истории диалоге (после F5 / переключения), а не только в текущем
+          // стриме. Поля опциональны — старый бэкенд их не шлёт, тогда сообщение
+          // ведёт себя как прежде (без чипа/источников).
+          reasoning: isAssistant ? item.reasoning : undefined,
+          citations: citations.length > 0 ? citations : undefined,
+        }
+      })
     )
     setIsExplicitSelection(false)
     window.setTimeout(() => scrollToConversationBottom('auto'), 0)
@@ -697,6 +1103,9 @@ export function AiAssistantBetaPage() {
     setChatMessages((current) => (current.length > 0 ? [] : current))
     setConversationId(null)
     setFeedbackByMessage({})
+    setCitationMarksByMessage((current) => (Object.keys(current).length > 0 ? {} : current))
+    setReasoningOpenByMessage((current) => (Object.keys(current).length > 0 ? {} : current))
+    setFocusedCitation(null)
     setIsAssistantResponding(false)
   }, [stopVoiceRecognition, cancelDictation, cancelVoiceMessage, stopTts, clearPendingImages])
 
@@ -758,42 +1167,23 @@ export function AiAssistantBetaPage() {
             </button>
           </div>
 
-          <p
-            className="mt-2.5 mb-1.5 text-[11px] font-medium text-gray-500"
-            title={t('pages.aiAssistant.modeTooltip')}
-          >
-            {t('pages.aiAssistant.mode')}
-          </p>
-          <div
-            className="bg-light-100/80 flex w-full rounded-lg p-0.5"
-            role="group"
-            aria-label={t('pages.aiAssistant.mode')}
-          >
-            <button
-              type="button"
-              onClick={() => applySettings((s) => ({ ...s, mode: 'fast' }))}
-              className={cn(
-                'min-h-8 flex-1 rounded-md px-2 py-1.5 text-[11px] font-medium transition-all',
-                assistantSettings.mode === 'fast'
-                  ? 'text-dark-500 bg-white shadow-sm ring-1 ring-gray-200/80'
-                  : 'hover:text-dark-500 text-gray-600'
-              )}
-            >
-              {t('pages.aiAssistant.modeFast')}
-            </button>
-            <button
-              type="button"
-              title={t('pages.aiAssistant.modeTooltip')}
-              onClick={() => applySettings((s) => ({ ...s, mode: 'thinking' }))}
-              className={cn(
-                'min-h-8 flex-1 rounded-md px-2 py-1.5 text-[11px] font-medium transition-all',
-                assistantSettings.mode === 'thinking'
-                  ? 'text-dark-500 bg-white shadow-sm ring-1 ring-gray-200/80'
-                  : 'hover:text-dark-500 text-gray-600'
-              )}
-            >
-              {t('pages.aiAssistant.modeThinking')}
-            </button>
+          {/* Reasoning mode now lives in the dropdown next to the composer
+              (single source of truth); the settings panel only points to it. */}
+          <div className="bg-light-50/60 mt-2.5 flex items-center gap-2 rounded-lg border border-gray-200/70 px-2.5 py-2">
+            {assistantSettings.mode === 'thinking' ? (
+              <Icons.AiBrain03 size={14} strokeWidth={1.5} className="text-primary-500 shrink-0" />
+            ) : (
+              <Icons.Flash size={14} strokeWidth={1.5} className="shrink-0 text-amber-500" />
+            )}
+            <span className="text-dark-500 min-w-0 flex-1 text-[11px] leading-snug font-light">
+              {t('pages.aiAssistant.mode')}:{' '}
+              {assistantSettings.mode === 'thinking'
+                ? t('pages.aiAssistant.modeThinkingShort')
+                : t('pages.aiAssistant.modeFastShort')}
+            </span>
+            <span className="shrink-0 text-[11px] font-light text-gray-400">
+              {t('pages.aiAssistant.modeChangeHint')}
+            </span>
           </div>
 
           <p className="mt-2.5 mb-1.5 text-[11px] font-medium text-gray-500">
@@ -841,6 +1231,60 @@ export function AiAssistantBetaPage() {
               ariaLabel={t('pages.aiAssistant.voiceInput')}
             />
           </div>
+
+          {assistantSettings.voiceInputEnabled && (
+            <div data-testid="voice-listening-settings">
+              <p className="mt-2.5 mb-1.5 text-[11px] font-medium text-gray-500">
+                {t('pages.aiAssistant.voiceSilenceTimeout')}
+              </p>
+              <div
+                className="bg-light-100/80 grid w-full grid-cols-3 gap-0.5 rounded-lg p-0.5"
+                role="group"
+                aria-label={t('pages.aiAssistant.voiceSilenceTimeout')}
+              >
+                {VOICE_SILENCE_OPTIONS.map((sec) => (
+                  <button
+                    key={sec}
+                    type="button"
+                    onClick={() => applySettings((s) => ({ ...s, voiceSilenceTimeoutSec: sec }))}
+                    className={cn(
+                      'min-h-8 rounded-md px-1 py-1.5 text-center text-[11px] font-medium transition-all',
+                      assistantSettings.voiceSilenceTimeoutSec === sec
+                        ? 'text-dark-500 bg-white shadow-sm ring-1 ring-gray-200/80'
+                        : 'hover:text-dark-500 text-gray-600'
+                    )}
+                  >
+                    {t('pages.aiAssistant.voiceSeconds', { count: sec })}
+                  </button>
+                ))}
+              </div>
+
+              <p className="mt-2.5 mb-1.5 text-[11px] font-medium text-gray-500">
+                {t('pages.aiAssistant.voiceMaxDuration')}
+              </p>
+              <div
+                className="bg-light-100/80 grid w-full grid-cols-3 gap-0.5 rounded-lg p-0.5"
+                role="group"
+                aria-label={t('pages.aiAssistant.voiceMaxDuration')}
+              >
+                {VOICE_MAX_DURATION_OPTIONS.map((sec) => (
+                  <button
+                    key={sec}
+                    type="button"
+                    onClick={() => applySettings((s) => ({ ...s, voiceMaxDurationSec: sec }))}
+                    className={cn(
+                      'min-h-8 rounded-md px-1 py-1.5 text-center text-[11px] font-medium transition-all',
+                      assistantSettings.voiceMaxDurationSec === sec
+                        ? 'text-dark-500 bg-white shadow-sm ring-1 ring-gray-200/80'
+                        : 'hover:text-dark-500 text-gray-600'
+                    )}
+                  >
+                    {t('pages.aiAssistant.voiceSeconds', { count: sec })}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </section>
 
         <section className="px-4 py-2.5">
@@ -893,18 +1337,6 @@ export function AiAssistantBetaPage() {
           </h3>
           <ul className="space-y-0">
             <li className="flex items-center justify-between gap-3 py-1.5 first:pt-0">
-              <span className="text-dark-500 min-w-0 flex-1 text-xs leading-snug font-light">
-                {t('pages.aiAssistant.showQuickSuggestionsAfterResponse')}
-              </span>
-              <ToggleSwitch
-                checked={assistantSettings.showQuickSuggestionsAfterResponse}
-                onChange={(checked) =>
-                  applySettings((s) => ({ ...s, showQuickSuggestionsAfterResponse: checked }))
-                }
-                ariaLabel={t('pages.aiAssistant.showQuickSuggestionsAfterResponse')}
-              />
-            </li>
-            <li className="flex items-center justify-between gap-3 border-t border-gray-100 py-1.5">
               <span className="text-dark-500 min-w-0 flex-1 text-xs leading-snug font-light">
                 {t('pages.aiAssistant.autoScrollToLatestAnswer')}
               </span>
@@ -1019,13 +1451,26 @@ export function AiAssistantBetaPage() {
       setIsAssistantResponding(true)
 
       const isThinking = assistantSettings.mode === 'thinking'
+      const reasoningStartedAt = Date.now()
       const loadingId = appendChatMessage({
         role: 'assistant',
         content: isThinking
           ? t('pages.aiAssistant.assistantThinking')
           : t('pages.aiAssistant.assistantTyping'),
         isLoading: true,
-        loadingLabel: isThinking ? t('pages.aiAssistant.assistantThinking') : undefined,
+        // Start marker for the "Xс" reasoning timer (chip + activity panel).
+        reasoningStartedAt,
+        // Thinking mode shows the "Ход рассуждения" window straight away (see
+        // thinkingPlaceholder), so the generic "думаю…" label stands down; fast
+        // mode keeps the light typing indicator.
+        loadingLabel: undefined,
+        // Arms the live "Ход рассуждения" view: the panel auto-expands while the
+        // turn streams reasoning/tool events, then collapses once it settles.
+        isStreamingReasoning: true,
+        // Thinking mode: open the reasoning window immediately (spinner +
+        // placeholder) before any reasoning delta. Fast mode shows the light
+        // typing dots and only reveals the panel if reasoning actually streams.
+        thinkingPlaceholder: isThinking,
       })
       window.setTimeout(() => scrollToConversationBottom('smooth'), 0)
 
@@ -1042,6 +1487,10 @@ export function AiAssistantBetaPage() {
       // deltas append to it as the answer grows.
       let streamedText = ''
       let receivedDelta = false
+      // Reasoning / tool events drive the "Ход рассуждения" panel. They are
+      // accumulated locally and pushed into the in-flight bubble on each event.
+      let streamedReasoning = ''
+      let toolSteps: ToolStep[] = []
       try {
         const result = await sendChat({
           payload: {
@@ -1052,6 +1501,9 @@ export function AiAssistantBetaPage() {
             mode: assistantSettings.mode,
             response_mode: assistantSettings.responseMode,
             output_format: assistantSettings.outputFormat,
+            // Send the deep-research flag only when on (forward-compatible: the
+            // gateway ignores it until it ships support).
+            deep_research: assistantSettings.deepResearch ? true : undefined,
             attachments:
               attachmentList.length > 0 ? toChatAttachmentPayload(attachmentList) : undefined,
           },
@@ -1061,11 +1513,52 @@ export function AiAssistantBetaPage() {
               receivedDelta = true
               patchLoadingMessage({ content: streamedText, isLoading: false })
             },
+            onReasoning: (delta) => {
+              streamedReasoning += delta
+              // Keep `isLoading` until the first answer delta: reasoning streams
+              // into the panel while the answer bubble still shows the live ход.
+              patchLoadingMessage({ reasoning: streamedReasoning })
+            },
+            onToolStart: (tool) => {
+              toolSteps = [
+                ...toolSteps,
+                {
+                  id: `${loadingId}-tool-${toolSteps.length}`,
+                  name: tool.name,
+                  label: tool.label,
+                  status: 'running',
+                },
+              ]
+              patchLoadingMessage({ toolSteps })
+            },
+            onToolEnd: (tool) => {
+              // tool_end has no name — settle the most recent still-running step.
+              let settled = false
+              toolSteps = toolSteps
+                .slice()
+                .reverse()
+                .map((step) => {
+                  if (!settled && step.status === 'running') {
+                    settled = true
+                    return {
+                      ...step,
+                      status: (tool.ok ? 'ok' : 'error') as ToolStepStatus,
+                      resultPreview: tool.result_preview ?? tool.summary,
+                    }
+                  }
+                  return step
+                })
+                .reverse()
+              patchLoadingMessage({ toolSteps })
+            },
             onSources: (sources) => {
               if (sources.tables.length > 0 || sources.tools.length > 0) {
                 patchLoadingMessage({ sources })
               }
             },
+            // Цитаты факт-сносок: patchLoadingMessage несёт тот же requestToken-
+            // guard, что и остальные патчи (см. выше), поэтому доп. проверки нет.
+            onCitations: (citations) => patchLoadingMessage({ citations }),
             onFollowups: (questions) => {
               if (questions.length > 0) patchLoadingMessage({ followups: questions })
             },
@@ -1085,6 +1578,13 @@ export function AiAssistantBetaPage() {
         patchLoadingMessage({
           content: receivedDelta ? streamedText : result.response,
           isLoading: false,
+          // Turn finished — collapse the reasoning panel (still re-expandable).
+          isStreamingReasoning: false,
+          // Drop the streaming placeholder; if no reasoning ever arrived the
+          // window simply disappears (no empty box left behind).
+          thinkingPlaceholder: false,
+          // Freeze the reasoning timer at its final value.
+          reasoningElapsedMs: Date.now() - reasoningStartedAt,
           serverMessageId: result.message_id > 0 ? result.message_id : undefined,
         })
       } catch (error) {
@@ -1113,8 +1613,13 @@ export function AiAssistantBetaPage() {
           content: errorMessage,
           isLoading: false,
           isError: true,
+          isStreamingReasoning: false,
+          thinkingPlaceholder: false,
           sources: undefined,
+          citations: undefined,
           followups: undefined,
+          reasoning: undefined,
+          toolSteps: undefined,
         })
       } finally {
         if (requestToken === responseTokenRef.current) {
@@ -1125,6 +1630,7 @@ export function AiAssistantBetaPage() {
     },
     [
       appendChatMessage,
+      assistantSettings.deepResearch,
       assistantSettings.mode,
       assistantSettings.outputFormat,
       assistantSettings.rememberConversationContext,
@@ -1338,6 +1844,135 @@ export function AiAssistantBetaPage() {
     [feedbackByMessage, mutateFeedback, t]
   )
 
+  // Пометка источника факт-сноски «верно/неверно» (Слой 5). Оптимистично
+  // подсвечиваем выбор; повторный клик по тому же вердикту снимает пометку
+  // (чисто UI — контракт step-mark выражает только ok/wrong, «снятие» не шлём),
+  // клик по другому вердикту — меняет и шлёт POST. Откат при ошибке POST.
+  const handleMarkCitation = useCallback(
+    (serverMessageId: number, citationId: number, verdict: AssistantCitationVerdict) => {
+      const previousVerdict = citationMarksByMessage[serverMessageId]?.[citationId]
+      const nextVerdict = previousVerdict === verdict ? undefined : verdict
+
+      const applyVerdict = (value: AssistantCitationVerdict | undefined) => {
+        setCitationMarksByMessage((current) => {
+          const forMessage = { ...(current[serverMessageId] ?? {}) }
+          if (value == null) delete forMessage[citationId]
+          else forMessage[citationId] = value
+          return { ...current, [serverMessageId]: forMessage }
+        })
+      }
+
+      applyVerdict(nextVerdict)
+
+      // Снятие пометки контракт не выражает (только ok/wrong) — держим локально.
+      if (nextVerdict == null) return
+
+      mutateMarkCitation(
+        { message_id: serverMessageId, citation_id: citationId, verdict: nextVerdict },
+        {
+          onError: () => {
+            toast.error(t('pages.aiAssistant.apiError'))
+            applyVerdict(previousVerdict)
+          },
+        }
+      )
+    },
+    [citationMarksByMessage, mutateMarkCitation, t]
+  )
+
+  // Resolve whether a message's reasoning panel is open: an explicit user
+  // Панель раздумий НЕ выезжает автоматически: по умолчанию свёрнута, открывается
+  // ТОЛЬКО явным кликом по плашке «Ход рассуждения» (toggleReasoning) или по факту.
+  // Плашка при стриме показывает live-индикатор, но само окно ждёт нажатия кнопки.
+  const isReasoningOpen = useCallback(
+    (item: ChatMessage) => reasoningOpenByMessage[item.id] ?? false,
+    [reasoningOpenByMessage]
+  )
+
+  const toggleReasoning = useCallback((item: ChatMessage) => {
+    setReasoningOpenByMessage((current) => {
+      const open = current[item.id] ?? false
+      return { ...current, [item.id]: !open }
+    })
+  }, [])
+
+  // Идемпотентно ОТКРЫТЬ панель для сообщения (в отличие от toggle — никогда не
+  // сворачивает). Используется кликом по факт-сноске: активной становится
+  // последняя открытая ветка (см. activeReasoningMessage).
+  const openReasoning = useCallback((item: ChatMessage) => {
+    setReasoningOpenByMessage((current) => ({ ...current, [item.id]: true }))
+  }, [])
+
+  const closeReasoning = useCallback((item: ChatMessage) => {
+    setReasoningOpenByMessage((current) => ({ ...current, [item.id]: false }))
+    // Закрыли ход — снимаем фокус на его источнике (чтобы повторное открытие
+    // через чип не подсвечивало старый источник).
+    setFocusedCitation((current) => (current?.messageId === item.id ? null : current))
+  }, [])
+
+  // Клик по факт-сноске `[[N]]` открывает панель «Активность» этого сообщения и
+  // разворачивает КОНКРЕТНЫЙ источник n: фокус ведёт к авто-скроллу + подсветке
+  // источника в секции «Источники» (см. ReasoningActivityPanel / focusedCitationId).
+  const openReasoningForFact = useCallback(
+    (item: ChatMessage, n: number) => {
+      setFocusedCitation({ messageId: item.id, citationId: n })
+      openReasoning(item)
+    },
+    [openReasoning]
+  )
+
+  // Single timestamp per render for the "Xс" reasoning timer — recomputed on
+  // every render (streamed deltas re-render), so no interval is needed. The
+  // final value is frozen into `reasoningElapsedMs` when the turn settles.
+  const reasoningNow = Date.now()
+
+  // The one assistant message whose activity panel is open (latest wins): an
+  // explicit toggle or the live stream. Drives the single fixed side panel and
+  // the composer/ribbon offset.
+  const activeReasoningMessage = useMemo(() => {
+    for (let i = chatMessages.length - 1; i >= 0; i -= 1) {
+      const item = chatMessages[i]
+      if (item.role !== 'assistant' || item.isError) continue
+      if (!messageHasActivity(item)) continue
+      if (isReasoningOpen(item)) return item
+    }
+    return null
+  }, [chatMessages, isReasoningOpen])
+
+  const isReasoningPanelOpen = activeReasoningMessage != null
+  // Номер источника для подсветки в панели — только если фокус принадлежит
+  // активному сообщению (иначе клик по факту в одном ходе подсветил бы источник
+  // с тем же номером в другом открытом ходе).
+  const focusedCitationId =
+    focusedCitation != null &&
+    activeReasoningMessage != null &&
+    focusedCitation.messageId === activeReasoningMessage.id
+      ? focusedCitation.citationId
+      : null
+  // Live width during a drag (parent-owned so the composer/ribbon shift in
+  // lockstep); the committed value is persisted in the store.
+  const storedReasoningPanelWidth = useAiAssistantStore((state) => state.reasoningPanelWidth)
+  const setStoredReasoningPanelWidth = useAiAssistantStore((state) => state.setReasoningPanelWidth)
+  const [reasoningPanelWidth, setReasoningPanelWidth] = useState(storedReasoningPanelWidth)
+  const activeReasoningElapsed =
+    activeReasoningMessage != null ? reasoningElapsedMs(activeReasoningMessage, reasoningNow) : null
+
+  // Слой 5: пометки «верно/неверно» доступны только когда у активного сообщения
+  // есть серверный message_id (после гидратации диалога). Пометки берём по нему из
+  // стейта; клик прокидывает id внутрь handleMarkCitation.
+  const activeServerMessageId = activeReasoningMessage?.serverMessageId ?? null
+  const activeCitationMarks =
+    activeServerMessageId != null
+      ? (citationMarksByMessage[activeServerMessageId] ?? EMPTY_CITATION_MARKS)
+      : EMPTY_CITATION_MARKS
+  const handleActiveMarkCitation = useCallback(
+    (citationId: number, verdict: AssistantCitationVerdict) => {
+      if (activeServerMessageId == null) return
+      handleMarkCitation(activeServerMessageId, citationId, verdict)
+    },
+    [activeServerMessageId, handleMarkCitation]
+  )
+
   const feedbackButtonClass = (isChosen: boolean, isGroupLocked: boolean) =>
     cn(
       'inline-flex min-h-7 items-center gap-1 rounded-full border px-2 py-1 text-[11px] font-medium transition-colors',
@@ -1439,6 +2074,32 @@ export function AiAssistantBetaPage() {
     </div>
   )
 
+  /**
+   * Compact reasoning summary shown in the answer bubble — a toggle that opens
+   * the «Активность» side panel. Only for thinking-style turns that actually
+   * carry reasoning / tool-steps / the pre-open placeholder; fast turns render
+   * nothing (as before). The full ход рассуждения lives in the side panel.
+   */
+  const renderReasoningChip = (item: ChatMessage) => {
+    // Показываем чип при ЛЮБОЙ активности (раздумья/шаги ИЛИ источники), а не
+    // только при reasoning: у fast-хода раздумий нет, но источники факт-сносок
+    // есть — без чипа они после гидратации/перезагрузки истории становятся
+    // недоступны (панель нельзя открыть). Чип корректно деградирует на пустом
+    // reasoning + нулевом stepCount (см. ReasoningInlineChip).
+    if (!messageHasActivity(item)) return null
+    const elapsed = reasoningElapsedMs(item, reasoningNow)
+    return (
+      <ReasoningInlineChip
+        open={isReasoningOpen(item)}
+        streaming={Boolean(item.isStreamingReasoning)}
+        reasoning={item.reasoning ?? ''}
+        stepCount={item.toolSteps?.length ?? 0}
+        elapsedLabel={elapsed != null ? formatReasoningDuration(elapsed) : null}
+        onToggle={() => toggleReasoning(item)}
+      />
+    )
+  }
+
   /** One labelled row of source chips (tables or tools). */
   const renderSourceRow = (label: string, items: string[]) =>
     items.length > 0 ? (
@@ -1500,6 +2161,13 @@ export function AiAssistantBetaPage() {
   return (
     <div
       ref={pageRootRef}
+      // Reserve room on the right for the open «Активность» panel (desktop): the
+      // message ribbon is pushed left by the panel width so it never slides
+      // under the panel. The fixed dock mirrors this via getDockRightOffset.
+      style={{
+        paddingRight:
+          !isMobileOrTablet && isReasoningPanelOpen ? `${reasoningPanelWidth}px` : undefined,
+      }}
       className={cn(
         'relative flex min-h-[calc(100vh-5.5rem)] w-full min-w-0 flex-1 flex-col self-stretch overflow-x-hidden supports-[height:100dvh]:min-h-[calc(100dvh-5.5rem)]',
         // Reserve space for the fixed history panel (its width + a 1rem gap).
@@ -1560,89 +2228,118 @@ export function AiAssistantBetaPage() {
         >
           <div className="mx-auto w-full max-w-5xl 2xl:max-w-6xl">
             <div className="mx-auto w-full max-w-4xl space-y-3 sm:space-y-4 2xl:max-w-5xl">
-              {chatMessages.map((item) => (
-                <div
-                  key={item.id}
-                  className={cn('flex', item.role === 'user' ? 'justify-end' : 'justify-start')}
-                >
+              {chatMessages.map((item) => {
+                // Reasoning fills the answer-bubble width track (symmetric with
+                // the answer), so a bubble carrying reasoning/tool-steps/the
+                // thinking placeholder stretches to its max width instead of
+                // shrinking to the short header (w-fit) — the reasoning box then
+                // uses the full available width rather than looking narrow.
+                const hasReasoningSurface =
+                  item.role === 'assistant' && !item.isError && messageHasActivity(item)
+                return (
                   <div
-                    className={cn(
-                      'flex w-fit max-w-[min(100%,22rem)] flex-col sm:max-w-[min(100%,85%)] md:max-w-2xl lg:max-w-3xl',
-                      item.role === 'user' ? 'items-end' : 'items-start'
-                    )}
+                    key={item.id}
+                    className={cn('flex', item.role === 'user' ? 'justify-end' : 'justify-start')}
                   >
                     <div
                       className={cn(
-                        'w-fit max-w-full rounded-2xl px-3.5 py-2.5 text-sm shadow-sm sm:px-4 sm:py-3',
-                        item.role === 'user'
-                          ? 'bg-secondary-800 text-white'
-                          : 'text-dark-500 border border-gray-100 bg-white',
-                        (item.role === 'user' || item.isLoading || item.isError) &&
-                          'whitespace-pre-wrap',
-                        item.isError && 'border-error-200 bg-error-50/60 text-error-700'
+                        'flex max-w-[min(100%,22rem)] flex-col sm:max-w-[min(100%,85%)] md:max-w-2xl lg:max-w-3xl',
+                        hasReasoningSurface ? 'w-full' : 'w-fit',
+                        item.role === 'user' ? 'items-end' : 'items-start'
                       )}
                     >
-                      {item.attachments && item.attachments.length > 0 && (
-                        <div className={cn('flex flex-col gap-2', item.content && 'mb-2')}>
-                          {item.attachments.map((attachment, index) =>
-                            attachment.type === 'image' ? (
-                              <img
-                                key={index}
-                                src={attachment.url}
-                                alt={t('pages.aiAssistant.attachedImageAlt')}
-                                className="max-h-48 max-w-full rounded-lg object-contain"
-                              />
-                            ) : (
-                              // eslint-disable-next-line jsx-a11y/media-has-caption -- voice note, no transcript available client-side
-                              <audio
-                                key={index}
-                                controls
-                                src={attachment.url}
-                                aria-label={t('pages.aiAssistant.voiceMessageBubbleLabel')}
-                                className="h-10 max-w-full"
-                              />
-                            )
-                          )}
-                        </div>
-                      )}
-                      {item.isLoading ? (
-                        <span className="inline-flex items-center gap-1.5 py-1">
-                          <span className="bg-secondary-500 h-1.5 w-1.5 animate-bounce rounded-full [animation-delay:-0.2s]" />
-                          <span className="bg-secondary-500 h-1.5 w-1.5 animate-bounce rounded-full [animation-delay:-0.1s]" />
-                          <span className="bg-secondary-500 h-1.5 w-1.5 animate-bounce rounded-full" />
-                          {item.loadingLabel && (
-                            <span className="ml-1.5 text-xs font-light text-gray-500">
-                              {item.loadingLabel}
+                      <div
+                        className={cn(
+                          'max-w-full rounded-2xl px-3.5 py-2.5 text-sm shadow-sm sm:px-4 sm:py-3',
+                          hasReasoningSurface ? 'w-full' : 'w-fit',
+                          item.role === 'user'
+                            ? 'bg-secondary-800 text-white'
+                            : 'text-dark-500 border border-gray-100 bg-white',
+                          (item.role === 'user' || item.isLoading || item.isError) &&
+                            'whitespace-pre-wrap',
+                          item.isError && 'border-error-200 bg-error-50/60 text-error-700'
+                        )}
+                      >
+                        {item.attachments && item.attachments.length > 0 && (
+                          <div className={cn('flex flex-col gap-2', item.content && 'mb-2')}>
+                            {item.attachments.map((attachment, index) =>
+                              attachment.type === 'image' ? (
+                                <img
+                                  key={index}
+                                  src={attachment.url}
+                                  alt={t('pages.aiAssistant.attachedImageAlt')}
+                                  className="max-h-48 max-w-full rounded-lg object-contain"
+                                />
+                              ) : (
+                                // eslint-disable-next-line jsx-a11y/media-has-caption -- voice note, no transcript available client-side
+                                <audio
+                                  key={index}
+                                  controls
+                                  src={attachment.url}
+                                  aria-label={t('pages.aiAssistant.voiceMessageBubbleLabel')}
+                                  className="h-10 max-w-full"
+                                />
+                              )
+                            )}
+                          </div>
+                        )}
+                        {/* Live "Ход рассуждения": shown above the answer both
+                          while the turn streams and (collapsed) afterwards. */}
+                        {item.role === 'assistant' && !item.isError && renderReasoningChip(item)}
+                        {item.isLoading ? (
+                          // Generic typing dots only until something concrete is
+                          // streaming — once reasoning/tool events arrive (or the
+                          // thinking window is pre-opened) the panel above is the
+                          // live indicator, so the dots stand down.
+                          item.reasoning ||
+                          item.thinkingPlaceholder ||
+                          (item.toolSteps && item.toolSteps.length > 0) ? null : (
+                            <span className="inline-flex items-center gap-1.5 py-1">
+                              <span className="bg-secondary-500 h-1.5 w-1.5 animate-bounce rounded-full [animation-delay:-0.2s]" />
+                              <span className="bg-secondary-500 h-1.5 w-1.5 animate-bounce rounded-full [animation-delay:-0.1s]" />
+                              <span className="bg-secondary-500 h-1.5 w-1.5 animate-bounce rounded-full" />
+                              {item.loadingLabel && (
+                                <span className="ml-1.5 text-xs font-light text-gray-500">
+                                  {item.loadingLabel}
+                                </span>
+                              )}
                             </span>
-                          )}
-                        </span>
-                      ) : item.role === 'assistant' && !item.isError ? (
-                        <div className={MARKDOWN_BODY_CLASS}>
-                          <ReactMarkdown remarkPlugins={[remarkGfm]}>{item.content}</ReactMarkdown>
-                        </div>
-                      ) : (
-                        item.content
-                      )}
+                          )
+                        ) : item.role === 'assistant' && !item.isError ? (
+                          <MarkdownMessage
+                            className={MARKDOWN_BODY_CLASS}
+                            citations={mapCitations(item.citations)}
+                            onFactClick={(n) => openReasoningForFact(item, n)}
+                          >
+                            {item.content}
+                          </MarkdownMessage>
+                        ) : (
+                          item.content
+                        )}
+                        {item.role === 'assistant' &&
+                          !item.isError &&
+                          item.sources &&
+                          (item.sources.tables.length > 0 || item.sources.tools.length > 0) &&
+                          renderSources(item.sources)}
+                      </div>
                       {item.role === 'assistant' &&
+                        !item.isLoading &&
                         !item.isError &&
-                        item.sources &&
-                        (item.sources.tables.length > 0 || item.sources.tools.length > 0) &&
-                        renderSources(item.sources)}
+                        renderAssistantActions(item)}
+                      {item.role === 'assistant' &&
+                        !item.isLoading &&
+                        !item.isError &&
+                        item.followups &&
+                        item.followups.length > 0 &&
+                        renderFollowups(item.followups)}
                     </div>
-                    {item.role === 'assistant' &&
-                      !item.isLoading &&
-                      !item.isError &&
-                      renderAssistantActions(item)}
-                    {item.role === 'assistant' &&
-                      !item.isLoading &&
-                      !item.isError &&
-                      item.followups &&
-                      item.followups.length > 0 &&
-                      renderFollowups(item.followups)}
                   </div>
-                </div>
-              ))}
-              <div ref={chatBottomRef} />
+                )
+              })}
+              {/* Bottom anchor + a small spacer so the last bubble / streaming
+                  reasoning keeps a visible gap above the fixed composer even
+                  before the measured dock height settles. */}
+              <div ref={chatBottomRef} className="h-2" />
             </div>
           </div>
         </div>
@@ -1662,12 +2359,19 @@ export function AiAssistantBetaPage() {
 
       <div
         ref={dockRef}
+        // When the «Активность» panel is open (desktop), shift the dock's right
+        // edge left by the panel width so the composer never slides under it —
+        // geometrically mirroring the page-root paddingRight above. Inline
+        // `right` overrides the resting `lg:right-7`; undefined restores it.
+        style={{
+          right: getDockRightOffset(isReasoningPanelOpen, isMobileOrTablet, reasoningPanelWidth),
+        }}
         className={cn(
           // Desktop: pin the fixed dock to the exact same box as the chat
           // content area (see dockGeometry.ts), so the input card and the
           // quick actions share one column centre with the message ribbon in
           // every sidebar combination. Mobile keeps the full-width box.
-          'from-light-50 via-light-50/95 pointer-events-none fixed right-0 bottom-0 left-0 z-20 flex w-full min-w-0 shrink-0 flex-col items-center bg-gradient-to-t to-transparent px-3 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] transition-[left] duration-300 sm:px-8 sm:pt-6 md:px-10 lg:px-14 xl:px-20',
+          'from-light-50 via-light-50/95 pointer-events-none fixed right-0 bottom-0 left-0 z-20 flex w-full min-w-0 shrink-0 flex-col items-center bg-gradient-to-t to-transparent px-3 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] transition-[left,right] duration-300 sm:px-8 sm:pt-6 md:px-10 lg:px-14 xl:px-20',
           getDockDesktopBoxClasses(isOpenSideBar, isHistoryCollapsed)
         )}
       >
@@ -1792,7 +2496,8 @@ export function AiAssistantBetaPage() {
                   {t('pages.aiAssistant.voiceMessageRecording')}
                 </span>
                 <span className="shrink-0 font-mono text-[11px] text-gray-600 tabular-nums">
-                  {formatRecordingTime(recorderElapsedSec)} / 2:00
+                  {formatRecordingTime(recorderElapsedSec)} /{' '}
+                  {formatRecordingTime(assistantSettings.voiceMaxDurationSec)}
                 </span>
                 <button
                   type="button"
@@ -1815,17 +2520,42 @@ export function AiAssistantBetaPage() {
 
             <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-3">
               <div className="flex shrink-0 items-center gap-2">
+                {/* Composer "+" hub: attach / CRM actions / deep research /
+                    context — Claude / ChatGPT "+" pattern. */}
+                <ComposerHubMenu
+                  onAttach={() => imageInputRef.current?.click()}
+                  onQuickAction={(key) => void submitPrompt(quickActionPrompts[key])}
+                  quickActionDisabled={isAssistantResponding}
+                  deepResearch={assistantSettings.deepResearch}
+                  onToggleDeepResearch={() =>
+                    applySettings((s) => ({ ...s, deepResearch: !s.deepResearch }))
+                  }
+                  clientScope={clientScope}
+                  clientOptions={clientOptions}
+                  onClientScopeChange={setClientScope}
+                />
+                <input
+                  ref={imageInputRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  multiple
+                  className="hidden"
+                  data-testid="attach-image-input"
+                  onChange={handleImageInputChange}
+                />
+
                 <div className="relative shrink-0">
                   <button
                     ref={settingsTriggerRef}
                     type="button"
                     onClick={() => setIsSettingsOpen((open) => !open)}
+                    aria-expanded={isSettingsOpen}
                     className="text-dark-500 hover:text-primary-600 flex min-h-9 cursor-pointer items-center gap-2 text-sm font-light transition-colors"
                   >
-                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-gray-300 bg-white text-gray-500 sm:h-6 sm:w-6">
-                      <Icons.Add size={16} strokeWidth={1.5} />
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-gray-300 bg-white text-gray-500 sm:h-7 sm:w-7">
+                      <Icons.Settings size={16} strokeWidth={1.5} />
                     </span>
-                    {t('pages.aiAssistant.settings')}
+                    <span className="hidden sm:inline">{t('pages.aiAssistant.settings')}</span>
                   </button>
                   {!isMobileOrTablet && isSettingsOpen && (
                     <div
@@ -1836,42 +2566,31 @@ export function AiAssistantBetaPage() {
                     </div>
                   )}
                 </div>
-
-                <button
-                  type="button"
-                  aria-label={t('pages.aiAssistant.attachImageButton')}
-                  title={t('pages.aiAssistant.attachImageButton')}
-                  onClick={() => imageInputRef.current?.click()}
-                  className="text-dark-500 hover:text-primary-600 flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-full border border-gray-300 bg-white text-gray-500 transition-colors sm:h-6 sm:w-6"
-                >
-                  <Icons.Attachment01 size={16} strokeWidth={1.5} />
-                </button>
-                <input
-                  ref={imageInputRef}
-                  type="file"
-                  accept="image/png,image/jpeg,image/webp"
-                  multiple
-                  className="hidden"
-                  data-testid="attach-image-input"
-                  onChange={handleImageInputChange}
-                />
               </div>
 
-              <div className="grid w-full min-w-0 grid-cols-[1fr_1fr_auto] items-center gap-2 sm:flex sm:w-auto sm:flex-wrap sm:justify-end">
+              <div className="flex w-full min-w-0 flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
                 <AssistFilterDropdown
                   ariaLabel={t('pages.aiAssistant.client')}
                   value={clientScope}
                   onChange={setClientScope}
                   options={clientOptions}
-                  triggerClassName="w-full min-w-0 sm:w-32"
+                  triggerClassName="min-w-0 flex-1 rounded-full border border-gray-300 sm:w-32 sm:flex-none"
                 />
                 <AssistFilterDropdown
                   ariaLabel={t('pages.aiAssistant.period')}
                   value={period}
                   onChange={setPeriod}
                   options={periodOptions}
-                  triggerClassName="w-full min-w-0 sm:w-32"
+                  triggerClassName="min-w-0 flex-1 rounded-full border border-gray-300 sm:w-32 sm:flex-none"
                 />
+
+                {/* Reasoning-mode picker (source of truth for `mode`). */}
+                <div className="min-w-0 flex-1 sm:flex-none">
+                  <ModeDropdown
+                    value={assistantSettings.mode}
+                    onChange={(mode) => applySettings((s) => ({ ...s, mode }))}
+                  />
+                </div>
 
                 <button
                   type="button"
@@ -1924,30 +2643,6 @@ export function AiAssistantBetaPage() {
               {t('pages.aiAssistant.inputHint')}
             </p>
           </div>
-
-          {/* In an active chat on mobile/tablet the stacked quick actions eat
-              most of the viewport inside the fixed dock — hide them there. */}
-          {assistantSettings.showQuickSuggestionsAfterResponse &&
-            (!hasConversation || !isMobileOrTablet) && (
-              <div className="mt-4 flex w-full min-w-0 flex-col gap-2 sm:mt-6 sm:flex-row sm:flex-wrap sm:justify-center sm:gap-3 lg:gap-4">
-                {QUICK_ACTION_KEYS.map((key) => (
-                  <button
-                    key={key}
-                    type="button"
-                    disabled={isAssistantResponding}
-                    className={cn(
-                      'text-secondary-800 w-full cursor-pointer rounded-full border border-white bg-white/70 px-4 py-2.5 text-center text-sm leading-[150%] font-light tracking-[-0.02em] sm:w-auto sm:px-5 sm:py-3 sm:text-base sm:leading-[155%] sm:tracking-[-0.32px]',
-                      'hover:border-primary-300 hover:bg-primary-50/40 transition-colors disabled:cursor-not-allowed disabled:opacity-60'
-                    )}
-                    onClick={() => {
-                      void submitPrompt(quickActionPrompts[key])
-                    }}
-                  >
-                    {t(`pages.aiAssistant.${key}`)}
-                  </button>
-                ))}
-              </div>
-            )}
         </div>
       </div>
 
@@ -1991,6 +2686,35 @@ export function AiAssistantBetaPage() {
           </div>
         </div>
       )}
+
+      {/* «Активность» — the single fixed reasoning panel (right). Shows the ход
+          рассуждения of the currently-open message; toggled by the bubble chip,
+          the header crest, Esc, or (mobile) the backdrop. */}
+      <ReasoningActivityPanel
+        open={isReasoningPanelOpen}
+        streaming={Boolean(activeReasoningMessage?.isStreamingReasoning)}
+        placeholderActive={Boolean(
+          activeReasoningMessage?.thinkingPlaceholder &&
+          activeReasoningMessage?.isStreamingReasoning
+        )}
+        reasoning={activeReasoningMessage?.reasoning ?? ''}
+        toolSteps={activeReasoningMessage?.toolSteps ?? []}
+        citations={activeReasoningMessage?.citations ?? []}
+        focusedCitationId={focusedCitationId}
+        citationMarkingEnabled={activeServerMessageId != null}
+        citationMarks={activeCitationMarks}
+        onMarkCitation={handleActiveMarkCitation}
+        elapsedLabel={
+          activeReasoningElapsed != null ? formatReasoningDuration(activeReasoningElapsed) : null
+        }
+        isMobileOrTablet={isMobileOrTablet}
+        width={reasoningPanelWidth}
+        onClose={() => {
+          if (activeReasoningMessage) closeReasoning(activeReasoningMessage)
+        }}
+        onResize={setReasoningPanelWidth}
+        onResizeEnd={setStoredReasoningPanelWidth}
+      />
     </div>
   )
 }

@@ -14,7 +14,12 @@ import { DocumentUploadModal } from './components/DocumentUploadModal'
 import { LoanFactoringInfo } from './components/LoanFactoringInfo'
 import { UbkiSubmissionHistory } from './components/UbkiSubmissionHistory'
 import { SaleNotesSection } from './components/SaleNotesSection'
-import { formatDate, formatDateTime, formatMoneyUAHTwoDecimals } from '@/lib/formatters'
+import {
+  formatClientFullName,
+  formatDate,
+  formatDateTime,
+  formatMoneyUAHTwoDecimals,
+} from '@/lib/formatters'
 import { Button } from '@/components/ui/Button'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { TableSkeleton } from '@/components/ui/TableSkeleton'
@@ -42,9 +47,12 @@ import type { Priority } from './types'
 import { TagBadge } from '@/components/ui/TagBadge'
 import { ClientTagTraceModal } from '@/pages/Tags/components/ClientTagTraceModal'
 import { CallDialogModal, type CallType, type CallStatus } from './components/CallDialogModal'
+import { ContactTagSelectorModal } from './components/ContactTagSelectorModal'
+import { ContactTagHistoryModal } from './components/ContactTagHistoryModal'
 import { ClientWriteoffsTable } from './components/ClientWriteoffsTable'
 import { WriteoffCreateModal } from './components/WriteoffCreateModal'
-import { CallRecordingModal } from './components/CallRecordingModal'
+import { CallRecordingModal, type CallRecordingModalHandle } from './components/CallRecordingModal'
+import { CallTranscriptPanel } from '@/features/quality/components/CallTranscriptPanel'
 import { ViewSMSModal } from './components/ViewSMSModal'
 import { SendSMSModal } from './components/SendSMSModal'
 import { ViewMessageModal } from './components/ViewMessageModal'
@@ -103,6 +111,13 @@ import {
   contactTypeLabel,
   pickDefaultActiveContactTypeId,
 } from '@/features/clients/utils/contactTypeLabel'
+import { useRRPeriodicitySettings } from '@/features/clients/hooks/useRRPeriodicitySettings'
+import {
+  generateSchedule,
+  PERIODICITY_EVERY_N_DAYS,
+  PERIODICITY_MONTHLY_NTH_DAY,
+  type PeriodicityType,
+} from '@/features/clients/utils/rrSchedule'
 import type { RestructuringPaymentEntry } from '@/features/clients/api/types'
 import type { OverpaymentResponse, RRStatusHistoryEntry } from '@/features/clients/api/clientApi'
 import { useUpdateInteraction } from '@/features/clients/hooks/useNoteInteraction'
@@ -123,6 +138,8 @@ import { useSubmitDebtToUbki, useBulkSubmitToUbki, ubkiKeys } from '@/features/u
 import { PERMISSIONS } from '@/constants/permissions'
 import { searchClientsByPhoneExact } from '@/api/clientSearchApi'
 import { ChainExecutor, TAInteractionHistory } from './components/taChains'
+import { RelatedTagsTab } from './components/RelatedTagsTab'
+import type { PhoneMeta } from '@/features/tags/hooks/useLinkedClientsRelatedTags'
 import { formatUkrainePhoneForDisplay } from '@/lib/phone'
 import { isAdminRole } from '@/features/tags/utils/visibility'
 import {
@@ -200,6 +217,12 @@ const formatDateAsISO = (d: Date): string => {
   return `${y}-${m}-${day}`
 }
 
+// DISABLED for the release (client requirement): bulk "Send all loans to UBKI"
+// must stay OFF; only the per-loan manual "Send to UBKI" button stays active.
+// The backend /submit/bulk endpoint is also disabled. Re-enable by flipping
+// this flag to true.
+const ENABLE_BULK_UBKI_SUBMISSION = false
+
 export function ClientDetailPage() {
   const { t, i18n } = useTranslation('common')
   const { isCallActive, setOpenCallModal } = useCallStore()
@@ -240,12 +263,55 @@ export function ClientDetailPage() {
     connectionDate: null as Date | null,
     totalAmount: '',
     numPayments: 1,
+    // KAN-785 Part 1 — Payment Periodicity. '' = manual entry (no auto-fill).
+    frequency: '' as '' | PeriodicityType,
+    intervalDays: '' as string, // for every_n_days
+    dayOfMonth: '' as string, // for monthly_nth_day: '1'..'30' or 'last'
+    // 0-based indexes of schedule rows whose date was clamped to month-end.
+    clampedRows: [] as number[],
+    // KAN-785 Part 2 — optional overdue penalty amount (blank = no penalty).
+    penaltyAmount: '' as string,
     payments: [{ date: null as Date | null, amount: '' }] as Array<{
       date: Date | null
       amount: string
     }>,
   })
   const [connectRrError, setConnectRrError] = useState<string | null>(null)
+
+  // KAN-785 Part 1 — enabled periodicity options for the Payment Frequency
+  // dropdown. Fetched only while the connect-RR modal is open.
+  const { data: rrPeriodicitySettings } = useRRPeriodicitySettings(isConnectRrOpen)
+  const rrEnabledPeriodicities = rrPeriodicitySettings?.enabled_types ?? []
+  // Hard cap on RR installments — the backend stores a fixed 12 payment slots
+  // (payment_date_1..12 / payment_amount_1..12) and silently drops anything
+  // beyond that, so the form must never let the operator exceed it.
+  const MAX_RR_PAYMENTS = 12
+
+  // Pure recompute of the schedule (dates + even-split amounts) from the
+  // current generation inputs. Row 0's date is the anchor; row 0 amount and
+  // rows 1..n-1 are regenerated. Returns the form unchanged in manual mode
+  // (no frequency). Callers pass the already-updated form so this stays pure
+  // and safe inside a setState updater.
+  const withGeneratedSchedule = (form: typeof connectRrForm): typeof connectRrForm => {
+    if (!form.frequency) return form
+    const firstDate = form.payments[0]?.date ?? null
+    const dayOfMonth =
+      form.dayOfMonth === 'last' ? 'last' : parseInt(form.dayOfMonth, 10) || undefined
+    const { rows, clampedIndexes } = generateSchedule({
+      firstDate,
+      numPayments: form.numPayments,
+      frequency: form.frequency,
+      intervalDays: parseInt(form.intervalDays, 10) || 0,
+      dayOfMonth,
+      totalAmount: parseFloat(form.totalAmount) || 0,
+    })
+    return {
+      ...form,
+      payments: rows.map((r) => ({ date: r.date, amount: r.amount })),
+      clampedRows: clampedIndexes,
+    }
+  }
+
   const [closeLoanConfirm, setCloseLoanConfirm] = useState<number | null>(null) // debtId to close
   // Reopen-loan confirmation modal: holds the debt_id to reopen, or null when closed.
   const [reopenLoanConfirm, setReopenLoanConfirm] = useState<number | null>(null)
@@ -253,6 +319,8 @@ export function ClientDetailPage() {
   // Defaults to today; max = today (future dates rejected).
   const [closeLoanClosureDate, setCloseLoanClosureDate] = useState<Date | null>(null)
   const [closeLoanDateError, setCloseLoanDateError] = useState<string | null>(null)
+  // KAN-784 AC5: optional operator reason logged to interaction history.
+  const [closeLoanReason, setCloseLoanReason] = useState<string>('')
   // Inline-edit modal for closure date on already-closed debts.
   const [editClosureDateDebtId, setEditClosureDateDebtId] = useState<number | null>(null)
   const [editClosureDateValue, setEditClosureDateValue] = useState<Date | null>(null)
@@ -546,7 +614,11 @@ export function ClientDetailPage() {
     [contactTypes]
   )
 
-  const openOutboundCall = (rawPhone: string | null | undefined, contactTypeId?: number | null) => {
+  const openOutboundCall = (
+    rawPhone: string | null | undefined,
+    contactTypeId?: number | null,
+    spamAllowedOverride?: boolean
+  ) => {
     const phone = (rawPhone ?? '').trim()
     if (!phone) return
     if (isCallActive()) {
@@ -559,7 +631,8 @@ export function ClientDetailPage() {
     const meta = contactTypeId != null ? contactTypesById.get(contactTypeId) : undefined
     const initialCallType: CallType =
       meta?.default_call_line === 'gray' ? 'gray-line' : 'white-line'
-    const spamOptionEnabled = meta?.spam_allowed !== false
+    const spamOptionEnabled =
+      spamAllowedOverride !== undefined ? spamAllowedOverride : meta?.spam_allowed !== false
     setCallModalPreferences({ phone, initialCallType, spamOptionEnabled })
     setOpenCallModal('call-dialog')
     setIsCallModalOpen(true)
@@ -662,6 +735,16 @@ export function ClientDetailPage() {
     )
   }
 
+  const handleCopyName = async () => {
+    if (!client?.fullName) return
+    try {
+      await navigator.clipboard.writeText(client.fullName)
+      toast.success(t('pages.clients.detail.nameCopied', 'Name copied'), { duration: 2500 })
+    } catch {
+      toast.error(t('pages.clients.detail.copyFailed', 'Copy failed'), { duration: 2500 })
+    }
+  }
+
   // Record Payment (Payments tab "+") — shares the exact same flow as the
   // Debt Summary "Record Payment" button via useRecordPaymentFlow.
   const [isRecordPaymentModalOpen, setIsRecordPaymentModalOpen] = useState(false)
@@ -678,6 +761,7 @@ export function ClientDetailPage() {
     // Build phones array from additional_phones (ordered by directory sort_order on backend)
     const isValidPhone = (p: string | null | undefined): p is string => !!p && !/^0+$/.test(p)
     const phones: Array<{
+      contactId: number
       number: string
       type: string
       contactTypeId: number
@@ -686,12 +770,17 @@ export function ClientDetailPage() {
       spamAllowed: boolean
       created_at?: string | null
       added_by_user_name?: string | null
+      contactTags: NonNullable<(typeof profile.additional_phones)[number]['contact_tags']>
+      blocking: NonNullable<(typeof profile.additional_phones)[number]['blocking']>
+      updated_at?: string | null
+      updated_by_user_name?: string | null
     }> = []
     if (profile.additional_phones && profile.additional_phones.length > 0) {
       profile.additional_phones
         .filter((p) => isValidPhone(p.number))
         .forEach((p) =>
           phones.push({
+            contactId: p.contact_id,
             number: p.number,
             type: p.type,
             contactTypeId: p.contact_type_id,
@@ -700,25 +789,35 @@ export function ClientDetailPage() {
             spamAllowed: p.spam_allowed !== false,
             created_at: p.created_at,
             added_by_user_name: p.added_by_user_name,
+            contactTags: p.contact_tags ?? [],
+            blocking: p.blocking ?? {
+              blocks_calls: false,
+              blocks_sms: false,
+              blocks_spam: false,
+              reasons: [],
+            },
+            updated_at: p.updated_at,
+            updated_by_user_name: p.updated_by_user_name,
           })
         )
     } else if (isValidPhone(profile.phone_primary)) {
-      // Legacy profile: primary phone string only (no contact rows in strip yet).
-      // Treat as client mobile (type id 1) so call/spam UI has consistent defaults.
       phones.push({
+        contactId: 0,
         number: profile.phone_primary,
         type: 'mobile',
         contactTypeId: 1,
         contactTypeCode: null,
         defaultCallLine: 'white',
         spamAllowed: true,
+        contactTags: [],
+        blocking: { blocks_calls: false, blocks_sms: false, blocks_spam: false, reasons: [] },
       })
     }
 
     return {
       ...profile,
       // Header fields
-      fullName: profile.full_name,
+      fullName: formatClientFullName(profile),
       score: profile.priority_score ?? 0,
       priority: profile.priority_level
         ? profile.priority_level.charAt(0).toUpperCase() + profile.priority_level.slice(1)
@@ -783,8 +882,16 @@ export function ClientDetailPage() {
           comment: r.comment ?? '',
           created_at: r.created_at,
           added_by_user_name: r.added_by_user_name,
+          updated_at: r.updated_at,
+          updated_by_user_name: r.updated_by_user_name,
           defaultCallLine: r.default_call_line ?? 'white',
           spamAllowed: r.spam_allowed !== false,
+          blocking: r.blocking ?? {
+            blocks_calls: false,
+            blocks_sms: false,
+            blocks_spam: false,
+            reasons: [],
+          },
         })
         const fromApi = (profile.recommenders ?? []).map(mapRow)
         const includedIds = new Set(fromApi.map((r) => r.id))
@@ -802,8 +909,16 @@ export function ClientDetailPage() {
             comment: '',
             created_at: p.created_at,
             added_by_user_name: p.added_by_user_name,
+            updated_at: p.updated_at,
+            updated_by_user_name: p.updated_by_user_name,
             defaultCallLine: p.default_call_line ?? 'white',
             spamAllowed: p.spam_allowed !== false,
+            blocking: p.blocking ?? {
+              blocks_calls: false,
+              blocks_sms: false,
+              blocks_spam: false,
+              reasons: [],
+            },
           }))
         return [...stripOnly, ...fromApi]
       })(),
@@ -841,6 +956,9 @@ export function ClientDetailPage() {
         principalDebt: d.principal_debt != null ? Number(d.principal_debt) : null,
         remainingDebtAmount: Number(d.remaining_debt_amount ?? 0),
         totalToReturn: Number(d.total_to_return ?? 0),
+        // KAN-784 AC2: fully-returned loan that fell short of the principal
+        // guard — auto-close was blocked, so it needs operator-driven closure.
+        needsManualClosureReview: d.needs_manual_closure_review ?? false,
         // Closure date — surfaced for closed debts so the user can see it and,
         // with the close_client_debt permission, edit it after closure.
         creditClosedDate: d.credit_closed_date ?? null,
@@ -1045,11 +1163,6 @@ export function ClientDetailPage() {
     [client?.activities]
   )
 
-  const effectiveCommentTab =
-    activeCommentTab === 'comments' && !isActivitiesLoading && displayedActivities.length === 0
-      ? 'ta-chains'
-      : activeCommentTab
-
   const normalizePhoneForLookup = (value: string) => stripPhoneFormat(value)
 
   const phoneLookupValues = useMemo(() => {
@@ -1093,10 +1206,7 @@ export function ClientDetailPage() {
       >()
 
       linkedClients.forEach((linkedClient) => {
-        const fullName = [linkedClient.first_name, linkedClient.middle_name, linkedClient.last_name]
-          .filter(Boolean)
-          .join(' ')
-          .trim()
+        const fullName = formatClientFullName(linkedClient)
 
         dedupedByClientId.set(linkedClient.id, {
           id: linkedClient.id,
@@ -1110,6 +1220,63 @@ export function ClientDetailPage() {
 
     return map
   }, [linkedContactQueries, phoneLookupValues])
+
+  const phoneMetaByNormalized = useMemo(() => {
+    const map = new Map<string, PhoneMeta>()
+    if (!client) return map
+
+    const addPhone = (
+      raw: string | null | undefined,
+      meta: Omit<PhoneMeta, 'displayPhone'> & { displayPhone?: string }
+    ) => {
+      if (!raw) return
+      const normalized = normalizePhoneForLookup(raw)
+      if (!normalized) return
+      map.set(normalized, {
+        displayPhone: meta.displayPhone ?? raw,
+        contactTypeId: meta.contactTypeId ?? null,
+        spamAllowed: meta.spamAllowed ?? true,
+        blocking: meta.blocking,
+      })
+    }
+
+    client.phones?.forEach((phone) =>
+      addPhone(phone.number, {
+        contactTypeId: phone.contactTypeId,
+        spamAllowed: phone.spamAllowed,
+        blocking: phone.blocking,
+      })
+    )
+    client.recommenders?.forEach((recommender) => {
+      if (recommender.isPhone || looksLikeUkrainePhone(recommender.contactValue)) {
+        addPhone(recommender.contactValue, {
+          contactTypeId: null,
+          spamAllowed: true,
+          blocking: {
+            blocks_calls: false,
+            blocks_sms: false,
+            blocks_spam: false,
+            reasons: [],
+          },
+        })
+      }
+    })
+    const workPhone = client.work?.workPhone
+    if (workPhone && workPhone !== '-' && looksLikeUkrainePhone(workPhone)) {
+      addPhone(workPhone, {
+        contactTypeId: null,
+        spamAllowed: true,
+        blocking: {
+          blocks_calls: false,
+          blocks_sms: false,
+          blocks_spam: false,
+          reasons: [],
+        },
+      })
+    }
+
+    return map
+  }, [client])
 
   const renderLinkedContactBadges = (rawPhone: string, align: 'end' | 'start' = 'end') => {
     const phoneKey = normalizePhoneForLookup(rawPhone)
@@ -1138,6 +1305,8 @@ export function ClientDetailPage() {
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false)
   // isCallModalOpen, currentCallId managed by useCallOrigination hook
   const [isCallRecordingModalOpen, setIsCallRecordingModalOpen] = useState(false)
+  // Call QA (Ф1) — modal handle so transcript timecodes can seek the player.
+  const callRecordingModalRef = useRef<CallRecordingModalHandle>(null)
   const [isTagModalOpen, setIsTagModalOpen] = useState(false)
   // const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
@@ -1175,6 +1344,14 @@ export function ClientDetailPage() {
   const [isSendMessageModalOpen, setIsSendMessageModalOpen] = useState(false)
   const [selectedPhoneForMessage, setSelectedPhoneForMessage] = useState<string>('')
   const [selectedPhoneForSMS, setSelectedPhoneForSMS] = useState<string>('')
+  const [contactTagModal, setContactTagModal] = useState<{
+    contactId: number
+    phone: string
+  } | null>(null)
+  const [contactTagHistoryModal, setContactTagHistoryModal] = useState<{
+    contactId: number
+    phone: string
+  } | null>(null)
   const [callModalPreferences, setCallModalPreferences] = useState<{
     phone: string
     initialCallType: CallType
@@ -1189,9 +1366,9 @@ export function ClientDetailPage() {
     contact_type_id: 7,
     comment: '',
   })
-  const [activeClientCardTab, setActiveClientCardTab] = useState<'personal' | 'passport' | 'work'>(
-    'personal'
-  )
+  const [activeClientCardTab, setActiveClientCardTab] = useState<
+    'related' | 'personal' | 'passport' | 'work'
+  >('related')
   // KAN-610: activeRightCardTab moved up (near activeCommentTab) so the data
   // hooks can gate on it for lazy loading.
   const [isUploadDocModalOpen, setIsUploadDocModalOpen] = useState(false)
@@ -1567,7 +1744,23 @@ export function ClientDetailPage() {
       key: 'totalToReturn',
       header: t('pages.clients.detail.tableHeaders.totalToReturn'),
       align: 'right',
-      render: (loan) => formatMoneyUAHTwoDecimals(loan.totalToReturn),
+      render: (loan) => (
+        <div className="flex flex-col items-end gap-1">
+          <span>{formatMoneyUAHTwoDecimals(loan.totalToReturn)}</span>
+          {loan.needsManualClosureReview && (
+            <span
+              className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800"
+              title={t(
+                'pages.clients.detail.needsManualClosureReviewTooltip',
+                'Fully repaid, but payments to us fell short of the principal. Auto-close is blocked — review and close manually.'
+              )}
+            >
+              <Icons.Warning size={12} strokeWidth={2} />
+              {t('pages.clients.detail.needsManualClosureReview', 'Needs manual closure review')}
+            </span>
+          )}
+        </div>
+      ),
     },
     {
       key: 'actions',
@@ -1631,6 +1824,7 @@ export function ClientDetailPage() {
                     setCloseLoanConfirm(loan.id)
                     setCloseLoanClosureDate(getTodayAtMidnight())
                     setCloseLoanDateError(null)
+                    setCloseLoanReason('')
                   }}
                   disabled={isClosingDebt}
                   className="p-1 text-green-600 hover:text-green-800 disabled:opacity-50"
@@ -2335,9 +2529,21 @@ export function ClientDetailPage() {
               >
                 <Icons.ArrowLeft02 size={24} className="text-secondary-800" strokeWidth={1.5} />
               </button>
-              <h1 className="text-dark-500 truncate text-xl leading-[150%] font-light md:text-2xl">
-                {client.fullName}
-              </h1>
+              <div className="flex min-w-0 items-center gap-2">
+                <h1 className="text-dark-500 truncate text-xl leading-[150%] font-light md:text-2xl">
+                  {client.fullName}
+                </h1>
+                <button
+                  type="button"
+                  onClick={handleCopyName}
+                  disabled={!client.fullName}
+                  aria-label={t('pages.clients.detail.copyName', 'Copy name')}
+                  title={t('pages.clients.detail.copyName', 'Copy name')}
+                  className="text-dark-500 hover:text-secondary-800 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded transition-colors disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <Icons.Copy size={18} strokeWidth={1.5} />
+                </button>
+              </div>
             </div>
             <div className="flex flex-row items-center gap-2">
               <span className="text-dark-500 flex items-center rounded-[16px] bg-white/10 px-3 py-0 text-sm">
@@ -2584,102 +2790,209 @@ export function ClientDetailPage() {
                 </div>
                 <div className="flex w-full flex-1 flex-col items-start justify-center gap-2">
                   {client.phones.map((phone, index) => (
-                    <div key={index} className="flex items-center gap-2 self-stretch md:gap-3">
-                      <div className="flex flex-1 items-center justify-end gap-1.5">
-                        <div className="flex min-w-0 flex-col items-end gap-1">
-                          <span className="text-dark-500 truncate text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                            {phone.number}
-                          </span>
-                          {renderLinkedContactBadges(phone.number, 'end')}
+                    <div key={index} className="flex flex-col gap-1 self-stretch">
+                      <div className="flex items-center gap-2 md:gap-3">
+                        <div className="flex flex-1 items-center justify-end gap-1.5">
+                          <div className="flex min-w-0 flex-col items-end gap-1">
+                            <span
+                              className={cn(
+                                'text-dark-500 truncate text-right text-xs leading-[140%] font-medium tracking-[-0.24px]',
+                                phone.blocking.blocks_calls && 'line-through opacity-70'
+                              )}
+                            >
+                              {phone.number}
+                            </span>
+                            {phone.contactTags.length > 0 && (
+                              <div className="flex max-w-full flex-wrap justify-end gap-1">
+                                {phone.contactTags.map((tag) => (
+                                  <button
+                                    key={tag.value_id}
+                                    type="button"
+                                    className="rounded-full px-1.5 py-0.5 text-[10px] text-white"
+                                    style={{ backgroundColor: tag.color || '#64748b' }}
+                                    title={tag.category_name}
+                                    onClick={() =>
+                                      phone.contactId > 0 &&
+                                      setContactTagModal({
+                                        contactId: phone.contactId,
+                                        phone: phone.number,
+                                      })
+                                    }
+                                  >
+                                    {tag.name}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                            {renderLinkedContactBadges(phone.number, 'end')}
+                          </div>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button
+                                type="button"
+                                className={cn(
+                                  'flex h-[20px] w-[20px] shrink-0 items-center justify-center text-gray-400 hover:text-gray-600',
+                                  phone.contactId > 0 && 'cursor-pointer'
+                                )}
+                                onClick={() => {
+                                  if (phone.contactId > 0) {
+                                    setContactTagHistoryModal({
+                                      contactId: phone.contactId,
+                                      phone: phone.number,
+                                    })
+                                  }
+                                }}
+                              >
+                                <Icons.Info size={14} strokeWidth={1.5} />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent side="top" className="text-xs">
+                              {phone.type && (
+                                <div>
+                                  {t('pages.clients.detail.phoneType')}:{' '}
+                                  {phone.contactTypeCode
+                                    ? t(`contactTypes.${phone.contactTypeCode}`, {
+                                        defaultValue: phone.type,
+                                      })
+                                    : phone.type === 'mobile'
+                                      ? t('pages.clients.editModal.phoneMobile')
+                                      : phone.type === 'home'
+                                        ? t('pages.clients.editModal.phoneHome')
+                                        : phone.type === 'register'
+                                          ? t('pages.clients.editModal.phoneRegister')
+                                          : phone.type}
+                                </div>
+                              )}
+                              {phone.blocking.reasons.map((reason) => (
+                                <div key={reason}>{reason}</div>
+                              ))}
+                              {phone.added_by_user_name && (
+                                <div>
+                                  {t('pages.clients.detail.addedBy')}: {phone.added_by_user_name}
+                                </div>
+                              )}
+                              {phone.created_at && (
+                                <div>
+                                  {t('pages.clients.detail.addedDate')}:{' '}
+                                  {formatDate(phone.created_at ?? undefined)}
+                                </div>
+                              )}
+                              {phone.updated_by_user_name && (
+                                <>
+                                  <div>
+                                    {t('pages.clients.detail.updatedBy')}:{' '}
+                                    {phone.updated_by_user_name}
+                                  </div>
+                                  {phone.updated_at && (
+                                    <div>
+                                      {t('pages.clients.detail.updatedDate')}:{' '}
+                                      {formatDate(phone.updated_at ?? undefined)}
+                                    </div>
+                                  )}
+                                </>
+                              )}
+                              {!phone.type &&
+                                !phone.added_by_user_name &&
+                                !phone.created_at &&
+                                !phone.updated_by_user_name &&
+                                phone.blocking.reasons.length === 0 && <div>-</div>}
+                            </TooltipContent>
+                          </Tooltip>
                         </div>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
+                        <div className="flex shrink-0 items-center gap-1 md:gap-2">
+                          <PermissionGuard permission={PERMISSIONS.COMMUNICATION.MAKE_CALLS}>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <button
+                                  disabled={
+                                    !user?.is_agent ||
+                                    !user?.asterisk_extension ||
+                                    phone.blocking.blocks_calls
+                                  }
+                                  onClick={() => {
+                                    openOutboundCall(
+                                      phone.number,
+                                      phone.contactTypeId,
+                                      phone.spamAllowed && !phone.blocking.blocks_spam
+                                    )
+                                  }}
+                                  className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-40 md:h-[20px] md:w-[20px]"
+                                >
+                                  {phone.blocking.blocks_calls ? (
+                                    <Icons.Lock size={16} className="flex-shrink-0" />
+                                  ) : (
+                                    <Icons.Headset size={16} className="flex-shrink-0" />
+                                  )}
+                                </button>
+                              </TooltipTrigger>
+                              {phone.blocking.blocks_calls && (
+                                <TooltipContent>
+                                  {phone.blocking.reasons.join('; ') ||
+                                    t('pages.contactTags.callsBlocked', 'Calls blocked')}
+                                </TooltipContent>
+                              )}
+                            </Tooltip>
+                          </PermissionGuard>
+                          <PermissionGuard permission={PERMISSIONS.COMMUNICATION.SEND_SMS}>
+                            <button
+                              disabled={phone.blocking.blocks_sms}
+                              onClick={() => {
+                                setSelectedPhoneForSMS(phone.number)
+                                setIsSendSMSModalOpen(true)
+                              }}
+                              className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-40 md:h-[20px] md:w-[20px]"
+                            >
+                              <Icons.ChatFeedback01 size={16} className="flex-shrink-0" />
+                            </button>
+                          </PermissionGuard>
+                          <PermissionGuard permissions={ALL_MESSAGING_SEND_PERMISSIONS} mode="any">
+                            <button
+                              disabled={phone.blocking.blocks_sms}
+                              onClick={() => {
+                                setSelectedPhoneForMessage(phone.number)
+                                setIsSendMessageModalOpen(true)
+                              }}
+                              className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-40 md:h-[20px] md:w-[20px]"
+                              title={
+                                phone.blocking.blocks_sms
+                                  ? phone.blocking.reasons
+                                      .filter((r) => r.toLowerCase().includes('sms'))
+                                      .join('; ') ||
+                                    t('pages.contactTags.smsBlocked', 'SMS blocked')
+                                  : t('pages.clients.detail.sendMessage', 'Send message')
+                              }
+                            >
+                              <Icons.Message01 size={16} className="flex-shrink-0" />
+                            </button>
+                          </PermissionGuard>
+                          <PermissionGuard permission={PERMISSIONS.CLIENTS.CREATE_INTERACTIONS}>
+                            <button
+                              onClick={() => {
+                                setChainExecutorContactSource('client')
+                                setChainExecutorPrefilledPhone(phone.number)
+                                setIsChainExecutorOpen(true)
+                              }}
+                              className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 md:h-[20px] md:w-[20px]"
+                            >
+                              <Icons.PencilEdit size={16} className="flex-shrink-0" />
+                            </button>
+                          </PermissionGuard>
+                          {phone.contactId > 0 && (
                             <button
                               type="button"
-                              className="flex h-[20px] w-[20px] shrink-0 items-center justify-center text-gray-400 hover:text-gray-600"
+                              onClick={() =>
+                                setContactTagModal({
+                                  contactId: phone.contactId,
+                                  phone: phone.number,
+                                })
+                              }
+                              className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 md:h-[20px] md:w-[20px]"
+                              title={t('pages.contactTags.tags', 'Tags')}
                             >
-                              <Icons.Info size={14} strokeWidth={1.5} />
+                              <Icons.Tag01 size={16} className="flex-shrink-0" />
                             </button>
-                          </TooltipTrigger>
-                          <TooltipContent side="top" className="text-xs">
-                            {phone.type && (
-                              <div>
-                                {t('pages.clients.detail.phoneType')}:{' '}
-                                {phone.contactTypeCode
-                                  ? t(`contactTypes.${phone.contactTypeCode}`, {
-                                      defaultValue: phone.type,
-                                    })
-                                  : phone.type === 'mobile'
-                                    ? t('pages.clients.editModal.phoneMobile')
-                                    : phone.type === 'home'
-                                      ? t('pages.clients.editModal.phoneHome')
-                                      : phone.type === 'register'
-                                        ? t('pages.clients.editModal.phoneRegister')
-                                        : phone.type}
-                              </div>
-                            )}
-                            {phone.added_by_user_name && (
-                              <div>
-                                {t('pages.clients.detail.addedBy')}: {phone.added_by_user_name}
-                              </div>
-                            )}
-                            {phone.created_at && (
-                              <div>
-                                {t('pages.clients.detail.addedDate')}:{' '}
-                                {formatDate(phone.created_at ?? undefined)}
-                              </div>
-                            )}
-                            {!phone.added_by_user_name && !phone.created_at && <div>-</div>}
-                          </TooltipContent>
-                        </Tooltip>
-                      </div>
-                      <div className="flex shrink-0 items-center gap-1 md:gap-2">
-                        <PermissionGuard permission={PERMISSIONS.COMMUNICATION.MAKE_CALLS}>
-                          <button
-                            disabled={!user?.is_agent || !user?.asterisk_extension}
-                            onClick={() => {
-                              openOutboundCall(phone.number, phone.contactTypeId)
-                            }}
-                            className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-40 md:h-[20px] md:w-[20px]"
-                          >
-                            <Icons.Headset size={16} className="flex-shrink-0" />
-                          </button>
-                        </PermissionGuard>
-                        <PermissionGuard permission={PERMISSIONS.COMMUNICATION.SEND_SMS}>
-                          <button
-                            onClick={() => {
-                              setSelectedPhoneForSMS(phone.number)
-                              setIsSendSMSModalOpen(true)
-                            }}
-                            className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 md:h-[20px] md:w-[20px]"
-                          >
-                            <Icons.ChatFeedback01 size={16} className="flex-shrink-0" />
-                          </button>
-                        </PermissionGuard>
-                        <PermissionGuard permissions={ALL_MESSAGING_SEND_PERMISSIONS} mode="any">
-                          <button
-                            onClick={() => {
-                              setSelectedPhoneForMessage(phone.number)
-                              setIsSendMessageModalOpen(true)
-                            }}
-                            className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 md:h-[20px] md:w-[20px]"
-                            title={t('pages.clients.detail.sendMessage', 'Send message')}
-                          >
-                            <Icons.Message01 size={16} className="flex-shrink-0" />
-                          </button>
-                        </PermissionGuard>
-                        <PermissionGuard permission={PERMISSIONS.CLIENTS.CREATE_INTERACTIONS}>
-                          <button
-                            onClick={() => {
-                              setChainExecutorContactSource('client')
-                              setChainExecutorPrefilledPhone(phone.number)
-                              setIsChainExecutorOpen(true)
-                            }}
-                            className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 md:h-[20px] md:w-[20px]"
-                          >
-                            <Icons.PencilEdit size={16} className="flex-shrink-0" />
-                          </button>
-                        </PermissionGuard>
+                          )}
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -2726,6 +3039,26 @@ export function ClientDetailPage() {
                     msOverflowStyle: 'none', // IE/Edge
                   }}
                 >
+                  <button
+                    type="button"
+                    data-tab="related"
+                    onClick={() => setActiveClientCardTab('related')}
+                    title={t('pages.clients.detail.tabs.relatedTags', 'Related tags')}
+                    className={cn(
+                      'md:hover:bg-primary-200/10 hover:bg-secondary-800/20 flex shrink-0 cursor-pointer flex-row items-center justify-center self-stretch rounded-md p-2 md:justify-start md:rounded-none md:border-b-0 md:border-l-2 md:p-2.5',
+                      activeClientCardTab === 'related'
+                        ? 'md:border-primary-300 md:bg-primary-200/10 bg-secondary-800/10'
+                        : 'md:border-transparent'
+                    )}
+                  >
+                    <Icons.Link01
+                      size={24}
+                      className={cn(
+                        'shrink-0',
+                        activeClientCardTab === 'related' ? 'text-secondary-800' : 'text-gray-700'
+                      )}
+                    />
+                  </button>
                   <button
                     type="button"
                     data-tab="personal"
@@ -2791,6 +3124,30 @@ export function ClientDetailPage() {
 
               {/* Right side content for selected client card tab */}
               <div className="flex w-full min-w-0 flex-col items-center gap-6 self-stretch overflow-hidden px-4 py-4 md:px-0">
+                {activeClientCardTab === 'related' && (
+                  <RelatedTagsTab
+                    clientId={clientId}
+                    linkedContactsByPhone={linkedContactsByPhone}
+                    phoneMetaByNormalized={phoneMetaByNormalized}
+                    includeHiddenTags={showHiddenTags}
+                    onCall={(phone, contactTypeId, spamAllowed) =>
+                      openOutboundCall(phone, contactTypeId, spamAllowed)
+                    }
+                    onSms={(phone) => {
+                      setSelectedPhoneForSMS(phone)
+                      setIsSendSMSModalOpen(true)
+                    }}
+                    onMessage={(phone) => {
+                      setSelectedPhoneForMessage(phone)
+                      setIsSendMessageModalOpen(true)
+                    }}
+                    onInteraction={(phone) => {
+                      setChainExecutorContactSource('client')
+                      setChainExecutorPrefilledPhone(phone)
+                      setIsChainExecutorOpen(true)
+                    }}
+                  />
+                )}
                 {activeClientCardTab === 'personal' && (
                   <>
                     <div className="flex items-center self-stretch p-0">
@@ -3472,6 +3829,11 @@ export function ClientDetailPage() {
                             connectionDate: null,
                             totalAmount: '',
                             numPayments: 1,
+                            frequency: '',
+                            intervalDays: '',
+                            dayOfMonth: '',
+                            clampedRows: [],
+                            penaltyAmount: '',
                             payments: [{ date: null, amount: '' }],
                           })
                           setConnectRrError(null)
@@ -3493,8 +3855,10 @@ export function ClientDetailPage() {
                         </Button>
                       )}
                       {/* Bulk "Send all loans to UBKI" — gated by the same
-                          submit_to_ubki permission as the per-loan send button. */}
-                      {canSubmitToUbki && (
+                          submit_to_ubki permission as the per-loan send button.
+                          Disabled for the release via ENABLE_BULK_UBKI_SUBMISSION
+                          (see the flag definition above). */}
+                      {ENABLE_BULK_UBKI_SUBMISSION && canSubmitToUbki && (
                         <Button
                           variant="secondary"
                           leftIcon={<Icons.MailSend01 size={20} />}
@@ -3656,7 +4020,18 @@ export function ClientDetailPage() {
                                     <TooltipTrigger asChild>
                                       <button
                                         type="button"
-                                        className="flex h-[20px] w-[20px] shrink-0 items-center justify-center text-gray-400 hover:text-gray-600"
+                                        className={cn(
+                                          'flex h-[20px] w-[20px] shrink-0 items-center justify-center text-gray-400 hover:text-gray-600',
+                                          contact.id > 0 && 'cursor-pointer'
+                                        )}
+                                        onClick={() => {
+                                          if (contact.id > 0) {
+                                            setContactTagHistoryModal({
+                                              contactId: contact.id,
+                                              phone: contact.contactValue,
+                                            })
+                                          }
+                                        }}
                                       >
                                         <Icons.Info size={14} strokeWidth={1.5} />
                                       </button>
@@ -3674,6 +4049,20 @@ export function ClientDetailPage() {
                                           {formatDate(contact.created_at ?? undefined)}
                                         </div>
                                       )}
+                                      {contact.updated_by_user_name && (
+                                        <>
+                                          <div>
+                                            {t('pages.clients.detail.updatedBy')}:{' '}
+                                            {contact.updated_by_user_name}
+                                          </div>
+                                          {contact.updated_at && (
+                                            <div>
+                                              {t('pages.clients.detail.updatedDate')}:{' '}
+                                              {formatDate(contact.updated_at ?? undefined)}
+                                            </div>
+                                          )}
+                                        </>
+                                      )}
                                       {!contact.added_by_user_name && !contact.created_at && (
                                         <div>-</div>
                                       )}
@@ -3685,77 +4074,109 @@ export function ClientDetailPage() {
                               </div>
                             </td>
                             <td className="py-2 pr-3">
-                              {(contact.isPhone || looksLikePhone(contact.contactValue)) &&
-                                contact.contactValue && (
+                              {contact.contactValue &&
+                                contact.id > 0 &&
+                                (contact.isPhone || looksLikePhone(contact.contactValue)) && (
                                   <div className="flex items-center gap-1 md:gap-2">
-                                    <PermissionGuard
-                                      permission={PERMISSIONS.COMMUNICATION.MAKE_CALLS}
-                                    >
-                                      <button
-                                        disabled={!user?.is_agent || !user?.asterisk_extension}
-                                        onClick={() => {
-                                          openOutboundCall(
-                                            contact.contactValue,
-                                            contact.contactTypeId
-                                          )
-                                        }}
-                                        className="text-primary-500 flex h-[20px] w-[20px] cursor-pointer items-center justify-center hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-40"
-                                      >
-                                        <Icons.Headset size={16} className="flex-shrink-0" />
-                                      </button>
-                                    </PermissionGuard>
-                                    <PermissionGuard
-                                      permission={PERMISSIONS.COMMUNICATION.SEND_SMS}
-                                    >
-                                      <button
-                                        onClick={() => {
-                                          setSelectedPhoneForSMS(contact.contactValue)
-                                          setIsSendSMSModalOpen(true)
-                                        }}
-                                        className="text-primary-500 flex h-[20px] w-[20px] cursor-pointer items-center justify-center hover:opacity-80"
-                                      >
-                                        <Icons.ChatFeedback01 size={16} className="flex-shrink-0" />
-                                      </button>
-                                    </PermissionGuard>
-                                    <PermissionGuard
-                                      permissions={ALL_MESSAGING_SEND_PERMISSIONS}
-                                      mode="any"
-                                    >
-                                      <button
-                                        onClick={() => {
-                                          setSelectedPhoneForMessage(contact.contactValue)
-                                          setIsSendMessageModalOpen(true)
-                                        }}
-                                        className="text-primary-500 flex h-[20px] w-[20px] cursor-pointer items-center justify-center hover:opacity-80"
-                                        title={t(
-                                          'pages.clients.detail.sendMessage',
-                                          'Send message'
+                                    {(contact.isPhone || looksLikePhone(contact.contactValue)) && (
+                                      <>
+                                        <PermissionGuard
+                                          permission={PERMISSIONS.COMMUNICATION.MAKE_CALLS}
+                                        >
+                                          <button
+                                            disabled={!user?.is_agent || !user?.asterisk_extension}
+                                            onClick={() => {
+                                              openOutboundCall(
+                                                contact.contactValue,
+                                                contact.contactTypeId
+                                              )
+                                            }}
+                                            className="text-primary-500 flex h-[20px] w-[20px] cursor-pointer items-center justify-center hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-40"
+                                          >
+                                            <Icons.Headset size={16} className="flex-shrink-0" />
+                                          </button>
+                                        </PermissionGuard>
+                                        <PermissionGuard
+                                          permission={PERMISSIONS.COMMUNICATION.SEND_SMS}
+                                        >
+                                          <button
+                                            disabled={contact.blocking?.blocks_sms}
+                                            onClick={() => {
+                                              setSelectedPhoneForSMS(contact.contactValue)
+                                              setIsSendSMSModalOpen(true)
+                                            }}
+                                            className="text-primary-500 flex h-[20px] w-[20px] cursor-pointer items-center justify-center hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-40"
+                                          >
+                                            <Icons.ChatFeedback01
+                                              size={16}
+                                              className="flex-shrink-0"
+                                            />
+                                          </button>
+                                        </PermissionGuard>
+                                        <PermissionGuard
+                                          permissions={ALL_MESSAGING_SEND_PERMISSIONS}
+                                          mode="any"
+                                        >
+                                          <button
+                                            disabled={contact.blocking?.blocks_sms}
+                                            onClick={() => {
+                                              setSelectedPhoneForMessage(contact.contactValue)
+                                              setIsSendMessageModalOpen(true)
+                                            }}
+                                            className="text-primary-500 flex h-[20px] w-[20px] cursor-pointer items-center justify-center hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-40"
+                                            title={
+                                              contact.blocking?.blocks_sms
+                                                ? contact.blocking.reasons
+                                                    .filter((r) => r.toLowerCase().includes('sms'))
+                                                    .join('; ') ||
+                                                  t('pages.contactTags.smsBlocked', 'SMS blocked')
+                                                : t(
+                                                    'pages.clients.detail.sendMessage',
+                                                    'Send message'
+                                                  )
+                                            }
+                                          >
+                                            <Icons.Message01 size={16} className="flex-shrink-0" />
+                                          </button>
+                                        </PermissionGuard>
+                                        <PermissionGuard
+                                          permission={PERMISSIONS.CLIENTS.CREATE_INTERACTIONS}
+                                        >
+                                          <button
+                                            onClick={() => {
+                                              // Classify by the phone's actual contact_type_id
+                                              // rather than by which tab the row lives in: a
+                                              // "Mobile phone from registers" (type 29) sits
+                                              // in the Recommenders tab but the backend treats
+                                              // it as a client phone.
+                                              setChainExecutorContactSource(
+                                                classifyContactSource(contact.contactTypeId)
+                                              )
+                                              setChainExecutorPrefilledPhone(contact.contactValue)
+                                              setIsChainExecutorOpen(true)
+                                            }}
+                                            className="text-primary-500 flex h-[20px] w-[20px] cursor-pointer items-center justify-center hover:opacity-80"
+                                          >
+                                            <Icons.PencilEdit size={16} className="flex-shrink-0" />
+                                          </button>
+                                        </PermissionGuard>
+                                        {contact.isPhone && (
+                                          <button
+                                            type="button"
+                                            onClick={() =>
+                                              setContactTagModal({
+                                                contactId: contact.id,
+                                                phone: contact.contactValue,
+                                              })
+                                            }
+                                            className="text-primary-500 flex h-[20px] w-[20px] cursor-pointer items-center justify-center hover:opacity-80"
+                                            title={t('pages.contactTags.tags', 'Tags')}
+                                          >
+                                            <Icons.Tag01 size={16} className="flex-shrink-0" />
+                                          </button>
                                         )}
-                                      >
-                                        <Icons.Message01 size={16} className="flex-shrink-0" />
-                                      </button>
-                                    </PermissionGuard>
-                                    <PermissionGuard
-                                      permission={PERMISSIONS.CLIENTS.CREATE_INTERACTIONS}
-                                    >
-                                      <button
-                                        onClick={() => {
-                                          // Classify by the phone's actual contact_type_id
-                                          // rather than by which tab the row lives in: a
-                                          // "Mobile phone from registers" (type 29) sits
-                                          // in the Recommenders tab but the backend treats
-                                          // it as a client phone.
-                                          setChainExecutorContactSource(
-                                            classifyContactSource(contact.contactTypeId)
-                                          )
-                                          setChainExecutorPrefilledPhone(contact.contactValue)
-                                          setIsChainExecutorOpen(true)
-                                        }}
-                                        className="text-primary-500 flex h-[20px] w-[20px] cursor-pointer items-center justify-center hover:opacity-80"
-                                      >
-                                        <Icons.PencilEdit size={16} className="flex-shrink-0" />
-                                      </button>
-                                    </PermissionGuard>
+                                      </>
+                                    )}
                                     {canEditClient && (
                                       <>
                                         <button
@@ -4836,31 +5257,29 @@ export function ClientDetailPage() {
                 onClick={() => setActiveCommentTab('ta-chains')}
                 className={cn(
                   'text-dark-500 flex items-center justify-center gap-2 rounded-md px-4 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px]',
-                  effectiveCommentTab === 'ta-chains'
+                  activeCommentTab === 'ta-chains'
                     ? 'bg-secondary-800 text-white'
                     : 'hover:bg-primary-200/10 hover:text-secondary-800'
                 )}
               >
                 {t('pages.clients.detail.tabs.taChains')}
               </button>
-              {!isActivitiesLoading && displayedActivities.length > 0 && (
-                <button
-                  onClick={() => setActiveCommentTab('comments')}
-                  className={cn(
-                    'text-dark-500 flex items-center justify-center gap-2 rounded-md px-4 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px]',
-                    effectiveCommentTab === 'comments'
-                      ? 'bg-secondary-800 text-white'
-                      : 'hover:bg-primary-200/10 hover:text-secondary-800'
-                  )}
-                >
-                  {t('pages.clients.detail.comments')}
-                </button>
-              )}
+              <button
+                onClick={() => setActiveCommentTab('comments')}
+                className={cn(
+                  'text-dark-500 flex items-center justify-center gap-2 rounded-md px-4 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px]',
+                  activeCommentTab === 'comments'
+                    ? 'bg-secondary-800 text-white'
+                    : 'hover:bg-primary-200/10 hover:text-secondary-800'
+                )}
+              >
+                {t('pages.clients.detail.comments')}
+              </button>
               <button
                 onClick={() => setActiveCommentTab('primary')}
                 className={cn(
                   'text-dark-500 flex items-center justify-center gap-2 rounded-md px-4 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px]',
-                  effectiveCommentTab === 'primary'
+                  activeCommentTab === 'primary'
                     ? 'bg-secondary-800 text-white'
                     : 'hover:bg-primary-200/10 hover:text-secondary-800'
                 )}
@@ -4871,7 +5290,7 @@ export function ClientDetailPage() {
                 onClick={() => setActiveCommentTab('searcher')}
                 className={cn(
                   'text-dark-500 flex items-center justify-center gap-2 rounded-md px-4 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px]',
-                  effectiveCommentTab === 'searcher'
+                  activeCommentTab === 'searcher'
                     ? 'bg-secondary-800 text-white'
                     : 'hover:bg-primary-200/10 hover:text-secondary-800'
                 )}
@@ -4882,7 +5301,7 @@ export function ClientDetailPage() {
                 onClick={() => setActiveCommentTab('dial-history')}
                 className={cn(
                   'text-dark-500 flex items-center justify-center gap-2 rounded-md px-4 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px]',
-                  effectiveCommentTab === 'dial-history'
+                  activeCommentTab === 'dial-history'
                     ? 'bg-secondary-800 text-white'
                     : 'hover:bg-primary-200/10 hover:text-secondary-800'
                 )}
@@ -4902,7 +5321,7 @@ export function ClientDetailPage() {
           </div>
 
           {/* Content based on active tab */}
-          {effectiveCommentTab === 'ta-chains' && (
+          {activeCommentTab === 'ta-chains' && (
             <div className="flex w-full flex-col gap-4">
               <TAInteractionHistory clientId={clientId} debts={loans} />
             </div>
@@ -4963,7 +5382,7 @@ export function ClientDetailPage() {
             </ModalContent>
           </Modal>
 
-          {effectiveCommentTab === 'comments' &&
+          {activeCommentTab === 'comments' &&
             (isActivitiesLoading ? (
               <TableSkeleton columns={12} rows={3} className="w-full" />
             ) : displayedActivities.length === 0 ? (
@@ -5005,9 +5424,9 @@ export function ClientDetailPage() {
               </div>
             ))}
 
-          {effectiveCommentTab === 'primary' && <SaleNotesSection clientId={clientId} />}
+          {activeCommentTab === 'primary' && <SaleNotesSection clientId={clientId} />}
 
-          {effectiveCommentTab === 'searcher' &&
+          {activeCommentTab === 'searcher' &&
             (isActivitiesLoading ? (
               <TableSkeleton columns={6} rows={3} className="w-full" />
             ) : displayedSearcherActivities.length === 0 ? (
@@ -5030,7 +5449,7 @@ export function ClientDetailPage() {
               </div>
             ))}
 
-          {effectiveCommentTab === 'dial-history' &&
+          {activeCommentTab === 'dial-history' &&
             (isDialHistoryLoading ? (
               <TableSkeleton columns={2} rows={3} className="w-full" />
             ) : dialHistory.length === 0 ? (
@@ -5145,9 +5564,30 @@ export function ClientDetailPage() {
           onSpamCall={(phone) => addSpamCall(phone)}
         />
 
+        {contactTagModal && (
+          <ContactTagSelectorModal
+            open
+            onClose={() => setContactTagModal(null)}
+            clientId={client.id}
+            contactId={contactTagModal.contactId}
+            phoneNumber={contactTagModal.phone}
+          />
+        )}
+
+        {contactTagHistoryModal && (
+          <ContactTagHistoryModal
+            open
+            onClose={() => setContactTagHistoryModal(null)}
+            clientId={client.id}
+            contactId={contactTagHistoryModal.contactId}
+            phoneNumber={contactTagHistoryModal.phone}
+          />
+        )}
+
         {/* Call Recording Modal */}
         {selectedCallData && (
           <CallRecordingModal
+            ref={callRecordingModalRef}
             open={isCallRecordingModalOpen}
             onClose={() => {
               setOpenCallModal(null)
@@ -5155,6 +5595,15 @@ export function ClientDetailPage() {
               setSelectedCallData(null)
             }}
             callData={selectedCallData}
+            transcriptPanel={
+              selectedCallData.call_id ? (
+                <CallTranscriptPanel
+                  callId={selectedCallData.call_id}
+                  active={isCallRecordingModalOpen}
+                  onSeek={(ms) => callRecordingModalRef.current?.seekTo(ms)}
+                />
+              ) : undefined
+            }
           />
         )}
 
@@ -5387,7 +5836,19 @@ export function ClientDetailPage() {
                           {
                             key: 'date',
                             header: t('pages.clients.detail.rrPaymentDate'),
-                            render: (p) => formatDate(p.date ?? undefined),
+                            render: (p) => (
+                              <span className="flex items-center gap-1.5">
+                                {formatDate(p.date ?? undefined)}
+                                {p.is_penalty && (
+                                  <span className="inline-block rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-medium text-red-700">
+                                    {t(
+                                      'pages.clients.detail.rrPenaltyTag',
+                                      'penalty (overdue trigger)'
+                                    )}
+                                  </span>
+                                )}
+                              </span>
+                            ),
                           },
                           {
                             key: 'amount',
@@ -5679,6 +6140,22 @@ export function ClientDetailPage() {
                 <span className="text-sm text-red-600">{closeLoanDateError}</span>
               )}
             </div>
+            <div className="mt-4 flex flex-col items-start gap-2 self-stretch">
+              <Label className="text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                {t('pages.clients.detail.closureReason', 'Reason (optional)')}
+              </Label>
+              <textarea
+                value={closeLoanReason}
+                onChange={(e) => setCloseLoanReason(e.target.value)}
+                maxLength={1000}
+                rows={3}
+                placeholder={t(
+                  'pages.clients.detail.closureReasonPlaceholder',
+                  'Add a note explaining why this loan is being closed'
+                )}
+                className="focus:border-primary-400 w-full resize-y rounded-md border border-gray-200 px-3 py-2 text-sm outline-none"
+              />
+            </div>
           </ModalContent>
           <ModalFooter>
             <Button
@@ -5719,6 +6196,7 @@ export function ClientDetailPage() {
                     clientId,
                     debtId: closeLoanConfirm,
                     closureDate: formatDateAsISO(closeLoanClosureDate),
+                    reason: closeLoanReason.trim() || undefined,
                   },
                   {
                     onSuccess: () => {
@@ -6230,29 +6708,168 @@ export function ClientDetailPage() {
                   step={0.01}
                   value={connectRrForm.totalAmount}
                   onChange={(e) =>
-                    setConnectRrForm((prev) => ({ ...prev, totalAmount: e.target.value }))
+                    setConnectRrForm((prev) =>
+                      withGeneratedSchedule({ ...prev, totalAmount: e.target.value })
+                    )
                   }
                   placeholder="0.00"
                 />
               </div>
               {/* Number of Payments */}
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
-                <Input
-                  label={`${t('pages.clients.detail.rrNumPayments')} *`}
-                  type="number"
-                  min={1}
-                  max={12}
-                  value={connectRrForm.numPayments}
-                  onChange={(e) => {
-                    const num = Math.max(1, Math.min(12, Number(e.target.value) || 1))
-                    setConnectRrForm((prev) => {
-                      const payments = [...prev.payments]
-                      while (payments.length < num) payments.push({ date: null, amount: '' })
-                      return { ...prev, numPayments: num, payments: payments.slice(0, num) }
-                    })
-                  }}
-                />
+                <div>
+                  <Input
+                    label={`${t('pages.clients.detail.rrNumPayments')} *`}
+                    type="number"
+                    min={1}
+                    max={MAX_RR_PAYMENTS}
+                    value={connectRrForm.numPayments}
+                    onChange={(e) => {
+                      const num = Math.max(
+                        1,
+                        Math.min(MAX_RR_PAYMENTS, Number(e.target.value) || 1)
+                      )
+                      setConnectRrForm((prev) => {
+                        const payments = [...prev.payments]
+                        while (payments.length < num) payments.push({ date: null, amount: '' })
+                        const next = { ...prev, numPayments: num, payments: payments.slice(0, num) }
+                        // Regenerate when a frequency is active; otherwise keep the
+                        // manual rows just resized above.
+                        return withGeneratedSchedule(next)
+                      })
+                    }}
+                  />
+                  <p className="text-dark-300 mt-1 text-xs">
+                    {t('pages.clients.detail.rrNumPaymentsHint', {
+                      max: MAX_RR_PAYMENTS,
+                      defaultValue: 'Up to {{max}} payments.',
+                    })}
+                  </p>
+                </div>
               </div>
+              {/* Payment Frequency (KAN-785 Part 1) — options come from Settings */}
+              {rrEnabledPeriodicities.length > 0 && (
+                <div className="flex flex-col gap-2">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
+                    <div>
+                      <label className="text-dark-500 mb-1 block text-sm font-medium">
+                        {t('pages.clients.detail.rrFrequency', 'Payment Frequency')}
+                      </label>
+                      <Select
+                        value={connectRrForm.frequency || 'manual'}
+                        onValueChange={(val) =>
+                          setConnectRrForm((prev) =>
+                            withGeneratedSchedule({
+                              ...prev,
+                              frequency: val === 'manual' ? '' : (val as PeriodicityType),
+                            })
+                          )
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="manual">
+                            {t('pages.clients.detail.rrFrequencyManual', 'Manual (no auto-fill)')}
+                          </SelectItem>
+                          {rrEnabledPeriodicities.map((type) => (
+                            <SelectItem key={type} value={type}>
+                              {t(
+                                `pages.clients.detail.rrFrequencyOptions.${type}`,
+                                type === PERIODICITY_EVERY_N_DAYS
+                                  ? 'Every N days'
+                                  : type === PERIODICITY_MONTHLY_NTH_DAY
+                                    ? 'Every Nth of month'
+                                    : 'Monthly (same day)'
+                              )}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {connectRrForm.frequency === PERIODICITY_EVERY_N_DAYS && (
+                      <Input
+                        label={t('pages.clients.detail.rrIntervalDays', 'Interval (days)')}
+                        type="number"
+                        min={1}
+                        value={connectRrForm.intervalDays}
+                        onChange={(e) =>
+                          setConnectRrForm((prev) =>
+                            withGeneratedSchedule({ ...prev, intervalDays: e.target.value })
+                          )
+                        }
+                        placeholder="14"
+                      />
+                    )}
+
+                    {connectRrForm.frequency === PERIODICITY_MONTHLY_NTH_DAY && (
+                      <div>
+                        <label className="text-dark-500 mb-1 block text-sm font-medium">
+                          {t('pages.clients.detail.rrDayOfMonth', 'Day of month')}
+                        </label>
+                        <Select
+                          value={connectRrForm.dayOfMonth || ''}
+                          onValueChange={(val) =>
+                            setConnectRrForm((prev) =>
+                              withGeneratedSchedule({ ...prev, dayOfMonth: val })
+                            )
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue
+                              placeholder={t(
+                                'pages.clients.detail.rrDayOfMonthPlaceholder',
+                                'Select day'
+                              )}
+                            />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {Array.from({ length: 30 }, (_, i) => String(i + 1)).map((day) => (
+                              <SelectItem key={day} value={day}>
+                                {day}
+                              </SelectItem>
+                            ))}
+                            <SelectItem value="last">
+                              {t('pages.clients.detail.rrDayOfMonthLast', 'Last day')}
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+
+                    {/* Anchor that drives the whole schedule (mirrors Payment 1). */}
+                    {connectRrForm.frequency && (
+                      <DateSelect
+                        label={`${t('pages.clients.detail.rrFirstPaymentDate', 'First Payment Date')} *`}
+                        value={connectRrForm.payments[0]?.date ?? null}
+                        onChange={({ value }) =>
+                          setConnectRrForm((prev) => {
+                            const payments = [...prev.payments]
+                            payments[0] = { ...payments[0], date: value }
+                            return withGeneratedSchedule({ ...prev, payments })
+                          })
+                        }
+                        format="dd-MM-yyyy"
+                        placeholder={t(
+                          'pages.clients.detail.rrFirstPaymentDate',
+                          'First Payment Date'
+                        )}
+                        className="rounded-lg border-gray-400"
+                      />
+                    )}
+                  </div>
+                  {connectRrForm.frequency && (
+                    <p className="text-dark-300 text-xs">
+                      {t(
+                        'pages.clients.detail.rrPeriodicityHint',
+                        'The schedule below is auto-filled from the first payment date, number of payments and frequency. You can still edit any row.'
+                      )}
+                    </p>
+                  )}
+                </div>
+              )}
               {/* Payment Schedule */}
               <div className="pt-2">
                 <h3 className="text-dark-500 mb-2 text-sm font-medium sm:text-base">
@@ -6268,7 +6885,11 @@ export function ClientDetailPage() {
                           setConnectRrForm((prev) => {
                             const payments = [...prev.payments]
                             payments[idx] = { ...payments[idx], date: value }
-                            return { ...prev, payments }
+                            const next = { ...prev, payments }
+                            // Editing the first payment date re-anchors the whole
+                            // auto-filled schedule; editing a later row is a manual
+                            // override that stands alone and does not cascade (AC4).
+                            return idx === 0 ? withGeneratedSchedule(next) : next
                           })
                         }}
                         format="dd-MM-yyyy"
@@ -6293,6 +6914,35 @@ export function ClientDetailPage() {
                     </div>
                   ))}
                 </div>
+                {connectRrForm.clampedRows.length > 0 && (
+                  <div className="mt-2 rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-700">
+                    {t('pages.clients.detail.rrClampNotice', {
+                      rows: connectRrForm.clampedRows.map((i) => i + 1).join(', '),
+                      defaultValue:
+                        'Payment {{rows}}: the selected day does not exist in that month, so the date was set to the last day of the month. You can still edit it manually.',
+                    })}
+                  </div>
+                )}
+              </div>
+              {/* Overdue Penalty (optional) — KAN-785 Part 2 */}
+              <div className="border-t border-gray-100 pt-3">
+                <Input
+                  label={t('pages.clients.detail.rrPenaltyAmount', 'Overdue Penalty (optional)')}
+                  type="number"
+                  min={0}
+                  step={0.01}
+                  value={connectRrForm.penaltyAmount}
+                  onChange={(e) =>
+                    setConnectRrForm((prev) => ({ ...prev, penaltyAmount: e.target.value }))
+                  }
+                  placeholder="0.00"
+                />
+                <p className="text-dark-300 mt-1 text-xs">
+                  {t(
+                    'pages.clients.detail.rrPenaltyHint',
+                    'If any payment goes 3+ days overdue, this amount is charged once as an extra payment at the end of the schedule.'
+                  )}
+                </p>
               </div>
             </div>
             {connectRrError && (
@@ -6377,6 +7027,21 @@ export function ClientDetailPage() {
                         payment_date: formatDate(p.date),
                         payment_amount: parseFloat(p.amount),
                       })),
+                      // KAN-785 Part 2 — optional penalty + persisted periodicity
+                      // (so the backend can date the penalty by this RR's cadence).
+                      penalty_amount:
+                        connectRrForm.penaltyAmount && parseFloat(connectRrForm.penaltyAmount) > 0
+                          ? parseFloat(connectRrForm.penaltyAmount)
+                          : null,
+                      periodicity: connectRrForm.frequency
+                        ? {
+                            frequency: connectRrForm.frequency,
+                            interval_days: connectRrForm.intervalDays
+                              ? parseInt(connectRrForm.intervalDays, 10)
+                              : null,
+                            day_of_month: connectRrForm.dayOfMonth || null,
+                          }
+                        : null,
                     },
                   },
                   {

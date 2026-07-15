@@ -17,6 +17,7 @@ import { useCallback } from 'react'
 import { toast } from 'sonner'
 
 import { useRecordPayment, useVerifyPayment } from '@/features/payments'
+import type { PaymentType } from '@/features/payments/api/types'
 import { frontendToBackendPaymentMethod } from '@/features/payments/utils'
 import { PERMISSIONS } from '@/constants/permissions'
 import { useHasPermission } from '@/hooks/usePermissions'
@@ -32,6 +33,7 @@ export interface RecordPaymentInput {
   last4Digits?: string
   paymentMethodDetails?: string
   debtId?: number
+  paymentType: PaymentType
 }
 
 export interface UseRecordPaymentFlowOptions {
@@ -77,6 +79,7 @@ export function useRecordPaymentFlow(
           payment_date: paymentDate,
           payment_method: backendMethod,
           payment_method_details: data.paymentMethodDetails,
+          payment_type: data.paymentType,
           bank_reference:
             data.referenceNumber ||
             (data.method === 'Card' ? `****${data.last4Digits}` : undefined),

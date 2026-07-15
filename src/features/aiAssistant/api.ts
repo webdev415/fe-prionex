@@ -2,6 +2,7 @@ import { api, API_BASE_URL, getAccessToken } from '@/lib/api'
 import type { ChatAttachmentPayload } from './attachments'
 import {
   consumeSseStream,
+  type AssistantCitation,
   type AssistantSources,
   type AssistantToolEnd,
   type AssistantToolStart,
@@ -29,6 +30,12 @@ export interface AssistantChatRequest {
   mode: AssistantMode
   response_mode: AssistantResponseMode
   output_format: AssistantOutputFormat
+  /**
+   * Deep-research flag: when true the brain runs a thorough multi-agent
+   * analysis. Sent only when enabled; the gateway ignores the field until it
+   * ships support, so it is safe to send today (forward-compatible).
+   */
+  deep_research?: boolean
   /** Images (screenshot paste) and/or one voice note; ≤3 total (PR #633/#638). */
   attachments?: ChatAttachmentPayload[]
 }
@@ -44,6 +51,8 @@ export interface AssistantChatResponse {
   response: string
   coverage_flag: string | null
   tool_calls: AssistantToolCall[]
+  /** Per-fact citations streamed in the `citations` frame (empty if none). */
+  citations?: AssistantCitation[]
 }
 
 export interface AssistantConversationSummary {
@@ -69,6 +78,25 @@ export interface AssistantConversationMessage {
   latency_ms: number | null
   tokens: number | null
   created_at: string
+  /**
+   * Слой 5: раздумья ассистентского сообщения (те же `reasoning`-дельты, что в
+   * стриме, но уже склеенные сервером) — чтобы панель «Активность» гидратировалась
+   * после F5 / переключения диалога, а не жила только в текущем ходе. Есть только
+   * у `role === 'assistant'`; старый бэкенд поле не шлёт (панель мягко деградирует).
+   */
+  reasoning?: string
+  /**
+   * Слой 5: источники факт-сносок `[[N]]` этого сообщения (та же форма, что во
+   * фрейме `citations` стрима — документированный конверт `{items:[...]}`). Даёт
+   * кликабельные сноски и секцию «Источники» в панели для загруженного из истории
+   * диалога. Опционально — как {@link reasoning}.
+   *
+   * Сырой payload бэкенда (конверт `{items:[...]}` или, у старого бэкенда, голый
+   * массив/`null`) — форму приводит клиент через {@link normalizeCitations} при
+   * гидратации, поэтому тип намеренно `unknown`: `AssistantCitation[]` здесь врал
+   * бы про реальный контракт и снова спрятал бы `.map is not a function`.
+   */
+  citations?: unknown
 }
 
 export interface AssistantConversationDetail extends AssistantConversationSummary {
@@ -106,7 +134,11 @@ export interface AssistantFeedbackRequest {
 export interface SendChatMessageCallbacks {
   onSession?: (payload: SseSessionPayload) => void
   onText?: (delta: string) => void
+  /** Reasoning deltas ("Ход рассуждения"); forwarded, never part of the answer. */
+  onReasoning?: (delta: string) => void
   onSources?: (sources: AssistantSources) => void
+  /** Per-fact citations (`citations` frame) — labels for `[[N]]` footnotes. */
+  onCitations?: (citations: AssistantCitation[]) => void
   /** Follow-up questions (the `questions[]` array of the followups frame). */
   onFollowups?: (questions: string[]) => void
   onToolStart?: (tool: AssistantToolStart) => void
@@ -185,6 +217,7 @@ export async function sendChatMessage(
   // `AssistantChatResponse.conversation_id` field (ASSISTANT_MODES.md §4).
   let conversationId = payload.conversation_id ?? 0
   const toolCalls: AssistantToolCall[] = []
+  let citations: AssistantCitation[] = []
   let streamError: SseErrorPayload | null = null
 
   const applySessionId = (value: number | string | undefined) => {
@@ -204,7 +237,14 @@ export async function sendChatMessage(
       accumulatedText += delta
       callbacks.onText?.(delta)
     },
+    // Reasoning is the agent's thinking, not the answer — forward it without
+    // touching `accumulatedText` so the resolved `response` stays clean.
+    onReasoning: (delta) => callbacks.onReasoning?.(delta),
     onSources: (sources) => callbacks.onSources?.(sources),
+    onCitations: (items) => {
+      citations = items
+      callbacks.onCitations?.(items)
+    },
     onFollowups: (questions) => callbacks.onFollowups?.(questions),
     onToolStart: (tool) => {
       // Pre-record the call as pending; a matching tool_end flips `success`.
@@ -240,6 +280,7 @@ export async function sendChatMessage(
     response: accumulatedText,
     coverage_flag: null,
     tool_calls: toolCalls,
+    citations,
   }
 }
 
@@ -274,4 +315,32 @@ export async function getConversation(id: number): Promise<AssistantConversation
 
 export async function sendFeedback(payload: AssistantFeedbackRequest): Promise<void> {
   await api.post(`${BASE}/feedback`, payload)
+}
+
+/** Вердикт пометки источника факт-сноски оператором (Слой 5). */
+export type AssistantCitationVerdict = 'ok' | 'wrong'
+
+/**
+ * Тело `POST /messages/{message_id}/step-mark` — оператор помечает источник
+ * факт-сноски как верный/неверный. `message_id` — серверный id ассистентского
+ * сообщения (доступен после гидратации диалога); `citation_id` совпадает с
+ * `AssistantCitation.id` (номер `[[N]]`).
+ */
+export interface AssistantMarkCitationRequest {
+  message_id: number
+  citation_id: number
+  verdict: AssistantCitationVerdict
+}
+
+/**
+ * Пометить источник факт-сноски (`POST /messages/{message_id}/step-mark`).
+ * Образец — {@link sendFeedback}: fire-and-forget POST, оптимистичную подсветку
+ * держит вызывающий (см. `useMarkCitation`).
+ */
+export async function markCitationStep({
+  message_id,
+  citation_id,
+  verdict,
+}: AssistantMarkCitationRequest): Promise<void> {
+  await api.post(`${BASE}/messages/${message_id}/step-mark`, { citation_id, verdict })
 }
