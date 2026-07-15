@@ -21,6 +21,22 @@ type CategoryChip = 'all' | 'low' | 'average' | 'high'
 type DialogueView = 'list' | 'averages'
 type TelephonyFilter = '' | 'white' | 'grey' | 'unknown'
 
+interface AppliedCallFilters {
+  name: string
+  telephony: TelephonyFilter
+  callFrom: string
+  callTo: string
+  minDuration: string
+}
+
+const EMPTY_FILTERS: AppliedCallFilters = {
+  name: '',
+  telephony: '',
+  callFrom: '',
+  callTo: '',
+  minDuration: '',
+}
+
 const DEFAULT_PAGE_SIZE = 50
 
 /** A picker date (YYYY-MM-DD) → ISO at the day's start/end so the tz-aware
@@ -38,12 +54,15 @@ export function DialogueEvaluationTab() {
   const [view, setView] = useState<DialogueView>('list')
   const [selectedRowId, setSelectedRowId] = useState<number | null>(null)
   const [selectedEmployeeIds, setSelectedEmployeeIds] = useState<number[]>([])
-  // KAN-827 call-attribute filters (server-side over denormalized columns).
+  // KAN-827 call-attribute filters. Draft state is bound to the inputs; it only
+  // reaches the query on "Apply Filters" (below) so a partial date/number entry
+  // doesn't fire a request per keystroke.
   const [nameQuery, setNameQuery] = useState('')
   const [telephonyType, setTelephonyType] = useState<TelephonyFilter>('')
   const [callFrom, setCallFrom] = useState('')
   const [callTo, setCallTo] = useState('')
   const [minDuration, setMinDuration] = useState('')
+  const [applied, setApplied] = useState<AppliedCallFilters>(EMPTY_FILTERS)
   // Unsaved-changes guard: the review panel reports its dirty state so we can
   // warn before switching rows (which would discard the edit).
   const [reviewDirty, setReviewDirty] = useState(false)
@@ -52,32 +71,67 @@ export function DialogueEvaluationTab() {
   const { data: operators = [] } = useOperators(activeProjectId ? Number(activeProjectId) : null)
   const scoped = useScopedUserIds(operators)
 
+  // Draft ≠ applied → "Apply Filters" is enabled; any value set (draft or
+  // applied) → "Clear All" is enabled.
+  const filtersDirty =
+    nameQuery !== applied.name ||
+    telephonyType !== applied.telephony ||
+    callFrom !== applied.callFrom ||
+    callTo !== applied.callTo ||
+    minDuration !== applied.minDuration
+  const hasAnyFilter =
+    filtersDirty ||
+    !!(
+      applied.name ||
+      applied.telephony ||
+      applied.callFrom ||
+      applied.callTo ||
+      applied.minDuration
+    )
+
+  const applyFilters = () =>
+    setApplied({
+      name: nameQuery,
+      telephony: telephonyType,
+      callFrom,
+      callTo,
+      minDuration,
+    })
+  const clearFilters = () => {
+    setNameQuery('')
+    setTelephonyType('')
+    setCallFrom('')
+    setCallTo('')
+    setMinDuration('')
+    setApplied(EMPTY_FILTERS)
+  }
+
   // Resolve the ФИО (full-name) search to operator ids, then intersect with the
   // multi-select / scope so the server filters on the ``operator_id`` column.
   // ``undefined`` means "no operator restriction" (scope=all/group) — kept as-is
   // so the server returns every operator's scorecards.
   const operatorIds = useMemo<number[] | undefined>(() => {
     const base = selectedEmployeeIds.length > 0 ? selectedEmployeeIds : scoped.userIds
-    const q = nameQuery.trim().toLowerCase()
+    const q = applied.name.trim().toLowerCase()
     if (!q) return base
     const matches = operators.filter((o) => o.full_name?.toLowerCase().includes(q)).map((o) => o.id)
     // With an unrestricted base, the name matches become the restriction; else
     // intersect the name matches with the existing scope/selection.
     const matchSet = new Set(matches)
     return base ? base.filter((id) => matchSet.has(id)) : matches
-  }, [selectedEmployeeIds, scoped.userIds, nameQuery, operators])
+  }, [selectedEmployeeIds, scoped.userIds, applied.name, operators])
 
   const filters = useMemo(
     () => ({
       operator_id: operatorIds,
-      telephony_type: telephonyType || undefined,
-      call_from: dayStartIso(callFrom),
-      call_to: dayEndIso(callTo),
-      min_talk_duration: minDuration ? Number(minDuration) : undefined,
+      telephony_type: applied.telephony || undefined,
+      call_from: dayStartIso(applied.callFrom),
+      call_to: dayEndIso(applied.callTo),
+      min_talk_duration: applied.minDuration ? Number(applied.minDuration) : undefined,
       page: 1,
       page_size: DEFAULT_PAGE_SIZE,
     }),
-    [operatorIds, telephonyType, callFrom, callTo, minDuration]
+    [operatorIds, applied]
   )
 
   // No operators to query for: scope resolved empty, or a name search / employee
@@ -257,6 +311,9 @@ export function DialogueEvaluationTab() {
           <input
             value={nameQuery}
             onChange={(e) => setNameQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && filtersDirty) applyFilters()
+            }}
             placeholder={t(
               'pages.training.dialogue.filters.namePlaceholder',
               'Search by full name…'
@@ -301,6 +358,22 @@ export function DialogueEvaluationTab() {
             placeholder={t('pages.training.dialogue.filters.minDuration', 'Min talk (sec)')}
             className="h-9 w-[130px] rounded-lg border border-[#DFDFDF] bg-white px-3 text-xs text-[#05040D] focus:outline-none"
           />
+          <button
+            type="button"
+            onClick={applyFilters}
+            disabled={!filtersDirty}
+            className="h-9 rounded-lg bg-[#204E4D] px-4 text-xs font-medium text-white transition-colors hover:bg-[#1a3f3e] disabled:opacity-50"
+          >
+            {t('pages.training.dialogue.filters.apply', 'Apply Filters')}
+          </button>
+          <button
+            type="button"
+            onClick={clearFilters}
+            disabled={!hasAnyFilter}
+            className="h-9 rounded-lg border border-[#DFDFDF] bg-white px-4 text-xs font-medium text-[#4B5563] transition-colors hover:bg-[#F7F7F7] disabled:opacity-50"
+          >
+            {t('pages.training.dialogue.filters.clearAll', 'Clear All')}
+          </button>
         </div>
       ) : null}
 
