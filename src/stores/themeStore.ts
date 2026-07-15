@@ -12,7 +12,6 @@ import {
   type ThemePreference,
 } from '@/theme/constants'
 import { readThemePreference, writeThemePreference } from '@/theme/storage'
-import { scheduleThemePreferenceSync, setThemeServerSyncSuppressed } from '@/theme/serverSync'
 
 interface ThemeState extends ThemePreference {
   setBase: (base: ThemeBase) => void
@@ -22,14 +21,13 @@ interface ThemeState extends ThemePreference {
   toggleLightDark: () => void
   /** Re-read localStorage and re-apply (e.g. after cross-tab sync). */
   hydrateFromStorage: () => void
-  /** Apply theme_base / theme_accent from GET /users/me (no server write-back). */
+  /** Apply theme_base / theme_accent from GET /users/me (overwrites localStorage). */
   hydrateFromServer: (themeBase?: string | null, themeAccent?: string | null) => void
 }
 
 function persistAndApply(preference: ThemePreference): ThemePreference {
   writeThemePreference(preference)
   applyThemeToDocument(preference)
-  scheduleThemePreferenceSync(preference)
   return preference
 }
 
@@ -106,23 +104,15 @@ export const useThemeStore = create<ThemeState>((set) => ({
     }
     if (!partial.base && !partial.accent) return
 
-    setThemeServerSyncSuppressed(true)
-    try {
-      set((state) => {
-        const merged: ThemePreference = {
-          base: partial.base ?? state.base,
-          accent: partial.accent ?? state.accent,
-          lastLightBase: partial.lastLightBase ?? state.lastLightBase,
-          lastDarkBase: partial.lastDarkBase ?? state.lastDarkBase,
-        }
-        const next = withRememberedBases(merged, state)
-        writeThemePreference(next)
-        applyThemeToDocument(next)
-        return next
-      })
-    } finally {
-      setThemeServerSyncSuppressed(false)
-    }
+    set((state) => {
+      const merged: ThemePreference = {
+        base: partial.base ?? state.base,
+        accent: partial.accent ?? state.accent,
+        lastLightBase: partial.lastLightBase ?? state.lastLightBase,
+        lastDarkBase: partial.lastDarkBase ?? state.lastDarkBase,
+      }
+      return persistAndApply(withRememberedBases(merged, state))
+    })
   },
 }))
 

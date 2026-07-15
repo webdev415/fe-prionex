@@ -1,6 +1,5 @@
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
-import { useThemeStore } from '@/stores/themeStore'
 import { THEME_ACCENTS, THEME_BASES, type ThemeAccent, type ThemeBase } from '@/theme/constants'
 
 const ACCENT_SWATCH: Record<ThemeAccent, string> = {
@@ -65,12 +64,20 @@ function ThemePreviewCard({
   )
 }
 
-export function AppearanceSettings() {
+interface AppearanceSettingsProps {
+  base: ThemeBase
+  accent: ThemeAccent
+  onBaseChange: (base: ThemeBase) => void
+  onAccentChange: (accent: ThemeAccent) => void
+}
+
+export function AppearanceSettings({
+  base,
+  accent,
+  onBaseChange,
+  onAccentChange,
+}: AppearanceSettingsProps) {
   const { t } = useTranslation('common')
-  const base = useThemeStore((s) => s.base)
-  const accent = useThemeStore((s) => s.accent)
-  const setBase = useThemeStore((s) => s.setBase)
-  const setAccent = useThemeStore((s) => s.setAccent)
 
   return (
     <section
@@ -100,7 +107,7 @@ export function AppearanceSettings() {
             base={themeBase}
             selected={base === themeBase}
             label={t(`pages.profile.appearance.bases.${themeBase}`)}
-            onSelect={() => setBase(themeBase)}
+            onSelect={() => onBaseChange(themeBase)}
           />
         ))}
       </div>
@@ -117,7 +124,7 @@ export function AppearanceSettings() {
             <button
               key={themeAccent}
               type="button"
-              onClick={() => setAccent(themeAccent)}
+              onClick={() => onAccentChange(themeAccent)}
               aria-pressed={selected}
               aria-label={t(`pages.profile.appearance.accents.${themeAccent}`)}
               title={t(`pages.profile.appearance.accents.${themeAccent}`)}
