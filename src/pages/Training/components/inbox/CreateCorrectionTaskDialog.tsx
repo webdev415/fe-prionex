@@ -291,7 +291,7 @@ export function CreateCorrectionTaskDialog({
             </div>
             <div className="flex flex-col gap-1">
               <label htmlFor="correction-priority" className="text-xs font-medium text-gray-600">
-                {t('pages.training.correction.priority', 'Priority')}
+                {t('pages.training.correction.priorityLabel', 'Priority')}
               </label>
               <select
                 id="correction-priority"

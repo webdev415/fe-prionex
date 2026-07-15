@@ -1564,7 +1564,12 @@
         "calls": "Calls",
         "scores": "Scores",
         "training": "Training",
-        "settings": "Settings"
+        "settings": "Settings",
+        "actionAnalysis": "Action Analysis",
+        "dialogueEvaluation": "Dialogue Evaluation",
+        "tasks": "Tasks",
+        "team": "Team",
+        "trainingsAndSessions": "Trainings and Sessions"
       },
       "topTabsComingSoon": "This section will be enabled in a follow-up release.",
       "subTabs": {
@@ -2066,6 +2071,17 @@
           },
           "forbidden": "You do not have permission to take charge of operators.",
           "success": "You are now coaching this operator."
+        },
+        "priority": {
+          "all": "All priorities",
+          "average": "Average",
+          "critical": "Critical",
+          "low": "Low"
+        },
+        "viewMode": {
+          "grid": "Grid",
+          "inbox": "Inbox",
+          "kanban": "Kanban"
         }
       },
       "paymentHistoryEmpty": "No payments match the current filters",
@@ -2119,7 +2135,15 @@
         "loading": "Loading…",
         "stand": "Stand",
         "subtitle": "Dominant state by hour · today",
-        "title": "Heatmap of activity"
+        "title": "Heatmap of activity",
+        "state": {
+          "afterCall": "After the call",
+          "break": "Break",
+          "call": "Call",
+          "idle": "Idle",
+          "offline": "Offline",
+          "waiting": "Waiting"
+        }
       },
       "scriptAnalytics": {
         "empty": "No script-analytics data for the selected filters.",
@@ -2238,8 +2262,10 @@
           "confirmed": "Flag confirmed",
           "converted": "Correction task created and flag confirmed",
           "dismissed": "Flag dismissed",
-          "error": "Action failed"
-        }
+          "error": "Action failed",
+          "bulkDismissed": "Dismissed {{count}} flags"
+        },
+        "total": "{{count}} flags"
       },
       "calendar": {
         "cancelled": "Cancelled",
@@ -2319,7 +2345,12 @@
         "noExtension": "This operator has no telephony extension; no recent calls available.",
         "operator": "Operator",
         "pickCall": "Pick a call…",
-        "priority": "Priority",
+        "priority": {
+          "high": "High",
+          "low": "Low",
+          "normal": "Normal",
+          "urgent": "Urgent"
+        },
         "submit": "Create task",
         "submitting": "Creating…",
         "success": "Correction task created. The operator has been notified.",
@@ -2327,7 +2358,14 @@
         "timestamp": "Timestamp in recording (seconds, optional)",
         "title": "Assign correction task",
         "titleField": "Title",
-        "titlePlaceholder": "e.g. \"Skipped objection-handling step\""
+        "titlePlaceholder": "e.g. \"Skipped objection-handling step\"",
+        "types": {
+          "correction": "Generic correction",
+          "listenReflect": "Listen & reflect",
+          "practiceNextCall": "Practice in next call",
+          "studyMaterial": "Study material"
+        },
+        "priorityLabel": "Priority"
       },
       "drills": {
         "allCategories": "All categories",
@@ -2482,10 +2520,17 @@
         "lookbackDecrease": "Decrease window",
         "lookbackIncrease": "Increase window",
         "noCall": "No call",
-        "ruleBanner": "Escalation rule: the client had a payment promise for today or overdue, but the payment has not been received. The operator is required to call back and follow up. Unprocessed escalations are a critical indicator."
+        "ruleBanner": "Escalation rule: the client had a payment promise for today or overdue, but the payment has not been received. The operator is required to call back and follow up. Unprocessed escalations are a critical indicator.",
+        "escalationBanner": "{{count}} escalations without follow-up",
+        "lookbackValue": "{{count}} d"
       },
       "period": {
-        "label": "Period"
+        "label": "Period",
+        "30days": "30 days",
+        "7days": "7 days",
+        "custom": "Custom",
+        "today": "Today",
+        "yesterday": "Yesterday"
       },
       "tasks": {
         "actions": {
@@ -2504,10 +2549,20 @@
         "create": "New task",
         "error": "Could not load tasks. Please retry shortly.",
         "kanban": {
-          "empty": "Empty"
+          "empty": "Empty",
+          "done": "DONE",
+          "inProgress": "IN PROGRESS",
+          "planned": "PLANNED",
+          "toDo": "TO DO"
         },
         "loading": "Loading correction tasks…",
-        "newTaskHint": "Pick an operator from the Inbox tab, then use the \"Assign task\" Quick Action to anchor the task to a call."
+        "newTaskHint": "Pick an operator from the Inbox tab, then use the \"Assign task\" Quick Action to anchor the task to a call.",
+        "chips": {
+          "all": "All",
+          "today": "Today",
+          "tomorrow": "Tomorrow",
+          "week": "Week"
+        }
       },
       "team": {
         "badges": {
@@ -2544,7 +2599,11 @@
           "refresh": "Recompute",
           "refreshing": "Recomputing…",
           "score": "Score",
-          "window": "Window"
+          "window": "Window",
+          "period": {
+            "month": "This month",
+            "week": "This week"
+          }
         },
         "loading": "Loading team roster…",
         "team": {
@@ -2553,6 +2612,11 @@
         "view": {
           "leaderboard": "Leaderboard",
           "roster": "Roster"
+        },
+        "workStatus": {
+          "behind": "Behind",
+          "inNorm": "In norm",
+          "inQueue": "In queue"
         }
       },
       "tests": {
@@ -2596,6 +2660,12 @@
         "returned": {
           "no": "Did not return",
           "yes": "Yes"
+        },
+        "result": {
+          "missedCall": "Missed call",
+          "promise": "Promise",
+          "refusal": "Refusal",
+          "willPassOn": "Will pass on"
         }
       },
       "timeAtWork": {
@@ -2622,7 +2692,12 @@
         "loading": "Loading…",
         "sortBy": "Sort by",
         "subtitle": "Red = 30%+ above norm · Green = faster than norm",
-        "title": "Time in work by operators"
+        "title": "Time in work by operators",
+        "sort": {
+          "afterCall": "After call",
+          "downtime": "Downtime",
+          "toCard": "To card"
+        }
       },
       "training": {
         "courses": {
@@ -2742,6 +2817,16 @@
           "upload": "Upload material",
           "uploadSuccess": "Material uploaded.",
           "uploading": "Uploading…"
+        },
+        "subTabs": {
+          "assignments": "Assignments",
+          "calendar": "1-on-1 Sessions",
+          "callLibrary": "Call library",
+          "courses": "Courses",
+          "drills": "Drill Exercises",
+          "groupTrainings": "Group Training Sessions",
+          "materials": "Materials",
+          "tests": "Tests"
         }
       },
       "weeklyTasks": {
@@ -2755,6 +2840,18 @@
         },
         "overdueBanner": "Weekly tasks – there are overdue ones",
         "today": "today"
+      },
+      "analyticsSubTabs": {
+        "autoFlags": "Auto-flags",
+        "closures": "Successful Closures",
+        "heatmap": "Heat Map",
+        "interactions": "Interactions",
+        "leaks": "Leaks",
+        "promises": "Promises and Callbacks",
+        "scriptAnalytics": "Script Analytics",
+        "thirdParties": "Third Parties",
+        "timeAtWork": "Time at Work",
+        "weeklyTasks": "Weekly Tasks"
       }
     },
     "users": {
