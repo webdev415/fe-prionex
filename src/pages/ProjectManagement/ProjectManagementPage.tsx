@@ -264,7 +264,7 @@ export function ProjectManagementPage() {
       sortable: true,
       render: (project) => (
         <div className="flex items-center justify-center">
-          <span className="text-dark-500 flex items-center justify-center text-xs font-medium">
+          <span className="text-foreground flex items-center justify-center text-xs font-medium">
             {project.user_count || 0}
           </span>
         </div>
@@ -276,8 +276,8 @@ export function ProjectManagementPage() {
       sortable: true,
       render: (project) => (
         <div className="flex flex-col">
-          <span className="text-dark-500 text-xs font-medium">{project.name}</span>
-          <span className="text-xs font-medium text-gray-700">{project.code}</span>
+          <span className="text-foreground text-xs font-medium">{project.name}</span>
+          <span className="text-muted-foreground text-xs font-medium">{project.code}</span>
         </div>
       ),
     },
@@ -287,7 +287,7 @@ export function ProjectManagementPage() {
       sortable: true,
       render: (project) => (
         <span
-          className="text-dark-500 block max-w-[180px] truncate text-xs font-medium"
+          className="text-foreground block max-w-[180px] truncate text-xs font-medium"
           title={project.client_company}
         >
           {project.client_company || '—'}
@@ -299,7 +299,7 @@ export function ProjectManagementPage() {
       header: t('pages.projects.tableHeaders.period'),
       sortable: true,
       render: (project) => (
-        <span className="text-dark-500 text-xs font-medium">
+        <span className="text-foreground text-xs font-medium">
           {formatPeriod(project.start_date, project.end_date)}
         </span>
       ),
@@ -310,7 +310,7 @@ export function ProjectManagementPage() {
       align: 'center',
       sortable: true,
       render: (project) => (
-        <span className="text-dark-500 text-xs font-medium">
+        <span className="text-foreground text-xs font-medium">
           {formatNumber(project.total_clients)}
         </span>
       ),
@@ -321,7 +321,7 @@ export function ProjectManagementPage() {
       align: 'right',
       sortable: true,
       render: (project) => (
-        <span className="text-dark-500 text-xs font-medium">
+        <span className="text-foreground text-xs font-medium">
           {formatCurrency(project.total_debt_amount)}
         </span>
       ),
@@ -339,7 +339,7 @@ export function ProjectManagementPage() {
     <div className="flex h-full flex-col">
       {/* Page Header */}
       <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-dark-500 text-xl font-light sm:text-2xl">
+        <h1 className="text-foreground text-xl font-light sm:text-2xl">
           {t('pages.projects.title')}
         </h1>
       </div>
@@ -375,7 +375,7 @@ export function ProjectManagementPage() {
             <div className="flex flex-1 gap-4 overflow-hidden">
               {/* Table Container */}
               <div className="flex min-w-0 flex-1 flex-col">
-                <div className="flex h-full flex-col overflow-hidden rounded-xl bg-white/50">
+                <div className="bg-card/50 flex h-full flex-col overflow-hidden rounded-xl">
                   <div className="flex-1 overflow-auto lg:p-6">
                     <DataTable
                       columns={columns}

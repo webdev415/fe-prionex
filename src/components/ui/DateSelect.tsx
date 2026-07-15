@@ -8,6 +8,7 @@
 import { forwardRef, useEffect, useId, useRef, useState } from 'react'
 import DatePicker from 'react-datepicker'
 import 'react-datepicker/dist/react-datepicker.css'
+import './DateSelect.theme.css'
 import { format as formatFns } from 'date-fns'
 import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
@@ -296,124 +297,16 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
     return (
       <div className={`w-full ${className || ''}`}>
         {label && (
-          <label htmlFor={inputId} className="text-dark-500 mb-1.5 block text-sm font-light">
+          <label htmlFor={inputId} className="text-foreground mb-1.5 block text-sm font-light">
             {label}
             {required && <span className="text-error-500 ml-1">*</span>}
           </label>
         )}
         <div className="relative">
           <div className="pointer-events-none absolute inset-y-0 left-0 z-10 flex items-center pl-3">
-            <Icons.Calendar size={18} className="text-gray-500" strokeWidth={1.5} />
+            <Icons.Calendar size={18} className="text-muted-foreground" strokeWidth={1.5} />
           </div>
-          <style>{`
-            .date-select-wrapper .react-datepicker-wrapper {
-              width: 100%;
-            }
-            .date-select-wrapper .react-datepicker__input-container {
-              width: 100%;
-            }
-            .date-select-wrapper .react-datepicker__input-container input:focus {
-              box-shadow: 0 0 0 2px ${hasError ? 'rgba(239, 68, 68, 0.2)' : 'rgba(128, 216, 10, 0.2)'};
-            }
-            .date-select-wrapper .react-datepicker__input-container input:disabled {
-              opacity: 0.5;
-              cursor: not-allowed;
-            }
-            .date-select-wrapper .react-datepicker__input-container input::placeholder {
-              color: #6B7280;
-            }
-            .react-datepicker {
-              font-family: inherit;
-              border: 1px solid #E5E7EB;
-              border-radius: 0.75rem;
-              box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-            }
-            .react-datepicker__header {
-              background-color: #F9FAFB;
-              border-bottom: 1px solid #E5E7EB;
-              border-top-left-radius: 0.75rem;
-              border-top-right-radius: 0.75rem;
-              padding-top: 12px;
-            }
-            .react-datepicker__current-month {
-              color: #05040D;
-              font-weight: 500;
-              font-size: 14px;
-            }
-            .react-datepicker__day-name {
-              color: #4B5563;
-              font-weight: 500;
-              font-size: 12px;
-            }
-            .react-datepicker__day {
-              color: #05040D;
-              border-radius: 0.375rem;
-              transition: all 0.15s;
-            }
-            .react-datepicker__day:hover {
-              background-color: #F3F4F6;
-              border-radius: 0.375rem;
-            }
-            .react-datepicker__day--selected,
-            .react-datepicker__day--keyboard-selected {
-              background-color: var(--color-primary-500) !important;
-              color: white !important;
-              border-radius: 0.375rem;
-            }
-            .react-datepicker__day--today {
-              font-weight: 600;
-              color: var(--color-primary-500);
-            }
-            .react-datepicker__day--disabled {
-              color: #D1D5DB;
-            }
-            .react-datepicker__navigation {
-              top: 12px;
-            }
-            .react-datepicker__navigation-icon::before {
-              border-color: #6B7280;
-            }
-            .react-datepicker__navigation:hover *::before {
-              border-color: #05040D;
-            }
-            .react-datepicker__year-dropdown-container {
-              margin: 0 4px;
-            }
-            .react-datepicker__year-read-view {
-              font-size: 13px;
-              font-weight: 500;
-              color: #05040D;
-              visibility: visible !important;
-            }
-            .react-datepicker__year-read-view--down-arrow {
-              border-color: #6B7280;
-              top: 3px;
-            }
-            .react-datepicker__year-dropdown {
-              background-color: white;
-              border: 1px solid #E5E7EB;
-              border-radius: 0.5rem;
-              box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-            }
-            .react-datepicker__year-option {
-              font-size: 13px;
-              padding: 4px 8px;
-            }
-            .react-datepicker__year-option:hover {
-              background-color: #F3F4F6;
-            }
-            .react-datepicker__year-option--selected_year {
-              font-weight: 600;
-              color: var(--color-primary-500);
-            }
-            .react-datepicker__triangle {
-              display: none;
-            }
-            .react-datepicker-popper {
-              z-index: 200 !important;
-            }
-          `}</style>
-          <div className="date-select-wrapper">
+          <div className="date-select-wrapper" data-has-error={hasError ? 'true' : 'false'}>
             <DatePicker
               ref={ref}
               id={inputId}
@@ -437,6 +330,8 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
               aria-describedby={displayedError ? errorId : helperText ? helperId : undefined}
               showPopperArrow={false}
               popperPlacement="bottom-start"
+              popperClassName="date-select-popper"
+              calendarClassName="date-select-calendar"
               popperProps={{ strategy: 'fixed' }}
               showTimeSelect={showTimeSelect}
               timeFormat={timeFormat}
@@ -459,7 +354,7 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
               type="button"
               onClick={onClear}
               aria-label="Clear"
-              className="absolute inset-y-0 right-0 z-10 flex items-center pr-3 text-gray-400 hover:text-gray-600"
+              className="text-muted-foreground hover:text-foreground absolute inset-y-0 right-0 z-10 flex items-center pr-3"
             >
               <Icons.Cancel01 size={14} />
             </button>
@@ -475,7 +370,7 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
           </p>
         ) : null}
         {helperText && !error && !(manualInvalid && invalidText) && (
-          <p id={helperId} className="mt-1.5 text-xs text-gray-500">
+          <p id={helperId} className="text-muted-foreground mt-1.5 text-xs">
             {helperText}
           </p>
         )}
