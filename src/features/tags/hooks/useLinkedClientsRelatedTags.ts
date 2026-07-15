@@ -7,7 +7,7 @@ import { useQueries } from '@tanstack/react-query'
 import { tagsApi } from '../api/tagsApi'
 import { useAuthStore } from '@/stores/authStore'
 import { filterTagsForRole } from '../utils/visibility'
-import { sortTagsByOrder } from '../utils/sortTags'
+import { compareRelatedTagEntries, sortTagsByOrder } from '../utils/sortTags'
 import type { TagDefinition } from '../types'
 
 export interface LinkedContactInfo {
@@ -142,6 +142,13 @@ export function useLinkedClientsRelatedTags(
         })
       })
     })
+
+    result.sort((a, b) =>
+      compareRelatedTagEntries(
+        { tag: a.tag, linkedClientId: a.linkedClient.id },
+        { tag: b.tag, linkedClientId: b.linkedClient.id }
+      )
+    )
 
     return result
   }, [
