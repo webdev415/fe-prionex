@@ -68,6 +68,9 @@ function makeScorecard(id: number, operatorId: number, weighted: number | null):
     created_at: '2026-05-15T09:30:00',
     completed_at: '2026-05-15T09:40:00',
     sent_at: null,
+    call_started_at: null,
+    call_talk_duration: null,
+    call_telephony_type: null,
   }
 }
 
