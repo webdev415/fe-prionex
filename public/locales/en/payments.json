@@ -18,6 +18,7 @@
     "computed": "Computed allocation",
     "component": "Component",
     "verified_note": "Allocation applied",
+    "reversed_note": "Reversed",
     "error": "Unable to load breakdown. Please try again.",
     "retry": "Retry",
     "unmatched": "Unmatched / Overpayment",

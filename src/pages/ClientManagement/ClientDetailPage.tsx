@@ -51,6 +51,9 @@ import { ContactTagSelectorModal } from './components/ContactTagSelectorModal'
 import { ContactTagHistoryModal } from './components/ContactTagHistoryModal'
 import { ClientWriteoffsTable } from './components/ClientWriteoffsTable'
 import { WriteoffCreateModal } from './components/WriteoffCreateModal'
+import { ReversalCreateModal, type ReversalEligiblePayment } from './components/ReversalCreateModal'
+import { ClientReversalsTable } from './components/ClientReversalsTable'
+import { useReversals } from '@/features/reversals/hooks/useReversals'
 import { CallRecordingModal, type CallRecordingModalHandle } from './components/CallRecordingModal'
 import { CallTranscriptPanel } from '@/features/quality/components/CallTranscriptPanel'
 import { ViewSMSModal } from './components/ViewSMSModal'
@@ -258,6 +261,9 @@ export function ClientDetailPage() {
   const [selectedRaId, setSelectedRaId] = useState<number | null>(null)
   const [isConnectRrOpen, setIsConnectRrOpen] = useState(false)
   const [isWriteoffOpen, setIsWriteoffOpen] = useState(false)
+  // KAN-334 — Reversal (storno) modal open state + optional row preselect.
+  const [isReversalOpen, setIsReversalOpen] = useState(false)
+  const [reversalInitialPaymentId, setReversalInitialPaymentId] = useState<number | null>(null)
   const [connectRrForm, setConnectRrForm] = useState({
     debtId: '' as string,
     connectionDate: null as Date | null,
@@ -532,7 +538,10 @@ export function ClientDetailPage() {
   const { mutate: recordOverpayment, isPending: isRecordingOverpayment } = useRecordRROverpayment()
   const { data: paymentsSection, isLoading: isPaymentsLoading } = useClientPaymentsSection(
     clientId,
-    isValidClientId && activeRightCardTab === 'payments'
+    // Also load when the Reversal modal is open — the header "Reversal" button
+    // lives on the Loans tab, so we must fetch payments even when the Payments
+    // tab isn't active, otherwise the modal's picker is empty (KAN-334).
+    isValidClientId && (activeRightCardTab === 'payments' || isReversalOpen)
   )
   const [showAllCalls, setShowAllCalls] = useState(false)
   // Reset the expansion when the user switches sub-tabs so they re-enter
@@ -644,6 +653,54 @@ export function ClientDetailPage() {
   const canCreateWriteoff = useHasPermission(PERMISSIONS.WRITEOFFS.CREATE)
   // KAN-245 — gate the Payments → "Writes-off" sub-tab's per-loan list.
   const canViewWriteoffs = useHasPermission(PERMISSIONS.WRITEOFFS.VIEW)
+  // KAN-334 — gate the "Reversal" button (create) and Reversals sub-tab (view).
+  const canCreateReversal = useHasPermission(PERMISSIONS.REVERSALS.CREATE)
+  const canViewReversals = useHasPermission(PERMISSIONS.REVERSALS.VIEW)
+  // KAN-334 — reversals for this client (drives the Reversals sub-tab, the
+  // "Reversed" indicator on the payments table, and the eligible-payment list
+  // for the reversal modal). Fetched when the Payments card is open and the
+  // operator can see or create reversals.
+  const { data: reversalsData } = useReversals(
+    { client_id: clientId },
+    isValidClientId &&
+      (activeRightCardTab === 'payments' || isReversalOpen) &&
+      (canViewReversals || canCreateReversal)
+  )
+  const reversedPaymentIds = useMemo(
+    () => new Set((reversalsData?.items ?? []).map((r) => r.original_payment_id)),
+    [reversalsData]
+  )
+  // credit/debt id → loan (contract) number, for the Reversals table.
+  const loanNumberByCreditId = useMemo(
+    () => new Map((loans ?? []).map((d) => [d.id, d.contract_number ?? undefined])),
+    [loans]
+  )
+  // Verified, credit-backed payments the operator can reverse (per Screenshot_14).
+  const eligibleReversalPayments = useMemo<ReversalEligiblePayment[]>(
+    () =>
+      (paymentsSection?.payments ?? [])
+        // Only verified, credit-backed, NON primary-creditor payments are
+        // reversible (KAN-334: only payments made through Prionex).
+        .filter(
+          (p) => p.status === 'verified' && p.debt_id != null && p.is_pre_acquisition !== true
+        )
+        .map((p) => ({
+          id: p.id,
+          amount: Number(p.amount),
+          paymentDate: formatDate(p.payment_date ?? undefined),
+          contractNumber: p.debt_contract_number ?? undefined,
+          isReversed: !!p.reallocated_at || reversedPaymentIds.has(p.id),
+          // Original split — fees = commission, fines = fine.
+          original: {
+            principal: Number(p.allocated_principal ?? 0),
+            interest: Number(p.allocated_interest ?? 0),
+            fine: Number(p.allocated_fines ?? 0),
+            penalty: Number(p.allocated_penalties ?? 0),
+            commission: Number(p.allocated_fees ?? 0),
+          },
+        })),
+    [paymentsSection, reversedPaymentIds]
+  )
   const hasEligibleLoanForWriteoff = useMemo(
     () => (loans ?? []).some((d) => d.status === 'active'),
     [loans]
@@ -1373,8 +1430,15 @@ export function ClientDetailPage() {
   // hooks can gate on it for lazy loading.
   const [isUploadDocModalOpen, setIsUploadDocModalOpen] = useState(false)
   const [activePaymentTab, setActivePaymentTab] = useState<
-    'payments' | 'writes-off' | 'primary-creditor'
+    'payments' | 'writes-off' | 'reversals' | 'primary-creditor'
   >('payments')
+  // KAN-334 — cross-navigation highlights: a payment id highlighted in the
+  // Payments table (from the Reversals table), and a source-payment id
+  // highlighted in the Reversals table (from the Payments table's badge).
+  const [highlightedPaymentId, setHighlightedPaymentId] = useState<number | null>(null)
+  const [highlightedReversalPaymentId, setHighlightedReversalPaymentId] = useState<number | null>(
+    null
+  )
   const [activeOperatorTab, setActiveOperatorTab] = useState<'operators' | 'searchers'>('operators')
   // KAN-610: activeCallSmsTab moved up (near activeCommentTab) for lazy gating.
   const [selectedMessageData, setSelectedMessageData] = useState<{
@@ -2284,6 +2348,11 @@ export function ClientDetailPage() {
             : 'pages.clients.debtSummary.paymentStatus.cancelled'
         const label = t(labelKey)
 
+        // KAN-334 — surface the "Reversed" indicator inline in the always-
+        // visible Status column (the per-row Reverse action / badge lives in
+        // the far-right Actions column, which can scroll off-screen).
+        const isReversed = reversedPaymentIds.has(payment.id)
+
         return (
           <div className="flex items-center gap-2">
             <span
@@ -2295,6 +2364,27 @@ export function ClientDetailPage() {
               <span className={cn('h-1.5 w-1.5 rounded-full', dotInner)} />
             </span>
             <span className={cn('text-xs font-medium', textClass)}>{label}</span>
+            {isReversed &&
+              (canViewReversals ? (
+                <button
+                  type="button"
+                  title={t('pages.clients.detail.reversalsTable.viewReversal', 'View reversal')}
+                  className="bg-primary-100 text-secondary-800 inline-flex cursor-pointer items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium hover:opacity-80"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setHighlightedReversalPaymentId(payment.id)
+                    setActivePaymentTab('reversals')
+                  }}
+                >
+                  <Icons.Reload size={10} strokeWidth={2} />
+                  {t('pages.clients.detail.reversalsTable.reversedBadge')}
+                </button>
+              ) : (
+                <span className="bg-primary-100 text-secondary-800 inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium">
+                  <Icons.Reload size={10} strokeWidth={2} />
+                  {t('pages.clients.detail.reversalsTable.reversedBadge')}
+                </span>
+              ))}
           </div>
         )
       },
@@ -2309,6 +2399,62 @@ export function ClientDetailPage() {
       header: t('pages.clients.detail.tableHeaders.fixationOnEmployee'),
       align: 'left',
     },
+    // KAN-334 — Reversal indicator + action. Reversed payments show a badge
+    // and the Reverse button is disabled; eligible ones get an active button.
+    ...(canCreateReversal || canViewReversals
+      ? [
+          {
+            key: 'reversalActions',
+            header: '',
+            align: 'right' as const,
+            render: (payment: (typeof client.payments)[0]) => {
+              const isReversed = reversedPaymentIds.has(payment.id)
+              const isVerified = (payment.status ?? '').toLowerCase().trim() === 'verified'
+              if (isReversed) {
+                // Clicking the badge cross-navigates to this payment's row in
+                // the Reversals tab (the "vice versa" direction of KAN-334).
+                const badge = (
+                  <span className="bg-primary-100 text-secondary-800 inline-flex items-center gap-1 rounded px-2 py-0.5 text-xs font-medium">
+                    <Icons.Reload size={12} strokeWidth={2} />
+                    {t('pages.clients.detail.reversalsTable.reversedBadge')}
+                  </span>
+                )
+                if (!canViewReversals) return badge
+                return (
+                  <button
+                    type="button"
+                    className="cursor-pointer hover:opacity-80"
+                    title={t('pages.clients.detail.reversalsTable.viewReversal', 'View reversal')}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setHighlightedReversalPaymentId(payment.id)
+                      setActivePaymentTab('reversals')
+                    }}
+                  >
+                    {badge}
+                  </button>
+                )
+              }
+              if (!canCreateReversal) return null
+              return (
+                <Button
+                  variant="outline"
+                  size="xs"
+                  disabled={!isVerified}
+                  leftIcon={<Icons.Reload size={14} strokeWidth={1.5} />}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setReversalInitialPaymentId(payment.id)
+                    setIsReversalOpen(true)
+                  }}
+                >
+                  {t('pages.clients.detail.reversal')}
+                </Button>
+              )
+            },
+          },
+        ]
+      : []),
   ]
 
   const writeOffColumns: Column<(typeof client.writesOffs)[0]>[] = [
@@ -3854,6 +4000,19 @@ export function ClientDetailPage() {
                           {t('pages.clients.detail.writeOff')}
                         </Button>
                       )}
+                      {/* KAN-334 — Reversal (storno) button, right of Write-off
+                          per Screenshot_14.png. Opens the reallocation modal. */}
+                      {canCreateReversal && (
+                        <Button
+                          variant="secondary"
+                          leftIcon={<Icons.Reload size={20} />}
+                          className="rounded text-xs md:text-sm"
+                          size="sm"
+                          onClick={() => setIsReversalOpen(true)}
+                        >
+                          {t('pages.clients.detail.reversal')}
+                        </Button>
+                      )}
                       {/* Bulk "Send all loans to UBKI" — gated by the same
                           submit_to_ubki permission as the per-loan send button.
                           Disabled for the release via ENABLE_BULK_UBKI_SUBMISSION
@@ -3919,6 +4078,20 @@ export function ClientDetailPage() {
                       >
                         {t('pages.clients.detail.writesOff')}
                       </button>
+                      {/* KAN-334 — Reversals sub-tab (gated on view_reversals). */}
+                      {canViewReversals && (
+                        <button
+                          onClick={() => setActivePaymentTab('reversals')}
+                          className={cn(
+                            'text-dark-500 flex shrink-0 cursor-pointer items-center justify-center gap-2.5 rounded-md p-2 text-xs leading-[150%] font-medium tracking-[-0.28px] md:p-3',
+                            activePaymentTab === 'reversals'
+                              ? 'bg-secondary-800/10 text-secondary-800'
+                              : 'hover:bg-secondary-800/20 hover:text-secondary-800 text-gray-600'
+                          )}
+                        >
+                          {t('pages.clients.detail.reversals')}
+                        </button>
+                      )}
                       <button
                         onClick={() => setActivePaymentTab('primary-creditor')}
                         className={cn(
@@ -3941,6 +4114,11 @@ export function ClientDetailPage() {
                               columns={paymentColumns}
                               data={client.payments}
                               className="w-full"
+                              rowClassName={(row) =>
+                                highlightedPaymentId != null && row.id === highlightedPaymentId
+                                  ? 'bg-primary-100/60 ring-primary-300 ring-1'
+                                  : undefined
+                              }
                             />
                           )}
                           {activePaymentTab === 'writes-off' && (
@@ -3971,6 +4149,18 @@ export function ClientDetailPage() {
                                 />
                               )}
                             </div>
+                          )}
+                          {activePaymentTab === 'reversals' && canViewReversals && (
+                            <ClientReversalsTable
+                              clientId={clientId}
+                              clientFullName={client.fullName}
+                              resolveLoanNumber={(creditId) => loanNumberByCreditId.get(creditId)}
+                              highlightPaymentId={highlightedReversalPaymentId}
+                              onPaymentClick={(paymentId) => {
+                                setHighlightedPaymentId(paymentId)
+                                setActivePaymentTab('payments')
+                              }}
+                            />
                           )}
                           {activePaymentTab === 'primary-creditor' && (
                             <DataTable
@@ -6644,6 +6834,18 @@ export function ClientDetailPage() {
           open={isWriteoffOpen}
           onClose={() => setIsWriteoffOpen(false)}
           debts={loans ?? []}
+        />
+
+        {/* KAN-334 — Reversal (storno) Create Modal (per Screenshot_14.png) */}
+        <ReversalCreateModal
+          open={isReversalOpen}
+          onClose={() => {
+            setIsReversalOpen(false)
+            setReversalInitialPaymentId(null)
+          }}
+          payments={eligibleReversalPayments}
+          initialPaymentId={reversalInitialPaymentId}
+          isLoading={isPaymentsLoading}
         />
 
         {/* Connect RR Modal */}

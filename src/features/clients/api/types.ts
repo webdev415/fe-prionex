@@ -782,6 +782,19 @@ export interface PaymentResponse {
   debt_contract_number?: string | null
   seller_name?: string | null
   is_deleted: boolean
+  // Cross-service debt reference — needed to gate reversal eligibility (KAN-334).
+  debt_id?: number | null
+  // KAN-334 storno marker: set once the payment's distribution is reversed.
+  reallocated_at?: string | null
+  // KAN-334: original verify-time per-component allocation (decimal strings),
+  // shown in the reversal modal. fees = commission, fines = fine.
+  allocated_principal?: string | null
+  allocated_interest?: string | null
+  allocated_fees?: string | null
+  allocated_penalties?: string | null
+  allocated_fines?: string | null
+  // KAN-334: True = primary-creditor (pre-acquisition) payment → NOT reversible.
+  is_pre_acquisition?: boolean | null
 }
 
 export interface ClientPaymentHistoryResponse {

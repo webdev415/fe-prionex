@@ -736,6 +736,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             requiredPermission: PERMISSIONS.WRITEOFFS.BULK,
           },
           {
+            path: '/dashboard/import/bulk-reversal-import',
+            label: t('navigation.bulkReversalImport', 'Bulk Reversal Import'),
+            icon: 'transaction-history',
+            requiredPermission: PERMISSIONS.REVERSALS.BULK,
+          },
+          {
             path: '/dashboard/import/bulk-sale-notes-import',
             label: t('navigation.bulkSaleNotesImport', 'Bulk Sales Note Import'),
             icon: 'activity-01',
