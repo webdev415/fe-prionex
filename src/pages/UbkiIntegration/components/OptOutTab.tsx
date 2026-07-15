@@ -3,6 +3,13 @@ import { toast } from 'sonner'
 import { MdOutlineFileUpload, MdAdd, MdDeleteOutline, MdOutlinePersonOff } from 'react-icons/md'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { Button } from '@/components/ui/Button'
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from '@/components/ui/Select'
 import { TableSkeleton } from '@/components/ui/TableSkeleton'
 import { formatDateTime } from '@/lib/formatters'
 import { useAuthStore } from '@/stores/authStore'
@@ -165,13 +172,13 @@ export function OptOutTab() {
   ]
 
   const submitAdd = () => {
-    const ids = addIds
+    const tins = addIds
       .split(/[\s,]+/)
-      .map((s) => Number(s.trim()))
-      .filter((n) => Number.isInteger(n) && n > 0)
-    if (!ids.length) return
+      .map((s) => s.trim())
+      .filter(Boolean)
+    if (!tins.length) return
     addMut.mutate(
-      { client_ids: ids, reason: addReason, note: addNote.trim() || undefined },
+      { tins, reason: addReason, note: addNote.trim() || undefined },
       {
         onSuccess: () => {
           setAddOpen(false)
@@ -343,28 +350,29 @@ export function OptOutTab() {
             </p>
             <div className="space-y-3">
               <div>
-                <label className="mb-1 block text-xs font-medium text-gray-600">Client IDs</label>
+                <label className="mb-1 block text-xs font-medium text-gray-600">Client TINs</label>
                 <input
                   value={addIds}
                   onChange={(e) => setAddIds(e.target.value)}
-                  placeholder="e.g. 372090, 235386"
+                  placeholder="e.g. 2288805863, 3328719312"
                   className="focus:border-primary-500 h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-xs text-gray-700 focus:outline-none"
                 />
                 <p className="mt-1 text-[11px] text-gray-400">Comma or space separated.</p>
               </div>
               <div>
                 <label className="mb-1 block text-xs font-medium text-gray-600">Reason</label>
-                <select
-                  value={addReason}
-                  onChange={(e) => setAddReason(e.target.value as Reason)}
-                  className="focus:border-primary-500 h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-xs text-gray-700 focus:outline-none"
-                >
-                  {REASONS.map((r) => (
-                    <option key={r} value={r}>
-                      {r}
-                    </option>
-                  ))}
-                </select>
+                <Select value={addReason} onValueChange={(v) => setAddReason(v as Reason)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {REASONS.map((r) => (
+                      <SelectItem key={r} value={r}>
+                        {r}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div>
                 <label className="mb-1 block text-xs font-medium text-gray-600">
@@ -379,7 +387,7 @@ export function OptOutTab() {
               </div>
             </div>
             {addMut.isError && (
-              <p className="text-error-600 mt-2 text-xs">Failed to add. Check the client IDs.</p>
+              <p className="text-error-600 mt-2 text-xs">Failed to add. Check the TINs.</p>
             )}
             <div className="mt-5 flex justify-end gap-2">
               <Button

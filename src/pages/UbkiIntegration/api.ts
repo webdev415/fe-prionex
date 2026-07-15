@@ -283,7 +283,7 @@ export async function getOptOutClients(): Promise<OptOutClientItem[]> {
   return r.data
 }
 
-export async function addOptOut(payload: { client_ids: number[]; reason: string; note?: string }) {
+export async function addOptOut(payload: { tins: string[]; reason: string; note?: string }) {
   const r = await api.post('/api/v1/ubki/opt-out', payload)
   return r.data
 }
