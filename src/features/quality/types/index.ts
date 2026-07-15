@@ -71,6 +71,11 @@ export interface Scorecard {
   created_at: string
   completed_at: string | null
   sent_at: string | null
+  // Denormalized call attributes (KAN-827): call date, talk time (seconds),
+  // dialing type (white/grey/unknown). Nullable until backfilled.
+  call_started_at: string | null
+  call_talk_duration: number | null
+  call_telephony_type: string | null
 }
 
 export interface ScorecardHistoryItem {
@@ -90,6 +95,11 @@ export interface ScorecardListFilters {
   period?: string
   from_date?: string
   to_date?: string
+  // KAN-827 Dialogue Evaluation filters (call attributes).
+  telephony_type?: string
+  call_from?: string
+  call_to?: string
+  min_talk_duration?: number
   page?: number
   page_size?: number
 }
