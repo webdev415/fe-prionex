@@ -102,8 +102,9 @@ export function applyKanbanFilters(
   }))
 }
 
-/** Fixed column width in horizontal-scroll mode (parent uses w-max, not min-w-full). */
+/** Fixed column width in horizontal-scroll mode (parent uses w-max grid, not min-w-full). */
 export const KANBAN_SCROLL_COLUMN_WIDTH_CLASS = 'w-[280px]'
+export const KANBAN_SCROLL_GRID_COLS_CLASS = 'auto-cols-[280px]'
 
 export const TYPE_COLOURS: Record<KanbanTaskType, string> = {
   unclassified: 'bg-gray-100 text-gray-500',

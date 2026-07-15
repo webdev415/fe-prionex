@@ -1,6 +1,13 @@
 import { create } from 'zustand'
 import { authApi } from '@/features/auth/api/authApi'
-import { getAccessToken, registerOnAuthCleared, setAccessToken } from '@/lib/api'
+import { toast } from 'sonner'
+import {
+  getAccessToken,
+  isDefinitiveAuthFailure,
+  registerOnAuthCleared,
+  runOnceOnNextAuthSuccess,
+  setAccessToken,
+} from '@/lib/api'
 import { applyPersistedLanguageFromServer } from '@/lib/i18n'
 import { cancelSessionHeartbeat, scheduleSessionHeartbeat } from '@/lib/sessionHeartbeat'
 import type { User, LoginRequest, AuthErrorState } from '@/types/api'
@@ -617,19 +624,97 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           originalAdminUser: null,
         })
       }
-    } catch {
-      // API call failed (401, network error, etc.) - clear auth state
-      setAccessToken(null)
-      cancelSessionHeartbeat()
-      set({
-        user: null,
-        isAuthenticated: false,
-        isLoading: false,
-        hasCheckedAuth: true,
-        isImpersonating: false,
-        impersonatedUser: null,
-        originalAdminUser: null,
-      })
+    } catch (e) {
+      if (isDefinitiveAuthFailure(e)) {
+        // 401 → auth actively rejected the token → real logout.
+        setAccessToken(null)
+        cancelSessionHeartbeat()
+        set({
+          user: null,
+          isAuthenticated: false,
+          isLoading: false,
+          hasCheckedAuth: true,
+          isImpersonating: false,
+          impersonatedUser: null,
+          originalAdminUser: null,
+        })
+      } else {
+        // Transient (network / timeout / 5xx) → auth is unreachable but the
+        // token is likely still valid. Keep it and rebuild the user from the
+        // JWT rather than logging out.
+        const notExpired =
+          typeof tokenPayload?.exp === 'number' && (tokenPayload.exp as number) * 1000 > Date.now()
+        if (!notExpired) {
+          setAccessToken(null)
+          cancelSessionHeartbeat()
+          set({
+            user: null,
+            isAuthenticated: false,
+            isLoading: false,
+            hasCheckedAuth: true,
+            isImpersonating: false,
+            impersonatedUser: null,
+            originalAdminUser: null,
+          })
+          return
+        }
+        const user = buildUserFromJwtToken(token)
+        // The JWT carries no timezone and /me is unreachable, so restore it
+        // from the localStorage cache (written by the subscription below),
+        // falling back to the browser timezone.
+        user.timezone =
+          localStorage.getItem('user_timezone') ?? Intl.DateTimeFormat().resolvedOptions().timeZone
+
+        // Show a sticky "reconnecting" toast, dismissed once auth-service is
+        // reachable again (see the interceptor in api.ts).
+        toast.warning('Connection problem — reconnecting…', {
+          id: 'auth-offline',
+          duration: Infinity,
+        })
+        runOnceOnNextAuthSuccess(() => {
+          toast.dismiss('auth-offline')
+        })
+
+        if (isImpersonating) {
+          // Preserve impersonation context so the admin isn't trapped as the
+          // target user (the ImpersonationBanner hides when impersonatedUser is
+          // null). Restore original admin + target profile from localStorage,
+          // mirroring the success path.
+          let originalAdmin: User | null = null
+          try {
+            const storedAdmin = localStorage.getItem('impersonation_original_admin')
+            if (storedAdmin) originalAdmin = JSON.parse(storedAdmin) as User
+          } catch {
+            // Failed to parse stored admin, will be null
+          }
+          let cachedImpersonated: User | null = null
+          try {
+            const stored = localStorage.getItem('impersonated_user_profile')
+            if (stored) cachedImpersonated = JSON.parse(stored) as User
+          } catch {
+            // Falls back to JWT-derived user below
+          }
+          set({
+            user,
+            isAuthenticated: true,
+            isImpersonating: true,
+            impersonatedUser: cachedImpersonated || user,
+            originalAdminUser: originalAdmin,
+            isLoading: false,
+            hasCheckedAuth: true,
+          })
+        } else {
+          set({
+            user,
+            isAuthenticated: true,
+            isImpersonating: false,
+            impersonatedUser: null,
+            originalAdminUser: null,
+            isLoading: false,
+            hasCheckedAuth: true,
+          })
+        }
+      }
     }
   },
 
@@ -856,6 +941,20 @@ registerOnAuthCleared(() => {
     impersonatedUser: null,
     originalAdminUser: null,
   })
+})
+
+// Cache the profile timezone whenever it changes. On a refresh during an auth
+// outage the JWT has no timezone and /me is unreachable, so this cache is the
+// only way to keep date filtering/display/writes on the user's timezone.
+// subscribe() fires on every state change, so guard on the value to avoid
+// re-writing the same timezone on unrelated updates.
+let lastPersistedTimezone: string | null = null
+useAuthStore.subscribe((state) => {
+  const tz = state.user?.timezone
+  if (tz && tz !== lastPersistedTimezone) {
+    lastPersistedTimezone = tz
+    localStorage.setItem('user_timezone', tz)
+  }
 })
 
 export default useAuthStore

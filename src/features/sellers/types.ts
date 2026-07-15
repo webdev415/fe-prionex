@@ -62,6 +62,11 @@ export interface FactoringAgreement {
    */
   previous_lender?: string | null
   contract_purchase_date?: string | null
+  /**
+   * Agreement-level reporting date. Nullable —
+   * historical agreements created before this field existed have no value.
+   */
+  reporting_date?: string | null
   created_at: string
   /** Count of debts (in the caller's project) linked to this agreement. */
   debt_count: number

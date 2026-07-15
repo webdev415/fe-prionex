@@ -1,11 +1,11 @@
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
 import { useLawyerWorkplaceLayout } from '../../context/lawyerWorkplaceLayout'
-import { KANBAN_SCROLL_COLUMN_WIDTH_CLASS } from './constants'
+import { KANBAN_SCROLL_GRID_COLS_CLASS } from './constants'
 
 export function KanbanTabSkeleton() {
   const { t } = useTranslation('common')
-  const { isCompact, isKanbanGrid } = useLawyerWorkplaceLayout()
+  const { isCompact, showWorkspaceBanner } = useLawyerWorkplaceLayout()
   const loadingLabel = t('pages.lawyerWorkplace.kanban.loading', 'Loading kanban tasks…')
 
   return (
@@ -34,19 +34,20 @@ export function KanbanTabSkeleton() {
 
       <div
         className={cn(
-          'flex min-h-0 flex-1 gap-3 pb-6',
-          isKanbanGrid
-            ? 'grid grid-cols-4'
-            : cn('overflow-x-auto', '[scrollbar-width:none] [&::-webkit-scrollbar]:hidden')
+          'grid items-stretch gap-3 pb-6',
+          showWorkspaceBanner
+            ? 'grid-cols-4'
+            : cn(
+                'w-max grid-flow-col overflow-x-auto',
+                KANBAN_SCROLL_GRID_COLS_CLASS,
+                '[scrollbar-width:none] [&::-webkit-scrollbar]:hidden'
+              )
         )}
       >
         {Array.from({ length: 4 }).map((_, columnIndex) => (
           <div
             key={columnIndex}
-            className={cn(
-              'flex min-h-[320px] flex-col rounded-xl border border-gray-100 bg-white/70 p-3',
-              !isKanbanGrid && KANBAN_SCROLL_COLUMN_WIDTH_CLASS
-            )}
+            className="flex min-h-[320px] flex-col rounded-xl border border-gray-100 bg-white/70 p-3"
           >
             <div className="mb-3 flex items-center justify-between gap-2">
               <div className="h-4 w-24 animate-pulse rounded bg-gray-200" />

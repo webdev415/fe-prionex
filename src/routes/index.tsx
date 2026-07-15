@@ -252,7 +252,11 @@ export const router = createBrowserRouter([
       },
       {
         path: 'ai-assistant',
-        element: withSuspense(<AiAssistantPage />),
+        element: (
+          <PermissionRoute requiredPermission={PERMISSIONS.AI_ASSISTANT.USE}>
+            {withSuspense(<AiAssistantPage />)}
+          </PermissionRoute>
+        ),
       },
       {
         path: 'team-management/users',

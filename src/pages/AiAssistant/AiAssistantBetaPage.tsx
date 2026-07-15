@@ -27,6 +27,7 @@ import {
   type AssistantFeedbackComprehension,
   type AssistantFeedbackRating,
 } from '@/features/aiAssistant/api'
+import { normalizeCitations } from '@/features/aiAssistant/sse'
 import type { AssistantCitation, AssistantSources } from '@/features/aiAssistant/sse'
 import {
   blobToBase64,
@@ -1004,6 +1005,13 @@ export function AiAssistantBetaPage() {
     setChatMessages(
       detail.messages.map((item) => {
         const isAssistant = item.role === 'assistant'
+        // Слой 5: источники приходят сырым конвертом `{items:[...]}` (как и во
+        // фрейме `citations` стрима) — разворачиваем тем же нормализатором, что
+        // и живой стрим, иначе рендер зовёт `.map` на объекте и падает
+        // `.map is not a function` (белый экран при открытии диалога с SQL-
+        // источниками). Пустой результат → undefined, чтобы сообщение без
+        // источников вело себя как прежде (без секции «Источники»).
+        const citations = isAssistant ? normalizeCitations(item.citations) : []
         return {
           id: `server-${item.id}`,
           role: item.role,
@@ -1015,7 +1023,7 @@ export function AiAssistantBetaPage() {
           // стриме. Поля опциональны — старый бэкенд их не шлёт, тогда сообщение
           // ведёт себя как прежде (без чипа/источников).
           reasoning: isAssistant ? item.reasoning : undefined,
-          citations: isAssistant ? item.citations : undefined,
+          citations: citations.length > 0 ? citations : undefined,
         }
       })
     )
@@ -2073,7 +2081,12 @@ export function AiAssistantBetaPage() {
    * nothing (as before). The full ход рассуждения lives in the side panel.
    */
   const renderReasoningChip = (item: ChatMessage) => {
-    if (!messageHasReasoning(item)) return null
+    // Показываем чип при ЛЮБОЙ активности (раздумья/шаги ИЛИ источники), а не
+    // только при reasoning: у fast-хода раздумий нет, но источники факт-сносок
+    // есть — без чипа они после гидратации/перезагрузки истории становятся
+    // недоступны (панель нельзя открыть). Чип корректно деградирует на пустом
+    // reasoning + нулевом stepCount (см. ReasoningInlineChip).
+    if (!messageHasActivity(item)) return null
     const elapsed = reasoningElapsedMs(item, reasoningNow)
     return (
       <ReasoningInlineChip
@@ -2222,7 +2235,7 @@ export function AiAssistantBetaPage() {
                 // shrinking to the short header (w-fit) — the reasoning box then
                 // uses the full available width rather than looking narrow.
                 const hasReasoningSurface =
-                  item.role === 'assistant' && !item.isError && messageHasReasoning(item)
+                  item.role === 'assistant' && !item.isError && messageHasActivity(item)
                 return (
                   <div
                     key={item.id}

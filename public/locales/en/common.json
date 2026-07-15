@@ -1570,6 +1570,7 @@
         "chooseTemplate": "Choose a specific template",
         "hideTemplatePicker": "Hide template list",
         "changeType": "← Change scorecard type",
+        "readOnlyNotOwner": "Read-only — only the trainer who created this scorecard can edit it.",
         "unsaved": "Unsaved changes",
         "unsavedConfirm": "You have unsaved changes that will be lost. Close anyway?",
         "discardConfirm": "Discard changes",
@@ -2659,13 +2660,17 @@
           "loading": "Loading…",
           "selectExisting": "Select agreement",
           "emptyForSeller": "No agreements yet — create one",
+          "reportingDateShort": "reporting",
+          "purchaseDateShort": "purchase",
           "fields": {
             "number": "Agreement number",
             "previousLender": "Who sold",
             "previousLenderPlaceholderWithFallback": "If left blank, the seller's legal name will be inserted.",
             "previousLenderPlaceholderGeneric": "Enter the entity that sold the debt",
             "contractPurchaseDate": "Contract purchase date",
-            "contractPurchaseDatePlaceholder": "Select contract purchase date"
+            "contractPurchaseDatePlaceholder": "Select contract purchase date",
+            "reportingDate": "Reporting Date",
+            "reportingDatePlaceholder": "Select reporting date"
           }
         }
       },
@@ -5286,6 +5291,8 @@
         "projectNote": "Tags are automatically assigned to your active project",
         "tagName": "Tag Name",
         "code": "Code",
+        "sortOrder": "Sort Order",
+        "sortOrderPlaceholder": "e.g. 1, 10, 100",
         "category": "Category",
         "visibility": "Visibility",
         "ttlSettings": "TTL Settings",
@@ -5315,7 +5322,8 @@
           "expiryType": "Permanent = forever. TTL = removed after set time. Loan closure = removed when loan is closed.",
           "protectedTag": "Only selected roles can remove this tag.",
           "relatedTag": "When enabled, this tag appears on linked clients who share a phone number.",
-          "mutexGroup": "Tags in the same group are mutually exclusive. Assigning one removes others."
+          "mutexGroup": "Tags in the same group are mutually exclusive. Assigning one removes others.",
+          "sortOrder": "Lower number = higher position in tag lists. Default is 100."
         },
         "notificationTemplatePlaceholder": "e.g. Tag '{tag_name}' assigned to client {client_id}",
         "codePlaceholder": "e.g. high_risk",
@@ -5331,7 +5339,9 @@
           "nameRequired": "Name is required",
           "nameMaxLength": "Name must be 50 characters or less",
           "colorFormat": "Please enter a valid color in hex format (#RRGGBB)",
-          "descriptionMaxLength": "Description must be 200 characters or less"
+          "descriptionMaxLength": "Description must be 200 characters or less",
+          "sortOrderRequired": "Sort order is required",
+          "sortOrderPositiveInteger": "Sort order must be a positive integer"
         }
       },
       "expiryTypes": {
@@ -7116,6 +7126,7 @@
         "chooseTemplate": "Choose a specific template",
         "hideTemplatePicker": "Hide template list",
         "changeType": "← Change scorecard type",
+        "readOnlyNotOwner": "Read-only — only the trainer who created this scorecard can edit it.",
         "unsaved": "Unsaved changes",
         "unsavedConfirm": "You have unsaved changes that will be lost. Close anyway?",
         "discardConfirm": "Discard changes",

@@ -61,6 +61,7 @@ export type TrainingInboxViewMode = 'inbox' | 'kanban' | 'grid'
 // backend lands in a later round.
 export type TrainingsAndSessionsSubTabId =
   | 'courses'
+  | 'assignments'
   | 'group-trainings'
   | 'drills'
   | 'calendar'
@@ -127,6 +128,7 @@ export const TRAINING_INBOX_VIEW_MODES: TrainingInboxViewMode[] = ['inbox', 'kan
 
 export const TRAININGS_AND_SESSIONS_SUB_TABS: TrainingsAndSessionsSubTabId[] = [
   'courses',
+  'assignments',
   'group-trainings',
   'drills',
   'calendar',

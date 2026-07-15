@@ -374,6 +374,16 @@ export const PERMISSIONS = {
   UBKI: {
     SUBMIT: 'submit_to_ubki',
   },
+
+  /**
+   * AI Assistant Category (1 permission)
+   * Gates access to the operator AI assistant (chat, history, feedback,
+   * voice/TTS). Enforced server-side by the ai-assistant proxy; this UI gate
+   * hides the entry for users who lack it. Orthogonal to per-user data-scope.
+   */
+  AI_ASSISTANT: {
+    USE: 'use_ai_assistant',
+  },
 } as const
 
 /**
@@ -433,6 +443,7 @@ export const PERMISSION_CATEGORIES = {
   RESTRUCTURING: 'Restructuring',
   UBKI: 'UBKI',
   REVERSALS: 'Reversals',
+  AI_ASSISTANT: 'AI Assistant',
 } as const
 
 /**
@@ -632,4 +643,7 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   // Reversals (KAN-334)
   view_reversals: 'View the payment reversals (storno) table',
   create_reversal: 'Create a payment reversal (storno) — single and bulk',
+
+  // AI Assistant
+  use_ai_assistant: 'Use the operator AI assistant (chat, history, feedback, voice)',
 }

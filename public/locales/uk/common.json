@@ -1569,6 +1569,7 @@
         "chooseTemplate": "Обрати конкретний шаблон",
         "hideTemplatePicker": "Сховати список шаблонів",
         "changeType": "← Змінити тип скоркарти",
+        "readOnlyNotOwner": "Лише для перегляду — редагувати скоркарту може тільки тренер, який її створив.",
         "unsaved": "Незбережені зміни",
         "unsavedConfirm": "Є незбережені зміни, їх буде втрачено. Все одно закрити?",
         "discardConfirm": "Скасувати зміни",
@@ -2660,13 +2661,17 @@
           "loading": "Завантаження…",
           "selectExisting": "Виберіть договір",
           "emptyForSeller": "Договорів ще немає — створіть",
+          "reportingDateShort": "звітна",
+          "purchaseDateShort": "купівля",
           "fields": {
             "number": "Номер договору",
             "previousLender": "Хто продав",
             "previousLenderPlaceholderWithFallback": "Якщо залишити порожнім, буде вставлено юридичну назву продавця.",
             "previousLenderPlaceholderGeneric": "Введіть особу, яка продала борг",
             "contractPurchaseDate": "Дата купівлі за договором",
-            "contractPurchaseDatePlaceholder": "Виберіть дату купівлі за договором"
+            "contractPurchaseDatePlaceholder": "Виберіть дату купівлі за договором",
+            "reportingDate": "Звітна дата договору",
+            "reportingDatePlaceholder": "Виберіть звітну дату договору"
           }
         }
       },
@@ -5918,6 +5923,8 @@
         "projectNote": "Теги автоматично призначаються вашому активному проєкту",
         "tagName": "Назва тега",
         "code": "Код",
+        "sortOrder": "Порядок сортування",
+        "sortOrderPlaceholder": "напр. 1, 10, 100",
         "category": "Категорія",
         "visibility": "Видимість",
         "ttlSettings": "Налаштування TTL",
@@ -5947,7 +5954,8 @@
           "expiryType": "Постійний = назавжди. TTL = видаляється через час. До закриття = при закритті позики.",
           "protectedTag": "Лише обрані ролі зможуть зняти цей тег.",
           "relatedTag": "Якщо увімкнено, тег відображається у пов'язаних клієнтів із спільним номером телефону.",
-          "mutexGroup": "Теги однієї групи взаємовиключні. Призначення одного знімає інші."
+          "mutexGroup": "Теги однієї групи взаємовиключні. Призначення одного знімає інші.",
+          "sortOrder": "Менше число = вище в списках тегів. За замовчуванням 100."
         },
         "notificationTemplatePlaceholder": "Напр.: Тег '{tag_name}' призначено клієнту {client_id}",
         "codePlaceholder": "Напр.: high_risk",
@@ -5963,7 +5971,9 @@
           "nameRequired": "Назва обов'язкова",
           "nameMaxLength": "Назва має бути не більше 50 символів",
           "colorFormat": "Будь ласка, введіть дійсний колір у форматі hex (#RRGGBB)",
-          "descriptionMaxLength": "Опис має бути не більше 200 символів"
+          "descriptionMaxLength": "Опис має бути не більше 200 символів",
+          "sortOrderRequired": "Порядок сортування обов'язковий",
+          "sortOrderPositiveInteger": "Порядок сортування має бути додатним цілим числом"
         }
       },
       "expiryTypes": {
@@ -7130,6 +7140,7 @@
         "chooseTemplate": "Обрати конкретний шаблон",
         "hideTemplatePicker": "Сховати список шаблонів",
         "changeType": "← Змінити тип скоркарти",
+        "readOnlyNotOwner": "Лише для перегляду — редагувати скоркарту може тільки тренер, який її створив.",
         "unsaved": "Незбережені зміни",
         "unsavedConfirm": "Є незбережені зміни, їх буде втрачено. Все одно закрити?",
         "discardConfirm": "Скасувати зміни",

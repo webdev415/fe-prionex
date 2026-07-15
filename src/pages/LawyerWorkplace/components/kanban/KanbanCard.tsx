@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import DatePicker from 'react-datepicker'
 import 'react-datepicker/dist/react-datepicker.css'
 import type { LegalKanbanTaskPatch, LegalLawyer, LegalLetterType } from '@/features/lawyerWorkplace'
+import { canAssignLawyer } from '@/features/lawyerWorkplace'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -85,6 +86,7 @@ export function KanbanCard({
     initials: lawyer.initials,
     name: extractAssigneeName(lawyer.display_name),
     label: lawyer.display_name,
+    assignable: canAssignLawyer(lawyer, task.assigneeUserId),
   }))
 
   const getAssigneeLabel = (initials: string, fallbackName: string) => {
@@ -335,40 +337,55 @@ export function KanbanCard({
                     </span>
                   </DropdownMenuSubTrigger>
                   <DropdownMenuSubContent className="min-w-[170px] p-1.5">
-                    {assigneeOptions.map((opt) => (
-                      <DropdownMenuItem
-                        key={`${opt.initials}-${opt.userId ?? opt.name}`}
-                        className={cn(
-                          'cursor-pointer rounded-md px-2 py-1.5 text-[12px] focus:bg-gray-50',
-                          opt.initials === assigneeInitials && 'bg-gray-50'
-                        )}
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          if (opt.userId != null) {
-                            onTaskUpdate?.(task.id, { assigneeUserId: opt.userId })
-                          }
-                        }}
-                      >
-                        <span className="flex items-center gap-2">
-                          <span
-                            className={cn(
-                              'flex h-5 w-5 items-center justify-center rounded-full text-[9px] font-bold',
-                              getAssigneeColour(opt.userId, opt.initials)
-                            )}
-                          >
-                            {opt.initials}
-                          </span>
-                          <span className="text-dark-500">{opt.label}</span>
-                          {opt.initials === assigneeInitials && (
-                            <Icons.Checkmark
-                              size={12}
-                              className="text-primary-600 ml-auto"
-                              strokeWidth={2}
-                            />
+                    {assigneeOptions.map((opt) => {
+                      const lawyer = lawyers.find((item) => item.user_id === opt.userId)
+                      return (
+                        <DropdownMenuItem
+                          key={`${opt.initials}-${opt.userId ?? opt.name}`}
+                          disabled={!opt.assignable}
+                          className={cn(
+                            'rounded-md px-2 py-1.5 text-[12px] focus:bg-gray-50',
+                            opt.assignable ? 'cursor-pointer' : 'cursor-not-allowed opacity-50',
+                            opt.initials === assigneeInitials && 'bg-gray-50'
                           )}
-                        </span>
-                      </DropdownMenuItem>
-                    ))}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            if (!opt.assignable || opt.userId == null) return
+                            onTaskUpdate?.(task.id, { assigneeUserId: opt.userId })
+                          }}
+                        >
+                          <span className="flex items-center gap-2">
+                            <span
+                              className={cn(
+                                'flex h-5 w-5 items-center justify-center rounded-full text-[9px] font-bold',
+                                getAssigneeColour(opt.userId, opt.initials)
+                              )}
+                            >
+                              {opt.initials}
+                            </span>
+                            <span className="text-dark-500 flex min-w-0 flex-col">
+                              <span>{opt.label}</span>
+                              {!opt.assignable && lawyer ? (
+                                <span className="text-light-500 text-[10px]">
+                                  {t('pages.lawyerWorkplace.lawyers.atCapacity', {
+                                    current: lawyer.current_active,
+                                    max: lawyer.max_in_flight,
+                                    defaultValue: `At capacity (${lawyer.current_active}/${lawyer.max_in_flight})`,
+                                  })}
+                                </span>
+                              ) : null}
+                            </span>
+                            {opt.initials === assigneeInitials && (
+                              <Icons.Checkmark
+                                size={12}
+                                className="text-primary-600 ml-auto"
+                                strokeWidth={2}
+                              />
+                            )}
+                          </span>
+                        </DropdownMenuItem>
+                      )
+                    })}
                   </DropdownMenuSubContent>
                 </DropdownMenuSub>
 

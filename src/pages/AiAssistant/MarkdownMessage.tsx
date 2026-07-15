@@ -2,6 +2,7 @@ import {
   useCallback,
   useMemo,
   useState,
+  type ComponentProps,
   type ComponentPropsWithoutRef,
   type KeyboardEvent,
   type ReactNode,
@@ -357,8 +358,7 @@ type MarkdownMessageProps = {
   citations?: MarkdownCitation[]
 }
 
-// Плагин статичен (не зависит от пропсов) — держим ссылку стабильной.
-const REHYPE_PLUGINS = [rehypeAssistantMarkers]
+type RehypePlugins = ComponentProps<typeof ReactMarkdown>['rehypePlugins']
 
 /**
  * Shared markdown surface for the assistant: GFM + syntax-highlighted code
@@ -378,6 +378,16 @@ export function MarkdownMessage({
     for (const citation of citations ?? []) map.set(citation.id, citation)
     return map
   }, [citations])
+
+  // Набор id источников хода → плагину, чтобы кружковые глифы `①..⑳` из вывода
+  // модели становились кликабельными сносками только там, где источник реально
+  // есть. Плагин пересобираем при смене источников (иначе react-markdown держит
+  // старый набор id).
+  const citationIds = useMemo(() => new Set(citationMap.keys()), [citationMap])
+  const rehypePlugins = useMemo<RehypePlugins>(
+    () => [[rehypeAssistantMarkers, { citationIds }]],
+    [citationIds]
+  )
 
   const components = useMemo(() => {
     const map: Components = {
@@ -415,7 +425,7 @@ export function MarkdownMessage({
     <div className={className}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
-        rehypePlugins={REHYPE_PLUGINS}
+        rehypePlugins={rehypePlugins}
         components={components}
       >
         {children}

@@ -11,6 +11,7 @@ import {
 import { Label } from '@/components/ui/Label'
 import { Modal, ModalContent, ModalFooter, ModalHeader } from '@/components/ui/Modal'
 import { SearchableSelect } from '@/components/ui/SearchableSelect'
+import { canAssignLawyer } from '@/features/lawyerWorkplace'
 import { useCreateLegalKanbanTask } from '@/features/lawyerWorkplace/hooks/useLegalMutations'
 import { legalDueDateToIso } from '@/features/lawyerWorkplace/utils/legalDueDate'
 import {
@@ -20,6 +21,7 @@ import {
 import { useLegalClientSearch } from '@/features/lawyerWorkplace/hooks/useLegalClientSearch'
 import { useDebounce } from '@/hooks/useDebounce'
 import { Icons } from '@/lib/icons'
+import { cn } from '@/lib/utils'
 import type { LegalLetterType } from '@/features/lawyerWorkplace'
 import { resolveKanbanTypeBadgeProps } from './constants'
 import { KanbanTypeBadge } from './KanbanTypeBadge'
@@ -51,7 +53,7 @@ interface FormSelectProps {
   label: string
   value: ReactNode
   onSelect: (key: string) => void
-  items: { key: string; content: ReactNode }[]
+  items: { key: string; content: ReactNode; disabled?: boolean }[]
   leftIcon?: ReactNode
   disabled?: boolean
 }
@@ -81,8 +83,14 @@ function FormSelect({ label, value, onSelect, items, leftIcon, disabled }: FormS
           {items.map((item) => (
             <DropdownMenuItem
               key={item.key}
-              className="cursor-pointer rounded-md px-2 py-1.5 text-[13px] focus:bg-gray-50"
-              onClick={() => onSelect(item.key)}
+              disabled={item.disabled}
+              className={cn(
+                'rounded-md px-2 py-1.5 text-[13px] focus:bg-gray-50',
+                item.disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'
+              )}
+              onClick={() => {
+                if (!item.disabled) onSelect(item.key)
+              }}
             >
               {item.content}
             </DropdownMenuItem>
@@ -131,16 +139,21 @@ export function CreateKanbanTaskModal({ open, onClose }: CreateKanbanTaskModalPr
     [clientsData?.items]
   )
 
+  const assignableLawyers = useMemo(
+    () => lawyers.filter((lawyer) => canAssignLawyer(lawyer)),
+    [lawyers]
+  )
+
   useEffect(() => {
     if (!open) return
     requestAnimationFrame(() => {
-      setLawyerUserId(lawyers[0]?.user_id ?? null)
+      setLawyerUserId(assignableLawyers[0]?.user_id ?? null)
       setLetterTypeId(letterTypes[0]?.id ?? null)
       setClientId('')
       setClientSearch('')
       setDeadline(getTomorrowDate())
     })
-  }, [letterTypes, lawyers, open])
+  }, [assignableLawyers, letterTypes, open])
 
   const selectedLawyer = lawyers.find((item) => item.user_id === lawyerUserId)
   const selectedLetterType = letterTypes.find((item) => item.id === letterTypeId)
@@ -197,16 +210,38 @@ export function CreateKanbanTaskModal({ open, onClose }: CreateKanbanTaskModalPr
         <div className="flex flex-col gap-4">
           <FormSelect
             label={t('pages.lawyerWorkplace.kanban.createTask.lawyer', 'Lawyer')}
-            disabled={optionsLoading || lawyers.length === 0}
+            disabled={optionsLoading || assignableLawyers.length === 0}
             value={
               selectedLawyer?.display_name ??
-              t('pages.lawyerWorkplace.kanban.createTask.selectLawyer', 'Select lawyer')
+              (lawyers.length > 0 && assignableLawyers.length === 0
+                ? t(
+                    'pages.lawyerWorkplace.kanban.createTask.noAvailableLawyers',
+                    'No lawyers with available capacity'
+                  )
+                : t('pages.lawyerWorkplace.kanban.createTask.selectLawyer', 'Select lawyer'))
             }
             onSelect={(key) => setLawyerUserId(Number(key))}
-            items={lawyers.map((lawyer) => ({
-              key: String(lawyer.user_id),
-              content: lawyer.display_name,
-            }))}
+            items={lawyers.map((lawyer) => {
+              const assignable = canAssignLawyer(lawyer)
+              return {
+                key: String(lawyer.user_id),
+                disabled: !assignable,
+                content: (
+                  <span className="flex min-w-0 flex-col">
+                    <span>{lawyer.display_name}</span>
+                    {!assignable ? (
+                      <span className="text-light-500 text-[11px]">
+                        {t('pages.lawyerWorkplace.lawyers.atCapacity', {
+                          current: lawyer.current_active,
+                          max: lawyer.max_in_flight,
+                          defaultValue: `At capacity (${lawyer.current_active}/${lawyer.max_in_flight})`,
+                        })}
+                      </span>
+                    ) : null}
+                  </span>
+                ),
+              }
+            })}
           />
 
           <FormSelect

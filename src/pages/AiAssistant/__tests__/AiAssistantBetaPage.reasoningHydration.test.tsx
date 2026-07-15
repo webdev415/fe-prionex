@@ -66,18 +66,25 @@ const HYDRATED_CONVERSATION: AssistantConversationDetail = {
       tokens: 50,
       created_at: '2026-07-08T10:01:00Z',
       // Слой 5: сервер отдаёт раздумья + источники в ассистентском сообщении.
+      // ВАЖНО: источники приходят документированным конвертом `{items:[...]}`
+      // (ровно так их персистит бэкенд и шлёт фрейм `citations` стрима), НЕ голым
+      // массивом. Раньше мок был массивом и скрывал реальный контракт — из-за
+      // чего `.map is not a function` (белый экран) не ловился ни фронт-, ни
+      // бэкенд-тестами. Держим форму реалистичной, чтобы регресс не вернулся.
       reasoning: 'Считаю клиентов по таблице clients.',
-      citations: [
-        {
-          id: 1,
-          kind: 'sql',
-          ref: 'clients:count',
-          query: 'SELECT count(*) FROM clients',
-          columns: ['count'],
-          rows: [[351000]],
-        },
-        { id: 2, kind: 'sql', ref: 'clients:active_count' },
-      ],
+      citations: {
+        items: [
+          {
+            id: 1,
+            kind: 'sql',
+            ref: 'clients:count',
+            query: 'SELECT count(*) FROM clients',
+            columns: ['count'],
+            rows: [[351000]],
+          },
+          { id: 2, kind: 'sql', ref: 'clients:active_count' },
+        ],
+      },
     },
   ],
 }
@@ -136,6 +143,33 @@ describe('AiAssistantBetaPage — гидратация раздумий/исто
 
   afterEach(() => {
     vi.unstubAllGlobals()
+  })
+
+  it('fast-ход БЕЗ reasoning: чип и клик по ① восстанавливают источники после гидратации', async () => {
+    // Быстрый ход (fast) не стримит reasoning — у сообщения только источники.
+    // Раньше messageHasReasoning=false → чип «Ход рассуждения» пропадал, и
+    // provenance (Джерело цифр) после перезагрузки истории был недоступен.
+    const noReasoning = {
+      ...HYDRATED_CONVERSATION,
+      messages: HYDRATED_CONVERSATION.messages.map((m) =>
+        m.role === 'assistant' ? { ...m, reasoning: undefined } : m
+      ),
+    }
+    useAiAssistantStore.getState().setActiveConversation('7', 42)
+    mockedGetConversation.mockResolvedValue(noReasoning)
+
+    renderPage()
+    await screen.findByText(/В проекте/)
+
+    // Чип активности присутствует даже без reasoning (есть источники).
+    expect(await screen.findByTestId('assistant-reasoning')).toBeInTheDocument()
+
+    // Клик по ① открывает панель с источником (SQL-запрос виден).
+    fireEvent.click(getFact(1))
+    await screen.findByTestId('assistant-citations', undefined, { timeout: 5000 })
+    expect(within(getSource(1)).getByTestId('citation-sql')).toHaveTextContent(
+      'SELECT count(*) FROM clients'
+    )
   })
 
   it('гидратирует диалог: чип раздумий + клик по факту открывает панель с источниками', async () => {
@@ -224,5 +258,27 @@ describe('AiAssistantBetaPage — гидратация раздумий/исто
       citation_id: 1,
       verdict: 'wrong',
     })
+  })
+
+  it('гидратация не падает на конверте без items / битых источниках (регресс .map is not a function)', async () => {
+    // Старый бэкенд мог отдать `citations` без `items`, `null` или мусор.
+    // normalizeCitations должен вернуть [] — сообщение рендерится без секции
+    // источников, а не роняет страницу в ErrorBoundary.
+    useAiAssistantStore.getState().setActiveConversation('7', 42)
+    mockedGetConversation.mockResolvedValue({
+      ...HYDRATED_CONVERSATION,
+      messages: HYDRATED_CONVERSATION.messages.map((m) =>
+        m.role === 'assistant'
+          ? { ...m, content: 'Просто ответ без источников.', citations: { note: 'no items' } }
+          : m
+      ),
+    })
+
+    renderPage()
+
+    // Текст сообщения отрисовался (страница жива, ErrorBoundary не сработал)…
+    expect(await screen.findByText(/Просто ответ без источников/)).toBeInTheDocument()
+    // …и секции источников нет — цитат не было.
+    expect(screen.queryByTestId('citation-source')).not.toBeInTheDocument()
   })
 })

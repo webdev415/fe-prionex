@@ -41,7 +41,7 @@ import {
   ALL_LAWYERS_FILTER,
   buildTypeFilterOptions,
   KANBAN_COLUMN_MOVE_OPTIONS,
-  KANBAN_SCROLL_COLUMN_WIDTH_CLASS,
+  KANBAN_SCROLL_GRID_COLS_CLASS,
   TYPE_FILTER_OPTIONS,
   type DeadlineFilter,
   type LawyerFilterId,
@@ -68,7 +68,7 @@ function parseTaskIdFromSearch(params: URLSearchParams): number | null {
 
 export function LegalKanbanBoard() {
   const { t } = useTranslation('common')
-  const { isKanbanGrid, showWorkspaceBanner } = useLawyerWorkplaceLayout()
+  const { showWorkspaceBanner } = useLawyerWorkplaceLayout()
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const { data: lawyersData } = useLegalLawyers({ scopedToActiveProject: true })
   const { data: letterTypesData } = useLegalLetterTypes({ includeInactive: true })
@@ -507,45 +507,38 @@ export function LegalKanbanBoard() {
           // Board-level vertical scroll only (Jira-style). Columns do not scroll individually.
           'lawyer-workplace-scroll flex min-h-0 flex-1 flex-col overflow-y-auto',
           (isLoading || isError || apiTasks.length === 0 || filteredTaskCount === 0) && 'hidden',
-          isKanbanGrid
-            ? showWorkspaceBanner
-              ? 'pb-24'
-              : 'pb-6'
-            : showWorkspaceBanner
-              ? 'pb-36'
-              : 'pb-20'
+          showWorkspaceBanner ? 'pb-24' : 'pb-20'
         )}
       >
         <div
           id={KANBAN_SCROLL_CONTAINER_ID}
           ref={scrollContainerRef}
           className={cn(
-            'flex min-h-0 flex-1 flex-col overscroll-x-contain',
-            isKanbanGrid
-              ? 'overflow-x-visible'
+            'overscroll-x-contain',
+            showWorkspaceBanner
+              ? 'flex min-h-0 flex-1 flex-col overflow-x-visible'
               : cn(
-                  'overflow-x-auto scroll-smooth px-4 sm:px-5 lg:px-7',
+                  'w-full snap-x snap-mandatory overflow-x-auto scroll-smooth px-4 sm:px-5 lg:px-7',
                   '[scrollbar-width:none] [&::-webkit-scrollbar]:hidden'
                 )
           )}
         >
           <div
             className={cn(
-              // Row grows with tallest column (cards + 100vh spacer); items-stretch equalizes bottoms.
-              'items-stretch',
-              isKanbanGrid
-                ? 'grid w-full grid-cols-4 gap-3 px-4 sm:px-5 lg:px-7'
-                : 'flex w-max snap-x snap-mandatory gap-3 lg:gap-4'
+              // Grid in both modes so items-stretch equalizes column bottoms (Jira-style).
+              'grid items-stretch',
+              showWorkspaceBanner
+                ? 'w-full grid-cols-4 gap-3 px-4 sm:px-5 lg:px-7'
+                : cn('w-max grid-flow-col gap-3 lg:gap-4', KANBAN_SCROLL_GRID_COLS_CLASS)
             )}
           >
             {displayColumns.map((col) => (
               <div
                 key={col.id}
                 className={cn(
-                  'flex flex-col self-stretch',
-                  isKanbanGrid
-                    ? 'min-w-0'
-                    : cn('shrink-0 snap-start', KANBAN_SCROLL_COLUMN_WIDTH_CLASS)
+                  'flex h-full min-h-0 flex-col',
+                  showWorkspaceBanner && 'min-w-0',
+                  !showWorkspaceBanner && 'snap-start'
                 )}
               >
                 <div className="sticky top-0 z-10 shrink-0">
@@ -573,12 +566,16 @@ export function LegalKanbanBoard() {
         </div>
       </div>
 
-      {!isKanbanGrid && !isLoading && !isError && apiTasks.length > 0 && filteredTaskCount > 0 && (
-        <KanbanBoardScrollNavigator
-          scrollContainerRef={scrollContainerRef}
-          columns={displayColumns}
-        />
-      )}
+      {!showWorkspaceBanner &&
+        !isLoading &&
+        !isError &&
+        apiTasks.length > 0 &&
+        filteredTaskCount > 0 && (
+          <KanbanBoardScrollNavigator
+            scrollContainerRef={scrollContainerRef}
+            columns={displayColumns}
+          />
+        )}
     </div>
   )
 }
