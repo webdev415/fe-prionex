@@ -109,8 +109,8 @@ export function ArchiveRoleModal({ open, roleId, onClose, onSuccess }: ArchiveRo
     <Modal open={open} onClose={onClose} maxWidth="2xl">
       <ModalHeader
         icon={
-          <div className="bg-primary-400 flex h-8 w-8 items-center justify-center rounded-full">
-            <Icons.Delete size={20} className="text-dark-500" strokeWidth={2} />
+          <div className="bg-primary-400 flex h-7 w-7 items-center justify-center rounded-full sm:h-8 sm:w-8">
+            <Icons.Delete size={18} className="text-foreground" strokeWidth={2} />
           </div>
         }
         title={
@@ -135,14 +135,14 @@ export function ArchiveRoleModal({ open, roleId, onClose, onSuccess }: ArchiveRo
             {/* Assigned Users Section */}
             {hasUsers ? (
               <div>
-                <p className="mb-3 text-sm font-light text-gray-950">
+                <p className="text-foreground mb-3 text-sm font-light">
                   {t('pages.roles.modals.archive.hasUsersAssigned')}
                 </p>
                 <div className="space-y-2">
                   {users.map((user) => (
                     <div key={user.id} className="flex items-center gap-3">
                       <Checkbox checked={true} disabled />
-                      <span className="text-sm font-light text-gray-950">
+                      <span className="text-foreground text-sm font-light">
                         {user.username}
                         {user.full_name ? ` (${user.full_name})` : ''}
                       </span>
@@ -152,7 +152,7 @@ export function ArchiveRoleModal({ open, roleId, onClose, onSuccess }: ArchiveRo
               </div>
             ) : (
               <div>
-                <p className="text-sm font-light text-gray-950">
+                <p className="text-foreground text-sm font-light">
                   {t('pages.roles.modals.archive.noUsersCanArchive')}
                 </p>
               </div>
@@ -161,8 +161,8 @@ export function ArchiveRoleModal({ open, roleId, onClose, onSuccess }: ArchiveRo
             {/* Role per Project Section */}
             {hasUsers && (
               <div className="space-y-4">
-                <hr className="border-light-50 border-t" />
-                <p className="text-sm font-light text-gray-950">
+                <hr className="border-border border-t" />
+                <p className="text-foreground text-sm font-light">
                   {t('pages.roles.modals.archive.reassignmentOptions')}
                 </p>
 
@@ -174,12 +174,12 @@ export function ArchiveRoleModal({ open, roleId, onClose, onSuccess }: ArchiveRo
                       className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 focus:outline-none ${
                         reassignmentOption === 'reassign'
                           ? 'border-primary-500 bg-primary-500'
-                          : 'border-gray-300 bg-transparent'
+                          : 'border-border bg-transparent'
                       }`}
                       onClick={() => setReassignmentOption('reassign')}
                     >
                       {reassignmentOption === 'reassign' && (
-                        <div className="h-2 w-2 rounded-full bg-white" />
+                        <div className="bg-primary-foreground h-2 w-2 rounded-full" />
                       )}
                     </button>
                     <div
@@ -194,7 +194,7 @@ export function ArchiveRoleModal({ open, roleId, onClose, onSuccess }: ArchiveRo
                       role="button"
                       tabIndex={0}
                     >
-                      <span className="w-1/2 text-sm font-light text-gray-950">
+                      <span className="text-foreground w-1/2 text-sm font-light">
                         {t('pages.roles.modals.archive.reassignTo')}
                       </span>
                       <div
@@ -236,12 +236,12 @@ export function ArchiveRoleModal({ open, roleId, onClose, onSuccess }: ArchiveRo
                       className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 focus:outline-none ${
                         reassignmentOption === 'default'
                           ? 'border-primary-500 bg-primary-500'
-                          : 'border-gray-300 bg-transparent'
+                          : 'border-border bg-transparent'
                       }`}
                       onClick={() => setReassignmentOption('default')}
                     >
                       {reassignmentOption === 'default' && (
-                        <div className="h-2 w-2 rounded-full bg-white" />
+                        <div className="bg-primary-foreground h-2 w-2 rounded-full" />
                       )}
                     </button>
                     <div
@@ -256,10 +256,10 @@ export function ArchiveRoleModal({ open, roleId, onClose, onSuccess }: ArchiveRo
                       role="button"
                       tabIndex={0}
                     >
-                      <span className="w-1/2 text-sm font-light text-gray-950">
+                      <span className="text-foreground w-1/2 text-sm font-light">
                         {t('pages.roles.modals.archive.setToDefault')}
                       </span>
-                      <span className="w-1/2 text-sm font-light text-gray-950">
+                      <span className="text-foreground w-1/2 text-sm font-light">
                         {defaultOperatorRole?.name || 'Operator'}
                       </span>
                     </div>
@@ -291,7 +291,7 @@ export function ArchiveRoleModal({ open, roleId, onClose, onSuccess }: ArchiveRo
             )}
           </div>
         ) : (
-          <div className="py-8 text-center text-gray-600">
+          <div className="text-muted-foreground py-8 text-center">
             {t('pages.roles.modals.archive.roleNotFound')}
           </div>
         )}
@@ -305,7 +305,7 @@ export function ArchiveRoleModal({ open, roleId, onClose, onSuccess }: ArchiveRo
           variant="primary"
           onClick={handleArchive}
           disabled={!canArchive || archiveMutation.isPending || isLoading}
-          className={`text-dark-500 bg-primary-300 h-[45px] flex-1 rounded-md border-none text-sm font-medium ${!canArchive ? 'opacity-50' : ''}`}
+          className={`text-primary-foreground bg-primary-300 h-[45px] flex-1 rounded-md border-none text-sm font-medium ${!canArchive ? 'opacity-50' : ''}`}
         >
           {archiveMutation.isPending
             ? t('pages.roles.modals.archive.archiving')
