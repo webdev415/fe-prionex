@@ -54,14 +54,19 @@ export function DialogueEvaluationTab() {
 
   // Resolve the ФИО (full-name) search to operator ids, then intersect with the
   // multi-select / scope so the server filters on the ``operator_id`` column.
-  const operatorIds = useMemo(() => {
+  // ``undefined`` means "no operator restriction" (scope=all/group) — kept as-is
+  // so the server returns every operator's scorecards.
+  const operatorIds = useMemo<number[] | undefined>(() => {
     const base = selectedEmployeeIds.length > 0 ? selectedEmployeeIds : scoped.userIds
     const q = nameQuery.trim().toLowerCase()
     if (!q) return base
-    const matches = new Set(
-      operators.filter((o) => o.full_name?.toLowerCase().includes(q)).map((o) => o.id)
-    )
-    return base.filter((id) => matches.has(id))
+    const matches = operators
+      .filter((o) => o.full_name?.toLowerCase().includes(q))
+      .map((o) => o.id)
+    // With an unrestricted base, the name matches become the restriction; else
+    // intersect the name matches with the existing scope/selection.
+    const matchSet = new Set(matches)
+    return base ? base.filter((id) => matchSet.has(id)) : matches
   }, [selectedEmployeeIds, scoped.userIds, nameQuery, operators])
 
   const filters = useMemo(
@@ -77,10 +82,12 @@ export function DialogueEvaluationTab() {
     [operatorIds, telephonyType, callFrom, callTo, minDuration]
   )
 
-  // No operators to query for: scope resolved empty, or a name search matched
-  // nobody. Either way, don't fetch (an empty operator_id list would otherwise
-  // widen to the whole project).
-  const noOperators = scoped.isEmptyResolution || operatorIds.length === 0
+  // No operators to query for: scope resolved empty, or a name search / employee
+  // selection narrowed to an explicit empty list. Don't fetch — an empty
+  // operator_id array would otherwise be omitted and widen to the whole project.
+  // (``undefined`` = "all operators" and must still fetch.)
+  const noOperators =
+    scoped.isEmptyResolution || (Array.isArray(operatorIds) && operatorIds.length === 0)
   const { data, isLoading, isError } = useScorecards(filters, !noOperators)
 
   // Scorecards carry only call_id; resolve the contacted number + client for
