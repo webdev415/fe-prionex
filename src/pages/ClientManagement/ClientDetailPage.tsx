@@ -12,6 +12,7 @@ import { Icons } from '@/lib/icons'
 import { DocumentsAccordion } from './components/DocumentsAccordion'
 import { DocumentUploadModal } from './components/DocumentUploadModal'
 import { LoanFactoringInfo } from './components/LoanFactoringInfo'
+import { LoanCalculationModal } from './components/LoanCalculationModal'
 import { UbkiSubmissionHistory } from './components/UbkiSubmissionHistory'
 import { SaleNotesSection } from './components/SaleNotesSection'
 import {
@@ -259,6 +260,8 @@ export function ClientDetailPage() {
   const looksLikePhone = (value: string) => looksLikeUkrainePhone(value)
   const [activeLoanTab, setActiveLoanTab] = useState<'process' | 'closed' | 'rr'>('process')
   const [selectedRaId, setSelectedRaId] = useState<number | null>(null)
+  // KAN-335: loan whose "detailed calculation after sale" modal is open.
+  const [calcLoan, setCalcLoan] = useState<{ id: number; loanNumber?: string | null } | null>(null)
   const [isConnectRrOpen, setIsConnectRrOpen] = useState(false)
   const [isWriteoffOpen, setIsWriteoffOpen] = useState(false)
   // KAN-334 — Reversal (storno) modal open state + optional row preselect.
@@ -1831,16 +1834,27 @@ export function ClientDetailPage() {
       header: t('pages.clients.detail.tableHeaders.actions'),
       align: 'center',
       render: (loan) => {
-        // "Info" button — always visible, opens expansion below.
+        // Leading buttons — always visible for every loan status:
+        // "Info" (opens the expansion below) and "Detailed calculation" (KAN-335).
         const infoButton = (
-          <button
-            onClick={() => toggleDebtExpand(loan.id)}
-            className="p-1 text-gray-500 hover:text-gray-700"
-            title={t('pages.clients.detail.loanInfo', 'Agreement info')}
-            aria-label={t('pages.clients.detail.loanInfo', 'Agreement info')}
-          >
-            <Icons.Info size={18} />
-          </button>
+          <>
+            <button
+              onClick={() => toggleDebtExpand(loan.id)}
+              className="p-1 text-gray-500 hover:text-gray-700"
+              title={t('pages.clients.detail.loanInfo', 'Agreement info')}
+              aria-label={t('pages.clients.detail.loanInfo', 'Agreement info')}
+            >
+              <Icons.Info size={18} />
+            </button>
+            <button
+              onClick={() => setCalcLoan({ id: loan.id, loanNumber: loan.loanNumber })}
+              className="p-1 text-gray-500 hover:text-gray-700"
+              title={t('pages.clients.detail.loanCalculation.trigger', 'Detailed calculation')}
+              aria-label={t('pages.clients.detail.loanCalculation.trigger', 'Detailed calculation')}
+            >
+              <Icons.Calculate size={18} />
+            </button>
+          </>
         )
 
         // Tooltip used when the UBKI send button is disabled because the
@@ -5943,6 +5957,17 @@ export function ClientDetailPage() {
                 }
               )
             }}
+          />
+        )}
+
+        {/* KAN-335: Detailed calculation (after sale) modal */}
+        {calcLoan && (
+          <LoanCalculationModal
+            open={!!calcLoan}
+            onClose={() => setCalcLoan(null)}
+            clientId={clientId}
+            debtId={calcLoan.id}
+            loanNumber={calcLoan.loanNumber}
           />
         )}
 

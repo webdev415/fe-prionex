@@ -52,6 +52,8 @@ export const clientKeys = {
     [...clientKeys.details(), id, 'restructuringAgreements'] as const,
   restructuringDetail: (id: number, raId: number) =>
     [...clientKeys.details(), id, 'restructuringDetail', raId] as const,
+  loanCalculation: (id: number, debtId: number) =>
+    [...clientKeys.details(), id, 'loanCalculation', debtId] as const,
   search: (params: SearchByTinParams) => [...clientKeys.all, 'search', params] as const,
   count: () => [...clientKeys.all, 'count'] as const,
   prioritySummary: () => [...clientKeys.all, 'priority-summary'] as const,
@@ -743,6 +745,19 @@ export function useRestructuringAgreementDetail(clientId: number, raId: number, 
     queryKey: clientKeys.restructuringDetail(clientId, raId),
     queryFn: () => clientApi.getRestructuringAgreementDetail(clientId, raId),
     enabled: enabled && clientId > 0 && raId > 0,
+    staleTime: 2 * 60_000,
+    refetchOnMount: false,
+  })
+}
+
+/**
+ * Detailed calculation (after sale) for a single loan — KAN-335 modal.
+ */
+export function useLoanCalculation(clientId: number, debtId: number, enabled = true) {
+  return useQuery({
+    queryKey: clientKeys.loanCalculation(clientId, debtId),
+    queryFn: () => clientApi.getLoanCalculation(clientId, debtId),
+    enabled: enabled && clientId > 0 && debtId > 0,
     staleTime: 2 * 60_000,
     refetchOnMount: false,
   })

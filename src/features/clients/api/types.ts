@@ -153,6 +153,48 @@ export interface RestructuringAgreementDetail {
   penalty_triggered_at?: string | null
 }
 
+// ── KAN-335: Detailed calculation for a loan (after sale) ──────────────────
+// One row per date on which a balance-changing event occurred, from the loan's
+// date of sale to today. All monetary values are backend-formatted strings
+// (2 dp). `*_debt` = end-of-day remaining balance; `*_written_off` / `*_paid`
+// = that day's deltas.
+export interface LoanCalculationRow {
+  date: string
+  is_sale_row: boolean
+
+  principal_debt: string
+  principal_written_off: string
+  principal_paid: string
+
+  interest_debt: string
+  interest_written_off: string
+  interest_paid: string
+
+  fine_debt: string
+  fine_written_off: string
+  fine_paid: string
+
+  penalty_debt: string
+  penalty_written_off: string
+  penalty_paid: string
+
+  commission_debt: string
+  commission_written_off: string
+  commission_paid: string
+
+  total_paid: string
+  tot_to_return: string
+}
+
+export interface LoanCalculation {
+  loan_id: number
+  contract_number?: string | null
+  principal_amount: string
+  date_of_sale?: string | null
+  currency: string
+  rows: LoanCalculationRow[]
+}
+
 export interface Client {
   id: number
   project_id: number
