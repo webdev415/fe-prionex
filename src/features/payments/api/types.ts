@@ -304,4 +304,11 @@ export interface PaymentDebtBreakdownResponse {
   computed_at: string
   /** AC-1b — when true, allocation is empty and the modal renders a placeholder. */
   debt_id_missing?: boolean
+  /**
+   * KAN-334 — true when the payment's distribution has been reversed. The
+   * ``allocation[].allocated_amount`` values then reflect the RE-ALLOCATED
+   * (new) split, and the modal shows a "Reversed" badge.
+   */
+  is_reversed?: boolean
+  reversal_date?: string | null
 }

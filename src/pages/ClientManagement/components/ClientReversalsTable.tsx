@@ -20,11 +20,16 @@ import type { Reversal } from '@/features/reversals/api/types'
 
 export interface ClientReversalsTableProps {
   clientId: number
+  /** This client's full name (the table is client-scoped). */
   clientFullName?: string
   /** Jump to the source payment in the main Payments table. */
   onPaymentClick?: (paymentId: number) => void
   /** Map a user id → display name (parent resolves from its operator lists). */
   resolveUserName?: (userId: number | null | undefined) => string
+  /** Map a credit/debt id → its loan (contract) number, resolved by the parent. */
+  resolveLoanNumber?: (creditId: number) => string | undefined
+  /** Highlight the reversal whose source payment matches (cross-navigation). */
+  highlightPaymentId?: number | null
   enabled?: boolean
 }
 
@@ -35,6 +40,8 @@ export function ClientReversalsTable({
   clientFullName,
   onPaymentClick,
   resolveUserName,
+  resolveLoanNumber,
+  highlightPaymentId = null,
   enabled = true,
 }: ClientReversalsTableProps) {
   const { t, i18n } = useTranslation('common')
@@ -78,10 +85,10 @@ export function ClientReversalsTable({
           ),
       },
       {
-        key: 'creditId',
-        header: t('pages.clients.detail.reversalsTable.creditId'),
+        key: 'loanNumber',
+        header: t('pages.clients.detail.tableHeaders.loanNumber'),
         align: 'left',
-        render: (r) => `#${r.credit_id}`,
+        render: (r) => resolveLoanNumber?.(r.credit_id) ?? String(r.credit_id),
       },
       {
         key: 'clientFullName',
@@ -141,7 +148,7 @@ export function ClientReversalsTable({
         render: (r) => r.comment ?? '-',
       },
     ]
-  }, [t, dateLocale, onPaymentClick, clientFullName, resolveUserName])
+  }, [t, dateLocale, onPaymentClick, resolveUserName, resolveLoanNumber, clientFullName])
 
   return (
     <div className="flex w-full flex-col gap-3">
@@ -156,6 +163,11 @@ export function ClientReversalsTable({
         data={rows}
         className="w-full"
         emptyMessage={t('pages.clients.detail.reversalsTable.empty')}
+        rowClassName={(row) =>
+          highlightPaymentId != null && row.original_payment_id === highlightPaymentId
+            ? 'bg-primary-100/60 ring-primary-300 ring-1'
+            : undefined
+        }
       />
     </div>
   )

@@ -52,6 +52,10 @@ export interface ReversalEligiblePayment {
   paymentDate: string
   /** True when this payment has already been reversed (disabled in the list). */
   isReversed: boolean
+  /** Loan/contract number of the payment's credit (shown in the picker). */
+  contractNumber?: string | null
+  /** Original verify-time allocation per charge type (for display). */
+  original: Record<ReversalChargeType, number>
 }
 
 export interface ReversalCreateModalProps {
@@ -61,6 +65,8 @@ export interface ReversalCreateModalProps {
   payments: ReversalEligiblePayment[]
   /** Optional preselect. */
   initialPaymentId?: number | null
+  /** True while the client's payments are still loading (picker not ready). */
+  isLoading?: boolean
 }
 
 type AmountMap = Record<ReversalChargeType, string>
@@ -83,6 +89,7 @@ const ERROR_CODE_I18N: Record<string, string> = {
   PAYMENT_NOT_FOUND: 'pages.clients.detail.reversalModal.errors.paymentNotFound',
   PAYMENT_HAS_NO_CREDIT: 'pages.clients.detail.reversalModal.errors.paymentHasNoCredit',
   REVERSAL_NOT_SNAPSHOTTED: 'pages.clients.detail.reversalModal.errors.notSnapshotted',
+  PRIMARY_CREDITOR_PAYMENT: 'pages.clients.detail.reversalModal.errors.primaryCreditorPayment',
 }
 
 function parseAmount(raw: string): number {
@@ -100,6 +107,7 @@ export function ReversalCreateModal({
   onClose,
   payments,
   initialPaymentId = null,
+  isLoading = false,
 }: ReversalCreateModalProps) {
   const { t } = useTranslation('common')
 
@@ -230,6 +238,7 @@ export function ReversalCreateModal({
               <SelectContent>
                 {payments.map((p) => (
                   <SelectItem key={p.id} value={String(p.id)} disabled={p.isReversed}>
+                    {p.contractNumber ? `${p.contractNumber} — ` : ''}
                     {p.paymentDate} — {formatMoneyUAHTwoDecimals(p.amount)}
                     {p.isReversed && (
                       <span className="ml-2 text-xs text-gray-500">
@@ -240,10 +249,14 @@ export function ReversalCreateModal({
                 ))}
               </SelectContent>
             </Select>
-            {selectablePayments.length === 0 && (
-              <p className="text-error-500 text-sm">
-                {t('pages.clients.detail.reversalModal.noEligiblePayments')}
-              </p>
+            {isLoading ? (
+              <p className="text-sm text-gray-500">{t('common.loading')}</p>
+            ) : (
+              selectablePayments.length === 0 && (
+                <p className="text-error-500 text-sm">
+                  {t('pages.clients.detail.reversalModal.noEligiblePayments')}
+                </p>
+              )
             )}
           </div>
 
@@ -259,6 +272,13 @@ export function ReversalCreateModal({
                 value={amounts[ct]}
                 disabled={!selectedPayment}
                 onChange={(e) => updateAmount(ct, e.target.value)}
+                helperText={
+                  selectedPayment
+                    ? t('pages.clients.detail.reversalModal.originalAllocated', {
+                        amount: formatMoneyUAHTwoDecimals(selectedPayment.original[ct]),
+                      })
+                    : undefined
+                }
               />
             ))}
           </div>

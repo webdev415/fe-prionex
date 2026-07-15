@@ -43,6 +43,7 @@
     "bulkPaymentVerification": "Масова верифікація платежів",
     "bulkTagAssignment": "Масове призначення тегів",
     "bulkWriteoffImport": "Масовий імпорт списань",
+    "bulkReversalImport": "Масовий імпорт сторнувань",
     "bulkSaleNotesImport": "Масовий імпорт коментарів",
     "auditLogs": "Журнал аудиту",
     "reports": "Звіти",
@@ -3420,6 +3421,7 @@
           "noEligiblePayments": "У цього клієнта немає підтверджених платежів, доступних для сторнування.",
           "reversedTag": "сторновано",
           "amountPlaceholder": "Сума для сторнування",
+          "originalAllocated": "Початковий розподіл: {{amount}}",
           "comment": "Коментар / Причина",
           "commentPlaceholder": "Необовʼязкова причина сторнування",
           "totalAmount": "Загальна сума сторнування",
@@ -3437,7 +3439,8 @@
             "paymentNotVerified": "Сторнувати можна лише підтверджені платежі.",
             "paymentNotFound": "Платіж не знайдено.",
             "paymentHasNoCredit": "Цей платіж не повʼязаний із кредитом.",
-            "notSnapshotted": "Для цього платежу немає знімка розподілу, тому його не можна сторнувати."
+            "notSnapshotted": "Для цього платежу немає знімка розподілу, тому його не можна сторнувати.",
+            "primaryCreditorPayment": "Платежі первинного кредитора не можна сторнувати — лише платежі, здійснені через Prionex."
           }
         },
         "reversalsTable": {

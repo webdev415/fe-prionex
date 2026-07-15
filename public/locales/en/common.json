@@ -43,6 +43,7 @@
     "bulkPaymentVerification": "Bulk Payment Verification",
     "bulkTagAssignment": "Bulk Tag Assignment",
     "bulkWriteoffImport": "Bulk Write-off Import",
+    "bulkReversalImport": "Bulk Reversal Import",
     "bulkSaleNotesImport": "Bulk Sales Note Import",
     "auditLogs": "Audit Logs",
     "reports": "Reports",
@@ -4090,6 +4091,7 @@
           "noEligiblePayments": "This client has no verified payments available for reversal.",
           "reversedTag": "reversed",
           "amountPlaceholder": "Amount to reverse",
+          "originalAllocated": "Originally allocated: {{amount}}",
           "comment": "Comment / Reason",
           "commentPlaceholder": "Optional reason for the reversal",
           "totalAmount": "Total amount of reversal",
@@ -4107,7 +4109,8 @@
             "paymentNotVerified": "Only verified payments can be reversed.",
             "paymentNotFound": "Payment not found.",
             "paymentHasNoCredit": "This payment is not associated with a credit.",
-            "notSnapshotted": "This payment has no allocation snapshot and cannot be reversed."
+            "notSnapshotted": "This payment has no allocation snapshot and cannot be reversed.",
+            "primaryCreditorPayment": "Primary-creditor payments cannot be reversed — only payments made through Prionex."
           }
         },
         "reversalsTable": {

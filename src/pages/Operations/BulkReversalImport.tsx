@@ -1,17 +1,20 @@
 /**
  * Bulk payment reversal (storno) CSV upload page — KAN-334.
  *
- * The operator uploads a CSV with columns:
- *   payment_id, principal, interest, fine, penalty, commission
+ * Three-step flow, matching the other bulk-import pages
+ * (upload → preview/verify → results):
+ *   1. 'upload'  — drag-and-drop / pick a CSV (payment_id, principal, interest,
+ *                  fine, penalty, commission). Parsed client-side; NOT sent yet.
+ *   2. 'preview' — verification table of the parsed rows with a per-row total,
+ *                  plus "Import" and "Back" buttons. Nothing is committed until
+ *                  the operator clicks Import.
+ *   3. 'result'  — per-row Created / Failed outcomes + "Upload another".
  *
- * Unlike the write-off bulk import (which posts the file to the backend),
- * this page parses the CSV client-side into JSON items and posts them to
- * ``POST /api/v1/payments/reversals/bulk``. The backend applies the three
- * file validations per row (Σ = payment amount · payment is a real verified
- * "Payment" · payment not already reversed) and returns a per-row result.
+ * On Import the rows are posted to ``POST /api/v1/payments/reversals/bulk``,
+ * which applies the three validations per row (Σ = payment amount · verified
+ * "Payment" · not already reversed) and returns a per-row result.
  *
- * i18n strings use inline English fallbacks (``t(key, 'Default')``) so the
- * page renders without adding keys to every locale.
+ * i18n strings use inline English fallbacks (``t(key, 'Default')``).
  */
 
 import { useCallback, useMemo, useRef, useState } from 'react'
@@ -21,6 +24,7 @@ import { toast } from 'sonner'
 import { Button } from '@/components/ui/Button'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { Icons } from '@/lib/icons'
+import { formatMoneyUAHTwoDecimals } from '@/lib/formatters'
 import { useBulkReversal } from '@/features/reversals/hooks/useReversals'
 import type {
   BulkReversalItem,
@@ -34,6 +38,13 @@ const CSV_TEMPLATE_EXAMPLE = '55001,1000,0,500,0,0'
 const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5 MB
 
 type ComponentKey = 'principal' | 'interest' | 'fine' | 'penalty' | 'commission'
+type PageState = 'upload' | 'preview' | 'result'
+
+const COMPONENT_KEYS: ComponentKey[] = ['principal', 'interest', 'fine', 'penalty', 'commission']
+
+function rowTotal(item: BulkReversalItem): number {
+  return COMPONENT_KEYS.reduce((sum, k) => sum + Number(item[k] || 0), 0)
+}
 
 function downloadTemplate() {
   const blob = new Blob([CSV_TEMPLATE_HEADER + '\n' + CSV_TEMPLATE_EXAMPLE + '\n'], {
@@ -100,47 +111,45 @@ async function parseCsv(file: File): Promise<BulkReversalItem[] | null> {
 
 export function BulkReversalImportPage() {
   const { t } = useTranslation('common')
+  const p = 'pages.operations.bulkReversalImport'
 
+  const [state, setState] = useState<PageState>('upload')
+  const [items, setItems] = useState<BulkReversalItem[]>([])
+  const [fileName, setFileName] = useState<string>('')
   const [result, setResult] = useState<BulkReversalResponse | null>(null)
   const [dragActive, setDragActive] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
   const bulk = useBulkReversal()
 
-  const triggerUpload = useCallback(
+  // ------------------------------------------------------------------
+  // Step 1 — upload + parse (no network)
+  // ------------------------------------------------------------------
+
+  const handleFileSelected = useCallback(
     async (file: File) => {
       if (!file.name.toLowerCase().endsWith('.csv')) {
-        toast.error(
-          t('pages.operations.bulkReversalImport.errors.onlyCsv', 'Only CSV files are supported.')
-        )
+        toast.error(t(`${p}.errors.onlyCsv`, 'Only CSV files are supported.'))
         return
       }
       if (file.size > MAX_FILE_SIZE) {
-        toast.error(
-          t(
-            'pages.operations.bulkReversalImport.errors.fileTooLarge',
-            'File is too large (5 MB limit).'
-          )
-        )
+        toast.error(t(`${p}.errors.fileTooLarge`, 'File is too large (5 MB limit).'))
         return
       }
-      const items = await parseCsv(file)
-      if (items == null) {
-        toast.error(
-          t(
-            'pages.operations.bulkReversalImport.errors.badHeader',
-            'CSV must have a payment_id column.'
-          )
-        )
+      const parsed = await parseCsv(file)
+      if (parsed == null) {
+        toast.error(t(`${p}.errors.badHeader`, 'CSV must have a payment_id column.'))
         return
       }
-      if (items.length === 0) {
-        toast.error(t('pages.operations.bulkReversalImport.errors.noRows', 'No valid rows found.'))
+      if (parsed.length === 0) {
+        toast.error(t(`${p}.errors.noRows`, 'No valid rows found.'))
         return
       }
-      bulk.mutate({ items }, { onSuccess: (res) => setResult(res) })
+      setItems(parsed)
+      setFileName(file.name)
+      setState('preview')
     },
-    [bulk, t]
+    [t, p]
   )
 
   const handleDrag = useCallback((e: React.DragEvent) => {
@@ -156,57 +165,114 @@ export function BulkReversalImportPage() {
       e.stopPropagation()
       setDragActive(false)
       const file = e.dataTransfer.files?.[0]
-      if (file) void triggerUpload(file)
+      if (file) void handleFileSelected(file)
     },
-    [triggerUpload]
+    [handleFileSelected]
   )
 
   const handleFileChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0]
-      if (file) void triggerUpload(file)
+      if (file) void handleFileSelected(file)
       if (inputRef.current) inputRef.current.value = ''
     },
-    [triggerUpload]
+    [handleFileSelected]
   )
 
-  type Row = BulkReversalResultItem & { id: number }
-  const rows = useMemo<Row[]>(
+  // ------------------------------------------------------------------
+  // Step 2 — verify → import
+  // ------------------------------------------------------------------
+
+  const handleImport = useCallback(() => {
+    bulk.mutate(
+      { items },
+      {
+        onSuccess: (res) => {
+          setResult(res)
+          setState('result')
+        },
+      }
+    )
+  }, [bulk, items])
+
+  const handleBack = useCallback(() => {
+    setItems([])
+    setFileName('')
+    setState('upload')
+  }, [])
+
+  const handleUploadAnother = useCallback(() => {
+    setResult(null)
+    setItems([])
+    setFileName('')
+    setState('upload')
+  }, [])
+
+  // ------------------------------------------------------------------
+  // Columns
+  // ------------------------------------------------------------------
+
+  type PreviewRow = BulkReversalItem & { id: number; _row: number }
+  const previewRows = useMemo<PreviewRow[]>(
+    () => items.map((it, i) => ({ ...it, id: i, _row: i + 1 })),
+    [items]
+  )
+
+  const previewColumns = useMemo<Column<PreviewRow>[]>(
+    () => [
+      { key: '_row', header: t(`${p}.rowNumber`, 'Row'), align: 'right' },
+      { key: 'payment_id', header: t(`${p}.paymentId`, 'Payment ID'), align: 'left' },
+      ...COMPONENT_KEYS.map(
+        (k): Column<PreviewRow> => ({
+          key: k,
+          header: t(`${p}.component.${k}`, k[0].toUpperCase() + k.slice(1)),
+          align: 'right',
+          render: (r) => formatMoneyUAHTwoDecimals(Number(r[k] || 0)),
+        })
+      ),
+      {
+        key: 'total',
+        header: t(`${p}.total`, 'Total'),
+        align: 'right',
+        render: (r) => formatMoneyUAHTwoDecimals(rowTotal(r)),
+      },
+    ],
+    [t, p]
+  )
+
+  type ResRow = BulkReversalResultItem & { id: number }
+  const resultRows = useMemo<ResRow[]>(
     () => (result?.results ?? []).map((r) => ({ ...r, id: r.row_index })),
     [result]
   )
 
-  const columns = useMemo<Column<Row>[]>(
+  const resultColumns = useMemo<Column<ResRow>[]>(
     () => [
       {
         key: 'row',
-        header: t('pages.operations.bulkReversalImport.rowNumber', 'Row'),
+        header: t(`${p}.rowNumber`, 'Row'),
         align: 'right',
         render: (r) => r.row_index + 1,
       },
-      {
-        key: 'payment_id',
-        header: t('pages.operations.bulkReversalImport.paymentId', 'Payment ID'),
-        align: 'left',
-      },
+      { key: 'payment_id', header: t(`${p}.paymentId`, 'Payment ID'), align: 'left' },
       {
         key: 'status',
-        header: t('pages.operations.bulkReversalImport.status', 'Status'),
+        header: t(`${p}.status`, 'Status'),
         align: 'left',
         render: (r) =>
           r.status === 'success' ? (
             <span className="text-success-700 bg-success-50 rounded px-2 py-0.5 text-xs font-medium">
-              {t('pages.operations.bulkReversalImport.statusCreated', 'Created')}
+              {t(`${p}.statusCreated`, 'Created')}
             </span>
           ) : (
             <span className="text-error-700 bg-error-50 rounded px-2 py-0.5 text-xs font-medium">
-              {t('pages.operations.bulkReversalImport.statusFailed', 'Failed')}
+              {t(`${p}.statusFailed`, 'Failed')}
             </span>
           ),
       },
       {
         key: 'detail',
-        header: t('pages.operations.bulkReversalImport.detail', 'Detail'),
+        header: t(`${p}.detail`, 'Detail'),
         align: 'left',
         render: (r) =>
           r.status === 'success'
@@ -214,10 +280,12 @@ export function BulkReversalImportPage() {
             : `${r.error_code ?? ''}: ${r.error ?? ''}`,
       },
     ],
-    [t]
+    [t, p]
   )
 
-  const p = 'pages.operations.bulkReversalImport'
+  // ------------------------------------------------------------------
+  // Render
+  // ------------------------------------------------------------------
 
   return (
     <div>
@@ -236,7 +304,8 @@ export function BulkReversalImportPage() {
       </div>
 
       <div className="rounded-xl border border-gray-200 bg-white/50 p-4 shadow-sm sm:p-6">
-        {!result ? (
+        {/* Step 1 — Upload */}
+        {state === 'upload' && (
           <div className="space-y-4">
             <div>
               <h3 className="text-dark-500 text-lg font-medium">
@@ -271,27 +340,18 @@ export function BulkReversalImportPage() {
                 dragActive
                   ? 'border-secondary-500 bg-secondary-50'
                   : 'border-gray-300 bg-gray-50 hover:bg-gray-100'
-              } ${bulk.isPending ? 'pointer-events-none opacity-50' : ''}`}
+              }`}
             >
-              {bulk.isPending ? (
-                <div className="flex flex-col items-center gap-2">
-                  <Icons.Spinner className="h-8 w-8" />
-                  <p className="text-sm text-gray-600">{t(`${p}.validating`, 'Uploading…')}</p>
-                </div>
-              ) : (
-                <>
-                  <Icons.CloudDownload size={40} className="text-gray-400" />
-                  <p className="text-dark-500 mt-2 text-sm">
-                    <span className="text-secondary-700 font-medium">
-                      {t(`${p}.clickToUpload`, 'Click to upload')}
-                    </span>{' '}
-                    {t(`${p}.orDragAndDrop`, 'or drag and drop')}
-                  </p>
-                  <p className="mt-1 text-xs text-gray-500">
-                    {t(`${p}.constraints`, 'CSV up to 5 MB')}
-                  </p>
-                </>
-              )}
+              <Icons.CloudDownload size={40} className="text-gray-400" />
+              <p className="text-dark-500 mt-2 text-sm">
+                <span className="text-secondary-700 font-medium">
+                  {t(`${p}.clickToUpload`, 'Click to upload')}
+                </span>{' '}
+                {t(`${p}.orDragAndDrop`, 'or drag and drop')}
+              </p>
+              <p className="mt-1 text-xs text-gray-500">
+                {t(`${p}.constraints`, 'CSV up to 5 MB')}
+              </p>
               <input
                 ref={inputRef}
                 type="file"
@@ -301,7 +361,50 @@ export function BulkReversalImportPage() {
               />
             </div>
           </div>
-        ) : (
+        )}
+
+        {/* Step 2 — Preview / verify */}
+        {state === 'preview' && (
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-1">
+              <h3 className="text-dark-500 text-lg font-medium">
+                {t(`${p}.previewTitle`, 'Review before importing')}
+              </h3>
+              <p className="text-sm text-gray-600">
+                {t(`${p}.previewSubtitlePrefix`, 'File')}{' '}
+                <span className="font-medium">{fileName}</span> —{' '}
+                {t(`${p}.previewRowCount`, '{{count}} row(s) to import', {
+                  count: items.length,
+                })}
+                . {t(`${p}.previewNote`, "Each row's total must equal the payment amount.")}
+              </p>
+            </div>
+
+            <DataTable columns={previewColumns} data={previewRows} className="w-full" />
+
+            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <Button
+                variant="white-secondary"
+                onClick={handleBack}
+                disabled={bulk.isPending}
+                leftIcon={<Icons.ArrowLeft size={18} />}
+              >
+                {t(`${p}.back`, 'Back')}
+              </Button>
+              <Button
+                variant="primary"
+                onClick={handleImport}
+                isLoading={bulk.isPending}
+                leftIcon={<Icons.FileImport size={18} />}
+              >
+                {t(`${p}.import`, 'Import')} ({items.length})
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Step 3 — Results */}
+        {state === 'result' && result && (
           <div className="flex flex-col gap-4">
             <div className="flex items-center justify-between">
               <h3 className="text-dark-500 text-lg font-medium">
@@ -310,7 +413,7 @@ export function BulkReversalImportPage() {
               <Button
                 variant="white-secondary"
                 size="sm"
-                onClick={() => setResult(null)}
+                onClick={handleUploadAnother}
                 leftIcon={<Icons.CloudDownload size={16} />}
               >
                 {t(`${p}.uploadAnother`, 'Upload another')}
@@ -329,7 +432,7 @@ export function BulkReversalImportPage() {
                 tone={result.failed > 0 ? 'error' : 'neutral'}
               />
             </div>
-            <DataTable columns={columns} data={rows} className="w-full" />
+            <DataTable columns={resultColumns} data={resultRows} className="w-full" />
           </div>
         )}
       </div>

@@ -57,9 +57,22 @@ vi.mock('@/features/reversals/hooks/useReversals', () => ({
 
 // --- fixtures ---------------------------------------------------------------
 
+const ZERO_ORIGINAL = { principal: 0, interest: 0, fine: 0, penalty: 0, commission: 0 }
 const payments: ReversalEligiblePayment[] = [
-  { id: 55001, amount: 1500, paymentDate: '01.01.2025', isReversed: false },
-  { id: 55002, amount: 5000, paymentDate: '02.12.2024', isReversed: true },
+  {
+    id: 55001,
+    amount: 1500,
+    paymentDate: '01.01.2025',
+    isReversed: false,
+    original: { ...ZERO_ORIGINAL, principal: 1500 },
+  },
+  {
+    id: 55002,
+    amount: 5000,
+    paymentDate: '02.12.2024',
+    isReversed: true,
+    original: { ...ZERO_ORIGINAL, principal: 5000 },
+  },
 ]
 
 function renderModal(initialPaymentId: number | null = 55001) {
