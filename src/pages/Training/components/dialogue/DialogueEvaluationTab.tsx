@@ -60,9 +60,7 @@ export function DialogueEvaluationTab() {
     const base = selectedEmployeeIds.length > 0 ? selectedEmployeeIds : scoped.userIds
     const q = nameQuery.trim().toLowerCase()
     if (!q) return base
-    const matches = operators
-      .filter((o) => o.full_name?.toLowerCase().includes(q))
-      .map((o) => o.id)
+    const matches = operators.filter((o) => o.full_name?.toLowerCase().includes(q)).map((o) => o.id)
     // With an unrestricted base, the name matches become the restriction; else
     // intersect the name matches with the existing scope/selection.
     const matchSet = new Set(matches)
@@ -259,7 +257,10 @@ export function DialogueEvaluationTab() {
           <input
             value={nameQuery}
             onChange={(e) => setNameQuery(e.target.value)}
-            placeholder={t('pages.training.dialogue.filters.namePlaceholder', 'Search by full name…')}
+            placeholder={t(
+              'pages.training.dialogue.filters.namePlaceholder',
+              'Search by full name…'
+            )}
             className="h-9 w-[200px] rounded-lg border border-[#DFDFDF] bg-white px-3 text-xs text-[#05040D] focus:outline-none"
           />
           <select

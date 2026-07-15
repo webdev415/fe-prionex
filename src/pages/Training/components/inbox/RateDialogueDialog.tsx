@@ -292,7 +292,9 @@ export function RateDialogueDialog({ open, onClose, operatorId }: RateDialogueDi
                   <option value="">
                     {t('pages.training.dialogue.filters.allTypes', 'All types')}
                   </option>
-                  <option value="white">{t('pages.training.dialogue.filters.white', 'White')}</option>
+                  <option value="white">
+                    {t('pages.training.dialogue.filters.white', 'White')}
+                  </option>
                   <option value="grey">{t('pages.training.dialogue.filters.grey', 'Grey')}</option>
                   <option value="unknown">
                     {t('pages.training.dialogue.filters.unknown', 'Unknown')}
