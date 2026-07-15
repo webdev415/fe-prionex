@@ -45,3 +45,20 @@ export function sortTagsWithSelectedFirst<T extends SortableTag>(
   }
   return [...pinned, ...rest]
 }
+
+/** Entry shape for Related Tags tab (tag + optional linked client tie-break). */
+export type RelatedTagSortable = {
+  tag: SortableTag
+  linkedClientId?: number
+}
+
+/** Global sort for Related Tags: tag sort_order/name, then linked client id. */
+export function compareRelatedTagEntries(a: RelatedTagSortable, b: RelatedTagSortable): number {
+  const byTag = compareTagsByOrder(a.tag, b.tag)
+  if (byTag !== 0) return byTag
+  return (a.linkedClientId ?? 0) - (b.linkedClientId ?? 0)
+}
+
+export function sortRelatedTagEntries<T extends RelatedTagSortable>(entries: T[]): T[] {
+  return [...entries].sort(compareRelatedTagEntries)
+}
