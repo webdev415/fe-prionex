@@ -221,7 +221,7 @@ const formatDateAsISO = (d: Date): string => {
 // must stay OFF; only the per-loan manual "Send to UBKI" button stays active.
 // The backend /submit/bulk endpoint is also disabled. Re-enable by flipping
 // this flag to true.
-const ENABLE_BULK_UBKI_SUBMISSION = false
+const ENABLE_BULK_UBKI_SUBMISSION = true
 
 export function ClientDetailPage() {
   const { t, i18n } = useTranslation('common')
