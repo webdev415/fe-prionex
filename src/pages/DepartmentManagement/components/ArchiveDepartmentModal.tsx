@@ -48,8 +48,8 @@ export function ArchiveDepartmentModal({
     <Modal open={open} onClose={onClose} maxWidth="2xl">
       <ModalHeader
         icon={
-          <div className="bg-primary-400 flex h-8 w-8 items-center justify-center rounded-full">
-            <Icons.Delete size={20} className="text-dark-500" strokeWidth={2} />
+          <div className="bg-primary-400 flex h-7 w-7 items-center justify-center rounded-full sm:h-8 sm:w-8">
+            <Icons.Delete size={18} className="text-foreground" strokeWidth={2} />
           </div>
         }
         title={
@@ -71,7 +71,7 @@ export function ArchiveDepartmentModal({
           <div className="space-y-6">
             {/* Warning message */}
             <div>
-              <p className="text-sm font-light text-gray-950">
+              <p className="text-foreground text-sm font-light">
                 {t('pages.departments.modals.archive.confirmMessage', {
                   departmentName: department.name,
                 })}
@@ -100,7 +100,7 @@ export function ArchiveDepartmentModal({
             )}
           </div>
         ) : (
-          <div className="py-8 text-center text-gray-600">
+          <div className="text-muted-foreground py-8 text-center">
             {t('pages.departments.modals.archive.departmentNotFound')}
           </div>
         )}
@@ -122,7 +122,7 @@ export function ArchiveDepartmentModal({
           disabled={
             archiveMutation.isPending || isLoading || (department?.assigned_roles_count ?? 0) > 0
           }
-          className="text-dark-500 bg-primary-300 h-[45px] flex-1 text-sm"
+          className="text-primary-foreground bg-primary-300 h-[45px] flex-1 text-sm"
         >
           {archiveMutation.isPending
             ? t('pages.departments.modals.archive.archiving')
