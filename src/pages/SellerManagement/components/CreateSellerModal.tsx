@@ -140,7 +140,7 @@ export function CreateSellerModal({ open, onClose, onSuccess }: CreateSellerModa
       <ModalHeader
         icon={
           <div className="bg-primary-400 flex h-7 w-7 items-center justify-center rounded-full sm:h-8 sm:w-8">
-            <Icons.Add size={18} className="text-dark-500" strokeWidth={2} />
+            <Icons.Add size={18} className="text-foreground" strokeWidth={2} />
           </div>
         }
         title={t('pages.sellers.modals.create.title')}
@@ -149,7 +149,7 @@ export function CreateSellerModal({ open, onClose, onSuccess }: CreateSellerModa
         <form id="create-seller-form" onSubmit={handleSubmit} className="space-y-6">
           {/* Basic Information Section */}
           <div className="space-y-4">
-            <h3 className="text-dark-500 text-base font-medium">
+            <h3 className="text-foreground text-base font-medium">
               {t('pages.sellers.modals.create.basicInformation')}
             </h3>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -212,14 +212,14 @@ export function CreateSellerModal({ open, onClose, onSuccess }: CreateSellerModa
                 disabled={createSellerMutation.isPending}
               />
             </div>
-            <div className="h-px w-full bg-gray-200" />
+            <div className="bg-border h-px w-full" />
           </div>
 
           {/* Contact Information Section */}
           <div className="space-y-4">
-            <h3 className="text-dark-500 text-base font-medium">
+            <h3 className="text-foreground text-base font-medium">
               {t('pages.sellers.modals.create.contactInformation')}
-              <span className="text-sm font-normal text-gray-500">
+              <span className="text-muted-foreground text-sm font-normal">
                 {' '}
                 ({t('pages.sellers.modals.create.optional')})
               </span>
@@ -266,15 +266,15 @@ export function CreateSellerModal({ open, onClose, onSuccess }: CreateSellerModa
                 disabled={createSellerMutation.isPending}
               />
             </div>
-            <div className="h-px w-full bg-gray-200" />
+            <div className="bg-border h-px w-full" />
           </div>
 
           {/* Notes Section (Optional) */}
           <div className="space-y-4">
             <div className="space-y-2">
-              <label className="text-dark-500 block text-sm font-light">
+              <label className="text-foreground block text-sm font-light">
                 {t('pages.sellers.modals.create.notes')}{' '}
-                <span className="text-sm font-normal text-gray-500">
+                <span className="text-muted-foreground text-sm font-normal">
                   ({t('pages.sellers.modals.create.optional')})
                 </span>
               </label>
