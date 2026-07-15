@@ -27,10 +27,15 @@ const CATEGORY_OPTIONS = [
   'Tools',
 ]
 
-const LEVEL_LABEL: Record<CourseLevel, string> = {
+type TFn = (key: string, fallback: string) => string
+
+const LEVEL_EN: Record<CourseLevel, string> = {
   beginner: 'Beginner',
   intermediate: 'Intermediate',
   advanced: 'Advanced',
+}
+function levelLabel(t: TFn, level: CourseLevel): string {
+  return t(`pages.training.training.courses.level.${level}`, LEVEL_EN[level])
 }
 const LEVEL_STARS: Record<CourseLevel, number> = {
   beginner: 1,
@@ -39,13 +44,15 @@ const LEVEL_STARS: Record<CourseLevel, number> = {
 }
 const MATERIAL_TYPES: MaterialType[] = ['pdf', 'docx', 'video', 'audio', 'link']
 
-function formatDuration(minutes?: number | null): string {
+function formatDuration(t: TFn, minutes?: number | null): string {
   if (!minutes) return '—'
   const h = Math.floor(minutes / 60)
   const m = minutes % 60
-  if (h === 0) return `${m} min`
-  if (m === 0) return `${h}h`
-  return `${h}h ${m}m`
+  const hu = t('common.hours', 'h')
+  const mu = t('common.minutes', 'min')
+  if (h === 0) return `${m} ${mu}`
+  if (m === 0) return `${h}${hu}`
+  return `${h}${hu} ${m}${mu}`
 }
 
 export function CoursesCatalogTab() {
@@ -189,7 +196,7 @@ function CourseCard({
         </div>
         <div className="relative z-[2] flex flex-col items-end gap-1">
           <span className="rounded-full bg-white px-3 py-1 text-xs font-medium text-[#204E4D]">
-            {LEVEL_LABEL[course.level]}
+            {levelLabel(t, course.level)}
           </span>
           <div className="flex items-center gap-0.5">
             {[1, 2, 3].map((n) => (
@@ -229,7 +236,7 @@ function CourseCard({
           <StatTile
             icon={Icons.Clock01}
             label={t('pages.training.training.courses.duration', 'Duration')}
-            value={formatDuration(course.duration_minutes)}
+            value={formatDuration(t, course.duration_minutes)}
           />
           <StatTile
             icon={Icons.File}
@@ -391,7 +398,7 @@ function CreateCoursePanel({ onClose }: { onClose: () => void }) {
               >
                 {(['beginner', 'intermediate', 'advanced'] as CourseLevel[]).map((l) => (
                   <option key={l} value={l}>
-                    {LEVEL_LABEL[l]}
+                    {levelLabel(t, l)}
                   </option>
                 ))}
               </select>
@@ -605,7 +612,7 @@ function CourseDetailsDialog({
             <StatTile
               icon={Icons.Clock01}
               label={t('pages.training.training.courses.duration', 'Duration')}
-              value={formatDuration(detail.duration_minutes)}
+              value={formatDuration(t, detail.duration_minutes)}
             />
             <StatTile
               icon={Icons.File}

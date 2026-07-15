@@ -244,7 +244,8 @@
     "dismiss": "Dismiss",
     "minutes": "min",
     "none": "—",
-    "select": "Select…"
+    "select": "Select…",
+    "hours": "h"
   },
   "logout": {
     "confirmTitle": "Confirm Logout",
@@ -2729,7 +2730,12 @@
           "publish": "Publish",
           "searchPlaceholder": "Search by title…",
           "students": "Students",
-          "title": "Course Catalog"
+          "title": "Course Catalog",
+          "level": {
+            "beginner": "Beginner",
+            "intermediate": "Intermediate",
+            "advanced": "Advanced"
+          }
         },
         "library": {
           "add": "Add to library",
@@ -2839,7 +2845,40 @@
           "week": "The Week"
         },
         "overdueBanner": "Weekly tasks – there are overdue ones",
-        "today": "today"
+        "today": "today",
+        "allTasks": "All tasks",
+        "status": {
+          "open": "Open",
+          "in_progress": "In progress",
+          "overdue": "Overdue",
+          "completed": "Completed"
+        },
+        "priority": {
+          "critical": "Critical",
+          "high": "High",
+          "medium": "Medium",
+          "low": "Low"
+        },
+        "days": {
+          "short": {
+            "mon": "Mon",
+            "tue": "Tue",
+            "wed": "Wed",
+            "thu": "Thu",
+            "fri": "Fri",
+            "sat": "Sat",
+            "sun": "Sun"
+          },
+          "full": {
+            "mon": "Monday",
+            "tue": "Tuesday",
+            "wed": "Wednesday",
+            "thu": "Thursday",
+            "fri": "Friday",
+            "sat": "Saturday",
+            "sun": "Sunday"
+          }
+        }
       },
       "analyticsSubTabs": {
         "autoFlags": "Auto-flags",
