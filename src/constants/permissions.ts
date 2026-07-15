@@ -96,6 +96,7 @@ export const PERMISSIONS = {
   DATA: {
     IMPORT: 'import_clients',
     IMPORT_PAYMENTS: 'import_payments',
+    IMPORT_DOCUMENTS: 'import_documents',
     EXPORT: 'export_clients',
     MANAGE_PRIORITY: 'manage_client_priority',
   },
@@ -467,6 +468,7 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   // Data
   import_clients: 'Import client data from files',
   import_payments: 'Import payments from bank CSV files in bulk',
+  import_documents: 'Bulk-import client and credit documents from a ZIP archive',
   export_clients: 'Export client and system data',
   manage_client_priority: 'Manually change client contact priority',
   manage_primary_creditor_comments: 'Upload bulk sale notes and delete individual sale notes',

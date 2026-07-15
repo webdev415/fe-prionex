@@ -1,3 +1,4 @@
+export { BulkDocumentImportPage } from './BulkDocumentImportPage'
 export { BulkOperatorAssignmentPage } from './BulkOperatorAssignmentPage'
 export { BulkPaymentVerificationPage } from './BulkPaymentVerification'
 export { BulkSaleNotesImportPage } from './BulkSaleNotesImportPage'

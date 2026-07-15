@@ -733,6 +733,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             icon: 'activity-01',
             requiredPermission: PERMISSIONS.SALE_NOTES.MANAGE,
           },
+          {
+            path: '/dashboard/import/bulk-document-import',
+            label: t('navigation.bulkDocumentImport', 'Bulk Document Import'),
+            icon: 'file-01',
+            requiredPermission: PERMISSIONS.DATA.IMPORT_DOCUMENTS,
+          },
         ],
       },
       {

@@ -42,6 +42,7 @@
     "bulkPaymentVerification": "Массовая верификация платежей",
     "bulkTagAssignment": "Массовое назначение тегов",
     "bulkSaleNotesImport": "Массовый импорт комментариев",
+    "bulkDocumentImport": "Массовый импорт документов",
     "auditLogs": "Журнал аудита",
     "reports": "Отчеты",
     "scoringConfiguration": "Конфигурация оценки",
@@ -1656,6 +1657,25 @@
       }
     },
     "imports": {
+      "documents": {
+        "title": "Массовый импорт документов",
+        "subtitle": "Загрузите ZIP-архив документов кредитов и клиентов, сопоставленных с выбранным договором факторинга.",
+        "agreement": "Договор факторинга",
+        "selectAgreement": "Выберите договор факторинга",
+        "agreementNumber": "Номер договора",
+        "whoSold": "Кто продал",
+        "purchaseDate": "Дата покупки",
+        "documentType": "Тип документа",
+        "selectDocumentType": "Выберите тип документа",
+        "archive": "Архив документов (.zip)",
+        "downloadTemplate": "Скачать шаблон",
+        "downloading": "Загрузка…",
+        "dropZip": "Нажмите, чтобы выбрать .zip-архив",
+        "structureHint": "ZIP с папками credits/<external_id>/ и users/<external_id>/ — каждая папка названа по external_id кредита или клиента. Файлы внутри прикрепляются к соответствующему кредиту или клиенту.",
+        "startImport": "Начать импорт",
+        "notReady": "Обработка импорта документов пока недоступна.",
+        "zipOnly": "Разрешены только .zip-архивы."
+      },
       "title": "Импорт клиентов",
       "viewHistory": "Просмотр истории",
       "back": "Назад",
