@@ -341,9 +341,9 @@
     background-color: #80d80a;
   }
 
-  /* Dashboard background image */
+  /* Dashboard background image — url from --dashboard-bg-image (themes.css) */
   .bg-dashboard-light {
-    background-image: url(/assets/images/dashboard-light-bg.svg);
+    background-image: var(--dashboard-bg-image, url(/assets/images/dashboard-light-bg.svg));
   }
 
   /* Button text color for light backgrounds */

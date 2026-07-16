@@ -1136,6 +1136,55 @@ html[data-theme='ultra-dark'][data-accent] {
   --elevated: #1d1c24;
 }
 
+/* Dashboard background images (light-classic + neutral-dim per accent) */
+html[data-theme='light-classic'] {
+  --dashboard-bg-image: url(/assets/images/dashboard-light-bg.svg);
+}
+
+html[data-theme='neutral-dim'][data-accent='teal'] {
+  --dashboard-bg-image: url(/assets/images/neutral-dim-teal.svg);
+}
+
+html[data-theme='neutral-dim'][data-accent='cyan'] {
+  --dashboard-bg-image: url(/assets/images/neutral-dim-cyan.svg);
+}
+
+html[data-theme='neutral-dim'][data-accent='blue'] {
+  --dashboard-bg-image: url(/assets/images/neutral-dim-blue.svg);
+}
+
+html[data-theme='neutral-dim'][data-accent='indigo'] {
+  --dashboard-bg-image: url(/assets/images/neutral-dim-indigo.svg);
+}
+
+html[data-theme='neutral-dim'][data-accent='violet'] {
+  --dashboard-bg-image: url(/assets/images/neutral-dim-violet.svg);
+}
+
+html[data-theme='neutral-dim'][data-accent='purple'] {
+  --dashboard-bg-image: url(/assets/images/neutral-dim-purple.svg);
+}
+
+html[data-theme='neutral-dim'][data-accent='fuchsia'] {
+  --dashboard-bg-image: url(/assets/images/neutral-dim-fuchsia.svg);
+}
+
+html[data-theme='neutral-dim'][data-accent='pink'] {
+  --dashboard-bg-image: url(/assets/images/neutral-dim-pink.svg);
+}
+
+html[data-theme='neutral-dim'][data-accent='rose'] {
+  --dashboard-bg-image: url(/assets/images/neutral-dim-rose.svg);
+}
+
+html[data-theme='neutral-dim'][data-accent='orange'] {
+  --dashboard-bg-image: url(/assets/images/neutral-dim-orange.svg);
+}
+
+html[data-theme='neutral-dim'][data-accent='amber'] {
+  --dashboard-bg-image: url(/assets/images/neutral-dim-amber.svg);
+}
+
 html[data-theme='neutral-dim'] .bg-white\/50,
 html[data-theme='ultra-dark'] .bg-white\/50 {
   background-color: rgb(255 255 255 / 0.1);

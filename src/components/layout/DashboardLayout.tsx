@@ -449,7 +449,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const navigate = useNavigate()
   const location = useLocation()
   const themeBase = useThemeStore((s) => s.base)
-  const showDashboardBgImage = themeBase === 'light-classic'
+  const showDashboardBgImage = themeBase === 'light-classic' || themeBase === 'neutral-dim'
   const { logout, isImpersonating, impersonatedUser, exitImpersonation } = useAuth()
   const [showLogoutModal, setShowLogoutModal] = useState(false)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
