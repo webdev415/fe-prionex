@@ -1,12 +1,11 @@
 /**
  * Tags Dropdown Component
  *
- * Multi-select dropdown for filtering clients by tags.
+ * Multi-select dropdown for filtering clients by tags (3-state: include/exclude/neutral).
  * Similar pattern to PortfolioDropdown.
  */
 
 import { useState, useMemo, useEffect } from 'react'
-import { Checkbox } from '@/components/ui/Checkbox'
 import { Button } from '@/components/ui/Button'
 import {
   DropdownMenu,
@@ -16,12 +15,19 @@ import {
 import { Icons } from '@/lib/icons'
 import type { Tag } from '@/features/tags/types'
 import { sortTagsWithSelectedFirst } from '@/features/tags/utils/sortTags'
+import {
+  cycleTagTriState,
+  getActiveTagFilterIds,
+  getTagTriState,
+  type TagFilterSelection,
+} from '@/features/tags/utils/tagFilterState'
+import { TagFilterTriState } from './TagFilterTriState'
 import { useTranslation } from 'react-i18next'
 
 interface TagsDropdownProps {
   tags: Tag[]
-  selectedTagIds: number[]
-  onSelectionChange: (tagIds: number[]) => void
+  tagFilterSelection: TagFilterSelection
+  onSelectionChange: (selection: TagFilterSelection) => void
   onOpenChange?: (open: boolean) => void
   trigger: React.ReactNode
   /**
@@ -35,7 +41,7 @@ interface TagsDropdownProps {
 
 export function TagsDropdown({
   tags,
-  selectedTagIds,
+  tagFilterSelection,
   onSelectionChange,
   onOpenChange,
   trigger,
@@ -43,42 +49,48 @@ export function TagsDropdown({
 }: TagsDropdownProps) {
   const { t } = useTranslation('common')
   const [searchQuery, setSearchQuery] = useState('')
-  const [tempSelection, setTempSelection] = useState<number[]>(selectedTagIds)
+  const [tempSelection, setTempSelection] = useState<TagFilterSelection>(tagFilterSelection)
   const [isOpen, setIsOpen] = useState(false)
 
-  // Filter tags based on search, then pin selected tags to the top
+  const activeFilterIds = getActiveTagFilterIds(tempSelection)
+
+  // Filter tags based on search, then pin active filter tags to the top
   const filteredTags = useMemo(() => {
     const q = searchQuery.trim().toLowerCase()
     const matched = q ? tags.filter((tag) => tag.name.toLowerCase().includes(q)) : tags
-    return sortTagsWithSelectedFirst(matched, tempSelection)
-  }, [tags, searchQuery, tempSelection])
+    return sortTagsWithSelectedFirst(matched, activeFilterIds)
+  }, [tags, searchQuery, activeFilterIds])
 
   // Initialize temp selection when dropdown opens
   const handleOpenChange = (open: boolean) => {
     setIsOpen(open)
     onOpenChange?.(open)
     if (open) {
-      setTempSelection([...selectedTagIds])
+      setTempSelection({
+        includeIds: [...tagFilterSelection.includeIds],
+        excludeIds: [...tagFilterSelection.excludeIds],
+      })
       setSearchQuery('')
     }
   }
 
-  // Sync temp selection when selectedTagIds changes externally
+  // Sync temp selection when tagFilterSelection changes externally
   useEffect(() => {
     if (!isOpen) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
-      setTempSelection([...selectedTagIds])
+      setTempSelection({
+        includeIds: [...tagFilterSelection.includeIds],
+        excludeIds: [...tagFilterSelection.excludeIds],
+      })
     }
-  }, [selectedTagIds, isOpen])
+  }, [tagFilterSelection, isOpen])
 
-  const handleToggleTag = (tagId: number) => {
-    setTempSelection((prev) =>
-      prev.includes(tagId) ? prev.filter((id) => id !== tagId) : [...prev, tagId]
-    )
+  const handleCycleTag = (tagId: number) => {
+    setTempSelection((prev) => cycleTagTriState(prev, tagId))
   }
 
   const handleClear = () => {
-    setTempSelection([])
+    setTempSelection({ includeIds: [], excludeIds: [] })
   }
 
   const handleApply = () => {
@@ -86,7 +98,9 @@ export function TagsDropdown({
     setIsOpen(false)
   }
 
-  const showClear = !!onClear && selectedTagIds.length > 0
+  const showClear =
+    !!onClear &&
+    (tagFilterSelection.includeIds.length > 0 || tagFilterSelection.excludeIds.length > 0)
 
   return (
     <DropdownMenu open={isOpen} onOpenChange={handleOpenChange} modal={false}>
@@ -134,9 +148,10 @@ export function TagsDropdown({
                   key={tag.id}
                   className="text-dark-500 flex cursor-pointer items-center gap-2 rounded px-2 py-2 hover:bg-gray-50"
                 >
-                  <Checkbox
-                    checked={tempSelection.includes(tag.id)}
-                    onCheckedChange={() => handleToggleTag(tag.id)}
+                  <TagFilterTriState
+                    state={getTagTriState(tempSelection, tag.id)}
+                    onCycle={() => handleCycleTag(tag.id)}
+                    aria-label={`${tag.name} filter`}
                   />
                   <div className="flex items-center gap-2">
                     <div className="h-3 w-3 rounded-full" style={{ backgroundColor: tag.color }} />
