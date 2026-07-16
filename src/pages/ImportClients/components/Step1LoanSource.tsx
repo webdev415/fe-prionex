@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/Select'
 import { Label } from '@/components/ui/Label'
 import { DateSelect } from '@/components/ui/DateSelect'
+import { RadioGroup, RadioItem } from '@/components/ui/Radio'
 import { RadioCard } from './RadioCard'
 import { useProjects } from '@/features/projects'
 import { useSellers, useSellerFactoringAgreements } from '@/features/sellers'
@@ -153,7 +154,7 @@ export function Step1LoanSource({ data, onChange }: Step1LoanSourceProps) {
     <div className="space-y-6">
       {/* Loan Source / Metadata Section */}
       <div>
-        <h2 className="text-dark-500 mb-4 text-sm font-medium">
+        <h2 className="text-foreground mb-4 text-sm font-medium">
           {t('pages.imports.step1.loanSourceMetadata')}
         </h2>
 
@@ -238,7 +239,7 @@ export function Step1LoanSource({ data, onChange }: Step1LoanSourceProps) {
             </Label>
 
             {!selectedSellerId ? (
-              <p className="text-sm font-light text-gray-500">
+              <p className="text-muted-foreground text-sm font-light">
                 {t(
                   'pages.imports.step1.factoringAgreement.pickSellerFirst',
                   'Pick a seller first.'
@@ -246,28 +247,30 @@ export function Step1LoanSource({ data, onChange }: Step1LoanSourceProps) {
               </p>
             ) : (
               <>
-                <div className="flex flex-col gap-2 sm:flex-row sm:gap-6">
-                  <label className="flex items-center gap-2 text-sm">
-                    <input
-                      type="radio"
-                      name="factoringAgreementMode"
-                      value="existing"
-                      checked={data.factoringAgreementMode === 'existing'}
-                      onChange={() => handleAgreementModeChange('existing')}
-                    />
-                    {t('pages.imports.step1.factoringAgreement.pickExisting', 'Pick existing')}
-                  </label>
-                  <label className="flex items-center gap-2 text-sm">
-                    <input
-                      type="radio"
-                      name="factoringAgreementMode"
-                      value="new"
-                      checked={data.factoringAgreementMode === 'new'}
-                      onChange={() => handleAgreementModeChange('new')}
-                    />
-                    {t('pages.imports.step1.factoringAgreement.createNew', 'Create new')}
-                  </label>
-                </div>
+                <RadioGroup
+                  value={data.factoringAgreementMode}
+                  onValueChange={(value) => handleAgreementModeChange(value as 'existing' | 'new')}
+                  className="flex flex-col gap-2 sm:flex-row sm:gap-6"
+                >
+                  <div className="flex items-center gap-2">
+                    <RadioItem value="existing" id="factoring-agreement-existing" />
+                    <Label
+                      htmlFor="factoring-agreement-existing"
+                      className="mb-0 cursor-pointer text-sm font-normal"
+                    >
+                      {t('pages.imports.step1.factoringAgreement.pickExisting', 'Pick existing')}
+                    </Label>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <RadioItem value="new" id="factoring-agreement-new" />
+                    <Label
+                      htmlFor="factoring-agreement-new"
+                      className="mb-0 cursor-pointer text-sm font-normal"
+                    >
+                      {t('pages.imports.step1.factoringAgreement.createNew', 'Create new')}
+                    </Label>
+                  </div>
+                </RadioGroup>
 
                 {data.factoringAgreementMode === 'existing' && (
                   <Select
@@ -307,7 +310,7 @@ export function Step1LoanSource({ data, onChange }: Step1LoanSourceProps) {
                 )}
 
                 {data.factoringAgreementMode === 'new' && (
-                  <div className="space-y-3 rounded-md border border-gray-200 bg-gray-50 p-3">
+                  <div className="border-border bg-card/50 space-y-3 rounded-md border p-3">
                     <Input
                       label={t(
                         'pages.imports.step1.factoringAgreement.fields.number',
@@ -345,7 +348,7 @@ export function Step1LoanSource({ data, onChange }: Step1LoanSourceProps) {
                         }
                       />
                       {!selectedSeller?.legal_name && (
-                        <p className="mt-1.5 text-xs text-gray-500">
+                        <p className="text-muted-foreground mt-1.5 text-xs">
                           {t(
                             'pages.imports.step1.factoringAgreement.fields.previousLenderRequiredHint',
                             'This seller has no legal name on file, so "Who sold" is required.'
@@ -424,7 +427,7 @@ export function Step1LoanSource({ data, onChange }: Step1LoanSourceProps) {
               maxLength={100}
               className="pb-8"
             />
-            <div className="absolute right-3 bottom-3 text-xs text-gray-500">
+            <div className="text-muted-foreground absolute right-3 bottom-3 text-xs">
               {data.comment.length}/100
             </div>
           </div>
@@ -433,31 +436,29 @@ export function Step1LoanSource({ data, onChange }: Step1LoanSourceProps) {
 
       {/* Import Type Section */}
       <div>
-        <h2 className="text-dark-500 mb-4 text-sm font-medium">
+        <h2 className="text-foreground mb-4 text-sm font-medium">
           {t('pages.imports.step1.importType')}
         </h2>
 
-        <div className="flex flex-col gap-4 sm:flex-row">
+        <RadioGroup
+          value={data.importType}
+          onValueChange={(value) => onChange({ importType: value as 'simple' | 'vendor' })}
+          className="flex flex-col gap-4 sm:flex-row"
+        >
           <RadioCard
-            name="importType"
             value="simple"
-            checked={data.importType === 'simple'}
-            onChange={(value) => onChange({ importType: value as 'simple' | 'vendor' })}
             title={t('pages.imports.step1.simpleClientCsv')}
             description={t('pages.imports.step1.simpleClientCsvDesc')}
             className="flex-1"
           />
 
           <RadioCard
-            name="importType"
             value="vendor"
-            checked={data.importType === 'vendor'}
-            onChange={(value) => onChange({ importType: value as 'simple' | 'vendor' })}
             title={t('pages.imports.step1.vendorDump')}
             description={t('pages.imports.step1.vendorDumpDesc')}
             className="flex-1"
           />
-        </div>
+        </RadioGroup>
 
         {isVendor && (
           <div className="mt-4">
