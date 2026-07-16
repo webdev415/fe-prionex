@@ -231,4 +231,7 @@ export function ModalFooter({ children, className }: ModalFooterProps) {
   )
 }
 
+/** Accessible dialog title — required by Radix inside DialogContent. */
+export const ModalTitle = DialogPrimitive.Title
+
 export default Modal
