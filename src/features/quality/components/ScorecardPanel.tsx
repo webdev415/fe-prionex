@@ -592,7 +592,9 @@ function CriterionRow({ criterion, entry, disabled, totalWeight, onChange }: Cri
         <span className="text-sm text-gray-700">
           {criterion.name}
           {criterion.weight > 0 ? (
-            <span className="ml-1.5 text-xs text-gray-400">· {criterion.weight} pts</span>
+            <span className="ml-1.5 text-xs text-gray-400">
+              · {criterion.weight} {t('pages.training.scorecard.pts', 'pts')}
+            </span>
           ) : null}
           {needsScore ? (
             <span className="ml-1.5 text-xs font-medium text-amber-600">

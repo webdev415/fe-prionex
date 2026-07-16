@@ -1629,7 +1629,8 @@
           "notReached": "Not reached",
           "reached": "Reached"
         },
-        "commentOptional": "Comment (optional)"
+        "commentOptional": "Comment (optional)",
+        "pts": "pts"
       },
       "dialogue": {
         "chips": {
@@ -1730,6 +1731,12 @@
           "namePlaceholder": "Search by full name…",
           "unknown": "Unknown",
           "white": "White"
+        },
+        "category": {
+          "low": "Low",
+          "average": "Average",
+          "high": "High",
+          "unscored": "Unscored"
         }
       },
       "transcript": {
@@ -2092,7 +2099,9 @@
           "awaiting_training": "Assigned course/drill",
           "scheduled": "There is a session in the calendar",
           "closed": "With resolution"
-        }
+        },
+        "compositeScore": "Composite score {{score}}",
+        "scoreShort": "score {{score}}"
       },
       "paymentHistoryEmpty": "No payments match the current filters",
       "paymentHistorySummary": {
@@ -2656,7 +2665,8 @@
           "behind": "Behind",
           "inNorm": "In norm",
           "inQueue": "In queue"
-        }
+        },
+        "ext": "ext"
       },
       "tests": {
         "course": "Course",
@@ -2788,7 +2798,13 @@
             "advanced": "Advanced"
           },
           "removeModule": "Remove module",
-          "removeMaterial": "Remove material"
+          "removeMaterial": "Remove material",
+          "status": {
+            "draft": "Draft",
+            "published": "Published",
+            "archived": "Archived"
+          },
+          "noAuthor": "No author"
         },
         "library": {
           "add": "Add to library",
@@ -2957,6 +2973,18 @@
         "thirdParties": "Third Parties",
         "timeAtWork": "Time at Work",
         "weeklyTasks": "Weekly Tasks"
+      },
+      "time": {
+        "today": "today",
+        "yesterday": "yesterday",
+        "now": "now",
+        "minutesAgo": "{{count}}m ago",
+        "hoursAgo": "{{count}}h ago",
+        "daysAgo": "{{count}}d ago",
+        "weeksAgo": "{{count}}w ago",
+        "minutesShort": "{{count}}m",
+        "hoursShort": "{{count}}h",
+        "daysShort": "{{count}}d"
       }
     },
     "users": {

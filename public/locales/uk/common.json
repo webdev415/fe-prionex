@@ -1628,7 +1628,8 @@
           "notReached": "Не досягнуто",
           "reached": "Досягнуто"
         },
-        "commentOptional": "Коментар (необов’язково)"
+        "commentOptional": "Коментар (необов’язково)",
+        "pts": "балів"
       },
       "dialogue": {
         "chips": {
@@ -1729,6 +1730,12 @@
           "namePlaceholder": "Пошук за ПІБ…",
           "unknown": "Невідомо",
           "white": "Білий"
+        },
+        "category": {
+          "low": "Низький",
+          "average": "Середній",
+          "high": "Високий",
+          "unscored": "Не оцінено"
         }
       },
       "transcript": {
@@ -2093,7 +2100,9 @@
           "awaiting_training": "Призначено курс/вправу",
           "scheduled": "У календарі є сесія",
           "closed": "З вирішенням"
-        }
+        },
+        "compositeScore": "Складений бал {{score}}",
+        "scoreShort": "бал {{score}}"
       },
       "paymentHistoryEmpty": "Немає платежів, що відповідають фільтрам",
       "paymentHistorySummary": {
@@ -2657,7 +2666,8 @@
           "behind": "Відстає",
           "inNorm": "У нормі",
           "inQueue": "У черзі"
-        }
+        },
+        "ext": "дод."
       },
       "tests": {
         "course": "Курс",
@@ -2789,7 +2799,13 @@
             "advanced": "Просунутий"
           },
           "removeModule": "Видалити модуль",
-          "removeMaterial": "Видалити матеріал"
+          "removeMaterial": "Видалити матеріал",
+          "status": {
+            "draft": "Чернетка",
+            "published": "Опубліковано",
+            "archived": "Архівовано"
+          },
+          "noAuthor": "Немає автора"
         },
         "library": {
           "add": "Додати до бібліотеки",
@@ -2958,6 +2974,18 @@
         "thirdParties": "Треті особи",
         "timeAtWork": "Час у роботі",
         "weeklyTasks": "Тижневі завдання"
+      },
+      "time": {
+        "today": "сьогодні",
+        "yesterday": "вчора",
+        "now": "зараз",
+        "minutesAgo": "{{count}} хв тому",
+        "hoursAgo": "{{count}} год тому",
+        "daysAgo": "{{count}} дн тому",
+        "weeksAgo": "{{count}} тиж тому",
+        "minutesShort": "{{count}} хв",
+        "hoursShort": "{{count}} год",
+        "daysShort": "{{count}} дн"
       }
     },
     "users": {
