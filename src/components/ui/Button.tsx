@@ -14,9 +14,9 @@ const buttonVariants = cva(
         secondary:
           'bg-secondary-800 text-white hover:bg-secondary-600 disabled:bg-gray-200 disabled:text-gray-600 active:bg-secondary-900',
         'white-primary':
-          'bg-white text-primary-500 hover:bg-primary-500 hover:text-primary-foreground disabled:bg-gray-200 disabled:text-gray-600 active:bg-primary-600 active:text-primary-foreground',
+          'bg-card text-primary-500 border border-border hover:bg-primary-500 hover:text-primary-foreground disabled:bg-muted disabled:text-muted-foreground active:bg-primary-600 active:text-primary-foreground',
         'white-secondary':
-          'bg-white text-secondary-800 hover:bg-secondary-800 hover:text-white disabled:bg-gray-200 disabled:text-gray-600 active:bg-secondary-500',
+          'bg-card text-foreground border border-border hover:bg-secondary-800 hover:text-white disabled:bg-muted disabled:text-muted-foreground active:bg-secondary-500',
         'transparent-black':
           'bg-transparent text-dark-500 hover:bg-gray-500 hover:text-white disabled:text-gray-600 active:bg-gray-700',
         light: 'bg-gray-200 text-gray-700 hover:bg-gray-300 active:bg-gray-400',
