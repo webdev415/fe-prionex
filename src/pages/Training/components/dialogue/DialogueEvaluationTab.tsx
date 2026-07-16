@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { useScorecards, useDeleteScorecard } from '@/features/quality'
 import { useConfirm } from '@/components/ui/useConfirm'
+import { Pagination } from '@/components/ui/Pagination'
 import { useOperators } from '@/features/users/hooks'
 import { useCallsBatch } from '@/features/calls/hooks/useCall'
 import { useClientNames } from '@/features/clients/hooks/useClients'
@@ -63,6 +64,8 @@ export function DialogueEvaluationTab() {
   const [callTo, setCallTo] = useState('')
   const [minDuration, setMinDuration] = useState('')
   const [applied, setApplied] = useState<AppliedCallFilters>(EMPTY_FILTERS)
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE)
   // Unsaved-changes guard: the review panel reports its dirty state so we can
   // warn before switching rows (which would discard the edit).
   const [reviewDirty, setReviewDirty] = useState(false)
@@ -128,11 +131,25 @@ export function DialogueEvaluationTab() {
       call_from: dayStartIso(applied.callFrom),
       call_to: dayEndIso(applied.callTo),
       min_talk_duration: applied.minDuration ? Number(applied.minDuration) : undefined,
-      page: 1,
-      page_size: DEFAULT_PAGE_SIZE,
+      page,
+      page_size: pageSize,
     }),
-    [operatorIds, applied]
+    [operatorIds, applied, page, pageSize]
   )
+
+  // Reset to page 1 whenever the server-side query (operators + applied filters +
+  // page size) changes, so a stale page number doesn't request an empty page.
+  // Render-time reset (no setState-in-effect), matching the pattern used across
+  // the Trainer Workplace.
+  const pageResetKey = useMemo(
+    () => JSON.stringify([operatorIds ?? null, applied, pageSize]),
+    [operatorIds, applied, pageSize]
+  )
+  const [trackedResetKey, setTrackedResetKey] = useState(pageResetKey)
+  if (pageResetKey !== trackedResetKey) {
+    setTrackedResetKey(pageResetKey)
+    setPage(1)
+  }
 
   // No operators to query for: scope resolved empty, or a name search / employee
   // selection narrowed to an explicit empty list. Don't fetch — an empty
@@ -170,6 +187,10 @@ export function DialogueEvaluationTab() {
     () => buildDialogueRows(data?.data ?? [], operators, callLookup, clientNames),
     [data?.data, operators, callLookup, clientNames]
   )
+
+  // Server-side pagination totals (the whole filtered set, not just this page).
+  const total = data?.pagination?.total ?? 0
+  const totalPages = data?.pagination?.total_pages ?? 1
 
   const categoryCounts = useMemo(
     () => ({
@@ -381,33 +402,44 @@ export function DialogueEvaluationTab() {
         <AvgScoreByTypeView operatorIds={filters.operator_id} />
       ) : (
         <div className="grid grid-cols-1 gap-3 xl:grid-cols-[1fr_520px]">
-          {noOperators ? (
-            <div className="rounded-xl bg-white/50 p-12 text-center text-sm text-gray-500 shadow-sm">
-              {t(
-                'pages.training.errors.emptyScopeResolution',
-                'The selected scope returned no operators.'
-              )}
-            </div>
-          ) : isLoading ? (
-            <div className="rounded-xl bg-white p-12 text-center text-sm text-[#6B7280] shadow-sm">
-              {t('common.loading', 'Loading…')}
-            </div>
-          ) : isError ? (
-            <div className="rounded-xl bg-white p-12 text-center text-sm text-red-500 shadow-sm">
-              {t('pages.training.errors.loadScorecardsFailed', 'Failed to load scorecards')}
-            </div>
-          ) : filteredRows.length === 0 ? (
-            <div className="rounded-xl bg-white p-12 text-center text-sm text-[#6B7280] shadow-sm">
-              {t('pages.training.scorecardsEmpty', 'No scorecards in scope.')}
-            </div>
-          ) : (
-            <ScorecardListView
-              rows={filteredRows}
-              selectedId={effectiveSelectedId}
-              onSelect={handleSelectRow}
-              onDelete={handleDeleteRow}
-            />
-          )}
+          <div className="flex flex-col gap-3">
+            {noOperators ? (
+              <div className="rounded-xl bg-white/50 p-12 text-center text-sm text-gray-500 shadow-sm">
+                {t(
+                  'pages.training.errors.emptyScopeResolution',
+                  'The selected scope returned no operators.'
+                )}
+              </div>
+            ) : isLoading ? (
+              <div className="rounded-xl bg-white p-12 text-center text-sm text-[#6B7280] shadow-sm">
+                {t('common.loading', 'Loading…')}
+              </div>
+            ) : isError ? (
+              <div className="rounded-xl bg-white p-12 text-center text-sm text-red-500 shadow-sm">
+                {t('pages.training.errors.loadScorecardsFailed', 'Failed to load scorecards')}
+              </div>
+            ) : filteredRows.length === 0 ? (
+              <div className="rounded-xl bg-white p-12 text-center text-sm text-[#6B7280] shadow-sm">
+                {t('pages.training.scorecardsEmpty', 'No scorecards in scope.')}
+              </div>
+            ) : (
+              <ScorecardListView
+                rows={filteredRows}
+                selectedId={effectiveSelectedId}
+                onSelect={handleSelectRow}
+                onDelete={handleDeleteRow}
+              />
+            )}
+            {!noOperators && !isLoading && !isError && total > 0 ? (
+              <Pagination
+                currentPage={page}
+                totalPages={totalPages}
+                pageSize={pageSize}
+                onPageChange={setPage}
+                onPageSizeChange={setPageSize}
+              />
+            ) : null}
+          </div>
           <CallReviewPanel
             scorecard={selectedScorecard}
             operatorName={selectedOperatorName}
