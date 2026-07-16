@@ -63,7 +63,7 @@ export function FeedbackSubTab() {
 
   if (scoped.isEmptyResolution) {
     return (
-      <div className="rounded-xl bg-white/50 p-12 text-center text-sm text-gray-500 shadow-sm">
+      <div className="bg-card/50 text-muted-foreground rounded-xl p-12 text-center text-sm shadow-sm">
         {t(
           'pages.actionAnalysis.errors.emptyScopeResolution',
           'The selected scope returned no operators.'
@@ -77,7 +77,7 @@ export function FeedbackSubTab() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-2">
-            <label className="text-sm text-gray-600">
+            <label className="text-muted-foreground text-sm">
               {t('pages.actionAnalysis.filters.feedbackType', 'Type')}
             </label>
             <select
@@ -86,7 +86,7 @@ export function FeedbackSubTab() {
                 setTypeFilter(e.target.value as FeedbackType | '')
                 setPage(1)
               }}
-              className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
+              className="border-border rounded-lg border px-3 py-1.5 text-sm"
             >
               <option value="">
                 {t('pages.actionAnalysis.filters.allFeedbackTypes', 'All types')}
@@ -100,7 +100,7 @@ export function FeedbackSubTab() {
           </div>
 
           <div className="flex items-center gap-2">
-            <label className="text-sm text-gray-600">
+            <label className="text-muted-foreground text-sm">
               {t('pages.actionAnalysis.filters.status', 'Status')}
             </label>
             <select
@@ -109,7 +109,7 @@ export function FeedbackSubTab() {
                 setStatusFilter(e.target.value as FeedbackStatus | '')
                 setPage(1)
               }}
-              className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
+              className="border-border rounded-lg border px-3 py-1.5 text-sm"
             >
               <option value="">
                 {t('pages.actionAnalysis.filters.allStatuses', 'All statuses')}
@@ -128,7 +128,7 @@ export function FeedbackSubTab() {
           size="md"
           onClick={() => exportMutation.mutate(filters)}
           disabled={exportMutation.isPending || total === 0}
-          leftIcon={<Icons.Download size={16} className="text-white" />}
+          leftIcon={<Icons.Download size={16} className="text-primary-foreground" />}
           className="h-[40px] rounded-full text-xs"
         >
           {exportMutation.isPending
@@ -137,10 +137,10 @@ export function FeedbackSubTab() {
         </Button>
       </div>
 
-      <div className="overflow-x-auto rounded-xl bg-white shadow-sm">
-        <table className="min-w-full divide-y divide-gray-100 text-sm">
-          <thead className="bg-gray-50">
-            <tr className="text-left text-xs font-medium tracking-wide text-gray-500 uppercase">
+      <div className="bg-card overflow-x-auto rounded-xl shadow-sm">
+        <table className="divide-border min-w-full divide-y text-sm">
+          <thead className="bg-muted">
+            <tr className="text-muted-foreground text-left text-xs font-medium tracking-wide uppercase">
               <th className="px-3 py-2">{t('pages.actionAnalysis.columns.date', 'Date')}</th>
               <th className="px-3 py-2">
                 {t('pages.actionAnalysis.columns.operator', 'Operator')}
@@ -152,22 +152,22 @@ export function FeedbackSubTab() {
               <th className="px-3 py-2">{t('pages.actionAnalysis.columns.status', 'Status')}</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100 text-gray-700">
+          <tbody className="divide-border text-foreground divide-y">
             {isLoading ? (
               <tr>
-                <td className="px-3 py-6 text-center text-gray-400" colSpan={5}>
+                <td className="text-muted-foreground px-3 py-6 text-center" colSpan={5}>
                   {t('common.loading', 'Loading…')}
                 </td>
               </tr>
             ) : isError ? (
               <tr>
-                <td className="px-3 py-6 text-center text-red-500" colSpan={5}>
+                <td className="text-error-700 px-3 py-6 text-center" colSpan={5}>
                   {t('pages.actionAnalysis.errors.loadFeedbackFailed', 'Failed to load feedback')}
                 </td>
               </tr>
             ) : rows.length === 0 ? (
               <tr>
-                <td className="px-3 py-6 text-center text-gray-400" colSpan={5}>
+                <td className="text-muted-foreground px-3 py-6 text-center" colSpan={5}>
                   {t('pages.actionAnalysis.feedbackEmpty', 'No feedback in scope.')}
                 </td>
               </tr>
@@ -176,8 +176,8 @@ export function FeedbackSubTab() {
                 <tr
                   key={row.id}
                   onClick={() => setOpenFeedbackId((cur) => (cur === row.id ? null : row.id))}
-                  className={`cursor-pointer hover:bg-gray-50 ${
-                    openFeedbackId === row.id ? 'bg-primary-50' : ''
+                  className={`hover:bg-muted cursor-pointer ${
+                    openFeedbackId === row.id ? 'bg-muted' : ''
                   }`}
                 >
                   <td className="px-3 py-2">{new Date(row.created_at).toLocaleString()}</td>
@@ -190,15 +190,17 @@ export function FeedbackSubTab() {
                       row.feedback_type.replace(/_/g, ' ')
                     )}
                   </td>
-                  <td className="max-w-[24rem] truncate px-3 py-2 text-gray-600">{row.text}</td>
+                  <td className="text-muted-foreground max-w-[24rem] truncate px-3 py-2">
+                    {row.text}
+                  </td>
                   <td className="px-3 py-2">
                     <span
                       className={`rounded-full px-2 py-0.5 text-xs font-medium ${
                         row.status === 'completed'
-                          ? 'bg-green-100 text-green-700'
+                          ? 'bg-success-100 text-success-700'
                           : row.status === 'read'
-                            ? 'bg-blue-100 text-blue-700'
-                            : 'bg-gray-100 text-gray-700'
+                            ? 'bg-info-100 text-info-700'
+                            : 'bg-muted text-foreground'
                       }`}
                     >
                       {t(`pages.actionAnalysis.feedback.status.${row.status}`, row.status)}
@@ -216,7 +218,7 @@ export function FeedbackSubTab() {
       ) : null}
 
       {totalPages > 1 ? (
-        <div className="flex items-center justify-between text-sm text-gray-600">
+        <div className="text-muted-foreground flex items-center justify-between text-sm">
           <span>
             {t('common.page', 'Page')} {page} {t('common.of', 'of')} {totalPages} · {total}{' '}
             {t('pages.actionAnalysis.feedbackTotalSuffix', 'items')}

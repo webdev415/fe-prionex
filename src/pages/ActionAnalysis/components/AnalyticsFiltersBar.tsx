@@ -16,7 +16,7 @@ import { DateRangeQuickFilter } from './DateRangeQuickFilter'
 import { EmployeeFilterDropdown } from './EmployeeFilterDropdown'
 import type { AnalyticsPeriod } from '@/features/operatorAnalytics'
 
-const FILTER_SURFACE = 'rounded-xl bg-white/50 p-4 shadow-sm sm:p-6'
+const FILTER_SURFACE = 'rounded-xl border border-border bg-card/60 p-4 shadow-sm sm:p-6'
 
 interface Props<S extends AnalyticsBarState> {
   value: S
@@ -74,7 +74,7 @@ export function AnalyticsFiltersBar<S extends AnalyticsBarState>({
           userTimezone={userTimezone}
         />
 
-        <div className="h-px w-full bg-gray-200" />
+        <div className="bg-border h-px w-full" />
 
         <div className="grid w-full gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <EmployeeFilterDropdown
@@ -85,7 +85,7 @@ export function AnalyticsFiltersBar<S extends AnalyticsBarState>({
           />
 
           <div className="flex flex-col gap-1.5">
-            <span className="text-dark-500 text-xs font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
+            <span className="text-foreground text-xs font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
               {t('pages.actionAnalysis.filters.period', 'Period')}
             </span>
             <Select

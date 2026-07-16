@@ -335,10 +335,10 @@ export function ActionAnalysisPage() {
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-dark-500 text-xl font-light sm:text-2xl">
+          <h1 className="text-foreground text-xl font-light sm:text-2xl">
             {t('pages.actionAnalysis.title', 'Action Analysis')}
           </h1>
-          <p className="mt-1 text-sm font-light text-gray-600">
+          <p className="text-muted-foreground mt-1 text-sm font-light">
             {t(
               'pages.actionAnalysis.subtitle',
               'Call monitoring and interaction history for the trainer team.'
@@ -351,7 +351,7 @@ export function ActionAnalysisPage() {
             size="md"
             onClick={handleHeaderExport}
             disabled={!exportReadyForCallsListOrInteractions || isExportingListOrInteractions}
-            leftIcon={<Icons.Download size={16} className="text-dark-500" />}
+            leftIcon={<Icons.Download size={16} className="text-primary-foreground" />}
             className="h-[45px] w-full rounded-full text-xs sm:w-auto"
           >
             {isExportingListOrInteractions
@@ -375,7 +375,7 @@ export function ActionAnalysisPage() {
       */}
       {/* prod-hide END */}
 
-      <div className="border-b border-gray-200">
+      <div className="border-border border-b">
         <div className="-mb-px flex flex-wrap gap-6" role="tablist">
           {visibleTopTabs.map((tab) => {
             const { key, fallback } = TOP_TAB_LABEL_KEYS[tab]
@@ -390,7 +390,7 @@ export function ActionAnalysisPage() {
                 className={`border-b-2 px-1 py-3 text-sm font-medium whitespace-nowrap transition-colors ${
                   isActive
                     ? 'border-primary-500 text-primary-600'
-                    : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
+                    : 'text-muted-foreground hover:border-border hover:text-foreground border-transparent'
                 }`}
               >
                 {t(key, fallback)}
@@ -428,8 +428,8 @@ export function ActionAnalysisPage() {
                   onClick={() => setActiveSubTab(sub)}
                   className={`rounded-full border px-4 py-1.5 text-xs font-medium transition-colors ${
                     isActive
-                      ? 'bg-primary-500 border-primary-500 text-white'
-                      : 'hover:border-primary-300 border-gray-200 bg-white text-gray-700'
+                      ? 'bg-primary-500 border-primary-500 text-primary-foreground'
+                      : 'hover:border-primary-300 border-border bg-card text-foreground'
                   }`}
                 >
                   {t(meta.key, meta.fallback)}
@@ -452,7 +452,7 @@ export function ActionAnalysisPage() {
           </div>
         </>
       ) : (
-        <div className="rounded-xl bg-white/50 p-12 text-center text-sm text-gray-500 shadow-sm">
+        <div className="bg-card/50 text-muted-foreground rounded-xl p-12 text-center text-sm shadow-sm">
           {t(
             'pages.actionAnalysis.topTabsComingSoon',
             'This section will be enabled in a follow-up release.'
