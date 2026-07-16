@@ -132,7 +132,9 @@ export function OperatorKanbanView({
               <p className="text-xs font-semibold text-[#05040D]">
                 {t(`pages.training.inbox.kanbanColumns.${col.state}`, col.label)}
               </p>
-              <p className="text-[10px] text-gray-500">{col.subtitle}</p>
+              <p className="text-[10px] text-gray-500">
+                {t(`pages.training.inbox.kanbanSubtitles.${col.state}`, col.subtitle)}
+              </p>
               <span className="mt-1 inline-block rounded-full bg-white px-2 py-0.5 text-[10px] font-medium text-gray-600">
                 {colRows.length}
               </span>

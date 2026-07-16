@@ -245,7 +245,8 @@
     "minutes": "min",
     "none": "—",
     "select": "Select…",
-    "hours": "h"
+    "hours": "h",
+    "seconds": "s"
   },
   "logout": {
     "confirmTitle": "Confirm Logout",
@@ -2084,6 +2085,13 @@
           "grid": "Grid",
           "inbox": "Inbox",
           "kanban": "Kanban"
+        },
+        "kanbanSubtitles": {
+          "wait": "Just arrived",
+          "in_progress": "The coach has taken it on",
+          "awaiting_training": "Assigned course/drill",
+          "scheduled": "There is a session in the calendar",
+          "closed": "With resolution"
         }
       },
       "paymentHistoryEmpty": "No payments match the current filters",
@@ -2235,7 +2243,12 @@
         "modules": "modules",
         "modulesLabel": "Modules",
         "noAccess": "You do not have access to assignments.",
-        "searchPlaceholder": "Search by course..."
+        "searchPlaceholder": "Search by course...",
+        "status": {
+          "done": "Done",
+          "in_progress": "In Progress",
+          "overdue": "Overdue"
+        }
       },
       "autoFlags": {
         "allRules": "All rules",
@@ -2297,7 +2310,12 @@
         "title": "1-on-1 Session Calendar",
         "topic": "Topic / focus",
         "topicPlaceholder": "For example: greeting by script",
-        "trainers": "Trainers"
+        "trainers": "Trainers",
+        "meetingType": {
+          "in_person": "In-person",
+          "zoom": "Zoom",
+          "phone": "Phone"
+        }
       },
       "closures": {
         "cols": {
@@ -2419,7 +2437,19 @@
         "title": "Short drills",
         "titleLabel": "Title",
         "titlePlaceholder": "e.g. Objection handling — price",
-        "updated": "Drill updated."
+        "updated": "Drill updated.",
+        "category": {
+          "objection_handling": "Objection handling",
+          "opening": "Opening",
+          "closing": "Closing",
+          "tone": "Tone",
+          "compliance": "Compliance"
+        },
+        "skillLevel": {
+          "beginner": "Beginner",
+          "intermediate": "Intermediate",
+          "advanced": "Advanced"
+        }
       },
       "funnel": {
         "dateType": {
@@ -2565,6 +2595,12 @@
           "today": "Today",
           "tomorrow": "Tomorrow",
           "week": "Week"
+        },
+        "priority": {
+          "critical": "Critical",
+          "high": "High",
+          "medium": "Medium",
+          "low": "Low"
         }
       },
       "team": {
@@ -2630,7 +2666,20 @@
         "retake": "Retake",
         "start": "Start",
         "title": "Tests",
-        "viewResults": "View results"
+        "viewResults": "View results",
+        "status": {
+          "passed": "Passed",
+          "failed": "Failed",
+          "in_progress": "In progress",
+          "not_started": "Not started"
+        },
+        "filters": {
+          "all": "All tests",
+          "passed": "Passed",
+          "failed": "Failed",
+          "in_progress": "In progress",
+          "not_started": "Not started"
+        }
       },
       "thirdParties": {
         "chips": {
@@ -2768,7 +2817,13 @@
           "tagsPlaceholder": "objection, rebuttal, payment",
           "title": "Call library",
           "titleField": "Title",
-          "titlePlaceholder": "e.g. \"Strong opening rebuttal\""
+          "titlePlaceholder": "e.g. \"Strong opening rebuttal\"",
+          "categories": {
+            "ideal": "Ideal",
+            "mistake": "Mistake",
+            "complex": "Complex",
+            "non_standard": "Non-standard"
+          }
         },
         "materials": {
           "archive": "Archive",
@@ -2826,7 +2881,14 @@
           "updateSuccess": "Material updated.",
           "upload": "Upload material",
           "uploadSuccess": "Material uploaded.",
-          "uploading": "Uploading…"
+          "uploading": "Uploading…",
+          "type": {
+            "pdf": "PDF",
+            "docx": "DOCX",
+            "video": "VIDEO",
+            "audio": "AUDIO",
+            "other": "FILE"
+          }
         },
         "subTabs": {
           "assignments": "Assignments",

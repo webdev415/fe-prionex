@@ -52,21 +52,26 @@ function avatarColorFor(operatorId: number): string {
   return AVATAR_PALETTE[Math.abs(operatorId) % AVATAR_PALETTE.length]
 }
 
+type TFn = (key: string, fallback: string) => string
+
 /** Format milliseconds as the mock's short label: `Xs` under a minute, else `Xmin Ys`. */
-function formatDurationMs(ms: number): string {
-  if (!Number.isFinite(ms) || ms <= 0) return '0s'
+function formatDurationMs(t: TFn, ms: number): string {
+  const s = t('common.seconds', 's')
+  const min = t('common.minutes', 'min')
+  if (!Number.isFinite(ms) || ms <= 0) return `0${s}`
   const seconds = Math.round(ms / 1000)
-  if (seconds < 60) return `${seconds}s`
+  if (seconds < 60) return `${seconds}${s}`
   const minutes = Math.floor(seconds / 60)
   const remainder = seconds % 60
-  return remainder === 0 ? `${minutes}min` : `${minutes}min ${remainder}s`
+  return remainder === 0 ? `${minutes}${min}` : `${minutes}${min} ${remainder}${s}`
 }
 
 /** Idle/downtime renders in minutes (matches the mock "58 min" treatment). */
-function formatMinutesMs(ms: number): string {
-  if (!Number.isFinite(ms) || ms <= 0) return '0 min'
+function formatMinutesMs(t: TFn, ms: number): string {
+  const min = t('common.minutes', 'min')
+  if (!Number.isFinite(ms) || ms <= 0) return `0 ${min}`
   const minutes = Math.max(1, Math.round(ms / 60_000))
-  return `${minutes} min`
+  return `${minutes} ${min}`
 }
 
 function mean(values: number[]): number {
@@ -177,13 +182,13 @@ export function TimeAtWorkSubTab() {
 
   const kpis = useMemo(
     () => ({
-      toCardAvg: formatDurationMs(mean(rows.map((r) => r.timeToCardMs))),
-      creditsAvg: formatDurationMs(mean(rows.map((r) => r.inclCreditsMs))),
-      toFormAvg: formatDurationMs(mean(rows.map((r) => r.fillFormsMs))),
-      downtimeAvg: formatMinutesMs(mean(rows.map((r) => r.downtimeMs))),
-      afterCallAvg: formatDurationMs(mean(rows.map((r) => r.afterCallMs))),
+      toCardAvg: formatDurationMs(t, mean(rows.map((r) => r.timeToCardMs))),
+      creditsAvg: formatDurationMs(t, mean(rows.map((r) => r.inclCreditsMs))),
+      toFormAvg: formatDurationMs(t, mean(rows.map((r) => r.fillFormsMs))),
+      downtimeAvg: formatMinutesMs(t, mean(rows.map((r) => r.downtimeMs))),
+      afterCallAvg: formatDurationMs(t, mean(rows.map((r) => r.afterCallMs))),
     }),
-    [rows]
+    [rows, t]
   )
 
   const sortedRows = useMemo(() => {
@@ -380,6 +385,7 @@ export function TimeAtWorkSubTab() {
 const TimeAtWorkRow = memo(TimeAtWorkRowImpl, (prev, next) => prev.row === next.row)
 
 function TimeAtWorkRowImpl({ row }: { row: OperatorRow }) {
+  const { t } = useTranslation('common')
   // `highlight` covers the time_to_card_open_ms metric only (the one the
   // analytics-service benchmark currently classifies); other columns stay
   // at the neutral-red default.
@@ -402,19 +408,19 @@ function TimeAtWorkRowImpl({ row }: { row: OperatorRow }) {
       </td>
       <td className={`${ANALYTICS_TABLE_TD} font-semibold text-[#05040D]`}>{row.calls}</td>
       <td className={ANALYTICS_TABLE_TD}>
-        <MetricPill tone={cardTone}>{formatDurationMs(row.timeToCardMs)}</MetricPill>
+        <MetricPill tone={cardTone}>{formatDurationMs(t, row.timeToCardMs)}</MetricPill>
       </td>
       <td className={ANALYTICS_TABLE_TD}>
-        <MetricPill>{formatDurationMs(row.inclCreditsMs)}</MetricPill>
+        <MetricPill>{formatDurationMs(t, row.inclCreditsMs)}</MetricPill>
       </td>
       <td className={ANALYTICS_TABLE_TD}>
-        <MetricPill>{formatDurationMs(row.fillFormsMs)}</MetricPill>
+        <MetricPill>{formatDurationMs(t, row.fillFormsMs)}</MetricPill>
       </td>
       <td className={ANALYTICS_TABLE_TD}>
-        <MetricPill>{formatMinutesMs(row.downtimeMs)}</MetricPill>
+        <MetricPill>{formatMinutesMs(t, row.downtimeMs)}</MetricPill>
       </td>
       <td className={ANALYTICS_TABLE_TD}>
-        <MetricPill>{formatDurationMs(row.afterCallMs)}</MetricPill>
+        <MetricPill>{formatDurationMs(t, row.afterCallMs)}</MetricPill>
       </td>
     </tr>
   )

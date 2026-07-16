@@ -92,9 +92,15 @@ export function AssignmentsGridTab() {
   const statusChips = useMemo(
     () => [
       { id: 'all', label: t('pages.training.assignments.filters.all', 'All') },
-      { id: 'in_progress', label: STATUS_BADGE.in_progress.label },
-      { id: 'overdue', label: STATUS_BADGE.overdue.label },
-      { id: 'done', label: STATUS_BADGE.done.label },
+      {
+        id: 'in_progress',
+        label: t('pages.training.assignments.status.in_progress', STATUS_BADGE.in_progress.label),
+      },
+      {
+        id: 'overdue',
+        label: t('pages.training.assignments.status.overdue', STATUS_BADGE.overdue.label),
+      },
+      { id: 'done', label: t('pages.training.assignments.status.done', STATUS_BADGE.done.label) },
     ],
     [t]
   )
@@ -134,7 +140,7 @@ export function AssignmentsGridTab() {
             <span className="text-sm text-[#05040D]">{r.course_title}</span>
             <span className="text-[10px] text-[#6B7280]">
               {[
-                r.duration_minutes ? `${r.duration_minutes} min` : null,
+                r.duration_minutes ? `${r.duration_minutes} ${t('common.minutes', 'min')}` : null,
                 `${r.lesson_count} ${t('pages.training.assignments.modules', 'modules')}`,
               ]
                 .filter(Boolean)
@@ -184,7 +190,7 @@ export function AssignmentsGridTab() {
             <span
               className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${badge.bg} ${badge.tone}`}
             >
-              {badge.label}
+              {t(`pages.training.assignments.status.${r.status}`, badge.label)}
             </span>
           )
         },
@@ -417,7 +423,10 @@ function AssignmentDetailsDialog({
             />
             <Detail
               label={t('pages.training.assignments.columns.status', 'Status')}
-              value={STATUS_BADGE[target.status].label}
+              value={t(
+                `pages.training.assignments.status.${target.status}`,
+                STATUS_BADGE[target.status].label
+              )}
             />
             <Detail
               label={t('pages.training.assignments.columns.deadline', 'Deadline')}

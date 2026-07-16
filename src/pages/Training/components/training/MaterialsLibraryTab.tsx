@@ -101,7 +101,10 @@ export function MaterialsLibraryTab() {
   const typeFilters = useMemo(
     () => [
       { id: 'all', label: t('pages.training.training.materials.filters.all', 'All types') },
-      ...MATERIAL_TYPES.map((tp) => ({ id: tp, label: TYPE_BADGE[tp].label })),
+      ...MATERIAL_TYPES.map((tp) => ({
+        id: tp,
+        label: t(`pages.training.training.materials.type.${tp}`, TYPE_BADGE[tp].label),
+      })),
     ],
     [t]
   )
@@ -227,7 +230,7 @@ export function MaterialsLibraryTab() {
                     <span
                       className={`rounded-full px-1.5 py-0.5 text-[9px] font-medium ${badge.iconBg} ${badge.tone}`}
                     >
-                      {badge.label}
+                      {t(`pages.training.training.materials.type.${m.type}`, badge.label)}
                     </span>
                     <span>{formatSize(m.size_bytes)}</span>
                     <span>·</span>

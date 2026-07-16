@@ -250,7 +250,8 @@
     "minutes": "хв",
     "none": "—",
     "select": "Вибрати…",
-    "hours": "год"
+    "hours": "год",
+    "seconds": "с"
   },
   "logout": {
     "confirmTitle": "Підтвердити вихід",
@@ -2085,6 +2086,13 @@
           "grid": "Сітка",
           "inbox": "Вхідні",
           "kanban": "Канбан"
+        },
+        "kanbanSubtitles": {
+          "wait": "Щойно надійшов",
+          "in_progress": "Коуч узяв у роботу",
+          "awaiting_training": "Призначено курс/вправу",
+          "scheduled": "У календарі є сесія",
+          "closed": "З вирішенням"
         }
       },
       "paymentHistoryEmpty": "Немає платежів, що відповідають фільтрам",
@@ -2236,7 +2244,12 @@
         "modules": "модулів",
         "modulesLabel": "Модулі",
         "noAccess": "У вас немає доступу до призначень.",
-        "searchPlaceholder": "Пошук за курсом..."
+        "searchPlaceholder": "Пошук за курсом...",
+        "status": {
+          "done": "Виконано",
+          "in_progress": "У роботі",
+          "overdue": "Прострочено"
+        }
       },
       "autoFlags": {
         "allRules": "Усі правила",
@@ -2298,7 +2311,12 @@
         "title": "Календар індивідуальних сесій",
         "topic": "Тема / фокус",
         "topicPlaceholder": "Наприклад: привітання за скриптом",
-        "trainers": "Тренери"
+        "trainers": "Тренери",
+        "meetingType": {
+          "in_person": "Особисто",
+          "zoom": "Zoom",
+          "phone": "Телефон"
+        }
       },
       "closures": {
         "cols": {
@@ -2420,7 +2438,19 @@
         "title": "Короткі вправи",
         "titleLabel": "Заголовок",
         "titlePlaceholder": "напр. Відпрацювання заперечень — ціна",
-        "updated": "Вправу оновлено."
+        "updated": "Вправу оновлено.",
+        "category": {
+          "objection_handling": "Відпрацювання заперечень",
+          "opening": "Відкриття",
+          "closing": "Закриття",
+          "tone": "Тон",
+          "compliance": "Комплаєнс"
+        },
+        "skillLevel": {
+          "beginner": "Початковий",
+          "intermediate": "Середній",
+          "advanced": "Просунутий"
+        }
       },
       "funnel": {
         "dateType": {
@@ -2566,6 +2596,12 @@
           "today": "Сьогодні",
           "tomorrow": "Завтра",
           "week": "Тиждень"
+        },
+        "priority": {
+          "critical": "Критичний",
+          "high": "Високий",
+          "medium": "Середній",
+          "low": "Низький"
         }
       },
       "team": {
@@ -2631,7 +2667,20 @@
         "retake": "Пройти знову",
         "start": "Почати",
         "title": "Тести",
-        "viewResults": "Переглянути результати"
+        "viewResults": "Переглянути результати",
+        "status": {
+          "passed": "Складено",
+          "failed": "Не складено",
+          "in_progress": "У процесі",
+          "not_started": "Не розпочато"
+        },
+        "filters": {
+          "all": "Усі тести",
+          "passed": "Складено",
+          "failed": "Не складено",
+          "in_progress": "У процесі",
+          "not_started": "Не розпочато"
+        }
       },
       "thirdParties": {
         "chips": {
@@ -2769,7 +2818,13 @@
           "tagsPlaceholder": "заперечення, відповідь, платіж",
           "title": "Бібліотека дзвінків",
           "titleField": "Заголовок",
-          "titlePlaceholder": "напр. «Сильна початкова відповідь»"
+          "titlePlaceholder": "напр. «Сильна початкова відповідь»",
+          "categories": {
+            "ideal": "Ідеальний",
+            "mistake": "Помилка",
+            "complex": "Складний",
+            "non_standard": "Нестандартний"
+          }
         },
         "materials": {
           "archive": "Архівувати",
@@ -2827,7 +2882,14 @@
           "updateSuccess": "Матеріал оновлено.",
           "upload": "Завантажити матеріал",
           "uploadSuccess": "Матеріал завантажено.",
-          "uploading": "Завантаження…"
+          "uploading": "Завантаження…",
+          "type": {
+            "pdf": "PDF",
+            "docx": "DOCX",
+            "video": "ВІДЕО",
+            "audio": "АУДІО",
+            "other": "ФАЙЛ"
+          }
         },
         "subTabs": {
           "assignments": "Призначення",

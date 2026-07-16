@@ -127,7 +127,14 @@ export function AssignTrainingDialog({ open, onClose, operatorId }: AssignTraini
                     drillIds.includes(d.id),
                     () => setDrillIds((l) => toggle(l, d.id)),
                     d.title,
-                    [d.skill_level, d.duration_minutes != null ? `${d.duration_minutes} min` : null]
+                    [
+                      d.skill_level
+                        ? t(`pages.training.drills.skillLevel.${d.skill_level}`, d.skill_level)
+                        : null,
+                      d.duration_minutes != null
+                        ? `${d.duration_minutes} ${t('common.minutes', 'min')}`
+                        : null,
+                    ]
                       .filter(Boolean)
                       .join(' · ') || t('pages.training.assign.drill', 'Drill')
                   )

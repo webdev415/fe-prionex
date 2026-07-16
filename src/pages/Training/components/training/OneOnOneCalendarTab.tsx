@@ -231,7 +231,7 @@ function SessionCard({
             ? t('pages.training.calendar.completed', 'Completed')
             : session.status === 'cancelled'
               ? t('pages.training.calendar.cancelled', 'Cancelled')
-              : fmt.label}
+              : t(`pages.training.calendar.meetingType.${session.format}`, fmt.label)}
         </span>
       </div>
 
@@ -278,7 +278,10 @@ function SessionCard({
             label={t('pages.training.calendar.duration', 'Duration')}
             value={`${session.duration_minutes} ${t('pages.training.calendar.min', 'min')}`}
           />
-          <StatTile label={t('pages.training.calendar.location', 'Location')} value={fmt.label} />
+          <StatTile
+            label={t('pages.training.calendar.location', 'Location')}
+            value={t(`pages.training.calendar.meetingType.${session.format}`, fmt.label)}
+          />
         </div>
 
         {planned ? (
