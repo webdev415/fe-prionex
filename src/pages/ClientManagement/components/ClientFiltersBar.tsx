@@ -236,10 +236,31 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
   }
 
   const handleTagsChange = (selection: TagFilterSelection) => {
+    const hasManual = selection.includeIds.length > 0 || selection.excludeIds.length > 0
     onFilterChange({
       ...filters,
       tagIds: selection.includeIds,
       excludeTagIds: selection.excludeIds,
+      // Manual tags clear segment (mutually exclusive)
+      ...(hasManual ? { segmentId: undefined } : {}),
+    })
+  }
+
+  const handleSegmentChange = (segmentId: number | null) => {
+    onFilterChange({
+      ...filters,
+      segmentId: segmentId ?? undefined,
+      // Segment clears manual tags (mutually exclusive)
+      ...(segmentId != null ? { tagIds: [], excludeTagIds: [] } : {}),
+    })
+  }
+
+  const handleClearTagFilters = () => {
+    onFilterChange({
+      ...filters,
+      tagIds: [],
+      excludeTagIds: [],
+      segmentId: undefined,
     })
   }
 
@@ -687,41 +708,48 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                     </div>
                   </label>
                 ))}
-                {hiddenTagsCount > 0 && (
-                  <div className="flex items-center gap-1.5 sm:gap-2">
+                {/* Always show dropdown so Segments tab remains reachable even with ≤3 tags */}
+                <div className="flex items-center gap-1.5 sm:gap-2">
+                  {hiddenTagsCount > 0 && (
                     <span className="text-secondary-800 text-xs leading-[150%] font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
                       + {hiddenTagsCount} {t('pages.clients.filters.more')}
                     </span>
-                    <TagsDropdown
-                      tags={tags}
-                      tagFilterSelection={tagFilterSelection}
-                      onSelectionChange={handleTagsChange}
-                      onClear={() => handleTagsChange({ includeIds: [], excludeIds: [] })}
-                      onOpenChange={setTagsDropdownOpen}
-                      trigger={
-                        <button
-                          type="button"
-                          data-testid="tags-multiselect-trigger"
-                          className="bg-primary-300 flex items-center gap-2 rounded p-1"
-                        >
-                          {tagsDropdownOpen ? (
-                            <Icons.ArrowUp
-                              size={16}
-                              className="text-secondary-800"
-                              strokeWidth={2}
-                            />
-                          ) : (
-                            <Icons.ArrowDown
-                              size={16}
-                              className="text-secondary-800"
-                              strokeWidth={2}
-                            />
-                          )}
-                        </button>
-                      }
-                    />
-                  </div>
-                )}
+                  )}
+                  {filters.segmentId != null && (
+                    <span
+                      className="text-primary-600 max-w-[140px] truncate text-xs font-medium sm:text-sm"
+                      title={t('pages.clients.filters.segmentActive')}
+                    >
+                      {t('pages.clients.filters.segmentActive')}
+                    </span>
+                  )}
+                  <TagsDropdown
+                    tags={tags}
+                    tagFilterSelection={tagFilterSelection}
+                    selectedSegmentId={filters.segmentId ?? null}
+                    onSelectionChange={handleTagsChange}
+                    onSegmentChange={handleSegmentChange}
+                    onClear={handleClearTagFilters}
+                    onOpenChange={setTagsDropdownOpen}
+                    trigger={
+                      <button
+                        type="button"
+                        data-testid="tags-multiselect-trigger"
+                        className="bg-primary-300 flex items-center gap-2 rounded p-1"
+                      >
+                        {tagsDropdownOpen ? (
+                          <Icons.ArrowUp size={16} className="text-secondary-800" strokeWidth={2} />
+                        ) : (
+                          <Icons.ArrowDown
+                            size={16}
+                            className="text-secondary-800"
+                            strokeWidth={2}
+                          />
+                        )}
+                      </button>
+                    }
+                  />
+                </div>
               </div>
             </div>
             <div className="hidden sm:flex sm:min-w-[220px] sm:flex-1" />

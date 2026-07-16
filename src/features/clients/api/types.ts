@@ -424,9 +424,10 @@ export interface GetClientsParams {
   assignment_date_to?: string // YYYY-MM-DD format
   tz?: string
 
-  // Filter: Tags (include OR + exclude AND-NOT)
+  // Filter: Tags (include OR + exclude AND-NOT) or segment preset
   tag_ids?: string // Comma-separated tag definition IDs to include (OR)
   exclude_tag_ids?: string // Comma-separated tag definition IDs to exclude (AND-NOT)
+  segment_id?: number // Active Tag Service segment (mutually exclusive with tag filters)
 
   // Filter: Status
   status?: string // Comma-separated statuses (e.g., "active,new")

@@ -4091,7 +4091,8 @@
         "more": "більше",
         "min": "Мін",
         "max": "Макс",
-        "days": "днів"
+        "days": "днів",
+        "segmentActive": "Фільтр сегмента"
       },
       "statuses": {
         "active": "Активний",
@@ -5304,7 +5305,14 @@
         },
         "tagsDropdown": {
           "searchTags": "Пошук тегів...",
+          "searchSegments": "Пошук сегментів...",
           "noTagsFound": "Теги не знайдено",
+          "noSegmentsFound": "Активних сегментів не знайдено",
+          "loadingSegments": "Завантаження сегментів...",
+          "tabManual": "Ручний фільтр",
+          "tabSegments": "Сегменти",
+          "segmentClients": "{{count}} клієнтів",
+          "segmentMeta": "{{clients}} · оновлено о {{time}}",
           "clear": "Очистити",
           "apply": "Застосувати"
         },

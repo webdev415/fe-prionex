@@ -195,6 +195,8 @@ export interface ClientFilters {
   // Tags Filter (3-state: include / exclude / neutral)
   tagIds?: number[]
   excludeTagIds?: number[]
+  /** Active Tag Service segment preset (mutually exclusive with manual tags) */
+  segmentId?: number
 
   // Chain filter — TA Chain ID. Narrows to clients with at least one
   // ta_interaction in this chain. Pairs with ``chainStepIds`` (steps in
@@ -277,6 +279,7 @@ export function ClientManagementPage() {
   const [portfolioFilter, setPortfolioFilter] = useURLState<number[]>('sellers', [])
   const [tagIdsFilter, setTagIdsFilter] = useURLState<number[]>('tags', [])
   const [excludeTagIdsFilter, setExcludeTagIdsFilter] = useURLState<number[]>('excludeTags', [])
+  const [segmentIdFilter, setSegmentIdFilter] = useURLState<number>('segment', 0)
   const [responsibleEmployeeFilter, setResponsibleEmployeeFilter] = useURLState<string>(
     'employee',
     ''
@@ -347,6 +350,7 @@ export function ClientManagementPage() {
       portfolio: portfolioFilter,
       tagIds: tagIdsFilter,
       excludeTagIds: excludeTagIdsFilter,
+      segmentId: segmentIdFilter || undefined,
       responsibleEmployee: responsibleEmployeeFilter || undefined,
       responsibleEmployeeIds: responsibleEmployeeIdsFilter,
       responsibleSearcher: responsibleSearcherFilter || undefined,
@@ -374,6 +378,7 @@ export function ClientManagementPage() {
       portfolioFilter,
       tagIdsFilter,
       excludeTagIdsFilter,
+      segmentIdFilter,
       responsibleEmployeeFilter,
       responsibleEmployeeIdsFilter,
       responsibleSearcherFilter,
@@ -474,6 +479,7 @@ export function ClientManagementPage() {
       portfolioFilter,
       tagIdsFilter,
       excludeTagIdsFilter,
+      segmentIdFilter,
       responsibleEmployeeIdsFilter,
       responsibleSearcherFilter,
       unassignedOnlyFilter,
@@ -508,6 +514,7 @@ export function ClientManagementPage() {
       portfolioFilter.length > 0 ||
       tagIdsFilter.length > 0 ||
       excludeTagIdsFilter.length > 0 ||
+      segmentIdFilter > 0 ||
       unassignedOnlyFilter ||
       dateOfSaleFromFilter !== '' ||
       dateOfSaleToFilter !== '' ||
@@ -545,6 +552,7 @@ export function ClientManagementPage() {
     portfolioFilter,
     tagIdsFilter,
     excludeTagIdsFilter,
+    segmentIdFilter,
     responsibleEmployeeFilter,
     responsibleEmployeeIdsFilter,
     responsibleSearcherFilter,
@@ -583,6 +591,7 @@ export function ClientManagementPage() {
       portfolioFilter.length > 0 ||
       tagIdsFilter.length > 0 ||
       excludeTagIdsFilter.length > 0 ||
+      segmentIdFilter > 0 ||
       unassignedOnlyFilter ||
       dateOfSaleFromFilter !== '' ||
       dateOfSaleToFilter !== '' ||
@@ -612,6 +621,7 @@ export function ClientManagementPage() {
             if (parsed.portfolioFilter) setPortfolioFilter(parsed.portfolioFilter)
             if (parsed.tagIdsFilter) setTagIdsFilter(parsed.tagIdsFilter)
             if (parsed.excludeTagIdsFilter) setExcludeTagIdsFilter(parsed.excludeTagIdsFilter)
+            if (parsed.segmentIdFilter) setSegmentIdFilter(parsed.segmentIdFilter)
             // Migrate legacy scalar `responsibleEmployeeFilter` to the new
             // `responsibleEmployeeIdsFilter` array (KAN-572). Saved states
             // from before the multi-select migration carry the scalar key.
@@ -850,12 +860,17 @@ export function ClientManagementPage() {
       params.debt_max = filters.debtRangeTo
     }
 
-    // FILTER 9: Tags (include OR + exclude AND-NOT)
-    if (filters.tagIds && filters.tagIds.length > 0) {
-      params.tag_ids = filters.tagIds.join(',')
-    }
-    if (filters.excludeTagIds && filters.excludeTagIds.length > 0) {
-      params.exclude_tag_ids = filters.excludeTagIds.join(',')
+    // FILTER 9: Tags (include OR + exclude AND-NOT) OR segment preset
+    // (mutually exclusive — prefer segment when set)
+    if (filters.segmentId) {
+      params.segment_id = filters.segmentId
+    } else {
+      if (filters.tagIds && filters.tagIds.length > 0) {
+        params.tag_ids = filters.tagIds.join(',')
+      }
+      if (filters.excludeTagIds && filters.excludeTagIds.length > 0) {
+        params.exclude_tag_ids = filters.excludeTagIds.join(',')
+      }
     }
 
     // FILTER 10: Priority
@@ -1049,7 +1064,8 @@ export function ClientManagementPage() {
     if (filters.portfolio && filters.portfolio.length > 0) count++
     if (
       (filters.tagIds && filters.tagIds.length > 0) ||
-      (filters.excludeTagIds && filters.excludeTagIds.length > 0)
+      (filters.excludeTagIds && filters.excludeTagIds.length > 0) ||
+      filters.segmentId
     )
       count++
     if (filters.responsibleEmployeeIds && filters.responsibleEmployeeIds.length > 0) count++
@@ -1392,6 +1408,10 @@ export function ClientManagementPage() {
       )
       setTagIdsFilter(next.includeIds)
       setExcludeTagIdsFilter(next.excludeIds)
+      // Manual tag selection clears segment (mutually exclusive)
+      if (next.includeIds.length > 0 || next.excludeIds.length > 0) {
+        setSegmentIdFilter(0)
+      }
       setCurrentPage(1)
       return
     }
@@ -1406,6 +1426,9 @@ export function ClientManagementPage() {
     }
     if (JSON.stringify(newFilters.excludeTagIds) !== JSON.stringify(excludeTagIdsFilter)) {
       setExcludeTagIdsFilter(newFilters.excludeTagIds || [])
+    }
+    if ((newFilters.segmentId || 0) !== segmentIdFilter) {
+      setSegmentIdFilter(newFilters.segmentId || 0)
     }
     if (
       JSON.stringify(newFilters.responsibleEmployeeIds) !==
@@ -1506,6 +1529,7 @@ export function ClientManagementPage() {
     setPortfolioFilter([])
     setTagIdsFilter([])
     setExcludeTagIdsFilter([])
+    setSegmentIdFilter(0)
     setResponsibleEmployeeFilter('')
     setResponsibleEmployeeIdsFilter([])
     setResponsibleSearcherFilter('')
