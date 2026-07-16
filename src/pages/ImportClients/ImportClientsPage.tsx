@@ -402,7 +402,7 @@ export function ImportClientsPage() {
               <span className="hidden sm:inline">{t('pages.imports.back')}</span>
             </Button>
           )}
-          <h1 className="text-dark-500 text-xl font-light sm:text-2xl">
+          <h1 className="text-foreground text-xl font-light sm:text-2xl">
             {t('pages.imports.title')}
           </h1>
         </div>
@@ -410,7 +410,7 @@ export function ImportClientsPage() {
         <Button
           variant="primary"
           onClick={handleViewHistory}
-          leftIcon={<Icons.TransactionHistory size={20} className="text-dark-500" />}
+          leftIcon={<Icons.TransactionHistory size={20} className="text-primary-foreground" />}
           className="flex h-10 w-full flex-row items-center justify-center rounded-full text-xs leading-[150%] font-medium sm:h-12 sm:w-auto"
         >
           {t('pages.imports.viewHistory')}
@@ -420,13 +420,13 @@ export function ImportClientsPage() {
       {/* Main Content */}
       <div className="flex flex-col gap-5 lg:flex-row">
         {/* Left Panel - Step Indicator */}
-        <div className="flex w-full shrink-0 gap-0 rounded-xl bg-white/50 px-4 py-6 shadow-sm lg:w-[24%] lg:px-6 lg:py-11">
+        <div className="bg-card/50 flex w-full shrink-0 gap-0 rounded-xl px-4 py-6 shadow-sm lg:w-[24%] lg:px-6 lg:py-11">
           <StepIndicator steps={STEPS} currentStep={currentStep} />
         </div>
 
         {/* Right Panel - Form Content */}
         <div className="flex flex-1 flex-col gap-3">
-          <div className="rounded-xl bg-white/50 p-4 shadow-sm sm:p-6">
+          <div className="bg-card/50 rounded-xl p-4 shadow-sm sm:p-6">
             {currentStep === 1 && <Step1LoanSource data={step1Data} onChange={handleStep1Change} />}
 
             {currentStep === 2 && step1Data.importType === 'simple' && (
@@ -479,7 +479,7 @@ export function ImportClientsPage() {
       {/* Import Progress Banner - Centered */}
       {isImportInProgress && importProgress ? (
         <div className="fixed bottom-10 left-1/2 z-50 flex w-full -translate-x-1/2 transform justify-center p-10">
-          <div className="flex w-[calc(100%-2rem)] max-w-7xl flex-col justify-center rounded-[10px] border border-gray-200 bg-white px-4 py-3 shadow-[0_12px_16px_-4px_rgba(16,24,40,0.08),0_4px_6px_-2px_rgba(16,24,40,0.03)] sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-6 sm:py-4">
+          <div className="border-border bg-card flex w-[calc(100%-2rem)] max-w-7xl flex-col justify-center rounded-[10px] border px-4 py-3 shadow-[0_12px_16px_-4px_rgba(16,24,40,0.08),0_4px_6px_-2px_rgba(16,24,40,0.03)] sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-6 sm:py-4">
             <div className="text-warning-500 flex items-center gap-2.5 py-3">
               {/* Icon - document with refresh symbol */}
               <Icons.FileImport size={20} />
@@ -489,21 +489,21 @@ export function ImportClientsPage() {
             </div>
             <div className="flex w-full flex-wrap items-center justify-center gap-5">
               <div className="flex flex-wrap gap-3">
-                <span className="text-dark-500 font-sans text-xs leading-[150%] font-light tracking-[-0.28px] sm:text-sm">
+                <span className="text-foreground font-sans text-xs leading-[150%] font-light tracking-[-0.28px] sm:text-sm">
                   {t('pages.imports.file')}:{' '}
-                  <span className="text-dark-500 font-sans text-xs leading-[150%] font-medium tracking-[-0.28px] sm:text-sm">
+                  <span className="text-foreground font-sans text-xs leading-[150%] font-medium tracking-[-0.28px] sm:text-sm">
                     {importProgress.fileName}
                   </span>
                 </span>
-                <span className="text-dark-500 font-sans text-xs leading-[150%] font-light tracking-[-0.28px] sm:text-sm">
+                <span className="text-foreground font-sans text-xs leading-[150%] font-light tracking-[-0.28px] sm:text-sm">
                   {t('pages.imports.started')}:{' '}
-                  <span className="text-dark-500 font-sans text-xs leading-[150%] font-medium tracking-[-0.28px] sm:text-sm">
+                  <span className="text-foreground font-sans text-xs leading-[150%] font-medium tracking-[-0.28px] sm:text-sm">
                     {importProgress.startedAt}
                   </span>
                 </span>
-                <span className="text-dark-500 font-sans text-xs leading-[150%] font-light tracking-[-0.28px] sm:text-sm">
+                <span className="text-foreground font-sans text-xs leading-[150%] font-light tracking-[-0.28px] sm:text-sm">
                   {t('pages.imports.status')}:{' '}
-                  <span className="text-dark-500 font-sans text-xs leading-[150%] font-medium tracking-[-0.28px] sm:text-sm">
+                  <span className="text-foreground font-sans text-xs leading-[150%] font-medium tracking-[-0.28px] sm:text-sm">
                     {importProgress?.status === 'pending'
                       ? t('pages.imports.queued')
                       : `${importProgress.progressPercentage}% ${t('pages.imports.complete')}`}

@@ -154,13 +154,13 @@ export function ConfigHistoryViewer({ sellers }: ConfigHistoryViewerProps) {
   return (
     <div className="flex flex-col gap-6">
       {/* Filters */}
-      <div className="bg-light-100 rounded-lg p-4">
-        <h4 className="text-dark-500 mb-4 text-sm font-semibold">
+      <div className="bg-muted rounded-lg p-4">
+        <h4 className="text-foreground mb-4 text-sm font-semibold">
           {t('pages.scoringConfiguration.filters', 'Filters')}
         </h4>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
           <div>
-            <label className="text-dark-500 mb-2 block text-xs font-medium">
+            <label className="text-foreground mb-2 block text-xs font-medium">
               {t('pages.scoringConfiguration.seller', 'Seller')}
             </label>
             <Select value={sellerFilter} onValueChange={setSellerFilter}>
@@ -178,14 +178,14 @@ export function ConfigHistoryViewer({ sellers }: ConfigHistoryViewerProps) {
           </div>
 
           <div>
-            <label className="text-dark-500 mb-2 block text-xs font-medium">
+            <label className="text-foreground mb-2 block text-xs font-medium">
               {t('pages.scoringConfiguration.startDate', 'Start Date')}
             </label>
             <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
           </div>
 
           <div>
-            <label className="text-dark-500 mb-2 block text-xs font-medium">
+            <label className="text-foreground mb-2 block text-xs font-medium">
               {t('pages.scoringConfiguration.endDate', 'End Date')}
             </label>
             <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
@@ -207,9 +207,11 @@ export function ConfigHistoryViewer({ sellers }: ConfigHistoryViewerProps) {
 
       {/* History Timeline */}
       {isLoading ? (
-        <div className="text-dark-400 text-center text-sm">{t('common.loading', 'Loading...')}</div>
+        <div className="text-muted-foreground text-center text-sm">
+          {t('common.loading', 'Loading...')}
+        </div>
       ) : history.length === 0 ? (
-        <div className="bg-light-100 text-dark-400 rounded-lg p-6 text-center text-sm">
+        <div className="bg-muted text-muted-foreground rounded-lg p-6 text-center text-sm">
           {t(
             'pages.scoringConfiguration.noHistory',
             'No configuration changes found for the selected filters.'
@@ -219,26 +221,23 @@ export function ConfigHistoryViewer({ sellers }: ConfigHistoryViewerProps) {
         <>
           <div className="space-y-4">
             {history.map((entry) => (
-              <div
-                key={entry.history_id}
-                className="border-light-200 bg-light-50 rounded-lg border p-4"
-              >
+              <div key={entry.history_id} className="border-border bg-card rounded-lg border p-4">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="mb-2 flex items-center gap-2">
                       <span
                         className={`rounded-full px-2 py-1 text-xs font-semibold ${
                           entry.change_type === 'create'
-                            ? 'bg-green-100 text-green-700'
+                            ? 'bg-success-100 text-success-700'
                             : entry.change_type === 'update'
-                              ? 'bg-blue-100 text-blue-700'
-                              : 'bg-red-100 text-red-700'
+                              ? 'bg-information-100 text-information-700'
+                              : 'bg-error-100 text-error-700'
                         }`}
                       >
                         {entry.change_type.toUpperCase()}
                       </span>
                       {entry.seller_id && (
-                        <span className="text-dark-400 text-xs">
+                        <span className="text-muted-foreground text-xs">
                           {t('pages.scoringConfiguration.seller', 'Seller')}:{' '}
                           {sellers.find((s) => s.id === entry.seller_id)?.name ||
                             `ID ${entry.seller_id}`}
@@ -246,16 +245,16 @@ export function ConfigHistoryViewer({ sellers }: ConfigHistoryViewerProps) {
                       )}
                     </div>
 
-                    <div className="text-dark-500 mb-1 text-sm font-medium">
+                    <div className="text-foreground mb-1 text-sm font-medium">
                       {t('pages.scoringConfiguration.history.tableHeaders.changedBy', 'Changed By')}
                       : {entry.changed_by_username}
                     </div>
-                    <div className="text-dark-400 mb-2 text-xs">
+                    <div className="text-muted-foreground mb-2 text-xs">
                       {formatDateTime(entry.changed_at)}
                     </div>
 
                     {entry.change_reason && (
-                      <div className="text-dark-400 mb-3 text-sm italic">
+                      <div className="text-muted-foreground mb-3 text-sm italic">
                         {t('pages.scoringConfiguration.history.tableHeaders.reason', 'Reason')}:{' '}
                         {entry.change_reason}
                       </div>
@@ -264,19 +263,19 @@ export function ConfigHistoryViewer({ sellers }: ConfigHistoryViewerProps) {
                     {/* Before/After Comparison */}
                     {entry.before_config && entry.after_config && (
                       <div className="mt-3 grid grid-cols-2 gap-4">
-                        <div className="bg-light-100 rounded p-3">
-                          <div className="text-dark-300 mb-2 text-xs font-semibold uppercase">
+                        <div className="bg-muted rounded p-3">
+                          <div className="text-muted-foreground mb-2 text-xs font-semibold uppercase">
                             {t('pages.scoringConfiguration.before', 'Before')}
                           </div>
-                          <pre className="text-dark-500 text-xs whitespace-pre-wrap">
+                          <pre className="text-foreground text-xs whitespace-pre-wrap">
                             {JSON.stringify(entry.before_config, null, 2)}
                           </pre>
                         </div>
-                        <div className="bg-light-100 rounded p-3">
-                          <div className="text-dark-300 mb-2 text-xs font-semibold uppercase">
+                        <div className="bg-muted rounded p-3">
+                          <div className="text-muted-foreground mb-2 text-xs font-semibold uppercase">
                             {t('pages.scoringConfiguration.after', 'After')}
                           </div>
-                          <pre className="text-dark-500 text-xs whitespace-pre-wrap">
+                          <pre className="text-foreground text-xs whitespace-pre-wrap">
                             {JSON.stringify(entry.after_config, null, 2)}
                           </pre>
                         </div>
@@ -291,7 +290,7 @@ export function ConfigHistoryViewer({ sellers }: ConfigHistoryViewerProps) {
           {/* Pagination */}
           {totalPages > 1 && (
             <div className="flex items-center justify-between">
-              <div className="text-dark-400 text-sm">
+              <div className="text-muted-foreground text-sm">
                 {t(
                   'pages.scoringConfiguration.showingResults',
                   'Showing {{start}} to {{end}} of {{total}} results',
@@ -310,7 +309,7 @@ export function ConfigHistoryViewer({ sellers }: ConfigHistoryViewerProps) {
                 >
                   {t('common.previous', 'Previous')}
                 </Button>
-                <span className="text-dark-500 flex items-center px-4 text-sm">
+                <span className="text-foreground flex items-center px-4 text-sm">
                   {t('common.page', 'Page')} {page} / {totalPages}
                 </span>
                 <Button

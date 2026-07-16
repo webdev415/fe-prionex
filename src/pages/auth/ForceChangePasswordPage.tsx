@@ -82,12 +82,12 @@ export default function ForceChangePasswordPage() {
         {/* Header */}
         <div className="mb-4 flex w-full flex-col items-center text-center sm:mb-6 md:mb-8">
           <div className="bg-primary-300 mb-3 flex h-12 w-12 items-center justify-center rounded-full sm:mb-4">
-            <Icons.LockSync01 size={24} className="text-dark-500" strokeWidth={2} />
+            <Icons.LockSync01 size={24} className="text-primary-foreground" strokeWidth={2} />
           </div>
-          <h1 className="text-dark-500 text-2xl font-medium md:text-[30px]">
+          <h1 className="text-foreground text-2xl font-medium md:text-[30px]">
             {t('changePassword.title')}
           </h1>
-          <p className="md:text-body-md mt-1.5 px-2 text-sm font-light text-gray-500 sm:mt-2 sm:px-0 sm:text-base">
+          <p className="text-muted-foreground md:text-body-md mt-1.5 px-2 text-sm font-light sm:mt-2 sm:px-0 sm:text-base">
             {t('changePassword.subtitle')}
           </p>
         </div>

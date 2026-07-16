@@ -120,7 +120,11 @@ export function DocumentTypeFormModal({
   return (
     <Modal open={open} onClose={onClose} maxWidth="md">
       <ModalHeader
-        icon={<Icons.Tag01 className="h-5 w-5" />}
+        icon={
+          <div className="bg-primary-300 flex h-7 w-7 items-center justify-center rounded-full sm:h-8 sm:w-8">
+            <Icons.Tag01 size={18} className="text-primary-foreground sm:size-5" strokeWidth={2} />
+          </div>
+        }
         title={
           isEdit
             ? t('pages.documentGeneration.types.editTitle', 'Edit document type')
@@ -132,7 +136,7 @@ export function DocumentTypeFormModal({
           <div className="space-y-1">
             <Label htmlFor="dt-name">
               {t('pages.documentGeneration.types.fields.name', 'Name')}
-              <span className="ml-0.5 text-red-500">*</span>
+              <span className="text-error-500 ml-0.5">*</span>
             </Label>
             <Input
               id="dt-name"
@@ -142,7 +146,7 @@ export function DocumentTypeFormModal({
               )}
               {...register('name')}
             />
-            {errors.name && <p className="text-xs text-red-500">{errors.name.message}</p>}
+            {errors.name && <p className="text-error-500 text-xs">{errors.name.message}</p>}
           </div>
 
           <Controller
@@ -162,11 +166,22 @@ export function DocumentTypeFormModal({
             )}
           />
         </ModalContent>
-        <ModalFooter>
-          <Button type="button" variant="secondary" onClick={onClose} disabled={isSubmitting}>
+        <ModalFooter className="flex-col-reverse gap-2 sm:flex-row">
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={onClose}
+            disabled={isSubmitting}
+            className="h-10 w-full flex-1 text-xs sm:h-[45px] sm:text-sm"
+          >
             {t('actions.cancel', 'Cancel')}
           </Button>
-          <Button type="submit" variant="primary" disabled={isSubmitting}>
+          <Button
+            type="submit"
+            variant="primary"
+            disabled={isSubmitting}
+            className="h-10 w-full flex-1 text-xs sm:h-[45px] sm:text-sm"
+          >
             {isSubmitting
               ? t('actions.saving', 'Saving…')
               : isEdit

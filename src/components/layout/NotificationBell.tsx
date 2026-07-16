@@ -99,9 +99,144 @@ type Tab = (typeof TABS)[number]
 
 function EmptyState({ label }: { t: TFunction; label: string }) {
   return (
-    <div className="flex flex-col items-center justify-center gap-2 px-4 py-8 text-gray-300">
+    <div className="text-muted-foreground flex flex-col items-center justify-center gap-2 px-4 py-8">
       <Icons.Bell size={28} strokeWidth={1.5} />
-      <p className="text-xs text-gray-400">{label}</p>
+      <p className="text-muted-foreground text-xs">{label}</p>
+    </div>
+  )
+}
+
+function NotificationTabStrip({
+  activeTab,
+  onTabChange,
+  tabCounts,
+  t,
+}: {
+  activeTab: Tab
+  onTabChange: (tab: Tab) => void
+  tabCounts: Record<Tab, number>
+  t: TFunction
+}) {
+  const scrollerRef = useRef<HTMLDivElement>(null)
+  const tabRefs = useRef<Partial<Record<Tab, HTMLButtonElement | null>>>({})
+  const [canScrollLeft, setCanScrollLeft] = useState(false)
+  const [canScrollRight, setCanScrollRight] = useState(false)
+
+  const updateScrollState = useCallback(() => {
+    const el = scrollerRef.current
+    if (!el) return
+    const { scrollLeft, scrollWidth, clientWidth } = el
+    setCanScrollLeft(scrollLeft > 1)
+    setCanScrollRight(scrollLeft + clientWidth < scrollWidth - 1)
+  }, [])
+
+  useEffect(() => {
+    const el = scrollerRef.current
+    if (!el) return
+
+    updateScrollState()
+    const frame = requestAnimationFrame(updateScrollState)
+    const ro = new ResizeObserver(() => updateScrollState())
+    ro.observe(el)
+    el.addEventListener('scroll', updateScrollState, { passive: true })
+    window.addEventListener('resize', updateScrollState)
+
+    return () => {
+      cancelAnimationFrame(frame)
+      ro.disconnect()
+      el.removeEventListener('scroll', updateScrollState)
+      window.removeEventListener('resize', updateScrollState)
+    }
+  }, [updateScrollState, t])
+
+  useEffect(() => {
+    const activeEl = tabRefs.current[activeTab]
+    if (!activeEl) return
+    activeEl.scrollIntoView({ behavior: 'smooth', inline: 'nearest', block: 'nearest' })
+    const timer = window.setTimeout(updateScrollState, 320)
+    return () => window.clearTimeout(timer)
+  }, [activeTab, updateScrollState])
+
+  const scrollTabs = (direction: -1 | 1) => {
+    const el = scrollerRef.current
+    if (!el) return
+    el.scrollBy({ left: direction * Math.max(120, el.clientWidth * 0.55), behavior: 'smooth' })
+  }
+
+  return (
+    <div className="border-border relative flex items-stretch border-b">
+      <button
+        type="button"
+        aria-label={t('notificationBell.tabsScrollLeft', 'Scroll tabs left')}
+        onClick={() => scrollTabs(-1)}
+        disabled={!canScrollLeft}
+        className={cn(
+          'from-card text-muted-foreground hover:text-foreground absolute top-0 bottom-0 left-0 z-10 flex w-8 items-center justify-start bg-gradient-to-r from-60% to-transparent pl-1.5 transition-all duration-200',
+          canScrollLeft
+            ? 'pointer-events-auto translate-x-0 opacity-100'
+            : 'pointer-events-none -translate-x-1 opacity-0'
+        )}
+      >
+        <Icons.ArrowLeft size={14} strokeWidth={2} />
+      </button>
+
+      <div
+        ref={scrollerRef}
+        className={cn(
+          'flex w-full overflow-x-auto scroll-smooth text-xs',
+          '[-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
+          canScrollLeft && 'pl-6',
+          canScrollRight && 'pr-6'
+        )}
+      >
+        {TABS.map((tab) => {
+          const count = tabCounts[tab]
+          const isActive = activeTab === tab
+          return (
+            <button
+              key={tab}
+              ref={(node) => {
+                tabRefs.current[tab] = node
+              }}
+              type="button"
+              onClick={() => onTabChange(tab)}
+              className={cn(
+                'flex-shrink-0 border-b-2 px-3 py-2 font-medium whitespace-nowrap transition-colors duration-200',
+                isActive
+                  ? 'border-primary-500 text-primary-600'
+                  : 'text-muted-foreground hover:text-foreground border-transparent'
+              )}
+            >
+              {t(`notificationBell.tabs.${tab}`)}
+              {count > 0 && (
+                <span
+                  className={cn(
+                    'ml-1.5 rounded-full px-1.5 py-0.5 text-[10px] font-semibold transition-colors duration-200',
+                    isActive ? 'bg-primary-100 text-primary-700' : 'bg-muted text-muted-foreground'
+                  )}
+                >
+                  {count}
+                </span>
+              )}
+            </button>
+          )
+        })}
+      </div>
+
+      <button
+        type="button"
+        aria-label={t('notificationBell.tabsScrollRight', 'Scroll tabs right')}
+        onClick={() => scrollTabs(1)}
+        disabled={!canScrollRight}
+        className={cn(
+          'from-card text-muted-foreground hover:text-foreground absolute top-0 right-0 bottom-0 z-10 flex w-8 items-center justify-end bg-gradient-to-l from-60% to-transparent pr-1.5 transition-all duration-200',
+          canScrollRight
+            ? 'pointer-events-auto translate-x-0 opacity-100'
+            : 'pointer-events-none translate-x-1 opacity-0'
+        )}
+      >
+        <Icons.ArrowRight size={14} strokeWidth={2} />
+      </button>
     </div>
   )
 }
@@ -264,19 +399,19 @@ export function NotificationBell() {
             : t('notificationBell.ariaLabel')
         }
         onClick={() => setIsOpen((prev) => !prev)}
-        className="relative flex h-9 w-9 items-center justify-center rounded-full transition-colors hover:bg-gray-100 focus:outline-none"
+        className="hover:bg-muted relative flex h-9 w-9 items-center justify-center rounded-full transition-colors focus:outline-none"
       >
         <Icons.Bell
           size={20}
           strokeWidth={1.5}
           className={cn(
             'transition-colors',
-            hasNotifications ? 'text-dark-500' : 'text-gray-300',
+            hasNotifications ? 'text-foreground' : 'text-muted-foreground',
             isShaking && 'animate-bell-shake'
           )}
         />
         {hasNotifications && (
-          <span className="absolute top-0.5 right-0.5 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-red-500 px-0.5 text-[10px] leading-none font-bold text-white">
+          <span className="bg-error-500 absolute top-0.5 right-0.5 flex h-4 min-w-[1rem] items-center justify-center rounded-full px-0.5 text-[10px] leading-none font-bold text-white">
             {count > 99 ? '99+' : count}
           </span>
         )}
@@ -284,10 +419,9 @@ export function NotificationBell() {
 
       {/* Dropdown */}
       {isOpen && (
-        <div className="absolute right-0 z-50 mt-2 w-80 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xl">
-          {/* Header */}
-          <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
-            <span className="text-dark-500 text-sm font-semibold">
+        <div className="border-border bg-card absolute right-0 z-50 mt-2 w-80 overflow-hidden rounded-xl border shadow-xl">
+          <div className="border-border flex items-center justify-between border-b px-4 py-3">
+            <span className="text-foreground text-sm font-semibold">
               {t('notificationBell.title')}
             </span>
             <div className="flex items-center gap-2">
@@ -300,11 +434,11 @@ export function NotificationBell() {
                         onError: () => toast.error(t('notificationBell.errors.markAllReadFailed')),
                       })
                     }
-                    className="text-[10px] font-medium text-blue-500 hover:text-blue-700"
+                    className="text-primary-500 hover:text-primary-700 text-[10px] font-medium"
                   >
                     {t('notificationBell.markAllRead')}
                   </button>
-                  <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-600">
+                  <span className="bg-error-100 text-error-600 rounded-full px-2 py-0.5 text-xs font-medium">
                     {count}
                   </span>
                 </>
@@ -312,49 +446,19 @@ export function NotificationBell() {
             </div>
           </div>
 
-          {/* Tab strip — horizontal, scrollable on overflow. */}
-          <div className="flex overflow-x-auto border-b border-gray-100 text-xs">
-            {TABS.map((tab) => {
-              const count =
-                tab === 'tasks'
-                  ? tasksTabItems.length
-                  : tab === 'starred'
-                    ? starredTabItems.length
-                    : tab === 'payments'
-                      ? paymentsTabItems.length
-                      : tab === 'calls'
-                        ? callsTabItems.length
-                        : tab === 'rrPayments'
-                          ? rrPaymentsTabItems.length
-                          : ubkiTabItems.length
-              const isActive = activeTab === tab
-              return (
-                <button
-                  key={tab}
-                  type="button"
-                  onClick={() => setActiveTab(tab)}
-                  className={cn(
-                    'flex-shrink-0 border-b-2 px-3 py-2 font-medium whitespace-nowrap transition-colors',
-                    isActive
-                      ? 'border-blue-500 text-blue-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700'
-                  )}
-                >
-                  {t(`notificationBell.tabs.${tab}`)}
-                  {count > 0 && (
-                    <span
-                      className={cn(
-                        'ml-1.5 rounded-full px-1.5 py-0.5 text-[10px] font-semibold',
-                        isActive ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'
-                      )}
-                    >
-                      {count}
-                    </span>
-                  )}
-                </button>
-              )
-            })}
-          </div>
+          <NotificationTabStrip
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
+            tabCounts={{
+              tasks: tasksTabItems.length,
+              starred: starredTabItems.length,
+              payments: paymentsTabItems.length,
+              calls: callsTabItems.length,
+              rrPayments: rrPaymentsTabItems.length,
+              ubki: ubkiTabItems.length,
+            }}
+            t={t}
+          />
 
           {/* Tab content panel */}
           <div className="max-h-80 overflow-y-auto">
@@ -488,26 +592,26 @@ function PaymentNotificationItem({
   const body = (
     <>
       <div className="flex flex-wrap items-center gap-1.5">
-        {!n.read && <span className="h-2 w-2 shrink-0 rounded-full bg-blue-500" />}
-        <p className="line-clamp-1 text-xs font-semibold text-black">
+        {!n.read && <span className="bg-primary-500 h-2 w-2 shrink-0 rounded-full" />}
+        <p className="text-foreground line-clamp-1 text-xs font-semibold">
           {meta.client_name ?? t('notificationBell.clientNumber', { id: meta.client_id })}
-          <span className="ml-1 font-normal text-black">
+          <span className="text-foreground ml-1 font-normal">
             ({t('notificationBell.idLabel', { id: meta.client_id })})
           </span>
-          <span className="ml-1 font-normal text-black">/ {meta.payment_number}</span>
+          <span className="text-foreground ml-1 font-normal">/ {meta.payment_number}</span>
         </p>
-        <span className="rounded bg-yellow-100 px-1.5 py-0.5 text-[10px] font-medium text-yellow-600">
+        <span className="bg-warning-100 text-warning-600 rounded px-1.5 py-0.5 text-[10px] font-medium">
           {t('notificationBell.payment.pending')}
         </span>
-        <span className="rounded bg-red-100 px-1.5 py-0.5 text-[10px] font-medium text-red-600">
+        <span className="bg-error-100 text-error-600 rounded px-1.5 py-0.5 text-[10px] font-medium">
           {t('notificationBell.payment.daysPending', { count: daysPending })}
         </span>
       </div>
-      <p className="w-full min-w-0 truncate text-xs text-black">
+      <p className="text-foreground w-full min-w-0 truncate text-xs">
         ₴ {Number(meta.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
         <span className="ml-2">{translatePaymentMethod(meta.payment_method, t)}</span>
       </p>
-      <div className="flex items-center gap-1 text-black">
+      <div className="text-foreground flex items-center gap-1">
         <Icons.Clock01 size={11} strokeWidth={1.5} />
         <span className="text-[11px]">
           {meta.recorded_at ? formatDateTime(meta.recorded_at, userTimezone, i18n.language) : '—'}
@@ -516,7 +620,7 @@ function PaymentNotificationItem({
     </>
   )
   return (
-    <div className="group relative flex border-b border-gray-100 transition-colors last:border-b-0 hover:bg-gray-50">
+    <div className="group border-border hover:bg-muted relative flex border-b transition-colors last:border-b-0">
       {meta.client_id ? (
         <Link
           to={clientHref(meta.client_id)}
@@ -565,31 +669,31 @@ function TaskNotificationItem({
   const body = (
     <>
       <div className="flex flex-wrap items-center gap-1.5 pr-5">
-        {!n.read && <span className="h-2 w-2 shrink-0 rounded-full bg-blue-500" />}
+        {!n.read && <span className="bg-primary-500 h-2 w-2 shrink-0 rounded-full" />}
         {hasClient ? (
-          <p className="line-clamp-1 text-xs font-semibold text-black">
+          <p className="text-foreground line-clamp-1 text-xs font-semibold">
             {meta.client_name ?? t('notificationBell.clientNumber', { id: meta.client_id })}
             {meta.client_id && (
-              <span className="ml-1 font-normal text-black">
+              <span className="text-foreground ml-1 font-normal">
                 ({t('notificationBell.idLabel', { id: meta.client_id })})
               </span>
             )}
             {meta.debt_id && (
-              <span className="ml-1 font-normal text-black">
+              <span className="text-foreground ml-1 font-normal">
                 / {t('notificationBell.debtLabel', { id: meta.debt_id })}
               </span>
             )}
           </p>
         ) : (
-          <p className="line-clamp-1 text-xs font-semibold text-black">{n.title}</p>
+          <p className="text-foreground line-clamp-1 text-xs font-semibold">{n.title}</p>
         )}
         {meta.priority && (
           <span
             className={cn(
               'rounded px-1.5 py-0.5 text-[10px] font-medium capitalize',
-              meta.priority === 'high' && 'bg-red-100 text-red-600',
-              meta.priority === 'normal' && 'bg-blue-100 text-blue-600',
-              meta.priority === 'low' && 'bg-gray-100 text-gray-500'
+              meta.priority === 'high' && 'bg-error-100 text-error-600',
+              meta.priority === 'normal' && 'bg-information-100 text-information-600',
+              meta.priority === 'low' && 'bg-muted text-muted-foreground'
             )}
           >
             {t(`notificationBell.taskPriority.${meta.priority}`, {
@@ -601,12 +705,12 @@ function TaskNotificationItem({
           <span
             className={cn(
               'rounded px-1.5 py-0.5 text-[10px] font-medium capitalize',
-              meta.status === 'pending' && 'bg-yellow-100 text-yellow-600',
-              meta.status === 'in_progress' && 'bg-blue-100 text-blue-600',
-              meta.status === 'completed' && 'bg-green-100 text-green-600',
-              meta.status === 'extended' && 'bg-purple-100 text-purple-600',
-              meta.status === 'rejected' && 'bg-red-100 text-red-600',
-              meta.status === 'incoming_line_result' && 'bg-orange-100 text-orange-600'
+              meta.status === 'pending' && 'bg-warning-100 text-warning-600',
+              meta.status === 'in_progress' && 'bg-information-100 text-information-600',
+              meta.status === 'completed' && 'bg-success-100 text-success-600',
+              meta.status === 'extended' && 'bg-information-100 text-information-600',
+              meta.status === 'rejected' && 'bg-error-100 text-error-600',
+              meta.status === 'incoming_line_result' && 'bg-warning-100 text-warning-600'
             )}
           >
             {t(`notificationBell.taskStatus.${meta.status}`, {
@@ -615,15 +719,17 @@ function TaskNotificationItem({
           </span>
         )}
         {meta.subject_name && !meta.status && (
-          <span className="rounded bg-blue-100 px-1.5 py-0.5 text-[10px] font-medium text-blue-600">
+          <span className="bg-information-100 text-information-600 rounded px-1.5 py-0.5 text-[10px] font-medium">
             {meta.subject_name}
           </span>
         )}
       </div>
       {(meta.description || n.body) && (
-        <p className="w-full min-w-0 truncate text-xs text-black">{meta.description || n.body}</p>
+        <p className="text-foreground w-full min-w-0 truncate text-xs">
+          {meta.description || n.body}
+        </p>
       )}
-      <div className="flex items-center gap-1 text-black">
+      <div className="text-foreground flex items-center gap-1">
         <Icons.Clock01 size={11} strokeWidth={1.5} />
         <span className="text-[11px]">
           {meta.due_date ? formatTaskDueDateForDisplay(meta.due_date, userTimezone) : '—'}
@@ -632,7 +738,7 @@ function TaskNotificationItem({
     </>
   )
   return (
-    <div className="group relative flex border-b border-gray-100 transition-colors last:border-b-0 hover:bg-gray-50">
+    <div className="group border-border hover:bg-muted relative flex border-b transition-colors last:border-b-0">
       {meta.client_id ? (
         <Link
           to={clientHref(meta.client_id)}
@@ -665,7 +771,7 @@ function TaskNotificationItem({
             aria-label={t('notificationBell.taskActions.completeAria', 'Complete task')}
             title={t('notificationBell.taskActions.completeTitle', 'Complete task')}
             onClick={(e) => onCompleteTask(e, taskId)}
-            className="flex h-5 w-5 items-center justify-center rounded text-gray-300 hover:bg-green-50 hover:text-green-600"
+            className="text-muted-foreground hover:bg-success-50 hover:text-success-600 flex h-5 w-5 items-center justify-center rounded"
           >
             <Icons.Tick02 size={12} strokeWidth={2} />
           </button>
@@ -676,7 +782,7 @@ function TaskNotificationItem({
             aria-label={t('notificationBell.taskActions.unstarAria', 'Unstar')}
             title={t('notificationBell.taskActions.unstarTitle', 'Unstar')}
             onClick={(e) => onUnstar(e, n.id)}
-            className="flex h-5 w-5 items-center justify-center rounded text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+            className="text-foreground hover:bg-muted hover:text-foreground flex h-5 w-5 items-center justify-center rounded"
           >
             <Icons.StarFilled size={12} strokeWidth={2} />
           </button>
@@ -686,7 +792,7 @@ function TaskNotificationItem({
             aria-label={t('notificationBell.taskActions.starAria', 'Star task')}
             title={t('notificationBell.taskActions.starTitle', 'Star task')}
             onClick={(e) => onStar(e, n.id)}
-            className="flex h-5 w-5 items-center justify-center rounded text-yellow-500 hover:bg-yellow-50 hover:text-yellow-600"
+            className="text-warning-500 hover:bg-warning-50 hover:text-warning-600 flex h-5 w-5 items-center justify-center rounded"
           >
             <Icons.StarFilled size={12} strokeWidth={2} />
           </button>
@@ -697,7 +803,7 @@ function TaskNotificationItem({
             aria-label={t('notificationBell.taskActions.cancelAria', 'Cancel task')}
             title={t('notificationBell.taskActions.cancelTitle', 'Cancel task')}
             onClick={(e) => onCancelTask(e, taskId)}
-            className="flex h-5 w-5 items-center justify-center rounded text-gray-300 hover:bg-red-50 hover:text-red-600"
+            className="text-muted-foreground hover:bg-error-50 hover:text-error-600 flex h-5 w-5 items-center justify-center rounded"
           >
             <Icons.Cancel01 size={12} strokeWidth={2} />
           </button>
@@ -725,18 +831,18 @@ function CallNotificationItem({
   const body = (
     <>
       <div className="flex items-center gap-2">
-        {!n.read && <span className="h-2 w-2 shrink-0 rounded-full bg-blue-500" />}
-        <Icons.Phone size={14} strokeWidth={1.5} className="text-green-500" />
-        <p className="text-xs font-semibold text-black">{n.title}</p>
+        {!n.read && <span className="bg-primary-500 h-2 w-2 shrink-0 rounded-full" />}
+        <Icons.Phone size={14} strokeWidth={1.5} className="text-success-500" />
+        <p className="text-foreground text-xs font-semibold">{n.title}</p>
       </div>
-      <p className="text-xs text-black">{n.body}</p>
-      <span className="text-[11px] text-gray-400">
+      <p className="text-foreground text-xs">{n.body}</p>
+      <span className="text-muted-foreground text-[11px]">
         {n.created_at ? formatRelativeTime(n.created_at, t) : ''}
       </span>
     </>
   )
   return (
-    <div className="group relative flex border-b border-gray-100 transition-colors last:border-b-0 hover:bg-gray-50">
+    <div className="group border-border hover:bg-muted relative flex border-b transition-colors last:border-b-0">
       {meta.client_id ? (
         <Link
           to={clientHref(meta.client_id)}
@@ -753,7 +859,7 @@ function CallNotificationItem({
         type="button"
         aria-label={t('notificationBell.dismissAria')}
         onClick={(e) => onDismiss(e, n.id)}
-        className="absolute top-2 right-2 flex h-5 w-5 items-center justify-center rounded text-gray-300 opacity-0 transition-opacity group-hover:opacity-100 hover:text-gray-600"
+        className="text-muted-foreground hover:text-foreground absolute top-2 right-2 flex h-5 w-5 items-center justify-center rounded opacity-0 transition-opacity group-hover:opacity-100"
       >
         <Icons.Cancel01 size={12} strokeWidth={2} />
       </button>
@@ -778,18 +884,20 @@ function UbkiNotificationItem({
 }) {
   const { t } = useTranslation('common')
   return (
-    <div className="group relative flex border-b border-gray-100 transition-colors last:border-b-0 hover:bg-gray-50">
+    <div className="group border-border hover:bg-muted relative flex border-b transition-colors last:border-b-0">
       <button
         type="button"
         onClick={(e) => onNotificationClick(e, n.id, n.read)}
         className="flex min-w-0 flex-1 flex-col gap-1.5 px-4 py-3 text-left"
       >
         <div className="flex flex-wrap items-center gap-1.5 pr-5">
-          {!n.read && <span className="h-2 w-2 shrink-0 rounded-full bg-blue-500" />}
-          <p className="line-clamp-1 text-xs font-semibold text-black">{n.title}</p>
+          {!n.read && <span className="bg-primary-500 h-2 w-2 shrink-0 rounded-full" />}
+          <p className="text-foreground line-clamp-1 text-xs font-semibold">{n.title}</p>
         </div>
-        {n.body && <p className="w-full min-w-0 text-xs whitespace-normal text-black">{n.body}</p>}
-        <div className="flex items-center gap-1 text-black">
+        {n.body && (
+          <p className="text-foreground w-full min-w-0 text-xs whitespace-normal">{n.body}</p>
+        )}
+        <div className="text-foreground flex items-center gap-1">
           <Icons.Clock01 size={11} strokeWidth={1.5} />
           <span className="text-[11px]">{formatRelativeTime(n.created_at, t)}</span>
         </div>
@@ -798,7 +906,7 @@ function UbkiNotificationItem({
         type="button"
         aria-label={t('notificationBell.dismissAria')}
         onClick={(e) => onDismiss(e, n.id)}
-        className="absolute top-2 right-2 flex h-5 w-5 items-center justify-center rounded text-gray-300 opacity-0 transition-opacity group-hover:opacity-100 hover:text-gray-600"
+        className="text-muted-foreground hover:text-foreground absolute top-2 right-2 flex h-5 w-5 items-center justify-center rounded opacity-0 transition-opacity group-hover:opacity-100"
       >
         <Icons.Cancel01 size={12} strokeWidth={2} />
       </button>
@@ -822,23 +930,23 @@ function RRPaymentNotificationItem({
   const body = (
     <>
       <div className="flex flex-wrap items-center gap-1.5 pr-5">
-        {!n.read && <span className="h-2 w-2 shrink-0 rounded-full bg-blue-500" />}
-        <p className="line-clamp-1 text-xs font-semibold text-black">
+        {!n.read && <span className="bg-primary-500 h-2 w-2 shrink-0 rounded-full" />}
+        <p className="text-foreground line-clamp-1 text-xs font-semibold">
           {t('notificationBell.rrPayment.title', { defaultValue: n.title })}
         </p>
         {meta.amount && (
-          <span className="rounded bg-blue-100 px-1.5 py-0.5 text-[10px] font-medium text-blue-600">
+          <span className="bg-information-100 text-information-600 rounded px-1.5 py-0.5 text-[10px] font-medium">
             ₴ {meta.amount}
           </span>
         )}
       </div>
-      {n.body && <p className="line-clamp-3 w-full min-w-0 text-xs text-black">{n.body}</p>}
-      <div className="flex items-center gap-1 text-black">
+      {n.body && <p className="text-foreground line-clamp-3 w-full min-w-0 text-xs">{n.body}</p>}
+      <div className="text-foreground flex items-center gap-1">
         <Icons.Clock01 size={11} strokeWidth={1.5} />
         <span className="text-[11px]">
           {meta.due_date ?? '—'}
           {typeof meta.days_left === 'number' && (
-            <span className="ml-1 text-gray-500">
+            <span className="text-muted-foreground ml-1">
               (
               {t('notificationBell.daysLeft', {
                 count: meta.days_left,
@@ -852,7 +960,7 @@ function RRPaymentNotificationItem({
     </>
   )
   return (
-    <div className="group relative flex border-b border-gray-100 transition-colors last:border-b-0 hover:bg-gray-50">
+    <div className="group border-border hover:bg-muted relative flex border-b transition-colors last:border-b-0">
       {meta.client_id ? (
         <Link
           to={clientHref(meta.client_id)}
@@ -869,7 +977,7 @@ function RRPaymentNotificationItem({
         type="button"
         aria-label={t('notificationBell.dismissAria')}
         onClick={(e) => onDismiss(e, n.id)}
-        className="absolute top-2 right-2 flex h-5 w-5 items-center justify-center rounded text-gray-300 opacity-0 transition-opacity group-hover:opacity-100 hover:text-gray-600"
+        className="text-muted-foreground hover:text-foreground absolute top-2 right-2 flex h-5 w-5 items-center justify-center rounded opacity-0 transition-opacity group-hover:opacity-100"
       >
         <Icons.Cancel01 size={12} strokeWidth={2} />
       </button>

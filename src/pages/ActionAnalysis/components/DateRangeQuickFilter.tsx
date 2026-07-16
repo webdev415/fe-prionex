@@ -77,7 +77,7 @@ export function DateRangeQuickFilter({
     <div className="flex flex-col gap-4 self-stretch xl:flex-row xl:items-center xl:gap-10">
       <div className="flex flex-1 flex-col gap-2 self-stretch sm:items-end sm:gap-5">
         <div className="flex flex-col gap-2 self-stretch sm:flex-row sm:items-center sm:gap-3">
-          <span className="text-dark-500 shrink-0 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:w-[100px] sm:text-sm">
+          <span className="text-foreground shrink-0 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:w-[100px] sm:text-sm">
             {t('pages.actionAnalysis.filters.dateRange', 'Date Range')}:
           </span>
           <div className="flex flex-1 items-center gap-2">
@@ -90,7 +90,7 @@ export function DateRangeQuickFilter({
               format="dd.MM.yyyy"
               className="flex-1 [&_input]:h-9 [&_input]:text-xs"
             />
-            <span className="text-base leading-[150%] font-medium tracking-[-0.28px] text-gray-700">
+            <span className="text-foreground text-base leading-[150%] font-medium tracking-[-0.28px]">
               -
             </span>
             <DateSelect
@@ -107,7 +107,7 @@ export function DateRangeQuickFilter({
       </div>
 
       <div className="flex flex-col gap-2 self-stretch sm:flex-row sm:items-center sm:gap-3 xl:flex-1">
-        <span className="text-dark-500 shrink-0 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:w-[100px] sm:text-sm">
+        <span className="text-foreground shrink-0 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:w-[100px] sm:text-sm">
           {t('pages.actionAnalysis.filters.quickRanges', 'Quick')}:
         </span>
         <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-1 sm:items-center sm:gap-2">
@@ -119,8 +119,8 @@ export function DateRangeQuickFilter({
                 type="button"
                 onClick={() => handleQuickRange(qr.id)}
                 className={cn(
-                  'text-dark-500 flex cursor-pointer items-center justify-center gap-2 rounded-md bg-white px-3 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px] shadow-sm sm:flex-1 sm:px-4',
-                  active ? 'bg-primary-500 text-white' : 'hover:bg-gray-50'
+                  'text-foreground bg-card flex cursor-pointer items-center justify-center gap-2 rounded-md px-3 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px] shadow-sm sm:flex-1 sm:px-4',
+                  active ? 'bg-primary-500 text-primary-foreground' : 'hover:bg-muted'
                 )}
               >
                 {t(qr.key, qr.fallback)}

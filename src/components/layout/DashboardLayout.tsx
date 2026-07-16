@@ -14,6 +14,7 @@ import { UserProfile } from './UserProfile'
 import { MinimizedCallBubble } from './MinimizedCallBubble'
 import { MinimizedChainExecutorBubble } from './MinimizedChainExecutorBubble'
 import { NotificationBell } from './NotificationBell'
+import { ThemeModeToggle } from './ThemeModeToggle'
 import { PERMISSIONS } from '@/constants/permissions'
 import type { Permission } from '@/constants/permissions'
 import { useHasPermission } from '@/hooks/usePermissions'
@@ -69,14 +70,14 @@ function AiAssistantHeaderButton() {
       aria-label={t('pages.aiAssistant.headerButtonAria')}
       onClick={() => navigate('/dashboard/ai-assistant')}
       className={cn(
-        'relative flex h-9 w-9 items-center justify-center rounded-full transition-colors hover:bg-gray-100 focus:outline-none',
-        isActive && 'bg-gray-100'
+        'hover:bg-muted relative flex h-9 w-9 items-center justify-center rounded-full transition-colors focus:outline-none',
+        isActive && 'bg-muted'
       )}
     >
       <Icons.AiBrain03
         size={20}
         strokeWidth={1.5}
-        className={cn('transition-colors', isActive ? 'text-primary-600' : 'text-gray-300')}
+        className={cn('transition-colors', isActive ? 'text-primary-600' : 'text-muted-foreground')}
       />
     </button>
   )
@@ -335,14 +336,12 @@ function MobileHeaderMenu({ onLogoutClick }: { onLogoutClick?: () => void }) {
             <Icons.User02 size={20} strokeWidth={1.5} className="text-primary-500" />
           </button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-56 bg-white">
-          {/* User Profile */}
-          <DropdownMenuItem disabled className="text-dark-500 text-sm">
+        <DropdownMenuContent align="end" className="w-56">
+          <DropdownMenuItem disabled className="text-foreground text-sm">
             <Icons.User02 size={16} className="mr-2" />
             <span className="truncate">{displayName}</span>
           </DropdownMenuItem>
 
-          {/* Minimized Call Bubble (if call is minimized) */}
           {minimizedCall && (
             <>
               <DropdownMenuSeparator />
@@ -372,7 +371,6 @@ function MobileHeaderMenu({ onLogoutClick }: { onLogoutClick?: () => void }) {
                           ? t('pages.clients.modals.callDialog.callClient')
                           : t('pages.clients.modals.callRecording.title')}
                       </span>
-                      {/* Active call indicator dot */}
                       {isActiveCall && (
                         <>
                           <span className="bg-success-500 border-secondary-800 absolute -top-0.5 -right-0.5 h-2.5 w-2.5 animate-ping rounded-full border-2" />
@@ -393,20 +391,18 @@ function MobileHeaderMenu({ onLogoutClick }: { onLogoutClick?: () => void }) {
             </>
           )}
 
-          {/* Settings */}
           <DropdownMenuItem
             onClick={() => {
               setIsOpen(false)
               navigate('/dashboard/profile')
             }}
-            className="text-dark-500 text-sm"
+            className="text-foreground text-sm"
           >
             <Icons.SlidersHorizontal size={16} className="mr-2" />
             <span>{t('navigation.profile')}</span>
           </DropdownMenuItem>
 
-          {/* Logout */}
-          <DropdownMenuItem onClick={onLogoutClick} className="text-dark-500 text-sm">
+          <DropdownMenuItem onClick={onLogoutClick} className="text-foreground text-sm">
             <Icons.Logout size={16} className="mr-2" />
             <span>{t('actions.logout')}</span>
           </DropdownMenuItem>
@@ -1016,29 +1012,28 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       <RouteChangeTracker />
       <div
         className={cn(
-          'bg-light-50 bg-dashboard-light min-h-screen bg-cover bg-center',
-          /* Long scroll (chat): fixed attachment paints vs viewport so the SVG does not “run out” mid-page */
+          'bg-background bg-dashboard-light min-h-screen bg-cover bg-center',
           isAiAssistantRoute ? '[background-attachment:fixed]' : 'bg-no-repeat'
         )}
       >
         {/* Sidebar */}
         <Sidebar items={navItems} bottomItems={bottomNavItems} />
 
-        {/* Main Content Area with left margin for sidebar - no margin on mobile */}
+        {/* Main Content Area with left margin for sidebar - no margin below xl */}
         <div
           className={cn(
             'min-w-0 transition-all duration-300',
-            'lg:ml-18', // Desktop: always has margin for collapsed sidebar
-            isOpenSideBar && 'lg:ml-60' // Desktop: expanded sidebar
+            'xl:ml-18', // Desktop: always has margin for collapsed sidebar
+            isOpenSideBar && 'xl:ml-60' // Desktop: expanded sidebar
           )}
         >
           {/* Fixed Header */}
           <header
             className={cn(
-              'bg-light-50 fixed top-0 right-0 z-20 flex h-[60px] justify-between border-l border-white/10 px-3 shadow-sm transition-all duration-300 sm:px-4 lg:px-6',
+              'bg-elevated border-border/40 fixed top-0 right-0 z-20 flex h-[60px] justify-between border-l px-3 shadow-sm transition-all duration-300 sm:px-4 lg:px-6',
               isLawyerWorkplaceRoute ? 'items-stretch' : 'items-center',
-              'left-0 lg:left-18', // Mobile: full width, Desktop: margin for collapsed sidebar
-              isOpenSideBar && 'lg:left-60' // Desktop: expanded sidebar
+              'left-0 xl:left-18',
+              isOpenSideBar && 'xl:left-60'
             )}
           >
             {/* Left side: Menu button (mobile) + Search Bar or Lawyer Workplace nav */}
@@ -1054,14 +1049,14 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               <button
                 onClick={toggleSidebar}
                 className={cn(
-                  'focus:ring-primary-500 group flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-gray-200 bg-white shadow-sm transition-all duration-200 hover:border-gray-300 hover:bg-gray-50 hover:shadow-md focus:ring-2 focus:ring-offset-2 focus:outline-none active:bg-gray-100 active:shadow-sm disabled:cursor-not-allowed disabled:opacity-50 lg:hidden',
+                  'focus:ring-primary-500 focus:ring-offset-background group border-border bg-card hover:bg-muted active:bg-muted flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-lg border shadow-sm transition-all duration-200 hover:border-gray-300 hover:shadow-md focus:ring-2 focus:ring-offset-2 focus:outline-none active:shadow-sm disabled:cursor-not-allowed disabled:opacity-50 xl:hidden',
                   isLawyerWorkplaceRoute && 'self-center'
                 )}
                 aria-label="Toggle menu"
               >
                 <Icons.Menu11
                   size={20}
-                  className="text-gray-700 transition-transform duration-200 group-hover:scale-110"
+                  className="text-foreground transition-transform duration-200 group-hover:scale-110"
                   strokeWidth={1.5}
                 />
               </button>
@@ -1102,15 +1097,16 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               <MinimizedCallBubble />
               <MinimizedChainExecutorBubble />
               <NotificationBell />
+              <ThemeModeToggle />
               <AiAssistantHeaderButton />
               <UserProfile onLogoutClick={handleLogoutClick} />
             </div>
 
-            {/* Mobile: Notification bell + dropdown menu */}
             <div className="flex shrink-0 items-center gap-1.5 self-center sm:gap-2 lg:hidden">
               <MinimizedCallBubble />
               <MinimizedChainExecutorBubble />
               <NotificationBell />
+              <ThemeModeToggle />
               <AiAssistantHeaderButton />
               <MobileHeaderMenu onLogoutClick={handleLogoutClick} />
             </div>

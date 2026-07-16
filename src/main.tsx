@@ -10,6 +10,10 @@ import './lib/i18n'
 import './index.css'
 import App from './App.tsx'
 import { AppLoadingFallback } from '@/components/ui/AppLoadingFallback'
+import { setupThemeStorageListener, useThemeStore } from '@/stores/themeStore'
+
+// Ensure theme store module evaluates (applies attrs from localStorage).
+void useThemeStore.getState()
 
 // Mutation retry policy: retry ONCE on a pure network error (no HTTP
 // response received — e.g. browser dropped the connection, DNS hiccup,
@@ -41,6 +45,10 @@ const queryClient = new QueryClient({
 
 setupChunkLoadRecovery()
 applyDomTranslationCompat()
+const teardownThemeStorageListener = setupThemeStorageListener()
+if (import.meta.hot) {
+  import.meta.hot.dispose(() => teardownThemeStorageListener())
+}
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

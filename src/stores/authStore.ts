@@ -9,6 +9,7 @@ import {
   setAccessToken,
 } from '@/lib/api'
 import { applyPersistedLanguageFromServer } from '@/lib/i18n'
+import { applyPersistedThemeFromServer } from '@/stores/themeStore'
 import { cancelSessionHeartbeat, scheduleSessionHeartbeat } from '@/lib/sessionHeartbeat'
 import type { User, LoginRequest, AuthErrorState } from '@/types/api'
 import {
@@ -61,6 +62,7 @@ async function resolveAuthUser(
   try {
     const userResponse = await authApi.me()
     applyPersistedLanguageFromServer(userResponse.data.language)
+    applyPersistedThemeFromServer(userResponse.data.theme_base, userResponse.data.theme_accent)
     user = mapBackendUserToUser(userResponse.data)
   } catch {
     user = buildUserFromJwtToken(token, loginUser)
@@ -163,6 +165,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
         const user = mapBackendUserToUser(backendUser)
         applyPersistedLanguageFromServer(backendUser.language)
+        applyPersistedThemeFromServer(backendUser.theme_base, backendUser.theme_accent)
 
         set({
           user,
@@ -309,6 +312,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
         const user = mapBackendUserToUser(backendUser)
         applyPersistedLanguageFromServer(backendUser.language)
+        applyPersistedThemeFromServer(backendUser.theme_base, backendUser.theme_accent)
 
         set({
           user,
@@ -381,6 +385,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
         const user = mapBackendUserToUser(backendUser)
         applyPersistedLanguageFromServer(backendUser.language)
+        applyPersistedThemeFromServer(backendUser.theme_base, backendUser.theme_accent)
 
         set({
           user,
@@ -498,6 +503,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
           const user = mapBackendUserToUser(backendUser)
           applyPersistedLanguageFromServer(backendUser.language)
+          applyPersistedThemeFromServer(backendUser.theme_base, backendUser.theme_accent)
 
           if (isImpersonating) {
             // In impersonation mode - restore original admin + target profile from localStorage

@@ -119,8 +119,8 @@ export function CreateProjectModal({ open, onClose, onSuccess }: CreateProjectMo
     <Modal open={open} onClose={onClose} maxWidth="2xl">
       <ModalHeader
         icon={
-          <div className="bg-primary-400 flex h-8 w-8 items-center justify-center rounded-full">
-            <Icons.Add size={20} className="text-dark-500" strokeWidth={2} />
+          <div className="bg-primary-400 flex h-7 w-7 items-center justify-center rounded-full sm:h-8 sm:w-8">
+            <Icons.Add size={18} className="text-foreground" strokeWidth={2} />
           </div>
         }
         title={t('pages.projects.modals.create.title')}
@@ -138,7 +138,7 @@ export function CreateProjectModal({ open, onClose, onSuccess }: CreateProjectMo
 
           {/* Project Information Section */}
           <div className="space-y-4">
-            <h3 className="text-dark-500 text-base font-medium">
+            <h3 className="text-foreground text-base font-medium">
               {t('pages.projects.modals.create.projectInformation')}
             </h3>
             <div className="grid grid-cols-2 gap-4">
@@ -164,12 +164,12 @@ export function CreateProjectModal({ open, onClose, onSuccess }: CreateProjectMo
                 error={errors.code}
               />
             </div>
-            <div className="h-px w-full bg-gray-200" />
+            <div className="bg-border h-px w-full" />
           </div>
 
           {/* Client & Contract Section */}
           <div className="space-y-4">
-            <h3 className="text-dark-500 text-base font-medium">
+            <h3 className="text-foreground text-base font-medium">
               {t('pages.projects.modals.create.clientContract')}
             </h3>
             <div className="grid grid-cols-2 gap-4">
@@ -191,12 +191,12 @@ export function CreateProjectModal({ open, onClose, onSuccess }: CreateProjectMo
                 disabled={createMutation.isPending}
               />
             </div>
-            <div className="h-px w-full bg-gray-200" />
+            <div className="bg-border h-px w-full" />
           </div>
 
           {/* Timeline Section */}
           <div className="space-y-4">
-            <h3 className="text-dark-500 text-base font-medium">
+            <h3 className="text-foreground text-base font-medium">
               {t('pages.projects.modals.create.timeline')}
             </h3>
             <div className="flex items-center gap-4">
@@ -238,7 +238,7 @@ export function CreateProjectModal({ open, onClose, onSuccess }: CreateProjectMo
                 </Label>
               </div>
             </div>
-            <div className="h-px w-full bg-gray-200" />
+            <div className="bg-border h-px w-full" />
           </div>
 
           {/* Description Section */}

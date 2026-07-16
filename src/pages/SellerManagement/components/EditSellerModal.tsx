@@ -163,7 +163,7 @@ export function EditSellerModal({
       <ModalHeader
         icon={
           <div className="bg-primary-400 flex h-7 w-7 items-center justify-center rounded-full sm:h-8 sm:w-8">
-            <Icons.PencilEdit size={18} className="text-dark-500" strokeWidth={1.5} />
+            <Icons.PencilEdit size={18} className="text-foreground" strokeWidth={1.5} />
           </div>
         }
         title={t('pages.sellers.modals.edit.title')}
@@ -172,16 +172,16 @@ export function EditSellerModal({
         <form id="edit-seller-form" onSubmit={handleSubmit} className="space-y-6">
           {/* Basic Information Section */}
           <div className="space-y-4">
-            <h3 className="text-dark-500 text-base font-medium">
+            <h3 className="text-foreground text-base font-medium">
               {t('pages.sellers.modals.edit.basicInformation')}
             </h3>
             <div className="grid grid-cols-1 gap-4">
               <div className="space-y-2">
-                <Label className="text-sm font-light text-gray-500">
+                <Label className="text-muted-foreground text-sm font-light">
                   {t('pages.sellers.modals.edit.sellerCode')}
                 </Label>
-                <p className="text-dark-500 text-sm font-medium">{seller?.seller_code}</p>
-                <p className="text-xs text-gray-500">
+                <p className="text-foreground text-sm font-medium">{seller?.seller_code}</p>
+                <p className="text-muted-foreground text-xs">
                   {t('pages.sellers.modals.edit.sellerCodeReadOnly')}
                 </p>
               </div>
@@ -244,14 +244,14 @@ export function EditSellerModal({
                 disabled={updateSellerMutation.isPending}
               />
             </div>
-            <div className="h-px w-full bg-gray-200" />
+            <div className="bg-border h-px w-full" />
           </div>
 
           {/* Contact Information Section */}
           <div className="space-y-4">
-            <h3 className="text-dark-500 text-base font-medium">
+            <h3 className="text-foreground text-base font-medium">
               {t('pages.sellers.modals.edit.contactInformation')}
-              <span className="text-sm font-normal text-gray-500">
+              <span className="text-muted-foreground text-sm font-normal">
                 {' '}
                 ({t('pages.sellers.modals.edit.optional')})
               </span>
@@ -298,15 +298,15 @@ export function EditSellerModal({
                 disabled={updateSellerMutation.isPending}
               />
             </div>
-            <div className="h-px w-full bg-gray-200" />
+            <div className="bg-border h-px w-full" />
           </div>
 
           {/* Notes Section (Optional) */}
           <div className="space-y-4">
             <div className="space-y-2">
-              <label className="text-dark-500 block text-sm font-light">
+              <label className="text-foreground block text-sm font-light">
                 {t('pages.sellers.modals.edit.notes')}{' '}
-                <span className="text-sm font-normal text-gray-500">
+                <span className="text-muted-foreground text-sm font-normal">
                   ({t('pages.sellers.modals.edit.optional')})
                 </span>
               </label>

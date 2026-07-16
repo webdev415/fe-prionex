@@ -254,11 +254,11 @@ export function BulkWriteoffImportPage() {
         align: 'left',
         render: (r) =>
           r.status === 'created' ? (
-            <span className="text-success-700 bg-success-50 rounded px-2 py-0.5 text-xs font-medium">
+            <span className="bg-success-100 text-success-700 rounded-full px-2 py-0.5 text-xs font-medium">
               {t(`${p}.statusCreated`)}
             </span>
           ) : (
-            <span className="text-error-700 bg-error-50 rounded px-2 py-0.5 text-xs font-medium">
+            <span className="bg-error-100 text-error-700 rounded-full px-2 py-0.5 text-xs font-medium">
               {t(`${p}.statusFailed`)}
             </span>
           ),
@@ -298,13 +298,13 @@ export function BulkWriteoffImportPage() {
   return (
     <div>
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-dark-500 text-xl font-light sm:text-2xl">{t(`${p}.title`)}</h1>
+        <h1 className="text-foreground text-xl font-light sm:text-2xl">{t(`${p}.title`)}</h1>
 
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           <Button
             variant="white-secondary"
             onClick={handleViewHistory}
-            leftIcon={<Icons.TransactionHistory size={20} className="text-dark-500" />}
+            leftIcon={<Icons.TransactionHistory size={20} />}
             className="flex h-10 w-full flex-row items-center justify-center rounded-full text-xs leading-[150%] font-medium sm:h-12 sm:w-auto"
           >
             {t(`${p}.viewHistory`)}
@@ -312,7 +312,7 @@ export function BulkWriteoffImportPage() {
           <Button
             variant="primary"
             onClick={downloadTemplate}
-            leftIcon={<Icons.Download size={20} className="text-dark-500" />}
+            leftIcon={<Icons.Download size={20} className="text-primary-foreground" />}
             className="flex h-10 w-full flex-row items-center justify-center rounded-full text-xs leading-[150%] font-medium sm:h-12 sm:w-auto"
           >
             {t(`${p}.downloadTemplate`)}
@@ -320,21 +320,21 @@ export function BulkWriteoffImportPage() {
         </div>
       </div>
 
-      <div className="rounded-xl border border-gray-200 bg-white/50 p-4 shadow-sm sm:p-6">
+      <div className="border-border bg-card/50 rounded-xl border p-4 shadow-sm sm:p-6">
         {!result ? (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-dark-500 text-lg font-medium">{t(`${p}.sectionTitle`)}</h3>
-                <p className="text-sm text-gray-600">
+                <h3 className="text-foreground text-lg font-medium">{t(`${p}.sectionTitle`)}</h3>
+                <p className="text-muted-foreground text-sm">
                   {t(`${p}.descriptionIntro`)}{' '}
-                  <code className="rounded bg-gray-100 px-1 text-xs">loan_id</code>,{' '}
-                  <code className="rounded bg-gray-100 px-1 text-xs">cancellation_date</code>,{' '}
-                  <code className="rounded bg-gray-100 px-1 text-xs">principal</code>,{' '}
-                  <code className="rounded bg-gray-100 px-1 text-xs">interest</code>,{' '}
-                  <code className="rounded bg-gray-100 px-1 text-xs">fine</code>,{' '}
-                  <code className="rounded bg-gray-100 px-1 text-xs">penalty</code>,{' '}
-                  <code className="rounded bg-gray-100 px-1 text-xs">commission</code>
+                  <code className="bg-muted rounded px-1 text-xs">loan_id</code>,{' '}
+                  <code className="bg-muted rounded px-1 text-xs">cancellation_date</code>,{' '}
+                  <code className="bg-muted rounded px-1 text-xs">principal</code>,{' '}
+                  <code className="bg-muted rounded px-1 text-xs">interest</code>,{' '}
+                  <code className="bg-muted rounded px-1 text-xs">fine</code>,{' '}
+                  <code className="bg-muted rounded px-1 text-xs">penalty</code>,{' '}
+                  <code className="bg-muted rounded px-1 text-xs">commission</code>
                 </p>
               </div>
             </div>
@@ -353,27 +353,23 @@ export function BulkWriteoffImportPage() {
                   inputRef.current?.click()
                 }
               }}
-              className={`focus:ring-secondary-500 relative flex h-48 w-full cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed transition-colors focus:ring-2 focus:ring-offset-2 focus:outline-none ${
-                dragActive
-                  ? 'border-secondary-500 bg-secondary-50'
-                  : 'border-gray-300 bg-gray-50 hover:bg-gray-100'
+              className={`focus:ring-primary-500 focus:ring-offset-card relative flex h-48 w-full cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed transition-colors focus:ring-2 focus:ring-offset-2 focus:outline-none ${
+                dragActive ? 'border-primary-500 bg-muted' : 'border-border hover:bg-muted/50'
               } ${upload.isPending ? 'pointer-events-none opacity-50' : ''}`}
             >
               {upload.isPending ? (
                 <div className="flex flex-col items-center gap-2">
                   <Icons.Spinner className="h-8 w-8" />
-                  <p className="text-sm text-gray-600">{t(`${p}.validating`)}</p>
+                  <p className="text-muted-foreground text-sm">{t(`${p}.validating`)}</p>
                 </div>
               ) : (
                 <>
-                  <Icons.CloudDownload size={40} className="text-gray-400" />
-                  <p className="text-dark-500 mt-2 text-sm">
-                    <span className="text-secondary-700 font-medium">
-                      {t(`${p}.clickToUpload`)}
-                    </span>{' '}
+                  <Icons.CloudDownload size={40} className="text-muted-foreground" />
+                  <p className="text-foreground mt-2 text-sm">
+                    <span className="text-primary-600 font-medium">{t(`${p}.clickToUpload`)}</span>{' '}
                     {t(`${p}.orDragAndDrop`)}
                   </p>
-                  <p className="mt-1 text-xs text-gray-500">{t(`${p}.constraints`)}</p>
+                  <p className="text-muted-foreground mt-1 text-xs">{t(`${p}.constraints`)}</p>
                 </>
               )}
 
@@ -406,8 +402,8 @@ export function BulkWriteoffImportPage() {
           <div className="flex flex-col gap-4">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-dark-500 text-lg font-medium">{t(`${p}.resultsTitle`)}</h3>
-                <p className="text-xs text-gray-500">
+                <h3 className="text-foreground text-lg font-medium">{t(`${p}.resultsTitle`)}</h3>
+                <p className="text-muted-foreground text-xs">
                   {t(`${p}.batchId`)}: {result.bulk_batch_id}
                 </p>
               </div>
@@ -458,14 +454,14 @@ function SummaryCard({
 }) {
   const toneClasses =
     tone === 'success'
-      ? 'border-success-200 bg-success-50'
+      ? 'border-success-200 bg-success-50 text-success-700'
       : tone === 'error'
-        ? 'border-error-200 bg-error-50'
-        : 'border-gray-200 bg-white'
+        ? 'border-error-200 bg-error-50 text-error-700'
+        : 'border-border bg-card text-foreground'
   return (
     <div className={`flex flex-col gap-0.5 rounded-lg border p-3 ${toneClasses}`}>
-      <span className="text-xs text-gray-500">{label}</span>
-      <span className="text-dark-500 text-lg font-semibold">{value}</span>
+      <span className="text-muted-foreground text-xs">{label}</span>
+      <span className="text-lg font-semibold">{value}</span>
     </div>
   )
 }

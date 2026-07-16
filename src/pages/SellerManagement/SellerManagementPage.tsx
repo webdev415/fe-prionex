@@ -162,20 +162,20 @@ export function SellerManagementPage() {
       key: 'legal_name',
       header: t('pages.sellers.tableHeaders.legalName'),
       render: (seller) => (
-        <span className="font-light text-gray-700">{seller.legal_name || '—'}</span>
+        <span className="text-foreground font-light">{seller.legal_name || '—'}</span>
       ),
     },
     {
       key: 'seller_type',
       header: t('pages.sellers.tableHeaders.sellerType'),
       render: (seller) => (
-        <span className="text-gray-700 capitalize">{seller.seller_type.replace('_', ' ')}</span>
+        <span className="text-foreground capitalize">{seller.seller_type.replace('_', ' ')}</span>
       ),
     },
     {
       key: 'contact_email',
       header: t('pages.sellers.tableHeaders.email'),
-      render: (seller) => <span className="text-gray-700">{seller.contact_email || '-'}</span>,
+      render: (seller) => <span className="text-foreground">{seller.contact_email || '-'}</span>,
     },
     {
       key: 'contact',
@@ -184,7 +184,7 @@ export function SellerManagementPage() {
         <div className="flex flex-col">
           <span>{seller.contact_person || '-'}</span>
           {seller.contact_phone && (
-            <span className="text-xs text-gray-500">{seller.contact_phone}</span>
+            <span className="text-muted-foreground text-xs">{seller.contact_phone}</span>
           )}
         </div>
       ),
@@ -195,7 +195,7 @@ export function SellerManagementPage() {
       render: (seller) => (
         <span
           className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${
-            seller.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+            seller.is_active ? 'bg-success-100 text-success-700' : 'bg-muted text-muted-foreground'
           }`}
         >
           {seller.is_active ? t('pages.sellers.status.active') : t('pages.sellers.status.inactive')}
@@ -215,7 +215,7 @@ export function SellerManagementPage() {
                 variant="regular-black"
                 size="xs"
                 onClick={() => handleViewAgreements(seller)}
-                leftIcon={<Icons.View size={16} color="#05040D" strokeWidth={1.5} />}
+                leftIcon={<Icons.View size={16} strokeWidth={1.5} className="text-foreground" />}
               >
                 {t('pages.sellers.actions.viewAgreements')}
               </LinkButton>
@@ -225,7 +225,9 @@ export function SellerManagementPage() {
                 variant="regular-black"
                 size="xs"
                 onClick={() => handleEdit(seller)}
-                leftIcon={<Icons.PencilEdit size={16} color="#05040D" strokeWidth={1.5} />}
+                leftIcon={
+                  <Icons.PencilEdit size={16} strokeWidth={1.5} className="text-foreground" />
+                }
               >
                 {t('pages.sellers.actions.edit')}
               </LinkButton>
@@ -235,7 +237,7 @@ export function SellerManagementPage() {
                 variant="regular-black"
                 size="xs"
                 onClick={() => handleDelete(seller)}
-                leftIcon={<Icons.Delete size={16} color="#05040D" strokeWidth={1.5} />}
+                leftIcon={<Icons.Delete size={16} strokeWidth={1.5} className="text-foreground" />}
               >
                 {t('pages.sellers.actions.delete')}
               </LinkButton>
@@ -252,17 +254,17 @@ export function SellerManagementPage() {
               <DropdownMenuTrigger asChild>
                 <button
                   type="button"
-                  className="text-dark-500 flex h-8 w-8 cursor-pointer items-center justify-center rounded-md border border-gray-300 bg-white transition-colors hover:bg-gray-100 focus:outline-none"
+                  className="text-foreground border-border bg-card hover:bg-muted flex h-8 w-8 cursor-pointer items-center justify-center rounded-md border transition-colors focus:outline-none"
                   aria-label={t('pages.sellers.tableHeaders.actions')}
                 >
                   <Icons.FilterVertical size={16} strokeWidth={1.5} />
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="bg-white">
+              <DropdownMenuContent align="end" className="bg-card">
                 <PermissionGuard permission={PERMISSIONS.SELLERS.VIEW}>
                   <DropdownMenuItem
                     onClick={() => handleViewAgreements(seller)}
-                    className="text-dark-500 flex cursor-pointer items-center gap-2 text-sm"
+                    className="text-foreground flex cursor-pointer items-center gap-2 text-sm"
                   >
                     <Icons.View size={16} strokeWidth={1.5} />
                     <span>{t('pages.sellers.actions.viewAgreements')}</span>
@@ -271,7 +273,7 @@ export function SellerManagementPage() {
                 <PermissionGuard permission={PERMISSIONS.SELLERS.EDIT}>
                   <DropdownMenuItem
                     onClick={() => handleEdit(seller)}
-                    className="text-dark-500 flex cursor-pointer items-center gap-2 text-sm"
+                    className="text-foreground flex cursor-pointer items-center gap-2 text-sm"
                   >
                     <Icons.PencilEdit size={16} strokeWidth={1.5} />
                     <span>{t('pages.sellers.actions.edit')}</span>
@@ -280,7 +282,7 @@ export function SellerManagementPage() {
                 <PermissionGuard permission={PERMISSIONS.SELLERS.DELETE}>
                   <DropdownMenuItem
                     onClick={() => handleDelete(seller)}
-                    className="text-dark-500 flex cursor-pointer items-center gap-2 text-sm"
+                    className="text-foreground flex cursor-pointer items-center gap-2 text-sm"
                   >
                     <Icons.Delete size={16} strokeWidth={1.5} />
                     <span>{t('pages.sellers.actions.delete')}</span>
@@ -299,10 +301,12 @@ export function SellerManagementPage() {
       {/* Page Header */}
       <div className="mb-4 flex items-center justify-between gap-2 sm:gap-3">
         <div className="flex items-center gap-2 sm:gap-3">
-          <h1 className="text-dark-500 text-xl font-light sm:text-2xl">
+          <h1 className="text-foreground text-xl font-light sm:text-2xl">
             {t('pages.sellers.title')}
           </h1>
-          <span className="text-sm font-light text-gray-500 sm:text-base">{totalSellers}</span>
+          <span className="text-muted-foreground text-sm font-light sm:text-base">
+            {totalSellers}
+          </span>
         </div>
 
         <PermissionGuard permission={PERMISSIONS.SELLERS.CREATE}>
@@ -320,7 +324,7 @@ export function SellerManagementPage() {
           {/* Mobile: Icon-only button */}
           <button
             onClick={() => setShowCreateModal(true)}
-            className="bg-primary-300 text-dark-500 hover:bg-primary-500 flex h-10 w-10 items-center justify-center rounded-full transition-colors focus:outline-none sm:hidden"
+            className="bg-primary-300 text-primary-foreground hover:bg-primary-500 flex h-10 w-10 items-center justify-center rounded-full transition-colors focus:outline-none sm:hidden"
             aria-label={t('pages.sellers.addNewSeller')}
           >
             <Icons.Add size={20} strokeWidth={2} />
@@ -332,7 +336,7 @@ export function SellerManagementPage() {
       <div className="mb-6 flex w-full items-center gap-4">
         {/* Search pill - responsive width only */}
         <div className="flex items-center gap-3">
-          <div className="flex w-[280px] items-center gap-3 rounded-full border border-gray-200 bg-white pr-2 pl-4 shadow-sm sm:w-[400px] md:w-[500px] lg:w-[600px]">
+          <div className="border-border bg-card flex w-[280px] items-center gap-3 rounded-full border pr-2 pl-4 sm:w-[400px] md:w-[500px] lg:w-[600px]">
             {/* Search Input */}
             <div className="flex flex-1 items-center gap-2 py-1">
               <input
@@ -345,16 +349,16 @@ export function SellerManagementPage() {
                     handleSearch()
                   }
                 }}
-                className="text-dark-500 h-9 w-full bg-transparent text-sm font-light outline-none placeholder:text-gray-500"
+                className="text-foreground placeholder:text-muted-foreground h-9 w-full bg-transparent text-sm font-light outline-none"
               />
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery('')}
-                  className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-gray-100"
+                  className="hover:bg-muted flex h-6 w-6 shrink-0 items-center justify-center rounded-full transition-colors"
                   type="button"
                   aria-label="Clear search"
                 >
-                  <Icons.Close size={14} className="text-gray-500" />
+                  <Icons.Close size={14} className="text-muted-foreground" />
                 </button>
               )}
             </div>
@@ -367,7 +371,7 @@ export function SellerManagementPage() {
               className="bg-primary-300 flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-all duration-200 hover:scale-105 disabled:opacity-60"
               aria-label={t('pages.sellers.searchButton')}
             >
-              <Icons.Search size={18} className="text-dark-500" strokeWidth={1.5} />
+              <Icons.Search size={18} className="text-primary-foreground" strokeWidth={1.5} />
             </button>
           </div>
         </div>

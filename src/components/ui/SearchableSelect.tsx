@@ -157,14 +157,16 @@ export function SearchableSelect({
           }
         }}
         className={cn(
-          'focus:border-primary-500 flex h-[45px] w-full items-center justify-between overflow-hidden rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-light shadow-none focus:outline-none',
+          'focus:border-primary-500 text-foreground border-input-border bg-input flex h-[45px] w-full items-center justify-between overflow-hidden rounded-lg border px-3 py-2 text-sm font-light shadow-none focus:outline-none',
           disabled ? 'cursor-default opacity-50' : 'cursor-pointer',
           isOpen && 'border-primary-500'
         )}
       >
         <span
-          className="flex-1 truncate text-left"
-          style={{ color: displayName ? '#1a1a2e' : '#9ca3af' }}
+          className={cn(
+            'flex-1 truncate text-left',
+            displayName ? 'text-foreground' : 'text-muted-foreground'
+          )}
         >
           {displayName || placeholder}
         </span>
@@ -178,13 +180,13 @@ export function SearchableSelect({
 
       {/* Dropdown */}
       {isOpen && (
-        <div className="absolute top-[calc(100%+4px)] right-0 left-0 z-[200] rounded-lg border border-gray-200 bg-white shadow-lg">
+        <div className="border-border bg-card absolute top-[calc(100%+4px)] right-0 left-0 z-[200] rounded-lg border shadow-lg">
           {searchable && (
-            <div className="sticky top-0 z-10 border-b border-gray-100 bg-white p-2">
+            <div className="border-border bg-card sticky top-0 z-10 border-b p-2">
               <div className="relative">
                 <Icons.Search
                   size={14}
-                  className="absolute top-1/2 left-2.5 -translate-y-1/2 text-gray-400"
+                  className="text-muted-foreground absolute top-1/2 left-2.5 -translate-y-1/2"
                   strokeWidth={1.5}
                 />
                 <input
@@ -196,7 +198,7 @@ export function SearchableSelect({
                     onSearchChange?.(e.target.value)
                   }}
                   placeholder={searchPlaceholder}
-                  className="text-dark-500 focus:border-primary-500 h-8 w-full rounded-md border border-gray-200 bg-gray-50 pr-3 pl-7 text-xs placeholder:text-gray-400 focus:outline-none"
+                  className="text-foreground border-border bg-muted placeholder:text-muted-foreground focus:border-primary-500 h-8 w-full rounded-md border pr-3 pl-7 text-xs focus:outline-none"
                 />
               </div>
             </div>
@@ -211,7 +213,11 @@ export function SearchableSelect({
           >
             {isLoading ? (
               <li className="flex items-center justify-center px-3 py-6">
-                <svg className="h-4 w-4 animate-spin text-gray-400" viewBox="0 0 24 24" fill="none">
+                <svg
+                  className="text-muted-foreground h-4 w-4 animate-spin"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                >
                   <circle
                     className="opacity-25"
                     cx="12"
@@ -224,9 +230,13 @@ export function SearchableSelect({
                 </svg>
               </li>
             ) : onSearchChange && !query.trim() ? (
-              <li className="px-3 py-6 text-center text-xs text-gray-400">{emptySearchHint}</li>
+              <li className="text-muted-foreground px-3 py-6 text-center text-xs">
+                {emptySearchHint}
+              </li>
             ) : filtered.length === 0 ? (
-              <li className="px-3 py-6 text-center text-xs text-gray-400">No results found</li>
+              <li className="text-muted-foreground px-3 py-6 text-center text-xs">
+                No results found
+              </li>
             ) : (
               filtered.map((option) => (
                 <li
@@ -242,8 +252,8 @@ export function SearchableSelect({
                     }
                   }}
                   className={cn(
-                    'text-dark-500 flex cursor-pointer items-center justify-between px-3 py-2 text-sm hover:bg-gray-50',
-                    option.id === value && 'bg-primary-50 font-medium'
+                    'text-foreground hover:bg-muted flex cursor-pointer items-center justify-between px-3 py-2 text-sm',
+                    option.id === value && 'bg-muted font-medium'
                   )}
                 >
                   <span>{option.name}</span>

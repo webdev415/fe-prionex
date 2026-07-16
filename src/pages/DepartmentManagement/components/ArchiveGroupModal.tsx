@@ -39,8 +39,8 @@ export function ArchiveGroupModal({ open, groupId, onClose, onSuccess }: Archive
     <Modal open={open} onClose={onClose} maxWidth="2xl">
       <ModalHeader
         icon={
-          <div className="bg-primary-400 flex h-8 w-8 items-center justify-center rounded-full">
-            <Icons.Delete size={20} className="text-dark-500" strokeWidth={2} />
+          <div className="bg-primary-400 flex h-7 w-7 items-center justify-center rounded-full sm:h-8 sm:w-8">
+            <Icons.Delete size={18} className="text-foreground" strokeWidth={2} />
           </div>
         }
         title={
@@ -60,7 +60,7 @@ export function ArchiveGroupModal({ open, groupId, onClose, onSuccess }: Archive
           </Alert>
         ) : group ? (
           <div className="space-y-6">
-            <p className="text-sm font-light text-gray-950">
+            <p className="text-foreground text-sm font-light">
               {t('pages.groups.modals.archive.confirmMessage', { groupName: group.name })}
             </p>
             {(group.assigned_operators_count ?? 0) > 0 && (
@@ -82,7 +82,9 @@ export function ArchiveGroupModal({ open, groupId, onClose, onSuccess }: Archive
             )}
           </div>
         ) : (
-          <p className="text-sm text-gray-600">{t('pages.groups.modals.archive.groupNotFound')}</p>
+          <p className="text-muted-foreground text-sm">
+            {t('pages.groups.modals.archive.groupNotFound')}
+          </p>
         )}
       </ModalContent>
       <ModalFooter>

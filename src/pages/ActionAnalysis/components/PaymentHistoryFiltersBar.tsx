@@ -26,7 +26,7 @@ import { DateRangeQuickFilter } from './DateRangeQuickFilter'
 import { EmployeeFilterDropdown } from './EmployeeFilterDropdown'
 import { MultiCheckboxDropdown } from './MultiCheckboxDropdown'
 
-const FILTER_SURFACE = 'rounded-xl bg-white/50 p-4 shadow-sm sm:p-6'
+const FILTER_SURFACE = 'rounded-xl border border-border bg-card/60 p-4 shadow-sm sm:p-6'
 
 interface Props {
   value: PaymentHistoryBarState
@@ -126,7 +126,7 @@ export function PaymentHistoryFiltersBar({
           userTimezone={userTimezone}
         />
 
-        <div className="h-px w-full bg-gray-200" />
+        <div className="bg-border h-px w-full" />
 
         <div className="grid w-full gap-3 sm:grid-cols-2 lg:grid-cols-3 lg:gap-4 xl:grid-cols-4">
           <EmployeeFilterDropdown
@@ -163,7 +163,7 @@ export function PaymentHistoryFiltersBar({
           />
 
           <div className="flex flex-col gap-1.5">
-            <span className="text-dark-500 text-xs font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
+            <span className="text-foreground text-xs font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
               {t('pages.actionAnalysis.filters.paymentCommentSearch', 'Payment comment')}
             </span>
             <Input
@@ -182,7 +182,7 @@ export function PaymentHistoryFiltersBar({
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <span className="text-dark-500 text-xs font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
+            <span className="text-foreground text-xs font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
               {t('pages.actionAnalysis.filters.amountMin', 'Min amount')}
             </span>
             <Input
@@ -200,7 +200,7 @@ export function PaymentHistoryFiltersBar({
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <span className="text-dark-500 text-xs font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
+            <span className="text-foreground text-xs font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
               {t('pages.actionAnalysis.filters.amountMax', 'Max amount')}
             </span>
             <Input
@@ -219,13 +219,13 @@ export function PaymentHistoryFiltersBar({
         </div>
 
         {/* Independent secondary date range — Confirmed at (Payment.verified_at). */}
-        <div className="flex flex-col gap-3 rounded-lg border border-gray-200 bg-white/60 p-4">
-          <span className="text-dark-500 text-xs font-semibold tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
+        <div className="border-border bg-card/60 flex flex-col gap-3 rounded-lg border p-4">
+          <span className="text-foreground text-xs font-semibold tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
             {t('pages.actionAnalysis.filters.confirmedAtRangeHeading', 'Confirmed at')}
           </span>
           <div className="grid w-full gap-3 sm:grid-cols-2 lg:gap-4">
             <div className="flex flex-col gap-1.5">
-              <span className="text-xs font-medium text-gray-600">
+              <span className="text-muted-foreground text-xs font-medium">
                 {t('pages.actionAnalysis.filters.confirmedAtFrom', 'From')}
               </span>
               <DateSelect
@@ -239,7 +239,7 @@ export function PaymentHistoryFiltersBar({
               />
             </div>
             <div className="flex flex-col gap-1.5">
-              <span className="text-xs font-medium text-gray-600">
+              <span className="text-muted-foreground text-xs font-medium">
                 {t('pages.actionAnalysis.filters.confirmedAtTo', 'To')}
               </span>
               <DateSelect
@@ -256,13 +256,13 @@ export function PaymentHistoryFiltersBar({
         </div>
 
         {/* Independent tertiary date range — Payment date (Payment.payment_date, DATE). */}
-        <div className="flex flex-col gap-3 rounded-lg border border-gray-200 bg-white/60 p-4">
-          <span className="text-dark-500 text-xs font-semibold tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
+        <div className="border-border bg-card/60 flex flex-col gap-3 rounded-lg border p-4">
+          <span className="text-foreground text-xs font-semibold tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
             {t('pages.actionAnalysis.filters.paymentDateRangeHeading', 'Payment date')}
           </span>
           <div className="grid w-full gap-3 sm:grid-cols-2 lg:gap-4">
             <div className="flex flex-col gap-1.5">
-              <span className="text-xs font-medium text-gray-600">
+              <span className="text-muted-foreground text-xs font-medium">
                 {t('pages.actionAnalysis.filters.paymentDateFrom', 'From')}
               </span>
               <DateSelect
@@ -276,7 +276,7 @@ export function PaymentHistoryFiltersBar({
               />
             </div>
             <div className="flex flex-col gap-1.5">
-              <span className="text-xs font-medium text-gray-600">
+              <span className="text-muted-foreground text-xs font-medium">
                 {t('pages.actionAnalysis.filters.paymentDateTo', 'To')}
               </span>
               <DateSelect

@@ -122,6 +122,10 @@
     "en": "English",
     "uk": "Ukrainian"
   },
+  "theme": {
+    "switchToLight": "Switch to light theme",
+    "switchToDark": "Switch to dark theme"
+  },
   "notificationBell": {
     "title": "Notifications",
     "markAllRead": "Mark all read",
@@ -3219,6 +3223,8 @@
       "errorUpdate": "Failed to update entry.",
       "errorDelete": "Failed to delete entry.",
       "confirmDelete": "Remove {{ip}} from the whitelist?",
+      "deleteModalTitle": "Delete IP address",
+      "deleteWarning": "This action cannot be undone. Logins from this IP will be blocked when enforcement is enabled.",
       "editAria": "Edit {{ip}}",
       "deleteAria": "Delete {{ip}}",
       "saveAria": "Save changes",
@@ -7020,6 +7026,31 @@
         "offline": "Offline",
         "busy": "Busy",
         "onCall": "On Call"
+      },
+      "appearance": {
+        "title": "Appearance Settings",
+        "description": "Personalize your interface for maximum comfort. Choose a theme and accent colors that help you stay focused and reduce eye strain.",
+        "baseThemesLabel": "Base themes",
+        "accentColorsLabel": "Accent colors",
+        "bases": {
+          "light-classic": "Light Classic",
+          "neutral-dim": "Neutral Dim",
+          "ultra-dark": "Ultra Dark",
+          "high-contrast-light": "High Contrast Light"
+        },
+        "accents": {
+          "teal": "Teal",
+          "cyan": "Cyan",
+          "blue": "Blue",
+          "indigo": "Indigo",
+          "violet": "Violet",
+          "purple": "Purple",
+          "fuchsia": "Fuchsia",
+          "pink": "Pink",
+          "rose": "Rose",
+          "orange": "Orange",
+          "amber": "Amber"
+        }
       }
     },
     "reports": {

@@ -181,7 +181,7 @@ export function EditRoleForm({ role, projectName, onSuccess }: EditRoleFormProps
       {/* Project Name (Always Read-only) */}
       <div>
         <Label>{t('pages.roles.forms.roleName')}</Label>
-        <div className="border-light-50 flex h-[45px] items-center rounded-lg border bg-white px-4 py-2 text-sm font-light text-gray-950">
+        <div className="border-border bg-muted text-foreground flex h-[45px] items-center rounded-lg border px-4 py-2 text-sm font-light">
           {projectName}
         </div>
       </div>
@@ -191,7 +191,7 @@ export function EditRoleForm({ role, projectName, onSuccess }: EditRoleFormProps
         <Label required={!isDefaultRole}>{t('pages.roles.forms.roleName')}</Label>
         {isDefaultRole ? (
           // Default role: read-only (backend prevents changes)
-          <div className="border-light-50 flex h-[45px] items-center rounded-lg border bg-white px-4 py-2 text-sm font-light text-gray-950">
+          <div className="border-border bg-muted text-foreground flex h-[45px] items-center rounded-lg border px-4 py-2 text-sm font-light">
             {role.name}
           </div>
         ) : (
@@ -217,7 +217,7 @@ export function EditRoleForm({ role, projectName, onSuccess }: EditRoleFormProps
         <Label>{t('pages.roles.forms.description')}</Label>
         {isDefaultRole ? (
           // Default role: read-only
-          <div className="border-light-50 flex min-h-[80px] items-start rounded-lg border bg-white px-4 py-2 pt-3 text-sm font-light text-gray-950">
+          <div className="border-border bg-muted text-foreground flex min-h-[80px] items-start rounded-lg border px-4 py-2 pt-3 text-sm font-light">
             {role.description || '—'}
           </div>
         ) : (
@@ -236,7 +236,7 @@ export function EditRoleForm({ role, projectName, onSuccess }: EditRoleFormProps
         <div>
           <Label htmlFor="department_id">
             {t('pages.roles.forms.department')}
-            <span className="ml-1 text-sm font-light text-gray-500">(Optional)</span>
+            <span className="text-muted-foreground ml-1 text-sm font-light">(Optional)</span>
           </Label>
           <select
             id="department_id"
@@ -244,7 +244,7 @@ export function EditRoleForm({ role, projectName, onSuccess }: EditRoleFormProps
               setValueAs: (v) => (v === '' || v === 'null' ? null : Number(v)),
             })}
             disabled={updateMutation.isPending || loadingDepartments}
-            className="text-dark-500 flex h-[45px] w-full items-center rounded-lg border border-gray-400 bg-white px-3 py-2 text-sm font-light shadow-none focus:ring-0 focus:outline-none disabled:opacity-50"
+            className="text-foreground border-border bg-card flex h-[45px] w-full items-center rounded-lg border px-3 py-2 text-sm font-light shadow-none focus:ring-0 focus:outline-none disabled:opacity-50"
           >
             <option value="">{t('pages.roles.forms.placeholders.noDepartment')}</option>
             {departments.map((dept) => (
@@ -253,7 +253,9 @@ export function EditRoleForm({ role, projectName, onSuccess }: EditRoleFormProps
               </option>
             ))}
           </select>
-          <p className="mt-1 text-sm text-gray-500">{t('pages.roles.forms.departmentHint')}</p>
+          <p className="text-muted-foreground mt-1 text-sm">
+            {t('pages.roles.forms.departmentHint')}
+          </p>
         </div>
       )}
 
@@ -261,7 +263,7 @@ export function EditRoleForm({ role, projectName, onSuccess }: EditRoleFormProps
       {isDefaultRole && (
         <div>
           <Label>{t('pages.roles.forms.department')}</Label>
-          <div className="border-light-50 flex h-[45px] items-center rounded-lg border bg-white px-4 py-2 text-sm font-light text-gray-500">
+          <div className="border-border bg-muted text-muted-foreground flex h-[45px] items-center rounded-lg border px-4 py-2 text-sm font-light">
             {t('pages.roles.forms.departmentNotAvailableForDefault')}
           </div>
         </div>
@@ -271,14 +273,14 @@ export function EditRoleForm({ role, projectName, onSuccess }: EditRoleFormProps
       <div>
         <Label>
           {t('pages.roles.forms.permissions')}
-          <span className="ml-2 text-sm font-light text-gray-500">
+          <span className="text-muted-foreground ml-2 text-sm font-light">
             (Selected: {selectedPermissions.length} of {permissions.length} permissions)
           </span>
         </Label>
 
-        <div className="max-h-96 overflow-y-auto rounded-xl bg-white p-6">
+        <div className="bg-card max-h-96 overflow-y-auto rounded-xl p-6">
           {loadingPermissions ? (
-            <div className="py-4 text-sm text-gray-500">
+            <div className="text-muted-foreground py-4 text-sm">
               {t('pages.roles.forms.loadingPermissions')}
             </div>
           ) : (
@@ -287,8 +289,8 @@ export function EditRoleForm({ role, projectName, onSuccess }: EditRoleFormProps
                 return (
                   <div key={category} className="mb-6 last:mb-0">
                     <div className="mb-3 flex items-center justify-between">
-                      <span className="text-sm font-light text-gray-950">{category}</span>
-                      <span className="text-xs text-gray-500">
+                      <span className="text-foreground text-sm font-light">{category}</span>
+                      <span className="text-muted-foreground text-xs">
                         {categoryPerms.filter((p) => selectedPermissions.includes(p.id)).length}/
                         {categoryPerms.length}
                       </span>
@@ -300,7 +302,7 @@ export function EditRoleForm({ role, projectName, onSuccess }: EditRoleFormProps
                         return (
                           <label
                             key={perm.id}
-                            className="flex cursor-pointer items-center gap-3 rounded p-2 transition-colors hover:bg-gray-50"
+                            className="hover:bg-muted flex cursor-pointer items-center gap-3 rounded p-2 transition-colors"
                           >
                             <Checkbox
                               checked={isSelected}
@@ -308,9 +310,11 @@ export function EditRoleForm({ role, projectName, onSuccess }: EditRoleFormProps
                               aria-label={perm.name}
                             />
                             <div className="flex-1">
-                              <span className="text-sm font-light text-gray-950">{perm.name}</span>
+                              <span className="text-foreground text-sm font-light">
+                                {perm.name}
+                              </span>
                               {perm.description && (
-                                <span className="ml-2 text-sm font-light text-gray-500">
+                                <span className="text-muted-foreground ml-2 text-sm font-light">
                                   {perm.description}
                                 </span>
                               )}
@@ -322,7 +326,7 @@ export function EditRoleForm({ role, projectName, onSuccess }: EditRoleFormProps
                                 disabled={!isSelected || updateMutation.isPending}
                                 onClick={(e) => e.stopPropagation()}
                                 onChange={(e) => handleAccessLevelChange(perm.id, e.target.value)}
-                                className="text-dark-500 h-[34px] rounded-lg border border-gray-400 bg-white px-2 text-sm font-light focus:ring-0 focus:outline-none disabled:opacity-50"
+                                className="text-foreground border-border bg-card h-[34px] rounded-lg border px-2 text-sm font-light focus:ring-0 focus:outline-none disabled:opacity-50"
                               >
                                 {ACCESS_LEVEL_OPTIONS.map((opt) => (
                                   <option key={opt.value} value={opt.value}>

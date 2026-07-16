@@ -105,7 +105,7 @@ export function StepFilterDropdown({
   return (
     <div className="flex flex-col gap-1.5">
       {label && (
-        <span className="text-dark-500 text-xs font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
+        <span className="text-foreground text-xs font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
           {label}
         </span>
       )}
@@ -116,20 +116,24 @@ export function StepFilterDropdown({
               type="button"
               disabled={disabled}
               className={cn(
-                'text-dark-500 focus:border-primary-500 flex h-[45px] w-full items-center justify-between rounded-lg border border-gray-400 bg-white px-3 py-2 text-xs outline-none disabled:cursor-not-allowed disabled:opacity-50'
+                'text-foreground focus:border-primary-500 border-input-border bg-card flex h-[45px] w-full items-center justify-between rounded-lg border px-3 py-2 text-xs outline-none disabled:cursor-not-allowed disabled:opacity-50'
               )}
             >
               <span className="truncate text-left">{triggerLabel}</span>
-              <Icons.ArrowDown size={16} className="shrink-0 text-gray-400" strokeWidth={1.5} />
+              <Icons.ArrowDown
+                size={16}
+                className="text-muted-foreground shrink-0"
+                strokeWidth={1.5}
+              />
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent
             align="start"
             sideOffset={8}
             style={{ width: triggerWidth ? `${triggerWidth}px` : undefined }}
-            className="max-w-[calc(100vw-2rem)] rounded-md border border-gray-200 bg-white p-0 shadow-lg sm:max-w-none"
+            className="border-border bg-card max-w-[calc(100vw-2rem)] rounded-md border p-0 shadow-lg sm:max-w-none"
           >
-            <div className="border-b border-gray-200 p-3">
+            <div className="border-border border-b p-3">
               <div className="relative">
                 <input
                   type="text"
@@ -139,11 +143,11 @@ export function StepFilterDropdown({
                     'pages.actionAnalysis.filters.searchEmployeesPlaceholder',
                     'Search'
                   )}
-                  className="text-dark-500 focus:border-primary-500 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 pr-10 text-sm outline-none placeholder:text-gray-400"
+                  className="text-foreground focus:border-primary-500 border-border bg-card placeholder:text-muted-foreground w-full rounded-lg border px-3 py-2 pr-10 text-sm outline-none"
                 />
                 <Icons.Search
                   size={16}
-                  className="absolute top-1/2 right-3 -translate-y-1/2 text-gray-400"
+                  className="text-muted-foreground absolute top-1/2 right-3 -translate-y-1/2"
                   strokeWidth={1.5}
                 />
               </div>
@@ -151,12 +155,12 @@ export function StepFilterDropdown({
 
             <div className="max-h-[200px] overflow-y-auto sm:max-h-[300px]">
               {filteredSteps.length === 0 && searchQuery ? (
-                <div className="py-4 text-center text-sm text-gray-500">
+                <div className="text-muted-foreground py-4 text-center text-sm">
                   {t('pages.actionAnalysis.filters.noOperatorsMatch', 'No matches')}
                 </div>
               ) : (
-                <div className="divide-y divide-gray-100">
-                  <label className="text-dark-500 flex cursor-pointer items-center gap-3 px-3 py-2.5 hover:bg-gray-50">
+                <div className="divide-border divide-y">
+                  <label className="text-foreground hover:bg-muted flex cursor-pointer items-center gap-3 px-3 py-2.5">
                     <Checkbox checked={isAllSelected} onCheckedChange={toggleAll} />
                     <span className="text-sm font-medium">
                       {t('pages.actionAnalysis.filters.allChainSteps', 'All steps')}
@@ -165,7 +169,7 @@ export function StepFilterDropdown({
                   {filteredSteps.map((s) => (
                     <label
                       key={s.id}
-                      className="text-dark-500 flex cursor-pointer items-center gap-3 px-3 py-2.5 hover:bg-gray-50"
+                      className="text-foreground hover:bg-muted flex cursor-pointer items-center gap-3 px-3 py-2.5"
                     >
                       <Checkbox
                         checked={selectedIds.includes(s.target_action_id)}

@@ -158,7 +158,7 @@ export function SellerConfigModal({
       <ModalHeader
         icon={
           <div className="bg-primary-300 flex h-8 w-8 items-center justify-center rounded-full">
-            <Icons.Add size={20} className="text-dark-500" strokeWidth={2} />
+            <Icons.Add size={20} className="text-primary-foreground" strokeWidth={2} />
           </div>
         }
         title={
@@ -172,7 +172,7 @@ export function SellerConfigModal({
         <div className="flex flex-col gap-6">
           {/* Seller Selection */}
           <div>
-            <label className="text-dark-500 mb-2 block text-sm font-medium">
+            <label className="text-foreground mb-2 block text-sm font-medium">
               {t('pages.scoringConfiguration.seller', 'Seller')}
             </label>
             <Select
@@ -198,7 +198,7 @@ export function SellerConfigModal({
           {/* Threshold Inputs */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="text-dark-500 mb-2 block text-sm font-medium">
+              <label className="text-foreground mb-2 block text-sm font-medium">
                 {t('pages.scoringConfiguration.criticalThreshold', 'Critical Threshold')}
               </label>
               <Input
@@ -210,7 +210,7 @@ export function SellerConfigModal({
                 min={0}
                 max={100}
               />
-              <p className="text-dark-300 mt-1 text-xs">
+              <p className="text-muted-foreground mt-1 text-xs">
                 {t(
                   'pages.scoringConfiguration.criticalHelp',
                   'Clients with score ≥ this value are Critical'
@@ -219,7 +219,7 @@ export function SellerConfigModal({
             </div>
 
             <div>
-              <label className="text-dark-500 mb-2 block text-sm font-medium">
+              <label className="text-foreground mb-2 block text-sm font-medium">
                 {t('pages.scoringConfiguration.highThreshold', 'High Threshold')}
               </label>
               <Input
@@ -231,7 +231,7 @@ export function SellerConfigModal({
                 min={0}
                 max={100}
               />
-              <p className="text-dark-300 mt-1 text-xs">
+              <p className="text-muted-foreground mt-1 text-xs">
                 {t(
                   'pages.scoringConfiguration.highHelp',
                   'Clients with score ≥ this value are High priority'
@@ -240,7 +240,7 @@ export function SellerConfigModal({
             </div>
 
             <div>
-              <label className="text-dark-500 mb-2 block text-sm font-medium">
+              <label className="text-foreground mb-2 block text-sm font-medium">
                 {t('pages.scoringConfiguration.mediumThreshold', 'Medium Threshold')}
               </label>
               <Input
@@ -252,7 +252,7 @@ export function SellerConfigModal({
                 min={0}
                 max={100}
               />
-              <p className="text-dark-300 mt-1 text-xs">
+              <p className="text-muted-foreground mt-1 text-xs">
                 {t(
                   'pages.scoringConfiguration.mediumHelp',
                   'Clients with score ≥ this value are Medium priority'
@@ -261,7 +261,7 @@ export function SellerConfigModal({
             </div>
 
             <div>
-              <label className="text-dark-500 mb-2 block text-sm font-medium">
+              <label className="text-foreground mb-2 block text-sm font-medium">
                 {t('pages.scoringConfiguration.lowThreshold', 'Low Threshold')}
               </label>
               <Input
@@ -274,7 +274,7 @@ export function SellerConfigModal({
                 max={100}
                 disabled
               />
-              <p className="text-dark-300 mt-1 text-xs">
+              <p className="text-muted-foreground mt-1 text-xs">
                 {t(
                   'pages.scoringConfiguration.lowHelp',
                   'Clients below Medium are Low priority (usually 0)'

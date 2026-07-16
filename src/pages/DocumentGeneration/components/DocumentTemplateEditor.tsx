@@ -116,24 +116,24 @@ export function DocumentTemplateEditor({ open, onClose, template }: Props) {
   return (
     <DialogPrimitive.Root open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogPrimitive.Portal>
-        <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/30 backdrop-blur-xl" />
+        <DialogPrimitive.Overlay className="bg-overlay fixed inset-0 z-50 backdrop-blur-xl" />
         <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4">
           <DialogPrimitive.Content
             aria-describedby={undefined}
             className={cn(
-              'bg-light-50 relative z-50 flex max-h-[92vh] w-full flex-col overflow-hidden rounded-lg shadow-xl',
+              'bg-card relative z-50 flex max-h-[92vh] w-full flex-col overflow-hidden rounded-lg shadow-xl',
               'max-w-[95%] sm:max-w-3xl md:max-w-5xl lg:max-w-6xl'
             )}
           >
             {/* Header */}
-            <div className="flex items-start justify-between border-b border-gray-200 px-6 py-4">
-              <div>
-                <DialogPrimitive.Title className="text-dark-500 text-lg font-semibold">
+            <div className="border-border flex items-start justify-between gap-3 border-b px-4 py-3 sm:px-6 sm:py-4">
+              <div className="min-w-0">
+                <DialogPrimitive.Title className="text-foreground text-base font-semibold sm:text-lg">
                   {isEdit
                     ? t('pages.documentGeneration.templates.modals.editTitle', 'Edit template')
                     : t('pages.documentGeneration.templates.modals.createTitle', 'Create template')}
                 </DialogPrimitive.Title>
-                <p className="mt-1 text-xs text-gray-500">
+                <p className="text-muted-foreground mt-1 text-xs">
                   {t(
                     'pages.documentGeneration.templates.modals.subtitle',
                     'Use {{variable_name}} to insert dynamic data.'
@@ -144,17 +144,22 @@ export function DocumentTemplateEditor({ open, onClose, template }: Props) {
                 <button
                   type="button"
                   aria-label={t('actions.close', 'Close')}
-                  className="flex h-8 w-8 items-center justify-center rounded-md hover:bg-gray-100"
+                  className="hover:bg-muted flex h-8 w-8 shrink-0 items-center justify-center rounded-md"
                 >
-                  <Icon icon={Cancel01Icon} size={18} className="text-dark-500" strokeWidth={1.5} />
+                  <Icon
+                    icon={Cancel01Icon}
+                    size={18}
+                    className="text-foreground"
+                    strokeWidth={1.5}
+                  />
                 </button>
               </DialogPrimitive.Close>
             </div>
 
             {/* Body */}
-            <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-6 py-4 lg:flex-row">
+            <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-4 py-3 sm:px-6 sm:py-4 lg:flex-row">
               {/* Left column: name + textarea + preview */}
-              <div className="flex flex-1 flex-col gap-4">
+              <div className="flex min-w-0 flex-1 flex-col gap-4">
                 <div className="flex flex-col gap-1">
                   <Label htmlFor="dt-name">
                     {t('pages.documentGeneration.templates.form.name', 'Template name')}
@@ -184,7 +189,8 @@ export function DocumentTemplateEditor({ open, onClose, template }: Props) {
                       'pages.documentGeneration.templates.form.bodyPlaceholder',
                       'Compose your template here. Insert variables from the right-hand panel.'
                     )}
-                    rows={10}
+                    rows={8}
+                    className="min-h-[160px] sm:min-h-[200px]"
                   />
                 </div>
 
@@ -192,11 +198,11 @@ export function DocumentTemplateEditor({ open, onClose, template }: Props) {
                   <Label>
                     {t('pages.documentGeneration.templates.form.preview', 'Preview (sample data)')}
                   </Label>
-                  <div className="min-h-[120px] rounded-md border border-dashed border-gray-300 bg-gray-50 px-3 py-2 text-sm whitespace-pre-wrap text-gray-800">
+                  <div className="border-border bg-muted text-foreground min-h-[100px] rounded-md border border-dashed px-3 py-2 text-sm whitespace-pre-wrap sm:min-h-[120px]">
                     {previewText.trim() ? (
                       previewText
                     ) : (
-                      <span className="text-gray-400">
+                      <span className="text-muted-foreground">
                         {t(
                           'pages.documentGeneration.templates.form.previewEmpty',
                           'Start typing to see a live preview.'
@@ -208,23 +214,23 @@ export function DocumentTemplateEditor({ open, onClose, template }: Props) {
               </div>
 
               {/* Right column: variables panel */}
-              <aside className="w-full shrink-0 rounded-lg border border-gray-200 bg-white p-3 lg:w-72">
-                <h3 className="text-dark-500 mb-2 text-sm font-semibold">
+              <aside className="border-border bg-card w-full shrink-0 rounded-lg border p-3 lg:w-72">
+                <h3 className="text-foreground mb-2 text-sm font-semibold">
                   {t('pages.documentGeneration.templates.form.variables', 'Variables')}
                 </h3>
-                <p className="mb-3 text-xs text-gray-500">
+                <p className="text-muted-foreground mb-3 text-xs">
                   {t(
                     'pages.documentGeneration.templates.form.variablesHelp',
                     'Click a variable to insert it at the cursor.'
                   )}
                 </p>
-                <div className="flex max-h-[60vh] flex-col gap-3 overflow-y-auto pr-1">
+                <div className="flex max-h-[40vh] flex-col gap-3 overflow-y-auto pr-1 lg:max-h-[60vh]">
                   {GROUP_ORDER.map((group) => {
                     const items = TEMPLATE_VARIABLES.filter((v) => v.group === group)
                     if (items.length === 0) return null
                     return (
                       <div key={group} className="flex flex-col gap-1">
-                        <span className="text-[11px] font-semibold tracking-wide text-gray-500 uppercase">
+                        <span className="text-muted-foreground text-[11px] font-semibold tracking-wide uppercase">
                           {groupLabel(group)}
                         </span>
                         <div className="flex flex-col gap-1">
@@ -233,10 +239,10 @@ export function DocumentTemplateEditor({ open, onClose, template }: Props) {
                               key={v.name}
                               type="button"
                               onClick={() => handleInsert(v.name)}
-                              className="hover:bg-primary-50 hover:border-primary-300 flex flex-col items-start gap-0.5 rounded-md border border-gray-200 bg-white px-2 py-1.5 text-left text-xs transition-colors"
+                              className="border-border bg-card hover:bg-muted hover:border-primary-300 flex flex-col items-start gap-0.5 rounded-md border px-2 py-1.5 text-left text-xs transition-colors"
                             >
                               <code className="text-primary-700 text-[11px]">{`{{${v.name}}}`}</code>
-                              <span className="text-[11px] leading-tight text-gray-600">
+                              <span className="text-muted-foreground text-[11px] leading-tight">
                                 {t(v.descriptionKey, v.fallback)}
                               </span>
                             </button>
@@ -250,11 +256,16 @@ export function DocumentTemplateEditor({ open, onClose, template }: Props) {
             </div>
 
             {/* Footer */}
-            <div className="flex items-center justify-end gap-2 border-t border-gray-200 px-6 py-3">
-              <Button variant="secondary" onClick={onClose} disabled={submitting}>
+            <div className="border-border flex flex-col-reverse items-stretch gap-2 border-t px-4 py-3 sm:flex-row sm:items-center sm:justify-end sm:px-6">
+              <Button
+                variant="secondary"
+                onClick={onClose}
+                disabled={submitting}
+                className="w-full sm:w-auto"
+              >
                 {t('actions.cancel', 'Cancel')}
               </Button>
-              <Button onClick={handleSubmit} disabled={submitting}>
+              <Button onClick={handleSubmit} disabled={submitting} className="w-full sm:w-auto">
                 {submitting
                   ? t('actions.saving', 'Saving…')
                   : isEdit

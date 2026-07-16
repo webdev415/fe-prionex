@@ -282,16 +282,16 @@ export function CampaignAnalyticsFiltersBar({
   )
 
   const filterDropdownClassName =
-    '[&_button]:max-h-[45px] [&_button]:rounded-md [&_button]:border-gray-200 [&_button]:text-xs [&_button]:shadow-none'
+    '[&_button]:border-border [&_button]:bg-card [&_button]:max-h-[45px] [&_button]:rounded-md [&_button]:text-xs [&_button]:shadow-none'
 
   return (
-    <div className="mb-4 flex flex-col items-start gap-3 self-stretch rounded-xl bg-white/50 p-3 sm:p-6">
+    <div className="bg-card/50 mb-4 flex flex-col items-start gap-3 self-stretch rounded-xl p-3 sm:p-6">
       <div className="flex flex-col items-center gap-4 self-stretch sm:gap-6">
         <div className="flex flex-col items-center gap-4 self-stretch sm:gap-7">
           <div className="flex flex-col gap-4 self-stretch xl:flex-row xl:items-center xl:gap-10">
             <div className="flex flex-1 flex-col gap-2 self-stretch sm:items-end sm:gap-5">
               <div className="flex flex-col gap-2 self-stretch sm:flex-row sm:items-center sm:gap-3">
-                <span className="text-dark-500 shrink-0 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:w-[100px] sm:text-sm">
+                <span className="text-foreground shrink-0 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:w-[100px] sm:text-sm">
                   {t('pages.auditLogs.searchFilters.dateRange')}:
                 </span>
                 <div className="flex flex-1 items-center gap-2">
@@ -306,7 +306,7 @@ export function CampaignAnalyticsFiltersBar({
                     format="dd.MM.yyyy"
                     className="flex-1 [&_input]:h-9 [&_input]:text-xs"
                   />
-                  <span className="text-base leading-[150%] font-medium tracking-[-0.28px] text-gray-700">
+                  <span className="text-foreground text-base leading-[150%] font-medium tracking-[-0.28px]">
                     -
                   </span>
                   <DateSelect
@@ -324,7 +324,7 @@ export function CampaignAnalyticsFiltersBar({
               </div>
             </div>
             <div className="flex flex-col gap-2 self-stretch sm:flex-row sm:items-center sm:gap-3 xl:flex-1">
-              <span className="text-dark-500 shrink-0 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:w-[100px] sm:text-sm">
+              <span className="text-foreground shrink-0 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:w-[100px] sm:text-sm">
                 {t('pages.auditLogs.searchFilters.quickRanges')}:
               </span>
               <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-1 sm:items-center sm:gap-2">
@@ -342,8 +342,8 @@ export function CampaignAnalyticsFiltersBar({
                     onClick={() => handlePeriodChange(key)}
                     disabled={isLoading}
                     className={cn(
-                      'text-dark-500 flex cursor-pointer items-center justify-center gap-2 rounded-md bg-white px-3 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px] shadow-sm disabled:cursor-not-allowed disabled:opacity-50 sm:flex-1 sm:px-4',
-                      period === key ? 'bg-primary-500 text-white' : 'hover:bg-gray-50'
+                      'text-foreground bg-card flex cursor-pointer items-center justify-center gap-2 rounded-md px-3 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px] shadow-sm disabled:cursor-not-allowed disabled:opacity-50 sm:flex-1 sm:px-4',
+                      period === key ? 'bg-primary-500 text-primary-foreground' : 'hover:bg-muted'
                     )}
                   >
                     {label}
@@ -353,11 +353,11 @@ export function CampaignAnalyticsFiltersBar({
             </div>
           </div>
 
-          <div className="h-px w-full bg-gray-200" />
+          <div className="bg-border h-px w-full" />
 
           <div className="flex flex-col gap-4 self-stretch lg:flex-row lg:items-start lg:gap-10">
             <div className="flex flex-col gap-2 self-stretch sm:min-w-[200px] sm:flex-1 sm:flex-row sm:items-center sm:gap-3">
-              <span className="text-dark-500 shrink-0 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:w-[100px] sm:text-sm">
+              <span className="text-foreground shrink-0 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:w-[100px] sm:text-sm">
                 {t('pages.messagingCampaigns.filters.searchLabel', 'Search')}:
               </span>
               <Input
@@ -368,13 +368,13 @@ export function CampaignAnalyticsFiltersBar({
                 )}
                 value={searchValue}
                 onChange={(event) => setSearchValue(event.target.value)}
-                className="max-h-[45px] flex-1 rounded-md border border-gray-200 bg-white text-xs"
+                className="border-border bg-card max-h-[45px] flex-1 rounded-md border text-xs"
                 disabled={isLoading}
               />
             </div>
 
             <div className="flex flex-col gap-2 self-stretch sm:min-w-[180px] sm:flex-1 sm:flex-row sm:items-center sm:gap-3">
-              <span className="text-dark-500 shrink-0 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:w-[100px] sm:text-sm">
+              <span className="text-foreground shrink-0 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:w-[100px] sm:text-sm">
                 {t('pages.messagingCampaigns.filters.status', 'Status')}:
               </span>
               <SearchableSelect
@@ -389,7 +389,7 @@ export function CampaignAnalyticsFiltersBar({
             </div>
 
             <div className="flex flex-col gap-2 self-stretch sm:min-w-[180px] sm:flex-1 sm:flex-row sm:items-center sm:gap-3">
-              <span className="text-dark-500 shrink-0 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:w-[100px] sm:text-sm">
+              <span className="text-foreground shrink-0 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:w-[100px] sm:text-sm">
                 {t('pages.messagingCampaigns.filters.channel', 'Channel')}:
               </span>
               <SearchableSelect
@@ -406,7 +406,7 @@ export function CampaignAnalyticsFiltersBar({
 
           <div className="flex flex-col gap-4 self-stretch lg:flex-row lg:items-start lg:gap-10">
             <div className="flex flex-col gap-2 self-stretch sm:min-w-[220px] sm:flex-1 sm:flex-row sm:items-center sm:gap-3">
-              <span className="text-dark-500 shrink-0 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:w-[100px] sm:text-sm">
+              <span className="text-foreground shrink-0 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:w-[100px] sm:text-sm">
                 {t('pages.messagingCampaigns.filters.launcher', 'Launched by')}:
               </span>
               <SearchableSelect
