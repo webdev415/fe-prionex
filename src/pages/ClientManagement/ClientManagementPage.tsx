@@ -251,7 +251,7 @@ function decodeStepValues(raw: string): Record<number, StepValueEntry> {
 // OFF; only per-loan manual submit stays active. The backend
 // /submit/by-clients endpoint is also disabled. Re-enable by flipping this
 // flag to true.
-const ENABLE_BULK_UBKI_SUBMISSION = false
+const ENABLE_BULK_UBKI_SUBMISSION = true
 
 export function ClientManagementPage() {
   const { t } = useTranslation('common')

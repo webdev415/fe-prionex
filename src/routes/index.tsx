@@ -81,6 +81,11 @@ const MessagingIntegrationsPage = lazy(() =>
     default: m.MessagingIntegrationsPage,
   }))
 )
+const UbkiIntegrationPage = lazy(() =>
+  import('@/pages/UbkiIntegration').then((m) => ({
+    default: m.UbkiIntegrationPage,
+  }))
+)
 const RRNotificationsPage = lazy(() =>
   import('@/pages/RRNotifications').then((m) => ({
     default: m.RRNotificationsPage,
@@ -434,6 +439,17 @@ export const router = createBrowserRouter([
         element: (
           <PermissionRoute requiredPermission={PERMISSIONS.MESSAGING.MANAGE_INTEGRATIONS}>
             {withSuspense(<MessagingIntegrationsPage />)}
+          </PermissionRoute>
+        ),
+      },
+      {
+        // UBKI integration admin page. TODO(ubki): gate behind a dedicated
+        // `manage_integrations` permission once it exists; reusing the
+        // messaging-integrations permission (admins hold it) for now.
+        path: 'system-settings/integrations/ubki',
+        element: (
+          <PermissionRoute requiredPermission={PERMISSIONS.MESSAGING.MANAGE_INTEGRATIONS}>
+            {withSuspense(<UbkiIntegrationPage />)}
           </PermissionRoute>
         ),
       },

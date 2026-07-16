@@ -193,14 +193,16 @@
       "starred": "Starred",
       "payments": "Pending Payments",
       "calls": "Inbound Calls",
-      "rrPayments": "RR Payments"
+      "rrPayments": "RR Payments",
+      "ubki": "UBKI"
     },
     "empty": {
       "tasks": "No overdue tasks",
       "starred": "No starred tasks",
       "payments": "No pending payments",
       "calls": "No inbound calls",
-      "rrPayments": "No RR payments due"
+      "rrPayments": "No RR payments due",
+      "ubki": "No UBKI alerts"
     },
     "taskActions": {
       "completeAria": "Complete task",
