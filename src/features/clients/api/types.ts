@@ -424,6 +424,10 @@ export interface GetClientsParams {
   assignment_date_to?: string // YYYY-MM-DD format
   tz?: string
 
+  // Filter: Tags (include OR + exclude AND-NOT)
+  tag_ids?: string // Comma-separated tag definition IDs to include (OR)
+  exclude_tag_ids?: string // Comma-separated tag definition IDs to exclude (AND-NOT)
+
   // Filter: Status
   status?: string // Comma-separated statuses (e.g., "active,new")
 }
