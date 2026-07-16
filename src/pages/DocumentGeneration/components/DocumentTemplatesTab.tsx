@@ -58,21 +58,23 @@ export function DocumentTemplatesTab() {
         header: t('pages.documentGeneration.templates.columns.name', 'Template name'),
         render: (row) => (
           <div className="flex flex-col">
-            <span className="text-dark-500 font-medium">{row.name}</span>
-            {row.description && <span className="text-xs text-gray-500">{row.description}</span>}
+            <span className="text-foreground font-medium">{row.name}</span>
+            {row.description && (
+              <span className="text-muted-foreground text-xs">{row.description}</span>
+            )}
           </div>
         ),
       },
       {
         key: 'body',
         header: t('pages.documentGeneration.templates.columns.preview', 'Preview'),
-        render: (row) => <span className="text-sm text-gray-700">{htmlToPreview(row.body)}</span>,
+        render: (row) => <span className="text-foreground text-sm">{htmlToPreview(row.body)}</span>,
       },
       {
         key: 'variables',
         header: t('pages.documentGeneration.templates.columns.variables', 'Variables'),
         render: (row) => (
-          <span className="text-sm text-gray-700">
+          <span className="text-foreground text-sm">
             {row.available_variables ? row.available_variables.length : 0}
           </span>
         ),
@@ -81,7 +83,7 @@ export function DocumentTemplatesTab() {
         key: 'updated_at',
         header: t('pages.documentGeneration.templates.columns.updated', 'Updated'),
         render: (row) => (
-          <span className="text-sm text-gray-700">
+          <span className="text-foreground text-sm">
             {dateFormatter.format(new Date(row.updated_at))}
           </span>
         ),
@@ -100,7 +102,7 @@ export function DocumentTemplatesTab() {
                   setEditingTemplate(row)
                   setEditorOpen(true)
                 }}
-                className="text-dark-500 hover:bg-primary-50 inline-flex h-8 w-8 items-center justify-center rounded-md"
+                className="text-foreground hover:bg-muted inline-flex h-8 w-8 items-center justify-center rounded-md"
               >
                 <Icons.PencilEdit size={16} strokeWidth={1.5} />
               </button>
@@ -110,7 +112,7 @@ export function DocumentTemplatesTab() {
                 type="button"
                 title={t('actions.delete', 'Delete')}
                 onClick={() => setDeleting(row)}
-                className="text-error-600 hover:bg-error-50 inline-flex h-8 w-8 items-center justify-center rounded-md"
+                className="text-error-600 hover:bg-error-100 inline-flex h-8 w-8 items-center justify-center rounded-md"
               >
                 <Icons.Delete size={16} strokeWidth={1.5} />
               </button>
@@ -124,23 +126,38 @@ export function DocumentTemplatesTab() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-gray-600">
+      <div className="flex items-start justify-between gap-3">
+        <p className="text-muted-foreground min-w-0 flex-1 text-sm">
           {t(
             'pages.documentGeneration.templates.intro',
             'Reusable document bodies with variable placeholders.'
           )}
         </p>
         {canCreateEdit && (
-          <Button
-            onClick={() => {
-              setEditingTemplate(null)
-              setEditorOpen(true)
-            }}
-          >
-            <Icons.Add size={16} strokeWidth={2} className="mr-1" />
-            {t('pages.documentGeneration.templates.create', 'Create template')}
-          </Button>
+          <>
+            <div className="hidden shrink-0 sm:block">
+              <Button
+                onClick={() => {
+                  setEditingTemplate(null)
+                  setEditorOpen(true)
+                }}
+              >
+                <Icons.Add size={16} strokeWidth={2} className="mr-1" />
+                {t('pages.documentGeneration.templates.create', 'Create template')}
+              </Button>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setEditingTemplate(null)
+                setEditorOpen(true)
+              }}
+              className="bg-primary-300 text-primary-foreground hover:bg-primary-500 flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-colors focus:outline-none sm:hidden"
+              aria-label={t('pages.documentGeneration.templates.create', 'Create template')}
+            >
+              <Icons.Add size={20} strokeWidth={2} />
+            </button>
+          </>
         )}
       </div>
 
