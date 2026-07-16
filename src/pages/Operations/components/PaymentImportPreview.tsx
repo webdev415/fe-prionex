@@ -152,14 +152,14 @@ function usePaymentPreviewColumns(t: TFunction<'common'>): Column<PreviewRowWith
             return <span className="text-muted-foreground text-xs">—</span>
           if (row.has_pending_match === true) {
             return (
-              <span className="inline-flex items-center rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700">
+              <span className="bg-information-50 text-information-700 inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium">
                 {rowTypeLabels.pending}
               </span>
             )
           }
           if (row.has_pending_match === false) {
             return (
-              <span className="inline-flex items-center rounded-full bg-violet-50 px-2 py-0.5 text-xs font-medium text-violet-700">
+              <span className="bg-muted text-foreground inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium">
                 {rowTypeLabels.new}
               </span>
             )

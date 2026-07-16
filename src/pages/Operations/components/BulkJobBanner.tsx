@@ -89,7 +89,7 @@ export function BulkJobBanner({ importType, label, onViewHistory, hidden }: Prop
 
   return (
     <div className="fixed bottom-10 left-1/2 z-50 flex w-full -translate-x-1/2 transform justify-center p-10">
-      <div className="border-border bg-card flex w-[calc(100%-2rem)] max-w-7xl flex-col justify-center rounded-[10px] border px-4 py-3 shadow-[0_12px_16px_-4px_rgba(16,24,40,0.08),0_4px_6px_-2px_rgba(16,24,40,0.03)] sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-6 sm:py-4">
+      <div className="border-border bg-card flex w-[calc(100%-2rem)] max-w-7xl flex-col justify-center rounded-[10px] border px-4 py-3 shadow-lg sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-6 sm:py-4">
         <div className="text-warning-500 flex items-center gap-2.5 py-3">
           <Icons.FileImport size={20} />
           <span className="text-xs font-medium whitespace-nowrap sm:text-sm">{label}</span>

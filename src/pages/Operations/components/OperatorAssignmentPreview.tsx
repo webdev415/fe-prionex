@@ -248,7 +248,7 @@ export function OperatorAssignmentPreview({ preview, onConfirm, onCancel, isExec
           onChange={(e) => setReason(e.target.value)}
           placeholder={t('pages.imports.operatorAssignment.preview.assignmentReasonPlaceholder')}
           disabled={isExecuting}
-          className="text-foreground focus:border-secondary-500 focus:ring-secondary-500 border-border bg-card placeholder:text-muted-foreground w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-1"
+          className="text-foreground focus:border-primary-500 focus:ring-primary-500 border-border bg-card placeholder:text-muted-foreground w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-1"
         />
       </div>
 

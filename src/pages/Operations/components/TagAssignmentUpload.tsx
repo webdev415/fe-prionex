@@ -140,7 +140,7 @@ export function TagAssignmentUpload({ mode, onModeChange, onFileSelected, isUplo
             onClick={() => onModeChange('remove')}
             disabled={isUploading}
             className={`border-border border-l px-4 py-2 text-sm font-medium transition-colors ${
-              mode === 'remove' ? 'bg-error-600 text-white' : 'text-foreground hover:bg-muted'
+              mode === 'remove' ? 'bg-error-100 text-error-700' : 'text-foreground hover:bg-muted'
             }`}
           >
             {t(`${p}.modeRemove`, 'Remove tags')}
