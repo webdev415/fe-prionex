@@ -758,8 +758,11 @@ export function useLoanCalculation(clientId: number, debtId: number, enabled = t
     queryKey: clientKeys.loanCalculation(clientId, debtId),
     queryFn: () => clientApi.getLoanCalculation(clientId, debtId),
     enabled: enabled && clientId > 0 && debtId > 0,
-    staleTime: 2 * 60_000,
-    refetchOnMount: false,
+    // The modal is opened on demand and must reflect the current ledger, so
+    // always refetch when it (re)mounts — a payment/write-off/reversal recorded
+    // between opens would otherwise be masked by a cached copy.
+    staleTime: 0,
+    refetchOnMount: 'always',
   })
 }
 
