@@ -2,7 +2,8 @@
  * Tags Dropdown Component
  *
  * Multi-select dropdown for filtering clients by tags (3-state: include/exclude/neutral).
- * Similar pattern to PortfolioDropdown.
+ * Tri-state clicks apply immediately (same as the inline tag controls) so operators
+ * do not need to press Apply for exclude/include to take effect.
  */
 
 import { useState, useMemo, useEffect } from 'react'
@@ -86,15 +87,20 @@ export function TagsDropdown({
   }, [tagFilterSelection, isOpen])
 
   const handleCycleTag = (tagId: number) => {
-    setTempSelection((prev) => cycleTagTriState(prev, tagId))
+    const next = cycleTagTriState(tempSelection, tagId)
+    setTempSelection(next)
+    // Apply immediately — same behavior as inline tri-state controls.
+    // Waiting for "Apply" made exclude look broken (red X visible, list unchanged).
+    onSelectionChange(next)
   }
 
   const handleClear = () => {
-    setTempSelection({ includeIds: [], excludeIds: [] })
+    const next = { includeIds: [] as number[], excludeIds: [] as number[] }
+    setTempSelection(next)
+    onSelectionChange(next)
   }
 
-  const handleApply = () => {
-    onSelectionChange(tempSelection)
+  const handleDone = () => {
     setIsOpen(false)
   }
 
@@ -169,7 +175,7 @@ export function TagsDropdown({
             <Button variant="cancel" onClick={handleClear} className="flex flex-1">
               {t('pages.clients.modals.tagsDropdown.clear')}
             </Button>
-            <Button variant="primary" onClick={handleApply} className="flex flex-1">
+            <Button variant="primary" onClick={handleDone} className="flex flex-1">
               {t('pages.clients.modals.tagsDropdown.apply')}
             </Button>
           </div>
