@@ -4090,7 +4090,8 @@
         "days": "days",
         "noUsersAvailable": "No users available",
         "noResponsible": "No Responsible",
-        "noInteractions": "No Interactions"
+        "noInteractions": "No Interactions",
+        "segmentActive": "Segment filter"
       },
       "statuses": {
         "active": "Active",
@@ -4485,7 +4486,14 @@
         },
         "tagsDropdown": {
           "searchTags": "Search tags...",
+          "searchSegments": "Search segments...",
           "noTagsFound": "No tags found",
+          "noSegmentsFound": "No active segments found",
+          "loadingSegments": "Loading segments...",
+          "tabManual": "Manual filter",
+          "tabSegments": "Segments",
+          "segmentClients": "{{count}} clients",
+          "segmentMeta": "{{clients}} · updated at {{time}}",
           "clear": "Clear",
           "apply": "Apply"
         },
