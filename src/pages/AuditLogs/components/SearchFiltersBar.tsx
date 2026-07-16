@@ -329,7 +329,7 @@ export function SearchFiltersBar({
   }, [localFilters.date_from])
 
   return (
-    <div className="mb-4 flex flex-col items-start gap-3 self-stretch rounded-xl bg-white/50 p-3 sm:p-6">
+    <div className="bg-card/50 mb-4 flex flex-col items-start gap-3 self-stretch rounded-xl p-3 sm:p-6">
       <div className="flex flex-col items-center gap-4 self-stretch sm:gap-6">
         {/* Advanced Filters Section */}
         <div className="flex flex-col items-center gap-4 self-stretch sm:gap-7">
@@ -338,7 +338,7 @@ export function SearchFiltersBar({
             {/* Date Range */}
             <div className="flex flex-1 flex-col gap-2 self-stretch sm:items-end sm:gap-5">
               <div className="flex flex-col gap-2 self-stretch sm:flex-row sm:items-center sm:gap-3">
-                <span className="text-dark-500 shrink-0 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:w-[100px] sm:text-sm">
+                <span className="text-foreground shrink-0 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:w-[100px] sm:text-sm">
                   {t('pages.auditLogs.searchFilters.dateRange')}:
                 </span>
                 <div className="flex flex-1 items-center gap-2">
@@ -353,7 +353,7 @@ export function SearchFiltersBar({
                     format="dd.MM.yyyy"
                     className="flex-1 [&_input]:h-9 [&_input]:text-xs"
                   />
-                  <span className="text-base leading-[150%] font-medium tracking-[-0.28px] text-gray-700">
+                  <span className="text-foreground text-base leading-[150%] font-medium tracking-[-0.28px]">
                     -
                   </span>
                   <DateSelect
@@ -372,7 +372,7 @@ export function SearchFiltersBar({
             </div>
             {/* Quick Ranges */}
             <div className="flex flex-col gap-2 self-stretch sm:flex-row sm:items-center sm:gap-3 xl:flex-1">
-              <span className="text-dark-500 shrink-0 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:w-[100px] sm:text-sm">
+              <span className="text-foreground shrink-0 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:w-[100px] sm:text-sm">
                 {t('pages.auditLogs.searchFilters.quickRanges')}:
               </span>
               <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-1 sm:items-center sm:gap-2">
@@ -380,8 +380,8 @@ export function SearchFiltersBar({
                   type="button"
                   onClick={() => handlePeriodChange('today')}
                   className={cn(
-                    'text-dark-500 flex cursor-pointer items-center justify-center gap-2 rounded-md bg-white px-3 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px] shadow-sm sm:flex-1 sm:px-4',
-                    period === 'today' ? 'bg-primary-500 text-white' : 'hover:bg-gray-50'
+                    'text-foreground bg-card flex cursor-pointer items-center justify-center gap-2 rounded-md px-3 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px] shadow-sm sm:flex-1 sm:px-4',
+                    period === 'today' ? 'bg-primary-500 text-primary-foreground' : 'hover:bg-muted'
                   )}
                 >
                   {t('pages.auditLogs.searchFilters.today')}
@@ -390,8 +390,10 @@ export function SearchFiltersBar({
                   type="button"
                   onClick={() => handlePeriodChange('yesterday')}
                   className={cn(
-                    'text-dark-500 flex cursor-pointer items-center justify-center gap-2 rounded-md bg-white px-3 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px] shadow-sm sm:flex-1 sm:px-4',
-                    period === 'yesterday' ? 'bg-primary-500 text-white' : 'hover:bg-gray-50'
+                    'text-foreground bg-card flex cursor-pointer items-center justify-center gap-2 rounded-md px-3 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px] shadow-sm sm:flex-1 sm:px-4',
+                    period === 'yesterday'
+                      ? 'bg-primary-500 text-primary-foreground'
+                      : 'hover:bg-muted'
                   )}
                 >
                   {t('pages.auditLogs.searchFilters.yesterday')}
@@ -400,8 +402,10 @@ export function SearchFiltersBar({
                   type="button"
                   onClick={() => handlePeriodChange('last_7')}
                   className={cn(
-                    'text-dark-500 flex cursor-pointer items-center justify-center gap-2 rounded-md bg-white px-3 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px] shadow-sm sm:flex-1 sm:px-4',
-                    period === 'last_7' ? 'bg-primary-500 text-white' : 'hover:bg-gray-50'
+                    'text-foreground bg-card flex cursor-pointer items-center justify-center gap-2 rounded-md px-3 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px] shadow-sm sm:flex-1 sm:px-4',
+                    period === 'last_7'
+                      ? 'bg-primary-500 text-primary-foreground'
+                      : 'hover:bg-muted'
                   )}
                 >
                   {t('pages.auditLogs.searchFilters.last7')}
@@ -410,8 +414,10 @@ export function SearchFiltersBar({
                   type="button"
                   onClick={() => handlePeriodChange('last_30')}
                   className={cn(
-                    'text-dark-500 flex cursor-pointer items-center justify-center gap-2 rounded-md bg-white px-3 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px] shadow-sm sm:flex-1 sm:px-4',
-                    period === 'last_30' ? 'bg-primary-500 text-white' : 'hover:bg-gray-50'
+                    'text-foreground bg-card flex cursor-pointer items-center justify-center gap-2 rounded-md px-3 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px] shadow-sm sm:flex-1 sm:px-4',
+                    period === 'last_30'
+                      ? 'bg-primary-500 text-primary-foreground'
+                      : 'hover:bg-muted'
                   )}
                 >
                   {t('pages.auditLogs.searchFilters.last30')}
@@ -419,12 +425,12 @@ export function SearchFiltersBar({
               </div>
             </div>
           </div>
-          <div className="h-px w-full bg-gray-200" />
+          <div className="bg-border h-px w-full" />
           {/* Filters Row 1: User, Action, Entity */}
           <div className="flex flex-col gap-4 self-stretch lg:flex-row lg:items-start lg:gap-6 lg:gap-10">
             {/* User Filter */}
             <div className="flex flex-col gap-2 self-stretch sm:min-w-[220px] sm:flex-1 sm:flex-row sm:items-center sm:gap-3">
-              <span className="text-dark-500 shrink-0 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:w-19 sm:text-sm">
+              <span className="text-foreground shrink-0 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:w-19 sm:text-sm">
                 {t('pages.auditLogs.searchFilters.user')}:
               </span>
               <UserFilterDropdown
@@ -436,7 +442,7 @@ export function SearchFiltersBar({
                   <button
                     type="button"
                     disabled={isLoading}
-                    className="text-dark-500 focus:border-primary-500 flex h-[45px] w-full items-center justify-between rounded-md border border-gray-200 bg-white px-3 py-2 text-xs outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                    className="text-foreground focus:border-primary-500 border-border bg-card flex h-[45px] w-full items-center justify-between rounded-md border px-3 py-2 text-xs outline-none disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <span className="truncate text-left">
                       {localFilters.users && localFilters.users.length > 0
@@ -447,14 +453,14 @@ export function SearchFiltersBar({
                             : `${localFilters.users.length} users selected`
                         : t('pages.auditLogs.searchFilters.allUsers')}
                     </span>
-                    <Icons.ArrowDown size={16} className="shrink-0 text-gray-400" />
+                    <Icons.ArrowDown size={16} className="text-muted-foreground shrink-0" />
                   </button>
                 }
               />
             </div>
             {/* Action Filter */}
             <div className="flex flex-col gap-2 self-stretch sm:min-w-[220px] sm:flex-1 sm:flex-row sm:items-center sm:gap-3">
-              <span className="text-dark-500 shrink-0 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:w-19 sm:text-sm">
+              <span className="text-foreground shrink-0 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:w-19 sm:text-sm">
                 {t('pages.auditLogs.searchFilters.action')}:
               </span>
               <FilterDropdown
@@ -469,7 +475,7 @@ export function SearchFiltersBar({
                   <button
                     type="button"
                     disabled={isLoading}
-                    className="text-dark-500 focus:border-primary-500 flex h-[45px] w-full items-center justify-between rounded-md border border-gray-200 bg-white px-3 py-2 text-xs outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                    className="text-foreground focus:border-primary-500 border-border bg-card flex h-[45px] w-full items-center justify-between rounded-md border px-3 py-2 text-xs outline-none disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <span className="truncate text-left">
                       {localFilters.actions && localFilters.actions.length > 0
@@ -480,14 +486,14 @@ export function SearchFiltersBar({
                             : `${localFilters.actions.length} actions selected`
                         : 'All Actions'}
                     </span>
-                    <Icons.ArrowDown size={16} className="shrink-0 text-gray-400" />
+                    <Icons.ArrowDown size={16} className="text-muted-foreground shrink-0" />
                   </button>
                 }
               />
             </div>
             {/* Entity Filter */}
             <div className="flex flex-col gap-2 self-stretch sm:min-w-[220px] sm:flex-1 sm:flex-row sm:items-center sm:gap-3">
-              <span className="text-dark-500 shrink-0 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:w-19 sm:text-sm">
+              <span className="text-foreground shrink-0 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:w-19 sm:text-sm">
                 {t('pages.auditLogs.searchFilters.entity')}:
               </span>
               <FilterDropdown
@@ -502,7 +508,7 @@ export function SearchFiltersBar({
                   <button
                     type="button"
                     disabled={isLoading}
-                    className="text-dark-500 focus:border-primary-500 flex h-[45px] w-full items-center justify-between rounded-md border border-gray-200 bg-white px-3 py-2 text-xs outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                    className="text-foreground focus:border-primary-500 border-border bg-card flex h-[45px] w-full items-center justify-between rounded-md border px-3 py-2 text-xs outline-none disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <span className="truncate text-left">
                       {localFilters.entity_types && localFilters.entity_types.length > 0
@@ -513,7 +519,7 @@ export function SearchFiltersBar({
                             : `${localFilters.entity_types.length} types selected`
                         : 'All Types'}
                     </span>
-                    <Icons.ArrowDown size={16} className="shrink-0 text-gray-400" />
+                    <Icons.ArrowDown size={16} className="text-muted-foreground shrink-0" />
                   </button>
                 }
               />
@@ -523,7 +529,7 @@ export function SearchFiltersBar({
           <div className="flex flex-col gap-4 self-stretch lg:flex-row lg:items-start lg:gap-6 lg:gap-10">
             {/* Role Filter */}
             <div className="flex flex-col gap-2 self-stretch sm:min-w-[220px] sm:flex-1 sm:flex-row sm:items-center sm:gap-3">
-              <span className="text-dark-500 shrink-0 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:w-19 sm:text-sm">
+              <span className="text-foreground shrink-0 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:w-19 sm:text-sm">
                 {t('pages.auditLogs.searchFilters.role')}:
               </span>
               <Select
@@ -536,10 +542,10 @@ export function SearchFiltersBar({
                 }
                 disabled={isLoading}
               >
-                <SelectTrigger className="max-h-[45px] w-full rounded-md border border-gray-200 bg-white text-xs">
+                <SelectTrigger className="border-border bg-card max-h-[45px] w-full rounded-md border text-xs">
                   <SelectValue placeholder={t('pages.auditLogs.searchFilters.selectRole')} />
                 </SelectTrigger>
-                <SelectContent className="bg-white">
+                <SelectContent className="bg-card">
                   <SelectItem value="all">All Roles</SelectItem>
                   {roles.map((role) => (
                     <SelectItem key={role} value={role}>
@@ -551,7 +557,7 @@ export function SearchFiltersBar({
             </div>
             {/* Search Input */}
             <div className="flex flex-col gap-2 self-stretch sm:min-w-[220px] sm:flex-1 sm:flex-row sm:items-center sm:gap-3">
-              <span className="text-dark-500 shrink-0 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:w-19 sm:text-sm">
+              <span className="text-foreground shrink-0 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:w-19 sm:text-sm">
                 {t('pages.auditLogs.searchFilters.search')}:
               </span>
               <Input
@@ -559,7 +565,7 @@ export function SearchFiltersBar({
                 placeholder={t('pages.auditLogs.searchFilters.placeholder')}
                 value={searchValue}
                 onChange={(e) => setSearchValue(e.target.value)}
-                className="max-h-[45px] flex-1 rounded-md border border-gray-200 bg-white text-xs"
+                className="border-border bg-card max-h-[45px] flex-1 rounded-md border text-xs"
               />
             </div>
             {/* Action Buttons */}

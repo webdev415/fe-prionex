@@ -21,6 +21,8 @@ import { Button } from '@/components/ui/Button'
 import { Icons } from '@/lib/icons'
 import { LinkButton } from '@/components/ui/LinkButton'
 import { cn } from '@/lib/utils'
+import { useThemeStore } from '@/stores/themeStore'
+import { isDarkBase } from '@/theme/constants'
 import {
   useAuditLogs,
   exportAuditLogs,
@@ -95,6 +97,8 @@ export interface AuditLogFilters {
 
 export function AuditLogsPage() {
   const { t } = useTranslation('common')
+  const themeBase = useThemeStore((s) => s.base)
+  const isDarkTheme = isDarkBase(themeBase)
   const canViewAuditLogs = useHasPermission(PERMISSIONS.SYSTEM.VIEW_AUDIT_LOGS)
   // Single permission checker for the Entity-link resolver (auditEntityLink),
   // built once from the user's permissions instead of one hook per destination.
@@ -753,7 +757,7 @@ export function AuditLogsPage() {
         header: t('pages.auditLogs.tableHeaders.timestamp'),
         sortable: true,
         render: (log) => (
-          <span className="truncate overflow-hidden text-sm leading-[150%] font-light tracking-[-0.28px] text-[#1E1E1E]">
+          <span className="text-foreground truncate overflow-hidden text-sm leading-[150%] font-light tracking-[-0.28px]">
             {formatTimestamp(log.timestamp)}
           </span>
         ),
@@ -765,16 +769,16 @@ export function AuditLogsPage() {
         sortKey: 'username',
         render: (log) => (
           <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-            <span className="truncate overflow-hidden text-sm leading-[150%] font-light tracking-[-0.28px] text-[#1E1E1E]">
+            <span className="text-foreground truncate overflow-hidden text-sm leading-[150%] font-light tracking-[-0.28px]">
               {log.username || '—'}
             </span>
             {log.role && (
-              <span className="truncate overflow-hidden text-xs leading-[150%] font-light tracking-[-0.28px] text-[#1E1E1E] sm:text-sm">
+              <span className="text-foreground truncate overflow-hidden text-xs leading-[150%] font-light tracking-[-0.28px] sm:text-sm">
                 {log.role}
               </span>
             )}
             {!log.role && log.username === 'unknown' && (
-              <span className="truncate overflow-hidden text-xs leading-[150%] font-light tracking-[-0.28px] text-[#1E1E1E] sm:text-sm">
+              <span className="text-foreground truncate overflow-hidden text-xs leading-[150%] font-light tracking-[-0.28px] sm:text-sm">
                 —
               </span>
             )}
@@ -786,7 +790,7 @@ export function AuditLogsPage() {
         header: t('pages.auditLogs.tableHeaders.actions'),
         sortable: true,
         render: (log) => (
-          <span className="truncate overflow-hidden text-sm leading-[150%] font-light tracking-[-0.28px] text-[#1E1E1E]">
+          <span className="text-foreground truncate overflow-hidden text-sm leading-[150%] font-light tracking-[-0.28px]">
             {log.action || '—'}
           </span>
         ),
@@ -801,14 +805,17 @@ export function AuditLogsPage() {
             return (
               <Link
                 to={to}
-                className="text-primary-600 truncate overflow-hidden text-sm leading-[150%] font-light tracking-[-0.28px] hover:underline"
+                className={cn(
+                  'truncate overflow-hidden text-sm leading-[150%] font-light tracking-[-0.28px] hover:underline',
+                  isDarkTheme ? 'text-primary' : 'text-primary-600'
+                )}
               >
                 {formatEntity(log)}
               </Link>
             )
           }
           return (
-            <span className="truncate overflow-hidden text-sm leading-[150%] font-light tracking-[-0.28px] text-[#1E1E1E]">
+            <span className="text-foreground truncate overflow-hidden text-sm leading-[150%] font-light tracking-[-0.28px]">
               {formatEntity(log)}
             </span>
           )
@@ -820,14 +827,14 @@ export function AuditLogsPage() {
         sortable: false,
         render: (log) => (
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <span className="truncate overflow-hidden text-sm leading-[150%] font-light tracking-[-0.28px] text-[#1E1E1E]">
+            <span className="text-foreground truncate overflow-hidden text-sm leading-[150%] font-light tracking-[-0.28px]">
               {formatDetails(log)}
             </span>
             <LinkButton
-              variant="regular-secondary"
+              variant="regular-black"
               size="xs"
               onClick={() => handleViewDetails(log)}
-              leftIcon={<Icons.View size={14} strokeWidth={2} />}
+              leftIcon={<Icons.View size={14} strokeWidth={2} className="text-foreground" />}
               className="self-start sm:self-auto"
             >
               {t('pages.auditLogs.viewDetails')}
@@ -836,19 +843,19 @@ export function AuditLogsPage() {
         ),
       },
     ],
-    [formatTimestamp, formatEntity, formatDetails, handleViewDetails, t, hasPermission]
+    [formatTimestamp, formatEntity, formatDetails, handleViewDetails, t, hasPermission, isDarkTheme]
   )
 
   // Show access denied message for users without view_audit_logs permission
   if (!canViewAuditLogs) {
     return (
       <div className="flex h-full flex-col items-center justify-center">
-        <div className="rounded-xl bg-white/50 p-8 text-center">
+        <div className="bg-card/50 rounded-xl p-8 text-center">
           <Icons.Lock className="text-error-500 mx-auto mb-4 h-12 w-12" />
-          <h2 className="text-dark-500 mb-2 text-xl font-semibold">
+          <h2 className="text-foreground mb-2 text-xl font-semibold">
             {t('pages.auditLogs.accessDenied.title', 'Access Denied')}
           </h2>
-          <p className="text-muted-foreground text-dark-500">
+          <p className="text-muted-foreground">
             {t(
               'pages.auditLogs.accessDenied.message',
               'You need the "View audit logs" permission to access this page. Please contact your administrator if you need access.'
@@ -867,14 +874,14 @@ export function AuditLogsPage() {
     <div className="flex h-full flex-col">
       {/* Page Header */}
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-dark-500 text-xl font-light sm:text-2xl">
+        <h1 className="text-foreground text-xl font-light sm:text-2xl">
           {t('pages.auditLogs.title')}
         </h1>
         <Button
           variant="primary"
           size="md"
           onClick={handleExport}
-          leftIcon={<Icons.Download size={16} className="text-dark-500" />}
+          leftIcon={<Icons.Download size={16} className="text-primary-foreground" />}
           className="h-[45px] w-full rounded-full text-xs sm:w-auto"
         >
           {t('pages.auditLogs.exportCsv')}
@@ -895,7 +902,7 @@ export function AuditLogsPage() {
       {/* Main Content Area */}
       <div className="flex flex-1 flex-col overflow-hidden">
         {/* Audit Logs Table */}
-        <div className="flex flex-1 flex-col gap-4 overflow-hidden rounded-xl bg-white/50 p-3 sm:gap-6 sm:p-6">
+        <div className="bg-card/50 flex flex-1 flex-col gap-4 overflow-hidden rounded-xl p-3 sm:gap-6 sm:p-6">
           {auditLogsPending ? (
             <AuditLogsTableSectionSkeleton />
           ) : error ? (
