@@ -13,7 +13,6 @@ import { NavLink, useLocation } from 'react-router-dom'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 import { useSidebarStore } from '@/stores/sidebarStore'
-import { useThemeStore } from '@/stores/themeStore'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 
@@ -113,8 +112,6 @@ const iconMap: Record<
  */
 export function Sidebar({ items = [], bottomItems = [], actions = [], className }: SidebarProps) {
   const location = useLocation()
-  const themeBase = useThemeStore((s) => s.base)
-  const brandLogoSrc = themeBase === 'light-classic' ? '/logo.svg' : '/logo-l.svg'
   const { isOpenSideBar, isHoverOpen, toggleSidebar, setHoverOpen } = useSidebarStore()
   const [openSubmenuIndex, setOpenSubmenuIndex] = useState<number | null>(null)
   const asideRef = useRef<HTMLElement | null>(null)
@@ -335,11 +332,19 @@ export function Sidebar({ items = [], bottomItems = [], actions = [], className 
           >
             <Icons.Menu11 size={20} className="text-nav-foreground shrink-0" strokeWidth={1.5} />
             {isSidebarVisible && (
-              <img
-                src={brandLogoSrc}
-                alt="Prionex"
-                className="ml-3 h-7 w-auto transition-all duration-300"
-              />
+              <span className="relative ml-3 inline-flex h-7 items-center">
+                <img
+                  src="/logo-l.svg"
+                  alt="Prionex"
+                  className="sidebar-brand-logo-light h-7 w-auto transition-all duration-300"
+                />
+                <img
+                  src="/logo.svg"
+                  alt=""
+                  aria-hidden
+                  className="sidebar-brand-logo-dark h-7 w-auto transition-all duration-300"
+                />
+              </span>
             )}
           </button>
           <div className="bg-nav-foreground/15 mx-2 h-px" />

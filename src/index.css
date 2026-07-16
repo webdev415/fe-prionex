@@ -232,6 +232,17 @@
   }
 }
 
+/*
+ * Theme switch performance: while data-theme / data-accent flip, suppress
+ * transitions so the whole tree snaps instead of animating every color.
+ * Class is added/removed by applyThemeToDocument.
+ */
+html.theme-switching,
+html.theme-switching * {
+  transition: none !important;
+  animation: none !important;
+}
+
 /* React Flow controls: force dark icons regardless of @layer ordering */
 .react-flow__controls-button {
   color: #374151 !important;
@@ -341,9 +352,32 @@
     background-color: #80d80a;
   }
 
-  /* Dashboard background image — url from --dashboard-bg-image (themes.css) */
+  /* Dashboard background image — only for themes that define --dashboard-bg-image */
   .bg-dashboard-light {
+    background-image: none;
+  }
+
+  html[data-theme='light-classic'] .bg-dashboard-light,
+  html[data-theme='neutral-dim'] .bg-dashboard-light {
     background-image: var(--dashboard-bg-image, url(/assets/images/dashboard-light-bg.svg));
+  }
+
+  /* Sidebar brand logos — CSS-only swap (no React theme subscription) */
+  .sidebar-brand-logo-light,
+  .sidebar-brand-logo-dark {
+    display: block;
+  }
+
+  .sidebar-brand-logo-dark {
+    display: none;
+  }
+
+  html[data-theme='light-classic'] .sidebar-brand-logo-light {
+    display: none;
+  }
+
+  html[data-theme='light-classic'] .sidebar-brand-logo-dark {
+    display: block;
   }
 
   /* Button text color for light backgrounds */

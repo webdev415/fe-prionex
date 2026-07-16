@@ -7,9 +7,6 @@
 
 import { Icons } from '@/lib/icons'
 import { getUserDisplayName } from '@/lib/mapBackendUser'
-import { cn } from '@/lib/utils'
-import { useThemeStore } from '@/stores/themeStore'
-import { isDarkBase } from '@/theme/constants'
 import type { User } from '@/types/api'
 
 export interface ImpersonationBannerProps {
@@ -25,9 +22,6 @@ export function ImpersonationBanner({
   onExitImpersonation,
   isLoading,
 }: ImpersonationBannerProps) {
-  const themeBase = useThemeStore((s) => s.base)
-  const isDarkTheme = isDarkBase(themeBase)
-
   if (!isImpersonating || !impersonatedUser) {
     return null
   }
@@ -41,17 +35,8 @@ export function ImpersonationBanner({
   return (
     <div className="flex w-full items-center justify-center">
       <div className="border-border bg-card text-foreground flex h-[65px] w-[80%] items-center justify-between rounded-md border pr-5 pl-6 text-base xl:w-[60%]">
-        <div
-          className={cn(
-            'flex items-center gap-2 font-medium',
-            isDarkTheme ? 'text-foreground' : 'text-primary-600'
-          )}
-        >
-          <Icons.UserCircle02Icon
-            size={20}
-            className={isDarkTheme ? 'text-foreground' : 'text-primary-600'}
-            strokeWidth={1.5}
-          />
+        <div className="text-primary-600 flex items-center gap-2 font-medium">
+          <Icons.UserCircle02Icon size={20} className="text-primary-600" strokeWidth={1.5} />
           Impersonation mode
         </div>
         <div className="text-muted-foreground font-light">

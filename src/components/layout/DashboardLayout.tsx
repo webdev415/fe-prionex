@@ -23,7 +23,6 @@ import { cn } from '@/lib/utils'
 import { formatClientFullName } from '@/lib/formatters'
 import { Icons } from '@/lib/icons'
 import { useCallStore } from '@/stores/callStore'
-import { useThemeStore } from '@/stores/themeStore'
 import { CallDialogModal } from '@/pages/ClientManagement/components/CallDialogModal'
 import { CallRecordingModal } from '@/pages/ClientManagement/components/CallRecordingModal'
 import { useIncomingCall } from '@/features/calls/hooks/useIncomingCall'
@@ -448,8 +447,6 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const { t, i18n } = useTranslation('common')
   const navigate = useNavigate()
   const location = useLocation()
-  const themeBase = useThemeStore((s) => s.base)
-  const showDashboardBgImage = themeBase === 'light-classic' || themeBase === 'neutral-dim'
   const { logout, isImpersonating, impersonatedUser, exitImpersonation } = useAuth()
   const [showLogoutModal, setShowLogoutModal] = useState(false)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
@@ -993,8 +990,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       <RouteChangeTracker />
       <div
         className={cn(
-          'bg-background min-h-screen bg-cover bg-center',
-          showDashboardBgImage && 'bg-dashboard-light',
+          'bg-background bg-dashboard-light min-h-screen bg-cover bg-center',
           isAiAssistantRoute ? '[background-attachment:fixed]' : 'bg-no-repeat'
         )}
       >

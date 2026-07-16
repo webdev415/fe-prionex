@@ -54,6 +54,7 @@ describe('applyThemeToDocument', () => {
   beforeEach(() => {
     document.documentElement.removeAttribute('data-theme')
     document.documentElement.removeAttribute('data-accent')
+    document.documentElement.classList.remove('theme-switching')
     document.documentElement.style.colorScheme = ''
   })
 
@@ -64,6 +65,18 @@ describe('applyThemeToDocument', () => {
 
     applyThemeToDocument({ base: 'light-classic', accent: 'teal' })
     expect(document.documentElement.style.colorScheme).toBe('light')
+  })
+
+  it('adds theme-switching class while applying a change', () => {
+    applyThemeToDocument({ base: 'neutral-dim', accent: 'cyan' })
+    expect(document.documentElement.classList.contains('theme-switching')).toBe(true)
+  })
+
+  it('skips work when preference is unchanged', () => {
+    applyThemeToDocument({ base: 'neutral-dim', accent: 'cyan' })
+    document.documentElement.classList.remove('theme-switching')
+    applyThemeToDocument({ base: 'neutral-dim', accent: 'cyan' })
+    expect(document.documentElement.classList.contains('theme-switching')).toBe(false)
   })
 })
 

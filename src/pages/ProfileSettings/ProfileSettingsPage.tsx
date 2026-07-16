@@ -21,17 +21,12 @@ import { Label } from '@/components/ui/Label'
 import { Button } from '@/components/ui/Button'
 import { DoubleButton } from '@/components/ui/DoubleButton'
 import { normalizeBackendLanguage } from '@/lib/i18n'
-import { cn } from '@/lib/utils'
 import type { UpdateMyProfileInput } from '@/types/api'
-import { useThemeStore } from '@/stores/themeStore'
-import { isDarkBase } from '@/theme/constants'
 import { AppearanceSettings } from './AppearanceSettings'
 
 export function ProfileSettingsPage() {
   const { user, isLoading: authLoading } = useAuth()
   const refreshUser = useAuthStore((state) => state.refreshUser)
-  const themeBase = useThemeStore((state) => state.base)
-  const isDarkTheme = isDarkBase(themeBase)
   const { t, i18n } = useTranslation('common')
   const { mutateAsync: updateMyProfileMutateAsync } = useUpdateMyProfile()
   const [isUpdatingLocal, setIsUpdatingLocal] = useState(false)
@@ -205,23 +200,9 @@ export function ProfileSettingsPage() {
       <div className="flex flex-col items-start gap-4 self-stretch 2xl:flex-row 2xl:gap-5">
         <div className="bg-card/50 flex w-full flex-col items-center gap-4 self-stretch rounded-xl px-4 py-6 sm:gap-5 sm:px-6 sm:py-8 2xl:w-[25%] 2xl:py-11">
           <div className="flex flex-col items-center gap-4 self-stretch">
-            <div
-              className={cn(
-                'relative flex flex-col items-center justify-center gap-[10px] rounded-full p-3.5',
-                isDarkTheme ? 'bg-muted' : 'bg-card'
-              )}
-            >
-              <div
-                className={cn(
-                  'absolute flex h-15 w-15 items-center justify-center rounded-full border-2 bg-transparent',
-                  isDarkTheme ? 'border-foreground' : 'border-border'
-                )}
-              />
-              <Icons.User02
-                size={40}
-                className={isDarkTheme ? 'text-foreground' : 'text-muted-foreground'}
-                strokeWidth={1}
-              />
+            <div className="bg-muted relative flex flex-col items-center justify-center gap-[10px] rounded-full p-3.5">
+              <div className="border-border absolute flex h-15 w-15 items-center justify-center rounded-full border-2 bg-transparent" />
+              <Icons.User02 size={40} className="text-muted-foreground" strokeWidth={1} />
             </div>
             <div className="text-foreground text-lg leading-[132%] font-medium tracking-[-0.4px] sm:text-xl">
               {user?.username}

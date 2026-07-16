@@ -21,8 +21,6 @@ import { Button } from '@/components/ui/Button'
 import { Icons } from '@/lib/icons'
 import { LinkButton } from '@/components/ui/LinkButton'
 import { cn } from '@/lib/utils'
-import { useThemeStore } from '@/stores/themeStore'
-import { isDarkBase } from '@/theme/constants'
 import {
   useAuditLogs,
   exportAuditLogs,
@@ -97,8 +95,6 @@ export interface AuditLogFilters {
 
 export function AuditLogsPage() {
   const { t } = useTranslation('common')
-  const themeBase = useThemeStore((s) => s.base)
-  const isDarkTheme = isDarkBase(themeBase)
   const canViewAuditLogs = useHasPermission(PERMISSIONS.SYSTEM.VIEW_AUDIT_LOGS)
   // Single permission checker for the Entity-link resolver (auditEntityLink),
   // built once from the user's permissions instead of one hook per destination.
@@ -805,10 +801,7 @@ export function AuditLogsPage() {
             return (
               <Link
                 to={to}
-                className={cn(
-                  'truncate overflow-hidden text-sm leading-[150%] font-light tracking-[-0.28px] hover:underline',
-                  isDarkTheme ? 'text-primary' : 'text-primary-600'
-                )}
+                className="text-primary-600 truncate overflow-hidden text-sm leading-[150%] font-light tracking-[-0.28px] hover:underline"
               >
                 {formatEntity(log)}
               </Link>
@@ -843,7 +836,7 @@ export function AuditLogsPage() {
         ),
       },
     ],
-    [formatTimestamp, formatEntity, formatDetails, handleViewDetails, t, hasPermission, isDarkTheme]
+    [formatTimestamp, formatEntity, formatDetails, handleViewDetails, t, hasPermission]
   )
 
   // Show access denied message for users without view_audit_logs permission
