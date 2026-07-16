@@ -89,28 +89,28 @@ export function BulkJobBanner({ importType, label, onViewHistory, hidden }: Prop
 
   return (
     <div className="fixed bottom-10 left-1/2 z-50 flex w-full -translate-x-1/2 transform justify-center p-10">
-      <div className="flex w-[calc(100%-2rem)] max-w-7xl flex-col justify-center rounded-[10px] border border-gray-200 bg-white px-4 py-3 shadow-[0_12px_16px_-4px_rgba(16,24,40,0.08),0_4px_6px_-2px_rgba(16,24,40,0.03)] sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-6 sm:py-4">
+      <div className="border-border bg-card flex w-[calc(100%-2rem)] max-w-7xl flex-col justify-center rounded-[10px] border px-4 py-3 shadow-[0_12px_16px_-4px_rgba(16,24,40,0.08),0_4px_6px_-2px_rgba(16,24,40,0.03)] sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-6 sm:py-4">
         <div className="text-warning-500 flex items-center gap-2.5 py-3">
           <Icons.FileImport size={20} />
           <span className="text-xs font-medium whitespace-nowrap sm:text-sm">{label}</span>
         </div>
         <div className="flex w-full flex-wrap items-center justify-center gap-5">
           <div className="flex flex-wrap gap-3">
-            <span className="text-dark-500 font-sans text-xs leading-[150%] font-light tracking-[-0.28px] sm:text-sm">
+            <span className="text-foreground font-sans text-xs leading-[150%] font-light tracking-[-0.28px] sm:text-sm">
               {t('pages.imports.file')}:{' '}
-              <span className="text-dark-500 font-sans text-xs leading-[150%] font-medium tracking-[-0.28px] sm:text-sm">
+              <span className="text-foreground font-sans text-xs leading-[150%] font-medium tracking-[-0.28px] sm:text-sm">
                 {progress.fileName}
               </span>
             </span>
-            <span className="text-dark-500 font-sans text-xs leading-[150%] font-light tracking-[-0.28px] sm:text-sm">
+            <span className="text-foreground font-sans text-xs leading-[150%] font-light tracking-[-0.28px] sm:text-sm">
               {t('pages.imports.started')}:{' '}
-              <span className="text-dark-500 font-sans text-xs leading-[150%] font-medium tracking-[-0.28px] sm:text-sm">
+              <span className="text-foreground font-sans text-xs leading-[150%] font-medium tracking-[-0.28px] sm:text-sm">
                 {progress.startedAt}
               </span>
             </span>
-            <span className="text-dark-500 font-sans text-xs leading-[150%] font-light tracking-[-0.28px] sm:text-sm">
+            <span className="text-foreground font-sans text-xs leading-[150%] font-light tracking-[-0.28px] sm:text-sm">
               {t('pages.imports.status')}:{' '}
-              <span className="text-dark-500 font-sans text-xs leading-[150%] font-medium tracking-[-0.28px] sm:text-sm">
+              <span className="text-foreground font-sans text-xs leading-[150%] font-medium tracking-[-0.28px] sm:text-sm">
                 {progress.status === 'pending'
                   ? t('pages.imports.queued')
                   : `${progress.percent}% ${t('pages.imports.complete')}`}
