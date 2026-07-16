@@ -290,35 +290,35 @@ export function BulkReversalImportPage() {
   return (
     <div>
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-dark-500 text-xl font-light sm:text-2xl">
+        <h1 className="text-foreground text-xl font-light sm:text-2xl">
           {t(`${p}.title`, 'Bulk Reversal Import')}
         </h1>
         <Button
           variant="primary"
           onClick={downloadTemplate}
-          leftIcon={<Icons.Download size={20} className="text-dark-500" />}
+          leftIcon={<Icons.Download size={20} className="text-primary-foreground" />}
           className="flex h-10 w-full flex-row items-center justify-center rounded-full text-xs font-medium sm:h-12 sm:w-auto"
         >
           {t(`${p}.downloadTemplate`, 'Download Template')}
         </Button>
       </div>
 
-      <div className="rounded-xl border border-gray-200 bg-white/50 p-4 shadow-sm sm:p-6">
+      <div className="border-border bg-card/50 rounded-xl border p-4 shadow-sm sm:p-6">
         {/* Step 1 — Upload */}
         {state === 'upload' && (
           <div className="space-y-4">
             <div>
-              <h3 className="text-dark-500 text-lg font-medium">
+              <h3 className="text-foreground text-lg font-medium">
                 {t(`${p}.sectionTitle`, 'Upload CSV File')}
               </h3>
-              <p className="text-sm text-gray-600">
+              <p className="text-muted-foreground text-sm">
                 {t(`${p}.descriptionIntro`, 'CSV columns:')}{' '}
-                <code className="rounded bg-gray-100 px-1 text-xs">payment_id</code>,{' '}
-                <code className="rounded bg-gray-100 px-1 text-xs">principal</code>,{' '}
-                <code className="rounded bg-gray-100 px-1 text-xs">interest</code>,{' '}
-                <code className="rounded bg-gray-100 px-1 text-xs">fine</code>,{' '}
-                <code className="rounded bg-gray-100 px-1 text-xs">penalty</code>,{' '}
-                <code className="rounded bg-gray-100 px-1 text-xs">commission</code>
+                <code className="bg-muted rounded px-1 text-xs">payment_id</code>,{' '}
+                <code className="bg-muted rounded px-1 text-xs">principal</code>,{' '}
+                <code className="bg-muted rounded px-1 text-xs">interest</code>,{' '}
+                <code className="bg-muted rounded px-1 text-xs">fine</code>,{' '}
+                <code className="bg-muted rounded px-1 text-xs">penalty</code>,{' '}
+                <code className="bg-muted rounded px-1 text-xs">commission</code>
               </p>
             </div>
 
@@ -336,20 +336,18 @@ export function BulkReversalImportPage() {
                   inputRef.current?.click()
                 }
               }}
-              className={`focus:ring-secondary-500 relative flex h-48 w-full cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed transition-colors focus:ring-2 focus:outline-none ${
-                dragActive
-                  ? 'border-secondary-500 bg-secondary-50'
-                  : 'border-gray-300 bg-gray-50 hover:bg-gray-100'
+              className={`focus:ring-primary-500 focus:ring-offset-card relative flex h-48 w-full cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed transition-colors focus:ring-2 focus:ring-offset-2 focus:outline-none ${
+                dragActive ? 'border-primary-500 bg-muted' : 'border-border hover:bg-muted/50'
               }`}
             >
-              <Icons.CloudDownload size={40} className="text-gray-400" />
-              <p className="text-dark-500 mt-2 text-sm">
-                <span className="text-secondary-700 font-medium">
+              <Icons.CloudDownload size={40} className="text-muted-foreground" />
+              <p className="text-foreground mt-2 text-sm">
+                <span className="text-primary-600 font-medium">
                   {t(`${p}.clickToUpload`, 'Click to upload')}
                 </span>{' '}
                 {t(`${p}.orDragAndDrop`, 'or drag and drop')}
               </p>
-              <p className="mt-1 text-xs text-gray-500">
+              <p className="text-muted-foreground mt-1 text-xs">
                 {t(`${p}.constraints`, 'CSV up to 5 MB')}
               </p>
               <input
@@ -367,12 +365,12 @@ export function BulkReversalImportPage() {
         {state === 'preview' && (
           <div className="flex flex-col gap-4">
             <div className="flex flex-col gap-1">
-              <h3 className="text-dark-500 text-lg font-medium">
+              <h3 className="text-foreground text-lg font-medium">
                 {t(`${p}.previewTitle`, 'Review before importing')}
               </h3>
-              <p className="text-sm text-gray-600">
+              <p className="text-muted-foreground text-sm">
                 {t(`${p}.previewSubtitlePrefix`, 'File')}{' '}
-                <span className="font-medium">{fileName}</span> —{' '}
+                <span className="text-foreground font-medium">{fileName}</span> —{' '}
                 {t(`${p}.previewRowCount`, '{{count}} row(s) to import', {
                   count: items.length,
                 })}
@@ -407,7 +405,7 @@ export function BulkReversalImportPage() {
         {state === 'result' && result && (
           <div className="flex flex-col gap-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-dark-500 text-lg font-medium">
+              <h3 className="text-foreground text-lg font-medium">
                 {t(`${p}.resultsTitle`, 'Import results')}
               </h3>
               <Button
@@ -451,14 +449,14 @@ function SummaryCard({
 }) {
   const toneClasses =
     tone === 'success'
-      ? 'border-success-200 bg-success-50'
+      ? 'border-success-200 bg-success-50 text-success-700'
       : tone === 'error'
-        ? 'border-error-200 bg-error-50'
-        : 'border-gray-200 bg-white'
+        ? 'border-error-200 bg-error-50 text-error-700'
+        : 'border-border bg-card text-foreground'
   return (
     <div className={`flex flex-col gap-0.5 rounded-lg border p-3 ${toneClasses}`}>
-      <span className="text-xs text-gray-500">{label}</span>
-      <span className="text-dark-500 text-lg font-semibold">{value}</span>
+      <span className="text-muted-foreground text-xs">{label}</span>
+      <span className="text-lg font-semibold">{value}</span>
     </div>
   )
 }
