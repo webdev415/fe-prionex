@@ -15,6 +15,7 @@ import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/Button'
 import { Icons } from '@/lib/icons'
+import { useAuthStore } from '@/stores/authStore'
 import { useScorecardDraft } from '../hooks/useScorecardDraft'
 import {
   useScorecard,
@@ -129,7 +130,15 @@ export function ScorecardPanel({
 
   const [locked, setLocked] = useState(false)
   const status = activeScorecard?.status ?? 'draft'
-  const canEdit = status === 'draft' && !locked
+  // Only the originating trainer may mutate a scorecard — the backend enforces
+  // this on PUT/DELETE/send with a 403, so gate the edit UI to match instead of
+  // letting the trainer edit and fail on save.
+  const currentUserId = useAuthStore((s) => s.user?.id)
+  const isOriginatingTrainer =
+    activeScorecard != null &&
+    currentUserId != null &&
+    Number(currentUserId) === activeScorecard.trainer_id
+  const canEdit = status === 'draft' && !locked && isOriginatingTrainer
 
   const handleSaveDraft = async () => {
     await draft.flush()
@@ -316,6 +325,18 @@ export function ScorecardPanel({
         </button>
       ) : null}
 
+      {!isOriginatingTrainer && status !== 'sent' ? (
+        <div className="flex items-start gap-2 rounded-lg bg-amber-50 p-3 text-xs text-amber-700">
+          <Icons.Lock size={14} className="mt-0.5 flex-shrink-0" />
+          <span>
+            {t(
+              'pages.training.scorecard.readOnlyNotOwner',
+              'Read-only — only the trainer who created this scorecard can edit it.'
+            )}
+          </span>
+        </div>
+      ) : null}
+
       <div className="bg-primary-50 text-primary-700 flex items-center justify-between gap-2 rounded-lg p-3 text-sm">
         <span>
           {t('pages.training.scorecard.computedScore', 'Score')}:{' '}
@@ -398,7 +419,7 @@ export function ScorecardPanel({
           </>
         ) : null}
 
-        {status === 'draft' && locked ? (
+        {status === 'draft' && locked && isOriginatingTrainer ? (
           <Button
             variant="primary"
             size="md"
@@ -409,7 +430,7 @@ export function ScorecardPanel({
           </Button>
         ) : null}
 
-        {status === 'completed' ? (
+        {status === 'completed' && isOriginatingTrainer ? (
           <Button
             variant="primary"
             size="md"
@@ -571,7 +592,9 @@ function CriterionRow({ criterion, entry, disabled, totalWeight, onChange }: Cri
         <span className="text-sm text-gray-700">
           {criterion.name}
           {criterion.weight > 0 ? (
-            <span className="ml-1.5 text-xs text-gray-400">· {criterion.weight} pts</span>
+            <span className="ml-1.5 text-xs text-gray-400">
+              · {criterion.weight} {t('pages.training.scorecard.pts', 'pts')}
+            </span>
           ) : null}
           {needsScore ? (
             <span className="ml-1.5 text-xs font-medium text-amber-600">
@@ -598,7 +621,7 @@ function CriterionRow({ criterion, entry, disabled, totalWeight, onChange }: Cri
       ) : null}
       <input
         type="text"
-        placeholder="Comment (optional)"
+        placeholder={t('pages.training.scorecard.commentOptional', 'Comment (optional)')}
         defaultValue={entry?.comment ?? ''}
         disabled={disabled}
         onBlur={(e) => onChange(criterion.key, entry?.value ?? null, e.target.value)}
@@ -617,13 +640,14 @@ function BinaryInput({
   disabled: boolean
   onChange: (next: boolean | null) => void
 }) {
+  const { t } = useTranslation('common')
   return (
     <div className="flex gap-1">
       <button
         type="button"
         disabled={disabled}
         onClick={() => onChange(value === true ? null : true)}
-        aria-label="Yes"
+        aria-label={t('common.yes', 'Yes')}
         aria-pressed={value === true}
         className={`rounded-full border px-3 py-1 text-xs font-medium ${
           value === true
@@ -637,7 +661,7 @@ function BinaryInput({
         type="button"
         disabled={disabled}
         onClick={() => onChange(value === false ? null : false)}
-        aria-label="No"
+        aria-label={t('common.no', 'No')}
         aria-pressed={value === false}
         className={`rounded-full border px-3 py-1 text-xs font-medium ${
           value === false

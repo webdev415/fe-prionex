@@ -26,6 +26,7 @@ export interface NewFactoringAgreementInput {
   agreement_number: string
   previous_lender: string
   contract_purchase_date: string
+  reporting_date: string
 }
 
 export interface Step1Data {
@@ -52,6 +53,7 @@ const EMPTY_NEW_FACTORING_AGREEMENT: NewFactoringAgreementInput = {
   agreement_number: '',
   previous_lender: '',
   contract_purchase_date: '',
+  reporting_date: '',
 }
 
 interface Step1LoanSourceProps {
@@ -298,10 +300,24 @@ export function Step1LoanSource({ data, onChange }: Step1LoanSourceProps) {
                     <SelectContent>
                       {factoringAgreements.map((fa) => {
                         const lender = fa.previous_lender ?? '—'
-                        const dateStr = fa.contract_purchase_date ?? '—'
+                        // Existing-agreements list is the only place the
+                        // reporting date surfaces on the UI. Show reporting
+                        // date first (only when present), then the always-shown
+                        // purchase date; both labelled to avoid ambiguity.
+                        const purchaseStr = `${t(
+                          'pages.imports.step1.factoringAgreement.purchaseDateShort',
+                          'purchase'
+                        )}: ${fa.contract_purchase_date ?? '—'}`
+                        const reportingStr = fa.reporting_date
+                          ? `${t(
+                              'pages.imports.step1.factoringAgreement.reportingDateShort',
+                              'reporting'
+                            )}: ${fa.reporting_date}, `
+                          : ''
                         return (
                           <SelectItem key={fa.id} value={fa.id.toString()}>
-                            {fa.agreement_number} — {lender} ({dateStr})
+                            {fa.agreement_number} — {lender} ({reportingStr}
+                            {purchaseStr})
                           </SelectItem>
                         )
                       })}
@@ -356,6 +372,54 @@ export function Step1LoanSource({ data, onChange }: Step1LoanSourceProps) {
                         </p>
                       )}
                     </div>
+                    <DateSelect
+                      id="new-fa-reporting-date"
+                      label={t(
+                        'pages.imports.step1.factoringAgreement.fields.reportingDate',
+                        'Reporting Date'
+                      )}
+                      required
+                      value={
+                        data.newFactoringAgreement.reporting_date
+                          ? (() => {
+                              // Convert UTC datetime ISO back to a Date object that
+                              // react-datepicker renders as the correct calendar day in
+                              // the user's timezone (mirrors the purchase-date picker).
+                              const utcDate = new Date(data.newFactoringAgreement.reporting_date)
+                              if (userTimezone) {
+                                const formatter = new Intl.DateTimeFormat('en-CA', {
+                                  timeZone: userTimezone,
+                                  year: 'numeric',
+                                  month: '2-digit',
+                                  day: '2-digit',
+                                })
+                                const dateStr = formatter.format(utcDate)
+                                const [year, month, day] = dateStr.split('-').map(Number)
+                                return new Date(year, month - 1, day, 12, 0, 0)
+                              }
+                              return utcDate
+                            })()
+                          : null
+                      }
+                      onChange={(args) => {
+                        if (!args.value) {
+                          handleNewAgreementFieldChange('reporting_date', '')
+                          return
+                        }
+                        // Store the chosen day as a UTC datetime ISO (noon UTC);
+                        // BE strips the time before persisting to the date column.
+                        const selectedDate = args.value
+                        const year = selectedDate.getFullYear()
+                        const month = selectedDate.getMonth()
+                        const day = selectedDate.getDate()
+                        const utcDate = new Date(Date.UTC(year, month, day, 12, 0, 0))
+                        handleNewAgreementFieldChange('reporting_date', utcDate.toISOString())
+                      }}
+                      placeholder={t(
+                        'pages.imports.step1.factoringAgreement.fields.reportingDatePlaceholder',
+                        'Select reporting date'
+                      )}
+                    />
                     <DateSelect
                       id="new-fa-contract-purchase-date"
                       label={t(

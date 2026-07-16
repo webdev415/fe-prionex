@@ -346,6 +346,9 @@ export function Step2FileUpload({
         // a plain YYYY-MM-DD date. Truncate the time portion here.
         payload.contract_purchase_date = newFa.contract_purchase_date.split('T')[0]
       }
+      if (newFa.reporting_date) {
+        payload.reporting_date = newFa.reporting_date.split('T')[0]
+      }
       newFactoringAgreementJson = JSON.stringify(payload)
       // effectivePurchaseDate keeps the UTC ISO format — batch_processor
       // already strips the time before stamping debts.purchase_date.

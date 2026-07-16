@@ -17,6 +17,7 @@ import { NotificationBell } from './NotificationBell'
 import { ThemeModeToggle } from './ThemeModeToggle'
 import { PERMISSIONS } from '@/constants/permissions'
 import type { Permission } from '@/constants/permissions'
+import { useHasPermission } from '@/hooks/usePermissions'
 import { SearchResults, type SearchResult } from '@/components/ui/SearchResults'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { cn } from '@/lib/utils'
@@ -54,7 +55,14 @@ function AiAssistantHeaderButton() {
   const navigate = useNavigate()
   const location = useLocation()
   const { t } = useTranslation('common')
+  const canUseAssistant = useHasPermission(PERMISSIONS.AI_ASSISTANT.USE)
   const isActive = location.pathname === '/dashboard/ai-assistant'
+
+  // Entitlement gate: hide the assistant entry for users without use_ai_assistant
+  // (the proxy/route also enforce it; this keeps the UI honest — no dead button).
+  if (!canUseAssistant) {
+    return null
+  }
 
   return (
     <button
@@ -724,6 +732,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             requiredPermission: PERMISSIONS.WRITEOFFS.BULK,
           },
           {
+            path: '/dashboard/import/bulk-reversal-import',
+            label: t('navigation.bulkReversalImport', 'Bulk Reversal Import'),
+            icon: 'transaction-history',
+            requiredPermission: PERMISSIONS.REVERSALS.BULK,
+          },
+          {
             path: '/dashboard/import/bulk-sale-notes-import',
             label: t('navigation.bulkSaleNotesImport', 'Bulk Sales Note Import'),
             icon: 'activity-01',
@@ -841,6 +855,14 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         ],
         mode: 'any' as const,
         subItems: [
+          {
+            // TODO(ubki): swap to a dedicated manage_integrations permission
+            // once it exists (reusing messaging integrations for now).
+            path: '/dashboard/system-settings/integrations/ubki',
+            label: t('navigation.ubkiIntegration', 'UBKI Integration'),
+            icon: 'briefcase-01',
+            requiredPermission: PERMISSIONS.MESSAGING.MANAGE_INTEGRATIONS,
+          },
           {
             path: '/dashboard/system-settings/tags',
             label: t('navigation.tags', 'Tags'),

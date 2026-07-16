@@ -94,7 +94,7 @@ function formatRelativeTime(isoDate: string, t: TFunction): string {
 // rendered order in the horizontal tab strip. Extending the system to
 // support new notification types in the future = add a new tab key
 // here + a new render branch in the tab-content panel.
-const TABS = ['tasks', 'starred', 'payments', 'calls', 'rrPayments'] as const
+const TABS = ['tasks', 'starred', 'payments', 'calls', 'rrPayments', 'ubki'] as const
 type Tab = (typeof TABS)[number]
 
 function EmptyState({ label }: { t: TFunction; label: string }) {
@@ -311,6 +311,12 @@ export function NotificationBell() {
       n.type === NotificationType.INCOMING_CALL || n.type === NotificationType.CALLBACK_REQUESTED
   )
   const rrPaymentsTabItems = notifications.filter((n) => n.type === NotificationType.RR_PAYMENT_DUE)
+  const ubkiTabItems = notifications.filter(
+    (n) =>
+      n.type === NotificationType.UBKI_FAILURE_ALERT ||
+      n.type === NotificationType.UBKI_CONNECTION_DOWN ||
+      n.type === NotificationType.UBKI_DAILY_SUMMARY
+  )
 
   const markAsReadMutation = useMarkAsRead()
   const starMutation = useStarNotification()
@@ -449,6 +455,7 @@ export function NotificationBell() {
               payments: paymentsTabItems.length,
               calls: callsTabItems.length,
               rrPayments: rrPaymentsTabItems.length,
+              ubki: ubkiTabItems.length,
             }}
             t={t}
           />
@@ -531,6 +538,20 @@ export function NotificationBell() {
               ) : (
                 rrPaymentsTabItems.map((n) => (
                   <RRPaymentNotificationItem
+                    key={n.id}
+                    notification={n}
+                    onNotificationClick={handleNotificationClick}
+                    onDismiss={handleDismiss}
+                  />
+                ))
+              ))}
+
+            {activeTab === 'ubki' &&
+              (ubkiTabItems.length === 0 ? (
+                <EmptyState t={t} label={t('notificationBell.empty.ubki', 'No UBKI alerts')} />
+              ) : (
+                ubkiTabItems.map((n) => (
+                  <UbkiNotificationItem
                     key={n.id}
                     notification={n}
                     onNotificationClick={handleNotificationClick}
@@ -849,6 +870,49 @@ function CallNotificationItem({
 // ─── RR Payment notification item ────────────────────────────────
 // Dismiss-only action (operators clear the card; the next poll cycle
 // in notification-service handles natural cleanup).
+
+// UBKI integration alerts (failure rate / connection down / daily summary).
+// System-level notifications with no client link — a plain title/body card.
+function UbkiNotificationItem({
+  notification: n,
+  onNotificationClick,
+  onDismiss,
+}: {
+  notification: NotificationItem
+  onNotificationClick: NotificationClickFn
+  onDismiss: DismissFn
+}) {
+  const { t } = useTranslation('common')
+  return (
+    <div className="group border-border hover:bg-muted relative flex border-b transition-colors last:border-b-0">
+      <button
+        type="button"
+        onClick={(e) => onNotificationClick(e, n.id, n.read)}
+        className="flex min-w-0 flex-1 flex-col gap-1.5 px-4 py-3 text-left"
+      >
+        <div className="flex flex-wrap items-center gap-1.5 pr-5">
+          {!n.read && <span className="bg-primary-500 h-2 w-2 shrink-0 rounded-full" />}
+          <p className="text-foreground line-clamp-1 text-xs font-semibold">{n.title}</p>
+        </div>
+        {n.body && (
+          <p className="text-foreground w-full min-w-0 text-xs whitespace-normal">{n.body}</p>
+        )}
+        <div className="text-foreground flex items-center gap-1">
+          <Icons.Clock01 size={11} strokeWidth={1.5} />
+          <span className="text-[11px]">{formatRelativeTime(n.created_at, t)}</span>
+        </div>
+      </button>
+      <button
+        type="button"
+        aria-label={t('notificationBell.dismissAria')}
+        onClick={(e) => onDismiss(e, n.id)}
+        className="text-muted-foreground hover:text-foreground absolute top-2 right-2 flex h-5 w-5 items-center justify-center rounded opacity-0 transition-opacity group-hover:opacity-100"
+      >
+        <Icons.Cancel01 size={12} strokeWidth={2} />
+      </button>
+    </div>
+  )
+}
 
 function RRPaymentNotificationItem({
   notification: n,

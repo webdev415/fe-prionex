@@ -39,14 +39,22 @@ function formatSize(bytes: number): string {
   return `${(bytes / 1024 / 1024 / 1024).toFixed(1)} GB`
 }
 
-function formatUpdated(iso: string): string {
+function formatUpdated(
+  t: (key: string, opts?: Record<string, unknown>) => string,
+  iso: string
+): string {
   const then = new Date(iso).getTime()
   if (Number.isNaN(then)) return ''
   const days = Math.floor((Date.now() - then) / 86_400_000)
-  if (days <= 0) return 'today'
-  if (days === 1) return 'yesterday'
-  if (days < 7) return `${days}d ago`
-  if (days < 30) return `${Math.floor(days / 7)}w ago`
+  if (days <= 0) return t('pages.training.time.today', { defaultValue: 'today' })
+  if (days === 1) return t('pages.training.time.yesterday', { defaultValue: 'yesterday' })
+  if (days < 7)
+    return t('pages.training.time.daysAgo', { count: days, defaultValue: `${days}d ago` })
+  if (days < 30)
+    return t('pages.training.time.weeksAgo', {
+      count: Math.floor(days / 7),
+      defaultValue: `${Math.floor(days / 7)}w ago`,
+    })
   return new Date(iso).toLocaleDateString()
 }
 
@@ -101,7 +109,10 @@ export function MaterialsLibraryTab() {
   const typeFilters = useMemo(
     () => [
       { id: 'all', label: t('pages.training.training.materials.filters.all', 'All types') },
-      ...MATERIAL_TYPES.map((tp) => ({ id: tp, label: TYPE_BADGE[tp].label })),
+      ...MATERIAL_TYPES.map((tp) => ({
+        id: tp,
+        label: t(`pages.training.training.materials.type.${tp}`, TYPE_BADGE[tp].label),
+      })),
     ],
     [t]
   )
@@ -227,11 +238,11 @@ export function MaterialsLibraryTab() {
                     <span
                       className={`rounded-full px-1.5 py-0.5 text-[9px] font-medium ${badge.iconBg} ${badge.tone}`}
                     >
-                      {badge.label}
+                      {t(`pages.training.training.materials.type.${m.type}`, badge.label)}
                     </span>
                     <span>{formatSize(m.size_bytes)}</span>
                     <span>·</span>
-                    <span>{formatUpdated(m.updated_at)}</span>
+                    <span>{formatUpdated(t, m.updated_at)}</span>
                     {m.category_id != null && categoryName.has(m.category_id) && (
                       <>
                         <span>·</span>

@@ -1,6 +1,7 @@
 /* eslint-disable no-console */
 import '@testing-library/jest-dom'
 import { vi, beforeAll, afterAll } from 'vitest'
+import './mocks/callQaSettings'
 
 // Set default API base URL for tests (deployed backend) if not already set
 // This ensures tests use the deployed backend URL

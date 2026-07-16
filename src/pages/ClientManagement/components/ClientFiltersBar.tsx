@@ -19,6 +19,8 @@ import {
 import { Icons } from '@/lib/icons'
 import { PortfolioDropdown } from './PortfolioDropdown'
 import { TagsDropdown } from './TagsDropdown'
+import { getTagTriState, type TagFilterSelection } from '@/features/tags/utils/tagFilterState'
+import { TagFilterTriState } from './TagFilterTriState'
 import {
   NO_INTERACTIONS_ID,
   NO_RESPONSIBLE_ID,
@@ -134,9 +136,11 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
     limit: 1000,
   })
 
-  // Fetch tags from API
-  const projectId = 1 // TODO: Get from auth context
-  const { data: tagsData } = useTags(projectId)
+  const activeProjectId = useAuthStore((s) => s.user?.active_project_id)
+  const projectIdNum = activeProjectId ? Number(activeProjectId) : undefined
+
+  // Fetch tags for the operator's active project (tag_definitions.id values).
+  const { data: tagsData } = useTags(projectIdNum)
 
   // TA chains feed the Chain + Step picker below.
   const { data: chainsData } = useTAChains({ include_inactive: false })
@@ -211,9 +215,8 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
   // inactive operator is shown only if it has ≥1 client in the relevant role —
   // employee for Responsible Employee, searcher for Responsible Searcher, either
   // role for Interaction Created By.
-  const activeProjectId = useAuthStore((s) => s.user?.active_project_id)
   const { employeeOptions, interactionUserOptions, searcherOptions } = useOperatorFilterOptions(
-    activeProjectId ? Number(activeProjectId) : null
+    projectIdNum ?? null
   )
 
   // BE owns timezone interpretation (via the ``tz`` query param); the FE
@@ -232,11 +235,17 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
     })
   }
 
-  const handleTagsChange = (tagIds: number[]) => {
+  const handleTagsChange = (selection: TagFilterSelection) => {
     onFilterChange({
       ...filters,
-      tagIds: tagIds,
+      tagIds: selection.includeIds,
+      excludeTagIds: selection.excludeIds,
     })
+  }
+
+  const tagFilterSelection: TagFilterSelection = {
+    includeIds: filters.tagIds ?? [],
+    excludeIds: filters.excludeTagIds ?? [],
   }
 
   const displayedPortfolios = portfolioOptions.slice(0, 3)
@@ -247,7 +256,6 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
   const tags = tagsData || []
   const displayedTags = tags.slice(0, 3)
   const hiddenTagsCount = Math.max(0, tags.length - 3)
-  const selectedTagIds = filters.tagIds || []
 
   return (
     <div className="flex w-full flex-col items-start gap-3 self-stretch rounded-xl bg-white/50 p-4 sm:p-6">
@@ -660,16 +668,15 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
               <div className="flex w-full flex-1 flex-wrap items-start gap-2 sm:gap-3">
                 {displayedTags.map((tag) => (
                   <label key={tag.id} className="flex cursor-pointer items-center gap-1.5 sm:gap-2">
-                    <Checkbox
-                      checked={selectedTagIds.includes(tag.id)}
-                      onCheckedChange={(checked) => {
-                        // Pass toggle action - parent will use functional update to avoid stale state
+                    <TagFilterTriState
+                      state={getTagTriState(tagFilterSelection, tag.id)}
+                      onCycle={() => {
                         onFilterChange({
-                          _action: 'toggleTag',
+                          _action: 'cycleTag',
                           _value: tag.id,
-                          _checked: checked,
                         } as unknown as ClientFilters)
                       }}
+                      aria-label={`${tag.name} filter`}
                     />
                     <div className="flex items-center gap-1 sm:gap-1.5">
                       <div
@@ -687,9 +694,9 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                     </span>
                     <TagsDropdown
                       tags={tags}
-                      selectedTagIds={selectedTagIds}
+                      tagFilterSelection={tagFilterSelection}
                       onSelectionChange={handleTagsChange}
-                      onClear={() => handleTagsChange([])}
+                      onClear={() => handleTagsChange({ includeIds: [], excludeIds: [] })}
                       onOpenChange={setTagsDropdownOpen}
                       trigger={
                         <button

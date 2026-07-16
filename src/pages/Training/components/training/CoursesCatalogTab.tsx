@@ -14,7 +14,7 @@ import {
   useUpdateCourse,
 } from '@/features/training/hooks/useCourses'
 import type { CourseCardData, CourseLevel, MaterialType } from '@/features/training/types/courses'
-import { TrainingPrimaryButton } from './TrainingToolbar'
+import { TrainingPrimaryButton, TrainingSearchBar } from './TrainingToolbar'
 
 const CATEGORY_OPTIONS = [
   'Scripts',
@@ -27,10 +27,15 @@ const CATEGORY_OPTIONS = [
   'Tools',
 ]
 
-const LEVEL_LABEL: Record<CourseLevel, string> = {
+type TFn = (key: string, fallback: string) => string
+
+const LEVEL_EN: Record<CourseLevel, string> = {
   beginner: 'Beginner',
   intermediate: 'Intermediate',
   advanced: 'Advanced',
+}
+function levelLabel(t: TFn, level: CourseLevel): string {
+  return t(`pages.training.training.courses.level.${level}`, LEVEL_EN[level])
 }
 const LEVEL_STARS: Record<CourseLevel, number> = {
   beginner: 1,
@@ -39,13 +44,15 @@ const LEVEL_STARS: Record<CourseLevel, number> = {
 }
 const MATERIAL_TYPES: MaterialType[] = ['pdf', 'docx', 'video', 'audio', 'link']
 
-function formatDuration(minutes?: number | null): string {
+function formatDuration(t: TFn, minutes?: number | null): string {
   if (!minutes) return '—'
   const h = Math.floor(minutes / 60)
   const m = minutes % 60
-  if (h === 0) return `${m} min`
-  if (m === 0) return `${h}h`
-  return `${h}h ${m}m`
+  const hu = t('common.hours', 'h')
+  const mu = t('common.minutes', 'min')
+  if (h === 0) return `${m} ${mu}`
+  if (m === 0) return `${h}${hu}`
+  return `${h}${hu} ${m}${mu}`
 }
 
 export function CoursesCatalogTab() {
@@ -54,9 +61,13 @@ export function CoursesCatalogTab() {
   const [createOpen, setCreateOpen] = useState(false)
   const [assignCourse, setAssignCourse] = useState<CourseCardData | null>(null)
   const [detailsCourse, setDetailsCourse] = useState<CourseCardData | null>(null)
+  const [query, setQuery] = useState('')
+  const [category, setCategory] = useState('')
 
-  // No filter toolbar in the Figma catalog — list all non-archived courses.
-  const filters = useMemo(() => ({}), [])
+  const filters = useMemo(
+    () => ({ q: query || undefined, category: category || undefined }),
+    [query, category]
+  )
   const { data, isLoading, isError } = useCourses(filters)
   const courses = data?.data ?? []
 
@@ -71,9 +82,31 @@ export function CoursesCatalogTab() {
             onClick={() => setCreateOpen(true)}
             leftIcon={<Icons.Add size={14} className="text-white" />}
           >
-            {t('pages.training.training.courses.addCourse', 'Create a Course')}
+            {t('pages.training.training.courses.addCourse', 'Add Course')}
           </TrainingPrimaryButton>
         ) : null}
+      </div>
+
+      <div className="flex flex-wrap items-center gap-3">
+        <TrainingSearchBar
+          value={query}
+          onChange={setQuery}
+          placeholder={t('pages.training.training.courses.searchPlaceholder', 'Search by title…')}
+        />
+        <select
+          value={category}
+          onChange={(e) => setCategory(e.target.value)}
+          className="h-9 rounded-lg border border-[#DFDFDF] bg-white px-3 text-xs text-[#05040D] focus:outline-none"
+        >
+          <option value="">
+            {t('pages.training.training.courses.allCategories', 'All categories')}
+          </option>
+          {CATEGORY_OPTIONS.map((c) => (
+            <option key={c} value={c}>
+              {c}
+            </option>
+          ))}
+        </select>
       </div>
 
       {isLoading ? (
@@ -163,7 +196,7 @@ function CourseCard({
         </div>
         <div className="relative z-[2] flex flex-col items-end gap-1">
           <span className="rounded-full bg-white px-3 py-1 text-xs font-medium text-[#204E4D]">
-            {LEVEL_LABEL[course.level]}
+            {levelLabel(t, course.level)}
           </span>
           <div className="flex items-center gap-0.5">
             {[1, 2, 3].map((n) => (
@@ -181,27 +214,29 @@ function CourseCard({
           <div className="flex items-start justify-between gap-2">
             <h3 className="text-base font-semibold text-[#05040D]">{course.title}</h3>
             {course.status !== 'published' ? (
-              <span className="rounded-full bg-[#FEF9C3] px-2 py-0.5 text-[10px] font-medium text-[#A16207] capitalize">
-                {course.status}
+              <span className="rounded-full bg-[#FEF9C3] px-2 py-0.5 text-[10px] font-medium text-[#A16207]">
+                {t(`pages.training.training.courses.status.${course.status}`, course.status)}
               </span>
             ) : null}
           </div>
-          {course.author_name || course.category ? (
+          <div className="flex items-center gap-2">
             <p className="text-xs text-[#4B5563]">
-              {course.author_name
-                ? `${t('pages.training.training.courses.author', 'Author')}: ${course.author_name}`
-                : ''}
-              {course.author_name && course.category ? ' · ' : ''}
-              {course.category ?? ''}
+              {t('pages.training.training.courses.author', 'Author')}:{' '}
+              {course.author_name ?? t('pages.training.training.courses.noAuthor', 'No author')}
             </p>
-          ) : null}
+            {course.category ? (
+              <span className="rounded-full bg-[#F3F4F6] px-2 py-0.5 text-[10px] font-medium text-[#374151]">
+                {course.category}
+              </span>
+            ) : null}
+          </div>
         </div>
 
         <div className="flex gap-2">
           <StatTile
             icon={Icons.Clock01}
             label={t('pages.training.training.courses.duration', 'Duration')}
-            value={formatDuration(course.duration_minutes)}
+            value={formatDuration(t, course.duration_minutes)}
           />
           <StatTile
             icon={Icons.File}
@@ -314,7 +349,7 @@ function CreateCoursePanel({ onClose }: { onClose: () => void }) {
               {t('pages.training.training.courses.addCourse', 'Create a Course')}
             </h3>
           </div>
-          <button type="button" onClick={onClose} aria-label="Close">
+          <button type="button" onClick={onClose} aria-label={t('common.close', 'Close')}>
             <Icons.Close size={18} className="text-[#676767]" />
           </button>
         </div>
@@ -363,7 +398,7 @@ function CreateCoursePanel({ onClose }: { onClose: () => void }) {
               >
                 {(['beginner', 'intermediate', 'advanced'] as CourseLevel[]).map((l) => (
                   <option key={l} value={l}>
-                    {LEVEL_LABEL[l]}
+                    {levelLabel(t, l)}
                   </option>
                 ))}
               </select>
@@ -445,7 +480,7 @@ function CreateCoursePanel({ onClose }: { onClose: () => void }) {
                 <button
                   type="button"
                   onClick={() => setModules((arr) => arr.filter((_, j) => j !== i))}
-                  aria-label="Remove module"
+                  aria-label={t('pages.training.training.courses.removeModule', 'Remove module')}
                 >
                   <Icons.Close size={14} className="text-[#9CA3AF]" />
                 </button>
@@ -500,7 +535,10 @@ function CreateCoursePanel({ onClose }: { onClose: () => void }) {
                 <button
                   type="button"
                   onClick={() => setMaterials((arr) => arr.filter((_, j) => j !== i))}
-                  aria-label="Remove material"
+                  aria-label={t(
+                    'pages.training.training.courses.removeMaterial',
+                    'Remove material'
+                  )}
                 >
                   <Icons.Close size={14} className="text-[#9CA3AF]" />
                 </button>
@@ -563,10 +601,10 @@ function CourseDetailsDialog({
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <span className="rounded-full bg-[#F0FDF4] px-2 py-0.5 text-[10px] font-medium text-[#15803D] capitalize">
-              {detail.status}
+            <span className="rounded-full bg-[#F0FDF4] px-2 py-0.5 text-[10px] font-medium text-[#15803D]">
+              {t(`pages.training.training.courses.status.${detail.status}`, detail.status)}
             </span>
-            <button type="button" onClick={onClose} aria-label="Close">
+            <button type="button" onClick={onClose} aria-label={t('common.close', 'Close')}>
               <Icons.Close size={18} className="text-[#676767]" />
             </button>
           </div>
@@ -577,7 +615,7 @@ function CourseDetailsDialog({
             <StatTile
               icon={Icons.Clock01}
               label={t('pages.training.training.courses.duration', 'Duration')}
-              value={formatDuration(detail.duration_minutes)}
+              value={formatDuration(t, detail.duration_minutes)}
             />
             <StatTile
               icon={Icons.File}

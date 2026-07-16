@@ -326,7 +326,7 @@ function ScheduleTrainingDialog({ onClose }: { onClose: () => void }) {
               {t('pages.training.groupTrainings.schedule', 'Schedule a Training')}
             </h3>
           </div>
-          <button type="button" onClick={onClose} aria-label="Close">
+          <button type="button" onClick={onClose} aria-label={t('common.close', 'Close')}>
             <Icons.Close size={18} className="text-[#676767]" />
           </button>
         </div>
@@ -487,7 +487,7 @@ function ParticipantsDialog({
             </h3>
             <span className="text-[11px] text-[#676767]">{training.title}</span>
           </div>
-          <button type="button" onClick={onClose} aria-label="Close">
+          <button type="button" onClick={onClose} aria-label={t('common.close', 'Close')}>
             <Icons.Close size={18} className="text-[#676767]" />
           </button>
         </div>

@@ -189,10 +189,13 @@ export function DataTable<T extends { id: number | string }>({
       const allOnPageSelected = data.every((item) => !excludedItems.has(item.id))
       return excludedItemsCount === 0 && allOnPageSelected
     }
-    // When allItemsSelected is false, don't check the header checkbox
-    // even if all items on current page are manually selected
-    return false
-  }, [data, allItemsSelected, excludedItems, excludedItemsCount])
+    // All-pages mode (onSelectAll provided): manually selecting a page's rows must
+    // NOT tick the header — that's reserved for the explicit "select all" action.
+    if (onSelectAll) return false
+    // Simple controlled mode (selectedItems + onSelectionChange): the header reflects
+    // the visible selection, so it ticks once every row on the page is selected.
+    return data.length > 0 && data.every((item) => selectedItems.has(item.id))
+  }, [data, allItemsSelected, excludedItems, excludedItemsCount, onSelectAll, selectedItems])
 
   const someSelected = useMemo(() => {
     if (allItemsSelected) {

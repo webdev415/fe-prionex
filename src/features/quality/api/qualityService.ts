@@ -32,6 +32,11 @@ function buildScorecardListParams(filters: ScorecardListFilters): URLSearchParam
   if (filters.period) params.set('period', filters.period)
   if (filters.from_date) params.set('from_date', filters.from_date)
   if (filters.to_date) params.set('to_date', filters.to_date)
+  if (filters.telephony_type) params.set('telephony_type', filters.telephony_type)
+  if (filters.call_from) params.set('call_from', filters.call_from)
+  if (filters.call_to) params.set('call_to', filters.call_to)
+  if (filters.min_talk_duration != null)
+    params.set('min_talk_duration', String(filters.min_talk_duration))
   if (filters.page != null) params.set('page', String(filters.page))
   if (filters.page_size != null) params.set('page_size', String(filters.page_size))
   return params

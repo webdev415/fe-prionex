@@ -48,6 +48,7 @@ import { useOperatorFilterOptions, coversAllOptions } from './hooks/useOperatorF
 import { NO_INTERACTIONS_ID, NO_RESPONSIBLE_ID } from './components/OperatorMultiSelectDropdown'
 import type { StepValueEntry } from './components/ClientStepValueRow'
 import type { Priority } from './types'
+import { cycleTagTriState } from '@/features/tags/utils/tagFilterState'
 import { PermissionGuard } from '@/components/auth'
 import { PERMISSIONS } from '@/constants/permissions'
 import { ALL_MESSAGING_LAUNCH_PERMISSIONS } from '@/features/messaging'
@@ -191,8 +192,9 @@ export interface ClientFilters {
   responsibleSearcher?: string
   unassignedOnly?: boolean
 
-  // Tags Filter
+  // Tags Filter (3-state: include / exclude / neutral)
   tagIds?: number[]
+  excludeTagIds?: number[]
 
   // Chain filter — TA Chain ID. Narrows to clients with at least one
   // ta_interaction in this chain. Pairs with ``chainStepIds`` (steps in
@@ -251,7 +253,7 @@ function decodeStepValues(raw: string): Record<number, StepValueEntry> {
 // OFF; only per-loan manual submit stays active. The backend
 // /submit/by-clients endpoint is also disabled. Re-enable by flipping this
 // flag to true.
-const ENABLE_BULK_UBKI_SUBMISSION = false
+const ENABLE_BULK_UBKI_SUBMISSION = true
 
 export function ClientManagementPage() {
   const { t } = useTranslation('common')
@@ -274,6 +276,7 @@ export function ClientManagementPage() {
   // URL state for filters
   const [portfolioFilter, setPortfolioFilter] = useURLState<number[]>('sellers', [])
   const [tagIdsFilter, setTagIdsFilter] = useURLState<number[]>('tags', [])
+  const [excludeTagIdsFilter, setExcludeTagIdsFilter] = useURLState<number[]>('excludeTags', [])
   const [responsibleEmployeeFilter, setResponsibleEmployeeFilter] = useURLState<string>(
     'employee',
     ''
@@ -343,6 +346,7 @@ export function ClientManagementPage() {
     () => ({
       portfolio: portfolioFilter,
       tagIds: tagIdsFilter,
+      excludeTagIds: excludeTagIdsFilter,
       responsibleEmployee: responsibleEmployeeFilter || undefined,
       responsibleEmployeeIds: responsibleEmployeeIdsFilter,
       responsibleSearcher: responsibleSearcherFilter || undefined,
@@ -369,6 +373,7 @@ export function ClientManagementPage() {
     [
       portfolioFilter,
       tagIdsFilter,
+      excludeTagIdsFilter,
       responsibleEmployeeFilter,
       responsibleEmployeeIdsFilter,
       responsibleSearcherFilter,
@@ -468,6 +473,7 @@ export function ClientManagementPage() {
       sortOrder,
       portfolioFilter,
       tagIdsFilter,
+      excludeTagIdsFilter,
       responsibleEmployeeIdsFilter,
       responsibleSearcherFilter,
       unassignedOnlyFilter,
@@ -501,6 +507,7 @@ export function ClientManagementPage() {
       responsibleSearcherFilter !== '' ||
       portfolioFilter.length > 0 ||
       tagIdsFilter.length > 0 ||
+      excludeTagIdsFilter.length > 0 ||
       unassignedOnlyFilter ||
       dateOfSaleFromFilter !== '' ||
       dateOfSaleToFilter !== '' ||
@@ -537,6 +544,7 @@ export function ClientManagementPage() {
     sortOrder,
     portfolioFilter,
     tagIdsFilter,
+    excludeTagIdsFilter,
     responsibleEmployeeFilter,
     responsibleEmployeeIdsFilter,
     responsibleSearcherFilter,
@@ -574,6 +582,7 @@ export function ClientManagementPage() {
       responsibleEmployeeIdsFilter.length > 0 ||
       portfolioFilter.length > 0 ||
       tagIdsFilter.length > 0 ||
+      excludeTagIdsFilter.length > 0 ||
       unassignedOnlyFilter ||
       dateOfSaleFromFilter !== '' ||
       dateOfSaleToFilter !== '' ||
@@ -602,6 +611,7 @@ export function ClientManagementPage() {
             if (parsed.selectedPriorities) setSelectedPriorities(parsed.selectedPriorities)
             if (parsed.portfolioFilter) setPortfolioFilter(parsed.portfolioFilter)
             if (parsed.tagIdsFilter) setTagIdsFilter(parsed.tagIdsFilter)
+            if (parsed.excludeTagIdsFilter) setExcludeTagIdsFilter(parsed.excludeTagIdsFilter)
             // Migrate legacy scalar `responsibleEmployeeFilter` to the new
             // `responsibleEmployeeIdsFilter` array (KAN-572). Saved states
             // from before the multi-select migration carry the scalar key.
@@ -840,9 +850,12 @@ export function ClientManagementPage() {
       params.debt_max = filters.debtRangeTo
     }
 
-    // FILTER 9: Tags
+    // FILTER 9: Tags (include OR + exclude AND-NOT)
     if (filters.tagIds && filters.tagIds.length > 0) {
       params.tag_ids = filters.tagIds.join(',')
+    }
+    if (filters.excludeTagIds && filters.excludeTagIds.length > 0) {
+      params.exclude_tag_ids = filters.excludeTagIds.join(',')
     }
 
     // FILTER 10: Priority
@@ -1034,7 +1047,11 @@ export function ClientManagementPage() {
     if (filters.interactionDateFrom || filters.interactionDateTo) count++
     if (filters.assignmentDateFrom || filters.assignmentDateTo) count++
     if (filters.portfolio && filters.portfolio.length > 0) count++
-    if (filters.tagIds && filters.tagIds.length > 0) count++
+    if (
+      (filters.tagIds && filters.tagIds.length > 0) ||
+      (filters.excludeTagIds && filters.excludeTagIds.length > 0)
+    )
+      count++
     if (filters.responsibleEmployeeIds && filters.responsibleEmployeeIds.length > 0) count++
     if (filters.responsibleSearcher) count++
     if (filters.unassignedOnly) count++
@@ -1367,10 +1384,14 @@ export function ClientManagementPage() {
       return
     }
 
-    if (newFilters._action === 'toggleTag') {
+    if (newFilters._action === 'cycleTag') {
       const tagId = newFilters._value as number
-      const checked = newFilters._checked as boolean
-      setTagIdsFilter((prev) => (checked ? [...prev, tagId] : prev.filter((id) => id !== tagId)))
+      const next = cycleTagTriState(
+        { includeIds: tagIdsFilter, excludeIds: excludeTagIdsFilter },
+        tagId
+      )
+      setTagIdsFilter(next.includeIds)
+      setExcludeTagIdsFilter(next.excludeIds)
       setCurrentPage(1)
       return
     }
@@ -1382,6 +1403,9 @@ export function ClientManagementPage() {
     }
     if (JSON.stringify(newFilters.tagIds) !== JSON.stringify(tagIdsFilter)) {
       setTagIdsFilter(newFilters.tagIds || [])
+    }
+    if (JSON.stringify(newFilters.excludeTagIds) !== JSON.stringify(excludeTagIdsFilter)) {
+      setExcludeTagIdsFilter(newFilters.excludeTagIds || [])
     }
     if (
       JSON.stringify(newFilters.responsibleEmployeeIds) !==
@@ -1481,6 +1505,7 @@ export function ClientManagementPage() {
     setSelectedPriorities([])
     setPortfolioFilter([])
     setTagIdsFilter([])
+    setExcludeTagIdsFilter([])
     setResponsibleEmployeeFilter('')
     setResponsibleEmployeeIdsFilter([])
     setResponsibleSearcherFilter('')

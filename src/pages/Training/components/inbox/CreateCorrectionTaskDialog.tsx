@@ -265,7 +265,10 @@ export function CreateCorrectionTaskDialog({
                 min={0}
                 value={callTimestamp}
                 onChange={(e) => setCallTimestamp(e.target.value)}
-                placeholder="e.g. 83 (for 1:23)"
+                placeholder={t(
+                  'pages.training.correction.timestampPlaceholder',
+                  'e.g. 83 (for 1:23)'
+                )}
                 className="h-[40px] text-sm"
               />
             </div>
@@ -291,7 +294,7 @@ export function CreateCorrectionTaskDialog({
             </div>
             <div className="flex flex-col gap-1">
               <label htmlFor="correction-priority" className="text-xs font-medium text-gray-600">
-                {t('pages.training.correction.priority', 'Priority')}
+                {t('pages.training.correction.priorityLabel', 'Priority')}
               </label>
               <select
                 id="correction-priority"

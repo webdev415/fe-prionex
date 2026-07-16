@@ -123,7 +123,15 @@ function PaymentDebtBreakdownInner({ paymentId }: PaymentDebtBreakdownProps) {
         <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">
           {t('breakdown.title')}
         </h4>
-        {isCancelled ? (
+        {breakdown.is_reversed ? (
+          // KAN-334: reversed payments show the RE-ALLOCATED split (the BE
+          // overrides allocated_amount with the reversal's new amounts) plus
+          // a "Reversed" badge.
+          <span className="text-secondary-700 dark:text-secondary-400 inline-flex items-center gap-1 text-xs">
+            <Icons.Reload className="h-3 w-3" />
+            {t('breakdown.reversed_note')}
+          </span>
+        ) : isCancelled ? (
           // H-3: cancelled snapshotted payments render the historical
           // allocation with an inline cancelled badge instead of a
           // placeholder. The BE preserves ``allocated_*`` across cancel.

@@ -21,7 +21,7 @@ import {
 import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Icons } from '@/lib/icons'
-import { sortTagsWithSelectedFirst } from '@/features/tags/utils/sortTags'
+import { sortTagsWithSelectedFirst, sortTagsByOrder } from '@/features/tags/utils/sortTags'
 import { useDebounce } from '@/hooks/useDebounce'
 import { useHasPermission } from '@/hooks'
 import { PERMISSIONS } from '@/constants/permissions'
@@ -82,7 +82,7 @@ export const TagSelectorModal = memo(function TagSelectorModal({
     for (const tag of clientTags ?? []) {
       byId.set(tag.id, tag)
     }
-    return [...byId.values()]
+    return sortTagsByOrder([...byId.values()])
   }, [allTags, clientTags])
 
   const filteredTags = useMemo(() => {
