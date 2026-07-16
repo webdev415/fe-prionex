@@ -430,7 +430,7 @@ export function DialogueEvaluationTab() {
                 onDelete={handleDeleteRow}
               />
             )}
-            {!noOperators && !isLoading && !isError && total > pageSize ? (
+            {!noOperators && !isLoading && !isError && total > 0 ? (
               <Pagination
                 currentPage={page}
                 totalPages={totalPages}
