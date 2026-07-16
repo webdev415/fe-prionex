@@ -841,20 +841,20 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             requiredPermission: PERMISSIONS.MESSAGING.MANAGE_INTEGRATIONS,
           },
           {
-            // TODO(ubki): swap to a dedicated manage_integrations permission
-            // once it exists (reusing messaging integrations for now).
-            path: '/dashboard/system-settings/integrations/ubki',
-            label: t('navigation.ubkiIntegration', 'UBKI Integration'),
-            icon: 'briefcase-01',
-            requiredPermission: PERMISSIONS.MESSAGING.MANAGE_INTEGRATIONS,
-          },
-          {
             path: '/dashboard/system-settings/messaging-drafts',
             label: t('navigation.messagingDrafts', 'Message Drafts'),
             icon: 'bubble-chat-edit',
             requiredPermission: PERMISSIONS.MESSAGING.MANAGE_DRAFTS,
           },
         ],
+      },
+      {
+        // TODO(ubki): swap to a dedicated manage_integrations permission once
+        // it exists (reusing messaging integrations for now).
+        path: '/dashboard/system-settings/integrations/ubki',
+        icon: 'briefcase-01',
+        label: t('navigation.ubkiIntegration', 'UBKI Integration'),
+        requiredPermission: PERMISSIONS.MESSAGING.MANAGE_INTEGRATIONS,
       },
       {
         path: '/dashboard/system-settings',
