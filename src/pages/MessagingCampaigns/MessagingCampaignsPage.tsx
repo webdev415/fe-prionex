@@ -190,7 +190,9 @@ export function MessagingCampaignsPage() {
           return (
             <div className="flex flex-col items-end gap-0.5">
               <span className="tabular-nums">{amount}</span>
-              {badge ? <span className="text-xs font-light text-gray-500">{badge}</span> : null}
+              {badge ? (
+                <span className="text-muted-foreground text-xs font-light">{badge}</span>
+              ) : null}
             </div>
           )
         },
@@ -219,7 +221,7 @@ export function MessagingCampaignsPage() {
               aria-label={t('pages.messagingCampaigns.actions.viewDetails', 'View details')}
               title={t('pages.messagingCampaigns.actions.viewDetails', 'View details')}
               className={cn(
-                'focus-visible:ring-primary-500 hover:border-primary-500 hover:text-primary-600 inline-flex h-8 w-8 items-center justify-center rounded-md border border-gray-300 bg-white text-gray-500 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2'
+                'border-border bg-card text-muted-foreground focus-visible:ring-primary-500 hover:border-primary-500 hover:text-primary-600 focus-visible:ring-offset-background inline-flex h-8 w-8 items-center justify-center rounded-md border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2'
               )}
             >
               <Icons.View size={16} strokeWidth={1.5} />
@@ -235,10 +237,10 @@ export function MessagingCampaignsPage() {
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex flex-col gap-2">
-          <h1 className="text-dark-500 text-xl font-light sm:text-2xl">
+          <h1 className="text-foreground text-xl font-light sm:text-2xl">
             {t('navigation.campaignAnalytics', 'Campaign Analytics')}
           </h1>
-          <p className="mt-1 text-sm font-light text-gray-600">
+          <p className="text-muted-foreground mt-1 text-sm font-light">
             {t(
               'pages.messagingCampaigns.description',
               'Review bulk and single-send campaigns, inspect recipient outcomes, and export delivery results.'
@@ -266,14 +268,14 @@ export function MessagingCampaignsPage() {
       />
 
       {!showTableSkeleton && totalItems > 0 && (
-        <div className="flex flex-col gap-1 self-stretch rounded-xl border border-gray-200 bg-white/70 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-          <span className="text-dark-500 text-sm font-medium tracking-[-0.28px]">
+        <div className="border-border bg-card/70 flex flex-col gap-1 self-stretch rounded-xl border px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+          <span className="text-foreground text-sm font-medium tracking-[-0.28px]">
             {t('pages.messagingCampaigns.summary.filteredCampaigns', {
               count: totalItems,
               defaultValue: '{{count}} campaigns match filters',
             })}
           </span>
-          <span className="text-dark-500 text-sm font-medium tracking-[-0.28px]">
+          <span className="text-foreground text-sm font-medium tracking-[-0.28px]">
             {t('pages.messagingCampaigns.summary.totalCost', 'Total cost')}:{' '}
             <span className="font-semibold tabular-nums">
               {formatCampaignCostAmount(
