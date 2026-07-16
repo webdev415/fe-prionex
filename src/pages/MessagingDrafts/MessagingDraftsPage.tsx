@@ -60,10 +60,10 @@ function TableIconButton({
       aria-label={label}
       title={label}
       className={cn(
-        'focus-visible:ring-primary-500 inline-flex h-8 w-8 items-center justify-center rounded-md border bg-white transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
+        'border-border bg-card focus-visible:ring-primary-500 focus-visible:ring-offset-background inline-flex h-8 w-8 items-center justify-center rounded-md border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
         variant === 'danger'
-          ? 'border-red-200 text-red-600 hover:bg-red-50'
-          : 'hover:border-primary-500 hover:text-primary-600 border-gray-300 text-gray-500'
+          ? 'border-error-200 text-error-600 hover:bg-error-100'
+          : 'text-muted-foreground hover:border-primary-500 hover:text-primary-600'
       )}
     >
       {children}
@@ -279,7 +279,7 @@ function DraftFormModal({ draft, open, onClose }: DraftFormModalProps) {
       <ModalHeader
         icon={
           <div className="bg-primary-300 flex h-8 w-8 items-center justify-center rounded-full">
-            <Icons.BubbleChatEdit size={18} className="text-dark-500" strokeWidth={1.5} />
+            <Icons.BubbleChatEdit size={18} className="text-primary-foreground" strokeWidth={1.5} />
           </div>
         }
         title={
@@ -297,7 +297,7 @@ function DraftFormModal({ draft, open, onClose }: DraftFormModalProps) {
             placeholder={t('pages.messagingDrafts.form.namePlaceholder', 'Payment reminder')}
           />
           <div>
-            <label className="text-dark-500 mb-1.5 block text-sm font-light">
+            <label className="text-foreground mb-1.5 block text-sm font-light">
               {t('pages.messagingDrafts.form.channel', 'Channel')}{' '}
               <span className="text-error-500">*</span>
             </label>
@@ -345,11 +345,11 @@ function DraftFormModal({ draft, open, onClose }: DraftFormModalProps) {
 
         <div className="mt-4">
           <div className="mb-1.5 flex items-baseline justify-between gap-3">
-            <label htmlFor="draft-body" className="text-dark-500 text-sm font-light">
+            <label htmlFor="draft-body" className="text-foreground text-sm font-light">
               {t('pages.messagingDrafts.form.body', 'Message body')}{' '}
               <span className="text-error-500">*</span>
             </label>
-            <span className="shrink-0 text-xs text-gray-500 tabular-nums">
+            <span className="text-muted-foreground shrink-0 text-xs tabular-nums">
               {t('pages.messagingDrafts.form.charCount', {
                 count: body.length,
                 max: bodyCharLimit,
@@ -507,10 +507,10 @@ export function MessagingDraftsPage() {
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
         <div>
-          <h1 className="text-dark-500 text-xl font-light sm:text-2xl">
+          <h1 className="text-foreground text-xl font-light sm:text-2xl">
             {t('navigation.messagingDrafts', 'Message Drafts')}
           </h1>
-          <p className="mt-1 text-sm text-gray-600">
+          <p className="text-muted-foreground mt-1 text-sm">
             {t(
               'pages.messagingDrafts.description',
               'Manage reusable message bodies for SMS, Viber, and email campaigns.'
@@ -524,7 +524,7 @@ export function MessagingDraftsPage() {
         </PermissionGuard>
       </div>
 
-      <div className="grid grid-cols-1 gap-3 rounded-xl border border-white/70 bg-white/60 p-4 md:grid-cols-2">
+      <div className="border-border bg-card/60 grid grid-cols-1 gap-3 rounded-xl border p-4 md:grid-cols-2">
         <Input
           value={searchQuery}
           onChange={(event) => setSearchQuery(event.target.value)}
@@ -547,7 +547,7 @@ export function MessagingDraftsPage() {
         </Select>
       </div>
 
-      <div className="rounded-xl border border-white/70 bg-white/60 p-4">
+      <div className="border-border bg-card/60 rounded-xl border p-4">
         {isLoading ? (
           <MessagingDraftsTableSkeleton />
         ) : (
