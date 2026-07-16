@@ -4953,6 +4953,7 @@
           "eligibleForReturn": "Eligible for Return",
           "remainingDebtAmount": "Remaining Debt Amount",
           "totalToReturn": "Total To Return",
+          "info": "Info",
           "rrAmount": "RR Amount",
           "rrConnectionDate": "RR Connection Date",
           "totalToBeRepaid": "Total to be Repaid",
@@ -4991,6 +4992,17 @@
         "editClosureDate": "Edit closure date",
         "closureDate": "Closure date",
         "loanInfo": "Agreement info",
+        "loanStatusBadge": {
+          "open": "Open",
+          "rr": "RR",
+          "closed": "Closed"
+        },
+        "selectLoanHint": "Select a loan row to enable actions.",
+        "closeLoanDisabledHint": "Only an open loan can be closed.",
+        "reopenLoanDisabledHint": "Only a closed loan can be reopened.",
+        "editClosureDateDisabledHint": "Only a closed loan has a closure date to edit.",
+        "connectRRClosedHint": "A closed loan cannot be restructured.",
+        "connectRROnRrHint": "This loan is already on an active restructuring.",
         "loanCalculation": {
           "trigger": "Detailed calculation",
           "title": "Detailed calculation for loan No. {{id}} after sale",

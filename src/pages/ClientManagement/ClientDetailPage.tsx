@@ -258,10 +258,13 @@ export function ClientDetailPage() {
   // Returns true if the value looks like a Ukrainian phone number,
   // regardless of the contact type's isPhone flag
   const looksLikePhone = (value: string) => looksLikeUkrainePhone(value)
-  const [activeLoanTab, setActiveLoanTab] = useState<'process' | 'closed' | 'rr'>('process')
   const [selectedRaId, setSelectedRaId] = useState<number | null>(null)
   // KAN-335: loan whose "detailed calculation after sale" modal is open.
   const [calcLoan, setCalcLoan] = useState<{ id: number; loanNumber?: string | null } | null>(null)
+  // KAN-339: id of the single loan row currently selected (highlighted) in the
+  // unified loans grid. Drives the enable/disable state of the bottom action
+  // panel. null = no selection → all row-scoped actions disabled.
+  const [selectedLoanId, setSelectedLoanId] = useState<number | null>(null)
   const [isConnectRrOpen, setIsConnectRrOpen] = useState(false)
   const [isWriteoffOpen, setIsWriteoffOpen] = useState(false)
   // KAN-334 — Reversal (storno) modal open state + optional row preselect.
@@ -1745,6 +1748,33 @@ export function ClientDetailPage() {
   // closed loan — otherwise it would be a column full of dashes.
   const hasClosedLoan = client.loans.some((loan) => loan.status === 'closed')
 
+  // KAN-339: derive the "on RR" state per loan. RR is not a Debt.status value —
+  // it lives in the separate restructuring_agreements list keyed by debt_id. A
+  // loan counts as "on RR" only while its agreement is active: Connected (1) or
+  // Violated (2). Cancelled (3) / Completed (4) / Completed-early (5) are not.
+  // Plain const (not useMemo) because this sits below the component's early
+  // returns; the list is small so recomputing per render is negligible.
+  const activeRrDebtIds = new Set<number>()
+  for (const ra of restructuringAgreements) {
+    if (ra.debt_id != null && (ra.status_id === 1 || ra.status_id === 2)) {
+      activeRrDebtIds.add(ra.debt_id)
+    }
+  }
+
+  // Effective badge status for a loan. "closed" wins over "rr" (a closed loan
+  // that once had an RR still reads as closed); otherwise an active RR shows
+  // "rr", and everything else is "open".
+  const getLoanBadgeStatus = (loan: (typeof client.loans)[0]): 'open' | 'rr' | 'closed' => {
+    if (loan.status === 'closed') return 'closed'
+    if (activeRrDebtIds.has(loan.id)) return 'rr'
+    return 'open'
+  }
+
+  // The single loan row currently selected in the grid (drives the bottom
+  // action panel). Null if nothing is selected or the id is no longer present.
+  const selectedLoan = client.loans.find((loan) => loan.id === selectedLoanId) ?? null
+  const selectedLoanOnRr = selectedLoan ? activeRrDebtIds.has(selectedLoan.id) : false
+
   // Show the "Eligible for Return" column (TABLE460.f53) only when at least
   // one loan has a populated value AND it diverges from the live Remaining
   // Debt. If every row matches, the column would carry no information beyond
@@ -1754,6 +1784,28 @@ export function ClientDetailPage() {
   )
 
   const loanColumns: Column<(typeof client.loans)[0]>[] = [
+    {
+      // KAN-339: status is the first column, shown as a colored badge.
+      //   open (active) — red · rr (active restructuring) — yellow · closed — green
+      key: 'status',
+      header: t('pages.clients.detail.tableHeaders.status', 'Status'),
+      align: 'center',
+      render: (loan) => {
+        const badge = getLoanBadgeStatus(loan)
+        return (
+          <span
+            className={cn(
+              'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium',
+              badge === 'open' && 'bg-red-100 text-red-800',
+              badge === 'rr' && 'bg-amber-100 text-amber-800',
+              badge === 'closed' && 'bg-green-100 text-green-800'
+            )}
+          >
+            {t(`pages.clients.detail.loanStatusBadge.${badge}`, badge)}
+          </span>
+        )
+      },
+    },
     { key: 'loanNumber', header: t('pages.clients.detail.tableHeaders.loanNumber'), align: 'left' },
     { key: 'issueDate', header: t('pages.clients.detail.tableHeaders.issueDate'), align: 'left' },
     {
@@ -1830,35 +1882,18 @@ export function ClientDetailPage() {
       ),
     },
     {
-      key: 'actions',
-      header: t('pages.clients.detail.tableHeaders.actions'),
+      // KAN-339: the former "Actions" column is now "Info". It carries only
+      // informational / non-mutating controls — the agreement-info expansion,
+      // the detailed-calculation (*dc) modal (replacing the old green-check
+      // close icon), and the per-loan UBKI submit (whose sent-state indicator
+      // is inherently row-level). All status-changing actions (close / reopen /
+      // edit closure date / connect RR) live in the selection-driven bottom
+      // action panel below the grid.
+      key: 'info',
+      header: t('pages.clients.detail.tableHeaders.info', 'Info'),
       align: 'center',
       render: (loan) => {
-        // Leading buttons — always visible for every loan status:
-        // "Info" (opens the expansion below) and "Detailed calculation" (KAN-335).
-        const infoButton = (
-          <>
-            <button
-              onClick={() => toggleDebtExpand(loan.id)}
-              className="p-1 text-gray-500 hover:text-gray-700"
-              title={t('pages.clients.detail.loanInfo', 'Agreement info')}
-              aria-label={t('pages.clients.detail.loanInfo', 'Agreement info')}
-            >
-              <Icons.Info size={18} />
-            </button>
-            <button
-              onClick={() => setCalcLoan({ id: loan.id, loanNumber: loan.loanNumber })}
-              className="p-1 text-gray-500 hover:text-gray-700"
-              title={t('pages.clients.detail.loanCalculation.trigger', 'Detailed calculation')}
-              aria-label={t('pages.clients.detail.loanCalculation.trigger', 'Detailed calculation')}
-            >
-              <Icons.Calculate size={18} />
-            </button>
-          </>
-        )
-
-        // Tooltip used when the UBKI send button is disabled because the
-        // client is opted out.
+        // Tooltip for the UBKI send button (disabled when the client opted out).
         const ubkiSendTitle = doNotSendToUbki
           ? t(
               'pages.clients.detail.ubki.optedOutTooltip',
@@ -1870,91 +1905,54 @@ export function ClientDetailPage() {
               })
             : t('pages.clients.detail.ubki.send', 'Send to UBKI')
 
-        // UBKI send button — shown for any loan when the operator can submit.
-        const ubkiButton = canSubmitToUbki ? (
-          <button
-            onClick={() => submitDebtToUbki({ debtId: loan.id, clientId })}
-            disabled={doNotSendToUbki || isSubmittingToUbki}
-            className={cn(
-              'p-1 disabled:opacity-50',
-              loan.sentToCreditBureau
-                ? 'text-secondary-800 hover:text-secondary-900'
-                : 'text-gray-500 hover:text-gray-700',
-              doNotSendToUbki ? 'cursor-not-allowed' : ''
-            )}
-            title={ubkiSendTitle}
-          >
-            {loan.sentToCreditBureau ? (
-              <Icons.Checkmark size={18} strokeWidth={1.5} />
-            ) : (
-              <Icons.MailSend01 size={18} strokeWidth={1.5} />
-            )}
-          </button>
-        ) : null
-
-        if (loan.status === 'active') {
-          return (
-            <div className="flex items-center justify-center gap-2">
-              {infoButton}
-              <PermissionGuard permission={PERMISSIONS.CLIENTS.CLOSE_DEBT}>
-                <button
-                  onClick={() => {
-                    setCloseLoanConfirm(loan.id)
-                    setCloseLoanClosureDate(getTodayAtMidnight())
-                    setCloseLoanDateError(null)
-                    setCloseLoanReason('')
-                  }}
-                  disabled={isClosingDebt}
-                  className="p-1 text-green-600 hover:text-green-800 disabled:opacity-50"
-                  title={t('pages.clients.detail.closeLoan')}
-                >
-                  <Icons.Success size={18} />
-                </button>
-              </PermissionGuard>
-              {ubkiButton}
-            </div>
-          )
-        }
-        if (loan.status === 'closed') {
-          return (
-            <div className="flex items-center justify-center gap-2">
-              {infoButton}
-              <PermissionGuard permission={PERMISSIONS.CLIENTS.CLOSE_DEBT}>
-                <div className="flex items-center gap-1">
-                  <button
-                    onClick={() => {
-                      setEditClosureDateDebtId(loan.id)
-                      setEditClosureDateValue(
-                        loan.creditClosedDate
-                          ? parseISODateAtMidnight(loan.creditClosedDate)
-                          : getTodayAtMidnight()
-                      )
-                      setEditClosureDateError(null)
-                    }}
-                    disabled={isUpdatingClosureDate}
-                    className="p-1 text-blue-600 hover:text-blue-800 disabled:opacity-50"
-                    title={t('pages.clients.detail.editClosureDate', 'Edit closure date')}
-                  >
-                    <Icons.Edit size={18} />
-                  </button>
-                  <button
-                    onClick={() => setReopenLoanConfirm(loan.id)}
-                    disabled={isReopeningDebt}
-                    className="p-1 text-amber-600 hover:text-amber-800 disabled:opacity-50"
-                    title={t('pages.clients.detail.reopenLoan', 'Reopen loan')}
-                  >
-                    <Icons.Reload size={18} />
-                  </button>
-                </div>
-              </PermissionGuard>
-              {ubkiButton}
-            </div>
-          )
-        }
         return (
           <div className="flex items-center justify-center gap-2">
-            {infoButton}
-            {ubkiButton}
+            <button
+              onClick={(e) => {
+                // Don't let an action click toggle the row selection.
+                e.stopPropagation()
+                toggleDebtExpand(loan.id)
+              }}
+              className="p-1 text-gray-500 hover:text-gray-700"
+              title={t('pages.clients.detail.loanInfo', 'Agreement info')}
+              aria-label={t('pages.clients.detail.loanInfo', 'Agreement info')}
+            >
+              <Icons.Info size={18} />
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                setCalcLoan({ id: loan.id, loanNumber: loan.loanNumber })
+              }}
+              className="p-1 text-gray-500 hover:text-gray-700"
+              title={t('pages.clients.detail.loanCalculation.trigger', 'Detailed calculation')}
+              aria-label={t('pages.clients.detail.loanCalculation.trigger', 'Detailed calculation')}
+            >
+              <Icons.Calculate size={18} />
+            </button>
+            {canSubmitToUbki && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  submitDebtToUbki({ debtId: loan.id, clientId })
+                }}
+                disabled={doNotSendToUbki || isSubmittingToUbki}
+                className={cn(
+                  'p-1 disabled:opacity-50',
+                  loan.sentToCreditBureau
+                    ? 'text-secondary-800 hover:text-secondary-900'
+                    : 'text-gray-500 hover:text-gray-700',
+                  doNotSendToUbki ? 'cursor-not-allowed' : ''
+                )}
+                title={ubkiSendTitle}
+              >
+                {loan.sentToCreditBureau ? (
+                  <Icons.Checkmark size={18} strokeWidth={1.5} />
+                ) : (
+                  <Icons.MailSend01 size={18} strokeWidth={1.5} />
+                )}
+              </button>
+            )}
           </div>
         )
       },
@@ -3858,65 +3856,27 @@ export function ClientDetailPage() {
                 {/* Tab 1: Loans */}
                 {activeRightCardTab === 'loans' && (
                   <div className="flex w-full flex-col gap-0">
-                    {/* Secondary filters below primary tabs */}
-                    <div className="mx-3 flex flex-col items-center gap-3 self-stretch overflow-x-auto pt-4 pb-0 sm:flex-row md:mx-6 md:gap-6 md:pt-6">
-                      <button
-                        onClick={() => setActiveLoanTab('process')}
-                        className={cn(
-                          'hover:bg-secondary-800/20 flex w-full shrink-0 cursor-pointer items-center justify-center gap-2.5 rounded-md p-2 text-xs font-medium tracking-[-0.28px] sm:w-auto md:p-3',
-                          activeLoanTab === 'process'
-                            ? 'bg-secondary-800/10 text-secondary-800'
-                            : 'hover:text-secondary-800 text-gray-600'
-                        )}
-                      >
-                        {t('pages.clients.detail.loansInProcess')}
-                      </button>
-                      <button
-                        onClick={() => setActiveLoanTab('closed')}
-                        className={cn(
-                          'hover:bg-secondary-800/20 flex w-full shrink-0 cursor-pointer items-center justify-center gap-2.5 rounded-md p-2 text-xs font-medium tracking-[-0.28px] sm:w-auto md:p-3',
-                          activeLoanTab === 'closed'
-                            ? 'bg-secondary-800/10 text-secondary-800'
-                            : 'hover:text-secondary-800 text-gray-600'
-                        )}
-                      >
-                        {t('pages.clients.detail.closedLoans')}
-                      </button>
-                      <button
-                        onClick={() => setActiveLoanTab('rr')}
-                        className={cn(
-                          'hover:bg-secondary-800/20 flex w-full shrink-0 cursor-pointer items-center justify-center gap-2.5 rounded-md p-2 text-xs font-medium tracking-[-0.28px] sm:w-auto md:p-3',
-                          activeLoanTab === 'rr'
-                            ? 'bg-secondary-800/10 text-secondary-800'
-                            : 'hover:text-secondary-800 text-gray-600'
-                        )}
-                      >
-                        {t('pages.clients.detail.loansOnRR')}
-                      </button>
-                    </div>
-                    {/* Data table filtered by sub-tab */}
+                    {/* KAN-339: single unified loans grid — no sub-tabs. Status
+                        is the first column (open / rr / closed badge). Clicking a
+                        row selects (highlights) it; the selection drives the
+                        enable/disable state of the bottom action panel. Clicking
+                        the selected row again clears the selection. */}
                     <div className="flex flex-col items-start gap-2.5 self-stretch px-3 py-4 md:px-6">
-                      {activeLoanTab === 'rr' ? (
-                        isRrLoading ? (
-                          <TableSkeleton columns={7} rows={3} />
-                        ) : (
-                          <DataTable
-                            columns={rrColumns}
-                            data={restructuringAgreements}
-                            className="w-full"
-                          />
-                        )
-                      ) : isLoansLoading ? (
+                      {isLoansLoading ? (
                         <TableSkeleton columns={7} rows={3} />
                       ) : (
                         <DataTable
                           columns={loanColumns}
-                          data={client.loans.filter((loan) => {
-                            if (activeLoanTab === 'process') return loan.status === 'active'
-                            if (activeLoanTab === 'closed') return loan.status === 'closed'
-                            return true
-                          })}
+                          data={client.loans}
                           className="w-full"
+                          onRowClick={(loan) =>
+                            setSelectedLoanId((prev) => (prev === loan.id ? null : loan.id))
+                          }
+                          rowClassName={(loan) =>
+                            selectedLoanId === loan.id
+                              ? 'ring-information-400 !bg-information-50 ring-1 ring-inset'
+                              : undefined
+                          }
                           expandedIds={expandedDebtIds}
                           renderExpanded={(loan) => (
                             <LoanFactoringInfo
@@ -3928,136 +3888,249 @@ export function ClientDetailPage() {
                         />
                       )}
                     </div>
-                    {/* Action buttons at the bottom */}
-                    <div className="flex flex-wrap items-center gap-2 self-stretch px-3 py-4 md:gap-3 md:px-6">
-                      {/* <Button
-                      variant="secondary"
-                      leftIcon={<Icons.MoneyRemove01 size={20} />}
-                      className="rounded text-xs md:text-sm"
-                      size="sm"
-                    >
-                      {t('pages.clients.detail.writeOff')}
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      leftIcon={<Icons.MoneyNotFound04 size={20} />}
-                      className="rounded text-xs md:text-sm"
-                      size="sm"
-                    >
-                      {t('pages.clients.detail.reversal')}
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      leftIcon={<Icons.CancelCircle size={20} />}
-                      className="rounded text-xs md:text-sm"
-                      size="sm"
-                    >
-                      {t('pages.clients.detail.closeLoan')}
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      leftIcon={<Icons.MailSend01 size={20} />}
-                      className="rounded text-xs md:text-sm"
-                      size="sm"
-                    >
-                      {t('pages.clients.detail.sendToUBCI')}
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      leftIcon={<Icons.Calculate size={20} />}
-                      className="rounded text-xs md:text-sm"
-                      size="sm"
-                    >
-                      {t('pages.clients.detail.rrCalculator')}
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      leftIcon={<Icons.PlusSignCircle size={20} />}
-                      className="rounded text-xs md:text-sm"
-                      size="sm"
-                    >
-                      {t('pages.clients.detail.makePayment')}
-                    </Button> */}
-                      <Button
-                        variant="secondary"
-                        leftIcon={<Icons.Calculate size={20} />}
-                        className="rounded text-xs md:text-sm"
-                        size="sm"
-                        onClick={() => {
-                          setConnectRrForm({
-                            debtId: eligibleLoansForRr[0] ? String(eligibleLoansForRr[0].id) : '',
-                            connectionDate: null,
-                            totalAmount: '',
-                            numPayments: 1,
-                            frequency: '',
-                            intervalDays: '',
-                            dayOfMonth: '',
-                            clampedRows: [],
-                            penaltyAmount: '',
-                            payments: [{ date: null, amount: '' }],
-                          })
-                          setConnectRrError(null)
-                          setIsConnectRrOpen(true)
-                        }}
-                      >
-                        {t('pages.clients.detail.connectRR')}
-                      </Button>
-                      {/* KAN-245 — Write-off button, client-scoped per Screenshot_1.png */}
-                      {canCreateWriteoff && hasEligibleLoanForWriteoff && (
+                    {/* KAN-339: the former "Loans on RR" tab is kept as a
+                        secondary section beneath the unified list so restructuring
+                        lifecycle actions (view detail / mark violated / restore /
+                        disconnect / complete) remain reachable. Shown only when the
+                        client has at least one restructuring agreement. */}
+                    {(isRrLoading || restructuringAgreements.length > 0) && (
+                      <div className="flex flex-col items-start gap-2.5 self-stretch px-3 pb-4 md:px-6">
+                        <h3 className="text-secondary-800 text-sm font-semibold">
+                          {t('pages.clients.detail.loansOnRR')}
+                        </h3>
+                        {isRrLoading ? (
+                          <TableSkeleton columns={7} rows={3} />
+                        ) : (
+                          <DataTable
+                            columns={rrColumns}
+                            data={restructuringAgreements}
+                            className="w-full"
+                          />
+                        )}
+                      </div>
+                    )}
+                    {/* KAN-339: selection-driven action panel. Row-scoped
+                        actions (Close / Reopen / Edit closure date / Connect RR)
+                        enable only when a single loan row is selected AND its
+                        status permits the action; otherwise they are disabled with
+                        an explanatory tooltip. Write-off / Reversal remain
+                        client-scoped (their own modals carry a picker). */}
+                    <div className="flex flex-col gap-2 self-stretch px-3 py-4 md:px-6">
+                      {!selectedLoan && (
+                        <p className="text-xs text-gray-500">
+                          {t(
+                            'pages.clients.detail.selectLoanHint',
+                            'Select a loan row to enable actions.'
+                          )}
+                        </p>
+                      )}
+                      <div className="flex flex-wrap items-center gap-2 md:gap-3">
+                        {/* Close loan — only for a selected active (open/rr) loan. */}
+                        <PermissionGuard permission={PERMISSIONS.CLIENTS.CLOSE_DEBT}>
+                          <Button
+                            variant="secondary"
+                            leftIcon={<Icons.Success size={20} />}
+                            className="rounded text-xs md:text-sm"
+                            size="sm"
+                            disabled={
+                              !selectedLoan || selectedLoan.status !== 'active' || isClosingDebt
+                            }
+                            title={
+                              !selectedLoan
+                                ? t(
+                                    'pages.clients.detail.selectLoanHint',
+                                    'Select a loan row to enable actions.'
+                                  )
+                                : selectedLoan.status !== 'active'
+                                  ? t(
+                                      'pages.clients.detail.closeLoanDisabledHint',
+                                      'Only an open loan can be closed.'
+                                    )
+                                  : t('pages.clients.detail.closeLoan')
+                            }
+                            onClick={() => {
+                              if (!selectedLoan) return
+                              setCloseLoanConfirm(selectedLoan.id)
+                              setCloseLoanClosureDate(getTodayAtMidnight())
+                              setCloseLoanDateError(null)
+                              setCloseLoanReason('')
+                            }}
+                          >
+                            {t('pages.clients.detail.closeLoan')}
+                          </Button>
+                        </PermissionGuard>
+                        {/* Reopen loan — only for a selected closed loan. */}
+                        <PermissionGuard permission={PERMISSIONS.CLIENTS.CLOSE_DEBT}>
+                          <Button
+                            variant="secondary"
+                            leftIcon={<Icons.Reload size={20} />}
+                            className="rounded text-xs md:text-sm"
+                            size="sm"
+                            disabled={
+                              !selectedLoan || selectedLoan.status !== 'closed' || isReopeningDebt
+                            }
+                            title={
+                              !selectedLoan
+                                ? t(
+                                    'pages.clients.detail.selectLoanHint',
+                                    'Select a loan row to enable actions.'
+                                  )
+                                : selectedLoan.status !== 'closed'
+                                  ? t(
+                                      'pages.clients.detail.reopenLoanDisabledHint',
+                                      'Only a closed loan can be reopened.'
+                                    )
+                                  : t('pages.clients.detail.reopenLoan', 'Reopen loan')
+                            }
+                            onClick={() => selectedLoan && setReopenLoanConfirm(selectedLoan.id)}
+                          >
+                            {t('pages.clients.detail.reopenLoan', 'Reopen loan')}
+                          </Button>
+                        </PermissionGuard>
+                        {/* Edit closure date — only for a selected closed loan. */}
+                        <PermissionGuard permission={PERMISSIONS.CLIENTS.CLOSE_DEBT}>
+                          <Button
+                            variant="secondary"
+                            leftIcon={<Icons.Edit size={20} />}
+                            className="rounded text-xs md:text-sm"
+                            size="sm"
+                            disabled={
+                              !selectedLoan ||
+                              selectedLoan.status !== 'closed' ||
+                              isUpdatingClosureDate
+                            }
+                            title={
+                              !selectedLoan
+                                ? t(
+                                    'pages.clients.detail.selectLoanHint',
+                                    'Select a loan row to enable actions.'
+                                  )
+                                : selectedLoan.status !== 'closed'
+                                  ? t(
+                                      'pages.clients.detail.editClosureDateDisabledHint',
+                                      'Only a closed loan has a closure date to edit.'
+                                    )
+                                  : t('pages.clients.detail.editClosureDate', 'Edit closure date')
+                            }
+                            onClick={() => {
+                              if (!selectedLoan) return
+                              setEditClosureDateDebtId(selectedLoan.id)
+                              setEditClosureDateValue(
+                                selectedLoan.creditClosedDate
+                                  ? parseISODateAtMidnight(selectedLoan.creditClosedDate)
+                                  : getTodayAtMidnight()
+                              )
+                              setEditClosureDateError(null)
+                            }}
+                          >
+                            {t('pages.clients.detail.editClosureDate', 'Edit closure date')}
+                          </Button>
+                        </PermissionGuard>
+                        {/* Connect RR — for a selected non-closed loan that is not
+                            already on an active restructuring agreement. */}
                         <Button
                           variant="secondary"
-                          leftIcon={<Icons.MoneyRemove01 size={20} />}
+                          leftIcon={<Icons.Calculate size={20} />}
                           className="rounded text-xs md:text-sm"
                           size="sm"
-                          onClick={() => setIsWriteoffOpen(true)}
+                          disabled={
+                            !selectedLoan || selectedLoan.status === 'closed' || selectedLoanOnRr
+                          }
+                          title={
+                            !selectedLoan
+                              ? t(
+                                  'pages.clients.detail.selectLoanHint',
+                                  'Select a loan row to enable actions.'
+                                )
+                              : selectedLoan.status === 'closed'
+                                ? t(
+                                    'pages.clients.detail.connectRRClosedHint',
+                                    'A closed loan cannot be restructured.'
+                                  )
+                                : selectedLoanOnRr
+                                  ? t(
+                                      'pages.clients.detail.connectRROnRrHint',
+                                      'This loan is already on an active restructuring.'
+                                    )
+                                  : t('pages.clients.detail.connectRR')
+                          }
+                          onClick={() => {
+                            if (!selectedLoan) return
+                            setConnectRrForm({
+                              debtId: String(selectedLoan.id),
+                              connectionDate: null,
+                              totalAmount: '',
+                              numPayments: 1,
+                              frequency: '',
+                              intervalDays: '',
+                              dayOfMonth: '',
+                              clampedRows: [],
+                              penaltyAmount: '',
+                              payments: [{ date: null, amount: '' }],
+                            })
+                            setConnectRrError(null)
+                            setIsConnectRrOpen(true)
+                          }}
                         >
-                          {t('pages.clients.detail.writeOff')}
+                          {t('pages.clients.detail.connectRR')}
                         </Button>
-                      )}
-                      {/* KAN-334 — Reversal (storno) button, right of Write-off
+                        {/* KAN-245 — Write-off button, client-scoped per Screenshot_1.png */}
+                        {canCreateWriteoff && hasEligibleLoanForWriteoff && (
+                          <Button
+                            variant="secondary"
+                            leftIcon={<Icons.MoneyRemove01 size={20} />}
+                            className="rounded text-xs md:text-sm"
+                            size="sm"
+                            onClick={() => setIsWriteoffOpen(true)}
+                          >
+                            {t('pages.clients.detail.writeOff')}
+                          </Button>
+                        )}
+                        {/* KAN-334 — Reversal (storno) button, right of Write-off
                           per Screenshot_14.png. Opens the reallocation modal. */}
-                      {canCreateReversal && (
-                        <Button
-                          variant="secondary"
-                          leftIcon={<Icons.Reload size={20} />}
-                          className="rounded text-xs md:text-sm"
-                          size="sm"
-                          onClick={() => setIsReversalOpen(true)}
-                        >
-                          {t('pages.clients.detail.reversal')}
-                        </Button>
-                      )}
-                      {/* Bulk "Send all loans to UBKI" — gated by the same
+                        {canCreateReversal && (
+                          <Button
+                            variant="secondary"
+                            leftIcon={<Icons.Reload size={20} />}
+                            className="rounded text-xs md:text-sm"
+                            size="sm"
+                            onClick={() => setIsReversalOpen(true)}
+                          >
+                            {t('pages.clients.detail.reversal')}
+                          </Button>
+                        )}
+                        {/* Bulk "Send all loans to UBKI" — gated by the same
                           submit_to_ubki permission as the per-loan send button.
                           Disabled for the release via ENABLE_BULK_UBKI_SUBMISSION
                           (see the flag definition above). */}
-                      {ENABLE_BULK_UBKI_SUBMISSION && canSubmitToUbki && (
-                        <Button
-                          variant="secondary"
-                          leftIcon={<Icons.MailSend01 size={20} />}
-                          className="rounded text-xs md:text-sm"
-                          size="sm"
-                          onClick={handleBulkSubmitToUbki}
-                          disabled={
-                            doNotSendToUbki || ubkiLoanIds.length === 0 || isBulkSubmittingToUbki
-                          }
-                          title={
-                            doNotSendToUbki
-                              ? t(
-                                  'pages.clients.detail.ubki.optedOutTooltip',
-                                  'Client is opted out of UBKI; submission is disabled.'
-                                )
-                              : ubkiLoanIds.length === 0
+                        {ENABLE_BULK_UBKI_SUBMISSION && canSubmitToUbki && (
+                          <Button
+                            variant="secondary"
+                            leftIcon={<Icons.MailSend01 size={20} />}
+                            className="rounded text-xs md:text-sm"
+                            size="sm"
+                            onClick={handleBulkSubmitToUbki}
+                            disabled={
+                              doNotSendToUbki || ubkiLoanIds.length === 0 || isBulkSubmittingToUbki
+                            }
+                            title={
+                              doNotSendToUbki
                                 ? t(
-                                    'pages.clients.detail.ubki.noLoansTooltip',
-                                    'This client has no loans to submit.'
+                                    'pages.clients.detail.ubki.optedOutTooltip',
+                                    'Client is opted out of UBKI; submission is disabled.'
                                   )
-                                : t('pages.clients.detail.ubki.sendAll', 'Send all loans to UBKI')
-                          }
-                        >
-                          {t('pages.clients.detail.ubki.sendAll', 'Send all loans to UBKI')}
-                        </Button>
-                      )}
+                                : ubkiLoanIds.length === 0
+                                  ? t(
+                                      'pages.clients.detail.ubki.noLoansTooltip',
+                                      'This client has no loans to submit.'
+                                    )
+                                  : t('pages.clients.detail.ubki.sendAll', 'Send all loans to UBKI')
+                            }
+                          >
+                            {t('pages.clients.detail.ubki.sendAll', 'Send all loans to UBKI')}
+                          </Button>
+                        )}
+                      </div>
                     </div>
                     {/* UBKI submission history — scoped to this client's loans. */}
                     <div className="px-3 pb-4 md:px-6">

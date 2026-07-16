@@ -4282,6 +4282,7 @@
           "eligibleForReturn": "Дозволена до повернення",
           "remainingDebtAmount": "Залишок боргу",
           "totalToReturn": "Всього до повернення",
+          "info": "Інфо",
           "rrAmount": "Сума РР",
           "rrConnectionDate": "Дата підключення РР",
           "totalToBeRepaid": "Всього до сплати",
@@ -4321,6 +4322,17 @@
         "editClosureDate": "Редагувати дату закриття",
         "closureDate": "Дата закриття",
         "loanInfo": "Інформація про договір",
+        "loanStatusBadge": {
+          "open": "Відкрито",
+          "rr": "РР",
+          "closed": "Закрито"
+        },
+        "selectLoanHint": "Виберіть рядок позики, щоб активувати дії.",
+        "closeLoanDisabledHint": "Закрити можна лише відкриту позику.",
+        "reopenLoanDisabledHint": "Поновити можна лише закриту позику.",
+        "editClosureDateDisabledHint": "Дата закриття є лише у закритої позики.",
+        "connectRRClosedHint": "Закриту позику не можна реструктуризувати.",
+        "connectRROnRrHint": "Ця позика вже на активній реструктуризації.",
         "loanCalculation": {
           "trigger": "Детальний розрахунок",
           "title": "Детальний розрахунок за кредитом № {{id}} після продажу",
