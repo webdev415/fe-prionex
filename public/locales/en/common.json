@@ -2268,6 +2268,8 @@
       "errorUpdate": "Failed to update entry.",
       "errorDelete": "Failed to delete entry.",
       "confirmDelete": "Remove {{ip}} from the whitelist?",
+      "deleteModalTitle": "Delete IP address",
+      "deleteWarning": "This action cannot be undone. Logins from this IP will be blocked when enforcement is enabled.",
       "editAria": "Edit {{ip}}",
       "deleteAria": "Delete {{ip}}",
       "saveAria": "Save changes",
