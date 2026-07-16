@@ -144,8 +144,8 @@ export function InboxTab({
   )
 
   const derivedRows = useMemo(
-    () => deriveInboxRows(queue?.data ?? [], operators),
-    [queue, operators]
+    () => deriveInboxRows(t, queue?.data ?? [], operators),
+    [queue, operators, t]
   )
 
   const filteredRows = useMemo(() => {

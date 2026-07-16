@@ -214,15 +214,15 @@ function CourseCard({
           <div className="flex items-start justify-between gap-2">
             <h3 className="text-base font-semibold text-[#05040D]">{course.title}</h3>
             {course.status !== 'published' ? (
-              <span className="rounded-full bg-[#FEF9C3] px-2 py-0.5 text-[10px] font-medium text-[#A16207] capitalize">
-                {course.status}
+              <span className="rounded-full bg-[#FEF9C3] px-2 py-0.5 text-[10px] font-medium text-[#A16207]">
+                {t(`pages.training.training.courses.status.${course.status}`, course.status)}
               </span>
             ) : null}
           </div>
           <div className="flex items-center gap-2">
             <p className="text-xs text-[#4B5563]">
               {t('pages.training.training.courses.author', 'Author')}:{' '}
-              {course.author_name ?? ' No author'}
+              {course.author_name ?? t('pages.training.training.courses.noAuthor', 'No author')}
             </p>
             {course.category ? (
               <span className="rounded-full bg-[#F3F4F6] px-2 py-0.5 text-[10px] font-medium text-[#374151]">
@@ -349,7 +349,7 @@ function CreateCoursePanel({ onClose }: { onClose: () => void }) {
               {t('pages.training.training.courses.addCourse', 'Create a Course')}
             </h3>
           </div>
-          <button type="button" onClick={onClose} aria-label="Close">
+          <button type="button" onClick={onClose} aria-label={t('common.close', 'Close')}>
             <Icons.Close size={18} className="text-[#676767]" />
           </button>
         </div>
@@ -480,7 +480,7 @@ function CreateCoursePanel({ onClose }: { onClose: () => void }) {
                 <button
                   type="button"
                   onClick={() => setModules((arr) => arr.filter((_, j) => j !== i))}
-                  aria-label="Remove module"
+                  aria-label={t('pages.training.training.courses.removeModule', 'Remove module')}
                 >
                   <Icons.Close size={14} className="text-[#9CA3AF]" />
                 </button>
@@ -535,7 +535,10 @@ function CreateCoursePanel({ onClose }: { onClose: () => void }) {
                 <button
                   type="button"
                   onClick={() => setMaterials((arr) => arr.filter((_, j) => j !== i))}
-                  aria-label="Remove material"
+                  aria-label={t(
+                    'pages.training.training.courses.removeMaterial',
+                    'Remove material'
+                  )}
                 >
                   <Icons.Close size={14} className="text-[#9CA3AF]" />
                 </button>
@@ -598,10 +601,10 @@ function CourseDetailsDialog({
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <span className="rounded-full bg-[#F0FDF4] px-2 py-0.5 text-[10px] font-medium text-[#15803D] capitalize">
-              {detail.status}
+            <span className="rounded-full bg-[#F0FDF4] px-2 py-0.5 text-[10px] font-medium text-[#15803D]">
+              {t(`pages.training.training.courses.status.${detail.status}`, detail.status)}
             </span>
-            <button type="button" onClick={onClose} aria-label="Close">
+            <button type="button" onClick={onClose} aria-label={t('common.close', 'Close')}>
               <Icons.Close size={18} className="text-[#676767]" />
             </button>
           </div>

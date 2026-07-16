@@ -592,7 +592,9 @@ function CriterionRow({ criterion, entry, disabled, totalWeight, onChange }: Cri
         <span className="text-sm text-gray-700">
           {criterion.name}
           {criterion.weight > 0 ? (
-            <span className="ml-1.5 text-xs text-gray-400">· {criterion.weight} pts</span>
+            <span className="ml-1.5 text-xs text-gray-400">
+              · {criterion.weight} {t('pages.training.scorecard.pts', 'pts')}
+            </span>
           ) : null}
           {needsScore ? (
             <span className="ml-1.5 text-xs font-medium text-amber-600">
@@ -619,7 +621,7 @@ function CriterionRow({ criterion, entry, disabled, totalWeight, onChange }: Cri
       ) : null}
       <input
         type="text"
-        placeholder="Comment (optional)"
+        placeholder={t('pages.training.scorecard.commentOptional', 'Comment (optional)')}
         defaultValue={entry?.comment ?? ''}
         disabled={disabled}
         onBlur={(e) => onChange(criterion.key, entry?.value ?? null, e.target.value)}
@@ -638,13 +640,14 @@ function BinaryInput({
   disabled: boolean
   onChange: (next: boolean | null) => void
 }) {
+  const { t } = useTranslation('common')
   return (
     <div className="flex gap-1">
       <button
         type="button"
         disabled={disabled}
         onClick={() => onChange(value === true ? null : true)}
-        aria-label="Yes"
+        aria-label={t('common.yes', 'Yes')}
         aria-pressed={value === true}
         className={`rounded-full border px-3 py-1 text-xs font-medium ${
           value === true
@@ -658,7 +661,7 @@ function BinaryInput({
         type="button"
         disabled={disabled}
         onClick={() => onChange(value === false ? null : false)}
-        aria-label="No"
+        aria-label={t('common.no', 'No')}
         aria-pressed={value === false}
         className={`rounded-full border px-3 py-1 text-xs font-medium ${
           value === false

@@ -210,7 +210,10 @@ export function ScorecardListView({
                 <span
                   className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${CATEGORY_TONE[row.category]}`}
                 >
-                  {row.category}
+                  {t(
+                    `pages.training.dialogue.category.${row.category.toLowerCase()}`,
+                    row.category
+                  )}
                 </span>
               </td>
               <td className={`${ANALYTICS_TABLE_TD} text-right`}>
