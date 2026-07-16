@@ -95,7 +95,10 @@
     "deleting": "Deleting…",
     "remove": "Remove",
     "decrease": "Decrease",
-    "increase": "Increase"
+    "increase": "Increase",
+    "add": "Add",
+    "details": "Details",
+    "download": "Download"
   },
   "components": {
     "pagination": {
@@ -234,7 +237,15 @@
     "edit": "Edit",
     "close": "Close",
     "optional": "optional",
-    "refresh": "Refresh"
+    "refresh": "Refresh",
+    "add": "Add",
+    "archive": "Archive",
+    "create": "Create",
+    "dismiss": "Dismiss",
+    "minutes": "min",
+    "none": "—",
+    "select": "Select…",
+    "hours": "h"
   },
   "logout": {
     "confirmTitle": "Confirm Logout",
@@ -1517,14 +1528,49 @@
         "placeholder": "Calls tab — coming soon"
       },
       "interactions": {
-        "placeholder": "Interaction History tab — coming soon"
+        "placeholder": "Interaction History tab — coming soon",
+        "cols": {
+          "amountPromised": "Amount promised",
+          "breakToNext": "Break to next.",
+          "client": "Client",
+          "date": "Date / Time",
+          "deal": "Deal",
+          "duration": "Duration",
+          "operator": "Operator",
+          "status": "Status"
+        },
+        "empty": "No interactions match the filters.",
+        "filters": {
+          "allOperators": "All operators",
+          "allStatuses": "All statuses",
+          "reset": "Reset"
+        },
+        "kpi": {
+          "avgGap": "Average Gap",
+          "missedCalls": "Missed Calls",
+          "promises": "Promises",
+          "rejections": "Rejections",
+          "total": "Interactions",
+          "willPass": "Will Pass"
+        },
+        "loadFailed": "Failed to load interactions. Please retry.",
+        "loading": "Loading…",
+        "status": {
+          "all": "All",
+          "label": "Status"
+        }
       },
       "topTabs": {
         "inbox": "Inbox",
         "calls": "Calls",
         "scores": "Scores",
         "training": "Training",
-        "settings": "Settings"
+        "settings": "Settings",
+        "actionAnalysis": "Action Analysis",
+        "dialogueEvaluation": "Dialogue Evaluation",
+        "tasks": "Tasks",
+        "team": "Team",
+        "trainingsAndSessions": "Trainings and Sessions"
       },
       "topTabsComingSoon": "This section will be enabled in a follow-up release.",
       "subTabs": {
@@ -1576,7 +1622,12 @@
         "discardConfirm": "Discard changes",
         "scoredCount": "{{scored}}/{{total}} scored",
         "completeIncomplete": "Score every criterion before completing.",
-        "notScored": "not scored"
+        "notScored": "not scored",
+        "stages": {
+          "hint": "Mark which script stages the call reached. Each stage is independent.",
+          "notReached": "Not reached",
+          "reached": "Reached"
+        }
       },
       "dialogue": {
         "chips": {
@@ -1606,7 +1657,9 @@
           "delete": "Delete draft",
           "deleteConfirm": "Delete this draft assessment?",
           "deleted": "Assessment deleted",
-          "deleteFailed": "Could not delete assessment"
+          "deleteFailed": "Could not delete assessment",
+          "callType": "Call type",
+          "duration": "Duration"
         },
         "view": {
           "list": "Scorecards",
@@ -1653,6 +1706,28 @@
             "calls": "# Calls",
             "trend": "Trend"
           }
+        },
+        "detail": {
+          "assignTask": "Assign task",
+          "empty": "Select a scorecard to view details"
+        },
+        "employee": {
+          "all": "All employees",
+          "clear": "Clear",
+          "label": "Employee",
+          "selectAll": "Select all",
+          "selected": "{{count}} selected"
+        },
+        "filters": {
+          "allTypes": "All types",
+          "apply": "Apply Filters",
+          "callDate": "Call date",
+          "clearAll": "Clear All",
+          "grey": "Grey",
+          "minDuration": "Min talk (sec)",
+          "namePlaceholder": "Search by full name…",
+          "unknown": "Unknown",
+          "white": "White"
         }
       },
       "transcript": {
@@ -1830,7 +1905,10 @@
       },
       "workspaceBanner": {
         "label": "Coach's Workspace",
-        "assignedTo": "You are assigned to {{department}}"
+        "assignedTo": "You are assigned to {{department}}",
+        "coach": "Coach",
+        "menu": "Menu",
+        "operatorsInOperation": "operators in operation"
       },
       "inbox": {
         "searchPlaceholder": "Operator name or phone number",
@@ -1860,7 +1938,13 @@
           "loading": "Loading queue…",
           "empty": "No operators in the current scope.",
           "emptyScope": "No operators in the current scope.",
-          "triggerCount": "{{count}} triggers"
+          "triggerCount": "{{count}} triggers",
+          "employeesInLine": "{{count}} employees in line",
+          "onCall": "On the call",
+          "sortByName": "by name",
+          "sortByPriority": "by priority",
+          "sortByScore": "by score",
+          "sortLabel": "Sorting"
         },
         "detail": {
           "selectOperator": "Select an operator to see details.",
@@ -1884,7 +1968,33 @@
             "assignTask": "Assign a task",
             "planOneOnOne": "Plan 1-on-1",
             "takeCharge": "Take charge"
-          }
+          },
+          "actions": {
+            "assignCourse": "Assign course",
+            "assignDrill": "Assign drill",
+            "leaveComment": "Leave a comment",
+            "listen": "Listen to the call",
+            "listenRealtime": "Listen in real-time",
+            "planOneOnOne": "1-on-1 session",
+            "rate": "Rate",
+            "takeCharge": "Take charge",
+            "task": "Task / checklist"
+          },
+          "critical": "Critical",
+          "empty": "Select an operator from the list",
+          "error": "Could not load operator details.",
+          "feedComingSoon": "Team event feed lands with the next round.",
+          "offline": "Offline",
+          "online": "Online",
+          "stats": {
+            "dailyPlan": "Daily plan",
+            "experience": "Experience",
+            "online": "Online",
+            "onlineFrom": "from {{time}}"
+          },
+          "tabDetails": "Details",
+          "tabFeed": "Event Feed",
+          "trainerActionsLabel": "Trainer actions"
         },
         "quickActions": {
           "button": "Quick Action",
@@ -1915,7 +2025,9 @@
         },
         "kanban": {
           "transitionSuccess": "Moved to {{state}}",
-          "transitionFailed": "Could not move the card."
+          "transitionFailed": "Could not move the card.",
+          "empty": "Empty",
+          "noAssignment": "No active assignment yet — take charge first."
         },
         "pendingFeature": {
           "dependsOn": "This action will be available once {{issue}} ships.",
@@ -1943,6 +2055,34 @@
             "noDate": "Pick a date and time.",
             "generic": "Could not schedule the session."
           }
+        },
+        "eventFeed": {
+          "empty": "No recent team events.",
+          "error": "Could not load team events.",
+          "loading": "Loading…"
+        },
+        "grid": {
+          "dailyPlan": "Daily plan",
+          "manually": "Manually",
+          "online": "Online"
+        },
+        "takeCharge": {
+          "errors": {
+            "generic": "Could not take charge."
+          },
+          "forbidden": "You do not have permission to take charge of operators.",
+          "success": "You are now coaching this operator."
+        },
+        "priority": {
+          "all": "All priorities",
+          "average": "Average",
+          "critical": "Critical",
+          "low": "Low"
+        },
+        "viewMode": {
+          "grid": "Grid",
+          "inbox": "Inbox",
+          "kanban": "Kanban"
         }
       },
       "paymentHistoryEmpty": "No payments match the current filters",
@@ -1989,6 +2129,21 @@
           "waiting": "Waiting",
           "idle": "Idle",
           "break": "Break"
+        },
+        "allDepartments": "All departments",
+        "department": "Department",
+        "loadFailed": "Failed to load heatmap. Please retry.",
+        "loading": "Loading…",
+        "stand": "Stand",
+        "subtitle": "Dominant state by hour · today",
+        "title": "Heatmap of activity",
+        "state": {
+          "afterCall": "After the call",
+          "break": "Break",
+          "call": "Call",
+          "idle": "Idle",
+          "offline": "Offline",
+          "waiting": "Waiting"
         }
       },
       "scriptAnalytics": {
@@ -2035,6 +2190,707 @@
         "loading": "Loading…",
         "loadFailed": "Failed to load. Please retry.",
         "empty": "No promises or callbacks match the filters."
+      },
+      "assign": {
+        "courses": "Published courses",
+        "drill": "Drill",
+        "drills": "Active drills",
+        "lessonCount": "{{count}} lessons",
+        "noCourses": "No published courses.",
+        "noDrills": "No active drills.",
+        "noPermission": "You need the assignment permission to submit.",
+        "operators": "Operators",
+        "submit": "Assign",
+        "summary": "{{items}} item(s) → {{ops}} operator(s)"
+      },
+      "assignments": {
+        "assignedAt": "Assigned",
+        "changeDeadline": "Deadline",
+        "changeDeadlineTitle": "Change deadline",
+        "columns": {
+          "actions": "Actions",
+          "category": "Category",
+          "course": "Course",
+          "deadline": "Deadline",
+          "operator": "Operator",
+          "progress": "Progress",
+          "status": "Status"
+        },
+        "deadlineError": "Could not update the deadline.",
+        "deadlineHint": "Leave empty to clear the deadline.",
+        "deadlineSaved": "Deadline updated.",
+        "detailsTitle": "Assignment details",
+        "empty": "No assignments yet.",
+        "filters": {
+          "all": "All"
+        },
+        "kpi": {
+          "active": "Active assignments",
+          "completed": "Completed",
+          "overdue": "Overdue"
+        },
+        "loadError": "Failed to load assignments.",
+        "loading": "Loading assignments...",
+        "modules": "modules",
+        "modulesLabel": "Modules",
+        "noAccess": "You do not have access to assignments.",
+        "searchPlaceholder": "Search by course..."
+      },
+      "autoFlags": {
+        "allRules": "All rules",
+        "bulkConfirm": "Dismiss every pending flag for this rule?",
+        "bulkDismiss": "Bulk dismiss",
+        "bulkDismissing": "Dismissing…",
+        "bulkRequiresRule": "Pick a single rule before bulk-dismissing.",
+        "call": "Call",
+        "confirm": "Confirm",
+        "convert": "Convert to task",
+        "dismiss": "Dismiss",
+        "dismissPrompt": "Why dismiss this flag? (Optional)",
+        "dismissReason": "Reason",
+        "empty": "No flags match the current filter. The scanner runs every 10 minutes.",
+        "loadError": "Could not load auto-flags.",
+        "loading": "Loading flags…",
+        "noCallTitle": "Flag has no associated call",
+        "operator": "Operator",
+        "pendingDataSource": "Pending data source",
+        "status": {
+          "confirmed": "Confirmed",
+          "dismissed": "Dismissed",
+          "pending": "Pending"
+        },
+        "toast": {
+          "confirmed": "Flag confirmed",
+          "converted": "Correction task created and flag confirmed",
+          "dismissed": "Flag dismissed",
+          "error": "Action failed",
+          "bulkDismissed": "Dismissed {{count}} flags"
+        },
+        "total": "{{count}} flags"
+      },
+      "calendar": {
+        "cancelled": "Cancelled",
+        "completed": "Completed",
+        "courseFromCatalog": "Course from the catalog",
+        "date": "Date",
+        "duration": "Duration",
+        "empty": "No sessions in this window.",
+        "from": "From",
+        "loadFailed": "Failed to load sessions.",
+        "location": "Location",
+        "min": "min",
+        "newDateTime": "New date & time",
+        "noPast": "No past sessions.",
+        "noPlanned": "No upcoming sessions.",
+        "participants": "Participants (operators)",
+        "past": "Past Sessions",
+        "planned": "Planned sessions",
+        "postpone": "Postpone",
+        "postponeConfirm": "Reschedule",
+        "schedule": "Schedule a Calibration Session",
+        "scheduleCta": "Schedule",
+        "selectCourse": "Select a course",
+        "skill": "Skill",
+        "start": "Start",
+        "time": "Time",
+        "title": "1-on-1 Session Calendar",
+        "topic": "Topic / focus",
+        "topicPlaceholder": "For example: greeting by script",
+        "trainers": "Trainers"
+      },
+      "closures": {
+        "cols": {
+          "amount": "Payment Amount",
+          "client": "Client",
+          "confirmationDate": "Confirmation Date",
+          "date": "Closure Date",
+          "deal": "Deal",
+          "operator": "Operator",
+          "status": "Status in CRM"
+        },
+        "empty": "No closures match the filters.",
+        "filters": {
+          "allOperators": "All operators",
+          "allStatuses": "All statuses",
+          "reset": "Reset"
+        },
+        "funnel": {
+          "interactions": "Interactions",
+          "payments": "Payments",
+          "promises": "Promises",
+          "title": "Funnel: interactions → promises → payments"
+        },
+        "kpi": {
+          "closures": "Successful Closures",
+          "conversion": "Conversion promise→payment",
+          "leader": "Closure Leader",
+          "leaderSub": "{{count}} closures",
+          "totalAmount": "Total Amount"
+        },
+        "loadFailed": "Failed to load closures. Please retry.",
+        "loading": "Loading…"
+      },
+      "correction": {
+        "call": "Call recording",
+        "descriptionField": "What to do",
+        "descriptionPlaceholder": "Describe the error and the corrective action the operator should take.",
+        "dueDate": "Due date",
+        "errors": {
+          "generic": "Could not create the correction task.",
+          "noCall": "Pick a recent call to anchor the correction task.",
+          "noOperator": "Select an operator from the Inbox first.",
+          "noTitle": "Give the task a short title so the operator knows what to fix."
+        },
+        "loadingCalls": "Loading recent calls…",
+        "noCalls": "No calls found in the last 30 days.",
+        "noExtension": "This operator has no telephony extension; no recent calls available.",
+        "operator": "Operator",
+        "pickCall": "Pick a call…",
+        "priority": {
+          "high": "High",
+          "low": "Low",
+          "normal": "Normal",
+          "urgent": "Urgent"
+        },
+        "submit": "Create task",
+        "submitting": "Creating…",
+        "success": "Correction task created. The operator has been notified.",
+        "taskType": "Task type",
+        "timestamp": "Timestamp in recording (seconds, optional)",
+        "title": "Assign correction task",
+        "titleField": "Title",
+        "titlePlaceholder": "e.g. \"Skipped objection-handling step\"",
+        "types": {
+          "correction": "Generic correction",
+          "listenReflect": "Listen & reflect",
+          "practiceNextCall": "Practice in next call",
+          "studyMaterial": "Study material"
+        },
+        "priorityLabel": "Priority"
+      },
+      "drills": {
+        "allCategories": "All categories",
+        "allSkillLevels": "All levels",
+        "assign": "Assign",
+        "assignCta": "Assign",
+        "assignFailed": "Could not assign the drill.",
+        "assignHint": "Select operators to assign this drill to.",
+        "assigned": "Drill assigned.",
+        "assignmentHistory": "Assignment history",
+        "assignments": "Assigned",
+        "attemptStatus": {
+          "confirmed": "Confirmed",
+          "done": "Done",
+          "open": "Open",
+          "returned": "Returned"
+        },
+        "avgMinutes": "Avg min",
+        "categoryLabel": "Category",
+        "completion": "Done",
+        "confirm": "Confirm",
+        "create": "Create a drill",
+        "created": "Drill created.",
+        "deadline": "Deadline",
+        "descriptionLabel": "Description",
+        "descriptionPlaceholder": "What this drill practises…",
+        "details": "Details",
+        "duration": "Duration",
+        "editTitle": "Edit drill",
+        "empty": "No drills yet.",
+        "loadFailed": "Failed to load drills.",
+        "noAccess": "You do not have access to drills.",
+        "noAssignments": "Not assigned to anyone yet.",
+        "noCategory": "None",
+        "noSkillLevel": "None",
+        "note": "Comment (optional)",
+        "operator": "Operator",
+        "overdue": "Overdue",
+        "return": "Return",
+        "returnReason": "Reason for revision…",
+        "reviewFailed": "Could not save the review.",
+        "reviewSaved": "Review saved.",
+        "saveFailed": "Could not save the drill.",
+        "searchPlaceholder": "Search drills…",
+        "skillLevelLabel": "Skill level",
+        "successCriteriaLabel": "Success criteria",
+        "successCriteriaPlaceholder": "What good looks like…",
+        "title": "Short drills",
+        "titleLabel": "Title",
+        "titlePlaceholder": "e.g. Objection handling — price",
+        "updated": "Drill updated."
+      },
+      "funnel": {
+        "dateType": {
+          "call": "Call date",
+          "evaluation": "Evaluation date",
+          "label": "Date type"
+        },
+        "dropTooltip": "Drop-off vs previous stage",
+        "empty": {
+          "body": "The funnel is built from calls a trainer scored against the \"Script stages\" section. Once trainers mark stages on evaluated calls, drop-off will appear here.",
+          "title": "No scored stage data yet"
+        },
+        "evaluatedCalls": "{{count}} scored calls",
+        "loadFailed": "Failed to load script stage funnel.",
+        "loading": "Loading funnel…",
+        "pain": {
+          "critical": "Critical",
+          "noCritical": "No critical stages",
+          "noStable": "No stable stages",
+          "noWarning": "No warnings",
+          "operatorsBelow": "{{count}} operators below threshold",
+          "stable": "Stable",
+          "warning": "Warning"
+        },
+        "subtitle": "How many calls reached each stage and where operators drop off",
+        "title": "Script stage funnel"
+      },
+      "groupTrainings": {
+        "assign": "Assign",
+        "assignCta": "Assign",
+        "assignFailed": "Could not assign operators.",
+        "assignHint": "Select operators to register for this session.",
+        "assigned": "Operators assigned.",
+        "assignedPartial": "{{assigned}} assigned, {{skipped}} skipped (session full).",
+        "cancel": "Cancel session",
+        "createFailed": "Could not schedule the training.",
+        "created": "Group training scheduled.",
+        "durationMinutes": "Duration (min)",
+        "empty": "No scheduled trainings.",
+        "full": "Full",
+        "loadFailed": "Failed to load trainings.",
+        "location": "Location",
+        "locationPlaceholder": "e.g. Conference Room A / Zoom",
+        "maxParticipants": "Max participants",
+        "meetingUrl": "Meeting URL",
+        "noParticipants": "No one registered yet.",
+        "participants": "Participants",
+        "participantsFailed": "Failed to load participants.",
+        "participantsTitle": "Participants",
+        "register": "Register",
+        "registered": "Registered — leave",
+        "report": "Report",
+        "reportTitle": "Attendance report",
+        "schedule": "Schedule a training",
+        "scheduleConfirm": "Schedule",
+        "scheduledAt": "Date & time",
+        "seatsLeft": "{{count}} seats left",
+        "statusCancelled": "Cancelled",
+        "statusCompleted": "Completed",
+        "statusScheduled": "Scheduled",
+        "time": "Time",
+        "title": "Group trainings",
+        "titlePlaceholder": "e.g. Objection-handling workshop",
+        "total": "Total",
+        "trainer": "Trainer",
+        "type": "Type",
+        "typePlaceholder": "Optional label",
+        "unlimited": "Unlimited"
+      },
+      "leaks": {
+        "chips": {
+          "all": "All",
+          "followedUp": "Followed up",
+          "notFollowedUp": "Not followed up"
+        },
+        "cols": {
+          "agreement": "Agreement",
+          "amount": "Amount of promise",
+          "callAfter": "Call after escalation",
+          "client": "Client",
+          "dateOfPromise": "Date of promise",
+          "followUp": "Follow-up",
+          "operator": "Operator"
+        },
+        "empty": "No escalations match the filters.",
+        "escalationBannerHint": "Operators did not call after the escalation. Trainer or senior department intervention is needed.",
+        "export": "Export",
+        "exporting": "Exporting…",
+        "followUp": {
+          "followed": "Followed up",
+          "notFollowed": "Not followed up"
+        },
+        "kpi": {
+          "followedUp": "Followed up",
+          "notFollowedUp": "Not followed up",
+          "totalEscalations": "Total escalations"
+        },
+        "loadFailed": "Failed to load. Please retry.",
+        "loading": "Loading…",
+        "lookback": "Follow-up window",
+        "lookbackDecrease": "Decrease window",
+        "lookbackIncrease": "Increase window",
+        "noCall": "No call",
+        "ruleBanner": "Escalation rule: the client had a payment promise for today or overdue, but the payment has not been received. The operator is required to call back and follow up. Unprocessed escalations are a critical indicator.",
+        "escalationBanner": "{{count}} escalations without follow-up",
+        "lookbackValue": "{{count}} d"
+      },
+      "period": {
+        "label": "Period",
+        "30days": "30 days",
+        "7days": "7 days",
+        "custom": "Custom",
+        "today": "Today",
+        "yesterday": "Yesterday"
+      },
+      "tasks": {
+        "actions": {
+          "confirm": "Confirm",
+          "confirmed": "Task confirmed.",
+          "error": "Could not move the task.",
+          "return": "Return",
+          "returned": "Task returned for revision."
+        },
+        "cols": {
+          "author": "Author",
+          "executor": "Executor",
+          "priority": "Priority",
+          "status": "Status"
+        },
+        "create": "New task",
+        "error": "Could not load tasks. Please retry shortly.",
+        "kanban": {
+          "empty": "Empty",
+          "done": "DONE",
+          "inProgress": "IN PROGRESS",
+          "planned": "PLANNED",
+          "toDo": "TO DO"
+        },
+        "loading": "Loading correction tasks…",
+        "newTaskHint": "Pick an operator from the Inbox tab, then use the \"Assign task\" Quick Action to anchor the task to a call.",
+        "chips": {
+          "all": "All",
+          "today": "Today",
+          "tomorrow": "Tomorrow",
+          "week": "Week"
+        }
+      },
+      "team": {
+        "badges": {
+          "empty": "No badges earned yet. They unlock automatically from leaderboard ranking, scorecard streaks, and on-time tasks.",
+          "loading": "Loading badges…",
+          "title": "Badges"
+        },
+        "chips": {
+          "all": "All my departments"
+        },
+        "dept": {
+          "average": "Average",
+          "employees": "employees",
+          "inQueue": "In queue",
+          "manager": "Manager",
+          "teams": "teams"
+        },
+        "empty": "No departments in the current scope.",
+        "error": "Could not load team roster.",
+        "leaderboard": {
+          "components": {
+            "scorecard": "Avg scorecard",
+            "script": "Script",
+            "tasks": "Tasks on-time"
+          },
+          "computedAt": "Computed",
+          "empty": "No operators ranked yet for this period.",
+          "export": "Export .xlsx",
+          "loadError": "Could not load the leaderboard.",
+          "loading": "Computing leaderboard…",
+          "operator": "Operator",
+          "rank": "Rank",
+          "rankDelta": "Δ Rank",
+          "refresh": "Recompute",
+          "refreshing": "Recomputing…",
+          "score": "Score",
+          "window": "Window",
+          "period": {
+            "month": "This month",
+            "week": "This week"
+          }
+        },
+        "loading": "Loading team roster…",
+        "team": {
+          "teamLead": "Team Lead"
+        },
+        "view": {
+          "leaderboard": "Leaderboard",
+          "roster": "Roster"
+        },
+        "workStatus": {
+          "behind": "Behind",
+          "inNorm": "In norm",
+          "inQueue": "In queue"
+        }
+      },
+      "tests": {
+        "course": "Course",
+        "create": "Create a test",
+        "deadline": "Deadline",
+        "favorite": "Favorite",
+        "retake": "Retake",
+        "start": "Start",
+        "title": "Tests",
+        "viewResults": "View results"
+      },
+      "thirdParties": {
+        "chips": {
+          "allResults": "All results"
+        },
+        "cols": {
+          "clientMain": "Client (main)",
+          "date": "Date / Time",
+          "duration": "Duration",
+          "operator": "Operator",
+          "result": "Result",
+          "returned": "Returned to the client",
+          "thirdPartyPhone": "Third party phone"
+        },
+        "empty": "No third-party calls match the filters.",
+        "export": "Export",
+        "exporting": "Exporting…",
+        "filters": {
+          "allOperators": "All operators"
+        },
+        "kpi": {
+          "calls": "Calls to 3 people",
+          "didNotReturn": "Did not return to the client",
+          "positiveResult": "Positive result",
+          "returned": "Returned to the client"
+        },
+        "loadFailed": "Failed to load. Please retry.",
+        "loading": "Loading…",
+        "recordingType": "Third-party call",
+        "returned": {
+          "no": "Did not return",
+          "yes": "Yes"
+        },
+        "result": {
+          "missedCall": "Missed call",
+          "promise": "Promise",
+          "refusal": "Refusal",
+          "willPassOn": "Will pass on"
+        }
+      },
+      "timeAtWork": {
+        "allDepartments": "All departments",
+        "cols": {
+          "afterCall": "After call",
+          "calls": "Calls",
+          "downtimeShift": "Downtime (shift)",
+          "fillForms": "Fill forms",
+          "inclCredits": "Incl. Credits",
+          "operator": "Operator",
+          "timeToCard": "Time to card"
+        },
+        "department": "Department",
+        "empty": "No screen-time activity in the selected window.",
+        "kpi": {
+          "afterCall": "After call (avg.)",
+          "credits": "Credits (average)",
+          "downtime": "Downtime (average)",
+          "toCard": "To card (average)",
+          "toForm": "To form (average)"
+        },
+        "loadFailed": "Failed to load screen-time data. Please retry.",
+        "loading": "Loading…",
+        "sortBy": "Sort by",
+        "subtitle": "Red = 30%+ above norm · Green = faster than norm",
+        "title": "Time in work by operators",
+        "sort": {
+          "afterCall": "After call",
+          "downtime": "Downtime",
+          "toCard": "To card"
+        }
+      },
+      "training": {
+        "courses": {
+          "addCourse": "Add Course",
+          "allCategories": "All categories",
+          "assign": "Assign",
+          "assignCta": "Assign",
+          "assignHint": "Select operators to enroll.",
+          "author": "Author",
+          "avgCompletion": "Average completion",
+          "createCta": "Create a course",
+          "details": "Details",
+          "duration": "Duration",
+          "empty": "No courses yet.",
+          "enrolled": "Enrolled",
+          "fieldAuthor": "Author",
+          "fieldCategory": "Category",
+          "fieldDescription": "Description",
+          "fieldDescriptionPlaceholder": "A course for operators who are just starting to work with objections",
+          "fieldDuration": "Duration (min)",
+          "fieldLevel": "Level",
+          "fieldName": "Course name",
+          "fieldNamePlaceholder": "Working with objections: basic",
+          "loadFailed": "Failed to load courses.",
+          "materialName": "Material name",
+          "materials": "Materials",
+          "moduleName": "Module name",
+          "modules": "Modules",
+          "publish": "Publish",
+          "searchPlaceholder": "Search by title…",
+          "students": "Students",
+          "title": "Course Catalog",
+          "level": {
+            "beginner": "Beginner",
+            "intermediate": "Intermediate",
+            "advanced": "Advanced"
+          }
+        },
+        "library": {
+          "add": "Add to library",
+          "archive": "Remove from library",
+          "callId": "Call ID",
+          "callIdPlaceholder": "Asterisk call_id / UUID",
+          "category": "Category",
+          "confirmArchive": "Remove this call from the library?",
+          "descriptionField": "Why this call is worth listening to",
+          "empty": "No library calls yet. Promote a marker from a call recording or click \"Add to library\".",
+          "errors": {
+            "generic": "Could not add the call to the library.",
+            "noCallId": "Provide the call ID this entry refers to.",
+            "noTitle": "Give the library entry a short title."
+          },
+          "filters": {
+            "all": "All"
+          },
+          "loadError": "Failed to load the library. Try refreshing.",
+          "loading": "Loading library...",
+          "searchPlaceholder": "Search by title or description...",
+          "submit": "Add to library",
+          "submitting": "Adding…",
+          "success": "Call added to the library.",
+          "tags": "Tags (comma-separated)",
+          "tagsPlaceholder": "objection, rebuttal, payment",
+          "title": "Call library",
+          "titleField": "Title",
+          "titlePlaceholder": "e.g. \"Strong opening rebuttal\""
+        },
+        "materials": {
+          "archive": "Archive",
+          "attach": "Attach",
+          "attachMaterial": "Attach material",
+          "attachSuccess": "Attached to the call.",
+          "attachToCall": "Attach to a call",
+          "attached": "Attached",
+          "attachedTitle": "Attached materials",
+          "callSearchPlaceholder": "Search by phone number…",
+          "callsError": "Could not load calls.",
+          "callsLoading": "Loading calls…",
+          "category": "Category",
+          "chooseFile": "Choose a file…",
+          "confirmArchive": "Archive \"{{title}}\"? It will be hidden from the library, but existing links keep working.",
+          "confirmArchiveTitle": "Archive material",
+          "descriptionField": "Description",
+          "detach": "Detach",
+          "edit": "Edit material",
+          "empty": "No materials yet.",
+          "errors": {
+            "archive": "Could not archive the material.",
+            "attach": "Could not attach the material.",
+            "createCategory": "Could not create the category.",
+            "detach": "Could not detach the material.",
+            "download": "Could not download the file.",
+            "noFile": "Choose a file to upload.",
+            "noTitle": "Give the material a title.",
+            "update": "Could not update the material.",
+            "upload": "Could not upload the material."
+          },
+          "file": "File",
+          "filters": {
+            "all": "All types"
+          },
+          "loadError": "Failed to load materials.",
+          "loading": "Loading materials...",
+          "newCategory": "New",
+          "newCategoryPlaceholder": "New category name",
+          "noAccess": "You do not have access to the materials library.",
+          "noCalls": "No calls found.",
+          "noCategory": "No category",
+          "noneAttached": "No materials attached yet.",
+          "preview": "Preview",
+          "previewError": "Could not load the preview.",
+          "previewLoading": "Loading preview…",
+          "previewUnsupported": "Preview is available for PDFs and video only. Download the file to view it.",
+          "saving": "Saving…",
+          "searchPlaceholder": "Search...",
+          "tags": "Tags (comma-separated)",
+          "tagsPlaceholder": "script, onboarding",
+          "title": "Materials library",
+          "titleField": "Title",
+          "titlePlaceholder": "Defaults to the file name",
+          "updateSuccess": "Material updated.",
+          "upload": "Upload material",
+          "uploadSuccess": "Material uploaded.",
+          "uploading": "Uploading…"
+        },
+        "subTabs": {
+          "assignments": "Assignments",
+          "calendar": "1-on-1 Sessions",
+          "callLibrary": "Call library",
+          "courses": "Courses",
+          "drills": "Drill Exercises",
+          "groupTrainings": "Group Training Sessions",
+          "materials": "Materials",
+          "tests": "Tests"
+        }
+      },
+      "weeklyTasks": {
+        "cols": {
+          "dateTime": "Date/Time",
+          "subject": "Subject"
+        },
+        "empty": "No tasks for this week",
+        "kpi": {
+          "week": "The Week"
+        },
+        "overdueBanner": "Weekly tasks – there are overdue ones",
+        "today": "today",
+        "allTasks": "All tasks",
+        "status": {
+          "open": "Open",
+          "in_progress": "In progress",
+          "overdue": "Overdue",
+          "completed": "Completed"
+        },
+        "priority": {
+          "critical": "Critical",
+          "high": "High",
+          "medium": "Medium",
+          "low": "Low"
+        },
+        "days": {
+          "short": {
+            "mon": "Mon",
+            "tue": "Tue",
+            "wed": "Wed",
+            "thu": "Thu",
+            "fri": "Fri",
+            "sat": "Sat",
+            "sun": "Sun"
+          },
+          "full": {
+            "mon": "Monday",
+            "tue": "Tuesday",
+            "wed": "Wednesday",
+            "thu": "Thursday",
+            "fri": "Friday",
+            "sat": "Saturday",
+            "sun": "Sunday"
+          }
+        }
+      },
+      "analyticsSubTabs": {
+        "autoFlags": "Auto-flags",
+        "closures": "Successful Closures",
+        "heatmap": "Heat Map",
+        "interactions": "Interactions",
+        "leaks": "Leaks",
+        "promises": "Promises and Callbacks",
+        "scriptAnalytics": "Script Analytics",
+        "thirdParties": "Third Parties",
+        "timeAtWork": "Time at Work",
+        "weeklyTasks": "Weekly Tasks"
       }
     },
     "users": {
@@ -4046,7 +4902,7 @@
         "rrLoanNumber": "Loan Number",
         "rrClientNumber": "Client Number",
         "rrRestructuringAmount": "Restructuring Amount",
-        "rrFirstPaymentDate": "Date of First Installment",
+        "rrFirstPaymentDate": "First Payment Date",
         "rrFirstPaymentAmount": "Amount of First Installment",
         "rrNumPayments": "Number of Payments",
         "rrMonthlyPayment": "Monthly Payment",
@@ -4057,7 +4913,6 @@
         "rrPenaltyTag": "penalty (overdue trigger)",
         "rrNumPaymentsHint": "Up to {{max}} payments.",
         "rrFrequency": "Payment Frequency",
-        "rrFirstPaymentDate": "First Payment Date",
         "rrPeriodicityHint": "The schedule below is auto-filled from the first payment date, number of payments and frequency. You can still edit any row.",
         "rrFrequencyManual": "Manual (no auto-fill)",
         "rrFrequencyOptions": {
@@ -4087,7 +4942,6 @@
         "makePayment": "Make Payment",
         "payments": "Payments",
         "writesOff": "Writes-off",
-        "reversal": "Reversal",
         "reversals": "Reversals",
         "reversalModal": {
           "title": "Reversal",
