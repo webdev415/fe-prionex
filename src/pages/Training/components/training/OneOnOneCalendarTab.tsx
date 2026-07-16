@@ -355,7 +355,7 @@ function PostponeDialog({
           <h3 className="text-sm font-semibold text-[#05040D]">
             {t('pages.training.calendar.postpone', 'Postpone')}
           </h3>
-          <button type="button" onClick={onClose} aria-label="Close">
+          <button type="button" onClick={onClose} aria-label={t('common.close', 'Close')}>
             <Icons.Close size={18} className="text-[#676767]" />
           </button>
         </div>
@@ -458,7 +458,7 @@ function MemberPicker({ label, operators, selected, onChange }: MemberPickerProp
           <button
             type="button"
             onClick={() => commit(slots.filter((_, j) => j !== i))}
-            aria-label="Remove"
+            aria-label={t('actions.remove', 'Remove')}
           >
             <Icons.Close size={13} className="text-[#9CA3AF]" />
           </button>
@@ -519,7 +519,7 @@ function ScheduleCalibrationPanel({
               {t('pages.training.calendar.schedule', 'Schedule a Calibration Session')}
             </h3>
           </div>
-          <button type="button" onClick={onClose} aria-label="Close">
+          <button type="button" onClick={onClose} aria-label={t('common.close', 'Close')}>
             <Icons.Close size={18} className="text-[#676767]" />
           </button>
         </div>

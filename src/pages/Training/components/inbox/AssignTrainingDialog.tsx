@@ -84,7 +84,7 @@ export function AssignTrainingDialog({ open, onClose, operatorId }: AssignTraini
           <h3 className="text-base font-semibold text-[#05040D]">
             {t('pages.training.inbox.quickActions.assignCourse', 'Assign course / drill')}
           </h3>
-          <button type="button" onClick={onClose} aria-label="Close">
+          <button type="button" onClick={onClose} aria-label={t('common.close', 'Close')}>
             <Icons.Close size={18} className="text-[#676767]" />
           </button>
         </div>

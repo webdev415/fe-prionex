@@ -1627,7 +1627,8 @@
           "hint": "Mark which script stages the call reached. Each stage is independent.",
           "notReached": "Not reached",
           "reached": "Reached"
-        }
+        },
+        "commentOptional": "Comment (optional)"
       },
       "dialogue": {
         "chips": {
@@ -2366,7 +2367,8 @@
           "practiceNextCall": "Practice in next call",
           "studyMaterial": "Study material"
         },
-        "priorityLabel": "Priority"
+        "priorityLabel": "Priority",
+        "timestampPlaceholder": "e.g. 83 (for 1:23)"
       },
       "drills": {
         "allCategories": "All categories",
@@ -2735,7 +2737,9 @@
             "beginner": "Beginner",
             "intermediate": "Intermediate",
             "advanced": "Advanced"
-          }
+          },
+          "removeModule": "Remove module",
+          "removeMaterial": "Remove material"
         },
         "library": {
           "add": "Add to library",

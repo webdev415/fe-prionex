@@ -349,7 +349,7 @@ function CreateCoursePanel({ onClose }: { onClose: () => void }) {
               {t('pages.training.training.courses.addCourse', 'Create a Course')}
             </h3>
           </div>
-          <button type="button" onClick={onClose} aria-label="Close">
+          <button type="button" onClick={onClose} aria-label={t('common.close', 'Close')}>
             <Icons.Close size={18} className="text-[#676767]" />
           </button>
         </div>
@@ -480,7 +480,7 @@ function CreateCoursePanel({ onClose }: { onClose: () => void }) {
                 <button
                   type="button"
                   onClick={() => setModules((arr) => arr.filter((_, j) => j !== i))}
-                  aria-label="Remove module"
+                  aria-label={t('pages.training.training.courses.removeModule', 'Remove module')}
                 >
                   <Icons.Close size={14} className="text-[#9CA3AF]" />
                 </button>
@@ -535,7 +535,10 @@ function CreateCoursePanel({ onClose }: { onClose: () => void }) {
                 <button
                   type="button"
                   onClick={() => setMaterials((arr) => arr.filter((_, j) => j !== i))}
-                  aria-label="Remove material"
+                  aria-label={t(
+                    'pages.training.training.courses.removeMaterial',
+                    'Remove material'
+                  )}
                 >
                   <Icons.Close size={14} className="text-[#9CA3AF]" />
                 </button>
@@ -601,7 +604,7 @@ function CourseDetailsDialog({
             <span className="rounded-full bg-[#F0FDF4] px-2 py-0.5 text-[10px] font-medium text-[#15803D] capitalize">
               {detail.status}
             </span>
-            <button type="button" onClick={onClose} aria-label="Close">
+            <button type="button" onClick={onClose} aria-label={t('common.close', 'Close')}>
               <Icons.Close size={18} className="text-[#676767]" />
             </button>
           </div>

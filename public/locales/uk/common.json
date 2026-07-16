@@ -1626,7 +1626,8 @@
           "hint": "Позначте, яких етапів скрипту досяг дзвінок. Кожен етап незалежний.",
           "notReached": "Не досягнуто",
           "reached": "Досягнуто"
-        }
+        },
+        "commentOptional": "Коментар (необов’язково)"
       },
       "dialogue": {
         "chips": {
@@ -2367,7 +2368,8 @@
           "practiceNextCall": "Відпрацювати в наступному дзвінку",
           "studyMaterial": "Вивчити матеріал"
         },
-        "priorityLabel": "Пріоритет"
+        "priorityLabel": "Пріоритет",
+        "timestampPlaceholder": "напр. 83 (для 1:23)"
       },
       "drills": {
         "allCategories": "Усі категорії",
@@ -2736,7 +2738,9 @@
             "beginner": "Початковий",
             "intermediate": "Середній",
             "advanced": "Просунутий"
-          }
+          },
+          "removeModule": "Видалити модуль",
+          "removeMaterial": "Видалити матеріал"
         },
         "library": {
           "add": "Додати до бібліотеки",
