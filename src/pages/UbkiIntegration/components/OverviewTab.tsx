@@ -183,15 +183,16 @@ export function OverviewTab() {
     setShowPassword(false)
     setEditing(true)
   }
+  // Login + password are mandatory — can't save when either is empty.
+  const canSaveConn = !!form.login.trim() && !!form.password.trim()
   const saveEdit = () => {
+    if (!canSaveConn) return
     const payload: UbkiConnectionUpdate = {
       environment: form.environment,
       endpoint_url: form.endpoint_url,
+      login: form.login.trim(),
+      password: form.password,
     }
-    // Blank login/password → keep the currently stored value (the backend only
-    // overwrites when a non-empty value is sent). Sending '' would wipe them.
-    if (form.login.trim()) payload.login = form.login.trim()
-    if (form.password) payload.password = form.password
     updateConn.mutate(payload, { onSuccess: () => setEditing(false) })
   }
 
@@ -368,7 +369,8 @@ export function OverviewTab() {
                 variant="secondary"
                 size="sm"
                 leftIcon={<MdCheck size={14} />}
-                disabled={updateConn.isPending}
+                disabled={updateConn.isPending || !canSaveConn}
+                title={!canSaveConn ? 'Login and password are required' : undefined}
                 onClick={saveEdit}
               >
                 {updateConn.isPending ? 'Saving…' : 'Done'}
@@ -447,7 +449,7 @@ export function OverviewTab() {
             <input
               readOnly={!editing}
               value={editing ? form.login : (conn?.login ?? '—')}
-              placeholder={editing ? 'Leave blank to keep current' : undefined}
+              placeholder={editing ? 'Required' : undefined}
               onChange={(e) => setForm((f) => ({ ...f, login: e.target.value }))}
               className={`h-10 w-full rounded-lg border border-gray-200 px-3 text-xs text-gray-700 ${
                 editing ? 'focus:border-primary-500 bg-white focus:outline-none' : 'bg-gray-50'
@@ -471,7 +473,7 @@ export function OverviewTab() {
                 type={editing && showPassword ? 'text' : 'password'}
                 readOnly={!editing}
                 value={editing ? form.password : '********'}
-                placeholder={editing ? 'Leave blank to keep current' : undefined}
+                placeholder={editing ? 'Required' : undefined}
                 onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
                 className={`h-10 w-full rounded-lg border border-gray-200 pl-3 text-xs text-gray-700 ${
                   editing
@@ -513,11 +515,14 @@ export function OverviewTab() {
           <p className="text-error-600 mt-2 text-xs">Failed to save connection settings.</p>
         )}
 
-        {/* status strip — last test result, else the cached-session config. */}
+        {/* status strip — reflects the last Test connection ONLY. It never
+            falls back to the background submission session, so a wrong saved
+            password shows "Not tested"/"Connection failed" instead of riding
+            on a cached ticket. */}
         {(() => {
-          const connected = testResult ? testResult.connected : (conn?.connected ?? false)
-          const sessionId = testResult?.session_id ?? conn?.session_id ?? null
-          const expiresAt = testResult?.expires_at ?? conn?.expires_at ?? null
+          const connected = testResult?.connected ?? false
+          const sessionId = testResult?.session_id ?? null
+          const expiresAt = testResult?.expires_at ?? null
           return (
             <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-500">
               <span
