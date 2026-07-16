@@ -54,7 +54,7 @@ function SummaryCard({
   return (
     <div className={`rounded-xl border px-4 py-3 ${color}`}>
       <p className="text-2xl font-bold">{value}</p>
-      <p className="text-xs text-gray-600">{label}</p>
+      <p className="text-muted-foreground text-xs">{label}</p>
     </div>
   )
 }
@@ -88,21 +88,21 @@ function usePaymentPreviewColumns(t: TFunction<'common'>): Column<PreviewRowWith
         key: 'loan_number',
         header: t(`${c}.contractNumber`),
         render: (row: PreviewRowWithId) => (
-          <span className="text-dark-500 font-medium">{row.loan_number}</span>
+          <span className="text-foreground font-medium">{row.loan_number}</span>
         ),
       },
       {
         key: 'tin',
         header: t(`${c}.tin`),
         render: (row: PreviewRowWithId) => (
-          <span className="text-xs text-gray-600">{row.tin || '—'}</span>
+          <span className="text-muted-foreground text-xs">{row.tin || '—'}</span>
         ),
       },
       {
         key: 'client_name',
         header: t(`${c}.client`),
         render: (row: PreviewRowWithId) => (
-          <span className="text-gray-600">
+          <span className="text-muted-foreground">
             {row.client_name || (row.client_id ? `ID: ${row.client_id}` : '—')}
           </span>
         ),
@@ -111,7 +111,7 @@ function usePaymentPreviewColumns(t: TFunction<'common'>): Column<PreviewRowWith
         key: 'payment_amount',
         header: t(`${c}.amount`),
         render: (row: PreviewRowWithId) => (
-          <span className="text-dark-500 font-medium">{formatAmount(row.payment_amount)}</span>
+          <span className="text-foreground font-medium">{formatAmount(row.payment_amount)}</span>
         ),
       },
       {
@@ -122,7 +122,7 @@ function usePaymentPreviewColumns(t: TFunction<'common'>): Column<PreviewRowWith
         key: 'payment_method',
         header: t(`${c}.method`),
         render: (row: PreviewRowWithId) => (
-          <span className="text-xs text-gray-600">{row.payment_method}</span>
+          <span className="text-muted-foreground text-xs">{row.payment_method}</span>
         ),
       },
       {
@@ -132,12 +132,13 @@ function usePaymentPreviewColumns(t: TFunction<'common'>): Column<PreviewRowWith
         key: 'payment_comment',
         header: t(`${c}.paymentComment`),
         render: (row: PreviewRowWithId) => {
-          if (row.status === 'error') return <span className="text-xs text-gray-400">—</span>
+          if (row.status === 'error')
+            return <span className="text-muted-foreground text-xs">—</span>
           const commentText = row.payment_comment?.trim() || null
           return commentText ? (
-            <span className="text-xs text-gray-700">{commentText}</span>
+            <span className="text-muted-foreground text-xs">{commentText}</span>
           ) : (
-            <span className="text-xs text-gray-400">—</span>
+            <span className="text-muted-foreground text-xs">—</span>
           )
         },
       },
@@ -147,7 +148,8 @@ function usePaymentPreviewColumns(t: TFunction<'common'>): Column<PreviewRowWith
         key: 'has_pending_match',
         header: t(`${c}.type`),
         render: (row: PreviewRowWithId) => {
-          if (row.status === 'error') return <span className="text-xs text-gray-400">—</span>
+          if (row.status === 'error')
+            return <span className="text-muted-foreground text-xs">—</span>
           if (row.has_pending_match === true) {
             return (
               <span className="inline-flex items-center rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700">
@@ -162,7 +164,7 @@ function usePaymentPreviewColumns(t: TFunction<'common'>): Column<PreviewRowWith
               </span>
             )
           }
-          return <span className="text-xs text-gray-400">—</span>
+          return <span className="text-muted-foreground text-xs">—</span>
         },
       },
       {
@@ -176,7 +178,7 @@ function usePaymentPreviewColumns(t: TFunction<'common'>): Column<PreviewRowWith
         key: 'note',
         header: t(`${c}.note`),
         render: (row: PreviewRowWithId) => (
-          <span className="text-xs text-gray-600">{row.error || row.warning || ''}</span>
+          <span className="text-muted-foreground text-xs">{row.error || row.warning || ''}</span>
         ),
       },
     ]
@@ -208,8 +210,8 @@ export function PaymentImportPreview({ preview, onConfirm, onCancel, isExecuting
   return (
     <div className="space-y-6">
       <div>
-        <h3 className="text-dark-500 text-lg font-medium">{t(`${p}.title`)}</h3>
-        <p className="text-sm text-gray-600">
+        <h3 className="text-foreground text-lg font-medium">{t(`${p}.title`)}</h3>
+        <p className="text-muted-foreground text-sm">
           {t(`${p}.fileInfo`, {
             filename: preview.filename,
             totalRecords: preview.total_records,
@@ -242,13 +244,13 @@ export function PaymentImportPreview({ preview, onConfirm, onCancel, isExecuting
         <SummaryCard
           label={t(`${p}.summary.uniqueContracts`)}
           value={summary.unique_contracts}
-          color="bg-gray-50 border-gray-200 text-dark-500"
+          color="bg-muted border-border text-foreground"
         />
       </div>
 
       {previewRowsWithId.length > 0 && (
         <div>
-          <h4 className="text-dark-500 mb-2 text-sm font-medium">
+          <h4 className="text-foreground mb-2 text-sm font-medium">
             {t(`${p}.previewTableTitle`, { count: previewShown })}
           </h4>
           <DataTable<PreviewRowWithId>
@@ -272,14 +274,14 @@ export function PaymentImportPreview({ preview, onConfirm, onCancel, isExecuting
         </div>
       )}
 
-      <div className="space-y-3 border-t border-gray-200 pt-4">
+      <div className="border-border space-y-3 border-t pt-4">
         {summary.warnings > 0 && (
-          <label className="flex items-center gap-2 text-sm text-gray-700">
+          <label className="text-muted-foreground flex items-center gap-2 text-sm">
             <input
               type="checkbox"
               checked={skipWarnings}
               onChange={(e) => setSkipWarnings(e.target.checked)}
-              className="rounded border-gray-300"
+              className="border-border rounded"
             />
             {t(`${p}.skipWarnings`, { count: summary.warnings })}
           </label>
@@ -290,7 +292,7 @@ export function PaymentImportPreview({ preview, onConfirm, onCancel, isExecuting
           placeholder={t(`${p}.commentPlaceholder`)}
           maxLength={500}
           rows={2}
-          className="focus:border-secondary-500 focus:ring-secondary-500 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-1 focus:outline-none"
+          className="text-foreground focus:border-primary-500 focus:ring-primary-500 bg-card placeholder:text-muted-foreground border-border w-full rounded-lg border px-3 py-2 text-sm focus:ring-1 focus:outline-none"
         />
       </div>
 
