@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import { MdClose, MdCheck, MdSend } from 'react-icons/md'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/Button'
@@ -74,6 +75,7 @@ function Chips({
   onAdd: (value: string) => void
   placeholder?: string
 }) {
+  const { t } = useTranslation('common')
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
@@ -136,7 +138,7 @@ function Chips({
             // which would otherwise commit twice / close the field.
             onMouseDown={(e) => e.preventDefault()}
             onClick={commit}
-            aria-label="Add"
+            aria-label={t('pages.ubkiIntegration.settings.chips.addAriaLabel', 'Add')}
             className="bg-primary-600 hover:bg-primary-700 inline-flex h-5 w-5 items-center justify-center rounded-md text-white"
           >
             <MdCheck size={12} />
@@ -148,7 +150,7 @@ function Chips({
           onClick={() => setEditing(true)}
           className="hover:text-dark-500 text-xs font-medium text-gray-500"
         >
-          + Add
+          {t('pages.ubkiIntegration.settings.chips.addButton', '+ Add')}
         </button>
       )}
     </div>
@@ -194,14 +196,27 @@ const WEEKDAYS: { key: string; label: string }[] = [
 ]
 
 export function SettingsTab() {
+  const { t } = useTranslation('common')
   const { data, isLoading, isError } = useUbkiSettings()
   const update = useUpdateUbkiSettings()
   const runNow = useRunAutoSubmitNow()
 
   const handleSendNow = () => {
     runNow.mutate(undefined, {
-      onSuccess: () => toast.success('Submission started — check the Overview log for results.'),
-      onError: () => toast.error('Could not start submission. Please try again.'),
+      onSuccess: () =>
+        toast.success(
+          t(
+            'pages.ubkiIntegration.settings.sendNow.successToast',
+            'Submission started — check the Overview log for results.'
+          )
+        ),
+      onError: () =>
+        toast.error(
+          t(
+            'pages.ubkiIntegration.settings.sendNow.errorToast',
+            'Could not start submission. Please try again.'
+          )
+        ),
     })
   }
 
@@ -218,12 +233,19 @@ export function SettingsTab() {
   }
 
   if (isLoading || !form) {
-    return <div className="py-16 text-center text-sm text-gray-500">Loading settings…</div>
+    return (
+      <div className="py-16 text-center text-sm text-gray-500">
+        {t('pages.ubkiIntegration.settings.loading', 'Loading settings…')}
+      </div>
+    )
   }
   if (isError) {
     return (
       <div className="text-error-600 py-16 text-center text-sm">
-        Failed to load settings. Please try again.
+        {t(
+          'pages.ubkiIntegration.settings.loadError',
+          'Failed to load settings. Please try again.'
+        )}
       </div>
     )
   }
@@ -246,8 +268,11 @@ export function SettingsTab() {
   return (
     <div className="flex flex-col gap-4">
       <SectionCard
-        title="Automatic Submission"
-        desc="Configure when UBKI submissions are sent automatically."
+        title={t('pages.ubkiIntegration.settings.section.autoSubmit.title', 'Automatic Submission')}
+        desc={t(
+          'pages.ubkiIntegration.settings.section.autoSubmit.desc',
+          'Configure when UBKI submissions are sent automatically.'
+        )}
         action={
           <Button
             variant="secondary"
@@ -258,23 +283,44 @@ export function SettingsTab() {
             onClick={handleSendNow}
             title={
               form.auto_submit_enabled
-                ? 'Run the automatic submission now (ignores the schedule)'
-                : 'Enable automatic submission to use Send now'
+                ? t(
+                    'pages.ubkiIntegration.settings.sendNow.enabledTitle',
+                    'Run the automatic submission now (ignores the schedule)'
+                  )
+                : t(
+                    'pages.ubkiIntegration.settings.sendNow.disabledTitle',
+                    'Enable automatic submission to use Send now'
+                  )
             }
           >
-            Send now
+            {t('pages.ubkiIntegration.settings.sendNow.button', 'Send now')}
           </Button>
         }
       >
         <ToggleRow
           checked={form.auto_submit_enabled}
           onChange={(v) => set({ auto_submit_enabled: v })}
-          title="Enable automatic submission"
-          desc="Automatically send credit updates on schedule."
-          note="If disabled, only Manual and Bulk submissions are allowed."
+          title={t(
+            'pages.ubkiIntegration.settings.autoSubmit.toggleTitle',
+            'Enable automatic submission'
+          )}
+          desc={t(
+            'pages.ubkiIntegration.settings.autoSubmit.toggleDesc',
+            'Automatically send credit updates on schedule.'
+          )}
+          note={t(
+            'pages.ubkiIntegration.settings.autoSubmit.toggleNote',
+            'If disabled, only Manual and Bulk submissions are allowed.'
+          )}
         />
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-          <Field label="Send time" hint="Default: 03:00 Europe/Kyiv. Off-peak recommended.">
+          <Field
+            label={t('pages.ubkiIntegration.settings.sendTime.label', 'Send time')}
+            hint={t(
+              'pages.ubkiIntegration.settings.sendTime.hint',
+              'Default: 03:00 Europe/Kyiv. Off-peak recommended.'
+            )}
+          >
             <input
               type="time"
               className={inputCls}
@@ -282,7 +328,7 @@ export function SettingsTab() {
               onChange={(e) => set({ send_time: e.target.value })}
             />
           </Field>
-          <Field label="Time zone">
+          <Field label={t('pages.ubkiIntegration.settings.timezone.label', 'Time zone')}>
             <Select value={form.timezone} onValueChange={(v) => set({ timezone: v })}>
               <SelectTrigger>
                 <SelectValue />
@@ -296,7 +342,7 @@ export function SettingsTab() {
               </SelectContent>
             </Select>
           </Field>
-          <Field label="Frequency">
+          <Field label={t('pages.ubkiIntegration.settings.frequency.label', 'Frequency')}>
             <div className="flex gap-1 rounded-xl border border-gray-200 bg-gray-50 p-1">
               {(['daily', 'weekdays', 'custom'] as const).map((f) => (
                 <button
@@ -321,7 +367,11 @@ export function SettingsTab() {
                       : 'text-gray-600 hover:text-gray-900'
                   }`}
                 >
-                  {f === 'daily' ? 'Every day' : f === 'weekdays' ? 'Weekdays only' : 'Custom days'}
+                  {f === 'daily'
+                    ? t('pages.ubkiIntegration.settings.frequency.everyDay', 'Every day')
+                    : f === 'weekdays'
+                      ? t('pages.ubkiIntegration.settings.frequency.weekdaysOnly', 'Weekdays only')
+                      : t('pages.ubkiIntegration.settings.frequency.customDays', 'Custom days')}
                 </button>
               ))}
             </div>
@@ -346,7 +396,7 @@ export function SettingsTab() {
                           : 'border border-gray-200 bg-white text-gray-600'
                       }`}
                     >
-                      {d.label}
+                      {t(`pages.ubkiIntegration.settings.weekdays.${d.key}`, d.label)}
                     </button>
                   )
                 })}
@@ -357,18 +407,39 @@ export function SettingsTab() {
         <ToggleRow
           checked={form.send_only_changed}
           onChange={(v) => set({ send_only_changed: v })}
-          title="Send only changed credits"
-          desc="Only credits with deltas since last send (payment / status / RR change)."
-          note="Switching off resends the full portfolio every day."
+          title={t(
+            'pages.ubkiIntegration.settings.sendOnlyChanged.title',
+            'Send only changed credits'
+          )}
+          desc={t(
+            'pages.ubkiIntegration.settings.sendOnlyChanged.desc',
+            'Only credits with deltas since last send (payment / status / RR change).'
+          )}
+          note={t(
+            'pages.ubkiIntegration.settings.sendOnlyChanged.note',
+            'Switching off resends the full portfolio every day.'
+          )}
         />
       </SectionCard>
 
       <SectionCard
-        title="Retry Policy"
-        desc="Control how failed submissions are automatically retried."
+        title={t('pages.ubkiIntegration.settings.section.retry.title', 'Retry Policy')}
+        desc={t(
+          'pages.ubkiIntegration.settings.section.retry.desc',
+          'Control how failed submissions are automatically retried.'
+        )}
       >
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-          <Field label="Max retry attempts" hint="Default: 3. Range: 1–10.">
+          <Field
+            label={t(
+              'pages.ubkiIntegration.settings.retry.maxAttempts.label',
+              'Max retry attempts'
+            )}
+            hint={t(
+              'pages.ubkiIntegration.settings.retry.maxAttempts.hint',
+              'Default: 3. Range: 1–10.'
+            )}
+          >
             <input
               type="number"
               min={1}
@@ -379,8 +450,14 @@ export function SettingsTab() {
             />
           </Field>
           <Field
-            label="Retry interval (minutes)"
-            hint="Default: 15 min. Fixed gap between retries."
+            label={t(
+              'pages.ubkiIntegration.settings.retry.interval.label',
+              'Retry interval (minutes)'
+            )}
+            hint={t(
+              'pages.ubkiIntegration.settings.retry.interval.hint',
+              'Default: 15 min. Fixed gap between retries.'
+            )}
           >
             <input
               type="number"
@@ -392,12 +469,21 @@ export function SettingsTab() {
             />
           </Field>
           <Field
-            label="Skip retry for these error codes"
-            hint="These errors require manual fix, not retry."
+            label={t(
+              'pages.ubkiIntegration.settings.retry.skipCodes.label',
+              'Skip retry for these error codes'
+            )}
+            hint={t(
+              'pages.ubkiIntegration.settings.retry.skipCodes.hint',
+              'These errors require manual fix, not retry.'
+            )}
           >
             <Chips
               items={form.skip_retry_error_codes}
-              placeholder="e.g. ERR_500"
+              placeholder={t(
+                'pages.ubkiIntegration.settings.retry.skipCodes.placeholder',
+                'e.g. ERR_500'
+              )}
               onRemove={(i) =>
                 set({
                   skip_retry_error_codes: form.skip_retry_error_codes.filter((_, idx) => idx !== i),
@@ -412,25 +498,46 @@ export function SettingsTab() {
       </SectionCard>
 
       <SectionCard
-        title="Notifications"
-        desc="Choose who gets alerted and when for UBKI integration events."
+        title={t('pages.ubkiIntegration.settings.section.notifications.title', 'Notifications')}
+        desc={t(
+          'pages.ubkiIntegration.settings.section.notifications.desc',
+          'Choose who gets alerted and when for UBKI integration events.'
+        )}
       >
         <ToggleRow
           checked={form.daily_summary_email}
           onChange={(v) => set({ daily_summary_email: v })}
-          title="Daily summary email"
-          desc="Send a daily report with submission stats to all recipients."
+          title={t(
+            'pages.ubkiIntegration.settings.notifications.dailySummary.title',
+            'Daily summary email'
+          )}
+          desc={t(
+            'pages.ubkiIntegration.settings.notifications.dailySummary.desc',
+            'Send a daily report with submission stats to all recipients.'
+          )}
         />
         <ToggleRow
           checked={form.alert_on_high_failure}
           onChange={(v) => set({ alert_on_high_failure: v })}
-          title="Alert on high failure rate"
-          desc="Send an alert when failure rate exceeds the threshold."
+          title={t(
+            'pages.ubkiIntegration.settings.notifications.highFailureAlert.title',
+            'Alert on high failure rate'
+          )}
+          desc={t(
+            'pages.ubkiIntegration.settings.notifications.highFailureAlert.desc',
+            'Send an alert when failure rate exceeds the threshold.'
+          )}
         />
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           <Field
-            label="High failure-rate threshold (%)"
-            hint="Default: 10%. Recommended range: 5–20%."
+            label={t(
+              'pages.ubkiIntegration.settings.notifications.threshold.label',
+              'High failure-rate threshold (%)'
+            )}
+            hint={t(
+              'pages.ubkiIntegration.settings.notifications.threshold.hint',
+              'Default: 10%. Recommended range: 5–20%.'
+            )}
           >
             <input
               type="number"
@@ -441,7 +548,16 @@ export function SettingsTab() {
               onChange={(e) => set({ failure_rate_threshold: Number(e.target.value) })}
             />
           </Field>
-          <Field label="Connection-down alert (minutes)" hint="Default: 15 min.">
+          <Field
+            label={t(
+              'pages.ubkiIntegration.settings.notifications.connectionDown.label',
+              'Connection-down alert (minutes)'
+            )}
+            hint={t(
+              'pages.ubkiIntegration.settings.notifications.connectionDown.hint',
+              'Default: 15 min.'
+            )}
+          >
             <input
               type="number"
               min={1}
@@ -452,12 +568,21 @@ export function SettingsTab() {
             />
           </Field>
           <Field
-            label="Notification recipients"
-            hint="Combination of roles and individuals is supported."
+            label={t(
+              'pages.ubkiIntegration.settings.notifications.recipients.label',
+              'Notification recipients'
+            )}
+            hint={t(
+              'pages.ubkiIntegration.settings.notifications.recipients.hint',
+              'Combination of roles and individuals is supported.'
+            )}
           >
             <Chips
               items={form.notification_recipients}
-              placeholder="email or role"
+              placeholder={t(
+                'pages.ubkiIntegration.settings.notifications.recipients.placeholder',
+                'email or role'
+              )}
               onRemove={(i) =>
                 set({
                   notification_recipients: form.notification_recipients.filter(
@@ -475,7 +600,10 @@ export function SettingsTab() {
 
       {update.isError && (
         <p className="text-error-600 text-right text-xs">
-          Failed to save. Please check the values and try again.
+          {t(
+            'pages.ubkiIntegration.settings.saveError',
+            'Failed to save. Please check the values and try again.'
+          )}
         </p>
       )}
 
@@ -487,7 +615,7 @@ export function SettingsTab() {
           disabled={!dirty || update.isPending}
           onClick={handleDiscard}
         >
-          Discard changes
+          {t('pages.ubkiIntegration.settings.discardButton', 'Discard changes')}
         </Button>
         <Button
           variant="secondary"
@@ -500,7 +628,9 @@ export function SettingsTab() {
             </span>
           }
         >
-          {update.isPending ? 'Saving…' : 'Save changes'}
+          {update.isPending
+            ? t('pages.ubkiIntegration.settings.savingButton', 'Saving…')
+            : t('pages.ubkiIntegration.settings.saveButton', 'Save changes')}
         </Button>
       </div>
     </div>

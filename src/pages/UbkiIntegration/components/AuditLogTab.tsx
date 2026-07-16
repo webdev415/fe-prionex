@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { MdOutlineFileDownload, MdSync, MdInfoOutline } from 'react-icons/md'
 import { DataTable, type Column } from '@/components/ui/DataTable'
@@ -21,13 +22,14 @@ const STATUS_STYLES: Record<string, string> = {
 }
 
 // Event-type vocabulary (server stores this on each row → used directly).
-const EVENT_TYPE_OPTIONS: MultiCheckboxOption<string>[] = [
-  { value: 'Settings changed', label: 'Settings changed' },
-  { value: 'Credentials updated', label: 'Credentials updated' },
-  { value: 'Connection tested', label: 'Connection tested' },
-  { value: 'Opt-out added/removed', label: 'Opt-out added/removed' },
-  { value: 'Bulk action triggered', label: 'Bulk action triggered' },
-]
+// Values are raw event_type codes sent to the API; only labels are localized.
+const EVENT_TYPE_VALUES = [
+  'Settings changed',
+  'Credentials updated',
+  'Connection tested',
+  'Opt-out added/removed',
+  'Bulk action triggered',
+] as const
 
 interface Row {
   id: number
@@ -40,6 +42,7 @@ interface Row {
 }
 
 export function AuditLogTab() {
+  const { t } = useTranslation('common')
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [eventTypes, setEventTypes] = useState<string[]>([])
@@ -84,11 +87,17 @@ export function AuditLogTab() {
         event: a.event,
         eventType: a.event_type,
         performedBy:
-          a.performed_by_name ?? (a.performed_by != null ? `User #${a.performed_by}` : 'System'),
+          a.performed_by_name ??
+          (a.performed_by != null
+            ? t('pages.ubkiIntegration.audit.performedByUser', {
+                defaultValue: 'User #{{id}}',
+                id: a.performed_by,
+              })
+            : t('pages.ubkiIntegration.audit.performedBySystem', 'System')),
         details: a.details ?? '—',
         status: a.status,
       })),
-    [data, userTimezone]
+    [data, userTimezone, t]
   )
   const total = data?.total ?? 0
   const totalPages = Math.max(1, Math.ceil(total / pageSize))
@@ -100,6 +109,34 @@ export function AuditLogTab() {
     () => (facets?.actors ?? []).map((a) => ({ value: a, label: a })),
     [facets]
   )
+
+  // Localized labels for the event-type filter; values stay as raw API codes.
+  const eventTypeLabels: Record<(typeof EVENT_TYPE_VALUES)[number], string> = {
+    'Settings changed': t(
+      'pages.ubkiIntegration.audit.eventTypes.settingsChanged',
+      'Settings changed'
+    ),
+    'Credentials updated': t(
+      'pages.ubkiIntegration.audit.eventTypes.credentialsUpdated',
+      'Credentials updated'
+    ),
+    'Connection tested': t(
+      'pages.ubkiIntegration.audit.eventTypes.connectionTested',
+      'Connection tested'
+    ),
+    'Opt-out added/removed': t(
+      'pages.ubkiIntegration.audit.eventTypes.optOutAddedRemoved',
+      'Opt-out added/removed'
+    ),
+    'Bulk action triggered': t(
+      'pages.ubkiIntegration.audit.eventTypes.bulkActionTriggered',
+      'Bulk action triggered'
+    ),
+  }
+  const eventTypeOptions: MultiCheckboxOption<string>[] = EVENT_TYPE_VALUES.map((value) => ({
+    value,
+    label: eventTypeLabels[value],
+  }))
 
   const resetFilters = () => {
     setSearch('')
@@ -127,7 +164,7 @@ export function AuditLogTab() {
       a.click()
       URL.revokeObjectURL(url)
     } catch {
-      toast.error('Export failed. Please try again.')
+      toast.error(t('pages.ubkiIntegration.audit.export.error', 'Export failed. Please try again.'))
     } finally {
       setExporting(false)
     }
@@ -136,29 +173,29 @@ export function AuditLogTab() {
   const columns: Column<Row>[] = [
     {
       key: 'dateTime',
-      header: 'Date / time',
+      header: t('pages.ubkiIntegration.audit.columns.dateTime', 'Date / time'),
       render: (r) => (
         <span className="text-xs whitespace-pre-line text-gray-700">{r.dateTime}</span>
       ),
     },
     {
       key: 'event',
-      header: 'Event',
+      header: t('pages.ubkiIntegration.audit.columns.event', 'Event'),
       render: (r) => <span className="text-dark-500 text-xs font-medium">{r.event}</span>,
     },
     {
       key: 'performedBy',
-      header: 'Performed By',
+      header: t('pages.ubkiIntegration.audit.columns.performedBy', 'Performed By'),
       render: (r) => <span className="text-xs text-gray-700">{r.performedBy}</span>,
     },
     {
       key: 'details',
-      header: 'Details',
+      header: t('pages.ubkiIntegration.audit.columns.details', 'Details'),
       render: (r) => <span className="text-xs text-gray-600">{r.details}</span>,
     },
     {
       key: 'status',
-      header: 'Status',
+      header: t('pages.ubkiIntegration.audit.columns.status', 'Status'),
       render: (r) => (
         <span
           className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium capitalize ${STATUS_STYLES[r.status] ?? 'bg-gray-100 text-gray-600'}`}
@@ -176,11 +213,14 @@ export function AuditLogTab() {
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="text-dark-500 flex items-center gap-1.5 text-sm font-semibold">
-              Audit log
+              {t('pages.ubkiIntegration.audit.title', 'Audit log')}
               <MdInfoOutline size={15} className="text-gray-400" />
             </h2>
             <p className="text-xs text-gray-500">
-              All configuration changes and admin actions for UBKI integration.
+              {t(
+                'pages.ubkiIntegration.audit.subtitle',
+                'All configuration changes and admin actions for UBKI integration.'
+              )}
             </p>
           </div>
           <Button
@@ -190,20 +230,22 @@ export function AuditLogTab() {
             disabled={exporting || total === 0}
             onClick={handleExport}
           >
-            {exporting ? 'Exporting…' : 'Export'}
+            {exporting
+              ? t('pages.ubkiIntegration.audit.export.inProgress', 'Exporting…')
+              : t('pages.ubkiIntegration.audit.export.button', 'Export')}
           </Button>
         </div>
 
         <div className="mb-4 flex flex-wrap items-center gap-2">
           <div className="w-48">
             <MultiCheckboxDropdown
-              options={EVENT_TYPE_OPTIONS}
+              options={eventTypeOptions}
               selected={eventTypes}
               onChange={(v) => {
                 setEventTypes(v)
                 setPage(1)
               }}
-              allLabel="All event types"
+              allLabel={t('pages.ubkiIntegration.audit.filters.allEventTypes', 'All event types')}
             />
           </div>
           <div className="w-48">
@@ -214,7 +256,7 @@ export function AuditLogTab() {
                 setActors(v)
                 setPage(1)
               }}
-              allLabel="All actors"
+              allLabel={t('pages.ubkiIntegration.audit.filters.allActors', 'All actors')}
             />
           </div>
           <div className="w-40">
@@ -249,7 +291,10 @@ export function AuditLogTab() {
               setSearch(e.target.value)
               setPage(1)
             }}
-            placeholder="Search by event / actor / details…"
+            placeholder={t(
+              'pages.ubkiIntegration.audit.filters.searchPlaceholder',
+              'Search by event / actor / details…'
+            )}
             className="focus:border-primary-500 h-[45px] min-w-[200px] flex-1 rounded-full border border-gray-400 bg-white px-4 text-xs text-gray-700 focus:outline-none"
           />
           <Button
@@ -259,7 +304,7 @@ export function AuditLogTab() {
             leftIcon={<MdSync size={15} />}
             onClick={resetFilters}
           >
-            Reset
+            {t('pages.ubkiIntegration.audit.filters.reset', 'Reset')}
           </Button>
         </div>
 
@@ -267,11 +312,14 @@ export function AuditLogTab() {
           <TableSkeleton columns={5} rows={5} />
         ) : isError ? (
           <div className="text-error-600 py-16 text-center text-sm">
-            Failed to load the audit log.
+            {t('pages.ubkiIntegration.audit.loadError', 'Failed to load the audit log.')}
           </div>
         ) : rows.length === 0 ? (
           <div className="py-16 text-center text-sm text-gray-500">
-            No audit entries yet. Saving settings or changing the opt-out list will appear here.
+            {t(
+              'pages.ubkiIntegration.audit.empty',
+              'No audit entries yet. Saving settings or changing the opt-out list will appear here.'
+            )}
           </div>
         ) : (
           <>

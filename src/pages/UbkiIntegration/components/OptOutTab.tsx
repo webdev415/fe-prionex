@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { MdOutlineFileUpload, MdAdd, MdDeleteOutline, MdOutlinePersonOff } from 'react-icons/md'
 import { DataTable, type Column } from '@/components/ui/DataTable'
@@ -28,8 +29,6 @@ import {
 const REASONS = ['Legal request', 'Data dispute', 'Test client', 'Other'] as const
 type Reason = (typeof REASONS)[number]
 
-const REASON_OPTIONS: MultiCheckboxOption<string>[] = REASONS.map((r) => ({ value: r, label: r }))
-
 const REASON_STYLES: Record<string, string> = {
   'Legal request': 'text-success-700',
   'Data dispute': 'text-information-600',
@@ -49,6 +48,7 @@ interface Row {
 }
 
 export function OptOutTab() {
+  const { t } = useTranslation('common')
   const { data, isLoading, isError } = useOptOutClients()
   const addMut = useAddOptOut()
   const removeMut = useRemoveOptOut()
@@ -70,19 +70,51 @@ export function OptOutTab() {
 
   const items = useMemo(() => data ?? [], [data])
 
+  const reasonLabel = (code: string) => {
+    switch (code) {
+      case 'Legal request':
+        return t('pages.ubkiIntegration.optOut.reasons.legalRequest', 'Legal request')
+      case 'Data dispute':
+        return t('pages.ubkiIntegration.optOut.reasons.dataDispute', 'Data dispute')
+      case 'Test client':
+        return t('pages.ubkiIntegration.optOut.reasons.testClient', 'Test client')
+      case 'Other':
+        return t('pages.ubkiIntegration.optOut.reasons.other', 'Other')
+      default:
+        return code
+    }
+  }
+
+  const reasonOptions = useMemo<MultiCheckboxOption<string>[]>(
+    () => REASONS.map((r) => ({ value: r, label: reasonLabel(r) })),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [t]
+  )
+
   const rows = useMemo<Row[]>(
     () =>
       items.map((c: OptOutClientItem) => ({
         id: c.client_id,
-        clientName: c.client_name ?? `Client #${c.client_id}`,
+        clientName:
+          c.client_name ??
+          t('pages.ubkiIntegration.optOut.clientFallback', {
+            defaultValue: 'Client #{{id}}',
+            id: c.client_id,
+          }),
         clientRef: `#${c.client_id}`,
         tin: c.tax_id ?? '—',
         reason: c.reason,
-        setBy: c.set_by != null ? `User #${c.set_by}` : '—',
+        setBy:
+          c.set_by != null
+            ? t('pages.ubkiIntegration.optOut.userFallback', {
+                defaultValue: 'User #{{id}}',
+                id: c.set_by,
+              })
+            : '—',
         dateAdded: c.set_at ? formatDateTime(c.set_at, userTimezone) : '—',
         note: c.note ?? '—',
       })),
-    [items, userTimezone]
+    [items, userTimezone, t]
   )
 
   const adminOptions = useMemo<MultiCheckboxOption<string>[]>(() => {
@@ -115,7 +147,7 @@ export function OptOutTab() {
   const columns: Column<Row>[] = [
     {
       key: 'client',
-      header: 'Client',
+      header: t('pages.ubkiIntegration.optOut.columns.client', 'Client'),
       render: (r) => (
         <div className="text-xs">
           <div className="text-dark-500 font-medium">{r.clientName}</div>
@@ -125,38 +157,38 @@ export function OptOutTab() {
     },
     {
       key: 'tin',
-      header: 'TIN',
+      header: t('pages.ubkiIntegration.optOut.columns.tin', 'TIN'),
       render: (r) => <span className="text-xs text-gray-700">{r.tin}</span>,
     },
     {
       key: 'reason',
-      header: 'Reason',
+      header: t('pages.ubkiIntegration.optOut.columns.reason', 'Reason'),
       render: (r) => (
         <span
           className={`text-xs font-medium ${r.reason ? (REASON_STYLES[r.reason] ?? 'text-gray-600') : 'text-gray-400'}`}
         >
-          {r.reason ?? '—'}
+          {r.reason ? reasonLabel(r.reason) : '—'}
         </span>
       ),
     },
     {
       key: 'setBy',
-      header: 'Set by',
+      header: t('pages.ubkiIntegration.optOut.columns.setBy', 'Set by'),
       render: (r) => <span className="text-xs text-gray-700">{r.setBy}</span>,
     },
     {
       key: 'dateAdded',
-      header: 'Date added',
+      header: t('pages.ubkiIntegration.optOut.columns.dateAdded', 'Date added'),
       render: (r) => <span className="text-xs text-gray-500">{r.dateAdded}</span>,
     },
     {
       key: 'note',
-      header: 'Note',
+      header: t('pages.ubkiIntegration.optOut.columns.note', 'Note'),
       render: (r) => <span className="text-xs text-gray-600">{r.note}</span>,
     },
     {
       key: 'actions',
-      header: 'Actions',
+      header: t('pages.ubkiIntegration.optOut.columns.actions', 'Actions'),
       align: 'right',
       render: (r) => (
         <button
@@ -165,7 +197,7 @@ export function OptOutTab() {
           onClick={() => removeMut.mutate([r.id])}
           className="text-error-600 inline-flex items-center gap-1 text-xs font-medium hover:underline disabled:opacity-50"
         >
-          <MdDeleteOutline size={14} /> Remove
+          <MdDeleteOutline size={14} /> {t('pages.ubkiIntegration.optOut.remove', 'Remove')}
         </button>
       ),
     },
@@ -197,14 +229,36 @@ export function OptOutTab() {
       { file, reason: 'Other' },
       {
         onSuccess: (res) => {
-          const parts = [`Imported ${res.imported_count}`]
-          if (res.skipped_count) parts.push(`skipped ${res.skipped_count} (no matching client)`)
+          const parts = [
+            t('pages.ubkiIntegration.optOut.import.imported', {
+              defaultValue: 'Imported {{count}}',
+              count: res.imported_count,
+            }),
+          ]
+          if (res.skipped_count)
+            parts.push(
+              t('pages.ubkiIntegration.optOut.import.skipped', {
+                defaultValue: 'skipped {{count}} (no matching client)',
+                count: res.skipped_count,
+              })
+            )
           toast.success(
             `${parts.join(', ')}.` +
-              (res.not_found.length ? `\nNot found: ${res.not_found.slice(0, 10).join(', ')}` : '')
+              (res.not_found.length
+                ? `\n${t('pages.ubkiIntegration.optOut.import.notFound', {
+                    defaultValue: 'Not found: {{list}}',
+                    list: res.not_found.slice(0, 10).join(', '),
+                  })}`
+                : '')
           )
         },
-        onError: () => toast.error('Import failed. Make sure the file is a CSV of TINs.'),
+        onError: () =>
+          toast.error(
+            t(
+              'pages.ubkiIntegration.optOut.import.error',
+              'Import failed. Make sure the file is a CSV of TINs.'
+            )
+          ),
       }
     )
   }
@@ -223,7 +277,7 @@ export function OptOutTab() {
         {/* Card header — title + actions, inside the card. */}
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-dark-500 flex items-center gap-2 text-sm font-semibold">
-            Opt-out clients
+            {t('pages.ubkiIntegration.optOut.title', 'Opt-out clients')}
             <span className="rounded-full bg-gray-100 px-1.5 py-0.5 text-xs text-gray-600">
               {items.length}
             </span>
@@ -236,7 +290,9 @@ export function OptOutTab() {
               disabled={importMut.isPending}
               onClick={() => fileRef.current?.click()}
             >
-              {importMut.isPending ? 'Importing…' : 'Import from CSV'}
+              {importMut.isPending
+                ? t('pages.ubkiIntegration.optOut.import.importing', 'Importing…')
+                : t('pages.ubkiIntegration.optOut.import.button', 'Import from CSV')}
             </Button>
             <Button
               variant="primary"
@@ -244,13 +300,18 @@ export function OptOutTab() {
               leftIcon={<MdAdd size={14} />}
               onClick={() => setAddOpen(true)}
             >
-              Add to opt-out
+              {t('pages.ubkiIntegration.optOut.add.button', 'Add to opt-out')}
             </Button>
           </div>
         </div>
 
         <div className="mb-4 flex flex-wrap items-center gap-2">
-          <span className="text-dark-500 text-xs font-medium">Selected: {selected.size}</span>
+          <span className="text-dark-500 text-xs font-medium">
+            {t('pages.ubkiIntegration.optOut.selected', {
+              defaultValue: 'Selected: {{count}}',
+              count: selected.size,
+            })}
+          </span>
           {selected.size > 0 && (
             <Button
               variant="danger"
@@ -259,21 +320,24 @@ export function OptOutTab() {
               disabled={removeMut.isPending}
               onClick={removeSelected}
             >
-              Remove selected
+              {t('pages.ubkiIntegration.optOut.removeSelected', 'Remove selected')}
             </Button>
           )}
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by client / TIN / contract…"
+            placeholder={t(
+              'pages.ubkiIntegration.optOut.searchPlaceholder',
+              'Search by client / TIN / contract…'
+            )}
             className="focus:border-primary-500 h-[45px] min-w-[220px] flex-1 rounded-full border border-gray-400 bg-white px-4 text-xs text-gray-700 focus:outline-none"
           />
           <div className="w-44">
             <MultiCheckboxDropdown
-              options={REASON_OPTIONS}
+              options={reasonOptions}
               selected={reasons}
               onChange={setReasons}
-              allLabel="All reasons"
+              allLabel={t('pages.ubkiIntegration.optOut.filters.allReasons', 'All reasons')}
             />
           </div>
           <div className="w-52">
@@ -281,7 +345,10 @@ export function OptOutTab() {
               options={adminOptions}
               selected={admins}
               onChange={setAdmins}
-              allLabel="All administrators"
+              allLabel={t(
+                'pages.ubkiIntegration.optOut.filters.allAdministrators',
+                'All administrators'
+              )}
             />
           </div>
         </div>
@@ -290,14 +357,19 @@ export function OptOutTab() {
           <TableSkeleton columns={7} rows={5} />
         ) : isError ? (
           <div className="text-error-600 py-16 text-center text-sm">
-            Failed to load opt-out clients.
+            {t('pages.ubkiIntegration.optOut.loadError', 'Failed to load opt-out clients.')}
           </div>
         ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-2 py-16 text-center">
             <MdOutlinePersonOff size={28} className="text-gray-400" />
-            <p className="text-dark-500 text-sm font-medium">No opt-out clients</p>
+            <p className="text-dark-500 text-sm font-medium">
+              {t('pages.ubkiIntegration.optOut.empty', 'No opt-out clients')}
+            </p>
             <p className="text-xs text-gray-500">
-              Clients added to the opt-out list won't receive UBKI submissions.
+              {t(
+                'pages.ubkiIntegration.optOut.emptyHint',
+                "Clients added to the opt-out list won't receive UBKI submissions."
+              )}
             </p>
             <div className="mt-1 flex gap-2">
               <Button
@@ -306,7 +378,7 @@ export function OptOutTab() {
                 leftIcon={<MdOutlineFileUpload size={14} />}
                 onClick={() => fileRef.current?.click()}
               >
-                Import from CSV
+                {t('pages.ubkiIntegration.optOut.import.button', 'Import from CSV')}
               </Button>
               <Button
                 variant="primary"
@@ -314,7 +386,7 @@ export function OptOutTab() {
                 leftIcon={<MdAdd size={14} />}
                 onClick={() => setAddOpen(true)}
               >
-                Add client
+                {t('pages.ubkiIntegration.optOut.add.clientButton', 'Add client')}
               </Button>
             </div>
           </div>
@@ -335,7 +407,7 @@ export function OptOutTab() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <button
             type="button"
-            aria-label="Close dialog"
+            aria-label={t('pages.ubkiIntegration.optOut.closeDialog', 'Close dialog')}
             className="absolute inset-0 bg-black/40"
             onClick={() => setAddOpen(false)}
           />
@@ -344,23 +416,37 @@ export function OptOutTab() {
             aria-modal="true"
             className="relative w-full max-w-md rounded-2xl bg-white p-5 shadow-xl"
           >
-            <h3 className="text-dark-500 text-sm font-semibold">Add clients to opt-out</h3>
+            <h3 className="text-dark-500 text-sm font-semibold">
+              {t('pages.ubkiIntegration.optOut.add.dialogTitle', 'Add clients to opt-out')}
+            </h3>
             <p className="mb-4 text-xs text-gray-500">
-              Their credits will stop being sent to UBKI.
+              {t(
+                'pages.ubkiIntegration.optOut.add.dialogHint',
+                'Their credits will stop being sent to UBKI.'
+              )}
             </p>
             <div className="space-y-3">
               <div>
-                <label className="mb-1 block text-xs font-medium text-gray-600">Client TINs</label>
+                <label className="mb-1 block text-xs font-medium text-gray-600">
+                  {t('pages.ubkiIntegration.optOut.add.clientTins', 'Client TINs')}
+                </label>
                 <input
                   value={addIds}
                   onChange={(e) => setAddIds(e.target.value)}
-                  placeholder="e.g. 2288805863, 3328719312"
+                  placeholder={t(
+                    'pages.ubkiIntegration.optOut.add.tinsPlaceholder',
+                    'e.g. 2288805863, 3328719312'
+                  )}
                   className="focus:border-primary-500 h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-xs text-gray-700 focus:outline-none"
                 />
-                <p className="mt-1 text-[11px] text-gray-400">Comma or space separated.</p>
+                <p className="mt-1 text-[11px] text-gray-400">
+                  {t('pages.ubkiIntegration.optOut.add.tinsHelp', 'Comma or space separated.')}
+                </p>
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-gray-600">Reason</label>
+                <label className="mb-1 block text-xs font-medium text-gray-600">
+                  {t('pages.ubkiIntegration.optOut.add.reason', 'Reason')}
+                </label>
                 <Select value={addReason} onValueChange={(v) => setAddReason(v as Reason)}>
                   <SelectTrigger>
                     <SelectValue />
@@ -368,7 +454,7 @@ export function OptOutTab() {
                   <SelectContent>
                     {REASONS.map((r) => (
                       <SelectItem key={r} value={r}>
-                        {r}
+                        {reasonLabel(r)}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -376,18 +462,23 @@ export function OptOutTab() {
               </div>
               <div>
                 <label className="mb-1 block text-xs font-medium text-gray-600">
-                  Note (optional)
+                  {t('pages.ubkiIntegration.optOut.add.note', 'Note (optional)')}
                 </label>
                 <input
                   value={addNote}
                   onChange={(e) => setAddNote(e.target.value)}
-                  placeholder="Why are these clients excluded?"
+                  placeholder={t(
+                    'pages.ubkiIntegration.optOut.add.notePlaceholder',
+                    'Why are these clients excluded?'
+                  )}
                   className="focus:border-primary-500 h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-xs text-gray-700 focus:outline-none"
                 />
               </div>
             </div>
             {addMut.isError && (
-              <p className="text-error-600 mt-2 text-xs">Failed to add. Check the TINs.</p>
+              <p className="text-error-600 mt-2 text-xs">
+                {t('pages.ubkiIntegration.optOut.add.error', 'Failed to add. Check the TINs.')}
+              </p>
             )}
             <div className="mt-5 flex justify-end gap-2">
               <Button
@@ -396,7 +487,7 @@ export function OptOutTab() {
                 className="rounded-full px-5"
                 onClick={() => setAddOpen(false)}
               >
-                Cancel
+                {t('pages.ubkiIntegration.optOut.cancel', 'Cancel')}
               </Button>
               <Button
                 variant="secondary"
@@ -405,7 +496,9 @@ export function OptOutTab() {
                 disabled={!addIds.trim() || addMut.isPending}
                 onClick={submitAdd}
               >
-                {addMut.isPending ? 'Adding…' : 'Add to opt-out'}
+                {addMut.isPending
+                  ? t('pages.ubkiIntegration.optOut.add.adding', 'Adding…')
+                  : t('pages.ubkiIntegration.optOut.add.button', 'Add to opt-out')}
               </Button>
             </div>
           </div>

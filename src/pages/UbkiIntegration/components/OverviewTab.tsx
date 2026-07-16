@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   MdEdit,
   MdCheck,
@@ -84,11 +85,17 @@ const STATUS_STYLES: Record<SubmissionStatus, string> = {
 }
 
 function StatusPill({ status }: { status: SubmissionStatus }) {
+  const { t } = useTranslation('common')
+  const labels: Record<SubmissionStatus, string> = {
+    success: t('pages.ubkiIntegration.overview.filters.status.success', 'Success'),
+    failed: t('pages.ubkiIntegration.overview.filters.status.failed', 'Failed'),
+    pending: t('pages.ubkiIntegration.overview.filters.status.pending', 'Pending'),
+  }
   return (
     <span
       className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium capitalize ${STATUS_STYLES[status]}`}
     >
-      {status}
+      {labels[status]}
     </span>
   )
 }
@@ -127,17 +134,6 @@ function KpiCard({
   )
 }
 
-const STATUS_OPTIONS: MultiCheckboxOption<string>[] = [
-  { value: 'success', label: 'Success' },
-  { value: 'failed', label: 'Failed' },
-  { value: 'pending', label: 'Pending' },
-]
-const MODE_OPTIONS: MultiCheckboxOption<string>[] = [
-  { value: 'Auto', label: 'Automatic' },
-  { value: 'Manual', label: 'Manual' },
-  { value: 'Bulk', label: 'Bulk' },
-]
-
 // Default UBKI auth endpoint per environment. Selecting Test/Production in the
 // connection editor fills the URL from here (unless a custom URL was typed).
 const DEFAULT_AUTH_URL: Record<UbkiEnv, string> = {
@@ -146,6 +142,50 @@ const DEFAULT_AUTH_URL: Record<UbkiEnv, string> = {
 }
 
 export function OverviewTab() {
+  const { t } = useTranslation('common')
+  const STATUS_OPTIONS: MultiCheckboxOption<string>[] = useMemo(
+    () => [
+      {
+        value: 'success',
+        label: t('pages.ubkiIntegration.overview.filters.status.success', 'Success'),
+      },
+      {
+        value: 'failed',
+        label: t('pages.ubkiIntegration.overview.filters.status.failed', 'Failed'),
+      },
+      {
+        value: 'pending',
+        label: t('pages.ubkiIntegration.overview.filters.status.pending', 'Pending'),
+      },
+    ],
+    [t]
+  )
+  const MODE_OPTIONS: MultiCheckboxOption<string>[] = useMemo(
+    () => [
+      {
+        value: 'Auto',
+        label: t('pages.ubkiIntegration.overview.filters.mode.automatic', 'Automatic'),
+      },
+      { value: 'Manual', label: t('pages.ubkiIntegration.overview.filters.mode.manual', 'Manual') },
+      { value: 'Bulk', label: t('pages.ubkiIntegration.overview.filters.mode.bulk', 'Bulk') },
+    ],
+    [t]
+  )
+  const periodLabel = (p: (typeof PERIODS)[number]): string => {
+    switch (p) {
+      case 'Today':
+        return t('pages.ubkiIntegration.overview.periods.today', 'Today')
+      case 'Yesterday':
+        return t('pages.ubkiIntegration.overview.periods.yesterday', 'Yesterday')
+      case 'Last 7 days':
+        return t('pages.ubkiIntegration.overview.periods.last7Days', 'Last 7 days')
+      case 'Last 30 days':
+        return t('pages.ubkiIntegration.overview.periods.last30Days', 'Last 30 days')
+      case 'Custom range':
+      default:
+        return t('pages.ubkiIntegration.overview.periods.customRange', 'Custom range')
+    }
+  }
   // Connection config + live Test-connection (real UBKI auth via the ubki-service).
   const { data: conn } = useUbkiConnection()
   const testConn = useTestUbkiConnection()
@@ -289,24 +329,24 @@ export function OverviewTab() {
   const columns: Column<SubmissionLogRow>[] = [
     {
       key: 'dateTime',
-      header: 'Date / time',
+      header: t('pages.ubkiIntegration.overview.columns.dateTime', 'Date / time'),
       render: (r) => (
         <span className="text-xs whitespace-pre-line text-gray-700">{r.dateTime}</span>
       ),
     },
     {
       key: 'type',
-      header: 'Type',
+      header: t('pages.ubkiIntegration.overview.columns.type', 'Type'),
       render: (r) => <span className="text-xs text-gray-700">{r.type}</span>,
     },
     {
       key: 'mode',
-      header: 'Mode',
+      header: t('pages.ubkiIntegration.overview.columns.mode', 'Mode'),
       render: (r) => <span className="text-xs text-gray-700">{r.mode}</span>,
     },
     {
       key: 'client',
-      header: 'Client',
+      header: t('pages.ubkiIntegration.overview.columns.client', 'Client'),
       render: (r) => (
         <div className="text-xs">
           <div className="text-dark-500 font-medium">{r.clientName}</div>
@@ -316,23 +356,27 @@ export function OverviewTab() {
     },
     {
       key: 'creditContract',
-      header: 'Credit contract',
+      header: t('pages.ubkiIntegration.overview.columns.creditContract', 'Credit contract'),
       render: (r) => <span className="text-xs text-gray-700">{r.creditContract || '—'}</span>,
     },
-    { key: 'status', header: 'Status', render: (r) => <StatusPill status={r.status} /> },
+    {
+      key: 'status',
+      header: t('pages.ubkiIntegration.overview.columns.status', 'Status'),
+      render: (r) => <StatusPill status={r.status} />,
+    },
     {
       key: 'error',
-      header: 'Error',
+      header: t('pages.ubkiIntegration.overview.columns.error', 'Error'),
       render: (r) => <span className="text-error-600 text-xs">{r.error ?? '—'}</span>,
     },
     {
       key: 'operator',
-      header: 'Operator',
+      header: t('pages.ubkiIntegration.overview.columns.operator', 'Operator'),
       render: (r) => <span className="text-xs text-gray-700">{r.operator}</span>,
     },
     {
       key: 'actions',
-      header: 'Actions',
+      header: t('pages.ubkiIntegration.overview.columns.actions', 'Actions'),
       align: 'right',
       render: (r) => (
         <button
@@ -343,7 +387,7 @@ export function OverviewTab() {
           }}
           className="text-primary-600 text-xs font-medium hover:underline"
         >
-          View
+          {t('pages.ubkiIntegration.overview.columns.view', 'View')}
         </button>
       ),
     },
@@ -354,7 +398,9 @@ export function OverviewTab() {
       {/* ── Connection Settings ─────────────────────────────────────────── */}
       <div className="rounded-2xl border border-gray-200 bg-white p-5">
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-dark-500 text-sm font-semibold">Connection Settings</h2>
+          <h2 className="text-dark-500 text-sm font-semibold">
+            {t('pages.ubkiIntegration.overview.connection.title', 'Connection Settings')}
+          </h2>
           {editing ? (
             <div className="flex gap-2">
               <Button
@@ -363,17 +409,26 @@ export function OverviewTab() {
                 disabled={updateConn.isPending}
                 onClick={() => setEditing(false)}
               >
-                Cancel
+                {t('pages.ubkiIntegration.overview.connection.cancel', 'Cancel')}
               </Button>
               <Button
                 variant="secondary"
                 size="sm"
                 leftIcon={<MdCheck size={14} />}
                 disabled={updateConn.isPending || !canSaveConn}
-                title={!canSaveConn ? 'Login and password are required' : undefined}
+                title={
+                  !canSaveConn
+                    ? t(
+                        'pages.ubkiIntegration.overview.connection.loginPasswordRequired',
+                        'Login and password are required'
+                      )
+                    : undefined
+                }
                 onClick={saveEdit}
               >
-                {updateConn.isPending ? 'Saving…' : 'Done'}
+                {updateConn.isPending
+                  ? t('pages.ubkiIntegration.overview.connection.saving', 'Saving…')
+                  : t('pages.ubkiIntegration.overview.connection.done', 'Done')}
               </Button>
             </div>
           ) : (
@@ -383,7 +438,7 @@ export function OverviewTab() {
               leftIcon={<MdEdit size={14} />}
               onClick={() => void startEdit()}
             >
-              Edit
+              {t('pages.ubkiIntegration.overview.connection.edit', 'Edit')}
             </Button>
           )}
         </div>
@@ -391,7 +446,9 @@ export function OverviewTab() {
         <div className="flex flex-wrap items-end gap-4">
           {/* Environment — editable radio when in edit mode. */}
           <div className="min-w-[210px]">
-            <label className="mb-1 block text-xs font-medium text-gray-500">Connection</label>
+            <label className="mb-1 block text-xs font-medium text-gray-500">
+              {t('pages.ubkiIntegration.overview.connection.environmentLabel', 'Connection')}
+            </label>
             <div className="inline-flex gap-1 rounded-lg border border-gray-200 bg-white p-1">
               {(['test', 'production'] as UbkiEnv[]).map((e) => {
                 const active = env === e
@@ -425,7 +482,9 @@ export function OverviewTab() {
                     >
                       {active && <span className="bg-primary-300 h-1.5 w-1.5 rounded-full" />}
                     </span>
-                    {e === 'test' ? 'Test' : 'Production'}
+                    {e === 'test'
+                      ? t('pages.ubkiIntegration.overview.connection.test', 'Test')
+                      : t('pages.ubkiIntegration.overview.connection.production', 'Production')}
                   </button>
                 )
               })}
@@ -433,7 +492,9 @@ export function OverviewTab() {
           </div>
 
           <div className="min-w-[220px] flex-1">
-            <label className="mb-1 block text-xs font-medium text-gray-500">Endpoint URL</label>
+            <label className="mb-1 block text-xs font-medium text-gray-500">
+              {t('pages.ubkiIntegration.overview.connection.endpointUrl', 'Endpoint URL')}
+            </label>
             <input
               readOnly={!editing}
               value={editing ? form.endpoint_url : (conn?.auth_url ?? '')}
@@ -445,11 +506,17 @@ export function OverviewTab() {
           </div>
 
           <div className="min-w-[160px] flex-1">
-            <label className="mb-1 block text-xs font-medium text-gray-500">Login</label>
+            <label className="mb-1 block text-xs font-medium text-gray-500">
+              {t('pages.ubkiIntegration.overview.connection.login', 'Login')}
+            </label>
             <input
               readOnly={!editing}
               value={editing ? form.login : (conn?.login ?? '—')}
-              placeholder={editing ? 'Required' : undefined}
+              placeholder={
+                editing
+                  ? t('pages.ubkiIntegration.overview.connection.required', 'Required')
+                  : undefined
+              }
               onChange={(e) => setForm((f) => ({ ...f, login: e.target.value }))}
               className={`h-10 w-full rounded-lg border border-gray-200 px-3 text-xs text-gray-700 ${
                 editing ? 'focus:border-primary-500 bg-white focus:outline-none' : 'bg-gray-50'
@@ -459,12 +526,12 @@ export function OverviewTab() {
 
           <div className="min-w-[150px] flex-1">
             <label className="mb-1 flex items-center gap-1.5 text-xs font-medium text-gray-500">
-              Password
+              {t('pages.ubkiIntegration.overview.connection.password', 'Password')}
               {/* Show that a password is stored (the view-mode field is masked). */}
               {conn?.credentials_configured && (
                 <span className="text-success-700 inline-flex items-center gap-0.5 text-[10px] font-medium">
                   <MdCheck size={11} />
-                  Saved
+                  {t('pages.ubkiIntegration.overview.connection.saved', 'Saved')}
                 </span>
               )}
             </label>
@@ -473,7 +540,11 @@ export function OverviewTab() {
                 type={editing && showPassword ? 'text' : 'password'}
                 readOnly={!editing}
                 value={editing ? form.password : '********'}
-                placeholder={editing ? 'Required' : undefined}
+                placeholder={
+                  editing
+                    ? t('pages.ubkiIntegration.overview.connection.required', 'Required')
+                    : undefined
+                }
                 onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
                 className={`h-10 w-full rounded-lg border border-gray-200 pl-3 text-xs text-gray-700 ${
                   editing
@@ -487,7 +558,11 @@ export function OverviewTab() {
                   type="button"
                   tabIndex={-1}
                   onClick={() => setShowPassword((v) => !v)}
-                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  aria-label={
+                    showPassword
+                      ? t('pages.ubkiIntegration.overview.connection.hidePassword', 'Hide password')
+                      : t('pages.ubkiIntegration.overview.connection.showPassword', 'Show password')
+                  }
                   className="absolute inset-y-0 right-0 flex items-center pr-2.5 text-gray-400 hover:text-gray-600"
                 >
                   {showPassword ? (
@@ -508,11 +583,18 @@ export function OverviewTab() {
             disabled={testConn.isPending || editing}
             onClick={() => testConn.mutate(undefined, { onSuccess: setTestResult })}
           >
-            {testConn.isPending ? 'Testing…' : 'Test connection'}
+            {testConn.isPending
+              ? t('pages.ubkiIntegration.overview.connection.testing', 'Testing…')
+              : t('pages.ubkiIntegration.overview.connection.testConnection', 'Test connection')}
           </Button>
         </div>
         {updateConn.isError && (
-          <p className="text-error-600 mt-2 text-xs">Failed to save connection settings.</p>
+          <p className="text-error-600 mt-2 text-xs">
+            {t(
+              'pages.ubkiIntegration.overview.connection.saveError',
+              'Failed to save connection settings.'
+            )}
+          </p>
         )}
 
         {/* status strip — reflects the last Test connection ONLY. It never
@@ -543,13 +625,21 @@ export function OverviewTab() {
                         : 'bg-gray-400'
                   }`}
                 />
-                {connected ? 'Connected' : testResult ? 'Connection failed' : 'Not tested'}
+                {connected
+                  ? t('pages.ubkiIntegration.overview.status.connected', 'Connected')
+                  : testResult
+                    ? t(
+                        'pages.ubkiIntegration.overview.status.connectionFailed',
+                        'Connection failed'
+                      )
+                    : t('pages.ubkiIntegration.overview.status.notTested', 'Not tested')}
               </span>
               {sessionId && (
                 <>
                   <span className="h-3 w-px bg-gray-300" />
                   <span>
-                    Session ID: <span className="text-dark-500 font-medium">{sessionId}</span>
+                    {t('pages.ubkiIntegration.overview.status.sessionId', 'Session ID')}:{' '}
+                    <span className="text-dark-500 font-medium">{sessionId}</span>
                   </span>
                 </>
               )}
@@ -557,7 +647,10 @@ export function OverviewTab() {
                 <>
                   <span className="h-3 w-px bg-gray-300" />
                   <span>
-                    Last checked: <span className="text-dark-500 font-medium">just now</span>
+                    {t('pages.ubkiIntegration.overview.status.lastChecked', 'Last checked')}:{' '}
+                    <span className="text-dark-500 font-medium">
+                      {t('pages.ubkiIntegration.overview.status.justNow', 'just now')}
+                    </span>
                   </span>
                 </>
               )}
@@ -565,7 +658,7 @@ export function OverviewTab() {
                 <>
                   <span className="h-3 w-px bg-gray-300" />
                   <span>
-                    Auth expires:{' '}
+                    {t('pages.ubkiIntegration.overview.status.authExpires', 'Auth expires')}:{' '}
                     <span className="text-dark-500 font-medium">
                       {new Date(expiresAt).toLocaleString()}
                     </span>
@@ -581,7 +674,12 @@ export function OverviewTab() {
               {!conn?.credentials_configured && (
                 <>
                   <span className="h-3 w-px bg-gray-300" />
-                  <span className="text-error-600">Credentials not configured</span>
+                  <span className="text-error-600">
+                    {t(
+                      'pages.ubkiIntegration.overview.status.credentialsNotConfigured',
+                      'Credentials not configured'
+                    )}
+                  </span>
                 </>
               )}
             </div>
@@ -602,7 +700,7 @@ export function OverviewTab() {
                 : 'bg-white text-gray-600 hover:bg-gray-50'
             }`}
           >
-            {p}
+            {periodLabel(p)}
           </button>
         ))}
       </div>
@@ -617,7 +715,7 @@ export function OverviewTab() {
               onClear={() => setCustomFrom(null)}
               max={customTo ?? undefined}
               format="dd / MM / yyyy"
-              placeholder="From date"
+              placeholder={t('pages.ubkiIntegration.overview.customRange.fromDate', 'From date')}
             />
           </div>
           <span className="text-gray-400">—</span>
@@ -628,7 +726,7 @@ export function OverviewTab() {
               onClear={() => setCustomTo(null)}
               min={customFrom ?? undefined}
               format="dd / MM / yyyy"
-              placeholder="To date"
+              placeholder={t('pages.ubkiIntegration.overview.customRange.toDate', 'To date')}
             />
           </div>
         </div>
@@ -638,45 +736,55 @@ export function OverviewTab() {
       <div className="flex flex-col gap-3 sm:flex-row">
         <KpiCard
           icon={<Icons.File size={18} />}
-          label="Total submissions"
+          label={t('pages.ubkiIntegration.overview.kpis.totalSubmissions', 'Total submissions')}
           value={kpis.total_submissions.toLocaleString()}
           trend={kpis.total_delta_pct >= 0}
-          sub={`${fmtPct(kpis.total_delta_pct)} vs prior period`}
+          sub={t('pages.ubkiIntegration.overview.kpis.vsPriorPeriod', {
+            defaultValue: '{{pct}} vs prior period',
+            pct: fmtPct(kpis.total_delta_pct),
+          })}
           subClass={deltaClass(kpis.total_delta_pct)}
         />
         <KpiCard
           icon={<Icons.Checkmark size={18} />}
-          label="Success"
+          label={t('pages.ubkiIntegration.overview.kpis.success', 'Success')}
           value={kpis.success.toLocaleString()}
           sub={fmtPct(kpis.success_delta_pct)}
           subClass={deltaClass(kpis.success_delta_pct)}
         />
         <KpiCard
           icon={<Icons.FileRemove size={18} />}
-          label="Failed"
+          label={t('pages.ubkiIntegration.overview.kpis.failed', 'Failed')}
           value={String(kpis.failed)}
-          sub={`${kpis.failed_error_codes} different error codes`}
+          sub={t('pages.ubkiIntegration.overview.kpis.differentErrorCodes', {
+            defaultValue: '{{codes}} different error codes',
+            codes: kpis.failed_error_codes,
+          })}
           subClass="text-error-600"
         />
         <KpiCard
           icon={<Icons.Reload size={18} />}
-          label="Pending"
+          label={t('pages.ubkiIntegration.overview.kpis.pending', 'Pending')}
           value={String(kpis.pending)}
-          sub="retry scheduled"
+          sub={t('pages.ubkiIntegration.overview.kpis.retryScheduled', 'retry scheduled')}
         />
         <KpiCard
           icon={<Icons.Cancel01 size={18} />}
-          label="Opt-out clients"
+          label={t('pages.ubkiIntegration.overview.kpis.optOutClients', 'Opt-out clients')}
           value={String(kpis.opt_out)}
-          sub="excluded per law"
+          sub={t('pages.ubkiIntegration.overview.kpis.excludedPerLaw', 'excluded per law')}
         />
       </div>
 
       {/* ── Submission log ──────────────────────────────────────────────── */}
       <div className="rounded-2xl border border-gray-200 bg-white p-5">
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-dark-500 text-sm font-semibold">Submission log</h2>
-          <span className="text-xs text-gray-400">Click a row to see full report</span>
+          <h2 className="text-dark-500 text-sm font-semibold">
+            {t('pages.ubkiIntegration.overview.log.title', 'Submission log')}
+          </h2>
+          <span className="text-xs text-gray-400">
+            {t('pages.ubkiIntegration.overview.log.clickRowHint', 'Click a row to see full report')}
+          </span>
         </div>
 
         <div className="mb-4 flex flex-wrap items-center gap-2">
@@ -688,7 +796,7 @@ export function OverviewTab() {
                 setStatusF(v)
                 setPage(1)
               }}
-              allLabel="All statuses"
+              allLabel={t('pages.ubkiIntegration.overview.log.allStatuses', 'All statuses')}
             />
           </div>
           <div className="min-w-[130px] flex-1">
@@ -699,7 +807,7 @@ export function OverviewTab() {
                 setModeF(v)
                 setPage(1)
               }}
-              allLabel="All modes"
+              allLabel={t('pages.ubkiIntegration.overview.log.allModes', 'All modes')}
             />
           </div>
           <div className="min-w-[130px] flex-1">
@@ -710,7 +818,7 @@ export function OverviewTab() {
                 setOperatorF(v)
                 setPage(1)
               }}
-              allLabel="All operators"
+              allLabel={t('pages.ubkiIntegration.overview.log.allOperators', 'All operators')}
             />
           </div>
           <div className="min-w-[130px] flex-1">
@@ -721,7 +829,7 @@ export function OverviewTab() {
                 setErrorF(v)
                 setPage(1)
               }}
-              allLabel="All error codes"
+              allLabel={t('pages.ubkiIntegration.overview.log.allErrorCodes', 'All error codes')}
             />
           </div>
           <input
@@ -730,7 +838,10 @@ export function OverviewTab() {
               setSearch(e.target.value)
               setPage(1)
             }}
-            placeholder="Search by client / TIN / contract…"
+            placeholder={t(
+              'pages.ubkiIntegration.overview.log.searchPlaceholder',
+              'Search by client / TIN / contract…'
+            )}
             className="focus:border-primary-500 h-[45px] min-w-[200px] flex-[1.5] rounded-full border border-gray-400 bg-white px-4 text-xs text-gray-700 focus:outline-none"
           />
           <Button
@@ -747,7 +858,7 @@ export function OverviewTab() {
               setPage(1)
             }}
           >
-            Reset
+            {t('pages.ubkiIntegration.overview.log.reset', 'Reset')}
           </Button>
         </div>
 
@@ -755,13 +866,23 @@ export function OverviewTab() {
           <TableSkeleton columns={9} rows={5} />
         ) : isError ? (
           <div className="text-error-600 py-16 text-center text-sm">
-            Failed to load the submission log. Please try again.
+            {t(
+              'pages.ubkiIntegration.overview.log.loadError',
+              'Failed to load the submission log. Please try again.'
+            )}
           </div>
         ) : rows.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-2 py-16 text-center">
             <MdOutlineDescription size={28} className="text-gray-400" />
-            <p className="text-dark-500 text-sm font-medium">No submissions found</p>
-            <p className="text-xs text-gray-500">Try adjusting your filters or search query.</p>
+            <p className="text-dark-500 text-sm font-medium">
+              {t('pages.ubkiIntegration.overview.log.noSubmissions', 'No submissions found')}
+            </p>
+            <p className="text-xs text-gray-500">
+              {t(
+                'pages.ubkiIntegration.overview.log.adjustFilters',
+                'Try adjusting your filters or search query.'
+              )}
+            </p>
             <Button
               variant="secondary"
               size="sm"
@@ -775,7 +896,7 @@ export function OverviewTab() {
                 setPage(1)
               }}
             >
-              Clear all filters
+              {t('pages.ubkiIntegration.overview.log.clearFilters', 'Clear all filters')}
             </Button>
           </div>
         ) : (

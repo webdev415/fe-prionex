@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import {
   MdClose,
@@ -28,6 +29,7 @@ function TimelineIcon({ state }: { state: UbkiLogDetailStep['state'] }) {
 }
 
 function CodeBlock({ title, body }: { title: string; body: string }) {
+  const { t } = useTranslation('common')
   return (
     <div className="overflow-hidden rounded-lg border border-gray-800 bg-[#0f1420]">
       <div className="flex items-center justify-between border-b border-gray-800 px-3 py-1.5">
@@ -39,7 +41,7 @@ function CodeBlock({ title, body }: { title: string; body: string }) {
           onClick={() => navigator.clipboard?.writeText(body)}
           className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] text-gray-400 hover:text-white"
         >
-          <MdContentCopy size={12} /> Copy
+          <MdContentCopy size={12} /> {t('pages.ubkiIntegration.drawer.codeBlock.copy', 'Copy')}
         </button>
       </div>
       <pre className="max-h-48 overflow-auto px-3 py-2 text-[11px] leading-relaxed whitespace-pre-wrap text-gray-300">
@@ -50,11 +52,12 @@ function CodeBlock({ title, body }: { title: string; body: string }) {
 }
 
 function DrawerShell({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
+  const { t } = useTranslation('common')
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
       <button
         type="button"
-        aria-label="Close drawer"
+        aria-label={t('pages.ubkiIntegration.drawer.closeDrawer', 'Close drawer')}
         onClick={onClose}
         className="absolute inset-0 bg-black/30"
       />
@@ -82,19 +85,27 @@ export function SubmissionDrawer({
 }
 
 function SubmissionDrawerLoader({ logId, onClose }: { logId: string; onClose: () => void }) {
+  const { t } = useTranslation('common')
   const { data, isLoading, isError } = useUbkiLogDetail(logId)
 
   if (isLoading || !data) {
     return (
       <DrawerShell onClose={onClose}>
         <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4">
-          <h3 className="text-dark-500 text-sm font-semibold">Submission #{logId}</h3>
+          <h3 className="text-dark-500 text-sm font-semibold">
+            {t('pages.ubkiIntegration.drawer.submissionTitle', {
+              defaultValue: 'Submission #{{id}}',
+              id: logId,
+            })}
+          </h3>
           <button type="button" onClick={onClose} className="hover:text-dark-500 text-gray-400">
             <MdClose size={20} />
           </button>
         </div>
         <div className="flex flex-1 items-center justify-center text-sm text-gray-500">
-          {isError ? 'Failed to load submission.' : 'Loading…'}
+          {isError
+            ? t('pages.ubkiIntegration.drawer.loadError', 'Failed to load submission.')
+            : t('pages.ubkiIntegration.drawer.loading', 'Loading…')}
         </div>
       </DrawerShell>
     )
@@ -110,6 +121,7 @@ function SubmissionDrawerContent({
   detail: UbkiLogDetail
   onClose: () => void
 }) {
+  const { t } = useTranslation('common')
   const saved = detail.admin_note ?? ''
   const [note, setNote] = useState(saved)
   const saveNote = useSaveUbkiLogNote()
@@ -130,16 +142,27 @@ function SubmissionDrawerContent({
           // as history. Close the drawer so the stale error view goes away —
           // the refreshed list shows the new successful submission.
           toast.success(
-            `Resent successfully (new submission, request id: ${res.ubki_request_id ?? '—'}).`
+            t('pages.ubkiIntegration.drawer.toast.resendSuccess', {
+              defaultValue: 'Resent successfully (new submission, request id: {{requestId}}).',
+              requestId: res.ubki_request_id ?? '—',
+            })
           )
           onClose()
         } else {
           toast.error(
-            `Resend ${res.status}: ${res.error_code ?? ''} ${res.error_message ?? ''}`.trim()
+            t('pages.ubkiIntegration.drawer.toast.resendError', {
+              defaultValue: 'Resend {{status}}: {{code}} {{message}}',
+              status: res.status,
+              code: res.error_code ?? '',
+              message: res.error_message ?? '',
+            }).trim()
           )
         }
       },
-      onError: () => toast.error('Resend failed. Please try again.'),
+      onError: () =>
+        toast.error(
+          t('pages.ubkiIntegration.drawer.toast.resendFailed', 'Resend failed. Please try again.')
+        ),
     })
   }
 
@@ -147,8 +170,21 @@ function SubmissionDrawerContent({
   const { data: ubkiSettings } = useUbkiSettings()
   const logTimezone = ubkiSettings?.timezone ?? 'Europe/Kyiv'
   const failed = detail.status === 'error'
-  const clientName = detail.client_name ?? `Client #${detail.client_id}`
-  const clientTin = detail.client_tin ? `TIN ${detail.client_tin}` : `Debt #${detail.debt_id}`
+  const clientName =
+    detail.client_name ??
+    t('pages.ubkiIntegration.drawer.clientFallback', {
+      defaultValue: 'Client #{{id}}',
+      id: detail.client_id,
+    })
+  const clientTin = detail.client_tin
+    ? t('pages.ubkiIntegration.drawer.clientTin', {
+        defaultValue: 'TIN {{tin}}',
+        tin: detail.client_tin,
+      })
+    : t('pages.ubkiIntegration.drawer.debtId', {
+        defaultValue: 'Debt #{{id}}',
+        id: detail.debt_id,
+      })
   const creditDate = `${detail.contract_number ?? '—'} · ${formatDateTime(detail.created_at, logTimezone)}`
   const dirty = note !== saved
 
@@ -165,7 +201,12 @@ function SubmissionDrawerContent({
             >
               {detail.status}
             </span>
-            <h3 className="text-dark-500 text-sm font-semibold">Submission #{detail.id}</h3>
+            <h3 className="text-dark-500 text-sm font-semibold">
+              {t('pages.ubkiIntegration.drawer.submissionTitle', {
+                defaultValue: 'Submission #{{id}}',
+                id: detail.id,
+              })}
+            </h3>
           </div>
           <p className="mt-1 text-xs text-gray-500">
             {clientName} · #{detail.client_id} · {clientTin}
@@ -185,7 +226,7 @@ function SubmissionDrawerContent({
           leftIcon={<MdOutlinePersonOutline size={14} />}
           onClick={openClient}
         >
-          Open client
+          {t('pages.ubkiIntegration.drawer.openClient', 'Open client')}
         </Button>
         <Button
           variant="primary"
@@ -194,14 +235,18 @@ function SubmissionDrawerContent({
           disabled={resend.isPending}
           onClick={handleResend}
         >
-          {resend.isPending ? 'Resending…' : 'Resend'}
+          {resend.isPending
+            ? t('pages.ubkiIntegration.drawer.resending', 'Resending…')
+            : t('pages.ubkiIntegration.drawer.resend', 'Resend')}
         </Button>
       </div>
 
       {/* body */}
       <div className="flex-1 space-y-4 overflow-y-auto px-5 pb-5">
         <div>
-          <p className="text-dark-500 mb-2 text-xs font-semibold">Submission Timeline</p>
+          <p className="text-dark-500 mb-2 text-xs font-semibold">
+            {t('pages.ubkiIntegration.drawer.timeline.title', 'Submission Timeline')}
+          </p>
           <ol className="space-y-3">
             {detail.timeline.map((step, i) => (
               <li key={i} className="flex gap-2">
@@ -227,22 +272,43 @@ function SubmissionDrawerContent({
           </div>
         )}
 
-        <CodeBlock title="Request · parameters" body={detail.request_summary} />
-        <CodeBlock title="Response" body={detail.response_summary} />
-        <CodeBlock title="Execution log" body={detail.execution_log} />
+        <CodeBlock
+          title={t(
+            'pages.ubkiIntegration.drawer.codeBlock.requestParameters',
+            'Request · parameters'
+          )}
+          body={detail.request_summary}
+        />
+        <CodeBlock
+          title={t('pages.ubkiIntegration.drawer.codeBlock.response', 'Response')}
+          body={detail.response_summary}
+        />
+        <CodeBlock
+          title={t('pages.ubkiIntegration.drawer.codeBlock.executionLog', 'Execution log')}
+          body={detail.execution_log}
+        />
 
         {/* admin notes */}
         <div>
-          <p className="text-dark-500 mb-1 text-xs font-semibold">Admin Notes</p>
+          <p className="text-dark-500 mb-1 text-xs font-semibold">
+            {t('pages.ubkiIntegration.drawer.adminNotes.title', 'Admin Notes')}
+          </p>
           <textarea
             value={note}
             maxLength={100}
             onChange={(e) => setNote(e.target.value)}
-            placeholder="Add a note about this submission…"
+            placeholder={t(
+              'pages.ubkiIntegration.drawer.adminNotes.placeholder',
+              'Add a note about this submission…'
+            )}
             className="focus:border-primary-500 h-20 w-full resize-none rounded-lg border border-gray-200 px-3 py-2 text-xs text-gray-700 focus:outline-none"
           />
           <div className="text-right text-[11px] text-gray-400">{note.length}/100</div>
-          {saveNote.isError && <p className="text-error-600 text-[11px]">Failed to save note.</p>}
+          {saveNote.isError && (
+            <p className="text-error-600 text-[11px]">
+              {t('pages.ubkiIntegration.drawer.adminNotes.saveError', 'Failed to save note.')}
+            </p>
+          )}
         </div>
       </div>
 
@@ -254,7 +320,7 @@ function SubmissionDrawerContent({
           disabled={!dirty || saveNote.isPending}
           onClick={() => setNote(saved)}
         >
-          Discard changes
+          {t('pages.ubkiIntegration.drawer.discardChanges', 'Discard changes')}
         </Button>
         <Button
           variant="primary"
@@ -263,7 +329,9 @@ function SubmissionDrawerContent({
           disabled={!dirty || saveNote.isPending}
           onClick={() => saveNote.mutate({ id: detail.id, note })}
         >
-          {saveNote.isPending ? 'Saving…' : 'Save Note'}
+          {saveNote.isPending
+            ? t('pages.ubkiIntegration.drawer.saving', 'Saving…')
+            : t('pages.ubkiIntegration.drawer.saveNote', 'Save Note')}
         </Button>
       </div>
     </DrawerShell>
