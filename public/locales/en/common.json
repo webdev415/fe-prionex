@@ -4890,6 +4890,28 @@
         "editClosureDate": "Edit closure date",
         "closureDate": "Closure date",
         "loanInfo": "Agreement info",
+        "loanCalculation": {
+          "trigger": "Detailed calculation",
+          "title": "Detailed calculation for loan No. {{id}} after sale",
+          "error": "Could not load the calculation. Please try again.",
+          "empty": "No balance changes recorded for this loan.",
+          "blocks": {
+            "principal": "Principal",
+            "interest": "Interest",
+            "fine": "Fine",
+            "penalty": "Penalty",
+            "commission": "Commissions"
+          },
+          "columns": {
+            "date": "Date",
+            "principalAmount": "Principal amount",
+            "debt": "Debt",
+            "writtenOff": "Written-off",
+            "paid": "Paid",
+            "totalPaid": "Total paid",
+            "totToReturn": "Tot to return"
+          }
+        },
         "factoringInfo": {
           "empty": "This debt is not linked to a factoring agreement.",
           "legalName": "Legal name",
