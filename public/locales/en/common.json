@@ -57,7 +57,8 @@
     "contactTypes": "Contact Types",
     "lawyerWorkplace": "Lawyer Workplace",
     "repaymentConfiguration": "Repayment Configuration",
-    "actionAnalysis": "Action Analysis"
+    "actionAnalysis": "Action Analysis",
+    "ubkiIntegration": "UBKI Integration"
   },
   "search": {
     "placeholder": "Search",
@@ -4042,7 +4043,7 @@
         "rrLoanNumber": "Loan Number",
         "rrClientNumber": "Client Number",
         "rrRestructuringAmount": "Restructuring Amount",
-        "rrFirstPaymentDate": "Date of First Installment",
+        "rrFirstPaymentDate": "First Payment Date",
         "rrFirstPaymentAmount": "Amount of First Installment",
         "rrNumPayments": "Number of Payments",
         "rrMonthlyPayment": "Monthly Payment",
@@ -4053,7 +4054,6 @@
         "rrPenaltyTag": "penalty (overdue trigger)",
         "rrNumPaymentsHint": "Up to {{max}} payments.",
         "rrFrequency": "Payment Frequency",
-        "rrFirstPaymentDate": "First Payment Date",
         "rrPeriodicityHint": "The schedule below is auto-filled from the first payment date, number of payments and frequency. You can still edit any row.",
         "rrFrequencyManual": "Manual (no auto-fill)",
         "rrFrequencyOptions": {
@@ -7418,6 +7418,338 @@
           "totalInteractions": "Interactions",
           "fastResultPct": "Fast %",
           "distribution": "Distribution"
+        }
+      }
+    },
+    "ubkiIntegration": {
+      "audit": {
+        "title": "Audit log",
+        "subtitle": "All configuration changes and admin actions for UBKI integration.",
+        "loadError": "Failed to load the audit log.",
+        "empty": "No audit entries yet. Saving settings or changing the opt-out list will appear here.",
+        "performedBySystem": "System",
+        "performedByUser": "User #{{id}}",
+        "columns": {
+          "dateTime": "Date / time",
+          "event": "Event",
+          "performedBy": "Performed By",
+          "details": "Details",
+          "status": "Status"
+        },
+        "export": {
+          "button": "Export",
+          "inProgress": "Exporting…",
+          "error": "Export failed. Please try again."
+        },
+        "filters": {
+          "allEventTypes": "All event types",
+          "allActors": "All actors",
+          "searchPlaceholder": "Search by event / actor / details…",
+          "reset": "Reset"
+        },
+        "eventTypes": {
+          "settingsChanged": "Settings changed",
+          "credentialsUpdated": "Credentials updated",
+          "connectionTested": "Connection tested",
+          "optOutAddedRemoved": "Opt-out added/removed",
+          "bulkActionTriggered": "Bulk action triggered"
+        }
+      },
+      "drawer": {
+        "closeDrawer": "Close drawer",
+        "submissionTitle": "Submission #{{id}}",
+        "loadError": "Failed to load submission.",
+        "loading": "Loading…",
+        "clientFallback": "Client #{{id}}",
+        "clientTin": "TIN {{tin}}",
+        "debtId": "Debt #{{id}}",
+        "openClient": "Open client",
+        "resending": "Resending…",
+        "resend": "Resend",
+        "discardChanges": "Discard changes",
+        "saving": "Saving…",
+        "saveNote": "Save Note",
+        "codeBlock": {
+          "copy": "Copy",
+          "requestParameters": "Request · parameters",
+          "response": "Response",
+          "executionLog": "Execution log"
+        },
+        "timeline": {
+          "title": "Submission Timeline"
+        },
+        "adminNotes": {
+          "title": "Admin Notes",
+          "placeholder": "Add a note about this submission…",
+          "saveError": "Failed to save note."
+        },
+        "toast": {
+          "resendSuccess": "Resent successfully (new submission, request id: {{requestId}}).",
+          "resendError": "Resend {{status}}: {{code}} {{message}}",
+          "resendFailed": "Resend failed. Please try again."
+        }
+      },
+      "optOut": {
+        "title": "Opt-out clients",
+        "selected": "Selected: {{count}}",
+        "removeSelected": "Remove selected",
+        "searchPlaceholder": "Search by client / TIN / contract…",
+        "loadError": "Failed to load opt-out clients.",
+        "empty": "No opt-out clients",
+        "emptyHint": "Clients added to the opt-out list won't receive UBKI submissions.",
+        "cancel": "Cancel",
+        "closeDialog": "Close dialog",
+        "remove": "Remove",
+        "clientFallback": "Client #{{id}}",
+        "userFallback": "User #{{id}}",
+        "filters": {
+          "allReasons": "All reasons",
+          "allAdministrators": "All administrators"
+        },
+        "import": {
+          "button": "Import from CSV",
+          "importing": "Importing…",
+          "imported": "Imported {{count}}",
+          "skipped": "skipped {{count}} (no matching client)",
+          "notFound": "Not found: {{list}}",
+          "error": "Import failed. Make sure the file is a CSV of TINs."
+        },
+        "add": {
+          "button": "Add to opt-out",
+          "clientButton": "Add client",
+          "dialogTitle": "Add clients to opt-out",
+          "dialogHint": "Their credits will stop being sent to UBKI.",
+          "clientTins": "Client TINs",
+          "tinsPlaceholder": "e.g. 2288805863, 3328719312",
+          "tinsHelp": "Comma or space separated.",
+          "reason": "Reason",
+          "note": "Note (optional)",
+          "notePlaceholder": "Why are these clients excluded?",
+          "error": "Failed to add. Check the TINs.",
+          "adding": "Adding…"
+        },
+        "columns": {
+          "client": "Client",
+          "tin": "TIN",
+          "reason": "Reason",
+          "setBy": "Set by",
+          "dateAdded": "Date added",
+          "note": "Note",
+          "actions": "Actions"
+        },
+        "reasons": {
+          "legalRequest": "Legal request",
+          "dataDispute": "Data dispute",
+          "testClient": "Test client",
+          "other": "Other"
+        }
+      },
+      "overview": {
+        "connection": {
+          "title": "Connection Settings",
+          "cancel": "Cancel",
+          "done": "Done",
+          "saving": "Saving…",
+          "loginPasswordRequired": "Login and password are required",
+          "edit": "Edit",
+          "environmentLabel": "Connection",
+          "test": "Test",
+          "production": "Production",
+          "endpointUrl": "Endpoint URL",
+          "login": "Login",
+          "required": "Required",
+          "password": "Password",
+          "saved": "Saved",
+          "showPassword": "Show password",
+          "hidePassword": "Hide password",
+          "testing": "Testing…",
+          "testConnection": "Test connection",
+          "saveError": "Failed to save connection settings."
+        },
+        "status": {
+          "connected": "Connected",
+          "connectionFailed": "Connection failed",
+          "notTested": "Not tested",
+          "sessionId": "Session ID",
+          "lastChecked": "Last checked",
+          "justNow": "just now",
+          "authExpires": "Auth expires",
+          "credentialsNotConfigured": "Credentials not configured"
+        },
+        "periods": {
+          "today": "Today",
+          "yesterday": "Yesterday",
+          "last7Days": "Last 7 days",
+          "last30Days": "Last 30 days",
+          "customRange": "Custom range"
+        },
+        "customRange": {
+          "fromDate": "From date",
+          "toDate": "To date"
+        },
+        "kpis": {
+          "totalSubmissions": "Total submissions",
+          "vsPriorPeriod": "{{pct}} vs prior period",
+          "success": "Success",
+          "failed": "Failed",
+          "differentErrorCodes": "{{codes}} different error codes",
+          "pending": "Pending",
+          "retryScheduled": "retry scheduled",
+          "optOutClients": "Opt-out clients",
+          "excludedPerLaw": "excluded per law"
+        },
+        "log": {
+          "title": "Submission log",
+          "clickRowHint": "Click a row to see full report",
+          "allStatuses": "All statuses",
+          "allModes": "All modes",
+          "allOperators": "All operators",
+          "allErrorCodes": "All error codes",
+          "searchPlaceholder": "Search by client / TIN / contract…",
+          "reset": "Reset",
+          "loadError": "Failed to load the submission log. Please try again.",
+          "noSubmissions": "No submissions found",
+          "adjustFilters": "Try adjusting your filters or search query.",
+          "clearFilters": "Clear all filters"
+        },
+        "columns": {
+          "dateTime": "Date / time",
+          "type": "Type",
+          "mode": "Mode",
+          "client": "Client",
+          "creditContract": "Credit contract",
+          "status": "Status",
+          "error": "Error",
+          "operator": "Operator",
+          "actions": "Actions",
+          "view": "View"
+        },
+        "filters": {
+          "status": {
+            "success": "Success",
+            "failed": "Failed",
+            "pending": "Pending"
+          },
+          "mode": {
+            "automatic": "Automatic",
+            "manual": "Manual",
+            "bulk": "Bulk"
+          }
+        }
+      },
+      "page": {
+        "title": "UBKI Integration",
+        "status": {
+          "active": "Active"
+        },
+        "tabs": {
+          "overview": "Overview",
+          "settings": "Settings",
+          "optout": "Opt-out clients",
+          "audit": "Audit log"
+        }
+      },
+      "settings": {
+        "loading": "Loading settings…",
+        "loadError": "Failed to load settings. Please try again.",
+        "saveError": "Failed to save. Please check the values and try again.",
+        "discardButton": "Discard changes",
+        "saveButton": "Save changes",
+        "savingButton": "Saving…",
+        "section": {
+          "autoSubmit": {
+            "title": "Automatic Submission",
+            "desc": "Configure when UBKI submissions are sent automatically."
+          },
+          "retry": {
+            "title": "Retry Policy",
+            "desc": "Control how failed submissions are automatically retried."
+          },
+          "notifications": {
+            "title": "Notifications",
+            "desc": "Choose who gets alerted and when for UBKI integration events."
+          }
+        },
+        "sendNow": {
+          "button": "Send now",
+          "enabledTitle": "Run the automatic submission now (ignores the schedule)",
+          "disabledTitle": "Enable automatic submission to use Send now",
+          "successToast": "Submission started — check the Overview log for results.",
+          "errorToast": "Could not start submission. Please try again."
+        },
+        "autoSubmit": {
+          "toggleTitle": "Enable automatic submission",
+          "toggleDesc": "Automatically send credit updates on schedule.",
+          "toggleNote": "If disabled, only Manual and Bulk submissions are allowed."
+        },
+        "sendTime": {
+          "label": "Send time",
+          "hint": "Default: 03:00 Europe/Kyiv. Off-peak recommended."
+        },
+        "timezone": {
+          "label": "Time zone"
+        },
+        "frequency": {
+          "label": "Frequency",
+          "everyDay": "Every day",
+          "weekdaysOnly": "Weekdays only",
+          "customDays": "Custom days"
+        },
+        "weekdays": {
+          "mon": "Mon",
+          "tue": "Tue",
+          "wed": "Wed",
+          "thu": "Thu",
+          "fri": "Fri",
+          "sat": "Sat",
+          "sun": "Sun"
+        },
+        "sendOnlyChanged": {
+          "title": "Send only changed credits",
+          "desc": "Only credits with deltas since last send (payment / status / RR change).",
+          "note": "Switching off resends the full portfolio every day."
+        },
+        "retry": {
+          "maxAttempts": {
+            "label": "Max retry attempts",
+            "hint": "Default: 3. Range: 1–10."
+          },
+          "interval": {
+            "label": "Retry interval (minutes)",
+            "hint": "Default: 15 min. Fixed gap between retries."
+          },
+          "skipCodes": {
+            "label": "Skip retry for these error codes",
+            "hint": "These errors require manual fix, not retry.",
+            "placeholder": "e.g. ERR_500"
+          }
+        },
+        "notifications": {
+          "dailySummary": {
+            "title": "Daily summary email",
+            "desc": "Send a daily report with submission stats to all recipients."
+          },
+          "highFailureAlert": {
+            "title": "Alert on high failure rate",
+            "desc": "Send an alert when failure rate exceeds the threshold."
+          },
+          "threshold": {
+            "label": "High failure-rate threshold (%)",
+            "hint": "Default: 10%. Recommended range: 5–20%."
+          },
+          "connectionDown": {
+            "label": "Connection-down alert (minutes)",
+            "hint": "Default: 15 min."
+          },
+          "recipients": {
+            "label": "Notification recipients",
+            "hint": "Combination of roles and individuals is supported.",
+            "placeholder": "email or role"
+          }
+        },
+        "chips": {
+          "addButton": "+ Add",
+          "addAriaLabel": "Add"
         }
       }
     }

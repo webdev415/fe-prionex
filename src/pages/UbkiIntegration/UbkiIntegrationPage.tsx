@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   MdOutlineDashboard,
   MdOutlineSettings,
@@ -29,6 +30,7 @@ const TABS: { key: TabKey; label: string; icon: React.ReactNode }[] = [
  * live in src/routes/index.tsx.
  */
 export function UbkiIntegrationPage() {
+  const { t } = useTranslation('common')
   const [tab, setTab] = useState<TabKey>('overview')
   // Real opt-out count for the tab badge.
   const { data: optOut } = useOptOutClients()
@@ -40,30 +42,32 @@ export function UbkiIntegrationPage() {
       <div className="flex items-center gap-3">
         <span className="border-success-200 bg-success-50 text-success-700 inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium">
           <span className="bg-success-500 h-1.5 w-1.5 rounded-full" />
-          Active
+          {t('pages.ubkiIntegration.page.status.active', 'Active')}
         </span>
-        <h1 className="text-dark-500 text-xl font-semibold">UBKI Integration</h1>
+        <h1 className="text-dark-500 text-xl font-semibold">
+          {t('pages.ubkiIntegration.page.title', 'UBKI Integration')}
+        </h1>
         <MdInfoOutline size={18} className="text-gray-500" />
       </div>
 
       {/* Tab bar */}
       <div className="flex items-center gap-6 border-b border-gray-200">
-        {TABS.map((t) => {
-          const active = tab === t.key
+        {TABS.map((item) => {
+          const active = tab === item.key
           return (
             <button
-              key={t.key}
+              key={item.key}
               type="button"
-              onClick={() => setTab(t.key)}
+              onClick={() => setTab(item.key)}
               className={`-mb-px flex items-center gap-2 border-b-2 px-1 pb-3 text-sm font-medium transition-colors ${
                 active
                   ? 'border-primary-500 text-dark-500'
                   : 'hover:text-dark-500 border-transparent text-gray-500'
               }`}
             >
-              {t.icon}
-              {t.label}
-              {t.key === 'optout' && optOutCount > 0 && (
+              {item.icon}
+              {t(`pages.ubkiIntegration.page.tabs.${item.key}`, item.label)}
+              {item.key === 'optout' && optOutCount > 0 && (
                 <span className="rounded-full bg-gray-100 px-1.5 py-0.5 text-xs font-medium text-gray-600">
                   {optOutCount}
                 </span>
