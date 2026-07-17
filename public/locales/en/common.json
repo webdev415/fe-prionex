@@ -4893,9 +4893,9 @@
         "loanInfo": "Agreement info",
         "loanStatusBadge": {
           "open": "Open",
-          "rr": "RR",
           "closed": "Closed"
         },
+        "rrTag": "RR",
         "selectLoanHint": "Select a loan row to enable actions.",
         "closeLoanDisabledHint": "Only an open loan can be closed.",
         "reopenLoanDisabledHint": "Only a closed loan can be reopened.",

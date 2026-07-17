@@ -483,8 +483,10 @@ export function ClientDetailPage() {
     [loans]
   )
   const hasEligibleLoansForRr = eligibleLoansForRr.length > 0
-  const { data: restructuringAgreements = [], isLoading: isRrLoading } =
-    useClientRestructuringAgreements(clientId, isValidClientId)
+  const { data: restructuringAgreements = [] } = useClientRestructuringAgreements(
+    clientId,
+    isValidClientId
+  )
   const { data: rrDetail } = useRestructuringAgreementDetail(
     clientId,
     selectedRaId ?? 0,
@@ -1748,26 +1750,26 @@ export function ClientDetailPage() {
   // closed loan — otherwise it would be a column full of dashes.
   const hasClosedLoan = client.loans.some((loan) => loan.status === 'closed')
 
-  // KAN-339: derive the "on RR" state per loan. RR is not a Debt.status value —
-  // it lives in the separate restructuring_agreements list keyed by debt_id. A
-  // loan counts as "on RR" only while its agreement is active: Connected (1) or
-  // Violated (2). Cancelled (3) / Completed (4) / Completed-early (5) are not.
-  // Plain const (not useMemo) because this sits below the component's early
+  // KAN-339: RR is NOT a Debt.status value — debt.status stays active/closed.
+  // Restructuring lives in the separate restructuring_agreements list, keyed by
+  // debt_id, with its own status lookup (1 Connected · 2 Violated · 3 Cancelled ·
+  // 4 Completed · 5 Completed-early). We derive three per-loan sets from it:
+  //   • rrDebtIds        — has an RR agreement of ANY status → purple RR tag +
+  //                        the inline RR detail line under the row.
+  //   • connectedRrDebtIds — has a Connected (1) agreement → an OPEN loan's
+  //                        status badge turns yellow.
+  //   • activeRrDebtIds  — has a Connected (1) or Violated (2) agreement →
+  //                        already-on-active-RR, so Connect RR is disabled.
+  // Plain consts (not useMemo) because this sits below the component's early
   // returns; the list is small so recomputing per render is negligible.
+  const rrDebtIds = new Set<number>()
+  const connectedRrDebtIds = new Set<number>()
   const activeRrDebtIds = new Set<number>()
   for (const ra of restructuringAgreements) {
-    if (ra.debt_id != null && (ra.status_id === 1 || ra.status_id === 2)) {
-      activeRrDebtIds.add(ra.debt_id)
-    }
-  }
-
-  // Effective badge status for a loan. "closed" wins over "rr" (a closed loan
-  // that once had an RR still reads as closed); otherwise an active RR shows
-  // "rr", and everything else is "open".
-  const getLoanBadgeStatus = (loan: (typeof client.loans)[0]): 'open' | 'rr' | 'closed' => {
-    if (loan.status === 'closed') return 'closed'
-    if (activeRrDebtIds.has(loan.id)) return 'rr'
-    return 'open'
+    if (ra.debt_id == null) continue
+    rrDebtIds.add(ra.debt_id)
+    if (ra.status_id === 1) connectedRrDebtIds.add(ra.debt_id)
+    if (ra.status_id === 1 || ra.status_id === 2) activeRrDebtIds.add(ra.debt_id)
   }
 
   // The single loan row currently selected in the grid (drives the bottom
@@ -1785,24 +1787,42 @@ export function ClientDetailPage() {
 
   const loanColumns: Column<(typeof client.loans)[0]>[] = [
     {
-      // KAN-339: status is the first column, shown as a colored badge.
-      //   open (active) — red · rr (active restructuring) — yellow · closed — green
+      // KAN-339: status is the first column. The badge shows the loan lifecycle
+      // (Open / Closed) and its COLOR encodes state:
+      //   • closed                     → green
+      //   • open + Connected RR        → yellow
+      //   • open (otherwise)           → red
+      // A separate always-purple "RR" tag marks any loan that has a
+      // restructuring agreement of ANY status (its details render inline below
+      // the row). So an open+violated loan is a red badge WITH a purple RR tag.
       key: 'status',
       header: t('pages.clients.detail.tableHeaders.status', 'Status'),
       align: 'center',
       render: (loan) => {
-        const badge = getLoanBadgeStatus(loan)
+        const isClosed = loan.status === 'closed'
+        const isConnectedRr = !isClosed && connectedRrDebtIds.has(loan.id)
         return (
-          <span
-            className={cn(
-              'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium',
-              badge === 'open' && 'bg-red-100 text-red-800',
-              badge === 'rr' && 'bg-amber-100 text-amber-800',
-              badge === 'closed' && 'bg-green-100 text-green-800'
+          <div className="flex items-center justify-center gap-1.5">
+            <span
+              className={cn(
+                'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium',
+                isClosed
+                  ? 'bg-green-100 text-green-800'
+                  : isConnectedRr
+                    ? 'bg-amber-100 text-amber-800'
+                    : 'bg-red-100 text-red-800'
+              )}
+            >
+              {isClosed
+                ? t('pages.clients.detail.loanStatusBadge.closed', 'Closed')
+                : t('pages.clients.detail.loanStatusBadge.open', 'Open')}
+            </span>
+            {rrDebtIds.has(loan.id) && (
+              <span className="inline-flex items-center rounded-full bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-800">
+                {t('pages.clients.detail.rrTag', 'RR')}
+              </span>
             )}
-          >
-            {t(`pages.clients.detail.loanStatusBadge.${badge}`, badge)}
-          </span>
+          </div>
         )
       },
     },
@@ -1960,190 +1980,178 @@ export function ClientDetailPage() {
   ]
 
   type RrRow = (typeof restructuringAgreements)[0]
-  const rrColumns: Column<RrRow>[] = [
-    {
-      key: 'contract_number',
-      header: t('pages.clients.detail.tableHeaders.loanNumber'),
-      align: 'left',
-    },
-    {
-      key: 'seller_company',
-      header: t('pages.clients.detail.tableHeaders.counterparty'),
-      align: 'left',
-    },
-    {
-      key: 'purchase_date',
-      header: t('pages.clients.detail.tableHeaders.saleDate'),
-      align: 'left',
-      render: (row) => formatDate(row.purchase_date ?? undefined),
-    },
-    {
-      key: 'restructuring_amount',
-      header: t('pages.clients.detail.tableHeaders.rrAmount'),
-      align: 'right',
-      render: (row) => formatMoneyUAHTwoDecimals(Number(row.restructuring_amount ?? 0)),
-    },
-    {
-      key: 'first_payment_date',
-      header: t('pages.clients.detail.tableHeaders.rrConnectionDate'),
-      align: 'left',
-      render: (row) => formatDate(row.first_payment_date ?? undefined),
-    },
-    {
-      key: 'remaining_debt_amount',
-      header: t('pages.clients.detail.tableHeaders.totalToBeRepaid'),
-      align: 'right',
-      render: (row) => formatMoneyUAHTwoDecimals(Number(row.remaining_debt_amount ?? 0)),
-    },
-    {
-      key: 'status_name',
-      header: t('pages.clients.detail.tableHeaders.status', 'Статус'),
-      align: 'center',
-      render: (row) => {
-        // restructuring_statuses lookup ids:
-        //   1 Connected, 2 Violated, 3 Cancelled,
-        //   4 Completed, 5 Completed Early
-        // Pick a colour per status so all five are visually distinct.
-        // Backend `status_name` is rendered as-is; localisation of the
-        // label is the server's responsibility.
-        const sid = row.status_id
-        const label = row.status_name ?? '-'
-        const cls =
-          sid === 1
-            ? 'bg-blue-100 text-blue-800' // Connected — paying on time
-            : sid === 2
-              ? 'bg-amber-100 text-amber-800' // Violated — overdue 30d+
-              : sid === 3
-                ? 'bg-red-100 text-red-800' // Cancelled — overdue 60d+ or manually disconnected
-                : sid === 4
-                  ? 'bg-green-100 text-green-800' // Completed
-                  : sid === 5
-                    ? 'bg-emerald-100 text-emerald-800' // Completed Early
-                    : 'bg-gray-100 text-gray-600'
-        return (
-          <span
-            className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${cls}`}
+  // KAN-339: the standalone "Loans on RR" grid was removed; RR details now
+  // render inline beneath each loan row (see renderRrInlineDetails). These
+  // helpers were lifted verbatim out of the old rrColumns so the RR status
+  // badge and lifecycle actions behave exactly as they did in the grid.
+  const renderRrStatusBadge = (row: RrRow) => {
+    // restructuring_statuses lookup ids:
+    //   1 Connected, 2 Violated, 3 Cancelled, 4 Completed, 5 Completed Early
+    const sid = row.status_id
+    const label = row.status_name ?? '-'
+    const cls =
+      sid === 1
+        ? 'bg-blue-100 text-blue-800' // Connected — paying on time
+        : sid === 2
+          ? 'bg-amber-100 text-amber-800' // Violated — overdue 30d+
+          : sid === 3
+            ? 'bg-red-100 text-red-800' // Cancelled — overdue 60d+ or manually disconnected
+            : sid === 4
+              ? 'bg-green-100 text-green-800' // Completed
+              : sid === 5
+                ? 'bg-emerald-100 text-emerald-800' // Completed Early
+                : 'bg-gray-100 text-gray-600'
+    return (
+      <span
+        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${cls}`}
+      >
+        {label}
+      </span>
+    )
+  }
+  const renderRrActions = (row: RrRow) => {
+    // Allowed-transition matrix mirrors the backend's
+    // ALLOWED_MANUAL_TRANSITIONS in rr_status_service.py:
+    //   1 Connected  → 2 Violated
+    //   2 Violated   → 1 Connected (restore)
+    //   3 Cancelled  → 1 Connected (restore)
+    // Terminal statuses (4 Completed / 5 Completed Early) get "view only".
+    // Disconnect is offered for any non-terminal status; it goes through a
+    // dedicated endpoint that records a mandatory reason.
+    const sid = row.status_id
+    const isTerminal = sid === 3 || sid === 4 || sid === 5
+    const isCompleted = sid === 4 || sid === 5
+    const showMarkViolated = sid === 1
+    const showRestore = sid === 2 || sid === 3
+    const canRestoreFromHere =
+      (sid === 2 && canRestoreFromViolated) || (sid === 3 && canRestoreFromCancelled)
+    const transitionBusy = isTransitioningRr || isDisconnectingRr
+    const noPermTip = t(
+      'pages.clients.detail.noTransitionPermission',
+      "Your role doesn't allow this transition."
+    )
+    return (
+      <div className="flex items-center justify-center gap-1">
+        <button
+          onClick={() => setSelectedRaId(row.id)}
+          className="text-secondary-800 hover:text-secondary-600 p-1"
+          title={t('pages.clients.detail.viewDetail')}
+        >
+          <Icons.Eye size={18} />
+        </button>
+        {showMarkViolated && (
+          <button
+            onClick={() => transitionRr({ clientId, raId: row.id, targetStatusId: 2 })}
+            disabled={transitionBusy || !canMarkViolated}
+            className="p-1 text-amber-600 hover:text-amber-800 disabled:cursor-not-allowed disabled:opacity-50"
+            title={
+              canMarkViolated
+                ? t('pages.clients.detail.markRRViolated', 'Mark Violated')
+                : noPermTip
+            }
           >
-            {label}
-          </span>
-        )
-      },
-    },
-    {
-      key: 'id',
-      header: t('pages.clients.detail.tableHeaders.actions'),
-      align: 'center',
-      render: (row) => {
-        // Allowed-transition matrix mirrors the backend's
-        // ALLOWED_MANUAL_TRANSITIONS in rr_status_service.py:
-        //   1 Connected  → 2 Violated
-        //   2 Violated   → 1 Connected (restore)
-        //   3 Cancelled  → 1 Connected (restore)
-        // Terminal statuses (4 Completed / 5 Completed Early) get
-        // "view only". Disconnect is offered for any non-terminal
-        // status; it goes through a dedicated endpoint that records a
-        // mandatory reason.
-        const sid = row.status_id
-        const isTerminal = sid === 3 || sid === 4 || sid === 5
-        const isCompleted = sid === 4 || sid === 5
-        // Status eligibility: which transitions does the row's *current
-        // status* allow at all? (Independent of the operator's role.)
-        const showMarkViolated = sid === 1
-        const showRestore = sid === 2 || sid === 3
-        // Role permission for the "Restore" button depends on whether we're
-        // coming from Violated or Cancelled (two separate permissions).
-        const canRestoreFromHere =
-          (sid === 2 && canRestoreFromViolated) || (sid === 3 && canRestoreFromCancelled)
-        const transitionBusy = isTransitioningRr || isDisconnectingRr
-        const noPermTip = t(
-          'pages.clients.detail.noTransitionPermission',
-          "Your role doesn't allow this transition."
-        )
-        return (
-          <div className="flex items-center justify-center gap-1">
-            <button
-              onClick={() => setSelectedRaId(row.id)}
-              className="text-secondary-800 hover:text-secondary-600 p-1"
-              title={t('pages.clients.detail.viewDetail')}
-            >
-              <Icons.Eye size={18} />
-            </button>
-            {showMarkViolated && (
-              <button
-                onClick={() => transitionRr({ clientId, raId: row.id, targetStatusId: 2 })}
-                disabled={transitionBusy || !canMarkViolated}
-                className="p-1 text-amber-600 hover:text-amber-800 disabled:cursor-not-allowed disabled:opacity-50"
-                title={
-                  canMarkViolated
-                    ? t('pages.clients.detail.markRRViolated', 'Mark Violated')
-                    : noPermTip
-                }
-              >
-                <Icons.Warning size={18} />
-              </button>
-            )}
-            {showRestore && (
-              <button
-                onClick={() => transitionRr({ clientId, raId: row.id, targetStatusId: 1 })}
-                disabled={transitionBusy || !canRestoreFromHere}
-                className="p-1 text-blue-600 hover:text-blue-800 disabled:cursor-not-allowed disabled:opacity-50"
-                title={
-                  canRestoreFromHere
-                    ? t('pages.clients.detail.restoreRRConnected', 'Restore to Connected')
-                    : noPermTip
-                }
-              >
-                <Icons.Reload size={18} />
-              </button>
-            )}
-            {!isTerminal && (
-              <button
-                onClick={() => setCompleteRrConfirm(row.id)}
-                disabled={isCompletingRa || transitionBusy || !canCompleteRR}
-                className="p-1 text-green-600 hover:text-green-800 disabled:cursor-not-allowed disabled:opacity-50"
-                title={
-                  canCompleteRR ? t('pages.clients.detail.completeRR', 'Complete RR') : noPermTip
-                }
-              >
-                <Icons.Success size={18} />
-              </button>
-            )}
-            {!isTerminal && (
-              <button
-                onClick={() =>
-                  setOverpaymentModal({
-                    raId: row.id,
-                    amount: '',
-                    allocationTarget: 'next',
-                    reason: '',
-                  })
-                }
-                disabled={transitionBusy || isRecordingOverpayment}
-                className="p-1 text-emerald-600 hover:text-emerald-800 disabled:opacity-50"
-                title={t('pages.clients.detail.recordOverpayment', 'Record Overpayment')}
-              >
-                <Icons.MoneyReceive01 size={18} />
-              </button>
-            )}
-            {!isCompleted && sid !== 3 && (
-              <button
-                onClick={() => setDisconnectRrConfirm({ raId: row.id, reason: '' })}
-                disabled={transitionBusy || !canDisconnectRR}
-                className="p-1 text-red-600 hover:text-red-800 disabled:cursor-not-allowed disabled:opacity-50"
-                title={
-                  canDisconnectRR
-                    ? t('pages.clients.detail.disconnectRR', 'Disconnect RR')
-                    : noPermTip
-                }
-              >
-                <Icons.CancelCircle size={18} />
-              </button>
-            )}
+            <Icons.Warning size={18} />
+          </button>
+        )}
+        {showRestore && (
+          <button
+            onClick={() => transitionRr({ clientId, raId: row.id, targetStatusId: 1 })}
+            disabled={transitionBusy || !canRestoreFromHere}
+            className="p-1 text-blue-600 hover:text-blue-800 disabled:cursor-not-allowed disabled:opacity-50"
+            title={
+              canRestoreFromHere
+                ? t('pages.clients.detail.restoreRRConnected', 'Restore to Connected')
+                : noPermTip
+            }
+          >
+            <Icons.Reload size={18} />
+          </button>
+        )}
+        {!isTerminal && (
+          <button
+            onClick={() => setCompleteRrConfirm(row.id)}
+            disabled={isCompletingRa || transitionBusy || !canCompleteRR}
+            className="p-1 text-green-600 hover:text-green-800 disabled:cursor-not-allowed disabled:opacity-50"
+            title={canCompleteRR ? t('pages.clients.detail.completeRR', 'Complete RR') : noPermTip}
+          >
+            <Icons.Success size={18} />
+          </button>
+        )}
+        {!isTerminal && (
+          <button
+            onClick={() =>
+              setOverpaymentModal({
+                raId: row.id,
+                amount: '',
+                allocationTarget: 'next',
+                reason: '',
+              })
+            }
+            disabled={transitionBusy || isRecordingOverpayment}
+            className="p-1 text-emerald-600 hover:text-emerald-800 disabled:opacity-50"
+            title={t('pages.clients.detail.recordOverpayment', 'Record Overpayment')}
+          >
+            <Icons.MoneyReceive01 size={18} />
+          </button>
+        )}
+        {!isCompleted && sid !== 3 && (
+          <button
+            onClick={() => setDisconnectRrConfirm({ raId: row.id, reason: '' })}
+            disabled={transitionBusy || !canDisconnectRR}
+            className="p-1 text-red-600 hover:text-red-800 disabled:cursor-not-allowed disabled:opacity-50"
+            title={
+              canDisconnectRR ? t('pages.clients.detail.disconnectRR', 'Disconnect RR') : noPermTip
+            }
+          >
+            <Icons.CancelCircle size={18} />
+          </button>
+        )}
+      </div>
+    )
+  }
+
+  // KAN-339: the inline RR detail line rendered under a loan row for every
+  // restructuring agreement it has (any status). Replaces the removed RR grid —
+  // same fields (amount / connection date / total to repay / status) plus the
+  // full lifecycle actions.
+  const renderRrInlineDetails = (debtId: number) => {
+    const agreements = restructuringAgreements.filter((ra) => ra.debt_id === debtId)
+    if (agreements.length === 0) return null
+    return (
+      <div className="flex flex-col gap-2">
+        {agreements.map((ra) => (
+          <div
+            key={ra.id}
+            className="flex flex-wrap items-center gap-x-6 gap-y-1 rounded-md border border-purple-200 bg-purple-50/60 px-3 py-2 text-xs"
+          >
+            <span className="font-semibold text-purple-800">
+              {t('pages.clients.detail.rrTag', 'RR')}
+            </span>
+            <span className="text-gray-600">
+              {t('pages.clients.detail.tableHeaders.rrAmount')}:{' '}
+              <span className="font-medium text-gray-900">
+                {formatMoneyUAHTwoDecimals(Number(ra.restructuring_amount ?? 0))}
+              </span>
+            </span>
+            <span className="text-gray-600">
+              {t('pages.clients.detail.tableHeaders.rrConnectionDate')}:{' '}
+              <span className="font-medium text-gray-900">
+                {formatDate(ra.first_payment_date ?? undefined)}
+              </span>
+            </span>
+            <span className="text-gray-600">
+              {t('pages.clients.detail.tableHeaders.totalToBeRepaid')}:{' '}
+              <span className="font-medium text-gray-900">
+                {formatMoneyUAHTwoDecimals(Number(ra.remaining_debt_amount ?? 0))}
+              </span>
+            </span>
+            {renderRrStatusBadge(ra)}
+            <div className="ml-auto">{renderRrActions(ra)}</div>
           </div>
-        )
-      },
-    },
-  ]
+        ))}
+      </div>
+    )
+  }
 
   const activityColumns: Column<(typeof client.activities)[0]>[] = [
     {
@@ -3857,17 +3865,23 @@ export function ClientDetailPage() {
                 {activeRightCardTab === 'loans' && (
                   <div className="flex w-full flex-col gap-0">
                     {/* KAN-339: single unified loans grid — no sub-tabs. Status
-                        is the first column (open / rr / closed badge). Clicking a
-                        row selects (highlights) it; the selection drives the
-                        enable/disable state of the bottom action panel. Clicking
-                        the selected row again clears the selection. */}
+                        is the first column (Open/Closed badge + purple RR tag).
+                        Open loans sort before closed ones. Clicking a row selects
+                        (highlights) it, driving the bottom action panel; clicking
+                        it again clears the selection. Every loan that has a
+                        restructuring agreement shows an always-visible RR detail
+                        line beneath its row; the Info button additionally toggles
+                        the factoring-agreement panel. */}
                     <div className="flex flex-col items-start gap-2.5 self-stretch px-3 py-4 md:px-6">
                       {isLoansLoading ? (
                         <TableSkeleton columns={7} rows={3} />
                       ) : (
                         <DataTable
                           columns={loanColumns}
-                          data={client.loans}
+                          data={[...client.loans].sort(
+                            (a, b) =>
+                              (a.status === 'closed' ? 1 : 0) - (b.status === 'closed' ? 1 : 0)
+                          )}
                           className="w-full"
                           onRowClick={(loan) =>
                             setSelectedLoanId((prev) => (prev === loan.id ? null : loan.id))
@@ -3877,38 +3891,22 @@ export function ClientDetailPage() {
                               ? 'ring-information-400 !bg-information-50 ring-1 ring-inset'
                               : undefined
                           }
-                          expandedIds={expandedDebtIds}
+                          expandedIds={new Set<number>([...rrDebtIds, ...expandedDebtIds])}
                           renderExpanded={(loan) => (
-                            <LoanFactoringInfo
-                              legalName={loan.sellerLegalName}
-                              previousLender={loan.factoringAgreementPreviousLender}
-                              purchaseDate={loan.factoringAgreementPurchaseDate}
-                            />
+                            <div className="flex flex-col gap-3">
+                              {rrDebtIds.has(loan.id) && renderRrInlineDetails(loan.id)}
+                              {expandedDebtIds.has(loan.id) && (
+                                <LoanFactoringInfo
+                                  legalName={loan.sellerLegalName}
+                                  previousLender={loan.factoringAgreementPreviousLender}
+                                  purchaseDate={loan.factoringAgreementPurchaseDate}
+                                />
+                              )}
+                            </div>
                           )}
                         />
                       )}
                     </div>
-                    {/* KAN-339: the former "Loans on RR" tab is kept as a
-                        secondary section beneath the unified list so restructuring
-                        lifecycle actions (view detail / mark violated / restore /
-                        disconnect / complete) remain reachable. Shown only when the
-                        client has at least one restructuring agreement. */}
-                    {(isRrLoading || restructuringAgreements.length > 0) && (
-                      <div className="flex flex-col items-start gap-2.5 self-stretch px-3 pb-4 md:px-6">
-                        <h3 className="text-secondary-800 text-sm font-semibold">
-                          {t('pages.clients.detail.loansOnRR')}
-                        </h3>
-                        {isRrLoading ? (
-                          <TableSkeleton columns={7} rows={3} />
-                        ) : (
-                          <DataTable
-                            columns={rrColumns}
-                            data={restructuringAgreements}
-                            className="w-full"
-                          />
-                        )}
-                      </div>
-                    )}
                     {/* KAN-339: selection-driven action panel. Row-scoped
                         actions (Close / Reopen / Edit closure date / Connect RR)
                         enable only when a single loan row is selected AND its
