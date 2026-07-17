@@ -5677,6 +5677,10 @@
     "rrPeriodicity": {
       "title": "RR Payment Periodicity",
       "description": "Choose which payment-frequency options operators can use to auto-fill the schedule when creating a Restructuring Agreement.",
+      "optionsTitle": "Frequency options",
+      "optionsDescription": "Enabled options appear in the Payment Frequency dropdown on the RR creation form.",
+      "enabled": "Enabled",
+      "disabled": "Disabled",
       "saved": "Payment periodicity options saved",
       "savedDescription": "Operators will see the updated frequency options next time they create a Restructuring Agreement.",
       "allDisabledHint": "With every option off, operators enter each payment date manually.",
