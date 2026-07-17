@@ -2,6 +2,8 @@ import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
+import { Pagination } from '@/components/ui/Pagination'
+import { useDebounce } from '@/hooks/useDebounce'
 import { useOperators } from '@/features/users/hooks'
 import { useInboxQueue, useTakeCharge, useTeamEvents } from '@/features/quality/coaching/hooks'
 import { OperatorDetailPanel } from '@/features/quality/coaching/components/OperatorDetailPanel'
@@ -88,7 +90,7 @@ export function InboxTab({
   // both of which resolve `scoped.userIds` to undefined) must be expanded here
   // to the concrete in-scope operator id list, otherwise the queue comes back
   // empty and the panel shows "No operators in the current scope".
-  const effectiveUserIds = useMemo<number[] | undefined>(() => {
+  const scopeUserIds = useMemo<number[] | undefined>(() => {
     if (!canSelectScope) {
       return currentUserId != null ? [currentUserId] : []
     }
@@ -97,6 +99,49 @@ export function InboxTab({
     }
     return scoped.userIds
   }, [canSelectScope, currentUserId, scoped.userIds, operators])
+
+  // Employee search — name / department / SIP (extension). Resolved against the
+  // FULL operator directory (not just the loaded queue page, which is capped),
+  // then used to narrow the queue's user_ids so a match is reachable even if the
+  // operator ranks past the first page.
+  const [nameQuery, setNameQuery] = useState('')
+  const [departmentId, setDepartmentId] = useState<number | 'all'>('all')
+  const [sipQuery, setSipQuery] = useState('')
+  const debouncedName = useDebounce(nameQuery, 300)
+  const debouncedSip = useDebounce(sipQuery, 300)
+  const searchActive = !!(debouncedName.trim() || debouncedSip.trim() || departmentId !== 'all')
+
+  const departmentOptions = useMemo(() => {
+    const map = new Map<number, string>()
+    for (const o of operators) {
+      if (o.department_id != null && !map.has(o.department_id)) {
+        map.set(o.department_id, o.department_name?.trim() || `ID ${o.department_id}`)
+      }
+    }
+    return Array.from(map, ([id, label]) => ({ id, label })).sort((a, b) =>
+      a.label.localeCompare(b.label)
+    )
+  }, [operators])
+
+  const effectiveUserIds = useMemo<number[] | undefined>(() => {
+    if (!searchActive) return scopeUserIds
+    const name = debouncedName.trim().toLowerCase()
+    const sip = debouncedSip.trim().toLowerCase()
+    const matched = operators
+      .filter((o) => {
+        if (departmentId !== 'all' && o.department_id !== departmentId) return false
+        if (name && !(o.full_name ?? '').toLowerCase().includes(name)) return false
+        if (sip && !(o.asterisk_extension ?? '').toLowerCase().includes(sip)) return false
+        return true
+      })
+      .map((o) => o.id)
+    const matchedSet = new Set(matched)
+    // Intersect with the active scope so search still respects my/department/all.
+    return scopeUserIds ? scopeUserIds.filter((id) => matchedSet.has(id)) : matched
+  }, [searchActive, scopeUserIds, debouncedName, debouncedSip, departmentId, operators])
+
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(50)
 
   // ?priority= chip state — defaults to 'all' and round-trips through the
   // URL so deep links survive a reload.
@@ -127,8 +172,8 @@ export function InboxTab({
       period: inboxState.period,
       from_date: inboxState.customFromDate,
       to_date: inboxState.customToDate,
-      page: 1,
-      page_size: 100,
+      page,
+      page_size: pageSize,
     }),
     [
       effectiveUserIds,
@@ -136,12 +181,44 @@ export function InboxTab({
       inboxState.period,
       inboxState.customFromDate,
       inboxState.customToDate,
+      page,
+      pageSize,
     ]
   )
   const { data: queue, isLoading } = useInboxQueue(
     queueFilters,
     effectiveUserIds === undefined || effectiveUserIds.length > 0
   )
+
+  // Reset to page 1 when the query (scope/search/period/page size) changes so a
+  // stale page number doesn't request an empty page. Render-time reset pattern.
+  const pageResetKey = useMemo(
+    () =>
+      JSON.stringify([
+        effectiveUserIds ?? null,
+        inboxState.states,
+        inboxState.period,
+        inboxState.customFromDate,
+        inboxState.customToDate,
+        pageSize,
+      ]),
+    [
+      effectiveUserIds,
+      inboxState.states,
+      inboxState.period,
+      inboxState.customFromDate,
+      inboxState.customToDate,
+      pageSize,
+    ]
+  )
+  const [trackedResetKey, setTrackedResetKey] = useState(pageResetKey)
+  if (pageResetKey !== trackedResetKey) {
+    setTrackedResetKey(pageResetKey)
+    setPage(1)
+  }
+
+  const queueTotal = queue?.pagination?.total ?? 0
+  const queueTotalPages = queue?.pagination?.total_pages ?? 1
 
   const derivedRows = useMemo(
     () => deriveInboxRows(t, queue?.data ?? [], operators),
@@ -292,34 +369,91 @@ export function InboxTab({
         </div>
       </div>
 
+      <div className="flex flex-wrap items-center gap-2">
+        <input
+          value={nameQuery}
+          onChange={(e) => setNameQuery(e.target.value)}
+          placeholder={t('pages.training.inbox.search.namePlaceholder', 'Search by full name…')}
+          className="h-9 w-[220px] rounded-lg border border-[#DFDFDF] bg-white px-3 text-xs text-[#05040D] focus:outline-none"
+        />
+        <select
+          value={departmentId}
+          onChange={(e) =>
+            setDepartmentId(e.target.value === 'all' ? 'all' : Number(e.target.value))
+          }
+          className="h-9 rounded-lg border border-[#DFDFDF] bg-white px-3 text-xs text-[#05040D] focus:outline-none"
+        >
+          <option value="all">
+            {t('pages.training.inbox.search.allDepartments', 'All departments')}
+          </option>
+          {departmentOptions.map((d) => (
+            <option key={d.id} value={d.id}>
+              {d.label}
+            </option>
+          ))}
+        </select>
+        <input
+          value={sipQuery}
+          onChange={(e) => setSipQuery(e.target.value)}
+          placeholder={t('pages.training.inbox.search.sipPlaceholder', 'SIP / extension…')}
+          className="h-9 w-[150px] rounded-lg border border-[#DFDFDF] bg-white px-3 text-xs text-[#05040D] focus:outline-none"
+        />
+        {searchActive ? (
+          <button
+            type="button"
+            onClick={() => {
+              setNameQuery('')
+              setDepartmentId('all')
+              setSipQuery('')
+            }}
+            className="h-9 rounded-lg border border-[#DFDFDF] bg-white px-4 text-xs font-medium text-[#4B5563] transition-colors hover:bg-[#F7F7F7]"
+          >
+            {t('pages.training.inbox.search.clear', 'Clear')}
+          </button>
+        ) : null}
+      </div>
+
       <div className={BODY_LAYOUT}>
-        {effectiveUserIds !== undefined && effectiveUserIds.length === 0 ? (
-          <div className="rounded-xl border border-[#EBECE8] bg-white p-6 text-center text-xs text-gray-500">
-            {t('pages.training.inbox.list.emptyScope', 'No operators in the current scope.')}
-          </div>
-        ) : inboxState.view === 'kanban' ? (
-          <OperatorKanbanView
-            rows={filteredRows}
-            assignmentIdByOperator={assignmentIdByOperator}
-            selectedOperatorId={selectedRow?.operatorId}
-            onSelect={handleSelectOperator}
-            isLoading={isLoading}
-          />
-        ) : inboxState.view === 'grid' ? (
-          <OperatorGridView
-            rows={filteredRows}
-            selectedOperatorId={selectedRow?.operatorId}
-            onSelect={handleSelectOperator}
-            isLoading={isLoading}
-          />
-        ) : (
-          <OperatorListView
-            rows={filteredRows}
-            selectedOperatorId={selectedRow?.operatorId ?? 0}
-            onSelect={handleSelectOperator}
-            isLoading={isLoading}
-          />
-        )}
+        <div className="flex flex-col gap-3">
+          {effectiveUserIds !== undefined && effectiveUserIds.length === 0 ? (
+            <div className="rounded-xl border border-[#EBECE8] bg-white p-6 text-center text-xs text-gray-500">
+              {searchActive
+                ? t('pages.training.inbox.search.noResults', 'No operators match the search.')
+                : t('pages.training.inbox.list.emptyScope', 'No operators in the current scope.')}
+            </div>
+          ) : inboxState.view === 'kanban' ? (
+            <OperatorKanbanView
+              rows={filteredRows}
+              assignmentIdByOperator={assignmentIdByOperator}
+              selectedOperatorId={selectedRow?.operatorId}
+              onSelect={handleSelectOperator}
+              isLoading={isLoading}
+            />
+          ) : inboxState.view === 'grid' ? (
+            <OperatorGridView
+              rows={filteredRows}
+              selectedOperatorId={selectedRow?.operatorId}
+              onSelect={handleSelectOperator}
+              isLoading={isLoading}
+            />
+          ) : (
+            <OperatorListView
+              rows={filteredRows}
+              selectedOperatorId={selectedRow?.operatorId ?? 0}
+              onSelect={handleSelectOperator}
+              isLoading={isLoading}
+            />
+          )}
+          {queueTotal > 0 ? (
+            <Pagination
+              currentPage={page}
+              totalPages={queueTotalPages}
+              pageSize={pageSize}
+              onPageChange={setPage}
+              onPageSizeChange={setPageSize}
+            />
+          ) : null}
+        </div>
 
         <OperatorDetailPanel
           operatorId={selectedRow?.operatorId}

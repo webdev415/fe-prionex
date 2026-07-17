@@ -2108,7 +2108,14 @@
           "closed": "With resolution"
         },
         "compositeScore": "Composite score {{score}}",
-        "scoreShort": "score {{score}}"
+        "scoreShort": "score {{score}}",
+        "search": {
+          "namePlaceholder": "Search by full name…",
+          "allDepartments": "All departments",
+          "sipPlaceholder": "SIP / extension…",
+          "clear": "Clear",
+          "noResults": "No operators match the search."
+        }
       },
       "paymentHistoryEmpty": "No payments match the current filters",
       "paymentHistorySummary": {
