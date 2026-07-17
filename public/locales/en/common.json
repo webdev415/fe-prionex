@@ -7324,11 +7324,15 @@
         "deactivateConfirmTitle": "Revert to Legacy Proportional?",
         "deactivateConfirmMessage": "Future payment snapshots will use the legacy proportional algorithm. Already-snapshotted payments are unaffected.",
         "deactivateConfirmButton": "Revert",
-        "preconditionError": "Strict Order requires payment-allocation snapshotting to be enabled."
+        "preconditionError": "Strict Order requires payment-allocation snapshotting to be enabled.",
+        "activeBadge": "Active",
+        "legacyBadge": "Legacy"
       },
       "history": {
         "title": "Recent Changes",
-        "version": "Version"
+        "version": "Version",
+        "changedBy": "Changed by",
+        "when": "When"
       }
     },
     "auditLogs": {
