@@ -372,11 +372,13 @@ html.theme-switching * {
     display: none;
   }
 
-  html[data-theme='light-classic'] .sidebar-brand-logo-light {
+  html[data-theme='light-classic'] .sidebar-brand-logo-light,
+  html[data-theme='high-contrast-light'] .sidebar-brand-logo-light {
     display: none;
   }
 
-  html[data-theme='light-classic'] .sidebar-brand-logo-dark {
+  html[data-theme='light-classic'] .sidebar-brand-logo-dark,
+  html[data-theme='high-contrast-light'] .sidebar-brand-logo-dark {
     display: block;
   }
 
