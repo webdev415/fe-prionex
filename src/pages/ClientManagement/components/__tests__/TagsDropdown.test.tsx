@@ -55,6 +55,11 @@ vi.mock('@/features/tags/hooks/useTags', () => ({
   useSegments: () => ({ data: mockSegments, isLoading: false }),
 }))
 
+vi.mock('@/stores/authStore', () => ({
+  useAuthStore: (selector: (s: { user: { timezone: string } }) => unknown) =>
+    selector({ user: { timezone: 'Europe/Kyiv' } }),
+}))
+
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string, opts?: Record<string, unknown>) => {
