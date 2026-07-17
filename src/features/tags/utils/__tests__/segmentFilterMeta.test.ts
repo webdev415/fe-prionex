@@ -14,12 +14,23 @@ describe('formatSegmentFilterMeta', () => {
     ).toBe('42 clients')
   })
 
-  it('includes updated time when last_refreshed_at is set', () => {
+  it('treats naive UTC timestamps as UTC and formats in the given timezone', () => {
+    // 08:20 UTC → 11:20 in Europe/Kyiv (EEST, UTC+3 in July)
+    const result = formatSegmentFilterMeta(
+      { cached_client_count: 2, last_refreshed_at: '2026-07-17T08:20:00' },
+      t,
+      'Europe/Kyiv'
+    )
+    expect(result).toBe('2 clients · updated at 11:20')
+  })
+
+  it('formats explicit Z timestamps in the given timezone', () => {
     const result = formatSegmentFilterMeta(
       { cached_client_count: 1240, last_refreshed_at: '2026-07-16T14:32:00Z' },
-      t
+      t,
+      'Europe/Kyiv'
     )
-    expect(result).toMatch(/^1240 clients · updated at \d{2}:\d{2}$/)
+    expect(result).toBe('1240 clients · updated at 17:32')
   })
 
   it('falls back to count for invalid timestamps', () => {

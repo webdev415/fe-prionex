@@ -29,6 +29,7 @@ import {
 import { TagFilterTriState } from './TagFilterTriState'
 import { useTranslation } from 'react-i18next'
 import { formatSegmentFilterMeta } from '@/features/tags/utils/segmentFilterMeta'
+import { useAuthStore } from '@/stores/authStore'
 
 type FilterTab = 'manual' | 'segments'
 
@@ -60,6 +61,7 @@ export function TagsDropdown({
   onClear,
 }: TagsDropdownProps) {
   const { t } = useTranslation('common')
+  const userTimezone = useAuthStore((s) => s.user?.timezone)
   const [searchQuery, setSearchQuery] = useState('')
   const [tempSelection, setTempSelection] = useState<TagFilterSelection>(tagFilterSelection)
   const [tempSegmentId, setTempSegmentId] = useState<number | null>(selectedSegmentId)
@@ -302,7 +304,7 @@ export function TagsDropdown({
                           {segment.name}
                         </div>
                         <div className="text-xs text-gray-500">
-                          {formatSegmentFilterMeta(segment, t)}
+                          {formatSegmentFilterMeta(segment, t, userTimezone)}
                         </div>
                       </div>
                     </button>
