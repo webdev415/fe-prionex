@@ -5531,6 +5531,7 @@ export function ClientDetailPage() {
           currentDebt={Number(clientDetail?.total_debt ?? 0)}
           debts={loans}
           canVerify={canVerifyPayment}
+          clientId={client.id}
           onSave={handleRecordPayment}
         />
 

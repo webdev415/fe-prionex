@@ -56,6 +56,28 @@ describe('useRecordPaymentFlow', () => {
     expect(mocks.recordMutate.mock.calls[1][0].payment_type).toBe('full_payment')
   })
 
+  // Regression guard: restructuringAgreementId must reach the request payload.
+  // When dropped, a ``payment_by_rr`` save fails the backend validator
+  // ("payment_type='payment_by_rr' requires restructuring_agreement_id").
+  it('sends restructuring_agreement_id for payment_by_rr when provided', () => {
+    const { result } = renderHook(() => useRecordPaymentFlow({ clientId: 42 }))
+    result.current.handleRecordPayment(
+      baseInput({ paymentType: 'payment_by_rr', restructuringAgreementId: 25770 })
+    )
+
+    const request = mocks.recordMutate.mock.calls[0][0]
+    expect(request.payment_type).toBe('payment_by_rr')
+    expect(request.restructuring_agreement_id).toBe(25770)
+  })
+
+  it('omits restructuring_agreement_id when none is provided', () => {
+    const { result } = renderHook(() => useRecordPaymentFlow({ clientId: 42 }))
+    result.current.handleRecordPayment(baseInput({ paymentType: 'partial_payment' }))
+
+    const request = mocks.recordMutate.mock.calls[0][0]
+    expect(request.restructuring_agreement_id).toBeUndefined()
+  })
+
   it('chains verify after record when status is Verified (unchanged behaviour)', () => {
     const onSuccess = vi.fn()
     const { result } = renderHook(() => useRecordPaymentFlow({ clientId: 7, onSuccess }))
