@@ -79,6 +79,13 @@ export function DocumentImportProgress({ jobId, onComplete }: Props) {
       valueClassName: 'text-dark-500',
     },
     {
+      key: 'duplicateSkipped',
+      value: counts?.duplicate_skipped ?? 0,
+      label: t(`${p}.duplicateSkipped`, 'Skipped (duplicate)'),
+      className: 'border-gray-200 bg-white/50',
+      valueClassName: 'text-dark-500',
+    },
+    {
       key: 'executablesBlocked',
       value: counts?.executables_blocked ?? 0,
       label: t(`${p}.executablesBlocked`, 'Blocked (executable)'),
@@ -144,7 +151,7 @@ export function DocumentImportProgress({ jobId, onComplete }: Props) {
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
         {stats.map((s) => (
           <div key={s.key} className={`rounded-xl border px-4 py-3 shadow-sm ${s.className}`}>
             <p className={`text-2xl font-bold ${s.valueClassName}`}>{isTerminal ? s.value : '—'}</p>

@@ -45,7 +45,8 @@ export function BulkDocumentImportPage() {
   })
   const { data: documentTypes = [], isLoading: isLoadingDocTypes } = useDocumentTypes()
   const downloadExample = useDownloadExampleArchive()
-  const { uploadFile, startImport, uploading, starting, progress } = useUploadDocumentArchive()
+  const { uploadFile, cancelUpload, startImport, uploading, starting, progress } =
+    useUploadDocumentArchive()
 
   const agreements = useMemo(() => agreementsPage?.items ?? [], [agreementsPage])
 
@@ -109,12 +110,21 @@ export function BulkDocumentImportPage() {
     if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
+  // Discard a staged upload that finished but hasn't been started yet — deletes
+  // the staged .zip.part + .meta.json on the server and clears the selection.
+  const handleRemoveStaged = () => {
+    if (uploadId) documentImportApi.abortUpload(uploadId).catch(() => {})
+    setZipFile(null)
+    setUploadId(null)
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }
+
   const handleViewHistory = () => {
     navigate('/dashboard/import/history?import_type=document')
   }
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6 p-6">
+    <div className={`mx-auto space-y-6 p-6 ${jobId !== null ? 'max-w-5xl' : 'max-w-3xl'}`}>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="text-dark-500 text-2xl font-semibold">
@@ -271,12 +281,6 @@ export function BulkDocumentImportPage() {
                   {t('pages.imports.documents.dropZip', 'Click to select a .zip archive')}
                 </span>
               )}
-              {uploadId && !uploading && (
-                <span className="text-success-600 flex items-center gap-1 text-xs font-medium">
-                  <Icons.Success size={14} className="text-success-500" />
-                  {t('pages.imports.documents.uploadReady', 'Uploaded — ready to import')}
-                </span>
-              )}
             </button>
             <input
               ref={fileInputRef}
@@ -285,6 +289,21 @@ export function BulkDocumentImportPage() {
               className="hidden"
               onChange={handleFileChange}
             />
+            {uploadId && !uploading && (
+              <div className="mt-2 flex items-center justify-between">
+                <span className="text-success-600 flex items-center gap-1 text-xs font-medium">
+                  <Icons.Success size={14} className="text-success-500" />
+                  {t('pages.imports.documents.uploadReady', 'Uploaded — ready to import')}
+                </span>
+                <button
+                  type="button"
+                  onClick={handleRemoveStaged}
+                  className="text-error-600 hover:text-error-700 text-xs font-medium"
+                >
+                  {t('pages.imports.documents.removeFile', 'Remove')}
+                </button>
+              </div>
+            )}
             <p className="mt-2 text-xs text-gray-500">
               {t(
                 'pages.imports.documents.structureHint',
@@ -296,9 +315,18 @@ export function BulkDocumentImportPage() {
           {/* Upload progress */}
           {uploading && (
             <div>
-              <div className="mb-1 flex justify-between text-xs text-gray-500">
+              <div className="mb-1 flex items-center justify-between text-xs text-gray-500">
                 <span>{t('pages.imports.documents.uploading', 'Uploading…')}</span>
-                <span>{progress}%</span>
+                <div className="flex items-center gap-3">
+                  <span>{progress}%</span>
+                  <button
+                    type="button"
+                    onClick={cancelUpload}
+                    className="text-error-600 hover:text-error-700 font-medium"
+                  >
+                    {t('pages.imports.documents.cancelUpload', 'Cancel')}
+                  </button>
+                </div>
               </div>
               <div className="h-2 w-full overflow-hidden rounded-full bg-gray-200">
                 <div

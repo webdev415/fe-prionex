@@ -432,6 +432,10 @@ export function ImportDetailsPage() {
                     value: documentCounts?.skipped_no_match ?? 0,
                   },
                   {
+                    label: t('pages.imports.details.duplicateSkipped', 'Skipped (duplicate)'),
+                    value: documentCounts?.duplicate_skipped ?? 0,
+                  },
+                  {
                     label: t('pages.imports.details.blockedExecutable', 'Blocked (executable)'),
                     value: documentCounts?.executables_blocked ?? 0,
                   },

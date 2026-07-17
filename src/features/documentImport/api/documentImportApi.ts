@@ -53,6 +53,7 @@ export type DocumentImportJobStatus =
 export interface DocumentImportJobCounts {
   matched_folders: number
   files_attached: number
+  duplicate_skipped: number
   skipped_no_match: number
   executables_blocked: number
   oversized_skipped: number
@@ -103,7 +104,8 @@ async function completeUpload(uploadId: string): Promise<UploadResult> {
  */
 export async function uploadArchiveInChunks(
   file: File,
-  onProgress?: (percent: number) => void
+  onProgress?: (percent: number) => void,
+  signal?: AbortSignal
 ): Promise<UploadResult> {
   const total = file.size
   const { upload_id } = await initUpload({
@@ -113,6 +115,12 @@ export async function uploadArchiveInChunks(
 
   let offset = 0
   while (offset < total) {
+    // User-initiated cancel: stop sending and delete the partial staged file
+    // (the .zip.part chunks sent so far + its .meta.json) so nothing is orphaned.
+    if (signal?.aborted) {
+      await abortUpload(upload_id).catch(() => {})
+      throw new DOMException('Upload cancelled', 'AbortError')
+    }
     const end = Math.min(offset + UPLOAD_CHUNK_SIZE, total)
     await uploadChunk(upload_id, offset, file.slice(offset, end))
     offset = end
