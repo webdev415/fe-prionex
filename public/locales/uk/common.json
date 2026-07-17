@@ -4325,9 +4325,9 @@
         "loanInfo": "Інформація про договір",
         "loanStatusBadge": {
           "open": "Відкрито",
-          "rr": "РР",
           "closed": "Закрито"
         },
+        "rrTag": "РР",
         "selectLoanHint": "Виберіть рядок позики, щоб активувати дії.",
         "closeLoanDisabledHint": "Закрити можна лише відкриту позику.",
         "reopenLoanDisabledHint": "Поновити можна лише закриту позику.",
