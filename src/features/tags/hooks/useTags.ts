@@ -380,6 +380,9 @@ export function useRefreshSegment() {
       queryClient.invalidateQueries({ queryKey: tagsKeys.segments() })
       toast.success('Segment refreshed')
     },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to refresh segment')
+    },
   })
 }
 
