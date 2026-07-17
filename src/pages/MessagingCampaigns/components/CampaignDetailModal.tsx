@@ -20,6 +20,7 @@ import {
 } from '@/features/messaging'
 import type { MessagingCampaignRecipient, MessagingCampaignSummary } from '@/features/messaging'
 import { useMessagingCampaign, useMessagingCampaignRecipients } from '@/features/messaging'
+import { useAuthStore } from '@/stores/authStore'
 
 const formatStatusFallback = (status: string) =>
   status
@@ -151,6 +152,7 @@ export function CampaignDetailModal({
   onClose,
 }: CampaignDetailModalProps) {
   const { t } = useTranslation('common')
+  const userTimezone = useAuthStore((s) => s.user?.timezone)
 
   const statusLabel = useCallback(
     (status: string) =>
@@ -220,13 +222,13 @@ export function CampaignDetailModal({
         key: 'sent_at',
         header: t('pages.messagingCampaigns.table.sentAt', 'Sent'),
         align: 'left',
-        render: (recipient) => formatDateTime(recipient.sent_at ?? undefined),
+        render: (recipient) => formatDateTime(recipient.sent_at ?? undefined, userTimezone),
       },
       {
         key: 'delivered_at',
         header: t('pages.messagingCampaigns.table.deliveredAt', 'Delivered'),
         align: 'left',
-        render: (recipient) => formatDateTime(recipient.delivered_at ?? undefined),
+        render: (recipient) => formatDateTime(recipient.delivered_at ?? undefined, userTimezone),
       },
       {
         key: 'error_message',
@@ -242,7 +244,7 @@ export function CampaignDetailModal({
           ),
       },
     ],
-    [statusLabel, t]
+    [statusLabel, t, userTimezone]
   )
 
   const handleExport = async () => {
@@ -353,10 +355,10 @@ export function CampaignDetailModal({
                   {formatLauncherName(summary.initiated_by, operatorNames) || '—'}
                 </DetailRow>
                 <DetailRow label={t('pages.messagingCampaigns.detail.launchedAt', 'Launched at')}>
-                  {formatDateTime(summary.launched_at)}
+                  {formatDateTime(summary.launched_at, userTimezone)}
                 </DetailRow>
                 <DetailRow label={t('pages.messagingCampaigns.detail.completedAt', 'Completed at')}>
-                  {formatDateTime(summary.completed_at ?? undefined)}
+                  {formatDateTime(summary.completed_at ?? undefined, userTimezone)}
                 </DetailRow>
                 <DetailRow label={t('pages.messagingCampaigns.detail.cost', 'Cost')}>
                   {(() => {
