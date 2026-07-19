@@ -16,7 +16,7 @@ export function LawyersTabSkeleton() {
     >
       <span className="sr-only">{loadingLabel}</span>
 
-      <div className="rounded-xl bg-white/50 p-5 sm:p-6">
+      <div className="bg-card/50 rounded-xl p-5 sm:p-6">
         <div className="mb-2 h-4 w-40 animate-pulse rounded bg-gray-200" />
         <div className="mb-5 h-3 w-full max-w-3xl animate-pulse rounded bg-gray-200" />
         <div
@@ -26,7 +26,7 @@ export function LawyersTabSkeleton() {
           )}
         >
           {Array.from({ length: 3 }).map((_, index) => (
-            <div key={index} className="flex flex-col gap-2 rounded-xl bg-white p-4">
+            <div key={index} className="bg-card flex flex-col gap-2 rounded-xl p-4">
               <div className="flex items-start justify-between gap-2">
                 <div className="h-4 w-28 animate-pulse rounded bg-gray-200" />
                 <div className="h-5 w-14 animate-pulse rounded-full bg-gray-200" />
@@ -38,7 +38,7 @@ export function LawyersTabSkeleton() {
         </div>
       </div>
 
-      <div className="min-w-0 overflow-hidden rounded-xl border border-gray-100 bg-white">
+      <div className="bg-card min-w-0 overflow-hidden rounded-xl border border-gray-100">
         <div
           className={cn(
             'flex gap-3 border-b border-gray-100 px-4 py-4 sm:px-5 lg:px-6',

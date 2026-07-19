@@ -30,7 +30,7 @@ const TYPE_COLOUR: Record<string, string> = {
   complaint: 'bg-error-100 text-error-700',
   nbu_inquiry: 'bg-secondary-100 text-secondary-800',
   court_claim: 'bg-warning-100 text-warning-700',
-  attorney_request: 'bg-[#EDE9FE] text-[#6D28D9]',
+  attorney_request: 'bg-violet-100 text-violet-700',
   inquiry: 'bg-success-100 text-success-700',
 }
 
@@ -65,7 +65,7 @@ export function LetterListItem({ letter, isSelected, onSelect }: LetterListItemP
               ? 'border-success-100 bg-success-50/30 hover:bg-success-50/60'
               : isDone
                 ? 'border-gray-200 bg-gray-50/80 hover:bg-gray-50'
-                : 'border-white bg-white hover:bg-gray-50/40'
+                : 'border-card bg-card hover:bg-gray-50/40'
       )}
     >
       <div className="mb-1.5 flex items-baseline justify-between gap-2">

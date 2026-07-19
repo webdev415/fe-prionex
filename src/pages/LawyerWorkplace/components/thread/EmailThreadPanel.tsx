@@ -67,7 +67,7 @@ function AttachmentPill({
   }
 
   return (
-    <div className="flex h-[56px] min-w-0 items-center gap-2.5 rounded-[12px] border border-gray-100 bg-white px-2.5 py-2 shadow-sm sm:min-w-[220px]">
+    <div className="bg-card flex h-[56px] min-w-0 items-center gap-2.5 rounded-[12px] border border-gray-100 px-2.5 py-2 shadow-sm sm:min-w-[220px]">
       <span
         className="text-secondary-800 flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] bg-gray-50 text-center font-medium tracking-wide uppercase"
         title={extensionLabel}
@@ -111,7 +111,7 @@ function MessageCard({
   const hasAttachments = (message.attachments?.length ?? 0) > 0
 
   return (
-    <div className="overflow-hidden rounded-[12px] bg-white shadow-sm">
+    <div className="bg-card overflow-hidden rounded-[12px] shadow-sm">
       <div className="flex items-start gap-3 px-4 pt-3.5 pb-2.5">
         <div className="bg-secondary-100 text-secondary-800 mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full font-sans text-[14px] font-medium">
           {initials(message.senderName)}
@@ -413,7 +413,7 @@ export function EmailThreadPanel({
   return (
     <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-gray-50/20">
       {showCompactNav && (
-        <div className="flex shrink-0 items-center justify-between border-b border-gray-100 bg-white px-3 py-2">
+        <div className="bg-card flex shrink-0 items-center justify-between border-b border-gray-100 px-3 py-2">
           {onBack ? (
             <button
               type="button"
@@ -454,7 +454,7 @@ export function EmailThreadPanel({
         </div>
       ) : null}
 
-      <div className="shrink-0 border-b border-gray-200 bg-white px-3 py-2.5 sm:px-6 sm:py-4">
+      <div className="border-border bg-card shrink-0 border-b px-3 py-2.5 sm:px-6 sm:py-4">
         <div className="mb-1.5 flex min-w-0 items-start gap-2 sm:items-center sm:gap-5">
           <div className="flex min-w-0 flex-1 flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-5">
             <span className="bg-light-100 text-light-700 w-fit shrink-0 rounded-full border border-gray-200 px-2.5 py-0.5 text-[11px] font-medium tracking-wide uppercase">

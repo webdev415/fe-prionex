@@ -12,12 +12,27 @@ import { PRIORITY_ROLE_OPTIONS } from '../../constants'
 interface LawyerRoleBadgeProps {
   role: LawyerPriorityRole
   onSelect: (role: LawyerPriorityRole) => void
+  disabled?: boolean
 }
 
-export function LawyerRoleBadge({ role, onSelect }: LawyerRoleBadgeProps) {
+export function LawyerRoleBadge({ role, onSelect, disabled = false }: LawyerRoleBadgeProps) {
   const { t } = useTranslation('common')
   const activeOption =
     PRIORITY_ROLE_OPTIONS.find((option) => option.id === role) ?? PRIORITY_ROLE_OPTIONS[3]!
+
+  if (disabled) {
+    return (
+      <span
+        aria-disabled="true"
+        className={cn(
+          'min-w-[88px] cursor-not-allowed rounded-full border px-3 py-1.5 text-center text-[10px] font-semibold tracking-wide opacity-70',
+          activeOption.activeClass
+        )}
+      >
+        {t(activeOption.labelKey, activeOption.fallback)}
+      </span>
+    )
+  }
 
   return (
     <DropdownMenu modal={false}>

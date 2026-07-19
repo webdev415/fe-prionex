@@ -100,7 +100,7 @@ function DocumentClientContractFieldsContent({
             <DropdownMenuTrigger asChild>
               <button
                 type="button"
-                className="text-dark-500 flex h-7 shrink-0 items-center gap-1 rounded-md border border-gray-200 bg-white px-2 text-[12px] font-light outline-none"
+                className="text-dark-500 border-border bg-input flex h-7 shrink-0 items-center gap-1 rounded-md border px-2 text-[12px] font-light outline-none"
               >
                 <Icons.Search size={12} strokeWidth={1.5} className="text-gray-400" />
                 {searchTypeLabel}
@@ -152,7 +152,7 @@ function DocumentClientContractFieldsContent({
             <DropdownMenuTrigger asChild>
               <button
                 type="button"
-                className="text-dark-500 flex h-10 w-full items-center justify-between rounded-[8px] border border-gray-200 bg-white px-3 text-[13px] font-light"
+                className="text-dark-500 border-border bg-input flex h-10 w-full items-center justify-between rounded-[8px] border px-3 text-[13px] font-light"
               >
                 <span>
                   {contractNumber ||
@@ -183,7 +183,7 @@ function DocumentClientContractFieldsContent({
             </DropdownMenuContent>
           </DropdownMenu>
         ) : (
-          <p className="text-dark-500 h-10 rounded-[8px] border border-gray-200 bg-white px-3 py-2 text-[13px] font-light">
+          <p className="text-dark-500 border-border bg-input h-10 rounded-[8px] border px-3 py-2 text-[13px] font-light">
             {contractsLoading
               ? t('pages.lawyerWorkplace.parameters.contractLoading', 'Loading contracts…')
               : contractNumber || t('pages.lawyerWorkplace.parameters.noContracts', 'No contracts')}

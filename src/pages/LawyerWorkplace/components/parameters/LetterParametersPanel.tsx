@@ -21,6 +21,7 @@ import {
   usePatchMessageContract,
   usePatchMessageSuggestions,
 } from '@/features/lawyerWorkplace'
+import { useLegalProfileTimezone } from '@/features/lawyerWorkplace/hooks/useLegalProfileTimezone'
 import { legalDueDateToIso, parseLegalDueDate } from '@/features/lawyerWorkplace/utils/legalDueDate'
 import {
   clientLookupFromLegalSearchItem,
@@ -39,7 +40,7 @@ const TYPE_COLOURS: Record<string, string> = {
   complaint: 'bg-error-100 text-error-700',
   nbu_inquiry: 'bg-secondary-100 text-secondary-800',
   court_claim: 'bg-warning-100 text-warning-700',
-  attorney_request: 'bg-[#EDE9FE] text-[#6D28D9]',
+  attorney_request: 'bg-violet-100 text-violet-700',
   inquiry: 'bg-success-100 text-success-700',
 }
 
@@ -95,7 +96,7 @@ function computeDueDateFromReceived(receivedAt: string, slaDays: number): Date |
   const base = new Date(receivedAt)
   const due = new Date(base)
   due.setDate(due.getDate() + slaDays)
-  due.setHours(0, 0, 0, 0)
+  due.setHours(9, 0, 0, 0)
   return due
 }
 
@@ -185,7 +186,7 @@ function ParameterDropdown({
         <DropdownMenuTrigger asChild>
           <button
             type="button"
-            className="text-dark-500 focus:border-primary-500 flex h-9 w-full items-center justify-between rounded-[8px] border border-gray-200 bg-white px-3 py-2 text-[14px] font-light outline-none"
+            className="text-dark-500 focus:border-primary-500 border-border bg-input flex h-9 w-full items-center justify-between rounded-[8px] border px-3 py-2 text-[14px] font-light outline-none"
           >
             <span className="min-w-0 flex-1 truncate text-left">
               {hasValue ? value : <span className="text-gray-400">{placeholder}</span>}
@@ -239,6 +240,7 @@ function LetterParametersPanelContent({
   onViewKanbanTask?: (taskId: number) => void
 }) {
   const { t, i18n } = useTranslation('common')
+  const timezone = useLegalProfileTimezone()
   const confirmMutation = useConfirmLetter()
   const patchSuggestionsMutation = usePatchMessageSuggestions()
   const patchContractMutation = usePatchMessageContract()
@@ -434,7 +436,7 @@ function LetterParametersPanelContent({
         messageId: letter.id,
         payload: {
           letter_type_id: effectiveTypeId,
-          due_date: legalDueDateToIso(value),
+          due_date: legalDueDateToIso(value, timezone),
         },
       })
       .then((result) => {
@@ -647,7 +649,7 @@ function LetterParametersPanelContent({
         payload: {
           letter_type_id: effectiveTypeId,
           client_id: clientIdNumber,
-          due_date: legalDueDateToIso(effectiveDueDate),
+          due_date: legalDueDateToIso(effectiveDueDate, timezone),
           assigned_to_user_id: lawyerUserIdNumber,
           contract_number: effectiveContract.trim() || null,
         },
@@ -666,7 +668,7 @@ function LetterParametersPanelContent({
   if (isReadOnly) {
     // ── MODE B: Read-only view ─────────────────────────────────────────────────
     return (
-      <div className="flex h-full w-full min-w-0 shrink-0 flex-col overflow-hidden border-l border-gray-100 bg-white">
+      <div className="border-border bg-card flex h-full w-full min-w-0 shrink-0 flex-col overflow-hidden border-l">
         <div className="flex w-full flex-col items-start gap-4 overflow-y-auto px-[18px] py-[16px]">
           <div className="flex w-full items-center justify-between gap-2">
             <span className="text-dark-500 text-[14px] font-medium">
@@ -748,7 +750,7 @@ function LetterParametersPanelContent({
 
   // ── MODE A: Editable ─────────────────────────────────────────────────────────
   return (
-    <div className="flex h-full w-full min-w-0 shrink-0 flex-col justify-between overflow-x-hidden overflow-y-auto border-l border-gray-100 bg-white">
+    <div className="border-border bg-card flex h-full w-full min-w-0 shrink-0 flex-col justify-between overflow-x-hidden overflow-y-auto border-l">
       <div className="flex w-full flex-col items-start gap-4 px-[18px] py-[16px]">
         <div className="flex w-full items-center justify-between gap-2 self-stretch">
           <span className="text-dark-500 text-[14px] font-medium">
@@ -821,7 +823,11 @@ function LetterParametersPanelContent({
             value={effectiveDueDate}
             onChange={({ value }) => handleDueDateChange(value)}
             placeholder={t('pages.lawyerWorkplace.parameters.selectDueDate', 'Select date')}
-            format="dd/MM/yyyy"
+            format="dd/MM/yyyy HH:mm"
+            showTimeSelect
+            timeFormat="HH:mm"
+            timeIntervals={15}
+            defaultTime="09:00"
             min={minDueDate}
             className="h-9 rounded-[8px] border-gray-200 text-[14px] font-light"
           />
@@ -926,7 +932,7 @@ export function LetterParametersPanel({
 
   if (!letter) {
     return (
-      <div className="flex h-full w-full min-w-0 shrink-0 items-center justify-center overflow-hidden border-l border-gray-200 bg-white">
+      <div className="border-border bg-card flex h-full w-full min-w-0 shrink-0 items-center justify-center overflow-hidden border-l">
         <p className="px-4 text-center text-sm text-gray-400">
           {t('pages.lawyerWorkplace.parameters.selectLetter', 'Select a letter to view parameters')}
         </p>

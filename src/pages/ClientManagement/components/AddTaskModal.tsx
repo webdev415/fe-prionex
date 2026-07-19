@@ -7,7 +7,7 @@
  *  - Description (textarea)
  *  - Priority (radio: High / Normal / Low)
  *  - Due Date (datetime-local input)
- *  - Assigned To (searchable select from active users)
+ *  - Assigned To (operators, or Legal Workplace lawyers when subject is Legal letter)
  *  - Comment (textarea)
  *
  * Status is always set to "pending" on creation.
@@ -22,10 +22,12 @@ import { Label } from '@/components/ui/Label'
 import { Textarea } from '@/components/ui/Textarea'
 import { RadioGroup, RadioItem } from '@/components/ui/Radio'
 import { Icons } from '@/lib/icons'
-import { SearchableSelect } from '@/components/ui/SearchableSelect'
+import { SearchableSelect, type SearchableSelectOption } from '@/components/ui/SearchableSelect'
 import { DateSelect } from '@/components/ui/DateSelect'
 import { getDateTimeStringInTimezone } from '@/lib/dateUtils'
 import { useCreateTask, useTaskSubjects } from '@/features/clients/hooks/useClients'
+import { canAssignLawyer } from '@/features/lawyerWorkplace'
+import { useLegalLawyers } from '@/features/lawyerWorkplace/hooks/useLegalInbox'
 import { useOperators } from '@/features/users/hooks/useUsers'
 import { useAuthStore } from '@/stores/authStore'
 
@@ -40,6 +42,8 @@ const PRIORITIES = [
   { value: 'normal', labelKey: 'pages.clients.tasks.priority.normal', fallback: 'Normal' },
   { value: 'low', labelKey: 'pages.clients.tasks.priority.low', fallback: 'Low' },
 ]
+
+const LEGAL_SUBJECT_CODE = 'legal'
 
 // Auto-fill on first future-date pick; skipped for today so the result
 // can't land in the past.
@@ -75,18 +79,6 @@ export function AddTaskModal({ open, clientId, onClose }: AddTaskModalProps) {
   const { data: subjects = [] } = useTaskSubjects()
   const { data: operators = [] } = useOperators(projectId)
 
-  const subjectOptions = useMemo(
-    () => subjects.map((s) => ({ id: s.id.toString(), name: s.name })),
-    [subjects]
-  )
-
-  const userOptions = useMemo(() => {
-    return operators.map((u) => ({
-      id: u.id.toString(),
-      name: u.full_name,
-    }))
-  }, [operators])
-
   const [subjectId, setSubjectId] = useState('')
   const [description, setDescription] = useState('')
   const [priority, setPriority] = useState('normal')
@@ -94,6 +86,47 @@ export function AddTaskModal({ open, clientId, onClose }: AddTaskModalProps) {
   const [assignedUserId, setAssignedUserId] = useState('')
   const [comment, setComment] = useState('')
   const [dueDateError, setDueDateError] = useState<string | null>(null)
+
+  const selectedSubject = useMemo(
+    () => subjects.find((s) => s.id.toString() === subjectId) ?? null,
+    [subjects, subjectId]
+  )
+  const isLegalSubject = selectedSubject?.code === LEGAL_SUBJECT_CODE
+
+  const { data: lawyersData, isLoading: lawyersLoading } = useLegalLawyers({
+    enabled: open && isLegalSubject,
+    scopedToActiveProject: true,
+  })
+  const lawyers = useMemo(() => lawyersData?.items ?? [], [lawyersData?.items])
+
+  const subjectOptions = useMemo(
+    () => subjects.map((s) => ({ id: s.id.toString(), name: s.name })),
+    [subjects]
+  )
+
+  const assigneeOptions = useMemo((): SearchableSelectOption[] => {
+    if (isLegalSubject) {
+      return lawyers.map((lawyer) => {
+        const assignable = canAssignLawyer(lawyer)
+        return {
+          id: String(lawyer.user_id),
+          name: lawyer.display_name,
+          disabled: !assignable,
+          description: assignable
+            ? undefined
+            : t('pages.lawyerWorkplace.lawyers.atCapacity', {
+                current: lawyer.current_active,
+                max: lawyer.max_in_flight,
+                defaultValue: `At capacity (${lawyer.current_active}/${lawyer.max_in_flight})`,
+              }),
+        }
+      })
+    }
+    return operators.map((u) => ({
+      id: u.id.toString(),
+      name: u.full_name,
+    }))
+  }, [isLegalSubject, lawyers, operators, t])
 
   // Picker day floor — computed once at mount. The BE validator is the
   // source of truth, so a stale floor on a long-open modal at worst
@@ -115,7 +148,21 @@ export function AddTaskModal({ open, clientId, onClose }: AddTaskModalProps) {
     }
   }, [open])
 
-  const canSubmit = description.trim() !== '' && assignedUserId !== ''
+  const selectedAssigneeOption = assigneeOptions.find((o) => o.id === assignedUserId)
+  const hasValidAssignee =
+    assignedUserId !== '' && selectedAssigneeOption != null && !selectedAssigneeOption.disabled
+
+  const canSubmit = description.trim() !== '' && hasValidAssignee && !createTask.isPending
+
+  const handleSubjectChange = (nextSubjectId: string) => {
+    const nextSubject = subjects.find((s) => s.id.toString() === nextSubjectId) ?? null
+    const nextIsLegal = nextSubject?.code === LEGAL_SUBJECT_CODE
+    setSubjectId(nextSubjectId)
+    // Drop assignee when subject flips between legal / non-legal pools.
+    if (nextIsLegal !== isLegalSubject) {
+      setAssignedUserId('')
+    }
+  }
 
   const handleSubmit = () => {
     if (!canSubmit) return
@@ -192,7 +239,7 @@ export function AddTaskModal({ open, clientId, onClose }: AddTaskModalProps) {
             <SearchableSelect
               options={subjectOptions}
               value={subjectId}
-              onValueChange={setSubjectId}
+              onValueChange={handleSubjectChange}
               placeholder={t('pages.clients.tasks.selectSubject', 'Select subject...')}
             />
           </div>
@@ -265,11 +312,24 @@ export function AddTaskModal({ open, clientId, onClose }: AddTaskModalProps) {
               <span className="ml-1 text-red-500">*</span>
             </Label>
             <SearchableSelect
-              options={userOptions}
+              options={assigneeOptions}
               value={assignedUserId}
               onValueChange={setAssignedUserId}
-              placeholder={t('pages.clients.tasks.selectUser', 'Select user...')}
+              isLoading={isLegalSubject && lawyersLoading}
+              placeholder={
+                isLegalSubject
+                  ? t('pages.clients.tasks.selectLawyer', 'Select lawyer...')
+                  : t('pages.clients.tasks.selectUser', 'Select user...')
+              }
             />
+            {isLegalSubject && !lawyersLoading && lawyers.length === 0 ? (
+              <p className="text-light-600 text-[11px]">
+                {t(
+                  'pages.clients.tasks.noLawyersAvailable',
+                  'No Legal Workplace lawyers are available for this project.'
+                )}
+              </p>
+            ) : null}
           </div>
 
           {/* Comment */}
@@ -301,7 +361,7 @@ export function AddTaskModal({ open, clientId, onClose }: AddTaskModalProps) {
           type="button"
           variant="primary"
           onClick={handleSubmit}
-          disabled={!canSubmit || createTask.isPending}
+          disabled={!canSubmit}
           className="h-10 flex-1 text-xs sm:h-[45px] sm:text-sm"
         >
           {createTask.isPending

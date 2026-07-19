@@ -176,7 +176,7 @@ export function KanbanBoardScrollNavigator({
           ref={trackRef}
           role="group"
           aria-label={t('pages.lawyerWorkplace.kanban.scrollNavigator', 'Scroll kanban columns')}
-          className="pointer-events-auto relative h-13 w-30 cursor-pointer overflow-hidden rounded-md bg-white/95 px-1 py-1 shadow-sm"
+          className="bg-card/95 pointer-events-auto relative h-13 w-30 cursor-pointer overflow-hidden rounded-md px-1 py-1 shadow-sm"
           onPointerDown={handleTrackPointerDown}
         >
           <div className="absolute inset-1 flex items-stretch gap-1 rounded-sm">

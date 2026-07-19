@@ -97,7 +97,7 @@ export function EditTrainingExampleModal({
               'pages.lawyerWorkplace.settings.letterTypes.exampleTitlePlaceholder',
               'e.g. Late-payment interest complaint'
             )}
-            className="text-dark-500 focus:border-primary-400 h-11 w-full rounded-xl border border-gray-200 bg-white px-3 text-[13px] outline-none"
+            className="text-dark-500 focus:border-primary-400 border-border bg-input h-11 w-full rounded-xl border px-3 text-[13px] outline-none"
           />
         </div>
 
@@ -116,7 +116,7 @@ export function EditTrainingExampleModal({
               'pages.lawyerWorkplace.settings.letterTypes.exampleBodyPlaceholder',
               'Paste the full letter text here...'
             )}
-            className="text-dark-500 focus:border-primary-400 w-full resize-y rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-[13px] outline-none"
+            className="text-dark-500 focus:border-primary-400 border-border bg-input w-full resize-y rounded-xl border px-3 py-2.5 text-[13px] outline-none"
           />
         </div>
 
@@ -136,7 +136,7 @@ export function EditTrainingExampleModal({
                 'pages.lawyerWorkplace.settings.letterTypes.exampleSourcePlaceholder',
                 'I. Petrenko'
               )}
-              className="text-dark-500 focus:border-primary-400 h-11 w-full rounded-xl border border-gray-200 bg-white py-2 pr-3 pl-12 text-[13px] outline-none"
+              className="text-dark-500 focus:border-primary-400 border-border bg-input h-11 w-full rounded-xl border py-2 pr-3 pl-12 text-[13px] outline-none"
             />
           </div>
         </div>

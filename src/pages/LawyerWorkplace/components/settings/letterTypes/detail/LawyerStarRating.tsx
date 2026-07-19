@@ -5,23 +5,30 @@ import { cn } from '@/lib/utils'
 interface LawyerStarRatingProps {
   value: number
   onChange: (stars: number) => void
+  disabled?: boolean
 }
 
-export function LawyerStarRating({ value, onChange }: LawyerStarRatingProps) {
+export function LawyerStarRating({ value, onChange, disabled = false }: LawyerStarRatingProps) {
   const { t } = useTranslation('common')
 
   return (
     <div
-      className="flex items-center gap-0.5"
+      className={cn('flex items-center gap-0.5', disabled && 'pointer-events-none')}
       role="group"
+      aria-disabled={disabled || undefined}
       aria-label={t('pages.lawyerWorkplace.settings.letterTypes.starRating', 'Star rating')}
     >
       {[1, 2, 3, 4].map((star) => (
         <button
           key={star}
           type="button"
-          onClick={() => onChange(star === value ? star - 1 : star)}
-          className="cursor-pointer p-0.5"
+          disabled={disabled}
+          tabIndex={disabled ? -1 : undefined}
+          onClick={() => {
+            if (disabled) return
+            onChange(star === value ? star - 1 : star)
+          }}
+          className={cn('p-0.5', disabled ? 'cursor-not-allowed' : 'cursor-pointer')}
           aria-label={t('pages.lawyerWorkplace.settings.letterTypes.starN', {
             n: star,
             total: 4,
@@ -31,7 +38,10 @@ export function LawyerStarRating({ value, onChange }: LawyerStarRatingProps) {
           <Icons.StarFilled
             size={15}
             strokeWidth={1.5}
-            className={cn(star <= value ? 'text-secondary-500' : 'text-gray-300')}
+            className={cn(
+              star <= value ? 'text-secondary-500' : 'text-gray-300',
+              disabled && 'opacity-60'
+            )}
           />
         </button>
       ))}

@@ -726,7 +726,7 @@
           "priorities": {
             "highest": "Highest",
             "high": "High",
-            "medium": "Medium",
+            "medium": "Normal",
             "low": "Low",
             "lowest": "Lowest"
           }

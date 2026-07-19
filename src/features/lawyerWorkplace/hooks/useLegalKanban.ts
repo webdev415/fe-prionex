@@ -3,8 +3,10 @@ import { useQuery } from '@tanstack/react-query'
 import { legalApi } from '../api/legalApi'
 import { mapLegalKanbanItems } from '../api/kanbanMappers'
 import { legalWorkplaceKeys, useLegalLawyers } from './useLegalInbox'
+import { useLegalProfileTimezone } from './useLegalProfileTimezone'
 
 export function useLegalKanban(options?: { enabled?: boolean; assignedToUserId?: number }) {
+  const timezone = useLegalProfileTimezone()
   const { data: lawyersData } = useLegalLawyers({
     enabled: options?.enabled !== false,
     scopedToActiveProject: true,
@@ -26,8 +28,8 @@ export function useLegalKanban(options?: { enabled?: boolean; assignedToUserId?:
   })
 
   const tasks = useMemo(
-    () => mapLegalKanbanItems(query.data?.items ?? [], lawyers),
-    [lawyers, query.data?.items]
+    () => mapLegalKanbanItems(query.data?.items ?? [], lawyers, timezone),
+    [lawyers, query.data?.items, timezone]
   )
 
   return {

@@ -1,7 +1,8 @@
 import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
+import { useLegalProfileTimezone } from '@/features/lawyerWorkplace/hooks/useLegalProfileTimezone'
 import {
-  formatLegalDueMonthDay,
+  formatLegalDueDateTime,
   parseLegalDueDate,
 } from '@/features/lawyerWorkplace/utils/legalDueDate'
 import type { LegalLetterType } from '@/features/lawyerWorkplace'
@@ -9,6 +10,7 @@ import type { KanbanTask } from '../../kanban/kanbanData'
 import { resolveKanbanTypeBadgeProps } from './constants'
 import { KanbanAssigneeChip } from './KanbanAssigneeChip'
 import { KanbanClientChip } from './KanbanClientChip'
+import { KanbanPriorityOption } from './KanbanPriorityOption'
 import { KanbanTypeBadge } from './KanbanTypeBadge'
 
 interface KanbanTaskDetailPanelProps {
@@ -18,13 +20,14 @@ interface KanbanTaskDetailPanelProps {
 
 export function KanbanTaskDetailPanel({ task, letterTypes = [] }: KanbanTaskDetailPanelProps) {
   const { t } = useTranslation('common')
+  const timezone = useLegalProfileTimezone()
   const deadline = parseLegalDueDate(task.deadline)
   const typeBadge = resolveKanbanTypeBadgeProps(task.letterTypeId, letterTypes, task.type)
 
   return (
-    <div className="flex h-full min-h-0 flex-col overflow-y-auto bg-gray-50/50 px-5 py-6">
+    <div className="bg-muted/50 flex h-full min-h-0 flex-col overflow-y-auto px-5 py-6">
       <div className="mx-auto flex w-full max-w-lg flex-col gap-4">
-        <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
+        <div className="bg-card rounded-xl border border-gray-100 p-4 shadow-sm">
           <div className="mb-3 flex items-start justify-between gap-3">
             <KanbanTypeBadge
               type={typeBadge.type}
@@ -36,7 +39,7 @@ export function KanbanTaskDetailPanel({ task, letterTypes = [] }: KanbanTaskDeta
           <h2 className="text-dark-500 text-[15px] leading-snug font-semibold">{task.title}</h2>
         </div>
 
-        <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
+        <div className="bg-card rounded-xl border border-gray-100 p-4 shadow-sm">
           <dl className="grid gap-3 text-[13px]">
             <div className="flex flex-col gap-1">
               <dt className="text-light-600 text-[11px] font-medium tracking-wide uppercase">
@@ -60,11 +63,20 @@ export function KanbanTaskDetailPanel({ task, letterTypes = [] }: KanbanTaskDeta
 
             <div className="flex flex-col gap-1">
               <dt className="text-light-600 text-[11px] font-medium tracking-wide uppercase">
+                {t('pages.lawyerWorkplace.kanban.createTask.priority', 'Priority')}
+              </dt>
+              <dd>
+                <KanbanPriorityOption priority={task.priority} />
+              </dd>
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <dt className="text-light-600 text-[11px] font-medium tracking-wide uppercase">
                 {t('pages.lawyerWorkplace.parameters.dueDate', 'Due date')}
               </dt>
               <dd className="text-dark-500">
                 {deadline ? (
-                  formatLegalDueMonthDay(task.deadline)
+                  formatLegalDueDateTime(task.deadline, timezone)
                 ) : (
                   <span className="text-light-400 italic">
                     {t('pages.lawyerWorkplace.kanban.noDeadline', 'no deadline set')}

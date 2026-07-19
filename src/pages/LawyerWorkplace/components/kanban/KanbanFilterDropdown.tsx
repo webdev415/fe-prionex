@@ -48,7 +48,7 @@ export function KanbanFilterDropdown<T extends string>({
         <button
           type="button"
           className={cn(
-            'text-dark-500 flex h-[38px] w-full items-center justify-between gap-2 rounded-[8px] border border-gray-200 bg-white px-3 text-[12px] font-normal hover:bg-gray-50',
+            'text-dark-500 border-border bg-input flex h-[38px] w-full items-center justify-between gap-2 rounded-[8px] border px-3 text-[12px] font-normal hover:bg-gray-50',
             className
           )}
         >

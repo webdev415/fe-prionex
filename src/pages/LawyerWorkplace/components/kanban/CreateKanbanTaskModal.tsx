@@ -10,9 +10,11 @@ import {
 } from '@/components/ui/DropdownMenu'
 import { Label } from '@/components/ui/Label'
 import { Modal, ModalContent, ModalFooter, ModalHeader } from '@/components/ui/Modal'
+import { RadioGroup, RadioItem } from '@/components/ui/Radio'
 import { SearchableSelect } from '@/components/ui/SearchableSelect'
 import { canAssignLawyer } from '@/features/lawyerWorkplace'
 import { useCreateLegalKanbanTask } from '@/features/lawyerWorkplace/hooks/useLegalMutations'
+import { useLegalProfileTimezone } from '@/features/lawyerWorkplace/hooks/useLegalProfileTimezone'
 import { legalDueDateToIso } from '@/features/lawyerWorkplace/utils/legalDueDate'
 import {
   useLegalLawyers,
@@ -31,10 +33,20 @@ interface CreateKanbanTaskModalProps {
   onClose: () => void
 }
 
-function getTomorrowDate(): Date {
+type TaskPriority = 'high' | 'normal' | 'low'
+
+const PRIORITIES: { value: TaskPriority; labelKey: string; fallback: string }[] = [
+  { value: 'high', labelKey: 'pages.clients.tasks.priority.high', fallback: 'High' },
+  { value: 'normal', labelKey: 'pages.clients.tasks.priority.normal', fallback: 'Normal' },
+  { value: 'low', labelKey: 'pages.clients.tasks.priority.low', fallback: 'Low' },
+]
+
+const DUE_DATE_DEFAULT_TIME = '09:00'
+
+function getTomorrowAtDefaultTime(): Date {
   const date = new Date()
   date.setDate(date.getDate() + 1)
-  date.setHours(0, 0, 0, 0)
+  date.setHours(9, 0, 0, 0)
   return date
 }
 
@@ -42,6 +54,16 @@ function getTodayStart(): Date {
   const date = new Date()
   date.setHours(0, 0, 0, 0)
   return date
+}
+
+/** Same rule as Client Detail Add Task: block past times today only. */
+const filterFromNow = (time: Date): boolean => {
+  const now = new Date()
+  const isSameDay =
+    time.getFullYear() === now.getFullYear() &&
+    time.getMonth() === now.getMonth() &&
+    time.getDate() === now.getDate()
+  return isSameDay ? time.getTime() >= now.getTime() : true
 }
 
 function renderLetterTypeOption(letterType: LegalLetterType) {
@@ -67,7 +89,7 @@ function FormSelect({ label, value, onSelect, items, leftIcon, disabled }: FormS
           <button
             type="button"
             disabled={disabled}
-            className="text-dark-500 focus:border-primary-500 flex h-9 w-full items-center justify-between rounded-[8px] border border-gray-200 bg-white px-3 py-2 text-[14px] font-light outline-none disabled:cursor-not-allowed disabled:opacity-60"
+            className="text-dark-500 focus:border-primary-500 border-border bg-input flex h-9 w-full items-center justify-between rounded-[8px] border px-3 py-2 text-[14px] font-light outline-none disabled:cursor-not-allowed disabled:opacity-60"
           >
             <span className="flex min-w-0 flex-1 items-center gap-2 truncate text-left">
               {leftIcon}
@@ -103,6 +125,7 @@ function FormSelect({ label, value, onSelect, items, leftIcon, disabled }: FormS
 
 export function CreateKanbanTaskModal({ open, onClose }: CreateKanbanTaskModalProps) {
   const { t } = useTranslation('common')
+  const timezone = useLegalProfileTimezone()
   const createTask = useCreateLegalKanbanTask()
   const { data: lawyersData, isLoading: lawyersLoading } = useLegalLawyers({
     enabled: open,
@@ -116,7 +139,8 @@ export function CreateKanbanTaskModal({ open, onClose }: CreateKanbanTaskModalPr
   const [letterTypeId, setLetterTypeId] = useState<string | null>(null)
   const [clientId, setClientId] = useState('')
   const [clientSearch, setClientSearch] = useState('')
-  const [deadline, setDeadline] = useState<Date | null>(getTomorrowDate())
+  const [priority, setPriority] = useState<TaskPriority>('normal')
+  const [deadline, setDeadline] = useState<Date | null>(getTomorrowAtDefaultTime())
 
   const debouncedClientSearch = useDebounce(clientSearch, 300)
   const { data: clientsData, isFetching: clientsLoading } = useLegalClientSearch(
@@ -151,7 +175,8 @@ export function CreateKanbanTaskModal({ open, onClose }: CreateKanbanTaskModalPr
       setLetterTypeId(letterTypes[0]?.id ?? null)
       setClientId('')
       setClientSearch('')
-      setDeadline(getTomorrowDate())
+      setPriority('normal')
+      setDeadline(getTomorrowAtDefaultTime())
     })
   }, [assignableLawyers, letterTypes, open])
 
@@ -187,7 +212,8 @@ export function CreateKanbanTaskModal({ open, onClose }: CreateKanbanTaskModalPr
         letter_type_id: letterTypeId,
         client_id: resolvedClientId,
         assigned_to_user_id: lawyerUserId,
-        due_date: legalDueDateToIso(deadline),
+        due_date: legalDueDateToIso(deadline, timezone),
+        priority,
       },
       {
         onSuccess: () => onClose(),
@@ -300,6 +326,27 @@ export function CreateKanbanTaskModal({ open, onClose }: CreateKanbanTaskModalPr
             />
           </div>
 
+          <div className="flex w-full flex-col gap-2">
+            <Label className="text-dark-500 text-[12px] font-normal">
+              {t('pages.lawyerWorkplace.kanban.createTask.priority', 'Priority')}
+            </Label>
+            <RadioGroup value={priority} onValueChange={(v) => setPriority(v as TaskPriority)}>
+              <div className="flex flex-wrap gap-4">
+                {PRIORITIES.map((p) => (
+                  <div key={p.value} className="flex items-center gap-2">
+                    <RadioItem value={p.value} id={`kanban-priority-${p.value}`} />
+                    <Label
+                      htmlFor={`kanban-priority-${p.value}`}
+                      className="text-dark-500 cursor-pointer text-[13px] font-light"
+                    >
+                      {t(p.labelKey, p.fallback)}
+                    </Label>
+                  </div>
+                ))}
+              </div>
+            </RadioGroup>
+          </div>
+
           <div className="flex w-full flex-col items-start gap-2">
             <Label className="text-dark-500 text-[12px] font-normal">
               {t('pages.lawyerWorkplace.kanban.createTask.deadline', 'Deadline')}
@@ -312,8 +359,14 @@ export function CreateKanbanTaskModal({ open, onClose }: CreateKanbanTaskModalPr
                 'pages.lawyerWorkplace.kanban.createTask.selectDeadline',
                 'Select deadline'
               )}
-              format="dd/MM/yyyy"
+              format="dd/MM/yyyy HH:mm"
+              showTimeSelect
+              timeFormat="HH:mm"
+              timeIntervals={15}
               min={getTodayStart()}
+              filterTime={filterFromNow}
+              defaultTime={DUE_DATE_DEFAULT_TIME}
+              defaultTimeSkipsToday
               className="h-9 rounded-[8px] border-gray-200 text-[14px] font-light"
             />
           </div>

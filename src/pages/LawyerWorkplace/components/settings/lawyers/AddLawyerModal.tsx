@@ -124,7 +124,7 @@ export function AddLawyerModal({
               <button
                 type="button"
                 disabled={isSubmitting}
-                className="text-dark-500 flex h-11 w-full items-center justify-between rounded-xl border border-gray-200 bg-white px-4 text-[14px] font-light disabled:opacity-60"
+                className="text-dark-500 border-border bg-input flex h-11 w-full items-center justify-between rounded-xl border px-4 text-[14px] font-light disabled:opacity-60"
               >
                 <span className={cn(selectedTypeIds.length === 0 && 'text-gray-400')}>
                   {selectedTypeIds.length > 0

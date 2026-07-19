@@ -140,7 +140,7 @@ export function GenerateDocumentModal({
             <DropdownMenuTrigger asChild>
               <button
                 type="button"
-                className="text-dark-500 flex h-10 w-full items-center justify-between rounded-[8px] border border-gray-200 bg-white px-3 text-[13px] font-light"
+                className="text-dark-500 border-border bg-input flex h-10 w-full items-center justify-between rounded-[8px] border px-3 text-[13px] font-light"
               >
                 <span className="flex items-center gap-2">
                   <span className="bg-secondary-100 text-secondary-800 rounded px-1.5 py-0.5 text-[10px] font-medium">
@@ -185,7 +185,7 @@ export function GenerateDocumentModal({
               'pages.lawyerWorkplace.documents.modals.generate.documentNamePlaceholder',
               'Enter document name'
             )}
-            className="text-dark-500 focus:border-primary-400 h-10 w-full rounded-[8px] border border-gray-200 bg-white px-3 text-[13px] font-light outline-none"
+            className="text-dark-500 focus:border-primary-400 border-border bg-input h-10 w-full rounded-[8px] border px-3 text-[13px] font-light outline-none"
           />
         </div>
 
@@ -209,7 +209,7 @@ export function GenerateDocumentModal({
             <DropdownMenuTrigger asChild>
               <button
                 type="button"
-                className="text-dark-500 flex h-10 w-full items-center justify-between rounded-[8px] border border-gray-200 bg-white px-3 text-[13px] font-light"
+                className="text-dark-500 border-border bg-input flex h-10 w-full items-center justify-between rounded-[8px] border px-3 text-[13px] font-light"
               >
                 <span>{selectedLawyer?.display_name ?? '—'}</span>
                 <Icons.ArrowDown size={16} strokeWidth={1.5} className="text-light-500" />

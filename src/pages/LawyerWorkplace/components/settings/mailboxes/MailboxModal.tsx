@@ -403,7 +403,7 @@ export function MailboxModal({
               value={email}
               onChange={(e) => handleEmailChange(e.target.value)}
               placeholder="legal@prionex.ua"
-              className="text-dark-500 focus:border-primary-400 h-11 rounded-md border border-gray-200 bg-white px-4 text-[14px] outline-none"
+              className="text-dark-500 focus:border-primary-400 border-border bg-input h-11 rounded-md border px-4 text-[14px] outline-none"
             />
             {duplicateEmail ? (
               <p className="text-error-600 text-[11px]">
@@ -426,7 +426,7 @@ export function MailboxModal({
                 'pages.lawyerWorkplace.settings.mailboxes.fields.displayNamePlaceholder',
                 'Legal department'
               )}
-              className="text-dark-500 focus:border-primary-400 h-11 rounded-md border border-gray-200 bg-white px-4 text-[14px] outline-none"
+              className="text-dark-500 focus:border-primary-400 border-border bg-input h-11 rounded-md border px-4 text-[14px] outline-none"
             />
           </div>
         </div>
@@ -440,7 +440,7 @@ export function MailboxModal({
             <DropdownMenuTrigger asChild>
               <button
                 type="button"
-                className="text-dark-500 flex h-11 w-full items-center justify-between rounded-md border border-gray-200 bg-white px-4 text-[14px]"
+                className="text-dark-500 border-border bg-input flex h-11 w-full items-center justify-between rounded-md border px-4 text-[14px]"
               >
                 <span>{selectedProviderLabel}</span>
                 <Icons.ArrowDown size={16} strokeWidth={1.5} className="text-light-500" />
@@ -486,7 +486,7 @@ export function MailboxModal({
                       'Enter app password'
                     )
               }
-              className="text-dark-500 focus:border-primary-400 h-11 w-full rounded-md border border-gray-200 bg-white px-4 pr-12 text-[14px] outline-none"
+              className="text-dark-500 focus:border-primary-400 border-border bg-input h-11 w-full rounded-md border px-4 pr-12 text-[14px] outline-none"
             />
             <button
               type="button"
@@ -538,7 +538,7 @@ export function MailboxModal({
                     resetConnectionTest()
                   }}
                   placeholder="imap.mail.prionex.ua"
-                  className="text-dark-500 focus:border-primary-400 h-10 rounded-md border border-gray-200 bg-white px-3 text-[13px] outline-none"
+                  className="text-dark-500 focus:border-primary-400 border-border bg-input h-10 rounded-md border px-3 text-[13px] outline-none"
                 />
               </div>
               <div className="flex flex-col gap-1.5">
@@ -554,7 +554,7 @@ export function MailboxModal({
                     setImapPort(Number(e.target.value))
                     resetConnectionTest()
                   }}
-                  className="text-dark-500 focus:border-primary-400 h-10 rounded-md border border-gray-200 bg-white px-3 text-[13px] outline-none"
+                  className="text-dark-500 focus:border-primary-400 border-border bg-input h-10 rounded-md border px-3 text-[13px] outline-none"
                 />
               </div>
             </div>
@@ -593,7 +593,7 @@ export function MailboxModal({
                     resetConnectionTest()
                   }}
                   placeholder="smtp.mail.prionex.ua"
-                  className="text-dark-500 focus:border-primary-400 h-10 rounded-md border border-gray-200 bg-white px-3 text-[13px] outline-none"
+                  className="text-dark-500 focus:border-primary-400 border-border bg-input h-10 rounded-md border px-3 text-[13px] outline-none"
                 />
               </div>
               <div className="flex flex-col gap-1.5">
@@ -609,7 +609,7 @@ export function MailboxModal({
                     setSmtpPort(Number(e.target.value))
                     resetConnectionTest()
                   }}
-                  className="text-dark-500 focus:border-primary-400 h-10 rounded-md border border-gray-200 bg-white px-3 text-[13px] outline-none"
+                  className="text-dark-500 focus:border-primary-400 border-border bg-input h-10 rounded-md border px-3 text-[13px] outline-none"
                 />
               </div>
             </div>

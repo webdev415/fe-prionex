@@ -90,7 +90,7 @@ export function LawyerLetterTypesCell({
             <button
               type="button"
               disabled={saving || availableToAdd.length === 0}
-              className="border-light-300 text-light-600 hover:border-primary-400 hover:text-primary-600 flex h-6 w-6 items-center justify-center rounded-full border bg-white transition-colors disabled:cursor-not-allowed disabled:opacity-40"
+              className="border-light-300 text-light-600 hover:border-primary-400 hover:text-primary-600 bg-card flex h-6 w-6 items-center justify-center rounded-full border transition-colors disabled:cursor-not-allowed disabled:opacity-40"
               aria-label={t(
                 'pages.lawyerWorkplace.settings.lawyers.addLetterType',
                 'Add letter type'

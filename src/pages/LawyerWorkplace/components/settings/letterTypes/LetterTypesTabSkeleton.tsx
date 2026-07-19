@@ -25,7 +25,7 @@ export function LetterTypesTabSkeleton() {
       <span className="sr-only">{loadingLabel}</span>
 
       <div className={cn(isCompact ? 'min-h-0 shrink-0' : 'h-full min-h-0')}>
-        <div className="flex h-full min-h-0 flex-col overflow-y-hidden rounded-[12px] border border-gray-100 bg-white">
+        <div className="bg-card flex h-full min-h-0 flex-col overflow-y-hidden rounded-[12px] border border-gray-100">
           <div className="border-light-100 flex items-center justify-between gap-2 border-b px-[14px] py-3">
             <div className="h-4 w-24 animate-pulse rounded bg-gray-200" />
             <div className="h-7 w-20 animate-pulse rounded bg-gray-200" />
@@ -50,7 +50,7 @@ export function LetterTypesTabSkeleton() {
         </div>
       </div>
 
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col rounded-[12px] bg-white/50">
+      <div className="bg-card/50 flex min-h-0 min-w-0 flex-1 flex-col rounded-[12px]">
         <div className="border-b border-gray-100 px-4 py-4 sm:px-5 sm:py-5 lg:px-6">
           <div className="flex flex-wrap items-center gap-2 sm:gap-3">
             <div className="h-5 w-40 animate-pulse rounded bg-gray-200" />
@@ -86,7 +86,7 @@ export function LetterTypesTabSkeleton() {
                     <div
                       key={rowIndex}
                       className={cn(
-                        'grid gap-3 rounded-xl bg-white px-4 py-3',
+                        'bg-card grid gap-3 rounded-xl px-4 py-3',
                         isCompact
                           ? 'grid-cols-1'
                           : 'lg:grid-cols-[minmax(180px,1fr)_auto_auto_auto] lg:items-center'

@@ -118,7 +118,7 @@ export function ReplyTemplateModal({
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="text-dark-500 focus:border-primary-400 h-11 rounded-md border border-gray-200 bg-white px-4 text-[14px] outline-none"
+            className="text-dark-500 focus:border-primary-400 border-border bg-input h-11 rounded-md border px-4 text-[14px] outline-none"
           />
         </div>
 
@@ -130,7 +130,7 @@ export function ReplyTemplateModal({
             <DropdownMenuTrigger asChild>
               <button
                 type="button"
-                className="text-dark-500 flex min-h-11 w-full items-center justify-between rounded-md border border-gray-200 bg-white px-4 py-2 text-[14px]"
+                className="text-dark-500 border-border bg-input flex min-h-11 w-full items-center justify-between rounded-md border px-4 py-2 text-[14px]"
               >
                 <span className="flex flex-wrap gap-1.5 text-left">
                   {letterTypeIds.length === 0 ? (

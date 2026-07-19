@@ -9,6 +9,7 @@ interface KanbanColumnLaneProps {
   lawyers: LegalLawyer[]
   letterTypes: LegalLetterType[]
   editableLetterTypes: LegalLetterType[]
+  timezone?: string | null
   draggingTaskId: string | null
   isDropTarget: boolean
   onCardClick?: (task: KanbanTask) => void
@@ -26,6 +27,7 @@ export function KanbanColumnLane({
   lawyers,
   letterTypes,
   editableLetterTypes,
+  timezone,
   draggingTaskId,
   isDropTarget,
   onCardClick,
@@ -44,7 +46,7 @@ export function KanbanColumnLane({
       onDrop={onDrop}
       className={cn(
         // No per-column scroll. Height = cards + min 100vh spacer; stretch fills to tallest sibling.
-        'flex min-h-0 flex-1 flex-col rounded-b-lg bg-gray-50/70 p-2 pb-4 transition-colors',
+        'bg-muted/70 flex min-h-0 flex-1 flex-col rounded-b-lg p-2 pb-4 transition-colors',
         isDropTarget && 'bg-primary-50/40 ring-primary-400 ring-2 ring-inset'
       )}
     >
@@ -56,6 +58,7 @@ export function KanbanColumnLane({
             lawyers={lawyers}
             letterTypes={letterTypes}
             editableLetterTypes={editableLetterTypes}
+            timezone={timezone}
             isDragging={draggingTaskId === task.id}
             onCardClick={onCardClick}
             onMoveTask={onMoveTask}

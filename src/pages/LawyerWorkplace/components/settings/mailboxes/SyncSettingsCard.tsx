@@ -45,7 +45,7 @@ export function SyncSettingsCard({
   }
 
   return (
-    <div className="rounded-xl bg-white/50 p-5 sm:p-6">
+    <div className="bg-card/50 rounded-xl p-5 sm:p-6">
       <div
         className={cn(
           'mb-4 flex gap-3',
@@ -93,7 +93,7 @@ export function SyncSettingsCard({
                 'cursor-pointer rounded-md px-3 py-2.5 text-center text-[12px] transition-colors',
                 isActive
                   ? 'bg-secondary-800 text-white'
-                  : 'text-dark-500 hover:bg-light-100 bg-white'
+                  : 'text-dark-500 hover:bg-light-100 bg-card'
               )}
             >
               {t(option.labelKey, option.fallback)}

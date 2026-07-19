@@ -47,7 +47,7 @@ export function KanbanTabSkeleton() {
         {Array.from({ length: 4 }).map((_, columnIndex) => (
           <div
             key={columnIndex}
-            className="flex min-h-[320px] flex-col rounded-xl border border-gray-100 bg-white/70 p-3"
+            className="bg-card/70 flex min-h-[320px] flex-col rounded-xl border border-gray-100 p-3"
           >
             <div className="mb-3 flex items-center justify-between gap-2">
               <div className="h-4 w-24 animate-pulse rounded bg-gray-200" />
@@ -57,7 +57,7 @@ export function KanbanTabSkeleton() {
               {Array.from({ length: isCompact ? 2 : 3 }).map((__, cardIndex) => (
                 <div
                   key={cardIndex}
-                  className="animate-pulse rounded-xl border border-gray-100 bg-white p-3"
+                  className="bg-card animate-pulse rounded-xl border border-gray-100 p-3"
                 >
                   <div className="mb-2 h-3.5 w-28 rounded bg-gray-200" />
                   <div className="mb-2 h-3 w-full rounded bg-gray-200" />

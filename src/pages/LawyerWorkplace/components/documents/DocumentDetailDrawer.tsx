@@ -90,12 +90,12 @@ export function DocumentDetailDrawer({ document, onClose }: DocumentDetailDrawer
 
       <div
         className={cn(
-          'fixed inset-y-0 right-0 z-50 flex w-full flex-col bg-white shadow-2xl transition-transform duration-200 ease-out sm:w-[min(480px,92vw)]',
+          'bg-card fixed inset-y-0 right-0 z-50 flex w-full flex-col shadow-2xl transition-transform duration-200 ease-out sm:w-[min(480px,92vw)]',
           isOpen ? 'translate-x-0' : 'translate-x-full'
         )}
         aria-hidden={!isOpen}
       >
-        <div className="flex shrink-0 items-center justify-between border-b border-gray-100 bg-white px-4 py-3">
+        <div className="bg-card flex shrink-0 items-center justify-between border-b border-gray-100 px-4 py-3">
           <span className="text-dark-500 text-[13px] font-medium">
             {t('pages.lawyerWorkplace.documents.modals.detail.title', 'Document details')}
           </span>

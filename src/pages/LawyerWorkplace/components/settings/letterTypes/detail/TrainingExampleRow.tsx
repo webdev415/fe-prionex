@@ -54,8 +54,8 @@ export function TrainingExampleRow({ example, onClick, onRemove }: TrainingExamp
           }
         }}
         className={cn(
-          'flex w-full cursor-pointer items-start gap-4 rounded-xl border border-gray-100 bg-white px-4 py-3 text-left',
-          'hover:border-secondary-200 focus-visible:ring-primary-400 hover:bg-[#FAFAF8] focus-visible:ring-2 focus-visible:outline-none'
+          'bg-card flex w-full cursor-pointer items-start gap-4 rounded-xl border border-gray-100 px-4 py-3 text-left',
+          'hover:border-secondary-200 focus-visible:ring-primary-400 hover:bg-muted focus-visible:ring-2 focus-visible:outline-none'
         )}
       >
         {content}
@@ -64,7 +64,12 @@ export function TrainingExampleRow({ example, onClick, onRemove }: TrainingExamp
   }
 
   return (
-    <div className="flex items-start gap-4 rounded-xl border border-gray-100 bg-white px-4 py-3">
+    <div
+      className={cn(
+        'flex items-start gap-4 rounded-xl border border-gray-100 px-4 py-3',
+        onClick || onRemove ? 'bg-card' : 'bg-gray-50/80'
+      )}
+    >
       {content}
     </div>
   )
