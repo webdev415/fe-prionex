@@ -17,10 +17,17 @@ import { ScorecardListView } from './ScorecardListView'
 import { CallReviewPanel } from './CallReviewPanel'
 import { AvgScoreByTypeView } from './AvgScoreByTypeView'
 import { NewAssessmentButton } from './NewAssessmentButton'
+import { DialogsListTab } from './DialogsListTab'
 
 type CategoryChip = 'all' | 'low' | 'average' | 'high'
-type DialogueView = 'list' | 'averages'
+type DialogueView = 'dialogs' | 'list' | 'averages'
 type TelephonyFilter = '' | 'white' | 'grey' | 'unknown'
+
+const VIEW_FALLBACK: Record<DialogueView, string> = {
+  dialogs: 'Dialogs',
+  list: 'Scorecards',
+  averages: 'Averages',
+}
 
 interface AppliedCallFilters {
   name: string
@@ -52,7 +59,7 @@ function dayEndIso(date: string): string | undefined {
 export function DialogueEvaluationTab() {
   const { t } = useTranslation('common')
   const [activeCategory, setActiveCategory] = useState<CategoryChip>('all')
-  const [view, setView] = useState<DialogueView>('list')
+  const [view, setView] = useState<DialogueView>('dialogs')
   const [selectedRowId, setSelectedRowId] = useState<number | null>(null)
   const [selectedEmployeeIds, setSelectedEmployeeIds] = useState<number[]>([])
   // KAN-827 call-attribute filters. Draft state is bound to the inputs; it only
@@ -157,7 +164,7 @@ export function DialogueEvaluationTab() {
   // (``undefined`` = "all operators" and must still fetch.)
   const noOperators =
     scoped.isEmptyResolution || (Array.isArray(operatorIds) && operatorIds.length === 0)
-  const { data, isLoading, isError } = useScorecards(filters, !noOperators)
+  const { data, isLoading, isError } = useScorecards(filters, !noOperators && view === 'list')
 
   // Scorecards carry only call_id; resolve the contacted number + client for
   // every row in one batched call-service request (vs. N per-row fetches).
@@ -303,7 +310,7 @@ export function DialogueEvaluationTab() {
         )}
         <div className="flex flex-wrap items-center justify-end gap-2">
           <div className="inline-flex rounded-md border border-[#EBECE8] p-0.5">
-            {(['list', 'averages'] as const).map((v) => (
+            {(['dialogs', 'list', 'averages'] as const).map((v) => (
               <button
                 key={v}
                 type="button"
@@ -312,18 +319,18 @@ export function DialogueEvaluationTab() {
                   view === v ? 'bg-[#204E4D] text-white' : 'text-[#6B7280] hover:text-[#05040D]'
                 }`}
               >
-                {v === 'list'
-                  ? t('pages.training.dialogue.view.list', 'Scorecards')
-                  : t('pages.training.dialogue.view.averages', 'Averages')}
+                {t(`pages.training.dialogue.view.${v}`, VIEW_FALLBACK[v])}
               </button>
             ))}
           </div>
           <NewAssessmentButton />
-          <EmployeeMultiSelect
-            value={selectedEmployeeIds}
-            onChange={setSelectedEmployeeIds}
-            operators={operators}
-          />
+          {view === 'list' ? (
+            <EmployeeMultiSelect
+              value={selectedEmployeeIds}
+              onChange={setSelectedEmployeeIds}
+              operators={operators}
+            />
+          ) : null}
         </div>
       </div>
 
@@ -398,7 +405,9 @@ export function DialogueEvaluationTab() {
         </div>
       ) : null}
 
-      {view === 'averages' ? (
+      {view === 'dialogs' ? (
+        <DialogsListTab />
+      ) : view === 'averages' ? (
         <AvgScoreByTypeView operatorIds={filters.operator_id} />
       ) : (
         <div className="grid grid-cols-1 gap-3 xl:grid-cols-[1fr_520px]">
@@ -441,7 +450,10 @@ export function DialogueEvaluationTab() {
             ) : null}
           </div>
           <CallReviewPanel
-            scorecard={selectedScorecard}
+            callId={selectedScorecard?.call_id}
+            operatorId={selectedScorecard?.operator_id}
+            scorecardId={selectedScorecard?.id}
+            createdAt={selectedScorecard?.created_at}
             operatorName={selectedOperatorName}
             onDirtyChange={setReviewDirty}
           />

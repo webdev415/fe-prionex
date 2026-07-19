@@ -6,6 +6,7 @@ import {
   getScorecard,
   getScorecardAggregate,
   getScorecardHistoryForCall,
+  getScorecardStatusByCalls,
   listMyScorecards,
   listScorecards,
   sendScorecard,
@@ -24,7 +25,18 @@ export const scorecardKeys = {
   myList: (filters: ScorecardListFilters) => [...scorecardKeys.all, 'me', filters] as const,
   detail: (scorecardId: number) => [...scorecardKeys.all, 'detail', scorecardId] as const,
   historyForCall: (callId: string) => [...scorecardKeys.all, 'history-for-call', callId] as const,
+  statusByCalls: (callIds: string[]) => [...scorecardKeys.all, 'status-by-calls', callIds] as const,
   aggregate: (filters: AggregateFilters) => [...scorecardKeys.all, 'aggregate', filters] as const,
+}
+
+/** Bulk evaluation-status lookup for a page of dialogs (call-first list badge). */
+export function useScorecardStatusByCalls(callIds: string[], enabled = true) {
+  return useQuery({
+    queryKey: scorecardKeys.statusByCalls(callIds),
+    queryFn: () => getScorecardStatusByCalls(callIds),
+    enabled: enabled && callIds.length > 0,
+    staleTime: 15_000,
+  })
 }
 
 export function useScorecardAggregate(filters: AggregateFilters, enabled = true) {

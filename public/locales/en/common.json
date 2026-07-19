@@ -1673,7 +1673,8 @@
         },
         "view": {
           "list": "Scorecards",
-          "averages": "Averages"
+          "averages": "Averages",
+          "dialogs": "Dialogs"
         },
         "newAssessment": "New assessment",
         "newAssessmentPicker": {
@@ -1744,6 +1745,14 @@
           "average": "Average",
           "high": "High",
           "unscored": "Unscored"
+        },
+        "dialogs": {
+          "myEmployees": "My employees",
+          "allDepartments": "All departments",
+          "evaluation": "Evaluation",
+          "notEvaluated": "Not evaluated",
+          "loadError": "Failed to load dialogs.",
+          "empty": "No dialogs match the filters."
         }
       },
       "transcript": {
