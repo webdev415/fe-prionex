@@ -2109,7 +2109,14 @@
           "closed": "З вирішенням"
         },
         "compositeScore": "Складений бал {{score}}",
-        "scoreShort": "бал {{score}}"
+        "scoreShort": "бал {{score}}",
+        "search": {
+          "namePlaceholder": "Пошук за ПІБ…",
+          "allDepartments": "Усі відділи",
+          "sipPlaceholder": "SIP / дод. номер…",
+          "clear": "Очистити",
+          "noResults": "Немає операторів за пошуком."
+        }
       },
       "paymentHistoryEmpty": "Немає платежів, що відповідають фільтрам",
       "paymentHistorySummary": {

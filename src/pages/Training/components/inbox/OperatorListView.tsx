@@ -200,6 +200,9 @@ export function OperatorListView({
                     <span className="text-sm font-semibold text-[#05040D]">{row.name} </span>
                     <span className="text-[11px] text-gray-500">
                       {row.team} · {row.segment}
+                      {row.extension
+                        ? ` · ${t('pages.training.team.ext', 'ext')} ${row.extension}`
+                        : ''}
                     </span>
                     <span className="text-[11px] text-gray-600">{formatPresence(row, t)}</span>
                     <p className="text-xs leading-relaxed text-[#05040D]">{row.cardSummary}</p>
