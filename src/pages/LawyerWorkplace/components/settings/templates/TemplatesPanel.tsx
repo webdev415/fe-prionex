@@ -32,11 +32,13 @@ export function TemplatesPanel({
   const [deletingReply, setDeletingReply] = useState<SettingsReplyTemplate | null>(null)
 
   const openAddReply = () => {
+    if (readOnly) return
     setEditingReply(null)
     setReplyModalOpen(true)
   }
 
   const openEditReply = (template: SettingsReplyTemplate) => {
+    if (readOnly) return
     setEditingReply(cloneReplyTemplate(template))
     setReplyModalOpen(true)
   }

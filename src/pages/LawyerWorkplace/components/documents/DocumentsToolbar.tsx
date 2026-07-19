@@ -126,7 +126,7 @@ export function DocumentsToolbar({
                     'flex shrink-0 cursor-pointer items-center gap-2 rounded-full px-3 py-1.5 text-[11px] font-medium transition-colors sm:px-4 sm:py-2 sm:text-[12px]',
                     isActive
                       ? 'bg-secondary-800 text-white'
-                      : 'text-dark-500 bg-white/50 hover:bg-white'
+                      : 'text-dark-500 bg-filter-bar hover:bg-card'
                   )}
                 >
                   <span className="whitespace-nowrap">{t(filter.labelKey, filter.fallback)}</span>
@@ -157,7 +157,7 @@ export function DocumentsToolbar({
               'pages.lawyerWorkplace.documents.searchPlaceholder',
               'Search by name, client, document #...'
             )}
-            className="text-dark-500 focus:border-primary-400 h-9 w-full rounded-full border border-gray-200 bg-white py-2 pr-3 pl-9 text-[12px] outline-none placeholder:text-gray-400"
+            className="text-dark-500 focus:border-primary-400 border-border bg-input placeholder:text-muted-foreground h-9 w-full rounded-full border py-2 pr-3 pl-9 text-[12px] outline-none"
           />
           {searchQuery && (
             <button

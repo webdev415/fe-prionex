@@ -12,6 +12,7 @@ import { BulkOperatorAssignmentPageSkeleton } from '@/pages/Operations/BulkOpera
 import { BulkTagAssignmentPageSkeleton } from '@/pages/Operations/BulkTagAssignmentPageSkeleton'
 import { BulkPaymentVerificationPageSkeleton } from '@/pages/Operations/BulkPaymentVerificationPageSkeleton'
 import { BulkSaleNotesImportPageSkeleton } from '@/pages/Operations/BulkSaleNotesImportPageSkeleton'
+import { RepaymentConfigurationPageSkeleton } from '@/pages/RepaymentConfiguration/RepaymentConfigurationPageSkeleton'
 import { AppLoadingFallback } from '@/components/ui/AppLoadingFallback'
 
 const LoginPage = lazy(() => import('@/pages/auth/LoginPage'))
@@ -473,7 +474,9 @@ export const router = createBrowserRouter([
         path: 'system-settings/repayment-configuration',
         element: (
           <PermissionRoute requiredPermission={PERMISSIONS.REPAYMENT_CONFIG.VIEW}>
-            {withSuspense(<RepaymentConfigurationPage />)}
+            <Suspense fallback={<RepaymentConfigurationPageSkeleton />}>
+              <RepaymentConfigurationPage />
+            </Suspense>
           </PermissionRoute>
         ),
       },

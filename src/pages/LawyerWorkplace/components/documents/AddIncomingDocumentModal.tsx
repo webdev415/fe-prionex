@@ -202,7 +202,7 @@ export function AddIncomingDocumentModal({
               'pages.lawyerWorkplace.documents.modals.incoming.documentNamePlaceholder',
               'Enter document name'
             )}
-            className="text-dark-500 focus:border-primary-400 h-10 w-full rounded-[8px] border border-gray-200 bg-white px-3 text-[13px] outline-none placeholder:text-gray-400"
+            className="text-dark-500 focus:border-primary-400 border-border bg-input placeholder:text-muted-foreground h-10 w-full rounded-[8px] border px-3 text-[13px] outline-none"
           />
         </div>
 
@@ -233,7 +233,7 @@ export function AddIncomingDocumentModal({
               'pages.lawyerWorkplace.documents.modals.incoming.relatedLetterPlaceholder',
               'e.g. IN-2026-142'
             )}
-            className="text-dark-500 focus:border-primary-400 h-10 w-full rounded-[8px] border border-gray-200 bg-white px-3 text-[13px] outline-none placeholder:text-gray-400"
+            className="text-dark-500 focus:border-primary-400 border-border bg-input placeholder:text-muted-foreground h-10 w-full rounded-[8px] border px-3 text-[13px] outline-none"
           />
         </div>
 
@@ -245,7 +245,7 @@ export function AddIncomingDocumentModal({
             <DropdownMenuTrigger asChild>
               <button
                 type="button"
-                className="text-dark-500 flex h-10 w-full items-center justify-between rounded-[8px] border border-gray-200 bg-white px-3 text-[13px] font-light"
+                className="text-dark-500 border-border bg-input flex h-10 w-full items-center justify-between rounded-[8px] border px-3 text-[13px] font-light"
               >
                 <span>{selectedLawyer?.display_name ?? '—'}</span>
                 <Icons.ArrowDown size={16} strokeWidth={1.5} className="text-light-500" />

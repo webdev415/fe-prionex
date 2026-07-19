@@ -726,7 +726,7 @@
           "priorities": {
             "highest": "Highest",
             "high": "High",
-            "medium": "Medium",
+            "medium": "Normal",
             "low": "Low",
             "lowest": "Lowest"
           }
@@ -5704,6 +5704,10 @@
     "rrPeriodicity": {
       "title": "RR Payment Periodicity",
       "description": "Choose which payment-frequency options operators can use to auto-fill the schedule when creating a Restructuring Agreement.",
+      "optionsTitle": "Frequency options",
+      "optionsDescription": "Enabled options appear in the Payment Frequency dropdown on the RR creation form.",
+      "enabled": "Enabled",
+      "disabled": "Disabled",
       "saved": "Payment periodicity options saved",
       "savedDescription": "Operators will see the updated frequency options next time they create a Restructuring Agreement.",
       "allDisabledHint": "With every option off, operators enter each payment date manually.",
@@ -7351,11 +7355,15 @@
         "deactivateConfirmTitle": "Revert to Legacy Proportional?",
         "deactivateConfirmMessage": "Future payment snapshots will use the legacy proportional algorithm. Already-snapshotted payments are unaffected.",
         "deactivateConfirmButton": "Revert",
-        "preconditionError": "Strict Order requires payment-allocation snapshotting to be enabled."
+        "preconditionError": "Strict Order requires payment-allocation snapshotting to be enabled.",
+        "activeBadge": "Active",
+        "legacyBadge": "Legacy"
       },
       "history": {
         "title": "Recent Changes",
-        "version": "Version"
+        "version": "Version",
+        "changedBy": "Changed by",
+        "when": "When"
       }
     },
     "auditLogs": {

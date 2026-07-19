@@ -55,7 +55,7 @@ export function LawyerWorkspaceBanner({ className }: LawyerWorkspaceBannerProps)
       <div className="flex w-full max-w-[820px] justify-end">
         <div
           className={cn(
-            'pointer-events-auto flex h-14 items-center overflow-hidden rounded-md border border-gray-100/90 bg-white/95 py-1 pr-1.5 shadow-[0_12px_24px_-6px_rgba(16,24,40,0.12),0_4px_8px_-2px_rgba(16,24,40,0.06)] backdrop-blur-sm',
+            'bg-card/95 pointer-events-auto flex h-14 items-center overflow-hidden rounded-md border border-gray-100/90 py-1 pr-1.5 shadow-[0_12px_24px_-6px_rgba(16,24,40,0.12),0_4px_8px_-2px_rgba(16,24,40,0.06)] backdrop-blur-sm',
             isExpanded ? 'w-full pl-3' : 'w-auto pl-1.5'
           )}
         >

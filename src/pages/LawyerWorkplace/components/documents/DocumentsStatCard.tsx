@@ -16,7 +16,7 @@ export function DocumentsStatCard({
   compact,
 }: DocumentsStatCardProps) {
   return (
-    <div className="flex min-w-0 flex-1 items-center gap-3 rounded-xl border border-white bg-white px-3 py-3 shadow-sm sm:px-4">
+    <div className="border-card bg-card flex min-w-0 flex-1 items-center gap-3 rounded-xl border px-3 py-3 shadow-sm sm:px-4">
       <div
         className={cn(
           'flex shrink-0 items-center justify-center rounded-lg',

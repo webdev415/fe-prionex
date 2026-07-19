@@ -13,11 +13,13 @@ import { LetterTypeDetailSectionHeader } from './LetterTypeDetailSectionHeader'
 interface LetterTypePrioritySectionProps {
   draft: LetterTypeConfig
   onDraftChange: (draft: LetterTypeConfig) => void
+  readOnly?: boolean
 }
 
 export function LetterTypePrioritySection({
   draft,
   onDraftChange,
+  readOnly = false,
 }: LetterTypePrioritySectionProps) {
   const { t } = useTranslation('common')
   const { isCompact } = useLawyerWorkplaceLayout()
@@ -62,7 +64,7 @@ export function LetterTypePrioritySection({
               <div
                 key={index}
                 className={cn(
-                  'grid gap-3 rounded-xl bg-white px-4 py-3',
+                  'bg-card grid gap-3 rounded-xl px-4 py-3',
                   isCompact
                     ? 'grid-cols-1'
                     : 'lg:grid-cols-[minmax(180px,1fr)_auto_auto_auto] lg:items-center'
@@ -89,7 +91,7 @@ export function LetterTypePrioritySection({
       ) : null}
 
       {!isLoading && priorityRows.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-gray-200 bg-white px-4 py-8 text-center">
+        <div className="border-border bg-card flex flex-col items-center justify-center rounded-xl border border-dashed px-4 py-8 text-center">
           <div className="bg-light-100 mb-3 flex h-10 w-10 items-center justify-center rounded-full">
             <Icons.UserMultiple02 size={18} strokeWidth={1.5} className="text-light-500" />
           </div>
@@ -114,7 +116,8 @@ export function LetterTypePrioritySection({
             <div
               key={lawyer.id}
               className={cn(
-                'grid gap-3 rounded-xl bg-white px-4 py-3',
+                'bg-card grid gap-3 rounded-xl px-4 py-3',
+                readOnly && 'bg-gray-50/80',
                 isCompact
                   ? 'grid-cols-1'
                   : 'lg:grid-cols-[minmax(180px,1fr)_auto_auto_auto] lg:items-center'
@@ -151,6 +154,7 @@ export function LetterTypePrioritySection({
               >
                 <LawyerStarRating
                   value={assignment.stars}
+                  disabled={readOnly}
                   onChange={(stars) =>
                     onDraftChange(
                       updateLetterTypePriority(draft, lawyer.id, { stars: Math.max(0, stars) })
@@ -161,6 +165,7 @@ export function LetterTypePrioritySection({
                 <div className={cn('flex', !isCompact && 'lg:justify-end')}>
                   <LawyerRoleBadge
                     role={assignment.role}
+                    disabled={readOnly}
                     onSelect={(role) =>
                       onDraftChange(updateLetterTypePriority(draft, lawyer.id, { role }))
                     }

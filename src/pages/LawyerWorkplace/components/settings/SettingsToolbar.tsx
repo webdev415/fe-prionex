@@ -49,7 +49,7 @@ export function SettingsToolbar({ activeSubTab, onSubTabChange }: SettingsToolba
 
         <div
           className={cn(
-            'flex shrink-0 gap-1 rounded-md bg-white p-1 shadow-sm',
+            'bg-card flex shrink-0 gap-1 rounded-md p-1 shadow-sm',
             isCompact ? 'w-full overflow-x-auto' : 'ml-auto flex-wrap'
           )}
         >

@@ -65,7 +65,7 @@ export function KanbanBoardToolbar({
   )
 
   return (
-    <div className="sticky top-0 z-10 shrink-0 bg-[#F2F3F0]/95 px-4 pt-4 backdrop-blur-sm sm:px-5 lg:px-7 lg:pt-7">
+    <div className="bg-background/95 sticky top-0 z-10 shrink-0 px-4 pt-4 backdrop-blur-sm sm:px-5 lg:px-7 lg:pt-7">
       <div className="mb-3 flex items-start justify-between gap-2 sm:mb-4">
         <div
           className={cn(
@@ -135,7 +135,7 @@ export function KanbanBoardToolbar({
         <div className={cn('min-w-0', isCompact ? 'w-full basis-full' : 'shrink-0')}>
           <div
             className={cn(
-              'flex items-stretch rounded-[8px] border border-white bg-white p-1 shadow-sm',
+              'border-card bg-card flex items-stretch rounded-[8px] border p-1 shadow-sm',
               isCompact ? 'w-full' : 'inline-flex'
             )}
           >

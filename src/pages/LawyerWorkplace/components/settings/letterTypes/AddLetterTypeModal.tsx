@@ -68,7 +68,7 @@ export function AddLetterTypeModal({
               'pages.lawyerWorkplace.settings.modals.addType.placeholder',
               'e.g. Payment dispute'
             )}
-            className="text-dark-500 focus:border-primary-400 h-11 w-full rounded-xl border border-gray-200 bg-white px-4 text-[14px] outline-none placeholder:text-gray-400"
+            className="text-dark-500 focus:border-primary-400 border-border bg-input placeholder:text-muted-foreground h-11 w-full rounded-xl border px-4 text-[14px] outline-none"
           />
         </div>
 

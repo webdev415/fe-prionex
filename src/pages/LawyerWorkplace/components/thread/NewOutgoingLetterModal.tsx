@@ -303,7 +303,7 @@ function NewOutgoingLetterForm({ onClose, onSent }: NewOutgoingLetterFormProps) 
                 <button
                   type="button"
                   disabled={mailboxes.length === 0}
-                  className="text-dark-500 flex h-9 w-full items-center justify-between rounded-[8px] border border-gray-200 bg-white px-3 text-[13px] font-light outline-none disabled:cursor-not-allowed disabled:opacity-60"
+                  className="text-dark-500 border-border bg-input flex h-9 w-full items-center justify-between rounded-[8px] border px-3 text-[13px] font-light outline-none disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   <span>{selectedMailbox?.email ?? t('common.loading', 'Loading...')}</span>
                   <Icons.ArrowDown size={14} strokeWidth={1.5} className="shrink-0 text-gray-400" />
@@ -333,7 +333,7 @@ function NewOutgoingLetterForm({ onClose, onSent }: NewOutgoingLetterFormProps) 
             <Label className="text-dark-500 text-[12px] font-normal">
               {t('pages.lawyerWorkplace.newLetter.recipientType', 'Recipient')}
             </Label>
-            <div className="flex w-fit rounded-[8px] border border-white bg-white p-1 shadow-sm">
+            <div className="border-card bg-card flex w-fit rounded-[8px] border p-1 shadow-sm">
               {(
                 [
                   {
@@ -385,7 +385,7 @@ function NewOutgoingLetterForm({ onClose, onSent }: NewOutgoingLetterFormProps) 
                     <DropdownMenuTrigger asChild>
                       <button
                         type="button"
-                        className="text-dark-500 flex h-7 shrink-0 items-center gap-1 rounded-md border border-gray-200 bg-white px-2 text-[12px] font-light outline-none"
+                        className="text-dark-500 border-border bg-input flex h-7 shrink-0 items-center gap-1 rounded-md border px-2 text-[12px] font-light outline-none"
                       >
                         <Icons.Search size={12} strokeWidth={1.5} className="text-gray-400" />
                         {searchTypeLabel}
@@ -436,7 +436,7 @@ function NewOutgoingLetterForm({ onClose, onSent }: NewOutgoingLetterFormProps) 
                       <DropdownMenuTrigger asChild>
                         <button
                           type="button"
-                          className="text-dark-500 flex h-9 w-full items-center justify-between rounded-[8px] border border-gray-200 bg-white px-3 text-[13px] font-light outline-none"
+                          className="text-dark-500 border-border bg-input flex h-9 w-full items-center justify-between rounded-[8px] border px-3 text-[13px] font-light outline-none"
                         >
                           <span>
                             {toEmail ||
@@ -492,7 +492,7 @@ function NewOutgoingLetterForm({ onClose, onSent }: NewOutgoingLetterFormProps) 
                   'pages.lawyerWorkplace.newLetter.institutionPlaceholder',
                   'e.g. consumers@bank.gov.ua'
                 )}
-                className="text-dark-500 focus:border-primary-500 h-9 w-full rounded-[8px] border border-gray-200 bg-white px-3 text-[13px] font-light outline-none"
+                className="text-dark-500 focus:border-primary-500 border-border bg-input h-9 w-full rounded-[8px] border px-3 text-[13px] font-light outline-none"
               />
             </div>
           )}
@@ -510,7 +510,7 @@ function NewOutgoingLetterForm({ onClose, onSent }: NewOutgoingLetterFormProps) 
                 'pages.lawyerWorkplace.newLetter.subjectPlaceholder',
                 'Letter subject...'
               )}
-              className="text-dark-500 focus:border-primary-500 h-9 w-full rounded-[8px] border border-gray-200 bg-white px-3 text-[13px] font-light outline-none"
+              className="text-dark-500 focus:border-primary-500 border-border bg-input h-9 w-full rounded-[8px] border px-3 text-[13px] font-light outline-none"
             />
           </div>
 
@@ -582,7 +582,7 @@ function NewOutgoingLetterForm({ onClose, onSent }: NewOutgoingLetterFormProps) 
                     'rounded-full border px-3 py-1.5 text-[12px] font-medium transition-colors',
                     edoType === opt.id
                       ? 'border-secondary-400 bg-secondary-50 text-secondary-800'
-                      : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50'
+                      : 'border-border bg-input text-gray-600 hover:bg-gray-50'
                   )}
                 >
                   {opt.badge && <span className="mr-1.5 font-bold">{opt.badge}</span>}
@@ -622,7 +622,7 @@ function NewOutgoingLetterForm({ onClose, onSent }: NewOutgoingLetterFormProps) 
                   <DropdownMenuTrigger asChild>
                     <button
                       type="button"
-                      className="text-dark-500 flex h-7 shrink-0 items-center gap-1 rounded-md border border-gray-200 bg-white px-2 text-[12px] font-light outline-none"
+                      className="text-dark-500 border-border bg-input flex h-7 shrink-0 items-center gap-1 rounded-md border px-2 text-[12px] font-light outline-none"
                     >
                       <Icons.Search size={12} strokeWidth={1.5} className="text-gray-400" />
                       {institutionEdoSearchTypeLabel}
@@ -668,7 +668,7 @@ function NewOutgoingLetterForm({ onClose, onSent }: NewOutgoingLetterFormProps) 
               {stagedAttachments.map((attachment) => (
                 <span
                   key={attachment.id}
-                  className="border-light-200 text-dark-500 inline-flex max-w-[200px] items-center gap-1 rounded-full border bg-white px-2 py-0.5 text-[10px]"
+                  className="border-light-200 text-dark-500 bg-card inline-flex max-w-[200px] items-center gap-1 rounded-full border px-2 py-0.5 text-[10px]"
                 >
                   <span className="truncate">{attachment.filename}</span>
                   <span className="text-light-600 shrink-0">

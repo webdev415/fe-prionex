@@ -8,28 +8,23 @@ export function ForbiddenPage() {
   const navigate = useNavigate()
 
   return (
-    <div className="bg-light-50 bg-dashboard-light flex min-h-screen items-center justify-center bg-cover bg-center bg-no-repeat">
-      <div className="rounded-xl bg-white/50 p-8 text-center">
+    <div className="bg-background flex min-h-screen items-center justify-center">
+      <div className="border-border bg-card/50 rounded-xl border p-8 text-center shadow-sm">
         <Icons.Lock className="text-error-500 mx-auto mb-4 h-12 w-12" strokeWidth={1.5} />
-        <h2 className="text-dark-500 mb-2 text-xl font-semibold">
+        <h2 className="text-foreground mb-2 text-xl font-semibold">
           {t('pages.forbidden.title', 'Access Denied')}
         </h2>
-        <p className="text-dark-500 mb-6 text-sm font-light">
+        <p className="text-muted-foreground mb-6 max-w-md text-sm font-light">
           {t(
             'pages.forbidden.message',
             "You don't have permission to access this page. Contact your administrator if you believe this is a mistake."
           )}
         </p>
         <div className="flex items-center justify-center gap-3">
-          <Button variant="primary" size="md" onClick={() => navigate(-1)} className="rounded-full">
+          <Button variant="primary" size="md" onClick={() => navigate(-1)}>
             {t('pages.forbidden.goBack', 'Go Back')}
           </Button>
-          <Button
-            variant="outline"
-            size="md"
-            onClick={() => navigate('/dashboard')}
-            className="rounded-full"
-          >
+          <Button variant="outline" size="md" onClick={() => navigate('/dashboard')}>
             {t('pages.forbidden.goHome', 'Go to Dashboard')}
           </Button>
         </div>

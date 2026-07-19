@@ -33,6 +33,7 @@ import {
 } from '@/features/messaging'
 import type { MessagingChannel, MessagingDraft } from '@/features/messaging'
 import { formatDateTime } from '@/lib/formatters'
+import { useAuthStore } from '@/stores/authStore'
 import { DeleteDraftModal } from './DeleteDraftModal'
 import { DraftViewModal } from './DraftViewModal'
 import { MessagingDraftsTableSkeleton } from './components/MessagingDraftsPageSkeleton'
@@ -426,6 +427,7 @@ function DraftFormModal({ draft, open, onClose }: DraftFormModalProps) {
 
 export function MessagingDraftsPage() {
   const { t } = useTranslation('common')
+  const userTimezone = useAuthStore((s) => s.user?.timezone)
   const [channelFilter, setChannelFilter] = useState<string>('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [editingDraft, setEditingDraft] = useState<MessagingDraft | null>(null)
@@ -467,7 +469,8 @@ export function MessagingDraftsPage() {
         key: 'updated_at',
         header: t('pages.messagingDrafts.table.updatedAt', 'Updated'),
         align: 'left',
-        render: (draft) => formatDateTime(draft.updated_at ?? draft.created_at ?? undefined),
+        render: (draft) =>
+          formatDateTime(draft.updated_at ?? draft.created_at ?? undefined, userTimezone),
       },
       {
         key: 'actions',
@@ -500,7 +503,7 @@ export function MessagingDraftsPage() {
         ),
       },
     ],
-    [t]
+    [t, userTimezone]
   )
 
   return (

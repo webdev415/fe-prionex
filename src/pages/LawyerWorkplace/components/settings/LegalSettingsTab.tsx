@@ -200,7 +200,7 @@ export function LegalSettingsTab() {
       <SettingsToolbar activeSubTab={activeSubTab} onSubTabChange={setActiveSubTab} />
 
       {readOnly && (
-        <p className="text-light-600 mx-4 mb-2 rounded-lg border border-gray-100 bg-white px-4 py-2.5 text-[12px] sm:mx-5 lg:mx-7">
+        <p className="text-light-600 bg-card mx-4 mb-2 rounded-lg border border-gray-100 px-4 py-2.5 text-[12px] sm:mx-5 lg:mx-7">
           {t(
             'pages.lawyerWorkplace.settings.readOnlyNotice',
             'View only — you do not have permission to change department settings.'

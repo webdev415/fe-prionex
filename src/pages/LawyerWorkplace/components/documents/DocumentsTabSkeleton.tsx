@@ -16,7 +16,7 @@ function DocumentsStatsSkeleton({ compact }: { compact: boolean }) {
       {Array.from({ length: 4 }).map((_, index) => (
         <div
           key={index}
-          className="flex min-w-0 flex-1 items-center gap-3 rounded-xl border border-white bg-white px-3 py-3 shadow-sm sm:px-4"
+          className="border-card bg-card flex min-w-0 flex-1 items-center gap-3 rounded-xl border px-3 py-3 shadow-sm sm:px-4"
         >
           <div
             className={cn(

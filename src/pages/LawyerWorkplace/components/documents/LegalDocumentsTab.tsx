@@ -252,7 +252,7 @@ export function LegalDocumentsTab() {
 
             {showEmptyState ? (
               <div
-                className="mx-4 flex flex-col items-center justify-center rounded-xl border border-gray-100 bg-white px-6 py-14 text-center sm:mx-5 lg:mx-7"
+                className="bg-card mx-4 flex flex-col items-center justify-center rounded-xl border border-gray-100 px-6 py-14 text-center sm:mx-5 lg:mx-7"
                 role="status"
               >
                 <div className="bg-light-100 mb-4 flex h-12 w-12 items-center justify-center rounded-full">

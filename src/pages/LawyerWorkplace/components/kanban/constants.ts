@@ -112,7 +112,7 @@ export const TYPE_COLOURS: Record<KanbanTaskType, string> = {
   complaint: 'bg-error-100 text-error-700',
   nbu_inquiry: 'bg-secondary-100 text-secondary-800',
   court_claim: 'bg-warning-100 text-warning-700',
-  attorney_request: 'bg-[#EDE9FE] text-[#6D28D9]',
+  attorney_request: 'bg-violet-100 text-violet-700',
   inquiry: 'bg-success-100 text-success-700',
 }
 
@@ -122,13 +122,13 @@ export const TYPE_DOT_COLOURS: Record<KanbanTaskType, string> = {
   complaint: 'bg-error-500',
   nbu_inquiry: 'bg-secondary-600',
   court_claim: 'bg-warning-500',
-  attorney_request: 'bg-[#7C3AED]',
+  attorney_request: 'bg-violet-600',
   inquiry: 'bg-success-600',
 }
 
 const ASSIGNEE_PALETTE = [
   'bg-secondary-100 text-secondary-800',
-  'bg-[#EDE9FE] text-[#6D28D9]',
+  'bg-violet-100 text-violet-700',
   'bg-blue-100 text-blue-700',
   'bg-success-100 text-success-700',
   'bg-warning-100 text-warning-700',
@@ -294,7 +294,7 @@ export const CREATE_TASK_PRIORITIES: {
   {
     id: 'medium',
     key: 'pages.lawyerWorkplace.kanban.createTask.priorities.medium',
-    fallback: 'Medium',
+    fallback: 'Normal',
     textClass: 'text-dark-500',
   },
   {

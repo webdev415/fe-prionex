@@ -18,7 +18,7 @@ export function LegalLetterVariablesPalette({
   return (
     <div
       className={cn(
-        'rounded-xl border border-gray-200 bg-white p-4 text-sm text-gray-600',
+        'border-border bg-card text-muted-foreground rounded-xl border p-4 text-sm',
         className
       )}
     >

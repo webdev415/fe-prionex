@@ -80,7 +80,7 @@ export function LawyersTable({
   }
 
   return (
-    <div className="min-w-0 overflow-hidden rounded-xl border border-gray-100 bg-white">
+    <div className="bg-card min-w-0 overflow-hidden rounded-xl border border-gray-100">
       <div
         className={cn(
           'flex gap-3 border-b border-gray-100 px-4 py-4 sm:px-5 lg:px-6',

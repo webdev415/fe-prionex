@@ -12,7 +12,7 @@ export function KanbanColumnHeader({ column }: KanbanColumnHeaderProps) {
   const count = column.tasks.length
 
   return (
-    <div className="border-light-100 flex items-center gap-2 rounded-t-lg border-b bg-white px-4 py-3 shadow-sm">
+    <div className="border-light-100 bg-card flex items-center gap-2 rounded-t-lg border-b px-4 py-3 shadow-sm">
       <span className={cn('h-2 w-2 shrink-0 rounded-full', column.dotClass)} />
       <span className="min-w-0 truncate text-[11px] font-semibold tracking-widest text-gray-500 uppercase">
         {label}

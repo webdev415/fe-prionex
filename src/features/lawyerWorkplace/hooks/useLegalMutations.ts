@@ -335,10 +335,12 @@ export function useTransitionLegalKanbanTask() {
     mutationFn: ({
       taskId,
       targetColumn,
+      timezone,
     }: {
       taskId: number
       targetColumn: 'not_defined' | 'in_progress' | 'overdue' | 'completed'
-    }) => legalApi.transitionKanbanTask(taskId, { target_column: targetColumn }),
+      timezone?: string
+    }) => legalApi.transitionKanbanTask(taskId, { target_column: targetColumn, timezone }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: legalWorkplaceKeys.kanban() })
       queryClient.invalidateQueries({ queryKey: legalWorkplaceKeys.inbox() })

@@ -25,6 +25,7 @@ import {
   useUpdateLegalKanbanTask,
   type LegalKanbanTaskPatch,
 } from '@/features/lawyerWorkplace'
+import { useLegalProfileTimezone } from '@/features/lawyerWorkplace/hooks/useLegalProfileTimezone'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 import { useLawyerWorkplaceLayout } from '../../context/lawyerWorkplaceLayout'
@@ -69,6 +70,7 @@ function parseTaskIdFromSearch(params: URLSearchParams): number | null {
 export function LegalKanbanBoard() {
   const { t } = useTranslation('common')
   const { showWorkspaceBanner } = useLawyerWorkplaceLayout()
+  const timezone = useLegalProfileTimezone()
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const { data: lawyersData } = useLegalLawyers({ scopedToActiveProject: true })
   const { data: letterTypesData } = useLegalLetterTypes({ includeInactive: true })
@@ -160,9 +162,17 @@ export function LegalKanbanBoard() {
         lawyerFilterOptions,
         typeFilterOptions,
         deadlineFilter,
-        matchesDeadlineFilter
+        (task, filter) => matchesDeadlineFilter(task, filter, timezone)
       ),
-    [columns, lawyerFilter, typeFilter, lawyerFilterOptions, typeFilterOptions, deadlineFilter]
+    [
+      columns,
+      lawyerFilter,
+      typeFilter,
+      lawyerFilterOptions,
+      typeFilterOptions,
+      deadlineFilter,
+      timezone,
+    ]
   )
 
   const displayColumns = useMemo(() => {
@@ -242,12 +252,12 @@ export function LegalKanbanBoard() {
 
       setLocalOverrides(
         source.map((item) =>
-          item.id === taskId ? applyKanbanTaskPatch(item, patch, lawyers) : item
+          item.id === taskId ? applyKanbanTaskPatch(item, patch, lawyers, timezone) : item
         )
       )
 
       const metadataPayload = mapKanbanPatchToMetadataPayload(patch)
-      const taskPayload = mapKanbanPatchToTaskUpdate(patch, task)
+      const taskPayload = mapKanbanPatchToTaskUpdate(patch, task, timezone)
 
       if (taskPayload.due_date !== undefined && metadataPayload.due_date === undefined) {
         metadataPayload.due_date = taskPayload.due_date
@@ -287,7 +297,7 @@ export function LegalKanbanBoard() {
         }
       })()
     },
-    [apiTasks, lawyers, localOverrides, patchMetadataMutation, updateTaskMutation]
+    [apiTasks, lawyers, localOverrides, patchMetadataMutation, timezone, updateTaskMutation]
   )
 
   const handleMoveTask = useCallback(
@@ -296,10 +306,10 @@ export function LegalKanbanBoard() {
       const task = source.find((item) => item.id === taskId)
       if (!task || task.columnId === toColumnId) return
 
-      const patch = buildKanbanColumnMovePatch(task, toColumnId)
+      const patch = buildKanbanColumnMovePatch(task, toColumnId, timezone)
       setLocalOverrides(
         source.map((item) =>
-          item.id === taskId ? applyKanbanTaskPatch(item, patch, lawyers) : item
+          item.id === taskId ? applyKanbanTaskPatch(item, patch, lawyers, timezone) : item
         )
       )
 
@@ -307,7 +317,7 @@ export function LegalKanbanBoard() {
       const columnLabel = columnMeta ? t(columnMeta.labelKey, columnMeta.id) : toColumnId
 
       transitionMutation.mutate(
-        { taskId: task.taskId, targetColumn: toColumnId },
+        { taskId: task.taskId, targetColumn: toColumnId, timezone },
         {
           onSuccess: () => {
             setLocalOverrides(null)
@@ -323,7 +333,7 @@ export function LegalKanbanBoard() {
         }
       )
     },
-    [apiTasks, lawyers, localOverrides, t, transitionMutation]
+    [apiTasks, lawyers, localOverrides, t, timezone, transitionMutation]
   )
 
   const handleTaskUpdate = useCallback(
@@ -549,6 +559,7 @@ export function LegalKanbanBoard() {
                   lawyers={lawyers}
                   letterTypes={letterTypes}
                   editableLetterTypes={activeLetterTypes}
+                  timezone={timezone}
                   draggingTaskId={draggingTaskId}
                   isDropTarget={dragOverColumn === col.id}
                   onCardClick={(task) => setThreadTarget({ letterId: task.letterId, task })}

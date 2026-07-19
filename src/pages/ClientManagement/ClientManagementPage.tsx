@@ -1607,7 +1607,7 @@ export function ClientManagementPage() {
       render: (client) => (
         <Link
           to={`/dashboard/clients/${client.id}`}
-          className="text-dark-500 cursor-pointer text-left hover:underline"
+          className="text-primary-600 cursor-pointer text-left hover:underline"
         >
           {client.fullName}
         </Link>
@@ -1622,7 +1622,7 @@ export function ClientManagementPage() {
       render: (client) => (
         <Link
           to={`/dashboard/clients/${client.id}`}
-          className="text-dark-500 cursor-pointer text-left hover:underline"
+          className="text-primary-600 cursor-pointer text-left hover:underline"
         >
           {client.taxIdNumber}
         </Link>
@@ -1653,7 +1653,7 @@ export function ClientManagementPage() {
                 ))}
                 {remainingCount > 0 && (
                   <span
-                    className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600"
+                    className="bg-muted text-muted-foreground rounded-full px-2 py-0.5 text-xs font-medium"
                     title={tags
                       .slice(3)
                       .map((t) => t.name)
@@ -1664,7 +1664,7 @@ export function ClientManagementPage() {
                 )}
               </>
             ) : (
-              <span className="text-xs text-gray-400">-</span>
+              <span className="text-muted-foreground text-xs">-</span>
             )}
           </div>
         )
@@ -1743,7 +1743,7 @@ export function ClientManagementPage() {
       render: (client) =>
         client.doNotSendToUbki ? (
           <span
-            className="inline-flex items-center rounded-full bg-red-50 px-2 py-0.5 text-xs font-medium text-red-700"
+            className="bg-error-100 text-error-700 inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium"
             title={t(
               'pages.clients.detail.ubki.optedOutTooltip',
               'Client is opted out of UBKI; submission is disabled.'
@@ -1752,7 +1752,7 @@ export function ClientManagementPage() {
             {t('pages.clients.detail.ubki.optedOut', 'Opted out')}
           </span>
         ) : (
-          <span className="text-xs text-gray-400">-</span>
+          <span className="text-muted-foreground text-xs">-</span>
         ),
     },
     {
@@ -1775,7 +1775,7 @@ export function ClientManagementPage() {
                 variant="regular-black"
                 size="xs"
                 onClick={() => handleAssign(client.id)}
-                leftIcon={<Icons.PencilEdit size={16} color="#05040D" strokeWidth={1.5} />}
+                leftIcon={<Icons.PencilEdit size={16} strokeWidth={1.5} />}
                 disabled={isBulkActionActive}
               >
                 {t('pages.clients.assign')}
@@ -1785,7 +1785,7 @@ export function ClientManagementPage() {
                   variant="regular-black"
                   size="xs"
                   onClick={() => handleManageTags(client.id, client.fullName)}
-                  leftIcon={<Icons.File size={16} color="#05040D" strokeWidth={1.5} />}
+                  leftIcon={<Icons.File size={16} strokeWidth={1.5} />}
                   disabled={isBulkActionActive}
                   data-testid={`tag-button-${client.id}`}
                 >
@@ -1804,19 +1804,19 @@ export function ClientManagementPage() {
                 <DropdownMenuTrigger asChild>
                   <button
                     type="button"
-                    className="text-dark-500 flex h-8 w-8 cursor-pointer items-center justify-center rounded-md border border-gray-300 bg-white transition-colors hover:bg-gray-100 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                    className="border-border bg-card text-foreground hover:bg-muted focus-visible:ring-ring flex h-8 w-8 cursor-pointer items-center justify-center rounded-md border transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
                     aria-label={t('pages.clients.tableHeaders.actions')}
                     disabled={isBulkActionActive}
                   >
                     <Icons.FilterVertical size={16} strokeWidth={1.5} />
                   </button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="bg-white">
+                <DropdownMenuContent align="end" className="border-border bg-card">
                   {/* Reassign trigger is always visible; warn-on-click happens on the
                       modal's Submit (PERMISSIONS.CLIENTS.REASSIGN_RESPONSIBLE). */}
                   <DropdownMenuItem
                     onClick={() => handleAssign(client.id)}
-                    className="text-dark-500 flex cursor-pointer items-center gap-2 text-sm"
+                    className="text-foreground flex cursor-pointer items-center gap-2 text-sm"
                     disabled={isBulkActionActive}
                   >
                     <Icons.PencilEdit size={16} strokeWidth={1.5} />
@@ -1825,7 +1825,7 @@ export function ClientManagementPage() {
                   <PermissionGuard permission={PERMISSIONS.CLIENTS.EDIT}>
                     <DropdownMenuItem
                       onClick={() => handleManageTags(client.id, client.fullName)}
-                      className="text-dark-500 flex cursor-pointer items-center gap-2 text-sm"
+                      className="text-foreground flex cursor-pointer items-center gap-2 text-sm"
                       disabled={isBulkActionActive}
                       data-testid={`tag-button-${client.id}`}
                     >
@@ -1872,8 +1872,8 @@ export function ClientManagementPage() {
     return (
       <div className="flex w-full flex-col items-center justify-center gap-4 pt-20">
         <Icons.Warning className="text-error-500 h-8 w-8" strokeWidth={2} />
-        <p className="font-medium text-gray-900">{t('pages.clients.errorLoading')}</p>
-        <p className="text-sm text-gray-600">
+        <p className="text-foreground font-medium">{t('pages.clients.errorLoading')}</p>
+        <p className="text-muted-foreground text-sm">
           {error?.message || t('pages.clients.errorOccurred')}
         </p>
       </div>
@@ -1894,10 +1894,10 @@ export function ClientManagementPage() {
         <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-0">
           <div className="flex items-center gap-2 sm:gap-3">
             <div className="flex flex-row items-center gap-2">
-              <span className="text-dark-500 text-center text-xl leading-tight font-light tracking-[-0.4px] sm:text-2xl sm:tracking-[-0.48px]">
+              <span className="text-foreground text-center text-xl leading-tight font-light tracking-[-0.4px] sm:text-2xl sm:tracking-[-0.48px]">
                 {t('pages.clients.listOfClients')}
               </span>
-              <span className="text-center text-sm leading-[155%] font-light tracking-[-0.28px] text-gray-700 sm:text-base sm:tracking-[-0.32px]">
+              <span className="text-muted-foreground text-center text-sm leading-[155%] font-light tracking-[-0.28px] sm:text-base sm:tracking-[-0.32px]">
                 {totalCount}
               </span>
             </div>
@@ -1906,32 +1906,28 @@ export function ClientManagementPage() {
             {appliedFiltersCount > 0 && (
               <button
                 onClick={handleClearAll}
-                className="flex items-center gap-2 rounded-full bg-white/5 px-4 py-2.5 transition-colors hover:bg-white/10"
+                className="border-border bg-card text-foreground hover:bg-muted flex items-center gap-2 rounded-full border px-4 py-2.5 transition-colors"
               >
-                <Icons.Cancel01
-                  size={20}
-                  className="stroke-secondary-800 text-secondary-800"
-                  strokeWidth={1.5}
-                />
-                <span className="text-center text-xs leading-[140%] font-medium tracking-[-0.24px] text-gray-700">
+                <Icons.Cancel01 size={20} className="text-foreground" strokeWidth={1.5} />
+                <span className="text-foreground text-center text-xs leading-[140%] font-medium tracking-[-0.24px]">
                   {t('pages.clients.clearAll')}
                 </span>
               </button>
             )}
             <button
               onClick={() => setIsFiltersOpen(!isFiltersOpen)}
-              className="flex flex-col items-start gap-2.5 rounded-lg bg-white px-5 py-3 shadow-sm"
+              className="border-border bg-card/50 flex flex-col items-start gap-2.5 rounded-lg border px-5 py-3 shadow-sm"
             >
               <div className="flex items-center gap-2">
-                <Icons.FilterVertical size={20} className="text-gray-700" strokeWidth={1.5} />
-                <span className="text-dark-500 text-center text-xs leading-[140%] font-light tracking-[-0.24px]">
+                <Icons.FilterVertical size={20} className="text-foreground" strokeWidth={1.5} />
+                <span className="text-foreground text-center text-xs leading-[140%] font-light tracking-[-0.24px]">
                   {t('pages.clients.filtersLabel')}{' '}
                   <span className="font-medium">
                     ({appliedFiltersCount} {t('pages.clients.applied')})
                   </span>
                 </span>
                 <span className={`transition-transform ${isFiltersOpen ? 'rotate-180' : ''}`}>
-                  <Icons.ArrowUp size={18} className="text-dark-500" strokeWidth={1.5} />
+                  <Icons.ArrowUp size={18} className="text-foreground" strokeWidth={1.5} />
                 </span>
               </div>
             </button>
@@ -1975,44 +1971,44 @@ export function ClientManagementPage() {
                     >
                       <Icons.Settings
                         size={16}
-                        className="text-dark-500 sm:h-[18px] sm:w-[18px]"
+                        className="text-primary-foreground sm:h-[18px] sm:w-[18px]"
                         strokeWidth={1.5}
                       />
                       <span className="hidden font-medium sm:inline">Bulk Actions</span>
                       <span className="font-medium sm:hidden">Actions</span>
                       <Icons.ArrowDown
                         size={14}
-                        className="text-dark-500 sm:h-4 sm:w-4"
+                        className="text-primary-foreground sm:h-4 sm:w-4"
                         strokeWidth={1.5}
                       />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent
                     align="end"
-                    className="w-56 rounded-lg border border-gray-200 bg-white p-1 shadow-lg"
+                    className="border-border bg-card w-56 rounded-lg border p-1 shadow-lg"
                   >
                     {/* Bulk-assign trigger is always visible; warn-on-click happens on the
                         modal's Submit (PERMISSIONS.CLIENTS.REASSIGN_RESPONSIBLE). */}
                     <DropdownMenuItem
                       onClick={handleBulkAssign}
-                      className="flex cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 transition-colors hover:bg-gray-50 focus:bg-gray-50"
+                      className="text-foreground hover:bg-muted focus:bg-muted flex cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 transition-colors"
                     >
-                      <Icons.UserCheck01 size={18} className="text-dark-500" strokeWidth={1.5} />
-                      <span className="text-dark-500 text-sm font-medium">
+                      <Icons.UserCheck01 size={18} className="text-foreground" strokeWidth={1.5} />
+                      <span className="text-foreground text-sm font-medium">
                         {t('pages.clients.bulkActions.assignEmployee', 'Assign Employee')}
                       </span>
                     </DropdownMenuItem>
                     <PermissionGuard permission={PERMISSIONS.CLIENTS.ASSIGN_TAGS}>
                       <DropdownMenuItem
                         onClick={handleBulkAddTags}
-                        className="flex cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 transition-colors hover:bg-gray-50 focus:bg-gray-50"
+                        className="text-foreground hover:bg-muted focus:bg-muted flex cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 transition-colors"
                       >
                         <Icons.PlusSignCircle
                           size={18}
-                          className="text-dark-500"
+                          className="text-foreground"
                           strokeWidth={1.5}
                         />
-                        <span className="text-dark-500 text-sm font-medium">
+                        <span className="text-foreground text-sm font-medium">
                           {t('pages.clients.bulkActions.addTags', 'Add Tags')}
                         </span>
                       </DropdownMenuItem>
@@ -2020,10 +2016,10 @@ export function ClientManagementPage() {
                     <PermissionGuard permission={PERMISSIONS.CLIENTS.ASSIGN_TAGS}>
                       <DropdownMenuItem
                         onClick={handleBulkRemoveTags}
-                        className="flex cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 transition-colors hover:bg-gray-50 focus:bg-gray-50"
+                        className="text-foreground hover:bg-muted focus:bg-muted flex cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 transition-colors"
                       >
-                        <Icons.Remove02 size={18} className="text-dark-500" strokeWidth={1.5} />
-                        <span className="text-dark-500 text-sm font-medium">
+                        <Icons.Remove02 size={18} className="text-foreground" strokeWidth={1.5} />
+                        <span className="text-foreground text-sm font-medium">
                           {t('pages.clients.bulkActions.removeTags', 'Remove Tags')}
                         </span>
                       </DropdownMenuItem>
@@ -2031,14 +2027,14 @@ export function ClientManagementPage() {
                     <PermissionGuard permissions={ALL_MESSAGING_LAUNCH_PERMISSIONS} mode="any">
                       <DropdownMenuItem
                         onClick={handleBulkSendMessage}
-                        className="flex cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 transition-colors hover:bg-gray-50 focus:bg-gray-50"
+                        className="text-foreground hover:bg-muted focus:bg-muted flex cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 transition-colors"
                       >
                         <Icons.MessageMultiple01
                           size={18}
-                          className="text-dark-500"
+                          className="text-foreground"
                           strokeWidth={1.5}
                         />
-                        <span className="text-dark-500 text-sm font-medium">
+                        <span className="text-foreground text-sm font-medium">
                           {t('pages.clients.bulkActions.sendMessage', 'Send Message')}
                         </span>
                       </DropdownMenuItem>
@@ -2052,10 +2048,14 @@ export function ClientManagementPage() {
                           disabled={
                             totalSelectedCount === 0 || bulkSubmitByClientsMutation.isPending
                           }
-                          className="flex cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 transition-colors hover:bg-gray-50 focus:bg-gray-50"
+                          className="text-foreground hover:bg-muted focus:bg-muted flex cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 transition-colors"
                         >
-                          <Icons.MailSend01 size={18} className="text-dark-500" strokeWidth={1.5} />
-                          <span className="text-dark-500 text-sm font-medium">
+                          <Icons.MailSend01
+                            size={18}
+                            className="text-foreground"
+                            strokeWidth={1.5}
+                          />
+                          <span className="text-foreground text-sm font-medium">
                             {t('pages.clients.bulkActions.submitUbki', 'Send to UBKI')}
                           </span>
                         </DropdownMenuItem>
@@ -2064,10 +2064,10 @@ export function ClientManagementPage() {
                     <PermissionGuard permission={PERMISSIONS.CLIENTS.EDIT}>
                       <DropdownMenuItem
                         onClick={() => handleBulkUbkiOptOut(true)}
-                        className="flex cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 transition-colors hover:bg-gray-50 focus:bg-gray-50"
+                        className="text-foreground hover:bg-muted focus:bg-muted flex cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 transition-colors"
                       >
-                        <Icons.Cancel01 size={18} className="text-dark-500" strokeWidth={1.5} />
-                        <span className="text-dark-500 text-sm font-medium">
+                        <Icons.Cancel01 size={18} className="text-foreground" strokeWidth={1.5} />
+                        <span className="text-foreground text-sm font-medium">
                           {t('pages.clients.bulkActions.optOutUbki', 'Do not send to UBKI')}
                         </span>
                       </DropdownMenuItem>
@@ -2075,10 +2075,10 @@ export function ClientManagementPage() {
                     <PermissionGuard permission={PERMISSIONS.CLIENTS.EDIT}>
                       <DropdownMenuItem
                         onClick={() => handleBulkUbkiOptOut(false)}
-                        className="flex cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 transition-colors hover:bg-gray-50 focus:bg-gray-50"
+                        className="text-foreground hover:bg-muted focus:bg-muted flex cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 transition-colors"
                       >
-                        <Icons.Reload size={18} className="text-dark-500" strokeWidth={1.5} />
-                        <span className="text-dark-500 text-sm font-medium">
+                        <Icons.Reload size={18} className="text-foreground" strokeWidth={1.5} />
+                        <span className="text-foreground text-sm font-medium">
                           {t('pages.clients.bulkActions.optInUbki', 'Re-enable UBKI sending')}
                         </span>
                       </DropdownMenuItem>

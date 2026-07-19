@@ -7,6 +7,8 @@ import {
   legalOverdueDueDateIso,
 } from '../../utils/legalDueDate'
 
+const TZ = 'Europe/Kyiv'
+
 const baseTask: KanbanTask = {
   id: 'TASK-1',
   taskId: 1,
@@ -14,7 +16,7 @@ const baseTask: KanbanTask = {
   title: 'Legal: Complaint',
   clientCode: 'CL-00010',
   clientName: 'Test Client',
-  deadline: legalDefaultDueDateIso(),
+  deadline: legalDefaultDueDateIso(TZ),
   closedAt: null,
   priority: 'medium',
   assigneeInitials: 'YD',
@@ -27,12 +29,12 @@ const baseTask: KanbanTask = {
 
 describe('buildKanbanColumnMovePatch', () => {
   it('sets overdue due date when moving to overdue', () => {
-    const patch = buildKanbanColumnMovePatch(baseTask, 'overdue')
-    expect(patch.deadline).toBe(legalOverdueDueDateIso())
+    const patch = buildKanbanColumnMovePatch(baseTask, 'overdue', TZ)
+    expect(patch.deadline).toBe(legalOverdueDueDateIso(TZ))
   })
 
   it('clears letter type when moving to not defined', () => {
-    const patch = buildKanbanColumnMovePatch(baseTask, 'not_defined')
+    const patch = buildKanbanColumnMovePatch(baseTask, 'not_defined', TZ)
     expect(patch.clearLetterType).toBe(true)
   })
 
@@ -42,8 +44,8 @@ describe('buildKanbanColumnMovePatch', () => {
       columnId: 'overdue' as const,
       deadline: '2020-01-01T10:00:00.000Z',
     }
-    const patch = buildKanbanColumnMovePatch(overdueTask, 'in_progress')
-    expect(patch.deadline).toBe(legalDefaultDueDateIso())
-    expect(isLegalDueDateOverdue(patch.deadline ?? null)).toBe(false)
+    const patch = buildKanbanColumnMovePatch(overdueTask, 'in_progress', TZ)
+    expect(patch.deadline).toBe(legalDefaultDueDateIso(TZ))
+    expect(isLegalDueDateOverdue(patch.deadline ?? null, TZ)).toBe(false)
   })
 })

@@ -197,7 +197,9 @@ export function LawyerWorkplaceHeaderNav() {
         })}
       </nav>
 
-      <LawyerAvailabilityToggle />
+      <div className="flex shrink-0 items-center self-center pl-1 sm:pl-2">
+        <LawyerAvailabilityToggle />
+      </div>
 
       {/* Left fade + scroll arrow (mobile / compact header) */}
       <div
@@ -205,14 +207,14 @@ export function LawyerWorkplaceHeaderNav() {
           'pointer-events-none absolute inset-y-0 left-0 z-10 flex w-10 items-center justify-start transition-opacity duration-200 lg:hidden',
           canScrollLeft ? 'opacity-100' : 'opacity-0'
         )}
-        style={{ background: 'linear-gradient(to right, #F2F3F0 45%, transparent)' }}
+        style={{ background: 'linear-gradient(to right, var(--background) 45%, transparent)' }}
       >
         <button
           type="button"
           aria-label={t('pages.lawyerWorkplace.navScrollLeft', 'Scroll tabs left')}
           onClick={() => scrollBy(-140)}
           className={cn(
-            'pointer-events-auto ml-0.5 flex h-6 w-6 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-500 shadow-md transition-all hover:border-gray-300 hover:text-gray-700 hover:shadow-lg',
+            'border-border bg-card text-muted-foreground hover:text-foreground pointer-events-auto ml-0.5 flex h-6 w-6 items-center justify-center rounded-full border shadow-md transition-all hover:border-gray-300 hover:shadow-lg',
             canScrollLeft ? 'cursor-pointer' : 'pointer-events-none'
           )}
         >
@@ -226,14 +228,14 @@ export function LawyerWorkplaceHeaderNav() {
           'pointer-events-none absolute inset-y-0 right-0 z-10 flex w-12 items-center justify-end transition-opacity duration-200 lg:hidden',
           canScrollRight ? 'opacity-100' : 'opacity-0'
         )}
-        style={{ background: 'linear-gradient(to left, #F2F3F0 55%, transparent)' }}
+        style={{ background: 'linear-gradient(to left, var(--background) 55%, transparent)' }}
       >
         <button
           type="button"
           aria-label={t('pages.lawyerWorkplace.navScrollRight', 'Scroll tabs right')}
           onClick={() => scrollBy(140)}
           className={cn(
-            'pointer-events-auto mr-0.5 flex h-6 w-6 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-500 shadow-md transition-all hover:border-gray-300 hover:text-gray-700 hover:shadow-lg',
+            'border-border bg-card text-muted-foreground hover:text-foreground pointer-events-auto mr-0.5 flex h-6 w-6 items-center justify-center rounded-full border shadow-md transition-all hover:border-gray-300 hover:shadow-lg',
             canScrollRight ? 'cursor-pointer' : 'pointer-events-none'
           )}
         >

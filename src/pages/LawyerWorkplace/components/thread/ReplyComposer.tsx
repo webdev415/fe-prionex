@@ -76,7 +76,7 @@ function StagedAttachmentChip({
   onRemove?: (attachmentId: string) => void
 }) {
   return (
-    <span className="border-light-200 text-dark-500 inline-flex max-w-[180px] items-center gap-1 rounded-full border bg-white px-2 py-0.5 text-[10px]">
+    <span className="border-light-200 text-dark-500 bg-card inline-flex max-w-[180px] items-center gap-1 rounded-full border px-2 py-0.5 text-[10px]">
       <span className="truncate">{attachment.filename}</span>
       <span className="text-light-600 shrink-0">{formatAttachmentSize(attachment.size_bytes)}</span>
       {onRemove && (
@@ -146,7 +146,7 @@ export function ReplyComposer({
   }
 
   return (
-    <div className="flex min-w-0 shrink-0 flex-col gap-2 bg-[linear-gradient(180deg,#F2F3F0_0%,#FFF_100%)] px-3 py-2.5 sm:px-5 sm:py-3">
+    <div className="from-background to-card flex min-w-0 shrink-0 flex-col gap-2 bg-gradient-to-b px-3 py-2.5 sm:px-5 sm:py-3">
       <div className="flex items-center justify-between gap-2 py-0.5 sm:gap-3 sm:py-2">
         <div className="flex min-w-0 flex-1 flex-col gap-1 sm:flex-row sm:flex-wrap sm:items-center sm:gap-2">
           <span className="text-light-700 shrink-0 text-[10px] sm:text-[11px]">
@@ -197,7 +197,7 @@ export function ReplyComposer({
                 'flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] transition-colors sm:text-[11px]',
                 edoType !== 'none'
                   ? 'border-secondary-300 bg-secondary-50 text-secondary-800'
-                  : 'border-gray-200 bg-white text-gray-500 hover:bg-gray-50'
+                  : 'border-border bg-input text-gray-500 hover:bg-gray-50'
               )}
             >
               {selectedEdo.badge ? (
@@ -249,7 +249,7 @@ export function ReplyComposer({
         </div>
       )}
 
-      <div className="flex flex-row items-end rounded-lg border border-gray-200 bg-white p-2.5 sm:p-3">
+      <div className="border-border bg-input flex flex-row items-end rounded-lg border p-2.5 sm:p-3">
         <Textarea
           value={value}
           onChange={(event) => onChange(event.target.value)}

@@ -320,11 +320,11 @@ export function IncomingListPanel({
       : null
 
   return (
-    <div className="flex h-full min-w-0 flex-col overflow-hidden border-r border-gray-200 bg-white">
+    <div className="border-border bg-card flex h-full min-w-0 flex-col overflow-hidden border-r">
       {/* ── Header ─────────────────────────────────────────────────────────── */}
       <div
         className="shrink-0 px-4 pt-4 pb-3"
-        style={{ background: 'linear-gradient(180deg, #F2F3F0 0%, #FFF 100%)' }}
+        style={{ background: 'linear-gradient(180deg, var(--background) 0%, var(--card) 100%)' }}
       >
         <div className="mb-3 flex items-center justify-between gap-2">
           <div className="flex min-w-0 items-center gap-2">
@@ -351,7 +351,7 @@ export function IncomingListPanel({
         </div>
 
         {/* Folder tabs */}
-        <div className="mb-3 flex gap-1 rounded-lg bg-white p-1 shadow-sm">
+        <div className="bg-card mb-3 flex gap-1 rounded-lg p-1 shadow-sm">
           {FOLDERS.map((f) => {
             const isActive = activeFolder === f.id
             return (
@@ -392,7 +392,7 @@ export function IncomingListPanel({
               'pages.lawyerWorkplace.incoming.searchPlaceholder',
               'Sender, subject...'
             )}
-            className="text-dark-500 focus:border-primary-400 h-8 w-full rounded-lg border border-gray-200 bg-white py-1.5 pr-3 pl-8 text-[12px] outline-none placeholder:text-gray-400"
+            className="text-dark-500 focus:border-primary-400 border-border bg-input placeholder:text-muted-foreground h-8 w-full rounded-lg border py-1.5 pr-3 pl-8 text-[12px] outline-none"
           />
           {searchDraft && (
             <button
@@ -448,7 +448,7 @@ export function IncomingListPanel({
                     'flex cursor-pointer items-center gap-1.5 rounded-full px-2.5 py-1.5 text-[11px] transition-colors',
                     isActive
                       ? 'bg-secondary-800 text-white'
-                      : 'text-dark-500 bg-white hover:bg-gray-50'
+                      : 'text-dark-500 bg-card hover:bg-gray-50'
                   )}
                 >
                   {t(f.labelKey, f.fallback)}
@@ -466,7 +466,7 @@ export function IncomingListPanel({
       <div className="relative min-h-0 flex-1 overflow-hidden">
         <div
           ref={listRef}
-          className="h-full overflow-y-auto bg-white [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          className="bg-card h-full overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         >
           {isLoading ? (
             <IncomingListSkeleton />
@@ -530,14 +530,14 @@ export function IncomingListPanel({
             'pointer-events-none absolute inset-x-0 top-0 flex h-14 flex-col items-center justify-start pt-1 transition-opacity duration-200',
             canScrollUp ? 'opacity-100' : 'opacity-0'
           )}
-          style={{ background: 'linear-gradient(to bottom, #F9FAFB 30%, transparent)' }}
+          style={{ background: 'linear-gradient(to bottom, var(--background) 30%, transparent)' }}
         >
           <button
             type="button"
             aria-label={t('pages.lawyerWorkplace.incoming.scrollUp', 'Scroll up')}
             onClick={() => scrollBy(-220)}
             className={cn(
-              'pointer-events-auto flex h-6 w-6 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-500 shadow-md transition-all hover:border-gray-300 hover:text-gray-700 hover:shadow-lg',
+              'border-border bg-card pointer-events-auto flex h-6 w-6 items-center justify-center rounded-full border text-gray-500 shadow-md transition-all hover:border-gray-300 hover:text-gray-700 hover:shadow-lg',
               canScrollUp ? 'cursor-pointer' : 'pointer-events-none'
             )}
           >
@@ -551,14 +551,14 @@ export function IncomingListPanel({
             'pointer-events-none absolute inset-x-0 bottom-0 flex h-14 flex-col items-center justify-end pb-1 transition-opacity duration-200',
             canScrollDown ? 'opacity-100' : 'opacity-0'
           )}
-          style={{ background: 'linear-gradient(to top, #F9FAFB 30%, transparent)' }}
+          style={{ background: 'linear-gradient(to top, var(--background) 30%, transparent)' }}
         >
           <button
             type="button"
             aria-label={t('pages.lawyerWorkplace.incoming.scrollDown', 'Scroll down')}
             onClick={() => scrollBy(220)}
             className={cn(
-              'pointer-events-auto flex h-6 w-6 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-500 shadow-md transition-all hover:border-gray-300 hover:text-gray-700 hover:shadow-lg',
+              'border-border bg-card pointer-events-auto flex h-6 w-6 items-center justify-center rounded-full border text-gray-500 shadow-md transition-all hover:border-gray-300 hover:text-gray-700 hover:shadow-lg',
               canScrollDown ? 'cursor-pointer' : 'pointer-events-none'
             )}
           >

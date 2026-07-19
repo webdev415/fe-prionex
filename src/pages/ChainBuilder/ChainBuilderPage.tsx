@@ -116,20 +116,20 @@ function ChainBuilderMainSkeleton() {
       role="status"
       aria-busy="true"
     >
-      <div className="flex-1 animate-pulse rounded-lg border border-gray-200 bg-gradient-to-b from-gray-100 to-gray-50" />
-      <div className="w-full space-y-4 rounded-lg border border-gray-200 bg-white p-4 lg:w-[360px]">
-        <div className="h-6 w-56 animate-pulse rounded-md bg-gray-200" />
+      <div className="border-border bg-muted flex-1 animate-pulse rounded-lg border" />
+      <div className="border-border bg-card w-full space-y-4 rounded-lg border p-4 lg:w-[360px]">
+        <div className="bg-muted h-6 w-56 animate-pulse rounded-md" />
         <div className="space-y-2">
-          <div className="h-3 w-24 animate-pulse rounded bg-gray-200" />
-          <div className="h-14 w-full animate-pulse rounded-md bg-gray-200" />
+          <div className="bg-muted h-3 w-24 animate-pulse rounded" />
+          <div className="bg-muted h-14 w-full animate-pulse rounded-md" />
         </div>
         <div className="space-y-2">
-          <div className="h-3 w-20 animate-pulse rounded bg-gray-200" />
-          <div className="h-14 w-full animate-pulse rounded-md bg-gray-200" />
+          <div className="bg-muted h-3 w-20 animate-pulse rounded" />
+          <div className="bg-muted h-14 w-full animate-pulse rounded-md" />
         </div>
         <div className="space-y-2">
-          <div className="h-3 w-16 animate-pulse rounded bg-gray-200" />
-          <div className="h-24 w-full animate-pulse rounded-md bg-gray-200" />
+          <div className="bg-muted h-3 w-16 animate-pulse rounded" />
+          <div className="bg-muted h-24 w-full animate-pulse rounded-md" />
         </div>
       </div>
     </div>
@@ -140,20 +140,20 @@ function ChainBuilderConfigPanelSkeleton() {
   return (
     <div className="flex flex-col gap-5" role="status" aria-busy="true">
       <div className="space-y-2">
-        <div className="h-3 w-28 animate-pulse rounded bg-gray-200" />
-        <div className="h-10 w-full animate-pulse rounded-md bg-gray-200" />
-        <div className="h-8 w-full animate-pulse rounded-md bg-gray-200" />
+        <div className="bg-muted h-3 w-28 animate-pulse rounded" />
+        <div className="bg-muted h-10 w-full animate-pulse rounded-md" />
+        <div className="bg-muted h-8 w-full animate-pulse rounded-md" />
       </div>
-      <div className="h-px w-full bg-gray-100" />
+      <div className="bg-muted h-px w-full" />
       <div className="space-y-2">
-        <div className="h-3 w-24 animate-pulse rounded bg-gray-200" />
-        <div className="h-10 w-full animate-pulse rounded-md bg-gray-200" />
-        <div className="h-8 w-full animate-pulse rounded-md bg-gray-200" />
+        <div className="bg-muted h-3 w-24 animate-pulse rounded" />
+        <div className="bg-muted h-10 w-full animate-pulse rounded-md" />
+        <div className="bg-muted h-8 w-full animate-pulse rounded-md" />
       </div>
-      <div className="h-px w-full bg-gray-100" />
+      <div className="bg-muted h-px w-full" />
       <div className="space-y-2">
-        <div className="h-3 w-20 animate-pulse rounded bg-gray-200" />
-        <div className="h-20 w-full animate-pulse rounded-md bg-gray-200" />
+        <div className="bg-muted h-3 w-20 animate-pulse rounded" />
+        <div className="bg-muted h-20 w-full animate-pulse rounded-md" />
       </div>
     </div>
   )
@@ -521,7 +521,7 @@ export function ChainBuilderPage() {
 
   return (
     <div className="flex w-full flex-col gap-4">
-      <h1 className="text-dark-500 text-2xl font-light">{t('pages.chainBuilder.title')}</h1>
+      <h1 className="text-foreground text-2xl font-light">{t('pages.chainBuilder.title')}</h1>
 
       {/* Chain picker */}
       <div className="sm:max-w-sm">
@@ -553,7 +553,7 @@ export function ChainBuilderPage() {
       </div>
 
       {!selectedChainId && (
-        <div className="w-full rounded-lg border border-dashed border-gray-300 bg-white/60 p-10 text-center text-gray-500">
+        <div className="border-border bg-card/60 text-muted-foreground w-full rounded-lg border border-dashed p-10 text-center">
           {t('pages.chainBuilder.selectChainHint')}
         </div>
       )}
@@ -563,7 +563,7 @@ export function ChainBuilderPage() {
       {selectedChainId && chain && (
         <div className="flex w-full flex-col gap-4 lg:flex-row" style={{ height: '70vh' }}>
           {/* Canvas */}
-          <div className="flex-1 overflow-hidden rounded-lg border border-gray-200 bg-white [&_.react-flow__controls-button]:border-gray-200 [&_.react-flow__controls-button]:bg-white [&_.react-flow__controls-button]:text-gray-700 [&_.react-flow__controls-button_svg]:fill-gray-700">
+          <div className="border-border bg-card [&_.react-flow__controls-button]:border-border [&_.react-flow__controls-button]:bg-card [&_.react-flow__controls-button]:text-foreground [&_.react-flow__controls-button_svg]:fill-foreground flex-1 overflow-hidden rounded-lg border">
             <ReactFlow
               nodes={nodes}
               edges={edges}
@@ -581,9 +581,9 @@ export function ChainBuilderPage() {
           </div>
 
           {/* Config panel */}
-          <div className="w-full overflow-y-auto rounded-lg border border-gray-200 bg-white p-4 lg:w-[360px]">
+          <div className="border-border bg-card w-full overflow-y-auto rounded-lg border p-4 lg:w-[360px]">
             <div className="flex flex-col gap-5">
-              <h2 className="text-dark-500 text-base font-semibold">{chain.name}</h2>
+              <h2 className="text-foreground text-base font-semibold">{chain.name}</h2>
               {builderPending && !builderData ? (
                 <ChainBuilderConfigPanelSkeleton />
               ) : (
@@ -591,10 +591,10 @@ export function ChainBuilderPage() {
                   {/* Triggers */}
                   <section className="flex flex-col gap-2">
                     <div className="flex items-center gap-1.5">
-                      <span className="text-xs font-semibold tracking-wide text-gray-700 uppercase">
+                      <span className="text-foreground text-xs font-semibold tracking-wide uppercase">
                         {t('pages.chainBuilder.triggers')}
                       </span>
-                      <span className="rounded-full bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium text-gray-500">
+                      <span className="bg-muted text-muted-foreground rounded-full px-1.5 py-0.5 text-[10px] font-medium">
                         {builderData?.triggers.length ?? 0}
                       </span>
                     </div>
@@ -602,14 +602,14 @@ export function ChainBuilderPage() {
                       {builderData?.triggers.map((tr) => (
                         <div
                           key={tr.id}
-                          className="flex items-center justify-between rounded-md border border-blue-200 bg-blue-50 px-2.5 py-1.5"
+                          className="border-info-200 bg-info-100 flex items-center justify-between rounded-md border px-2.5 py-1.5"
                         >
                           <div className="flex flex-col">
-                            <span className="text-xs font-medium text-blue-800">
+                            <span className="text-info-800 text-xs font-medium">
                               {typeLabel('trigger', tr.trigger_type)}
                             </span>
                             {Object.keys(tr.config).length > 0 && (
-                              <span className="text-[10px] text-blue-600">
+                              <span className="text-info-600 text-[10px]">
                                 {formatConfig(tr.config)}
                               </span>
                             )}
@@ -623,7 +623,7 @@ export function ChainBuilderPage() {
                                 toast.error(getErrorMessage(e))
                               }
                             }}
-                            className="ml-2 flex h-4 w-4 items-center justify-center rounded-full text-blue-400 hover:bg-blue-200 hover:text-blue-700"
+                            className="text-info-500 hover:bg-info-100 hover:text-info-700 ml-2 flex h-4 w-4 items-center justify-center rounded-full"
                             title={t('pages.chainBuilder.removeItem')}
                           >
                             ×
@@ -692,7 +692,7 @@ export function ChainBuilderPage() {
                       )}
                       {newTriggerType === 'call_result' && (
                         <input
-                          className="h-8 rounded-md border border-gray-200 px-2 text-xs"
+                          className="border-border h-8 rounded-md border px-2 text-xs"
                           placeholder={t('pages.chainBuilder.placeholders.resultCode')}
                           value={newTriggerConfig.result_code ?? ''}
                           onChange={(e) => setNewTriggerConfig({ result_code: e.target.value })}
@@ -740,22 +740,22 @@ export function ChainBuilderPage() {
                           }
                         }}
                         disabled={newTriggerType === 'debt_status' && !newTriggerConfig.status}
-                        className="flex h-8 items-center justify-center rounded-md border border-gray-200 bg-gray-50 text-xs text-gray-600 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
+                        className="border-border bg-muted text-muted-foreground hover:bg-muted flex h-8 items-center justify-center rounded-md border text-xs disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         {t('pages.chainBuilder.addTrigger')}
                       </button>
                     </div>
                   </section>
 
-                  <div className="border-t border-gray-100" />
+                  <div className="border-border border-t" />
 
                   {/* Blockers */}
                   <section className="flex flex-col gap-2">
                     <div className="flex items-center gap-1.5">
-                      <span className="text-xs font-semibold tracking-wide text-gray-700 uppercase">
+                      <span className="text-foreground text-xs font-semibold tracking-wide uppercase">
                         {t('pages.chainBuilder.blockers')}
                       </span>
-                      <span className="rounded-full bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium text-gray-500">
+                      <span className="bg-muted text-muted-foreground rounded-full px-1.5 py-0.5 text-[10px] font-medium">
                         {builderData?.blockers.length ?? 0}
                       </span>
                     </div>
@@ -763,14 +763,14 @@ export function ChainBuilderPage() {
                       {builderData?.blockers.map((bl) => (
                         <div
                           key={bl.id}
-                          className="flex items-center justify-between rounded-md border border-red-200 bg-red-50 px-2.5 py-1.5"
+                          className="border-error-200 bg-error-50 flex items-center justify-between rounded-md border px-2.5 py-1.5"
                         >
                           <div className="flex flex-col">
-                            <span className="text-xs font-medium text-red-800">
+                            <span className="text-error-800 text-xs font-medium">
                               {typeLabel('blocker', bl.blocker_type)}
                             </span>
                             {Object.keys(bl.config).length > 0 && (
-                              <span className="text-[10px] text-red-600">
+                              <span className="text-error-600 text-[10px]">
                                 {formatConfig(bl.config)}
                               </span>
                             )}
@@ -784,7 +784,7 @@ export function ChainBuilderPage() {
                                 toast.error(getErrorMessage(e))
                               }
                             }}
-                            className="ml-2 flex h-4 w-4 items-center justify-center rounded-full text-red-400 hover:bg-red-200 hover:text-red-700"
+                            className="text-error-500 hover:bg-error-100 hover:text-error-700 ml-2 flex h-4 w-4 items-center justify-center rounded-full"
                             title={t('pages.chainBuilder.removeItem')}
                           >
                             ×
@@ -813,7 +813,7 @@ export function ChainBuilderPage() {
                       </Select>
                       {newBlockerType === 'launched_within' && (
                         <input
-                          className="h-8 rounded-md border border-gray-200 px-2 text-xs"
+                          className="border-border h-8 rounded-md border px-2 text-xs"
                           placeholder={t('pages.chainBuilder.placeholders.daysCooldown')}
                           value={newBlockerConfig.days ?? ''}
                           onChange={(e) => setNewBlockerConfig({ days: e.target.value })}
@@ -879,7 +879,7 @@ export function ChainBuilderPage() {
                             toast.error(getErrorMessage(e))
                           }
                         }}
-                        className="flex h-8 items-center justify-center rounded-md border border-gray-200 bg-gray-50 text-xs text-gray-600 hover:bg-gray-100"
+                        className="border-border bg-muted text-muted-foreground hover:bg-muted flex h-8 items-center justify-center rounded-md border text-xs"
                       >
                         {t('pages.chainBuilder.addBlocker')}
                       </button>
@@ -889,17 +889,17 @@ export function ChainBuilderPage() {
                   {/* Step config */}
                   {selectedStep ? (
                     <>
-                      <div className="border-t border-gray-100" />
+                      <div className="border-border border-t" />
 
                       <section className="flex flex-col gap-3">
                         <div>
-                          <p className="text-[10px] font-semibold tracking-wide text-gray-400 uppercase">
+                          <p className="text-muted-foreground text-[10px] font-semibold tracking-wide uppercase">
                             {t('pages.chainBuilder.stepConfig')}
                           </p>
-                          <h3 className="mt-0.5 text-sm font-semibold text-gray-800">
+                          <h3 className="text-foreground mt-0.5 text-sm font-semibold">
                             {selectedStep.step_order}. {selectedStep.target_action_name}
                           </h3>
-                          <div className="mt-1 flex gap-3 text-xs text-gray-500">
+                          <div className="text-muted-foreground mt-1 flex gap-3 text-xs">
                             <span>
                               {t('pages.chainBuilder.delay')}:{' '}
                               {t('pages.chainBuilder.delayMinutes', {
@@ -916,10 +916,10 @@ export function ChainBuilderPage() {
                         {/* Effects */}
                         <div className="flex flex-col gap-2">
                           <div className="flex items-center gap-1.5">
-                            <span className="text-xs font-semibold tracking-wide text-gray-700 uppercase">
+                            <span className="text-foreground text-xs font-semibold tracking-wide uppercase">
                               {t('pages.chainBuilder.effects')}
                             </span>
-                            <span className="rounded-full bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium text-gray-500">
+                            <span className="bg-muted text-muted-foreground rounded-full px-1.5 py-0.5 text-[10px] font-medium">
                               {stepEffects.length}
                             </span>
                           </div>
@@ -927,13 +927,13 @@ export function ChainBuilderPage() {
                             {stepEffects.map((ef) => (
                               <div
                                 key={ef.id}
-                                className="flex items-center justify-between rounded-md border border-green-200 bg-green-50 px-2.5 py-1.5"
+                                className="border-success-200 bg-success-50 flex items-center justify-between rounded-md border px-2.5 py-1.5"
                               >
                                 <div className="flex flex-col">
-                                  <span className="text-xs font-medium text-green-800">
+                                  <span className="text-success-800 text-xs font-medium">
                                     {typeLabel('effect', ef.effect_type)}
                                     {ef.condition_dropdown_value_ids.length > 0 && (
-                                      <span className="font-normal text-green-600">
+                                      <span className="text-success-600 font-normal">
                                         {' '}
                                         {t('pages.chainBuilder.ifPrefix')}{' '}
                                         {ef.condition_dropdown_value_ids
@@ -943,7 +943,7 @@ export function ChainBuilderPage() {
                                     )}
                                   </span>
                                   {Object.keys(ef.config).length > 0 && (
-                                    <span className="text-[10px] text-green-600">
+                                    <span className="text-success-600 text-[10px]">
                                       {formatConfig(ef.config)}
                                     </span>
                                   )}
@@ -957,7 +957,7 @@ export function ChainBuilderPage() {
                                       toast.error(getErrorMessage(e))
                                     }
                                   }}
-                                  className="ml-2 flex h-4 w-4 items-center justify-center rounded-full text-green-400 hover:bg-green-200 hover:text-green-700"
+                                  className="text-success-500 hover:bg-success-100 hover:text-success-700 ml-2 flex h-4 w-4 items-center justify-center rounded-full"
                                   title={t('pages.chainBuilder.removeItem')}
                                 >
                                   ×
@@ -1032,7 +1032,7 @@ export function ChainBuilderPage() {
                                 }
                                 if (dateSteps.length === 0) {
                                   return (
-                                    <p className="text-xs text-amber-600">
+                                    <p className="text-warning-600 text-xs">
                                       {t(
                                         'pages.chainBuilder.placeholders.noDateStepsForTag',
                                         'This chain has no date-type steps; add one before using a Target-Action-Date tag.'
@@ -1098,7 +1098,7 @@ export function ChainBuilderPage() {
                             {newEffectType === 'send_message' && (
                               <>
                                 <select
-                                  className="h-8 rounded-md border border-gray-200 px-2 text-xs text-gray-800"
+                                  className="border-border text-foreground h-8 rounded-md border px-2 text-xs"
                                   value={messageChannel}
                                   onChange={(e) => {
                                     const ch = e.target.value as MessagingChannel
@@ -1127,12 +1127,12 @@ export function ChainBuilderPage() {
                                   ))}
                                 </select>
                                 {usableMessagingServices.length === 0 ? (
-                                  <div className="rounded-md border border-amber-200 bg-amber-50 px-2 py-1.5 text-[11px] text-amber-700">
+                                  <div className="border-warning-200 bg-warning-100 text-warning-700 rounded-md border px-2 py-1.5 text-[11px]">
                                     {t('pages.chainBuilder.sendMessageNoIntegration')}
                                   </div>
                                 ) : (
                                   <select
-                                    className="h-8 rounded-md border border-gray-200 px-2 text-xs text-gray-800"
+                                    className="border-border text-foreground h-8 rounded-md border px-2 text-xs"
                                     value={newEffectConfig.service ?? ''}
                                     onChange={(e) =>
                                       setNewEffectConfig({
@@ -1181,12 +1181,12 @@ export function ChainBuilderPage() {
                                 </Select>
                                 {(messageChannel === 'sms' || messageChannel === 'viber') &&
                                   (phoneContactSteps.length === 0 ? (
-                                    <div className="rounded-md border border-amber-200 bg-amber-50 px-2 py-1.5 text-[11px] text-amber-700">
+                                    <div className="border-warning-200 bg-warning-100 text-warning-700 rounded-md border px-2 py-1.5 text-[11px]">
                                       {t('pages.chainBuilder.addToSpamNoContactSteps')}
                                     </div>
                                   ) : (
                                     <select
-                                      className="h-8 rounded-md border border-gray-200 px-2 text-xs text-gray-800"
+                                      className="border-border text-foreground h-8 rounded-md border px-2 text-xs"
                                       value={newEffectConfig.phone_ref ?? ''}
                                       onChange={(e) => {
                                         const next: Record<string, string> = {
@@ -1216,7 +1216,7 @@ export function ChainBuilderPage() {
                                   ))}
                                 {messageChannel === 'email' &&
                                   (emailContactSteps.length === 0 ? (
-                                    <p className="text-[11px] text-gray-500">
+                                    <p className="text-muted-foreground text-[11px]">
                                       {t(
                                         'pages.chainBuilder.sendMessageEmailRefOptional',
                                         'Optional: add an email contact step to pick the address from chain data. Otherwise the client primary email is used.'
@@ -1224,7 +1224,7 @@ export function ChainBuilderPage() {
                                     </p>
                                   ) : (
                                     <select
-                                      className="h-8 rounded-md border border-gray-200 px-2 text-xs text-gray-800"
+                                      className="border-border text-foreground h-8 rounded-md border px-2 text-xs"
                                       value={newEffectConfig.email_ref ?? ''}
                                       onChange={(e) => {
                                         const next: Record<string, string> = {
@@ -1272,7 +1272,7 @@ export function ChainBuilderPage() {
                                   className="text-xs"
                                 />
                                 <input
-                                  className="h-8 rounded-md border border-gray-200 px-2 text-xs text-gray-800"
+                                  className="border-border text-foreground h-8 rounded-md border px-2 text-xs"
                                   placeholder={t('pages.chainBuilder.placeholders.titleOptional')}
                                   value={newEffectConfig.title ?? ''}
                                   onChange={(e) =>
@@ -1283,7 +1283,7 @@ export function ChainBuilderPage() {
                                   }
                                 />
                                 <textarea
-                                  className="min-h-[48px] rounded-md border border-gray-200 px-2 py-1.5 text-xs text-gray-800"
+                                  className="border-border text-foreground min-h-[48px] rounded-md border px-2 py-1.5 text-xs"
                                   placeholder={t(
                                     'pages.chainBuilder.placeholders.descriptionOptional'
                                   )}
@@ -1296,7 +1296,7 @@ export function ChainBuilderPage() {
                                   }
                                 />
                                 <select
-                                  className="h-8 rounded-md border border-gray-200 px-2 text-xs text-gray-800"
+                                  className="border-border text-foreground h-8 rounded-md border px-2 text-xs"
                                   value={newEffectConfig.priority ?? 'normal'}
                                   onChange={(e) =>
                                     setNewEffectConfig({
@@ -1322,7 +1322,7 @@ export function ChainBuilderPage() {
                                   </option>
                                 </select>
                                 <select
-                                  className="h-8 rounded-md border border-gray-200 px-2 text-xs text-gray-800"
+                                  className="border-border text-foreground h-8 rounded-md border px-2 text-xs"
                                   value={newEffectConfig.assignee_mode ?? ''}
                                   onChange={(e) =>
                                     setNewEffectConfig({
@@ -1363,7 +1363,7 @@ export function ChainBuilderPage() {
                                   />
                                 )}
                                 <select
-                                  className="h-8 rounded-md border border-gray-200 px-2 text-xs text-gray-800"
+                                  className="border-border text-foreground h-8 rounded-md border px-2 text-xs"
                                   value={newEffectConfig.due_date_ref ?? ''}
                                   onChange={(e) =>
                                     setNewEffectConfig({
@@ -1398,12 +1398,12 @@ export function ChainBuilderPage() {
                             )}
                             {newEffectType === 'add_to_spam' &&
                               (phoneContactSteps.length === 0 ? (
-                                <div className="rounded-md border border-amber-200 bg-amber-50 px-2 py-1.5 text-[11px] text-amber-700">
+                                <div className="border-warning-200 bg-warning-100 text-warning-700 rounded-md border px-2 py-1.5 text-[11px]">
                                   {t('pages.chainBuilder.addToSpamNoContactSteps')}
                                 </div>
                               ) : (
                                 <select
-                                  className="h-8 rounded-md border border-gray-200 px-2 text-xs text-gray-800"
+                                  className="border-border text-foreground h-8 rounded-md border px-2 text-xs"
                                   value={newEffectConfig.phone_ref ?? ''}
                                   onChange={(e) =>
                                     setNewEffectConfig({
@@ -1434,7 +1434,7 @@ export function ChainBuilderPage() {
                                 <button
                                   type="button"
                                   onClick={() => setEffectCondDropdownOpen(!effectCondDropdownOpen)}
-                                  className="flex h-9 w-full items-center justify-between rounded-md border border-gray-300 bg-white px-3 text-xs text-gray-700 hover:bg-gray-50"
+                                  className="border-border bg-card text-foreground hover:bg-muted flex h-9 w-full items-center justify-between rounded-md border px-3 text-xs"
                                 >
                                   <span className="truncate">
                                     {newEffectConditions.size > 0
@@ -1446,13 +1446,13 @@ export function ChainBuilderPage() {
                                       : t('pages.chainBuilder.effectCondition')}
                                   </span>
                                   <span
-                                    className={`ml-2 text-gray-400 transition-transform ${effectCondDropdownOpen ? 'rotate-180' : ''}`}
+                                    className={`text-muted-foreground ml-2 transition-transform ${effectCondDropdownOpen ? 'rotate-180' : ''}`}
                                   >
                                     ▾
                                   </span>
                                 </button>
                                 {effectCondDropdownOpen && (
-                                  <div className="absolute z-10 mt-1 w-full rounded-md border border-gray-200 bg-white py-1 shadow-lg">
+                                  <div className="border-border bg-card absolute z-10 mt-1 w-full rounded-md border py-1 shadow-lg">
                                     <div className="max-h-48 overflow-y-auto">
                                       {stepDropdownValues.map((dv) => {
                                         const checked = newEffectConditions.has(dv.id)
@@ -1466,10 +1466,12 @@ export function ChainBuilderPage() {
                                               else next.add(dv.id)
                                               setNewEffectConditions(next)
                                             }}
-                                            className="flex w-full items-center justify-between px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-100"
+                                            className="text-foreground hover:bg-muted flex w-full items-center justify-between px-3 py-1.5 text-xs"
                                           >
                                             <span>{dv.value}</span>
-                                            {checked && <span className="text-gray-500">✓</span>}
+                                            {checked && (
+                                              <span className="text-muted-foreground">✓</span>
+                                            )}
                                           </button>
                                         )
                                       })}
@@ -1576,7 +1578,7 @@ export function ChainBuilderPage() {
                                       toast.error(getErrorMessage(e))
                                     }
                                   }}
-                                  className="flex h-8 items-center justify-center rounded-md border border-gray-200 bg-gray-50 text-xs text-gray-600 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
+                                  className="border-border bg-muted text-muted-foreground hover:bg-muted flex h-8 items-center justify-center rounded-md border text-xs disabled:cursor-not-allowed disabled:opacity-50"
                                 >
                                   {t('pages.chainBuilder.addEffect')}
                                 </button>
@@ -1588,10 +1590,10 @@ export function ChainBuilderPage() {
                         {/* Branches */}
                         <div className="flex flex-col gap-2">
                           <div className="flex items-center gap-1.5">
-                            <span className="text-xs font-semibold tracking-wide text-gray-700 uppercase">
+                            <span className="text-foreground text-xs font-semibold tracking-wide uppercase">
                               {t('pages.chainBuilder.branches')}
                             </span>
-                            <span className="rounded-full bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium text-gray-500">
+                            <span className="bg-muted text-muted-foreground rounded-full px-1.5 py-0.5 text-[10px] font-medium">
                               {stepBranches.length}
                             </span>
                           </div>
@@ -1599,9 +1601,9 @@ export function ChainBuilderPage() {
                             {stepBranches.map((br) => (
                               <div
                                 key={br.id}
-                                className="flex items-center justify-between rounded-md border border-purple-200 bg-purple-50 px-2.5 py-1.5"
+                                className="border-secondary-200 bg-secondary-100 flex items-center justify-between rounded-md border px-2.5 py-1.5"
                               >
-                                <span className="text-xs font-medium text-purple-800">
+                                <span className="text-secondary-800 text-xs font-medium">
                                   →{' '}
                                   {(() => {
                                     const toStep = steps.find((s) => s.id === br.to_step_id)
@@ -1611,7 +1613,7 @@ export function ChainBuilderPage() {
                                           id: br.to_step_id,
                                         })
                                   })()}{' '}
-                                  <span className="font-normal text-purple-600">
+                                  <span className="text-secondary-600 font-normal">
                                     {br.condition_dropdown_value_ids.length > 0
                                       ? `${t('pages.chainBuilder.ifPrefix')} ${br.condition_dropdown_value_ids
                                           .map((id) => `"${dvNameById.get(id) ?? `#${id}`}"`)
@@ -1634,7 +1636,7 @@ export function ChainBuilderPage() {
                                       toast.error(getErrorMessage(e))
                                     }
                                   }}
-                                  className="ml-2 flex h-4 w-4 items-center justify-center rounded-full text-purple-400 hover:bg-purple-200 hover:text-purple-700"
+                                  className="text-secondary-500 hover:bg-secondary-100 hover:text-secondary-700 ml-2 flex h-4 w-4 items-center justify-center rounded-full"
                                   title={t('pages.chainBuilder.removeItem')}
                                 >
                                   ×
@@ -1687,7 +1689,7 @@ export function ChainBuilderPage() {
                                     toast.error(getErrorMessage(e))
                                   }
                                 }}
-                                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-gray-200 bg-gray-50 text-gray-600 hover:bg-gray-100"
+                                className="border-border bg-muted text-muted-foreground hover:bg-muted flex h-8 w-8 shrink-0 items-center justify-center rounded-md border"
                               >
                                 +
                               </button>
@@ -1703,7 +1705,7 @@ export function ChainBuilderPage() {
                                     <button
                                       type="button"
                                       onClick={() => setOpen(!open)}
-                                      className="flex h-9 w-full items-center justify-between rounded-md border border-gray-300 bg-white px-3 text-xs text-gray-700 hover:bg-gray-50"
+                                      className="border-border bg-card text-foreground hover:bg-muted flex h-9 w-full items-center justify-between rounded-md border px-3 text-xs"
                                     >
                                       <span className="truncate">
                                         {newBranchConditions.size > 0
@@ -1713,13 +1715,13 @@ export function ChainBuilderPage() {
                                           : t('pages.chainBuilder.conditionLeaf')}
                                       </span>
                                       <span
-                                        className={`ml-2 text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`}
+                                        className={`text-muted-foreground ml-2 transition-transform ${open ? 'rotate-180' : ''}`}
                                       >
                                         ▾
                                       </span>
                                     </button>
                                     {open && (
-                                      <div className="absolute z-10 mt-1 w-full rounded-md border border-gray-200 bg-white py-1 shadow-lg">
+                                      <div className="border-border bg-card absolute z-10 mt-1 w-full rounded-md border py-1 shadow-lg">
                                         <div className="max-h-48 overflow-y-auto">
                                           {stepDropdownValues.map((dv) => {
                                             const checked = newBranchConditions.has(dv.id)
@@ -1733,11 +1735,11 @@ export function ChainBuilderPage() {
                                                   else next.add(dv.id)
                                                   setNewBranchConditions(next)
                                                 }}
-                                                className="flex w-full items-center justify-between px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-100"
+                                                className="text-foreground hover:bg-muted flex w-full items-center justify-between px-3 py-1.5 text-xs"
                                               >
                                                 <span>{dv.value}</span>
                                                 {checked && (
-                                                  <span className="text-gray-500">✓</span>
+                                                  <span className="text-muted-foreground">✓</span>
                                                 )}
                                               </button>
                                             )
@@ -1754,8 +1756,8 @@ export function ChainBuilderPage() {
                     </>
                   ) : (
                     <>
-                      <div className="border-t border-gray-100" />
-                      <p className="py-2 text-center text-xs text-gray-400">
+                      <div className="border-border border-t" />
+                      <p className="text-muted-foreground py-2 text-center text-xs">
                         {t('pages.chainBuilder.selectStepHint')}
                       </p>
                     </>

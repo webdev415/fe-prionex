@@ -57,7 +57,7 @@ export function AutoAssignmentCard() {
   ]
 
   return (
-    <div className="rounded-xl bg-white/50 p-5 sm:p-6">
+    <div className="bg-card/50 rounded-xl p-5 sm:p-6">
       <h2 className="text-dark-500 mb-2 text-[15px] font-medium">
         {t('pages.lawyerWorkplace.settings.lawyers.autoAssignmentTitle', 'Assignment algorithm')}
       </h2>
@@ -75,7 +75,7 @@ export function AutoAssignmentCard() {
         )}
       >
         {steps.map((step) => (
-          <div key={step.titleKey} className="flex flex-col gap-2 rounded-xl bg-white p-4">
+          <div key={step.titleKey} className="bg-card flex flex-col gap-2 rounded-xl p-4">
             <div className="flex flex-row items-start justify-between gap-2">
               {step.variant === 'fallback' ? (
                 <h3 className="text-warning-700 flex min-w-0 items-center gap-1 text-[13px] font-medium">

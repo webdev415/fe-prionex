@@ -26,7 +26,7 @@ export function LetterTypeList({
   return (
     <div
       className={cn(
-        'flex min-h-0 flex-col overflow-y-hidden rounded-[12px] border border-gray-100 bg-white',
+        'bg-card flex min-h-0 flex-col overflow-y-hidden rounded-[12px] border border-gray-100',
         isEmpty && 'min-h-[420px]'
       )}
     >
@@ -75,7 +75,7 @@ export function LetterTypeList({
                 onClick={() => onSelect(letterType.id)}
                 className={cn(
                   'flex w-full cursor-pointer items-center gap-3 border-l-3 border-white px-3 py-3 text-left transition-colors',
-                  isSelected ? 'bg-primary-50 border-primary-500 border-l-3' : 'hover:bg-white/70'
+                  isSelected ? 'bg-primary-50 border-primary-500 border-l-3' : 'hover:bg-card/70'
                 )}
               >
                 <div className="min-w-0 flex-1">
@@ -96,7 +96,7 @@ export function LetterTypeList({
                 <span
                   className={cn(
                     'text-secondary-900 flex items-center justify-center rounded-full px-2 text-[11px] font-normal',
-                    !isSelected ? 'bg-light-100' : 'bg-white'
+                    !isSelected ? 'bg-light-100' : 'bg-card'
                   )}
                 >
                   {letterType.letterCount}
