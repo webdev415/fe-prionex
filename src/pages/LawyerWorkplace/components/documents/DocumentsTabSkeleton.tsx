@@ -20,15 +20,15 @@ function DocumentsStatsSkeleton({ compact }: { compact: boolean }) {
         >
           <div
             className={cn(
-              'shrink-0 animate-pulse rounded-lg bg-gray-200',
+              'bg-muted-foreground/25 shrink-0 animate-pulse rounded-lg',
               compact ? 'h-9 w-9' : 'h-10 w-10'
             )}
           />
           <div className="min-w-0 flex-1 space-y-1.5">
-            <div className="h-2.5 w-[72%] max-w-[7.5rem] animate-pulse rounded bg-gray-200" />
+            <div className="bg-muted-foreground/25 h-2.5 w-[72%] max-w-[7.5rem] animate-pulse rounded" />
             <div
               className={cn(
-                'animate-pulse rounded bg-gray-200',
+                'bg-muted-foreground/25 animate-pulse rounded',
                 compact ? 'h-4 w-16' : 'h-5 w-[4.5rem]'
               )}
             />
@@ -51,24 +51,27 @@ function DocumentsToolbarSkeleton({ compact, wide }: { compact: boolean; wide: b
         >
           <div
             className={cn(
-              'animate-pulse rounded bg-gray-200',
+              'bg-muted-foreground/25 animate-pulse rounded',
               compact ? 'h-6 w-32' : 'h-7 w-36 lg:h-8 lg:w-40'
             )}
           />
           <div
-            className={cn('animate-pulse rounded bg-gray-200', compact ? 'h-3 w-28' : 'h-4 w-32')}
+            className={cn(
+              'bg-muted-foreground/25 animate-pulse rounded',
+              compact ? 'h-3 w-28' : 'h-4 w-32'
+            )}
           />
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <div
             className={cn(
-              'animate-pulse rounded-md bg-gray-200',
+              'bg-muted-foreground/25 animate-pulse rounded-md',
               compact ? 'h-10 w-10 rounded-full' : wide ? 'h-[45px] w-40' : 'h-10 w-36'
             )}
           />
           <div
             className={cn(
-              'animate-pulse rounded-md bg-gray-200',
+              'bg-muted-foreground/25 animate-pulse rounded-md',
               compact ? 'h-10 w-10 rounded-full' : wide ? 'h-[45px] w-32' : 'h-10 w-28'
             )}
           />
@@ -86,7 +89,10 @@ function DocumentsToolbarSkeleton({ compact, wide }: { compact: boolean; wide: b
             {FILTER_PILL_WIDTHS.map((widthClass, index) => (
               <div
                 key={index}
-                className={cn('h-8 animate-pulse rounded-full bg-gray-200 sm:h-9', widthClass)}
+                className={cn(
+                  'bg-muted-foreground/25 h-8 animate-pulse rounded-full sm:h-9',
+                  widthClass
+                )}
               />
             ))}
           </div>
@@ -98,7 +104,7 @@ function DocumentsToolbarSkeleton({ compact, wide }: { compact: boolean; wide: b
             !compact && wide && 'max-w-[340px]'
           )}
         >
-          <div className="h-9 w-full animate-pulse rounded-full bg-gray-200" />
+          <div className="bg-muted-foreground/25 h-9 w-full animate-pulse rounded-full" />
         </div>
       </div>
     </div>

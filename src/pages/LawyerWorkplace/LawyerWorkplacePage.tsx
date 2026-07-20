@@ -328,8 +328,8 @@ function LawyerWorkplacePageContent() {
       </div>
 
       {activeTab === 'inbox' && (
-        <div className="bg-card flex shrink-0 flex-col gap-1 border-t border-gray-100 px-3 py-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3 sm:px-5">
-          <div className="text-light-700 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] sm:text-[11px]">
+        <div className="bg-card border-border flex shrink-0 flex-col gap-1 border-t px-3 py-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3 sm:px-5">
+          <div className="text-muted-foreground flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] sm:text-[11px]">
             <span className="bg-success-700 h-2 w-2 shrink-0 rounded-full" aria-hidden="true" />
             <span>
               {t('pages.lawyerWorkplace.footer.syncHint', {
@@ -337,7 +337,7 @@ function LawyerWorkplacePageContent() {
                 defaultValue: `Email Service · ${syncIntervalLabel}`,
               })}
             </span>
-            <span className="hidden text-gray-300 sm:inline">|</span>
+            <span className="text-muted-foreground/60 hidden sm:inline">|</span>
             <span className="min-w-0 truncate">
               {t('pages.lawyerWorkplace.footer.mailboxesCount', {
                 count: connectedMailboxes,

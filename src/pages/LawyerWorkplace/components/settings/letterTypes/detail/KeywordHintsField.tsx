@@ -29,7 +29,7 @@ export function KeywordHintsField({
     <div
       className={cn(
         'flex min-h-[44px] flex-wrap items-center gap-2 rounded-xl border px-3 py-2',
-        readOnly ? 'cursor-not-allowed border-gray-100 bg-gray-50' : 'border-border bg-input'
+        readOnly ? 'border-border bg-muted cursor-not-allowed' : 'border-border bg-input'
       )}
     >
       {keywords.map((keyword) => (
@@ -42,7 +42,7 @@ export function KeywordHintsField({
             <button
               type="button"
               onClick={() => onChange(keywords.filter((item) => item !== keyword))}
-              className="text-secondary-700 hover:text-secondary-900"
+              className="text-secondary-700 hover:text-foreground"
               aria-label={t('actions.remove', 'Remove')}
             >
               <Icons.Cancel01 size={10} strokeWidth={1.5} />
@@ -66,10 +66,10 @@ export function KeywordHintsField({
             'pages.lawyerWorkplace.settings.letterTypes.keywordPlaceholder',
             'Type a keyword and press Enter..'
           )}
-          className="text-dark-500 placeholder:text-muted-foreground min-w-[120px] flex-1 bg-transparent text-[13px] outline-none sm:min-w-[180px]"
+          className="text-foreground placeholder:text-muted-foreground min-w-[120px] flex-1 bg-transparent text-[13px] outline-none sm:min-w-[180px]"
         />
       ) : keywords.length === 0 ? (
-        <span className="text-light-500 text-[12px]">
+        <span className="text-muted-foreground text-[12px]">
           {t('pages.lawyerWorkplace.settings.letterTypes.noKeywordHints', 'No keyword hints')}
         </span>
       ) : null}

@@ -50,14 +50,14 @@ export function AddLetterTypeModal({
       <ModalHeader
         icon={
           <div className="bg-primary-300 flex h-10 w-10 items-center justify-center rounded-full">
-            <Icons.UserMultiple02 size={20} strokeWidth={1.5} className="text-dark-500" />
+            <Icons.UserMultiple02 size={20} strokeWidth={1.5} className="text-foreground" />
           </div>
         }
         title={t('pages.lawyerWorkplace.settings.modals.addType.title', 'Add type')}
       />
       <ModalContent className="flex flex-col gap-5 px-1">
         <div className="flex flex-col gap-2">
-          <Label className="text-dark-500 text-[13px] font-medium">
+          <Label className="text-foreground text-[13px] font-medium">
             {t('pages.lawyerWorkplace.settings.modals.addType.letterTypes', 'Letter types')}
           </Label>
           <input
@@ -68,12 +68,12 @@ export function AddLetterTypeModal({
               'pages.lawyerWorkplace.settings.modals.addType.placeholder',
               'e.g. Payment dispute'
             )}
-            className="text-dark-500 focus:border-primary-400 border-border bg-input placeholder:text-muted-foreground h-11 w-full rounded-xl border px-4 text-[14px] outline-none"
+            className="text-foreground focus:border-primary-400 border-border bg-input placeholder:text-muted-foreground h-11 w-full rounded-xl border px-4 text-[14px] outline-none"
           />
         </div>
 
         <div className="flex flex-col gap-3">
-          <Label className="text-dark-500 text-[13px] font-medium">
+          <Label className="text-foreground text-[13px] font-medium">
             {t('pages.lawyerWorkplace.settings.modals.addType.color', 'Color')}
           </Label>
           <div className="flex flex-wrap gap-3">
@@ -102,7 +102,7 @@ export function AddLetterTypeModal({
         </div>
 
         <div className="flex flex-col items-start gap-2">
-          <Label className="text-dark-500 text-[13px] font-medium">
+          <Label className="text-foreground text-[13px] font-medium">
             {t('pages.lawyerWorkplace.settings.modals.addType.preview', 'Preview')}
           </Label>
           <LetterTypeBadge

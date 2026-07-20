@@ -29,10 +29,12 @@ export function LawyerTableMobileCard({
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
-              <p className="text-dark-500 text-[13px] font-semibold">
+              <p className="text-foreground text-[13px] font-semibold">
                 {t(lawyer.nameKey, lawyer.nameFallback)}
               </p>
-              <p className="text-light-600 text-[11px]">{t(lawyer.roleKey, lawyer.roleFallback)}</p>
+              <p className="text-muted-foreground text-[11px]">
+                {t(lawyer.roleKey, lawyer.roleFallback)}
+              </p>
             </div>
             <span
               className={cn(
@@ -49,7 +51,7 @@ export function LawyerTableMobileCard({
       </div>
 
       <div className="space-y-2">
-        <p className="text-light-600 text-[11px] font-medium">
+        <p className="text-muted-foreground text-[11px] font-medium">
           {t('pages.lawyerWorkplace.settings.lawyers.letterTypesColumn', 'Letter types')}
         </p>
         <div className="flex flex-wrap gap-1.5">
@@ -63,12 +65,12 @@ export function LawyerTableMobileCard({
 
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
-          <p className="text-light-600 text-[11px] font-medium">
+          <p className="text-muted-foreground text-[11px] font-medium">
             {t('pages.lawyerWorkplace.settings.lawyers.currentWorkload', 'Current workload')}
           </p>
           <p className="text-[13px] leading-none">
-            <span className="text-dark-500 font-semibold">{lawyer.currentActive}</span>
-            <span className="text-light-500 font-normal">
+            <span className="text-foreground font-semibold">{lawyer.currentActive}</span>
+            <span className="text-muted-foreground font-normal">
               {' '}
               {t('pages.lawyerWorkplace.settings.lawyers.ofActiveSuffix', {
                 max: lawyer.maxInFlight,
@@ -76,37 +78,37 @@ export function LawyerTableMobileCard({
               })}
             </span>
           </p>
-          <div className="h-1.5 overflow-hidden rounded-full bg-gray-100">
+          <div className="bg-muted h-1.5 overflow-hidden rounded-full">
             <div
               className="bg-secondary-500 h-full rounded-full transition-all"
               style={{ width: `${Math.min(progress, 100)}%` }}
             />
           </div>
-          <p className="text-light-600 text-[11px]">
+          <p className="text-muted-foreground text-[11px]">
             {getWorkloadLabel(lawyer.currentActive, lawyer.maxInFlight, t)}
           </p>
         </div>
 
         <div className="space-y-2">
-          <p className="text-light-600 text-[11px] font-medium">
+          <p className="text-muted-foreground text-[11px] font-medium">
             {t('pages.lawyerWorkplace.settings.lawyers.maxInFlight', 'Max in flight')}
           </p>
-          <div className="bg-light-100 inline-flex items-center rounded-full px-1">
+          <div className="bg-muted inline-flex items-center rounded-full px-1">
             <button
               type="button"
               onClick={() => onUpdateMaxInFlight(lawyer.id, -1)}
-              className="text-light-600 hover:text-dark-500 flex h-8 w-8 items-center justify-center"
+              className="text-muted-foreground hover:text-foreground flex h-8 w-8 items-center justify-center"
               aria-label={t('actions.decrease', 'Decrease')}
             >
               <Icons.Remove02 size={14} strokeWidth={1} />
             </button>
-            <span className="text-dark-500 min-w-[32px] px-1 text-center text-[13px] font-semibold">
+            <span className="text-foreground min-w-[32px] px-1 text-center text-[13px] font-semibold">
               {lawyer.maxInFlight}
             </span>
             <button
               type="button"
               onClick={() => onUpdateMaxInFlight(lawyer.id, 1)}
-              className="text-light-600 hover:text-dark-500 flex h-8 w-8 items-center justify-center"
+              className="text-muted-foreground hover:text-foreground flex h-8 w-8 items-center justify-center"
               aria-label={t('actions.increase', 'Increase')}
             >
               <Icons.Add size={14} strokeWidth={1} />

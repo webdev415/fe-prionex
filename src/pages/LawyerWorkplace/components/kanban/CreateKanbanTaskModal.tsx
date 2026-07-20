@@ -83,19 +83,23 @@ interface FormSelectProps {
 function FormSelect({ label, value, onSelect, items, leftIcon, disabled }: FormSelectProps) {
   return (
     <div className="flex w-full flex-col items-start gap-2">
-      <Label className="text-dark-500 text-[12px] font-normal">{label}</Label>
+      <Label className="text-foreground text-[12px] font-normal">{label}</Label>
       <DropdownMenu modal={false}>
         <DropdownMenuTrigger asChild disabled={disabled}>
           <button
             type="button"
             disabled={disabled}
-            className="text-dark-500 focus:border-primary-500 border-border bg-input flex h-9 w-full items-center justify-between rounded-[8px] border px-3 py-2 text-[14px] font-light outline-none disabled:cursor-not-allowed disabled:opacity-60"
+            className="text-foreground focus:border-primary-500 border-border bg-input flex h-9 w-full items-center justify-between rounded-[8px] border px-3 py-2 text-[14px] font-light outline-none disabled:cursor-not-allowed disabled:opacity-60"
           >
             <span className="flex min-w-0 flex-1 items-center gap-2 truncate text-left">
               {leftIcon}
               {value}
             </span>
-            <Icons.ArrowDown size={16} className="ml-2 shrink-0 text-gray-400" strokeWidth={1.5} />
+            <Icons.ArrowDown
+              size={16}
+              className="text-muted-foreground ml-2 shrink-0"
+              strokeWidth={1.5}
+            />
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent
@@ -107,7 +111,7 @@ function FormSelect({ label, value, onSelect, items, leftIcon, disabled }: FormS
               key={item.key}
               disabled={item.disabled}
               className={cn(
-                'rounded-md px-2 py-1.5 text-[13px] focus:bg-gray-50',
+                'focus:bg-muted rounded-md px-2 py-1.5 text-[13px]',
                 item.disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'
               )}
               onClick={() => {
@@ -226,7 +230,7 @@ export function CreateKanbanTaskModal({ open, onClose }: CreateKanbanTaskModalPr
       <ModalHeader
         icon={
           <div className="bg-primary-300 flex h-8 w-8 items-center justify-center rounded-full">
-            <Icons.CheckmarkSquare03 size={18} className="text-dark-500" strokeWidth={1.5} />
+            <Icons.CheckmarkSquare03 size={18} className="text-foreground" strokeWidth={1.5} />
           </div>
         }
         title={t('pages.lawyerWorkplace.kanban.createTask.title', 'Create a Task')}
@@ -256,7 +260,7 @@ export function CreateKanbanTaskModal({ open, onClose }: CreateKanbanTaskModalPr
                   <span className="flex min-w-0 flex-col">
                     <span>{lawyer.display_name}</span>
                     {!assignable ? (
-                      <span className="text-light-500 text-[11px]">
+                      <span className="text-muted-foreground text-[11px]">
                         {t('pages.lawyerWorkplace.lawyers.atCapacity', {
                           current: lawyer.current_active,
                           max: lawyer.max_in_flight,
@@ -287,14 +291,14 @@ export function CreateKanbanTaskModal({ open, onClose }: CreateKanbanTaskModalPr
 
           <div className="flex w-full flex-col items-start gap-2">
             <div className="flex w-full items-center justify-between gap-2">
-              <Label className="text-dark-500 text-[12px] font-normal">
+              <Label className="text-foreground text-[12px] font-normal">
                 {t('pages.lawyerWorkplace.kanban.createTask.client', 'Client')}
               </Label>
               {clientId ? (
                 <button
                   type="button"
                   onClick={() => setClientId('')}
-                  className="text-light-600 hover:text-dark-500 text-[11px] font-light"
+                  className="text-muted-foreground hover:text-foreground text-[11px] font-light"
                 >
                   {t('pages.lawyerWorkplace.kanban.createTask.clearClient', 'Clear')}
                 </button>
@@ -327,7 +331,7 @@ export function CreateKanbanTaskModal({ open, onClose }: CreateKanbanTaskModalPr
           </div>
 
           <div className="flex w-full flex-col gap-2">
-            <Label className="text-dark-500 text-[12px] font-normal">
+            <Label className="text-foreground text-[12px] font-normal">
               {t('pages.lawyerWorkplace.kanban.createTask.priority', 'Priority')}
             </Label>
             <RadioGroup value={priority} onValueChange={(v) => setPriority(v as TaskPriority)}>
@@ -337,7 +341,7 @@ export function CreateKanbanTaskModal({ open, onClose }: CreateKanbanTaskModalPr
                     <RadioItem value={p.value} id={`kanban-priority-${p.value}`} />
                     <Label
                       htmlFor={`kanban-priority-${p.value}`}
-                      className="text-dark-500 cursor-pointer text-[13px] font-light"
+                      className="text-foreground cursor-pointer text-[13px] font-light"
                     >
                       {t(p.labelKey, p.fallback)}
                     </Label>
@@ -348,7 +352,7 @@ export function CreateKanbanTaskModal({ open, onClose }: CreateKanbanTaskModalPr
           </div>
 
           <div className="flex w-full flex-col items-start gap-2">
-            <Label className="text-dark-500 text-[12px] font-normal">
+            <Label className="text-foreground text-[12px] font-normal">
               {t('pages.lawyerWorkplace.kanban.createTask.deadline', 'Deadline')}
             </Label>
             <DateSelect
@@ -367,7 +371,7 @@ export function CreateKanbanTaskModal({ open, onClose }: CreateKanbanTaskModalPr
               filterTime={filterFromNow}
               defaultTime={DUE_DATE_DEFAULT_TIME}
               defaultTimeSkipsToday
-              className="h-9 rounded-[8px] border-gray-200 text-[14px] font-light"
+              className="border-border h-9 rounded-[8px] text-[14px] font-light"
             />
           </div>
         </div>

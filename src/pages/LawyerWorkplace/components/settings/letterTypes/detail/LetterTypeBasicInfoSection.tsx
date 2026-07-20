@@ -5,7 +5,7 @@ import type { LetterTypeConfig } from '../../../../settings/types'
 import { LetterTypeDetailSectionHeader } from './LetterTypeDetailSectionHeader'
 
 const inputClassName =
-  'text-dark-500 focus:border-primary-400 h-11 w-full rounded-md border border-border bg-input px-3 text-[13px] outline-none disabled:cursor-not-allowed disabled:border-border disabled:bg-muted disabled:text-light-700'
+  'text-foreground focus:border-primary-400 h-11 w-full rounded-md border border-border bg-input px-3 text-[13px] outline-none disabled:cursor-not-allowed disabled:border-border disabled:bg-muted disabled:text-muted-foreground'
 
 interface LetterTypeBasicInfoSectionProps {
   draft: LetterTypeConfig
@@ -35,7 +35,7 @@ export function LetterTypeBasicInfoSection({
           )}
         >
           <div className="flex w-full flex-col gap-2">
-            <label className="text-dark-500 text-[12px] font-medium">
+            <label className="text-foreground text-[12px] font-medium">
               {t('pages.lawyerWorkplace.settings.letterTypes.displayName', 'Display name')}
             </label>
             <input
@@ -56,7 +56,7 @@ export function LetterTypeBasicInfoSection({
           </div>
 
           <div className="flex w-full flex-col gap-2">
-            <label className="text-dark-500 text-[12px] font-medium">
+            <label className="text-foreground text-[12px] font-medium">
               {t('pages.lawyerWorkplace.settings.letterTypes.responseSla', 'Response SLA')}
             </label>
             <div className="relative">
@@ -72,7 +72,7 @@ export function LetterTypeBasicInfoSection({
                 }}
                 className={cn(inputClassName, 'pr-24')}
               />
-              <span className="text-light-400 pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-[12px] font-light">
+              <span className="text-muted-foreground pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-[12px] font-light">
                 {t('pages.lawyerWorkplace.settings.letterTypes.businessDays', 'business days')}
               </span>
             </div>
@@ -80,7 +80,7 @@ export function LetterTypeBasicInfoSection({
         </div>
 
         <div className="flex flex-col gap-2">
-          <label className="text-dark-500 text-[12px] font-medium">
+          <label className="text-foreground text-[12px] font-medium">
             {t('pages.lawyerWorkplace.settings.letterTypes.description', 'Description')}
           </label>
           <input

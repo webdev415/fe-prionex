@@ -12,12 +12,12 @@ export function KanbanColumnHeader({ column }: KanbanColumnHeaderProps) {
   const count = column.tasks.length
 
   return (
-    <div className="border-light-100 bg-card flex items-center gap-2 rounded-t-lg border-b px-4 py-3 shadow-sm">
+    <div className="border-border bg-card flex items-center gap-2 rounded-t-lg border-x border-t border-b px-4 py-3 shadow-sm">
       <span className={cn('h-2 w-2 shrink-0 rounded-full', column.dotClass)} />
-      <span className="min-w-0 truncate text-[11px] font-semibold tracking-widest text-gray-500 uppercase">
+      <span className="text-muted-foreground min-w-0 truncate text-[11px] font-semibold tracking-widest uppercase">
         {label}
       </span>
-      <span className="ml-auto rounded-full bg-gray-100 px-2 py-0.5 text-[10.5px] font-medium text-gray-600">
+      <span className="bg-muted text-muted-foreground ml-auto rounded-full px-2 py-0.5 text-[10.5px] font-medium">
         {column.todayCount != null
           ? `${count} · ${t('pages.lawyerWorkplace.kanban.today', 'today')}`
           : count}

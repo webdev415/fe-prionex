@@ -23,7 +23,7 @@ export function LegalLetterVariablesPalette({
       )}
     >
       <div className="flex items-center justify-between">
-        <div className="text-dark-500 font-medium">
+        <div className="text-foreground font-medium">
           {t('pages.lawyerWorkplace.settings.templates.availableVariables', 'Available variables')}
         </div>
         <div className="flex items-center gap-2">
@@ -33,7 +33,7 @@ export function LegalLetterVariablesPalette({
           </span>
         </div>
       </div>
-      <p className="text-light-600 mt-2 text-[11px]">
+      <p className="text-muted-foreground mt-2 text-[11px]">
         {t(
           'pages.lawyerWorkplace.settings.templates.variablesHint',
           'Click a variable to insert it at the cursor in the template body.'
@@ -46,9 +46,9 @@ export function LegalLetterVariablesPalette({
             type="button"
             disabled={disabled}
             onClick={() => onInsert(variable.name)}
-            className="text-dark-500 hover:bg-primary-50 flex items-start gap-4 rounded-lg px-2 py-1.5 text-left text-xs transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+            className="text-foreground hover:bg-primary/10 flex items-start gap-4 rounded-lg px-2 py-1.5 text-left text-xs transition-colors disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <code className="w-44 shrink-0 rounded bg-gray-100 px-2 py-1 font-mono">
+            <code className="bg-muted w-44 shrink-0 rounded px-2 py-1 font-mono">
               {`{{${variable.name}}}`}
             </code>
             <span className="flex-1 self-center font-medium">

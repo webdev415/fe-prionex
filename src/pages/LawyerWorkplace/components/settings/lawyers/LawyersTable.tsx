@@ -80,21 +80,21 @@ export function LawyersTable({
   }
 
   return (
-    <div className="bg-card min-w-0 overflow-hidden rounded-xl border border-gray-100">
+    <div className="bg-card border-border min-w-0 overflow-hidden rounded-xl border">
       <div
         className={cn(
-          'flex gap-3 border-b border-gray-100 px-4 py-4 sm:px-5 lg:px-6',
+          'border-border flex gap-3 border-b px-4 py-4 sm:px-5 lg:px-6',
           isCompact ? 'flex-col' : 'flex-row items-center justify-between'
         )}
       >
         <div className="min-w-0">
-          <h2 className="text-dark-500 text-[13px] font-semibold">
+          <h2 className="text-foreground text-[13px] font-semibold">
             {t('pages.lawyerWorkplace.settings.lawyers.departmentTitle', {
               count: lawyers.length,
               defaultValue: `Legal department · ${lawyers.length} lawyers`,
             })}
           </h2>
-          <p className="text-light-600 mt-0.5 text-[11.5px]">
+          <p className="text-muted-foreground mt-0.5 text-[11.5px]">
             {t(
               'pages.lawyerWorkplace.settings.lawyers.departmentDesc',
               'Adjust max workload and specializations per person'
@@ -136,13 +136,13 @@ export function LawyersTable({
 
       {isEmpty ? (
         <div className="flex flex-col items-center justify-center px-6 py-14 text-center">
-          <div className="bg-light-100 mb-4 flex h-12 w-12 items-center justify-center rounded-full">
-            <Icons.UserMultiple02 size={22} strokeWidth={1.5} className="text-light-500" />
+          <div className="bg-muted mb-4 flex h-12 w-12 items-center justify-center rounded-full">
+            <Icons.UserMultiple02 size={22} strokeWidth={1.5} className="text-muted-foreground" />
           </div>
-          <p className="text-dark-500 text-[14px] font-medium">
+          <p className="text-foreground text-[14px] font-medium">
             {t('pages.lawyerWorkplace.settings.lawyers.empty.title', 'No lawyers yet')}
           </p>
-          <p className="text-light-600 mt-1 max-w-sm text-[12px] leading-relaxed">
+          <p className="text-muted-foreground mt-1 max-w-sm text-[12px] leading-relaxed">
             {t(
               'pages.lawyerWorkplace.settings.lawyers.empty.description',
               'Add lawyers to configure workload limits and letter type specializations.'
@@ -154,28 +154,28 @@ export function LawyersTable({
           <div className="data-table-scroll w-full overflow-x-auto overflow-y-hidden pb-2">
             <table className="w-full min-w-[760px] text-left text-[13px]">
               <thead>
-                <tr className="border-b border-gray-100">
+                <tr className="border-border border-b">
                   <th
                     className={cn(
-                      'text-light-600 py-3 text-[11px] font-medium',
+                      'text-muted-foreground py-3 text-[11px] font-medium',
                       isCompact ? 'px-4' : 'px-5'
                     )}
                   >
                     {t('pages.lawyerWorkplace.settings.lawyer', 'Lawyer')}
                   </th>
-                  <th className="text-light-600 px-4 py-3 text-[11px] font-medium">
+                  <th className="text-muted-foreground px-4 py-3 text-[11px] font-medium">
                     {t('pages.lawyerWorkplace.settings.lawyers.letterTypesColumn', 'Letter types')}
                   </th>
-                  <th className="text-light-600 px-4 py-3 text-[11px] font-medium">
+                  <th className="text-muted-foreground px-4 py-3 text-[11px] font-medium">
                     {t(
                       'pages.lawyerWorkplace.settings.lawyers.currentWorkload',
                       'Current workload'
                     )}
                   </th>
-                  <th className="text-light-600 px-4 py-3 text-[11px] font-medium">
+                  <th className="text-muted-foreground px-4 py-3 text-[11px] font-medium">
                     {t('pages.lawyerWorkplace.settings.lawyers.maxInFlight', 'Max in flight')}
                   </th>
-                  <th className="text-light-600 px-4 py-3 text-[11px] font-medium">
+                  <th className="text-muted-foreground px-4 py-3 text-[11px] font-medium">
                     {t('pages.lawyerWorkplace.settings.status', 'Status')}
                   </th>
                 </tr>
@@ -188,9 +188,7 @@ export function LawyersTable({
                   return (
                     <tr
                       key={lawyer.id}
-                      className={cn(
-                        idx < paginatedLawyers.length - 1 && 'border-b border-gray-100'
-                      )}
+                      className={cn(idx < paginatedLawyers.length - 1 && 'border-border border-b')}
                     >
                       <td className={cn('py-4', isCompact ? 'px-4' : 'px-5')}>
                         <div className="flex items-center gap-3">
@@ -198,10 +196,10 @@ export function LawyersTable({
                             {lawyer.initials}
                           </div>
                           <div className="min-w-0">
-                            <p className="text-dark-500 truncate text-[13px] font-semibold">
+                            <p className="text-foreground truncate text-[13px] font-semibold">
                               {t(lawyer.nameKey, lawyer.nameFallback)}
                             </p>
-                            <p className="text-light-600 truncate text-[11px]">
+                            <p className="text-muted-foreground truncate text-[11px]">
                               {t(lawyer.roleKey, lawyer.roleFallback)}
                             </p>
                           </div>
@@ -219,10 +217,10 @@ export function LawyersTable({
                       <td className="px-4 py-4">
                         <div className="min-w-[132px]">
                           <p className="flex flex-row items-center justify-between text-[13px] leading-none">
-                            <span className="text-dark-500 font-semibold">
+                            <span className="text-foreground font-semibold">
                               {lawyer.currentActive}
                             </span>
-                            <span className="text-light-500 font-normal">
+                            <span className="text-muted-foreground font-normal">
                               {' '}
                               {t('pages.lawyerWorkplace.settings.lawyers.ofActiveSuffix', {
                                 max: lawyer.maxInFlight,
@@ -230,41 +228,41 @@ export function LawyersTable({
                               })}
                             </span>
                           </p>
-                          <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-gray-100">
+                          <div className="bg-muted mt-2 h-1.5 overflow-hidden rounded-full">
                             <div
                               className="bg-secondary-500 h-full rounded-full transition-all"
                               style={{ width: `${Math.min(progress, 100)}%` }}
                             />
                           </div>
-                          <p className="text-light-600 mt-1.5 text-[11px]">
+                          <p className="text-muted-foreground mt-1.5 text-[11px]">
                             {getWorkloadLabel(lawyer.currentActive, lawyer.maxInFlight, t)}
                           </p>
                         </div>
                       </td>
                       <td className="px-4 py-4">
                         {readOnly ? (
-                          <span className="text-dark-500 text-[13px] font-semibold">
+                          <span className="text-foreground text-[13px] font-semibold">
                             {lawyer.maxInFlight}
                           </span>
                         ) : (
-                          <div className="bg-light-100 inline-flex items-center rounded-full px-1">
+                          <div className="bg-muted inline-flex items-center rounded-full px-1">
                             <button
                               type="button"
                               onClick={() => updateMaxInFlight(lawyer.id, -1)}
                               disabled={isSaving}
-                              className="text-light-600 hover:text-dark-500 flex h-8 w-8 items-center justify-center disabled:opacity-50"
+                              className="text-muted-foreground hover:text-foreground flex h-8 w-8 items-center justify-center disabled:opacity-50"
                               aria-label={t('actions.decrease', 'Decrease')}
                             >
                               <Icons.Remove02 size={14} strokeWidth={1} />
                             </button>
-                            <span className="text-dark-500 min-w-[32px] px-1 text-center text-[13px] font-semibold">
+                            <span className="text-foreground min-w-[32px] px-1 text-center text-[13px] font-semibold">
                               {lawyer.maxInFlight}
                             </span>
                             <button
                               type="button"
                               onClick={() => updateMaxInFlight(lawyer.id, 1)}
                               disabled={isSaving}
-                              className="text-light-600 hover:text-dark-500 flex h-8 w-8 items-center justify-center disabled:opacity-50"
+                              className="text-muted-foreground hover:text-foreground flex h-8 w-8 items-center justify-center disabled:opacity-50"
                               aria-label={t('actions.increase', 'Increase')}
                             >
                               <Icons.Add size={14} strokeWidth={1} />
@@ -302,7 +300,7 @@ export function LawyersTable({
               pageSizeOptions={PAGE_SIZE_OPTIONS}
               onPageChange={setPage}
               onPageSizeChange={setPageSize}
-              className={cn('border-t border-gray-100 px-4 sm:px-5 lg:px-6', isCompact && 'py-3')}
+              className={cn('border-border border-t px-4 sm:px-5 lg:px-6', isCompact && 'py-3')}
             />
           )}
         </>

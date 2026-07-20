@@ -185,7 +185,7 @@ export function KanbanBoardScrollNavigator({
                 key={column.id}
                 type="button"
                 aria-label={t(column.labelKey, column.id.replace('_', ' '))}
-                className={cn('bg-light-50 min-w-0 flex-1 rounded-[2px]')}
+                className={cn('bg-muted min-w-0 flex-1 rounded-[2px]')}
                 onClick={(event) => {
                   event.stopPropagation()
                   scrollToColumn(index)

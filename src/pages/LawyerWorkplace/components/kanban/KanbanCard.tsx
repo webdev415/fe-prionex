@@ -171,7 +171,7 @@ export function KanbanCard({
           {!isCompleted && (
             <span
               aria-hidden="true"
-              className="text-light-400 flex h-8 w-8 items-center justify-center sm:h-5 sm:w-4"
+              className="text-muted-foreground flex h-8 w-8 items-center justify-center sm:h-5 sm:w-4"
             >
               <svg width="8" height="12" viewBox="0 0 8 12" fill="currentColor" aria-hidden="true">
                 <circle cx="2" cy="2" r="1.2" />
@@ -189,7 +189,9 @@ export function KanbanCard({
           >
             <KanbanPriorityIcon priority={task.priority} />
           </span>
-          <span className="text-light-400 text-[10px] font-medium tracking-wide">{task.id}</span>
+          <span className="text-muted-foreground text-[10px] font-medium tracking-wide">
+            {task.id}
+          </span>
         </div>
       </div>
 
@@ -205,7 +207,7 @@ export function KanbanCard({
       )}
 
       {/* Title */}
-      <p className="text-dark-500 mb-1.5 text-[13px] leading-snug font-semibold">{task.title}</p>
+      <p className="text-foreground mb-1.5 text-[13px] leading-snug font-semibold">{task.title}</p>
 
       {/* Client */}
       <div className="mb-3 flex min-w-0 items-center gap-1.5">
@@ -213,24 +215,26 @@ export function KanbanCard({
           <>
             <KanbanClientChip code={clientCode} />
             {clientName ? (
-              <span className="text-light-700 min-w-0 truncate text-[11px]">{clientName}</span>
+              <span className="text-muted-foreground min-w-0 truncate text-[11px]">
+                {clientName}
+              </span>
             ) : null}
           </>
         ) : (
-          <span className="text-light-400 text-[11px] italic">
+          <span className="text-muted-foreground text-[11px] italic">
             {t('pages.lawyerWorkplace.letterItem.unidentified', 'unidentified')}
           </span>
         )}
       </div>
 
-      <div className="mb-2 h-px w-full bg-gray-100" />
+      <div className="bg-muted mb-2 h-px w-full" />
 
       {/* Footer: deadline + assignee */}
       <div className="flex items-center justify-between gap-2">
         {isCompleted ? (
           /* Completed: closed date is static, no editing */
           task.closedAt ? (
-            <span className="text-light-500 text-[11px]">
+            <span className="text-muted-foreground text-[11px]">
               {t('pages.lawyerWorkplace.kanban.closedLabel', 'closed')}{' '}
               {formatLegalDueMonthDay(task.closedAt, timezone)}
             </span>
@@ -246,14 +250,14 @@ export function KanbanCard({
                   {formatLegalDueDateTime(task.deadline, timezone)}
                 </span>
               ) : (
-                <span className="text-light-600 flex items-center gap-1 text-[11px]">
+                <span className="text-muted-foreground flex items-center gap-1 text-[11px]">
                   <Icons.Calendar size={11} strokeWidth={1.5} className="shrink-0" />
                   {t('pages.lawyerWorkplace.kanban.byLabel', 'by')}{' '}
                   {formatLegalDueDateTime(task.deadline, timezone)}
                 </span>
               )
             ) : (
-              <span className="text-light-400 flex items-center gap-1 text-[11px] italic">
+              <span className="text-muted-foreground flex items-center gap-1 text-[11px] italic">
                 <Icons.Calendar size={11} strokeWidth={1.5} className="shrink-0" />
                 {t('pages.lawyerWorkplace.kanban.noDeadline', 'no deadline set')}
               </span>
@@ -269,7 +273,7 @@ export function KanbanCard({
                 <button
                   type="button"
                   onClick={(e) => e.stopPropagation()}
-                  className="text-light-400 hover:text-dark-500 focus-visible:ring-primary-500 flex h-8 w-8 items-center justify-center rounded hover:bg-gray-100 focus:outline-none focus-visible:ring-2 sm:h-5 sm:w-5"
+                  className="text-muted-foreground hover:text-foreground focus-visible:ring-primary-500 hover:bg-muted flex h-8 w-8 items-center justify-center rounded focus:outline-none focus-visible:ring-2 sm:h-5 sm:w-5"
                   title={t('pages.lawyerWorkplace.kanban.moreOptions', 'More options')}
                 >
                   {/* Three-dot icon (not in icon set, rendered inline) */}
@@ -295,7 +299,11 @@ export function KanbanCard({
                 <DropdownMenuSub>
                   <DropdownMenuSubTrigger className="cursor-pointer rounded-md px-2 py-1.5 text-[12px]">
                     <span className="flex items-center gap-2">
-                      <Icons.ArrowRight size={13} strokeWidth={1.8} className="text-light-500" />
+                      <Icons.ArrowRight
+                        size={13}
+                        strokeWidth={1.8}
+                        className="text-muted-foreground"
+                      />
                       {t('pages.lawyerWorkplace.kanban.moveTo', 'Move to')}
                     </span>
                   </DropdownMenuSubTrigger>
@@ -303,7 +311,7 @@ export function KanbanCard({
                     {COLUMN_MOVE_OPTIONS.filter((col) => col.id !== task.columnId).map((col) => (
                       <DropdownMenuItem
                         key={col.id}
-                        className="cursor-pointer rounded-md px-2 py-1.5 text-[12px] focus:bg-gray-50"
+                        className="focus:bg-muted cursor-pointer rounded-md px-2 py-1.5 text-[12px]"
                         onClick={(event) => {
                           event.stopPropagation()
                           onMoveTask?.(task.id, col.id)
@@ -319,7 +327,7 @@ export function KanbanCard({
                 <DropdownMenuSub>
                   <DropdownMenuSubTrigger className="cursor-pointer rounded-md px-2 py-1.5 text-[12px]">
                     <span className="flex items-center gap-2">
-                      <Icons.Tag01 size={13} strokeWidth={1.8} className="text-light-500" />
+                      <Icons.Tag01 size={13} strokeWidth={1.8} className="text-muted-foreground" />
                       {t('pages.lawyerWorkplace.kanban.changeType', 'Change type')}
                     </span>
                   </DropdownMenuSubTrigger>
@@ -327,7 +335,7 @@ export function KanbanCard({
                     {editableLetterTypes.map((letterType) => (
                       <DropdownMenuItem
                         key={letterType.id}
-                        className="cursor-pointer rounded-md px-2 py-1.5 focus:bg-gray-50"
+                        className="focus:bg-muted cursor-pointer rounded-md px-2 py-1.5"
                         onClick={(e) => {
                           e.stopPropagation()
                           onTaskUpdate?.(task.id, { letterTypeId: letterType.id })
@@ -346,7 +354,7 @@ export function KanbanCard({
                       <Icons.UserCircle02Icon
                         size={13}
                         strokeWidth={1.8}
-                        className="text-light-500"
+                        className="text-muted-foreground"
                       />
                       {t('pages.lawyerWorkplace.kanban.changeAssignee', 'Change assignee')}
                     </span>
@@ -359,9 +367,9 @@ export function KanbanCard({
                           key={`${opt.initials}-${opt.userId ?? opt.name}`}
                           disabled={!opt.assignable}
                           className={cn(
-                            'rounded-md px-2 py-1.5 text-[12px] focus:bg-gray-50',
+                            'focus:bg-muted rounded-md px-2 py-1.5 text-[12px]',
                             opt.assignable ? 'cursor-pointer' : 'cursor-not-allowed opacity-50',
-                            opt.initials === assigneeInitials && 'bg-gray-50'
+                            opt.initials === assigneeInitials && 'bg-muted'
                           )}
                           onClick={(e) => {
                             e.stopPropagation()
@@ -378,10 +386,10 @@ export function KanbanCard({
                             >
                               {opt.initials}
                             </span>
-                            <span className="text-dark-500 flex min-w-0 flex-col">
+                            <span className="text-foreground flex min-w-0 flex-col">
                               <span>{opt.label}</span>
                               {!opt.assignable && lawyer ? (
-                                <span className="text-light-500 text-[10px]">
+                                <span className="text-muted-foreground text-[10px]">
                                   {t('pages.lawyerWorkplace.lawyers.atCapacity', {
                                     current: lawyer.current_active,
                                     max: lawyer.max_in_flight,
@@ -408,7 +416,7 @@ export function KanbanCard({
                 <DropdownMenuSub>
                   <DropdownMenuSubTrigger className="cursor-pointer rounded-md px-2 py-1.5 text-[12px]">
                     <span className="flex items-center gap-2">
-                      <Icons.Flash size={13} strokeWidth={1.8} className="text-light-500" />
+                      <Icons.Flash size={13} strokeWidth={1.8} className="text-muted-foreground" />
                       {t('pages.lawyerWorkplace.kanban.changePriority', 'Change priority')}
                     </span>
                   </DropdownMenuSubTrigger>
@@ -419,8 +427,8 @@ export function KanbanCard({
                       <DropdownMenuItem
                         key={item.id}
                         className={cn(
-                          'cursor-pointer rounded-md px-2 py-1.5 focus:bg-gray-50',
-                          item.id === task.priority && 'bg-gray-50'
+                          'focus:bg-muted cursor-pointer rounded-md px-2 py-1.5',
+                          item.id === task.priority && 'bg-muted'
                         )}
                         onClick={(e) => {
                           e.stopPropagation()
@@ -437,7 +445,11 @@ export function KanbanCard({
                 <DropdownMenuSub>
                   <DropdownMenuSubTrigger className="cursor-pointer rounded-md px-2 py-1.5 text-[12px]">
                     <span className="flex items-center gap-2">
-                      <Icons.Calendar size={13} strokeWidth={1.8} className="text-light-500" />
+                      <Icons.Calendar
+                        size={13}
+                        strokeWidth={1.8}
+                        className="text-muted-foreground"
+                      />
                       {t('pages.lawyerWorkplace.kanban.setDeadline', 'Set deadline')}
                     </span>
                   </DropdownMenuSubTrigger>
@@ -469,14 +481,18 @@ export function KanbanCard({
 
                 {/* Copy task key */}
                 <DropdownMenuItem
-                  className="cursor-pointer rounded-md px-2 py-1.5 text-[12px] focus:bg-gray-50"
+                  className="focus:bg-muted cursor-pointer rounded-md px-2 py-1.5 text-[12px]"
                   onClick={(e) => {
                     e.stopPropagation()
                     navigator.clipboard.writeText(task.id).catch(() => {})
                   }}
                 >
                   <span className="flex items-center gap-2">
-                    <Icons.Files02Icon size={13} strokeWidth={1.8} className="text-light-500" />
+                    <Icons.Files02Icon
+                      size={13}
+                      strokeWidth={1.8}
+                      className="text-muted-foreground"
+                    />
                     {t('pages.lawyerWorkplace.kanban.copyKey', 'Copy task key')}
                   </span>
                 </DropdownMenuItem>

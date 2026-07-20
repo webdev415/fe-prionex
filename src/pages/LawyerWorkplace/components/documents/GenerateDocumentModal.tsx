@@ -133,14 +133,14 @@ export function GenerateDocumentModal({
       />
       <ModalContent className="flex flex-col gap-4">
         <div className="flex flex-col gap-2">
-          <Label className="text-dark-500 text-[12px] font-normal">
+          <Label className="text-foreground text-[12px] font-normal">
             {t('pages.lawyerWorkplace.documents.modals.generate.documentType', 'Document type')}
           </Label>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button
                 type="button"
-                className="text-dark-500 border-border bg-input flex h-10 w-full items-center justify-between rounded-[8px] border px-3 text-[13px] font-light"
+                className="text-foreground border-border bg-input flex h-10 w-full items-center justify-between rounded-[8px] border px-3 text-[13px] font-light"
               >
                 <span className="flex items-center gap-2">
                   <span className="bg-secondary-100 text-secondary-800 rounded px-1.5 py-0.5 text-[10px] font-medium">
@@ -148,7 +148,7 @@ export function GenerateDocumentModal({
                   </span>
                   {t(selectedTypeOption.labelKey, selectedTypeOption.fallback)}
                 </span>
-                <Icons.ArrowDown size={16} strokeWidth={1.5} className="text-light-500" />
+                <Icons.ArrowDown size={16} strokeWidth={1.5} className="text-muted-foreground" />
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent
@@ -174,7 +174,7 @@ export function GenerateDocumentModal({
         </div>
 
         <div className="flex flex-col gap-2">
-          <Label className="text-dark-500 text-[12px] font-normal">
+          <Label className="text-foreground text-[12px] font-normal">
             {t('pages.lawyerWorkplace.documents.modals.generate.documentName', 'Document name')}
           </Label>
           <input
@@ -185,7 +185,7 @@ export function GenerateDocumentModal({
               'pages.lawyerWorkplace.documents.modals.generate.documentNamePlaceholder',
               'Enter document name'
             )}
-            className="text-dark-500 focus:border-primary-400 border-border bg-input h-10 w-full rounded-[8px] border px-3 text-[13px] font-light outline-none"
+            className="text-foreground focus:border-primary-400 border-border bg-input h-10 w-full rounded-[8px] border px-3 text-[13px] font-light outline-none"
           />
         </div>
 
@@ -202,17 +202,17 @@ export function GenerateDocumentModal({
         />
 
         <div className="flex flex-col gap-2">
-          <Label className="text-dark-500 text-[12px] font-normal">
+          <Label className="text-foreground text-[12px] font-normal">
             {t('pages.lawyerWorkplace.documents.modals.generate.assignee', 'Assignee')}
           </Label>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button
                 type="button"
-                className="text-dark-500 border-border bg-input flex h-10 w-full items-center justify-between rounded-[8px] border px-3 text-[13px] font-light"
+                className="text-foreground border-border bg-input flex h-10 w-full items-center justify-between rounded-[8px] border px-3 text-[13px] font-light"
               >
                 <span>{selectedLawyer?.display_name ?? '—'}</span>
-                <Icons.ArrowDown size={16} strokeWidth={1.5} className="text-light-500" />
+                <Icons.ArrowDown size={16} strokeWidth={1.5} className="text-muted-foreground" />
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent

@@ -58,10 +58,10 @@ export function AutoAssignmentCard() {
 
   return (
     <div className="bg-card/50 rounded-xl p-5 sm:p-6">
-      <h2 className="text-dark-500 mb-2 text-[15px] font-medium">
+      <h2 className="text-foreground mb-2 text-[15px] font-medium">
         {t('pages.lawyerWorkplace.settings.lawyers.autoAssignmentTitle', 'Assignment algorithm')}
       </h2>
-      <p className="text-light-600 mb-5 text-[12px] leading-relaxed">
+      <p className="text-muted-foreground mb-5 text-[12px] leading-relaxed">
         <Trans
           i18nKey="pages.lawyerWorkplace.settings.lawyers.autoAssignmentDesc"
           components={{ strong: <span className="font-semibold" /> }}
@@ -84,7 +84,7 @@ export function AutoAssignmentCard() {
                   <span>{t(step.titleAfterKey!, step.titleAfterFallback!)}</span>
                 </h3>
               ) : (
-                <h3 className="text-dark-500 text-[13px] font-medium">
+                <h3 className="text-foreground text-[13px] font-medium">
                   {t(step.titleKey, step.titleFallback)}
                 </h3>
               )}
@@ -98,7 +98,7 @@ export function AutoAssignmentCard() {
               </span>
             </div>
 
-            <p className="text-light-600 text-[11px] leading-relaxed">
+            <p className="text-muted-foreground text-[11px] leading-relaxed">
               {t(step.descriptionKey, step.descriptionFallback)}
             </p>
           </div>

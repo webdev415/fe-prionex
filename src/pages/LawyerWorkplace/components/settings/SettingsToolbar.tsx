@@ -31,7 +31,7 @@ export function SettingsToolbar({ activeSubTab, onSubTabChange }: SettingsToolba
         >
           <h1
             className={cn(
-              'text-dark-500 truncate font-light',
+              'text-foreground truncate font-light',
               isCompact ? 'text-lg' : 'text-xl lg:text-2xl'
             )}
           >
@@ -39,7 +39,7 @@ export function SettingsToolbar({ activeSubTab, onSubTabChange }: SettingsToolba
           </h1>
           <span
             className={cn(
-              'font-light whitespace-nowrap text-gray-500',
+              'text-muted-foreground font-light whitespace-nowrap',
               isCompact ? 'text-xs' : 'text-sm'
             )}
           >
@@ -62,7 +62,7 @@ export function SettingsToolbar({ activeSubTab, onSubTabChange }: SettingsToolba
                 onClick={() => onSubTabChange(tab.id)}
                 className={cn(
                   'cursor-pointer rounded-md px-3 py-1.5 text-[11px] font-medium whitespace-nowrap transition-colors sm:px-4 sm:py-2 sm:text-[12px]',
-                  isActive ? 'bg-secondary-800 text-white' : 'text-dark-500 hover:bg-light-100',
+                  isActive ? 'bg-secondary-800 text-white' : 'text-foreground hover:bg-muted',
                   isCompact && 'min-w-0 flex-1 text-center'
                 )}
               >

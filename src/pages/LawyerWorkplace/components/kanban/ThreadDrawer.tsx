@@ -57,8 +57,8 @@ export function ThreadDrawer({ target, letterTypes = [], onClose }: ThreadDrawer
         )}
         aria-hidden={!isOpen}
       >
-        <div className="bg-card flex shrink-0 items-center justify-between border-b border-gray-100 px-4 py-3">
-          <span className="text-dark-500 text-[13px] font-medium">
+        <div className="bg-card border-border flex shrink-0 items-center justify-between border-b px-4 py-3">
+          <span className="text-foreground text-[13px] font-medium">
             {showTaskOnly
               ? t('pages.lawyerWorkplace.kanban.taskDetails', 'Task details')
               : t('pages.lawyerWorkplace.kanban.emailThread', 'Email thread')}
@@ -67,7 +67,7 @@ export function ThreadDrawer({ target, letterTypes = [], onClose }: ThreadDrawer
             type="button"
             onClick={onClose}
             aria-label={t('pages.lawyerWorkplace.thread.closeThread', 'Close thread')}
-            className="text-light-700 hover:text-dark-500 flex h-7 w-7 items-center justify-center rounded-md transition-colors hover:bg-gray-100"
+            className="text-muted-foreground hover:text-foreground hover:bg-muted flex h-7 w-7 items-center justify-center rounded-md transition-colors"
           >
             <Icons.Cancel01 size={18} strokeWidth={1.5} />
           </button>
