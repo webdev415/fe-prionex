@@ -1748,6 +1748,7 @@
         },
         "dialogs": {
           "myEmployees": "My employees",
+          "statusAll": "All",
           "allDepartments": "All departments",
           "evaluation": "Evaluation",
           "notEvaluated": "Not evaluated",

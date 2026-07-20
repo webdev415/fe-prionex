@@ -1,14 +1,23 @@
 import { useMemo, useState } from 'react'
+import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
+import { toast } from 'sonner'
 import { Pagination } from '@/components/ui/Pagination'
+import { useConfirm } from '@/components/ui/useConfirm'
+import { useDebounce } from '@/hooks/useDebounce'
 import { useAuthStore } from '@/stores/authStore'
 import { useOperators } from '@/features/users/hooks'
 import { useCallMonitoring } from '@/features/training'
 import type { CallMonitoringItem, TelephonyType } from '@/features/training'
-import { useScorecardStatusByCalls } from '@/features/quality'
+import { useScorecards, useDeleteScorecard, useScorecardStatusByCalls } from '@/features/quality'
 import type { CallScorecardStatus } from '@/features/quality'
 import { useMyOperators } from '@/features/quality/coaching/hooks'
+import { useCallsBatch } from '@/features/calls/hooks/useCall'
+import { useClientNames } from '@/features/clients/hooks/useClients'
+import { buildDialogueRows } from '../../lib/dialogueScorecardAdapter'
+import type { CallContactInfo } from '../../lib/dialogueScorecardAdapter'
 import { useScopedUserIds } from '../../lib/scope'
+import { ScorecardListView } from './ScorecardListView'
 import { CallReviewPanel } from './CallReviewPanel'
 import {
   ANALYTICS_TABLE_HEAD,
@@ -19,7 +28,11 @@ import {
 import { AnalyticsMockTable } from '../analytics/AnalyticsMockTable'
 
 type TelephonyFilter = '' | TelephonyType
+/** All + the not-evaluated queue (call source) + the three scorecard statuses. */
+type EvalStatus = 'all' | 'not_evaluated' | 'draft' | 'completed' | 'sent'
+type CategoryChip = 'all' | 'low' | 'average' | 'high'
 
+const SCORECARD_STATUSES: EvalStatus[] = ['draft', 'completed', 'sent']
 const PAGE_SIZE = 50
 
 const CALL_TYPE_TONE: Record<string, string> = {
@@ -59,28 +72,44 @@ function formatDateTime(iso: string): string {
   return Number.isNaN(d.getTime()) ? '—' : d.toLocaleString()
 }
 
+interface Selected {
+  callId: string
+  operatorId: number
+  scorecardId?: number
+  createdAt?: string
+  operatorName?: string
+}
+
 /**
- * Call-first Dialogue Evaluation list (KAN-827, PM feedback): shows ALL recorded
- * dialogs for the scoped operators by default — no more adding one-by-one — with
- * "My employees" / department / dialing-type filters and a per-dialog evaluation
- * status. Selecting a row opens the call in the review panel to evaluate it.
+ * Merged Dialogue Evaluation surface (KAN-827, PM feedback). One list of
+ * dialogs with an evaluation-status filter that switches the data source:
+ *   - All / Not evaluated → /calls/monitoring (call-first work queue)
+ *   - Draft / Completed / Sent → /quality/scorecards (evaluation records, with
+ *     score bands, per-scorecard rows and delete-draft)
+ * Selecting a row opens the call in the review panel to evaluate / review it.
  */
 export function DialogsListTab() {
   const { t } = useTranslation('common')
   const activeProjectId = useAuthStore((s) => s.user?.active_project_id)
   const { data: operators = [] } = useOperators(activeProjectId ? Number(activeProjectId) : null)
   const scoped = useScopedUserIds(operators)
+  const { confirm, confirmDialog } = useConfirm()
 
+  const [evalStatus, setEvalStatus] = useState<EvalStatus>('all')
   const [myEmployeesOnly, setMyEmployeesOnly] = useState(false)
   const [departmentId, setDepartmentId] = useState<number | 'all'>('all')
   const [telephonyType, setTelephonyType] = useState<TelephonyFilter>('')
   const [callFrom, setCallFrom] = useState('')
   const [callTo, setCallTo] = useState('')
   const [minDuration, setMinDuration] = useState('')
+  const [nameQuery, setNameQuery] = useState('')
+  const [activeCategory, setActiveCategory] = useState<CategoryChip>('all')
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(PAGE_SIZE)
-  const [selected, setSelected] = useState<{ callId: string; operatorId: number } | null>(null)
+  const [selected, setSelected] = useState<Selected | null>(null)
 
+  const debouncedName = useDebounce(nameQuery, 300)
+  const isScorecardMode = SCORECARD_STATUSES.includes(evalStatus)
   const { data: myOperatorIds = [] } = useMyOperators(myEmployeesOnly)
 
   const departmentOptions = useMemo(() => {
@@ -95,11 +124,9 @@ export function DialogsListTab() {
     )
   }, [operators])
 
-  // Resolve the scoped + filtered operator set → their Asterisk extensions (the
-  // call service filters by extension, not user_id).
-  const { extensions, operatorByExtension } = useMemo(() => {
-    const base = scoped.userIds ?? operators.map((o) => o.id)
-    let ids = base
+  // Shared operator resolution (scope ∩ my-employees ∩ department ∩ name).
+  const operatorIds = useMemo<number[] | undefined>(() => {
+    let ids = scoped.userIds ?? operators.map((o) => o.id)
     if (myEmployeesOnly) {
       const mine = new Set(myOperatorIds)
       ids = ids.filter((id) => mine.has(id))
@@ -110,10 +137,21 @@ export function DialogsListTab() {
       )
       ids = ids.filter((id) => inDept.has(id))
     }
+    const q = debouncedName.trim().toLowerCase()
+    if (q) {
+      const named = new Set(
+        operators.filter((o) => o.full_name?.toLowerCase().includes(q)).map((o) => o.id)
+      )
+      ids = ids.filter((id) => named.has(id))
+    }
+    return ids
+  }, [scoped.userIds, operators, myEmployeesOnly, myOperatorIds, departmentId, debouncedName])
+
+  const { extensions, operatorByExtension } = useMemo(() => {
     const byId = new Map(operators.map((o) => [o.id, o]))
     const exts: string[] = []
     const extToOp = new Map<string, { id: number; name: string }>()
-    for (const id of ids) {
+    for (const id of operatorIds ?? []) {
       const op = byId.get(id)
       if (op?.asterisk_extension) {
         exts.push(op.asterisk_extension)
@@ -121,10 +159,38 @@ export function DialogsListTab() {
       }
     }
     return { extensions: exts, operatorByExtension: extToOp }
-  }, [scoped.userIds, operators, myEmployeesOnly, myOperatorIds, departmentId])
+  }, [operators, operatorIds])
 
+  // Genuinely empty (scope resolved empty, or filters narrowed to zero) — not
+  // merely operators still loading.
+  const noOperators =
+    scoped.isEmptyResolution || (operators.length > 0 && (operatorIds?.length ?? 0) === 0)
+
+  // Reset to page 1 (and clear category on leaving scorecard mode) when the
+  // query changes.
+  const resetKey = useMemo(
+    () =>
+      JSON.stringify([
+        evalStatus,
+        operatorIds ?? null,
+        telephonyType,
+        callFrom,
+        callTo,
+        minDuration,
+        pageSize,
+      ]),
+    [evalStatus, operatorIds, telephonyType, callFrom, callTo, minDuration, pageSize]
+  )
+  const [trackedResetKey, setTrackedResetKey] = useState(resetKey)
+  if (resetKey !== trackedResetKey) {
+    setTrackedResetKey(resetKey)
+    setPage(1)
+    if (!isScorecardMode && activeCategory !== 'all') setActiveCategory('all')
+  }
+
+  // ── Call path (All / Not evaluated) ─────────────────────────────────
   const useCustomRange = !!(callFrom || callTo)
-  const filters = useMemo(
+  const callFilters = useMemo(
     () => ({
       agent_extensions: extensions,
       period: useCustomRange ? undefined : ('last_30d' as const),
@@ -138,23 +204,8 @@ export function DialogsListTab() {
     }),
     [extensions, useCustomRange, callFrom, callTo, telephonyType, minDuration, page, pageSize]
   )
-
-  // Reset to page 1 when the query changes.
-  const resetKey = useMemo(
-    () => JSON.stringify([extensions, telephonyType, callFrom, callTo, minDuration, pageSize]),
-    [extensions, telephonyType, callFrom, callTo, minDuration, pageSize]
-  )
-  const [trackedResetKey, setTrackedResetKey] = useState(resetKey)
-  if (resetKey !== trackedResetKey) {
-    setTrackedResetKey(resetKey)
-    setPage(1)
-  }
-
-  const { data, isLoading, isError } = useCallMonitoring(filters, extensions.length > 0)
-  const calls = useMemo(() => data?.calls ?? [], [data?.calls])
-  const total = data?.total ?? 0
-  const totalPages = Math.max(1, Math.ceil(total / pageSize))
-
+  const callQuery = useCallMonitoring(callFilters, !isScorecardMode && extensions.length > 0)
+  const calls = useMemo(() => callQuery.data?.calls ?? [], [callQuery.data?.calls])
   const callIds = useMemo(() => calls.map((c) => c.call_id), [calls])
   const { data: statusList = [] } = useScorecardStatusByCalls(callIds, callIds.length > 0)
   const statusByCall = useMemo(() => {
@@ -162,6 +213,105 @@ export function DialogsListTab() {
     for (const s of statusList) map.set(s.call_id, s)
     return map
   }, [statusList])
+  const visibleCalls = useMemo(
+    () =>
+      evalStatus === 'not_evaluated' ? calls.filter((c) => !statusByCall.has(c.call_id)) : calls,
+    [calls, evalStatus, statusByCall]
+  )
+
+  // ── Scorecard path (Draft / Completed / Sent) ───────────────────────
+  const scFilters = useMemo(
+    () => ({
+      operator_id: operatorIds,
+      status: isScorecardMode ? [evalStatus as 'draft' | 'completed' | 'sent'] : undefined,
+      telephony_type: telephonyType || undefined,
+      call_from: dayStartIso(callFrom),
+      call_to: dayEndIso(callTo),
+      min_talk_duration: parsePositiveInt(minDuration),
+      page,
+      page_size: pageSize,
+    }),
+    [
+      operatorIds,
+      isScorecardMode,
+      evalStatus,
+      telephonyType,
+      callFrom,
+      callTo,
+      minDuration,
+      page,
+      pageSize,
+    ]
+  )
+  const scQuery = useScorecards(scFilters, isScorecardMode && !noOperators)
+  const scCallIds = useMemo(
+    () => (scQuery.data?.data ?? []).map((s) => s.call_id),
+    [scQuery.data?.data]
+  )
+  const { data: callBatch } = useCallsBatch(scCallIds)
+  const callLookup = useMemo(() => {
+    const map = new Map<string, CallContactInfo>()
+    for (const c of callBatch ?? [])
+      map.set(c.call_id, { customer_number: c.customer_number, client_id: c.client_id })
+    return map
+  }, [callBatch])
+  const clientIds = useMemo(
+    () =>
+      Array.from(
+        new Set((callBatch ?? []).map((c) => c.client_id).filter((id): id is number => id != null))
+      ),
+    [callBatch]
+  )
+  const clientNames = useClientNames(clientIds)
+  const scRows = useMemo(
+    () => buildDialogueRows(scQuery.data?.data ?? [], operators, callLookup, clientNames),
+    [scQuery.data?.data, operators, callLookup, clientNames]
+  )
+  const categoryCounts = useMemo(
+    () => ({
+      all: scRows.length,
+      low: scRows.filter((r) => r.category === 'Low').length,
+      average: scRows.filter((r) => r.category === 'Average').length,
+      high: scRows.filter((r) => r.category === 'High').length,
+    }),
+    [scRows]
+  )
+  const filteredScRows = useMemo(
+    () =>
+      activeCategory === 'all'
+        ? scRows
+        : scRows.filter((r) => r.category.toLowerCase() === activeCategory),
+    [scRows, activeCategory]
+  )
+
+  const deleteMutation = useDeleteScorecard()
+  const handleDeleteRow = async (scorecardId: number) => {
+    const ok = await confirm({
+      title: t('pages.training.dialogue.list.deleteTitle', 'Delete draft'),
+      message: t('pages.training.dialogue.list.deleteConfirm', 'Delete this draft assessment?'),
+      confirmLabel: t('pages.training.dialogue.list.delete', 'Delete draft'),
+      tone: 'danger',
+    })
+    if (!ok) return
+    deleteMutation.mutate(scorecardId, {
+      onSuccess: () => {
+        toast.success(t('pages.training.dialogue.list.deleted', 'Assessment deleted'))
+        if (selected?.scorecardId === scorecardId) setSelected(null)
+      },
+      onError: () =>
+        toast.error(t('pages.training.dialogue.list.deleteFailed', 'Could not delete assessment')),
+    })
+  }
+
+  // ── Pagination + loading/empty (per active source) ──────────────────
+  const total = isScorecardMode
+    ? (scQuery.data?.pagination?.total ?? 0)
+    : (callQuery.data?.total ?? 0)
+  const totalPages = isScorecardMode
+    ? (scQuery.data?.pagination?.total_pages ?? 1)
+    : Math.max(1, Math.ceil((callQuery.data?.total ?? 0) / pageSize))
+  const isLoading = isScorecardMode ? scQuery.isLoading : callQuery.isLoading
+  const isError = isScorecardMode ? scQuery.isError : callQuery.isError
 
   const clearFilters = () => {
     setMyEmployeesOnly(false)
@@ -170,17 +320,50 @@ export function DialogsListTab() {
     setCallFrom('')
     setCallTo('')
     setMinDuration('')
+    setNameQuery('')
+    setActiveCategory('all')
   }
   const hasAnyFilter =
     myEmployeesOnly ||
     departmentId !== 'all' ||
-    !!(telephonyType || callFrom || callTo || minDuration)
+    !!(telephonyType || callFrom || callTo || minDuration || nameQuery)
 
   const inputCls =
     'h-9 rounded-lg border border-[#DFDFDF] bg-white px-3 text-xs text-[#05040D] focus:outline-none'
 
+  const statusChips: { id: EvalStatus; label: string }[] = [
+    { id: 'all', label: t('pages.training.dialogue.dialogs.statusAll', 'All') },
+    {
+      id: 'not_evaluated',
+      label: t('pages.training.dialogue.dialogs.notEvaluated', 'Not evaluated'),
+    },
+    { id: 'draft', label: t('pages.training.scorecard.status.draft', 'Draft') },
+    { id: 'completed', label: t('pages.training.scorecard.status.completed', 'Completed') },
+    { id: 'sent', label: t('pages.training.scorecard.status.sent', 'Sent') },
+  ]
+
   return (
     <div className="flex flex-col gap-3">
+      {confirmDialog}
+
+      {/* Evaluation-status filter — switches the list's data source. */}
+      <div className="inline-flex max-w-full flex-wrap gap-1 rounded-lg border border-[#EBECE8] bg-white p-1">
+        {statusChips.map((chip) => (
+          <button
+            key={chip.id}
+            type="button"
+            onClick={() => setEvalStatus(chip.id)}
+            className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+              evalStatus === chip.id
+                ? 'bg-[#204E4D] text-white'
+                : 'text-[#545454] hover:bg-[#F7F7F7]'
+            }`}
+          >
+            {chip.label}
+          </button>
+        ))}
+      </div>
+
       <div className="flex flex-wrap items-center gap-2">
         <button
           type="button"
@@ -193,6 +376,12 @@ export function DialogsListTab() {
         >
           {t('pages.training.dialogue.dialogs.myEmployees', 'My employees')}
         </button>
+        <input
+          value={nameQuery}
+          onChange={(e) => setNameQuery(e.target.value)}
+          placeholder={t('pages.training.dialogue.filters.namePlaceholder', 'Search by full name…')}
+          className={`${inputCls} w-[200px]`}
+        />
         <select
           value={departmentId}
           onChange={(e) =>
@@ -258,38 +447,89 @@ export function DialogsListTab() {
         ) : null}
       </div>
 
+      {/* Category (score band) chips — only meaningful for evaluated rows. */}
+      {isScorecardMode ? (
+        <div className="inline-flex max-w-full flex-wrap gap-1">
+          {(['all', 'low', 'average', 'high'] as CategoryChip[]).map((c) => (
+            <button
+              key={c}
+              type="button"
+              onClick={() => setActiveCategory(c)}
+              className={`rounded-full px-3 py-1 text-[11px] font-medium transition-colors ${
+                activeCategory === c
+                  ? 'bg-[#204E4D] text-white'
+                  : 'bg-white text-[#545454] hover:bg-[#F7F7F7]'
+              }`}
+            >
+              {t(
+                `pages.training.dialogue.chips.${c === 'all' ? 'all' : c}`,
+                c === 'all' ? 'All calls' : c
+              )}{' '}
+              ({categoryCounts[c]})
+            </button>
+          ))}
+        </div>
+      ) : null}
+
       <div className="grid grid-cols-1 gap-3 xl:grid-cols-[1fr_520px]">
         <div className="flex flex-col gap-3">
-          {extensions.length === 0 ? (
-            <div className="rounded-xl bg-white/50 p-12 text-center text-sm text-gray-500 shadow-sm">
+          {noOperators ? (
+            <EmptyBox>
               {t(
                 'pages.training.errors.emptyScopeResolution',
                 'The selected scope returned no operators.'
               )}
-            </div>
+            </EmptyBox>
           ) : isLoading ? (
-            <div className="rounded-xl bg-white p-12 text-center text-sm text-[#6B7280] shadow-sm">
-              {t('common.loading', 'Loading…')}
-            </div>
+            <EmptyBox>{t('common.loading', 'Loading…')}</EmptyBox>
           ) : isError ? (
-            <div className="rounded-xl bg-white p-12 text-center text-sm text-red-500 shadow-sm">
+            <EmptyBox tone="error">
               {t('pages.training.dialogue.dialogs.loadError', 'Failed to load dialogs.')}
-            </div>
-          ) : calls.length === 0 ? (
-            <div className="rounded-xl bg-white p-12 text-center text-sm text-[#6B7280] shadow-sm">
+            </EmptyBox>
+          ) : isScorecardMode ? (
+            filteredScRows.length === 0 ? (
+              <EmptyBox>
+                {t('pages.training.dialogue.dialogs.empty', 'No dialogs match the filters.')}
+              </EmptyBox>
+            ) : (
+              <ScorecardListView
+                rows={filteredScRows}
+                selectedId={selected?.scorecardId ?? null}
+                onSelect={(id) => {
+                  const sc = scQuery.data?.data?.find((s) => s.id === id)
+                  if (sc)
+                    setSelected({
+                      callId: sc.call_id,
+                      operatorId: sc.operator_id,
+                      scorecardId: sc.id,
+                      createdAt: sc.created_at,
+                      operatorName: operators.find((o) => o.id === sc.operator_id)?.full_name,
+                    })
+                }}
+                onDelete={evalStatus === 'draft' ? handleDeleteRow : undefined}
+              />
+            )
+          ) : visibleCalls.length === 0 ? (
+            <EmptyBox>
               {t('pages.training.dialogue.dialogs.empty', 'No dialogs match the filters.')}
-            </div>
+            </EmptyBox>
           ) : (
             <DialogsTable
-              calls={calls}
+              calls={visibleCalls}
               operatorByExtension={operatorByExtension}
               statusByCall={statusByCall}
               selectedCallId={selected?.callId}
-              onSelect={(callId, operatorId) => setSelected({ callId, operatorId })}
-              t={t}
+              onSelect={(call, operatorId) =>
+                setSelected({
+                  callId: call.call_id,
+                  operatorId,
+                  createdAt: call.initiated_at,
+                  operatorName: operatorByExtension.get(call.agent_extension)?.name,
+                })
+              }
             />
           )}
-          {extensions.length > 0 && !isLoading && !isError && total > 0 ? (
+          {!noOperators && !isLoading && !isError && total > 0 ? (
             <Pagination
               currentPage={page}
               totalPages={totalPages}
@@ -303,20 +543,25 @@ export function DialogsListTab() {
         <CallReviewPanel
           callId={selected?.callId}
           operatorId={selected?.operatorId}
-          operatorName={
-            selected
-              ? operatorByExtension.get(findExtForCall(calls, selected.callId))?.name
-              : undefined
-          }
-          createdAt={calls.find((c) => c.call_id === selected?.callId)?.initiated_at}
+          scorecardId={selected?.scorecardId}
+          createdAt={selected?.createdAt}
+          operatorName={selected?.operatorName}
         />
       </div>
     </div>
   )
 }
 
-function findExtForCall(calls: CallMonitoringItem[], callId: string): string {
-  return calls.find((c) => c.call_id === callId)?.agent_extension ?? ''
+function EmptyBox({ children, tone }: { children: ReactNode; tone?: 'error' }) {
+  return (
+    <div
+      className={`rounded-xl bg-white p-12 text-center text-sm shadow-sm ${
+        tone === 'error' ? 'text-red-500' : 'text-[#6B7280]'
+      }`}
+    >
+      {children}
+    </div>
+  )
 }
 
 function DialogsTable({
@@ -325,15 +570,14 @@ function DialogsTable({
   statusByCall,
   selectedCallId,
   onSelect,
-  t,
 }: {
   calls: CallMonitoringItem[]
   operatorByExtension: Map<string, { id: number; name: string }>
   statusByCall: Map<string, CallScorecardStatus>
   selectedCallId?: string
-  onSelect: (callId: string, operatorId: number) => void
-  t: (key: string, fallback: string) => string
+  onSelect: (call: CallMonitoringItem, operatorId: number) => void
 }) {
+  const { t } = useTranslation('common')
   return (
     <AnalyticsMockTable>
       <thead className={ANALYTICS_TABLE_HEAD}>
@@ -365,7 +609,7 @@ function DialogsTable({
           return (
             <tr
               key={call.call_id}
-              onClick={() => op && onSelect(call.call_id, op.id)}
+              onClick={() => op && onSelect(call, op.id)}
               role="button"
               tabIndex={0}
               aria-current={isActive || undefined}
@@ -392,17 +636,22 @@ function DialogsTable({
               </td>
               <td className={ANALYTICS_TABLE_TD}>
                 {status ? (
-                  <span
-                    className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
-                      STATUS_TONE[status.latest_status] ?? 'bg-gray-100 text-gray-500'
-                    }`}
-                  >
-                    {status.latest_score != null
-                      ? `${Math.round(status.latest_score * 20)}`
-                      : t(
-                          `pages.training.tests.status.${status.latest_status}`,
-                          status.latest_status
-                        )}
+                  <span className="inline-flex items-center gap-1">
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                        STATUS_TONE[status.latest_status] ?? 'bg-gray-100 text-gray-500'
+                      }`}
+                    >
+                      {status.latest_score != null
+                        ? `${Math.round(Number(status.latest_score) * 20)}`
+                        : t(
+                            `pages.training.scorecard.status.${status.latest_status}`,
+                            status.latest_status
+                          )}
+                    </span>
+                    {status.count > 1 ? (
+                      <span className="text-[10px] text-[#9CA3AF]">×{status.count}</span>
+                    ) : null}
                   </span>
                 ) : (
                   <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-medium text-gray-400">
