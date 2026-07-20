@@ -1672,7 +1672,8 @@
         },
         "view": {
           "list": "Скоркарти",
-          "averages": "Середні"
+          "averages": "Середні",
+          "dialogs": "Діалоги"
         },
         "newAssessment": "Нова оцінка",
         "newAssessmentPicker": {
@@ -1743,6 +1744,14 @@
           "average": "Середній",
           "high": "Високий",
           "unscored": "Не оцінено"
+        },
+        "dialogs": {
+          "myEmployees": "Мої співробітники",
+          "allDepartments": "Усі відділи",
+          "evaluation": "Оцінка",
+          "notEvaluated": "Не оцінено",
+          "loadError": "Не вдалося завантажити діалоги.",
+          "empty": "Немає діалогів за фільтрами."
         }
       },
       "transcript": {

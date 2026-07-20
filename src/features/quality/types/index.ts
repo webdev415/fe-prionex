@@ -88,6 +88,15 @@ export interface ScorecardHistoryItem {
   sent_at: string | null
 }
 
+/** Bulk call → evaluation status (Dialogue Evaluation list badge). Only calls
+ *  that have ≥1 scorecard are returned; a missing call_id = "not evaluated". */
+export interface CallScorecardStatus {
+  call_id: string
+  count: number
+  latest_status: ScorecardStatus
+  latest_score: number | null
+}
+
 export interface ScorecardListFilters {
   operator_id?: number[]
   trainer_id?: number[]

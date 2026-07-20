@@ -4,6 +4,7 @@ import type {
   AggregateResponse,
   AlertsResponse,
   CallMarker,
+  CallScorecardStatus,
   DynamicsFilters,
   DynamicsResponse,
   Feedback,
@@ -73,6 +74,15 @@ export async function listMyScorecards(
 ): Promise<PageResponse<Scorecard>> {
   const response = await api.get<PageResponse<Scorecard>>('/api/v1/quality/scorecards/me', {
     params: buildScorecardListParams(filters as ScorecardListFilters),
+  })
+  return response.data
+}
+
+/** Bulk: which of these calls already have scorecards + latest status/score. */
+export async function getScorecardStatusByCalls(callIds: string[]): Promise<CallScorecardStatus[]> {
+  if (callIds.length === 0) return []
+  const response = await api.post<CallScorecardStatus[]>('/api/v1/quality/scorecards/by-calls', {
+    call_ids: callIds,
   })
   return response.data
 }

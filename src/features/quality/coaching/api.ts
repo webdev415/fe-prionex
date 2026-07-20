@@ -72,6 +72,12 @@ export async function getHeaderKpis(filters: HeaderKpisFilters): Promise<HeaderK
   return response.data
 }
 
+/** Operator ids the current trainer has taken under control (active assignment). */
+export async function getMyOperators(): Promise<number[]> {
+  const response = await api.get<number[]>(`${BASE}/my-operators`)
+  return response.data
+}
+
 export async function scheduleOneOnOne(payload: ScheduleOneOnOnePayload): Promise<OneOnOneRecord> {
   const response = await api.post<OneOnOneRecord>(`${BASE}/one-on-ones`, payload)
   return response.data
