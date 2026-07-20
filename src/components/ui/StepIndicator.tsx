@@ -41,17 +41,17 @@ export function StepIndicator({ steps, currentStep, className }: StepIndicatorPr
                 <div
                   className={cn(
                     'absolute z-1 h-9 w-9 rounded-full border sm:h-11 sm:w-11',
-                    isActive ? 'border-primary-300' : 'border-gray-200'
+                    isActive ? 'border-primary-300' : 'border-border'
                   )}
                 />
 
                 {/* Main circle - responsive size */}
                 <div
                   className={cn(
-                    'relative flex h-10 w-10 items-center justify-center rounded-full border border-white text-sm sm:h-12 sm:w-12 sm:text-base',
+                    'border-card relative flex h-10 w-10 items-center justify-center rounded-full border text-sm sm:h-12 sm:w-12 sm:text-base',
                     isActive || isCompleted
                       ? 'bg-secondary-800 text-[#BBFB5B]'
-                      : 'bg-white text-gray-500'
+                      : 'bg-card text-muted-foreground'
                   )}
                 >
                   {isCompleted ? (
@@ -68,20 +68,22 @@ export function StepIndicator({ steps, currentStep, className }: StepIndicatorPr
                 <div
                   className={cn(
                     'text-sm leading-tight sm:text-base',
-                    isActive || isCompleted ? 'text-secondary-800' : 'text-gray-500'
+                    isActive || isCompleted ? 'text-secondary-800' : 'text-muted-foreground'
                   )}
                 >
                   {t('common.step')} {step.number}
                 </div>
 
                 {/* Step Label/Description */}
-                <div className="text-dark-500 text-sm leading-tight sm:text-base">{step.label}</div>
+                <div className="text-foreground text-sm leading-tight sm:text-base">
+                  {step.label}
+                </div>
               </div>
             </div>
             {/* Vertical connecting line */}
             {!isLast && (
               <div className="absolute flex w-10 justify-center gap-10 align-middle sm:w-12">
-                <div className="mx-2 flex h-25 w-0.5 flex-shrink-0 justify-center bg-gray-100 align-middle outline-3 outline-white outline-solid sm:h-35" />
+                <div className="bg-border mx-2 flex h-25 w-[3px] flex-shrink-0 justify-center align-middle sm:h-35" />
               </div>
             )}
           </div>

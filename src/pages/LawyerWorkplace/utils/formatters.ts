@@ -37,10 +37,13 @@ export function formatDateSeparator(iso: string, language: string): string {
 }
 
 export function formatDueDate(iso: string, language: string): string {
-  return new Date(iso).toLocaleDateString(language, {
+  return new Date(iso).toLocaleString(language, {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
   })
 }
 

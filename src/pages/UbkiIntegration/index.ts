@@ -1,0 +1,1 @@
+export { UbkiIntegrationPage } from './UbkiIntegrationPage'

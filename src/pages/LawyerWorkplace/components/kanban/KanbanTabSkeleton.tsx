@@ -20,15 +20,15 @@ export function KanbanTabSkeleton() {
       <div className="mb-4 pt-4 lg:pt-7">
         <div className="mb-4 flex items-start justify-between gap-3">
           <div className="space-y-2">
-            <div className="h-7 w-40 animate-pulse rounded bg-gray-200" />
-            <div className="h-4 w-24 animate-pulse rounded bg-gray-200" />
+            <div className="bg-muted-foreground/25 h-7 w-40 animate-pulse rounded" />
+            <div className="bg-muted-foreground/25 h-4 w-24 animate-pulse rounded" />
           </div>
-          <div className="h-11 w-28 animate-pulse rounded-full bg-gray-200" />
+          <div className="bg-muted-foreground/25 h-11 w-28 animate-pulse rounded-full" />
         </div>
         <div className="flex flex-wrap gap-2">
-          <div className="h-10 w-52 animate-pulse rounded-lg bg-gray-200" />
-          <div className="h-10 w-40 animate-pulse rounded-lg bg-gray-200" />
-          <div className="h-10 w-40 animate-pulse rounded-lg bg-gray-200" />
+          <div className="bg-muted-foreground/25 h-10 w-52 animate-pulse rounded-lg" />
+          <div className="bg-muted-foreground/25 h-10 w-40 animate-pulse rounded-lg" />
+          <div className="bg-muted-foreground/25 h-10 w-40 animate-pulse rounded-lg" />
         </div>
       </div>
 
@@ -47,21 +47,21 @@ export function KanbanTabSkeleton() {
         {Array.from({ length: 4 }).map((_, columnIndex) => (
           <div
             key={columnIndex}
-            className="flex min-h-[320px] flex-col rounded-xl border border-gray-100 bg-white/70 p-3"
+            className="bg-card/70 border-border flex min-h-[320px] flex-col rounded-xl border p-3"
           >
             <div className="mb-3 flex items-center justify-between gap-2">
-              <div className="h-4 w-24 animate-pulse rounded bg-gray-200" />
-              <div className="h-5 w-8 animate-pulse rounded-full bg-gray-200" />
+              <div className="bg-muted-foreground/25 h-4 w-24 animate-pulse rounded" />
+              <div className="bg-muted-foreground/25 h-5 w-8 animate-pulse rounded-full" />
             </div>
             <div className="space-y-2">
               {Array.from({ length: isCompact ? 2 : 3 }).map((__, cardIndex) => (
                 <div
                   key={cardIndex}
-                  className="animate-pulse rounded-xl border border-gray-100 bg-white p-3"
+                  className="bg-card border-border animate-pulse rounded-xl border p-3"
                 >
-                  <div className="mb-2 h-3.5 w-28 rounded bg-gray-200" />
-                  <div className="mb-2 h-3 w-full rounded bg-gray-200" />
-                  <div className="h-3 w-2/3 rounded bg-gray-200" />
+                  <div className="bg-muted mb-2 h-3.5 w-28 rounded" />
+                  <div className="bg-muted mb-2 h-3 w-full rounded" />
+                  <div className="bg-muted h-3 w-2/3 rounded" />
                 </div>
               ))}
             </div>

@@ -41,7 +41,7 @@ export function SemiCircularProgressSkeleton({
         rx={segmentWidth / 2}
         ry={segmentWidth / 2}
         transform={`rotate(${rotation}, ${x}, ${y})`}
-        className="animate-pulse fill-gray-300"
+        className="fill-muted animate-pulse"
       />
     )
   }
@@ -61,7 +61,7 @@ export function SemiCircularProgressSkeleton({
           x={centerX}
           y={size * 0.42}
           textAnchor="middle"
-          className="animate-pulse fill-gray-300 text-2xl leading-tight font-medium tracking-[-0.48px]"
+          className="fill-muted animate-pulse text-2xl leading-tight font-medium tracking-[-0.48px]"
         >
           {/* Placeholder text */}
           <tspan opacity="0.5">100</tspan>
@@ -72,7 +72,7 @@ export function SemiCircularProgressSkeleton({
           x={centerX}
           y={size * 0.52}
           textAnchor="middle"
-          className="animate-pulse fill-gray-300 text-2xl leading-tight font-light tracking-[-0.48px]"
+          className="fill-muted animate-pulse text-2xl leading-tight font-light tracking-[-0.48px]"
         >
           {/* Placeholder text */}
           <tspan opacity="0.5">Completed</tspan>

@@ -33,8 +33,13 @@ export function LetterTypeDetailPanel({
   isDeleting = false,
   readOnly = false,
 }: LetterTypeDetailPanelProps) {
+  const handleDraftChange = (next: LetterTypeConfig) => {
+    if (readOnly) return
+    onDraftChange(next)
+  }
+
   return (
-    <div className="flex min-h-0 min-w-0 flex-1 flex-col rounded-[12px] bg-white/50">
+    <div className="bg-card/50 flex min-h-0 min-w-0 flex-1 flex-col rounded-[12px]">
       <LetterTypeDetailHeader
         draft={draft}
         onBack={onBack}
@@ -43,18 +48,29 @@ export function LetterTypeDetailPanel({
         isDeleting={isDeleting}
       />
 
-      <fieldset disabled={readOnly} className="min-h-0 flex-1 border-0 p-0 disabled:opacity-90">
-        <div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-4 py-5 sm:space-y-8 sm:px-5 sm:py-6 lg:px-6">
-          <LetterTypeBasicInfoSection draft={draft} onDraftChange={onDraftChange} />
-          <LetterTypePrioritySection draft={draft} onDraftChange={onDraftChange} />
-          <LetterTypeTrainingExamplesSection
-            key={draft.id}
-            draft={draft}
-            onDraftChange={onDraftChange}
-          />
-          <LetterTypeKeywordHintsSection draft={draft} onDraftChange={onDraftChange} />
-        </div>
-      </fieldset>
+      <div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-4 py-5 sm:space-y-8 sm:px-5 sm:py-6 lg:px-6">
+        <LetterTypeBasicInfoSection
+          draft={draft}
+          readOnly={readOnly}
+          onDraftChange={handleDraftChange}
+        />
+        <LetterTypePrioritySection
+          draft={draft}
+          readOnly={readOnly}
+          onDraftChange={handleDraftChange}
+        />
+        <LetterTypeTrainingExamplesSection
+          key={draft.id}
+          draft={draft}
+          readOnly={readOnly}
+          onDraftChange={handleDraftChange}
+        />
+        <LetterTypeKeywordHintsSection
+          draft={draft}
+          readOnly={readOnly}
+          onDraftChange={handleDraftChange}
+        />
+      </div>
 
       {!readOnly && (
         <LetterTypeDetailFooter

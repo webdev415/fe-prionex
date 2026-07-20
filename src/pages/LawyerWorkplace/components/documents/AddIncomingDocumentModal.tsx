@@ -129,7 +129,7 @@ export function AddIncomingDocumentModal({
       />
       <ModalContent className="flex flex-col gap-4">
         <div className="flex flex-col gap-2">
-          <Label className="text-dark-500 text-[12px] font-normal">
+          <Label className="text-foreground text-[12px] font-normal">
             {t('pages.lawyerWorkplace.documents.modals.incoming.file', 'File')}
           </Label>
           <div
@@ -141,9 +141,9 @@ export function AddIncomingDocumentModal({
             className={cn(
               'flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed p-6 transition-colors',
               dragOver
-                ? 'border-primary-400 bg-primary-50'
+                ? 'border-primary-400 bg-primary/10'
                 : file
-                  ? 'border-primary-300 bg-primary-50/50'
+                  ? 'border-primary-300 bg-primary/10'
                   : 'border-secondary-300 hover:border-secondary-400 hover:bg-secondary-50'
             )}
             onClick={() => fileInputRef.current?.click()}
@@ -168,8 +168,8 @@ export function AddIncomingDocumentModal({
             {file ? (
               <div className="flex flex-col items-center gap-2 text-center">
                 <Icons.File size={28} strokeWidth={1.5} className="text-primary-500" />
-                <p className="text-dark-500 text-[13px] font-medium">{file.name}</p>
-                <p className="text-light-600 text-[11px]">
+                <p className="text-foreground text-[13px] font-medium">{file.name}</p>
+                <p className="text-muted-foreground text-[11px]">
                   {t(
                     'pages.lawyerWorkplace.documents.modals.incoming.changeFile',
                     'Click to replace'
@@ -178,8 +178,8 @@ export function AddIncomingDocumentModal({
               </div>
             ) : (
               <div className="flex flex-col items-center gap-2 text-center">
-                <Icons.FileImport size={28} strokeWidth={1.5} className="text-light-500" />
-                <p className="text-dark-500 text-[13px]">
+                <Icons.FileImport size={28} strokeWidth={1.5} className="text-muted-foreground" />
+                <p className="text-foreground text-[13px]">
                   {t(
                     'pages.lawyerWorkplace.documents.modals.incoming.dropHint',
                     'Drag & drop or click to upload PDF, DOC, or image'
@@ -191,7 +191,7 @@ export function AddIncomingDocumentModal({
         </div>
 
         <div className="flex flex-col gap-2">
-          <Label className="text-dark-500 text-[12px] font-normal">
+          <Label className="text-foreground text-[12px] font-normal">
             {t('pages.lawyerWorkplace.documents.modals.incoming.documentName', 'Document name')}
           </Label>
           <input
@@ -202,7 +202,7 @@ export function AddIncomingDocumentModal({
               'pages.lawyerWorkplace.documents.modals.incoming.documentNamePlaceholder',
               'Enter document name'
             )}
-            className="text-dark-500 focus:border-primary-400 h-10 w-full rounded-[8px] border border-gray-200 bg-white px-3 text-[13px] outline-none placeholder:text-gray-400"
+            className="text-foreground focus:border-primary-400 border-border bg-input placeholder:text-muted-foreground h-10 w-full rounded-[8px] border px-3 text-[13px] outline-none"
           />
         </div>
 
@@ -219,7 +219,7 @@ export function AddIncomingDocumentModal({
         />
 
         <div className="flex flex-col gap-2">
-          <Label className="text-dark-500 text-[12px] font-normal">
+          <Label className="text-foreground text-[12px] font-normal">
             {t(
               'pages.lawyerWorkplace.documents.modals.incoming.relatedLetter',
               'Related inbox letter (optional)'
@@ -233,22 +233,22 @@ export function AddIncomingDocumentModal({
               'pages.lawyerWorkplace.documents.modals.incoming.relatedLetterPlaceholder',
               'e.g. IN-2026-142'
             )}
-            className="text-dark-500 focus:border-primary-400 h-10 w-full rounded-[8px] border border-gray-200 bg-white px-3 text-[13px] outline-none placeholder:text-gray-400"
+            className="text-foreground focus:border-primary-400 border-border bg-input placeholder:text-muted-foreground h-10 w-full rounded-[8px] border px-3 text-[13px] outline-none"
           />
         </div>
 
         <div className="flex flex-col gap-2">
-          <Label className="text-dark-500 text-[12px] font-normal">
+          <Label className="text-foreground text-[12px] font-normal">
             {t('pages.lawyerWorkplace.documents.modals.incoming.assignee', 'Assignee')}
           </Label>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button
                 type="button"
-                className="text-dark-500 flex h-10 w-full items-center justify-between rounded-[8px] border border-gray-200 bg-white px-3 text-[13px] font-light"
+                className="text-foreground border-border bg-input flex h-10 w-full items-center justify-between rounded-[8px] border px-3 text-[13px] font-light"
               >
                 <span>{selectedLawyer?.display_name ?? '—'}</span>
-                <Icons.ArrowDown size={16} strokeWidth={1.5} className="text-light-500" />
+                <Icons.ArrowDown size={16} strokeWidth={1.5} className="text-muted-foreground" />
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent

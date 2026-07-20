@@ -75,7 +75,7 @@ export function SaleNotesPreview({ preview, onConfirm, onCancel, isExecuting }: 
         key: 'comment_preview',
         header: t(`${p}.columns.commentPreview`, 'Comment'),
         render: (row: RowWithId) => (
-          <span className="text-xs text-gray-700">{row.comment_preview ?? '—'}</span>
+          <span className="text-muted-foreground text-xs">{row.comment_preview ?? '—'}</span>
         ),
       },
       {
@@ -98,7 +98,7 @@ export function SaleNotesPreview({ preview, onConfirm, onCancel, isExecuting }: 
         key: 'note',
         header: t(`${p}.columns.note`, 'Note'),
         render: (row: RowWithId) => (
-          <span className="text-xs text-gray-600">{row.error ?? ''}</span>
+          <span className="text-muted-foreground text-xs">{row.error ?? ''}</span>
         ),
       },
     ],
@@ -110,10 +110,10 @@ export function SaleNotesPreview({ preview, onConfirm, onCancel, isExecuting }: 
   return (
     <div className="space-y-6">
       <div>
-        <h3 className="text-dark-500 text-lg font-medium">
+        <h3 className="text-foreground text-lg font-medium">
           {t(`${p}.title`, 'Preview Bulk Sales Note Import')}
         </h3>
-        <p className="text-sm text-gray-600">
+        <p className="text-muted-foreground text-sm">
           {t(`${p}.fileInfo`, {
             defaultValue: 'File: {{filename}} · {{total}} records · Batch: {{batch}}',
             filename: preview.filename,
@@ -126,21 +126,23 @@ export function SaleNotesPreview({ preview, onConfirm, onCancel, isExecuting }: 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <div className="border-success-200 bg-success-50 rounded-xl border px-4 py-3 shadow-sm">
           <p className="text-success-700 text-2xl font-bold">{summary.ready}</p>
-          <p className="text-xs text-gray-600">{t(`${p}.ready`, 'Ready')}</p>
+          <p className="text-muted-foreground text-xs">{t(`${p}.ready`, 'Ready')}</p>
         </div>
         <div className="border-error-200 bg-error-50 rounded-xl border px-4 py-3 shadow-sm">
           <p className="text-error-700 text-2xl font-bold">{summary.errors}</p>
-          <p className="text-xs text-gray-600">{t(`${p}.errors`, 'Errors')}</p>
+          <p className="text-muted-foreground text-xs">{t(`${p}.errors`, 'Errors')}</p>
         </div>
-        <div className="rounded-xl border border-gray-200 bg-white/50 px-4 py-3 shadow-sm">
-          <p className="text-dark-500 text-2xl font-bold">{summary.unique_clients}</p>
-          <p className="text-xs text-gray-600">{t(`${p}.uniqueClients`, 'Unique Clients')}</p>
+        <div className="border-border bg-card/50 rounded-xl border px-4 py-3 shadow-sm">
+          <p className="text-foreground text-2xl font-bold">{summary.unique_clients}</p>
+          <p className="text-muted-foreground text-xs">
+            {t(`${p}.uniqueClients`, 'Unique Clients')}
+          </p>
         </div>
       </div>
 
       {previewWithId.length > 0 && (
         <div>
-          <h4 className="text-dark-500 mb-2 text-sm font-medium">
+          <h4 className="text-foreground mb-2 text-sm font-medium">
             {preview.preview_rows_truncated
               ? t(`${p}.readyShowingFirst`, {
                   defaultValue: 'Ready (showing first {{shown}} of {{total}})',
@@ -176,7 +178,7 @@ export function SaleNotesPreview({ preview, onConfirm, onCancel, isExecuting }: 
         </div>
       )}
 
-      <div className="flex items-center justify-end gap-3 border-t border-gray-200 pt-4">
+      <div className="border-border flex items-center justify-end gap-3 border-t pt-4">
         <Button variant="cancel" size="md" onClick={onCancel} disabled={isExecuting}>
           {t(`${p}.cancel`, 'Cancel')}
         </Button>

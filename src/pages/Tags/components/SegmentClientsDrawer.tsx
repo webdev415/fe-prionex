@@ -29,7 +29,7 @@ export function SegmentClientsDrawer({ segment, onClose }: SegmentClientsDrawerP
   const [pageSize, setPageSize] = useState(PAGE_SIZE)
 
   const skip = (currentPage - 1) * pageSize
-  const { data, isLoading } = useSegmentClients(segment.id, skip, pageSize)
+  const { data, isLoading, isError, error, refetch } = useSegmentClients(segment.id, skip, pageSize)
 
   const totalPages = data ? Math.max(1, Math.ceil(data.total / pageSize)) : 1
 
@@ -63,7 +63,22 @@ export function SegmentClientsDrawer({ segment, onClose }: SegmentClientsDrawerP
           </div>
         )}
 
-        {!isLoading && data && data.client_ids.length === 0 && (
+        {!isLoading && isError && (
+          <div className="flex flex-col items-center justify-center py-12 text-center">
+            <p className="text-sm text-red-600">
+              {t('pages.tags.segments.clientsLoadError', 'Failed to load segment clients')}
+            </p>
+            <p className="mt-1 text-xs text-gray-400">
+              {(error as Error)?.message ||
+                t('pages.tags.segments.clientsLoadErrorHint', 'Please try again')}
+            </p>
+            <Button variant="cancel" className="mt-4 h-9 text-sm" onClick={() => refetch()}>
+              {t('actions.retry', 'Retry')}
+            </Button>
+          </div>
+        )}
+
+        {!isLoading && !isError && data && data.client_ids.length === 0 && (
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <Icons.Users size={40} className="mb-3 text-gray-300" strokeWidth={1} />
             <p className="text-sm text-gray-500">
@@ -75,7 +90,7 @@ export function SegmentClientsDrawer({ segment, onClose }: SegmentClientsDrawerP
           </div>
         )}
 
-        {!isLoading && data && data.client_ids.length > 0 && (
+        {!isLoading && !isError && data && data.client_ids.length > 0 && (
           <div className="space-y-1">
             {data.client_ids.map((clientId) => (
               <button
@@ -92,7 +107,7 @@ export function SegmentClientsDrawer({ segment, onClose }: SegmentClientsDrawerP
           </div>
         )}
 
-        {!isLoading && data && data.total > pageSize && (
+        {!isLoading && !isError && data && data.total > pageSize && (
           <Pagination
             currentPage={currentPage}
             totalPages={totalPages}

@@ -625,13 +625,13 @@ export function Step2FileUpload({
   return (
     <div className="space-y-4 sm:space-y-6">
       {/* Section Title */}
-      <h2 className="text-dark-500 mb-4 text-center text-xl leading-[120%] font-light tracking-[-0.48px] sm:mb-6 sm:text-2xl">
+      <h2 className="text-foreground mb-4 text-center text-xl leading-[120%] font-light tracking-[-0.48px] sm:mb-6 sm:text-2xl">
         {t('pages.imports.step2.simple.title')}
       </h2>
 
       {/* Warning Alert - shown when import is in progress */}
       {isImportInProgress && (
-        <div className="flex items-center justify-center gap-2 rounded-lg bg-white p-4 sm:gap-3 sm:p-6">
+        <div className="bg-card flex items-center justify-center gap-2 rounded-lg p-4 sm:gap-3 sm:p-6">
           <Icons.Warning size={20} className="text-error-500 sm:size-6" />
           <span className="text-error-500 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:text-sm">
             {t('pages.imports.step2.simple.cannotStartAnother')}
@@ -644,7 +644,7 @@ export function Step2FileUpload({
         mutationErrorMsg ||
         uploadImportMutation.isError ||
         hasInvalidCSVStructure) && (
-        <div className="mb-4 flex items-center justify-center gap-2 rounded-lg border-2 border-red-500 bg-white p-4 sm:gap-3 sm:p-6">
+        <div className="border-error-500 bg-card mb-4 flex items-center justify-center gap-2 rounded-lg border-2 p-4 sm:gap-3 sm:p-6">
           <Icons.Warning size={20} className="text-error-500 sm:size-6" />
           <span className="text-error-500 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:text-sm">
             {importError ||
@@ -665,7 +665,7 @@ export function Step2FileUpload({
       <div
         className={cn(
           'relative flex flex-col items-center gap-4 self-stretch rounded-lg border-2 border-dashed p-4 transition-colors sm:gap-6 sm:p-6',
-          isDragging ? 'border-primary-500 bg-primary-50' : 'border-gray-300',
+          isDragging ? 'border-primary-500 bg-muted' : 'border-border',
           isImportInProgress && 'pointer-events-none opacity-50' // Disable when import in progress
         )}
         onDragOver={isImportInProgress ? undefined : handleDragOver}
@@ -689,7 +689,11 @@ export function Step2FileUpload({
         {/* Cloud Icon - shown when no file or valid file */}
         {!hasInvalidFile && !hasInvalidCSVStructure && (
           <div className="flex aspect-square items-center justify-center px-1 py-1.5">
-            <Icons.CloudDownload size={40} strokeWidth={0.5} className="text-dark-500 sm:size-12" />
+            <Icons.CloudDownload
+              size={40}
+              strokeWidth={0.5}
+              className="text-foreground sm:size-12"
+            />
           </div>
         )}
 
@@ -710,12 +714,12 @@ export function Step2FileUpload({
 
           {/* File Name Display */}
           {displayFile ? (
-            <div className="text-dark-500 text-center text-sm leading-[155%] font-light tracking-[-0.32px] break-words sm:text-base">
+            <div className="text-foreground text-center text-sm leading-[155%] font-light tracking-[-0.32px] break-words sm:text-base">
               {displayFile.name} ({formatFileSize(displayFile.size)})
             </div>
           ) : (
             !hasInvalidCSVStructure && (
-              <div className="text-dark-500 text-center text-lg leading-[120%] font-light tracking-[-0.48px] sm:text-2xl">
+              <div className="text-foreground text-center text-lg leading-[120%] font-light tracking-[-0.48px] sm:text-2xl">
                 {t('pages.imports.step2.simple.chooseCsvFile')}
               </div>
             )
@@ -723,7 +727,7 @@ export function Step2FileUpload({
 
           {/* Show "Choose CSV File" text even when invalid CSV structure */}
           {hasInvalidCSVStructure && (
-            <div className="text-dark-500 text-center text-sm leading-[155%] font-light tracking-[-0.32px] sm:text-base">
+            <div className="text-foreground text-center text-sm leading-[155%] font-light tracking-[-0.32px] sm:text-base">
               {t('pages.imports.step2.simple.chooseCsvFile')}
             </div>
           )}
@@ -733,7 +737,7 @@ export function Step2FileUpload({
             data.csvValidationError?.missingColumns &&
             data.csvValidationError.missingColumns.length > 0 && (
               <div className="flex w-full flex-col items-center gap-2 sm:gap-3">
-                <div className="text-dark-500 text-center text-sm leading-[155%] font-bold tracking-[-0.32px] sm:text-base">
+                <div className="text-foreground text-center text-sm leading-[155%] font-bold tracking-[-0.32px] sm:text-base">
                   {t('pages.imports.step2.simple.missingRequiredColumns')}
                 </div>
                 <div className="flex w-full flex-wrap items-center justify-center gap-2 sm:gap-3">
@@ -771,7 +775,7 @@ export function Step2FileUpload({
 
           {/* Error Message - Only .csv files supported */}
           {hasInvalidFile && !hasInvalidCSVStructure && (
-            <div className="text-dark-500 text-center text-sm leading-[155%] font-medium tracking-[-0.32px] sm:text-base">
+            <div className="text-foreground text-center text-sm leading-[155%] font-medium tracking-[-0.32px] sm:text-base">
               {t('pages.imports.step2.simple.onlyCsvSupported')}
             </div>
           )}
@@ -779,10 +783,10 @@ export function Step2FileUpload({
           {/* File Requirements - hidden when invalid file or invalid CSV structure */}
           {!hasInvalidFile && !hasInvalidCSVStructure && (
             <>
-              <div className="text-dark-500 text-center text-sm leading-[155%] font-light tracking-[-0.32px] sm:text-base">
+              <div className="text-foreground text-center text-sm leading-[155%] font-light tracking-[-0.32px] sm:text-base">
                 {t('pages.imports.step2.simple.fileRequirements')}
               </div>
-              <div className="text-dark-500 flex flex-wrap items-center justify-center gap-1 self-stretch text-center">
+              <div className="text-foreground flex flex-wrap items-center justify-center gap-1 self-stretch text-center">
                 <span className="text-sm leading-[155%] font-medium tracking-[-0.32px] sm:text-base">
                   {t('pages.imports.step2.simple.oneCsvOnly')}
                 </span>
@@ -790,7 +794,7 @@ export function Step2FileUpload({
                   {t('pages.imports.step2.simple.maxRows')}
                 </span>
               </div>
-              <div className="text-dark-500 flex flex-wrap items-center justify-center gap-1 self-stretch text-center">
+              <div className="text-foreground flex flex-wrap items-center justify-center gap-1 self-stretch text-center">
                 <span className="text-sm leading-[155%] font-medium tracking-[-0.32px] sm:text-base">
                   {t('pages.imports.step2.simple.required')}:
                 </span>{' '}
@@ -798,7 +802,7 @@ export function Step2FileUpload({
                   {t('pages.imports.step2.simple.requiredColumns')}
                 </span>
               </div>
-              <div className="text-dark-500 flex flex-wrap items-center justify-center gap-1 self-stretch text-center">
+              <div className="text-foreground flex flex-wrap items-center justify-center gap-1 self-stretch text-center">
                 <span className="text-sm leading-[155%] font-medium tracking-[-0.32px] sm:text-base">
                   {t('pages.imports.step2.simple.optional')}:
                 </span>{' '}

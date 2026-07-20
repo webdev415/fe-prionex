@@ -56,12 +56,12 @@ function buildMonthGrid(viewMonth: Date): Date[] {
 /** Heat tiering. v1 uses fixed thresholds — simple to reason about and
  * caps the worst-case color at the project's primary scale. */
 function tierClasses(count: number, inMonth: boolean): string {
-  if (!inMonth) return 'bg-gray-50 text-gray-300'
-  if (count === 0) return 'bg-white text-gray-600 border border-gray-100'
+  if (!inMonth) return 'bg-muted text-muted-foreground'
+  if (count === 0) return 'bg-card text-muted-foreground border border-border'
   if (count <= 2) return 'bg-primary-100 text-primary-900'
   if (count <= 5) return 'bg-primary-300 text-primary-900'
-  if (count <= 10) return 'bg-primary-500 text-white'
-  return 'bg-primary-700 text-white'
+  if (count <= 10) return 'bg-primary-500 text-primary-foreground'
+  return 'bg-primary-700 text-primary-foreground'
 }
 
 export function TaskHistoryAnalytics({ buckets, total, isLoading, initialViewMonth }: Props) {
@@ -104,13 +104,13 @@ export function TaskHistoryAnalytics({ buckets, total, isLoading, initialViewMon
   }, [viewMonth, i18n.language])
 
   return (
-    <div className="rounded-xl bg-white/50 p-4 shadow-sm sm:p-6">
+    <div className="bg-card/50 rounded-xl p-4 shadow-sm sm:p-6">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h2 className="text-dark-500 text-sm font-medium sm:text-base">
+          <h2 className="text-foreground text-sm font-medium sm:text-base">
             {t('pages.actionAnalysis.taskHistoryAnalytics.title', 'Tasks due by date')}
           </h2>
-          <p className="mt-0.5 text-xs text-gray-500">
+          <p className="text-muted-foreground mt-0.5 text-xs">
             {t(
               'pages.actionAnalysis.taskHistoryAnalytics.subtitle',
               'Total tasks due within the current filter range.'
@@ -118,10 +118,10 @@ export function TaskHistoryAnalytics({ buckets, total, isLoading, initialViewMon
           </p>
         </div>
         <div className="text-right">
-          <div className="text-dark-500 text-2xl leading-none font-light">
+          <div className="text-foreground text-2xl leading-none font-light">
             {isLoading ? '…' : total.toLocaleString()}
           </div>
-          <div className="mt-1 text-[11px] tracking-wide text-gray-500 uppercase">
+          <div className="text-muted-foreground mt-1 text-[11px] tracking-wide uppercase">
             {t('pages.actionAnalysis.taskHistoryAnalytics.totalLabel', 'tasks due')}
           </div>
         </div>
@@ -133,16 +133,16 @@ export function TaskHistoryAnalytics({ buckets, total, isLoading, initialViewMon
             type="button"
             aria-label={t('pages.actionAnalysis.taskHistoryAnalytics.prevMonth', 'Previous month')}
             onClick={() => setViewMonth((m) => addMonths(m, -1))}
-            className="hover:border-primary-300 inline-flex h-8 w-8 items-center justify-center rounded-full border border-gray-200 text-gray-600 hover:text-gray-900"
+            className="hover:border-primary-300 border-border text-muted-foreground hover:text-foreground inline-flex h-8 w-8 items-center justify-center rounded-full border"
           >
             <Icons.ArrowLeft size={16} />
           </button>
-          <span className="text-dark-500 text-sm font-medium capitalize">{monthLabel}</span>
+          <span className="text-foreground text-sm font-medium capitalize">{monthLabel}</span>
           <button
             type="button"
             aria-label={t('pages.actionAnalysis.taskHistoryAnalytics.nextMonth', 'Next month')}
             onClick={() => setViewMonth((m) => addMonths(m, 1))}
-            className="hover:border-primary-300 inline-flex h-8 w-8 items-center justify-center rounded-full border border-gray-200 text-gray-600 hover:text-gray-900"
+            className="hover:border-primary-300 border-border text-muted-foreground hover:text-foreground inline-flex h-8 w-8 items-center justify-center rounded-full border"
           >
             <Icons.ArrowRight size={16} />
           </button>
@@ -159,7 +159,7 @@ export function TaskHistoryAnalytics({ buckets, total, isLoading, initialViewMon
 
       <div className={`mt-4 ${isLoading ? 'opacity-50' : ''}`}>
         <div
-          className="grid grid-cols-7 gap-1 text-[11px] font-medium text-gray-500 uppercase"
+          className="text-muted-foreground grid grid-cols-7 gap-1 text-[11px] font-medium uppercase"
           role="row"
         >
           {WEEKDAY_KEYS.map((key) => (
@@ -201,7 +201,7 @@ export function TaskHistoryAnalytics({ buckets, total, isLoading, initialViewMon
         </div>
 
         {!isLoading && !visibleMonthHasBuckets ? (
-          <div className="mt-3 rounded-md border border-dashed border-gray-200 bg-gray-50 px-3 py-3 text-center text-xs text-gray-500">
+          <div className="border-border bg-muted text-muted-foreground mt-3 rounded-md border border-dashed px-3 py-3 text-center text-xs">
             {t('pages.actionAnalysis.taskHistoryAnalytics.emptyMonth', 'No tasks due this month.')}
           </div>
         ) : null}

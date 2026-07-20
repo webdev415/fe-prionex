@@ -44,39 +44,39 @@ const COLUMN_META: Record<
   wait: {
     key: 'pages.actionAnalysis.inbox.kanbanColumns.wait',
     fallback: 'Wait',
-    chipTone: 'bg-yellow-100 text-yellow-700',
-    columnTone: 'bg-yellow-50/40',
+    chipTone: 'bg-warning-100 text-warning-700',
+    columnTone: 'bg-warning-100/40',
   },
   in_progress: {
     key: 'pages.actionAnalysis.inbox.kanbanColumns.in_progress',
     fallback: 'In progress',
-    chipTone: 'bg-blue-100 text-blue-700',
-    columnTone: 'bg-blue-50/40',
+    chipTone: 'bg-info-100 text-info-700',
+    columnTone: 'bg-info-100/40',
   },
   awaiting_training: {
     key: 'pages.actionAnalysis.inbox.kanbanColumns.awaiting_training',
     fallback: 'Awaiting training',
-    chipTone: 'bg-purple-100 text-purple-700',
-    columnTone: 'bg-purple-50/40',
+    chipTone: 'bg-secondary-100 text-secondary-700',
+    columnTone: 'bg-secondary-100/40',
   },
   scheduled: {
     key: 'pages.actionAnalysis.inbox.kanbanColumns.scheduled',
     fallback: 'Scheduled',
-    chipTone: 'bg-indigo-100 text-indigo-700',
-    columnTone: 'bg-indigo-50/40',
+    chipTone: 'bg-primary-100 text-primary-700',
+    columnTone: 'bg-primary-100/40',
   },
   closed: {
     key: 'pages.actionAnalysis.inbox.kanbanColumns.closed',
     fallback: 'Closed',
-    chipTone: 'bg-gray-100 text-gray-700',
-    columnTone: 'bg-gray-50/40',
+    chipTone: 'bg-muted text-muted-foreground',
+    columnTone: 'bg-muted/40',
   },
 }
 
 const SCORE_BAND_BG: Record<ScoreBand, string> = {
-  red: 'bg-red-500 text-white ring-red-300',
-  amber: 'bg-amber-400 text-white ring-amber-300',
-  green: 'bg-green-500 text-white ring-green-300',
+  red: 'bg-error-100 text-error-700 ring-error-200',
+  amber: 'bg-warning-100 text-warning-700 ring-warning-200',
+  green: 'bg-success-100 text-success-700 ring-success-200',
 }
 
 const DRAG_MIME = 'application/x-coaching-assignment'
@@ -204,7 +204,7 @@ export function OperatorKanbanView({
 
   if (isLoading) {
     return (
-      <div className="rounded-2xl bg-white/60 p-6 text-center text-sm text-gray-500">
+      <div className="bg-card/60 text-muted-foreground rounded-2xl p-6 text-center text-sm">
         {t('pages.actionAnalysis.inbox.list.loading', 'Loading queue…')}
       </div>
     )
@@ -234,7 +234,7 @@ export function OperatorKanbanView({
               <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${meta.chipTone}`}>
                 {t(meta.key, meta.fallback)}
               </span>
-              <span className="text-[10px] font-medium text-gray-500">{bucket.length}</span>
+              <span className="text-muted-foreground text-[10px] font-medium">{bucket.length}</span>
             </header>
 
             <ul className="flex flex-col gap-1.5">
@@ -251,10 +251,10 @@ export function OperatorKanbanView({
                       onDragStart={(e) => handleDragStart(e, row)}
                       onClick={() => onSelect(row.operator_id)}
                       className={[
-                        'flex w-full items-start gap-2 rounded-xl border bg-white p-2.5 text-left transition-colors',
+                        'bg-card flex w-full items-start gap-2 rounded-xl border p-2.5 text-left transition-colors',
                         isSelected
                           ? 'border-primary-400 ring-primary-100 ring-2'
-                          : 'hover:border-primary-200 border-gray-100',
+                          : 'hover:border-primary-200 border-border',
                       ].join(' ')}
                     >
                       <div className="relative flex-shrink-0">
@@ -264,30 +264,30 @@ export function OperatorKanbanView({
                         {row.triggers.length > 0 ? (
                           <span
                             aria-label="red flag"
-                            className="absolute -top-0.5 -right-0.5 inline-block h-2.5 w-2.5 rounded-full border-2 border-white bg-red-500"
+                            className="border-card bg-destructive absolute -top-0.5 -right-0.5 inline-block h-2.5 w-2.5 rounded-full border-2"
                           />
                         ) : null}
                       </div>
                       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                        <span className="text-dark-500 truncate text-xs font-medium">{name}</span>
+                        <span className="text-foreground truncate text-xs font-medium">{name}</span>
                         <div className="flex flex-wrap items-center gap-1">
                           {departmentName ? (
-                            <span className="bg-primary-50 text-primary-700 rounded-full px-1.5 py-0.5 text-[9px] font-medium uppercase">
+                            <span className="bg-primary-100 text-primary-700 rounded-full px-1.5 py-0.5 text-[9px] font-medium uppercase">
                               {departmentName}
                             </span>
                           ) : null}
                           {lastActive ? (
-                            <span className="text-[9px] text-gray-500">{lastActive}</span>
+                            <span className="text-muted-foreground text-[9px]">{lastActive}</span>
                           ) : null}
                           {row.triggers.length > 0 ? (
-                            <span className="text-[9px] font-medium text-red-600">
+                            <span className="text-error-600 text-[9px] font-medium">
                               {row.triggers.length}⚑
                             </span>
                           ) : null}
                         </div>
                       </div>
                       <span
-                        className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-xs font-semibold ring-1 ${row.score_band ? SCORE_BAND_BG[row.score_band] : 'bg-gray-300 text-gray-600 ring-gray-200'}`}
+                        className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-xs font-semibold ring-1 ${row.score_band ? SCORE_BAND_BG[row.score_band] : 'bg-muted text-muted-foreground ring-border'}`}
                       >
                         {row.composite_score}
                       </span>

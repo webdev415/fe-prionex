@@ -79,33 +79,33 @@ export function KPICard({
   return (
     <div
       className={cn(
-        'flex flex-1 flex-col items-center justify-between self-stretch rounded-xl border border-white bg-white/50 p-6',
+        'border-border bg-card/50 flex w-full flex-col items-center justify-between gap-4 rounded-xl border p-4 sm:gap-6 sm:p-6',
         className
       )}
     >
       <div className="flex items-center justify-between self-stretch">
         {/* Title */}
-        <span className="text-dark-500 text-[18px] leading-[150%] font-light tracking-[-0.36px]">
+        <span className="text-foreground text-base leading-[150%] font-light tracking-[-0.36px] sm:text-[18px]">
           {title}
         </span>
         {/* Icon in top right */}
-        <div className="flex items-center gap-2.5 rounded-full bg-white p-2">{getIcon()}</div>
+        <div className="bg-card flex items-center gap-2.5 rounded-full p-2">{getIcon()}</div>
       </div>
 
       {/* Value and Change */}
-      <div className="flex flex-1 flex-col items-center justify-center gap-3">
+      <div className="flex flex-col items-center justify-center gap-3">
         {isPercentage && percentage !== undefined ? (
-          <div className="relative flex h-30 w-30 items-center justify-center">
-            <svg className="h-30 w-30 -rotate-90 transform" viewBox="0 0 100 100">
+          <div className="relative flex h-24 w-24 items-center justify-center sm:h-30 sm:w-30">
+            <svg className="h-24 w-24 -rotate-90 transform sm:h-30 sm:w-30" viewBox="0 0 100 100">
               {/* Background circle */}
               <circle
                 cx="50"
                 cy="50"
                 r="45"
                 fill="none"
-                stroke="#FFF"
+                stroke="currentColor"
                 strokeWidth="10"
-                className="shadow-[inset_0_1px_2px_0_rgba(0,0,0,0.06),inset_0_2px_5px_0_rgba(0,0,0,0.10)] transition-all duration-300"
+                className="text-border shadow-[inset_0_1px_2px_0_rgba(0,0,0,0.06),inset_0_2px_5px_0_rgba(0,0,0,0.10)] transition-all duration-300"
               />
               {/* Progress circle */}
               <circle
@@ -113,32 +113,32 @@ export function KPICard({
                 cy="50"
                 r="45"
                 fill="none"
-                stroke="#A0F229"
+                stroke="currentColor"
                 strokeWidth="10"
                 strokeDasharray={circumference}
                 strokeDashoffset={offset}
                 strokeLinecap="round"
-                className="shadow-[inset_0_1px_2px_0_rgba(0,0,0,0.06),inset_0_2px_5px_0_rgba(0,0,0,0.10)] transition-all duration-300"
+                className="text-primary-400 shadow-[inset_0_1px_2px_0_rgba(0,0,0,0.06),inset_0_2px_5px_0_rgba(0,0,0,0.10)] transition-all duration-300"
               />
             </svg>
-            <span className="text-dark-500 absolute text-[30px] leading-[129%] font-medium tracking-[-0.6px]">
+            <span className="text-foreground absolute text-2xl leading-[129%] font-medium tracking-[-0.6px] sm:text-[30px]">
               {value}
             </span>
           </div>
         ) : (
-          <span className="text-dark-500 text-[30px] leading-[129%] font-medium tracking-[-0.6px]">
+          <span className="text-foreground text-2xl leading-[129%] font-medium tracking-[-0.6px] sm:text-[30px]">
             {value}
           </span>
         )}
 
         {!hideTrend && (
-          <div className="flex items-center justify-center gap-2">
+          <div className="flex flex-wrap items-center justify-center gap-2 text-center">
             {isIncrease ? (
               <Icons.ArrowUp02 size={20} className="text-success-500" />
             ) : (
               <Icons.ArrowDown02 size={20} className="text-error-500" />
             )}
-            <span className="text-dark-500 text-sm leading-[150%] tracking-[-0.28px]">
+            <span className="text-foreground text-sm leading-[150%] tracking-[-0.28px]">
               <span className="font-medium">{change}% </span>
               <span className="font-light">{t('pages.reports.kpi.vs')} </span>
               <span className="font-medium">{getComparisonText()}</span>
@@ -148,10 +148,10 @@ export function KPICard({
         {/* View Details Link */}
         {onViewDetails && (
           <LinkButton
-            variant="regular-secondary"
+            variant="regular-black"
             size="sm"
             onClick={onViewDetails}
-            rightIcon={<Icons.ArrowRight size={20} />}
+            rightIcon={<Icons.ArrowRight size={20} className="text-foreground" />}
           >
             {t('pages.reports.kpi.viewDetails')}
           </LinkButton>

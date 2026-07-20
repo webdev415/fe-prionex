@@ -116,7 +116,7 @@ export function TargetActionForm({ formId, initial, onSuccess }: TargetActionFor
   return (
     <form id={formId} onSubmit={handleSubmit} className="flex flex-col gap-4">
       {isLocked && (
-        <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-xs text-amber-800">
+        <div className="border-warning-200 bg-warning-100 text-warning-700 rounded-md border p-3 text-xs">
           {t('pages.targetActions.lockedHint')}
         </div>
       )}
@@ -172,7 +172,7 @@ export function TargetActionForm({ formId, initial, onSuccess }: TargetActionFor
               type="button"
               onClick={addValue}
               disabled={isLocked}
-              className="bg-primary-300 text-dark-500 hover:bg-primary-500 rounded-md px-3 text-sm disabled:opacity-50"
+              className="bg-primary-300 text-primary-foreground hover:bg-primary-500 rounded-md px-3 text-sm disabled:opacity-50"
             >
               <Icons.Add size={16} strokeWidth={2} />
             </button>
@@ -181,21 +181,21 @@ export function TargetActionForm({ formId, initial, onSuccess }: TargetActionFor
             {dropdownValues.map((v, idx) => (
               <li
                 key={v.value}
-                className="flex flex-col gap-1 rounded border border-gray-200 bg-white px-2 py-2"
+                className="border-border bg-card flex flex-col gap-1 rounded border px-2 py-2"
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-dark-500 text-sm font-medium">{v.value}</span>
+                  <span className="text-foreground text-sm font-medium">{v.value}</span>
                   {!isLocked && (
                     <button
                       type="button"
                       onClick={() => removeValue(v.value)}
-                      className="text-xs text-red-600 hover:underline"
+                      className="text-error-600 text-xs hover:underline"
                     >
                       {t('actions.delete')}
                     </button>
                   )}
                 </div>
-                <div className="flex flex-wrap gap-3 text-[11px] text-gray-600">
+                <div className="text-muted-foreground flex flex-wrap gap-3 text-[11px]">
                   <label className="flex items-center gap-1">
                     <input
                       type="checkbox"

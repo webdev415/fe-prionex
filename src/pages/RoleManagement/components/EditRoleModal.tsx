@@ -39,8 +39,8 @@ export function EditRoleModal({ open, roleId, onClose, onSuccess }: EditRoleModa
     <Modal open={open} onClose={onClose} maxWidth="2xl">
       <ModalHeader
         icon={
-          <div className="bg-primary-400 flex h-8 w-8 items-center justify-center rounded-full">
-            <Icons.PencilEdit size={20} className="text-dark-500" strokeWidth={2} />
+          <div className="bg-primary-400 flex h-7 w-7 items-center justify-center rounded-full sm:h-8 sm:w-8">
+            <Icons.PencilEdit size={18} className="text-foreground" strokeWidth={2} />
           </div>
         }
         title={t('pages.roles.modals.edit.title')}
@@ -56,7 +56,7 @@ export function EditRoleModal({ open, roleId, onClose, onSuccess }: EditRoleModa
             onCancel={onClose}
           />
         ) : (
-          <div className="py-8 text-center text-gray-600">
+          <div className="text-muted-foreground py-8 text-center">
             {t('pages.roles.modals.archive.failedToLoad')}
           </div>
         )}

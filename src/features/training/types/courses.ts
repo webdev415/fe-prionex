@@ -47,6 +47,7 @@ export interface CourseListResponse {
 
 export interface CourseListFilters {
   status?: CourseStatus
+  category?: string
   q?: string
   limit?: number
   offset?: number

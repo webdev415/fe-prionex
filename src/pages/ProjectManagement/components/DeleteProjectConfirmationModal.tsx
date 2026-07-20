@@ -31,14 +31,14 @@ export function DeleteProjectConfirmationModal({
     <Modal open={open} onClose={onCancel} maxWidth="2xl">
       <ModalHeader
         icon={
-          <div className="bg-primary-400 flex h-8 w-8 items-center justify-center rounded-full">
-            <Icons.Delete size={20} className="text-dark-500" strokeWidth={2} />
+          <div className="bg-primary-400 flex h-7 w-7 items-center justify-center rounded-full sm:h-8 sm:w-8">
+            <Icons.Delete size={18} className="text-foreground" strokeWidth={2} />
           </div>
         }
         title={t('pages.projects.modals.delete.title', { projectName })}
       />
       <ModalContent>
-        <p className="text-dark-500 text-base font-light">
+        <p className="text-foreground text-base font-light">
           {t('pages.projects.modals.delete.confirmMessage')}
         </p>
       </ModalContent>

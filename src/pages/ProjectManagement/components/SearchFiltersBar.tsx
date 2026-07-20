@@ -189,14 +189,18 @@ export function SearchFiltersBar({
       <div className="flex flex-1 items-center justify-between">
         <div
           className={cn(
-            'border-light-100 flex h-11 flex-1 items-center gap-2 rounded-full border bg-white sm:gap-3',
+            'border-border bg-card flex h-11 flex-1 items-center gap-2 rounded-full border sm:gap-3',
             'pl-3 sm:pl-4',
             'pr-2 lg:pr-2',
             'w-full max-w-full'
           )}
         >
           {/* Search icon - shown on mobile when search button is hidden, hidden on desktop when search button is visible */}
-          <Icons.Search size={18} className="shrink-0 text-gray-400 lg:hidden" strokeWidth={1.5} />
+          <Icons.Search
+            size={18}
+            className="text-muted-foreground shrink-0 lg:hidden"
+            strokeWidth={1.5}
+          />
 
           {/* Search Input */}
           <div className="flex flex-1 items-center gap-2">
@@ -205,15 +209,15 @@ export function SearchFiltersBar({
               placeholder={t('pages.projects.searchFilters.placeholder')}
               value={searchValue}
               onChange={(e) => setSearchValue(e.target.value)}
-              className="text-dark-500 min-w-0 flex-1 bg-transparent text-xs outline-none placeholder:font-light placeholder:text-gray-400 sm:text-sm"
+              className="text-foreground placeholder:text-muted-foreground min-w-0 flex-1 bg-transparent text-xs outline-none placeholder:font-light sm:text-sm"
             />
             {searchValue && (
               <button
                 onClick={() => setSearchValue('')}
-                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-gray-100"
+                className="hover:bg-muted flex h-6 w-6 shrink-0 items-center justify-center rounded-full transition-colors"
                 type="button"
               >
-                <Icons.Close size={14} className="text-gray-500" />
+                <Icons.Close size={14} className="text-muted-foreground" />
               </button>
             )}
           </div>
@@ -230,21 +234,21 @@ export function SearchFiltersBar({
                 <DropdownMenuTrigger asChild>
                   <button
                     type="button"
-                    className="text-dark-500 bg-primary-300 hover:bg-primary-500 active:bg-primary-600 group flex h-9 w-9 min-w-0 cursor-pointer items-center justify-center rounded-full border-0 p-0 shadow-none transition-all duration-200 hover:shadow-md focus:outline-none active:shadow-sm disabled:cursor-not-allowed disabled:opacity-50 data-[state=open]:focus:ring-0 data-[state=open]:focus:ring-offset-0"
+                    className="text-primary-foreground bg-primary-300 hover:bg-primary-500 active:bg-primary-600 group flex h-9 w-9 min-w-0 cursor-pointer items-center justify-center rounded-full border-0 p-0 shadow-none transition-all duration-200 hover:shadow-md focus:outline-none active:shadow-sm disabled:cursor-not-allowed disabled:opacity-50 data-[state=open]:focus:ring-0 data-[state=open]:focus:ring-offset-0"
                     aria-label="Filters"
                     disabled={isLoading}
                   >
                     <Icons.Filter
                       size={18}
-                      className="text-dark-500 shrink-0 transition-transform duration-200 group-hover:scale-110"
+                      className="text-primary-foreground shrink-0 transition-transform duration-200 group-hover:scale-110"
                       strokeWidth={1.5}
                     />
                   </button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48 bg-white">
+                <DropdownMenuContent align="end" className="bg-card w-48">
                   {/* Status Filter */}
                   <div className="px-2 py-1.5">
-                    <span className="text-xs font-medium text-gray-700">
+                    <span className="text-foreground text-xs font-medium">
                       {t('pages.projects.searchFilters.status')}:
                     </span>
                     <div className="mt-1">
@@ -253,10 +257,10 @@ export function SearchFiltersBar({
                         onValueChange={handleStatusChange}
                         disabled={isLoading}
                       >
-                        <SelectTrigger className="h-8 w-full border border-gray-200 bg-white text-xs">
+                        <SelectTrigger className="border-border bg-card h-8 w-full border text-xs">
                           <SelectValue />
                         </SelectTrigger>
-                        <SelectContent className="bg-white">
+                        <SelectContent className="bg-card">
                           <SelectItem value="active">
                             {t('pages.projects.searchFilters.statusOptions.active')}
                           </SelectItem>
@@ -276,7 +280,7 @@ export function SearchFiltersBar({
 
                   {/* Client Filter */}
                   <div className="px-2 py-1.5">
-                    <span className="text-xs font-medium text-gray-700">
+                    <span className="text-foreground text-xs font-medium">
                       {t('pages.projects.searchFilters.client')}:
                     </span>
                     <div className="mt-1">
@@ -285,10 +289,10 @@ export function SearchFiltersBar({
                         onValueChange={handleClientChange}
                         disabled={isLoading || clients.length === 0}
                       >
-                        <SelectTrigger className="h-8 w-full border border-gray-200 bg-white text-xs">
+                        <SelectTrigger className="border-border bg-card h-8 w-full border text-xs">
                           <SelectValue />
                         </SelectTrigger>
-                        <SelectContent className="bg-white">
+                        <SelectContent className="bg-card">
                           <SelectItem value="all">
                             {t('pages.projects.searchFilters.allClients')}
                           </SelectItem>
@@ -304,7 +308,7 @@ export function SearchFiltersBar({
 
                   {/* Period Filter */}
                   <div className="px-2 py-1.5">
-                    <span className="text-xs font-medium text-gray-700">
+                    <span className="text-foreground text-xs font-medium">
                       {t('pages.projects.searchFilters.period')}:
                     </span>
                     <div className="mt-1">
@@ -313,10 +317,10 @@ export function SearchFiltersBar({
                         onValueChange={(value) => handlePeriodChange(value as PeriodOption)}
                         disabled={isLoading}
                       >
-                        <SelectTrigger className="h-8 w-full border border-gray-200 bg-white text-xs">
+                        <SelectTrigger className="border-border bg-card h-8 w-full border text-xs">
                           <SelectValue />
                         </SelectTrigger>
-                        <SelectContent className="bg-white">
+                        <SelectContent className="bg-card">
                           <SelectItem value="any">
                             {t('pages.projects.searchFilters.periodOptions.any')}
                           </SelectItem>
@@ -339,11 +343,11 @@ export function SearchFiltersBar({
 
             {/* Desktop: Inline filters with divider */}
             <div className="hidden items-center lg:flex">
-              <div className="mx-2 h-5 w-px bg-gray-300" />
-              <div className="flex items-center gap-4 text-xs text-gray-700">
+              <div className="bg-border mx-2 h-5 w-px" />
+              <div className="text-foreground flex items-center gap-4 text-xs">
                 {/* Status Filter */}
                 <div className="flex items-center gap-1">
-                  <span className="text-[14px] text-gray-500">
+                  <span className="text-muted-foreground text-[14px]">
                     {t('pages.projects.searchFilters.status')}:
                   </span>
                   <Select
@@ -354,7 +358,7 @@ export function SearchFiltersBar({
                     <SelectTrigger className="h-auto border-0 bg-transparent p-0 text-[11px] font-medium shadow-none focus:ring-0">
                       <SelectValue placeholder={t('pages.projects.searchFilters.status')} />
                     </SelectTrigger>
-                    <SelectContent className="bg-white">
+                    <SelectContent className="bg-card">
                       <SelectItem value="active">
                         {t('pages.projects.searchFilters.statusOptions.active')}
                       </SelectItem>
@@ -373,7 +377,7 @@ export function SearchFiltersBar({
 
                 {/* Client Filter */}
                 <div className="flex items-center gap-1">
-                  <span className="text-[14px] text-gray-500">
+                  <span className="text-muted-foreground text-[14px]">
                     {t('pages.projects.searchFilters.client')}
                   </span>
                   <Select
@@ -384,7 +388,7 @@ export function SearchFiltersBar({
                     <SelectTrigger className="h-auto border-0 bg-transparent p-0 text-[11px] font-medium shadow-none focus:ring-0">
                       <SelectValue placeholder={t('pages.projects.searchFilters.client')} />
                     </SelectTrigger>
-                    <SelectContent className="bg-white">
+                    <SelectContent className="bg-card">
                       <SelectItem value="all">
                         {t('pages.projects.searchFilters.allClients')}
                       </SelectItem>
@@ -399,7 +403,7 @@ export function SearchFiltersBar({
 
                 {/* Period Filter */}
                 <div className="flex items-center gap-1">
-                  <span className="text-[14px] text-gray-500">
+                  <span className="text-muted-foreground text-[14px]">
                     {t('pages.projects.searchFilters.period')}
                   </span>
                   <Select
@@ -412,7 +416,7 @@ export function SearchFiltersBar({
                         placeholder={t('pages.projects.searchFilters.periodOptions.any')}
                       />
                     </SelectTrigger>
-                    <SelectContent className="bg-white">
+                    <SelectContent className="bg-card">
                       <SelectItem value="any">
                         {t('pages.projects.searchFilters.periodOptions.any')}
                       </SelectItem>
@@ -442,7 +446,7 @@ export function SearchFiltersBar({
             className="bg-primary-300 hidden h-9 w-9 shrink-0 items-center justify-center rounded-full transition-all duration-200 hover:scale-105 disabled:opacity-60 lg:flex"
             aria-label={t('pages.projects.searchFilters.searchProjects')}
           >
-            <Icons.Search size={18} className="text-dark-500" strokeWidth={1.5} />
+            <Icons.Search size={18} className="text-primary-foreground" strokeWidth={1.5} />
           </button>
         </div>
       </div>
@@ -462,10 +466,10 @@ export function SearchFiltersBar({
         <button
           type="button"
           onClick={() => setShowCreateModal(true)}
-          className="bg-primary-300 flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-all duration-200 hover:scale-105 lg:hidden"
+          className="bg-primary-300 text-primary-foreground flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-all duration-200 hover:scale-105 lg:hidden"
           aria-label={t('pages.projects.searchFilters.newProject')}
         >
-          <Icons.Add size={20} className="text-dark-500" strokeWidth={2} />
+          <Icons.Add size={20} strokeWidth={2} />
         </button>
 
         {/* Create Modal */}
@@ -484,7 +488,7 @@ export function SearchFiltersBar({
             size="md"
             onClick={onExport}
             disabled={isLoading}
-            leftIcon={<Icons.FileImport size={16} className="text-dark-500" />}
+            leftIcon={<Icons.FileImport size={16} className="text-primary-foreground" />}
             className="hidden h-[45px] rounded-full text-xs lg:flex"
           >
             {t('pages.projects.searchFilters.export')}
@@ -494,10 +498,10 @@ export function SearchFiltersBar({
             type="button"
             onClick={onExport}
             disabled={isLoading}
-            className="bg-primary-300 flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-all duration-200 hover:scale-105 disabled:opacity-60 lg:hidden"
+            className="bg-primary-300 text-primary-foreground flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-all duration-200 hover:scale-105 disabled:opacity-60 lg:hidden"
             aria-label={t('pages.projects.searchFilters.export')}
           >
-            <Icons.FileImport size={18} className="text-dark-500" strokeWidth={1.5} />
+            <Icons.FileImport size={18} strokeWidth={1.5} />
           </button>
         </PermissionGuard>
       </div>

@@ -61,7 +61,12 @@ export function UnlockAccountModal({ open, user, onClose }: UnlockAccountModalPr
       <ModalHeader
         icon={
           <div className="bg-primary-400 flex h-7 w-7 items-center justify-center rounded-full sm:h-8 sm:w-8">
-            <HugeiconsIcon icon={LockedIcon} size={18} color="#05040D" />
+            <HugeiconsIcon
+              icon={LockedIcon}
+              size={18}
+              color="currentColor"
+              className="text-foreground"
+            />
           </div>
         }
         title={
@@ -75,83 +80,85 @@ export function UnlockAccountModal({ open, user, onClose }: UnlockAccountModalPr
         {/* Account summary */}
         <div className="space-y-1 text-sm sm:space-y-2">
           <p className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
-            <span className="text-dark-500 text-sm font-medium sm:text-base">
+            <span className="text-foreground text-sm font-medium sm:text-base">
               {t('pages.users.modals.unlock.unlockAccount')}
             </span>
-            <span className="text-dark-500 text-sm font-light break-words sm:text-base">
+            <span className="text-foreground text-sm font-light break-words sm:text-base">
               {user.username}
             </span>
           </p>
           <p className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
-            <span className="text-dark-500 text-sm font-light sm:text-base">
+            <span className="text-foreground text-sm font-light sm:text-base">
               {t('pages.users.modals.unlock.failedAttempts')}
             </span>
-            <span className="text-dark-500 text-sm font-medium sm:text-base">{failedAttempts}</span>
+            <span className="text-foreground text-sm font-medium sm:text-base">
+              {failedAttempts}
+            </span>
           </p>
           {lockedAt && (
             <p className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
-              <span className="text-dark-500 text-sm font-light sm:text-base">
+              <span className="text-foreground text-sm font-light sm:text-base">
                 {t('pages.users.modals.unlock.lockedAt')}
               </span>
-              <span className="text-dark-500 text-sm font-medium break-words sm:text-base">
+              <span className="text-foreground text-sm font-medium break-words sm:text-base">
                 {formatDateTime(lockedAt.toISOString())}
               </span>
             </p>
           )}
           {autoUnlockAt && (
             <p className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
-              <span className="text-dark-500 text-sm font-light sm:text-base">
+              <span className="text-foreground text-sm font-light sm:text-base">
                 {t('pages.users.modals.unlock.autoUnlockAt')}
               </span>
-              <span className="text-dark-500 text-sm font-medium break-words sm:text-base">
+              <span className="text-foreground text-sm font-medium break-words sm:text-base">
                 {formatDateTime(autoUnlockAt.toISOString())}
               </span>
               {remainingMinutes !== null && remainingMinutes > 0 && (
-                <span className="text-dark-500 text-xs font-light sm:text-sm">{`(${remainingMinutes} ${t('pages.users.modals.unlock.minRemaining')})`}</span>
+                <span className="text-foreground text-xs font-light sm:text-sm">{`(${remainingMinutes} ${t('pages.users.modals.unlock.minRemaining')})`}</span>
               )}
             </p>
           )}
         </div>
 
-        <hr className="border-light-50 border-t" />
+        <hr className="border-border border-t" />
 
         {/* Confirmation copy */}
         <div className="space-y-2 text-sm sm:space-y-3">
-          <p className="text-dark-500 text-base font-medium sm:text-lg">
+          <p className="text-foreground text-base font-medium sm:text-lg">
             {t('pages.users.modals.unlock.confirmTitle')}
           </p>
           <div className="space-y-2">
-            <p className="text-dark-500 text-sm font-light sm:text-base">
+            <p className="text-foreground text-sm font-light sm:text-base">
               {t('pages.users.modals.unlock.thisWill')}
             </p>
             <div className="space-y-1">
               <div className="flex items-start gap-2 sm:items-center">
                 <Icons.ArrowRight
                   size={14}
-                  className="text-dark-500 mt-0.5 shrink-0 sm:mt-0"
+                  className="text-foreground mt-0.5 shrink-0 sm:mt-0"
                   strokeWidth={1.5}
                 />
-                <span className="text-dark-500 text-sm font-light break-words sm:text-base">
+                <span className="text-foreground text-sm font-light break-words sm:text-base">
                   {t('pages.users.modals.unlock.restoreAccess')}
                 </span>
               </div>
               <div className="flex items-start gap-2 sm:items-center">
                 <Icons.ArrowRight
                   size={14}
-                  className="text-dark-500 mt-0.5 shrink-0 sm:mt-0"
+                  className="text-foreground mt-0.5 shrink-0 sm:mt-0"
                   strokeWidth={1.5}
                 />
-                <span className="text-dark-500 text-sm font-light break-words sm:text-base">
+                <span className="text-foreground text-sm font-light break-words sm:text-base">
                   {t('pages.users.modals.unlock.resetCounter')}
                 </span>
               </div>
               <div className="flex items-start gap-2 sm:items-center">
                 <Icons.ArrowRight
                   size={14}
-                  className="text-dark-500 mt-0.5 shrink-0 sm:mt-0"
+                  className="text-foreground mt-0.5 shrink-0 sm:mt-0"
                   strokeWidth={1.5}
                 />
-                <span className="text-dark-500 text-sm font-light break-words sm:text-base">
+                <span className="text-foreground text-sm font-light break-words sm:text-base">
                   {t('pages.users.modals.unlock.recordAudit')}
                 </span>
               </div>

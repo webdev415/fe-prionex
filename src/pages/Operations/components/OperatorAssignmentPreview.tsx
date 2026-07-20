@@ -32,7 +32,7 @@ function StatusBadge({ status }: { status: OARowStatus }) {
     },
     no_change: {
       icon: Icons.Cancel01,
-      color: 'text-gray-400',
+      color: 'text-muted-foreground',
       labelKey: 'pages.imports.operatorAssignment.preview.statuses.noChange',
     },
     warning: {
@@ -69,7 +69,7 @@ function SummaryCard({ label, value, color }: { label: string; value: number; co
   return (
     <div className={`rounded-xl border px-4 py-3 ${color}`}>
       <p className="text-2xl font-bold">{value}</p>
-      <p className="text-xs text-gray-600">{label}</p>
+      <p className="text-muted-foreground text-xs">{label}</p>
     </div>
   )
 }
@@ -89,10 +89,10 @@ function usePreviewColumns(): Column<OAPreviewRowWithId>[] {
         header: t(`${p}.client`),
         render: (row: OAPreviewRowWithId) => (
           <>
-            <span className="text-dark-500 font-medium">
+            <span className="text-foreground font-medium">
               {row.client_name || `ID: ${row.client_id}`}
             </span>
-            <span className="ml-1 text-xs text-gray-400">({row.client_id})</span>
+            <span className="text-muted-foreground ml-1 text-xs">({row.client_id})</span>
           </>
         ),
       },
@@ -100,7 +100,7 @@ function usePreviewColumns(): Column<OAPreviewRowWithId>[] {
         key: 'current_operator',
         header: t(`${p}.currentOperator`),
         render: (row: OAPreviewRowWithId) => (
-          <span className="text-gray-600">
+          <span className="text-muted-foreground">
             {row.current_operator_name ||
               (row.current_operator_id ? `ID: ${row.current_operator_id}` : '—')}
           </span>
@@ -111,10 +111,10 @@ function usePreviewColumns(): Column<OAPreviewRowWithId>[] {
         header: t(`${p}.newOperator`),
         render: (row: OAPreviewRowWithId) => (
           <>
-            <span className="text-dark-500 font-medium">
+            <span className="text-foreground font-medium">
               {row.operator_name || `ID: ${row.operator_id}`}
             </span>
-            <span className="ml-1 text-xs text-gray-400">({row.operator_id})</span>
+            <span className="text-muted-foreground ml-1 text-xs">({row.operator_id})</span>
           </>
         ),
       },
@@ -128,7 +128,7 @@ function usePreviewColumns(): Column<OAPreviewRowWithId>[] {
         header: t(`${p}.note`),
         render: (row: OAPreviewRowWithId) => (
           <div className="flex flex-col gap-1">
-            {row.error ? <span className="text-xs text-gray-600">{row.error}</span> : null}
+            {row.error ? <span className="text-muted-foreground text-xs">{row.error}</span> : null}
             {row.note ? (
               <span className="text-warning-700 bg-warning-50 border-warning-200 inline-flex w-fit items-center rounded-md border px-1.5 py-0.5 text-[10px] font-medium">
                 {row.note}
@@ -163,10 +163,10 @@ export function OperatorAssignmentPreview({ preview, onConfirm, onCancel, isExec
       {/* File info */}
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-dark-500 text-lg font-medium">
+          <h3 className="text-foreground text-lg font-medium">
             {t('pages.imports.operatorAssignment.preview.title')}
           </h3>
-          <p className="text-sm text-gray-600">
+          <p className="text-muted-foreground text-sm">
             {t('pages.imports.operatorAssignment.preview.fileInfo', {
               filename: preview.filename,
               totalRecords: preview.total_records,
@@ -186,7 +186,7 @@ export function OperatorAssignmentPreview({ preview, onConfirm, onCancel, isExec
         <SummaryCard
           label={t('pages.imports.operatorAssignment.preview.noChange')}
           value={summary.no_change}
-          color="bg-gray-50 border-gray-200 text-dark-500"
+          color="bg-muted border-border text-foreground"
         />
         <SummaryCard
           label={t('pages.imports.operatorAssignment.preview.wouldSkip')}
@@ -208,7 +208,7 @@ export function OperatorAssignmentPreview({ preview, onConfirm, onCancel, isExec
       {/* Preview table */}
       {previewRowsWithId.length > 0 && (
         <div>
-          <h4 className="text-dark-500 mb-2 text-sm font-medium">
+          <h4 className="text-foreground mb-2 text-sm font-medium">
             {t('pages.imports.operatorAssignment.preview.previewRows', {
               count: Math.min(previewRowsWithId.length, 50),
             })}
@@ -239,7 +239,7 @@ export function OperatorAssignmentPreview({ preview, onConfirm, onCancel, isExec
 
       {/* Assignment reason */}
       <div>
-        <label className="text-dark-500 mb-1 block text-sm font-medium">
+        <label className="text-foreground mb-1 block text-sm font-medium">
           {t('pages.imports.operatorAssignment.preview.assignmentReason')}
         </label>
         <input
@@ -248,12 +248,12 @@ export function OperatorAssignmentPreview({ preview, onConfirm, onCancel, isExec
           onChange={(e) => setReason(e.target.value)}
           placeholder={t('pages.imports.operatorAssignment.preview.assignmentReasonPlaceholder')}
           disabled={isExecuting}
-          className="text-dark-500 focus:border-secondary-500 focus:ring-secondary-500 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm outline-none placeholder:text-gray-400 focus:ring-1"
+          className="text-foreground focus:border-primary-500 focus:ring-primary-500 border-border bg-card placeholder:text-muted-foreground w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-1"
         />
       </div>
 
       {/* Actions */}
-      <div className="flex items-center justify-end gap-3 border-t border-gray-200 pt-4">
+      <div className="border-border flex items-center justify-end gap-3 border-t pt-4">
         <Button variant="cancel" size="md" onClick={onCancel} disabled={isExecuting}>
           {t('pages.imports.operatorAssignment.preview.cancel')}
         </Button>

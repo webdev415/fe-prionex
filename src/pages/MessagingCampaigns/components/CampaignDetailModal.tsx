@@ -20,6 +20,7 @@ import {
 } from '@/features/messaging'
 import type { MessagingCampaignRecipient, MessagingCampaignSummary } from '@/features/messaging'
 import { useMessagingCampaign, useMessagingCampaignRecipients } from '@/features/messaging'
+import { useAuthStore } from '@/stores/authStore'
 
 const formatStatusFallback = (status: string) =>
   status
@@ -30,43 +31,43 @@ const formatStatusFallback = (status: string) =>
 function campaignStatusBadgeClasses(status: string) {
   const normalized = status.trim().toLowerCase()
   if (normalized === 'completed') {
-    return 'bg-success-50 text-success-800 ring-success-200/60'
+    return 'bg-success-100 text-success-700'
   }
   if (normalized === 'failed') {
-    return 'bg-error-50 text-error-800 ring-error-200/60'
+    return 'bg-error-100 text-error-700'
   }
   if (normalized === 'partially_failed') {
-    return 'bg-warning-50 text-warning-800 ring-warning-200/60'
+    return 'bg-warning-100 text-warning-700'
   }
   if (normalized === 'queued' || normalized === 'sending') {
-    return 'bg-secondary-800/10 text-secondary-800 ring-secondary-800/20'
+    return 'bg-information-100 text-information-700'
   }
-  return 'bg-gray-100 text-gray-700 ring-gray-200'
+  return 'bg-muted text-muted-foreground'
 }
 
 function recipientStatusBadgeClasses(status: string) {
   const display = messagingStatusForCallLogCard(status)
   switch (display) {
     case 'Delivered':
-      return 'bg-success-50 text-success-800 ring-success-200/60'
+      return 'bg-success-100 text-success-700'
     case 'Failed':
-      return 'bg-error-50 text-error-800 ring-error-200/60'
+      return 'bg-error-100 text-error-700'
     case 'Sent':
-      return 'bg-secondary-800/10 text-secondary-800 ring-secondary-800/20'
+      return 'bg-information-100 text-information-700'
     case 'Skipped':
-      return 'bg-gray-100 text-gray-700 ring-gray-200'
+      return 'bg-muted text-muted-foreground'
     default:
-      return 'bg-warning-50 text-warning-800 ring-warning-200/60'
+      return 'bg-warning-100 text-warning-700'
   }
 }
 
 function DetailRow({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div className="flex flex-col gap-1 border-b border-gray-100 py-3 last:border-b-0 sm:flex-row sm:items-start sm:gap-6">
-      <span className="w-full shrink-0 text-xs font-light tracking-wide text-gray-500 sm:w-[8.5rem] sm:text-sm">
+    <div className="border-border flex flex-col gap-1 border-b py-3 last:border-b-0 sm:flex-row sm:items-start sm:gap-6">
+      <span className="text-muted-foreground w-full shrink-0 text-xs font-light tracking-wide sm:w-[8.5rem] sm:text-sm">
         {label}
       </span>
-      <div className="text-dark-500 min-w-0 flex-1 text-sm leading-relaxed font-medium">
+      <div className="text-foreground min-w-0 flex-1 text-sm leading-relaxed font-medium">
         {children}
       </div>
     </div>
@@ -75,9 +76,9 @@ function DetailRow({ label, children }: { label: string; children: ReactNode }) 
 
 function MetricCard({ label, value }: { label: string; value: number }) {
   return (
-    <div className="rounded-xl bg-gray-50 px-3 py-3 ring-1 ring-gray-100 ring-inset sm:px-4 sm:py-3.5">
-      <div className="text-xs font-light tracking-wide text-gray-500">{label}</div>
-      <div className="text-dark-500 mt-1 text-xl font-semibold tabular-nums sm:text-2xl">
+    <div className="bg-muted ring-border rounded-xl px-3 py-3 ring-1 ring-inset sm:px-4 sm:py-3.5">
+      <div className="text-muted-foreground text-xs font-light tracking-wide">{label}</div>
+      <div className="text-foreground mt-1 text-xl font-semibold tabular-nums sm:text-2xl">
         {value}
       </div>
     </div>
@@ -126,11 +127,11 @@ function CampaignDetailSkeleton() {
     <div className="space-y-5" aria-busy="true" aria-hidden="true">
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5">
         {Array.from({ length: 5 }).map((_, index) => (
-          <div key={index} className="h-16 animate-pulse rounded-xl bg-gray-200" />
+          <div key={index} className="bg-muted h-16 animate-pulse rounded-xl" />
         ))}
       </div>
-      <div className="h-40 animate-pulse rounded-2xl bg-gray-200" />
-      <div className="h-28 animate-pulse rounded-2xl bg-gray-200" />
+      <div className="bg-muted h-40 animate-pulse rounded-2xl" />
+      <div className="bg-muted h-28 animate-pulse rounded-2xl" />
       <TableSkeleton columns={5} rows={4} className="w-full" />
     </div>
   )
@@ -151,6 +152,7 @@ export function CampaignDetailModal({
   onClose,
 }: CampaignDetailModalProps) {
   const { t } = useTranslation('common')
+  const userTimezone = useAuthStore((s) => s.user?.timezone)
 
   const statusLabel = useCallback(
     (status: string) =>
@@ -178,9 +180,9 @@ export function CampaignDetailModal({
           return (
             <div className="min-w-0">
               {name ? (
-                <span className="text-dark-500 text-sm font-medium">{name}</span>
+                <span className="text-foreground text-sm font-medium">{name}</span>
               ) : (
-                <span className="font-mono text-xs text-gray-500 sm:text-sm">
+                <span className="text-muted-foreground font-mono text-xs sm:text-sm">
                   #{recipient.client_id}
                 </span>
               )}
@@ -207,7 +209,7 @@ export function CampaignDetailModal({
           return (
             <span
               className={cn(
-                'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset',
+                'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium',
                 recipientStatusBadgeClasses(recipient.status)
               )}
             >
@@ -220,13 +222,13 @@ export function CampaignDetailModal({
         key: 'sent_at',
         header: t('pages.messagingCampaigns.table.sentAt', 'Sent'),
         align: 'left',
-        render: (recipient) => formatDateTime(recipient.sent_at ?? undefined),
+        render: (recipient) => formatDateTime(recipient.sent_at ?? undefined, userTimezone),
       },
       {
         key: 'delivered_at',
         header: t('pages.messagingCampaigns.table.deliveredAt', 'Delivered'),
         align: 'left',
-        render: (recipient) => formatDateTime(recipient.delivered_at ?? undefined),
+        render: (recipient) => formatDateTime(recipient.delivered_at ?? undefined, userTimezone),
       },
       {
         key: 'error_message',
@@ -242,7 +244,7 @@ export function CampaignDetailModal({
           ),
       },
     ],
-    [statusLabel, t]
+    [statusLabel, t, userTimezone]
   )
 
   const handleExport = async () => {
@@ -282,18 +284,24 @@ export function CampaignDetailModal({
           <ModalHeader
             icon={
               <div className="bg-primary-300 flex h-10 w-10 items-center justify-center rounded-full sm:h-12 sm:w-12">
-                <Icons.MailSend01 size={20} className="text-dark-500 sm:size-6" strokeWidth={1.5} />
+                <Icons.MailSend01
+                  size={20}
+                  className="text-foreground sm:size-6"
+                  strokeWidth={1.5}
+                />
               </div>
             }
             title={summary?.name ?? t('pages.messagingCampaigns.detail.title', 'Campaign details')}
           />
           {summary ? (
             <div className="-mt-1 flex flex-wrap items-center gap-2 pl-12 sm:pl-[3.75rem]">
-              <span className="font-mono text-xs tracking-tight text-gray-500">{summary.code}</span>
-              <span className="inline-flex items-center rounded-full bg-white/80 px-2.5 py-0.5 text-xs font-medium text-gray-700 ring-1 ring-gray-200/80 ring-inset">
+              <span className="text-muted-foreground font-mono text-xs tracking-tight">
+                {summary.code}
+              </span>
+              <span className="bg-card text-foreground ring-border inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset">
                 {summary.channel.toUpperCase()}
               </span>
-              <span className="inline-flex items-center rounded-full bg-white/80 px-2.5 py-0.5 text-xs font-medium text-gray-600 ring-1 ring-gray-200/80 ring-inset">
+              <span className="bg-card text-muted-foreground ring-border inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset">
                 {t(
                   `pages.messagingIntegrations.services.${summary.service}`,
                   getMessagingServiceLabel(summary.service)
@@ -301,7 +309,7 @@ export function CampaignDetailModal({
               </span>
               <span
                 className={cn(
-                  'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset',
+                  'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium',
                   campaignStatusBadgeClasses(summary.status)
                 )}
               >
@@ -339,7 +347,7 @@ export function CampaignDetailModal({
                 />
               </div>
 
-              <section className="rounded-2xl border border-gray-200/80 bg-gradient-to-b from-white to-gray-50/80 px-4 py-1 shadow-sm sm:px-5">
+              <section className="border-border from-card to-muted/50 rounded-2xl border bg-gradient-to-b px-4 py-1 shadow-sm sm:px-5">
                 <DetailRow label={t('pages.messagingCampaigns.detail.source', 'Source')}>
                   {formatSourceLabel(summary.source, t)}
                 </DetailRow>
@@ -347,10 +355,10 @@ export function CampaignDetailModal({
                   {formatLauncherName(summary.initiated_by, operatorNames) || '—'}
                 </DetailRow>
                 <DetailRow label={t('pages.messagingCampaigns.detail.launchedAt', 'Launched at')}>
-                  {formatDateTime(summary.launched_at)}
+                  {formatDateTime(summary.launched_at, userTimezone)}
                 </DetailRow>
                 <DetailRow label={t('pages.messagingCampaigns.detail.completedAt', 'Completed at')}>
-                  {formatDateTime(summary.completed_at ?? undefined)}
+                  {formatDateTime(summary.completed_at ?? undefined, userTimezone)}
                 </DetailRow>
                 <DetailRow label={t('pages.messagingCampaigns.detail.cost', 'Cost')}>
                   {(() => {
@@ -359,7 +367,9 @@ export function CampaignDetailModal({
                       <span>
                         {amount}
                         {badge ? (
-                          <span className="ml-2 text-xs font-light text-gray-500">({badge})</span>
+                          <span className="text-muted-foreground ml-2 text-xs font-light">
+                            ({badge})
+                          </span>
                         ) : null}
                       </span>
                     )
@@ -374,35 +384,35 @@ export function CampaignDetailModal({
                 </DetailRow>
               </section>
 
-              <section className="rounded-2xl border border-gray-200/80 bg-white px-4 py-3 shadow-sm sm:px-5 sm:py-4">
-                <h3 className="text-dark-500 mb-3 text-xs font-semibold tracking-wide text-gray-500 uppercase">
+              <section className="border-border bg-card rounded-2xl border px-4 py-3 shadow-sm sm:px-5 sm:py-4">
+                <h3 className="text-muted-foreground mb-3 text-xs font-semibold tracking-wide uppercase">
                   {t('pages.messagingCampaigns.detail.campaignMessage', 'Campaign message')}
                 </h3>
                 <div className="space-y-3 text-sm">
                   {showDraftUsed && (
                     <div>
-                      <span className="text-xs font-light text-gray-500">
+                      <span className="text-muted-foreground text-xs font-light">
                         {t('pages.messagingCampaigns.detail.draftUsed', 'Draft')}
                       </span>
-                      <p className="text-dark-500 mt-0.5 font-medium">{snapshotDraftName}</p>
+                      <p className="text-foreground mt-0.5 font-medium">{snapshotDraftName}</p>
                     </div>
                   )}
                   {displaySubject && summary.channel === 'email' && (
                     <div>
-                      <span className="text-xs font-light text-gray-500">
+                      <span className="text-muted-foreground text-xs font-light">
                         {t('pages.messagingCampaigns.detail.subject', 'Subject')}
                       </span>
-                      <p className="text-dark-500 mt-0.5 font-medium">{displaySubject}</p>
+                      <p className="text-foreground mt-0.5 font-medium">{displaySubject}</p>
                     </div>
                   )}
                   <div>
-                    <span className="text-xs font-light text-gray-500">
+                    <span className="text-muted-foreground text-xs font-light">
                       {renderedBody
                         ? t('pages.messagingCampaigns.detail.sentBody', 'Sent message')
                         : t('pages.messagingCampaigns.detail.body', 'Body')}
                     </span>
                     <div
-                      className="text-dark-500 mt-1.5 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap ring-1 ring-gray-100 ring-inset"
+                      className="text-foreground border-border bg-muted ring-border mt-1.5 rounded-xl border px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap ring-1 ring-inset"
                       role="article"
                     >
                       {displayBody || '—'}
@@ -412,12 +422,12 @@ export function CampaignDetailModal({
                 </div>
               </section>
 
-              <section className="rounded-2xl border border-gray-200/80 bg-white px-4 py-3 shadow-sm sm:px-5 sm:py-4">
+              <section className="border-border bg-card rounded-2xl border px-4 py-3 shadow-sm sm:px-5 sm:py-4">
                 <div className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
-                  <h3 className="text-dark-500 text-xs font-semibold tracking-wide text-gray-500 uppercase">
+                  <h3 className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
                     {t('pages.messagingCampaigns.detail.recipientResults', 'Recipient results')}
                   </h3>
-                  <p className="text-xs font-light text-gray-500">
+                  <p className="text-muted-foreground text-xs font-light">
                     {t(
                       'pages.messagingCampaigns.detail.recipientResultsHint',
                       'Showing the latest 100 recipient rows for this campaign.'
@@ -441,7 +451,7 @@ export function CampaignDetailModal({
           ) : null}
         </ModalContent>
 
-        <ModalFooter className="bg-light-50 mt-auto shrink-0 flex-col gap-2 sm:flex-row">
+        <ModalFooter className="bg-muted mt-auto shrink-0 flex-col gap-2 sm:flex-row">
           <Button type="button" variant="cancel" onClick={onClose} className="w-full sm:flex-1">
             {t('actions.close', 'Close')}
           </Button>

@@ -172,8 +172,8 @@ export function TeamTab() {
   )
 
   const departments = useMemo(
-    () => (rosterPayload ? deriveTeamRoster(rosterPayload) : []),
-    [rosterPayload]
+    () => (rosterPayload ? deriveTeamRoster(t, rosterPayload) : []),
+    [rosterPayload, t]
   )
 
   const chips = useMemo(() => {
