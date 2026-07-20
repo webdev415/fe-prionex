@@ -60,7 +60,25 @@
     "lawyerWorkplace": "Робоче місце юриста",
     "repaymentConfiguration": "Конфігурація погашення",
     "actionAnalysis": "Аналіз дій",
-    "ubkiIntegration": "Інтеграція з UBKI"
+    "ubkiIntegration": "Інтеграція з UBKI",
+    "dialer": "Дайлер"
+  },
+  "dialer": {
+    "title": "Дайлер",
+    "comingSoon": "{{section}} — незабаром",
+    "tabs": {
+      "queueNumbers": "Черга номерів",
+      "addFromCrm": "Додати з CRM",
+      "analysis": "Аналітика",
+      "queueList": "Список черг"
+    },
+    "operator": {
+      "myCampaigns": "Мої кампанії",
+      "availableCampaigns": "Доступні кампанії вашого відділу",
+      "noCampaigns": "Поки немає доступних кампаній.",
+      "selectCampaignTitle": "Виберіть кампанію",
+      "selectCampaignHint": "Виберіть кампанію зі списку ліворуч, щоб запустити дайлер."
+    }
   },
   "search": {
     "placeholder": "Пошук",

@@ -764,6 +764,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         requiredPermission: PERMISSIONS.REPORTS.VIEW_ALL_REPORTS,
       },
       {
+        path: '/dashboard/dialer',
+        icon: 'call-dialer',
+        label: t('navigation.dialer', 'Dialer'),
+        requiredPermission: PERMISSIONS.DIALER.VIEW,
+      },
+      {
         path: '/dashboard/messaging/campaigns',
         icon: 'mail-send-01',
         label: t('navigation.campaignAnalytics', 'Campaign Analytics'),

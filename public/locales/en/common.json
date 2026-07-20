@@ -60,7 +60,25 @@
     "lawyerWorkplace": "Lawyer Workplace",
     "repaymentConfiguration": "Repayment Configuration",
     "actionAnalysis": "Action Analysis",
-    "ubkiIntegration": "UBKI Integration"
+    "ubkiIntegration": "UBKI Integration",
+    "dialer": "Dialer"
+  },
+  "dialer": {
+    "title": "Dialer",
+    "comingSoon": "{{section}} — coming soon",
+    "tabs": {
+      "queueNumbers": "Queue of Numbers",
+      "addFromCrm": "Add from CRM",
+      "analysis": "Analysis",
+      "queueList": "Queue List"
+    },
+    "operator": {
+      "myCampaigns": "My Campaigns",
+      "availableCampaigns": "Available campaigns for your department",
+      "noCampaigns": "No campaigns available yet.",
+      "selectCampaignTitle": "Select a campaign",
+      "selectCampaignHint": "Select a campaign from the list on the left to start the dialer."
+    }
   },
   "search": {
     "placeholder": "Search",

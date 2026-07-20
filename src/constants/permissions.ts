@@ -77,6 +77,21 @@ export const PERMISSIONS = {
   },
 
   /**
+   * Dialer Category (KAN-379)
+   * Controls access to the aggressive/auto dialer.
+   * VIEW gates the Dialer tab; OPERATE is the operator surface (join/leave
+   * a campaign queue and take routed live calls); SUPERVISE + MANAGE_QUEUES
+   * gate the supervisor admin (queue CRUD, number upload, statistics, restart).
+   * NOTE: backend RBAC code strings must be confirmed with the auth service.
+   */
+  DIALER: {
+    VIEW: 'view_dialer',
+    OPERATE: 'operate_dialer',
+    SUPERVISE: 'supervise_dialer',
+    MANAGE_QUEUES: 'manage_dialer_queues',
+  },
+
+  /**
    * Messaging Category (9 permissions)
    * Controls access to the unified messaging-service surfaces.
    */
@@ -425,6 +440,7 @@ export function getAllPermissions(): Permission[] {
 export const PERMISSION_CATEGORIES = {
   CLIENTS: 'Clients',
   COMMUNICATION: 'Communication',
+  DIALER: 'Dialer',
   MESSAGING: 'Messaging',
   REPORTS: 'Reports',
   DATA: 'Data',
@@ -471,6 +487,12 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   make_calls: 'Make outbound phone calls to clients',
   send_sms: 'Send SMS messages to clients',
   view_call_history: 'View call recordings and SMS history',
+
+  // Dialer (KAN-379)
+  view_dialer: 'View the Dialer tab (operator or supervisor surface)',
+  operate_dialer: 'Join/leave a dialer campaign queue and take routed live calls',
+  supervise_dialer: 'Access the dialer supervisor admin (queues, uploads, statistics, restart)',
+  manage_dialer_queues: 'Create, edit, delete, and activate dialer campaign queues',
 
   // Messaging
   manage_drafts: 'Create, edit, and delete messaging drafts; open the Message Drafts settings page',

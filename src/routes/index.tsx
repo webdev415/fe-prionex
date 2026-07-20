@@ -31,6 +31,7 @@ const ImportClientsPage = lazy(() => import('@/pages/ImportClients/ImportClients
 const ImportHistoryPage = lazy(() => import('@/pages/ImportClients/ImportHistoryPage'))
 const ImportDetailsPage = lazy(() => import('@/pages/ImportClients/ImportDetailsPage'))
 const ProjectManagementPage = lazy(() => import('@/pages/ProjectManagement/ProjectManagementPage'))
+const DialerPage = lazy(() => import('@/pages/Dialer').then((m) => ({ default: m.DialerPage })))
 const RoleManagementPage = lazy(() =>
   import('@/pages/RoleManagement/RoleManagementPage').then((m) => ({
     default: m.RoleManagementPage,
@@ -333,6 +334,14 @@ export const router = createBrowserRouter([
         element: (
           <PermissionRoute requiredPermission={PERMISSIONS.PROJECTS.MANAGE}>
             {withSuspense(<ProjectManagementPage />)}
+          </PermissionRoute>
+        ),
+      },
+      {
+        path: 'dialer',
+        element: (
+          <PermissionRoute requiredPermission={PERMISSIONS.DIALER.VIEW}>
+            {withSuspense(<DialerPage />)}
           </PermissionRoute>
         ),
       },
