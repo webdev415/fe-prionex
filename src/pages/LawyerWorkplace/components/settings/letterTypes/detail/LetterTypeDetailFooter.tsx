@@ -24,7 +24,7 @@ export function LetterTypeDetailFooter({
   return (
     <div
       className={cn(
-        'flex shrink-0 flex-col gap-3 border-t border-gray-100 px-4 py-4 sm:px-5 sm:py-5 lg:px-6',
+        'border-border flex shrink-0 flex-col gap-3 border-t px-4 py-4 sm:px-5 sm:py-5 lg:px-6',
         isCompact ? 'items-stretch' : 'sm:flex-row sm:justify-center'
       )}
     >

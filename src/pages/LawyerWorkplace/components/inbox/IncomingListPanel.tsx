@@ -42,7 +42,7 @@ const FILTERS: { id: IncomingMailboxFilter; labelKey: string; fallback: string }
 
 function CountPill({ children }: { children: React.ReactNode }) {
   return (
-    <span className="bg-light-100 text-dark-500 rounded-full px-2.5 py-0.5 text-[11px]">
+    <span className="bg-muted text-foreground rounded-full px-2.5 py-0.5 text-[11px]">
       {children}
     </span>
   )
@@ -53,7 +53,7 @@ function NumBadge({ count, active }: { count: number; active: boolean }) {
     <span
       className={cn(
         'flex h-[18px] min-w-[18px] items-center justify-center rounded-full px-1 text-[10px] leading-none',
-        active ? 'bg-primary-300 text-dark-500' : 'text-dark-500 bg-gray-100'
+        active ? 'bg-primary-300 text-foreground' : 'text-foreground bg-muted'
       )}
     >
       {count}
@@ -72,20 +72,20 @@ function IncomingListSkeleton() {
       {Array.from({ length: 5 }, (_, index) => (
         <div
           key={index}
-          className="mx-0 my-2 animate-pulse rounded-[12px] border border-gray-100 p-3.5"
+          className="border-border mx-0 my-2 animate-pulse rounded-[12px] border p-3.5"
         >
           <div className="mb-2 flex items-center justify-between gap-2">
-            <div className="h-3.5 w-32 rounded bg-gray-200" />
-            <div className="h-3 w-12 rounded bg-gray-200" />
+            <div className="bg-muted h-3.5 w-32 rounded" />
+            <div className="bg-muted h-3 w-12 rounded" />
           </div>
           <div className="mb-2 flex items-start justify-between gap-2">
-            <div className="h-3 w-full max-w-[220px] rounded bg-gray-200" />
-            <div className="h-5 w-16 rounded-full bg-gray-200" />
+            <div className="bg-muted h-3 w-full max-w-[220px] rounded" />
+            <div className="bg-muted h-5 w-16 rounded-full" />
           </div>
-          <div className="mb-2 h-3.5 w-full max-w-[280px] rounded bg-gray-200" />
+          <div className="bg-muted mb-2 h-3.5 w-full max-w-[280px] rounded" />
           <div className="flex gap-1.5">
-            <div className="h-5 w-20 rounded-full bg-gray-200" />
-            <div className="h-5 w-14 rounded-full bg-gray-200" />
+            <div className="bg-muted h-5 w-20 rounded-full" />
+            <div className="bg-muted h-5 w-14 rounded-full" />
           </div>
         </div>
       ))}
@@ -107,7 +107,7 @@ function getIncomingEmptyState(
 ): IncomingEmptyStateConfig {
   if (committedSearch.trim()) {
     return {
-      icon: <Icons.Search size={22} strokeWidth={1.5} className="text-light-500" />,
+      icon: <Icons.Search size={22} strokeWidth={1.5} className="text-muted-foreground" />,
       title: t('pages.lawyerWorkplace.incoming.empty.search.title', 'No matching letters'),
       description: t(
         'pages.lawyerWorkplace.incoming.empty.search.description',
@@ -123,7 +123,7 @@ function getIncomingEmptyState(
       : t('pages.lawyerWorkplace.filters.allMailboxes', 'All mailboxes')
 
     return {
-      icon: <Icons.Filter size={22} strokeWidth={1.5} className="text-light-500" />,
+      icon: <Icons.Filter size={22} strokeWidth={1.5} className="text-muted-foreground" />,
       title: t('pages.lawyerWorkplace.incoming.empty.filter.title', 'No letters in this view'),
       description: t('pages.lawyerWorkplace.incoming.empty.filter.description', {
         filter: filterLabel,
@@ -134,11 +134,11 @@ function getIncomingEmptyState(
 
   const folderIcon =
     activeFolder === 'inbox' ? (
-      <Icons.InboxIcon size={22} strokeWidth={1.5} className="text-light-500" />
+      <Icons.InboxIcon size={22} strokeWidth={1.5} className="text-muted-foreground" />
     ) : activeFolder === 'quarantine' ? (
-      <Icons.KanbanIcon size={22} strokeWidth={1.5} className="text-light-500" />
+      <Icons.KanbanIcon size={22} strokeWidth={1.5} className="text-muted-foreground" />
     ) : (
-      <Icons.MailSend01 size={22} strokeWidth={1.5} className="text-light-500" />
+      <Icons.MailSend01 size={22} strokeWidth={1.5} className="text-muted-foreground" />
     )
 
   return {
@@ -328,7 +328,7 @@ export function IncomingListPanel({
       >
         <div className="mb-3 flex items-center justify-between gap-2">
           <div className="flex min-w-0 items-center gap-2">
-            <h2 className="text-dark-500 text-[13px]">
+            <h2 className="text-foreground text-[13px]">
               {t('pages.lawyerWorkplace.incoming.title', 'Incoming')}
             </h2>
             <CountPill>
@@ -363,10 +363,10 @@ export function IncomingListPanel({
                   'flex min-w-0 flex-1 cursor-pointer items-center justify-center gap-1 rounded-md px-1.5 py-2 text-[11px] font-medium transition-all sm:gap-1.5 sm:px-2 sm:text-[12px]',
                   isActive
                     ? 'bg-secondary-800 text-white shadow-sm'
-                    : 'text-dark-500 hover:bg-gray-50'
+                    : 'text-foreground hover:bg-muted'
                 )}
               >
-                <span className={isActive ? 'text-white' : 'text-dark-500'}>{f.icon}</span>
+                <span className={isActive ? 'text-white' : 'text-foreground'}>{f.icon}</span>
                 {t(f.labelKey)}
               </button>
             )
@@ -378,7 +378,7 @@ export function IncomingListPanel({
           <button
             type="button"
             onClick={handleSearchSubmit}
-            className="text-light-500 hover:text-primary-500 absolute top-1/2 left-2 -translate-y-1/2 transition-colors"
+            className="text-muted-foreground hover:text-primary-500 absolute top-1/2 left-2 -translate-y-1/2 transition-colors"
             aria-label={t('actions.search', 'Search')}
           >
             <Icons.Search size={14} strokeWidth={1.5} />
@@ -392,13 +392,13 @@ export function IncomingListPanel({
               'pages.lawyerWorkplace.incoming.searchPlaceholder',
               'Sender, subject...'
             )}
-            className="text-dark-500 focus:border-primary-400 border-border bg-input placeholder:text-muted-foreground h-8 w-full rounded-lg border py-1.5 pr-3 pl-8 text-[12px] outline-none"
+            className="text-foreground focus:border-primary-400 border-border bg-input placeholder:text-muted-foreground h-8 w-full rounded-lg border py-1.5 pr-3 pl-8 text-[12px] outline-none"
           />
           {searchDraft && (
             <button
               type="button"
               onClick={handleClearSearch}
-              className="text-light-500 hover:text-dark-500 absolute top-1/2 right-2 -translate-y-1/2"
+              className="text-muted-foreground hover:text-foreground absolute top-1/2 right-2 -translate-y-1/2"
             >
               <Icons.Cancel01 size={12} strokeWidth={1.5} />
             </button>
@@ -415,19 +415,19 @@ export function IncomingListPanel({
                   type="button"
                   disabled={page <= 1}
                   onClick={() => onPageChange(page - 1)}
-                  className="text-light-500 hover:text-dark-500 flex h-6 w-6 items-center justify-center rounded disabled:opacity-30"
+                  className="text-muted-foreground hover:text-foreground flex h-6 w-6 items-center justify-center rounded disabled:opacity-30"
                   aria-label={t('pagination.prev', 'Previous page')}
                 >
                   <Icons.ArrowLeft size={12} strokeWidth={2} />
                 </button>
-                <span className="text-light-600 text-[10px] whitespace-nowrap">
+                <span className="text-muted-foreground text-[10px] whitespace-nowrap">
                   {pageStart}–{pageEnd} / {total}
                 </span>
                 <button
                   type="button"
                   disabled={page >= totalPages}
                   onClick={() => onPageChange(page + 1)}
-                  className="text-light-500 hover:text-dark-500 flex h-6 w-6 items-center justify-center rounded disabled:opacity-30"
+                  className="text-muted-foreground hover:text-foreground flex h-6 w-6 items-center justify-center rounded disabled:opacity-30"
                   aria-label={t('pagination.next', 'Next page')}
                 >
                   <Icons.ArrowRight size={12} strokeWidth={2} />
@@ -448,7 +448,7 @@ export function IncomingListPanel({
                     'flex cursor-pointer items-center gap-1.5 rounded-full px-2.5 py-1.5 text-[11px] transition-colors',
                     isActive
                       ? 'bg-secondary-800 text-white'
-                      : 'text-dark-500 bg-card hover:bg-gray-50'
+                      : 'text-foreground bg-card hover:bg-muted'
                   )}
                 >
                   {t(f.labelKey, f.fallback)}
@@ -460,7 +460,7 @@ export function IncomingListPanel({
         </div>
       </div>
 
-      <div className="mx-4 shrink-0 border-b border-gray-100" />
+      <div className="border-border mx-4 shrink-0 border-b" />
 
       {/* ── Letter list ──────────────────────────────────────────────────────── */}
       <div className="relative min-h-0 flex-1 overflow-hidden">
@@ -478,10 +478,10 @@ export function IncomingListPanel({
               <div className="bg-error-50 mb-4 flex h-12 w-12 items-center justify-center rounded-full">
                 <Icons.Warning size={22} strokeWidth={1.5} className="text-error-500" />
               </div>
-              <p className="text-dark-500 text-[14px] font-medium">
+              <p className="text-foreground text-[14px] font-medium">
                 {t('pages.lawyerWorkplace.incoming.loadError.title', 'Could not load inbox')}
               </p>
-              <p className="text-light-600 mt-1 max-w-sm text-[12px] leading-relaxed">
+              <p className="text-muted-foreground mt-1 max-w-sm text-[12px] leading-relaxed">
                 {t(
                   'pages.lawyerWorkplace.incoming.loadError.description',
                   'Check your connection and try again.'
@@ -504,11 +504,11 @@ export function IncomingListPanel({
               className="flex flex-col items-center justify-center px-6 py-14 text-center"
               role="status"
             >
-              <div className="bg-light-100 mb-4 flex h-12 w-12 items-center justify-center rounded-full">
+              <div className="bg-muted mb-4 flex h-12 w-12 items-center justify-center rounded-full">
                 {emptyState.icon}
               </div>
-              <p className="text-dark-500 text-[14px] font-medium">{emptyState.title}</p>
-              <p className="text-light-600 mt-1 max-w-sm text-[12px] leading-relaxed">
+              <p className="text-foreground text-[14px] font-medium">{emptyState.title}</p>
+              <p className="text-muted-foreground mt-1 max-w-sm text-[12px] leading-relaxed">
                 {emptyState.description}
               </p>
             </div>
@@ -537,7 +537,7 @@ export function IncomingListPanel({
             aria-label={t('pages.lawyerWorkplace.incoming.scrollUp', 'Scroll up')}
             onClick={() => scrollBy(-220)}
             className={cn(
-              'border-border bg-card pointer-events-auto flex h-6 w-6 items-center justify-center rounded-full border text-gray-500 shadow-md transition-all hover:border-gray-300 hover:text-gray-700 hover:shadow-lg',
+              'border-border bg-card text-muted-foreground hover:border-border hover:text-foreground pointer-events-auto flex h-6 w-6 items-center justify-center rounded-full border shadow-md transition-all hover:shadow-lg',
               canScrollUp ? 'cursor-pointer' : 'pointer-events-none'
             )}
           >
@@ -558,7 +558,7 @@ export function IncomingListPanel({
             aria-label={t('pages.lawyerWorkplace.incoming.scrollDown', 'Scroll down')}
             onClick={() => scrollBy(220)}
             className={cn(
-              'border-border bg-card pointer-events-auto flex h-6 w-6 items-center justify-center rounded-full border text-gray-500 shadow-md transition-all hover:border-gray-300 hover:text-gray-700 hover:shadow-lg',
+              'border-border bg-card text-muted-foreground hover:border-border hover:text-foreground pointer-events-auto flex h-6 w-6 items-center justify-center rounded-full border shadow-md transition-all hover:shadow-lg',
               canScrollDown ? 'cursor-pointer' : 'pointer-events-none'
             )}
           >

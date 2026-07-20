@@ -100,7 +100,7 @@ export function ReplyTemplateModal({
       <ModalHeader
         icon={
           <div className="bg-primary-300 flex h-10 w-10 items-center justify-center rounded-full">
-            <Icons.File size={20} strokeWidth={1.5} className="text-dark-500" />
+            <Icons.File size={20} strokeWidth={1.5} className="text-foreground" />
           </div>
         }
         title={
@@ -111,30 +111,30 @@ export function ReplyTemplateModal({
       />
       <ModalContent className="flex flex-col gap-5 px-1">
         <div className="flex flex-col gap-2">
-          <Label className="text-dark-500 text-[13px] font-medium">
+          <Label className="text-foreground text-[13px] font-medium">
             {t('pages.lawyerWorkplace.settings.templates.fields.name', 'Template name')}
           </Label>
           <input
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="text-dark-500 focus:border-primary-400 border-border bg-input h-11 rounded-md border px-4 text-[14px] outline-none"
+            className="text-foreground focus:border-primary-400 border-border bg-input h-11 rounded-md border px-4 text-[14px] outline-none"
           />
         </div>
 
         <div className="flex flex-col gap-2">
-          <Label className="text-dark-500 text-[13px] font-medium">
+          <Label className="text-foreground text-[13px] font-medium">
             {t('pages.lawyerWorkplace.settings.templates.fields.letterTypes', 'Letter types')}
           </Label>
           <DropdownMenu open={typesOpen} onOpenChange={setTypesOpen} modal={false}>
             <DropdownMenuTrigger asChild>
               <button
                 type="button"
-                className="text-dark-500 border-border bg-input flex min-h-11 w-full items-center justify-between rounded-md border px-4 py-2 text-[14px]"
+                className="text-foreground border-border bg-input flex min-h-11 w-full items-center justify-between rounded-md border px-4 py-2 text-[14px]"
               >
                 <span className="flex flex-wrap gap-1.5 text-left">
                   {letterTypeIds.length === 0 ? (
-                    <span className="text-gray-400">
+                    <span className="text-muted-foreground">
                       {t('pages.lawyerWorkplace.settings.templates.allTypes', 'All types')}
                     </span>
                   ) : (
@@ -147,7 +147,11 @@ export function ReplyTemplateModal({
                     })
                   )}
                 </span>
-                <Icons.ArrowDown size={16} strokeWidth={1.5} className="text-light-500 shrink-0" />
+                <Icons.ArrowDown
+                  size={16}
+                  strokeWidth={1.5}
+                  className="text-muted-foreground shrink-0"
+                />
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent
@@ -173,7 +177,7 @@ export function ReplyTemplateModal({
         </div>
 
         <div className="flex flex-col gap-2">
-          <Label className="text-dark-500 text-[13px] font-medium">
+          <Label className="text-foreground text-[13px] font-medium">
             {t('pages.lawyerWorkplace.settings.templates.fields.body', 'Template body')}
           </Label>
           <Textarea
@@ -185,7 +189,7 @@ export function ReplyTemplateModal({
               'pages.lawyerWorkplace.settings.templates.fields.bodyPlaceholder',
               'Write the letter template text...'
             )}
-            className="text-dark-500 min-h-[160px] resize-y rounded-md border-gray-200 text-[13px]"
+            className="text-foreground border-border min-h-[160px] resize-y rounded-md text-[13px]"
           />
         </div>
 

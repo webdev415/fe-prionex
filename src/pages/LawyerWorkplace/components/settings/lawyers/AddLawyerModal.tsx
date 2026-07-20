@@ -81,14 +81,14 @@ export function AddLawyerModal({
       <ModalHeader
         icon={
           <div className="bg-primary-300 flex h-10 w-10 items-center justify-center rounded-full">
-            <Icons.UserMultiple02 size={20} strokeWidth={1.5} className="text-dark-500" />
+            <Icons.UserMultiple02 size={20} strokeWidth={1.5} className="text-foreground" />
           </div>
         }
         title={t('pages.lawyerWorkplace.settings.modals.addLawyer.title', 'Add lawyer')}
       />
       <ModalContent className="flex flex-col gap-5 px-1">
         <div className="flex flex-col gap-2">
-          <Label className="text-dark-500 text-[13px] font-medium">
+          <Label className="text-foreground text-[13px] font-medium">
             {t('pages.lawyerWorkplace.settings.lawyer', 'Lawyer')}
           </Label>
           <SearchableSelect
@@ -106,14 +106,14 @@ export function AddLawyerModal({
             disabled={!hasAvailableUsers || isSubmitting}
           />
           {!hasAvailableUsers ? (
-            <p className="text-light-600 text-[12px]">
+            <p className="text-muted-foreground text-[12px]">
               {t('pages.lawyerWorkplace.settings.modals.addLawyer.noLawyers', 'All lawyers added')}
             </p>
           ) : null}
         </div>
 
         <div className="flex flex-col gap-2">
-          <Label className="text-dark-500 text-[13px] font-medium">
+          <Label className="text-foreground text-[13px] font-medium">
             {t(
               'pages.lawyerWorkplace.settings.modals.addLawyer.responsibleTypes',
               'Responsible letter types'
@@ -124,9 +124,9 @@ export function AddLawyerModal({
               <button
                 type="button"
                 disabled={isSubmitting}
-                className="text-dark-500 border-border bg-input flex h-11 w-full items-center justify-between rounded-xl border px-4 text-[14px] font-light disabled:opacity-60"
+                className="text-foreground border-border bg-input flex h-11 w-full items-center justify-between rounded-xl border px-4 text-[14px] font-light disabled:opacity-60"
               >
-                <span className={cn(selectedTypeIds.length === 0 && 'text-gray-400')}>
+                <span className={cn(selectedTypeIds.length === 0 && 'text-muted-foreground')}>
                   {selectedTypeIds.length > 0
                     ? t(
                         'pages.lawyerWorkplace.settings.modals.addLawyer.typesSelected',
@@ -141,7 +141,10 @@ export function AddLawyerModal({
                 <Icons.ArrowDown
                   size={16}
                   strokeWidth={1.5}
-                  className={cn('text-light-500 transition-transform', typesOpen && 'rotate-180')}
+                  className={cn(
+                    'text-muted-foreground transition-transform',
+                    typesOpen && 'rotate-180'
+                  )}
                 />
               </button>
             </DropdownMenuTrigger>
@@ -191,7 +194,7 @@ export function AddLawyerModal({
                     <button
                       type="button"
                       onClick={() => removeType(typeId)}
-                      className="text-light-500 hover:text-dark-500"
+                      className="text-muted-foreground hover:text-foreground"
                       aria-label={t('actions.remove', 'Remove')}
                     >
                       <Icons.Cancel01 size={12} strokeWidth={1.5} />

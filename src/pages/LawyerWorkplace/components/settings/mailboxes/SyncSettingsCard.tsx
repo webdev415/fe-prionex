@@ -53,19 +53,19 @@ export function SyncSettingsCard({
         )}
       >
         <div className="min-w-0">
-          <h2 className="text-dark-500 text-[15px] font-medium">
+          <h2 className="text-foreground text-[15px] font-medium">
             {t('pages.lawyerWorkplace.settings.mailboxes.sync.title', 'Email sync')}
           </h2>
-          <p className="text-light-600 mt-1 text-[12px] leading-relaxed">
+          <p className="text-muted-foreground mt-1 text-[12px] leading-relaxed">
             {t(
               'pages.lawyerWorkplace.settings.mailboxes.sync.description',
               'How often the email service pulls new messages from connected mailboxes.'
             )}
           </p>
         </div>
-        <span className="text-light-600 shrink-0 text-[11px]">
+        <span className="text-muted-foreground shrink-0 text-[11px]">
           {t('pages.lawyerWorkplace.settings.mailboxes.sync.lastSynced', 'Last synced')}:{' '}
-          <span className="text-dark-500 font-medium">
+          <span className="text-foreground font-medium">
             {formatLastSynced(syncSettings.lastSyncedAt, t)}
           </span>
         </span>
@@ -91,9 +91,7 @@ export function SyncSettingsCard({
               onClick={() => handleIntervalChange(option.id)}
               className={cn(
                 'cursor-pointer rounded-md px-3 py-2.5 text-center text-[12px] transition-colors',
-                isActive
-                  ? 'bg-secondary-800 text-white'
-                  : 'text-dark-500 hover:bg-light-100 bg-card'
+                isActive ? 'bg-secondary-800 text-white' : 'text-foreground hover:bg-muted bg-card'
               )}
             >
               {t(option.labelKey, option.fallback)}

@@ -88,7 +88,7 @@ export function LetterTypeTrainingExamplesSection({
             <button
               type="button"
               onClick={openCreateModal}
-              className="text-light-600 hover:border-secondary-300 hover:text-dark-500 hover:bg-card flex w-full cursor-pointer items-center justify-center rounded-xl border-2 border-dashed border-gray-200 bg-transparent px-4 py-4 text-[13px] transition-colors"
+              className="text-muted-foreground hover:border-secondary-300 hover:text-foreground hover:bg-card border-border flex w-full cursor-pointer items-center justify-center rounded-xl border-2 border-dashed bg-transparent px-4 py-4 text-[13px] transition-colors"
             >
               {t(
                 'pages.lawyerWorkplace.settings.letterTypes.addTrainingExample',

@@ -39,7 +39,7 @@ export function LawyerStarRating({ value, onChange, disabled = false }: LawyerSt
             size={15}
             strokeWidth={1.5}
             className={cn(
-              star <= value ? 'text-secondary-500' : 'text-gray-300',
+              star <= value ? 'text-secondary-500' : 'text-muted-foreground/60',
               disabled && 'opacity-60'
             )}
           />

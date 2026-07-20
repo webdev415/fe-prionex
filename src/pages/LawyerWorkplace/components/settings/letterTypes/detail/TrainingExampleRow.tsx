@@ -17,13 +17,13 @@ export function TrainingExampleRow({ example, onClick, onRemove }: TrainingExamp
 
   const content = (
     <>
-      <p className="text-secondary-900 min-w-0 flex-1 text-[13px] leading-snug">
+      <p className="text-foreground min-w-0 flex-1 text-[13px] leading-snug">
         <span className="font-semibold">{title}</span>
         <span className="font-light"> — </span>
         <span className="font-light">{body}</span>
       </p>
       <div className="flex shrink-0 items-center gap-2">
-        <span className="text-light-600 text-[11px] whitespace-nowrap">{source}</span>
+        <span className="text-muted-foreground text-[11px] whitespace-nowrap">{source}</span>
         {onRemove ? (
           <button
             type="button"
@@ -31,7 +31,7 @@ export function TrainingExampleRow({ example, onClick, onRemove }: TrainingExamp
               event.stopPropagation()
               onRemove()
             }}
-            className="text-light-500 hover:text-dark-500 p-0.5"
+            className="text-muted-foreground hover:text-foreground p-0.5"
             aria-label={t('actions.remove', 'Remove')}
           >
             <Icons.Cancel01 size={14} strokeWidth={2} />
@@ -54,7 +54,7 @@ export function TrainingExampleRow({ example, onClick, onRemove }: TrainingExamp
           }
         }}
         className={cn(
-          'bg-card flex w-full cursor-pointer items-start gap-4 rounded-xl border border-gray-100 px-4 py-3 text-left',
+          'bg-card border-border flex w-full cursor-pointer items-start gap-4 rounded-xl border px-4 py-3 text-left',
           'hover:border-secondary-200 focus-visible:ring-primary-400 hover:bg-muted focus-visible:ring-2 focus-visible:outline-none'
         )}
       >
@@ -66,8 +66,8 @@ export function TrainingExampleRow({ example, onClick, onRemove }: TrainingExamp
   return (
     <div
       className={cn(
-        'flex items-start gap-4 rounded-xl border border-gray-100 px-4 py-3',
-        onClick || onRemove ? 'bg-card' : 'bg-gray-50/80'
+        'border-border flex items-start gap-4 rounded-xl border px-4 py-3',
+        onClick || onRemove ? 'bg-card' : 'bg-muted/80'
       )}
     >
       {content}

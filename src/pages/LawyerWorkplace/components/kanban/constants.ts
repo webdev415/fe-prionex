@@ -107,8 +107,8 @@ export const KANBAN_SCROLL_COLUMN_WIDTH_CLASS = 'w-[280px]'
 export const KANBAN_SCROLL_GRID_COLS_CLASS = 'auto-cols-[280px]'
 
 export const TYPE_COLOURS: Record<KanbanTaskType, string> = {
-  unclassified: 'bg-gray-100 text-gray-500',
-  type_pending: 'bg-amber-50 text-amber-600 border border-amber-200',
+  unclassified: 'bg-muted text-muted-foreground',
+  type_pending: 'bg-warning-100 text-warning-600 border border-warning-200',
   complaint: 'bg-error-100 text-error-700',
   nbu_inquiry: 'bg-secondary-100 text-secondary-800',
   court_claim: 'bg-warning-100 text-warning-700',
@@ -117,8 +117,8 @@ export const TYPE_COLOURS: Record<KanbanTaskType, string> = {
 }
 
 export const TYPE_DOT_COLOURS: Record<KanbanTaskType, string> = {
-  unclassified: 'bg-gray-400',
-  type_pending: 'bg-amber-400',
+  unclassified: 'bg-muted-foreground',
+  type_pending: 'bg-warning-400',
   complaint: 'bg-error-500',
   nbu_inquiry: 'bg-secondary-600',
   court_claim: 'bg-warning-500',
@@ -132,7 +132,7 @@ const ASSIGNEE_PALETTE = [
   'bg-blue-100 text-blue-700',
   'bg-success-100 text-success-700',
   'bg-warning-100 text-warning-700',
-  'bg-gray-100 text-gray-600',
+  'bg-muted text-muted-foreground',
 ] as const
 
 const KNOWN_KANBAN_TYPE_IDS = new Set<string>([
@@ -198,7 +198,7 @@ export function getAssigneeColour(userId: number | null, initials: string): stri
   const seed =
     userId ?? initials.split('').reduce((total, character) => total + character.charCodeAt(0), 0)
   const index = Math.abs(Number(seed)) % ASSIGNEE_PALETTE.length
-  return ASSIGNEE_PALETTE[index] ?? 'bg-gray-100 text-gray-500'
+  return ASSIGNEE_PALETTE[index] ?? 'bg-muted text-muted-foreground'
 }
 
 export function buildTypeFilterOptions(
@@ -295,7 +295,7 @@ export const CREATE_TASK_PRIORITIES: {
     id: 'medium',
     key: 'pages.lawyerWorkplace.kanban.createTask.priorities.medium',
     fallback: 'Normal',
-    textClass: 'text-dark-500',
+    textClass: 'text-foreground',
   },
   {
     id: 'low',

@@ -27,12 +27,12 @@ export function DocumentsStatCard({
         {icon}
       </div>
       <div className="min-w-0">
-        <p className="text-light-600 truncate text-[10px] font-medium tracking-wide uppercase sm:text-[11px]">
+        <p className="text-muted-foreground truncate text-[10px] font-medium tracking-wide uppercase sm:text-[11px]">
           {label}
         </p>
         <p
           className={cn(
-            'text-dark-500 truncate leading-tight font-light',
+            'text-foreground truncate leading-tight font-light',
             compact ? 'text-base' : 'text-[18px]'
           )}
         >

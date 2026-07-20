@@ -149,17 +149,19 @@ export function LawyerWorkplaceHeaderNav() {
               title={label}
               className={cn(
                 'relative inline-flex h-full shrink-0 cursor-pointer items-center gap-1.5 px-2 text-sm font-medium transition-colors sm:gap-2 sm:px-3 lg:px-4',
-                isActive ? 'text-dark-500' : 'text-gray-500 hover:bg-gray-50 hover:text-gray-700'
+                isActive
+                  ? 'text-foreground'
+                  : 'text-muted-foreground hover:bg-muted hover:text-foreground'
               )}
             >
               <Icon
                 size={20}
                 strokeWidth={1.5}
-                className={cn('shrink-0', isActive ? 'text-secondary-800' : 'text-gray-700')}
+                className={cn('shrink-0', isActive ? 'text-primary-600' : 'text-muted-foreground')}
               />
               <span
                 className={cn(
-                  isActive ? 'text-secondary-800' : 'text-gray-700',
+                  isActive ? 'text-primary-600' : 'text-foreground',
                   'hidden truncate text-sm lg:inline'
                 )}
               >
@@ -170,8 +172,8 @@ export function LawyerWorkplaceHeaderNav() {
                   className={cn(
                     'shrink-0 rounded-full px-1.5 py-0.5 text-[10px] leading-none font-semibold',
                     tab.badgeVariant === 'new'
-                      ? 'bg-red-50 text-red-600'
-                      : 'bg-gray-100 text-gray-600'
+                      ? 'bg-error-100 text-error-700'
+                      : 'bg-muted text-muted-foreground'
                   )}
                 >
                   {tab.badgeVariant === 'new' ? (
@@ -214,7 +216,7 @@ export function LawyerWorkplaceHeaderNav() {
           aria-label={t('pages.lawyerWorkplace.navScrollLeft', 'Scroll tabs left')}
           onClick={() => scrollBy(-140)}
           className={cn(
-            'border-border bg-card text-muted-foreground hover:text-foreground pointer-events-auto ml-0.5 flex h-6 w-6 items-center justify-center rounded-full border shadow-md transition-all hover:border-gray-300 hover:shadow-lg',
+            'border-border bg-card text-muted-foreground hover:text-foreground hover:border-border pointer-events-auto ml-0.5 flex h-6 w-6 items-center justify-center rounded-full border shadow-md transition-all hover:shadow-lg',
             canScrollLeft ? 'cursor-pointer' : 'pointer-events-none'
           )}
         >
@@ -235,7 +237,7 @@ export function LawyerWorkplaceHeaderNav() {
           aria-label={t('pages.lawyerWorkplace.navScrollRight', 'Scroll tabs right')}
           onClick={() => scrollBy(140)}
           className={cn(
-            'border-border bg-card text-muted-foreground hover:text-foreground pointer-events-auto mr-0.5 flex h-6 w-6 items-center justify-center rounded-full border shadow-md transition-all hover:border-gray-300 hover:shadow-lg',
+            'border-border bg-card text-muted-foreground hover:text-foreground hover:border-border pointer-events-auto mr-0.5 flex h-6 w-6 items-center justify-center rounded-full border shadow-md transition-all hover:shadow-lg',
             canScrollRight ? 'cursor-pointer' : 'pointer-events-none'
           )}
         >

@@ -156,7 +156,7 @@ export function LegalDocumentsTab() {
   const emptyState = useMemo(() => {
     if (hasSearch) {
       return {
-        icon: <Icons.Search size={22} strokeWidth={1.5} className="text-light-500" />,
+        icon: <Icons.Search size={22} strokeWidth={1.5} className="text-muted-foreground" />,
         title: t('pages.lawyerWorkplace.documents.empty.search.title', 'No matching documents'),
         description: t(
           'pages.lawyerWorkplace.documents.empty.search.description',
@@ -172,7 +172,7 @@ export function LegalDocumentsTab() {
         : t('pages.lawyerWorkplace.documents.filters.allTypes', 'All types')
 
       return {
-        icon: <Icons.Filter size={22} strokeWidth={1.5} className="text-light-500" />,
+        icon: <Icons.Filter size={22} strokeWidth={1.5} className="text-muted-foreground" />,
         title: t('pages.lawyerWorkplace.documents.empty.filter.title', 'No documents in this view'),
         description: t('pages.lawyerWorkplace.documents.empty.filter.description', {
           filter: filterLabel,
@@ -182,7 +182,7 @@ export function LegalDocumentsTab() {
     }
 
     return {
-      icon: <Icons.File size={22} strokeWidth={1.5} className="text-light-500" />,
+      icon: <Icons.File size={22} strokeWidth={1.5} className="text-muted-foreground" />,
       title: t('pages.lawyerWorkplace.documents.empty.title', 'No documents yet'),
       description: t(
         'pages.lawyerWorkplace.documents.empty.description',
@@ -227,10 +227,10 @@ export function LegalDocumentsTab() {
                 <div className="bg-error-50 mb-4 flex h-12 w-12 items-center justify-center rounded-full">
                   <Icons.Warning size={22} strokeWidth={1.5} className="text-error-500" />
                 </div>
-                <p className="text-dark-500 text-[14px] font-medium">
+                <p className="text-foreground text-[14px] font-medium">
                   {t('pages.lawyerWorkplace.documents.loadError.title', 'Could not load documents')}
                 </p>
-                <p className="text-light-600 mt-1 max-w-sm text-[12px] leading-relaxed">
+                <p className="text-muted-foreground mt-1 max-w-sm text-[12px] leading-relaxed">
                   {t(
                     'pages.lawyerWorkplace.documents.loadError.description',
                     'Check your connection and try again.'
@@ -252,14 +252,14 @@ export function LegalDocumentsTab() {
 
             {showEmptyState ? (
               <div
-                className="bg-card mx-4 flex flex-col items-center justify-center rounded-xl border border-gray-100 px-6 py-14 text-center sm:mx-5 lg:mx-7"
+                className="bg-card border-border mx-4 flex flex-col items-center justify-center rounded-xl border px-6 py-14 text-center sm:mx-5 lg:mx-7"
                 role="status"
               >
-                <div className="bg-light-100 mb-4 flex h-12 w-12 items-center justify-center rounded-full">
+                <div className="bg-muted mb-4 flex h-12 w-12 items-center justify-center rounded-full">
                   {emptyState.icon}
                 </div>
-                <p className="text-dark-500 text-[14px] font-medium">{emptyState.title}</p>
-                <p className="text-light-600 mt-1 max-w-sm text-[12px] leading-relaxed">
+                <p className="text-foreground text-[14px] font-medium">{emptyState.title}</p>
+                <p className="text-muted-foreground mt-1 max-w-sm text-[12px] leading-relaxed">
                   {emptyState.description}
                 </p>
               </div>

@@ -93,18 +93,18 @@ function DocumentClientContractFieldsContent({
     <>
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between gap-2">
-          <Label className="text-dark-500 text-[12px] font-normal">
+          <Label className="text-foreground text-[12px] font-normal">
             {t(`${baseKey}.client`, 'Client')}
           </Label>
           <DropdownMenu modal={false}>
             <DropdownMenuTrigger asChild>
               <button
                 type="button"
-                className="text-dark-500 border-border bg-input flex h-7 shrink-0 items-center gap-1 rounded-md border px-2 text-[12px] font-light outline-none"
+                className="text-foreground border-border bg-input flex h-7 shrink-0 items-center gap-1 rounded-md border px-2 text-[12px] font-light outline-none"
               >
-                <Icons.Search size={12} strokeWidth={1.5} className="text-gray-400" />
+                <Icons.Search size={12} strokeWidth={1.5} className="text-muted-foreground" />
                 {searchTypeLabel}
-                <Icons.ArrowDown size={13} strokeWidth={1.5} className="text-gray-400" />
+                <Icons.ArrowDown size={13} strokeWidth={1.5} className="text-muted-foreground" />
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="min-w-[160px]">
@@ -140,11 +140,11 @@ function DocumentClientContractFieldsContent({
       </div>
 
       <div className="flex flex-col gap-2">
-        <Label className="text-dark-500 text-[12px] font-normal">
+        <Label className="text-foreground text-[12px] font-normal">
           {t(`${baseKey}.contract`, 'Contract')}
         </Label>
         {!clientId ? (
-          <p className="text-light-600 h-10 rounded-[8px] border border-gray-200 bg-gray-50 px-3 py-2 text-[13px] font-light">
+          <p className="text-muted-foreground border-border bg-muted h-10 rounded-[8px] border px-3 py-2 text-[13px] font-light">
             {t(`${baseKey}.selectClientFirst`, 'Select a client to load contracts')}
           </p>
         ) : requiresSelection ? (
@@ -152,7 +152,7 @@ function DocumentClientContractFieldsContent({
             <DropdownMenuTrigger asChild>
               <button
                 type="button"
-                className="text-dark-500 border-border bg-input flex h-10 w-full items-center justify-between rounded-[8px] border px-3 text-[13px] font-light"
+                className="text-foreground border-border bg-input flex h-10 w-full items-center justify-between rounded-[8px] border px-3 text-[13px] font-light"
               >
                 <span>
                   {contractNumber ||
@@ -160,7 +160,7 @@ function DocumentClientContractFieldsContent({
                       ? t('pages.lawyerWorkplace.parameters.contractLoading', 'Loading contracts…')
                       : t('pages.lawyerWorkplace.parameters.selectContract', 'Select contract'))}
                 </span>
-                <Icons.ArrowDown size={16} strokeWidth={1.5} className="text-light-500" />
+                <Icons.ArrowDown size={16} strokeWidth={1.5} className="text-muted-foreground" />
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent
@@ -183,7 +183,7 @@ function DocumentClientContractFieldsContent({
             </DropdownMenuContent>
           </DropdownMenu>
         ) : (
-          <p className="text-dark-500 border-border bg-input h-10 rounded-[8px] border px-3 py-2 text-[13px] font-light">
+          <p className="text-foreground border-border bg-input h-10 rounded-[8px] border px-3 py-2 text-[13px] font-light">
             {contractsLoading
               ? t('pages.lawyerWorkplace.parameters.contractLoading', 'Loading contracts…')
               : contractNumber || t('pages.lawyerWorkplace.parameters.noContracts', 'No contracts')}

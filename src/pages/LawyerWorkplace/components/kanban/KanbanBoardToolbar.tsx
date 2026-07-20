@@ -75,7 +75,7 @@ export function KanbanBoardToolbar({
         >
           <h1
             className={cn(
-              'text-dark-500 truncate font-light',
+              'text-foreground truncate font-light',
               isCompact ? 'text-lg' : 'text-xl lg:text-2xl'
             )}
           >
@@ -83,7 +83,7 @@ export function KanbanBoardToolbar({
           </h1>
           <span
             className={cn(
-              'font-light whitespace-nowrap text-gray-500',
+              'text-muted-foreground font-light whitespace-nowrap',
               isCompact ? 'text-xs' : 'text-sm lg:text-base'
             )}
           >
@@ -100,7 +100,7 @@ export function KanbanBoardToolbar({
               type="button"
               onClick={onNewTask}
               aria-label={t('pages.lawyerWorkplace.kanban.newTask', 'New Task')}
-              className="bg-primary-300 text-dark-500 hover:bg-primary-400 flex h-10 w-10 cursor-pointer items-center justify-center rounded-full transition-colors"
+              className="bg-primary-300 text-foreground hover:bg-primary-400 flex h-10 w-10 cursor-pointer items-center justify-center rounded-full transition-colors"
             >
               <Icons.Add size={20} strokeWidth={2} />
             </button>
@@ -121,7 +121,7 @@ export function KanbanBoardToolbar({
               type="button"
               variant="primary"
               size="md"
-              leftIcon={<Icons.FileImport size={16} className="text-dark-500" />}
+              leftIcon={<Icons.FileImport size={16} className="text-foreground" />}
               className="h-[45px] rounded-full text-xs"
               onClick={onExportCsv}
             >
@@ -151,7 +151,7 @@ export function KanbanBoardToolbar({
                     : 'shrink-0 px-3 whitespace-nowrap sm:px-5 lg:px-6',
                   deadlineFilter === filter.id
                     ? 'bg-secondary-800 text-white'
-                    : 'text-dark-500 hover:bg-gray-50'
+                    : 'text-foreground hover:bg-muted'
                 )}
               >
                 <Icons.Calendar size={14} strokeWidth={1.5} className="shrink-0 sm:h-4 sm:w-4" />

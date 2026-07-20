@@ -46,8 +46,8 @@ export function KanbanColumnLane({
       onDrop={onDrop}
       className={cn(
         // No per-column scroll. Height = cards + min 100vh spacer; stretch fills to tallest sibling.
-        'bg-muted/70 flex min-h-0 flex-1 flex-col rounded-b-lg p-2 pb-4 transition-colors',
-        isDropTarget && 'bg-primary-50/40 ring-primary-400 ring-2 ring-inset'
+        'bg-muted border-border flex min-h-0 flex-1 flex-col rounded-b-lg border-x border-b p-2 pb-4 transition-colors',
+        isDropTarget && 'bg-primary/10 ring-primary-400 ring-2 ring-inset'
       )}
     >
       <div className="flex shrink-0 flex-col gap-2">
