@@ -78,6 +78,53 @@
       "noCampaigns": "No campaigns available yet.",
       "selectCampaignTitle": "Select a campaign",
       "selectCampaignHint": "Select a campaign from the list on the left to start the dialer."
+    },
+    "accessGroup": {
+      "all_groups": "All groups",
+      "supervisor": "Supervisor",
+      "operator": "Operator",
+      "administrator": "Administrator"
+    },
+    "queueStatus": {
+      "active": "Active",
+      "paused": "Paused",
+      "empty": "Queue is empty",
+      "inactive": "Inactive"
+    },
+    "queueList": {
+      "found": "Found: {{count}} queues",
+      "allQueues": "All queues",
+      "onlyActive": "Only active",
+      "addNew": "Add new queue",
+      "searchPlaceholder": "Search for queue by name...",
+      "name": "Queue name",
+      "department": "Department",
+      "accessGroup": "Access group",
+      "entries": "Number of entries",
+      "status": "Status",
+      "activeQueue": "Active queue",
+      "toggleActive": "Toggle active",
+      "actions": "Actions",
+      "empty": "No queues yet. Create your first queue.",
+      "loadError": "Failed to load queues.",
+      "deleteTitle": "Delete '{{name}}'?",
+      "deleteMessage": "This action is irreversible. The queue will be deleted along with all settings.",
+      "deleted": "Queue deleted"
+    },
+    "queueForm": {
+      "createTitle": "Add a new queue",
+      "editTitle": "Edit queue",
+      "subtitle": "Specify the name and set access for the queue",
+      "name": "Queue name",
+      "namePlaceholder": "Enter the queue name",
+      "department": "Department",
+      "selectDepartment": "Select a department",
+      "accessGroup": "Access group",
+      "selectGroup": "Select groups",
+      "create": "Create queue",
+      "save": "Save changes",
+      "created": "Queue created",
+      "updated": "Queue updated"
     }
   },
   "search": {

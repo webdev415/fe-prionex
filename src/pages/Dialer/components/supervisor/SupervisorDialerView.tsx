@@ -15,6 +15,8 @@
 import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router-dom'
 
+import { QueueListTab } from './tabs/QueueListTab'
+
 type TabId = 'queue-numbers' | 'add-from-crm' | 'analysis' | 'queue-list'
 
 const TABS: { id: TabId; labelKey: string; fallback: string }[] = [
@@ -72,9 +74,7 @@ export function SupervisorDialerView() {
         <TabPlaceholder label={t('dialer.tabs.addFromCrm', 'Add from CRM')} />
       )}
       {activeTab === 'analysis' && <TabPlaceholder label={t('dialer.tabs.analysis', 'Analysis')} />}
-      {activeTab === 'queue-list' && (
-        <TabPlaceholder label={t('dialer.tabs.queueList', 'Queue List')} />
-      )}
+      {activeTab === 'queue-list' && <QueueListTab />}
     </div>
   )
 }

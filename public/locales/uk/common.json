@@ -78,6 +78,53 @@
       "noCampaigns": "Поки немає доступних кампаній.",
       "selectCampaignTitle": "Виберіть кампанію",
       "selectCampaignHint": "Виберіть кампанію зі списку ліворуч, щоб запустити дайлер."
+    },
+    "accessGroup": {
+      "all_groups": "Усі групи",
+      "supervisor": "Супервайзер",
+      "operator": "Оператор",
+      "administrator": "Адміністратор"
+    },
+    "queueStatus": {
+      "active": "Активна",
+      "paused": "Призупинена",
+      "empty": "Черга порожня",
+      "inactive": "Неактивна"
+    },
+    "queueList": {
+      "found": "Знайдено: {{count}} черг",
+      "allQueues": "Усі черги",
+      "onlyActive": "Лише активні",
+      "addNew": "Додати чергу",
+      "searchPlaceholder": "Пошук черги за назвою...",
+      "name": "Назва черги",
+      "department": "Відділ",
+      "accessGroup": "Група доступу",
+      "entries": "Кількість записів",
+      "status": "Статус",
+      "activeQueue": "Активна черга",
+      "toggleActive": "Перемкнути активність",
+      "actions": "Дії",
+      "empty": "Черг ще немає. Створіть першу чергу.",
+      "loadError": "Не вдалося завантажити черги.",
+      "deleteTitle": "Видалити «{{name}}»?",
+      "deleteMessage": "Цю дію не можна скасувати. Чергу буде видалено разом з усіма налаштуваннями.",
+      "deleted": "Чергу видалено"
+    },
+    "queueForm": {
+      "createTitle": "Додати нову чергу",
+      "editTitle": "Редагувати чергу",
+      "subtitle": "Вкажіть назву та налаштуйте доступ до черги",
+      "name": "Назва черги",
+      "namePlaceholder": "Введіть назву черги",
+      "department": "Відділ",
+      "selectDepartment": "Виберіть відділ",
+      "accessGroup": "Група доступу",
+      "selectGroup": "Виберіть групи",
+      "create": "Створити чергу",
+      "save": "Зберегти зміни",
+      "created": "Чергу створено",
+      "updated": "Чергу оновлено"
     }
   },
   "search": {
