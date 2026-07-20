@@ -84,14 +84,19 @@ export interface QueueStatusCounts {
   line_errors: number
 }
 
-/** Result of a CSV upload (strict validation — no partial import). */
+/** Result of a CSV upload dry-run (validated, not yet committed). */
 export interface QueueUploadResult {
   total_records: number
   duplicates_removed: number
   invalid_count: number
   invalid_rows?: Array<{ row: number; reason: string }>
   will_be_added: number
+  /** Server-issued token identifying this validated batch; passed to confirm. */
+  upload_token?: string
 }
+
+/** How a confirmed upload is merged into the existing queue. */
+export type QueueUploadMode = 'append' | 'replace'
 
 /** Operator session state (join/leave surface). */
 export interface DialerSession {

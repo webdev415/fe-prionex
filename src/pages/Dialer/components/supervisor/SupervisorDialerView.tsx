@@ -16,6 +16,7 @@ import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router-dom'
 
 import { QueueListTab } from './tabs/QueueListTab'
+import { QueueNumbersTab } from './tabs/QueueNumbersTab'
 
 type TabId = 'queue-numbers' | 'add-from-crm' | 'analysis' | 'queue-list'
 
@@ -66,10 +67,8 @@ export function SupervisorDialerView() {
         </nav>
       </div>
 
-      {/* Tab content (placeholders — filled in later slices) */}
-      {activeTab === 'queue-numbers' && (
-        <TabPlaceholder label={t('dialer.tabs.queueNumbers', 'Queue of Numbers')} />
-      )}
+      {/* Tab content (remaining placeholders filled in later slices) */}
+      {activeTab === 'queue-numbers' && <QueueNumbersTab />}
       {activeTab === 'add-from-crm' && (
         <TabPlaceholder label={t('dialer.tabs.addFromCrm', 'Add from CRM')} />
       )}

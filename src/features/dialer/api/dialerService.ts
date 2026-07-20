@@ -6,6 +6,7 @@ import type {
   OperatorDialerStats,
   QueueNumber,
   QueueStatusCounts,
+  QueueUploadMode,
   QueueUploadResult,
   SimCardStats,
 } from '../types'
@@ -66,16 +67,29 @@ class DialerService {
     return response.data
   }
 
-  async uploadQueueNumbers(
-    queueId: number,
-    file: File,
-    mode: 'append' | 'replace'
-  ): Promise<QueueUploadResult> {
+  /**
+   * Dry-run: upload the CSV, validate every record server-side (dedupe +
+   * confirm each phone exists in the client's contacts), and return the
+   * counts + a token. Nothing is added to the queue yet.
+   */
+  async previewQueueUpload(queueId: number, file: File): Promise<QueueUploadResult> {
     const form = new FormData()
     form.append('file', file)
-    form.append('mode', mode)
-    const response = await api.post(`${base}/queues/${queueId}/numbers/upload`, form, {
+    const response = await api.post(`${base}/queues/${queueId}/numbers/preview`, form, {
       headers: { 'Content-Type': 'multipart/form-data' },
+    })
+    return response.data
+  }
+
+  /** Commit a previously previewed batch into the queue. */
+  async confirmQueueUpload(
+    queueId: number,
+    uploadToken: string,
+    mode: QueueUploadMode
+  ): Promise<{ added_count: number }> {
+    const response = await api.post(`${base}/queues/${queueId}/numbers/confirm`, {
+      upload_token: uploadToken,
+      mode,
     })
     return response.data
   }
