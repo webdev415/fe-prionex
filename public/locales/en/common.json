@@ -3591,6 +3591,7 @@
         "bannerInProgress": "Document import in progress",
         "agreement": "Factoring agreement",
         "selectAgreement": "Select a factoring agreement",
+        "seller": "Seller",
         "agreementNumber": "Agreement number",
         "whoSold": "Who sold",
         "purchaseDate": "Purchase date",
