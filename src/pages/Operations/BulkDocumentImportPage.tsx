@@ -33,6 +33,7 @@ import {
   useUploadDocumentArchive,
 } from '@/features/documentImport'
 import { useFactoringAgreements } from '@/features/factoringAgreements'
+import { useSellers } from '@/features/sellers'
 import { DocumentImportProgress } from './components/DocumentImportProgress'
 import { BulkJobBanner } from './components/BulkJobBanner'
 
@@ -60,6 +61,15 @@ export function BulkDocumentImportPage() {
   const selectedAgreement = useMemo(
     () => agreements.find((a) => String(a.id) === agreementId) ?? null,
     [agreements, agreementId]
+  )
+
+  // The agreement carries only seller_id; resolve it to the seller's name.
+  const { data: sellersData } = useSellers({ is_active: true, limit: 100 })
+  const sellerName = useMemo(
+    () =>
+      (sellersData?.sellers ?? []).find((s) => s.id === selectedAgreement?.seller_id)
+        ?.seller_name ?? null,
+    [sellersData, selectedAgreement]
   )
 
   // The ZIP is uploaded + staged on selection; Start Import only runs once the
@@ -184,6 +194,11 @@ export function BulkDocumentImportPage() {
           {/* Agreement info panel — agreement number, who sold, purchase date */}
           {selectedAgreement && (
             <dl className="grid grid-cols-1 gap-y-2 rounded-md bg-gray-50 p-4 text-sm sm:grid-cols-[max-content_1fr] sm:gap-x-6">
+              <dt className="font-medium text-gray-500">
+                {t('pages.imports.documents.seller', 'Seller')}
+              </dt>
+              <dd className="text-dark-500 font-light">{sellerName || '—'}</dd>
+
               <dt className="font-medium text-gray-500">
                 {t('pages.imports.documents.agreementNumber', 'Agreement number')}
               </dt>
