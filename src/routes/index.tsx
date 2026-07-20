@@ -12,6 +12,7 @@ import { BulkOperatorAssignmentPageSkeleton } from '@/pages/Operations/BulkOpera
 import { BulkTagAssignmentPageSkeleton } from '@/pages/Operations/BulkTagAssignmentPageSkeleton'
 import { BulkPaymentVerificationPageSkeleton } from '@/pages/Operations/BulkPaymentVerificationPageSkeleton'
 import { BulkSaleNotesImportPageSkeleton } from '@/pages/Operations/BulkSaleNotesImportPageSkeleton'
+import { BulkDocumentImportPageSkeleton } from '@/pages/Operations/BulkDocumentImportPageSkeleton'
 import { RepaymentConfigurationPageSkeleton } from '@/pages/RepaymentConfiguration/RepaymentConfigurationPageSkeleton'
 import { AppLoadingFallback } from '@/components/ui/AppLoadingFallback'
 
@@ -210,6 +211,11 @@ const RepaymentConfigurationPage = lazy(() =>
 const BulkSaleNotesImportPage = lazy(() =>
   import('@/pages/Operations').then((m) => ({
     default: m.BulkSaleNotesImportPage,
+  }))
+)
+const BulkDocumentImportPage = lazy(() =>
+  import('@/pages/Operations').then((m) => ({
+    default: m.BulkDocumentImportPage,
   }))
 )
 
@@ -618,6 +624,16 @@ export const router = createBrowserRouter([
           <PermissionRoute requiredPermission={PERMISSIONS.SALE_NOTES.MANAGE}>
             <Suspense fallback={<BulkSaleNotesImportPageSkeleton />}>
               <BulkSaleNotesImportPage />
+            </Suspense>
+          </PermissionRoute>
+        ),
+      },
+      {
+        path: 'import/bulk-document-import',
+        element: (
+          <PermissionRoute requiredPermission={PERMISSIONS.DATA.IMPORT_DOCUMENTS}>
+            <Suspense fallback={<BulkDocumentImportPageSkeleton />}>
+              <BulkDocumentImportPage />
             </Suspense>
           </PermissionRoute>
         ),
