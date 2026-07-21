@@ -27,3 +27,9 @@ export {
   useSimStats,
   type DialerStatsFilters,
 } from './hooks/useDialerStats'
+export {
+  dialerSessionKeys,
+  useMyDialerSession,
+  useJoinQueue,
+  useLeaveQueue,
+} from './hooks/useDialerSession'

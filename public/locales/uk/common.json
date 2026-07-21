@@ -77,7 +77,21 @@
       "availableCampaigns": "Доступні кампанії вашого відділу",
       "noCampaigns": "Поки немає доступних кампаній.",
       "selectCampaignTitle": "Виберіть кампанію",
-      "selectCampaignHint": "Виберіть кампанію зі списку ліворуч, щоб запустити дайлер."
+      "selectCampaignHint": "Виберіть кампанію зі списку ліворуч, щоб запустити дайлер.",
+      "joined": "Приєднано",
+      "inQueue": "У черзі",
+      "operators": "Оператори",
+      "aggressiveness": "Агресивність",
+      "hours": "Години",
+      "joinDialer": "Приєднатися",
+      "leaveDialer": "Вийти з дайлера",
+      "joinedToast": "Ви приєдналися до дайлера",
+      "leftToast": "Ви вийшли з дайлера",
+      "statusActive": "Активний",
+      "statusPaused": "Призупинено",
+      "statusNotConnected": "Не підключено",
+      "waitingForCall": "Підключено — очікування наступного дзвінка…",
+      "joinToStart": "Приєднайтеся до дайлера, щоб отримувати дзвінки."
     },
     "accessGroup": {
       "all_groups": "Усі групи",

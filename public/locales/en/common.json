@@ -77,7 +77,21 @@
       "availableCampaigns": "Available campaigns for your department",
       "noCampaigns": "No campaigns available yet.",
       "selectCampaignTitle": "Select a campaign",
-      "selectCampaignHint": "Select a campaign from the list on the left to start the dialer."
+      "selectCampaignHint": "Select a campaign from the list on the left to start the dialer.",
+      "joined": "Joined",
+      "inQueue": "In queue",
+      "operators": "Operators",
+      "aggressiveness": "Aggressiveness",
+      "hours": "Hours",
+      "joinDialer": "Join Dialer",
+      "leaveDialer": "Leave Dialer",
+      "joinedToast": "Joined the dialer",
+      "leftToast": "Left the dialer",
+      "statusActive": "Active",
+      "statusPaused": "Paused",
+      "statusNotConnected": "Not connected",
+      "waitingForCall": "Connected — waiting for the next call…",
+      "joinToStart": "Join the dialer to start receiving calls."
     },
     "accessGroup": {
       "all_groups": "All groups",
