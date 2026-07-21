@@ -16,6 +16,7 @@ import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router-dom'
 
 import { AddFromCrmTab } from './tabs/AddFromCrmTab'
+import { AnalysisTab } from './tabs/AnalysisTab'
 import { QueueListTab } from './tabs/QueueListTab'
 import { QueueNumbersTab } from './tabs/QueueNumbersTab'
 
@@ -27,15 +28,6 @@ const TABS: { id: TabId; labelKey: string; fallback: string }[] = [
   { id: 'analysis', labelKey: 'dialer.tabs.analysis', fallback: 'Analysis' },
   { id: 'queue-list', labelKey: 'dialer.tabs.queueList', fallback: 'Queue List' },
 ]
-
-function TabPlaceholder({ label }: { label: string }) {
-  const { t } = useTranslation('common')
-  return (
-    <div className="border-border text-muted-foreground rounded-xl border bg-white p-10 text-center text-sm">
-      {t('dialer.comingSoon', '{{section}} — coming soon', { section: label })}
-    </div>
-  )
-}
 
 export function SupervisorDialerView() {
   const { t } = useTranslation('common')
@@ -71,7 +63,7 @@ export function SupervisorDialerView() {
       {/* Tab content (remaining placeholders filled in later slices) */}
       {activeTab === 'queue-numbers' && <QueueNumbersTab />}
       {activeTab === 'add-from-crm' && <AddFromCrmTab />}
-      {activeTab === 'analysis' && <TabPlaceholder label={t('dialer.tabs.analysis', 'Analysis')} />}
+      {activeTab === 'analysis' && <AnalysisTab />}
       {activeTab === 'queue-list' && <QueueListTab />}
     </div>
   )

@@ -176,6 +176,33 @@
       "loadError": "Не вдалося завантажити клієнтів.",
       "showingFirst": "Показано перші {{shown}} з {{total}} клієнтів.",
       "added": "Додано клієнтів до черги: {{count}}"
+    },
+    "analysis": {
+      "operatorsInLine": "Операторів на лінії",
+      "currentlyInConversation": "У розмові",
+      "waitingForCall": "Очікують дзвінка",
+      "totalTalkTime": "Загальний час розмов",
+      "clientsProcessed": "Оброблено клієнтів",
+      "allPresets": "Усі пресети",
+      "inConversation": "У розмові",
+      "awaitingCall": "Очікує дзвінка",
+      "waiting": "Очікують",
+      "operator": "Оператор",
+      "status": "Статус",
+      "inLineWith": "На лінії з",
+      "timeInLine": "Час на лінії",
+      "talkTime": "Час розмов",
+      "utilization": "Завантаженість",
+      "processed": "Оброблено",
+      "currentCall": "Поточний дзвінок",
+      "empty": "Немає підключених операторів.",
+      "simStats": "Статистика SIM-карток",
+      "simId": "SIM-картка",
+      "callsMade": "Здійснено дзвінків",
+      "errors": "Помилки",
+      "simActive": "Активна",
+      "simDisabled": "Вимкнена",
+      "noSims": "Немає даних SIM."
     }
   },
   "search": {

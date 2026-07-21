@@ -176,6 +176,33 @@
       "loadError": "Failed to load clients.",
       "showingFirst": "Showing the first {{shown}} of {{total}} clients.",
       "added": "{{count}} clients added to the queue"
+    },
+    "analysis": {
+      "operatorsInLine": "Operators in Line",
+      "currentlyInConversation": "In Conversation",
+      "waitingForCall": "Waiting for a Call",
+      "totalTalkTime": "Total Talk Time",
+      "clientsProcessed": "Clients Processed",
+      "allPresets": "All presets",
+      "inConversation": "In conversation",
+      "awaitingCall": "Awaiting call",
+      "waiting": "Waiting",
+      "operator": "Operator",
+      "status": "Status",
+      "inLineWith": "In line with",
+      "timeInLine": "Time in Line",
+      "talkTime": "Talk Time",
+      "utilization": "Utilization",
+      "processed": "Processed",
+      "currentCall": "Current call",
+      "empty": "No operators connected.",
+      "simStats": "SIM Card Statistics",
+      "simId": "SIM Card",
+      "callsMade": "Calls made",
+      "errors": "Errors",
+      "simActive": "Active",
+      "simDisabled": "Disabled",
+      "noSims": "No SIM data."
     }
   },
   "search": {

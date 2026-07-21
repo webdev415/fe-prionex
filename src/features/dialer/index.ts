@@ -21,3 +21,9 @@ export {
   useConfirmQueueUpload,
   useAddClientsToQueue,
 } from './hooks/useQueueNumbers'
+export {
+  dialerStatsKeys,
+  useOperatorStats,
+  useSimStats,
+  type DialerStatsFilters,
+} from './hooks/useDialerStats'
