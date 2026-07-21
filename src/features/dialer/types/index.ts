@@ -127,3 +127,20 @@ export interface SimCardStats {
   error_count: number
   status: 'active' | 'disabled'
 }
+
+/**
+ * A live call routed to the operator (design: operator-02). Emitted by the
+ * dialer when a live-answered call is bridged to a free operator.
+ * NOTE: the transport + exact payload depend on the telephony/AMD stack
+ * decision (plan §7.1) and must be confirmed with the dev team.
+ */
+export interface RoutedCall {
+  call_id: string
+  client_id: number
+  client_name: string
+  phone: string
+  line_type: TelephonyType
+  started_at: string
+  /** Optional debt/loan context for the interaction + TA chain. */
+  debt_id?: number | null
+}

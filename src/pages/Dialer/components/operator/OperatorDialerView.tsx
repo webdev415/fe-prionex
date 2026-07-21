@@ -14,10 +14,17 @@ import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/Button'
-import { useDialerQueues, useJoinQueue, useLeaveQueue, useMyDialerSession } from '@/features/dialer'
+import {
+  useDialerQueues,
+  useDialerSocket,
+  useJoinQueue,
+  useLeaveQueue,
+  useMyDialerSession,
+} from '@/features/dialer'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 
+import { ActiveCallPanel } from './ActiveCallPanel'
 import { CampaignList } from './CampaignList'
 
 export function OperatorDialerView() {
@@ -30,6 +37,11 @@ export function OperatorDialerView() {
 
   const joinedQueueId = session?.queue_id ?? null
   const [selectedId, setSelectedId] = useState<number | null>(null)
+  const [autoConnect, setAutoConnect] = useState(false)
+
+  // Routed live-call stream for the joined queue (stubbed until the telephony
+  // socket contract is confirmed — plan §7.1).
+  const { routedCall, clearRoutedCall } = useDialerSocket(joinedQueueId)
 
   // Default the right pane to the joined campaign, else the operator's pick.
   const activeId = selectedId ?? joinedQueueId
@@ -101,6 +113,16 @@ export function OperatorDialerView() {
             </p>
           </div>
         </section>
+      ) : isJoinedHere && routedCall ? (
+        <ActiveCallPanel
+          routedCall={routedCall}
+          campaignName={activeCampaign.name}
+          autoConnect={autoConnect}
+          onToggleAutoConnect={setAutoConnect}
+          onLeave={handleLeave}
+          leaving={leaveMutation.isPending}
+          onHangup={clearRoutedCall}
+        />
       ) : (
         <section className="border-border flex min-h-[420px] flex-col rounded-xl border bg-white p-6">
           <div className="flex flex-wrap items-start justify-between gap-3">

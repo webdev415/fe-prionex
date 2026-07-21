@@ -93,6 +93,21 @@
       "waitingForCall": "Підключено — очікування наступного дзвінка…",
       "joinToStart": "Приєднайтеся до дайлера, щоб отримувати дзвінки."
     },
+    "call": {
+      "activeCall": "Активний дзвінок",
+      "autoConnection": "Автопідключення",
+      "white": "БІЛА",
+      "grey": "СІРА",
+      "hangUp": "Завершити",
+      "phone": "Телефон",
+      "clientInfo": "Інфо клієнта",
+      "viewClient": "Картка клієнта",
+      "recentInteractions": "Останні взаємодії з цим клієнтом",
+      "noInteractions": "Взаємодій ще немає.",
+      "interaction": "Взаємодія",
+      "addInteraction": "Додати взаємодію",
+      "interactionSaved": "Взаємодію збережено"
+    },
     "accessGroup": {
       "all_groups": "Усі групи",
       "supervisor": "Супервайзер",

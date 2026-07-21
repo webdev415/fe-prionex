@@ -33,3 +33,4 @@ export {
   useJoinQueue,
   useLeaveQueue,
 } from './hooks/useDialerSession'
+export { useDialerSocket, type DialerSocketState } from './hooks/useDialerSocket'

@@ -93,6 +93,21 @@
       "waitingForCall": "Connected — waiting for the next call…",
       "joinToStart": "Join the dialer to start receiving calls."
     },
+    "call": {
+      "activeCall": "Active Call",
+      "autoConnection": "Auto-connection",
+      "white": "WHITE",
+      "grey": "GREY",
+      "hangUp": "Hang up",
+      "phone": "Phone",
+      "clientInfo": "Client info",
+      "viewClient": "View Client",
+      "recentInteractions": "Recent interactions with this client",
+      "noInteractions": "No interactions yet.",
+      "interaction": "Interaction",
+      "addInteraction": "Add interaction",
+      "interactionSaved": "Interaction saved"
+    },
     "accessGroup": {
       "all_groups": "All groups",
       "supervisor": "Supervisor",
