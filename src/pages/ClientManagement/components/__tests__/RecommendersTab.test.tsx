@@ -287,4 +287,40 @@ describe('RecommendersTab', () => {
     await user.click(await screen.findByTestId('action-message-sms'))
     expect(onSendSms).toHaveBeenCalledWith('380971111111')
   })
+
+  it('strikes through phone when calls are blocked', () => {
+    renderTab({
+      contacts: [
+        phoneContact({
+          contactTags: [],
+          blocking: {
+            blocks_calls: true,
+            blocks_sms: false,
+            blocks_spam: false,
+            reasons: ['Do Not Call'],
+          },
+        }),
+      ],
+    })
+    const card = screen.getByTestId('recommender-phone-card')
+    const phone = within(card).getByText('380971111111')
+    expect(phone.className).toMatch(/line-through/)
+  })
+
+  it('shows the full contact type name without truncation class', () => {
+    renderTab({
+      contacts: [
+        phoneContact({
+          contactType: 'Mobile phone from registers',
+          contactTypeCode: 'register_mobile_phone',
+          contactTypeId: 29,
+          contactTags: [],
+        }),
+      ],
+    })
+    const pill = screen.getByTestId('contact-type-pill')
+    expect(pill.textContent?.length).toBeGreaterThan(0)
+    expect(pill.querySelector('.truncate')).toBeNull()
+    expect(pill.className).not.toMatch(/\bmax-w-full\b/)
+  })
 })

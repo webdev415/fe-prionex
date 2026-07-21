@@ -518,7 +518,8 @@ function ContactCard({
                 <span
                   className={cn(
                     'text-dark-500 min-w-0 text-xs font-medium tracking-[-0.24px] break-all',
-                    isPhone && 'tabular-nums'
+                    isPhone && 'tabular-nums',
+                    contact.blocking?.blocks_calls && 'line-through opacity-70'
                   )}
                 >
                   {contact.contactValue}
@@ -526,11 +527,11 @@ function ContactCard({
                 <ContactInfoButton contact={contact} onOpenTagHistory={onOpenTagHistory} />
               </div>
             </div>
-            <div className="w-[190px] shrink-0 pt-0.5">
+            <div className="w-auto max-w-full shrink-0 pt-0.5">
               <span
                 data-testid="contact-type-pill"
                 className={cn(
-                  'inline-flex max-w-full items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] leading-[1.4] font-semibold whitespace-nowrap',
+                  'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] leading-[1.4] font-semibold whitespace-nowrap',
                   contactTypePillToneClass(contact.contactTypeCode, isPhone)
                 )}
               >
@@ -539,7 +540,7 @@ function ContactCard({
                   isPhone={isPhone}
                   code={contact.contactTypeCode}
                 />
-                <span className="truncate">{typeLabel || '—'}</span>
+                <span>{typeLabel || '—'}</span>
               </span>
             </div>
             <div className="ml-auto flex shrink-0 items-center">
@@ -636,7 +637,7 @@ function ContactCard({
                   <TagBadge
                     name={tag.name}
                     color={tag.color || '#64748b'}
-                    size="sm"
+                    size="xs"
                     isProtected={tag.is_protected}
                     isSystem={tag.is_system}
                   />
