@@ -180,7 +180,7 @@ export function BulkAssignClientModal({
       <ModalHeader
         icon={
           <div className="bg-primary-400 flex h-8 w-8 items-center justify-center rounded-full">
-            <Icons.UserCheck01 size={20} className="text-dark-500" strokeWidth={1.5} />
+            <Icons.UserCheck01 size={20} className="text-primary-foreground" strokeWidth={1.5} />
           </div>
         }
         title={t('pages.clients.modals.bulkAssignClient.title', { count: selectedCount })}
@@ -189,10 +189,10 @@ export function BulkAssignClientModal({
         <div className="flex flex-col gap-6">
           {/* Selected Clients Preview Section */}
           <div className="flex flex-col items-start gap-2 self-stretch">
-            <span className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+            <span className="text-foreground text-sm leading-[150%] font-medium tracking-[-0.28px]">
               {t('pages.clients.modals.bulkAssignClient.selectedClientsPreview')}
             </span>
-            <div className="flex flex-col items-start justify-center gap-3 self-stretch rounded-xl border border-white/100 bg-white/50 p-4 sm:p-5 md:p-6">
+            <div className="border-border bg-card/50 flex flex-col items-start justify-center gap-3 self-stretch rounded-xl border p-4 sm:p-5 md:p-6">
               {/* Preview list */}
               <div className="flex flex-col items-start gap-3 self-stretch sm:gap-2">
                 {previewClients.map((client) => (
@@ -200,19 +200,19 @@ export function BulkAssignClientModal({
                     key={client.id}
                     className="flex w-full flex-col gap-2 self-stretch sm:flex-row sm:items-center sm:gap-2"
                   >
-                    <span className="text-dark-500 w-full text-xs leading-[150%] font-medium tracking-[-0.24px] sm:w-[50%] sm:text-sm sm:tracking-[-0.28px]">
+                    <span className="text-foreground w-full text-xs leading-[150%] font-medium tracking-[-0.24px] sm:w-[50%] sm:text-sm sm:tracking-[-0.28px]">
                       {client.fullName} (#{client.id})
                     </span>
                     <div className="w-full sm:w-[25%]">
                       <PriorityBadge priority={client.priority} variant="compact" />
                     </div>
-                    <span className="text-dark-500 w-full text-xs leading-[150%] font-medium tracking-[-0.24px] sm:w-[25%] sm:text-sm sm:tracking-[-0.28px]">
+                    <span className="text-foreground w-full text-xs leading-[150%] font-medium tracking-[-0.24px] sm:w-[25%] sm:text-sm sm:tracking-[-0.28px]">
                       {formatUAH(client.debt)} ₴
                     </span>
                   </div>
                 ))}
                 {remainingCount > 0 && (
-                  <span className="text-dark-500 text-xs leading-[150%] font-light tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
+                  <span className="text-foreground text-xs leading-[150%] font-light tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
                     {t('pages.clients.modals.bulkAssignClient.andMoreClients', {
                       count: remainingCount,
                       client: t(
@@ -222,17 +222,17 @@ export function BulkAssignClientModal({
                   </span>
                 )}
               </div>
-              <div className="my-2 h-px w-full bg-gray-200" />
+              <div className="bg-border my-2 h-px w-full" />
               {/* Summary */}
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-5">
                 <div>
-                  <span className="text-dark-500 text-xs leading-[150%] font-light tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
+                  <span className="text-foreground text-xs leading-[150%] font-light tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
                     {t('pages.clients.modals.bulkAssignClient.totalDebt')}{' '}
                     <span className="font-medium">{formatUAH(summary.totalDebt)} ₴</span>
                   </span>
                 </div>
                 <div>
-                  <span className="text-dark-500 text-xs leading-[150%] font-light tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
+                  <span className="text-foreground text-xs leading-[150%] font-light tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
                     {t('pages.clients.modals.bulkAssignClient.avgScore')}{' '}
                     <span className="font-medium">{summary.avgScore}</span>
                   </span>
@@ -243,16 +243,16 @@ export function BulkAssignClientModal({
 
           {/* Assignment Options Section */}
           <div className="flex flex-col items-start gap-2 self-stretch">
-            <span className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+            <span className="text-foreground text-sm leading-[150%] font-medium tracking-[-0.28px]">
               {t('pages.clients.modals.bulkAssignClient.assignmentOptions')}
             </span>
-            <div className="flex flex-col items-start justify-center gap-4 self-stretch rounded-xl border border-white/100 bg-white/50 p-4 sm:gap-5 sm:p-5 md:p-6">
+            <div className="border-border bg-card/50 flex flex-col items-start justify-center gap-4 self-stretch rounded-xl border p-4 sm:gap-5 sm:p-5 md:p-6">
               <div className="flex w-full flex-col gap-4 self-stretch sm:flex-row sm:items-start sm:gap-4">
                 {/* Employee Dropdown */}
                 <div className="flex min-h-[63px] w-full flex-col items-start justify-center gap-1 sm:flex-1">
                   <Label
                     htmlFor="bulk-employee"
-                    className="text-dark-500 text-xs leading-[140%] font-medium tracking-[-0.24px]"
+                    className="text-foreground text-xs leading-[140%] font-medium tracking-[-0.24px]"
                   >
                     {t('pages.clients.modals.bulkAssignClient.assignEmployeeToAll')}
                   </Label>
@@ -267,7 +267,7 @@ export function BulkAssignClientModal({
                     </SelectTrigger>
                     <SelectContent searchable>
                       {userOptions.length === 0 ? (
-                        <div className="px-2 py-6 text-center text-sm text-gray-500">
+                        <div className="text-muted-foreground px-2 py-6 text-center text-sm">
                           {t('pages.clients.modals.assignClient.noUsersAvailable')}
                         </div>
                       ) : (
@@ -285,7 +285,7 @@ export function BulkAssignClientModal({
                 <div className="flex min-h-[63px] w-full flex-col items-start justify-center gap-1 sm:flex-1">
                   <Label
                     htmlFor="bulk-searcher"
-                    className="text-dark-500 text-xs leading-[140%] font-medium tracking-[-0.24px]"
+                    className="text-foreground text-xs leading-[140%] font-medium tracking-[-0.24px]"
                   >
                     {t('pages.clients.modals.bulkAssignClient.assignSearcherToAll')}
                   </Label>
@@ -300,7 +300,7 @@ export function BulkAssignClientModal({
                     </SelectTrigger>
                     <SelectContent searchable>
                       {userOptions.length === 0 ? (
-                        <div className="px-2 py-6 text-center text-sm text-gray-500">
+                        <div className="text-muted-foreground px-2 py-6 text-center text-sm">
                           {t('pages.clients.modals.assignClient.noUsersAvailable')}
                         </div>
                       ) : (
@@ -317,7 +317,7 @@ export function BulkAssignClientModal({
               <div className="flex w-full flex-col gap-4 self-stretch sm:flex-row sm:items-start sm:gap-2">
                 {/* Distribution Method */}
                 <div className="flex w-full flex-col items-start justify-center gap-1 sm:self-stretch">
-                  <Label className="text-dark-500 text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                  <Label className="text-foreground text-xs leading-[140%] font-medium tracking-[-0.24px]">
                     {t('pages.clients.modals.bulkAssignClient.distributionMethod')}
                   </Label>
                   <RadioGroup
@@ -331,7 +331,7 @@ export function BulkAssignClientModal({
                         <RadioItem value="assign-all" id="distribute-assign-all" />
                         <Label
                           htmlFor="distribute-assign-all"
-                          className="text-dark-500 cursor-pointer text-xs font-light tracking-[-0.24px]"
+                          className="text-foreground cursor-pointer text-xs font-light tracking-[-0.24px]"
                         >
                           {t('pages.clients.modals.bulkAssignClient.assignAllToSelected')}
                         </Label>
@@ -340,7 +340,7 @@ export function BulkAssignClientModal({
                         <RadioItem value="distribute-evenly" id="distribute-evenly" disabled />
                         <Label
                           htmlFor="distribute-evenly"
-                          className="text-dark-500 cursor-not-allowed text-xs font-light tracking-[-0.24px] opacity-50"
+                          className="text-muted-foreground cursor-not-allowed text-xs font-light tracking-[-0.24px] opacity-50"
                         >
                           {t('pages.clients.modals.bulkAssignClient.distributeEvenly')}
                         </Label>
@@ -353,7 +353,7 @@ export function BulkAssignClientModal({
                 <div className="flex min-h-[63px] w-full flex-col items-start justify-center gap-1 sm:flex-1">
                   <Label
                     htmlFor="bulk-reason"
-                    className="text-dark-500 text-xs leading-[140%] font-medium tracking-[-0.24px]"
+                    className="text-foreground text-xs leading-[140%] font-medium tracking-[-0.24px]"
                   >
                     {t('pages.clients.modals.bulkAssignClient.assignmentReason')}
                   </Label>
@@ -393,7 +393,7 @@ export function BulkAssignClientModal({
                 <div className="flex w-full flex-col items-start justify-center gap-1 sm:flex-1">
                   <Label
                     htmlFor="bulk-notes"
-                    className="text-dark-500 text-xs leading-[140%] font-medium tracking-[-0.24px]"
+                    className="text-foreground text-xs leading-[140%] font-medium tracking-[-0.24px]"
                   >
                     {t('pages.clients.modals.bulkAssignClient.notes')}
                   </Label>
@@ -403,7 +403,7 @@ export function BulkAssignClientModal({
                     onChange={(e) => setNotes(e.target.value)}
                     placeholder={t('pages.clients.modals.bulkAssignClient.enterAdditionalNotes')}
                     textareaSize="md"
-                    className="text-dark-500 w-full rounded-md text-xs leading-[140%] font-light tracking-[-0.24px]"
+                    className="text-foreground w-full rounded-md text-xs leading-[140%] font-light tracking-[-0.24px]"
                   />
                 </div>
               </div>
@@ -411,9 +411,9 @@ export function BulkAssignClientModal({
           </div>
 
           {/* Warning Message */}
-          <div className="bg-warning-50 flex w-full items-center gap-2 rounded-md p-3">
+          <div className="border-warning-200 bg-warning-100/40 text-warning-700 flex w-full items-center gap-2 rounded-md border p-3">
             <Icons.Warning size={20} className="text-warning-500 flex-shrink-0" strokeWidth={2} />
-            <p className="text-warning-800 text-sm">
+            <p className="text-warning-700 text-sm">
               {t('pages.clients.modals.bulkAssignClient.warningMessage', {
                 count: selectedCount,
                 client: t(

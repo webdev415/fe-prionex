@@ -66,7 +66,7 @@ export function DepartmentGroupsModal({ open, departmentId, onClose }: Departmen
           <PermissionGuard permission={PERMISSIONS.SYSTEM.MANAGE_ROLES}>
             <button
               type="button"
-              className="text-dark-500 flex items-center gap-1 text-xs font-medium"
+              className="text-foreground flex items-center gap-1 text-xs font-medium"
               onClick={() => setEditGroupId(g.id)}
             >
               <Icons.PencilEdit size={14} />
@@ -74,7 +74,7 @@ export function DepartmentGroupsModal({ open, departmentId, onClose }: Departmen
             </button>
             <button
               type="button"
-              className="text-dark-500 flex items-center gap-1 text-xs font-medium"
+              className="text-foreground flex items-center gap-1 text-xs font-medium"
               onClick={() => setArchiveGroupId(g.id)}
             >
               <Icons.Delete size={14} />
@@ -91,8 +91,8 @@ export function DepartmentGroupsModal({ open, departmentId, onClose }: Departmen
       <Modal open={open} onClose={onClose} maxWidth="2xl">
         <ModalHeader
           icon={
-            <div className="bg-primary-300 flex h-8 w-8 items-center justify-center rounded-full">
-              <Icons.Users size={20} className="text-dark-500" strokeWidth={2} />
+            <div className="bg-primary-400 flex h-7 w-7 items-center justify-center rounded-full sm:h-8 sm:w-8">
+              <Icons.Users size={18} className="text-foreground" strokeWidth={2} />
             </div>
           }
           title={

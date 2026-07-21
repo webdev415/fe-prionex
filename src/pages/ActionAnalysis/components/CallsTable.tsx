@@ -40,7 +40,7 @@ export function CallsTable({ data, onOpenCall, operatorLookup }: Props) {
       key: 'date',
       header: t('pages.actionAnalysis.columns.dateTime', 'Date / Time'),
       render: (r) => (
-        <span className="text-sm text-gray-700">{formatDateTime(r.initiated_at)}</span>
+        <span className="text-foreground text-sm">{formatDateTime(r.initiated_at)}</span>
       ),
     },
     {
@@ -48,7 +48,7 @@ export function CallsTable({ data, onOpenCall, operatorLookup }: Props) {
       header: t('pages.actionAnalysis.columns.duration', 'Duration'),
       render: (r) => {
         const display = isNonAnsweredOutcome(r.outcome) ? null : r.talk_duration
-        return <span className="text-sm text-gray-700">{formatDuration(display)}</span>
+        return <span className="text-foreground text-sm">{formatDuration(display)}</span>
       },
     },
     {
@@ -72,7 +72,7 @@ export function CallsTable({ data, onOpenCall, operatorLookup }: Props) {
       render: (r) => {
         const isInbound = r.direction === 'inbound'
         return (
-          <span className="inline-flex items-center gap-1.5 text-sm text-gray-700">
+          <span className="text-foreground inline-flex items-center gap-1.5 text-sm">
             {isInbound ? (
               <Icons.CallIncoming04 size={14} className="text-information-500" strokeWidth={1.5} />
             ) : (
@@ -94,7 +94,7 @@ export function CallsTable({ data, onOpenCall, operatorLookup }: Props) {
       key: 'phone',
       header: t('pages.actionAnalysis.columns.phone', 'Phone'),
       render: (r) => (
-        <span className="text-sm text-gray-700">
+        <span className="text-foreground text-sm">
           {formatUkrainePhoneForDisplay(r.customer_number, r.customer_number)}
         </span>
       ),
@@ -103,7 +103,7 @@ export function CallsTable({ data, onOpenCall, operatorLookup }: Props) {
       key: 'agent',
       header: t('pages.actionAnalysis.columns.agent', 'Employee'),
       render: (r) => (
-        <span className="text-sm text-gray-700">
+        <span className="text-foreground text-sm">
           {formatEmployeeName(operatorLookup?.[r.agent_extension], r.agent_extension)}
         </span>
       ),
@@ -120,7 +120,7 @@ export function CallsTable({ data, onOpenCall, operatorLookup }: Props) {
             #{r.client_id}
           </Link>
         ) : (
-          <span className="text-sm text-gray-400">—</span>
+          <span className="text-muted-foreground text-sm">—</span>
         ),
     },
     {
@@ -139,7 +139,7 @@ export function CallsTable({ data, onOpenCall, operatorLookup }: Props) {
               'inline-flex h-8 w-8 items-center justify-center rounded-md transition-colors',
               enabled
                 ? 'text-secondary-700 hover:bg-secondary-50 cursor-pointer'
-                : 'cursor-not-allowed text-gray-300'
+                : 'text-muted-foreground cursor-not-allowed'
             )}
           >
             <Icons.Voice size={18} strokeWidth={1.5} />

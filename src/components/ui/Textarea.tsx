@@ -4,11 +4,11 @@ import { cva, type VariantProps } from 'class-variance-authority'
 import { cn } from '@/lib/utils'
 
 const textareaVariants = cva(
-  'flex w-full rounded-lg border bg-white px-4 py-2 text-sm font-light text-dark-500 placeholder:text-gray-500 transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none',
+  'flex w-full rounded-lg border bg-input px-4 py-2 text-sm font-light text-foreground placeholder:text-muted-foreground transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-card disabled:cursor-not-allowed disabled:opacity-50 resize-none',
   {
     variants: {
       variant: {
-        default: 'border-gray-400 focus:border-primary-500 focus:ring-primary-500',
+        default: 'border-input-border focus:border-primary-500 focus:ring-primary-500',
         error: 'border-error-500 focus:border-error-500 focus:ring-error-500',
         success: 'border-success-500 focus:border-success-500 focus:ring-success-500',
       },
@@ -46,26 +46,26 @@ const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
     return (
       <div className="w-full">
         {label && (
-          <label htmlFor={textareaId} className="text-dark-500 mb-1.5 block text-sm font-light">
+          <label htmlFor={textareaId} className="text-foreground mb-1.5 block text-sm font-light">
             {label}
           </label>
         )}
         <textarea
           id={textareaId}
           className={cn(textareaVariants({ variant: effectiveVariant, textareaSize }), className)}
-          style={{ color: '#05040D', ...style }}
+          style={style}
           ref={ref}
           aria-invalid={!!error}
           aria-describedby={error ? errorId : helperText ? helperId : undefined}
           {...props}
         />
         {error && (
-          <p id={errorId} className="text-text-xs text-error-500 mt-1.5" role="alert">
+          <p id={errorId} className="text-error-500 mt-1.5 text-xs" role="alert">
             {error}
           </p>
         )}
         {helperText && !error && (
-          <p id={helperId} className="text-text-xs mt-1.5 text-gray-500">
+          <p id={helperId} className="text-muted-foreground mt-1.5 text-xs">
             {helperText}
           </p>
         )}

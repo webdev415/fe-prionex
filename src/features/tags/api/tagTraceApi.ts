@@ -29,12 +29,16 @@ export interface TraceTimelineEntry {
   source: TraceSource
   timestamp: string
   summary: string
+  action?: string | null
+  tag_id?: number | null
+  tag_name?: string | null
   rule_id?: number | null
   rule_name?: string | null
   correlation_id?: string | null
   event_type?: string | null
   actor_type?: string | null
   actor_id?: number | null
+  actor_display_name?: string | null
   reason?: string | null
   processing_status?: ProcessingStatus | string | null
   action_taken?: string | null

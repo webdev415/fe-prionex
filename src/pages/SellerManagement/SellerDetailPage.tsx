@@ -16,6 +16,10 @@ import { Pagination } from '@/components/ui/Pagination'
 import { useURLState } from '@/hooks'
 import { useSellerDetail, useSellerFactoringAgreements } from '@/features/sellers'
 import { formatDate } from '@/lib/formatters'
+import {
+  SellerDetailAgreementsSkeleton,
+  SellerDetailPageSkeleton,
+} from './components/SellerDetailPageSkeleton'
 
 const DEFAULT_PAGE_SIZE = 10
 
@@ -46,11 +50,7 @@ export function SellerDetailPage() {
   }
 
   if (sellerQuery.isLoading) {
-    return (
-      <p className="text-dark-500 text-sm font-light">
-        {t('pages.sellers.detail.loading', 'Loading seller...')}
-      </p>
-    )
+    return <SellerDetailPageSkeleton />
   }
 
   if (sellerQuery.isError || !sellerQuery.data) {
@@ -76,7 +76,7 @@ export function SellerDetailPage() {
       {/* Back link */}
       <Link
         to="/dashboard/sellers"
-        className="text-dark-500 hover:text-primary-500 inline-flex items-center gap-1 text-sm font-light"
+        className="text-foreground hover:text-primary-500 inline-flex items-center gap-1 text-sm font-light"
       >
         <Icons.ArrowLeft size={16} strokeWidth={1.5} />
         {t('pages.sellers.detail.back', 'Back to sellers')}
@@ -84,26 +84,24 @@ export function SellerDetailPage() {
 
       {/* Header */}
       <div>
-        <h1 className="text-dark-500 flex flex-wrap items-baseline gap-3 text-2xl font-medium">
+        <h1 className="text-foreground flex flex-wrap items-baseline gap-3 text-2xl font-medium">
           <span>{seller.seller_name}</span>
           {seller.legal_name && (
-            <span className="text-base font-light text-gray-500">{seller.legal_name}</span>
+            <span className="text-muted-foreground text-base font-light">{seller.legal_name}</span>
           )}
         </h1>
       </div>
 
-      <div className="h-px w-full bg-gray-200" />
+      <div className="bg-border h-px w-full" />
 
       {/* Factoring Agreements section */}
       <div className="space-y-4">
-        <h2 className="text-dark-500 text-lg font-medium">
+        <h2 className="text-foreground text-lg font-medium">
           {t('pages.sellers.detail.factoringAgreements.title', 'Factoring Agreements')}
         </h2>
 
         {agreementsQuery.isLoading ? (
-          <p className="text-sm font-light text-gray-500">
-            {t('pages.sellers.detail.factoringAgreements.loading', 'Loading agreements...')}
-          </p>
+          <SellerDetailAgreementsSkeleton />
         ) : agreementsQuery.isError ? (
           <p className="text-sm font-light text-red-500">
             {t(
@@ -112,7 +110,7 @@ export function SellerDetailPage() {
             )}
           </p>
         ) : agreements.length === 0 ? (
-          <p className="text-sm font-light text-gray-500">
+          <p className="text-muted-foreground text-sm font-light">
             {t(
               'pages.sellers.detail.factoringAgreements.empty',
               'No factoring agreements for this seller yet.'
@@ -120,10 +118,10 @@ export function SellerDetailPage() {
           </p>
         ) : (
           <>
-            <div className="overflow-x-auto rounded-md border border-gray-200">
-              <table className="min-w-full divide-y divide-gray-200 text-sm">
-                <thead className="bg-gray-50">
-                  <tr className="text-xs font-medium tracking-wide text-gray-500 uppercase">
+            <div className="border-border overflow-x-auto rounded-md border">
+              <table className="divide-border min-w-full divide-y text-sm">
+                <thead className="bg-muted">
+                  <tr className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
                     <th className="px-4 py-3 text-center">
                       {t(
                         'pages.sellers.detail.factoringAgreements.columns.number',
@@ -150,9 +148,9 @@ export function SellerDetailPage() {
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100">
+                <tbody className="divide-border divide-y">
                   {agreements.map((a) => (
-                    <tr key={a.id} className="text-dark-500 odd:bg-white even:bg-gray-50">
+                    <tr key={a.id} className="text-foreground odd:bg-card even:bg-muted">
                       <td className="px-4 py-3 text-center font-medium">{a.agreement_number}</td>
                       <td className="px-4 py-3 text-center font-light">
                         {a.previous_lender || '—'}

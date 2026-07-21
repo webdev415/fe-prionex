@@ -27,15 +27,15 @@ export function DeleteLetterTypeModal({
   return (
     <Modal open={open} onClose={onClose} maxWidth="md">
       <div className="flex flex-col gap-4">
-        <DialogPrimitive.Title className="text-dark-500 text-lg font-semibold">
+        <DialogPrimitive.Title className="text-foreground text-lg font-semibold">
           {t('pages.lawyerWorkplace.settings.letterTypes.deleteTypeTitle', 'Delete letter type')}
         </DialogPrimitive.Title>
-        <p className="text-sm text-gray-700">
+        <p className="text-foreground text-sm">
           {t(
             'pages.lawyerWorkplace.settings.letterTypes.deleteTypeConfirm',
             'Are you sure you want to delete this letter type?'
           )}{' '}
-          <span className="text-dark-500 font-medium">{typeName}</span>
+          <span className="text-foreground font-medium">{typeName}</span>
         </p>
         {letterType && letterType.letterCount > 0 ? (
           <p className="text-warning-700 text-xs">
@@ -45,7 +45,7 @@ export function DeleteLetterTypeModal({
             })}
           </p>
         ) : null}
-        <p className="text-xs text-gray-500">
+        <p className="text-muted-foreground text-xs">
           {t(
             'pages.lawyerWorkplace.settings.letterTypes.deleteTypeWarning',
             'It will be removed from active lists. Historical letters keep their classification.'

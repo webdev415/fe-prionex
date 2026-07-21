@@ -26,6 +26,9 @@ vi.mock('../../../lib/scope', () => ({ useScopedUserIds: vi.fn() }))
 // The interactive review panel pulls in the player + query-backed scorecard
 // editor; stub it so this list-focused test needs no QueryClientProvider.
 vi.mock('../CallReviewPanel', () => ({ CallReviewPanel: () => null }))
+// Default view is now the call-first "Dialogs" list; stub it so these
+// scorecard-list tests (which switch to the Scorecards view) stay isolated.
+vi.mock('../DialogsListTab', () => ({ DialogsListTab: () => null }))
 vi.mock('@/stores/authStore', () => ({
   useAuthStore: (selector: (s: unknown) => unknown) => selector({ user: { active_project_id: 3 } }),
 }))
@@ -68,6 +71,9 @@ function makeScorecard(id: number, operatorId: number, weighted: number | null):
     created_at: '2026-05-15T09:30:00',
     completed_at: '2026-05-15T09:40:00',
     sent_at: null,
+    call_started_at: null,
+    call_talk_duration: null,
+    call_telephony_type: null,
   }
 }
 
@@ -93,16 +99,23 @@ beforeEach(() => {
   })
 })
 
+/** Render + switch to the Scorecards view (default is now the Dialogs list). */
+function renderScorecards() {
+  const result = render(<DialogueEvaluationTab />)
+  fireEvent.click(screen.getByText('pages.training.dialogue.view.list'))
+  return result
+}
+
 describe('DialogueEvaluationTab', () => {
   it('renders the loading state', () => {
     setScorecards({ isLoading: true })
-    render(<DialogueEvaluationTab />)
+    renderScorecards()
     expect(screen.getByText('common.loading')).toBeInTheDocument()
   })
 
   it('renders the error state', () => {
     setScorecards({ isError: true })
-    render(<DialogueEvaluationTab />)
+    renderScorecards()
     expect(screen.getByText('pages.training.errors.loadScorecardsFailed')).toBeInTheDocument()
   })
 
@@ -110,7 +123,7 @@ describe('DialogueEvaluationTab', () => {
     setScorecards({
       data: { data: [], pagination: { page: 1, page_size: 50, total: 0, total_pages: 0 } },
     })
-    render(<DialogueEvaluationTab />)
+    renderScorecards()
     expect(screen.getByText('pages.training.scorecardsEmpty')).toBeInTheDocument()
   })
 
@@ -126,7 +139,7 @@ describe('DialogueEvaluationTab', () => {
     setScorecards({
       data: { data: [], pagination: { page: 1, page_size: 50, total: 0, total_pages: 0 } },
     })
-    render(<DialogueEvaluationTab />)
+    renderScorecards()
     expect(screen.getByText('pages.training.errors.emptyScopeResolution')).toBeInTheDocument()
   })
 
@@ -140,7 +153,7 @@ describe('DialogueEvaluationTab', () => {
         pagination: { page: 1, page_size: 50, total: 2, total_pages: 1 },
       },
     })
-    render(<DialogueEvaluationTab />)
+    renderScorecards()
 
     // Both operators show under "All calls" (the name also repeats in the
     // detail-panel header for the auto-selected row, hence getAllByText).

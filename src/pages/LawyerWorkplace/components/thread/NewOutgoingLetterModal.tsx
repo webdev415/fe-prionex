@@ -286,7 +286,7 @@ function NewOutgoingLetterForm({ onClose, onSent }: NewOutgoingLetterFormProps) 
       <ModalHeader
         icon={
           <div className="bg-primary-300 flex h-8 w-8 items-center justify-center rounded-full">
-            <Icons.Sent02 size={16} className="text-dark-500" strokeWidth={1.5} />
+            <Icons.Sent02 size={16} className="text-foreground" strokeWidth={1.5} />
           </div>
         }
         title={t('pages.lawyerWorkplace.newLetter.title', 'New Outgoing Letter')}
@@ -295,7 +295,7 @@ function NewOutgoingLetterForm({ onClose, onSent }: NewOutgoingLetterFormProps) 
       <ModalContent>
         <div className="flex flex-col gap-4">
           <div className="flex w-full flex-col gap-2">
-            <Label className="text-dark-500 text-[12px] font-normal">
+            <Label className="text-foreground text-[12px] font-normal">
               {t('pages.lawyerWorkplace.newLetter.from', 'From')}
             </Label>
             <DropdownMenu modal={false}>
@@ -303,10 +303,14 @@ function NewOutgoingLetterForm({ onClose, onSent }: NewOutgoingLetterFormProps) 
                 <button
                   type="button"
                   disabled={mailboxes.length === 0}
-                  className="text-dark-500 flex h-9 w-full items-center justify-between rounded-[8px] border border-gray-200 bg-white px-3 text-[13px] font-light outline-none disabled:cursor-not-allowed disabled:opacity-60"
+                  className="text-foreground border-border bg-input flex h-9 w-full items-center justify-between rounded-[8px] border px-3 text-[13px] font-light outline-none disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   <span>{selectedMailbox?.email ?? t('common.loading', 'Loading...')}</span>
-                  <Icons.ArrowDown size={14} strokeWidth={1.5} className="shrink-0 text-gray-400" />
+                  <Icons.ArrowDown
+                    size={14}
+                    strokeWidth={1.5}
+                    className="text-muted-foreground shrink-0"
+                  />
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent
@@ -318,7 +322,7 @@ function NewOutgoingLetterForm({ onClose, onSent }: NewOutgoingLetterFormProps) 
                     key={mailbox.id}
                     className={cn(
                       'cursor-pointer rounded-md px-2.5 py-1.5 text-[13px]',
-                      mailbox.id === selectedMailbox?.id && 'bg-gray-50 font-medium'
+                      mailbox.id === selectedMailbox?.id && 'bg-muted font-medium'
                     )}
                     onClick={() => setMailboxOverrideId(mailbox.id)}
                   >
@@ -330,10 +334,10 @@ function NewOutgoingLetterForm({ onClose, onSent }: NewOutgoingLetterFormProps) 
           </div>
 
           <div className="flex w-full flex-col gap-2">
-            <Label className="text-dark-500 text-[12px] font-normal">
+            <Label className="text-foreground text-[12px] font-normal">
               {t('pages.lawyerWorkplace.newLetter.recipientType', 'Recipient')}
             </Label>
-            <div className="flex w-fit rounded-[8px] border border-white bg-white p-1 shadow-sm">
+            <div className="border-card bg-card flex w-fit rounded-[8px] border p-1 shadow-sm">
               {(
                 [
                   {
@@ -364,7 +368,7 @@ function NewOutgoingLetterForm({ onClose, onSent }: NewOutgoingLetterFormProps) 
                     'rounded-[6px] px-3 py-1.5 text-[12px] font-medium transition-colors',
                     recipientMode === opt.id
                       ? 'bg-secondary-800 text-white'
-                      : 'text-dark-500 hover:bg-gray-50'
+                      : 'text-foreground hover:bg-muted'
                   )}
                 >
                   {t(opt.labelKey, opt.fallback)}
@@ -377,7 +381,7 @@ function NewOutgoingLetterForm({ onClose, onSent }: NewOutgoingLetterFormProps) 
             <>
               <div className="flex w-full flex-col gap-2">
                 <div className="flex items-center justify-between gap-2">
-                  <Label className="text-dark-500 text-[12px] font-normal">
+                  <Label className="text-foreground text-[12px] font-normal">
                     {t('pages.lawyerWorkplace.newLetter.client', 'Client')}
                     <span className="text-error-500 ml-1">*</span>
                   </Label>
@@ -385,11 +389,19 @@ function NewOutgoingLetterForm({ onClose, onSent }: NewOutgoingLetterFormProps) 
                     <DropdownMenuTrigger asChild>
                       <button
                         type="button"
-                        className="text-dark-500 flex h-7 shrink-0 items-center gap-1 rounded-md border border-gray-200 bg-white px-2 text-[12px] font-light outline-none"
+                        className="text-foreground border-border bg-input flex h-7 shrink-0 items-center gap-1 rounded-md border px-2 text-[12px] font-light outline-none"
                       >
-                        <Icons.Search size={12} strokeWidth={1.5} className="text-gray-400" />
+                        <Icons.Search
+                          size={12}
+                          strokeWidth={1.5}
+                          className="text-muted-foreground"
+                        />
                         {searchTypeLabel}
-                        <Icons.ArrowDown size={13} strokeWidth={1.5} className="text-gray-400" />
+                        <Icons.ArrowDown
+                          size={13}
+                          strokeWidth={1.5}
+                          className="text-muted-foreground"
+                        />
                       </button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="min-w-[160px]">
@@ -427,7 +439,7 @@ function NewOutgoingLetterForm({ onClose, onSent }: NewOutgoingLetterFormProps) 
 
               {clientId && (
                 <div className="flex w-full flex-col gap-2">
-                  <Label className="text-dark-500 text-[12px] font-normal">
+                  <Label className="text-foreground text-[12px] font-normal">
                     {t('pages.lawyerWorkplace.newLetter.to', 'To')}
                     <span className="text-error-500 ml-1">*</span>
                   </Label>
@@ -436,7 +448,7 @@ function NewOutgoingLetterForm({ onClose, onSent }: NewOutgoingLetterFormProps) 
                       <DropdownMenuTrigger asChild>
                         <button
                           type="button"
-                          className="text-dark-500 flex h-9 w-full items-center justify-between rounded-[8px] border border-gray-200 bg-white px-3 text-[13px] font-light outline-none"
+                          className="text-foreground border-border bg-input flex h-9 w-full items-center justify-between rounded-[8px] border px-3 text-[13px] font-light outline-none"
                         >
                           <span>
                             {toEmail ||
@@ -445,7 +457,7 @@ function NewOutgoingLetterForm({ onClose, onSent }: NewOutgoingLetterFormProps) 
                           <Icons.ArrowDown
                             size={14}
                             strokeWidth={1.5}
-                            className="shrink-0 text-gray-400"
+                            className="text-muted-foreground shrink-0"
                           />
                         </button>
                       </DropdownMenuTrigger>
@@ -458,7 +470,7 @@ function NewOutgoingLetterForm({ onClose, onSent }: NewOutgoingLetterFormProps) 
                             key={email}
                             className={cn(
                               'cursor-pointer rounded-md px-2.5 py-1.5 text-[13px]',
-                              email === toEmail && 'bg-gray-50 font-medium'
+                              email === toEmail && 'bg-muted font-medium'
                             )}
                             onClick={() => setEmailOverride({ clientId, email })}
                           >
@@ -468,7 +480,7 @@ function NewOutgoingLetterForm({ onClose, onSent }: NewOutgoingLetterFormProps) 
                       </DropdownMenuContent>
                     </DropdownMenu>
                   ) : (
-                    <div className="text-dark-500 flex h-9 w-full items-center rounded-[8px] border border-gray-100 bg-gray-50 px-3 text-[13px] font-light">
+                    <div className="text-foreground border-border bg-muted flex h-9 w-full items-center rounded-[8px] border px-3 text-[13px] font-light">
                       {toEmail ||
                         t('pages.lawyerWorkplace.newLetter.noClientEmail', 'No email on file')}
                     </div>
@@ -480,7 +492,7 @@ function NewOutgoingLetterForm({ onClose, onSent }: NewOutgoingLetterFormProps) 
 
           {recipientMode === 'institution' && (
             <div className="flex w-full flex-col gap-2">
-              <Label className="text-dark-500 text-[12px] font-normal">
+              <Label className="text-foreground text-[12px] font-normal">
                 {t('pages.lawyerWorkplace.newLetter.to', 'To')}
                 <span className="text-error-500 ml-1">*</span>
               </Label>
@@ -492,13 +504,13 @@ function NewOutgoingLetterForm({ onClose, onSent }: NewOutgoingLetterFormProps) 
                   'pages.lawyerWorkplace.newLetter.institutionPlaceholder',
                   'e.g. consumers@bank.gov.ua'
                 )}
-                className="text-dark-500 focus:border-primary-500 h-9 w-full rounded-[8px] border border-gray-200 bg-white px-3 text-[13px] font-light outline-none"
+                className="text-foreground focus:border-primary-500 border-border bg-input h-9 w-full rounded-[8px] border px-3 text-[13px] font-light outline-none"
               />
             </div>
           )}
 
           <div className="flex w-full flex-col gap-2">
-            <Label className="text-dark-500 text-[12px] font-normal">
+            <Label className="text-foreground text-[12px] font-normal">
               {t('pages.lawyerWorkplace.newLetter.subject', 'Subject')}
               <span className="text-error-500 ml-1">*</span>
             </Label>
@@ -510,13 +522,13 @@ function NewOutgoingLetterForm({ onClose, onSent }: NewOutgoingLetterFormProps) 
                 'pages.lawyerWorkplace.newLetter.subjectPlaceholder',
                 'Letter subject...'
               )}
-              className="text-dark-500 focus:border-primary-500 h-9 w-full rounded-[8px] border border-gray-200 bg-white px-3 text-[13px] font-light outline-none"
+              className="text-foreground focus:border-primary-500 border-border bg-input h-9 w-full rounded-[8px] border px-3 text-[13px] font-light outline-none"
             />
           </div>
 
           <div className="flex w-full flex-col gap-2">
             <div className="flex items-center justify-between">
-              <Label className="text-dark-500 text-[12px] font-normal">
+              <Label className="text-foreground text-[12px] font-normal">
                 {t('pages.lawyerWorkplace.newLetter.body', 'Message')}
                 <span className="text-error-500 ml-1">*</span>
               </Label>
@@ -524,11 +536,11 @@ function NewOutgoingLetterForm({ onClose, onSent }: NewOutgoingLetterFormProps) 
                 <DropdownMenuTrigger asChild>
                   <button
                     type="button"
-                    className="text-light-600 flex items-center gap-1 text-[11px] hover:text-gray-700"
+                    className="text-muted-foreground hover:text-foreground flex items-center gap-1 text-[11px]"
                   >
                     <Icons.Files02Icon size={12} strokeWidth={1.5} />
                     {t('pages.lawyerWorkplace.reply.template', 'Template')}
-                    <Icons.ArrowDown size={9} strokeWidth={2} className="text-gray-400" />
+                    <Icons.ArrowDown size={9} strokeWidth={2} className="text-muted-foreground" />
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="min-w-[170px] p-1.5">
@@ -554,7 +566,7 @@ function NewOutgoingLetterForm({ onClose, onSent }: NewOutgoingLetterFormProps) 
               value={body}
               onChange={(e) => setBody(e.target.value)}
               textareaSize="md"
-              className="text-dark-500 min-h-[120px] w-full text-[13px] font-light"
+              className="text-foreground min-h-[120px] w-full text-[13px] font-light"
               placeholder={t(
                 'pages.lawyerWorkplace.newLetter.bodyPlaceholder',
                 'Write your message...'
@@ -563,7 +575,7 @@ function NewOutgoingLetterForm({ onClose, onSent }: NewOutgoingLetterFormProps) 
           </div>
 
           <div className="flex w-full flex-col gap-2">
-            <Label className="text-dark-500 text-[12px] font-normal">
+            <Label className="text-foreground text-[12px] font-normal">
               {t('pages.lawyerWorkplace.newLetter.edoType', 'EDO document type')}
             </Label>
             <div className="flex flex-wrap gap-2">
@@ -582,7 +594,7 @@ function NewOutgoingLetterForm({ onClose, onSent }: NewOutgoingLetterFormProps) 
                     'rounded-full border px-3 py-1.5 text-[12px] font-medium transition-colors',
                     edoType === opt.id
                       ? 'border-secondary-400 bg-secondary-50 text-secondary-800'
-                      : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50'
+                      : 'border-border bg-input text-muted-foreground hover:bg-muted'
                   )}
                 >
                   {opt.badge && <span className="mr-1.5 font-bold">{opt.badge}</span>}
@@ -591,7 +603,7 @@ function NewOutgoingLetterForm({ onClose, onSent }: NewOutgoingLetterFormProps) 
               ))}
             </div>
             {recipientMode === 'client' && edoType !== 'none' && !clientId && (
-              <p className="text-light-600 text-[11px]">
+              <p className="text-muted-foreground text-[11px]">
                 {t(
                   'pages.lawyerWorkplace.newLetter.edoRequiresClientHint',
                   'Select a CRM client above to register this letter in EDO.'
@@ -599,7 +611,7 @@ function NewOutgoingLetterForm({ onClose, onSent }: NewOutgoingLetterFormProps) 
               </p>
             )}
             {recipientMode === 'institution' && edoType !== 'none' && (
-              <p className="text-light-600 text-[11px]">
+              <p className="text-muted-foreground text-[11px]">
                 {t(
                   'pages.lawyerWorkplace.newLetter.edoHintInstitution',
                   'Link a CRM client below to register this institution letter in EDO.'
@@ -611,7 +623,7 @@ function NewOutgoingLetterForm({ onClose, onSent }: NewOutgoingLetterFormProps) 
           {recipientMode === 'institution' && edoType !== 'none' && (
             <div className="flex w-full flex-col gap-2">
               <div className="flex items-center justify-between gap-2">
-                <Label className="text-dark-500 text-[12px] font-normal">
+                <Label className="text-foreground text-[12px] font-normal">
                   {t(
                     'pages.lawyerWorkplace.newLetter.edoClientForInstitution',
                     'CRM client (for EDO registration)'
@@ -622,11 +634,15 @@ function NewOutgoingLetterForm({ onClose, onSent }: NewOutgoingLetterFormProps) 
                   <DropdownMenuTrigger asChild>
                     <button
                       type="button"
-                      className="text-dark-500 flex h-7 shrink-0 items-center gap-1 rounded-md border border-gray-200 bg-white px-2 text-[12px] font-light outline-none"
+                      className="text-foreground border-border bg-input flex h-7 shrink-0 items-center gap-1 rounded-md border px-2 text-[12px] font-light outline-none"
                     >
-                      <Icons.Search size={12} strokeWidth={1.5} className="text-gray-400" />
+                      <Icons.Search size={12} strokeWidth={1.5} className="text-muted-foreground" />
                       {institutionEdoSearchTypeLabel}
-                      <Icons.ArrowDown size={13} strokeWidth={1.5} className="text-gray-400" />
+                      <Icons.ArrowDown
+                        size={13}
+                        strokeWidth={1.5}
+                        className="text-muted-foreground"
+                      />
                     </button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="min-w-[160px]">
@@ -668,15 +684,15 @@ function NewOutgoingLetterForm({ onClose, onSent }: NewOutgoingLetterFormProps) 
               {stagedAttachments.map((attachment) => (
                 <span
                   key={attachment.id}
-                  className="border-light-200 text-dark-500 inline-flex max-w-[200px] items-center gap-1 rounded-full border bg-white px-2 py-0.5 text-[10px]"
+                  className="border-border text-foreground bg-card inline-flex max-w-[200px] items-center gap-1 rounded-full border px-2 py-0.5 text-[10px]"
                 >
                   <span className="truncate">{attachment.filename}</span>
-                  <span className="text-light-600 shrink-0">
+                  <span className="text-muted-foreground shrink-0">
                     {formatAttachmentSize(attachment.size_bytes)}
                   </span>
                   <button
                     type="button"
-                    className="text-light-600 hover:text-dark-500"
+                    className="text-muted-foreground hover:text-foreground"
                     onClick={() => {
                       void legalApi
                         .deleteOutgoingStagedAttachment(stagingSessionId, attachment.id)
@@ -728,7 +744,7 @@ function NewOutgoingLetterForm({ onClose, onSent }: NewOutgoingLetterFormProps) 
             type="button"
             disabled={!selectedMailbox?.id || isUploadingAttachment}
             onClick={() => fileInputRef.current?.click()}
-            className="text-light-600 hover:text-dark-500 flex items-center gap-1.5 text-[12px] disabled:cursor-not-allowed disabled:opacity-60"
+            className="text-muted-foreground hover:text-foreground flex items-center gap-1.5 text-[12px] disabled:cursor-not-allowed disabled:opacity-60"
           >
             <Icon icon={Link01Icon} size={14} strokeWidth={1.5} />
             {isUploadingAttachment

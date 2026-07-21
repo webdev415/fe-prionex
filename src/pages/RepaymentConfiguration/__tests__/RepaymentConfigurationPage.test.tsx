@@ -6,7 +6,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
@@ -177,9 +177,11 @@ describe('RepaymentConfigurationPage', () => {
       expect(screen.getAllByText('Fines').length).toBeGreaterThanOrEqual(1)
     })
 
-    // Position numbers 1-5 must be present in the order list
+    // Position numbers 1-5 must be present in the order list (not the history
+    // table, which can also render a version number like "3").
+    const orderList = screen.getByRole('list')
     for (let i = 1; i <= 5; i++) {
-      expect(screen.getByText(String(i))).toBeInTheDocument()
+      expect(within(orderList).getByText(String(i))).toBeInTheDocument()
     }
   })
 

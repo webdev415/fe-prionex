@@ -84,6 +84,9 @@ export interface RecordPaymentModalProps {
     debtId?: number
     /** KAN-507: required at the form layer; always set when onSave fires. */
     paymentType: PaymentType
+    /** The connected RR's id — required by the backend when paymentType is
+     * ``payment_by_rr``; undefined for all other payment types. */
+    restructuringAgreementId?: number
   }) => void
 }
 
@@ -157,12 +160,15 @@ export function RecordPaymentModal({
   // by definition report zero remaining balance, otherwise the feature
   // is useless.
   const isClosedDebtCorrection = selectedDebt?.status === 'closed'
-  const hasConnectedRrForDebt = useMemo(() => {
-    if (selectedDebtId == null) return false
-    return (restructuringAgreements ?? []).some(
-      (ra) => ra.debt_id === selectedDebtId && isRrConnected(ra)
+  const connectedRr = useMemo(() => {
+    if (selectedDebtId == null) return null
+    return (
+      (restructuringAgreements ?? []).find(
+        (ra) => ra.debt_id === selectedDebtId && isRrConnected(ra)
+      ) ?? null
     )
   }, [restructuringAgreements, selectedDebtId])
+  const hasConnectedRrForDebt = connectedRr != null
 
   // Dirty guard prevents this auto-prefill from clobbering an explicit
   // operator pick when the picked debt changes.
@@ -304,6 +310,7 @@ export function RecordPaymentModal({
       paymentMethodDetails: paymentMethodDetails.trim() || undefined,
       debtId: selectedDebtId ?? undefined,
       paymentType,
+      restructuringAgreementId: paymentType === 'payment_by_rr' ? connectedRr?.id : undefined,
     })
 
     // Reset form

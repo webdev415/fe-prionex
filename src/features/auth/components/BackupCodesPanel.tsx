@@ -61,7 +61,7 @@ export function BackupCodesPanel({ codes, warning }: BackupCodesPanelProps) {
         {codes.map((code) => (
           <code
             key={code}
-            className="text-dark-500 rounded border border-gray-200 bg-white px-2 py-1.5 text-center font-mono text-xs select-all sm:text-sm"
+            className="text-dark-500 border-input-border bg-input rounded border px-2 py-1.5 text-center font-mono text-xs select-all sm:text-sm"
           >
             {code}
           </code>

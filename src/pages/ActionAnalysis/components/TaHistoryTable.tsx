@@ -125,7 +125,9 @@ export function TaHistoryTable({ data, chains, tasById, userTimezone }: Props) {
     {
       key: 'date',
       header: t('pages.actionAnalysis.columns.dateTime', 'Date / Time'),
-      render: (r) => <span className="text-sm text-gray-700">{formatDateTime(r.created_at)}</span>,
+      render: (r) => (
+        <span className="text-foreground text-sm">{formatDateTime(r.created_at)}</span>
+      ),
     },
     {
       key: 'clientId',
@@ -142,7 +144,7 @@ export function TaHistoryTable({ data, chains, tasById, userTimezone }: Props) {
     {
       key: 'chain',
       header: t('pages.actionAnalysis.columns.chain', 'Chain'),
-      render: (r) => <span className="text-sm text-gray-700">{r.chain_name ?? '—'}</span>,
+      render: (r) => <span className="text-foreground text-sm">{r.chain_name ?? '—'}</span>,
     },
     {
       key: 'result',
@@ -154,15 +156,15 @@ export function TaHistoryTable({ data, chains, tasById, userTimezone }: Props) {
             r.dropdown_value_name ??
             r.leaf_node_name ??
             (r.dictionary_path.length > 0 ? r.dictionary_path.join(' > ') : '—')
-          return <span className="text-sm text-gray-700">{fallback}</span>
+          return <span className="text-foreground text-sm">{fallback}</span>
         }
         return (
-          <span className="text-sm text-gray-700">
+          <span className="text-foreground text-sm">
             {entries.map((e, i) => (
               <span key={i}>
                 {e.value}
                 {e.followUps.length > 0 && (
-                  <span className="text-gray-500"> ({e.followUps.join(', ')})</span>
+                  <span className="text-muted-foreground"> ({e.followUps.join(', ')})</span>
                 )}
                 {i < entries.length - 1 && ' -> '}
               </span>
@@ -175,7 +177,7 @@ export function TaHistoryTable({ data, chains, tasById, userTimezone }: Props) {
       key: 'createdBy',
       header: t('pages.actionAnalysis.columns.createdBy', 'Created by'),
       render: (r) => (
-        <span className="text-sm text-gray-700">
+        <span className="text-foreground text-sm">
           {r.recorded_by_full_name ?? r.recorded_by_name ?? '—'}
         </span>
       ),
@@ -184,21 +186,21 @@ export function TaHistoryTable({ data, chains, tasById, userTimezone }: Props) {
       key: 'responsibleAtCreation',
       header: t('pages.actionAnalysis.columns.responsibleAtCreation', 'Responsible at creation'),
       render: (r) => (
-        <span className="text-sm text-gray-700">{r.assigned_operator_name ?? '—'}</span>
+        <span className="text-foreground text-sm">{r.assigned_operator_name ?? '—'}</span>
       ),
     },
     {
       key: 'currentResponsible',
       header: t('pages.actionAnalysis.columns.currentResponsible', 'Current responsible'),
       render: (r) => (
-        <span className="text-sm text-gray-700">{r.current_responsible_name ?? '—'}</span>
+        <span className="text-foreground text-sm">{r.current_responsible_name ?? '—'}</span>
       ),
     },
     {
       key: 'notes',
       header: t('pages.actionAnalysis.columns.notes', 'Notes'),
       render: (r) => (
-        <span className="text-sm text-gray-600" title={r.notes ?? undefined}>
+        <span className="text-muted-foreground text-sm" title={r.notes ?? undefined}>
           {r.notes ? (r.notes.length > 60 ? `${r.notes.slice(0, 60)}…` : r.notes) : '—'}
         </span>
       ),

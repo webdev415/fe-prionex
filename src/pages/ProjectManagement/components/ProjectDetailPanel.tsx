@@ -51,9 +51,11 @@ export function ProjectDetailPanel({
   // Empty state when there are no projects
   if (!hasProjects) {
     return (
-      <div className="flex h-full flex-col items-center justify-center rounded-lg border border-gray-200 bg-white/50 p-6">
-        <Icons.View size={48} className="text-gray-300" strokeWidth={1} />
-        <p className="mt-4 text-sm text-gray-500">{t('pages.projects.detailPanel.noProject')}</p>
+      <div className="border-border bg-card/50 flex h-full flex-col items-center justify-center rounded-lg border p-6">
+        <Icons.View size={48} className="text-muted-foreground" strokeWidth={1} />
+        <p className="text-muted-foreground mt-4 text-sm">
+          {t('pages.projects.detailPanel.noProject')}
+        </p>
       </div>
     )
   }
@@ -64,13 +66,13 @@ export function ProjectDetailPanel({
   }
 
   return (
-    <div className="flex h-full w-full flex-col overflow-hidden rounded-lg border border-gray-200 bg-white/50 p-6">
+    <div className="border-border bg-card/50 flex h-full w-full flex-col overflow-hidden rounded-lg border p-6">
       {/* Header */}
       <div className="flex items-center border-none">
         <div className="flex items-center gap-2">
           <StatusBadge status={getStatusType(project.status)} />
           <h2
-            className="text-dark-500 max-w-[180px] truncate text-base font-medium"
+            className="text-foreground max-w-[180px] truncate text-base font-medium"
             title={project.name}
           >
             {project.name}
@@ -95,11 +97,11 @@ export function ProjectDetailPanel({
         </div>
 
         {/* Divider */}
-        <div className="my-1 h-px w-full bg-gray-200" />
+        <div className="bg-border my-1 h-px w-full" />
 
         {/* Metrics */}
         <div className="flex flex-col gap-2">
-          <h3 className="text-dark-500 text-base font-light">
+          <h3 className="text-foreground text-base font-light">
             {t('pages.projects.detailPanel.metrics')}
           </h3>
           <div className="grid grid-cols-2 gap-3">
@@ -118,12 +120,12 @@ export function ProjectDetailPanel({
         {project.description && (
           <>
             {/* Divider */}
-            <div className="my-1 h-px w-full bg-gray-200" />
+            <div className="bg-border my-1 h-px w-full" />
             <div className="flex flex-col gap-2">
-              <h3 className="text-dark-500 text-sm font-light">
+              <h3 className="text-foreground text-sm font-light">
                 {t('pages.projects.detailPanel.description')}
               </h3>
-              <p className="text-dark-500 text-sm leading-relaxed font-light">
+              <p className="text-foreground text-sm leading-relaxed font-light">
                 {isExpanded ? project.description : truncateText(project.description, 120)}
               </p>
               {project.description.length > 120 && (
@@ -143,27 +145,27 @@ export function ProjectDetailPanel({
         )}
 
         {/* Divider */}
-        <div className="my-1 h-px w-full bg-gray-200" />
+        <div className="bg-border my-1 h-px w-full" />
 
         {/* Access and Roles */}
         <div className="flex flex-col gap-2">
-          <h3 className="text-dark-500 text-base font-light">
+          <h3 className="text-foreground text-base font-light">
             {t('pages.projects.detailPanel.accessAndRoles')}
           </h3>
           <div className="flex items-center justify-start gap-2">
-            <span className="text-xs font-light text-gray-600">
+            <span className="text-muted-foreground text-xs font-light">
               {t('pages.projects.detailPanel.assignedUsers')}
             </span>
-            <span className="text-dark-500 text-sm font-medium">
+            <span className="text-foreground text-sm font-medium">
               {project.assigned_users_count || project.statistics?.user_count || 0}
             </span>
           </div>
           <div className="flex items-center justify-start gap-2">
-            <span className="text-xs font-light text-gray-600">
+            <span className="text-muted-foreground text-xs font-light">
               {t('pages.projects.detailPanel.defaultRoles')}
             </span>
             <span
-              className="text-dark-500 text-right text-xs font-medium"
+              className="text-foreground text-right text-xs font-medium"
               title={project.default_roles?.join(', ')}
             >
               {project.default_roles?.join(', ') || t('pages.projects.detailPanel.none')}
@@ -182,35 +184,35 @@ export function ProjectDetailPanel({
         </div>
 
         {/* Divider */}
-        <div className="my-1 h-px w-full bg-gray-200" />
+        <div className="bg-border my-1 h-px w-full" />
 
         {/* Audit */}
         <div className="flex flex-col gap-3">
-          <h3 className="text-dark-500 text-base font-light">
+          <h3 className="text-foreground text-base font-light">
             {t('pages.projects.detailPanel.audit')}
           </h3>
           <div className="space-y-1">
             <div className="flex justify-between">
-              <span className="text-xs font-light text-gray-700">
+              <span className="text-muted-foreground text-xs font-light">
                 {t('pages.projects.detailPanel.createdBy')}
               </span>
-              <span className="text-dark-500 text-xs font-medium">
+              <span className="text-foreground text-xs font-medium">
                 {project.created_by?.username || t('pages.projects.detailPanel.system')}
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-xs font-light text-gray-700">
+              <span className="text-muted-foreground text-xs font-light">
                 {t('pages.projects.detailPanel.created')}
               </span>
-              <span className="text-dark-500 text-xs font-medium">
+              <span className="text-foreground text-xs font-medium">
                 {formatDateTime(project.created_at)}
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-xs font-light text-gray-700">
+              <span className="text-muted-foreground text-xs font-light">
                 {t('pages.projects.detailPanel.lastUpdated')}
               </span>
-              <span className="text-dark-500 text-xs font-medium">
+              <span className="text-foreground text-xs font-medium">
                 {formatDateTime(project.updated_at)}
               </span>
             </div>
@@ -226,7 +228,7 @@ export function ProjectDetailPanel({
             size="xl"
             onClick={onEdit}
             className="h-[45px] flex-1 rounded-md text-sm"
-            leftIcon={<Icons.PencilEdit size={20} className="text-dark-500" strokeWidth={2} />}
+            leftIcon={<Icons.PencilEdit size={20} className="text-foreground" strokeWidth={2} />}
           >
             {t('pages.projects.detailPanel.edit')}
           </Button>
@@ -240,8 +242,8 @@ export function ProjectDetailPanel({
 function InfoItem({ label, value }: { label: string; value?: string }) {
   return (
     <div className="flex items-center gap-2">
-      <span className="text-xs font-light text-gray-700">{label}:</span>
-      <span className="text-dark-500 text-base font-medium">{value || '—'}</span>
+      <span className="text-muted-foreground text-xs font-light">{label}:</span>
+      <span className="text-foreground text-base font-medium">{value || '—'}</span>
     </div>
   )
 }
@@ -250,8 +252,8 @@ function InfoItem({ label, value }: { label: string; value?: string }) {
 function MetricCard({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-center gap-2">
-      <span className="text-xs font-light text-gray-700">{label}:</span>
-      <span className="text-dark-500 text-xs font-medium">{value}</span>
+      <span className="text-muted-foreground text-xs font-light">{label}:</span>
+      <span className="text-foreground text-xs font-medium">{value}</span>
     </div>
   )
 }

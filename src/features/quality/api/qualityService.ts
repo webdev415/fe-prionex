@@ -4,6 +4,7 @@ import type {
   AggregateResponse,
   AlertsResponse,
   CallMarker,
+  CallScorecardStatus,
   DynamicsFilters,
   DynamicsResponse,
   Feedback,
@@ -32,6 +33,11 @@ function buildScorecardListParams(filters: ScorecardListFilters): URLSearchParam
   if (filters.period) params.set('period', filters.period)
   if (filters.from_date) params.set('from_date', filters.from_date)
   if (filters.to_date) params.set('to_date', filters.to_date)
+  if (filters.telephony_type) params.set('telephony_type', filters.telephony_type)
+  if (filters.call_from) params.set('call_from', filters.call_from)
+  if (filters.call_to) params.set('call_to', filters.call_to)
+  if (filters.min_talk_duration != null)
+    params.set('min_talk_duration', String(filters.min_talk_duration))
   if (filters.page != null) params.set('page', String(filters.page))
   if (filters.page_size != null) params.set('page_size', String(filters.page_size))
   return params
@@ -68,6 +74,15 @@ export async function listMyScorecards(
 ): Promise<PageResponse<Scorecard>> {
   const response = await api.get<PageResponse<Scorecard>>('/api/v1/quality/scorecards/me', {
     params: buildScorecardListParams(filters as ScorecardListFilters),
+  })
+  return response.data
+}
+
+/** Bulk: which of these calls already have scorecards + latest status/score. */
+export async function getScorecardStatusByCalls(callIds: string[]): Promise<CallScorecardStatus[]> {
+  if (callIds.length === 0) return []
+  const response = await api.post<CallScorecardStatus[]>('/api/v1/quality/scorecards/by-calls', {
+    call_ids: callIds,
   })
   return response.data
 }

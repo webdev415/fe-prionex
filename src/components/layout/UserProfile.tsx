@@ -1,9 +1,3 @@
-/**
- * UserProfile Component
- *
- * User profile dropdown with user info, settings, and logout option.
- */
-
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
@@ -29,7 +23,6 @@ export function UserProfile({ onLogoutClick }: UserProfileProps) {
 
   const displayName = getUserDisplayName(user)
 
-  // Close dropdown on window resize to prevent positioning issues
   useEffect(() => {
     const handleResize = () => {
       if (isOpen) {
@@ -42,7 +35,6 @@ export function UserProfile({ onLogoutClick }: UserProfileProps) {
   }, [isOpen])
 
   const handleSettingsClick = () => {
-    // Navigate to profile settings page
     setIsOpen(false)
     navigate('/dashboard/profile')
   }
@@ -58,22 +50,20 @@ export function UserProfile({ onLogoutClick }: UserProfileProps) {
           <Icons.ArrowDown size={16} className="text-white" strokeWidth={1.5} />
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-[175px] bg-white">
-        {/* Settings */}
+      <DropdownMenuContent align="end" className="w-[175px]">
         <DropdownMenuItem
           onClick={handleSettingsClick}
-          className="text-dark-500 flex cursor-pointer items-center gap-2 text-sm"
+          className="text-foreground flex cursor-pointer items-center gap-2 text-sm"
         >
-          <Icons.SlidersHorizontal size={16} className="text-dark-500" />
+          <Icons.SlidersHorizontal size={16} className="text-foreground" />
           <span>{t('navigation.profile')}</span>
         </DropdownMenuItem>
 
-        {/* Logout */}
         <DropdownMenuItem
           onClick={onLogoutClick}
-          className="text-dark-500 flex cursor-pointer items-center gap-2 text-sm"
+          className="text-foreground flex cursor-pointer items-center gap-2 text-sm"
         >
-          <Icons.Logout size={16} className="text-dark-500" />
+          <Icons.Logout size={16} className="text-foreground" />
           <span>{t('actions.logout')}</span>
         </DropdownMenuItem>
       </DropdownMenuContent>

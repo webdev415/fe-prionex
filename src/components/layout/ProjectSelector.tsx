@@ -137,13 +137,15 @@ export function ProjectSelector() {
               disabled={isSwitchingProject || isActive}
               className={cn(
                 'flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-sm transition-colors',
-                isActive ? 'text-primary-600 font-medium' : 'text-gray-700'
+                isActive ? 'text-primary-600 font-medium' : 'text-foreground'
               )}
             >
               <span className="flex-1 truncate">{project.name}</span>
-              {projectRole && <span className="text-xs text-gray-500">({projectRole.name})</span>}
+              {projectRole && (
+                <span className="text-muted-foreground text-xs">({projectRole.name})</span>
+              )}
               {isActive && (
-                <Icons.Checkmark size={16} strokeWidth={2} className="text-dark-500 ml-auto" />
+                <Icons.Checkmark size={16} strokeWidth={2} className="text-foreground ml-auto" />
               )}
             </DropdownMenuItem>
           )

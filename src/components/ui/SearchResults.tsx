@@ -74,7 +74,7 @@ export function SearchResults({
 
   // Shared dropdown positioning: align with search bar, match its responsive width (w-full = parent = SearchBar)
   const dropdownBase =
-    'absolute left-0 top-full z-[200] mt-2 w-full min-w-0 rounded-lg border border-gray-200 bg-white shadow-lg'
+    'absolute top-full left-0 z-[200] mt-2 w-full min-w-0 rounded-lg border border-border bg-card shadow-lg'
 
   // Hint State — soft guidance (e.g. "type at least 8 digits"). Checked
   // before Loading so the typeahead doesn't flash a spinner over the hint
@@ -195,7 +195,7 @@ export function SearchResults({
         <div className="border-t border-gray-200 p-2 sm:p-3">
           <button
             onClick={onViewAll}
-            className="bg-primary-300 text-dark-500 hover:bg-primary-400 w-full rounded-lg px-4 py-2 text-sm font-medium transition-colors"
+            className="bg-primary-300 text-primary-foreground hover:bg-primary-400 w-full rounded-lg px-4 py-2 text-sm font-medium transition-colors"
           >
             {t('search.viewAllResults')}
           </button>

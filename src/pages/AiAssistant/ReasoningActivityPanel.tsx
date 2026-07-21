@@ -92,7 +92,7 @@ export function ReasoningStream({ text, streaming, placeholder }: ReasoningStrea
       onScroll={handleScroll}
       data-testid="assistant-reasoning-scroll"
       className={cn(
-        'ai-chat-input-scrollbar max-h-[200px] overflow-y-auto overscroll-y-contain text-[12px] leading-relaxed text-gray-600',
+        'ai-chat-input-scrollbar text-muted-foreground max-h-[200px] overflow-y-auto overscroll-y-contain text-[12px] leading-relaxed',
         // Hold a stable window height while only the placeholder shows, so the
         // first deltas don't visibly grow the box from a single line.
         showPlaceholder && 'min-h-[48px]'
@@ -100,11 +100,11 @@ export function ReasoningStream({ text, streaming, placeholder }: ReasoningStrea
     >
       {showPlaceholder ? (
         <span
-          className="flex items-center gap-2 text-[12px] text-gray-500"
+          className="text-muted-foreground flex items-center gap-2 text-[12px]"
           data-testid="reasoning-placeholder"
         >
           <span
-            className="h-3 w-3 shrink-0 animate-spin rounded-full border border-gray-400 border-t-transparent"
+            className="border-border h-3 w-3 shrink-0 animate-spin rounded-full border border-t-transparent"
             aria-hidden
           />
           {placeholder}
@@ -133,7 +133,7 @@ export function ToolStepRow({ step }: { step: ToolStep }) {
       <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center">
         {step.status === 'running' ? (
           <span
-            className="h-3 w-3 animate-spin rounded-full border border-gray-400 border-t-transparent"
+            className="border-border h-3 w-3 animate-spin rounded-full border border-t-transparent"
             aria-hidden
           />
         ) : step.status === 'ok' ? (
@@ -143,12 +143,12 @@ export function ToolStepRow({ step }: { step: ToolStep }) {
         )}
       </span>
       <span className="min-w-0 flex-1">
-        <span className="text-dark-500 font-medium">
+        <span className="text-foreground font-medium">
           {step.label || step.name}
           {step.status === 'running' && '…'}
         </span>
         {step.status !== 'running' && preview && (
-          <span className="ml-1 break-words text-gray-500">— {preview}</span>
+          <span className="text-muted-foreground ml-1 break-words">— {preview}</span>
         )}
       </span>
     </li>
@@ -226,18 +226,20 @@ export function ReasoningInlineChip({
         type="button"
         aria-expanded={open}
         onClick={onToggle}
-        className="border-light-200 bg-light-50/60 hover:border-primary-300 hover:bg-light-100/70 flex w-full cursor-pointer items-center gap-2.5 rounded-xl border px-3 py-2 text-left transition-colors"
+        className="border-border bg-muted/60 hover:border-primary-300 hover:bg-muted/70 flex w-full cursor-pointer items-center gap-2.5 rounded-xl border px-3 py-2 text-left transition-colors"
       >
         <span className="bg-primary-50 text-primary-600 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg">
           <Icons.AiBrain03 size={15} strokeWidth={1.5} />
         </span>
         <span className="min-w-0 flex-1">
-          <span className="text-dark-500 flex items-center gap-1.5 text-[12px] font-semibold tracking-tight">
+          <span className="text-foreground flex items-center gap-1.5 text-[12px] font-semibold tracking-tight">
             {streaming
               ? t('pages.aiAssistant.reasoningStreaming')
               : t('pages.aiAssistant.reasoningTitle')}
             {metaText && (
-              <span className="text-[11px] font-normal text-gray-400 tabular-nums">{metaText}</span>
+              <span className="text-muted-foreground text-[11px] font-normal tabular-nums">
+                {metaText}
+              </span>
             )}
             {streaming && (
               <span
@@ -248,14 +250,14 @@ export function ReasoningInlineChip({
             )}
           </span>
           {previewLine ? (
-            <span className="mt-0.5 block truncate text-[12px] text-gray-500">
-              <span aria-hidden className="text-gray-400">
+            <span className="text-muted-foreground mt-0.5 block truncate text-[12px]">
+              <span aria-hidden className="text-muted-foreground">
                 …
               </span>
               <TokenizedText text={previewLine} />
             </span>
           ) : streaming ? (
-            <span className="mt-0.5 block truncate text-[12px] text-gray-500">
+            <span className="text-muted-foreground mt-0.5 block truncate text-[12px]">
               {t('pages.aiAssistant.reasoningAnalyzing')}
             </span>
           ) : null}
@@ -264,7 +266,7 @@ export function ReasoningInlineChip({
           size={16}
           strokeWidth={1.5}
           className={cn(
-            'shrink-0 text-gray-400 transition-transform duration-200',
+            'text-muted-foreground shrink-0 transition-transform duration-200',
             open && 'rotate-90'
           )}
         />
@@ -298,15 +300,15 @@ function formatCitationCell(value: unknown): string {
 /** Компактная таблица-превью результата SQL (заголовки + первые строки). */
 function CitationTable({ columns, rows }: { columns: string[]; rows: unknown[][] }) {
   return (
-    <div className="ai-chat-input-scrollbar border-light-200 overflow-x-auto rounded-lg border">
+    <div className="ai-chat-input-scrollbar border-border overflow-x-auto rounded-lg border">
       <table className="w-full border-collapse text-[11px] [font-variant-numeric:tabular-nums]">
         {columns.length > 0 && (
           <thead>
-            <tr className="bg-light-100">
+            <tr className="bg-muted">
               {columns.map((col, index) => (
                 <th
                   key={index}
-                  className="border-light-200 text-dark-500 border-b px-2 py-1 text-left font-semibold whitespace-nowrap"
+                  className="border-border text-foreground border-b px-2 py-1 text-left font-semibold whitespace-nowrap"
                 >
                   {col}
                 </th>
@@ -316,11 +318,11 @@ function CitationTable({ columns, rows }: { columns: string[]; rows: unknown[][]
         )}
         <tbody>
           {rows.map((row, rowIndex) => (
-            <tr key={rowIndex} className="even:bg-light-50/50 odd:bg-white">
+            <tr key={rowIndex} className="even:bg-muted/50 odd:bg-card">
               {row.map((cell, cellIndex) => (
                 <td
                   key={cellIndex}
-                  className="border-light-100 border-b px-2 py-1 whitespace-nowrap text-gray-600"
+                  className="border-border text-muted-foreground border-b px-2 py-1 whitespace-nowrap"
                 >
                   {formatCitationCell(cell)}
                 </td>
@@ -370,8 +372,8 @@ function CitationMarkButton({
             ? 'border-success-300 bg-success-50 text-success-700'
             : 'border-error-300 bg-error-50 text-error-700'
           : isOk
-            ? 'border-light-200 hover:border-success-300 hover:text-success-600 bg-white text-gray-500'
-            : 'border-light-200 hover:border-error-300 hover:text-error-600 bg-white text-gray-500'
+            ? 'border-border hover:border-success-300 hover:text-success-600 bg-card text-muted-foreground'
+            : 'border-border hover:border-error-300 hover:text-error-600 bg-card text-muted-foreground'
       )}
     >
       {isOk ? (
@@ -420,23 +422,23 @@ function CitationSource({
         'rounded-xl border px-3 py-2.5 transition-colors',
         focused
           ? 'border-primary-400 bg-primary-50/50 ring-primary-300/70 ring-1'
-          : 'border-light-200 bg-light-50/50'
+          : 'border-border bg-muted/50'
       )}
     >
       <div className="flex items-center gap-2">
         <span
           className={cn(
             'flex h-5 min-w-5 items-center justify-center rounded-md px-1 text-[12px] font-semibold [font-variant-numeric:tabular-nums]',
-            focused ? 'bg-primary-100 text-primary-700' : 'bg-light-100 text-dark-500'
+            focused ? 'bg-primary-100 text-primary-700' : 'bg-muted text-foreground'
           )}
         >
           {citationGlyph(citation.id)}
         </span>
-        <span className="text-dark-500 min-w-0 flex-1 truncate font-mono text-[12px] font-medium">
+        <span className="text-foreground min-w-0 flex-1 truncate font-mono text-[12px] font-medium">
           {citation.ref || citation.kind || t('pages.aiAssistant.citationSourceFallback')}
         </span>
         {citation.kind && (
-          <span className="bg-light-100 shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-medium tracking-wide text-gray-500 uppercase">
+          <span className="bg-muted text-muted-foreground shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-medium tracking-wide uppercase">
             {citation.kind}
           </span>
         )}
@@ -445,7 +447,7 @@ function CitationSource({
       {hasSql && (
         <div className="mt-2 space-y-2" data-testid="citation-sql">
           {citation.query && (
-            <pre className="ai-chat-input-scrollbar bg-light-100 text-dark-500 overflow-x-auto rounded-lg px-2.5 py-2 font-mono text-[11px] leading-relaxed whitespace-pre">
+            <pre className="ai-chat-input-scrollbar bg-muted text-foreground overflow-x-auto rounded-lg px-2.5 py-2 font-mono text-[11px] leading-relaxed whitespace-pre">
               {citation.query}
             </pre>
           )}
@@ -458,12 +460,12 @@ function CitationSource({
       {hasCalc && (
         <div className="mt-2 space-y-2" data-testid="citation-code">
           {citation.code && (
-            <pre className="ai-chat-input-scrollbar bg-light-100 text-dark-500 overflow-x-auto rounded-lg px-2.5 py-2 font-mono text-[11px] leading-relaxed whitespace-pre">
+            <pre className="ai-chat-input-scrollbar bg-muted text-foreground overflow-x-auto rounded-lg px-2.5 py-2 font-mono text-[11px] leading-relaxed whitespace-pre">
               {citation.code}
             </pre>
           )}
           {citation.result && (
-            <div className="border-primary-200 bg-primary-50/60 text-dark-500 rounded-lg border px-2.5 py-1.5 text-[12px]">
+            <div className="border-primary-200 bg-primary-50/60 text-foreground rounded-lg border px-2.5 py-1.5 text-[12px]">
               <span className="text-primary-600 mr-1.5 text-[10px] font-semibold tracking-wide uppercase">
                 {t('pages.aiAssistant.citationResultLabel')}
               </span>
@@ -478,9 +480,9 @@ function CitationSource({
       {markingEnabled && (
         <div
           data-testid="citation-marks"
-          className="border-light-200/70 mt-2.5 flex items-center gap-1.5 border-t pt-2"
+          className="border-border/70 mt-2.5 flex items-center gap-1.5 border-t pt-2"
         >
-          <span className="mr-auto text-[10px] font-medium tracking-wide text-gray-400 uppercase">
+          <span className="text-muted-foreground mr-auto text-[10px] font-medium tracking-wide uppercase">
             {t('pages.aiAssistant.citationMarkPrompt')}
           </span>
           <CitationMarkButton
@@ -698,7 +700,7 @@ export function ReasoningActivityPanel({
         inert={!open ? true : undefined}
         style={isMobileOrTablet ? undefined : { width: `${width}px` }}
         className={cn(
-          'border-light-200 fixed right-0 flex flex-col border-l bg-white shadow-2xl transition-transform duration-300',
+          'border-border bg-card fixed right-0 flex flex-col border-l shadow-2xl transition-transform duration-300',
           isMobileOrTablet
             ? 'inset-y-0 z-50 w-full max-w-md'
             : 'top-[80px] bottom-[20px] z-30 rounded-l-2xl border-y',
@@ -726,15 +728,15 @@ export function ReasoningActivityPanel({
           </button>
         )}
 
-        <header className="border-light-200 bg-light-50/70 flex shrink-0 items-center gap-2.5 rounded-tl-2xl border-b px-4 py-3">
+        <header className="border-border bg-muted/70 flex shrink-0 items-center gap-2.5 rounded-tl-2xl border-b px-4 py-3">
           <span className="bg-primary-50 text-primary-600 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg">
             <Icons.AiBrain03 size={15} strokeWidth={1.5} />
           </span>
-          <h2 className="text-dark-500 text-sm font-semibold tracking-tight">
+          <h2 className="text-foreground text-sm font-semibold tracking-tight">
             {t('pages.aiAssistant.activityTitle')}
           </h2>
           {elapsedLabel && (
-            <span className="text-[11px] font-normal text-gray-400 tabular-nums">
+            <span className="text-muted-foreground text-[11px] font-normal tabular-nums">
               · {elapsedLabel}
             </span>
           )}
@@ -742,7 +744,7 @@ export function ReasoningActivityPanel({
             type="button"
             aria-label={t('pages.aiAssistant.activityClose')}
             onClick={onClose}
-            className="border-light-200 text-dark-500 hover:bg-light-100 ml-auto flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-lg border bg-white transition-colors"
+            className="border-border text-foreground hover:bg-muted bg-card ml-auto flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-lg border transition-colors"
           >
             <Icons.Cancel01 size={15} strokeWidth={1.5} />
           </button>
@@ -752,7 +754,7 @@ export function ReasoningActivityPanel({
           <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-4 pt-2 pb-6">
             {hasSteps && (
               <section className="pb-2">
-                <p className="py-2 text-[10.5px] font-semibold tracking-[0.1em] text-gray-400 uppercase">
+                <p className="text-muted-foreground py-2 text-[10.5px] font-semibold tracking-[0.1em] uppercase">
                   {t('pages.aiAssistant.activityStepsSection')}
                 </p>
                 <ul className="space-y-1.5" data-testid="assistant-tool-steps">
@@ -763,8 +765,8 @@ export function ReasoningActivityPanel({
               </section>
             )}
             {showReasoningBox && (
-              <section className={cn(hasSteps && 'border-light-200/80 mt-1 border-t pt-2')}>
-                <p className="py-2 text-[10.5px] font-semibold tracking-[0.1em] text-gray-400 uppercase">
+              <section className={cn(hasSteps && 'border-border/80 mt-1 border-t pt-2')}>
+                <p className="text-muted-foreground py-2 text-[10.5px] font-semibold tracking-[0.1em] uppercase">
                   {t('pages.aiAssistant.activityReasoningSection')}
                 </p>
                 <ReasoningStream
@@ -777,10 +779,10 @@ export function ReasoningActivityPanel({
             {hasCitations && (
               <section
                 className={cn(
-                  (hasSteps || showReasoningBox) && 'border-light-200/80 mt-1 border-t pt-2'
+                  (hasSteps || showReasoningBox) && 'border-border/80 mt-1 border-t pt-2'
                 )}
               >
-                <p className="py-2 text-[10.5px] font-semibold tracking-[0.1em] text-gray-400 uppercase">
+                <p className="text-muted-foreground py-2 text-[10.5px] font-semibold tracking-[0.1em] uppercase">
                   {t('pages.aiAssistant.activitySourcesSection')}
                 </p>
                 <CitationSources

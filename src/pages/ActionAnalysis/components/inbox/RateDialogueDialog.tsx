@@ -80,14 +80,14 @@ export function RateDialogueDialog({ open, onClose, operatorId }: RateDialogueDi
   const renderEmptyState = () => {
     if (!operatorId) {
       return (
-        <p className="px-4 py-8 text-center text-sm text-gray-500">
+        <p className="text-muted-foreground px-4 py-8 text-center text-sm">
           {t('pages.actionAnalysis.inbox.rateDialogue.noOperator', 'Select an operator first.')}
         </p>
       )
     }
     if (!extension) {
       return (
-        <p className="px-4 py-8 text-center text-sm text-gray-500">
+        <p className="text-muted-foreground px-4 py-8 text-center text-sm">
           {t(
             'pages.actionAnalysis.inbox.rateDialogue.noExtension',
             'This operator has no telephony extension and no calls to rate.'
@@ -97,14 +97,14 @@ export function RateDialogueDialog({ open, onClose, operatorId }: RateDialogueDi
     }
     if (isLoading) {
       return (
-        <p className="px-4 py-8 text-center text-sm text-gray-500">
+        <p className="text-muted-foreground px-4 py-8 text-center text-sm">
           {t('pages.actionAnalysis.inbox.detail.loading', 'Loading…')}
         </p>
       )
     }
     if (calls.length === 0) {
       return (
-        <p className="px-4 py-8 text-center text-sm text-gray-500">
+        <p className="text-muted-foreground px-4 py-8 text-center text-sm">
           {t(
             'pages.actionAnalysis.inbox.rateDialogue.noCalls',
             'No recent calls for this operator.'
@@ -125,7 +125,7 @@ export function RateDialogueDialog({ open, onClose, operatorId }: RateDialogueDi
         />
         <ModalContent>
           {emptyState ?? (
-            <ul className="divide-y divide-gray-100">
+            <ul className="divide-border divide-y">
               {calls.map((call) => {
                 const start = formatTime(call.initiated_at)
                 const disabled = !call.has_recording
@@ -137,18 +137,18 @@ export function RateDialogueDialog({ open, onClose, operatorId }: RateDialogueDi
                       disabled={disabled}
                       className={[
                         'flex w-full items-center justify-between gap-4 px-4 py-3 text-left text-sm transition-colors',
-                        disabled ? 'cursor-not-allowed opacity-50' : 'hover:bg-primary-50',
+                        disabled ? 'cursor-not-allowed opacity-50' : 'hover:bg-muted',
                       ].join(' ')}
                     >
                       <div className="flex flex-col">
-                        <span className="text-dark-500 font-medium">
+                        <span className="text-foreground font-medium">
                           {start.date} · {start.time}
                         </span>
-                        <span className="text-xs text-gray-500">
+                        <span className="text-muted-foreground text-xs">
                           {call.customer_number} · {formatDuration(call.talk_duration)}
                         </span>
                       </div>
-                      <span className="text-xs text-gray-500">
+                      <span className="text-muted-foreground text-xs">
                         {call.outcome ??
                           (call.has_recording
                             ? t(

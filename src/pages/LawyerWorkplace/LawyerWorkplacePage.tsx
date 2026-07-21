@@ -275,7 +275,7 @@ function LawyerWorkplacePageContent() {
             )}
 
             {isCompact && inboxPane === 'parameters' && showParametersPanel && (
-              <div className="absolute inset-0 z-30 flex h-full w-full flex-col bg-white">
+              <div className="bg-card absolute inset-0 z-30 flex h-full w-full flex-col">
                 <LetterParametersPanel
                   letter={selectedLetter}
                   onClose={closeParameters}
@@ -293,7 +293,7 @@ function LawyerWorkplacePageContent() {
                   aria-label={t('pages.lawyerWorkplace.parameters.close', 'Close parameters')}
                   onClick={closeParameters}
                 />
-                <div className="absolute inset-y-0 right-0 z-50 w-[min(380px,92%)] bg-white shadow-2xl">
+                <div className="bg-card absolute inset-y-0 right-0 z-50 w-[min(380px,92%)] shadow-2xl">
                   <LetterParametersPanel
                     letter={selectedLetter}
                     onClose={closeParameters}
@@ -328,8 +328,8 @@ function LawyerWorkplacePageContent() {
       </div>
 
       {activeTab === 'inbox' && (
-        <div className="flex shrink-0 flex-col gap-1 border-t border-gray-100 bg-white px-3 py-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3 sm:px-5">
-          <div className="text-light-700 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] sm:text-[11px]">
+        <div className="bg-card border-border flex shrink-0 flex-col gap-1 border-t px-3 py-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3 sm:px-5">
+          <div className="text-muted-foreground flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] sm:text-[11px]">
             <span className="bg-success-700 h-2 w-2 shrink-0 rounded-full" aria-hidden="true" />
             <span>
               {t('pages.lawyerWorkplace.footer.syncHint', {
@@ -337,7 +337,7 @@ function LawyerWorkplacePageContent() {
                 defaultValue: `Email Service · ${syncIntervalLabel}`,
               })}
             </span>
-            <span className="hidden text-gray-300 sm:inline">|</span>
+            <span className="text-muted-foreground/60 hidden sm:inline">|</span>
             <span className="min-w-0 truncate">
               {t('pages.lawyerWorkplace.footer.mailboxesCount', {
                 count: connectedMailboxes,

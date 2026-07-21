@@ -13,11 +13,13 @@ import { LetterTypeDetailSectionHeader } from './LetterTypeDetailSectionHeader'
 interface LetterTypePrioritySectionProps {
   draft: LetterTypeConfig
   onDraftChange: (draft: LetterTypeConfig) => void
+  readOnly?: boolean
 }
 
 export function LetterTypePrioritySection({
   draft,
   onDraftChange,
+  readOnly = false,
 }: LetterTypePrioritySectionProps) {
   const { t } = useTranslation('common')
   const { isCompact } = useLawyerWorkplaceLayout()
@@ -62,26 +64,26 @@ export function LetterTypePrioritySection({
               <div
                 key={index}
                 className={cn(
-                  'grid gap-3 rounded-xl bg-white px-4 py-3',
+                  'bg-card grid gap-3 rounded-xl px-4 py-3',
                   isCompact
                     ? 'grid-cols-1'
                     : 'lg:grid-cols-[minmax(180px,1fr)_auto_auto_auto] lg:items-center'
                 )}
               >
                 <div className="flex items-center gap-3">
-                  <div className="h-9 w-9 shrink-0 animate-pulse rounded-full bg-gray-200" />
+                  <div className="bg-muted h-9 w-9 shrink-0 animate-pulse rounded-full" />
                   <div className="min-w-0 flex-1 space-y-2">
-                    <div className="h-3.5 w-28 animate-pulse rounded bg-gray-200" />
-                    <div className="h-3 w-20 animate-pulse rounded bg-gray-200" />
+                    <div className="bg-muted h-3.5 w-28 animate-pulse rounded" />
+                    <div className="bg-muted h-3 w-20 animate-pulse rounded" />
                   </div>
                 </div>
-                <div className="h-3 w-16 animate-pulse rounded bg-gray-200" />
+                <div className="bg-muted h-3 w-16 animate-pulse rounded" />
                 <div className="flex gap-1">
                   {Array.from({ length: 4 }).map((__, starIndex) => (
-                    <div key={starIndex} className="h-4 w-4 animate-pulse rounded bg-gray-200" />
+                    <div key={starIndex} className="bg-muted h-4 w-4 animate-pulse rounded" />
                   ))}
                 </div>
-                <div className="h-7 w-20 animate-pulse rounded-full bg-gray-200" />
+                <div className="bg-muted h-7 w-20 animate-pulse rounded-full" />
               </div>
             ))}
           </div>
@@ -89,17 +91,17 @@ export function LetterTypePrioritySection({
       ) : null}
 
       {!isLoading && priorityRows.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-gray-200 bg-white px-4 py-8 text-center">
-          <div className="bg-light-100 mb-3 flex h-10 w-10 items-center justify-center rounded-full">
-            <Icons.UserMultiple02 size={18} strokeWidth={1.5} className="text-light-500" />
+        <div className="border-border bg-card flex flex-col items-center justify-center rounded-xl border border-dashed px-4 py-8 text-center">
+          <div className="bg-muted mb-3 flex h-10 w-10 items-center justify-center rounded-full">
+            <Icons.UserMultiple02 size={18} strokeWidth={1.5} className="text-muted-foreground" />
           </div>
-          <p className="text-dark-500 text-[13px] font-medium">
+          <p className="text-foreground text-[13px] font-medium">
             {t(
               'pages.lawyerWorkplace.settings.letterTypes.priorityEmpty.title',
               'No lawyers to assign'
             )}
           </p>
-          <p className="text-light-600 mt-1 max-w-sm text-[12px] leading-relaxed">
+          <p className="text-muted-foreground mt-1 max-w-sm text-[12px] leading-relaxed">
             {t(
               'pages.lawyerWorkplace.settings.letterTypes.priorityEmpty.description',
               'Add lawyers in the Lawyers tab, then set star ratings and roles for this letter type.'
@@ -114,7 +116,8 @@ export function LetterTypePrioritySection({
             <div
               key={lawyer.id}
               className={cn(
-                'grid gap-3 rounded-xl bg-white px-4 py-3',
+                'bg-card grid gap-3 rounded-xl px-4 py-3',
+                readOnly && 'bg-muted/80',
                 isCompact
                   ? 'grid-cols-1'
                   : 'lg:grid-cols-[minmax(180px,1fr)_auto_auto_auto] lg:items-center'
@@ -125,17 +128,19 @@ export function LetterTypePrioritySection({
                   {lawyer.initials}
                 </div>
                 <div className="min-w-0">
-                  <p className="text-dark-500 truncate text-[13px] font-semibold">
+                  <p className="text-foreground truncate text-[13px] font-semibold">
                     {lawyer.display_name}
                   </p>
-                  <p className="text-light-600 truncate text-[11px]">
+                  <p className="text-muted-foreground truncate text-[11px]">
                     {lawyer.role_title ??
                       t('pages.lawyerWorkplace.settings.lawyers.noRole', 'Legal team')}
                   </p>
                 </div>
               </div>
 
-              <p className={cn('text-light-600 text-[12px]', !isCompact && 'lg:text-center')}>
+              <p
+                className={cn('text-muted-foreground text-[12px]', !isCompact && 'lg:text-center')}
+              >
                 {t('pages.lawyerWorkplace.settings.letterTypes.activeLoad', {
                   current: lawyer.current_active,
                   max: lawyer.max_in_flight,
@@ -151,6 +156,7 @@ export function LetterTypePrioritySection({
               >
                 <LawyerStarRating
                   value={assignment.stars}
+                  disabled={readOnly}
                   onChange={(stars) =>
                     onDraftChange(
                       updateLetterTypePriority(draft, lawyer.id, { stars: Math.max(0, stars) })
@@ -161,6 +167,7 @@ export function LetterTypePrioritySection({
                 <div className={cn('flex', !isCompact && 'lg:justify-end')}>
                   <LawyerRoleBadge
                     role={assignment.role}
+                    disabled={readOnly}
                     onSelect={(role) =>
                       onDraftChange(updateLetterTypePriority(draft, lawyer.id, { role }))
                     }

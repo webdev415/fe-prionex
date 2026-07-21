@@ -76,7 +76,7 @@ export function InteractionHistoryTable({
       header: t('pages.actionAnalysis.columns.dateTime', 'Date / Time'),
       sortable: true,
       render: (r) => (
-        <span className="text-sm text-gray-700">{formatDateTime(r.interaction_date)}</span>
+        <span className="text-foreground text-sm">{formatDateTime(r.interaction_date)}</span>
       ),
     },
     {
@@ -107,7 +107,7 @@ export function InteractionHistoryTable({
       key: 'phone',
       header: t('pages.actionAnalysis.columns.phone', 'Phone'),
       render: (r) => (
-        <span className="text-sm text-gray-700">
+        <span className="text-foreground text-sm">
           {r.phone_used ? formatUkrainePhoneForDisplay(r.phone_used, r.phone_used) : '—'}
         </span>
       ),
@@ -115,13 +115,13 @@ export function InteractionHistoryTable({
     {
       key: 'responsibleAtCreation',
       header: t('pages.actionAnalysis.columns.responsibleAtCreation', 'Responsible at creation'),
-      render: (r) => <span className="text-sm text-gray-700">{r.user_name ?? '—'}</span>,
+      render: (r) => <span className="text-foreground text-sm">{r.user_name ?? '—'}</span>,
     },
     {
       key: 'currentResponsible',
       header: t('pages.actionAnalysis.columns.currentResponsible', 'Current responsible'),
       render: (r) => (
-        <span className="text-sm text-gray-700">
+        <span className="text-foreground text-sm">
           {r.current_responsible_user_name ??
             (r.current_responsible_user_id ? `#${r.current_responsible_user_id}` : '—')}
         </span>
@@ -132,31 +132,31 @@ export function InteractionHistoryTable({
       header: t('pages.actionAnalysis.columns.internalDate', 'Date (promise / callback)'),
       render: (r) => {
         const value = pickInternalDate(r, internalDateType)
-        return <span className="text-sm text-gray-700">{value ? formatDate(value) : '—'}</span>
+        return <span className="text-foreground text-sm">{value ? formatDate(value) : '—'}</span>
       },
     },
     {
       key: 'channel',
       header: t('pages.actionAnalysis.columns.channel', 'Channel'),
-      render: (r) => <span className="text-sm text-gray-700">{r.channel ?? '—'}</span>,
+      render: (r) => <span className="text-foreground text-sm">{r.channel ?? '—'}</span>,
     },
     {
       key: 'contactType',
       header: t('pages.actionAnalysis.columns.contactType', 'Contact type'),
-      render: (r) => <span className="text-sm text-gray-700">{r.contact_type_name ?? '—'}</span>,
+      render: (r) => <span className="text-foreground text-sm">{r.contact_type_name ?? '—'}</span>,
     },
     {
       key: 'result',
       header: t('pages.actionAnalysis.columns.result', 'Result'),
       render: (r) =>
         r.result_code ? (
-          <span className="text-sm text-gray-700">
+          <span className="text-foreground text-sm">
             {t(`interactionResults.${r.result_code}`, {
               defaultValue: r.result_name ?? r.result_code,
             })}
           </span>
         ) : (
-          <span className="text-sm text-gray-400">—</span>
+          <span className="text-muted-foreground text-sm">—</span>
         ),
     },
     {
@@ -167,7 +167,7 @@ export function InteractionHistoryTable({
       // Promise *date* lives in the dedicated "Internal date" column now —
       // showing it again as a sub-line here was duplicate noise.
       render: (r) => (
-        <span className="text-sm text-gray-700">{formatAmount(r.promise_to_pay_amount)}</span>
+        <span className="text-foreground text-sm">{formatAmount(r.promise_to_pay_amount)}</span>
       ),
     },
   ]

@@ -24,12 +24,12 @@ export function LetterTypeDetailHeader({
   const color = LETTER_TYPE_COLOR_BY_ID[draft.colorId] ?? LETTER_TYPE_COLOR_BY_ID.teal!
 
   return (
-    <div className="border-b border-gray-100 px-4 py-4 sm:px-5 sm:py-5 lg:px-6">
+    <div className="border-border border-b px-4 py-4 sm:px-5 sm:py-5 lg:px-6">
       {onBack ? (
         <button
           type="button"
           onClick={onBack}
-          className="text-light-600 hover:text-dark-500 mb-3 inline-flex items-center gap-1.5 text-[12px] font-medium"
+          className="text-muted-foreground hover:text-foreground mb-3 inline-flex items-center gap-1.5 text-[12px] font-medium"
         >
           <Icons.ArrowLeft02 size={14} strokeWidth={1.5} />
           {t('actions.back', 'Back')}
@@ -38,7 +38,7 @@ export function LetterTypeDetailHeader({
 
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 flex-wrap items-center gap-2 sm:gap-3">
-          <h2 className="text-dark-500 text-base font-normal">{getLetterTypeName(draft, t)}</h2>
+          <h2 className="text-foreground text-base font-normal">{getLetterTypeName(draft, t)}</h2>
           <span
             className={cn(
               'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium',
@@ -69,9 +69,9 @@ export function LetterTypeDetailHeader({
               'Delete letter type'
             )}
             className={cn(
-              'text-light-500 hover:text-error-600 flex h-8 w-8 shrink-0 items-center justify-center rounded-md transition-colors hover:bg-red-50',
+              'text-muted-foreground hover:text-error-600 hover:bg-error-100 flex h-8 w-8 shrink-0 items-center justify-center rounded-md transition-colors',
               (!canDelete || isDeleting) &&
-                'hover:text-light-500 cursor-not-allowed opacity-40 hover:bg-transparent'
+                'hover:text-muted-foreground cursor-not-allowed opacity-40 hover:bg-transparent'
             )}
           >
             <Icons.Delete size={18} strokeWidth={1.5} />

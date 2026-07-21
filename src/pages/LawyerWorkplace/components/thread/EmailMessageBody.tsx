@@ -17,7 +17,7 @@ export function EmailMessageBody({ body, bodyFormat, className }: EmailMessageBo
     return (
       <div
         className={cn(
-          'email-message-body text-dark-500 max-w-none overflow-x-auto text-[13px] leading-relaxed break-words',
+          'email-message-body text-foreground max-w-none overflow-x-auto text-[13px] leading-relaxed break-words',
           '[&_a]:text-secondary-700 [&_a]:underline [&_img]:max-h-64 [&_img]:max-w-full [&_table]:max-w-full',
           className
         )}
@@ -30,7 +30,7 @@ export function EmailMessageBody({ body, bodyFormat, className }: EmailMessageBo
   return (
     <p
       className={cn(
-        'text-dark-500 overflow-wrap-anywhere text-[13px] leading-relaxed break-words whitespace-pre-wrap',
+        'text-foreground overflow-wrap-anywhere text-[13px] leading-relaxed break-words whitespace-pre-wrap',
         className
       )}
     >

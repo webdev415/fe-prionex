@@ -51,28 +51,28 @@ export function MailboxesTable({
       case 'error':
         return 'bg-error-100 text-error-700'
       default:
-        return 'bg-light-100 text-light-600'
+        return 'bg-muted text-muted-foreground'
     }
   }
 
   const isEmpty = mailboxes.length === 0
 
   return (
-    <div className="min-w-0 overflow-hidden rounded-xl border border-gray-100 bg-white">
+    <div className="bg-card border-border min-w-0 overflow-hidden rounded-xl border">
       <div
         className={cn(
-          'flex gap-3 border-b border-gray-100 px-4 py-4 sm:px-5 lg:px-6',
+          'border-border flex gap-3 border-b px-4 py-4 sm:px-5 lg:px-6',
           isCompact ? 'flex-col' : 'flex-row items-center justify-between'
         )}
       >
         <div className="min-w-0">
-          <h2 className="text-dark-500 text-[13px] font-semibold">
+          <h2 className="text-foreground text-[13px] font-semibold">
             {t('pages.lawyerWorkplace.settings.mailboxes.tableTitle', {
               count: mailboxes.length,
               defaultValue: `Connected mailboxes · ${mailboxes.length}`,
             })}
           </h2>
-          <p className="text-light-600 mt-0.5 text-[11.5px]">
+          <p className="text-muted-foreground mt-0.5 text-[11.5px]">
             {t(
               'pages.lawyerWorkplace.settings.mailboxes.tableDesc',
               'Manage addresses and routing rules'
@@ -110,13 +110,13 @@ export function MailboxesTable({
 
       {isEmpty ? (
         <div className="flex flex-col items-center justify-center px-6 py-14 text-center">
-          <div className="bg-light-100 mb-4 flex h-12 w-12 items-center justify-center rounded-full">
-            <Icons.Mail size={22} strokeWidth={1.5} className="text-light-500" />
+          <div className="bg-muted mb-4 flex h-12 w-12 items-center justify-center rounded-full">
+            <Icons.Mail size={22} strokeWidth={1.5} className="text-muted-foreground" />
           </div>
-          <p className="text-dark-500 text-[14px] font-medium">
+          <p className="text-foreground text-[14px] font-medium">
             {t('pages.lawyerWorkplace.settings.mailboxes.empty.title', 'No mailboxes connected')}
           </p>
-          <p className="text-light-600 mt-1 max-w-sm text-[12px] leading-relaxed">
+          <p className="text-muted-foreground mt-1 max-w-sm text-[12px] leading-relaxed">
             {t(
               'pages.lawyerWorkplace.settings.mailboxes.empty.description',
               'Add a mailbox to start syncing incoming legal correspondence.'
@@ -128,22 +128,22 @@ export function MailboxesTable({
           <div className="data-table-scroll w-full overflow-x-auto overflow-y-hidden pb-2">
             <table className="w-full min-w-[820px] text-left text-[13px]">
               <thead>
-                <tr className="border-b border-gray-100">
+                <tr className="border-border border-b">
                   <th
                     className={cn(
-                      'text-light-600 py-3 text-[11px] font-medium',
+                      'text-muted-foreground py-3 text-[11px] font-medium',
                       isCompact ? 'px-4' : 'px-5'
                     )}
                   >
                     {t('pages.lawyerWorkplace.settings.mailboxes.columns.mailbox', 'Mailbox')}
                   </th>
-                  <th className="text-light-600 px-4 py-3 text-[11px] font-medium">
+                  <th className="text-muted-foreground px-4 py-3 text-[11px] font-medium">
                     {t('pages.lawyerWorkplace.settings.status', 'Status')}
                   </th>
-                  <th className="text-light-600 px-4 py-3 text-[11px] font-medium">
+                  <th className="text-muted-foreground px-4 py-3 text-[11px] font-medium">
                     {t('pages.lawyerWorkplace.settings.mailboxes.columns.letters', 'Letters')}
                   </th>
-                  <th className="text-light-600 px-4 py-3 text-[11px] font-medium">
+                  <th className="text-muted-foreground px-4 py-3 text-[11px] font-medium">
                     {t('pages.lawyerWorkplace.settings.mailboxes.columns.actions', 'Actions')}
                   </th>
                 </tr>
@@ -154,13 +154,13 @@ export function MailboxesTable({
                     <tr
                       key={mailbox.id}
                       className={cn(
-                        idx < paginatedMailboxes.length - 1 && 'border-b border-gray-100'
+                        idx < paginatedMailboxes.length - 1 && 'border-border border-b'
                       )}
                     >
                       <td className={cn('py-4', isCompact ? 'px-4' : 'px-5')}>
                         <div className="min-w-[180px]">
                           <div className="flex flex-wrap items-center gap-2">
-                            <p className="text-dark-500 text-[13px] font-semibold">
+                            <p className="text-foreground text-[13px] font-semibold">
                               {t(mailbox.displayNameKey, mailbox.displayNameFallback)}
                             </p>
                             {!mailbox.hasCredentials ? (
@@ -179,7 +179,9 @@ export function MailboxesTable({
                               </span>
                             ) : null}
                           </div>
-                          <p className="text-light-600 truncate text-[11px]">{mailbox.email}</p>
+                          <p className="text-muted-foreground truncate text-[11px]">
+                            {mailbox.email}
+                          </p>
                         </div>
                       </td>
                       <td className="px-4 py-4">
@@ -196,7 +198,7 @@ export function MailboxesTable({
                         </span>
                       </td>
                       <td className="px-4 py-4">
-                        <span className="text-dark-500 font-semibold">{mailbox.letterCount}</span>
+                        <span className="text-foreground font-semibold">{mailbox.letterCount}</span>
                       </td>
                       <td className="px-4 py-4">
                         {!readOnly ? (
@@ -204,7 +206,7 @@ export function MailboxesTable({
                             <button
                               type="button"
                               onClick={() => onEdit(mailbox)}
-                              className="text-light-600 hover:text-dark-500 flex h-8 w-8 items-center justify-center rounded-full hover:bg-gray-100"
+                              className="text-muted-foreground hover:text-foreground hover:bg-muted flex h-8 w-8 items-center justify-center rounded-full"
                               aria-label={t('actions.edit', 'Edit')}
                             >
                               <Icons.PencilEdit02 size={15} strokeWidth={1.5} />
@@ -212,7 +214,7 @@ export function MailboxesTable({
                             <button
                               type="button"
                               onClick={() => onToggleStatus(mailbox)}
-                              className="text-light-600 hover:text-dark-500 flex h-8 w-8 items-center justify-center rounded-full hover:bg-gray-100"
+                              className="text-muted-foreground hover:text-foreground hover:bg-muted flex h-8 w-8 items-center justify-center rounded-full"
                               aria-label={
                                 mailbox.status === 'disabled'
                                   ? t('actions.enable', 'Enable')
@@ -227,7 +229,7 @@ export function MailboxesTable({
                             </button>
                           </div>
                         ) : (
-                          <span className="text-light-500 text-[12px]">—</span>
+                          <span className="text-muted-foreground text-[12px]">—</span>
                         )}
                       </td>
                     </tr>
@@ -245,7 +247,7 @@ export function MailboxesTable({
               pageSizeOptions={PAGE_SIZE_OPTIONS}
               onPageChange={setPage}
               onPageSizeChange={setPageSize}
-              className={cn('border-t border-gray-100 px-4 sm:px-5 lg:px-6', isCompact && 'py-3')}
+              className={cn('border-border border-t px-4 sm:px-5 lg:px-6', isCompact && 'py-3')}
             />
           )}
         </>

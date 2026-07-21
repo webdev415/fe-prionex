@@ -169,12 +169,12 @@ export function RRNotificationsPage() {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 p-6">
-      <div className="flex flex-col gap-2 border-b border-gray-100 pb-4">
-        <h1 className="text-dark-500 text-2xl font-light">
+    <div className="flex w-full flex-col items-start gap-4">
+      <div className="flex flex-col gap-2 pb-4">
+        <h1 className="text-foreground text-xl font-light sm:text-2xl">
           {t('pages.rrNotifications.title', 'RR Notifications')}
         </h1>
-        <p className="max-w-2xl text-sm text-gray-500">
+        <p className="text-muted-foreground max-w-2xl text-sm font-light">
           {t(
             'pages.rrNotifications.description',
             'Configure bell reminders for the responsible operator before each scheduled Restructuring Agreement payment. Sent daily by the system.'
@@ -183,18 +183,18 @@ export function RRNotificationsPage() {
       </div>
 
       {isPending ? (
-        <div className="rounded-md border border-gray-200 bg-white p-6 text-sm text-gray-500">
+        <div className="border-border bg-card text-muted-foreground w-full rounded-xl border p-6 text-sm shadow-sm">
           {t('common.loading')}
         </div>
       ) : (
-        <div className="flex flex-col gap-5 rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+        <div className="border-border bg-card/50 flex w-full flex-col gap-5 rounded-xl border p-4 shadow-sm sm:p-6">
           {/* Enable toggle */}
           <div className="flex items-center justify-between">
             <div className="flex flex-col gap-0.5">
-              <Label className="text-sm font-medium text-gray-800">
+              <Label className="text-foreground text-sm font-medium">
                 {t('pages.rrNotifications.enable', 'Enable RR notifications')}
               </Label>
-              <span className="text-xs text-gray-500">
+              <span className="text-muted-foreground text-xs">
                 {t(
                   'pages.rrNotifications.enableHint',
                   'When off, no reminders are sent — pending notifications remain in the bell.'
@@ -204,16 +204,16 @@ export function RRNotificationsPage() {
             <ToggleSwitch
               checked={enabled}
               onChange={setEnabled}
-              aria-label={t('pages.rrNotifications.enable', 'Enable RR notifications')}
+              ariaLabel={t('pages.rrNotifications.enable', 'Enable RR notifications')}
             />
           </div>
 
           {/* Days before */}
           <div className="flex flex-col gap-2">
-            <Label className="text-sm font-medium text-gray-800">
+            <Label className="text-foreground text-sm font-medium">
               {t('pages.rrNotifications.daysBefore', 'Days before due date')}
             </Label>
-            <span className="text-xs text-gray-500">
+            <span className="text-muted-foreground text-xs">
               {t(
                 'pages.rrNotifications.daysBeforeHint',
                 'Add one or more values (1–365). One reminder per value per payment.'
@@ -223,13 +223,13 @@ export function RRNotificationsPage() {
               {daysBefore.map((n) => (
                 <span
                   key={n}
-                  className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700"
+                  className="bg-info-100 text-info-700 inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium"
                 >
                   {t('pages.rrNotifications.daysChip', '{{n}} days', { n })}
                   <button
                     type="button"
                     onClick={() => removeDay(n)}
-                    className="rounded-full hover:bg-blue-100"
+                    className="hover:bg-info-100 rounded-full"
                     aria-label={t('actions.remove', 'Remove')}
                   >
                     <Icons.Close size={12} strokeWidth={2.5} />
@@ -264,7 +264,7 @@ export function RRNotificationsPage() {
               </div>
             </div>
             {daysBefore.length === 0 && (
-              <span className="text-xs text-amber-600">
+              <span className="text-warning-600 text-xs">
                 {t('pages.rrNotifications.daysRequired', 'Add at least one days-before value.')}
               </span>
             )}
@@ -272,7 +272,7 @@ export function RRNotificationsPage() {
 
           {/* Template text */}
           <div className="flex flex-col gap-2">
-            <Label className="text-sm font-medium text-gray-800">
+            <Label className="text-foreground text-sm font-medium">
               {t('pages.rrNotifications.template', 'Notification text')}
             </Label>
             <Textarea
@@ -292,7 +292,7 @@ export function RRNotificationsPage() {
                 admin can also edit the textarea directly. */}
             {detectedVariables.length > 0 && (
               <div className="flex flex-col gap-1">
-                <Label className="text-xs font-medium text-gray-600">
+                <Label className="text-muted-foreground text-xs font-medium">
                   {t('pages.rrNotifications.variablesDetected', 'Variables detected')}:
                 </Label>
                 <div className="flex flex-wrap gap-2">
@@ -305,11 +305,11 @@ export function RRNotificationsPage() {
                     return (
                       <span
                         key={v}
-                        className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-white px-3 py-1 text-xs font-medium text-gray-700"
+                        className="border-border bg-card text-foreground inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-medium"
                       >
                         {token}
                         {count > 1 && (
-                          <span className="rounded bg-gray-100 px-1.5 text-[10px] text-gray-600">
+                          <span className="bg-muted text-muted-foreground rounded px-1.5 text-[10px]">
                             ×{count}
                           </span>
                         )}
@@ -328,7 +328,7 @@ export function RRNotificationsPage() {
                                 templateText.substring(idx + token.length)
                             )
                           }}
-                          className="ml-0.5 rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-700"
+                          className="text-muted-foreground hover:bg-muted hover:text-foreground ml-0.5 rounded-full"
                           aria-label={t('actions.remove', 'Remove')}
                           title={t('pages.rrNotifications.removeVariable', 'Remove one occurrence')}
                         >
@@ -338,7 +338,7 @@ export function RRNotificationsPage() {
                     )
                   })}
                 </div>
-                <span className="text-[11px] text-gray-500">
+                <span className="text-muted-foreground text-[11px]">
                   {t(
                     'pages.rrNotifications.removeHint',
                     'Click × on a chip to remove all occurrences, or edit the text directly.'
@@ -349,12 +349,12 @@ export function RRNotificationsPage() {
 
             {/* Available variables — clickable list that inserts
                 at the textarea caret. */}
-            <div className="flex flex-col gap-2 rounded-lg border border-gray-200 bg-gray-50 p-4">
+            <div className="border-border bg-muted flex flex-col gap-2 rounded-lg border p-4">
               <div className="flex items-center justify-between">
-                <Label className="text-xs font-medium text-gray-700">
+                <Label className="text-foreground text-xs font-medium">
                   {t('pages.rrNotifications.availableVariables', 'Available variables')}:
                 </Label>
-                <span className="text-[11px] text-gray-500">
+                <span className="text-muted-foreground text-[11px]">
                   {t('pages.rrNotifications.clickToInsert', 'Click to insert')}
                 </span>
               </div>
@@ -364,12 +364,12 @@ export function RRNotificationsPage() {
                     key={v.name}
                     type="button"
                     onClick={() => insertVariable(v.name)}
-                    className="flex items-start gap-4 self-stretch rounded px-2 py-1.5 text-left text-xs transition-colors hover:bg-white"
+                    className="hover:bg-card flex items-start gap-4 self-stretch rounded px-2 py-1.5 text-left text-xs transition-colors"
                   >
-                    <code className="w-[120px] shrink-0 font-mono text-gray-700">
+                    <code className="text-foreground w-[120px] shrink-0 font-mono">
                       {`{${v.name}}`}
                     </code>
-                    <span className="flex-1 text-gray-600">
+                    <span className="text-muted-foreground flex-1">
                       {t(`pages.rrNotifications.variables.${v.i18nKey}`)}
                     </span>
                   </button>
@@ -378,20 +378,20 @@ export function RRNotificationsPage() {
             </div>
 
             {/* Live preview */}
-            <div className="rounded border border-dashed border-gray-200 bg-white px-3 py-2 text-xs">
-              <span className="font-medium text-gray-600">
+            <div className="border-border bg-card rounded border border-dashed px-3 py-2 text-xs">
+              <span className="text-muted-foreground font-medium">
                 {t('pages.rrNotifications.preview', 'Preview')}:{' '}
               </span>
-              <span className="text-gray-700">{previewBody}</span>
+              <span className="text-foreground">{previewBody}</span>
             </div>
           </div>
 
           {/* Penalty reminder template (KAN-785 Part 2) — optional override */}
-          <div className="flex flex-col gap-2 border-t border-gray-100 pt-5">
-            <Label className="text-sm font-medium text-gray-800">
+          <div className="border-border flex flex-col gap-2 border-t pt-5">
+            <Label className="text-foreground text-sm font-medium">
               {t('pages.rrNotifications.penaltyTemplate', 'Penalty reminder template')}
             </Label>
-            <span className="text-xs text-gray-500">
+            <span className="text-muted-foreground text-xs">
               {t(
                 'pages.rrNotifications.penaltyTemplateHint',
                 'Used only for the overdue-penalty reminder. Leave blank to reuse the installment template above.'
@@ -413,18 +413,18 @@ export function RRNotificationsPage() {
                   key={v.name}
                   type="button"
                   onClick={() => setPenaltyTemplateText(penaltyTemplateText + `{${v.name}}`)}
-                  className="rounded-full border border-gray-200 bg-white px-2 py-1 font-mono text-[11px] text-gray-700 hover:bg-gray-50"
+                  className="border-border bg-card text-foreground hover:bg-muted rounded-full border px-2 py-1 font-mono text-[11px]"
                 >
                   {`{${v.name}}`}
                 </button>
               ))}
             </div>
             {penaltyTemplateText.trim() && (
-              <div className="rounded border border-dashed border-gray-200 bg-white px-3 py-2 text-xs">
-                <span className="font-medium text-gray-600">
+              <div className="border-border bg-card rounded border border-dashed px-3 py-2 text-xs">
+                <span className="text-muted-foreground font-medium">
                   {t('pages.rrNotifications.preview', 'Preview')}:{' '}
                 </span>
-                <span className="text-gray-700">
+                <span className="text-foreground">
                   {renderTemplate(penaltyTemplateText, SAMPLE_CTX)}
                 </span>
               </div>

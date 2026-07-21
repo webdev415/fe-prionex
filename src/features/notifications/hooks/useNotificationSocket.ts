@@ -40,7 +40,12 @@ export function useNotificationSocket(
     const socket = io(WS_URL + '/notifications', {
       path: '/ws/notifications/socket.io',
       transports: ['websocket'],
-      query: { token },
+      // Send the JWT in the handshake ``auth`` payload, NOT ``query``: a token
+      // in the query string lands in the WS upgrade URL and leaks into the
+      // browser console on a failed handshake (401/502) and into proxy/access
+      // logs. socket.io carries ``auth`` in the CONNECT packet, off the URL.
+      // Backend reads ``auth`` first with a transitional query fallback.
+      auth: { token },
       autoConnect: true,
       reconnection: true,
       reconnectionAttempts: MAX_RECONNECT_ATTEMPTS,

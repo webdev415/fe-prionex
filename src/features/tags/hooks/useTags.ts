@@ -9,6 +9,7 @@ import { toast } from 'sonner'
 import { tagsApi } from '../api/tagsApi'
 import { useAuthStore } from '@/stores/authStore'
 import { filterTagsForRole } from '../utils/visibility'
+import { sortTagsByOrder } from '../utils/sortTags'
 import { clientKeys } from '@/features/clients/hooks/useClients'
 import type {
   TagCreate,
@@ -52,7 +53,7 @@ export function useTags(projectId?: number, options?: { includeHidden?: boolean 
   return useQuery({
     queryKey: [...tagsKeys.list(projectId), { includeHidden, roleName, activeDepartmentId }],
     queryFn: () => tagsApi.getTags(projectId),
-    select: (tags) => filterTagsForRole(tags, roleName, includeHidden),
+    select: (tags) => sortTagsByOrder(filterTagsForRole(tags, roleName, includeHidden)),
     staleTime: 5 * 60 * 1000, // 5 minutes
   })
 }
@@ -125,7 +126,7 @@ export function useClientTags(clientId: number, options?: { includeHidden?: bool
   return useQuery({
     queryKey: ['clients', clientId, 'tags', { includeHidden, roleName }] as const,
     queryFn: () => tagsApi.getClientTags(clientId),
-    select: (tags) => filterTagsForRole(tags, roleName, includeHidden),
+    select: (tags) => sortTagsByOrder(filterTagsForRole(tags, roleName, includeHidden)),
     enabled: !!clientId,
     staleTime: 0, // Always refetch on invalidation (auto-tagging is async)
     // Cron-driven and cross-session tag changes (другой оператор / scheduled
@@ -378,6 +379,9 @@ export function useRefreshSegment() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: tagsKeys.segments() })
       toast.success('Segment refreshed')
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to refresh segment')
     },
   })
 }

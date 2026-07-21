@@ -17,13 +17,13 @@ export function AlreadyLoggedInCard({
   return (
     <div className="w-full">
       <div className="mb-4 flex w-full flex-col items-center text-center sm:mb-6 md:mb-8">
-        <h1 className="sm:text-display-xs md:text-display-sm text-dark-500 text-xl font-medium">
+        <h1 className="sm:text-display-xs md:text-display-sm text-foreground text-xl font-medium">
           {t('alreadyLoggedIn.title')}
         </h1>
       </div>
 
       <div className="space-y-3 sm:space-y-4">
-        <span className="text-body-xs sm:text-body-sm flex w-full items-center justify-center gap-1.5 px-2 font-normal text-gray-700 sm:gap-2 sm:px-0">
+        <span className="text-body-xs sm:text-body-sm text-muted-foreground flex w-full items-center justify-center gap-1.5 px-2 font-normal sm:gap-2 sm:px-0">
           {t('alreadyLoggedIn.message')}
         </span>
 
