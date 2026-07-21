@@ -33,6 +33,8 @@ export interface CallReviewPanelProps {
   /** Pin a specific scorecard; when absent the editor opens the latest draft on
    *  the call or lets the trainer start a new evaluation (call-first flow). */
   scorecardId?: number
+  /** Whether the trainer may create/edit/send/remove here (operator assigned). */
+  canEdit?: boolean
   /** Emits the editor's unsaved-changes state so the tab can guard row switches. */
   onDirtyChange?: (dirty: boolean) => void
 }
@@ -43,6 +45,7 @@ export function CallReviewPanel({
   operatorName,
   createdAt,
   scorecardId,
+  canEdit = false,
   onDirtyChange,
 }: CallReviewPanelProps) {
   const { t } = useTranslation('common')
@@ -118,6 +121,7 @@ export function CallReviewPanel({
           callId={callId}
           operatorId={operatorId}
           scorecardId={scorecardId}
+          canEdit={canEdit}
           onDirtyChange={onDirtyChange}
         />
       </div>

@@ -35,6 +35,10 @@ interface ScorecardPanelProps {
   operatorId: number
   /** When set, the panel opens that scorecard rather than the latest draft. */
   scorecardId?: number | null
+  /** Assignment-based write gate. When provided it fully governs edit rights at
+   *  any status (the trainer may edit + re-send). When omitted, the legacy
+   *  originating-trainer + draft-only gate applies. */
+  canEdit?: boolean
   /** Callback after the trainer presses "Send to operator". */
   onSent?: (scorecardId: number) => void
   /** Emits the unsaved-changes state so the parent can warn on close. */
@@ -45,6 +49,7 @@ export function ScorecardPanel({
   callId,
   operatorId,
   scorecardId: pinnedScorecardId,
+  canEdit: canEditProp,
   onSent,
   onDirtyChange,
 }: ScorecardPanelProps) {
@@ -130,15 +135,18 @@ export function ScorecardPanel({
 
   const [locked, setLocked] = useState(false)
   const status = activeScorecard?.status ?? 'draft'
-  // Only the originating trainer may mutate a scorecard — the backend enforces
-  // this on PUT/DELETE/send with a 403, so gate the edit UI to match instead of
-  // letting the trainer edit and fail on save.
   const currentUserId = useAuthStore((s) => s.user?.id)
   const isOriginatingTrainer =
     activeScorecard != null &&
     currentUserId != null &&
     Number(currentUserId) === activeScorecard.trainer_id
-  const canEdit = status === 'draft' && !locked && isOriginatingTrainer
+  // Assignment-based gate (new model) governs editing at any status; the backend
+  // enforces the same rule with a 403. Legacy callers fall back to
+  // originating-trainer + draft-only.
+  const canEdit =
+    canEditProp != null
+      ? canEditProp && !locked
+      : status === 'draft' && !locked && isOriginatingTrainer
 
   const handleSaveDraft = async () => {
     await draft.flush()

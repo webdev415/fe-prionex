@@ -1658,6 +1658,7 @@
         "list": {
           "dateTime": "Date / Time",
           "employee": "Employee",
+          "trainer": "Trainer",
           "client": "Client",
           "phone": "Phone",
           "category": "Category",
@@ -8263,6 +8264,7 @@
         "list": {
           "dateTime": "Date / Time",
           "employee": "Employee",
+          "trainer": "Trainer",
           "client": "Client",
           "phone": "Phone",
           "category": "Category",
