@@ -616,33 +616,30 @@ function ContactCard({
               </div>
             </div>
           </div>
-          {isPhone && linkedContacts.length > 0 && (
-            <div className="ml-0 md:ml-[156px]">
-              <LinkedContactPills linked={linkedContacts} />
-            </div>
-          )}
-          {isPhone && contact.contactTags.length > 0 && (
-            <div
-              className="ml-0 flex flex-wrap gap-1.5 md:ml-[156px]"
-              data-testid="contact-tag-chips"
-            >
-              {contact.contactTags.map((tag) => (
-                <button
-                  key={tag.value_id}
-                  type="button"
-                  className="cursor-pointer rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-1"
-                  title={tag.category_name}
-                  onClick={() => onOpenTagModal(contact.id, contact.contactValue)}
-                >
-                  <TagBadge
-                    name={tag.name}
-                    color={tag.color || '#64748b'}
-                    size="xs"
-                    isProtected={tag.is_protected}
-                    isSystem={tag.is_system}
-                  />
-                </button>
-              ))}
+          {isPhone && (linkedContacts.length > 0 || contact.contactTags.length > 0) && (
+            <div className="ml-0 flex flex-col gap-1.5 md:ml-[156px]">
+              {linkedContacts.length > 0 && <LinkedContactPills linked={linkedContacts} />}
+              {contact.contactTags.length > 0 && (
+                <div className="flex flex-wrap gap-1.5" data-testid="contact-tag-chips">
+                  {contact.contactTags.map((tag) => (
+                    <button
+                      key={tag.value_id}
+                      type="button"
+                      className="inline-flex cursor-pointer items-center rounded-full border-0 bg-transparent p-0 leading-none focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-1"
+                      title={tag.category_name}
+                      onClick={() => onOpenTagModal(contact.id, contact.contactValue)}
+                    >
+                      <TagBadge
+                        name={tag.name}
+                        color={tag.color || '#64748b'}
+                        size="xs"
+                        isProtected={tag.is_protected}
+                        isSystem={tag.is_system}
+                      />
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>
