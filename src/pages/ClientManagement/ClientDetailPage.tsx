@@ -2982,8 +2982,7 @@ export function ClientDetailPage() {
                                   <button
                                     key={tag.value_id}
                                     type="button"
-                                    className="rounded-full px-1.5 py-0.5 text-[10px] text-white"
-                                    style={{ backgroundColor: tag.color || '#64748b' }}
+                                    className="cursor-pointer rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-1"
                                     title={tag.category_name}
                                     onClick={() =>
                                       phone.contactId > 0 &&
@@ -2993,7 +2992,13 @@ export function ClientDetailPage() {
                                       })
                                     }
                                   >
-                                    {tag.name}
+                                    <TagBadge
+                                      name={tag.name}
+                                      color={tag.color || '#64748b'}
+                                      size="xs"
+                                      isProtected={tag.is_protected}
+                                      isSystem={tag.is_system}
+                                    />
                                   </button>
                                 ))}
                               </div>
