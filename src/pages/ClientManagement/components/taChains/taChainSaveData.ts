@@ -13,6 +13,45 @@
 
 import type { ChainInstanceStepSnapshot } from '@/features/taInteractions/api/types'
 
+/**
+ * A local, not-yet-persisted edit to a previously confirmed step. Keyed by
+ * step_order in the executor. Any undefined field leaves the server snapshot's
+ * value untouched; an empty string explicitly clears that field.
+ */
+export interface StepEdit {
+  value?: string
+  promiseDate?: string
+  promiseAmount?: string
+  creditId?: string
+}
+
+/**
+ * Layer local per-step edits over the authoritative server snapshot, returning
+ * a NEW snapshot (inputs untouched). This is what makes editing a previously
+ * confirmed step persist: the edited step's fields override the server copy,
+ * per step, without disturbing any OTHER step's values (so a single interaction
+ * promise assembled from multiple steps is never clobbered).
+ */
+export function applyStepEdits(
+  snapshot: Record<string, ChainInstanceStepSnapshot> | null | undefined,
+  edits: Record<string, StepEdit> | null | undefined
+): Record<string, ChainInstanceStepSnapshot> {
+  const out: Record<string, ChainInstanceStepSnapshot> = { ...(snapshot ?? {}) }
+  if (edits) {
+    for (const [order, e] of Object.entries(edits)) {
+      const base = out[order] ?? ({} as ChainInstanceStepSnapshot)
+      out[order] = {
+        ...base,
+        ...(e.value !== undefined ? { value: e.value } : {}),
+        ...(e.promiseDate !== undefined ? { promise_date: e.promiseDate } : {}),
+        ...(e.promiseAmount !== undefined ? { promise_amount: e.promiseAmount } : {}),
+        ...(e.creditId !== undefined ? { credit_id: e.creditId } : {}),
+      }
+    }
+  }
+  return out
+}
+
 export interface SnapshotCollected {
   /** step_order → entered value string. */
   stepData: Record<string, string>
