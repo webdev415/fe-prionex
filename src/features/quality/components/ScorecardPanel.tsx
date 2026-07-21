@@ -427,7 +427,11 @@ export function ScorecardPanel({
           </>
         ) : null}
 
-        {status === 'draft' && locked && isOriginatingTrainer ? (
+        {(
+          canEditProp != null
+            ? canEditProp && locked
+            : status === 'draft' && locked && isOriginatingTrainer
+        ) ? (
           <Button
             variant="primary"
             size="md"
@@ -438,7 +442,11 @@ export function ScorecardPanel({
           </Button>
         ) : null}
 
-        {status === 'completed' && isOriginatingTrainer ? (
+        {(
+          canEditProp != null
+            ? canEditProp && (status === 'completed' || status === 'sent')
+            : status === 'completed' && isOriginatingTrainer
+        ) ? (
           <Button
             variant="primary"
             size="md"
@@ -446,7 +454,9 @@ export function ScorecardPanel({
             disabled={sendMutation.isPending}
             className="rounded-full"
           >
-            {t('pages.training.scorecard.sendToOperator', 'Send to operator')}
+            {status === 'sent'
+              ? t('pages.training.scorecard.resend', 'Re-send')
+              : t('pages.training.scorecard.sendToOperator', 'Send to operator')}
           </Button>
         ) : null}
       </footer>

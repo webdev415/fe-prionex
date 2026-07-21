@@ -1612,6 +1612,7 @@
         "clear": "Clear",
         "edit": "Edit",
         "sendToOperator": "Send to operator",
+        "resend": "Re-send",
         "status": {
           "draft": "Draft",
           "completed": "Completed",
@@ -8225,6 +8226,7 @@
         "clear": "Clear",
         "edit": "Edit",
         "sendToOperator": "Send to operator",
+        "resend": "Re-send",
         "status": {
           "draft": "Draft",
           "completed": "Completed",
