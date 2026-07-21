@@ -25,6 +25,12 @@ import { Fragment, type ReactNode, useMemo, useRef, useEffect, useState } from '
 import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
 import { Checkbox } from './Checkbox'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from './DropdownMenu'
 
 export interface Column<T> {
   key: string
@@ -60,6 +66,10 @@ export interface DataTableProps<T> {
   allItemsSelected?: boolean // Indicates if all items across all pages are selected (when onSelectAll is used)
   excludedItemsCount?: number // Number of excluded items when allItemsSelected is true (for accurate count)
   excludedItems?: Set<number | string> // Set of excluded item IDs when allItemsSelected is true
+  onSelectPage?: () => void
+  onSelectAllByFilter?: () => void
+  pageSelectableCount?: number
+  filterSelectableCount?: number
   // Bulk header configuration
   bulkHeaderTitle?: string | ReactNode // Custom title for bulk actions header (e.g., "[Bulk Assign]")
   bulkHeaderActions?: ReactNode // Buttons/actions to display in the bulk header (always visible when bulk selection is enabled)
@@ -101,6 +111,10 @@ export function DataTable<T extends { id: number | string }>({
   allItemsSelected = false,
   excludedItemsCount = 0,
   excludedItems = new Set(),
+  onSelectPage,
+  onSelectAllByFilter,
+  pageSelectableCount,
+  filterSelectableCount,
   bulkHeaderTitle,
   bulkHeaderActions,
   headerActions,
@@ -336,12 +350,46 @@ export function DataTable<T extends { id: number | string }>({
                   className="border-border bg-card w-[60px] border-r border-b px-4 text-left"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <Checkbox
-                    checked={headerCheckboxChecked}
-                    onCheckedChange={handleSelectAll}
-                    aria-checked={someSelected ? 'mixed' : headerCheckboxChecked}
-                    aria-label="Select all"
-                  />
+                  {onSelectPage && onSelectAllByFilter ? (
+                    <div className="flex items-center gap-1">
+                      <Checkbox
+                        checked={headerCheckboxChecked}
+                        onCheckedChange={(checked) =>
+                          checked ? onSelectPage() : onSelectionChange?.(new Set())
+                        }
+                        aria-checked={someSelected ? 'mixed' : headerCheckboxChecked}
+                        aria-label="Select all"
+                      />
+                      <DropdownMenu>
+                        <DropdownMenuTrigger
+                          aria-label="Selection options"
+                          className="text-muted-foreground hover:text-foreground flex items-center outline-none"
+                        >
+                          <Icons.ArrowDown size={14} strokeWidth={1.5} />
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="start" className="border-border bg-card">
+                          <DropdownMenuItem className="cursor-pointer" onClick={onSelectPage}>
+                            {t('common.selectOnThisPage', 'Select on this page')} (
+                            {pageSelectableCount ?? 0})
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            className="cursor-pointer"
+                            onClick={onSelectAllByFilter}
+                          >
+                            {t('common.selectAllByFilter', 'Select all by filter')} (
+                            {filterSelectableCount ?? 0})
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  ) : (
+                    <Checkbox
+                      checked={headerCheckboxChecked}
+                      onCheckedChange={handleSelectAll}
+                      aria-checked={someSelected ? 'mixed' : headerCheckboxChecked}
+                      aria-label="Select all"
+                    />
+                  )}
                 </th>
               )}
               {columns.map((column, index) => (
