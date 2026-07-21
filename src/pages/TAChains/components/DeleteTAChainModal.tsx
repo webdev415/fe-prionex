@@ -47,7 +47,7 @@ export function DeleteTAChainModal({ open, chain, onClose, onSuccess }: DeleteTA
       <ModalHeader
         icon={
           <div className="bg-primary-400 flex h-8 w-8 items-center justify-center rounded-full">
-            <Icons.Delete size={20} className="text-dark-500" strokeWidth={2} />
+            <Icons.Delete size={20} className="text-primary-foreground" strokeWidth={2} />
           </div>
         }
         title={t('pages.taChains.modals.delete.title')}
@@ -63,18 +63,18 @@ export function DeleteTAChainModal({ open, chain, onClose, onSuccess }: DeleteTA
 
         {chain && (
           <div className="mb-4 flex flex-col items-start gap-2 self-stretch">
-            <span className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+            <span className="text-foreground text-sm leading-[150%] font-medium tracking-[-0.28px]">
               {t('pages.taChains.modals.delete.chainDetails')}
             </span>
-            <div className="flex flex-col items-start justify-center gap-3 self-stretch rounded-xl border border-white bg-white/50 px-4 py-4 sm:px-6 sm:py-5">
-              <span className="text-dark-500 text-xs leading-[150%] font-light tracking-[-0.28px] sm:text-sm">
+            <div className="border-border bg-card/50 flex flex-col items-start justify-center gap-3 self-stretch rounded-xl border px-4 py-4 sm:px-6 sm:py-5">
+              <span className="text-foreground text-xs leading-[150%] font-light tracking-[-0.28px] sm:text-sm">
                 {t('pages.taChains.table.name')}: <span className="font-medium">{chain.name}</span>
               </span>
-              <span className="text-dark-500 text-xs leading-[150%] font-light tracking-[-0.28px] sm:text-sm">
+              <span className="text-foreground text-xs leading-[150%] font-light tracking-[-0.28px] sm:text-sm">
                 {t('pages.taChains.table.steps')}:{' '}
                 <span className="font-medium">{chain.step_count}</span>
               </span>
-              <span className="text-dark-500 text-xs leading-[150%] font-light tracking-[-0.28px] sm:text-sm">
+              <span className="text-foreground text-xs leading-[150%] font-light tracking-[-0.28px] sm:text-sm">
                 {t('pages.taChains.table.type')}:{' '}
                 <span className="font-medium">{chainTypeLabel}</span>
               </span>
@@ -83,10 +83,10 @@ export function DeleteTAChainModal({ open, chain, onClose, onSuccess }: DeleteTA
         )}
 
         <div className="mb-4 flex flex-col items-start gap-2 self-stretch">
-          <span className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+          <span className="text-foreground text-sm leading-[150%] font-medium tracking-[-0.28px]">
             {t('pages.taChains.modals.delete.whatHappensTitle')}
           </span>
-          <ul className="text-dark-500 list-disc space-y-2 pl-5 text-xs sm:text-sm">
+          <ul className="text-foreground list-disc space-y-2 pl-5 text-xs sm:text-sm">
             <li>{t('pages.taChains.modals.delete.bulletRemoveRow')}</li>
             <li>{t('pages.taChains.modals.delete.bulletRefusedIfUsed')}</li>
             <li>{t('pages.taChains.modals.delete.bulletCascadeChildren')}</li>
@@ -103,7 +103,7 @@ export function DeleteTAChainModal({ open, chain, onClose, onSuccess }: DeleteTA
           />
           <label
             htmlFor="confirm-delete-ta-chain"
-            className="text-dark-500 cursor-pointer text-sm leading-[150%] font-medium"
+            className="text-foreground cursor-pointer text-sm leading-[150%] font-medium"
           >
             {t('pages.taChains.modals.delete.acknowledge')}
           </label>

@@ -404,7 +404,11 @@ export function BulkSendMessageModal({
       <ModalHeader
         icon={
           <div className="bg-primary-300 flex h-8 w-8 items-center justify-center rounded-full">
-            <Icons.MessageMultiple01 size={18} className="text-dark-500" strokeWidth={1.5} />
+            <Icons.MessageMultiple01
+              size={18}
+              className="text-primary-foreground"
+              strokeWidth={1.5}
+            />
           </div>
         }
         title={t('pages.clients.modals.bulkSendMessage.title', {
@@ -414,34 +418,34 @@ export function BulkSendMessageModal({
       />
       <ModalContent>
         <div className="space-y-6">
-          <div className="rounded-xl border border-gray-200 bg-white p-4">
-            <div className="text-dark-500 text-sm font-medium">
+          <div className="border-border bg-card/50 rounded-xl border p-4">
+            <div className="text-foreground text-sm font-medium">
               {t(
                 'pages.clients.modals.bulkSendMessage.selectedClients',
                 'Selected clients preview'
               )}
             </div>
-            <div className="mt-1 text-xs text-gray-500">
+            <div className="text-muted-foreground mt-1 text-xs">
               {t('pages.clients.modals.bulkSendMessage.recipientCount', {
                 count: recipientCountLabel,
                 defaultValue: '{{count}} recipients will receive this message',
               })}
             </div>
             {allClientsSelectedAcrossPages && (
-              <p className="mt-2 text-xs text-gray-500">
+              <p className="text-muted-foreground mt-2 text-xs">
                 {t(
                   'pages.clients.modals.bulkSendMessage.filteredSelectAllHint',
                   'All clients matching your current search and filters are included (across all pages).'
                 )}
               </p>
             )}
-            <div className="mt-3 space-y-2 text-sm text-gray-600">
+            <div className="text-muted-foreground mt-3 space-y-2 text-sm">
               {previewClients.map((client) => (
                 <div
                   key={client.id}
                   className="flex flex-col gap-1 md:flex-row md:items-center md:gap-3"
                 >
-                  <span className="text-dark-500 font-medium">
+                  <span className="text-foreground font-medium">
                     {client.fullName} (#{client.id})
                   </span>
                   <span>{client.priority}</span>
@@ -449,7 +453,7 @@ export function BulkSendMessageModal({
                 </div>
               ))}
               {remainingCount > 0 && (
-                <div className="text-xs text-gray-500">
+                <div className="text-muted-foreground text-xs">
                   {t('pages.clients.modals.bulkSendMessage.andMore', {
                     count: remainingCount,
                     defaultValue: `and ${remainingCount} more clients`,
@@ -475,7 +479,7 @@ export function BulkSendMessageModal({
                 />
 
                 <div>
-                  <label className="text-dark-500 mb-1.5 block text-sm font-light">
+                  <label className="text-foreground mb-1.5 block text-sm font-light">
                     {t('pages.clients.modals.bulkSendMessage.channel', 'Channel')}
                   </label>
                   <Select
@@ -504,7 +508,7 @@ export function BulkSendMessageModal({
                 </div>
 
                 <div>
-                  <label className="text-dark-500 mb-1.5 block text-sm font-light">
+                  <label className="text-foreground mb-1.5 block text-sm font-light">
                     {t('pages.clients.modals.bulkSendMessage.service', 'Service')}
                   </label>
                   <Select value={service || undefined} onValueChange={setService}>
@@ -543,7 +547,7 @@ export function BulkSendMessageModal({
                 </div>
 
                 <div>
-                  <label className="text-dark-500 mb-1.5 block text-sm font-light">
+                  <label className="text-foreground mb-1.5 block text-sm font-light">
                     {t('pages.clients.modals.bulkSendMessage.draft', 'Draft')}
                   </label>
                   <Select
@@ -649,21 +653,21 @@ export function BulkSendMessageModal({
                 )}
 
                 {body.trim().length > 0 && (
-                  <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+                  <div className="border-border bg-muted rounded-xl border p-4">
                     <div className="mb-3 flex flex-wrap items-center gap-2">
-                      <span className="text-dark-500 text-sm font-medium">
+                      <span className="text-foreground text-sm font-medium">
                         {t('pages.clients.modals.bulkSendMessage.draftPreview', 'Message preview')}
                       </span>
                       {previewLabel && (
-                        <span className="rounded-full bg-white px-2.5 py-0.5 text-xs font-medium text-gray-600 ring-1 ring-gray-200 ring-inset">
+                        <span className="bg-card text-muted-foreground ring-border rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset">
                           {previewLabel}
                         </span>
                       )}
-                      <span className="rounded-full bg-white px-2.5 py-0.5 text-xs font-medium text-gray-600 ring-1 ring-gray-200 ring-inset">
+                      <span className="bg-card text-muted-foreground ring-border rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset">
                         {channel.toUpperCase()}
                       </span>
                     </div>
-                    <p className="mb-3 text-xs text-gray-500">
+                    <p className="text-muted-foreground mb-3 text-xs">
                       {t(
                         'pages.clients.modals.bulkSendMessage.draftPreviewHint',
                         'Variables such as {{client_name}} and {{debt_amount}} are shown as written. Each recipient receives a message with values filled from their own client data at send time.'
@@ -672,17 +676,19 @@ export function BulkSendMessageModal({
                     <div className="space-y-2 text-sm">
                       {channelSpec.showSubject && (
                         <div>
-                          <span className="text-dark-500 font-medium">
+                          <span className="text-foreground font-medium">
                             {t('pages.clients.modals.bulkSendMessage.previewSubject', 'Subject')}:
                           </span>{' '}
-                          <span className="font-mono text-gray-600">{subject.trim() || '—'}</span>
+                          <span className="text-muted-foreground font-mono">
+                            {subject.trim() || '—'}
+                          </span>
                         </div>
                       )}
                       <div>
-                        <span className="text-dark-500 font-medium">
+                        <span className="text-foreground font-medium">
                           {t('pages.clients.modals.bulkSendMessage.previewBody', 'Message')}:
                         </span>
-                        <pre className="text-dark-500 mt-1 max-h-48 overflow-auto rounded-lg bg-white p-3 font-mono text-xs whitespace-pre-wrap">
+                        <pre className="text-foreground bg-card border-border mt-1 max-h-48 overflow-auto rounded-lg border p-3 font-mono text-xs whitespace-pre-wrap">
                           {body.trim() || '—'}
                         </pre>
                       </div>

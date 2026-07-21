@@ -6,11 +6,13 @@ import { LetterTypeDetailSectionHeader } from './LetterTypeDetailSectionHeader'
 interface LetterTypeKeywordHintsSectionProps {
   draft: LetterTypeConfig
   onDraftChange: (draft: LetterTypeConfig) => void
+  readOnly?: boolean
 }
 
 export function LetterTypeKeywordHintsSection({
   draft,
   onDraftChange,
+  readOnly = false,
 }: LetterTypeKeywordHintsSectionProps) {
   const { t } = useTranslation('common')
 
@@ -26,6 +28,7 @@ export function LetterTypeKeywordHintsSection({
 
       <KeywordHintsField
         keywords={draft.keywordHints}
+        readOnly={readOnly}
         onChange={(keywordHints) => onDraftChange({ ...draft, keywordHints })}
       />
     </section>

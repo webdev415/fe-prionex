@@ -25,36 +25,36 @@ export function LetterTypesTabSkeleton() {
       <span className="sr-only">{loadingLabel}</span>
 
       <div className={cn(isCompact ? 'min-h-0 shrink-0' : 'h-full min-h-0')}>
-        <div className="flex h-full min-h-0 flex-col overflow-y-hidden rounded-[12px] border border-gray-100 bg-white">
-          <div className="border-light-100 flex items-center justify-between gap-2 border-b px-[14px] py-3">
-            <div className="h-4 w-24 animate-pulse rounded bg-gray-200" />
-            <div className="h-7 w-20 animate-pulse rounded bg-gray-200" />
+        <div className="bg-card border-border flex h-full min-h-0 flex-col overflow-y-hidden rounded-[12px] border">
+          <div className="border-border flex items-center justify-between gap-2 border-b px-[14px] py-3">
+            <div className="bg-muted-foreground/25 h-4 w-24 animate-pulse rounded" />
+            <div className="bg-muted-foreground/25 h-7 w-20 animate-pulse rounded" />
           </div>
           <div className="min-h-0 flex-1 overflow-y-auto">
             {Array.from({ length: 5 }).map((_, index) => (
               <div
                 key={index}
-                className="flex items-center gap-3 border-l-3 border-white px-3 py-3"
+                className="border-border flex items-center gap-3 border-l-3 px-3 py-3"
               >
                 <div className="min-w-0 flex-1 space-y-2">
                   <div className="flex items-center gap-2">
-                    <div className="h-2.5 w-2.5 shrink-0 animate-pulse rounded-full bg-gray-200" />
-                    <div className="h-3.5 w-32 animate-pulse rounded bg-gray-200" />
+                    <div className="bg-muted-foreground/25 h-2.5 w-2.5 shrink-0 animate-pulse rounded-full" />
+                    <div className="bg-muted-foreground/25 h-3.5 w-32 animate-pulse rounded" />
                   </div>
-                  <div className="h-3 w-40 animate-pulse rounded bg-gray-200" />
+                  <div className="bg-muted-foreground/25 h-3 w-40 animate-pulse rounded" />
                 </div>
-                <div className="h-5 w-7 animate-pulse rounded-full bg-gray-200" />
+                <div className="bg-muted-foreground/25 h-5 w-7 animate-pulse rounded-full" />
               </div>
             ))}
           </div>
         </div>
       </div>
 
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col rounded-[12px] bg-white/50">
-        <div className="border-b border-gray-100 px-4 py-4 sm:px-5 sm:py-5 lg:px-6">
+      <div className="bg-card/50 flex min-h-0 min-w-0 flex-1 flex-col rounded-[12px]">
+        <div className="border-border border-b px-4 py-4 sm:px-5 sm:py-5 lg:px-6">
           <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-            <div className="h-5 w-40 animate-pulse rounded bg-gray-200" />
-            <div className="h-6 w-24 animate-pulse rounded-full bg-gray-200" />
+            <div className="bg-muted-foreground/25 h-5 w-40 animate-pulse rounded" />
+            <div className="bg-muted-foreground/25 h-6 w-24 animate-pulse rounded-full" />
           </div>
         </div>
 
@@ -62,9 +62,9 @@ export function LetterTypesTabSkeleton() {
           {Array.from({ length: 4 }).map((_, sectionIndex) => (
             <div key={sectionIndex} className="space-y-3">
               <div className="flex flex-wrap items-baseline justify-between gap-2">
-                <div className="h-4 w-28 animate-pulse rounded bg-gray-200" />
+                <div className="bg-muted-foreground/25 h-4 w-28 animate-pulse rounded" />
                 {sectionIndex > 0 ? (
-                  <div className="h-3 w-48 max-w-full animate-pulse rounded bg-gray-200" />
+                  <div className="bg-muted-foreground/25 h-3 w-48 max-w-full animate-pulse rounded" />
                 ) : null}
               </div>
               {sectionIndex === 0 ? (
@@ -75,10 +75,10 @@ export function LetterTypesTabSkeleton() {
                       isCompact ? 'flex-col' : 'flex-row items-center gap-5'
                     )}
                   >
-                    <div className="h-11 w-full animate-pulse rounded-md bg-gray-200" />
-                    <div className="h-11 w-full animate-pulse rounded-md bg-gray-200" />
+                    <div className="bg-muted-foreground/25 h-11 w-full animate-pulse rounded-md" />
+                    <div className="bg-muted-foreground/25 h-11 w-full animate-pulse rounded-md" />
                   </div>
-                  <div className="h-11 w-full animate-pulse rounded-md bg-gray-200" />
+                  <div className="bg-muted-foreground/25 h-11 w-full animate-pulse rounded-md" />
                 </div>
               ) : sectionIndex === 1 ? (
                 <div className="space-y-2">
@@ -86,46 +86,46 @@ export function LetterTypesTabSkeleton() {
                     <div
                       key={rowIndex}
                       className={cn(
-                        'grid gap-3 rounded-xl bg-white px-4 py-3',
+                        'bg-card grid gap-3 rounded-xl px-4 py-3',
                         isCompact
                           ? 'grid-cols-1'
                           : 'lg:grid-cols-[minmax(180px,1fr)_auto_auto_auto] lg:items-center'
                       )}
                     >
                       <div className="flex items-center gap-3">
-                        <div className="h-9 w-9 shrink-0 animate-pulse rounded-full bg-gray-200" />
+                        <div className="bg-muted-foreground/25 h-9 w-9 shrink-0 animate-pulse rounded-full" />
                         <div className="min-w-0 flex-1 space-y-2">
-                          <div className="h-3.5 w-28 animate-pulse rounded bg-gray-200" />
-                          <div className="h-3 w-20 animate-pulse rounded bg-gray-200" />
+                          <div className="bg-muted-foreground/25 h-3.5 w-28 animate-pulse rounded" />
+                          <div className="bg-muted-foreground/25 h-3 w-20 animate-pulse rounded" />
                         </div>
                       </div>
-                      <div className="h-3 w-16 animate-pulse rounded bg-gray-200" />
+                      <div className="bg-muted-foreground/25 h-3 w-16 animate-pulse rounded" />
                       <div className="flex gap-1">
                         {Array.from({ length: 4 }).map((___, starIndex) => (
                           <div
                             key={starIndex}
-                            className="h-4 w-4 animate-pulse rounded bg-gray-200"
+                            className="bg-muted-foreground/25 h-4 w-4 animate-pulse rounded"
                           />
                         ))}
                       </div>
-                      <div className="h-7 w-20 animate-pulse rounded-full bg-gray-200" />
+                      <div className="bg-muted-foreground/25 h-7 w-20 animate-pulse rounded-full" />
                     </div>
                   ))}
                 </div>
               ) : sectionIndex === 2 ? (
                 <div className="space-y-2">
-                  <div className="h-14 w-full animate-pulse rounded-xl bg-gray-200" />
-                  <div className="h-14 w-full animate-pulse rounded-xl border-2 border-dashed border-gray-200 bg-transparent" />
+                  <div className="bg-muted-foreground/25 h-14 w-full animate-pulse rounded-xl" />
+                  <div className="border-border h-14 w-full animate-pulse rounded-xl border-2 border-dashed bg-transparent" />
                 </div>
               ) : (
                 <div className="flex flex-wrap gap-2">
                   {Array.from({ length: 4 }).map((__, tagIndex) => (
                     <div
                       key={tagIndex}
-                      className="h-7 w-20 animate-pulse rounded-full bg-gray-200"
+                      className="bg-muted-foreground/25 h-7 w-20 animate-pulse rounded-full"
                     />
                   ))}
-                  <div className="h-7 min-w-[120px] flex-1 animate-pulse rounded-full bg-gray-200" />
+                  <div className="bg-muted-foreground/25 h-7 min-w-[120px] flex-1 animate-pulse rounded-full" />
                 </div>
               )}
             </div>
@@ -134,19 +134,19 @@ export function LetterTypesTabSkeleton() {
 
         <div
           className={cn(
-            'flex shrink-0 gap-3 border-t border-gray-100 px-4 py-4 sm:px-5 sm:py-5 lg:px-6',
+            'border-border flex shrink-0 gap-3 border-t px-4 py-4 sm:px-5 sm:py-5 lg:px-6',
             isCompact ? 'flex-col' : 'flex-row justify-center'
           )}
         >
           <div
             className={cn(
-              'h-11 animate-pulse rounded-full bg-gray-200',
+              'bg-muted-foreground/25 h-11 animate-pulse rounded-full',
               isCompact ? 'w-full' : 'min-w-[170px]'
             )}
           />
           <div
             className={cn(
-              'h-11 animate-pulse rounded-full bg-gray-200',
+              'bg-muted-foreground/25 h-11 animate-pulse rounded-full',
               isCompact ? 'w-full' : 'min-w-[170px]'
             )}
           />

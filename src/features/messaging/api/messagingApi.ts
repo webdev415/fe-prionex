@@ -170,6 +170,7 @@ export const messagingApi = {
     search?: string
     limit?: number
     offset?: number
+    tz?: string
   }) {
     return api
       .get<MessagingCampaignListResponse>(`${BASE_URL}/campaigns`, { params })

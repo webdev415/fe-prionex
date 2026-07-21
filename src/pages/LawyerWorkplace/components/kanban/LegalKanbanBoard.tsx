@@ -25,6 +25,7 @@ import {
   useUpdateLegalKanbanTask,
   type LegalKanbanTaskPatch,
 } from '@/features/lawyerWorkplace'
+import { useLegalProfileTimezone } from '@/features/lawyerWorkplace/hooks/useLegalProfileTimezone'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 import { useLawyerWorkplaceLayout } from '../../context/lawyerWorkplaceLayout'
@@ -69,6 +70,7 @@ function parseTaskIdFromSearch(params: URLSearchParams): number | null {
 export function LegalKanbanBoard() {
   const { t } = useTranslation('common')
   const { showWorkspaceBanner } = useLawyerWorkplaceLayout()
+  const timezone = useLegalProfileTimezone()
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const { data: lawyersData } = useLegalLawyers({ scopedToActiveProject: true })
   const { data: letterTypesData } = useLegalLetterTypes({ includeInactive: true })
@@ -160,9 +162,17 @@ export function LegalKanbanBoard() {
         lawyerFilterOptions,
         typeFilterOptions,
         deadlineFilter,
-        matchesDeadlineFilter
+        (task, filter) => matchesDeadlineFilter(task, filter, timezone)
       ),
-    [columns, lawyerFilter, typeFilter, lawyerFilterOptions, typeFilterOptions, deadlineFilter]
+    [
+      columns,
+      lawyerFilter,
+      typeFilter,
+      lawyerFilterOptions,
+      typeFilterOptions,
+      deadlineFilter,
+      timezone,
+    ]
   )
 
   const displayColumns = useMemo(() => {
@@ -242,12 +252,12 @@ export function LegalKanbanBoard() {
 
       setLocalOverrides(
         source.map((item) =>
-          item.id === taskId ? applyKanbanTaskPatch(item, patch, lawyers) : item
+          item.id === taskId ? applyKanbanTaskPatch(item, patch, lawyers, timezone) : item
         )
       )
 
       const metadataPayload = mapKanbanPatchToMetadataPayload(patch)
-      const taskPayload = mapKanbanPatchToTaskUpdate(patch, task)
+      const taskPayload = mapKanbanPatchToTaskUpdate(patch, task, timezone)
 
       if (taskPayload.due_date !== undefined && metadataPayload.due_date === undefined) {
         metadataPayload.due_date = taskPayload.due_date
@@ -287,7 +297,7 @@ export function LegalKanbanBoard() {
         }
       })()
     },
-    [apiTasks, lawyers, localOverrides, patchMetadataMutation, updateTaskMutation]
+    [apiTasks, lawyers, localOverrides, patchMetadataMutation, timezone, updateTaskMutation]
   )
 
   const handleMoveTask = useCallback(
@@ -296,10 +306,10 @@ export function LegalKanbanBoard() {
       const task = source.find((item) => item.id === taskId)
       if (!task || task.columnId === toColumnId) return
 
-      const patch = buildKanbanColumnMovePatch(task, toColumnId)
+      const patch = buildKanbanColumnMovePatch(task, toColumnId, timezone)
       setLocalOverrides(
         source.map((item) =>
-          item.id === taskId ? applyKanbanTaskPatch(item, patch, lawyers) : item
+          item.id === taskId ? applyKanbanTaskPatch(item, patch, lawyers, timezone) : item
         )
       )
 
@@ -307,7 +317,7 @@ export function LegalKanbanBoard() {
       const columnLabel = columnMeta ? t(columnMeta.labelKey, columnMeta.id) : toColumnId
 
       transitionMutation.mutate(
-        { taskId: task.taskId, targetColumn: toColumnId },
+        { taskId: task.taskId, targetColumn: toColumnId, timezone },
         {
           onSuccess: () => {
             setLocalOverrides(null)
@@ -323,7 +333,7 @@ export function LegalKanbanBoard() {
         }
       )
     },
-    [apiTasks, lawyers, localOverrides, t, transitionMutation]
+    [apiTasks, lawyers, localOverrides, t, timezone, transitionMutation]
   )
 
   const handleTaskUpdate = useCallback(
@@ -433,10 +443,10 @@ export function LegalKanbanBoard() {
           <div className="bg-error-50 mb-4 flex h-12 w-12 items-center justify-center rounded-full">
             <Icons.Warning size={22} strokeWidth={1.5} className="text-error-500" />
           </div>
-          <p className="text-dark-500 text-[14px] font-medium">
+          <p className="text-foreground text-[14px] font-medium">
             {t('pages.lawyerWorkplace.kanban.loadError.title', 'Could not load kanban tasks')}
           </p>
-          <p className="text-light-600 mt-1 max-w-sm text-[12px] leading-relaxed">
+          <p className="text-muted-foreground mt-1 max-w-sm text-[12px] leading-relaxed">
             {t(
               'pages.lawyerWorkplace.kanban.loadError.description',
               'Check your connection and try again.'
@@ -456,13 +466,13 @@ export function LegalKanbanBoard() {
 
       {!isLoading && !isError && apiTasks.length === 0 ? (
         <div className="flex flex-col items-center justify-center px-6 py-14 text-center sm:px-5 lg:px-7">
-          <div className="bg-light-100 mb-4 flex h-12 w-12 items-center justify-center rounded-full">
-            <Icons.KanbanIcon size={22} strokeWidth={1.5} className="text-light-500" />
+          <div className="bg-muted mb-4 flex h-12 w-12 items-center justify-center rounded-full">
+            <Icons.KanbanIcon size={22} strokeWidth={1.5} className="text-muted-foreground" />
           </div>
-          <p className="text-dark-500 text-[14px] font-medium">
+          <p className="text-foreground text-[14px] font-medium">
             {t('pages.lawyerWorkplace.kanban.empty.title', 'No tasks on the board yet')}
           </p>
-          <p className="text-light-600 mt-1 max-w-sm text-[12px] leading-relaxed">
+          <p className="text-muted-foreground mt-1 max-w-sm text-[12px] leading-relaxed">
             {t(
               'pages.lawyerWorkplace.kanban.empty.description',
               'Confirm letters from the inbox or create a task manually to start tracking legal work.'
@@ -476,13 +486,13 @@ export function LegalKanbanBoard() {
           className="flex flex-col items-center justify-center px-6 py-14 text-center sm:px-5 lg:px-7"
           role="status"
         >
-          <div className="bg-light-100 mb-4 flex h-12 w-12 items-center justify-center rounded-full">
-            <Icons.Filter size={22} strokeWidth={1.5} className="text-light-500" />
+          <div className="bg-muted mb-4 flex h-12 w-12 items-center justify-center rounded-full">
+            <Icons.Filter size={22} strokeWidth={1.5} className="text-muted-foreground" />
           </div>
-          <p className="text-dark-500 text-[14px] font-medium">
+          <p className="text-foreground text-[14px] font-medium">
             {t('pages.lawyerWorkplace.kanban.emptyFilter.title', 'No tasks match these filters')}
           </p>
-          <p className="text-light-600 mt-1 max-w-sm text-[12px] leading-relaxed">
+          <p className="text-muted-foreground mt-1 max-w-sm text-[12px] leading-relaxed">
             {t(
               'pages.lawyerWorkplace.kanban.emptyFilter.description',
               'Try another lawyer, type, or deadline range.'
@@ -549,6 +559,7 @@ export function LegalKanbanBoard() {
                   lawyers={lawyers}
                   letterTypes={letterTypes}
                   editableLetterTypes={activeLetterTypes}
+                  timezone={timezone}
                   draggingTaskId={draggingTaskId}
                   isDropTarget={dragOverColumn === col.id}
                   onCardClick={(task) => setThreadTarget({ letterId: task.letterId, task })}

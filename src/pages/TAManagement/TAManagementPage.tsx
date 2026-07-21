@@ -50,8 +50,8 @@ export function TAManagementPage() {
   return (
     <div className="flex w-full flex-col">
       {/* Tab bar */}
-      <div className="mb-4 border-b border-gray-200">
-        <nav className="-mb-px flex gap-6">
+      <div className="border-border mb-4 border-b">
+        <nav className="-mb-px flex gap-6 overflow-x-auto">
           {TABS.map((tab) => (
             <button
               key={tab.id}
@@ -60,7 +60,7 @@ export function TAManagementPage() {
               className={`border-b-2 px-1 py-3 text-sm font-medium whitespace-nowrap transition-colors ${
                 activeTab === tab.id
                   ? 'border-primary-500 text-primary-600'
-                  : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
+                  : 'text-muted-foreground hover:text-foreground hover:border-border border-transparent'
               }`}
             >
               {t(tab.labelKey, { defaultValue: tab.fallback })}

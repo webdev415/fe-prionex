@@ -15,6 +15,7 @@ export type ImportType =
   | 'payment_import'
   | 'tag_assignment'
   | 'sale_notes'
+  | 'document'
 
 // Mode for tag_assignment imports
 export type TagAssignmentMode = 'assign' | 'remove'

@@ -58,7 +58,7 @@ const KANBAN_COLUMN_META: Pick<KanbanColumnDef, 'id' | 'labelKey' | 'dotClass'>[
   {
     id: 'not_defined',
     labelKey: 'pages.lawyerWorkplace.kanban.columns.notDefined',
-    dotClass: 'bg-gray-600',
+    dotClass: 'bg-muted-foreground',
   },
   {
     id: 'in_progress',

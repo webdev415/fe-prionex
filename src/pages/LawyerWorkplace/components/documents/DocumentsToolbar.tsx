@@ -42,7 +42,7 @@ export function DocumentsToolbar({
         >
           <h1
             className={cn(
-              'text-dark-500 truncate font-light',
+              'text-foreground truncate font-light',
               isCompact ? 'text-lg' : 'text-xl lg:text-2xl'
             )}
           >
@@ -50,7 +50,7 @@ export function DocumentsToolbar({
           </h1>
           <span
             className={cn(
-              'font-light whitespace-nowrap text-gray-500',
+              'text-muted-foreground font-light whitespace-nowrap',
               isCompact ? 'text-xs' : 'text-sm'
             )}
           >
@@ -76,7 +76,7 @@ export function DocumentsToolbar({
                 type="button"
                 onClick={onAddIncoming}
                 aria-label={t('pages.lawyerWorkplace.documents.addIncoming', 'Add incoming')}
-                className="bg-primary-300 text-dark-500 hover:bg-primary-400 flex h-10 w-10 cursor-pointer items-center justify-center rounded-full transition-colors"
+                className="bg-primary-300 text-foreground hover:bg-primary-400 flex h-10 w-10 cursor-pointer items-center justify-center rounded-full transition-colors"
               >
                 <Icons.Add size={20} strokeWidth={2} />
               </button>
@@ -126,7 +126,7 @@ export function DocumentsToolbar({
                     'flex shrink-0 cursor-pointer items-center gap-2 rounded-full px-3 py-1.5 text-[11px] font-medium transition-colors sm:px-4 sm:py-2 sm:text-[12px]',
                     isActive
                       ? 'bg-secondary-800 text-white'
-                      : 'text-dark-500 bg-white/50 hover:bg-white'
+                      : 'text-foreground bg-filter-bar hover:bg-card'
                   )}
                 >
                   <span className="whitespace-nowrap">{t(filter.labelKey, filter.fallback)}</span>
@@ -147,7 +147,7 @@ export function DocumentsToolbar({
           <Icons.Search
             size={14}
             strokeWidth={1.5}
-            className="text-light-500 pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2"
+            className="text-muted-foreground pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2"
           />
           <input
             type="text"
@@ -157,13 +157,13 @@ export function DocumentsToolbar({
               'pages.lawyerWorkplace.documents.searchPlaceholder',
               'Search by name, client, document #...'
             )}
-            className="text-dark-500 focus:border-primary-400 h-9 w-full rounded-full border border-gray-200 bg-white py-2 pr-3 pl-9 text-[12px] outline-none placeholder:text-gray-400"
+            className="text-foreground focus:border-primary-400 border-border bg-input placeholder:text-muted-foreground h-9 w-full rounded-full border py-2 pr-3 pl-9 text-[12px] outline-none"
           />
           {searchQuery && (
             <button
               type="button"
               onClick={() => onSearchQueryChange('')}
-              className="text-light-500 hover:text-dark-500 absolute top-1/2 right-3 -translate-y-1/2"
+              className="text-muted-foreground hover:text-foreground absolute top-1/2 right-3 -translate-y-1/2"
               aria-label={t('actions.close', 'Close')}
             >
               <Icons.Cancel01 size={12} strokeWidth={1.5} />

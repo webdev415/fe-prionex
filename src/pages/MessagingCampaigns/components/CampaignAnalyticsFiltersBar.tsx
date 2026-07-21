@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useSyncedState } from '@/hooks'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
+import { formatPickerDateAsYMD, getDateStringInTimezone } from '@/lib/dateUtils'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { DateSelect } from '@/components/ui/DateSelect'
@@ -28,6 +29,7 @@ interface CampaignAnalyticsFiltersBarProps {
   onFilterChange: (filters: CampaignAnalyticsFilters) => void
   launcherOptions: LauncherOption[]
   isLoading?: boolean
+  timezone?: string | null
 }
 
 type PeriodOption = 'any' | 'today' | 'yesterday' | 'last_7' | 'last_30'
@@ -38,45 +40,33 @@ const DEFAULT_FILTERS: CampaignAnalyticsFilters = {
   launcher: 'all',
 }
 
-const formatDateLocal = (date: Date): string => {
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-  return `${year}-${month}-${day}`
+const shiftDateStringInTimezone = (daysAgo: number, timezone?: string | null): string =>
+  getDateStringInTimezone(new Date(Date.now() - daysAgo * 24 * 60 * 60 * 1000), timezone)
+
+const calendarDaysBetween = (from: string, to: string): number => {
+  const start = new Date(`${from}T00:00:00`)
+  const end = new Date(`${to}T00:00:00`)
+  return Math.round((end.getTime() - start.getTime()) / (24 * 60 * 60 * 1000))
 }
 
 const detectPeriodFromDates = (
   dateFrom: string | undefined,
-  dateTo: string | undefined
+  dateTo: string | undefined,
+  timezone?: string | null
 ): PeriodOption => {
   if (!dateFrom || !dateTo) return 'any'
 
-  const start = new Date(dateFrom)
-  const end = new Date(dateTo)
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  start.setHours(0, 0, 0, 0)
-  end.setHours(0, 0, 0, 0)
-
-  const daysDiff = Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24))
-  const isEndToday = end.toDateString() === today.toDateString()
-  const isStartToday = start.toDateString() === today.toDateString()
-
-  if (daysDiff === 0 && isStartToday && isEndToday) return 'today'
-
-  if (daysDiff === 0) {
-    const yesterday = new Date(today)
-    yesterday.setDate(yesterday.getDate() - 1)
-    if (
-      start.toDateString() === yesterday.toDateString() &&
-      end.toDateString() === yesterday.toDateString()
-    ) {
-      return 'yesterday'
-    }
+  const todayStr = getDateStringInTimezone(new Date(), timezone)
+  if (dateFrom === dateTo) {
+    if (dateFrom === todayStr) return 'today'
+    if (dateFrom === shiftDateStringInTimezone(1, timezone)) return 'yesterday'
   }
 
-  if (daysDiff === 7 && isEndToday) return 'last_7'
-  if (daysDiff === 30 && isEndToday) return 'last_30'
+  if (dateTo !== todayStr) return 'any'
+
+  const daysDiff = calendarDaysBetween(dateFrom, dateTo)
+  if (daysDiff === 7) return 'last_7'
+  if (daysDiff === 30) return 'last_30'
 
   return 'any'
 }
@@ -92,20 +82,21 @@ export function CampaignAnalyticsFiltersBar({
   onFilterChange,
   launcherOptions,
   isLoading = false,
+  timezone,
 }: CampaignAnalyticsFiltersBarProps) {
   const { t } = useTranslation('common')
   const [searchValue, setSearchValue] = useSyncedState(filters.search, '')
   const [localFilters, setLocalFilters] = useState<CampaignAnalyticsFilters>(filters)
 
   const initialPeriod = useMemo(
-    () => detectPeriodFromDates(filters.launched_from, filters.launched_to),
-    [filters.launched_from, filters.launched_to]
+    () => detectPeriodFromDates(filters.launched_from, filters.launched_to, timezone),
+    [filters.launched_from, filters.launched_to, timezone]
   )
 
   const periodManuallySetRef = useRef(false)
   const computedPeriod = useMemo(
-    () => detectPeriodFromDates(localFilters.launched_from, localFilters.launched_to),
-    [localFilters.launched_from, localFilters.launched_to]
+    () => detectPeriodFromDates(localFilters.launched_from, localFilters.launched_to, timezone),
+    [localFilters.launched_from, localFilters.launched_to, timezone]
   )
   const [period, setPeriod] = useState<PeriodOption>(initialPeriod)
 
@@ -120,9 +111,9 @@ export function CampaignAnalyticsFiltersBar({
 
   useEffect(() => {
     setLocalFilters(filters)
-    setPeriod(detectPeriodFromDates(filters.launched_from, filters.launched_to))
+    setPeriod(detectPeriodFromDates(filters.launched_from, filters.launched_to, timezone))
     periodManuallySetRef.current = false
-  }, [filters])
+  }, [filters, timezone])
   /* eslint-enable react-hooks/set-state-in-effect */
 
   const handlePeriodChange = useCallback(
@@ -130,37 +121,31 @@ export function CampaignAnalyticsFiltersBar({
       periodManuallySetRef.current = true
       setPeriod(value)
 
-      const today = new Date()
-      today.setHours(0, 0, 0, 0)
+      const todayStr = getDateStringInTimezone(new Date(), timezone)
 
       let launched_from: string | undefined
       let launched_to: string | undefined
 
       switch (value) {
         case 'today': {
-          launched_from = formatDateLocal(today)
-          launched_to = formatDateLocal(today)
+          launched_from = todayStr
+          launched_to = todayStr
           break
         }
         case 'yesterday': {
-          const yesterday = new Date(today)
-          yesterday.setDate(yesterday.getDate() - 1)
-          launched_from = formatDateLocal(yesterday)
-          launched_to = formatDateLocal(yesterday)
+          const yesterdayStr = shiftDateStringInTimezone(1, timezone)
+          launched_from = yesterdayStr
+          launched_to = yesterdayStr
           break
         }
         case 'last_7': {
-          const from = new Date(today)
-          from.setDate(from.getDate() - 7)
-          launched_from = formatDateLocal(from)
-          launched_to = formatDateLocal(today)
+          launched_from = shiftDateStringInTimezone(7, timezone)
+          launched_to = todayStr
           break
         }
         case 'last_30': {
-          const from = new Date(today)
-          from.setDate(from.getDate() - 30)
-          launched_from = formatDateLocal(from)
-          launched_to = formatDateLocal(today)
+          launched_from = shiftDateStringInTimezone(30, timezone)
+          launched_to = todayStr
           break
         }
         case 'any':
@@ -176,12 +161,12 @@ export function CampaignAnalyticsFiltersBar({
         launched_to,
       })
     },
-    [localFilters]
+    [localFilters, timezone]
   )
 
   const handleDateFromChange = useCallback(
     (args: { value: Date | null }) => {
-      const dateStr = args.value ? formatDateLocal(args.value) : undefined
+      const dateStr = args.value ? formatPickerDateAsYMD(args.value) : undefined
       setLocalFilters({
         ...localFilters,
         launched_from: dateStr,
@@ -192,7 +177,7 @@ export function CampaignAnalyticsFiltersBar({
 
   const handleDateToChange = useCallback(
     (args: { value: Date | null }) => {
-      const dateStr = args.value ? formatDateLocal(args.value) : undefined
+      const dateStr = args.value ? formatPickerDateAsYMD(args.value) : undefined
       setLocalFilters({
         ...localFilters,
         launched_to: dateStr,

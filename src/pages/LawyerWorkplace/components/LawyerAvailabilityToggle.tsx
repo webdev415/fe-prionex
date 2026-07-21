@@ -47,7 +47,7 @@ export function LawyerAvailabilityToggle() {
           type="button"
           disabled={isSaving}
           className={cn(
-            'mr-1 inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full border px-2.5 text-[11px] font-medium transition-colors disabled:opacity-60 sm:mr-2 sm:px-3 sm:text-[12px]',
+            'inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full border px-2.5 text-[11px] leading-none font-medium transition-colors disabled:opacity-60 sm:px-3 sm:text-[12px]',
             isOnline
               ? 'border-success-200 bg-success-50 text-success-700'
               : 'border-warning-200 bg-warning-50 text-warning-700'

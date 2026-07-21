@@ -14,6 +14,10 @@ import { Icons } from '@/lib/icons'
 export interface SearchableSelectOption {
   id: string
   name: string
+  /** When true, option is shown but not selectable. */
+  disabled?: boolean
+  /** Optional secondary line under the option name. */
+  description?: string
 }
 
 interface SearchableSelectProps {
@@ -104,6 +108,7 @@ export function SearchableSelect({
   })
 
   const select = (option: SearchableSelectOption) => {
+    if (option.disabled) return
     setDisplayName(option.name)
     onValueChange(option.id)
     close()
@@ -243,21 +248,33 @@ export function SearchableSelect({
                   key={option.id}
                   role="option"
                   aria-selected={option.id === value}
-                  tabIndex={0}
+                  aria-disabled={option.disabled || undefined}
+                  tabIndex={option.disabled ? -1 : 0}
                   onClick={() => select(option)}
                   onKeyDown={(e) => {
+                    if (option.disabled) return
                     if (e.key === 'Enter' || e.key === ' ') {
                       e.preventDefault()
                       select(option)
                     }
                   }}
                   className={cn(
-                    'text-foreground hover:bg-muted flex cursor-pointer items-center justify-between px-3 py-2 text-sm',
-                    option.id === value && 'bg-muted font-medium'
+                    'text-foreground flex items-center justify-between px-3 py-2 text-sm',
+                    option.disabled
+                      ? 'cursor-not-allowed opacity-50'
+                      : 'hover:bg-muted cursor-pointer',
+                    option.id === value && !option.disabled && 'bg-muted font-medium'
                   )}
                 >
-                  <span>{option.name}</span>
-                  {option.id === value && (
+                  <span className="flex min-w-0 flex-col">
+                    <span className="truncate">{option.name}</span>
+                    {option.description ? (
+                      <span className="text-muted-foreground text-[11px] font-normal">
+                        {option.description}
+                      </span>
+                    ) : null}
+                  </span>
+                  {option.id === value && !option.disabled && (
                     <Icons.Tick02 size={14} className="text-primary-500" strokeWidth={2} />
                   )}
                 </li>

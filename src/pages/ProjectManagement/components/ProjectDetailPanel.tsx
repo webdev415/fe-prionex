@@ -21,7 +21,6 @@ interface ProjectDetailPanelProps {
   project: ApiProjectDetail | null
   hasProjects: boolean
   onEdit: () => void
-  onDelete: () => void
   isLoading?: boolean
 }
 
@@ -29,7 +28,6 @@ export function ProjectDetailPanel({
   project,
   hasProjects,
   onEdit,
-  onDelete,
   isLoading = false,
 }: ProjectDetailPanelProps) {
   const { t } = useTranslation('common')
@@ -233,15 +231,6 @@ export function ProjectDetailPanel({
             leftIcon={<Icons.PencilEdit size={20} className="text-foreground" strokeWidth={2} />}
           >
             {t('pages.projects.detailPanel.edit')}
-          </Button>
-          <Button
-            variant="danger"
-            size="xl"
-            onClick={onDelete}
-            className="h-[45px] flex-1 rounded-md text-sm"
-            leftIcon={<Icons.Delete size={20} className="text-white" strokeWidth={2} />}
-          >
-            {t('pages.projects.detailPanel.delete')}
           </Button>
         </div>
       </PermissionGuard>

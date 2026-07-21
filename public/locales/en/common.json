@@ -45,6 +45,7 @@
     "bulkWriteoffImport": "Bulk Write-off Import",
     "bulkReversalImport": "Bulk Reversal Import",
     "bulkSaleNotesImport": "Bulk Sales Note Import",
+    "bulkDocumentImport": "Bulk Document Import",
     "auditLogs": "Audit Logs",
     "reports": "Reports",
     "scoringConfiguration": "Scoring Configuration",
@@ -726,7 +727,7 @@
           "priorities": {
             "highest": "Highest",
             "high": "High",
-            "medium": "Medium",
+            "medium": "Normal",
             "low": "Low",
             "lowest": "Lowest"
           }
@@ -3584,6 +3585,52 @@
       }
     },
     "imports": {
+      "documents": {
+        "title": "Bulk Document Import",
+        "subtitle": "Upload a ZIP archive of credit and client documents, matched to a selected factoring agreement.",
+        "viewHistory": "Import History",
+        "bannerInProgress": "Document import in progress",
+        "agreement": "Factoring agreement",
+        "selectAgreement": "Select a factoring agreement",
+        "seller": "Seller",
+        "agreementNumber": "Agreement number",
+        "whoSold": "Who sold",
+        "purchaseDate": "Purchase date",
+        "documentType": "Document type",
+        "selectDocumentType": "Select a document type",
+        "archive": "Document archive (.zip)",
+        "downloadTemplate": "Download Template",
+        "downloading": "Downloading…",
+        "dropZip": "Click to select a .zip archive",
+        "structureHint": "ZIP with credits/<external_id>/ and users/<external_id>/ folders — each folder is named by the credit or client external_id. Files inside are attached to the matching credit or client.",
+        "startImport": "Start Import",
+        "starting": "Starting…",
+        "uploadReady": "Uploaded — ready to import",
+        "cancelUpload": "Cancel",
+        "removeFile": "Remove",
+        "notReady": "Document import processing is not available yet.",
+        "uploading": "Uploading…",
+        "started": "Document import started (job #{{id}}).",
+        "zipOnly": "Only .zip archives are allowed.",
+        "progress": {
+          "processing": "Processing documents…",
+          "processingHint": "Matching folders and attaching documents. This can take a while for large archives.",
+          "attaching": "Attaching documents…",
+          "headingComplete": "Document import complete",
+          "headingFailed": "Document import failed",
+          "headingCancelled": "Document import cancelled",
+          "jobRef": "Job #{{id}}",
+          "filesAttached": "Files attached",
+          "matchedFolders": "Folders matched",
+          "skippedNoMatch": "Skipped (no match)",
+          "duplicateSkipped": "Skipped (duplicate)",
+          "executablesBlocked": "Blocked (executable)",
+          "oversizedSkipped": "Skipped (too large)",
+          "errors": "Errors",
+          "errorDetails": "Error details",
+          "startNewImport": "Start new import"
+        }
+      },
       "title": "Import Clients",
       "viewHistory": "View History",
       "back": "Back",
@@ -3717,7 +3764,8 @@
           "writeoffImport": "Write-off Import",
           "tagAssignment": "Tag assignment",
           "tagRemoval": "Tag removal",
-          "saleNotes": "Sale Notes"
+          "saleNotes": "Sale Notes",
+          "document": "Document Import"
         },
         "uploadedBy": "Uploaded by:",
         "view": "View",
@@ -3762,6 +3810,12 @@
         "tagsApplied": "Tags Applied:",
         "errors": "Errors:",
         "processingTime": "Processing time:",
+        "filesAttached": "Files attached:",
+        "foldersMatched": "Folders matched:",
+        "skippedNoMatch": "Skipped (no match):",
+        "duplicateSkipped": "Skipped (duplicate):",
+        "blockedExecutable": "Blocked (executable):",
+        "skippedTooLarge": "Skipped (too large):",
         "progress": "Progress",
         "systemError": "System error while processing file.",
         "noRowsImported": "No rows imported.",
@@ -4912,7 +4966,8 @@
         "savingAll": "Saving all…",
         "saveAllSuccess": "All sections saved",
         "saveAllPartial": "Some sections failed to save — check the errors below",
-        "saveAllError": "Failed to save sections"
+        "saveAllError": "Failed to save sections",
+        "addPhone": "Add phone"
       },
       "detail": {
         "clientNotFound": "Client not found",
@@ -5310,7 +5365,14 @@
             "unreachable": "UBKI service unavailable",
             "connection": "Connection error"
           }
-        }
+        },
+        "otherContacts": "Others",
+        "contactsCount": "{{count}} contacts",
+        "sendMessageSmsViber": "Message (SMS / Viber)",
+        "contactInfo": "Details",
+        "logInteraction": "Log interaction",
+        "call": "Call",
+        "sendSms": "Send SMS"
       },
       "debtSummary": {
         "title": "Debt Summary",
@@ -5714,6 +5776,10 @@
     "rrPeriodicity": {
       "title": "RR Payment Periodicity",
       "description": "Choose which payment-frequency options operators can use to auto-fill the schedule when creating a Restructuring Agreement.",
+      "optionsTitle": "Frequency options",
+      "optionsDescription": "Enabled options appear in the Payment Frequency dropdown on the RR creation form.",
+      "enabled": "Enabled",
+      "disabled": "Disabled",
       "saved": "Payment periodicity options saved",
       "savedDescription": "Operators will see the updated frequency options next time they create a Restructuring Agreement.",
       "allDisabledHint": "With every option off, operators enter each payment date manually.",
@@ -7361,11 +7427,15 @@
         "deactivateConfirmTitle": "Revert to Legacy Proportional?",
         "deactivateConfirmMessage": "Future payment snapshots will use the legacy proportional algorithm. Already-snapshotted payments are unaffected.",
         "deactivateConfirmButton": "Revert",
-        "preconditionError": "Strict Order requires payment-allocation snapshotting to be enabled."
+        "preconditionError": "Strict Order requires payment-allocation snapshotting to be enabled.",
+        "activeBadge": "Active",
+        "legacyBadge": "Legacy"
       },
       "history": {
         "title": "Recent Changes",
-        "version": "Version"
+        "version": "Version",
+        "changedBy": "Changed by",
+        "when": "When"
       }
     },
     "auditLogs": {

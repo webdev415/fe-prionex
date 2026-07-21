@@ -12,9 +12,14 @@ import { BulkOperatorAssignmentPageSkeleton } from '@/pages/Operations/BulkOpera
 import { BulkTagAssignmentPageSkeleton } from '@/pages/Operations/BulkTagAssignmentPageSkeleton'
 import { BulkPaymentVerificationPageSkeleton } from '@/pages/Operations/BulkPaymentVerificationPageSkeleton'
 import { BulkSaleNotesImportPageSkeleton } from '@/pages/Operations/BulkSaleNotesImportPageSkeleton'
+import { BulkDocumentImportPageSkeleton } from '@/pages/Operations/BulkDocumentImportPageSkeleton'
+import { RepaymentConfigurationPageSkeleton } from '@/pages/RepaymentConfiguration/RepaymentConfigurationPageSkeleton'
 import { AppLoadingFallback } from '@/components/ui/AppLoadingFallback'
 
 const LoginPage = lazy(() => import('@/pages/auth/LoginPage'))
+const PublicPaymentsPage = lazy(() =>
+  import('@/pages/PublicPayments').then((m) => ({ default: m.PublicPaymentsPage }))
+)
 const ForceChangePasswordPage = lazy(() => import('@/pages/auth/ForceChangePasswordPage'))
 const UserManagementPage = lazy(() =>
   import('@/pages/UserManagement').then((m) => ({ default: m.UserManagementPage }))
@@ -208,6 +213,11 @@ const BulkSaleNotesImportPage = lazy(() =>
     default: m.BulkSaleNotesImportPage,
   }))
 )
+const BulkDocumentImportPage = lazy(() =>
+  import('@/pages/Operations').then((m) => ({
+    default: m.BulkDocumentImportPage,
+  }))
+)
 
 const withSuspense = (element: React.ReactElement) => (
   <Suspense fallback={<AppLoadingFallback />}>{element}</Suspense>
@@ -231,6 +241,13 @@ export const router = createBrowserRouter([
   {
     path: '/login',
     element: <GuestRoute>{withSuspense(<LoginPage />)}</GuestRoute>,
+    errorElement: <RouteErrorElement />,
+  },
+  {
+    // Public EasyPay payment portal (techno-finance.com "Factoring" tab).
+    // No auth, no dashboard layout — reachable by unauthenticated visitors.
+    path: '/pay',
+    element: withSuspense(<PublicPaymentsPage />),
     errorElement: <RouteErrorElement />,
   },
   {
@@ -473,7 +490,9 @@ export const router = createBrowserRouter([
         path: 'system-settings/repayment-configuration',
         element: (
           <PermissionRoute requiredPermission={PERMISSIONS.REPAYMENT_CONFIG.VIEW}>
-            {withSuspense(<RepaymentConfigurationPage />)}
+            <Suspense fallback={<RepaymentConfigurationPageSkeleton />}>
+              <RepaymentConfigurationPage />
+            </Suspense>
           </PermissionRoute>
         ),
       },
@@ -605,6 +624,16 @@ export const router = createBrowserRouter([
           <PermissionRoute requiredPermission={PERMISSIONS.SALE_NOTES.MANAGE}>
             <Suspense fallback={<BulkSaleNotesImportPageSkeleton />}>
               <BulkSaleNotesImportPage />
+            </Suspense>
+          </PermissionRoute>
+        ),
+      },
+      {
+        path: 'import/bulk-document-import',
+        element: (
+          <PermissionRoute requiredPermission={PERMISSIONS.DATA.IMPORT_DOCUMENTS}>
+            <Suspense fallback={<BulkDocumentImportPageSkeleton />}>
+              <BulkDocumentImportPage />
             </Suspense>
           </PermissionRoute>
         ),

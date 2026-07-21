@@ -42,6 +42,7 @@ const DEFAULT_PAGE_SIZE = 10
 export function MessagingCampaignsPage() {
   const { t } = useTranslation('common')
   const activeProjectId = useAuthStore((s) => s.user?.active_project_id)
+  const userTimezone = useAuthStore((s) => s.user?.timezone)
   const { data: operators = [] } = useOperators(activeProjectId ? Number(activeProjectId) : null)
   const operatorNames = useMemo(() => buildOperatorNamesMap(operators), [operators])
 
@@ -94,6 +95,7 @@ export function MessagingCampaignsPage() {
         : (appliedFilters.channel as (typeof MESSAGING_CHANNELS)[number]),
     launched_from: appliedFilters.launched_from,
     launched_to: appliedFilters.launched_to,
+    tz: userTimezone,
     initiated_by: appliedFilters.launcher === 'all' ? undefined : Number(appliedFilters.launcher),
     search: appliedFilters.search?.trim() || undefined,
     limit: pageSize,
@@ -207,7 +209,7 @@ export function MessagingCampaignsPage() {
         key: 'launched_at',
         header: t('pages.messagingCampaigns.table.launchedAt', 'Launched'),
         align: 'left',
-        render: (campaign) => formatDateTime(campaign.launched_at),
+        render: (campaign) => formatDateTime(campaign.launched_at, userTimezone),
       },
       {
         key: 'actions',
@@ -230,7 +232,7 @@ export function MessagingCampaignsPage() {
         ),
       },
     ],
-    [campaignSourceLabel, campaignStatusLabel, operatorNames, t]
+    [campaignSourceLabel, campaignStatusLabel, operatorNames, t, userTimezone]
   )
 
   return (
@@ -265,6 +267,7 @@ export function MessagingCampaignsPage() {
         onFilterChange={handleFilterChange}
         launcherOptions={launcherOptions}
         isLoading={isPending || isFetching}
+        timezone={userTimezone}
       />
 
       {!showTableSkeleton && totalItems > 0 && (

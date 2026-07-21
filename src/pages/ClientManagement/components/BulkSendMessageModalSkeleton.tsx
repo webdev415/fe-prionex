@@ -25,7 +25,7 @@ export function BulkSendMessageModalSkeleton() {
         </div>
       </div>
       <div className="bg-muted h-32 w-full animate-pulse rounded-md" />
-      <div className="bg-muted h-36 w-full animate-pulse rounded-xl" />
+      <div className="border-border bg-muted h-36 w-full animate-pulse rounded-xl border" />
     </div>
   )
 }

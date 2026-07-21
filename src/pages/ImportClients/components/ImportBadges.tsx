@@ -177,6 +177,10 @@ export function ImportTypeBadge({
       label: t('pages.imports.history.importTypes.saleNotes', 'Sale Notes'),
       className: 'bg-information-50 text-information-600',
     },
+    document: {
+      label: t('pages.imports.history.importTypes.document', 'Document Import'),
+      className: 'bg-secondary-50 text-secondary-600',
+    },
   }
 
   if (importType === 'tag_assignment') {

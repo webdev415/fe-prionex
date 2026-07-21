@@ -167,9 +167,15 @@ export const legalApi = {
 
   transitionKanbanTask(
     taskId: number,
-    payload: { target_column: 'not_defined' | 'in_progress' | 'overdue' | 'completed' }
+    payload: {
+      target_column: 'not_defined' | 'in_progress' | 'overdue' | 'completed'
+      timezone?: string
+    }
   ) {
-    return api.post(`${BASE_URL}/kanban/tasks/${taskId}/transition`, payload)
+    const { timezone, ...body } = payload
+    return api.post(`${BASE_URL}/kanban/tasks/${taskId}/transition`, body, {
+      params: timezone ? { timezone } : undefined,
+    })
   },
 
   listDocuments(params: LegalDocumentListParams = {}) {

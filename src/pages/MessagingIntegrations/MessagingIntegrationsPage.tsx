@@ -26,6 +26,7 @@ import type {
   MessagingIntegration,
 } from '@/features/messaging'
 import { formatDateTime } from '@/lib/formatters'
+import { useAuthStore } from '@/stores/authStore'
 import { MessagingIntegrationsPageSkeleton } from './components/MessagingIntegrationsPageSkeleton'
 
 const formatStatusFallback = (status: string) =>
@@ -66,6 +67,7 @@ interface IntegrationCardProps {
 
 function IntegrationCard({ row, animationIndex = 0 }: IntegrationCardProps) {
   const { t } = useTranslation('common')
+  const userTimezone = useAuthStore((s) => s.user?.timezone)
   const updateIntegrationMutation = useUpdateMessagingIntegration()
   const testIntegrationMutation = useTestMessagingIntegration()
   const revealCredentialsMutation = useRevealMessagingIntegrationCredentials()
@@ -391,7 +393,7 @@ function IntegrationCard({ row, animationIndex = 0 }: IntegrationCardProps) {
             {t('pages.messagingIntegrations.table.lastTested', 'Last tested')}
           </div>
           <div className="text-foreground mt-1 text-sm">
-            {formatDateTime(row.last_tested_at ?? undefined)}
+            {formatDateTime(row.last_tested_at ?? undefined, userTimezone)}
           </div>
         </div>
 
