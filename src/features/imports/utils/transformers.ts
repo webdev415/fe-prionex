@@ -146,6 +146,31 @@ function extractMetadata(importOptions: Record<string, unknown> | null): {
 /**
  * Transform backend ImportJobResponse to frontend ImportJob
  */
+// Document imports report per-category counts in error_summary.counts
+// (skipped_no_match, duplicate_skipped, ...). Sum them so the "Download Errors"
+// button can enable for doc jobs — WITHOUT touching errors_count, which stays
+// = real failures only, keeping the history "Errors" column honest.
+const DOC_PROBLEM_KEYS = [
+  'skipped_no_match',
+  'duplicate_skipped',
+  'executables_blocked',
+  'oversized_skipped',
+  'errors',
+] as const
+
+export function docProblemFilesCount(errorSummary: unknown): number {
+  const counts =
+    errorSummary && typeof errorSummary === 'object'
+      ? (errorSummary as Record<string, unknown>).counts
+      : null
+  if (!counts || typeof counts !== 'object') return 0
+  const c = counts as Record<string, unknown>
+  return DOC_PROBLEM_KEYS.reduce(
+    (sum, k) => sum + (typeof c[k] === 'number' ? (c[k] as number) : 0),
+    0
+  )
+}
+
 export function transformImportJob(backend: BackendImportJobResponse): ImportJob {
   const metadata = extractMetadata(backend.import_options)
   const importType =
@@ -164,6 +189,7 @@ export function transformImportJob(backend: BackendImportJobResponse): ImportJob
     uploaded_at: backend.created_at,
     status,
     errors_count: backend.failed_records,
+    problem_files_count: docProblemFilesCount(backend.error_summary),
     import_type: importType,
     tag_mode: tagMode,
     seller_creditor: metadata.seller_creditor,
