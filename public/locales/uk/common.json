@@ -4285,7 +4285,8 @@
         "savingAll": "Зберігаємо все…",
         "saveAllSuccess": "Усі розділи збережено",
         "saveAllPartial": "Деякі розділи не вдалося зберегти — див. помилки нижче",
-        "saveAllError": "Не вдалося зберегти розділи"
+        "saveAllError": "Не вдалося зберегти розділи",
+        "addPhone": "Додати телефон"
       },
       "detail": {
         "clientNotFound": "Клієнта не знайдено",
@@ -4716,7 +4717,14 @@
             "unreachable": "Сервіс УБКІ недоступний",
             "connection": "Помилка з’єднання"
           }
-        }
+        },
+        "otherContacts": "Інші",
+        "contactsCount": "{{count}} контактів",
+        "sendMessageSmsViber": "Повідомлення (SMS / Viber)",
+        "contactInfo": "Деталі",
+        "logInteraction": "Записати взаємодію",
+        "call": "Дзвінок",
+        "sendSms": "Надіслати SMS"
       },
       "modals": {
         "addNote": {

@@ -4965,7 +4965,8 @@
         "savingAll": "Saving all…",
         "saveAllSuccess": "All sections saved",
         "saveAllPartial": "Some sections failed to save — check the errors below",
-        "saveAllError": "Failed to save sections"
+        "saveAllError": "Failed to save sections",
+        "addPhone": "Add phone"
       },
       "detail": {
         "clientNotFound": "Client not found",
@@ -5363,7 +5364,14 @@
             "unreachable": "UBKI service unavailable",
             "connection": "Connection error"
           }
-        }
+        },
+        "otherContacts": "Others",
+        "contactsCount": "{{count}} contacts",
+        "sendMessageSmsViber": "Message (SMS / Viber)",
+        "contactInfo": "Details",
+        "logInteraction": "Log interaction",
+        "call": "Call",
+        "sendSms": "Send SMS"
       },
       "debtSummary": {
         "title": "Debt Summary",
