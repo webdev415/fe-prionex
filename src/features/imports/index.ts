@@ -13,3 +13,4 @@ export {
   computeImportUiStatusFromDetail,
   type ImportUiStatus,
 } from './utils/statusHelpers'
+export { docProblemFilesCount } from './utils/transformers'

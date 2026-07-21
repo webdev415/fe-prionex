@@ -29,6 +29,7 @@ export interface ImportJob {
   uploaded_at: string // ISO datetime string
   status: ImportJobStatus
   errors_count: number
+  problem_files_count?: number
   import_type: ImportType
   tag_mode?: TagAssignmentMode // Only set when import_type === 'tag_assignment'
   seller_creditor?: string // Seller code for display (from job metadata)

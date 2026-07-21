@@ -38,9 +38,17 @@ export interface ImportHistoryItem {
   uploadedBy: string
   status: 'done' | 'failed' | 'completed_with_errors' | 'in_progress' | 'pending' | 'cancelled'
   errors: number
+  problemFilesCount?: number
   importType: string
   tagMode?: 'assign' | 'remove'
 }
+
+// Download Errors is available when the target job has something to export:
+// real errors for any import, OR — for document imports — any problem files
+// (skips / blocked / errors) reported in problemFilesCount.
+const hasDownloadableErrors = (item?: ImportHistoryItem): boolean =>
+  !!item &&
+  (item.errors > 0 || (item.importType === 'document' && (item.problemFilesCount ?? 0) > 0))
 
 // Helper to convert API ImportJob to ImportHistoryItem.
 // The status mapping defers to computeImportUiStatusFromJob so a vendor
@@ -54,6 +62,7 @@ function mapImportJobToHistoryItem(job: ImportJob): ImportHistoryItem {
     uploadedBy: job.uploaded_by,
     status: computeImportUiStatusFromJob(job),
     errors: job.errors_count,
+    problemFilesCount: job.problem_files_count,
     importType: job.import_type || 'simple',
     tagMode: job.tag_mode,
   }
@@ -612,9 +621,11 @@ export function ImportHistoryPage() {
                   disabled={
                     exportErrorsMutation.isPending ||
                     (!selectedJobId && paginatedData.length === 0) ||
-                    (selectedJobId
-                      ? !paginatedData.find((item) => item.id === selectedJobId)?.errors
-                      : !paginatedData[0]?.errors)
+                    !hasDownloadableErrors(
+                      selectedJobId
+                        ? paginatedData.find((item) => item.id === selectedJobId)
+                        : paginatedData[0]
+                    )
                   }
                   leftIcon={<Icons.FileDownload size={16} className="text-primary-foreground" />}
                   className="hidden h-[45px] rounded-full text-xs lg:flex"
@@ -630,9 +641,11 @@ export function ImportHistoryPage() {
                   disabled={
                     exportErrorsMutation.isPending ||
                     (!selectedJobId && paginatedData.length === 0) ||
-                    (selectedJobId
-                      ? !paginatedData.find((item) => item.id === selectedJobId)?.errors
-                      : !paginatedData[0]?.errors)
+                    !hasDownloadableErrors(
+                      selectedJobId
+                        ? paginatedData.find((item) => item.id === selectedJobId)
+                        : paginatedData[0]
+                    )
                   }
                   className="bg-primary-300 flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-all duration-200 hover:scale-105 disabled:opacity-60 lg:hidden"
                   aria-label={t('pages.imports.history.downloadErrors')}
