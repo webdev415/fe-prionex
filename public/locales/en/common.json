@@ -153,6 +153,29 @@
       "strictNote": "Strict validation — if a record is invalid, it is reported before import.",
       "confirmUpload": "Confirm Upload",
       "uploaded": "{{count}} numbers added to the queue"
+    },
+    "crm": {
+      "filterTag": "Client tag",
+      "anyTag": "Any tag",
+      "filterLastContact": "Last contact",
+      "anyTime": "Any time",
+      "moreThanDays": "More than {{days}} days ago",
+      "filterDepartment": "Department",
+      "anyDepartment": "All departments",
+      "clearAll": "Clear All",
+      "applyFilters": "Apply Filters",
+      "found": "Found: {{count}} clients",
+      "selected": "{{count}} selected",
+      "addToDialer": "Add to dialer",
+      "addToQueue": "Add to queue",
+      "client": "Client",
+      "phone": "Phone",
+      "tags": "Tags",
+      "lastContact": "Last contact",
+      "empty": "No clients match these filters.",
+      "loadError": "Failed to load clients.",
+      "showingFirst": "Showing the first {{shown}} of {{total}} clients.",
+      "added": "{{count}} clients added to the queue"
     }
   },
   "search": {

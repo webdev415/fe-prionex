@@ -51,3 +51,16 @@ export function useConfirmQueueUpload() {
     onError: (error) => toast.error(error.message || 'Failed to upload numbers'),
   })
 }
+
+/** Bulk-add CRM clients to a queue (design: supervisor-06 "Add from CRM"). */
+export function useAddClientsToQueue() {
+  const queryClient = useQueryClient()
+  return useMutation<{ added_count: number }, Error, { queueId: number; clientIds: number[] }>({
+    mutationFn: ({ queueId, clientIds }) => dialerService.addClientsFromCrm(queueId, clientIds),
+    onSuccess: (_data, { queueId }) => {
+      queryClient.invalidateQueries({ queryKey: queueNumbersKeys.status(queueId) })
+      queryClient.invalidateQueries({ queryKey: dialerQueuesKeys.lists() })
+    },
+    onError: (error) => toast.error(error.message || 'Failed to add clients to queue'),
+  })
+}

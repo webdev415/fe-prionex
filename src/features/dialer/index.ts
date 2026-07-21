@@ -19,4 +19,5 @@ export {
   useQueueStatus,
   usePreviewQueueUpload,
   useConfirmQueueUpload,
+  useAddClientsToQueue,
 } from './hooks/useQueueNumbers'

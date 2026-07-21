@@ -15,6 +15,7 @@
 import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router-dom'
 
+import { AddFromCrmTab } from './tabs/AddFromCrmTab'
 import { QueueListTab } from './tabs/QueueListTab'
 import { QueueNumbersTab } from './tabs/QueueNumbersTab'
 
@@ -69,9 +70,7 @@ export function SupervisorDialerView() {
 
       {/* Tab content (remaining placeholders filled in later slices) */}
       {activeTab === 'queue-numbers' && <QueueNumbersTab />}
-      {activeTab === 'add-from-crm' && (
-        <TabPlaceholder label={t('dialer.tabs.addFromCrm', 'Add from CRM')} />
-      )}
+      {activeTab === 'add-from-crm' && <AddFromCrmTab />}
       {activeTab === 'analysis' && <TabPlaceholder label={t('dialer.tabs.analysis', 'Analysis')} />}
       {activeTab === 'queue-list' && <QueueListTab />}
     </div>
