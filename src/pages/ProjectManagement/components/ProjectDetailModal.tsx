@@ -24,7 +24,6 @@ interface ProjectDetailModalProps {
   open: boolean
   onClose: () => void
   onEdit: () => void
-  onDelete: () => void
   isLoading?: boolean
 }
 
@@ -34,7 +33,6 @@ export function ProjectDetailModal({
   open,
   onClose,
   onEdit,
-  onDelete,
   isLoading = false,
 }: ProjectDetailModalProps) {
   const { t } = useTranslation('common')
@@ -57,11 +55,6 @@ export function ProjectDetailModal({
 
   const handleEdit = () => {
     onEdit()
-    onClose()
-  }
-
-  const handleDelete = () => {
-    onDelete()
     onClose()
   }
 
@@ -260,15 +253,6 @@ export function ProjectDetailModal({
             leftIcon={<Icons.PencilEdit size={20} className="text-dark-500" strokeWidth={2} />}
           >
             {t('pages.projects.detailPanel.edit')}
-          </Button>
-          <Button
-            variant="danger"
-            size="xl"
-            onClick={handleDelete}
-            className="h-[45px] w-full flex-1 self-stretch rounded-md text-sm sm:flex-initial"
-            leftIcon={<Icons.Delete size={20} className="text-white" strokeWidth={2} />}
-          >
-            {t('pages.projects.detailPanel.delete')}
           </Button>
         </ModalFooter>
       </PermissionGuard>

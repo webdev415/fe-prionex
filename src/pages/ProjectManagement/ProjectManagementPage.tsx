@@ -9,11 +9,10 @@ import { useState, useCallback, useMemo, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useURLState, useAutoPersistedState } from '@/hooks'
 import { useProjects, useProjectDetail } from '@/features/projects/hooks/useProjects'
-import { useProjectExport, useDeleteProject } from '@/features/projects/hooks/useProjectMutations'
+import { useProjectExport } from '@/features/projects/hooks/useProjectMutations'
 import { EditProjectModal } from './components/EditProjectModal'
 import { ProjectDetailPanel } from './components/ProjectDetailPanel'
 import { ProjectDetailModal } from './components/ProjectDetailModal'
-import { DeleteProjectConfirmationModal } from './components/DeleteProjectConfirmationModal'
 import { SearchFiltersBar } from './components/SearchFiltersBar'
 import type { ApiProject, ApiProjectDetail, ProjectFilters } from '@/features/projects/types'
 import { formatPeriod, formatCurrency, formatNumber } from '@/lib/formatters'
@@ -95,7 +94,6 @@ export function ProjectManagementPage() {
 
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null)
   const [editingProject, setEditingProject] = useState<ApiProjectDetail | null>(null)
-  const [deletingProject, setDeletingProject] = useState<ApiProjectDetail | null>(null)
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1024) // lg breakpoint
   const [showDetailModal, setShowDetailModal] = useState(false)
 
@@ -145,9 +143,6 @@ export function ProjectManagementPage() {
 
   // Export mutation
   const exportMutation = useProjectExport()
-
-  // Delete mutation
-  const deleteMutation = useDeleteProject()
 
   // Extract unique client companies for filter
   const clientCompanies = useMemo(() => {
@@ -215,31 +210,6 @@ export function ProjectManagementPage() {
     setEditingProject(null)
     refetch()
   }, [refetch])
-
-  const handleDeleteFromPanel = useCallback(() => {
-    if (projectDetail) {
-      setDeletingProject(projectDetail as ApiProjectDetail)
-    }
-  }, [projectDetail])
-
-  const handleDeleteConfirm = useCallback(() => {
-    if (deletingProject) {
-      deleteMutation.mutate(
-        { projectId: deletingProject.id },
-        {
-          onSuccess: () => {
-            setDeletingProject(null)
-            setSelectedProjectId(null)
-            refetch()
-          },
-        }
-      )
-    }
-  }, [deletingProject, deleteMutation, refetch])
-
-  const handleDeleteCancel = useCallback(() => {
-    setDeletingProject(null)
-  }, [])
 
   // Map status for StatusBadge component
   const getStatusType = (status: string): 'active' | 'disabled' | 'inactive' | 'archived' => {
@@ -395,7 +365,6 @@ export function ProjectManagementPage() {
                     project={projectDetail as ApiProjectDetail | null}
                     hasProjects={projects.length > 0}
                     onEdit={handleEditFromPanel}
-                    onDelete={handleDeleteFromPanel}
                     isLoading={effectiveSelectedProjectId !== null && isDetailLoading}
                   />
                 </div>
@@ -431,19 +400,6 @@ export function ProjectManagementPage() {
         )}
       </PermissionGuard>
 
-      {/* Delete Confirmation Modal */}
-      <PermissionGuard permission={PERMISSIONS.PROJECTS.MANAGE}>
-        {deletingProject && (
-          <DeleteProjectConfirmationModal
-            open={deletingProject !== null}
-            projectName={deletingProject.name}
-            onConfirm={handleDeleteConfirm}
-            onCancel={handleDeleteCancel}
-            isLoading={deleteMutation.isPending}
-          />
-        )}
-      </PermissionGuard>
-
       {/* Project Detail Modal - shown on mobile when project is clicked */}
       {showDetailModal && (
         <ProjectDetailModal
@@ -452,7 +408,6 @@ export function ProjectManagementPage() {
           project={projectDetail as ApiProjectDetail | null}
           hasProjects={projects.length > 0}
           onEdit={handleEditFromPanel}
-          onDelete={handleDeleteFromPanel}
           isLoading={effectiveSelectedProjectId !== null && isDetailLoading}
         />
       )}
