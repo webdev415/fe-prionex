@@ -4,12 +4,11 @@ import { Icons } from '@/lib/icons'
 import type { OperatorUser } from '@/features/users/api/usersApi'
 
 /**
- * Multi-select employee dropdown rendered to the right of the
- * "Schedule a session" CTA on the Dialogue Evaluation tab. Mirrors the
- * Figma frame — text trigger + checkbox list + apply/clear footer.
+ * Multi-select employee filter on the Dialogue Evaluation tab: text trigger +
+ * checkbox list, with an optional pinned shortcut row on top.
  *
  * Operator candidates come from the live project roster (`useOperators`,
- * passed down by the tab) — KAN-737.
+ * passed down by the tab).
  */
 export interface EmployeeMultiSelectProps {
   value: number[]
@@ -132,7 +131,7 @@ export function EmployeeMultiSelect({
       </button>
 
       {open ? (
-        <div className="absolute right-0 z-30 mt-1 flex w-[280px] flex-col overflow-hidden rounded-lg border border-[#EBECE8] bg-white shadow-lg">
+        <div className="absolute left-0 z-30 mt-1 flex w-[280px] flex-col overflow-hidden rounded-lg border border-[#EBECE8] bg-white shadow-lg">
           <div className="flex items-center justify-between border-b border-[#EBECE8] px-3 py-2 text-[11px] text-[#676767]">
             <span>
               {t('pages.training.dialogue.employee.label', 'Employee')}{' '}
