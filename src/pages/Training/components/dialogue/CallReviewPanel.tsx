@@ -35,6 +35,8 @@ export interface CallReviewPanelProps {
   scorecardId?: number
   /** Whether the trainer may create/edit/send/remove here (operator assigned). */
   canEdit?: boolean
+  /** Known talk time, used to position markers before the audio is fetched. */
+  talkDurationSec?: number | null
   /** Emits the editor's unsaved-changes state so the tab can guard row switches. */
   onDirtyChange?: (dirty: boolean) => void
 }
@@ -46,6 +48,7 @@ export function CallReviewPanel({
   createdAt,
   scorecardId,
   canEdit = false,
+  talkDurationSec,
   onDirtyChange,
 }: CallReviewPanelProps) {
   const { t } = useTranslation('common')
@@ -85,9 +88,14 @@ export function CallReviewPanel({
           ref={playerRef}
           callId={callId}
           active
+          lazy
           onDurationChange={setDurationMs}
           markerOverlay={
-            <MarkerOverlay markers={markers} durationMs={durationMs} onSeek={seekTo} />
+            <MarkerOverlay
+              markers={markers}
+              durationMs={durationMs || (talkDurationSec ?? 0) * 1000}
+              onSeek={seekTo}
+            />
           }
         />
 

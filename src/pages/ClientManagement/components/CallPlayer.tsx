@@ -32,6 +32,9 @@ export interface CallPlayerProps {
   callId?: string
   /** Load/reset gate (e.g. the modal's open state). Defaults true. */
   active?: boolean
+  /** Defer the recording download until the first Play. Use where the player is
+   *  mounted without the user asking for audio (e.g. an auto-selected row). */
+  lazy?: boolean
   /** Overlay rendered on top of the scrub bar (marker timeline). */
   markerOverlay?: ReactNode
   /** Emits the recording duration (ms) once metadata loads. */
@@ -55,12 +58,15 @@ const recordingExtensionFromBlob = (blob: Blob): string => {
 }
 
 export const CallPlayer = forwardRef<CallPlayerHandle, CallPlayerProps>(function CallPlayer(
-  { callId, active = true, markerOverlay, onDurationChange, className },
+  { callId, active = true, lazy = false, markerOverlay, onDurationChange, className },
   forwardedRef
 ) {
   const { t } = useTranslation('common')
   const [isPlaying, setIsPlaying] = useState(false)
-  const [isAudioLoading, setIsAudioLoading] = useState(true)
+  const [isAudioLoading, setIsAudioLoading] = useState(!lazy)
+  // Lazy players hold off the download until the trainer presses Play.
+  const [requested, setRequested] = useState(!lazy)
+  const [playWhenReady, setPlayWhenReady] = useState(false)
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
   const [playbackSpeed, setPlaybackSpeed] = useState(1.0)
@@ -108,7 +114,7 @@ export const CallPlayer = forwardRef<CallPlayerHandle, CallPlayerProps>(function
   // Async data-loading effect: setState here is intentional (loading → blob).
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
-    if (!active || !callId) {
+    if (!active || !callId || !requested) {
       if (recordingObjectUrlRef.current) {
         URL.revokeObjectURL(recordingObjectUrlRef.current)
         recordingObjectUrlRef.current = null
@@ -159,8 +165,16 @@ export const CallPlayer = forwardRef<CallPlayerHandle, CallPlayerProps>(function
       recordingBlobRef.current = null
       setAudioObjectUrl(null)
     }
-  }, [active, callId, t])
+  }, [active, callId, requested, t])
   /* eslint-enable react-hooks/set-state-in-effect */
+
+  // A new call re-arms the lazy gate so the next recording isn't pre-fetched.
+  const [trackedCallId, setTrackedCallId] = useState(callId)
+  if (callId !== trackedCallId) {
+    setTrackedCallId(callId)
+    setRequested(!lazy)
+    setPlayWhenReady(false)
+  }
 
   // Reset playback UI when deactivated (render-time adjustment per the React
   // docs — avoids the set-state-in-effect lint and an extra render).
@@ -177,6 +191,12 @@ export const CallPlayer = forwardRef<CallPlayerHandle, CallPlayerProps>(function
   }
 
   const handlePlayPause = () => {
+    // First press on a lazy player kicks off the download and plays on arrival.
+    if (!requested) {
+      setRequested(true)
+      setPlayWhenReady(true)
+      return
+    }
     const audio = audioRef.current
     if (!audio) return
     if (isPlaying) {
@@ -237,7 +257,14 @@ export const CallPlayer = forwardRef<CallPlayerHandle, CallPlayerProps>(function
             }
             setIsAudioLoading(false)
           }}
-          onCanPlay={() => setIsAudioLoading(false)}
+          onCanPlay={(e) => {
+            setIsAudioLoading(false)
+            if (playWhenReady) {
+              setPlayWhenReady(false)
+              e.currentTarget.play()
+              setIsPlaying(true)
+            }
+          }}
           onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
           onEnded={() => setIsPlaying(false)}
           onError={() => {

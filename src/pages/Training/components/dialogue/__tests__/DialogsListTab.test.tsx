@@ -43,7 +43,9 @@ vi.mock('../EmployeeMultiSelect', () => ({
     </button>
   ),
 }))
-vi.mock('../CallReviewPanel', () => ({ CallReviewPanel: () => null }))
+vi.mock('../CallReviewPanel', () => ({
+  CallReviewPanel: ({ callId }: { callId?: string }) => <div>panel:{callId ?? 'none'}</div>,
+}))
 vi.mock('@/stores/authStore', () => ({
   useAuthStore: (selector: (s: unknown) => unknown) => selector({ user: { active_project_id: 3 } }),
 }))
@@ -173,6 +175,28 @@ describe('DialogsListTab (call-grain)', () => {
     // Clicking must not silently narrow to an empty selection.
     fireEvent.click(button)
     expect(mockUseCallMonitoring.mock.calls.at(-1)?.[0]?.agent_extensions).toEqual(['101', '102'])
+  })
+
+  it('auto-selects the first reviewable dialog so the panel is not empty', () => {
+    setCalls({
+      data: { calls: [call()], summary: {}, total: 1, limit: 50, offset: 0 } as never,
+    })
+    render(<DialogsListTab />)
+    expect(screen.getByText(/panel:c1/)).toBeInTheDocument()
+  })
+
+  it('does not auto-select a call whose operator cannot be resolved', () => {
+    setCalls({
+      data: {
+        calls: [call({ agent_extension: '999' })],
+        summary: {},
+        total: 1,
+        limit: 50,
+        offset: 0,
+      } as never,
+    })
+    render(<DialogsListTab />)
+    expect(screen.getByText(/panel:none/)).toBeInTheDocument()
   })
 
   it('renders loading + error + empty states', () => {

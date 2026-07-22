@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Pagination } from '@/components/ui/Pagination'
+import { useConfirm } from '@/components/ui/useConfirm'
 import { useAuthStore } from '@/stores/authStore'
 import { useOperators } from '@/features/users/hooks'
 import { useCallMonitoring } from '@/features/training'
@@ -72,7 +73,7 @@ interface Selected {
   scorecardId?: number
   createdAt?: string
   operatorName?: string
-  canEdit: boolean
+  talkDurationSec?: number | null
 }
 
 /**
@@ -97,6 +98,8 @@ export function DialogsListTab() {
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(PAGE_SIZE)
   const [selected, setSelected] = useState<Selected | null>(null)
+  const [reviewDirty, setReviewDirty] = useState(false)
+  const { confirm, confirmDialog } = useConfirm()
 
   const myOperatorsQuery = useMyOperators()
   const myOperatorIds = useMemo(() => myOperatorsQuery.data ?? [], [myOperatorsQuery.data])
@@ -218,6 +221,44 @@ export function DialogsListTab() {
   )
   const clientNames = useClientNames(clientIds)
 
+  const selectCall = (call: CallMonitoringItem, operatorId: number) => {
+    setSelected({
+      callId: call.call_id,
+      operatorId,
+      scorecardId: call.scorecard_id ?? undefined,
+      createdAt: call.initiated_at,
+      operatorName: operatorByExtension.get(call.agent_extension)?.name,
+      talkDurationSec: call.talk_duration,
+    })
+  }
+
+  // Open the newest reviewable dialog on first load so the panel isn't empty.
+  // Deliberately once — re-selecting on every filter change would refetch the
+  // panel (and its recording) while the trainer is still narrowing the list.
+  const [autoSelected, setAutoSelected] = useState(false)
+  if (!autoSelected && selected == null && calls.length > 0) {
+    setAutoSelected(true)
+    const first = calls.find((c) => operatorByExtension.has(c.agent_extension))
+    const op = first ? operatorByExtension.get(first.agent_extension) : undefined
+    if (first && op) selectCall(first, op.id)
+  }
+
+  const handleSelectRow = async (call: CallMonitoringItem, operatorId: number) => {
+    if (reviewDirty && call.call_id !== selected?.callId) {
+      const ok = await confirm({
+        title: t('pages.training.scorecard.unsaved', 'Unsaved changes'),
+        message: t(
+          'pages.training.scorecard.unsavedConfirm',
+          'You have unsaved changes that will be lost. Close anyway?'
+        ),
+        confirmLabel: t('pages.training.scorecard.discardConfirm', 'Discard changes'),
+        tone: 'danger',
+      })
+      if (!ok) return
+    }
+    selectCall(call, operatorId)
+  }
+
   const clearFilters = () => {
     setSelectedEmployeeIds([])
     setDepartmentId('all')
@@ -237,6 +278,7 @@ export function DialogsListTab() {
 
   return (
     <div className="flex flex-col gap-3">
+      {confirmDialog}
       <div className="flex flex-wrap items-center gap-2">
         <EmployeeMultiSelect
           value={selectedEmployeeIds}
@@ -361,16 +403,7 @@ export function DialogsListTab() {
               trainerByOperator={trainerByOperator}
               clientNames={clientNames}
               selectedCallId={selected?.callId}
-              onSelect={(call, operatorId) =>
-                setSelected({
-                  callId: call.call_id,
-                  operatorId,
-                  scorecardId: call.scorecard_id ?? undefined,
-                  createdAt: call.initiated_at,
-                  operatorName: operatorByExtension.get(call.agent_extension)?.name,
-                  canEdit: myOperatorIds.includes(operatorId),
-                })
-              }
+              onSelect={handleSelectRow}
             />
           )}
           {!isLoading && !isError && total > 0 ? (
@@ -390,7 +423,9 @@ export function DialogsListTab() {
           scorecardId={selected?.scorecardId}
           createdAt={selected?.createdAt}
           operatorName={selected?.operatorName}
-          canEdit={selected?.canEdit ?? false}
+          talkDurationSec={selected?.talkDurationSec}
+          canEdit={selected != null && myOperatorIds.includes(selected.operatorId)}
+          onDirtyChange={setReviewDirty}
         />
       </div>
     </div>
