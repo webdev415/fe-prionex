@@ -238,7 +238,7 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
   // users directory.
   const user = useAuthStore((s) => s.user)
   const projectId = user?.active_project_id ? parseInt(user.active_project_id, 10) : null
-  const { data: operators } = useOperators(projectId)
+  const { data: operators } = useOperators(projectId, { includeInactive: true })
   const operatorNameById = useMemo(() => {
     const m = new Map<number, string>()
     for (const op of operators ?? []) {
