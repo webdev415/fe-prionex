@@ -1612,6 +1612,7 @@
         "clear": "Clear",
         "edit": "Edit",
         "sendToOperator": "Send to operator",
+        "notAssigned": "This operator is not assigned to you, so you cannot score this call.",
         "resend": "Re-send",
         "status": {
           "draft": "Draft",
@@ -8228,6 +8229,7 @@
         "clear": "Clear",
         "edit": "Edit",
         "sendToOperator": "Send to operator",
+        "notAssigned": "This operator is not assigned to you, so you cannot score this call.",
         "resend": "Re-send",
         "status": {
           "draft": "Draft",

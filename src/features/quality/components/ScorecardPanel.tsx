@@ -162,7 +162,7 @@ export function ScorecardPanel({
   }
 
   const handleStartNew = async () => {
-    if (!selectedTemplateId) return
+    if (!selectedTemplateId || canEditProp === false) return
     const created = await createMutation.mutateAsync({
       call_id: callId,
       operator_id: operatorId,
@@ -196,6 +196,24 @@ export function ScorecardPanel({
 
   // ---- Render branches ----
   if (!activeScorecardId || forcePicker) {
+    // Never offer a create action the caller isn't allowed to perform — the
+    // backend rejects it with a 403.
+    if (canEditProp === false) {
+      return (
+        <aside className="flex h-full flex-col gap-3 rounded-xl bg-white p-4 shadow-sm">
+          <h2 className="text-dark-500 text-lg font-medium">
+            {t('pages.training.scorecard.title', 'Quality evaluation')}
+          </h2>
+          <p className="text-sm text-[#6B7280]">
+            {t(
+              'pages.training.scorecard.notAssigned',
+              'This operator is not assigned to you, so you cannot score this call.'
+            )}
+          </p>
+        </aside>
+      )
+    }
+
     return (
       <aside className="flex h-full flex-col gap-3 rounded-xl bg-white p-4 shadow-sm">
         <h2 className="text-dark-500 text-lg font-medium">
