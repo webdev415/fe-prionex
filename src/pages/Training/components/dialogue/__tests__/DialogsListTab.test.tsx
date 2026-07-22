@@ -4,16 +4,17 @@
  * Data hooks are mocked; the i18n mock returns the key.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import type { OperatorUser } from '@/features/users/api/usersApi'
 import { useCallMonitoring } from '@/features/training'
+import { useMyOperators } from '@/features/quality/coaching/hooks'
 import { useOperators } from '@/features/users/hooks'
 import { useScopedUserIds } from '../../../lib/scope'
 import { DialogsListTab } from '../DialogsListTab'
 
 vi.mock('@/features/training', () => ({ useCallMonitoring: vi.fn() }))
 vi.mock('@/features/quality/coaching/hooks', () => ({
-  useMyOperators: () => ({ data: [41] }),
+  useMyOperators: vi.fn(),
   useOperatorTrainers: () => ({
     data: [{ operator_id: 41, trainer_id: 7, trainer_name: 'Trainer Ivan' }],
   }),
@@ -23,18 +24,38 @@ vi.mock('@/features/clients/hooks/useClients', () => ({
   useClientNames: () => new Map([[99, 'Acme Corp']]),
 }))
 vi.mock('../../../lib/scope', () => ({ useScopedUserIds: vi.fn() }))
-vi.mock('../EmployeeMultiSelect', () => ({ EmployeeMultiSelect: () => null }))
+// Stubbed to just the quick-select shortcut, so these tests assert the wiring
+// (ids + disabled) rather than the dropdown's own behaviour.
+vi.mock('../EmployeeMultiSelect', () => ({
+  EmployeeMultiSelect: ({
+    onChange,
+    quickSelect,
+  }: {
+    onChange: (next: number[]) => void
+    quickSelect?: { label: string; ids: number[]; disabled?: boolean }
+  }) => (
+    <button
+      type="button"
+      disabled={quickSelect?.disabled}
+      onClick={() => onChange(quickSelect?.ids ?? [])}
+    >
+      {quickSelect?.label}
+    </button>
+  ),
+}))
 vi.mock('../CallReviewPanel', () => ({ CallReviewPanel: () => null }))
 vi.mock('@/stores/authStore', () => ({
   useAuthStore: (selector: (s: unknown) => unknown) => selector({ user: { active_project_id: 3 } }),
 }))
 
 const mockUseCallMonitoring = vi.mocked(useCallMonitoring)
+const mockUseMyOperators = vi.mocked(useMyOperators)
 const mockUseOperators = vi.mocked(useOperators)
 const mockUseScopedUserIds = vi.mocked(useScopedUserIds)
 
 const OPERATORS = [
   { id: 41, full_name: 'Kateryna Antonova', asterisk_extension: '101' },
+  { id: 42, full_name: 'Oleh Bondar', asterisk_extension: '102' },
 ] as unknown as OperatorUser[]
 
 function call(overrides: Record<string, unknown> = {}) {
@@ -76,6 +97,9 @@ function setCalls(result: Partial<ReturnType<typeof useCallMonitoring>>) {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  mockUseMyOperators.mockReturnValue({ data: [41], isLoading: false } as ReturnType<
+    typeof useMyOperators
+  >)
   mockUseOperators.mockReturnValue({ data: OPERATORS } as ReturnType<typeof useOperators>)
   mockUseScopedUserIds.mockReturnValue({
     scope: 'all',
@@ -126,6 +150,29 @@ describe('DialogsListTab (call-grain)', () => {
     expect(screen.getAllByText('pages.training.dialogue.category.unscored').length).toBeGreaterThan(
       1
     )
+  })
+
+  it('narrows the query to assigned operators when "My employees" is clicked', () => {
+    setCalls({ data: { calls: [], summary: {}, total: 0, limit: 50, offset: 0 } as never })
+    render(<DialogsListTab />)
+    expect(mockUseCallMonitoring.mock.calls.at(-1)?.[0]?.agent_extensions).toEqual(['101', '102'])
+
+    fireEvent.click(screen.getByText('pages.training.dialogue.dialogs.myEmployees'))
+    expect(mockUseCallMonitoring.mock.calls.at(-1)?.[0]?.agent_extensions).toEqual(['101'])
+  })
+
+  it('disables "My employees" when the trainer has no operators under control', () => {
+    mockUseMyOperators.mockReturnValue({ data: [] as number[], isLoading: false } as ReturnType<
+      typeof useMyOperators
+    >)
+    setCalls({ data: { calls: [], summary: {}, total: 0, limit: 50, offset: 0 } as never })
+    render(<DialogsListTab />)
+
+    const button = screen.getByText('pages.training.dialogue.dialogs.myEmployees')
+    expect(button).toBeDisabled()
+    // Clicking must not silently narrow to an empty selection.
+    fireEvent.click(button)
+    expect(mockUseCallMonitoring.mock.calls.at(-1)?.[0]?.agent_extensions).toEqual(['101', '102'])
   })
 
   it('renders loading + error + empty states', () => {

@@ -1751,6 +1751,8 @@
         },
         "dialogs": {
           "myEmployees": "My employees",
+          "myEmployeesEmpty": "You have no operators under your control yet",
+          "myEmployeesError": "Could not load your operators",
           "statusAll": "All",
           "allDepartments": "All departments",
           "evaluation": "Evaluation",

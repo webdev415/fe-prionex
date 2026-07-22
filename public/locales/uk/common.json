@@ -1750,6 +1750,8 @@
         },
         "dialogs": {
           "myEmployees": "Мої співробітники",
+          "myEmployeesEmpty": "У вас поки немає операторів під контролем",
+          "myEmployeesError": "Не вдалося завантажити ваших операторів",
           "statusAll": "Всі",
           "allDepartments": "Усі відділи",
           "evaluation": "Оцінка",

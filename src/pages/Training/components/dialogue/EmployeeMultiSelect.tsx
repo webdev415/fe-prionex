@@ -15,6 +15,14 @@ export interface EmployeeMultiSelectProps {
   value: number[]
   onChange: (next: number[]) => void
   operators: OperatorUser[]
+  /** Pinned shortcut at the top of the list (e.g. "My employees"). Selecting it
+   *  replaces the current selection with ``ids``; selecting it again clears. */
+  quickSelect?: {
+    label: string
+    ids: number[]
+    disabled?: boolean
+    hint?: string
+  }
 }
 
 const AVATAR_PALETTE = [
@@ -35,7 +43,12 @@ function initialsFor(name: string): string {
   return `${parts[0][0]}${parts[1][0]}`.toUpperCase()
 }
 
-export function EmployeeMultiSelect({ value, onChange, operators }: EmployeeMultiSelectProps) {
+export function EmployeeMultiSelect({
+  value,
+  onChange,
+  operators,
+  quickSelect,
+}: EmployeeMultiSelectProps) {
   const { t } = useTranslation('common')
   const [open, setOpen] = useState(false)
   const wrapperRef = useRef<HTMLDivElement | null>(null)
@@ -77,8 +90,21 @@ export function EmployeeMultiSelect({ value, onChange, operators }: EmployeeMult
   const clearAll = () => onChange([])
   const selectAll = () => onChange(candidates.map((r) => r.operatorId))
 
-  const triggerLabel =
-    value.length === 0
+  // The shortcut reads as "on" only when the selection is exactly its set.
+  const quickActive =
+    quickSelect != null &&
+    quickSelect.ids.length > 0 &&
+    value.length === quickSelect.ids.length &&
+    quickSelect.ids.every((id) => value.includes(id))
+
+  const toggleQuickSelect = () => {
+    if (!quickSelect || quickSelect.disabled) return
+    onChange(quickActive ? [] : quickSelect.ids)
+  }
+
+  const triggerLabel = quickActive
+    ? (quickSelect?.label ?? '')
+    : value.length === 0
       ? t('pages.training.dialogue.employee.all', 'All employees')
       : value.length === 1
         ? (candidates.find((r) => r.operatorId === value[0])?.name ?? '')
@@ -122,6 +148,30 @@ export function EmployeeMultiSelect({ value, onChange, operators }: EmployeeMult
               </button>
             </div>
           </div>
+          {quickSelect ? (
+            <button
+              type="button"
+              onClick={toggleQuickSelect}
+              disabled={quickSelect.disabled}
+              title={quickSelect.hint}
+              className={`flex w-full items-center gap-2 border-b border-[#EBECE8] px-3 py-2 text-left text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+                quickActive ? 'bg-[#F7FFE5] text-[#204E4D]' : 'text-[#05040D] hover:bg-[#F7F7F7]'
+              }`}
+            >
+              <span
+                className={`flex h-4 w-4 flex-shrink-0 items-center justify-center rounded border ${
+                  quickActive
+                    ? 'border-[#204E4D] bg-[#204E4D] text-white'
+                    : 'border-[#DFDFDF] bg-white'
+                }`}
+              >
+                {quickActive ? <Icons.Checkmark size={10} className="text-white" /> : null}
+              </span>
+              <span className="truncate">{quickSelect.label}</span>
+              <span className="ml-auto text-[10px] text-[#676767]">({quickSelect.ids.length})</span>
+            </button>
+          ) : null}
+
           <ul className="max-h-[240px] overflow-y-auto py-1">
             {candidates.map((row) => {
               const checked = value.includes(row.operatorId)

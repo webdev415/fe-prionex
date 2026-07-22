@@ -98,8 +98,22 @@ export function DialogsListTab() {
   const [pageSize, setPageSize] = useState(PAGE_SIZE)
   const [selected, setSelected] = useState<Selected | null>(null)
 
-  const { data: myOperatorIds = [] } = useMyOperators()
+  const myOperatorsQuery = useMyOperators()
+  const myOperatorIds = useMemo(() => myOperatorsQuery.data ?? [], [myOperatorsQuery.data])
   const { data: operatorTrainers = [] } = useOperatorTrainers()
+
+  // Nothing to filter by until the trainer has operators under their control;
+  // without this the button would be a silent no-op.
+  const myEmployeesUnavailable =
+    myOperatorsQuery.isLoading || myOperatorsQuery.isError || myOperatorIds.length === 0
+  const myEmployeesHint = myOperatorsQuery.isError
+    ? t('pages.training.dialogue.dialogs.myEmployeesError', 'Could not load your operators')
+    : myOperatorIds.length === 0
+      ? t(
+          'pages.training.dialogue.dialogs.myEmployeesEmpty',
+          'You have no operators under your control yet'
+        )
+      : undefined
 
   const trainerByOperator = useMemo(() => {
     const map = new Map<number, string>()
@@ -204,18 +218,6 @@ export function DialogsListTab() {
   )
   const clientNames = useClientNames(clientIds)
 
-  const toggleMyEmployees = () => {
-    const mine = new Set(myOperatorIds)
-    const allSelected =
-      myOperatorIds.length > 0 &&
-      myOperatorIds.every((id) => mine.has(id) && selectedEmployeeIds.includes(id))
-    setSelectedEmployeeIds(allSelected ? [] : myOperatorIds)
-  }
-  const myEmployeesActive =
-    myOperatorIds.length > 0 &&
-    selectedEmployeeIds.length === myOperatorIds.length &&
-    myOperatorIds.every((id) => selectedEmployeeIds.includes(id))
-
   const clearFilters = () => {
     setSelectedEmployeeIds([])
     setDepartmentId('all')
@@ -236,21 +238,16 @@ export function DialogsListTab() {
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center gap-2">
-        <button
-          type="button"
-          onClick={toggleMyEmployees}
-          className={`h-9 rounded-lg px-4 text-xs font-medium transition-colors ${
-            myEmployeesActive
-              ? 'bg-[#204E4D] text-white'
-              : 'border border-[#DFDFDF] bg-white text-[#05040D] hover:bg-[#F7F7F7]'
-          }`}
-        >
-          {t('pages.training.dialogue.dialogs.myEmployees', 'My employees')}
-        </button>
         <EmployeeMultiSelect
           value={selectedEmployeeIds}
           onChange={setSelectedEmployeeIds}
           operators={operators}
+          quickSelect={{
+            label: t('pages.training.dialogue.dialogs.myEmployees', 'My employees'),
+            ids: myOperatorIds,
+            disabled: myEmployeesUnavailable,
+            hint: myEmployeesHint,
+          }}
         />
         <select
           value={departmentId}
