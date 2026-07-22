@@ -34,6 +34,12 @@ function makeCall(overrides: Partial<CallMonitoringItem>): CallMonitoringItem {
     campaign_id: null,
     has_recording: false,
     telephony_type: 'unknown',
+    has_scorecard: false,
+    scorecard_id: null,
+    scorecard_status: null,
+    scorecard_weighted_score: null,
+    scorecard_category: null,
+    scorecard_comment: null,
     ...overrides,
   }
 }

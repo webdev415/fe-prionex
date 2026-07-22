@@ -1611,6 +1611,7 @@
         "clear": "Очистити",
         "edit": "Редагувати",
         "sendToOperator": "Надіслати оператору",
+        "resend": "Повторно надіслати",
         "status": {
           "draft": "Чернетка",
           "completed": "Завершена",
@@ -1657,6 +1658,7 @@
         "list": {
           "dateTime": "Дата / Час",
           "employee": "Співробітник",
+          "trainer": "Тренер",
           "client": "Клієнт",
           "phone": "Телефон",
           "category": "Категорія",
@@ -1748,6 +1750,7 @@
         },
         "dialogs": {
           "myEmployees": "Мої співробітники",
+          "statusAll": "Всі",
           "allDepartments": "Усі відділи",
           "evaluation": "Оцінка",
           "notEvaluated": "Не оцінено",
@@ -8237,6 +8240,7 @@
         "clear": "Очистити",
         "edit": "Редагувати",
         "sendToOperator": "Надіслати оператору",
+        "resend": "Повторно надіслати",
         "status": {
           "draft": "Чернетка",
           "completed": "Завершена",
@@ -8276,6 +8280,7 @@
         "list": {
           "dateTime": "Дата / Час",
           "employee": "Співробітник",
+          "trainer": "Тренер",
           "client": "Клієнт",
           "phone": "Телефон",
           "category": "Категорія",
