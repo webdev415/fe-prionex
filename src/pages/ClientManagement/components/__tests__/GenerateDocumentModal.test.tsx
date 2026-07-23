@@ -3,8 +3,8 @@
  *
  * Focus areas:
  *   - template availability is driven by the backend per-debt verdict
- *     (available templates are selectable, unavailable ones are disabled and
- *     show a human-readable reason);
+ *     (available templates are selectable, unavailable ones are hidden with
+ *     a muted filtered-count note);
  *   - the generate call sends the correct body (client/debt/type; index_num
  *     only when the operator typed one);
  *   - a 409 surfaces the server's reason to the operator.
@@ -19,6 +19,15 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string, fallback?: unknown) => {
       if (typeof fallback === 'string') return fallback
+      // Object form: t(key, {defaultValue, ...interpolationValues})
+      if (fallback && typeof fallback === 'object' && 'defaultValue' in fallback) {
+        const opts = fallback as Record<string, unknown>
+        let out = String(opts.defaultValue)
+        for (const [k, v] of Object.entries(opts)) {
+          if (k !== 'defaultValue') out = out.replaceAll(`{{${k}}}`, String(v))
+        }
+        return out
+      }
       return key
     },
     i18n: { language: 'uk', changeLanguage: vi.fn() },
@@ -120,18 +129,20 @@ describe('GenerateDocumentModal', () => {
     generateMock.mockReset()
   })
 
-  it('shows available templates as selectable and unavailable ones disabled with a reason', async () => {
+  it('shows only available templates and a hidden-count note for the rest', async () => {
     getOptionsMock.mockResolvedValue(optionsWith(false, 'debt_not_closed'))
     renderModal()
 
-    // Available template — enabled radio.
+    // Available template — selectable radio.
     const available = await screen.findByRole('radio', { name: /Demand letter/i })
     expect(available).toBeEnabled()
 
-    // Unavailable one — disabled + human-readable reason.
-    const unavailable = screen.getByRole('radio', { name: /Closure notice/i })
-    expect(unavailable).toBeDisabled()
-    expect(screen.getByText('Кредит не закритий')).toBeInTheDocument()
+    // Unavailable one is HIDDEN entirely (CEO decision 23.07); a muted
+    // counter reveals that one template was filtered for this credit.
+    expect(screen.queryByRole('radio', { name: /Closure notice/i })).not.toBeInTheDocument()
+    expect(
+      screen.getByText(/Приховано шаблонів, недоступних для цього кредиту: 1/)
+    ).toBeInTheDocument()
   })
 
   it('sends the correct body and omits index_num when left blank', async () => {
