@@ -105,6 +105,7 @@ const iconMap: Record<
   'message-secure-01': (props) => <Icons.MessageSecure01 {...props} />,
   'bubble-chat-edit': (props) => <Icons.BubbleChatEdit {...props} />,
   work: (props) => <Icons.WorkIcon {...props} />,
+  'ai-brain-03': (props) => <Icons.AiBrain03 {...props} />,
 }
 
 /**

@@ -23,6 +23,7 @@
     "projects": "Projects",
     "users": "Users",
     "ipWhitelist": "IP Whitelist",
+    "aiSettings": "AI Settings",
     "sellers": "Sellers",
     "roles": "Roles",
     "departments": "Departments",
@@ -3265,6 +3266,8 @@
       "toastError": "Failed to update AI call analysis settings."
     },
     "aiSettings": {
+      "title": "AI Settings",
+      "helper": "Global switches for the AI assistant and AI call analysis, and assistant access by role.",
       "assistantToggleTitle": "AI assistant",
       "assistantToggleDescription": "Global kill-switch. When off, the assistant is unavailable for everyone and the header button is hidden.",
       "assistantToggleAria": "Toggle the AI assistant",

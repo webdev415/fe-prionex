@@ -858,9 +858,22 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           PERMISSIONS.SYSTEM.MANAGE_SETTINGS,
           PERMISSIONS.CONTACT_TYPES.VIEW,
           PERMISSIONS.REPAYMENT_CONFIG.VIEW,
+          PERMISSIONS.SYSTEM.MANAGE_AI_SETTINGS,
+          PERMISSIONS.SYSTEM.MANAGE_CALL_QA,
         ],
         mode: 'any' as const,
         subItems: [
+          {
+            path: '/dashboard/system-settings/ai',
+            label: t('navigation.aiSettings', 'AI Settings'),
+            icon: 'ai-brain-03',
+            requiredPermissions: [
+              PERMISSIONS.SYSTEM.MANAGE_AI_SETTINGS,
+              PERMISSIONS.SYSTEM.MANAGE_CALL_QA,
+              PERMISSIONS.SYSTEM.MANAGE_ROLES,
+            ],
+            mode: 'any' as const,
+          },
           {
             // TODO(ubki): swap to a dedicated manage_integrations permission
             // once it exists (reusing messaging integrations for now).
