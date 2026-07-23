@@ -24,6 +24,7 @@ import { useHasPermission } from '@/hooks'
 import { PERMISSIONS } from '@/constants/permissions'
 import { DocumentTemplateEditor } from './DocumentTemplateEditor'
 import { DeleteDocumentTemplateModal } from './DeleteDocumentTemplateModal'
+import { TemplatePreviewModal } from './TemplatePreviewModal'
 
 const PREVIEW_LENGTH = 100
 
@@ -45,6 +46,7 @@ export function DocumentTemplatesTab() {
   const [editorOpen, setEditorOpen] = useState(false)
   const [editingTemplate, setEditingTemplate] = useState<DocumentTemplate | null>(null)
   const [deleting, setDeleting] = useState<DocumentTemplate | null>(null)
+  const [previewing, setPreviewing] = useState<DocumentTemplate | null>(null)
   const [downloadingId, setDownloadingId] = useState<number | null>(null)
 
   const items = data?.items ?? []
@@ -148,6 +150,16 @@ export function DocumentTemplatesTab() {
         align: 'right',
         render: (row) => (
           <div className="flex items-center justify-end gap-2">
+            {row.template_kind === 'docx' && (
+              <button
+                type="button"
+                title={t('pages.documentGeneration.templates.actions.preview', 'Preview')}
+                onClick={() => setPreviewing(row)}
+                className="text-foreground hover:bg-muted inline-flex h-8 w-8 items-center justify-center rounded-md"
+              >
+                <Icons.Eye size={16} strokeWidth={1.5} />
+              </button>
+            )}
             {row.template_kind === 'docx' && (
               <button
                 type="button"
@@ -262,6 +274,14 @@ export function DocumentTemplatesTab() {
           open={!!deleting}
           template={deleting}
           onClose={() => setDeleting(null)}
+        />
+      )}
+
+      {previewing && (
+        <TemplatePreviewModal
+          open={!!previewing}
+          template={previewing}
+          onClose={() => setPreviewing(null)}
         />
       )}
     </div>

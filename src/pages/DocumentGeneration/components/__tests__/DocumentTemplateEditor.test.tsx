@@ -37,6 +37,11 @@ vi.mock('@/features/messaging/utils/downloadBlob', () => ({
   downloadBlob: vi.fn(),
 }))
 
+// DocxRenderer lazy-imports docx-preview for the inline "sample data" section.
+vi.mock('docx-preview', () => ({
+  renderAsync: vi.fn(async () => {}),
+}))
+
 // ---------------------------------------------------------------------------
 // Variable dictionary shared between the api mock and assertions.
 // ---------------------------------------------------------------------------
@@ -76,6 +81,7 @@ vi.mock('@/features/documents/api/documentTemplatesApi', () => ({
   })),
   replaceDocumentTemplateFile: vi.fn(async () => ({ id: 2, unknown_variables: [] })),
   downloadDocumentTemplateFile: vi.fn(async () => new Blob(['x'])),
+  previewDocumentTemplateFile: vi.fn(async () => new Blob(['sample'])),
   getDocumentTemplateVariables: vi.fn(async () => VARIABLES),
 }))
 
@@ -212,5 +218,17 @@ describe('DocumentTemplateEditor', () => {
     expect(screen.queryByRole('radio', { name: /text template/i })).not.toBeInTheDocument()
     // Replace-file dropzone input exists.
     expect(document.querySelector('#dt-replace-file')).not.toBeNull()
+  })
+
+  it('docx edit mode: sample-data section is collapsed until expanded', async () => {
+    const user = userEvent.setup()
+    renderEditor(makeDocxTemplate())
+
+    // Collapsed by default — no preview request yet.
+    expect(templatesApi.previewDocumentTemplateFile).not.toHaveBeenCalled()
+
+    await user.click(screen.getByRole('button', { name: /show/i }))
+
+    await waitFor(() => expect(templatesApi.previewDocumentTemplateFile).toHaveBeenCalledWith(2))
   })
 })

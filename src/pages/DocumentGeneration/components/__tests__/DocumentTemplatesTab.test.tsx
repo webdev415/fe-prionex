@@ -32,6 +32,11 @@ vi.mock('@/features/messaging/utils/downloadBlob', () => ({
   downloadBlob: vi.fn(),
 }))
 
+// DocxRenderer lazy-imports docx-preview when the preview modal opens.
+vi.mock('docx-preview', () => ({
+  renderAsync: vi.fn(async () => {}),
+}))
+
 const { ROWS } = vi.hoisted(() => ({
   ROWS: [
     {
@@ -78,6 +83,7 @@ vi.mock('@/features/documents/api/documentTemplatesApi', () => ({
   uploadDocumentTemplate: vi.fn(),
   replaceDocumentTemplateFile: vi.fn(),
   downloadDocumentTemplateFile: vi.fn(async () => new Blob(['docx'])),
+  previewDocumentTemplateFile: vi.fn(async () => new Blob(['sample'])),
   getDocumentTemplateVariables: vi.fn(async () => ({ groups: [], items: [] })),
 }))
 
@@ -128,5 +134,26 @@ describe('DocumentTemplatesTab', () => {
     renderTab()
     await waitFor(() => expect(screen.getByText('Demand letter')).toBeInTheDocument())
     expect(screen.getAllByTitle('Download file')).toHaveLength(1)
+  })
+
+  it('shows a Preview action only on docx rows', async () => {
+    renderTab()
+    await waitFor(() => expect(screen.getByText('Demand letter')).toBeInTheDocument())
+    // Only the docx row (Demand letter) gets a preview eye; the text row does not.
+    expect(screen.getAllByTitle('Preview')).toHaveLength(1)
+  })
+
+  it('opens the preview modal from the docx row', async () => {
+    const user = userEvent.setup()
+    renderTab()
+    await waitFor(() => expect(screen.getByText('Demand letter')).toBeInTheDocument())
+
+    await user.click(screen.getByTitle('Preview'))
+
+    // The modal exposes the mode switch; default mode fetches the raw .docx.
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'With sample data' })).toBeInTheDocument()
+    )
+    await waitFor(() => expect(templatesApi.downloadDocumentTemplateFile).toHaveBeenCalledWith(1))
   })
 })
