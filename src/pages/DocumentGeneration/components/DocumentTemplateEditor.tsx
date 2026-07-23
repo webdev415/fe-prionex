@@ -52,7 +52,7 @@ import {
 } from '@/features/documents'
 import { downloadBlob } from '@/features/messaging/utils/downloadBlob'
 import { buildSampleVariableMap, substituteVariables } from './templateVariables'
-import { DocxRenderer } from './DocxRenderer'
+import { DocumentFileViewer } from './DocumentFileViewer'
 import { TemplatePreviewModal } from './TemplatePreviewModal'
 
 interface Props {
@@ -161,8 +161,8 @@ export function DocumentTemplateEditor({ open, onClose, template }: Props) {
     isLoading: sampleLoading,
     isError: sampleError,
   } = useQuery({
-    queryKey: ['document-template-preview', template?.id, 'sample'],
-    queryFn: () => previewDocumentTemplateFile(template!.id),
+    queryKey: ['document-template-preview', template?.id, 'sample', 'pdf'],
+    queryFn: () => previewDocumentTemplateFile(template!.id, 'pdf'),
     enabled: isDocxEdit && sampleExpanded && !!template,
     staleTime: 5 * 60 * 1000,
   })
@@ -824,7 +824,8 @@ export function DocumentTemplateEditor({ open, onClose, template }: Props) {
                             </div>
                             {sampleExpanded && (
                               <div className="border-border h-[50vh] overflow-hidden rounded-md border">
-                                <DocxRenderer
+                                <DocumentFileViewer
+                                  title={name}
                                   blob={sampleBlob ?? null}
                                   isLoading={sampleLoading}
                                   error={sampleError}

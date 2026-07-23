@@ -77,9 +77,19 @@ export async function replaceDocumentTemplateFile(
   return response.data
 }
 
-/** Fetch the raw .docx of a docx template (404 for text templates). */
-export async function downloadDocumentTemplateFile(id: number): Promise<Blob> {
+export type TemplateFileFormat = 'docx' | 'pdf'
+
+/**
+ * Fetch a docx template's file (404 for text templates).
+ * `format: 'pdf'` returns the server-rendered PDF — pixel-identical to what
+ * generation produces (used for in-browser preview).
+ */
+export async function downloadDocumentTemplateFile(
+  id: number,
+  format: TemplateFileFormat = 'docx'
+): Promise<Blob> {
   const response = await api.get<Blob>(`${BASE_URL}/${id}/file`, {
+    params: format === 'pdf' ? { format } : undefined,
     responseType: 'blob',
   })
   return response.data
@@ -91,8 +101,12 @@ export async function downloadDocumentTemplateFile(id: number): Promise<Blob> {
  * whether anything shifts once real values fill the placeholders.
  * 404 for text templates.
  */
-export async function previewDocumentTemplateFile(id: number): Promise<Blob> {
+export async function previewDocumentTemplateFile(
+  id: number,
+  format: TemplateFileFormat = 'docx'
+): Promise<Blob> {
   const response = await api.get<Blob>(`${BASE_URL}/${id}/file/preview`, {
+    params: format === 'pdf' ? { format } : undefined,
     responseType: 'blob',
   })
   return response.data

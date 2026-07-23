@@ -7,9 +7,10 @@
  * ("{{placeholders}}" intact) and the same template *rendered with sample data*
  * — so a lawyer can eyeball whether anything shifts once real values fill in.
  *
- * Each mode is fetched independently (React Query, keyed by template + mode) and
- * drawn by <DocxRenderer/>. Download saves whichever mode is on screen, reusing
- * the already-loaded blob so no second request is made.
+ * Each mode is fetched as a SERVER-RENDERED PDF (same LibreOffice pipeline the
+ * generation flow uses) and shown in the browser's native viewer — pixel-
+ * identical to a generated document. Download always hands out the .docx
+ * flavour (that is what lawyers edit).
  */
 
 import { useState } from 'react'
@@ -24,7 +25,7 @@ import {
   type DocumentTemplate,
 } from '@/features/documents'
 import { downloadBlob } from '@/features/messaging/utils/downloadBlob'
-import { DocxRenderer } from './DocxRenderer'
+import { DocumentFileViewer } from './DocumentFileViewer'
 
 export type TemplatePreviewMode = 'template' | 'sample'
 
@@ -62,18 +63,22 @@ export function TemplatePreviewModal({
     isLoading,
     isError,
   } = useQuery({
-    queryKey: ['document-template-preview', template.id, mode],
+    queryKey: ['document-template-preview', template.id, mode, 'pdf'],
     queryFn: () =>
       mode === 'sample'
-        ? previewDocumentTemplateFile(template.id)
-        : downloadDocumentTemplateFile(template.id),
+        ? previewDocumentTemplateFile(template.id, 'pdf')
+        : downloadDocumentTemplateFile(template.id, 'pdf'),
     enabled: open,
     staleTime: PREVIEW_STALE_TIME,
   })
 
-  const handleDownload = () => {
-    if (!blob) return
-    downloadBlob(blob, mode === 'sample' ? sampleFileName(baseFileName) : baseFileName)
+  const handleDownload = async () => {
+    // Preview shows the PDF; lawyers edit the .docx — fetch that flavour.
+    const docx =
+      mode === 'sample'
+        ? await previewDocumentTemplateFile(template.id)
+        : await downloadDocumentTemplateFile(template.id)
+    downloadBlob(docx, mode === 'sample' ? sampleFileName(baseFileName) : baseFileName)
   }
 
   const modes: { id: TemplatePreviewMode; label: string }[] = [
@@ -156,7 +161,8 @@ export function TemplatePreviewModal({
           </div>
 
           {/* Document viewport */}
-          <DocxRenderer
+          <DocumentFileViewer
+            title={template.name}
             blob={blob ?? null}
             isLoading={isLoading}
             error={isError}

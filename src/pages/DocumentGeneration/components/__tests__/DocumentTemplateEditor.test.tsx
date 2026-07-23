@@ -7,7 +7,7 @@
  * real hooks + React Query run — mirroring DocumentTypesTab.test.tsx.
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -37,10 +37,12 @@ vi.mock('@/features/messaging/utils/downloadBlob', () => ({
   downloadBlob: vi.fn(),
 }))
 
-// DocxRenderer lazy-imports docx-preview for the inline "sample data" section.
-vi.mock('docx-preview', () => ({
-  renderAsync: vi.fn(async () => {}),
-}))
+// The inline "sample data" section shows a server-rendered PDF; jsdom lacks
+// object-URL support for blobs.
+beforeAll(() => {
+  URL.createObjectURL = vi.fn(() => 'blob:mock')
+  URL.revokeObjectURL = vi.fn()
+})
 
 // ---------------------------------------------------------------------------
 // Variable dictionary shared between the api mock and assertions.
@@ -230,6 +232,8 @@ describe('DocumentTemplateEditor', () => {
 
     await user.click(screen.getByRole('button', { name: /show/i }))
 
-    await waitFor(() => expect(templatesApi.previewDocumentTemplateFile).toHaveBeenCalledWith(2))
+    await waitFor(() =>
+      expect(templatesApi.previewDocumentTemplateFile).toHaveBeenCalledWith(2, 'pdf')
+    )
   })
 })
