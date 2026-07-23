@@ -36,6 +36,11 @@ import {
   sortContactsByTypeOrder,
 } from '@/features/clients/utils/contactTypeVisualHelpers'
 import type { ContactTypeOption } from '@/features/clients/api/types'
+import {
+  requiresDigitsOnly,
+  hasNonDigitChars,
+  isDuplicateContactValue,
+} from '@/features/clients/utils/contactValueValidation'
 import { formatDate } from '@/lib/formatters'
 import { useHasAnyPermission, useHasPermission } from '@/hooks/usePermissions'
 
@@ -166,6 +171,9 @@ function SectionHeader({
 function ContactEditorForm({
   formData,
   contactTypes,
+  contactTypesById,
+  allContacts,
+  editingContactId,
   onChange,
   onSave,
   onCancel,
@@ -173,12 +181,38 @@ function ContactEditorForm({
 }: {
   formData: ContactFormData
   contactTypes: ContactTypeOption[]
+  contactTypesById: Map<number, ContactTypeOption>
+  allContacts: RecommenderContact[]
+  editingContactId: number | null
   onChange: (patch: Partial<ContactFormData>) => void
   onSave: () => void
   onCancel: () => void
   isSaving: boolean
 }) {
   const { t, i18n } = useTranslation('common')
+
+  // Requirement 1 — digits-only for Client/Recommender (phone) contact sources.
+  const selectedSource = contactTypesById.get(formData.contact_type_id)?.contact_source
+  const digitsOnly = requiresDigitsOnly(selectedSource)
+  const hasValue = formData.contact_value.trim().length > 0
+  const nonDigit = digitsOnly && hasValue && hasNonDigitChars(formData.contact_value)
+
+  // Requirement 2 — duplicate value across every Contact Source of this client,
+  // excluding the contact being edited from the comparison against itself.
+  const duplicate =
+    hasValue && isDuplicateContactValue(allContacts, formData.contact_value, editingContactId)
+
+  const validationMessage = nonDigit
+    ? t(
+        'pages.clients.editModal.contactDigitsOnly',
+        'Only digits are allowed for this contact type'
+      )
+    : duplicate
+      ? t('pages.clients.editModal.contactDuplicate', 'This value already exists for this client')
+      : null
+
+  const saveDisabled = isSaving || !hasValue || nonDigit || duplicate
+
   return (
     <div
       data-testid="recommender-contact-form"
@@ -190,6 +224,7 @@ function ContactEditorForm({
             value={formData.contact_value}
             onChange={(e) => onChange({ contact_value: e.target.value })}
             label={t('pages.clients.detail.contactValue')}
+            aria-invalid={validationMessage ? true : undefined}
           />
         </div>
         <div className="flex min-w-[160px] flex-1 flex-col gap-1">
@@ -223,7 +258,7 @@ function ContactEditorForm({
           <Button
             size="sm"
             onClick={onSave}
-            disabled={isSaving || !formData.contact_value.trim()}
+            disabled={saveDisabled}
             className="h-[30px] rounded-md"
           >
             {isSaving
@@ -235,6 +270,11 @@ function ContactEditorForm({
           </Button>
         </div>
       </div>
+      {validationMessage && (
+        <p className="text-error-500 text-xs" data-testid="contact-value-error">
+          {validationMessage}
+        </p>
+      )}
     </div>
   )
 }
@@ -657,10 +697,12 @@ function ContactCard({
 function ContactSection({
   isPhone,
   contacts,
+  allContacts,
   ...shared
 }: {
   isPhone: boolean
   contacts: RecommenderContact[]
+  allContacts: RecommenderContact[]
 } & Omit<RecommendersTabProps, 'contacts' | 'contactError'>) {
   const { t } = useTranslation('common')
   const {
@@ -722,6 +764,9 @@ function ContactSection({
           <ContactEditorForm
             formData={contactFormData}
             contactTypes={contactTypesForSelect}
+            contactTypesById={contactTypesById}
+            allContacts={allContacts}
+            editingContactId={editingContactId}
             onChange={onFormChange}
             onSave={onSave}
             onCancel={onCancelEditor}
@@ -739,6 +784,9 @@ function ContactSection({
                 key={contact.id ?? `edit-${index}`}
                 formData={contactFormData}
                 contactTypes={contactTypesForSelect}
+                contactTypesById={contactTypesById}
+                allContacts={allContacts}
+                editingContactId={editingContactId}
                 onChange={onFormChange}
                 onSave={onSave}
                 onCancel={onCancelEditor}
@@ -781,8 +829,13 @@ export function RecommendersTab(props: RecommendersTabProps) {
   return (
     <div className="self-stretch overflow-x-auto p-3 md:p-6" data-testid="recommenders-tab">
       {contactError && <p className="text-error-500 mb-3 text-sm">{contactError}</p>}
-      <ContactSection isPhone {...sectionProps} contacts={phoneContacts} />
-      <ContactSection isPhone={false} {...sectionProps} contacts={otherContacts} />
+      <ContactSection isPhone {...sectionProps} contacts={phoneContacts} allContacts={contacts} />
+      <ContactSection
+        isPhone={false}
+        {...sectionProps}
+        contacts={otherContacts}
+        allContacts={contacts}
+      />
     </div>
   )
 }

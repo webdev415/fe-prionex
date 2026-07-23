@@ -116,6 +116,11 @@ import {
   pickDefaultActiveContactTypeId,
   pickDefaultActiveContactTypeIdForSection,
 } from '@/features/clients/utils/contactTypeLabel'
+import {
+  requiresDigitsOnly,
+  hasNonDigitChars,
+  isDuplicateContactValue,
+} from '@/features/clients/utils/contactValueValidation'
 import { RecommendersTab } from './components/RecommendersTab'
 import { useRRPeriodicitySettings } from '@/features/clients/hooks/useRRPeriodicitySettings'
 import {
@@ -1553,6 +1558,29 @@ export function ClientDetailPage() {
       comment: contactFormData.comment.trim() || undefined,
     }
     if (!payload.contact_value) return
+
+    // Requirement 1 — digits-only for Client/Recommender (phone) contact sources.
+    const source = contactTypesById.get(contactFormData.contact_type_id)?.contact_source
+    if (requiresDigitsOnly(source) && hasNonDigitChars(payload.contact_value)) {
+      setContactError(
+        t(
+          'pages.clients.editModal.contactDigitsOnly',
+          'Only digits are allowed for this contact type'
+        )
+      )
+      return
+    }
+
+    // Requirement 2 — duplicate value across every Contact Source of this client,
+    // excluding the contact being edited from the comparison against itself.
+    const excludeId = contactEditorMode === 'edit' ? editingContactId : null
+    if (isDuplicateContactValue(client?.recommenders ?? [], payload.contact_value, excludeId)) {
+      setContactError(
+        t('pages.clients.editModal.contactDuplicate', 'This value already exists for this client')
+      )
+      return
+    }
+
     setContactError(null)
     if (contactEditorMode === 'edit' && editingContactId !== null) {
       updateContact(

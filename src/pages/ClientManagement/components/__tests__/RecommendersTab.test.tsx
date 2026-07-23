@@ -57,10 +57,25 @@ const emailType: ContactTypeOption = {
   contact_source: 'client',
 }
 
+const otherType: ContactTypeOption = {
+  id: 55,
+  code: 'address_home',
+  name: 'Home address',
+  is_phone: false,
+  sort_order: 20,
+  default_call_line: 'white',
+  spam_allowed: false,
+  show_as_primary_phone: false,
+  show_in_client_detail: true,
+  is_hidden: false,
+  contact_source: 'other',
+}
+
 const contactTypesById = new Map<number, ContactTypeOption>([
   [29, phoneType],
   [7, thirdPartyType],
   [3, emailType],
+  [55, otherType],
 ])
 
 function phoneContact(overrides: Partial<RecommenderContact> = {}): RecommenderContact {
@@ -305,6 +320,71 @@ describe('RecommendersTab', () => {
     const card = screen.getByTestId('recommender-phone-card')
     const phone = within(card).getByText('380971111111')
     expect(phone.className).toMatch(/line-through/)
+  })
+
+  it('disables Save and shows an error when a digit-only phone value has non-digits', () => {
+    renderTab({
+      contacts: [],
+      contactEditorMode: 'add',
+      contactEditorIsPhone: true,
+      contactTypesForSelect: [phoneType, thirdPartyType],
+      contactFormData: { contact_value: '38097abc', contact_type_id: 29, comment: '' },
+    })
+    const form = screen.getByTestId('recommender-contact-form')
+    expect(within(form).getByTestId('contact-value-error')).toHaveTextContent(
+      'pages.clients.editModal.contactDigitsOnly'
+    )
+    expect(
+      within(form).getByRole('button', { name: 'pages.clients.editModal.save' })
+    ).toBeDisabled()
+  })
+
+  it('accepts any characters for an Other-source contact type', () => {
+    renderTab({
+      contacts: [],
+      contactEditorMode: 'add',
+      contactEditorIsPhone: false,
+      contactTypesForSelect: [otherType],
+      contactFormData: { contact_value: 'Kyiv, Main st. 12', contact_type_id: 55, comment: '' },
+    })
+    const form = screen.getByTestId('recommender-contact-form')
+    expect(within(form).queryByTestId('contact-value-error')).not.toBeInTheDocument()
+    expect(
+      within(form).getByRole('button', { name: 'pages.clients.editModal.save' })
+    ).not.toBeDisabled()
+  })
+
+  it('blocks Save when the value duplicates another contact of the same client', () => {
+    renderTab({
+      contacts: [otherContact({ id: 201, contactValue: '380971111111', isPhone: false })],
+      contactEditorMode: 'add',
+      contactEditorIsPhone: true,
+      contactTypesForSelect: [phoneType, thirdPartyType],
+      contactFormData: { contact_value: '380971111111', contact_type_id: 29, comment: '' },
+    })
+    const form = screen.getByTestId('recommender-contact-form')
+    expect(within(form).getByTestId('contact-value-error')).toHaveTextContent(
+      'pages.clients.editModal.contactDuplicate'
+    )
+    expect(
+      within(form).getByRole('button', { name: 'pages.clients.editModal.save' })
+    ).toBeDisabled()
+  })
+
+  it('allows Save when editing a contact without changing its value', () => {
+    renderTab({
+      contacts: [phoneContact({ id: 101, contactValue: '380971111111', contactTags: [] })],
+      contactEditorMode: 'edit',
+      contactEditorIsPhone: true,
+      editingContactId: 101,
+      contactTypesForSelect: [phoneType, thirdPartyType],
+      contactFormData: { contact_value: '380971111111', contact_type_id: 29, comment: '' },
+    })
+    const form = screen.getByTestId('recommender-contact-form')
+    expect(within(form).queryByTestId('contact-value-error')).not.toBeInTheDocument()
+    expect(
+      within(form).getByRole('button', { name: 'pages.clients.editModal.save' })
+    ).not.toBeDisabled()
   })
 
   it('shows the full contact type name without truncation class', () => {
