@@ -607,7 +607,9 @@
         "edoOutgoing": "Вихідний (ВИХ)",
         "edoNbu": "Відповідь НБУ (НБУ)",
         "edoNone": "Не реєструвати",
-        "edoRequiresClientLawyer": "Оберіть клієнта та юриста в параметрах перед реєстрацією в ЕДО"
+        "edoRequiresClientLawyer": "Оберіть клієнта та юриста в параметрах перед реєстрацією в ЕДО",
+        "noMailbox": "Оберіть скриньку для надсилання",
+        "noTemplates": "Немає доступних шаблонів"
       },
       "newLetter": {
         "title": "Новий вихідний лист",
@@ -659,7 +661,16 @@
         "auto": "Авто",
         "managerConfirmation": "Підтвердження менеджера",
         "parametersCount": "{{confirmed}}/{{total}} параметрів",
-        "confirmAndCreate": "Підтвердити та створити задачу"
+        "confirmAndCreate": "Підтвердити та створити задачу",
+        "confirming": "Підтвердження…",
+        "confirmSuccess": "Задачу створено на канбан-дошці",
+        "contractLoading": "Завантаження договорів…",
+        "lawyerAssigned": "Призначено на канбані",
+        "noContracts": "Немає договорів",
+        "selectContract": "Оберіть договір",
+        "autoProcessed": "АВТО",
+        "taskOnBoard": "Задачу створено на канбані",
+        "viewTask": "Переглянути →"
       },
       "kanban": {
         "title": "Канбан юридичних задач",
@@ -735,8 +746,16 @@
             "medium": "Нормальний",
             "low": "Низький",
             "lowest": "Найнижчий"
-          }
-        }
+          },
+          "clearClient": "Очистити",
+          "client": "Клієнт",
+          "creating": "Створення…",
+          "selectLawyer": "Оберіть юриста",
+          "selectType": "Оберіть тип"
+        },
+        "exportEmpty": "Немає задач за поточними фільтрами",
+        "taskNotFound": "Задачу канбану не знайдено",
+        "transitionSuccess": "Переміщено до {{state}}"
       },
       "documents": {
         "title": "Документи",
@@ -840,7 +859,9 @@
             "title": "Деталі документа",
             "close": "Закрити документ",
             "download": "Завантажити",
-            "downloadStarted": "Завантаження розпочато"
+            "downloadStarted": "Завантаження розпочато",
+            "export": "Експорт",
+            "exportStarted": "Експорт розпочато"
           }
         }
       },
@@ -931,7 +952,8 @@
             "backup": "РЕЗЕРВ",
             "secondary": "ДРУГОРЯДНИЙ",
             "off": "ВИМК"
-          }
+          },
+          "noKeywordHints": "Немає підказок ключових слів"
         },
         "lawyers": {
           "autoAssignmentTitle": "Алгоритм призначення",
