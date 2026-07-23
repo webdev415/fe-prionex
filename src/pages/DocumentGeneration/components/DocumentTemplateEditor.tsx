@@ -1,30 +1,47 @@
 /**
  * Create / Edit modal for a Document Template (KAN-403 Tab 2).
  *
- * The body editor is a plain `<Textarea>`, mirroring the SMS Templates form:
- * the operator types/edits freely and clicks variables in the side panel to
- * splice `{{name}}` into the current cursor position.
+ * A template is one of two kinds:
+ *   - `text`  — body authored in a <Textarea>; variables are spliced in via the
+ *               side panel, exactly like the SMS Templates form.
+ *   - `docx`  — body derived from an uploaded .docx file; the file is the source
+ *               of truth, so the body is read-only and the operator replaces the
+ *               file to change it.
  *
- * The component is unmounted when the modal closes, so we can rely on lazy
- * state initialisers — no useEffect needed to hydrate from props.
+ * On create the operator picks the kind; on edit the kind is fixed. The variable
+ * dictionary is fetched from the backend (37 entries) — in text mode it is a
+ * click-to-insert palette, in docx mode a read-only reference the lawyer copies
+ * into Word.
+ *
+ * The component is unmounted when the modal closes, so we can rely on lazy state
+ * initialisers — no useEffect needed to hydrate from props.
  */
 
 import { useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import * as DialogPrimitive from '@radix-ui/react-dialog'
-import { Cancel01Icon, Icon } from '@/lib/icons'
+import { Cancel01Icon, Icon, Icons } from '@/lib/icons'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Label } from '@/components/ui/Label'
 import { Textarea } from '@/components/ui/Textarea'
+import { RadioGroup, RadioItem } from '@/components/ui/Radio'
+import { ToggleSwitch } from '@/components/ui/ToggleSwitch'
 import { cn } from '@/lib/utils'
 import {
   useCreateDocumentTemplate,
+  useDocumentTemplateVariables,
+  useReplaceDocumentTemplateFile,
   useUpdateDocumentTemplate,
+  useUploadDocumentTemplate,
+  downloadDocumentTemplateFile,
   type DocumentTemplate,
+  type DocumentTemplateKind,
+  type TemplateVariableDefinition,
 } from '@/features/documents'
-import { SAMPLE_VARIABLE_MAP, TEMPLATE_VARIABLES, substituteVariables } from './templateVariables'
+import { downloadBlob } from '@/features/messaging/utils/downloadBlob'
+import { buildSampleVariableMap, substituteVariables } from './templateVariables'
 
 interface Props {
   open: boolean
@@ -33,24 +50,78 @@ interface Props {
   template?: DocumentTemplate | null
 }
 
-const GROUP_ORDER: Array<'client' | 'credit' | 'system'> = ['client', 'credit', 'system']
+const ACCEPT_DOCX = '.docx'
+
+/** English fallbacks for variable-group headings (used when i18n is unset). */
+const GROUP_FALLBACK: Record<string, string> = {
+  client: 'Client',
+  credit: 'Credit',
+  promise: 'Promise',
+  restructuring: 'Restructuring',
+  system: 'System',
+}
+
+function formatBytes(bytes: number | null | undefined): string {
+  if (bytes == null) return ''
+  if (bytes < 1024) return `${bytes} B`
+  const kb = bytes / 1024
+  if (kb < 1024) return `${kb.toFixed(0)} KB`
+  return `${(kb / 1024).toFixed(1)} MB`
+}
 
 export function DocumentTemplateEditor({ open, onClose, template }: Props) {
-  const { t } = useTranslation('common')
+  const { t, i18n } = useTranslation('common')
   const isEdit = !!template
+
+  // Kind is chosen on create, fixed on edit.
+  const [templateKind, setTemplateKind] = useState<DocumentTemplateKind>(
+    () => template?.template_kind ?? 'text'
+  )
 
   // Lazy initialisers — populated once when the modal opens.
   const [name, setName] = useState(() => template?.name ?? '')
+  const [description, setDescription] = useState(() => template?.description ?? '')
   const [body, setBody] = useState(() => template?.body ?? '')
+  const [isActive, setIsActive] = useState(() => template?.is_active ?? true)
+  const [file, setFile] = useState<File | null>(null)
+  const [replaceFile, setReplaceFile] = useState<File | null>(null)
+  /** Placeholders in the just-uploaded file that are outside the dictionary. */
+  const [uploadWarning, setUploadWarning] = useState<string[] | null>(null)
+  const [replaceWarning, setReplaceWarning] = useState<string[] | null>(null)
+  const [dragOver, setDragOver] = useState(false)
+
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  // Create-file and replace-file dropzones never mount at the same time
+  // (create vs. edit-docx are mutually exclusive), so one ref is enough.
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const createMutation = useCreateDocumentTemplate()
   const updateMutation = useUpdateDocumentTemplate()
-  const submitting = createMutation.isPending || updateMutation.isPending
+  const uploadMutation = useUploadDocumentTemplate()
+  const replaceMutation = useReplaceDocumentTemplateFile()
+  const submitting =
+    createMutation.isPending ||
+    updateMutation.isPending ||
+    uploadMutation.isPending ||
+    replaceMutation.isPending
 
-  const previewText = useMemo(() => substituteVariables(body, SAMPLE_VARIABLE_MAP), [body])
+  const { data: variablesData } = useDocumentTemplateVariables()
+  const variableItems = useMemo(() => variablesData?.items ?? [], [variablesData])
+  const variableGroups = variablesData?.groups ?? []
 
-  /** Insert `{{name}}` at the textarea's current cursor (replacing any selection). */
+  const sampleMap = useMemo(() => buildSampleVariableMap(variableItems), [variableItems])
+  const previewText = useMemo(
+    () => (templateKind === 'text' ? substituteVariables(body, sampleMap) : ''),
+    [templateKind, body, sampleMap]
+  )
+
+  const baseLang = (i18n.language ?? 'en').split('-')[0]
+  const variableLabel = (v: TemplateVariableDefinition): string =>
+    v.labels[baseLang] ?? v.labels.uk ?? v.labels.en ?? v.name
+  const groupLabel = (group: string): string =>
+    t(`pages.documentGeneration.templates.variableGroups.${group}`, GROUP_FALLBACK[group] ?? group)
+
+  /** Insert `{{name}}` at the textarea's current cursor (text mode only). */
   const handleInsert = (variableName: string) => {
     const token = `{{${variableName}}}`
     const ta = textareaRef.current
@@ -62,7 +133,6 @@ export function DocumentTemplateEditor({ open, onClose, template }: Props) {
     const end = ta.selectionEnd ?? body.length
     const next = body.slice(0, start) + token + body.slice(end)
     setBody(next)
-    // Restore focus + place caret after the inserted token.
     requestAnimationFrame(() => {
       ta.focus()
       const pos = start + token.length
@@ -70,30 +140,41 @@ export function DocumentTemplateEditor({ open, onClose, template }: Props) {
     })
   }
 
-  const handleSubmit = async () => {
-    const trimmedName = name.trim()
-    if (!trimmedName) {
+  const requireName = (): string | null => {
+    const trimmed = name.trim()
+    if (!trimmed) {
       toast.error(
         t('pages.documentGeneration.templates.errors.nameRequired', 'Template name is required')
       )
-      return
+      return null
     }
+    return trimmed
+  }
+
+  const handleTextSubmit = async () => {
+    const trimmedName = requireName()
+    if (!trimmedName) return
     if (!body.trim()) {
       toast.error(
         t('pages.documentGeneration.templates.errors.bodyRequired', 'Template body is required')
       )
       return
     }
-
     try {
       if (isEdit && template) {
+        // PUT is partial: null means "leave unchanged" server-side, so send
+        // the (possibly empty) string to allow clearing the description.
         await updateMutation.mutateAsync({
           id: template.id,
-          payload: { name: trimmedName, body },
+          payload: { name: trimmedName, description: description.trim(), body },
         })
         toast.success(t('pages.documentGeneration.templates.messages.updated', 'Template updated'))
       } else {
-        await createMutation.mutateAsync({ name: trimmedName, body })
+        await createMutation.mutateAsync({
+          name: trimmedName,
+          description: description.trim() || null,
+          body,
+        })
         toast.success(t('pages.documentGeneration.templates.messages.created', 'Template created'))
       }
       onClose()
@@ -102,16 +183,236 @@ export function DocumentTemplateEditor({ open, onClose, template }: Props) {
     }
   }
 
-  const groupLabel = (g: 'client' | 'credit' | 'system'): string => {
-    switch (g) {
-      case 'client':
-        return t('pages.documentGeneration.templates.variableGroups.client', 'Client')
-      case 'credit':
-        return t('pages.documentGeneration.templates.variableGroups.credit', 'Credit')
-      case 'system':
-        return t('pages.documentGeneration.templates.variableGroups.system', 'System')
+  const handleDocxCreate = async () => {
+    const trimmedName = requireName()
+    if (!trimmedName) return
+    if (!file) {
+      toast.error(
+        t('pages.documentGeneration.templates.errors.fileRequired', 'Please choose a .docx file')
+      )
+      return
+    }
+    const fd = new FormData()
+    fd.append('file', file)
+    fd.append('name', trimmedName)
+    if (description.trim()) fd.append('description', description.trim())
+    try {
+      const res = await uploadMutation.mutateAsync(fd)
+      toast.success(t('pages.documentGeneration.templates.messages.uploaded', 'Template uploaded'))
+      if (res.unknown_variables.length > 0) {
+        // Keep the modal open on a terminal warning screen — the template is
+        // already saved and the list refreshed; the operator must see this.
+        setUploadWarning(res.unknown_variables)
+      } else {
+        onClose()
+      }
+    } catch {
+      // Error toast handled by the mutation's onError.
     }
   }
+
+  const handleDocxEditSave = async () => {
+    if (!template) return
+    const trimmedName = requireName()
+    if (!trimmedName) return
+    try {
+      await updateMutation.mutateAsync({
+        id: template.id,
+        payload: {
+          name: trimmedName,
+          // See handleTextSubmit — empty string clears, null would be ignored.
+          description: description.trim(),
+          is_active: isActive,
+        },
+      })
+      toast.success(t('pages.documentGeneration.templates.messages.updated', 'Template updated'))
+      onClose()
+    } catch {
+      // Error toast handled by the mutation's onError.
+    }
+  }
+
+  const handleReplace = async () => {
+    if (!template || !replaceFile) return
+    const fd = new FormData()
+    fd.append('file', replaceFile)
+    try {
+      const res = await replaceMutation.mutateAsync({ id: template.id, formData: fd })
+      toast.success(
+        t('pages.documentGeneration.templates.messages.fileReplaced', 'Template file replaced')
+      )
+      setReplaceFile(null)
+      setReplaceWarning(res.unknown_variables.length > 0 ? res.unknown_variables : null)
+    } catch {
+      // Error toast handled by the mutation's onError.
+    }
+  }
+
+  const handleDownload = async () => {
+    if (!template) return
+    try {
+      const blob = await downloadDocumentTemplateFile(template.id)
+      downloadBlob(blob, template.file_name ?? `${template.name}.docx`)
+    } catch {
+      toast.error(
+        t('pages.documentGeneration.templates.messages.downloadError', 'Failed to download file')
+      )
+    }
+  }
+
+  const handlePrimarySubmit = () => {
+    if (templateKind === 'text') return handleTextSubmit()
+    return isEdit ? handleDocxEditSave() : handleDocxCreate()
+  }
+
+  const title = isEdit
+    ? t('pages.documentGeneration.templates.modals.editTitle', 'Edit template')
+    : t('pages.documentGeneration.templates.modals.createTitle', 'Create template')
+
+  const renderVariablesPanel = (mode: 'insert' | 'reference') => (
+    <aside className="border-border bg-card w-full shrink-0 rounded-lg border p-3 lg:w-72">
+      <h3 className="text-foreground mb-2 text-sm font-semibold">
+        {t('pages.documentGeneration.templates.form.variables', 'Variables')}
+      </h3>
+      <p className="text-muted-foreground mb-3 text-xs">
+        {mode === 'insert'
+          ? t(
+              'pages.documentGeneration.templates.form.variablesHelp',
+              'Click a variable to insert it at the cursor.'
+            )
+          : t(
+              'pages.documentGeneration.templates.form.variablesReferenceHelp',
+              'Use these names in your Word file as {{name}}.'
+            )}
+      </p>
+      <div className="flex max-h-[40vh] flex-col gap-3 overflow-y-auto pr-1 lg:max-h-[60vh]">
+        {variableGroups.map((group) => {
+          const items = variableItems.filter((v) => v.group === group)
+          if (items.length === 0) return null
+          return (
+            <div key={group} className="flex flex-col gap-1">
+              <span className="text-muted-foreground text-[11px] font-semibold tracking-wide uppercase">
+                {groupLabel(group)}
+              </span>
+              <div className="flex flex-col gap-1">
+                {items.map((v) =>
+                  mode === 'insert' ? (
+                    <button
+                      key={v.name}
+                      type="button"
+                      onClick={() => handleInsert(v.name)}
+                      className="border-border bg-card hover:bg-muted hover:border-primary-300 flex flex-col items-start gap-0.5 rounded-md border px-2 py-1.5 text-left text-xs transition-colors"
+                    >
+                      <code className="text-primary-700 text-[11px]">{`{{${v.name}}}`}</code>
+                      <span className="text-muted-foreground text-[11px] leading-tight">
+                        {variableLabel(v)}
+                      </span>
+                    </button>
+                  ) : (
+                    <div
+                      key={v.name}
+                      className="border-border bg-card flex flex-col items-start gap-0.5 rounded-md border px-2 py-1.5 text-left text-xs"
+                    >
+                      <code className="text-primary-700 text-[11px]">{`{{${v.name}}}`}</code>
+                      <span className="text-muted-foreground text-[11px] leading-tight">
+                        {variableLabel(v)}
+                      </span>
+                    </div>
+                  )
+                )}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </aside>
+  )
+
+  const renderDropZone = (selected: File | null, onSelect: (f: File) => void, inputId: string) => {
+    return (
+      <div
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') fileInputRef.current?.click()
+        }}
+        onClick={() => fileInputRef.current?.click()}
+        onDragOver={(e) => {
+          e.preventDefault()
+          setDragOver(true)
+        }}
+        onDragLeave={() => setDragOver(false)}
+        onDrop={(e) => {
+          e.preventDefault()
+          setDragOver(false)
+          const f = e.dataTransfer.files?.[0]
+          if (f) onSelect(f)
+        }}
+        className={cn(
+          'flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed p-6 text-center transition-colors',
+          dragOver
+            ? 'border-primary-400 bg-primary-50'
+            : selected
+              ? 'border-primary-300 bg-primary-50/50'
+              : 'border-border hover:border-primary-300 hover:bg-muted'
+        )}
+      >
+        <input
+          id={inputId}
+          ref={fileInputRef}
+          type="file"
+          accept={ACCEPT_DOCX}
+          className="hidden"
+          onChange={(e) => {
+            const f = e.target.files?.[0]
+            if (f) onSelect(f)
+            // Allow re-selecting the same filename in a row.
+            e.target.value = ''
+          }}
+        />
+        <Icons.File size={28} strokeWidth={1.5} className="text-muted-foreground" />
+        {selected ? (
+          <div className="flex flex-col items-center gap-0.5">
+            <span className="text-foreground text-sm font-medium">{selected.name}</span>
+            <span className="text-muted-foreground text-xs">{formatBytes(selected.size)}</span>
+          </div>
+        ) : (
+          <span className="text-muted-foreground text-sm">
+            {t(
+              'pages.documentGeneration.templates.form.dropFileOrClick',
+              'Drop a .docx file here or click to choose'
+            )}
+          </span>
+        )}
+      </div>
+    )
+  }
+
+  const unknownVariablesBlock = (vars: string[]) => (
+    <div className="border-warning-200 bg-warning-50 text-warning-800 flex flex-col gap-1 rounded-md border p-3 text-xs">
+      <div className="flex items-center gap-1.5 font-semibold">
+        <Icons.Warning size={14} strokeWidth={2} />
+        {t(
+          'pages.documentGeneration.templates.warnings.unknownVariablesTitle',
+          'Variables outside the dictionary'
+        )}
+      </div>
+      <p className="text-warning-700">
+        {t(
+          'pages.documentGeneration.templates.warnings.unknownVariablesHelp',
+          'These placeholders are not in the dictionary and will not be substituted:'
+        )}
+      </p>
+      <div className="flex flex-wrap gap-1">
+        {vars.map((v) => (
+          <code
+            key={v}
+            className="border-warning-300 bg-warning-100 rounded border px-1.5 py-0.5 text-[11px]"
+          >{`{{${v}}}`}</code>
+        ))}
+      </div>
+    </div>
+  )
 
   return (
     <DialogPrimitive.Root open={open} onOpenChange={(o) => !o && onClose()}>
@@ -129,9 +430,7 @@ export function DocumentTemplateEditor({ open, onClose, template }: Props) {
             <div className="border-border flex items-start justify-between gap-3 border-b px-4 py-3 sm:px-6 sm:py-4">
               <div className="min-w-0">
                 <DialogPrimitive.Title className="text-foreground text-base font-semibold sm:text-lg">
-                  {isEdit
-                    ? t('pages.documentGeneration.templates.modals.editTitle', 'Edit template')
-                    : t('pages.documentGeneration.templates.modals.createTitle', 'Create template')}
+                  {title}
                 </DialogPrimitive.Title>
                 <p className="text-muted-foreground mt-1 text-xs">
                   {t(
@@ -156,123 +455,283 @@ export function DocumentTemplateEditor({ open, onClose, template }: Props) {
               </DialogPrimitive.Close>
             </div>
 
-            {/* Body */}
-            <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-4 py-3 sm:px-6 sm:py-4 lg:flex-row">
-              {/* Left column: name + textarea + preview */}
-              <div className="flex min-w-0 flex-1 flex-col gap-4">
-                <div className="flex flex-col gap-1">
-                  <Label htmlFor="dt-name">
-                    {t('pages.documentGeneration.templates.form.name', 'Template name')}
-                  </Label>
-                  <Input
-                    id="dt-name"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder={t(
-                      'pages.documentGeneration.templates.form.namePlaceholder',
-                      'e.g. Demand letter'
-                    )}
-                    maxLength={200}
-                  />
+            {uploadWarning ? (
+              /* Terminal screen after a docx upload that had unknown variables. */
+              <>
+                <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-4 py-4 sm:px-6">
+                  {unknownVariablesBlock(uploadWarning)}
                 </div>
-
-                <div className="flex flex-col gap-1">
-                  <Label htmlFor="dt-body">
-                    {t('pages.documentGeneration.templates.form.body', 'Template body')}
-                  </Label>
-                  <Textarea
-                    id="dt-body"
-                    ref={textareaRef}
-                    value={body}
-                    onChange={(e) => setBody(e.target.value)}
-                    placeholder={t(
-                      'pages.documentGeneration.templates.form.bodyPlaceholder',
-                      'Compose your template here. Insert variables from the right-hand panel.'
-                    )}
-                    rows={8}
-                    className="min-h-[160px] sm:min-h-[200px]"
-                  />
+                <div className="border-border flex items-center justify-end border-t px-4 py-3 sm:px-6">
+                  <Button onClick={onClose} className="w-full sm:w-auto">
+                    {t('pages.documentGeneration.templates.warnings.acknowledge', 'Done')}
+                  </Button>
                 </div>
+              </>
+            ) : (
+              <>
+                {/* Body */}
+                <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-4 py-3 sm:px-6 sm:py-4 lg:flex-row">
+                  <div className="flex min-w-0 flex-1 flex-col gap-4">
+                    {/* Kind switcher — create only. */}
+                    {!isEdit && (
+                      <div className="flex flex-col gap-1.5">
+                        <Label>
+                          {t(
+                            'pages.documentGeneration.templates.templateKind.label',
+                            'Template type'
+                          )}
+                        </Label>
+                        <RadioGroup
+                          value={templateKind}
+                          onValueChange={(v) => setTemplateKind(v as DocumentTemplateKind)}
+                          className="grid-cols-2 gap-2 sm:inline-grid"
+                        >
+                          {(['text', 'docx'] as DocumentTemplateKind[]).map((kind) => {
+                            const id = `dt-kind-${kind}`
+                            return (
+                              <div
+                                key={kind}
+                                className={cn(
+                                  'flex items-center gap-2 rounded-md border px-3 py-2 text-sm transition-colors',
+                                  templateKind === kind
+                                    ? 'border-primary-400 bg-primary-50/50'
+                                    : 'border-border hover:bg-muted'
+                                )}
+                              >
+                                <RadioItem id={id} value={kind} />
+                                <Label htmlFor={id} className="mb-0 cursor-pointer font-normal">
+                                  {kind === 'text'
+                                    ? t(
+                                        'pages.documentGeneration.templates.templateKind.text',
+                                        'Text template'
+                                      )
+                                    : t(
+                                        'pages.documentGeneration.templates.templateKind.docx',
+                                        '.docx file'
+                                      )}
+                                </Label>
+                              </div>
+                            )
+                          })}
+                        </RadioGroup>
+                      </div>
+                    )}
 
-                <div className="flex flex-col gap-1">
-                  <Label>
-                    {t('pages.documentGeneration.templates.form.preview', 'Preview (sample data)')}
-                  </Label>
-                  <div className="border-border bg-muted text-foreground min-h-[100px] rounded-md border border-dashed px-3 py-2 text-sm whitespace-pre-wrap sm:min-h-[120px]">
-                    {previewText.trim() ? (
-                      previewText
-                    ) : (
-                      <span className="text-muted-foreground">
-                        {t(
-                          'pages.documentGeneration.templates.form.previewEmpty',
-                          'Start typing to see a live preview.'
+                    {/* Name */}
+                    <div className="flex flex-col gap-1">
+                      <Label htmlFor="dt-name">
+                        {t('pages.documentGeneration.templates.form.name', 'Template name')}
+                      </Label>
+                      <Input
+                        id="dt-name"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        placeholder={t(
+                          'pages.documentGeneration.templates.form.namePlaceholder',
+                          'e.g. Demand letter'
                         )}
-                      </span>
+                        maxLength={200}
+                      />
+                    </div>
+
+                    {/* Description */}
+                    <div className="flex flex-col gap-1">
+                      <Label htmlFor="dt-description">
+                        {t('pages.documentGeneration.templates.form.description', 'Description')}
+                      </Label>
+                      <Input
+                        id="dt-description"
+                        value={description}
+                        onChange={(e) => setDescription(e.target.value)}
+                        placeholder={t(
+                          'pages.documentGeneration.templates.form.descriptionPlaceholder',
+                          'Optional short description'
+                        )}
+                        maxLength={500}
+                      />
+                    </div>
+
+                    {/* is_active — docx edit only. */}
+                    {isEdit && templateKind === 'docx' && (
+                      <div className="flex items-center justify-between gap-3">
+                        <Label htmlFor="dt-active" className="mb-0">
+                          {t('pages.documentGeneration.templates.form.isActive', 'Active')}
+                        </Label>
+                        <ToggleSwitch
+                          checked={isActive}
+                          onChange={setIsActive}
+                          ariaLabel={t(
+                            'pages.documentGeneration.templates.form.isActive',
+                            'Active'
+                          )}
+                        />
+                      </div>
+                    )}
+
+                    {templateKind === 'text' ? (
+                      <>
+                        {/* Body */}
+                        <div className="flex flex-col gap-1">
+                          <Label htmlFor="dt-body">
+                            {t('pages.documentGeneration.templates.form.body', 'Template body')}
+                          </Label>
+                          <Textarea
+                            id="dt-body"
+                            ref={textareaRef}
+                            value={body}
+                            onChange={(e) => setBody(e.target.value)}
+                            placeholder={t(
+                              'pages.documentGeneration.templates.form.bodyPlaceholder',
+                              'Compose your template here. Insert variables from the right-hand panel.'
+                            )}
+                            rows={8}
+                            className="min-h-[160px] sm:min-h-[200px]"
+                          />
+                        </div>
+
+                        {/* Preview */}
+                        <div className="flex flex-col gap-1">
+                          <Label>
+                            {t(
+                              'pages.documentGeneration.templates.form.preview',
+                              'Preview (sample data)'
+                            )}
+                          </Label>
+                          <div className="border-border bg-muted text-foreground min-h-[100px] rounded-md border border-dashed px-3 py-2 text-sm whitespace-pre-wrap sm:min-h-[120px]">
+                            {previewText.trim() ? (
+                              previewText
+                            ) : (
+                              <span className="text-muted-foreground">
+                                {t(
+                                  'pages.documentGeneration.templates.form.previewEmpty',
+                                  'Start typing to see a live preview.'
+                                )}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </>
+                    ) : isEdit ? (
+                      <>
+                        {/* Docx edit: read-only body preview + replace + download. */}
+                        <div className="flex flex-col gap-1">
+                          <Label>
+                            {t(
+                              'pages.documentGeneration.templates.form.bodyReadonly',
+                              'Body (from file, read-only)'
+                            )}
+                          </Label>
+                          <div className="border-border bg-muted text-foreground max-h-[220px] min-h-[100px] overflow-y-auto rounded-md border border-dashed px-3 py-2 text-sm whitespace-pre-wrap">
+                            {body.trim() ? (
+                              body
+                            ) : (
+                              <span className="text-muted-foreground">
+                                {t(
+                                  'pages.documentGeneration.templates.form.bodyEmpty',
+                                  'No extracted text.'
+                                )}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="flex flex-col gap-2">
+                          <div className="flex items-center justify-between gap-2">
+                            <Label className="mb-0">
+                              {t(
+                                'pages.documentGeneration.templates.form.currentFile',
+                                'Current file'
+                              )}
+                            </Label>
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              size="sm"
+                              onClick={handleDownload}
+                              leftIcon={<Icons.Download size={14} strokeWidth={1.5} />}
+                            >
+                              {t(
+                                'pages.documentGeneration.templates.form.downloadFile',
+                                'Download file'
+                              )}
+                            </Button>
+                          </div>
+                          {template?.file_name && (
+                            <p className="text-muted-foreground text-xs">
+                              {template.file_name}
+                              {template.file_size != null &&
+                                ` · ${formatBytes(template.file_size)}`}
+                            </p>
+                          )}
+                        </div>
+
+                        <div className="flex flex-col gap-2">
+                          <Label className="mb-0">
+                            {t(
+                              'pages.documentGeneration.templates.form.replaceFile',
+                              'Replace file'
+                            )}
+                          </Label>
+                          {renderDropZone(replaceFile, setReplaceFile, 'dt-replace-file')}
+                          {replaceWarning && unknownVariablesBlock(replaceWarning)}
+                          <div>
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              onClick={handleReplace}
+                              disabled={!replaceFile || submitting}
+                            >
+                              {replaceMutation.isPending
+                                ? t('actions.saving', 'Saving…')
+                                : t(
+                                    'pages.documentGeneration.templates.form.replaceAction',
+                                    'Replace file'
+                                  )}
+                            </Button>
+                          </div>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        {/* Docx create: file picker. */}
+                        <div className="flex flex-col gap-1">
+                          <Label>
+                            {t('pages.documentGeneration.templates.form.file', '.docx file')}
+                          </Label>
+                          {renderDropZone(file, setFile, 'dt-file')}
+                        </div>
+                      </>
                     )}
                   </div>
-                </div>
-              </div>
 
-              {/* Right column: variables panel */}
-              <aside className="border-border bg-card w-full shrink-0 rounded-lg border p-3 lg:w-72">
-                <h3 className="text-foreground mb-2 text-sm font-semibold">
-                  {t('pages.documentGeneration.templates.form.variables', 'Variables')}
-                </h3>
-                <p className="text-muted-foreground mb-3 text-xs">
-                  {t(
-                    'pages.documentGeneration.templates.form.variablesHelp',
-                    'Click a variable to insert it at the cursor.'
-                  )}
-                </p>
-                <div className="flex max-h-[40vh] flex-col gap-3 overflow-y-auto pr-1 lg:max-h-[60vh]">
-                  {GROUP_ORDER.map((group) => {
-                    const items = TEMPLATE_VARIABLES.filter((v) => v.group === group)
-                    if (items.length === 0) return null
-                    return (
-                      <div key={group} className="flex flex-col gap-1">
-                        <span className="text-muted-foreground text-[11px] font-semibold tracking-wide uppercase">
-                          {groupLabel(group)}
-                        </span>
-                        <div className="flex flex-col gap-1">
-                          {items.map((v) => (
-                            <button
-                              key={v.name}
-                              type="button"
-                              onClick={() => handleInsert(v.name)}
-                              className="border-border bg-card hover:bg-muted hover:border-primary-300 flex flex-col items-start gap-0.5 rounded-md border px-2 py-1.5 text-left text-xs transition-colors"
-                            >
-                              <code className="text-primary-700 text-[11px]">{`{{${v.name}}}`}</code>
-                              <span className="text-muted-foreground text-[11px] leading-tight">
-                                {t(v.descriptionKey, v.fallback)}
-                              </span>
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )
-                  })}
+                  {/* Right column: variables panel */}
+                  {renderVariablesPanel(templateKind === 'text' ? 'insert' : 'reference')}
                 </div>
-              </aside>
-            </div>
 
-            {/* Footer */}
-            <div className="border-border flex flex-col-reverse items-stretch gap-2 border-t px-4 py-3 sm:flex-row sm:items-center sm:justify-end sm:px-6">
-              <Button
-                variant="secondary"
-                onClick={onClose}
-                disabled={submitting}
-                className="w-full sm:w-auto"
-              >
-                {t('actions.cancel', 'Cancel')}
-              </Button>
-              <Button onClick={handleSubmit} disabled={submitting} className="w-full sm:w-auto">
-                {submitting
-                  ? t('actions.saving', 'Saving…')
-                  : isEdit
-                    ? t('actions.save', 'Save')
-                    : t('actions.create', 'Create')}
-              </Button>
-            </div>
+                {/* Footer */}
+                <div className="border-border flex flex-col-reverse items-stretch gap-2 border-t px-4 py-3 sm:flex-row sm:items-center sm:justify-end sm:px-6">
+                  <Button
+                    variant="secondary"
+                    onClick={onClose}
+                    disabled={submitting}
+                    className="w-full sm:w-auto"
+                  >
+                    {t('actions.cancel', 'Cancel')}
+                  </Button>
+                  <Button
+                    onClick={handlePrimarySubmit}
+                    disabled={submitting}
+                    className="w-full sm:w-auto"
+                  >
+                    {submitting
+                      ? t('actions.saving', 'Saving…')
+                      : isEdit
+                        ? t('actions.save', 'Save')
+                        : t('actions.create', 'Create')}
+                  </Button>
+                </div>
+              </>
+            )}
           </DialogPrimitive.Content>
         </div>
       </DialogPrimitive.Portal>

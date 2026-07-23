@@ -6166,7 +6166,8 @@
           "preview": "Превʼю",
           "variables": "Змінні",
           "updated": "Оновлено",
-          "actions": "Дії"
+          "actions": "Дії",
+          "type": "Тип"
         },
         "modals": {
           "createTitle": "Створити шаблон",
@@ -6184,12 +6185,26 @@
           "preview": "Превʼю (тестові дані)",
           "previewEmpty": "Почніть друкувати, щоб побачити превʼю.",
           "variables": "Змінні",
-          "variablesHelp": "Натисніть змінну, щоб вставити її в позицію курсора."
+          "variablesHelp": "Натисніть змінну, щоб вставити її в позицію курсора.",
+          "description": "Опис",
+          "descriptionPlaceholder": "Необовʼязковий короткий опис",
+          "file": "Файл .docx",
+          "dropFileOrClick": "Перетягніть файл .docx сюди або натисніть, щоб вибрати",
+          "bodyReadonly": "Тіло (з файлу, лише для читання)",
+          "bodyEmpty": "Немає витягнутого тексту.",
+          "currentFile": "Поточний файл",
+          "downloadFile": "Завантажити файл",
+          "replaceFile": "Замінити файл",
+          "replaceAction": "Замінити файл",
+          "isActive": "Активний",
+          "variablesReferenceHelp": "Використовуйте ці імена у вашому Word-файлі як {{name}}."
         },
         "variableGroups": {
           "client": "Клієнт",
           "credit": "Кредит",
-          "system": "Система"
+          "system": "Система",
+          "promise": "Обіцянка",
+          "restructuring": "Реструктуризація"
         },
         "variables": {
           "clientFullName": "Повне імʼя клієнта",
@@ -6210,12 +6225,26 @@
         },
         "errors": {
           "nameRequired": "Назва шаблона обовʼязкова",
-          "bodyRequired": "Тіло шаблона обовʼязкове"
+          "bodyRequired": "Тіло шаблона обовʼязкове",
+          "fileRequired": "Виберіть файл .docx"
         },
         "messages": {
           "created": "Шаблон створено",
           "updated": "Шаблон оновлено",
-          "deleted": "Шаблон видалено"
+          "deleted": "Шаблон видалено",
+          "uploaded": "Шаблон завантажено",
+          "fileReplaced": "Файл шаблона оновлено",
+          "downloadError": "Не вдалося завантажити файл"
+        },
+        "templateKind": {
+          "label": "Тип шаблона",
+          "text": "Текстовий шаблон",
+          "docx": "Файл .docx"
+        },
+        "warnings": {
+          "unknownVariablesTitle": "Змінні поза словником",
+          "unknownVariablesHelp": "Ці плейсхолдери відсутні у словнику й не будуть підставлені:",
+          "acknowledge": "Готово"
         }
       }
     },

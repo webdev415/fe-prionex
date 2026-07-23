@@ -56,6 +56,13 @@ export interface DocumentTemplateVariable {
   required: boolean
 }
 
+/**
+ * `text`  — the body is authored in-app (Textarea) and stored as plain text.
+ * `docx`  — the body is derived from an uploaded .docx file; it is read-only
+ *           in the UI and re-scanned server-side whenever the file changes.
+ */
+export type DocumentTemplateKind = 'text' | 'docx'
+
 export interface DocumentTemplate {
   id: number
   name: string
@@ -68,11 +75,49 @@ export interface DocumentTemplate {
   last_used_at: string | null
   created_at: string
   updated_at: string
+  /** How the body is produced/stored — see DocumentTemplateKind. */
+  template_kind: DocumentTemplateKind
+  /** Original filename of the uploaded .docx (null for text templates). */
+  file_name: string | null
+  /** Size of the uploaded .docx in bytes (null for text templates). */
+  file_size: number | null
+}
+
+/**
+ * Returned by the upload / replace-file endpoints. Same shape as a template
+ * plus the placeholders found in the file that are NOT in the variable
+ * dictionary. These are still persisted into `available_variables`; the list
+ * is a *warning* (typos / unsupported vars), not an error.
+ */
+export interface DocumentTemplateUploadResponse extends DocumentTemplate {
+  unknown_variables: string[]
 }
 
 export interface DocumentTemplateListResponse {
   total: number
   items: DocumentTemplate[]
+}
+
+/* ------------------------------------------------------------------ */
+/* Variable dictionary (server-driven; replaces the old hardcoded list) */
+/* ------------------------------------------------------------------ */
+
+export interface TemplateVariableDefinition {
+  name: string
+  /** Bucket id — one of TemplateVariablesResponse.groups. */
+  group: string
+  /** Localised human label, keyed by language code (e.g. { uk, en }). */
+  labels: Record<string, string>
+  /** Example value used by the live preview of text templates. */
+  sample: string
+  /** Free-text aliases a lawyer might type in Word; informational only. */
+  aliases: string[]
+}
+
+export interface TemplateVariablesResponse {
+  /** Group ids in the order they should be rendered. */
+  groups: string[]
+  items: TemplateVariableDefinition[]
 }
 
 export interface DocumentTemplateCreatePayload {
