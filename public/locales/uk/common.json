@@ -6233,7 +6233,13 @@
           "replaceAction": "Замінити файл",
           "isActive": "Активний",
           "activationRule": "Правило активації",
-          "variablesReferenceHelp": "Використовуйте ці імена у вашому Word-файлі як {{name}}."
+          "variablesReferenceHelp": "Використовуйте ці імена у вашому Word-файлі як {{name}}.",
+          "composeHelp": "Шапка з лого, реквізити компанії, печатка та підпис додаються автоматично.",
+          "composeTitle": "Заголовок документа",
+          "composeTitlePlaceholder": "напр. ГАРАНТІЙНИЙ ЛИСТ",
+          "composeBodyPlaceholder": "Кожен рядок — окремий абзац. Вставляйте змінні з панелі праворуч.",
+          "includeRequisites": "Реквізити для оплати",
+          "includeSchedule": "Таблиця графіка платежів (РР)"
         },
         "activationRules": {
           "always": "Завжди доступний",
@@ -6270,7 +6276,8 @@
         "errors": {
           "nameRequired": "Назва шаблона обовʼязкова",
           "bodyRequired": "Тіло шаблона обовʼязкове",
-          "fileRequired": "Виберіть файл .docx"
+          "fileRequired": "Виберіть файл .docx",
+          "titleRequired": "Вкажіть заголовок документа"
         },
         "messages": {
           "created": "Шаблон створено",
@@ -6283,7 +6290,8 @@
         "templateKind": {
           "label": "Тип шаблона",
           "text": "Текстовий шаблон",
-          "docx": "Файл .docx"
+          "docx": "Файл .docx",
+          "compose": "Фірмовий бланк"
         },
         "warnings": {
           "unknownVariablesTitle": "Змінні поза словником",

@@ -117,3 +117,27 @@ export async function getDocumentTemplateVariables(): Promise<TemplateVariablesR
   const response = await api.get<TemplateVariablesResponse>(`${BASE_URL}/variables`)
   return response.data
 }
+
+export interface DocumentTemplateComposePayload {
+  name: string
+  description?: string | null
+  /** Title lines, split by \n. */
+  title: string
+  /** Body paragraphs, split by newlines. */
+  body: string
+  include_schedule: boolean
+  include_requisites: boolean
+  activation_rule?: string
+}
+
+/**
+ * Compose a branded template from structured input: the corporate static
+ * (letterhead, requisites, stamp/signature footer) is fixed server-side —
+ * the author supplies only title/body and block toggles.
+ */
+export async function composeDocumentTemplate(
+  payload: DocumentTemplateComposePayload
+): Promise<DocumentTemplateUploadResponse> {
+  const response = await api.post<DocumentTemplateUploadResponse>(`${BASE_URL}/compose`, payload)
+  return response.data
+}

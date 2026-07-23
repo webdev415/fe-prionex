@@ -5977,7 +5977,13 @@
           "replaceAction": "Replace file",
           "isActive": "Active",
           "activationRule": "Activation rule",
-          "variablesReferenceHelp": "Use these names in your Word file as {{name}}."
+          "variablesReferenceHelp": "Use these names in your Word file as {{name}}.",
+          "composeHelp": "Letterhead with logo, company requisites, stamp and signature are added automatically.",
+          "composeTitle": "Document title",
+          "composeTitlePlaceholder": "e.g. GUARANTEE LETTER",
+          "composeBodyPlaceholder": "Each line is a separate paragraph. Insert variables from the panel on the right.",
+          "includeRequisites": "Payment requisites",
+          "includeSchedule": "Payment schedule table (RR)"
         },
         "activationRules": {
           "always": "Always available",
@@ -6014,7 +6020,8 @@
         "errors": {
           "nameRequired": "Template name is required",
           "bodyRequired": "Template body is required",
-          "fileRequired": "Please choose a .docx file"
+          "fileRequired": "Please choose a .docx file",
+          "titleRequired": "Document title is required"
         },
         "messages": {
           "created": "Template created",
@@ -6027,7 +6034,8 @@
         "templateKind": {
           "label": "Template type",
           "text": "Text template",
-          "docx": ".docx file"
+          "docx": ".docx file",
+          "compose": "Branded form"
         },
         "warnings": {
           "unknownVariablesTitle": "Variables outside the dictionary",
