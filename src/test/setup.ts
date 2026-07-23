@@ -2,6 +2,7 @@
 import '@testing-library/jest-dom'
 import { vi, beforeAll, afterAll } from 'vitest'
 import './mocks/callQaSettings'
+import './mocks/aiAssistantSettings'
 
 // Set default API base URL for tests (deployed backend) if not already set
 // This ensures tests use the deployed backend URL
