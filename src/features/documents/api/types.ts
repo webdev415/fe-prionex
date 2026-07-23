@@ -2,6 +2,8 @@
  * Types for the Document Generation > Document Journal feature (KAN-403 Tab 1).
  */
 
+import type { ClientDocument } from '@/features/clients/api/documentApi'
+
 export type DocumentAction = 'uploaded' | 'generated'
 
 export interface DocumentTypeRef {
@@ -63,6 +65,25 @@ export interface DocumentTemplateVariable {
  */
 export type DocumentTemplateKind = 'text' | 'docx'
 
+/**
+ * When a template becomes selectable for generation on a client's debt.
+ *   - `always`           — no precondition.
+ *   - `active_debt`      — the debt must be open/active.
+ *   - `closed_debt`      — the debt must be closed.
+ *   - `rr_active`        — the debt has an active restructuring (RR).
+ *   - `rr_first_payment` — the RR's first instalment has been paid.
+ *   - `promise_active`   — the client has a live promise-to-pay.
+ * The server evaluates the rule per debt and returns the verdict in
+ * `GenerationTemplateDebt.available` / `.reason`.
+ */
+export type DocumentActivationRule =
+  | 'always'
+  | 'active_debt'
+  | 'closed_debt'
+  | 'rr_active'
+  | 'rr_first_payment'
+  | 'promise_active'
+
 export interface DocumentTemplate {
   id: number
   name: string
@@ -81,6 +102,8 @@ export interface DocumentTemplate {
   file_name: string | null
   /** Size of the uploaded .docx in bytes (null for text templates). */
   file_size: number | null
+  /** Precondition that gates this template during generation. */
+  activation_rule: DocumentActivationRule
 }
 
 /**
@@ -126,6 +149,7 @@ export interface DocumentTemplateCreatePayload {
   body: string
   available_variables?: DocumentTemplateVariable[]
   project_id?: number
+  activation_rule?: DocumentActivationRule
 }
 
 export interface DocumentTemplateUpdatePayload {
@@ -134,4 +158,62 @@ export interface DocumentTemplateUpdatePayload {
   body?: string
   available_variables?: DocumentTemplateVariable[]
   is_active?: boolean
+  activation_rule?: DocumentActivationRule
+}
+
+/* ------------------------------------------------------------------ */
+/* Document generation from a client card                              */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Why a template is (un)available for a specific debt.
+ *   - `ok`               — available.
+ *   - `debt_not_closed`  — rule needs a closed debt, this one is open.
+ *   - `debt_closed`      — rule needs an open debt, this one is closed.
+ *   - `no_active_rr`     — rule needs an active restructuring, none found.
+ *   - `no_active_promise`— rule needs a live promise-to-pay, none found.
+ * Unknown codes are tolerated and fall back to a generic message.
+ */
+export type GenerationOptionReason =
+  | 'ok'
+  | 'debt_not_closed'
+  | 'debt_closed'
+  | 'no_active_rr'
+  | 'no_active_promise'
+
+export interface GenerationTemplateDebt {
+  debt_id: number
+  available: boolean
+  reason: GenerationOptionReason | string
+}
+
+export interface GenerationTemplateOption {
+  id: number
+  name: string
+  activation_rule: DocumentActivationRule
+  /** Per-debt availability verdict for this template. */
+  debts: GenerationTemplateDebt[]
+}
+
+export interface GenerationOptionsResponse {
+  templates: GenerationTemplateOption[]
+}
+
+export interface GenerateDocumentPayload {
+  client_id: number
+  debt_id: number
+  document_type_id: number
+  /** Outgoing number; omit to let the server auto-assign one. */
+  index_num?: number
+}
+
+export interface GenerateDocumentResponse {
+  document_id: number
+  document_name: string
+  /** Resolved outgoing number (auto-assigned when the request omitted it). */
+  index_num: number
+  /** The persisted PDF row — already visible in the client's documents list. */
+  pdf_document: ClientDocument
+  /** Base64-encoded .docx twin the operator may download client-side. */
+  docx_base64: string
 }

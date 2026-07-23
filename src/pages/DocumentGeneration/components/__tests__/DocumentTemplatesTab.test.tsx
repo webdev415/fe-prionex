@@ -54,6 +54,7 @@ const { ROWS } = vi.hoisted(() => ({
       template_kind: 'docx',
       file_name: 'demand.docx',
       file_size: 2048,
+      activation_rule: 'active_debt',
     },
     {
       id: 2,
@@ -70,6 +71,7 @@ const { ROWS } = vi.hoisted(() => ({
       template_kind: 'text',
       file_name: null,
       file_size: null,
+      activation_rule: 'always',
     },
   ] as DocumentTemplate[],
 }))

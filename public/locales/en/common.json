@@ -4982,6 +4982,34 @@
         "loan": "Loan",
         "documentsUnlinked": "Not linked to a loan",
         "documentTypePlaceholder": "Select a type",
+        "generatedBadge": "Generated",
+        "generateModal": {
+          "title": "Generate document",
+          "credit": "Loan",
+          "creditPlaceholder": "Select a loan",
+          "template": "Template",
+          "selectCreditFirst": "Select a loan first",
+          "templatesEmpty": "No available templates",
+          "loadError": "Failed to load templates",
+          "documentType": "Document type",
+          "indexNum": "Outgoing №",
+          "indexNumPlaceholder": "Auto",
+          "indexNumHint": "Leave empty for auto-numbering",
+          "generate": "Generate",
+          "generating": "Generating…",
+          "done": "Done",
+          "successTitle": "Document generated",
+          "successPdfHint": "The PDF has been added to the client's documents.",
+          "downloadDocx": "Download .docx",
+          "genericError": "Failed to generate the document",
+          "reasons": {
+            "debt_not_closed": "The loan is not closed",
+            "debt_closed": "The loan is closed",
+            "no_active_rr": "No active restructuring",
+            "no_active_promise": "No active payment promise",
+            "unavailable": "Unavailable for this loan"
+          }
+        },
         "department": "Department",
         "phones": "Phones",
         "tin": "TIN",
@@ -5941,7 +5969,16 @@
           "replaceFile": "Replace file",
           "replaceAction": "Replace file",
           "isActive": "Active",
+          "activationRule": "Activation rule",
           "variablesReferenceHelp": "Use these names in your Word file as {{name}}."
+        },
+        "activationRules": {
+          "always": "Always available",
+          "active_debt": "Active debt",
+          "closed_debt": "Closed debt",
+          "rr_active": "Active restructuring",
+          "rr_first_payment": "First restructuring payment",
+          "promise_active": "Active payment promise"
         },
         "variableGroups": {
           "client": "Client",
