@@ -721,7 +721,12 @@ export interface ContactResponse {
   updated_at?: string | null
 }
 
-export type ContactSource = 'client' | 'recommender'
+// 'client'/'recommender' are phone contact types; 'other' marks a non-phone
+// type (email, address, …) where call-line/spam/primary-phone are meaningless.
+// Note: the TA chain step's own contact_source (features/taChains/api/types.ts)
+// stays 'client' | 'recommender' — 'Other' is an excluded category, not a
+// third TA filter option.
+export type ContactSource = 'client' | 'recommender' | 'other'
 
 export interface ContactTypeOption {
   id: number

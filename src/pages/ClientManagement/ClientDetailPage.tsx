@@ -625,7 +625,11 @@ export function ClientDetailPage() {
     if (contactTypeId == null) {
       return 'recommender'
     }
-    return contactTypesById.get(contactTypeId)?.contact_source ?? 'recommender'
+    // Only phone (client/recommender) contacts reach here — 'other' types are
+    // non-phone and have no call/interaction row — but coerce defensively so an
+    // unexpected source falls back to the existing default.
+    const source = contactTypesById.get(contactTypeId)?.contact_source
+    return source === 'client' ? 'client' : 'recommender'
   }
 
   const defaultNewContactTypeId = useMemo(
