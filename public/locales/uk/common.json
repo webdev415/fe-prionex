@@ -3271,7 +3271,12 @@
       "assistantToggleAria": "Перемкнути AI-асистента",
       "toastEnabled": "AI-асистента ввімкнено",
       "toastDisabled": "AI-асистента вимкнено",
-      "toastError": "Не вдалося оновити налаштування AI-асистента"
+      "toastError": "Не вдалося оновити налаштування AI-асистента",
+      "accessTitle": "Доступ до асистента",
+      "accessDescription": "Які ролі можуть користуватися асистентом оператора (пермішен use_ai_assistant).",
+      "accessToggleAria": "Перемкнути доступ до асистента для ролі {{role}}",
+      "accessUpdated": "Доступ для ролі {{role}} оновлено",
+      "accessUpdateError": "Не вдалося оновити доступ ролі"
     },
     "projects": {
       "title": "Управління проєктами",
