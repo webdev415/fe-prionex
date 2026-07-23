@@ -128,6 +128,7 @@ export interface DocumentTemplateComposePayload {
   include_schedule: boolean
   include_requisites: boolean
   activation_rule?: string
+  document_type_id?: number | null
 }
 
 /**

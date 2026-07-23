@@ -4335,7 +4335,8 @@
             "no_active_promise": "Немає актуальної обіцянки платежу",
             "unavailable": "Недоступно для цього кредиту"
           },
-          "hiddenTemplates": "Приховано шаблонів, недоступних для цього кредиту: {{count}}"
+          "hiddenTemplates": "Приховано шаблонів, недоступних для цього кредиту: {{count}}",
+          "typeFromTemplate": "застосовується автоматично з шаблону"
         },
         "department": "Відділ",
         "phones": "Телефони",
@@ -6239,7 +6240,9 @@
           "composeTitlePlaceholder": "напр. ГАРАНТІЙНИЙ ЛИСТ",
           "composeBodyPlaceholder": "Кожен рядок — окремий абзац. Вставляйте змінні з панелі праворуч.",
           "includeRequisites": "Реквізити для оплати",
-          "includeSchedule": "Таблиця графіка платежів (РР)"
+          "includeSchedule": "Таблиця графіка платежів (РР)",
+          "documentType": "Тип документа (для генерації)",
+          "documentTypePlaceholder": "Не задано — оператор обере вручну"
         },
         "activationRules": {
           "always": "Завжди доступний",
