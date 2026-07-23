@@ -38,6 +38,7 @@ import {
 } from '@/components/ui/Select'
 import { cn } from '@/lib/utils'
 import {
+  useComposeDocumentTemplate,
   useCreateDocumentTemplate,
   useDocumentTemplateVariables,
   useReplaceDocumentTemplateFile,
@@ -52,7 +53,7 @@ import {
 } from '@/features/documents'
 import { downloadBlob } from '@/features/messaging/utils/downloadBlob'
 import { buildSampleVariableMap, substituteVariables } from './templateVariables'
-import { DocxRenderer } from './DocxRenderer'
+import { DocumentFileViewer } from './DocumentFileViewer'
 import { TemplatePreviewModal } from './TemplatePreviewModal'
 
 interface Props {
@@ -104,10 +105,15 @@ export function DocumentTemplateEditor({ open, onClose, template }: Props) {
   const { t, i18n } = useTranslation('common')
   const isEdit = !!template
 
-  // Kind is chosen on create, fixed on edit.
-  const [templateKind, setTemplateKind] = useState<DocumentTemplateKind>(
+  // Kind is chosen on create, fixed on edit. 'compose' is a CREATE-only UI
+  // mode (branded constructor) — the stored template is a regular docx.
+  type CreateKind = DocumentTemplateKind | 'compose'
+  const [templateKind, setTemplateKind] = useState<CreateKind>(
     () => template?.template_kind ?? 'text'
   )
+  const [composeTitle, setComposeTitle] = useState('')
+  const [includeSchedule, setIncludeSchedule] = useState(false)
+  const [includeRequisites, setIncludeRequisites] = useState(true)
 
   // Lazy initialisers — populated once when the modal opens.
   const [name, setName] = useState(() => template?.name ?? '')
@@ -136,11 +142,13 @@ export function DocumentTemplateEditor({ open, onClose, template }: Props) {
   const createMutation = useCreateDocumentTemplate()
   const updateMutation = useUpdateDocumentTemplate()
   const uploadMutation = useUploadDocumentTemplate()
+  const composeMutation = useComposeDocumentTemplate()
   const replaceMutation = useReplaceDocumentTemplateFile()
   const submitting =
     createMutation.isPending ||
     updateMutation.isPending ||
     uploadMutation.isPending ||
+    composeMutation.isPending ||
     replaceMutation.isPending
 
   const { data: variablesData } = useDocumentTemplateVariables()
@@ -161,8 +169,8 @@ export function DocumentTemplateEditor({ open, onClose, template }: Props) {
     isLoading: sampleLoading,
     isError: sampleError,
   } = useQuery({
-    queryKey: ['document-template-preview', template?.id, 'sample'],
-    queryFn: () => previewDocumentTemplateFile(template!.id),
+    queryKey: ['document-template-preview', template?.id, 'sample', 'pdf'],
+    queryFn: () => previewDocumentTemplateFile(template!.id, 'pdf'),
     enabled: isDocxEdit && sampleExpanded && !!template,
     staleTime: 5 * 60 * 1000,
   })
@@ -272,6 +280,42 @@ export function DocumentTemplateEditor({ open, onClose, template }: Props) {
     }
   }
 
+  const handleComposeCreate = async () => {
+    const trimmedName = requireName()
+    if (!trimmedName) return
+    if (!composeTitle.trim()) {
+      toast.error(
+        t('pages.documentGeneration.templates.errors.titleRequired', 'Вкажіть заголовок документа')
+      )
+      return
+    }
+    if (!body.trim()) {
+      toast.error(
+        t('pages.documentGeneration.templates.errors.bodyRequired', 'Template body is required')
+      )
+      return
+    }
+    try {
+      const res = await composeMutation.mutateAsync({
+        name: trimmedName,
+        description: description.trim() || null,
+        title: composeTitle.trim(),
+        body,
+        include_schedule: includeSchedule,
+        include_requisites: includeRequisites,
+        activation_rule: activationRule,
+      })
+      toast.success(t('pages.documentGeneration.templates.messages.created', 'Template created'))
+      if (res.unknown_variables.length > 0) {
+        setUploadWarning(res.unknown_variables)
+      } else {
+        onClose()
+      }
+    } catch {
+      // Error toast handled by the mutation's onError.
+    }
+  }
+
   const handleDocxEditSave = async () => {
     if (!template) return
     const trimmedName = requireName()
@@ -324,6 +368,7 @@ export function DocumentTemplateEditor({ open, onClose, template }: Props) {
 
   const handlePrimarySubmit = () => {
     if (templateKind === 'text') return handleTextSubmit()
+    if (templateKind === 'compose') return handleComposeCreate()
     return isEdit ? handleDocxEditSave() : handleDocxCreate()
   }
 
@@ -547,9 +592,9 @@ export function DocumentTemplateEditor({ open, onClose, template }: Props) {
                           <RadioGroup
                             value={templateKind}
                             onValueChange={(v) => setTemplateKind(v as DocumentTemplateKind)}
-                            className="grid-cols-2 gap-2 sm:inline-grid"
+                            className="grid-cols-3 gap-2 sm:inline-grid"
                           >
-                            {(['text', 'docx'] as DocumentTemplateKind[]).map((kind) => {
+                            {(['text', 'compose', 'docx'] as CreateKind[]).map((kind) => {
                               const id = `dt-kind-${kind}`
                               return (
                                 <div
@@ -568,10 +613,15 @@ export function DocumentTemplateEditor({ open, onClose, template }: Props) {
                                           'pages.documentGeneration.templates.templateKind.text',
                                           'Text template'
                                         )
-                                      : t(
-                                          'pages.documentGeneration.templates.templateKind.docx',
-                                          '.docx file'
-                                        )}
+                                      : kind === 'compose'
+                                        ? t(
+                                            'pages.documentGeneration.templates.templateKind.compose',
+                                            'Фірмовий бланк'
+                                          )
+                                        : t(
+                                            'pages.documentGeneration.templates.templateKind.docx',
+                                            '.docx file'
+                                          )}
                                   </Label>
                                 </div>
                               )
@@ -656,7 +706,77 @@ export function DocumentTemplateEditor({ open, onClose, template }: Props) {
                         </div>
                       )}
 
-                      {templateKind === 'text' ? (
+                      {templateKind === 'compose' ? (
+                        <>
+                          <p className="text-muted-foreground text-xs">
+                            {t(
+                              'pages.documentGeneration.templates.form.composeHelp',
+                              'Шапка з лого, реквізити компанії, печатка та підпис додаються автоматично.'
+                            )}
+                          </p>
+                          <div className="flex flex-col gap-1">
+                            <Label htmlFor="dt-compose-title">
+                              {t(
+                                'pages.documentGeneration.templates.form.composeTitle',
+                                'Заголовок документа'
+                              )}
+                            </Label>
+                            <Input
+                              id="dt-compose-title"
+                              value={composeTitle}
+                              onChange={(e) => setComposeTitle(e.target.value)}
+                              placeholder={t(
+                                'pages.documentGeneration.templates.form.composeTitlePlaceholder',
+                                'напр. ГАРАНТІЙНИЙ ЛИСТ'
+                              )}
+                              maxLength={300}
+                            />
+                          </div>
+                          <div className="flex flex-col gap-1">
+                            <Label htmlFor="dt-compose-body">
+                              {t('pages.documentGeneration.templates.form.body', 'Template body')}
+                            </Label>
+                            <Textarea
+                              id="dt-compose-body"
+                              ref={textareaRef}
+                              value={body}
+                              onChange={(e) => setBody(e.target.value)}
+                              placeholder={t(
+                                'pages.documentGeneration.templates.form.composeBodyPlaceholder',
+                                'Кожен рядок — окремий абзац. Вставляйте змінні з панелі праворуч.'
+                              )}
+                              rows={10}
+                              className="min-h-[200px]"
+                            />
+                          </div>
+                          <div className="flex flex-col gap-2">
+                            <label className="flex cursor-pointer items-center gap-2 text-sm">
+                              <input
+                                type="checkbox"
+                                checked={includeRequisites}
+                                onChange={(e) => setIncludeRequisites(e.target.checked)}
+                                className="accent-primary-500 h-4 w-4"
+                              />
+                              {t(
+                                'pages.documentGeneration.templates.form.includeRequisites',
+                                'Реквізити для оплати'
+                              )}
+                            </label>
+                            <label className="flex cursor-pointer items-center gap-2 text-sm">
+                              <input
+                                type="checkbox"
+                                checked={includeSchedule}
+                                onChange={(e) => setIncludeSchedule(e.target.checked)}
+                                className="accent-primary-500 h-4 w-4"
+                              />
+                              {t(
+                                'pages.documentGeneration.templates.form.includeSchedule',
+                                'Таблиця графіка платежів (РР)'
+                              )}
+                            </label>
+                          </div>
+                        </>
+                      ) : templateKind === 'text' ? (
                         <>
                           {/* Body */}
                           <div className="flex flex-col gap-1">
@@ -824,7 +944,8 @@ export function DocumentTemplateEditor({ open, onClose, template }: Props) {
                             </div>
                             {sampleExpanded && (
                               <div className="border-border h-[50vh] overflow-hidden rounded-md border">
-                                <DocxRenderer
+                                <DocumentFileViewer
+                                  title={name}
                                   blob={sampleBlob ?? null}
                                   isLoading={sampleLoading}
                                   error={sampleError}
@@ -847,7 +968,9 @@ export function DocumentTemplateEditor({ open, onClose, template }: Props) {
                     </div>
 
                     {/* Right column: variables panel */}
-                    {renderVariablesPanel(templateKind === 'text' ? 'insert' : 'reference')}
+                    {renderVariablesPanel(
+                      templateKind === 'text' || templateKind === 'compose' ? 'insert' : 'reference'
+                    )}
                   </div>
 
                   {/* Footer */}

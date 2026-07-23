@@ -3,10 +3,11 @@
  *
  * Focus: the "Template" / "With sample data" segmented switch drives which
  * endpoint is queried, and the download button saves the loaded blob. The
- * docx-preview engine is mocked so DocxRenderer's lazy import is a no-op.
+ * The preview is a server-rendered PDF in an iframe; URL.createObjectURL is
+ * stubbed for jsdom.
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -20,10 +21,11 @@ vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: vi.fn() },
 }))
 
-// Lazy import target of DocxRenderer — keep it a cheap no-op.
-vi.mock('docx-preview', () => ({
-  renderAsync: vi.fn(async () => {}),
-}))
+// jsdom lacks object-URL support for blobs.
+beforeAll(() => {
+  URL.createObjectURL = vi.fn(() => 'blob:mock')
+  URL.revokeObjectURL = vi.fn()
+})
 
 vi.mock('@/features/messaging/utils/downloadBlob', () => ({
   downloadBlob: vi.fn(),
@@ -79,7 +81,9 @@ describe('TemplatePreviewModal', () => {
 
   it('defaults to the template mode and fetches the raw .docx', async () => {
     renderModal()
-    await waitFor(() => expect(templatesApi.downloadDocumentTemplateFile).toHaveBeenCalledWith(7))
+    await waitFor(() =>
+      expect(templatesApi.downloadDocumentTemplateFile).toHaveBeenCalledWith(7, 'pdf')
+    )
     expect(templatesApi.previewDocumentTemplateFile).not.toHaveBeenCalled()
   })
 
@@ -90,12 +94,16 @@ describe('TemplatePreviewModal', () => {
 
     await user.click(screen.getByRole('button', { name: 'With sample data' }))
 
-    await waitFor(() => expect(templatesApi.previewDocumentTemplateFile).toHaveBeenCalledWith(7))
+    await waitFor(() =>
+      expect(templatesApi.previewDocumentTemplateFile).toHaveBeenCalledWith(7, 'pdf')
+    )
   })
 
   it('honours initialMode=sample by fetching the preview first', async () => {
     renderModal(makeDocxTemplate(), 'sample')
-    await waitFor(() => expect(templatesApi.previewDocumentTemplateFile).toHaveBeenCalledWith(7))
+    await waitFor(() =>
+      expect(templatesApi.previewDocumentTemplateFile).toHaveBeenCalledWith(7, 'pdf')
+    )
     expect(templatesApi.downloadDocumentTemplateFile).not.toHaveBeenCalled()
   })
 

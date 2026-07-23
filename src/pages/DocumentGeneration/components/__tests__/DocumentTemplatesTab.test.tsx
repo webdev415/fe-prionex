@@ -152,10 +152,12 @@ describe('DocumentTemplatesTab', () => {
 
     await user.click(screen.getByTitle('Preview'))
 
-    // The modal exposes the mode switch; default mode fetches the raw .docx.
+    // The modal exposes the mode switch; default mode fetches the server PDF.
     await waitFor(() =>
       expect(screen.getByRole('button', { name: 'With sample data' })).toBeInTheDocument()
     )
-    await waitFor(() => expect(templatesApi.downloadDocumentTemplateFile).toHaveBeenCalledWith(1))
+    await waitFor(() =>
+      expect(templatesApi.downloadDocumentTemplateFile).toHaveBeenCalledWith(1, 'pdf')
+    )
   })
 })

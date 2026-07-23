@@ -77,9 +77,19 @@ export async function replaceDocumentTemplateFile(
   return response.data
 }
 
-/** Fetch the raw .docx of a docx template (404 for text templates). */
-export async function downloadDocumentTemplateFile(id: number): Promise<Blob> {
+export type TemplateFileFormat = 'docx' | 'pdf'
+
+/**
+ * Fetch a docx template's file (404 for text templates).
+ * `format: 'pdf'` returns the server-rendered PDF — pixel-identical to what
+ * generation produces (used for in-browser preview).
+ */
+export async function downloadDocumentTemplateFile(
+  id: number,
+  format: TemplateFileFormat = 'docx'
+): Promise<Blob> {
   const response = await api.get<Blob>(`${BASE_URL}/${id}/file`, {
+    params: format === 'pdf' ? { format } : undefined,
     responseType: 'blob',
   })
   return response.data
@@ -91,8 +101,12 @@ export async function downloadDocumentTemplateFile(id: number): Promise<Blob> {
  * whether anything shifts once real values fill the placeholders.
  * 404 for text templates.
  */
-export async function previewDocumentTemplateFile(id: number): Promise<Blob> {
+export async function previewDocumentTemplateFile(
+  id: number,
+  format: TemplateFileFormat = 'docx'
+): Promise<Blob> {
   const response = await api.get<Blob>(`${BASE_URL}/${id}/file/preview`, {
+    params: format === 'pdf' ? { format } : undefined,
     responseType: 'blob',
   })
   return response.data
@@ -101,5 +115,29 @@ export async function previewDocumentTemplateFile(id: number): Promise<Blob> {
 /** Fetch the server-driven catalogue of insertable template variables. */
 export async function getDocumentTemplateVariables(): Promise<TemplateVariablesResponse> {
   const response = await api.get<TemplateVariablesResponse>(`${BASE_URL}/variables`)
+  return response.data
+}
+
+export interface DocumentTemplateComposePayload {
+  name: string
+  description?: string | null
+  /** Title lines, split by \n. */
+  title: string
+  /** Body paragraphs, split by newlines. */
+  body: string
+  include_schedule: boolean
+  include_requisites: boolean
+  activation_rule?: string
+}
+
+/**
+ * Compose a branded template from structured input: the corporate static
+ * (letterhead, requisites, stamp/signature footer) is fixed server-side —
+ * the author supplies only title/body and block toggles.
+ */
+export async function composeDocumentTemplate(
+  payload: DocumentTemplateComposePayload
+): Promise<DocumentTemplateUploadResponse> {
+  const response = await api.post<DocumentTemplateUploadResponse>(`${BASE_URL}/compose`, payload)
   return response.data
 }

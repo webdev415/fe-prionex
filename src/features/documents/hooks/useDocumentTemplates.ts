@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import type { AxiosError } from 'axios'
 import {
+  composeDocumentTemplate,
   createDocumentTemplate,
   deleteDocumentTemplate,
   getDocumentTemplate,
@@ -12,6 +13,7 @@ import {
   uploadDocumentTemplate,
 } from '../api/documentTemplatesApi'
 import type { DocumentTemplateCreatePayload, DocumentTemplateUpdatePayload } from '../api/types'
+import type { DocumentTemplateComposePayload } from '../api/documentTemplatesApi'
 
 export const documentTemplateKeys = {
   all: ['document-templates'] as const,
@@ -116,6 +118,19 @@ export function useReplaceDocumentTemplateFile() {
     },
     onError: (error: AxiosError<{ detail?: string }>) => {
       toast.error(extractError(error, 'Failed to replace template file'))
+    },
+  })
+}
+
+export function useComposeDocumentTemplate() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (payload: DocumentTemplateComposePayload) => composeDocumentTemplate(payload),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: documentTemplateKeys.all })
+    },
+    onError: (error: AxiosError<{ detail?: string }>) => {
+      toast.error(extractError(error, 'Failed to compose template'))
     },
   })
 }
