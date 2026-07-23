@@ -85,6 +85,19 @@ export async function downloadDocumentTemplateFile(id: number): Promise<Blob> {
   return response.data
 }
 
+/**
+ * Fetch the .docx of a docx template rendered with sample data — the server
+ * substitutes the same engine future generation will use, so lawyers can see
+ * whether anything shifts once real values fill the placeholders.
+ * 404 for text templates.
+ */
+export async function previewDocumentTemplateFile(id: number): Promise<Blob> {
+  const response = await api.get<Blob>(`${BASE_URL}/${id}/file/preview`, {
+    responseType: 'blob',
+  })
+  return response.data
+}
+
 /** Fetch the server-driven catalogue of insertable template variables. */
 export async function getDocumentTemplateVariables(): Promise<TemplateVariablesResponse> {
   const response = await api.get<TemplateVariablesResponse>(`${BASE_URL}/variables`)

@@ -5989,6 +5989,21 @@
           "unknownVariablesTitle": "Variables outside the dictionary",
           "unknownVariablesHelp": "These placeholders are not in the dictionary and will not be substituted:",
           "acknowledge": "Done"
+        },
+        "actions": {
+          "preview": "Preview"
+        },
+        "preview": {
+          "title": "Template preview",
+          "loading": "Loading preview…",
+          "error": "Could not render the document.",
+          "empty": "Nothing to preview.",
+          "modeTemplate": "Template",
+          "modeSample": "With sample data",
+          "sampleSectionTitle": "How it will look (sample data)",
+          "openFullscreen": "Open fullscreen",
+          "show": "Show",
+          "hide": "Hide"
         }
       }
     },

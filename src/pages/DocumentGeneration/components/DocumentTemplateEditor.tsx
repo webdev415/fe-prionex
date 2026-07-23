@@ -18,6 +18,7 @@
  */
 
 import { useMemo, useRef, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import * as DialogPrimitive from '@radix-ui/react-dialog'
@@ -36,12 +37,15 @@ import {
   useUpdateDocumentTemplate,
   useUploadDocumentTemplate,
   downloadDocumentTemplateFile,
+  previewDocumentTemplateFile,
   type DocumentTemplate,
   type DocumentTemplateKind,
   type TemplateVariableDefinition,
 } from '@/features/documents'
 import { downloadBlob } from '@/features/messaging/utils/downloadBlob'
 import { buildSampleVariableMap, substituteVariables } from './templateVariables'
+import { DocxRenderer } from './DocxRenderer'
+import { TemplatePreviewModal } from './TemplatePreviewModal'
 
 interface Props {
   open: boolean
@@ -89,6 +93,10 @@ export function DocumentTemplateEditor({ open, onClose, template }: Props) {
   const [uploadWarning, setUploadWarning] = useState<string[] | null>(null)
   const [replaceWarning, setReplaceWarning] = useState<string[] | null>(null)
   const [dragOver, setDragOver] = useState(false)
+  // Inline "how it will look" section (docx edit only) — collapsed by default so
+  // the heavy preview only loads once the lawyer asks for it.
+  const [sampleExpanded, setSampleExpanded] = useState(false)
+  const [previewFullscreen, setPreviewFullscreen] = useState(false)
 
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   // Create-file and replace-file dropzones never mount at the same time
@@ -114,6 +122,20 @@ export function DocumentTemplateEditor({ open, onClose, template }: Props) {
     () => (templateKind === 'text' ? substituteVariables(body, sampleMap) : ''),
     [templateKind, body, sampleMap]
   )
+
+  // Sample-data render of the docx (edit mode). Shares its query key with
+  // TemplatePreviewModal's "sample" tab, so opening fullscreen reuses this blob.
+  const isDocxEdit = isEdit && templateKind === 'docx'
+  const {
+    data: sampleBlob,
+    isLoading: sampleLoading,
+    isError: sampleError,
+  } = useQuery({
+    queryKey: ['document-template-preview', template?.id, 'sample'],
+    queryFn: () => previewDocumentTemplateFile(template!.id),
+    enabled: isDocxEdit && sampleExpanded && !!template,
+    staleTime: 5 * 60 * 1000,
+  })
 
   const baseLang = (i18n.language ?? 'en').split('-')[0]
   const variableLabel = (v: TemplateVariableDefinition): string =>
@@ -415,326 +437,391 @@ export function DocumentTemplateEditor({ open, onClose, template }: Props) {
   )
 
   return (
-    <DialogPrimitive.Root open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogPrimitive.Portal>
-        <DialogPrimitive.Overlay className="bg-overlay fixed inset-0 z-50 backdrop-blur-xl" />
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4">
-          <DialogPrimitive.Content
-            aria-describedby={undefined}
-            className={cn(
-              'bg-card relative z-50 flex max-h-[92vh] w-full flex-col overflow-hidden rounded-lg shadow-xl',
-              'max-w-[95%] sm:max-w-3xl md:max-w-5xl lg:max-w-6xl'
-            )}
-          >
-            {/* Header */}
-            <div className="border-border flex items-start justify-between gap-3 border-b px-4 py-3 sm:px-6 sm:py-4">
-              <div className="min-w-0">
-                <DialogPrimitive.Title className="text-foreground text-base font-semibold sm:text-lg">
-                  {title}
-                </DialogPrimitive.Title>
-                <p className="text-muted-foreground mt-1 text-xs">
-                  {t(
-                    'pages.documentGeneration.templates.modals.subtitle',
-                    'Use {{variable_name}} to insert dynamic data.'
-                  )}
-                </p>
-              </div>
-              <DialogPrimitive.Close asChild>
-                <button
-                  type="button"
-                  aria-label={t('actions.close', 'Close')}
-                  className="hover:bg-muted flex h-8 w-8 shrink-0 items-center justify-center rounded-md"
-                >
-                  <Icon
-                    icon={Cancel01Icon}
-                    size={18}
-                    className="text-foreground"
-                    strokeWidth={1.5}
-                  />
-                </button>
-              </DialogPrimitive.Close>
-            </div>
-
-            {uploadWarning ? (
-              /* Terminal screen after a docx upload that had unknown variables. */
-              <>
-                <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-4 py-4 sm:px-6">
-                  {unknownVariablesBlock(uploadWarning)}
-                </div>
-                <div className="border-border flex items-center justify-end border-t px-4 py-3 sm:px-6">
-                  <Button onClick={onClose} className="w-full sm:w-auto">
-                    {t('pages.documentGeneration.templates.warnings.acknowledge', 'Done')}
-                  </Button>
-                </div>
-              </>
-            ) : (
-              <>
-                {/* Body */}
-                <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-4 py-3 sm:px-6 sm:py-4 lg:flex-row">
-                  <div className="flex min-w-0 flex-1 flex-col gap-4">
-                    {/* Kind switcher — create only. */}
-                    {!isEdit && (
-                      <div className="flex flex-col gap-1.5">
-                        <Label>
-                          {t(
-                            'pages.documentGeneration.templates.templateKind.label',
-                            'Template type'
-                          )}
-                        </Label>
-                        <RadioGroup
-                          value={templateKind}
-                          onValueChange={(v) => setTemplateKind(v as DocumentTemplateKind)}
-                          className="grid-cols-2 gap-2 sm:inline-grid"
-                        >
-                          {(['text', 'docx'] as DocumentTemplateKind[]).map((kind) => {
-                            const id = `dt-kind-${kind}`
-                            return (
-                              <div
-                                key={kind}
-                                className={cn(
-                                  'flex items-center gap-2 rounded-md border px-3 py-2 text-sm transition-colors',
-                                  templateKind === kind
-                                    ? 'border-primary-400 bg-primary-50/50'
-                                    : 'border-border hover:bg-muted'
-                                )}
-                              >
-                                <RadioItem id={id} value={kind} />
-                                <Label htmlFor={id} className="mb-0 cursor-pointer font-normal">
-                                  {kind === 'text'
-                                    ? t(
-                                        'pages.documentGeneration.templates.templateKind.text',
-                                        'Text template'
-                                      )
-                                    : t(
-                                        'pages.documentGeneration.templates.templateKind.docx',
-                                        '.docx file'
-                                      )}
-                                </Label>
-                              </div>
-                            )
-                          })}
-                        </RadioGroup>
-                      </div>
+    <>
+      <DialogPrimitive.Root open={open} onOpenChange={(o) => !o && onClose()}>
+        <DialogPrimitive.Portal>
+          <DialogPrimitive.Overlay className="bg-overlay fixed inset-0 z-50 backdrop-blur-xl" />
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4">
+            <DialogPrimitive.Content
+              aria-describedby={undefined}
+              className={cn(
+                'bg-card relative z-50 flex max-h-[92vh] w-full flex-col overflow-hidden rounded-lg shadow-xl',
+                'max-w-[95%] sm:max-w-3xl md:max-w-5xl lg:max-w-6xl'
+              )}
+            >
+              {/* Header */}
+              <div className="border-border flex items-start justify-between gap-3 border-b px-4 py-3 sm:px-6 sm:py-4">
+                <div className="min-w-0">
+                  <DialogPrimitive.Title className="text-foreground text-base font-semibold sm:text-lg">
+                    {title}
+                  </DialogPrimitive.Title>
+                  <p className="text-muted-foreground mt-1 text-xs">
+                    {t(
+                      'pages.documentGeneration.templates.modals.subtitle',
+                      'Use {{variable_name}} to insert dynamic data.'
                     )}
+                  </p>
+                </div>
+                <DialogPrimitive.Close asChild>
+                  <button
+                    type="button"
+                    aria-label={t('actions.close', 'Close')}
+                    className="hover:bg-muted flex h-8 w-8 shrink-0 items-center justify-center rounded-md"
+                  >
+                    <Icon
+                      icon={Cancel01Icon}
+                      size={18}
+                      className="text-foreground"
+                      strokeWidth={1.5}
+                    />
+                  </button>
+                </DialogPrimitive.Close>
+              </div>
 
-                    {/* Name */}
-                    <div className="flex flex-col gap-1">
-                      <Label htmlFor="dt-name">
-                        {t('pages.documentGeneration.templates.form.name', 'Template name')}
-                      </Label>
-                      <Input
-                        id="dt-name"
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        placeholder={t(
-                          'pages.documentGeneration.templates.form.namePlaceholder',
-                          'e.g. Demand letter'
-                        )}
-                        maxLength={200}
-                      />
-                    </div>
+              {uploadWarning ? (
+                /* Terminal screen after a docx upload that had unknown variables. */
+                <>
+                  <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-4 py-4 sm:px-6">
+                    {unknownVariablesBlock(uploadWarning)}
+                  </div>
+                  <div className="border-border flex items-center justify-end border-t px-4 py-3 sm:px-6">
+                    <Button onClick={onClose} className="w-full sm:w-auto">
+                      {t('pages.documentGeneration.templates.warnings.acknowledge', 'Done')}
+                    </Button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  {/* Body */}
+                  <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-4 py-3 sm:px-6 sm:py-4 lg:flex-row">
+                    <div className="flex min-w-0 flex-1 flex-col gap-4">
+                      {/* Kind switcher — create only. */}
+                      {!isEdit && (
+                        <div className="flex flex-col gap-1.5">
+                          <Label>
+                            {t(
+                              'pages.documentGeneration.templates.templateKind.label',
+                              'Template type'
+                            )}
+                          </Label>
+                          <RadioGroup
+                            value={templateKind}
+                            onValueChange={(v) => setTemplateKind(v as DocumentTemplateKind)}
+                            className="grid-cols-2 gap-2 sm:inline-grid"
+                          >
+                            {(['text', 'docx'] as DocumentTemplateKind[]).map((kind) => {
+                              const id = `dt-kind-${kind}`
+                              return (
+                                <div
+                                  key={kind}
+                                  className={cn(
+                                    'flex items-center gap-2 rounded-md border px-3 py-2 text-sm transition-colors',
+                                    templateKind === kind
+                                      ? 'border-primary-400 bg-primary-50/50'
+                                      : 'border-border hover:bg-muted'
+                                  )}
+                                >
+                                  <RadioItem id={id} value={kind} />
+                                  <Label htmlFor={id} className="mb-0 cursor-pointer font-normal">
+                                    {kind === 'text'
+                                      ? t(
+                                          'pages.documentGeneration.templates.templateKind.text',
+                                          'Text template'
+                                        )
+                                      : t(
+                                          'pages.documentGeneration.templates.templateKind.docx',
+                                          '.docx file'
+                                        )}
+                                  </Label>
+                                </div>
+                              )
+                            })}
+                          </RadioGroup>
+                        </div>
+                      )}
 
-                    {/* Description */}
-                    <div className="flex flex-col gap-1">
-                      <Label htmlFor="dt-description">
-                        {t('pages.documentGeneration.templates.form.description', 'Description')}
-                      </Label>
-                      <Input
-                        id="dt-description"
-                        value={description}
-                        onChange={(e) => setDescription(e.target.value)}
-                        placeholder={t(
-                          'pages.documentGeneration.templates.form.descriptionPlaceholder',
-                          'Optional short description'
-                        )}
-                        maxLength={500}
-                      />
-                    </div>
-
-                    {/* is_active — docx edit only. */}
-                    {isEdit && templateKind === 'docx' && (
-                      <div className="flex items-center justify-between gap-3">
-                        <Label htmlFor="dt-active" className="mb-0">
-                          {t('pages.documentGeneration.templates.form.isActive', 'Active')}
+                      {/* Name */}
+                      <div className="flex flex-col gap-1">
+                        <Label htmlFor="dt-name">
+                          {t('pages.documentGeneration.templates.form.name', 'Template name')}
                         </Label>
-                        <ToggleSwitch
-                          checked={isActive}
-                          onChange={setIsActive}
-                          ariaLabel={t(
-                            'pages.documentGeneration.templates.form.isActive',
-                            'Active'
+                        <Input
+                          id="dt-name"
+                          value={name}
+                          onChange={(e) => setName(e.target.value)}
+                          placeholder={t(
+                            'pages.documentGeneration.templates.form.namePlaceholder',
+                            'e.g. Demand letter'
                           )}
+                          maxLength={200}
                         />
                       </div>
-                    )}
 
-                    {templateKind === 'text' ? (
-                      <>
-                        {/* Body */}
-                        <div className="flex flex-col gap-1">
-                          <Label htmlFor="dt-body">
-                            {t('pages.documentGeneration.templates.form.body', 'Template body')}
+                      {/* Description */}
+                      <div className="flex flex-col gap-1">
+                        <Label htmlFor="dt-description">
+                          {t('pages.documentGeneration.templates.form.description', 'Description')}
+                        </Label>
+                        <Input
+                          id="dt-description"
+                          value={description}
+                          onChange={(e) => setDescription(e.target.value)}
+                          placeholder={t(
+                            'pages.documentGeneration.templates.form.descriptionPlaceholder',
+                            'Optional short description'
+                          )}
+                          maxLength={500}
+                        />
+                      </div>
+
+                      {/* is_active — docx edit only. */}
+                      {isEdit && templateKind === 'docx' && (
+                        <div className="flex items-center justify-between gap-3">
+                          <Label htmlFor="dt-active" className="mb-0">
+                            {t('pages.documentGeneration.templates.form.isActive', 'Active')}
                           </Label>
-                          <Textarea
-                            id="dt-body"
-                            ref={textareaRef}
-                            value={body}
-                            onChange={(e) => setBody(e.target.value)}
-                            placeholder={t(
-                              'pages.documentGeneration.templates.form.bodyPlaceholder',
-                              'Compose your template here. Insert variables from the right-hand panel.'
+                          <ToggleSwitch
+                            checked={isActive}
+                            onChange={setIsActive}
+                            ariaLabel={t(
+                              'pages.documentGeneration.templates.form.isActive',
+                              'Active'
                             )}
-                            rows={8}
-                            className="min-h-[160px] sm:min-h-[200px]"
                           />
                         </div>
+                      )}
 
-                        {/* Preview */}
-                        <div className="flex flex-col gap-1">
-                          <Label>
-                            {t(
-                              'pages.documentGeneration.templates.form.preview',
-                              'Preview (sample data)'
-                            )}
-                          </Label>
-                          <div className="border-border bg-muted text-foreground min-h-[100px] rounded-md border border-dashed px-3 py-2 text-sm whitespace-pre-wrap sm:min-h-[120px]">
-                            {previewText.trim() ? (
-                              previewText
-                            ) : (
-                              <span className="text-muted-foreground">
-                                {t(
-                                  'pages.documentGeneration.templates.form.previewEmpty',
-                                  'Start typing to see a live preview.'
-                                )}
-                              </span>
-                            )}
+                      {templateKind === 'text' ? (
+                        <>
+                          {/* Body */}
+                          <div className="flex flex-col gap-1">
+                            <Label htmlFor="dt-body">
+                              {t('pages.documentGeneration.templates.form.body', 'Template body')}
+                            </Label>
+                            <Textarea
+                              id="dt-body"
+                              ref={textareaRef}
+                              value={body}
+                              onChange={(e) => setBody(e.target.value)}
+                              placeholder={t(
+                                'pages.documentGeneration.templates.form.bodyPlaceholder',
+                                'Compose your template here. Insert variables from the right-hand panel.'
+                              )}
+                              rows={8}
+                              className="min-h-[160px] sm:min-h-[200px]"
+                            />
                           </div>
-                        </div>
-                      </>
-                    ) : isEdit ? (
-                      <>
-                        {/* Docx edit: read-only body preview + replace + download. */}
-                        <div className="flex flex-col gap-1">
-                          <Label>
-                            {t(
-                              'pages.documentGeneration.templates.form.bodyReadonly',
-                              'Body (from file, read-only)'
-                            )}
-                          </Label>
-                          <div className="border-border bg-muted text-foreground max-h-[220px] min-h-[100px] overflow-y-auto rounded-md border border-dashed px-3 py-2 text-sm whitespace-pre-wrap">
-                            {body.trim() ? (
-                              body
-                            ) : (
-                              <span className="text-muted-foreground">
-                                {t(
-                                  'pages.documentGeneration.templates.form.bodyEmpty',
-                                  'No extracted text.'
-                                )}
-                              </span>
-                            )}
-                          </div>
-                        </div>
 
-                        <div className="flex flex-col gap-2">
-                          <div className="flex items-center justify-between gap-2">
-                            <Label className="mb-0">
+                          {/* Preview */}
+                          <div className="flex flex-col gap-1">
+                            <Label>
                               {t(
-                                'pages.documentGeneration.templates.form.currentFile',
-                                'Current file'
+                                'pages.documentGeneration.templates.form.preview',
+                                'Preview (sample data)'
                               )}
                             </Label>
-                            <Button
-                              type="button"
-                              variant="secondary"
-                              size="sm"
-                              onClick={handleDownload}
-                              leftIcon={<Icons.Download size={14} strokeWidth={1.5} />}
-                            >
-                              {t(
-                                'pages.documentGeneration.templates.form.downloadFile',
-                                'Download file'
-                              )}
-                            </Button>
-                          </div>
-                          {template?.file_name && (
-                            <p className="text-muted-foreground text-xs">
-                              {template.file_name}
-                              {template.file_size != null &&
-                                ` · ${formatBytes(template.file_size)}`}
-                            </p>
-                          )}
-                        </div>
-
-                        <div className="flex flex-col gap-2">
-                          <Label className="mb-0">
-                            {t(
-                              'pages.documentGeneration.templates.form.replaceFile',
-                              'Replace file'
-                            )}
-                          </Label>
-                          {renderDropZone(replaceFile, setReplaceFile, 'dt-replace-file')}
-                          {replaceWarning && unknownVariablesBlock(replaceWarning)}
-                          <div>
-                            <Button
-                              type="button"
-                              variant="secondary"
-                              onClick={handleReplace}
-                              disabled={!replaceFile || submitting}
-                            >
-                              {replaceMutation.isPending
-                                ? t('actions.saving', 'Saving…')
-                                : t(
-                                    'pages.documentGeneration.templates.form.replaceAction',
-                                    'Replace file'
+                            <div className="border-border bg-muted text-foreground min-h-[100px] rounded-md border border-dashed px-3 py-2 text-sm whitespace-pre-wrap sm:min-h-[120px]">
+                              {previewText.trim() ? (
+                                previewText
+                              ) : (
+                                <span className="text-muted-foreground">
+                                  {t(
+                                    'pages.documentGeneration.templates.form.previewEmpty',
+                                    'Start typing to see a live preview.'
                                   )}
-                            </Button>
+                                </span>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        {/* Docx create: file picker. */}
-                        <div className="flex flex-col gap-1">
-                          <Label>
-                            {t('pages.documentGeneration.templates.form.file', '.docx file')}
-                          </Label>
-                          {renderDropZone(file, setFile, 'dt-file')}
-                        </div>
-                      </>
-                    )}
+                        </>
+                      ) : isEdit ? (
+                        <>
+                          {/* Docx edit: read-only body preview + replace + download. */}
+                          <div className="flex flex-col gap-1">
+                            <Label>
+                              {t(
+                                'pages.documentGeneration.templates.form.bodyReadonly',
+                                'Body (from file, read-only)'
+                              )}
+                            </Label>
+                            <div className="border-border bg-muted text-foreground max-h-[220px] min-h-[100px] overflow-y-auto rounded-md border border-dashed px-3 py-2 text-sm whitespace-pre-wrap">
+                              {body.trim() ? (
+                                body
+                              ) : (
+                                <span className="text-muted-foreground">
+                                  {t(
+                                    'pages.documentGeneration.templates.form.bodyEmpty',
+                                    'No extracted text.'
+                                  )}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="flex flex-col gap-2">
+                            <div className="flex items-center justify-between gap-2">
+                              <Label className="mb-0">
+                                {t(
+                                  'pages.documentGeneration.templates.form.currentFile',
+                                  'Current file'
+                                )}
+                              </Label>
+                              <Button
+                                type="button"
+                                variant="secondary"
+                                size="sm"
+                                onClick={handleDownload}
+                                leftIcon={<Icons.Download size={14} strokeWidth={1.5} />}
+                              >
+                                {t(
+                                  'pages.documentGeneration.templates.form.downloadFile',
+                                  'Download file'
+                                )}
+                              </Button>
+                            </div>
+                            {template?.file_name && (
+                              <p className="text-muted-foreground text-xs">
+                                {template.file_name}
+                                {template.file_size != null &&
+                                  ` · ${formatBytes(template.file_size)}`}
+                              </p>
+                            )}
+                          </div>
+
+                          <div className="flex flex-col gap-2">
+                            <Label className="mb-0">
+                              {t(
+                                'pages.documentGeneration.templates.form.replaceFile',
+                                'Replace file'
+                              )}
+                            </Label>
+                            {renderDropZone(replaceFile, setReplaceFile, 'dt-replace-file')}
+                            {replaceWarning && unknownVariablesBlock(replaceWarning)}
+                            <div>
+                              <Button
+                                type="button"
+                                variant="secondary"
+                                onClick={handleReplace}
+                                disabled={!replaceFile || submitting}
+                              >
+                                {replaceMutation.isPending
+                                  ? t('actions.saving', 'Saving…')
+                                  : t(
+                                      'pages.documentGeneration.templates.form.replaceAction',
+                                      'Replace file'
+                                    )}
+                              </Button>
+                            </div>
+                          </div>
+
+                          {/* How it will look (sample data) — collapsed by default. */}
+                          <div className="border-border flex flex-col gap-2 border-t pt-4">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <Label className="mb-0">
+                                {t(
+                                  'pages.documentGeneration.templates.preview.sampleSectionTitle',
+                                  'How it will look (sample data)'
+                                )}
+                              </Label>
+                              <div className="flex items-center gap-2">
+                                {sampleExpanded && (
+                                  <Button
+                                    type="button"
+                                    variant="secondary"
+                                    size="sm"
+                                    onClick={() => setPreviewFullscreen(true)}
+                                    leftIcon={<Icons.Eye size={14} strokeWidth={1.5} />}
+                                  >
+                                    {t(
+                                      'pages.documentGeneration.templates.preview.openFullscreen',
+                                      'Open fullscreen'
+                                    )}
+                                  </Button>
+                                )}
+                                <Button
+                                  type="button"
+                                  variant="secondary"
+                                  size="sm"
+                                  onClick={() => setSampleExpanded((v) => !v)}
+                                  leftIcon={
+                                    sampleExpanded ? (
+                                      <Icons.ArrowUp size={14} strokeWidth={1.5} />
+                                    ) : (
+                                      <Icons.ArrowDown size={14} strokeWidth={1.5} />
+                                    )
+                                  }
+                                >
+                                  {sampleExpanded
+                                    ? t('pages.documentGeneration.templates.preview.hide', 'Hide')
+                                    : t('pages.documentGeneration.templates.preview.show', 'Show')}
+                                </Button>
+                              </div>
+                            </div>
+                            {sampleExpanded && (
+                              <div className="border-border h-[50vh] overflow-hidden rounded-md border">
+                                <DocxRenderer
+                                  blob={sampleBlob ?? null}
+                                  isLoading={sampleLoading}
+                                  error={sampleError}
+                                />
+                              </div>
+                            )}
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          {/* Docx create: file picker. */}
+                          <div className="flex flex-col gap-1">
+                            <Label>
+                              {t('pages.documentGeneration.templates.form.file', '.docx file')}
+                            </Label>
+                            {renderDropZone(file, setFile, 'dt-file')}
+                          </div>
+                        </>
+                      )}
+                    </div>
+
+                    {/* Right column: variables panel */}
+                    {renderVariablesPanel(templateKind === 'text' ? 'insert' : 'reference')}
                   </div>
 
-                  {/* Right column: variables panel */}
-                  {renderVariablesPanel(templateKind === 'text' ? 'insert' : 'reference')}
-                </div>
+                  {/* Footer */}
+                  <div className="border-border flex flex-col-reverse items-stretch gap-2 border-t px-4 py-3 sm:flex-row sm:items-center sm:justify-end sm:px-6">
+                    <Button
+                      variant="secondary"
+                      onClick={onClose}
+                      disabled={submitting}
+                      className="w-full sm:w-auto"
+                    >
+                      {t('actions.cancel', 'Cancel')}
+                    </Button>
+                    <Button
+                      onClick={handlePrimarySubmit}
+                      disabled={submitting}
+                      className="w-full sm:w-auto"
+                    >
+                      {submitting
+                        ? t('actions.saving', 'Saving…')
+                        : isEdit
+                          ? t('actions.save', 'Save')
+                          : t('actions.create', 'Create')}
+                    </Button>
+                  </div>
+                </>
+              )}
+            </DialogPrimitive.Content>
+          </div>
+        </DialogPrimitive.Portal>
+      </DialogPrimitive.Root>
 
-                {/* Footer */}
-                <div className="border-border flex flex-col-reverse items-stretch gap-2 border-t px-4 py-3 sm:flex-row sm:items-center sm:justify-end sm:px-6">
-                  <Button
-                    variant="secondary"
-                    onClick={onClose}
-                    disabled={submitting}
-                    className="w-full sm:w-auto"
-                  >
-                    {t('actions.cancel', 'Cancel')}
-                  </Button>
-                  <Button
-                    onClick={handlePrimarySubmit}
-                    disabled={submitting}
-                    className="w-full sm:w-auto"
-                  >
-                    {submitting
-                      ? t('actions.saving', 'Saving…')
-                      : isEdit
-                        ? t('actions.save', 'Save')
-                        : t('actions.create', 'Create')}
-                  </Button>
-                </div>
-              </>
-            )}
-          </DialogPrimitive.Content>
-        </div>
-      </DialogPrimitive.Portal>
-    </DialogPrimitive.Root>
+      {previewFullscreen && template && (
+        <TemplatePreviewModal
+          open={previewFullscreen}
+          template={template}
+          initialMode="sample"
+          onClose={() => setPreviewFullscreen(false)}
+        />
+      )}
+    </>
   )
 }
