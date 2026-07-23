@@ -196,9 +196,9 @@ describe('AssistantAccessSection', () => {
         access_levels: { 2: 'department' },
       })
     )
-    await waitFor(() =>
-      expect(toast.success).toHaveBeenCalledWith('pages.aiSettings.accessUpdated')
-    )
+    // No per-row toast here — useUpdateRole's own generic success toast is
+    // the only one that fires (avoids the double-toast the review caught).
+    await waitFor(() => expect(toast.success).toHaveBeenCalledWith('Role updated successfully'))
   })
 
   it('toggling on adds the ai permission and fills default access_levels for tab permissions', async () => {
@@ -215,12 +215,10 @@ describe('AssistantAccessSection', () => {
         access_levels: { 4: 'all' },
       })
     )
-    await waitFor(() =>
-      expect(toast.success).toHaveBeenCalledWith('pages.aiSettings.accessUpdated')
-    )
+    await waitFor(() => expect(toast.success).toHaveBeenCalledWith('Role updated successfully'))
   })
 
-  it('toasts the access-specific error and keeps the switch state when the PUT fails', async () => {
+  it('keeps the switch checked and lets the hook toast the error when the PUT fails', async () => {
     mockUpdateRole.mockRejectedValue(new Error('403'))
     renderSection()
 
@@ -228,9 +226,12 @@ describe('AssistantAccessSection', () => {
     await waitFor(() => expect(switches[0]).toHaveAttribute('aria-checked', 'true'))
     fireEvent.click(switches[0])
 
-    await waitFor(() =>
-      expect(toast.error).toHaveBeenCalledWith('pages.aiSettings.accessUpdateError')
-    )
-    await waitFor(() => expect(switches[0]).toHaveAttribute('aria-checked', 'true'))
+    await waitFor(() => expect(mockUpdateRole).toHaveBeenCalled())
+    // useUpdateRole's own onError toasts getErrorMessage(error) — the row
+    // adds nothing on top, it only swallows the rejection.
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith('403'))
+    // Role detail is unchanged (the PUT never landed), so the switch never
+    // moves away from its pre-toggle state.
+    expect(switches[0]).toHaveAttribute('aria-checked', 'true')
   })
 })

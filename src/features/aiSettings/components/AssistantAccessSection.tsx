@@ -9,10 +9,12 @@
  * keeps its stored depth, defaulting to DEFAULT_ACCESS_LEVEL when unset —
  * so toggling assistant access never resets a role's other permissions.
  * Visible under `manage_roles` only (the roles API needs it).
+ *
+ * No extra toast here on top of useUpdateRole's own success/error toast —
+ * a per-row message would double up with the shared hook's generic one.
  */
 import { useTranslation } from 'react-i18next'
 import { useQuery } from '@tanstack/react-query'
-import { toast } from 'sonner'
 
 import { PermissionGuard } from '@/components/auth'
 import { PERMISSIONS } from '@/constants/permissions'
@@ -61,9 +63,9 @@ function RoleAccessRow({
 
     try {
       await updateRole.mutateAsync({ roleId, data: { permission_ids, access_levels } })
-      toast.success(t('pages.aiSettings.accessUpdated', { role: roleName }))
     } catch {
-      toast.error(t('pages.aiSettings.accessUpdateError'))
+      // Swallowed: useUpdateRole already toasts the error. Catching here
+      // only keeps the rejection from propagating to ToggleSwitch's caller.
     }
   }
 
