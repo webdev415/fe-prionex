@@ -16,9 +16,15 @@ import type {
 
 const BASE = '/api/v1/document-types'
 
-export async function getDocumentTypes(includeHidden = false): Promise<DocumentType[]> {
+export async function getDocumentTypes(
+  includeHidden = false,
+  withCounts = false
+): Promise<DocumentType[]> {
+  // ``with_counts`` is OFF by default: per-type ``doc_count`` makes the BE
+  // aggregate the whole client_documents table. Only the admin management
+  // tab opts in; dropdowns/filters/modals must leave it false.
   const response = await api.get<DocumentType[]>(BASE, {
-    params: { include_hidden: includeHidden },
+    params: { include_hidden: includeHidden, with_counts: withCounts },
   })
   return response.data
 }
