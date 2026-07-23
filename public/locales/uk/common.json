@@ -3265,6 +3265,14 @@
       "toastDisabled": "AI-аналіз дзвінків вимкнено.",
       "toastError": "Не вдалося оновити налаштування AI-аналізу дзвінків."
     },
+    "aiSettings": {
+      "assistantToggleTitle": "AI-асистент",
+      "assistantToggleDescription": "Глобальний вимикач. Коли вимкнено — асистент недоступний для всіх, кнопку в шапці приховано.",
+      "assistantToggleAria": "Перемкнути AI-асистента",
+      "toastEnabled": "AI-асистента ввімкнено",
+      "toastDisabled": "AI-асистента вимкнено",
+      "toastError": "Не вдалося оновити налаштування AI-асистента"
+    },
     "projects": {
       "title": "Управління проєктами",
       "noProjectsFound": "Проєктів не знайдено",

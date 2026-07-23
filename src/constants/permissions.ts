@@ -127,7 +127,7 @@ export const PERMISSIONS = {
   },
 
   /**
-   * System Category (4 permissions)
+   * System Category (5 permissions)
    * Controls access to system administration
    */
   SYSTEM: {

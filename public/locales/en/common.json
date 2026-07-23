@@ -3264,6 +3264,14 @@
       "toastDisabled": "AI call analysis disabled.",
       "toastError": "Failed to update AI call analysis settings."
     },
+    "aiSettings": {
+      "assistantToggleTitle": "AI assistant",
+      "assistantToggleDescription": "Global kill-switch. When off, the assistant is unavailable for everyone and the header button is hidden.",
+      "assistantToggleAria": "Toggle the AI assistant",
+      "toastEnabled": "AI assistant enabled",
+      "toastDisabled": "AI assistant disabled",
+      "toastError": "Failed to update AI assistant settings"
+    },
     "projects": {
       "title": "Project Management",
       "noProjectsFound": "No projects found",
