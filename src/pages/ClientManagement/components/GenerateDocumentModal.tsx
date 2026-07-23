@@ -117,9 +117,11 @@ export function GenerateDocumentModal({
   }
 
   // Availability of each template for the currently selected credit.
-  const templatesForDebt = useMemo(() => {
-    if (debtId == null || !options) return []
-    return options.templates.map((tpl) => {
+  // CEO decision (23.07): templates the deal cannot generate are HIDDEN,
+  // not greyed out — only a muted counter reveals that some were filtered.
+  const { templatesForDebt, hiddenCount } = useMemo(() => {
+    if (debtId == null || !options) return { templatesForDebt: [], hiddenCount: 0 }
+    const all = options.templates.map((tpl) => {
       const entry = tpl.debts.find((d) => d.debt_id === debtId)
       return {
         id: tpl.id,
@@ -128,6 +130,8 @@ export function GenerateDocumentModal({
         reason: entry?.reason,
       }
     })
+    const availableOnly = all.filter((tpl) => tpl.available)
+    return { templatesForDebt: availableOnly, hiddenCount: all.length - availableOnly.length }
   }, [options, debtId])
 
   const handleSelectDebt = (value: string) => {
@@ -281,26 +285,26 @@ export function GenerateDocumentModal({
                       type="button"
                       role="radio"
                       aria-checked={isSelected}
-                      disabled={!tpl.available}
-                      onClick={() => tpl.available && setTemplateId(tpl.id)}
+                      onClick={() => setTemplateId(tpl.id)}
                       className={cn(
                         'flex flex-col items-start gap-0.5 rounded-lg border px-3 py-2.5 text-left transition-colors',
-                        !tpl.available
-                          ? 'cursor-not-allowed border-[#EBECE8] bg-[#F9FAF8] opacity-70'
-                          : isSelected
-                            ? 'border-primary-400 bg-primary-50/50'
-                            : 'hover:border-secondary-400 hover:bg-secondary-50 border-[#EBECE8]'
+                        isSelected
+                          ? 'border-primary-400 bg-primary-50/50'
+                          : 'hover:border-secondary-400 hover:bg-secondary-50 border-[#EBECE8]'
                       )}
                     >
                       <span className="text-secondary-900 text-sm font-medium">{tpl.name}</span>
-                      {!tpl.available && (
-                        <span className="text-secondary-500 text-xs">
-                          {reasonLabel(tpl.reason)}
-                        </span>
-                      )}
                     </button>
                   )
                 })}
+                {hiddenCount > 0 && (
+                  <p className="text-secondary-400 text-xs">
+                    {t('pages.clients.detail.generateModal.hiddenTemplates', {
+                      count: hiddenCount,
+                      defaultValue: 'Приховано шаблонів, недоступних для цього кредиту: {{count}}',
+                    })}
+                  </p>
+                )}
               </div>
             )}
           </div>
@@ -350,7 +354,7 @@ export function GenerateDocumentModal({
             <p className="text-secondary-500 mt-1 text-xs">
               {t(
                 'pages.clients.detail.generateModal.indexNumHint',
-                'Залиште порожнім для автонумерації'
+                'Залиште порожнім для автонумерації. Реєстр вихідних номерів буде запроваджено пізніше.'
               )}
             </p>
           </div>

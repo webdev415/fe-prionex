@@ -5000,7 +5000,7 @@
           "documentType": "Document type",
           "indexNum": "Outgoing №",
           "indexNumPlaceholder": "Auto",
-          "indexNumHint": "Leave empty for auto-numbering",
+          "indexNumHint": "Leave empty for auto-numbering. The outgoing-number register will be introduced later.",
           "generate": "Generate",
           "generating": "Generating…",
           "done": "Done",
@@ -5014,7 +5014,8 @@
             "no_active_rr": "No active restructuring",
             "no_active_promise": "No active payment promise",
             "unavailable": "Unavailable for this loan"
-          }
+          },
+          "hiddenTemplates": "Hidden templates unavailable for this credit: {{count}}"
         },
         "department": "Department",
         "phones": "Phones",
