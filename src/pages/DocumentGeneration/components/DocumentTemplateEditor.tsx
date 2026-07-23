@@ -52,6 +52,8 @@ import {
   type TemplateVariableDefinition,
 } from '@/features/documents'
 import { downloadBlob } from '@/features/messaging/utils/downloadBlob'
+import { useDocumentTypes } from '@/features/documentTypes'
+import { DocumentTypePill } from '@/components/DocumentTypePill'
 import { buildSampleVariableMap, substituteVariables } from './templateVariables'
 import { DocumentFileViewer } from './DocumentFileViewer'
 import { TemplatePreviewModal } from './TemplatePreviewModal'
@@ -120,6 +122,9 @@ export function DocumentTemplateEditor({ open, onClose, template }: Props) {
   const [description, setDescription] = useState(() => template?.description ?? '')
   const [body, setBody] = useState(() => template?.body ?? '')
   const [isActive, setIsActive] = useState(() => template?.is_active ?? true)
+  const [documentTypeId, setDocumentTypeId] = useState<number | null>(
+    () => template?.document_type_id ?? null
+  )
   const [activationRule, setActivationRule] = useState<DocumentActivationRule>(
     () => template?.activation_rule ?? 'always'
   )
@@ -152,6 +157,7 @@ export function DocumentTemplateEditor({ open, onClose, template }: Props) {
     replaceMutation.isPending
 
   const { data: variablesData } = useDocumentTemplateVariables()
+  const { data: documentTypes } = useDocumentTypes({ includeHidden: false })
   const variableItems = useMemo(() => variablesData?.items ?? [], [variablesData])
   const variableGroups = variablesData?.groups ?? []
 
@@ -265,6 +271,7 @@ export function DocumentTemplateEditor({ open, onClose, template }: Props) {
     fd.append('name', trimmedName)
     if (description.trim()) fd.append('description', description.trim())
     fd.append('activation_rule', activationRule)
+    if (documentTypeId != null) fd.append('document_type_id', String(documentTypeId))
     try {
       const res = await uploadMutation.mutateAsync(fd)
       toast.success(t('pages.documentGeneration.templates.messages.uploaded', 'Template uploaded'))
@@ -304,6 +311,7 @@ export function DocumentTemplateEditor({ open, onClose, template }: Props) {
         include_schedule: includeSchedule,
         include_requisites: includeRequisites,
         activation_rule: activationRule,
+        document_type_id: documentTypeId,
       })
       toast.success(t('pages.documentGeneration.templates.messages.created', 'Template created'))
       if (res.unknown_variables.length > 0) {
@@ -329,6 +337,7 @@ export function DocumentTemplateEditor({ open, onClose, template }: Props) {
           description: description.trim(),
           is_active: isActive,
           activation_rule: activationRule,
+          document_type_id: documentTypeId,
         },
       })
       toast.success(t('pages.documentGeneration.templates.messages.updated', 'Template updated'))
@@ -683,6 +692,45 @@ export function DocumentTemplateEditor({ open, onClose, template }: Props) {
                             {ACTIVATION_RULES.map((rule) => (
                               <SelectItem key={rule} value={rule}>
                                 {activationRuleLabel(rule)}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Document type auto-applied on generation (CEO 24.07). */}
+                      <div className="flex flex-col gap-1">
+                        <Label htmlFor="dt-doc-type">
+                          {t(
+                            'pages.documentGeneration.templates.form.documentType',
+                            'Тип документа (для генерації)'
+                          )}
+                        </Label>
+                        <Select
+                          value={documentTypeId == null ? '' : String(documentTypeId)}
+                          onValueChange={(v) => setDocumentTypeId(v ? Number(v) : null)}
+                        >
+                          <SelectTrigger id="dt-doc-type" className="w-full">
+                            <SelectValue
+                              placeholder={t(
+                                'pages.documentGeneration.templates.form.documentTypePlaceholder',
+                                'Не задано — оператор обере вручну'
+                              )}
+                            >
+                              {(() => {
+                                const selected = (documentTypes ?? []).find(
+                                  (dt) => dt.id === documentTypeId
+                                )
+                                return selected ? (
+                                  <DocumentTypePill name={selected.name} hex={selected.color} />
+                                ) : null
+                              })()}
+                            </SelectValue>
+                          </SelectTrigger>
+                          <SelectContent>
+                            {(documentTypes ?? []).map((type) => (
+                              <SelectItem key={type.id} value={String(type.id)}>
+                                <DocumentTypePill name={type.name} hex={type.color} />
                               </SelectItem>
                             ))}
                           </SelectContent>

@@ -102,6 +102,8 @@ export interface DocumentTemplate {
   file_name: string | null
   /** Size of the uploaded .docx in bytes (null for text templates). */
   file_size: number | null
+  /** Document type auto-applied on generation (null = operator picks). */
+  document_type_id: number | null
   /** Precondition that gates this template during generation. */
   activation_rule: DocumentActivationRule
 }
@@ -146,6 +148,7 @@ export interface TemplateVariablesResponse {
 export interface DocumentTemplateCreatePayload {
   name: string
   description?: string | null
+  document_type_id?: number | null
   body: string
   available_variables?: DocumentTemplateVariable[]
   project_id?: number
@@ -153,6 +156,7 @@ export interface DocumentTemplateCreatePayload {
 }
 
 export interface DocumentTemplateUpdatePayload {
+  document_type_id?: number | null
   name?: string
   description?: string | null
   body?: string
@@ -187,10 +191,18 @@ export interface GenerationTemplateDebt {
   reason: GenerationOptionReason | string
 }
 
+export interface GenerationDocumentTypeRef {
+  id: number
+  name: string
+  color: string
+}
+
 export interface GenerationTemplateOption {
   id: number
   name: string
   activation_rule: DocumentActivationRule
+  /** Type bound to the template — auto-applied on generation. */
+  document_type: GenerationDocumentTypeRef | null
   /** Per-debt availability verdict for this template. */
   debts: GenerationTemplateDebt[]
 }
@@ -202,7 +214,8 @@ export interface GenerationOptionsResponse {
 export interface GenerateDocumentPayload {
   client_id: number
   debt_id: number
-  document_type_id: number
+  /** Optional override; defaults to the template's bound type. */
+  document_type_id?: number
   /** Outgoing number; omit to let the server auto-assign one. */
   index_num?: number
 }
