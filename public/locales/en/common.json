@@ -1612,6 +1612,10 @@
         "clear": "Clear",
         "edit": "Edit",
         "sendToOperator": "Send to operator",
+        "saveChanges": "Save changes",
+        "changeTypeWarning": "Changing the type replaces the criteria — the current scores will be cleared.",
+        "changeTypeConfirm": "Change type",
+        "notAssigned": "This operator is not assigned to you, so you cannot score this call.",
         "resend": "Re-send",
         "status": {
           "draft": "Draft",
@@ -1723,7 +1727,7 @@
         },
         "detail": {
           "assignTask": "Assign task",
-          "empty": "Select a scorecard to view details"
+          "empty": "Select a dialog to review"
         },
         "employee": {
           "all": "All employees",
@@ -1751,6 +1755,8 @@
         },
         "dialogs": {
           "myEmployees": "My employees",
+          "myEmployeesEmpty": "You have no operators under your control yet",
+          "myEmployeesError": "Could not load your operators",
           "statusAll": "All",
           "allDepartments": "All departments",
           "evaluation": "Evaluation",
@@ -8307,6 +8313,10 @@
         "clear": "Clear",
         "edit": "Edit",
         "sendToOperator": "Send to operator",
+        "saveChanges": "Save changes",
+        "changeTypeWarning": "Changing the type replaces the criteria — the current scores will be cleared.",
+        "changeTypeConfirm": "Change type",
+        "notAssigned": "This operator is not assigned to you, so you cannot score this call.",
         "resend": "Re-send",
         "status": {
           "draft": "Draft",
