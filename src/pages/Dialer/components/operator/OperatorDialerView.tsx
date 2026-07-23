@@ -39,9 +39,8 @@ export function OperatorDialerView() {
   const [selectedId, setSelectedId] = useState<number | null>(null)
   const [autoConnect, setAutoConnect] = useState(false)
 
-  // Routed live-call stream for the joined queue (stubbed until the telephony
-  // socket contract is confirmed — plan §7.1).
-  const { routedCall, clearRoutedCall } = useDialerSocket(joinedQueueId)
+  // Routed live-call stream — active while the operator is joined to a queue.
+  const { routedCall, clearRoutedCall } = useDialerSocket(joinedQueueId != null)
 
   // Default the right pane to the joined campaign, else the operator's pick.
   const activeId = selectedId ?? joinedQueueId
