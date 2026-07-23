@@ -108,6 +108,11 @@ export function DocxRenderer({ blob, isLoading, error, className }: DocxRenderer
         // Let our neutral surface show through docx-preview's own grey wrapper;
         // the white "pages" (and their shadow) sit on top unchanged.
         '[&_.docx-wrapper]:bg-transparent [&_.docx-wrapper]:p-4 sm:[&_.docx-wrapper]:p-8',
+        // Tailwind preflight sets `img { max-width: 100% }`; docx-preview
+        // positions anchored images (logo/stamp/signature) inside zero-width
+        // inline anchors, so that cap collapses them to 0×N. Restore the
+        // explicit pt sizes docx-preview writes.
+        '[&_.docx-wrapper_img]:max-w-none',
         className
       )}
     >
