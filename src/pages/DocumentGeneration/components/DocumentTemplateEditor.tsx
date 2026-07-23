@@ -29,6 +29,13 @@ import { Label } from '@/components/ui/Label'
 import { Textarea } from '@/components/ui/Textarea'
 import { RadioGroup, RadioItem } from '@/components/ui/Radio'
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/Select'
 import { cn } from '@/lib/utils'
 import {
   useCreateDocumentTemplate,
@@ -38,6 +45,7 @@ import {
   useUploadDocumentTemplate,
   downloadDocumentTemplateFile,
   previewDocumentTemplateFile,
+  type DocumentActivationRule,
   type DocumentTemplate,
   type DocumentTemplateKind,
   type TemplateVariableDefinition,
@@ -65,6 +73,25 @@ const GROUP_FALLBACK: Record<string, string> = {
   system: 'System',
 }
 
+const ACTIVATION_RULES: DocumentActivationRule[] = [
+  'always',
+  'active_debt',
+  'closed_debt',
+  'rr_active',
+  'rr_first_payment',
+  'promise_active',
+]
+
+/** English fallbacks for activation-rule options (used when i18n is unset). */
+const ACTIVATION_RULE_FALLBACK: Record<DocumentActivationRule, string> = {
+  always: 'Always available',
+  active_debt: 'Active debt',
+  closed_debt: 'Closed debt',
+  rr_active: 'Active restructuring',
+  rr_first_payment: 'First restructuring payment',
+  promise_active: 'Active payment promise',
+}
+
 function formatBytes(bytes: number | null | undefined): string {
   if (bytes == null) return ''
   if (bytes < 1024) return `${bytes} B`
@@ -87,6 +114,9 @@ export function DocumentTemplateEditor({ open, onClose, template }: Props) {
   const [description, setDescription] = useState(() => template?.description ?? '')
   const [body, setBody] = useState(() => template?.body ?? '')
   const [isActive, setIsActive] = useState(() => template?.is_active ?? true)
+  const [activationRule, setActivationRule] = useState<DocumentActivationRule>(
+    () => template?.activation_rule ?? 'always'
+  )
   const [file, setFile] = useState<File | null>(null)
   const [replaceFile, setReplaceFile] = useState<File | null>(null)
   /** Placeholders in the just-uploaded file that are outside the dictionary. */
@@ -142,6 +172,8 @@ export function DocumentTemplateEditor({ open, onClose, template }: Props) {
     v.labels[baseLang] ?? v.labels.uk ?? v.labels.en ?? v.name
   const groupLabel = (group: string): string =>
     t(`pages.documentGeneration.templates.variableGroups.${group}`, GROUP_FALLBACK[group] ?? group)
+  const activationRuleLabel = (rule: DocumentActivationRule): string =>
+    t(`pages.documentGeneration.templates.activationRules.${rule}`, ACTIVATION_RULE_FALLBACK[rule])
 
   /** Insert `{{name}}` at the textarea's current cursor (text mode only). */
   const handleInsert = (variableName: string) => {
@@ -188,7 +220,12 @@ export function DocumentTemplateEditor({ open, onClose, template }: Props) {
         // the (possibly empty) string to allow clearing the description.
         await updateMutation.mutateAsync({
           id: template.id,
-          payload: { name: trimmedName, description: description.trim(), body },
+          payload: {
+            name: trimmedName,
+            description: description.trim(),
+            body,
+            activation_rule: activationRule,
+          },
         })
         toast.success(t('pages.documentGeneration.templates.messages.updated', 'Template updated'))
       } else {
@@ -196,6 +233,7 @@ export function DocumentTemplateEditor({ open, onClose, template }: Props) {
           name: trimmedName,
           description: description.trim() || null,
           body,
+          activation_rule: activationRule,
         })
         toast.success(t('pages.documentGeneration.templates.messages.created', 'Template created'))
       }
@@ -218,6 +256,7 @@ export function DocumentTemplateEditor({ open, onClose, template }: Props) {
     fd.append('file', file)
     fd.append('name', trimmedName)
     if (description.trim()) fd.append('description', description.trim())
+    fd.append('activation_rule', activationRule)
     try {
       const res = await uploadMutation.mutateAsync(fd)
       toast.success(t('pages.documentGeneration.templates.messages.uploaded', 'Template uploaded'))
@@ -245,6 +284,7 @@ export function DocumentTemplateEditor({ open, onClose, template }: Props) {
           // See handleTextSubmit — empty string clears, null would be ignored.
           description: description.trim(),
           is_active: isActive,
+          activation_rule: activationRule,
         },
       })
       toast.success(t('pages.documentGeneration.templates.messages.updated', 'Template updated'))
@@ -572,6 +612,31 @@ export function DocumentTemplateEditor({ open, onClose, template }: Props) {
                           )}
                           maxLength={500}
                         />
+                      </div>
+
+                      {/* Activation rule — gates when the template is offered for generation. */}
+                      <div className="flex flex-col gap-1">
+                        <Label htmlFor="dt-activation-rule">
+                          {t(
+                            'pages.documentGeneration.templates.form.activationRule',
+                            'Activation rule'
+                          )}
+                        </Label>
+                        <Select
+                          value={activationRule}
+                          onValueChange={(v) => setActivationRule(v as DocumentActivationRule)}
+                        >
+                          <SelectTrigger id="dt-activation-rule" className="w-full">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {ACTIVATION_RULES.map((rule) => (
+                              <SelectItem key={rule} value={rule}>
+                                {activationRuleLabel(rule)}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
 
                       {/* is_active — docx edit only. */}

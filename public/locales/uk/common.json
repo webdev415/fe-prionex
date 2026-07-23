@@ -4302,6 +4302,34 @@
         "loan": "Кредит",
         "documentsUnlinked": "Без прив'язки",
         "documentTypePlaceholder": "Оберіть тип",
+        "generatedBadge": "Згенеровано",
+        "generateModal": {
+          "title": "Згенерувати документ",
+          "credit": "Кредит",
+          "creditPlaceholder": "Оберіть кредит",
+          "template": "Шаблон",
+          "selectCreditFirst": "Спершу оберіть кредит",
+          "templatesEmpty": "Немає доступних шаблонів",
+          "loadError": "Не вдалося завантажити шаблони",
+          "documentType": "Тип документа",
+          "indexNum": "Вихідний №",
+          "indexNumPlaceholder": "Авто",
+          "indexNumHint": "Залиште порожнім для автонумерації",
+          "generate": "Згенерувати",
+          "generating": "Генерація…",
+          "done": "Готово",
+          "successTitle": "Документ згенеровано",
+          "successPdfHint": "PDF додано до документів клієнта.",
+          "downloadDocx": "Завантажити .docx",
+          "genericError": "Не вдалося згенерувати документ",
+          "reasons": {
+            "debt_not_closed": "Кредит не закритий",
+            "debt_closed": "Кредит закритий",
+            "no_active_rr": "Немає діючої реструктуризації",
+            "no_active_promise": "Немає актуальної обіцянки платежу",
+            "unavailable": "Недоступно для цього кредиту"
+          }
+        },
         "department": "Відділ",
         "phones": "Телефони",
         "tin": "ІПН",
@@ -6197,7 +6225,16 @@
           "replaceFile": "Замінити файл",
           "replaceAction": "Замінити файл",
           "isActive": "Активний",
+          "activationRule": "Правило активації",
           "variablesReferenceHelp": "Використовуйте ці імена у вашому Word-файлі як {{name}}."
+        },
+        "activationRules": {
+          "always": "Завжди доступний",
+          "active_debt": "Активний кредит",
+          "closed_debt": "Закритий кредит",
+          "rr_active": "Діюча реструктуризація",
+          "rr_first_payment": "Перший платіж за РР",
+          "promise_active": "Активна обіцянка платежу"
         },
         "variableGroups": {
           "client": "Клієнт",
