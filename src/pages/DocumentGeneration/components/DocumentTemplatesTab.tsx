@@ -5,13 +5,20 @@
  * editor + delete modals.
  */
 
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { toast } from 'sonner'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { TableSkeleton } from '@/components/ui/TableSkeleton'
 import { Button } from '@/components/ui/Button'
 import { Icons } from '@/lib/icons'
-import { useDocumentTemplates, type DocumentTemplate } from '@/features/documents'
+import { cn } from '@/lib/utils'
+import {
+  useDocumentTemplates,
+  downloadDocumentTemplateFile,
+  type DocumentTemplate,
+} from '@/features/documents'
+import { downloadBlob } from '@/features/messaging/utils/downloadBlob'
 import { intlLocaleForUiLanguage } from '@/lib/i18n'
 import { useHasPermission } from '@/hooks'
 import { PERMISSIONS } from '@/constants/permissions'
@@ -38,8 +45,26 @@ export function DocumentTemplatesTab() {
   const [editorOpen, setEditorOpen] = useState(false)
   const [editingTemplate, setEditingTemplate] = useState<DocumentTemplate | null>(null)
   const [deleting, setDeleting] = useState<DocumentTemplate | null>(null)
+  const [downloadingId, setDownloadingId] = useState<number | null>(null)
 
   const items = data?.items ?? []
+
+  const handleDownloadFile = useCallback(
+    async (row: DocumentTemplate) => {
+      setDownloadingId(row.id)
+      try {
+        const blob = await downloadDocumentTemplateFile(row.id)
+        downloadBlob(blob, row.file_name ?? `${row.name}.docx`)
+      } catch {
+        toast.error(
+          t('pages.documentGeneration.templates.messages.downloadError', 'Failed to download file')
+        )
+      } finally {
+        setDownloadingId(null)
+      }
+    },
+    [t]
+  )
 
   const dateFormatter = useMemo(
     () =>
@@ -61,6 +86,35 @@ export function DocumentTemplatesTab() {
             <span className="text-foreground font-medium">{row.name}</span>
             {row.description && (
               <span className="text-muted-foreground text-xs">{row.description}</span>
+            )}
+          </div>
+        ),
+      },
+      {
+        key: 'kind',
+        header: t('pages.documentGeneration.templates.columns.type', 'Type'),
+        render: (row) => (
+          <div className="flex flex-col gap-1">
+            <span
+              className={cn(
+                'inline-flex w-fit rounded-full px-2 py-0.5 text-xs font-medium',
+                row.template_kind === 'docx'
+                  ? 'bg-info-100 text-info-700'
+                  : 'bg-muted text-muted-foreground'
+              )}
+            >
+              {t(
+                `pages.documentGeneration.templates.templateKind.${row.template_kind}`,
+                row.template_kind === 'docx' ? '.docx file' : 'Text template'
+              )}
+            </span>
+            {row.template_kind === 'docx' && row.file_name && (
+              <span
+                className="text-muted-foreground max-w-[180px] truncate text-xs"
+                title={row.file_name}
+              >
+                {row.file_name}
+              </span>
             )}
           </div>
         ),
@@ -94,6 +148,17 @@ export function DocumentTemplatesTab() {
         align: 'right',
         render: (row) => (
           <div className="flex items-center justify-end gap-2">
+            {row.template_kind === 'docx' && (
+              <button
+                type="button"
+                title={t('pages.documentGeneration.templates.form.downloadFile', 'Download file')}
+                onClick={() => handleDownloadFile(row)}
+                disabled={downloadingId === row.id}
+                className="text-foreground hover:bg-muted inline-flex h-8 w-8 items-center justify-center rounded-md disabled:opacity-50"
+              >
+                <Icons.Download size={16} strokeWidth={1.5} />
+              </button>
+            )}
             {canCreateEdit && (
               <button
                 type="button"
@@ -121,7 +186,7 @@ export function DocumentTemplatesTab() {
         ),
       },
     ],
-    [t, dateFormatter, canCreateEdit, canDelete]
+    [t, dateFormatter, canCreateEdit, canDelete, handleDownloadFile, downloadingId]
   )
 
   return (

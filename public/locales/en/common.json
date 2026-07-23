@@ -5910,7 +5910,8 @@
           "preview": "Preview",
           "variables": "Variables",
           "updated": "Updated",
-          "actions": "Actions"
+          "actions": "Actions",
+          "type": "Type"
         },
         "modals": {
           "createTitle": "Create template",
@@ -5928,12 +5929,26 @@
           "preview": "Preview (sample data)",
           "previewEmpty": "Start typing to see a live preview.",
           "variables": "Variables",
-          "variablesHelp": "Click a variable to insert it at the cursor."
+          "variablesHelp": "Click a variable to insert it at the cursor.",
+          "description": "Description",
+          "descriptionPlaceholder": "Optional short description",
+          "file": ".docx file",
+          "dropFileOrClick": "Drop a .docx file here or click to choose",
+          "bodyReadonly": "Body (from file, read-only)",
+          "bodyEmpty": "No extracted text.",
+          "currentFile": "Current file",
+          "downloadFile": "Download file",
+          "replaceFile": "Replace file",
+          "replaceAction": "Replace file",
+          "isActive": "Active",
+          "variablesReferenceHelp": "Use these names in your Word file as {{name}}."
         },
         "variableGroups": {
           "client": "Client",
           "credit": "Credit",
-          "system": "System"
+          "system": "System",
+          "promise": "Promise",
+          "restructuring": "Restructuring"
         },
         "variables": {
           "clientFullName": "Client's full name",
@@ -5954,12 +5969,26 @@
         },
         "errors": {
           "nameRequired": "Template name is required",
-          "bodyRequired": "Template body is required"
+          "bodyRequired": "Template body is required",
+          "fileRequired": "Please choose a .docx file"
         },
         "messages": {
           "created": "Template created",
           "updated": "Template updated",
-          "deleted": "Template deleted"
+          "deleted": "Template deleted",
+          "uploaded": "Template uploaded",
+          "fileReplaced": "Template file replaced",
+          "downloadError": "Failed to download file"
+        },
+        "templateKind": {
+          "label": "Template type",
+          "text": "Text template",
+          "docx": ".docx file"
+        },
+        "warnings": {
+          "unknownVariablesTitle": "Variables outside the dictionary",
+          "unknownVariablesHelp": "These placeholders are not in the dictionary and will not be substituted:",
+          "acknowledge": "Done"
         }
       }
     },

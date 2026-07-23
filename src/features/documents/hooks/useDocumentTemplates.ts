@@ -5,8 +5,11 @@ import {
   createDocumentTemplate,
   deleteDocumentTemplate,
   getDocumentTemplate,
+  getDocumentTemplateVariables,
   listDocumentTemplates,
+  replaceDocumentTemplateFile,
   updateDocumentTemplate,
+  uploadDocumentTemplate,
 } from '../api/documentTemplatesApi'
 import type { DocumentTemplateCreatePayload, DocumentTemplateUpdatePayload } from '../api/types'
 
@@ -15,6 +18,7 @@ export const documentTemplateKeys = {
   list: (includeInactive: boolean) =>
     [...documentTemplateKeys.all, 'list', { includeInactive }] as const,
   detail: (id: number) => [...documentTemplateKeys.all, 'detail', id] as const,
+  variables: () => [...documentTemplateKeys.all, 'variables'] as const,
 }
 
 export function useDocumentTemplates(includeInactive = false) {
@@ -73,6 +77,45 @@ export function useDeleteDocumentTemplate() {
     },
     onError: (error: AxiosError<{ detail?: string }>) => {
       toast.error(extractError(error, 'Failed to delete template'))
+    },
+  })
+}
+
+/**
+ * The variable dictionary is static (37 entries) and shared across every
+ * template, so it is safe to cache for a long time — a stale hour is fine.
+ */
+export function useDocumentTemplateVariables() {
+  return useQuery({
+    queryKey: documentTemplateKeys.variables(),
+    queryFn: getDocumentTemplateVariables,
+    staleTime: 60 * 60 * 1000,
+  })
+}
+
+export function useUploadDocumentTemplate() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (formData: FormData) => uploadDocumentTemplate(formData),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: documentTemplateKeys.all })
+    },
+    onError: (error: AxiosError<{ detail?: string }>) => {
+      toast.error(extractError(error, 'Failed to upload template'))
+    },
+  })
+}
+
+export function useReplaceDocumentTemplateFile() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, formData }: { id: number; formData: FormData }) =>
+      replaceDocumentTemplateFile(id, formData),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: documentTemplateKeys.all })
+    },
+    onError: (error: AxiosError<{ detail?: string }>) => {
+      toast.error(extractError(error, 'Failed to replace template file'))
     },
   })
 }
