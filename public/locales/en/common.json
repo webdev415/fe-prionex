@@ -23,6 +23,7 @@
     "projects": "Projects",
     "users": "Users",
     "ipWhitelist": "IP Whitelist",
+    "aiSettings": "AI Settings",
     "sellers": "Sellers",
     "roles": "Roles",
     "departments": "Departments",
@@ -3379,6 +3380,20 @@
       "toastEnabled": "AI call analysis enabled.",
       "toastDisabled": "AI call analysis disabled.",
       "toastError": "Failed to update AI call analysis settings."
+    },
+    "aiSettings": {
+      "title": "AI Settings",
+      "helper": "Global switches for the AI assistant and AI call analysis, and assistant access by role.",
+      "assistantToggleTitle": "AI assistant",
+      "assistantToggleDescription": "Global kill-switch. When off, the assistant is unavailable for everyone and the header button is hidden.",
+      "assistantToggleAria": "Toggle the AI assistant",
+      "toastEnabled": "AI assistant enabled",
+      "toastDisabled": "AI assistant disabled",
+      "toastError": "Failed to update AI assistant settings",
+      "accessTitle": "Assistant access",
+      "accessDescription": "Which roles may use the operator assistant (use_ai_assistant permission).",
+      "accessToggleAria": "Toggle assistant access for role {{role}}",
+      "disabledBanner": "The AI assistant is temporarily disabled by an administrator."
     },
     "projects": {
       "title": "Project Management",
