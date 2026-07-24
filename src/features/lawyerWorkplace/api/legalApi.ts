@@ -5,6 +5,7 @@ import type {
   LegalKanbanResponse,
   LegalKanbanTaskCreateRequest,
   LegalKanbanTaskCreateResponse,
+  LegalTaskLettersResponse,
   LegalLawyer,
   LegalLawyerCreate,
   LegalLawyerListResponse,
@@ -140,6 +141,12 @@ export const legalApi = {
   listKanban(params?: { assigned_to_user_id?: number }) {
     return api
       .get<LegalKanbanResponse>(`${BASE_URL}/kanban`, { params })
+      .then((response) => response.data)
+  },
+
+  listTaskLetters(legalTaskId: number) {
+    return api
+      .get<LegalTaskLettersResponse>(`${BASE_URL}/tasks/${legalTaskId}/letters`)
       .then((response) => response.data)
   },
 

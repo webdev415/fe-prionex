@@ -12,7 +12,6 @@ import {
   useReplyComposerState,
   useReplyToLegalThread,
   loadReplyDraftForMessage,
-  type EdoType,
 } from '@/features/lawyerWorkplace'
 import { getErrorMessage } from '@/lib/errors'
 import { getFilenameExtensionLabel } from '@/features/lawyerWorkplace/utils/attachmentExtension'
@@ -183,6 +182,8 @@ export interface EmailThreadPanelProps {
   onReplySent?: () => void
   onBack?: () => void
   onOpenParameters?: () => void
+  /** Centre the message column at a readable max-width (wide drawer layout). */
+  contentMaxWidth?: boolean
 }
 
 export function EmailThreadPanel({
@@ -194,6 +195,7 @@ export function EmailThreadPanel({
   onReplySent,
   onBack,
   onOpenParameters,
+  contentMaxWidth = false,
 }: EmailThreadPanelProps) {
   const { t, i18n } = useTranslation('common')
   const { data: mailboxesData } = useLegalMailboxes({ enabled: Boolean(letter) })
@@ -205,10 +207,6 @@ export function EmailThreadPanel({
   const [mailboxOverride, setMailboxOverride] = useState<{
     letterId: string
     mailboxId: string | null
-  } | null>(null)
-  const [edoOverride, setEdoOverride] = useState<{
-    letterId: string
-    edoType: EdoType
   } | null>(null)
 
   const mailboxes = useMemo(() => mailboxesData?.items ?? [], [mailboxesData?.items])
@@ -244,7 +242,6 @@ export function EmailThreadPanel({
 
   const selectedMailboxId =
     mailboxOverride?.letterId === letterId ? mailboxOverride.mailboxId : defaultMailboxId
-  const edoType = edoOverride?.letterId === letterId ? edoOverride.edoType : 'none'
 
   const {
     stagedAttachments,
@@ -257,7 +254,6 @@ export function EmailThreadPanel({
   } = useReplyComposerState({
     messageId: letterId || null,
     selectedMailboxId,
-    edoType,
     body: replyDraft,
     enabled: Boolean(letter),
   })
@@ -276,9 +272,6 @@ export function EmailThreadPanel({
         if (saved.mailboxId) {
           setMailboxOverride({ letterId, mailboxId: saved.mailboxId })
         }
-        if (saved.edoType !== 'none') {
-          setEdoOverride({ letterId, edoType: saved.edoType })
-        }
       } else {
         onReplyDraftChange('')
       }
@@ -287,10 +280,6 @@ export function EmailThreadPanel({
 
   const handleMailboxChange = (mailboxId: string) => {
     setMailboxOverride({ letterId, mailboxId })
-  }
-
-  const handleEdoTypeChange = (nextEdoType: EdoType) => {
-    setEdoOverride({ letterId, edoType: nextEdoType })
   }
 
   const handleSendReply = async () => {
@@ -309,17 +298,12 @@ export function EmailThreadPanel({
     const assignedUserId =
       replyContext.assignedUserId ??
       (letter.parameters.lawyerId ? Number(letter.parameters.lawyerId) : null)
+    const contractNumber = letter.parameters.contractLabel.trim() || null
 
-    if (edoType !== 'none' && (clientId == null || assignedUserId == null)) {
-      toast.error(
-        t(
-          'pages.lawyerWorkplace.reply.edoRequiresClientLawyer',
-          'Select client and lawyer in parameters before registering EDO'
-        )
-      )
-      return
-    }
-
+    // Replies are always registered in the correspondence journal — there is no
+    // mode selector, so `edo_type` is never sent. Registration metadata is
+    // included only when the letter carries it; when omitted the backend falls
+    // back to the confirmed client/lawyer of the source letter.
     replyMutation.mutate(
       {
         threadId: replyContext.threadId,
@@ -329,11 +313,9 @@ export function EmailThreadPanel({
           to_addresses: [letter.senderEmail],
           subject: letter.subject.startsWith('RE:') ? letter.subject : `RE: ${letter.subject}`,
           body_text: body,
-          edo_type: edoType,
-          client_id: edoType !== 'none' ? clientId : null,
-          assigned_to_user_id: edoType !== 'none' ? assignedUserId : null,
-          contract_number:
-            edoType !== 'none' ? letter.parameters.contractLabel.trim() || null : null,
+          ...(clientId != null ? { client_id: clientId } : {}),
+          ...(assignedUserId != null ? { assigned_to_user_id: assignedUserId } : {}),
+          ...(contractNumber ? { contract_number: contractNumber } : {}),
           attachment_ids: stagedAttachments.map((item) => item.id),
           draft_message_id: letter.id,
         },
@@ -496,27 +478,29 @@ export function EmailThreadPanel({
         </div>
       </div>
 
-      <div className="min-h-0 min-w-0 flex-1 space-y-4 overflow-x-hidden overflow-y-auto px-3 py-4 sm:px-5">
-        {isLoading && (
-          <p className="text-muted-foreground text-center text-xs">
-            {t('pages.lawyerWorkplace.thread.loading', 'Loading thread…')}
-          </p>
-        )}
-        {letter.thread.map((message, index) => {
-          const showDateSep =
-            index === 0 ||
-            formatDateSeparator(message.sentAt, i18n.language) !==
-              formatDateSeparator(letter.thread[index - 1]!.sentAt, i18n.language)
+      <div className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto px-3 py-4 sm:px-5">
+        <div className={cn('space-y-4', contentMaxWidth && 'mx-auto w-full max-w-4xl')}>
+          {isLoading && (
+            <p className="text-muted-foreground text-center text-xs">
+              {t('pages.lawyerWorkplace.thread.loading', 'Loading thread…')}
+            </p>
+          )}
+          {letter.thread.map((message, index) => {
+            const showDateSep =
+              index === 0 ||
+              formatDateSeparator(message.sentAt, i18n.language) !==
+                formatDateSeparator(letter.thread[index - 1]!.sentAt, i18n.language)
 
-          return (
-            <div key={message.id}>
-              {showDateSep && (
-                <DateSeparator label={formatDateSeparator(message.sentAt, i18n.language)} />
-              )}
-              <MessageCard message={message} messageId={message.id} />
-            </div>
-          )
-        })}
+            return (
+              <div key={message.id}>
+                {showDateSep && (
+                  <DateSeparator label={formatDateSeparator(message.sentAt, i18n.language)} />
+                )}
+                <MessageCard message={message} messageId={message.id} />
+              </div>
+            )
+          })}
+        </div>
       </div>
 
       <ReplyComposer
@@ -526,8 +510,6 @@ export function EmailThreadPanel({
         toMailbox={letter.senderEmail}
         value={replyDraft}
         onChange={onReplyDraftChange}
-        edoType={edoType}
-        onEdoTypeChange={handleEdoTypeChange}
         onSend={handleSendReply}
         replyTemplates={replyTemplates}
         onApplyTemplate={handleApplyTemplate}
