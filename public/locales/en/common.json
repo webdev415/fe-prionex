@@ -3393,7 +3393,45 @@
       "accessTitle": "Assistant access",
       "accessDescription": "Which roles may use the operator assistant (use_ai_assistant permission).",
       "accessToggleAria": "Toggle assistant access for role {{role}}",
-      "disabledBanner": "The AI assistant is temporarily disabled by an administrator."
+      "disabledBanner": "The AI assistant is temporarily disabled by an administrator.",
+      "internals": {
+        "title": "Assistant internals",
+        "configTitle": "Configuration",
+        "promptsTitle": "Prompting",
+        "unavailable": "Assistant brain is unreachable",
+        "on": "on",
+        "off": "off",
+        "model": "Model",
+        "commit": "Commit",
+        "prompt0Append": "Prompt0 append",
+        "skills": "Skills",
+        "knowledge": "Knowledge",
+        "flags": {
+          "thinking_mode_enabled": "Thinking mode",
+          "skills_enabled": "Skills",
+          "hooks_enabled": "Hooks",
+          "crm_mode": "CRM mode",
+          "memory_enabled": "Memory",
+          "knowledge_enabled": "Knowledge base",
+          "query_router_enabled": "Query router",
+          "answer_eval_enabled": "Answer evaluation",
+          "tts_normalize_enabled": "TTS normalization",
+          "corrector_enabled": "Corrector",
+          "rbac_scope_enabled": "RBAC scope",
+          "call_qa_enabled": "Call QA"
+        },
+        "limits": {
+          "max_turns": "Max turns",
+          "turn_deadline_s": "Turn deadline (s)",
+          "sql_max_rows": "SQL max rows",
+          "prompt_append_limit": "Prompt append limit"
+        },
+        "apply": {
+          "gw-restart": "gw restart",
+          "hot-reload": "hot reload",
+          "reseed": "reseed"
+        }
+      }
     },
     "projects": {
       "title": "Project Management",

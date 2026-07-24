@@ -3404,7 +3404,45 @@
       "accessTitle": "Доступ до асистента",
       "accessDescription": "Які ролі можуть користуватися асистентом оператора (пермішен use_ai_assistant).",
       "accessToggleAria": "Перемкнути доступ до асистента для ролі {{role}}",
-      "disabledBanner": "AI-асистент тимчасово вимкнений адміністратором."
+      "disabledBanner": "AI-асистент тимчасово вимкнений адміністратором.",
+      "internals": {
+        "title": "Устрій асистента",
+        "configTitle": "Конфігурація",
+        "promptsTitle": "Промптинг",
+        "unavailable": "Мозок асистента недоступний",
+        "on": "увімк.",
+        "off": "вимк.",
+        "model": "Модель",
+        "commit": "Коміт",
+        "prompt0Append": "Доповнення prompt0",
+        "skills": "Скіли",
+        "knowledge": "База знань",
+        "flags": {
+          "thinking_mode_enabled": "Режим міркувань",
+          "skills_enabled": "Скіли",
+          "hooks_enabled": "Хуки",
+          "crm_mode": "Режим CRM",
+          "memory_enabled": "Пам'ять",
+          "knowledge_enabled": "База знань",
+          "query_router_enabled": "Роутер запитів",
+          "answer_eval_enabled": "Оцінка відповідей",
+          "tts_normalize_enabled": "Нормалізація TTS",
+          "corrector_enabled": "Коректор",
+          "rbac_scope_enabled": "Область RBAC",
+          "call_qa_enabled": "QA дзвінків"
+        },
+        "limits": {
+          "max_turns": "Макс. кількість ходів",
+          "turn_deadline_s": "Дедлайн ходу (с)",
+          "sql_max_rows": "Макс. рядків SQL",
+          "prompt_append_limit": "Ліміт доповнення промпту"
+        },
+        "apply": {
+          "gw-restart": "перезапуск gw",
+          "hot-reload": "hot reload",
+          "reseed": "reseed"
+        }
+      }
     },
     "projects": {
       "title": "Управління проєктами",

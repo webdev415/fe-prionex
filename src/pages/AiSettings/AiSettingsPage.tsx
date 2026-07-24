@@ -10,6 +10,7 @@
 import { useTranslation } from 'react-i18next'
 
 import { AssistantAccessSection } from '@/features/aiSettings/components/AssistantAccessSection'
+import { AssistantInternalsSection } from '@/features/aiSettings/components/AssistantInternalsSection'
 import { AssistantSettingsSection } from '@/features/aiSettings/components/AssistantSettingsSection'
 import { CallQaSettingsSection } from '@/features/quality/components/CallQaSettingsSection'
 
@@ -28,6 +29,7 @@ export function AiSettingsPage() {
       <AssistantSettingsSection />
       <CallQaSettingsSection />
       <AssistantAccessSection />
+      <AssistantInternalsSection />
     </div>
   )
 }
