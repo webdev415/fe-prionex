@@ -674,7 +674,7 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
                   setPendingFilters((prev) => ({ ...prev, chainFilter: v === 'all' ? '' : v }))
                 }
               >
-                <SelectTrigger className="max-h-[45px] w-full rounded-md border border-gray-200 bg-white text-xs">
+                <SelectTrigger className="border-border bg-card max-h-[45px] w-full rounded-md border text-xs">
                   <SelectValue placeholder={t('pages.clientChains.history.allChains')} />
                 </SelectTrigger>
                 <SelectContent>
@@ -725,7 +725,7 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
               </label>
               <Input
                 type="text"
-                className="max-h-[45px] w-full rounded-md border border-gray-200 bg-white text-xs"
+                className="border-border bg-card max-h-[45px] w-full rounded-md border text-xs"
                 placeholder={t('pages.clientChains.history.searchNotesPlaceholder')}
                 value={pendingFilters.notesSearch}
                 onChange={(e) =>

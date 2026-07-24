@@ -85,7 +85,7 @@ interface Payment {
 /** Thead pulse row — identical for full-page load and in-table refetch skeleton */
 function PaymentHistoryTableHeadSkeletonRow() {
   return (
-    <tr className="bg-white">
+    <tr className="border-border bg-card">
       <th className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-left text-xs font-medium sm:px-6">
         <div className="flex items-center gap-1">
           <div className="h-3 w-12 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-16" />
@@ -1436,9 +1436,9 @@ export function PaymentHistoryPage() {
                     {showPaymentTableBodySkeleton ? (
                       <PaymentHistoryTableHeadSkeletonRow />
                     ) : (
-                      <tr className="bg-white">
+                      <tr className="border-border bg-card">
                         <th
-                          className="text-dark-500 h-[49px] cursor-pointer border-r border-[#EBECE8] px-3 text-left text-xs font-medium transition-colors select-none hover:bg-gray-50 sm:px-6"
+                          className="text-dark-500 hover:bg-muted h-[49px] cursor-pointer border-r border-[#EBECE8] px-3 text-left text-xs font-medium transition-colors select-none sm:px-6"
                           onClick={() => handleSort('date')}
                         >
                           <span className="inline-flex items-center gap-1">
@@ -1453,7 +1453,7 @@ export function PaymentHistoryPage() {
                           {t('pages.clients.paymentHistory.tableHeaders.cancelledDate')}
                         </th>
                         <th
-                          className="text-dark-500 h-[49px] cursor-pointer border-r border-[#EBECE8] px-3 text-right text-xs font-medium transition-colors select-none hover:bg-gray-50 sm:px-6"
+                          className="text-dark-500 hover:bg-muted h-[49px] cursor-pointer border-r border-[#EBECE8] px-3 text-right text-xs font-medium transition-colors select-none sm:px-6"
                           onClick={() => handleSort('amount')}
                         >
                           <span className="inline-flex items-center justify-end gap-1">
@@ -1462,7 +1462,7 @@ export function PaymentHistoryPage() {
                           </span>
                         </th>
                         <th
-                          className="text-dark-500 h-[49px] cursor-pointer border-r border-[#EBECE8] px-3 text-left text-xs font-medium transition-colors select-none hover:bg-gray-50 sm:px-6"
+                          className="text-dark-500 hover:bg-muted h-[49px] cursor-pointer border-r border-[#EBECE8] px-3 text-left text-xs font-medium transition-colors select-none sm:px-6"
                           onClick={() => handleSort('method')}
                         >
                           <span className="inline-flex items-center gap-1">
@@ -1471,7 +1471,7 @@ export function PaymentHistoryPage() {
                           </span>
                         </th>
                         <th
-                          className="text-dark-500 h-[49px] cursor-pointer border-r border-[#EBECE8] px-3 text-left text-xs font-medium transition-colors select-none hover:bg-gray-50 sm:px-6"
+                          className="text-dark-500 hover:bg-muted h-[49px] cursor-pointer border-r border-[#EBECE8] px-3 text-left text-xs font-medium transition-colors select-none sm:px-6"
                           onClick={() => handleSort('reference')}
                         >
                           <span className="inline-flex items-center gap-1">
@@ -1480,7 +1480,7 @@ export function PaymentHistoryPage() {
                           </span>
                         </th>
                         <th
-                          className="text-dark-500 h-[49px] cursor-pointer border-r border-[#EBECE8] px-3 text-left text-xs font-medium transition-colors select-none hover:bg-gray-50 sm:px-6"
+                          className="text-dark-500 hover:bg-muted h-[49px] cursor-pointer border-r border-[#EBECE8] px-3 text-left text-xs font-medium transition-colors select-none sm:px-6"
                           onClick={() => handleSort('contract')}
                         >
                           <span className="inline-flex items-center gap-1">
@@ -1489,7 +1489,7 @@ export function PaymentHistoryPage() {
                           </span>
                         </th>
                         <th
-                          className="text-dark-500 h-[49px] cursor-pointer border-r border-[#EBECE8] px-3 text-left text-xs font-medium transition-colors select-none hover:bg-gray-50 sm:px-6"
+                          className="text-dark-500 hover:bg-muted h-[49px] cursor-pointer border-r border-[#EBECE8] px-3 text-left text-xs font-medium transition-colors select-none sm:px-6"
                           onClick={() => handleSort('status')}
                         >
                           <span className="inline-flex items-center gap-1">
@@ -1657,7 +1657,7 @@ export function PaymentHistoryPage() {
                                     <DropdownMenuTrigger asChild>
                                       <button
                                         type="button"
-                                        className="text-dark-500 flex h-8 w-8 cursor-pointer items-center justify-center rounded-md border border-gray-300 bg-white transition-colors hover:bg-gray-100 focus:outline-none"
+                                        className="text-foreground border-border bg-card flex h-8 w-8 cursor-pointer items-center justify-center rounded-md border transition-colors hover:bg-gray-100 focus:outline-none"
                                         aria-label={t(
                                           'pages.clients.paymentHistory.tableHeaders.actions'
                                         )}
@@ -1665,7 +1665,10 @@ export function PaymentHistoryPage() {
                                         <Icons.FilterVertical size={16} strokeWidth={1.5} />
                                       </button>
                                     </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end" className="bg-white">
+                                    <DropdownMenuContent
+                                      align="end"
+                                      className="border-border bg-card"
+                                    >
                                       {payment.status === 'verified' && (
                                         <DropdownMenuItem
                                           onClick={() => {
@@ -1685,7 +1688,7 @@ export function PaymentHistoryPage() {
                                             }
                                             setOpenDropdownPaymentId(null)
                                           }}
-                                          className="text-dark-500 flex cursor-pointer items-center gap-2 text-sm"
+                                          className="text-foreground flex cursor-pointer items-center gap-2 text-sm"
                                         >
                                           <Icons.FileDownload size={16} strokeWidth={1.5} />
                                           <span>
@@ -1704,7 +1707,7 @@ export function PaymentHistoryPage() {
                                                 setIsVerificationModalOpen(true)
                                                 setOpenDropdownPaymentId(null)
                                               }}
-                                              className="text-dark-500 flex cursor-pointer items-center gap-2 text-sm"
+                                              className="text-foreground flex cursor-pointer items-center gap-2 text-sm"
                                             >
                                               <Icons.Success size={16} strokeWidth={1.5} />
                                               <span>
@@ -1718,7 +1721,7 @@ export function PaymentHistoryPage() {
                                           handleViewDetails(payment)
                                           setOpenDropdownPaymentId(null)
                                         }}
-                                        className="text-dark-500 flex cursor-pointer items-center gap-2 text-sm"
+                                        className="text-foreground flex cursor-pointer items-center gap-2 text-sm"
                                       >
                                         <Icons.View size={16} strokeWidth={1.5} />
                                         <span>

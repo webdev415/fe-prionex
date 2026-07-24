@@ -281,7 +281,7 @@ export const CallPlayer = forwardRef<CallPlayerHandle, CallPlayerProps>(function
       <div className="relative">
         {loadError && <p className="text-error-600 mb-2 text-center text-sm">{loadError}</p>}
         {isAudioLoading && !loadError && (
-          <div className="absolute inset-0 z-10 flex items-center justify-center rounded-full bg-white/80">
+          <div className="bg-card/80 absolute inset-0 z-10 flex items-center justify-center rounded-full">
             <Icons.Spinner className="h-6 w-6" />
           </div>
         )}
@@ -386,14 +386,14 @@ export const CallPlayer = forwardRef<CallPlayerHandle, CallPlayerProps>(function
             <Icons.ArrowDown size={14} className="ml-1 sm:size-4" />
           </Button>
           {showSpeedMenu && (
-            <div className="absolute top-full right-0 z-10 mt-1 rounded-md border border-gray-300 bg-white shadow-lg">
+            <div className="border-border bg-card absolute top-full right-0 z-10 mt-1 rounded-md border shadow-lg">
               {[0.5, 0.75, 1.0, 1.25, 1.5, 2.0].map((speed) => (
                 <button
                   key={speed}
                   onClick={() => handleSpeedChange(speed)}
                   className={cn(
-                    'text-dark-500 w-full px-3 py-2 text-left text-xs hover:bg-gray-100 sm:px-4 sm:text-sm',
-                    playbackSpeed === speed && 'bg-primary-100 text-primary-700'
+                    'text-foreground hover:bg-muted w-full px-3 py-2 text-left text-xs sm:px-4 sm:text-sm',
+                    playbackSpeed === speed && 'bg-primary/10 text-primary-700'
                   )}
                 >
                   {speed.toFixed(1)}x
