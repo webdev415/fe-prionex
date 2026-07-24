@@ -490,7 +490,9 @@
         "kanban": "Канбан",
         "documents": "Документи",
         "settings": "Налаштування",
-        "newCount": "{{count}} нових"
+        "newCount": "{{count}} нових",
+        "incomingRegistry": "Вхідний реєстр",
+        "outgoingRegistry": "Вихідний реєстр"
       },
       "availability": {
         "label": "Ваша доступність",
@@ -637,7 +639,9 @@
         "edoClientForInstitution": "Клієнт CRM (для реєстрації в ЕДО)",
         "clientSearchHint": "Введіть 2+ символи для пошуку…",
         "sending": "Надсилання…",
-        "send": "Надіслати"
+        "send": "Надіслати",
+        "institutionName": "Назва установи",
+        "institutionNamePlaceholder": "напр. Національний банк України"
       },
       "parameters": {
         "title": "Параметри листа",
@@ -859,7 +863,11 @@
             "relatedLetterPlaceholder": "напр. IN-2026-142",
             "assignee": "Виконавець",
             "submit": "Зареєструвати вхідний",
-            "success": "Вхідний документ зареєстровано"
+            "success": "Вхідний документ зареєстровано",
+            "senderEmail": "Ел. пошта відправника (необов’язково)",
+            "senderEmailPlaceholder": "напр. sender@example.com",
+            "summary": "Короткий зміст (необов’язково)",
+            "summaryPlaceholder": "Короткий опис листа"
           },
           "detail": {
             "title": "Деталі документа",
@@ -1260,6 +1268,50 @@
       },
       "lawyers": {
         "atCapacity": "Ліміт вичерпано ({{current}}/{{max}})"
+      },
+      "registry": {
+        "columns": {
+          "receivedDate": "Дата надходження",
+          "number": "№",
+          "senderEmail": "Ел. пошта відправника",
+          "summary": "Короткий зміст",
+          "requestReceivedAt": "Дата надходження звернення",
+          "email": "Ел. пошта",
+          "category": "Категорія",
+          "partyName": "ПІБ / Назва установи",
+          "outgoingNumber": "Вих. №",
+          "responseDate": "Дата відповіді",
+          "responsible": "Відповідальний"
+        },
+        "filters": {
+          "from": "Період з",
+          "to": "по",
+          "selectStartDate": "Дата початку",
+          "selectEndDate": "Дата кінця",
+          "category": "Категорія",
+          "allCategories": "Усі категорії",
+          "lawyer": "Відповідальний",
+          "allLawyers": "Усі юристи",
+          "search": "Пошук",
+          "searchPlaceholder": "Пошук за номером, ел. поштою, змістом…"
+        },
+        "export": {
+          "button": "Експорт (CSV)",
+          "exporting": "Експортування…",
+          "failed": "Не вдалося експортувати",
+          "incomingFileName": "журнал-вхідної-{{date}}.csv",
+          "outgoingFileName": "журнал-вихідної-{{date}}.csv"
+        },
+        "loadError": {
+          "title": "Не вдалося завантажити реєстр",
+          "description": "Перевірте з’єднання та спробуйте ще раз."
+        },
+        "incoming": {
+          "empty": "Вхідної кореспонденції ще немає"
+        },
+        "outgoing": {
+          "empty": "Вихідної кореспонденції ще немає"
+        }
       }
     },
     "training": {
@@ -4410,6 +4462,7 @@
             "unavailable": "Недоступно для цього кредиту"
           },
           "hiddenTemplates": "Приховано шаблонів, недоступних для цього кредиту: {{count}}",
+          "indexNumRegistryHint": "Вихідний № буде присвоєно автоматично з реєстру кореспонденції",
           "typeFromTemplate": "застосовується автоматично з шаблону"
         },
         "department": "Відділ",
@@ -8392,7 +8445,8 @@
         "timeline": "Таймлайн",
         "screenTime": "Екранний час",
         "heatmap": "Теплова карта",
-        "scriptAnalytics": "Аналітика скриптів"
+        "scriptAnalytics": "Аналітика скриптів",
+        "correspondence": "Кореспонденція"
       },
       "scoresSubTabs": {
         "scorecards": "Скоркарти",
@@ -8778,6 +8832,25 @@
           "fastResultPct": "% швидких",
           "distribution": "Розподіл"
         }
+      },
+      "correspondence": {
+        "columns": {
+          "date": "Дата",
+          "direction": "Напрям",
+          "number": "№",
+          "category": "Категорія",
+          "party": "Клієнт / Установа",
+          "responsible": "Відповідальний"
+        },
+        "directionIncoming": "Вхідна",
+        "directionOutgoing": "Вихідна",
+        "filters": {
+          "from": "Період з",
+          "to": "по",
+          "selectStartDate": "Дата початку",
+          "selectEndDate": "Дата кінця"
+        },
+        "empty": "Немає активності кореспонденції за цей період"
       }
     },
     "ubkiIntegration": {
