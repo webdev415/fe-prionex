@@ -882,7 +882,10 @@ function LetterParametersPanelContent({
                     <span className="text-foreground truncate text-[13px]">{primary}</span>
                     {contract.status && (
                       <span className="text-muted-foreground shrink-0 text-[11px] capitalize">
-                        {contract.status}
+                        {t(
+                          `pages.lawyerWorkplace.parameters.contractStatus.${contract.status}`,
+                          contract.status
+                        )}
                       </span>
                     )}
                   </span>

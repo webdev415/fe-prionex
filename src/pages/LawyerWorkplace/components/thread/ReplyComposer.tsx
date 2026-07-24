@@ -75,6 +75,7 @@ function StagedAttachmentChip({
   attachment: LegalStagedAttachment
   onRemove?: (attachmentId: string) => void
 }) {
+  const { t } = useTranslation('common')
   return (
     <span className="border-border text-foreground bg-card inline-flex max-w-[180px] items-center gap-1 rounded-full border px-2 py-0.5 text-[10px]">
       <span className="truncate">{attachment.filename}</span>
@@ -86,7 +87,7 @@ function StagedAttachmentChip({
           type="button"
           onClick={() => onRemove(attachment.id)}
           className="text-muted-foreground hover:text-foreground shrink-0"
-          aria-label="Remove attachment"
+          aria-label={t('pages.lawyerWorkplace.thread.removeAttachment', 'Remove attachment')}
         >
           <Icons.Close size={10} strokeWidth={2} />
         </button>

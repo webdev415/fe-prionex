@@ -540,7 +540,8 @@
             "title": "No letters in this view",
             "description": "Nothing matches the «{{filter}}» filter. Try another status or show all mailboxes."
           }
-        }
+        },
+        "noSubject": "(no subject)"
       },
       "letterItem": {
         "unclassified": "Unclassified",
@@ -580,7 +581,8 @@
         "attachmentPdf": "PDF",
         "attachmentDoc": "DOC",
         "closeThread": "Close thread",
-        "disabledMailboxNotice": "The original mailbox for this letter is disabled. Choose another mailbox below to send a reply."
+        "disabledMailboxNotice": "The original mailbox for this letter is disabled. Choose another mailbox below to send a reply.",
+        "removeAttachment": "Remove attachment"
       },
       "reply": {
         "replyFrom": "Reply from",
@@ -663,7 +665,11 @@
         "contractLoading": "Loading contracts…",
         "lawyerAssigned": "Assigned on kanban",
         "noContracts": "No contracts",
-        "selectContract": "Select contract"
+        "selectContract": "Select contract",
+        "contractStatus": {
+          "active": "Active",
+          "closed": "Closed"
+        }
       },
       "kanban": {
         "title": "Legal tasks kanban",
@@ -856,7 +862,9 @@
             "export": "Export",
             "exportStarted": "Export started"
           }
-        }
+        },
+        "unknownClient": "Client #{{id}}",
+        "unknownUser": "User #{{id}}"
       },
       "settings": {
         "title": "Settings",
@@ -995,7 +1003,8 @@
           "empty": {
             "title": "No lawyers yet",
             "description": "Add lawyers to configure workload limits and letter type specializations."
-          }
+          },
+          "defaultRole": "Legal department"
         },
         "mailboxes": {
           "title": "Mailboxes",
@@ -1115,7 +1124,10 @@
             "matchDefault": "Default",
             "matchSenderDomain": "Sender domain",
             "matchSubjectKeyword": "Subject keyword"
-          }
+          },
+          "customProvider": "Custom / Self-hosted",
+          "hidePassword": "Hide password",
+          "showPassword": "Show password"
         },
         "templates": {
           "title": "Templates",
@@ -1215,7 +1227,7 @@
       },
       "workspaceBanner": {
         "lawBadge": "Law",
-        "title": "Lawyers's Workspace",
+        "title": "Lawyers' Workspace",
         "activeProject": "Active project: {{project}}.",
         "noActiveProject": "No active project selected.",
         "lawyersInProject": "lawyers in this project",
@@ -1227,6 +1239,18 @@
         "syncHint": "Email Service · {{interval}}",
         "mailboxes": "6 mailboxes connected",
         "mailboxesCount": "{{count}} mailboxes connected"
+      },
+      "mutations": {
+        "edoRegistered": "EDO registered: {{number}}",
+        "replySent": "Reply sent",
+        "letterSent": "Letter sent",
+        "taskCreated": "Task created"
+      },
+      "letterTemplate": {
+        "clientFallback": "Client"
+      },
+      "lawyers": {
+        "atCapacity": "At capacity ({{current}}/{{max}})"
       }
     },
     "training": {

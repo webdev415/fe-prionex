@@ -1,4 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { taskApi } from '@/features/clients/api/taskApi'
 import { getErrorMessage } from '@/lib/errors'
@@ -220,6 +221,7 @@ export function useArchiveLegalLawyer() {
 }
 
 export function useReplyToLegalThread() {
+  const { t } = useTranslation('common')
   const queryClient = useQueryClient()
 
   return useMutation({
@@ -237,9 +239,13 @@ export function useReplyToLegalThread() {
         invalidateLegalDocuments(queryClient)
       }
       if (data.legal_document_number) {
-        toast.success(`EDO registered: ${data.legal_document_number}`)
+        toast.success(
+          t('pages.lawyerWorkplace.mutations.edoRegistered', 'EDO registered: {{number}}', {
+            number: data.legal_document_number,
+          })
+        )
       } else {
-        toast.success('Reply sent')
+        toast.success(t('pages.lawyerWorkplace.mutations.replySent', 'Reply sent'))
       }
     },
     onError: (error) => toast.error(getErrorMessage(error)),
@@ -247,6 +253,7 @@ export function useReplyToLegalThread() {
 }
 
 export function useSendOutgoingLetter() {
+  const { t } = useTranslation('common')
   const queryClient = useQueryClient()
 
   return useMutation({
@@ -263,9 +270,13 @@ export function useSendOutgoingLetter() {
         invalidateLegalDocuments(queryClient)
       }
       if (data.legal_document_number) {
-        toast.success(`EDO registered: ${data.legal_document_number}`)
+        toast.success(
+          t('pages.lawyerWorkplace.mutations.edoRegistered', 'EDO registered: {{number}}', {
+            number: data.legal_document_number,
+          })
+        )
       } else {
-        toast.success('Letter sent')
+        toast.success(t('pages.lawyerWorkplace.mutations.letterSent', 'Letter sent'))
       }
     },
     onError: (error) => toast.error(getErrorMessage(error)),
@@ -353,6 +364,7 @@ export function useTransitionLegalKanbanTask() {
 }
 
 export function useCreateLegalKanbanTask() {
+  const { t } = useTranslation('common')
   const queryClient = useQueryClient()
 
   return useMutation({
@@ -364,7 +376,7 @@ export function useCreateLegalKanbanTask() {
       queryClient.invalidateQueries({ queryKey: legalWorkplaceKeys.threads() })
       queryClient.invalidateQueries({ queryKey: ['tasks', 'my-tasks'] })
       invalidateLegalWorkload(queryClient)
-      toast.success('Task created')
+      toast.success(t('pages.lawyerWorkplace.mutations.taskCreated', 'Task created'))
     },
     onError: (error) => toast.error(getErrorMessage(error)),
   })

@@ -547,7 +547,8 @@
             "title": "У цьому перегляді немає листів",
             "description": "Нічого не відповідає фільтру «{{filter}}». Спробуйте інший статус або покажіть усі скриньки."
           }
-        }
+        },
+        "noSubject": "(без теми)"
       },
       "letterItem": {
         "unclassified": "Без класифікації",
@@ -587,7 +588,8 @@
         "attachmentPdf": "PDF",
         "attachmentDoc": "DOC",
         "closeThread": "Закрити ланцюжок",
-        "disabledMailboxNotice": "Початкова поштова скринька для цього листа вимкнена. Оберіть іншу скриньку нижче, щоб надіслати відповідь."
+        "disabledMailboxNotice": "Початкова поштова скринька для цього листа вимкнена. Оберіть іншу скриньку нижче, щоб надіслати відповідь.",
+        "removeAttachment": "Прибрати вкладення"
       },
       "reply": {
         "replyFrom": "Відповідь з",
@@ -670,7 +672,11 @@
         "selectContract": "Оберіть договір",
         "autoProcessed": "АВТО",
         "taskOnBoard": "Задачу створено на канбані",
-        "viewTask": "Переглянути →"
+        "viewTask": "Переглянути →",
+        "contractStatus": {
+          "active": "Активний",
+          "closed": "Закритий"
+        }
       },
       "kanban": {
         "title": "Канбан юридичних задач",
@@ -863,7 +869,9 @@
             "export": "Експорт",
             "exportStarted": "Експорт розпочато"
           }
-        }
+        },
+        "unknownClient": "Клієнт №{{id}}",
+        "unknownUser": "Користувач №{{id}}"
       },
       "settings": {
         "title": "Налаштування",
@@ -1004,7 +1012,8 @@
           "empty": {
             "title": "Юристів ще немає",
             "description": "Додайте юристів, щоб налаштувати ліміти навантаження та спеціалізації за типами листів."
-          }
+          },
+          "defaultRole": "Юридичний відділ"
         },
         "mailboxes": {
           "title": "Скриньки",
@@ -1124,7 +1133,10 @@
             "matchDefault": "За замовчуванням",
             "matchSenderDomain": "Домен відправника",
             "matchSubjectKeyword": "Ключове слово в темі"
-          }
+          },
+          "customProvider": "Власний / Self-hosted",
+          "hidePassword": "Приховати пароль",
+          "showPassword": "Показати пароль"
         },
         "templates": {
           "title": "Шаблони",
@@ -1236,6 +1248,18 @@
         "syncHint": "Email Service · {{interval}}",
         "mailboxes": "6 скриньок підключено",
         "mailboxesCount": "{{count}} скриньок підключено"
+      },
+      "mutations": {
+        "edoRegistered": "ЕДО зареєстровано: {{number}}",
+        "replySent": "Відповідь надіслано",
+        "letterSent": "Лист надіслано",
+        "taskCreated": "Задачу створено"
+      },
+      "letterTemplate": {
+        "clientFallback": "Клієнт"
+      },
+      "lawyers": {
+        "atCapacity": "Ліміт вичерпано ({{current}}/{{max}})"
       }
     },
     "training": {

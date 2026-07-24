@@ -38,6 +38,8 @@ export interface MailboxFormValues {
 interface ProviderPreset {
   id: MailboxProvider
   label: string
+  /** i18n key for non-brand labels (e.g. "Custom / Self-hosted"); brands keep raw label. */
+  labelKey?: string
   imapHost: string
   imapPort: number
   imapUseSsl: boolean
@@ -90,6 +92,7 @@ const PROVIDER_PRESETS: ProviderPreset[] = [
   {
     id: 'custom',
     label: 'Custom / Self-hosted',
+    labelKey: 'pages.lawyerWorkplace.settings.mailboxes.customProvider',
     imapHost: '',
     imapPort: 993,
     imapUseSsl: true,
@@ -214,6 +217,8 @@ export function MailboxModal({
   isSubmitting = false,
 }: MailboxModalProps) {
   const { t } = useTranslation('common')
+  const providerLabel = (preset: ProviderPreset) =>
+    preset.labelKey ? t(preset.labelKey, preset.label) : preset.label
   const isEditing = mailbox !== null
 
   const [email, setEmail] = useState('')
@@ -375,7 +380,10 @@ export function MailboxModal({
     }
   }
 
-  const selectedProviderLabel = PROVIDER_PRESETS.find((p) => p.id === provider)?.label ?? provider
+  const selectedProviderPreset = PROVIDER_PRESETS.find((p) => p.id === provider)
+  const selectedProviderLabel = selectedProviderPreset
+    ? providerLabel(selectedProviderPreset)
+    : provider
 
   return (
     <Modal open={open} onClose={onClose} maxWidth="lg">
@@ -456,7 +464,7 @@ export function MailboxModal({
                   className="cursor-pointer"
                   onClick={() => handleProviderChange(preset.id)}
                 >
-                  {preset.label}
+                  {providerLabel(preset)}
                 </DropdownMenuItem>
               ))}
             </DropdownMenuContent>
@@ -493,7 +501,11 @@ export function MailboxModal({
               onClick={() => setShowPassword((v) => !v)}
               className="text-muted-foreground hover:text-foreground absolute top-0 right-0 flex h-11 w-11 items-center justify-center"
               tabIndex={-1}
-              aria-label={showPassword ? 'Hide password' : 'Show password'}
+              aria-label={
+                showPassword
+                  ? t('pages.lawyerWorkplace.settings.mailboxes.hidePassword', 'Hide password')
+                  : t('pages.lawyerWorkplace.settings.mailboxes.showPassword', 'Show password')
+              }
             >
               <Icons.View size={16} strokeWidth={showPassword ? 1.5 : 2.5} />
             </button>
