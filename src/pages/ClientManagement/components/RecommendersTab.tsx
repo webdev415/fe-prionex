@@ -41,6 +41,12 @@ import {
   hasNonDigitChars,
   isDuplicateContactValue,
 } from '@/features/clients/utils/contactValueValidation'
+import {
+  isCallBlocked,
+  isMessageBlocked,
+  callBlockReason,
+  messageBlockReason,
+} from '@/features/clients/utils/contactBlocking'
 import { formatDate } from '@/lib/formatters'
 import { useHasAnyPermission, useHasPermission } from '@/hooks/usePermissions'
 
@@ -412,13 +418,13 @@ const ActionIconButton = forwardRef<
  */
 function MessageActionsButton({
   phone,
-  smsBlocked,
+  blocked,
   blockReason,
   onSendSms,
   onSendMessage,
 }: {
   phone: string
-  smsBlocked?: boolean
+  blocked?: boolean
   blockReason?: string
   onSendSms: (phone: string) => void
   onSendMessage: (phone: string) => void
@@ -435,8 +441,8 @@ function MessageActionsButton({
     return (
       <ActionIconButton
         primary
-        disabled={smsBlocked}
-        title={smsBlocked ? blockedTitle : t('pages.clients.detail.sendSms', 'Send SMS')}
+        disabled={blocked}
+        title={blocked ? blockedTitle : t('pages.clients.detail.sendSms', 'Send SMS')}
         aria-label={messageTitle}
         data-testid="action-message"
         onClick={() => onSendSms(phone)}
@@ -450,8 +456,8 @@ function MessageActionsButton({
     return (
       <ActionIconButton
         primary
-        disabled={smsBlocked}
-        title={smsBlocked ? blockedTitle : t('pages.clients.detail.sendMessage', 'Send message')}
+        disabled={blocked}
+        title={blocked ? blockedTitle : t('pages.clients.detail.sendMessage', 'Send message')}
         aria-label={messageTitle}
         data-testid="action-message"
         onClick={() => onSendMessage(phone)}
@@ -466,8 +472,8 @@ function MessageActionsButton({
       <DropdownMenuTrigger asChild>
         <ActionIconButton
           primary
-          disabled={smsBlocked}
-          title={smsBlocked ? blockedTitle : messageTitle}
+          disabled={blocked}
+          title={blocked ? blockedTitle : messageTitle}
           aria-label={messageTitle}
           data-testid="action-message"
         >
@@ -476,7 +482,7 @@ function MessageActionsButton({
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-[160px] bg-white">
         <DropdownMenuItem
-          disabled={smsBlocked}
+          disabled={blocked}
           className="cursor-pointer text-sm"
           data-testid="action-message-sms"
           onClick={() => onSendSms(phone)}
@@ -484,7 +490,7 @@ function MessageActionsButton({
           {t('pages.clients.detail.sendSms', 'Send SMS')}
         </DropdownMenuItem>
         <DropdownMenuItem
-          disabled={smsBlocked}
+          disabled={blocked}
           className="cursor-pointer text-sm"
           data-testid="action-message-viber"
           onClick={() => onSendMessage(phone)}
@@ -536,9 +542,11 @@ function ContactCard({
         : contact.contactType
   const isPhone = contact.isPhone
   const showPhoneActions = isPhone && Boolean(contact.contactValue) && contact.id > 0
-  const smsBlockReason = contact.blocking?.reasons
-    .filter((r) => r.toLowerCase().includes('sms'))
-    .join('; ')
+  const callBlocked = isCallBlocked(contact.blocking)
+  const callBlockedTitle =
+    callBlockReason(contact.blocking) || t('pages.contactTags.callsBlocked', 'Calls blocked')
+  const messageBlocked = isMessageBlocked(contact.blocking)
+  const messageBlockedReason = messageBlockReason(contact.blocking)
 
   return (
     <div
@@ -590,8 +598,10 @@ function ContactCard({
                     <PermissionGuard permission={PERMISSIONS.COMMUNICATION.MAKE_CALLS}>
                       <ActionIconButton
                         primary
-                        disabled={!canMakeCalls}
-                        title={t('pages.clients.detail.call', 'Call')}
+                        disabled={!canMakeCalls || callBlocked}
+                        title={
+                          callBlocked ? callBlockedTitle : t('pages.clients.detail.call', 'Call')
+                        }
                         data-testid="action-call"
                         onClick={() => onCall(contact.contactValue, contact.contactTypeId)}
                       >
@@ -600,8 +610,8 @@ function ContactCard({
                     </PermissionGuard>
                     <MessageActionsButton
                       phone={contact.contactValue}
-                      smsBlocked={contact.blocking?.blocks_sms}
-                      blockReason={smsBlockReason}
+                      blocked={messageBlocked}
+                      blockReason={messageBlockedReason}
                       onSendSms={onSendSms}
                       onSendMessage={onSendMessage}
                     />

@@ -121,6 +121,12 @@ import {
   hasNonDigitChars,
   isDuplicateContactValue,
 } from '@/features/clients/utils/contactValueValidation'
+import {
+  isCallBlocked,
+  isMessageBlocked,
+  callBlockReason,
+  messageBlockReason,
+} from '@/features/clients/utils/contactBlocking'
 import { RecommendersTab } from './components/RecommendersTab'
 import { useRRPeriodicitySettings } from '@/features/clients/hooks/useRRPeriodicitySettings'
 import {
@@ -3118,7 +3124,7 @@ export function ClientDetailPage() {
                                   disabled={
                                     !user?.is_agent ||
                                     !user?.asterisk_extension ||
-                                    phone.blocking.blocks_calls
+                                    isCallBlocked(phone.blocking)
                                   }
                                   onClick={() => {
                                     openOutboundCall(
@@ -3129,16 +3135,16 @@ export function ClientDetailPage() {
                                   }}
                                   className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-40 md:h-[20px] md:w-[20px]"
                                 >
-                                  {phone.blocking.blocks_calls ? (
+                                  {isCallBlocked(phone.blocking) ? (
                                     <Icons.Lock size={16} className="flex-shrink-0" />
                                   ) : (
                                     <Icons.Headset size={16} className="flex-shrink-0" />
                                   )}
                                 </button>
                               </TooltipTrigger>
-                              {phone.blocking.blocks_calls && (
+                              {isCallBlocked(phone.blocking) && (
                                 <TooltipContent>
-                                  {phone.blocking.reasons.join('; ') ||
+                                  {callBlockReason(phone.blocking) ||
                                     t('pages.contactTags.callsBlocked', 'Calls blocked')}
                                 </TooltipContent>
                               )}
@@ -3146,29 +3152,33 @@ export function ClientDetailPage() {
                           </PermissionGuard>
                           <PermissionGuard permission={PERMISSIONS.COMMUNICATION.SEND_SMS}>
                             <button
-                              disabled={phone.blocking.blocks_sms}
+                              disabled={isMessageBlocked(phone.blocking)}
                               onClick={() => {
                                 setSelectedPhoneForSMS(phone.number)
                                 setIsSendSMSModalOpen(true)
                               }}
                               className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-40 md:h-[20px] md:w-[20px]"
+                              title={
+                                isMessageBlocked(phone.blocking)
+                                  ? messageBlockReason(phone.blocking) ||
+                                    t('pages.contactTags.smsBlocked', 'SMS blocked')
+                                  : t('pages.clients.detail.sendSms', 'Send SMS')
+                              }
                             >
                               <Icons.ChatFeedback01 size={16} className="flex-shrink-0" />
                             </button>
                           </PermissionGuard>
                           <PermissionGuard permissions={ALL_MESSAGING_SEND_PERMISSIONS} mode="any">
                             <button
-                              disabled={phone.blocking.blocks_sms}
+                              disabled={isMessageBlocked(phone.blocking)}
                               onClick={() => {
                                 setSelectedPhoneForMessage(phone.number)
                                 setIsSendMessageModalOpen(true)
                               }}
                               className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-40 md:h-[20px] md:w-[20px]"
                               title={
-                                phone.blocking.blocks_sms
-                                  ? phone.blocking.reasons
-                                      .filter((r) => r.toLowerCase().includes('sms'))
-                                      .join('; ') ||
+                                isMessageBlocked(phone.blocking)
+                                  ? messageBlockReason(phone.blocking) ||
                                     t('pages.contactTags.smsBlocked', 'SMS blocked')
                                   : t('pages.clients.detail.sendMessage', 'Send message')
                               }
