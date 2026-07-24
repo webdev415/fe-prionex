@@ -36,6 +36,12 @@ export interface ReplyComposerProps {
   onSaveDraft?: () => void
   onAttachFiles?: (files: FileList) => void
   onRemoveAttachment?: (attachmentId: string) => void
+  /** Opens the "document already on the client" picker (option 2). */
+  onAttachFromClient?: () => void
+  /** Opens the document-generation modal seeded with the letter's client (option 3). */
+  onGenerateDocument?: () => void
+  /** Whether the letter has a confirmed client — gates options 2 and 3. */
+  clientActionsEnabled?: boolean
   isSavingDraft?: boolean
   isUploadingAttachment?: boolean
   isSending?: boolean
@@ -84,6 +90,9 @@ export function ReplyComposer({
   onSaveDraft,
   onAttachFiles,
   onRemoveAttachment,
+  onAttachFromClient,
+  onGenerateDocument,
+  clientActionsEnabled = false,
   isSavingDraft = false,
   isUploadingAttachment = false,
   isSending = false,
@@ -91,6 +100,10 @@ export function ReplyComposer({
 }: ReplyComposerProps) {
   const { t } = useTranslation('common')
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const clientActionsDisabledHint = clientActionsEnabled
+    ? undefined
+    : t('pages.lawyerWorkplace.reply.attachClientDisabledHint', 'Confirm the client first')
 
   const selectedMailbox =
     mailboxes.find((mailbox) => mailbox.id === selectedMailboxId) ?? mailboxes[0] ?? null
@@ -230,22 +243,70 @@ export function ReplyComposer({
         </LinkButton>
 
         <div className="flex shrink-0 items-center gap-0.5">
-          <LinkButton
-            type="button"
-            variant="regular-gray"
-            size="xs"
-            className="shrink-0 px-2 sm:px-2"
-            aria-label={t('pages.lawyerWorkplace.reply.attach', 'Attach')}
-            leftIcon={<Icon icon={Link01Icon} size={13} strokeWidth={1.5} />}
-            disabled={isUploadingAttachment || sendDisabled}
-            onClick={() => fileInputRef.current?.click()}
-          >
-            <span className="hidden sm:inline">
-              {isUploadingAttachment
-                ? t('pages.lawyerWorkplace.reply.attaching', 'Attaching…')
-                : t('pages.lawyerWorkplace.reply.attach', 'Attach')}
-            </span>
-          </LinkButton>
+          <DropdownMenu modal={false}>
+            <DropdownMenuTrigger asChild>
+              <LinkButton
+                type="button"
+                variant="regular-gray"
+                size="xs"
+                className="shrink-0 px-2 sm:px-2"
+                aria-label={t('pages.lawyerWorkplace.reply.attach', 'Attach')}
+                leftIcon={<Icon icon={Link01Icon} size={13} strokeWidth={1.5} />}
+                rightIcon={
+                  <Icons.ArrowDown size={10} strokeWidth={2} className="text-muted-foreground" />
+                }
+                disabled={isUploadingAttachment || sendDisabled}
+              >
+                <span className="hidden sm:inline">
+                  {isUploadingAttachment
+                    ? t('pages.lawyerWorkplace.reply.attaching', 'Attaching…')
+                    : t('pages.lawyerWorkplace.reply.attach', 'Attach')}
+                </span>
+              </LinkButton>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="min-w-[240px] p-1.5">
+              <DropdownMenuItem
+                className="cursor-pointer text-[12px]"
+                onSelect={() => fileInputRef.current?.click()}
+              >
+                {t('pages.lawyerWorkplace.reply.attachFromComputer', 'File from computer')}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className={cn(
+                  'cursor-pointer text-[12px]',
+                  !clientActionsEnabled && 'text-muted-foreground opacity-60'
+                )}
+                aria-disabled={!clientActionsEnabled}
+                title={clientActionsDisabledHint}
+                onSelect={(event) => {
+                  if (!clientActionsEnabled) {
+                    event.preventDefault()
+                    return
+                  }
+                  onAttachFromClient?.()
+                }}
+              >
+                {t('pages.lawyerWorkplace.reply.attachFromClient', 'Attached file on client')}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className={cn(
+                  'cursor-pointer text-[12px]',
+                  !clientActionsEnabled && 'text-muted-foreground opacity-60'
+                )}
+                aria-disabled={!clientActionsEnabled}
+                title={clientActionsDisabledHint}
+                onSelect={(event) => {
+                  if (!clientActionsEnabled) {
+                    event.preventDefault()
+                    return
+                  }
+                  onGenerateDocument?.()
+                }}
+              >
+                {t('pages.lawyerWorkplace.reply.generateDocument', 'Generate document')}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
           <DropdownMenu modal={false}>
             <DropdownMenuTrigger asChild>

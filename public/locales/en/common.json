@@ -598,6 +598,17 @@
         "draftSaved": "Draft saved",
         "attach": "Attach",
         "attaching": "Attaching…",
+        "attachFromComputer": "File from computer",
+        "attachFromClient": "Attached file on client",
+        "generateDocument": "Generate document",
+        "attachClientDisabledHint": "Confirm the client first",
+        "generatedAttached": "Document generated and attached to the reply",
+        "attachClientModal": {
+          "title": "Client documents",
+          "empty": "This client has no documents",
+          "error": "Could not load client documents",
+          "attached": "Document attached to the reply"
+        },
         "template": "Template",
         "noTemplatesHint": "Create letter templates in Settings → Templates",
         "send": "Send",
@@ -910,6 +921,9 @@
           "displayName": "Display name",
           "responseSla": "Response SLA",
           "businessDays": "business days",
+          "slaDayTypeLabel": "SLA day type",
+          "slaDayTypeWorking": "Working days",
+          "slaDayTypeCalendar": "Calendar days",
           "description": "Description",
           "priorityAssignment": "Priority assignment",
           "priorityHint": "★ = how strongly this lawyer should be preferred for this type",
@@ -5176,6 +5190,8 @@
             "debt_closed": "The loan is closed",
             "no_active_rr": "No active restructuring",
             "no_active_promise": "No active payment promise",
+            "no_activation_tag": "Template not configured: select a tag",
+            "no_required_tag": "Client is missing the required tag",
             "unavailable": "Unavailable for this loan"
           },
           "hiddenTemplates": "Hidden templates unavailable for this credit: {{count}}",
@@ -6154,6 +6170,9 @@
           "replaceAction": "Replace file",
           "isActive": "Active",
           "activationRule": "Activation rule",
+          "activationTag": "Activation tag",
+          "activationTagPlaceholder": "Select a tag",
+          "activationTagHelp": "The template will only be available to clients with this tag.",
           "variablesReferenceHelp": "Use these names in your Word file as {{name}}.",
           "composeHelp": "Letterhead with logo, company requisites, stamp and signature are added automatically.",
           "composeTitle": "Document title",
@@ -6170,7 +6189,8 @@
           "closed_debt": "Closed debt",
           "rr_active": "Active restructuring",
           "rr_first_payment": "First restructuring payment",
-          "promise_active": "Active payment promise"
+          "promise_active": "Active payment promise",
+          "tag_active": "Active tag"
         },
         "variableGroups": {
           "client": "Client",
@@ -6200,7 +6220,8 @@
           "nameRequired": "Template name is required",
           "bodyRequired": "Template body is required",
           "fileRequired": "Please choose a .docx file",
-          "titleRequired": "Document title is required"
+          "titleRequired": "Document title is required",
+          "activationTagRequired": "Select a tag for the \"Active tag\" rule"
         },
         "messages": {
           "created": "Template created",

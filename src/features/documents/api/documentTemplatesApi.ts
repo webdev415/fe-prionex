@@ -8,12 +8,23 @@ import type {
   DocumentTemplate,
   DocumentTemplateCreatePayload,
   DocumentTemplateListResponse,
+  DocumentTemplateTagOption,
   DocumentTemplateUpdatePayload,
   DocumentTemplateUploadResponse,
   TemplateVariablesResponse,
 } from './types'
 
 const BASE_URL = '/api/v1/documents/templates'
+
+/**
+ * Tags selectable for the `tag_active` activation rule. Served from
+ * client-service so the ids match the space the generation check uses
+ * (client_db `tags.id`). Live tags for the caller's project, sorted by name.
+ */
+export async function getDocumentTemplateTagOptions(): Promise<DocumentTemplateTagOption[]> {
+  const response = await api.get<DocumentTemplateTagOption[]>(`${BASE_URL}/tag-options`)
+  return response.data
+}
 
 /** Content-Type for multipart uploads — axios fills in the boundary itself. */
 const MULTIPART_HEADERS = { 'Content-Type': 'multipart/form-data' } as const
@@ -128,6 +139,8 @@ export interface DocumentTemplateComposePayload {
   include_schedule: boolean
   include_requisites: boolean
   activation_rule?: string
+  /** Required client_db tag id when activation_rule is `tag_active`. */
+  activation_tag_id?: number | null
   document_type_id?: number | null
 }
 

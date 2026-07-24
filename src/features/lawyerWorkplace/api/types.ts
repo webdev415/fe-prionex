@@ -361,6 +361,8 @@ export interface LegalLetterType {
   name: string
   color_id: string
   sla_days: number
+  /** How SLA days are counted; omitted by older backends → treat as calendar. */
+  sla_day_type?: 'working' | 'calendar'
   description: string | null
   keyword_hints: string[]
   is_active: boolean
@@ -379,6 +381,7 @@ export interface LegalLetterTypeCreate {
   name: string
   color_id: string
   sla_days: number
+  sla_day_type?: 'working' | 'calendar'
   description?: string | null
   keyword_hints?: string[]
   slug?: string | null
@@ -388,6 +391,7 @@ export interface LegalLetterTypeUpdate {
   name?: string
   color_id?: string
   sla_days?: number
+  sla_day_type?: 'working' | 'calendar'
   description?: string | null
   keyword_hints?: string[]
   is_active?: boolean

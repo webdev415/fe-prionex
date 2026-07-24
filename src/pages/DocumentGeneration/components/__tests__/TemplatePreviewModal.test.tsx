@@ -57,6 +57,7 @@ function makeDocxTemplate(overrides: Partial<DocumentTemplate> = {}): DocumentTe
     file_name: 'demand.docx',
     file_size: 2048,
     activation_rule: 'always',
+    activation_tag_id: null,
     document_type_id: null,
     ...overrides,
   }

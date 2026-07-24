@@ -6,6 +6,7 @@ import {
   createDocumentTemplate,
   deleteDocumentTemplate,
   getDocumentTemplate,
+  getDocumentTemplateTagOptions,
   getDocumentTemplateVariables,
   listDocumentTemplates,
   replaceDocumentTemplateFile,
@@ -21,6 +22,7 @@ export const documentTemplateKeys = {
     [...documentTemplateKeys.all, 'list', { includeInactive }] as const,
   detail: (id: number) => [...documentTemplateKeys.all, 'detail', id] as const,
   variables: () => [...documentTemplateKeys.all, 'variables'] as const,
+  tagOptions: () => [...documentTemplateKeys.all, 'tag-options'] as const,
 }
 
 export function useDocumentTemplates(includeInactive = false) {
@@ -92,6 +94,19 @@ export function useDocumentTemplateVariables() {
     queryKey: documentTemplateKeys.variables(),
     queryFn: getDocumentTemplateVariables,
     staleTime: 60 * 60 * 1000,
+  })
+}
+
+/**
+ * Tag catalog for the `tag_active` activation rule (client_db tag id space).
+ * `enabled` lets the editor fetch it only when that rule is in play.
+ */
+export function useDocumentTemplateTagOptions(enabled = true) {
+  return useQuery({
+    queryKey: documentTemplateKeys.tagOptions(),
+    queryFn: getDocumentTemplateTagOptions,
+    enabled,
+    staleTime: 5 * 60 * 1000,
   })
 }
 

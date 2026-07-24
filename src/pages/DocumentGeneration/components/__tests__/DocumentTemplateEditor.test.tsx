@@ -42,6 +42,13 @@ vi.mock('@/features/messaging/utils/downloadBlob', () => ({
 beforeAll(() => {
   URL.createObjectURL = vi.fn(() => 'blob:mock')
   URL.revokeObjectURL = vi.fn()
+  // Radix Select relies on pointer-capture APIs jsdom lacks.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ;(window.HTMLElement.prototype as any).hasPointerCapture = () => false
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ;(window.HTMLElement.prototype as any).releasePointerCapture = () => undefined
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ;(window.HTMLElement.prototype as any).scrollIntoView = () => undefined
 })
 
 // ---------------------------------------------------------------------------
@@ -85,6 +92,9 @@ vi.mock('@/features/documents/api/documentTemplatesApi', () => ({
   downloadDocumentTemplateFile: vi.fn(async () => new Blob(['x'])),
   previewDocumentTemplateFile: vi.fn(async () => new Blob(['sample'])),
   getDocumentTemplateVariables: vi.fn(async () => VARIABLES),
+  getDocumentTemplateTagOptions: vi.fn(async () => [
+    { id: 501, name: 'VIP clients', color: '#000000' },
+  ]),
 }))
 
 import * as templatesApi from '@/features/documents/api/documentTemplatesApi'
@@ -123,6 +133,7 @@ function makeDocxTemplate(overrides: Partial<DocumentTemplate> = {}): DocumentTe
     file_name: 'demand.docx',
     file_size: 2048,
     activation_rule: 'always',
+    activation_tag_id: null,
     document_type_id: null,
     ...overrides,
   }
@@ -235,6 +246,35 @@ describe('DocumentTemplateEditor', () => {
 
     await waitFor(() =>
       expect(templatesApi.previewDocumentTemplateFile).toHaveBeenCalledWith(2, 'pdf')
+    )
+  })
+
+  it('tag_active rule: requires a tag, then sends activation_tag_id', async () => {
+    const user = userEvent.setup()
+    renderEditor(null)
+
+    await user.type(screen.getByLabelText('Template name'), 'Tagged')
+    await user.type(screen.getByLabelText('Template body'), 'Body text')
+
+    // Switch the activation rule to "Active tag" (first combobox is the rule).
+    const combosBefore = screen.getAllByRole('combobox')
+    await user.click(combosBefore[0])
+    await user.click(await screen.findByRole('option', { name: 'Active tag' }))
+
+    // Submitting without a tag is blocked — create is not called.
+    await user.click(screen.getByRole('button', { name: /^Create$/ }))
+    expect(templatesApi.createDocumentTemplate).not.toHaveBeenCalled()
+
+    // The tag select now appears (second combobox) — pick a tag and submit.
+    const combosAfter = screen.getAllByRole('combobox')
+    await user.click(combosAfter[1])
+    await user.click(await screen.findByRole('option', { name: 'VIP clients' }))
+    await user.click(screen.getByRole('button', { name: /^Create$/ }))
+
+    await waitFor(() =>
+      expect(templatesApi.createDocumentTemplate).toHaveBeenCalledWith(
+        expect.objectContaining({ activation_rule: 'tag_active', activation_tag_id: 501 })
+      )
     )
   })
 })

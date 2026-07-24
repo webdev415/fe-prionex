@@ -43,6 +43,7 @@ export function mapLegalLetterTypeToConfig(item: LegalLetterType): LetterTypeCon
     nameFallback: item.name,
     colorId: item.color_id,
     slaDays: item.sla_days,
+    slaDayType: item.sla_day_type ?? 'calendar',
     descriptionKey: `api:desc:${item.id}`,
     descriptionFallback: item.description ?? '',
     letterCount: item.letter_count,
@@ -104,6 +105,7 @@ export function mapLetterTypeConfigToUpdate(draft: LetterTypeConfig) {
     name: draft.nameFallback,
     color_id: draft.colorId,
     sla_days: draft.slaDays,
+    sla_day_type: draft.slaDayType,
     description: draft.descriptionFallback || null,
     keyword_hints: draft.keywordHints,
   }
