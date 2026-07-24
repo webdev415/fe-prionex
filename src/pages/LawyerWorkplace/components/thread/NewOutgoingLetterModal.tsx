@@ -109,6 +109,7 @@ function NewOutgoingLetterForm({ onClose, onSent }: NewOutgoingLetterFormProps) 
     null
   )
   const [institutionEmail, setInstitutionEmail] = useState('')
+  const [institutionName, setInstitutionName] = useState('')
   const [institutionEdoClientId, setInstitutionEdoClientId] = useState('')
   const [institutionEdoClientSearch, setInstitutionEdoClientSearch] = useState('')
   const [institutionEdoSearchType, setInstitutionEdoSearchType] = useState<SearchType>('phone')
@@ -233,7 +234,7 @@ function NewOutgoingLetterForm({ onClose, onSent }: NewOutgoingLetterFormProps) 
     effectiveToEmail.trim() !== '' &&
     subject.trim() !== '' &&
     body.trim() !== '' &&
-    (recipientMode === 'institution' || clientId !== '') &&
+    (recipientMode === 'client' ? clientId !== '' : institutionName.trim() !== '') &&
     edoRegistrationReady &&
     !sendMutation.isPending
 
@@ -269,6 +270,7 @@ function NewOutgoingLetterForm({ onClose, onSent }: NewOutgoingLetterFormProps) 
         edo_type: edoType,
         client_id: clientIdForPayload,
         assigned_to_user_id: edoType !== 'none' ? currentUserId : null,
+        institution_name: recipientMode === 'institution' ? institutionName.trim() : undefined,
         attachment_ids: stagedAttachments.map((item) => item.id),
         staging_session_id: stagingSessionId,
       },
@@ -360,6 +362,7 @@ function NewOutgoingLetterForm({ onClose, onSent }: NewOutgoingLetterFormProps) 
                     setClientId('')
                     setEmailOverride(null)
                     setInstitutionEmail('')
+                    setInstitutionName('')
                     setInstitutionEdoClientId('')
                     setInstitutionEdoClientSearch('')
                     setEdoType('none')
@@ -491,22 +494,41 @@ function NewOutgoingLetterForm({ onClose, onSent }: NewOutgoingLetterFormProps) 
           )}
 
           {recipientMode === 'institution' && (
-            <div className="flex w-full flex-col gap-2">
-              <Label className="text-foreground text-[12px] font-normal">
-                {t('pages.lawyerWorkplace.newLetter.to', 'To')}
-                <span className="text-error-500 ml-1">*</span>
-              </Label>
-              <input
-                type="email"
-                value={institutionEmail}
-                onChange={(e) => setInstitutionEmail(e.target.value)}
-                placeholder={t(
-                  'pages.lawyerWorkplace.newLetter.institutionPlaceholder',
-                  'e.g. consumers@bank.gov.ua'
-                )}
-                className="text-foreground focus:border-primary-500 border-border bg-input h-9 w-full rounded-[8px] border px-3 text-[13px] font-light outline-none"
-              />
-            </div>
+            <>
+              <div className="flex w-full flex-col gap-2">
+                <Label className="text-foreground text-[12px] font-normal">
+                  {t('pages.lawyerWorkplace.newLetter.institutionName', 'Institution name')}
+                  <span className="text-error-500 ml-1">*</span>
+                </Label>
+                <input
+                  type="text"
+                  value={institutionName}
+                  onChange={(e) => setInstitutionName(e.target.value)}
+                  placeholder={t(
+                    'pages.lawyerWorkplace.newLetter.institutionNamePlaceholder',
+                    'e.g. National Bank of Ukraine'
+                  )}
+                  className="text-foreground focus:border-primary-500 border-border bg-input h-9 w-full rounded-[8px] border px-3 text-[13px] font-light outline-none"
+                />
+              </div>
+
+              <div className="flex w-full flex-col gap-2">
+                <Label className="text-foreground text-[12px] font-normal">
+                  {t('pages.lawyerWorkplace.newLetter.to', 'To')}
+                  <span className="text-error-500 ml-1">*</span>
+                </Label>
+                <input
+                  type="email"
+                  value={institutionEmail}
+                  onChange={(e) => setInstitutionEmail(e.target.value)}
+                  placeholder={t(
+                    'pages.lawyerWorkplace.newLetter.institutionPlaceholder',
+                    'e.g. consumers@bank.gov.ua'
+                  )}
+                  className="text-foreground focus:border-primary-500 border-border bg-input h-9 w-full rounded-[8px] border px-3 text-[13px] font-light outline-none"
+                />
+              </div>
+            </>
           )}
 
           <div className="flex w-full flex-col gap-2">

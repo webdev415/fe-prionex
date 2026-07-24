@@ -91,6 +91,11 @@ export function GenerateDocumentModal({
   const { data: types } = useDocumentTypes({ includeHidden: false })
   const generateMutation = useGenerateDocument()
 
+  // When the backend numbers outgoing letters from the correspondence
+  // registry, the manual number field is hidden and any typed index_num is
+  // dropped (the server ignores it). Older backends omit the flag → manual.
+  const registryNumbering = options?.registry_numbering === true
+
   /** Map a backend reason code to a human-readable string. */
   const reasonLabel = (reason?: string): string => {
     switch (reason) {
@@ -149,6 +154,9 @@ export function GenerateDocumentModal({
     setErrorReason(null)
     const trimmedIndex = indexNum.trim()
     const parsedIndex = trimmedIndex ? Number(trimmedIndex) : undefined
+    // Under registry numbering the server assigns the number and ignores any
+    // client-supplied index_num, so never send it.
+    const includeIndex = !registryNumbering && parsedIndex != null && Number.isFinite(parsedIndex)
     try {
       const res = await generateMutation.mutateAsync({
         templateId,
@@ -156,9 +164,7 @@ export function GenerateDocumentModal({
           client_id: clientId,
           debt_id: debtId,
           document_type_id: docTypeId,
-          ...(parsedIndex != null && Number.isFinite(parsedIndex)
-            ? { index_num: parsedIndex }
-            : {}),
+          ...(includeIndex ? { index_num: parsedIndex } : {}),
         },
       })
       queryClient.invalidateQueries({ queryKey: clientKeys.documents(clientId) })
@@ -340,23 +346,34 @@ export function GenerateDocumentModal({
             </Select>
           </div>
 
-          {/* Outgoing number (optional) */}
+          {/* Outgoing number */}
           <div>
             <label className="text-secondary-700 mb-1 block text-sm font-medium">
               {t('pages.clients.detail.generateModal.indexNum', 'Вихідний №')}
             </label>
-            <Input
-              value={indexNum}
-              inputMode="numeric"
-              onChange={(e) => setIndexNum(e.target.value.replace(/[^0-9]/g, ''))}
-              placeholder={t('pages.clients.detail.generateModal.indexNumPlaceholder', 'Авто')}
-            />
-            <p className="text-secondary-500 mt-1 text-xs">
-              {t(
-                'pages.clients.detail.generateModal.indexNumHint',
-                'Залиште порожнім для автонумерації. Реєстр вихідних номерів буде запроваджено пізніше.'
-              )}
-            </p>
+            {registryNumbering ? (
+              <p className="text-secondary-500 mt-1 text-xs">
+                {t(
+                  'pages.clients.detail.generateModal.indexNumRegistryHint',
+                  'Вихідний № буде присвоєно автоматично з реєстру кореспонденції'
+                )}
+              </p>
+            ) : (
+              <>
+                <Input
+                  value={indexNum}
+                  inputMode="numeric"
+                  onChange={(e) => setIndexNum(e.target.value.replace(/[^0-9]/g, ''))}
+                  placeholder={t('pages.clients.detail.generateModal.indexNumPlaceholder', 'Авто')}
+                />
+                <p className="text-secondary-500 mt-1 text-xs">
+                  {t(
+                    'pages.clients.detail.generateModal.indexNumHint',
+                    'Залиште порожнім для автонумерації. Реєстр вихідних номерів буде запроваджено пізніше.'
+                  )}
+                </p>
+              </>
+            )}
           </div>
 
           {errorReason && (

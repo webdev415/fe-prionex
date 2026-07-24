@@ -381,6 +381,8 @@ export function useUploadIncomingLegalDocument() {
       assigned_to_user_id?: number
       contract_number?: string | null
       related_letter_number?: string | null
+      sender_email?: string | null
+      summary?: string | null
     }) => legalApi.uploadIncomingDocument(payload),
     onSuccess: () => invalidateLegalDocuments(queryClient),
     onError: (error) => toast.error(getErrorMessage(error)),

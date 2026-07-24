@@ -130,6 +130,8 @@ export function LegalDocumentsTab() {
     relatedLetterNumber?: string
     file: File
     contractNumber?: string | null
+    senderEmail?: string
+    summary?: string
   }) => {
     try {
       const result = await uploadMutation.mutateAsync({
@@ -139,6 +141,8 @@ export function LegalDocumentsTab() {
         assigned_to_user_id: input.assignedToUserId,
         contract_number: input.contractNumber,
         related_letter_number: input.relatedLetterNumber,
+        sender_email: input.senderEmail,
+        summary: input.summary,
       })
       setPage(1)
       toast.success(

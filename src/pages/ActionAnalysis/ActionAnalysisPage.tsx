@@ -21,6 +21,7 @@ import { InteractionHistoryTab } from './components/InteractionHistoryTab'
 import { TaHistoryTab } from './components/TaHistoryTab'
 import { TaskHistoryTab } from './components/TaskHistoryTab'
 import { PaymentHistoryTab } from './components/PaymentHistoryTab'
+import { CorrespondenceTab } from './components/CorrespondenceTab'
 import { TimelineTab } from './components/TimelineTab'
 import { ScreenTimeTab } from './components/ScreenTimeTab'
 import { HeatmapTab } from './components/HeatmapTab'
@@ -80,6 +81,11 @@ const SUB_TAB_LABEL_KEYS: Record<
     fallback: 'Payment History',
     permission: PERMISSIONS.ACTION_ANALYSIS.VIEW_PAYMENT_HISTORY,
   },
+  correspondence: {
+    key: 'pages.actionAnalysis.subTabs.correspondence',
+    fallback: 'Correspondence',
+    permission: PERMISSIONS.ACTION_ANALYSIS.VIEW,
+  },
   timeline: {
     key: 'pages.actionAnalysis.subTabs.timeline',
     fallback: 'Timeline',
@@ -125,6 +131,7 @@ const PROD_VISIBLE_SUB_TABS: ActionAnalysisCallsSubTabId[] = [
   'ta-history',
   'task-history',
   'payment-history',
+  'correspondence',
   'timeline',
   'screen-time',
   'heatmap',
@@ -446,6 +453,7 @@ export function ActionAnalysisPage() {
             {activeSubTab === 'ta-history' && <TaHistoryTab />}
             {activeSubTab === 'task-history' && <TaskHistoryTab />}
             {activeSubTab === 'payment-history' && <PaymentHistoryTab />}
+            {activeSubTab === 'correspondence' && <CorrespondenceTab />}
             {activeSubTab === 'timeline' && <TimelineTab />}
             {activeSubTab === 'screen-time' && <ScreenTimeTab />}
             {activeSubTab === 'heatmap' && <HeatmapTab />}

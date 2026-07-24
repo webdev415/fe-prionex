@@ -483,7 +483,9 @@
         "kanban": "Kanban",
         "documents": "Documents",
         "settings": "Settings",
-        "newCount": "{{count}} new"
+        "newCount": "{{count}} new",
+        "incomingRegistry": "Incoming registry",
+        "outgoingRegistry": "Outgoing registry"
       },
       "availability": {
         "label": "Your availability",
@@ -625,7 +627,9 @@
         "edoHintInstitution": "Link a CRM client below to register this institution letter in EDO.",
         "edoClientForInstitution": "CRM client (for EDO registration)",
         "clientSearchHint": "Type 2+ characters to search…",
-        "send": "Send"
+        "send": "Send",
+        "institutionName": "Institution name",
+        "institutionNamePlaceholder": "e.g. National Bank of Ukraine"
       },
       "parameters": {
         "title": "Letter parameters",
@@ -829,7 +833,11 @@
             "relatedLetterPlaceholder": "e.g. IN-2026-142",
             "assignee": "Assignee",
             "submit": "Register incoming",
-            "success": "Incoming document registered"
+            "success": "Incoming document registered",
+            "senderEmail": "Sender email (optional)",
+            "senderEmailPlaceholder": "e.g. sender@example.com",
+            "summary": "Summary (optional)",
+            "summaryPlaceholder": "Short description of the letter"
           },
           "detail": {
             "title": "Document details",
@@ -1215,6 +1223,50 @@
         "syncHint": "Email Service · {{interval}}",
         "mailboxes": "6 mailboxes connected",
         "mailboxesCount": "{{count}} mailboxes connected"
+      },
+      "registry": {
+        "columns": {
+          "receivedDate": "Received date",
+          "number": "No.",
+          "senderEmail": "Sender email",
+          "summary": "Summary",
+          "requestReceivedAt": "Request received",
+          "email": "Email",
+          "category": "Category",
+          "partyName": "Full name / Institution",
+          "outgoingNumber": "Outgoing No.",
+          "responseDate": "Response date",
+          "responsible": "Responsible"
+        },
+        "filters": {
+          "from": "From",
+          "to": "To",
+          "selectStartDate": "Start date",
+          "selectEndDate": "End date",
+          "category": "Category",
+          "allCategories": "All categories",
+          "lawyer": "Responsible",
+          "allLawyers": "All lawyers",
+          "search": "Search",
+          "searchPlaceholder": "Search by number, email, summary…"
+        },
+        "export": {
+          "button": "Export (CSV)",
+          "exporting": "Exporting…",
+          "failed": "Export failed",
+          "incomingFileName": "incoming-register-{{date}}.csv",
+          "outgoingFileName": "outgoing-register-{{date}}.csv"
+        },
+        "loadError": {
+          "title": "Could not load the registry",
+          "description": "Check your connection and try again."
+        },
+        "incoming": {
+          "empty": "No incoming correspondence yet"
+        },
+        "outgoing": {
+          "empty": "No outgoing correspondence yet"
+        }
       }
     },
     "training": {
@@ -5015,7 +5067,8 @@
             "no_active_promise": "No active payment promise",
             "unavailable": "Unavailable for this loan"
           },
-          "hiddenTemplates": "Hidden templates unavailable for this credit: {{count}}"
+          "hiddenTemplates": "Hidden templates unavailable for this credit: {{count}}",
+          "indexNumRegistryHint": "The outgoing number will be assigned automatically from the correspondence registry"
         },
         "department": "Department",
         "phones": "Phones",
@@ -8301,7 +8354,8 @@
         "timeline": "Timeline",
         "screenTime": "Screen Time",
         "heatmap": "Heatmap",
-        "scriptAnalytics": "Script Analytics"
+        "scriptAnalytics": "Script Analytics",
+        "correspondence": "Correspondence"
       },
       "scoresSubTabs": {
         "scorecards": "Scorecards",
@@ -8687,6 +8741,25 @@
           "fastResultPct": "Fast %",
           "distribution": "Distribution"
         }
+      },
+      "correspondence": {
+        "columns": {
+          "date": "Date",
+          "direction": "Direction",
+          "number": "No.",
+          "category": "Category",
+          "party": "Client / Institution",
+          "responsible": "Responsible"
+        },
+        "directionIncoming": "Incoming",
+        "directionOutgoing": "Outgoing",
+        "filters": {
+          "from": "From",
+          "to": "To",
+          "selectStartDate": "Start date",
+          "selectEndDate": "End date"
+        },
+        "empty": "No correspondence activity for this period"
       }
     },
     "ubkiIntegration": {

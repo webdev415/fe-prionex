@@ -224,6 +224,8 @@ export interface LegalOutgoingLetterRequest {
   client_id?: number | null
   assigned_to_user_id?: number | null
   contract_number?: string | null
+  /** Recipient institution name (required when the recipient is an institution). */
+  institution_name?: string | null
   attachment_ids?: string[]
   staging_session_id?: string | null
 }

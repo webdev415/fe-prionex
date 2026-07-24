@@ -21,7 +21,14 @@ interface TabConfig {
   badgeVariant?: 'new' | 'count'
 }
 
-const WORKPLACE_TABS: LawyerWorkplaceTab[] = ['inbox', 'kanban', 'documents', 'settings']
+const WORKPLACE_TABS: LawyerWorkplaceTab[] = [
+  'inbox',
+  'kanban',
+  'documents',
+  'incoming-registry',
+  'outgoing-registry',
+  'settings',
+]
 
 const TAB_BASE: Omit<TabConfig, 'badge' | 'badgeVariant'>[] = [
   {
@@ -41,6 +48,18 @@ const TAB_BASE: Omit<TabConfig, 'badge' | 'badgeVariant'>[] = [
     labelKey: 'pages.lawyerWorkplace.tabs.documents',
     fallback: 'Documents',
     icon: (props) => <Icons.Files02Icon {...props} />,
+  },
+  {
+    id: 'incoming-registry',
+    labelKey: 'pages.lawyerWorkplace.tabs.incomingRegistry',
+    fallback: 'Incoming registry',
+    icon: (props) => <Icons.Download {...props} />,
+  },
+  {
+    id: 'outgoing-registry',
+    labelKey: 'pages.lawyerWorkplace.tabs.outgoingRegistry',
+    fallback: 'Outgoing registry',
+    icon: (props) => <Icons.Sent02 {...props} />,
   },
   {
     id: 'settings',

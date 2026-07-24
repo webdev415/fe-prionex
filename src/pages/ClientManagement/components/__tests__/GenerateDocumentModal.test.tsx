@@ -190,6 +190,50 @@ describe('GenerateDocumentModal', () => {
     expect(payload).toMatchObject({ document_type_id: 42, index_num: 99 })
   })
 
+  it('hides the manual number field and omits index_num when registry numbering is on', async () => {
+    getOptionsMock.mockResolvedValue({
+      registry_numbering: true,
+      templates: [
+        {
+          id: 10,
+          name: 'Demand letter',
+          activation_rule: 'active_debt',
+          debts: [{ debt_id: LOAN.id, available: true, reason: 'ok' }],
+        },
+      ],
+    })
+    generateMock.mockResolvedValue({
+      document_id: 1,
+      // Kept free of the number so the success-screen assertion below is
+      // unambiguous (document_name and index_num render in the same panel).
+      document_name: 'Demand letter (registry)',
+      // Registry numbering returns a string index_num like "2307/01".
+      index_num: '2307/01',
+      pdf_document: { id: 1 },
+      docx_base64: 'AAA=',
+    })
+    const user = userEvent.setup()
+    renderModal()
+
+    await user.click(await screen.findByRole('radio', { name: /Demand letter/i }))
+
+    // Manual number input is hidden; the registry hint replaces it.
+    expect(screen.queryByPlaceholderText('Авто')).not.toBeInTheDocument()
+    expect(
+      screen.getByText('Вихідний № буде присвоєно автоматично з реєстру кореспонденції')
+    ).toBeInTheDocument()
+
+    await pickDocumentType(user)
+    await user.click(screen.getByRole('button', { name: 'Згенерувати' }))
+
+    await waitFor(() => expect(generateMock).toHaveBeenCalledTimes(1))
+    const [, payload] = generateMock.mock.calls[0]
+    expect('index_num' in payload).toBe(false)
+
+    // The string index_num from the registry renders on the success screen.
+    expect(await screen.findByText(/2307\/01/)).toBeInTheDocument()
+  })
+
   it('surfaces the reason on a 409 response', async () => {
     getOptionsMock.mockResolvedValue(optionsWith(true, 'ok'))
     generateMock.mockRejectedValue({

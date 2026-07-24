@@ -197,6 +197,13 @@ export interface GenerationTemplateOption {
 
 export interface GenerationOptionsResponse {
   templates: GenerationTemplateOption[]
+  /**
+   * When true, outgoing numbers are assigned automatically from the
+   * correspondence registry: the manual number field is hidden and any
+   * client-supplied `index_num` is ignored by the server. Optional so older
+   * backends (which never send it) keep the manual-number behaviour.
+   */
+  registry_numbering?: boolean
 }
 
 export interface GenerateDocumentPayload {
@@ -210,8 +217,12 @@ export interface GenerateDocumentPayload {
 export interface GenerateDocumentResponse {
   document_id: number
   document_name: string
-  /** Resolved outgoing number (auto-assigned when the request omitted it). */
-  index_num: number
+  /**
+   * Resolved outgoing number (auto-assigned when the request omitted it).
+   * A string like "2307/01" under registry numbering; a plain number on
+   * legacy backends.
+   */
+  index_num: number | string
   /** The persisted PDF row — already visible in the client's documents list. */
   pdf_document: ClientDocument
   /** Base64-encoded .docx twin the operator may download client-side. */
