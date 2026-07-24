@@ -5138,6 +5138,8 @@
         "deleteAddress": "Delete address",
         "editContact": "Edit contact",
         "deleteContact": "Delete contact",
+        "contactDigitsOnly": "Only digits are allowed for this contact type",
+        "contactDuplicate": "This value already exists for this client",
         "workPhone": "Work Phone",
         "saveAll": "Save All Sections",
         "savingAll": "Saving all…",
