@@ -125,7 +125,9 @@ export function AssignmentsGridTab() {
               <div className="flex flex-col">
                 <span className="text-sm font-medium text-[#05040D]">{name}</span>
                 <span className="text-[10px] text-[#6B7280]">
-                  {[team, ext ? `ext. ${ext}` : null].filter(Boolean).join(' · ') || '—'}
+                  {[team, ext ? `${t('pages.training.team.ext', 'ext')} ${ext}` : null]
+                    .filter(Boolean)
+                    .join(' · ') || '—'}
                 </span>
               </div>
             </div>

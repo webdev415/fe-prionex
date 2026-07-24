@@ -1,3 +1,4 @@
+import i18n from '@/lib/i18n'
 import type { MailboxFormValues } from '@/pages/LawyerWorkplace/components/settings/mailboxes/MailboxModal'
 import type { ReplyTemplateFormValues } from '@/pages/LawyerWorkplace/components/settings/templates/ReplyTemplateModal'
 import type {
@@ -63,7 +64,9 @@ export function mapLegalLawyerToSettings(lawyer: LegalLawyer): SettingsLawyer {
     nameKey: `api:lawyer:name:${lawyer.id}`,
     nameFallback: lawyer.display_name,
     roleKey: `api:lawyer:role:${lawyer.id}`,
-    roleFallback: lawyer.role_title ?? 'Legal department',
+    roleFallback:
+      lawyer.role_title ??
+      i18n.t('pages.lawyerWorkplace.settings.lawyers.defaultRole', 'Legal department'),
     letterTypeIds: [...lawyer.letter_type_ids],
     currentActive: lawyer.current_active,
     maxInFlight: lawyer.max_in_flight,

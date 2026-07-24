@@ -139,6 +139,15 @@ function humanizeTrigger(trigger: string): string {
     .trim()
 }
 
+/**
+ * Localized trigger label. The BE returns opaque trigger codes; we translate
+ * the known ones via `pages.training.inbox.triggers.<code>` and fall back to
+ * the humanized code so an unmapped trigger still renders readably.
+ */
+export function triggerLabel(t: TFn, code: string): string {
+  return t(`pages.training.inbox.triggers.${code}`, { defaultValue: humanizeTrigger(code) })
+}
+
 function toInboxAssignmentState(state: AssignmentState | undefined): InboxAssignmentState {
   // Both type aliases share the same five values; `wait` is the entry state
   // the BE auto-creates for operators below the threshold.
@@ -155,14 +164,14 @@ function buildTriggerSummaries(
   const triggers: MockInboxTrigger[] = row.triggers.map((code, idx) => ({
     id: idx + 1,
     code,
-    label: humanizeTrigger(code),
+    label: triggerLabel(t, code),
     severity:
       triggerTone(code) === 'red' ? 'critical' : triggerTone(code) === 'amber' ? 'warn' : 'info',
     detectedAtLabel: formatRelative(t, row.last_active_at),
   }))
   const triggerTags: MockInboxTriggerTag[] = row.triggers
     .slice(0, 4)
-    .map((code) => ({ label: humanizeTrigger(code), tone: triggerTone(code) }))
+    .map((code) => ({ label: triggerLabel(t, code), tone: triggerTone(code) }))
   return { triggers, triggerTags }
 }
 
@@ -170,7 +179,7 @@ function buildTriggerSummaries(
 function summaryFor(t: TFn, row: QueueOperator): string {
   const score = row.composite_score ?? '—'
   if (row.triggers.length > 0) {
-    return `${humanizeTrigger(row.triggers[0])} · ${t('pages.training.inbox.scoreShort', { score, defaultValue: `score ${score}` })}`
+    return `${triggerLabel(t, row.triggers[0])} · ${t('pages.training.inbox.scoreShort', { score, defaultValue: `score ${score}` })}`
   }
   return t('pages.training.inbox.compositeScore', {
     score,

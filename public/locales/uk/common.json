@@ -549,7 +549,8 @@
             "title": "У цьому перегляді немає листів",
             "description": "Нічого не відповідає фільтру «{{filter}}». Спробуйте інший статус або покажіть усі скриньки."
           }
-        }
+        },
+        "noSubject": "(без теми)"
       },
       "letterItem": {
         "unclassified": "Без класифікації",
@@ -589,7 +590,8 @@
         "attachmentPdf": "PDF",
         "attachmentDoc": "DOC",
         "closeThread": "Закрити ланцюжок",
-        "disabledMailboxNotice": "Початкова поштова скринька для цього листа вимкнена. Оберіть іншу скриньку нижче, щоб надіслати відповідь."
+        "disabledMailboxNotice": "Початкова поштова скринька для цього листа вимкнена. Оберіть іншу скриньку нижче, щоб надіслати відповідь.",
+        "removeAttachment": "Прибрати вкладення"
       },
       "reply": {
         "replyFrom": "Відповідь з",
@@ -674,7 +676,11 @@
         "selectContract": "Оберіть договір",
         "autoProcessed": "АВТО",
         "taskOnBoard": "Задачу створено на канбані",
-        "viewTask": "Переглянути →"
+        "viewTask": "Переглянути →",
+        "contractStatus": {
+          "active": "Активний",
+          "closed": "Закритий"
+        }
       },
       "kanban": {
         "title": "Канбан юридичних задач",
@@ -871,7 +877,9 @@
             "export": "Експорт",
             "exportStarted": "Експорт розпочато"
           }
-        }
+        },
+        "unknownClient": "Клієнт №{{id}}",
+        "unknownUser": "Користувач №{{id}}"
       },
       "settings": {
         "title": "Налаштування",
@@ -1012,7 +1020,8 @@
           "empty": {
             "title": "Юристів ще немає",
             "description": "Додайте юристів, щоб налаштувати ліміти навантаження та спеціалізації за типами листів."
-          }
+          },
+          "defaultRole": "Юридичний відділ"
         },
         "mailboxes": {
           "title": "Скриньки",
@@ -1132,7 +1141,10 @@
             "matchDefault": "За замовчуванням",
             "matchSenderDomain": "Домен відправника",
             "matchSubjectKeyword": "Ключове слово в темі"
-          }
+          },
+          "customProvider": "Власний / Self-hosted",
+          "hidePassword": "Приховати пароль",
+          "showPassword": "Показати пароль"
         },
         "templates": {
           "title": "Шаблони",
@@ -1244,6 +1256,18 @@
         "syncHint": "Email Service · {{interval}}",
         "mailboxes": "6 скриньок підключено",
         "mailboxesCount": "{{count}} скриньок підключено"
+      },
+      "mutations": {
+        "edoRegistered": "ЕДО зареєстровано: {{number}}",
+        "replySent": "Відповідь надіслано",
+        "letterSent": "Лист надіслано",
+        "taskCreated": "Задачу створено"
+      },
+      "letterTemplate": {
+        "clientFallback": "Клієнт"
+      },
+      "lawyers": {
+        "atCapacity": "Ліміт вичерпано ({{current}}/{{max}})"
       },
       "registry": {
         "columns": {
@@ -2123,7 +2147,13 @@
           "low_scorecard_average": "Низький середній бал",
           "low_conversion_rate": "Низька конверсія",
           "overdue_correction_tasks": "Прострочені коригуючі завдання",
-          "active_auto_flags": "Активні авто-прапорці"
+          "active_auto_flags": "Активні авто-прапорці",
+          "missed_calls": "Пропущені дзвінки",
+          "low_score": "Низький бал",
+          "silence": "Мовчання",
+          "tone": "Тон голосу",
+          "overdue_promise": "Прострочена обіцянка",
+          "no_summary": "Немає підсумку"
         },
         "rateDialogue": {
           "title": "Оберіть дзвінок для оцінки",
@@ -2270,7 +2300,8 @@
           "idle": "Простій",
           "offline": "Офлайн",
           "waiting": "Очікування"
-        }
+        },
+        "noData": "немає даних"
       },
       "scriptAnalytics": {
         "empty": "Немає даних за вибраними фільтрами.",
@@ -2432,7 +2463,8 @@
           "in_person": "Особисто",
           "zoom": "Zoom",
           "phone": "Телефон"
-        }
+        },
+        "today": "Сьогодні"
       },
       "closures": {
         "cols": {
@@ -2464,7 +2496,10 @@
           "totalAmount": "Загальна сума"
         },
         "loadFailed": "Не вдалося завантажити закриття. Спробуйте ще раз.",
-        "loading": "Завантаження…"
+        "loading": "Завантаження…",
+        "status": {
+          "verified": "Підтверджено"
+        }
       },
       "correction": {
         "call": "Запис дзвінка",
@@ -2724,7 +2759,10 @@
         "badges": {
           "empty": "Ще немає зароблених значків. Вони відкриваються автоматично за рейтингом, серіями оцінок і вчасно виконаними завданнями.",
           "loading": "Завантаження значків…",
-          "title": "Значки"
+          "title": "Значки",
+          "codes": {
+            "best_call_of_week": "Найкращий дзвінок тижня"
+          }
         },
         "chips": {
           "all": "Усі мої відділи"
@@ -2774,7 +2812,9 @@
           "inNorm": "У нормі",
           "inQueue": "У черзі"
         },
-        "ext": "дод."
+        "ext": "дод.",
+        "collapseDepartment": "Згорнути відділ",
+        "expandDepartment": "Розгорнути відділ"
       },
       "tests": {
         "course": "Курс",
@@ -3023,6 +3063,18 @@
           "groupTrainings": "Групові тренінги",
           "materials": "Матеріали",
           "tests": "Тести"
+        },
+        "catalog": {
+          "categories": {
+            "scripts": "Скрипти",
+            "hard_collection": "Жорстке стягнення",
+            "soft_skills": "М'які навички",
+            "tone": "Тон",
+            "analytics": "Аналітика",
+            "compliance": "Комплаєнс",
+            "product": "Продукт",
+            "tools": "Інструменти"
+          }
         }
       },
       "weeklyTasks": {
