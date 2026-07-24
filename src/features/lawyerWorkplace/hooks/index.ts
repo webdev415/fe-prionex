@@ -1,5 +1,6 @@
 export * from './useLegalInbox'
 export * from './useLegalLetterDetail'
+export * from './useLegalDrawerThread'
 export * from './useConfirmLetter'
 export * from './usePatchMessageSuggestions'
 export * from './usePatchMessageContract'

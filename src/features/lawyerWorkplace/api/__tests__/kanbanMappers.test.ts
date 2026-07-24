@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { buildKanbanColumnMovePatch } from '../kanbanMappers'
+import { buildKanbanColumnMovePatch, mapLegalKanbanItemToTask } from '../kanbanMappers'
 import type { KanbanTask } from '@/pages/LawyerWorkplace/kanban/kanbanData'
+import type { LegalKanbanTaskItem } from '../types'
 import {
   isLegalDueDateOverdue,
   legalDefaultDueDateIso,
@@ -25,6 +26,25 @@ const baseTask: KanbanTask = {
   columnId: 'in_progress',
   letterId: 'letter-1',
   letterTypeId: 'complaint',
+  legalTaskId: 1,
+  letterCount: 1,
+}
+
+const baseItem: LegalKanbanTaskItem = {
+  task_id: 7,
+  message_id: 'letter-7',
+  letter_type_id: 'complaint',
+  title: 'Legal: Complaint',
+  client_id: 10,
+  client_name: 'Test Client',
+  priority: 'normal',
+  status: 'in_progress',
+  due_date: legalDefaultDueDateIso(TZ),
+  is_overdue: false,
+  assigned_to_user_id: 42,
+  assigned_to_username: 'Yurii Demchuk',
+  completed_at: null,
+  updated_at: null,
 }
 
 describe('buildKanbanColumnMovePatch', () => {
@@ -47,5 +67,23 @@ describe('buildKanbanColumnMovePatch', () => {
     const patch = buildKanbanColumnMovePatch(overdueTask, 'in_progress', TZ)
     expect(patch.deadline).toBe(legalDefaultDueDateIso(TZ))
     expect(isLegalDueDateOverdue(patch.deadline ?? null, TZ)).toBe(false)
+  })
+})
+
+describe('mapLegalKanbanItemToTask — letter grouping', () => {
+  it('exposes legalTaskId and defaults letterCount to 1 for ungrouped tasks', () => {
+    const task = mapLegalKanbanItemToTask(baseItem, [], TZ)
+    expect(task.legalTaskId).toBe(7)
+    expect(task.letterCount).toBe(1)
+  })
+
+  it('carries the backend letter_count when the task groups several letters', () => {
+    const task = mapLegalKanbanItemToTask({ ...baseItem, letter_count: 3 }, [], TZ)
+    expect(task.letterCount).toBe(3)
+  })
+
+  it('clamps a zero/negative letter_count to 1', () => {
+    const task = mapLegalKanbanItemToTask({ ...baseItem, letter_count: 0 }, [], TZ)
+    expect(task.letterCount).toBe(1)
   })
 })

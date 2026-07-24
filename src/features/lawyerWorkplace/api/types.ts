@@ -280,11 +280,21 @@ export interface LegalKanbanTaskItem {
   assigned_to_username: string | null
   completed_at: string | null
   updated_at: string | null
+  /**
+   * Number of letters grouped into this task (same client + lawyer + day).
+   * Absent/1 means a single-letter task. Drives the "N листів" card badge.
+   */
+  letter_count?: number
 }
 
 export interface LegalKanbanResponse {
   items: LegalKanbanTaskItem[]
   total: number
+}
+
+/** Letters grouped into one legal task, shaped like inbox rows. */
+export interface LegalTaskLettersResponse {
+  items: LegalInboxItem[]
 }
 
 export interface LegalKanbanTaskCreateRequest {

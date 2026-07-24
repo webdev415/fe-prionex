@@ -288,6 +288,8 @@ export function mapLegalKanbanItemToTask(
     columnId: resolveKanbanColumn(item, taskType, timezone),
     letterId: item.message_id,
     letterTypeId: item.letter_type_id ?? null,
+    legalTaskId: item.task_id,
+    letterCount: item.letter_count != null && item.letter_count > 0 ? item.letter_count : 1,
   }
 }
 
