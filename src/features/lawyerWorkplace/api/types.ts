@@ -300,6 +300,8 @@ export interface LegalKanbanResponse {
 export interface LegalTaskLetter {
   id: string
   thread_id: string
+  mailbox_id: string | null
+  mailbox_email: string | null
   subject: string | null
   from_address: string
   to_addresses: string[]
@@ -308,6 +310,8 @@ export interface LegalTaskLetter {
   received_at: string | null
   sent_at: string | null
   is_quarantined: boolean
+  needs_manual_review: boolean
+  source_mailbox_disabled: boolean
   letter_type_id: string | null
   client_id: number | null
   client_name: string | null

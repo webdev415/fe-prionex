@@ -17,6 +17,8 @@ vi.mock('@/features/clients/hooks/useClients', () => ({
 const letterA = {
   id: 'letter-a',
   thread_id: 'thread-a',
+  mailbox_id: 'mb-1',
+  mailbox_email: 'legal@prionex.ua',
   subject: 'First letter',
   from_address: 'client@example.com',
   to_addresses: ['legal@prionex.ua'],
@@ -25,6 +27,8 @@ const letterA = {
   received_at: '2026-07-01T09:00:00Z',
   sent_at: null,
   is_quarantined: false,
+  needs_manual_review: false,
+  source_mailbox_disabled: false,
   letter_type_id: 'complaint',
   client_id: 10,
   client_name: 'Test Client',
@@ -153,8 +157,9 @@ describe('ThreadDrawer — grouped-letter thread', () => {
     expect(first.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
 
     // Grouped-letter endpoint was queried with the legal task id, and no
-    // per-letter thread fetch was needed (bodies come from /letters).
+    // per-letter message/thread fetch was needed (everything comes from /letters).
     expect(listTaskLetters).toHaveBeenCalledWith(77)
     expect(getThread).not.toHaveBeenCalled()
+    expect(getMessage).not.toHaveBeenCalled()
   })
 })

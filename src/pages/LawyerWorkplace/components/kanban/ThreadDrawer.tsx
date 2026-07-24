@@ -29,6 +29,7 @@ function ThreadDrawerContent({ task }: { task: KanbanTask }) {
     legalTaskId: task.legalTaskId,
     fallbackLetterId: task.letterId,
     letterCount: task.letterCount,
+    assignedUserId: task.assigneeUserId,
     replyDraft,
   })
 
