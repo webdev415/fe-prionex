@@ -4520,7 +4520,7 @@
           "indexNumRegistryHint": "Вихідний № буде присвоєно автоматично з реєстру кореспонденції",
           "typeFromTemplate": "застосовується автоматично з шаблону",
           "deliveryChannel": "Канал відправки клієнту",
-          "deliveryChannelPlaceholder": "Оберіть канал (необовʼязково)",
+          "deliveryChannelPlaceholder": "Оберіть канал",
           "deliveryContact": "Контакт (куди)",
           "deliveryContactPlaceholder": "+380… або email",
           "channels": {

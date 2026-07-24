@@ -192,24 +192,28 @@ export function GenerateDocumentModal({
   const selectedTemplate = templatesForDebt.find((tpl) => tpl.id === templateId)
   const boundType = selectedTemplate?.documentType ?? null
 
+  // Delivery channel and contact are mandatory: the operator must always
+  // record where the generated document is sent (CEO decision 24.07).
   const canGenerate =
     debtId != null &&
     templateId != null &&
     (boundType != null || docTypeId != null) &&
+    deliveryChannel != null &&
+    deliveryContact.trim() !== '' &&
     !generateMutation.isPending
 
   const handleGenerate = async () => {
     if (debtId == null || templateId == null) return
     if (boundType == null && docTypeId == null) return
+    const trimmedContact = deliveryContact.trim()
+    // Delivery channel and contact are mandatory (mirrors canGenerate).
+    if (deliveryChannel == null || trimmedContact === '') return
     setErrorReason(null)
     const trimmedIndex = indexNum.trim()
     const parsedIndex = trimmedIndex ? Number(trimmedIndex) : undefined
     // Under registry numbering the server assigns the number and ignores any
     // client-supplied index_num, so never send it.
     const includeIndex = !registryNumbering && parsedIndex != null && Number.isFinite(parsedIndex)
-    // Delivery channel is optional; the contact rides along only when both a
-    // channel is chosen and a destination was typed.
-    const trimmedContact = deliveryContact.trim()
     try {
       const res = await generateMutation.mutateAsync({
         templateId,
@@ -219,8 +223,8 @@ export function GenerateDocumentModal({
           // Bound to the template server-side; send only a manual pick.
           ...(boundType == null && docTypeId != null ? { document_type_id: docTypeId } : {}),
           ...(includeIndex ? { index_num: parsedIndex } : {}),
-          ...(deliveryChannel ? { delivery_channel: deliveryChannel } : {}),
-          ...(deliveryChannel && trimmedContact ? { delivery_contact: trimmedContact } : {}),
+          delivery_channel: deliveryChannel,
+          delivery_contact: trimmedContact,
         },
       })
       queryClient.invalidateQueries({ queryKey: clientKeys.documents(clientId) })
@@ -448,12 +452,13 @@ export function GenerateDocumentModal({
             )}
           </div>
 
-          {/* Delivery to the client — optional; feeds the outgoing registry's
-              "from → to" column. Left blank, nothing is sent. */}
+          {/* Delivery to the client — mandatory; feeds the outgoing registry's
+              "from → to" column. The operator must record where it is sent. */}
           <div className="flex flex-col gap-4 border-t border-[#EBECE8] pt-4">
             <div>
               <label className="text-secondary-700 mb-1 block text-sm font-medium">
                 {t('pages.clients.detail.generateModal.deliveryChannel', 'Канал відправки клієнту')}
+                <span className="text-error-500 ml-1">*</span>
               </label>
               <Select
                 value={deliveryChannel ?? ''}
@@ -465,7 +470,7 @@ export function GenerateDocumentModal({
                   <SelectValue
                     placeholder={t(
                       'pages.clients.detail.generateModal.deliveryChannelPlaceholder',
-                      'Оберіть канал (необовʼязково)'
+                      'Оберіть канал'
                     )}
                   />
                 </SelectTrigger>
@@ -482,6 +487,7 @@ export function GenerateDocumentModal({
             <div>
               <label className="text-secondary-700 mb-1 block text-sm font-medium">
                 {t('pages.clients.detail.generateModal.deliveryContact', 'Контакт (куди)')}
+                <span className="text-error-500 ml-1">*</span>
               </label>
               <Input
                 value={deliveryContact}

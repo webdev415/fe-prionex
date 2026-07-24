@@ -5190,7 +5190,7 @@
           "indexNumRegistryHint": "The outgoing number will be assigned automatically from the correspondence registry",
           "typeFromTemplate": "applied automatically from the template",
           "deliveryChannel": "Delivery channel to client",
-          "deliveryChannelPlaceholder": "Choose a channel (optional)",
+          "deliveryChannelPlaceholder": "Choose a channel",
           "deliveryContact": "Contact (where to)",
           "deliveryContactPlaceholder": "+380… or email",
           "channels": {

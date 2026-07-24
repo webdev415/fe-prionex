@@ -7,6 +7,8 @@
  *     a muted filtered-count note);
  *   - the generate call sends the correct body (client/debt/type; index_num
  *     only when the operator typed one);
+ *   - delivery channel + contact are mandatory: generation is blocked until
+ *     both are provided, and the payload always carries them;
  *   - a 409 surfaces the server's reason to the operator.
  */
 
@@ -128,11 +130,21 @@ async function pickDocumentType(user: ReturnType<typeof userEvent.setup>) {
   await user.click(await screen.findByText('Insurance'))
 }
 
-/** Open the delivery-channel Select (3rd combobox) and pick an option by label. */
-async function pickDeliveryChannel(user: ReturnType<typeof userEvent.setup>, label: string) {
+/**
+ * Choose a delivery channel and type a destination. The channel Select is the
+ * last combobox in the form (its index shifts when the document-type Select is
+ * replaced by a template-bound pill), so target it from the end. Both fields
+ * are mandatory — without them the generate button stays disabled.
+ */
+async function chooseDelivery(
+  user: ReturnType<typeof userEvent.setup>,
+  label = 'Telegram',
+  contact = '@client_tg'
+) {
   const combos = await screen.findAllByRole('combobox')
-  await user.click(combos[2])
+  await user.click(combos[combos.length - 1])
   await user.click(await screen.findByRole('option', { name: label }))
+  await user.type(screen.getByPlaceholderText(/380/), contact)
 }
 
 describe('GenerateDocumentModal', () => {
@@ -171,12 +183,19 @@ describe('GenerateDocumentModal', () => {
 
     await user.click(await screen.findByRole('radio', { name: /Demand letter/i }))
     await pickDocumentType(user)
+    await chooseDelivery(user)
     await user.click(screen.getByRole('button', { name: 'Згенерувати' }))
 
     await waitFor(() => expect(generateMock).toHaveBeenCalledTimes(1))
     const [templateId, payload] = generateMock.mock.calls[0]
     expect(templateId).toBe(10)
-    expect(payload).toEqual({ client_id: 100, debt_id: 555, document_type_id: 42 })
+    expect(payload).toEqual({
+      client_id: 100,
+      debt_id: 555,
+      document_type_id: 42,
+      delivery_channel: 'telegram',
+      delivery_contact: '@client_tg',
+    })
     expect('index_num' in payload).toBe(false)
   })
 
@@ -194,6 +213,7 @@ describe('GenerateDocumentModal', () => {
 
     await user.click(await screen.findByRole('radio', { name: /Demand letter/i }))
     await pickDocumentType(user)
+    await chooseDelivery(user)
     await user.click(screen.getByRole('button', { name: 'Згенерувати' }))
 
     await waitFor(() => expect(generateMock).toHaveBeenCalledTimes(1))
@@ -204,7 +224,7 @@ describe('GenerateDocumentModal', () => {
     )
   })
 
-  it('sends delivery_channel and delivery_contact when a channel is chosen', async () => {
+  it('always sends delivery_channel and delivery_contact', async () => {
     getOptionsMock.mockResolvedValue(optionsWith(true, 'ok'))
     generateMock.mockResolvedValue({
       document_id: 1,
@@ -218,8 +238,7 @@ describe('GenerateDocumentModal', () => {
 
     await user.click(await screen.findByRole('radio', { name: /Demand letter/i }))
     await pickDocumentType(user)
-    await pickDeliveryChannel(user, 'Telegram')
-    await user.type(screen.getByPlaceholderText(/380/), '@client_tg')
+    await chooseDelivery(user, 'Telegram', '@client_tg')
     await user.click(screen.getByRole('button', { name: 'Згенерувати' }))
 
     await waitFor(() => expect(generateMock).toHaveBeenCalledTimes(1))
@@ -230,26 +249,26 @@ describe('GenerateDocumentModal', () => {
     })
   })
 
-  it('omits delivery fields when no channel is chosen', async () => {
+  it('keeps generate disabled until a delivery channel and contact are provided', async () => {
     getOptionsMock.mockResolvedValue(optionsWith(true, 'ok'))
-    generateMock.mockResolvedValue({
-      document_id: 1,
-      document_name: 'Demand letter #7',
-      index_num: 7,
-      pdf_document: { id: 1 },
-      docx_base64: 'AAA=',
-    })
     const user = userEvent.setup()
     renderModal()
 
     await user.click(await screen.findByRole('radio', { name: /Demand letter/i }))
     await pickDocumentType(user)
-    await user.click(screen.getByRole('button', { name: 'Згенерувати' }))
 
-    await waitFor(() => expect(generateMock).toHaveBeenCalledTimes(1))
-    const [, payload] = generateMock.mock.calls[0]
-    expect('delivery_channel' in payload).toBe(false)
-    expect('delivery_contact' in payload).toBe(false)
+    // Type is chosen but delivery is not yet filled → generation is blocked.
+    expect(screen.getByRole('button', { name: 'Згенерувати' })).toBeDisabled()
+
+    // A channel alone is not enough — the contact is mandatory too.
+    const combos = await screen.findAllByRole('combobox')
+    await user.click(combos[combos.length - 1])
+    await user.click(await screen.findByRole('option', { name: 'Telegram' }))
+    expect(screen.getByRole('button', { name: 'Згенерувати' })).toBeDisabled()
+
+    // With both channel and contact set, generation unlocks.
+    await user.type(screen.getByPlaceholderText(/380/), '@client_tg')
+    expect(screen.getByRole('button', { name: 'Згенерувати' })).toBeEnabled()
   })
 
   it('includes index_num when the operator types one', async () => {
@@ -267,6 +286,7 @@ describe('GenerateDocumentModal', () => {
     await user.click(await screen.findByRole('radio', { name: /Demand letter/i }))
     await pickDocumentType(user)
     await user.type(screen.getByPlaceholderText('Авто'), '99')
+    await chooseDelivery(user)
     await user.click(screen.getByRole('button', { name: 'Згенерувати' }))
 
     await waitFor(() => expect(generateMock).toHaveBeenCalledTimes(1))
@@ -308,6 +328,7 @@ describe('GenerateDocumentModal', () => {
     ).toBeInTheDocument()
 
     await pickDocumentType(user)
+    await chooseDelivery(user)
     await user.click(screen.getByRole('button', { name: 'Згенерувати' }))
 
     await waitFor(() => expect(generateMock).toHaveBeenCalledTimes(1))
@@ -345,6 +366,7 @@ describe('GenerateDocumentModal', () => {
     expect(await screen.findByText('Гарантійний лист')).toBeInTheDocument()
     expect(screen.getByText('застосовується автоматично з шаблону')).toBeInTheDocument()
 
+    await chooseDelivery(user)
     await user.click(screen.getByRole('button', { name: 'Згенерувати' }))
     await waitFor(() => expect(generateMock).toHaveBeenCalledTimes(1))
     const [, payload] = generateMock.mock.calls[0]
@@ -367,6 +389,7 @@ describe('GenerateDocumentModal', () => {
 
     await user.click(await screen.findByRole('radio', { name: /Demand letter/i }))
     await pickDocumentType(user)
+    await chooseDelivery(user)
     await user.click(screen.getByRole('button', { name: 'Згенерувати' }))
 
     expect(await screen.findByText('Немає актуальної обіцянки платежу')).toBeInTheDocument()
