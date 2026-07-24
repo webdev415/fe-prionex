@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import type { TFunction } from 'i18next'
 import { toast } from 'sonner'
 import { Icons } from '@/lib/icons'
+import { formatDateTime } from '@/lib/localeFormat'
 import { useHasPermission } from '@/hooks'
 import { useAuthStore } from '@/stores/authStore'
 import { useOperators } from '@/features/users/hooks'
@@ -619,7 +620,7 @@ function DrillDetailsDialog({
   canManage: boolean
   onClose: () => void
 }) {
-  const { t } = useTranslation('common')
+  const { t, i18n } = useTranslation('common')
   const { data: stats } = useDrillStats(drill.id)
   const { data: attempts = [], isLoading } = useDrillAttempts(drill.id)
   const activeProjectId = useAuthStore((s) => s.user?.active_project_id)
@@ -706,7 +707,7 @@ function DrillDetailsDialog({
               {a.deadline ? (
                 <p className="mt-1 text-[11px] text-[#6B7280]">
                   {t('pages.training.drills.deadline', 'Deadline')}:{' '}
-                  {new Date(a.deadline).toLocaleString()}
+                  {formatDateTime(a.deadline, i18n.language)}
                 </p>
               ) : null}
               {a.reflection ? (

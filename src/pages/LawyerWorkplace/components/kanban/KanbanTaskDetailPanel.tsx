@@ -19,7 +19,7 @@ interface KanbanTaskDetailPanelProps {
 }
 
 export function KanbanTaskDetailPanel({ task, letterTypes = [] }: KanbanTaskDetailPanelProps) {
-  const { t } = useTranslation('common')
+  const { t, i18n } = useTranslation('common')
   const timezone = useLegalProfileTimezone()
   const deadline = parseLegalDueDate(task.deadline)
   const typeBadge = resolveKanbanTypeBadgeProps(task.letterTypeId, letterTypes, task.type)
@@ -78,7 +78,7 @@ export function KanbanTaskDetailPanel({ task, letterTypes = [] }: KanbanTaskDeta
               </dt>
               <dd className="text-foreground">
                 {deadline ? (
-                  formatLegalDueDateTime(task.deadline, timezone)
+                  formatLegalDueDateTime(task.deadline, timezone, i18n.language)
                 ) : (
                   <span className="text-muted-foreground italic">
                     {t('pages.lawyerWorkplace.kanban.noDeadline', 'no deadline set')}

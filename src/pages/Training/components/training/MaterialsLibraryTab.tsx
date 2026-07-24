@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { Icons } from '@/lib/icons'
+import { formatDate } from '@/lib/localeFormat'
 import { useConfirm } from '@/components/ui/useConfirm'
 import { useHasPermission } from '@/hooks'
 import { downloadMaterial } from '@/features/training/api/materialsService'
@@ -41,7 +42,8 @@ function formatSize(bytes: number): string {
 
 function formatUpdated(
   t: (key: string, opts?: Record<string, unknown>) => string,
-  iso: string
+  iso: string,
+  language: string
 ): string {
   const then = new Date(iso).getTime()
   if (Number.isNaN(then)) return ''
@@ -55,7 +57,7 @@ function formatUpdated(
       count: Math.floor(days / 7),
       defaultValue: `${Math.floor(days / 7)}w ago`,
     })
-  return new Date(iso).toLocaleDateString()
+  return formatDate(iso, language)
 }
 
 function triggerBlobDownload(blob: Blob, filename: string) {
@@ -70,7 +72,7 @@ function triggerBlobDownload(blob: Blob, filename: string) {
 }
 
 export function MaterialsLibraryTab() {
-  const { t } = useTranslation('common')
+  const { t, i18n } = useTranslation('common')
   const canView = useHasPermission('view_materials')
   const canManage = useHasPermission('manage_materials')
   const { confirm, confirmDialog } = useConfirm()
@@ -242,7 +244,7 @@ export function MaterialsLibraryTab() {
                     </span>
                     <span>{formatSize(m.size_bytes)}</span>
                     <span>·</span>
-                    <span>{formatUpdated(t, m.updated_at)}</span>
+                    <span>{formatUpdated(t, m.updated_at, i18n.language)}</span>
                     {m.category_id != null && categoryName.has(m.category_id) && (
                       <>
                         <span>·</span>

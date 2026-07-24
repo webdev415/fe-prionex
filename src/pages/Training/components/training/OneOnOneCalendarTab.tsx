@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
+import { formatMonthDay, formatTimeShort } from '@/lib/localeFormat'
 import { useHasPermission } from '@/hooks'
 import { useAuthStore } from '@/stores/authStore'
 import { useOperators } from '@/features/users/hooks'
@@ -43,22 +44,23 @@ function deriveInitials(name: string): string {
   return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase()
 }
 
-function formatTime(iso: string): string {
+function formatTime(iso: string, language: string): string {
   const d = new Date(iso)
   if (Number.isNaN(d.getTime())) return ''
-  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+  return formatTimeShort(d, language)
 }
 
 function formatDateLabel(
   t: (key: string, fallback: string) => string,
   iso: string,
-  today: string
+  today: string,
+  language: string
 ): string {
   const d = new Date(iso)
   if (Number.isNaN(d.getTime())) return iso
   const ymd = d.toISOString().slice(0, 10)
   if (ymd === today) return t('pages.training.calendar.today', 'Today')
-  return `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}`
+  return formatMonthDay(d, language)
 }
 
 interface OperatorLite {
@@ -208,7 +210,7 @@ function SessionCard({
   canManage: boolean
   planned: boolean
 }) {
-  const { t } = useTranslation('common')
+  const { t, i18n } = useTranslation('common')
   const reschedule = useRescheduleCalibrationSession()
   const complete = useCompleteCalibrationSession()
   const [postponeOpen, setPostponeOpen] = useState(false)
@@ -243,9 +245,11 @@ function SessionCard({
         <div className="flex items-start gap-3">
           <div className="flex flex-col items-center justify-center rounded-xl bg-[#F0FDF4] px-3 py-1.5 text-[#204E4D]">
             <span className="text-base leading-tight font-bold">
-              {formatTime(session.scheduled_at)}
+              {formatTime(session.scheduled_at, i18n.language)}
             </span>
-            <span className="text-[10px]">{formatDateLabel(t, session.scheduled_at, today)}</span>
+            <span className="text-[10px]">
+              {formatDateLabel(t, session.scheduled_at, today, i18n.language)}
+            </span>
           </div>
           <div className="flex min-w-0 flex-1 flex-col">
             <span className="truncate text-sm font-semibold text-[#05040D]">{session.title}</span>

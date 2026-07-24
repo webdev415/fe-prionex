@@ -38,7 +38,7 @@ export function applyLetterTemplatePlaceholders(
   context: LegalLetterTemplateContext,
   options?: { language?: string }
 ): string {
-  const language = options?.language ?? 'en'
+  const language = options?.language ?? i18n.language
   const today = context.date ?? new Date().toISOString().slice(0, 10)
   const requestNo = resolveRequestNo(context)
   // Letter body language follows the recipient (options.language), not the UI —

@@ -7,6 +7,8 @@ import type {
   MockInboxTrigger,
   MockInboxTriggerTag,
 } from '../mocks/trainerWorkplaceMocks'
+import i18n from '@/lib/i18n'
+import { formatDate, formatTimeShort } from '@/lib/localeFormat'
 
 /**
  * Derive a Figma-faithful UI row from a `QueueOperator` returned by
@@ -108,7 +110,7 @@ function formatClock(isoTimestamp: string | null | undefined): string {
   if (!isoTimestamp) return ''
   const d = new Date(isoTimestamp)
   if (Number.isNaN(d.getTime())) return ''
-  return d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
+  return formatTimeShort(d, i18n.language)
 }
 
 /**
@@ -191,7 +193,7 @@ function parseHireDate(iso: string | null | undefined): { year: string; date: st
   if (!iso) return { year: '', date: '' }
   const d = new Date(iso)
   if (Number.isNaN(d.getTime())) return { year: '', date: '' }
-  return { year: String(d.getFullYear()), date: d.toLocaleDateString() }
+  return { year: String(d.getFullYear()), date: formatDate(d, i18n.language) }
 }
 
 export function deriveInboxRow(

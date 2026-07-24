@@ -1,4 +1,5 @@
 import type { TFunction } from 'i18next'
+import { formatDate, formatMonthDay } from '@/lib/localeFormat'
 
 export function formatLetterTime(iso: string, t: TFunction, language: string): string {
   const d = new Date(iso)
@@ -47,11 +48,8 @@ export function formatDueDate(iso: string, language: string): string {
   })
 }
 
-export function formatKanbanMonthDay(isoDate: string): string {
-  const d = new Date(isoDate)
-  const mm = String(d.getMonth() + 1).padStart(2, '0')
-  const dd = String(d.getDate()).padStart(2, '0')
-  return `${mm}/${dd}`
+export function formatKanbanMonthDay(isoDate: string, language: string): string {
+  return formatMonthDay(new Date(isoDate), language)
 }
 
 export function formatDocumentDateLines(
@@ -77,10 +75,7 @@ export function formatDocumentDateLines(
   } else if (diffDays === 1) {
     dateLine = t('pages.lawyerWorkplace.documents.dates.yesterday', 'yesterday')
   } else {
-    const mm = String(d.getMonth() + 1).padStart(2, '0')
-    const dd = String(d.getDate()).padStart(2, '0')
-    const yyyy = d.getFullYear()
-    dateLine = `${mm}/${dd}/${yyyy}`
+    dateLine = formatDate(d, language)
   }
 
   return { dateLine, timeLine }

@@ -1,5 +1,6 @@
 ﻿import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
+import { intlLocaleForUiLanguage } from '@/lib/i18n'
 import { useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/Button'
@@ -32,7 +33,7 @@ const STATE_COLORS: Record<HeatmapState, string> = {
 }
 
 export function HeatmapTab() {
-  const { t } = useTranslation('common')
+  const { t, i18n } = useTranslation('common')
   const [searchParams, setSearchParams] = useSearchParams()
   const urlState = readHeatmapBarState(searchParams)
 
@@ -191,12 +192,12 @@ export function HeatmapTab() {
                 </th>
                 {allHours.map((hour) => (
                   <th key={hour} className="px-1 py-2 font-mono text-[10px]">
-                    {new Date(hour).toLocaleString(undefined, {
+                    {new Intl.DateTimeFormat(intlLocaleForUiLanguage(i18n.language), {
                       month: 'short',
                       day: 'numeric',
                       hour: '2-digit',
                       hour12: false,
-                    })}
+                    }).format(new Date(hour))}
                   </th>
                 ))}
               </tr>

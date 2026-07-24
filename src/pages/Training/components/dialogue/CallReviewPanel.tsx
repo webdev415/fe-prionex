@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
+import { formatDateTime } from '@/lib/localeFormat'
 import {
   AddMarkerButton,
   LeaveFeedbackButton,
@@ -51,7 +52,7 @@ export function CallReviewPanel({
   talkDurationSec,
   onDirtyChange,
 }: CallReviewPanelProps) {
-  const { t } = useTranslation('common')
+  const { t, i18n } = useTranslation('common')
   const playerRef = useRef<CallPlayerHandle>(null)
   const [assignOpen, setAssignOpen] = useState(false)
   const [durationMs, setDurationMs] = useState(0)
@@ -80,7 +81,7 @@ export function CallReviewPanel({
             {operatorName ?? `#${operatorId}`}
           </p>
           {createdAt ? (
-            <p className="text-[11px] text-[#6B7280]">{new Date(createdAt).toLocaleString()}</p>
+            <p className="text-[11px] text-[#6B7280]">{formatDateTime(createdAt, i18n.language)}</p>
           ) : null}
         </div>
 

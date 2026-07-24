@@ -30,6 +30,7 @@ import {
 import type { LegalMessageSuggestionsPatchResponse } from '@/features/lawyerWorkplace/api/types'
 import { useDebounce } from '@/hooks/useDebounce'
 import { Icons } from '@/lib/icons'
+import { dateTimeInputPattern } from '@/lib/localeFormat'
 import { cn } from '@/lib/utils'
 import { formatDueDate } from '../../utils/formatters'
 import type { LetterDetail } from '../../types'
@@ -827,7 +828,7 @@ function LetterParametersPanelContent({
             value={effectiveDueDate}
             onChange={({ value }) => handleDueDateChange(value)}
             placeholder={t('pages.lawyerWorkplace.parameters.selectDueDate', 'Select date')}
-            format="dd/MM/yyyy HH:mm"
+            format={dateTimeInputPattern(i18n.language)}
             showTimeSelect
             timeFormat="HH:mm"
             timeIntervals={15}

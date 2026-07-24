@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { Icons } from '@/lib/icons'
+import { formatDate, formatMonthDay, formatTimeShort } from '@/lib/localeFormat'
 import { useHasPermission } from '@/hooks'
 import { useAuthStore } from '@/stores/authStore'
 import { useOperators } from '@/features/users/hooks'
@@ -19,12 +20,10 @@ import { TrainingPrimaryButton } from './TrainingToolbar'
 
 type NameById = Map<number, string>
 
-function formatDateTime(iso: string): { date: string; time: string } {
+function formatDateTime(iso: string, language: string): { date: string; time: string } {
   const d = new Date(iso)
   if (Number.isNaN(d.getTime())) return { date: iso, time: '' }
-  const date = `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}`
-  const time = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
-  return { date, time }
+  return { date: formatMonthDay(d, language), time: formatTimeShort(d, language) }
 }
 
 export function GroupTrainingsTab() {
@@ -118,11 +117,11 @@ function GroupTrainingCard({
   onParticipants: () => void
   onAssign: () => void
 }) {
-  const { t } = useTranslation('common')
+  const { t, i18n } = useTranslation('common')
   const register = useRegisterForTraining()
   const unregister = useUnregisterFromTraining()
   const cancel = useCancelGroupTraining()
-  const { date, time } = formatDateTime(training.scheduled_at)
+  const { date, time } = formatDateTime(training.scheduled_at, i18n.language)
   const seatsLeft =
     training.max_participants != null ? training.max_participants - training.registered_count : null
   const isFull = seatsLeft != null && seatsLeft <= 0
@@ -455,10 +454,10 @@ function ScheduleTrainingDialog({ onClose }: { onClose: () => void }) {
   )
 }
 
-function formatRegisteredAt(iso: string): string {
+function formatRegisteredAt(iso: string, language: string): string {
   const d = new Date(iso)
   if (Number.isNaN(d.getTime())) return ''
-  return d.toLocaleDateString()
+  return formatDate(d, language)
 }
 
 function ParticipantsDialog({
@@ -470,7 +469,7 @@ function ParticipantsDialog({
   nameById: NameById
   onClose: () => void
 }) {
-  const { t } = useTranslation('common')
+  const { t, i18n } = useTranslation('common')
   const { data, isLoading, isError } = useGroupTrainingParticipants(training.id)
   const participants = data?.participants ?? []
   const isCompleted = training.status === 'completed'
@@ -519,7 +518,7 @@ function ParticipantsDialog({
                     {nameById.get(p.operator_id) ?? `#${p.operator_id}`}
                   </span>
                   <span className="text-[10px] text-[#9CA3AF]">
-                    {formatRegisteredAt(p.registered_at)}
+                    {formatRegisteredAt(p.registered_at, i18n.language)}
                   </span>
                 </div>
               ))}

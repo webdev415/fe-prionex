@@ -19,6 +19,7 @@ import {
   ANALYTICS_TABLE_TH,
 } from '../analytics/analyticsTableStyles'
 import { AnalyticsMockTable } from '../analytics/AnalyticsMockTable'
+import { formatDateTime as formatDateTimeLocale } from '@/lib/localeFormat'
 
 type TelephonyFilter = '' | TelephonyType
 type CategoryFilter = '' | ScorecardCategory
@@ -59,9 +60,9 @@ function formatDuration(seconds: number | null): string {
   const s = seconds % 60
   return `${m}:${String(s).padStart(2, '0')}`
 }
-function formatDateTime(iso: string): string {
+function formatDateTime(iso: string, language: string): string {
   const d = new Date(iso)
-  return Number.isNaN(d.getTime()) ? '—' : d.toLocaleString()
+  return Number.isNaN(d.getTime()) ? '—' : formatDateTimeLocale(d, language)
 }
 function categoryOf(call: CallMonitoringItem): ScorecardCategory {
   return call.has_scorecard ? (call.scorecard_category ?? 'unscored') : 'unscored'
@@ -459,7 +460,7 @@ function DialogsTable({
   selectedCallId?: string
   onSelect: (call: CallMonitoringItem, operatorId: number) => void
 }) {
-  const { t } = useTranslation('common')
+  const { t, i18n } = useTranslation('common')
   return (
     <AnalyticsMockTable>
       <thead className={ANALYTICS_TABLE_HEAD}>
@@ -516,7 +517,7 @@ function DialogsTable({
               }`}
             >
               <td className={`${ANALYTICS_TABLE_TD} whitespace-nowrap`}>
-                {formatDateTime(call.initiated_at)}
+                {formatDateTime(call.initiated_at, i18n.language)}
               </td>
               <td className={ANALYTICS_TABLE_TD}>{op?.name ?? call.agent_extension}</td>
               <td className={ANALYTICS_TABLE_TD}>

@@ -13,13 +13,14 @@ import type { Scorecard, ScorecardStatus } from '@/features/quality'
 import { useAuthStore } from '@/stores/authStore'
 import { Button } from '@/components/ui/Button'
 import { Icons } from '@/lib/icons'
+import { formatDateTime } from '@/lib/localeFormat'
 import { useScopedUserIds } from '../../lib/scope'
 
 const STATUSES: ScorecardStatus[] = ['draft', 'completed', 'sent']
 const DEFAULT_PAGE_SIZE = 25
 
 export function ScorecardsSubTab() {
-  const { t } = useTranslation('common')
+  const { t, i18n } = useTranslation('common')
   const activeProjectId = useAuthStore((s) => s.user?.active_project_id)
   const { data: operators = [] } = useOperators(activeProjectId ? Number(activeProjectId) : null)
   const scoped = useScopedUserIds(operators)
@@ -136,7 +137,7 @@ export function ScorecardsSubTab() {
             ) : (
               rows.map((row) => (
                 <tr key={row.id} className="hover:bg-gray-50">
-                  <td className="px-3 py-2">{new Date(row.created_at).toLocaleString()}</td>
+                  <td className="px-3 py-2">{formatDateTime(row.created_at, i18n.language)}</td>
                   <td className="px-3 py-2">
                     {operatorLookup.get(row.operator_id) ?? `#${row.operator_id}`}
                   </td>

@@ -15,6 +15,8 @@
  */
 import type { OperatorUser } from '@/features/users/api/usersApi'
 import type { Scorecard, ScorecardStatus } from '@/features/quality'
+import i18n from '@/lib/i18n'
+import { formatMonthDay, formatTimeShort } from '@/lib/localeFormat'
 
 // 'Unscored' = a draft with no weighted_score yet (rendered as a `—` ring and
 // excluded from the Low/Average/High bands).
@@ -96,18 +98,14 @@ function initialsFor(name: string): string {
 function formatDayMonth(iso: string): string {
   const d = new Date(iso)
   if (Number.isNaN(d.getTime())) return ''
-  const dd = String(d.getDate()).padStart(2, '0')
-  const mm = String(d.getMonth() + 1).padStart(2, '0')
-  return `${dd}.${mm}`
+  return formatMonthDay(d, i18n.language)
 }
 
 /** ISO timestamp → `HH:MM`. */
 function formatHourMinute(iso: string): string {
   const d = new Date(iso)
   if (Number.isNaN(d.getTime())) return ''
-  const hh = String(d.getHours()).padStart(2, '0')
-  const mm = String(d.getMinutes()).padStart(2, '0')
-  return `${hh}:${mm}`
+  return formatTimeShort(d, i18n.language)
 }
 
 /**

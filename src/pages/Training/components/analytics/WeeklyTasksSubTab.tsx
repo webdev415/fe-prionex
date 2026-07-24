@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
+import { formatMonthDay } from '@/lib/localeFormat'
 import { Pagination } from '@/components/ui/Pagination'
 import { useTaskHistory, useWeeklyBucket } from '@/features/training/hooks/useTaskHistory'
 import type { TaskHistoryItem, WeeklyBucket, WeeklyDowKey } from '@/features/training/types'
@@ -111,14 +112,17 @@ interface WeeklyTaskRow {
 
 /** Parse a naive ISO due_date string directly (no timezone math — the BE stores
  *  naive UTC and the Figma table shows the stored wall-clock). */
-function toRow(item: TaskHistoryItem): WeeklyTaskRow {
+function toRow(item: TaskHistoryItem, language: string): WeeklyTaskRow {
   const iso = item.due_date ?? item.created_at ?? ''
   const [datePart = '', timePart = ''] = iso.split('T')
-  const [, mm = '', dd = ''] = datePart.split('-')
+  const [yyyy = '', mm = '', dd = ''] = datePart.split('-')
   const hhmm = timePart.slice(0, 5)
   return {
     id: item.id,
-    dateLabel: mm && dd ? `${mm}/${dd}` : '—',
+    // Reorder the stored wall-clock month/day by locale without any timezone
+    // math — build a local Date from the parsed parts, then format.
+    dateLabel:
+      mm && dd ? formatMonthDay(new Date(Number(yyyy), Number(mm) - 1, Number(dd)), language) : '—',
     timeLabel: hhmm,
     title: item.subject_name ?? item.title,
     executor: item.assigned_to_username ?? '—',
@@ -169,7 +173,7 @@ function ChiliIcon({ size = 14, className = '' }: { size?: number; className?: s
 }
 
 export function WeeklyTasksSubTab() {
-  const { t } = useTranslation('common')
+  const { t, i18n } = useTranslation('common')
   const [statusFilter, setStatusFilter] = useState<'all' | TaskStatus>('all')
   const [bannerDismissed, setBannerDismissed] = useState(false)
   const [page, setPage] = useState(1)
@@ -218,15 +222,18 @@ export function WeeklyTasksSubTab() {
       return {
         label: t(`pages.training.weeklyTasks.days.short.${key}`, DAY_SHORT_EN[i]),
         fullLabel: t(`pages.training.weeklyTasks.days.full.${key}`, DAY_FULL_EN[i]),
-        dateLabel: `${pad2(dayDate.getMonth() + 1)}/${pad2(dayDate.getDate())}`,
+        dateLabel: formatMonthDay(dayDate, i18n.language),
         isToday: dayDate.getTime() === today.getTime(),
         count,
         status,
       }
     })
-  }, [bucket, weekStart, t])
+  }, [bucket, weekStart, t, i18n.language])
 
-  const rows = useMemo(() => (history?.items ?? []).map(toRow), [history])
+  const rows = useMemo(
+    () => (history?.items ?? []).map((item) => toRow(item, i18n.language)),
+    [history, i18n.language]
+  )
 
   const filteredRows = rows.filter((row) => statusFilter === 'all' || row.status === statusFilter)
 

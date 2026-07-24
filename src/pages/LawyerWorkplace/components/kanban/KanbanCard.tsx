@@ -76,7 +76,7 @@ export function KanbanCard({
   onDragStart,
   onDragEnd,
 }: KanbanCardProps) {
-  const { t } = useTranslation('common')
+  const { t, i18n } = useTranslation('common')
   const isOverdue = task.columnId === 'overdue'
   const isCompleted = task.columnId === 'completed'
   const typeBadge = resolveKanbanTypeBadgeProps(task.letterTypeId, letterTypes, task.type)
@@ -236,7 +236,7 @@ export function KanbanCard({
           task.closedAt ? (
             <span className="text-muted-foreground text-[11px]">
               {t('pages.lawyerWorkplace.kanban.closedLabel', 'closed')}{' '}
-              {formatLegalDueMonthDay(task.closedAt, timezone)}
+              {formatLegalDueMonthDay(task.closedAt, timezone, i18n.language)}
             </span>
           ) : null
         ) : (
@@ -247,13 +247,13 @@ export function KanbanCard({
                 <span className="text-error-600 flex items-center gap-1 text-[11px] font-medium">
                   <Icons.Calendar size={11} strokeWidth={1.5} className="shrink-0" />
                   {t('pages.lawyerWorkplace.kanban.dueLabel', 'due:')}{' '}
-                  {formatLegalDueDateTime(task.deadline, timezone)}
+                  {formatLegalDueDateTime(task.deadline, timezone, i18n.language)}
                 </span>
               ) : (
                 <span className="text-muted-foreground flex items-center gap-1 text-[11px]">
                   <Icons.Calendar size={11} strokeWidth={1.5} className="shrink-0" />
                   {t('pages.lawyerWorkplace.kanban.byLabel', 'by')}{' '}
-                  {formatLegalDueDateTime(task.deadline, timezone)}
+                  {formatLegalDueDateTime(task.deadline, timezone, i18n.language)}
                 </span>
               )
             ) : (

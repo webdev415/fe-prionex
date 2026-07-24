@@ -8,6 +8,7 @@ import type { CallMonitoringItem, TelephonyType } from '@/features/training'
 import { useCreateScorecard, useTemplates } from '@/features/quality'
 import { useOperators } from '@/features/users/hooks'
 import { useAuthStore } from '@/stores/authStore'
+import { formatDate, formatTimeShort } from '@/lib/localeFormat'
 
 /**
  * New-assessment picker (KAN-504 / Scorecard Review Panel redesign).
@@ -29,15 +30,12 @@ export interface RateDialogueDialogProps {
   operatorId?: number
 }
 
-function formatTime(value: string): { date: string; time: string } {
+function formatTime(value: string, language: string): { date: string; time: string } {
   const d = new Date(value)
   if (Number.isNaN(d.getTime())) return { date: '—', time: '' }
   return {
-    date: d.toLocaleDateString(),
-    time: d.toLocaleTimeString(undefined, {
-      hour: '2-digit',
-      minute: '2-digit',
-    }),
+    date: formatDate(d, language),
+    time: formatTimeShort(d, language),
   }
 }
 
@@ -49,7 +47,7 @@ function formatDuration(seconds: number | null): string {
 }
 
 export function RateDialogueDialog({ open, onClose, operatorId }: RateDialogueDialogProps) {
-  const { t } = useTranslation('common')
+  const { t, i18n } = useTranslation('common')
   const activeProjectId = useAuthStore((s) => s.user?.active_project_id)
   const { data: operators = [] } = useOperators(activeProjectId ? Number(activeProjectId) : null)
 
@@ -172,7 +170,7 @@ export function RateDialogueDialog({ open, onClose, operatorId }: RateDialogueDi
     return (
       <ul className="divide-y divide-gray-100">
         {calls.map((call) => {
-          const start = formatTime(call.initiated_at)
+          const start = formatTime(call.initiated_at, i18n.language)
           const disabled = !call.has_recording
           return (
             <li key={call.call_id}>

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import type { TaskHistoryAnalyticsBucket } from '@/features/training'
 import { Button } from '@/components/ui/Button'
 import { Icons } from '@/lib/icons'
+import { formatNumber } from '@/lib/localeFormat'
 
 interface Props {
   buckets: TaskHistoryAnalyticsBucket[]
@@ -119,7 +120,7 @@ export function TaskHistoryAnalytics({ buckets, total, isLoading, initialViewMon
         </div>
         <div className="text-right">
           <div className="text-dark-500 text-2xl leading-none font-light">
-            {isLoading ? '…' : total.toLocaleString()}
+            {isLoading ? '…' : formatNumber(total, i18n.language)}
           </div>
           <div className="mt-1 text-[11px] tracking-wide text-gray-500 uppercase">
             {t('pages.training.taskHistoryAnalytics.totalLabel', 'tasks due')}

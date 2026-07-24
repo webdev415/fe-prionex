@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { Icons } from '@/lib/icons'
+import { formatDateTime } from '@/lib/localeFormat'
 import { useAuthStore } from '@/stores/authStore'
 import { useOperators } from '@/features/users/hooks'
 import {
@@ -242,9 +243,11 @@ function FlagRow({
   onConvert,
   isMutating,
 }: FlagRowProps) {
-  const { t } = useTranslation('common')
+  const { t, i18n } = useTranslation('common')
   const detected = new Date(flag.detected_at)
-  const detectedLabel = Number.isNaN(detected.getTime()) ? '—' : detected.toLocaleString()
+  const detectedLabel = Number.isNaN(detected.getTime())
+    ? '—'
+    : formatDateTime(detected, i18n.language)
   const isPending = flag.status === 'pending'
   return (
     <div className="flex flex-col gap-2 rounded-xl border border-[#EBECE8] bg-white p-4 shadow-[0px_1px_2px_rgba(0,0,0,0.04)]">
