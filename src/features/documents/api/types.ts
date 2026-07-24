@@ -176,6 +176,17 @@ export interface DocumentTemplateUpdatePayload {
   activation_tag_id?: number | null
 }
 
+/**
+ * A selectable tag for the `tag_active` activation rule. The `id` is in the
+ * client-service tag space (client_db `tags.id`) — the exact id space the
+ * generation-options check expects — NOT the tag-service `/tags` id.
+ */
+export interface DocumentTemplateTagOption {
+  id: number
+  name: string
+  color: string
+}
+
 /* ------------------------------------------------------------------ */
 /* Document generation from a client card                              */
 /* ------------------------------------------------------------------ */

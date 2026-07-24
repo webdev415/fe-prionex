@@ -11,7 +11,6 @@ import type {
   LegalLetterTypeCreate,
   LegalLetterTypePrioritiesUpdate,
   LegalLetterTypeUpdate,
-  LegalGenerateDocumentRequest,
   LegalMailboxCreate,
   LegalMailboxConnectionTest,
   LegalMailboxUpdate,
@@ -396,16 +395,6 @@ export function useUploadIncomingLegalDocument() {
       sender_email?: string | null
       summary?: string | null
     }) => legalApi.uploadIncomingDocument(payload),
-    onSuccess: () => invalidateLegalDocuments(queryClient),
-    onError: (error) => toast.error(getErrorMessage(error)),
-  })
-}
-
-export function useGenerateLegalDocument() {
-  const queryClient = useQueryClient()
-
-  return useMutation({
-    mutationFn: (payload: LegalGenerateDocumentRequest) => legalApi.generateDocument(payload),
     onSuccess: () => invalidateLegalDocuments(queryClient),
     onError: (error) => toast.error(getErrorMessage(error)),
   })

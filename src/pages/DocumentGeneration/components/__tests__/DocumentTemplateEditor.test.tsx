@@ -32,13 +32,6 @@ vi.mock('sonner', () => ({
   toast: { success: vi.fn(), error: vi.fn(), info: vi.fn(), warning: vi.fn() },
 }))
 
-// Tag catalog for the `tag_active` activation rule.
-vi.mock('@/features/tags', () => ({
-  useTags: () => ({
-    data: [{ id: 501, name: 'VIP clients', color: '#000000', project_id: 1, created_at: '' }],
-  }),
-}))
-
 // The download helper touches URL.createObjectURL — stub it out.
 vi.mock('@/features/messaging/utils/downloadBlob', () => ({
   downloadBlob: vi.fn(),
@@ -99,6 +92,9 @@ vi.mock('@/features/documents/api/documentTemplatesApi', () => ({
   downloadDocumentTemplateFile: vi.fn(async () => new Blob(['x'])),
   previewDocumentTemplateFile: vi.fn(async () => new Blob(['sample'])),
   getDocumentTemplateVariables: vi.fn(async () => VARIABLES),
+  getDocumentTemplateTagOptions: vi.fn(async () => [
+    { id: 501, name: 'VIP clients', color: '#000000' },
+  ]),
 }))
 
 import * as templatesApi from '@/features/documents/api/documentTemplatesApi'

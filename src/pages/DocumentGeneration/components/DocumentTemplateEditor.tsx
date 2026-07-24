@@ -40,6 +40,7 @@ import { cn } from '@/lib/utils'
 import {
   useComposeDocumentTemplate,
   useCreateDocumentTemplate,
+  useDocumentTemplateTagOptions,
   useDocumentTemplateVariables,
   useReplaceDocumentTemplateFile,
   useUpdateDocumentTemplate,
@@ -53,10 +54,6 @@ import {
 } from '@/features/documents'
 import { downloadBlob } from '@/features/messaging/utils/downloadBlob'
 import { useDocumentTypes } from '@/features/documentTypes'
-// Activation-tag catalog: reuse the same tag list the client filters use.
-// ⚠️ The `tag_active` rule stores a client_db tag id server-side — confirm this
-// source yields the id space client-service expects (see team note).
-import { useTags } from '@/features/tags'
 import { DocumentTypePill } from '@/components/DocumentTypePill'
 import { buildSampleVariableMap, substituteVariables } from './templateVariables'
 import { DocumentFileViewer } from './DocumentFileViewer'
@@ -167,10 +164,10 @@ export function DocumentTemplateEditor({ open, onClose, template }: Props) {
 
   const { data: variablesData } = useDocumentTemplateVariables()
   const { data: documentTypes } = useDocumentTypes({ includeHidden: false })
-  // Tag catalog for the `tag_active` activation rule (same list the client
-  // filters use). The tag is required only when that rule is selected.
+  // Tag catalog for the `tag_active` activation rule, served from client-service
+  // (client_db tag id space). Fetched only when that rule is selected.
   const requiresActivationTag = activationRule === 'tag_active'
-  const { data: activationTags } = useTags(undefined, { includeHidden: false })
+  const { data: activationTags } = useDocumentTemplateTagOptions(requiresActivationTag)
   const variableItems = useMemo(() => variablesData?.items ?? [], [variablesData])
   const variableGroups = variablesData?.groups ?? []
 
