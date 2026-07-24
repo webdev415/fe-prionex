@@ -506,7 +506,7 @@ export function EditTAInteractionModal({
                                 return (
                                   <label
                                     key={d.id}
-                                    className="flex items-center gap-2 rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                                    className="text-foreground border-border bg-card hover:bg-muted flex items-center gap-2 rounded-md border px-3 py-2 text-sm"
                                   >
                                     <input
                                       type="checkbox"

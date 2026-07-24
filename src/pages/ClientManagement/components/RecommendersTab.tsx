@@ -241,7 +241,7 @@ function ContactEditorForm({
             value={String(formData.contact_type_id)}
             onValueChange={(value) => onChange({ contact_type_id: Number(value) })}
           >
-            <SelectTrigger className="h-[42px] rounded-lg border border-gray-300 bg-white">
+            <SelectTrigger className="border-border bg-card h-[42px] rounded-lg border">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -480,7 +480,7 @@ function MessageActionsButton({
           <Icons.Message01 size={15} className="shrink-0" />
         </ActionIconButton>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="min-w-[160px] bg-white">
+      <DropdownMenuContent align="end" className="border-border bg-card min-w-[160px]">
         <DropdownMenuItem
           disabled={blocked}
           className="cursor-pointer text-sm"

@@ -2828,7 +2828,7 @@ export function ClientDetailPage() {
                   <Icons.FilterVertical size={18} strokeWidth={1.5} />
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48 bg-white">
+              <DropdownMenuContent align="end" className="border-border bg-card w-48">
                 <DropdownMenuItem
                   onClick={() => setIsDeleteModalOpen(true)}
                   className="flex cursor-pointer items-center gap-2 text-sm text-red-600 hover:text-red-700"
@@ -3048,7 +3048,7 @@ export function ClientDetailPage() {
                               <button
                                 type="button"
                                 className={cn(
-                                  'flex h-[20px] w-[20px] shrink-0 items-center justify-center text-gray-400 hover:text-gray-600',
+                                  'text-muted-foreground hover:text-foreground flex h-[20px] w-[20px] shrink-0 items-center justify-center',
                                   phone.contactId > 0 && 'cursor-pointer'
                                 )}
                                 onClick={() => {
@@ -3661,7 +3661,7 @@ export function ClientDetailPage() {
           <div className="client-panel-scroll flex w-full flex-1 flex-col items-start gap-5 self-stretch xl:max-h-[70vh] xl:w-[64%] xl:overflow-y-auto">
             <div className="flex min-h-0 flex-1 flex-col items-start gap-0 self-stretch overflow-y-auto rounded-lg bg-white/50 p-0">
               {/* Horizontal tab bar - 6 tabs at the top - scrollable on mobile */}
-              <div className="relative mx-3 flex items-center gap-0 self-stretch border-b border-gray-200">
+              <div className="border-border relative mx-3 flex items-center gap-0 self-stretch border-b">
                 {/* Left Arrow Button */}
                 {showLeftArrow && (
                   <button
@@ -6509,7 +6509,7 @@ export function ClientDetailPage() {
               )}
               maxLength={500}
               rows={3}
-              className="text-dark-500 focus:border-primary-500 focus:ring-primary-500 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm outline-none placeholder:text-gray-400 focus:ring-1"
+              className="text-foreground focus:border-primary-500 focus:ring-primary-500 bg-card placeholder:text-muted-foreground w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-1"
             />
           </ModalContent>
           <ModalFooter>

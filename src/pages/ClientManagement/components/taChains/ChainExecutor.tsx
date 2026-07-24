@@ -1442,7 +1442,7 @@ export function ChainExecutor({
                 <DropdownMenuTrigger asChild>
                   <button
                     type="button"
-                    className="focus:border-primary-500 flex min-h-[40px] w-full items-center justify-between gap-2 rounded-md border border-gray-300 bg-white px-3 py-2 text-left text-sm outline-none hover:bg-gray-50"
+                    className="text-foreground focus:border-primary-500 border-border bg-card hover:bg-muted flex min-h-[40px] w-full items-center justify-between gap-2 rounded-md border px-3 py-2 text-left text-sm outline-none"
                   >
                     <span className={selectedTemplate ? 'text-gray-800' : 'text-gray-400'}>
                       {selectedTemplate
@@ -1457,7 +1457,7 @@ export function ChainExecutor({
                 <DropdownMenuContent
                   align="start"
                   sideOffset={6}
-                  className="w-[--radix-dropdown-menu-trigger-width] min-w-[260px] rounded-md border border-gray-200 bg-white p-0 shadow-lg"
+                  className="border-border bg-card w-[--radix-dropdown-menu-trigger-width] min-w-[260px] rounded-md border p-0 shadow-lg"
                 >
                   <div className="border-b border-gray-200 p-2">
                     <input
@@ -1468,7 +1468,7 @@ export function ChainExecutor({
                         'pages.clientChains.templateSearchPlaceholder',
                         'Search templates…'
                       )}
-                      className="focus:border-primary-500 w-full rounded-md border border-gray-200 bg-white px-2 py-1.5 text-sm text-gray-900 outline-none placeholder:text-gray-400"
+                      className="text-foreground focus:border-primary-500 placeholder:text-muted-foreground border-border bg-card w-full rounded-md border px-2 py-1.5 text-sm outline-none"
                     />
                   </div>
                   <div
@@ -1539,7 +1539,7 @@ export function ChainExecutor({
                 <DropdownMenuTrigger asChild>
                   <button
                     type="button"
-                    className="focus:border-primary-500 flex min-h-[40px] w-full items-center justify-between gap-2 rounded-md border border-gray-300 bg-white px-3 py-2 text-left text-sm outline-none hover:bg-gray-50"
+                    className="text-foreground focus:border-primary-500 border-border bg-card hover:bg-muted flex min-h-[40px] w-full items-center justify-between gap-2 rounded-md border px-3 py-2 text-left text-sm outline-none"
                   >
                     <span className={selectedChainObj ? 'text-gray-800' : 'text-gray-400'}>
                       {selectedChainObj
@@ -1552,7 +1552,7 @@ export function ChainExecutor({
                 <DropdownMenuContent
                   align="start"
                   sideOffset={6}
-                  className="w-[--radix-dropdown-menu-trigger-width] min-w-[260px] rounded-md border border-gray-200 bg-white p-0 shadow-lg"
+                  className="border-border bg-card w-[--radix-dropdown-menu-trigger-width] min-w-[260px] rounded-md border p-0 shadow-lg"
                 >
                   <div className="border-b border-gray-200 p-2">
                     <input
@@ -1560,7 +1560,7 @@ export function ChainExecutor({
                       value={chainSearch}
                       onChange={(e) => setChainSearch(e.target.value)}
                       placeholder={t('pages.clientChains.chainSearchPlaceholder', 'Search chains…')}
-                      className="focus:border-primary-500 w-full rounded-md border border-gray-200 bg-white px-2 py-1.5 text-sm text-gray-900 outline-none placeholder:text-gray-400"
+                      className="text-foreground focus:border-primary-500 placeholder:text-muted-foreground border-border bg-card w-full rounded-md border px-2 py-1.5 text-sm outline-none"
                     />
                   </div>
                   <div

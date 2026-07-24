@@ -170,7 +170,7 @@ export function TagsDropdown({
             type="button"
             onClick={onClear}
             aria-label="Clear"
-            className="flex shrink-0 items-center text-gray-400 hover:text-gray-600"
+            className="text-muted-foreground hover:text-foreground flex shrink-0 items-center"
           >
             <Icons.Cancel01 size={14} />
           </button>
@@ -179,10 +179,10 @@ export function TagsDropdown({
       <DropdownMenuContent
         align="start"
         sideOffset={8}
-        className="w-[320px] rounded-lg border border-gray-200 bg-white p-0 shadow-lg"
+        className="border-border bg-card w-[320px] rounded-lg border p-0 shadow-lg"
       >
         {/* Tabs */}
-        <div className="flex border-b border-gray-200">
+        <div className="border-border flex border-b">
           <button
             type="button"
             onClick={() => {
@@ -191,8 +191,8 @@ export function TagsDropdown({
             }}
             className={`flex-1 px-3 py-2.5 text-sm font-medium transition-colors ${
               activeTab === 'manual'
-                ? 'border-primary-500 text-dark-500 border-b-2'
-                : 'hover:text-dark-500 text-gray-500'
+                ? 'border-primary-500 text-foreground border-b-2'
+                : 'text-muted-foreground hover:text-foreground'
             }`}
           >
             {t('pages.clients.modals.tagsDropdown.tabManual')}
@@ -206,8 +206,8 @@ export function TagsDropdown({
             }}
             className={`flex-1 px-3 py-2.5 text-sm font-medium transition-colors ${
               activeTab === 'segments'
-                ? 'border-primary-500 text-dark-500 border-b-2'
-                : 'hover:text-dark-500 text-gray-500'
+                ? 'border-primary-500 text-foreground border-b-2'
+                : 'text-muted-foreground hover:text-foreground'
             }`}
           >
             {t('pages.clients.modals.tagsDropdown.tabSegments')}
@@ -216,7 +216,7 @@ export function TagsDropdown({
         </div>
 
         {/* Search Input */}
-        <div className="border-b border-gray-200 p-3">
+        <div className="border-border border-b p-3">
           <input
             type="text"
             value={searchQuery}
@@ -226,7 +226,7 @@ export function TagsDropdown({
                 ? t('pages.clients.modals.tagsDropdown.searchTags')
                 : t('pages.clients.modals.tagsDropdown.searchSegments')
             }
-            className="text-dark-500 focus:border-primary-500 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm outline-none placeholder:text-gray-400"
+            className="text-foreground focus:border-primary-500 border-border bg-card placeholder:text-muted-foreground w-full rounded-lg border px-3 py-2 text-sm outline-none"
           />
         </div>
 
@@ -234,7 +234,7 @@ export function TagsDropdown({
         {activeTab === 'manual' && (
           <div className="max-h-[200px] overflow-y-auto p-2">
             {filteredTags.length === 0 ? (
-              <div className="py-4 text-center text-sm text-gray-500">
+              <div className="text-muted-foreground py-4 text-center text-sm">
                 {t('pages.clients.modals.tagsDropdown.noTagsFound')}
               </div>
             ) : (
@@ -242,7 +242,7 @@ export function TagsDropdown({
                 {filteredTags.map((tag) => (
                   <label
                     key={tag.id}
-                    className="text-dark-500 flex cursor-pointer items-center gap-2 rounded px-2 py-2 hover:bg-gray-50"
+                    className="text-foreground hover:bg-muted flex cursor-pointer items-center gap-2 rounded px-2 py-2"
                   >
                     <TagFilterTriState
                       state={getTagTriState(tempSelection, tag.id)}
@@ -267,11 +267,11 @@ export function TagsDropdown({
         {activeTab === 'segments' && (
           <div className="max-h-[240px] overflow-y-auto p-2">
             {segmentsLoading ? (
-              <div className="py-4 text-center text-sm text-gray-500">
+              <div className="text-muted-foreground py-4 text-center text-sm">
                 {t('pages.clients.modals.tagsDropdown.loadingSegments')}
               </div>
             ) : filteredSegments.length === 0 ? (
-              <div className="py-4 text-center text-sm text-gray-500">
+              <div className="text-muted-foreground py-4 text-center text-sm">
                 {t('pages.clients.modals.tagsDropdown.noSegmentsFound')}
               </div>
             ) : (
@@ -285,25 +285,23 @@ export function TagsDropdown({
                       role="radio"
                       aria-checked={selected}
                       onClick={() => handleSelectSegment(segment.id)}
-                      className={`flex w-full cursor-pointer items-start gap-2 rounded px-2 py-2 text-left hover:bg-gray-50 ${
+                      className={`hover:bg-muted flex w-full cursor-pointer items-start gap-2 rounded px-2 py-2 text-left ${
                         selected ? 'bg-primary-50' : ''
                       }`}
                     >
                       <span
                         className={`mt-0.5 flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full border ${
-                          selected
-                            ? 'border-primary-500 bg-primary-500'
-                            : 'border-gray-300 bg-white'
+                          selected ? 'border-primary-500 bg-primary-500' : 'border-border bg-card'
                         }`}
                         aria-hidden
                       >
                         {selected && <span className="h-1.5 w-1.5 rounded-full bg-white" />}
                       </span>
                       <div className="min-w-0 flex-1">
-                        <div className="text-dark-500 truncate text-sm font-medium">
+                        <div className="text-foreground truncate text-sm font-medium">
                           {segment.name}
                         </div>
-                        <div className="text-xs text-gray-500">
+                        <div className="text-muted-foreground text-xs">
                           {formatSegmentFilterMeta(segment, t, userTimezone)}
                         </div>
                       </div>
@@ -316,7 +314,7 @@ export function TagsDropdown({
         )}
 
         {/* Action Buttons */}
-        <div className="border-t border-gray-200 p-3">
+        <div className="border-border border-t p-3">
           <div className="flex items-center gap-2">
             <Button variant="cancel" onClick={handleClear} className="flex flex-1">
               {t('pages.clients.modals.tagsDropdown.clear')}
