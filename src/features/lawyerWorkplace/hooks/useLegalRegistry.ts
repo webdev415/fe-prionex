@@ -20,6 +20,9 @@ export function useIncomingRegistry(
     queryFn: () => legalRegistryApi.listIncoming(filters),
     enabled: options?.enabled !== false,
     staleTime: 15_000,
+    // Reopening the registry tab must always show freshly generated rows,
+    // even within the stale window (CEO: rows "appeared not immediately").
+    refetchOnMount: 'always',
     placeholderData: keepPreviousData,
   })
 }
@@ -33,6 +36,9 @@ export function useOutgoingRegistry(
     queryFn: () => legalRegistryApi.listOutgoing(filters),
     enabled: options?.enabled !== false,
     staleTime: 15_000,
+    // Reopening the registry tab must always show freshly generated rows,
+    // even within the stale window (CEO: rows "appeared not immediately").
+    refetchOnMount: 'always',
     placeholderData: keepPreviousData,
   })
 }

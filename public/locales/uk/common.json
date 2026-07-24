@@ -4518,7 +4518,19 @@
           },
           "hiddenTemplates": "Приховано шаблонів, недоступних для цього кредиту: {{count}}",
           "indexNumRegistryHint": "Вихідний № буде присвоєно автоматично з реєстру кореспонденції",
-          "typeFromTemplate": "застосовується автоматично з шаблону"
+          "typeFromTemplate": "застосовується автоматично з шаблону",
+          "deliveryChannel": "Канал відправки клієнту",
+          "deliveryChannelPlaceholder": "Оберіть канал",
+          "deliveryContact": "Контакт (куди)",
+          "deliveryContactPlaceholder": "+380… або email",
+          "channels": {
+            "email": "Ел. пошта",
+            "telegram": "Telegram",
+            "viber": "Viber",
+            "whatsapp": "WhatsApp",
+            "sms": "SMS",
+            "post": "Поштою"
+          }
         },
         "department": "Відділ",
         "phones": "Телефони",

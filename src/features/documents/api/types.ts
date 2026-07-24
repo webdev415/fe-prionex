@@ -218,6 +218,13 @@ export interface GenerationOptionsResponse {
   registry_numbering?: boolean
 }
 
+/**
+ * How the generated letter is delivered to the client. Recorded on the
+ * outgoing registry row (column "Ел. пошта (звідки → куди)"). Optional — a
+ * document may be generated without a chosen delivery channel.
+ */
+export type DeliveryChannel = 'email' | 'telegram' | 'viber' | 'whatsapp' | 'sms' | 'post'
+
 export interface GenerateDocumentPayload {
   client_id: number
   debt_id: number
@@ -225,6 +232,10 @@ export interface GenerateDocumentPayload {
   document_type_id?: number
   /** Outgoing number; omit to let the server auto-assign one. */
   index_num?: number
+  /** Channel the letter is sent to the client through; omit when not chosen. */
+  delivery_channel?: DeliveryChannel
+  /** Free-form destination (phone / email / address); omit when blank. */
+  delivery_contact?: string
 }
 
 export interface GenerateDocumentResponse {
