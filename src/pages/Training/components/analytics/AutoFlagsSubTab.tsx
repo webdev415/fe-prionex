@@ -161,7 +161,9 @@ export function AutoFlagsSubTab() {
             {rules.map((rule) => (
               <option key={rule.code} value={rule.code}>
                 {rule.name}
-                {rule.is_local_evaluable ? '' : ' · pending data source'}
+                {rule.is_local_evaluable
+                  ? ''
+                  : ` · ${t('pages.training.autoFlags.pendingDataSource', 'Pending data source')}`}
               </option>
             ))}
           </select>

@@ -410,7 +410,7 @@ export function SuccessfulClosuresSubTab() {
             </option>
             {statusOptions.map((s) => (
               <option key={s} value={s}>
-                {s}
+                {t(`pages.training.closures.status.${s}`, s)}
               </option>
             ))}
           </select>
@@ -514,6 +514,7 @@ function ClosureRow({
   operatorName: string | null
   onOpenClient: () => void
 }) {
+  const { t } = useTranslation('common')
   const displayName = operatorName ?? (row.operator_id ? `#${row.operator_id}` : '—')
   const initials = operatorName ? deriveInitials(operatorName) : ''
   return (
@@ -550,7 +551,7 @@ function ClosureRow({
       <td className={ANALYTICS_TABLE_TD}>
         <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-medium text-emerald-700">
           <Icons.Success size={10} />
-          {row.status}
+          {t(`pages.training.closures.status.${row.status}`, row.status)}
         </span>
       </td>
     </tr>

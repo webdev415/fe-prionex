@@ -49,11 +49,15 @@ function formatTime(iso: string): string {
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
 }
 
-function formatDateLabel(iso: string, today: string): string {
+function formatDateLabel(
+  t: (key: string, fallback: string) => string,
+  iso: string,
+  today: string
+): string {
   const d = new Date(iso)
   if (Number.isNaN(d.getTime())) return iso
   const ymd = d.toISOString().slice(0, 10)
-  if (ymd === today) return 'Today'
+  if (ymd === today) return t('pages.training.calendar.today', 'Today')
   return `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}`
 }
 
@@ -241,7 +245,7 @@ function SessionCard({
             <span className="text-base leading-tight font-bold">
               {formatTime(session.scheduled_at)}
             </span>
-            <span className="text-[10px]">{formatDateLabel(session.scheduled_at, today)}</span>
+            <span className="text-[10px]">{formatDateLabel(t, session.scheduled_at, today)}</span>
           </div>
           <div className="flex min-w-0 flex-1 flex-col">
             <span className="truncate text-sm font-semibold text-[#05040D]">{session.title}</span>
