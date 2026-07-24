@@ -13,21 +13,24 @@ vi.mock('@/features/clients/hooks/useClients', () => ({
   useClients: () => ({ data: { items: [] }, isLoading: false, isError: false }),
 }))
 
+// Grouped-task letters already carry their bodies + attachments, chronological ASC.
 const letterA = {
   id: 'letter-a',
   thread_id: 'thread-a',
-  mailbox_id: 'mb-1',
   subject: 'First letter',
   from_address: 'client@example.com',
-  processing_status: 'in_progress',
+  to_addresses: ['legal@prionex.ua'],
   direction: 'incoming',
+  processing_status: 'in_progress',
   received_at: '2026-07-01T09:00:00Z',
+  sent_at: null,
   is_quarantined: false,
-  needs_manual_review: false,
-  suggested_letter_type_id: null,
-  suggested_client_id: null,
-  suggested_lawyer_user_id: null,
-  auto_process_eligible: false,
+  letter_type_id: 'complaint',
+  client_id: 10,
+  client_name: 'Test Client',
+  body_text: 'Body A1',
+  body_html: null,
+  attachments: [] as [],
 }
 
 const letterB = {
@@ -36,8 +39,10 @@ const letterB = {
   thread_id: 'thread-b',
   subject: 'Second letter',
   received_at: '2026-07-02T09:00:00Z',
+  body_text: 'Body B1',
 }
 
+// Reply context of the most recent letter of the group.
 const messageB = {
   id: 'letter-b',
   thread_id: 'thread-b',
@@ -47,7 +52,7 @@ const messageB = {
   from_address: 'client@example.com',
   to_addresses: ['legal@prionex.ua'],
   cc_addresses: [] as string[],
-  body_text: '',
+  body_text: 'Body B1',
   body_html: null,
   processing_status: 'in_progress',
   direction: 'incoming',
@@ -56,51 +61,24 @@ const messageB = {
   is_quarantined: false,
   quarantine_reason: null,
   needs_manual_review: false,
-  suggested_letter_type_id: null,
+  suggested_letter_type_id: 'complaint',
   suggested_client_id: null,
   suggested_lawyer_user_id: null,
   auto_process_eligible: false,
   attachments: [] as [],
 }
 
-const threadA = {
-  id: 'thread-a',
-  subject: 'First letter',
-  root_message_id: 'a1',
-  messages: [
-    {
-      id: 'a1',
-      direction: 'incoming',
-      from_address: 'client@example.com',
-      subject: 'First letter',
-      body_text: 'Body A1',
-      body_html: null,
-      received_at: '2026-07-01T09:00:00Z',
-      sent_at: null,
-      processing_status: 'in_progress',
-      is_quarantined: false,
-      to_addresses: [] as string[],
-      attachments: [] as [],
-    },
-  ],
-}
-
-const threadB = {
-  ...threadA,
-  id: 'thread-b',
-  subject: 'Second letter',
-  root_message_id: 'b1',
-  messages: [
-    { ...threadA.messages[0], id: 'b1', body_text: 'Body B1', received_at: '2026-07-02T09:00:00Z' },
-  ],
-}
-
 const listTaskLetters = vi.fn((_legalTaskId: number) =>
-  Promise.resolve({ items: [letterB, letterA] })
+  Promise.resolve({ legal_task_id: 77, items: [letterB, letterA], total: 2 })
 )
 const getMessage = vi.fn((_messageId: string) => Promise.resolve(messageB))
-const getThread = vi.fn((threadId: string) =>
-  Promise.resolve(threadId === 'thread-a' ? threadA : threadB)
+const getThread = vi.fn((_threadId: string) =>
+  Promise.resolve({
+    id: 'thread-b',
+    subject: 'Second letter',
+    root_message_id: 'letter-b',
+    messages: [],
+  })
 )
 
 vi.mock('@/features/lawyerWorkplace/api/legalApi', () => ({
@@ -165,7 +143,7 @@ describe('ThreadDrawer — grouped-letter thread', () => {
     expect(panel).toHaveClass('sm:w-[75vw]')
   })
 
-  it('merges every grouped letter into one chronological thread', async () => {
+  it('renders every grouped letter as one chronological thread from /letters', async () => {
     renderDrawer()
 
     const first = await screen.findByText('Body A1')
@@ -174,7 +152,9 @@ describe('ThreadDrawer — grouped-letter thread', () => {
     // Oldest letter first — the group renders as a single chronological thread.
     expect(first.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
 
-    // Grouped-letter endpoint was queried with the legal task id.
+    // Grouped-letter endpoint was queried with the legal task id, and no
+    // per-letter thread fetch was needed (bodies come from /letters).
     expect(listTaskLetters).toHaveBeenCalledWith(77)
+    expect(getThread).not.toHaveBeenCalled()
   })
 })

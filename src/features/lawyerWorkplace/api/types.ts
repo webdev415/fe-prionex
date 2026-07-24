@@ -292,9 +292,35 @@ export interface LegalKanbanResponse {
   total: number
 }
 
-/** Letters grouped into one legal task, shaped like inbox rows. */
+/**
+ * One letter of a grouped legal task. A trimmed inbox row plus message bodies
+ * and attachments, so the drawer can render the whole group as a single thread
+ * without extra per-letter message/thread requests.
+ */
+export interface LegalTaskLetter {
+  id: string
+  thread_id: string
+  subject: string | null
+  from_address: string
+  to_addresses: string[]
+  direction: string
+  processing_status: string
+  received_at: string | null
+  sent_at: string | null
+  is_quarantined: boolean
+  letter_type_id: string | null
+  client_id: number | null
+  client_name: string | null
+  body_text: string | null
+  body_html: string | null
+  attachments: LegalAttachmentItem[]
+}
+
+/** Letters grouped into one legal task, ordered chronologically (received_at ASC). */
 export interface LegalTaskLettersResponse {
-  items: LegalInboxItem[]
+  legal_task_id: number
+  items: LegalTaskLetter[]
+  total: number
 }
 
 export interface LegalKanbanTaskCreateRequest {

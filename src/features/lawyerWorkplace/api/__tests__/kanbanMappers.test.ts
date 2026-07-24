@@ -82,8 +82,8 @@ describe('mapLegalKanbanItemToTask — letter grouping', () => {
     expect(task.letterCount).toBe(3)
   })
 
-  it('clamps a zero/negative letter_count to 1', () => {
+  it('keeps a standalone letter_count of 0 as-is (no letter linked)', () => {
     const task = mapLegalKanbanItemToTask({ ...baseItem, letter_count: 0 }, [], TZ)
-    expect(task.letterCount).toBe(1)
+    expect(task.letterCount).toBe(0)
   })
 })
