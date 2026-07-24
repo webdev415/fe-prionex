@@ -116,7 +116,7 @@ export function buildOutgoingColumns(
       header: t('pages.lawyerWorkplace.registry.columns.partyName', 'Full name / Institution'),
       render: (row) => (
         <span className="text-foreground text-xs">
-          {row.client_name || row.institution_name || DASH}
+          {row.recipient_name || DASH}
         </span>
       ),
     },

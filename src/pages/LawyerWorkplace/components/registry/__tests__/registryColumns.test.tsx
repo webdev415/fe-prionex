@@ -27,8 +27,7 @@ const outgoingRow: OutgoingRegistryItem = {
   sender_email: 'legal@prionex.ua',
   recipient_email: 'nbu@bank.gov.ua',
   letter_type: { id: 'nbu', name: 'NBU reply', color_id: 'teal' },
-  client_name: null,
-  institution_name: 'National Bank of Ukraine',
+  recipient_name: 'National Bank of Ukraine',
   issued_date: '2026-07-12T09:00:00Z',
   lawyer: { id: 9, name: 'Jane Lawyer' },
 }
@@ -113,7 +112,7 @@ describe('outgoing registry columns', () => {
     expect(screen.getByText('legal@prionex.ua')).toBeInTheDocument()
     expect(screen.getByText('nbu@bank.gov.ua')).toBeInTheDocument()
     expect(screen.getByText('NBU reply')).toBeInTheDocument()
-    // client_name is null → institution_name is shown
+    // recipient_name (merged client/institution) is shown
     expect(screen.getByText('National Bank of Ukraine')).toBeInTheDocument()
     expect(screen.getByText('2307/01')).toBeInTheDocument()
     expect(screen.getByText('Jane Lawyer')).toBeInTheDocument()
