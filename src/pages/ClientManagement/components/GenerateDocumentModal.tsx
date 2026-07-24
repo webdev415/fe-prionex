@@ -51,6 +51,19 @@ interface GenerateDocumentModalProps {
   onClose: () => void
   clientId: number
   loans: Loan[]
+  /**
+   * Called after a successful generation with the server response. When
+   * provided, the modal delegates the post-success UX to the caller (e.g. the
+   * lawyer's reply composer attaches the generated PDF and closes the modal)
+   * and skips its own success screen. Omit it to keep the standalone
+   * client-card behaviour (success screen with a .docx download).
+   */
+  onGenerated?: (result: GenerateDocumentResponse) => void
+  /**
+   * Optional pre-filled delivery fields. The operator can still change them
+   * before generating (used by the reply composer to seed email + address).
+   */
+  prefill?: { deliveryChannel?: DeliveryChannel; deliveryContact?: string }
 }
 
 const DOCX_MIME = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
@@ -108,6 +121,8 @@ export function GenerateDocumentModal({
   onClose,
   clientId,
   loans,
+  onGenerated,
+  prefill,
 }: GenerateDocumentModalProps) {
   const { t } = useTranslation('common')
   const queryClient = useQueryClient()
@@ -120,8 +135,10 @@ export function GenerateDocumentModal({
   const [templateId, setTemplateId] = useState<number | null>(null)
   const [docTypeId, setDocTypeId] = useState<number | null>(null)
   const [indexNum, setIndexNum] = useState('')
-  const [deliveryChannel, setDeliveryChannel] = useState<DeliveryChannel | null>(null)
-  const [deliveryContact, setDeliveryContact] = useState('')
+  const [deliveryChannel, setDeliveryChannel] = useState<DeliveryChannel | null>(
+    () => prefill?.deliveryChannel ?? null
+  )
+  const [deliveryContact, setDeliveryContact] = useState(() => prefill?.deliveryContact ?? '')
   const [generated, setGenerated] = useState<GenerateDocumentResponse | null>(null)
   const [errorReason, setErrorReason] = useState<string | null>(null)
 
@@ -154,6 +171,16 @@ export function GenerateDocumentModal({
         return t(
           'pages.clients.detail.generateModal.reasons.no_active_promise',
           'Немає актуальної обіцянки платежу'
+        )
+      case 'no_activation_tag':
+        return t(
+          'pages.clients.detail.generateModal.reasons.no_activation_tag',
+          'Шаблон не налаштовано: оберіть тег'
+        )
+      case 'no_required_tag':
+        return t(
+          'pages.clients.detail.generateModal.reasons.no_required_tag',
+          'Немає потрібного тегу на клієнті'
         )
       default:
         return t(
@@ -232,8 +259,13 @@ export function GenerateDocumentModal({
       // invalidate the whole registry family by prefix so the row shows up on
       // the next tab open regardless of active filters/pagination.
       queryClient.invalidateQueries({ queryKey: legalRegistryKeys.root() })
-      toast.success(t('status.success'))
-      setGenerated(res)
+      if (onGenerated) {
+        // The caller owns the post-success flow (attach PDF, close, toast).
+        onGenerated(res)
+      } else {
+        toast.success(t('status.success'))
+        setGenerated(res)
+      }
     } catch (err) {
       const axErr = err as AxiosError<{
         detail?: string | { message?: string; reason?: string }

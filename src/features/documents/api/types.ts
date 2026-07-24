@@ -73,6 +73,7 @@ export type DocumentTemplateKind = 'text' | 'docx'
  *   - `rr_active`        — the debt has an active restructuring (RR).
  *   - `rr_first_payment` — the RR's first instalment has been paid.
  *   - `promise_active`   — the client has a live promise-to-pay.
+ *   - `tag_active`       — the client carries the template's `activation_tag_id`.
  * The server evaluates the rule per debt and returns the verdict in
  * `GenerationTemplateDebt.available` / `.reason`.
  */
@@ -83,6 +84,7 @@ export type DocumentActivationRule =
   | 'rr_active'
   | 'rr_first_payment'
   | 'promise_active'
+  | 'tag_active'
 
 export interface DocumentTemplate {
   id: number
@@ -106,6 +108,11 @@ export interface DocumentTemplate {
   document_type_id: number | null
   /** Precondition that gates this template during generation. */
   activation_rule: DocumentActivationRule
+  /**
+   * client_db tag id required by the `tag_active` rule (null for other rules).
+   * This is the client-service tag id, NOT the tag-service `/tags` id.
+   */
+  activation_tag_id: number | null
 }
 
 /**
@@ -153,6 +160,8 @@ export interface DocumentTemplateCreatePayload {
   available_variables?: DocumentTemplateVariable[]
   project_id?: number
   activation_rule?: DocumentActivationRule
+  /** Required client_db tag id when activation_rule is `tag_active`. */
+  activation_tag_id?: number | null
 }
 
 export interface DocumentTemplateUpdatePayload {
@@ -163,6 +172,8 @@ export interface DocumentTemplateUpdatePayload {
   available_variables?: DocumentTemplateVariable[]
   is_active?: boolean
   activation_rule?: DocumentActivationRule
+  /** Required client_db tag id when activation_rule is `tag_active`. */
+  activation_tag_id?: number | null
 }
 
 /* ------------------------------------------------------------------ */
@@ -176,6 +187,8 @@ export interface DocumentTemplateUpdatePayload {
  *   - `debt_closed`      — rule needs an open debt, this one is closed.
  *   - `no_active_rr`     — rule needs an active restructuring, none found.
  *   - `no_active_promise`— rule needs a live promise-to-pay, none found.
+ *   - `no_activation_tag`— `tag_active` rule but the template has no tag set.
+ *   - `no_required_tag`  — `tag_active` rule but the client lacks that tag.
  * Unknown codes are tolerated and fall back to a generic message.
  */
 export type GenerationOptionReason =
@@ -184,6 +197,8 @@ export type GenerationOptionReason =
   | 'debt_closed'
   | 'no_active_rr'
   | 'no_active_promise'
+  | 'no_activation_tag'
+  | 'no_required_tag'
 
 export interface GenerationTemplateDebt {
   debt_id: number

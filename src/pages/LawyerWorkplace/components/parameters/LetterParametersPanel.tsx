@@ -23,6 +23,8 @@ import {
 } from '@/features/lawyerWorkplace'
 import { useLegalProfileTimezone } from '@/features/lawyerWorkplace/hooks/useLegalProfileTimezone'
 import { legalDueDateToIso, parseLegalDueDate } from '@/features/lawyerWorkplace/utils/legalDueDate'
+import { addSlaDays } from '@/features/lawyerWorkplace/utils/slaDeadline'
+import type { SlaDayType } from '@/pages/LawyerWorkplace/settings/types'
 import {
   clientLookupFromLegalSearchItem,
   isLetterParametersReadOnly,
@@ -90,13 +92,17 @@ function formatClientOption(client: { id: number; first_name: string; last_name:
   return { id: String(client.id), name: lookup.label }
 }
 
-function computeDueDateFromReceived(receivedAt: string, slaDays: number): Date | null {
+function computeDueDateFromReceived(
+  receivedAt: string,
+  slaDays: number,
+  slaDayType: SlaDayType
+): Date | null {
   if (!Number.isFinite(slaDays) || slaDays <= 0) {
     return null
   }
-  const base = new Date(receivedAt)
-  const due = new Date(base)
-  due.setDate(due.getDate() + slaDays)
+  // Backend does NOT recompute the due date on manual confirmation — the FE
+  // computes it here and sends it. Working-day types skip weekends.
+  const due = addSlaDays(new Date(receivedAt), slaDays, slaDayType)
   due.setHours(9, 0, 0, 0)
   return due
 }
@@ -128,6 +134,7 @@ function buildPrioritySignature(
 function applySuggestionResult(
   result: LegalMessageSuggestionsPatchResponse,
   receivedAt: string,
+  slaDayType: SlaDayType,
   setLawyerOverride: (value: string | null) => void,
   setDueDateOverride: (value: Date | null) => void,
   options?: {
@@ -148,7 +155,7 @@ function applySuggestionResult(
     options?.onDueDateAutoApplied?.()
     return
   }
-  const dueDate = computeDueDateFromReceived(receivedAt, result.sla_days)
+  const dueDate = computeDueDateFromReceived(receivedAt, result.sla_days, slaDayType)
   if (dueDate) {
     setDueDateOverride(dueDate)
     options?.onDueDateAutoApplied?.()
@@ -276,7 +283,11 @@ function LetterParametersPanelContent({
       if (dueDateManuallyOverridden) return
       const letterType = letterTypesData?.items?.find((item) => item.id === typeId)
       if (!letterType) return
-      const dueDate = computeDueDateFromReceived(letter.receivedAt, letterType.sla_days)
+      const dueDate = computeDueDateFromReceived(
+        letter.receivedAt,
+        letterType.sla_days,
+        letterType.sla_day_type ?? 'calendar'
+      )
       if (!dueDate) return
       setDueDateOverride(dueDate)
       setDueDateManuallyOverridden(false)
@@ -315,6 +326,14 @@ function LetterParametersPanelContent({
 
   const letterTypes = useMemo(() => letterTypesData?.items ?? [], [letterTypesData?.items])
   const lawyers = useMemo(() => lawyersData?.items ?? [], [lawyersData?.items])
+
+  // The FE computes the confirm due date from the letter type's SLA — resolve
+  // that type's day-count basis (working days skip weekends; default calendar).
+  const resolveSlaDayType = useCallback(
+    (typeId: string | null | undefined): SlaDayType =>
+      letterTypes.find((item) => item.id === typeId)?.sla_day_type ?? 'calendar',
+    [letterTypes]
+  )
 
   const contractsClientId = useMemo(() => {
     const parsed = Number(effectiveClientId)
@@ -374,13 +393,26 @@ function LetterParametersPanelContent({
           ...(options?.refreshLawyer ? { refresh_lawyer: true } : {}),
         },
       })
-      applySuggestionResult(result, letter.receivedAt, setLawyerOverride, setDueDateOverride, {
-        dueDateManuallyOverridden,
-        onDueDateAutoApplied: () => setDueDateManuallyOverridden(false),
-      })
+      applySuggestionResult(
+        result,
+        letter.receivedAt,
+        resolveSlaDayType(typeId),
+        setLawyerOverride,
+        setDueDateOverride,
+        {
+          dueDateManuallyOverridden,
+          onDueDateAutoApplied: () => setDueDateManuallyOverridden(false),
+        }
+      )
       return result
     },
-    [dueDateManuallyOverridden, letter.id, letter.receivedAt, patchSuggestionsMutation]
+    [
+      dueDateManuallyOverridden,
+      letter.id,
+      letter.receivedAt,
+      patchSuggestionsMutation,
+      resolveSlaDayType,
+    ]
   )
 
   useEffect(() => {
@@ -445,9 +477,16 @@ function LetterParametersPanelContent({
         },
       })
       .then((result) => {
-        applySuggestionResult(result, letter.receivedAt, setLawyerOverride, setDueDateOverride, {
-          dueDateManuallyOverridden: true,
-        })
+        applySuggestionResult(
+          result,
+          letter.receivedAt,
+          resolveSlaDayType(effectiveTypeId),
+          setLawyerOverride,
+          setDueDateOverride,
+          {
+            dueDateManuallyOverridden: true,
+          }
+        )
       })
       .catch(() => {
         // Keep local selection visible even if persistence fails.
@@ -473,9 +512,16 @@ function LetterParametersPanelContent({
         },
       })
       .then((result) => {
-        applySuggestionResult(result, letter.receivedAt, setLawyerOverride, setDueDateOverride, {
-          dueDateManuallyOverridden,
-        })
+        applySuggestionResult(
+          result,
+          letter.receivedAt,
+          resolveSlaDayType(effectiveTypeId),
+          setLawyerOverride,
+          setDueDateOverride,
+          {
+            dueDateManuallyOverridden,
+          }
+        )
       })
       .catch(() => {
         setLawyerOverride(defaultLawyerUserId || null)
@@ -528,10 +574,17 @@ function LetterParametersPanelContent({
         },
       })
       .then((result) => {
-        applySuggestionResult(result, letter.receivedAt, setLawyerOverride, setDueDateOverride, {
-          dueDateManuallyOverridden,
-          onDueDateAutoApplied: () => setDueDateManuallyOverridden(false),
-        })
+        applySuggestionResult(
+          result,
+          letter.receivedAt,
+          resolveSlaDayType(effectiveTypeId),
+          setLawyerOverride,
+          setDueDateOverride,
+          {
+            dueDateManuallyOverridden,
+            onDueDateAutoApplied: () => setDueDateManuallyOverridden(false),
+          }
+        )
       })
       .catch(() => {
         // Keep local selection; user can still pick lawyer manually.

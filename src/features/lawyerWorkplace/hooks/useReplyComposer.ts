@@ -59,10 +59,10 @@ export function useReplyComposerState(options: {
   }, [body, messageId, selectedMailboxId, t])
 
   const uploadAttachment = useCallback(
-    async (file: File) => {
+    async (file: File): Promise<LegalStagedAttachment | null> => {
       if (!messageId || !selectedMailboxId) {
         toast.error(t('pages.lawyerWorkplace.reply.noMailbox', 'Select a mailbox to send from'))
-        return
+        return null
       }
       setIsUploadingAttachment(true)
       try {
@@ -72,8 +72,10 @@ export function useReplyComposerState(options: {
           file
         )
         setStagedAttachments((current) => [...current, uploaded])
+        return uploaded
       } catch (error) {
         toast.error(getErrorMessage(error))
+        return null
       } finally {
         setIsUploadingAttachment(false)
       }

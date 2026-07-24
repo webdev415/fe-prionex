@@ -394,4 +394,87 @@ describe('GenerateDocumentModal', () => {
 
     expect(await screen.findByText('Немає актуальної обіцянки платежу')).toBeInTheDocument()
   })
+
+  it('pre-fills the delivery channel and contact from the prefill prop', async () => {
+    getOptionsMock.mockResolvedValue(optionsWith(true, 'ok'))
+    const user = userEvent.setup()
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    })
+    render(
+      <QueryClientProvider client={queryClient}>
+        <GenerateDocumentModal
+          open
+          onClose={() => undefined}
+          clientId={100}
+          loans={[LOAN]}
+          prefill={{ deliveryChannel: 'email', deliveryContact: 'client@example.com' }}
+        />
+      </QueryClientProvider>
+    )
+
+    // The contact is seeded from the prefill; picking a template + type is then
+    // enough to enable generate because the mandatory delivery fields already
+    // carry the prefilled values.
+    expect(screen.getByPlaceholderText(/380/)).toHaveValue('client@example.com')
+    await user.click(await screen.findByRole('radio', { name: /Demand letter/i }))
+    await pickDocumentType(user)
+    expect(screen.getByRole('button', { name: 'Згенерувати' })).toBeEnabled()
+  })
+
+  it('delegates to onGenerated and skips the success screen when it is provided', async () => {
+    getOptionsMock.mockResolvedValue(optionsWith(true, 'ok'))
+    generateMock.mockResolvedValue({
+      document_id: 9,
+      document_name: 'Demand letter #9',
+      index_num: 9,
+      pdf_document: { id: 9, original_filename: 'demand.pdf' },
+      docx_base64: 'AAA=',
+    })
+    const onGenerated = vi.fn()
+    const user = userEvent.setup()
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    })
+    render(
+      <QueryClientProvider client={queryClient}>
+        <GenerateDocumentModal
+          open
+          onClose={() => undefined}
+          clientId={100}
+          loans={[LOAN]}
+          prefill={{ deliveryChannel: 'email', deliveryContact: 'client@example.com' }}
+          onGenerated={onGenerated}
+        />
+      </QueryClientProvider>
+    )
+
+    await user.click(await screen.findByRole('radio', { name: /Demand letter/i }))
+    await pickDocumentType(user)
+    await user.click(screen.getByRole('button', { name: 'Згенерувати' }))
+
+    await waitFor(() => expect(onGenerated).toHaveBeenCalledTimes(1))
+    expect(onGenerated.mock.calls[0]![0]).toMatchObject({ document_id: 9 })
+    // The standalone success screen must NOT appear — the caller owns the flow.
+    expect(screen.queryByText('Документ згенеровано')).not.toBeInTheDocument()
+  })
+
+  it('surfaces the tag-activation reason on a 409 response', async () => {
+    getOptionsMock.mockResolvedValue(optionsWith(true, 'ok'))
+    generateMock.mockRejectedValue({
+      response: {
+        status: 409,
+        data: { detail: { message: 'Rule not satisfied', reason: 'no_required_tag' } },
+      },
+    })
+    const user = userEvent.setup()
+    renderModal()
+
+    await user.click(await screen.findByRole('radio', { name: /Demand letter/i }))
+    await pickDocumentType(user)
+    await chooseDelivery(user)
+    await user.click(screen.getByRole('button', { name: 'Згенерувати' }))
+
+    expect(await screen.findByText('Немає потрібного тегу на клієнті')).toBeInTheDocument()
+  })
 })

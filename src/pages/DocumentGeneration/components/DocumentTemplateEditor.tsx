@@ -53,6 +53,10 @@ import {
 } from '@/features/documents'
 import { downloadBlob } from '@/features/messaging/utils/downloadBlob'
 import { useDocumentTypes } from '@/features/documentTypes'
+// Activation-tag catalog: reuse the same tag list the client filters use.
+// ⚠️ The `tag_active` rule stores a client_db tag id server-side — confirm this
+// source yields the id space client-service expects (see team note).
+import { useTags } from '@/features/tags'
 import { DocumentTypePill } from '@/components/DocumentTypePill'
 import { buildSampleVariableMap, substituteVariables } from './templateVariables'
 import { DocumentFileViewer } from './DocumentFileViewer'
@@ -83,6 +87,7 @@ const ACTIVATION_RULES: DocumentActivationRule[] = [
   'rr_active',
   'rr_first_payment',
   'promise_active',
+  'tag_active',
 ]
 
 /** English fallbacks for activation-rule options (used when i18n is unset). */
@@ -93,6 +98,7 @@ const ACTIVATION_RULE_FALLBACK: Record<DocumentActivationRule, string> = {
   rr_active: 'Active restructuring',
   rr_first_payment: 'First restructuring payment',
   promise_active: 'Active payment promise',
+  tag_active: 'Active tag',
 }
 
 function formatBytes(bytes: number | null | undefined): string {
@@ -128,6 +134,9 @@ export function DocumentTemplateEditor({ open, onClose, template }: Props) {
   const [activationRule, setActivationRule] = useState<DocumentActivationRule>(
     () => template?.activation_rule ?? 'always'
   )
+  const [activationTagId, setActivationTagId] = useState<number | null>(
+    () => template?.activation_tag_id ?? null
+  )
   const [file, setFile] = useState<File | null>(null)
   const [replaceFile, setReplaceFile] = useState<File | null>(null)
   /** Placeholders in the just-uploaded file that are outside the dictionary. */
@@ -158,6 +167,10 @@ export function DocumentTemplateEditor({ open, onClose, template }: Props) {
 
   const { data: variablesData } = useDocumentTemplateVariables()
   const { data: documentTypes } = useDocumentTypes({ includeHidden: false })
+  // Tag catalog for the `tag_active` activation rule (same list the client
+  // filters use). The tag is required only when that rule is selected.
+  const requiresActivationTag = activationRule === 'tag_active'
+  const { data: activationTags } = useTags(undefined, { includeHidden: false })
   const variableItems = useMemo(() => variablesData?.items ?? [], [variablesData])
   const variableGroups = variablesData?.groups ?? []
 
@@ -219,6 +232,23 @@ export function DocumentTemplateEditor({ open, onClose, template }: Props) {
     return trimmed
   }
 
+  /** Block submit when `tag_active` is chosen but no tag was picked. */
+  const ensureActivationTag = (): boolean => {
+    if (requiresActivationTag && activationTagId == null) {
+      toast.error(
+        t(
+          'pages.documentGeneration.templates.errors.activationTagRequired',
+          'Оберіть тег для правила «Активний тег»'
+        )
+      )
+      return false
+    }
+    return true
+  }
+
+  // Sent on every save: the tag id when `tag_active`, else null to clear it.
+  const activationTagPayload = requiresActivationTag ? activationTagId : null
+
   const handleTextSubmit = async () => {
     const trimmedName = requireName()
     if (!trimmedName) return
@@ -228,6 +258,7 @@ export function DocumentTemplateEditor({ open, onClose, template }: Props) {
       )
       return
     }
+    if (!ensureActivationTag()) return
     try {
       if (isEdit && template) {
         // PUT is partial: null means "leave unchanged" server-side, so send
@@ -239,6 +270,7 @@ export function DocumentTemplateEditor({ open, onClose, template }: Props) {
             description: description.trim(),
             body,
             activation_rule: activationRule,
+            activation_tag_id: activationTagPayload,
           },
         })
         toast.success(t('pages.documentGeneration.templates.messages.updated', 'Template updated'))
@@ -248,6 +280,7 @@ export function DocumentTemplateEditor({ open, onClose, template }: Props) {
           description: description.trim() || null,
           body,
           activation_rule: activationRule,
+          activation_tag_id: activationTagPayload,
         })
         toast.success(t('pages.documentGeneration.templates.messages.created', 'Template created'))
       }
@@ -266,11 +299,13 @@ export function DocumentTemplateEditor({ open, onClose, template }: Props) {
       )
       return
     }
+    if (!ensureActivationTag()) return
     const fd = new FormData()
     fd.append('file', file)
     fd.append('name', trimmedName)
     if (description.trim()) fd.append('description', description.trim())
     fd.append('activation_rule', activationRule)
+    if (activationTagPayload != null) fd.append('activation_tag_id', String(activationTagPayload))
     if (documentTypeId != null) fd.append('document_type_id', String(documentTypeId))
     try {
       const res = await uploadMutation.mutateAsync(fd)
@@ -302,6 +337,7 @@ export function DocumentTemplateEditor({ open, onClose, template }: Props) {
       )
       return
     }
+    if (!ensureActivationTag()) return
     try {
       const res = await composeMutation.mutateAsync({
         name: trimmedName,
@@ -311,6 +347,7 @@ export function DocumentTemplateEditor({ open, onClose, template }: Props) {
         include_schedule: includeSchedule,
         include_requisites: includeRequisites,
         activation_rule: activationRule,
+        activation_tag_id: activationTagPayload,
         document_type_id: documentTypeId,
       })
       toast.success(t('pages.documentGeneration.templates.messages.created', 'Template created'))
@@ -328,6 +365,7 @@ export function DocumentTemplateEditor({ open, onClose, template }: Props) {
     if (!template) return
     const trimmedName = requireName()
     if (!trimmedName) return
+    if (!ensureActivationTag()) return
     try {
       await updateMutation.mutateAsync({
         id: template.id,
@@ -337,6 +375,7 @@ export function DocumentTemplateEditor({ open, onClose, template }: Props) {
           description: description.trim(),
           is_active: isActive,
           activation_rule: activationRule,
+          activation_tag_id: activationTagPayload,
           document_type_id: documentTypeId,
         },
       })
@@ -697,6 +736,45 @@ export function DocumentTemplateEditor({ open, onClose, template }: Props) {
                           </SelectContent>
                         </Select>
                       </div>
+
+                      {/* Activation tag — required when the rule is `tag_active`. */}
+                      {requiresActivationTag && (
+                        <div className="flex flex-col gap-1">
+                          <Label htmlFor="dt-activation-tag">
+                            {t(
+                              'pages.documentGeneration.templates.form.activationTag',
+                              'Тег активації'
+                            )}
+                            <span className="text-error-500 ml-1">*</span>
+                          </Label>
+                          <Select
+                            value={activationTagId == null ? '' : String(activationTagId)}
+                            onValueChange={(v) => setActivationTagId(v ? Number(v) : null)}
+                          >
+                            <SelectTrigger id="dt-activation-tag" className="w-full">
+                              <SelectValue
+                                placeholder={t(
+                                  'pages.documentGeneration.templates.form.activationTagPlaceholder',
+                                  'Оберіть тег'
+                                )}
+                              />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {(activationTags ?? []).map((tag) => (
+                                <SelectItem key={tag.id} value={String(tag.id)}>
+                                  {tag.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <p className="text-muted-foreground text-xs">
+                            {t(
+                              'pages.documentGeneration.templates.form.activationTagHelp',
+                              'Шаблон буде доступний лише клієнтам із цим тегом.'
+                            )}
+                          </p>
+                        </div>
+                      )}
 
                       {/* Document type auto-applied on generation (CEO 24.07). */}
                       <div className="flex flex-col gap-1">

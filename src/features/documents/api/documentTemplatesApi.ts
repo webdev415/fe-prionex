@@ -128,6 +128,8 @@ export interface DocumentTemplateComposePayload {
   include_schedule: boolean
   include_requisites: boolean
   activation_rule?: string
+  /** Required client_db tag id when activation_rule is `tag_active`. */
+  activation_tag_id?: number | null
   document_type_id?: number | null
 }
 

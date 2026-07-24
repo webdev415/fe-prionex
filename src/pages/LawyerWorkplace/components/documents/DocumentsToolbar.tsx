@@ -13,7 +13,6 @@ interface DocumentsToolbarProps {
   searchQuery: string
   onSearchQueryChange: (query: string) => void
   filterCounts: Record<LegalDocumentTypeFilter, number>
-  onGenerateDocument: () => void
   onAddIncoming: () => void
 }
 
@@ -23,7 +22,6 @@ export function DocumentsToolbar({
   searchQuery,
   onSearchQueryChange,
   filterCounts,
-  onGenerateDocument,
   onAddIncoming,
 }: DocumentsToolbarProps) {
   const { t } = useTranslation('common')
@@ -60,48 +58,24 @@ export function DocumentsToolbar({
 
         <div className="flex shrink-0 items-center gap-2">
           {isCompact ? (
-            <>
-              <button
-                type="button"
-                onClick={onGenerateDocument}
-                aria-label={t(
-                  'pages.lawyerWorkplace.documents.generateDocument',
-                  'Generate document'
-                )}
-                className="bg-secondary-800 hover:bg-secondary-600 flex h-10 w-10 cursor-pointer items-center justify-center rounded-full text-white transition-colors"
-              >
-                <Icons.ArtificialIntelligence08 size={18} strokeWidth={1.5} />
-              </button>
-              <button
-                type="button"
-                onClick={onAddIncoming}
-                aria-label={t('pages.lawyerWorkplace.documents.addIncoming', 'Add incoming')}
-                className="bg-primary-300 text-foreground hover:bg-primary-400 flex h-10 w-10 cursor-pointer items-center justify-center rounded-full transition-colors"
-              >
-                <Icons.Add size={20} strokeWidth={2} />
-              </button>
-            </>
+            <button
+              type="button"
+              onClick={onAddIncoming}
+              aria-label={t('pages.lawyerWorkplace.documents.addIncoming', 'Add incoming')}
+              className="bg-primary-300 text-foreground hover:bg-primary-400 flex h-10 w-10 cursor-pointer items-center justify-center rounded-full transition-colors"
+            >
+              <Icons.Add size={20} strokeWidth={2} />
+            </button>
           ) : (
-            <>
-              <Button
-                variant="secondary"
-                size="md"
-                leftIcon={<Icons.ArtificialIntelligence08 size={18} strokeWidth={1.5} />}
-                className={cn('rounded-md', isWide ? 'h-[45px]' : 'h-10 px-4 text-xs')}
-                onClick={onGenerateDocument}
-              >
-                {t('pages.lawyerWorkplace.documents.generateDocument', 'Generate document')}
-              </Button>
-              <Button
-                variant="primary"
-                size="md"
-                leftIcon={<Icons.AddCircle size={18} strokeWidth={1.5} />}
-                className={cn('rounded-md', isWide ? 'h-[45px]' : 'h-10 px-4 text-xs')}
-                onClick={onAddIncoming}
-              >
-                {t('pages.lawyerWorkplace.documents.addIncoming', 'Add incoming')}
-              </Button>
-            </>
+            <Button
+              variant="primary"
+              size="md"
+              leftIcon={<Icons.AddCircle size={18} strokeWidth={1.5} />}
+              className={cn('rounded-md', isWide ? 'h-[45px]' : 'h-10 px-4 text-xs')}
+              onClick={onAddIncoming}
+            >
+              {t('pages.lawyerWorkplace.documents.addIncoming', 'Add incoming')}
+            </Button>
           )}
         </div>
       </div>

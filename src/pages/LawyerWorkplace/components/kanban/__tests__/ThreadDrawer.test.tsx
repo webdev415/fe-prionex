@@ -11,6 +11,8 @@ vi.mock('sonner', () => ({
 vi.mock('@/features/clients/hooks/useClients', () => ({
   useClient: () => ({ data: null, isLoading: false, isError: false }),
   useClients: () => ({ data: { items: [] }, isLoading: false, isError: false }),
+  useClientLoans: () => ({ data: [] }),
+  useClientDocuments: () => ({ data: [], isLoading: false, isError: false }),
 }))
 
 // Grouped-task letters already carry their bodies + attachments, chronological ASC.

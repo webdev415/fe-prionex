@@ -605,6 +605,17 @@
         "draftSaved": "Чернетку збережено",
         "attach": "Додати файл",
         "attaching": "Додавання…",
+        "attachFromComputer": "Файл з компʼютера",
+        "attachFromClient": "Прикріплений файл на клієнті",
+        "generateDocument": "Згенерувати документ",
+        "attachClientDisabledHint": "Спочатку підтвердіть клієнта",
+        "generatedAttached": "Документ згенеровано та додано до відповіді",
+        "attachClientModal": {
+          "title": "Документи клієнта",
+          "empty": "У клієнта немає документів",
+          "error": "Не вдалося завантажити документи клієнта",
+          "attached": "Документ додано до відповіді"
+        },
         "template": "Шаблон",
         "noTemplatesHint": "Створіть шаблони листів у Налаштування → Шаблони",
         "send": "Надіслати",
@@ -917,6 +928,9 @@
           "displayName": "Відображувана назва",
           "responseSla": "SLA відповіді",
           "businessDays": "робочих днів",
+          "slaDayTypeLabel": "Тип днів SLA",
+          "slaDayTypeWorking": "Робочі дні",
+          "slaDayTypeCalendar": "Календарні дні",
           "description": "Опис",
           "priorityAssignment": "Призначення пріоритету",
           "priorityHint": "★ = наскільки цей юрист має бути пріоритетним для цього типу",
@@ -4506,6 +4520,8 @@
             "debt_closed": "Кредит закритий",
             "no_active_rr": "Немає діючої реструктуризації",
             "no_active_promise": "Немає актуальної обіцянки платежу",
+            "no_activation_tag": "Шаблон не налаштовано: оберіть тег",
+            "no_required_tag": "Немає потрібного тегу на клієнті",
             "unavailable": "Недоступно для цього кредиту"
           },
           "hiddenTemplates": "Приховано шаблонів, недоступних для цього кредиту: {{count}}",
@@ -6420,6 +6436,9 @@
           "replaceAction": "Замінити файл",
           "isActive": "Активний",
           "activationRule": "Правило активації",
+          "activationTag": "Тег активації",
+          "activationTagPlaceholder": "Оберіть тег",
+          "activationTagHelp": "Шаблон буде доступний лише клієнтам із цим тегом.",
           "variablesReferenceHelp": "Використовуйте ці імена у вашому Word-файлі як {{name}}.",
           "composeHelp": "Шапка з лого, реквізити компанії, печатка та підпис додаються автоматично.",
           "composeTitle": "Заголовок документа",
@@ -6436,7 +6455,8 @@
           "closed_debt": "Закритий кредит",
           "rr_active": "Діюча реструктуризація",
           "rr_first_payment": "Перший платіж за РР",
-          "promise_active": "Активна обіцянка платежу"
+          "promise_active": "Активна обіцянка платежу",
+          "tag_active": "Активний тег"
         },
         "variableGroups": {
           "client": "Клієнт",
@@ -6466,7 +6486,8 @@
           "nameRequired": "Назва шаблона обовʼязкова",
           "bodyRequired": "Тіло шаблона обовʼязкове",
           "fileRequired": "Виберіть файл .docx",
-          "titleRequired": "Вкажіть заголовок документа"
+          "titleRequired": "Вкажіть заголовок документа",
+          "activationTagRequired": "Оберіть тег для правила «Активний тег»"
         },
         "messages": {
           "created": "Шаблон створено",
