@@ -73,6 +73,7 @@ vi.mock('@/features/documentTypes/api/documentTypesApi', () => ({
 }))
 
 import { GenerateDocumentModal } from '../GenerateDocumentModal'
+import { legalRegistryKeys } from '@/features/lawyerWorkplace/hooks/useLegalRegistry'
 
 // jsdom lacks the pointer-capture APIs Radix Select relies on.
 beforeEach(() => {
@@ -111,11 +112,13 @@ function renderModal() {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   })
-  return render(
+  const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries')
+  const utils = render(
     <QueryClientProvider client={queryClient}>
       <GenerateDocumentModal open onClose={() => undefined} clientId={100} loans={[LOAN]} />
     </QueryClientProvider>
   )
+  return { ...utils, queryClient, invalidateSpy }
 }
 
 /** Open the document-type Select (2nd combobox after credit) and pick a value. */
@@ -123,6 +126,13 @@ async function pickDocumentType(user: ReturnType<typeof userEvent.setup>) {
   const combos = await screen.findAllByRole('combobox')
   await user.click(combos[1])
   await user.click(await screen.findByText('Insurance'))
+}
+
+/** Open the delivery-channel Select (3rd combobox) and pick an option by label. */
+async function pickDeliveryChannel(user: ReturnType<typeof userEvent.setup>, label: string) {
+  const combos = await screen.findAllByRole('combobox')
+  await user.click(combos[2])
+  await user.click(await screen.findByRole('option', { name: label }))
 }
 
 describe('GenerateDocumentModal', () => {
@@ -168,6 +178,78 @@ describe('GenerateDocumentModal', () => {
     expect(templateId).toBe(10)
     expect(payload).toEqual({ client_id: 100, debt_id: 555, document_type_id: 42 })
     expect('index_num' in payload).toBe(false)
+  })
+
+  it('invalidates the correspondence registry after a successful generation', async () => {
+    getOptionsMock.mockResolvedValue(optionsWith(true, 'ok'))
+    generateMock.mockResolvedValue({
+      document_id: 1,
+      document_name: 'Demand letter #7',
+      index_num: 7,
+      pdf_document: { id: 1 },
+      docx_base64: 'AAA=',
+    })
+    const user = userEvent.setup()
+    const { invalidateSpy } = renderModal()
+
+    await user.click(await screen.findByRole('radio', { name: /Demand letter/i }))
+    await pickDocumentType(user)
+    await user.click(screen.getByRole('button', { name: 'Згенерувати' }))
+
+    await waitFor(() => expect(generateMock).toHaveBeenCalledTimes(1))
+    // The generated letter must show up in the outgoing registry without a
+    // manual refresh — the modal invalidates the whole registry family.
+    await waitFor(() =>
+      expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: legalRegistryKeys.root() })
+    )
+  })
+
+  it('sends delivery_channel and delivery_contact when a channel is chosen', async () => {
+    getOptionsMock.mockResolvedValue(optionsWith(true, 'ok'))
+    generateMock.mockResolvedValue({
+      document_id: 1,
+      document_name: 'Demand letter #7',
+      index_num: 7,
+      pdf_document: { id: 1 },
+      docx_base64: 'AAA=',
+    })
+    const user = userEvent.setup()
+    renderModal()
+
+    await user.click(await screen.findByRole('radio', { name: /Demand letter/i }))
+    await pickDocumentType(user)
+    await pickDeliveryChannel(user, 'Telegram')
+    await user.type(screen.getByPlaceholderText(/380/), '@client_tg')
+    await user.click(screen.getByRole('button', { name: 'Згенерувати' }))
+
+    await waitFor(() => expect(generateMock).toHaveBeenCalledTimes(1))
+    const [, payload] = generateMock.mock.calls[0]
+    expect(payload).toMatchObject({
+      delivery_channel: 'telegram',
+      delivery_contact: '@client_tg',
+    })
+  })
+
+  it('omits delivery fields when no channel is chosen', async () => {
+    getOptionsMock.mockResolvedValue(optionsWith(true, 'ok'))
+    generateMock.mockResolvedValue({
+      document_id: 1,
+      document_name: 'Demand letter #7',
+      index_num: 7,
+      pdf_document: { id: 1 },
+      docx_base64: 'AAA=',
+    })
+    const user = userEvent.setup()
+    renderModal()
+
+    await user.click(await screen.findByRole('radio', { name: /Demand letter/i }))
+    await pickDocumentType(user)
+    await user.click(screen.getByRole('button', { name: 'Згенерувати' }))
+
+    await waitFor(() => expect(generateMock).toHaveBeenCalledTimes(1))
+    const [, payload] = generateMock.mock.calls[0]
+    expect('delivery_channel' in payload).toBe(false)
+    expect('delivery_contact' in payload).toBe(false)
   })
 
   it('includes index_num when the operator types one', async () => {

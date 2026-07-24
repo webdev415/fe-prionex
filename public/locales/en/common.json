@@ -5188,7 +5188,19 @@
           },
           "hiddenTemplates": "Hidden templates unavailable for this credit: {{count}}",
           "indexNumRegistryHint": "The outgoing number will be assigned automatically from the correspondence registry",
-          "typeFromTemplate": "applied automatically from the template"
+          "typeFromTemplate": "applied automatically from the template",
+          "deliveryChannel": "Delivery channel to client",
+          "deliveryChannelPlaceholder": "Choose a channel (optional)",
+          "deliveryContact": "Contact (where to)",
+          "deliveryContactPlaceholder": "+380… or email",
+          "channels": {
+            "email": "Email",
+            "telegram": "Telegram",
+            "viber": "Viber",
+            "whatsapp": "WhatsApp",
+            "sms": "SMS",
+            "post": "Postal mail"
+          }
         },
         "department": "Department",
         "phones": "Phones",

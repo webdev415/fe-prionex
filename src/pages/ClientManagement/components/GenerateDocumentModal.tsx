@@ -29,11 +29,13 @@ import { DocumentTypePill } from '@/components/DocumentTypePill'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 import { clientKeys } from '@/features/clients/hooks/useClients'
+import { legalRegistryKeys } from '@/features/lawyerWorkplace/hooks/useLegalRegistry'
 import { useDocumentTypes } from '@/features/documentTypes'
 import {
   useGenerationOptions,
   useGenerateDocument,
   type GenerateDocumentResponse,
+  type DeliveryChannel,
 } from '@/features/documents'
 import { downloadBlob } from '@/features/messaging/utils/downloadBlob'
 
@@ -52,6 +54,44 @@ interface GenerateDocumentModalProps {
 }
 
 const DOCX_MIME = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+
+/** Delivery channels offered when sending the generated letter to the client. */
+const DELIVERY_CHANNELS: ReadonlyArray<{
+  value: DeliveryChannel
+  labelKey: string
+  labelFallback: string
+}> = [
+  {
+    value: 'email',
+    labelKey: 'pages.clients.detail.generateModal.channels.email',
+    labelFallback: 'Ел. пошта',
+  },
+  {
+    value: 'telegram',
+    labelKey: 'pages.clients.detail.generateModal.channels.telegram',
+    labelFallback: 'Telegram',
+  },
+  {
+    value: 'viber',
+    labelKey: 'pages.clients.detail.generateModal.channels.viber',
+    labelFallback: 'Viber',
+  },
+  {
+    value: 'whatsapp',
+    labelKey: 'pages.clients.detail.generateModal.channels.whatsapp',
+    labelFallback: 'WhatsApp',
+  },
+  {
+    value: 'sms',
+    labelKey: 'pages.clients.detail.generateModal.channels.sms',
+    labelFallback: 'SMS',
+  },
+  {
+    value: 'post',
+    labelKey: 'pages.clients.detail.generateModal.channels.post',
+    labelFallback: 'Поштою',
+  },
+]
 
 /** Decode a base64 payload into a Blob for client-side download. */
 function base64ToBlob(base64: string, mime: string): Blob {
@@ -80,6 +120,8 @@ export function GenerateDocumentModal({
   const [templateId, setTemplateId] = useState<number | null>(null)
   const [docTypeId, setDocTypeId] = useState<number | null>(null)
   const [indexNum, setIndexNum] = useState('')
+  const [deliveryChannel, setDeliveryChannel] = useState<DeliveryChannel | null>(null)
+  const [deliveryContact, setDeliveryContact] = useState('')
   const [generated, setGenerated] = useState<GenerateDocumentResponse | null>(null)
   const [errorReason, setErrorReason] = useState<string | null>(null)
 
@@ -165,6 +207,9 @@ export function GenerateDocumentModal({
     // Under registry numbering the server assigns the number and ignores any
     // client-supplied index_num, so never send it.
     const includeIndex = !registryNumbering && parsedIndex != null && Number.isFinite(parsedIndex)
+    // Delivery channel is optional; the contact rides along only when both a
+    // channel is chosen and a destination was typed.
+    const trimmedContact = deliveryContact.trim()
     try {
       const res = await generateMutation.mutateAsync({
         templateId,
@@ -174,9 +219,15 @@ export function GenerateDocumentModal({
           // Bound to the template server-side; send only a manual pick.
           ...(boundType == null && docTypeId != null ? { document_type_id: docTypeId } : {}),
           ...(includeIndex ? { index_num: parsedIndex } : {}),
+          ...(deliveryChannel ? { delivery_channel: deliveryChannel } : {}),
+          ...(deliveryChannel && trimmedContact ? { delivery_contact: trimmedContact } : {}),
         },
       })
       queryClient.invalidateQueries({ queryKey: clientKeys.documents(clientId) })
+      // A generated letter lands in the correspondence registry (outgoing);
+      // invalidate the whole registry family by prefix so the row shows up on
+      // the next tab open regardless of active filters/pagination.
+      queryClient.invalidateQueries({ queryKey: legalRegistryKeys.root() })
       toast.success(t('status.success'))
       setGenerated(res)
     } catch (err) {
@@ -395,6 +446,52 @@ export function GenerateDocumentModal({
                 </p>
               </>
             )}
+          </div>
+
+          {/* Delivery to the client — optional; feeds the outgoing registry's
+              "from → to" column. Left blank, nothing is sent. */}
+          <div className="flex flex-col gap-4 border-t border-[#EBECE8] pt-4">
+            <div>
+              <label className="text-secondary-700 mb-1 block text-sm font-medium">
+                {t('pages.clients.detail.generateModal.deliveryChannel', 'Канал відправки клієнту')}
+              </label>
+              <Select
+                value={deliveryChannel ?? ''}
+                onValueChange={(value) =>
+                  setDeliveryChannel(value ? (value as DeliveryChannel) : null)
+                }
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue
+                    placeholder={t(
+                      'pages.clients.detail.generateModal.deliveryChannelPlaceholder',
+                      'Оберіть канал (необовʼязково)'
+                    )}
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  {DELIVERY_CHANNELS.map((channel) => (
+                    <SelectItem key={channel.value} value={channel.value}>
+                      {t(channel.labelKey, channel.labelFallback)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <label className="text-secondary-700 mb-1 block text-sm font-medium">
+                {t('pages.clients.detail.generateModal.deliveryContact', 'Контакт (куди)')}
+              </label>
+              <Input
+                value={deliveryContact}
+                onChange={(e) => setDeliveryContact(e.target.value)}
+                placeholder={t(
+                  'pages.clients.detail.generateModal.deliveryContactPlaceholder',
+                  '+380… або email'
+                )}
+              />
+            </div>
           </div>
 
           {errorReason && (
