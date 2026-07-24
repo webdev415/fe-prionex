@@ -93,12 +93,14 @@ function optionsWith(available: boolean, reason: string) {
         id: 10,
         name: 'Demand letter',
         activation_rule: 'active_debt',
+        document_type: null,
         debts: [{ debt_id: LOAN.id, available: true, reason: 'ok' }],
       },
       {
         id: 11,
         name: 'Closure notice',
         activation_rule: 'closed_debt',
+        document_type: null,
         debts: [{ debt_id: LOAN.id, available, reason }],
       },
     ],
@@ -232,6 +234,39 @@ describe('GenerateDocumentModal', () => {
 
     // The string index_num from the registry renders on the success screen.
     expect(await screen.findByText(/2307\/01/)).toBeInTheDocument()
+  })
+
+  it('auto-applies the template-bound type and omits it from the payload', async () => {
+    getOptionsMock.mockResolvedValue({
+      templates: [
+        {
+          id: 12,
+          name: 'Typed letter',
+          activation_rule: 'active_debt',
+          document_type: { id: 14, name: 'Гарантійний лист', color: '#2563EB' },
+          debts: [{ debt_id: LOAN.id, available: true, reason: 'ok' }],
+        },
+      ],
+    })
+    generateMock.mockResolvedValue({
+      document_id: 5,
+      document_name: 'Typed letter #1',
+      index_num: 1,
+      pdf_document: { id: 5 },
+      docx_base64: 'AAA=',
+    })
+    const user = userEvent.setup()
+    renderModal()
+
+    await user.click(await screen.findByRole('radio', { name: /Typed letter/i }))
+    // Bound type shown as a pill with the auto-applied note; no type select.
+    expect(await screen.findByText('Гарантійний лист')).toBeInTheDocument()
+    expect(screen.getByText('застосовується автоматично з шаблону')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Згенерувати' }))
+    await waitFor(() => expect(generateMock).toHaveBeenCalledTimes(1))
+    const [, payload] = generateMock.mock.calls[0]
+    expect('document_type_id' in payload).toBe(false)
   })
 
   it('surfaces the reason on a 409 response', async () => {

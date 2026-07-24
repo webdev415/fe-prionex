@@ -581,9 +581,7 @@
         "messagesInThread": "{{count}} messages in thread",
         "attachmentPdf": "PDF",
         "attachmentDoc": "DOC",
-        "newLetter": "New letter",
         "closeThread": "Close thread",
-        "emailThread": "Email thread",
         "disabledMailboxNotice": "The original mailbox for this letter is disabled. Choose another mailbox below to send a reply."
       },
       "reply": {
@@ -603,7 +601,10 @@
         "edoLabel": "EDO",
         "edoOutgoing": "Outgoing (ВИХ)",
         "edoNbu": "NBU reply (НБУ)",
-        "edoNone": "Do not register"
+        "edoNone": "Do not register",
+        "noMailbox": "Select a mailbox to send from",
+        "noTemplates": "No templates available",
+        "edoRequiresClientLawyer": "Select client and lawyer in parameters before registering EDO"
       },
       "newLetter": {
         "title": "New Outgoing Letter",
@@ -629,7 +630,9 @@
         "clientSearchHint": "Type 2+ characters to search…",
         "send": "Send",
         "institutionName": "Institution name",
-        "institutionNamePlaceholder": "e.g. National Bank of Ukraine"
+        "institutionNamePlaceholder": "e.g. National Bank of Ukraine",
+        "noClientEmail": "No email on file",
+        "sending": "Sending..."
       },
       "parameters": {
         "title": "Letter parameters",
@@ -658,7 +661,13 @@
         "auto": "Auto",
         "managerConfirmation": "Manager confirmation",
         "parametersCount": "{{confirmed}}/{{total}} parameters",
-        "confirmAndCreate": "Confirm & create task"
+        "confirmAndCreate": "Confirm & create task",
+        "confirming": "Confirming…",
+        "confirmSuccess": "Task created on kanban board",
+        "contractLoading": "Loading contracts…",
+        "lawyerAssigned": "Assigned on kanban",
+        "noContracts": "No contracts",
+        "selectContract": "Select contract"
       },
       "kanban": {
         "title": "Legal tasks kanban",
@@ -734,8 +743,16 @@
             "medium": "Normal",
             "low": "Low",
             "lowest": "Lowest"
-          }
-        }
+          },
+          "clearClient": "Clear",
+          "client": "Client",
+          "creating": "Creating…",
+          "selectLawyer": "Select lawyer",
+          "selectType": "Select type"
+        },
+        "exportEmpty": "No tasks match the current filters",
+        "taskNotFound": "Kanban task could not be found",
+        "transitionSuccess": "Moved to {{state}}"
       },
       "documents": {
         "title": "Documents",
@@ -843,7 +860,9 @@
             "title": "Document details",
             "close": "Close document",
             "download": "Download",
-            "downloadStarted": "Download started"
+            "downloadStarted": "Download started",
+            "export": "Export",
+            "exportStarted": "Export started"
           }
         }
       },
@@ -934,7 +953,8 @@
             "backup": "BACKUP",
             "secondary": "SECONDARY",
             "off": "OFF"
-          }
+          },
+          "noKeywordHints": "No keyword hints"
         },
         "lawyers": {
           "autoAssignmentTitle": "Assignment algorithm",
@@ -1200,14 +1220,6 @@
             "error": "Could not add lawyer"
           }
         }
-      },
-      "activityLog": {
-        "title": "Activity",
-        "letterReceived": "Letter received",
-        "classified": "Auto-classified",
-        "typeSuggested": "Type suggested",
-        "parametersConfirmed": "Parameters confirmed",
-        "taskCreated": "Task created on kanban board"
       },
       "workspaceBanner": {
         "lawBadge": "Law",
@@ -5068,7 +5080,8 @@
             "unavailable": "Unavailable for this loan"
           },
           "hiddenTemplates": "Hidden templates unavailable for this credit: {{count}}",
-          "indexNumRegistryHint": "The outgoing number will be assigned automatically from the correspondence registry"
+          "indexNumRegistryHint": "The outgoing number will be assigned automatically from the correspondence registry",
+          "typeFromTemplate": "applied automatically from the template"
         },
         "department": "Department",
         "phones": "Phones",
@@ -6036,7 +6049,9 @@
           "composeTitlePlaceholder": "e.g. GUARANTEE LETTER",
           "composeBodyPlaceholder": "Each line is a separate paragraph. Insert variables from the panel on the right.",
           "includeRequisites": "Payment requisites",
-          "includeSchedule": "Payment schedule table (RR)"
+          "includeSchedule": "Payment schedule table (RR)",
+          "documentType": "Document type (for generation)",
+          "documentTypePlaceholder": "Not set — the operator picks manually"
         },
         "activationRules": {
           "always": "Always available",

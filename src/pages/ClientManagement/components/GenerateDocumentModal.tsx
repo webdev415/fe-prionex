@@ -131,6 +131,7 @@ export function GenerateDocumentModal({
       return {
         id: tpl.id,
         name: tpl.name,
+        documentType: tpl.document_type,
         available: entry?.available ?? false,
         reason: entry?.reason,
       }
@@ -146,11 +147,18 @@ export function GenerateDocumentModal({
     setErrorReason(null)
   }
 
+  const selectedTemplate = templatesForDebt.find((tpl) => tpl.id === templateId)
+  const boundType = selectedTemplate?.documentType ?? null
+
   const canGenerate =
-    debtId != null && templateId != null && docTypeId != null && !generateMutation.isPending
+    debtId != null &&
+    templateId != null &&
+    (boundType != null || docTypeId != null) &&
+    !generateMutation.isPending
 
   const handleGenerate = async () => {
-    if (debtId == null || templateId == null || docTypeId == null) return
+    if (debtId == null || templateId == null) return
+    if (boundType == null && docTypeId == null) return
     setErrorReason(null)
     const trimmedIndex = indexNum.trim()
     const parsedIndex = trimmedIndex ? Number(trimmedIndex) : undefined
@@ -163,7 +171,8 @@ export function GenerateDocumentModal({
         payload: {
           client_id: clientId,
           debt_id: debtId,
-          document_type_id: docTypeId,
+          // Bound to the template server-side; send only a manual pick.
+          ...(boundType == null && docTypeId != null ? { document_type_id: docTypeId } : {}),
           ...(includeIndex ? { index_num: parsedIndex } : {}),
         },
       })
@@ -315,35 +324,47 @@ export function GenerateDocumentModal({
             )}
           </div>
 
-          {/* Document type */}
+          {/* Document type: auto from the template, manual pick otherwise */}
           <div>
             <label className="text-secondary-700 mb-1 block text-sm font-medium">
               {t('pages.clients.detail.generateModal.documentType', 'Тип документа')}
             </label>
-            <Select
-              value={docTypeId == null ? '' : String(docTypeId)}
-              onValueChange={(value) => setDocTypeId(value ? Number(value) : null)}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue
-                  placeholder={t('pages.clients.detail.documentTypePlaceholder', 'Оберіть тип')}
-                >
-                  {(() => {
-                    const selected = (types ?? []).find((dt) => dt.id === docTypeId)
-                    return selected ? (
-                      <DocumentTypePill name={selected.name} hex={selected.color} />
-                    ) : null
-                  })()}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                {(types ?? []).map((type) => (
-                  <SelectItem key={type.id} value={String(type.id)}>
-                    <DocumentTypePill name={type.name} hex={type.color} />
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {boundType != null ? (
+              <div className="flex items-center gap-2">
+                <DocumentTypePill name={boundType.name} hex={boundType.color} />
+                <span className="text-secondary-400 text-xs">
+                  {t(
+                    'pages.clients.detail.generateModal.typeFromTemplate',
+                    'застосовується автоматично з шаблону'
+                  )}
+                </span>
+              </div>
+            ) : (
+              <Select
+                value={docTypeId == null ? '' : String(docTypeId)}
+                onValueChange={(value) => setDocTypeId(value ? Number(value) : null)}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue
+                    placeholder={t('pages.clients.detail.documentTypePlaceholder', 'Оберіть тип')}
+                  >
+                    {(() => {
+                      const selected = (types ?? []).find((dt) => dt.id === docTypeId)
+                      return selected ? (
+                        <DocumentTypePill name={selected.name} hex={selected.color} />
+                      ) : null
+                    })()}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {(types ?? []).map((type) => (
+                    <SelectItem key={type.id} value={String(type.id)}>
+                      <DocumentTypePill name={type.name} hex={type.color} />
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           </div>
 
           {/* Outgoing number */}
