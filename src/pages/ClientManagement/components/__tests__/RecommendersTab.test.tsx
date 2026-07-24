@@ -387,6 +387,65 @@ describe('RecommendersTab', () => {
     ).not.toBeDisabled()
   })
 
+  it('disables the Call icon with a tag tooltip when calls are blocked', () => {
+    renderTab({
+      contacts: [
+        phoneContact({
+          contactTags: [],
+          blocking: {
+            blocks_calls: true,
+            blocks_sms: false,
+            blocks_spam: false,
+            reasons: ['Calls blocked: Do Not Call'],
+          },
+        }),
+      ],
+    })
+    const call = screen.getByTestId('action-call')
+    expect(call).toBeDisabled()
+    expect(call).toHaveAttribute('title', 'Calls blocked: Do Not Call')
+  })
+
+  it('disables the Message icon when blocks_spam is active (not only blocks_sms)', () => {
+    renderTab({
+      contacts: [
+        phoneContact({
+          contactTags: [],
+          blocking: {
+            blocks_calls: false,
+            blocks_sms: false,
+            blocks_spam: true,
+            reasons: ['Spam blocked: Do Not Spam'],
+          },
+        }),
+      ],
+    })
+    expect(screen.getByTestId('action-message')).toBeDisabled()
+  })
+
+  it('disables the Message icon when blocks_sms is active', () => {
+    renderTab({
+      contacts: [
+        phoneContact({
+          contactTags: [],
+          blocking: {
+            blocks_calls: false,
+            blocks_sms: true,
+            blocks_spam: false,
+            reasons: ['SMS blocked: Do Not SMS'],
+          },
+        }),
+      ],
+    })
+    expect(screen.getByTestId('action-message')).toBeDisabled()
+  })
+
+  it('keeps Call and Message icons enabled when there are no blocking tags', () => {
+    renderTab({ contacts: [phoneContact({ contactTags: [] })] })
+    expect(screen.getByTestId('action-call')).not.toBeDisabled()
+    expect(screen.getByTestId('action-message')).not.toBeDisabled()
+  })
+
   it('shows the full contact type name without truncation class', () => {
     renderTab({
       contacts: [
