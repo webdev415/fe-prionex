@@ -3276,7 +3276,8 @@
       "toastError": "Failed to update AI assistant settings",
       "accessTitle": "Assistant access",
       "accessDescription": "Which roles may use the operator assistant (use_ai_assistant permission).",
-      "accessToggleAria": "Toggle assistant access for role {{role}}"
+      "accessToggleAria": "Toggle assistant access for role {{role}}",
+      "disabledBanner": "The AI assistant is temporarily disabled by an administrator."
     },
     "projects": {
       "title": "Project Management",

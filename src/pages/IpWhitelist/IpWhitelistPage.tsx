@@ -33,7 +33,6 @@ import {
   useIpWhitelistSettings,
   useUpdateIpWhitelistSettings,
 } from '@/features/users/hooks/useIpWhitelistSettings'
-import { CallQaSettingsSection } from '@/features/quality'
 import { DeleteIpWhitelistEntryModal } from './DeleteIpWhitelistEntryModal'
 
 function extractApiError(err: unknown, fallback: string): string {
@@ -276,10 +275,6 @@ export function IpWhitelistPage() {
             ariaLabel={t('pages.ipWhitelist.gateToggleAria')}
           />
         </div>
-
-        {/* Global Call QA (AI call analysis) switch — the second system-wide
-            admin toggle, guarded by manage_call_qa on its own. */}
-        <CallQaSettingsSection />
 
         {/* Add new entry */}
         <form

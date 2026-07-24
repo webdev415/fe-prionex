@@ -39,6 +39,7 @@ import { searchClients, mapPriorityLevel, type SearchType } from '@/api/clientSe
 import { RouteChangeTracker, TrackingProvider } from '@/features/operatorAnalytics'
 import { LawyerWorkplaceHeaderNav } from '@/pages/LawyerWorkplace/components/LawyerWorkplaceHeaderNav'
 import { useLegalInboxSummary } from '@/features/lawyerWorkplace'
+import { useAiAssistantSettings } from '@/features/aiSettings/hooks/useAiAssistantSettings'
 
 // Minimum digit count required to fire a phone-type search. Mirrors the
 // backend guard at services/client/app/routers/search.py (PHONE_MIN_DIGITS).
@@ -51,16 +52,20 @@ interface DashboardLayoutProps {
   children: ReactNode
 }
 
-function AiAssistantHeaderButton() {
+// Exported (in addition to being used inline below) so it can be unit-tested
+// without mounting the rest of DashboardLayout's auth/websocket/search stack.
+export function AiAssistantHeaderButton() {
   const navigate = useNavigate()
   const location = useLocation()
   const { t } = useTranslation('common')
   const canUseAssistant = useHasPermission(PERMISSIONS.AI_ASSISTANT.USE)
+  const { data: aiSettings } = useAiAssistantSettings()
   const isActive = location.pathname === '/dashboard/ai-assistant'
 
-  // Entitlement gate: hide the assistant entry for users without use_ai_assistant
-  // (the proxy/route also enforce it; this keeps the UI honest — no dead button).
-  if (!canUseAssistant) {
+  // Entitlement + kill-switch: hide for users without use_ai_assistant and
+  // for everyone while the global switch is off. Fail-open: while settings
+  // are loading/unavailable the button stays (backend still enforces).
+  if (!canUseAssistant || aiSettings?.assistant_enabled === false) {
     return null
   }
 
