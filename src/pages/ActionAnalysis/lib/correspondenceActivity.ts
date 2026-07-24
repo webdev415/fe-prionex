@@ -53,7 +53,7 @@ export function mergeCorrespondenceActivity(
     direction: 'outgoing',
     number: item.number,
     letterType: item.letter_type,
-    party: item.client_name ?? item.institution_name ?? null,
+    party: item.recipient_name ?? null,
     responsible: item.lawyer?.name ?? null,
   }))
 

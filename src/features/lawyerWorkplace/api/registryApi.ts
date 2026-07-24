@@ -47,8 +47,8 @@ export interface OutgoingRegistryItem {
   sender_email: string | null
   recipient_email: string | null
   letter_type: RegistryLetterType | null
-  client_name: string | null
-  institution_name: string | null
+  /** ПІБ клієнта або назва установи — server-side merged (client snapshot ?? institution). */
+  recipient_name: string | null
   issued_date: string
   lawyer: RegistryLawyerRef | null
 }

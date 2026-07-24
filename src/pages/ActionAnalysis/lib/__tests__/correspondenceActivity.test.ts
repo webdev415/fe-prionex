@@ -23,8 +23,7 @@ const outgoing: OutgoingRegistryItem[] = [
     sender_email: 'legal@prionex.ua',
     recipient_email: 'nbu@bank.gov.ua',
     letter_type: { id: 'nbu', name: 'NBU reply', color_id: 'teal' },
-    client_name: null,
-    institution_name: 'National Bank of Ukraine',
+    recipient_name: 'National Bank of Ukraine',
     issued_date: '2026-07-12T09:00:00Z',
     lawyer: { id: 9, name: 'Jane Lawyer' },
   },
@@ -50,7 +49,7 @@ describe('mergeCorrespondenceActivity', () => {
     expect(incomingRow.responsible).toBeNull()
 
     const outgoingRow = rows.find((r) => r.direction === 'outgoing')!
-    // client_name is null → falls back to institution_name
+    // recipient_name carries the merged client/institution value
     expect(outgoingRow.party).toBe('National Bank of Ukraine')
     expect(outgoingRow.responsible).toBe('Jane Lawyer')
   })
