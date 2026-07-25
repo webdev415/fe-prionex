@@ -857,7 +857,7 @@
             "selectClientFirst": "Select a client to load contracts",
             "selectClient": "Select client",
             "relatedLetter": "Related inbox letter (optional)",
-            "relatedLetterPlaceholder": "e.g. IN-2026-142",
+            "relatedLetterPlaceholder": "e.g. incoming No. 12",
             "assignee": "Assignee",
             "submit": "Register incoming",
             "success": "Incoming document registered",

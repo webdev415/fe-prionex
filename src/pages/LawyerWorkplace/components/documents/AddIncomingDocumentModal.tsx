@@ -239,7 +239,7 @@ export function AddIncomingDocumentModal({
             onChange={(e) => setRelatedLetterNumber(e.target.value)}
             placeholder={t(
               'pages.lawyerWorkplace.documents.modals.incoming.relatedLetterPlaceholder',
-              'e.g. IN-2026-142'
+              'e.g. incoming No. 12'
             )}
             className="text-foreground focus:border-primary-400 border-border bg-input placeholder:text-muted-foreground h-10 w-full rounded-[8px] border px-3 text-[13px] outline-none"
           />
