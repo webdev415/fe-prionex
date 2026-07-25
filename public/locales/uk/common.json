@@ -796,8 +796,8 @@
           }
         },
         "stats": {
-          "incoming": "IN · вхідні",
-          "outgoing": "OUT · вихідні",
+          "incoming": "ВХ · вхідні",
+          "outgoing": "ВИХ · вихідні",
           "nbu": "НБУ · відповіді",
           "generated": "Згенеровано",
           "countOfYear": "{{count}} / {{year}}",
@@ -805,8 +805,8 @@
         },
         "filters": {
           "allTypes": "Усі типи",
-          "incoming": "IN",
-          "outgoing": "OUT",
+          "incoming": "ВХ",
+          "outgoing": "ВИХ",
           "nbu": "НБУ",
           "uploaded": "Завантажено",
           "generated": "Згенеровано"
@@ -864,7 +864,7 @@
             "selectClientFirst": "Спочатку оберіть клієнта",
             "selectClient": "Оберіть клієнта",
             "relatedLetter": "Пов’язаний лист (необов’язково)",
-            "relatedLetterPlaceholder": "напр. IN-2026-142",
+            "relatedLetterPlaceholder": "напр. вхідний № 12",
             "assignee": "Виконавець",
             "submit": "Зареєструвати вхідний",
             "success": "Вхідний документ зареєстровано",
