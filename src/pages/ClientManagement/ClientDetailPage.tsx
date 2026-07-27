@@ -112,6 +112,7 @@ import {
   pickDefaultActiveContactTypeId,
 } from '@/features/clients/utils/contactTypeLabel'
 import { useRRPeriodicitySettings } from '@/features/clients/hooks/useRRPeriodicitySettings'
+import { rrBadgeClass } from '@/features/clients/constants/rrStatus'
 import {
   generateSchedule,
   PERIODICITY_EVERY_N_DAYS,
@@ -1924,29 +1925,12 @@ export function ClientDetailPage() {
       header: t('pages.clients.detail.tableHeaders.status', 'Статус'),
       align: 'center',
       render: (row) => {
-        // restructuring_statuses lookup ids:
-        //   1 Connected, 2 Violated, 3 Cancelled,
-        //   4 Completed, 5 Completed Early
-        // Pick a colour per status so all five are visually distinct.
-        // Backend `status_name` is rendered as-is; localisation of the
-        // label is the server's responsibility.
-        const sid = row.status_id
         const label = row.status_name ?? '-'
-        const cls =
-          sid === 1
-            ? 'bg-blue-100 text-blue-800' // Connected — paying on time
-            : sid === 2
-              ? 'bg-amber-100 text-amber-800' // Violated — overdue 30d+
-              : sid === 3
-                ? 'bg-red-100 text-red-800' // Cancelled — overdue 60d+ or manually disconnected
-                : sid === 4
-                  ? 'bg-green-100 text-green-800' // Completed
-                  : sid === 5
-                    ? 'bg-emerald-100 text-emerald-800' // Completed Early
-                    : 'bg-gray-100 text-gray-600'
         return (
           <span
-            className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${cls}`}
+            className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${rrBadgeClass(
+              row.status_id
+            )}`}
           >
             {label}
           </span>
