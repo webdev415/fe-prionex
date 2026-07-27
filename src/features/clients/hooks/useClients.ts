@@ -957,6 +957,47 @@ export function useDisconnectRR() {
   })
 }
 
+export function useActivateRR() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ clientId, raId }: { clientId: number; raId: number }) =>
+      clientApi.activateRestructuringAgreement(clientId, raId),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: clientKeys.restructuringAgreements(variables.clientId),
+      })
+      queryClient.invalidateQueries({
+        queryKey: clientKeys.restructuringDetail(variables.clientId, variables.raId),
+      })
+      toast.success('Restructuring activated')
+    },
+    onError: (error: AxiosError<{ detail?: string }>) => {
+      const message = error?.response?.data?.detail || 'Failed to activate restructuring'
+      toast.error(message)
+    },
+  })
+}
+
+export function useDeleteRRDraft() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ clientId, raId }: { clientId: number; raId: number }) =>
+      clientApi.deleteRestructuringAgreement(clientId, raId),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: clientKeys.restructuringAgreements(variables.clientId),
+      })
+      toast.success('Draft restructuring deleted')
+    },
+    onError: (error: AxiosError<{ detail?: string }>) => {
+      const message = error?.response?.data?.detail || 'Failed to delete draft restructuring'
+      toast.error(message)
+    },
+  })
+}
+
 /**
  * Newest-first audit log of status changes for one RR.
  */

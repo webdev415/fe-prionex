@@ -122,6 +122,7 @@ export interface CreateRestructuringAgreementRequest {
   connection_date?: string | null
   restructuring_amount: number
   num_payments: number
+  save_mode?: 'draft' | 'active'
   payments: Array<{
     payment_date?: string | null
     payment_amount?: number | null
