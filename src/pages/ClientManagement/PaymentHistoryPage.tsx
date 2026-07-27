@@ -63,6 +63,7 @@ import {
   frontendToBackendPaymentMethod,
   frontendToBackendPaymentStatus,
 } from '@/features/payments/utils'
+import { getPaymentHistoryPagination } from '@/features/payments/utils/paymentHistoryPagination'
 import type {
   Payment as BackendPayment,
   PaymentMethod as BackendPaymentMethod,
@@ -856,21 +857,21 @@ export function PaymentHistoryPage() {
   }, [paymentHistory, statusFilter, methodFilter, startDate, endDate, sortConfig])
 
   // Paginate payments
-  const totalPages = Math.ceil(filteredPayments.length / pageSize)
-  const paginatedPayments = useMemo(() => {
-    const start = (currentPage - 1) * pageSize
-    const end = start + pageSize
-    return filteredPayments.slice(start, end)
-  }, [filteredPayments, currentPage, pageSize])
+  const { totalPages, rangeStart, rangeEnd } = getPaymentHistoryPagination(
+    paymentHistoryData?.total_payments ?? 0,
+    currentPage,
+    pageSize
+  )
+  const paginatedPayments = filteredPayments
 
   const paymentHistorySubtitle = useMemo(() => {
     if (!paymentHistory || filteredPayments.length === 0) {
       return null
     }
 
-    const total = filteredPayments.length
-    const start = (currentPage - 1) * pageSize + 1
-    const end = Math.min(currentPage * pageSize, total)
+    const total = paymentHistoryData?.total_payments ?? 0
+    const start = rangeStart
+    const end = rangeEnd
 
     if (currentPage === 1 && pageSize === 10 && total >= 10) {
       return t('pages.clients.paymentHistory.subtitle.last10')
@@ -880,7 +881,16 @@ export function PaymentHistoryPage() {
       return t('pages.clients.paymentHistory.subtitle.single', { index: start, total })
     }
     return t('pages.clients.paymentHistory.subtitle.range', { start, end, total })
-  }, [paymentHistory, filteredPayments, currentPage, pageSize, t])
+  }, [
+    paymentHistory,
+    filteredPayments,
+    paymentHistoryData,
+    currentPage,
+    pageSize,
+    rangeStart,
+    rangeEnd,
+    t,
+  ])
 
   /** Same thead + tbody skeleton as full-page load (filters stay interactive). */
   const showPaymentTableBodySkeleton = Boolean(
