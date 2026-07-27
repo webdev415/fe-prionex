@@ -96,6 +96,8 @@ import {
   useCompleteRestructuringAgreement,
   useTransitionRRStatus,
   useDisconnectRR,
+  useActivateRR,
+  useDeleteRRDraft,
   useRecordRROverpayment,
   useRRStatusHistory,
   useRROverpayments,
@@ -112,7 +114,7 @@ import {
   pickDefaultActiveContactTypeId,
 } from '@/features/clients/utils/contactTypeLabel'
 import { useRRPeriodicitySettings } from '@/features/clients/hooks/useRRPeriodicitySettings'
-import { rrBadgeClass } from '@/features/clients/constants/rrStatus'
+import { RR_STATUS, rrBadgeClass } from '@/features/clients/constants/rrStatus'
 import {
   generateSchedule,
   PERIODICITY_EVERY_N_DAYS,
@@ -639,6 +641,8 @@ export function ClientDetailPage() {
   const { mutate: completeRa, isPending: isCompletingRa } = useCompleteRestructuringAgreement()
   const { mutate: transitionRr, isPending: isTransitioningRr } = useTransitionRRStatus()
   const { mutate: disconnectRr, isPending: isDisconnectingRr } = useDisconnectRR()
+  const { mutate: activateRr, isPending: isActivatingRr } = useActivateRR()
+  const { mutate: deleteRrDraft, isPending: isDeletingRrDraft } = useDeleteRRDraft()
   const { mutate: recordOverpayment, isPending: isRecordingOverpayment } = useRecordRROverpayment()
   const { data: paymentsSection, isLoading: isPaymentsLoading } = useClientPaymentsSection(
     clientId,
@@ -797,6 +801,8 @@ export function ClientDetailPage() {
   )
   const canDisconnectRR = useHasPermission(PERMISSIONS.RESTRUCTURING.DISCONNECT)
   const canCompleteRR = useHasPermission(PERMISSIONS.RESTRUCTURING.COMPLETE)
+  const canActivateRR = useHasPermission(PERMISSIONS.RESTRUCTURING.ACTIVATE)
+  const canDeleteRRDraft = useHasPermission(PERMISSIONS.RESTRUCTURING.DELETE_DRAFT)
   const updateTaskMutation = useUpdateTask(clientId)
   const deleteTaskMutation = useDeleteTask(clientId)
   // Fetch client tags from API (real) — async; does not block profile render
@@ -2063,6 +2069,8 @@ export function ClientDetailPage() {
         const sid = row.status_id
         const isTerminal = sid === 3 || sid === 4 || sid === 5
         const isCompleted = sid === 4 || sid === 5
+        const isDraft = sid === RR_STATUS.Draft
+        const draftBusy = isActivatingRr || isDeletingRrDraft
         // Status eligibility: which transitions does the row's *current
         // status* allow at all? (Independent of the operator's role.)
         const showMarkViolated = sid === 1
@@ -2085,6 +2093,32 @@ export function ClientDetailPage() {
             >
               <Icons.Eye size={18} />
             </button>
+            {isDraft && (
+              <>
+                <button
+                  onClick={() => activateRr({ clientId, raId: row.id })}
+                  disabled={draftBusy || !canActivateRR}
+                  className="p-1 text-green-600 hover:text-green-800 disabled:cursor-not-allowed disabled:opacity-50"
+                  title={
+                    canActivateRR ? t('pages.clients.detail.activateRR', 'Activate') : noPermTip
+                  }
+                >
+                  <Icons.PlayCircle02 size={18} />
+                </button>
+                <button
+                  onClick={() => deleteRrDraft({ clientId, raId: row.id })}
+                  disabled={draftBusy || !canDeleteRRDraft}
+                  className="p-1 text-red-600 hover:text-red-800 disabled:cursor-not-allowed disabled:opacity-50"
+                  title={
+                    canDeleteRRDraft
+                      ? t('pages.clients.detail.deleteDraftRR', 'Delete draft')
+                      : noPermTip
+                  }
+                >
+                  <Icons.Delete size={18} />
+                </button>
+              </>
+            )}
             {showMarkViolated && (
               <button
                 onClick={() => transitionRr({ clientId, raId: row.id, targetStatusId: 2 })}
@@ -2113,7 +2147,7 @@ export function ClientDetailPage() {
                 <Icons.Reload size={18} />
               </button>
             )}
-            {!isTerminal && (
+            {!isTerminal && !isDraft && (
               <button
                 onClick={() => setCompleteRrConfirm(row.id)}
                 disabled={isCompletingRa || transitionBusy || !canCompleteRR}
@@ -2125,7 +2159,7 @@ export function ClientDetailPage() {
                 <Icons.Success size={18} />
               </button>
             )}
-            {!isTerminal && (
+            {!isTerminal && !isDraft && (
               <button
                 onClick={() =>
                   setOverpaymentModal({
@@ -2142,7 +2176,7 @@ export function ClientDetailPage() {
                 <Icons.MoneyReceive01 size={18} />
               </button>
             )}
-            {!isCompleted && sid !== 3 && (
+            {!isCompleted && sid !== 3 && !isDraft && (
               <button
                 onClick={() => setDisconnectRrConfirm({ raId: row.id, reason: '' })}
                 disabled={transitionBusy || !canDisconnectRR}
