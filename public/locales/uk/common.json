@@ -123,6 +123,8 @@
     },
     "queueList": {
       "found": "Знайдено: {{count}} черг",
+      "foundLabel": "Знайдено:",
+      "queuesWord": "черг",
       "allQueues": "Усі черги",
       "onlyActive": "Лише активні",
       "addNew": "Додати чергу",

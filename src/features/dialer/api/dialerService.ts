@@ -4,6 +4,7 @@ import type {
   DialerQueue,
   DialerSession,
   OperatorDialerStats,
+  PagedDialerQueues,
   QueueNumber,
   QueueStatusCounts,
   QueueUploadMode,
@@ -34,6 +35,18 @@ class DialerService {
     q?: string
   }): Promise<DialerQueue[]> {
     const response = await api.get(`${base}/queues`, { params })
+    return response.data
+  }
+
+  /** Server-side filtered/searched/paginated Queue List (supervisor table). */
+  async listQueuesPaged(params: {
+    page: number
+    page_size: number
+    active_only?: boolean
+    q?: string
+    department_id?: number
+  }): Promise<PagedDialerQueues> {
+    const response = await api.get(`${base}/queues/paged`, { params })
     return response.data
   }
 

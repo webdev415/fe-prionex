@@ -65,6 +65,20 @@ export interface DialerQueue {
   updated_at?: string
 }
 
+/**
+ * Paginated Queue List response (GET /dialer/queues/paged). `total` follows the
+ * active filter (drives pagination + "Found: N"); `total_all` / `total_active`
+ * always carry both counts so the All / Only-active filter badges stay accurate.
+ */
+export interface PagedDialerQueues {
+  items: DialerQueue[]
+  total: number
+  total_all: number
+  total_active: number
+  page: number
+  page_size: number
+}
+
 /** A single number waiting in / processed by a queue. */
 export interface QueueNumber {
   id: number

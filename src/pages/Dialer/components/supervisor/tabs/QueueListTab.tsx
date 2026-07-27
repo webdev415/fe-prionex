@@ -15,35 +15,43 @@ import { toast } from 'sonner'
 import { Button } from '@/components/ui/Button'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { Input } from '@/components/ui/Input'
+import { Pagination } from '@/components/ui/Pagination'
+import { TableSkeleton } from '@/components/ui/TableSkeleton'
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch'
 import { useConfirm } from '@/components/ui/useConfirm'
 import {
   ACCESS_GROUP_LABELS,
   useDeleteDialerQueue,
-  useDialerQueues,
+  useDialerQueuesPaged,
   useSetDialerQueueActive,
   type AccessGroup,
   type DialerQueue,
 } from '@/features/dialer'
+import { useDebounce } from '@/hooks/useDebounce'
 import { Icons } from '@/lib/icons'
+
+const DEFAULT_PAGE_SIZE = 20
 
 import { QueueFormModal } from '../QueueFormModal'
 
 type QueueFilter = 'all' | 'active'
 
-function StatusBadge({ status }: { status: DialerQueue['status'] }) {
+/**
+ * Dialer queue status pill (Figma): light-green pill + green dot for active,
+ * light-grey pill + grey dot for inactive. All colours are design tokens.
+ */
+function QueueStatusBadge({ active }: { active: boolean }) {
   const { t } = useTranslation('common')
-  const isActive = status === 'active'
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium ${
-        isActive ? 'bg-success-50 text-success-600' : 'bg-muted text-muted-foreground'
+      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs leading-[130%] font-medium tracking-[-0.02em] ${
+        active ? 'bg-success-100 text-success-700' : 'bg-gray-100 text-gray-600'
       }`}
     >
       <span
-        className={`h-1.5 w-1.5 rounded-full ${isActive ? 'bg-success-500' : 'bg-muted-foreground/50'}`}
+        className={`h-2 w-2 shrink-0 rounded-full ${active ? 'bg-success-500' : 'bg-gray-600'}`}
       />
-      {t(`dialer.queueStatus.${status}`, isActive ? 'Active' : 'Inactive')}
+      {t(active ? 'statusLabels.active' : 'statusLabels.inactive', active ? 'Active' : 'Inactive')}
     </span>
   )
 }
@@ -52,26 +60,43 @@ export function QueueListTab() {
   const { t } = useTranslation('common')
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState<QueueFilter>('all')
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE)
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState<DialerQueue | null>(null)
 
-  const { data, isLoading, isError } = useDialerQueues()
+  const debouncedSearch = useDebounce(search, 400)
+
+  const { data, isLoading, isError } = useDialerQueuesPaged({
+    page,
+    page_size: pageSize,
+    active_only: filter === 'active',
+    q: debouncedSearch.trim() || undefined,
+  })
   const setActiveMutation = useSetDialerQueueActive()
   const deleteMutation = useDeleteDialerQueue()
   const { confirm, confirmDialog } = useConfirm()
 
-  const queues = useMemo(() => data ?? [], [data])
+  const queues = data?.items ?? []
+  const total = data?.total ?? 0
+  const totalAll = data?.total_all ?? 0
+  const totalActive = data?.total_active ?? 0
+  const totalPages = Math.max(1, Math.ceil(total / pageSize))
 
-  const filtered = useMemo(() => {
-    const term = search.trim().toLowerCase()
-    return queues.filter((q) => {
-      if (filter === 'active' && !q.is_active) return false
-      if (term && !q.name.toLowerCase().includes(term)) return false
-      return true
-    })
-  }, [queues, search, filter])
-
-  const activeCount = useMemo(() => queues.filter((q) => q.is_active).length, [queues])
+  // Filter / search / page-size changes reset to page 1. Done in the handlers
+  // (not an effect) to avoid react-hooks/set-state-in-effect.
+  const handleSearchChange = (value: string) => {
+    setSearch(value)
+    setPage(1)
+  }
+  const handleFilterChange = (next: QueueFilter) => {
+    setFilter(next)
+    setPage(1)
+  }
+  const handlePageSizeChange = (size: number) => {
+    setPageSize(size)
+    setPage(1)
+  }
 
   const openCreate = () => {
     setEditing(null)
@@ -139,7 +164,7 @@ export function QueueListTab() {
         key: 'status',
         header: t('dialer.queueList.status', 'Status'),
         align: 'center',
-        render: (q) => <StatusBadge status={q.status} />,
+        render: (q) => <QueueStatusBadge active={q.is_active} />,
       },
       {
         key: 'is_active',
@@ -163,17 +188,19 @@ export function QueueListTab() {
             <Button
               variant="ghost"
               size="sm"
-              leftIcon={<Icons.PencilEdit size={16} />}
               onClick={() => openEdit(q)}
+              leftIcon={<Icons.PencilEdit size={16} strokeWidth={2} />}
+              className="text-foreground hover:bg-muted"
             >
               {t('actions.edit', 'Edit')}
             </Button>
             <Button
               variant="ghost"
               size="sm"
-              leftIcon={<Icons.Delete size={16} className="text-error-600" />}
               onClick={() => handleDelete(q)}
               disabled={deleteMutation.isPending}
+              leftIcon={<Icons.Delete01 size={16} strokeWidth={2} />}
+              className="text-foreground hover:bg-muted disabled:opacity-40"
             >
               {t('actions.delete', 'Delete')}
             </Button>
@@ -189,62 +216,97 @@ export function QueueListTab() {
     <div className="flex flex-col gap-4">
       {confirmDialog}
 
-      {/* Header: count + search + filter + add */}
+      {/* Header: found count + segmented filter (Figma "CTAs" strip) */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-muted-foreground text-sm">
-          {t('dialer.queueList.found', 'Found: {{count}} queues', { count: queues.length })}
+          {t('dialer.queueList.foundLabel', 'Found:')}{' '}
+          <span className="text-foreground font-bold">{total}</span>{' '}
+          {t('dialer.queueList.queuesWord', 'queues')}
         </p>
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="border-border inline-flex rounded-lg border p-0.5">
-            <button
-              type="button"
-              onClick={() => setFilter('all')}
-              className={`rounded-md px-3 py-1 text-xs font-medium transition-colors ${
-                filter === 'all' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'
-              }`}
-            >
-              {t('dialer.queueList.allQueues', 'All queues')} {queues.length}
-            </button>
-            <button
-              type="button"
-              onClick={() => setFilter('active')}
-              className={`rounded-md px-3 py-1 text-xs font-medium transition-colors ${
-                filter === 'active' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'
-              }`}
-            >
-              {t('dialer.queueList.onlyActive', 'Only active')} {activeCount}
-            </button>
-          </div>
-          <Button variant="primary" leftIcon={<Icons.Add size={16} />} onClick={openCreate}>
-            {t('dialer.queueList.addNew', 'Add new queue')}
-          </Button>
+        <div className="inline-flex items-center gap-1 rounded-lg bg-white p-1 shadow-[0px_1px_3px_0px_#0000001A,0px_1px_2px_0px_#0000000F]">
+          {(
+            [
+              ['all', t('dialer.queueList.allQueues', 'All queues'), totalAll],
+              ['active', t('dialer.queueList.onlyActive', 'Only active'), totalActive],
+            ] as const
+          ).map(([id, label, count]) => {
+            const isActive = filter === id
+            return (
+              <button
+                key={id}
+                type="button"
+                onClick={() => handleFilterChange(id)}
+                className={`flex items-center gap-1.5 rounded-md px-4 py-2 text-xs font-medium transition-colors ${
+                  isActive ? 'bg-secondary-800 text-white' : 'text-foreground hover:bg-muted'
+                }`}
+              >
+                {label}
+                <span
+                  className={`flex h-4 min-w-4 items-center justify-center rounded-full px-1.5 text-[10px] font-medium ${
+                    isActive
+                      ? 'bg-primary-300 text-primary-foreground'
+                      : 'bg-gray-100 text-gray-800'
+                  }`}
+                >
+                  {count}
+                </span>
+              </button>
+            )
+          })}
         </div>
       </div>
 
-      <Input
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        leftIcon={<Icons.Search size={16} />}
-        placeholder={t('dialer.queueList.searchPlaceholder', 'Search for queue by name...')}
-        inputSize="sm"
-        className="max-w-sm"
-      />
+      {/* Container: search + create row, then the table — one Figma card
+          (header/zebra recolor + card reset scoped via .dialer-queue-card in index.css) */}
+      <div className="dialer-queue-card overflow-hidden rounded-xl bg-white/50 shadow-[0px_1px_3px_0px_#00000012]">
+        <div className="flex items-center justify-between gap-3 border-b border-gray-100 bg-gray-50 px-4 py-3">
+          <Input
+            value={search}
+            onChange={(e) => handleSearchChange(e.target.value)}
+            placeholder={t('dialer.queueList.searchPlaceholder', 'Search for queue by name...')}
+            className="w-full max-w-[400px]"
+          />
+          <Button
+            variant="primary"
+            size="lg"
+            leftIcon={<Icons.PlusSignCircle size={20} strokeWidth={1.5} />}
+            onClick={openCreate}
+            className="h-[45px] text-sm leading-[150%] font-medium tracking-[-0.02em]"
+          >
+            {t('dialer.queueList.addNew', 'Add new queue')}
+          </Button>
+        </div>
 
-      {isError ? (
-        <div className="text-error-600 border-border rounded-xl border bg-white p-10 text-center text-sm">
-          {t('dialer.queueList.loadError', 'Failed to load queues.')}
-        </div>
-      ) : isLoading ? (
-        <div className="text-muted-foreground border-border rounded-xl border bg-white p-10 text-center text-sm">
-          {t('common.loading', 'Loading...')}
-        </div>
-      ) : (
-        <DataTable
-          columns={columns}
-          data={filtered}
-          emptyMessage={t('dialer.queueList.empty', 'No queues yet. Create your first queue.')}
-        />
-      )}
+        {isError ? (
+          <div className="text-error-600 p-10 text-center text-sm">
+            {t('dialer.queueList.loadError', 'Failed to load queues.')}
+          </div>
+        ) : isLoading ? (
+          <TableSkeleton
+            columns={7}
+            rows={8}
+            className="rounded-none! border-0! bg-transparent! shadow-none!"
+          />
+        ) : (
+          <>
+            <DataTable
+              columns={columns}
+              data={queues}
+              emptyMessage={t('dialer.queueList.empty', 'No queues yet. Create your first queue.')}
+            />
+            {total > 0 && (
+              <Pagination
+                currentPage={page}
+                totalPages={totalPages}
+                pageSize={pageSize}
+                onPageChange={setPage}
+                onPageSizeChange={handlePageSizeChange}
+                className="border-t border-gray-100 bg-gray-50 px-4"
+              />
+            )}
+          </>
+        )}
+      </div>
 
       <QueueFormModal
         open={formOpen}

@@ -716,3 +716,50 @@ input[type='date']::-webkit-calendar-picker-indicator:hover,
 input[type='datetime-local']::-webkit-calendar-picker-indicator:hover {
   opacity: 1;
 }
+
+/* ---------------------------------------------------------------------------
+   Dialer Queue List — Figma card (KAN-379)
+   The shared DataTable ships its own bordered card with a white header and a
+   grey-first-row zebra. Inside .dialer-queue-card we reset that card, recolour
+   the header to Gray-100 (#EDEDED) and invert the zebra so the FIRST row is
+   white. Unlayered so it wins over Tailwind's layered utilities; scoped to the
+   class so no other table is affected.
+   --------------------------------------------------------------------------- */
+.dialer-queue-card .data-table-scroll {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  padding-bottom: 0;
+}
+.dialer-queue-card table thead tr,
+.dialer-queue-card table thead th {
+  background-color: var(--color-gray-50); /* #F7F7F7 — same as the toolbar row */
+}
+.dialer-queue-card table tbody tr:nth-child(odd) {
+  background-color: #ffffff;
+}
+.dialer-queue-card table tbody tr:nth-child(even) {
+  background-color: #f2f3f066; /* light-50 @ 40% */
+}
+/* Header column dividers are white; the body has no column dividers. */
+.dialer-queue-card table thead th {
+  border-right-color: #ffffff;
+}
+.dialer-queue-card table tbody td {
+  border-right: 0;
+  font-weight: 300;
+}
+/* Emphasise only Queue name (col 1) and Number of entries (col 4). */
+.dialer-queue-card table tbody td:nth-child(1),
+.dialer-queue-card table tbody td:nth-child(4) {
+  font-weight: 500;
+}
+/* Active toggle: Secondary-600 (#287975) track with a white knob (Figma),
+   overriding the shared ToggleSwitch's green primary track for this table only. */
+.dialer-queue-card button[role='switch'][aria-checked='true'] {
+  background-color: var(--color-secondary-600);
+}
+.dialer-queue-card button[role='switch'][aria-checked='true'] > span {
+  background-color: #ffffff;
+}

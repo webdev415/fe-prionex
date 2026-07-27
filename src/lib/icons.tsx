@@ -171,6 +171,10 @@ import {
   ThumbsDownIcon,
   Moon02Icon,
   Sun02Icon,
+  DialpadSquareIcon,
+  AddMaleIcon,
+  Profile02Icon,
+  RightToLeftListNumberIcon,
 } from '@hugeicons/core-free-icons'
 /**
  * Icon component props
@@ -204,6 +208,12 @@ export const Icons = {
   Bell: (props: Omit<IconProps, 'icon'>) => <Icon icon={Notification03Icon} {...props} />,
   Phone: (props: Omit<IconProps, 'icon'>) => <Icon icon={AiPhone01Icon} {...props} />,
   CallEnd: (props: Omit<IconProps, 'icon'>) => <Icon icon={CallEnd02Icon} {...props} />,
+  DialpadSquare: (props: Omit<IconProps, 'icon'>) => <Icon icon={DialpadSquareIcon} {...props} />,
+  AddMale: (props: Omit<IconProps, 'icon'>) => <Icon icon={AddMaleIcon} {...props} />,
+  Profile02: (props: Omit<IconProps, 'icon'>) => <Icon icon={Profile02Icon} {...props} />,
+  RightToLeftListNumber: (props: Omit<IconProps, 'icon'>) => (
+    <Icon icon={RightToLeftListNumberIcon} {...props} />
+  ),
   Calendar: (props: Omit<IconProps, 'icon'>) => <Icon icon={Calendar01Icon} {...props} />,
   Users: (props: Omit<IconProps, 'icon'>) => <Icon icon={UserGroupIcon} {...props} />,
   Folder: (props: Omit<IconProps, 'icon'>) => <Icon icon={Folder01Icon} {...props} />,
@@ -221,6 +231,7 @@ export const Icons = {
   Edit: (props: Omit<IconProps, 'icon'>) => <Icon icon={Edit01Icon} {...props} />,
   PencilEdit: (props: Omit<IconProps, 'icon'>) => <Icon icon={PencilEdit01Icon} {...props} />,
   Delete: (props: Omit<IconProps, 'icon'>) => <Icon icon={Delete02Icon} {...props} />,
+  Delete01: (props: Omit<IconProps, 'icon'>) => <Icon icon={Delete01Icon} {...props} />,
   Search: (props: Omit<IconProps, 'icon'>) => <Icon icon={Search01Icon} {...props} />,
   Filter: (props: Omit<IconProps, 'icon'>) => <Icon icon={FilterIcon} {...props} />,
   Eye: (props: Omit<IconProps, 'icon'>) => <Icon icon={EyeIcon} {...props} />,

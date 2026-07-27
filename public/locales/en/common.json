@@ -123,6 +123,8 @@
     },
     "queueList": {
       "found": "Found: {{count}} queues",
+      "foundLabel": "Found:",
+      "queuesWord": "queues",
       "allQueues": "All queues",
       "onlyActive": "Only active",
       "addNew": "Add new queue",

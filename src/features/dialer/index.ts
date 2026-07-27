@@ -8,11 +8,13 @@ export * from './constants/dialer'
 export {
   dialerQueuesKeys,
   useDialerQueues,
+  useDialerQueuesPaged,
   useCreateDialerQueue,
   useUpdateDialerQueue,
   useDeleteDialerQueue,
   useSetDialerQueueActive,
   type DialerQueuesFilters,
+  type DialerQueuesPagedFilters,
 } from './hooks/useDialerQueues'
 export {
   queueNumbersKeys,

@@ -12,8 +12,11 @@
  * filled in the subsequent supervisor slices.
  */
 
+import { type ComponentType } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router-dom'
+
+import { Icons } from '@/lib/icons'
 
 import { AddFromCrmTab } from './tabs/AddFromCrmTab'
 import { AnalysisTab } from './tabs/AnalysisTab'
@@ -22,11 +25,28 @@ import { QueueNumbersTab } from './tabs/QueueNumbersTab'
 
 type TabId = 'queue-numbers' | 'add-from-crm' | 'analysis' | 'queue-list'
 
-const TABS: { id: TabId; labelKey: string; fallback: string }[] = [
-  { id: 'queue-numbers', labelKey: 'dialer.tabs.queueNumbers', fallback: 'Queue of Numbers' },
-  { id: 'add-from-crm', labelKey: 'dialer.tabs.addFromCrm', fallback: 'Add from CRM' },
-  { id: 'analysis', labelKey: 'dialer.tabs.analysis', fallback: 'Analysis' },
-  { id: 'queue-list', labelKey: 'dialer.tabs.queueList', fallback: 'Queue List' },
+type TabIcon = ComponentType<{ size?: number; className?: string; strokeWidth?: number }>
+
+const TABS: { id: TabId; labelKey: string; fallback: string; Icon: TabIcon }[] = [
+  {
+    id: 'queue-numbers',
+    labelKey: 'dialer.tabs.queueNumbers',
+    fallback: 'Queue of Numbers',
+    Icon: Icons.DialpadSquare,
+  },
+  {
+    id: 'add-from-crm',
+    labelKey: 'dialer.tabs.addFromCrm',
+    fallback: 'Add from CRM',
+    Icon: Icons.AddMale,
+  },
+  { id: 'analysis', labelKey: 'dialer.tabs.analysis', fallback: 'Analysis', Icon: Icons.Profile02 },
+  {
+    id: 'queue-list',
+    labelKey: 'dialer.tabs.queueList',
+    fallback: 'Queue List',
+    Icon: Icons.RightToLeftListNumber,
+  },
 ]
 
 export function SupervisorDialerView() {
@@ -48,12 +68,13 @@ export function SupervisorDialerView() {
               key={tab.id}
               type="button"
               onClick={() => setTab(tab.id)}
-              className={`border-b-2 px-1 py-3 text-sm font-medium whitespace-nowrap transition-colors ${
+              className={`flex items-center gap-2 border-b-2 px-1 py-3 text-sm font-medium whitespace-nowrap transition-colors ${
                 activeTab === tab.id
                   ? 'border-primary-500 text-primary-600'
                   : 'text-muted-foreground hover:text-foreground hover:border-border border-transparent'
               }`}
             >
+              <tab.Icon size={18} strokeWidth={2} />
               {t(tab.labelKey, { defaultValue: tab.fallback })}
             </button>
           ))}

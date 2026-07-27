@@ -12,7 +12,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 
 import { dialerService } from '../api/dialerService'
-import type { DialerQueue } from '../types'
+import type { DialerQueue, PagedDialerQueues } from '../types'
 
 export interface DialerQueuesFilters {
   department_id?: number
@@ -20,10 +20,17 @@ export interface DialerQueuesFilters {
   q?: string
 }
 
+export interface DialerQueuesPagedFilters extends DialerQueuesFilters {
+  page: number
+  page_size: number
+}
+
 export const dialerQueuesKeys = {
   all: ['dialerQueues'] as const,
   lists: () => [...dialerQueuesKeys.all, 'list'] as const,
   list: (filters: DialerQueuesFilters) => [...dialerQueuesKeys.lists(), filters] as const,
+  paged: (filters: DialerQueuesPagedFilters) =>
+    [...dialerQueuesKeys.all, 'paged', filters] as const,
   details: () => [...dialerQueuesKeys.all, 'detail'] as const,
   detail: (id: number) => [...dialerQueuesKeys.details(), id] as const,
 }
@@ -33,6 +40,20 @@ export function useDialerQueues(filters: DialerQueuesFilters = {}) {
     queryKey: dialerQueuesKeys.list(filters),
     queryFn: () => dialerService.listQueues(filters),
     staleTime: 60 * 1000,
+  })
+}
+
+/**
+ * Paginated Queue List for the supervisor table (server-side filter + search +
+ * pagination). `placeholderData` keeps the previous page visible while the next
+ * loads, avoiding a table flash on page/search changes.
+ */
+export function useDialerQueuesPaged(filters: DialerQueuesPagedFilters) {
+  return useQuery<PagedDialerQueues>({
+    queryKey: dialerQueuesKeys.paged(filters),
+    queryFn: () => dialerService.listQueuesPaged(filters),
+    staleTime: 60 * 1000,
+    placeholderData: (prev) => prev,
   })
 }
 
