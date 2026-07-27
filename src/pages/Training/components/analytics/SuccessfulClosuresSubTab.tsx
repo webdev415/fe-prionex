@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
+import { formatDate as formatLocaleDate, formatNumber } from '@/lib/localeFormat'
 import { Pagination } from '@/components/ui/Pagination'
 import { useAuthStore } from '@/stores/authStore'
 import { useOperators } from '@/features/users/hooks'
@@ -74,18 +75,20 @@ function avatarColorFor(operatorId: number | null): string {
   return AVATAR_PALETTE[Math.abs(operatorId) % AVATAR_PALETTE.length]
 }
 
-/** YYYY-MM-DD → DD/MM/YYYY (payment_date / confirmation_date are plain dates). */
-function formatDate(iso: string | null): string {
+/** Plain calendar date (payment_date / confirmation_date) → locale order.
+ *  Split the YYYY-MM-DD string into a local Date so no timezone shift moves
+ *  the day, then let the locale reorder day/month/year. */
+function formatDate(iso: string | null, language: string): string {
   if (!iso) return '—'
   const [y, m, d] = iso.split('-')
   if (!y || !m || !d) return iso
-  return `${d}/${m}/${y}`
+  return formatLocaleDate(new Date(Number(y), Number(m) - 1, Number(d)), language)
 }
 
-function formatAmount(raw: string): string {
+function formatAmount(raw: string, language: string): string {
   const n = Number(raw)
   if (!Number.isFinite(n)) return raw
-  return `${n.toLocaleString()} ₴`
+  return `${formatNumber(n, language)} ₴`
 }
 
 /** Inline trophy SVG — no trophy glyph in the Icons module. */
@@ -123,7 +126,7 @@ function TrophyIcon({ size = 18, className = '' }: { size?: number; className?: 
 }
 
 export function SuccessfulClosuresSubTab() {
-  const { t } = useTranslation('common')
+  const { t, i18n } = useTranslation('common')
   const navigate = useNavigate()
   const [period, setPeriod] = useState<PeriodOption>('today')
   const [operatorFilter, setOperatorFilter] = useState<'all' | string>('all')
@@ -268,7 +271,7 @@ export function SuccessfulClosuresSubTab() {
         />
         <AnalyticsKpiTile
           label={t('pages.training.closures.kpi.totalAmount', 'Total Amount')}
-          value={formatAmount(cards?.total_amount ?? '0')}
+          value={formatAmount(cards?.total_amount ?? '0', i18n.language)}
           icon={<span className="text-lg leading-none font-semibold">Σ</span>}
           iconBg="bg-[#F7F7F7]"
           iconTone="text-[#05040D]"
@@ -410,7 +413,7 @@ export function SuccessfulClosuresSubTab() {
             </option>
             {statusOptions.map((s) => (
               <option key={s} value={s}>
-                {s}
+                {t(`pages.training.closures.status.${s}`, s)}
               </option>
             ))}
           </select>
@@ -514,11 +517,12 @@ function ClosureRow({
   operatorName: string | null
   onOpenClient: () => void
 }) {
+  const { t, i18n } = useTranslation('common')
   const displayName = operatorName ?? (row.operator_id ? `#${row.operator_id}` : '—')
   const initials = operatorName ? deriveInitials(operatorName) : ''
   return (
     <tr className={ANALYTICS_TABLE_ROW}>
-      <td className={ANALYTICS_TABLE_TD}>{formatDate(row.payment_date)}</td>
+      <td className={ANALYTICS_TABLE_TD}>{formatDate(row.payment_date, i18n.language)}</td>
       <td className={ANALYTICS_TABLE_TD}>
         <div className="flex items-center gap-2">
           {initials ? (
@@ -544,13 +548,15 @@ function ClosureRow({
       </td>
       <td className={ANALYTICS_TABLE_TD}>{row.contract_number ?? '—'}</td>
       <td className={`${ANALYTICS_TABLE_TD} font-semibold text-[#05040D]`}>
-        {formatAmount(row.amount)}
+        {formatAmount(row.amount, i18n.language)}
       </td>
-      <td className={ANALYTICS_TABLE_TD}>{formatDate(row.payment_confirmation_date)}</td>
+      <td className={ANALYTICS_TABLE_TD}>
+        {formatDate(row.payment_confirmation_date, i18n.language)}
+      </td>
       <td className={ANALYTICS_TABLE_TD}>
         <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-medium text-emerald-700">
           <Icons.Success size={10} />
-          {row.status}
+          {t(`pages.training.closures.status.${row.status}`, row.status)}
         </span>
       </td>
     </tr>

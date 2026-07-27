@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/Button'
 import {
-  useGenerateLegalDocument,
   useLegalDocumentFilterCounts,
   useLegalDocuments,
   useLegalDocumentStats,
@@ -21,7 +20,6 @@ import { DocumentsStatsBar } from './DocumentsStatsBar'
 import { DocumentsPageSkeleton, DocumentsTableSkeleton } from './DocumentsTabSkeleton'
 import { DocumentsToolbar } from './DocumentsToolbar'
 import { DocumentsTable } from './DocumentsTable'
-import { GenerateDocumentModal } from './GenerateDocumentModal'
 
 const DEFAULT_PAGE_SIZE = 20
 
@@ -50,7 +48,6 @@ export function LegalDocumentsTab() {
   const [searchQuery, setSearchQuery] = useState('')
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE)
-  const [generateOpen, setGenerateOpen] = useState(false)
   const [addIncomingOpen, setAddIncomingOpen] = useState(false)
   const [selectedDocument, setSelectedDocument] = useState<LegalDocumentRow | null>(null)
 
@@ -71,7 +68,6 @@ export function LegalDocumentsTab() {
   const { data: stats } = useLegalDocumentStats()
   const { data: filterCounts } = useLegalDocumentFilterCounts()
   const uploadMutation = useUploadIncomingLegalDocument()
-  const generateMutation = useGenerateLegalDocument()
 
   const totalPages = total > 0 ? Math.ceil(total / pageSize) : 0
   const currentPage = totalPages > 0 ? Math.min(page, totalPages) : 1
@@ -98,31 +94,6 @@ export function LegalDocumentsTab() {
     setPage(1)
   }
 
-  const handleGenerateSubmit = async (input: {
-    documentType: 'outgoing' | 'nbu_response'
-    title: string
-    clientId: number
-    assignedToUserId: number
-    contractNumber?: string | null
-  }) => {
-    try {
-      const result = await generateMutation.mutateAsync({
-        document_type: input.documentType,
-        title: input.title,
-        client_id: input.clientId,
-        assigned_to_user_id: input.assignedToUserId,
-        contract_number: input.contractNumber,
-      })
-      setPage(1)
-      toast.success(
-        t('pages.lawyerWorkplace.documents.modals.generate.success', 'Document generated'),
-        { description: result.number }
-      )
-    } catch {
-      // mutation toast handles errors
-    }
-  }
-
   const handleIncomingSubmit = async (input: {
     title: string
     clientId: number
@@ -130,6 +101,8 @@ export function LegalDocumentsTab() {
     relatedLetterNumber?: string
     file: File
     contractNumber?: string | null
+    senderEmail?: string
+    summary?: string
   }) => {
     try {
       const result = await uploadMutation.mutateAsync({
@@ -139,6 +112,8 @@ export function LegalDocumentsTab() {
         assigned_to_user_id: input.assignedToUserId,
         contract_number: input.contractNumber,
         related_letter_number: input.relatedLetterNumber,
+        sender_email: input.senderEmail,
+        summary: input.summary,
       })
       setPage(1)
       toast.success(
@@ -213,7 +188,6 @@ export function LegalDocumentsTab() {
                   searchQuery={searchQuery}
                   onSearchQueryChange={handleSearchQueryChange}
                   filterCounts={filterCounts}
-                  onGenerateDocument={() => setGenerateOpen(true)}
                   onAddIncoming={() => setAddIncomingOpen(true)}
                 />
               </>
@@ -280,12 +254,6 @@ export function LegalDocumentsTab() {
         )}
       </div>
 
-      <GenerateDocumentModal
-        open={generateOpen}
-        onClose={() => setGenerateOpen(false)}
-        onSubmit={handleGenerateSubmit}
-        isSubmitting={generateMutation.isPending}
-      />
       <AddIncomingDocumentModal
         open={addIncomingOpen}
         onClose={() => setAddIncomingOpen(false)}

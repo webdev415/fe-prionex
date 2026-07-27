@@ -1,4 +1,18 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
+
+// The shared test setup mocks i18next core, so @/lib/i18n has no real `t`.
+// Provide a passthrough that interpolates {{id}} for the unknown-entity fallbacks.
+vi.mock('@/lib/i18n', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/i18n')>()
+  return {
+    ...actual,
+    default: {
+      t: (key: string, opts?: { defaultValue?: string; id?: number | string }) =>
+        (opts?.defaultValue ?? key).replace('{{id}}', String(opts?.id ?? '')),
+    },
+  }
+})
+
 import { mapLegalDocumentItem } from '../documentMappers'
 import type { LegalDocumentListItem } from '../types'
 
@@ -59,5 +73,27 @@ describe('mapLegalDocumentItem contract display', () => {
     )
 
     expect(row.contractId).toBe('—')
+  })
+
+  it('falls back to a numbered placeholder for unknown client and assignee', () => {
+    const row = mapLegalDocumentItem(
+      {
+        id: 'doc-3',
+        number: 'VIN-2026-003',
+        title: 'Unknown parties',
+        document_type: 'incoming',
+        action: 'uploaded',
+        client_id: 999,
+        contract_number: null,
+        assigned_to_user_id: 77,
+        created_at: '2026-07-03T08:56:00Z',
+        filename: 'scan.pdf',
+        source_message_id: null,
+      } as LegalDocumentListItem,
+      clientLookup
+    )
+
+    expect(row.clientName).toBe('Client #999')
+    expect(row.assigneeName).toBe('User #77')
   })
 })

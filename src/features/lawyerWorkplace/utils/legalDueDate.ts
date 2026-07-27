@@ -4,6 +4,8 @@
  * DB storage remains UTC.
  */
 
+import { formatMonthDay, formatTimeShort } from '@/lib/localeFormat'
+
 export const LEGAL_DEFAULT_TIMEZONE = 'Europe/Kyiv'
 
 export function resolveLegalTimezone(timezone?: string | null): string {
@@ -98,26 +100,31 @@ export function parseLegalDueDate(iso: string | null | undefined): Date | null {
 
 export function formatLegalDueMonthDay(
   iso: string | null | undefined,
-  timezone?: string | null
+  timezone?: string | null,
+  language?: string
 ): string {
   const parsed = parseLegalDueDate(iso)
   if (!parsed) return ''
-  const { month, day } = calendarPartsInTimezone(parsed, resolveLegalTimezone(timezone))
-  return `${String(month).padStart(2, '0')}/${String(day).padStart(2, '0')}`
+  const { year, month, day } = calendarPartsInTimezone(parsed, resolveLegalTimezone(timezone))
+  // Reconstruct the profile-TZ wall-clock day as a local Date so Intl reorders
+  // month/day by locale (en → MM/DD, uk → DD.MM) without a browser-TZ shift.
+  return formatMonthDay(new Date(year, month - 1, day), language ?? '')
 }
 
 /** Profile-TZ month/day + HH:mm for kanban cards and detail panels. */
 export function formatLegalDueDateTime(
   iso: string | null | undefined,
-  timezone?: string | null
+  timezone?: string | null,
+  language?: string
 ): string {
   const parsed = parseLegalDueDate(iso)
   if (!parsed) return ''
-  const { month, day, hour, minute } = calendarPartsInTimezone(
+  const { year, month, day, hour, minute } = calendarPartsInTimezone(
     parsed,
     resolveLegalTimezone(timezone)
   )
-  return `${String(month).padStart(2, '0')}/${String(day).padStart(2, '0')} ${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`
+  const local = new Date(year, month - 1, day, hour, minute)
+  return `${formatMonthDay(local, language ?? '')} ${formatTimeShort(local, language ?? '')}`
 }
 
 function noonUtcIsoForOffset(offsetDays: number, timezone?: string | null): string {

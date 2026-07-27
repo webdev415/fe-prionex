@@ -14,31 +14,7 @@ import {
 import { Icon, Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 import { formatAttachmentSize } from '@/features/lawyerWorkplace/api/mappers'
-import type {
-  EdoType,
-  LegalMailbox,
-  LegalStagedAttachment,
-} from '@/features/lawyerWorkplace/api/types'
-
-const EDO_OPTIONS: { id: EdoType; labelKey: string; fallback: string; badge?: string }[] = [
-  {
-    id: 'outgoing',
-    labelKey: 'pages.lawyerWorkplace.reply.edoOutgoing',
-    fallback: 'Outgoing (ВИХ)',
-    badge: 'ВИХ',
-  },
-  {
-    id: 'nbu',
-    labelKey: 'pages.lawyerWorkplace.reply.edoNbu',
-    fallback: 'NBU reply (НБУ)',
-    badge: 'НБУ',
-  },
-  {
-    id: 'none',
-    labelKey: 'pages.lawyerWorkplace.reply.edoNone',
-    fallback: 'Do not register',
-  },
-]
+import type { LegalMailbox, LegalStagedAttachment } from '@/features/lawyerWorkplace/api/types'
 
 export interface ReplyComposerTemplate {
   id: string
@@ -53,8 +29,6 @@ export interface ReplyComposerProps {
   toMailbox: string
   value: string
   onChange: (value: string) => void
-  edoType: EdoType
-  onEdoTypeChange: (edoType: EdoType) => void
   onSend: () => void
   replyTemplates?: ReplyComposerTemplate[]
   onApplyTemplate?: (body: string) => void
@@ -62,6 +36,12 @@ export interface ReplyComposerProps {
   onSaveDraft?: () => void
   onAttachFiles?: (files: FileList) => void
   onRemoveAttachment?: (attachmentId: string) => void
+  /** Opens the "document already on the client" picker (option 2). */
+  onAttachFromClient?: () => void
+  /** Opens the document-generation modal seeded with the letter's client (option 3). */
+  onGenerateDocument?: () => void
+  /** Whether the letter has a confirmed client — gates options 2 and 3. */
+  clientActionsEnabled?: boolean
   isSavingDraft?: boolean
   isUploadingAttachment?: boolean
   isSending?: boolean
@@ -75,6 +55,7 @@ function StagedAttachmentChip({
   attachment: LegalStagedAttachment
   onRemove?: (attachmentId: string) => void
 }) {
+  const { t } = useTranslation('common')
   return (
     <span className="border-border text-foreground bg-card inline-flex max-w-[180px] items-center gap-1 rounded-full border px-2 py-0.5 text-[10px]">
       <span className="truncate">{attachment.filename}</span>
@@ -86,7 +67,7 @@ function StagedAttachmentChip({
           type="button"
           onClick={() => onRemove(attachment.id)}
           className="text-muted-foreground hover:text-foreground shrink-0"
-          aria-label="Remove attachment"
+          aria-label={t('pages.lawyerWorkplace.thread.removeAttachment', 'Remove attachment')}
         >
           <Icons.Close size={10} strokeWidth={2} />
         </button>
@@ -102,8 +83,6 @@ export function ReplyComposer({
   toMailbox,
   value,
   onChange,
-  edoType,
-  onEdoTypeChange,
   onSend,
   replyTemplates = [],
   onApplyTemplate,
@@ -111,6 +90,9 @@ export function ReplyComposer({
   onSaveDraft,
   onAttachFiles,
   onRemoveAttachment,
+  onAttachFromClient,
+  onGenerateDocument,
+  clientActionsEnabled = false,
   isSavingDraft = false,
   isUploadingAttachment = false,
   isSending = false,
@@ -119,9 +101,12 @@ export function ReplyComposer({
   const { t } = useTranslation('common')
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  const clientActionsDisabledHint = clientActionsEnabled
+    ? undefined
+    : t('pages.lawyerWorkplace.reply.attachClientDisabledHint', 'Confirm the client first')
+
   const selectedMailbox =
     mailboxes.find((mailbox) => mailbox.id === selectedMailboxId) ?? mailboxes[0] ?? null
-  const selectedEdo = EDO_OPTIONS.find((option) => option.id === edoType) ?? EDO_OPTIONS[2]!
 
   const handleSend = () => {
     if (sendDisabled || isSending || !value.trim()) return
@@ -197,53 +182,6 @@ export function ReplyComposer({
             </span>
           </div>
         </div>
-
-        <DropdownMenu modal={false}>
-          <DropdownMenuTrigger asChild>
-            <button
-              type="button"
-              className={cn(
-                'flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] transition-colors sm:text-[11px]',
-                edoType !== 'none'
-                  ? 'border-secondary-300 bg-secondary-50 text-secondary-800'
-                  : 'border-border bg-input text-muted-foreground hover:bg-muted'
-              )}
-            >
-              {selectedEdo.badge ? (
-                <span className="font-semibold">{selectedEdo.badge}</span>
-              ) : (
-                <Icons.File size={11} strokeWidth={1.5} />
-              )}
-              <span className="hidden sm:inline">
-                {edoType === 'none'
-                  ? t('pages.lawyerWorkplace.reply.edoLabel', 'EDO')
-                  : t(selectedEdo.labelKey, selectedEdo.fallback)}
-              </span>
-              <Icons.ArrowDown size={9} strokeWidth={2} className="text-muted-foreground" />
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="min-w-[190px] p-1.5">
-            {EDO_OPTIONS.map((option) => (
-              <DropdownMenuItem
-                key={option.id}
-                className={cn(
-                  'focus:bg-muted cursor-pointer rounded-md px-2.5 py-1.5 text-[12px]',
-                  option.id === edoType && 'bg-muted font-medium'
-                )}
-                onClick={() => onEdoTypeChange(option.id)}
-              >
-                <span className="flex items-center gap-2">
-                  {option.badge && (
-                    <span className="text-secondary-800 bg-secondary-50 rounded px-1 text-[10px] font-bold">
-                      {option.badge}
-                    </span>
-                  )}
-                  {t(option.labelKey, option.fallback)}
-                </span>
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
       </div>
 
       {stagedAttachments.length > 0 && (
@@ -305,22 +243,70 @@ export function ReplyComposer({
         </LinkButton>
 
         <div className="flex shrink-0 items-center gap-0.5">
-          <LinkButton
-            type="button"
-            variant="regular-gray"
-            size="xs"
-            className="shrink-0 px-2 sm:px-2"
-            aria-label={t('pages.lawyerWorkplace.reply.attach', 'Attach')}
-            leftIcon={<Icon icon={Link01Icon} size={13} strokeWidth={1.5} />}
-            disabled={isUploadingAttachment || sendDisabled}
-            onClick={() => fileInputRef.current?.click()}
-          >
-            <span className="hidden sm:inline">
-              {isUploadingAttachment
-                ? t('pages.lawyerWorkplace.reply.attaching', 'Attaching…')
-                : t('pages.lawyerWorkplace.reply.attach', 'Attach')}
-            </span>
-          </LinkButton>
+          <DropdownMenu modal={false}>
+            <DropdownMenuTrigger asChild>
+              <LinkButton
+                type="button"
+                variant="regular-gray"
+                size="xs"
+                className="shrink-0 px-2 sm:px-2"
+                aria-label={t('pages.lawyerWorkplace.reply.attach', 'Attach')}
+                leftIcon={<Icon icon={Link01Icon} size={13} strokeWidth={1.5} />}
+                rightIcon={
+                  <Icons.ArrowDown size={10} strokeWidth={2} className="text-muted-foreground" />
+                }
+                disabled={isUploadingAttachment || sendDisabled}
+              >
+                <span className="hidden sm:inline">
+                  {isUploadingAttachment
+                    ? t('pages.lawyerWorkplace.reply.attaching', 'Attaching…')
+                    : t('pages.lawyerWorkplace.reply.attach', 'Attach')}
+                </span>
+              </LinkButton>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="min-w-[240px] p-1.5">
+              <DropdownMenuItem
+                className="cursor-pointer text-[12px]"
+                onSelect={() => fileInputRef.current?.click()}
+              >
+                {t('pages.lawyerWorkplace.reply.attachFromComputer', 'File from computer')}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className={cn(
+                  'cursor-pointer text-[12px]',
+                  !clientActionsEnabled && 'text-muted-foreground opacity-60'
+                )}
+                aria-disabled={!clientActionsEnabled}
+                title={clientActionsDisabledHint}
+                onSelect={(event) => {
+                  if (!clientActionsEnabled) {
+                    event.preventDefault()
+                    return
+                  }
+                  onAttachFromClient?.()
+                }}
+              >
+                {t('pages.lawyerWorkplace.reply.attachFromClient', 'Attached file on client')}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className={cn(
+                  'cursor-pointer text-[12px]',
+                  !clientActionsEnabled && 'text-muted-foreground opacity-60'
+                )}
+                aria-disabled={!clientActionsEnabled}
+                title={clientActionsDisabledHint}
+                onSelect={(event) => {
+                  if (!clientActionsEnabled) {
+                    event.preventDefault()
+                    return
+                  }
+                  onGenerateDocument?.()
+                }}
+              >
+                {t('pages.lawyerWorkplace.reply.generateDocument', 'Generate document')}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
           <DropdownMenu modal={false}>
             <DropdownMenuTrigger asChild>

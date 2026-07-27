@@ -12,12 +12,16 @@ import {
   useReplyComposerState,
   useReplyToLegalThread,
   loadReplyDraftForMessage,
-  type EdoType,
 } from '@/features/lawyerWorkplace'
 import { getErrorMessage } from '@/lib/errors'
 import { getFilenameExtensionLabel } from '@/features/lawyerWorkplace/utils/attachmentExtension'
+import { documentApi, type ClientDocument } from '@/features/clients/api/documentApi'
+import { useClientLoans } from '@/features/clients/hooks/useClients'
+import type { GenerateDocumentResponse } from '@/features/documents'
+import { GenerateDocumentModal } from '@/pages/ClientManagement/components/GenerateDocumentModal'
 import { formatDateSeparator, formatLetterTime } from '../../utils/formatters'
 import type { LetterDetail, ThreadAttachment } from '../../types'
+import { AttachClientDocumentModal } from './AttachClientDocumentModal'
 import { ReplyComposer } from './ReplyComposer'
 import { EmailMessageBody } from './EmailMessageBody'
 
@@ -183,6 +187,8 @@ export interface EmailThreadPanelProps {
   onReplySent?: () => void
   onBack?: () => void
   onOpenParameters?: () => void
+  /** Centre the message column at a readable max-width (wide drawer layout). */
+  contentMaxWidth?: boolean
 }
 
 export function EmailThreadPanel({
@@ -194,6 +200,7 @@ export function EmailThreadPanel({
   onReplySent,
   onBack,
   onOpenParameters,
+  contentMaxWidth = false,
 }: EmailThreadPanelProps) {
   const { t, i18n } = useTranslation('common')
   const { data: mailboxesData } = useLegalMailboxes({ enabled: Boolean(letter) })
@@ -205,10 +212,6 @@ export function EmailThreadPanel({
   const [mailboxOverride, setMailboxOverride] = useState<{
     letterId: string
     mailboxId: string | null
-  } | null>(null)
-  const [edoOverride, setEdoOverride] = useState<{
-    letterId: string
-    edoType: EdoType
   } | null>(null)
 
   const mailboxes = useMemo(() => mailboxesData?.items ?? [], [mailboxesData?.items])
@@ -244,7 +247,6 @@ export function EmailThreadPanel({
 
   const selectedMailboxId =
     mailboxOverride?.letterId === letterId ? mailboxOverride.mailboxId : defaultMailboxId
-  const edoType = edoOverride?.letterId === letterId ? edoOverride.edoType : 'none'
 
   const {
     stagedAttachments,
@@ -257,10 +259,39 @@ export function EmailThreadPanel({
   } = useReplyComposerState({
     messageId: letterId || null,
     selectedMailboxId,
-    edoType,
     body: replyDraft,
     enabled: Boolean(letter),
   })
+
+  // Client + delivery context for the attach-from-client and generate-document
+  // reply actions. Both need a confirmed client on the letter.
+  const letterClientId = useMemo(() => {
+    if (!letter) return null
+    return (
+      letter.replyContext.clientId ??
+      (letter.parameters.clientId ? Number(letter.parameters.clientId) : null)
+    )
+  }, [letter])
+  const clientActionsEnabled = letterClientId != null
+
+  const { data: clientDebts = [] } = useClientLoans(
+    letterClientId ?? 0,
+    clientActionsEnabled && Boolean(letter)
+  )
+  const generateLoans = useMemo(
+    () =>
+      clientDebts.map((debt) => ({
+        id: debt.id,
+        loanNumber: debt.contract_number ?? String(debt.id),
+        counterparty: debt.seller_company ?? '',
+        status: debt.status,
+      })),
+    [clientDebts]
+  )
+
+  const [clientDocPickerOpen, setClientDocPickerOpen] = useState(false)
+  const [generateOpen, setGenerateOpen] = useState(false)
+  const [attachingClientDocId, setAttachingClientDocId] = useState<number | null>(null)
 
   const loadedDraftForLetterRef = useRef<string | null>(null)
 
@@ -276,9 +307,6 @@ export function EmailThreadPanel({
         if (saved.mailboxId) {
           setMailboxOverride({ letterId, mailboxId: saved.mailboxId })
         }
-        if (saved.edoType !== 'none') {
-          setEdoOverride({ letterId, edoType: saved.edoType })
-        }
       } else {
         onReplyDraftChange('')
       }
@@ -287,10 +315,6 @@ export function EmailThreadPanel({
 
   const handleMailboxChange = (mailboxId: string) => {
     setMailboxOverride({ letterId, mailboxId })
-  }
-
-  const handleEdoTypeChange = (nextEdoType: EdoType) => {
-    setEdoOverride({ letterId, edoType: nextEdoType })
   }
 
   const handleSendReply = async () => {
@@ -309,17 +333,12 @@ export function EmailThreadPanel({
     const assignedUserId =
       replyContext.assignedUserId ??
       (letter.parameters.lawyerId ? Number(letter.parameters.lawyerId) : null)
+    const contractNumber = letter.parameters.contractLabel.trim() || null
 
-    if (edoType !== 'none' && (clientId == null || assignedUserId == null)) {
-      toast.error(
-        t(
-          'pages.lawyerWorkplace.reply.edoRequiresClientLawyer',
-          'Select client and lawyer in parameters before registering EDO'
-        )
-      )
-      return
-    }
-
+    // Replies are always registered in the correspondence journal — there is no
+    // mode selector, so `edo_type` is never sent. Registration metadata is
+    // included only when the letter carries it; when omitted the backend falls
+    // back to the confirmed client/lawyer of the source letter.
     replyMutation.mutate(
       {
         threadId: replyContext.threadId,
@@ -329,11 +348,9 @@ export function EmailThreadPanel({
           to_addresses: [letter.senderEmail],
           subject: letter.subject.startsWith('RE:') ? letter.subject : `RE: ${letter.subject}`,
           body_text: body,
-          edo_type: edoType,
-          client_id: edoType !== 'none' ? clientId : null,
-          assigned_to_user_id: edoType !== 'none' ? assignedUserId : null,
-          contract_number:
-            edoType !== 'none' ? letter.parameters.contractLabel.trim() || null : null,
+          ...(clientId != null ? { client_id: clientId } : {}),
+          ...(assignedUserId != null ? { assigned_to_user_id: assignedUserId } : {}),
+          ...(contractNumber ? { contract_number: contractNumber } : {}),
           attachment_ids: stagedAttachments.map((item) => item.id),
           draft_message_id: letter.id,
         },
@@ -411,6 +428,57 @@ export function EmailThreadPanel({
   const threadCount = letter.thread.length
 
   const showCompactNav = Boolean(onBack || onOpenParameters)
+
+  // Turn a downloaded blob into a File and stage it on the reply exactly like a
+  // file picked from disk (same upload path).
+  const attachBlobToReply = async (blob: Blob, filename: string) => {
+    const file = new File([blob], filename, { type: blob.type || 'application/octet-stream' })
+    return uploadAttachment(file)
+  }
+
+  const handleSelectClientDocument = async (doc: ClientDocument) => {
+    if (letterClientId == null) return
+    setAttachingClientDocId(doc.id)
+    try {
+      const blob = await documentApi.preview(letterClientId, doc.id)
+      const uploaded = await attachBlobToReply(blob, doc.original_filename)
+      if (uploaded) {
+        setClientDocPickerOpen(false)
+        toast.success(
+          t(
+            'pages.lawyerWorkplace.reply.attachClientModal.attached',
+            'Document attached to the reply'
+          )
+        )
+      }
+    } catch (error) {
+      toast.error(getErrorMessage(error))
+    } finally {
+      setAttachingClientDocId(null)
+    }
+  }
+
+  // Fired by the generation modal after a successful generate: pull the freshly
+  // persisted PDF and attach it to the reply, then close the modal.
+  const handleGeneratedDocument = async (result: GenerateDocumentResponse) => {
+    if (letterClientId == null) return
+    setGenerateOpen(false)
+    try {
+      const blob = await documentApi.preview(letterClientId, result.document_id)
+      const filename = result.pdf_document?.original_filename ?? `${result.document_name}.pdf`
+      const uploaded = await attachBlobToReply(blob, filename)
+      if (uploaded) {
+        toast.success(
+          t(
+            'pages.lawyerWorkplace.reply.generatedAttached',
+            'Document generated and attached to the reply'
+          )
+        )
+      }
+    } catch (error) {
+      toast.error(getErrorMessage(error))
+    }
+  }
 
   return (
     <div className="bg-muted/20 flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
@@ -496,27 +564,29 @@ export function EmailThreadPanel({
         </div>
       </div>
 
-      <div className="min-h-0 min-w-0 flex-1 space-y-4 overflow-x-hidden overflow-y-auto px-3 py-4 sm:px-5">
-        {isLoading && (
-          <p className="text-muted-foreground text-center text-xs">
-            {t('pages.lawyerWorkplace.thread.loading', 'Loading thread…')}
-          </p>
-        )}
-        {letter.thread.map((message, index) => {
-          const showDateSep =
-            index === 0 ||
-            formatDateSeparator(message.sentAt, i18n.language) !==
-              formatDateSeparator(letter.thread[index - 1]!.sentAt, i18n.language)
+      <div className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto px-3 py-4 sm:px-5">
+        <div className={cn('space-y-4', contentMaxWidth && 'mx-auto w-full max-w-4xl')}>
+          {isLoading && (
+            <p className="text-muted-foreground text-center text-xs">
+              {t('pages.lawyerWorkplace.thread.loading', 'Loading thread…')}
+            </p>
+          )}
+          {letter.thread.map((message, index) => {
+            const showDateSep =
+              index === 0 ||
+              formatDateSeparator(message.sentAt, i18n.language) !==
+                formatDateSeparator(letter.thread[index - 1]!.sentAt, i18n.language)
 
-          return (
-            <div key={message.id}>
-              {showDateSep && (
-                <DateSeparator label={formatDateSeparator(message.sentAt, i18n.language)} />
-              )}
-              <MessageCard message={message} messageId={message.id} />
-            </div>
-          )
-        })}
+            return (
+              <div key={message.id}>
+                {showDateSep && (
+                  <DateSeparator label={formatDateSeparator(message.sentAt, i18n.language)} />
+                )}
+                <MessageCard message={message} messageId={message.id} />
+              </div>
+            )
+          })}
+        </div>
       </div>
 
       <ReplyComposer
@@ -526,8 +596,6 @@ export function EmailThreadPanel({
         toMailbox={letter.senderEmail}
         value={replyDraft}
         onChange={onReplyDraftChange}
-        edoType={edoType}
-        onEdoTypeChange={handleEdoTypeChange}
         onSend={handleSendReply}
         replyTemplates={replyTemplates}
         onApplyTemplate={handleApplyTemplate}
@@ -541,11 +609,35 @@ export function EmailThreadPanel({
         onRemoveAttachment={(attachmentId) => {
           void removeAttachment(attachmentId)
         }}
+        onAttachFromClient={() => setClientDocPickerOpen(true)}
+        onGenerateDocument={() => setGenerateOpen(true)}
+        clientActionsEnabled={clientActionsEnabled}
         isSavingDraft={isSavingDraft}
         isUploadingAttachment={isUploadingAttachment}
         isSending={replyMutation.isPending}
         sendDisabled={!letter.replyContext.threadId}
       />
+
+      {letterClientId != null && (
+        <AttachClientDocumentModal
+          open={clientDocPickerOpen}
+          clientId={letterClientId}
+          onClose={() => setClientDocPickerOpen(false)}
+          onSelect={handleSelectClientDocument}
+          attachingDocId={attachingClientDocId}
+        />
+      )}
+
+      {letterClientId != null && generateOpen && (
+        <GenerateDocumentModal
+          open={generateOpen}
+          onClose={() => setGenerateOpen(false)}
+          clientId={letterClientId}
+          loans={generateLoans}
+          prefill={{ deliveryChannel: 'email', deliveryContact: letter.senderEmail }}
+          onGenerated={handleGeneratedDocument}
+        />
+      )}
     </div>
   )
 }

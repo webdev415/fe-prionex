@@ -224,6 +224,8 @@ export interface LegalOutgoingLetterRequest {
   client_id?: number | null
   assigned_to_user_id?: number | null
   contract_number?: string | null
+  /** Recipient institution name (required when the recipient is an institution). */
+  institution_name?: string | null
   attachment_ids?: string[]
   staging_session_id?: string | null
 }
@@ -278,10 +280,50 @@ export interface LegalKanbanTaskItem {
   assigned_to_username: string | null
   completed_at: string | null
   updated_at: string | null
+  /**
+   * Number of letters grouped into this task (same client + lawyer + day).
+   * Absent/1 means a single-letter task. Drives the "N листів" card badge.
+   */
+  letter_count?: number
 }
 
 export interface LegalKanbanResponse {
   items: LegalKanbanTaskItem[]
+  total: number
+}
+
+/**
+ * One letter of a grouped legal task. A trimmed inbox row plus message bodies
+ * and attachments, so the drawer can render the whole group as a single thread
+ * without extra per-letter message/thread requests.
+ */
+export interface LegalTaskLetter {
+  id: string
+  thread_id: string
+  mailbox_id: string | null
+  mailbox_email: string | null
+  subject: string | null
+  from_address: string
+  to_addresses: string[]
+  direction: string
+  processing_status: string
+  received_at: string | null
+  sent_at: string | null
+  is_quarantined: boolean
+  needs_manual_review: boolean
+  source_mailbox_disabled: boolean
+  letter_type_id: string | null
+  client_id: number | null
+  client_name: string | null
+  body_text: string | null
+  body_html: string | null
+  attachments: LegalAttachmentItem[]
+}
+
+/** Letters grouped into one legal task, ordered chronologically (received_at ASC). */
+export interface LegalTaskLettersResponse {
+  legal_task_id: number
+  items: LegalTaskLetter[]
   total: number
 }
 
@@ -319,6 +361,8 @@ export interface LegalLetterType {
   name: string
   color_id: string
   sla_days: number
+  /** How SLA days are counted; omitted by older backends → treat as calendar. */
+  sla_day_type?: 'working' | 'calendar'
   description: string | null
   keyword_hints: string[]
   is_active: boolean
@@ -337,6 +381,7 @@ export interface LegalLetterTypeCreate {
   name: string
   color_id: string
   sla_days: number
+  sla_day_type?: 'working' | 'calendar'
   description?: string | null
   keyword_hints?: string[]
   slug?: string | null
@@ -346,6 +391,7 @@ export interface LegalLetterTypeUpdate {
   name?: string
   color_id?: string
   sla_days?: number
+  sla_day_type?: 'working' | 'calendar'
   description?: string | null
   keyword_hints?: string[]
   is_active?: boolean

@@ -7,6 +7,8 @@ import type {
   MockInboxTrigger,
   MockInboxTriggerTag,
 } from '../mocks/trainerWorkplaceMocks'
+import i18n from '@/lib/i18n'
+import { formatDate, formatTimeShort } from '@/lib/localeFormat'
 
 /**
  * Derive a Figma-faithful UI row from a `QueueOperator` returned by
@@ -108,7 +110,7 @@ function formatClock(isoTimestamp: string | null | undefined): string {
   if (!isoTimestamp) return ''
   const d = new Date(isoTimestamp)
   if (Number.isNaN(d.getTime())) return ''
-  return d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
+  return formatTimeShort(d, i18n.language)
 }
 
 /**
@@ -139,6 +141,15 @@ function humanizeTrigger(trigger: string): string {
     .trim()
 }
 
+/**
+ * Localized trigger label. The BE returns opaque trigger codes; we translate
+ * the known ones via `pages.training.inbox.triggers.<code>` and fall back to
+ * the humanized code so an unmapped trigger still renders readably.
+ */
+export function triggerLabel(t: TFn, code: string): string {
+  return t(`pages.training.inbox.triggers.${code}`, { defaultValue: humanizeTrigger(code) })
+}
+
 function toInboxAssignmentState(state: AssignmentState | undefined): InboxAssignmentState {
   // Both type aliases share the same five values; `wait` is the entry state
   // the BE auto-creates for operators below the threshold.
@@ -155,14 +166,14 @@ function buildTriggerSummaries(
   const triggers: MockInboxTrigger[] = row.triggers.map((code, idx) => ({
     id: idx + 1,
     code,
-    label: humanizeTrigger(code),
+    label: triggerLabel(t, code),
     severity:
       triggerTone(code) === 'red' ? 'critical' : triggerTone(code) === 'amber' ? 'warn' : 'info',
     detectedAtLabel: formatRelative(t, row.last_active_at),
   }))
   const triggerTags: MockInboxTriggerTag[] = row.triggers
     .slice(0, 4)
-    .map((code) => ({ label: humanizeTrigger(code), tone: triggerTone(code) }))
+    .map((code) => ({ label: triggerLabel(t, code), tone: triggerTone(code) }))
   return { triggers, triggerTags }
 }
 
@@ -170,7 +181,7 @@ function buildTriggerSummaries(
 function summaryFor(t: TFn, row: QueueOperator): string {
   const score = row.composite_score ?? '—'
   if (row.triggers.length > 0) {
-    return `${humanizeTrigger(row.triggers[0])} · ${t('pages.training.inbox.scoreShort', { score, defaultValue: `score ${score}` })}`
+    return `${triggerLabel(t, row.triggers[0])} · ${t('pages.training.inbox.scoreShort', { score, defaultValue: `score ${score}` })}`
   }
   return t('pages.training.inbox.compositeScore', {
     score,
@@ -182,7 +193,7 @@ function parseHireDate(iso: string | null | undefined): { year: string; date: st
   if (!iso) return { year: '', date: '' }
   const d = new Date(iso)
   if (Number.isNaN(d.getTime())) return { year: '', date: '' }
-  return { year: String(d.getFullYear()), date: d.toLocaleDateString() }
+  return { year: String(d.getFullYear()), date: formatDate(d, i18n.language) }
 }
 
 export function deriveInboxRow(

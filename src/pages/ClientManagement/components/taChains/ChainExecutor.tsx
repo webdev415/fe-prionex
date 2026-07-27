@@ -69,7 +69,7 @@ import { useChainExecutorStore } from '@/stores/chainExecutorStore'
 import { formatMoneyKopeckTight } from '@/lib/formatters'
 import { useClientEmails } from '@/features/clients/hooks/useClientEmails'
 import { useClientPhones } from '@/features/clients/hooks/useClientPhones'
-import { collectFromSnapshot } from './taChainSaveData'
+import { applyStepEdits, collectFromSnapshot, type StepEdit } from './taChainSaveData'
 
 interface Props {
   clientId: number
@@ -468,6 +468,12 @@ export function ChainExecutor({
   const collectedPromiseDateRef = useRef('')
   const collectedPromiseAmountRef = useRef('')
   const collectedCreditIdRef = useRef('')
+  // Local, not-yet-persisted edits to previously confirmed steps, keyed by
+  // step_order. Layered over the server snapshot for BOTH the edit form
+  // (so re-opening a step shows the edit, not the stale server value) and the
+  // final save (so TA history reflects the edit). Per-step, so editing one
+  // step never clobbers another step's promise fields.
+  const editedStepsRef = useRef<Record<string, StepEdit>>({})
 
   // Completed steps summaries
   interface CompletedStep {
@@ -573,6 +579,7 @@ export function ChainExecutor({
       collectedPromiseDateRef.current = fs.collectedPromiseDate
       collectedPromiseAmountRef.current = fs.collectedPromiseAmount
       collectedCreditIdRef.current = fs.collectedCreditId
+      editedStepsRef.current = fs.editedSteps ?? {}
       // "All-at-once" mode: restore the chain selection + entered values.
       // (Optional fields — absent in snapshots saved before this existed.)
       if (fs.selectedChainId !== undefined) {
@@ -612,6 +619,7 @@ export function ChainExecutor({
         collectedPromiseDate: collectedPromiseDateRef.current,
         collectedPromiseAmount: collectedPromiseAmountRef.current,
         collectedCreditId: collectedCreditIdRef.current,
+        editedSteps: { ...editedStepsRef.current },
         // "All-at-once" mode state (no server snapshot exists for it).
         selectedChainId,
         instantValues,
@@ -653,6 +661,7 @@ export function ChainExecutor({
     collectedPromiseDateRef.current = ''
     collectedPromiseAmountRef.current = ''
     collectedCreditIdRef.current = ''
+    editedStepsRef.current = {}
     setCompletedSteps([])
     setIsAutoAdvancing(false)
     // Don't reset stepValue here — step-change effect handles it with preset support
@@ -821,14 +830,17 @@ export function ChainExecutor({
   const openEditStep = (cs: CompletedStep) => {
     if (!cs.targetActionId) return
     const snap = activeInstance?.step_data?.[String(cs.stepOrder)]
+    // A prior local edit wins over the server snapshot, so re-opening a step
+    // shows the edited values rather than the original confirmed ones.
+    const edited = editedStepsRef.current[String(cs.stepOrder)]
     setEditingStep({
       stepOrder: cs.stepOrder,
       targetActionId: cs.targetActionId,
       fieldType: cs.fieldType ?? 'text',
-      value: snap?.value ?? cs.taValue,
-      promiseDate: snap?.promise_date ?? '',
-      promiseAmount: snap?.promise_amount ?? '',
-      creditId: snap?.credit_id ?? '',
+      value: edited?.value ?? snap?.value ?? cs.taValue,
+      promiseDate: edited?.promiseDate ?? snap?.promise_date ?? '',
+      promiseAmount: edited?.promiseAmount ?? snap?.promise_amount ?? '',
+      creditId: edited?.creditId ?? snap?.credit_id ?? '',
     })
   }
 
@@ -855,6 +867,17 @@ export function ChainExecutor({
     if (pa) collectedPromiseAmountRef.current = pa
     if (ci) collectedCreditIdRef.current = ci
 
+    // Record the edit PER STEP so it (a) survives re-opening the edit form and
+    // (b) is layered over the server snapshot at final save — the fix for
+    // "editing a confirmed step is silently discarded". Storing '' explicitly
+    // clears a field; only fields present on the edit are overridden.
+    editedStepsRef.current[String(stepOrder)] = {
+      value,
+      promiseDate: pd,
+      promiseAmount: pa,
+      creditId: ci,
+    }
+
     setCompletedSteps((prev) =>
       prev.map((cs) => (cs.stepOrder === stepOrder ? { ...cs, taValue: value } : cs))
     )
@@ -873,6 +896,11 @@ export function ChainExecutor({
       for (const k of keysToRemove) {
         if (parseInt(k, 10) >= editingStep.stepOrder) {
           delete collectedStepDataRef.current[k]
+        }
+      }
+      for (const k of Object.keys(editedStepsRef.current)) {
+        if (parseInt(k, 10) >= editingStep.stepOrder) {
+          delete editedStepsRef.current[k]
         }
       }
       // Reset extra fields — they'll be re-collected as the user re-walks
@@ -1093,8 +1121,31 @@ export function ChainExecutor({
     // missing from history after minimize/restore). The in-memory refs win on
     // conflict, since they hold the current step and any local edits not yet
     // pushed to the server.
-    const snap = collectFromSnapshot(activeInstance.step_data)
+    // Layer local edits to previously confirmed steps over the server snapshot
+    // BEFORE collecting, so an edit that was never round-tripped to the server
+    // (saveEditStepLocal makes no server call) still reaches TA history.
+    const effectiveSnapshot = applyStepEdits(activeInstance.step_data, editedStepsRef.current)
+    const snap = collectFromSnapshot(effectiveSnapshot)
     const mergedStepData = { ...snap.stepData, ...collectedStepDataRef.current }
+    // A confirmed-step edit (saveEditStepLocal makes no server call) is the most
+    // authoritative source: re-apply it LAST so the value the server-snapshot
+    // hydration left in collectedStepDataRef can't clobber the edit. Normalize
+    // the same way saveEditStepLocal does; an empty edit clears the step.
+    // `editedStepData` carries just these explicit edits to the backend, which
+    // mirrors them into the chain-instance snapshot so the completion
+    // reconciliation (KAN-744) preserves the edit instead of overwriting it.
+    const editedStepData: Record<string, string> = {}
+    for (const [order, edit] of Object.entries(editedStepsRef.current)) {
+      if (typeof edit.value !== 'string') continue
+      const fieldType = completedSteps.find((cs) => String(cs.stepOrder) === order)?.fieldType
+      const normalized =
+        edit.value === ''
+          ? ''
+          : (toUtcIsoIfDate(edit.value, fieldType, user?.timezone) ?? edit.value)
+      editedStepData[order] = normalized
+      if (normalized === '') delete mergedStepData[order]
+      else mergedStepData[order] = normalized
+    }
     const mergedDropdownIds = { ...snap.dropdownIds, ...collectedDropdownValueIdsRef.current }
 
     // Use current step's dropdown value or first collected one
@@ -1117,6 +1168,7 @@ export function ChainExecutor({
         promise_amount: finalPromiseAmount ? parseFloat(finalPromiseAmount) : undefined,
         notes: notes || undefined,
         step_data: Object.keys(mergedStepData).length > 0 ? mergedStepData : undefined,
+        edited_step_data: Object.keys(editedStepData).length > 0 ? editedStepData : undefined,
         notify_responsible: showNotifyResponsibleCheckbox ? notifyResponsible : false,
       })
       const result = await advanceMut.mutateAsync({
@@ -1140,6 +1192,7 @@ export function ChainExecutor({
       collectedPromiseDateRef.current = ''
       collectedPromiseAmountRef.current = ''
       collectedCreditIdRef.current = ''
+      editedStepsRef.current = {}
       setCompletedSteps([])
       setStepValue('')
       setPromiseDate('')
@@ -1389,7 +1442,7 @@ export function ChainExecutor({
                 <DropdownMenuTrigger asChild>
                   <button
                     type="button"
-                    className="focus:border-primary-500 flex min-h-[40px] w-full items-center justify-between gap-2 rounded-md border border-gray-300 bg-white px-3 py-2 text-left text-sm outline-none hover:bg-gray-50"
+                    className="text-foreground focus:border-primary-500 border-border bg-card hover:bg-muted flex min-h-[40px] w-full items-center justify-between gap-2 rounded-md border px-3 py-2 text-left text-sm outline-none"
                   >
                     <span className={selectedTemplate ? 'text-gray-800' : 'text-gray-400'}>
                       {selectedTemplate
@@ -1404,7 +1457,7 @@ export function ChainExecutor({
                 <DropdownMenuContent
                   align="start"
                   sideOffset={6}
-                  className="w-[--radix-dropdown-menu-trigger-width] min-w-[260px] rounded-md border border-gray-200 bg-white p-0 shadow-lg"
+                  className="border-border bg-card w-[--radix-dropdown-menu-trigger-width] min-w-[260px] rounded-md border p-0 shadow-lg"
                 >
                   <div className="border-b border-gray-200 p-2">
                     <input
@@ -1415,7 +1468,7 @@ export function ChainExecutor({
                         'pages.clientChains.templateSearchPlaceholder',
                         'Search templates…'
                       )}
-                      className="focus:border-primary-500 w-full rounded-md border border-gray-200 bg-white px-2 py-1.5 text-sm text-gray-900 outline-none placeholder:text-gray-400"
+                      className="text-foreground focus:border-primary-500 placeholder:text-muted-foreground border-border bg-card w-full rounded-md border px-2 py-1.5 text-sm outline-none"
                     />
                   </div>
                   <div
@@ -1486,7 +1539,7 @@ export function ChainExecutor({
                 <DropdownMenuTrigger asChild>
                   <button
                     type="button"
-                    className="focus:border-primary-500 flex min-h-[40px] w-full items-center justify-between gap-2 rounded-md border border-gray-300 bg-white px-3 py-2 text-left text-sm outline-none hover:bg-gray-50"
+                    className="text-foreground focus:border-primary-500 border-border bg-card hover:bg-muted flex min-h-[40px] w-full items-center justify-between gap-2 rounded-md border px-3 py-2 text-left text-sm outline-none"
                   >
                     <span className={selectedChainObj ? 'text-gray-800' : 'text-gray-400'}>
                       {selectedChainObj
@@ -1499,7 +1552,7 @@ export function ChainExecutor({
                 <DropdownMenuContent
                   align="start"
                   sideOffset={6}
-                  className="w-[--radix-dropdown-menu-trigger-width] min-w-[260px] rounded-md border border-gray-200 bg-white p-0 shadow-lg"
+                  className="border-border bg-card w-[--radix-dropdown-menu-trigger-width] min-w-[260px] rounded-md border p-0 shadow-lg"
                 >
                   <div className="border-b border-gray-200 p-2">
                     <input
@@ -1507,7 +1560,7 @@ export function ChainExecutor({
                       value={chainSearch}
                       onChange={(e) => setChainSearch(e.target.value)}
                       placeholder={t('pages.clientChains.chainSearchPlaceholder', 'Search chains…')}
-                      className="focus:border-primary-500 w-full rounded-md border border-gray-200 bg-white px-2 py-1.5 text-sm text-gray-900 outline-none placeholder:text-gray-400"
+                      className="text-foreground focus:border-primary-500 placeholder:text-muted-foreground border-border bg-card w-full rounded-md border px-2 py-1.5 text-sm outline-none"
                     />
                   </div>
                   <div

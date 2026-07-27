@@ -112,9 +112,22 @@ import {
 } from '@/features/clients/hooks/useClients'
 import { useClientChainInstances } from '@/features/taInteractions/hooks/useTAInteractions'
 import {
-  contactTypeLabel,
+  contactTypesForSection,
   pickDefaultActiveContactTypeId,
+  pickDefaultActiveContactTypeIdForSection,
 } from '@/features/clients/utils/contactTypeLabel'
+import {
+  requiresDigitsOnly,
+  hasNonDigitChars,
+  isDuplicateContactValue,
+} from '@/features/clients/utils/contactValueValidation'
+import {
+  isCallBlocked,
+  isMessageBlocked,
+  callBlockReason,
+  messageBlockReason,
+} from '@/features/clients/utils/contactBlocking'
+import { RecommendersTab } from './components/RecommendersTab'
 import { useRRPeriodicitySettings } from '@/features/clients/hooks/useRRPeriodicitySettings'
 import {
   generateSchedule,
@@ -623,7 +636,11 @@ export function ClientDetailPage() {
     if (contactTypeId == null) {
       return 'recommender'
     }
-    return contactTypesById.get(contactTypeId)?.contact_source ?? 'recommender'
+    // Only phone (client/recommender) contacts reach here — 'other' types are
+    // non-phone and have no call/interaction row — but coerce defensively so an
+    // unexpected source falls back to the existing default.
+    const source = contactTypesById.get(contactTypeId)?.contact_source
+    return source === 'client' ? 'client' : 'recommender'
   }
 
   const defaultNewContactTypeId = useMemo(
@@ -951,6 +968,7 @@ export function ClientDetailPage() {
           updated_by_user_name: r.updated_by_user_name,
           defaultCallLine: r.default_call_line ?? 'white',
           spamAllowed: r.spam_allowed !== false,
+          contactTags: r.contact_tags ?? [],
           blocking: r.blocking ?? {
             blocks_calls: false,
             blocks_sms: false,
@@ -978,6 +996,7 @@ export function ClientDetailPage() {
             updated_by_user_name: p.updated_by_user_name,
             defaultCallLine: p.default_call_line ?? 'white',
             spamAllowed: p.spam_allowed !== false,
+            contactTags: p.contact_tags ?? [],
             blocking: p.blocking ?? {
               blocks_calls: false,
               blocks_sms: false,
@@ -1423,6 +1442,7 @@ export function ClientDetailPage() {
     spamOptionEnabled: boolean
   } | null>(null)
   const [contactEditorMode, setContactEditorMode] = useState<'add' | 'edit' | null>(null)
+  const [contactEditorIsPhone, setContactEditorIsPhone] = useState<boolean | null>(null)
   const [editingContactId, setEditingContactId] = useState<number | null>(null)
   const [contactDeleteConfirmId, setContactDeleteConfirmId] = useState<number | null>(null)
   const [contactError, setContactError] = useState<string | null>(null)
@@ -1485,17 +1505,17 @@ export function ClientDetailPage() {
   }
 
   const contactTypesForRecommenderSelect = useMemo(() => {
-    return [...contactTypes]
-      .filter((ct) => !ct.is_hidden || ct.id === contactFormData.contact_type_id)
-      .sort((a, b) =>
-        a.sort_order !== b.sort_order
-          ? a.sort_order - b.sort_order
-          : a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })
-      )
-  }, [contactTypes, contactFormData.contact_type_id])
+    if (contactEditorIsPhone === null) return []
+    return contactTypesForSection(
+      contactTypes,
+      contactEditorIsPhone,
+      contactFormData.contact_type_id
+    )
+  }, [contactTypes, contactEditorIsPhone, contactFormData.contact_type_id])
 
   const resetContactEditor = () => {
     setContactEditorMode(null)
+    setContactEditorIsPhone(null)
     setEditingContactId(null)
     setContactError(null)
     setContactFormData({
@@ -1505,15 +1525,16 @@ export function ClientDetailPage() {
     })
   }
 
-  const handleStartAddContact = async () => {
+  const handleStartAddContact = async (isPhone: boolean) => {
     setContactError(null)
     setEditingContactId(null)
     setContactEditorMode('add')
+    setContactEditorIsPhone(isPhone)
     const { data: freshTypes } = await refetchContactTypes()
     const types = freshTypes ?? contactTypes
     setContactFormData({
       contact_value: '',
-      contact_type_id: pickDefaultActiveContactTypeId(types),
+      contact_type_id: pickDefaultActiveContactTypeIdForSection(types, isPhone),
       comment: '',
     })
   }
@@ -1523,10 +1544,12 @@ export function ClientDetailPage() {
     contactValue: string
     contactTypeId: number | null
     comment: string
+    isPhone: boolean
   }) => {
     setContactError(null)
     setEditingContactId(contact.id)
     setContactEditorMode('edit')
+    setContactEditorIsPhone(contact.isPhone)
     setContactFormData({
       contact_value: contact.contactValue ?? '',
       contact_type_id: contact.contactTypeId ?? defaultNewContactTypeId,
@@ -1541,6 +1564,29 @@ export function ClientDetailPage() {
       comment: contactFormData.comment.trim() || undefined,
     }
     if (!payload.contact_value) return
+
+    // Requirement 1 — digits-only for Client/Recommender (phone) contact sources.
+    const source = contactTypesById.get(contactFormData.contact_type_id)?.contact_source
+    if (requiresDigitsOnly(source) && hasNonDigitChars(payload.contact_value)) {
+      setContactError(
+        t(
+          'pages.clients.editModal.contactDigitsOnly',
+          'Only digits are allowed for this contact type'
+        )
+      )
+      return
+    }
+
+    // Requirement 2 — duplicate value across every Contact Source of this client,
+    // excluding the contact being edited from the comparison against itself.
+    const excludeId = contactEditorMode === 'edit' ? editingContactId : null
+    if (isDuplicateContactValue(client?.recommenders ?? [], payload.contact_value, excludeId)) {
+      setContactError(
+        t('pages.clients.editModal.contactDuplicate', 'This value already exists for this client')
+      )
+      return
+    }
+
     setContactError(null)
     if (contactEditorMode === 'edit' && editingContactId !== null) {
       updateContact(
@@ -2782,7 +2828,7 @@ export function ClientDetailPage() {
                   <Icons.FilterVertical size={18} strokeWidth={1.5} />
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48 bg-white">
+              <DropdownMenuContent align="end" className="border-border bg-card w-48">
                 <DropdownMenuItem
                   onClick={() => setIsDeleteModalOpen(true)}
                   className="flex cursor-pointer items-center gap-2 text-sm text-red-600 hover:text-red-700"
@@ -2974,8 +3020,7 @@ export function ClientDetailPage() {
                                   <button
                                     key={tag.value_id}
                                     type="button"
-                                    className="rounded-full px-1.5 py-0.5 text-[10px] text-white"
-                                    style={{ backgroundColor: tag.color || '#64748b' }}
+                                    className="cursor-pointer rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-1"
                                     title={tag.category_name}
                                     onClick={() =>
                                       phone.contactId > 0 &&
@@ -2985,7 +3030,13 @@ export function ClientDetailPage() {
                                       })
                                     }
                                   >
-                                    {tag.name}
+                                    <TagBadge
+                                      name={tag.name}
+                                      color={tag.color || '#64748b'}
+                                      size="xs"
+                                      isProtected={tag.is_protected}
+                                      isSystem={tag.is_system}
+                                    />
                                   </button>
                                 ))}
                               </div>
@@ -2997,7 +3048,7 @@ export function ClientDetailPage() {
                               <button
                                 type="button"
                                 className={cn(
-                                  'flex h-[20px] w-[20px] shrink-0 items-center justify-center text-gray-400 hover:text-gray-600',
+                                  'text-muted-foreground hover:text-foreground flex h-[20px] w-[20px] shrink-0 items-center justify-center',
                                   phone.contactId > 0 && 'cursor-pointer'
                                 )}
                                 onClick={() => {
@@ -3073,7 +3124,7 @@ export function ClientDetailPage() {
                                   disabled={
                                     !user?.is_agent ||
                                     !user?.asterisk_extension ||
-                                    phone.blocking.blocks_calls
+                                    isCallBlocked(phone.blocking)
                                   }
                                   onClick={() => {
                                     openOutboundCall(
@@ -3084,16 +3135,16 @@ export function ClientDetailPage() {
                                   }}
                                   className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-40 md:h-[20px] md:w-[20px]"
                                 >
-                                  {phone.blocking.blocks_calls ? (
+                                  {isCallBlocked(phone.blocking) ? (
                                     <Icons.Lock size={16} className="flex-shrink-0" />
                                   ) : (
                                     <Icons.Headset size={16} className="flex-shrink-0" />
                                   )}
                                 </button>
                               </TooltipTrigger>
-                              {phone.blocking.blocks_calls && (
+                              {isCallBlocked(phone.blocking) && (
                                 <TooltipContent>
-                                  {phone.blocking.reasons.join('; ') ||
+                                  {callBlockReason(phone.blocking) ||
                                     t('pages.contactTags.callsBlocked', 'Calls blocked')}
                                 </TooltipContent>
                               )}
@@ -3101,29 +3152,33 @@ export function ClientDetailPage() {
                           </PermissionGuard>
                           <PermissionGuard permission={PERMISSIONS.COMMUNICATION.SEND_SMS}>
                             <button
-                              disabled={phone.blocking.blocks_sms}
+                              disabled={isMessageBlocked(phone.blocking)}
                               onClick={() => {
                                 setSelectedPhoneForSMS(phone.number)
                                 setIsSendSMSModalOpen(true)
                               }}
                               className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-40 md:h-[20px] md:w-[20px]"
+                              title={
+                                isMessageBlocked(phone.blocking)
+                                  ? messageBlockReason(phone.blocking) ||
+                                    t('pages.contactTags.smsBlocked', 'SMS blocked')
+                                  : t('pages.clients.detail.sendSms', 'Send SMS')
+                              }
                             >
                               <Icons.ChatFeedback01 size={16} className="flex-shrink-0" />
                             </button>
                           </PermissionGuard>
                           <PermissionGuard permissions={ALL_MESSAGING_SEND_PERMISSIONS} mode="any">
                             <button
-                              disabled={phone.blocking.blocks_sms}
+                              disabled={isMessageBlocked(phone.blocking)}
                               onClick={() => {
                                 setSelectedPhoneForMessage(phone.number)
                                 setIsSendMessageModalOpen(true)
                               }}
                               className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-40 md:h-[20px] md:w-[20px]"
                               title={
-                                phone.blocking.blocks_sms
-                                  ? phone.blocking.reasons
-                                      .filter((r) => r.toLowerCase().includes('sms'))
-                                      .join('; ') ||
+                                isMessageBlocked(phone.blocking)
+                                  ? messageBlockReason(phone.blocking) ||
                                     t('pages.contactTags.smsBlocked', 'SMS blocked')
                                   : t('pages.clients.detail.sendMessage', 'Send message')
                               }
@@ -3606,7 +3661,7 @@ export function ClientDetailPage() {
           <div className="client-panel-scroll flex w-full flex-1 flex-col items-start gap-5 self-stretch xl:max-h-[70vh] xl:w-[64%] xl:overflow-y-auto">
             <div className="flex min-h-0 flex-1 flex-col items-start gap-0 self-stretch overflow-y-auto rounded-lg bg-white/50 p-0">
               {/* Horizontal tab bar - 6 tabs at the top - scrollable on mobile */}
-              <div className="relative mx-3 flex items-center gap-0 self-stretch border-b border-gray-200">
+              <div className="border-border relative mx-3 flex items-center gap-0 self-stretch border-b">
                 {/* Left Arrow Button */}
                 {showLeftArrow && (
                   <button
@@ -4262,337 +4317,46 @@ export function ClientDetailPage() {
 
                 {/* Tab 3: Recommenders */}
                 {activeRightCardTab === 'recommenders' && (
-                  <div className="self-stretch overflow-x-auto p-3 md:p-6">
-                    {contactError && <p className="text-error-500 mb-3 text-sm">{contactError}</p>}
-                    <table className="w-full text-xs">
-                      <thead>
-                        <tr className="border-b border-gray-200">
-                          <th className="pb-2 text-left font-light tracking-[-0.24px] text-gray-700">
-                            {t('pages.clients.detail.contactValue')}
-                          </th>
-                          <th className="pb-2"></th>
-                          <th className="pb-2 text-left font-light tracking-[-0.24px] text-gray-700">
-                            {t('pages.clients.detail.contactType')}
-                          </th>
-                          <th className="pb-2 text-left font-light tracking-[-0.24px] text-gray-700">
-                            {t('pages.clients.detail.comment')}
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {client.recommenders.map((contact, index) => (
-                          <tr
-                            key={contact.id ?? `recommender-${index}-${contact.contactValue}`}
-                            className="border-b border-gray-100 last:border-0"
-                          >
-                            <td className="py-2 pr-3">
-                              <div className="flex flex-col items-start gap-1">
-                                <div className="flex items-center gap-0.5">
-                                  <span className="text-dark-500 font-medium tracking-[-0.24px] break-all">
-                                    {contact.contactValue}
-                                  </span>
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <button
-                                        type="button"
-                                        className={cn(
-                                          'flex h-[20px] w-[20px] shrink-0 items-center justify-center text-gray-400 hover:text-gray-600',
-                                          contact.id > 0 && 'cursor-pointer'
-                                        )}
-                                        onClick={() => {
-                                          if (contact.id > 0) {
-                                            setContactTagHistoryModal({
-                                              contactId: contact.id,
-                                              phone: contact.contactValue,
-                                            })
-                                          }
-                                        }}
-                                      >
-                                        <Icons.Info size={14} strokeWidth={1.5} />
-                                      </button>
-                                    </TooltipTrigger>
-                                    <TooltipContent side="top" className="text-xs">
-                                      {contact.added_by_user_name && (
-                                        <div>
-                                          {t('pages.clients.detail.addedBy')}:{' '}
-                                          {contact.added_by_user_name}
-                                        </div>
-                                      )}
-                                      {contact.created_at && (
-                                        <div>
-                                          {t('pages.clients.detail.addedDate')}:{' '}
-                                          {formatDate(contact.created_at ?? undefined)}
-                                        </div>
-                                      )}
-                                      {contact.updated_by_user_name && (
-                                        <>
-                                          <div>
-                                            {t('pages.clients.detail.updatedBy')}:{' '}
-                                            {contact.updated_by_user_name}
-                                          </div>
-                                          {contact.updated_at && (
-                                            <div>
-                                              {t('pages.clients.detail.updatedDate')}:{' '}
-                                              {formatDate(contact.updated_at ?? undefined)}
-                                            </div>
-                                          )}
-                                        </>
-                                      )}
-                                      {!contact.added_by_user_name && !contact.created_at && (
-                                        <div>-</div>
-                                      )}
-                                    </TooltipContent>
-                                  </Tooltip>
-                                </div>
-                                {(contact.isPhone || looksLikePhone(contact.contactValue)) &&
-                                  renderLinkedContactBadges(contact.contactValue, 'start')}
-                              </div>
-                            </td>
-                            <td className="py-2 pr-3">
-                              {contact.contactValue &&
-                                contact.id > 0 &&
-                                (contact.isPhone || looksLikePhone(contact.contactValue)) && (
-                                  <div className="flex items-center gap-1 md:gap-2">
-                                    {(contact.isPhone || looksLikePhone(contact.contactValue)) && (
-                                      <>
-                                        <PermissionGuard
-                                          permission={PERMISSIONS.COMMUNICATION.MAKE_CALLS}
-                                        >
-                                          <button
-                                            disabled={!user?.is_agent || !user?.asterisk_extension}
-                                            onClick={() => {
-                                              openOutboundCall(
-                                                contact.contactValue,
-                                                contact.contactTypeId
-                                              )
-                                            }}
-                                            className="text-primary-500 flex h-[20px] w-[20px] cursor-pointer items-center justify-center hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-40"
-                                          >
-                                            <Icons.Headset size={16} className="flex-shrink-0" />
-                                          </button>
-                                        </PermissionGuard>
-                                        <PermissionGuard
-                                          permission={PERMISSIONS.COMMUNICATION.SEND_SMS}
-                                        >
-                                          <button
-                                            disabled={contact.blocking?.blocks_sms}
-                                            onClick={() => {
-                                              setSelectedPhoneForSMS(contact.contactValue)
-                                              setIsSendSMSModalOpen(true)
-                                            }}
-                                            className="text-primary-500 flex h-[20px] w-[20px] cursor-pointer items-center justify-center hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-40"
-                                          >
-                                            <Icons.ChatFeedback01
-                                              size={16}
-                                              className="flex-shrink-0"
-                                            />
-                                          </button>
-                                        </PermissionGuard>
-                                        <PermissionGuard
-                                          permissions={ALL_MESSAGING_SEND_PERMISSIONS}
-                                          mode="any"
-                                        >
-                                          <button
-                                            disabled={contact.blocking?.blocks_sms}
-                                            onClick={() => {
-                                              setSelectedPhoneForMessage(contact.contactValue)
-                                              setIsSendMessageModalOpen(true)
-                                            }}
-                                            className="text-primary-500 flex h-[20px] w-[20px] cursor-pointer items-center justify-center hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-40"
-                                            title={
-                                              contact.blocking?.blocks_sms
-                                                ? contact.blocking.reasons
-                                                    .filter((r) => r.toLowerCase().includes('sms'))
-                                                    .join('; ') ||
-                                                  t('pages.contactTags.smsBlocked', 'SMS blocked')
-                                                : t(
-                                                    'pages.clients.detail.sendMessage',
-                                                    'Send message'
-                                                  )
-                                            }
-                                          >
-                                            <Icons.Message01 size={16} className="flex-shrink-0" />
-                                          </button>
-                                        </PermissionGuard>
-                                        <PermissionGuard
-                                          permission={PERMISSIONS.CLIENTS.CREATE_INTERACTIONS}
-                                        >
-                                          <button
-                                            onClick={() => {
-                                              // Classify by the phone's actual contact_type_id
-                                              // rather than by which tab the row lives in: a
-                                              // "Mobile phone from registers" (type 29) sits
-                                              // in the Recommenders tab but the backend treats
-                                              // it as a client phone.
-                                              setChainExecutorContactSource(
-                                                classifyContactSource(contact.contactTypeId)
-                                              )
-                                              setChainExecutorPrefilledPhone(contact.contactValue)
-                                              setIsChainExecutorOpen(true)
-                                            }}
-                                            className="text-primary-500 flex h-[20px] w-[20px] cursor-pointer items-center justify-center hover:opacity-80"
-                                          >
-                                            <Icons.PencilEdit size={16} className="flex-shrink-0" />
-                                          </button>
-                                        </PermissionGuard>
-                                        {contact.isPhone && (
-                                          <button
-                                            type="button"
-                                            onClick={() =>
-                                              setContactTagModal({
-                                                contactId: contact.id,
-                                                phone: contact.contactValue,
-                                              })
-                                            }
-                                            className="text-primary-500 flex h-[20px] w-[20px] cursor-pointer items-center justify-center hover:opacity-80"
-                                            title={t('pages.contactTags.tags', 'Tags')}
-                                          >
-                                            <Icons.Tag01 size={16} className="flex-shrink-0" />
-                                          </button>
-                                        )}
-                                      </>
-                                    )}
-                                    {canEditClient && (
-                                      <>
-                                        <button
-                                          type="button"
-                                          onClick={() => handleStartEditContact(contact)}
-                                          className="flex h-[20px] w-[20px] cursor-pointer items-center justify-center rounded border border-gray-300 text-gray-600 hover:bg-gray-100"
-                                          title={t(
-                                            'pages.clients.editModal.editContact',
-                                            'Edit contact'
-                                          )}
-                                        >
-                                          <Icons.Edit size={14} className="flex-shrink-0" />
-                                        </button>
-                                        <button
-                                          type="button"
-                                          onClick={() => setContactDeleteConfirmId(contact.id)}
-                                          className="text-error-500 flex h-[20px] w-[20px] cursor-pointer items-center justify-center rounded border border-red-200 hover:bg-red-50"
-                                          title={t(
-                                            'pages.clients.editModal.deleteContact',
-                                            'Delete contact'
-                                          )}
-                                        >
-                                          <Icons.Delete size={14} className="flex-shrink-0" />
-                                        </button>
-                                      </>
-                                    )}
-                                  </div>
-                                )}
-                            </td>
-                            <td className="py-2 pr-3">
-                              <span className="text-dark-500 font-medium tracking-[-0.24px]">
-                                {i18n.language === 'uk'
-                                  ? contact.contactType
-                                  : contact.contactTypeCode
-                                    ? t(`contactTypes.${contact.contactTypeCode}`, {
-                                        defaultValue: contact.contactType,
-                                      })
-                                    : contact.contactType}
-                              </span>
-                            </td>
-                            <td className="py-2 pr-3">
-                              <span className="text-dark-500 font-medium tracking-[-0.24px]">
-                                {contact.comment}
-                              </span>
-                            </td>
-                          </tr>
-                        ))}
-                        {client.recommenders.length === 0 && contactEditorMode === null && (
-                          <tr>
-                            <td colSpan={4} className="py-3 text-xs text-gray-500">
-                              -
-                            </td>
-                          </tr>
-                        )}
-                        {contactEditorMode !== null && (
-                          <tr className="border-b border-gray-100">
-                            <td colSpan={4} className="py-3">
-                              <div className="grid grid-cols-1 gap-3 rounded-lg border border-gray-200 bg-gray-50 p-3 md:grid-cols-3">
-                                <Input
-                                  value={contactFormData.contact_value}
-                                  onChange={(e) =>
-                                    setContactFormData((prev) => ({
-                                      ...prev,
-                                      contact_value: e.target.value,
-                                    }))
-                                  }
-                                  label={t('pages.clients.detail.contactValue')}
-                                />
-                                <div className="flex flex-col gap-1">
-                                  <label className="text-dark-500 text-xs font-medium sm:text-sm">
-                                    {t('pages.clients.detail.contactType')}
-                                  </label>
-                                  <Select
-                                    value={String(contactFormData.contact_type_id)}
-                                    onValueChange={(value) =>
-                                      setContactFormData((prev) => ({
-                                        ...prev,
-                                        contact_type_id: Number(value),
-                                      }))
-                                    }
-                                  >
-                                    <SelectTrigger className="h-[42px] rounded-lg border border-gray-300 bg-white">
-                                      <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      {contactTypesForRecommenderSelect.map((ct) => (
-                                        <SelectItem key={ct.id} value={String(ct.id)}>
-                                          {contactTypeLabel(ct, t, i18n.language)}
-                                        </SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
-                                </div>
-                                <Input
-                                  value={contactFormData.comment}
-                                  onChange={(e) =>
-                                    setContactFormData((prev) => ({
-                                      ...prev,
-                                      comment: e.target.value,
-                                    }))
-                                  }
-                                  label={t('pages.clients.detail.comment')}
-                                />
-                              </div>
-                              <div className="mt-3 flex items-center gap-2">
-                                <Button
-                                  size="sm"
-                                  onClick={handleSaveContact}
-                                  disabled={
-                                    isCreatingContact ||
-                                    isUpdatingContact ||
-                                    !contactFormData.contact_value.trim()
-                                  }
-                                >
-                                  {isCreatingContact || isUpdatingContact
-                                    ? t('actions.saving', 'Saving...')
-                                    : t('pages.clients.editModal.save', 'Save')}
-                                </Button>
-                                <Button size="sm" variant="cancel" onClick={resetContactEditor}>
-                                  {t('actions.cancel')}
-                                </Button>
-                              </div>
-                            </td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
-                    {canEditClient && (
-                      <div className="mt-4 flex justify-end">
-                        <Button
-                          variant="secondary"
-                          leftIcon={<Icons.PlusSignCircle size={20} />}
-                          className="rounded text-xs md:text-sm"
-                          size="sm"
-                          onClick={handleStartAddContact}
-                        >
-                          {t('pages.clients.editModal.addContact', 'Add Contact')}
-                        </Button>
-                      </div>
-                    )}
-                  </div>
+                  <RecommendersTab
+                    contacts={client.recommenders}
+                    contactTypesForSelect={contactTypesForRecommenderSelect}
+                    contactTypesById={contactTypesById}
+                    contactError={contactError}
+                    contactEditorMode={contactEditorMode}
+                    contactEditorIsPhone={contactEditorIsPhone}
+                    editingContactId={editingContactId}
+                    contactFormData={contactFormData}
+                    isCreatingContact={isCreatingContact}
+                    isUpdatingContact={isUpdatingContact}
+                    canEditClient={canEditClient}
+                    canMakeCalls={Boolean(user?.is_agent && user?.asterisk_extension)}
+                    linkedContactsByPhone={linkedContactsByPhone}
+                    normalizePhoneForLookup={normalizePhoneForLookup}
+                    onFormChange={(patch) => setContactFormData((prev) => ({ ...prev, ...patch }))}
+                    onStartAdd={handleStartAddContact}
+                    onStartEdit={handleStartEditContact}
+                    onSave={handleSaveContact}
+                    onCancelEditor={resetContactEditor}
+                    onDelete={setContactDeleteConfirmId}
+                    onOpenTagHistory={(contactId, phone) =>
+                      setContactTagHistoryModal({ contactId, phone })
+                    }
+                    onOpenTagModal={(contactId, phone) => setContactTagModal({ contactId, phone })}
+                    onCall={(phone, contactTypeId) => openOutboundCall(phone, contactTypeId)}
+                    onSendSms={(phone) => {
+                      setSelectedPhoneForSMS(phone)
+                      setIsSendSMSModalOpen(true)
+                    }}
+                    onSendMessage={(phone) => {
+                      setSelectedPhoneForMessage(phone)
+                      setIsSendMessageModalOpen(true)
+                    }}
+                    onStartInteraction={(phone, contactTypeId) => {
+                      setChainExecutorContactSource(classifyContactSource(contactTypeId))
+                      setChainExecutorPrefilledPhone(phone)
+                      setIsChainExecutorOpen(true)
+                    }}
+                  />
                 )}
 
                 {/* Tab 4: Operators/Searchers */}
@@ -6745,7 +6509,7 @@ export function ClientDetailPage() {
               )}
               maxLength={500}
               rows={3}
-              className="text-dark-500 focus:border-primary-500 focus:ring-primary-500 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm outline-none placeholder:text-gray-400 focus:ring-1"
+              className="text-foreground focus:border-primary-500 focus:ring-primary-500 bg-card placeholder:text-muted-foreground w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-1"
             />
           </ModalContent>
           <ModalFooter>

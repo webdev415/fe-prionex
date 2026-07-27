@@ -23,6 +23,7 @@
     "projects": "Проєкти",
     "users": "Користувачі",
     "ipWhitelist": "Білий список IP",
+    "aiSettings": "Налаштування AI",
     "sellers": "Продавці",
     "roles": "Ролі",
     "departments": "Відділи",
@@ -662,7 +663,9 @@
         "kanban": "Канбан",
         "documents": "Документи",
         "settings": "Налаштування",
-        "newCount": "{{count}} нових"
+        "newCount": "{{count}} нових",
+        "incomingRegistry": "Вхідний реєстр",
+        "outgoingRegistry": "Вихідний реєстр"
       },
       "availability": {
         "label": "Ваша доступність",
@@ -719,7 +722,8 @@
             "title": "У цьому перегляді немає листів",
             "description": "Нічого не відповідає фільтру «{{filter}}». Спробуйте інший статус або покажіть усі скриньки."
           }
-        }
+        },
+        "noSubject": "(без теми)"
       },
       "letterItem": {
         "unclassified": "Без класифікації",
@@ -759,7 +763,8 @@
         "attachmentPdf": "PDF",
         "attachmentDoc": "DOC",
         "closeThread": "Закрити ланцюжок",
-        "disabledMailboxNotice": "Початкова поштова скринька для цього листа вимкнена. Оберіть іншу скриньку нижче, щоб надіслати відповідь."
+        "disabledMailboxNotice": "Початкова поштова скринька для цього листа вимкнена. Оберіть іншу скриньку нижче, щоб надіслати відповідь.",
+        "removeAttachment": "Прибрати вкладення"
       },
       "reply": {
         "replyFrom": "Відповідь з",
@@ -772,14 +777,22 @@
         "draftSaved": "Чернетку збережено",
         "attach": "Додати файл",
         "attaching": "Додавання…",
+        "attachFromComputer": "Файл з компʼютера",
+        "attachFromClient": "Прикріплений файл на клієнті",
+        "generateDocument": "Згенерувати документ",
+        "attachClientDisabledHint": "Спочатку підтвердіть клієнта",
+        "generatedAttached": "Документ згенеровано та додано до відповіді",
+        "attachClientModal": {
+          "title": "Документи клієнта",
+          "empty": "У клієнта немає документів",
+          "error": "Не вдалося завантажити документи клієнта",
+          "attached": "Документ додано до відповіді"
+        },
         "template": "Шаблон",
         "noTemplatesHint": "Створіть шаблони листів у Налаштування → Шаблони",
         "send": "Надіслати",
-        "edoLabel": "ЕДО",
-        "edoOutgoing": "Вихідний (ВИХ)",
-        "edoNbu": "Відповідь НБУ (НБУ)",
-        "edoNone": "Не реєструвати",
-        "edoRequiresClientLawyer": "Оберіть клієнта та юриста в параметрах перед реєстрацією в ЕДО"
+        "noMailbox": "Оберіть скриньку для надсилання",
+        "noTemplates": "Немає доступних шаблонів"
       },
       "newLetter": {
         "title": "Новий вихідний лист",
@@ -798,14 +811,12 @@
         "subjectPlaceholder": "Тема листа...",
         "body": "Повідомлення",
         "bodyPlaceholder": "Напишіть текст листа...",
-        "edoType": "Тип документа ЕДО",
-        "edoRequiresClient": "Оберіть клієнта CRM перед реєстрацією в ЕДО",
-        "edoRequiresClientHint": "Оберіть клієнта CRM вище, щоб зареєструвати лист в ЕДО.",
-        "edoHintInstitution": "Прив’яжіть клієнта CRM нижче, щоб зареєструвати лист до установи в ЕДО.",
-        "edoClientForInstitution": "Клієнт CRM (для реєстрації в ЕДО)",
+        "clientForRegister": "Клієнт CRM (необовʼязково, для реєстру)",
         "clientSearchHint": "Введіть 2+ символи для пошуку…",
         "sending": "Надсилання…",
-        "send": "Надіслати"
+        "send": "Надіслати",
+        "institutionName": "Назва установи",
+        "institutionNamePlaceholder": "напр. Національний банк України"
       },
       "parameters": {
         "title": "Параметри листа",
@@ -831,7 +842,20 @@
         "auto": "Авто",
         "managerConfirmation": "Підтвердження менеджера",
         "parametersCount": "{{confirmed}}/{{total}} параметрів",
-        "confirmAndCreate": "Підтвердити та створити задачу"
+        "confirmAndCreate": "Підтвердити та створити задачу",
+        "confirming": "Підтвердження…",
+        "confirmSuccess": "Задачу створено на канбан-дошці",
+        "contractLoading": "Завантаження договорів…",
+        "lawyerAssigned": "Призначено на канбані",
+        "noContracts": "Немає договорів",
+        "selectContract": "Оберіть договір",
+        "autoProcessed": "АВТО",
+        "taskOnBoard": "Задачу створено на канбані",
+        "viewTask": "Переглянути →",
+        "contractStatus": {
+          "active": "Активний",
+          "closed": "Закритий"
+        }
       },
       "kanban": {
         "title": "Канбан юридичних задач",
@@ -862,6 +886,7 @@
         "today": "сьогодні",
         "emailThread": "Листування",
         "taskDetails": "Деталі задачі",
+        "lettersCount": "{{count}} листів",
         "noEmailThread": "Ця задача не має пов’язаного листування. Деталі вище взяті лише з задачі на канбані.",
         "changeAssignee": "Змінити виконавця",
         "emptyColumn": "Немає задач",
@@ -907,8 +932,16 @@
             "medium": "Нормальний",
             "low": "Низький",
             "lowest": "Найнижчий"
-          }
-        }
+          },
+          "clearClient": "Очистити",
+          "client": "Клієнт",
+          "creating": "Створення…",
+          "selectLawyer": "Оберіть юриста",
+          "selectType": "Оберіть тип"
+        },
+        "exportEmpty": "Немає задач за поточними фільтрами",
+        "taskNotFound": "Задачу канбану не знайдено",
+        "transitionSuccess": "Переміщено до {{state}}"
       },
       "documents": {
         "title": "Документи",
@@ -935,8 +968,8 @@
           }
         },
         "stats": {
-          "incoming": "IN · вхідні",
-          "outgoing": "OUT · вихідні",
+          "incoming": "ВХ · вхідні",
+          "outgoing": "ВИХ · вихідні",
           "nbu": "НБУ · відповіді",
           "generated": "Згенеровано",
           "countOfYear": "{{count}} / {{year}}",
@@ -944,8 +977,8 @@
         },
         "filters": {
           "allTypes": "Усі типи",
-          "incoming": "IN",
-          "outgoing": "OUT",
+          "incoming": "ВХ",
+          "outgoing": "ВИХ",
           "nbu": "НБУ",
           "uploaded": "Завантажено",
           "generated": "Згенеровано"
@@ -1003,18 +1036,26 @@
             "selectClientFirst": "Спочатку оберіть клієнта",
             "selectClient": "Оберіть клієнта",
             "relatedLetter": "Пов’язаний лист (необов’язково)",
-            "relatedLetterPlaceholder": "напр. IN-2026-142",
+            "relatedLetterPlaceholder": "напр. вхідний № 12",
             "assignee": "Виконавець",
             "submit": "Зареєструвати вхідний",
-            "success": "Вхідний документ зареєстровано"
+            "success": "Вхідний документ зареєстровано",
+            "senderEmail": "Ел. пошта відправника (необов’язково)",
+            "senderEmailPlaceholder": "напр. sender@example.com",
+            "summary": "Короткий зміст (необов’язково)",
+            "summaryPlaceholder": "Короткий опис листа"
           },
           "detail": {
             "title": "Деталі документа",
             "close": "Закрити документ",
             "download": "Завантажити",
-            "downloadStarted": "Завантаження розпочато"
+            "downloadStarted": "Завантаження розпочато",
+            "export": "Експорт",
+            "exportStarted": "Експорт розпочато"
           }
-        }
+        },
+        "unknownClient": "Клієнт №{{id}}",
+        "unknownUser": "Користувач №{{id}}"
       },
       "settings": {
         "title": "Налаштування",
@@ -1059,6 +1100,9 @@
           "displayName": "Відображувана назва",
           "responseSla": "SLA відповіді",
           "businessDays": "робочих днів",
+          "slaDayTypeLabel": "Тип днів SLA",
+          "slaDayTypeWorking": "Робочі дні",
+          "slaDayTypeCalendar": "Календарні дні",
           "description": "Опис",
           "priorityAssignment": "Призначення пріоритету",
           "priorityHint": "★ = наскільки цей юрист має бути пріоритетним для цього типу",
@@ -1103,7 +1147,8 @@
             "backup": "РЕЗЕРВ",
             "secondary": "ДРУГОРЯДНИЙ",
             "off": "ВИМК"
-          }
+          },
+          "noKeywordHints": "Немає підказок ключових слів"
         },
         "lawyers": {
           "autoAssignmentTitle": "Алгоритм призначення",
@@ -1154,7 +1199,8 @@
           "empty": {
             "title": "Юристів ще немає",
             "description": "Додайте юристів, щоб налаштувати ліміти навантаження та спеціалізації за типами листів."
-          }
+          },
+          "defaultRole": "Юридичний відділ"
         },
         "mailboxes": {
           "title": "Скриньки",
@@ -1274,7 +1320,10 @@
             "matchDefault": "За замовчуванням",
             "matchSenderDomain": "Домен відправника",
             "matchSubjectKeyword": "Ключове слово в темі"
-          }
+          },
+          "customProvider": "Власний / Self-hosted",
+          "hidePassword": "Приховати пароль",
+          "showPassword": "Показати пароль"
         },
         "templates": {
           "title": "Шаблони",
@@ -1386,6 +1435,62 @@
         "syncHint": "Email Service · {{interval}}",
         "mailboxes": "6 скриньок підключено",
         "mailboxesCount": "{{count}} скриньок підключено"
+      },
+      "mutations": {
+        "edoRegistered": "ЕДО зареєстровано: {{number}}",
+        "replySent": "Відповідь надіслано",
+        "letterSent": "Лист надіслано",
+        "taskCreated": "Задачу створено"
+      },
+      "letterTemplate": {
+        "clientFallback": "Клієнт"
+      },
+      "lawyers": {
+        "atCapacity": "Ліміт вичерпано ({{current}}/{{max}})"
+      },
+      "registry": {
+        "columns": {
+          "receivedDate": "Дата надходження",
+          "number": "№",
+          "senderEmail": "Ел. пошта відправника",
+          "summary": "Короткий зміст",
+          "requestReceivedAt": "Дата надходження звернення",
+          "email": "Ел. пошта",
+          "category": "Категорія",
+          "partyName": "ПІБ / Назва установи",
+          "outgoingNumber": "Вих. №",
+          "responseDate": "Дата відповіді",
+          "responsible": "Відповідальний"
+        },
+        "filters": {
+          "from": "Період з",
+          "to": "по",
+          "selectStartDate": "Дата початку",
+          "selectEndDate": "Дата кінця",
+          "category": "Категорія",
+          "allCategories": "Усі категорії",
+          "lawyer": "Відповідальний",
+          "allLawyers": "Усі юристи",
+          "search": "Пошук",
+          "searchPlaceholder": "Пошук за номером, ел. поштою, змістом…"
+        },
+        "export": {
+          "button": "Експорт (CSV)",
+          "exporting": "Експортування…",
+          "failed": "Не вдалося експортувати",
+          "incomingFileName": "журнал-вхідної-{{date}}.csv",
+          "outgoingFileName": "журнал-вихідної-{{date}}.csv"
+        },
+        "loadError": {
+          "title": "Не вдалося завантажити реєстр",
+          "description": "Перевірте з’єднання та спробуйте ще раз."
+        },
+        "incoming": {
+          "empty": "Вхідної кореспонденції ще немає"
+        },
+        "outgoing": {
+          "empty": "Вихідної кореспонденції ще немає"
+        }
       }
     },
     "training": {
@@ -1783,6 +1888,11 @@
         "clear": "Очистити",
         "edit": "Редагувати",
         "sendToOperator": "Надіслати оператору",
+        "saveChanges": "Зберегти зміни",
+        "changeTypeWarning": "Зміна типу замінює критерії — поточні оцінки буде очищено.",
+        "changeTypeConfirm": "Змінити тип",
+        "notAssigned": "Цей оператор не закріплений за вами, тому ви не можете оцінити цей дзвінок.",
+        "resend": "Повторно надіслати",
         "status": {
           "draft": "Чернетка",
           "completed": "Завершена",
@@ -1829,6 +1939,7 @@
         "list": {
           "dateTime": "Дата / Час",
           "employee": "Співробітник",
+          "trainer": "Тренер",
           "client": "Клієнт",
           "phone": "Телефон",
           "category": "Категорія",
@@ -1892,7 +2003,7 @@
         },
         "detail": {
           "assignTask": "Призначити завдання",
-          "empty": "Виберіть оцінку, щоб переглянути деталі"
+          "empty": "Оберіть діалог для перегляду"
         },
         "employee": {
           "all": "Усі співробітники",
@@ -1920,6 +2031,9 @@
         },
         "dialogs": {
           "myEmployees": "Мої співробітники",
+          "myEmployeesEmpty": "У вас поки немає операторів під контролем",
+          "myEmployeesError": "Не вдалося завантажити ваших операторів",
+          "statusAll": "Всі",
           "allDepartments": "Усі відділи",
           "evaluation": "Оцінка",
           "notEvaluated": "Не оцінено",
@@ -2212,7 +2326,13 @@
           "low_scorecard_average": "Низький середній бал",
           "low_conversion_rate": "Низька конверсія",
           "overdue_correction_tasks": "Прострочені коригуючі завдання",
-          "active_auto_flags": "Активні авто-прапорці"
+          "active_auto_flags": "Активні авто-прапорці",
+          "missed_calls": "Пропущені дзвінки",
+          "low_score": "Низький бал",
+          "silence": "Мовчання",
+          "tone": "Тон голосу",
+          "overdue_promise": "Прострочена обіцянка",
+          "no_summary": "Немає підсумку"
         },
         "rateDialogue": {
           "title": "Оберіть дзвінок для оцінки",
@@ -2359,7 +2479,8 @@
           "idle": "Простій",
           "offline": "Офлайн",
           "waiting": "Очікування"
-        }
+        },
+        "noData": "немає даних"
       },
       "scriptAnalytics": {
         "empty": "Немає даних за вибраними фільтрами.",
@@ -2521,7 +2642,8 @@
           "in_person": "Особисто",
           "zoom": "Zoom",
           "phone": "Телефон"
-        }
+        },
+        "today": "Сьогодні"
       },
       "closures": {
         "cols": {
@@ -2553,7 +2675,10 @@
           "totalAmount": "Загальна сума"
         },
         "loadFailed": "Не вдалося завантажити закриття. Спробуйте ще раз.",
-        "loading": "Завантаження…"
+        "loading": "Завантаження…",
+        "status": {
+          "verified": "Підтверджено"
+        }
       },
       "correction": {
         "call": "Запис дзвінка",
@@ -2813,7 +2938,10 @@
         "badges": {
           "empty": "Ще немає зароблених значків. Вони відкриваються автоматично за рейтингом, серіями оцінок і вчасно виконаними завданнями.",
           "loading": "Завантаження значків…",
-          "title": "Значки"
+          "title": "Значки",
+          "codes": {
+            "best_call_of_week": "Найкращий дзвінок тижня"
+          }
         },
         "chips": {
           "all": "Усі мої відділи"
@@ -2863,7 +2991,9 @@
           "inNorm": "У нормі",
           "inQueue": "У черзі"
         },
-        "ext": "дод."
+        "ext": "дод.",
+        "collapseDepartment": "Згорнути відділ",
+        "expandDepartment": "Розгорнути відділ"
       },
       "tests": {
         "course": "Курс",
@@ -3112,6 +3242,18 @@
           "groupTrainings": "Групові тренінги",
           "materials": "Матеріали",
           "tests": "Тести"
+        },
+        "catalog": {
+          "categories": {
+            "scripts": "Скрипти",
+            "hard_collection": "Жорстке стягнення",
+            "soft_skills": "М'які навички",
+            "tone": "Тон",
+            "analytics": "Аналітика",
+            "compliance": "Комплаєнс",
+            "product": "Продукт",
+            "tools": "Інструменти"
+          }
         }
       },
       "weeklyTasks": {
@@ -3427,6 +3569,58 @@
       "toastEnabled": "AI-аналіз дзвінків увімкнено.",
       "toastDisabled": "AI-аналіз дзвінків вимкнено.",
       "toastError": "Не вдалося оновити налаштування AI-аналізу дзвінків."
+    },
+    "aiSettings": {
+      "title": "Налаштування AI",
+      "helper": "Глобальні перемикачі AI-асистента та AI-аналізу дзвінків, доступ до асистента за ролями.",
+      "assistantToggleTitle": "AI-асистент",
+      "assistantToggleDescription": "Глобальний вимикач. Коли вимкнено — асистент недоступний для всіх, кнопку в шапці приховано.",
+      "assistantToggleAria": "Перемкнути AI-асистента",
+      "toastEnabled": "AI-асистента ввімкнено",
+      "toastDisabled": "AI-асистента вимкнено",
+      "toastError": "Не вдалося оновити налаштування AI-асистента",
+      "accessTitle": "Доступ до асистента",
+      "accessDescription": "Які ролі можуть користуватися асистентом оператора (пермішен use_ai_assistant).",
+      "accessToggleAria": "Перемкнути доступ до асистента для ролі {{role}}",
+      "disabledBanner": "AI-асистент тимчасово вимкнений адміністратором.",
+      "internals": {
+        "title": "Устрій асистента",
+        "configTitle": "Конфігурація",
+        "promptsTitle": "Промптинг",
+        "unavailable": "Мозок асистента недоступний",
+        "on": "увімк.",
+        "off": "вимк.",
+        "model": "Модель",
+        "commit": "Коміт",
+        "prompt0Append": "Доповнення prompt0",
+        "skills": "Скіли",
+        "knowledge": "База знань",
+        "flags": {
+          "thinking_mode_enabled": "Режим міркувань",
+          "skills_enabled": "Скіли",
+          "hooks_enabled": "Хуки",
+          "crm_mode": "Режим CRM",
+          "memory_enabled": "Пам'ять",
+          "knowledge_enabled": "База знань",
+          "query_router_enabled": "Роутер запитів",
+          "answer_eval_enabled": "Оцінка відповідей",
+          "tts_normalize_enabled": "Нормалізація TTS",
+          "corrector_enabled": "Коректор",
+          "rbac_scope_enabled": "Область RBAC",
+          "call_qa_enabled": "QA дзвінків"
+        },
+        "limits": {
+          "max_turns": "Макс. кількість ходів",
+          "turn_deadline_s": "Дедлайн ходу (с)",
+          "sql_max_rows": "Макс. рядків SQL",
+          "prompt_append_limit": "Ліміт доповнення промпту"
+        },
+        "apply": {
+          "gw-restart": "перезапуск gw",
+          "hot-reload": "hot reload",
+          "reseed": "reseed"
+        }
+      }
     },
     "projects": {
       "title": "Управління проєктами",
@@ -4452,12 +4646,15 @@
         "deleteAddress": "Видалити адресу",
         "editContact": "Редагувати контакт",
         "deleteContact": "Видалити контакт",
+        "contactDigitsOnly": "Для цього типу контакту дозволені лише цифри",
+        "contactDuplicate": "Це значення вже існує для цього клієнта",
         "workPhone": "Робочий телефон",
         "saveAll": "Зберегти всі розділи",
         "savingAll": "Зберігаємо все…",
         "saveAllSuccess": "Усі розділи збережено",
         "saveAllPartial": "Деякі розділи не вдалося зберегти — див. помилки нижче",
-        "saveAllError": "Не вдалося зберегти розділи"
+        "saveAllError": "Не вдалося зберегти розділи",
+        "addPhone": "Додати телефон"
       },
       "detail": {
         "clientNotFound": "Клієнта не знайдено",
@@ -4470,6 +4667,51 @@
         "loan": "Кредит",
         "documentsUnlinked": "Без прив'язки",
         "documentTypePlaceholder": "Оберіть тип",
+        "generatedBadge": "Згенеровано",
+        "generateModal": {
+          "title": "Згенерувати документ",
+          "credit": "Кредит",
+          "creditPlaceholder": "Оберіть кредит",
+          "template": "Шаблон",
+          "selectCreditFirst": "Спершу оберіть кредит",
+          "templatesEmpty": "Немає доступних шаблонів",
+          "loadError": "Не вдалося завантажити шаблони",
+          "documentType": "Тип документа",
+          "indexNum": "Вихідний №",
+          "indexNumPlaceholder": "Авто",
+          "indexNumHint": "Залиште порожнім для автонумерації. Реєстр вихідних номерів буде запроваджено пізніше.",
+          "generate": "Згенерувати",
+          "generating": "Генерація…",
+          "done": "Готово",
+          "successTitle": "Документ згенеровано",
+          "successPdfHint": "PDF додано до документів клієнта.",
+          "downloadDocx": "Завантажити .docx",
+          "genericError": "Не вдалося згенерувати документ",
+          "reasons": {
+            "debt_not_closed": "Кредит не закритий",
+            "debt_closed": "Кредит закритий",
+            "no_active_rr": "Немає діючої реструктуризації",
+            "no_active_promise": "Немає актуальної обіцянки платежу",
+            "no_activation_tag": "Шаблон не налаштовано: оберіть тег",
+            "no_required_tag": "Немає потрібного тегу на клієнті",
+            "unavailable": "Недоступно для цього кредиту"
+          },
+          "hiddenTemplates": "Приховано шаблонів, недоступних для цього кредиту: {{count}}",
+          "indexNumRegistryHint": "Вихідний № буде присвоєно автоматично з реєстру кореспонденції",
+          "typeFromTemplate": "застосовується автоматично з шаблону",
+          "deliveryChannel": "Канал відправки клієнту",
+          "deliveryChannelPlaceholder": "Оберіть канал",
+          "deliveryContact": "Контакт (куди)",
+          "deliveryContactPlaceholder": "+380… або email",
+          "channels": {
+            "email": "Ел. пошта",
+            "telegram": "Telegram",
+            "viber": "Viber",
+            "whatsapp": "WhatsApp",
+            "sms": "SMS",
+            "post": "Поштою"
+          }
+        },
         "department": "Відділ",
         "phones": "Телефони",
         "tin": "ІПН",
@@ -4888,7 +5130,14 @@
             "unreachable": "Сервіс УБКІ недоступний",
             "connection": "Помилка з’єднання"
           }
-        }
+        },
+        "otherContacts": "Інші",
+        "contactsCount": "{{count}} контактів",
+        "sendMessageSmsViber": "Повідомлення (SMS / Viber)",
+        "contactInfo": "Деталі",
+        "logInteraction": "Записати взаємодію",
+        "call": "Дзвінок",
+        "sendSms": "Надіслати SMS"
       },
       "modals": {
         "addNote": {
@@ -6327,7 +6576,8 @@
           "preview": "Превʼю",
           "variables": "Змінні",
           "updated": "Оновлено",
-          "actions": "Дії"
+          "actions": "Дії",
+          "type": "Тип"
         },
         "modals": {
           "createTitle": "Створити шаблон",
@@ -6345,12 +6595,47 @@
           "preview": "Превʼю (тестові дані)",
           "previewEmpty": "Почніть друкувати, щоб побачити превʼю.",
           "variables": "Змінні",
-          "variablesHelp": "Натисніть змінну, щоб вставити її в позицію курсора."
+          "variablesHelp": "Натисніть змінну, щоб вставити її в позицію курсора.",
+          "description": "Опис",
+          "descriptionPlaceholder": "Необовʼязковий короткий опис",
+          "file": "Файл .docx",
+          "dropFileOrClick": "Перетягніть файл .docx сюди або натисніть, щоб вибрати",
+          "bodyReadonly": "Тіло (з файлу, лише для читання)",
+          "bodyEmpty": "Немає витягнутого тексту.",
+          "currentFile": "Поточний файл",
+          "downloadFile": "Завантажити файл",
+          "replaceFile": "Замінити файл",
+          "replaceAction": "Замінити файл",
+          "isActive": "Активний",
+          "activationRule": "Правило активації",
+          "activationTag": "Тег активації",
+          "activationTagPlaceholder": "Оберіть тег",
+          "activationTagHelp": "Шаблон буде доступний лише клієнтам із цим тегом.",
+          "variablesReferenceHelp": "Використовуйте ці імена у вашому Word-файлі як {{name}}.",
+          "composeHelp": "Шапка з лого, реквізити компанії, печатка та підпис додаються автоматично.",
+          "composeTitle": "Заголовок документа",
+          "composeTitlePlaceholder": "напр. ГАРАНТІЙНИЙ ЛИСТ",
+          "composeBodyPlaceholder": "Кожен рядок — окремий абзац. Вставляйте змінні з панелі праворуч.",
+          "includeRequisites": "Реквізити для оплати",
+          "includeSchedule": "Таблиця графіка платежів (РР)",
+          "documentType": "Тип документа (для генерації)",
+          "documentTypePlaceholder": "Не задано — оператор обере вручну"
+        },
+        "activationRules": {
+          "always": "Завжди доступний",
+          "active_debt": "Активний кредит",
+          "closed_debt": "Закритий кредит",
+          "rr_active": "Діюча реструктуризація",
+          "rr_first_payment": "Перший платіж за РР",
+          "promise_active": "Активна обіцянка платежу",
+          "tag_active": "Активний тег"
         },
         "variableGroups": {
           "client": "Клієнт",
           "credit": "Кредит",
-          "system": "Система"
+          "system": "Система",
+          "promise": "Обіцянка",
+          "restructuring": "Реструктуризація"
         },
         "variables": {
           "clientFullName": "Повне імʼя клієнта",
@@ -6371,12 +6656,44 @@
         },
         "errors": {
           "nameRequired": "Назва шаблона обовʼязкова",
-          "bodyRequired": "Тіло шаблона обовʼязкове"
+          "bodyRequired": "Тіло шаблона обовʼязкове",
+          "fileRequired": "Виберіть файл .docx",
+          "titleRequired": "Вкажіть заголовок документа",
+          "activationTagRequired": "Оберіть тег для правила «Активний тег»"
         },
         "messages": {
           "created": "Шаблон створено",
           "updated": "Шаблон оновлено",
-          "deleted": "Шаблон видалено"
+          "deleted": "Шаблон видалено",
+          "uploaded": "Шаблон завантажено",
+          "fileReplaced": "Файл шаблона оновлено",
+          "downloadError": "Не вдалося завантажити файл"
+        },
+        "templateKind": {
+          "label": "Тип шаблона",
+          "text": "Текстовий шаблон",
+          "docx": "Файл .docx",
+          "compose": "Фірмовий бланк"
+        },
+        "warnings": {
+          "unknownVariablesTitle": "Змінні поза словником",
+          "unknownVariablesHelp": "Ці плейсхолдери відсутні у словнику й не будуть підставлені:",
+          "acknowledge": "Готово"
+        },
+        "actions": {
+          "preview": "Перегляд"
+        },
+        "preview": {
+          "title": "Перегляд шаблона",
+          "loading": "Завантаження превʼю…",
+          "error": "Не вдалося відобразити документ.",
+          "empty": "Немає що показати.",
+          "modeTemplate": "Шаблон",
+          "modeSample": "Зі зразком даних",
+          "sampleSectionTitle": "Як виглядатиме (зразок даних)",
+          "openFullscreen": "Відкрити на весь екран",
+          "show": "Показати",
+          "hide": "Сховати"
         }
       }
     },
@@ -8380,7 +8697,8 @@
         "timeline": "Таймлайн",
         "screenTime": "Екранний час",
         "heatmap": "Теплова карта",
-        "scriptAnalytics": "Аналітика скриптів"
+        "scriptAnalytics": "Аналітика скриптів",
+        "correspondence": "Кореспонденція"
       },
       "scoresSubTabs": {
         "scorecards": "Скоркарти",
@@ -8401,6 +8719,11 @@
         "clear": "Очистити",
         "edit": "Редагувати",
         "sendToOperator": "Надіслати оператору",
+        "saveChanges": "Зберегти зміни",
+        "changeTypeWarning": "Зміна типу замінює критерії — поточні оцінки буде очищено.",
+        "changeTypeConfirm": "Змінити тип",
+        "notAssigned": "Цей оператор не закріплений за вами, тому ви не можете оцінити цей дзвінок.",
+        "resend": "Повторно надіслати",
         "status": {
           "draft": "Чернетка",
           "completed": "Завершена",
@@ -8440,6 +8763,7 @@
         "list": {
           "dateTime": "Дата / Час",
           "employee": "Співробітник",
+          "trainer": "Тренер",
           "client": "Клієнт",
           "phone": "Телефон",
           "category": "Категорія",
@@ -8760,6 +9084,25 @@
           "fastResultPct": "% швидких",
           "distribution": "Розподіл"
         }
+      },
+      "correspondence": {
+        "columns": {
+          "date": "Дата",
+          "direction": "Напрям",
+          "number": "№",
+          "category": "Категорія",
+          "party": "Клієнт / Установа",
+          "responsible": "Відповідальний"
+        },
+        "directionIncoming": "Вхідна",
+        "directionOutgoing": "Вихідна",
+        "filters": {
+          "from": "Період з",
+          "to": "по",
+          "selectStartDate": "Дата початку",
+          "selectEndDate": "Дата кінця"
+        },
+        "empty": "Немає активності кореспонденції за цей період"
       }
     },
     "ubkiIntegration": {

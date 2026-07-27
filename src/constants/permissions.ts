@@ -142,7 +142,7 @@ export const PERMISSIONS = {
   },
 
   /**
-   * System Category (4 permissions)
+   * System Category (5 permissions)
    * Controls access to system administration
    */
   SYSTEM: {
@@ -151,6 +151,8 @@ export const PERMISSIONS = {
     MANAGE_ROLES: 'manage_roles',
     // Call QA — global «AI call analysis» switch + its settings surface
     MANAGE_CALL_QA: 'manage_call_qa',
+    // AI settings — global assistant kill-switch + its settings surface
+    MANAGE_AI_SETTINGS: 'manage_ai_settings',
   },
 
   /**
@@ -670,4 +672,5 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
 
   // AI Assistant
   use_ai_assistant: 'Use the operator AI assistant (chat, history, feedback, voice)',
+  manage_ai_settings: 'Manage global AI settings (assistant kill-switch)',
 }

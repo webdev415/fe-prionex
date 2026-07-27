@@ -45,6 +45,7 @@ import {
 } from '@/features/aiAssistant/useVoiceMessageRecorder'
 import { prepareTtsText, resolveTtsVoice, useTtsPlayer } from '@/features/aiAssistant/tts'
 import { useAuthStore } from '@/stores/authStore'
+import { useAiAssistantSettings } from '@/features/aiSettings/hooks/useAiAssistantSettings'
 import {
   DEFAULT_ASSISTANT_SETTINGS,
   useAiAssistantStore,
@@ -587,6 +588,7 @@ function ComposerHubMenu({
 
 export function AiAssistantBetaPage() {
   const { t, i18n } = useTranslation('common')
+  const { data: aiSettings } = useAiAssistantSettings()
   const isOpenSideBar = useSidebarStore((state) => state.isOpenSideBar)
   const userId = useAuthStore((state) => state.user?.id ?? null)
   const storedConversationId = useAiAssistantStore((state) => state.conversationIdFor(userId))
@@ -2161,6 +2163,18 @@ export function AiAssistantBetaPage() {
   const activeSidebarConversationId = conversationId ?? storedConversationId
   const isVoiceActive =
     voiceStatus === 'listening' || dictationStatus !== 'idle' || recorderStatus === 'recording'
+
+  if (aiSettings?.assistant_enabled === false) {
+    return (
+      <div className="flex h-full w-full items-center justify-center p-8">
+        <div className="border-border bg-card max-w-md rounded-xl border p-6 text-center shadow-sm">
+          <div className="text-foreground text-sm font-medium">
+            {t('pages.aiSettings.disabledBanner')}
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div

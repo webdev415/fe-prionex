@@ -37,7 +37,7 @@ export function LawyerWorkspaceBanner({ className }: LawyerWorkspaceBannerProps)
   )
 
   const regionCode = i18n.language?.startsWith('uk') ? 'UA' : 'EN'
-  const workspaceTitle = t('pages.lawyerWorkplace.workspaceBanner.title', "Lawyers's Workspace")
+  const workspaceTitle = t('pages.lawyerWorkplace.workspaceBanner.title', "Lawyers' Workspace")
 
   if (!showWorkspaceBanner) {
     return null

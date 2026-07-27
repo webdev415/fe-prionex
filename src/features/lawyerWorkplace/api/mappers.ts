@@ -1,3 +1,4 @@
+import i18n from '@/lib/i18n'
 import type {
   LetterDetail,
   LetterDisplayStatus,
@@ -302,7 +303,9 @@ export function mapInboxItemToLetterListItem(
     routeToEmail,
     direction,
     receivedAt: item.received_at ?? new Date().toISOString(),
-    subject: item.subject?.trim() || '(no subject)',
+    subject:
+      item.subject?.trim() ||
+      i18n.t('pages.lawyerWorkplace.incoming.noSubject', { defaultValue: '(no subject)' }),
     mailbox: resolveMailboxLabel(
       item.mailbox_id,
       item.mailbox_email ?? context?.mailboxLabelById?.get(item.mailbox_id ?? '')

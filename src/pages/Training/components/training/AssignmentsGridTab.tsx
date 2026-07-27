@@ -5,6 +5,7 @@ import { DataTable, type Column } from '@/components/ui/DataTable'
 import { Modal, ModalContent, ModalFooter, ModalHeader } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
+import { formatDate as formatLocaleDate } from '@/lib/localeFormat'
 import { useHasPermission } from '@/hooks'
 import { useAuthStore } from '@/stores/authStore'
 import { useOperators } from '@/features/users/hooks'
@@ -34,10 +35,10 @@ function initialsFor(name: string): string {
   return `${parts[0][0]}${parts[1][0]}`.toUpperCase()
 }
 
-function formatDate(iso: string | null | undefined): string {
+function formatDate(iso: string | null | undefined, language: string): string {
   if (!iso) return '—'
   const d = new Date(iso)
-  return Number.isNaN(d.getTime()) ? '—' : d.toLocaleDateString()
+  return Number.isNaN(d.getTime()) ? '—' : formatLocaleDate(d, language)
 }
 
 /** A picker date (YYYY-MM-DD) → end-of-day ISO, so the backend's `datetime` param parses. */
@@ -52,7 +53,7 @@ function isoToDateInput(iso: string | null | undefined): string {
 }
 
 export function AssignmentsGridTab() {
-  const { t } = useTranslation('common')
+  const { t, i18n } = useTranslation('common')
   const canView = useHasPermission('view_courses')
   const canManage = useHasPermission('manage_courses')
   const activeProjectId = useAuthStore((s) => s.user?.active_project_id)
@@ -125,7 +126,9 @@ export function AssignmentsGridTab() {
               <div className="flex flex-col">
                 <span className="text-sm font-medium text-[#05040D]">{name}</span>
                 <span className="text-[10px] text-[#6B7280]">
-                  {[team, ext ? `ext. ${ext}` : null].filter(Boolean).join(' · ') || '—'}
+                  {[team, ext ? `${t('pages.training.team.ext', 'ext')} ${ext}` : null]
+                    .filter(Boolean)
+                    .join(' · ') || '—'}
                 </span>
               </div>
             </div>
@@ -179,7 +182,9 @@ export function AssignmentsGridTab() {
       {
         key: 'deadline',
         header: t('pages.training.assignments.columns.deadline', 'Deadline'),
-        render: (r) => <span className="text-xs text-[#374151]">{formatDate(r.deadline)}</span>,
+        render: (r) => (
+          <span className="text-xs text-[#374151]">{formatDate(r.deadline, i18n.language)}</span>
+        ),
       },
       {
         key: 'status',
@@ -221,7 +226,7 @@ export function AssignmentsGridTab() {
         ),
       },
     ],
-    [t, operatorMap, canManage]
+    [t, operatorMap, canManage, i18n.language]
   )
 
   if (!canView) {
@@ -394,7 +399,7 @@ function AssignmentDetailsDialog({
   operatorName: string
   onClose: () => void
 }) {
-  const { t } = useTranslation('common')
+  const { t, i18n } = useTranslation('common')
   return (
     <Modal open={target != null} onClose={onClose} maxWidth="md">
       <ModalHeader title={t('pages.training.assignments.detailsTitle', 'Assignment details')} />
@@ -430,11 +435,11 @@ function AssignmentDetailsDialog({
             />
             <Detail
               label={t('pages.training.assignments.columns.deadline', 'Deadline')}
-              value={formatDate(target.deadline)}
+              value={formatDate(target.deadline, i18n.language)}
             />
             <Detail
               label={t('pages.training.assignments.assignedAt', 'Assigned')}
-              value={formatDate(target.assigned_at)}
+              value={formatDate(target.assigned_at, i18n.language)}
             />
           </dl>
         )}

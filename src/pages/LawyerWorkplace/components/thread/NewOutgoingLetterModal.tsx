@@ -22,7 +22,6 @@ import {
   useLegalComposerReplyTemplates,
   useLegalMailboxes,
   useSendOutgoingLetter,
-  type EdoType,
   type LegalMailbox,
   type LegalStagedAttachment,
 } from '@/features/lawyerWorkplace'
@@ -32,22 +31,6 @@ import { useAuthStore } from '@/stores/authStore'
 import { Icon, Icons } from '@/lib/icons'
 import { getErrorMessage } from '@/lib/errors'
 import { cn } from '@/lib/utils'
-
-const EDO_OPTIONS: { id: EdoType; labelKey: string; fallback: string; badge?: string }[] = [
-  {
-    id: 'outgoing',
-    labelKey: 'pages.lawyerWorkplace.reply.edoOutgoing',
-    fallback: 'Outgoing (ВИХ)',
-    badge: 'ВИХ',
-  },
-  {
-    id: 'nbu',
-    labelKey: 'pages.lawyerWorkplace.reply.edoNbu',
-    fallback: 'NBU reply (НБУ)',
-    badge: 'НБУ',
-  },
-  { id: 'none', labelKey: 'pages.lawyerWorkplace.reply.edoNone', fallback: 'Do not register' },
-]
 
 type RecipientMode = 'client' | 'institution'
 
@@ -109,12 +92,12 @@ function NewOutgoingLetterForm({ onClose, onSent }: NewOutgoingLetterFormProps) 
     null
   )
   const [institutionEmail, setInstitutionEmail] = useState('')
+  const [institutionName, setInstitutionName] = useState('')
   const [institutionEdoClientId, setInstitutionEdoClientId] = useState('')
   const [institutionEdoClientSearch, setInstitutionEdoClientSearch] = useState('')
   const [institutionEdoSearchType, setInstitutionEdoSearchType] = useState<SearchType>('phone')
   const [subject, setSubject] = useState('')
   const [body, setBody] = useState('')
-  const [edoType, setEdoType] = useState<EdoType>('none')
   const [selectedClientTemplateContext, setSelectedClientTemplateContext] = useState<{
     clientName: string | null
     contract: string | null
@@ -144,10 +127,7 @@ function NewOutgoingLetterForm({ onClose, onSent }: NewOutgoingLetterFormProps) 
         search_type: institutionEdoSearchType,
         limit: 20,
       }),
-    enabled:
-      recipientMode === 'institution' &&
-      edoType !== 'none' &&
-      debouncedInstitutionEdoClientSearch.length >= 2,
+    enabled: recipientMode === 'institution' && debouncedInstitutionEdoClientSearch.length >= 2,
     staleTime: 30_000,
   })
 
@@ -219,56 +199,41 @@ function NewOutgoingLetterForm({ onClose, onSent }: NewOutgoingLetterFormProps) 
   }
 
   const effectiveToEmail = recipientMode === 'client' ? toEmail : institutionEmail
-  const edoClientIdForRegistration = recipientMode === 'client' ? clientId : institutionEdoClientId
-  const edoClientIdNumber = Number(edoClientIdForRegistration)
-  const edoRegistrationReady =
-    edoType === 'none' ||
-    (Number.isFinite(edoClientIdNumber) &&
-      edoClientIdNumber > 0 &&
-      Number.isFinite(currentUserId) &&
-      currentUserId > 0)
+  // CRM client linked to the letter for the correspondence register: the picked
+  // client in client mode, or the optional client link in institution mode.
+  const registrationClientId = recipientMode === 'client' ? clientId : institutionEdoClientId
+  const registrationClientNumber = Number(registrationClientId)
 
   const canSend =
     Boolean(selectedMailbox?.id) &&
     effectiveToEmail.trim() !== '' &&
     subject.trim() !== '' &&
     body.trim() !== '' &&
-    (recipientMode === 'institution' || clientId !== '') &&
-    edoRegistrationReady &&
+    (recipientMode === 'client' ? clientId !== '' : institutionName.trim() !== '') &&
     !sendMutation.isPending
 
   const handleSend = () => {
     if (!canSend || !selectedMailbox) return
 
     const clientIdForPayload =
-      edoType !== 'none' && Number.isFinite(edoClientIdNumber) && edoClientIdNumber > 0
-        ? edoClientIdNumber
-        : recipientMode === 'client' && Number.isFinite(clientIdNumber) && clientIdNumber > 0
-          ? clientIdNumber
-          : null
+      Number.isFinite(registrationClientNumber) && registrationClientNumber > 0
+        ? registrationClientNumber
+        : null
+    const assignedUserId =
+      Number.isFinite(currentUserId) && currentUserId > 0 ? currentUserId : null
 
-    if (
-      edoType !== 'none' &&
-      (clientIdForPayload == null || !Number.isFinite(currentUserId) || currentUserId <= 0)
-    ) {
-      toast.error(
-        t(
-          'pages.lawyerWorkplace.newLetter.edoRequiresClient',
-          'Select a CRM client before registering EDO'
-        )
-      )
-      return
-    }
-
+    // Outgoing letters are always registered in the correspondence journal —
+    // there is no EDO mode selector, so `edo_type` is never sent. Client/lawyer
+    // are forwarded only when known; the backend assigns the outgoing number.
     sendMutation.mutate(
       {
         mailbox_id: selectedMailbox.id,
         to_addresses: [effectiveToEmail.trim()],
         subject: subject.trim(),
         body_text: body.trim(),
-        edo_type: edoType,
-        client_id: clientIdForPayload,
-        assigned_to_user_id: edoType !== 'none' ? currentUserId : null,
+        ...(clientIdForPayload != null ? { client_id: clientIdForPayload } : {}),
+        ...(assignedUserId != null ? { assigned_to_user_id: assignedUserId } : {}),
+        institution_name: recipientMode === 'institution' ? institutionName.trim() : undefined,
         attachment_ids: stagedAttachments.map((item) => item.id),
         staging_session_id: stagingSessionId,
       },
@@ -360,9 +325,9 @@ function NewOutgoingLetterForm({ onClose, onSent }: NewOutgoingLetterFormProps) 
                     setClientId('')
                     setEmailOverride(null)
                     setInstitutionEmail('')
+                    setInstitutionName('')
                     setInstitutionEdoClientId('')
                     setInstitutionEdoClientSearch('')
-                    setEdoType('none')
                   }}
                   className={cn(
                     'rounded-[6px] px-3 py-1.5 text-[12px] font-medium transition-colors',
@@ -491,22 +456,41 @@ function NewOutgoingLetterForm({ onClose, onSent }: NewOutgoingLetterFormProps) 
           )}
 
           {recipientMode === 'institution' && (
-            <div className="flex w-full flex-col gap-2">
-              <Label className="text-foreground text-[12px] font-normal">
-                {t('pages.lawyerWorkplace.newLetter.to', 'To')}
-                <span className="text-error-500 ml-1">*</span>
-              </Label>
-              <input
-                type="email"
-                value={institutionEmail}
-                onChange={(e) => setInstitutionEmail(e.target.value)}
-                placeholder={t(
-                  'pages.lawyerWorkplace.newLetter.institutionPlaceholder',
-                  'e.g. consumers@bank.gov.ua'
-                )}
-                className="text-foreground focus:border-primary-500 border-border bg-input h-9 w-full rounded-[8px] border px-3 text-[13px] font-light outline-none"
-              />
-            </div>
+            <>
+              <div className="flex w-full flex-col gap-2">
+                <Label className="text-foreground text-[12px] font-normal">
+                  {t('pages.lawyerWorkplace.newLetter.institutionName', 'Institution name')}
+                  <span className="text-error-500 ml-1">*</span>
+                </Label>
+                <input
+                  type="text"
+                  value={institutionName}
+                  onChange={(e) => setInstitutionName(e.target.value)}
+                  placeholder={t(
+                    'pages.lawyerWorkplace.newLetter.institutionNamePlaceholder',
+                    'e.g. National Bank of Ukraine'
+                  )}
+                  className="text-foreground focus:border-primary-500 border-border bg-input h-9 w-full rounded-[8px] border px-3 text-[13px] font-light outline-none"
+                />
+              </div>
+
+              <div className="flex w-full flex-col gap-2">
+                <Label className="text-foreground text-[12px] font-normal">
+                  {t('pages.lawyerWorkplace.newLetter.to', 'To')}
+                  <span className="text-error-500 ml-1">*</span>
+                </Label>
+                <input
+                  type="email"
+                  value={institutionEmail}
+                  onChange={(e) => setInstitutionEmail(e.target.value)}
+                  placeholder={t(
+                    'pages.lawyerWorkplace.newLetter.institutionPlaceholder',
+                    'e.g. consumers@bank.gov.ua'
+                  )}
+                  className="text-foreground focus:border-primary-500 border-border bg-input h-9 w-full rounded-[8px] border px-3 text-[13px] font-light outline-none"
+                />
+              </div>
+            </>
           )}
 
           <div className="flex w-full flex-col gap-2">
@@ -574,61 +558,14 @@ function NewOutgoingLetterForm({ onClose, onSent }: NewOutgoingLetterFormProps) 
             />
           </div>
 
-          <div className="flex w-full flex-col gap-2">
-            <Label className="text-foreground text-[12px] font-normal">
-              {t('pages.lawyerWorkplace.newLetter.edoType', 'EDO document type')}
-            </Label>
-            <div className="flex flex-wrap gap-2">
-              {EDO_OPTIONS.map((opt) => (
-                <button
-                  key={opt.id}
-                  type="button"
-                  onClick={() => {
-                    setEdoType(opt.id)
-                    if (opt.id === 'none') {
-                      setInstitutionEdoClientId('')
-                      setInstitutionEdoClientSearch('')
-                    }
-                  }}
-                  className={cn(
-                    'rounded-full border px-3 py-1.5 text-[12px] font-medium transition-colors',
-                    edoType === opt.id
-                      ? 'border-secondary-400 bg-secondary-50 text-secondary-800'
-                      : 'border-border bg-input text-muted-foreground hover:bg-muted'
-                  )}
-                >
-                  {opt.badge && <span className="mr-1.5 font-bold">{opt.badge}</span>}
-                  {t(opt.labelKey, opt.fallback)}
-                </button>
-              ))}
-            </div>
-            {recipientMode === 'client' && edoType !== 'none' && !clientId && (
-              <p className="text-muted-foreground text-[11px]">
-                {t(
-                  'pages.lawyerWorkplace.newLetter.edoRequiresClientHint',
-                  'Select a CRM client above to register this letter in EDO.'
-                )}
-              </p>
-            )}
-            {recipientMode === 'institution' && edoType !== 'none' && (
-              <p className="text-muted-foreground text-[11px]">
-                {t(
-                  'pages.lawyerWorkplace.newLetter.edoHintInstitution',
-                  'Link a CRM client below to register this institution letter in EDO.'
-                )}
-              </p>
-            )}
-          </div>
-
-          {recipientMode === 'institution' && edoType !== 'none' && (
+          {recipientMode === 'institution' && (
             <div className="flex w-full flex-col gap-2">
               <div className="flex items-center justify-between gap-2">
                 <Label className="text-foreground text-[12px] font-normal">
                   {t(
-                    'pages.lawyerWorkplace.newLetter.edoClientForInstitution',
-                    'CRM client (for EDO registration)'
+                    'pages.lawyerWorkplace.newLetter.clientForRegister',
+                    'CRM client (optional, for the register)'
                   )}
-                  <span className="text-error-500 ml-1">*</span>
                 </Label>
                 <DropdownMenu modal={false}>
                   <DropdownMenuTrigger asChild>

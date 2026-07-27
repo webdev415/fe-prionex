@@ -27,6 +27,9 @@ const UserManagementPage = lazy(() =>
 const IpWhitelistPage = lazy(() =>
   import('@/pages/IpWhitelist').then((m) => ({ default: m.IpWhitelistPage }))
 )
+const AiSettingsPage = lazy(() =>
+  import('@/pages/AiSettings').then((m) => ({ default: m.AiSettingsPage }))
+)
 const ImportClientsPage = lazy(() => import('@/pages/ImportClients/ImportClientsPage'))
 const ImportHistoryPage = lazy(() => import('@/pages/ImportClients/ImportHistoryPage'))
 const ImportDetailsPage = lazy(() => import('@/pages/ImportClients/ImportDetailsPage'))
@@ -366,6 +369,21 @@ export const router = createBrowserRouter([
         element: (
           <PermissionRoute requiredPermission={PERMISSIONS.USERS.EDIT}>
             {withSuspense(<IpWhitelistPage />)}
+          </PermissionRoute>
+        ),
+      },
+      {
+        path: 'system-settings/ai',
+        element: (
+          <PermissionRoute
+            requiredPermissions={[
+              PERMISSIONS.SYSTEM.MANAGE_AI_SETTINGS,
+              PERMISSIONS.SYSTEM.MANAGE_CALL_QA,
+              PERMISSIONS.SYSTEM.MANAGE_ROLES,
+            ]}
+            mode="any"
+          >
+            {withSuspense(<AiSettingsPage />)}
           </PermissionRoute>
         ),
       },

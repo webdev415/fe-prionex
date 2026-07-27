@@ -1,14 +1,16 @@
 import { useMemo, useState } from 'react'
+import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Pagination } from '@/components/ui/Pagination'
+import { useConfirm } from '@/components/ui/useConfirm'
 import { useAuthStore } from '@/stores/authStore'
 import { useOperators } from '@/features/users/hooks'
 import { useCallMonitoring } from '@/features/training'
-import type { CallMonitoringItem, TelephonyType } from '@/features/training'
-import { useScorecardStatusByCalls } from '@/features/quality'
-import type { CallScorecardStatus } from '@/features/quality'
-import { useMyOperators } from '@/features/quality/coaching/hooks'
+import type { CallMonitoringItem, ScorecardCategory, TelephonyType } from '@/features/training'
+import { useMyOperators, useOperatorTrainers } from '@/features/quality/coaching/hooks'
+import { useClientNames } from '@/features/clients/hooks/useClients'
 import { useScopedUserIds } from '../../lib/scope'
+import { EmployeeMultiSelect } from './EmployeeMultiSelect'
 import { CallReviewPanel } from './CallReviewPanel'
 import {
   ANALYTICS_TABLE_HEAD,
@@ -17,8 +19,10 @@ import {
   ANALYTICS_TABLE_TH,
 } from '../analytics/analyticsTableStyles'
 import { AnalyticsMockTable } from '../analytics/AnalyticsMockTable'
+import { formatDateTime as formatDateTimeLocale } from '@/lib/localeFormat'
 
 type TelephonyFilter = '' | TelephonyType
+type CategoryFilter = '' | ScorecardCategory
 
 const PAGE_SIZE = 50
 
@@ -27,11 +31,13 @@ const CALL_TYPE_TONE: Record<string, string> = {
   grey: 'bg-[#E5E7EB] text-[#4B5563]',
   unknown: 'bg-gray-100 text-gray-400',
 }
-const STATUS_TONE: Record<string, string> = {
-  draft: 'bg-[#FEF3C7] text-[#B45309]',
-  completed: 'bg-[#DCFCE7] text-[#15803D]',
-  sent: 'bg-[#DBEAFE] text-[#1D4ED8]',
+const CATEGORY_TONE: Record<string, string> = {
+  unscored: 'bg-gray-100 text-gray-400',
+  low: 'bg-[#FEE2E2] text-[#B91C1C]',
+  average: 'bg-[#FEF3C7] text-[#B45309]',
+  high: 'bg-[#DCFCE7] text-[#15803D]',
 }
+const CATEGORIES: ScorecardCategory[] = ['unscored', 'low', 'average', 'high']
 
 function dayStartIso(date: string): string | undefined {
   return date ? new Date(`${date}T00:00:00`).toISOString() : undefined
@@ -54,16 +60,28 @@ function formatDuration(seconds: number | null): string {
   const s = seconds % 60
   return `${m}:${String(s).padStart(2, '0')}`
 }
-function formatDateTime(iso: string): string {
+function formatDateTime(iso: string, language: string): string {
   const d = new Date(iso)
-  return Number.isNaN(d.getTime()) ? '—' : d.toLocaleString()
+  return Number.isNaN(d.getTime()) ? '—' : formatDateTimeLocale(d, language)
+}
+function categoryOf(call: CallMonitoringItem): ScorecardCategory {
+  return call.has_scorecard ? (call.scorecard_category ?? 'unscored') : 'unscored'
+}
+
+interface Selected {
+  callId: string
+  operatorId: number
+  scorecardId?: number
+  createdAt?: string
+  operatorName?: string
+  talkDurationSec?: number | null
 }
 
 /**
- * Call-first Dialogue Evaluation list (KAN-827, PM feedback): shows ALL recorded
- * dialogs for the scoped operators by default — no more adding one-by-one — with
- * "My employees" / department / dialing-type filters and a per-dialog evaluation
- * status. Selecting a row opens the call in the review panel to evaluate it.
+ * Dialogue Evaluation list — one row per recorded call. Trainers see every
+ * project call (filterable), open any to view its evaluation, and score the
+ * ones for operators assigned to them. The scorecard summary (category, rating,
+ * comment) is served inline by call-service so filtering is server-side.
  */
 export function DialogsListTab() {
   const { t } = useTranslation('common')
@@ -71,17 +89,41 @@ export function DialogsListTab() {
   const { data: operators = [] } = useOperators(activeProjectId ? Number(activeProjectId) : null)
   const scoped = useScopedUserIds(operators)
 
-  const [myEmployeesOnly, setMyEmployeesOnly] = useState(false)
+  const [selectedEmployeeIds, setSelectedEmployeeIds] = useState<number[]>([])
   const [departmentId, setDepartmentId] = useState<number | 'all'>('all')
   const [telephonyType, setTelephonyType] = useState<TelephonyFilter>('')
+  const [category, setCategory] = useState<CategoryFilter>('')
   const [callFrom, setCallFrom] = useState('')
   const [callTo, setCallTo] = useState('')
   const [minDuration, setMinDuration] = useState('')
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(PAGE_SIZE)
-  const [selected, setSelected] = useState<{ callId: string; operatorId: number } | null>(null)
+  const [selected, setSelected] = useState<Selected | null>(null)
+  const [reviewDirty, setReviewDirty] = useState(false)
+  const { confirm, confirmDialog } = useConfirm()
 
-  const { data: myOperatorIds = [] } = useMyOperators(myEmployeesOnly)
+  const myOperatorsQuery = useMyOperators()
+  const myOperatorIds = useMemo(() => myOperatorsQuery.data ?? [], [myOperatorsQuery.data])
+  const { data: operatorTrainers = [] } = useOperatorTrainers()
+
+  // Nothing to filter by until the trainer has operators under their control;
+  // without this the button would be a silent no-op.
+  const myEmployeesUnavailable =
+    myOperatorsQuery.isLoading || myOperatorsQuery.isError || myOperatorIds.length === 0
+  const myEmployeesHint = myOperatorsQuery.isError
+    ? t('pages.training.dialogue.dialogs.myEmployeesError', 'Could not load your operators')
+    : myOperatorIds.length === 0
+      ? t(
+          'pages.training.dialogue.dialogs.myEmployeesEmpty',
+          'You have no operators under your control yet'
+        )
+      : undefined
+
+  const trainerByOperator = useMemo(() => {
+    const map = new Map<number, string>()
+    for (const ot of operatorTrainers) map.set(ot.operator_id, ot.trainer_name)
+    return map
+  }, [operatorTrainers])
 
   const departmentOptions = useMemo(() => {
     const map = new Map<number, string>()
@@ -95,25 +137,24 @@ export function DialogsListTab() {
     )
   }, [operators])
 
-  // Resolve the scoped + filtered operator set → their Asterisk extensions (the
-  // call service filters by extension, not user_id).
-  const { extensions, operatorByExtension } = useMemo(() => {
-    const base = scoped.userIds ?? operators.map((o) => o.id)
-    let ids = base
-    if (myEmployeesOnly) {
-      const mine = new Set(myOperatorIds)
-      ids = ids.filter((id) => mine.has(id))
-    }
+  // Scope ∩ employee picker ∩ department → the operators whose calls we list.
+  const operatorIds = useMemo<number[] | undefined>(() => {
+    let ids = selectedEmployeeIds.length > 0 ? selectedEmployeeIds : scoped.userIds
     if (departmentId !== 'all') {
       const inDept = new Set(
         operators.filter((o) => o.department_id === departmentId).map((o) => o.id)
       )
-      ids = ids.filter((id) => inDept.has(id))
+      ids = (ids ?? operators.map((o) => o.id)).filter((id) => inDept.has(id))
     }
+    return ids
+  }, [selectedEmployeeIds, scoped.userIds, departmentId, operators])
+
+  const { extensions, operatorByExtension } = useMemo(() => {
+    const base = operatorIds ?? operators.map((o) => o.id)
     const byId = new Map(operators.map((o) => [o.id, o]))
     const exts: string[] = []
     const extToOp = new Map<string, { id: number; name: string }>()
-    for (const id of ids) {
+    for (const id of base) {
       const op = byId.get(id)
       if (op?.asterisk_extension) {
         exts.push(op.asterisk_extension)
@@ -121,7 +162,7 @@ export function DialogsListTab() {
       }
     }
     return { extensions: exts, operatorByExtension: extToOp }
-  }, [scoped.userIds, operators, myEmployeesOnly, myOperatorIds, departmentId])
+  }, [operators, operatorIds])
 
   const useCustomRange = !!(callFrom || callTo)
   const filters = useMemo(
@@ -131,18 +172,37 @@ export function DialogsListTab() {
       from_datetime: dayStartIso(callFrom),
       to_datetime: dayEndIso(callTo),
       telephony_types: telephonyType ? [telephonyType] : undefined,
+      category: category || undefined,
       min_duration: parsePositiveInt(minDuration),
       sort: 'date_desc' as const,
       limit: pageSize,
       offset: (page - 1) * pageSize,
     }),
-    [extensions, useCustomRange, callFrom, callTo, telephonyType, minDuration, page, pageSize]
+    [
+      extensions,
+      useCustomRange,
+      callFrom,
+      callTo,
+      telephonyType,
+      category,
+      minDuration,
+      page,
+      pageSize,
+    ]
   )
 
-  // Reset to page 1 when the query changes.
   const resetKey = useMemo(
-    () => JSON.stringify([extensions, telephonyType, callFrom, callTo, minDuration, pageSize]),
-    [extensions, telephonyType, callFrom, callTo, minDuration, pageSize]
+    () =>
+      JSON.stringify([
+        extensions,
+        telephonyType,
+        category,
+        callFrom,
+        callTo,
+        minDuration,
+        pageSize,
+      ]),
+    [extensions, telephonyType, category, callFrom, callTo, minDuration, pageSize]
   )
   const [trackedResetKey, setTrackedResetKey] = useState(resetKey)
   if (resetKey !== trackedResetKey) {
@@ -155,44 +215,83 @@ export function DialogsListTab() {
   const total = data?.total ?? 0
   const totalPages = Math.max(1, Math.ceil(total / pageSize))
 
-  const callIds = useMemo(() => calls.map((c) => c.call_id), [calls])
-  const { data: statusList = [] } = useScorecardStatusByCalls(callIds, callIds.length > 0)
-  const statusByCall = useMemo(() => {
-    const map = new Map<string, CallScorecardStatus>()
-    for (const s of statusList) map.set(s.call_id, s)
-    return map
-  }, [statusList])
+  const clientIds = useMemo(
+    () =>
+      Array.from(new Set(calls.map((c) => c.client_id).filter((id): id is number => id != null))),
+    [calls]
+  )
+  const clientNames = useClientNames(clientIds)
+
+  const selectCall = (call: CallMonitoringItem, operatorId: number) => {
+    setSelected({
+      callId: call.call_id,
+      operatorId,
+      scorecardId: call.scorecard_id ?? undefined,
+      createdAt: call.initiated_at,
+      operatorName: operatorByExtension.get(call.agent_extension)?.name,
+      talkDurationSec: call.talk_duration,
+    })
+  }
+
+  // Open the newest reviewable dialog on first load so the panel isn't empty.
+  // Deliberately once — re-selecting on every filter change would refetch the
+  // panel (and its recording) while the trainer is still narrowing the list.
+  const [autoSelected, setAutoSelected] = useState(false)
+  if (!autoSelected && selected == null && calls.length > 0) {
+    setAutoSelected(true)
+    const first = calls.find((c) => operatorByExtension.has(c.agent_extension))
+    const op = first ? operatorByExtension.get(first.agent_extension) : undefined
+    if (first && op) selectCall(first, op.id)
+  }
+
+  const handleSelectRow = async (call: CallMonitoringItem, operatorId: number) => {
+    if (reviewDirty && call.call_id !== selected?.callId) {
+      const ok = await confirm({
+        title: t('pages.training.scorecard.unsaved', 'Unsaved changes'),
+        message: t(
+          'pages.training.scorecard.unsavedConfirm',
+          'You have unsaved changes that will be lost. Close anyway?'
+        ),
+        confirmLabel: t('pages.training.scorecard.discardConfirm', 'Discard changes'),
+        tone: 'danger',
+      })
+      if (!ok) return
+    }
+    selectCall(call, operatorId)
+  }
 
   const clearFilters = () => {
-    setMyEmployeesOnly(false)
+    setSelectedEmployeeIds([])
     setDepartmentId('all')
     setTelephonyType('')
+    setCategory('')
     setCallFrom('')
     setCallTo('')
     setMinDuration('')
   }
   const hasAnyFilter =
-    myEmployeesOnly ||
+    selectedEmployeeIds.length > 0 ||
     departmentId !== 'all' ||
-    !!(telephonyType || callFrom || callTo || minDuration)
+    !!(telephonyType || category || callFrom || callTo || minDuration)
 
   const inputCls =
     'h-9 rounded-lg border border-[#DFDFDF] bg-white px-3 text-xs text-[#05040D] focus:outline-none'
 
   return (
     <div className="flex flex-col gap-3">
+      {confirmDialog}
       <div className="flex flex-wrap items-center gap-2">
-        <button
-          type="button"
-          onClick={() => setMyEmployeesOnly((v) => !v)}
-          className={`h-9 rounded-lg px-4 text-xs font-medium transition-colors ${
-            myEmployeesOnly
-              ? 'bg-[#204E4D] text-white'
-              : 'border border-[#DFDFDF] bg-white text-[#05040D] hover:bg-[#F7F7F7]'
-          }`}
-        >
-          {t('pages.training.dialogue.dialogs.myEmployees', 'My employees')}
-        </button>
+        <EmployeeMultiSelect
+          value={selectedEmployeeIds}
+          onChange={setSelectedEmployeeIds}
+          operators={operators}
+          quickSelect={{
+            label: t('pages.training.dialogue.dialogs.myEmployees', 'My employees'),
+            ids: myOperatorIds,
+            disabled: myEmployeesUnavailable,
+            hint: myEmployeesHint,
+          }}
+        />
         <select
           value={departmentId}
           onChange={(e) =>
@@ -258,38 +357,57 @@ export function DialogsListTab() {
         ) : null}
       </div>
 
+      <div className="inline-flex max-w-full flex-wrap gap-1">
+        <button
+          type="button"
+          onClick={() => setCategory('')}
+          className={`rounded-full px-3 py-1 text-[11px] font-medium transition-colors ${
+            category === ''
+              ? 'bg-[#204E4D] text-white'
+              : 'bg-white text-[#545454] hover:bg-[#F7F7F7]'
+          }`}
+        >
+          {t('pages.training.dialogue.chips.all', 'All calls')}
+        </button>
+        {CATEGORIES.map((c) => (
+          <button
+            key={c}
+            type="button"
+            onClick={() => setCategory(c)}
+            className={`rounded-full px-3 py-1 text-[11px] font-medium transition-colors ${
+              category === c
+                ? 'bg-[#204E4D] text-white'
+                : 'bg-white text-[#545454] hover:bg-[#F7F7F7]'
+            }`}
+          >
+            {t(`pages.training.dialogue.category.${c}`, c)}
+          </button>
+        ))}
+      </div>
+
       <div className="grid grid-cols-1 gap-3 xl:grid-cols-[1fr_520px]">
         <div className="flex flex-col gap-3">
-          {extensions.length === 0 ? (
-            <div className="rounded-xl bg-white/50 p-12 text-center text-sm text-gray-500 shadow-sm">
-              {t(
-                'pages.training.errors.emptyScopeResolution',
-                'The selected scope returned no operators.'
-              )}
-            </div>
-          ) : isLoading ? (
-            <div className="rounded-xl bg-white p-12 text-center text-sm text-[#6B7280] shadow-sm">
-              {t('common.loading', 'Loading…')}
-            </div>
+          {isLoading ? (
+            <EmptyBox>{t('common.loading', 'Loading…')}</EmptyBox>
           ) : isError ? (
-            <div className="rounded-xl bg-white p-12 text-center text-sm text-red-500 shadow-sm">
+            <EmptyBox tone="error">
               {t('pages.training.dialogue.dialogs.loadError', 'Failed to load dialogs.')}
-            </div>
+            </EmptyBox>
           ) : calls.length === 0 ? (
-            <div className="rounded-xl bg-white p-12 text-center text-sm text-[#6B7280] shadow-sm">
+            <EmptyBox>
               {t('pages.training.dialogue.dialogs.empty', 'No dialogs match the filters.')}
-            </div>
+            </EmptyBox>
           ) : (
             <DialogsTable
               calls={calls}
               operatorByExtension={operatorByExtension}
-              statusByCall={statusByCall}
+              trainerByOperator={trainerByOperator}
+              clientNames={clientNames}
               selectedCallId={selected?.callId}
-              onSelect={(callId, operatorId) => setSelected({ callId, operatorId })}
-              t={t}
+              onSelect={handleSelectRow}
             />
           )}
-          {extensions.length > 0 && !isLoading && !isError && total > 0 ? (
+          {!isLoading && !isError && total > 0 ? (
             <Pagination
               currentPage={page}
               totalPages={totalPages}
@@ -303,37 +421,46 @@ export function DialogsListTab() {
         <CallReviewPanel
           callId={selected?.callId}
           operatorId={selected?.operatorId}
-          operatorName={
-            selected
-              ? operatorByExtension.get(findExtForCall(calls, selected.callId))?.name
-              : undefined
-          }
-          createdAt={calls.find((c) => c.call_id === selected?.callId)?.initiated_at}
+          scorecardId={selected?.scorecardId}
+          createdAt={selected?.createdAt}
+          operatorName={selected?.operatorName}
+          talkDurationSec={selected?.talkDurationSec}
+          canEdit={selected != null && myOperatorIds.includes(selected.operatorId)}
+          onDirtyChange={setReviewDirty}
         />
       </div>
     </div>
   )
 }
 
-function findExtForCall(calls: CallMonitoringItem[], callId: string): string {
-  return calls.find((c) => c.call_id === callId)?.agent_extension ?? ''
+function EmptyBox({ children, tone }: { children: ReactNode; tone?: 'error' }) {
+  return (
+    <div
+      className={`rounded-xl bg-white p-12 text-center text-sm shadow-sm ${
+        tone === 'error' ? 'text-red-500' : 'text-[#6B7280]'
+      }`}
+    >
+      {children}
+    </div>
+  )
 }
 
 function DialogsTable({
   calls,
   operatorByExtension,
-  statusByCall,
+  trainerByOperator,
+  clientNames,
   selectedCallId,
   onSelect,
-  t,
 }: {
   calls: CallMonitoringItem[]
   operatorByExtension: Map<string, { id: number; name: string }>
-  statusByCall: Map<string, CallScorecardStatus>
+  trainerByOperator: Map<number, string>
+  clientNames: Map<number, string>
   selectedCallId?: string
-  onSelect: (callId: string, operatorId: number) => void
-  t: (key: string, fallback: string) => string
+  onSelect: (call: CallMonitoringItem, operatorId: number) => void
 }) {
+  const { t, i18n } = useTranslation('common')
   return (
     <AnalyticsMockTable>
       <thead className={ANALYTICS_TABLE_HEAD}>
@@ -344,7 +471,12 @@ function DialogsTable({
           <th className={ANALYTICS_TABLE_TH}>
             {t('pages.training.dialogue.list.employee', 'Employee')}
           </th>
-          <th className={ANALYTICS_TABLE_TH}>{t('pages.training.dialogue.list.phone', 'Phone')}</th>
+          <th className={ANALYTICS_TABLE_TH}>
+            {t('pages.training.dialogue.list.trainer', 'Trainer')}
+          </th>
+          <th className={ANALYTICS_TABLE_TH}>
+            {t('pages.training.dialogue.list.client', 'Client')}
+          </th>
           <th className={ANALYTICS_TABLE_TH}>
             {t('pages.training.dialogue.list.callType', 'Call type')}
           </th>
@@ -352,20 +484,31 @@ function DialogsTable({
             {t('pages.training.dialogue.list.duration', 'Duration')}
           </th>
           <th className={ANALYTICS_TABLE_TH}>
-            {t('pages.training.dialogue.dialogs.evaluation', 'Evaluation')}
+            {t('pages.training.dialogue.list.category', 'Category')}
+          </th>
+          <th className={ANALYTICS_TABLE_TH}>
+            {t('pages.training.dialogue.list.rating', 'Rating')}
+          </th>
+          <th className={ANALYTICS_TABLE_TH}>
+            {t('pages.training.dialogue.list.comment', 'Comment')}
           </th>
         </tr>
       </thead>
       <tbody>
         {calls.map((call) => {
           const op = operatorByExtension.get(call.agent_extension)
-          const status = statusByCall.get(call.call_id)
           const isActive = call.call_id === selectedCallId
           const clickable = !!op
+          const cat = categoryOf(call)
+          const rating =
+            call.scorecard_weighted_score != null
+              ? Math.round(call.scorecard_weighted_score * 20)
+              : null
+          const clientName = call.client_id != null ? clientNames.get(call.client_id) : undefined
           return (
             <tr
               key={call.call_id}
-              onClick={() => op && onSelect(call.call_id, op.id)}
+              onClick={() => op && onSelect(call, op.id)}
               role="button"
               tabIndex={0}
               aria-current={isActive || undefined}
@@ -374,10 +517,15 @@ function DialogsTable({
               }`}
             >
               <td className={`${ANALYTICS_TABLE_TD} whitespace-nowrap`}>
-                {formatDateTime(call.initiated_at)}
+                {formatDateTime(call.initiated_at, i18n.language)}
               </td>
               <td className={ANALYTICS_TABLE_TD}>{op?.name ?? call.agent_extension}</td>
-              <td className={`${ANALYTICS_TABLE_TD} tabular-nums`}>{call.customer_number}</td>
+              <td className={ANALYTICS_TABLE_TD}>
+                {op ? (trainerByOperator.get(op.id) ?? '—') : '—'}
+              </td>
+              <td className={ANALYTICS_TABLE_TD}>
+                {clientName ?? (call.client_id != null ? `#${call.client_id}` : '—')}
+              </td>
               <td className={ANALYTICS_TABLE_TD}>
                 <span
                   className={`rounded-full px-2 py-0.5 text-[10px] font-medium capitalize ${
@@ -391,24 +539,18 @@ function DialogsTable({
                 {formatDuration(call.talk_duration)}
               </td>
               <td className={ANALYTICS_TABLE_TD}>
-                {status ? (
-                  <span
-                    className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
-                      STATUS_TONE[status.latest_status] ?? 'bg-gray-100 text-gray-500'
-                    }`}
-                  >
-                    {status.latest_score != null
-                      ? `${Math.round(status.latest_score * 20)}`
-                      : t(
-                          `pages.training.tests.status.${status.latest_status}`,
-                          status.latest_status
-                        )}
-                  </span>
-                ) : (
-                  <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-medium text-gray-400">
-                    {t('pages.training.dialogue.dialogs.notEvaluated', 'Not evaluated')}
-                  </span>
-                )}
+                <span
+                  className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${CATEGORY_TONE[cat]}`}
+                >
+                  {t(`pages.training.dialogue.category.${cat}`, cat)}
+                </span>
+              </td>
+              <td className={`${ANALYTICS_TABLE_TD} tabular-nums`}>{rating ?? '—'}</td>
+              <td
+                className={`${ANALYTICS_TABLE_TD} max-w-[220px] truncate`}
+                title={call.scorecard_comment ?? undefined}
+              >
+                {call.scorecard_comment ?? '—'}
               </td>
             </tr>
           )

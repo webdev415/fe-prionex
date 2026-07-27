@@ -9,6 +9,7 @@ import {
 } from '@/components/ui/Select'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { formatDateTime, formatDate } from '@/lib/formatters'
+import { formatMoneyAmount } from '@/lib/localeFormat'
 import type { PaymentMonitoringItem, PaymentMonitoringSort } from '@/features/actionAnalysis'
 
 type Row = PaymentMonitoringItem & { id: number }
@@ -45,15 +46,15 @@ interface Props {
   onSortChange: (next: PaymentMonitoringSort) => void
 }
 
-function formatAmount(value: string): string {
+function formatAmount(value: string, language: string): string {
   // Backend ships Decimal as string; render with grouping but no forced currency.
   const n = Number(value)
   if (!Number.isFinite(n)) return value
-  return n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  return formatMoneyAmount(n, language)
 }
 
 export function PaymentHistoryTable({ data, userTimezone, sort, onSortChange }: Props) {
-  const { t } = useTranslation('common')
+  const { t, i18n } = useTranslation('common')
 
   const rows: Row[] = data.map((p) => ({ ...p, id: p.id }))
 
@@ -125,7 +126,9 @@ export function PaymentHistoryTable({ data, userTimezone, sort, onSortChange }: 
       key: 'amount',
       header: t('pages.actionAnalysis.columns.amount', 'Amount'),
       render: (r) => (
-        <span className="text-foreground text-sm font-medium">{formatAmount(r.amount)}</span>
+        <span className="text-foreground text-sm font-medium">
+          {formatAmount(r.amount, i18n.language)}
+        </span>
       ),
     },
     {

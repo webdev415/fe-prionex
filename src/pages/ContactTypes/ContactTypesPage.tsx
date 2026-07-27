@@ -47,10 +47,16 @@ export function ContactTypesPage() {
   const [contactSource, setContactSource] = useState<ContactSource>('client')
   const [formError, setFormError] = useState<string | null>(null)
 
-  const contactSourceLabel = (source: ContactSource) =>
-    source === 'recommender'
-      ? t('pages.contactTypes.recommender', 'Recommender')
-      : t('pages.contactTypes.client', 'Client')
+  const contactSourceLabel = (source: ContactSource) => {
+    if (source === 'recommender') return t('pages.contactTypes.recommender', 'Recommender')
+    if (source === 'other') return t('pages.contactTypes.other', 'Other')
+    return t('pages.contactTypes.client', 'Client')
+  }
+
+  // 'Other' = non-phone contact type: call-line / spam / primary-phone are
+  // meaningless, so those controls are disabled (and derived to neutral values
+  // server-side). Name and Sort Order stay editable.
+  const isOtherSource = contactSource === 'other'
 
   const openCreate = () => {
     setFormError(null)
@@ -303,7 +309,7 @@ export function ContactTypesPage() {
             onChange={(e) => setName(e.target.value)}
             required
           />
-          <div>
+          <div className={isOtherSource ? 'pointer-events-none opacity-50' : undefined}>
             <p className="text-dark-500 mb-2 text-sm">
               {t('pages.contactTypes.fieldDefaultLine', 'Default Call Line')}
             </p>
@@ -311,28 +317,45 @@ export function ContactTypesPage() {
               value={defaultLine}
               onValueChange={(v) => setDefaultLine(v as 'white' | 'gray')}
               className="flex flex-col gap-2 sm:flex-row"
+              disabled={isOtherSource}
             >
               <label className="flex items-center gap-2">
-                <RadioItem value="white" id="ct-white" />
+                <RadioItem value="white" id="ct-white" disabled={isOtherSource} />
                 <span>{t('pages.contactTypes.white', 'White')}</span>
               </label>
               <label className="flex items-center gap-2">
-                <RadioItem value="gray" id="ct-gray" />
+                <RadioItem value="gray" id="ct-gray" disabled={isOtherSource} />
                 <span>{t('pages.contactTypes.gray', 'Gray')}</span>
               </label>
             </RadioGroup>
           </div>
-          <div className="flex items-center justify-between gap-4">
+          <div
+            className={`flex items-center justify-between gap-4${
+              isOtherSource ? 'opacity-50' : ''
+            }`}
+          >
             <span className="text-dark-500 text-sm">
               {t('pages.contactTypes.fieldSpam', 'Spam Allowed')}
             </span>
-            <ToggleSwitch checked={spamAllowed} onChange={setSpamAllowed} />
+            <ToggleSwitch
+              checked={isOtherSource ? false : spamAllowed}
+              onChange={setSpamAllowed}
+              disabled={isOtherSource}
+            />
           </div>
-          <div className="flex items-center justify-between gap-4">
+          <div
+            className={`flex items-center justify-between gap-4${
+              isOtherSource ? 'opacity-50' : ''
+            }`}
+          >
             <span className="text-dark-500 text-sm">
               {t('pages.contactTypes.fieldPrimary', 'Show as Primary Phone')}
             </span>
-            <ToggleSwitch checked={primaryPhone} onChange={setPrimaryPhone} />
+            <ToggleSwitch
+              checked={isOtherSource ? false : primaryPhone}
+              onChange={setPrimaryPhone}
+              disabled={isOtherSource}
+            />
           </div>
           <div>
             <p className="text-dark-500 mb-2 text-sm">
@@ -354,6 +377,7 @@ export function ContactTypesPage() {
               <SelectContent>
                 <SelectItem value="client">{contactSourceLabel('client')}</SelectItem>
                 <SelectItem value="recommender">{contactSourceLabel('recommender')}</SelectItem>
+                <SelectItem value="other">{contactSourceLabel('other')}</SelectItem>
               </SelectContent>
             </Select>
           </div>

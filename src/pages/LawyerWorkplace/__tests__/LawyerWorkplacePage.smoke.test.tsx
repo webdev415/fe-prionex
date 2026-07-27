@@ -109,6 +109,8 @@ vi.mock('@/hooks/usePermissions', () => ({
 vi.mock('@/features/clients/hooks/useClients', () => ({
   useClients: () => ({ data: { items: [] }, isLoading: false, isError: false }),
   useClient: () => ({ data: null, isLoading: false, isError: false }),
+  useClientLoans: () => ({ data: [] }),
+  useClientDocuments: () => ({ data: [], isLoading: false, isError: false }),
 }))
 
 vi.mock('@/features/users/hooks/useUsers', () => ({

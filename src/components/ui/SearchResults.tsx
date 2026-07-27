@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next'
 import { intlLocaleForUiLanguage } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 import { Icons } from '@/lib/icons'
+import { ContactSourceFilterIcon } from '@/features/clients/utils/contactTypeVisual'
 import { PriorityBadge } from '@/pages/ClientManagement/components/PriorityBadge'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/Tooltip'
 
@@ -155,11 +156,7 @@ export function SearchResults({
                                 : t('search.recommenderContactIndicator', 'Recommender contact')
                             }
                           >
-                            {result.contactSource === 'client' ? (
-                              <Icons.User size={16} strokeWidth={2} />
-                            ) : (
-                              <Icons.Contact size={16} strokeWidth={2} />
-                            )}
+                            <ContactSourceFilterIcon source={result.contactSource} size={16} />
                           </span>
                         </TooltipTrigger>
                         <TooltipContent side="top">

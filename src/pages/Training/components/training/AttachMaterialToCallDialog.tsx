@@ -4,6 +4,7 @@ import { toast } from 'sonner'
 import { Modal, ModalContent, ModalHeader } from '@/components/ui/Modal'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
+import { formatDateTime } from '@/lib/localeFormat'
 import { useCallMonitoring } from '@/features/actionAnalysis'
 import { useAttachMaterialToCall } from '@/features/training/hooks/useMaterials'
 import type { Material } from '@/features/training/types/materials'
@@ -22,13 +23,13 @@ function shortId(callId: string): string {
   return callId.slice(0, 8)
 }
 
-function formatWhen(iso: string): string {
+function formatWhen(iso: string, language: string): string {
   const d = new Date(iso)
-  return Number.isNaN(d.getTime()) ? '' : d.toLocaleString()
+  return Number.isNaN(d.getTime()) ? '' : formatDateTime(d, language)
 }
 
 export function AttachMaterialToCallDialog({ material, onClose }: AttachMaterialToCallDialogProps) {
-  const { t } = useTranslation('common')
+  const { t, i18n } = useTranslation('common')
   const [search, setSearch] = useState('')
   const [debounced, setDebounced] = useState('')
 
@@ -106,7 +107,7 @@ export function AttachMaterialToCallDialog({ material, onClose }: AttachMaterial
                     {c.customer_number || shortId(c.call_id)}
                   </span>
                   <span className="text-[10px] text-[#6B7280]">
-                    {formatWhen(c.initiated_at)} · #{shortId(c.call_id)}
+                    {formatWhen(c.initiated_at, i18n.language)} · #{shortId(c.call_id)}
                     {c.agent_extension ? ` · ${c.agent_extension}` : ''}
                   </span>
                 </div>

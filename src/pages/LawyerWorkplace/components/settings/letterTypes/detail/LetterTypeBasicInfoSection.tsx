@@ -1,7 +1,14 @@
 import { useTranslation } from 'react-i18next'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/Select'
 import { cn } from '@/lib/utils'
 import { useLawyerWorkplaceLayout } from '../../../../context/lawyerWorkplaceLayout'
-import type { LetterTypeConfig } from '../../../../settings/types'
+import type { LetterTypeConfig, SlaDayType } from '../../../../settings/types'
 import { LetterTypeDetailSectionHeader } from './LetterTypeDetailSectionHeader'
 
 const inputClassName =
@@ -59,7 +66,7 @@ export function LetterTypeBasicInfoSection({
             <label className="text-foreground text-[12px] font-medium">
               {t('pages.lawyerWorkplace.settings.letterTypes.responseSla', 'Response SLA')}
             </label>
-            <div className="relative">
+            <div className="flex items-center gap-2">
               <input
                 type="number"
                 min={1}
@@ -70,11 +77,44 @@ export function LetterTypeBasicInfoSection({
                   if (readOnly) return
                   onDraftChange({ ...draft, slaDays: Number(e.target.value) || 1 })
                 }}
-                className={cn(inputClassName, 'pr-24')}
+                className={cn(inputClassName, 'w-20 shrink-0')}
+                aria-label={t(
+                  'pages.lawyerWorkplace.settings.letterTypes.responseSla',
+                  'Response SLA'
+                )}
               />
-              <span className="text-muted-foreground pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-[12px] font-light">
-                {t('pages.lawyerWorkplace.settings.letterTypes.businessDays', 'business days')}
-              </span>
+              <Select
+                value={draft.slaDayType}
+                disabled={readOnly}
+                onValueChange={(value) => {
+                  if (readOnly) return
+                  onDraftChange({ ...draft, slaDayType: value as SlaDayType })
+                }}
+              >
+                <SelectTrigger
+                  className="h-11 flex-1 rounded-md"
+                  aria-label={t(
+                    'pages.lawyerWorkplace.settings.letterTypes.slaDayTypeLabel',
+                    'SLA day type'
+                  )}
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="working">
+                    {t(
+                      'pages.lawyerWorkplace.settings.letterTypes.slaDayTypeWorking',
+                      'Working days'
+                    )}
+                  </SelectItem>
+                  <SelectItem value="calendar">
+                    {t(
+                      'pages.lawyerWorkplace.settings.letterTypes.slaDayTypeCalendar',
+                      'Calendar days'
+                    )}
+                  </SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </div>

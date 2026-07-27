@@ -29,6 +29,15 @@ const CATEGORY_OPTIONS = [
 
 type TFn = (key: string, fallback: string) => string
 
+/** Deterministic i18n-key segment for a display category ("Soft Skills" → "soft_skills"). */
+function categorySlug(category: string): string {
+  return category.toLowerCase().replace(/\s+/g, '_')
+}
+/** Localized category label; the raw category value stays the BE contract. */
+function categoryLabel(t: TFn, category: string): string {
+  return t(`pages.training.training.catalog.categories.${categorySlug(category)}`, category)
+}
+
 const LEVEL_EN: Record<CourseLevel, string> = {
   beginner: 'Beginner',
   intermediate: 'Intermediate',
@@ -103,7 +112,7 @@ export function CoursesCatalogTab() {
           </option>
           {CATEGORY_OPTIONS.map((c) => (
             <option key={c} value={c}>
-              {c}
+              {categoryLabel(t, c)}
             </option>
           ))}
         </select>
@@ -382,7 +391,7 @@ function CreateCoursePanel({ onClose }: { onClose: () => void }) {
               >
                 {CATEGORY_OPTIONS.map((c) => (
                   <option key={c} value={c}>
-                    {c}
+                    {categoryLabel(t, c)}
                   </option>
                 ))}
               </select>

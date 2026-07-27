@@ -16,8 +16,12 @@ describe('legalDueDate', () => {
     const parsed = parseLegalDueDate(iso)
 
     expect(parsed).not.toBeNull()
+    // No language → defaults to en-US ordering (MM/DD).
     expect(formatLegalDueMonthDay(iso, KYIV)).toBe('07/11')
     expect(formatLegalDueDateTime(iso, KYIV)).toBe('07/11 09:30')
+    // uk reorders to DD.MM while keeping the profile-TZ calendar day + time.
+    expect(formatLegalDueMonthDay(iso, KYIV, 'uk')).toBe('11.07')
+    expect(formatLegalDueDateTime(iso, KYIV, 'uk')).toBe('11.07 09:30')
   })
 
   it('parses stored ISO using profile calendar day', () => {

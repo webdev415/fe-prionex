@@ -1,5 +1,6 @@
 export * from './api/types'
 export * from './api/legalApi'
+export * from './api/registryApi'
 export * from './api/mappers'
 export * from './api/settingsMappers'
 export * from './utils/letterTemplateVariables'

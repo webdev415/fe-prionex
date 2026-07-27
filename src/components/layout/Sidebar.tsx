@@ -106,6 +106,7 @@ const iconMap: Record<
   'bubble-chat-edit': (props) => <Icons.BubbleChatEdit {...props} />,
   work: (props) => <Icons.WorkIcon {...props} />,
   'call-dialer': (props) => <Icons.Phone {...props} />,
+  'ai-brain-03': (props) => <Icons.AiBrain03 {...props} />,
 }
 
 /**

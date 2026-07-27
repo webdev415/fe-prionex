@@ -2,6 +2,15 @@ export type SettingsSubTab = 'letterTypes' | 'lawyers' | 'mailboxes' | 'template
 
 export type LawyerPriorityRole = 'primary' | 'backup' | 'secondary' | 'off'
 
+/**
+ * How the response-SLA countdown treats the day count.
+ *   - `working`  — business days only (weekends excluded).
+ *   - `calendar` — plain calendar days.
+ * Backend defaults to `calendar`; the field is optional on the wire for
+ * backward compatibility with older payloads.
+ */
+export type SlaDayType = 'working' | 'calendar'
+
 export type LawyerStatus = 'online' | 'away'
 
 export interface LetterTypeColorOption {
@@ -36,6 +45,7 @@ export interface LetterTypeConfig {
   nameFallback: string
   colorId: string
   slaDays: number
+  slaDayType: SlaDayType
   descriptionKey: string
   descriptionFallback: string
   letterCount: number

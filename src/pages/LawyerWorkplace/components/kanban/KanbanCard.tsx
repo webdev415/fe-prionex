@@ -76,7 +76,7 @@ export function KanbanCard({
   onDragStart,
   onDragEnd,
 }: KanbanCardProps) {
-  const { t } = useTranslation('common')
+  const { t, i18n } = useTranslation('common')
   const isOverdue = task.columnId === 'overdue'
   const isCompleted = task.columnId === 'completed'
   const typeBadge = resolveKanbanTypeBadgeProps(task.letterTypeId, letterTypes, task.type)
@@ -155,18 +155,35 @@ export function KanbanCard({
     >
       {/* Row 1: type/overdue badge + task ID */}
       <div className="mb-2 flex items-center justify-between gap-2">
-        {isOverdue ? (
-          <span className="bg-error-50 text-error-600 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium">
-            <Icons.Warning size={11} strokeWidth={2.5} className="shrink-0" />
-            {t('pages.lawyerWorkplace.kanban.overdueBadge', 'Overdue')}
-          </span>
-        ) : (
-          <KanbanTypeBadge
-            type={typeBadge.type}
-            label={typeBadge.label}
-            colorId={typeBadge.colorId}
-          />
-        )}
+        <div className="flex min-w-0 items-center gap-1.5">
+          {isOverdue ? (
+            <span className="bg-error-50 text-error-600 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium">
+              <Icons.Warning size={11} strokeWidth={2.5} className="shrink-0" />
+              {t('pages.lawyerWorkplace.kanban.overdueBadge', 'Overdue')}
+            </span>
+          ) : (
+            <KanbanTypeBadge
+              type={typeBadge.type}
+              label={typeBadge.label}
+              colorId={typeBadge.colorId}
+            />
+          )}
+          {task.letterCount > 1 && (
+            <span
+              className="bg-muted text-muted-foreground inline-flex shrink-0 items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-medium"
+              title={t('pages.lawyerWorkplace.kanban.lettersCount', {
+                count: task.letterCount,
+                defaultValue: '{{count}} letters',
+              })}
+            >
+              <Icons.Mail size={10} strokeWidth={2} className="shrink-0" />
+              {t('pages.lawyerWorkplace.kanban.lettersCount', {
+                count: task.letterCount,
+                defaultValue: '{{count}} letters',
+              })}
+            </span>
+          )}
+        </div>
         <div className="flex shrink-0 items-center gap-1">
           {!isCompleted && (
             <span
@@ -236,7 +253,7 @@ export function KanbanCard({
           task.closedAt ? (
             <span className="text-muted-foreground text-[11px]">
               {t('pages.lawyerWorkplace.kanban.closedLabel', 'closed')}{' '}
-              {formatLegalDueMonthDay(task.closedAt, timezone)}
+              {formatLegalDueMonthDay(task.closedAt, timezone, i18n.language)}
             </span>
           ) : null
         ) : (
@@ -247,13 +264,13 @@ export function KanbanCard({
                 <span className="text-error-600 flex items-center gap-1 text-[11px] font-medium">
                   <Icons.Calendar size={11} strokeWidth={1.5} className="shrink-0" />
                   {t('pages.lawyerWorkplace.kanban.dueLabel', 'due:')}{' '}
-                  {formatLegalDueDateTime(task.deadline, timezone)}
+                  {formatLegalDueDateTime(task.deadline, timezone, i18n.language)}
                 </span>
               ) : (
                 <span className="text-muted-foreground flex items-center gap-1 text-[11px]">
                   <Icons.Calendar size={11} strokeWidth={1.5} className="shrink-0" />
                   {t('pages.lawyerWorkplace.kanban.byLabel', 'by')}{' '}
-                  {formatLegalDueDateTime(task.deadline, timezone)}
+                  {formatLegalDueDateTime(task.deadline, timezone, i18n.language)}
                 </span>
               )
             ) : (

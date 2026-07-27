@@ -30,6 +30,7 @@ export function useLegalSettingsActions() {
         name: input.nameFallback,
         color_id: input.colorId,
         sla_days: 14,
+        sla_day_type: 'calendar',
         description: '',
         keyword_hints: [],
         slug: id,

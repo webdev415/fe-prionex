@@ -37,6 +37,8 @@ export const legalWorkplaceKeys = {
   lawyerMe: () => [...legalWorkplaceKeys.all, 'lawyer-me'] as const,
   kanban: (assignedToUserId?: number) =>
     [...legalWorkplaceKeys.all, 'kanban', { assignedToUserId }] as const,
+  taskLetters: (legalTaskId: number) =>
+    [...legalWorkplaceKeys.all, 'task-letters', legalTaskId] as const,
   documents: () => [...legalWorkplaceKeys.all, 'documents'] as const,
   documentsList: (params: LegalDocumentListParams) =>
     [...legalWorkplaceKeys.documents(), 'list', params] as const,
@@ -78,6 +80,15 @@ export function useLegalThread(
       }),
     enabled: options?.enabled !== false && Boolean(threadId),
     staleTime: 10_000,
+  })
+}
+
+export function useLegalTaskLetters(legalTaskId: number | null, options?: { enabled?: boolean }) {
+  return useQuery({
+    queryKey: legalWorkplaceKeys.taskLetters(legalTaskId ?? 0),
+    queryFn: () => legalApi.listTaskLetters(legalTaskId!),
+    enabled: options?.enabled !== false && legalTaskId != null && legalTaskId > 0,
+    staleTime: 15_000,
   })
 }
 

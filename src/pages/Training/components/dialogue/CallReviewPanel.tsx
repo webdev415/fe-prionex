@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
+import { formatDateTime } from '@/lib/localeFormat'
 import {
   AddMarkerButton,
   LeaveFeedbackButton,
@@ -33,6 +34,10 @@ export interface CallReviewPanelProps {
   /** Pin a specific scorecard; when absent the editor opens the latest draft on
    *  the call or lets the trainer start a new evaluation (call-first flow). */
   scorecardId?: number
+  /** Whether the trainer may create/edit/send/remove here (operator assigned). */
+  canEdit?: boolean
+  /** Known talk time, used to position markers before the audio is fetched. */
+  talkDurationSec?: number | null
   /** Emits the editor's unsaved-changes state so the tab can guard row switches. */
   onDirtyChange?: (dirty: boolean) => void
 }
@@ -43,9 +48,11 @@ export function CallReviewPanel({
   operatorName,
   createdAt,
   scorecardId,
+  canEdit = false,
+  talkDurationSec,
   onDirtyChange,
 }: CallReviewPanelProps) {
-  const { t } = useTranslation('common')
+  const { t, i18n } = useTranslation('common')
   const playerRef = useRef<CallPlayerHandle>(null)
   const [assignOpen, setAssignOpen] = useState(false)
   const [durationMs, setDurationMs] = useState(0)
@@ -74,7 +81,7 @@ export function CallReviewPanel({
             {operatorName ?? `#${operatorId}`}
           </p>
           {createdAt ? (
-            <p className="text-[11px] text-[#6B7280]">{new Date(createdAt).toLocaleString()}</p>
+            <p className="text-[11px] text-[#6B7280]">{formatDateTime(createdAt, i18n.language)}</p>
           ) : null}
         </div>
 
@@ -82,9 +89,14 @@ export function CallReviewPanel({
           ref={playerRef}
           callId={callId}
           active
+          lazy
           onDurationChange={setDurationMs}
           markerOverlay={
-            <MarkerOverlay markers={markers} durationMs={durationMs} onSeek={seekTo} />
+            <MarkerOverlay
+              markers={markers}
+              durationMs={durationMs || (talkDurationSec ?? 0) * 1000}
+              onSeek={seekTo}
+            />
           }
         />
 
@@ -118,6 +130,7 @@ export function CallReviewPanel({
           callId={callId}
           operatorId={operatorId}
           scorecardId={scorecardId}
+          canEdit={canEdit}
           onDirtyChange={onDirtyChange}
         />
       </div>

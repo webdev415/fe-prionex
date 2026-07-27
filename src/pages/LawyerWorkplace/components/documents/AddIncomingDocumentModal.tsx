@@ -32,6 +32,8 @@ interface AddIncomingDocumentModalProps {
     relatedLetterNumber?: string
     file: File
     contractNumber?: string | null
+    senderEmail?: string
+    summary?: string
   }) => void | Promise<void>
 }
 
@@ -51,6 +53,8 @@ export function AddIncomingDocumentModal({
   const [clientId, setClientId] = useState('')
   const [assigneeUserId, setAssigneeUserId] = useState<number | null>(null)
   const [relatedLetterNumber, setRelatedLetterNumber] = useState('')
+  const [senderEmail, setSenderEmail] = useState('')
+  const [summary, setSummary] = useState('')
   const [dragOver, setDragOver] = useState(false)
 
   const {
@@ -89,6 +93,8 @@ export function AddIncomingDocumentModal({
       setClientId('')
       resetContract()
       setRelatedLetterNumber('')
+      setSenderEmail('')
+      setSummary('')
       setDragOver(false)
       setAssigneeUserId(null)
     })
@@ -118,6 +124,8 @@ export function AddIncomingDocumentModal({
       relatedLetterNumber: relatedLetterNumber.trim() || undefined,
       file,
       contractNumber: contractNumber.trim() || null,
+      senderEmail: senderEmail.trim() || undefined,
+      summary: summary.trim() || undefined,
     })
     onClose()
   }
@@ -231,9 +239,44 @@ export function AddIncomingDocumentModal({
             onChange={(e) => setRelatedLetterNumber(e.target.value)}
             placeholder={t(
               'pages.lawyerWorkplace.documents.modals.incoming.relatedLetterPlaceholder',
-              'e.g. IN-2026-142'
+              'e.g. incoming No. 12'
             )}
             className="text-foreground focus:border-primary-400 border-border bg-input placeholder:text-muted-foreground h-10 w-full rounded-[8px] border px-3 text-[13px] outline-none"
+          />
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <Label className="text-foreground text-[12px] font-normal">
+            {t(
+              'pages.lawyerWorkplace.documents.modals.incoming.senderEmail',
+              'Sender email (optional)'
+            )}
+          </Label>
+          <input
+            type="email"
+            value={senderEmail}
+            onChange={(e) => setSenderEmail(e.target.value)}
+            placeholder={t(
+              'pages.lawyerWorkplace.documents.modals.incoming.senderEmailPlaceholder',
+              'e.g. sender@example.com'
+            )}
+            className="text-foreground focus:border-primary-400 border-border bg-input placeholder:text-muted-foreground h-10 w-full rounded-[8px] border px-3 text-[13px] outline-none"
+          />
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <Label className="text-foreground text-[12px] font-normal">
+            {t('pages.lawyerWorkplace.documents.modals.incoming.summary', 'Summary (optional)')}
+          </Label>
+          <textarea
+            value={summary}
+            onChange={(e) => setSummary(e.target.value)}
+            rows={3}
+            placeholder={t(
+              'pages.lawyerWorkplace.documents.modals.incoming.summaryPlaceholder',
+              'Short description of the letter'
+            )}
+            className="text-foreground focus:border-primary-400 border-border bg-input placeholder:text-muted-foreground min-h-[72px] w-full resize-y rounded-[8px] border px-3 py-2 text-[13px] outline-none"
           />
         </div>
 

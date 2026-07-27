@@ -23,6 +23,7 @@
     "projects": "Projects",
     "users": "Users",
     "ipWhitelist": "IP Whitelist",
+    "aiSettings": "AI Settings",
     "sellers": "Sellers",
     "roles": "Roles",
     "departments": "Departments",
@@ -655,7 +656,9 @@
         "kanban": "Kanban",
         "documents": "Documents",
         "settings": "Settings",
-        "newCount": "{{count}} new"
+        "newCount": "{{count}} new",
+        "incomingRegistry": "Incoming registry",
+        "outgoingRegistry": "Outgoing registry"
       },
       "availability": {
         "label": "Your availability",
@@ -712,7 +715,8 @@
             "title": "No letters in this view",
             "description": "Nothing matches the «{{filter}}» filter. Try another status or show all mailboxes."
           }
-        }
+        },
+        "noSubject": "(no subject)"
       },
       "letterItem": {
         "unclassified": "Unclassified",
@@ -751,10 +755,9 @@
         "messagesInThread": "{{count}} messages in thread",
         "attachmentPdf": "PDF",
         "attachmentDoc": "DOC",
-        "newLetter": "New letter",
         "closeThread": "Close thread",
-        "emailThread": "Email thread",
-        "disabledMailboxNotice": "The original mailbox for this letter is disabled. Choose another mailbox below to send a reply."
+        "disabledMailboxNotice": "The original mailbox for this letter is disabled. Choose another mailbox below to send a reply.",
+        "removeAttachment": "Remove attachment"
       },
       "reply": {
         "replyFrom": "Reply from",
@@ -767,13 +770,22 @@
         "draftSaved": "Draft saved",
         "attach": "Attach",
         "attaching": "Attaching…",
+        "attachFromComputer": "File from computer",
+        "attachFromClient": "Attached file on client",
+        "generateDocument": "Generate document",
+        "attachClientDisabledHint": "Confirm the client first",
+        "generatedAttached": "Document generated and attached to the reply",
+        "attachClientModal": {
+          "title": "Client documents",
+          "empty": "This client has no documents",
+          "error": "Could not load client documents",
+          "attached": "Document attached to the reply"
+        },
         "template": "Template",
         "noTemplatesHint": "Create letter templates in Settings → Templates",
         "send": "Send",
-        "edoLabel": "EDO",
-        "edoOutgoing": "Outgoing (ВИХ)",
-        "edoNbu": "NBU reply (НБУ)",
-        "edoNone": "Do not register"
+        "noMailbox": "Select a mailbox to send from",
+        "noTemplates": "No templates available"
       },
       "newLetter": {
         "title": "New Outgoing Letter",
@@ -791,13 +803,13 @@
         "subjectPlaceholder": "Letter subject...",
         "body": "Message",
         "bodyPlaceholder": "Write your message...",
-        "edoType": "EDO document type",
-        "edoRequiresClient": "Select a CRM client before registering EDO",
-        "edoRequiresClientHint": "Select a CRM client above to register this letter in EDO.",
-        "edoHintInstitution": "Link a CRM client below to register this institution letter in EDO.",
-        "edoClientForInstitution": "CRM client (for EDO registration)",
+        "clientForRegister": "CRM client (optional, for the register)",
         "clientSearchHint": "Type 2+ characters to search…",
-        "send": "Send"
+        "send": "Send",
+        "institutionName": "Institution name",
+        "institutionNamePlaceholder": "e.g. National Bank of Ukraine",
+        "noClientEmail": "No email on file",
+        "sending": "Sending..."
       },
       "parameters": {
         "title": "Letter parameters",
@@ -826,7 +838,17 @@
         "auto": "Auto",
         "managerConfirmation": "Manager confirmation",
         "parametersCount": "{{confirmed}}/{{total}} parameters",
-        "confirmAndCreate": "Confirm & create task"
+        "confirmAndCreate": "Confirm & create task",
+        "confirming": "Confirming…",
+        "confirmSuccess": "Task created on kanban board",
+        "contractLoading": "Loading contracts…",
+        "lawyerAssigned": "Assigned on kanban",
+        "noContracts": "No contracts",
+        "selectContract": "Select contract",
+        "contractStatus": {
+          "active": "Active",
+          "closed": "Closed"
+        }
       },
       "kanban": {
         "title": "Legal tasks kanban",
@@ -857,6 +879,7 @@
         "today": "today",
         "emailThread": "Email thread",
         "taskDetails": "Task details",
+        "lettersCount": "{{count}} letters",
         "noEmailThread": "This task has no linked email thread. Details above come from the kanban task only.",
         "changeAssignee": "Change assignee",
         "emptyColumn": "No tasks",
@@ -902,8 +925,16 @@
             "medium": "Normal",
             "low": "Low",
             "lowest": "Lowest"
-          }
-        }
+          },
+          "clearClient": "Clear",
+          "client": "Client",
+          "creating": "Creating…",
+          "selectLawyer": "Select lawyer",
+          "selectType": "Select type"
+        },
+        "exportEmpty": "No tasks match the current filters",
+        "taskNotFound": "Kanban task could not be found",
+        "transitionSuccess": "Moved to {{state}}"
       },
       "documents": {
         "title": "Documents",
@@ -998,18 +1029,26 @@
             "selectClientFirst": "Select a client to load contracts",
             "selectClient": "Select client",
             "relatedLetter": "Related inbox letter (optional)",
-            "relatedLetterPlaceholder": "e.g. IN-2026-142",
+            "relatedLetterPlaceholder": "e.g. incoming No. 12",
             "assignee": "Assignee",
             "submit": "Register incoming",
-            "success": "Incoming document registered"
+            "success": "Incoming document registered",
+            "senderEmail": "Sender email (optional)",
+            "senderEmailPlaceholder": "e.g. sender@example.com",
+            "summary": "Summary (optional)",
+            "summaryPlaceholder": "Short description of the letter"
           },
           "detail": {
             "title": "Document details",
             "close": "Close document",
             "download": "Download",
-            "downloadStarted": "Download started"
+            "downloadStarted": "Download started",
+            "export": "Export",
+            "exportStarted": "Export started"
           }
-        }
+        },
+        "unknownClient": "Client #{{id}}",
+        "unknownUser": "User #{{id}}"
       },
       "settings": {
         "title": "Settings",
@@ -1054,6 +1093,9 @@
           "displayName": "Display name",
           "responseSla": "Response SLA",
           "businessDays": "business days",
+          "slaDayTypeLabel": "SLA day type",
+          "slaDayTypeWorking": "Working days",
+          "slaDayTypeCalendar": "Calendar days",
           "description": "Description",
           "priorityAssignment": "Priority assignment",
           "priorityHint": "★ = how strongly this lawyer should be preferred for this type",
@@ -1098,7 +1140,8 @@
             "backup": "BACKUP",
             "secondary": "SECONDARY",
             "off": "OFF"
-          }
+          },
+          "noKeywordHints": "No keyword hints"
         },
         "lawyers": {
           "autoAssignmentTitle": "Assignment algorithm",
@@ -1147,7 +1190,8 @@
           "empty": {
             "title": "No lawyers yet",
             "description": "Add lawyers to configure workload limits and letter type specializations."
-          }
+          },
+          "defaultRole": "Legal department"
         },
         "mailboxes": {
           "title": "Mailboxes",
@@ -1267,7 +1311,10 @@
             "matchDefault": "Default",
             "matchSenderDomain": "Sender domain",
             "matchSubjectKeyword": "Subject keyword"
-          }
+          },
+          "customProvider": "Custom / Self-hosted",
+          "hidePassword": "Hide password",
+          "showPassword": "Show password"
         },
         "templates": {
           "title": "Templates",
@@ -1365,17 +1412,9 @@
           }
         }
       },
-      "activityLog": {
-        "title": "Activity",
-        "letterReceived": "Letter received",
-        "classified": "Auto-classified",
-        "typeSuggested": "Type suggested",
-        "parametersConfirmed": "Parameters confirmed",
-        "taskCreated": "Task created on kanban board"
-      },
       "workspaceBanner": {
         "lawBadge": "Law",
-        "title": "Lawyers's Workspace",
+        "title": "Lawyers' Workspace",
         "activeProject": "Active project: {{project}}.",
         "noActiveProject": "No active project selected.",
         "lawyersInProject": "lawyers in this project",
@@ -1387,6 +1426,62 @@
         "syncHint": "Email Service · {{interval}}",
         "mailboxes": "6 mailboxes connected",
         "mailboxesCount": "{{count}} mailboxes connected"
+      },
+      "mutations": {
+        "edoRegistered": "EDO registered: {{number}}",
+        "replySent": "Reply sent",
+        "letterSent": "Letter sent",
+        "taskCreated": "Task created"
+      },
+      "letterTemplate": {
+        "clientFallback": "Client"
+      },
+      "lawyers": {
+        "atCapacity": "At capacity ({{current}}/{{max}})"
+      },
+      "registry": {
+        "columns": {
+          "receivedDate": "Received date",
+          "number": "No.",
+          "senderEmail": "Sender email",
+          "summary": "Summary",
+          "requestReceivedAt": "Request received",
+          "email": "Email",
+          "category": "Category",
+          "partyName": "Full name / Institution",
+          "outgoingNumber": "Outgoing No.",
+          "responseDate": "Response date",
+          "responsible": "Responsible"
+        },
+        "filters": {
+          "from": "From",
+          "to": "To",
+          "selectStartDate": "Start date",
+          "selectEndDate": "End date",
+          "category": "Category",
+          "allCategories": "All categories",
+          "lawyer": "Responsible",
+          "allLawyers": "All lawyers",
+          "search": "Search",
+          "searchPlaceholder": "Search by number, email, summary…"
+        },
+        "export": {
+          "button": "Export (CSV)",
+          "exporting": "Exporting…",
+          "failed": "Export failed",
+          "incomingFileName": "incoming-register-{{date}}.csv",
+          "outgoingFileName": "outgoing-register-{{date}}.csv"
+        },
+        "loadError": {
+          "title": "Could not load the registry",
+          "description": "Check your connection and try again."
+        },
+        "incoming": {
+          "empty": "No incoming correspondence yet"
+        },
+        "outgoing": {
+          "empty": "No outgoing correspondence yet"
+        }
       }
     },
     "training": {
@@ -1784,6 +1879,11 @@
         "clear": "Clear",
         "edit": "Edit",
         "sendToOperator": "Send to operator",
+        "saveChanges": "Save changes",
+        "changeTypeWarning": "Changing the type replaces the criteria — the current scores will be cleared.",
+        "changeTypeConfirm": "Change type",
+        "notAssigned": "This operator is not assigned to you, so you cannot score this call.",
+        "resend": "Re-send",
         "status": {
           "draft": "Draft",
           "completed": "Completed",
@@ -1830,6 +1930,7 @@
         "list": {
           "dateTime": "Date / Time",
           "employee": "Employee",
+          "trainer": "Trainer",
           "client": "Client",
           "phone": "Phone",
           "category": "Category",
@@ -1893,7 +1994,7 @@
         },
         "detail": {
           "assignTask": "Assign task",
-          "empty": "Select a scorecard to view details"
+          "empty": "Select a dialog to review"
         },
         "employee": {
           "all": "All employees",
@@ -1921,6 +2022,9 @@
         },
         "dialogs": {
           "myEmployees": "My employees",
+          "myEmployeesEmpty": "You have no operators under your control yet",
+          "myEmployeesError": "Could not load your operators",
+          "statusAll": "All",
           "allDepartments": "All departments",
           "evaluation": "Evaluation",
           "notEvaluated": "Not evaluated",
@@ -2211,7 +2315,13 @@
           "low_scorecard_average": "Low scorecard average",
           "low_conversion_rate": "Low conversion rate",
           "overdue_correction_tasks": "Overdue correction tasks",
-          "active_auto_flags": "Active auto-flags"
+          "active_auto_flags": "Active auto-flags",
+          "missed_calls": "Missed Calls",
+          "low_score": "Low Score",
+          "silence": "Silence",
+          "tone": "Tone",
+          "overdue_promise": "Overdue Promise",
+          "no_summary": "No Summary"
         },
         "rateDialogue": {
           "title": "Pick a call to rate",
@@ -2358,7 +2468,8 @@
           "idle": "Idle",
           "offline": "Offline",
           "waiting": "Waiting"
-        }
+        },
+        "noData": "no data"
       },
       "scriptAnalytics": {
         "empty": "No script-analytics data for the selected filters.",
@@ -2520,7 +2631,8 @@
           "in_person": "In-person",
           "zoom": "Zoom",
           "phone": "Phone"
-        }
+        },
+        "today": "Today"
       },
       "closures": {
         "cols": {
@@ -2552,7 +2664,10 @@
           "totalAmount": "Total Amount"
         },
         "loadFailed": "Failed to load closures. Please retry.",
-        "loading": "Loading…"
+        "loading": "Loading…",
+        "status": {
+          "verified": "Verified"
+        }
       },
       "correction": {
         "call": "Call recording",
@@ -2812,7 +2927,10 @@
         "badges": {
           "empty": "No badges earned yet. They unlock automatically from leaderboard ranking, scorecard streaks, and on-time tasks.",
           "loading": "Loading badges…",
-          "title": "Badges"
+          "title": "Badges",
+          "codes": {
+            "best_call_of_week": "Best call of the week"
+          }
         },
         "chips": {
           "all": "All my departments"
@@ -2862,7 +2980,9 @@
           "inNorm": "In norm",
           "inQueue": "In queue"
         },
-        "ext": "ext"
+        "ext": "ext",
+        "collapseDepartment": "Collapse department",
+        "expandDepartment": "Expand department"
       },
       "tests": {
         "course": "Course",
@@ -3111,6 +3231,18 @@
           "groupTrainings": "Group Training Sessions",
           "materials": "Materials",
           "tests": "Tests"
+        },
+        "catalog": {
+          "categories": {
+            "scripts": "Scripts",
+            "hard_collection": "Hard Collection",
+            "soft_skills": "Soft Skills",
+            "tone": "Tone",
+            "analytics": "Analytics",
+            "compliance": "Compliance",
+            "product": "Product",
+            "tools": "Tools"
+          }
         }
       },
       "weeklyTasks": {
@@ -3426,6 +3558,58 @@
       "toastEnabled": "AI call analysis enabled.",
       "toastDisabled": "AI call analysis disabled.",
       "toastError": "Failed to update AI call analysis settings."
+    },
+    "aiSettings": {
+      "title": "AI Settings",
+      "helper": "Global switches for the AI assistant and AI call analysis, and assistant access by role.",
+      "assistantToggleTitle": "AI assistant",
+      "assistantToggleDescription": "Global kill-switch. When off, the assistant is unavailable for everyone and the header button is hidden.",
+      "assistantToggleAria": "Toggle the AI assistant",
+      "toastEnabled": "AI assistant enabled",
+      "toastDisabled": "AI assistant disabled",
+      "toastError": "Failed to update AI assistant settings",
+      "accessTitle": "Assistant access",
+      "accessDescription": "Which roles may use the operator assistant (use_ai_assistant permission).",
+      "accessToggleAria": "Toggle assistant access for role {{role}}",
+      "disabledBanner": "The AI assistant is temporarily disabled by an administrator.",
+      "internals": {
+        "title": "Assistant internals",
+        "configTitle": "Configuration",
+        "promptsTitle": "Prompting",
+        "unavailable": "Assistant brain is unreachable",
+        "on": "on",
+        "off": "off",
+        "model": "Model",
+        "commit": "Commit",
+        "prompt0Append": "Prompt0 append",
+        "skills": "Skills",
+        "knowledge": "Knowledge",
+        "flags": {
+          "thinking_mode_enabled": "Thinking mode",
+          "skills_enabled": "Skills",
+          "hooks_enabled": "Hooks",
+          "crm_mode": "CRM mode",
+          "memory_enabled": "Memory",
+          "knowledge_enabled": "Knowledge base",
+          "query_router_enabled": "Query router",
+          "answer_eval_enabled": "Answer evaluation",
+          "tts_normalize_enabled": "TTS normalization",
+          "corrector_enabled": "Corrector",
+          "rbac_scope_enabled": "RBAC scope",
+          "call_qa_enabled": "Call QA"
+        },
+        "limits": {
+          "max_turns": "Max turns",
+          "turn_deadline_s": "Turn deadline (s)",
+          "sql_max_rows": "SQL max rows",
+          "prompt_append_limit": "Prompt append limit"
+        },
+        "apply": {
+          "gw-restart": "gw restart",
+          "hot-reload": "hot reload",
+          "reseed": "reseed"
+        }
+      }
     },
     "projects": {
       "title": "Project Management",
@@ -5132,12 +5316,15 @@
         "deleteAddress": "Delete address",
         "editContact": "Edit contact",
         "deleteContact": "Delete contact",
+        "contactDigitsOnly": "Only digits are allowed for this contact type",
+        "contactDuplicate": "This value already exists for this client",
         "workPhone": "Work Phone",
         "saveAll": "Save All Sections",
         "savingAll": "Saving all…",
         "saveAllSuccess": "All sections saved",
         "saveAllPartial": "Some sections failed to save — check the errors below",
-        "saveAllError": "Failed to save sections"
+        "saveAllError": "Failed to save sections",
+        "addPhone": "Add phone"
       },
       "detail": {
         "clientNotFound": "Client not found",
@@ -5150,6 +5337,51 @@
         "loan": "Loan",
         "documentsUnlinked": "Not linked to a loan",
         "documentTypePlaceholder": "Select a type",
+        "generatedBadge": "Generated",
+        "generateModal": {
+          "title": "Generate document",
+          "credit": "Loan",
+          "creditPlaceholder": "Select a loan",
+          "template": "Template",
+          "selectCreditFirst": "Select a loan first",
+          "templatesEmpty": "No available templates",
+          "loadError": "Failed to load templates",
+          "documentType": "Document type",
+          "indexNum": "Outgoing №",
+          "indexNumPlaceholder": "Auto",
+          "indexNumHint": "Leave empty for auto-numbering. The outgoing-number register will be introduced later.",
+          "generate": "Generate",
+          "generating": "Generating…",
+          "done": "Done",
+          "successTitle": "Document generated",
+          "successPdfHint": "The PDF has been added to the client's documents.",
+          "downloadDocx": "Download .docx",
+          "genericError": "Failed to generate the document",
+          "reasons": {
+            "debt_not_closed": "The loan is not closed",
+            "debt_closed": "The loan is closed",
+            "no_active_rr": "No active restructuring",
+            "no_active_promise": "No active payment promise",
+            "no_activation_tag": "Template not configured: select a tag",
+            "no_required_tag": "Client is missing the required tag",
+            "unavailable": "Unavailable for this loan"
+          },
+          "hiddenTemplates": "Hidden templates unavailable for this credit: {{count}}",
+          "indexNumRegistryHint": "The outgoing number will be assigned automatically from the correspondence registry",
+          "typeFromTemplate": "applied automatically from the template",
+          "deliveryChannel": "Delivery channel to client",
+          "deliveryChannelPlaceholder": "Choose a channel",
+          "deliveryContact": "Contact (where to)",
+          "deliveryContactPlaceholder": "+380… or email",
+          "channels": {
+            "email": "Email",
+            "telegram": "Telegram",
+            "viber": "Viber",
+            "whatsapp": "WhatsApp",
+            "sms": "SMS",
+            "post": "Postal mail"
+          }
+        },
         "department": "Department",
         "phones": "Phones",
         "tin": "TIN",
@@ -5535,7 +5767,14 @@
             "unreachable": "UBKI service unavailable",
             "connection": "Connection error"
           }
-        }
+        },
+        "otherContacts": "Others",
+        "contactsCount": "{{count}} contacts",
+        "sendMessageSmsViber": "Message (SMS / Viber)",
+        "contactInfo": "Details",
+        "logInteraction": "Log interaction",
+        "call": "Call",
+        "sendSms": "Send SMS"
       },
       "debtSummary": {
         "title": "Debt Summary",
@@ -6071,7 +6310,8 @@
           "preview": "Preview",
           "variables": "Variables",
           "updated": "Updated",
-          "actions": "Actions"
+          "actions": "Actions",
+          "type": "Type"
         },
         "modals": {
           "createTitle": "Create template",
@@ -6089,12 +6329,47 @@
           "preview": "Preview (sample data)",
           "previewEmpty": "Start typing to see a live preview.",
           "variables": "Variables",
-          "variablesHelp": "Click a variable to insert it at the cursor."
+          "variablesHelp": "Click a variable to insert it at the cursor.",
+          "description": "Description",
+          "descriptionPlaceholder": "Optional short description",
+          "file": ".docx file",
+          "dropFileOrClick": "Drop a .docx file here or click to choose",
+          "bodyReadonly": "Body (from file, read-only)",
+          "bodyEmpty": "No extracted text.",
+          "currentFile": "Current file",
+          "downloadFile": "Download file",
+          "replaceFile": "Replace file",
+          "replaceAction": "Replace file",
+          "isActive": "Active",
+          "activationRule": "Activation rule",
+          "activationTag": "Activation tag",
+          "activationTagPlaceholder": "Select a tag",
+          "activationTagHelp": "The template will only be available to clients with this tag.",
+          "variablesReferenceHelp": "Use these names in your Word file as {{name}}.",
+          "composeHelp": "Letterhead with logo, company requisites, stamp and signature are added automatically.",
+          "composeTitle": "Document title",
+          "composeTitlePlaceholder": "e.g. GUARANTEE LETTER",
+          "composeBodyPlaceholder": "Each line is a separate paragraph. Insert variables from the panel on the right.",
+          "includeRequisites": "Payment requisites",
+          "includeSchedule": "Payment schedule table (RR)",
+          "documentType": "Document type (for generation)",
+          "documentTypePlaceholder": "Not set — the operator picks manually"
+        },
+        "activationRules": {
+          "always": "Always available",
+          "active_debt": "Active debt",
+          "closed_debt": "Closed debt",
+          "rr_active": "Active restructuring",
+          "rr_first_payment": "First restructuring payment",
+          "promise_active": "Active payment promise",
+          "tag_active": "Active tag"
         },
         "variableGroups": {
           "client": "Client",
           "credit": "Credit",
-          "system": "System"
+          "system": "System",
+          "promise": "Promise",
+          "restructuring": "Restructuring"
         },
         "variables": {
           "clientFullName": "Client's full name",
@@ -6115,12 +6390,44 @@
         },
         "errors": {
           "nameRequired": "Template name is required",
-          "bodyRequired": "Template body is required"
+          "bodyRequired": "Template body is required",
+          "fileRequired": "Please choose a .docx file",
+          "titleRequired": "Document title is required",
+          "activationTagRequired": "Select a tag for the \"Active tag\" rule"
         },
         "messages": {
           "created": "Template created",
           "updated": "Template updated",
-          "deleted": "Template deleted"
+          "deleted": "Template deleted",
+          "uploaded": "Template uploaded",
+          "fileReplaced": "Template file replaced",
+          "downloadError": "Failed to download file"
+        },
+        "templateKind": {
+          "label": "Template type",
+          "text": "Text template",
+          "docx": ".docx file",
+          "compose": "Branded form"
+        },
+        "warnings": {
+          "unknownVariablesTitle": "Variables outside the dictionary",
+          "unknownVariablesHelp": "These placeholders are not in the dictionary and will not be substituted:",
+          "acknowledge": "Done"
+        },
+        "actions": {
+          "preview": "Preview"
+        },
+        "preview": {
+          "title": "Template preview",
+          "loading": "Loading preview…",
+          "error": "Could not render the document.",
+          "empty": "Nothing to preview.",
+          "modeTemplate": "Template",
+          "modeSample": "With sample data",
+          "sampleSectionTitle": "How it will look (sample data)",
+          "openFullscreen": "Open fullscreen",
+          "show": "Show",
+          "hide": "Hide"
         }
       }
     },
@@ -8366,7 +8673,8 @@
         "timeline": "Timeline",
         "screenTime": "Screen Time",
         "heatmap": "Heatmap",
-        "scriptAnalytics": "Script Analytics"
+        "scriptAnalytics": "Script Analytics",
+        "correspondence": "Correspondence"
       },
       "scoresSubTabs": {
         "scorecards": "Scorecards",
@@ -8387,6 +8695,11 @@
         "clear": "Clear",
         "edit": "Edit",
         "sendToOperator": "Send to operator",
+        "saveChanges": "Save changes",
+        "changeTypeWarning": "Changing the type replaces the criteria — the current scores will be cleared.",
+        "changeTypeConfirm": "Change type",
+        "notAssigned": "This operator is not assigned to you, so you cannot score this call.",
+        "resend": "Re-send",
         "status": {
           "draft": "Draft",
           "completed": "Completed",
@@ -8426,6 +8739,7 @@
         "list": {
           "dateTime": "Date / Time",
           "employee": "Employee",
+          "trainer": "Trainer",
           "client": "Client",
           "phone": "Phone",
           "category": "Category",
@@ -8746,6 +9060,25 @@
           "fastResultPct": "Fast %",
           "distribution": "Distribution"
         }
+      },
+      "correspondence": {
+        "columns": {
+          "date": "Date",
+          "direction": "Direction",
+          "number": "No.",
+          "category": "Category",
+          "party": "Client / Institution",
+          "responsible": "Responsible"
+        },
+        "directionIncoming": "Incoming",
+        "directionOutgoing": "Outgoing",
+        "filters": {
+          "from": "From",
+          "to": "To",
+          "selectStartDate": "Start date",
+          "selectEndDate": "End date"
+        },
+        "empty": "No correspondence activity for this period"
       }
     },
     "ubkiIntegration": {

@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from '@/components/ui/Select'
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch'
+import { useConfirm } from '@/components/ui/useConfirm'
 import { ColorPickerField } from '@/components/forms'
 import { PermissionGuard } from '@/components/auth'
 import { PERMISSIONS } from '@/constants/permissions'
@@ -26,6 +27,8 @@ import {
   useContactTagCategories,
   useCreateContactTagCategory,
   useCreateContactTagValue,
+  useDeleteContactTagCategory,
+  useDeleteContactTagValue,
   usePatchContactTagCategory,
   usePatchContactTagValue,
 } from '@/features/contactTags/hooks/useContactTags'
@@ -35,6 +38,7 @@ type StatusFilter = 'all' | 'active' | 'hidden'
 
 export function ContactTagsPage() {
   const { t } = useTranslation('common')
+  const { confirm, confirmDialog } = useConfirm()
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const {
     data: categories = [],
@@ -46,6 +50,8 @@ export function ContactTagsPage() {
   const patchCategory = usePatchContactTagCategory()
   const createValue = useCreateContactTagValue()
   const patchValue = usePatchContactTagValue()
+  const deleteCategory = useDeleteContactTagCategory()
+  const deleteValue = useDeleteContactTagValue()
 
   const [categoryModalOpen, setCategoryModalOpen] = useState(false)
   const [valueModalOpen, setValueModalOpen] = useState(false)
@@ -212,6 +218,50 @@ export function ContactTagsPage() {
     }
   }
 
+  const handleDeleteCategory = async (row: ContactTagCategory) => {
+    const ok = await confirm({
+      title: t('pages.contactTags.confirmDeleteCategoryTitle', 'Delete category?'),
+      message: t(
+        'pages.contactTags.confirmDeleteCategory',
+        'Delete “{{name}}” and all its values? It disappears everywhere but stays readable in Tag History.',
+        { name: row.name }
+      ),
+      confirmLabel: t('common.delete', 'Delete'),
+      cancelLabel: t('common.cancel', 'Cancel'),
+      tone: 'danger',
+    })
+    if (!ok) return
+    deleteCategory.mutate(row.id, {
+      onSuccess: () => {
+        toast.success(t('pages.contactTags.categoryDeleted', 'Category deleted'))
+        refetch()
+      },
+      onError: (error) => toast.error(getErrorMessage(error)),
+    })
+  }
+
+  const handleDeleteValue = async (value: ContactTagValue) => {
+    const ok = await confirm({
+      title: t('pages.contactTags.confirmDeleteValueTitle', 'Delete value?'),
+      message: t(
+        'pages.contactTags.confirmDeleteValue',
+        'Delete “{{name}}”? It is removed from all contacts but stays readable in Tag History.',
+        { name: value.name }
+      ),
+      confirmLabel: t('common.delete', 'Delete'),
+      cancelLabel: t('common.cancel', 'Cancel'),
+      tone: 'danger',
+    })
+    if (!ok) return
+    deleteValue.mutate(value.id, {
+      onSuccess: () => {
+        toast.success(t('pages.contactTags.valueDeleted', 'Value deleted'))
+        refetch()
+      },
+      onError: (error) => toast.error(getErrorMessage(error)),
+    })
+  }
+
   // Column defs reference handlers — do not wrap in useMemo without listing those
   // deps (react-hooks/preserve-manual-memoization). Small table: rebuild each render.
   const columns: Column<ContactTagCategory>[] = [
@@ -266,6 +316,16 @@ export function ContactTagsPage() {
                 {t('pages.contactTags.addValue', 'Add value')}
               </Button>
             )}
+            {!row.is_system && (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="text-red-500 hover:text-red-600"
+                onClick={() => void handleDeleteCategory(row)}
+              >
+                {t('common.delete', 'Delete')}
+              </Button>
+            )}
           </PermissionGuard>
         </div>
       ),
@@ -309,16 +369,33 @@ export function ContactTagsPage() {
             <div className="mb-2 text-sm font-medium">{cat.name} — values</div>
             <div className="flex flex-wrap gap-2">
               {cat.values.map((v) => (
-                <button
+                <span
                   key={v.id}
-                  type="button"
-                  className="rounded-full px-2 py-0.5 text-xs text-white"
+                  className="inline-flex items-center overflow-hidden rounded-full text-xs text-white"
                   style={{ backgroundColor: v.color || '#64748b', opacity: v.is_hidden ? 0.5 : 1 }}
-                  onClick={() => openEditValue(cat, v)}
                 >
-                  {v.name}
-                  {v.blocks_calls ? ' 📵' : ''}
-                </button>
+                  <button
+                    type="button"
+                    className="px-2 py-0.5"
+                    onClick={() => openEditValue(cat, v)}
+                  >
+                    {v.name}
+                    {v.blocks_calls ? ' 📵' : ''}
+                  </button>
+                  {!cat.is_system && (
+                    <PermissionGuard permission={PERMISSIONS.CONTACT_TAGS.MANAGE}>
+                      <button
+                        type="button"
+                        aria-label={t('common.delete', 'Delete')}
+                        title={t('common.delete', 'Delete')}
+                        className="px-1.5 py-0.5 hover:bg-black/20"
+                        onClick={() => void handleDeleteValue(v)}
+                      >
+                        ×
+                      </button>
+                    </PermissionGuard>
+                  )}
+                </span>
               ))}
             </div>
           </div>
@@ -440,6 +517,8 @@ export function ContactTagsPage() {
           <Button onClick={saveValue}>{t('common.save', 'Save')}</Button>
         </ModalFooter>
       </Modal>
+
+      {confirmDialog}
     </div>
   )
 }

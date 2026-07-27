@@ -39,6 +39,7 @@ import { searchClients, mapPriorityLevel, type SearchType } from '@/api/clientSe
 import { RouteChangeTracker, TrackingProvider } from '@/features/operatorAnalytics'
 import { LawyerWorkplaceHeaderNav } from '@/pages/LawyerWorkplace/components/LawyerWorkplaceHeaderNav'
 import { useLegalInboxSummary } from '@/features/lawyerWorkplace'
+import { useAiAssistantSettings } from '@/features/aiSettings/hooks/useAiAssistantSettings'
 
 // Minimum digit count required to fire a phone-type search. Mirrors the
 // backend guard at services/client/app/routers/search.py (PHONE_MIN_DIGITS).
@@ -51,16 +52,20 @@ interface DashboardLayoutProps {
   children: ReactNode
 }
 
-function AiAssistantHeaderButton() {
+// Exported (in addition to being used inline below) so it can be unit-tested
+// without mounting the rest of DashboardLayout's auth/websocket/search stack.
+export function AiAssistantHeaderButton() {
   const navigate = useNavigate()
   const location = useLocation()
   const { t } = useTranslation('common')
   const canUseAssistant = useHasPermission(PERMISSIONS.AI_ASSISTANT.USE)
+  const { data: aiSettings } = useAiAssistantSettings()
   const isActive = location.pathname === '/dashboard/ai-assistant'
 
-  // Entitlement gate: hide the assistant entry for users without use_ai_assistant
-  // (the proxy/route also enforce it; this keeps the UI honest — no dead button).
-  if (!canUseAssistant) {
+  // Entitlement + kill-switch: hide for users without use_ai_assistant and
+  // for everyone while the global switch is off. Fail-open: while settings
+  // are loading/unavailable the button stays (backend still enforces).
+  if (!canUseAssistant || aiSettings?.assistant_enabled === false) {
     return null
   }
 
@@ -864,9 +869,22 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           PERMISSIONS.SYSTEM.MANAGE_SETTINGS,
           PERMISSIONS.CONTACT_TYPES.VIEW,
           PERMISSIONS.REPAYMENT_CONFIG.VIEW,
+          PERMISSIONS.SYSTEM.MANAGE_AI_SETTINGS,
+          PERMISSIONS.SYSTEM.MANAGE_CALL_QA,
         ],
         mode: 'any' as const,
         subItems: [
+          {
+            path: '/dashboard/system-settings/ai',
+            label: t('navigation.aiSettings', 'AI Settings'),
+            icon: 'ai-brain-03',
+            requiredPermissions: [
+              PERMISSIONS.SYSTEM.MANAGE_AI_SETTINGS,
+              PERMISSIONS.SYSTEM.MANAGE_CALL_QA,
+              PERMISSIONS.SYSTEM.MANAGE_ROLES,
+            ],
+            mode: 'any' as const,
+          },
           {
             // TODO(ubki): swap to a dedicated manage_integrations permission
             // once it exists (reusing messaging integrations for now).

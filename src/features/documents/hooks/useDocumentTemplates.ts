@@ -2,19 +2,27 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import type { AxiosError } from 'axios'
 import {
+  composeDocumentTemplate,
   createDocumentTemplate,
   deleteDocumentTemplate,
   getDocumentTemplate,
+  getDocumentTemplateTagOptions,
+  getDocumentTemplateVariables,
   listDocumentTemplates,
+  replaceDocumentTemplateFile,
   updateDocumentTemplate,
+  uploadDocumentTemplate,
 } from '../api/documentTemplatesApi'
 import type { DocumentTemplateCreatePayload, DocumentTemplateUpdatePayload } from '../api/types'
+import type { DocumentTemplateComposePayload } from '../api/documentTemplatesApi'
 
 export const documentTemplateKeys = {
   all: ['document-templates'] as const,
   list: (includeInactive: boolean) =>
     [...documentTemplateKeys.all, 'list', { includeInactive }] as const,
   detail: (id: number) => [...documentTemplateKeys.all, 'detail', id] as const,
+  variables: () => [...documentTemplateKeys.all, 'variables'] as const,
+  tagOptions: () => [...documentTemplateKeys.all, 'tag-options'] as const,
 }
 
 export function useDocumentTemplates(includeInactive = false) {
@@ -73,6 +81,71 @@ export function useDeleteDocumentTemplate() {
     },
     onError: (error: AxiosError<{ detail?: string }>) => {
       toast.error(extractError(error, 'Failed to delete template'))
+    },
+  })
+}
+
+/**
+ * The variable dictionary is static (37 entries) and shared across every
+ * template, so it is safe to cache for a long time — a stale hour is fine.
+ */
+export function useDocumentTemplateVariables() {
+  return useQuery({
+    queryKey: documentTemplateKeys.variables(),
+    queryFn: getDocumentTemplateVariables,
+    staleTime: 60 * 60 * 1000,
+  })
+}
+
+/**
+ * Tag catalog for the `tag_active` activation rule (client_db tag id space).
+ * `enabled` lets the editor fetch it only when that rule is in play.
+ */
+export function useDocumentTemplateTagOptions(enabled = true) {
+  return useQuery({
+    queryKey: documentTemplateKeys.tagOptions(),
+    queryFn: getDocumentTemplateTagOptions,
+    enabled,
+    staleTime: 5 * 60 * 1000,
+  })
+}
+
+export function useUploadDocumentTemplate() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (formData: FormData) => uploadDocumentTemplate(formData),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: documentTemplateKeys.all })
+    },
+    onError: (error: AxiosError<{ detail?: string }>) => {
+      toast.error(extractError(error, 'Failed to upload template'))
+    },
+  })
+}
+
+export function useReplaceDocumentTemplateFile() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, formData }: { id: number; formData: FormData }) =>
+      replaceDocumentTemplateFile(id, formData),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: documentTemplateKeys.all })
+    },
+    onError: (error: AxiosError<{ detail?: string }>) => {
+      toast.error(extractError(error, 'Failed to replace template file'))
+    },
+  })
+}
+
+export function useComposeDocumentTemplate() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (payload: DocumentTemplateComposePayload) => composeDocumentTemplate(payload),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: documentTemplateKeys.all })
+    },
+    onError: (error: AxiosError<{ detail?: string }>) => {
+      toast.error(extractError(error, 'Failed to compose template'))
     },
   })
 }

@@ -22,6 +22,7 @@ import { formatClientFullName, formatDate, formatDateTime } from '@/lib/formatte
 import { TagSelectorModal } from './components/TagSelectorModal'
 import { BulkTagModal } from './components/BulkTagModal'
 import { BulkSendMessageModal } from './components/BulkSendMessageModal'
+import { fetchFilteredClientIds } from '@/features/messaging/utils/fetchFilteredClientIds'
 import { ClientManagementPageSkeleton } from './components/ClientManagementPageSkeleton'
 import { Icons } from '@/lib/icons'
 import {
@@ -257,6 +258,8 @@ function decodeStepValues(raw: string): Record<number, StepValueEntry> {
 // flag to true.
 const ENABLE_BULK_UBKI_SUBMISSION = true
 
+const BULK_ACTION_LIMIT = 10000
+
 export function ClientManagementPage() {
   const { t } = useTranslation('common')
   // Get search state from global store (synced with header search)
@@ -419,6 +422,7 @@ export function ClientManagementPage() {
   const [showBulkTagModal, setShowBulkTagModal] = useState(false)
   const [showBulkSendMessageModal, setShowBulkSendMessageModal] = useState(false)
   const [bulkTagAction, setBulkTagAction] = useState<'add' | 'remove'>('add')
+  const [bulkTagClientIds, setBulkTagClientIds] = useState<number[]>([])
   const [tagModalOpen, setTagModalOpen] = useState(false)
   const [selectedClientForTags, setSelectedClientForTags] = useState<{
     id: number
@@ -1119,19 +1123,69 @@ export function ClientManagementPage() {
     setCurrentPage(1)
   }
 
-  // Bulk selection handlers
+  const handleSelectPage = () => {
+    setAllClientsSelected(false)
+    setExcludedClients(new Set())
+    setSelectedClients(new Set(filteredClients.map((client) => client.id)))
+  }
+
+  const exceedsBulkLimit = (): boolean => {
+    if (totalSelectedCount > BULK_ACTION_LIMIT) {
+      toast.error(
+        t(
+          'pages.clients.bulkActions.limitExceeded',
+          'The maximum allowed selection for bulk actions is 10,000 clients. Please narrow your filter and try again.'
+        )
+      )
+      return true
+    }
+    return false
+  }
+
+  const resolveBulkClientIds = async (): Promise<number[]> => {
+    if (allClientsSelected) {
+      return fetchFilteredClientIds(clientListFilterParams, excludedClients)
+    }
+    return Array.from(selectedClients).map(Number)
+  }
+
   const handleBulkAssign = () => {
+    if (totalSelectedCount === 0) {
+      toast.error(
+        t(
+          'pages.clients.bulkActions.selectClientsFirst',
+          'Select at least one client before starting a bulk action'
+        )
+      )
+      return
+    }
+    if (exceedsBulkLimit()) return
     setShowBulkAssignModal(true)
   }
 
-  const handleBulkAddTags = () => {
-    setBulkTagAction('add')
+  const openBulkTagModal = async (action: 'add' | 'remove') => {
+    if (totalSelectedCount === 0) {
+      toast.error(
+        t(
+          'pages.clients.bulkActions.selectClientsFirst',
+          'Select at least one client before starting a bulk action'
+        )
+      )
+      return
+    }
+    if (exceedsBulkLimit()) return
+    const ids = await resolveBulkClientIds()
+    setBulkTagClientIds(ids)
+    setBulkTagAction(action)
     setShowBulkTagModal(true)
   }
 
+  const handleBulkAddTags = () => {
+    void openBulkTagModal('add')
+  }
+
   const handleBulkRemoveTags = () => {
-    setBulkTagAction('remove')
-    setShowBulkTagModal(true)
+    void openBulkTagModal('remove')
   }
 
   const handleBulkSendMessage = () => {
@@ -1144,7 +1198,7 @@ export function ClientManagementPage() {
       )
       return
     }
-
+    if (exceedsBulkLimit()) return
     setShowBulkSendMessageModal(true)
   }
 
@@ -1208,24 +1262,15 @@ export function ClientManagementPage() {
     )
   }
 
-  const handleBulkAssignSubmit = (assignmentData: {
+  const handleBulkAssignSubmit = async (assignmentData: {
     employeeId?: string
     searcherId?: string
     distributionMethod: 'assign-all' | 'distribute-evenly'
     reason: string
   }) => {
-    // Collect client IDs to assign
-    let clientIds: number[]
+    if (exceedsBulkLimit()) return
 
-    if (allClientsSelected) {
-      // All selected minus excluded - get from current page data
-      clientIds = apiClients
-        .filter((client) => !excludedClients.has(client.id))
-        .map((client) => client.id)
-    } else {
-      // Just the explicitly selected clients
-      clientIds = Array.from(selectedClients).map(Number)
-    }
+    const clientIds = await resolveBulkClientIds()
 
     if (clientIds.length === 0) return
 
@@ -1957,7 +2002,10 @@ export function ClientManagementPage() {
               selectedItems={selectedClients}
               onSelectionChange={handleSelectionChange}
               totalCount={totalCount}
-              onSelectAll={handleSelectAll}
+              onSelectPage={handleSelectPage}
+              onSelectAllByFilter={handleSelectAll}
+              pageSelectableCount={filteredClients.length}
+              filterSelectableCount={totalCount}
               allItemsSelected={allClientsSelected}
               excludedItemsCount={excludedClients.size}
               excludedItems={excludedClients}
@@ -2139,13 +2187,7 @@ export function ClientManagementPage() {
         {/* Bulk Tag Modal */}
         <BulkTagModal
           open={showBulkTagModal}
-          clientIds={
-            allClientsSelected
-              ? apiClients
-                  .filter((client) => !excludedClients.has(client.id))
-                  .map((client) => client.id)
-              : Array.from(selectedClients).map(Number)
-          }
+          clientIds={bulkTagClientIds}
           clientCount={totalSelectedCount}
           action={bulkTagAction}
           onClose={() => setShowBulkTagModal(false)}

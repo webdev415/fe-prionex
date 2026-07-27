@@ -21,6 +21,7 @@ import {
   useImportJobErrors,
   useExportImportErrors,
   computeImportUiStatusFromDetail,
+  docProblemFilesCount,
 } from '@/features/imports'
 import { ImportDetailsPageSkeleton } from './components/ImportDetailsPageSkeleton'
 import { ImportStatusBadge } from './components/ImportBadges'
@@ -124,6 +125,12 @@ export function ImportDetailsPage() {
           | Record<string, number>
           | undefined)
       : undefined
+
+  // Total problem files for a document import (skips + blocked + errors),
+  // via the same shared helper the list page uses. Enables the Download Errors
+  // button for doc jobs without using errors_count (which is real failures
+  // only), so NON-document imports keep their exact previous behaviour.
+  const documentProblemFiles = docProblemFilesCount(jobDetail?.error_summary)
 
   // Convert API data to component format
   const importDetail = jobDetail
@@ -238,7 +245,13 @@ export function ImportDetailsPage() {
         <Button
           variant="primary"
           onClick={handleDownloadErrors}
-          disabled={exportErrorsMutation.isPending || importDetail.errors === 0}
+          // Enable when the job has something to export: real errors for any
+          // import, OR — for document imports — any problem files (skips /
+          // blocked / errors). Non-document imports are unchanged (errors > 0).
+          disabled={
+            exportErrorsMutation.isPending ||
+            !(importDetail.errors > 0 || (isDocument && documentProblemFiles > 0))
+          }
           leftIcon={<Icons.FileDownload size={20} className="text-primary-foreground" />}
           className="h-10 w-full rounded-full text-xs font-medium sm:h-12 sm:w-auto sm:text-sm"
         >
