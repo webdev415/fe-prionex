@@ -492,6 +492,115 @@ export function ClientDetailPage() {
     !!selectedRaId
   )
   const { mutate: createRr, isPending: isCreatingRr } = useCreateRestructuringAgreement()
+
+  const submitConnectRr = (saveMode: 'draft' | 'active') => {
+    const d = 'pages.clients.detail'
+    setConnectRrError(null)
+    if (!connectRrForm.debtId) {
+      setConnectRrError(t(`${d}.rrValidationLoanRequired`))
+      return
+    }
+    if (!connectRrForm.connectionDate) {
+      setConnectRrError(t(`${d}.rrValidationConnectionDateRequired`))
+      return
+    }
+    if (!connectRrForm.totalAmount || parseFloat(connectRrForm.totalAmount) <= 0) {
+      setConnectRrError(t(`${d}.rrValidationAmountRequired`))
+      return
+    }
+    for (let i = 0; i < connectRrForm.payments.length; i++) {
+      if (!connectRrForm.payments[i].date) {
+        setConnectRrError(t(`${d}.rrValidationPaymentDateRequired`, { num: i + 1 }))
+        return
+      }
+      if (!connectRrForm.payments[i].amount || parseFloat(connectRrForm.payments[i].amount) <= 0) {
+        setConnectRrError(t(`${d}.rrValidationPaymentAmountRequired`, { num: i + 1 }))
+        return
+      }
+    }
+    const totalAmount = parseFloat(connectRrForm.totalAmount)
+    const paymentsSum = connectRrForm.payments.reduce(
+      (sum, p) => sum + (parseFloat(p.amount) || 0),
+      0
+    )
+    if (Math.abs(paymentsSum - totalAmount) > 0.01) {
+      setConnectRrError(
+        t(`${d}.rrValidationSumMismatch`, {
+          sum: paymentsSum.toFixed(2),
+          total: totalAmount.toFixed(2),
+        })
+      )
+      return
+    }
+
+    const formatDate = (dt: Date | null) => {
+      if (!dt) return null
+      const y = dt.getFullYear()
+      const m = String(dt.getMonth() + 1).padStart(2, '0')
+      const day = String(dt.getDate()).padStart(2, '0')
+      return `${y}-${m}-${day}`
+    }
+    createRr(
+      {
+        clientId,
+        data: {
+          debt_id: parseInt(connectRrForm.debtId),
+          connection_date: formatDate(connectRrForm.connectionDate),
+          restructuring_amount: totalAmount,
+          num_payments: connectRrForm.numPayments,
+          save_mode: saveMode,
+          payments: connectRrForm.payments.map((p) => ({
+            payment_date: formatDate(p.date),
+            payment_amount: parseFloat(p.amount),
+          })),
+          penalty_amount:
+            connectRrForm.penaltyAmount && parseFloat(connectRrForm.penaltyAmount) > 0
+              ? parseFloat(connectRrForm.penaltyAmount)
+              : null,
+          periodicity: connectRrForm.frequency
+            ? {
+                frequency: connectRrForm.frequency,
+                interval_days: connectRrForm.intervalDays
+                  ? parseInt(connectRrForm.intervalDays, 10)
+                  : null,
+                day_of_month: connectRrForm.dayOfMonth || null,
+              }
+            : null,
+        },
+      },
+      {
+        onSuccess: () => {
+          if (saveMode === 'draft') {
+            toast.success(t(`${d}.saveDraftRRSuccess`, 'Draft saved'))
+          } else {
+            toast.success(t(`${d}.connectRRSuccess`))
+          }
+          setIsConnectRrOpen(false)
+        },
+        onError: (error) => {
+          const detail = (
+            error as import('axios').AxiosError<{
+              detail?: string | Array<{ msg?: string }>
+            }>
+          )?.response?.data?.detail
+          let message = t(
+            `${d}.connectRRError`,
+            t('errors.somethingWentWrong', 'Something went wrong')
+          )
+          if (typeof detail === 'string') {
+            message = detail
+          } else if (Array.isArray(detail) && detail.length > 0) {
+            message = detail
+              .map((e) => e.msg || '')
+              .filter(Boolean)
+              .join('; ')
+          }
+          setConnectRrError(message)
+        },
+      }
+    )
+  }
+
   const { mutate: closeDebt, isPending: isClosingDebt } = useCloseDebt()
   const { mutate: reopenDebt, isPending: isReopeningDebt } = useReopenDebt()
   const { mutate: updateClosureDate, isPending: isUpdatingClosureDate } = useUpdateDebtClosureDate()
@@ -6945,120 +7054,22 @@ export function ClientDetailPage() {
               {t('actions.cancel')}
             </Button>
             <Button
+              variant="outline"
+              size="sm"
+              disabled={isCreatingRr || !hasEligibleLoansForRr}
+              onClick={() => submitConnectRr('draft')}
+              className="w-full rounded-md"
+            >
+              {isCreatingRr ? '...' : t('pages.clients.detail.saveDraftRR', 'Save draft')}
+            </Button>
+            <Button
               variant="primary"
               size="sm"
               disabled={isCreatingRr || !hasEligibleLoansForRr}
-              onClick={() => {
-                const d = 'pages.clients.detail'
-                setConnectRrError(null)
-                // Validation
-                if (!connectRrForm.debtId) {
-                  setConnectRrError(t(`${d}.rrValidationLoanRequired`))
-                  return
-                }
-                if (!connectRrForm.connectionDate) {
-                  setConnectRrError(t(`${d}.rrValidationConnectionDateRequired`))
-                  return
-                }
-                if (!connectRrForm.totalAmount || parseFloat(connectRrForm.totalAmount) <= 0) {
-                  setConnectRrError(t(`${d}.rrValidationAmountRequired`))
-                  return
-                }
-                for (let i = 0; i < connectRrForm.payments.length; i++) {
-                  if (!connectRrForm.payments[i].date) {
-                    setConnectRrError(t(`${d}.rrValidationPaymentDateRequired`, { num: i + 1 }))
-                    return
-                  }
-                  if (
-                    !connectRrForm.payments[i].amount ||
-                    parseFloat(connectRrForm.payments[i].amount) <= 0
-                  ) {
-                    setConnectRrError(t(`${d}.rrValidationPaymentAmountRequired`, { num: i + 1 }))
-                    return
-                  }
-                }
-                const totalAmount = parseFloat(connectRrForm.totalAmount)
-                const paymentsSum = connectRrForm.payments.reduce(
-                  (sum, p) => sum + (parseFloat(p.amount) || 0),
-                  0
-                )
-                if (Math.abs(paymentsSum - totalAmount) > 0.01) {
-                  setConnectRrError(
-                    t(`${d}.rrValidationSumMismatch`, {
-                      sum: paymentsSum.toFixed(2),
-                      total: totalAmount.toFixed(2),
-                    })
-                  )
-                  return
-                }
-
-                const formatDate = (dt: Date | null) => {
-                  if (!dt) return null
-                  const y = dt.getFullYear()
-                  const m = String(dt.getMonth() + 1).padStart(2, '0')
-                  const day = String(dt.getDate()).padStart(2, '0')
-                  return `${y}-${m}-${day}`
-                }
-                createRr(
-                  {
-                    clientId,
-                    data: {
-                      debt_id: parseInt(connectRrForm.debtId),
-                      connection_date: formatDate(connectRrForm.connectionDate),
-                      restructuring_amount: totalAmount,
-                      num_payments: connectRrForm.numPayments,
-                      payments: connectRrForm.payments.map((p) => ({
-                        payment_date: formatDate(p.date),
-                        payment_amount: parseFloat(p.amount),
-                      })),
-                      // KAN-785 Part 2 — optional penalty + persisted periodicity
-                      // (so the backend can date the penalty by this RR's cadence).
-                      penalty_amount:
-                        connectRrForm.penaltyAmount && parseFloat(connectRrForm.penaltyAmount) > 0
-                          ? parseFloat(connectRrForm.penaltyAmount)
-                          : null,
-                      periodicity: connectRrForm.frequency
-                        ? {
-                            frequency: connectRrForm.frequency,
-                            interval_days: connectRrForm.intervalDays
-                              ? parseInt(connectRrForm.intervalDays, 10)
-                              : null,
-                            day_of_month: connectRrForm.dayOfMonth || null,
-                          }
-                        : null,
-                    },
-                  },
-                  {
-                    onSuccess: () => {
-                      toast.success(t(`${d}.connectRRSuccess`))
-                      setIsConnectRrOpen(false)
-                    },
-                    onError: (error) => {
-                      const detail = (
-                        error as import('axios').AxiosError<{
-                          detail?: string | Array<{ msg?: string }>
-                        }>
-                      )?.response?.data?.detail
-                      let message = t(
-                        `${d}.connectRRError`,
-                        t('errors.somethingWentWrong', 'Something went wrong')
-                      )
-                      if (typeof detail === 'string') {
-                        message = detail
-                      } else if (Array.isArray(detail) && detail.length > 0) {
-                        message = detail
-                          .map((e) => e.msg || '')
-                          .filter(Boolean)
-                          .join('; ')
-                      }
-                      setConnectRrError(message)
-                    },
-                  }
-                )
-              }}
+              onClick={() => submitConnectRr('active')}
               className="w-full rounded-md"
             >
-              {isCreatingRr ? '...' : t('pages.clients.detail.connectRR')}
+              {isCreatingRr ? '...' : t('pages.clients.detail.saveActivateRR', 'Save & activate')}
             </Button>
           </ModalFooter>
         </Modal>
