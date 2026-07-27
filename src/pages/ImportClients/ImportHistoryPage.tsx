@@ -19,6 +19,7 @@ import {
   ImportHistoryFiltersBar,
   type ImportHistoryFilters,
 } from './components/ImportHistoryFiltersBar'
+import { ImportStatusBadge, ImportTypeBadge } from './components/ImportBadges'
 import {
   useImportJobs,
   useExportImportErrors,
@@ -37,9 +38,17 @@ export interface ImportHistoryItem {
   uploadedBy: string
   status: 'done' | 'failed' | 'completed_with_errors' | 'in_progress' | 'pending' | 'cancelled'
   errors: number
+  problemFilesCount?: number
   importType: string
   tagMode?: 'assign' | 'remove'
 }
+
+// Download Errors is available when the target job has something to export:
+// real errors for any import, OR — for document imports — any problem files
+// (skips / blocked / errors) reported in problemFilesCount.
+const hasDownloadableErrors = (item?: ImportHistoryItem): boolean =>
+  !!item &&
+  (item.errors > 0 || (item.importType === 'document' && (item.problemFilesCount ?? 0) > 0))
 
 // Helper to convert API ImportJob to ImportHistoryItem.
 // The status mapping defers to computeImportUiStatusFromJob so a vendor
@@ -53,140 +62,19 @@ function mapImportJobToHistoryItem(job: ImportJob): ImportHistoryItem {
     uploadedBy: job.uploaded_by,
     status: computeImportUiStatusFromJob(job),
     errors: job.errors_count,
+    problemFilesCount: job.problem_files_count,
     importType: job.import_type || 'simple',
     tagMode: job.tag_mode,
   }
 }
 
-// Status Badge Component for Import History
-function ImportStatusBadge({
-  status,
-}: {
-  status: 'done' | 'failed' | 'completed_with_errors' | 'in_progress' | 'pending' | 'cancelled'
-}) {
-  const { t } = useTranslation('common')
-
-  if (status === 'done') {
-    return (
-      <span className="bg-secondary-800 inline-flex h-[33px] items-center gap-1.5 rounded-full px-3 text-xs font-medium text-white">
-        <span className="h-2 w-2 rounded-full bg-white" />
-        {t('pages.imports.history.statuses.done')}
-      </span>
-    )
-  }
-
-  if (status === 'completed_with_errors') {
-    return (
-      <span className="inline-flex h-[33px] items-center gap-1.5 rounded-full bg-gray-600 px-3 text-xs font-medium text-white">
-        <Icons.Warning size={14} className="text-white" />
-        {t('pages.imports.history.statuses.completedWithErrors')}
-      </span>
-    )
-  }
-
-  if (status === 'in_progress') {
-    return (
-      <span className="bg-secondary-800 inline-flex h-[33px] items-center gap-1.5 rounded-full px-3 text-xs font-medium text-white">
-        <span className="h-2 w-2 rounded-full bg-white" />
-        {t('pages.imports.history.statuses.inProgress')}
-      </span>
-    )
-  }
-
-  if (status === 'pending') {
-    return (
-      <span className="inline-flex h-[33px] items-center gap-1.5 rounded-full bg-yellow-500 px-3 text-xs font-medium text-white">
-        <span className="h-2 w-2 rounded-full bg-white" />
-        {t('pages.imports.history.statuses.pending')}
-      </span>
-    )
-  }
-
-  if (status === 'cancelled') {
-    return (
-      <span className="inline-flex h-[33px] items-center gap-1.5 rounded-full bg-gray-500 px-3 text-xs font-medium text-white">
-        <span className="h-2 w-2 rounded-full bg-white" />
-        {t('pages.imports.history.statuses.cancelled')}
-      </span>
-    )
-  }
-
-  return (
-    <span className="inline-flex h-[33px] items-center gap-1.5 rounded-full bg-red-600 px-3 text-xs font-medium text-white">
-      <span className="h-2 w-2 rounded-full bg-white" />
-      {t('pages.imports.history.statuses.failed')}
-    </span>
-  )
-}
-
-// Import Type Badge Component
-function ImportTypeBadge({
-  importType,
-  tagMode,
-}: {
-  importType: string
-  tagMode?: 'assign' | 'remove'
-}) {
-  const { t } = useTranslation('common')
-
-  const config: Record<string, { label: string; className: string }> = {
-    simple: {
-      label: t('pages.imports.history.importTypes.simple', 'Simple'),
-      className: 'bg-primary-300 text-dark-500',
-    },
-    vendor: {
-      label: t('pages.imports.history.importTypes.vendor', 'Vendor Dump'),
-      className: 'bg-secondary-800 text-white',
-    },
-    operator_assignment: {
-      label: t('pages.imports.history.importTypes.operatorAssignment', 'Operator Assignment'),
-      className: 'bg-primary-700 text-white',
-    },
-    payment_import: {
-      label: t('pages.imports.history.importTypes.paymentImport', 'Payment Import'),
-      className: 'bg-blue-600 text-white',
-    },
-    writeoff_import: {
-      label: t('pages.imports.history.importTypes.writeoffImport', 'Write-off Import'),
-      className: 'bg-orange-600 text-white',
-    },
-    sale_notes: {
-      label: t('pages.imports.history.importTypes.saleNotes', 'Sale Notes'),
-      className: 'bg-cyan-600 text-white',
-    },
-  }
-
-  if (importType === 'tag_assignment') {
-    const isRemove = tagMode === 'remove'
-    return (
-      <span
-        className={`inline-flex h-[28px] items-center rounded-full px-2.5 text-[11px] font-medium ${
-          isRemove ? 'bg-red-500 text-white' : 'bg-emerald-500 text-white'
-        }`}
-      >
-        {isRemove
-          ? t('pages.imports.history.importTypes.tagRemoval', 'Tag removal')
-          : t('pages.imports.history.importTypes.tagAssignment', 'Tag assignment')}
-      </span>
-    )
-  }
-
-  const cfg = config[importType] || config.simple
-
-  return (
-    <span
-      className={`inline-flex h-[28px] items-center rounded-full px-2.5 text-[11px] font-medium ${cfg.className}`}
-    >
-      {cfg.label}
-    </span>
-  )
-}
+// Status Badge Component for Import History — see components/ImportBadges.tsx
 
 function ImportHistoryHeaderSkeleton() {
   return (
     <div className="flex items-center gap-2 sm:gap-4">
-      <div className="h-10 w-24 shrink-0 animate-pulse rounded-full bg-gray-200 sm:h-11 sm:w-28" />
-      <div className="h-7 w-44 animate-pulse rounded bg-gray-200 sm:h-8 sm:w-56" />
+      <div className="bg-muted h-10 w-24 shrink-0 animate-pulse rounded-full sm:h-11 sm:w-28" />
+      <div className="bg-muted h-7 w-44 animate-pulse rounded sm:h-8 sm:w-56" />
     </div>
   )
 }
@@ -196,23 +84,23 @@ function ImportHistoryToolbarSkeleton() {
   return (
     <>
       <div className="flex min-w-0 flex-1 items-center justify-between">
-        <div className="border-light-100 flex h-11 min-w-0 flex-1 items-center gap-2 rounded-full border bg-white pr-2 pl-3 sm:gap-3 sm:pl-4 lg:pr-2">
-          <div className="h-4 w-4 shrink-0 animate-pulse rounded bg-gray-200 lg:hidden" />
-          <div className="h-4 min-w-0 flex-1 animate-pulse rounded bg-gray-200" />
-          <div className="mx-2 hidden h-5 w-px shrink-0 bg-gray-200 lg:block" />
+        <div className="border-border bg-card flex h-11 min-w-0 flex-1 items-center gap-2 rounded-full border pr-2 pl-3 sm:gap-3 sm:pl-4 lg:pr-2">
+          <div className="bg-muted h-4 w-4 shrink-0 animate-pulse rounded lg:hidden" />
+          <div className="bg-muted h-4 min-w-0 flex-1 animate-pulse rounded" />
+          <div className="bg-border mx-2 hidden h-5 w-px shrink-0 lg:block" />
           <div className="hidden items-center gap-4 lg:flex">
-            <div className="h-4 w-[72px] animate-pulse rounded bg-gray-200" />
-            <div className="h-4 w-16 animate-pulse rounded bg-gray-200" />
-            <div className="h-4 w-14 animate-pulse rounded bg-gray-200" />
-            <div className="h-4 w-16 animate-pulse rounded bg-gray-200" />
+            <div className="bg-muted h-4 w-[72px] animate-pulse rounded" />
+            <div className="bg-muted h-4 w-16 animate-pulse rounded" />
+            <div className="bg-muted h-4 w-14 animate-pulse rounded" />
+            <div className="bg-muted h-4 w-16 animate-pulse rounded" />
           </div>
-          <div className="h-9 w-9 shrink-0 animate-pulse rounded-full bg-gray-200 lg:hidden" />
-          <div className="hidden h-9 w-9 shrink-0 animate-pulse rounded-full bg-gray-200 lg:flex" />
+          <div className="bg-muted h-9 w-9 shrink-0 animate-pulse rounded-full lg:hidden" />
+          <div className="bg-muted hidden h-9 w-9 shrink-0 animate-pulse rounded-full lg:flex" />
         </div>
       </div>
       <div className="flex w-[30%] shrink-0 items-center justify-end gap-2">
-        <div className="hidden h-[45px] w-full max-w-[220px] animate-pulse rounded-full bg-gray-200 lg:flex" />
-        <div className="flex h-10 w-10 shrink-0 animate-pulse rounded-full bg-gray-200 lg:hidden" />
+        <div className="bg-muted hidden h-[45px] w-full max-w-[220px] animate-pulse rounded-full lg:flex" />
+        <div className="bg-muted flex h-10 w-10 shrink-0 animate-pulse rounded-full lg:hidden" />
       </div>
     </>
   )
@@ -639,7 +527,7 @@ export function ImportHistoryPage() {
       render: (item) => (
         <div className="flex flex-col">
           <span className="font-medium">{item.fileName}</span>
-          <span className="mt-0.5 text-[11px] text-gray-600">
+          <span className="text-muted-foreground mt-0.5 text-[11px]">
             {t('pages.imports.history.uploadedBy')} {item.uploadedBy}
           </span>
         </div>
@@ -678,7 +566,7 @@ export function ImportHistoryPage() {
               setSelectedJobId(item.id)
               navigate(`/dashboard/import/history/${item.id}`)
             }}
-            leftIcon={<Icons.View size={16} color="#05040D" strokeWidth={1.5} />}
+            leftIcon={<Icons.View size={16} className="text-foreground" strokeWidth={1.5} />}
           >
             {t('pages.imports.history.view')}
           </LinkButton>
@@ -698,12 +586,12 @@ export function ImportHistoryPage() {
             <LinkButton
               variant="regular-black"
               onClick={handleGoToImportClients}
-              leftIcon={<Icons.ArrowLeft size={16} className="text-dark-500" />}
+              leftIcon={<Icons.ArrowLeft size={16} className="text-foreground" />}
               className="text-sm"
             >
               {t('common.back', 'Back')}
             </LinkButton>
-            <h1 className="text-dark-500 text-xl font-light sm:text-2xl">
+            <h1 className="text-foreground text-xl font-light sm:text-2xl">
               {t('pages.imports.history.title')}
             </h1>
           </div>
@@ -733,11 +621,13 @@ export function ImportHistoryPage() {
                   disabled={
                     exportErrorsMutation.isPending ||
                     (!selectedJobId && paginatedData.length === 0) ||
-                    (selectedJobId
-                      ? !paginatedData.find((item) => item.id === selectedJobId)?.errors
-                      : !paginatedData[0]?.errors)
+                    !hasDownloadableErrors(
+                      selectedJobId
+                        ? paginatedData.find((item) => item.id === selectedJobId)
+                        : paginatedData[0]
+                    )
                   }
-                  leftIcon={<Icons.FileDownload size={16} className="text-dark-500" />}
+                  leftIcon={<Icons.FileDownload size={16} className="text-primary-foreground" />}
                   className="hidden h-[45px] rounded-full text-xs lg:flex"
                 >
                   {exportErrorsMutation.isPending
@@ -751,14 +641,20 @@ export function ImportHistoryPage() {
                   disabled={
                     exportErrorsMutation.isPending ||
                     (!selectedJobId && paginatedData.length === 0) ||
-                    (selectedJobId
-                      ? !paginatedData.find((item) => item.id === selectedJobId)?.errors
-                      : !paginatedData[0]?.errors)
+                    !hasDownloadableErrors(
+                      selectedJobId
+                        ? paginatedData.find((item) => item.id === selectedJobId)
+                        : paginatedData[0]
+                    )
                   }
                   className="bg-primary-300 flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-all duration-200 hover:scale-105 disabled:opacity-60 lg:hidden"
                   aria-label={t('pages.imports.history.downloadErrors')}
                 >
-                  <Icons.FileDownload size={18} className="text-dark-500" strokeWidth={1.5} />
+                  <Icons.FileDownload
+                    size={18}
+                    className="text-primary-foreground"
+                    strokeWidth={1.5}
+                  />
                 </button>
               </div>
             </>
@@ -767,7 +663,7 @@ export function ImportHistoryPage() {
       </div>
 
       {/* Data Table or Empty State */}
-      <div className="rounded-xl bg-white/50 p-4 shadow-sm sm:p-6">
+      <div className="bg-card/50 rounded-xl p-4 shadow-sm sm:p-6">
         {showTableSkeleton ? (
           // Loading: full page on first paint; table-only when filters/page refetch
           <TableSkeleton columns={columns.length} rows={rowsPerPage} />
@@ -776,11 +672,11 @@ export function ImportHistoryPage() {
           <div className="flex flex-col items-center justify-center py-16">
             {/* Icon */}
             <div className="flex h-16 w-16 items-center justify-center rounded-lg">
-              <Icons.FolderRemove size={48} className="text-gray-400" strokeWidth={1} />
+              <Icons.FolderRemove size={48} className="text-muted-foreground" strokeWidth={1} />
             </div>
 
             {/* Message */}
-            <h3 className="text-dark-500 flex flex-col items-center justify-center gap-6 p-6 text-xl leading-[120%] font-light tracking-[-0.48px] sm:text-2xl">
+            <h3 className="text-foreground flex flex-col items-center justify-center gap-6 p-6 text-xl leading-[120%] font-light tracking-[-0.48px] sm:text-2xl">
               {t('pages.imports.history.noImportsFound')}
             </h3>
 
@@ -799,16 +695,16 @@ export function ImportHistoryPage() {
           <div className="flex min-h-[448px] flex-col items-center justify-center gap-6 p-6">
             {/* Icon */}
             <div className="flex h-20 w-20 items-center justify-center">
-              <Icons.FolderRemove size={48} className="text-gray-400" strokeWidth={1} />
+              <Icons.FolderRemove size={48} className="text-muted-foreground" strokeWidth={1} />
             </div>
 
             {/* Primary Message */}
-            <h3 className="text-dark-500 text-center text-xl leading-[120%] font-light tracking-[-0.48px] sm:text-2xl">
+            <h3 className="text-foreground text-center text-xl leading-[120%] font-light tracking-[-0.48px] sm:text-2xl">
               {t('pages.imports.history.noHistoryYet')}
             </h3>
 
             {/* Secondary Message */}
-            <p className="text-dark-500 text-center text-sm leading-[150%] font-medium tracking-[-0.32px] sm:text-base">
+            <p className="text-foreground text-center text-sm leading-[150%] font-medium tracking-[-0.32px] sm:text-base">
               {t('pages.imports.history.runFirstImport')}
             </p>
 

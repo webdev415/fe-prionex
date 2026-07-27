@@ -49,6 +49,10 @@ export interface CurrentUserResponse {
   status: string
   language: string
   timezone: string
+  /** UI theme base (light-classic | neutral-dim | ultra-dark | high-contrast-light). */
+  theme_base?: string
+  /** UI theme accent (teal | cyan | … | amber). */
+  theme_accent?: string
   phone?: string | null
   role: {
     id: number
@@ -111,6 +115,10 @@ export interface User {
   timezone?: string
   /** Backend UI language preference (uk | en; legacy `ru` may still appear as string). */
   language?: string
+  /** Backend theme base preference. */
+  themeBase?: string
+  /** Backend theme accent preference. */
+  themeAccent?: string
   mustChangePassword?: boolean
   /** Mirrors backend `two_factor_enabled` for the dashboard 2FA toggle. */
   twoFactorEnabled?: boolean
@@ -125,6 +133,8 @@ export interface UpdateMyProfileInput {
   phone?: string
   language?: 'uk' | 'en'
   timezone?: string
+  theme_base?: string
+  theme_accent?: string
   agent_status?: string
 }
 

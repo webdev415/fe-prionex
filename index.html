@@ -1,10 +1,54 @@
 <!doctype html>
-<html lang="en" translate="no" class="notranslate">
+<html lang="en" translate="no" class="notranslate" data-theme="light-classic" data-accent="teal">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/prionex-logo.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>CRM-Prionex</title>
+    <!-- Theme FOUC guard: apply stored preference before CSS/React paint. -->
+    <script>
+      (function () {
+        try {
+          var KEY = 'prionex_theme'
+          var LIGHT = { 'light-classic': 1, 'high-contrast-light': 1 }
+          var DARK = { 'neutral-dim': 1, 'ultra-dark': 1 }
+          var BASES = {
+            'light-classic': 1,
+            'neutral-dim': 1,
+            'ultra-dark': 1,
+            'high-contrast-light': 1,
+          }
+          var ACCENTS = {
+            teal: 1,
+            cyan: 1,
+            blue: 1,
+            indigo: 1,
+            violet: 1,
+            purple: 1,
+            fuchsia: 1,
+            pink: 1,
+            rose: 1,
+            orange: 1,
+            amber: 1,
+          }
+          var base = 'light-classic'
+          var accent = 'teal'
+          var raw = localStorage.getItem(KEY)
+          if (raw) {
+            var parsed = JSON.parse(raw)
+            if (parsed && BASES[parsed.base]) base = parsed.base
+            if (parsed && ACCENTS[parsed.accent]) accent = parsed.accent
+          }
+          var root = document.documentElement
+          root.setAttribute('data-theme', base)
+          root.setAttribute('data-accent', accent)
+          // Hint for native form controls / scrollbars on dark bases
+          root.style.colorScheme = DARK[base] ? 'dark' : 'light'
+        } catch (e) {
+          /* keep html defaults */
+        }
+      })()
+    </script>
   </head>
   <body>
     <div id="root"></div>

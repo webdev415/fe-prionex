@@ -7,7 +7,7 @@
  * Tab 2 — Document Templates: placeholder; implemented in a follow-up slice.
  */
 
-import { useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { DataTable, type Column } from '@/components/ui/DataTable'
@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/Select'
 import { Button } from '@/components/ui/Button'
 import { TableSkeleton } from '@/components/ui/TableSkeleton'
+import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 import { intlLocaleForUiLanguage } from '@/lib/i18n'
 import {
@@ -209,7 +210,9 @@ export function DocumentGenerationPage() {
           <span
             className={cn(
               'inline-flex rounded-full px-2 py-0.5 text-xs font-medium',
-              row.action === 'generated' ? 'bg-blue-50 text-blue-700' : 'bg-green-50 text-green-700'
+              row.action === 'generated'
+                ? 'bg-info-100 text-info-700'
+                : 'bg-success-100 text-success-700'
             )}
           >
             {t(`pages.documentGeneration.actions.${row.action}`, row.action)}
@@ -244,62 +247,157 @@ export function DocumentGenerationPage() {
     setPage(1)
   }
 
+  const tabsScrollerRef = useRef<HTMLDivElement>(null)
+  const tabButtonRefs = useRef<Partial<Record<Tab, HTMLButtonElement | null>>>({})
+  const [canScrollLeft, setCanScrollLeft] = useState(false)
+  const [canScrollRight, setCanScrollRight] = useState(false)
+
+  const updateTabsScrollState = useCallback(() => {
+    const el = tabsScrollerRef.current
+    if (!el) return
+    const { scrollLeft, scrollWidth, clientWidth } = el
+    setCanScrollLeft(scrollLeft > 1)
+    setCanScrollRight(scrollLeft + clientWidth < scrollWidth - 1)
+  }, [])
+
+  useEffect(() => {
+    const el = tabsScrollerRef.current
+    if (!el) return
+
+    updateTabsScrollState()
+    const frame = requestAnimationFrame(updateTabsScrollState)
+    const ro = new ResizeObserver(() => updateTabsScrollState())
+    ro.observe(el)
+    el.addEventListener('scroll', updateTabsScrollState, { passive: true })
+    window.addEventListener('resize', updateTabsScrollState)
+
+    return () => {
+      cancelAnimationFrame(frame)
+      ro.disconnect()
+      el.removeEventListener('scroll', updateTabsScrollState)
+      window.removeEventListener('resize', updateTabsScrollState)
+    }
+  }, [updateTabsScrollState, canViewJournal, canViewTemplates, canManageTypes])
+
+  useEffect(() => {
+    const activeEl = tabButtonRefs.current[tab]
+    if (!activeEl) return
+    activeEl.scrollIntoView({ behavior: 'smooth', inline: 'nearest', block: 'nearest' })
+    const timer = window.setTimeout(updateTabsScrollState, 320)
+    return () => window.clearTimeout(timer)
+  }, [tab, updateTabsScrollState])
+
+  const scrollTabs = (direction: -1 | 1) => {
+    const el = tabsScrollerRef.current
+    if (!el) return
+    el.scrollBy({ left: direction * Math.max(140, el.clientWidth * 0.55), behavior: 'smooth' })
+  }
+
   return (
-    <div className="flex h-full flex-col gap-4">
-      <h1 className="text-2xl font-semibold text-gray-900">
+    <div className="flex w-full flex-col gap-4">
+      <h1 className="text-foreground text-xl font-light sm:text-2xl">
         {t('pages.documentGeneration.title', 'Document Generation')}
       </h1>
 
-      <div className="flex gap-2 border-b border-gray-200">
-        {canViewJournal && (
-          <button
-            type="button"
-            onClick={() => setTab('journal')}
-            className={cn(
-              '-mb-px border-b-2 px-4 py-2 text-sm font-medium transition-colors',
-              tab === 'journal'
-                ? 'border-primary-600 text-primary-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700'
-            )}
-          >
-            {t('pages.documentGeneration.tabs.journal', 'Document Journal')}
-          </button>
-        )}
-        {canViewTemplates && (
-          <button
-            type="button"
-            onClick={() => setTab('templates')}
-            className={cn(
-              '-mb-px border-b-2 px-4 py-2 text-sm font-medium transition-colors',
-              tab === 'templates'
-                ? 'border-primary-600 text-primary-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700'
-            )}
-          >
-            {t('pages.documentGeneration.tabs.templates', 'Document Templates')}
-          </button>
-        )}
-        {canManageTypes && (
-          <button
-            type="button"
-            onClick={() => setTab('types')}
-            className={cn(
-              '-mb-px border-b-2 px-4 py-2 text-sm font-medium transition-colors',
-              tab === 'types'
-                ? 'border-primary-600 text-primary-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700'
-            )}
-          >
-            {t('pages.documentGeneration.tabs.types', 'Document Types')}
-          </button>
-        )}
+      <div className="border-border relative flex items-stretch border-b">
+        <button
+          type="button"
+          aria-label={t('pages.documentGeneration.tabsScrollLeft', 'Scroll tabs left')}
+          onClick={() => scrollTabs(-1)}
+          disabled={!canScrollLeft}
+          className={cn(
+            'from-background text-muted-foreground hover:text-foreground absolute top-0 bottom-0 left-0 z-10 flex w-8 items-center justify-start bg-gradient-to-r from-60% to-transparent pl-1.5 transition-all duration-200',
+            canScrollLeft
+              ? 'pointer-events-auto translate-x-0 opacity-100'
+              : 'pointer-events-none -translate-x-1 opacity-0'
+          )}
+        >
+          <Icons.ArrowLeft size={14} strokeWidth={2} />
+        </button>
+
+        <div
+          ref={tabsScrollerRef}
+          className={cn(
+            'flex w-full gap-1 overflow-x-auto scroll-smooth sm:gap-2',
+            '[-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
+            canScrollLeft && 'pl-6',
+            canScrollRight && 'pr-6'
+          )}
+        >
+          {canViewJournal && (
+            <button
+              ref={(node) => {
+                tabButtonRefs.current.journal = node
+              }}
+              type="button"
+              onClick={() => setTab('journal')}
+              className={cn(
+                '-mb-px shrink-0 cursor-pointer border-b-2 px-3 py-2 text-sm font-normal whitespace-nowrap transition-colors sm:px-4',
+                tab === 'journal'
+                  ? 'border-primary-600 text-primary-600'
+                  : 'text-muted-foreground hover:text-foreground border-transparent'
+              )}
+            >
+              {t('pages.documentGeneration.tabs.journal', 'Document Journal')}
+            </button>
+          )}
+          {canViewTemplates && (
+            <button
+              ref={(node) => {
+                tabButtonRefs.current.templates = node
+              }}
+              type="button"
+              onClick={() => setTab('templates')}
+              className={cn(
+                '-mb-px shrink-0 cursor-pointer border-b-2 px-3 py-2 text-sm font-normal whitespace-nowrap transition-colors sm:px-4',
+                tab === 'templates'
+                  ? 'border-primary-600 text-primary-600'
+                  : 'text-muted-foreground hover:text-foreground border-transparent'
+              )}
+            >
+              {t('pages.documentGeneration.tabs.templates', 'Document Templates')}
+            </button>
+          )}
+          {canManageTypes && (
+            <button
+              ref={(node) => {
+                tabButtonRefs.current.types = node
+              }}
+              type="button"
+              onClick={() => setTab('types')}
+              className={cn(
+                '-mb-px shrink-0 cursor-pointer border-b-2 px-3 py-2 text-sm font-normal whitespace-nowrap transition-colors sm:px-4',
+                tab === 'types'
+                  ? 'border-primary-600 text-primary-600'
+                  : 'text-muted-foreground hover:text-foreground border-transparent'
+              )}
+            >
+              {t('pages.documentGeneration.tabs.types', 'Document Types')}
+            </button>
+          )}
+        </div>
+
+        <button
+          type="button"
+          aria-label={t('pages.documentGeneration.tabsScrollRight', 'Scroll tabs right')}
+          onClick={() => scrollTabs(1)}
+          disabled={!canScrollRight}
+          className={cn(
+            'from-background text-muted-foreground hover:text-foreground absolute top-0 right-0 bottom-0 z-10 flex w-8 items-center justify-end bg-gradient-to-l from-60% to-transparent pr-1.5 transition-all duration-200',
+            canScrollRight
+              ? 'pointer-events-auto translate-x-0 opacity-100'
+              : 'pointer-events-none translate-x-1 opacity-0'
+          )}
+        >
+          <Icons.ArrowRight size={14} strokeWidth={2} />
+        </button>
       </div>
 
       {tab === 'journal' && canViewJournal ? (
         <div className="flex flex-col gap-4">
-          <div className="grid grid-cols-1 gap-3 rounded-xl border border-gray-200 bg-white p-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="border-border bg-card grid grid-cols-1 gap-3 rounded-xl border p-3 sm:grid-cols-2 sm:p-4 lg:grid-cols-4">
             <div className="flex flex-col gap-1">
-              <label className="text-xs font-medium text-gray-600">
+              <label className="text-muted-foreground text-xs font-medium">
                 {t('pages.documentGeneration.filters.documentType', 'Document type')}
               </label>
               <Select
@@ -344,7 +442,7 @@ export function DocumentGenerationPage() {
               </Select>
             </div>
             <div className="flex flex-col gap-1">
-              <label className="text-xs font-medium text-gray-600">
+              <label className="text-muted-foreground text-xs font-medium">
                 {t('pages.documentGeneration.filters.action', 'Action')}
               </label>
               <Select
@@ -369,7 +467,7 @@ export function DocumentGenerationPage() {
               </Select>
             </div>
             <div className="flex flex-col gap-1">
-              <label className="text-xs font-medium text-gray-600">
+              <label className="text-muted-foreground text-xs font-medium">
                 {t('pages.documentGeneration.filters.operator', 'Operator')}
               </label>
               <Select
@@ -392,7 +490,7 @@ export function DocumentGenerationPage() {
               </Select>
             </div>
             <div className="flex flex-col gap-1">
-              <label className="text-xs font-medium text-gray-600">
+              <label className="text-muted-foreground text-xs font-medium">
                 {t('pages.documentGeneration.filters.client', 'Client')}
               </label>
               <Input
@@ -403,7 +501,7 @@ export function DocumentGenerationPage() {
               />
             </div>
             <div className="flex flex-col gap-1">
-              <label className="text-xs font-medium text-gray-600">
+              <label className="text-muted-foreground text-xs font-medium">
                 {t('pages.documentGeneration.filters.creditor', 'Creditor')}
               </label>
               <Input
@@ -417,7 +515,7 @@ export function DocumentGenerationPage() {
               />
             </div>
             <div className="flex flex-col gap-1">
-              <label className="text-xs font-medium text-gray-600">
+              <label className="text-muted-foreground text-xs font-medium">
                 {t('pages.documentGeneration.filters.dateFrom', 'Date from')}
               </label>
               <DateSelect
@@ -427,11 +525,11 @@ export function DocumentGenerationPage() {
                 placeholder={t('pages.documentGeneration.filters.dateFrom', 'Date from')}
                 allowManualInput
                 format="dd.MM.yyyy"
-                className="rounded-lg border-gray-400"
+                className="border-border rounded-lg"
               />
             </div>
             <div className="flex flex-col gap-1">
-              <label className="text-xs font-medium text-gray-600">
+              <label className="text-muted-foreground text-xs font-medium">
                 {t('pages.documentGeneration.filters.dateTo', 'Date to')}
               </label>
               <DateSelect
@@ -441,7 +539,7 @@ export function DocumentGenerationPage() {
                 placeholder={t('pages.documentGeneration.filters.dateTo', 'Date to')}
                 allowManualInput
                 format="dd.MM.yyyy"
-                className="rounded-lg border-gray-400"
+                className="border-border rounded-lg"
               />
             </div>
             <div className="flex items-end">

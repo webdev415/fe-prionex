@@ -15,7 +15,8 @@ interface TagBadgeProps {
   color: string
   onRemove?: () => void
   className?: string
-  size?: 'sm' | 'md' | 'lg'
+  /** `xs` matches compact chips (e.g. Recommenders related-contact pills). */
+  size?: 'xs' | 'sm' | 'md' | 'lg'
   /** TTL expiration timestamp (ISO string) — shows countdown */
   expiresAt?: string
   /** Payload data — shows tooltip on hover */
@@ -43,22 +44,27 @@ export const TagBadge = memo(function TagBadge({
   const { t } = useTranslation('common')
   const showLock = isSystem || isProtected
   const sizeClasses = {
+    xs: 'px-2 py-0.5 text-[11px] leading-3',
     sm: 'px-2 py-0.5 text-xs',
     md: 'px-3 py-1.5 text-sm',
     lg: 'px-4 py-2 text-base',
   }
 
   const dotSizes = {
+    xs: 'h-1.5 w-1.5',
     sm: 'h-1.5 w-1.5',
     md: 'h-2 w-2',
     lg: 'h-2.5 w-2.5',
   }
 
   const gapSizes = {
+    xs: 'gap-1',
     sm: 'gap-1',
     md: 'gap-2',
     lg: 'gap-2',
   }
+
+  const iconSize = size === 'xs' || size === 'sm' ? 10 : 12
 
   // Use tag color directly for text (matching data table style)
   const textColor = color
@@ -80,7 +86,7 @@ export const TagBadge = memo(function TagBadge({
     >
       {showLock && (
         <Icons.Lock
-          size={size === 'sm' ? 10 : 12}
+          size={iconSize}
           className="opacity-70"
           aria-label={
             isProtected
@@ -96,7 +102,7 @@ export const TagBadge = memo(function TagBadge({
           className="opacity-70"
           title={t('pages.tags.tagBadge.loanClosureTitle', 'Active until loan closure')}
         >
-          <Icons.Money04 size={size === 'sm' ? 10 : 12} />
+          <Icons.Money04 size={iconSize} />
         </span>
       )}
       {expiresAt && (
@@ -104,12 +110,12 @@ export const TagBadge = memo(function TagBadge({
           className="opacity-70"
           title={`${t('pages.tags.tagBadge.expiresPrefix', 'Expires')}: ${new Date(expiresAt).toLocaleString()}`}
         >
-          <Icons.Clock01 size={size === 'sm' ? 10 : 12} />
+          <Icons.Clock01 size={iconSize} />
         </span>
       )}
       {payload && Object.keys(payload).length > 0 && (
         <span className="opacity-70" title={JSON.stringify(payload, null, 2)}>
-          <Icons.Info size={size === 'sm' ? 10 : 12} />
+          <Icons.Info size={iconSize} />
         </span>
       )}
       {onRemove && !showLock && (
@@ -119,7 +125,7 @@ export const TagBadge = memo(function TagBadge({
           className="ml-1 transition-opacity hover:opacity-70"
           aria-label={t('pages.tags.tagBadge.removeLabel', 'Remove {{name}} tag', { name })}
         >
-          <Icons.Delete size={size === 'sm' ? 12 : size === 'md' ? 14 : 16} />
+          <Icons.Delete size={size === 'xs' || size === 'sm' ? 12 : size === 'md' ? 14 : 16} />
         </button>
       )}
     </span>

@@ -35,13 +35,13 @@ export const DOCUMENT_TYPE_FILTERS: {
 ]
 
 export const DOCUMENT_TYPE_BADGE_COLOURS: Record<LegalDocumentType, string> = {
-  outgoing: 'bg-[#E0F2FE] text-[#0369A1]',
+  outgoing: 'bg-sky-100 text-sky-700',
   incoming: 'bg-success-100 text-success-700',
   nbu_response: 'bg-warning-100 text-warning-700',
 }
 
 export const DOCUMENT_TYPE_DOT_COLOURS: Record<LegalDocumentType, string> = {
-  outgoing: 'bg-[#0369A1]',
+  outgoing: 'bg-sky-700',
   incoming: 'bg-success-700',
   nbu_response: 'bg-warning-600',
 }

@@ -115,21 +115,3 @@ export function useRestoreProject() {
     },
   })
 }
-
-/**
- * Hook to delete a project
- */
-export function useDeleteProject() {
-  const queryClient = useQueryClient()
-
-  return useMutation({
-    mutationFn: ({ projectId }: { projectId: number }) => projectsApi.deleteProject(projectId),
-    onSuccess: () => {
-      toast.success('Project deleted successfully')
-      queryClient.invalidateQueries({ queryKey: projectsKeys.lists() })
-    },
-    onError: (error) => {
-      toast.error(getErrorMessage(error))
-    },
-  })
-}

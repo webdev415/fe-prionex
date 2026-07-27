@@ -44,6 +44,14 @@ export async function patchContactTagCategory(
   return r.data
 }
 
+export async function deleteContactTagCategory(categoryId: number): Promise<void> {
+  await api.delete(`/api/v1/clients/contact-tag-categories/${categoryId}`)
+}
+
+export async function deleteContactTagValue(valueId: number): Promise<void> {
+  await api.delete(`/api/v1/clients/contact-tag-values/${valueId}`)
+}
+
 export async function createContactTagValue(
   categoryId: number,
   payload: {

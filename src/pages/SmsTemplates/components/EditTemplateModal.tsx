@@ -45,7 +45,11 @@ export function EditTemplateModal({
       <ModalHeader
         icon={
           <div className="bg-primary-400 flex h-7 w-7 items-center justify-center rounded-full sm:h-8 sm:w-8">
-            <Icons.PencilEdit size={18} className="text-dark-500 sm:size-5" strokeWidth={2} />
+            <Icons.PencilEdit
+              size={18}
+              className="text-primary-foreground sm:size-5"
+              strokeWidth={2}
+            />
           </div>
         }
         title={t('pages.smsTemplates.modals.edit.title')}
@@ -56,7 +60,7 @@ export function EditTemplateModal({
         ) : template ? (
           <EditTemplateForm template={template} onSuccess={handleSuccess} onCancel={onClose} />
         ) : (
-          <div className="py-8 text-center text-gray-600">
+          <div className="text-muted-foreground py-8 text-center">
             {t('pages.smsTemplates.modals.templateNotFound')}
           </div>
         )}

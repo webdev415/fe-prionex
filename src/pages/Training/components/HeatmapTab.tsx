@@ -1,5 +1,6 @@
 ﻿import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
+import { intlLocaleForUiLanguage } from '@/lib/i18n'
 import { useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/Button'
@@ -32,7 +33,7 @@ const STATE_COLORS: Record<HeatmapState, string> = {
 }
 
 export function HeatmapTab() {
-  const { t } = useTranslation('common')
+  const { t, i18n } = useTranslation('common')
   const [searchParams, setSearchParams] = useSearchParams()
   const urlState = readHeatmapBarState(searchParams)
 
@@ -191,12 +192,12 @@ export function HeatmapTab() {
                 </th>
                 {allHours.map((hour) => (
                   <th key={hour} className="px-1 py-2 font-mono text-[10px]">
-                    {new Date(hour).toLocaleString(undefined, {
+                    {new Intl.DateTimeFormat(intlLocaleForUiLanguage(i18n.language), {
                       month: 'short',
                       day: 'numeric',
                       hour: '2-digit',
                       hour12: false,
-                    })}
+                    }).format(new Date(hour))}
                   </th>
                 ))}
               </tr>
@@ -213,8 +214,8 @@ export function HeatmapTab() {
                       const bucket = byHour.get(hour)
                       const color = bucket ? STATE_COLORS[bucket.dominant_state] : '#f3f4f6'
                       const tooltip = bucket
-                        ? `${bucket.dominant_state} • a:${bucket.minute_breakdown.active_call} p:${bucket.minute_breakdown.post_call} w:${bucket.minute_breakdown.waiting} i:${bucket.minute_breakdown.idle} b:${bucket.minute_breakdown.break}`
-                        : 'no data'
+                        ? `${t(`pages.training.heatmap.states.${bucket.dominant_state}`, bucket.dominant_state)} • a:${bucket.minute_breakdown.active_call} p:${bucket.minute_breakdown.post_call} w:${bucket.minute_breakdown.waiting} i:${bucket.minute_breakdown.idle} b:${bucket.minute_breakdown.break}`
+                        : t('pages.training.heatmap.noData', 'no data')
                       return (
                         <td key={hour} className="px-0.5 py-0.5">
                           <div

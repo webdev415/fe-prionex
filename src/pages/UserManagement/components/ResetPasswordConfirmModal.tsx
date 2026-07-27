@@ -38,7 +38,7 @@ export function ResetPasswordConfirmModal({ open, user, onClose }: ResetPassword
       <ModalHeader
         icon={
           <div className="bg-primary-400 flex h-7 w-7 items-center justify-center rounded-full sm:h-8 sm:w-8">
-            <Icons.LockSync01 size={18} color="#05040D" strokeWidth={1.5} />
+            <Icons.LockSync01 size={18} strokeWidth={1.5} className="text-foreground" />
           </div>
         }
         title={t('pages.users.modals.resetPassword.title')}
@@ -46,33 +46,33 @@ export function ResetPasswordConfirmModal({ open, user, onClose }: ResetPassword
       <ModalContent className="space-y-4 sm:space-y-6">
         <div className="space-y-1 text-sm sm:space-y-2">
           <p className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
-            <span className="text-dark-500 text-sm font-medium sm:text-base">
+            <span className="text-foreground text-sm font-medium sm:text-base">
               {t('pages.users.modals.changeStatus.username')}
             </span>
-            <span className="text-dark-500 text-sm font-light break-words sm:text-base">
+            <span className="text-foreground text-sm font-light break-words sm:text-base">
               {user.username}
             </span>
           </p>
           <p className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
-            <span className="text-dark-500 text-sm font-medium sm:text-base">
+            <span className="text-foreground text-sm font-medium sm:text-base">
               {t('pages.users.modals.changeStatus.email')}
             </span>
-            <span className="text-dark-500 text-sm font-light break-words sm:text-base">
+            <span className="text-foreground text-sm font-light break-words sm:text-base">
               {user.email || '—'}
             </span>
           </p>
         </div>
 
-        <hr className="border-light-50 border-t" />
+        <hr className="border-border border-t" />
 
         <div className="space-y-2 text-sm sm:space-y-3">
-          <p className="text-dark-500 text-base font-medium sm:text-lg">
+          <p className="text-foreground text-base font-medium sm:text-lg">
             {t('pages.users.modals.resetPassword.confirmTitle')}
           </p>
-          <p className="text-dark-500 text-sm font-light sm:text-base">
+          <p className="text-foreground text-sm font-light sm:text-base">
             {t('pages.users.modals.resetPassword.confirmBody')}
           </p>
-          <p className="text-dark-500 text-sm font-medium break-all sm:text-base">
+          <p className="text-foreground text-sm font-medium break-all sm:text-base">
             {t('pages.users.modals.resetPassword.confirmDetail', { password: 'Crm_user_123' })}
           </p>
           {isError && (

@@ -93,7 +93,7 @@ export function Pagination({
       {/* Rows per page selector (Left) - minimized on mobile */}
       <div className="flex items-center gap-2">
         {/* Hidden on mobile, shown on desktop */}
-        <span className="text-dark-500 hidden text-sm font-light md:inline">
+        <span className="text-foreground hidden text-sm font-light md:inline">
           {t('components.pagination.rowsPerPage', 'Rows per page:')}
         </span>
         <Select
@@ -105,7 +105,7 @@ export function Pagination({
           }}
         >
           <SelectTrigger className="h-auto w-auto min-w-[50px] border-0 bg-transparent p-0 shadow-none focus:ring-0 md:min-w-[60px]">
-            <SelectValue className="text-dark-500 text-xs font-medium md:text-sm" />
+            <SelectValue className="text-foreground text-xs font-medium md:text-sm" />
           </SelectTrigger>
           <SelectContent>
             {pageSizeOptions.map((size) => (
@@ -123,17 +123,17 @@ export function Pagination({
         <button
           onClick={() => onPageChange(Math.max(1, currentPage - 1))}
           disabled={currentPage === 1}
-          className="flex h-8 w-8 items-center justify-center rounded-full border border-gray-300 bg-white transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-white sm:h-10 sm:w-10"
+          className="border-border bg-card hover:bg-muted disabled:hover:bg-card flex h-8 w-8 items-center justify-center rounded-full border transition-colors disabled:cursor-not-allowed disabled:opacity-40 sm:h-10 sm:w-10"
           aria-label={t('components.pagination.previousPage', 'Previous page')}
         >
-          <Icons.ArrowLeft size={14} className="text-dark-500 sm:h-4 sm:w-4" strokeWidth={1.5} />
+          <Icons.ArrowLeft size={14} className="text-foreground sm:h-4 sm:w-4" strokeWidth={1.5} />
         </button>
 
         {visibleTokens.map((token, index) =>
           token === 'ellipsis' ? (
             <span
               key={`ellipsis-${index}`}
-              className="text-dark-500 flex h-8 min-w-[2rem] shrink-0 items-center justify-center px-1 text-xs font-medium sm:h-10 sm:min-w-[2.5rem] sm:text-sm"
+              className="text-foreground flex h-8 min-w-[2rem] shrink-0 items-center justify-center px-1 text-xs font-medium sm:h-10 sm:min-w-[2.5rem] sm:text-sm"
               aria-hidden="true"
             >
               ...
@@ -146,7 +146,7 @@ export function Pagination({
                 'flex h-8 min-w-[2rem] shrink-0 items-center justify-center rounded-full px-2 text-xs font-medium tabular-nums transition-colors sm:h-10 sm:min-w-[2.5rem] sm:text-sm',
                 currentPage === token
                   ? 'bg-secondary-800 text-white'
-                  : 'text-dark-500 border border-gray-300 bg-white hover:bg-gray-100'
+                  : 'text-foreground border-border bg-card hover:bg-muted border'
               )}
               aria-label={t('components.pagination.goToPage', {
                 defaultValue: 'Go to page {{page}}',
@@ -164,24 +164,24 @@ export function Pagination({
         <button
           onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
           disabled={currentPage === totalPages}
-          className="flex h-8 w-8 items-center justify-center rounded-full border border-gray-300 bg-white transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-white sm:h-10 sm:w-10"
+          className="border-border bg-card hover:bg-muted disabled:hover:bg-card flex h-8 w-8 items-center justify-center rounded-full border transition-colors disabled:cursor-not-allowed disabled:opacity-40 sm:h-10 sm:w-10"
           aria-label={t('components.pagination.nextPage', 'Next page')}
         >
-          <Icons.ArrowRight size={14} className="text-dark-500 sm:h-4 sm:w-4" strokeWidth={1.5} />
+          <Icons.ArrowRight size={14} className="text-foreground sm:h-4 sm:w-4" strokeWidth={1.5} />
         </button>
       </div>
 
       {/* Page indicator (Right) - minimized on mobile */}
       <div className="flex items-center gap-1">
         {/* Hidden on mobile, shown on desktop */}
-        <span className="hidden text-sm font-light text-gray-700 md:inline">
+        <span className="text-foreground hidden text-sm font-light md:inline">
           {t('components.pagination.page', 'Page')}
         </span>
-        <span className="text-dark-500 text-xs font-medium md:text-sm">{currentPage}</span>
-        <span className="text-xs font-light text-gray-500 md:text-sm">
+        <span className="text-foreground text-xs font-medium md:text-sm">{currentPage}</span>
+        <span className="text-muted-foreground text-xs font-light md:text-sm">
           {t('components.pagination.of', 'of')}
         </span>
-        <span className="text-dark-500 text-xs font-medium md:text-sm">{totalPages}</span>
+        <span className="text-foreground text-xs font-medium md:text-sm">{totalPages}</span>
       </div>
     </div>
   )

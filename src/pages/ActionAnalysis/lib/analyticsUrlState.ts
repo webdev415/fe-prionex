@@ -4,6 +4,7 @@ import type {
   HeatmapFilters,
   HeatmapState,
 } from '@/features/operatorAnalytics'
+import { localDateStringsToIsoRange } from './dateRange'
 
 export interface AnalyticsBarState {
   operator_ids?: number[]
@@ -61,11 +62,18 @@ export function writeAnalyticsBarState(
 
 export function toAnalyticsRangeFilters(state: AnalyticsBarState): AnalyticsRangeFilters {
   if (state.period === 'custom' && state.customFromDate && state.customToDate) {
+    // The analytics endpoints declare from_date/to_date as `datetime`; send full
+    // ISO bounds (start-of-day → end-of-day) rather than bare YYYY-MM-DD, which
+    // pydantic rejects. Mirrors the Calls tab (localDateStringsToIsoRange).
+    const { from_datetime, to_datetime } = localDateStringsToIsoRange(
+      state.customFromDate,
+      state.customToDate
+    )
     return {
       operator_ids: state.operator_ids,
       period: 'custom',
-      from_date: state.customFromDate,
-      to_date: state.customToDate,
+      from_date: from_datetime,
+      to_date: to_datetime,
     }
   }
   return {

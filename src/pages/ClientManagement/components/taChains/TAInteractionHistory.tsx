@@ -238,7 +238,7 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
   // users directory.
   const user = useAuthStore((s) => s.user)
   const projectId = user?.active_project_id ? parseInt(user.active_project_id, 10) : null
-  const { data: operators } = useOperators(projectId)
+  const { data: operators } = useOperators(projectId, { includeInactive: true })
   const operatorNameById = useMemo(() => {
     const m = new Map<number, string>()
     for (const op of operators ?? []) {
@@ -468,7 +468,13 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
               entries.push({ value: formattedValue, followUps })
             }
           } else {
-            for (const [, val] of Object.entries(row.step_data as Record<string, string>)) {
+            // No ordered steps (chain deleted or not loaded yet): fall back to
+            // the interaction's own values. Iterate `resolved`, never raw
+            // step_data — a value may be a rich object
+            // ({value, autofilled, target_action_id, target_action_name}) from
+            // the chain-autofill feature, and rendering one raw throws React
+            // error #31, blanking the whole client profile.
+            for (const val of Object.values(resolved)) {
               if (val) entries.push({ value: val, followUps: [] })
             }
           }
@@ -668,7 +674,7 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
                   setPendingFilters((prev) => ({ ...prev, chainFilter: v === 'all' ? '' : v }))
                 }
               >
-                <SelectTrigger className="max-h-[45px] w-full rounded-md border border-gray-200 bg-white text-xs">
+                <SelectTrigger className="border-border bg-card max-h-[45px] w-full rounded-md border text-xs">
                   <SelectValue placeholder={t('pages.clientChains.history.allChains')} />
                 </SelectTrigger>
                 <SelectContent>
@@ -719,7 +725,7 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
               </label>
               <Input
                 type="text"
-                className="max-h-[45px] w-full rounded-md border border-gray-200 bg-white text-xs"
+                className="border-border bg-card max-h-[45px] w-full rounded-md border text-xs"
                 placeholder={t('pages.clientChains.history.searchNotesPlaceholder')}
                 value={pendingFilters.notesSearch}
                 onChange={(e) =>

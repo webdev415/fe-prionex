@@ -153,6 +153,48 @@ export interface RestructuringAgreementDetail {
   penalty_triggered_at?: string | null
 }
 
+// ── KAN-335: Detailed calculation for a loan (after sale) ──────────────────
+// One row per date on which a balance-changing event occurred, from the loan's
+// date of sale to today. All monetary values are backend-formatted strings
+// (2 dp). `*_debt` = end-of-day remaining balance; `*_written_off` / `*_paid`
+// = that day's deltas.
+export interface LoanCalculationRow {
+  date: string
+  is_sale_row: boolean
+
+  principal_debt: string
+  principal_written_off: string
+  principal_paid: string
+
+  interest_debt: string
+  interest_written_off: string
+  interest_paid: string
+
+  fine_debt: string
+  fine_written_off: string
+  fine_paid: string
+
+  penalty_debt: string
+  penalty_written_off: string
+  penalty_paid: string
+
+  commission_debt: string
+  commission_written_off: string
+  commission_paid: string
+
+  total_paid: string
+  tot_to_return: string
+}
+
+export interface LoanCalculation {
+  loan_id: number
+  contract_number?: string | null
+  principal_amount: string
+  date_of_sale?: string | null
+  currency: string
+  rows: LoanCalculationRow[]
+}
+
 export interface Client {
   id: number
   project_id: number
@@ -219,6 +261,7 @@ export interface Client {
     color: string
     description?: string | null
     visibility?: string | null
+    sort_order?: number
   }>
 
   // UBKI outbound submission opt-out (credit bureau).
@@ -380,6 +423,11 @@ export interface GetClientsParams {
   assignment_date_from?: string // YYYY-MM-DD format
   assignment_date_to?: string // YYYY-MM-DD format
   tz?: string
+
+  // Filter: Tags (include OR + exclude AND-NOT) or segment preset
+  tag_ids?: string // Comma-separated tag definition IDs to include (OR)
+  exclude_tag_ids?: string // Comma-separated tag definition IDs to exclude (AND-NOT)
+  segment_id?: number // Active Tag Service segment (mutually exclusive with tag filters)
 
   // Filter: Status
   status?: string // Comma-separated statuses (e.g., "active,new")
@@ -673,7 +721,12 @@ export interface ContactResponse {
   updated_at?: string | null
 }
 
-export type ContactSource = 'client' | 'recommender'
+// 'client'/'recommender' are phone contact types; 'other' marks a non-phone
+// type (email, address, …) where call-line/spam/primary-phone are meaningless.
+// Note: the TA chain step's own contact_source (features/taChains/api/types.ts)
+// stays 'client' | 'recommender' — 'Other' is an excluded category, not a
+// third TA filter option.
+export type ContactSource = 'client' | 'recommender' | 'other'
 
 export interface ContactTypeOption {
   id: number
@@ -781,6 +834,19 @@ export interface PaymentResponse {
   debt_contract_number?: string | null
   seller_name?: string | null
   is_deleted: boolean
+  // Cross-service debt reference — needed to gate reversal eligibility (KAN-334).
+  debt_id?: number | null
+  // KAN-334 storno marker: set once the payment's distribution is reversed.
+  reallocated_at?: string | null
+  // KAN-334: original verify-time per-component allocation (decimal strings),
+  // shown in the reversal modal. fees = commission, fines = fine.
+  allocated_principal?: string | null
+  allocated_interest?: string | null
+  allocated_fees?: string | null
+  allocated_penalties?: string | null
+  allocated_fines?: string | null
+  // KAN-334: True = primary-creditor (pre-acquisition) payment → NOT reversible.
+  is_pre_acquisition?: boolean | null
 }
 
 export interface ClientPaymentHistoryResponse {

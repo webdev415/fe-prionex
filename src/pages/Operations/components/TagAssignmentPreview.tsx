@@ -33,7 +33,7 @@ function StatusBadge({ status }: { status: TagRowStatus }) {
     },
     no_change: {
       icon: Icons.Cancel01,
-      color: 'text-gray-400',
+      color: 'text-muted-foreground',
       labelKey: 'pages.imports.tagAssignment.preview.statuses.noChange',
       defaultLabel: 'No change',
     },
@@ -65,7 +65,7 @@ function SummaryCard({ label, value, color }: { label: string; value: number; co
   return (
     <div className={`rounded-xl border px-4 py-3 ${color}`}>
       <p className="text-2xl font-bold">{value}</p>
-      <p className="text-xs text-gray-600">{label}</p>
+      <p className="text-muted-foreground text-xs">{label}</p>
     </div>
   )
 }
@@ -85,10 +85,10 @@ function usePreviewColumns(): Column<TagPreviewRowWithId>[] {
         header: t(`${p}.client`, 'Client'),
         render: (row: TagPreviewRowWithId) => (
           <>
-            <span className="text-dark-500 font-medium">
+            <span className="text-foreground font-medium">
               {row.client_name || `TIN: ${row.tax_id}`}
             </span>
-            <span className="ml-1 text-xs text-gray-400">({row.tax_id})</span>
+            <span className="text-muted-foreground ml-1 text-xs">({row.tax_id})</span>
           </>
         ),
       },
@@ -115,7 +115,7 @@ function usePreviewColumns(): Column<TagPreviewRowWithId>[] {
                   className={`rounded-full border px-2 py-0.5 text-xs ${
                     struck
                       ? 'border-error-300 bg-error-50 text-error-700 line-through'
-                      : 'border-secondary-200 bg-secondary-50 text-secondary-800'
+                      : 'border-border bg-muted text-foreground'
                   }`}
                   title={title}
                 >
@@ -138,12 +138,12 @@ function usePreviewColumns(): Column<TagPreviewRowWithId>[] {
           const hasAllowed = !!row.protected_allowed_names && row.protected_allowed_names.length > 0
           const hasBlocked = !!row.protected_blocked_names && row.protected_blocked_names.length > 0
           if (!hasAllowed && !hasBlocked) {
-            return <span className="text-xs text-gray-600">{row.error || ''}</span>
+            return <span className="text-muted-foreground text-xs">{row.error || ''}</span>
           }
           return (
             <div className="flex flex-col gap-0.5 text-xs">
               {hasAllowed && (
-                <span className="text-gray-600">
+                <span className="text-muted-foreground">
                   {t(`${p}.protectedTagNote`, 'Protected tag: {{names}}', {
                     names: row.protected_allowed_names.join(', '),
                   })}
@@ -185,10 +185,10 @@ export function TagAssignmentPreview({ preview, onConfirm, onCancel, isExecuting
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-dark-500 text-lg font-medium">
+          <h3 className="text-foreground text-lg font-medium">
             {t('pages.imports.tagAssignment.preview.title', 'Review tag operation')}
           </h3>
-          <p className="text-sm text-gray-600">
+          <p className="text-muted-foreground text-sm">
             {t('pages.imports.tagAssignment.preview.fileInfo', {
               defaultValue: '{{filename}} • {{totalRecords}} records • Batch {{batchId}}',
               filename: preview.filename,
@@ -198,11 +198,11 @@ export function TagAssignmentPreview({ preview, onConfirm, onCancel, isExecuting
           </p>
           <p className="mt-1 text-xs">
             {isAssign ? (
-              <span className="bg-secondary-50 text-secondary-800 rounded-full px-2 py-0.5 font-medium">
+              <span className="bg-success-100 text-success-700 rounded-full px-2 py-0.5 font-medium">
                 {t('pages.imports.tagAssignment.preview.modeAssign', 'Mode: Assign tags')}
               </span>
             ) : (
-              <span className="bg-error-50 text-error-700 rounded-full px-2 py-0.5 font-medium">
+              <span className="bg-error-100 text-error-700 rounded-full px-2 py-0.5 font-medium">
                 {t('pages.imports.tagAssignment.preview.modeRemove', 'Mode: Remove tags')}
               </span>
             )}
@@ -224,7 +224,7 @@ export function TagAssignmentPreview({ preview, onConfirm, onCancel, isExecuting
         <SummaryCard
           label={t('pages.imports.tagAssignment.preview.noChange', 'No change')}
           value={summary.no_change}
-          color="bg-gray-50 border-gray-200 text-dark-500"
+          color="bg-muted border-border text-foreground"
         />
         <SummaryCard
           label={t('pages.imports.tagAssignment.preview.invalid', 'Invalid')}
@@ -240,7 +240,7 @@ export function TagAssignmentPreview({ preview, onConfirm, onCancel, isExecuting
 
       {previewRowsWithId.length > 0 && (
         <div>
-          <h4 className="text-dark-500 mb-2 text-sm font-medium">
+          <h4 className="text-foreground mb-2 text-sm font-medium">
             {t('pages.imports.tagAssignment.preview.previewRows', {
               defaultValue: 'Preview ({{count}} rows)',
               count: Math.min(previewRowsWithId.length, 50),
@@ -273,7 +273,7 @@ export function TagAssignmentPreview({ preview, onConfirm, onCancel, isExecuting
         </div>
       )}
 
-      <div className="flex items-center justify-end gap-3 border-t border-gray-200 pt-4">
+      <div className="border-border flex items-center justify-end gap-3 border-t pt-4">
         <Button variant="cancel" size="md" onClick={onCancel} disabled={isExecuting}>
           {t('pages.imports.tagAssignment.preview.cancel', 'Cancel')}
         </Button>

@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
+import { formatDate } from '@/lib/localeFormat'
 import { useOperatorBadges } from '@/features/training/hooks/useLeaderboard'
 import type { OperatorBadge } from '@/features/training/types/leaderboard'
 
@@ -57,9 +58,9 @@ export function OperatorBadgesGallery({ operatorId }: OperatorBadgesGalleryProps
 }
 
 function BadgeChip({ badge }: { badge: OperatorBadge }) {
-  const { t } = useTranslation('common')
+  const { t, i18n } = useTranslation('common')
   const awarded = new Date(badge.awarded_at)
-  const awardedLabel = Number.isNaN(awarded.getTime()) ? '' : awarded.toLocaleDateString()
+  const awardedLabel = Number.isNaN(awarded.getTime()) ? '' : formatDate(awarded, i18n.language)
   return (
     <div
       title={`${badge.name}${badge.description ? ` — ${badge.description}` : ''}\n${awardedLabel}`}

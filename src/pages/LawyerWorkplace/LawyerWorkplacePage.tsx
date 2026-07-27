@@ -19,6 +19,8 @@ import { EmailThreadPanel } from './components/thread/EmailThreadPanel'
 import { LetterParametersPanel } from './components/parameters/LetterParametersPanel'
 import { LegalKanbanBoard } from './components/kanban/LegalKanbanBoard'
 import { LegalDocumentsTab } from './components/documents/LegalDocumentsTab'
+import { IncomingRegistryTab } from './components/registry/IncomingRegistryTab'
+import { OutgoingRegistryTab } from './components/registry/OutgoingRegistryTab'
 import { LawyerWorkspaceBanner } from './components/LawyerWorkspaceBanner'
 import { LegalSettingsTab } from './components/settings/LegalSettingsTab'
 import { NewOutgoingLetterModal } from './components/thread/NewOutgoingLetterModal'
@@ -27,7 +29,18 @@ import { useLawyerWorkplaceLayout } from './context/lawyerWorkplaceLayout'
 import { getSyncIntervalLabel } from './components/settings/constants'
 import type { IncomingFolder, IncomingMailboxFilter, LawyerWorkplaceTab } from './types'
 
-const WORKPLACE_TABS: LawyerWorkplaceTab[] = ['inbox', 'kanban', 'documents', 'settings']
+const WORKPLACE_TABS: LawyerWorkplaceTab[] = [
+  'inbox',
+  'kanban',
+  'documents',
+  'incoming-registry',
+  'outgoing-registry',
+  'settings',
+]
+
+// Inbox and Kanban use a viewport-locked layout; every other tab scrolls
+// with the page.
+const FIXED_HEIGHT_TABS: LawyerWorkplaceTab[] = ['inbox', 'kanban']
 
 type InboxPane = 'list' | 'thread' | 'parameters'
 
@@ -50,6 +63,7 @@ function LawyerWorkplacePageContent() {
   const canAccessKanban = useCanAccessLegalKanban()
   const rawTab = searchParams.get('tab')
   const activeTab: LawyerWorkplaceTab = isWorkplaceTab(rawTab) ? rawTab : 'inbox'
+  const usesFixedHeight = FIXED_HEIGHT_TABS.includes(activeTab)
 
   useEffect(() => {
     if (activeTab === 'kanban' && !canAccessKanban) {
@@ -178,9 +192,7 @@ function LawyerWorkplacePageContent() {
       ref={layoutRef}
       className={cn(
         '-mx-4 -mt-[20px] -mb-4 flex min-w-0 flex-col sm:-mx-6 sm:-mb-6 lg:-mx-[28px] lg:-mb-[20px]',
-        activeTab !== 'documents' &&
-          activeTab !== 'settings' &&
-          'h-[calc(100vh-60px)] overflow-hidden'
+        usesFixedHeight && 'h-[calc(100vh-60px)] overflow-hidden'
       )}
     >
       <NewOutgoingLetterModal
@@ -194,13 +206,7 @@ function LawyerWorkplacePageContent() {
           }
         }}
       />
-      <div
-        className={cn(
-          activeTab !== 'documents' &&
-            activeTab !== 'settings' &&
-            'flex min-h-0 flex-1 flex-col overflow-hidden'
-        )}
-      >
+      <div className={cn(usesFixedHeight && 'flex min-h-0 flex-1 flex-col overflow-hidden')}>
         {activeTab === 'inbox' && (
           <div
             className={cn(
@@ -275,7 +281,7 @@ function LawyerWorkplacePageContent() {
             )}
 
             {isCompact && inboxPane === 'parameters' && showParametersPanel && (
-              <div className="absolute inset-0 z-30 flex h-full w-full flex-col bg-white">
+              <div className="bg-card absolute inset-0 z-30 flex h-full w-full flex-col">
                 <LetterParametersPanel
                   letter={selectedLetter}
                   onClose={closeParameters}
@@ -293,7 +299,7 @@ function LawyerWorkplacePageContent() {
                   aria-label={t('pages.lawyerWorkplace.parameters.close', 'Close parameters')}
                   onClick={closeParameters}
                 />
-                <div className="absolute inset-y-0 right-0 z-50 w-[min(380px,92%)] bg-white shadow-2xl">
+                <div className="bg-card absolute inset-y-0 right-0 z-50 w-[min(380px,92%)] shadow-2xl">
                   <LetterParametersPanel
                     letter={selectedLetter}
                     onClose={closeParameters}
@@ -320,6 +326,18 @@ function LawyerWorkplacePageContent() {
           </div>
         )}
 
+        {activeTab === 'incoming-registry' && (
+          <div className="px-4 pt-4 pb-8 sm:px-5 lg:px-7 lg:pt-5">
+            <IncomingRegistryTab />
+          </div>
+        )}
+
+        {activeTab === 'outgoing-registry' && (
+          <div className="px-4 pt-4 pb-8 sm:px-5 lg:px-7 lg:pt-5">
+            <OutgoingRegistryTab />
+          </div>
+        )}
+
         {activeTab === 'settings' && (
           <div className="relative">
             <LegalSettingsTab />
@@ -328,8 +346,8 @@ function LawyerWorkplacePageContent() {
       </div>
 
       {activeTab === 'inbox' && (
-        <div className="flex shrink-0 flex-col gap-1 border-t border-gray-100 bg-white px-3 py-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3 sm:px-5">
-          <div className="text-light-700 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] sm:text-[11px]">
+        <div className="bg-card border-border flex shrink-0 flex-col gap-1 border-t px-3 py-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3 sm:px-5">
+          <div className="text-muted-foreground flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] sm:text-[11px]">
             <span className="bg-success-700 h-2 w-2 shrink-0 rounded-full" aria-hidden="true" />
             <span>
               {t('pages.lawyerWorkplace.footer.syncHint', {
@@ -337,7 +355,7 @@ function LawyerWorkplacePageContent() {
                 defaultValue: `Email Service · ${syncIntervalLabel}`,
               })}
             </span>
-            <span className="hidden text-gray-300 sm:inline">|</span>
+            <span className="text-muted-foreground/60 hidden sm:inline">|</span>
             <span className="min-w-0 truncate">
               {t('pages.lawyerWorkplace.footer.mailboxesCount', {
                 count: connectedMailboxes,

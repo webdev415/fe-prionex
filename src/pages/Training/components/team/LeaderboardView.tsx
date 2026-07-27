@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
+import { formatDateTime } from '@/lib/localeFormat'
 import { useAuthStore } from '@/stores/authStore'
 import { useOperators } from '@/features/users/hooks'
 import { useLeaderboard, leaderboardExportUrl } from '@/features/training'
@@ -20,7 +21,7 @@ const PERIOD_LABELS: { id: LeaderboardPeriod; key: string; fallback: string }[] 
  * climbed, negative = fell).
  */
 export function LeaderboardView() {
-  const { t } = useTranslation('common')
+  const { t, i18n } = useTranslation('common')
   const [period, setPeriod] = useState<LeaderboardPeriod>('week')
   const [refreshKey, setRefreshKey] = useState(0)
 
@@ -97,7 +98,7 @@ export function LeaderboardView() {
           <span>·</span>
           <span>
             {t('pages.training.team.leaderboard.computedAt', 'Computed')}:{' '}
-            {new Date(data.computed_at).toLocaleString()}
+            {formatDateTime(data.computed_at, i18n.language)}
           </span>
         </div>
       ) : null}

@@ -87,11 +87,15 @@ export const ConditionRow = memo(function ConditionRow({
               searchable
               searchPlaceholder={t('pages.tags.searchTags', 'Search tags...')}
             >
-              {tags.map((tag) => (
-                <SelectItem key={tag.id} value={(tag as { code?: string }).code ?? tag.name}>
-                  {tag.name}
-                </SelectItem>
-              ))}
+              {tags.map((tag) => {
+                const code = (tag as { code?: string }).code
+                if (!code) return null
+                return (
+                  <SelectItem key={tag.id} value={code}>
+                    {tag.name}
+                  </SelectItem>
+                )
+              })}
             </SelectContent>
           </Select>
         </div>
@@ -108,11 +112,15 @@ export const ConditionRow = memo(function ConditionRow({
               <SelectValue placeholder={t('pages.tags.segments.selectTag', 'Select tag')} />
             </SelectTrigger>
             <SelectContent searchable>
-              {tags.map((tag) => (
-                <SelectItem key={tag.id} value={(tag as { code?: string }).code ?? tag.name}>
-                  {tag.name}
-                </SelectItem>
-              ))}
+              {tags.map((tag) => {
+                const code = (tag as { code?: string }).code
+                if (!code) return null
+                return (
+                  <SelectItem key={tag.id} value={code}>
+                    {tag.name}
+                  </SelectItem>
+                )
+              })}
             </SelectContent>
           </Select>
         </div>

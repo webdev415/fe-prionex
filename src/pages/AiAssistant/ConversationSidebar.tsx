@@ -107,10 +107,10 @@ function formatDateTime(ts: number, nowTs: number, language: string): string {
 }
 
 const ICON_BUTTON_CLASS =
-  'flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-light-100 hover:text-dark-500'
+  'flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground'
 
 const MENU_ITEM_CLASS =
-  'text-dark-500 flex cursor-pointer items-center gap-2 text-sm font-light data-[highlighted]:bg-light-50'
+  'text-foreground flex cursor-pointer items-center gap-2 text-sm font-light data-[highlighted]:bg-muted'
 
 export function ConversationSidebar({
   activeConversationId,
@@ -237,7 +237,7 @@ export function ConversationSidebar({
     return (
       <div
         className={cn(
-          'border-light-200 flex h-full w-14 flex-col items-center gap-1.5 rounded-2xl border bg-white py-3 shadow-sm',
+          'border-border bg-card flex h-full w-14 flex-col items-center gap-1.5 rounded-2xl border py-3 shadow-sm',
           className
         )}
       >
@@ -257,7 +257,7 @@ export function ConversationSidebar({
         >
           <Icons.BubbleChatEdit size={16} strokeWidth={1.5} />
         </button>
-        <span className="bg-light-200 my-1 h-px w-6" aria-hidden />
+        <span className="bg-border my-1 h-px w-6" aria-hidden />
         <button
           type="button"
           aria-label={t('pages.aiAssistant.historyTitle')}
@@ -273,20 +273,20 @@ export function ConversationSidebar({
   return (
     <div
       className={cn(
-        'flex h-full min-h-0 w-full flex-col bg-white',
-        variant === 'desktop' && 'border-light-200 rounded-2xl border shadow-sm',
+        'bg-card flex h-full min-h-0 w-full flex-col',
+        variant === 'desktop' && 'border-border rounded-2xl border shadow-sm',
         className
       )}
     >
       <div className="flex items-center justify-between gap-2 px-3 pt-3 pb-1">
-        <span className="text-dark-500 inline-flex min-w-0 items-center gap-2 text-sm font-medium tracking-tight">
+        <span className="text-foreground inline-flex min-w-0 items-center gap-2 text-sm font-medium tracking-tight">
           {showArchived ? (
-            <Icons.Archive size={16} strokeWidth={1.5} className="shrink-0 text-gray-400" />
+            <Icons.Archive size={16} strokeWidth={1.5} className="text-muted-foreground shrink-0" />
           ) : (
             <Icons.MessageMultiple01
               size={16}
               strokeWidth={1.5}
-              className="shrink-0 text-gray-400"
+              className="text-muted-foreground shrink-0"
             />
           )}
           <span className="truncate">
@@ -322,7 +322,7 @@ export function ConversationSidebar({
             type="button"
             data-testid="archive-back"
             onClick={() => switchMode(false)}
-            className="border-light-200 text-dark-500 hover:bg-light-50 flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border bg-white px-3 py-2 text-sm font-light transition-colors"
+            className="border-border text-foreground hover:bg-muted bg-card flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border px-3 py-2 text-sm font-light transition-colors"
           >
             <Icons.ArrowLeft size={16} strokeWidth={1.5} />
             {t('pages.aiAssistant.historyBackToChats')}
@@ -342,15 +342,15 @@ export function ConversationSidebar({
       )}
 
       <div className="px-3 pt-2 pb-1">
-        <div className="border-light-200 bg-light-50/60 focus-within:border-primary-300 flex items-center gap-2 rounded-xl border px-2.5 py-1.5 transition-colors">
-          <Icons.Search size={14} strokeWidth={1.5} className="shrink-0 text-gray-400" />
+        <div className="border-border bg-muted/60 focus-within:border-primary-300 flex items-center gap-2 rounded-xl border px-2.5 py-1.5 transition-colors">
+          <Icons.Search size={14} strokeWidth={1.5} className="text-muted-foreground shrink-0" />
           <input
             type="text"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
             placeholder={t('pages.aiAssistant.historySearchPlaceholder')}
             aria-label={t('pages.aiAssistant.historySearchPlaceholder')}
-            className="text-dark-500 w-full min-w-0 border-0 bg-transparent text-sm font-light placeholder:text-gray-400 focus:outline-none"
+            className="text-foreground placeholder:text-muted-foreground w-full min-w-0 border-0 bg-transparent text-sm font-light focus:outline-none"
           />
         </div>
       </div>
@@ -359,14 +359,14 @@ export function ConversationSidebar({
         {conversationsQuery.isPending && (
           <div className="space-y-2 px-1 pt-1" aria-hidden>
             {[0, 1, 2, 3].map((row) => (
-              <div key={row} className="bg-light-100 h-12 animate-pulse rounded-xl" />
+              <div key={row} className="bg-muted h-12 animate-pulse rounded-xl" />
             ))}
           </div>
         )}
 
         {conversationsQuery.isError && (
           <div className="flex flex-col items-start gap-2 px-2 pt-2">
-            <p className="text-xs leading-snug font-light text-gray-500">
+            <p className="text-muted-foreground text-xs leading-snug font-light">
               {t('pages.aiAssistant.historyLoadError')}
             </p>
             <button
@@ -383,11 +383,15 @@ export function ConversationSidebar({
         {conversationsQuery.isSuccess && !hasConversations && (
           <div className="flex flex-col items-center gap-2 px-2 pt-8 text-center">
             {showArchived ? (
-              <Icons.Archive size={24} strokeWidth={1} className="text-gray-300" />
+              <Icons.Archive size={24} strokeWidth={1} className="text-muted-foreground/60" />
             ) : (
-              <Icons.MessageMultiple01 size={24} strokeWidth={1} className="text-gray-300" />
+              <Icons.MessageMultiple01
+                size={24}
+                strokeWidth={1}
+                className="text-muted-foreground/60"
+              />
             )}
-            <p className="text-xs leading-snug font-light text-gray-400">
+            <p className="text-muted-foreground text-xs leading-snug font-light">
               {showArchived
                 ? t('pages.aiAssistant.historyArchiveEmpty')
                 : t('pages.aiAssistant.historyEmpty')}
@@ -397,8 +401,8 @@ export function ConversationSidebar({
 
         {conversationsQuery.isSuccess && hasConversations && groups.length === 0 && (
           <div className="flex flex-col items-center gap-2 px-2 pt-8 text-center">
-            <Icons.Search size={24} strokeWidth={1} className="text-gray-300" />
-            <p className="text-xs leading-snug font-light text-gray-400">
+            <Icons.Search size={24} strokeWidth={1} className="text-muted-foreground/60" />
+            <p className="text-muted-foreground text-xs leading-snug font-light">
               {t('pages.aiAssistant.historyNoResults')}
             </p>
           </div>
@@ -406,7 +410,7 @@ export function ConversationSidebar({
 
         {groups.map((group) => (
           <div key={group.key}>
-            <p className="inline-flex items-center gap-1 px-2 pt-3 pb-1 text-[11px] font-medium tracking-wide text-gray-400 uppercase first:pt-1">
+            <p className="text-muted-foreground inline-flex items-center gap-1 px-2 pt-3 pb-1 text-[11px] font-medium tracking-wide uppercase first:pt-1">
               {group.key === 'pinned' && <Icons.Pin size={11} strokeWidth={2} aria-hidden />}
               {t(GROUP_LABEL_KEYS[group.key])}
             </p>
@@ -421,7 +425,7 @@ export function ConversationSidebar({
                     <li key={item.id}>
                       <div
                         className={cn(
-                          'rounded-xl border bg-white px-3 py-2',
+                          'bg-card rounded-xl border px-3 py-2',
                           renameTooLong ? 'border-error-300' : 'border-primary-300'
                         )}
                       >
@@ -452,7 +456,7 @@ export function ConversationSidebar({
                             }
                           }}
                           onBlur={cancelRename}
-                          className="text-dark-500 w-full min-w-0 border-0 bg-transparent text-sm font-light placeholder:text-gray-400 focus:outline-none"
+                          className="text-foreground placeholder:text-muted-foreground w-full min-w-0 border-0 bg-transparent text-sm font-light focus:outline-none"
                         />
                         {renameTooLong && (
                           <p className="text-error-600 pt-0.5 text-[11px] font-light">
@@ -482,14 +486,14 @@ export function ConversationSidebar({
                         'flex w-full cursor-pointer flex-col gap-0.5 rounded-xl border py-2 pr-9 pl-3 text-left transition-colors',
                         isActive
                           ? 'border-primary-200 bg-primary-50'
-                          : 'hover:bg-light-50 border-transparent'
+                          : 'hover:bg-muted border-transparent'
                       )}
                     >
                       <span className="flex min-w-0 items-center gap-1.5">
                         <span
                           className={cn(
                             'min-w-0 truncate text-sm font-light',
-                            isActive ? 'text-primary-700' : 'text-dark-500'
+                            isActive ? 'text-primary-700' : 'text-foreground'
                           )}
                         >
                           {conversationLabel(item)}
@@ -501,12 +505,12 @@ export function ConversationSidebar({
                             aria-hidden
                             className={cn(
                               'shrink-0',
-                              isActive ? 'text-primary-500' : 'text-gray-400'
+                              isActive ? 'text-primary-500' : 'text-muted-foreground'
                             )}
                           />
                         )}
                       </span>
-                      <span className="truncate text-[11px] font-light text-gray-400">
+                      <span className="text-muted-foreground truncate text-[11px] font-light">
                         {formatDateTime(ts, nowTs, language)}
                         {' · '}
                         {formatRelativeTime(ts, nowTs, language)}
@@ -524,15 +528,15 @@ export function ConversationSidebar({
                           data-testid={`conversation-menu-${item.id}`}
                           aria-label={t('pages.aiAssistant.historyMenuAria')}
                           className={cn(
-                            'absolute top-1/2 right-1.5 flex h-7 w-7 -translate-y-1/2 cursor-pointer items-center justify-center rounded-lg text-gray-400 opacity-0 transition-opacity',
-                            'hover:bg-light-100 hover:text-dark-500 group-hover/convo:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100',
+                            'text-muted-foreground absolute top-1/2 right-1.5 flex h-7 w-7 -translate-y-1/2 cursor-pointer items-center justify-center rounded-lg opacity-0 transition-opacity',
+                            'hover:bg-muted hover:text-foreground group-hover/convo:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100',
                             isActive && 'opacity-100'
                           )}
                         >
                           <Icons.MoreVertical size={15} strokeWidth={1.5} />
                         </button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="start" className="w-48 bg-white">
+                      <DropdownMenuContent align="start" className="bg-card w-48">
                         {!showArchived && (
                           <DropdownMenuItem
                             className={MENU_ITEM_CLASS}
@@ -558,7 +562,7 @@ export function ConversationSidebar({
                           <Icons.PencilEdit size={14} strokeWidth={1.5} />
                           {t('pages.aiAssistant.historyRename')}
                         </DropdownMenuItem>
-                        <DropdownMenuSeparator className="bg-light-100" />
+                        <DropdownMenuSeparator className="bg-muted" />
                         <DropdownMenuItem
                           className={MENU_ITEM_CLASS}
                           onSelect={() => handleToggleArchived(item)}
@@ -585,7 +589,7 @@ export function ConversationSidebar({
         ))}
       </div>
 
-      <div className="border-light-200/80 border-t px-3 py-2">
+      <div className="border-border/80 border-t px-3 py-2">
         <button
           type="button"
           data-testid="archive-toggle"
@@ -595,7 +599,7 @@ export function ConversationSidebar({
             'flex w-full cursor-pointer items-center gap-2 rounded-xl px-3 py-2 text-sm font-light transition-colors',
             showArchived
               ? 'bg-primary-50 text-primary-700'
-              : 'hover:bg-light-50 hover:text-dark-500 text-gray-500'
+              : 'hover:bg-muted hover:text-foreground text-muted-foreground'
           )}
         >
           <Icons.Archive size={16} strokeWidth={1.5} />

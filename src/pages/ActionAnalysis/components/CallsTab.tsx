@@ -275,7 +275,7 @@ export function CallsTab() {
         scope={scoped}
       />
 
-      <div className="flex flex-wrap gap-4 text-sm text-gray-700">
+      <div className="text-foreground flex flex-wrap gap-4 text-sm">
         <span>
           <span className="font-medium">{summary?.total_calls ?? 0}</span>{' '}
           {t('pages.actionAnalysis.summary.total', 'total')}
@@ -291,7 +291,7 @@ export function CallsTab() {
       </div>
 
       {error ? (
-        <div className="border-error-200 bg-error-50 text-error-700 rounded-md border p-3 text-sm">
+        <div className="border-error-200 bg-error-100 text-error-700 rounded-md border p-3 text-sm">
           {t('pages.actionAnalysis.errors.loadFailed', 'Failed to load calls')}
         </div>
       ) : (

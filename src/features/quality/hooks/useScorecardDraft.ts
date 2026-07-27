@@ -57,6 +57,13 @@ export function useScorecardDraft({
   useEffect(() => {
     dirtyRef.current = dirty
   }, [dirty])
+  // Mirror state so `flush` can read the latest values without listing `state`
+  // in its deps — otherwise flush's identity changes every keystroke and the
+  // effects below re-run (and their cleanups fire) on every render.
+  const stateRef = useRef(state)
+  useEffect(() => {
+    stateRef.current = state
+  }, [state])
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const updateMutation = useUpdateScorecard()
 
@@ -73,35 +80,48 @@ export function useScorecardDraft({
     setState(initial)
   }
 
+  const { mutateAsync } = updateMutation
   const flush = useCallback(async () => {
     if (!scorecardId || !dirtyRef.current) return
     setDirty(false)
     const payload: ScorecardUpdatePayload = {
-      scores: state.scores,
-      overall_comment: state.overall_comment || null,
+      scores: stateRef.current.scores,
+      overall_comment: stateRef.current.overall_comment || null,
     }
-    await updateMutation.mutateAsync({ scorecardId, payload })
-  }, [scorecardId, state, updateMutation])
+    await mutateAsync({ scorecardId, payload })
+  }, [scorecardId, mutateAsync])
 
-  // Debounced autosave.
+  // Keep the latest flush/opt-out in refs so the unmount effect can register
+  // once (empty deps) and fire only on true unmount, not on every render.
+  const flushRef = useRef(flush)
+  useEffect(() => {
+    flushRef.current = flush
+  }, [flush])
+  const flushOnUnmountRef = useRef(flushOnUnmount)
+  useEffect(() => {
+    flushOnUnmountRef.current = flushOnUnmount
+  }, [flushOnUnmount])
+
+  // Debounced autosave. Keyed on state/dirty/config only — never reset by an
+  // unrelated re-render, since it reads flush from a ref.
   useEffect(() => {
     if (!enabled || !scorecardId || !dirty) return
     if (timerRef.current) clearTimeout(timerRef.current)
     timerRef.current = setTimeout(() => {
-      void flush()
+      void flushRef.current()
     }, debounceMs)
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current)
     }
-  }, [state, enabled, scorecardId, debounceMs, dirty, flush])
+  }, [state, enabled, scorecardId, debounceMs, dirty])
 
   // Flush on unmount so closing the modal doesn't drop the last edit —
   // unless the caller opts out (explicit-save flow warns instead).
   useEffect(() => {
     return () => {
-      if (flushOnUnmount && dirtyRef.current) void flush()
+      if (flushOnUnmountRef.current && dirtyRef.current) void flushRef.current()
     }
-  }, [flush, flushOnUnmount])
+  }, [])
 
   const setScore = useCallback(
     (criterionKey: string, value: number | boolean | null, comment?: string | null) => {

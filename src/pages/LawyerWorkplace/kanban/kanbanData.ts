@@ -35,6 +35,10 @@ export interface KanbanTask {
   letterId: string | null
   /** Letter type id from settings (for filters and patches) */
   letterTypeId: string | null
+  /** Legal task id (== task_id); path key for the grouped-letters endpoint. */
+  legalTaskId: number
+  /** Letters grouped into this task. >1 drives the "N листів" badge + group thread. */
+  letterCount: number
 }
 
 export interface KanbanColumnDef {
@@ -58,7 +62,7 @@ const KANBAN_COLUMN_META: Pick<KanbanColumnDef, 'id' | 'labelKey' | 'dotClass'>[
   {
     id: 'not_defined',
     labelKey: 'pages.lawyerWorkplace.kanban.columns.notDefined',
-    dotClass: 'bg-gray-600',
+    dotClass: 'bg-muted-foreground',
   },
   {
     id: 'in_progress',

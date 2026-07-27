@@ -9,6 +9,7 @@ import { useTranslation } from 'react-i18next'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
+import { Label } from '@/components/ui/Label'
 import {
   Select,
   SelectContent,
@@ -162,7 +163,7 @@ export function InteractionLogPage() {
       header: t('pages.interactionLog.columns.date'),
       align: 'left',
       render: (row) => (
-        <span className="text-xs text-gray-700">
+        <span className="text-foreground text-xs">
           {formatDateTime(row.created_at, user?.timezone)}
         </span>
       ),
@@ -174,7 +175,7 @@ export function InteractionLogPage() {
       render: (row) => (
         <Link
           to={`/dashboard/clients/${row.client_id}`}
-          className="text-xs font-medium text-blue-600 hover:underline"
+          className="text-primary-600 text-xs font-medium hover:underline"
         >
           #{row.client_id}
         </Link>
@@ -184,7 +185,7 @@ export function InteractionLogPage() {
       key: 'chain_name',
       header: t('pages.interactionLog.columns.chain'),
       align: 'left',
-      render: (row) => <span className="text-xs text-gray-800">{row.chain_name ?? '-'}</span>,
+      render: (row) => <span className="text-foreground text-xs">{row.chain_name ?? '-'}</span>,
     },
     {
       key: 'dictionary_path',
@@ -205,7 +206,7 @@ export function InteractionLogPage() {
         }
         const suffix = promiseSuffix.length > 0 ? ` — ${promiseSuffix.join(', ')}` : ''
         return (
-          <span className="text-xs text-gray-700">
+          <span className="text-foreground text-xs">
             {base}
             {suffix}
           </span>
@@ -217,7 +218,7 @@ export function InteractionLogPage() {
       header: t('pages.interactionLog.columns.creditNumber'),
       align: 'left',
       render: (row) => (
-        <span className="text-xs text-gray-700">{row.credit_id ? `#${row.credit_id}` : '-'}</span>
+        <span className="text-foreground text-xs">{row.credit_id ? `#${row.credit_id}` : '-'}</span>
       ),
     },
     {
@@ -225,7 +226,7 @@ export function InteractionLogPage() {
       header: t('pages.interactionLog.columns.notes'),
       align: 'left',
       render: (row) => (
-        <span className="text-xs text-gray-600">
+        <span className="text-muted-foreground text-xs">
           {row.notes ? (row.notes.length > 40 ? row.notes.slice(0, 40) + '...' : row.notes) : '-'}
         </span>
       ),
@@ -234,21 +235,24 @@ export function InteractionLogPage() {
       key: 'recorded_by_name',
       header: t('pages.interactionLog.columns.operator'),
       align: 'left',
-      render: (row) => <span className="text-xs text-gray-600">{row.recorded_by_name ?? '-'}</span>,
+      render: (row) => (
+        <span className="text-muted-foreground text-xs">{row.recorded_by_name ?? '-'}</span>
+      ),
     },
   ]
 
   return (
     <div className="flex w-full flex-col items-start gap-4">
-      <div className="flex w-full items-center justify-between">
-        <h1 className="text-dark-500 text-2xl font-light">{t('pages.interactionLog.title')}</h1>
+      <div className="mb-4 flex w-full flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <h1 className="text-foreground text-xl font-light sm:text-2xl">
+          {t('pages.interactionLog.title')}
+        </h1>
         <Button
           variant="primary"
           size="md"
           onClick={handleExport}
           disabled={isExporting}
           leftIcon={<Icons.Csv02 size={20} />}
-          className="rounded-full"
         >
           {isExporting
             ? t('pages.reports.exporting', 'Exporting...')
@@ -256,126 +260,120 @@ export function InteractionLogPage() {
         </Button>
       </div>
 
-      <div className="w-full rounded-xl bg-white/50 p-3 sm:p-4">
-        <div className="flex flex-col gap-4">
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5">
-            <div className="flex flex-col gap-2">
-              <label className="text-dark-500 text-xs leading-[150%] font-medium tracking-[-0.28px]">
-                {t('pages.interactionLog.filters.clientId')}
-              </label>
-              <Input
-                type="text"
-                inputMode="numeric"
-                className="max-h-[45px] w-full rounded-md border border-gray-200 bg-white text-xs"
-                placeholder={t('pages.interactionLog.filters.clientIdPlaceholder')}
-                value={pendingFilters.clientId}
-                onChange={(e) =>
-                  setPendingFilters((prev) => ({ ...prev, clientId: e.target.value }))
-                }
-              />
-            </div>
-            <div className="flex flex-col gap-2">
-              <label className="text-dark-500 text-xs leading-[150%] font-medium tracking-[-0.28px]">
-                {t('pages.interactionLog.filters.chain')}
-              </label>
-              <Select
-                value={pendingFilters.chainFilter || 'all'}
-                onValueChange={(v) =>
-                  setPendingFilters((prev) => ({ ...prev, chainFilter: v === 'all' ? '' : v }))
-                }
-              >
-                <SelectTrigger className="max-h-[45px] w-full rounded-md border border-gray-200 bg-white text-xs">
-                  <SelectValue placeholder={t('pages.interactionLog.filters.allChains')} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{t('pages.interactionLog.filters.allChains')}</SelectItem>
-                  {chains.map((c) => (
-                    <SelectItem key={c.id} value={String(c.id)}>
-                      {c.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex flex-col gap-2">
-              <label className="text-dark-500 text-xs leading-[150%] font-medium tracking-[-0.28px]">
-                {t('pages.interactionLog.filters.from')}
-              </label>
-              <DateSelect
-                value={parseDateString(pendingFilters.dateFrom)}
-                onChange={({ value }) =>
-                  setPendingFilters((prev) => ({ ...prev, dateFrom: formatDateString(value) }))
-                }
-                max={parseDateString(pendingFilters.dateTo) || undefined}
-                placeholder={t('pages.clientChains.history.selectStartDate')}
-                allowManualInput
-                format="dd.MM.yyyy"
-                className="[&_input]:h-[45px] [&_input]:rounded-md [&_input]:border-gray-200 [&_input]:text-xs [&_input]:font-normal"
-              />
-            </div>
-            <div className="flex flex-col gap-2">
-              <label className="text-dark-500 text-xs leading-[150%] font-medium tracking-[-0.28px]">
-                {t('pages.interactionLog.filters.to')}
-              </label>
-              <DateSelect
-                value={parseDateString(pendingFilters.dateTo)}
-                onChange={({ value }) =>
-                  setPendingFilters((prev) => ({ ...prev, dateTo: formatDateString(value) }))
-                }
-                min={parseDateString(pendingFilters.dateFrom) || undefined}
-                placeholder={t('pages.clientChains.history.selectEndDate')}
-                allowManualInput
-                format="dd.MM.yyyy"
-                className="[&_input]:h-[45px] [&_input]:rounded-md [&_input]:border-gray-200 [&_input]:text-xs [&_input]:font-normal"
-              />
-            </div>
-            <div className="flex flex-col gap-2">
-              <label className="text-dark-500 text-xs leading-[150%] font-medium tracking-[-0.28px]">
-                {t('pages.interactionLog.filters.notes')}
-              </label>
-              <Input
-                type="text"
-                className="max-h-[45px] w-full rounded-md border border-gray-200 bg-white text-xs"
-                placeholder={t('pages.interactionLog.filters.notesPlaceholder')}
-                value={pendingFilters.notesSearch}
-                onChange={(e) =>
-                  setPendingFilters((prev) => ({ ...prev, notesSearch: e.target.value }))
-                }
-              />
-            </div>
+      <div className="border-border bg-card/50 flex w-full flex-col gap-4 rounded-xl border p-4 shadow-sm sm:p-6">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5">
+          <div className="flex flex-col gap-2">
+            <Label className="text-foreground text-xs font-medium">
+              {t('pages.interactionLog.filters.clientId')}
+            </Label>
+            <Input
+              type="text"
+              inputMode="numeric"
+              className="h-[45px] w-full text-xs"
+              placeholder={t('pages.interactionLog.filters.clientIdPlaceholder')}
+              value={pendingFilters.clientId}
+              onChange={(e) => setPendingFilters((prev) => ({ ...prev, clientId: e.target.value }))}
+            />
           </div>
-          <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
-            <Button
-              type="button"
-              variant="secondary"
-              className="h-[45px] rounded sm:min-w-[160px]"
-              onClick={handleApplyFilters}
+          <div className="flex flex-col gap-2">
+            <Label className="text-foreground text-xs font-medium">
+              {t('pages.interactionLog.filters.chain')}
+            </Label>
+            <Select
+              value={pendingFilters.chainFilter || 'all'}
+              onValueChange={(v) =>
+                setPendingFilters((prev) => ({ ...prev, chainFilter: v === 'all' ? '' : v }))
+              }
             >
-              {t('pages.clientChains.history.applyFilters')}
-            </Button>
-            <Button
-              type="button"
-              variant="white-secondary"
-              className="h-[45px] rounded sm:min-w-[140px]"
-              leftIcon={<Icons.Reload size={16} />}
-              onClick={handleClearFilters}
-            >
-              {t('pages.clientChains.history.clearFilters')}
-            </Button>
+              <SelectTrigger className="h-[45px] w-full text-xs">
+                <SelectValue placeholder={t('pages.interactionLog.filters.allChains')} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t('pages.interactionLog.filters.allChains')}</SelectItem>
+                {chains.map((c) => (
+                  <SelectItem key={c.id} value={String(c.id)}>
+                    {c.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
+          <div className="flex flex-col gap-2">
+            <Label className="text-foreground text-xs font-medium">
+              {t('pages.interactionLog.filters.from')}
+            </Label>
+            <DateSelect
+              value={parseDateString(pendingFilters.dateFrom)}
+              onChange={({ value }) =>
+                setPendingFilters((prev) => ({ ...prev, dateFrom: formatDateString(value) }))
+              }
+              max={parseDateString(pendingFilters.dateTo) || undefined}
+              placeholder={t('pages.clientChains.history.selectStartDate')}
+              allowManualInput
+              format="dd.MM.yyyy"
+              className="[&_input]:h-[45px] [&_input]:text-xs [&_input]:font-normal"
+            />
+          </div>
+          <div className="flex flex-col gap-2">
+            <Label className="text-foreground text-xs font-medium">
+              {t('pages.interactionLog.filters.to')}
+            </Label>
+            <DateSelect
+              value={parseDateString(pendingFilters.dateTo)}
+              onChange={({ value }) =>
+                setPendingFilters((prev) => ({ ...prev, dateTo: formatDateString(value) }))
+              }
+              min={parseDateString(pendingFilters.dateFrom) || undefined}
+              placeholder={t('pages.clientChains.history.selectEndDate')}
+              allowManualInput
+              format="dd.MM.yyyy"
+              className="[&_input]:h-[45px] [&_input]:text-xs [&_input]:font-normal"
+            />
+          </div>
+          <div className="flex flex-col gap-2">
+            <Label className="text-foreground text-xs font-medium">
+              {t('pages.interactionLog.filters.notes')}
+            </Label>
+            <Input
+              type="text"
+              className="h-[45px] w-full text-xs"
+              placeholder={t('pages.interactionLog.filters.notesPlaceholder')}
+              value={pendingFilters.notesSearch}
+              onChange={(e) =>
+                setPendingFilters((prev) => ({ ...prev, notesSearch: e.target.value }))
+              }
+            />
+          </div>
+        </div>
+        <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+          <Button
+            type="button"
+            variant="secondary"
+            className="h-[45px] sm:min-w-[160px]"
+            onClick={handleApplyFilters}
+          >
+            {t('pages.clientChains.history.applyFilters')}
+          </Button>
+          <Button
+            type="button"
+            variant="white-secondary"
+            className="h-[45px] sm:min-w-[140px]"
+            leftIcon={<Icons.Reload size={16} />}
+            onClick={handleClearFilters}
+          >
+            {t('pages.clientChains.history.clearFilters')}
+          </Button>
         </div>
       </div>
 
       {isLoading ? (
         <InteractionLogTableSkeleton rows={8} className="w-full" />
       ) : items.length === 0 ? (
-        <div className="flex flex-col items-center gap-4 self-stretch py-8 md:gap-6">
-          <div className="flex flex-col items-center justify-center gap-4 self-stretch py-8 sm:flex-row md:gap-6">
-            <Icons.FileRemove size={48} className="text-gray-500" strokeWidth={0.5} />
-            <p className="text-dark-500 text-center text-xl leading-tight font-light tracking-[-0.48px] md:text-2xl">
-              {t('pages.interactionLog.empty')}
-            </p>
-          </div>
+        <div className="border-border bg-card/50 flex w-full flex-col items-center justify-center gap-4 rounded-xl border px-4 py-12 shadow-sm sm:flex-row md:gap-6">
+          <Icons.FileRemove size={48} className="text-muted-foreground" strokeWidth={0.5} />
+          <p className="text-foreground text-center text-xl leading-tight font-light md:text-2xl">
+            {t('pages.interactionLog.empty')}
+          </p>
         </div>
       ) : (
         <DataTable columns={columns} data={items} className="w-full" />

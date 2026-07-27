@@ -59,11 +59,11 @@ export function ScopeSelector({ ceiling = 'all' }: ScopeSelectorProps) {
 
   return (
     <div className="flex flex-col gap-1.5">
-      <span className="text-xs font-medium text-gray-600">
+      <span className="text-muted-foreground text-xs font-medium">
         {t('pages.actionAnalysis.scope.label', 'View scope')}
       </span>
       <div
-        className="inline-flex flex-wrap items-center gap-2 rounded-full bg-white/50 p-1 shadow-sm"
+        className="bg-card/50 inline-flex flex-wrap items-center gap-2 rounded-full p-1 shadow-sm"
         role="tablist"
         aria-label={t('pages.actionAnalysis.scope.label', 'View scope')}
       >
@@ -88,8 +88,8 @@ export function ScopeSelector({ ceiling = 'all' }: ScopeSelectorProps) {
               className={[
                 'rounded-full px-4 py-1.5 text-xs font-medium transition-colors',
                 isActive
-                  ? 'bg-primary-500 text-white shadow-sm'
-                  : 'bg-transparent text-gray-700 hover:bg-gray-100',
+                  ? 'bg-primary-500 text-primary-foreground shadow-sm'
+                  : 'text-foreground hover:bg-muted bg-transparent',
                 disabled ? 'cursor-not-allowed opacity-50 hover:bg-transparent' : '',
               ]
                 .filter(Boolean)

@@ -11,5 +11,4 @@ export {
   useUpdateProject,
   useArchiveProject,
   useRestoreProject,
-  useDeleteProject,
 } from './useProjectMutations'

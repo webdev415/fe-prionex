@@ -21,7 +21,10 @@ import {
   usePatchMessageContract,
   usePatchMessageSuggestions,
 } from '@/features/lawyerWorkplace'
+import { useLegalProfileTimezone } from '@/features/lawyerWorkplace/hooks/useLegalProfileTimezone'
 import { legalDueDateToIso, parseLegalDueDate } from '@/features/lawyerWorkplace/utils/legalDueDate'
+import { addSlaDays } from '@/features/lawyerWorkplace/utils/slaDeadline'
+import type { SlaDayType } from '@/pages/LawyerWorkplace/settings/types'
 import {
   clientLookupFromLegalSearchItem,
   isLetterParametersReadOnly,
@@ -29,6 +32,7 @@ import {
 import type { LegalMessageSuggestionsPatchResponse } from '@/features/lawyerWorkplace/api/types'
 import { useDebounce } from '@/hooks/useDebounce'
 import { Icons } from '@/lib/icons'
+import { dateTimeInputPattern } from '@/lib/localeFormat'
 import { cn } from '@/lib/utils'
 import { formatDueDate } from '../../utils/formatters'
 import type { LetterDetail } from '../../types'
@@ -39,12 +43,12 @@ const TYPE_COLOURS: Record<string, string> = {
   complaint: 'bg-error-100 text-error-700',
   nbu_inquiry: 'bg-secondary-100 text-secondary-800',
   court_claim: 'bg-warning-100 text-warning-700',
-  attorney_request: 'bg-[#EDE9FE] text-[#6D28D9]',
+  attorney_request: 'bg-violet-100 text-violet-700',
   inquiry: 'bg-success-100 text-success-700',
 }
 
 function TypeBadge({ type, label }: { type: string; label: string }) {
-  const colour = TYPE_COLOURS[type] ?? 'bg-gray-100 text-gray-600'
+  const colour = TYPE_COLOURS[type] ?? 'bg-muted text-muted-foreground'
   return (
     <span
       className={cn(
@@ -88,14 +92,18 @@ function formatClientOption(client: { id: number; first_name: string; last_name:
   return { id: String(client.id), name: lookup.label }
 }
 
-function computeDueDateFromReceived(receivedAt: string, slaDays: number): Date | null {
+function computeDueDateFromReceived(
+  receivedAt: string,
+  slaDays: number,
+  slaDayType: SlaDayType
+): Date | null {
   if (!Number.isFinite(slaDays) || slaDays <= 0) {
     return null
   }
-  const base = new Date(receivedAt)
-  const due = new Date(base)
-  due.setDate(due.getDate() + slaDays)
-  due.setHours(0, 0, 0, 0)
+  // Backend does NOT recompute the due date on manual confirmation — the FE
+  // computes it here and sends it. Working-day types skip weekends.
+  const due = addSlaDays(new Date(receivedAt), slaDays, slaDayType)
+  due.setHours(9, 0, 0, 0)
   return due
 }
 
@@ -126,6 +134,7 @@ function buildPrioritySignature(
 function applySuggestionResult(
   result: LegalMessageSuggestionsPatchResponse,
   receivedAt: string,
+  slaDayType: SlaDayType,
   setLawyerOverride: (value: string | null) => void,
   setDueDateOverride: (value: Date | null) => void,
   options?: {
@@ -146,7 +155,7 @@ function applySuggestionResult(
     options?.onDueDateAutoApplied?.()
     return
   }
-  const dueDate = computeDueDateFromReceived(receivedAt, result.sla_days)
+  const dueDate = computeDueDateFromReceived(receivedAt, result.sla_days, slaDayType)
   if (dueDate) {
     setDueDateOverride(dueDate)
     options?.onDueDateAutoApplied?.()
@@ -158,8 +167,8 @@ function applySuggestionResult(
 function ReadonlyField({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex w-full flex-col items-start gap-1.5">
-      <Label className="text-dark-500 text-[12px] font-normal">{label}</Label>
-      <div className="text-dark-500 text-[13px] font-light">{children}</div>
+      <Label className="text-foreground text-[12px] font-normal">{label}</Label>
+      <div className="text-foreground text-[13px] font-light">{children}</div>
     </div>
   )
 }
@@ -180,17 +189,21 @@ function ParameterDropdown({
   const hasValue = value !== null && value !== undefined && value !== false
   return (
     <div className="flex w-full flex-col items-start gap-2">
-      <Label className="text-dark-500 text-[12px] font-normal">{label}</Label>
+      <Label className="text-foreground text-[12px] font-normal">{label}</Label>
       <DropdownMenu modal={false}>
         <DropdownMenuTrigger asChild>
           <button
             type="button"
-            className="text-dark-500 focus:border-primary-500 flex h-9 w-full items-center justify-between rounded-[8px] border border-gray-200 bg-white px-3 py-2 text-[14px] font-light outline-none"
+            className="text-foreground focus:border-primary-500 border-border bg-input flex h-9 w-full items-center justify-between rounded-[8px] border px-3 py-2 text-[14px] font-light outline-none"
           >
             <span className="min-w-0 flex-1 truncate text-left">
-              {hasValue ? value : <span className="text-gray-400">{placeholder}</span>}
+              {hasValue ? value : <span className="text-muted-foreground">{placeholder}</span>}
             </span>
-            <Icons.ArrowDown size={16} className="ml-2 shrink-0 text-gray-400" strokeWidth={1.5} />
+            <Icons.ArrowDown
+              size={16}
+              className="text-muted-foreground ml-2 shrink-0"
+              strokeWidth={1.5}
+            />
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent
@@ -202,7 +215,7 @@ function ParameterDropdown({
               key={item.key}
               disabled={item.disabled}
               className={cn(
-                'rounded-md px-2 py-1.5 text-[13px] focus:bg-gray-50',
+                'focus:bg-muted rounded-md px-2 py-1.5 text-[13px]',
                 item.disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'
               )}
               onSelect={() => {
@@ -239,6 +252,7 @@ function LetterParametersPanelContent({
   onViewKanbanTask?: (taskId: number) => void
 }) {
   const { t, i18n } = useTranslation('common')
+  const timezone = useLegalProfileTimezone()
   const confirmMutation = useConfirmLetter()
   const patchSuggestionsMutation = usePatchMessageSuggestions()
   const patchContractMutation = usePatchMessageContract()
@@ -269,7 +283,11 @@ function LetterParametersPanelContent({
       if (dueDateManuallyOverridden) return
       const letterType = letterTypesData?.items?.find((item) => item.id === typeId)
       if (!letterType) return
-      const dueDate = computeDueDateFromReceived(letter.receivedAt, letterType.sla_days)
+      const dueDate = computeDueDateFromReceived(
+        letter.receivedAt,
+        letterType.sla_days,
+        letterType.sla_day_type ?? 'calendar'
+      )
       if (!dueDate) return
       setDueDateOverride(dueDate)
       setDueDateManuallyOverridden(false)
@@ -308,6 +326,14 @@ function LetterParametersPanelContent({
 
   const letterTypes = useMemo(() => letterTypesData?.items ?? [], [letterTypesData?.items])
   const lawyers = useMemo(() => lawyersData?.items ?? [], [lawyersData?.items])
+
+  // The FE computes the confirm due date from the letter type's SLA — resolve
+  // that type's day-count basis (working days skip weekends; default calendar).
+  const resolveSlaDayType = useCallback(
+    (typeId: string | null | undefined): SlaDayType =>
+      letterTypes.find((item) => item.id === typeId)?.sla_day_type ?? 'calendar',
+    [letterTypes]
+  )
 
   const contractsClientId = useMemo(() => {
     const parsed = Number(effectiveClientId)
@@ -367,13 +393,26 @@ function LetterParametersPanelContent({
           ...(options?.refreshLawyer ? { refresh_lawyer: true } : {}),
         },
       })
-      applySuggestionResult(result, letter.receivedAt, setLawyerOverride, setDueDateOverride, {
-        dueDateManuallyOverridden,
-        onDueDateAutoApplied: () => setDueDateManuallyOverridden(false),
-      })
+      applySuggestionResult(
+        result,
+        letter.receivedAt,
+        resolveSlaDayType(typeId),
+        setLawyerOverride,
+        setDueDateOverride,
+        {
+          dueDateManuallyOverridden,
+          onDueDateAutoApplied: () => setDueDateManuallyOverridden(false),
+        }
+      )
       return result
     },
-    [dueDateManuallyOverridden, letter.id, letter.receivedAt, patchSuggestionsMutation]
+    [
+      dueDateManuallyOverridden,
+      letter.id,
+      letter.receivedAt,
+      patchSuggestionsMutation,
+      resolveSlaDayType,
+    ]
   )
 
   useEffect(() => {
@@ -434,13 +473,20 @@ function LetterParametersPanelContent({
         messageId: letter.id,
         payload: {
           letter_type_id: effectiveTypeId,
-          due_date: legalDueDateToIso(value),
+          due_date: legalDueDateToIso(value, timezone),
         },
       })
       .then((result) => {
-        applySuggestionResult(result, letter.receivedAt, setLawyerOverride, setDueDateOverride, {
-          dueDateManuallyOverridden: true,
-        })
+        applySuggestionResult(
+          result,
+          letter.receivedAt,
+          resolveSlaDayType(effectiveTypeId),
+          setLawyerOverride,
+          setDueDateOverride,
+          {
+            dueDateManuallyOverridden: true,
+          }
+        )
       })
       .catch(() => {
         // Keep local selection visible even if persistence fails.
@@ -466,9 +512,16 @@ function LetterParametersPanelContent({
         },
       })
       .then((result) => {
-        applySuggestionResult(result, letter.receivedAt, setLawyerOverride, setDueDateOverride, {
-          dueDateManuallyOverridden,
-        })
+        applySuggestionResult(
+          result,
+          letter.receivedAt,
+          resolveSlaDayType(effectiveTypeId),
+          setLawyerOverride,
+          setDueDateOverride,
+          {
+            dueDateManuallyOverridden,
+          }
+        )
       })
       .catch(() => {
         setLawyerOverride(defaultLawyerUserId || null)
@@ -521,10 +574,17 @@ function LetterParametersPanelContent({
         },
       })
       .then((result) => {
-        applySuggestionResult(result, letter.receivedAt, setLawyerOverride, setDueDateOverride, {
-          dueDateManuallyOverridden,
-          onDueDateAutoApplied: () => setDueDateManuallyOverridden(false),
-        })
+        applySuggestionResult(
+          result,
+          letter.receivedAt,
+          resolveSlaDayType(effectiveTypeId),
+          setLawyerOverride,
+          setDueDateOverride,
+          {
+            dueDateManuallyOverridden,
+            onDueDateAutoApplied: () => setDueDateManuallyOverridden(false),
+          }
+        )
       })
       .catch(() => {
         // Keep local selection; user can still pick lawyer manually.
@@ -647,7 +707,7 @@ function LetterParametersPanelContent({
         payload: {
           letter_type_id: effectiveTypeId,
           client_id: clientIdNumber,
-          due_date: legalDueDateToIso(effectiveDueDate),
+          due_date: legalDueDateToIso(effectiveDueDate, timezone),
           assigned_to_user_id: lawyerUserIdNumber,
           contract_number: effectiveContract.trim() || null,
         },
@@ -666,10 +726,10 @@ function LetterParametersPanelContent({
   if (isReadOnly) {
     // ── MODE B: Read-only view ─────────────────────────────────────────────────
     return (
-      <div className="flex h-full w-full min-w-0 shrink-0 flex-col overflow-hidden border-l border-gray-100 bg-white">
+      <div className="border-border bg-card flex h-full w-full min-w-0 shrink-0 flex-col overflow-hidden border-l">
         <div className="flex w-full flex-col items-start gap-4 overflow-y-auto px-[18px] py-[16px]">
           <div className="flex w-full items-center justify-between gap-2">
-            <span className="text-dark-500 text-[14px] font-medium">
+            <span className="text-foreground text-[14px] font-medium">
               {t('pages.lawyerWorkplace.parameters.title', 'Letter parameters')}
             </span>
             <div className="flex shrink-0 items-center gap-2">
@@ -688,7 +748,7 @@ function LetterParametersPanelContent({
                   type="button"
                   onClick={onClose}
                   aria-label={t('pages.lawyerWorkplace.parameters.close', 'Close parameters')}
-                  className="text-light-700 hover:text-dark-500 flex h-7 w-7 cursor-pointer items-center justify-center rounded-md transition-colors hover:bg-gray-100"
+                  className="text-muted-foreground hover:text-foreground hover:bg-muted flex h-7 w-7 cursor-pointer items-center justify-center rounded-md transition-colors"
                 >
                   <Icons.Cancel01 size={18} strokeWidth={1.5} />
                 </button>
@@ -708,7 +768,7 @@ function LetterParametersPanelContent({
 
           {p.dueDate && (
             <ReadonlyField label={t('pages.lawyerWorkplace.parameters.dueDate', 'Due date')}>
-              <span className="text-dark-500">{formatDueDate(p.dueDate, i18n.language)}</span>
+              <span className="text-foreground">{formatDueDate(p.dueDate, i18n.language)}</span>
               {p.dueDateHint && (
                 <span className="text-error-500 ml-2 text-[11px]">{p.dueDateHint}</span>
               )}
@@ -721,7 +781,7 @@ function LetterParametersPanelContent({
 
           {/* Link to kanban task */}
           {letter.legalTaskId != null && (
-            <div className="border-primary-200 bg-primary-50 flex w-full items-center justify-between rounded-lg border px-3 py-2.5">
+            <div className="border-primary-200 bg-primary/10 flex w-full items-center justify-between rounded-lg border px-3 py-2.5">
               <div className="flex items-center gap-2">
                 <Icons.CheckmarkSquare03
                   size={16}
@@ -748,10 +808,10 @@ function LetterParametersPanelContent({
 
   // ── MODE A: Editable ─────────────────────────────────────────────────────────
   return (
-    <div className="flex h-full w-full min-w-0 shrink-0 flex-col justify-between overflow-x-hidden overflow-y-auto border-l border-gray-100 bg-white">
+    <div className="border-border bg-card flex h-full w-full min-w-0 shrink-0 flex-col justify-between overflow-x-hidden overflow-y-auto border-l">
       <div className="flex w-full flex-col items-start gap-4 px-[18px] py-[16px]">
         <div className="flex w-full items-center justify-between gap-2 self-stretch">
-          <span className="text-dark-500 text-[14px] font-medium">
+          <span className="text-foreground text-[14px] font-medium">
             {t('pages.lawyerWorkplace.parameters.title', 'Letter parameters')}
           </span>
           <div className="flex shrink-0 items-center gap-2">
@@ -760,7 +820,7 @@ function LetterParametersPanelContent({
                 type="button"
                 onClick={onClose}
                 aria-label={t('pages.lawyerWorkplace.parameters.close', 'Close parameters')}
-                className="text-light-700 hover:text-dark-500 flex h-7 w-7 cursor-pointer items-center justify-center rounded-md transition-colors hover:bg-gray-100"
+                className="text-muted-foreground hover:text-foreground hover:bg-muted flex h-7 w-7 cursor-pointer items-center justify-center rounded-md transition-colors"
               >
                 <Icons.Cancel01 size={18} strokeWidth={1.5} />
               </button>
@@ -788,11 +848,11 @@ function LetterParametersPanelContent({
         />
 
         <div className="flex w-full flex-col gap-2">
-          <Label className="text-dark-500 text-[12px] font-normal">
+          <Label className="text-foreground text-[12px] font-normal">
             {t('pages.lawyerWorkplace.parameters.client', 'Client')}
           </Label>
           {p.clientLockedByEmail ? (
-            <div className="text-dark-500 flex h-9 w-full items-center rounded-[8px] border border-gray-200 bg-gray-50 px-3 py-2 text-[13px] font-light">
+            <div className="text-foreground border-border bg-muted flex h-9 w-full items-center rounded-[8px] border px-3 py-2 text-[13px] font-light">
               {p.clientLabel ||
                 t('pages.lawyerWorkplace.parameters.notIdentified', 'Not identified')}
             </div>
@@ -813,7 +873,7 @@ function LetterParametersPanelContent({
         </div>
 
         <div className="flex w-full flex-col gap-2">
-          <Label className="text-dark-500 text-[12px] font-normal">
+          <Label className="text-foreground text-[12px] font-normal">
             {t('pages.lawyerWorkplace.parameters.dueDate', 'Due date')}
           </Label>
           <DateSelect
@@ -821,9 +881,13 @@ function LetterParametersPanelContent({
             value={effectiveDueDate}
             onChange={({ value }) => handleDueDateChange(value)}
             placeholder={t('pages.lawyerWorkplace.parameters.selectDueDate', 'Select date')}
-            format="dd/MM/yyyy"
+            format={dateTimeInputPattern(i18n.language)}
+            showTimeSelect
+            timeFormat="HH:mm"
+            timeIntervals={15}
+            defaultTime="09:00"
             min={minDueDate}
-            className="h-9 rounded-[8px] border-gray-200 text-[14px] font-light"
+            className="border-border h-9 rounded-[8px] text-[14px] font-light"
           />
         </div>
 
@@ -836,9 +900,9 @@ function LetterParametersPanelContent({
             disabled: !option.assignable,
             content: (
               <span className="flex min-w-0 flex-col">
-                <span className="text-dark-500 text-[13px] font-light">{option.display}</span>
+                <span className="text-foreground text-[13px] font-light">{option.display}</span>
                 {!option.assignable ? (
-                  <span className="text-light-500 text-[11px]">{option.capacityLabel}</span>
+                  <span className="text-muted-foreground text-[11px]">{option.capacityLabel}</span>
                 ) : null}
               </span>
             ),
@@ -858,7 +922,7 @@ function LetterParametersPanelContent({
             }
             value={
               effectiveContract ? (
-                <span className="text-dark-500 text-[13px] font-light">{effectiveContract}</span>
+                <span className="text-foreground text-[13px] font-light">{effectiveContract}</span>
               ) : null
             }
             onSelect={handleContractSelect}
@@ -869,10 +933,13 @@ function LetterParametersPanelContent({
                 key,
                 content: (
                   <span className="flex w-full items-center justify-between gap-2">
-                    <span className="text-dark-500 truncate text-[13px]">{primary}</span>
+                    <span className="text-foreground truncate text-[13px]">{primary}</span>
                     {contract.status && (
-                      <span className="text-light-500 shrink-0 text-[11px] capitalize">
-                        {contract.status}
+                      <span className="text-muted-foreground shrink-0 text-[11px] capitalize">
+                        {t(
+                          `pages.lawyerWorkplace.parameters.contractStatus.${contract.status}`,
+                          contract.status
+                        )}
                       </span>
                     )}
                   </span>
@@ -883,12 +950,12 @@ function LetterParametersPanelContent({
         )}
       </div>
 
-      <div className="bg-light-50 flex w-full flex-col items-center justify-center gap-2 border-t border-gray-200 px-[18px] py-[16px]">
+      <div className="bg-muted border-border flex w-full flex-col items-center justify-center gap-2 border-t px-[18px] py-[16px]">
         <div className="flex flex-row items-center justify-between self-stretch">
-          <span className="text-light-700 text-[12px] font-normal">
+          <span className="text-muted-foreground text-[12px] font-normal">
             {t('pages.lawyerWorkplace.parameters.managerConfirmation', 'Manager confirmation')}
           </span>
-          <span className="text-secondary-900 text-[12px] font-normal">
+          <span className="text-foreground text-[12px] font-normal">
             {t('pages.lawyerWorkplace.parameters.parametersCount', {
               confirmed: effectiveConfirmedCount,
               total: p.totalParameters,
@@ -926,8 +993,8 @@ export function LetterParametersPanel({
 
   if (!letter) {
     return (
-      <div className="flex h-full w-full min-w-0 shrink-0 items-center justify-center overflow-hidden border-l border-gray-200 bg-white">
-        <p className="px-4 text-center text-sm text-gray-400">
+      <div className="border-border bg-card flex h-full w-full min-w-0 shrink-0 items-center justify-center overflow-hidden border-l">
+        <p className="text-muted-foreground px-4 text-center text-sm">
           {t('pages.lawyerWorkplace.parameters.selectLetter', 'Select a letter to view parameters')}
         </p>
       </div>

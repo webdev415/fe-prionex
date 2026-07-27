@@ -199,20 +199,22 @@ export function AgentPerformanceTable({
     {
       key: 'operator',
       header: t('pages.reports.tableHeaders.operator'),
-      render: (item) => <span className="text-dark-500 text-xs font-medium">{item.operator}</span>,
+      render: (item) => (
+        <span className="text-foreground text-xs font-medium">{item.operator}</span>
+      ),
     },
     {
       key: 'calls',
       header: t('pages.reports.tableHeaders.calls'),
       align: 'center',
-      render: (item) => <span className="text-dark-500 text-xs font-medium">{item.calls}</span>,
+      render: (item) => <span className="text-foreground text-xs font-medium">{item.calls}</span>,
     },
     {
       key: 'contactRate',
       header: t('pages.reports.tableHeaders.contactRate'),
       align: 'center',
       render: (item) => (
-        <span className="text-dark-500 text-xs font-medium">{item.contactRate}%</span>
+        <span className="text-foreground text-xs font-medium">{item.contactRate}%</span>
       ),
     },
     {
@@ -220,27 +222,29 @@ export function AgentPerformanceTable({
       header: t('pages.reports.tableHeaders.avgDuration'),
       align: 'center',
       render: (item) => (
-        <span className="text-dark-500 text-xs font-medium">{item.avgDuration}</span>
+        <span className="text-foreground text-xs font-medium">{item.avgDuration}</span>
       ),
     },
     {
       key: 'sms',
       header: t('pages.reports.tableHeaders.sms'),
       align: 'center',
-      render: (item) => <span className="text-dark-500 text-xs font-medium">{item.sms}</span>,
+      render: (item) => <span className="text-foreground text-xs font-medium">{item.sms}</span>,
     },
     {
       key: 'messages',
       header: t('pages.reports.tableHeaders.messages'),
       align: 'center',
-      render: (item) => <span className="text-dark-500 text-xs font-medium">{item.messages}</span>,
+      render: (item) => (
+        <span className="text-foreground text-xs font-medium">{item.messages}</span>
+      ),
     },
     {
       key: 'payments',
       header: t('pages.reports.tableHeaders.payments'),
       align: 'right',
       render: (item) => (
-        <span className="text-dark-500 text-xs font-medium">
+        <span className="text-foreground text-xs font-medium">
           {formatCurrency(item.payments)} {t('pages.reports.currencySymbol')}
         </span>
       ),
@@ -310,30 +314,31 @@ export function AgentPerformanceTable({
   }
 
   return (
-    <div className="flex min-h-[730px] flex-1 flex-col items-start gap-3 self-stretch rounded-xl bg-white/50 p-6">
+    <div className="bg-card/50 flex min-h-0 w-full flex-1 flex-col items-start gap-3 self-stretch rounded-xl p-3 sm:min-h-[730px] sm:p-6">
       {/* Header */}
-      <div className="flex items-center justify-between self-stretch">
-        <span className="text-dark-500 text-base leading-[155%] font-medium tracking-[-0.32px]">
+      <div className="flex flex-col gap-2 self-stretch sm:flex-row sm:items-center sm:justify-between">
+        <span className="text-foreground text-base leading-[155%] font-medium tracking-[-0.32px]">
           {t('pages.reports.agentPerformance.title', { count: filteredData.length })}
         </span>
         <LinkButton
-          variant="regular-secondary"
+          variant="regular-black"
           size="xs"
           onClick={handleExport}
-          rightIcon={<Icons.ArrowRight size={20} />}
+          rightIcon={<Icons.ArrowRight size={20} className="text-foreground" />}
+          className="self-start sm:self-auto"
         >
           {t('pages.reports.agentPerformance.exportTable')}
         </LinkButton>
       </div>
 
-      <div className="flex flex-1 flex-col items-start self-stretch">
+      <div className="flex min-w-0 flex-1 flex-col items-start self-stretch">
         {/* Filters */}
-        <div className="flex items-start gap-5 self-stretch rounded-t-xl border border-[#EBECE8] bg-white p-4">
-          <div className="flex flex-1 flex-col items-start justify-center gap-1">
+        <div className="border-border bg-card flex w-full flex-col items-stretch gap-4 self-stretch rounded-t-xl border p-3 sm:p-4 xl:flex-row xl:items-end xl:gap-5">
+          <div className="flex w-full min-w-0 flex-col items-start justify-center gap-1 xl:flex-1">
             <Label
               htmlFor="responsible-operator"
               required
-              className="text-dark-500 text-xs leading-[140%] font-medium tracking-[-0.24px]"
+              className="text-foreground text-xs leading-[140%] font-medium tracking-[-0.24px]"
             >
               {t('pages.reports.filters.responsibleOperator')}
             </Label>
@@ -356,11 +361,11 @@ export function AgentPerformanceTable({
               </SelectContent>
             </Select>
           </div>
-          <div className="flex flex-1 flex-col items-start justify-center gap-1">
+          <div className="flex w-full min-w-0 flex-col items-start justify-center gap-1 xl:flex-1">
             <Label
               htmlFor="client-phone"
               required
-              className="text-dark-500 text-xs leading-[140%] font-medium tracking-[-0.24px]"
+              className="text-foreground text-xs leading-[140%] font-medium tracking-[-0.24px]"
             >
               {t('pages.reports.filters.clientPhone')}
             </Label>
@@ -370,13 +375,14 @@ export function AgentPerformanceTable({
               placeholder={t('pages.reports.filters.typePhoneNumber')}
               value={clientPhone}
               onChange={(e) => setClientPhone(e.target.value)}
+              className="w-full"
             />
           </div>
-          <div className="flex flex-col items-start justify-center gap-1 self-stretch">
-            <span className="text-dark-500 text-xs leading-[140%] font-medium tracking-[-0.24px]">
+          <div className="flex w-full min-w-0 flex-col items-start justify-center gap-1 xl:min-w-[280px] xl:flex-[1.4]">
+            <span className="text-foreground text-xs leading-[140%] font-medium tracking-[-0.24px]">
               {t('pages.reports.filters.dateOfSale')}
             </span>
-            <div className="flex items-center gap-3">
+            <div className="grid w-full grid-cols-1 gap-2 min-[480px]:grid-cols-[1fr_auto_1fr] min-[480px]:items-center min-[480px]:gap-3">
               <DateSelect
                 key={`date-from-${selectedPeriod}`}
                 disabled={true} // Disable manual date selection when period is selected
@@ -386,8 +392,9 @@ export function AgentPerformanceTable({
                 }}
                 allowManualInput
                 format="dd.MM.yyyy"
+                className="w-full min-w-0"
               />
-              <span className="text-base leading-[155%] font-medium tracking-[-0.32px] text-gray-700">
+              <span className="text-muted-foreground hidden text-center text-base leading-[155%] font-medium tracking-[-0.32px] min-[480px]:block">
                 -
               </span>
               <DateSelect
@@ -399,27 +406,28 @@ export function AgentPerformanceTable({
                 }}
                 allowManualInput
                 format="dd.MM.yyyy"
+                className="w-full min-w-0"
               />
             </div>
           </div>
         </div>
 
         {/* Table with Total Row */}
-        <div className="w-full overflow-hidden rounded-b-xl border border-t-0 border-[#EBECE8] bg-[#EBECE8] shadow-sm">
-          <table className="min-w-full border-collapse">
+        <div className="border-border bg-border w-full overflow-x-auto rounded-b-xl border border-t-0 shadow-sm">
+          <table className="w-full min-w-[720px] border-collapse">
             <thead>
-              <tr className="bg-white">
+              <tr className="bg-card">
                 {columns.map((column, index) => (
                   <th
                     key={column.key}
                     scope="col"
-                    className={`h-[49px] px-6 text-xs font-medium text-[#05040D] ${
+                    className={`text-foreground h-[49px] px-3 text-xs font-medium sm:px-6 ${
                       column.align === 'center'
                         ? 'text-center'
                         : column.align === 'right'
                           ? 'text-right'
                           : 'text-left'
-                    } ${index < columns.length - 1 ? 'border-r border-[#EBECE8]' : ''}`}
+                    } ${index < columns.length - 1 ? 'border-border border-r' : ''}`}
                   >
                     {column.header}
                   </th>
@@ -431,17 +439,17 @@ export function AgentPerformanceTable({
                 Array.from({ length: 5 }).map((_, rowIndex) => (
                   <tr
                     key={`skeleton-row-${rowIndex}`}
-                    className={rowIndex % 2 === 0 ? 'bg-[#F2F3F0]' : 'bg-white'}
+                    className={rowIndex % 2 === 0 ? 'bg-muted' : 'bg-card'}
                   >
                     {columns.map((_, colIndex) => (
                       <td
                         key={`skeleton-col-${colIndex}`}
-                        className={`h-[49px] px-6 ${
-                          colIndex < columns.length - 1 ? 'border-r border-[#EBECE8]' : ''
+                        className={`h-[49px] px-3 sm:px-6 ${
+                          colIndex < columns.length - 1 ? 'border-border border-r' : ''
                         }`}
                       >
                         <div
-                          className={`h-4 animate-pulse rounded bg-gray-200 ${
+                          className={`bg-muted h-4 animate-pulse rounded ${
                             colIndex === 0
                               ? 'w-[60%]'
                               : colIndex === columns.length - 1
@@ -457,7 +465,7 @@ export function AgentPerformanceTable({
                 <tr>
                   <td
                     colSpan={columns.length}
-                    className="text-dark-500 h-[49px] px-6 text-center text-xs font-medium"
+                    className="text-foreground h-[49px] px-3 text-center text-xs font-medium sm:px-6"
                   >
                     {t('pages.reports.agentPerformance.noData')}
                   </td>
@@ -467,20 +475,18 @@ export function AgentPerformanceTable({
                   {filteredData.map((item, rowIndex) => (
                     <tr
                       key={item.id}
-                      className={`transition-colors ${
-                        rowIndex % 2 === 0 ? 'bg-[#F2F3F0]' : 'bg-white'
-                      }`}
+                      className={`transition-colors ${rowIndex % 2 === 0 ? 'bg-muted' : 'bg-card'}`}
                     >
                       {columns.map((column, colIndex) => (
                         <td
                           key={column.key}
-                          className={`text-dark-500 h-[49px] px-6 text-xs font-medium ${
+                          className={`text-foreground h-[49px] px-3 text-xs font-medium sm:px-6 ${
                             column.align === 'center'
                               ? 'text-center'
                               : column.align === 'right'
                                 ? 'text-right'
                                 : 'text-left'
-                          } ${colIndex < columns.length - 1 ? 'border-r border-[#EBECE8]' : ''}`}
+                          } ${colIndex < columns.length - 1 ? 'border-border border-r' : ''}`}
                         >
                           {column.render
                             ? column.render(item)
@@ -492,26 +498,26 @@ export function AgentPerformanceTable({
                     </tr>
                   ))}
                   {/* Total Row */}
-                  <tr className="bg-[#F2F3F0]">
-                    <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-6 text-left text-xs font-semibold">
+                  <tr className="bg-muted">
+                    <td className="text-foreground border-border h-[49px] border-r px-3 text-left text-xs font-semibold sm:px-6">
                       {t('pages.reports.tableHeaders.total')}
                     </td>
-                    <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-6 text-center text-xs font-semibold">
+                    <td className="text-foreground border-border h-[49px] border-r px-3 text-center text-xs font-semibold sm:px-6">
                       {totals.calls}
                     </td>
-                    <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-6 text-center text-xs font-semibold">
+                    <td className="text-foreground border-border h-[49px] border-r px-3 text-center text-xs font-semibold sm:px-6">
                       {totals.contactRate}%
                     </td>
-                    <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-6 text-center text-xs font-semibold">
+                    <td className="text-foreground border-border h-[49px] border-r px-3 text-center text-xs font-semibold sm:px-6">
                       {totals.avgDuration}
                     </td>
-                    <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-6 text-center text-xs font-semibold">
+                    <td className="text-foreground border-border h-[49px] border-r px-3 text-center text-xs font-semibold sm:px-6">
                       {totals.sms}
                     </td>
-                    <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-6 text-center text-xs font-semibold">
+                    <td className="text-foreground border-border h-[49px] border-r px-3 text-center text-xs font-semibold sm:px-6">
                       {totals.messages}
                     </td>
-                    <td className="text-dark-500 h-[49px] px-6 text-right text-xs font-semibold">
+                    <td className="text-foreground h-[49px] px-3 text-right text-xs font-semibold sm:px-6">
                       {formatCurrency(totals.payments)} {t('pages.reports.currencySymbol')}
                     </td>
                   </tr>

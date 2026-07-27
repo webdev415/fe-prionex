@@ -2,6 +2,7 @@ import { memo, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
+import { formatDateTime, formatNumber } from '@/lib/localeFormat'
 import { Pagination } from '@/components/ui/Pagination'
 import { useAuthStore } from '@/stores/authStore'
 import { useOperators } from '@/features/users/hooks'
@@ -104,26 +105,21 @@ function avatarColorFor(operatorId: number | null): string {
   return AVATAR_PALETTE[Math.abs(operatorId) % AVATAR_PALETTE.length]
 }
 
-function formatInteractionDate(iso: string): string {
+function formatInteractionDate(iso: string, language: string): string {
   const d = new Date(iso)
   if (Number.isNaN(d.getTime())) return iso
-  const dd = String(d.getDate()).padStart(2, '0')
-  const mm = String(d.getMonth() + 1).padStart(2, '0')
-  const yyyy = d.getFullYear()
-  const hh = String(d.getHours()).padStart(2, '0')
-  const mn = String(d.getMinutes()).padStart(2, '0')
-  return `${dd}/${mm}/${yyyy} ${hh}:${mn}`
+  return formatDateTime(d, language)
 }
 
-function formatAmount(raw: string | null): string {
+function formatAmount(raw: string | null, language: string): string {
   if (raw == null) return '—'
   const n = Number(raw)
   if (!Number.isFinite(n)) return raw
-  return `${n.toLocaleString()} ₴`
+  return `${formatNumber(n, language)} ₴`
 }
 
 export function InteractionsSubTab() {
-  const { t } = useTranslation('common')
+  const { t, i18n } = useTranslation('common')
   const [period, setPeriod] = useState<InteractionPeriod>('today')
   const [operatorFilter, setOperatorFilter] = useState<'all' | string>('all')
   const [statusFilter, setStatusFilter] = useState<'all' | string>('all')
@@ -334,7 +330,7 @@ export function InteractionsSubTab() {
               </td>
             </tr>
           ) : (
-            items.map((row) => <InteractionRow key={row.id} row={row} />)
+            items.map((row) => <InteractionRow key={row.id} row={row} language={i18n.language} />)
           )}
         </tbody>
       </AnalyticsMockTable>
@@ -354,9 +350,18 @@ export function InteractionsSubTab() {
 
 /** Memoized so a filter / dropdown change on the parent doesn't repaint
  *  every row when its `row` reference is unchanged. */
-const InteractionRow = memo(InteractionRowImpl, (prev, next) => prev.row === next.row)
+const InteractionRow = memo(
+  InteractionRowImpl,
+  (prev, next) => prev.row === next.row && prev.language === next.language
+)
 
-function InteractionRowImpl({ row }: { row: InteractionMonitoringItem }) {
+function InteractionRowImpl({
+  row,
+  language,
+}: {
+  row: InteractionMonitoringItem
+  language: string
+}) {
   const navigate = useNavigate()
   const operatorName = row.user_name ?? (row.user_id ? `#${row.user_id}` : '—')
   const initials =
@@ -365,7 +370,9 @@ function InteractionRowImpl({ row }: { row: InteractionMonitoringItem }) {
       : deriveInitials(operatorName === `#${row.user_id}` ? '' : operatorName)
   return (
     <tr className={ANALYTICS_TABLE_ROW}>
-      <td className={ANALYTICS_TABLE_TD}>{formatInteractionDate(row.interaction_date)}</td>
+      <td className={ANALYTICS_TABLE_TD}>
+        {formatInteractionDate(row.interaction_date, language)}
+      </td>
       <td className={ANALYTICS_TABLE_TD}>
         <div className="flex items-center gap-2">
           {initials ? (
@@ -404,7 +411,7 @@ function InteractionRowImpl({ row }: { row: InteractionMonitoringItem }) {
       </td>
       <td className={ANALYTICS_TABLE_TD}>{row.contract_number ?? '—'}</td>
       <td className={`${ANALYTICS_TABLE_TD} text-right font-medium`}>
-        {formatAmount(row.promise_to_pay_amount)}
+        {formatAmount(row.promise_to_pay_amount, language)}
       </td>
     </tr>
   )

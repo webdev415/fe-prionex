@@ -55,10 +55,10 @@ export function TimelineTab() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="rounded-xl bg-white/50 p-4 shadow-sm sm:p-6">
+      <div className="bg-card/50 rounded-xl p-4 shadow-sm sm:p-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:gap-4">
           <div className="flex flex-1 flex-col gap-1.5">
-            <span className="text-dark-500 text-xs font-medium sm:text-sm">
+            <span className="text-foreground text-xs font-medium sm:text-sm">
               {t('pages.actionAnalysis.timeline.callId', 'Call ID')}
             </span>
             <Input
@@ -88,7 +88,7 @@ export function TimelineTab() {
             variant="primary"
             onClick={handleExport}
             disabled={!callId || exportMutation.isPending || events.length === 0}
-            leftIcon={<Icons.Download size={16} className="text-dark-500" />}
+            leftIcon={<Icons.Download size={16} className="text-primary-foreground" />}
             className="h-[45px] rounded-full sm:px-6"
           >
             {exportMutation.isPending
@@ -99,14 +99,14 @@ export function TimelineTab() {
       </div>
 
       {!callId ? (
-        <div className="rounded-xl bg-white/50 p-6 text-center text-sm text-gray-500 shadow-sm">
+        <div className="bg-card/50 text-muted-foreground rounded-xl p-6 text-center text-sm shadow-sm">
           {t(
             'pages.actionAnalysis.timeline.empty',
             'Enter a call ID above to inspect its operator action timeline.'
           )}
         </div>
       ) : isError ? (
-        <div className="rounded-xl bg-red-50 p-6 text-center text-sm text-red-700 shadow-sm">
+        <div className="bg-error-100 text-error-700 rounded-xl p-6 text-center text-sm shadow-sm">
           {isInvalidCallId
             ? t(
                 'pages.actionAnalysis.errors.invalidCallId',
@@ -115,20 +115,20 @@ export function TimelineTab() {
             : t('pages.actionAnalysis.errors.loadTimelineFailed', 'Failed to load the timeline.')}
         </div>
       ) : isPending ? (
-        <div className="overflow-x-auto rounded-xl bg-white/80 shadow-sm">
+        <div className="bg-card/80 overflow-x-auto rounded-xl shadow-sm">
           <TableSkeleton columns={4} rows={8} className="w-full" />
         </div>
       ) : events.length === 0 ? (
-        <div className="rounded-xl bg-white/50 p-6 text-center text-sm text-gray-500 shadow-sm">
+        <div className="bg-card/50 text-muted-foreground rounded-xl p-6 text-center text-sm shadow-sm">
           {t(
             'pages.actionAnalysis.timeline.noEvents',
             'No tracking events recorded for this call.'
           )}
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-xl bg-white/80 shadow-sm">
+        <div className="bg-card/80 overflow-x-auto rounded-xl shadow-sm">
           <table className="w-full text-sm">
-            <thead className="bg-gray-100 text-left text-xs text-gray-600 uppercase">
+            <thead className="bg-muted text-muted-foreground text-left text-xs uppercase">
               <tr>
                 <th className="px-4 py-2">
                   {t('pages.actionAnalysis.timeline.columns.offset', 'Offset')}
@@ -146,13 +146,13 @@ export function TimelineTab() {
             </thead>
             <tbody>
               {events.map((event, index) => (
-                <tr key={`${event.ts}-${index}`} className="border-t border-gray-100">
-                  <td className="px-4 py-2 font-mono text-xs text-gray-700">
+                <tr key={`${event.ts}-${index}`} className="border-border border-t">
+                  <td className="text-foreground px-4 py-2 font-mono text-xs">
                     {formatOffset(event.offset_seconds)}
                   </td>
-                  <td className="px-4 py-2 font-medium text-gray-800">{event.event_type}</td>
-                  <td className="px-4 py-2 text-gray-600">{event.page_ref ?? '—'}</td>
-                  <td className="px-4 py-2 font-mono text-xs text-gray-500">
+                  <td className="text-foreground px-4 py-2 font-medium">{event.event_type}</td>
+                  <td className="text-muted-foreground px-4 py-2">{event.page_ref ?? '—'}</td>
+                  <td className="text-muted-foreground px-4 py-2 font-mono text-xs">
                     {new Date(event.ts).toLocaleString()}
                   </td>
                 </tr>

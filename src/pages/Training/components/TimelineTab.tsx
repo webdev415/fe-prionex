@@ -6,6 +6,7 @@ import { toast } from 'sonner'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Icons } from '@/lib/icons'
+import { formatDateTime } from '@/lib/localeFormat'
 import { useExportTimeline, useTimeline, type TimelineEventDto } from '@/features/operatorAnalytics'
 import { TableSkeleton } from '@/components/ui/TableSkeleton'
 import { readTimelineBarState, writeTimelineBarState } from '../lib/analyticsUrlState'
@@ -20,7 +21,7 @@ function formatOffset(seconds?: number | null): string {
 }
 
 export function TimelineTab() {
-  const { t } = useTranslation('common')
+  const { t, i18n } = useTranslation('common')
   const [searchParams, setSearchParams] = useSearchParams()
   const urlState = readTimelineBarState(searchParams)
 
@@ -146,7 +147,7 @@ export function TimelineTab() {
                   <td className="px-4 py-2 font-medium text-gray-800">{event.event_type}</td>
                   <td className="px-4 py-2 text-gray-600">{event.page_ref ?? '—'}</td>
                   <td className="px-4 py-2 font-mono text-xs text-gray-500">
-                    {new Date(event.ts).toLocaleString()}
+                    {formatDateTime(event.ts, i18n.language)}
                   </td>
                 </tr>
               ))}

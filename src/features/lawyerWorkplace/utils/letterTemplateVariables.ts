@@ -1,3 +1,5 @@
+import i18n from '@/lib/i18n'
+
 export interface LegalLetterTemplateContext {
   clientName?: string | null
   contract?: string | null
@@ -14,7 +16,6 @@ export const LEGAL_LETTER_TEMPLATE_VARIABLES = [
   { name: 'contract', labelKey: 'contract' },
 ] as const
 
-const FALLBACK_CLIENT = 'Client'
 const FALLBACK_EMPTY = '—'
 
 function formatTemplateDueDate(iso: string | null | undefined, language: string): string {
@@ -37,12 +38,18 @@ export function applyLetterTemplatePlaceholders(
   context: LegalLetterTemplateContext,
   options?: { language?: string }
 ): string {
-  const language = options?.language ?? 'en'
+  const language = options?.language ?? i18n.language
   const today = context.date ?? new Date().toISOString().slice(0, 10)
   const requestNo = resolveRequestNo(context)
+  // Letter body language follows the recipient (options.language), not the UI —
+  // resolve the client fallback in that language, not the operator's locale.
+  const clientFallback = i18n.getFixedT(language)(
+    'pages.lawyerWorkplace.letterTemplate.clientFallback',
+    'Client'
+  )
 
   const replacements: Record<string, string> = {
-    clientName: context.clientName?.trim() || FALLBACK_CLIENT,
+    clientName: context.clientName?.trim() || clientFallback,
     date: today,
     dueDate: formatTemplateDueDate(context.dueDate, language),
     requestNo,
