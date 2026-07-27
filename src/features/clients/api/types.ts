@@ -311,6 +311,7 @@ export interface GetClientsParams {
 
   // Filter: Portfolio/Sellers
   seller_ids?: string // Comma-separated seller IDs (e.g., "1,5,12")
+  rr_status_in?: string // Comma-separated RR status IDs (e.g., "6,1")
 
   // Filter: Date Range
   sale_date_from?: string // YYYY-MM-DD format
