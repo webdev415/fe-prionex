@@ -110,12 +110,27 @@ export function NotificationBell() {
   const { t } = useTranslation('common')
   const userTimezone = useAuthStore((state) => state.user?.timezone)
 
-  const { data: notificationsData } = useNotifications({ page: 1, page_size: 50 })
+  const { data: taskNotifData } = useNotifications({
+    page: 1,
+    page_size: 200,
+    type: [NotificationType.TASK_OVERDUE, NotificationType.CORRECTION_TASK_OVERDUE],
+  })
+  const { data: otherNotifData } = useNotifications({
+    page: 1,
+    page_size: 50,
+    type: [
+      NotificationType.PAYMENT_PENDING,
+      NotificationType.INCOMING_CALL,
+      NotificationType.CALLBACK_REQUESTED,
+      NotificationType.RR_PAYMENT_DUE,
+    ],
+  })
   const { data: unreadData } = useUnreadCount()
   const dismissMutation = useDismissNotification()
   const markAllReadMutation = useMarkAllAsRead()
 
-  const notifications = notificationsData?.items ?? []
+  const taskNotifs = taskNotifData?.items ?? []
+  const otherNotifs = otherNotifData?.items ?? []
   const count = unreadData?.total ?? 0
 
   const [isOpen, setIsOpen] = useState(false)
@@ -164,18 +179,18 @@ export function NotificationBell() {
   // Tasks-tab default matches operators' most-frequent action.
   const [activeTab, setActiveTab] = useState<Tab>('tasks')
 
-  // Per-tab filtered slices (one query, filtered locally — same pattern
-  // the previous flat-list rendering used). Task tabs split on starred.
-  const isTaskType = (n: NotificationItem) =>
-    n.type === NotificationType.TASK_OVERDUE || n.type === NotificationType.CORRECTION_TASK_OVERDUE
-  const tasksTabItems = notifications.filter((n) => isTaskType(n) && !n.starred)
-  const starredTabItems = notifications.filter((n) => isTaskType(n) && n.starred)
-  const paymentsTabItems = notifications.filter((n) => n.type === NotificationType.PAYMENT_PENDING)
-  const callsTabItems = notifications.filter(
+  // Per-tab filtered slices. Task-based tabs read from ``taskNotifs``
+  // (the dedicated 200-cap fetch) so the per-user task cap is fully
+  // exposed; non-task tabs read from ``otherNotifs`` (the 50-cap fetch
+  // for lower-volume types) so tasks can't cannibalize their slots.
+  const tasksTabItems = taskNotifs.filter((n) => !n.starred)
+  const starredTabItems = taskNotifs.filter((n) => n.starred)
+  const paymentsTabItems = otherNotifs.filter((n) => n.type === NotificationType.PAYMENT_PENDING)
+  const callsTabItems = otherNotifs.filter(
     (n) =>
       n.type === NotificationType.INCOMING_CALL || n.type === NotificationType.CALLBACK_REQUESTED
   )
-  const rrPaymentsTabItems = notifications.filter((n) => n.type === NotificationType.RR_PAYMENT_DUE)
+  const rrPaymentsTabItems = otherNotifs.filter((n) => n.type === NotificationType.RR_PAYMENT_DUE)
 
   const markAsReadMutation = useMarkAsRead()
   const starMutation = useStarNotification()

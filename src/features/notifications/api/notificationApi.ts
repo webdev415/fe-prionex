@@ -11,11 +11,14 @@ const BASE_URL = '/api/v1/notifications'
 export async function getNotifications(params: {
   page?: number
   page_size?: number
-  type?: string
+  type?: string | string[]
   read?: boolean
   starred?: boolean
 }): Promise<NotificationListResponse> {
-  const response = await api.get<NotificationListResponse>(BASE_URL, { params })
+  const response = await api.get<NotificationListResponse>(BASE_URL, {
+    params,
+    paramsSerializer: { indexes: null },
+  })
   return response.data
 }
 
