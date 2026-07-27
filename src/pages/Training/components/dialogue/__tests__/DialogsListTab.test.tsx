@@ -4,7 +4,7 @@
  * Data hooks are mocked; the i18n mock returns the key.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import type { OperatorUser } from '@/features/users/api/usersApi'
 import { useCallMonitoring } from '@/features/training'
 import { useMyOperators } from '@/features/quality/coaching/hooks'
@@ -161,6 +161,18 @@ describe('DialogsListTab (call-grain)', () => {
 
     fireEvent.click(screen.getByText('pages.training.dialogue.dialogs.myEmployees'))
     expect(mockUseCallMonitoring.mock.calls.at(-1)?.[0]?.agent_extensions).toEqual(['101'])
+  })
+
+  it('narrows the query by full-name search', async () => {
+    setCalls({ data: { calls: [], summary: {}, total: 0, limit: 50, offset: 0 } as never })
+    render(<DialogsListTab />)
+    fireEvent.change(
+      screen.getByPlaceholderText('pages.training.dialogue.filters.namePlaceholder'),
+      { target: { value: 'Oleh' } }
+    )
+    await waitFor(() =>
+      expect(mockUseCallMonitoring.mock.calls.at(-1)?.[0]?.agent_extensions).toEqual(['102'])
+    )
   })
 
   it('disables "My employees" when the trainer has no operators under control', () => {

@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Pagination } from '@/components/ui/Pagination'
 import { useConfirm } from '@/components/ui/useConfirm'
+import { useDebounce } from '@/hooks/useDebounce'
 import { useAuthStore } from '@/stores/authStore'
 import { useOperators } from '@/features/users/hooks'
 import { useCallMonitoring } from '@/features/training'
@@ -11,6 +12,7 @@ import { useMyOperators, useOperatorTrainers } from '@/features/quality/coaching
 import { useClientNames } from '@/features/clients/hooks/useClients'
 import { useScopedUserIds } from '../../lib/scope'
 import { EmployeeMultiSelect } from './EmployeeMultiSelect'
+import { EmployeeAvatar } from './EmployeeAvatar'
 import { CallReviewPanel } from './CallReviewPanel'
 import {
   ANALYTICS_TABLE_HEAD,
@@ -24,7 +26,7 @@ import { formatDateTime as formatDateTimeLocale } from '@/lib/localeFormat'
 type TelephonyFilter = '' | TelephonyType
 type CategoryFilter = '' | ScorecardCategory
 
-const PAGE_SIZE = 50
+const PAGE_SIZE = 10
 
 const CALL_TYPE_TONE: Record<string, string> = {
   white: 'bg-[#F3F4F6] text-[#374151]',
@@ -90,6 +92,8 @@ export function DialogsListTab() {
   const scoped = useScopedUserIds(operators)
 
   const [selectedEmployeeIds, setSelectedEmployeeIds] = useState<number[]>([])
+  const [nameQuery, setNameQuery] = useState('')
+  const debouncedName = useDebounce(nameQuery, 300)
   const [departmentId, setDepartmentId] = useState<number | 'all'>('all')
   const [telephonyType, setTelephonyType] = useState<TelephonyFilter>('')
   const [category, setCategory] = useState<CategoryFilter>('')
@@ -146,8 +150,15 @@ export function DialogsListTab() {
       )
       ids = (ids ?? operators.map((o) => o.id)).filter((id) => inDept.has(id))
     }
+    const q = debouncedName.trim().toLowerCase()
+    if (q) {
+      const named = new Set(
+        operators.filter((o) => o.full_name?.toLowerCase().includes(q)).map((o) => o.id)
+      )
+      ids = (ids ?? operators.map((o) => o.id)).filter((id) => named.has(id))
+    }
     return ids
-  }, [selectedEmployeeIds, scoped.userIds, departmentId, operators])
+  }, [selectedEmployeeIds, scoped.userIds, departmentId, operators, debouncedName])
 
   const { extensions, operatorByExtension } = useMemo(() => {
     const base = operatorIds ?? operators.map((o) => o.id)
@@ -262,6 +273,7 @@ export function DialogsListTab() {
 
   const clearFilters = () => {
     setSelectedEmployeeIds([])
+    setNameQuery('')
     setDepartmentId('all')
     setTelephonyType('')
     setCategory('')
@@ -272,7 +284,7 @@ export function DialogsListTab() {
   const hasAnyFilter =
     selectedEmployeeIds.length > 0 ||
     departmentId !== 'all' ||
-    !!(telephonyType || category || callFrom || callTo || minDuration)
+    !!(nameQuery || telephonyType || category || callFrom || callTo || minDuration)
 
   const inputCls =
     'h-9 rounded-lg border border-[#DFDFDF] bg-white px-3 text-xs text-[#05040D] focus:outline-none'
@@ -281,6 +293,12 @@ export function DialogsListTab() {
     <div className="flex flex-col gap-3">
       {confirmDialog}
       <div className="flex flex-wrap items-center gap-2">
+        <input
+          value={nameQuery}
+          onChange={(e) => setNameQuery(e.target.value)}
+          placeholder={t('pages.training.dialogue.filters.namePlaceholder', 'Search by full name…')}
+          className={`${inputCls} w-[200px]`}
+        />
         <EmployeeMultiSelect
           value={selectedEmployeeIds}
           onChange={setSelectedEmployeeIds}
@@ -519,7 +537,12 @@ function DialogsTable({
               <td className={`${ANALYTICS_TABLE_TD} whitespace-nowrap`}>
                 {formatDateTime(call.initiated_at, i18n.language)}
               </td>
-              <td className={ANALYTICS_TABLE_TD}>{op?.name ?? call.agent_extension}</td>
+              <td className={ANALYTICS_TABLE_TD}>
+                <span className="flex items-center gap-2">
+                  <EmployeeAvatar name={op?.name ?? call.agent_extension} seed={op?.id} />
+                  <span className="truncate">{op?.name ?? call.agent_extension}</span>
+                </span>
+              </td>
               <td className={ANALYTICS_TABLE_TD}>
                 {op ? (trainerByOperator.get(op.id) ?? '—') : '—'}
               </td>
