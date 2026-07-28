@@ -763,3 +763,47 @@ input[type='datetime-local']::-webkit-calendar-picker-indicator:hover {
 .dialer-queue-card button[role='switch'][aria-checked='true'] > span {
   background-color: #ffffff;
 }
+
+/* Add-from-CRM (KAN-379, design: supervisor-06): identical table look to the
+   Queue List card — reset the DataTable's own card chrome, Gray-50 column header
+   with white column dividers (default height), first-row-white zebra, no body
+   column dividers, and weight-300 body content. Scoped so no other table is
+   affected. */
+.dialer-crm-card .data-table-scroll {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  padding-bottom: 0;
+}
+/* Select row (bulk header: Selected N of Y + destination + Add-to-queue): keep
+   its vertical padding but drop the divider + shadow so it reads as one surface
+   with the column header. */
+.dialer-crm-card .data-table-scroll .min-w-full > div:first-child {
+  padding-top: 0.625rem;
+  padding-bottom: 0.625rem;
+  border-bottom: 0;
+  box-shadow: none;
+}
+.dialer-crm-card table thead tr,
+.dialer-crm-card table thead th {
+  background-color: var(--color-gray-50); /* #F7F7F7 — same as Queue List */
+}
+.dialer-crm-card table thead th {
+  border-right-color: #ffffff;
+  border-bottom: 0;
+  /* The DataTable stamps the (padded) select-row height onto every column
+     header via an inline style; pin it back to the standard row height so the
+     header is not taller than the Queue List / the body rows. */
+  height: 49px !important;
+}
+.dialer-crm-card table tbody tr:nth-child(odd) {
+  background-color: #ffffff;
+}
+.dialer-crm-card table tbody tr:nth-child(even) {
+  background-color: #f2f3f066; /* light-50 @ 40% */
+}
+.dialer-crm-card table tbody td {
+  border-right: 0;
+  font-weight: 300;
+}

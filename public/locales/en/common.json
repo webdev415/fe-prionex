@@ -197,7 +197,7 @@
       "anyDepartment": "All departments",
       "clearAll": "Clear All",
       "applyFilters": "Apply Filters",
-      "found": "Found: {{count}} clients",
+      "found": "Found: {{total}} clients",
       "selected": "{{count}} selected",
       "addToDialer": "Add to dialer",
       "addToQueue": "Add to queue",

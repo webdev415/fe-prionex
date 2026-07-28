@@ -17,6 +17,8 @@ import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/Button'
 import { DataTable, type Column } from '@/components/ui/DataTable'
+import { Pagination } from '@/components/ui/Pagination'
+import { TableSkeleton } from '@/components/ui/TableSkeleton'
 import {
   Select,
   SelectContent,
@@ -30,9 +32,10 @@ import { useDepartments } from '@/features/departments'
 import { useAddClientsToQueue, useDialerQueues } from '@/features/dialer'
 import { useTags } from '@/features/tags/hooks/useTags'
 import { usersApi } from '@/features/users/api/usersApi'
+import { Icons } from '@/lib/icons'
 import { useAuthStore } from '@/stores/authStore'
 
-const PAGE_SIZE = 100
+const DEFAULT_PAGE_SIZE = 20
 const ALL = 'all'
 
 /** "Last contact more than N days ago" presets → number of days. */
@@ -82,6 +85,8 @@ export function AddFromCrmTab() {
 
   const [selected, setSelected] = useState<Set<number | string>>(new Set())
   const [destQueueId, setDestQueueId] = useState<number | null>(null)
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE)
 
   const addMutation = useAddClientsToQueue()
 
@@ -100,7 +105,7 @@ export function AddFromCrmTab() {
   const departmentEmployeeIds = deptMembers.data?.users.map((u) => u.id) ?? []
 
   const apiParams: GetClientsParams = useMemo(() => {
-    const params: GetClientsParams = { skip: 0, limit: PAGE_SIZE }
+    const params: GetClientsParams = { skip: (page - 1) * pageSize, limit: pageSize }
     if (applied.tagId) params.tag_ids = String(applied.tagId)
     if (applied.lastContactDays) params.interaction_date_to = daysAgoIso(applied.lastContactDays)
     if (applied.departmentId) {
@@ -110,7 +115,7 @@ export function AddFromCrmTab() {
     return params
     // departmentEmployeeIds is derived from applied.departmentId's query.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [applied, departmentEmployeeIds.join(',')])
+  }, [applied, page, pageSize, departmentEmployeeIds.join(',')])
 
   // Wait for department members before querying clients (avoids a flash of the
   // unfiltered list while members resolve).
@@ -124,14 +129,22 @@ export function AddFromCrmTab() {
   const clients = clientsData?.items ?? []
   const total = clientsData?.total ?? 0
 
+  const totalPages = Math.max(1, Math.ceil(total / pageSize))
+
   const applyFilters = () => {
     setApplied(draft)
     setSelected(new Set())
+    setPage(1)
   }
   const clearFilters = () => {
     setDraft(EMPTY_FILTERS)
     setApplied(EMPTY_FILTERS)
     setSelected(new Set())
+    setPage(1)
+  }
+  const handlePageSizeChange = (size: number) => {
+    setPageSize(size)
+    setPage(1)
   }
 
   const handleAdd = async () => {
@@ -179,7 +192,6 @@ export function AddFromCrmTab() {
       {
         key: 'last_contact_date',
         header: t('dialer.crm.lastContact', 'Last contact'),
-        align: 'right',
         render: (c) => relativeDays(c.last_contact_date ?? c.last_ta_date),
       },
     ],
@@ -188,124 +200,104 @@ export function AddFromCrmTab() {
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Filter bar */}
-      <div className="border-border grid grid-cols-1 gap-3 rounded-xl border bg-white p-4 sm:grid-cols-3">
-        <div>
-          <label className="text-muted-foreground mb-1 block text-xs">
-            {t('dialer.crm.filterTag', 'Client tag')}
-          </label>
-          <Select
-            value={draft.tagId ? String(draft.tagId) : ALL}
-            onValueChange={(v) => setDraft((d) => ({ ...d, tagId: v === ALL ? null : Number(v) }))}
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ALL}>{t('dialer.crm.anyTag', 'Any tag')}</SelectItem>
-              {(tags ?? []).map((tag) => (
-                <SelectItem key={tag.id} value={String(tag.id)}>
-                  {tag.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div>
-          <label className="text-muted-foreground mb-1 block text-xs">
-            {t('dialer.crm.filterLastContact', 'Last contact')}
-          </label>
-          <Select
-            value={draft.lastContactDays ? String(draft.lastContactDays) : ALL}
-            onValueChange={(v) =>
-              setDraft((d) => ({ ...d, lastContactDays: v === ALL ? null : Number(v) }))
-            }
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ALL}>{t('dialer.crm.anyTime', 'Any time')}</SelectItem>
-              {LAST_CONTACT_OPTIONS.map((days) => (
-                <SelectItem key={days} value={String(days)}>
-                  {t('dialer.crm.moreThanDays', 'More than {{days}} days ago', { days })}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div>
-          <label className="text-muted-foreground mb-1 block text-xs">
-            {t('dialer.crm.filterDepartment', 'Department')}
-          </label>
-          <Select
-            value={draft.departmentId ? String(draft.departmentId) : ALL}
-            onValueChange={(v) =>
-              setDraft((d) => ({ ...d, departmentId: v === ALL ? null : Number(v) }))
-            }
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ALL}>
-                {t('dialer.crm.anyDepartment', 'All departments')}
-              </SelectItem>
-              {departments.map((dept) => (
-                <SelectItem key={dept.id} value={String(dept.id)}>
-                  {dept.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="flex items-end gap-2 sm:col-span-3 sm:justify-end">
-          <Button variant="secondary" onClick={clearFilters}>
-            {t('dialer.crm.clearAll', 'Clear All')}
-          </Button>
-          <Button variant="primary" onClick={applyFilters}>
-            {t('dialer.crm.applyFilters', 'Apply Filters')}
-          </Button>
-        </div>
-      </div>
-
-      {/* Selection + destination + action */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-muted-foreground text-sm">
-          {t('dialer.crm.found', 'Found: {{count}} clients', { count: total })}
-          {selected.size > 0
-            ? ` · ${t('dialer.crm.selected', '{{count}} selected', { count: selected.size })}`
-            : ''}
-        </p>
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="w-56">
+      {/* Filter bar (design: supervisor-06) */}
+      <div className="rounded-xl bg-white/50 px-6 py-5">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <div>
+            <label className="text-dark-500 mb-1 block text-xs font-medium">
+              {t('dialer.crm.filterTag', 'Client tag')}
+            </label>
             <Select
-              value={destQueueId ? String(destQueueId) : undefined}
-              onValueChange={(v) => setDestQueueId(Number(v))}
+              value={draft.tagId ? String(draft.tagId) : ALL}
+              onValueChange={(v) =>
+                setDraft((d) => ({ ...d, tagId: v === ALL ? null : Number(v) }))
+              }
             >
               <SelectTrigger>
-                <SelectValue placeholder={t('dialer.crm.addToDialer', 'Add to dialer')} />
+                <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {(queues ?? []).map((q) => (
-                  <SelectItem key={q.id} value={String(q.id)}>
-                    {q.name}
+                <SelectItem value={ALL}>{t('dialer.crm.anyTag', 'Any tag')}</SelectItem>
+                {(tags ?? []).map((tag) => (
+                  <SelectItem key={tag.id} value={String(tag.id)}>
+                    {tag.name}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
-          <Button
-            variant="primary"
-            onClick={handleAdd}
-            disabled={!destQueueId || selected.size === 0}
-            isLoading={addMutation.isPending}
-          >
-            {t('dialer.crm.addToQueue', 'Add to queue')}
-          </Button>
+
+          <div>
+            <label className="text-dark-500 mb-1 block text-xs font-medium">
+              {t('dialer.crm.filterLastContact', 'Last contact')}
+            </label>
+            <Select
+              value={draft.lastContactDays ? String(draft.lastContactDays) : ALL}
+              onValueChange={(v) =>
+                setDraft((d) => ({ ...d, lastContactDays: v === ALL ? null : Number(v) }))
+              }
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ALL}>{t('dialer.crm.anyTime', 'Any time')}</SelectItem>
+                {LAST_CONTACT_OPTIONS.map((days) => (
+                  <SelectItem key={days} value={String(days)}>
+                    {t('dialer.crm.moreThanDays', 'More than {{days}} days ago', { days })}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <label className="text-dark-500 mb-1 block text-xs font-medium">
+              {t('dialer.crm.filterDepartment', 'Department')}
+            </label>
+            <Select
+              value={draft.departmentId ? String(draft.departmentId) : ALL}
+              onValueChange={(v) =>
+                setDraft((d) => ({ ...d, departmentId: v === ALL ? null : Number(v) }))
+              }
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ALL}>
+                  {t('dialer.crm.anyDepartment', 'All departments')}
+                </SelectItem>
+                {departments.map((dept) => (
+                  <SelectItem key={dept.id} value={String(dept.id)}>
+                    {dept.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        {/* Found count + Clear All / Apply Filters on one line (design: supervisor-06). */}
+        <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-muted-foreground text-sm font-light">
+            {t('dialer.crm.found', 'Found: {{total}} clients', {
+              total: total.toLocaleString(),
+            })}
+          </p>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="white-secondary"
+              onClick={clearFilters}
+              leftIcon={<Icons.Reload size={18} strokeWidth={1.5} />}
+              className="h-[45px] rounded"
+            >
+              {t('dialer.crm.clearAll', 'Clear All')}
+            </Button>
+            <Button variant="secondary" onClick={applyFilters} className="h-[45px] w-40 rounded">
+              {t('dialer.crm.applyFilters', 'Apply Filters')}
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -314,28 +306,74 @@ export function AddFromCrmTab() {
           {t('dialer.crm.loadError', 'Failed to load clients.')}
         </div>
       ) : isLoading ? (
-        <div className="text-muted-foreground border-border rounded-xl border bg-white p-10 text-center text-sm">
-          {t('common.loading', 'Loading...')}
+        <div className="dialer-crm-card overflow-hidden rounded-xl bg-white/50 shadow-[0px_1px_3px_0px_#00000012]">
+          <TableSkeleton
+            columns={4}
+            rows={8}
+            enableBulkSelection
+            showBulkHeader
+            className="rounded-none! border-0! bg-transparent! shadow-none!"
+          />
         </div>
       ) : (
-        <DataTable
-          columns={columns}
-          data={clients}
-          enableBulkSelection
-          selectedItems={selected}
-          onSelectionChange={setSelected}
-          totalCount={total}
-          emptyMessage={t('dialer.crm.empty', 'No clients match these filters.')}
-        />
-      )}
-
-      {total > clients.length && (
-        <p className="text-muted-foreground text-center text-xs">
-          {t('dialer.crm.showingFirst', 'Showing the first {{shown}} of {{total}} clients.', {
-            shown: clients.length,
-            total,
-          })}
-        </p>
+        <div className="dialer-crm-card overflow-hidden rounded-xl bg-white/50 shadow-[0px_1px_3px_0px_#00000012]">
+          <DataTable
+            columns={columns}
+            data={clients}
+            enableBulkSelection
+            selectedItems={selected}
+            onSelectionChange={setSelected}
+            totalCount={total}
+            emptyMessage={t('dialer.crm.empty', 'No clients match these filters.')}
+            // Destination + action live in the table's bulk header (design:
+            // supervisor-06 — same line as the "Selected N of Y" checkbox).
+            bulkHeaderActions={
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-dark-500 hidden text-sm font-medium sm:inline">
+                  {t('dialer.crm.addToDialer', 'Add to dialer')}:
+                </span>
+                <div className="w-56">
+                  <Select
+                    value={destQueueId ? String(destQueueId) : undefined}
+                    onValueChange={(v) => setDestQueueId(Number(v))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={t('dialer.crm.selectQueue', 'Select queue')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(queues ?? []).map((q) => (
+                        <SelectItem key={q.id} value={String(q.id)}>
+                          {q.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button
+                  variant="primary"
+                  size="lg"
+                  onClick={handleAdd}
+                  disabled={!destQueueId || selected.size === 0}
+                  isLoading={addMutation.isPending}
+                  leftIcon={<Icons.PlusSignCircle size={20} strokeWidth={1.5} />}
+                  className="h-[45px] rounded-md text-sm leading-[150%] font-medium tracking-[-0.02em]"
+                >
+                  {t('dialer.crm.addToQueue', 'Add to queue')}
+                </Button>
+              </div>
+            }
+          />
+          {total > 0 && (
+            <Pagination
+              currentPage={page}
+              totalPages={totalPages}
+              pageSize={pageSize}
+              onPageChange={setPage}
+              onPageSizeChange={handlePageSizeChange}
+              className="border-t border-gray-100 bg-gray-50 px-4"
+            />
+          )}
+        </div>
       )}
     </div>
   )

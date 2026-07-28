@@ -277,7 +277,7 @@ export function QueueListTab() {
             size="lg"
             leftIcon={<Icons.PlusSignCircle size={20} strokeWidth={1.5} />}
             onClick={openCreate}
-            className="h-[45px] text-sm leading-[150%] font-medium tracking-[-0.02em]"
+            className="h-[45px] rounded-md text-sm leading-[150%] font-medium tracking-[-0.02em]"
           >
             {t('dialer.queueList.addNew', 'Add new queue')}
           </Button>

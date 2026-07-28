@@ -197,7 +197,7 @@
       "anyDepartment": "Усі відділи",
       "clearAll": "Очистити все",
       "applyFilters": "Застосувати фільтри",
-      "found": "Знайдено: {{count}} клієнтів",
+      "found": "Знайдено: {{total}} клієнтів",
       "selected": "Вибрано: {{count}}",
       "addToDialer": "Додати до дайлера",
       "addToQueue": "Додати до черги",
