@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { contactTypePillToneClass, sortContactsByTypeOrder } from './contactTypeVisualHelpers'
+import {
+  contactTypePillStyle,
+  contactTypePillToneClass,
+  sortContactsByTypeOrder,
+} from './contactTypeVisualHelpers'
 
 describe('sortContactsByTypeOrder', () => {
   const types = new Map([
@@ -23,6 +27,23 @@ describe('sortContactsByTypeOrder', () => {
       { id: 1, contactTypeId: 29 },
     ]
     expect(sortContactsByTypeOrder(contacts, types).map((c) => c.id)).toEqual([1, 9])
+  })
+})
+
+describe('contactTypePillStyle', () => {
+  it('returns inline styles from admin-picked color', () => {
+    const style = contactTypePillStyle('#FF6B6B')
+    expect(style).toEqual({
+      borderColor: '#FF6B6B',
+      backgroundColor: '#FF6B6B20',
+      color: '#FF6B6B',
+    })
+  })
+
+  it('returns null when no color is provided', () => {
+    expect(contactTypePillStyle(null)).toBeNull()
+    expect(contactTypePillStyle(undefined)).toBeNull()
+    expect(contactTypePillStyle('')).toBeNull()
   })
 })
 

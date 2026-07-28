@@ -32,6 +32,7 @@ import { ALL_MESSAGING_SEND_PERMISSIONS } from '@/features/messaging/utils/messa
 import { contactTypeLabel } from '@/features/clients/utils/contactTypeLabel'
 import { ContactTypePillIcon } from '@/features/clients/utils/contactTypeVisual'
 import {
+  contactTypePillStyle,
   contactTypePillToneClass,
   sortContactsByTypeOrder,
 } from '@/features/clients/utils/contactTypeVisualHelpers'
@@ -580,8 +581,9 @@ function ContactCard({
                 data-testid="contact-type-pill"
                 className={cn(
                   'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] leading-[1.4] font-semibold whitespace-nowrap',
-                  contactTypePillToneClass(contact.contactTypeCode, isPhone)
+                  !typeMeta?.color && contactTypePillToneClass(contact.contactTypeCode, isPhone)
                 )}
+                style={contactTypePillStyle(typeMeta?.color) ?? undefined}
               >
                 <ContactTypePillIcon
                   contactSource={typeMeta?.contact_source}
