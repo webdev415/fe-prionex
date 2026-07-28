@@ -199,8 +199,6 @@ export interface ClientFilters {
   /** Active Tag Service segment preset (mutually exclusive with manual tags) */
   segmentId?: number
 
-  rrStatusIds?: number[]
-
   // Chain filter — TA Chain ID. Narrows to clients with at least one
   // ta_interaction in this chain. Pairs with ``chainStepIds`` (steps in
   // that chain) and ``stepValues`` (per-step value bounds).
@@ -283,7 +281,6 @@ export function ClientManagementPage() {
   // URL state for filters
   const [portfolioFilter, setPortfolioFilter] = useURLState<number[]>('sellers', [])
   const [tagIdsFilter, setTagIdsFilter] = useURLState<number[]>('tags', [])
-  const [rrStatusFilter, setRrStatusFilter] = useURLState<number[]>('rr_status', [])
   const [excludeTagIdsFilter, setExcludeTagIdsFilter] = useURLState<number[]>('excludeTags', [])
   const [segmentIdFilter, setSegmentIdFilter] = useURLState<number>('segment', 0)
   const [responsibleEmployeeFilter, setResponsibleEmployeeFilter] = useURLState<string>(
@@ -355,7 +352,6 @@ export function ClientManagementPage() {
     () => ({
       portfolio: portfolioFilter,
       tagIds: tagIdsFilter,
-      rrStatusIds: rrStatusFilter,
       excludeTagIds: excludeTagIdsFilter,
       segmentId: segmentIdFilter || undefined,
       responsibleEmployee: responsibleEmployeeFilter || undefined,
@@ -384,7 +380,6 @@ export function ClientManagementPage() {
     [
       portfolioFilter,
       tagIdsFilter,
-      rrStatusFilter,
       excludeTagIdsFilter,
       segmentIdFilter,
       responsibleEmployeeFilter,
@@ -487,7 +482,6 @@ export function ClientManagementPage() {
       sortOrder,
       portfolioFilter,
       tagIdsFilter,
-      rrStatusFilter,
       excludeTagIdsFilter,
       segmentIdFilter,
       responsibleEmployeeIdsFilter,
@@ -523,7 +517,6 @@ export function ClientManagementPage() {
       responsibleSearcherFilter !== '' ||
       portfolioFilter.length > 0 ||
       tagIdsFilter.length > 0 ||
-      rrStatusFilter.length > 0 ||
       excludeTagIdsFilter.length > 0 ||
       segmentIdFilter > 0 ||
       unassignedOnlyFilter ||
@@ -562,7 +555,6 @@ export function ClientManagementPage() {
     sortOrder,
     portfolioFilter,
     tagIdsFilter,
-    rrStatusFilter,
     excludeTagIdsFilter,
     segmentIdFilter,
     responsibleEmployeeFilter,
@@ -602,7 +594,6 @@ export function ClientManagementPage() {
       responsibleEmployeeIdsFilter.length > 0 ||
       portfolioFilter.length > 0 ||
       tagIdsFilter.length > 0 ||
-      rrStatusFilter.length > 0 ||
       excludeTagIdsFilter.length > 0 ||
       segmentIdFilter > 0 ||
       unassignedOnlyFilter ||
@@ -633,7 +624,6 @@ export function ClientManagementPage() {
             if (parsed.selectedPriorities) setSelectedPriorities(parsed.selectedPriorities)
             if (parsed.portfolioFilter) setPortfolioFilter(parsed.portfolioFilter)
             if (parsed.tagIdsFilter) setTagIdsFilter(parsed.tagIdsFilter)
-            if (parsed.rrStatusFilter) setRrStatusFilter(parsed.rrStatusFilter)
             if (parsed.excludeTagIdsFilter) setExcludeTagIdsFilter(parsed.excludeTagIdsFilter)
             if (parsed.segmentIdFilter) setSegmentIdFilter(parsed.segmentIdFilter)
             // Migrate legacy scalar `responsibleEmployeeFilter` to the new
@@ -885,10 +875,6 @@ export function ClientManagementPage() {
       if (filters.excludeTagIds && filters.excludeTagIds.length > 0) {
         params.exclude_tag_ids = filters.excludeTagIds.join(',')
       }
-    }
-
-    if (filters.rrStatusIds && filters.rrStatusIds.length > 0) {
-      params.rr_status_in = filters.rrStatusIds.join(',')
     }
 
     // FILTER 10: Priority
@@ -1475,16 +1461,6 @@ export function ClientManagementPage() {
       return
     }
 
-    if (newFilters._action === 'toggleRrStatus') {
-      const statusId = newFilters._value as number
-      const checked = newFilters._checked as boolean
-      setRrStatusFilter((prev) =>
-        checked ? [...prev, statusId] : prev.filter((id) => id !== statusId)
-      )
-      setCurrentPage(1)
-      return
-    }
-
     // Handle regular filter updates (non-toggle actions)
     // Only update if value has actually changed (use JSON.stringify for deep comparison)
     if (JSON.stringify(newFilters.portfolio) !== JSON.stringify(portfolioFilter)) {
@@ -1492,9 +1468,6 @@ export function ClientManagementPage() {
     }
     if (JSON.stringify(newFilters.tagIds) !== JSON.stringify(tagIdsFilter)) {
       setTagIdsFilter(newFilters.tagIds || [])
-    }
-    if (JSON.stringify(newFilters.rrStatusIds) !== JSON.stringify(rrStatusFilter)) {
-      setRrStatusFilter(newFilters.rrStatusIds || [])
     }
     if (JSON.stringify(newFilters.excludeTagIds) !== JSON.stringify(excludeTagIdsFilter)) {
       setExcludeTagIdsFilter(newFilters.excludeTagIds || [])
@@ -1600,7 +1573,6 @@ export function ClientManagementPage() {
     setSelectedPriorities([])
     setPortfolioFilter([])
     setTagIdsFilter([])
-    setRrStatusFilter([])
     setExcludeTagIdsFilter([])
     setSegmentIdFilter(0)
     setResponsibleEmployeeFilter('')

@@ -122,7 +122,6 @@ export interface CreateRestructuringAgreementRequest {
   connection_date?: string | null
   restructuring_amount: number
   num_payments: number
-  save_mode?: 'draft' | 'active'
   payments: Array<{
     payment_date?: string | null
     payment_amount?: number | null
@@ -354,7 +353,6 @@ export interface GetClientsParams {
 
   // Filter: Portfolio/Sellers
   seller_ids?: string // Comma-separated seller IDs (e.g., "1,5,12")
-  rr_status_in?: string // Comma-separated RR status IDs (e.g., "6,1")
 
   // Filter: Date Range
   sale_date_from?: string // YYYY-MM-DD format
