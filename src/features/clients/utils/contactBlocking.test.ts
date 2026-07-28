@@ -28,13 +28,16 @@ describe('isCallBlocked', () => {
 })
 
 describe('isMessageBlocked', () => {
-  it('is true when blocks_sms OR blocks_spam is set', () => {
+  it('is true only when blocks_sms is set', () => {
     expect(isMessageBlocked(flags({ blocks_sms: true }))).toBe(true)
-    expect(isMessageBlocked(flags({ blocks_spam: true }))).toBe(true)
     expect(isMessageBlocked(flags({ blocks_sms: true, blocks_spam: true }))).toBe(true)
   })
 
-  it('is false when neither message flag is set', () => {
+  it('ignores blocks_spam (it governs the Spam-calls option, not the Message icon)', () => {
+    expect(isMessageBlocked(flags({ blocks_spam: true }))).toBe(false)
+  })
+
+  it('is false when blocks_sms is not set', () => {
     expect(isMessageBlocked(flags({ blocks_calls: true }))).toBe(false)
     expect(isMessageBlocked(flags())).toBe(false)
     expect(isMessageBlocked(null)).toBe(false)
@@ -60,7 +63,7 @@ describe('callBlockReason', () => {
 })
 
 describe('messageBlockReason', () => {
-  it('names both SMS- and Spam-blocking tags', () => {
+  it('names only SMS-blocking tags (not spam)', () => {
     const reason = messageBlockReason(
       flags({
         blocks_sms: true,
@@ -72,7 +75,7 @@ describe('messageBlockReason', () => {
         ],
       })
     )
-    expect(reason).toBe('SMS blocked: Do Not SMS; Spam blocked: Do Not Spam')
+    expect(reason).toBe('SMS blocked: Do Not SMS')
   })
 
   it('is empty when nothing blocks messages', () => {
