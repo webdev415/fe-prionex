@@ -740,6 +740,7 @@ export interface ContactTypeOption {
   show_in_client_detail: boolean
   is_hidden: boolean
   contact_source: ContactSource
+  color: string
 }
 
 export interface ContactTypeCreatePayload {
@@ -749,6 +750,7 @@ export interface ContactTypeCreatePayload {
   show_as_primary_phone: boolean
   sort_order: number
   contact_source?: ContactSource
+  color?: string
 }
 
 export interface ContactTypePatchPayload {
@@ -760,6 +762,7 @@ export interface ContactTypePatchPayload {
   sort_order?: number
   is_hidden?: boolean
   contact_source?: ContactSource
+  color?: string
 }
 
 export interface WriteoffsResponse {
