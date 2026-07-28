@@ -869,6 +869,18 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             icon: 'chart-01',
             requiredPermission: PERMISSIONS.SCORING_CONFIG.VIEW,
           },
+          // Scoring v3 operator work list (KAN-791). Hidden until the shadow-run
+          // is signed off — enable by setting VITE_V3_WORKLIST_ENABLED=true.
+          ...(import.meta.env.VITE_V3_WORKLIST_ENABLED === 'true'
+            ? [
+                {
+                  path: '/dashboard/operator-work-list',
+                  label: t('navigation.operatorWorkList', 'Priority Work List'),
+                  icon: 'chart-01',
+                  requiredPermission: PERMISSIONS.SCORING_CONFIG.VIEW,
+                },
+              ]
+            : []),
           {
             path: '/dashboard/system-settings/repayment-configuration',
             label: t('navigation.repaymentConfiguration'),

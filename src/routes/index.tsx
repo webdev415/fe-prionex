@@ -146,6 +146,11 @@ const ConfigurationHistoryPage = lazy(() =>
     default: m.ConfigurationHistoryPage,
   }))
 )
+const OperatorWorkListPage = lazy(() =>
+  import('@/pages/OperatorWorkList').then((m) => ({
+    default: m.OperatorWorkListPage,
+  }))
+)
 const AuditLogsPage = lazy(() =>
   import('@/pages/AuditLogs').then((m) => ({ default: m.AuditLogsPage }))
 )
@@ -457,6 +462,16 @@ export const router = createBrowserRouter([
         element: (
           <PermissionRoute requiredPermission={PERMISSIONS.SCORING_CONFIG.VIEW}>
             {withSuspense(<ScoringConfigurationPage />)}
+          </PermissionRoute>
+        ),
+      },
+      {
+        // Scoring v3 operator work list (KAN-791). Permission-gated; nav entry is
+        // additionally feature-flagged off until the shadow-run is signed off.
+        path: 'operator-work-list',
+        element: (
+          <PermissionRoute requiredPermission={PERMISSIONS.SCORING_CONFIG.VIEW}>
+            {withSuspense(<OperatorWorkListPage />)}
           </PermissionRoute>
         ),
       },
