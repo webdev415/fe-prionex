@@ -811,7 +811,9 @@
         },
         "actions": {
           "generated": "generated",
-          "uploaded": "uploaded"
+          "uploaded": "uploaded",
+          "received": "received (letter)",
+          "synced": "synced from mailbox"
         },
         "columns": {
           "number": "Number",

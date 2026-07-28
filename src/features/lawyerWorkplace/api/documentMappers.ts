@@ -21,7 +21,12 @@ function resolveDocumentType(value: string): LegalDocumentType {
 }
 
 function resolveDocumentAction(value: string): LegalDocumentAction {
-  return value === 'uploaded' ? 'uploaded' : 'generated'
+  // Pass known actions through; anything unexpected keeps the legacy
+  // "generated" fallback so an unknown server value never crashes the table.
+  if (value === 'uploaded' || value === 'received' || value === 'synced') {
+    return value
+  }
+  return 'generated'
 }
 
 function resolveClientName(clientId: number | null, lookup: LegalDocumentLookup): string {
