@@ -6941,6 +6941,8 @@
           "remaining_debt": "Remaining Debt",
           "debt_count": "Debt Count",
           "status": "Client Status",
+          "days_since_last_debt_purchase": "Days Since Last Debt Purchase (All)",
+          "days_since_last_active_debt_purchase": "Days Since Last Debt Purchase (Active)",
           "has_tag": "Has Tag",
           "not_has_tag": "Does Not Have Tag"
         },
