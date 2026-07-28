@@ -61,7 +61,7 @@ export function useCreateDialerQueue() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (payload: Partial<DialerQueue>) => dialerService.createQueue(payload),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: dialerQueuesKeys.lists() }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: dialerQueuesKeys.all }),
     onError: (error: Error) => toast.error(error.message || 'Failed to create queue'),
   })
 }
@@ -71,7 +71,7 @@ export function useUpdateDialerQueue() {
   return useMutation({
     mutationFn: ({ id, payload }: { id: number; payload: Partial<DialerQueue> }) =>
       dialerService.updateQueue(id, payload),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: dialerQueuesKeys.lists() }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: dialerQueuesKeys.all }),
     onError: (error: Error) => toast.error(error.message || 'Failed to update queue'),
   })
 }
@@ -80,7 +80,7 @@ export function useDeleteDialerQueue() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (id: number) => dialerService.deleteQueue(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: dialerQueuesKeys.lists() }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: dialerQueuesKeys.all }),
     onError: (error: Error) => toast.error(error.message || 'Failed to delete queue'),
   })
 }
@@ -90,7 +90,7 @@ export function useSetDialerQueueActive() {
   return useMutation({
     mutationFn: ({ id, isActive }: { id: number; isActive: boolean }) =>
       dialerService.setQueueActive(id, isActive),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: dialerQueuesKeys.lists() }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: dialerQueuesKeys.all }),
     onError: (error: Error) => toast.error(error.message || 'Failed to update queue status'),
   })
 }

@@ -151,6 +151,7 @@
       "namePlaceholder": "Enter the queue name",
       "department": "Department",
       "selectDepartment": "Select a department",
+      "allDepartments": "All departments",
       "accessGroup": "Access group",
       "selectGroup": "Select groups",
       "create": "Create queue",

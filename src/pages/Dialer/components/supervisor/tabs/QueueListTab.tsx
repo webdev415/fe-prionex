@@ -141,18 +141,24 @@ export function QueueListTab() {
     () => [
       { key: 'name', header: t('dialer.queueList.name', 'Queue name') },
       {
-        key: 'department_name',
+        key: 'department_names',
         header: t('dialer.queueList.department', 'Department'),
-        render: (q) => q.department_name ?? '—',
+        render: (q) =>
+          q.department_names?.length
+            ? q.department_names.join(', ')
+            : t('dialer.queueForm.allDepartments', 'All departments'),
       },
       {
-        key: 'access_group',
+        key: 'access_groups',
         header: t('dialer.queueList.accessGroup', 'Access group'),
-        render: (q) => {
-          const group = q.access_group as AccessGroup | undefined
-          if (!group) return '—'
-          return t(`dialer.accessGroup.${group}`, ACCESS_GROUP_LABELS[group] ?? group)
-        },
+        render: (q) =>
+          q.access_groups?.length
+            ? q.access_groups
+                .map((g) =>
+                  t(`dialer.accessGroup.${g}`, ACCESS_GROUP_LABELS[g as AccessGroup] ?? g)
+                )
+                .join(', ')
+            : t('dialer.accessGroup.all_groups', ACCESS_GROUP_LABELS.all_groups),
       },
       {
         key: 'total_in_queue',
@@ -190,7 +196,7 @@ export function QueueListTab() {
               size="sm"
               onClick={() => openEdit(q)}
               leftIcon={<Icons.PencilEdit size={16} strokeWidth={2} />}
-              className="text-foreground hover:bg-muted"
+              className="text-foreground hover:bg-muted hover:text-foreground active:bg-muted"
             >
               {t('actions.edit', 'Edit')}
             </Button>
@@ -200,7 +206,7 @@ export function QueueListTab() {
               onClick={() => handleDelete(q)}
               disabled={deleteMutation.isPending}
               leftIcon={<Icons.Delete01 size={16} strokeWidth={2} />}
-              className="text-foreground hover:bg-muted disabled:opacity-40"
+              className="text-foreground hover:bg-muted hover:text-foreground active:bg-muted disabled:opacity-40"
             >
               {t('actions.delete', 'Delete')}
             </Button>

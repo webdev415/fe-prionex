@@ -2,6 +2,10 @@
  * Add / Edit dialer queue modal (KAN-379, design: supervisor-02).
  *
  * Follows the design's add/edit form: Queue name + Department + Access group.
+ * Department and Access group are checkbox MULTI-selects (a queue can target
+ * several departments / groups). An empty selection means "All departments" /
+ * "All groups" (unrestricted), matching the backend's empty-array sentinel.
+ *
  * NOTE: the ticket's richer preset config (§4.1 — telephony type, aggressiveness,
  * SIM limits, wait/hold timings, calling hours, answer mode) is not part of this
  * modal in the current design and is deferred to a dedicated configuration
@@ -18,19 +22,13 @@ import { toast } from 'sonner'
 import { z } from 'zod'
 
 import { Button } from '@/components/ui/Button'
+import { CheckboxMultiSelect } from '@/components/ui/CheckboxMultiSelect'
 import { Input } from '@/components/ui/Input'
-import { Modal, ModalContent, ModalFooter, ModalHeader } from '@/components/ui/Modal'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/Select'
+import { Modal, ModalContent, ModalFooter, ModalTitle } from '@/components/ui/Modal'
 import { useDepartments } from '@/features/departments'
 import {
-  ACCESS_GROUPS,
   ACCESS_GROUP_LABELS,
+  ACCESS_GROUP_VALUES,
   useCreateDialerQueue,
   useUpdateDialerQueue,
   type DialerQueue,
@@ -40,8 +38,9 @@ import { useAuthStore } from '@/stores/authStore'
 
 const schema = z.object({
   name: z.string().trim().min(1, 'Queue name is required').max(120),
-  department_id: z.number().int().min(1, 'Department is required'),
-  access_group: z.enum(ACCESS_GROUPS),
+  // Empty arrays are valid — they mean "All departments" / "All groups".
+  department_ids: z.array(z.number().int()),
+  access_groups: z.array(z.string()),
 })
 
 type FormData = z.infer<typeof schema>
@@ -66,6 +65,19 @@ export function QueueFormModal({ open, queue, onClose }: QueueFormModalProps) {
   })
   const departments = useMemo(() => departmentsData?.departments ?? [], [departmentsData])
 
+  const departmentOptions = useMemo(
+    () => departments.map((d) => ({ value: d.id, label: d.name })),
+    [departments]
+  )
+  const groupOptions = useMemo(
+    () =>
+      ACCESS_GROUP_VALUES.map((g) => ({
+        value: g as string,
+        label: t(`dialer.accessGroup.${g}`, ACCESS_GROUP_LABELS[g]),
+      })),
+    [t]
+  )
+
   const createMutation = useCreateDialerQueue()
   const updateMutation = useUpdateDialerQueue()
 
@@ -79,8 +91,8 @@ export function QueueFormModal({ open, queue, onClose }: QueueFormModalProps) {
     resolver: zodResolver(schema),
     defaultValues: {
       name: queue?.name ?? '',
-      department_id: queue?.department_id ?? 0,
-      access_group: (queue?.access_group as FormData['access_group']) ?? 'all_groups',
+      department_ids: queue?.department_ids ?? [],
+      access_groups: queue?.access_groups ?? [],
     },
   })
 
@@ -88,19 +100,24 @@ export function QueueFormModal({ open, queue, onClose }: QueueFormModalProps) {
     if (open) {
       reset({
         name: queue?.name ?? '',
-        department_id: queue?.department_id ?? 0,
-        access_group: (queue?.access_group as FormData['access_group']) ?? 'all_groups',
+        department_ids: queue?.department_ids ?? [],
+        access_groups: queue?.access_groups ?? [],
       })
     }
   }, [open, queue, reset])
 
   const onSubmit = async (data: FormData) => {
+    // Resolve the denormalized labels the list renders from the picked ids.
+    const department_names = departments
+      .filter((d) => data.department_ids.includes(d.id))
+      .map((d) => d.name)
+    const payload = { ...data, department_names }
     try {
       if (isEdit && queue) {
-        await updateMutation.mutateAsync({ id: queue.id, payload: data })
+        await updateMutation.mutateAsync({ id: queue.id, payload })
         toast.success(t('dialer.queueForm.updated', 'Queue updated'))
       } else {
-        await createMutation.mutateAsync(data)
+        await createMutation.mutateAsync(payload)
         toast.success(t('dialer.queueForm.created', 'Queue created'))
       }
       onClose()
@@ -111,20 +128,25 @@ export function QueueFormModal({ open, queue, onClose }: QueueFormModalProps) {
 
   return (
     <Modal open={open} onClose={onClose} maxWidth="md">
-      <ModalHeader
-        icon={<Icons.Phone size={22} className="text-primary-600" strokeWidth={2} />}
-        title={
-          isEdit
-            ? t('dialer.queueForm.editTitle', 'Edit queue')
-            : t('dialer.queueForm.createTitle', 'Add a new queue')
-        }
-      />
+      {/* Header: green-circle dial-square icon + title, subtitle, then divider
+          (design: supervisor-02 — description sits above the divider). */}
+      <div className="border-border border-b pb-3">
+        <div className="flex items-center gap-3">
+          <div className="bg-primary-300 flex h-10 w-10 items-center justify-center rounded-full sm:h-12 sm:w-12">
+            <Icons.DialpadSquare size={20} className="text-dark-500 sm:size-6" strokeWidth={1.5} />
+          </div>
+          <ModalTitle className="text-foreground text-lg font-medium break-words sm:text-xl md:text-2xl">
+            {isEdit
+              ? t('dialer.queueForm.editTitle', 'Edit queue')
+              : t('dialer.queueForm.createTitle', 'Add a new queue')}
+          </ModalTitle>
+        </div>
+        <p className="text-muted-foreground mt-2 text-sm">
+          {t('dialer.queueForm.subtitle', 'Specify the name and set access for the queue')}
+        </p>
+      </div>
       <form onSubmit={handleSubmit(onSubmit)}>
         <ModalContent>
-          <p className="text-muted-foreground mb-4 text-sm">
-            {t('dialer.queueForm.subtitle', 'Specify the name and set access for the queue')}
-          </p>
-
           <div className="flex flex-col gap-4">
             {/* Queue name */}
             <div>
@@ -139,62 +161,42 @@ export function QueueFormModal({ open, queue, onClose }: QueueFormModalProps) {
               {errors.name && <p className="text-error-500 mt-1 text-xs">{errors.name.message}</p>}
             </div>
 
-            {/* Department */}
+            {/* Department (multi-select) */}
             <div>
               <label className="text-foreground mb-1 block text-sm font-medium">
                 {t('dialer.queueForm.department', 'Department')}
               </label>
               <Controller
                 control={control}
-                name="department_id"
+                name="department_ids"
                 render={({ field }) => (
-                  <Select
-                    value={field.value ? String(field.value) : undefined}
-                    onValueChange={(v) => field.onChange(Number(v))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue
-                        placeholder={t('dialer.queueForm.selectDepartment', 'Select a department')}
-                      />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {departments.map((dept) => (
-                        <SelectItem key={dept.id} value={String(dept.id)}>
-                          {dept.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <CheckboxMultiSelect
+                    options={departmentOptions}
+                    selected={field.value}
+                    onChange={field.onChange}
+                    allLabel={t('dialer.queueForm.allDepartments', 'All departments')}
+                    ariaLabel={t('dialer.queueForm.department', 'Department')}
+                  />
                 )}
               />
-              {errors.department_id && (
-                <p className="text-error-500 mt-1 text-xs">{errors.department_id.message}</p>
-              )}
             </div>
 
-            {/* Access group */}
+            {/* Access group (multi-select) */}
             <div>
               <label className="text-foreground mb-1 block text-sm font-medium">
                 {t('dialer.queueForm.accessGroup', 'Access group')}
               </label>
               <Controller
                 control={control}
-                name="access_group"
+                name="access_groups"
                 render={({ field }) => (
-                  <Select value={field.value} onValueChange={field.onChange}>
-                    <SelectTrigger>
-                      <SelectValue
-                        placeholder={t('dialer.queueForm.selectGroup', 'Select groups')}
-                      />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {ACCESS_GROUPS.map((group) => (
-                        <SelectItem key={group} value={group}>
-                          {t(`dialer.accessGroup.${group}`, ACCESS_GROUP_LABELS[group])}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <CheckboxMultiSelect
+                    options={groupOptions}
+                    selected={field.value}
+                    onChange={field.onChange}
+                    allLabel={t('dialer.accessGroup.all_groups', ACCESS_GROUP_LABELS.all_groups)}
+                    ariaLabel={t('dialer.queueForm.accessGroup', 'Access group')}
+                  />
                 )}
               />
             </div>
@@ -202,10 +204,10 @@ export function QueueFormModal({ open, queue, onClose }: QueueFormModalProps) {
         </ModalContent>
 
         <ModalFooter>
-          <Button type="button" variant="secondary" onClick={onClose}>
+          <Button type="button" variant="secondary" onClick={onClose} className="flex-1">
             {t('actions.cancel', 'Cancel')}
           </Button>
-          <Button type="submit" variant="primary" isLoading={isSubmitting}>
+          <Button type="submit" variant="primary" isLoading={isSubmitting} className="flex-1">
             {isEdit
               ? t('dialer.queueForm.save', 'Save changes')
               : t('dialer.queueForm.create', 'Create queue')}

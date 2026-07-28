@@ -11,6 +11,13 @@ export const ACCESS_GROUPS = ['all_groups', 'supervisor', 'operator', 'administr
 
 export type AccessGroup = (typeof ACCESS_GROUPS)[number]
 
+/**
+ * Concrete, selectable access groups for the multi-select (design: supervisor-02).
+ * Excludes the `all_groups` sentinel — an EMPTY `access_groups` array means
+ * "All groups" (unrestricted), so `all_groups` is never stored as a value.
+ */
+export const ACCESS_GROUP_VALUES = ['supervisor', 'administrator', 'operator'] as const
+
 /** i18n key suffix + fallback label per access group. */
 export const ACCESS_GROUP_LABELS: Record<AccessGroup, string> = {
   all_groups: 'All groups',

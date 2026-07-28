@@ -35,10 +35,12 @@ export type OperatorDialerStatus = 'active' | 'paused' | 'not_connected'
 export interface DialerQueue {
   id: number
   name: string
-  department_id: number
-  department_name?: string
-  /** Access group(s) that may operate this queue (Supervisor / Operator / All). */
-  access_group?: string
+  /** Departments this queue targets (multi-select). Empty = all departments. */
+  department_ids: number[]
+  /** Denormalized department labels, parallel to department_ids. */
+  department_names: string[]
+  /** Access groups that may operate this queue (multi-select). Empty = all groups. */
+  access_groups: string[]
   priority: number
   telephony_type: TelephonyType
   sim_card_limit: number

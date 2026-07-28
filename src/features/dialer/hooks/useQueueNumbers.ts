@@ -46,7 +46,7 @@ export function useConfirmQueueUpload() {
       dialerService.confirmQueueUpload(queueId, uploadToken, mode),
     onSuccess: (_data, { queueId }) => {
       queryClient.invalidateQueries({ queryKey: queueNumbersKeys.status(queueId) })
-      queryClient.invalidateQueries({ queryKey: dialerQueuesKeys.lists() })
+      queryClient.invalidateQueries({ queryKey: dialerQueuesKeys.all })
     },
     onError: (error) => toast.error(error.message || 'Failed to upload numbers'),
   })
@@ -59,7 +59,7 @@ export function useAddClientsToQueue() {
     mutationFn: ({ queueId, clientIds }) => dialerService.addClientsFromCrm(queueId, clientIds),
     onSuccess: (_data, { queueId }) => {
       queryClient.invalidateQueries({ queryKey: queueNumbersKeys.status(queueId) })
-      queryClient.invalidateQueries({ queryKey: dialerQueuesKeys.lists() })
+      queryClient.invalidateQueries({ queryKey: dialerQueuesKeys.all })
     },
     onError: (error) => toast.error(error.message || 'Failed to add clients to queue'),
   })

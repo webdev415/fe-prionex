@@ -151,6 +151,7 @@
       "namePlaceholder": "Введіть назву черги",
       "department": "Відділ",
       "selectDepartment": "Виберіть відділ",
+      "allDepartments": "Всі відділи",
       "accessGroup": "Група доступу",
       "selectGroup": "Виберіть групи",
       "create": "Створити чергу",
