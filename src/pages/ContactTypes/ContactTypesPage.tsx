@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from '@/components/ui/Select'
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch'
+import { ColorPickerField } from '@/components/forms/ColorPickerField'
 import { PermissionGuard } from '@/components/auth'
 import { PERMISSIONS } from '@/constants/permissions'
 import {
@@ -45,6 +46,7 @@ export function ContactTypesPage() {
   const [spamAllowed, setSpamAllowed] = useState(false)
   const [primaryPhone, setPrimaryPhone] = useState(false)
   const [contactSource, setContactSource] = useState<ContactSource>('client')
+  const [color, setColor] = useState('#80D80A')
   const [formError, setFormError] = useState<string | null>(null)
 
   const contactSourceLabel = (source: ContactSource) => {
@@ -67,6 +69,7 @@ export function ContactTypesPage() {
     setSpamAllowed(false)
     setPrimaryPhone(false)
     setContactSource('client')
+    setColor('#80D80A')
     setFormOpen(true)
   }
 
@@ -78,6 +81,7 @@ export function ContactTypesPage() {
     setSpamAllowed(row.spam_allowed)
     setPrimaryPhone(row.show_as_primary_phone)
     setContactSource(row.contact_source ?? 'client')
+    setColor(row.color || '#80D80A')
     setFormOpen(true)
   }
 
@@ -101,6 +105,7 @@ export function ContactTypesPage() {
             spam_allowed: spamAllowed,
             show_as_primary_phone: primaryPhone,
             contact_source: contactSource,
+            color,
           },
         },
         {
@@ -120,6 +125,7 @@ export function ContactTypesPage() {
           spam_allowed: spamAllowed,
           show_as_primary_phone: primaryPhone,
           contact_source: contactSource,
+          color,
         },
         {
           onSuccess: () => {
@@ -308,6 +314,13 @@ export function ContactTypesPage() {
             value={name}
             onChange={(e) => setName(e.target.value)}
             required
+          />
+          <ColorPickerField
+            value={color}
+            onChange={setColor}
+            label={t('pages.contactTypes.fieldColor', 'Color')}
+            showPreview
+            previewText={name || t('pages.contactTypes.fieldName', 'Name')}
           />
           <div className={isOtherSource ? 'pointer-events-none opacity-50' : undefined}>
             <p className="text-dark-500 mb-2 text-sm">

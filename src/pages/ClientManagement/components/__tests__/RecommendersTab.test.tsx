@@ -27,6 +27,7 @@ const phoneType: ContactTypeOption = {
   show_in_client_detail: true,
   is_hidden: false,
   contact_source: 'client',
+  color: '#80D80A',
 }
 
 const thirdPartyType: ContactTypeOption = {
@@ -41,6 +42,7 @@ const thirdPartyType: ContactTypeOption = {
   show_in_client_detail: true,
   is_hidden: false,
   contact_source: 'recommender',
+  color: '#80D80A',
 }
 
 const emailType: ContactTypeOption = {
@@ -55,6 +57,7 @@ const emailType: ContactTypeOption = {
   show_in_client_detail: true,
   is_hidden: false,
   contact_source: 'client',
+  color: '#80D80A',
 }
 
 const otherType: ContactTypeOption = {
@@ -69,6 +72,7 @@ const otherType: ContactTypeOption = {
   show_in_client_detail: true,
   is_hidden: false,
   contact_source: 'other',
+  color: '#80D80A',
 }
 
 const contactTypesById = new Map<number, ContactTypeOption>([
