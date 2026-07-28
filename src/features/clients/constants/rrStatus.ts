@@ -21,7 +21,7 @@ export const rrStatusMeta: Record<number, RRStatusMeta> = {
   [RR_STATUS.Draft]: {
     labelKey: 'pages.clients.rrStatus.draft',
     fallbackLabel: 'Draft',
-    badgeClass: 'bg-slate-100 text-slate-700',
+    badgeClass: 'bg-gray-200 text-gray-700',
   },
   [RR_STATUS.Connected]: {
     labelKey: 'pages.clients.rrStatus.connected',

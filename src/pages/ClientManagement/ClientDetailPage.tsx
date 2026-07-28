@@ -339,6 +339,7 @@ export function ClientDetailPage() {
       return next
     })
   const [completeRrConfirm, setCompleteRrConfirm] = useState<number | null>(null) // raId to complete
+  const [deleteDraftConfirm, setDeleteDraftConfirm] = useState<number | null>(null)
   // Disconnect modal: holds the raId to disconnect + the operator's reason.
   // null when closed; reason starts empty and is required by the backend.
   const [disconnectRrConfirm, setDisconnectRrConfirm] = useState<{
@@ -598,6 +599,7 @@ export function ClientDetailPage() {
               .join('; ')
           }
           setConnectRrError(message)
+          toast.error(message)
         },
       }
     )
@@ -2103,10 +2105,10 @@ export function ClientDetailPage() {
                     canActivateRR ? t('pages.clients.detail.activateRR', 'Activate') : noPermTip
                   }
                 >
-                  <Icons.PlayCircle02 size={18} />
+                  <Icons.Checkmark size={18} />
                 </button>
                 <button
-                  onClick={() => deleteRrDraft({ clientId, raId: row.id })}
+                  onClick={() => setDeleteDraftConfirm(row.id)}
                   disabled={draftBusy || !canDeleteRRDraft}
                   className="p-1 text-red-600 hover:text-red-800 disabled:cursor-not-allowed disabled:opacity-50"
                   title={
@@ -6547,6 +6549,59 @@ export function ClientDetailPage() {
               {isCompletingRa
                 ? t('actions.saving', 'Saving...')
                 : t('pages.clients.detail.completeRR', 'Complete RR')}
+            </Button>
+          </ModalFooter>
+        </Modal>
+
+        {/* Delete Draft RR Confirmation Modal */}
+        <Modal
+          open={deleteDraftConfirm !== null}
+          onClose={() => setDeleteDraftConfirm(null)}
+          maxWidth="md"
+        >
+          <ModalHeader
+            icon={
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-red-100">
+                <Icons.Delete size={20} className="text-red-600" strokeWidth={2} />
+              </div>
+            }
+            title={t('pages.clients.detail.deleteDraftRR', 'Delete draft')}
+          />
+          <ModalContent>
+            <p className="text-dark-500 text-base font-light">
+              {t(
+                'pages.clients.detail.confirmDeleteDraftRR',
+                'Are you sure you want to delete this draft restructuring agreement? This cannot be undone.'
+              )}
+            </p>
+          </ModalContent>
+          <ModalFooter>
+            <Button
+              type="button"
+              variant="cancel"
+              onClick={() => setDeleteDraftConfirm(null)}
+              disabled={isDeletingRrDraft}
+              className="h-[45px] flex-1 text-sm"
+            >
+              {t('actions.cancel')}
+            </Button>
+            <Button
+              type="button"
+              variant="danger"
+              onClick={() => {
+                if (deleteDraftConfirm !== null) {
+                  deleteRrDraft(
+                    { clientId, raId: deleteDraftConfirm },
+                    { onSettled: () => setDeleteDraftConfirm(null) }
+                  )
+                }
+              }}
+              disabled={isDeletingRrDraft}
+              className="h-[45px] flex-1 text-sm"
+            >
+              {isDeletingRrDraft
+                ? t('actions.saving', 'Saving...')
+                : t('pages.clients.detail.deleteDraftRR', 'Delete draft')}
             </Button>
           </ModalFooter>
         </Modal>
