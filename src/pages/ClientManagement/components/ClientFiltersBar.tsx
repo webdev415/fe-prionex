@@ -19,6 +19,7 @@ import {
 import { Icons } from '@/lib/icons'
 import { PortfolioDropdown } from './PortfolioDropdown'
 import { TagsDropdown } from './TagsDropdown'
+import { RR_STATUS_FILTER_OPTIONS, rrStatusMeta } from '@/features/clients/constants/rrStatus'
 import {
   NO_INTERACTIONS_ID,
   NO_RESPONSIBLE_ID,
@@ -248,6 +249,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
   const displayedTags = tags.slice(0, 3)
   const hiddenTagsCount = Math.max(0, tags.length - 3)
   const selectedTagIds = filters.tagIds || []
+  const selectedRrStatusIds = filters.rrStatusIds || []
 
   return (
     <div className="flex w-full flex-col items-start gap-3 self-stretch rounded-xl bg-white/50 p-4 sm:p-6">
@@ -715,6 +717,40 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                     />
                   </div>
                 )}
+              </div>
+            </div>
+            <div className="hidden sm:flex sm:min-w-[220px] sm:flex-1" />
+          </div>
+
+          <div className="flex w-full flex-col gap-4 self-stretch lg:flex-row lg:items-center lg:gap-10">
+            <div className="flex w-full flex-col gap-2 sm:min-w-[220px] sm:flex-1 sm:flex-row sm:items-center sm:gap-3">
+              <label className="text-dark-500 w-full text-xs leading-[150%] font-medium tracking-[-0.24px] sm:w-[100px] sm:text-sm sm:tracking-[-0.28px]">
+                {t('pages.clients.filters.rrStatus', 'RR status')}
+              </label>
+              <div className="flex w-full flex-1 flex-wrap items-start gap-2 sm:gap-3">
+                {RR_STATUS_FILTER_OPTIONS.map((statusId) => {
+                  const meta = rrStatusMeta[statusId]
+                  return (
+                    <label
+                      key={statusId}
+                      className="flex cursor-pointer items-center gap-1.5 sm:gap-2"
+                    >
+                      <Checkbox
+                        checked={selectedRrStatusIds.includes(statusId)}
+                        onCheckedChange={(checked) => {
+                          onFilterChange({
+                            _action: 'toggleRrStatus',
+                            _value: statusId,
+                            _checked: checked,
+                          } as unknown as ClientFilters)
+                        }}
+                      />
+                      <span className="text-dark-500 text-xs sm:text-sm">
+                        {t(meta.labelKey, meta.fallbackLabel)}
+                      </span>
+                    </label>
+                  )
+                })}
               </div>
             </div>
             <div className="hidden sm:flex sm:min-w-[220px] sm:flex-1" />
