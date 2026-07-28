@@ -406,7 +406,9 @@ describe('RecommendersTab', () => {
     expect(call).toHaveAttribute('title', 'Calls blocked: Do Not Call')
   })
 
-  it('disables the Message icon when blocks_spam is active (not only blocks_sms)', () => {
+  // blocks_spam governs the Spam-calls option in the call dialog, not the
+  // Message action icon.
+  it('does NOT disable the Message icon when only blocks_spam is active', () => {
     renderTab({
       contacts: [
         phoneContact({
@@ -420,7 +422,7 @@ describe('RecommendersTab', () => {
         }),
       ],
     })
-    expect(screen.getByTestId('action-message')).toBeDisabled()
+    expect(screen.getByTestId('action-message')).not.toBeDisabled()
   })
 
   it('disables the Message icon when blocks_sms is active', () => {

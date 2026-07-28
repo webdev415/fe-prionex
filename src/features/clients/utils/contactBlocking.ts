@@ -27,10 +27,11 @@ export function isCallBlocked(blocking?: ContactBlockingFlags | null): boolean {
 
 /**
  * A message (SMS / Viber) is blocked when the contact has an active blocks_sms
- * OR blocks_spam tag.
+ * tag.  blocks_spam governs the "Spam calls" option in the call dialog, not
+ * the Message action icon.
  */
 export function isMessageBlocked(blocking?: ContactBlockingFlags | null): boolean {
-  return Boolean(blocking?.blocks_sms || blocking?.blocks_spam)
+  return Boolean(blocking?.blocks_sms)
 }
 
 function pickReasons(reasons: string[] | undefined, prefixes: string[]): string {
@@ -46,5 +47,5 @@ export function callBlockReason(blocking?: ContactBlockingFlags | null): string 
 
 /** Tooltip text naming the tag(s) that block messages (empty if none). */
 export function messageBlockReason(blocking?: ContactBlockingFlags | null): string {
-  return pickReasons(blocking?.reasons, ['sms blocked', 'spam blocked'])
+  return pickReasons(blocking?.reasons, ['sms blocked'])
 }
