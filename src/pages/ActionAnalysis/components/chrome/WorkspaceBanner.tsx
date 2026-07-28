@@ -33,7 +33,7 @@ export function WorkspaceBanner() {
   return (
     <div
       role="status"
-      className="border-primary-200 bg-primary-50/90 text-primary-900 sticky bottom-0 z-10 -mx-4 mt-4 flex flex-wrap items-center justify-between gap-2 border-t px-4 py-2 text-[11px] font-medium backdrop-blur sm:-mx-6 sm:px-6"
+      className="border-primary-200 bg-primary-100/90 text-primary-800 sticky bottom-0 z-10 -mx-4 mt-4 flex flex-wrap items-center justify-between gap-2 border-t px-4 py-2 text-[11px] font-medium backdrop-blur sm:-mx-6 sm:px-6"
     >
       <span>{parts.join(' · ')}</span>
       <span className="text-primary-700/80 flex flex-wrap items-center gap-2">

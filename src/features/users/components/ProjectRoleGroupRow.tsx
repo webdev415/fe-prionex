@@ -57,9 +57,9 @@ export function ProjectRoleGroupRow({
   return (
     <div className="space-y-2">
       <div className="grid w-full grid-cols-1 items-center gap-2 sm:grid-cols-2 sm:gap-4">
-        <span className="text-dark-500 text-sm font-light">{projectName}:</span>
+        <span className="text-foreground text-sm font-light">{projectName}:</span>
         <Select value={selectedRoleId?.toString() || ''} onValueChange={handleRoleChange}>
-          <SelectTrigger className="border-light-50 text-dark-500 mt-1 w-full border text-sm">
+          <SelectTrigger className="border-border text-foreground mt-1 w-full border text-sm">
             <SelectValue placeholder={t('pages.users.forms.notAssigned')} />
           </SelectTrigger>
           <SelectContent>
@@ -80,14 +80,16 @@ export function ProjectRoleGroupRow({
       </div>
       {departmentId && (
         <div className="grid w-full grid-cols-1 items-center gap-2 sm:grid-cols-2 sm:gap-4">
-          <span className="text-dark-500 text-sm font-light">{t('pages.users.forms.group')}:</span>
+          <span className="text-foreground text-sm font-light">
+            {t('pages.users.forms.group')}:
+          </span>
           <Select
             value={selectedGroupId?.toString() || 'none'}
             onValueChange={(value) =>
               onGroupChange(value === 'none' ? undefined : parseInt(value, 10))
             }
           >
-            <SelectTrigger className="border-light-50 text-dark-500 mt-1 w-full border text-sm">
+            <SelectTrigger className="border-border text-foreground mt-1 w-full border text-sm">
               <SelectValue placeholder={t('pages.users.forms.noGroup')} />
             </SelectTrigger>
             <SelectContent>

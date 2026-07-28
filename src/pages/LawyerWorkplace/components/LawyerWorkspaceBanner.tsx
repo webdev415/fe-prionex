@@ -37,7 +37,7 @@ export function LawyerWorkspaceBanner({ className }: LawyerWorkspaceBannerProps)
   )
 
   const regionCode = i18n.language?.startsWith('uk') ? 'UA' : 'EN'
-  const workspaceTitle = t('pages.lawyerWorkplace.workspaceBanner.title', "Lawyers's Workspace")
+  const workspaceTitle = t('pages.lawyerWorkplace.workspaceBanner.title', "Lawyers' Workspace")
 
   if (!showWorkspaceBanner) {
     return null
@@ -55,26 +55,22 @@ export function LawyerWorkspaceBanner({ className }: LawyerWorkspaceBannerProps)
       <div className="flex w-full max-w-[820px] justify-end">
         <div
           className={cn(
-            'pointer-events-auto flex h-14 items-center overflow-hidden rounded-md border border-gray-100/90 bg-white/95 py-1 pr-1.5 shadow-[0_12px_24px_-6px_rgba(16,24,40,0.12),0_4px_8px_-2px_rgba(16,24,40,0.06)] backdrop-blur-sm',
+            'bg-card/95 border-border/90 pointer-events-auto flex h-14 items-center overflow-hidden rounded-md border py-1 pr-1.5 shadow-[0_12px_24px_-6px_rgba(16,24,40,0.12),0_4px_8px_-2px_rgba(16,24,40,0.06)] backdrop-blur-sm',
             isExpanded ? 'w-full pl-3' : 'w-auto pl-1.5'
           )}
         >
           {isExpanded && (
             <div className="flex min-w-0 flex-1 items-center gap-4 overflow-hidden whitespace-nowrap">
               <div className="flex items-center gap-2">
-                <span className="bg-secondary-800/10 text-secondary-800 shrink-0 rounded-full px-3 py-1 text-[12px] font-medium">
+                <span className="bg-primary/15 text-primary-600 shrink-0 rounded-full px-3 py-1 text-[12px] font-medium">
                   {t('pages.lawyerWorkplace.workspaceBanner.lawBadge', 'Law')}
                 </span>
-                <Icons.UserCircle02Icon
-                  size={20}
-                  strokeWidth={1.5}
-                  className="text-secondary-800"
-                />
-                <span className="text-secondary-800 text-[16px] font-medium">
+                <Icons.UserCircle02Icon size={20} strokeWidth={1.5} className="text-primary-600" />
+                <span className="text-foreground text-[16px] font-medium">
                   {workspaceTitle} · {regionCode}
                 </span>
               </div>
-              <p className="text-dark-500 hidden shrink-0 text-[14px] leading-none xl:block">
+              <p className="text-foreground hidden shrink-0 text-[14px] leading-none xl:block">
                 {activeProjectName
                   ? t('pages.lawyerWorkplace.workspaceBanner.activeProject', {
                       project: activeProjectName,
@@ -87,10 +83,10 @@ export function LawyerWorkspaceBanner({ className }: LawyerWorkspaceBannerProps)
               </p>
 
               <div className="hidden shrink-0 items-center gap-2 xl:flex">
-                <span className="bg-light-100 flex h-5 w-5 shrink-0 items-center justify-center rounded-full px-[6px] text-[12px] text-gray-800">
+                <span className="bg-muted text-foreground flex h-5 w-5 shrink-0 items-center justify-center rounded-full px-[6px] text-[12px]">
                   {activeLawyerCount}
                 </span>
-                <span className="text-dark-500 truncate text-[14px]">
+                <span className="text-foreground truncate text-[14px]">
                   {t(
                     'pages.lawyerWorkplace.workspaceBanner.lawyersInProject',
                     'lawyers in this project'
@@ -104,7 +100,7 @@ export function LawyerWorkspaceBanner({ className }: LawyerWorkspaceBannerProps)
             type="button"
             onClick={() => setIsExpanded((open) => !open)}
             className={cn(
-              'bg-primary-300 text-dark-500 flex cursor-pointer items-center justify-center rounded-lg',
+              'bg-primary-300 text-foreground flex cursor-pointer items-center justify-center rounded-lg',
               TOGGLE_SIZE_CLASS
             )}
             aria-expanded={isExpanded}

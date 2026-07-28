@@ -56,7 +56,7 @@ export function KanbanBoardToolbar({
       return (
         <KanbanTypeBadge
           type={resolveKanbanBadgeType(letterTypeId)}
-          label={option.label ?? option.fallback}
+          label={option.label ?? (option.key ? t(option.key, option.fallback) : option.fallback)}
           colorId={option.colorId}
         />
       )
@@ -65,7 +65,7 @@ export function KanbanBoardToolbar({
   )
 
   return (
-    <div className="sticky top-0 z-10 shrink-0 bg-[#F2F3F0]/95 px-4 pt-4 backdrop-blur-sm sm:px-5 lg:px-7 lg:pt-7">
+    <div className="bg-background/95 sticky top-0 z-10 shrink-0 px-4 pt-4 backdrop-blur-sm sm:px-5 lg:px-7 lg:pt-7">
       <div className="mb-3 flex items-start justify-between gap-2 sm:mb-4">
         <div
           className={cn(
@@ -75,7 +75,7 @@ export function KanbanBoardToolbar({
         >
           <h1
             className={cn(
-              'text-dark-500 truncate font-light',
+              'text-foreground truncate font-light',
               isCompact ? 'text-lg' : 'text-xl lg:text-2xl'
             )}
           >
@@ -83,7 +83,7 @@ export function KanbanBoardToolbar({
           </h1>
           <span
             className={cn(
-              'font-light whitespace-nowrap text-gray-500',
+              'text-muted-foreground font-light whitespace-nowrap',
               isCompact ? 'text-xs' : 'text-sm lg:text-base'
             )}
           >
@@ -100,7 +100,7 @@ export function KanbanBoardToolbar({
               type="button"
               onClick={onNewTask}
               aria-label={t('pages.lawyerWorkplace.kanban.newTask', 'New Task')}
-              className="bg-primary-300 text-dark-500 hover:bg-primary-400 flex h-10 w-10 cursor-pointer items-center justify-center rounded-full transition-colors"
+              className="bg-primary-300 text-foreground hover:bg-primary-400 flex h-10 w-10 cursor-pointer items-center justify-center rounded-full transition-colors"
             >
               <Icons.Add size={20} strokeWidth={2} />
             </button>
@@ -121,7 +121,7 @@ export function KanbanBoardToolbar({
               type="button"
               variant="primary"
               size="md"
-              leftIcon={<Icons.FileImport size={16} className="text-dark-500" />}
+              leftIcon={<Icons.FileImport size={16} className="text-foreground" />}
               className="h-[45px] rounded-full text-xs"
               onClick={onExportCsv}
             >
@@ -135,7 +135,7 @@ export function KanbanBoardToolbar({
         <div className={cn('min-w-0', isCompact ? 'w-full basis-full' : 'shrink-0')}>
           <div
             className={cn(
-              'flex items-stretch rounded-[8px] border border-white bg-white p-1 shadow-sm',
+              'border-card bg-card flex items-stretch rounded-[8px] border p-1 shadow-sm',
               isCompact ? 'w-full' : 'inline-flex'
             )}
           >
@@ -151,7 +151,7 @@ export function KanbanBoardToolbar({
                     : 'shrink-0 px-3 whitespace-nowrap sm:px-5 lg:px-6',
                   deadlineFilter === filter.id
                     ? 'bg-secondary-800 text-white'
-                    : 'text-dark-500 hover:bg-gray-50'
+                    : 'text-foreground hover:bg-muted'
                 )}
               >
                 <Icons.Calendar size={14} strokeWidth={1.5} className="shrink-0 sm:h-4 sm:w-4" />

@@ -18,15 +18,15 @@ export function SmsTemplatesTableSectionSkeleton() {
         <TableSkeleton columns={TABLE_COLUMNS} rows={ITEMS_PER_PAGE} className="w-full" />
       </div>
       <div className="flex w-full flex-row justify-center gap-3 sm:items-center sm:justify-between">
-        <div className="h-5 w-48 animate-pulse rounded bg-gray-200" />
+        <div className="bg-muted h-5 w-48 animate-pulse rounded" />
         <div className="flex items-center gap-2">
-          <div className="h-10 w-10 animate-pulse rounded-full bg-gray-200" />
+          <div className="bg-muted h-10 w-10 animate-pulse rounded-full" />
           {Array.from({ length: 5 }).map((_, index) => (
-            <div key={index} className="h-10 w-10 animate-pulse rounded-full bg-gray-200" />
+            <div key={index} className="bg-muted h-10 w-10 animate-pulse rounded-full" />
           ))}
-          <div className="h-10 w-10 animate-pulse rounded-full bg-gray-200" />
+          <div className="bg-muted h-10 w-10 animate-pulse rounded-full" />
         </div>
-        <div className="h-4 w-64 animate-pulse rounded bg-gray-200" />
+        <div className="bg-muted h-4 w-64 animate-pulse rounded" />
       </div>
     </>
   )
@@ -39,11 +39,11 @@ export function SmsTemplatesPageSkeleton() {
       <div className="flex items-center justify-between self-stretch">
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
-            <div className="h-8 w-48 animate-pulse rounded bg-gray-200" />
-            <div className="h-6 w-24 animate-pulse rounded bg-gray-200" />
+            <div className="bg-muted h-8 w-48 animate-pulse rounded" />
+            <div className="bg-muted h-6 w-24 animate-pulse rounded" />
           </div>
         </div>
-        <div className="h-12 w-40 animate-pulse rounded-full bg-gray-200" />
+        <div className="bg-muted h-12 w-40 animate-pulse rounded-full" />
       </div>
 
       <SmsTemplatesTableSectionSkeleton />

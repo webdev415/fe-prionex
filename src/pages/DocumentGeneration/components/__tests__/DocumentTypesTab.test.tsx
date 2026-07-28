@@ -168,7 +168,9 @@ describe('DocumentTypesTab', () => {
     renderTab()
     await waitFor(() => expect(screen.getByText('passport')).toBeInTheDocument())
 
-    await user.click(screen.getByRole('button', { name: /new type/i }))
+    // Desktop + mobile create controls both expose "New type" (jsdom ignores
+    // sm:hidden), same pattern as TagsPage dual create buttons.
+    await user.click(screen.getAllByRole('button', { name: /new type/i })[0])
     await waitFor(() => expect(screen.getByPlaceholderText(/e\.g\. Passport/i)).toBeInTheDocument())
 
     await user.type(screen.getByPlaceholderText(/e\.g\. Passport/i), 'Insurance')

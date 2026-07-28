@@ -26,8 +26,8 @@ function formatMs(ms: number): string {
 }
 
 function highlightStyles(highlight: string | null | undefined): string {
-  if (highlight === 'red') return 'bg-red-50'
-  if (highlight === 'green') return 'bg-green-50'
+  if (highlight === 'red') return 'bg-error-100'
+  if (highlight === 'green') return 'bg-success-100'
   return ''
 }
 
@@ -83,7 +83,7 @@ export function ScreenTimeTab() {
           variant="primary"
           onClick={handleExport}
           disabled={!periodReady || exportMutation.isPending || !data?.operators?.length}
-          leftIcon={<Icons.Download size={16} className="text-dark-500" />}
+          leftIcon={<Icons.Download size={16} className="text-primary-foreground" />}
           className="h-[45px] rounded-full sm:px-6"
         >
           {exportMutation.isPending
@@ -93,34 +93,34 @@ export function ScreenTimeTab() {
       </div>
 
       {!periodReady ? (
-        <div className="rounded-xl bg-white/50 p-6 text-center text-sm text-gray-500 shadow-sm">
+        <div className="bg-card/50 text-muted-foreground rounded-xl p-6 text-center text-sm shadow-sm">
           {t(
             'pages.actionAnalysis.filters.selectCustomRange',
             'Pick a custom date range to load data.'
           )}
         </div>
       ) : isError ? (
-        <div className="rounded-xl bg-red-50 p-6 text-center text-sm text-red-700 shadow-sm">
+        <div className="bg-error-100 text-error-700 rounded-xl p-6 text-center text-sm shadow-sm">
           {t(
             'pages.actionAnalysis.errors.loadScreenTimeFailed',
             'Failed to load screen-time data.'
           )}
         </div>
       ) : isPending ? (
-        <div className="overflow-x-auto rounded-xl bg-white/80 shadow-sm">
+        <div className="bg-card/80 overflow-x-auto rounded-xl shadow-sm">
           <TableSkeleton columns={6} rows={8} className="w-full" />
         </div>
       ) : !data?.operators?.length ? (
-        <div className="rounded-xl bg-white/50 p-6 text-center text-sm text-gray-500 shadow-sm">
+        <div className="bg-card/50 text-muted-foreground rounded-xl p-6 text-center text-sm shadow-sm">
           {t(
             'pages.actionAnalysis.screenTime.empty',
             'No screen-time data for the selected filters.'
           )}
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-xl bg-white/80 shadow-sm">
+        <div className="bg-card/80 overflow-x-auto rounded-xl shadow-sm">
           <table className="w-full text-sm">
-            <thead className="bg-gray-100 text-left text-xs text-gray-600 uppercase">
+            <thead className="bg-muted text-muted-foreground text-left text-xs uppercase">
               <tr>
                 <th className="px-4 py-2">
                   {t('pages.actionAnalysis.screenTime.columns.operator', 'Operator')}
@@ -146,18 +146,20 @@ export function ScreenTimeTab() {
               {data.operators.map((op) => (
                 <tr
                   key={op.operator_id}
-                  className={`border-t border-gray-100 ${highlightStyles(op.highlight)}`}
+                  className={`border-border border-t ${highlightStyles(op.highlight)}`}
                 >
-                  <td className="px-4 py-2 font-medium text-gray-800">
+                  <td className="text-foreground px-4 py-2 font-medium">
                     {operatorById.get(op.operator_id) ?? `#${op.operator_id}`}
                   </td>
-                  <td className="px-4 py-2 text-gray-700">{formatMs(op.time_to_card_open_ms)}</td>
-                  <td className="px-4 py-2 text-gray-700">{formatMs(op.time_to_form_submit_ms)}</td>
-                  <td className="px-4 py-2 text-gray-700">{formatMs(op.idle_total_ms)}</td>
-                  <td className="px-4 py-2 text-gray-700">
+                  <td className="text-foreground px-4 py-2">{formatMs(op.time_to_card_open_ms)}</td>
+                  <td className="text-foreground px-4 py-2">
+                    {formatMs(op.time_to_form_submit_ms)}
+                  </td>
+                  <td className="text-foreground px-4 py-2">{formatMs(op.idle_total_ms)}</td>
+                  <td className="text-foreground px-4 py-2">
                     {formatMs(op.after_call_processing_ms)}
                   </td>
-                  <td className="px-4 py-2 font-mono text-xs text-gray-700">
+                  <td className="text-foreground px-4 py-2 font-mono text-xs">
                     {op.deviation_pct == null
                       ? '—'
                       : `${op.deviation_pct > 0 ? '+' : ''}${op.deviation_pct}%`}

@@ -30,7 +30,7 @@ const TYPE_COLOUR: Record<string, string> = {
   complaint: 'bg-error-100 text-error-700',
   nbu_inquiry: 'bg-secondary-100 text-secondary-800',
   court_claim: 'bg-warning-100 text-warning-700',
-  attorney_request: 'bg-[#EDE9FE] text-[#6D28D9]',
+  attorney_request: 'bg-violet-100 text-violet-700',
   inquiry: 'bg-success-100 text-success-700',
 }
 
@@ -45,7 +45,7 @@ export function LetterListItem({ letter, isSelected, onSelect }: LetterListItemP
   const displayStatus = letter.status
   const status = STATUS_KEYS[displayStatus]
   const typeColour = letter.letterType
-    ? (TYPE_COLOUR[letter.letterType] ?? 'bg-gray-100 text-gray-600')
+    ? (TYPE_COLOUR[letter.letterType] ?? 'bg-muted text-muted-foreground')
     : null
 
   const isAutoProcessed = displayStatus === 'auto_processed'
@@ -58,31 +58,31 @@ export function LetterListItem({ letter, isSelected, onSelect }: LetterListItemP
       className={cn(
         'relative mx-3 my-2 w-[calc(100%-24px)] rounded-[12px] border p-3.5 text-left transition-colors',
         isSelected
-          ? 'border-primary-500 bg-primary-50'
+          ? 'border-primary-500 bg-primary/10'
           : letter.isUnprocessed
-            ? 'border-l-warning-400 border-l-2 border-white bg-orange-50/60 hover:bg-orange-100/40'
+            ? 'border-l-warning-400 border-border bg-warning-100/60 hover:bg-warning-100/40 border-l-2'
             : isAutoProcessed
               ? 'border-success-100 bg-success-50/30 hover:bg-success-50/60'
               : isDone
-                ? 'border-gray-200 bg-gray-50/80 hover:bg-gray-50'
-                : 'border-white bg-white hover:bg-gray-50/40'
+                ? 'border-border bg-muted/80 hover:bg-muted'
+                : 'border-card bg-card hover:bg-muted/40'
       )}
     >
       <div className="mb-1.5 flex items-baseline justify-between gap-2">
-        <span className="text-dark-500 min-w-0 truncate text-[13px] leading-tight font-medium">
+        <span className="text-foreground min-w-0 truncate text-[13px] leading-tight font-medium">
           {letter.senderName}
         </span>
-        <span className="text-light-700 shrink-0 text-[11px]">
+        <span className="text-muted-foreground shrink-0 text-[11px]">
           {formatLetterTime(letter.receivedAt, t, i18n.language)}
         </span>
       </div>
 
       <div className="mb-0.5 flex items-start gap-2">
-        <p className="text-light-700 flex min-w-0 flex-1 flex-wrap text-[11.5px] leading-snug">
+        <p className="text-muted-foreground flex min-w-0 flex-1 flex-wrap text-[11.5px] leading-snug">
           <span className="inline-flex items-center whitespace-nowrap">
             <span>{letter.routeFromEmail}</span>
             <span
-              className="text-light-700 inline-flex items-baseline px-0.5 py-0.5 align-baseline"
+              className="text-muted-foreground inline-flex items-baseline px-0.5 py-0.5 align-baseline"
               aria-hidden="true"
             >
               <Icons.ArrowRight02 size={10} strokeWidth={1.5} />
@@ -103,7 +103,7 @@ export function LetterListItem({ letter, isSelected, onSelect }: LetterListItemP
         )}
       </div>
 
-      <p className="text-dark-500 mt-2 mb-2 line-clamp-2 text-[12.5px] leading-snug">
+      <p className="text-foreground mt-2 mb-2 line-clamp-2 text-[12.5px] leading-snug">
         {letter.subject}
       </p>
 
@@ -119,8 +119,8 @@ export function LetterListItem({ letter, isSelected, onSelect }: LetterListItemP
             <span>{letter.letterTypeLabel}</span>
           </span>
         ) : (
-          <span className="bg-light-100 border-dotted-[1px] text-light-700 flex items-center gap-1 rounded-full border-gray-200 px-2 py-0.5 text-[10.5px] font-medium">
-            <span className="bg-light-700 h-1.5 w-1.5 rounded-full" />
+          <span className="bg-muted border-dotted-[1px] text-muted-foreground border-border flex items-center gap-1 rounded-full px-2 py-0.5 text-[10.5px] font-medium">
+            <span className="bg-muted-foreground h-1.5 w-1.5 rounded-full" />
             <span>{t('pages.lawyerWorkplace.letterItem.unclassified', 'Unclassified')}</span>
           </span>
         )}
@@ -136,11 +136,11 @@ export function LetterListItem({ letter, isSelected, onSelect }: LetterListItemP
           <div className="flex items-center gap-1">
             {letter.clientName ? (
               <>
-                <span className="text-dark-500 text-[11px]">{letter.clientName}</span>
-                <span className="text-light-700 text-[11px]"> · </span>
+                <span className="text-foreground text-[11px]">{letter.clientName}</span>
+                <span className="text-muted-foreground text-[11px]"> · </span>
               </>
             ) : null}
-            <span className="text-light-700 text-[11px]">{letter.clientCode}</span>
+            <span className="text-muted-foreground text-[11px]">{letter.clientCode}</span>
           </div>
         ) : (
           <em className="text-error-700 text-[11px] italic">

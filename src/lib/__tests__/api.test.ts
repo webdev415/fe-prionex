@@ -9,7 +9,13 @@
 import type { AxiosAdapter } from 'axios'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { api, getAccessToken, setAccessToken } from '@/lib/api'
+import {
+  api,
+  getAccessToken,
+  isDefinitiveAuthFailure,
+  runOnceOnNextAuthSuccess,
+  setAccessToken,
+} from '@/lib/api'
 import { useAuthStore } from '@/stores/authStore'
 
 const originalAdapter = api.defaults.adapter
@@ -326,5 +332,74 @@ describe('api response interceptor — transient-error retry (R3 #2)', () => {
 
       expect(attempts).toBe(1)
     }
+  })
+})
+
+// KAN-730 — only a real 401 is a definitive auth failure.
+describe('isDefinitiveAuthFailure', () => {
+  const axiosErr = (extra: Record<string, unknown>) =>
+    Object.assign(new Error('err'), { isAxiosError: true, ...extra })
+
+  it('is true only for a 401 response', () => {
+    expect(isDefinitiveAuthFailure(axiosErr({ response: { status: 401 } }))).toBe(true)
+  })
+
+  it('is false for a network error (no response)', () => {
+    expect(isDefinitiveAuthFailure(axiosErr({ code: 'ERR_NETWORK' }))).toBe(false)
+  })
+
+  it('is false for 5xx and other 4xx', () => {
+    for (const status of [400, 403, 404, 500, 502, 503, 504]) {
+      expect(isDefinitiveAuthFailure(axiosErr({ response: { status } }))).toBe(false)
+    }
+  })
+
+  it('is false for a non-axios error or non-error value', () => {
+    expect(isDefinitiveAuthFailure(new Error('boom'))).toBe(false)
+    expect(isDefinitiveAuthFailure(null)).toBe(false)
+    expect(isDefinitiveAuthFailure(undefined)).toBe(false)
+  })
+})
+
+// KAN-730 — the "reconnecting" toast dismiss fires only when auth-service
+// itself responds successfully (not any request; other services stay up
+// during an auth-only outage).
+describe('runOnceOnNextAuthSuccess — dismiss on auth-service success only', () => {
+  const okAdapter: AxiosAdapter = (config) =>
+    Promise.resolve({ data: {}, status: 200, statusText: 'OK', headers: {}, config })
+
+  beforeEach(() => {
+    api.defaults.adapter = okAdapter
+  })
+
+  it('fires on a successful /users/* response', async () => {
+    const cb = vi.fn()
+    runOnceOnNextAuthSuccess(cb)
+    await api.get('/api/v1/users/me')
+    expect(cb).toHaveBeenCalledTimes(1)
+  })
+
+  it('fires on a successful /auth/* response', async () => {
+    const cb = vi.fn()
+    runOnceOnNextAuthSuccess(cb)
+    await api.put('/api/v1/auth/me/tabs/snapshot')
+    expect(cb).toHaveBeenCalledTimes(1)
+  })
+
+  it('does NOT fire on a non-auth-service success, then DOES on the next auth success', async () => {
+    const cb = vi.fn()
+    runOnceOnNextAuthSuccess(cb)
+    await api.get('/api/v1/clients') // other service up during an auth-only outage
+    expect(cb).not.toHaveBeenCalled()
+    await api.get('/api/v1/users/me') // auth back → fires (and drains the queue)
+    expect(cb).toHaveBeenCalledTimes(1)
+  })
+
+  it('fires only once — the queue is cleared after firing', async () => {
+    const cb = vi.fn()
+    runOnceOnNextAuthSuccess(cb)
+    await api.get('/api/v1/users/me')
+    await api.get('/api/v1/users/me')
+    expect(cb).toHaveBeenCalledTimes(1)
   })
 })

@@ -308,7 +308,7 @@ function TaskKanbanCard({
         <span
           className={`flex-shrink-0 rounded-full px-2 py-0.5 text-[9px] font-medium ${priority.tone}`}
         >
-          {priority.label}
+          {t(`pages.training.tasks.priority.${task.priority}`, priority.label)}
         </span>
       </div>
 

@@ -26,6 +26,7 @@ import { cn } from '@/lib/utils'
 import { PermissionGuard } from '@/components/auth/PermissionGuard'
 import { DocumentTypePill } from '@/components/DocumentTypePill'
 import { PERMISSIONS } from '@/constants/permissions'
+import { GenerateDocumentModal } from './GenerateDocumentModal'
 
 interface Loan {
   id: number
@@ -55,6 +56,7 @@ export function DocumentUploadModal({ open, onClose, clientId, loans }: Document
   const [debtId, setDebtId] = useState<number | null>(null)
   const [uploading, setUploading] = useState(false)
   const [dragOver, setDragOver] = useState(false)
+  const [showGenerate, setShowGenerate] = useState(false)
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0]
@@ -105,11 +107,20 @@ export function DocumentUploadModal({ open, onClose, clientId, loans }: Document
             type="button"
             className="w-full"
             leftIcon={<Icons.AddInvoice size={16} />}
-            onClick={() => toast.info(t('pages.clients.detail.comingSoon'))}
+            onClick={() => setShowGenerate(true)}
           >
             {t('pages.clients.detail.generateDocument')}
           </Button>
         </PermissionGuard>
+
+        {showGenerate && (
+          <GenerateDocumentModal
+            open={showGenerate}
+            onClose={() => setShowGenerate(false)}
+            clientId={clientId}
+            loans={loans}
+          />
+        )}
 
         {/* File drop zone */}
         <div

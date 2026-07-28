@@ -90,7 +90,7 @@ export function Modal({
             onInteractOutside={preventOutsideClose ? (e) => e.preventDefault() : undefined}
             onEscapeKeyDown={preventOutsideClose ? (e) => e.preventDefault() : undefined}
             className={cn(
-              'bg-light-50 fixed top-1/2 left-1/2 z-50 max-h-[90vh] w-[calc(100%-1rem)] -translate-x-1/2 -translate-y-1/2 rounded-lg shadow-xl sm:w-[calc(100%-2rem)]',
+              'bg-card fixed top-1/2 left-1/2 z-50 max-h-[90vh] w-[calc(100%-1rem)] -translate-x-1/2 -translate-y-1/2 rounded-lg shadow-xl sm:w-[calc(100%-2rem)]',
               'p-4 sm:p-6 md:p-8 lg:p-10',
               'data-[state=open]:animate-in data-[state=closed]:animate-out',
               'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
@@ -109,10 +109,15 @@ export function Modal({
             {showCloseButton && (
               <DialogPrimitive.Close asChild>
                 <button
-                  className="absolute top-2 right-2 flex h-8 w-8 items-center justify-center rounded-md transition-colors hover:bg-gray-100 sm:top-4 sm:right-4"
+                  className="hover:bg-muted absolute top-2 right-2 flex h-8 w-8 items-center justify-center rounded-md transition-colors sm:top-4 sm:right-4"
                   aria-label="Close modal"
                 >
-                  <Icon icon={Cancel01Icon} size={18} className="text-dark-500" strokeWidth={1.5} />
+                  <Icon
+                    icon={Cancel01Icon}
+                    size={18}
+                    className="text-foreground"
+                    strokeWidth={1.5}
+                  />
                 </button>
               </DialogPrimitive.Close>
             )}
@@ -125,7 +130,7 @@ export function Modal({
               onInteractOutside={preventOutsideClose ? (e) => e.preventDefault() : undefined}
               onEscapeKeyDown={preventOutsideClose ? (e) => e.preventDefault() : undefined}
               className={cn(
-                'bg-light-50 relative z-50 max-h-[90vh] w-full rounded-lg shadow-xl',
+                'bg-card relative z-50 max-h-[90vh] w-full rounded-lg shadow-xl',
                 'p-4 sm:p-6 md:p-8 lg:p-10', // Responsive padding
                 'data-[state=open]:animate-in data-[state=closed]:animate-out',
                 'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
@@ -147,13 +152,13 @@ export function Modal({
               {showCloseButton && (
                 <DialogPrimitive.Close asChild>
                   <button
-                    className="absolute top-2 right-2 flex h-8 w-8 items-center justify-center rounded-md transition-colors hover:bg-gray-100 sm:top-4 sm:right-4"
+                    className="hover:bg-muted absolute top-2 right-2 flex h-8 w-8 items-center justify-center rounded-md transition-colors sm:top-4 sm:right-4"
                     aria-label="Close modal"
                   >
                     <Icon
                       icon={Cancel01Icon}
                       size={18}
-                      className="text-dark-500"
+                      className="text-foreground"
                       strokeWidth={1.5}
                     />
                   </button>
@@ -177,10 +182,10 @@ interface ModalHeaderProps {
 
 export function ModalHeader({ icon, title, className }: ModalHeaderProps) {
   return (
-    <div className={cn('border-light-200 flex items-center border-b p-0 pb-2 sm:pb-3', className)}>
+    <div className={cn('border-border flex items-center border-b p-0 pb-2 sm:pb-3', className)}>
       <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
         {icon && <div className="flex-shrink-0">{icon}</div>}
-        <DialogPrimitive.Title className="text-dark-500 min-w-0 text-lg font-medium break-words sm:text-xl md:text-2xl">
+        <DialogPrimitive.Title className="text-foreground min-w-0 text-lg font-medium break-words sm:text-xl md:text-2xl">
           {title}
         </DialogPrimitive.Title>
       </div>
@@ -216,7 +221,7 @@ export function ModalFooter({ children, className }: ModalFooterProps) {
   return (
     <div
       className={cn(
-        'border-light-200 flex flex-row items-stretch justify-end gap-2 border-t sm:flex-row sm:items-center sm:gap-3',
+        'border-border flex flex-row items-stretch justify-end gap-2 border-t sm:flex-row sm:items-center sm:gap-3',
         'pt-3 sm:pt-4', // Responsive padding
         className
       )}
@@ -225,5 +230,8 @@ export function ModalFooter({ children, className }: ModalFooterProps) {
     </div>
   )
 }
+
+/** Accessible dialog title — required by Radix inside DialogContent. */
+export const ModalTitle = DialogPrimitive.Title
 
 export default Modal

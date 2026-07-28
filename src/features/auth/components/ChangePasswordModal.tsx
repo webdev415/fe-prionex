@@ -1,10 +1,3 @@
-/**
- * ChangePasswordModal Component
- *
- * Modal for changing user password with validation.
- * Uses Modal component pattern consistent with other modals.
- */
-
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Modal, ModalContent, ModalFooter } from '@/components/ui/Modal'
@@ -41,7 +34,6 @@ export function ChangePasswordModal({
     if (!newPassword) {
       newErrors.newPassword = t('pages.profile.newPasswordRequired')
     } else if (newPassword.length < 8) {
-      // Reuse auth namespace message when possible
       newErrors.newPassword = t('passwordMinLength', { ns: 'auth' })
     }
 
@@ -74,27 +66,18 @@ export function ChangePasswordModal({
 
   return (
     <Modal open={open} onClose={handleClose} maxWidth="xl">
-      {/* <ModalHeader
-        icon={
-          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#A7E8BD]">
-            <Icons.Lock size={24} className="text-dark-500" strokeWidth={2} />
-          </div>
-        }
-        title="Change Password"
-      /> */}
-      <div className="border-light-200 flex w-full items-center justify-center border-b p-0 pb-4 sm:pb-4">
+      <div className="border-border flex w-full items-center justify-center border-b p-0 pb-4 sm:pb-4">
         <div className="flex items-center gap-3 sm:gap-4">
           <div className="bg-primary-300 flex h-12 w-12 items-center justify-center rounded-full">
-            <Icons.LockSync01 size={24} className="text-dark-500" strokeWidth={2} />
+            <Icons.LockSync01 size={24} className="text-primary-foreground" strokeWidth={2} />
           </div>
-          <span className="text-dark-500 text-3xl leading-[129%] font-light tracking-[-0.6px]">
+          <span className="text-foreground text-3xl leading-[129%] font-light tracking-[-0.6px]">
             {t('pages.profile.resetPassword')}
           </span>
         </div>
       </div>
       <ModalContent>
         <form id="change-password-form" onSubmit={handleSubmit} className="space-y-4">
-          {/* Current Password */}
           <PasswordInput
             id="currentPassword"
             label={t('pages.profile.currentPassword')}
@@ -105,7 +88,6 @@ export function ChangePasswordModal({
             required
           />
 
-          {/* New Password */}
           <PasswordInput
             id="newPassword"
             label={t('pages.profile.newPassword')}
@@ -116,7 +98,6 @@ export function ChangePasswordModal({
             required
           />
 
-          {/* Confirm Password */}
           <PasswordInput
             id="confirmPassword"
             label={t('pages.profile.confirmNewPassword')}

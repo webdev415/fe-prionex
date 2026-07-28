@@ -34,6 +34,14 @@ export interface MinimizedChainExecutorInfo {
     collectedPromiseDate: string
     collectedPromiseAmount: string
     collectedCreditId: string
+    // Local, not-yet-persisted edits to previously confirmed steps, keyed by
+    // step_order. Preserved across minimize/restore so an edit made before
+    // minimizing isn't silently lost on restore. Optional for backward-compat
+    // with snapshots written before this field existed.
+    editedSteps?: Record<
+      string,
+      { value?: string; promiseDate?: string; promiseAmount?: string; creditId?: string }
+    >
     // "All-at-once" (instant) mode state. Unlike the step-by-step mode, this
     // is never snapshotted to the server until final save, so it must be
     // preserved here to survive a minimize/restore cycle. Optional for

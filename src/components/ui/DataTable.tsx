@@ -25,6 +25,12 @@ import { Fragment, type ReactNode, useMemo, useRef, useEffect, useState } from '
 import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
 import { Checkbox } from './Checkbox'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from './DropdownMenu'
 
 export interface Column<T> {
   key: string
@@ -60,6 +66,10 @@ export interface DataTableProps<T> {
   allItemsSelected?: boolean // Indicates if all items across all pages are selected (when onSelectAll is used)
   excludedItemsCount?: number // Number of excluded items when allItemsSelected is true (for accurate count)
   excludedItems?: Set<number | string> // Set of excluded item IDs when allItemsSelected is true
+  onSelectPage?: () => void
+  onSelectAllByFilter?: () => void
+  pageSelectableCount?: number
+  filterSelectableCount?: number
   // Bulk header configuration
   bulkHeaderTitle?: string | ReactNode // Custom title for bulk actions header (e.g., "[Bulk Assign]")
   bulkHeaderActions?: ReactNode // Buttons/actions to display in the bulk header (always visible when bulk selection is enabled)
@@ -101,6 +111,10 @@ export function DataTable<T extends { id: number | string }>({
   allItemsSelected = false,
   excludedItemsCount = 0,
   excludedItems = new Set(),
+  onSelectPage,
+  onSelectAllByFilter,
+  pageSelectableCount,
+  filterSelectableCount,
   bulkHeaderTitle,
   bulkHeaderActions,
   headerActions,
@@ -189,10 +203,13 @@ export function DataTable<T extends { id: number | string }>({
       const allOnPageSelected = data.every((item) => !excludedItems.has(item.id))
       return excludedItemsCount === 0 && allOnPageSelected
     }
-    // When allItemsSelected is false, don't check the header checkbox
-    // even if all items on current page are manually selected
-    return false
-  }, [data, allItemsSelected, excludedItems, excludedItemsCount])
+    // All-pages mode (onSelectAll provided): manually selecting a page's rows must
+    // NOT tick the header — that's reserved for the explicit "select all" action.
+    if (onSelectAll) return false
+    // Simple controlled mode (selectedItems + onSelectionChange): the header reflects
+    // the visible selection, so it ticks once every row on the page is selected.
+    return data.length > 0 && data.every((item) => selectedItems.has(item.id))
+  }, [data, allItemsSelected, excludedItems, excludedItemsCount, onSelectAll, selectedItems])
 
   const someSelected = useMemo(() => {
     if (allItemsSelected) {
@@ -218,7 +235,7 @@ export function DataTable<T extends { id: number | string }>({
     if (!isActive) {
       return (
         <span className="ml-1 opacity-40">
-          <Icons.Sorting01Icon size={14} className="text-gray-500" strokeWidth={1.5} />
+          <Icons.Sorting01Icon size={14} className="text-muted-foreground" strokeWidth={1.5} />
         </span>
       )
     }
@@ -250,7 +267,7 @@ export function DataTable<T extends { id: number | string }>({
     }
 
     return (
-      <span className="text-xs font-medium text-[#05040D]">
+      <span className="text-foreground text-xs font-medium">
         {t('common.selected', 'Selected')} {selectedCount} {t('common.of', 'of')} {totalItems}
       </span>
     )
@@ -260,7 +277,7 @@ export function DataTable<T extends { id: number | string }>({
   const renderBulkHeaderTitle = () => {
     if (bulkHeaderTitle) {
       return typeof bulkHeaderTitle === 'string' ? (
-        <span className="text-xs font-medium text-[#05040D]">{bulkHeaderTitle}</span>
+        <span className="text-foreground text-xs font-medium">{bulkHeaderTitle}</span>
       ) : (
         bulkHeaderTitle
       )
@@ -288,14 +305,14 @@ export function DataTable<T extends { id: number | string }>({
 
   return (
     <div
-      className={`data-table-scroll overflow-x-auto rounded-xl border border-[#EBECE8] bg-[#EBECE8] pb-2 shadow-sm ${className || ''}`}
+      className={`data-table-scroll border-border bg-border overflow-x-auto rounded-xl border pb-2 shadow-sm ${className || ''}`}
     >
       <div className="min-w-full">
         {/* Header Row - shown when bulk selection is enabled OR when tableHeaderActions/tableHeaderTitle is provided */}
         {showHeaderRow && (
           <div
             ref={headerRowRef}
-            className="top-0 z-20 flex min-h-[49px] w-full items-center justify-between border-b border-[#EBECE8] bg-white px-4 shadow-sm"
+            className="border-border bg-card top-0 z-20 flex min-h-[49px] w-full items-center justify-between border-b px-4 shadow-sm"
           >
             <div className="flex w-full items-center gap-3">
               {/* Show selection info when bulk selection is enabled */}
@@ -306,7 +323,7 @@ export function DataTable<T extends { id: number | string }>({
               {!enableBulkSelection &&
                 tableHeaderTitle &&
                 (typeof tableHeaderTitle === 'string' ? (
-                  <span className="text-xs font-medium text-[#05040D]">{tableHeaderTitle}</span>
+                  <span className="text-foreground text-xs font-medium">{tableHeaderTitle}</span>
                 ) : (
                   tableHeaderTitle
                 ))}
@@ -324,21 +341,55 @@ export function DataTable<T extends { id: number | string }>({
 
         <table className={`min-w-full border-collapse ${tableClassName || 'whitespace-nowrap'}`}>
           <thead className="sticky top-0 z-10">
-            <tr className="bg-white">
+            <tr className="bg-card">
               {/* Checkbox column for bulk selection */}
               {enableBulkSelection && (
                 <th
                   scope="col"
                   style={{ height: `${headerHeight}px` }}
-                  className="w-[60px] border-r border-b border-[#EBECE8] bg-white px-4 text-left"
+                  className="border-border bg-card w-[60px] border-r border-b px-4 text-left"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <Checkbox
-                    checked={headerCheckboxChecked}
-                    onCheckedChange={handleSelectAll}
-                    aria-checked={someSelected ? 'mixed' : headerCheckboxChecked}
-                    aria-label="Select all"
-                  />
+                  {onSelectPage && onSelectAllByFilter ? (
+                    <div className="flex items-center gap-1">
+                      <Checkbox
+                        checked={headerCheckboxChecked}
+                        onCheckedChange={(checked) =>
+                          checked ? onSelectPage() : onSelectionChange?.(new Set())
+                        }
+                        aria-checked={someSelected ? 'mixed' : headerCheckboxChecked}
+                        aria-label="Select all"
+                      />
+                      <DropdownMenu>
+                        <DropdownMenuTrigger
+                          aria-label="Selection options"
+                          className="text-muted-foreground hover:text-foreground flex items-center outline-none"
+                        >
+                          <Icons.ArrowDown size={14} strokeWidth={1.5} />
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="start" className="border-border bg-card">
+                          <DropdownMenuItem className="cursor-pointer" onClick={onSelectPage}>
+                            {t('common.selectOnThisPage', 'Select on this page')} (
+                            {pageSelectableCount ?? 0})
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            className="cursor-pointer"
+                            onClick={onSelectAllByFilter}
+                          >
+                            {t('common.selectAllByFilter', 'Select all by filter')} (
+                            {filterSelectableCount ?? 0})
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  ) : (
+                    <Checkbox
+                      checked={headerCheckboxChecked}
+                      onCheckedChange={handleSelectAll}
+                      aria-checked={someSelected ? 'mixed' : headerCheckboxChecked}
+                      aria-label="Select all"
+                    />
+                  )}
                 </th>
               )}
               {columns.map((column, index) => (
@@ -346,14 +397,14 @@ export function DataTable<T extends { id: number | string }>({
                   key={column.key}
                   scope="col"
                   style={{ height: `${headerHeight}px` }}
-                  className={`border-b border-[#EBECE8] bg-white px-4 text-xs font-semibold ${column.className ? '' : 'whitespace-nowrap'} text-[#05040D] ${
+                  className={`border-border bg-card border-b px-4 text-xs font-semibold ${column.className ? '' : 'whitespace-nowrap'} text-foreground ${
                     column.align === 'center'
                       ? 'text-center'
                       : column.align === 'right'
                         ? 'text-right'
                         : 'text-left'
-                  } ${column.sortable ? 'cursor-pointer transition-colors select-none hover:bg-gray-50' : ''} ${
-                    index < columns.length - 1 ? 'border-r border-[#EBECE8]' : ''
+                  } ${column.sortable ? 'hover:bg-muted cursor-pointer transition-colors select-none' : ''} ${
+                    index < columns.length - 1 ? 'border-border border-r' : ''
                   } ${column.className || ''}`}
                   onClick={() => handleSort(column)}
                 >
@@ -370,7 +421,7 @@ export function DataTable<T extends { id: number | string }>({
               <tr>
                 <td
                   colSpan={enableBulkSelection ? columns.length + 1 : columns.length}
-                  className="h-[49px] px-4 text-center text-xs font-medium text-[#05040D]"
+                  className="text-foreground h-[49px] px-4 text-center text-xs font-medium"
                 >
                   {emptyMessage}
                 </td>
@@ -387,7 +438,7 @@ export function DataTable<T extends { id: number | string }>({
                   if (isSelected) {
                     return 'bg-information-50' // Light blue background for selected rows
                   }
-                  return rowIndex % 2 === 0 ? 'bg-[#F2F3F0]' : 'bg-white'
+                  return rowIndex % 2 === 0 ? 'bg-muted' : 'bg-card'
                 }
                 const isExpanded = !!(renderExpanded && expandedIds?.has(item.id))
                 return (
@@ -399,7 +450,7 @@ export function DataTable<T extends { id: number | string }>({
                       {/* Checkbox column for bulk selection */}
                       {enableBulkSelection && (
                         <td
-                          className="h-[49px] border-r border-[#EBECE8] px-4"
+                          className="border-border h-[49px] border-r px-4"
                           onClick={(e) => e.stopPropagation()}
                         >
                           <Checkbox
@@ -414,13 +465,13 @@ export function DataTable<T extends { id: number | string }>({
                       {columns.map((column, colIndex) => (
                         <td
                           key={column.key}
-                          className={`text-dark-500 h-[49px] px-4 text-xs font-medium ${column.className ? '' : 'whitespace-nowrap'} ${
+                          className={`text-foreground h-[49px] px-4 text-xs font-medium ${column.className ? '' : 'whitespace-nowrap'} ${
                             column.align === 'center'
                               ? 'text-center'
                               : column.align === 'right'
                                 ? 'text-right'
                                 : 'text-left'
-                          } ${colIndex < columns.length - 1 ? 'border-r border-[#EBECE8]' : ''} ${column.className || ''}`}
+                          } ${colIndex < columns.length - 1 ? 'border-border border-r' : ''} ${column.className || ''}`}
                         >
                           {column.render
                             ? column.render(item)
@@ -429,7 +480,7 @@ export function DataTable<T extends { id: number | string }>({
                       ))}
                     </tr>
                     {isExpanded && (
-                      <tr className="bg-gray-50">
+                      <tr className="bg-muted">
                         <td
                           colSpan={columns.length + (enableBulkSelection ? 1 : 0)}
                           className="px-4 py-3"

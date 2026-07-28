@@ -32,8 +32,8 @@ export function RoleDetailModal({ open, roleId, onClose }: RoleDetailModalProps)
     <Modal open={open} onClose={onClose} maxWidth="2xl">
       <ModalHeader
         icon={
-          <div className="bg-primary-400 flex h-8 w-8 items-center justify-center rounded-full">
-            <Icons.View size={20} className="text-white" strokeWidth={2} />
+          <div className="bg-primary-400 flex h-7 w-7 items-center justify-center rounded-full sm:h-8 sm:w-8">
+            <Icons.View size={18} className="text-foreground" strokeWidth={2} />
           </div>
         }
         title={t('pages.roles.modals.view.title')}
@@ -44,7 +44,7 @@ export function RoleDetailModal({ open, roleId, onClose }: RoleDetailModalProps)
         ) : role && project ? (
           <ViewRoleForm role={role} projectName={project.name} />
         ) : (
-          <div className="py-8 text-center text-gray-600">
+          <div className="text-muted-foreground py-8 text-center">
             {t('pages.roles.modals.archive.failedToLoad')}
           </div>
         )}

@@ -20,6 +20,8 @@ import { Icons } from '@/lib/icons'
 import { PortfolioDropdown } from './PortfolioDropdown'
 import { TagsDropdown } from './TagsDropdown'
 import { RR_STATUS_FILTER_OPTIONS, rrStatusMeta } from '@/features/clients/constants/rrStatus'
+import { getTagTriState, type TagFilterSelection } from '@/features/tags/utils/tagFilterState'
+import { TagFilterTriState } from './TagFilterTriState'
 import {
   NO_INTERACTIONS_ID,
   NO_RESPONSIBLE_ID,
@@ -135,9 +137,11 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
     limit: 1000,
   })
 
-  // Fetch tags from API
-  const projectId = 1 // TODO: Get from auth context
-  const { data: tagsData } = useTags(projectId)
+  const activeProjectId = useAuthStore((s) => s.user?.active_project_id)
+  const projectIdNum = activeProjectId ? Number(activeProjectId) : undefined
+
+  // Fetch tags for the operator's active project (tag_definitions.id values).
+  const { data: tagsData } = useTags(projectIdNum)
 
   // TA chains feed the Chain + Step picker below.
   const { data: chainsData } = useTAChains({ include_inactive: false })
@@ -212,9 +216,8 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
   // inactive operator is shown only if it has ≥1 client in the relevant role —
   // employee for Responsible Employee, searcher for Responsible Searcher, either
   // role for Interaction Created By.
-  const activeProjectId = useAuthStore((s) => s.user?.active_project_id)
   const { employeeOptions, interactionUserOptions, searcherOptions } = useOperatorFilterOptions(
-    activeProjectId ? Number(activeProjectId) : null
+    projectIdNum ?? null
   )
 
   // BE owns timezone interpretation (via the ``tz`` query param); the FE
@@ -233,11 +236,38 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
     })
   }
 
-  const handleTagsChange = (tagIds: number[]) => {
+  const handleTagsChange = (selection: TagFilterSelection) => {
+    const hasManual = selection.includeIds.length > 0 || selection.excludeIds.length > 0
     onFilterChange({
       ...filters,
-      tagIds: tagIds,
+      tagIds: selection.includeIds,
+      excludeTagIds: selection.excludeIds,
+      // Manual tags clear segment (mutually exclusive)
+      ...(hasManual ? { segmentId: undefined } : {}),
     })
+  }
+
+  const handleSegmentChange = (segmentId: number | null) => {
+    onFilterChange({
+      ...filters,
+      segmentId: segmentId ?? undefined,
+      // Segment clears manual tags (mutually exclusive)
+      ...(segmentId != null ? { tagIds: [], excludeTagIds: [] } : {}),
+    })
+  }
+
+  const handleClearTagFilters = () => {
+    onFilterChange({
+      ...filters,
+      tagIds: [],
+      excludeTagIds: [],
+      segmentId: undefined,
+    })
+  }
+
+  const tagFilterSelection: TagFilterSelection = {
+    includeIds: filters.tagIds ?? [],
+    excludeIds: filters.excludeTagIds ?? [],
   }
 
   const displayedPortfolios = portfolioOptions.slice(0, 3)
@@ -248,22 +278,21 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
   const tags = tagsData || []
   const displayedTags = tags.slice(0, 3)
   const hiddenTagsCount = Math.max(0, tags.length - 3)
-  const selectedTagIds = filters.tagIds || []
   const selectedRrStatusIds = filters.rrStatusIds || []
 
   return (
-    <div className="flex w-full flex-col items-start gap-3 self-stretch rounded-xl bg-white/50 p-4 sm:p-6">
+    <div className="border-border bg-card/50 flex w-full flex-col items-start gap-3 self-stretch rounded-xl border p-4 shadow-sm sm:p-6">
       <div className="flex w-full flex-col items-center gap-4 self-stretch sm:gap-6">
         <div className="flex w-full flex-col items-center gap-4 self-stretch sm:gap-7">
           {/* First Row: Debt Range & DPD Range */}
           <div className="flex w-full flex-col gap-4 self-stretch lg:flex-row lg:items-center lg:gap-10">
             {/* Debt Range */}
             <div className="flex w-full flex-col gap-2 sm:flex-1 sm:flex-row sm:items-center sm:gap-3">
-              <label className="text-dark-500 w-full text-xs leading-[150%] font-medium tracking-[-0.24px] sm:w-[100px] sm:text-sm sm:tracking-[-0.28px]">
+              <label className="text-foreground w-full text-xs leading-[150%] font-medium tracking-[-0.24px] sm:w-[100px] sm:text-sm sm:tracking-[-0.28px]">
                 {t('pages.clients.filters.debtRange')}
               </label>
               <div className="flex w-full items-center gap-2 sm:flex-1">
-                <span className="text-sm leading-[155%] font-medium tracking-[-0.28px] text-gray-700 sm:text-base sm:tracking-[-0.32px]">
+                <span className="text-muted-foreground text-sm leading-[155%] font-medium tracking-[-0.28px] sm:text-base sm:tracking-[-0.32px]">
                   ₴
                 </span>
                 <DebouncedNumberInput
@@ -279,7 +308,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                   className="flex flex-1 flex-col items-start gap-2"
                   formatWithCommas={true}
                 />
-                <span className="text-sm leading-[155%] font-medium tracking-[-0.28px] text-gray-700 sm:text-base sm:tracking-[-0.32px]">
+                <span className="text-muted-foreground text-sm leading-[155%] font-medium tracking-[-0.28px] sm:text-base sm:tracking-[-0.32px]">
                   -
                 </span>
                 <DebouncedNumberInput
@@ -299,7 +328,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
             </div>
             {/* DPD Range */}
             <div className="flex w-full flex-col gap-2 sm:flex-1 sm:flex-row sm:items-center sm:gap-3">
-              <label className="text-dark-500 w-full text-xs leading-[150%] font-medium tracking-[-0.24px] sm:w-[100px] sm:text-sm sm:tracking-[-0.28px]">
+              <label className="text-foreground w-full text-xs leading-[150%] font-medium tracking-[-0.24px] sm:w-[100px] sm:text-sm sm:tracking-[-0.28px]">
                 {t('pages.clients.filters.dpdRange')}
               </label>
               <div className="flex w-full flex-1 items-center gap-2">
@@ -315,7 +344,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                   placeholder={t('pages.clients.filters.min')}
                   className="flex flex-1 flex-col items-start gap-2"
                 />
-                <span className="text-sm leading-[155%] font-medium tracking-[-0.28px] text-gray-700 sm:text-base sm:tracking-[-0.32px]">
+                <span className="text-muted-foreground text-sm leading-[155%] font-medium tracking-[-0.28px] sm:text-base sm:tracking-[-0.32px]">
                   -
                 </span>
                 <DebouncedNumberInput
@@ -330,7 +359,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                   placeholder={t('pages.clients.filters.max')}
                   className="flex flex-1 flex-col items-start gap-2"
                 />
-                <span className="text-xs leading-[150%] font-medium tracking-[-0.24px] text-gray-700 sm:text-sm sm:tracking-[-0.28px]">
+                <span className="text-muted-foreground text-xs leading-[150%] font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
                   {t('pages.clients.filters.days')}
                 </span>
               </div>
@@ -341,11 +370,11 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
           <div className="flex w-full flex-col gap-4 self-stretch lg:flex-row lg:items-center lg:gap-10">
             {/* Principal Amount (principal_min/max on open loans) — KAN-572. */}
             <div className="flex w-full flex-col gap-2 sm:flex-1 sm:flex-row sm:items-center sm:gap-3">
-              <label className="text-dark-500 w-full text-xs leading-[150%] font-medium tracking-[-0.24px] sm:w-[100px] sm:text-sm sm:tracking-[-0.28px]">
+              <label className="text-foreground w-full text-xs leading-[150%] font-medium tracking-[-0.24px] sm:w-[100px] sm:text-sm sm:tracking-[-0.28px]">
                 {t('pages.clients.filters.amountOfDebtRange')}
               </label>
               <div className="flex w-full items-center gap-2 sm:flex-1">
-                <span className="text-sm leading-[155%] font-medium tracking-[-0.28px] text-gray-700 sm:text-base sm:tracking-[-0.32px]">
+                <span className="text-muted-foreground text-sm leading-[155%] font-medium tracking-[-0.28px] sm:text-base sm:tracking-[-0.32px]">
                   ₴
                 </span>
                 <DebouncedNumberInput
@@ -361,7 +390,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                   className="flex flex-1 flex-col items-start gap-2"
                   formatWithCommas={true}
                 />
-                <span className="text-sm leading-[155%] font-medium tracking-[-0.28px] text-gray-700 sm:text-base sm:tracking-[-0.32px]">
+                <span className="text-muted-foreground text-sm leading-[155%] font-medium tracking-[-0.28px] sm:text-base sm:tracking-[-0.32px]">
                   -
                 </span>
                 <DebouncedNumberInput
@@ -382,7 +411,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
 
             {/* Date of sale */}
             <div className="flex w-full flex-col gap-2 sm:flex-1 sm:flex-row sm:items-center sm:gap-3">
-              <label className="text-dark-500 w-full text-xs leading-[150%] font-medium tracking-[-0.24px] sm:w-[100px] sm:text-sm sm:tracking-[-0.28px]">
+              <label className="text-foreground w-full text-xs leading-[150%] font-medium tracking-[-0.24px] sm:w-[100px] sm:text-sm sm:tracking-[-0.28px]">
                 {t('pages.clients.filters.dateOfSale')}
               </label>
               <div className="flex w-full flex-1 items-center gap-2">
@@ -395,7 +424,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                   format="dd.MM.yyyy"
                   className="flex flex-1 flex-col gap-2"
                 />
-                <span className="text-sm leading-[155%] font-medium tracking-[-0.28px] text-gray-700 sm:text-base sm:tracking-[-0.32px]">
+                <span className="text-muted-foreground text-sm leading-[155%] font-medium tracking-[-0.28px] sm:text-base sm:tracking-[-0.32px]">
                   -
                 </span>
                 <DateSelect
@@ -414,7 +443,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
           {/* Assignment Date */}
           <div className="flex w-full flex-col gap-4 self-stretch lg:flex-row lg:items-center lg:gap-10">
             <div className="flex w-full flex-col gap-2 sm:flex-1 sm:flex-row sm:items-center sm:gap-3">
-              <label className="text-dark-500 w-full text-xs leading-[150%] font-medium tracking-[-0.24px] sm:w-[100px] sm:text-sm sm:tracking-[-0.28px]">
+              <label className="text-foreground w-full text-xs leading-[150%] font-medium tracking-[-0.24px] sm:w-[100px] sm:text-sm sm:tracking-[-0.28px]">
                 {t('pages.clients.filters.assignmentDate')}
               </label>
               <div className="flex w-full flex-1 items-center gap-2">
@@ -427,7 +456,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                   format="dd.MM.yyyy"
                   className="flex flex-1 flex-col gap-2"
                 />
-                <span className="text-sm leading-[155%] font-medium tracking-[-0.28px] text-gray-700 sm:text-base sm:tracking-[-0.32px]">
+                <span className="text-muted-foreground text-sm leading-[155%] font-medium tracking-[-0.28px] sm:text-base sm:tracking-[-0.32px]">
                   -
                 </span>
                 <DateSelect
@@ -450,7 +479,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
               [taDateFrom, taDateTo]. */}
           <div className="flex w-full flex-col gap-4 self-stretch lg:flex-row lg:items-center lg:gap-10">
             <div className="flex w-full flex-col gap-2 sm:flex-1 sm:flex-row sm:items-center sm:gap-3">
-              <label className="text-dark-500 w-full shrink-0 text-xs leading-[150%] font-medium tracking-[-0.24px] sm:max-w-[9.5rem] sm:min-w-[7.25rem] sm:text-sm sm:tracking-[-0.28px] sm:whitespace-normal">
+              <label className="text-foreground w-full shrink-0 text-xs leading-[150%] font-medium tracking-[-0.24px] sm:max-w-[9.5rem] sm:min-w-[7.25rem] sm:text-sm sm:tracking-[-0.28px] sm:whitespace-normal">
                 {t('pages.clients.filters.targetActionDate', 'Target Action Date')}
               </label>
               <div className="flex w-full flex-1 items-center gap-2">
@@ -463,7 +492,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                   format="dd.MM.yyyy"
                   className="flex flex-1 flex-col gap-2"
                 />
-                <span className="text-sm leading-[155%] font-medium tracking-[-0.28px] text-gray-700 sm:text-base sm:tracking-[-0.32px]">
+                <span className="text-muted-foreground text-sm leading-[155%] font-medium tracking-[-0.28px] sm:text-base sm:tracking-[-0.32px]">
                   -
                 </span>
                 <DateSelect
@@ -485,7 +514,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
           {/* Interaction Logged Date (range) & Interaction Created By (operator) */}
           <div className="flex w-full flex-col gap-4 self-stretch lg:flex-row lg:items-center lg:gap-10">
             <div className="flex w-full flex-col gap-2 sm:flex-1 sm:flex-row sm:items-center sm:gap-3">
-              <label className="text-dark-500 w-full shrink-0 text-xs leading-[150%] font-medium tracking-[-0.24px] sm:max-w-[9.5rem] sm:min-w-[7.25rem] sm:text-sm sm:tracking-[-0.28px] sm:whitespace-normal">
+              <label className="text-foreground w-full shrink-0 text-xs leading-[150%] font-medium tracking-[-0.24px] sm:max-w-[9.5rem] sm:min-w-[7.25rem] sm:text-sm sm:tracking-[-0.28px] sm:whitespace-normal">
                 {t('pages.clients.filters.interactionLoggedDate', 'Interaction Logged Date')}
               </label>
               <div className="flex w-full flex-1 items-center gap-2">
@@ -498,7 +527,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                   format="dd.MM.yyyy"
                   className="flex flex-1 flex-col gap-2"
                 />
-                <span className="text-sm leading-[155%] font-medium tracking-[-0.28px] text-gray-700 sm:text-base sm:tracking-[-0.32px]">
+                <span className="text-muted-foreground text-sm leading-[155%] font-medium tracking-[-0.28px] sm:text-base sm:tracking-[-0.32px]">
                   -
                 </span>
                 <DateSelect
@@ -513,7 +542,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
               </div>
             </div>
             <div className="flex w-full flex-col gap-2 sm:flex-1 sm:flex-row sm:items-center sm:gap-3">
-              <label className="text-dark-500 w-full shrink-0 text-xs leading-[150%] font-medium tracking-[-0.24px] sm:max-w-[9.5rem] sm:min-w-[7.25rem] sm:text-sm sm:tracking-[-0.28px] sm:whitespace-normal">
+              <label className="text-foreground w-full shrink-0 text-xs leading-[150%] font-medium tracking-[-0.24px] sm:max-w-[9.5rem] sm:min-w-[7.25rem] sm:text-sm sm:tracking-[-0.28px] sm:whitespace-normal">
                 {t('pages.clients.filters.interactionCreatedBy', 'Interaction Created By')}
               </label>
               <div className="flex w-full flex-1 flex-col items-start gap-2">
@@ -538,7 +567,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                   trigger={
                     <button
                       type="button"
-                      className="text-dark-500 flex h-[45px] w-full cursor-pointer items-center justify-between gap-2 rounded-lg border border-gray-400 bg-white px-3 py-2 text-left text-sm font-light whitespace-nowrap shadow-none focus:ring-0 focus:outline-none"
+                      className="text-foreground border-border bg-card flex h-[45px] w-full cursor-pointer items-center justify-between gap-2 rounded-lg border px-3 py-2 text-left text-sm font-light whitespace-nowrap shadow-none focus:ring-0 focus:outline-none"
                     >
                       <span className="truncate">
                         {(() => {
@@ -589,7 +618,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
           <div className="flex w-full flex-col gap-4 self-stretch lg:flex-row lg:items-center lg:gap-10">
             {/* Portfolio */}
             <div className="flex w-full flex-col gap-2 sm:min-w-[220px] sm:flex-1 sm:flex-row sm:items-center sm:gap-3">
-              <label className="text-dark-500 w-full text-xs leading-[150%] font-medium tracking-[-0.24px] sm:w-[100px] sm:text-sm sm:tracking-[-0.28px]">
+              <label className="text-foreground w-full text-xs leading-[150%] font-medium tracking-[-0.24px] sm:w-[100px] sm:text-sm sm:tracking-[-0.28px]">
                 {t('pages.clients.filters.portfolio')}
               </label>
               <div className="flex w-full flex-1 flex-wrap items-start gap-2 sm:gap-3">
@@ -609,7 +638,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                         } as unknown as ClientFilters)
                       }}
                     />
-                    <span className="text-dark-500 text-xs sm:text-sm">
+                    <span className="text-foreground text-xs sm:text-sm">
                       {portfolio.displayName}
                     </span>
                   </label>
@@ -656,67 +685,73 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
           <div className="flex w-full flex-col gap-4 self-stretch lg:flex-row lg:items-center lg:gap-10">
             {/* Tags Filter */}
             <div className="flex w-full flex-col gap-2 sm:min-w-[220px] sm:flex-1 sm:flex-row sm:items-center sm:gap-3">
-              <label className="text-dark-500 w-full text-xs leading-[150%] font-medium tracking-[-0.24px] sm:w-[100px] sm:text-sm sm:tracking-[-0.28px]">
+              <label className="text-foreground w-full text-xs leading-[150%] font-medium tracking-[-0.24px] sm:w-[100px] sm:text-sm sm:tracking-[-0.28px]">
                 {t('pages.clients.filters.tags')}
               </label>
               <div className="flex w-full flex-1 flex-wrap items-start gap-2 sm:gap-3">
                 {displayedTags.map((tag) => (
                   <label key={tag.id} className="flex cursor-pointer items-center gap-1.5 sm:gap-2">
-                    <Checkbox
-                      checked={selectedTagIds.includes(tag.id)}
-                      onCheckedChange={(checked) => {
-                        // Pass toggle action - parent will use functional update to avoid stale state
+                    <TagFilterTriState
+                      state={getTagTriState(tagFilterSelection, tag.id)}
+                      onCycle={() => {
                         onFilterChange({
-                          _action: 'toggleTag',
+                          _action: 'cycleTag',
                           _value: tag.id,
-                          _checked: checked,
                         } as unknown as ClientFilters)
                       }}
+                      aria-label={`${tag.name} filter`}
                     />
                     <div className="flex items-center gap-1 sm:gap-1.5">
                       <div
                         className="h-2 w-2 rounded-full sm:h-2.5 sm:w-2.5"
                         style={{ backgroundColor: tag.color }}
                       />
-                      <span className="text-dark-500 text-xs sm:text-sm">{tag.name}</span>
+                      <span className="text-foreground text-xs sm:text-sm">{tag.name}</span>
                     </div>
                   </label>
                 ))}
-                {hiddenTagsCount > 0 && (
-                  <div className="flex items-center gap-1.5 sm:gap-2">
+                {/* Always show dropdown so Segments tab remains reachable even with ≤3 tags */}
+                <div className="flex items-center gap-1.5 sm:gap-2">
+                  {hiddenTagsCount > 0 && (
                     <span className="text-secondary-800 text-xs leading-[150%] font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
                       + {hiddenTagsCount} {t('pages.clients.filters.more')}
                     </span>
-                    <TagsDropdown
-                      tags={tags}
-                      selectedTagIds={selectedTagIds}
-                      onSelectionChange={handleTagsChange}
-                      onClear={() => handleTagsChange([])}
-                      onOpenChange={setTagsDropdownOpen}
-                      trigger={
-                        <button
-                          type="button"
-                          data-testid="tags-multiselect-trigger"
-                          className="bg-primary-300 flex items-center gap-2 rounded p-1"
-                        >
-                          {tagsDropdownOpen ? (
-                            <Icons.ArrowUp
-                              size={16}
-                              className="text-secondary-800"
-                              strokeWidth={2}
-                            />
-                          ) : (
-                            <Icons.ArrowDown
-                              size={16}
-                              className="text-secondary-800"
-                              strokeWidth={2}
-                            />
-                          )}
-                        </button>
-                      }
-                    />
-                  </div>
-                )}
+                  )}
+                  {filters.segmentId != null && (
+                    <span
+                      className="text-primary-600 max-w-[140px] truncate text-xs font-medium sm:text-sm"
+                      title={t('pages.clients.filters.segmentActive')}
+                    >
+                      {t('pages.clients.filters.segmentActive')}
+                    </span>
+                  )}
+                  <TagsDropdown
+                    tags={tags}
+                    tagFilterSelection={tagFilterSelection}
+                    selectedSegmentId={filters.segmentId ?? null}
+                    onSelectionChange={handleTagsChange}
+                    onSegmentChange={handleSegmentChange}
+                    onClear={handleClearTagFilters}
+                    onOpenChange={setTagsDropdownOpen}
+                    trigger={
+                      <button
+                        type="button"
+                        data-testid="tags-multiselect-trigger"
+                        className="bg-primary-300 flex items-center gap-2 rounded p-1"
+                      >
+                        {tagsDropdownOpen ? (
+                          <Icons.ArrowUp size={16} className="text-secondary-800" strokeWidth={2} />
+                        ) : (
+                          <Icons.ArrowDown
+                            size={16}
+                            className="text-secondary-800"
+                            strokeWidth={2}
+                          />
+                        )}
+                      </button>
+                    }
+                  />
+                </div>
               </div>
             </div>
             <div className="hidden sm:flex sm:min-w-[220px] sm:flex-1" />
@@ -763,7 +798,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
               handleFilterChange for the cascade. */}
           <div className="flex w-full flex-col gap-4 self-stretch lg:flex-row lg:items-start lg:gap-10">
             <div className="flex w-full flex-col gap-2 sm:min-w-[220px] sm:flex-1 sm:flex-row sm:items-center sm:gap-3">
-              <label className="text-dark-500 w-full text-xs leading-[150%] font-medium tracking-[-0.24px] sm:w-auto sm:shrink-0 sm:text-sm sm:tracking-[-0.28px]">
+              <label className="text-foreground w-full text-xs leading-[150%] font-medium tracking-[-0.24px] sm:w-auto sm:shrink-0 sm:text-sm sm:tracking-[-0.28px]">
                 {t('pages.clients.filters.chain', 'Chain')}
               </label>
               <div className="flex w-full flex-1 flex-col items-start gap-2">
@@ -802,7 +837,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
               </div>
             </div>
             <div className="flex w-full flex-col gap-2 sm:min-w-[220px] sm:flex-1 sm:flex-row sm:items-center sm:gap-3">
-              <label className="text-dark-500 w-full text-xs leading-[150%] font-medium tracking-[-0.24px] sm:w-auto sm:shrink-0 sm:text-sm sm:tracking-[-0.28px]">
+              <label className="text-foreground w-full text-xs leading-[150%] font-medium tracking-[-0.24px] sm:w-auto sm:shrink-0 sm:text-sm sm:tracking-[-0.28px]">
                 {t('pages.clients.filters.chainStep', 'Step')}
               </label>
               <div className="flex w-full flex-1 flex-col items-start gap-2">
@@ -842,7 +877,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
           <div className="flex w-full flex-col gap-4 self-stretch lg:flex-row lg:items-start lg:gap-10">
             {/* Responsible employee (multi-select OR, KAN-572) */}
             <div className="flex w-full flex-col gap-2 sm:min-w-[220px] sm:flex-1 sm:flex-row sm:items-center sm:gap-3">
-              <label className="text-dark-500 w-full text-xs leading-[150%] font-medium tracking-[-0.24px] sm:w-auto sm:text-sm sm:tracking-[-0.28px]">
+              <label className="text-foreground w-full text-xs leading-[150%] font-medium tracking-[-0.24px] sm:w-auto sm:text-sm sm:tracking-[-0.28px]">
                 {t('pages.clients.filters.responsibleEmployee')}
               </label>
               <div className="flex w-full flex-1 flex-col items-start gap-2">
@@ -867,7 +902,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                   trigger={
                     <button
                       type="button"
-                      className="text-dark-500 flex h-[45px] w-full cursor-pointer items-center justify-between gap-2 rounded-lg border border-gray-400 bg-white px-3 py-2 text-left text-sm font-light whitespace-nowrap shadow-none focus:ring-0 focus:outline-none"
+                      className="text-foreground border-border bg-card flex h-[45px] w-full cursor-pointer items-center justify-between gap-2 rounded-lg border px-3 py-2 text-left text-sm font-light whitespace-nowrap shadow-none focus:ring-0 focus:outline-none"
                     >
                       <span className="truncate">
                         {(() => {
@@ -912,7 +947,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
 
             {/* Responsible searcher */}
             <div className="flex w-full flex-col gap-2 sm:min-w-[220px] sm:flex-1 sm:flex-row sm:items-center sm:gap-3">
-              <label className="text-dark-500 w-full text-xs leading-[150%] font-medium tracking-[-0.24px] sm:w-auto sm:text-sm sm:tracking-[-0.28px]">
+              <label className="text-foreground w-full text-xs leading-[150%] font-medium tracking-[-0.24px] sm:w-auto sm:text-sm sm:tracking-[-0.28px]">
                 {t('pages.clients.filters.responsibleSearcher')}
               </label>
               <div className="flex w-full flex-1 flex-col items-start gap-2">
@@ -934,14 +969,14 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                       {t('pages.clients.filters.selectSearcher')}
                     </SelectItem>
                     {searcherOptions.length === 0 ? (
-                      <div className="px-2 py-6 text-center text-sm text-gray-500">
+                      <div className="text-muted-foreground px-2 py-6 text-center text-sm">
                         {t('pages.clients.filters.noUsersAvailable')}
                       </div>
                     ) : (
                       searcherOptions.map((user) => (
                         <SelectItem key={user.id} value={user.id}>
                           {user.isInactive ? (
-                            <span className="text-gray-400">
+                            <span className="text-muted-foreground">
                               {user.name} {t('pages.clients.filters.inactiveSuffix', '(blocked)')}
                             </span>
                           ) : (
@@ -969,7 +1004,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                     })
                   }
                 />
-                <span className="text-dark-500 text-xs leading-[150%] font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
+                <span className="text-foreground text-xs leading-[150%] font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
                   {t('pages.clients.filters.unassignedOnly')}
                 </span>
               </label>

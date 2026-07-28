@@ -2,6 +2,7 @@
 import { Link } from 'react-router-dom'
 import { DataTable, type Column, type SortConfig } from '@/components/ui/DataTable'
 import { formatDate, formatDateTime } from '@/lib/formatters'
+import { formatMoneyAmount } from '@/lib/localeFormat'
 import { formatUkrainePhoneForDisplay } from '@/lib/phone'
 import type {
   InteractionInternalDateType,
@@ -39,11 +40,11 @@ function pickInternalDate(
   return row.promise_to_pay_date ?? row.next_action_date ?? row.follow_up_date ?? null
 }
 
-function formatAmount(value: string | null): string {
+function formatAmount(value: string | null, language: string): string {
   if (!value) return '—'
   const n = Number(value)
   if (Number.isNaN(n)) return value
-  return n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  return formatMoneyAmount(n, language)
 }
 
 export function InteractionHistoryTable({
@@ -53,7 +54,7 @@ export function InteractionHistoryTable({
   onSortChange,
   internalDateType,
 }: Props) {
-  const { t } = useTranslation('common')
+  const { t, i18n } = useTranslation('common')
 
   const rows: Row[] = data
 
@@ -171,7 +172,9 @@ export function InteractionHistoryTable({
       // Promise *date* lives in the dedicated "Internal date" column now —
       // showing it again as a sub-line here was duplicate noise.
       render: (r) => (
-        <span className="text-sm text-gray-700">{formatAmount(r.promise_to_pay_amount)}</span>
+        <span className="text-sm text-gray-700">
+          {formatAmount(r.promise_to_pay_amount, i18n.language)}
+        </span>
       ),
     },
   ]

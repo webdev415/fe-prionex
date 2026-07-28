@@ -441,14 +441,14 @@ export function CsvCampaignLaunchModal({ open, onClose, onLaunched }: CsvCampaig
       <ModalHeader
         icon={
           <div className="bg-primary-300 flex h-8 w-8 items-center justify-center rounded-full">
-            <Icons.MailSend01 size={18} className="text-dark-500" strokeWidth={1.5} />
+            <Icons.MailSend01 size={18} className="text-foreground" strokeWidth={1.5} />
           </div>
         }
         title={t('pages.messagingCampaigns.csvLaunch.title', 'Launch campaign from CSV')}
       />
 
       <ModalContent>
-        <p className="text-sm text-gray-600">
+        <p className="text-muted-foreground text-sm">
           {t(
             'pages.messagingCampaigns.csvLaunch.subtitle',
             'Upload recipients, compose the message, and launch.'
@@ -463,7 +463,7 @@ export function CsvCampaignLaunchModal({ open, onClose, onLaunched }: CsvCampaig
             />
 
             <div>
-              <label className="text-dark-500 mb-1.5 block text-sm font-light">
+              <label className="text-foreground mb-1.5 block text-sm font-light">
                 {t('pages.clients.modals.bulkSendMessage.channel', 'Channel')}
               </label>
               <Select
@@ -484,13 +484,13 @@ export function CsvCampaignLaunchModal({ open, onClose, onLaunched }: CsvCampaig
             </div>
           </div>
 
-          <div className="space-y-4 rounded-xl border border-gray-200 bg-gray-50 p-4">
+          <div className="border-border bg-muted space-y-4 rounded-xl border p-4">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <h3 className="text-dark-500 text-lg font-medium">
+                <h3 className="text-foreground text-lg font-medium">
                   {t(`${uploadP}.sectionTitle`, 'Upload CSV File')}
                 </h3>
-                <p className="text-sm text-gray-600">
+                <p className="text-muted-foreground text-sm">
                   {channel === 'email'
                     ? t(
                         `${uploadP}.descriptionEmail`,
@@ -537,29 +537,27 @@ export function CsvCampaignLaunchModal({ open, onClose, onLaunched }: CsvCampaig
                   fileInputRef.current?.click()
                 }
               }}
-              className={`focus:ring-secondary-500 relative flex h-48 w-full cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed transition-colors focus:ring-2 focus:ring-offset-2 focus:outline-none ${
-                dragActive
-                  ? 'border-secondary-500 bg-secondary-50'
-                  : 'border-gray-300 bg-gray-50 hover:bg-gray-100'
+              className={`focus:ring-primary-500 focus:ring-offset-card relative flex h-48 w-full cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed transition-colors focus:ring-2 focus:ring-offset-2 focus:outline-none ${
+                dragActive ? 'border-primary-500 bg-muted' : 'border-border hover:bg-muted/50'
               } ${isParsing ? 'pointer-events-none opacity-50' : ''}`}
             >
               {isParsing ? (
                 <div className="flex flex-col items-center gap-2">
                   <Icons.Spinner className="h-8 w-8" />
-                  <p className="text-sm text-gray-600">
+                  <p className="text-muted-foreground text-sm">
                     {t(`${uploadP}.validating`, 'Validating CSV…')}
                   </p>
                 </div>
               ) : (
                 <>
-                  <Icons.CloudDownload size={40} className="text-gray-400" />
-                  <p className="text-dark-500 mt-2 text-sm">
-                    <span className="text-secondary-700 font-medium">
+                  <Icons.CloudDownload size={40} className="text-muted-foreground" />
+                  <p className="text-foreground mt-2 text-sm">
+                    <span className="text-primary-600 font-medium">
                       {t(`${uploadP}.clickToUpload`, 'Click to upload')}
                     </span>{' '}
                     {t(`${uploadP}.orDragAndDrop`, 'or drag and drop')}
                   </p>
-                  <p className="mt-1 text-xs text-gray-500">
+                  <p className="text-muted-foreground mt-1 text-xs">
                     {t(`${uploadP}.constraints`, {
                       defaultValue: 'CSV only, max 10 MB, max {{max}} rows',
                       max: BULK_MESSAGING_RECIPIENT_CAP.toLocaleString(),
@@ -579,7 +577,7 @@ export function CsvCampaignLaunchModal({ open, onClose, onLaunched }: CsvCampaig
             </div>
 
             {uploadedFileName && !isParsing && (
-              <p className="text-dark-500 text-sm">
+              <p className="text-foreground text-sm">
                 {t(`${uploadP}.selectedFile`, {
                   defaultValue: 'Selected file: {{name}}',
                   name: uploadedFileName,
@@ -588,8 +586,8 @@ export function CsvCampaignLaunchModal({ open, onClose, onLaunched }: CsvCampaig
             )}
 
             {parseResult && (
-              <div className="rounded-lg border border-gray-200 bg-white p-3">
-                <p className="text-sm text-gray-700">
+              <div className="border-border bg-card rounded-lg border p-3">
+                <p className="text-foreground text-sm">
                   {t('pages.messagingCampaigns.csvLaunch.parseSummary', {
                     eligible: parseResult.eligible,
                     total: parseResult.total,
@@ -598,7 +596,7 @@ export function CsvCampaignLaunchModal({ open, onClose, onLaunched }: CsvCampaig
                   })}
                 </p>
                 {parseResult.sample?.length ? (
-                  <ul className="mt-2 space-y-1 text-xs text-gray-600">
+                  <ul className="text-muted-foreground mt-2 space-y-1 text-xs">
                     {parseResult.sample.map((row) => (
                       <li key={row.row_number}>
                         #{row.client_id} · {row.destination}
@@ -617,7 +615,7 @@ export function CsvCampaignLaunchModal({ open, onClose, onLaunched }: CsvCampaig
             <>
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div>
-                  <label className="text-dark-500 mb-1.5 block text-sm font-light">
+                  <label className="text-foreground mb-1.5 block text-sm font-light">
                     {t('pages.clients.modals.bulkSendMessage.service', 'Service')}
                   </label>
                   <Select value={service || undefined} onValueChange={setService}>
@@ -640,7 +638,7 @@ export function CsvCampaignLaunchModal({ open, onClose, onLaunched }: CsvCampaig
                 </div>
 
                 <div>
-                  <label className="text-dark-500 mb-1.5 block text-sm font-light">
+                  <label className="text-foreground mb-1.5 block text-sm font-light">
                     {t('pages.clients.modals.bulkSendMessage.draft', 'Draft')}
                   </label>
                   <Select
@@ -727,21 +725,21 @@ export function CsvCampaignLaunchModal({ open, onClose, onLaunched }: CsvCampaig
                 )}
 
                 {body.trim().length > 0 && (
-                  <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+                  <div className="border-border bg-muted rounded-xl border p-4">
                     <div className="mb-3 flex flex-wrap items-center gap-2">
-                      <span className="text-dark-500 text-sm font-medium">
+                      <span className="text-foreground text-sm font-medium">
                         {t('pages.clients.modals.bulkSendMessage.draftPreview', 'Message preview')}
                       </span>
                       {previewLabel && (
-                        <span className="rounded-full bg-white px-2.5 py-0.5 text-xs font-medium text-gray-600 ring-1 ring-gray-200 ring-inset">
+                        <span className="bg-card text-muted-foreground ring-border rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset">
                           {previewLabel}
                         </span>
                       )}
-                      <span className="rounded-full bg-white px-2.5 py-0.5 text-xs font-medium text-gray-600 ring-1 ring-gray-200 ring-inset">
+                      <span className="bg-card text-muted-foreground ring-border rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset">
                         {channel.toUpperCase()}
                       </span>
                     </div>
-                    <pre className="text-dark-500 max-h-48 overflow-auto rounded-lg bg-white p-3 font-mono text-xs whitespace-pre-wrap">
+                    <pre className="text-foreground bg-card max-h-48 overflow-auto rounded-lg p-3 font-mono text-xs whitespace-pre-wrap">
                       {body.trim() || '—'}
                     </pre>
                   </div>

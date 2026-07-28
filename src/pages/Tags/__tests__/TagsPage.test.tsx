@@ -49,6 +49,7 @@ let mockTags = [
     description: 'VIP clients',
     project_id: 1,
     client_count: 5,
+    sort_order: 10,
     created_at: '2024-01-01T00:00:00Z',
   },
   {
@@ -58,6 +59,7 @@ let mockTags = [
     description: 'Hot leads',
     project_id: 1,
     client_count: 10,
+    sort_order: 20,
     created_at: '2024-01-02T00:00:00Z',
   },
 ]
@@ -144,6 +146,7 @@ describe('TagsPage - TDD Phase 1 (RED)', () => {
         description: 'VIP clients',
         project_id: 1,
         client_count: 5,
+        sort_order: 10,
         created_at: '2024-01-01T00:00:00Z',
       },
       {
@@ -153,6 +156,7 @@ describe('TagsPage - TDD Phase 1 (RED)', () => {
         description: 'Hot leads',
         project_id: 1,
         client_count: 10,
+        sort_order: 20,
         created_at: '2024-01-02T00:00:00Z',
       },
     ]

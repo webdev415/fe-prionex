@@ -17,7 +17,7 @@ export function ProjectManagementPageSkeleton() {
       <div className="flex flex-1 gap-4 overflow-hidden">
         {/* Table Container - full width on mobile, 70% on desktop */}
         <div className="flex min-w-0 flex-1 flex-col">
-          <div className="flex h-full flex-col overflow-hidden rounded-xl bg-white/50">
+          <div className="bg-card/50 flex h-full flex-col overflow-hidden rounded-xl">
             <div className="flex-1 overflow-auto lg:p-6">
               <TableSkeleton columns={TABLE_COLUMNS} rows={ITEMS_PER_PAGE} />
             </div>
@@ -36,7 +36,7 @@ export function ProjectManagementPageSkeleton() {
       <div className="mt-4 shrink-0">
         <div className="flex items-center justify-center gap-2">
           {Array.from({ length: 5 }).map((_, index) => (
-            <div key={index} className="h-10 w-10 animate-pulse rounded bg-gray-200" />
+            <div key={index} className="bg-muted h-10 w-10 animate-pulse rounded" />
           ))}
         </div>
       </div>

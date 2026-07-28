@@ -52,6 +52,8 @@ export const clientKeys = {
     [...clientKeys.details(), id, 'restructuringAgreements'] as const,
   restructuringDetail: (id: number, raId: number) =>
     [...clientKeys.details(), id, 'restructuringDetail', raId] as const,
+  loanCalculation: (id: number, debtId: number) =>
+    [...clientKeys.details(), id, 'loanCalculation', debtId] as const,
   search: (params: SearchByTinParams) => [...clientKeys.all, 'search', params] as const,
   count: () => [...clientKeys.all, 'count'] as const,
   prioritySummary: () => [...clientKeys.all, 'priority-summary'] as const,
@@ -745,6 +747,22 @@ export function useRestructuringAgreementDetail(clientId: number, raId: number, 
     enabled: enabled && clientId > 0 && raId > 0,
     staleTime: 2 * 60_000,
     refetchOnMount: false,
+  })
+}
+
+/**
+ * Detailed calculation (after sale) for a single loan — KAN-335 modal.
+ */
+export function useLoanCalculation(clientId: number, debtId: number, enabled = true) {
+  return useQuery({
+    queryKey: clientKeys.loanCalculation(clientId, debtId),
+    queryFn: () => clientApi.getLoanCalculation(clientId, debtId),
+    enabled: enabled && clientId > 0 && debtId > 0,
+    // The modal is opened on demand and must reflect the current ledger, so
+    // always refetch when it (re)mounts — a payment/write-off/reversal recorded
+    // between opens would otherwise be masked by a cached copy.
+    staleTime: 0,
+    refetchOnMount: 'always',
   })
 }
 

@@ -1,4 +1,21 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
+
+// The letter body language follows the recipient (options.language), not the UI.
+// Mock i18n so getFixedT resolves the client fallback per-language deterministically
+// (the shared test setup mocks i18next core, leaving no real t on @/lib/i18n).
+vi.mock('@/lib/i18n', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/i18n')>()
+  return {
+    ...actual,
+    default: {
+      getFixedT: (lng: string) => (key: string, defaultValue: string) =>
+        lng?.startsWith('uk') && key === 'pages.lawyerWorkplace.letterTemplate.clientFallback'
+          ? 'Клієнт'
+          : defaultValue,
+    },
+  }
+})
+
 import { applyLetterTemplatePlaceholders } from '../letterTemplateVariables'
 
 describe('applyLetterTemplatePlaceholders', () => {
@@ -40,5 +57,11 @@ describe('applyLetterTemplatePlaceholders', () => {
     expect(applyLetterTemplatePlaceholders(body, { referenceId: 'REF-001' })).toBe(
       'REF-001 vs REF-001'
     )
+  })
+
+  it('resolves the client fallback in the recipient letter language', () => {
+    const body = 'Dear {{clientName}}'
+    expect(applyLetterTemplatePlaceholders(body, {}, { language: 'uk' })).toBe('Dear Клієнт')
+    expect(applyLetterTemplatePlaceholders(body, {}, { language: 'en' })).toBe('Dear Client')
   })
 })

@@ -11,12 +11,12 @@ function PhaseStatusBadge({ status }: { status: VendorFilePhase['status'] }) {
   const { t } = useTranslation('common')
 
   const base =
-    'inline-flex h-7 items-center gap-1.5 rounded-full px-3 text-xs font-medium text-white'
+    'inline-flex h-7 items-center gap-1.5 rounded-full px-3 text-xs font-medium text-primary-foreground'
 
   if (status === 'completed') {
     return (
       <span className={`${base} bg-secondary-800`}>
-        <Icons.Checkmark size={12} className="text-white" />
+        <Icons.Checkmark size={12} className="text-primary-foreground" />
         {t('pages.imports.details.statuses.completed', 'Completed')}
       </span>
     )
@@ -24,7 +24,7 @@ function PhaseStatusBadge({ status }: { status: VendorFilePhase['status'] }) {
   if (status === 'in_progress') {
     return (
       <span className={`${base} bg-secondary-800`}>
-        <span className="h-2 w-2 animate-pulse rounded-full bg-white" />
+        <span className="bg-primary-foreground h-2 w-2 animate-pulse rounded-full" />
         {t('pages.imports.details.statuses.inProgress', 'In progress')}
       </span>
     )
@@ -32,14 +32,14 @@ function PhaseStatusBadge({ status }: { status: VendorFilePhase['status'] }) {
   if (status === 'failed') {
     return (
       <span className={`${base} bg-error-600`}>
-        <Icons.Warning size={12} className="text-white" />
+        <Icons.Warning size={12} className="text-primary-foreground" />
         {t('pages.imports.details.statuses.failed', 'Failed')}
       </span>
     )
   }
   return (
-    <span className="inline-flex h-7 items-center gap-1.5 rounded-full bg-gray-200 px-3 text-xs font-medium text-gray-700">
-      <span className="h-2 w-2 rounded-full bg-gray-500" />
+    <span className="bg-muted text-muted-foreground inline-flex h-7 items-center gap-1.5 rounded-full px-3 text-xs font-medium">
+      <span className="bg-muted-foreground h-2 w-2 rounded-full" />
       {t('pages.imports.details.statuses.pending', 'Pending')}
     </span>
   )
@@ -49,13 +49,13 @@ export function VendorPhaseProgress({ phases, errorMessage }: VendorPhaseProgres
   const { t } = useTranslation('common')
 
   return (
-    <div className="flex flex-1 flex-col gap-3 rounded-xl border border-gray-200 bg-white/50 p-4 shadow-sm sm:p-6">
-      <h2 className="text-dark-500 text-lg leading-[150%] font-light tracking-[-0.4px] sm:text-xl">
+    <div className="border-border bg-card/50 flex flex-1 flex-col gap-3 rounded-xl border p-4 shadow-sm sm:p-6">
+      <h2 className="text-foreground text-lg leading-[150%] font-light tracking-[-0.4px] sm:text-xl">
         {t('pages.imports.details.vendor.filesProgress', 'Files & downstream progress')}
       </h2>
-      <div className="h-px w-full bg-gray-200" />
+      <div className="bg-border h-px w-full" />
 
-      <div className="flex flex-col divide-y divide-gray-100">
+      <div className="divide-border flex flex-col divide-y">
         {phases.map((phase) => {
           const showCounters =
             phase.status === 'in_progress' &&
@@ -67,15 +67,17 @@ export function VendorPhaseProgress({ phases, errorMessage }: VendorPhaseProgres
               className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between"
             >
               <div className="flex flex-col">
-                <span className="text-dark-500 text-sm font-medium tracking-[-0.32px]">
+                <span className="text-foreground text-sm font-medium tracking-[-0.32px]">
                   {phase.display_name}
                 </span>
-                <span className="text-xs break-all text-gray-500">{phase.filename || '—'}</span>
-                <span className="text-xs text-gray-400">→ {phase.target_db}</span>
+                <span className="text-muted-foreground text-xs break-all">
+                  {phase.filename || '—'}
+                </span>
+                <span className="text-muted-foreground text-xs">→ {phase.target_db}</span>
               </div>
               <div className="flex items-center gap-3">
                 {showCounters && (
-                  <span className="text-xs text-gray-600 tabular-nums">
+                  <span className="text-muted-foreground text-xs tabular-nums">
                     {phase.processed?.toLocaleString()} / {phase.total?.toLocaleString()}
                   </span>
                 )}
@@ -88,7 +90,7 @@ export function VendorPhaseProgress({ phases, errorMessage }: VendorPhaseProgres
 
       {errorMessage && (
         <>
-          <div className="my-2 h-px w-full bg-gray-200" />
+          <div className="bg-border my-2 h-px w-full" />
           <div className="bg-error-50 border-error-200 text-error-700 rounded-lg border px-3 py-2 text-xs break-words">
             <div className="font-medium">
               {t('pages.imports.details.vendor.lastError', 'Last error')}

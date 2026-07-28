@@ -1,5 +1,6 @@
 @import 'tailwindcss';
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap');
+@import './theme/themes.css';
 
 @theme {
   /* PRIMARY (Green #80D80A) - CTAs, links, focus states, interactive elements */
@@ -119,6 +120,19 @@
   --color-error-900: #7f1d1d;
   --color-error-950: #450a0a;
 
+  /* info-* aliases (Alert.tsx) — same scale as information */
+  --color-info-50: var(--color-information-50);
+  --color-info-100: var(--color-information-100);
+  --color-info-200: var(--color-information-200);
+  --color-info-300: var(--color-information-300);
+  --color-info-400: var(--color-information-400);
+  --color-info-500: var(--color-information-500);
+  --color-info-600: var(--color-information-600);
+  --color-info-700: var(--color-information-700);
+  --color-info-800: var(--color-information-800);
+  --color-info-900: var(--color-information-900);
+  --color-info-950: var(--color-information-950);
+
   /* Font Family */
   --font-family-sans: 'Noto Sans', sans-serif;
 
@@ -162,6 +176,40 @@
   --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
   --shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 0.25);
   --shadow-card: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+
+  /* Semantic theme tokens (values from src/theme/themes.css via data-theme / data-accent) */
+  --color-background: var(--background);
+  --color-elevated: var(--elevated);
+  --color-nav-surface: var(--nav-surface);
+  --color-nav-foreground: var(--nav-foreground);
+  --color-nav-muted: var(--nav-muted);
+  --color-nav-hover: var(--nav-hover);
+  --color-filter-bar: var(--filter-bar);
+  --color-search-bar: var(--search-bar);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-input-border: var(--input-border);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-overlay: var(--overlay);
+  --color-ring: var(--ring);
+  --color-primary: var(--primary);
+  --color-primary-soft: var(--primary-soft);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
 }
 
 @layer base {
@@ -174,14 +222,25 @@
   }
 
   body {
-    background-color: var(--color-light-50);
-    color: var(--color-dark-500);
+    background-color: var(--background);
+    color: var(--foreground);
     min-height: 100vh;
   }
 
   button {
     color: inherit;
   }
+}
+
+/*
+ * Theme switch performance: while data-theme / data-accent flip, suppress
+ * transitions so the whole tree snaps instead of animating every color.
+ * Class is added/removed by applyThemeToDocument.
+ */
+html.theme-switching,
+html.theme-switching * {
+  transition: none !important;
+  animation: none !important;
 }
 
 /* React Flow controls: force dark icons regardless of @layer ordering */
@@ -293,9 +352,34 @@
     background-color: #80d80a;
   }
 
-  /* Dashboard background image */
+  /* Dashboard background image — only for themes that define --dashboard-bg-image */
   .bg-dashboard-light {
-    background-image: url(/assets/images/dashboard-light-bg.svg);
+    background-image: none;
+  }
+
+  html[data-theme='light-classic'] .bg-dashboard-light,
+  html[data-theme='neutral-dim'] .bg-dashboard-light {
+    background-image: var(--dashboard-bg-image, url(/assets/images/dashboard-light-bg.svg));
+  }
+
+  /* Sidebar brand logos — CSS-only swap (no React theme subscription) */
+  .sidebar-brand-logo-light,
+  .sidebar-brand-logo-dark {
+    display: block;
+  }
+
+  .sidebar-brand-logo-dark {
+    display: none;
+  }
+
+  html[data-theme='light-classic'] .sidebar-brand-logo-light,
+  html[data-theme='high-contrast-light'] .sidebar-brand-logo-light {
+    display: none;
+  }
+
+  html[data-theme='light-classic'] .sidebar-brand-logo-dark,
+  html[data-theme='high-contrast-light'] .sidebar-brand-logo-dark {
+    display: block;
   }
 
   /* Button text color for light backgrounds */
@@ -397,30 +481,30 @@
     scrollbar-color: #d4d4d4 transparent;
   }
 
-  /* Data Table Scrollbar */
+  /* Data Table Scrollbar — follows active data-theme tokens */
   .data-table-scroll::-webkit-scrollbar {
     height: 8px;
   }
 
   .data-table-scroll::-webkit-scrollbar-track {
-    background: #ebece8;
+    background: var(--border);
     border-radius: 0 0 12px 12px;
   }
 
   .data-table-scroll::-webkit-scrollbar-thumb {
-    background: #90947b;
+    background: var(--muted-foreground);
     border-radius: 4px;
-    border: 1px solid #ebece8;
+    border: 1px solid var(--border);
   }
 
   .data-table-scroll::-webkit-scrollbar-thumb:hover {
-    background: #6f715d;
+    background: color-mix(in srgb, var(--muted-foreground) 70%, var(--foreground));
   }
 
   /* Firefox */
   .data-table-scroll {
     scrollbar-width: thin;
-    scrollbar-color: #90947b transparent;
+    scrollbar-color: var(--muted-foreground) var(--border);
     margin: 0;
     padding: 0;
   }

@@ -8,7 +8,7 @@
  * Each document row has: filename, type badge, date, size, preview, download, delete buttons.
  */
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
@@ -62,10 +62,17 @@ export function DocumentsAccordion({ documents, loans, clientId }: DocumentsAcco
     })
   }
 
+  // Newest first within every section. ISO timestamps sort lexicographically,
+  // so a string compare is chronological; DESC = (b, a).
+  const sortedDocuments = useMemo(
+    () => [...documents].sort((a, b) => (b.created_at ?? '').localeCompare(a.created_at ?? '')),
+    [documents]
+  )
+
   // Group documents by debt_id
-  const unlinked = documents.filter((d) => d.debt_id == null)
+  const unlinked = sortedDocuments.filter((d) => d.debt_id == null)
   const byDebt = new Map<number, ClientDocument[]>()
-  for (const doc of documents) {
+  for (const doc of sortedDocuments) {
     if (doc.debt_id != null) {
       const list = byDebt.get(doc.debt_id) ?? []
       list.push(doc)
@@ -100,7 +107,14 @@ export function DocumentsAccordion({ documents, loans, clientId }: DocumentsAcco
         className="truncate px-3 py-2 text-sm font-medium text-[#05040D]"
         title={doc.original_filename}
       >
-        {doc.original_filename}
+        <div className="flex items-center gap-2">
+          <span className="truncate">{doc.original_filename}</span>
+          {doc.source === 'generated' && (
+            <span className="bg-primary-50 text-primary-600 shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium">
+              {t('pages.clients.detail.generatedBadge', 'Згенеровано')}
+            </span>
+          )}
+        </div>
       </td>
       <td className="px-3 py-2">
         <DocumentTypePill

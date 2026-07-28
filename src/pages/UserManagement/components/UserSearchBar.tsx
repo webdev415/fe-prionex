@@ -92,7 +92,7 @@ export function UserSearchBar({
   }
 
   return (
-    <div className="flex w-[280px] items-center gap-3 rounded-full border border-gray-200 bg-white pr-2 pl-4 shadow-sm sm:w-[400px] md:w-[500px] lg:w-[600px]">
+    <div className="border-border bg-card flex w-[280px] items-center gap-3 rounded-full border pr-2 pl-4 sm:w-[400px] md:w-[500px] lg:w-[600px]">
       <div className="flex min-w-0 flex-1 items-center gap-2 py-1">
         <input
           type="text"
@@ -100,16 +100,16 @@ export function UserSearchBar({
           value={value}
           onChange={(event) => onValueChange(event.target.value)}
           onKeyDown={handleKeyDown}
-          className="text-dark-500 h-9 w-full min-w-0 bg-transparent text-sm font-light outline-none placeholder:text-gray-500"
+          className="text-foreground placeholder:text-muted-foreground h-9 w-full min-w-0 bg-transparent text-sm font-light outline-none"
         />
         {value && (
           <button
             onClick={onClear}
-            className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-gray-100"
+            className="hover:bg-muted flex h-6 w-6 shrink-0 items-center justify-center rounded-full transition-colors"
             type="button"
             aria-label={t('pages.users.clearSearch')}
           >
-            <Icons.Close size={14} className="text-gray-500" />
+            <Icons.Close size={14} className="text-muted-foreground" />
           </button>
         )}
       </div>
@@ -124,29 +124,33 @@ export function UserSearchBar({
             <DropdownMenuTrigger asChild>
               <button
                 type="button"
-                className="text-dark-500 bg-primary-300 hover:bg-primary-500 active:bg-primary-600 group flex h-9 w-9 min-w-0 cursor-pointer items-center justify-center rounded-full border-0 p-0 shadow-none transition-all duration-200 hover:shadow-md focus:outline-none active:shadow-sm disabled:cursor-not-allowed disabled:opacity-50 data-[state=open]:focus:ring-0 data-[state=open]:focus:ring-offset-0"
+                className="text-primary-foreground bg-primary-300 hover:bg-primary-500 active:bg-primary-600 group flex h-9 w-9 min-w-0 cursor-pointer items-center justify-center rounded-full border-0 p-0 shadow-none transition-all duration-200 hover:shadow-md focus:outline-none active:shadow-sm disabled:cursor-not-allowed disabled:opacity-50 data-[state=open]:focus:ring-0 data-[state=open]:focus:ring-offset-0"
                 aria-label={t('pages.users.searchCriterionLabel')}
               >
                 <Icons.Filter
                   size={18}
-                  className="text-dark-500 shrink-0 transition-transform duration-200 group-hover:scale-110"
+                  className="text-primary-foreground shrink-0 transition-transform duration-200 group-hover:scale-110"
                   strokeWidth={1.5}
                 />
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48 bg-white">
+            <DropdownMenuContent align="end" className="w-48">
               {searchOptions.map((option) => (
                 <DropdownMenuItem
                   key={option.value}
                   onClick={() => handleSearchFieldChange(option.value)}
                   className={cn(
-                    'text-dark-500 flex cursor-pointer items-center gap-2 text-xs',
-                    searchField === option.value && 'bg-gray-100 font-medium'
+                    'text-foreground flex cursor-pointer items-center gap-2 text-xs',
+                    searchField === option.value && 'bg-muted font-medium'
                   )}
                 >
                   {option.label}
                   {searchField === option.value && (
-                    <Icons.Checkmark size={16} className="text-dark-500 ml-auto" strokeWidth={2} />
+                    <Icons.Checkmark
+                      size={16}
+                      className="text-foreground ml-auto"
+                      strokeWidth={2}
+                    />
                   )}
                 </DropdownMenuItem>
               ))}
@@ -155,7 +159,7 @@ export function UserSearchBar({
         </div>
 
         <div className="hidden items-center lg:flex">
-          <div className="mx-2 h-5 w-px bg-gray-300" />
+          <div className="bg-border mx-2 h-5 w-px" />
           <DropdownMenu
             modal={false}
             open={isDesktopDropdownOpen}
@@ -164,30 +168,34 @@ export function UserSearchBar({
             <DropdownMenuTrigger asChild>
               <button
                 type="button"
-                className="text-dark-500 group flex h-auto w-auto min-w-[140px] cursor-pointer items-center justify-between gap-2 rounded-md border-0 bg-transparent px-2 py-1 text-xs shadow-none transition-all duration-200 hover:bg-gray-100 focus:outline-none active:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50 data-[state=open]:focus:ring-0 data-[state=open]:focus:ring-offset-0"
+                className="text-foreground hover:bg-muted active:bg-muted group flex h-auto w-auto min-w-[140px] cursor-pointer items-center justify-between gap-2 rounded-md border-0 bg-transparent px-2 py-1 text-xs shadow-none transition-all duration-200 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 data-[state=open]:focus:ring-0 data-[state=open]:focus:ring-offset-0"
                 aria-label={t('pages.users.searchCriterionLabel')}
               >
                 <span className="transition-colors duration-200">{currentSearchFieldLabel}</span>
                 <Icons.ArrowDown
                   size={14}
-                  className="text-gray-500 opacity-50 transition-all duration-200 group-hover:translate-y-0.5 group-hover:opacity-100"
+                  className="text-muted-foreground opacity-50 transition-all duration-200 group-hover:translate-y-0.5 group-hover:opacity-100"
                   strokeWidth={1.5}
                 />
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48 bg-white">
+            <DropdownMenuContent align="end" className="w-48">
               {searchOptions.map((option) => (
                 <DropdownMenuItem
                   key={option.value}
                   onClick={() => handleSearchFieldChange(option.value)}
                   className={cn(
-                    'text-dark-500 flex cursor-pointer items-center gap-2 text-xs',
-                    searchField === option.value && 'bg-gray-100 font-medium'
+                    'text-foreground flex cursor-pointer items-center gap-2 text-xs',
+                    searchField === option.value && 'bg-muted font-medium'
                   )}
                 >
                   {option.label}
                   {searchField === option.value && (
-                    <Icons.Checkmark size={16} className="text-dark-500 ml-auto" strokeWidth={2} />
+                    <Icons.Checkmark
+                      size={16}
+                      className="text-foreground ml-auto"
+                      strokeWidth={2}
+                    />
                   )}
                 </DropdownMenuItem>
               ))}
@@ -203,7 +211,7 @@ export function UserSearchBar({
         className="bg-primary-300 flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-all duration-200 hover:scale-105 disabled:opacity-60"
         aria-label={t('pages.users.searchButton')}
       >
-        <Icons.Search size={18} className="text-dark-500" strokeWidth={1.5} />
+        <Icons.Search size={18} className="text-primary-foreground" strokeWidth={1.5} />
       </button>
     </div>
   )

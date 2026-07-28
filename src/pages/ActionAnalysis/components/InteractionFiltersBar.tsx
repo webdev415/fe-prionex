@@ -24,7 +24,7 @@ import type { ScopedUserIds } from '../lib/scope'
 import { DateRangeQuickFilter } from './DateRangeQuickFilter'
 import { EmployeeFilterDropdown } from './EmployeeFilterDropdown'
 
-const FILTER_SURFACE = 'rounded-xl bg-white/50 p-4 shadow-sm sm:p-6'
+const FILTER_SURFACE = 'rounded-xl border border-border bg-card/60 p-4 shadow-sm sm:p-6'
 
 interface Props {
   value: InteractionBarState
@@ -131,11 +131,11 @@ export function InteractionFiltersBar({
           userTimezone={userTimezone}
         />
 
-        <div className="h-px w-full bg-gray-200" />
+        <div className="bg-border h-px w-full" />
 
         <div className="grid w-full gap-3 sm:grid-cols-2 lg:grid-cols-3 lg:gap-4 xl:grid-cols-5">
           <div className="flex flex-col gap-1.5">
-            <span className="text-dark-500 text-xs font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
+            <span className="text-foreground text-xs font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
               {t('pages.actionAnalysis.filters.department', 'Department')}
             </span>
             <Select
@@ -180,7 +180,7 @@ export function InteractionFiltersBar({
           />
 
           <div className="flex flex-col gap-1.5">
-            <span className="text-dark-500 text-xs font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
+            <span className="text-foreground text-xs font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
               {t('pages.actionAnalysis.filters.contactType', 'Contact type')}
             </span>
             <Select
@@ -208,7 +208,7 @@ export function InteractionFiltersBar({
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <span className="text-dark-500 text-xs font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
+            <span className="text-foreground text-xs font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
               {t('pages.actionAnalysis.filters.result', 'Result')}
             </span>
             <Select
@@ -232,7 +232,7 @@ export function InteractionFiltersBar({
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <span className="text-dark-500 text-xs font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
+            <span className="text-foreground text-xs font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
               {t('pages.actionAnalysis.filters.channel', 'Channel')}
             </span>
             <Select
@@ -256,7 +256,7 @@ export function InteractionFiltersBar({
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <span className="text-dark-500 text-xs font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
+            <span className="text-foreground text-xs font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
               {t('pages.actionAnalysis.filters.promiseMin', 'Promise min')}
             </span>
             <Input
@@ -274,7 +274,7 @@ export function InteractionFiltersBar({
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <span className="text-dark-500 text-xs font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
+            <span className="text-foreground text-xs font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
               {t('pages.actionAnalysis.filters.promiseMax', 'Promise max')}
             </span>
             <Input
@@ -300,7 +300,7 @@ export function InteractionFiltersBar({
             stays exactly 2 rows of 5 at xl+ (10 cells total).
           */}
           <div className="flex flex-col gap-1.5">
-            <span className="text-dark-500 text-xs font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
+            <span className="text-foreground text-xs font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
               {t('pages.actionAnalysis.filters.internalDateType', 'Internal date')}
             </span>
             <Select
@@ -349,7 +349,7 @@ export function InteractionFiltersBar({
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <span className="text-dark-500 text-xs font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
+            <span className="text-foreground text-xs font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
               {t('pages.actionAnalysis.filters.internalDateFrom', 'Internal date from')}
             </span>
             <DateSelect
@@ -361,13 +361,13 @@ export function InteractionFiltersBar({
               max={parsedInternalTo ?? undefined}
               allowManualInput
               format="dd.MM.yyyy"
-              className="h-[45px] rounded-lg border-gray-400"
+              className="border-input-border h-[45px] rounded-lg"
               disabled={!internalDateRangeActive}
             />
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <span className="text-dark-500 text-xs font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
+            <span className="text-foreground text-xs font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
               {t('pages.actionAnalysis.filters.internalDateTo', 'Internal date to')}
             </span>
             <DateSelect
@@ -377,7 +377,7 @@ export function InteractionFiltersBar({
               min={parsedInternalFrom ?? undefined}
               allowManualInput
               format="dd.MM.yyyy"
-              className="h-[45px] rounded-lg border-gray-400"
+              className="border-input-border h-[45px] rounded-lg"
               disabled={!internalDateRangeActive}
             />
           </div>

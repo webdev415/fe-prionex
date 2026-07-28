@@ -22,7 +22,7 @@ export function ViewTemplateForm({ template }: ViewTemplateFormProps) {
       {/* Template Name */}
       <div className="space-y-2">
         <Label>{t('pages.smsTemplates.forms.templateName')}</Label>
-        <div className="text-dark-500 rounded-md border border-gray-300 bg-gray-50 px-3 py-2 text-sm">
+        <div className="text-foreground border-border bg-muted rounded-md border px-3 py-2 text-sm">
           {template.name}
         </div>
       </div>
@@ -30,7 +30,7 @@ export function ViewTemplateForm({ template }: ViewTemplateFormProps) {
       {/* Category */}
       <div className="space-y-2">
         <Label>{t('pages.smsTemplates.forms.category')}</Label>
-        <div className="text-dark-500 rounded-md border border-gray-300 bg-gray-50 px-3 py-2 text-sm">
+        <div className="text-foreground border-border bg-muted rounded-md border px-3 py-2 text-sm">
           {template.category}
         </div>
       </div>
@@ -41,7 +41,7 @@ export function ViewTemplateForm({ template }: ViewTemplateFormProps) {
         <div>
           <StatusBadge status={template.isEnabled ? 'active' : 'disabled'} />
           {template.isSystem && (
-            <span className="ml-2 text-xs text-gray-500">
+            <span className="text-muted-foreground ml-2 text-xs">
               ({t('pages.smsTemplates.forms.systemTemplate')})
             </span>
           )}
@@ -57,7 +57,7 @@ export function ViewTemplateForm({ template }: ViewTemplateFormProps) {
           {template.variables.map((variable, index) => (
             <span
               key={index}
-              className="text-dark-500 inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-xs font-medium"
+              className="text-foreground bg-muted inline-flex items-center rounded-full px-3 py-1 text-xs font-medium"
             >
               {'{' + variable + '}'}
             </span>
@@ -68,7 +68,7 @@ export function ViewTemplateForm({ template }: ViewTemplateFormProps) {
       {/* Usage Count */}
       <div className="space-y-2">
         <Label>{t('pages.smsTemplates.forms.usageCount')}</Label>
-        <div className="text-dark-500 rounded-md border border-gray-300 bg-gray-50 px-3 py-2 text-sm">
+        <div className="text-foreground border-border bg-muted rounded-md border px-3 py-2 text-sm">
           {template.usageCount} {t('pages.smsTemplates.times')}
         </div>
       </div>
@@ -76,7 +76,7 @@ export function ViewTemplateForm({ template }: ViewTemplateFormProps) {
       {/* Message Text */}
       <div className="space-y-2">
         <Label>{t('pages.smsTemplates.forms.messageText')}</Label>
-        <Textarea value={template.messageText} readOnly rows={6} className="bg-gray-50" />
+        <Textarea value={template.messageText} readOnly rows={6} className="bg-muted" />
       </div>
     </div>
   )

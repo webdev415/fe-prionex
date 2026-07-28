@@ -169,6 +169,8 @@ import {
   ArtificialIntelligence08Icon,
   ThumbsUpIcon,
   ThumbsDownIcon,
+  Moon02Icon,
+  Sun02Icon,
 } from '@hugeicons/core-free-icons'
 /**
  * Icon component props
@@ -380,6 +382,8 @@ export const Icons = {
   CallOutgoing04: (props: Omit<IconProps, 'icon'>) => <Icon icon={CallOutgoing04Icon} {...props} />,
   CallIncoming04: (props: Omit<IconProps, 'icon'>) => <Icon icon={CallIncoming04Icon} {...props} />,
   AiBrain03: (props: Omit<IconProps, 'icon'>) => <Icon icon={AiBrain03Icon} {...props} />,
+  Moon: (props: Omit<IconProps, 'icon'>) => <Icon icon={Moon02Icon} {...props} />,
+  Sun: (props: Omit<IconProps, 'icon'>) => <Icon icon={Sun02Icon} {...props} />,
   Flash: (props: Omit<IconProps, 'icon'>) => <Icon icon={FlashIcon} {...props} />,
   Sparkles: (props: Omit<IconProps, 'icon'>) => <Icon icon={SparklesIcon} {...props} />,
   FileSearch: (props: Omit<IconProps, 'icon'>) => <Icon icon={FileSearchIcon} {...props} />,
@@ -545,6 +549,8 @@ export {
   CallOutgoing04Icon,
   CallIncoming04Icon,
   AiBrain03Icon,
+  Moon02Icon,
+  Sun02Icon,
   FlashIcon,
   SparklesIcon,
   FileSearchIcon,

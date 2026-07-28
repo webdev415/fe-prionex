@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
+import { formatMonthDay, formatTimeShort } from '@/lib/localeFormat'
 import { Pagination } from '@/components/ui/Pagination'
 import { useAuthStore } from '@/stores/authStore'
 import { useOperators } from '@/features/users/hooks'
@@ -105,11 +106,11 @@ function pad(n: number): string {
   return String(n).padStart(2, '0')
 }
 
-function formatDateTime(iso: string | null): string {
+function formatDateTime(iso: string | null, language: string): string {
   if (!iso) return '—'
   const d = new Date(iso)
   if (Number.isNaN(d.getTime())) return iso
-  return `${pad(d.getMonth() + 1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
+  return `${formatMonthDay(d, language)} ${formatTimeShort(d, language)}`
 }
 
 function formatDuration(seconds: number | null): string {
@@ -391,7 +392,7 @@ function ThirdPartyRow({
   yesLabel: string
   didNotReturnLabel: string
 }) {
-  const { t } = useTranslation('common')
+  const { t, i18n } = useTranslation('common')
   const operatorName = row.operator_name ?? (row.operator_id ? `#${row.operator_id}` : '—')
   const initials = row.operator_name ? deriveInitials(row.operator_name) : ''
   const chip = row.result_chip
@@ -402,7 +403,7 @@ function ThirdPartyRow({
       className={`${ANALYTICS_TABLE_ROW} ${clickable ? 'cursor-pointer' : ''}`}
       onClick={clickable ? onOpen : undefined}
     >
-      <td className={ANALYTICS_TABLE_TD}>{formatDateTime(row.datetime)}</td>
+      <td className={ANALYTICS_TABLE_TD}>{formatDateTime(row.datetime, i18n.language)}</td>
       <td className={ANALYTICS_TABLE_TD}>
         <div className="flex items-center gap-2">
           {initials ? (
@@ -444,7 +445,7 @@ function ThirdPartyRow({
             </span>
             {row.returned_at ? (
               <span className="mt-0.5 text-[10px] text-[#9CA3AF]">
-                {formatDateTime(row.returned_at)}
+                {formatDateTime(row.returned_at, i18n.language)}
               </span>
             ) : null}
           </div>

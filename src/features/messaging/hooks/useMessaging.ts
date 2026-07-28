@@ -19,6 +19,7 @@ export const messagingKeys = {
     search?: string
     limit?: number
     offset?: number
+    tz?: string
   }) => [...messagingKeys.campaigns(), 'list', params ?? {}] as const,
   campaign: (campaignId: number) => [...messagingKeys.campaigns(), campaignId] as const,
   campaignRecipients: (
@@ -68,6 +69,7 @@ export function useMessagingCampaigns(params?: {
   search?: string
   limit?: number
   offset?: number
+  tz?: string
 }) {
   return useQuery({
     queryKey: messagingKeys.campaignList(params),

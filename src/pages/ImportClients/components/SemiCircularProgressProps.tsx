@@ -13,8 +13,8 @@ const SemiCircularProgress = ({
   percentage,
   size = 200,
   className,
-  completedColor = '#2d9d92',
-  incompleteColor = '#d4d7dc',
+  completedColor,
+  incompleteColor,
 }: SemiCircularProgressProps) => {
   const { t } = useTranslation('common')
   const clampedPercentage = Math.min(100, Math.max(0, percentage))
@@ -50,8 +50,17 @@ const SemiCircularProgress = ({
         rx={segmentWidth / 2}
         ry={segmentWidth / 2}
         transform={`rotate(${rotation}, ${x}, ${y})`}
-        fill={isFilled ? completedColor : incompleteColor}
-        className="transition-all duration-300 ease-in-out"
+        fill={
+          completedColor || incompleteColor
+            ? isFilled
+              ? completedColor
+              : incompleteColor
+            : undefined
+        }
+        className={cn(
+          'transition-all duration-300 ease-in-out',
+          !completedColor && !incompleteColor && (isFilled ? 'fill-primary-400' : 'fill-border')
+        )}
         style={{
           opacity: isFilled ? 0.4 + opacityProgress * 0.6 : 1,
         }}
@@ -74,7 +83,7 @@ const SemiCircularProgress = ({
           x={centerX}
           y={size * 0.42}
           textAnchor="middle"
-          className="text-dark-500 text-2xl leading-tight font-medium tracking-[-0.48px]"
+          className="text-foreground text-2xl leading-tight font-medium tracking-[-0.48px]"
         >
           {Math.round(clampedPercentage)}%
         </text>
@@ -84,7 +93,7 @@ const SemiCircularProgress = ({
           x={centerX}
           y={size * 0.52}
           textAnchor="middle"
-          className="text-dark-500 text-2xl leading-tight font-light tracking-[-0.48px]"
+          className="text-foreground text-2xl leading-tight font-light tracking-[-0.48px]"
         >
           {t('pages.imports.details.statuses.completed')}
         </text>

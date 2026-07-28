@@ -1,4 +1,17 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
+
+// The shared test setup mocks i18next core, so @/lib/i18n has no real `t`.
+// Provide a passthrough that returns the defaultValue for the noSubject fallback.
+vi.mock('@/lib/i18n', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/i18n')>()
+  return {
+    ...actual,
+    default: {
+      t: (key: string, opts?: { defaultValue?: string }) => opts?.defaultValue ?? key,
+    },
+  }
+})
+
 import {
   buildLetterParameters,
   isLetterParametersReadOnly,
@@ -35,6 +48,15 @@ describe('mapInboxItemToLetterListItem', () => {
 
     expect(item.senderName).toBe('Client-111 Беззуб')
     expect(item.senderEmail).toBe('sargsyantigran835@gmail.com')
+  })
+
+  it('falls back to a localized placeholder when the subject is blank', () => {
+    const item = mapInboxItemToLetterListItem({
+      ...baseItem,
+      subject: '   ',
+    })
+
+    expect(item.subject).toBe('(no subject)')
   })
 
   it('uses mailbox email instead of mailbox id', () => {
