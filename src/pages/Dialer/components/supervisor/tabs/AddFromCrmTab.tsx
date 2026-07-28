@@ -163,15 +163,22 @@ export function AddFromCrmTab() {
 
   const columns: Column<Client>[] = useMemo(
     () => [
-      { key: 'name', header: t('dialer.crm.client', 'Client'), render: (c) => clientName(c) },
+      {
+        key: 'name',
+        header: t('dialer.crm.client', 'Client'),
+        className: 'w-1/4',
+        render: (c) => clientName(c),
+      },
       {
         key: 'phone_primary',
         header: t('dialer.crm.phone', 'Phone'),
+        className: 'w-1/4',
         render: (c) => c.phone_primary ?? '—',
       },
       {
         key: 'tags',
         header: t('dialer.crm.tags', 'Tags'),
+        className: 'w-1/4',
         render: (c) =>
           c.tags && c.tags.length > 0 ? (
             <div className="flex flex-wrap gap-1">
@@ -192,6 +199,7 @@ export function AddFromCrmTab() {
       {
         key: 'last_contact_date',
         header: t('dialer.crm.lastContact', 'Last contact'),
+        className: 'w-1/4',
         render: (c) => relativeDays(c.last_contact_date ?? c.last_ta_date),
       },
     ],

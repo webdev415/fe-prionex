@@ -184,6 +184,7 @@
       "modeAppend": "Додати до наявної черги",
       "modeReplace": "Замінити чергу",
       "strictNote": "Сувора перевірка — якщо запис некоректний, це буде показано перед імпортом.",
+      "strictValidation": "Сувора перевірка - якщо хоча б один запис некоректний, жоден запис не буде імпортовано.",
       "confirmUpload": "Підтвердити завантаження",
       "uploaded": "Додано номерів до черги: {{count}}"
     },
@@ -212,7 +213,7 @@
     },
     "analysis": {
       "operatorsInLine": "Операторів на лінії",
-      "currentlyInConversation": "У розмові",
+      "currentlyInConversation": "Зараз у розмові",
       "waitingForCall": "Очікують дзвінка",
       "totalTalkTime": "Загальний час розмов",
       "clientsProcessed": "Оброблено клієнтів",

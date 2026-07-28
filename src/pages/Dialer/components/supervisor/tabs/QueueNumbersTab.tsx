@@ -38,6 +38,8 @@ import { getErrorMessage } from '@/lib/errors'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 
+import { DialerKpiStrip } from '../DialerKpiStrip'
+
 /** Columns the dialer CSV must contain (comment is optional). */
 const REQUIRED_COLUMNS = ['client_id', 'phone_number']
 
@@ -66,30 +68,6 @@ function validateCsvHeader(file: File): Promise<{ isValid: boolean; missingColum
     reader.onerror = () => resolve({ isValid: false, missingColumns: REQUIRED_COLUMNS })
     reader.readAsText(file.slice(0, 10240))
   })
-}
-
-function KpiCard({
-  icon,
-  label,
-  value,
-  tone,
-}: {
-  icon: React.ReactNode
-  label: string
-  value: number | undefined
-  tone?: 'default' | 'error'
-}) {
-  return (
-    <div className="border-border flex items-center gap-3 rounded-xl border bg-white px-4 py-3">
-      <div className={cn('text-muted-foreground', tone === 'error' && 'text-error-500')}>
-        {icon}
-      </div>
-      <div className="min-w-0">
-        <p className="text-muted-foreground truncate text-xs">{label}</p>
-        <p className="text-foreground text-lg font-semibold">{(value ?? 0).toLocaleString()}</p>
-      </div>
-    </div>
-  )
 }
 
 export function QueueNumbersTab() {
@@ -185,34 +163,35 @@ export function QueueNumbersTab() {
 
   return (
     <div className="flex flex-col gap-4">
-      {/* KPI strip */}
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <KpiCard
-          icon={<Icons.Phone size={20} />}
-          label={t('dialer.numbers.inQueue', 'In Queue')}
-          value={status?.in_queue}
-        />
-        <KpiCard
-          icon={<Icons.CheckmarkBadge02 size={20} />}
-          label={t('dialer.numbers.processed', 'Processed')}
-          value={status?.processed}
-        />
-        <KpiCard
-          icon={<Icons.CallEnd size={20} />}
-          label={t('dialer.numbers.missedCall', 'Missed Call')}
-          value={status?.missed_call}
-        />
-        <KpiCard
-          icon={<Icons.Warning size={20} />}
-          label={t('dialer.numbers.lineErrors', 'Line Errors')}
-          value={status?.line_errors}
-          tone="error"
-        />
-      </div>
+      {/* KPI strip (design: supervisor-04) */}
+      <DialerKpiStrip
+        items={[
+          {
+            icon: <Icons.RightToLeftListNumber size={20} />,
+            label: t('dialer.numbers.inQueue', 'In Queue'),
+            value: (status?.in_queue ?? 0).toLocaleString(),
+          },
+          {
+            icon: <Icons.CallDone size={20} />,
+            label: t('dialer.numbers.processed', 'Processed'),
+            value: (status?.processed ?? 0).toLocaleString(),
+          },
+          {
+            icon: <Icons.CallEnd01 size={20} />,
+            label: t('dialer.numbers.missedCall', 'Missed Call'),
+            value: (status?.missed_call ?? 0).toLocaleString(),
+          },
+          {
+            icon: <Icons.SignalNo01 size={20} />,
+            label: t('dialer.numbers.lineErrors', 'Line Errors'),
+            value: (status?.line_errors ?? 0).toLocaleString(),
+          },
+        ]}
+      />
 
-      {/* Upload panel */}
-      <div className="border-border rounded-xl border bg-white p-4">
-        <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+      {/* Upload panel — body matches the KPI surface (bg #FFFFFF80). */}
+      <div className="rounded-xl border border-white bg-white/50 p-4">
+        <div className="mb-4 flex flex-col gap-2 border-b border-gray-100 pb-4 sm:flex-row sm:items-center sm:justify-between">
           <h3 className="text-foreground text-sm font-semibold">
             {t('dialer.numbers.uploadTitle', 'Upload Numbers')}
             {selectedQueue ? ` — ${selectedQueue.name}` : ''}
@@ -240,10 +219,10 @@ export function QueueNumbersTab() {
         </div>
 
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          {/* Drop zone */}
+          {/* Drop zone (left column) */}
           <div
             className={cn(
-              'flex flex-col items-center justify-center gap-3 rounded-lg border-2 border-dashed p-8 text-center transition-colors',
+              'flex min-h-[300px] flex-col items-center justify-center gap-3 rounded-lg border-2 border-dashed px-8 py-16 text-center transition-colors',
               isDragging ? 'border-primary-500 bg-muted' : 'border-border'
             )}
             onDragOver={(e) => {
@@ -261,10 +240,10 @@ export function QueueNumbersTab() {
             }}
           >
             <Icons.CloudDownload size={40} strokeWidth={0.75} className="text-muted-foreground" />
-            <p className="text-foreground text-sm font-medium">
+            <p className="text-foreground text-xl font-light">
               {t('dialer.numbers.dropHint', 'Drag CSV or click to select')}
             </p>
-            <p className="text-muted-foreground text-xs">
+            <p className="text-dark-500 text-sm font-medium">
               {t('dialer.numbers.format', 'Format: client_id, phone_number, comment')}
             </p>
             <Button
@@ -284,15 +263,21 @@ export function QueueNumbersTab() {
             />
           </div>
 
-          {/* Result panel */}
-          <div className="border-border flex flex-col rounded-lg border p-4">
+          {/* Result panel — white only while the CSV report is shown; empty
+              state matches the shared surface (like the drop zone). */}
+          <div
+            className={cn(
+              'border-border flex flex-col rounded-lg border p-4',
+              file ? 'bg-white' : 'bg-transparent'
+            )}
+          >
             {!file ? (
               <div className="text-muted-foreground flex flex-1 items-center justify-center text-center text-sm">
                 {t('dialer.numbers.noFile', 'Select a CSV file to validate before uploading.')}
               </div>
             ) : (
               <>
-                <div className="mb-3 flex items-center justify-between gap-2">
+                <div className="flex items-center justify-between gap-2 border-b border-gray-100 pb-3">
                   <div className="flex min-w-0 items-center gap-2">
                     <Icons.Csv02 size={18} className="text-muted-foreground shrink-0" />
                     <span className="text-foreground truncate text-sm font-medium">
@@ -329,80 +314,83 @@ export function QueueNumbersTab() {
 
                 {/* Preview counts */}
                 {preview && (
-                  <div className="flex flex-col gap-2 text-sm">
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">
-                        {t('dialer.numbers.totalRecords', 'Total Records')}
-                      </span>
-                      <span className="text-foreground font-medium">
-                        {preview.total_records.toLocaleString()}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">
-                        {t('dialer.numbers.duplicatesRemoved', 'Duplicates Removed')}
-                      </span>
-                      <span className="font-medium text-amber-600">
-                        {preview.duplicates_removed.toLocaleString()}
-                      </span>
-                    </div>
-                    <div>
-                      <div className="flex items-center justify-between">
+                  <div className="text-sm">
+                    <div className="flex flex-col divide-y divide-gray-100">
+                      <div className="flex items-center justify-between py-3">
                         <span className="text-muted-foreground">
-                          {t('dialer.numbers.invalidNumbers', 'Invalid Numbers')}
+                          {t('dialer.numbers.totalRecords', 'Total Records')}
                         </span>
-                        <span className="text-error-600 font-medium">
-                          {preview.invalid_count.toLocaleString()}
+                        <span className="text-foreground font-medium">
+                          {preview.total_records.toLocaleString()}
                         </span>
                       </div>
-                      {preview.invalid_count > 0 && preview.invalid_rows?.length ? (
-                        <>
-                          <button
-                            type="button"
-                            className="text-primary-600 mt-1 text-xs"
-                            onClick={() => setShowInvalid((s) => !s)}
-                          >
-                            {showInvalid
-                              ? t('dialer.numbers.hide', 'Hide')
-                              : t('dialer.numbers.show', 'Show')}
-                          </button>
-                          {showInvalid && (
-                            <div className="bg-error-50 text-error-600 mt-2 flex flex-col gap-1 rounded-md p-2 text-xs">
-                              {preview.invalid_rows.map((r) => (
-                                <div key={r.row}>
-                                  {t('dialer.numbers.rowLabel', 'Row {{row}}', { row: r.row })}:{' '}
-                                  {r.reason}
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </>
-                      ) : null}
-                    </div>
-                    <div className="border-border mt-1 flex items-center justify-between border-t pt-2">
-                      <span className="text-foreground font-medium">
-                        {t('dialer.numbers.willBeAdded', 'Will be added')}
-                      </span>
-                      <span className="text-foreground font-semibold">
-                        {preview.will_be_added.toLocaleString()}
-                      </span>
-                    </div>
+                      <div className="flex items-center justify-between py-3">
+                        <span className="text-muted-foreground">
+                          {t('dialer.numbers.duplicatesRemoved', 'Duplicates Removed')}
+                        </span>
+                        <span className="font-medium text-amber-600">
+                          {preview.duplicates_removed.toLocaleString()}
+                        </span>
+                      </div>
+                      <div className="py-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-muted-foreground">
+                            {t('dialer.numbers.invalidNumbers', 'Invalid Numbers')}
+                          </span>
+                          <span className="text-error-600 font-medium">
+                            {preview.invalid_count.toLocaleString()}
+                          </span>
+                        </div>
+                        {preview.invalid_count > 0 && preview.invalid_rows?.length ? (
+                          <>
+                            <button
+                              type="button"
+                              className="text-primary-600 mt-1 text-xs"
+                              onClick={() => setShowInvalid((s) => !s)}
+                            >
+                              {showInvalid
+                                ? t('dialer.numbers.hide', 'Hide')
+                                : t('dialer.numbers.show', 'Show')}
+                            </button>
+                            {showInvalid && (
+                              <div className="bg-error-50 text-error-600 mt-2 flex flex-col gap-1 rounded-md p-2 text-xs">
+                                {preview.invalid_rows.map((r) => (
+                                  <div key={r.row}>
+                                    {t('dialer.numbers.rowLabel', 'Row {{row}}', { row: r.row })}:{' '}
+                                    {r.reason}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </>
+                        ) : null}
+                      </div>
+                      <div className="flex items-center justify-between py-3">
+                        <span className="text-foreground font-medium">
+                          {t('dialer.numbers.willBeAdded', 'Will be added')}
+                        </span>
+                        <span className="text-foreground font-semibold">
+                          {preview.will_be_added.toLocaleString()}
+                        </span>
+                      </div>
 
-                    {/* Append vs replace */}
-                    <RadioGroup
-                      className="mt-2"
-                      value={mode}
-                      onValueChange={(v) => setMode(v as QueueUploadMode)}
-                    >
-                      <label className="flex cursor-pointer items-center gap-2 text-sm">
-                        <RadioItem value="append" />
-                        {t('dialer.numbers.modeAppend', 'Add to existing queue')}
-                      </label>
-                      <label className="flex cursor-pointer items-center gap-2 text-sm">
-                        <RadioItem value="replace" />
-                        {t('dialer.numbers.modeReplace', 'Replace queue')}
-                      </label>
-                    </RadioGroup>
+                      {/* Append vs replace — divider above (under "Will be added") */}
+                      <div className="py-3">
+                        <RadioGroup
+                          value={mode}
+                          onValueChange={(v) => setMode(v as QueueUploadMode)}
+                        >
+                          <label className="flex cursor-pointer items-center gap-2 text-sm">
+                            <RadioItem value="append" />
+                            {t('dialer.numbers.modeAppend', 'Add to existing queue')}
+                          </label>
+                          <label className="flex cursor-pointer items-center gap-2 text-sm">
+                            <RadioItem value="replace" />
+                            {t('dialer.numbers.modeReplace', 'Replace queue')}
+                          </label>
+                        </RadioGroup>
+                      </div>
+                    </div>
                   </div>
                 )}
               </>
@@ -410,24 +398,31 @@ export function QueueNumbersTab() {
           </div>
         </div>
 
-        {/* Footer: strict-validation note + actions */}
-        <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        {/* Footer: strict-validation note under the drop zone (left), actions
+            under the validation column (right). Mirrors the panel grid. */}
+        <div className="mt-4 grid grid-cols-1 items-center gap-4 lg:grid-cols-2">
           <p className="text-muted-foreground flex items-center gap-1.5 text-xs">
             <Icons.Warning size={14} />
             {t(
-              'dialer.numbers.strictNote',
-              'Strict validation — if a record is invalid, it is reported before import.'
+              'dialer.numbers.strictValidation',
+              'Strict validation - if at least one record is invalid, no records are imported.'
             )}
           </p>
-          <div className="flex items-center gap-2">
-            <Button variant="secondary" onClick={resetUpload} disabled={!file}>
+          <div className="grid grid-cols-2 gap-3">
+            <Button
+              variant="cancel"
+              onClick={resetUpload}
+              disabled={!file}
+              className="w-full rounded"
+            >
               {t('actions.cancel', 'Cancel')}
             </Button>
             <Button
-              variant="primary"
+              variant="secondary"
               onClick={handleConfirm}
               disabled={!canConfirm}
               isLoading={confirmMutation.isPending}
+              className="w-full rounded"
             >
               {t('dialer.numbers.confirmUpload', 'Confirm Upload')}
             </Button>

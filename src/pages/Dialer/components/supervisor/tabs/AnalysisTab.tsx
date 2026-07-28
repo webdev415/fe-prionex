@@ -21,20 +21,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/Select'
-import {
-  useDialerQueues,
-  useOperatorStats,
-  useSimStats,
-  type OperatorDialerStats,
-  type SimCardStats,
-} from '@/features/dialer'
+import { useDialerQueues, useOperatorStats, type OperatorDialerStats } from '@/features/dialer'
+import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
+
+import { DialerKpiStrip } from '../DialerKpiStrip'
 
 const ALL = 'all'
 type StatusFilter = 'all' | 'in_conversation' | 'awaiting_call'
 
 type OperatorRow = OperatorDialerStats & { id: number }
-type SimRow = SimCardStats & { id: string }
 
 function fmtDuration(seconds: number): string {
   if (!seconds) return '0m'
@@ -66,15 +62,6 @@ function initials(name: string): string {
     .join('')
 }
 
-function StatCard({ label, value }: { label: string; value: string | number }) {
-  return (
-    <div className="border-border rounded-xl border bg-white px-4 py-3">
-      <p className="text-muted-foreground truncate text-xs">{label}</p>
-      <p className="text-foreground text-lg font-semibold">{value}</p>
-    </div>
-  )
-}
-
 export function AnalysisTab() {
   const { t } = useTranslation('common')
 
@@ -83,7 +70,6 @@ export function AnalysisTab() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
 
   const { data: stats, isLoading } = useOperatorStats(queueId ? { queue_id: queueId } : {})
-  const { data: sims } = useSimStats(queueId ?? undefined)
 
   const rows: OperatorRow[] = useMemo(
     () => (stats ?? []).map((s) => ({ ...s, id: s.operator_id })),
@@ -103,8 +89,6 @@ export function AnalysisTab() {
     () => (statusFilter === 'all' ? rows : rows.filter((r) => r.status === statusFilter)),
     [rows, statusFilter]
   )
-
-  const simRows: SimRow[] = useMemo(() => (sims ?? []).map((s) => ({ ...s, id: s.sim_id })), [sims])
 
   const operatorColumns: Column<OperatorRow>[] = useMemo(
     () => [
@@ -208,74 +192,38 @@ export function AnalysisTab() {
     [t]
   )
 
-  const simColumns: Column<SimRow>[] = useMemo(
-    () => [
-      { key: 'sim_id', header: t('dialer.analysis.simId', 'SIM Card') },
-      {
-        key: 'calls_made',
-        header: t('dialer.analysis.callsMade', 'Calls made'),
-        align: 'right',
-        render: (s) => s.calls_made.toLocaleString(),
-      },
-      {
-        key: 'error_count',
-        header: t('dialer.analysis.errors', 'Errors'),
-        align: 'right',
-        render: (s) => (
-          <span className={s.error_count > 0 ? 'text-error-600 font-medium' : undefined}>
-            {s.error_count.toLocaleString()}
-          </span>
-        ),
-      },
-      {
-        key: 'status',
-        header: t('dialer.analysis.status', 'Status'),
-        align: 'center',
-        render: (s) => {
-          const active = s.status === 'active'
-          return (
-            <span
-              className={cn(
-                'rounded-full px-2 py-0.5 text-xs font-medium',
-                active ? 'bg-success-50 text-success-600' : 'bg-muted text-muted-foreground'
-              )}
-            >
-              {active
-                ? t('dialer.analysis.simActive', 'Active')
-                : t('dialer.analysis.simDisabled', 'Disabled')}
-            </span>
-          )
-        },
-      },
-    ],
-    [t]
-  )
-
   return (
     <div className="flex flex-col gap-4">
-      {/* KPI strip */}
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
-        <StatCard
-          label={t('dialer.analysis.operatorsInLine', 'Operators in Line')}
-          value={kpi.operators}
-        />
-        <StatCard
-          label={t('dialer.analysis.currentlyInConversation', 'In Conversation')}
-          value={kpi.inConversation}
-        />
-        <StatCard
-          label={t('dialer.analysis.waitingForCall', 'Waiting for a Call')}
-          value={kpi.waiting}
-        />
-        <StatCard
-          label={t('dialer.analysis.totalTalkTime', 'Total Talk Time')}
-          value={fmtDuration(kpi.totalTalk)}
-        />
-        <StatCard
-          label={t('dialer.analysis.clientsProcessed', 'Clients Processed')}
-          value={kpi.processed.toLocaleString()}
-        />
-      </div>
+      {/* KPI strip (design: supervisor-07) — same surface as Queue of Numbers. */}
+      <DialerKpiStrip
+        items={[
+          {
+            icon: <Icons.Headset size={20} />,
+            label: t('dialer.analysis.operatorsInLine', 'Operators in Line'),
+            value: kpi.operators,
+          },
+          {
+            icon: <Icons.CallRinging04 size={20} />,
+            label: t('dialer.analysis.currentlyInConversation', 'Currently in Conversation'),
+            value: kpi.inConversation,
+          },
+          {
+            icon: <Icons.CallIncoming01 size={20} />,
+            label: t('dialer.analysis.waitingForCall', 'Waiting for a Call'),
+            value: kpi.waiting,
+          },
+          {
+            icon: <Icons.TimeQuarter02 size={20} />,
+            label: t('dialer.analysis.totalTalkTime', 'Total Talk Time'),
+            value: fmtDuration(kpi.totalTalk),
+          },
+          {
+            icon: <Icons.UserCheck02 size={20} />,
+            label: t('dialer.analysis.clientsProcessed', 'Clients Processed'),
+            value: kpi.processed.toLocaleString(),
+          },
+        ]}
+      />
 
       {/* Toolbar: preset + status filter */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -297,7 +245,8 @@ export function AnalysisTab() {
             </SelectContent>
           </Select>
         </div>
-        <div className="inline-flex flex-wrap gap-1">
+        {/* Status filter — segmented switch (same style as the Queue List). */}
+        <div className="inline-flex items-center gap-1 rounded-lg bg-white p-1 shadow-[0px_1px_3px_0px_#0000001A,0px_1px_2px_0px_#0000000F]">
           {(
             [
               [
@@ -315,13 +264,19 @@ export function AnalysisTab() {
                 type="button"
                 onClick={() => setStatusFilter(active ? 'all' : key)}
                 className={cn(
-                  'rounded-lg border px-3 py-1 text-xs font-medium transition-colors',
-                  active
-                    ? 'bg-primary text-primary-foreground border-transparent'
-                    : 'border-border text-muted-foreground'
+                  'flex items-center gap-1.5 rounded-md px-4 py-2 text-xs font-medium transition-colors',
+                  active ? 'bg-secondary-800 text-white' : 'text-foreground hover:bg-muted'
                 )}
               >
-                {label} {count}
+                {label}
+                <span
+                  className={cn(
+                    'flex h-4 min-w-4 items-center justify-center rounded-full px-1.5 text-[10px] font-medium',
+                    active ? 'bg-primary-300 text-primary-foreground' : 'bg-gray-100 text-gray-800'
+                  )}
+                >
+                  {count}
+                </span>
               </button>
             )
           })}
@@ -334,23 +289,11 @@ export function AnalysisTab() {
           {t('common.loading', 'Loading...')}
         </div>
       ) : (
-        <DataTable
-          columns={operatorColumns}
-          data={filteredRows}
-          emptyMessage={t('dialer.analysis.empty', 'No operators connected.')}
-        />
-      )}
-
-      {/* SIM stats */}
-      {simRows.length > 0 && (
-        <div className="flex flex-col gap-2">
-          <h3 className="text-foreground text-sm font-semibold">
-            {t('dialer.analysis.simStats', 'SIM Card Statistics')}
-          </h3>
+        <div className="dialer-analysis-card overflow-hidden rounded-xl bg-white/50 shadow-[0px_1px_3px_0px_#00000012]">
           <DataTable
-            columns={simColumns}
-            data={simRows}
-            emptyMessage={t('dialer.analysis.noSims', 'No SIM data.')}
+            columns={operatorColumns}
+            data={filteredRows}
+            emptyMessage={t('dialer.analysis.empty', 'No operators connected.')}
           />
         </div>
       )}

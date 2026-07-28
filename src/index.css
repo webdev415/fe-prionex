@@ -807,3 +807,35 @@ input[type='datetime-local']::-webkit-calendar-picker-indicator:hover {
   border-right: 0;
   font-weight: 300;
 }
+
+/* Analysis operator table (KAN-379, design: supervisor-07) — same look as the
+   Queue List: card reset, Gray-50 header with white column dividers, first-row-
+   white zebra, no body dividers, weight-300 body with the Operator name (col 1)
+   emphasised. Scoped so no other table is affected. */
+.dialer-analysis-card .data-table-scroll {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  padding-bottom: 0;
+}
+.dialer-analysis-card table thead tr,
+.dialer-analysis-card table thead th {
+  background-color: var(--color-gray-50); /* #F7F7F7 */
+}
+.dialer-analysis-card table thead th {
+  border-right-color: #ffffff;
+}
+.dialer-analysis-card table tbody tr:nth-child(odd) {
+  background-color: #ffffff;
+}
+.dialer-analysis-card table tbody tr:nth-child(even) {
+  background-color: #f2f3f066; /* light-50 @ 40% */
+}
+.dialer-analysis-card table tbody td {
+  border-right: 0;
+  font-weight: 300;
+}
+.dialer-analysis-card table tbody td:nth-child(1) {
+  font-weight: 500;
+}

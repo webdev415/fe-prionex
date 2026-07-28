@@ -184,6 +184,7 @@
       "modeAppend": "Add to existing queue",
       "modeReplace": "Replace queue",
       "strictNote": "Strict validation — if a record is invalid, it is reported before import.",
+      "strictValidation": "Strict validation - if at least one record is invalid, no records are imported.",
       "confirmUpload": "Confirm Upload",
       "uploaded": "{{count}} numbers added to the queue"
     },
@@ -212,7 +213,7 @@
     },
     "analysis": {
       "operatorsInLine": "Operators in Line",
-      "currentlyInConversation": "In Conversation",
+      "currentlyInConversation": "Currently in Conversation",
       "waitingForCall": "Waiting for a Call",
       "totalTalkTime": "Total Talk Time",
       "clientsProcessed": "Clients Processed",
