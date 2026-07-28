@@ -32,7 +32,7 @@ export function DialerKpiStrip({ items }: { items: DialerKpiItem[] }) {
               {item.icon}
             </div>
             <span className="truncate text-xs text-gray-900">{item.label}</span>
-            <span className="text-foreground ml-auto text-lg font-semibold">{item.value}</span>
+            <span className="text-dark-500 ml-auto text-sm font-semibold">{item.value}</span>
           </div>
         </Fragment>
       ))}

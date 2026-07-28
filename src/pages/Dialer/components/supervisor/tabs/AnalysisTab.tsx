@@ -53,6 +53,22 @@ function fmtTime(iso?: string | null): string {
   return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`
 }
 
+/** Soft avatar tints for in-conversation operators (picked deterministically by
+ * operator id so each person keeps a stable colour). Awaiting operators are grey. */
+const AVATAR_COLORS = [
+  'bg-success-100 text-success-700', // green
+  'bg-[#FEF3C7] text-[#B45309]', // amber
+  'bg-[#DBEAFE] text-[#1D4ED8]', // blue
+  'bg-[#EDE9FE] text-[#6D28D9]', // violet
+  'bg-[#FCE7F3] text-[#BE185D]', // pink
+  'bg-[#CCFBF1] text-[#0F766E]', // teal
+]
+
+function avatarClass(operatorId: number, inConversation: boolean): string {
+  if (!inConversation) return 'bg-gray-100 text-gray-600'
+  return AVATAR_COLORS[Math.abs(operatorId) % AVATAR_COLORS.length]
+}
+
 function initials(name: string): string {
   return name
     .split(' ')
@@ -95,19 +111,29 @@ export function AnalysisTab() {
       {
         key: 'operator',
         header: t('dialer.analysis.operator', 'Operator'),
-        render: (r) => (
-          <div className="flex items-center gap-2">
-            <span className="bg-muted text-foreground flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-medium">
-              {initials(r.operator_name)}
-            </span>
-            <div className="min-w-0">
-              <p className="text-foreground truncate text-sm font-medium">{r.operator_name}</p>
-              {r.operator_email && (
-                <p className="text-muted-foreground truncate text-xs">{r.operator_email}</p>
-              )}
+        render: (r) => {
+          const inConv = r.status === 'in_conversation'
+          return (
+            <div className="flex items-center gap-2">
+              {/* Avatar: a stable per-operator colour when in conversation, grey
+                  when awaiting (design: supervisor-07). */}
+              <span
+                className={cn(
+                  'flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-medium',
+                  avatarClass(r.operator_id, inConv)
+                )}
+              >
+                {initials(r.operator_name)}
+              </span>
+              <div className="min-w-0">
+                <p className="text-dark-500 truncate text-sm font-medium">{r.operator_name}</p>
+                {r.operator_email && (
+                  <p className="truncate text-xs text-[#A1A1A1]">{r.operator_email}</p>
+                )}
+              </div>
             </div>
-          </div>
-        ),
+          )
+        },
       },
       {
         key: 'status',
@@ -118,13 +144,13 @@ export function AnalysisTab() {
             <span
               className={cn(
                 'inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium',
-                inConv ? 'bg-success-50 text-success-600' : 'bg-amber-50 text-amber-600'
+                inConv ? 'bg-success-100 text-success-700' : 'bg-gray-100 text-gray-600'
               )}
             >
               <span
                 className={cn(
                   'h-1.5 w-1.5 rounded-full',
-                  inConv ? 'bg-success-500' : 'bg-amber-500'
+                  inConv ? 'bg-success-700' : 'bg-gray-600'
                 )}
               />
               {inConv
@@ -152,35 +178,42 @@ export function AnalysisTab() {
       {
         key: 'utilization_pct',
         header: t('dialer.analysis.utilization', 'Utilization'),
-        render: (r) => (
-          <div className="flex items-center gap-2">
-            <ProgressBar
-              percentage={r.utilization_pct}
-              height="sm"
-              className="w-24"
-              barClassName={r.utilization_pct >= 75 ? 'bg-success-500' : 'bg-amber-400'}
-            />
-            <span className="text-muted-foreground w-9 text-right text-xs">
-              {Math.round(r.utilization_pct)}%
-            </span>
-          </div>
-        ),
+        render: (r) => {
+          const inConv = r.status === 'in_conversation'
+          return (
+            <div className="flex items-center gap-2">
+              <ProgressBar
+                percentage={r.utilization_pct}
+                height="sm"
+                className="w-24 bg-[#DFDFDF] shadow-none"
+                barClassName={cn('shadow-none', inConv ? 'bg-success-500' : 'bg-warning-500')}
+              />
+              <span
+                className={cn(
+                  'w-9 text-right text-xs font-medium',
+                  inConv ? 'text-success-500' : 'text-warning-500'
+                )}
+              >
+                {Math.round(r.utilization_pct)}%
+              </span>
+            </div>
+          )
+        },
       },
       {
         key: 'processed',
         header: t('dialer.analysis.processed', 'Processed'),
-        align: 'right',
         render: (r) => r.processed.toLocaleString(),
       },
       {
         key: 'current_call',
         header: t('dialer.analysis.currentCall', 'Current call'),
-        align: 'right',
         render: (r) =>
           r.current_call_phone ? (
-            <div className="text-right">
+            <div>
               <p className="text-foreground text-sm">{r.current_call_phone}</p>
-              <p className="text-muted-foreground text-xs">
+              <p className="text-muted-foreground flex items-center gap-1 text-xs">
+                <Icons.Clock01 size={12} strokeWidth={2} />
                 {fmtClock(r.current_call_duration_seconds)}
               </p>
             </div>

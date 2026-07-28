@@ -836,6 +836,9 @@ input[type='datetime-local']::-webkit-calendar-picker-indicator:hover {
   border-right: 0;
   font-weight: 300;
 }
-.dialer-analysis-card table tbody td:nth-child(1) {
+/* Emphasise Talk Time (col 5) and Processed (col 7); all other cells weight 300
+   (the operator name keeps its own medium weight via the cell's markup). */
+.dialer-analysis-card table tbody td:nth-child(5),
+.dialer-analysis-card table tbody td:nth-child(7) {
   font-weight: 500;
 }
