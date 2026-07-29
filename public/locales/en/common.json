@@ -901,6 +901,7 @@
           "letterTypes": "Letter types",
           "lawyers": "Lawyers",
           "mailboxes": "Mailboxes",
+          "routing": "Identification rules",
           "templates": "Templates"
         },
         "letterTypes": {
@@ -1146,6 +1147,27 @@
           "hidePassword": "Hide password",
           "showPassword": "Show password"
         },
+        "routing": {
+          "explanation": "Rules decide the letter type by sender domain or a word in the subject. Priority: domain → subject → letter-type keywords → default.",
+          "mailbox": "Mailbox",
+          "tableTitle": "Identification rules",
+          "tableDesc": "Rules decide the letter type by sender domain or a word in the subject.",
+          "addRule": "Add rule",
+          "matchType": "Match",
+          "value": "Value",
+          "letterType": "Letter type",
+          "active": "Active",
+          "valueDomainPlaceholder": "e.g. vchasno.ua",
+          "valueKeywordPlaceholder": "e.g. statement of claim",
+          "empty": {
+            "title": "No identification rules yet",
+            "description": "Add a rule to map a sender domain or a subject keyword to a letter type."
+          },
+          "noMailboxes": {
+            "title": "No mailboxes connected",
+            "description": "Connect a mailbox in the Mailboxes tab before adding identification rules."
+          }
+        },
         "templates": {
           "title": "Templates",
           "description": "Manage outgoing letter templates for the thread and new letter composer.",
@@ -1200,6 +1222,8 @@
             "name": "Template name",
             "presetName": "Preset name",
             "letterTypes": "Letter types",
+            "subject": "Template subject",
+            "subjectPlaceholder": "Reply subject (optional)...",
             "body": "Template body",
             "bodyPlaceholder": "Write the letter template text...",
             "bodyHint": "Use the variable palette below to insert placeholders.",
@@ -1208,19 +1232,62 @@
             "assignee": "Default assignee",
             "presetActive": "Active in document generation"
           },
+          "variableGroups": {
+            "client": "Client",
+            "incoming": "Incoming letter",
+            "reply": "Reply",
+            "company": "Company"
+          },
           "variables": {
-            "clientName": "Client name",
+            "clientName": "Client full name",
+            "clientTaxId": "Client tax ID",
+            "contract": "Contract",
+            "debtAmount": "Debt amount",
+            "senderName": "Sender",
+            "incomingRef": "Sender's reference no.",
+            "incomingDate": "Incoming date",
+            "caseNo": "Case number",
+            "requestNo": "Our incoming no.",
+            "outNo": "Outgoing no.",
+            "date": "Date",
+            "dueDate": "Response due date",
+            "lawyerName": "Lawyer",
+            "attachments": "Attachments list",
+            "companyName": "Company name",
+            "companyPhone": "Company phone"
+          },
+          "variableDescriptions": {
+            "clientName": "Client's full name",
+            "clientTaxId": "Client's taxpayer identification number",
+            "contract": "Contract number",
+            "debtAmount": "Client's outstanding debt amount",
+            "senderName": "Who the incoming letter is from",
+            "incomingRef": "The sender's registration number for the letter",
+            "incomingDate": "Date the incoming letter was received",
+            "caseNo": "Court case number",
+            "requestNo": "Our registration number for the incoming letter",
+            "outNo": "Outgoing registration number (assigned when the reply is sent)",
             "date": "Today's date",
             "dueDate": "Response due date",
-            "requestNo": "Request reference number",
-            "contract": "Contract"
-          }
+            "lawyerName": "Lawyer preparing the reply",
+            "attachments": "List of attached documents",
+            "companyName": "Our company name",
+            "companyPhone": "Company contact phone"
+          },
+          "previewShow": "Preview with sample data",
+          "previewHide": "Hide preview",
+          "previewHint": "Variables are shown with sample values. Real values are filled when a lawyer applies the template in a letter thread.",
+          "previewEmpty": "Write the template body to see a preview."
         },
         "modals": {
           "addType": {
             "title": "Add type",
             "letterTypes": "Letter types",
             "placeholder": "e.g. Payment dispute",
+            "code": "Code",
+            "codePlaceholder": "e.g. payment_dispute",
+            "codeHint": "Unique ID for the API. Auto-generated from the name.",
+            "codeError": "Use latin letters, digits, _ or -; must start with a letter.",
             "color": "Color",
             "preview": "Preview",
             "submit": "Add",

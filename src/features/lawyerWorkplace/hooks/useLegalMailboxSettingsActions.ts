@@ -2,11 +2,17 @@ import { useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import type { MailboxFormValues } from '@/pages/LawyerWorkplace/components/settings/mailboxes/MailboxModal'
-import type { SettingsMailbox, SyncInterval } from '@/pages/LawyerWorkplace/settings/types'
+import type {
+  MailboxRoutingRule,
+  SettingsMailbox,
+  SyncInterval,
+} from '@/pages/LawyerWorkplace/settings/types'
+import { withReindexedPriority } from '@/pages/LawyerWorkplace/settings/utils/mailboxHelpers'
 import {
   mapMailboxFormToConnectionTest,
   mapMailboxFormToCreate,
   mapMailboxFormToUpdate,
+  mapRoutingRulesToUpdate,
 } from '../api/settingsMappers'
 import { mapMailboxConnectionError } from '@/pages/LawyerWorkplace/settings/utils/mailboxConnectionErrors'
 import {
@@ -70,6 +76,18 @@ export function useLegalMailboxSettingsActions() {
     [updateSyncSettings]
   )
 
+  const saveRoutingRules = useCallback(
+    async (mailboxId: string, rules: MailboxRoutingRule[]) => {
+      // Replace semantics: the backend receives the whole (re-ordered) list.
+      const ordered = withReindexedPriority(rules)
+      await updateMailbox.mutateAsync({
+        mailboxId,
+        payload: mapRoutingRulesToUpdate(ordered),
+      })
+    },
+    [updateMailbox]
+  )
+
   const testSync = useCallback(async () => {
     const result = await pollAllMailboxes.mutateAsync()
     const ingested = result.results.reduce((sum, item) => sum + item.ingested, 0)
@@ -120,10 +138,12 @@ export function useLegalMailboxSettingsActions() {
     testMailboxConnection,
     toggleMailboxStatus,
     changeSyncInterval,
+    saveRoutingRules,
     testSync,
     isSavingMailbox: createMailbox.isPending || updateMailbox.isPending,
     isTestingConnection: testMailboxConnectionMutation.isPending,
     isPolling: pollAllMailboxes.isPending,
     isSavingSync: updateSyncSettings.isPending,
+    isSavingRoutingRules: updateMailbox.isPending,
   }
 }

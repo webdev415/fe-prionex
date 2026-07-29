@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/Button'
 import {
@@ -10,7 +10,14 @@ import {
 import { Label } from '@/components/ui/Label'
 import { Modal, ModalContent, ModalFooter, ModalHeader } from '@/components/ui/Modal'
 import { Textarea } from '@/components/ui/Textarea'
-import { insertMessagingVariableAtCursor } from '@/features/messaging/utils/messagingTemplateVariables'
+import {
+  insertMessagingVariableAtCursor,
+  type MessagingTemplateFocusField,
+} from '@/features/messaging/utils/messagingTemplateVariables'
+import {
+  fillTemplateVariables,
+  type LegalTemplateFillContext,
+} from '@/features/lawyerWorkplace/utils/letterTemplateVariables'
 import { Icons } from '@/lib/icons'
 import type { LetterTypeConfig, SettingsReplyTemplate } from '../../../settings/types'
 import { LetterTypeBadge } from '../LetterTypeBadge'
@@ -18,8 +25,29 @@ import { LegalLetterVariablesPalette } from './LegalLetterVariablesPalette'
 
 export interface ReplyTemplateFormValues {
   name: string
+  subject: string
   body: string
   letterTypeIds: string[]
+}
+
+/** Sample values used only for the in-editor live preview of the template body. */
+const TEMPLATE_PREVIEW_DEMO_CONTEXT: LegalTemplateFillContext = {
+  clientName: 'Іваненко Іван Іванович',
+  clientTaxId: '1234567890',
+  contract: 'CR-2024-00518',
+  debtAmount: '12 500,00 грн',
+  senderName: 'Національний банк України',
+  incomingRef: '12-3456',
+  incomingDate: '01.07.2026',
+  caseNo: '910/456/24',
+  requestNo: 'ВХ-0042',
+  outNo: 'ВИХ-0128',
+  date: '30.07.2026',
+  dueDate: '15.08.2026',
+  lawyerName: 'Петренко О. В.',
+  attachments: 'Копія договору, розрахунок заборгованості',
+  companyName: 'ТОВ «ФК «ТЕХНОФІНАНС»',
+  companyPhone: '+380 44 000 00 00',
 }
 
 interface ReplyTemplateModalProps {
@@ -36,10 +64,11 @@ function getInitialValues(
   t: (key: string, fallback: string) => string
 ): ReplyTemplateFormValues {
   if (!template) {
-    return { name: '', body: '', letterTypeIds: [] }
+    return { name: '', subject: '', body: '', letterTypeIds: [] }
   }
   return {
     name: t(template.nameKey, template.nameFallback),
+    subject: t(template.subjectKey, template.subjectFallback),
     body: t(template.bodyKey, template.bodyFallback),
     letterTypeIds: [...template.letterTypeIds],
   }
@@ -55,23 +84,35 @@ export function ReplyTemplateModal({
 }: ReplyTemplateModalProps) {
   const { t } = useTranslation('common')
   const isEditing = template !== null
+  const subjectRef = useRef<HTMLInputElement>(null)
   const bodyRef = useRef<HTMLTextAreaElement>(null)
+  const lastFocusedRef = useRef<MessagingTemplateFocusField>('body')
 
   const [name, setName] = useState('')
+  const [subject, setSubject] = useState('')
   const [body, setBody] = useState('')
   const [letterTypeIds, setLetterTypeIds] = useState<string[]>([])
   const [typesOpen, setTypesOpen] = useState(false)
+  const [showPreview, setShowPreview] = useState(false)
 
   useEffect(() => {
     if (!open) return
     requestAnimationFrame(() => {
       const initial = getInitialValues(template, t)
       setName(initial.name)
+      setSubject(initial.subject)
       setBody(initial.body)
       setLetterTypeIds(initial.letterTypeIds)
       setTypesOpen(false)
+      setShowPreview(false)
+      lastFocusedRef.current = 'body'
     })
   }, [open, template, t])
+
+  const previewText = useMemo(
+    () => fillTemplateVariables(body, TEMPLATE_PREVIEW_DEMO_CONTEXT),
+    [body]
+  )
 
   const toggleType = (typeId: string) => {
     setLetterTypeIds((previous) =>
@@ -82,14 +123,14 @@ export function ReplyTemplateModal({
   const insertVariableAtCursor = (variableName: string) => {
     insertMessagingVariableAtCursor({
       variableName,
-      subject: '',
+      subject,
       body,
-      setSubject: () => {},
+      setSubject,
       setBody,
-      showSubject: false,
-      subjectRef: { current: null },
+      showSubject: true,
+      subjectRef,
       bodyRef,
-      lastFocusedRef: { current: 'body' },
+      lastFocusedRef,
     })
   }
 
@@ -178,12 +219,35 @@ export function ReplyTemplateModal({
 
         <div className="flex flex-col gap-2">
           <Label className="text-foreground text-[13px] font-medium">
+            {t('pages.lawyerWorkplace.settings.templates.fields.subject', 'Template subject')}
+          </Label>
+          <input
+            ref={subjectRef}
+            type="text"
+            value={subject}
+            onChange={(e) => setSubject(e.target.value)}
+            onFocus={() => {
+              lastFocusedRef.current = 'subject'
+            }}
+            placeholder={t(
+              'pages.lawyerWorkplace.settings.templates.fields.subjectPlaceholder',
+              'Reply subject (optional)...'
+            )}
+            className="text-foreground focus:border-primary-400 border-border bg-input h-11 rounded-md border px-4 text-[14px] outline-none"
+          />
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <Label className="text-foreground text-[13px] font-medium">
             {t('pages.lawyerWorkplace.settings.templates.fields.body', 'Template body')}
           </Label>
           <Textarea
             ref={bodyRef}
             value={body}
             onChange={(e) => setBody(e.target.value)}
+            onFocus={() => {
+              lastFocusedRef.current = 'body'
+            }}
             rows={8}
             placeholder={t(
               'pages.lawyerWorkplace.settings.templates.fields.bodyPlaceholder',
@@ -194,6 +258,40 @@ export function ReplyTemplateModal({
         </div>
 
         <LegalLetterVariablesPalette onInsert={insertVariableAtCursor} disabled={isSubmitting} />
+
+        <div className="flex flex-col gap-2">
+          <button
+            type="button"
+            onClick={() => setShowPreview((previous) => !previous)}
+            className="text-secondary-800 hover:text-secondary-700 flex w-fit items-center gap-1.5 text-[13px] font-medium"
+          >
+            <Icons.Eye size={15} strokeWidth={1.5} />
+            {showPreview
+              ? t('pages.lawyerWorkplace.settings.templates.previewHide', 'Hide preview')
+              : t(
+                  'pages.lawyerWorkplace.settings.templates.previewShow',
+                  'Preview with sample data'
+                )}
+          </button>
+          {showPreview && (
+            <div className="border-border bg-muted/40 rounded-xl border p-4">
+              <p className="text-muted-foreground mb-2 text-[11px]">
+                {t(
+                  'pages.lawyerWorkplace.settings.templates.previewHint',
+                  'Variables are shown with sample values. Real values are filled when a lawyer applies the template in a letter thread.'
+                )}
+              </p>
+              <pre className="text-foreground font-sans text-[13px] break-words whitespace-pre-wrap">
+                {body.trim()
+                  ? previewText
+                  : t(
+                      'pages.lawyerWorkplace.settings.templates.previewEmpty',
+                      'Write the template body to see a preview.'
+                    )}
+              </pre>
+            </div>
+          )}
+        </div>
       </ModalContent>
       <ModalFooter>
         <Button variant="cancel" onClick={onClose} className="h-10 w-full rounded-md">
@@ -205,6 +303,7 @@ export function ReplyTemplateModal({
           onClick={() =>
             void onSave({
               name: name.trim(),
+              subject: subject.trim(),
               body: body.trim(),
               letterTypeIds,
             })

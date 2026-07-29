@@ -5,9 +5,15 @@ import { Button } from '@/components/ui/Button'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 import {
-  applyLetterTemplatePlaceholders,
+  fillTemplateVariables,
+  formatTemplateDate,
+  extractIncomingRef,
+  extractCaseNo,
+  LEGAL_COMPANY_INFO,
+  type LegalTemplateFillContext,
   downloadLegalAttachment,
   useLegalComposerReplyTemplates,
+  useLegalLawyerMe,
   useLegalMailboxes,
   useReplyComposerState,
   useReplyToLegalThread,
@@ -204,6 +210,7 @@ export function EmailThreadPanel({
 }: EmailThreadPanelProps) {
   const { t, i18n } = useTranslation('common')
   const { data: mailboxesData } = useLegalMailboxes({ enabled: Boolean(letter) })
+  const { data: lawyerMe } = useLegalLawyerMe({ enabled: Boolean(letter) })
   const { data: replyTemplatesData } = useLegalComposerReplyTemplates(letter?.letterType, {
     enabled: Boolean(letter),
   })
@@ -227,16 +234,25 @@ export function EmailThreadPanel({
 
   const handleApplyTemplate = (body: string) => {
     if (!letter) return
-    const filled = applyLetterTemplatePlaceholders(
-      body,
-      {
-        clientName: letter.clientName,
-        referenceId: letter.referenceId,
-        contract: letter.parameters.contractLabel,
-        dueDate: letter.parameters.dueDate,
-      },
-      { language: i18n.language }
-    )
+    const language = i18n.language
+    // Prefill from everything the thread already knows. Anything the frontend
+    // cannot see (ІПН, debt amount, outgoing № assigned at send, attachment list)
+    // keeps its {{placeholder}} for the lawyer to complete before sending.
+    const context: LegalTemplateFillContext = {
+      clientName: letter.clientName,
+      contract: letter.parameters.contractLabel,
+      dueDate: formatTemplateDate(letter.parameters.dueDate, language),
+      requestNo: letter.referenceId,
+      senderName: letter.senderName,
+      incomingDate: formatTemplateDate(letter.receivedAt, language),
+      incomingRef: extractIncomingRef(letter.subject),
+      caseNo: extractCaseNo(letter.subject),
+      date: formatTemplateDate(new Date().toISOString(), language),
+      lawyerName: lawyerMe?.display_name ?? null,
+      companyName: LEGAL_COMPANY_INFO.name,
+      companyPhone: LEGAL_COMPANY_INFO.phone,
+    }
+    const filled = fillTemplateVariables(body, context)
     onReplyDraftChange(replyDraft.trim() ? `${replyDraft.trim()}\n\n${filled}` : filled)
   }
 

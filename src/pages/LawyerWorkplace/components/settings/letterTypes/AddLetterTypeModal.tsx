@@ -1,18 +1,21 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/Button'
 import { Label } from '@/components/ui/Label'
 import { Modal, ModalContent, ModalFooter, ModalHeader } from '@/components/ui/Modal'
 import { Icons } from '@/lib/icons'
-import { cn } from '@/lib/utils'
+import { cn, generateCode } from '@/lib/utils'
 import type { LetterTypeConfig } from '../../../settings/types'
 import { LETTER_TYPE_COLOR_OPTIONS } from '../constants'
 import { LetterTypeBadge } from '../LetterTypeBadge'
 
+// Backend letter-type id pattern (see POST /letter-types).
+const CODE_PATTERN = /^[a-z][a-z0-9_-]*$/
+
 interface AddLetterTypeModalProps {
   open: boolean
   onClose: () => void
-  onAdd: (input: Pick<LetterTypeConfig, 'nameFallback' | 'colorId'>) => Promise<void>
+  onAdd: (input: Pick<LetterTypeConfig, 'nameFallback' | 'colorId' | 'id'>) => Promise<void>
   isSubmitting?: boolean
 }
 
@@ -24,24 +27,42 @@ export function AddLetterTypeModal({
 }: AddLetterTypeModalProps) {
   const { t } = useTranslation('common')
   const [name, setName] = useState('')
+  const [code, setCode] = useState('')
   const [colorId, setColorId] = useState(LETTER_TYPE_COLOR_OPTIONS[0]?.id ?? 'teal')
+  // The code is auto-derived from the name until the user edits it by hand.
+  const codeManuallyEdited = useRef(false)
 
   useEffect(() => {
     if (!open) return
     requestAnimationFrame(() => {
       setName('')
+      setCode('')
+      codeManuallyEdited.current = false
       setColorId(LETTER_TYPE_COLOR_OPTIONS[0]?.id ?? 'teal')
     })
   }, [open])
 
+  const handleNameChange = (value: string) => {
+    setName(value)
+    if (!codeManuallyEdited.current) {
+      setCode(generateCode(value))
+    }
+  }
+
+  const handleCodeChange = (value: string) => {
+    codeManuallyEdited.current = true
+    setCode(value)
+  }
+
   const previewName =
     name.trim() ||
     t('pages.lawyerWorkplace.settings.letterTypes.previewFallback', 'Letter type name')
-  const canSubmit = name.trim().length > 0 && !isSubmitting
+  const codeInvalid = code.length > 0 && !CODE_PATTERN.test(code)
+  const canSubmit = name.trim().length > 0 && CODE_PATTERN.test(code) && !isSubmitting
 
   const handleAdd = async () => {
     if (!canSubmit) return
-    await onAdd({ nameFallback: name.trim(), colorId })
+    await onAdd({ nameFallback: name.trim(), colorId, id: code })
     onClose()
   }
 
@@ -63,13 +84,46 @@ export function AddLetterTypeModal({
           <input
             type="text"
             value={name}
-            onChange={(e) => setName(e.target.value)}
+            onChange={(e) => handleNameChange(e.target.value)}
             placeholder={t(
               'pages.lawyerWorkplace.settings.modals.addType.placeholder',
               'e.g. Payment dispute'
             )}
             className="text-foreground focus:border-primary-400 border-border bg-input placeholder:text-muted-foreground h-11 w-full rounded-xl border px-4 text-[14px] outline-none"
           />
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <Label className="text-foreground text-[13px] font-medium">
+            {t('pages.lawyerWorkplace.settings.modals.addType.code', 'Code')}
+          </Label>
+          <input
+            type="text"
+            value={code}
+            onChange={(e) => handleCodeChange(e.target.value)}
+            placeholder={t(
+              'pages.lawyerWorkplace.settings.modals.addType.codePlaceholder',
+              'e.g. payment_dispute'
+            )}
+            className={cn(
+              'text-foreground focus:border-primary-400 border-border bg-input placeholder:text-muted-foreground h-11 w-full rounded-xl border px-4 text-[14px] outline-none',
+              codeInvalid && 'border-error focus:border-error'
+            )}
+          />
+          <p className="text-muted-foreground text-[12px]">
+            {t(
+              'pages.lawyerWorkplace.settings.modals.addType.codeHint',
+              'Unique ID for the API. Auto-generated from the name.'
+            )}
+          </p>
+          {codeInvalid && (
+            <p className="text-error text-[12px]">
+              {t(
+                'pages.lawyerWorkplace.settings.modals.addType.codeError',
+                'Use latin letters, digits, _ or -; must start with a letter.'
+              )}
+            </p>
+          )}
         </div>
 
         <div className="flex flex-col gap-3">

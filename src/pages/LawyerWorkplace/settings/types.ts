@@ -1,4 +1,4 @@
-export type SettingsSubTab = 'letterTypes' | 'lawyers' | 'mailboxes' | 'templates'
+export type SettingsSubTab = 'letterTypes' | 'lawyers' | 'mailboxes' | 'routing' | 'templates'
 
 export type LawyerPriorityRole = 'primary' | 'backup' | 'secondary' | 'off'
 
@@ -79,6 +79,8 @@ export interface MailboxRoutingRule {
   matchType: RoutingMatchType
   value: string
   letterTypeId: string
+  isActive: boolean
+  priority: number
 }
 
 export type MailboxProvider = 'ukrnet' | 'iua' | 'google_workspace' | 'microsoft365' | 'custom'
@@ -106,6 +108,8 @@ export interface SettingsReplyTemplate {
   id: string
   nameKey: string
   nameFallback: string
+  subjectKey: string
+  subjectFallback: string
   bodyKey: string
   bodyFallback: string
   letterTypeIds: string[]

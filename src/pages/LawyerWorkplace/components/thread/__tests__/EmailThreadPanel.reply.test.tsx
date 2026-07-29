@@ -48,6 +48,20 @@ vi.mock('@/features/lawyerWorkplace/api/legalApi', () => ({
       })
     ),
     listComposerReplyTemplates: vi.fn(() => Promise.resolve({ items: [], total: 0 })),
+    getMyLawyerProfile: vi.fn(() =>
+      Promise.resolve({
+        id: 'law-1',
+        user_id: 42,
+        display_name: 'Petro Yurydychnyi',
+        initials: 'PY',
+        role_title: 'Lawyer',
+        letter_type_ids: [],
+        current_active: 0,
+        max_in_flight: 10,
+        status: 'online',
+        is_active: true,
+      })
+    ),
     getReplyDraft: vi.fn(() =>
       Promise.resolve({
         exists: true,
