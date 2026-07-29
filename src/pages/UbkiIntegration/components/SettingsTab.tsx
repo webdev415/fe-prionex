@@ -30,9 +30,9 @@ function Field({
 }) {
   return (
     <div>
-      <label className="mb-1 block text-xs font-medium text-gray-600">{label}</label>
+      <label className="text-muted-foreground mb-1 block text-xs font-medium">{label}</label>
       {children}
-      {hint && <p className="mt-1 text-[11px] text-gray-400">{hint}</p>}
+      {hint && <p className="text-muted-foreground mt-1 text-[11px]">{hint}</p>}
     </div>
   )
 }
@@ -55,11 +55,13 @@ function ToggleRow({
       <div className="flex items-start gap-3">
         <ToggleSwitch checked={checked} onChange={onChange} ariaLabel={title} />
         <div>
-          <p className="text-dark-500 text-sm font-medium">{title}</p>
-          <p className="text-xs text-gray-500">{desc}</p>
+          <p className="text-foreground text-sm font-medium">{title}</p>
+          <p className="text-muted-foreground text-xs">{desc}</p>
         </div>
       </div>
-      {note && <p className="text-right text-[11px] whitespace-nowrap text-gray-400">{note}</p>}
+      {note && (
+        <p className="text-muted-foreground text-right text-[11px] whitespace-nowrap">{note}</p>
+      )}
     </div>
   )
 }
@@ -95,7 +97,7 @@ function Chips({
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-2 rounded-lg border border-gray-200 bg-white px-2 py-1.5">
+    <div className="border-border bg-card flex flex-wrap items-center gap-2 rounded-lg border px-2 py-1.5">
       {items.map((c, i) => (
         <span
           key={`${c}-${i}`}
@@ -130,7 +132,7 @@ function Chips({
               commit()
               setEditing(false)
             }}
-            className="focus:border-primary-500 min-w-[8rem] flex-1 rounded-md border border-gray-200 px-2 py-0.5 text-xs text-gray-700 focus:outline-none"
+            className="focus:border-primary-500 border-border text-foreground min-w-[8rem] flex-1 rounded-md border px-2 py-0.5 text-xs focus:outline-none"
           />
           <button
             type="button"
@@ -148,7 +150,7 @@ function Chips({
         <button
           type="button"
           onClick={() => setEditing(true)}
-          className="hover:text-dark-500 text-xs font-medium text-gray-500"
+          className="hover:text-foreground text-muted-foreground text-xs font-medium"
         >
           {t('pages.ubkiIntegration.settings.chips.addButton', '+ Add')}
         </button>
@@ -169,11 +171,11 @@ function SectionCard({
   action?: React.ReactNode
 }) {
   return (
-    <div className="rounded-2xl border border-gray-200 bg-white p-5">
+    <div className="border-border bg-card rounded-2xl border p-5">
       <div className="mb-4 flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-dark-500 text-sm font-semibold">{title}</h2>
-          <p className="text-xs text-gray-500">{desc}</p>
+          <h2 className="text-foreground text-sm font-semibold">{title}</h2>
+          <p className="text-muted-foreground text-xs">{desc}</p>
         </div>
         {action}
       </div>
@@ -183,7 +185,7 @@ function SectionCard({
 }
 
 const inputCls =
-  'h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-xs text-gray-700 focus:border-primary-500 focus:outline-none'
+  'h-10 w-full rounded-lg border border-border bg-card px-3 text-xs text-foreground focus:border-primary-500 focus:outline-none'
 
 const WEEKDAYS: { key: string; label: string }[] = [
   { key: 'mon', label: 'Mon' },
@@ -234,7 +236,7 @@ export function SettingsTab() {
 
   if (isLoading || !form) {
     return (
-      <div className="py-16 text-center text-sm text-gray-500">
+      <div className="text-muted-foreground py-16 text-center text-sm">
         {t('pages.ubkiIntegration.settings.loading', 'Loading settings…')}
       </div>
     )
@@ -343,7 +345,7 @@ export function SettingsTab() {
             </Select>
           </Field>
           <Field label={t('pages.ubkiIntegration.settings.frequency.label', 'Frequency')}>
-            <div className="flex gap-1 rounded-xl border border-gray-200 bg-gray-50 p-1">
+            <div className="border-border bg-muted flex gap-1 rounded-xl border p-1">
               {(['daily', 'weekdays', 'custom'] as const).map((f) => (
                 <button
                   key={f}
@@ -363,8 +365,8 @@ export function SettingsTab() {
                   }
                   className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
                     form.frequency === f
-                      ? 'bg-secondary-800 text-white shadow-sm'
-                      : 'text-gray-600 hover:text-gray-900'
+                      ? 'bg-primary-600 text-white shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground'
                   }`}
                 >
                   {f === 'daily'
@@ -392,8 +394,8 @@ export function SettingsTab() {
                       }
                       className={`rounded-md px-2.5 py-1 text-xs font-medium ${
                         on
-                          ? 'bg-secondary-800 text-white'
-                          : 'border border-gray-200 bg-white text-gray-600'
+                          ? 'bg-primary-600 text-white'
+                          : 'border-border bg-card text-muted-foreground border'
                       }`}
                     >
                       {t(`pages.ubkiIntegration.settings.weekdays.${d.key}`, d.label)}
@@ -608,7 +610,7 @@ export function SettingsTab() {
       )}
 
       {/* Save bar — a normal in-flow bar at the end of the form. */}
-      <div className="flex justify-end gap-3 border-t border-gray-200 pt-4">
+      <div className="border-border flex justify-end gap-3 border-t pt-4">
         <Button
           variant="cancel"
           className="rounded-full px-6"
