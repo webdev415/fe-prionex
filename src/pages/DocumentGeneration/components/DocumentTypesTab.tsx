@@ -34,16 +34,7 @@ export function DocumentTypesTab() {
   const { t } = useTranslation('common')
 
   // Include hidden so admins can see + un-hide them from the same table.
-  // withCounts: this admin tab is the ONLY place that opts into per-type
-  // ``doc_count`` (it shows the count column and gates Delete on it). The
-  // count fetch scans the whole client_documents table on the BE, so it
-  // must stay off everywhere else (journal filter, dropdowns, upload
-  // modal). This tab is only mounted when the "types" tab is active, so
-  // the expensive fetch fires only when an admin opens it.
-  const { data, isLoading, isError } = useDocumentTypes({
-    includeHidden: true,
-    withCounts: true,
-  })
+  const { data, isLoading, isError } = useDocumentTypes({ includeHidden: true })
   const deleteMutation = useDeleteDocumentType()
   const visibilityMutation = useUpdateDocumentTypeVisibility()
   const { confirm, confirmDialog } = useConfirm()

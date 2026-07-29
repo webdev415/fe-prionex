@@ -366,8 +366,6 @@ export const PERMISSIONS = {
     TRANSITION_CANCELLED_TO_CONNECTED: 'rr_transition_cancelled_to_connected',
     DISCONNECT: 'rr_disconnect',
     COMPLETE: 'rr_complete',
-    ACTIVATE: 'rr_activate',
-    DELETE_DRAFT: 'rr_delete_draft',
   },
 
   /**
@@ -634,8 +632,6 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
     'Manually restore a Cancelled restructuring agreement to Connected (rare; mistaken cancellation)',
   rr_disconnect: 'Manually disconnect a restructuring agreement (status → Cancelled with reason)',
   rr_complete: 'Manually mark a restructuring agreement as Completed',
-  rr_activate: 'Manually activate a draft restructuring agreement (Draft → Connected)',
-  rr_delete_draft: 'Delete a draft restructuring agreement before it is activated',
 
   // Write-offs (KAN-245)
   view_writeoffs: 'List and read individual debt write-off entries',
