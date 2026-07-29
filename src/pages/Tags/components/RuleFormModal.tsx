@@ -166,6 +166,7 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
             'event',
             'schedule',
             'tag_expired',
+            'expires_today',
             'scoring_change',
             'import_complete',
           ]),
@@ -208,7 +209,10 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
               path: ['cron_expression'],
             })
           }
-          if (data.trigger_type === 'tag_expired' && !data.trigger_tag_code) {
+          if (
+            (data.trigger_type === 'tag_expired' || data.trigger_type === 'expires_today') &&
+            !data.trigger_tag_code
+          ) {
             ctx.addIssue({
               code: z.ZodIssueCode.custom,
               message: t(
@@ -390,7 +394,9 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
         trigger_type: data.trigger_type,
         trigger_event: data.trigger_type === 'event' ? data.trigger_event || undefined : undefined,
         trigger_tag_code:
-          data.trigger_type === 'tag_expired' ? data.trigger_tag_code || undefined : undefined,
+          data.trigger_type === 'tag_expired' || data.trigger_type === 'expires_today'
+            ? data.trigger_tag_code || undefined
+            : undefined,
         cron_expression:
           data.trigger_type === 'schedule' ? data.cron_expression || undefined : undefined,
         conditions: data.conditions.map((c) => ({
@@ -634,8 +640,8 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
                 </div>
               )}
 
-              {/* Trigger Tag (if tag_expired) */}
-              {triggerType === 'tag_expired' && (
+              {/* Trigger Tag (if tag_expired or expires_today) */}
+              {(triggerType === 'tag_expired' || triggerType === 'expires_today') && (
                 <div className="space-y-1.5">
                   <Label required>{t('pages.tags.rules.triggerTag', 'Expired Tag')}</Label>
                   <Controller

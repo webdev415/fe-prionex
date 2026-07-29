@@ -169,6 +169,7 @@ export type RuleTriggerType =
   | 'event'
   | 'schedule'
   | 'tag_expired'
+  | 'expires_today'
   | 'scoring_change'
   | 'import_complete'
 export type RuleActionType = 'add_tag' | 'remove_tag' | 'replace_tag'

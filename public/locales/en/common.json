@@ -6888,6 +6888,7 @@
           "schedule": "Runs on a recurring schedule using cron syntax",
           "scoring_change": "Fires when a client's risk score is recalculated",
           "tag_expired": "Fires when a tag with TTL reaches expiry",
+          "expires_today": "Fires once daily for tags whose expiration date is today (00:05 Kyiv time)",
           "import_complete": "Fires after a data import batch completes"
         },
         "conditionsHelp": "All conditions must be true for the rule to fire (AND logic). Leave empty to always fire.",
@@ -6912,6 +6913,7 @@
           "event": "Event — triggers on a specific system event",
           "schedule": "Schedule — triggers on a cron schedule",
           "tag_expired": "Tag Expired — triggers when a tag TTL expires",
+          "expires_today": "Expires Today — triggers for tags expiring today (daily at 00:05)",
           "scoring_change": "Scoring Change — triggers when client score changes",
           "import_complete": "Import Complete — triggers after data import"
         },
