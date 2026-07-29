@@ -167,7 +167,20 @@ function mapRoutingRuleToInput(rule: MailboxRoutingRule): LegalMailboxRoutingRul
     match_type: rule.matchType,
     value: rule.value,
     letter_type_id: rule.letterTypeId,
+    is_active: rule.isActive,
+    priority: rule.priority,
   }
+}
+
+/**
+ * Build the PATCH mailbox-settings body for a full routing-rule replace.
+ * The backend applies replace semantics — the whole list is sent every time
+ * a rule is added, toggled, or removed.
+ */
+export function mapRoutingRulesToUpdate(rules: MailboxRoutingRule[]): {
+  routing_rules: LegalMailboxRoutingRuleInput[]
+} {
+  return { routing_rules: rules.map(mapRoutingRuleToInput) }
 }
 
 export function mapLegalSettingsMailboxToSettings(mailbox: LegalSettingsMailbox): SettingsMailbox {
@@ -187,6 +200,9 @@ export function mapLegalSettingsMailboxToSettings(mailbox: LegalSettingsMailbox)
       matchType: rule.match_type,
       value: rule.value,
       letterTypeId: rule.letter_type_id,
+      // Older backends omit these fields → a rule with no explicit flag is active.
+      isActive: rule.is_active ?? true,
+      priority: rule.priority ?? 0,
     })),
   }
 }

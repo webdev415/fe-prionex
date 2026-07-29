@@ -525,6 +525,10 @@ export interface LegalMailboxRoutingRule {
   match_type: LegalRoutingMatchType
   value: string
   letter_type_id: string
+  /** Whether the rule participates in identification. Older backends omit it → treat as active. */
+  is_active?: boolean
+  /** Tie-break order within the same match type. Older backends omit it → treat as 0. */
+  priority?: number
 }
 
 export interface LegalSettingsMailbox {
@@ -550,6 +554,8 @@ export interface LegalMailboxRoutingRuleInput {
   match_type: LegalRoutingMatchType
   value: string
   letter_type_id: string
+  is_active?: boolean
+  priority?: number
 }
 
 export type LegalMailboxProvider = 'ukrnet' | 'iua' | 'google_workspace' | 'microsoft365' | 'custom'

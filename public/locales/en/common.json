@@ -901,6 +901,7 @@
           "letterTypes": "Letter types",
           "lawyers": "Lawyers",
           "mailboxes": "Mailboxes",
+          "routing": "Identification rules",
           "templates": "Templates"
         },
         "letterTypes": {
@@ -1146,6 +1147,27 @@
           "hidePassword": "Hide password",
           "showPassword": "Show password"
         },
+        "routing": {
+          "explanation": "Rules decide the letter type by sender domain or a word in the subject. Priority: domain → subject → letter-type keywords → default.",
+          "mailbox": "Mailbox",
+          "tableTitle": "Identification rules",
+          "tableDesc": "Rules decide the letter type by sender domain or a word in the subject.",
+          "addRule": "Add rule",
+          "matchType": "Match",
+          "value": "Value",
+          "letterType": "Letter type",
+          "active": "Active",
+          "valueDomainPlaceholder": "e.g. vchasno.ua",
+          "valueKeywordPlaceholder": "e.g. statement of claim",
+          "empty": {
+            "title": "No identification rules yet",
+            "description": "Add a rule to map a sender domain or a subject keyword to a letter type."
+          },
+          "noMailboxes": {
+            "title": "No mailboxes connected",
+            "description": "Connect a mailbox in the Mailboxes tab before adding identification rules."
+          }
+        },
         "templates": {
           "title": "Templates",
           "description": "Manage outgoing letter templates for the thread and new letter composer.",
@@ -1221,6 +1243,10 @@
             "title": "Add type",
             "letterTypes": "Letter types",
             "placeholder": "e.g. Payment dispute",
+            "code": "Code",
+            "codePlaceholder": "e.g. payment_dispute",
+            "codeHint": "Unique ID for the API. Auto-generated from the name.",
+            "codeError": "Use latin letters, digits, _ or -; must start with a letter.",
             "color": "Color",
             "preview": "Preview",
             "submit": "Add",
