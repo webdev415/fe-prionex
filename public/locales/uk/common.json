@@ -7612,6 +7612,8 @@
           "remaining_debt": "Залишок боргу",
           "debt_count": "Кількість кредитів",
           "status": "Статус клієнта",
+          "days_since_last_debt_purchase": "Днів з останньої дати продажу (всі)",
+          "days_since_last_active_debt_purchase": "Днів з останньої дати продажу (активні)",
           "has_tag": "Має тег",
           "not_has_tag": "Не має тег"
         },
