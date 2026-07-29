@@ -23,6 +23,11 @@ export const SETTINGS_SUB_TABS = [
     fallback: 'Mailboxes',
   },
   {
+    id: 'routing' as const,
+    labelKey: 'pages.lawyerWorkplace.settings.subTabs.routing',
+    fallback: 'Identification rules',
+  },
+  {
     id: 'templates' as const,
     labelKey: 'pages.lawyerWorkplace.settings.subTabs.templates',
     fallback: 'Templates',
