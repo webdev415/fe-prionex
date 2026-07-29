@@ -638,6 +638,7 @@ export interface LegalPollAllMailboxesResponse {
 export interface LegalReplyTemplate {
   id: string
   name: string
+  subject: string | null
   body: string
   letter_type_ids: string[]
   is_active: boolean
@@ -650,6 +651,7 @@ export interface LegalReplyTemplateListResponse {
 
 export interface LegalReplyTemplateCreate {
   name: string
+  subject?: string | null
   body: string
   letter_type_ids?: string[]
   is_active?: boolean
@@ -657,6 +659,7 @@ export interface LegalReplyTemplateCreate {
 
 export interface LegalReplyTemplateUpdate {
   name?: string
+  subject?: string | null
   body?: string
   letter_type_ids?: string[]
   is_active?: boolean

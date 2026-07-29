@@ -298,6 +298,8 @@ export function mapLegalReplyTemplateToSettings(
     id: template.id,
     nameKey: `api:reply-template:name:${template.id}`,
     nameFallback: template.name,
+    subjectKey: `api:reply-template:subject:${template.id}`,
+    subjectFallback: template.subject ?? '',
     bodyKey: `api:reply-template:body:${template.id}`,
     bodyFallback: template.body,
     letterTypeIds: [...template.letter_type_ids],
@@ -308,6 +310,7 @@ export function mapLegalReplyTemplateToSettings(
 export function mapReplyTemplateFormToCreate(values: ReplyTemplateFormValues) {
   return {
     name: values.name.trim(),
+    subject: values.subject.trim() || null,
     body: values.body,
     letter_type_ids: values.letterTypeIds,
     is_active: true,
@@ -317,6 +320,7 @@ export function mapReplyTemplateFormToCreate(values: ReplyTemplateFormValues) {
 export function mapReplyTemplateFormToUpdate(values: ReplyTemplateFormValues) {
   return {
     name: values.name.trim(),
+    subject: values.subject.trim() || null,
     body: values.body,
     letter_type_ids: values.letterTypeIds,
     is_active: true,

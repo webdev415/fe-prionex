@@ -10,7 +10,10 @@ import {
 import { Label } from '@/components/ui/Label'
 import { Modal, ModalContent, ModalFooter, ModalHeader } from '@/components/ui/Modal'
 import { Textarea } from '@/components/ui/Textarea'
-import { insertMessagingVariableAtCursor } from '@/features/messaging/utils/messagingTemplateVariables'
+import {
+  insertMessagingVariableAtCursor,
+  type MessagingTemplateFocusField,
+} from '@/features/messaging/utils/messagingTemplateVariables'
 import {
   fillTemplateVariables,
   type LegalTemplateFillContext,
@@ -22,6 +25,7 @@ import { LegalLetterVariablesPalette } from './LegalLetterVariablesPalette'
 
 export interface ReplyTemplateFormValues {
   name: string
+  subject: string
   body: string
   letterTypeIds: string[]
 }
@@ -60,10 +64,11 @@ function getInitialValues(
   t: (key: string, fallback: string) => string
 ): ReplyTemplateFormValues {
   if (!template) {
-    return { name: '', body: '', letterTypeIds: [] }
+    return { name: '', subject: '', body: '', letterTypeIds: [] }
   }
   return {
     name: t(template.nameKey, template.nameFallback),
+    subject: t(template.subjectKey, template.subjectFallback),
     body: t(template.bodyKey, template.bodyFallback),
     letterTypeIds: [...template.letterTypeIds],
   }
@@ -79,9 +84,12 @@ export function ReplyTemplateModal({
 }: ReplyTemplateModalProps) {
   const { t } = useTranslation('common')
   const isEditing = template !== null
+  const subjectRef = useRef<HTMLInputElement>(null)
   const bodyRef = useRef<HTMLTextAreaElement>(null)
+  const lastFocusedRef = useRef<MessagingTemplateFocusField>('body')
 
   const [name, setName] = useState('')
+  const [subject, setSubject] = useState('')
   const [body, setBody] = useState('')
   const [letterTypeIds, setLetterTypeIds] = useState<string[]>([])
   const [typesOpen, setTypesOpen] = useState(false)
@@ -92,10 +100,12 @@ export function ReplyTemplateModal({
     requestAnimationFrame(() => {
       const initial = getInitialValues(template, t)
       setName(initial.name)
+      setSubject(initial.subject)
       setBody(initial.body)
       setLetterTypeIds(initial.letterTypeIds)
       setTypesOpen(false)
       setShowPreview(false)
+      lastFocusedRef.current = 'body'
     })
   }, [open, template, t])
 
@@ -113,14 +123,14 @@ export function ReplyTemplateModal({
   const insertVariableAtCursor = (variableName: string) => {
     insertMessagingVariableAtCursor({
       variableName,
-      subject: '',
+      subject,
       body,
-      setSubject: () => {},
+      setSubject,
       setBody,
-      showSubject: false,
-      subjectRef: { current: null },
+      showSubject: true,
+      subjectRef,
       bodyRef,
-      lastFocusedRef: { current: 'body' },
+      lastFocusedRef,
     })
   }
 
@@ -209,12 +219,35 @@ export function ReplyTemplateModal({
 
         <div className="flex flex-col gap-2">
           <Label className="text-foreground text-[13px] font-medium">
+            {t('pages.lawyerWorkplace.settings.templates.fields.subject', 'Template subject')}
+          </Label>
+          <input
+            ref={subjectRef}
+            type="text"
+            value={subject}
+            onChange={(e) => setSubject(e.target.value)}
+            onFocus={() => {
+              lastFocusedRef.current = 'subject'
+            }}
+            placeholder={t(
+              'pages.lawyerWorkplace.settings.templates.fields.subjectPlaceholder',
+              'Reply subject (optional)...'
+            )}
+            className="text-foreground focus:border-primary-400 border-border bg-input h-11 rounded-md border px-4 text-[14px] outline-none"
+          />
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <Label className="text-foreground text-[13px] font-medium">
             {t('pages.lawyerWorkplace.settings.templates.fields.body', 'Template body')}
           </Label>
           <Textarea
             ref={bodyRef}
             value={body}
             onChange={(e) => setBody(e.target.value)}
+            onFocus={() => {
+              lastFocusedRef.current = 'body'
+            }}
             rows={8}
             placeholder={t(
               'pages.lawyerWorkplace.settings.templates.fields.bodyPlaceholder',
@@ -270,6 +303,7 @@ export function ReplyTemplateModal({
           onClick={() =>
             void onSave({
               name: name.trim(),
+              subject: subject.trim(),
               body: body.trim(),
               letterTypeIds,
             })

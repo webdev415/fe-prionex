@@ -1222,6 +1222,8 @@
             "name": "Template name",
             "presetName": "Preset name",
             "letterTypes": "Letter types",
+            "subject": "Template subject",
+            "subjectPlaceholder": "Reply subject (optional)...",
             "body": "Template body",
             "bodyPlaceholder": "Write the letter template text...",
             "bodyHint": "Use the variable palette below to insert placeholders.",

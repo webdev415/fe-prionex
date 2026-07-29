@@ -108,6 +108,8 @@ export interface SettingsReplyTemplate {
   id: string
   nameKey: string
   nameFallback: string
+  subjectKey: string
+  subjectFallback: string
   bodyKey: string
   bodyFallback: string
   letterTypeIds: string[]
