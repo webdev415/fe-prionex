@@ -93,16 +93,34 @@ export interface AMIHealthResponse {
 }
 
 // WebSocket event interfaces
-export interface CallStateEvent {
-  event_type: 'call.state.changed'
+
+// The Socket.IO event call-service emits is "call.state_changed" (UNDERSCORE).
+// The RabbitMQ domain event is "call.state.changed" (DOTTED) and is consumed
+// dotted by client-service — they are deliberately different names, so this
+// constant is the single place the socket name lives.
+// See services/call/app/services/event_listener.py.
+export const CALL_STATE_CHANGED_EVENT = 'call.state_changed'
+
+export interface CallStateEventData {
   call_id: string
-  current_state: CallState
-  data: {
-    call_id: string
-    state: CallState
-    duration?: number
-    [key: string]: unknown
-  }
+  state: CallState
+  customer_number?: string
+  client_id?: unknown
+  clientId?: unknown
+  duration?: number
+  total_duration?: number
+  hangup_cause?: number
+  [key: string]: unknown
+}
+
+// broadcast_to_agent (services/call/app/socketio_app.py) wraps the payload:
+// {event_type, timestamp, data: {...}}. There is no top-level call_id — reading
+// one yields undefined and invalidates the query key ['callDetails', undefined],
+// which matches nothing. Always read through `data`.
+export interface CallStateEvent {
+  event_type: string
+  timestamp: string
+  data: CallStateEventData
 }
 
 export interface ConnectionStatus {
