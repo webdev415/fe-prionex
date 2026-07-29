@@ -30,4 +30,15 @@ export async function getV3Monitoring(
   return res.data
 }
 
-export const scoringApi = { getV3Scores, getV3Monitoring }
+/** Trigger a re-score for a brand (async Celery job). */
+export async function triggerV3Scoring(
+  projectId: number,
+  asOf?: string
+): Promise<{ message: string; task_id: string; project_id: number }> {
+  const res = await api.post(`${BASE_URL}/${projectId}/run`, null, {
+    params: asOf ? { as_of: asOf } : {},
+  })
+  return res.data
+}
+
+export const scoringApi = { getV3Scores, getV3Monitoring, triggerV3Scoring }

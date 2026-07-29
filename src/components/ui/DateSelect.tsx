@@ -62,6 +62,8 @@ export interface DateSelectProps {
   min?: Date | string
   max?: Date | string
   format?: string
+  /** Month-year picker: a grid of months + year navigation, no day grid. */
+  showMonthYearPicker?: boolean
   showTimeSelect?: boolean
   timeFormat?: string
   timeIntervals?: number
@@ -150,6 +152,7 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
       min,
       max,
       format = 'MM/dd/yyyy',
+      showMonthYearPicker = false,
       showTimeSelect,
       timeFormat = 'HH:mm',
       timeIntervals = 15,
@@ -369,6 +372,26 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
             .react-datepicker__day--disabled {
               color: #D1D5DB;
             }
+            .react-datepicker__month-text {
+              color: #05040D;
+              border-radius: 0.375rem;
+              padding: 6px 4px;
+              transition: all 0.15s;
+            }
+            .react-datepicker__month-text:hover {
+              background-color: #F3F4F6;
+              border-radius: 0.375rem;
+            }
+            .react-datepicker__month-text--selected,
+            .react-datepicker__month-text--keyboard-selected {
+              background-color: var(--color-primary-500) !important;
+              color: white !important;
+              border-radius: 0.375rem;
+            }
+            .react-datepicker__month-text--today {
+              font-weight: 600;
+              color: var(--color-primary-500);
+            }
             .react-datepicker__navigation {
               top: 12px;
             }
@@ -451,6 +474,7 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
               maxTime={maxTime}
               filterTime={filterTime}
               calendarStartDay={1}
+              showMonthYearPicker={showMonthYearPicker}
               showYearDropdown
               scrollableYearDropdown
               yearDropdownItemNumber={10}

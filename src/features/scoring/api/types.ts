@@ -29,6 +29,8 @@ export interface GetV3ScoreParams {
   month_start?: string
   bucket?: V3Bucket
   include_exit?: boolean
+  debt_id?: number
+  min_hazard?: number
   limit?: number
   offset?: number
 }

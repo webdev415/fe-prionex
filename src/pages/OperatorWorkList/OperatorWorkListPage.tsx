@@ -10,19 +10,46 @@
  * permission and (in the nav) a feature flag until the model is signed off.
  */
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useAuthStore } from '@/stores/authStore'
 import { DataTable, type Column } from '@/components/ui/DataTable'
-import { useV3Scores } from '@/features/scoring/hooks/useV3Scores'
-import type { V3ScoreResult } from '@/features/scoring/api/types'
+import { DateSelect } from '@/components/ui/DateSelect'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/Select'
+import { useTriggerV3Scoring, useV3Scores } from '@/features/scoring/hooks/useV3Scores'
+import type { V3Bucket, V3ScoreResult } from '@/features/scoring/api/types'
 import { V3BucketBadge } from './components/V3BucketBadge'
 
 const PAGE_SIZE = 50
+
+const BUCKET_FILTERS: { value: 'ALL' | V3Bucket; label: string }[] = [
+  { value: 'ALL', label: 'All active' },
+  { value: 'CRIT', label: 'Call first' },
+  { value: 'HIGH', label: 'High' },
+  { value: 'AVG', label: 'Average' },
+  { value: 'LOW', label: 'Low' },
+  { value: 'EXIT', label: 'Do-not-call' },
+]
 
 type Row = V3ScoreResult & { id: number }
 
 function currentMonth(): string {
   return new Date().toISOString().slice(0, 7) // YYYY-MM
+}
+
+/** Debounce a value so a query fires only after the user stops typing. */
+function useDebounced<T>(value: T, delay = 400): T {
+  const [debounced, setDebounced] = useState(value)
+  useEffect(() => {
+    const t = setTimeout(() => setDebounced(value), delay)
+    return () => clearTimeout(t)
+  }, [value, delay])
+  return debounced
 }
 
 function fmtMoney(v: number | null): string {
@@ -38,13 +65,25 @@ export function OperatorWorkListPage() {
   const projectId = activeProjectId ? Number(activeProjectId) : undefined
 
   const [month, setMonth] = useState<string>(currentMonth)
-  const [includeExit, setIncludeExit] = useState(false)
+  const [bucket, setBucket] = useState<'ALL' | V3Bucket>('ALL')
+  const [debtId, setDebtId] = useState('')
+  const [minPct, setMinPct] = useState('')
   const [page, setPage] = useState(0)
+  const trigger = useTriggerV3Scoring()
 
   const monthStart = `${month}-01`
+  const dDebtId = useDebounced(debtId)
+  const dMinPct = useDebounced(minPct)
+  const debtIdNum = dDebtId.trim() && !isNaN(Number(dDebtId)) ? Number(dDebtId) : undefined
+  const minHazard = dMinPct.trim() && !isNaN(Number(dMinPct)) ? Number(dMinPct) / 100 : undefined
   const { data, isLoading, isError } = useV3Scores(projectId, {
     month_start: monthStart,
-    include_exit: includeExit,
+    ...(debtIdNum
+      ? { debt_id: debtIdNum }
+      : bucket === 'ALL'
+        ? { include_exit: false }
+        : { bucket }),
+    ...(minHazard !== undefined && !debtIdNum ? { min_hazard: minHazard } : {}),
     limit: PAGE_SIZE,
     offset: page * PAGE_SIZE,
   })
@@ -86,38 +125,110 @@ export function OperatorWorkListPage() {
 
   return (
     <div className="flex flex-col gap-4 p-6">
-      <div className="flex flex-col gap-1">
-        <h1 className="text-lg font-semibold text-[#05040D]">Priority Work List</h1>
-        <p className="text-xs text-gray-500">
-          Debts ranked by the v3 model — call the top of the list first. Shadow-run preview.
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex flex-col gap-1">
+          <h1 className="text-lg font-semibold text-[#05040D]">Priority Work List</h1>
+          <p className="text-xs text-gray-500">
+            Debts ranked by the v3 model — call the top of the list first. Shadow-run preview.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => projectId && trigger.mutate({ projectId, asOf: monthStart })}
+          disabled={!projectId || trigger.isPending}
+          className="bg-primary-600 hover:bg-primary-700 shrink-0 rounded-md px-4 py-2 text-xs font-medium text-white disabled:opacity-50"
+        >
+          {trigger.isPending ? 'Starting…' : 'Run now'}
+        </button>
       </div>
 
       {/* Controls */}
       <div className="flex flex-wrap items-center gap-4">
-        <label className="flex items-center gap-2 text-xs font-medium text-[#05040D]">
+        <div className="flex items-center gap-2 text-xs font-medium text-[#05040D]">
           Month
+          <div className="w-[190px]">
+            <DateSelect
+              showMonthYearPicker
+              format="MMMM yyyy"
+              value={`${month}-01`}
+              onChange={({ value }) => {
+                if (!value) return
+                const v = `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}`
+                setMonth(v)
+                resetPage()
+              }}
+            />
+          </div>
+        </div>
+        <div className="flex items-center gap-2 text-xs font-medium text-[#05040D]">
+          Priority
+          <div className="w-[160px]">
+            <Select
+              value={bucket}
+              onValueChange={(v) => {
+                setBucket(v as 'ALL' | V3Bucket)
+                resetPage()
+              }}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {BUCKET_FILTERS.map((b) => (
+                  <SelectItem key={b.value} value={b.value}>
+                    {b.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 text-xs font-medium text-[#05040D]">
+          Debt ID
           <input
-            type="month"
-            value={month}
+            type="text"
+            inputMode="numeric"
+            placeholder="Search…"
+            value={debtId}
             onChange={(e) => {
-              setMonth(e.target.value)
+              setDebtId(e.target.value.replace(/[^0-9]/g, ''))
               resetPage()
             }}
-            className="rounded-md border border-[#EBECE8] px-2 py-1 text-xs"
+            className="h-[45px] w-[140px] rounded-lg border border-gray-400 bg-white px-3 text-sm font-light text-[#05040D] outline-none placeholder:text-gray-400"
           />
-        </label>
-        <label className="flex items-center gap-2 text-xs font-medium text-[#05040D]">
-          <input
-            type="checkbox"
-            checked={includeExit}
-            onChange={(e) => {
-              setIncludeExit(e.target.checked)
-              resetPage()
-            }}
-          />
-          Show do-not-call (EXIT)
-        </label>
+          {debtId && (
+            <button
+              type="button"
+              onClick={() => {
+                setDebtId('')
+                resetPage()
+              }}
+              className="text-gray-400 hover:text-gray-600"
+              aria-label="Clear debt ID"
+            >
+              ✕
+            </button>
+          )}
+        </div>
+
+        <div className="flex items-center gap-2 text-xs font-medium text-[#05040D]">
+          Min pay-chance
+          <div className="flex items-center gap-1">
+            <input
+              type="text"
+              inputMode="decimal"
+              placeholder="0"
+              value={minPct}
+              onChange={(e) => {
+                setMinPct(e.target.value.replace(/[^0-9.]/g, ''))
+                resetPage()
+              }}
+              className="h-[45px] w-[80px] rounded-lg border border-gray-400 bg-white px-3 text-sm font-light text-[#05040D] outline-none placeholder:text-gray-400"
+            />
+            <span className="text-gray-500">%</span>
+          </div>
+        </div>
         <span className="ml-auto text-xs text-gray-500">{total.toLocaleString()} debts</span>
       </div>
 
@@ -129,7 +240,13 @@ export function OperatorWorkListPage() {
         <DataTable
           columns={columns}
           data={rows}
-          emptyMessage={isLoading ? 'Loading…' : 'No scored debts for this month yet.'}
+          emptyMessage={
+            isLoading
+              ? 'Loading…'
+              : debtIdNum
+                ? `No debt with ID ${debtIdNum} in this month.`
+                : 'No scored debts match these filters.'
+          }
         />
       )}
 

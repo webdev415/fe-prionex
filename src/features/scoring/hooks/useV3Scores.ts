@@ -2,7 +2,8 @@
  * React Query hooks for scoring v3 (priority) data.
  */
 
-import { keepPreviousData, useQuery } from '@tanstack/react-query'
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
 import { scoringApi } from '../api/scoringApi'
 import type { GetV3ScoreParams } from '../api/types'
 
@@ -38,5 +39,20 @@ export function useV3Monitoring(
     queryKey: scoringKeys.monitoring(projectId ?? 0, month),
     queryFn: () => scoringApi.getV3Monitoring(projectId as number, month),
     enabled: !!projectId && (options.enabled ?? true),
+  })
+}
+
+/** Trigger a re-score. Scoring runs in the background (Celery), so results
+ * appear after the job finishes — we refresh the list shortly after. */
+export function useTriggerV3Scoring() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (vars: { projectId: number; asOf?: string }) =>
+      scoringApi.triggerV3Scoring(vars.projectId, vars.asOf),
+    onSuccess: () => {
+      toast.success('Scoring started — refresh in a moment to see updates.')
+      setTimeout(() => qc.invalidateQueries({ queryKey: scoringKeys.lists() }), 4000)
+    },
+    onError: () => toast.error('Could not start scoring.'),
   })
 }
