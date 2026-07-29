@@ -1208,13 +1208,52 @@
             "assignee": "Default assignee",
             "presetActive": "Active in document generation"
           },
+          "variableGroups": {
+            "client": "Client",
+            "incoming": "Incoming letter",
+            "reply": "Reply",
+            "company": "Company"
+          },
           "variables": {
-            "clientName": "Client name",
+            "clientName": "Client full name",
+            "clientTaxId": "Client tax ID",
+            "contract": "Contract",
+            "debtAmount": "Debt amount",
+            "senderName": "Sender",
+            "incomingRef": "Sender's reference no.",
+            "incomingDate": "Incoming date",
+            "caseNo": "Case number",
+            "requestNo": "Our incoming no.",
+            "outNo": "Outgoing no.",
+            "date": "Date",
+            "dueDate": "Response due date",
+            "lawyerName": "Lawyer",
+            "attachments": "Attachments list",
+            "companyName": "Company name",
+            "companyPhone": "Company phone"
+          },
+          "variableDescriptions": {
+            "clientName": "Client's full name",
+            "clientTaxId": "Client's taxpayer identification number",
+            "contract": "Contract number",
+            "debtAmount": "Client's outstanding debt amount",
+            "senderName": "Who the incoming letter is from",
+            "incomingRef": "The sender's registration number for the letter",
+            "incomingDate": "Date the incoming letter was received",
+            "caseNo": "Court case number",
+            "requestNo": "Our registration number for the incoming letter",
+            "outNo": "Outgoing registration number (assigned when the reply is sent)",
             "date": "Today's date",
             "dueDate": "Response due date",
-            "requestNo": "Request reference number",
-            "contract": "Contract"
-          }
+            "lawyerName": "Lawyer preparing the reply",
+            "attachments": "List of attached documents",
+            "companyName": "Our company name",
+            "companyPhone": "Company contact phone"
+          },
+          "previewShow": "Preview with sample data",
+          "previewHide": "Hide preview",
+          "previewHint": "Variables are shown with sample values. Real values are filled when a lawyer applies the template in a letter thread.",
+          "previewEmpty": "Write the template body to see a preview."
         },
         "modals": {
           "addType": {
