@@ -222,8 +222,8 @@ export function AddTaskModal({ open, clientId, onClose }: AddTaskModalProps) {
     <Modal open={open} onClose={onClose} maxWidth="md">
       <ModalHeader
         icon={
-          <div className="bg-primary-400 flex h-8 w-8 items-center justify-center rounded-full">
-            <Icons.Clock01 size={20} className="text-dark-500" strokeWidth={1.5} />
+          <div className="bg-primary flex h-8 w-8 items-center justify-center rounded-full">
+            <Icons.Clock01 size={20} className="text-primary-foreground" strokeWidth={1.5} />
           </div>
         }
         title={t('pages.clients.tasks.addTask', 'Add Task')}
@@ -233,7 +233,7 @@ export function AddTaskModal({ open, clientId, onClose }: AddTaskModalProps) {
         <div className="flex flex-col gap-4">
           {/* Task Subject */}
           <div className="flex flex-col gap-1">
-            <Label className="text-dark-500 text-xs leading-[140%] font-medium tracking-[-0.24px]">
+            <Label className="text-foreground text-xs leading-[140%] font-medium tracking-[-0.24px]">
               {t('pages.clients.tasks.subject', 'Task Subject')}
             </Label>
             <SearchableSelect
@@ -246,7 +246,7 @@ export function AddTaskModal({ open, clientId, onClose }: AddTaskModalProps) {
 
           {/* Description */}
           <div className="flex flex-col gap-1">
-            <Label className="text-dark-500 text-xs leading-[140%] font-medium tracking-[-0.24px]">
+            <Label className="text-foreground text-xs leading-[140%] font-medium tracking-[-0.24px]">
               {t('pages.clients.tasks.description', 'Description')}
               <span className="ml-1 text-red-500">*</span>
             </Label>
@@ -258,13 +258,13 @@ export function AddTaskModal({ open, clientId, onClose }: AddTaskModalProps) {
                 'Enter task description...'
               )}
               textareaSize="md"
-              className="text-dark-500 w-full text-xs leading-[140%] font-light tracking-[-0.24px]"
+              className="text-foreground w-full text-xs leading-[140%] font-light tracking-[-0.24px]"
             />
           </div>
 
           {/* Priority */}
           <div className="flex flex-col gap-2">
-            <Label className="text-dark-500 text-xs leading-[140%] font-medium tracking-[-0.24px]">
+            <Label className="text-foreground text-xs leading-[140%] font-medium tracking-[-0.24px]">
               {t('pages.clients.tasks.priority.label', 'Priority')}
             </Label>
             <RadioGroup value={priority} onValueChange={setPriority}>
@@ -274,7 +274,7 @@ export function AddTaskModal({ open, clientId, onClose }: AddTaskModalProps) {
                     <RadioItem value={p.value} id={`task-priority-${p.value}`} />
                     <Label
                       htmlFor={`task-priority-${p.value}`}
-                      className="text-dark-500 text-xs font-light tracking-[-0.24px]"
+                      className="text-foreground text-xs font-light tracking-[-0.24px]"
                     >
                       {t(p.labelKey, p.fallback)}
                     </Label>
@@ -307,7 +307,7 @@ export function AddTaskModal({ open, clientId, onClose }: AddTaskModalProps) {
 
           {/* Assigned To */}
           <div className="flex flex-col gap-1">
-            <Label className="text-dark-500 text-xs leading-[140%] font-medium tracking-[-0.24px]">
+            <Label className="text-foreground text-xs leading-[140%] font-medium tracking-[-0.24px]">
               {t('pages.clients.tasks.assignedTo', 'Assigned To')}
               <span className="ml-1 text-red-500">*</span>
             </Label>
@@ -323,7 +323,7 @@ export function AddTaskModal({ open, clientId, onClose }: AddTaskModalProps) {
               }
             />
             {isLegalSubject && !lawyersLoading && lawyers.length === 0 ? (
-              <p className="text-light-600 text-[11px]">
+              <p className="text-muted-foreground text-[11px]">
                 {t(
                   'pages.clients.tasks.noLawyersAvailable',
                   'No Legal Workplace lawyers are available for this project.'
@@ -334,7 +334,7 @@ export function AddTaskModal({ open, clientId, onClose }: AddTaskModalProps) {
 
           {/* Comment */}
           <div className="flex flex-col gap-1">
-            <Label className="text-dark-500 text-xs leading-[140%] font-medium tracking-[-0.24px]">
+            <Label className="text-foreground text-xs leading-[140%] font-medium tracking-[-0.24px]">
               {t('pages.clients.tasks.comment', 'Comment')}
             </Label>
             <Textarea
@@ -342,7 +342,7 @@ export function AddTaskModal({ open, clientId, onClose }: AddTaskModalProps) {
               onChange={(e) => setComment(e.target.value)}
               placeholder={t('pages.clients.tasks.commentPlaceholder', 'Optional comment...')}
               textareaSize="md"
-              className="text-dark-500 w-full text-xs leading-[140%] font-light tracking-[-0.24px]"
+              className="text-foreground w-full text-xs leading-[140%] font-light tracking-[-0.24px]"
             />
           </div>
         </div>

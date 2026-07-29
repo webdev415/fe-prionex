@@ -55,22 +55,22 @@ export function LoanCalculationModal({
 
   // Sticky first column: same classes on <th> and <td> so the Date column
   // stays fixed while the financial blocks scroll horizontally.
-  const stickyCell = 'sticky left-0 z-10 bg-white'
-  const th = 'whitespace-nowrap px-3 py-2 text-right font-medium text-gray-600'
-  const thLeft = 'whitespace-nowrap px-3 py-2 text-left font-medium text-gray-600'
-  const td = 'whitespace-nowrap px-3 py-1.5 text-right text-gray-800 tabular-nums'
+  const stickyCell = 'sticky left-0 z-10 bg-card'
+  const th = 'whitespace-nowrap px-3 py-2 text-right font-medium text-muted-foreground'
+  const thLeft = 'whitespace-nowrap px-3 py-2 text-left font-medium text-muted-foreground'
+  const td = 'whitespace-nowrap px-3 py-1.5 text-right text-foreground tabular-nums'
 
   return (
     <Modal open={open} onClose={onClose} maxWidth="full" showCloseButton>
       <ModalHeader
-        icon={<Icons.Calculate size={20} className="text-primary-600" />}
+        icon={<Icons.Calculate size={20} className="text-primary" />}
         title={t(`${p}.title`, 'Detailed calculation for loan No. {{id}} after sale', {
           id: titleId,
         })}
       />
       <ModalContent>
         {isLoading ? (
-          <div className="py-10 text-center text-sm text-gray-500">
+          <div className="text-muted-foreground py-10 text-center text-sm">
             {t('common.loading', 'Loading…')}
           </div>
         ) : isError ? (
@@ -78,15 +78,15 @@ export function LoanCalculationModal({
             {t(`${p}.error`, 'Could not load the calculation. Please try again.')}
           </div>
         ) : !data || data.rows.length === 0 ? (
-          <div className="py-10 text-center text-sm text-gray-500">
+          <div className="text-muted-foreground py-10 text-center text-sm">
             {t(`${p}.empty`, 'No balance changes recorded for this loan.')}
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="min-w-[1600px] text-xs">
-              <thead className="sticky top-0 z-20 bg-white text-gray-600">
+              <thead className="bg-card text-muted-foreground sticky top-0 z-20">
                 {/* Group header row */}
-                <tr className="border-b border-gray-200">
+                <tr className="border-border border-b">
                   <th rowSpan={2} className={`${stickyCell} ${thLeft} z-30 align-bottom`}>
                     {t(`${p}.columns.date`, 'Date')}
                   </th>
@@ -97,12 +97,12 @@ export function LoanCalculationModal({
                     <th
                       key={b.key}
                       colSpan={3}
-                      className="border-l border-gray-200 px-3 py-2 text-center font-semibold whitespace-nowrap text-gray-700"
+                      className="border-border text-foreground border-l px-3 py-2 text-center font-semibold whitespace-nowrap"
                     >
                       {t(`${p}.${b.labelKey}`, b.fallback)}
                     </th>
                   ))}
-                  <th rowSpan={2} className={`${th} border-l border-gray-200 align-bottom`}>
+                  <th rowSpan={2} className={`${th} border-border border-l align-bottom`}>
                     {t(`${p}.columns.totalPaid`, 'Total paid')}
                   </th>
                   <th rowSpan={2} className={`${th} align-bottom`}>
@@ -110,7 +110,7 @@ export function LoanCalculationModal({
                   </th>
                 </tr>
                 {/* Sub-header row: Debt / Written-off / Paid per block */}
-                <tr className="border-b border-gray-200">
+                <tr className="border-border border-b">
                   {BLOCKS.map((b) => (
                     <BlockSubHeaders key={b.key} thClass={th} p={p} t={t} />
                   ))}
@@ -120,13 +120,13 @@ export function LoanCalculationModal({
                 {data.rows.map((row, idx) => (
                   <tr
                     key={`${row.date}-${idx}`}
-                    className={`border-b border-gray-100 ${
-                      row.is_sale_row ? 'bg-primary-50/40 font-medium' : ''
+                    className={`border-border border-b ${
+                      row.is_sale_row ? 'bg-primary/40 font-medium' : ''
                     }`}
                   >
                     <td
-                      className={`${stickyCell} px-3 py-1.5 text-left whitespace-nowrap text-gray-900 ${
-                        row.is_sale_row ? 'bg-primary-50/40 font-medium' : ''
+                      className={`${stickyCell} text-foreground px-3 py-1.5 text-left whitespace-nowrap ${
+                        row.is_sale_row ? 'bg-primary/40 font-medium' : ''
                       }`}
                     >
                       {formatDate(row.date)}
@@ -135,7 +135,7 @@ export function LoanCalculationModal({
                     {BLOCKS.map((b) => (
                       <BlockCells key={b.key} row={row} block={b.key} tdClass={td} />
                     ))}
-                    <td className={`${td} border-l border-gray-200`}>{money(row.total_paid)}</td>
+                    <td className={`${td} border-border border-l`}>{money(row.total_paid)}</td>
                     <td className={`${td} font-medium`}>{money(row.tot_to_return)}</td>
                   </tr>
                 ))}
@@ -159,7 +159,7 @@ function BlockSubHeaders({
 }) {
   return (
     <>
-      <th className={`${thClass} border-l border-gray-200`}>{t(`${p}.columns.debt`, 'Debt')}</th>
+      <th className={`${thClass} border-border border-l`}>{t(`${p}.columns.debt`, 'Debt')}</th>
       <th className={thClass}>{t(`${p}.columns.writtenOff`, 'Written-off')}</th>
       <th className={thClass}>{t(`${p}.columns.paid`, 'Paid')}</th>
     </>
@@ -181,7 +181,7 @@ function BlockCells({
   const paid = row[`${block}_paid` as keyof LoanCalculationRow] as string
   return (
     <>
-      <td className={`${tdClass} border-l border-gray-200`}>{money(debt)}</td>
+      <td className={`${tdClass} border-border border-l`}>{money(debt)}</td>
       <td className={tdClass}>{money(writtenOff)}</td>
       <td className={tdClass}>{money(paid)}</td>
     </>

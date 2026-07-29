@@ -22,19 +22,19 @@ export function ClientManagementPageSkeleton() {
           >
             {/* Badge and Title */}
             <div className="flex w-full min-w-0 items-start gap-2 sm:gap-3">
-              <div className="bg-muted h-[20px] w-full shrink-0 animate-pulse rounded-[16px] sm:h-[25px]" />
-              <div className="bg-muted h-5 min-w-0 flex-1 animate-pulse rounded sm:h-6" />
+              <div className="bg-muted-foreground/25 h-[20px] w-full shrink-0 animate-pulse rounded-[16px] sm:h-[25px]" />
+              <div className="bg-muted-foreground/25 h-5 min-w-0 flex-1 animate-pulse rounded sm:h-6" />
             </div>
 
             {/* Stats */}
             <div className="flex flex-col items-start gap-2 self-stretch sm:flex-row sm:justify-between sm:gap-0">
               <div className="flex min-w-0 flex-row items-start gap-1">
-                <div className="bg-muted h-4 w-12 shrink-0 animate-pulse rounded sm:h-5 sm:w-16" />
-                <div className="bg-muted h-4 min-w-[3.5rem] flex-1 animate-pulse rounded sm:h-5 sm:min-w-[4rem]" />
+                <div className="bg-muted-foreground/25 h-4 w-12 shrink-0 animate-pulse rounded sm:h-5 sm:w-16" />
+                <div className="bg-muted-foreground/25 h-4 min-w-[3.5rem] flex-1 animate-pulse rounded sm:h-5 sm:min-w-[4rem]" />
               </div>
               <div className="flex min-w-0 flex-row items-start gap-1">
-                <div className="bg-muted h-4 w-10 shrink-0 animate-pulse rounded sm:h-5 sm:w-12" />
-                <div className="bg-muted h-4 min-w-[1.5rem] flex-1 animate-pulse rounded sm:h-5 sm:min-w-[2rem]" />
+                <div className="bg-muted-foreground/25 h-4 w-10 shrink-0 animate-pulse rounded sm:h-5 sm:w-12" />
+                <div className="bg-muted-foreground/25 h-4 min-w-[1.5rem] flex-1 animate-pulse rounded sm:h-5 sm:min-w-[2rem]" />
               </div>
             </div>
           </div>
@@ -45,12 +45,12 @@ export function ClientManagementPageSkeleton() {
       <div className="flex w-full flex-col gap-3 self-stretch sm:flex-row sm:items-center sm:justify-between sm:gap-0">
         <div className="flex items-center gap-2 sm:gap-3">
           <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
-            <div className="bg-muted h-6 w-32 animate-pulse rounded sm:h-8 sm:w-40" />
-            <div className="bg-muted h-5 w-10 animate-pulse rounded sm:h-6 sm:w-12" />
+            <div className="bg-muted-foreground/25 h-6 w-32 animate-pulse rounded sm:h-8 sm:w-40" />
+            <div className="bg-muted-foreground/25 h-5 w-10 animate-pulse rounded sm:h-6 sm:w-12" />
           </div>
         </div>
         <div className="flex flex-wrap items-center justify-start gap-2 sm:justify-end sm:gap-5">
-          <div className="bg-muted h-9 w-24 animate-pulse rounded-full sm:h-10 sm:w-32" />
+          <div className="bg-muted-foreground/25 h-9 w-24 animate-pulse rounded-full sm:h-10 sm:w-32" />
           <div className="border-border bg-card/50 h-10 w-32 animate-pulse rounded-lg border sm:h-12 sm:w-40" />
         </div>
       </div>
@@ -72,7 +72,7 @@ export function ClientManagementPageSkeleton() {
           {Array.from({ length: 7 }).map((_, index) => (
             <div
               key={index}
-              className="bg-muted h-8 w-8 animate-pulse rounded-full sm:h-10 sm:w-10"
+              className="bg-muted-foreground/25 h-8 w-8 animate-pulse rounded-full sm:h-10 sm:w-10"
             />
           ))}
         </div>

@@ -625,16 +625,16 @@ export function CallDialogModal({
         {/* Minimize Button */}
         <button
           onClick={() => handleMinimize()}
-          className="absolute top-2 right-2 flex h-8 w-8 items-center justify-center rounded-md transition-colors hover:bg-gray-100 sm:top-4 sm:right-12"
+          className="hover:bg-muted absolute top-2 right-2 flex h-8 w-8 items-center justify-center rounded-md transition-colors sm:top-4 sm:right-12"
           aria-label="Minimize modal"
         >
-          <Icons.Remove02 size={20} className="text-dark-500" strokeWidth={1.5} />
+          <Icons.Remove02 size={20} className="text-foreground" strokeWidth={1.5} />
         </button>
         <div className="flex flex-col gap-4 sm:gap-6">
           {telephonyUnavailable && (
             <div
               role="alert"
-              className="border-warning-300 bg-warning-50 text-warning-900 rounded-lg border px-3 py-2 text-sm font-medium"
+              className="border-warning-500/40 bg-warning-50 text-warning-500 rounded-lg border px-3 py-2 text-sm font-medium"
             >
               Telephony is temporarily unavailable
             </div>
@@ -642,15 +642,15 @@ export function CallDialogModal({
 
           {/* Call Info */}
           <div className="flex flex-col items-center gap-2 sm:gap-3">
-            <div className="flex h-16 w-16 items-center justify-center rounded-full border-2 border-gray-300 bg-white sm:h-20 sm:w-20">
-              <Icons.Headset size={32} className="text-gray-700 sm:size-10" strokeWidth={1.5} />
+            <div className="border-border bg-muted flex h-16 w-16 items-center justify-center rounded-full border-2 sm:h-20 sm:w-20">
+              <Icons.Headset size={32} className="text-foreground sm:size-10" strokeWidth={1.5} />
             </div>
-            <div className="text-dark-500 text-center text-xl font-semibold sm:text-2xl">
+            <div className="text-foreground text-center text-xl font-semibold sm:text-2xl">
               {phoneNumber}
             </div>
-            <div className="bg-primary-300 flex items-center gap-2 rounded-full px-3 py-1 sm:px-4 sm:py-1.5">
-              <div className="bg-primary-500 h-2 w-2 rounded-full" />
-              <span className="text-dark-500 text-xs font-medium sm:text-sm">
+            <div className="bg-primary flex items-center gap-2 rounded-full px-3 py-1 sm:px-4 sm:py-1.5">
+              <div className="bg-primary-foreground h-2 w-2 rounded-full" />
+              <span className="text-primary-foreground text-xs font-medium sm:text-sm">
                 {t('pages.clients.modals.callDialog.incomingCall')}
               </span>
             </div>
@@ -663,10 +663,10 @@ export function CallDialogModal({
               {loans.filter((loan) => loan.priority === 'Critical').length > 0 && (
                 <div className="flex flex-col gap-2">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="bg-error-500 rounded-full px-2 py-1 text-xs font-medium text-white sm:px-3">
+                    <span className="bg-error-500 text-primary-foreground rounded-full px-2 py-1 text-xs font-medium sm:px-3">
                       {t('pages.clients.modals.callDialog.primary')}
                     </span>
-                    <span className="text-dark-500 text-xs font-medium sm:text-sm">
+                    <span className="text-foreground text-xs font-medium sm:text-sm">
                       {t('pages.clients.modals.callDialog.primaryLoans')}
                     </span>
                   </div>
@@ -682,10 +682,10 @@ export function CallDialogModal({
               {loans.filter((loan) => loan.priority !== 'Critical').length > 0 && (
                 <div className="flex flex-col gap-2">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="bg-warning-500 rounded-full px-2 py-1 text-xs font-medium text-white sm:px-3">
+                    <span className="bg-warning-500 text-primary-foreground rounded-full px-2 py-1 text-xs font-medium sm:px-3">
                       {t('pages.clients.priorities.high')}
                     </span>
-                    <span className="text-dark-500 text-xs font-medium sm:text-sm">
+                    <span className="text-foreground text-xs font-medium sm:text-sm">
                       {t('pages.clients.modals.callDialog.thirdPartyLoans')}
                     </span>
                   </div>
@@ -697,7 +697,7 @@ export function CallDialogModal({
                 </div>
               )}
 
-              <button className="text-primary-300 flex items-center justify-center gap-1 text-xs font-medium sm:text-sm">
+              <button className="text-primary flex items-center justify-center gap-1 text-xs font-medium sm:text-sm">
                 {t('pages.clients.modals.callDialog.viewAllLoans')}{' '}
                 <Icons.ArrowDown size={14} className="sm:size-4" />
               </button>
@@ -706,9 +706,9 @@ export function CallDialogModal({
 
           {/* Call Actions */}
           <div className="flex flex-col gap-2 sm:gap-3">
-            <div className="flex items-center gap-2 rounded-lg bg-gray-100 px-3 py-2 sm:px-4">
-              <Icons.StopWatch size={14} className="text-gray-600 sm:size-4" />
-              <span className="text-xs text-gray-600 sm:text-sm">
+            <div className="bg-muted flex items-center gap-2 rounded-lg px-3 py-2 sm:px-4">
+              <Icons.StopWatch size={14} className="text-muted-foreground sm:size-4" />
+              <span className="text-muted-foreground text-xs sm:text-sm">
                 {t('pages.clients.modals.callDialog.ringing')} {formatTime(elapsedTime)}
               </span>
             </div>
@@ -717,7 +717,7 @@ export function CallDialogModal({
                 variant="danger"
                 size="sm"
                 onClick={handleReject}
-                className="bg-error-500 hover:bg-error-600 w-full rounded-md text-white"
+                className="w-full rounded-md"
               >
                 <Icons.Cancel01 size={18} className="mr-2 sm:size-5" />
                 {t('pages.clients.modals.callDialog.reject')}
@@ -726,7 +726,7 @@ export function CallDialogModal({
                 variant="primary"
                 size="sm"
                 onClick={handleAnswer}
-                className="bg-primary-300 text-dark-500 hover:bg-primary-400 w-full rounded-md"
+                className="w-full rounded-md"
               >
                 <Icons.HeadphoneMute size={18} className="mr-2 sm:size-5" />
                 {t('pages.clients.modals.callDialog.answerCall')}
@@ -751,16 +751,16 @@ export function CallDialogModal({
       {/* Minimize Button */}
       <button
         onClick={() => handleMinimize()}
-        className="absolute top-2 right-2 flex h-8 w-8 items-center justify-center rounded-md transition-colors hover:bg-gray-100 sm:top-4 sm:right-12"
+        className="hover:bg-muted absolute top-2 right-2 flex h-8 w-8 items-center justify-center rounded-md transition-colors sm:top-4 sm:right-12"
         aria-label="Minimize modal"
       >
-        <Icons.Remove02 size={20} className="text-dark-500" strokeWidth={1.5} />
+        <Icons.Remove02 size={20} className="text-foreground" strokeWidth={1.5} />
       </button>
       <div className="flex flex-col gap-4 sm:gap-6">
         {telephonyUnavailable && (
           <div
             role="alert"
-            className="border-warning-300 bg-warning-50 text-warning-900 rounded-lg border px-3 py-2 text-sm font-medium"
+            className="border-warning-500/40 bg-warning-50 text-warning-500 rounded-lg border px-3 py-2 text-sm font-medium"
           >
             Telephony is temporarily unavailable
           </div>
@@ -771,8 +771,12 @@ export function CallDialogModal({
           <>
             <ModalHeader
               icon={
-                <div className="bg-primary-300 flex h-10 w-10 items-center justify-center rounded-full sm:h-12 sm:w-12">
-                  <Icons.Headset size={20} className="text-dark-500 sm:size-6" strokeWidth={1.5} />
+                <div className="bg-primary flex h-10 w-10 items-center justify-center rounded-full sm:h-12 sm:w-12">
+                  <Icons.Headset
+                    size={20}
+                    className="text-primary-foreground sm:size-6"
+                    strokeWidth={1.5}
+                  />
                 </div>
               }
               title={t('pages.clients.modals.callDialog.callClient')}
@@ -781,20 +785,22 @@ export function CallDialogModal({
               <div className="flex flex-col gap-4 sm:gap-6">
                 {/* Client Name */}
                 <div className="flex flex-col gap-2">
-                  <label className="text-dark-500 text-sm font-light">
+                  <label className="text-foreground text-sm font-light">
                     {t('pages.clients.modals.callDialog.clientName')}:
                   </label>
                   <input
                     type="text"
                     value={clientName}
                     readOnly
-                    className="text-dark-500 focus:ring-primary-300/20 focus:border-primary-300 w-full rounded-lg border border-gray-400 bg-white px-3 py-2 text-sm font-light focus:ring-2 focus:outline-none"
+                    className={cn(
+                      'text-foreground focus:border-primary focus:ring-primary/20 border-border bg-card w-full rounded-lg border px-3 py-2 text-sm font-light focus:ring-2 focus:outline-none'
+                    )}
                   />
                 </div>
 
                 {/* Phone Number */}
                 <div className="flex flex-col gap-2">
-                  <label className="text-dark-500 text-sm font-light">
+                  <label className="text-foreground text-sm font-light">
                     {t('pages.clients.modals.callDialog.phoneNumber')}:
                   </label>
                   <input
@@ -820,9 +826,9 @@ export function CallDialogModal({
                       !isValidManualDialPhone(manualPhoneDigits)
                     }
                     className={cn(
-                      'text-dark-500 focus:ring-primary-300/20 focus:border-primary-300 w-full rounded-lg border border-gray-400 bg-white px-3 py-2 text-sm font-light focus:ring-2 focus:outline-none',
+                      'text-foreground focus:border-primary focus:ring-primary/20 border-border bg-card w-full rounded-lg border px-3 py-2 text-sm font-light focus:ring-2 focus:outline-none',
                       manualPhoneEnabled && 'font-mono tracking-wide tabular-nums',
-                      !manualPhoneEnabled && 'bg-gray-50'
+                      !manualPhoneEnabled && 'bg-muted'
                     )}
                   />
                   <label
@@ -838,12 +844,12 @@ export function CallDialogModal({
                         if (!on) setManualPhoneDigits('')
                       }}
                     />
-                    <span className="text-dark-500 text-sm font-light">
+                    <span className="text-foreground text-sm font-light">
                       {t('pages.clients.modals.callDialog.manualPhoneEntry')}
                     </span>
                   </label>
                   {manualPhoneEnabled && (
-                    <p className="text-xs text-gray-500">
+                    <p className="text-muted-foreground text-xs">
                       {t('pages.clients.modals.callDialog.manualPhoneHint')}
                     </p>
                   )}
@@ -851,7 +857,7 @@ export function CallDialogModal({
 
                 {/* Call Type */}
                 <div className="flex flex-col gap-2">
-                  <label className="text-dark-500 text-sm font-light">
+                  <label className="text-foreground text-sm font-light">
                     {t('pages.clients.modals.callDialog.callType')}:
                   </label>
                   <RadioGroup
@@ -863,12 +869,12 @@ export function CallDialogModal({
                       className={cn(
                         'flex cursor-pointer items-center gap-2 rounded-lg border-2 px-3 py-2 transition-colors sm:px-4',
                         callType === 'white-line'
-                          ? 'border-primary-300 bg-primary-100'
-                          : 'border-gray-300 bg-white hover:border-gray-400'
+                          ? 'border-primary bg-primary/10'
+                          : 'border-border bg-card hover:border-muted-foreground/40'
                       )}
                     >
                       <RadioItem value="white-line" id="white-line" />
-                      <span className="text-dark-500 text-xs font-light sm:text-sm">
+                      <span className="text-foreground text-xs font-light sm:text-sm">
                         {t('pages.clients.modals.callDialog.whiteLine')}
                       </span>
                     </label>
@@ -876,12 +882,12 @@ export function CallDialogModal({
                       className={cn(
                         'flex cursor-pointer items-center gap-2 rounded-lg border-2 px-3 py-2 transition-colors sm:px-4',
                         callType === 'gray-line'
-                          ? 'border-primary-300 bg-primary-100'
-                          : 'border-gray-300 bg-white hover:border-gray-400'
+                          ? 'border-primary bg-primary/10'
+                          : 'border-border bg-card hover:border-muted-foreground/40'
                       )}
                     >
                       <RadioItem value="gray-line" id="gray-line" />
-                      <span className="text-dark-500 text-xs font-light sm:text-sm">
+                      <span className="text-foreground text-xs font-light sm:text-sm">
                         {t('pages.clients.modals.callDialog.grayLine')}
                       </span>
                     </label>
@@ -890,12 +896,12 @@ export function CallDialogModal({
                         className={cn(
                           'flex cursor-pointer items-center gap-2 rounded-lg border-2 px-3 py-2 transition-colors sm:px-4',
                           callType === 'spam-calls'
-                            ? 'border-primary-300 bg-primary-100'
-                            : 'border-gray-300 bg-white hover:border-gray-400'
+                            ? 'border-primary bg-primary/10'
+                            : 'border-border bg-card hover:border-muted-foreground/40'
                         )}
                       >
                         <RadioItem value="spam-calls" id="spam-calls" />
-                        <span className="text-dark-500 text-xs font-light sm:text-sm">
+                        <span className="text-foreground text-xs font-light sm:text-sm">
                           {t('pages.clients.modals.callDialog.spamCalls')}
                         </span>
                       </label>
@@ -962,36 +968,31 @@ export function CallDialogModal({
           <>
             {/* Contact Info */}
             <div className="flex flex-col items-center gap-2 sm:gap-3">
-              <div className="flex h-16 w-16 items-center justify-center rounded-full border-2 border-gray-300 bg-white sm:h-20 sm:w-20">
-                <Icons.Headset size={32} className="text-gray-700 sm:size-10" strokeWidth={1.5} />
+              <div className="border-border bg-muted flex h-16 w-16 items-center justify-center rounded-full border-2 sm:h-20 sm:w-20">
+                <Icons.Headset size={32} className="text-foreground sm:size-10" strokeWidth={1.5} />
               </div>
-              <div className="text-dark-500 text-center text-xl font-semibold sm:text-2xl">
+              <div className="text-foreground text-center text-xl font-semibold sm:text-2xl">
                 {clientName}
               </div>
               <div
                 className={cn(
                   'flex items-center gap-2 rounded-full px-3 py-1 sm:px-4 sm:py-1.5',
                   callState === 'dialing'
-                    ? 'bg-primary-300'
+                    ? 'bg-primary'
                     : callState === 'connected'
                       ? 'bg-success-500'
                       : callState === 'failed'
                         ? 'bg-error-500'
-                        : 'bg-gray-800'
+                        : 'bg-muted-foreground'
                 )}
               >
                 <div
                   className={cn(
                     'h-2 w-2 rounded-full',
-                    callState === 'dialing' ? 'bg-primary-500' : 'bg-white'
+                    callState === 'dialing' ? 'bg-primary-foreground' : 'bg-card'
                   )}
                 />
-                <span
-                  className={cn(
-                    'text-xs font-medium sm:text-sm',
-                    callState === 'dialing' ? 'text-dark-500' : 'text-white'
-                  )}
-                >
+                <span className="text-primary-foreground text-xs font-medium sm:text-sm">
                   {callState === 'dialing'
                     ? t('pages.clients.modals.callDialog.calling')
                     : callState === 'connected'
@@ -1001,28 +1002,28 @@ export function CallDialogModal({
                         : t('pages.clients.modals.callDialog.callEnded')}
                 </span>
               </div>
-              <div className="text-dark-500 text-xs sm:text-sm">{displayPhone}</div>
+              <div className="text-foreground text-xs sm:text-sm">{displayPhone}</div>
             </div>
 
             {/* Call Details Card */}
             {(callState === 'dialing' || callState === 'connected') && (
-              <div className="flex flex-col items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white p-4">
+              <div className="border-border bg-card flex flex-col items-center justify-center gap-2 rounded-lg border p-4">
                 <div className="flex items-center gap-2">
-                  <Icons.StopWatch size={16} className="text-gray-600" />
-                  <span className="text-dark-500 text-sm font-medium">
+                  <Icons.StopWatch size={16} className="text-muted-foreground" />
+                  <span className="text-foreground text-sm font-medium">
                     {callState === 'dialing'
                       ? t('pages.clients.modals.callDialog.elapsedTime')
                       : t('pages.clients.modals.callDialog.talkTime')}
                     : <span className="font-semibold">{formatTime(elapsedTime)}</span>
                   </span>
                 </div>
-                <div className="mt-1 text-sm text-gray-600">
+                <div className="text-muted-foreground mt-1 text-sm">
                   {callState === 'dialing'
                     ? t('pages.clients.modals.callDialog.dialing')
                     : t('pages.clients.modals.callDialog.activeCall')}
                 </div>
-                <div className="flex items-center gap-2 text-sm text-gray-600">
-                  <Icons.Phone size={14} className="text-gray-500" />
+                <div className="text-muted-foreground flex items-center gap-2 text-sm">
+                  <Icons.Phone size={14} className="text-muted-foreground" />
                   <span>
                     {t('pages.clients.modals.callDialog.callType')}: {callLineLabel}
                   </span>
@@ -1032,10 +1033,10 @@ export function CallDialogModal({
 
             {callState === 'ended' && (
               <>
-                <div className="flex flex-col items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white p-4">
+                <div className="border-border bg-card flex flex-col items-center justify-center gap-2 rounded-lg border p-4">
                   <div className="flex items-center gap-2">
-                    <Icons.StopWatch size={16} className="text-gray-600" />
-                    <span className="text-dark-500 text-sm font-medium">
+                    <Icons.StopWatch size={16} className="text-muted-foreground" />
+                    <span className="text-foreground text-sm font-medium">
                       {t('pages.clients.modals.callDialog.duration')}:{' '}
                       <span className="font-semibold">{formatTime(elapsedTime)}</span>
                     </span>
@@ -1043,14 +1044,14 @@ export function CallDialogModal({
                   <div className="text-success-500 mt-1 text-sm font-medium">
                     {t('pages.clients.modals.callDialog.answered')}
                   </div>
-                  <div className="flex items-center gap-2 text-sm text-gray-600">
-                    <Icons.Phone size={14} className="text-gray-500" />
+                  <div className="text-muted-foreground flex items-center gap-2 text-sm">
+                    <Icons.Phone size={14} className="text-muted-foreground" />
                     <span>
                       {t('pages.clients.modals.callDialog.callType')}: {callLineLabel}
                     </span>
                   </div>
                 </div>
-                <div className="text-dark-500 mt-2 text-center text-sm">
+                <div className="text-foreground mt-2 text-center text-sm">
                   {t('pages.clients.modals.callDialog.autoClosingIn')}{' '}
                   <span className="font-semibold">{autoCloseCountdown}</span>{' '}
                   {t('pages.clients.modals.callDialog.seconds')}...
@@ -1059,7 +1060,7 @@ export function CallDialogModal({
                   variant="outline"
                   size="sm"
                   onClick={handleClose}
-                  className="text-dark-500 mt-3 w-full rounded-md border-gray-400"
+                  className="text-foreground border-border mt-3 w-full rounded-md"
                 >
                   {t('actions.close')}
                 </Button>
@@ -1068,11 +1069,11 @@ export function CallDialogModal({
 
             {callState === 'failed' && (
               <>
-                <div className="border-error-200 bg-error-50 flex flex-col items-center justify-center gap-3 rounded-lg border p-4">
-                  <div className="bg-error-100 flex h-12 w-12 items-center justify-center rounded-full">
+                <div className="border-error-500/40 bg-error-50 flex flex-col items-center justify-center gap-3 rounded-lg border p-4">
+                  <div className="bg-error-500/15 flex h-12 w-12 items-center justify-center rounded-full">
                     <Icons.Cancel01 size={24} className="text-error-500" />
                   </div>
-                  <div className="text-error-600 text-center text-sm font-medium">
+                  <div className="text-error-500 text-center text-sm font-medium">
                     {error || t('pages.clients.modals.callDialog.callFailedMessage')}
                   </div>
                 </div>
@@ -1115,8 +1116,8 @@ export function CallDialogModal({
                   className={cn(
                     'w-full rounded-md',
                     isMuted
-                      ? 'bg-error-500 hover:bg-error-600 text-white'
-                      : 'text-dark-500 border-gray-400 bg-white hover:bg-gray-50',
+                      ? 'bg-error-500 hover:bg-error-600 text-primary-foreground'
+                      : 'text-foreground border-border bg-card hover:bg-muted',
                     'cursor-not-allowed opacity-50'
                   )}
                 >
@@ -1129,8 +1130,8 @@ export function CallDialogModal({
                   onClick={() => setIsOnHold(!isOnHold)}
                   disabled
                   className={cn(
-                    'text-dark-500 w-full rounded-md border-gray-400 bg-white hover:bg-gray-50',
-                    isOnHold && 'bg-gray-800 text-white',
+                    'text-foreground border-border bg-card hover:bg-muted w-full rounded-md',
+                    isOnHold && 'bg-muted-foreground text-primary-foreground',
                     'cursor-not-allowed opacity-50'
                   )}
                 >
@@ -1142,7 +1143,7 @@ export function CallDialogModal({
                   size="sm"
                   onClick={handleHangUp}
                   disabled={hangupMutation.isPending}
-                  className="bg-primary-300 text-dark-500 hover:bg-primary-400 w-full rounded-md"
+                  className="w-full rounded-md"
                 >
                   <Icons.Call02 size={18} className="mr-2 sm:size-5" />
                   {t('pages.clients.modals.callDialog.hangUp')}
@@ -1185,75 +1186,75 @@ function LoanCard({
       case 'Medium':
         return 'bg-success-500'
       case 'Low':
-        return 'bg-gray-500'
+        return 'bg-muted-foreground'
       default:
-        return 'bg-gray-500'
+        return 'bg-muted-foreground'
     }
   }
 
   return (
-    <div className="rounded-lg border border-gray-200 bg-white p-3 sm:p-4">
+    <div className="border-border bg-card rounded-lg border p-3 sm:p-4">
       <div className="flex flex-col items-start justify-between gap-2 sm:flex-row sm:items-center sm:gap-4">
         <div className="flex items-center gap-2 sm:gap-3">
           <div
             className={cn(
-              'flex h-8 w-8 items-center justify-center rounded-full text-xs font-semibold text-white sm:h-10 sm:w-10 sm:text-sm',
+              'text-primary-foreground flex h-8 w-8 items-center justify-center rounded-full text-xs font-semibold sm:h-10 sm:w-10 sm:text-sm',
               getPriorityColor(loan.priority)
             )}
           >
             {loan.score}
           </div>
           <div className="flex flex-col">
-            <div className="text-dark-500 text-xs font-medium sm:text-sm">
+            <div className="text-foreground text-xs font-medium sm:text-sm">
               {loan.clientName} - {t('pages.clients.detail.tableHeaders.loanNumber')} #
               {loan.loanNumber}
             </div>
           </div>
         </div>
-        <button className="text-primary-300 text-xs font-medium sm:text-sm">
+        <button className="text-primary text-xs font-medium sm:text-sm">
           {t('pages.clients.modals.callDialog.viewClient')} &gt;
         </button>
       </div>
       <div className="mt-2 grid grid-cols-1 gap-2 sm:mt-3 sm:grid-cols-2 sm:gap-3">
         <div className="flex flex-col gap-1">
-          <span className="text-xs text-gray-600">
+          <span className="text-muted-foreground text-xs">
             {t('pages.clients.detail.tableHeaders.counterparty')}:
           </span>
-          <span className="text-dark-500 text-sm font-medium">{loan.counterparty}</span>
+          <span className="text-foreground text-sm font-medium">{loan.counterparty}</span>
         </div>
         <div className="flex flex-col gap-1">
-          <span className="text-xs text-gray-600">
+          <span className="text-muted-foreground text-xs">
             {t('pages.clients.detail.tableHeaders.saleDate')}:
           </span>
-          <span className="text-dark-500 text-sm font-medium">{loan.saleDate}</span>
+          <span className="text-foreground text-sm font-medium">{loan.saleDate}</span>
         </div>
         <div className="flex flex-col gap-1">
-          <span className="text-xs text-gray-600">
+          <span className="text-muted-foreground text-xs">
             {t('pages.clients.modals.callDialog.loanPrincipal')}:
           </span>
-          <span className="text-dark-500 text-sm font-medium">
+          <span className="text-foreground text-sm font-medium">
             {formatMoneyUAHTwoDecimals(loan.loanPrincipal)}
           </span>
         </div>
         <div className="flex flex-col gap-1">
-          <span className="text-xs text-gray-600">
+          <span className="text-muted-foreground text-xs">
             {t('pages.clients.modals.callDialog.lastContact')}:
           </span>
-          <span className="text-dark-500 text-sm font-medium">{loan.lastContact}</span>
+          <span className="text-foreground text-sm font-medium">{loan.lastContact}</span>
         </div>
         <div className="flex flex-col gap-1">
-          <span className="text-xs text-gray-600">
+          <span className="text-muted-foreground text-xs">
             {t('pages.clients.detail.tableHeaders.debt')}:
           </span>
-          <span className="text-dark-500 text-sm font-medium">
+          <span className="text-foreground text-sm font-medium">
             {formatMoneyUAHTwoDecimals(loan.debt)}
           </span>
         </div>
         <div className="flex flex-col gap-1">
-          <span className="text-xs text-gray-600">
+          <span className="text-muted-foreground text-xs">
             {t('pages.clients.detail.tableHeaders.status')}:
           </span>
-          <span className="text-dark-500 text-sm font-medium">{loan.status}</span>
+          <span className="text-foreground text-sm font-medium">{loan.status}</span>
         </div>
       </div>
     </div>

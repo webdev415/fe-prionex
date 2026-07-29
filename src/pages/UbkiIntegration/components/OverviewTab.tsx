@@ -106,7 +106,7 @@ function KpiCard({
   value,
   trend = false,
   sub,
-  subClass = 'text-gray-400',
+  subClass = 'text-muted-foreground',
 }: {
   icon: React.ReactNode
   label: string
@@ -116,14 +116,14 @@ function KpiCard({
   subClass?: string
 }) {
   return (
-    <div className="flex flex-1 items-center gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3">
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-gray-200 bg-white text-gray-500">
+    <div className="border-border bg-card flex flex-1 items-center gap-3 rounded-xl border px-4 py-3">
+      <div className="border-border bg-card text-muted-foreground flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border">
         {icon}
       </div>
       <div className="flex flex-1 items-center justify-between gap-2">
-        <p className="text-xs leading-tight text-gray-600">{label}</p>
+        <p className="text-muted-foreground text-xs leading-tight">{label}</p>
         <div className="text-right">
-          <p className="text-dark-500 inline-flex items-center gap-1 text-lg font-semibold">
+          <p className="text-foreground inline-flex items-center gap-1 text-lg font-semibold">
             {trend && <MdNorthEast size={13} className="text-success-600" />}
             {value}
           </p>
@@ -331,33 +331,35 @@ export function OverviewTab() {
       key: 'dateTime',
       header: t('pages.ubkiIntegration.overview.columns.dateTime', 'Date / time'),
       render: (r) => (
-        <span className="text-xs whitespace-pre-line text-gray-700">{r.dateTime}</span>
+        <span className="text-muted-foreground text-xs whitespace-pre-line">{r.dateTime}</span>
       ),
     },
     {
       key: 'type',
       header: t('pages.ubkiIntegration.overview.columns.type', 'Type'),
-      render: (r) => <span className="text-xs text-gray-700">{r.type}</span>,
+      render: (r) => <span className="text-muted-foreground text-xs">{r.type}</span>,
     },
     {
       key: 'mode',
       header: t('pages.ubkiIntegration.overview.columns.mode', 'Mode'),
-      render: (r) => <span className="text-xs text-gray-700">{r.mode}</span>,
+      render: (r) => <span className="text-muted-foreground text-xs">{r.mode}</span>,
     },
     {
       key: 'client',
       header: t('pages.ubkiIntegration.overview.columns.client', 'Client'),
       render: (r) => (
         <div className="text-xs">
-          <div className="text-dark-500 font-medium">{r.clientName}</div>
-          <div className="text-gray-500">{r.clientTin}</div>
+          <div className="text-foreground font-medium">{r.clientName}</div>
+          <div className="text-muted-foreground">{r.clientTin}</div>
         </div>
       ),
     },
     {
       key: 'creditContract',
       header: t('pages.ubkiIntegration.overview.columns.creditContract', 'Credit contract'),
-      render: (r) => <span className="text-xs text-gray-700">{r.creditContract || '—'}</span>,
+      render: (r) => (
+        <span className="text-muted-foreground text-xs">{r.creditContract || '—'}</span>
+      ),
     },
     {
       key: 'status',
@@ -372,7 +374,7 @@ export function OverviewTab() {
     {
       key: 'operator',
       header: t('pages.ubkiIntegration.overview.columns.operator', 'Operator'),
-      render: (r) => <span className="text-xs text-gray-700">{r.operator}</span>,
+      render: (r) => <span className="text-muted-foreground text-xs">{r.operator}</span>,
     },
     {
       key: 'actions',
@@ -396,9 +398,9 @@ export function OverviewTab() {
   return (
     <div className="flex flex-col gap-4">
       {/* ── Connection Settings ─────────────────────────────────────────── */}
-      <div className="rounded-2xl border border-gray-200 bg-white p-5">
+      <div className="border-border bg-card rounded-2xl border p-5">
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-dark-500 text-sm font-semibold">
+          <h2 className="text-foreground text-sm font-semibold">
             {t('pages.ubkiIntegration.overview.connection.title', 'Connection Settings')}
           </h2>
           {editing ? (
@@ -446,10 +448,10 @@ export function OverviewTab() {
         <div className="flex flex-wrap items-end gap-4">
           {/* Environment — editable radio when in edit mode. */}
           <div className="min-w-[210px]">
-            <label className="mb-1 block text-xs font-medium text-gray-500">
+            <label className="text-muted-foreground mb-1 block text-xs font-medium">
               {t('pages.ubkiIntegration.overview.connection.environmentLabel', 'Connection')}
             </label>
-            <div className="inline-flex gap-1 rounded-lg border border-gray-200 bg-white p-1">
+            <div className="border-border bg-card inline-flex gap-1 rounded-lg border p-1">
               {(['test', 'production'] as UbkiEnv[]).map((e) => {
                 const active = env === e
                 return (
@@ -472,12 +474,12 @@ export function OverviewTab() {
                       })
                     }
                     className={`inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
-                      active ? 'bg-secondary-800 text-white' : 'text-gray-400'
+                      active ? 'bg-primary-600 text-white' : 'text-muted-foreground'
                     } ${editing ? 'cursor-pointer' : 'cursor-default'}`}
                   >
                     <span
                       className={`flex h-3.5 w-3.5 items-center justify-center rounded-full border-2 ${
-                        active ? 'border-primary-300' : 'border-gray-300'
+                        active ? 'border-primary-300' : 'border-border'
                       }`}
                     >
                       {active && <span className="bg-primary-300 h-1.5 w-1.5 rounded-full" />}
@@ -492,21 +494,21 @@ export function OverviewTab() {
           </div>
 
           <div className="min-w-[220px] flex-1">
-            <label className="mb-1 block text-xs font-medium text-gray-500">
+            <label className="text-muted-foreground mb-1 block text-xs font-medium">
               {t('pages.ubkiIntegration.overview.connection.endpointUrl', 'Endpoint URL')}
             </label>
             <input
               readOnly={!editing}
               value={editing ? form.endpoint_url : (conn?.auth_url ?? '')}
               onChange={(e) => setForm((f) => ({ ...f, endpoint_url: e.target.value }))}
-              className={`h-10 w-full rounded-lg border border-gray-200 px-3 text-xs text-gray-700 ${
-                editing ? 'focus:border-primary-500 bg-white focus:outline-none' : 'bg-gray-50'
+              className={`border-border text-foreground h-10 w-full rounded-lg border px-3 text-xs ${
+                editing ? 'focus:border-primary-500 bg-card focus:outline-none' : 'bg-muted'
               }`}
             />
           </div>
 
           <div className="min-w-[160px] flex-1">
-            <label className="mb-1 block text-xs font-medium text-gray-500">
+            <label className="text-muted-foreground mb-1 block text-xs font-medium">
               {t('pages.ubkiIntegration.overview.connection.login', 'Login')}
             </label>
             <input
@@ -518,14 +520,14 @@ export function OverviewTab() {
                   : undefined
               }
               onChange={(e) => setForm((f) => ({ ...f, login: e.target.value }))}
-              className={`h-10 w-full rounded-lg border border-gray-200 px-3 text-xs text-gray-700 ${
-                editing ? 'focus:border-primary-500 bg-white focus:outline-none' : 'bg-gray-50'
+              className={`border-border text-foreground h-10 w-full rounded-lg border px-3 text-xs ${
+                editing ? 'focus:border-primary-500 bg-card focus:outline-none' : 'bg-muted'
               }`}
             />
           </div>
 
           <div className="min-w-[150px] flex-1">
-            <label className="mb-1 flex items-center gap-1.5 text-xs font-medium text-gray-500">
+            <label className="text-muted-foreground mb-1 flex items-center gap-1.5 text-xs font-medium">
               {t('pages.ubkiIntegration.overview.connection.password', 'Password')}
               {/* Show that a password is stored (the view-mode field is masked). */}
               {conn?.credentials_configured && (
@@ -546,10 +548,10 @@ export function OverviewTab() {
                     : undefined
                 }
                 onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
-                className={`h-10 w-full rounded-lg border border-gray-200 pl-3 text-xs text-gray-700 ${
+                className={`border-border text-foreground h-10 w-full rounded-lg border pl-3 text-xs ${
                   editing
-                    ? 'focus:border-primary-500 bg-white pr-9 focus:outline-none'
-                    : 'bg-gray-50 pr-3'
+                    ? 'focus:border-primary-500 bg-card pr-9 focus:outline-none'
+                    : 'bg-muted pr-3'
                 }`}
               />
               {/* Reveal the saved/typed password while editing. */}
@@ -563,7 +565,7 @@ export function OverviewTab() {
                       ? t('pages.ubkiIntegration.overview.connection.hidePassword', 'Hide password')
                       : t('pages.ubkiIntegration.overview.connection.showPassword', 'Show password')
                   }
-                  className="absolute inset-y-0 right-0 flex items-center pr-2.5 text-gray-400 hover:text-gray-600"
+                  className="text-muted-foreground hover:text-foreground absolute inset-y-0 right-0 flex items-center pr-2.5"
                 >
                   {showPassword ? (
                     <MdOutlineVisibilityOff size={16} />
@@ -606,14 +608,14 @@ export function OverviewTab() {
           const sessionId = testResult?.session_id ?? null
           const expiresAt = testResult?.expires_at ?? null
           return (
-            <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-500">
+            <div className="border-border bg-muted text-muted-foreground mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border px-3 py-2 text-xs">
               <span
                 className={`inline-flex items-center gap-1.5 font-medium ${
                   connected
                     ? 'text-success-700'
                     : testResult?.error
                       ? 'text-error-600'
-                      : 'text-gray-500'
+                      : 'text-muted-foreground'
                 }`}
               >
                 <span
@@ -622,7 +624,7 @@ export function OverviewTab() {
                       ? 'bg-success-500'
                       : testResult?.error
                         ? 'bg-error-500'
-                        : 'bg-gray-400'
+                        : 'bg-muted-foreground'
                   }`}
                 />
                 {connected
@@ -636,19 +638,19 @@ export function OverviewTab() {
               </span>
               {sessionId && (
                 <>
-                  <span className="h-3 w-px bg-gray-300" />
+                  <span className="bg-border h-3 w-px" />
                   <span>
                     {t('pages.ubkiIntegration.overview.status.sessionId', 'Session ID')}:{' '}
-                    <span className="text-dark-500 font-medium">{sessionId}</span>
+                    <span className="text-foreground font-medium">{sessionId}</span>
                   </span>
                 </>
               )}
               {testResult && (
                 <>
-                  <span className="h-3 w-px bg-gray-300" />
+                  <span className="bg-border h-3 w-px" />
                   <span>
                     {t('pages.ubkiIntegration.overview.status.lastChecked', 'Last checked')}:{' '}
-                    <span className="text-dark-500 font-medium">
+                    <span className="text-foreground font-medium">
                       {t('pages.ubkiIntegration.overview.status.justNow', 'just now')}
                     </span>
                   </span>
@@ -656,10 +658,10 @@ export function OverviewTab() {
               )}
               {expiresAt && (
                 <>
-                  <span className="h-3 w-px bg-gray-300" />
+                  <span className="bg-border h-3 w-px" />
                   <span>
                     {t('pages.ubkiIntegration.overview.status.authExpires', 'Auth expires')}:{' '}
-                    <span className="text-dark-500 font-medium">
+                    <span className="text-foreground font-medium">
                       {new Date(expiresAt).toLocaleString()}
                     </span>
                   </span>
@@ -667,13 +669,13 @@ export function OverviewTab() {
               )}
               {testResult?.error && (
                 <>
-                  <span className="h-3 w-px bg-gray-300" />
+                  <span className="bg-border h-3 w-px" />
                   <span className="text-error-600">{testResult.error}</span>
                 </>
               )}
               {!conn?.credentials_configured && (
                 <>
-                  <span className="h-3 w-px bg-gray-300" />
+                  <span className="bg-border h-3 w-px" />
                   <span className="text-error-600">
                     {t(
                       'pages.ubkiIntegration.overview.status.credentialsNotConfigured',
@@ -696,8 +698,8 @@ export function OverviewTab() {
             onClick={() => setPeriod(p)}
             className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
               period === p
-                ? 'bg-secondary-800 text-white'
-                : 'bg-white text-gray-600 hover:bg-gray-50'
+                ? 'bg-primary-600 text-white'
+                : 'bg-card text-muted-foreground hover:bg-muted'
             }`}
           >
             {periodLabel(p)}
@@ -718,7 +720,7 @@ export function OverviewTab() {
               placeholder={t('pages.ubkiIntegration.overview.customRange.fromDate', 'From date')}
             />
           </div>
-          <span className="text-gray-400">—</span>
+          <span className="text-muted-foreground">—</span>
           <div className="w-44">
             <DateSelect
               value={customTo}
@@ -777,12 +779,12 @@ export function OverviewTab() {
       </div>
 
       {/* ── Submission log ──────────────────────────────────────────────── */}
-      <div className="rounded-2xl border border-gray-200 bg-white p-5">
+      <div className="border-border bg-card rounded-2xl border p-5">
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-dark-500 text-sm font-semibold">
+          <h2 className="text-foreground text-sm font-semibold">
             {t('pages.ubkiIntegration.overview.log.title', 'Submission log')}
           </h2>
-          <span className="text-xs text-gray-400">
+          <span className="text-muted-foreground text-xs">
             {t('pages.ubkiIntegration.overview.log.clickRowHint', 'Click a row to see full report')}
           </span>
         </div>
@@ -842,12 +844,12 @@ export function OverviewTab() {
               'pages.ubkiIntegration.overview.log.searchPlaceholder',
               'Search by client / TIN / contract…'
             )}
-            className="focus:border-primary-500 h-[45px] min-w-[200px] flex-[1.5] rounded-full border border-gray-400 bg-white px-4 text-xs text-gray-700 focus:outline-none"
+            className="focus:border-primary-500 border-border bg-card text-foreground h-[45px] min-w-[200px] flex-[1.5] rounded-full border px-4 text-xs focus:outline-none"
           />
           <Button
             variant="transparent-black"
             size="sm"
-            className="rounded-full text-gray-600"
+            className="text-muted-foreground rounded-full"
             leftIcon={<MdSync size={15} />}
             onClick={() => {
               setSearch('')
@@ -873,11 +875,11 @@ export function OverviewTab() {
           </div>
         ) : rows.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-2 py-16 text-center">
-            <MdOutlineDescription size={28} className="text-gray-400" />
-            <p className="text-dark-500 text-sm font-medium">
+            <MdOutlineDescription size={28} className="text-muted-foreground" />
+            <p className="text-foreground text-sm font-medium">
               {t('pages.ubkiIntegration.overview.log.noSubmissions', 'No submissions found')}
             </p>
-            <p className="text-xs text-gray-500">
+            <p className="text-muted-foreground text-xs">
               {t(
                 'pages.ubkiIntegration.overview.log.adjustFilters',
                 'Try adjusting your filters or search query.'

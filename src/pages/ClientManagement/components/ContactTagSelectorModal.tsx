@@ -105,17 +105,22 @@ export function ContactTagSelectorModal({
         {isLoading ? (
           <p>{t('common.loading', 'Loading...')}</p>
         ) : categories.length === 0 ? (
-          <p className="text-sm text-gray-500">
+          <p className="text-muted-foreground text-sm">
             {t('pages.contactTags.noCategories', 'No tag categories available')}
           </p>
         ) : (
           <div className="flex flex-col gap-4">
             {categories.map((category) => (
-              <div key={category.category_id} className="rounded border p-3">
+              <div
+                key={category.category_id}
+                className="border-border bg-card rounded-lg border p-3"
+              >
                 <div className="mb-3 flex items-center justify-between gap-2">
                   <div>
-                    <span className="text-sm font-medium">{category.category_name}</span>
-                    <p className="text-dark-400 text-xs">
+                    <span className="text-foreground text-sm font-medium">
+                      {category.category_name}
+                    </span>
+                    <p className="text-muted-foreground text-xs">
                       {category.selection_type === 'multi'
                         ? t('pages.contactTags.multiSelectHint', 'Select one or more values')
                         : t(
@@ -127,7 +132,7 @@ export function ContactTagSelectorModal({
                     </p>
                   </div>
                   {!category.can_edit && (
-                    <span className="shrink-0 rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-600">
+                    <span className="bg-muted text-muted-foreground shrink-0 rounded px-2 py-0.5 text-xs">
                       {t('pages.contactTags.readOnly', 'Read only')}
                     </span>
                   )}
@@ -146,7 +151,7 @@ export function ContactTagSelectorModal({
                         <label
                           key={v.id}
                           className={`flex items-center gap-2 rounded p-1.5 ${
-                            category.can_edit ? 'cursor-pointer hover:bg-gray-50' : 'cursor-default'
+                            category.can_edit ? 'hover:bg-muted cursor-pointer' : 'cursor-default'
                           }`}
                         >
                           <RadioItem
@@ -163,7 +168,7 @@ export function ContactTagSelectorModal({
                           <TagValueBadge name={v.name} color={v.color} />
                           {v.blocks_calls && (
                             <span
-                              className="text-xs text-red-500"
+                              className="text-error-500 text-xs"
                               title={t('pages.contactTags.blocksCalls', 'Blocks calls')}
                             >
                               📵
@@ -190,7 +195,7 @@ export function ContactTagSelectorModal({
                       <label
                         key={v.id}
                         className={`flex items-center gap-2 rounded p-1.5 ${
-                          category.can_edit ? 'cursor-pointer hover:bg-gray-50' : 'cursor-default'
+                          category.can_edit ? 'hover:bg-muted cursor-pointer' : 'cursor-default'
                         }`}
                       >
                         <Checkbox
@@ -203,7 +208,7 @@ export function ContactTagSelectorModal({
                         <TagValueBadge name={v.name} color={v.color} />
                         {v.blocks_calls && (
                           <span
-                            className="text-xs text-red-500"
+                            className="text-error-500 text-xs"
                             title={t('pages.contactTags.blocksCalls', 'Blocks calls')}
                           >
                             📵
@@ -229,7 +234,7 @@ export function ContactTagSelectorModal({
         )}
       </ModalContent>
       <ModalFooter>
-        <Button variant="ghost" onClick={handleClose}>
+        <Button variant="white-secondary" onClick={handleClose}>
           {t('common.close', 'Close')}
         </Button>
       </ModalFooter>

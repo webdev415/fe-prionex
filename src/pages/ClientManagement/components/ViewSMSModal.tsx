@@ -74,7 +74,7 @@ const getStatusColor = (status: string) => {
     case 'Pending':
       return 'bg-warning-100 text-warning-700'
     default:
-      return 'bg-gray-100 text-gray-700'
+      return 'bg-muted text-foreground'
   }
 }
 
@@ -100,10 +100,10 @@ export function ViewSMSModal({ open, onClose, smsData }: ViewSMSModalProps) {
         {/* Header */}
         <ModalHeader
           icon={
-            <div className="bg-primary-300 flex h-10 w-10 items-center justify-center rounded-full sm:h-12 sm:w-12">
+            <div className="bg-primary flex h-10 w-10 items-center justify-center rounded-full sm:h-12 sm:w-12">
               <Icons.ChatFeedback01
                 size={20}
-                className="text-dark-500 sm:size-6"
+                className="text-primary-foreground sm:size-6"
                 strokeWidth={1.5}
               />
             </div>
@@ -117,31 +117,31 @@ export function ViewSMSModal({ open, onClose, smsData }: ViewSMSModalProps) {
             {/* Date/Time, Template, Operator, Status */}
             <div className="flex flex-col items-start gap-2 self-stretch sm:gap-3">
               <div className="flex flex-col items-start gap-2 self-stretch sm:flex-row sm:gap-6">
-                <span className="text-dark-500 w-full shrink-0 text-xs leading-[155%] font-light tracking-[-0.32px] sm:w-[120px] sm:text-base">
+                <span className="text-foreground w-full shrink-0 text-xs leading-[155%] font-light tracking-[-0.32px] sm:w-[120px] sm:text-base">
                   {t('pages.clients.modals.viewSMS.dateTime')}:
                 </span>
-                <span className="text-dark-500 flex-1 text-xs leading-[155%] font-medium tracking-[-0.32px] sm:text-base">
+                <span className="text-foreground flex-1 text-xs leading-[155%] font-medium tracking-[-0.32px] sm:text-base">
                   {dateTime}
                 </span>
               </div>
               <div className="flex flex-col items-start gap-2 self-stretch sm:flex-row sm:gap-6">
-                <span className="text-dark-500 w-full shrink-0 text-xs leading-[155%] font-light tracking-[-0.32px] sm:w-[120px] sm:text-base">
+                <span className="text-foreground w-full shrink-0 text-xs leading-[155%] font-light tracking-[-0.32px] sm:w-[120px] sm:text-base">
                   {t('pages.clients.modals.viewSMS.template')}:
                 </span>
-                <span className="text-dark-500 flex-1 text-xs leading-[155%] font-medium tracking-[-0.32px] sm:text-base">
+                <span className="text-foreground flex-1 text-xs leading-[155%] font-medium tracking-[-0.32px] sm:text-base">
                   {smsData.template}
                 </span>
               </div>
               <div className="flex flex-col items-start gap-2 self-stretch sm:flex-row sm:gap-6">
-                <span className="text-dark-500 w-full shrink-0 text-xs leading-[155%] font-light tracking-[-0.32px] sm:w-[120px] sm:text-base">
+                <span className="text-foreground w-full shrink-0 text-xs leading-[155%] font-light tracking-[-0.32px] sm:w-[120px] sm:text-base">
                   {t('pages.clients.modals.viewSMS.operator')}:
                 </span>
-                <span className="text-dark-500 flex-1 text-xs leading-[155%] font-medium tracking-[-0.32px] sm:text-base">
+                <span className="text-foreground flex-1 text-xs leading-[155%] font-medium tracking-[-0.32px] sm:text-base">
                   {smsData.operator}
                 </span>
               </div>
               <div className="flex flex-col items-start gap-2 self-stretch sm:flex-row sm:gap-6">
-                <span className="text-dark-500 w-full shrink-0 text-xs leading-[155%] font-light tracking-[-0.32px] sm:w-[120px] sm:text-base">
+                <span className="text-foreground w-full shrink-0 text-xs leading-[155%] font-light tracking-[-0.32px] sm:w-[120px] sm:text-base">
                   {t('pages.clients.modals.viewSMS.status')}:
                 </span>
                 <span
@@ -175,32 +175,32 @@ export function ViewSMSModal({ open, onClose, smsData }: ViewSMSModalProps) {
                 </span>
               </div>
             </div>
-            <div className="flex h-px flex-col items-start gap-2.5 self-stretch bg-gray-200 p-0"></div>
+            <div className="bg-muted flex h-px flex-col items-start gap-2.5 self-stretch p-0"></div>
             {/* Message Content */}
             <div className="flex flex-col gap-2">
-              <label className="text-xs font-light text-gray-700 sm:text-sm">
+              <label className="text-foreground text-xs font-light sm:text-sm">
                 {t('pages.clients.modals.viewSMS.message')}:
               </label>
               <textarea
                 readOnly
                 value={smsData.message}
-                className="text-dark-500 focus:ring-primary-300/20 focus:border-primary-300 min-h-[80px] resize-none rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-light focus:ring-2 focus:outline-none sm:min-h-[100px] sm:text-sm"
+                className="text-foreground focus:ring-primary-300/20 focus:border-primary-300 border-border bg-card min-h-[80px] resize-none rounded-lg border px-3 py-2 text-xs font-light focus:ring-2 focus:outline-none sm:min-h-[100px] sm:text-sm"
               />
             </div>
 
             {/* Message Metrics */}
-            <div className="flex flex-row justify-between rounded-lg border border-gray-200 bg-gray-100 p-3 sm:p-4">
+            <div className="border-border bg-muted flex flex-row justify-between rounded-lg border p-3 sm:p-4">
               <div className="flex items-center gap-2">
                 <span className="bg-success-500 h-2 w-2 rounded-full" />
-                <span className="text-xs font-light text-gray-700 sm:text-sm">
+                <span className="text-foreground text-xs font-light sm:text-sm">
                   {charCount}/{maxChars} {t('pages.clients.modals.viewSMS.characters')}
                 </span>
               </div>
               <div className="flex items-center gap-2">
-                <Icons.File size={14} className="text-gray-600 sm:size-4" />
-                <span className="text-xs font-light text-gray-700 sm:text-sm">
+                <Icons.File size={14} className="text-muted-foreground sm:size-4" />
+                <span className="text-foreground text-xs font-light sm:text-sm">
                   {t('pages.clients.modals.viewSMS.script')}:{' '}
-                  <span className="text-dark-500 font-semibold">
+                  <span className="text-foreground font-semibold">
                     {hasCyrillic
                       ? t('pages.clients.modals.viewSMS.cyrillic')
                       : t('pages.clients.modals.viewSMS.latin')}
@@ -208,8 +208,8 @@ export function ViewSMSModal({ open, onClose, smsData }: ViewSMSModalProps) {
                 </span>
               </div>
               <div className="flex items-center gap-2">
-                <Icons.Mail size={14} className="text-gray-600 sm:size-4" />
-                <span className="text-xs font-light text-gray-700 sm:text-sm">
+                <Icons.Mail size={14} className="text-muted-foreground sm:size-4" />
+                <span className="text-foreground text-xs font-light sm:text-sm">
                   {smsParts}{' '}
                   {smsParts !== 1
                     ? t('pages.clients.modals.viewSMS.smsParts')
@@ -217,10 +217,10 @@ export function ViewSMSModal({ open, onClose, smsData }: ViewSMSModalProps) {
                 </span>
               </div>
               {/* <div className="flex items-center gap-2">
-                  <Icons.MoneyRemove01 size={14} className="text-gray-600 sm:size-4" />
-                  <span className="text-xs font-light text-gray-700 sm:text-sm">
+                  <Icons.MoneyRemove01 size={14} className="text-muted-foreground sm:size-4" />
+                  <span className="text-xs font-light text-foreground sm:text-sm">
                     {t('pages.clients.modals.viewSMS.cost')}:{' '}
-                    <span className="text-dark-500 font-semibold">
+                    <span className="text-foreground font-semibold">
                       {formatMoneyUAHTwoDecimals(cost)}
                     </span>
                   </span>
@@ -230,18 +230,18 @@ export function ViewSMSModal({ open, onClose, smsData }: ViewSMSModalProps) {
             {/* Delivery Timestamps */}
             <div className="flex flex-col items-start gap-2 self-stretch sm:flex-row sm:items-center sm:gap-3">
               <div className="flex w-full flex-1 items-center gap-2 sm:w-auto">
-                <span className="text-dark-500 text-xs leading-[155%] font-light tracking-[-0.32px] sm:text-base">
+                <span className="text-foreground text-xs leading-[155%] font-light tracking-[-0.32px] sm:text-base">
                   {t('pages.clients.modals.viewSMS.sent')}:
                 </span>
-                <span className="text-dark-500 flex-1 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:text-sm">
+                <span className="text-foreground flex-1 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:text-sm">
                   {dateTime}
                 </span>
               </div>
               <div className="flex w-full flex-1 items-center gap-2 sm:w-auto">
-                <span className="text-dark-500 text-xs leading-[155%] font-light tracking-[-0.32px] sm:text-base">
+                <span className="text-foreground text-xs leading-[155%] font-light tracking-[-0.32px] sm:text-base">
                   {t('pages.clients.modals.viewSMS.delivered')}:
                 </span>
-                <span className="text-dark-500 flex-1 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:text-sm">
+                <span className="text-foreground flex-1 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:text-sm">
                   {deliveredDateTime}
                 </span>
               </div>

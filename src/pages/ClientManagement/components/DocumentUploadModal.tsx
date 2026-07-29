@@ -132,10 +132,10 @@ export function DocumentUploadModal({ open, onClose, clientId, loans }: Document
           className={cn(
             'flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed p-8 transition-colors',
             dragOver
-              ? 'border-primary-400 bg-primary-50'
+              ? 'border-primary-400 bg-primary/10'
               : file
-                ? 'border-primary-300 bg-primary-50/50'
-                : 'border-secondary-300 hover:border-secondary-400 hover:bg-secondary-50'
+                ? 'border-primary-300 bg-primary/50'
+                : 'border-secondary-300 hover:border-primary-400 hover:bg-primary/10'
           )}
           onClick={() => fileInputRef.current?.click()}
           onDragOver={(e) => {
@@ -166,8 +166,10 @@ export function DocumentUploadModal({ open, onClose, clientId, loans }: Document
                 <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
                 <polyline points="14 2 14 8 20 8" />
               </svg>
-              <span className="text-secondary-900 text-sm font-medium">{file.name}</span>
-              <span className="text-secondary-500 text-xs">{(file.size / 1024).toFixed(0)} KB</span>
+              <span className="text-foreground text-sm font-medium">{file.name}</span>
+              <span className="text-muted-foreground text-xs">
+                {(file.size / 1024).toFixed(0)} KB
+              </span>
             </div>
           ) : (
             <div className="flex flex-col items-center gap-2">
@@ -184,7 +186,7 @@ export function DocumentUploadModal({ open, onClose, clientId, loans }: Document
                 <polyline points="17 8 12 3 7 8" />
                 <line x1="12" y1="3" x2="12" y2="15" />
               </svg>
-              <span className="text-secondary-600 text-sm">
+              <span className="text-muted-foreground text-sm">
                 {t('pages.clients.detail.dropFileOrClick')}
               </span>
             </div>
@@ -194,7 +196,7 @@ export function DocumentUploadModal({ open, onClose, clientId, loans }: Document
         {/* Document type & Credit */}
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="text-secondary-700 mb-1 block text-sm font-medium">
+            <label className="text-foreground mb-1 block text-sm font-medium">
               {t('pages.clients.detail.documentType')}
             </label>
             <Select
@@ -224,7 +226,7 @@ export function DocumentUploadModal({ open, onClose, clientId, loans }: Document
           </div>
 
           <div>
-            <label className="text-secondary-700 mb-1 block text-sm font-medium">
+            <label className="text-foreground mb-1 block text-sm font-medium">
               {t('pages.clients.detail.loan')}
             </label>
             <Select

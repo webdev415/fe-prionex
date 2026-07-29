@@ -403,7 +403,7 @@ export function BulkSendMessageModal({
     <Modal open={open} onClose={onClose} maxWidth="2xl">
       <ModalHeader
         icon={
-          <div className="bg-primary-300 flex h-8 w-8 items-center justify-center rounded-full">
+          <div className="bg-primary flex h-8 w-8 items-center justify-center rounded-full">
             <Icons.MessageMultiple01
               size={18}
               className="text-primary-foreground"

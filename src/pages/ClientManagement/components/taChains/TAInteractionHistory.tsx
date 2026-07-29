@@ -79,12 +79,12 @@ function NotesCell({
 }) {
   const { t } = useTranslation('common')
   if (!note) {
-    return <span className="text-xs text-gray-600">-</span>
+    return <span className="text-muted-foreground text-xs">-</span>
   }
   const isLong = note.length > NOTE_PREVIEW_LENGTH
   if (!isLong) {
     return (
-      <span className="text-xs break-words [word-break:break-word] whitespace-pre-wrap text-gray-600">
+      <span className="text-muted-foreground text-xs break-words [word-break:break-word] whitespace-pre-wrap">
         {note}
       </span>
     )
@@ -100,7 +100,7 @@ function NotesCell({
       aria-expanded={expanded}
       aria-label={label}
       title={label}
-      className="shrink-0 cursor-pointer rounded p-0.5 text-black hover:bg-gray-100"
+      className="hover:bg-muted shrink-0 cursor-pointer rounded p-0.5 text-black"
     >
       {expanded ? (
         <Icons.ArrowUp size={16} strokeWidth={2} />
@@ -115,7 +115,7 @@ function NotesCell({
     // column width instead of wrapping into a 2–3-char-per-line sliver when a
     // long Result column steals the space.
     return (
-      <span className="flex max-w-[260px] items-center gap-1 text-xs text-gray-600">
+      <span className="text-muted-foreground flex max-w-[260px] items-center gap-1 text-xs">
         <span className="min-w-0 truncate">{preview}</span>
         {toggleButton}
       </span>
@@ -125,7 +125,7 @@ function NotesCell({
   // ``break-words`` (overflow-wrap) + ``[word-break:break-word]`` guarantee a
   // long unbreakable string still breaks instead of wrapping character-by-char.
   return (
-    <span className="flex items-start gap-1 text-xs text-gray-600">
+    <span className="text-muted-foreground flex items-start gap-1 text-xs">
       <span className="break-words [word-break:break-word] whitespace-pre-wrap">{note}</span>
       {toggleButton}
     </span>
@@ -301,7 +301,7 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
       header: t('pages.clientChains.history.date'),
       align: 'left',
       render: (row) => (
-        <span className="text-xs text-gray-700">
+        <span className="text-foreground text-xs">
           {formatDateTime(row.created_at, user?.timezone)}
         </span>
       ),
@@ -311,7 +311,7 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
       header: t('pages.clientChains.history.chain'),
       align: 'left',
       render: (row) => (
-        <span className="text-xs font-medium text-gray-800">{row.chain_name ?? '-'}</span>
+        <span className="text-foreground text-xs font-medium">{row.chain_name ?? '-'}</span>
       ),
     },
     {
@@ -319,7 +319,7 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
       header: t('pages.clientChains.history.phone'),
       align: 'left',
       render: (row) => {
-        if (!row.step_data) return <span className="text-xs text-gray-700">-</span>
+        if (!row.step_data) return <span className="text-foreground text-xs">-</span>
         const chain = chainById.get(row.chain_id)
         const stepsOrdered = chain?.steps ?? []
         // extractPhones shape-checks every value (rejecting dates, datetimes,
@@ -329,7 +329,7 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
         // column matches the Edit modal's per-step values.
         const uniquePhones = extractPhones(resolvedStepData(row), stepsOrdered)
         return (
-          <span className="text-xs text-gray-700">
+          <span className="text-foreground text-xs">
             {uniquePhones.length > 0 ? uniquePhones.join(', ') : '-'}
           </span>
         )
@@ -505,8 +505,8 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
         // no cap, Result shows in full. max-w is a ceiling (auto table layout),
         // so short results still render at their natural width.
         const resultCls = anyNoteExpanded
-          ? 'text-xs text-gray-700 inline-block max-w-[240px] truncate align-middle'
-          : 'text-xs text-gray-700'
+          ? 'text-xs text-foreground inline-block max-w-[240px] truncate align-middle'
+          : 'text-xs text-foreground'
 
         if (entries.length === 0) {
           const fallback =
@@ -521,7 +521,7 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
               <span key={i}>
                 {e.value}
                 {e.followUps.length > 0 && (
-                  <span className="text-gray-500"> ({e.followUps.join(', ')})</span>
+                  <span className="text-muted-foreground"> ({e.followUps.join(', ')})</span>
                 )}
                 {i < entries.length - 1 && ' -> '}
               </span>
@@ -573,7 +573,7 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
         // the chain has no credit step (older interactions).
         if (creditIds.length === 0 && row.credit_id) addCredit(row.credit_id)
         return (
-          <span className="text-xs text-gray-700">
+          <span className="text-foreground text-xs">
             {creditIds.length > 0 ? creditIds.join(', ') : '-'}
           </span>
         )
@@ -608,7 +608,7 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
           (row.recorded_by != null ? operatorNameById.get(row.recorded_by) : null) ??
           row.recorded_by_name ??
           '-'
-        return <span className="text-xs text-gray-600">{display}</span>
+        return <span className="text-muted-foreground text-xs">{display}</span>
       },
     },
     {
@@ -623,8 +623,8 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
             disabled={togglePinMut.isPending}
             className={`rounded p-1 transition-colors ${
               row.is_pinned
-                ? 'text-amber-500 hover:bg-amber-50'
-                : 'text-gray-400 hover:bg-gray-100 hover:text-gray-700'
+                ? 'hover:bg-warning-100 text-amber-500'
+                : 'text-muted-foreground hover:bg-muted hover:text-foreground'
             }`}
             aria-label={row.is_pinned ? t('pages.clientChains.unpin') : t('pages.clientChains.pin')}
             title={row.is_pinned ? t('pages.clientChains.unpin') : t('pages.clientChains.pin')}
@@ -635,7 +635,7 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
             <button
               type="button"
               onClick={() => setEditingId(row.id)}
-              className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-800"
+              className="text-muted-foreground hover:bg-muted hover:text-foreground rounded p-1"
               aria-label={t('actions.edit')}
               title={t('actions.edit')}
             >
@@ -646,7 +646,7 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
             <button
               type="button"
               onClick={() => setDeletingId(row.id)}
-              className="rounded p-1 text-gray-400 hover:bg-red-50 hover:text-red-600"
+              className="text-muted-foreground hover:bg-error-100 rounded p-1 hover:text-red-600"
               aria-label={t('actions.delete')}
               title={t('actions.delete')}
             >
@@ -661,11 +661,11 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
   return (
     <div className="flex flex-col gap-3">
       {/* Filters */}
-      <div className="rounded-xl bg-white/50 p-3 sm:p-4">
+      <div className="bg-card/50 rounded-xl p-3 sm:p-4">
         <div className="flex flex-col gap-4">
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
             <div className="flex flex-col gap-2">
-              <label className="text-dark-500 text-xs leading-[150%] font-medium tracking-[-0.28px]">
+              <label className="text-foreground text-xs leading-[150%] font-medium tracking-[-0.28px]">
                 {t('pages.clientChains.history.filterChain')}
               </label>
               <Select
@@ -688,7 +688,7 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
               </Select>
             </div>
             <div className="flex flex-col gap-2">
-              <label className="text-dark-500 text-xs leading-[150%] font-medium tracking-[-0.28px]">
+              <label className="text-foreground text-xs leading-[150%] font-medium tracking-[-0.28px]">
                 {t('pages.clientChains.history.from')}
               </label>
               <DateSelect
@@ -700,11 +700,11 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
                 placeholder={t('pages.clientChains.history.selectStartDate')}
                 allowManualInput
                 format="dd.MM.yyyy"
-                className="[&_input]:h-[45px] [&_input]:rounded-md [&_input]:border-gray-200 [&_input]:text-xs [&_input]:font-normal"
+                className="[&_input]:border-border [&_input]:h-[45px] [&_input]:rounded-md [&_input]:text-xs [&_input]:font-normal"
               />
             </div>
             <div className="flex flex-col gap-2">
-              <label className="text-dark-500 text-xs leading-[150%] font-medium tracking-[-0.28px]">
+              <label className="text-foreground text-xs leading-[150%] font-medium tracking-[-0.28px]">
                 {t('pages.clientChains.history.to')}
               </label>
               <DateSelect
@@ -716,11 +716,11 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
                 placeholder={t('pages.clientChains.history.selectEndDate')}
                 allowManualInput
                 format="dd.MM.yyyy"
-                className="[&_input]:h-[45px] [&_input]:rounded-md [&_input]:border-gray-200 [&_input]:text-xs [&_input]:font-normal"
+                className="[&_input]:border-border [&_input]:h-[45px] [&_input]:rounded-md [&_input]:text-xs [&_input]:font-normal"
               />
             </div>
             <div className="flex flex-col gap-2">
-              <label className="text-dark-500 text-xs leading-[150%] font-medium tracking-[-0.28px]">
+              <label className="text-foreground text-xs leading-[150%] font-medium tracking-[-0.28px]">
                 {t('pages.clientChains.history.searchNotes')}
               </label>
               <Input
@@ -762,8 +762,8 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
       ) : items.length === 0 ? (
         <div className="flex flex-col items-center gap-4 self-stretch py-8 md:gap-6">
           <div className="flex flex-col items-center justify-center gap-4 self-stretch py-8 sm:flex-row md:gap-6">
-            <Icons.FileRemove size={48} className="text-gray-500" strokeWidth={0.5} />
-            <p className="text-dark-500 text-center text-xl leading-tight font-light tracking-[-0.48px] md:text-2xl">
+            <Icons.FileRemove size={48} className="text-muted-foreground" strokeWidth={0.5} />
+            <p className="text-foreground text-center text-xl leading-tight font-light tracking-[-0.48px] md:text-2xl">
               {t('pages.clientChains.history.empty')}
             </p>
           </div>
@@ -785,10 +785,12 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
             <Icons.Delete size={26} className="text-red-600" strokeWidth={1.8} />
           </div>
           <div className="flex flex-col gap-1.5">
-            <h3 className="text-base font-semibold text-gray-900">
+            <h3 className="text-foreground text-base font-semibold">
               {t('pages.clientChains.history.deleteTitle')}
             </h3>
-            <p className="text-sm text-gray-500">{t('pages.clientChains.history.deleteConfirm')}</p>
+            <p className="text-muted-foreground text-sm">
+              {t('pages.clientChains.history.deleteConfirm')}
+            </p>
           </div>
           <div className="mt-2 flex w-full gap-3">
             <Button

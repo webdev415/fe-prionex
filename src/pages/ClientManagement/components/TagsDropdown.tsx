@@ -286,7 +286,7 @@ export function TagsDropdown({
                       aria-checked={selected}
                       onClick={() => handleSelectSegment(segment.id)}
                       className={`hover:bg-muted flex w-full cursor-pointer items-start gap-2 rounded px-2 py-2 text-left ${
-                        selected ? 'bg-primary-50' : ''
+                        selected ? 'bg-primary/10' : ''
                       }`}
                     >
                       <span
@@ -295,7 +295,7 @@ export function TagsDropdown({
                         }`}
                         aria-hidden
                       >
-                        {selected && <span className="h-1.5 w-1.5 rounded-full bg-white" />}
+                        {selected && <span className="bg-card h-1.5 w-1.5 rounded-full" />}
                       </span>
                       <div className="min-w-0 flex-1">
                         <div className="text-foreground truncate text-sm font-medium">
