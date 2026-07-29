@@ -46,6 +46,22 @@ function createWrapper() {
   )
 }
 
+function renderWithInvalidateSpy(agentExtension = '1003') {
+  const queryClient = new QueryClient()
+  const invalidateQueriesSpy = vi.spyOn(queryClient, 'invalidateQueries')
+  const wrapper = ({ children }: { children: React.ReactNode }) => (
+    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+  )
+
+  renderHook(() => useCallWebSocket(agentExtension), { wrapper })
+
+  const stateChangeHandler = mockSocket.on.mock.calls.find(
+    (call) => call[0] === 'call.state_changed'
+  )?.[1]
+
+  return { invalidateQueriesSpy, stateChangeHandler }
+}
+
 describe('useCallWebSocket', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -122,30 +138,17 @@ describe('useCallWebSocket', () => {
   })
 
   it('should handle call state change events', async () => {
-    const agentExtension = '1003'
     const mockEvent: CallStateEvent = {
       event_type: 'call.state_changed',
       timestamp: '2026-07-29T10:00:00Z',
       data: {
         call_id: 'CALL-123',
         state: 'ACTIVE',
-        duration: 120,
+        total_duration: 120,
       },
     }
 
-    const queryClient = new QueryClient()
-    const invalidateQueriesSpy = vi.spyOn(queryClient, 'invalidateQueries')
-
-    const wrapper = ({ children }: { children: React.ReactNode }) => (
-      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-    )
-
-    renderHook(() => useCallWebSocket(agentExtension), { wrapper })
-
-    // Simulate call state changed event
-    const stateChangeHandler = mockSocket.on.mock.calls.find(
-      (call) => call[0] === 'call.state_changed'
-    )?.[1]
+    const { invalidateQueriesSpy, stateChangeHandler } = renderWithInvalidateSpy()
     stateChangeHandler?.(mockEvent)
 
     await waitFor(() => {
@@ -160,19 +163,7 @@ describe('useCallWebSocket', () => {
   })
 
   it('should skip the call-details invalidation when the payload carries no call_id', async () => {
-    const agentExtension = '1003'
-    const queryClient = new QueryClient()
-    const invalidateQueriesSpy = vi.spyOn(queryClient, 'invalidateQueries')
-
-    const wrapper = ({ children }: { children: React.ReactNode }) => (
-      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-    )
-
-    renderHook(() => useCallWebSocket(agentExtension), { wrapper })
-
-    const stateChangeHandler = mockSocket.on.mock.calls.find(
-      (call) => call[0] === 'call.state_changed'
-    )?.[1]
+    const { invalidateQueriesSpy, stateChangeHandler } = renderWithInvalidateSpy()
 
     expect(() =>
       stateChangeHandler?.({
@@ -194,20 +185,10 @@ describe('useCallWebSocket', () => {
     expect(callDetailsKeys).toHaveLength(0)
   })
 
+  // client_id is not part of the call.state_changed payload, but the shared
+  // helper reads it defensively — this pins that it is fed event.data, not event.
   it('should pass the nested client id to the call-related invalidation', async () => {
-    const agentExtension = '1003'
-    const queryClient = new QueryClient()
-    const invalidateQueriesSpy = vi.spyOn(queryClient, 'invalidateQueries')
-
-    const wrapper = ({ children }: { children: React.ReactNode }) => (
-      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-    )
-
-    renderHook(() => useCallWebSocket(agentExtension), { wrapper })
-
-    const stateChangeHandler = mockSocket.on.mock.calls.find(
-      (call) => call[0] === 'call.state_changed'
-    )?.[1]
+    const { invalidateQueriesSpy, stateChangeHandler } = renderWithInvalidateSpy()
     stateChangeHandler?.({
       event_type: 'call.state_changed',
       timestamp: '2026-07-29T10:00:00Z',
@@ -221,10 +202,8 @@ describe('useCallWebSocket', () => {
     })
   })
 
-  // Pins the react-query matching semantics this bug depended on: the pre-fix
-  // code invalidated ['callDetails', undefined], which does NOT match a live
-  // ['callDetails', '<id>'] query, so the refetch never happened. If a future
-  // react-query upgrade changed partial matching, this would catch it.
+  // Pins the matching semantics the bug depended on, in case a react-query
+  // upgrade changes partial matching.
   it('should not match a live callDetails query when the key holds undefined', async () => {
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false } },
@@ -364,7 +343,6 @@ describe('useCallWebSocket', () => {
   })
 
   it('should handle multiple state change events', async () => {
-    const agentExtension = '1003'
     const mockEvents: CallStateEvent[] = [
       {
         event_type: 'call.state_changed',
@@ -383,27 +361,15 @@ describe('useCallWebSocket', () => {
       },
     ]
 
-    const queryClient = new QueryClient()
-    const invalidateQueriesSpy = vi.spyOn(queryClient, 'invalidateQueries')
+    const { invalidateQueriesSpy, stateChangeHandler } = renderWithInvalidateSpy()
 
-    const wrapper = ({ children }: { children: React.ReactNode }) => (
-      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-    )
-
-    renderHook(() => useCallWebSocket(agentExtension), { wrapper })
-
-    const stateChangeHandler = mockSocket.on.mock.calls.find(
-      (call) => call[0] === 'call.state_changed'
-    )?.[1]
-
-    // Simulate multiple events
     for (const event of mockEvents) {
       stateChangeHandler?.(event)
     }
 
     await waitFor(() => {
-      // Should invalidate queries for each event
-      expect(invalidateQueriesSpy).toHaveBeenCalledTimes(mockEvents.length * 2) // 2 invalidations per event
+      // callDetails + callHistory per event
+      expect(invalidateQueriesSpy).toHaveBeenCalledTimes(mockEvents.length * 2)
     })
   })
 })

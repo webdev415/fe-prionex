@@ -100,14 +100,11 @@ export function useCallWebSocket(agentExtension: string | null) {
       }
     })
 
-    // Listen for call state updates. The payload is nested under `data`; a
-    // top-level read yields undefined and invalidates ['callDetails', undefined],
-    // which matches no query.
     socket.on(CALL_STATE_CHANGED_EVENT, (event: CallStateEvent) => {
       const eventData = event.data
 
-      // Without an id there is no call query to target; firing the invalidation
-      // anyway would just re-create the undefined-key no-op.
+      // An absent id would invalidate ['callDetails', undefined], which matches
+      // no query.
       if (eventData?.call_id) {
         queryClient.invalidateQueries({
           queryKey: ['callDetails', eventData.call_id],
