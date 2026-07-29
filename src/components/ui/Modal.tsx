@@ -90,7 +90,7 @@ export function Modal({
             onInteractOutside={preventOutsideClose ? (e) => e.preventDefault() : undefined}
             onEscapeKeyDown={preventOutsideClose ? (e) => e.preventDefault() : undefined}
             className={cn(
-              'bg-card fixed top-1/2 left-1/2 z-50 max-h-[90vh] w-[calc(100%-1rem)] -translate-x-1/2 -translate-y-1/2 rounded-lg shadow-xl sm:w-[calc(100%-2rem)]',
+              'bg-card border-border fixed top-1/2 left-1/2 z-50 max-h-[90vh] w-[calc(100%-1rem)] -translate-x-1/2 -translate-y-1/2 rounded-lg border shadow-xl sm:w-[calc(100%-2rem)]',
               'p-4 sm:p-6 md:p-8 lg:p-10',
               'data-[state=open]:animate-in data-[state=closed]:animate-out',
               'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
@@ -109,15 +109,10 @@ export function Modal({
             {showCloseButton && (
               <DialogPrimitive.Close asChild>
                 <button
-                  className="hover:bg-muted absolute top-2 right-2 flex h-8 w-8 items-center justify-center rounded-md transition-colors sm:top-4 sm:right-4"
+                  className="text-muted-foreground hover:bg-muted hover:text-foreground absolute top-2 right-2 flex h-8 w-8 items-center justify-center rounded-md transition-colors sm:top-4 sm:right-4"
                   aria-label="Close modal"
                 >
-                  <Icon
-                    icon={Cancel01Icon}
-                    size={18}
-                    className="text-foreground"
-                    strokeWidth={1.5}
-                  />
+                  <Icon icon={Cancel01Icon} size={18} className="text-current" strokeWidth={2} />
                 </button>
               </DialogPrimitive.Close>
             )}
@@ -130,7 +125,7 @@ export function Modal({
               onInteractOutside={preventOutsideClose ? (e) => e.preventDefault() : undefined}
               onEscapeKeyDown={preventOutsideClose ? (e) => e.preventDefault() : undefined}
               className={cn(
-                'bg-card relative z-50 max-h-[90vh] w-full rounded-lg shadow-xl',
+                'bg-card border-border relative z-50 max-h-[90vh] w-full rounded-lg border shadow-xl',
                 'p-4 sm:p-6 md:p-8 lg:p-10', // Responsive padding
                 'data-[state=open]:animate-in data-[state=closed]:animate-out',
                 'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
@@ -152,15 +147,10 @@ export function Modal({
               {showCloseButton && (
                 <DialogPrimitive.Close asChild>
                   <button
-                    className="hover:bg-muted absolute top-2 right-2 flex h-8 w-8 items-center justify-center rounded-md transition-colors sm:top-4 sm:right-4"
+                    className="text-muted-foreground hover:bg-muted hover:text-foreground absolute top-2 right-2 flex h-8 w-8 items-center justify-center rounded-md transition-colors sm:top-4 sm:right-4"
                     aria-label="Close modal"
                   >
-                    <Icon
-                      icon={Cancel01Icon}
-                      size={18}
-                      className="text-foreground"
-                      strokeWidth={1.5}
-                    />
+                    <Icon icon={Cancel01Icon} size={18} className="text-current" strokeWidth={2} />
                   </button>
                 </DialogPrimitive.Close>
               )}

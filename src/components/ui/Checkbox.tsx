@@ -21,14 +21,14 @@ const Checkbox = React.forwardRef<React.ElementRef<typeof CheckboxPrimitive.Root
       <CheckboxPrimitive.Root
         ref={ref}
         className={cn(
-          'peer ring-offset-background focus-visible:ring-ring h-4 w-4 shrink-0 rounded border border-gray-300 bg-transparent focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50',
+          'peer ring-offset-background focus-visible:ring-ring border-muted-foreground/50 bg-card data-[state=checked]:border-primary h-4 w-4 shrink-0 rounded border-2 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50',
           className
         )}
         {...props}
       >
         <CheckboxPrimitive.Indicator
           className={cn(
-            'bg-primary-500 flex h-full w-full items-center justify-center rounded text-current'
+            'bg-primary text-primary-foreground flex h-full w-full items-center justify-center rounded'
           )}
         >
           <svg

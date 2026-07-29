@@ -15,8 +15,8 @@ export function VerifiedPaymentsByContract({ contracts }: VerifiedPaymentsByCont
   const { t } = useTranslation('common')
 
   return (
-    <div className="flex w-full flex-col items-stretch border-t border-[#EBECE8] bg-white px-4 py-4 sm:px-6 sm:py-5">
-      <span className="text-[10px] leading-[150%] font-medium tracking-[0.08em] text-gray-500 uppercase sm:text-xs">
+    <div className="border-border bg-card flex w-full flex-col items-stretch border-t px-4 py-4 sm:px-6 sm:py-5">
+      <span className="text-muted-foreground text-[10px] leading-[150%] font-medium tracking-[0.08em] uppercase sm:text-xs">
         {t('pages.clients.debtSummary.verifiedByContract.title')}
       </span>
       {contracts.length > 0 && (
@@ -26,25 +26,25 @@ export function VerifiedPaymentsByContract({ contracts }: VerifiedPaymentsByCont
             return (
               <div
                 key={item.contractNumber}
-                className="flex min-w-[9.5rem] flex-1 flex-col gap-2 rounded-lg border border-[#EBECE8] bg-white px-4 py-3 sm:min-w-[10.5rem]"
+                className="border-border bg-card flex min-w-[9.5rem] flex-1 flex-col gap-2 rounded-lg border px-4 py-3 sm:min-w-[10.5rem]"
               >
-                <span className="text-xs leading-[150%] font-medium tracking-[-0.24px] text-gray-500">
+                <span className="text-muted-foreground text-xs leading-[150%] font-medium tracking-[-0.24px]">
                   {t('pages.clients.debtSummary.verifiedByContract.contract', {
                     number: item.contractNumber,
                   })}
                 </span>
                 <span
                   className={cn(
-                    'text-dark-500 text-base leading-[132%] font-medium tracking-[-0.4px] sm:text-xl',
-                    isEmpty && 'text-gray-400'
+                    'text-foreground text-base leading-[132%] font-medium tracking-[-0.4px] sm:text-xl',
+                    isEmpty && 'text-muted-foreground'
                   )}
                 >
                   {formatMoneyUAHTwoDecimals(item.totalVerified)}
                 </span>
                 <span
                   className={cn(
-                    'text-xs leading-[150%] font-medium tracking-[-0.24px] text-gray-500',
-                    isEmpty && 'text-gray-400'
+                    'text-muted-foreground text-xs leading-[150%] font-medium tracking-[-0.24px]',
+                    isEmpty && 'text-muted-foreground'
                   )}
                 >
                   {item.verifiedCount === 1

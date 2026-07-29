@@ -149,13 +149,13 @@ function SectionHeader({
   canAdd: boolean
 }) {
   return (
-    <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-[#2b2f36]">
+    <div className="text-foreground mb-3 flex items-center gap-2 text-sm font-semibold">
       <span className="text-primary-500 inline-flex shrink-0">{icon}</span>
       <span>{title}</span>
       <span
         data-testid="section-contact-count"
         data-count={count}
-        className="rounded-full bg-[#f2f4f2] px-2.5 py-0.5 text-xs font-normal text-[#9b9fa6]"
+        className="bg-muted text-muted-foreground rounded-full px-2.5 py-0.5 text-xs font-normal"
       >
         {countLabel}
       </span>
@@ -166,7 +166,7 @@ function SectionHeader({
           aria-label={addTitle}
           data-testid="section-add-contact"
           onClick={onAdd}
-          className="bg-primary-50 text-primary-500 hover:bg-primary-500 ml-1 inline-flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-full transition-colors hover:text-white"
+          className="bg-primary/10 text-primary-500 hover:bg-primary-500 ml-1 inline-flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-full transition-colors hover:text-white"
         >
           <Icons.Add size={16} strokeWidth={2} />
         </button>
@@ -223,7 +223,7 @@ function ContactEditorForm({
   return (
     <div
       data-testid="recommender-contact-form"
-      className="flex flex-col gap-2.5 rounded-xl border border-[#e8e9eb] bg-white p-3.5 shadow-sm"
+      className="border-border bg-card flex flex-col gap-2.5 rounded-xl border p-3.5 shadow-sm"
     >
       <div className="flex flex-wrap items-end gap-3">
         <div className="min-w-[140px] flex-1">
@@ -235,7 +235,7 @@ function ContactEditorForm({
           />
         </div>
         <div className="flex min-w-[160px] flex-1 flex-col gap-1">
-          <label className="text-dark-500 text-xs font-medium sm:text-sm">
+          <label className="text-foreground text-xs font-medium sm:text-sm">
             {t('pages.clients.detail.contactType')}
           </label>
           <Select
@@ -261,18 +261,23 @@ function ContactEditorForm({
             label={t('pages.clients.detail.comment')}
           />
         </div>
-        <div className="flex gap-1.5 pb-0.5">
+        <div className="flex gap-1.5 self-end pb-0.5">
           <Button
             size="sm"
             onClick={onSave}
             disabled={saveDisabled}
-            className="h-[30px] rounded-md"
+            className="h-[42px] min-w-[7rem] rounded-lg"
           >
             {isSaving
               ? t('actions.saving', 'Saving...')
               : t('pages.clients.editModal.save', 'Save')}
           </Button>
-          <Button size="sm" variant="cancel" onClick={onCancel} className="h-[30px] rounded-md">
+          <Button
+            size="sm"
+            variant="cancel"
+            onClick={onCancel}
+            className="h-[42px] min-w-[5.5rem] rounded-lg"
+          >
             {t('actions.cancel')}
           </Button>
         </div>
@@ -301,7 +306,7 @@ function ContactInfoButton({
           type="button"
           aria-label={t('pages.clients.detail.contactInfo', 'Details')}
           className={cn(
-            'inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full border border-[#b9bdc3] text-[10px] font-semibold text-[#9b9fa6] transition-colors hover:border-[#7c8189] hover:text-[#7c8189]',
+            'border-border text-muted-foreground hover:border-border hover:text-muted-foreground inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full border text-[10px] font-semibold transition-colors',
             contact.id > 0 && 'cursor-pointer'
           )}
           onClick={() => {
@@ -351,7 +356,7 @@ function LinkedContactPills({ linked }: { linked: LinkedContactBadge[] }) {
         <Link
           key={item.id}
           to={`/dashboard/clients/${item.id}`}
-          className="inline-flex max-w-full items-center gap-1 rounded-full border border-[#d7ebc6] bg-[#ecf6e4] px-2 py-0.5 text-[11px] leading-3 font-semibold text-[#519a3d] no-underline hover:border-[#c5e0b0] hover:bg-[#e3f2d6]"
+          className="border-success-200 bg-success-50 text-success-700 hover:border-success-300 hover:bg-success-100 inline-flex max-w-full items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] leading-3 font-semibold no-underline"
           title={item.fullName}
         >
           <Icons.Link01 size={9} strokeWidth={2.2} className="shrink-0" />
@@ -400,10 +405,10 @@ const ActionIconButton = forwardRef<
       className={cn(
         'inline-flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-md border-none bg-transparent transition-colors disabled:cursor-not-allowed disabled:opacity-40',
         danger
-          ? 'text-[#f0a0a0] hover:bg-[#fef2f2] hover:text-[#d64545]'
+          ? 'text-error-400 hover:bg-error-100 hover:text-error-600'
           : primary
-            ? 'text-primary-500 hover:bg-primary-50 hover:text-primary-700'
-            : 'text-[#9b9fa6] hover:bg-[#f2f4f2] hover:text-[#6b7077]',
+            ? 'text-primary-500 hover:bg-primary/10 hover:text-primary-700'
+            : 'text-muted-foreground hover:bg-muted hover:text-muted-foreground',
         className
       )}
       {...props}
@@ -552,7 +557,7 @@ function ContactCard({
   return (
     <div
       data-testid={isPhone ? 'recommender-phone-card' : 'recommender-other-card'}
-      className="flex flex-col gap-1.5 rounded-xl border border-[#e8e9eb] bg-white px-3.5 py-2.5 transition-[border-color,box-shadow] hover:border-[#d7ebc6] hover:shadow-[0_2px_10px_rgba(63,157,91,0.07)]"
+      className="border-border bg-card hover:border-success-200 flex flex-col gap-1.5 rounded-xl border px-3.5 py-2.5 transition-[border-color,box-shadow] hover:shadow-[0_2px_10px_rgba(63,157,91,0.07)]"
     >
       <div className="flex min-w-0 items-stretch gap-3.5">
         <div className="flex min-w-0 flex-1 flex-col gap-1.5">
@@ -566,7 +571,7 @@ function ContactCard({
               <div className="flex items-center gap-1.5">
                 <span
                   className={cn(
-                    'text-dark-500 min-w-0 text-xs font-medium tracking-[-0.24px] break-all',
+                    'text-foreground min-w-0 text-xs font-medium tracking-[-0.24px] break-all',
                     isPhone && 'tabular-nums',
                     contact.blocking?.blocks_calls && 'line-through opacity-70'
                   )}
@@ -640,7 +645,7 @@ function ContactCard({
                     {canEditClient && contact.id > 0 && (
                       <span
                         data-testid="action-separator"
-                        className="mx-1 h-[18px] w-px shrink-0 bg-[#eceef0]"
+                        className="bg-border mx-1 h-[18px] w-px shrink-0"
                         aria-hidden
                       />
                     )}
@@ -697,7 +702,7 @@ function ContactCard({
         </div>
         <div
           data-testid="contact-comment"
-          className="w-[320px] max-w-[36%] shrink-0 border-l border-[#eceef0] py-0.5 pl-3.5 text-xs leading-[1.35] break-words text-[#7c8189] md:max-w-none"
+          className="border-border text-muted-foreground w-[320px] max-w-[36%] shrink-0 border-l py-0.5 pl-3.5 text-xs leading-[1.35] break-words md:max-w-none"
         >
           {contact.comment || '\u00A0'}
         </div>
@@ -827,7 +832,9 @@ function ContactSection({
             />
           )
         })}
-        {contacts.length === 0 && !showAddForm && <p className="py-2 text-xs text-gray-500">—</p>}
+        {contacts.length === 0 && !showAddForm && (
+          <p className="text-muted-foreground py-2 text-xs">—</p>
+        )}
       </div>
     </section>
   )

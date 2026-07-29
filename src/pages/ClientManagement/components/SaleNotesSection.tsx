@@ -40,7 +40,7 @@ export function SaleNotesSection({ clientId }: Props) {
     return (
       <div className="w-full space-y-3 p-4">
         {[1, 2, 3].map((i) => (
-          <div key={i} className="h-28 animate-pulse rounded-lg bg-gray-100" />
+          <div key={i} className="bg-muted-foreground/25 h-28 animate-pulse rounded-lg" />
         ))}
       </div>
     )
@@ -49,7 +49,7 @@ export function SaleNotesSection({ clientId }: Props) {
   if (error) {
     return (
       <div className="flex flex-col items-center gap-4 self-stretch py-16">
-        <p className="text-dark-500 text-center">
+        <p className="text-foreground text-center">
           {t('pages.client.saleNotes.loadError', 'Failed to load comments')}
         </p>
         <button
@@ -66,8 +66,8 @@ export function SaleNotesSection({ clientId }: Props) {
   if (!notes || notes.length === 0) {
     return (
       <div className="flex flex-col items-center gap-4 self-stretch py-16 md:gap-6">
-        <Icons.FileRemove size={48} className="text-gray-500" strokeWidth={0.5} />
-        <p className="text-dark-500 text-center text-xl leading-tight font-light tracking-[-0.48px] md:text-2xl">
+        <Icons.FileRemove size={48} className="text-muted-foreground" strokeWidth={0.5} />
+        <p className="text-foreground text-center text-xl leading-tight font-light tracking-[-0.48px] md:text-2xl">
           {t('pages.client.saleNotes.empty', 'No comments yet')}
         </p>
       </div>
@@ -98,7 +98,7 @@ export function SaleNotesSection({ clientId }: Props) {
           <button
             type="button"
             onClick={() => setExpanded((v) => !v)}
-            className="text-dark-500 flex items-center gap-2 text-sm font-medium hover:opacity-80"
+            className="text-foreground flex items-center gap-2 text-sm font-medium hover:opacity-80"
           >
             {expanded
               ? t('pages.client.saleNotes.collapse', 'Collapse')
@@ -119,10 +119,10 @@ export function SaleNotesSection({ clientId }: Props) {
             <Icons.Delete size={26} className="text-red-600" strokeWidth={1.8} />
           </div>
           <div className="flex flex-col gap-1.5">
-            <h3 className="text-base font-semibold text-gray-900">
+            <h3 className="text-foreground text-base font-semibold">
               {t('pages.client.saleNotes.deleteTitle', 'Delete sale note')}
             </h3>
-            <p className="text-sm text-gray-500">
+            <p className="text-muted-foreground text-sm">
               {t(
                 'pages.client.saleNotes.deleteMessage',
                 'Are you sure you want to delete this comment? This cannot be undone.'

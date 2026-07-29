@@ -346,9 +346,11 @@ export function ActivityTimelinePage() {
       className: 'w-[200px] whitespace-normal',
       render: (activity) => (
         <div className="flex flex-col gap-0.5">
-          <span className="text-dark-500 text-xs font-medium">{activity.employee}</span>
+          <span className="text-foreground text-xs font-medium">{activity.employee}</span>
           {activity.updated_at && (
-            <span className="text-[10px] text-gray-400">{formatDateTime(activity.updated_at)}</span>
+            <span className="text-muted-foreground text-[10px]">
+              {formatDateTime(activity.updated_at)}
+            </span>
           )}
         </div>
       ),
@@ -366,7 +368,7 @@ export function ActivityTimelinePage() {
               setEditingInteraction(activity._raw)
               setIsEditModalOpen(true)
             }}
-            className="flex items-center justify-center rounded-full p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700"
+            className="text-muted-foreground hover:bg-muted hover:text-foreground flex items-center justify-center rounded-full p-1 transition-colors"
           >
             <Icons.PencilEdit size={16} strokeWidth={1.5} />
           </button>
@@ -400,14 +402,14 @@ export function ActivityTimelinePage() {
               onClick={() => navigate(`/dashboard/clients/${client?.id ?? clientId}`)}
               className="flex h-6 w-6 items-center justify-center"
             >
-              <Icons.ArrowLeft02 size={24} className="text-secondary-800" strokeWidth={1.5} />
+              <Icons.ArrowLeft02 size={24} className="text-primary" strokeWidth={1.5} />
             </button>
-            <h1 className="text-dark-500 text-center text-xl leading-[150%] font-light md:text-2xl">
+            <h1 className="text-foreground text-center text-xl leading-[150%] font-light md:text-2xl">
               {client?.fullName ?? '-'}
             </h1>
           </div>
           <div className="flex flex-row items-center gap-2">
-            <span className="text-dark-500 flex items-center rounded-[16px] bg-white/10 px-3 py-0 text-sm">
+            <span className="text-foreground bg-card/10 flex items-center rounded-[16px] px-3 py-0 text-sm">
               {client?.priorityScore ?? 0} {t('pages.clients.activity.score')}
             </span>
             <PriorityBadge
@@ -451,11 +453,11 @@ export function ActivityTimelinePage() {
         </div>
       </div>
 
-      <div className="flex flex-col items-start gap-5 self-stretch rounded-xl bg-white/50 p-3 md:p-6">
+      <div className="bg-card/50 flex flex-col items-start gap-5 self-stretch rounded-xl p-3 md:p-6">
         {/* Row 1: Type & Date range */}
         <div className="flex w-full flex-col gap-4 self-stretch lg:flex-row lg:items-center lg:gap-10">
           <div className="flex w-full flex-col gap-2 sm:flex-1 sm:flex-row sm:items-center sm:gap-3">
-            <label className="text-dark-500 w-full shrink-0 text-xs leading-[150%] font-medium tracking-[-0.24px] sm:max-w-[9.5rem] sm:min-w-[7.25rem] sm:text-sm sm:tracking-[-0.28px] sm:whitespace-normal">
+            <label className="text-foreground w-full shrink-0 text-xs leading-[150%] font-medium tracking-[-0.24px] sm:max-w-[9.5rem] sm:min-w-[7.25rem] sm:text-sm sm:tracking-[-0.28px] sm:whitespace-normal">
               {t('pages.clients.activity.tableHeaders.type', 'Type')}
             </label>
             <Select
@@ -479,7 +481,7 @@ export function ActivityTimelinePage() {
             </Select>
           </div>
           <div className="flex w-full flex-col gap-2 sm:flex-1 sm:flex-row sm:items-center sm:gap-3">
-            <label className="text-dark-500 w-full shrink-0 text-xs leading-[150%] font-medium tracking-[-0.24px] sm:max-w-[9.5rem] sm:min-w-[7.25rem] sm:text-sm sm:tracking-[-0.28px] sm:whitespace-normal">
+            <label className="text-foreground w-full shrink-0 text-xs leading-[150%] font-medium tracking-[-0.24px] sm:max-w-[9.5rem] sm:min-w-[7.25rem] sm:text-sm sm:tracking-[-0.28px] sm:whitespace-normal">
               {t('pages.clients.activity.dateRange')}
             </label>
             <div className="flex w-full flex-1 items-center gap-2">
@@ -495,7 +497,7 @@ export function ActivityTimelinePage() {
                 format="dd.MM.yyyy"
                 className="flex flex-1 flex-col gap-2"
               />
-              <span className="text-sm leading-[155%] font-medium tracking-[-0.28px] text-gray-700 sm:text-base sm:tracking-[-0.32px]">
+              <span className="text-foreground text-sm leading-[155%] font-medium tracking-[-0.28px] sm:text-base sm:tracking-[-0.32px]">
                 -
               </span>
               <DateSelect
@@ -517,7 +519,7 @@ export function ActivityTimelinePage() {
         {/* Row 2: Promise Date & Callback Date */}
         <div className="flex w-full flex-col gap-4 self-stretch lg:flex-row lg:items-center lg:gap-10">
           <div className="flex w-full flex-col gap-2 sm:flex-1 sm:flex-row sm:items-center sm:gap-3">
-            <label className="text-dark-500 w-full shrink-0 text-xs leading-[150%] font-medium tracking-[-0.24px] sm:max-w-[9.5rem] sm:min-w-[7.25rem] sm:text-sm sm:tracking-[-0.28px] sm:whitespace-normal">
+            <label className="text-foreground w-full shrink-0 text-xs leading-[150%] font-medium tracking-[-0.24px] sm:max-w-[9.5rem] sm:min-w-[7.25rem] sm:text-sm sm:tracking-[-0.28px] sm:whitespace-normal">
               {t('pages.clients.filters.promiseDate', 'Promise Date')}
             </label>
             <div className="flex w-full flex-1 items-center gap-2">
@@ -533,7 +535,7 @@ export function ActivityTimelinePage() {
                 format="dd.MM.yyyy"
                 className="flex flex-1 flex-col gap-2"
               />
-              <span className="text-sm leading-[155%] font-medium tracking-[-0.28px] text-gray-700 sm:text-base sm:tracking-[-0.32px]">
+              <span className="text-foreground text-sm leading-[155%] font-medium tracking-[-0.28px] sm:text-base sm:tracking-[-0.32px]">
                 -
               </span>
               <DateSelect
@@ -551,7 +553,7 @@ export function ActivityTimelinePage() {
             </div>
           </div>
           <div className="flex w-full flex-col gap-2 sm:flex-1 sm:flex-row sm:items-center sm:gap-3">
-            <label className="text-dark-500 w-full shrink-0 text-xs leading-[150%] font-medium tracking-[-0.24px] sm:max-w-[9.5rem] sm:min-w-[7.25rem] sm:text-sm sm:tracking-[-0.28px] sm:whitespace-normal">
+            <label className="text-foreground w-full shrink-0 text-xs leading-[150%] font-medium tracking-[-0.24px] sm:max-w-[9.5rem] sm:min-w-[7.25rem] sm:text-sm sm:tracking-[-0.28px] sm:whitespace-normal">
               {t('pages.clients.filters.callbackDate', 'Callback Date')}
             </label>
             <div className="flex w-full flex-1 items-center gap-2">
@@ -567,7 +569,7 @@ export function ActivityTimelinePage() {
                 format="dd.MM.yyyy"
                 className="flex flex-1 flex-col gap-2"
               />
-              <span className="text-sm leading-[155%] font-medium tracking-[-0.28px] text-gray-700 sm:text-base sm:tracking-[-0.32px]">
+              <span className="text-foreground text-sm leading-[155%] font-medium tracking-[-0.28px] sm:text-base sm:tracking-[-0.32px]">
                 -
               </span>
               <DateSelect
@@ -589,7 +591,7 @@ export function ActivityTimelinePage() {
         {/* Row 3: Created by & Latest only + Clear all */}
         <div className="flex w-full flex-col gap-4 self-stretch lg:flex-row lg:items-center lg:gap-10">
           <div className="flex w-full flex-col gap-2 sm:flex-1 sm:flex-row sm:items-center sm:gap-3">
-            <label className="text-dark-500 w-full shrink-0 text-xs leading-[150%] font-medium tracking-[-0.24px] sm:max-w-[9.5rem] sm:min-w-[7.25rem] sm:text-sm sm:tracking-[-0.28px] sm:whitespace-normal">
+            <label className="text-foreground w-full shrink-0 text-xs leading-[150%] font-medium tracking-[-0.24px] sm:max-w-[9.5rem] sm:min-w-[7.25rem] sm:text-sm sm:tracking-[-0.28px] sm:whitespace-normal">
               {t('pages.clients.filters.interactionCreatedBy', 'Created by')}
             </label>
             <div className="flex w-full flex-1 flex-col items-start gap-2">
@@ -606,7 +608,7 @@ export function ActivityTimelinePage() {
                 <SelectContent searchable>
                   <SelectItem value="all">{t('pages.clients.activity.all')}</SelectItem>
                   {operatorOptions.length === 0 ? (
-                    <div className="px-2 py-6 text-center text-sm text-gray-500">
+                    <div className="text-muted-foreground px-2 py-6 text-center text-sm">
                       {t('pages.clients.filters.noUsersAvailable', 'No users available')}
                     </div>
                   ) : (
@@ -629,16 +631,16 @@ export function ActivityTimelinePage() {
                   setCurrentPage(1)
                 }}
               />
-              <span className="text-dark-500 text-xs leading-[150%] font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
+              <span className="text-foreground text-xs leading-[150%] font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
                 {t('pages.clients.activity.latestOnly', 'Show latest interaction only')}
               </span>
             </label>
             {hasFilters && (
               <button
                 onClick={handleClearFilters}
-                className="flex cursor-pointer items-center gap-2 rounded-full bg-white/5 px-3 py-2 text-gray-700 transition-colors hover:bg-white/10 sm:px-4"
+                className="bg-card/5 text-foreground hover:bg-card/10 flex cursor-pointer items-center gap-2 rounded-full px-3 py-2 transition-colors sm:px-4"
               >
-                <Icons.Close size={16} className="text-gray-700" />
+                <Icons.Close size={16} className="text-foreground" />
                 <span className="text-xs font-medium">{t('pages.clients.activity.clearAll')}</span>
               </button>
             )}
@@ -652,15 +654,15 @@ export function ActivityTimelinePage() {
           </div>
         ) : activitiesState.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-4 self-stretch md:gap-6">
-            <Icons.FileRemove size={48} className="text-gray-500" strokeWidth={0.5} />
-            <p className="text-dark-500 text-center text-xl leading-tight font-light tracking-[-0.48px] md:text-2xl">
+            <Icons.FileRemove size={48} className="text-muted-foreground" strokeWidth={0.5} />
+            <p className="text-foreground text-center text-xl leading-tight font-light tracking-[-0.48px] md:text-2xl">
               {t('pages.clients.activity.noActivityRecordedYet')}
             </p>
             {hasFilters && (
               <DoubleButton
                 size="md"
                 onClick={handleClearFilters}
-                icon={<Icons.Close size={20} className="text-dark-500" strokeWidth={2} />}
+                icon={<Icons.Close size={20} className="text-foreground" strokeWidth={2} />}
               >
                 {t('pages.clients.activity.resetFilters')}
               </DoubleButton>

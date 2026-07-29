@@ -30,7 +30,7 @@ export function TableSkeleton({
 }: TableSkeletonProps) {
   return (
     <div
-      className={`border-border bg-border overflow-hidden rounded-xl border shadow-sm ${className || ''}`}
+      className={`border-border bg-card overflow-hidden rounded-xl border shadow-sm ${className || ''}`}
     >
       {showBulkHeader && (
         <div className="border-border bg-card flex h-[49px] items-center justify-between border-b px-6">
@@ -48,7 +48,7 @@ export function TableSkeleton({
 
       <table className="min-w-full border-collapse">
         <thead>
-          <tr className="bg-card">
+          <tr className="bg-muted/60">
             {enableBulkSelection && (
               <th scope="col" className="border-border h-[49px] border-r px-6 text-left">
                 <div className="bg-muted h-4 w-4 animate-pulse rounded" />
@@ -67,10 +67,10 @@ export function TableSkeleton({
         </thead>
         <tbody>
           {Array.from({ length: rows }).map((_, rowIndex) => (
-            <tr key={rowIndex} className={rowIndex % 2 === 0 ? 'bg-muted' : 'bg-card'}>
+            <tr key={rowIndex} className="bg-card">
               {enableBulkSelection && (
                 <td className="border-border h-[49px] border-r px-6">
-                  <div className="bg-muted-foreground/25 h-4 w-4 animate-pulse rounded" />
+                  <div className="bg-muted h-4 w-4 animate-pulse rounded" />
                 </td>
               )}
               {Array.from({ length: columns }).map((_, colIndex) => (
@@ -79,7 +79,7 @@ export function TableSkeleton({
                   className={`h-[49px] px-6 ${colIndex < columns - 1 ? 'border-border border-r' : ''}`}
                 >
                   <div
-                    className={`bg-muted-foreground/25 h-4 animate-pulse rounded ${
+                    className={`bg-muted h-4 animate-pulse rounded ${
                       colIndex === 0 ? 'w-[60%]' : colIndex === columns - 1 ? 'w-[40%]' : 'w-[80%]'
                     }`}
                   />

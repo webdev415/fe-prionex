@@ -304,16 +304,16 @@ export function GenerateDocumentModal({
         <div className="flex flex-col items-center gap-4 p-4 text-center md:p-6">
           <Icons.Success size={40} className="text-success-500" />
           <div className="flex flex-col gap-1">
-            <p className="text-secondary-900 text-base font-medium">
+            <p className="text-foreground text-base font-medium">
               {t('pages.clients.detail.generateModal.successTitle', 'Документ згенеровано')}
             </p>
-            <p className="text-secondary-600 text-sm">{generated.document_name}</p>
-            <p className="text-secondary-500 text-xs">
+            <p className="text-muted-foreground text-sm">{generated.document_name}</p>
+            <p className="text-muted-foreground text-xs">
               {t('pages.clients.detail.generateModal.indexNum', 'Вихідний №')}:{' '}
               {generated.index_num}
             </p>
           </div>
-          <p className="text-secondary-600 text-sm">
+          <p className="text-muted-foreground text-sm">
             {t(
               'pages.clients.detail.generateModal.successPdfHint',
               'PDF додано до документів клієнта.'
@@ -333,7 +333,7 @@ export function GenerateDocumentModal({
         <div className="flex flex-col gap-4 p-4 md:p-6">
           {/* Credit */}
           <div>
-            <label className="text-secondary-700 mb-1 block text-sm font-medium">
+            <label className="text-foreground mb-1 block text-sm font-medium">
               {t('pages.clients.detail.generateModal.credit', 'Кредит')}
             </label>
             <Select value={debtId == null ? '' : String(debtId)} onValueChange={handleSelectDebt}>
@@ -357,15 +357,15 @@ export function GenerateDocumentModal({
 
           {/* Templates */}
           <div>
-            <label className="text-secondary-700 mb-1 block text-sm font-medium">
+            <label className="text-foreground mb-1 block text-sm font-medium">
               {t('pages.clients.detail.generateModal.template', 'Шаблон')}
             </label>
             {debtId == null ? (
-              <p className="text-secondary-500 rounded-lg border border-dashed border-[#EBECE8] px-3 py-4 text-sm">
+              <p className="text-muted-foreground border-border rounded-lg border border-dashed px-3 py-4 text-sm">
                 {t('pages.clients.detail.generateModal.selectCreditFirst', 'Спершу оберіть кредит')}
               </p>
             ) : optionsLoading ? (
-              <p className="text-secondary-500 px-3 py-4 text-sm">{t('status.loading', '…')}</p>
+              <p className="text-muted-foreground px-3 py-4 text-sm">{t('status.loading', '…')}</p>
             ) : optionsError ? (
               <p className="text-sm text-red-500">
                 {t(
@@ -374,7 +374,7 @@ export function GenerateDocumentModal({
                 )}
               </p>
             ) : templatesForDebt.length === 0 ? (
-              <p className="text-secondary-500 rounded-lg border border-dashed border-[#EBECE8] px-3 py-4 text-sm">
+              <p className="text-muted-foreground border-border rounded-lg border border-dashed px-3 py-4 text-sm">
                 {t('pages.clients.detail.generateModal.templatesEmpty', 'Немає доступних шаблонів')}
               </p>
             ) : (
@@ -391,11 +391,11 @@ export function GenerateDocumentModal({
                       className={cn(
                         'flex flex-col items-start gap-0.5 rounded-lg border px-3 py-2.5 text-left transition-colors',
                         isSelected
-                          ? 'border-primary-400 bg-primary-50/50'
-                          : 'hover:border-secondary-400 hover:bg-secondary-50 border-[#EBECE8]'
+                          ? 'border-primary-400 bg-primary/50'
+                          : 'hover:border-primary-400 hover:bg-primary/10 border-border'
                       )}
                     >
-                      <span className="text-secondary-900 text-sm font-medium">{tpl.name}</span>
+                      <span className="text-foreground text-sm font-medium">{tpl.name}</span>
                     </button>
                   )
                 })}
@@ -413,7 +413,7 @@ export function GenerateDocumentModal({
 
           {/* Document type: auto from the template, manual pick otherwise */}
           <div>
-            <label className="text-secondary-700 mb-1 block text-sm font-medium">
+            <label className="text-foreground mb-1 block text-sm font-medium">
               {t('pages.clients.detail.generateModal.documentType', 'Тип документа')}
             </label>
             {boundType != null ? (
@@ -456,11 +456,11 @@ export function GenerateDocumentModal({
 
           {/* Outgoing number */}
           <div>
-            <label className="text-secondary-700 mb-1 block text-sm font-medium">
+            <label className="text-foreground mb-1 block text-sm font-medium">
               {t('pages.clients.detail.generateModal.indexNum', 'Вихідний №')}
             </label>
             {registryNumbering ? (
-              <p className="text-secondary-500 mt-1 text-xs">
+              <p className="text-muted-foreground mt-1 text-xs">
                 {t(
                   'pages.clients.detail.generateModal.indexNumRegistryHint',
                   'Вихідний № буде присвоєно автоматично з реєстру кореспонденції'
@@ -474,7 +474,7 @@ export function GenerateDocumentModal({
                   onChange={(e) => setIndexNum(e.target.value.replace(/[^0-9]/g, ''))}
                   placeholder={t('pages.clients.detail.generateModal.indexNumPlaceholder', 'Авто')}
                 />
-                <p className="text-secondary-500 mt-1 text-xs">
+                <p className="text-muted-foreground mt-1 text-xs">
                   {t(
                     'pages.clients.detail.generateModal.indexNumHint',
                     'Залиште порожнім для автонумерації. Реєстр вихідних номерів буде запроваджено пізніше.'
@@ -486,9 +486,9 @@ export function GenerateDocumentModal({
 
           {/* Delivery to the client — mandatory; feeds the outgoing registry's
               "from → to" column. The operator must record where it is sent. */}
-          <div className="flex flex-col gap-4 border-t border-[#EBECE8] pt-4">
+          <div className="border-border flex flex-col gap-4 border-t pt-4">
             <div>
-              <label className="text-secondary-700 mb-1 block text-sm font-medium">
+              <label className="text-foreground mb-1 block text-sm font-medium">
                 {t('pages.clients.detail.generateModal.deliveryChannel', 'Канал відправки клієнту')}
                 <span className="text-error-500 ml-1">*</span>
               </label>
@@ -517,7 +517,7 @@ export function GenerateDocumentModal({
             </div>
 
             <div>
-              <label className="text-secondary-700 mb-1 block text-sm font-medium">
+              <label className="text-foreground mb-1 block text-sm font-medium">
                 {t('pages.clients.detail.generateModal.deliveryContact', 'Контакт (куди)')}
                 <span className="text-error-500 ml-1">*</span>
               </label>

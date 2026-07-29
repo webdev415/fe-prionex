@@ -37,7 +37,7 @@ export function LoanFactoringInfo({
 
   if (!hasAny) {
     return (
-      <p className="text-sm font-light text-gray-500">
+      <p className="text-muted-foreground text-sm font-light">
         {t(
           'pages.clients.detail.factoringInfo.empty',
           'This debt is not linked to a factoring agreement.'
@@ -48,20 +48,20 @@ export function LoanFactoringInfo({
 
   return (
     <dl className="grid grid-cols-1 gap-y-2 text-sm sm:grid-cols-[max-content_1fr] sm:gap-x-6">
-      <dt className="font-medium text-gray-500">
+      <dt className="text-muted-foreground font-medium">
         {t('pages.clients.detail.factoringInfo.legalName', 'Legal name')}
       </dt>
-      <dd className="text-dark-500 font-light">{legalName || '—'}</dd>
+      <dd className="text-foreground font-light">{legalName || '—'}</dd>
 
-      <dt className="font-medium text-gray-500">
+      <dt className="text-muted-foreground font-medium">
         {t('pages.clients.detail.factoringInfo.previousLender', 'Who sold')}
       </dt>
-      <dd className="text-dark-500 font-light">{previousLender || '—'}</dd>
+      <dd className="text-foreground font-light">{previousLender || '—'}</dd>
 
-      <dt className="font-medium text-gray-500">
+      <dt className="text-muted-foreground font-medium">
         {t('pages.clients.detail.factoringInfo.purchaseDate', 'Purchase date')}
       </dt>
-      <dd className="text-dark-500 font-light">{purchaseDate || '—'}</dd>
+      <dd className="text-foreground font-light">{purchaseDate || '—'}</dd>
     </dl>
   )
 }
