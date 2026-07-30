@@ -1495,6 +1495,13 @@
           "letterCount": "Листів",
           "messageCount": "Повідомлень у ланцюжку"
         }
+      },
+      "senderHistory": {
+        "label": "Історія за адресою",
+        "single": "Перше звернення з цієї адреси",
+        "position": "{{position}}-е з {{total}} звернень з цієї адреси",
+        "current": "поточний",
+        "noSubject": "(без теми)"
       }
     },
     "training": {

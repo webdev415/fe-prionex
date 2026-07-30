@@ -54,6 +54,7 @@ import type {
   LegalReplyDraftUpsert,
   LegalStagedAttachment,
   LegalStagedAttachmentListResponse,
+  LegalSenderHistoryResponse,
   LegalSettingsMailbox,
   LegalSettingsMailboxListResponse,
 } from './types'
@@ -94,6 +95,12 @@ export const legalApi = {
   getThread(threadId: string, params?: { include_quarantined?: boolean }) {
     return api
       .get<LegalThreadDetail>(`${BASE_URL}/threads/${threadId}`, { params })
+      .then((response) => response.data)
+  },
+
+  getSenderHistory(messageId: string) {
+    return api
+      .get<LegalSenderHistoryResponse>(`${BASE_URL}/messages/${messageId}/sender-history`)
       .then((response) => response.data)
   },
 

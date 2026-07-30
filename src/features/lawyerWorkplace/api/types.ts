@@ -688,3 +688,20 @@ export interface LegalClientContractItem {
 export interface LegalClientContractListResponse {
   items: LegalClientContractItem[]
 }
+
+export interface LegalSenderHistoryItem {
+  id: string
+  subject: string | null
+  direction: string
+  received_at: string | null
+  sent_at: string | null
+  letter_type_id: string | null
+  is_current: boolean
+}
+
+export interface LegalSenderHistoryResponse {
+  sender_address: string
+  total: number
+  position: number
+  items: LegalSenderHistoryItem[]
+}

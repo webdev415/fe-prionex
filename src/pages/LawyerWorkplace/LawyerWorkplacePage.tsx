@@ -87,16 +87,19 @@ function LawyerWorkplacePageContent() {
     setActiveFilter('all')
     setInboxPage(1)
     setCommittedSearch('')
+    setSelectedLetterId(null)
   }
 
   const handleFilterChange = (filter: IncomingMailboxFilter) => {
     setActiveFilter(filter)
     setInboxPage(1)
+    setSelectedLetterId(null)
   }
 
   const handleSearchCommit = (query: string) => {
     setCommittedSearch(query)
     setInboxPage(1)
+    setSelectedLetterId(null)
   }
 
   const {
@@ -130,10 +133,13 @@ function LawyerWorkplacePageContent() {
   }, [syncSettingsData, t])
 
   const activeLetterId = useMemo(() => {
+    // An explicit selection wins even when the letter is not in the current
+    // list view — this lets the sender-history picker open an earlier letter
+    // from the same address that lives under a different folder/filter. The
+    // list-view handlers reset the selection so switching folders still shows
+    // the first letter of the new view.
+    if (selectedLetterId) return selectedLetterId
     if (inboxLoading || filteredLetters.length === 0) return null
-    if (selectedLetterId && filteredLetters.some((letter) => letter.id === selectedLetterId)) {
-      return selectedLetterId
-    }
     return filteredLetters[0]?.id ?? null
   }, [filteredLetters, inboxLoading, selectedLetterId])
 
@@ -276,6 +282,7 @@ function LawyerWorkplacePageContent() {
                   letter={selectedLetter}
                   onConfirm={handleConfirmLetter}
                   onViewKanbanTask={handleViewKanbanTask}
+                  onOpenLetter={handleSelectLetter}
                 />
               </div>
             )}
@@ -287,6 +294,7 @@ function LawyerWorkplacePageContent() {
                   onClose={closeParameters}
                   onConfirm={handleConfirmLetter}
                   onViewKanbanTask={handleViewKanbanTask}
+                  onOpenLetter={handleSelectLetter}
                 />
               </div>
             )}
@@ -305,6 +313,7 @@ function LawyerWorkplacePageContent() {
                     onClose={closeParameters}
                     onConfirm={handleConfirmLetter}
                     onViewKanbanTask={handleViewKanbanTask}
+                    onOpenLetter={handleSelectLetter}
                   />
                 </div>
               </>

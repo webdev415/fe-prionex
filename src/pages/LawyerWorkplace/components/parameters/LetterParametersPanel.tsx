@@ -36,6 +36,7 @@ import { dateTimeInputPattern } from '@/lib/localeFormat'
 import { cn } from '@/lib/utils'
 import { formatDueDate } from '../../utils/formatters'
 import type { LetterDetail } from '../../types'
+import { SenderHistorySection } from './SenderHistorySection'
 
 // ─── Colour maps ──────────────────────────────────────────────────────────────
 
@@ -238,6 +239,7 @@ export interface LetterParametersPanelProps {
   onClose?: () => void
   onConfirm?: (letterId: string) => void
   onViewKanbanTask?: (taskId: number) => void
+  onOpenLetter?: (letterId: string) => void
 }
 
 function LetterParametersPanelContent({
@@ -245,11 +247,13 @@ function LetterParametersPanelContent({
   onClose,
   onConfirm,
   onViewKanbanTask,
+  onOpenLetter,
 }: {
   letter: LetterDetail
   onClose?: () => void
   onConfirm?: (letterId: string) => void
   onViewKanbanTask?: (taskId: number) => void
+  onOpenLetter?: (letterId: string) => void
 }) {
   const { t, i18n } = useTranslation('common')
   const timezone = useLegalProfileTimezone()
@@ -779,6 +783,10 @@ function LetterParametersPanelContent({
             {readonlyLawyerDisplay}
           </ReadonlyField>
 
+          {letter.direction === 'incoming' && (
+            <SenderHistorySection messageId={letter.id} onOpenLetter={onOpenLetter} />
+          )}
+
           {/* Link to kanban task */}
           {letter.legalTaskId != null && (
             <div className="border-primary-200 bg-primary/10 flex w-full items-center justify-between rounded-lg border px-3 py-2.5">
@@ -948,6 +956,10 @@ function LetterParametersPanelContent({
             })}
           />
         )}
+
+        {letter.direction === 'incoming' && (
+          <SenderHistorySection messageId={letter.id} onOpenLetter={onOpenLetter} />
+        )}
       </div>
 
       <div className="bg-muted border-border flex w-full flex-col items-center justify-center gap-2 border-t px-[18px] py-[16px]">
@@ -988,6 +1000,7 @@ export function LetterParametersPanel({
   onClose,
   onConfirm,
   onViewKanbanTask,
+  onOpenLetter,
 }: LetterParametersPanelProps) {
   const { t } = useTranslation('common')
 
@@ -1008,6 +1021,7 @@ export function LetterParametersPanel({
       onClose={onClose}
       onConfirm={onConfirm}
       onViewKanbanTask={onViewKanbanTask}
+      onOpenLetter={onOpenLetter}
     />
   )
 }
