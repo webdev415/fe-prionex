@@ -2361,12 +2361,38 @@
             "projectCode": "Enter Project Code",
             "clientCompany": "Client Company",
             "contractNumber": "Contract Number",
-            "description": "Placeholder text"
+            "description": "Placeholder text",
+            "fullCompanyName": "Enter full company name",
+            "address": "Enter address",
+            "edrpouCode": "Enter EDRPOU",
+            "website": "Enter website",
+            "email": "Enter email",
+            "hotlinePhone": "Enter support hotline phone",
+            "directorName": "Enter director's name",
+            "iban": "Enter IBAN",
+            "bankName": "Enter bank name",
+            "bankCode": "Enter bank code"
           },
           "errors": {
             "nameMinLength": "Name must be at least 3 characters",
             "codeMinLength": "Code must be at least 2 characters",
             "endDateAfterStart": "End date must be after start date"
+          },
+          "companyDetails": {
+            "title": "Company details",
+            "fullCompanyName": "Full company name",
+            "address": "Address",
+            "edrpouCode": "EDRPOU",
+            "website": "Website",
+            "email": "Email",
+            "hotlinePhone": "Support hotline phone",
+            "directorName": "Director"
+          },
+          "bankingDetails": {
+            "title": "Banking details",
+            "iban": "IBAN",
+            "bankName": "Bank",
+            "bankCode": "Bank code"
           }
         },
         "edit": {
@@ -2395,11 +2421,37 @@
             "projectName": "Enter Project Name",
             "clientCompany": "Client Company",
             "contractNumber": "Contract Number",
-            "description": "Placeholder text"
+            "description": "Placeholder text",
+            "fullCompanyName": "Enter full company name",
+            "address": "Enter address",
+            "edrpouCode": "Enter EDRPOU",
+            "website": "Enter website",
+            "email": "Enter email",
+            "hotlinePhone": "Enter support hotline phone",
+            "directorName": "Enter director's name",
+            "iban": "Enter IBAN",
+            "bankName": "Enter bank name",
+            "bankCode": "Enter bank code"
           },
           "errors": {
             "nameMinLength": "Name must be at least 3 characters",
             "endDateAfterStart": "End date must be after start date"
+          },
+          "companyDetails": {
+            "title": "Company details",
+            "fullCompanyName": "Full company name",
+            "address": "Address",
+            "edrpouCode": "EDRPOU",
+            "website": "Website",
+            "email": "Email",
+            "hotlinePhone": "Support hotline phone",
+            "directorName": "Director"
+          },
+          "bankingDetails": {
+            "title": "Banking details",
+            "iban": "IBAN",
+            "bankName": "Bank",
+            "bankCode": "Bank code"
           }
         },
         "delete": {
@@ -2407,6 +2459,12 @@
           "confirmMessage": "Are you sure you want to delete this project? This action cannot be undone.",
           "deleting": "Deleting...",
           "deleteProject": "Delete Project"
+        },
+        "errors": {
+          "edrpouCodeFormat": "EDRPOU must be exactly 8 digits",
+          "ibanFormat": "IBAN must start with 2 uppercase letters followed by up to 32 digits (max 34 characters)",
+          "hotlinePhoneFormat": "Phone number may contain digits and spaces only",
+          "emailFormat": "Enter a valid email address"
         }
       }
     },
@@ -4040,7 +4098,7 @@
         "rrLoanNumber": "Loan Number",
         "rrClientNumber": "Client Number",
         "rrRestructuringAmount": "Restructuring Amount",
-        "rrFirstPaymentDate": "Date of First Installment",
+        "rrFirstPaymentDate": "First Payment Date",
         "rrFirstPaymentAmount": "Amount of First Installment",
         "rrNumPayments": "Number of Payments",
         "rrMonthlyPayment": "Monthly Payment",
@@ -4051,7 +4109,6 @@
         "rrPenaltyTag": "penalty (overdue trigger)",
         "rrNumPaymentsHint": "Up to {{max}} payments.",
         "rrFrequency": "Payment Frequency",
-        "rrFirstPaymentDate": "First Payment Date",
         "rrPeriodicityHint": "The schedule below is auto-filled from the first payment date, number of payments and frequency. You can still edit any row.",
         "rrFrequencyManual": "Manual (no auto-fill)",
         "rrFrequencyOptions": {
