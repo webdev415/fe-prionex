@@ -210,8 +210,8 @@ export function ReplyComposer({
         <Textarea
           value={value}
           onChange={(event) => onChange(event.target.value)}
-          rows={4}
-          className="text-foreground min-h-[96px] w-full resize-none overflow-y-scroll rounded border-none bg-transparent p-0 text-[13px] shadow-none outline-none [scrollbar-width:none] focus:ring-0 focus:ring-offset-0 sm:min-h-[110px] [&::-webkit-scrollbar]:hidden"
+          rows={7}
+          className="text-foreground max-h-[55vh] min-h-[168px] w-full resize-y overflow-y-auto rounded border-none bg-transparent p-0 text-[13px] shadow-none outline-none focus:ring-0 focus:ring-offset-0 sm:min-h-[220px]"
           placeholder={t('pages.lawyerWorkplace.reply.placeholder', 'Write your reply...')}
         />
         <Button
