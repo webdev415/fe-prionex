@@ -1486,6 +1486,13 @@
           "letterCount": "Letters",
           "messageCount": "Messages in thread"
         }
+      },
+      "senderHistory": {
+        "label": "Address history",
+        "single": "First letter from this address",
+        "position": "Letter {{position}} of {{total}} from this address",
+        "current": "current",
+        "noSubject": "(no subject)"
       }
     },
     "training": {
