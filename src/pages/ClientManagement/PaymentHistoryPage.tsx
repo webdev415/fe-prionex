@@ -545,7 +545,7 @@ export function PaymentHistoryPage() {
     // Find payment by ID
     const payment = paymentHistory?.payments.find((p) => p.id.toString() === paymentId)
     if (!payment) {
-      toast.error('Payment not found')
+      toast.error(t('errors.paymentNotFound', 'Payment not found'))
       return
     }
 
@@ -597,7 +597,7 @@ export function PaymentHistoryPage() {
 
     const backendPayment = paymentHistoryData?.payments.find((p) => p.id === selectedPayment.id)
     if (!backendPayment) {
-      toast.error('Payment not found')
+      toast.error(t('errors.paymentNotFound', 'Payment not found'))
       return
     }
 
@@ -1165,7 +1165,7 @@ export function PaymentHistoryPage() {
                         : 'text-error-500'
                     )}
                   >
-                    {paymentHistory.status}
+                    {t(`debtSummaryStatuses.${paymentHistory.status}`, paymentHistory.status)}
                   </span>
                 </div>
               </div>
@@ -1226,7 +1226,7 @@ export function PaymentHistoryPage() {
                   onClick={() => {
                     const phoneNumber = client?.phones?.[0]?.number
                     if (!phoneNumber) {
-                      toast.error('Client has no phone number')
+                      toast.error(t('errors.clientHasNoPhone', 'Client has no phone number'))
                       return
                     }
 
@@ -1614,7 +1614,9 @@ export function PaymentHistoryPage() {
                                             format: 'pdf',
                                           })
                                         } else {
-                                          toast.error('Payment not found')
+                                          toast.error(
+                                            t('errors.paymentNotFound', 'Payment not found')
+                                          )
                                         }
                                       }}
                                     >
@@ -1698,7 +1700,9 @@ export function PaymentHistoryPage() {
                                                 format: 'pdf',
                                               })
                                             } else {
-                                              toast.error('Payment not found')
+                                              toast.error(
+                                                t('errors.paymentNotFound', 'Payment not found')
+                                              )
                                             }
                                             setOpenDropdownPaymentId(null)
                                           }}
@@ -1886,7 +1890,7 @@ export function PaymentHistoryPage() {
           onViewClientProfile={handleViewClientProfile}
           onPrintReceipt={() => {
             if (!backendPayment) {
-              toast.error('Payment not found')
+              toast.error(t('errors.paymentNotFound', 'Payment not found'))
               return
             }
             // Prepare client data if available
@@ -1899,7 +1903,7 @@ export function PaymentHistoryPage() {
           }}
           onDownloadReceipt={() => {
             if (!backendPayment) {
-              toast.error('Payment not found')
+              toast.error(t('errors.paymentNotFound', 'Payment not found'))
               return
             }
             // Prepare client data if available
@@ -1967,7 +1971,7 @@ export function PaymentHistoryPage() {
                 (p) => p.id === selectedPayment.id
               )
               if (!backendPayment) {
-                toast.error('Payment not found')
+                toast.error(t('errors.paymentNotFound', 'Payment not found'))
                 return
               }
 

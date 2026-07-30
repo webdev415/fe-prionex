@@ -87,7 +87,7 @@ export function DocumentsAccordion({ documents, loans, clientId }: DocumentsAcco
   }
 
   const handleDelete = async (doc: ClientDocument) => {
-    if (!confirm(t('common.confirmDelete', 'Are you sure?'))) return
+    if (!confirm(t('common.confirmDelete', 'Are you sure you want to delete this item?'))) return
     try {
       await documentApi.delete(clientId, doc.id)
       queryClient.invalidateQueries({ queryKey: clientKeys.documents(clientId) })
