@@ -16,7 +16,11 @@ export function useLegalClientSearch(
   options?: { enabled?: boolean; searchType?: SearchType }
 ) {
   const trimmed = query.trim()
-  const searchType = options?.searchType ?? 'name'
+  // Default to 'all' so a lawyer can paste a phone / contract number / TIN and
+  // still find the client — searching by name only (the old default) missed
+  // everything typed as a number (contract, phone), which broke client lookup
+  // in the reply parameters panel and the kanban task-creation modal.
+  const searchType = options?.searchType ?? 'all'
   const enabled = options?.enabled !== false && trimmed.length >= 2
   const activeProjectId = useAuthStore((state) => state.user?.active_project_id)
 

@@ -36,12 +36,21 @@ export interface ReplyComposerProps {
   onSaveDraft?: () => void
   onAttachFiles?: (files: FileList) => void
   onRemoveAttachment?: (attachmentId: string) => void
-  /** Opens the "document already on the client" picker (option 2). */
+  /** Opens the "attach a document from any client" picker (option 2). */
   onAttachFromClient?: () => void
   /** Opens the document-generation modal seeded with the letter's client (option 3). */
   onGenerateDocument?: () => void
-  /** Whether the letter has a confirmed client — gates options 2 and 3. */
+  /**
+   * Gates "Generate document" (option 3) — that flow needs the letter's confirmed
+   * client + its loans. Attaching a document is NOT gated by this: the picker can
+   * search any client.
+   */
   clientActionsEnabled?: boolean
+  /**
+   * Gates "Attached file on client" (option 2). Defaults to enabled — the picker
+   * lets the lawyer search any client, so it does not require a letter client.
+   */
+  attachFromClientEnabled?: boolean
   isSavingDraft?: boolean
   isUploadingAttachment?: boolean
   isSending?: boolean
@@ -93,6 +102,7 @@ export function ReplyComposer({
   onAttachFromClient,
   onGenerateDocument,
   clientActionsEnabled = false,
+  attachFromClientEnabled = true,
   isSavingDraft = false,
   isUploadingAttachment = false,
   isSending = false,
@@ -274,12 +284,12 @@ export function ReplyComposer({
               <DropdownMenuItem
                 className={cn(
                   'cursor-pointer text-[12px]',
-                  !clientActionsEnabled && 'text-muted-foreground opacity-60'
+                  !attachFromClientEnabled && 'text-muted-foreground opacity-60'
                 )}
-                aria-disabled={!clientActionsEnabled}
-                title={clientActionsDisabledHint}
+                aria-disabled={!attachFromClientEnabled}
+                title={attachFromClientEnabled ? undefined : clientActionsDisabledHint}
                 onSelect={(event) => {
-                  if (!clientActionsEnabled) {
+                  if (!attachFromClientEnabled) {
                     event.preventDefault()
                     return
                   }

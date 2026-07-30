@@ -104,9 +104,31 @@ describe('ReplyComposer — attach dropdown with three options', () => {
     clickSpy.mockRestore()
   })
 
-  it('disables the client-dependent options without a confirmed client', async () => {
+  it('disables only "Generate document" without a confirmed client, keeping attach available', async () => {
     const user = userEvent.setup()
-    const { onAttachFromClient } = renderComposer({ clientActionsEnabled: false })
+    // No confirmed letter client, but attach-from-client stays enabled because
+    // the picker lets the lawyer search for any client's document.
+    const { onAttachFromClient, onGenerateDocument } = renderComposer({
+      clientActionsEnabled: false,
+    })
+
+    await user.click(screen.getByRole('button', { name: 'Attach' }))
+    const clientOption = await screen.findByText('Attached file on client')
+    expect(clientOption).not.toHaveAttribute('aria-disabled', 'true')
+    await user.click(clientOption)
+    expect(onAttachFromClient).toHaveBeenCalledTimes(1)
+
+    // Re-open the (now closed) menu to inspect the generate option.
+    await user.click(screen.getByRole('button', { name: 'Attach' }))
+    const generateOption = await screen.findByText('Generate document')
+    expect(generateOption).toHaveAttribute('aria-disabled', 'true')
+    await user.click(generateOption)
+    expect(onGenerateDocument).not.toHaveBeenCalled()
+  })
+
+  it('disables attach-from-client only when explicitly turned off', async () => {
+    const user = userEvent.setup()
+    const { onAttachFromClient } = renderComposer({ attachFromClientEnabled: false })
 
     await user.click(screen.getByRole('button', { name: 'Attach' }))
     const clientOption = await screen.findByText('Attached file on client')

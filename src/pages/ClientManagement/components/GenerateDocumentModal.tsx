@@ -10,7 +10,7 @@
  * .docx twin for download.
  */
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
@@ -28,7 +28,8 @@ import {
 import { DocumentTypePill } from '@/components/DocumentTypePill'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
-import { clientKeys } from '@/features/clients/hooks/useClients'
+import { clientKeys, useClientProfile } from '@/features/clients/hooks/useClients'
+import type { ClientProfileResponse } from '@/features/clients/api/types'
 import { legalRegistryKeys } from '@/features/lawyerWorkplace/hooks/useLegalRegistry'
 import { useDocumentTypes } from '@/features/documentTypes'
 import {
@@ -116,6 +117,168 @@ function base64ToBlob(base64: string, mime: string): Blob {
   return new Blob([bytes], { type: mime })
 }
 
+type ContactKind = 'phone' | 'email' | 'address'
+
+/** A single suggestion offered in the "Контакт (куди)" combobox. */
+interface ContactOption {
+  /** The value written into deliveryContact when picked. */
+  value: string
+  kind: ContactKind
+  /** Optional label shown next to the value, e.g. "основний" or "Мобільний". */
+  hint?: string
+}
+
+/**
+ * Which contact kind a delivery channel points at. `null` means "no channel
+ * chosen yet" → every contact is offered. Messenger/SMS channels all target a
+ * phone number; the mapping is intentionally soft (the operator may still type
+ * any value manually).
+ */
+function contactKindForChannel(channel: DeliveryChannel | null): ContactKind | null {
+  if (channel == null) return null
+  if (channel === 'email') return 'email'
+  if (channel === 'post') return 'address'
+  return 'phone'
+}
+
+/**
+ * Contact picker for the "Контакт (куди)" field: a free-text input backed by a
+ * dropdown of the client's own contacts. Picking a suggestion fills the value;
+ * typing an arbitrary value that matches no contact simply hides the dropdown,
+ * so manual entry (and the caller's `deliveryContact.trim()` validation) is
+ * never blocked. When the client has no contacts the field behaves like a plain
+ * input.
+ */
+function DeliveryContactCombobox({
+  value,
+  onChange,
+  suggestions,
+  placeholder,
+}: {
+  value: string
+  onChange: (value: string) => void
+  suggestions: ContactOption[]
+  placeholder?: string
+}) {
+  const [isOpen, setIsOpen] = useState(false)
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  const query = value.trim().toLowerCase()
+  const filtered = query
+    ? suggestions.filter(
+        (c) =>
+          c.value.toLowerCase().includes(query) || (c.hint?.toLowerCase().includes(query) ?? false)
+      )
+    : suggestions
+
+  // Close when the pointer goes down outside the field + dropdown.
+  useEffect(() => {
+    if (!isOpen) return
+    const onPointerDown = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setIsOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', onPointerDown)
+    return () => document.removeEventListener('mousedown', onPointerDown)
+  }, [isOpen])
+
+  const showDropdown = isOpen && filtered.length > 0
+
+  return (
+    <div ref={containerRef} className="relative">
+      <Input
+        value={value}
+        onChange={(e) => {
+          onChange(e.target.value)
+          setIsOpen(true)
+        }}
+        onFocus={() => setIsOpen(true)}
+        onKeyDown={(e) => {
+          if (e.key === 'Escape') setIsOpen(false)
+        }}
+        placeholder={placeholder}
+        autoComplete="off"
+        aria-autocomplete="list"
+      />
+      {showDropdown && (
+        <ul
+          role="listbox"
+          className="border-border bg-card absolute top-[calc(100%+4px)] right-0 left-0 z-[200] max-h-52 overflow-y-auto rounded-lg border py-1 shadow-lg"
+        >
+          {filtered.map((c) => {
+            const pick = () => {
+              onChange(c.value)
+              setIsOpen(false)
+            }
+            return (
+              <li
+                key={`${c.kind}:${c.value}`}
+                role="option"
+                aria-selected={c.value === value}
+                tabIndex={0}
+                onClick={pick}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault()
+                    pick()
+                  }
+                }}
+                className={cn(
+                  'hover:bg-muted flex cursor-pointer items-center justify-between gap-2 px-3 py-2 text-sm',
+                  c.value === value && 'bg-muted font-medium'
+                )}
+              >
+                <span className="text-foreground truncate">{c.value}</span>
+                {c.hint && (
+                  <span className="text-muted-foreground shrink-0 text-[11px]">{c.hint}</span>
+                )}
+              </li>
+            )
+          })}
+        </ul>
+      )}
+    </div>
+  )
+}
+
+/**
+ * Collect the client's own contacts (phones, email, postal addresses) into a
+ * de-duplicated option list, primary phone first. `primaryHint`/`emailHint` are
+ * the localised labels for the base phone/email (the additional phones and
+ * addresses carry their own labels from the data).
+ */
+function buildContactOptions(
+  profile: ClientProfileResponse | undefined,
+  primaryHint: string,
+  emailHint: string
+): ContactOption[] {
+  if (!profile) return []
+  const out: ContactOption[] = []
+  const seen = new Set<string>()
+  const add = (raw: string | null | undefined, kind: ContactKind, hint?: string | null) => {
+    const contactValue = (raw ?? '').trim()
+    if (!contactValue) return
+    const key = `${kind}:${contactValue.toLowerCase()}`
+    if (seen.has(key)) return
+    seen.add(key)
+    out.push({ value: contactValue, kind, hint: hint?.trim() || undefined })
+  }
+
+  // Phones — the client's own numbers, primary first then the extras.
+  add(profile.phone_primary, 'phone', primaryHint)
+  for (const phone of profile.additional_phones ?? []) {
+    add(phone.number, 'phone', phone.label || phone.type)
+  }
+  // Email.
+  add(profile.email, 'email', emailHint)
+  // Postal addresses — offered for the "Поштою" channel.
+  for (const address of profile.addresses ?? []) {
+    add(address.full_address, 'address', address.address_type)
+  }
+  return out
+}
+
 export function GenerateDocumentModal({
   open,
   onClose,
@@ -149,6 +312,28 @@ export function GenerateDocumentModal({
   } = useGenerationOptions(clientId, open)
   const { data: types } = useDocumentTypes({ includeHidden: false })
   const generateMutation = useGenerateDocument()
+
+  // Client contacts feed the "Контакт (куди)" combobox so the operator can pick
+  // an existing phone/email instead of retyping it. Loaded only while the modal
+  // is open; a missing profile degrades to plain free-text entry.
+  const { data: clientProfile } = useClientProfile(clientId, open)
+  const contactOptions = useMemo(
+    () =>
+      buildContactOptions(
+        clientProfile,
+        t('pages.clients.detail.generateModal.contactHints.primary', 'основний'),
+        t('pages.clients.detail.generateModal.contactHints.email', 'ел. пошта')
+      ),
+    [clientProfile, t]
+  )
+  // Narrow the suggestions to the channel's contact kind, but softly: if the
+  // client has no contact of that kind, keep offering all of them.
+  const contactSuggestions = useMemo(() => {
+    const kind = contactKindForChannel(deliveryChannel)
+    if (kind == null) return contactOptions
+    const matching = contactOptions.filter((c) => c.kind === kind)
+    return matching.length > 0 ? matching : contactOptions
+  }, [contactOptions, deliveryChannel])
 
   // When the backend numbers outgoing letters from the correspondence
   // registry, the manual number field is hidden and any typed index_num is
@@ -521,9 +706,10 @@ export function GenerateDocumentModal({
                 {t('pages.clients.detail.generateModal.deliveryContact', 'Контакт (куди)')}
                 <span className="text-error-500 ml-1">*</span>
               </label>
-              <Input
+              <DeliveryContactCombobox
                 value={deliveryContact}
-                onChange={(e) => setDeliveryContact(e.target.value)}
+                onChange={setDeliveryContact}
+                suggestions={contactSuggestions}
                 placeholder={t(
                   'pages.clients.detail.generateModal.deliveryContactPlaceholder',
                   '+380… або email'

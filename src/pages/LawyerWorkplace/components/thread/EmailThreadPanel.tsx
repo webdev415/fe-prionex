@@ -452,11 +452,10 @@ export function EmailThreadPanel({
     return uploadAttachment(file)
   }
 
-  const handleSelectClientDocument = async (doc: ClientDocument) => {
-    if (letterClientId == null) return
+  const handleSelectClientDocument = async (doc: ClientDocument, docClientId: number) => {
     setAttachingClientDocId(doc.id)
     try {
-      const blob = await documentApi.preview(letterClientId, doc.id)
+      const blob = await documentApi.preview(docClientId, doc.id)
       const uploaded = await attachBlobToReply(blob, doc.original_filename)
       if (uploaded) {
         setClientDocPickerOpen(false)
@@ -634,15 +633,13 @@ export function EmailThreadPanel({
         sendDisabled={!letter.replyContext.threadId}
       />
 
-      {letterClientId != null && (
-        <AttachClientDocumentModal
-          open={clientDocPickerOpen}
-          clientId={letterClientId}
-          onClose={() => setClientDocPickerOpen(false)}
-          onSelect={handleSelectClientDocument}
-          attachingDocId={attachingClientDocId}
-        />
-      )}
+      <AttachClientDocumentModal
+        open={clientDocPickerOpen}
+        clientId={letterClientId}
+        onClose={() => setClientDocPickerOpen(false)}
+        onSelect={handleSelectClientDocument}
+        attachingDocId={attachingClientDocId}
+      />
 
       {letterClientId != null && generateOpen && (
         <GenerateDocumentModal

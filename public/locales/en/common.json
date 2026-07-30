@@ -79,7 +79,9 @@
     "recommenderContactIndicator": "Recommender contact",
     "debt": "Debt",
     "phone": "Phone",
-    "viewAllResults": "View all results"
+    "viewAllResults": "View all results",
+    "selectClient": "Select client",
+    "clientSearchHint": "Type 2+ characters to search…"
   },
   "actions": {
     "save": "Save",
@@ -670,7 +672,9 @@
           "title": "Client documents",
           "empty": "This client has no documents",
           "error": "Could not load client documents",
-          "attached": "Document attached to the reply"
+          "attached": "Document attached to the reply",
+          "selectClient": "Select a client",
+          "pickClient": "Choose a client to see their documents"
         },
         "template": "Template",
         "noTemplatesHint": "Create letter templates in Settings → Templates",
@@ -1448,6 +1452,39 @@
         },
         "outgoing": {
           "empty": "No outgoing correspondence yet"
+        }
+      },
+      "context": {
+        "title": "Letter context",
+        "empty": "—",
+        "client": {
+          "title": "Client",
+          "name": "Full name",
+          "code": "Client code",
+          "tin": "TIN",
+          "debt": "Outstanding debt",
+          "contract": "Contract №",
+          "status": "Status",
+          "openCard": "Open client card",
+          "notIdentified": "Client not identified"
+        },
+        "classification": {
+          "title": "Classification",
+          "type": "Letter type",
+          "referenceId": "Incoming №",
+          "receivedAt": "Received",
+          "deadline": "Deadline / SLA"
+        },
+        "assignment": {
+          "title": "Assignment",
+          "lawyer": "Responsible lawyer",
+          "taskStatus": "Task status",
+          "kanbanTask": "Kanban task"
+        },
+        "history": {
+          "title": "History",
+          "letterCount": "Letters",
+          "messageCount": "Messages in thread"
         }
       }
     },
@@ -5445,6 +5482,10 @@
           "deliveryChannelPlaceholder": "Choose a channel",
           "deliveryContact": "Contact (where to)",
           "deliveryContactPlaceholder": "+380… or email",
+          "contactHints": {
+            "primary": "primary",
+            "email": "email"
+          },
           "channels": {
             "email": "Email",
             "telegram": "Telegram",

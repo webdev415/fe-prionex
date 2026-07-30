@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { KanbanTask } from '../../../kanban/kanbanData'
 import { ThreadDrawer } from '../ThreadDrawer'
@@ -136,17 +137,19 @@ const groupedTask: KanbanTask = {
 function renderDrawer() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   return render(
-    <QueryClientProvider client={queryClient}>
-      <ThreadDrawer target={{ letterId: 'letter-b', task: groupedTask }} onClose={vi.fn()} />
-    </QueryClientProvider>
+    <MemoryRouter>
+      <QueryClientProvider client={queryClient}>
+        <ThreadDrawer target={{ letterId: 'letter-b', task: groupedTask }} onClose={vi.fn()} />
+      </QueryClientProvider>
+    </MemoryRouter>
   )
 }
 
 describe('ThreadDrawer — grouped-letter thread', () => {
-  it('renders the drawer panel at 75vw width', () => {
+  it('renders the drawer panel at 85vw width', () => {
     const { container } = renderDrawer()
     const panel = container.querySelector('[aria-hidden="false"]')
-    expect(panel).toHaveClass('sm:w-[75vw]')
+    expect(panel).toHaveClass('sm:w-[85vw]')
   })
 
   it('renders every grouped letter as one chronological thread from /letters', async () => {
