@@ -63,7 +63,7 @@ export function LoanCalculationModal({
   return (
     <Modal open={open} onClose={onClose} maxWidth="full" showCloseButton>
       <ModalHeader
-        icon={<Icons.Calculate size={20} className="text-primary" />}
+        icon={<Icons.Calculate size={20} className="text-primary-700" />}
         title={t(`${p}.title`, 'Detailed calculation for loan No. {{id}} after sale', {
           id: titleId,
         })}

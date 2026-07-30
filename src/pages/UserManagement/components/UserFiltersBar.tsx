@@ -50,7 +50,7 @@ function FilterSelect({
       </span>
       <Select value={value} onValueChange={onValueChange} disabled={disabled}>
         <SelectTrigger
-          className={cn('h-[45px] w-full', isActive && 'border-primary-500 bg-primary-50')}
+          className={cn('h-[45px] w-full', isActive && 'border-primary bg-primary/10')}
         >
           <SelectValue />
         </SelectTrigger>

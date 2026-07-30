@@ -2,6 +2,7 @@ import { type DragEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import DatePicker from 'react-datepicker'
 import 'react-datepicker/dist/react-datepicker.css'
+import '@/components/ui/DateSelect.theme.css'
 import type { LegalKanbanTaskPatch, LegalLawyer, LegalLetterType } from '@/features/lawyerWorkplace'
 import { canAssignLawyer } from '@/features/lawyerWorkplace'
 import {
@@ -474,23 +475,26 @@ export function KanbanCard({
                     className="bg-card p-2"
                     onClick={(e) => e.stopPropagation()}
                   >
-                    <DatePicker
-                      inline
-                      selected={deadline}
-                      onChange={(date: Date | null) => {
-                        onTaskUpdate?.(task.id, {
-                          deadline: date ? legalDueDateToIso(date, timezone) : null,
-                        })
-                      }}
-                      showTimeSelect
-                      timeFormat="HH:mm"
-                      timeIntervals={15}
-                      dateFormat="dd/MM/yyyy HH:mm"
-                      calendarStartDay={1}
-                      showYearDropdown
-                      scrollableYearDropdown
-                      yearDropdownItemNumber={10}
-                    />
+                    <div className="date-select-wrapper">
+                      <DatePicker
+                        inline
+                        selected={deadline}
+                        onChange={(date: Date | null) => {
+                          onTaskUpdate?.(task.id, {
+                            deadline: date ? legalDueDateToIso(date, timezone) : null,
+                          })
+                        }}
+                        showTimeSelect
+                        timeFormat="HH:mm"
+                        timeIntervals={15}
+                        dateFormat="dd/MM/yyyy HH:mm"
+                        calendarStartDay={1}
+                        showYearDropdown
+                        scrollableYearDropdown
+                        yearDropdownItemNumber={10}
+                        calendarClassName="date-select-calendar"
+                      />
+                    </div>
                   </DropdownMenuSubContent>
                 </DropdownMenuSub>
 

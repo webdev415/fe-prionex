@@ -643,7 +643,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                 ))}
                 {hiddenPortfoliosCount > 0 && (
                   <div className="flex items-center gap-1.5 sm:gap-2">
-                    <span className="text-primary text-xs leading-[150%] font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
+                    <span className="text-primary-700 text-xs leading-[150%] font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
                       + {hiddenPortfoliosCount} {t('pages.clients.filters.more')}
                     </span>
                     <PortfolioDropdown
@@ -655,12 +655,13 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                       trigger={
                         <button
                           type="button"
-                          className="bg-primary-300 flex items-center gap-2 rounded p-1"
+                          className="bg-primary-700 text-primary-foreground flex items-center gap-2 rounded p-1"
+                          aria-label={t('pages.clients.filters.more')}
                         >
                           {portfolioDropdownOpen ? (
-                            <Icons.ArrowUp size={16} className="text-primary" strokeWidth={2} />
+                            <Icons.ArrowUp size={16} className="text-current" strokeWidth={2} />
                           ) : (
-                            <Icons.ArrowDown size={16} className="text-primary" strokeWidth={2} />
+                            <Icons.ArrowDown size={16} className="text-current" strokeWidth={2} />
                           )}
                         </button>
                       }
@@ -703,13 +704,13 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                 {/* Always show dropdown so Segments tab remains reachable even with ≤3 tags */}
                 <div className="flex items-center gap-1.5 sm:gap-2">
                   {hiddenTagsCount > 0 && (
-                    <span className="text-primary text-xs leading-[150%] font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
+                    <span className="text-primary-700 text-xs leading-[150%] font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
                       + {hiddenTagsCount} {t('pages.clients.filters.more')}
                     </span>
                   )}
                   {filters.segmentId != null && (
                     <span
-                      className="text-primary max-w-[140px] truncate text-xs font-medium sm:text-sm"
+                      className="text-primary-700 max-w-[140px] truncate text-xs font-medium sm:text-sm"
                       title={t('pages.clients.filters.segmentActive')}
                     >
                       {t('pages.clients.filters.segmentActive')}
@@ -727,12 +728,13 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                       <button
                         type="button"
                         data-testid="tags-multiselect-trigger"
-                        className="bg-primary-300 flex items-center gap-2 rounded p-1"
+                        className="bg-primary-700 text-primary-foreground flex items-center gap-2 rounded p-1"
+                        aria-label={t('pages.clients.filters.more')}
                       >
                         {tagsDropdownOpen ? (
-                          <Icons.ArrowUp size={16} className="text-primary" strokeWidth={2} />
+                          <Icons.ArrowUp size={16} className="text-current" strokeWidth={2} />
                         ) : (
-                          <Icons.ArrowDown size={16} className="text-primary" strokeWidth={2} />
+                          <Icons.ArrowDown size={16} className="text-current" strokeWidth={2} />
                         )}
                       </button>
                     }

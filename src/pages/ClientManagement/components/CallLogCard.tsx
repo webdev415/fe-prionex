@@ -192,7 +192,7 @@ export function CallLogCard({
     >
       <div className="flex h-full min-w-0 items-start gap-2 md:gap-4">
         <div className="bg-muted flex h-8 w-8 shrink-0 items-center justify-center rounded-md md:h-10 md:w-10">
-          <div className="text-primary/50 group-hover:text-primary">{icon}</div>
+          <div className="text-primary-700/50 group-hover:text-primary-700">{icon}</div>
         </div>
 
         <div className="flex min-w-0 flex-1 flex-col gap-0.5 overflow-hidden md:gap-1">
@@ -204,14 +204,14 @@ export function CallLogCard({
                     {type === 'Incoming' ? (
                       <Icons.CallIncoming04
                         size={16}
-                        className="text-primary"
+                        className="text-primary-700"
                         aria-hidden="true"
                         focusable="false"
                       />
                     ) : (
                       <Icons.CallOutgoing04
                         size={16}
-                        className="text-primary"
+                        className="text-primary-700"
                         aria-hidden="true"
                         focusable="false"
                       />

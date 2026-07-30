@@ -110,7 +110,7 @@ export function DocumentsAccordion({ documents, loans, clientId }: DocumentsAcco
         <div className="flex items-center gap-2">
           <span className="truncate">{doc.original_filename}</span>
           {doc.source === 'generated' && (
-            <span className="bg-primary/10 text-primary shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium">
+            <span className="bg-primary/10 text-primary-700 shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium">
               {t('pages.clients.detail.generatedBadge', 'Згенеровано')}
             </span>
           )}

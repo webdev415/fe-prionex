@@ -58,7 +58,7 @@ function statusBadgeClasses(displayStatus: ReturnType<typeof messagingStatusForC
       }
     case 'Sent':
       return {
-        wrap: 'bg-primary/10 text-primary ring-secondary-800/20',
+        wrap: 'bg-primary/10 text-primary-700 ring-secondary-800/20',
         dot: 'bg-primary-600',
       }
     case 'Skipped':

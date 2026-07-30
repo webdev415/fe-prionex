@@ -189,7 +189,7 @@ export const CallRecordingModal = forwardRef<CallRecordingModalHandle, CallRecor
               {callData.clientId != null ? (
                 <Link
                   to={`/dashboard/clients/${callData.clientId}`}
-                  className="text-primary hover:underline"
+                  className="text-primary-700 hover:underline"
                   onClick={onClose}
                 >
                   {callData.clientName}

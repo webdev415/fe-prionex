@@ -2008,7 +2008,7 @@ export function ClientDetailPage() {
                 className={cn(
                   'p-1 disabled:opacity-50',
                   loan.sentToCreditBureau
-                    ? 'text-primary hover:text-foreground'
+                    ? 'text-primary-700 hover:text-foreground'
                     : 'text-muted-foreground hover:text-foreground',
                   doNotSendToUbki ? 'cursor-not-allowed' : ''
                 )}
@@ -2082,7 +2082,7 @@ export function ClientDetailPage() {
       <div className="flex items-center justify-center gap-1">
         <button
           onClick={() => setSelectedRaId(row.id)}
-          className="text-primary hover:text-muted-foreground p-1"
+          className="text-primary-700 hover:text-muted-foreground p-1"
           title={t('pages.clients.detail.viewDetail')}
         >
           <Icons.Eye size={18} />
@@ -2136,7 +2136,7 @@ export function ClientDetailPage() {
               })
             }
             disabled={transitionBusy || isRecordingOverpayment}
-            className="text-primary hover:text-primary/80 p-1 disabled:opacity-50"
+            className="text-primary-700 hover:text-primary-700/80 p-1 disabled:opacity-50"
             title={t('pages.clients.detail.recordOverpayment', 'Record Overpayment')}
           >
             <Icons.MoneyReceive01 size={18} />
@@ -2439,7 +2439,7 @@ export function ClientDetailPage() {
                 <button
                   type="button"
                   title={t('pages.clients.detail.reversalsTable.viewReversal', 'View reversal')}
-                  className="bg-primary-100 text-primary inline-flex cursor-pointer items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium hover:opacity-80"
+                  className="bg-primary-100 text-primary-700 inline-flex cursor-pointer items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium hover:opacity-80"
                   onClick={(e) => {
                     e.stopPropagation()
                     setHighlightedReversalPaymentId(payment.id)
@@ -2450,7 +2450,7 @@ export function ClientDetailPage() {
                   {t('pages.clients.detail.reversalsTable.reversedBadge')}
                 </button>
               ) : (
-                <span className="bg-primary-100 text-primary inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium">
+                <span className="bg-primary-100 text-primary-700 inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium">
                   <Icons.Reload size={10} strokeWidth={2} />
                   {t('pages.clients.detail.reversalsTable.reversedBadge')}
                 </span>
@@ -2484,7 +2484,7 @@ export function ClientDetailPage() {
                 // Clicking the badge cross-navigates to this payment's row in
                 // the Reversals tab (the "vice versa" direction of KAN-334).
                 const badge = (
-                  <span className="bg-primary-100 text-primary inline-flex items-center gap-1 rounded px-2 py-0.5 text-xs font-medium">
+                  <span className="bg-primary-100 text-primary-700 inline-flex items-center gap-1 rounded px-2 py-0.5 text-xs font-medium">
                     <Icons.Reload size={12} strokeWidth={2} />
                     {t('pages.clients.detail.reversalsTable.reversedBadge')}
                   </span>
@@ -2750,7 +2750,7 @@ export function ClientDetailPage() {
                 onClick={() => navigate('/dashboard')}
                 className="flex h-6 w-6 shrink-0 items-center justify-center"
               >
-                <Icons.ArrowLeft02 size={24} className="text-primary" strokeWidth={1.5} />
+                <Icons.ArrowLeft02 size={24} className="text-primary-700" strokeWidth={1.5} />
               </button>
               <div className="flex min-w-0 items-center gap-2">
                 <h1 className="text-foreground truncate text-xl leading-[150%] font-light md:text-2xl">
@@ -2762,7 +2762,7 @@ export function ClientDetailPage() {
                   disabled={!client.fullName}
                   aria-label={t('pages.clients.detail.copyName', 'Copy name')}
                   title={t('pages.clients.detail.copyName', 'Copy name')}
-                  className="text-foreground hover:text-primary inline-flex h-7 w-7 shrink-0 items-center justify-center rounded transition-colors disabled:cursor-not-allowed disabled:opacity-40"
+                  className="text-foreground hover:text-primary-700 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded transition-colors disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   <Icons.Copy size={18} strokeWidth={1.5} />
                 </button>
@@ -3246,7 +3246,7 @@ export function ClientDetailPage() {
                     aria-label={t('pages.clients.detail.tabsScrollLeft', 'Scroll tabs left')}
                     type="button"
                   >
-                    <Icons.ArrowLeft size={20} className="text-primary" />
+                    <Icons.ArrowLeft size={20} className="text-primary-700" />
                   </button>
                 )}
 
@@ -3258,7 +3258,7 @@ export function ClientDetailPage() {
                     aria-label={t('pages.clients.detail.tabsScrollRight', 'Scroll tabs right')}
                     type="button"
                   >
-                    <Icons.ArrowRight size={20} className="text-primary" />
+                    <Icons.ArrowRight size={20} className="text-primary-700" />
                   </button>
                 )}
 
@@ -3287,7 +3287,7 @@ export function ClientDetailPage() {
                       size={24}
                       className={cn(
                         'shrink-0',
-                        activeClientCardTab === 'related' ? 'text-primary' : 'text-foreground'
+                        activeClientCardTab === 'related' ? 'text-primary-700' : 'text-foreground'
                       )}
                     />
                   </button>
@@ -3307,7 +3307,7 @@ export function ClientDetailPage() {
                       size={24}
                       className={cn(
                         'shrink-0',
-                        activeClientCardTab === 'personal' ? 'text-primary' : 'text-foreground'
+                        activeClientCardTab === 'personal' ? 'text-primary-700' : 'text-foreground'
                       )}
                     />
                   </button>
@@ -3327,7 +3327,7 @@ export function ClientDetailPage() {
                       size={24}
                       className={cn(
                         'shrink-0',
-                        activeClientCardTab === 'work' ? 'text-primary' : 'text-foreground'
+                        activeClientCardTab === 'work' ? 'text-primary-700' : 'text-foreground'
                       )}
                     />
                   </button>
@@ -3347,7 +3347,7 @@ export function ClientDetailPage() {
                       size={24}
                       className={cn(
                         'shrink-0',
-                        activeClientCardTab === 'passport' ? 'text-primary' : 'text-foreground'
+                        activeClientCardTab === 'passport' ? 'text-primary-700' : 'text-foreground'
                       )}
                     />
                   </button>
@@ -3683,7 +3683,7 @@ export function ClientDetailPage() {
                     aria-label={t('pages.clients.detail.tabsScrollLeft', 'Scroll tabs left')}
                     type="button"
                   >
-                    <Icons.ArrowLeft size={20} className="text-primary" />
+                    <Icons.ArrowLeft size={20} className="text-primary-700" />
                   </button>
                 )}
 
@@ -3695,7 +3695,7 @@ export function ClientDetailPage() {
                     aria-label={t('pages.clients.detail.tabsScrollRight', 'Scroll tabs right')}
                     type="button"
                   >
-                    <Icons.ArrowRight size={20} className="text-primary" />
+                    <Icons.ArrowRight size={20} className="text-primary-700" />
                   </button>
                 )}
 
@@ -3716,8 +3716,8 @@ export function ClientDetailPage() {
                     className={cn(
                       'hover:bg-primary-200/10 flex shrink-0 cursor-pointer items-center justify-center gap-2 border-b-2 px-3 py-4 transition-colors md:px-4',
                       activeRightCardTab === 'loans'
-                        ? 'border-primary-300 text-primary bg-primary-300/10'
-                        : 'hover:text-primary text-muted-foreground border-transparent'
+                        ? 'border-primary-300 text-primary-700 bg-primary-300/10'
+                        : 'hover:text-primary-700 text-muted-foreground border-transparent'
                     )}
                   >
                     <Icons.Folder size={20} className="shrink-0 text-current" />
@@ -3733,8 +3733,8 @@ export function ClientDetailPage() {
                     className={cn(
                       'group hover:bg-primary-200/10 flex shrink-0 cursor-pointer items-center justify-center gap-2 border-b-2 px-3 py-4 transition-colors md:px-4',
                       activeRightCardTab === 'payments'
-                        ? 'border-primary-300 text-primary bg-primary-300/10'
-                        : 'hover:text-primary text-muted-foreground border-transparent'
+                        ? 'border-primary-300 text-primary-700 bg-primary-300/10'
+                        : 'hover:text-primary-700 text-muted-foreground border-transparent'
                     )}
                   >
                     <Icons.Wallet01 size={20} className="shrink-0 text-current" />
@@ -3774,8 +3774,8 @@ export function ClientDetailPage() {
                     className={cn(
                       'hover:bg-primary-200/10 flex shrink-0 cursor-pointer items-center justify-center gap-2 border-b-2 px-3 py-4 transition-colors md:px-4',
                       activeRightCardTab === 'recommenders'
-                        ? 'border-primary-300 text-primary bg-primary-300/10'
-                        : 'hover:text-primary text-muted-foreground border-transparent'
+                        ? 'border-primary-300 text-primary-700 bg-primary-300/10'
+                        : 'hover:text-primary-700 text-muted-foreground border-transparent'
                     )}
                   >
                     <Icons.UserCheck01 size={20} className="shrink-0 text-current" />
@@ -3791,8 +3791,8 @@ export function ClientDetailPage() {
                     className={cn(
                       'group hover:bg-primary-200/10 flex shrink-0 cursor-pointer items-center justify-center gap-2 border-b-2 px-3 py-4 transition-colors md:px-4',
                       activeRightCardTab === 'operators'
-                        ? 'border-primary-300 text-primary bg-primary-300/10'
-                        : 'hover:text-primary text-muted-foreground border-transparent'
+                        ? 'border-primary-300 text-primary-700 bg-primary-300/10'
+                        : 'hover:text-primary-700 text-muted-foreground border-transparent'
                     )}
                   >
                     <Icons.UserMultiple02 size={20} className="shrink-0 text-current" />
@@ -3832,8 +3832,8 @@ export function ClientDetailPage() {
                     className={cn(
                       'hover:bg-primary-200/10 flex shrink-0 cursor-pointer items-center justify-center gap-2 border-b-2 px-3 py-4 transition-colors md:px-4',
                       activeRightCardTab === 'call-sms-history'
-                        ? 'border-primary-300 text-primary bg-primary-300/10'
-                        : 'hover:text-primary text-muted-foreground border-transparent'
+                        ? 'border-primary-300 text-primary-700 bg-primary-300/10'
+                        : 'hover:text-primary-700 text-muted-foreground border-transparent'
                     )}
                   >
                     <Icons.Clock01 size={20} className="shrink-0 text-current" />
@@ -3849,8 +3849,8 @@ export function ClientDetailPage() {
                     className={cn(
                       'group hover:bg-primary-200/10 flex shrink-0 cursor-pointer items-center justify-center gap-2 border-b-2 px-3 py-4 transition-colors md:px-4',
                       activeRightCardTab === 'tasks'
-                        ? 'border-primary-300 text-primary bg-primary-300/10'
-                        : 'hover:text-primary text-muted-foreground border-transparent'
+                        ? 'border-primary-300 text-primary-700 bg-primary-300/10'
+                        : 'hover:text-primary-700 text-muted-foreground border-transparent'
                     )}
                   >
                     <Icons.CheckmarkSquare03 size={20} className="shrink-0 text-current" />
@@ -3893,8 +3893,8 @@ export function ClientDetailPage() {
                     className={cn(
                       'group hover:bg-primary-200/10 flex shrink-0 cursor-pointer items-center justify-center gap-2 border-b-2 px-3 py-4 transition-colors md:px-4',
                       activeRightCardTab === 'documents'
-                        ? 'border-primary-300 text-primary bg-primary-300/10'
-                        : 'hover:text-primary text-muted-foreground border-transparent'
+                        ? 'border-primary-300 text-primary-700 bg-primary-300/10'
+                        : 'hover:text-primary-700 text-muted-foreground border-transparent'
                     )}
                   >
                     <Icons.File size={20} className="shrink-0 text-current" />
@@ -4214,8 +4214,8 @@ export function ClientDetailPage() {
                         className={cn(
                           'text-foreground flex shrink-0 cursor-pointer items-center justify-center gap-2.5 rounded-md p-2 text-xs leading-[150%] font-medium tracking-[-0.28px] md:p-3',
                           activePaymentTab === 'payments'
-                            ? 'bg-primary/10 text-primary'
-                            : 'hover:bg-primary/20 hover:text-primary text-muted-foreground'
+                            ? 'bg-primary/10 text-primary-700'
+                            : 'hover:bg-primary/20 hover:text-primary-700 text-muted-foreground'
                         )}
                       >
                         {t('pages.clients.detail.payments')}
@@ -4225,8 +4225,8 @@ export function ClientDetailPage() {
                         className={cn(
                           'text-foreground flex shrink-0 cursor-pointer items-center justify-center gap-2.5 rounded-md p-2 text-xs leading-[150%] font-medium tracking-[-0.28px] md:p-3',
                           activePaymentTab === 'writes-off'
-                            ? 'bg-primary/10 text-primary'
-                            : 'hover:bg-primary/20 hover:text-primary text-muted-foreground'
+                            ? 'bg-primary/10 text-primary-700'
+                            : 'hover:bg-primary/20 hover:text-primary-700 text-muted-foreground'
                         )}
                       >
                         {t('pages.clients.detail.writesOff')}
@@ -4238,8 +4238,8 @@ export function ClientDetailPage() {
                           className={cn(
                             'text-foreground flex shrink-0 cursor-pointer items-center justify-center gap-2.5 rounded-md p-2 text-xs leading-[150%] font-medium tracking-[-0.28px] md:p-3',
                             activePaymentTab === 'reversals'
-                              ? 'bg-primary/10 text-primary'
-                              : 'hover:bg-primary/20 hover:text-primary text-muted-foreground'
+                              ? 'bg-primary/10 text-primary-700'
+                              : 'hover:bg-primary/20 hover:text-primary-700 text-muted-foreground'
                           )}
                         >
                           {t('pages.clients.detail.reversals')}
@@ -4250,8 +4250,8 @@ export function ClientDetailPage() {
                         className={cn(
                           'text-foreground flex shrink-0 cursor-pointer items-center justify-center gap-2.5 rounded-md p-2 text-xs leading-[150%] font-medium tracking-[-0.28px] md:p-3',
                           activePaymentTab === 'primary-creditor'
-                            ? 'bg-primary/10 text-primary'
-                            : 'hover:bg-primary/20 hover:text-primary text-muted-foreground'
+                            ? 'bg-primary/10 text-primary-700'
+                            : 'hover:bg-primary/20 hover:text-primary-700 text-muted-foreground'
                         )}
                       >
                         {t('pages.clients.detail.paymentToPrimaryCreditor')}
@@ -4381,8 +4381,8 @@ export function ClientDetailPage() {
                         className={cn(
                           'text-muted-foreground flex shrink-0 cursor-pointer items-center justify-center gap-2.5 rounded-md p-2 text-xs leading-[150%] font-medium tracking-[-0.28px] md:p-3',
                           activeOperatorTab === 'operators'
-                            ? 'bg-primary/10 text-primary'
-                            : 'hover:bg-primary/20 hover:text-primary'
+                            ? 'bg-primary/10 text-primary-700'
+                            : 'hover:bg-primary/20 hover:text-primary-700'
                         )}
                       >
                         {t('pages.clients.detail.operators')}
@@ -4392,8 +4392,8 @@ export function ClientDetailPage() {
                         className={cn(
                           'text-muted-foreground flex shrink-0 cursor-pointer items-center justify-center gap-2.5 rounded-md p-2 text-xs leading-[150%] font-medium tracking-[-0.28px] md:p-3',
                           activeOperatorTab === 'searchers'
-                            ? 'bg-primary/10 text-primary'
-                            : 'hover:bg-primary/20 hover:text-primary'
+                            ? 'bg-primary/10 text-primary-700'
+                            : 'hover:bg-primary/20 hover:text-primary-700'
                         )}
                       >
                         {t('pages.clients.detail.searchers')}
@@ -4445,8 +4445,8 @@ export function ClientDetailPage() {
                           className={cn(
                             'flex max-w-[120px] flex-1 items-center justify-center gap-2 rounded-md px-3 py-2 text-xs transition-colors md:px-4 md:text-sm',
                             activeCallSmsTab === 'all'
-                              ? 'bg-primary/10 text-primary'
-                              : 'hover:text-primary hover:bg-primary/20 text-muted-foreground cursor-pointer'
+                              ? 'bg-primary/10 text-primary-700'
+                              : 'hover:text-primary-700 hover:bg-primary/20 text-muted-foreground cursor-pointer'
                           )}
                         >
                           {t('pages.clients.activity.all')}
@@ -4456,8 +4456,8 @@ export function ClientDetailPage() {
                           className={cn(
                             'flex max-w-[120px] flex-1 items-center justify-center gap-2 rounded-md px-3 py-2 text-xs transition-colors md:px-4 md:text-sm',
                             activeCallSmsTab === 'calls'
-                              ? 'bg-primary/10 text-primary'
-                              : 'hover:text-primary hover:bg-primary/20 text-muted-foreground cursor-pointer'
+                              ? 'bg-primary/10 text-primary-700'
+                              : 'hover:text-primary-700 hover:bg-primary/20 text-muted-foreground cursor-pointer'
                           )}
                         >
                           {t('pages.clients.activity.calls')}
@@ -4467,8 +4467,8 @@ export function ClientDetailPage() {
                           className={cn(
                             'flex max-w-[120px] flex-1 items-center justify-center gap-2 rounded-md px-3 py-2 text-xs transition-colors md:px-4 md:text-sm',
                             activeCallSmsTab === 'sms'
-                              ? 'bg-primary/10 text-primary'
-                              : 'hover:text-primary hover:bg-primary/20 text-muted-foreground cursor-pointer'
+                              ? 'bg-primary/10 text-primary-700'
+                              : 'hover:text-primary-700 hover:bg-primary/20 text-muted-foreground cursor-pointer'
                           )}
                         >
                           {t('pages.clients.activity.sms')}
@@ -4479,8 +4479,8 @@ export function ClientDetailPage() {
                             className={cn(
                               'flex max-w-[120px] flex-1 items-center justify-center gap-2 rounded-md px-3 py-2 text-xs transition-colors md:px-4 md:text-sm',
                               activeCallSmsTab === 'messaging'
-                                ? 'bg-primary/10 text-primary'
-                                : 'hover:text-primary hover:bg-primary/20 text-muted-foreground cursor-pointer'
+                                ? 'bg-primary/10 text-primary-700'
+                                : 'hover:text-primary-700 hover:bg-primary/20 text-muted-foreground cursor-pointer'
                             )}
                           >
                             {t('pages.clients.activity.messaging', 'Messaging')}
@@ -4667,7 +4667,9 @@ export function ClientDetailPage() {
                                               ? (call.recording_path as string | null)
                                               : null
                                           }
-                                          icon={<Icons.Play size={24} className="text-primary" />}
+                                          icon={
+                                            <Icons.Play size={24} className="text-primary-700" />
+                                          }
                                           setSelectedCallData={setSelectedCallData}
                                           setIsCallRecordingModalOpen={setIsCallRecordingModalOpen}
                                         />
@@ -4687,7 +4689,9 @@ export function ClientDetailPage() {
                                           phone={sms.phone}
                                           sent_at={sms.sent_at}
                                           delivered_at={sms.delivered_at}
-                                          icon={<Icons.Chat size={24} className="text-primary" />}
+                                          icon={
+                                            <Icons.Chat size={24} className="text-primary-700" />
+                                          }
                                           setSelectedSMSData={setSelectedSMSData}
                                           setIsViewSMSModalOpen={setIsViewSMSModalOpen}
                                         />
@@ -4741,7 +4745,7 @@ export function ClientDetailPage() {
                                             icon={
                                               <Icons.ChatFeedback01
                                                 size={20}
-                                                className="text-primary"
+                                                className="text-primary-700"
                                               />
                                             }
                                             onSelect={() => {
@@ -4781,7 +4785,7 @@ export function ClientDetailPage() {
                                 <button
                                   type="button"
                                   onClick={() => setShowAllCalls((v) => !v)}
-                                  className="text-primary hover:bg-primary/10 self-center rounded-md px-4 py-2 text-sm font-medium transition-colors"
+                                  className="text-primary-700 hover:bg-primary/10 self-center rounded-md px-4 py-2 text-sm font-medium transition-colors"
                                 >
                                   {showAllCalls
                                     ? t('pages.clients.detail.showLess', 'Show Less')
@@ -4940,7 +4944,7 @@ export function ClientDetailPage() {
                                             icon={
                                               <Icons.PlayCircle02
                                                 size={20}
-                                                className="text-primary"
+                                                className="text-primary-700"
                                               />
                                             }
                                             setSelectedCallData={setSelectedCallData}
@@ -4971,7 +4975,7 @@ export function ClientDetailPage() {
                                 <button
                                   type="button"
                                   onClick={() => setShowAllCalls((v) => !v)}
-                                  className="text-primary hover:bg-primary/10 self-center rounded-md px-4 py-2 text-sm font-medium transition-colors"
+                                  className="text-primary-700 hover:bg-primary/10 self-center rounded-md px-4 py-2 text-sm font-medium transition-colors"
                                 >
                                   {showAllCalls
                                     ? t('pages.clients.detail.showLess', 'Show Less')
@@ -5083,7 +5087,7 @@ export function ClientDetailPage() {
                                             icon={
                                               <Icons.ChatFeedback01
                                                 size={20}
-                                                className="text-primary"
+                                                className="text-primary-700"
                                               />
                                             }
                                             setSelectedSMSData={setSelectedSMSData}
@@ -5223,7 +5227,7 @@ export function ClientDetailPage() {
                                                 icon={
                                                   <Icons.ChatFeedback01
                                                     size={20}
-                                                    className="text-primary"
+                                                    className="text-primary-700"
                                                   />
                                                 }
                                                 onSelect={() => {
@@ -5307,7 +5311,7 @@ export function ClientDetailPage() {
                   'text-foreground flex items-center justify-center gap-2 rounded-md px-4 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px]',
                   activeCommentTab === 'ta-chains'
                     ? 'bg-primary-600 text-white'
-                    : 'hover:bg-primary-200/10 hover:text-primary'
+                    : 'hover:bg-primary-200/10 hover:text-primary-700'
                 )}
               >
                 {t('pages.clients.detail.tabs.taChains')}
@@ -5318,7 +5322,7 @@ export function ClientDetailPage() {
                   'text-foreground flex items-center justify-center gap-2 rounded-md px-4 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px]',
                   activeCommentTab === 'comments'
                     ? 'bg-primary-600 text-white'
-                    : 'hover:bg-primary-200/10 hover:text-primary'
+                    : 'hover:bg-primary-200/10 hover:text-primary-700'
                 )}
               >
                 {t('pages.clients.detail.comments')}
@@ -5329,7 +5333,7 @@ export function ClientDetailPage() {
                   'text-foreground flex items-center justify-center gap-2 rounded-md px-4 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px]',
                   activeCommentTab === 'primary'
                     ? 'bg-primary-600 text-white'
-                    : 'hover:bg-primary-200/10 hover:text-primary'
+                    : 'hover:bg-primary-200/10 hover:text-primary-700'
                 )}
               >
                 {t('pages.clients.detail.commentsFromPrimaryCreditor')}
@@ -5340,7 +5344,7 @@ export function ClientDetailPage() {
                   'text-foreground flex items-center justify-center gap-2 rounded-md px-4 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px]',
                   activeCommentTab === 'searcher'
                     ? 'bg-primary-600 text-white'
-                    : 'hover:bg-primary-200/10 hover:text-primary'
+                    : 'hover:bg-primary-200/10 hover:text-primary-700'
                 )}
               >
                 {t('pages.clients.detail.tabs.searcherComments')}
@@ -5351,7 +5355,7 @@ export function ClientDetailPage() {
                   'text-foreground flex items-center justify-center gap-2 rounded-md px-4 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px]',
                   activeCommentTab === 'dial-history'
                     ? 'bg-primary-600 text-white'
-                    : 'hover:bg-primary-200/10 hover:text-primary'
+                    : 'hover:bg-primary-200/10 hover:text-primary-700'
                 )}
               >
                 {t('pages.clients.detail.spamCallHistory')}
