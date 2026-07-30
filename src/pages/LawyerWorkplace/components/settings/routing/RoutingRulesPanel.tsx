@@ -1,5 +1,12 @@
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/Select'
 import { Icons } from '@/lib/icons'
 import type { LetterTypeConfig, MailboxRoutingRule, SettingsMailbox } from '../../../settings/types'
 import { createRoutingRule, sortRoutingRules } from '../../../settings/utils/mailboxHelpers'
@@ -95,18 +102,21 @@ export function RoutingRulesPanel({
               <label className="text-foreground text-[13px] font-medium">
                 {t('pages.lawyerWorkplace.settings.routing.mailbox', 'Mailbox')}
               </label>
-              <select
-                aria-label={t('pages.lawyerWorkplace.settings.routing.mailbox', 'Mailbox')}
-                value={selectedMailbox?.id ?? ''}
-                onChange={(e) => setSelectedMailboxId(e.target.value)}
-                className="text-foreground focus:border-primary-400 border-border bg-input h-10 max-w-md rounded-md border px-3 text-[13px] outline-none"
-              >
-                {mailboxes.map((mailbox) => (
-                  <option key={mailbox.id} value={mailbox.id}>
-                    {mailbox.email}
-                  </option>
-                ))}
-              </select>
+              <Select value={selectedMailbox?.id ?? ''} onValueChange={setSelectedMailboxId}>
+                <SelectTrigger
+                  aria-label={t('pages.lawyerWorkplace.settings.routing.mailbox', 'Mailbox')}
+                  className="h-10 max-w-md rounded-md text-[13px]"
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {mailboxes.map((mailbox) => (
+                    <SelectItem key={mailbox.id} value={mailbox.id}>
+                      {mailbox.email}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           )}
 

@@ -1,5 +1,5 @@
-import { describe, it, expect, vi } from 'vitest'
-import { render, screen, within } from '@testing-library/react'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { LetterTypeConfig, MailboxRoutingRule, SettingsMailbox } from '../../../settings/types'
 import { RoutingRulesPanel } from './RoutingRulesPanel'
@@ -13,6 +13,18 @@ vi.mock('react-i18next', () => ({
 vi.mock('../../../context/lawyerWorkplaceLayout', () => ({
   useLawyerWorkplaceLayout: () => ({ isCompact: false }),
 }))
+
+// jsdom lacks the pointer-capture APIs Radix Select relies on.
+beforeEach(() => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ;(window.HTMLElement.prototype as any).hasPointerCapture = () => false
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ;(window.HTMLElement.prototype as any).setPointerCapture = () => undefined
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ;(window.HTMLElement.prototype as any).releasePointerCapture = () => undefined
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ;(window.HTMLElement.prototype as any).scrollIntoView = () => undefined
+})
 
 function letterType(id: string, nameFallback: string, isActive = true): LetterTypeConfig {
   return {
@@ -101,13 +113,12 @@ describe('RoutingRulesPanel', () => {
     expect(screen.getByText('vchasno.ua')).toBeInTheDocument()
   })
 
-  it('populates the per-row letter-type select with the available categories', () => {
+  it('populates the per-row letter-type select with the available categories', async () => {
+    const user = userEvent.setup()
     renderPanel([DOMAIN_RULE])
 
-    const select = screen.getByLabelText('Letter type') as HTMLSelectElement
-    const optionLabels = within(select)
-      .getAllByRole('option')
-      .map((option) => option.textContent)
+    await user.click(screen.getByRole('combobox', { name: 'Letter type' }))
+    const optionLabels = screen.getAllByRole('option').map((option) => option.textContent)
     expect(optionLabels).toEqual(['Court letters', 'NBU letters'])
   })
 
@@ -154,7 +165,8 @@ describe('RoutingRulesPanel', () => {
     const { onSaveRoutingRules } = renderPanel([DOMAIN_RULE], letterTypes)
 
     await user.click(screen.getByRole('button', { name: 'Add rule' }))
-    await user.selectOptions(screen.getByLabelText('Match'), 'default')
+    await user.click(screen.getByRole('combobox', { name: 'Match' }))
+    await user.click(screen.getByRole('option', { name: 'Default' }))
     await user.click(screen.getByRole('button', { name: 'Add' }))
 
     const [, savedRules] = onSaveRoutingRules.mock.calls[0]

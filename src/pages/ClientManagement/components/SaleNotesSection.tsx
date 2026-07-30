@@ -55,7 +55,7 @@ export function SaleNotesSection({ clientId }: Props) {
         <button
           type="button"
           onClick={() => refetch()}
-          className="text-primary-500 text-sm underline"
+          className="text-primary-700 text-sm underline"
         >
           {t('common.retry', 'Retry')}
         </button>

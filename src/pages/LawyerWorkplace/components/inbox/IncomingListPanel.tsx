@@ -53,7 +53,7 @@ function NumBadge({ count, active }: { count: number; active: boolean }) {
     <span
       className={cn(
         'flex h-[18px] min-w-[18px] items-center justify-center rounded-full px-1 text-[10px] leading-none',
-        active ? 'bg-primary-300 text-foreground' : 'text-foreground bg-muted'
+        active ? 'bg-white/20 text-white' : 'text-foreground bg-muted'
       )}
     >
       {count}

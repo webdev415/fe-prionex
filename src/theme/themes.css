@@ -1204,9 +1204,17 @@ html[data-theme='high-contrast-light'] .bg-white\/50 {
  * On light classic they stay dark greens from the scale; on dark surfaces remap
  * them to --primary (the light accent) so links remain visible without page forks.
  * Prefer bg-primary / bg-primary-300 for filled controls — not primary-600/700.
+ *
+ * primary-50/100 stay light-mode creams in @theme and blow out dark UIs when used
+ * as "soft selected" fills (e.g. active filter chips). Remap to a tint of --primary.
  */
 html[data-theme='neutral-dim'],
 html[data-theme='ultra-dark'] {
+  --color-primary-50: color-mix(in srgb, var(--primary) 14%, var(--card));
+  --color-primary-100: color-mix(in srgb, var(--primary) 22%, var(--card));
+  /* Link/label weights: stay readable on dark (soft fills use 50/100 above) */
   --color-primary-600: var(--primary);
   --color-primary-700: var(--primary);
+  --color-primary-800: var(--primary);
+  --color-primary-900: var(--primary);
 }

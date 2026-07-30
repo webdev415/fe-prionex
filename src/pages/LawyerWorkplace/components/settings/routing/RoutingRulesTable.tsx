@@ -1,6 +1,13 @@
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/Button'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/Select'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 import { useLawyerWorkplaceLayout } from '../../../context/lawyerWorkplaceLayout'
@@ -30,8 +37,7 @@ interface RoutingRulesTableProps {
   readOnly?: boolean
 }
 
-const selectClass =
-  'text-foreground focus:border-primary-400 border-border bg-input h-9 rounded-md border px-2.5 text-[13px] outline-none'
+const selectTriggerClass = 'h-9 rounded-md text-[13px]'
 const inputClass =
   'text-foreground focus:border-primary-400 border-border bg-input h-9 rounded-md border px-3 text-[13px] outline-none'
 
@@ -163,18 +169,24 @@ export function RoutingRulesTable({
               <label className="text-muted-foreground text-[11px]">
                 {t('pages.lawyerWorkplace.settings.routing.matchType', 'Match')}
               </label>
-              <select
-                aria-label={t('pages.lawyerWorkplace.settings.routing.matchType', 'Match')}
+              <Select
                 value={draftMatchType}
-                onChange={(e) => handleDraftMatchTypeChange(e.target.value as RoutingMatchType)}
-                className={selectClass}
+                onValueChange={(value) => handleDraftMatchTypeChange(value as RoutingMatchType)}
               >
-                {ROUTING_MATCH_OPTIONS.map((option) => (
-                  <option key={option.id} value={option.id}>
-                    {t(option.labelKey, option.fallback)}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger
+                  aria-label={t('pages.lawyerWorkplace.settings.routing.matchType', 'Match')}
+                  className={selectTriggerClass}
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {ROUTING_MATCH_OPTIONS.map((option) => (
+                    <SelectItem key={option.id} value={option.id}>
+                      {t(option.labelKey, option.fallback)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             {draftNeedsValue && (
@@ -207,18 +219,21 @@ export function RoutingRulesTable({
               <label className="text-muted-foreground text-[11px]">
                 {t('pages.lawyerWorkplace.settings.routing.letterType', 'Letter type')}
               </label>
-              <select
-                aria-label={t('pages.lawyerWorkplace.settings.routing.letterType', 'Letter type')}
-                value={draftLetterTypeId}
-                onChange={(e) => setDraftLetterTypeId(e.target.value)}
-                className={selectClass}
-              >
-                {selectableLetterTypes.map((type) => (
-                  <option key={type.id} value={type.id}>
-                    {t(type.nameKey, type.nameFallback)}
-                  </option>
-                ))}
-              </select>
+              <Select value={draftLetterTypeId} onValueChange={setDraftLetterTypeId}>
+                <SelectTrigger
+                  aria-label={t('pages.lawyerWorkplace.settings.routing.letterType', 'Letter type')}
+                  className={selectTriggerClass}
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {selectableLetterTypes.map((type) => (
+                    <SelectItem key={type.id} value={type.id}>
+                      {t(type.nameKey, type.nameFallback)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <label className="flex cursor-pointer items-center gap-2 pb-1.5">
@@ -314,22 +329,28 @@ export function RoutingRulesTable({
                       <LetterTypeDot
                         colorId={letterTypeById[rule.letterTypeId]?.colorId ?? 'teal'}
                       />
-                      <select
-                        aria-label={t(
-                          'pages.lawyerWorkplace.settings.routing.letterType',
-                          'Letter type'
-                        )}
+                      <Select
                         value={rule.letterTypeId}
                         disabled={readOnly}
-                        onChange={(e) => onChangeLetterType(rule, e.target.value)}
-                        className={cn(selectClass, 'min-w-[160px]')}
+                        onValueChange={(value) => onChangeLetterType(rule, value)}
                       >
-                        {letterTypeOptions(rule.letterTypeId).map((type) => (
-                          <option key={type.id} value={type.id}>
-                            {t(type.nameKey, type.nameFallback)}
-                          </option>
-                        ))}
-                      </select>
+                        <SelectTrigger
+                          aria-label={t(
+                            'pages.lawyerWorkplace.settings.routing.letterType',
+                            'Letter type'
+                          )}
+                          className={cn(selectTriggerClass, 'min-w-[160px]')}
+                        >
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {letterTypeOptions(rule.letterTypeId).map((type) => (
+                            <SelectItem key={type.id} value={type.id}>
+                              {t(type.nameKey, type.nameFallback)}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                   </td>
                   <td className="px-4 py-4">
@@ -348,7 +369,7 @@ export function RoutingRulesTable({
                     >
                       <span
                         className={cn(
-                          'inline-block h-4 w-4 transform rounded-full bg-white transition-transform',
+                          'bg-background inline-block h-4 w-4 transform rounded-full transition-transform',
                           rule.isActive ? 'translate-x-4' : 'translate-x-0.5'
                         )}
                       />
