@@ -486,6 +486,20 @@ export async function disconnectRestructuringAgreement(
   return response.data
 }
 
+export async function activateRestructuringAgreement(
+  clientId: number,
+  raId: number
+): Promise<RRStatusChangeResponse> {
+  const response = await api.patch<RRStatusChangeResponse>(
+    `${BASE_URL}/${clientId}/restructuring-agreements/${raId}/activate`
+  )
+  return response.data
+}
+
+export async function deleteRestructuringAgreement(clientId: number, raId: number): Promise<void> {
+  await api.delete(`${BASE_URL}/${clientId}/restructuring-agreements/${raId}`)
+}
+
 /**
  * Newest-first audit log of status changes for one RR.
  */
@@ -615,6 +629,8 @@ export const clientApi = {
   completeRestructuringAgreement,
   transitionRestructuringAgreementStatus,
   disconnectRestructuringAgreement,
+  activateRestructuringAgreement,
+  deleteRestructuringAgreement,
   getRestructuringAgreementStatusHistory,
   recordRROverpayment,
   getRROverpayments,
