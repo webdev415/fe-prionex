@@ -79,7 +79,9 @@
     "recommenderContactIndicator": "Контакт поручителя",
     "debt": "Борг",
     "phone": "Телефон",
-    "viewAllResults": "Переглянути всі результати"
+    "viewAllResults": "Переглянути всі результати",
+    "selectClient": "Виберіть клієнта",
+    "clientSearchHint": "Введіть 2+ символи для пошуку…"
   },
   "actions": {
     "save": "Зберегти",
@@ -677,7 +679,9 @@
           "title": "Документи клієнта",
           "empty": "У клієнта немає документів",
           "error": "Не вдалося завантажити документи клієнта",
-          "attached": "Документ додано до відповіді"
+          "attached": "Документ додано до відповіді",
+          "selectClient": "Виберіть клієнта",
+          "pickClient": "Оберіть клієнта, щоб побачити його документи"
         },
         "template": "Шаблон",
         "noTemplatesHint": "Створіть шаблони листів у Налаштування → Шаблони",
@@ -1457,6 +1461,39 @@
         },
         "outgoing": {
           "empty": "Вихідної кореспонденції ще немає"
+        }
+      },
+      "context": {
+        "title": "Контекст листа",
+        "empty": "—",
+        "client": {
+          "title": "Клієнт",
+          "name": "Повне ім'я",
+          "code": "Код клієнта",
+          "tin": "ІПН",
+          "debt": "Заборгованість",
+          "contract": "№ договору",
+          "status": "Статус",
+          "openCard": "Відкрити картку",
+          "notIdentified": "Клієнта не ідентифіковано"
+        },
+        "classification": {
+          "title": "Класифікація",
+          "type": "Тип листа",
+          "referenceId": "Вхідний №",
+          "receivedAt": "Отримано",
+          "deadline": "Термін / SLA"
+        },
+        "assignment": {
+          "title": "Призначення",
+          "lawyer": "Відповідальний юрист",
+          "taskStatus": "Статус задачі",
+          "kanbanTask": "Канбан-задача"
+        },
+        "history": {
+          "title": "Історія",
+          "letterCount": "Листів",
+          "messageCount": "Повідомлень у ланцюжку"
         }
       }
     },
@@ -4774,6 +4811,10 @@
           "deliveryChannelPlaceholder": "Оберіть канал",
           "deliveryContact": "Контакт (куди)",
           "deliveryContactPlaceholder": "+380… або email",
+          "contactHints": {
+            "primary": "основний",
+            "email": "ел. пошта"
+          },
           "channels": {
             "email": "Ел. пошта",
             "telegram": "Telegram",
