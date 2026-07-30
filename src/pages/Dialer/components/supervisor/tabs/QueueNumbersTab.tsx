@@ -152,7 +152,7 @@ export function QueueNumbersTab() {
 
   if (!queues || queues.length === 0) {
     return (
-      <div className="border-border text-muted-foreground rounded-xl border bg-white p-10 text-center text-sm">
+      <div className="border-border text-muted-foreground bg-card rounded-xl border p-10 text-center text-sm">
         {t('dialer.numbers.noQueues', 'Create a queue first to upload numbers.')}
       </div>
     )
@@ -189,9 +189,9 @@ export function QueueNumbersTab() {
         ]}
       />
 
-      {/* Upload panel — body matches the KPI surface (bg #FFFFFF80). */}
-      <div className="rounded-xl border border-white bg-white/50 p-4">
-        <div className="mb-4 flex flex-col gap-2 border-b border-gray-100 pb-4 sm:flex-row sm:items-center sm:justify-between">
+      {/* Upload panel — body matches the KPI surface. */}
+      <div className="border-border bg-card/50 rounded-xl border p-4">
+        <div className="border-border mb-4 flex flex-col gap-2 border-b pb-4 sm:flex-row sm:items-center sm:justify-between">
           <h3 className="text-foreground text-sm font-semibold">
             {t('dialer.numbers.uploadTitle', 'Upload Numbers')}
             {selectedQueue ? ` — ${selectedQueue.name}` : ''}
@@ -243,7 +243,7 @@ export function QueueNumbersTab() {
             <p className="text-foreground text-xl font-light">
               {t('dialer.numbers.dropHint', 'Drag CSV or click to select')}
             </p>
-            <p className="text-dark-500 text-sm font-medium">
+            <p className="text-foreground text-sm font-medium">
               {t('dialer.numbers.format', 'Format: client_id, phone_number, comment')}
             </p>
             <Button
@@ -268,7 +268,7 @@ export function QueueNumbersTab() {
           <div
             className={cn(
               'border-border flex flex-col rounded-lg border p-4',
-              file ? 'bg-white' : 'bg-transparent'
+              file ? 'bg-card' : 'bg-transparent'
             )}
           >
             {!file ? (
@@ -277,7 +277,7 @@ export function QueueNumbersTab() {
               </div>
             ) : (
               <>
-                <div className="flex items-center justify-between gap-2 border-b border-gray-100 pb-3">
+                <div className="border-border flex items-center justify-between gap-2 border-b pb-3">
                   <div className="flex min-w-0 items-center gap-2">
                     <Icons.Csv02 size={18} className="text-muted-foreground shrink-0" />
                     <span className="text-foreground truncate text-sm font-medium">
@@ -315,7 +315,7 @@ export function QueueNumbersTab() {
                 {/* Preview counts */}
                 {preview && (
                   <div className="text-sm">
-                    <div className="flex flex-col divide-y divide-gray-100">
+                    <div className="divide-border flex flex-col divide-y">
                       <div className="flex items-center justify-between py-3">
                         <span className="text-muted-foreground">
                           {t('dialer.numbers.totalRecords', 'Total Records')}
@@ -345,7 +345,7 @@ export function QueueNumbersTab() {
                           <>
                             <button
                               type="button"
-                              className="text-primary-600 mt-1 text-xs"
+                              className="text-primary-700 mt-1 text-xs"
                               onClick={() => setShowInvalid((s) => !s)}
                             >
                               {showInvalid

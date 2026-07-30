@@ -65,7 +65,7 @@ const AVATAR_COLORS = [
 ]
 
 function avatarClass(operatorId: number, inConversation: boolean): string {
-  if (!inConversation) return 'bg-gray-100 text-gray-600'
+  if (!inConversation) return 'bg-muted text-muted-foreground'
   return AVATAR_COLORS[Math.abs(operatorId) % AVATAR_COLORS.length]
 }
 
@@ -126,9 +126,9 @@ export function AnalysisTab() {
                 {initials(r.operator_name)}
               </span>
               <div className="min-w-0">
-                <p className="text-dark-500 truncate text-sm font-medium">{r.operator_name}</p>
+                <p className="text-foreground truncate text-sm font-medium">{r.operator_name}</p>
                 {r.operator_email && (
-                  <p className="truncate text-xs text-[#A1A1A1]">{r.operator_email}</p>
+                  <p className="text-muted-foreground truncate text-xs">{r.operator_email}</p>
                 )}
               </div>
             </div>
@@ -144,13 +144,13 @@ export function AnalysisTab() {
             <span
               className={cn(
                 'inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium',
-                inConv ? 'bg-success-100 text-success-700' : 'bg-gray-100 text-gray-600'
+                inConv ? 'bg-success-100 text-success-700' : 'bg-muted text-muted-foreground'
               )}
             >
               <span
                 className={cn(
                   'h-1.5 w-1.5 rounded-full',
-                  inConv ? 'bg-success-700' : 'bg-gray-600'
+                  inConv ? 'bg-success-700' : 'bg-muted-foreground'
                 )}
               />
               {inConv
@@ -185,7 +185,7 @@ export function AnalysisTab() {
               <ProgressBar
                 percentage={r.utilization_pct}
                 height="sm"
-                className="w-24 bg-[#DFDFDF] shadow-none"
+                className="bg-muted w-24 shadow-none"
                 barClassName={cn('shadow-none', inConv ? 'bg-success-500' : 'bg-warning-500')}
               />
               <span
@@ -279,7 +279,7 @@ export function AnalysisTab() {
           </Select>
         </div>
         {/* Status filter — segmented switch (same style as the Queue List). */}
-        <div className="inline-flex items-center gap-1 rounded-lg bg-white p-1 shadow-[0px_1px_3px_0px_#0000001A,0px_1px_2px_0px_#0000000F]">
+        <div className="bg-card inline-flex items-center gap-1 rounded-lg p-1 shadow-[0px_1px_3px_0px_#0000001A,0px_1px_2px_0px_#0000000F]">
           {(
             [
               [
@@ -305,7 +305,7 @@ export function AnalysisTab() {
                 <span
                   className={cn(
                     'flex h-4 min-w-4 items-center justify-center rounded-full px-1.5 text-[10px] font-medium',
-                    active ? 'bg-primary-300 text-primary-foreground' : 'bg-gray-100 text-gray-800'
+                    active ? 'bg-white/20 text-white' : 'bg-muted text-foreground'
                   )}
                 >
                   {count}
@@ -318,11 +318,11 @@ export function AnalysisTab() {
 
       {/* Operator table */}
       {isLoading ? (
-        <div className="text-muted-foreground border-border rounded-xl border bg-white p-10 text-center text-sm">
+        <div className="text-muted-foreground border-border bg-card rounded-xl border p-10 text-center text-sm">
           {t('common.loading', 'Loading...')}
         </div>
       ) : (
-        <div className="dialer-analysis-card overflow-hidden rounded-xl bg-white/50 shadow-[0px_1px_3px_0px_#00000012]">
+        <div className="dialer-analysis-card bg-card/50 overflow-hidden rounded-xl shadow-[0px_1px_3px_0px_#00000012]">
           <DataTable
             columns={operatorColumns}
             data={filteredRows}

@@ -209,10 +209,10 @@ export function AddFromCrmTab() {
   return (
     <div className="flex flex-col gap-4">
       {/* Filter bar (design: supervisor-06) */}
-      <div className="rounded-xl bg-white/50 px-6 py-5">
+      <div className="bg-card/50 rounded-xl px-6 py-5">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <div>
-            <label className="text-dark-500 mb-1 block text-xs font-medium">
+            <label className="text-foreground mb-1 block text-xs font-medium">
               {t('dialer.crm.filterTag', 'Client tag')}
             </label>
             <Select
@@ -236,7 +236,7 @@ export function AddFromCrmTab() {
           </div>
 
           <div>
-            <label className="text-dark-500 mb-1 block text-xs font-medium">
+            <label className="text-foreground mb-1 block text-xs font-medium">
               {t('dialer.crm.filterLastContact', 'Last contact')}
             </label>
             <Select
@@ -260,7 +260,7 @@ export function AddFromCrmTab() {
           </div>
 
           <div>
-            <label className="text-dark-500 mb-1 block text-xs font-medium">
+            <label className="text-foreground mb-1 block text-xs font-medium">
               {t('dialer.crm.filterDepartment', 'Department')}
             </label>
             <Select
@@ -310,11 +310,11 @@ export function AddFromCrmTab() {
       </div>
 
       {isError ? (
-        <div className="text-error-600 border-border rounded-xl border bg-white p-10 text-center text-sm">
+        <div className="text-error-600 border-border bg-card rounded-xl border p-10 text-center text-sm">
           {t('dialer.crm.loadError', 'Failed to load clients.')}
         </div>
       ) : isLoading ? (
-        <div className="dialer-crm-card overflow-hidden rounded-xl bg-white/50 shadow-[0px_1px_3px_0px_#00000012]">
+        <div className="dialer-crm-card bg-card/50 overflow-hidden rounded-xl shadow-[0px_1px_3px_0px_#00000012]">
           <TableSkeleton
             columns={4}
             rows={8}
@@ -324,7 +324,7 @@ export function AddFromCrmTab() {
           />
         </div>
       ) : (
-        <div className="dialer-crm-card overflow-hidden rounded-xl bg-white/50 shadow-[0px_1px_3px_0px_#00000012]">
+        <div className="dialer-crm-card bg-card/50 overflow-hidden rounded-xl shadow-[0px_1px_3px_0px_#00000012]">
           <DataTable
             columns={columns}
             data={clients}
@@ -337,7 +337,7 @@ export function AddFromCrmTab() {
             // supervisor-06 — same line as the "Selected N of Y" checkbox).
             bulkHeaderActions={
               <div className="flex flex-wrap items-center gap-2">
-                <span className="text-dark-500 hidden text-sm font-medium sm:inline">
+                <span className="text-foreground hidden text-sm font-medium sm:inline">
                   {t('dialer.crm.addToDialer', 'Add to dialer')}:
                 </span>
                 <div className="w-56">
@@ -378,7 +378,7 @@ export function AddFromCrmTab() {
               pageSize={pageSize}
               onPageChange={setPage}
               onPageSizeChange={handlePageSizeChange}
-              className="border-t border-gray-100 bg-gray-50 px-4"
+              className="border-border bg-muted border-t px-4"
             />
           )}
         </div>

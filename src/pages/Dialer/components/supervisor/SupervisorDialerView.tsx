@@ -70,7 +70,7 @@ export function SupervisorDialerView() {
               onClick={() => setTab(tab.id)}
               className={`flex items-center gap-2 border-b-2 px-1 py-3 text-sm font-medium whitespace-nowrap transition-colors ${
                 activeTab === tab.id
-                  ? 'border-primary-500 text-primary-600'
+                  ? 'border-primary-500 text-primary-700'
                   : 'text-muted-foreground hover:text-foreground hover:border-border border-transparent'
               }`}
             >

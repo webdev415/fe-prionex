@@ -132,8 +132,12 @@ export function QueueFormModal({ open, queue, onClose }: QueueFormModalProps) {
           (design: supervisor-02 — description sits above the divider). */}
       <div className="border-border border-b pb-3">
         <div className="flex items-center gap-3">
-          <div className="bg-primary-300 flex h-10 w-10 items-center justify-center rounded-full sm:h-12 sm:w-12">
-            <Icons.DialpadSquare size={20} className="text-dark-500 sm:size-6" strokeWidth={1.5} />
+          <div className="bg-primary flex h-10 w-10 items-center justify-center rounded-full sm:h-12 sm:w-12">
+            <Icons.DialpadSquare
+              size={20}
+              className="text-primary-foreground sm:size-6"
+              strokeWidth={1.5}
+            />
           </div>
           <ModalTitle className="text-foreground text-lg font-medium break-words sm:text-xl md:text-2xl">
             {isEdit

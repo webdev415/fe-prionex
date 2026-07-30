@@ -721,8 +721,8 @@ input[type='datetime-local']::-webkit-calendar-picker-indicator:hover {
    Dialer Queue List — Figma card (KAN-379)
    The shared DataTable ships its own bordered card with a white header and a
    grey-first-row zebra. Inside .dialer-queue-card we reset that card, recolour
-   the header to Gray-100 (#EDEDED) and invert the zebra so the FIRST row is
-   white. Unlayered so it wins over Tailwind's layered utilities; scoped to the
+   the header to muted, and invert the zebra so the FIRST row uses --card.
+   Unlayered so it wins over Tailwind's layered utilities; scoped to the
    class so no other table is affected.
    --------------------------------------------------------------------------- */
 .dialer-queue-card .data-table-scroll {
@@ -734,17 +734,17 @@ input[type='datetime-local']::-webkit-calendar-picker-indicator:hover {
 }
 .dialer-queue-card table thead tr,
 .dialer-queue-card table thead th {
-  background-color: var(--color-gray-50); /* #F7F7F7 — same as the toolbar row */
+  background-color: var(--muted);
 }
 .dialer-queue-card table tbody tr:nth-child(odd) {
-  background-color: #ffffff;
+  background-color: var(--card);
 }
 .dialer-queue-card table tbody tr:nth-child(even) {
-  background-color: #f2f3f066; /* light-50 @ 40% */
+  background-color: color-mix(in srgb, var(--muted) 40%, transparent);
 }
-/* Header column dividers are white; the body has no column dividers. */
+/* Header column dividers match the card surface; the body has no column dividers. */
 .dialer-queue-card table thead th {
-  border-right-color: #ffffff;
+  border-right-color: var(--card);
 }
 .dialer-queue-card table tbody td {
   border-right: 0;
@@ -755,18 +755,18 @@ input[type='datetime-local']::-webkit-calendar-picker-indicator:hover {
 .dialer-queue-card table tbody td:nth-child(4) {
   font-weight: 500;
 }
-/* Active toggle: Secondary-600 (#287975) track with a white knob (Figma),
+/* Active toggle: Secondary-600 track with a themed knob (Figma),
    overriding the shared ToggleSwitch's green primary track for this table only. */
 .dialer-queue-card button[role='switch'][aria-checked='true'] {
   background-color: var(--color-secondary-600);
 }
 .dialer-queue-card button[role='switch'][aria-checked='true'] > span {
-  background-color: #ffffff;
+  background-color: var(--background);
 }
 
 /* Add-from-CRM (KAN-379, design: supervisor-06): identical table look to the
-   Queue List card — reset the DataTable's own card chrome, Gray-50 column header
-   with white column dividers (default height), first-row-white zebra, no body
+   Queue List card — reset the DataTable's own card chrome, muted column header
+   with card-colored column dividers (default height), first-row-card zebra, no body
    column dividers, and weight-300 body content. Scoped so no other table is
    affected. */
 .dialer-crm-card .data-table-scroll {
@@ -787,10 +787,10 @@ input[type='datetime-local']::-webkit-calendar-picker-indicator:hover {
 }
 .dialer-crm-card table thead tr,
 .dialer-crm-card table thead th {
-  background-color: var(--color-gray-50); /* #F7F7F7 — same as Queue List */
+  background-color: var(--muted);
 }
 .dialer-crm-card table thead th {
-  border-right-color: #ffffff;
+  border-right-color: var(--card);
   border-bottom: 0;
   /* The DataTable stamps the (padded) select-row height onto every column
      header via an inline style; pin it back to the standard row height so the
@@ -798,10 +798,10 @@ input[type='datetime-local']::-webkit-calendar-picker-indicator:hover {
   height: 49px !important;
 }
 .dialer-crm-card table tbody tr:nth-child(odd) {
-  background-color: #ffffff;
+  background-color: var(--card);
 }
 .dialer-crm-card table tbody tr:nth-child(even) {
-  background-color: #f2f3f066; /* light-50 @ 40% */
+  background-color: color-mix(in srgb, var(--muted) 40%, transparent);
 }
 .dialer-crm-card table tbody td {
   border-right: 0;
@@ -809,8 +809,8 @@ input[type='datetime-local']::-webkit-calendar-picker-indicator:hover {
 }
 
 /* Analysis operator table (KAN-379, design: supervisor-07) — same look as the
-   Queue List: card reset, Gray-50 header with white column dividers, first-row-
-   white zebra, no body dividers, weight-300 body with the Operator name (col 1)
+   Queue List: card reset, muted header with card column dividers, first-row-
+   card zebra, no body dividers, weight-300 body with the Operator name (col 1)
    emphasised. Scoped so no other table is affected. */
 .dialer-analysis-card .data-table-scroll {
   border: 0;
@@ -821,16 +821,16 @@ input[type='datetime-local']::-webkit-calendar-picker-indicator:hover {
 }
 .dialer-analysis-card table thead tr,
 .dialer-analysis-card table thead th {
-  background-color: var(--color-gray-50); /* #F7F7F7 */
+  background-color: var(--muted);
 }
 .dialer-analysis-card table thead th {
-  border-right-color: #ffffff;
+  border-right-color: var(--card);
 }
 .dialer-analysis-card table tbody tr:nth-child(odd) {
-  background-color: #ffffff;
+  background-color: var(--card);
 }
 .dialer-analysis-card table tbody tr:nth-child(even) {
-  background-color: #f2f3f066; /* light-50 @ 40% */
+  background-color: color-mix(in srgb, var(--muted) 40%, transparent);
 }
 .dialer-analysis-card table tbody td {
   border-right: 0;

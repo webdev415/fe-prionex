@@ -45,11 +45,11 @@ function QueueStatusBadge({ active }: { active: boolean }) {
   return (
     <span
       className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs leading-[130%] font-medium tracking-[-0.02em] ${
-        active ? 'bg-success-100 text-success-700' : 'bg-gray-100 text-gray-600'
+        active ? 'bg-success-100 text-success-700' : 'bg-muted text-muted-foreground'
       }`}
     >
       <span
-        className={`h-2 w-2 shrink-0 rounded-full ${active ? 'bg-success-500' : 'bg-gray-600'}`}
+        className={`h-2 w-2 shrink-0 rounded-full ${active ? 'bg-success-500' : 'bg-muted-foreground'}`}
       />
       {t(active ? 'statusLabels.active' : 'statusLabels.inactive', active ? 'Active' : 'Inactive')}
     </span>
@@ -229,7 +229,7 @@ export function QueueListTab() {
           <span className="text-foreground font-bold">{total}</span>{' '}
           {t('dialer.queueList.queuesWord', 'queues')}
         </p>
-        <div className="inline-flex items-center gap-1 rounded-lg bg-white p-1 shadow-[0px_1px_3px_0px_#0000001A,0px_1px_2px_0px_#0000000F]">
+        <div className="bg-card inline-flex items-center gap-1 rounded-lg p-1 shadow-[0px_1px_3px_0px_#0000001A,0px_1px_2px_0px_#0000000F]">
           {(
             [
               ['all', t('dialer.queueList.allQueues', 'All queues'), totalAll],
@@ -249,9 +249,7 @@ export function QueueListTab() {
                 {label}
                 <span
                   className={`flex h-4 min-w-4 items-center justify-center rounded-full px-1.5 text-[10px] font-medium ${
-                    isActive
-                      ? 'bg-primary-300 text-primary-foreground'
-                      : 'bg-gray-100 text-gray-800'
+                    isActive ? 'bg-white/20 text-white' : 'bg-muted text-foreground'
                   }`}
                 >
                   {count}
@@ -264,8 +262,8 @@ export function QueueListTab() {
 
       {/* Container: search + create row, then the table — one Figma card
           (header/zebra recolor + card reset scoped via .dialer-queue-card in index.css) */}
-      <div className="dialer-queue-card overflow-hidden rounded-xl bg-white/50 shadow-[0px_1px_3px_0px_#00000012]">
-        <div className="flex items-center justify-between gap-3 border-b border-gray-100 bg-gray-50 px-4 py-3">
+      <div className="dialer-queue-card bg-card/50 overflow-hidden rounded-xl shadow-[0px_1px_3px_0px_#00000012]">
+        <div className="border-border bg-muted flex items-center justify-between gap-3 border-b px-4 py-3">
           <Input
             value={search}
             onChange={(e) => handleSearchChange(e.target.value)}
@@ -307,7 +305,7 @@ export function QueueListTab() {
                 pageSize={pageSize}
                 onPageChange={setPage}
                 onPageSizeChange={handlePageSizeChange}
-                className="border-t border-gray-100 bg-gray-50 px-4"
+                className="border-border bg-muted border-t px-4"
               />
             )}
           </>
